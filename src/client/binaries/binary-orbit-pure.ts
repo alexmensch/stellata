@@ -63,6 +63,25 @@ export function evaluateOrbitSkyAU(
   };
 }
 
+/** Unit normal of the orbital plane in the sky frame (north, east, radial)
+ *  — `(sin i sin Ω, −sin i cos Ω, cos i)`, the cross product of the
+ *  Thiele-Innes periastron and quadrature vectors. Static in `t`: the plane
+ *  is a property of the elements, so no Kepler solve enters.
+ *
+ *  Tier 1 only. Tier 2's plane is the galactic-plane convention rather than
+ *  a measurement (README § Tier mapping), and a caller levelling a view on
+ *  it would be dressing a default as an observation. */
+export function orbitNormalSky(
+  elements: OrbitalElements,
+): { north: number; east: number; radial: number } {
+  const sinI = Math.sin(elements.i);
+  return {
+    north: sinI * Math.sin(elements.Omega),
+    east: -sinI * Math.cos(elements.Omega),
+    radial: Math.cos(elements.i),
+  };
+}
+
 /** In-plane orbital position (AU) rotated by ω so periastron sits along
  *  the local x-axis. Used by Tier 2: the orbit plane is the galactic
  *  plane, so this 2D vector is placed in galactic-XY before rotating to

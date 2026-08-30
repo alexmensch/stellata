@@ -425,7 +425,8 @@ emitted by `positionsAt`.
 
 Any new planet-bearing host must declare its plane via the orientation
 quaternion; the default for non-Sol hosts is the galactic plane — don't
-accidentally default to the ecliptic.
+accidentally default to the ecliptic. For one BODY's own orbit normal
+reach for `orbitPlaneNormalInto`, never `orbitalPlaneNormalFor`.
 
 ## Gotchas
 

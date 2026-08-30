@@ -322,11 +322,48 @@ const _writePlaneQuat = new THREE.Quaternion();
 const _writeVec = new THREE.Vector3();
 
 /**
+ * Orbital frame → ICRS-aligned local space for one body: Rz(Ω)·Rx(I)·Rz(ω)
+ * → (moon reference plane → host plane, when the geometry carries a ref
+ * pole) → host plane → ICRS via `hostQuat`. Returns `out`.
+ */
+export function orbitFrameQuat(
+  g: BodyOrbitGeometry,
+  hostQuat: Readonly<THREE.Quaternion>,
+  out: THREE.Quaternion,
+  scratch: THREE.Quaternion,
+): THREE.Quaternion {
+  out.copy(hostQuat);
+  if (g.refPoleRaDeg !== undefined && g.refPoleDecDeg !== undefined) {
+    out.multiply(refPlaneToEclipticQuat(g.refPoleRaDeg, g.refPoleDecDeg, scratch));
+  }
+  return out.multiply(composeOrbitOrientationQuat(g.orientation, scratch));
+}
+
+const ORBIT_PLANE_LOCAL_NORMAL = new THREE.Vector3(0, 0, 1);
+const _normalQuat = new THREE.Quaternion();
+const _normalScratch = new THREE.Quaternion();
+
+/**
+ * Unit normal of one body's own orbital plane in ICRS — the +z of the
+ * frame `orbitFrameQuat` builds, since `buildEllipsePoints` lays the
+ * ellipse out flat in local xy. Parent-relative like the ring itself: a
+ * moon's normal is the pole of its orbit about its parent, not of the
+ * parent's orbit about the host. Returns `out`.
+ */
+export function orbitPlaneNormalInto(
+  out: THREE.Vector3,
+  g: BodyOrbitGeometry,
+  hostQuat: Readonly<THREE.Quaternion>,
+): THREE.Vector3 {
+  orbitFrameQuat(g, hostQuat, _normalQuat, _normalScratch);
+  return out.copy(ORBIT_PLANE_LOCAL_NORMAL).applyQuaternion(_normalQuat).normalize();
+}
+
+/**
  * Fill `verts` with one body's orbit-ring loop in ICRS-aligned local
- * space: canonical focus-at-origin ellipse → Rz(Ω)·Rx(I)·Rz(ω) →
- * (moon reference plane → host plane, when the geometry carries a ref
- * pole) → host plane → ICRS via `hostQuat`. Returns the semi-major
- * axis in pc (the visibility heuristic's characteristic size).
+ * space: canonical focus-at-origin ellipse → the orbital frame above.
+ * Returns the semi-major axis in pc (the visibility heuristic's
+ * characteristic size).
  */
 export function writeRingVerts(
   verts: Float32Array | Float64Array,
@@ -335,13 +372,7 @@ export function writeRingVerts(
 ): number {
   const aPc = g.aAu * AU_PC;
   buildEllipsePoints(aPc, g.e, ORBIT_LINE_SEGMENTS, verts, g.eccentricAnomaly ?? 0);
-  _writeQuat.copy(hostQuat);
-  if (g.refPoleRaDeg !== undefined && g.refPoleDecDeg !== undefined) {
-    _writeQuat.multiply(
-      refPlaneToEclipticQuat(g.refPoleRaDeg, g.refPoleDecDeg, _writePlaneQuat),
-    );
-  }
-  _writeQuat.multiply(composeOrbitOrientationQuat(g.orientation, _writePlaneQuat));
+  orbitFrameQuat(g, hostQuat, _writeQuat, _writePlaneQuat);
   for (let i = 0; i < ORBIT_LINE_SEGMENTS; i++) {
     _writeVec.set(verts[i * 3], verts[i * 3 + 1], verts[i * 3 + 2]);
     _writeVec.applyQuaternion(_writeQuat);

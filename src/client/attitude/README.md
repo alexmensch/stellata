@@ -22,6 +22,8 @@ attitude-ball.ts           The painted grid texture and the standalone mini
                            renderer that draws the sphere.
 attitude-indicator.ts      The instrument: canvas + fixed SVG chrome, the
                            corner frame flag, and the level affordances.
+orbit-plane.ts             The focused object's own orbit normal, dispatched
+                           to whichever subsystem holds its elements.
 ```
 
 ## Which frame, and who chooses
@@ -47,6 +49,10 @@ nothing where you are.
 `level()` — a click on the ball, or `L` — zeroes **roll only**. Levelling
 pitch would move the camera through space in NAVIGATE, where it orbits a
 target rather than turning in place.
+
+A third override joins them: **double-clicking the ball, or `Shift`+`L`,
+captures ORB** — a frame on the orbital plane of whatever is focused — and
+levels on it. § Levelling on an orbit.
 
 ## What it reads
 
@@ -222,6 +228,46 @@ tip, tapering to nothing at the base corners — and that bright wedge is what
 keeps the caret legible whichever hemisphere is passing underneath. Scaling a
 second equilateral triangle inside the first is the wrong shape: it leaves an
 even border rather than a chevron.
+
+## Levelling on an orbit
+
+Double-click the ball (or `Shift`+`L`) and the active frame becomes **ORB**,
+whose pole is the normal of the orbit the focused object *itself* rides. It
+is a captured datum like REF, planted from `orbit-plane.ts`'s answer rather
+than from the current attitude, and `level()` then runs unchanged.
+
+Capturing rather than only rolling is what makes it legible: rolling to a
+plane the instrument is not displaying leaves the caret reading un-level
+against the *old* frame, so the gesture would look like it had failed.
+
+**Always the innermost orbit the object is on.** Luna levels on its orbit
+about Earth, not Earth's about Sol; Algol Aa2 on its tight inner pair, not
+on the wide Aa-Ab one its primary also belongs to. Each subsystem answers
+from its own elements — `PlanetBodyField.orbitPlaneNormalOf` for a body
+(`../solar-system/ephemerides/README.md` § Orbit rings), `starOrbitNormalIcrs`
+for a pair (`../binaries/README.md` § Tier mapping).
+
+**The obvious shortcut is wrong and must stay unused here.**
+`orbitalPlaneNormalFor()` answers per HOST STAR — the ecliptic for Sol,
+galactic otherwise — so routing a body through it would level every
+solar-system object on the ecliptic and every moon on the wrong plane, while
+looking exactly like a working feature.
+
+Two silent no-ops, both deliberate, both because the plane on offer would be
+a convention dressed as a measurement: a **Tier-2 pair** (no published
+inclination, so its plane is the galactic fallback) and a **host with no live
+element source** (its rings fall back to `defaultOrbitGeometry`, flat on the
+host plane). Kinds that ride no orbit at all — probes, clouds, shells — are
+the third, and the ordinary one.
+
+The normal is a static function of the elements, not a sampled one: an orbit
+is planar, so `r(t) × r(t+dt)` recovers only what `Rz(Ω)·Rx(I)·Rz(ω)` and the
+Thiele-Innes basis already state exactly, and it degenerates whenever the two
+samples come back near-parallel.
+
+Retrograde orbits keep their sense. Triton's normal points south of the
+ecliptic and levelling on it inverts the view, because that is where its
+angular momentum points.
 
 ## Levelling
 

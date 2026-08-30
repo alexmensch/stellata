@@ -9,7 +9,11 @@ import { targetsEqual, type Target } from '../../focus/focus-target';
 import type { FilterState } from '../../../filters/filter-state';
 import type { PoiStore } from '../../../poi/poi-store';
 import { clickLadderAction } from '../../../poi/click-ladder-pure';
-import { PendingClickDispatcher } from '../../../util/pending-click';
+import {
+  DBL_CLICK_DIST_PX_SQ,
+  DBL_CLICK_MS,
+  PendingClickDispatcher,
+} from '../../../util/pending-click';
 import { bestHitBy } from '../../../hover/hover-pick-disambiguator';
 import type { HoverHit } from '../../../hover/hover-types';
 import type { Picker } from '../picker';
@@ -80,11 +84,9 @@ export class InputController {
   // Canvas clicks in BOTH modes are held for DBL_CLICK_MS so single
   // (per-mode click semantics) and double (aim-at in observe, travel in
   // navigate) can be disambiguated.
-  private static DBL_CLICK_MS = 280;
-  private static DBL_CLICK_DIST_PX_SQ = 8 * 8;
   private readonly clickDispatcher = new PendingClickDispatcher(
-    InputController.DBL_CLICK_MS,
-    InputController.DBL_CLICK_DIST_PX_SQ,
+    DBL_CLICK_MS,
+    DBL_CLICK_DIST_PX_SQ,
     (x, y) => this.dispatchSingleClick(x, y),
     (x, y) => this.dispatchDoubleClick(x, y),
   );

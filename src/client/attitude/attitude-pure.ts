@@ -15,12 +15,14 @@ export type ReferenceFrameKey =
   | 'equatorial'
   | 'ecliptic'
   | 'galactic'
-  | 'reference';
+  | 'reference'
+  | 'orbit';
 
-/** Every frame the instrument can reach on its own. `reference` is missing on
- *  purpose: a captured datum is built from an attitude the user is holding, so
- *  it cannot be tabulated ahead of time and only a right-click produces one. */
-export type AutoFrameKey = Exclude<ReferenceFrameKey, 'reference'>;
+/** Every frame the instrument can reach on its own. The two captured data are
+ *  missing on purpose: `reference` is built from an attitude the user is
+ *  holding and `orbit` from whatever is focused, so neither can be tabulated
+ *  ahead of time. */
+export type AutoFrameKey = Exclude<ReferenceFrameKey, 'reference' | 'orbit'>;
 
 export interface ReferenceFrame {
   key: ReferenceFrameKey;
@@ -38,6 +40,10 @@ export interface Attitude {
 }
 
 const OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
+
+// Boresight this close to a captured pole leaves no zero-longitude
+// direction to project — 1e-3 rad off the axis.
+const DEGENERATE_SEED_COS = Math.cos(1e-3);
 
 function makeFrame(
   key: ReferenceFrameKey,
@@ -66,6 +72,26 @@ export function captureReferenceFrame(camera: THREE.Camera): ReferenceFrame {
   const pole = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
   const boresight = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
   return makeFrame('reference', 'REF', pole, boresight);
+}
+
+/** A frame on the focused object's own orbital plane. `normal` is the
+ *  orbit's angular-momentum direction, so a retrograde orbit reads
+ *  inverted — that is the plane's real sense, not a display choice.
+ *
+ *  Zero longitude seeds off the boresight, as REF does, giving the same
+ *  "level from where you are" read. Sighting straight down the pole makes
+ *  that seed degenerate, and the camera's up takes over: it is
+ *  perpendicular to the boresight, hence to the pole in exactly that
+ *  case. */
+export function captureOrbitFrame(
+  camera: THREE.Camera,
+  normal: THREE.Vector3,
+): ReferenceFrame {
+  const boresight = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+  const seed = Math.abs(boresight.dot(normal)) > DEGENERATE_SEED_COS
+    ? new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion)
+    : boresight;
+  return makeFrame('orbit', 'ORB', normal, seed);
 }
 
 export function buildReferenceFrames(): Record<AutoFrameKey, ReferenceFrame> {
@@ -122,10 +148,10 @@ export const FRAME_CYCLE: AutoFrameKey[] = [
 /** The flag's next stop, with the cycle rotated so the focus default leads.
  *
  *  Rotating a cycle leaves every successor unchanged, so this only bites on the
- *  way **out of REF** — a captured datum sits outside the cycle and has no
- *  successor of its own, and dropping back to a fixed first entry would strand
- *  you on a frame that means nothing where you are. Leaving REF therefore lands
- *  on whatever the focused object implies. */
+ *  way **out of a captured frame** (REF or ORB) — a captured datum sits outside
+ *  the cycle and has no successor of its own, and dropping back to a fixed first
+ *  entry would strand you on a frame that means nothing where you are. Leaving
+ *  one therefore lands on whatever the focused object implies. */
 export function nextFrameKey(
   current: ReferenceFrameKey,
   focusDefault: AutoFrameKey,

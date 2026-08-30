@@ -36,6 +36,9 @@ export interface KeyboardShortcutsDeps {
   /** Zero the camera's roll against the attitude indicator's active
    *  reference frame — the same action as clicking its ball. */
   levelAttitude: () => void;
+  /** Capture the focused object's own orbital plane and level on it — the
+   *  same action as double-clicking the ball. */
+  levelAttitudeOnOrbit: () => void;
 }
 
 export function bindKeyboardShortcuts(
@@ -178,7 +181,7 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case 'l': case 'L':
-        deps.levelAttitude();
+        if (e.shiftKey) deps.levelAttitudeOnOrbit(); else deps.levelAttitude();
         e.preventDefault();
         break;
       case 'f': case 'F':

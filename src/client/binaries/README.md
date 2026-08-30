@@ -28,7 +28,9 @@ star catalog records.
   any vantage; Tier 2 is the galactic-plane fallback
   (`evaluateOrbitInPlaneAU` + `projectGalacticPlaneToICRS`). See
   § Tier mapping for why the fallback costs only the offset's
-  *direction*.
+  *direction*. `orbitNormalSky` is the plane itself —
+  `(sin i sin Ω, −sin i cos Ω, cos i)`, the Thiele-Innes basis vectors'
+  cross product — static in `t`, so no Kepler solve enters.
 - `orbit-relation-cache.ts` — `keplerRelationParams` (the has_orbit +
   finite-elements gate → tier + elements), the per-attach cache builder
   (`buildOrbitRelationCaches`, which adds the baseline
@@ -49,6 +51,8 @@ star catalog records.
   relation-index set on a focal star's slot-chain (focal as primary or
   secondary, plus `parentRelation` ancestors). Shared by
   `BinaryOrbitField`'s LOD-exemption walk and the orbit-path layer.
+  `innermostRelationOf` is the narrower question — the deepest pair a star
+  is itself a member of, ancestors excluded (§ Which pair a star rides).
 - `binary-system-membership.ts` — the multi-star implementation of the
   kind-generic system-membership contract
   (`../system-membership/README.md`): the star-companion graph walk +
@@ -143,6 +147,24 @@ For Tier 1 and Tier 2 the offset is split q : (1−q) between primary
 and secondary about the system barycentre — primary moves by
 `−q·ΔR(t)`, secondary by `+(1−q)·ΔR(t)`, where q = M_s/(M_p + M_s) is
 the mass-fraction stored on each record.
+
+### Which pair a star rides
+
+`innermostRelationOf` answers "which orbit is this star ON", and the answer
+is always the **innermost** pair naming it directly. Relations are stored
+outer-before-inner with `parentRelation` always below the child's index, so
+the highest index naming the star is the deepest one.
+
+Ancestors are excluded, unlike `focalChainRelationSet` — the outer pair
+moves the star's whole subsystem, but it is not the orbit the star is on.
+Focus Algol Aa2 and that is the tight Aa1-Aa2 pair; focus Ab and it is the
+wide Aa-Ab one, about which Aa2's own orbit says nothing.
+
+`starOrbitNormalIcrs` is that pair's plane in ICRS, and it is **Tier 1
+only**: a Tier-2 pair's plane is the galactic-plane fallback, so handing it
+out as an orbit normal would pass a convention off as a measurement. The
+attitude indicator levels on it (`../attitude/README.md` § Levelling on an
+orbit).
 
 ### Composition with proper-motion propagation
 

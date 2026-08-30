@@ -40,6 +40,7 @@ import {
   MESH_FADE_MIN_PX,
 } from './mesh-crossfade';
 import {
+  orbitPlaneNormalInto,
   orbitalPlaneNormalFor,
   placeholderEccentricAnomaly,
   planetLocalPosition,
@@ -968,6 +969,20 @@ export class PlanetBodyField {
     const host = this.hosts.get(hostStarIdx);
     if (!host || planetIdx < 0 || planetIdx >= host.count) return null;
     return host.startInstance + planetIdx;
+  }
+
+  /** Unit ICRS normal of this body's OWN orbital plane at `t` — a moon's
+   *  orbit about its parent, not its parent's about the host. False when
+   *  the host carries no live element source: its rings fall back to
+   *  `defaultOrbitGeometry`, whose plane is the host-plane convention
+   *  rather than a measured orientation. */
+  orbitPlaneNormalOf(instanceIdx: number, t: number, out: THREE.Vector3): boolean {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return false;
+    const g = host.ps.orbitGeometryAt?.(t)[instanceIdx - host.startInstance];
+    if (g === undefined) return false;
+    orbitPlaneNormalInto(out, g, host.orientation);
+    return true;
   }
 
   /** Planet record for a flat instance index, or null. */

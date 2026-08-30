@@ -7,6 +7,7 @@ import { BALL_DARK, BALL_LIGHT, createAttitudeBall } from './attitude-ball';
 import {
   autoFrameFor,
   buildReferenceFrames,
+  captureOrbitFrame,
   captureReferenceFrame,
   nextFrameKey,
   readAttitude,
@@ -14,7 +15,13 @@ import {
   type FocusFrameInputs,
   type ReferenceFrame,
 } from './attitude-pure';
+import { focusedOrbitNormalInto } from './orbit-plane';
 import type { Target } from '../camera/focus/focus-target';
+import {
+  DBL_CLICK_DIST_PX_SQ,
+  DBL_CLICK_MS,
+  PendingClickDispatcher,
+} from '../util/pending-click';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -164,6 +171,10 @@ export interface AttitudeIndicator {
   /** Zero the roll against the active frame. Bound to a click on the ball and
    *  to the `L` shortcut. */
   level(): void;
+  /** Capture the focused object's own orbital plane as the ORB frame and
+   *  level on it. A double-click on the ball or `Shift`+`L`; a no-op when
+   *  nothing focused rides an orbit the model has elements for. */
+  levelOnOrbit(): void;
 }
 
 export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator | null {
@@ -240,14 +251,30 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     draw();
   }
 
-  stage.addEventListener('click', level);
+  const orbitNormal = new THREE.Vector3();
+
+  function levelOnOrbit() {
+    if (!focusedOrbitNormalInto(orbitNormal, stellata, focused)) return;
+    setFrame(captureOrbitFrame(stellata.camera, orbitNormal));
+    level();
+  }
+
+  const clicks = new PendingClickDispatcher(
+    DBL_CLICK_MS,
+    DBL_CLICK_DIST_PX_SQ,
+    level,
+    levelOnOrbit,
+  );
+
+  stage.addEventListener('click', (e) => clicks.click(e.clientX, e.clientY));
   stage.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     setFrame(captureReferenceFrame(stellata.camera));
   });
   stage.setAttribute('role', 'img');
   stage.setAttribute('aria-label', 'Attitude indicator');
-  stage.title = 'Click to level · right-click to set REF here';
+  stage.title = 'Click to level · double-click to level on the focused orbit '
+    + '· right-click to set REF here';
 
   frameBtn.addEventListener('click', () => {
     setFrame(frames[nextFrameKey(frame.key, autoFrameFor(focusInputs(stellata, focused)))]);
@@ -257,6 +284,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // while you study one object without freezing the automatic choice forever.
   stellata.on('focus', (target) => {
     focused = target;
+    clicks.cancel();
     setFrame(frames[autoFrameFor(focusInputs(stellata, target))]);
   });
 
@@ -272,5 +300,5 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   });
 
   draw();
-  return { level };
+  return { level, levelOnOrbit };
 }

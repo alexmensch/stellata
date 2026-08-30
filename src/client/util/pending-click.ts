@@ -1,3 +1,12 @@
+/** Hold window for a click, so a second one inside it reads as a double
+ *  instead of two singles. One value across every surface that
+ *  disambiguates the pair — the canvas click FSM and the attitude ball. */
+export const DBL_CLICK_MS = 280;
+
+/** Squared pointer travel a second click may sit from the first and still
+ *  pair with it. */
+export const DBL_CLICK_DIST_PX_SQ = 8 * 8;
+
 /** Defers each click for `dblMs` so a second click landing within
  *  `maxDistPxSq` of it fires `onDouble` instead of two `onSingle`s. */
 export class PendingClickDispatcher {

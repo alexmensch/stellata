@@ -27,3 +27,24 @@ export function focalChainRelationSet(
   }
   return out;
 }
+
+/** The innermost pair `starIdx` is itself a member of, or `NO_PARENT` when
+ *  it is a member of none. Relations are stored outer-before-inner with
+ *  `parentRelation` always below the child's index, so the highest index
+ *  among the ones naming this star directly is the deepest.
+ *
+ *  Ancestors are deliberately excluded, unlike `focalChainRelationSet`:
+ *  the orbit a star is ON is the pair it belongs to. Focus Algol Aa2 and
+ *  that is the tight Aa1-Aa2 pair; focus Ab and it is the wide Aa-Ab one,
+ *  which Aa2's own orbit says nothing about. */
+export function innermostRelationOf(
+  binaries: BinariesData,
+  starIdx: number,
+): number {
+  let best = NO_PARENT;
+  for (const map of [binaries.primaryIdxToRelations, binaries.secondaryIdxToRelations]) {
+    const rels = map.get(starIdx);
+    if (rels) for (const ri of rels) if (ri > best) best = ri;
+  }
+  return best;
+}

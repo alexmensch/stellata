@@ -5,12 +5,16 @@
 import { J2000_JD } from '../util/astronomy-constants';
 import {
   evaluateOrbitOffsetPc,
+  orbitNormalSky,
+  projectSkyToICRS,
   type OrbitalElements,
   type Vec3,
 } from './binary-orbit-pure';
+import { innermostRelationOf } from './focal-chain';
 import {
   FLAG_HAS_ORBIT,
   FLAG_HAS_INCLINATION,
+  NO_PARENT,
   type BinariesData,
   type BinaryRelation,
 } from './binaries-loader';
@@ -78,6 +82,30 @@ export function keplerRelationParams(
   ) return null;
   const tier: 1 | 2 = (r.flags & FLAG_HAS_INCLINATION) !== 0 ? 1 : 2;
   return { tier, elements: relationToElements(r) };
+}
+
+/** Unit ICRS normal of the orbital plane `starIdx` itself rides — the
+ *  innermost pair it is a member of — or null when it is in none, the
+ *  pair is not Kepler-evaluable, or the pair is Tier 2.
+ *
+ *  Tier 2 is excluded on purpose. Its plane is the galactic-plane
+ *  fallback for a pair with no published inclination (README § Tier
+ *  mapping), so a normal from it would read as measured while being the
+ *  same convention the GAL frame already offers.
+ *
+ *  `systemXyzPc` is the pair's ICRS position, supplying the sky tangent
+ *  basis the sky-frame normal projects through. */
+export function starOrbitNormalIcrs(
+  binaries: BinariesData,
+  starIdx: number,
+  systemXyzPc: Vec3,
+): Vec3 | null {
+  const ri = innermostRelationOf(binaries, starIdx);
+  if (ri === NO_PARENT) return null;
+  const params = keplerRelationParams(binaries.relations[ri]);
+  if (params === null || params.tier !== 1) return null;
+  const n = orbitNormalSky(params.elements);
+  return projectSkyToICRS(systemXyzPc, n.north, n.east, n.radial);
 }
 
 /** Both members' xyz triples fall inside a catalog-wide position buffer.

@@ -305,6 +305,7 @@ async function main() {
       bindControlsHideToggle();
       bindKeyboardShortcuts(stellata, {
         levelAttitude: () => attitude?.level(),
+        levelAttitudeOnOrbit: () => attitude?.levelOnOrbit(),
         toggleDebugPanel: debugTools.panel,
         timeScrubber,
       });
