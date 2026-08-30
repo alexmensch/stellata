@@ -151,6 +151,22 @@ export function frameDirToBallInto(
 }
 
 const right = new THREE.Vector3();
+const basisX = new THREE.Vector3();
+const basisY = new THREE.Vector3();
+const basisZ = new THREE.Vector3();
+
+/** A frame axis resolved onto the camera's own right / up / forward, which is
+ *  where the instrument's +X / +Y / +Z point. Reads the scratch above, so the
+ *  caller sets those first. */
+function projectInto(
+  out: THREE.Vector3,
+  dir: THREE.Vector3,
+  sign: number,
+): THREE.Vector3 {
+  return out
+    .set(dir.dot(right), dir.dot(up), dir.dot(forward))
+    .multiplyScalar(sign);
+}
 
 /** The ball's model matrix: ball coordinates → instrument coordinates (+X
  *  right, +Y up, +Z toward the viewer).
@@ -173,12 +189,9 @@ export function ballBasisInto(
   cameraLocalUpInto(up, camera);
   right.set(1, 0, 0).applyQuaternion(camera.quaternion);
 
-  const project = (d: THREE.Vector3, sign: number) =>
-    new THREE.Vector3(d.dot(right), d.dot(up), d.dot(forward)).multiplyScalar(sign);
-
   return out.makeBasis(
-    project(frame.zeroLon, 1),
-    project(frame.pole, 1),
-    project(frame.east, -1),
+    projectInto(basisX, frame.zeroLon, 1),
+    projectInto(basisY, frame.pole, 1),
+    projectInto(basisZ, frame.east, -1),
   );
 }
