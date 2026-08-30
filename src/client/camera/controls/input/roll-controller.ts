@@ -24,12 +24,14 @@ export class RollController {
    *  the orientation the quaternion already holds instead of rolling away
    *  from it.
    *
-   *  Every frame in OBSERVE, where the quaternion is the authority. In
-   *  NAVIGATE, only where something has written the quaternion directly —
-   *  the landing of a captured-endpoint slerp. **Never per navigate
-   *  frame**: `up → lookAt → quaternion → up` is a rounding round-trip that
-   *  2-cycles, and the quaternion is in the render gate's exact-equality
-   *  pose snapshot (`../../../render-gate/README.md`). */
+   *  Every frame in OBSERVE, where the quaternion is the authority; on every
+   *  frame a navigate ANIMATION owns the camera, where nothing else
+   *  transports `up` against a view axis that is moving (README.md § The
+   *  perpendicular invariant); and at the landing of a captured-endpoint
+   *  slerp. **Never on a steady-state navigate frame**: `up → lookAt →
+   *  quaternion → up` is a rounding round-trip that 2-cycles, and the
+   *  quaternion is in the render gate's exact-equality pose snapshot
+   *  (`../../../render-gate/README.md`), so a still view could never idle. */
   adoptFromCamera(camera: THREE.Camera): void {
     cameraLocalUpInto(camera.up, camera).normalize();
   }

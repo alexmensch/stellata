@@ -19,9 +19,10 @@ click handlers (single = pin a POI, double = aim-at).
   `ObserveFocusOps` cross-controller seam (implemented by
   `FocusController` in `../focus/`). The observe→navigate seam hands roll
   back through `RollController.adoptFromCamera`
-  (`../controls/input/README.md` § Reference up axis) — writing `camera.up`
-  alone would be overwritten by the next frame's correction, restoring
-  the pitch-snap bug the re-anchor exists to prevent.
+  (`../controls/input/README.md` § Roll authority) — the quaternion is the
+  authority on the observe side and `camera.up` on the navigate side, so the
+  seam's job is to make the first navigate `lookAt` reproduce the pose the
+  drag left rather than resolve it against a stale axis.
 
 Public surface of `ObserveTransition`:
 - `setMode(mode, opts)` — mode-pill toggle, keyboard O, URL restore.
@@ -145,11 +146,11 @@ to.
   (`../README.md` § Shared). Trackpad pinch reaches this same handler:
   `InputController` normalises it to whole wheel notches rather than
   forking a pinch→FOV path (`../controls/input/README.md` § Pinch-to-zoom).
-- In navigate-mode, `rollCamera` turns `camera.up`, and the
-  per-frame correction derives `camera.up` from it (TrackballControls
-  rebuilds the quaternion from `camera.up` on every `update()`). In
-  observe-mode it rotates `camera.quaternion` — the rendered roll — and
-  the reference re-adopts from it. Shift+drag fires in both modes — armed
+- In navigate-mode, `rollCamera` turns `camera.up` itself, which is the roll
+  authority there (TrackballControls rebuilds the quaternion from
+  `camera.up` on every `update()`). In observe-mode it rotates
+  `camera.quaternion` — the rendered roll — and `camera.up` re-adopts from
+  it on the next frame. Shift+drag fires in both modes — armed
   and disarmed live by the Shift key, mid-drag — and the look-around drag
   bails out of a shifted pointerdown so the two never process the same
   gesture. `../controls/input/README.md` § Roll gestures carries the input paths

@@ -72,7 +72,11 @@ Camera orientation during the reorient depends on launch mode:
   around it. Roll comes along for free: `lookAt` reads `camera.up`, the
   navigate roll authority (`../controls/input/README.md` § Roll authority),
   so a swing that crosses the sky carries the roll the camera launched
-  with rather than acquiring one from the new view axis.
+  with rather than acquiring one from the new view axis. The animate loop
+  transports `camera.up` across each of those frames — the controls are
+  disabled, so nothing else would, and a reorient whose travel direction sits
+  near screen-up would otherwise close the angle between `up` and the
+  boresight to nothing (§ The perpendicular invariant, same README).
 - **Observe launch** (`returnToObserve`, `mag0 ≈ 0`): the
   lookAt-per-frame approach degenerates — the camera starts on top
   of A, so `lookAt(A)` snaps to "facing forward" the instant the

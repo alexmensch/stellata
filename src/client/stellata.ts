@@ -2368,9 +2368,9 @@ export class Stellata implements FrameAnchor {
     this.starFrame.flushLocalPositions();
     perfMark('controls.update');
     // Observe's quaternion is the roll authority, so camera.up follows it
-    // each frame, keeping the observe→navigate handover a no-op. Navigate
-    // needs no per-frame step at all: camera.up IS the authority there and
-    // TrackballControls parallel-transports it.
+    // each frame, keeping the observe→navigate handover a no-op. Steady-state
+    // navigate needs no step at all: camera.up IS the authority there and
+    // TrackballControls transports it alongside the eye vector.
     // See camera/controls/input/README.md § Roll authority.
     if (this.focus.getCameraMode() === 'observe') {
       this.roll.adoptFromCamera(this.camera);
@@ -2411,6 +2411,17 @@ export class Stellata implements FrameAnchor {
       this.trackballSettle.tick(
         this.camera, this.angularToPx(), this.sharedUniforms.uFovYRad.value,
       );
+    }
+    // A navigate animation drives orientation through lookAt while nothing
+    // transports camera.up, so the view axis sweeps away from it and the two
+    // can finish parallel — where the image-plane projection every lookAt and
+    // roll measurement rides collapses, and TrackballControls then preserves
+    // that angle indefinitely. Re-deriving per animating frame transports up
+    // the way a drag does, without touching the pose just rendered. Gated on
+    // an animation owning the camera: the steady state must still write on no
+    // frame of its own (camera/controls/input/README.md § Roll authority).
+    if (cameraAnimating && this.focus.getCameraMode() === 'navigate') {
+      this.roll.adoptFromCamera(this.camera);
     }
     perfMeasure('controls.update');
     // The frame context is built ABOVE the gate now, because the

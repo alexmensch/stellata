@@ -167,21 +167,44 @@ pin is re-derived only on rotation (`../../observe/README.md`
 state in OBSERVE.** Neither is derived from anything else, and there is no
 third vector behind them.
 
-- **NAVIGATE** — nothing runs per frame. TrackballControls rotates
-  `camera.up` by the same quaternion it rotates `_eye` by, then `lookAt`
-  reads it, so the roll the user is holding is carried forward frame to
-  frame by the library itself.
+- **NAVIGATE** — nothing runs on a steady-state frame. TrackballControls
+  rotates `camera.up` by the same quaternion it rotates `_eye` by, then
+  `lookAt` reads it, so the roll the user is holding is carried forward frame
+  to frame by the library itself. While an **animation** owns the camera
+  instead, nothing transports `up` — so `stellata.ts` re-derives it per
+  animating frame; § The perpendicular invariant.
 - **OBSERVE** — `adoptFromCamera(camera)` each frame, ahead of the
   animation dispatch in `stellata.ts`'s `animate()`: there the quaternion
   is the authority (a direct-manipulation drag rolls by construction), so
   `camera.up` follows it. That makes the observe→navigate handover a
   no-op — the first navigate `lookAt` reproduces the pose the drag left.
 
+### The perpendicular invariant
+
 `camera.up` is kept **perpendicular to the view axis**. `levelTo` and
 `adoptFromCamera` both establish that, and TrackballControls preserves the
 angle between `up` and `_eye` thereafter, so the image-plane projection
 every `lookAt` and roll measurement depends on stays well-conditioned from
 any vantage — there is no cone around any axis where it degenerates.
+
+**TrackballControls is not the only thing that moves the camera, and the
+others do not transport `up`.** A navigate aim slerp and a navigate warp
+both disable the controls and drive orientation with `camera.lookAt()` per
+frame while `camera.up` sits frozen, so the view axis sweeps and the angle
+between the two closes by however far the sweep went. Aim at a point 8° short
+of screen-up and `up` lands 8° off perpendicular; aim at screen-up exactly and
+it lands *on* the boresight, where the projection is a zero vector and
+three.js's `lookAt` falls back to an arbitrary roll. Neither self-repairs —
+TrackballControls preserves whatever angle it inherits, so the view stays
+ill-conditioned until the next `L`.
+
+So the animate loop re-derives `up` on every frame a navigate animation owns
+the camera. That is discrete parallel transport — project the rendered up
+into the next image plane — which is what a drag does, so an aim now injects
+no roll of its own instead of spinning the image as its endpoint approaches
+the old screen-up. It does not reintroduce the 2-cycle below: that needs a
+frame where nothing else moves, and these frames are moving by definition.
+`camera/README.md` § Camera-activity predicates carries which branches count.
 
 ### Orbit drift is the feature, not the bug
 
@@ -216,8 +239,9 @@ Two things went with that correction, and neither should come back:
   equality**, so the view could never idle with nothing moving on screen
   (`../../../render-gate/README.md`).
 
-**The rule that replaces the deadband: navigate writes `camera.up` on no
-frame of its own.** Only a gesture, a level, a URL restore, or the landing
+**The rule that replaces the deadband: steady-state navigate writes
+`camera.up` on no frame of its own.** Only a gesture, a level, a URL restore,
+a frame an animation owns (§ The perpendicular invariant), or the landing
 of a captured-endpoint animation writes it. `up → lookAt → quaternion → up`
 is a rounding round-trip that 2-cycles exactly as the old correction did,
 so `adoptFromCamera` must stay out of the navigate steady state — it is an
@@ -233,7 +257,10 @@ Camera animations split into two classes, and only one needs care:
 | **A** | per-frame `lookAt`, reads `camera.up` | TrackballControls steady state, warp reorient (navigate launch), warp Fly, warp finish (navigate), the navigate aim tick (its `q0`/`q1` slerp drives *position*), observe exit's no-op `lookAt` |
 | **B** | a quaternion captured up-front, then slerped | focus-park lerp `qEnd`, warp reorient (observe launch), warp phase 3, observe aim `q1` |
 
-Class A inherits the authority for free. **A Class-B endpoint must be built
+Class A inherits the authority for free — it reads `camera.up`, so the roll
+comes along. What it does not inherit is the perpendicular invariant, which
+the per-animating-frame adopt supplies (§ The perpendicular invariant).
+**A Class-B endpoint must be built
 from the same `camera.up` the camera is actually holding**, and the
 animation must **re-derive `camera.up` from the landed quaternion** before
 handing back. Build the endpoint from any other axis and the first `lookAt`
