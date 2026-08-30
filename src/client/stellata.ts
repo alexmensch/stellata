@@ -2216,6 +2216,23 @@ export class Stellata implements FrameAnchor {
     this.aim.aimAt(pointLocal);
   }
 
+  /**
+   * Swing the camera to the reciprocal of the direction it holds — in
+   * navigate around to the far side of the focused object at the same
+   * distance, in observe a half turn in place. Bound to the instrument's
+   * REV chip (`attitude/README.md` § Inverting the view).
+   *
+   * Shares `aimAt`'s composition-layer busy gates; the sweep itself lives in
+   * `AimController`.
+   */
+  invertView() {
+    if (this.warp.isActive() || this.aim.isActive()) return;
+    this.focus.cancelUnfocusLerp();
+    this.focus.cancelFocusLerp();
+    if (this.observe.isActive()) return;
+    this.aim.invert();
+  }
+
   // Star position in the renderer's local frame — i.e. in the same space
   // as `camera.position` and `controls.target`. This is what overlays want
   // for projection math and what the orbit camera operates in. It is NOT

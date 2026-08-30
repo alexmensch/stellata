@@ -315,3 +315,124 @@ describe('AimController — cancel / dispose / mode isolation', () => {
     expect(h.aim.isActive()).toBe(false);
   });
 });
+
+describe('AimController — invert', () => {
+  // A half turn runs the whole AIM_T_MAX_MS cap, so a tick that has to land
+  // past the end gets a generous margin: the controller stamps its own
+  // performance.now() after the test reads one, and under a loaded suite that
+  // gap swamps the 1 ms the shorter aim tests can afford.
+  const PAST_SWEEP_MS = AIM_T_MAX_MS * 2;
+
+  it('lands the camera on the far side of the pivot at the same radius', () => {
+    const h = makeHarness('navigate');
+    h.camera.position.set(10, 0, 0);
+    h.controls.target.set(0, 0, 0);
+    h.camera.lookAt(h.controls.target);
+    const startMs = performance.now();
+
+    h.aim.invert();
+    expect(h.aim.isActive()).toBe(true);
+    expect(h.controls.enabled).toBe(false);
+
+    h.aim.tick(startMs + PAST_SWEEP_MS);
+    expect(h.aim.isActive()).toBe(false);
+    expect(h.controls.enabled).toBe(true);
+    expect(h.camera.position.x).toBeCloseTo(-10, 5);
+    expect(h.camera.position.y).toBeCloseTo(0, 5);
+    expect(h.camera.position.z).toBeCloseTo(0, 5);
+  });
+
+  it('sweeps in the plane perpendicular to the camera\'s up, at constant radius', () => {
+    const h = makeHarness('navigate');
+    h.camera.position.set(10, 0, 0);
+    h.controls.target.set(0, 0, 0);
+    h.camera.up.set(0, 1, 0);
+    h.camera.lookAt(h.controls.target);
+    const startMs = performance.now();
+    h.aim.invert();
+
+    // A half turn has no unique axis; pinning it about the camera's up is
+    // what makes the path a horizontal swing rather than an arbitrary
+    // tumble. Every intermediate pose therefore stays in the y = 0 plane.
+    for (const frac of [0.15, 0.35, 0.5, 0.7, 0.9]) {
+      h.aim.tick(startMs + AIM_T_MAX_MS * frac);
+      expect(h.camera.position.y).toBeCloseTo(0, 5);
+      expect(h.camera.position.length()).toBeCloseTo(10, 5);
+    }
+  });
+
+  it('negates the offset when the camera sits off the cardinal axes', () => {
+    const h = makeHarness('navigate');
+    h.camera.position.set(3, -4, 12);
+    h.controls.target.set(1, 1, 1);
+    h.camera.lookAt(h.controls.target);
+    const r = h.camera.position.distanceTo(h.controls.target);
+    const startMs = performance.now();
+
+    h.aim.invert();
+    h.aim.tick(startMs + PAST_SWEEP_MS);
+    // Reflected through the pivot: offset negated, distance untouched.
+    expect(h.camera.position.x).toBeCloseTo(-1, 4);
+    expect(h.camera.position.y).toBeCloseTo(6, 4);
+    expect(h.camera.position.z).toBeCloseTo(-10, 4);
+    expect(h.camera.position.distanceTo(h.controls.target)).toBeCloseTo(r, 4);
+  });
+
+  it('no-ops in navigate when the camera sits on the pivot', () => {
+    const h = makeHarness('navigate');
+    h.controls.target.set(0, 0, 0);
+    h.camera.position.set(AIM_DEGENERATE_DIST_PC / 2, 0, 0);
+    h.aim.invert();
+    expect(h.aim.isActive()).toBe(false);
+    expect(h.controls.enabled).not.toBe(false);
+  });
+
+  it('turns to the reciprocal direction in observe, holding position', () => {
+    const h = makeHarness('observe');
+    h.camera.position.set(5, 6, 7);
+    h.camera.up.set(0, 1, 0);
+    h.camera.lookAt(5, 6, 6); // boresight along −Z
+    const startMs = performance.now();
+
+    h.aim.invert();
+    expect(h.aim.isObserveAimActive()).toBe(true);
+    expect(h.observeControls.disable).toHaveBeenCalled();
+
+    h.aim.tickObserve(startMs + PAST_SWEEP_MS);
+    expect(h.aim.isObserveAimActive()).toBe(false);
+    expect(h.observeControls.enable).toHaveBeenCalled();
+
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(h.camera.quaternion);
+    expect(forward.x).toBeCloseTo(0, 5);
+    expect(forward.y).toBeCloseTo(0, 5);
+    expect(forward.z).toBeCloseTo(1, 5);
+    // The camera never leaves the object it is standing on.
+    expect(h.camera.position.x).toBeCloseTo(5, 10);
+    expect(h.camera.position.y).toBeCloseTo(6, 10);
+    expect(h.camera.position.z).toBeCloseTo(7, 10);
+  });
+
+  it('runs the half-circle duration rather than a nudge', () => {
+    const h = makeHarness('navigate');
+    h.camera.position.set(10, 0, 0);
+    h.controls.target.set(0, 0, 0);
+    h.camera.lookAt(h.controls.target);
+    const startMs = performance.now();
+    h.aim.invert();
+    h.aim.tick(startMs + AIM_T_MAX_MS - 50);
+    expect(h.aim.isActive()).toBe(true);
+  });
+
+  it('is suppressed while an aim already owns the camera', () => {
+    const h = makeHarness('navigate');
+    h.camera.position.set(10, 0, 0);
+    h.controls.target.set(0, 0, 0);
+    h.camera.lookAt(h.controls.target);
+    h.aim.aimAt(new THREE.Vector3(0, 10, 0));
+    h.aim.invert();
+    const startMs = performance.now();
+    h.aim.tick(startMs + PAST_SWEEP_MS);
+    // The original aim landed, not the invert.
+    expect(h.camera.position.y).toBeCloseTo(-10, 5);
+  });
+});

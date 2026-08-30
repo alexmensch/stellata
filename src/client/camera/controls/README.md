@@ -276,6 +276,17 @@ swing). The observe branch's swing angle uses the geodesic quaternion
 formula `2·acos(|q0·q1|)`; the navigate branch uses the planar
 `acos(dir0·dir1)` between unit direction vectors.
 
+`invert()` reuses both slots for the reciprocal pose — navigate negates the
+offset from the pivot, observe turns in place — and always runs the full
+`AIM_T_MAX_MS`, since a half turn is the cap by definition. It is the one
+motion here whose **path is not implied by its endpoints**: a 180° rotation
+has no unique axis, so rather than slerping two poses and taking whatever
+plane falls out, both branches compose an explicit half turn about the
+camera's local up onto their own start pose. That axis is perpendicular to
+the boresight by construction, which is what makes the endpoint exact as well
+as the route predictable. `../../attitude/README.md` § Inverting the view
+owns the user-facing definition.
+
 Composition split — `Stellata.aimAt(pointLocal)` is the dispatcher that
 owns the cross-controller busy gates (`warp.isActive()`,
 `cancelUnfocusLerp`, `cancelFocusLerp`, `isObserveTransitionActive`)
