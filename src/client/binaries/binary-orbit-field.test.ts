@@ -659,6 +659,36 @@ describe('BinaryOrbitField.update — hierarchical inner-pair physics', () => {
     expect(pert.length()).toBeGreaterThan(INNER_DISPLACEMENT_PC);
   });
 
+  it('relationOffsetPcInto answers R(t) about the relation ANCHOR, not the slot difference', () => {
+    const fx = makeAlgolFixture();
+    const field = new BinaryOrbitField(fx);
+    const r = new THREE.Vector3();
+    // No walk has run, so there is no ΔR to hand out.
+    expect(field.relationOffsetPcInto(0, r)).toBe(false);
+    field.update(tQuarter, closeCamera, 15, 1080, 0.8);
+    // Both pairs are circular, so |R(t)| is the semi-major axis at any t.
+    expect(field.relationOffsetPcInto(0, r)).toBe(true);
+    expect(r.length()).toBeCloseTo(2.8 * AU_PC, 12);
+    const outer = r.clone();
+    expect(field.relationOffsetPcInto(1, r)).toBe(true);
+    expect(r.length()).toBeCloseTo(0.06 * AU_PC, 12);
+    expect(field.relationOffsetPcInto(2, r)).toBe(false);
+    // Ab's slot minus Aa1's is NOT that offset: the inner pair split the
+    // shared primary slot again AFTER the outer step placed Ab, so the
+    // difference carries a q_inner·ΔR_inner the secondary never saw. Reading
+    // the barycentre off both slots inherits it, which is what pushed the
+    // drawn ring off Algol Ab.
+    const slotDiff = new THREE.Vector3(
+      fx.localPositions[6] - fx.localPositions[0],
+      fx.localPositions[7] - fx.localPositions[1],
+      fx.localPositions[8] - fx.localPositions[2],
+    );
+    // Bounded by q_inner·2a_inner, plus the float32 slot quantum at 2.64 pc.
+    const F32_TOL = 3e-7;
+    expect(slotDiff.sub(outer).length())
+      .toBeLessThanOrEqual(0.5 * INNER_DISPLACEMENT_PC + F32_TOL);
+  });
+
   it('focalPerturbationInto(Aa1) matches the shared-primary displacement', () => {
     const fx = makeAlgolFixture();
     const field = new BinaryOrbitField(fx);

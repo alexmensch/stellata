@@ -1132,7 +1132,12 @@ export class Stellata implements FrameAnchor {
         this.updateBinaryOrbits();
         // After the walk wrote this frame's slots, so each path rides its
         // pair's live barycentre drift.
-        this.binaryOrbitPathLayer.update(this.localPositions, ctx.camera, window.innerHeight);
+        this.binaryOrbitPathLayer.update(
+          this.binaryOrbitField,
+          this.localPositions,
+          ctx.camera,
+          window.innerHeight,
+        );
       },
       recenter: (newOrigin) => this.binaryOrbitField?.recenter(newOrigin),
       dispose: () => {

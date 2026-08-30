@@ -45,7 +45,10 @@ star catalog records.
   …)` walks `BinariesData.relations` in topological order, applies the
   LOD cascade, and rewrites the active slots of `localPositions` plus
   `compositeSuppress`; `recenter(newOrigin)` updates the cached world
-  offset. The static-frame skip, the `markBaselinesDirty()` contract and
+  offset. `relationOffsetPcInto` hands out one pair's rendered `R(t)` as
+  the walk placed it — the ANCHOR-relative offset, which for a
+  hierarchical outer pair is not the difference of the two slots
+  (`orbit-paths/README.md` § Anchor). The static-frame skip, the `markBaselinesDirty()` contract and
   `cadenceReport` each have a section below.
 - `focal-chain.ts` — `focalChainRelationSet(binaries, focalIdx)`: the
   relation-index set on a focal star's slot-chain (focal as primary or
@@ -164,7 +167,10 @@ wide Aa-Ab one, about which Aa2's own orbit says nothing.
 only**: a Tier-2 pair's plane is the galactic-plane fallback, so handing it
 out as an orbit normal would pass a convention off as a measurement. The
 attitude indicator levels on it (`../attitude/README.md` § Levelling on an
-orbit).
+orbit), and takes its zero-longitude datum from the same pair's OTHER
+member: the barycentre sits on the segment between the two, so the partner's
+live slot gives the direction to it and the mass split only sets how far
+along — which a longitude datum drops.
 
 ### Composition with proper-motion propagation
 
