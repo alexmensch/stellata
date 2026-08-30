@@ -47,15 +47,17 @@ export function focusedOrbitInto(
     systemXyz.z = pos[base + 2];
     const plane = starOrbitNormalIcrs(binaries, target.idx, systemXyz);
     if (plane === null) return false;
-    const r = binaries.relations[plane.relationIdx];
-    const partnerIdx = r.primaryIdx === target.idx ? r.secondaryIdx : r.primaryIdx;
     const local = stellata.localPositions;
-    const pBase = partnerIdx * 3;
+    const pBase = plane.partnerIdx * 3;
     if (pBase < 0 || pBase + 2 >= local.length) return false;
     const sBase = target.idx * 3;
-    // The barycentre lies on the segment between the two members, so the
-    // partner's direction IS the direction to the orbit's centre — the
+    // The barycentre lies on the segment between the pair's two members, so
+    // the partner's direction IS the direction to the orbit's centre — the
     // mass split only sets how far along, which a longitude datum drops.
+    // Riding an ancestor pair, the focused star sits inside one member's
+    // subsystem rather than on it; that subsystem is nested well inside the
+    // orbit it rides, so it moves the direction by far less than the datum
+    // resolves.
     out.toCentre.set(
       local[pBase + 0] - local[sBase + 0],
       local[pBase + 1] - local[sBase + 1],

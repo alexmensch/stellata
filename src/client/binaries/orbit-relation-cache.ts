@@ -84,14 +84,54 @@ export function keplerRelationParams(
   return { tier, elements: relationToElements(r) };
 }
 
-/** The plane `starIdx` itself rides, with the pair it came from — null when
- *  the star is in no pair, the pair carries no Kepler elements, or the pair
- *  is Tier 2, whose plane is a convention rather than a measurement
- *  (README § Which pair a star rides).
+/** The innermost Tier-1 pair `starIdx` rides, with the member of it on the
+ *  far side of the orbit — null when no pair on its chain carries a measured
+ *  plane (README § Which pair a star rides).
  *
- *  `relationIdx` is returned so a caller wanting the same pair's other
- *  member reads it off this answer rather than resolving the innermost
- *  relation a second time and trusting the two to agree.
+ *  The walk starts at the innermost pair naming the star and steps outward
+ *  through `parentRelation`, because a Tier-2 or Tier-3 inner pair must not
+ *  hide a measured outer one the star genuinely rides: refusing there is what
+ *  left both Dabih companions with no ORB frame while Dabih itself had one.
+ *  A chain with no Tier-1 pair anywhere still declines — the plane on offer
+ *  would be a convention dressed as a measurement.
+ *
+ *  `member` tracks which star represents the walked subsystem in the pair
+ *  under test. A hierarchical pair's PRIMARY is the node its parent also
+ *  moves (`binary-orbit-field` anchors the secondary on the primary's slot),
+ *  so stepping outward carries `primaryIdx` up; taking the other side of
+ *  the ancestor without it would answer with a star on the focused one's own
+ *  branch and put zero longitude inside the subsystem. */
+function innermostMeasuredOrbitOf(
+  binaries: BinariesData,
+  starIdx: number,
+): { relationIdx: number; partnerIdx: number } | null {
+  let relationIdx = innermostRelationOf(binaries, starIdx);
+  let member = starIdx;
+  const walked = new Set<number>();
+  while (relationIdx !== NO_PARENT && !walked.has(relationIdx)) {
+    walked.add(relationIdx);
+    const r = binaries.relations[relationIdx];
+    const params = keplerRelationParams(r);
+    if (params !== null && params.tier === 1) {
+      return {
+        relationIdx,
+        partnerIdx: r.primaryIdx === member ? r.secondaryIdx : r.primaryIdx,
+      };
+    }
+    member = r.primaryIdx;
+    relationIdx = r.parentRelation;
+  }
+  return null;
+}
+
+/** The plane `starIdx` rides, with the pair it came from and that pair's
+ *  other member — null when nothing on its chain carries a measured plane.
+ *
+ *  Both indices are returned so a caller wanting the longitude datum reads
+ *  them off this answer rather than resolving the pair a second time and
+ *  trusting the two to agree. `partnerIdx` is NOT derivable from
+ *  `relationIdx` and the focused star alone: an ancestor pair does not name
+ *  the star at all.
  *
  *  `systemXyzPc` is the pair's ICRS position, supplying the sky tangent
  *  basis the sky-frame normal projects through. */
@@ -99,15 +139,16 @@ export function starOrbitNormalIcrs(
   binaries: BinariesData,
   starIdx: number,
   systemXyzPc: Vec3,
-): { normal: Vec3; relationIdx: number } | null {
-  const relationIdx = innermostRelationOf(binaries, starIdx);
-  if (relationIdx === NO_PARENT) return null;
-  const params = keplerRelationParams(binaries.relations[relationIdx]);
-  if (params === null || params.tier !== 1) return null;
+): { normal: Vec3; relationIdx: number; partnerIdx: number } | null {
+  const ride = innermostMeasuredOrbitOf(binaries, starIdx);
+  if (ride === null) return null;
+  const params = keplerRelationParams(binaries.relations[ride.relationIdx]);
+  if (params === null) return null;
   const n = orbitNormalSky(params.elements);
   return {
     normal: projectSkyToICRS(systemXyzPc, n.north, n.east, n.radial),
-    relationIdx,
+    relationIdx: ride.relationIdx,
+    partnerIdx: ride.partnerIdx,
   };
 }
 

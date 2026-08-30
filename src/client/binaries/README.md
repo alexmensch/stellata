@@ -165,12 +165,33 @@ wide Aa-Ab one, about which Aa2's own orbit says nothing.
 
 `starOrbitNormalIcrs` is that pair's plane in ICRS, and it is **Tier 1
 only**: a Tier-2 pair's plane is the galactic-plane fallback, so handing it
-out as an orbit normal would pass a convention off as a measurement. The
-attitude indicator levels on it (`../attitude/README.md` § Levelling on an
-orbit), and takes its zero-longitude datum from the same pair's OTHER
-member: the barycentre sits on the segment between the two, so the partner's
-live slot gives the direction to it and the mass split only sets how far
-along — which a longitude datum drops.
+out as an orbit normal would pass a convention off as a measurement.
+
+**It answers with the innermost MEASURED pair, not the innermost pair.**
+When the innermost one is Tier 2 or Tier 3 the resolver steps outward
+through `parentRelation` to the first Tier-1 relation, because an unmeasured
+inner plane must not hide a measured outer one the star genuinely rides.
+Dabih is the case that forced it: β Cap's Aa–Ab pair is Tier 1, its Ab1–Ab2
+sub-pair is a spectroscopic Tier 2, and refusing at the innermost left
+*both* Ab and Ab2 with no ORB frame while Aa had one. Measured over
+`binaries.bin`, 468 of the 20,843 paired stars sit in that gap, reached in
+at most two hops. A chain with no Tier-1 pair anywhere still declines — the
+silent no-op is the unmeasured case, not the nested one.
+
+The zero-longitude datum is the answering pair's OTHER member: the
+barycentre sits on the segment between the two, so the partner's live slot
+gives the direction to it and the mass split only sets how far along — which
+a longitude datum drops. `starOrbitNormalIcrs` therefore returns
+`partnerIdx` alongside `relationIdx`, and **the caller must not re-derive
+it**: riding an ancestor pair, the focused star is not a member of the
+answering relation at all, so "the member that isn't me" has no answer at
+the call site. The walk tracks it instead, carrying each hop's `primaryIdx`
+outward — a hierarchical pair's primary is the node its parent also moves
+(§ Hierarchical walk), so that is the side the focused star's subsystem
+hangs from and the datum is the other one.
+
+The attitude indicator levels on all of it (`../attitude/README.md`
+§ Levelling on an orbit).
 
 ### Composition with proper-motion propagation
 

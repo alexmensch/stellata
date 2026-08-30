@@ -321,13 +321,21 @@ Capturing rather than only rolling is what makes it legible: rolling to a
 plane the instrument is not displaying leaves the caret reading un-level
 against the *old* frame, so the gesture would look like it had failed.
 
-**Always the innermost orbit the object is on.** Luna levels on its orbit
-about Earth, not Earth's about Sol; Algol Aa2 on its tight inner pair, not
-on the wide Aa-Ab one its primary also belongs to. Each subsystem answers
-from its own elements — `PlanetBodyField.orbitPlaneNormalOf` /
-`orbitCentreOffsetInto` for a body (`../solar-system/ephemerides/README.md`
-§ Orbit rings), `starOrbitNormalIcrs` plus `innermostRelationOf`'s partner
-slot for a pair (`../binaries/README.md` § Which pair a star rides).
+**Always the innermost orbit the object is on — that the model has measured.**
+Luna levels on its orbit about Earth, not Earth's about Sol; Algol Aa2 on its
+tight inner pair, not on the wide Aa-Ab one its primary also belongs to. Each
+subsystem answers from its own elements — `PlanetBodyField.orbitPlaneNormalOf`
+/ `orbitCentreOffsetInto` for a body (`../solar-system/ephemerides/README.md`
+§ Orbit rings), `starOrbitNormalIcrs` for a pair, which hands back the
+longitude datum with the plane (`../binaries/README.md` § Which pair a star
+rides).
+
+Where a star's innermost pair has no measured plane, the answer steps
+**outward** to the first pair that does, rather than declining: Dabih Ab and
+Ab2 sit in a spectroscopic sub-pair with no published inclination, and both
+ride β Cap's measured Aa-Ab orbit. Declining there is what left them with no
+ORB while Dabih itself had one. Only a chain with no measured pair anywhere
+is a no-op.
 
 **The obvious shortcut is wrong and must stay unused here.**
 `orbitalPlaneNormalFor()` answers per HOST STAR — the ecliptic for Sol,
@@ -336,11 +344,11 @@ solar-system object on the ecliptic and every moon on the wrong plane, while
 looking exactly like a working feature.
 
 Two silent no-ops, both deliberate, both because the plane on offer would be
-a convention dressed as a measurement: a **Tier-2 pair** (no published
-inclination, so its plane is the galactic fallback) and a **host with no live
-element source** (its rings fall back to `defaultOrbitGeometry`, flat on the
-host plane). Kinds that ride no orbit at all — probes, clouds, shells — are
-the third, and the ordinary one.
+a convention dressed as a measurement: a **Tier-2 pair with no measured pair
+above it either** (no published inclination, so its plane is the galactic
+fallback) and a **host with no live element source** (its rings fall back to
+`defaultOrbitGeometry`, flat on the host plane). Kinds that ride no orbit at
+all — probes, clouds, shells — are the third, and the ordinary one.
 
 The normal is a static function of the elements, not a sampled one: an orbit
 is planar, so `r(t) × r(t+dt)` recovers only what `Rz(Ω)·Rx(I)·Rz(ω)` and the
