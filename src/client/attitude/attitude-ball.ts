@@ -20,21 +20,6 @@ const deg = (d: number) => d * PX_PER_DEG;
 const lonToX = (d: number) => TEX_W * (d / 360 + 0.5);
 const latToY = (d: number) => TEX_H * (0.5 - d / 180);
 
-// The ball's model matrix is a reflection, so the texture reads back-to-front
-// in longitude unless every glyph is drawn mirrored to cancel it.
-function mirroredText(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  x: number,
-  y: number,
-) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(-1, 1);
-  ctx.fillText(text, 0, 0);
-  ctx.restore();
-}
-
 function segment(
   ctx: CanvasRenderingContext2D,
   x1: number,
@@ -83,30 +68,35 @@ function paintGraticule(ctx: CanvasRenderingContext2D) {
   }
 }
 
-/** Ticks along the prime meridian, in whichever ink the hemisphere needs. The
- *  flanking rails themselves are painted unclipped by `paintPrimeRails`. */
+/** The prime meridian's painted band: five equal stripes — dark, light, dark,
+ *  light, dark — reading outward from the centre line, matching the rail the
+ *  real ball carries. Drawn widest-first, each stroke over the last. */
+const PRIME_BANDS_DEG = [2.5, 1.5, 0.5];
+const PRIME_HALF_DEG = PRIME_BANDS_DEG[0] / 2;
+
+/** Ticks flanking the prime meridian, in whichever ink the hemisphere needs.
+ *  They start outside the painted band rather than crossing it. */
 function paintPrimeTicks(ctx: CanvasRenderingContext2D) {
   const x = lonToX(0);
+  const gap = deg(PRIME_HALF_DEG);
   ctx.lineWidth = 2.4;
   for (let lat = -88; lat <= 88; lat += SCALE_STEP_DEG) {
     const len = deg(lat % 10 === 0 ? 2.1 : 1.3);
     const y = latToY(lat);
-    segment(ctx, x - len, y, x + len, y);
+    segment(ctx, x - gap, y, x - gap - len, y);
+    segment(ctx, x + gap, y, x + gap + len, y);
   }
 }
 
-/** The prime meridian's rails: a dark line flanked by two light ones of equal
- *  thickness. Drawn unclipped, so each hemisphere shows the half that contrasts
- *  — a plain dark line across the light side, a split light rail across the
- *  dark one. */
+/** The prime meridian's rails, painted unclipped so each hemisphere shows
+ *  whichever bands contrast against it. */
 function paintPrimeRails(ctx: CanvasRenderingContext2D) {
   const x = lonToX(0);
-  ctx.strokeStyle = LIGHT;
-  ctx.lineWidth = deg(1.35);
-  segment(ctx, x, 0, x, TEX_H);
-  ctx.strokeStyle = DARK;
-  ctx.lineWidth = deg(0.45);
-  segment(ctx, x, 0, x, TEX_H);
+  PRIME_BANDS_DEG.forEach((width, i) => {
+    ctx.strokeStyle = i % 2 === 0 ? DARK : LIGHT;
+    ctx.lineWidth = deg(width);
+    segment(ctx, x, 0, x, TEX_H);
+  });
 }
 
 /** The equator needs no line of its own — it is the seam between the two
@@ -121,29 +111,98 @@ function paintEquatorTicks(ctx: CanvasRenderingContext2D) {
   }
 }
 
+const GLYPH_DEG = 7.5;
+const GLYPH_PAD_DEG = 1.6;
+
+/** One numeral, cleared of the lines running under it.
+ *
+ *  **Two horizontal corrections ride the same transform.** The mirror cancels
+ *  the ball's reflected model matrix; the `1 / cos(lat)` stretch cancels the
+ *  equirectangular squeeze, which narrows a fixed-width glyph toward the poles
+ *  — on a real ball the numerals were painted at constant size on the surface,
+ *  so undoing the projection is what reproduces that. */
+function numeral(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  lon: number,
+  lat: number,
+  bg: string,
+  ink: string,
+) {
+  const stretch = 1 / Math.max(0.2, Math.cos((lat * Math.PI) / 180));
+  const y = latToY(lat);
+  const w = (ctx.measureText(text).width + deg(GLYPH_PAD_DEG)) * stretch;
+  const h = deg(GLYPH_DEG + GLYPH_PAD_DEG);
+  const x = lonToX(lon);
+
+  // A numeral straddling ±180° sits on the texture's own edge, so half of it
+  // would fall off the canvas — draw the wrapped copy too and let RepeatWrapping
+  // join them.
+  const copies = [x];
+  if (x - w / 2 < 0) copies.push(x + TEX_W);
+  if (x + w / 2 > TEX_W) copies.push(x - TEX_W);
+
+  for (const cx of copies) {
+    ctx.fillStyle = bg;
+    ctx.fillRect(cx - w / 2, y - h / 2, w, h);
+    ctx.fillStyle = ink;
+    ctx.save();
+    ctx.translate(cx, y);
+    ctx.scale(-stretch, 1);
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
+  }
+}
+
 /** FDAI numerals: tens of degrees with the trailing zero dropped, one size
- *  throughout. Latitude drops its sign too — the hemisphere's own colour is
- *  what says south, which is the whole point of a two-tone ball. */
-function paintLabels(ctx: CanvasRenderingContext2D, north: boolean) {
+ *  throughout, painted at **every crossing of a solid line with a tick track**
+ *  — the solid line's own value, so following a line around the ball reads the
+ *  same number the whole way. Two exceptions: nothing above ±60°, where the
+ *  meridians crowd, and nothing on the prime meridian, which carries its own
+ *  rail and the two `0` badges instead. */
+function paintNumerals(ctx: CanvasRenderingContext2D, north: boolean) {
+  const bg = north ? LIGHT : DARK;
+  const ink = north ? DARK : LIGHT;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `600 ${deg(7.5)}px ${FONT}`;
+  ctx.font = `600 ${deg(GLYPH_DEG)}px ${FONT}`;
 
+  const trackLats = north ? [15, 45] : [-15, -45];
   for (let lon = -180; lon < 180; lon += SOLID_STEP_DEG) {
-    const tens = Math.round((((lon % 360) + 360) % 360) / 10);
-    mirroredText(ctx, String(tens), lonToX(lon + 7), latToY(north ? 10 : -10));
+    if (lon === 0) continue;
+    const tens = String(Math.round((((lon % 360) + 360) % 360) / 10));
+    for (const lat of trackLats) numeral(ctx, tens, lon, lat, bg, ink);
   }
 
+  const trackLons: number[] = [];
+  for (let lon = -165; lon <= 165; lon += SOLID_STEP_DEG) trackLons.push(lon);
   for (const lat of north ? [30, 60] : [-30, -60]) {
-    const tens = Math.abs(lat) / 10;
-    for (const lon of [0, 90, 180, 270]) {
-      mirroredText(
-        ctx,
-        String(tens),
-        lonToX(lon + 7),
-        latToY(lat - Math.sign(lat) * 6),
-      );
-    }
+    const tens = String(Math.abs(lat) / 10);
+    for (const lon of trackLons) numeral(ctx, tens, lon, lat, bg, ink);
+  }
+}
+
+/** The two `0` badges: light D-shapes, flat edge against the equator, hanging
+ *  into the dark hemisphere at ±15° of the prime meridian. */
+function paintZeroBadges(ctx: CanvasRenderingContext2D) {
+  const h = deg(GLYPH_DEG + GLYPH_PAD_DEG);
+  const w = deg(6.5);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `600 ${deg(GLYPH_DEG)}px ${FONT}`;
+  for (const lon of [15, -15]) {
+    const x = lonToX(lon);
+    const top = latToY(0) + deg(0.6);
+    ctx.fillStyle = LIGHT;
+    ctx.beginPath();
+    ctx.roundRect(x - w / 2, top, w, h, [deg(0.6), deg(0.6), w / 2, w / 2]);
+    ctx.fill();
+    ctx.fillStyle = DARK;
+    ctx.save();
+    ctx.translate(x, top + h / 2 - deg(0.8));
+    ctx.scale(-1, 1);
+    ctx.fillText('0', 0, 0);
+    ctx.restore();
   }
 }
 
@@ -168,10 +227,18 @@ export function buildBallTexture(): THREE.CanvasTexture {
     paintGraticule(ctx);
     paintPrimeTicks(ctx);
     if (north) paintEquatorTicks(ctx);
-    paintLabels(ctx, north);
     ctx.restore();
   }
   paintPrimeRails(ctx);
+  for (const north of [true, false]) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, north ? 0 : equator, TEX_W, north ? equator : TEX_H - equator);
+    ctx.clip();
+    paintNumerals(ctx, north);
+    ctx.restore();
+  }
+  paintZeroBadges(ctx);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;

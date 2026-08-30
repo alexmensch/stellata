@@ -1277,9 +1277,18 @@ body.monochrome .poi-label {
   font-family: inherit;
 }
 
-/* Spike: gyro-sphere attitude indicator, drawn in attitude/. */
+/* Gyro-sphere attitude indicator, drawn in attitude/. Stacks above the
+   scale bar; the frame flag sits in the instrument's own bottom-left
+   corner, the way a mode flag sits on an aircraft AI. */
+.bottom-left-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  pointer-events: none;
+}
+.bottom-left-stack > * { pointer-events: auto; }
 .attitude {
-  margin-bottom: 8px;
   color: var(--fg);
   font-size: 10.5px;
   letter-spacing: 0.06em;
@@ -1322,33 +1331,19 @@ body.monochrome .poi-label {
 .ai-chrome .ai-symbol circle {
   fill: #ffd24a;
 }
-.attitude-bar {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 5px;
-}
 .attitude-frame {
-  background: none;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  background: rgba(7, 9, 18, 0.72);
   border: 1px solid var(--border-strong);
   border-radius: 3px;
   color: var(--fg);
   font: inherit;
+  font-size: 10.5px;
   letter-spacing: 0.08em;
   padding: 1px 5px;
   cursor: pointer;
-}
-.attitude-coords,
-.attitude-bank {
-  color: var(--fg-dim);
-  white-space: nowrap;
-}
-.attitude-bank {
-  display: block;
-  margin-top: 2px;
-}
-.attitude-bank.is-warn {
-  color: #ffb35c;
 }
 
 .tooltip {

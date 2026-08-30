@@ -1,17 +1,18 @@
-// Throwaway spike: a gyro-sphere attitude indicator driven by the camera
-// quaternion against a selectable reference frame, with click-to-level.
+// A gyro-sphere attitude indicator driven by the camera quaternion against a
+// reference frame that follows the focused object, with click-to-level.
 
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { createAttitudeBall } from './attitude-ball';
 import {
   buildReferenceFrames,
-  formatLatitude,
+  captureReferenceFrame,
   readAttitude,
   type Attitude,
   type ReferenceFrame,
   type ReferenceFrameKey,
 } from './attitude-pure';
+import type { Target } from '../camera/focus/focus-target';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -25,8 +26,25 @@ const BALL_R = (BALL_PX / 2) * (Math.tan(Math.asin(1 / 6)) / Math.tan((10 * Math
 // Roll is unbounded out here, so the scale runs the whole way round rather
 // than covering the shallow band an aircraft lives in.
 const BANK_TICK_STEP_DEG = 5;
-const POLE_WARN_SIN = Math.sin((15 * Math.PI) / 180);
 const FRAME_CYCLE: ReferenceFrameKey[] = ['equatorial', 'ecliptic', 'galactic'];
+
+/** Which frame the focused object implies. Everything in Sol's system rides
+ *  the ecliptic — that is the plane its planets actually orbit in — with Earth
+ *  the single exception, where RA/Dec is the frame anyone reading the sky from
+ *  the surface already thinks in. Beyond the system, galactic is the only frame
+ *  still defined by something real. */
+function autoFrameFor(stellata: Stellata, target: Target | null): ReferenceFrameKey {
+  if (target === null) return 'galactic';
+  if (target.kind === 'planet') {
+    const name = stellata.kinds.planet?.displayName(target.idx);
+    return name === 'Earth' ? 'equatorial' : 'ecliptic';
+  }
+  if (target.kind === 'probe') return 'ecliptic';
+  if (target.kind === 'star' && target.idx === stellata.catalog.solIndex) {
+    return 'ecliptic';
+  }
+  return 'galactic';
+}
 
 function el<K extends keyof SVGElementTagNameMap>(
   tag: K,
@@ -114,19 +132,22 @@ function buildSymbol() {
   return g;
 }
 
-/** The FDAI roll caret: a light **equilateral** triangle carrying a dark
- *  **isoceles** one whose base is the same segment, so the light survives as a
- *  chevron — solid at the tip, tapering to nothing at the base corners. That
- *  bright wedge is what keeps the caret legible against either hemisphere
- *  passing underneath. Inset apex sits `INSET_APEX_FRAC` down the height. */
+/** The FDAI roll caret: a light **equilateral** triangle carrying a narrow dark
+ *  **isoceles** one on the same base line. The dark triangle is a little over a
+ *  third as wide and all but as tall, so the light reads as an outline that
+ *  thickens toward the base corners and closes over a hairline gap at the tip.
+ *  Scaling a second equilateral inside the first is the wrong shape — it leaves
+ *  an even border instead. */
 const CARET_HALF_BASE = 8;
-const INSET_APEX_FRAC = 0.38;
+const INSET_BASE_FRAC = 0.36;
+const INSET_HEIGHT_FRAC = 0.99;
 
 function buildBankPointer() {
   const g = el('g');
   const tip = C - BALL_R + 1;
   const height = CARET_HALF_BASE * Math.sqrt(3);
   const base = tip + height;
+  const inset = CARET_HALF_BASE * INSET_BASE_FRAC;
   g.appendChild(
     el('polygon', {
       points: `${C},${tip} ${C - CARET_HALF_BASE},${base} ${C + CARET_HALF_BASE},${base}`,
@@ -135,26 +156,31 @@ function buildBankPointer() {
   );
   g.appendChild(
     el('polygon', {
-      points: `${C},${tip + height * INSET_APEX_FRAC} ${C - CARET_HALF_BASE},${base} ${C + CARET_HALF_BASE},${base}`,
+      points: `${C},${base - height * INSET_HEIGHT_FRAC} ${C - inset},${base} ${C + inset},${base}`,
       class: 'ai-bank-pointer-inset',
     }),
   );
   return g;
 }
 
-export function createAttitudeIndicator(stellata: Stellata) {
+export interface AttitudeIndicator {
+  /** Zero the roll against the active frame. Bound to a click on the ball and
+   *  to the `L` shortcut. */
+  level(): void;
+}
+
+export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator | null {
   const host = document.getElementById('attitude');
-  if (!host) return;
+  if (host === null) return null;
   host.hidden = false;
   host.innerHTML = '';
+  host.style.width = `${BOX}px`;
 
   const frames = buildReferenceFrames();
-  let frameKey: ReferenceFrameKey = 'equatorial';
-  let frame: ReferenceFrame = frames[frameKey];
+  let frame: ReferenceFrame = frames.equatorial;
 
   const ball = createAttitudeBall(BALL_PX);
 
-  host.style.width = `${BOX}px`;
   const stage = document.createElement('div');
   stage.className = 'attitude-stage';
   stage.style.width = `${BOX}px`;
@@ -171,24 +197,34 @@ export function createAttitudeIndicator(stellata: Stellata) {
   svg.appendChild(bankPointer);
   svg.appendChild(buildSymbol());
   stage.appendChild(svg);
-  host.appendChild(stage);
 
-  const bar = document.createElement('div');
-  bar.className = 'attitude-bar';
   const frameBtn = document.createElement('button');
   frameBtn.type = 'button';
   frameBtn.className = 'attitude-frame';
   frameBtn.textContent = frame.label;
-  const coords = document.createElement('span');
-  coords.className = 'attitude-coords';
-  const bankLabel = document.createElement('span');
-  bankLabel.className = 'attitude-bank';
-  bar.append(frameBtn, coords);
-  host.append(bar, bankLabel);
+  frameBtn.title = 'Reference frame — click to cycle, right-click the ball to set REF';
+  stage.appendChild(frameBtn);
+  host.appendChild(stage);
 
   const attitude: Attitude = { pitchRad: 0, bankRad: 0, lonRad: 0, sinFromPole: 1 };
+  const lastQuat = new THREE.Quaternion(2, 2, 2, 2);
 
-  function levelNow() {
+  function draw() {
+    const camera = stellata.camera;
+    lastQuat.copy(camera.quaternion);
+    ball.render(camera, frame);
+    readAttitude(camera, frame, attitude);
+    const bankDeg = (attitude.bankRad * 180) / Math.PI;
+    bankPointer.setAttribute('transform', `rotate(${bankDeg.toFixed(2)} ${C} ${C})`);
+  }
+
+  function setFrame(next: ReferenceFrame) {
+    frame = next;
+    frameBtn.textContent = frame.label;
+    draw();
+  }
+
+  function level() {
     if (stellata.isCameraTransitionActive()) return;
     const camera = stellata.camera;
     const ref = stellata.referenceUp;
@@ -197,51 +233,37 @@ export function createAttitudeIndicator(stellata: Stellata) {
     } else {
       ref.snapReferenceTo(camera, frame.pole);
     }
+    draw();
   }
 
-  stage.addEventListener('click', levelNow);
+  stage.addEventListener('click', level);
+  stage.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    frames.reference = captureReferenceFrame(stellata.camera);
+    setFrame(frames.reference);
+  });
   stage.setAttribute('role', 'button');
   stage.setAttribute('tabindex', '0');
   stage.setAttribute('aria-label', 'Level the camera against the reference frame');
-  stage.title = 'Click to level';
+  stage.title = 'Click to level · right-click to set REF here';
 
-  frameBtn.addEventListener('click', () => {
-    frameKey = FRAME_CYCLE[(FRAME_CYCLE.indexOf(frameKey) + 1) % FRAME_CYCLE.length];
-    frame = frames[frameKey];
-    frameBtn.textContent = frame.label;
-    lastQuat.set(2, 2, 2, 2);
+  frameBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const at = FRAME_CYCLE.indexOf(frame.key);
+    setFrame(frames[FRAME_CYCLE[(at + 1) % FRAME_CYCLE.length]]);
   });
 
-  const lastQuat = new THREE.Quaternion(2, 2, 2, 2);
-  let lastCoords = '';
-  let lastBank = '';
+  // A manual pick holds only until the focus next changes — overriding sticks
+  // while you study one object without freezing the automatic choice forever.
+  stellata.on('focus', (target) => {
+    setFrame(frames[autoFrameFor(stellata, target)]);
+  });
 
   stellata.on('frame', () => {
-    const camera = stellata.camera;
-    if (lastQuat.equals(camera.quaternion)) return;
-    lastQuat.copy(camera.quaternion);
-
-    ball.render(camera, frame);
-    readAttitude(camera, frame, attitude);
-
-    const bankDeg = (attitude.bankRad * 180) / Math.PI;
-    bankPointer.setAttribute('transform', `rotate(${bankDeg.toFixed(2)} ${C} ${C})`);
-
-    const text = `${frame.lonSymbol} ${frame.formatLon(attitude.lonRad)}  ${frame.latSymbol} ${formatLatitude(attitude.pitchRad)}`;
-    if (text !== lastCoords) {
-      coords.textContent = text;
-      lastCoords = text;
-    }
-
-    const nearPole = attitude.sinFromPole < POLE_WARN_SIN;
-    const shown = -bankDeg;
-    const bank = nearPole
-      ? 'over the pole'
-      : `bank ${Math.abs(shown).toFixed(0)}° ${shown >= 0 ? 'R' : 'L'}`;
-    if (bank !== lastBank) {
-      bankLabel.textContent = bank;
-      bankLabel.classList.toggle('is-warn', nearPole);
-      lastBank = bank;
-    }
+    if (lastQuat.equals(stellata.camera.quaternion)) return;
+    draw();
   });
+
+  draw();
+  return { level };
 }

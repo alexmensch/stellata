@@ -27,6 +27,7 @@ export const SHORTCUTS: readonly ShortcutDescriptor[] = [
   { keys: ['W'], label: 'Warp to the destination' },
   { keys: ['C'], label: 'Show a constellation' },
   { keys: ['S'], label: 'Cycle the coordinate sphere: none → galactic → equatorial' },
+  { keys: ['L'], label: 'Level the camera against the attitude indicator' },
   { keys: ['H'], label: 'Toggle the head-up display (HUD)' },
   { keys: ['R'], label: 'Reset FOV, exposure & exaggeration' },
   { keys: ['T'], label: 'Open the time scrubber' },

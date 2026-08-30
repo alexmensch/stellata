@@ -10,17 +10,18 @@ import {
 } from '../camera/controls/input/reference-up-pure';
 import { galacticDirToIcrs } from '../galactic/galactic-coords';
 
-export type ReferenceFrameKey = 'equatorial' | 'ecliptic' | 'galactic';
+export type ReferenceFrameKey =
+  | 'equatorial'
+  | 'ecliptic'
+  | 'galactic'
+  | 'reference';
 
 export interface ReferenceFrame {
   key: ReferenceFrameKey;
   label: string;
-  latSymbol: string;
-  lonSymbol: string;
   pole: THREE.Vector3;
   zeroLon: THREE.Vector3;
   east: THREE.Vector3;
-  formatLon(rad: number): string;
 }
 
 export interface Attitude {
@@ -35,11 +36,8 @@ const OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
 function makeFrame(
   key: ReferenceFrameKey,
   label: string,
-  latSymbol: string,
-  lonSymbol: string,
   pole: THREE.Vector3,
   zeroLonSeed: THREE.Vector3,
-  formatLon: (rad: number) => string,
 ): ReferenceFrame {
   const p = pole.clone().normalize();
   const zeroLon = zeroLonSeed
@@ -49,30 +47,19 @@ function makeFrame(
   return {
     key,
     label,
-    latSymbol,
-    lonSymbol,
     pole: p,
     zeroLon,
     east: new THREE.Vector3().crossVectors(p, zeroLon),
-    formatLon,
   };
 }
 
-export function formatDegrees(rad: number): string {
-  const deg = ((rad * 180) / Math.PI + 360) % 360;
-  return `${deg.toFixed(1)}°`;
-}
-
-export function formatHours(rad: number): string {
-  const hours = ((rad * 12) / Math.PI + 24) % 24;
-  const h = Math.floor(hours);
-  const m = Math.floor((hours - h) * 60);
-  return `${h}h${String(m).padStart(2, '0')}m`;
-}
-
-export function formatLatitude(rad: number): string {
-  const deg = (rad * 180) / Math.PI;
-  return `${deg >= 0 ? '+' : '−'}${Math.abs(deg).toFixed(1)}°`;
+/** Shuttle's ATT REF: plant a datum on the attitude the camera holds right
+ *  now, so the ball reads 0/0 level from here. The camera's own up and
+ *  boresight are already perpendicular, which is exactly a frame. */
+export function captureReferenceFrame(camera: THREE.Camera): ReferenceFrame {
+  const pole = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+  const boresight = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+  return makeFrame('reference', 'REF', pole, boresight);
 }
 
 export function buildReferenceFrames(): Record<ReferenceFrameKey, ReferenceFrame> {
@@ -87,29 +74,16 @@ export function buildReferenceFrames(): Record<ReferenceFrameKey, ReferenceFrame
     equatorial: makeFrame(
       'equatorial',
       'EQU',
-      'δ',
-      'α',
       new THREE.Vector3(0, 0, 1),
       new THREE.Vector3(1, 0, 0),
-      formatHours,
     ),
-    ecliptic: makeFrame(
-      'ecliptic',
-      'ECL',
-      'β',
-      'λ',
-      eclipticPole,
+    ecliptic: makeFrame('ecliptic', 'ECL', eclipticPole, new THREE.Vector3(1, 0, 0)),
+    galactic: makeFrame('galactic', 'GAL', galacticPole, galacticCentre),
+    reference: makeFrame(
+      'reference',
+      'REF',
+      new THREE.Vector3(0, 0, 1),
       new THREE.Vector3(1, 0, 0),
-      formatDegrees,
-    ),
-    galactic: makeFrame(
-      'galactic',
-      'GAL',
-      'b',
-      'l',
-      galacticPole,
-      galacticCentre,
-      formatDegrees,
     ),
   };
 }

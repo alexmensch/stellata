@@ -234,7 +234,7 @@ async function main() {
     // shares that module's apparent-size ranking pass.
     createMilkyWayLabel(stellata);
     createScaleBar(stellata);
-    createAttitudeIndicator(stellata);
+    const attitude = createAttitudeIndicator(stellata);
     bindWarpButton(stellata);
     bindModeToggle(stellata);
     // Hide the #overlay SVG (HUD arrows, focus ring, distance vector,
@@ -304,6 +304,7 @@ async function main() {
       bindBrandModals(catalog.count);
       bindControlsHideToggle();
       bindKeyboardShortcuts(stellata, {
+        levelAttitude: () => attitude?.level(),
         toggleDebugPanel: debugTools.panel,
         timeScrubber,
       });

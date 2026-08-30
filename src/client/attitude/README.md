@@ -1,22 +1,46 @@
-# Attitude indicator — spike
+# Attitude indicator
 
-**Throwaway.** A branch-only experiment in giving the camera an attitude
-indicator so the viewer always knows which way is "up" relative to a chosen
-reference plane. A gyro-sphere — the old gimballed 8-ball, rendered as a real
-sphere — not a flat two-tone horizon. Delete the folder and its three wiring
-lines (`index.html`, `main.ts`, `styles.css`) and nothing else changes.
+Stellata has no canonical up, only conventions. This is the instrument that
+tells you which way you are oriented: an FDAI-style gyro-sphere — the Apollo
+8-ball, rendered as a real sphere — reading the camera quaternion against a
+reference frame that follows whatever is focused.
+
+The prior art is worth knowing, because it settles the design: Apollo carried
+no single up either. Its 8-ball read against a REFSMMAT — a matrix the crews
+swapped per mission phase — and the Shuttle ADI put the choice on a switch
+(INRTL / LVLH / REF). Real spacecraft pick a reference by regime, which is what
+the focus rule below does, and capture one on demand, which is what right-click
+does.
 
 ## Files
 
 ```
-attitude-pure.ts (+ test)  Frame table (equatorial / ecliptic / galactic), the
-                           camera→(pitch, bank, longitude) read, and the ball's
-                           model matrix.
+attitude-pure.ts (+ test)  Frame table (equatorial / ecliptic / galactic /
+                           captured REF), the camera→(pitch, bank, longitude)
+                           read, and the ball's model matrix.
 attitude-ball.ts           The painted grid texture and the standalone mini
                            renderer that draws the sphere.
-attitude-indicator.ts      The instrument: canvas + fixed SVG chrome, bottom
-                           left, plus click-to-level and the frame chip.
+attitude-indicator.ts      The instrument: canvas + fixed SVG chrome, the
+                           corner frame flag, and the level affordances.
 ```
+
+## Which frame, and who chooses
+
+`autoFrameFor` reads the focused object: **ecliptic** across Sol's system —
+that is the plane its planets actually orbit in — with **Earth** the single
+exception, where RA/Dec is the frame anyone reading the sky from the surface
+already thinks in, and **galactic** beyond, the only frame out there still
+defined by something real.
+
+Two overrides, both outranking the rule until the focus next changes: the
+corner flag cycles EQU → ECL → GAL, and **right-clicking the ball captures
+REF** — a datum planted on the attitude held right now, so the ball reads 0/0
+level from here. That is the Shuttle's ATT REF button, and it is the answer to
+"what is level outside the galaxy", where no inherited frame means anything.
+
+`level()` — a click on the ball, or `L` — zeroes **roll only**. Levelling
+pitch would move the camera through space in NAVIGATE, where it orbits a
+target rather than turning in place.
 
 ## What it reads
 
@@ -31,16 +55,17 @@ pole plus a zero-longitude direction, and the instrument needs nothing but
   the equatorial frame, ecliptic longitude λ, galactic l.
 - **bank** — the signed roll from level, about the view axis. Positive means
   the frame's north lies clockwise of screen-up, which is a **left** bank in
-  aircraft convention, so the readout negates it.
+  aircraft convention.
+
+Pitch and longitude are read but not printed: the ball shows them directly,
+which is the point of a sphere over a flat horizon. Only bank drives chrome —
+it aims the roll caret.
 
 Near the pole the level up shrinks to nothing and the bank stops being a
-measurement. **Two cones, and they are not the same number.** Inside
-`POLE_HOLD_DEG` (1°) the read declines to write bank at all and the last one
-stands, so crossing the pole doesn't spin the ball on float noise; the
-*readout* warns from 15° out, matching the `POLE_CONE_DEG` the roll correction
-itself eases off inside (`../camera/controls/input/reference-up-pure.ts`).
-Between the two the ball still tracks, and it is genuinely twitchy there —
-that twitch is the honest reading.
+measurement. Inside `POLE_HOLD_DEG` (1°) the read declines to write bank at all
+and the last one stands, so crossing the pole doesn't swing the caret on float
+noise. Outside it the caret tracks honestly, including the genuinely twitchy
+band just beyond.
 
 ## The ball's matrix is a reflection, and that is the whole trick
 
@@ -141,17 +166,12 @@ even border rather than a chevron.
 
 ## Levelling
 
-Clicking the ball zeroes the **roll** only — the boresight does not move. That
-is deliberate: in NAVIGATE the camera orbits a target, so pitching to the
-horizon would move the camera through space, not just turn it.
-
-The two modes need different calls, matching the split in
+The two camera modes need different calls, matching the split in
 `../camera/controls/input/README.md` § Snap-to-level: NAVIGATE re-anchors the
 reference axis (`snapReferenceTo`), OBSERVE rolls the quaternion by
 `renderedRollError`.
 
-**Known inconsistency, left in on purpose:** the drag-time snap-to-level guide
-sticks to `coordSphereNorthPole(filter.coordSphere)` — the *displayed* grid —
-while this instrument levels against whichever frame its chip selects. Pick
-`ECL` here and the 2° guide during a Shift-drag still sticks to galactic or
-equatorial. Unifying the two is part of what the spike is for.
+**Known inconsistency:** the drag-time snap-to-level guide sticks to
+`coordSphereNorthPole(filter.coordSphere)` — the *displayed* grid — while this
+instrument levels against whichever frame the flag holds. Pick `ECL` here and
+the 2° guide during a Shift-drag still sticks to galactic or equatorial.
