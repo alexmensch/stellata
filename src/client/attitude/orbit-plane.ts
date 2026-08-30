@@ -5,8 +5,6 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import type { Target } from '../camera/focus/focus-target';
 import { starOrbitNormalIcrs } from '../binaries/orbit-relation-cache';
-import { innermostRelationOf } from '../binaries/focal-chain';
-import { NO_PARENT } from '../binaries/binaries-loader';
 
 const systemXyz = { x: 0, y: 0, z: 0 };
 
@@ -21,13 +19,11 @@ export interface FocusedOrbit {
 
 /** Fill `out` with the orbit the focused object itself rides, or false when
  *  it rides none the model has measured elements for.
+ *  README.md § Levelling on an orbit.
  *
- *  Always the INNERMOST orbit the object is on: Luna's about Earth, not
- *  Earth's about Sol; Algol Aa2's tight inner pair, not the wide Aa-Ab
- *  one its primary also belongs to. Each subsystem answers from its own
- *  elements — there is no cross-kind orbit accessor, and the per-host
- *  `orbitalPlaneNormalFor` is not one: it answers for the HOST STAR, so
- *  every solar-system body would come back on the ecliptic. */
+ *  Never route a body through `orbitalPlaneNormalFor`: it answers per HOST
+ *  STAR, so every solar-system object would come back on the ecliptic while
+ *  looking like a working feature. */
 export function focusedOrbitInto(
   out: FocusedOrbit,
   stellata: Stellata,
@@ -49,11 +45,9 @@ export function focusedOrbitInto(
     systemXyz.x = pos[base];
     systemXyz.y = pos[base + 1];
     systemXyz.z = pos[base + 2];
-    const n = starOrbitNormalIcrs(binaries, target.idx, systemXyz);
-    if (n === null) return false;
-    const ri = innermostRelationOf(binaries, target.idx);
-    if (ri === NO_PARENT) return false;
-    const r = binaries.relations[ri];
+    const plane = starOrbitNormalIcrs(binaries, target.idx, systemXyz);
+    if (plane === null) return false;
+    const r = binaries.relations[plane.relationIdx];
     const partnerIdx = r.primaryIdx === target.idx ? r.secondaryIdx : r.primaryIdx;
     const local = stellata.localPositions;
     const pBase = partnerIdx * 3;
@@ -67,7 +61,7 @@ export function focusedOrbitInto(
       local[pBase + 1] - local[sBase + 1],
       local[pBase + 2] - local[sBase + 2],
     );
-    out.normal.set(n.x, n.y, n.z).normalize();
+    out.normal.set(plane.normal.x, plane.normal.y, plane.normal.z).normalize();
     return true;
   }
   return false;
