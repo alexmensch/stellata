@@ -7,7 +7,7 @@ import type { CameraMode, StellataEventMap } from '../../stellata';
 import type { Target } from '../focus/focus-target';
 import type { EventBus } from '../../util/event-bus';
 import type { AimController } from '../controls/aim-controller';
-import type { ReferenceUpController } from '../controls/input/reference-up';
+import type { RollController } from '../controls/input/roll-controller';
 import type { ObserveControls } from './observe-controls';
 import {
   type ArrivalState,
@@ -95,7 +95,7 @@ export interface ObserveTransitionDeps {
    *  handover). The controller calls `aim.cancel()` at every startExit
    *  entry. */
   aim: AimController;
-  referenceUp: ReferenceUpController;
+  roll: RollController;
   /** Per-kind focal-body hide (star: uHideFocusIdx; planet: the body
    *  field's uHideIdx). The 'enter' kind hides the focal body at
    *  finish (the user is standing ON it — its disc would render from
@@ -241,7 +241,7 @@ export class ObserveTransition {
       // local origin (or world origin when unfocused) and
       // TrackballControls re-enables.
       this.deps.controls.target.set(0, 0, 0);
-      this.deps.referenceUp.adoptFromCamera(this.deps.camera);
+      this.deps.roll.adoptFromCamera(this.deps.camera);
       this.deps.controls.update();
       this.deps.controls.enabled = true;
       this.state = null;
@@ -436,7 +436,7 @@ export class ObserveTransition {
       // target = (0,0,0) would whip the camera onto the focal star;
       // target = fromPos keeps lookAt a no-op.
       this.deps.controls.target.copy(state.fromPos);
-      this.deps.referenceUp.adoptFromCamera(this.deps.camera);
+      this.deps.roll.adoptFromCamera(this.deps.camera);
       this.deps.controls.update();
       this.deps.controls.enabled = true;
       if (state.clearFocusOnExit) this.deps.focus.setFocus(null);

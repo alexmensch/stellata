@@ -1,8 +1,7 @@
 # Camera input
 
-Canvas gestures and the camera state they drive: the click FSM, the
-reference up axis that keeps the view galactic-level, the roll gestures,
-and pinch-to-zoom. TrackballControls' own tuning lives here too — the
+Canvas gestures and the camera state they drive: the click FSM, the two
+roll authorities and the gestures that write them, and pinch-to-zoom. TrackballControls' own tuning lives here too — the
 gestures below toggle its `noRotate` / `noPan` flags.
 
 ## Files
@@ -11,10 +10,11 @@ gestures below toggle its `noRotate` / `noPan` flags.
   listener: the click FSM (single/double dispatch in both modes, the
   kind-generic click ladder, cloud click semantics), the roll gestures,
   and the pinch normaliser.
-- `reference-up.ts` (+ test) — `ReferenceUpController`: the persistent
-  reference up axis and the per-frame `camera.up` correction.
-- `reference-up-pure.ts` (+ test) — roll algebra: level-up projection,
-  pole-cone weight, signed roll angles, camera-local up.
+- `roll-controller.ts` (+ test) — `RollController`: the roll operations
+  on `camera.up` and on the quaternion, one authority per camera mode.
+  Holds no state of its own beyond scratch. § Roll authority.
+- `roll-pure.ts` (+ test) — roll algebra: level-up projection, signed
+  roll angles, camera-local up, and the guide band.
 - `pinch-zoom-pure.ts` (+ test) — pinch-delta → wheel-notch normalisation
   (`PINCH_NOTCH_GAIN`, `pinchStep`).
 - `trackball-settle.ts` (+ test) — `TrackballSettle`: stops the damping
@@ -48,7 +48,7 @@ The controller sees the rest of the app only through its deps
 closures (busy gates, Target-keyed focus/vector reads, flyTo /
 setOrbitTarget / unfocus / togglePoi / aimAt) — it owns
 dispatch order and gesture math, never focus or camera-transition
-state. Roll math delegates to `ReferenceUpController`, which owns the
+state. Roll math delegates to `RollController`, which owns the
 scratch vectors; the per-gesture-event path allocates nothing.
 
 ## TrackballControls tuning
@@ -161,93 +161,70 @@ The OBSERVE half of the same defect is not floored but removed: its look
 pin is re-derived only on rotation (`../../observe/README.md`
 § The serialised look pin).
 
-## Reference up axis
+## Roll authority
 
-`camera.up` is **derived state**. The roll authority is
-`ReferenceUpController`'s single unit vector — the *reference axis*,
-galactic north (`GALACTIC_NORTH_POLE_ICRS`) by default, written only by
-an explicit roll gesture, the snap-to-level, or a URL restore. Every
-frame, ahead of the whole animation dispatch in `stellata.ts`'s
-`animate()`:
+**`camera.up` is the roll state in NAVIGATE; the quaternion is the roll
+state in OBSERVE.** Neither is derived from anything else, and there is no
+third vector behind them.
 
-- **NAVIGATE** — `correct(camera)` rotates `camera.up` back toward the
-  reference about the view axis. Must run *before* `controls.update()`
-  and every animation tick, because every navigate-mode orientation
-  source is a `lookAt` reading `camera.up`.
-- **OBSERVE** — `adoptFromCamera(camera)` instead: there the quaternion
-  is the roll authority (direct-manipulation drag rolls by construction),
-  so the reference *follows* the camera. That keeps the axis truthful for
-  URL round-trip and makes the observe→navigate handover a no-op.
+- **NAVIGATE** — nothing runs per frame. TrackballControls rotates
+  `camera.up` by the same quaternion it rotates `_eye` by, then `lookAt`
+  reads it, so the roll the user is holding is carried forward frame to
+  frame by the library itself.
+- **OBSERVE** — `adoptFromCamera(camera)` each frame, ahead of the
+  animation dispatch in `stellata.ts`'s `animate()`: there the quaternion
+  is the authority (a direct-manipulation drag rolls by construction), so
+  `camera.up` follows it. That makes the observe→navigate handover a
+  no-op — the first navigate `lookAt` reproduces the pose the drag left.
 
-### Why the correction exists
+`camera.up` is kept **perpendicular to the view axis**. `levelTo` and
+`adoptFromCamera` both establish that, and TrackballControls preserves the
+angle between `up` and `_eye` thereafter, so the image-plane projection
+every `lookAt` and roll measurement depends on stays well-conditioned from
+any vantage — there is no cone around any axis where it degenerates.
 
-Orbit drift is **parallel-transport holonomy**, not input noise. A single
-TrackballControls rotate step turns `_eye` and `camera.up` by the same
-quaternion about an axis ⊥ eye, injecting zero roll — but any closed drag
-loop returns with a net roll equal to the enclosed solid angle. A
-diagonal-drag filter can't fix that (an axis-aligned right/up/left/down
-loop encloses area too); only re-deriving the up from a reference can.
-TrackballControls also keeps rotating `up` through its damping tail after
-pointer-up, so the correction has to be per frame, not per input event.
+### Orbit drift is the feature, not the bug
 
-### The pole cone
+Orbit drift is **parallel-transport holonomy**: a single TrackballControls
+rotate step injects zero roll of its own, but any closed drag loop returns
+with a net roll equal to the enclosed solid angle. A measured 4-lap circuit
+comes back within 0.07 rad of its starting view direction carrying 0.38 rad
+of roll — five times the path's own closure error, which is what
+identifies the residual as holonomy rather than an unclosed loop
+(`roll-controller.test.ts`).
 
-`levelUpInto` (the reference projected into the image plane) is
-ill-conditioned when the view axis approaches the reference axis, and the
-180° flip there is *inherent*: "north stays up" from the far side of the
-pole IS the flipped image. So correction strength is
-`poleConeWeight(sin θ)` — a smoothstep that reaches 1 outside a
-`POLE_CONE_DEG` = 15° cone and eases to 0 on the axis. Outside the cone
-the view is exactly level in one frame; inside it, TrackballControls'
-transported up governs, so orbiting over the pole neither whips nor
-stalls (the freedom TrackballControls was chosen for), and the 180°
-re-level unwinds smoothly on the way out. Strength is a function of
-geometry, not of `dt` — no time constant to tune. Consequence to expect:
-because the correction reads the *previous* frame's view axis, a
-continuous drag leaves a sub-degree residual that settles as soon as the
-pointer stops.
+That roll now **stands**. The camera is free to end up rolled after a long
+orbit, because the attitude indicator says which way you are pointing
+(`../../../attitude/README.md`) and `L` puts you back. Before it existed,
+nothing on screen carried orientation, so a per-frame correction re-derived
+`camera.up` from a persistent reference axis every navigate frame and held
+the view galactic-level whatever the user did.
 
-### The correction needs a deadband, or it 2-cycles
+Two things went with that correction, and neither should come back:
 
-**`UP_CORRECTION_DEADBAND_RAD` (1e-4 rad) is load-bearing, and the bug it
-fixes looks like nothing.** Without it the correction has no fixed point:
-at level it measures a residual of order 1e-18 rad, applies it, and the
-project / normalise / rotate / normalise chain lands one representable
-step away — the next frame's projection brings it back, forever. Measured:
-`camera.up` moved on 200 of 200 frames, alternating between two adjacent
-doubles.
+- **A cone around the reference axis** where the projection was
+  ill-conditioned and correction strength had to ease to zero, since "north
+  stays up" flips through 180° over arbitrarily small travel across a pole.
+  Nothing is re-derived now, so nothing is ill-conditioned.
+- **A deadband on the correction's own write.** Correcting every frame had
+  no fixed point: at level it measured a residual of order 1e-18 rad,
+  applied it, and the project / normalise / rotate / normalise chain landed
+  one representable step away, forever. `camera.up` moved on 200 of 200
+  frames, alternating between two adjacent doubles, and since every
+  navigate orientation source is a `lookAt` reading it, that reached
+  `camera.quaternion` — which the render gate snapshots by **exact
+  equality**, so the view could never idle with nothing moving on screen
+  (`../../../render-gate/README.md`).
 
-Every navigate-mode orientation source is a `lookAt` reading `camera.up`,
-so that alternation reaches `camera.quaternion`, and the render gate's
-pose snapshot compares by **exact equality** — so it saw a slot move every
-tick and the view could never idle, at any vantage, with nothing
-whatsoever moving on screen (`../../../render-gate/README.md`). The
-readout named it `pose moved: quat.y by 1.11e-16 (1 ulp)`.
+**The rule that replaces the deadband: navigate writes `camera.up` on no
+frame of its own.** Only a gesture, a level, a URL restore, or the landing
+of a captured-endpoint animation writes it. `up → lookAt → quaternion → up`
+is a rounding round-trip that 2-cycles exactly as the old correction did,
+so `adoptFromCamera` must stay out of the navigate steady state — it is an
+observe-mode and seam call only. `roll-controller.test.ts` pins a settled
+navigate pose bit-identical across 200 `lookAt`s.
 
-Declining to write below the band is the same hysteresis `slewDm` applies
-to the exposure cut, and for the same reason: a bit-identical input
-re-derives a bit-identical output, so the loop breaks at the source
-instead of being filtered downstream. Three properties the band has to
-keep, each pinned by test:
-
-- **Nothing is written inside it** — not even the re-projection, which is
-  a rounding step that cycled on its own.
-- **A sub-band residual still accumulates.** The error is measured against
-  the reference each frame rather than integrated, so holonomy drift
-  crosses the band and gets corrected. A band that swallowed drift
-  permanently would trade a render-gate bug for a levelling bug.
-- **It is invisible.** A roll displaces a feature by `radius · angle`:
-  1e-4 rad at a 1500 px screen radius is 0.15 px, under the cadence's
-  0.25 device-px scheduling threshold, and four decades below
-  `SNAP_TO_LEVEL_DEG`.
-
-The measurement is also taken against `up` directly rather than its
-projection — `levelUpInto`'s output is perpendicular to `forward` by
-construction, so up's forward-parallel component cancels out of both the
-cross and the dot and the angle is unchanged. That removes two of the
-rounding steps that drove the cycle rather than merely tolerating them.
-
-### The slerp-endpoint rule
+### Captured-endpoint animations
 
 Camera animations split into two classes, and only one needs care:
 
@@ -256,26 +233,29 @@ Camera animations split into two classes, and only one needs care:
 | **A** | per-frame `lookAt`, reads `camera.up` | TrackballControls steady state, warp reorient (navigate launch), warp Fly, warp finish (navigate), the navigate aim tick (its `q0`/`q1` slerp drives *position*), observe exit's no-op `lookAt` |
 | **B** | a quaternion captured up-front, then slerped | focus-park lerp `qEnd`, warp reorient (observe launch), warp phase 3, observe aim `q1` |
 
-Class A inherits the correction for free. **Class B endpoints must
-resolve roll against the reference axis, never the live `camera.up`** —
-the end pose looks down a different axis than the start, so an endpoint
-built from the start-pose up lands on a roll the steady-state correction
-then has to undo, one frame after the animation settles. That is the pop
-`focus-transition.ts`'s `referenceUp` parameter exists to prevent
-(`focus-transition.test.ts` pins both directions). The observe-mode
-Class-B sites read `camera.up` and stay correct because the per-frame
-adopt keeps it equal to the rendered screen-up.
+Class A inherits the authority for free. **A Class-B endpoint must be built
+from the same `camera.up` the camera is actually holding**, and the
+animation must **re-derive `camera.up` from the landed quaternion** before
+handing back. Build the endpoint from any other axis and the first `lookAt`
+after landing resolves against a different up and rolls the view off the
+pose the slerp settled on — `focus-transition.test.ts` pins both halves.
 
-Nothing has to suspend the correction during a Class-B slerp: it only
-writes `camera.up`, which no one reads while a slerp owns the quaternion,
-and the value it converges on at the end pose is exactly what the
-endpoint was built from.
+The adopt on landing is not a no-op even when the rendered pose already
+matches: the launch `up` is perpendicular to the *launch* view axis, and
+the end pose looks down a different one. Adopting is what puts it back on
+the perpendicular invariant.
+
+The observe-mode Class-B sites need no extra call — the per-frame adopt
+already does it.
 
 ## Roll gestures
 
 Three input paths, one dispatch (`InputController.rollCamera`): NAVIGATE
-re-tilts the reference axis, OBSERVE rolls the quaternion. Both leave the
-tilt persistent through subsequent orbit / dolly.
+turns `camera.up` about the view axis, OBSERVE rolls the quaternion. The
+image rolls by exactly the angle asked for either way — a `lookAt` renders
+up's component perpendicular to forward, and turning about forward turns
+that component by the same angle. Both leave the tilt persistent through
+subsequent orbit / dolly.
 
 - **Shift+drag (desktop, both modes)** — the roll gesture that replaced
   Shift-pan. Roll follows the pointer's *bearing about screen centre*, so
@@ -321,7 +301,7 @@ dead — the worst version of sticky.
 Sign convention: pointer/finger rotation CW on screen → world rotates CW.
 `rollCamera(-delta)` achieves this because `applyAxisAngle(forward, θ)`
 rotates CCW viewed from behind the forward vector (right-hand rule), and
-rotating the reference CCW in world space makes content appear CW.
+rotating the up CCW in world space makes content appear CW.
 
 ### Snap-to-level — an alignment guide, not a release-time fixup
 
@@ -339,9 +319,9 @@ virtual roll passes the band — resuming exactly where the pointer says,
 not where it entered. Tracking the virtual position separately is what
 makes the band un-chatterable with one threshold instead of two.
 
-The residual is measured differently per mode, and the split is
-load-bearing. NAVIGATE reads `referenceRollError` (reference vs the level
-pole, about the view axis) because there the quaternion trails
+The residual is measured off whichever slot carries the roll, and the
+split is load-bearing. NAVIGATE reads `upRollError` (`camera.up` vs the
+level pole, about the view axis) because there the quaternion trails
 `camera.up` by a frame — `lookAt` hasn't consumed the newest roll yet.
 OBSERVE reads `renderedRollError` (the quaternion's own screen-up),
 because that is what the user sees.
@@ -362,11 +342,11 @@ RA/Dec fade demotes the selection to `none`, and `S` is live too. Re-reading
 the pole on release would then settle against a frame the view never stuck to
 and rotate the image by up to the ~63° between them.
 
-Leaving a gesture *while still on the guide* re-anchors the reference on
-that pole **exactly** (`settleRollSnap` → `snapReferenceTo`). Snapping
-only rolled the axis until it *renders* level from the current view
-direction, and every axis in the forward/pole plane does that — such an
-axis would drift back off level as soon as the orbit moved.
+Leaving a gesture on the guide does **nothing** beyond clearing the
+snap state. The guide has already put `camera.up` exactly on level, and
+that IS the roll — there is no separate axis left to re-anchor, and
+re-levelling on release would roll the image a second time on the way out.
+Orbiting away from there rolls the view again, which is the point.
 
 ## Pinch-to-zoom
 

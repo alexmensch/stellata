@@ -13,7 +13,7 @@ import {
   FOCUS_LERP_MS,
   WARP_REORIENT_MS,
 } from '../../stellata';
-import { ReferenceUpController } from '../controls/input/reference-up';
+import { RollController } from '../controls/input/roll-controller';
 
 describe('camera-lerp duration consolidation)', () => {
   it('routes AIM_T_MAX_MS / FOCUS_LERP_MS through CAMERA_LERP_MS', () => {
@@ -129,36 +129,20 @@ describe('newFocusLerpFrom', () => {
   });
 
   // No pop at the seam: the frame after the lerp settles, TrackballControls
-  // re-derives orientation from the corrected camera.up. That has to
-  // reproduce the roll the slerp just landed on.
+  // re-derives orientation from camera.up. That has to reproduce the roll
+  // the slerp just landed on.
   it('lands on a roll the steady-state orientation source reproduces', () => {
-    const refUp = new ReferenceUpController();
+    const roll = new RollController();
     const camera = new THREE.PerspectiveCamera(50, 1.5, 1e-12, 1000);
     // Looking somewhere other than the new focal target, so the end pose's
     // view axis genuinely differs from the start's.
     camera.position.set(3, 4, 5);
+    // A camera carrying real roll — the default up is (0,1,0), which would
+    // make "the launch up" and "a world axis" the same vector and leave
+    // both this test and its inverse below asserting nothing.
+    camera.up.set(0.31, 0.85, -0.43).normalize();
     camera.lookAt(new THREE.Vector3(20, -8, 3));
-    refUp.correct(camera);
-    const target = new THREE.Vector3(0, 0, 0);
-
-    const state = newFocusLerpFrom(
-      camera.position, camera.quaternion, refUp.get(), target, AU_PC, 2000, 0,
-    );
-    tickFocusLerp(state, 2000, camera);
-    const landed = camera.quaternion.clone();
-
-    refUp.correct(camera);
-    camera.lookAt(target);
-
-    expect(camera.quaternion.angleTo(landed)).toBeCloseTo(0, 6);
-  });
-
-  it('would pop the roll if the endpoint resolved against the start-pose up', () => {
-    const refUp = new ReferenceUpController();
-    const camera = new THREE.PerspectiveCamera(50, 1.5, 1e-12, 1000);
-    camera.position.set(3, 4, 5);
-    camera.lookAt(new THREE.Vector3(20, -8, 3));
-    refUp.correct(camera);
+    roll.adoptFromCamera(camera);
     const target = new THREE.Vector3(0, 0, 0);
 
     const state = newFocusLerpFrom(
@@ -167,7 +151,35 @@ describe('newFocusLerpFrom', () => {
     tickFocusLerp(state, 2000, camera);
     const landed = camera.quaternion.clone();
 
-    refUp.correct(camera);
+    // What FocusController.tick does on landing, before handing back to TC.
+    roll.adoptFromCamera(camera);
+    camera.lookAt(target);
+
+    expect(camera.quaternion.angleTo(landed)).toBeCloseTo(0, 9);
+    // The adopt is not a no-op on the value: it re-establishes the
+    // perpendicular invariant the launch up lost when the view axis moved.
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    expect(camera.up.dot(forward)).toBeCloseTo(0, 12);
+    expect(camera.up.length()).toBeCloseTo(1, 12);
+  });
+
+  // The endpoint up and camera.up have to be the SAME vector. Build the
+  // endpoint from anything else — a world axis, a stale reference — and the
+  // first lookAt after landing resolves against a different up and rolls
+  // the view off the pose the slerp settled on.
+  it('would pop if the endpoint resolved against an up the camera does not hold', () => {
+    const camera = new THREE.PerspectiveCamera(50, 1.5, 1e-12, 1000);
+    camera.position.set(3, 4, 5);
+    camera.up.set(0.31, 0.85, -0.43).normalize();
+    camera.lookAt(new THREE.Vector3(20, -8, 3));
+    const target = new THREE.Vector3(0, 0, 0);
+
+    const state = newFocusLerpFrom(
+      camera.position, camera.quaternion, new THREE.Vector3(0, 1, 0), target, AU_PC, 2000, 0,
+    );
+    tickFocusLerp(state, 2000, camera);
+    const landed = camera.quaternion.clone();
+
     camera.lookAt(target);
 
     expect(camera.quaternion.angleTo(landed)).toBeGreaterThan(0.01);

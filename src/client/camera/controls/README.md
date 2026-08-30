@@ -21,7 +21,7 @@ in both navigate and observe modes.
   control's disabled state, which tracks camera distance and so rides
   `'frame'` behind a cached flag (`../../galactic/coord-spheres/README.md`).
 - `input/` — canvas gestures + the camera state they drive: the click
-  FSM, the reference up axis (galactic-north roll lock), the roll
+  FSM, the two roll authorities (camera.up and the quaternion), the roll
   gestures, pinch-to-zoom, and TrackballControls' own tuning. Its
   `README.md` replaces this one for reads inside that folder.
 - `mode-toggle.ts` — navigate / observe pill in the topbar.

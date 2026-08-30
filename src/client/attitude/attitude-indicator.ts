@@ -242,11 +242,11 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   function level() {
     if (stellata.isCameraTransitionActive()) return;
     const camera = stellata.camera;
-    const ref = stellata.referenceUp;
+    const roll = stellata.roll;
     if (stellata.focus.getCameraMode() === 'observe') {
-      ref.rollQuaternion(camera, ref.renderedRollError(camera, frame.pole));
+      roll.rollQuaternion(camera, roll.renderedRollError(camera, frame.pole));
     } else {
-      ref.snapReferenceTo(camera, frame.pole);
+      roll.levelTo(camera, frame.pole);
     }
     draw();
   }

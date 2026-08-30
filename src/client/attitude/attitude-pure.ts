@@ -7,7 +7,7 @@ import {
   cameraLocalUpInto,
   levelUpInto,
   signedAngleAbout,
-} from '../camera/controls/input/reference-up-pure';
+} from '../camera/controls/input/roll-pure';
 import { galacticDirToIcrs } from '../galactic/galactic-coords';
 import type { TargetKind } from '../camera/focus/focus-target';
 
@@ -163,8 +163,7 @@ export function nextFrameKey(
 
 /** Bank is the angle to a level up that shrinks to nothing on the pole, so
  *  inside this cone the reading is float noise rather than a measurement and
- *  the last one stands. Two decades tighter than the roll correction's own
- *  `POLE_CONE_DEG`, which eases the *camera* rather than the readout. */
+ *  the last one stands. */
 export const POLE_HOLD_DEG = 1;
 const POLE_HOLD_SIN = Math.sin((POLE_HOLD_DEG * Math.PI) / 180);
 

@@ -112,7 +112,7 @@ themselves.
 ## Public surface of `Stellata`
 
 The shell exposes its controllers as readonly namespaces rather than
-forwarding to them: `focus`, `warp`, `observe`, `aim`, `filters`,
+forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
 `exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,

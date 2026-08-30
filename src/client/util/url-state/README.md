@@ -137,21 +137,25 @@ bit order, so mode isn't known until the field loop completes).
   `setOrbitTarget` so the explicit camera wins.
 - Camera changes are tracked via the `'frame'` event with a per-component
   epsilon comparison (no per-frame allocations) feeding a 1 s debounced
-  writer. The comparison covers position, target, **and** the reference up
-  axis — so a roll gesture (which moves neither position nor target) still
-  triggers a URL update.
+  writer. The comparison covers position, target, **and** `camera.up` — so
+  a roll gesture (which moves neither position nor target) still triggers a
+  URL update.
   The same frame check also watches the **pinned `t`** (`isLive(t) ? null
   : t`, mirroring `currentStateOf`'s encode gate): the scrubber drives
   `getT()` directly without a `'state'` event, so without this a time
   scrub on a still camera would never reach the URL.
-- The `up` slot carries the camera's **reference up axis**
-  (`src/client/camera/controls/input/README.md` § Reference up axis), not the
-  live `camera.up` — the live vector is derived per frame, so serialising
-  it would round-trip a value the next frame overwrites. It round-trips
-  when it differs from **galactic north**, the canonical reference, so a
-  share from a level camera omits the field entirely; and it is applied
+- The `up` slot carries **`camera.up`**
+  (`src/client/camera/controls/input/README.md` § Roll authority), which is
+  the navigate roll authority itself — nothing derives it per frame, so it
+  is a value a link can hold. **The omission test is the rendered roll, not
+  the vector:** the field is dropped when the view is galactic-LEVEL, since
+  up is the pole's image-plane projection and therefore equals the pole
+  itself from no viewpoint at all. A share from a level camera omits it
+  entirely, as it always did. It is applied
   **before** focus/orbit dispatch because `focusStar` / `setOrbitTarget`
-  call `controls.update()`, which reads the `camera.up` derived from it.
+  call `controls.update()`, which reads it — so it lands as a raw axis and
+  the `lookAt` inside that update projects it. One `adoptFromCamera` after
+  the final update puts `up` back on the perpendicular invariant.
   `DEFAULT_UP_V3` keeps world `+Y` as the v3 fill value: a v3 blob was
   written when that was the reference, and a frozen decoder has to stay
   the one v3 meant (the golden corpus pins it). Either value restores the

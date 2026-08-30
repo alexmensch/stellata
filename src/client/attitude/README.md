@@ -295,9 +295,12 @@ angular momentum points.
 ## Levelling
 
 The two camera modes need different calls, matching the split in
-`../camera/controls/input/README.md` § Snap-to-level: NAVIGATE re-anchors the
-reference axis (`snapReferenceTo`), OBSERVE rolls the quaternion by
+`../camera/controls/input/README.md` § Roll authority: NAVIGATE puts
+`camera.up` on the frame's pole (`levelTo`), OBSERVE rolls the quaternion by
 `renderedRollError`.
+
+Level is a one-shot state, not a maintained one — orbiting away from here
+rolls the view again, and the ball is what tells you so.
 
 **Known inconsistency:** the drag-time snap-to-level guide sticks to
 `coordSphereNorthPole(filter.coordSphere)` — the *displayed* grid — while this

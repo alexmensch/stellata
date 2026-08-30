@@ -18,7 +18,7 @@ click handlers (single = pin a POI, double = aim-at).
   `startExit`, `startUnfocusLerp`, the per-frame lerp, and the
   `ObserveFocusOps` cross-controller seam (implemented by
   `FocusController` in `../focus/`). The observe→navigate seam hands roll
-  back through `ReferenceUpController.adoptFromCamera`
+  back through `RollController.adoptFromCamera`
   (`../controls/input/README.md` § Reference up axis) — writing `camera.up`
   alone would be overwritten by the next frame's correction, restoring
   the pitch-snap bug the re-anchor exists to prevent.
@@ -92,7 +92,7 @@ to.
 - **Roll-independent.** In observe the **quaternion is the roll
   authority** — a direct-manipulation drag rotates about whatever
   screen-relative axis matches the cursor, so it accumulates roll by
-  construction, and that is wanted here. The reference up axis therefore
+  construction, and that is wanted here. `camera.up` therefore
   *follows* the camera every frame (`adoptFromCamera`) instead of
   correcting it: the URL encodes that axis, and a stale one would lose
   the roll on reload, since URL restore rebuilds the quaternion from
@@ -133,7 +133,7 @@ to.
   target via `Matrix4.lookAt(pos, point, camera.up)`, and the per-frame
   adopt keeps `camera.up` equal to the rendered screen-up — so the
   endpoint carries the user's current roll into the new view direction
-  instead of unwinding it. Before the reference-up axis landed, `up` was
+  instead of unwinding it. Before the roll authority was settled, `up` was
   only written by the twist gestures, so any direct-manipulation roll was
   stale by the time an aim read it and the slerp snapped the image back
   toward ICRS Y.
@@ -145,7 +145,7 @@ to.
   (`../README.md` § Shared). Trackpad pinch reaches this same handler:
   `InputController` normalises it to whole wheel notches rather than
   forking a pinch→FOV path (`../controls/input/README.md` § Pinch-to-zoom).
-- In navigate-mode, `rollCamera` re-tilts the reference up axis, and the
+- In navigate-mode, `rollCamera` turns `camera.up`, and the
   per-frame correction derives `camera.up` from it (TrackballControls
   rebuilds the quaternion from `camera.up` on every `update()`). In
   observe-mode it rotates `camera.quaternion` — the rendered roll — and

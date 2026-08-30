@@ -37,7 +37,10 @@ import {
 } from './galactic/coord-spheres/coord-sphere-frames';
 import { HudOverlay } from './overlays/hud-overlay';
 import { ChartLabels } from './chart-mode/labels/chart-labels';
-import { GALACTIC_CENTRE_PC } from './galactic/galactic-coords';
+import {
+  GALACTIC_CENTRE_PC,
+  GALACTIC_NORTH_POLE_ICRS,
+} from './galactic/galactic-coords';
 import type { CloudCatalog } from './molecular-clouds/cloud-loader';
 import { MilkyWay } from './milkyway/milkyway';
 import { ObserveControls } from './camera/observe/observe-controls';
@@ -79,7 +82,7 @@ import { paperClearColour } from './chart-mode/chart-palette';
 import { applyChartPaletteSwap } from './chart-mode/chart-swap-pure';
 import { Picker } from './camera/controls/picker';
 import { AimController } from './camera/controls/aim-controller';
-import { ReferenceUpController } from './camera/controls/input/reference-up';
+import { RollController } from './camera/controls/input/roll-controller';
 import { WarpController } from './camera/warp/warp-controller';
 import { ObserveTransition } from './camera/observe/observe-transition';
 import { lookPinStale, writeLookPin } from './camera/observe/look-pin-pure';
@@ -243,7 +246,7 @@ export class Stellata implements FrameAnchor {
   readonly camera: THREE.PerspectiveCamera;
   readonly controls: TrackballControls;
   readonly hdr: HdrSeam;
-  readonly referenceUp = new ReferenceUpController();
+  readonly roll = new RollController();
 
   private scene: THREE.Scene;
   // Star render pipeline — one InstancedBufferGeometry feeds three
@@ -510,7 +513,7 @@ export class Stellata implements FrameAnchor {
       CAMERA_FAR_PC,
     );
     this.camera.position.set(0, 0, 30);
-    this.camera.up.copy(this.referenceUp.get());
+    this.roll.levelTo(this.camera, GALACTIC_NORTH_POLE_ICRS);
 
     // TrackballControls (instead of OrbitControls) because we want
     // unconstrained rotation — no polar clamping at the zenith/nadir, so
@@ -815,7 +818,7 @@ export class Stellata implements FrameAnchor {
       bus: this.bus,
       frameAnchor: this,
       aim: this.aim,
-      referenceUp: this.referenceUp,
+      roll: this.roll,
       setFocalBodyHidden: (target) => this.setFocalBodyHidden(target),
       getWarp: () => this.warp,
       getObserve: () => this.observe,
@@ -852,7 +855,7 @@ export class Stellata implements FrameAnchor {
       controls: this.controls,
       observeControls: this.observeControls,
       aim: this.aim,
-      referenceUp: this.referenceUp,
+      roll: this.roll,
       setFocalBodyHidden: (target) => this.setFocalBodyHidden(target),
       bus: this.bus,
       focus: this.focus,
@@ -2258,7 +2261,7 @@ export class Stellata implements FrameAnchor {
       picker: this.picker,
       bus: this.bus,
       poiStore: this.pois,
-      referenceUp: this.referenceUp,
+      roll: this.roll,
       getCameraMode: () => this.focus.getCameraMode(),
       getFilter: () => this.filter,
       getFocusedTarget: () => this.focus.getFocusedTarget(),
@@ -2347,15 +2350,13 @@ export class Stellata implements FrameAnchor {
     // downstream reads localPositions.
     this.starFrame.flushLocalPositions();
     perfMark('controls.update');
-    // Roll bookkeeping, ahead of every orientation source: navigate-mode
-    // `lookAt`s read camera.up, so the correction has to land before the
-    // dispatch below. In observe the quaternion is the roll authority and
-    // the reference follows it instead. See camera/controls/input/README.md
-    // § Reference up axis.
+    // Observe's quaternion is the roll authority, so camera.up follows it
+    // each frame, keeping the observe→navigate handover a no-op. Navigate
+    // needs no per-frame step at all: camera.up IS the authority there and
+    // TrackballControls parallel-transports it.
+    // See camera/controls/input/README.md § Roll authority.
     if (this.focus.getCameraMode() === 'observe') {
-      this.referenceUp.adoptFromCamera(this.camera);
-    } else {
-      this.referenceUp.correct(this.camera);
+      this.roll.adoptFromCamera(this.camera);
     }
     // Cleared by the two steady-state branches alone, so a transition
     // added to this chain renders every frame by default — the safe

@@ -18,8 +18,8 @@ import { bestHitBy } from '../../../hover/hover-pick-disambiguator';
 import type { HoverHit } from '../../../hover/hover-types';
 import type { Picker } from '../picker';
 import { coordSphereNorthPole } from '../../../galactic/coord-spheres/coord-sphere-frames';
-import type { ReferenceUpController } from './reference-up';
-import { SNAP_TO_LEVEL_RAD } from './reference-up-pure';
+import type { RollController } from './roll-controller';
+import { SNAP_TO_LEVEL_RAD } from './roll-pure';
 import { WHEEL_NOTCH_DELTA_PX, pinchStep, scaleStepDeltaPx } from './pinch-zoom-pure';
 
 export interface InputControllerDeps {
@@ -29,7 +29,7 @@ export interface InputControllerDeps {
   picker: Picker;
   bus: EventBus<StellataEventMap>;
   poiStore: PoiStore;
-  referenceUp: ReferenceUpController;
+  roll: RollController;
   getCameraMode: () => CameraMode;
   getFilter: () => Readonly<FilterState>;
   getFocusedTarget: () => Target | null;
@@ -402,7 +402,7 @@ export class InputController {
   private onTouchEnd = (e: TouchEvent) => {
     if (e.touches.length !== 2 && this.twoFingerAngle !== null) {
       this.twoFingerAngle = null;
-      this.settleRollSnap();
+      this.clearRollSnap();
     }
   };
 
@@ -438,7 +438,7 @@ export class InputController {
   private onGestureEnd = (e: Event) => {
     e.preventDefault();
     this.gestureActive = false;
-    this.settleRollSnap();
+    this.clearRollSnap();
   };
 
   private onPointerMove = (e: PointerEvent) => {
@@ -550,25 +550,12 @@ export class InputController {
     if (this.rollDrag === null) return;
     this.rollDrag = null;
     this.deps.controls.noRotate = false;
-    this.settleRollSnap();
+    this.clearRollSnap();
   }
 
   private clearRollSnap(): void {
     this.rollSnapPole = null;
     this.rollSnapExcursion = 0;
-  }
-
-  /** Leaving a roll gesture while held at the guide re-anchors the reference
-   *  on the pole the guide stuck to, exactly. Snapping only rolled the axis
-   *  until it *renders* level from here; any axis in the forward/pole plane
-   *  does that, and would drift back off level as soon as the orbit moves. */
-  private settleRollSnap(): void {
-    const pole = this.rollSnapPole;
-    if (pole === null) return;
-    this.clearRollSnap();
-    if (this.deps.getCameraMode() !== 'observe') {
-      this.deps.referenceUp.snapReferenceTo(this.deps.camera, pole);
-    }
   }
 
   /** Apply one gesture step of roll through the alignment guide: the view
@@ -598,14 +585,15 @@ export class InputController {
     this.rollCamera(delta);
   }
 
-  /** Roll still needed to reach level against `pole`. Read off the reference
-   *  axis in navigate (the quaternion trails `camera.up` by a frame there) and
-   *  off the rendered quaternion in observe, which is the authority in that
-   *  mode. See `README.md` § Reference up axis. */
+  /** Roll still needed to reach level against `pole`, read off whichever
+   *  slot carries the roll in this mode: `camera.up` in navigate (the
+   *  quaternion trails it by a frame there — `lookAt` hasn't consumed the
+   *  newest roll yet), the rendered quaternion in observe.
+   *  See `README.md` § Roll authority. */
   private levelRollError(pole: THREE.Vector3): number {
     return this.deps.getCameraMode() === 'observe'
-      ? this.deps.referenceUp.renderedRollError(this.deps.camera, pole)
-      : this.deps.referenceUp.referenceRollError(this.deps.camera, pole);
+      ? this.deps.roll.renderedRollError(this.deps.camera, pole)
+      : this.deps.roll.upRollError(this.deps.camera, pole);
   }
 
   /** What "level" means right now: the displayed coordinate sphere's own north
@@ -615,15 +603,14 @@ export class InputController {
     return coordSphereNorthPole(this.deps.getFilter().coordSphere);
   }
 
-  /** Rotate the view around its own axis. NAVIGATE re-tilts the reference up
-   *  axis (the persistent roll state the per-frame correction derives
-   *  `camera.up` from); OBSERVE rolls the quaternion, which carries the
-   *  rendered roll there. */
+  /** Rotate the view around its own axis, through the mode's roll
+   *  authority: NAVIGATE turns `camera.up`, OBSERVE the quaternion. Both
+   *  leave the tilt persistent through subsequent orbit / dolly. */
   private rollCamera(angle: number) {
     if (this.deps.getCameraMode() === 'observe') {
-      this.deps.referenceUp.rollQuaternion(this.deps.camera, angle);
+      this.deps.roll.rollQuaternion(this.deps.camera, angle);
     } else {
-      this.deps.referenceUp.roll(this.deps.camera, angle);
+      this.deps.roll.roll(this.deps.camera, angle);
     }
   }
 }
