@@ -21,7 +21,6 @@ export interface ReferenceFrame {
   zeroLon: THREE.Vector3;
   east: THREE.Vector3;
   formatLon(rad: number): string;
-  formatLonTick(rad: number): string;
 }
 
 export interface Attitude {
@@ -41,7 +40,6 @@ function makeFrame(
   pole: THREE.Vector3,
   zeroLonSeed: THREE.Vector3,
   formatLon: (rad: number) => string,
-  formatLonTick: (rad: number) => string,
 ): ReferenceFrame {
   const p = pole.clone().normalize();
   const zeroLon = zeroLonSeed
@@ -57,7 +55,6 @@ function makeFrame(
     zeroLon,
     east: new THREE.Vector3().crossVectors(p, zeroLon),
     formatLon,
-    formatLonTick,
   };
 }
 
@@ -78,14 +75,6 @@ export function formatLatitude(rad: number): string {
   return `${deg >= 0 ? '+' : '−'}${Math.abs(deg).toFixed(1)}°`;
 }
 
-function tickHours(rad: number): string {
-  return `${Math.round(((rad * 12) / Math.PI + 24) % 24)}h`;
-}
-
-function tickDegrees(rad: number): string {
-  return `${Math.round(((rad * 180) / Math.PI + 360) % 360)}°`;
-}
-
 export function buildReferenceFrames(): Record<ReferenceFrameKey, ReferenceFrame> {
   const eclipticPole = new THREE.Vector3(
     0,
@@ -103,7 +92,6 @@ export function buildReferenceFrames(): Record<ReferenceFrameKey, ReferenceFrame
       new THREE.Vector3(0, 0, 1),
       new THREE.Vector3(1, 0, 0),
       formatHours,
-      tickHours,
     ),
     ecliptic: makeFrame(
       'ecliptic',
@@ -113,7 +101,6 @@ export function buildReferenceFrames(): Record<ReferenceFrameKey, ReferenceFrame
       eclipticPole,
       new THREE.Vector3(1, 0, 0),
       formatDegrees,
-      tickDegrees,
     ),
     galactic: makeFrame(
       'galactic',
@@ -123,7 +110,6 @@ export function buildReferenceFrames(): Record<ReferenceFrameKey, ReferenceFrame
       galacticPole,
       galacticCentre,
       formatDegrees,
-      tickDegrees,
     ),
   };
 }

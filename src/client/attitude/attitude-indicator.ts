@@ -67,10 +67,10 @@ function buildShading() {
 }
 
 function bankTick(deg: number) {
-  if (deg % 90 === 0) return { len: 12, width: 2.4 };
-  if (deg % 30 === 0) return { len: 8.5, width: 2 };
-  if (deg % 10 === 0) return { len: 5.5, width: 1.5 };
-  return { len: 3.5, width: 1.2 };
+  if (deg % 90 === 0) return { len: 12, width: 3 };
+  if (deg % 30 === 0) return { len: 8.5, width: 2.4 };
+  if (deg % 10 === 0) return { len: 5.5, width: 1.8 };
+  return { len: 3.5, width: 1.4 };
 }
 
 function buildBezel() {
@@ -114,23 +114,28 @@ function buildSymbol() {
   return g;
 }
 
-/** The FDAI roll caret: a light triangle carrying a dark one inset inside it,
- *  stopping short of the tip so a bright wedge survives against either
- *  hemisphere passing underneath. */
+/** The FDAI roll caret: a light **equilateral** triangle carrying a dark
+ *  **isoceles** one whose base is the same segment, so the light survives as a
+ *  chevron — solid at the tip, tapering to nothing at the base corners. That
+ *  bright wedge is what keeps the caret legible against either hemisphere
+ *  passing underneath. Inset apex sits `INSET_APEX_FRAC` down the height. */
+const CARET_HALF_BASE = 8;
+const INSET_APEX_FRAC = 0.38;
+
 function buildBankPointer() {
   const g = el('g');
   const tip = C - BALL_R + 1;
-  const base = tip + 14;
-  const half = 7;
+  const height = CARET_HALF_BASE * Math.sqrt(3);
+  const base = tip + height;
   g.appendChild(
     el('polygon', {
-      points: `${C},${tip} ${C - half},${base} ${C + half},${base}`,
+      points: `${C},${tip} ${C - CARET_HALF_BASE},${base} ${C + CARET_HALF_BASE},${base}`,
       class: 'ai-bank-pointer',
     }),
   );
   g.appendChild(
     el('polygon', {
-      points: `${C},${tip + 4.6} ${C - half * 0.56},${base - 2.6} ${C + half * 0.56},${base - 2.6}`,
+      points: `${C},${tip + height * INSET_APEX_FRAC} ${C - CARET_HALF_BASE},${base} ${C + CARET_HALF_BASE},${base}`,
       class: 'ai-bank-pointer-inset',
     }),
   );
@@ -148,7 +153,6 @@ export function createAttitudeIndicator(stellata: Stellata) {
   let frame: ReferenceFrame = frames[frameKey];
 
   const ball = createAttitudeBall(BALL_PX);
-  ball.setFrame(frame);
 
   host.style.width = `${BOX}px`;
   const stage = document.createElement('div');
@@ -205,7 +209,6 @@ export function createAttitudeIndicator(stellata: Stellata) {
     frameKey = FRAME_CYCLE[(FRAME_CYCLE.indexOf(frameKey) + 1) % FRAME_CYCLE.length];
     frame = frames[frameKey];
     frameBtn.textContent = frame.label;
-    ball.setFrame(frame);
     lastQuat.set(2, 2, 2, 2);
   });
 

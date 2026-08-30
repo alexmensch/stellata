@@ -74,23 +74,35 @@ Everything is drawn from the app's own two tones — `--fg` `#e6edf7` for the
 light hemisphere, the settings panel's `#070912` for the dark one — with each
 hemisphere's markings in the other's colour. **The mid-tone orbit-ring blue
 (`../util/orbit-line.ts`'s `ORBIT_LINE_COLOUR`) was considered for the light
-and rejected:** the equator carries a tick per degree, and a hairline at that
-pitch needs the full contrast range against its ground. Amber survives only on
+and rejected:** the equator and prime meridian carry a tick every 2°, and a
+hairline at that pitch needs the full contrast range against its ground. Amber survives only on
 the centre cross, which is the one thing that must never be mistaken for a
 grid line.
 
 The graticule follows the FDAI rather than a map: solid lines every 30°, and on
 the 15° offsets **no line at all** — a track of ticks every 5°, drawn
-perpendicular to the line they stand in for. The equator is the exception and
-carries a real scale: a light belt (which is why the dark hemisphere starts at
-−3° rather than 0°), a solid line on it, and a tick per degree stepped up at 5°
-and 10°.
+perpendicular to the line they stand in for. Where two tracks cross they read as
+the little `+` the real ball is covered in.
 
-**A tick per degree is finer than the ball's own pixels.** The visible half of
-the equator spans 180° across roughly the ball's diameter, so the comb lands
-under a pixel per tick and will read as a textured band rather than countable
-ticks. That is faithful to the instrument and deliberate; coarsening the step
-is a one-line change in `paintEquator` if it reads as mush.
+Two lines carry a real scale instead, both ticked every 2°:
+
+- **The prime meridian** is a dark line flanked by two light rails of equal
+  thickness, painted *unclipped* so each hemisphere shows whichever half
+  contrasts — a plain dark line across the light side, a split light rail
+  across the dark one. Its ticks take the hemisphere's opposite ink.
+- **The equator has no line of its own.** It is the seam between the two
+  hemispheres, and that is the whole argument for a two-tone ball. It carries
+  dark ticks running north into the light side only.
+
+Numerals are the FDAI's: tens of degrees with the trailing zero dropped (`3`
+for 30°), one size throughout, and **always degrees — never hours**, whichever
+frame is selected. Latitude drops its sign as well, because the hemisphere's
+colour already says south. A bare `3` is therefore both 30° of latitude and 30°
+of longitude; position on the ball disambiguates them, exactly as it does on
+the real instrument.
+
+Because none of that depends on the frame, **the texture is built once** and
+switching frames only re-aims the ball.
 
 No red polar zone. The real ball wore one to warn of gimbal lock approaching,
 which is a mechanical failure this has no analogue for.
@@ -104,8 +116,8 @@ lands in the HDR target and would take scene exposure and tone-mapping with it
 chrome out of the physical light path.
 
 It redraws only on ticks where `camera.quaternion` actually changed, so a
-static view costs nothing. The grid texture is rebuilt only when the frame
-chip changes, since only its labels differ.
+static view costs nothing, and the texture is built once for the life of the
+page — the frame chip re-aims the ball rather than repainting it.
 
 ## Case chrome
 
@@ -119,9 +131,13 @@ un-aviation:
 - **The centre index is a cross, not a pair of wings** — four arms and a point,
   sized off `BALL_R` so it tracks the ball's size, then trimmed 5%.
 
-The roll caret is the FDAI's: a light triangle carrying a dark one inset inside
-it, stopping short of the tip. The surviving bright wedge is what keeps it
-legible whichever hemisphere happens to be passing underneath.
+The roll caret is the FDAI's: a light **equilateral** triangle carrying a dark
+**isoceles** one on the *same base segment*, its apex stopping `INSET_APEX_FRAC`
+(0.38) down the height. The light therefore survives as a chevron — solid at the
+tip, tapering to nothing at the base corners — and that bright wedge is what
+keeps the caret legible whichever hemisphere is passing underneath. Scaling a
+second equilateral triangle inside the first is the wrong shape: it leaves an
+even border rather than a chevron.
 
 ## Levelling
 
