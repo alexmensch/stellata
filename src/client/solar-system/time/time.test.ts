@@ -13,6 +13,7 @@ import {
   nextFastForwardRate,
   nextRewindRate,
   parseJulianDateValue,
+  parseJumpEntry,
   parseLocalDatetimeValue,
   tToJdUt,
   tToJdTdb,
@@ -473,6 +474,39 @@ describe('parseJulianDateValue', () => {
   it('tolerates surrounding whitespace', () => {
     expect(parseJulianDateValue('  991085.63500  '))
       .toBe(parseJulianDateValue('991085.63500'));
+  });
+});
+
+describe('parseJumpEntry', () => {
+  it('answers in SECONDS for both forms, though the two parsers do not', () => {
+    // The defect this exists to make impossible: parseLocalDatetimeValue
+    // returns epoch-ms and parseJulianDateValue returns Unix-seconds, so a
+    // dispatcher that forwards one of them unconverted is wrong by 1000 —
+    // which at the clock's scale lands somewhere in the deep past rather
+    // than failing visibly.
+    const t = parseJumpEntry('2030-01-01 00:00:00');
+    expect(t).toBe(parseLocalDatetimeValue('2030-01-01 00:00:00') / 1000);
+    expect(t).toBeGreaterThan(1.8e9);
+    expect(t).toBeLessThan(2.0e9);
+  });
+
+  it('falls through to the Julian Date form for a bare number', () => {
+    expect(parseJumpEntry('991085.63500')).toBe(parseJulianDateValue('991085.63500'));
+    expect(parseJumpEntry('JD 2451545.0 UT')).toBe(946728000);
+  });
+
+  it('prefers the datetime form where both could look plausible', () => {
+    // Dashes disqualify the JD form, so the order is not load-bearing for
+    // any currently accepted string — pinned so a looser JD regex cannot
+    // quietly start winning entries the datetime parser already handles.
+    expect(parseJumpEntry('2030-01-01 12:34:56'))
+      .toBe(parseLocalDatetimeValue('2030-01-01 12:34:56') / 1000);
+  });
+
+  it('is NaN when neither form matches', () => {
+    for (const bad of ['', 'not-a-date', '2030', '991085.635 TDB', '31 Dec 2030']) {
+      expect(Number.isNaN(parseJumpEntry(bad)), bad).toBe(true);
+    }
   });
 });
 

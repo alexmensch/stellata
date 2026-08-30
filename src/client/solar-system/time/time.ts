@@ -152,6 +152,17 @@ export function parseJulianDateValue(value: string): number {
   return scale?.toUpperCase() === 'UT' ? jdUtToT(jd) : jdTdbToT(jd);
 }
 
+/** A jump-field entry in either accepted form → Unix-seconds `t`, or NaN.
+ *  Datetime first; a bare number falls through to the Julian Date form,
+ *  whose dashes-free shape is what keeps the two from colliding. **The two
+ *  parsers do not share a unit** — `parseLocalDatetimeValue` answers in
+ *  epoch-milliseconds and `parseJulianDateValue` in seconds — so the
+ *  reconciliation lives here rather than at the widget's call site. */
+export function parseJumpEntry(value: string): number {
+  const ms = parseLocalDatetimeValue(value);
+  return Number.isNaN(ms) ? parseJulianDateValue(value) : ms / 1000;
+}
+
 /** Virtual clock behind `Stellata.getT()`. `getT() = simT0 + rate ·
  *  (wallNow − wallT0)`, so at `rate = 1` in steady state it tracks
  *  wall-clock exactly. Rate flips snapshot the current virtual time so

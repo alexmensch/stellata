@@ -7,8 +7,7 @@ import { createTimeReadout, formatFullTimeReadout } from './time-readout';
 import {
   TRANSPORT_BUTTONS,
   toLocalDatetimeValue,
-  parseLocalDatetimeValue,
-  parseJulianDateValue,
+  parseJumpEntry,
   clampT,
   JUMP_FIELD_PLACEHOLDER,
   LOCAL_DATETIME_FORMAT,
@@ -81,8 +80,17 @@ export function createTimeScrubberWidget(
   readout.type = 'button';
   readout.id = 'time-readout';
   readout.className = 'time-readout time-readout-btn';
-  readout.setAttribute('aria-label', 'Open time scrubber');
-  collapsed.append(count, readout);
+  // Described, not labelled. An aria-label REPLACES the accessible name, so
+  // labelling this button hides the clock text it exists to show — and this
+  // is the only place the model time appears. The name stays the timestamp;
+  // the action rides a description. The hint lives outside the button
+  // because `createTimeReadout` writes `textContent` and would erase a child.
+  const readoutHint = document.createElement('span');
+  readoutHint.id = 'time-readout-hint';
+  readoutHint.className = 'visually-hidden';
+  readoutHint.textContent = 'Open time scrubber';
+  readout.setAttribute('aria-describedby', readoutHint.id);
+  collapsed.append(count, readout, readoutHint);
 
   // Expanded view: the scrubber, hidden until opened.
   const scrubber = document.createElement('div');
@@ -160,12 +168,6 @@ export function createTimeScrubberWidget(
     stellata.notifyClockJumped();
     setJumpField(seconds);
     refresh();
-  };
-  // Either accepted form → Unix-seconds, or NaN. Datetime first; a bare
-  // number falls through to the Julian Date form.
-  const parseJumpEntry = (value: string): number => {
-    const ms = parseLocalDatetimeValue(value);
-    return Number.isNaN(ms) ? parseJulianDateValue(value) : ms / 1000;
   };
   /** True when the entry parsed and the clock moved. */
   const doJump = (): boolean => {

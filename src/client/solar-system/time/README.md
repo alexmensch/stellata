@@ -145,6 +145,14 @@ and the echo is always the canonical **local datetime** — one canonical
 echo rather than per-entry-form state, with the readout's JD line as the
 JD-scale confirmation of where the clock landed.
 
+`parseJumpEntry` is the two forms' single dispatcher, and it lives in
+`time.ts` beside them rather than in the widget because **the two parsers
+do not share a unit**: `parseLocalDatetimeValue` answers in
+epoch-milliseconds (it is the `toLocalDatetimeValue` inverse) and
+`parseJulianDateValue` in Unix-seconds. A dispatcher that forwards one
+of them unconverted is wrong by a factor of 1000, which at this clock's
+scale lands in the deep past instead of failing visibly.
+
 **Typed-only, and `datetime-local` cannot deliver that.** It was one
 originally, with
 `.scrubber-jump input::-webkit-calendar-picker-indicator { display: none }`
@@ -223,6 +231,13 @@ a truer date. Deliberately NOT Stellarium's switch-at-1582 behaviour.
 The ` (Gregorian)` suffix shows only on the collapsed readout
 (`showCalendar` in `formatTimeReadout`) — the expanded scrubber header
 has no room for it.
+
+The collapsed readout is a button, and its **accessible name is that
+timestamp** — the text itself, carried by `aria-describedby` pointing at
+a visually-hidden "Open time scrubber" hint that sits *outside* the
+button (`createTimeReadout` writes `textContent` and would erase a
+child). An `aria-label` here replaces the name rather than adding to it,
+which silences the one place the model clock is announced at all.
 
 Line 2 is the reconciliation: the JD in **TT**, the scale every canon
 publishes against, so a catalogue's number is directly matchable — plus

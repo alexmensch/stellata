@@ -402,6 +402,17 @@ body[data-controls-hidden] .controls-restore-btn { display: flex; }
   white-space: pre-line;
 }
 
+/* Reachable by assistive tech, painted nowhere. Clipped rather than
+ * `display: none`, which would drop it from the accessibility tree. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* Time-scrubber widget (promoted from the debug panel). Collapsed, the
  * readout doubles as the open trigger; expanded, it's a small app-styled
  * transport panel. Colours ride the root tokens so chart mode adapts; only
