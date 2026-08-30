@@ -69,9 +69,9 @@ export class RollController {
   renderedRollError(camera: THREE.Camera, levelPole: THREE.Vector3): number {
     this.viewForwardInto(this.forward, camera);
     cameraLocalUpInto(this.currentUp, camera);
-    this.currentUp.addScaledVector(this.forward, -this.currentUp.dot(this.forward));
-    if (this.currentUp.lengthSq() === 0) return 0;
-    this.currentUp.normalize();
+    // Projected in place: `levelUpInto` copies its axis first, so aliasing
+    // the two is a self-copy and the scratch stays one vector.
+    if (levelUpInto(this.currentUp, this.currentUp, this.forward) === 0) return 0;
     return this.rollErrorToward(levelPole);
   }
 
