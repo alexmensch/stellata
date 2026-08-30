@@ -22,7 +22,7 @@ function longTermParabola(y: number): number {
 // against use −25.858. NASA's own correction reconciles the two — dropping
 // it reads 202 s high at 2000 BC, which is 0.84° of Earth rotation under
 // every deep-time eclipse ground point.
-function lunarSecularAccelerationCorrection(y: number): number {
+export function lunarSecularAccelerationCorrection(y: number): number {
   return -0.000012932 * (y - 1955) * (y - 1955);
 }
 

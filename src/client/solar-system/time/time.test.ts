@@ -67,7 +67,7 @@ describe('tToJdTdb', () => {
   });
 
   it('round-trips through jdTdbToT, at both clamp bounds', () => {
-    // ΔT reaches 20.6 h at the lower bound, so the inverse is a fixed
+    // ΔT reaches 20.5 h at the lower bound, so the inverse is a fixed
     // point rather than a subtraction; a single-pass version still lands
     // inside a millisecond, and this is what catches it going missing.
     for (const t of [1.78e9, T_CLAMP_MIN_S, T_CLAMP_MAX_S]) {
