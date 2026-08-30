@@ -79,6 +79,10 @@ themselves.
   Local Bubble.
 - `hover/`, `overlays/`, `ui/`, `typeahead/`, `modals/`, `debug/` —
   cross-cutting UI.
+- `attitude/` — **spike, branch-only.** Aircraft-style attitude indicator
+  reading the camera quaternion against a selectable reference frame
+  (equatorial / ecliptic / galactic), plus click-to-level. Wired from
+  `main.ts` in three lines; its README says what to delete.
 - `calibration/` — the display-calibration screen: authored sRGB step
   wedge, black-point and highlight ladders, and gamma match patches.
   Deliberately outside the `hdr/` path — it shows the display's own

@@ -1277,6 +1277,85 @@ body.monochrome .poi-label {
   font-family: inherit;
 }
 
+/* Spike: attitude indicator, drawn in attitude/attitude-indicator.ts. */
+.attitude {
+  width: 132px;
+  margin-bottom: 6px;
+  color: var(--fg);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+}
+.ai-svg {
+  display: block;
+  cursor: pointer;
+}
+.ai-svg .ai-north {
+  fill: #24476b;
+}
+.ai-svg .ai-south {
+  fill: #5a4326;
+}
+.ai-svg .ai-horizon {
+  stroke: #f2f4f8;
+  stroke-width: 1.1;
+}
+.ai-svg .ai-rung {
+  stroke: rgba(242, 244, 248, 0.8);
+  stroke-width: 0.8;
+}
+.ai-svg .ai-rung-label {
+  fill: rgba(242, 244, 248, 0.75);
+  font-size: 5px;
+  font-family: inherit;
+}
+.ai-svg .ai-bezel {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.ai-svg .ai-bank-tick {
+  stroke: var(--fg-dim);
+  stroke-width: 1;
+}
+.ai-svg .ai-bank-pointer {
+  fill: var(--fg);
+}
+.ai-svg .ai-symbol line {
+  stroke: #ffd24a;
+  stroke-width: 1.6;
+}
+.ai-svg .ai-symbol circle {
+  fill: #ffd24a;
+}
+.ai-svg .ai-readout {
+  fill: var(--fg-dim);
+  font-size: 9px;
+  font-family: inherit;
+  letter-spacing: 0.05em;
+}
+.attitude-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+.attitude-frame {
+  background: none;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  color: var(--fg);
+  font: inherit;
+  letter-spacing: 0.08em;
+  padding: 1px 5px;
+  cursor: pointer;
+}
+.attitude-bank {
+  color: var(--fg-dim);
+}
+.attitude-bank.is-warn {
+  color: #ffb35c;
+}
+
 .tooltip {
   position: fixed;
   z-index: 11;
