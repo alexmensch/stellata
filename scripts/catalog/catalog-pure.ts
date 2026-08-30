@@ -1450,7 +1450,8 @@ export const FLAGS = {
   binaryCompanionOnly: 0x08,
   binaryPrimary: 0x10,
   /** Companion addressable only via the row-index map's `bySynth`
-   *  table. See scripts/catalog/README.md § Companion promotion. */
+   *  table. See companions/README.md § Companion promotion from
+   *  `data/binaries/multiples.tsv`. */
   binaryCompanionSynthetic: 0x20,
 } as const;
 export const FLAG_HAS_NAME = FLAGS.hasName;

@@ -145,7 +145,8 @@ export interface Star {
    *  `vTierIsSystemBlend` in ../photometry/v-magnitude-pure.ts. */
   vVia: VVia | null;
   /** Build-time-only synthetic identifier. See
-   *  scripts/catalog/README.md § Companion promotion. */
+   *  ../companions/README.md § Companion promotion from
+   *  `data/binaries/multiples.tsv`. */
   syntheticId: string | null;
 }
 

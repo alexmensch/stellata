@@ -1,6 +1,6 @@
 // J2000 osculating orbital elements for the major moons + the resolver
 // that composes their heliocentric ecliptic positions. Sibling of
-// ephemeris.ts (planets). See src/client/solar-system/README.md § Moons.
+// ephemeris.ts (planets). See ./README.md § Moon ephemeris.
 
 import { J2000_JD, KM_PC } from '../../util/astronomy-constants';
 import { icrsToEcliptic } from '../../util/ecliptic-frame';
