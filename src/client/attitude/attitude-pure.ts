@@ -9,6 +9,7 @@ import {
   signedAngleAbout,
 } from '../camera/controls/input/reference-up-pure';
 import { galacticDirToIcrs } from '../galactic/galactic-coords';
+import type { TargetKind } from '../camera/focus/focus-target';
 
 export type ReferenceFrameKey =
   | 'equatorial'
@@ -86,6 +87,31 @@ export function buildReferenceFrames(): Record<ReferenceFrameKey, ReferenceFrame
       new THREE.Vector3(1, 0, 0),
     ),
   };
+}
+
+/** What the frame rule needs to know about the focused object, resolved by the
+ *  caller so the rule itself stays a plain decision over values. */
+export interface FocusFrameInputs {
+  kind: TargetKind | null;
+  /** Only consulted for a planet: Earth is the one body whose sky is read in
+   *  RA/Dec rather than against the ecliptic. */
+  planetName: string | null;
+  isSol: boolean;
+}
+
+/** Which frame the focused object implies. Everything in Sol's system rides
+ *  the ecliptic — that is the plane its planets actually orbit in — with Earth
+ *  the single exception, where RA/Dec is the frame anyone reading the sky from
+ *  the surface already thinks in. Beyond the system, galactic is the only frame
+ *  still defined by something real. */
+export function autoFrameFor(focus: FocusFrameInputs): ReferenceFrameKey {
+  if (focus.kind === null) return 'galactic';
+  if (focus.kind === 'planet') {
+    return focus.planetName === 'Earth' ? 'equatorial' : 'ecliptic';
+  }
+  if (focus.kind === 'probe') return 'ecliptic';
+  if (focus.kind === 'star' && focus.isSol) return 'ecliptic';
+  return 'galactic';
 }
 
 export const FRAME_CYCLE: ReferenceFrameKey[] = [

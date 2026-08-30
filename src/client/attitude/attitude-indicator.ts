@@ -5,13 +5,14 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { BALL_DARK, BALL_LIGHT, createAttitudeBall } from './attitude-ball';
 import {
+  autoFrameFor,
   buildReferenceFrames,
   captureReferenceFrame,
   nextFrameKey,
   readAttitude,
   type Attitude,
+  type FocusFrameInputs,
   type ReferenceFrame,
-  type ReferenceFrameKey,
 } from './attitude-pure';
 import type { Target } from '../camera/focus/focus-target';
 
@@ -27,22 +28,15 @@ const BALL_R = (BALL_PX / 2) * (Math.tan(Math.asin(1 / 6)) / Math.tan((10 * Math
 // Roll is unbounded out here, so the scale runs the whole way round rather
 // than covering the shallow band an aircraft lives in.
 const BANK_TICK_STEP_DEG = 5;
-/** Which frame the focused object implies. Everything in Sol's system rides
- *  the ecliptic — that is the plane its planets actually orbit in — with Earth
- *  the single exception, where RA/Dec is the frame anyone reading the sky from
- *  the surface already thinks in. Beyond the system, galactic is the only frame
- *  still defined by something real. */
-function autoFrameFor(stellata: Stellata, target: Target | null): ReferenceFrameKey {
-  if (target === null) return 'galactic';
-  if (target.kind === 'planet') {
-    const name = stellata.kinds.planet?.displayName(target.idx);
-    return name === 'Earth' ? 'equatorial' : 'ecliptic';
-  }
-  if (target.kind === 'probe') return 'ecliptic';
-  if (target.kind === 'star' && target.idx === stellata.catalog.solIndex) {
-    return 'ecliptic';
-  }
-  return 'galactic';
+function focusInputs(stellata: Stellata, target: Target | null): FocusFrameInputs {
+  return {
+    kind: target?.kind ?? null,
+    planetName:
+      target?.kind === 'planet'
+        ? stellata.kinds.planet?.displayName(target.idx) ?? null
+        : null,
+    isSol: target?.kind === 'star' && target.idx === stellata.catalog.solIndex,
+  };
 }
 
 function el<K extends keyof SVGElementTagNameMap>(
@@ -252,14 +246,14 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   frameBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    setFrame(frames[nextFrameKey(frame.key, autoFrameFor(stellata, focused))]);
+    setFrame(frames[nextFrameKey(frame.key, autoFrameFor(focusInputs(stellata, focused)))]);
   });
 
   // A manual pick holds only until the focus next changes — overriding sticks
   // while you study one object without freezing the automatic choice forever.
   stellata.on('focus', (target) => {
     focused = target;
-    setFrame(frames[autoFrameFor(stellata, target)]);
+    setFrame(frames[autoFrameFor(focusInputs(stellata, target))]);
   });
 
   stellata.on('frame', () => {

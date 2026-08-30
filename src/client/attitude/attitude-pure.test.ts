@@ -1,13 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
+  autoFrameFor,
   ballBasisInto,
   buildReferenceFrames,
+  captureReferenceFrame,
   frameDirToBallInto,
   nextFrameKey,
   POLE_HOLD_DEG,
   readAttitude,
   type Attitude,
+  type FocusFrameInputs,
 } from './attitude-pure';
 
 const DEG = Math.PI / 180;
@@ -234,5 +237,75 @@ describe('nextFrameKey', () => {
       }
       expect(seen.size).toBe(3);
     }
+  });
+});
+
+describe('autoFrameFor', () => {
+  const focus = (o: Partial<FocusFrameInputs> = {}): FocusFrameInputs => ({
+    kind: null,
+    planetName: null,
+    isSol: false,
+    ...o,
+  });
+
+  it('reads an empty sky as galactic', () => {
+    expect(autoFrameFor(focus())).toBe('galactic');
+  });
+
+  it('rides the ecliptic across Sol\'s system', () => {
+    expect(autoFrameFor(focus({ kind: 'planet', planetName: 'Mars' }))).toBe('ecliptic');
+    expect(autoFrameFor(focus({ kind: 'planet', planetName: 'Luna' }))).toBe('ecliptic');
+    expect(autoFrameFor(focus({ kind: 'probe' }))).toBe('ecliptic');
+    expect(autoFrameFor(focus({ kind: 'star', isSol: true }))).toBe('ecliptic');
+  });
+
+  it('puts Earth alone on the celestial equator', () => {
+    expect(autoFrameFor(focus({ kind: 'planet', planetName: 'Earth' }))).toBe('equatorial');
+  });
+
+  it('falls back to ecliptic for a planet whose name never resolved', () => {
+    expect(autoFrameFor(focus({ kind: 'planet', planetName: null }))).toBe('ecliptic');
+  });
+
+  it('leaves the system on galactic', () => {
+    expect(autoFrameFor(focus({ kind: 'star' }))).toBe('galactic');
+    for (const kind of ['cloud', 'lg', 'shell'] as const) {
+      expect(autoFrameFor(focus({ kind }))).toBe('galactic');
+    }
+  });
+
+  it('never picks the captured datum — only a right-click can', () => {
+    const kinds = [null, 'star', 'cloud', 'lg', 'planet', 'shell', 'probe'] as const;
+    for (const kind of kinds) {
+      expect(autoFrameFor(focus({ kind, isSol: true, planetName: 'Earth' }))).not.toBe(
+        'reference',
+      );
+    }
+  });
+});
+
+describe('captureReferenceFrame', () => {
+  it('reads dead level and zero from the attitude it was captured at', () => {
+    const camera = cameraLookingAt(new THREE.Vector3(0.3, -0.8, 0.5));
+    camera.quaternion.premultiply(
+      new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion),
+        41 * DEG,
+      ),
+    );
+    const out: Attitude = { pitchRad: 9, bankRad: 9, lonRad: 9, sinFromPole: 0 };
+    readAttitude(camera, captureReferenceFrame(camera), out);
+    expect(out.pitchRad).toBeCloseTo(0, 10);
+    expect(out.lonRad).toBeCloseTo(0, 10);
+    expect(out.bankRad).toBeCloseTo(0, 10);
+  });
+
+  it('captures an orthonormal frame like any other', () => {
+    const frame = captureReferenceFrame(cameraLookingAt(new THREE.Vector3(1, 2, -3)));
+    expect(frame.key).toBe('reference');
+    expect(frame.pole.length()).toBeCloseTo(1, 12);
+    expect(frame.zeroLon.length()).toBeCloseTo(1, 12);
+    expect(frame.east.length()).toBeCloseTo(1, 12);
+    expect(frame.pole.dot(frame.zeroLon)).toBeCloseTo(0, 12);
   });
 });
