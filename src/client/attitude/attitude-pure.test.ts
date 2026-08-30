@@ -4,6 +4,7 @@ import {
   ballBasisInto,
   buildReferenceFrames,
   frameDirToBallInto,
+  nextFrameKey,
   POLE_HOLD_DEG,
   readAttitude,
   type Attitude,
@@ -206,6 +207,32 @@ describe('reference frames', () => {
       expect(frame.east.length()).toBeCloseTo(1, 12);
       expect(frame.pole.dot(frame.zeroLon)).toBeCloseTo(0, 12);
       expect(frame.east.dot(frame.zeroLon)).toBeCloseTo(0, 12);
+    }
+  });
+});
+
+describe('nextFrameKey', () => {
+  it('advances through the cycle, ignoring the focus default', () => {
+    expect(nextFrameKey('equatorial', 'galactic')).toBe('ecliptic');
+    expect(nextFrameKey('ecliptic', 'galactic')).toBe('galactic');
+    expect(nextFrameKey('galactic', 'galactic')).toBe('equatorial');
+  });
+
+  it('leaves a captured REF on the focused object\'s own default', () => {
+    expect(nextFrameKey('reference', 'ecliptic')).toBe('ecliptic');
+    expect(nextFrameKey('reference', 'galactic')).toBe('galactic');
+    expect(nextFrameKey('reference', 'equatorial')).toBe('equatorial');
+  });
+
+  it('reaches every frame from every frame', () => {
+    for (const start of ['equatorial', 'ecliptic', 'galactic'] as const) {
+      const seen = new Set<string>();
+      let at: ReturnType<typeof nextFrameKey> = start;
+      for (let i = 0; i < 3; i++) {
+        at = nextFrameKey(at, 'galactic');
+        seen.add(at);
+      }
+      expect(seen.size).toBe(3);
     }
   });
 });

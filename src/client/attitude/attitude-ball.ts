@@ -20,6 +20,39 @@ const deg = (d: number) => d * PX_PER_DEG;
 const lonToX = (d: number) => TEX_W * (d / 360 + 0.5);
 const latToY = (d: number) => TEX_H * (0.5 - d / 180);
 
+/** Undoes the equirectangular squeeze along a parallel: a degree of longitude
+ *  is only `cos(lat)` of arc, so anything measured east-west has to widen by
+ *  this to hold a constant size **on the sphere**. That is how the real ball
+ *  was painted — the meridian rail is a solid reference at any attitude, so it
+ *  must not thin to nothing where the crew most needs it. Clamped near 78°,
+ *  past which the correction diverges. */
+const lonStretch = (lat: number) =>
+  1 / Math.max(0.2, Math.cos((lat * Math.PI) / 180));
+
+const RIBBON_STEP_DEG = 2;
+
+/** A meridian drawn as a filled ribbon rather than a stroke, so its width can
+ *  follow `lonStretch` up the sphere instead of tapering away with the
+ *  converging meridians. */
+function meridianRibbon(
+  ctx: CanvasRenderingContext2D,
+  lonDeg: number,
+  halfWidthPx: number,
+) {
+  const x = lonToX(lonDeg);
+  const half = (lat: number) => halfWidthPx * lonStretch(lat);
+  ctx.beginPath();
+  ctx.moveTo(x - half(90), latToY(90));
+  for (let lat = 90 - RIBBON_STEP_DEG; lat >= -90; lat -= RIBBON_STEP_DEG) {
+    ctx.lineTo(x - half(lat), latToY(lat));
+  }
+  for (let lat = -90; lat <= 90; lat += RIBBON_STEP_DEG) {
+    ctx.lineTo(x + half(lat), latToY(lat));
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
 function segment(
   ctx: CanvasRenderingContext2D,
   x1: number,
@@ -47,23 +80,28 @@ function paintGraticule(ctx: CanvasRenderingContext2D) {
   }
   for (let lon = -180; lon <= 180; lon += SOLID_STEP_DEG) {
     if (lon === 0) continue;
-    segment(ctx, lonToX(lon), 0, lonToX(lon), TEX_H);
+    meridianRibbon(ctx, lon, 1.6);
   }
 
-  ctx.lineWidth = 2.6;
   for (let lat = -75; lat <= 75; lat += SOLID_STEP_DEG) {
     const y = latToY(lat);
+    // A vertical tick's *thickness* runs east-west, so it thins toward the
+    // poles unless it widens along with everything else.
+    ctx.lineWidth = 2.6 * lonStretch(lat);
     for (let lon = -180; lon < 180; lon += TRACK_STEP_DEG) {
       const x = lonToX(lon);
       segment(ctx, x, y - tick, x, y + tick);
     }
   }
+  ctx.lineWidth = 2.6;
   for (let lon = -165; lon <= 165; lon += SOLID_STEP_DEG) {
     const x = lonToX(lon);
     for (let lat = -75; lat <= 75; lat += TRACK_STEP_DEG) {
       if (lat === 0) continue;
+      // A horizontal tick's *length* runs east-west, so it shortens instead.
+      const half = tick * lonStretch(lat);
       const y = latToY(lat);
-      segment(ctx, x - tick, y, x + tick, y);
+      segment(ctx, x - half, y, x + half, y);
     }
   }
 }
@@ -78,10 +116,11 @@ const PRIME_HALF_DEG = PRIME_BANDS_DEG[0] / 2;
  *  They start outside the painted band rather than crossing it. */
 function paintPrimeTicks(ctx: CanvasRenderingContext2D) {
   const x = lonToX(0);
-  const gap = deg(PRIME_HALF_DEG);
   ctx.lineWidth = 2.4;
   for (let lat = -88; lat <= 88; lat += SCALE_STEP_DEG) {
-    const len = deg(lat % 10 === 0 ? 2.1 : 1.3);
+    const stretch = lonStretch(lat);
+    const gap = deg(PRIME_HALF_DEG) * stretch;
+    const len = deg(lat % 10 === 0 ? 2.1 : 1.3) * stretch;
     const y = latToY(lat);
     segment(ctx, x - gap, y, x - gap - len, y);
     segment(ctx, x + gap, y, x + gap + len, y);
@@ -91,11 +130,9 @@ function paintPrimeTicks(ctx: CanvasRenderingContext2D) {
 /** The prime meridian's rails, painted unclipped so each hemisphere shows
  *  whichever bands contrast against it. */
 function paintPrimeRails(ctx: CanvasRenderingContext2D) {
-  const x = lonToX(0);
   PRIME_BANDS_DEG.forEach((width, i) => {
-    ctx.strokeStyle = i % 2 === 0 ? DARK : LIGHT;
-    ctx.lineWidth = deg(width);
-    segment(ctx, x, 0, x, TEX_H);
+    ctx.fillStyle = i % 2 === 0 ? DARK : LIGHT;
+    meridianRibbon(ctx, 0, deg(width) / 2);
   });
 }
 
@@ -116,11 +153,9 @@ const GLYPH_PAD_DEG = 1.6;
 
 /** One numeral, cleared of the lines running under it.
  *
- *  **Two horizontal corrections ride the same transform.** The mirror cancels
- *  the ball's reflected model matrix; the `1 / cos(lat)` stretch cancels the
- *  equirectangular squeeze, which narrows a fixed-width glyph toward the poles
- *  — on a real ball the numerals were painted at constant size on the surface,
- *  so undoing the projection is what reproduces that. */
+ *  **Two horizontal corrections ride the same transform:** the mirror cancels
+ *  the ball's reflected model matrix, and `lonStretch` cancels the
+ *  equirectangular squeeze. */
 function numeral(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -129,7 +164,7 @@ function numeral(
   bg: string,
   ink: string,
 ) {
-  const stretch = 1 / Math.max(0.2, Math.cos((lat * Math.PI) / 180));
+  const stretch = lonStretch(lat);
   const y = latToY(lat);
   const w = (ctx.measureText(text).width + deg(GLYPH_PAD_DEG)) * stretch;
   const h = deg(GLYPH_DEG + GLYPH_PAD_DEG);

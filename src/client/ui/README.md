@@ -311,7 +311,8 @@ offsets.
 
 Sits under the attitude indicator in `.bottom-left-stack`; the ball owns
 the width of that column, so a scale bar wider than ~192px pushes the
-column rather than the ball.
+column rather than the ball. The indicator hides with `U`, the scale bar
+does not — same split as the meta readout, which also survives the toggle.
 
 `scale-bar.ts` is a single SVG. Targets ~20% of viewport width;
 `niceRound` snaps the represented distance to a 1/2/5×10^N value, then

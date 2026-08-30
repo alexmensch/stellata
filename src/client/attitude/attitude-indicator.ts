@@ -7,6 +7,7 @@ import { createAttitudeBall } from './attitude-ball';
 import {
   buildReferenceFrames,
   captureReferenceFrame,
+  nextFrameKey,
   readAttitude,
   type Attitude,
   type ReferenceFrame,
@@ -26,8 +27,6 @@ const BALL_R = (BALL_PX / 2) * (Math.tan(Math.asin(1 / 6)) / Math.tan((10 * Math
 // Roll is unbounded out here, so the scale runs the whole way round rather
 // than covering the shallow band an aircraft lives in.
 const BANK_TICK_STEP_DEG = 5;
-const FRAME_CYCLE: ReferenceFrameKey[] = ['equatorial', 'ecliptic', 'galactic'];
-
 /** Which frame the focused object implies. Everything in Sol's system rides
  *  the ecliptic — that is the plane its planets actually orbit in — with Earth
  *  the single exception, where RA/Dec is the frame anyone reading the sky from
@@ -178,6 +177,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   const frames = buildReferenceFrames();
   let frame: ReferenceFrame = frames.equatorial;
+  let focused: Target | null = null;
 
   const ball = createAttitudeBall(BALL_PX);
 
@@ -242,20 +242,19 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     frames.reference = captureReferenceFrame(stellata.camera);
     setFrame(frames.reference);
   });
-  stage.setAttribute('role', 'button');
-  stage.setAttribute('tabindex', '0');
-  stage.setAttribute('aria-label', 'Level the camera against the reference frame');
+  stage.setAttribute('role', 'img');
+  stage.setAttribute('aria-label', 'Attitude indicator');
   stage.title = 'Click to level · right-click to set REF here';
 
   frameBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    const at = FRAME_CYCLE.indexOf(frame.key);
-    setFrame(frames[FRAME_CYCLE[(at + 1) % FRAME_CYCLE.length]]);
+    setFrame(frames[nextFrameKey(frame.key, autoFrameFor(stellata, focused))]);
   });
 
   // A manual pick holds only until the focus next changes — overriding sticks
   // while you study one object without freezing the automatic choice forever.
   stellata.on('focus', (target) => {
+    focused = target;
     setFrame(frames[autoFrameFor(stellata, target)]);
   });
 

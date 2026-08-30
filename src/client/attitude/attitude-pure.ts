@@ -88,6 +88,28 @@ export function buildReferenceFrames(): Record<ReferenceFrameKey, ReferenceFrame
   };
 }
 
+export const FRAME_CYCLE: ReferenceFrameKey[] = [
+  'equatorial',
+  'ecliptic',
+  'galactic',
+];
+
+/** The flag's next stop, with the cycle rotated so the focus default leads.
+ *
+ *  Rotating a cycle leaves every successor unchanged, so this only bites on the
+ *  way **out of REF** — a captured datum sits outside the cycle and has no
+ *  successor of its own, and dropping back to a fixed first entry would strand
+ *  you on a frame that means nothing where you are. Leaving REF therefore lands
+ *  on whatever the focused object implies. */
+export function nextFrameKey(
+  current: ReferenceFrameKey,
+  focusDefault: ReferenceFrameKey,
+): ReferenceFrameKey {
+  const at = FRAME_CYCLE.indexOf(current);
+  if (at < 0) return focusDefault;
+  return FRAME_CYCLE[(at + 1) % FRAME_CYCLE.length];
+}
+
 /** Bank is the angle to a level up that shrinks to nothing on the pole, so
  *  inside this cone the reading is float noise rather than a measurement and
  *  the last one stands. Two decades tighter than the roll correction's own

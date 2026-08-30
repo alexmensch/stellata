@@ -219,7 +219,8 @@ html, body {
  * the column floor by its .ui-top-bottom wrapper. */
 body[data-controls-hidden] #topbar,
 body[data-controls-hidden] #panel,
-body[data-controls-hidden] #card-stack {
+body[data-controls-hidden] #card-stack,
+body[data-controls-hidden] #attitude {
   display: none;
 }
 .controls-restore-btn {
@@ -1297,6 +1298,21 @@ body.monochrome .poi-label {
   position: relative;
   cursor: pointer;
 }
+/* The instrument is a click target inside a WebGL-heavy view, and a UA focus
+   ring on it reads as a rendering fault rather than an affordance. The
+   keyboard path is `L`, not a tab stop, so nothing is lost by suppressing it
+   here — the flag below keeps a visible focus state of its own. */
+.attitude-stage,
+.attitude-stage:focus,
+.attitude-stage:focus-visible,
+.attitude-frame:focus,
+.attitude-frame:focus-visible {
+  outline: none;
+}
+.attitude-stage,
+.attitude-frame {
+  -webkit-tap-highlight-color: transparent;
+}
 .attitude-stage .ai-canvas {
   position: absolute;
   display: block;
@@ -1344,6 +1360,10 @@ body.monochrome .poi-label {
   letter-spacing: 0.08em;
   padding: 1px 5px;
   cursor: pointer;
+}
+.attitude-frame:hover,
+.attitude-frame:focus-visible {
+  border-color: var(--fg);
 }
 
 .tooltip {

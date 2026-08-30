@@ -38,6 +38,12 @@ REF** — a datum planted on the attitude held right now, so the ball reads 0/0
 level from here. That is the Shuttle's ATT REF button, and it is the answer to
 "what is level outside the galaxy", where no inherited frame means anything.
 
+`nextFrameKey` rotates the cycle so the focus default leads. Rotating a cycle
+leaves every successor unchanged, so this only bites **on the way out of REF**:
+a captured datum sits outside the cycle and has no successor of its own, and
+falling back to a fixed first entry would strand you on a frame that means
+nothing where you are.
+
 `level()` — a click on the ball, or `L` — zeroes **roll only**. Levelling
 pitch would move the camera through space in NAVIGATE, where it orbits a
 target rather than turning in place.
@@ -129,6 +135,16 @@ the real instrument.
 Because none of that depends on the frame, **the texture is built once** and
 switching frames only re-aims the ball.
 
+**Everything measured east-west widens by `lonStretch` = 1/cos(lat).** A degree
+of longitude is only `cos(lat)` of arc, so a fixed texture width tapers to
+nothing at the poles — which is exactly where a reference is most needed and
+hardest to read. The meridians are therefore filled *ribbons* rather than
+strokes (`meridianRibbon`), and the same correction widens the prime rail, the
+vertical tick tracks' stroke width, the horizontal ticks' length, and the
+numerals' glyphs. Out of proportion at the poles by construction; that is the
+real ball's bargain, and the reason its rail stays solid at any attitude. The
+correction is clamped near 78°, past which it diverges.
+
 No red polar zone. The real ball wore one to warn of gimbal lock approaching,
 which is a mechanical failure this has no analogue for.
 
@@ -155,6 +171,12 @@ un-aviation:
   scale that ran out would be worse than none.
 - **The centre index is a cross, not a pair of wings** — four arms and a point,
   sized off `BALL_R` so it tracks the ball's size, then trimmed 5%.
+
+`U` hides the instrument along with the rest of the controls
+(`../ui/README.md` § Hide-controls toggle). No focus ring ever appears on it:
+the ball is not a tab stop — the keyboard path is `L` — and the flag's focus
+state is a border brighten rather than a UA outline, because a blue ring over a
+WebGL canvas reads as a rendering fault.
 
 The roll caret is the FDAI's: a light **equilateral** triangle carrying a dark
 **isoceles** one on the *same base segment*, its apex stopping `INSET_APEX_FRAC`
