@@ -2,9 +2,9 @@
 // build-catalog.ts and its tests — binary layout constants, spectral
 // parsing, Stefan-Boltzmann radius, GCVS field extraction.
 
-import { ballesterosBvFromTeff } from '../colour/blackbody-lut-pure';
-import { emptyTallyPartition } from '../util/tally';
-import { headerIndex } from './parse/corpus-tsv';
+import { ballesterosBvFromTeff } from '../colour/blackbody-lut-pure.ts';
+import { emptyTallyPartition } from '../util/tally.ts';
+import { headerIndex } from './parse/corpus-tsv.ts';
 
 /** Solar-type B-V used as a fallback when no chromaticity input is
  *  available. ~0.65 yields a yellow disc rather than a hot blue or

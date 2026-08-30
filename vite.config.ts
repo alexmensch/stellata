@@ -1,13 +1,13 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
-import { catalogChunkFilename, readCatalogHeader } from './scripts/catalog/catalog-pure';
+import { catalogChunkFilename, readCatalogHeader } from './scripts/catalog/catalog-pure.ts';
 
 // Expose package.json version as `import.meta.env.VITE_APP_VERSION`. The
 // VITE_ prefix is the supported way to inject build-time values that work
 // in both dev and prod (define behaves differently across the two).
 const pkgVersion: string = JSON.parse(
-  readFileSync(resolve(__dirname, 'package.json'), 'utf8'),
+  readFileSync(resolve(import.meta.dirname, 'package.json'), 'utf8'),
 ).version;
 process.env.VITE_APP_VERSION = pkgVersion;
 
@@ -20,7 +20,7 @@ process.env.VITE_APP_VERSION = pkgVersion;
  */
 function builtStarCount(): string {
   try {
-    const buf = readFileSync(resolve(__dirname, 'public', catalogChunkFilename(0)));
+    const buf = readFileSync(resolve(import.meta.dirname, 'public', catalogChunkFilename(0)));
     const bytes = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
     return readCatalogHeader(bytes as ArrayBuffer).count.toLocaleString('en-US');
   } catch {
@@ -31,20 +31,24 @@ process.env.VITE_STAR_COUNT = builtStarCount();
 
 export default defineConfig(() => ({
   base: '/',
-  root: resolve(__dirname, 'src/client'),
-  publicDir: resolve(__dirname, 'public'),
+  root: resolve(import.meta.dirname, 'src/client'),
+  publicDir: resolve(import.meta.dirname, 'public'),
   build: {
-    outDir: resolve(__dirname, 'dist'),
+    outDir: resolve(import.meta.dirname, 'dist'),
     emptyOutDir: true,
     target: 'es2022',
+    // Sits above the entry chunk on purpose. JS is ~1% of the bytes before
+    // first frame (the catalogue fetch dominates), and a three/app vendor
+    // split leaves both halves near 500 kB, so it silences nothing.
+    chunkSizeWarningLimit: 1600,
     rollupOptions: {
-      input: resolve(__dirname, 'src/client/index.html'),
+      input: resolve(import.meta.dirname, 'src/client/index.html'),
     },
   },
   server: {
     port: 5173,
     fs: {
-      allow: [resolve(__dirname, '..')],
+      allow: [resolve(import.meta.dirname, '..')],
     },
   },
 }));
