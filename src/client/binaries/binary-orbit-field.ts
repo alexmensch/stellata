@@ -532,6 +532,7 @@ export class BinaryOrbitField {
     this.lastCamPos.set(NaN, NaN, NaN);
     this.relDelta.fill(0);
     this.prevRelDelta.fill(0);
+    this.relDeltaWritten.fill(0);
     this.activeRelations.length = 0;
     this.memberSnapshotValid = false;
     this.observedUsable = false;
