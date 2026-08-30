@@ -1,6 +1,6 @@
-// The orbit-plane normal both subsystems answer with, against published
-// inclinations. See ../solar-system/ephemerides/README.md § Orbit rings
-// and ../binaries/README.md § Tier mapping.
+// The orbit-plane normal both subsystems answer with, pinned against
+// published inclinations, the ORB frame built from it, and the dispatcher
+// that picks a subsystem per focused kind.
 
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
@@ -28,8 +28,11 @@ import {
   FLAG_HAS_INCLINATION,
   FLAG_HAS_ORBIT,
   NO_PARENT,
+  type BinariesData,
 } from '../binaries/binaries-loader';
 import { captureOrbitFrame } from './attitude-pure';
+import { focusedOrbitInto, type FocusedOrbit } from './orbit-plane';
+import type { Stellata } from '../stellata';
 
 const DEG = Math.PI / 180;
 const J2000_T = 0;
@@ -206,12 +209,25 @@ describe('binary orbit normals', () => {
     const system = { x: 0, y: 0, z: 30 };
     const los = new THREE.Vector3(0, 0, 1);
     const angleFor = (idx: number) => {
-      const n = starOrbitNormalIcrs(b, idx, system);
-      expect(n).not.toBeNull();
-      return new THREE.Vector3(n!.x, n!.y, n!.z).angleTo(los) / DEG;
+      const plane = starOrbitNormalIcrs(b, idx, system);
+      expect(plane).not.toBeNull();
+      const n = plane!.normal;
+      return new THREE.Vector3(n.x, n.y, n.z).angleTo(los) / DEG;
     };
     expect(angleFor(INNER_SECONDARY)).toBeCloseTo(80, 6);
     expect(angleFor(OUTER_SECONDARY)).toBeCloseTo(20, 6);
+  });
+
+  // The pair the normal came from is handed back so a caller wanting the
+  // other member cannot resolve a different one and pair a plane with a
+  // longitude datum off some other orbit.
+  it('hands back the pair the normal came from', () => {
+    const b = algol();
+    const system = { x: 0, y: 0, z: 30 };
+    for (const idx of [OUTER_PRIMARY, OUTER_SECONDARY, INNER_SECONDARY]) {
+      expect(starOrbitNormalIcrs(b, idx, system)!.relationIdx)
+        .toBe(innermostRelationOf(b, idx));
+    }
   });
 
   it('declines a star in no pair', () => {
@@ -300,5 +316,146 @@ describe('captureOrbitFrame', () => {
       expect(v.length()).toBeCloseTo(1, 12);
     }
     expect(f.pole.dot(f.zeroLon)).toBeCloseTo(0, 12);
+  });
+});
+
+describe('focusedOrbitInto', () => {
+  const PRIMARY = 4;
+  const SECONDARY = 7;
+  const TIER_1 = FLAG_HAS_ORBIT | FLAG_HAS_INCLINATION;
+
+  const out = (): FocusedOrbit => ({
+    normal: new THREE.Vector3(),
+    toCentre: new THREE.Vector3(),
+  });
+
+  // Slots 4 and 7 sit 2 pc apart along +x; the rest of the buffer is far
+  // enough away that a wrong slot cannot pass for the right one.
+  const localPositions = () => {
+    const a = new Float32Array(30).fill(100);
+    a[PRIMARY * 3 + 0] = 1; a[PRIMARY * 3 + 1] = 0; a[PRIMARY * 3 + 2] = 0;
+    a[SECONDARY * 3 + 0] = 3; a[SECONDARY * 3 + 1] = 0; a[SECONDARY * 3 + 2] = 0;
+    return a;
+  };
+
+  const starHarness = (binaries: BinariesData | null) => {
+    const positions = new Float32Array(30);
+    for (const idx of [PRIMARY, SECONDARY]) positions[idx * 3 + 2] = 30;
+    return {
+      kinds: {},
+      getT: () => 0,
+      getBinaries: () => binaries,
+      catalog: { positions },
+      localPositions: localPositions(),
+    } as unknown as Stellata;
+  };
+
+  const pair = () => makeBinaries([
+    makeRelation({
+      primaryIdx: PRIMARY,
+      secondaryIdx: SECONDARY,
+      flags: TIER_1,
+      iRad: 40 * DEG,
+    }),
+  ]);
+
+  it('declines when nothing is focused', () => {
+    expect(focusedOrbitInto(out(), starHarness(pair()), null)).toBe(false);
+  });
+
+  // Probes, clouds and shells ride no orbit at all. The dispatcher must
+  // fall through rather than reaching for a kind's index in the wrong table.
+  it.each(['cloud', 'lg', 'shell', 'probe'] as const)('declines kind %s', (kind) => {
+    expect(focusedOrbitInto(out(), starHarness(pair()), { kind, idx: PRIMARY }))
+      .toBe(false);
+  });
+
+  it('declines a star before binaries.bin lands', () => {
+    expect(focusedOrbitInto(out(), starHarness(null), { kind: 'star', idx: PRIMARY }))
+      .toBe(false);
+  });
+
+  it('declines a star in no measured pair', () => {
+    expect(focusedOrbitInto(out(), starHarness(pair()), { kind: 'star', idx: 9 }))
+      .toBe(false);
+  });
+
+  // A catalog index past the position buffer means binaries.bin and
+  // catalog.bin disagree; reading it would hand out whatever float sat
+  // past the end.
+  it('declines an index outside the position buffer', () => {
+    const b = makeBinaries([
+      makeRelation({ primaryIdx: 500, secondaryIdx: 501, flags: TIER_1 }),
+    ]);
+    expect(focusedOrbitInto(out(), starHarness(b), { kind: 'star', idx: 501 }))
+      .toBe(false);
+  });
+
+  // Whichever member is focused, the barycentre lies between the two, so
+  // the answer is the direction to the OTHER one — opposite for the pair.
+  it('points each member at its partner', () => {
+    const s = starHarness(pair());
+    const fromSecondary = out();
+    expect(focusedOrbitInto(fromSecondary, s, { kind: 'star', idx: SECONDARY })).toBe(true);
+    const fromPrimary = out();
+    expect(focusedOrbitInto(fromPrimary, s, { kind: 'star', idx: PRIMARY })).toBe(true);
+
+    expect(fromSecondary.toCentre.clone().normalize().x).toBeCloseTo(-1, 6);
+    expect(fromPrimary.toCentre.clone().normalize().x).toBeCloseTo(1, 6);
+    expect(fromSecondary.normal.angleTo(fromPrimary.normal)).toBeCloseTo(0, 12);
+  });
+
+  it('returns a unit normal lying perpendicular to the centre direction', () => {
+    const o = out();
+    expect(focusedOrbitInto(o, starHarness(pair()), { kind: 'star', idx: SECONDARY }))
+      .toBe(true);
+    expect(o.normal.length()).toBeCloseTo(1, 12);
+    // The two members' separation lies in the orbital plane by
+    // construction, so the plane normal is square to it.
+    expect(o.normal.dot(o.toCentre.clone().normalize())).toBeCloseTo(0, 6);
+  });
+
+  it('declines a planet before the planet kind attaches', () => {
+    expect(focusedOrbitInto(out(), starHarness(pair()), { kind: 'planet', idx: 0 }))
+      .toBe(false);
+  });
+
+  // Both legs must land: a normal with no centre direction would capture a
+  // plane whose zero longitude fell back to the boresight, which is the
+  // vantage-dependent datum ORB exists to replace.
+  it('declines a planet whose centre offset is unavailable', () => {
+    const field = {
+      orbitPlaneNormalOf: (_i: number, _t: number, n: THREE.Vector3) => {
+        n.set(0, 0, 1);
+        return true;
+      },
+      orbitCentreOffsetInto: () => false,
+    };
+    const s = {
+      kinds: { planet: { field } },
+      getT: () => 0,
+    } as unknown as Stellata;
+    expect(focusedOrbitInto(out(), s, { kind: 'planet', idx: 0 })).toBe(false);
+  });
+
+  it('fills both legs for a planet whose host carries live elements', () => {
+    const field = {
+      orbitPlaneNormalOf: (_i: number, _t: number, n: THREE.Vector3) => {
+        n.set(0, 0, 1);
+        return true;
+      },
+      orbitCentreOffsetInto: (_i: number, c: THREE.Vector3) => {
+        c.set(-2, 0, 0);
+        return true;
+      },
+    };
+    const s = {
+      kinds: { planet: { field } },
+      getT: () => 0,
+    } as unknown as Stellata;
+    const o = out();
+    expect(focusedOrbitInto(o, s, { kind: 'planet', idx: 3 })).toBe(true);
+    expect(o.normal.z).toBeCloseTo(1, 12);
+    expect(o.toCentre.x).toBeCloseTo(-2, 12);
   });
 });

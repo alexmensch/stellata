@@ -15,9 +15,10 @@ does.
 ## Files
 
 ```
-attitude-pure.ts (+ test)  Frame table (equatorial / ecliptic / galactic /
-                           captured REF), the camera→(pitch, bank, longitude)
-                           read, and the ball's model matrix.
+attitude-pure.ts (+ test)  Frame table (equatorial / ecliptic / galactic,
+                           plus the captured REF and ORB), the
+                           camera→(pitch, bank, longitude) read, and the
+                           ball's model matrix.
 attitude-ball.ts           The painted grid texture and the standalone mini
                            renderer that draws the sphere.
 attitude-indicator.ts      The instrument: canvas + fixed SVG chrome, the
@@ -247,6 +248,15 @@ not a distance, so the focus-versus-geometric-centre distinction the ellipse
 carries does not arise. The centre direction already lies in the orbital
 plane, leaving the boresight to seed a degenerate case that a real orbit
 does not produce.
+
+**Vantage-invariant, not epoch-invariant** — a captured datum is a
+snapshot, as REF's is. The pole is a static function of the elements and
+barely moves, but zero longitude is the centre direction at the instant of
+capture, and the object keeps going round: Luna walks ~13° off its datum
+per day of model time, and one frame of fast scrub can carry it anywhere on
+the orbit. Double-click again to re-read. Do not "fix" this by recomputing
+the frame per tick — a datum that chases the object reads a constant
+longitude and stops measuring anything.
 
 Capturing rather than only rolling is what makes it legible: rolling to a
 plane the instrument is not displaying leaves the caret reading un-level
