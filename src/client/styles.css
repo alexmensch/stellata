@@ -1277,67 +1277,54 @@ body.monochrome .poi-label {
   font-family: inherit;
 }
 
-/* Spike: attitude indicator, drawn in attitude/attitude-indicator.ts. */
+/* Spike: gyro-sphere attitude indicator, drawn in attitude/. */
 .attitude {
-  width: 132px;
-  margin-bottom: 6px;
+  width: 144px;
+  margin-bottom: 8px;
   color: var(--fg);
   font-size: 10.5px;
   letter-spacing: 0.06em;
 }
-.ai-svg {
-  display: block;
+.attitude-stage {
+  position: relative;
   cursor: pointer;
 }
-.ai-svg .ai-north {
-  fill: #24476b;
+.attitude-stage .ai-canvas {
+  position: absolute;
+  display: block;
 }
-.ai-svg .ai-south {
-  fill: #5a4326;
+.attitude-stage .ai-chrome {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
 }
-.ai-svg .ai-horizon {
-  stroke: #f2f4f8;
-  stroke-width: 1.1;
-}
-.ai-svg .ai-rung {
-  stroke: rgba(242, 244, 248, 0.8);
-  stroke-width: 0.8;
-}
-.ai-svg .ai-rung-label {
-  fill: rgba(242, 244, 248, 0.75);
-  font-size: 5px;
-  font-family: inherit;
-}
-.ai-svg .ai-bezel {
+.ai-chrome .ai-bezel {
   fill: none;
   stroke: var(--border-strong);
-  stroke-width: 1;
+  stroke-width: 1.25;
 }
-.ai-svg .ai-bank-tick {
+.ai-chrome .ai-bank-tick {
   stroke: var(--fg-dim);
-  stroke-width: 1;
+  stroke-width: 1.25;
 }
-.ai-svg .ai-bank-pointer {
-  fill: var(--fg);
+.ai-chrome .ai-bank-pointer {
+  fill: #f2f4f8;
 }
-.ai-svg .ai-symbol line {
+.ai-chrome .ai-symbol line {
   stroke: #ffd24a;
-  stroke-width: 1.6;
+  stroke-width: 2;
 }
-.ai-svg .ai-symbol circle {
+.ai-chrome .ai-symbol circle {
   fill: #ffd24a;
-}
-.ai-svg .ai-readout {
-  fill: var(--fg-dim);
-  font-size: 9px;
-  font-family: inherit;
-  letter-spacing: 0.05em;
 }
 .attitude-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 2px;
+  gap: 7px;
+  margin-top: 5px;
 }
 .attitude-frame {
   background: none;
@@ -1349,8 +1336,14 @@ body.monochrome .poi-label {
   padding: 1px 5px;
   cursor: pointer;
 }
+.attitude-coords,
 .attitude-bank {
   color: var(--fg-dim);
+  white-space: nowrap;
+}
+.attitude-bank {
+  display: block;
+  margin-top: 2px;
 }
 .attitude-bank.is-warn {
   color: #ffb35c;

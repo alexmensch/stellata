@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
+  ballBasisInto,
   buildReferenceFrames,
+  frameDirToBallInto,
   POLE_HOLD_DEG,
   readAttitude,
   type Attitude,
@@ -84,6 +86,91 @@ describe('readAttitude — equatorial', () => {
     readAttitude(camera, frames.equatorial, out);
     expect(out.bankRad).not.toBe(9);
     expect(out.bankRad / DEG).toBeCloseTo(0, 6);
+  });
+});
+
+describe('ballBasisInto — the 8-ball moves the way a pilot expects', () => {
+  const frame = frames.equatorial;
+
+  function ballScreenPos(camera: THREE.Camera, dir: THREE.Vector3) {
+    const m = ballBasisInto(new THREE.Matrix4(), camera, frame);
+    const inBall = frameDirToBallInto(new THREE.Vector3(), dir, frame);
+    return inBall.applyMatrix4(m);
+  }
+
+  function levelCameraAt(lonDeg: number, latDeg: number) {
+    const lon = lonDeg * DEG;
+    const lat = latDeg * DEG;
+    const dir = new THREE.Vector3(
+      Math.cos(lat) * Math.cos(lon),
+      Math.cos(lat) * Math.sin(lon),
+      Math.sin(lat),
+    );
+    return { camera: cameraLookingAt(dir), dir };
+  }
+
+  function turn(camera: THREE.Camera, localAxis: THREE.Vector3, deg: number) {
+    const axis = localAxis.clone().applyQuaternion(camera.quaternion);
+    camera.quaternion.premultiply(
+      new THREE.Quaternion().setFromAxisAngle(axis, deg * DEG),
+    );
+  }
+
+  it('puts the boresight at the centre of the visible face', () => {
+    const { camera, dir } = levelCameraAt(37, -22);
+    const p = ballScreenPos(camera, dir);
+    expect(p.x).toBeCloseTo(0, 10);
+    expect(p.y).toBeCloseTo(0, 10);
+    expect(p.z).toBeCloseTo(1, 10);
+  });
+
+  it('keeps the frame pole upright when the camera is level', () => {
+    const { camera } = levelCameraAt(0, 0);
+    const p = ballScreenPos(camera, frame.pole);
+    expect(p.x).toBeCloseTo(0, 10);
+    expect(p.y).toBeCloseTo(1, 10);
+  });
+
+  it('is a reflection, not a rotation', () => {
+    const { camera } = levelCameraAt(17, 5);
+    expect(ballBasisInto(new THREE.Matrix4(), camera, frame).determinant()).toBeCloseTo(
+      -1,
+      10,
+    );
+  });
+
+  it('pitching up drives the old centre down the ball', () => {
+    const { camera, dir } = levelCameraAt(0, 0);
+    turn(camera, new THREE.Vector3(1, 0, 0), 20);
+    const p = ballScreenPos(camera, dir);
+    expect(p.y).toBeLessThan(-0.3);
+    expect(p.x).toBeCloseTo(0, 10);
+  });
+
+  it('yawing right drives the old centre left across the ball', () => {
+    const { camera, dir } = levelCameraAt(0, 0);
+    turn(camera, new THREE.Vector3(0, 1, 0), -20);
+    const p = ballScreenPos(camera, dir);
+    expect(p.x).toBeLessThan(-0.3);
+    expect(p.y).toBeCloseTo(0, 10);
+  });
+
+  it('banking right tips the pole left, by the bank angle', () => {
+    const { camera } = levelCameraAt(0, 0);
+    turn(camera, new THREE.Vector3(0, 0, -1), 30);
+    const p = ballScreenPos(camera, frame.pole);
+    expect(p.x).toBeCloseTo(-Math.sin(30 * DEG), 6);
+    expect(p.y).toBeCloseTo(Math.cos(30 * DEG), 6);
+    expect(read(camera, 'equatorial').bankRad / DEG).toBeCloseTo(-30, 6);
+  });
+
+  it('places increasing longitude to the left, as the real sky does', () => {
+    const { camera } = levelCameraAt(0, 0);
+    const east = new THREE.Vector3()
+      .copy(frame.zeroLon)
+      .multiplyScalar(Math.cos(5 * DEG))
+      .addScaledVector(frame.east, Math.sin(5 * DEG));
+    expect(ballScreenPos(camera, east).x).toBeLessThan(0);
   });
 });
 

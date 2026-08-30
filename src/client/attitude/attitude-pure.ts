@@ -21,6 +21,7 @@ export interface ReferenceFrame {
   zeroLon: THREE.Vector3;
   east: THREE.Vector3;
   formatLon(rad: number): string;
+  formatLonTick(rad: number): string;
 }
 
 export interface Attitude {
@@ -40,6 +41,7 @@ function makeFrame(
   pole: THREE.Vector3,
   zeroLonSeed: THREE.Vector3,
   formatLon: (rad: number) => string,
+  formatLonTick: (rad: number) => string,
 ): ReferenceFrame {
   const p = pole.clone().normalize();
   const zeroLon = zeroLonSeed
@@ -55,6 +57,7 @@ function makeFrame(
     zeroLon,
     east: new THREE.Vector3().crossVectors(p, zeroLon),
     formatLon,
+    formatLonTick,
   };
 }
 
@@ -75,6 +78,14 @@ export function formatLatitude(rad: number): string {
   return `${deg >= 0 ? '+' : '−'}${Math.abs(deg).toFixed(1)}°`;
 }
 
+function tickHours(rad: number): string {
+  return `${Math.round(((rad * 12) / Math.PI + 24) % 24)}h`;
+}
+
+function tickDegrees(rad: number): string {
+  return `${Math.round(((rad * 180) / Math.PI + 360) % 360)}°`;
+}
+
 export function buildReferenceFrames(): Record<ReferenceFrameKey, ReferenceFrame> {
   const eclipticPole = new THREE.Vector3(
     0,
@@ -92,6 +103,7 @@ export function buildReferenceFrames(): Record<ReferenceFrameKey, ReferenceFrame
       new THREE.Vector3(0, 0, 1),
       new THREE.Vector3(1, 0, 0),
       formatHours,
+      tickHours,
     ),
     ecliptic: makeFrame(
       'ecliptic',
@@ -101,6 +113,7 @@ export function buildReferenceFrames(): Record<ReferenceFrameKey, ReferenceFrame
       eclipticPole,
       new THREE.Vector3(1, 0, 0),
       formatDegrees,
+      tickDegrees,
     ),
     galactic: makeFrame(
       'galactic',
@@ -110,6 +123,7 @@ export function buildReferenceFrames(): Record<ReferenceFrameKey, ReferenceFrame
       galacticPole,
       galacticCentre,
       formatDegrees,
+      tickDegrees,
     ),
   };
 }
@@ -140,4 +154,49 @@ export function readAttitude(
   out.sinFromPole = sinTheta;
   if (sinTheta > POLE_HOLD_SIN) out.bankRad = signedAngleAbout(up, level, forward);
   return out;
+}
+
+/** A frame direction in the ball's own coordinates: pole along +Y, zero
+ *  longitude at +X, longitude increasing toward −Z. The sphere's poles are
+ *  fixed on +Y by `THREE.SphereGeometry`, and the −Z is what keeps the basis
+ *  right-handed given `east = pole × zeroLon`. */
+export function frameDirToBallInto(
+  out: THREE.Vector3,
+  dir: THREE.Vector3,
+  frame: ReferenceFrame,
+): THREE.Vector3 {
+  return out.set(dir.dot(frame.zeroLon), dir.dot(frame.pole), -dir.dot(frame.east));
+}
+
+const right = new THREE.Vector3();
+
+/** The ball's model matrix: ball coordinates → instrument coordinates (+X
+ *  right, +Y up, +Z toward the viewer).
+ *
+ *  **Determinant is −1 — this is a reflection, and that is the whole trick.**
+ *  A direction lands on the instrument exactly where it lands on screen in the
+ *  real view, so the ball's grid is a true miniature of the coordinate sphere
+ *  the scene draws, with the boresight at the centre. A pure rotation cannot
+ *  do that: it would put the *anti*-boresight at the centre, because a globe
+ *  read from outside is the mirror of a sky read from inside. Two consequences
+ *  callers must honour — the texture has to be drawn mirrored in longitude to
+ *  read the right way round, and a lit material would light the far side, so
+ *  the ball is unlit with its shading faked on top. */
+export function ballBasisInto(
+  out: THREE.Matrix4,
+  camera: THREE.Camera,
+  frame: ReferenceFrame,
+): THREE.Matrix4 {
+  forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
+  cameraLocalUpInto(up, camera);
+  right.set(1, 0, 0).applyQuaternion(camera.quaternion);
+
+  const project = (d: THREE.Vector3, sign: number) =>
+    new THREE.Vector3(d.dot(right), d.dot(up), d.dot(forward)).multiplyScalar(sign);
+
+  return out.makeBasis(
+    project(frame.zeroLon, 1),
+    project(frame.pole, 1),
+    project(frame.east, -1),
+  );
 }
