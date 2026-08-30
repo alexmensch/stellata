@@ -39,12 +39,12 @@ describe('attitude layout', () => {
     // only stay concentric while this ratio holds — a bezel that no longer
     // hugs the ball is what breaking it looks like.
     expect(BALL_RASTER_PX / RENDERED_BOX_PX).toBeCloseTo(BALL_PX / BOX, 12);
-    expect(RENDERED_BOX_PX).toBe(192);
-    expect(BALL_RASTER_PX).toBe(160);
+    expect(RENDERED_BOX_PX).toBe(240);
+    expect(BALL_RASTER_PX).toBe(200);
   });
 
   it('reports the optical inset the scale bar aligns to', () => {
     expect(CHROME_INSET_PX).toBeCloseTo(CHROME_INSET * (RENDERED_BOX_PX / BOX), 12);
-    expect(CHROME_INSET_PX).toBeCloseTo(4.8103, 4);
+    expect(CHROME_INSET_PX).toBeCloseTo(6.0128, 4);
   });
 });

@@ -215,11 +215,15 @@ parameter. It is sized off what the ball can actually resolve.
 The ball's centre is where the sphere resolves most finely: there its surface
 faces the viewer square-on, so a degree of arc spans `BALL_R` × π/180 pixels
 and nothing on the ball is denser. At a device ratio of at most 2 that is
-**~2.7 device pixels per degree**, against the texture's 5.7 — so the texture
-out-resolves the screen by ~2.1×, and mip selection lands near the top level
-with anisotropy carrying the oblique periphery.
+**~3.3 device pixels per degree**, against the texture's 5.7 — so the texture
+still out-resolves the screen by ~1.7×, and mip selection lands near the top
+level with anisotropy carrying the oblique periphery.
 
-That margin is the number to re-check whenever the instrument is resized.
+That margin is the number to re-check whenever the instrument is resized, and
+it is why `TEX_W` stayed at 2048 through the 240px enlargement: the ratio fell
+from ~2.1× but never approached 1, where the texture would start to blur.
+Restoring a 2× margin would mean 2560 × 1280 — a third more VRAM for a
+permanent instrument texture, against no visible difference.
 
 ## Sizing
 

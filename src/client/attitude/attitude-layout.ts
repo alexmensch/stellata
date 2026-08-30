@@ -34,7 +34,7 @@ export const CHROME_INSET = C - CHROME_R;
 
 /** What the instrument measures on the page. The design space above scales to
  *  this, so strokes, ticks and the caret grow with the ball. */
-export const RENDERED_BOX_PX = 192;
+export const RENDERED_BOX_PX = 240;
 const RENDERED_SCALE = RENDERED_BOX_PX / BOX;
 
 /** The ball's raster size in CSS pixels. `attitude-ball.ts` sizes its drawing
