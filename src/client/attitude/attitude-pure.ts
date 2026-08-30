@@ -17,6 +17,11 @@ export type ReferenceFrameKey =
   | 'galactic'
   | 'reference';
 
+/** Every frame the instrument can reach on its own. `reference` is missing on
+ *  purpose: a captured datum is built from an attitude the user is holding, so
+ *  it cannot be tabulated ahead of time and only a right-click produces one. */
+export type AutoFrameKey = Exclude<ReferenceFrameKey, 'reference'>;
+
 export interface ReferenceFrame {
   key: ReferenceFrameKey;
   label: string;
@@ -63,7 +68,7 @@ export function captureReferenceFrame(camera: THREE.Camera): ReferenceFrame {
   return makeFrame('reference', 'REF', pole, boresight);
 }
 
-export function buildReferenceFrames(): Record<ReferenceFrameKey, ReferenceFrame> {
+export function buildReferenceFrames(): Record<AutoFrameKey, ReferenceFrame> {
   const eclipticPole = new THREE.Vector3(
     0,
     -Math.sin(OBLIQUITY_RAD),
@@ -80,12 +85,6 @@ export function buildReferenceFrames(): Record<ReferenceFrameKey, ReferenceFrame
     ),
     ecliptic: makeFrame('ecliptic', 'ECL', eclipticPole, new THREE.Vector3(1, 0, 0)),
     galactic: makeFrame('galactic', 'GAL', galacticPole, galacticCentre),
-    reference: makeFrame(
-      'reference',
-      'REF',
-      new THREE.Vector3(0, 0, 1),
-      new THREE.Vector3(1, 0, 0),
-    ),
   };
 }
 
@@ -104,7 +103,7 @@ export interface FocusFrameInputs {
  *  the single exception, where RA/Dec is the frame anyone reading the sky from
  *  the surface already thinks in. Beyond the system, galactic is the only frame
  *  still defined by something real. */
-export function autoFrameFor(focus: FocusFrameInputs): ReferenceFrameKey {
+export function autoFrameFor(focus: FocusFrameInputs): AutoFrameKey {
   if (focus.kind === null) return 'galactic';
   if (focus.kind === 'planet') {
     return focus.planetName === 'Earth' ? 'equatorial' : 'ecliptic';
@@ -114,7 +113,7 @@ export function autoFrameFor(focus: FocusFrameInputs): ReferenceFrameKey {
   return 'galactic';
 }
 
-export const FRAME_CYCLE: ReferenceFrameKey[] = [
+export const FRAME_CYCLE: AutoFrameKey[] = [
   'equatorial',
   'ecliptic',
   'galactic',
@@ -129,9 +128,9 @@ export const FRAME_CYCLE: ReferenceFrameKey[] = [
  *  on whatever the focused object implies. */
 export function nextFrameKey(
   current: ReferenceFrameKey,
-  focusDefault: ReferenceFrameKey,
-): ReferenceFrameKey {
-  const at = FRAME_CYCLE.indexOf(current);
+  focusDefault: AutoFrameKey,
+): AutoFrameKey {
+  const at = (FRAME_CYCLE as readonly ReferenceFrameKey[]).indexOf(current);
   if (at < 0) return focusDefault;
   return FRAME_CYCLE[(at + 1) % FRAME_CYCLE.length];
 }

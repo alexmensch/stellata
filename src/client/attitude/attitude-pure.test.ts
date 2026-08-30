@@ -273,15 +273,6 @@ describe('autoFrameFor', () => {
       expect(autoFrameFor(focus({ kind }))).toBe('galactic');
     }
   });
-
-  it('never picks the captured datum — only a right-click can', () => {
-    const kinds = [null, 'star', 'cloud', 'lg', 'planet', 'shell', 'probe'] as const;
-    for (const kind of kinds) {
-      expect(autoFrameFor(focus({ kind, isSol: true, planetName: 'Earth' }))).not.toBe(
-        'reference',
-      );
-    }
-  });
 });
 
 describe('captureReferenceFrame', () => {

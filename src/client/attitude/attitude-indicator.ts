@@ -237,8 +237,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   stage.addEventListener('click', level);
   stage.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    frames.reference = captureReferenceFrame(stellata.camera);
-    setFrame(frames.reference);
+    setFrame(captureReferenceFrame(stellata.camera));
   });
   stage.setAttribute('role', 'img');
   stage.setAttribute('aria-label', 'Attitude indicator');
