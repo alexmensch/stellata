@@ -174,8 +174,8 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   host.style.width = `${BOX}px`;
 
   const frames = buildReferenceFrames();
-  let frame: ReferenceFrame = frames.equatorial;
-  let focused: Target | null = null;
+  let focused: Target | null = stellata.focus.getFocusedTarget();
+  let frame: ReferenceFrame = frames[autoFrameFor(focusInputs(stellata, focused))];
 
   const ball = createAttitudeBall(BALL_PX);
 
@@ -201,11 +201,17 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   frameBtn.className = 'attitude-frame';
   frameBtn.textContent = frame.label;
   frameBtn.title = 'Reference frame — click to cycle, right-click the ball to set REF';
-  stage.appendChild(frameBtn);
   host.appendChild(stage);
+  // Outside the stage, which is clipped to its disc so the square's corners
+  // stay clicks on the sky. The flag sits in one of those corners.
+  host.appendChild(frameBtn);
 
   const attitude: Attitude = { pitchRad: 0, bankRad: 0, lonRad: 0, sinFromPole: 1 };
   const lastQuat = new THREE.Quaternion(2, 2, 2, 2);
+  // `U` hides the instrument, but display:none suppresses only the composite —
+  // the mini renderer would keep drawing a sphere nobody can see. Set while
+  // hidden so the ball catches up on the first frame after it comes back.
+  let missedWhileHidden = false;
 
   function draw() {
     const camera = stellata.camera;
@@ -243,8 +249,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   stage.setAttribute('aria-label', 'Attitude indicator');
   stage.title = 'Click to level · right-click to set REF here';
 
-  frameBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
+  frameBtn.addEventListener('click', () => {
     setFrame(frames[nextFrameKey(frame.key, autoFrameFor(focusInputs(stellata, focused)))]);
   });
 
@@ -256,7 +261,13 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   });
 
   stellata.on('frame', () => {
-    if (lastQuat.equals(stellata.camera.quaternion)) return;
+    const moved = !lastQuat.equals(stellata.camera.quaternion);
+    if (host.hidden || document.body.hasAttribute('data-controls-hidden')) {
+      missedWhileHidden = missedWhileHidden || moved;
+      return;
+    }
+    if (!moved && !missedWhileHidden) return;
+    missedWhileHidden = false;
     draw();
   });
 

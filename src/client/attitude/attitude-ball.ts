@@ -294,7 +294,6 @@ export function buildBallTexture(): THREE.CanvasTexture {
 export interface AttitudeBall {
   canvas: HTMLCanvasElement;
   render(camera: THREE.Camera, frame: ReferenceFrame): void;
-  dispose(): void;
 }
 
 export function createAttitudeBall(sizePx: number): AttitudeBall {
@@ -328,12 +327,6 @@ export function createAttitudeBall(sizePx: number): AttitudeBall {
       ballBasisInto(mesh.matrix, camera, frame);
       mesh.matrixWorldNeedsUpdate = true;
       renderer.render(scene, view);
-    },
-    dispose() {
-      map.dispose();
-      material.dispose();
-      mesh.geometry.dispose();
-      renderer.dispose();
     },
   };
 }

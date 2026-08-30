@@ -1295,13 +1295,23 @@ body.monochrome .poi-label {
 }
 .bottom-left-stack > * { pointer-events: auto; }
 .attitude {
+  position: relative;
   color: var(--fg);
   font-size: 10.5px;
   letter-spacing: 0.06em;
+  /* The instrument is a square box holding a round instrument. Only the round
+     parts take pointer events; the corners of the square are 44px clear of the
+     outermost tick, and a click landing there is a click on the sky. */
+  pointer-events: none;
 }
 .attitude-stage {
   position: relative;
   cursor: pointer;
+  pointer-events: auto;
+  /* Clips the hit area as well as the paint — the whole point. The outermost
+     chrome sits at radius 91 of the 96 this leaves, so nothing visible is
+     cut. */
+  clip-path: circle(50%);
 }
 /* The instrument is a click target inside a WebGL-heavy view, and a UA focus
    ring on it reads as a rendering fault rather than an affordance. The
@@ -1343,6 +1353,7 @@ body.monochrome .poi-label {
   position: absolute;
   left: 0;
   bottom: 0;
+  pointer-events: auto;
   background: rgba(7, 9, 18, 0.72);
   border: 1px solid var(--border-strong);
   border-radius: 3px;

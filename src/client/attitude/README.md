@@ -172,9 +172,22 @@ lands in the HDR target and would take scene exposure and tone-mapping with it
 (`../hdr/README.md`). A separate context is the cheap way to keep instrument
 chrome out of the physical light path.
 
-It redraws only on ticks where `camera.quaternion` actually changed, so a
-static view costs nothing, and the texture is built once for the life of the
-page — the frame chip re-aims the ball rather than repainting it.
+It redraws only on ticks where `camera.quaternion` actually changed **and the
+instrument is on screen** — `display: none` suppresses the composite, not the
+draw, so hiding with `U` would otherwise keep a sphere rendering that nobody
+can see. A tick skipped while hidden is remembered, so the ball catches up on
+the first frame after it returns rather than showing a stale attitude.
+
+The texture is built once for the life of the page — the frame chip re-aims
+the ball rather than repainting it — and so is the renderer: the instrument is
+created once at boot and lives as long as the document, so its context and GPU
+objects are released by the page unload that ends them.
+
+The grid is painted at `TEX_W` × `TEX_H`, and every stroke in `attitude-ball.ts`
+is measured in **degrees** rather than texture pixels, so that pair is a free
+parameter. It is sized off what the ball can actually resolve: `BALL_PX` CSS
+pixels at a device ratio of at most 2 puts under 3 texels per degree at the
+ball's centre, and the texture carries about twice that.
 
 ## Case chrome
 
@@ -188,6 +201,13 @@ un-aviation:
 - **The centre index is a cross, not a pair of wings** — four arms and a point,
   sized off `BALL_R` so it tracks the ball's size, then trimmed 5%.
 
+**The stage is clipped to its own disc** (`clip-path: circle(50%)`), which
+clips hit-testing as well as paint. The instrument is round and its box is
+square, so the corners are 44px clear of the outermost tick; without the clip
+they would swallow a click meant for the sky and level the camera instead. The
+frame flag sits in one of those corners and is therefore a sibling of the
+stage, not a child of it.
+
 `U` hides the instrument along with the rest of the controls
 (`../ui/README.md` § Hide-controls toggle). No focus ring ever appears on it:
 the ball is not a tab stop — the keyboard path is `L` — and the flag's focus
@@ -195,8 +215,9 @@ state is a border brighten rather than a UA outline, because a blue ring over a
 WebGL canvas reads as a rendering fault.
 
 The roll caret is the FDAI's: a light **equilateral** triangle carrying a dark
-**isoceles** one on the *same base segment*, its apex stopping `INSET_APEX_FRAC`
-(0.38) down the height. The light therefore survives as a chevron — solid at the
+**isoceles** one on the *same base segment*, `INSET_BASE_FRAC` (0.36) as wide
+and `INSET_HEIGHT_FRAC` (0.99) as tall. The light therefore survives as a
+chevron — solid at the
 tip, tapering to nothing at the base corners — and that bright wedge is what
 keeps the caret legible whichever hemisphere is passing underneath. Scaling a
 second equilateral triangle inside the first is the wrong shape: it leaves an
