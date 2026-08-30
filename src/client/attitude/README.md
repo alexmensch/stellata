@@ -101,9 +101,25 @@ drives it *left*, banking right tips the pole *left* by the bank angle.
 
 ## Markings and palette
 
-Everything is drawn from the app's own two tones — `--fg` `#e6edf7` for the
-light hemisphere, the settings panel's `#070912` for the dark one — with each
-hemisphere's markings in the other's colour. **The mid-tone orbit-ring blue
+Everything is drawn from the app's own two tones — `#e6edf7` for the light
+hemisphere, `#070912` for the dark one — with each hemisphere's markings in the
+other's colour. They match the dark page palette's `--fg` and `--bg` but are
+**held fixed as `BALL_LIGHT` / `BALL_DARK`** rather than read from it, because
+the ball is a painted object rather than a surface of the page: it looks the
+same in chart mode as anywhere else, the way a real instrument face does.
+
+That fixes where every piece of chrome takes its colour, and the line is the
+ball's edge:
+
+- **Over the ball** — the roll caret and the amber index cross. Read against
+  the ball, so they take the fixed tones, painted straight onto the SVG by
+  `attitude-indicator.ts`. Following the page theme here inverts the caret's
+  light triangle onto its dark inset under `body.monochrome` and the chevron
+  disappears.
+- **Outside it** — the roll scale's ticks, the bezel, and the frame flag. Read
+  against the page, so they take `--fg` / `--border-strong` from the stylesheet
+  and flip with it. The flag also needs its own `body.monochrome` background
+  rule, since a translucent panel ground cannot come from a token. **The mid-tone orbit-ring blue
 (`../util/orbit-line.ts`'s `ORBIT_LINE_COLOUR`) was considered for the light
 and rejected:** the equator and prime meridian carry a tick every 2°, and a
 hairline at that pitch needs the full contrast range against its ground. Amber survives only on

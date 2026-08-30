@@ -1280,7 +1280,12 @@ body.monochrome .poi-label {
 
 /* Gyro-sphere attitude indicator, drawn in attitude/. Stacks above the
    scale bar; the frame flag sits in the instrument's own bottom-left
-   corner, the way a mode flag sits on an aircraft AI. */
+   corner, the way a mode flag sits on an aircraft AI.
+
+   Only the chrome OUTSIDE the ball is styled here. The caret and the index
+   cross are read against the ball's own fixed two tones rather than the page,
+   so attitude-indicator.ts paints them from those constants directly —
+   attitude/README.md § Markings and palette. */
 .bottom-left-stack {
   display: flex;
   flex-direction: column;
@@ -1333,19 +1338,6 @@ body.monochrome .poi-label {
 .ai-chrome .ai-bank-tick {
   stroke: var(--fg);
   opacity: 0.75;
-}
-.ai-chrome .ai-bank-pointer {
-  fill: var(--fg);
-}
-.ai-chrome .ai-bank-pointer-inset {
-  fill: #070912;
-}
-.ai-chrome .ai-symbol line {
-  stroke: #ffd24a;
-  stroke-width: 2.2;
-}
-.ai-chrome .ai-symbol circle {
-  fill: #ffd24a;
 }
 .attitude-frame {
   position: absolute;
@@ -1411,6 +1403,7 @@ body.monochrome .tooltip,
 body.monochrome .search-row,
 body.monochrome .search-results,
 body.monochrome .card-strips,
+body.monochrome .attitude-frame,
 body.monochrome select {
   background: rgba(255, 255, 255, 0.92);
   color: var(--fg);

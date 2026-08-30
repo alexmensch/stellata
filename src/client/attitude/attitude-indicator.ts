@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
-import { createAttitudeBall } from './attitude-ball';
+import { BALL_DARK, BALL_LIGHT, createAttitudeBall } from './attitude-ball';
 import {
   buildReferenceFrames,
   captureReferenceFrame,
@@ -111,10 +111,14 @@ function buildBezel() {
   return g;
 }
 
+/** The fixed index amber. Like the caret below it is read against the ball,
+ *  never the page, so it stays put when the page palette flips. */
+const INDEX_AMBER = '#ffd24a';
+
 /** A cross rather than aircraft wings: four arms and a centre point, scaled
  *  off the ball and trimmed 5%. */
 function buildSymbol() {
-  const g = el('g', { class: 'ai-symbol' });
+  const g = el('g', { class: 'ai-symbol', stroke: INDEX_AMBER, 'stroke-width': 2.2 });
   const inner = BALL_R * 0.163;
   const outer = inner + (BALL_R * 0.489 - inner) * 0.95;
   for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -127,7 +131,7 @@ function buildSymbol() {
       }),
     );
   }
-  g.appendChild(el('circle', { cx: C, cy: C, r: 2.4 }));
+  g.appendChild(el('circle', { cx: C, cy: C, r: 2.4, fill: INDEX_AMBER, stroke: 'none' }));
   return g;
 }
 
@@ -150,13 +154,13 @@ function buildBankPointer() {
   g.appendChild(
     el('polygon', {
       points: `${C},${tip} ${C - CARET_HALF_BASE},${base} ${C + CARET_HALF_BASE},${base}`,
-      class: 'ai-bank-pointer',
+      fill: BALL_LIGHT,
     }),
   );
   g.appendChild(
     el('polygon', {
       points: `${C},${base - height * INSET_HEIGHT_FRAC} ${C - inset},${base} ${C + inset},${base}`,
-      class: 'ai-bank-pointer-inset',
+      fill: BALL_DARK,
     }),
   );
   return g;

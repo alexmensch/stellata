@@ -10,8 +10,11 @@ import { ballBasisInto, type ReferenceFrame } from './attitude-pure';
 const TEX_W = 2048;
 const TEX_H = 1024;
 
-const LIGHT = '#e6edf7';
-const DARK = '#070912';
+/** The instrument's own two tones, held fixed against every page theme. The
+ *  ball is a painted object, not a surface of the page, so chrome drawn over
+ *  it is read against these — see README.md § Markings and palette. */
+export const BALL_LIGHT = '#e6edf7';
+export const BALL_DARK = '#070912';
 const FONT = 'ui-monospace, SFMono-Regular, Menlo, monospace';
 
 const SOLID_STEP_DEG = 30;
@@ -138,7 +141,7 @@ function paintPrimeTicks(ctx: CanvasRenderingContext2D) {
  *  whichever bands contrast against it. */
 function paintPrimeRails(ctx: CanvasRenderingContext2D) {
   PRIME_BANDS_DEG.forEach((width, i) => {
-    ctx.fillStyle = i % 2 === 0 ? DARK : LIGHT;
+    ctx.fillStyle = i % 2 === 0 ? BALL_DARK : BALL_LIGHT;
     meridianRibbon(ctx, 0, deg(width) / 2);
   });
 }
@@ -203,8 +206,8 @@ function numeral(
  *  meridians crowd, and nothing on the prime meridian, which carries its own
  *  rail and the two `0` badges instead. */
 function paintNumerals(ctx: CanvasRenderingContext2D, north: boolean) {
-  const bg = north ? LIGHT : DARK;
-  const ink = north ? DARK : LIGHT;
+  const bg = north ? BALL_LIGHT : BALL_DARK;
+  const ink = north ? BALL_DARK : BALL_LIGHT;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = `600 ${deg(GLYPH_DEG)}px ${FONT}`;
@@ -235,11 +238,11 @@ function paintZeroBadges(ctx: CanvasRenderingContext2D) {
   for (const lon of [15, -15]) {
     const x = lonToX(lon);
     const top = latToY(0) + deg(0.6);
-    ctx.fillStyle = LIGHT;
+    ctx.fillStyle = BALL_LIGHT;
     ctx.beginPath();
     ctx.roundRect(x - w / 2, top, w, h, [deg(0.6), deg(0.6), w / 2, w / 2]);
     ctx.fill();
-    ctx.fillStyle = DARK;
+    ctx.fillStyle = BALL_DARK;
     ctx.save();
     ctx.translate(x, top + h / 2 - deg(0.8));
     ctx.scale(-1, 1);
@@ -255,9 +258,9 @@ export function buildBallTexture(): THREE.CanvasTexture {
   const ctx = canvas.getContext('2d')!;
   const equator = latToY(0);
 
-  ctx.fillStyle = LIGHT;
+  ctx.fillStyle = BALL_LIGHT;
   ctx.fillRect(0, 0, TEX_W, equator);
-  ctx.fillStyle = DARK;
+  ctx.fillStyle = BALL_DARK;
   ctx.fillRect(0, equator, TEX_W, TEX_H - equator);
 
   for (const north of [true, false]) {
@@ -265,7 +268,7 @@ export function buildBallTexture(): THREE.CanvasTexture {
     ctx.beginPath();
     ctx.rect(0, north ? 0 : equator, TEX_W, north ? equator : TEX_H - equator);
     ctx.clip();
-    ctx.strokeStyle = ctx.fillStyle = north ? DARK : LIGHT;
+    ctx.strokeStyle = ctx.fillStyle = north ? BALL_DARK : BALL_LIGHT;
     paintGraticule(ctx);
     paintPrimeTicks(ctx);
     if (north) paintEquatorTicks(ctx);
