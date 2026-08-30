@@ -96,12 +96,21 @@ describe('geocentric position vs JPL Horizons across the model clock', () => {
     expect(worst.km).toBeLessThan(45);
   });
 
-  it('holds 20 km over the epochs the recalibration was NOT fitted to', () => {
+  it('holds 30 km over the epochs the recalibration was NOT fitted to', () => {
     // The `check` rows are an independent 150-year grid; the `fit` and
     // `fit2` rows are the samples the mean-longitude and D/M′/F argument
     // corrections were least-squared over. A regression that re-tuned the
     // fit without improving the model would pass the combined bound and
-    // fail this one.
+    // fail this one — but only if the deep rows are in here. They carry
+    // the whole result: the 17 rows before 500 BC sit at 28.1 km with the
+    // argument corrections and 123.9 km without, while the 23 rows after
+    // barely move (17.3 vs 17.5). Bounding only the shallow half, as this
+    // did, left the recalibration's entire claim resting on its own basis.
+    const worst = worstError((r) => r.set === 'check');
+    expect(worst.km).toBeLessThan(30);
+  });
+
+  it('holds 20 km over the held-out epochs inside ±25 centuries', () => {
     const worst = worstError((r) => r.set === 'check' && Math.abs(r.jdTt - J2000_JD) < 25 * 36525);
     expect(worst.km).toBeLessThan(20);
   });

@@ -25,6 +25,13 @@ const ARG_MP_T3_ARCSEC = 2.327369e-3;
 const ARG_F_T2_ARCSEC = -1.987338e-2;
 const ARG_F_T3_ARCSEC = 5.602035e-3;
 
+/** One recalibration pair evaluated at `T`, arcsec → degrees. */
+function secularCorrDeg(T: number, t2Arcsec: number, t3Arcsec: number): number {
+  return (t2Arcsec * T * T + t3Arcsec * T * T * T) / 3600;
+}
+
+const wrapDeg = (x: number): number => ((x % 360) + 360) % 360;
+
 // Table 47.A: D, M, M′, F, Σl (1e-6 deg), Σr (1e-3 km).
 const LON_DIST_TERMS = [
   0, 0, 1, 0, 6288774, -20905355,
@@ -217,9 +224,7 @@ export function moonGeocentricOfDate(jdTt: number): MoonGeocentric {
     + 127 * Math.sin((lp - mp) * DEG)
     - 115 * Math.sin((lp + mp) * DEG);
 
-  const T2 = T * T;
-  const meanLonCorrDeg =
-    (MEAN_LON_T2_ARCSEC * T2 + MEAN_LON_T3_ARCSEC * T2 * T) / 3600;
+  const meanLonCorrDeg = secularCorrDeg(T, MEAN_LON_T2_ARCSEC, MEAN_LON_T3_ARCSEC);
 
   return {
     lonDeg: lp + sumL / 1e6 - meanLonCorrDeg,
@@ -239,19 +244,19 @@ export function lunarArgumentsDeg(jdTt: number): {
   const T2 = T * T;
   const T3 = T2 * T;
   const T4 = T3 * T;
-  const wrap = (x: number) => ((x % 360) + 360) % 360;
-  const corr = (t2Arcsec: number, t3Arcsec: number) =>
-    (t2Arcsec * T2 + t3Arcsec * T3) / 3600;
   return {
-    lp: wrap(218.3164477 + 481267.88123421 * T - 0.0015786 * T2
+    lp: wrapDeg(218.3164477 + 481267.88123421 * T - 0.0015786 * T2
       + T3 / 538841 - T4 / 65194000),
-    d: wrap(297.8501921 + 445267.1114034 * T - 0.0018819 * T2
-      + T3 / 545868 - T4 / 113065000) + corr(ARG_D_T2_ARCSEC, ARG_D_T3_ARCSEC),
-    m: wrap(357.5291092 + 35999.0502909 * T - 0.0001536 * T2 + T3 / 24490000),
-    mp: wrap(134.9633964 + 477198.8675055 * T + 0.0087414 * T2
-      + T3 / 69699 - T4 / 14712000) + corr(ARG_MP_T2_ARCSEC, ARG_MP_T3_ARCSEC),
-    f: wrap(93.2720950 + 483202.0175233 * T - 0.0036539 * T2
-      - T3 / 3526000 + T4 / 863310000) + corr(ARG_F_T2_ARCSEC, ARG_F_T3_ARCSEC),
+    d: wrapDeg(297.8501921 + 445267.1114034 * T - 0.0018819 * T2
+      + T3 / 545868 - T4 / 113065000
+      + secularCorrDeg(T, ARG_D_T2_ARCSEC, ARG_D_T3_ARCSEC)),
+    m: wrapDeg(357.5291092 + 35999.0502909 * T - 0.0001536 * T2 + T3 / 24490000),
+    mp: wrapDeg(134.9633964 + 477198.8675055 * T + 0.0087414 * T2
+      + T3 / 69699 - T4 / 14712000
+      + secularCorrDeg(T, ARG_MP_T2_ARCSEC, ARG_MP_T3_ARCSEC)),
+    f: wrapDeg(93.2720950 + 483202.0175233 * T - 0.0036539 * T2
+      - T3 / 3526000 + T4 / 863310000
+      + secularCorrDeg(T, ARG_F_T2_ARCSEC, ARG_F_T3_ARCSEC)),
     e: 1 - 0.002516 * T - 0.0000074 * T2,
   };
 }

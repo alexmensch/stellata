@@ -180,11 +180,11 @@ plane-aligned default per § Orbital plane convention.
 Positions recompute at every distinct `t` — the single-slot cache is
 keyed on exact `t` and only collapses the several same-frame consumers
 (body field, focal ride, overlays) into one Kepler solve per frame.
-The former 60-second bucket was reasoned against billboarded-disc
-pixel scale ("sub-minute motion is invisible"); mesh-LOD close viewing
-invalidated that premise — a resolved disc visibly snapped position
-once a minute — so the bucket is gone. Nine Kepler solves per frame is
-noise next to the 18 moon solves that already ran unbucketed.
+**Never bucket that key in time.** Any bucket coarser than a frame
+snaps a resolved mesh disc across its own width once per bucket; the
+"sub-minute motion is invisible" argument holds only for billboarded
+discs. Nine Kepler solves per frame is noise next to the 18 moon
+solves that already run unbucketed.
 
 ## Moon ephemeris
 
@@ -241,10 +241,15 @@ Mimas's libration amplitude already carry in `MOON_ELEMENTS`.
 
 Resulting geocentric accuracy vs Horizons/DE441, pinned in
 `moon-vector-truth.test.ts`: **≲20 km across 1900–2100** (the truncation
-floor — Meeus quotes ~10″ ≈ 19 km near the present), **≲20 km over the
-independent `check` grid inside ±25 centuries, ≲45 km over the whole
+floor — Meeus quotes ~10″ ≈ 19 km near the present), **≲30 km over the
+whole independent `check` grid, ≲45 km over the whole
 3000 BC – 3000 AD span** (≲150 km with the mean-longitude term alone,
 ~1000 km with none, tens of thousands from the element row).
+
+The held-out grid has to reach the deep end to carry that claim: the
+argument corrections are worth 123.9 → 28.1 km on the 17 `check` rows
+before 500 BC and nothing on the 23 after (17.5 → 17.3), so a bound over
+the shallow half alone rests the recalibration on its own basis.
 
 ### Every other moon
 
