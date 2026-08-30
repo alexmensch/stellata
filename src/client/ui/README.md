@@ -312,9 +312,18 @@ offsets.
 ## Bottom-left widget: scene-scale bar
 
 Sits under the attitude indicator in `.bottom-left-stack`; the ball owns
-the width of that column, so a scale bar wider than ~192px pushes the
-column rather than the ball. The indicator hides with `U`, the scale bar
-does not — same split as the meta readout, which also survives the toggle.
+the width of that column, so a scale bar wider than the instrument's box
+pushes the column rather than the ball. The indicator hides with `U`, the
+scale bar does not — same split as the meta readout, which also survives the
+toggle.
+
+**The bar's left pad is an alignment, not a margin.** `PAD_LEFT_PX` is the
+instrument's `CHROME_INSET_PX` (`../attitude/README.md` § Sizing): a round
+face in a square box leaves a gap between the box edge and the outermost bank
+tick, so padding the bar by the same amount puts its left endcap on the
+instrument's *optical* edge rather than its layout edge. One constant governs
+both, so resizing the ball keeps the column's left edge straight — hardcode a
+number here and the two drift apart the next time the instrument moves.
 
 `scale-bar.ts` is a single SVG. Targets ~20% of viewport width;
 `niceRound` snaps the represented distance to a 1/2/5×10^N value, then
