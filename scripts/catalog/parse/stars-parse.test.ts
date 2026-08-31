@@ -237,7 +237,7 @@ describe('readStars PM rescue', () => {
         raDeg: 0, decDeg: 0,
         epochRa: CATALOG_SCENE_EPOCH, epochDec: CATALOG_SCENE_EPOCH,
         pmRaMasyr: pm.pmRaMasyr, pmDecMasyr: pm.pmDecMasyr,
-        btMag: 10, vtMag: 10, flag: null, fromIcrs: false,
+        btMag: 10, vtMag: 10, fromIcrs: false, isPhotocentre: false,
       }]]),
       ...overrides,
     };

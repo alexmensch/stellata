@@ -7,7 +7,7 @@ import {
   parseCrossIndexTsv,
   parseTyc2HdTsv,
 } from './classic-ids-parse';
-import { cns5Row } from './cns5-fixture';
+import { cns5Astrometry, cns5Row } from './cns5-fixture';
 
 const TYC2_HD = [
   'tyc1\ttyc2\ttyc3\thd\tn_hd\tn_tyc',
@@ -112,10 +112,7 @@ describe('classic-ids-parse / parseCns5Tsv', () => {
 });
 
 describe('classic-ids-parse / cns5AstrometryByGj', () => {
-  const astrometry = {
-    raDeg: 10, decDeg: 20, posEpoch: 2016.0,
-    plxMas: 100, pmRaMasyr: 5, pmDecMasyr: -5,
-  };
+  const astrometry = cns5Astrometry({ raDeg: 10, decDeg: 20, posEpoch: 2016.0 });
 
   it("keys on the record's own gl form, component letter included", () => {
     const index = cns5AstrometryByGj([

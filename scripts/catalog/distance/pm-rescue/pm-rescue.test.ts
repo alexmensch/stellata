@@ -15,7 +15,7 @@ function tycho2Row(overrides: Partial<Tycho2Row> = {}): Tycho2Row {
   return {
     raDeg: 10, decDeg: 20, epochRa: 1991.07, epochDec: 1991.0,
     pmRaMasyr: -453.7, pmDecMasyr: -591.4,
-    btMag: 5, vtMag: 4.5, flag: null, fromIcrs: false,
+    btMag: 5, vtMag: 4.5, fromIcrs: false, isPhotocentre: false,
     ...overrides,
   };
 }
@@ -48,7 +48,7 @@ describe('resolvePmRescue', () => {
   it('falls past Tycho-2 where the row has no mean solution', () => {
     const res = resolvePmRescue(
       {
-        tycho2: tycho2Row({ pmRaMasyr: null, pmDecMasyr: null, flag: 'X', fromIcrs: true }),
+        tycho2: tycho2Row({ pmRaMasyr: null, pmDecMasyr: null, fromIcrs: true }),
         cns5: null,
         simbad: cited(),
       },
