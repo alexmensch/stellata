@@ -11,6 +11,7 @@ import {
   type Vec3,
 } from './binary-orbit-pure';
 import { innermostRelationOf } from './focal-chain';
+import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
 import {
   FLAG_HAS_ORBIT,
   FLAG_HAS_INCLINATION,
@@ -84,17 +85,23 @@ export function keplerRelationParams(
   return { tier, elements: relationToElements(r) };
 }
 
-/** The plane `starIdx` itself rides, with the pair it came from — null when
- *  the star is in no pair, the pair carries no Kepler elements, or the pair
- *  is Tier 2, whose plane is a convention rather than a measurement
+/** The plane of the pair `starIdx` rides, with the pair it came from — null
+ *  only when the star is in no pair, or its pair carries no orbital elements
  *  (README § Which pair a star rides).
+ *
+ *  **The tier is not a gate.** Tier 2 has no published inclination, so the
+ *  whole runtime places its orbit in the galactic plane; this answers with
+ *  that same plane rather than refusing. Both tiers draw an orbit ring, so a
+ *  tier-conditional ORB frame would appear and disappear on a distinction
+ *  nothing on screen exposes. A pair with no elements draws no ring at all —
+ *  that no-op is the one the user can see.
  *
  *  `relationIdx` is returned so a caller wanting the same pair's other
  *  member reads it off this answer rather than resolving the innermost
  *  relation a second time and trusting the two to agree.
  *
  *  `systemXyzPc` is the pair's ICRS position, supplying the sky tangent
- *  basis the sky-frame normal projects through. */
+ *  basis a Tier-1 normal projects through; Tier 2 needs no vantage. */
 export function starOrbitNormalIcrs(
   binaries: BinariesData,
   starIdx: number,
@@ -103,7 +110,15 @@ export function starOrbitNormalIcrs(
   const relationIdx = innermostRelationOf(binaries, starIdx);
   if (relationIdx === NO_PARENT) return null;
   const params = keplerRelationParams(binaries.relations[relationIdx]);
-  if (params === null || params.tier !== 1) return null;
+  if (params === null) return null;
+  if (params.tier === 2) {
+    // `projectGalacticPlaneToICRS` rides the pair's in-plane (x, y) into the
+    // galactic XY basis, so the normal of what it draws is galactic +Z — the
+    // same vector, by construction of that basis. The fallback carries no
+    // sense of its own: an inclination past 90° is exactly what is missing.
+    const p = GALACTIC_NORTH_POLE_ICRS;
+    return { normal: { x: p.x, y: p.y, z: p.z }, relationIdx };
+  }
   const n = orbitNormalSky(params.elements);
   return {
     normal: projectSkyToICRS(systemXyzPc, n.north, n.east, n.radial),

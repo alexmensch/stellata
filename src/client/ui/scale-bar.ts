@@ -1,4 +1,5 @@
 import type { Stellata } from '../stellata';
+import { CHROME_INSET_PX } from '../attitude/attitude-layout';
 import { AU_PER_PC } from '../util/astronomy-constants';
 import {
   fmtDistAuto,
@@ -24,7 +25,11 @@ const TICK_FRACTIONS = [0.25, 0.5, 0.75];
 const TICK_HEIGHT_PX = 4;
 const ENDCAP_HEIGHT_PX = 7;
 
-const PAD_LEFT_PX = 10;
+// The instrument above this bar is a round face in a square box, so its box
+// edge is not the edge the eye reads. Padding by the same inset its outermost
+// tick sits at puts the bar's left endcap on the instrument's optical edge —
+// one constant governs both, so resizing the ball keeps them aligned.
+const PAD_LEFT_PX = CHROME_INSET_PX;
 const PAD_TOP_PX = 4;
 const BAR_LABEL_GAP_PX = 6;
 const BAR_LABEL_HEIGHT_PX = 14;

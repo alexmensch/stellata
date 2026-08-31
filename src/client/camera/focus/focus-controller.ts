@@ -7,7 +7,7 @@ import type { Catalog } from '../../loaders/catalog-loader';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
 import type { AimController } from '../controls/aim-controller';
-import type { ReferenceUpController } from '../controls/input/reference-up';
+import type { RollController } from '../controls/input/roll-controller';
 import type { ObserveControls } from '../observe/observe-controls';
 import type { ObserveTransition } from '../observe/observe-transition';
 import type { WarpController } from '../warp/warp-controller';
@@ -109,7 +109,7 @@ export interface FocusControllerDeps {
   bus: EventBus<StellataEventMap>;
   frameAnchor: FrameAnchor;
   aim: AimController;
-  referenceUp: ReferenceUpController;
+  roll: RollController;
   /** Hide/unhide the rendered body of a hard-focus target (star: the
    *  uHideFocusIdx shader pin; planet: the body field's uHideIdx).
    *  null unhides. The shell owns the per-kind dispatch. */
@@ -422,7 +422,7 @@ export class FocusController implements FocusOps {
     this.cameraMode = 'navigate';
     this.deps.setFocalBodyHidden(null);
     this.deps.observeControls.disable();
-    this.deps.referenceUp.adoptFromCamera(this.deps.camera);
+    this.deps.roll.adoptFromCamera(this.deps.camera);
     this.deps.controls.enabled = true;
     this.deps.bus.emit('cameraMode', 'navigate');
   }
@@ -513,6 +513,12 @@ export class FocusController implements FocusOps {
     const stillActive = tickFocusLerp(state, nowMs, this.deps.camera);
     if (!stillActive) {
       this.endFocusLerp();
+      // The slerp owned the quaternion; camera.up still holds the launch
+      // roll. Re-derive it before handing back, or TC's first lookAt
+      // resolves against the stale up and pops the view off the pose the
+      // lerp just landed on. See ../controls/input/README.md
+      // § Captured-endpoint animations.
+      this.deps.roll.adoptFromCamera(this.deps.camera);
       this.deps.controls.update();
     }
   }
@@ -572,7 +578,7 @@ export class FocusController implements FocusOps {
     // Orientation is frame-shift-invariant; capture once — `fromQuat`
     // must stay the user's pre-click camera view across the recentre.
     const startQuat = this.deps.camera.quaternion.clone();
-    const referenceUp = this.deps.referenceUp.get();
+    const startUp = this.deps.camera.up.clone();
     const parkDist = provider.focusParkDistance(target.idx);
 
     // The setter's contract: caller seeds controls.target with the
@@ -596,7 +602,7 @@ export class FocusController implements FocusOps {
 
     this.parkOnFocalTarget(
       startQuat,
-      referenceUp,
+      startUp,
       parkDist,
       provider.arrivalRadiusPc(target.idx),
       opts.animate ?? true,
@@ -623,7 +629,7 @@ export class FocusController implements FocusOps {
    */
   private parkOnFocalTarget(
     startQuat: THREE.Quaternion,
-    referenceUp: THREE.Vector3,
+    startUp: THREE.Vector3,
     parkDist: number,
     arrivalRadiusPc: number | null,
     animate: boolean,
@@ -643,7 +649,7 @@ export class FocusController implements FocusOps {
       this.startFocusLerp(newFocusLerpFrom(
         this.deps.camera.position,
         startQuat,
-        referenceUp,
+        startUp,
         target,
         parkDist,
         FOCUS_LERP_MS,
@@ -728,12 +734,12 @@ export class FocusController implements FocusOps {
     this.clearVector();
 
     const startQuat = this.deps.camera.quaternion.clone();
-    const referenceUp = this.deps.referenceUp.get();
+    const startUp = this.deps.camera.up.clone();
 
     this.deps.controls.target.copy(this.tmpLive);
     this.parkOnFocalTarget(
       startQuat,
-      referenceUp,
+      startUp,
       provider.focusParkDistance(target.idx),
       provider.arrivalRadiusPc(target.idx),
       opts.animate ?? true,

@@ -44,7 +44,7 @@ import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import { EventBus } from '../../util/event-bus';
 import { FOCUS_LERP_MS } from '../timing';
-import { ReferenceUpController } from '../controls/input/reference-up';
+import { RollController } from '../controls/input/roll-controller';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 
 interface WarpStub {
@@ -338,7 +338,7 @@ function makeHarness(opts: {
     catalog,
     bus,
     frameAnchor: frame.anchor,
-    referenceUp: new ReferenceUpController(),
+    roll: new RollController(),
     aim,
     setFocalBodyHidden: (target) => {
       uHide.value = target?.kind === 'star' ? target.idx : -1;

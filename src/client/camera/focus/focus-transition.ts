@@ -47,21 +47,23 @@ export type FocusLerpState = ArrivalState;
  * point at `parkDist` from `target`, along the current eye-to-target line —
  * so the camera glides in along its existing viewing direction rather than
  * jumping sideways. Orientation slerps in parallel: starting from
- * `cameraQuat`, ending at "looking at `target` from `toPos` with
- * `referenceUp` as up." Both interpolations are driven by the same
- * smoothstep so the camera continuously reorients toward the new target as
- * it flies. The caller must build this **after** any floating-origin
- * recentre — every vector here is in the post-recentre local frame.
+ * `cameraQuat`, ending at "looking at `target` from `toPos` with `startUp`
+ * as up." Both interpolations are driven by the same smoothstep so the
+ * camera continuously reorients toward the new target as it flies. The
+ * caller must build this **after** any floating-origin recentre — every
+ * vector here is in the post-recentre local frame.
  *
- * `referenceUp` is the reference axis, NOT the live `camera.up`: the end
- * pose looks down a different axis than the start, so resolving roll
- * against the start-pose up lands on a roll the steady-state correction
- * then has to undo — a pop on the frame after the lerp settles.
+ * `startUp` is the launch `camera.up`, which is the roll authority the
+ * whole navigate mode runs on, so the end pose keeps the roll the user
+ * flew in with rather than acquiring one from the new view axis. The
+ * caller must re-derive `camera.up` from the landed quaternion — the
+ * slerp writes the quaternion alone. See
+ * `../controls/input/README.md` § Captured-endpoint animations.
  */
 export function newFocusLerpFrom(
   cameraPos: THREE.Vector3,
   cameraQuat: THREE.Quaternion,
-  referenceUp: THREE.Vector3,
+  startUp: THREE.Vector3,
   target: THREE.Vector3,
   parkDist: number,
   durationMs: number,
@@ -74,12 +76,12 @@ export function newFocusLerpFrom(
   const toPos = new THREE.Vector3().addVectors(target, offset);
 
   // End orientation: place a scratch PerspectiveCamera at toPos with the
-  // reference up, look at target. Its quaternion is the camera orientation
+  // launch up, look at target. Its quaternion is the camera orientation
   // we want at lerp end. (Object3D.lookAt swaps axes for non-cameras —
   // we need the camera-flavoured variant that orients -Z at the target.)
   const endPose = new THREE.PerspectiveCamera();
   endPose.position.copy(toPos);
-  endPose.up.copy(referenceUp);
+  endPose.up.copy(startUp);
   endPose.lookAt(target);
 
   return newArrival({

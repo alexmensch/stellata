@@ -163,14 +163,36 @@ moves the star's whole subsystem, but it is not the orbit the star is on.
 Focus Algol Aa2 and that is the tight Aa1-Aa2 pair; focus Ab and it is the
 wide Aa-Ab one, about which Aa2's own orbit says nothing.
 
-`starOrbitNormalIcrs` is that pair's plane in ICRS, and it is **Tier 1
-only**: a Tier-2 pair's plane is the galactic-plane fallback, so handing it
-out as an orbit normal would pass a convention off as a measurement. The
-attitude indicator levels on it (`../attitude/README.md` § Levelling on an
-orbit), and takes its zero-longitude datum from the same pair's OTHER
-member: the barycentre sits on the segment between the two, so the partner's
-live slot gives the direction to it and the mass split only sets how far
-along — which a longitude datum drops.
+`starOrbitNormalIcrs` is that pair's plane in ICRS, **whatever tier the pair
+is**. Tier 1 projects the sky-frame normal through the system's tangent
+basis; Tier 2 answers with galactic north, which is the normal of the plane
+`projectGalacticPlaneToICRS` already places that pair's orbit in — so the
+frame agrees with the ring on screen rather than with the elements'
+provenance. Only Tier 3 declines, having no orbit to answer about.
+
+**The tier is not a gate, deliberately.** Gating on it — Tier 2's plane
+being a convention rather than a measurement — is a distinction the user
+cannot see: both tiers evaluate Kepler and both draw a ring, so ORB would
+appear on one ring and not another for a reason nothing on screen exposes.
+Tier 3 draws no ring at all, which is why its no-op is the honest one.
+Measured over `binaries.bin`: of 20,843 paired stars, 5,251 have a Tier-1
+innermost pair, **872 a Tier-2 one** (these are what a tier gate costs), and
+14,720 a Tier-3 one.
+
+The Tier-2 fallback carries no sense of its own — a retrograde orbit is
+exactly an inclination past 90°, which is the term that is missing — so it
+is always +galactic-north, and it is vantage-independent where a Tier-1
+normal is not.
+
+The zero-longitude datum is the same pair's OTHER member: the barycentre
+sits on the segment between the two, so the partner's live slot gives the
+direction to it and the mass split only sets how far along — which a
+longitude datum drops. `relationIdx` comes back with the normal so the
+caller reads the partner off that answer rather than resolving the innermost
+relation a second time and trusting the two to agree.
+
+The attitude indicator levels on all of it (`../attitude/README.md`
+§ Levelling on an orbit).
 
 ### Composition with proper-motion propagation
 

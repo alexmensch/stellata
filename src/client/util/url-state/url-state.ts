@@ -63,12 +63,19 @@ export function frameTriggerEps(magnitude: number): number {
 // Default values that the encoder uses to decide whether to omit a field.
 const DEFAULT_CAM: [number, number, number] = [0, 0, 30];
 const DEFAULT_TGT: [number, number, number] = [0, 0, 0];
-// The `up` slot carries the camera's REFERENCE axis (camera/controls/input/README.md
-// § Reference up axis), whose canonical value is galactic north — so a share
-// from a level camera omits the field entirely.
+// The `up` slot carries `camera.up` (camera/controls/input/README.md § Roll
+// authority). A galactic-LEVEL camera omits the field, and the receiver's own
+// default reproduces it — the test is the rendered roll, not the vector,
+// because up is the pole's image-plane projection and so equals the pole
+// itself from no viewpoint at all.
 const DEFAULT_UP: [number, number, number] = [
   GALACTIC_NORTH_POLE_ICRS.x, GALACTIC_NORTH_POLE_ICRS.y, GALACTIC_NORTH_POLE_ICRS.z,
 ];
+// Roll off galactic level under which the `up` field is omitted, and the
+// receiver reproduces it from DEFAULT_UP instead. Three and a half decades
+// below SNAP_TO_LEVEL_RAD (0.0349) and far above the float noise of the
+// projection, so only a camera the user levelled elides it.
+const LEVEL_UP_EPS_RAD = 1e-5;
 // v3's frozen default. A v3 blob was written when world +Y was the reference,
 // so its elided components have to fill from that value or the decode isn't
 // the one v3 meant — the axis then applies as a reference and reproduces the
@@ -1101,7 +1108,7 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
 
   const c = stellata.camera.position;
   const t = stellata.controls.target;
-  const u = stellata.referenceUp.get();
+  const u = stellata.camera.up;
   // Skip each independently. Under floating origin, a focused-orbit URL
   // has tgt=[0,0,0] (the focal star's local position) and observe-mode
   // has cam=[0,0,0] (camera is parked *at* the focal star), so omitting
@@ -1155,7 +1162,8 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   if (woNonSol || !approx(t.x, DEFAULT_TGT[0]) || !approx(t.y, DEFAULT_TGT[1]) || !approx(t.z, DEFAULT_TGT[2])) {
     view.tgt = [t.x, t.y, t.z];
   }
-  if (!approx(u.x, DEFAULT_UP[0]) || !approx(u.y, DEFAULT_UP[1]) || !approx(u.z, DEFAULT_UP[2])) {
+  if (Math.abs(stellata.roll.upRollError(stellata.camera, GALACTIC_NORTH_POLE_ICRS))
+    > LEVEL_UP_EPS_RAD) {
     view.up = [u.x, u.y, u.z];
   }
 
@@ -1253,16 +1261,20 @@ export function applyDecodedView(
 
   // Single dirty flag for everything that requires controls.update() at
   // the end of the camera-touching block. Each branch below that mutates
-  // camera.position / controls.target / the reference axis sets this so the final
+  // camera.position / controls.target / camera.up sets this so the final
   // update() reads as "if any of those happened, refresh" — replaces
   // a hand-maintained N-way OR that grew with every new branch.
   let controlsDirty = false;
 
-  if (view.up) {
-    stellata.referenceUp.set(view.up[0], view.up[1], view.up[2]);
-    stellata.referenceUp.correct(stellata.camera);
-    controlsDirty = true;
-  }
+  // An omitted `up` is a positive statement — the sender was galactic-LEVEL
+  // — so the receiver restores the pole itself and lets the `lookAt` below
+  // project it. Leaving `camera.up` alone instead restores the roll of
+  // whatever pose this session last held: at boot that is the pole projected
+  // into the DEFAULT view axis, which renders level from that vantage and no
+  // other. A level share from +X came back rolled 66 degrees.
+  const up = view.up ?? DEFAULT_UP;
+  stellata.roll.restore(stellata.camera, up[0], up[1], up[2]);
+  controlsDirty = true;
 
   const hasCam = view.cam !== undefined;
   const hasTgt = view.tgt !== undefined;
@@ -1358,7 +1370,15 @@ export function applyDecodedView(
     setCameraToDefault(stellata, 'observe');
     controlsDirty = true;
   }
-  if (controlsDirty) stellata.controls.update();
+  if (controlsDirty) {
+    stellata.controls.update();
+    // The restored `up` arrived as an axis, ahead of the position and target
+    // it has to be perpendicular to. The lookAt inside update() has now
+    // resolved the roll from it; this puts up itself back on the
+    // perpendicular invariant (camera/controls/input/README.md
+    // § Roll authority) without changing what is on screen.
+    stellata.roll.adoptFromCamera(stellata.camera);
+  }
 
   if (willEnterObserve) {
     stellata.observe.setMode('observe', { animate: false });
@@ -1472,7 +1492,7 @@ export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): boolean {
 function snapshotCam(stellata: Stellata, out: Float64Array): void {
   const c = stellata.camera.position;
   const t = stellata.controls.target;
-  const u = stellata.referenceUp.get();
+  const u = stellata.camera.up;
   out[0] = c.x; out[1] = c.y; out[2] = c.z;
   out[3] = t.x; out[4] = t.y; out[5] = t.z;
   out[6] = u.x; out[7] = u.y; out[8] = u.z;
@@ -1529,7 +1549,7 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
 
     const c = stellata.camera.position;
     const tg = stellata.controls.target;
-    const u = stellata.referenceUp.get();
+    const u = stellata.camera.up;
     // Component-wise epsilon comparison on the steady-state path. The
     // per-vector threshold scales with magnitude (frameTriggerEps) so
     // a zoom-out from solar-system scale trips at AU-resolution rather

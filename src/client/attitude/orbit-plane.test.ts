@@ -19,6 +19,7 @@ import {
   type OrbitalElements,
 } from '../binaries/binary-orbit-pure';
 import { innermostRelationOf } from '../binaries/focal-chain';
+import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
 import { starOrbitNormalIcrs } from '../binaries/orbit-relation-cache';
 import {
   makeBinaries,
@@ -234,21 +235,98 @@ describe('binary orbit normals', () => {
     expect(starOrbitNormalIcrs(algol(), 999, { x: 0, y: 0, z: 30 })).toBeNull();
   });
 
-  // Tier 2's plane is the galactic-plane fallback, not a measurement, so
-  // it must not surface as an orbit normal at all — offering it would let
-  // a level-on-orbit gesture pass a convention off as an observation.
-  it('declines a Tier-2 pair with no published inclination', () => {
+  // Tier 2 has no published inclination, so the runtime draws its orbit in
+  // the galactic plane — and this answers with that same plane. Gating ORB
+  // on the tier instead would make the frame come and go on a distinction
+  // nothing on screen exposes: both tiers draw a ring.
+  it('answers a Tier-2 pair with the galactic plane it is drawn in', () => {
     const b = makeBinaries([
       makeRelation({ primaryIdx: 1, secondaryIdx: 2, flags: FLAG_HAS_ORBIT, iRad: NaN }),
     ]);
-    expect(starOrbitNormalIcrs(b, 2, { x: 0, y: 0, z: 30 })).toBeNull();
+    for (const idx of [1, 2]) {
+      const plane = starOrbitNormalIcrs(b, idx, { x: 12, y: -5, z: 8 });
+      expect(plane, `star ${idx}`).not.toBeNull();
+      expect(plane!.relationIdx).toBe(0);
+      const n = new THREE.Vector3(plane!.normal.x, plane!.normal.y, plane!.normal.z);
+      expect(n.angleTo(GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(0, 12);
+      expect(n.length()).toBeCloseTo(1, 12);
+    }
   });
 
+  // The fallback plane is a property of the pair, not of where it is seen
+  // from — unlike a Tier-1 normal, which projects through the system's own
+  // sky tangent basis.
+  it('gives the same Tier-2 plane from any vantage', () => {
+    const b = makeBinaries([
+      makeRelation({ primaryIdx: 1, secondaryIdx: 2, flags: FLAG_HAS_ORBIT, iRad: NaN }),
+    ]);
+    const a = starOrbitNormalIcrs(b, 2, { x: 100, y: 0, z: 0 })!.normal;
+    const c = starOrbitNormalIcrs(b, 2, { x: 0, y: -40, z: 9 })!.normal;
+    expect(a).toEqual(c);
+  });
+
+  // No elements at all means no orbit is evaluated and no ring is drawn, so
+  // there is nothing to level on and the absence is visible on screen.
   it('declines a Tier-3 pair with no orbit', () => {
     const b = makeBinaries([
       makeRelation({ primaryIdx: 1, secondaryIdx: 2, flags: 0 }),
     ]);
     expect(starOrbitNormalIcrs(b, 2, { x: 0, y: 0, z: 30 })).toBeNull();
+  });
+
+  // Dabih's shape: a Tier-1 outer pair carrying a tight spectroscopic inner
+  // one with no published inclination. Every member gets ORB — Aa on the
+  // measured Aa-Ab plane, Ab and Ab2 on the plane their own inner pair is
+  // drawn in. Numbers are beta Cap's, from data/binaries/multiples.tsv.
+  const DABIH_AA = 20;
+  const DABIH_AB = 21;   // = Ab1: shared node, secondary of the outer pair
+  const DABIH_AB2 = 22;
+  const OUTER_INC_DEG = 75.1;
+  const dabih = () => makeBinaries([
+    makeRelation({
+      primaryIdx: DABIH_AA,
+      secondaryIdx: DABIH_AB,
+      flags: TIER_1,
+      iRad: OUTER_INC_DEG * DEG,
+      aAU: 5.799967,
+    }),
+    makeRelation({
+      primaryIdx: DABIH_AB,
+      secondaryIdx: DABIH_AB2,
+      flags: FLAG_HAS_ORBIT,
+      iRad: NaN,
+      aAU: 0.132273,
+      parentRelation: 0,
+    }),
+  ]);
+
+  it('offers ORB to every member of a mixed-tier hierarchy', () => {
+    const b = dabih();
+    const system = { x: 0, y: 0, z: 30 };
+    for (const idx of [DABIH_AA, DABIH_AB, DABIH_AB2]) {
+      expect(starOrbitNormalIcrs(b, idx, system), `star ${idx}`).not.toBeNull();
+    }
+  });
+
+  it('answers each member on the orbit it is itself on', () => {
+    const b = dabih();
+    const system = { x: 0, y: 0, z: 30 };
+    const los = new THREE.Vector3(0, 0, 1);
+
+    // Aa rides only the outer pair, whose plane is measured.
+    const aa = starOrbitNormalIcrs(b, DABIH_AA, system)!;
+    expect(aa.relationIdx).toBe(0);
+    expect(new THREE.Vector3(aa.normal.x, aa.normal.y, aa.normal.z).angleTo(los) / DEG)
+      .toBeCloseTo(OUTER_INC_DEG, 6);
+
+    // Ab and Ab2 ride the inner pair — the orbit they are actually on, and
+    // the one drawn around them, not the wider one their subsystem rides.
+    for (const idx of [DABIH_AB, DABIH_AB2]) {
+      const plane = starOrbitNormalIcrs(b, idx, system)!;
+      expect(plane.relationIdx, `star ${idx}`).toBe(1);
+      const n = new THREE.Vector3(plane.normal.x, plane.normal.y, plane.normal.z);
+      expect(n.angleTo(GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(0, 12);
+    }
   });
 });
 
@@ -413,6 +491,28 @@ describe('focusedOrbitInto', () => {
     // The two members' separation lies in the orbital plane by
     // construction, so the plane normal is square to it.
     expect(o.normal.dot(o.toCentre.clone().normalize())).toBeCloseTo(0, 6);
+  });
+
+  // A pair whose plane is the galactic fallback still fills both legs: the
+  // orbit is drawn, so it can be levelled on. The centre direction is the
+  // partner's, exactly as for a measured pair.
+  it('fills both legs for a pair with no published inclination', () => {
+    const b = makeBinaries([
+      makeRelation({
+        primaryIdx: PRIMARY, secondaryIdx: SECONDARY, flags: FLAG_HAS_ORBIT, iRad: NaN,
+      }),
+    ]);
+    const s = starHarness(b);
+    const fromSecondary = out();
+    expect(focusedOrbitInto(fromSecondary, s, { kind: 'star', idx: SECONDARY })).toBe(true);
+    const fromPrimary = out();
+    expect(focusedOrbitInto(fromPrimary, s, { kind: 'star', idx: PRIMARY })).toBe(true);
+
+    expect(fromSecondary.toCentre.clone().normalize().x).toBeCloseTo(-1, 6);
+    expect(fromPrimary.toCentre.clone().normalize().x).toBeCloseTo(1, 6);
+    for (const o of [fromSecondary, fromPrimary]) {
+      expect(o.normal.angleTo(GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(0, 12);
+    }
   });
 
   it('declines a planet before the planet kind attaches', () => {

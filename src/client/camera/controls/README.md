@@ -21,7 +21,7 @@ in both navigate and observe modes.
   control's disabled state, which tracks camera distance and so rides
   `'frame'` behind a cached flag (`../../galactic/coord-spheres/README.md`).
 - `input/` — canvas gestures + the camera state they drive: the click
-  FSM, the reference up axis (galactic-north roll lock), the roll
+  FSM, the two roll authorities (camera.up and the quaternion), the roll
   gestures, pinch-to-zoom, and TrackballControls' own tuning. Its
   `README.md` replaces this one for reads inside that folder.
 - `mode-toggle.ts` — navigate / observe pill in the topbar.
@@ -275,6 +275,17 @@ Both branches share `aimDurationMs`: a linear ramp from `AIM_T_MIN_MS`
 swing). The observe branch's swing angle uses the geodesic quaternion
 formula `2·acos(|q0·q1|)`; the navigate branch uses the planar
 `acos(dir0·dir1)` between unit direction vectors.
+
+`invert()` reuses both slots for the reciprocal pose — navigate negates the
+offset from the pivot, observe turns in place — and always runs the full
+`AIM_T_MAX_MS`, since a half turn is the cap by definition. It is the one
+motion here whose **path is not implied by its endpoints**: a 180° rotation
+has no unique axis, so rather than slerping two poses and taking whatever
+plane falls out, both branches compose an explicit half turn about the
+camera's local up onto their own start pose. That axis is perpendicular to
+the boresight by construction, which is what makes the endpoint exact as well
+as the route predictable. `../../attitude/README.md` § Inverting the view
+owns the user-facing definition.
 
 Composition split — `Stellata.aimAt(pointLocal)` is the dispatcher that
 owns the cross-controller busy gates (`warp.isActive()`,

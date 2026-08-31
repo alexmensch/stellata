@@ -90,15 +90,27 @@ const GN_UP: [number, number, number] = [
   GALACTIC_NORTH_POLE_ICRS.x, GALACTIC_NORTH_POLE_ICRS.y, GALACTIC_NORTH_POLE_ICRS.z,
 ];
 
-function referenceUpStub(up: [number, number, number] = GN_UP) {
-  const vec = { x: up[0], y: up[1], z: up[2] };
+/** RollController's URL legs only. The real `upRollError` measures the
+ *  roll off `camera.up` through the quaternion, which this THREE-free
+ *  suite deliberately has no camera for; here "level" is `up` sitting on
+ *  galactic north, which is what the stub cameras hold when level. */
+function rollStub() {
   return {
-    get: () => vec,
-    set: (x: number, y: number, z: number) => {
+    restore: (
+      camera: { up: { x: number; y: number; z: number } },
+      x: number, y: number, z: number,
+    ) => {
+      if (x === 0 && y === 0 && z === 0) return;
       const len = Math.hypot(x, y, z) || 1;
-      vec.x = x / len; vec.y = y / len; vec.z = z / len;
+      camera.up.x = x / len; camera.up.y = y / len; camera.up.z = z / len;
     },
-    correct: () => 0,
+    upRollError: (camera: { up: { x: number; y: number; z: number } }) => {
+      const d = Math.hypot(
+        camera.up.x - GN_UP[0], camera.up.y - GN_UP[1], camera.up.z - GN_UP[2],
+      );
+      return d < 1e-9 ? 0 : 1;
+    },
+    adoptFromCamera: () => {},
   };
 }
 
@@ -266,7 +278,7 @@ function makeStatefulStellata() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     camera: { position: mockVec3(0, 0, 30), up: mockVec3(...GN_UP) } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    referenceUp: referenceUpStub() as any,
+    roll: rollStub() as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     controls: { target: mockVec3(), update() {} } as any,
   };
@@ -394,6 +406,25 @@ describe('url-state', () => {
       // false → the field doesn't even claim its outer presence bit.
       const { view } = roundtrip({ up: GN_UP });
       expect(view.up).toBeUndefined();
+    });
+
+    // The other half of that elision, and the half that broke: an omitted
+    // `up` says "the sender was level", so the receiver has to restore the
+    // POLE rather than keep whatever its own camera holds. Its own value is
+    // the pole already projected into some other view axis, which renders
+    // level from that vantage alone. Wiring only — the geometry that makes
+    // the projection vantage-specific is pinned in roll-controller.test.ts.
+    it('restores the pole when the blob carries no up', () => {
+      const { stellata } = makeStatefulStellata();
+      stellata.camera.up.x = 0;
+      stellata.camera.up.y = 1;
+      stellata.camera.up.z = 0;
+      const view = decodeBlob(encodeBlob({ cam: [30, 0, 0], tgt: [0, 0, 0] })).view;
+      expect(view.up).toBeUndefined();
+      applyDecodedView(stellata, view, makeFixtureBuild());
+      expect(stellata.camera.up.x).toBeCloseTo(GN_UP[0], 12);
+      expect(stellata.camera.up.y).toBeCloseTo(GN_UP[1], 12);
+      expect(stellata.camera.up.z).toBeCloseTo(GN_UP[2], 12);
     });
 
     it('elides tgt when it matches the default [0, 0, 0]', () => {
@@ -1037,7 +1068,7 @@ describe('url-state', () => {
           up: { x: up[0], y: up[1], z: up[2] },
         } as any,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        referenceUp: referenceUpStub(up) as any,
+        roll: rollStub() as any,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         controls: {
           target: { x: tgt[0], y: tgt[1], z: tgt[2] },
@@ -1796,7 +1827,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     };
     const cam = { position: mockVec3(0, 0, 30), up: mockVec3(...GN_UP) };
     const controls = { target: mockVec3(0, 0, 0), update() {} };
-    const referenceUp = referenceUpStub();
+    const roll = rollStub();
     const handlers: Record<string, Array<(p: unknown) => void>> = { frame: [], state: [] };
     const stub: Partial<Stellata> = {
       filters: partialOf<Stellata['filters']>({
@@ -1839,7 +1870,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       controls: controls as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      referenceUp: referenceUp as any,
+      roll: roll as any,
     };
     stub.on = ((name: string, h: (p: unknown) => void) => {
       handlers[name].push(h);
@@ -1847,7 +1878,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     }) as unknown as Stellata['on'];
     return {
       stellata: stub as Stellata,
-      state, cam, controls, referenceUp,
+      state, cam, controls, roll,
       frame: () => handlers.frame.forEach((h) => h(undefined)),
     };
   }

@@ -83,8 +83,10 @@ themselves.
   reading the camera quaternion against a reference frame that follows the
   focused object (ecliptic / equatorial / galactic, plus a captured REF
   datum and an ORB one on the focused object's own orbital plane), with
-  click-, double-click-, `L`-, `Shift`+`L`- and right-click affordances.
-  Draws on its own
+  click-, double-click-, `L`-, `Shift`+`L`- and right-click affordances,
+  plus two corner chips — the frame flag, whose cycle ORB joins whenever the
+  focused object rides one, and REV, which swings the camera to the
+  reciprocal of the direction it holds. Draws on its own
   small WebGL context rather than the main one, to stay clear of the HDR
   target and its exposure.
 - `calibration/` — the display-calibration screen: authored sRGB step
@@ -112,7 +114,7 @@ themselves.
 ## Public surface of `Stellata`
 
 The shell exposes its controllers as readonly namespaces rather than
-forwarding to them: `focus`, `warp`, `observe`, `aim`, `filters`,
+forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
 `exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,
@@ -129,6 +131,7 @@ the one split pair (read on `focus`, write on `observe`).
 does something no single controller can. Keep that property when adding
 one: `setCameraFov` (syncs the pixel solid angle to the HDR seam),
 `aimAt` / `aimAtConstellation` (cross-controller busy gates),
+`invertView` (the same gates, for the reciprocal pose),
 `isCameraTransitionActive` (warp ∪ observe), `getT` / `setT`
 (clockJumped fan-out), the `FrameAnchor` recentre trio, `setMonochrome`,
 the `attach*` family, and the star-frame reads (`localPositions`,

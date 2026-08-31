@@ -2,11 +2,13 @@
 // wrapped on a sphere, and rendered by a small standalone WebGL renderer.
 
 import * as THREE from 'three';
+import { BALL_VIEW_DIST, BALL_VIEW_FOV_DEG } from './attitude-layout';
 import { ballBasisInto, type ReferenceFrame } from './attitude-pure';
 
-// The ball spans `BALL_PX` CSS pixels at a device ratio of at most 2, so its
-// centre resolves under 3 texels per degree. This is still ~2x that; every
-// stroke below is measured in degrees so the size stays a free parameter.
+// The ball's centre resolves ~3.3 device pixels per degree at a device ratio
+// of 2; this carries 5.7, so the texture still out-resolves the screen by
+// ~1.7x. Every stroke below is measured in degrees, so the ball's size stays
+// a free parameter — README.md § Rendering.
 const TEX_W = 2048;
 const TEX_H = 1024;
 
@@ -303,8 +305,8 @@ export function createAttitudeBall(sizePx: number): AttitudeBall {
   renderer.setClearAlpha(0);
 
   const scene = new THREE.Scene();
-  const view = new THREE.PerspectiveCamera(20, 1, 0.1, 20);
-  view.position.set(0, 0, 6);
+  const view = new THREE.PerspectiveCamera(BALL_VIEW_FOV_DEG, 1, 0.1, 20);
+  view.position.set(0, 0, BALL_VIEW_DIST);
 
   const map = buildBallTexture();
   map.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -317,9 +319,9 @@ export function createAttitudeBall(sizePx: number): AttitudeBall {
   mesh.frustumCulled = false;
   scene.add(mesh);
 
+  // `setSize`'s third argument leaves the element's CSS size alone; the
+  // stylesheet owns it, so the drawing buffer is all that is set here.
   const canvas = renderer.domElement;
-  canvas.style.width = `${sizePx}px`;
-  canvas.style.height = `${sizePx}px`;
 
   return {
     canvas,

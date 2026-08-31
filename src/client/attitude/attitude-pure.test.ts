@@ -6,6 +6,7 @@ import {
   buildReferenceFrames,
   captureReferenceFrame,
   frameDirToBallInto,
+  FRAME_CYCLE,
   nextFrameKey,
   POLE_HOLD_DEG,
   readAttitude,
@@ -216,15 +217,17 @@ describe('reference frames', () => {
 
 describe('nextFrameKey', () => {
   it('advances through the cycle, ignoring the focus default', () => {
-    expect(nextFrameKey('equatorial', 'galactic')).toBe('ecliptic');
-    expect(nextFrameKey('ecliptic', 'galactic')).toBe('galactic');
-    expect(nextFrameKey('galactic', 'galactic')).toBe('equatorial');
+    expect(nextFrameKey('equatorial', 'galactic', false)).toBe('ecliptic');
+    expect(nextFrameKey('ecliptic', 'galactic', false)).toBe('galactic');
+    expect(nextFrameKey('galactic', 'galactic', false)).toBe('equatorial');
   });
 
   it('leaves a captured REF on the focused object\'s own default', () => {
-    expect(nextFrameKey('reference', 'ecliptic')).toBe('ecliptic');
-    expect(nextFrameKey('reference', 'galactic')).toBe('galactic');
-    expect(nextFrameKey('reference', 'equatorial')).toBe('equatorial');
+    expect(nextFrameKey('reference', 'ecliptic', false)).toBe('ecliptic');
+    expect(nextFrameKey('reference', 'galactic', false)).toBe('galactic');
+    expect(nextFrameKey('reference', 'equatorial', false)).toBe('equatorial');
+    // Available or not, a captured datum has no successor of its own.
+    expect(nextFrameKey('reference', 'ecliptic', true)).toBe('ecliptic');
   });
 
   it('reaches every frame from every frame', () => {
@@ -232,10 +235,49 @@ describe('nextFrameKey', () => {
       const seen = new Set<string>();
       let at: ReturnType<typeof nextFrameKey> = start;
       for (let i = 0; i < 3; i++) {
-        at = nextFrameKey(at, 'galactic');
+        at = nextFrameKey(at, 'galactic', false);
         seen.add(at);
       }
       expect(seen.size).toBe(3);
+    }
+  });
+
+  it('runs ORB - EQU - ECL - GAL when the focus rides an orbit', () => {
+    expect(nextFrameKey('orbit', 'galactic', true)).toBe('equatorial');
+    expect(nextFrameKey('equatorial', 'galactic', true)).toBe('ecliptic');
+    expect(nextFrameKey('ecliptic', 'galactic', true)).toBe('galactic');
+    expect(nextFrameKey('galactic', 'galactic', true)).toBe('orbit');
+  });
+
+  it('skips ORB when the focused object rides no orbit', () => {
+    expect(nextFrameKey('galactic', 'galactic', false)).toBe('equatorial');
+  });
+
+  it('leaves ORB for the cycle even once the orbit is gone', () => {
+    // A captured ORB survives a focus change that strips the elements out
+    // from under it; the flag must still have somewhere to go.
+    expect(nextFrameKey('orbit', 'galactic', false)).toBe('equatorial');
+  });
+
+  it('reaches all four from every frame while an orbit is on offer', () => {
+    for (const start of FRAME_CYCLE) {
+      const seen = new Set<string>();
+      let at: ReturnType<typeof nextFrameKey> = start;
+      for (let i = 0; i < FRAME_CYCLE.length; i++) {
+        at = nextFrameKey(at, 'galactic', true);
+        seen.add(at);
+      }
+      expect(seen.size).toBe(FRAME_CYCLE.length);
+    }
+  });
+
+  it('never answers ORB when no orbit is on offer', () => {
+    for (const start of FRAME_CYCLE) {
+      let at: ReturnType<typeof nextFrameKey> = start;
+      for (let i = 0; i < 8; i++) {
+        at = nextFrameKey(at, 'galactic', false);
+        expect(at).not.toBe('orbit');
+      }
     }
   });
 });

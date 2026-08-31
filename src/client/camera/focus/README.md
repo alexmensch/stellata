@@ -293,11 +293,12 @@ run, taking `bidirectional` for the soft-kind rule below:
 - **`eyeDist > parkDist` → lerp.** Camera position lerps from
   `fromPos` to `toPos = target + (eye-direction × parkDist)` and
   camera orientation slerps in parallel from `fromQuat` to a
-  quaternion that looks at the target from `toPos` **with the reference
-  up axis as up, not the live `camera.up`** — the end pose looks down a
-  different axis than the start, so resolving roll against the start-pose
-  up lands on a roll the per-frame correction undoes one frame later, as
-  a visible pop (`../controls/input/README.md` § Reference up axis). Both
+  quaternion that looks at the target from `toPos` **with the launch
+  `camera.up`**, the navigate roll authority — so the end pose keeps the
+  roll the user flew in with. `tick` then re-derives `camera.up` from the
+  landed quaternion before handing back to TrackballControls; skip that
+  and the first `lookAt` resolves against a stale up and pops
+  (`../controls/input/README.md` § Captured-endpoint animations). Both
   interpolations are driven by the same smoothstep, so the camera
   continuously rotates toward the new target as it flies in. Builds
   the lerp **after** the focus mutation recentres the floating origin so

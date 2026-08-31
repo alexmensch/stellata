@@ -11,6 +11,7 @@ import {
 } from './aim-controller';
 import { AIM_T_MAX_MS, AIM_T_MIN_MS } from '../timing';
 import { makeControlsStub, makeObserveControlsStub } from '../camera-test-stubs';
+import { RollController } from './input/roll-controller';
 
 function makeHarness(mode: 'navigate' | 'observe' = 'navigate') {
   const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
@@ -313,5 +314,194 @@ describe('AimController — cancel / dispose / mode isolation', () => {
     // observe-mode aim path runs — but starts the observe slot, not navigate.
     h.aim.aimAt(new THREE.Vector3(0, 10, 0));
     expect(h.aim.isActive()).toBe(false);
+  });
+});
+
+describe('AimController — invert', () => {
+  // A half turn runs the whole AIM_T_MAX_MS cap, so a tick that has to land
+  // past the end gets a generous margin: the controller stamps its own
+  // performance.now() after the test reads one, and under a loaded suite that
+  // gap swamps the 1 ms the shorter aim tests can afford.
+  const PAST_SWEEP_MS = AIM_T_MAX_MS * 2;
+
+  it('lands the camera on the far side of the pivot at the same radius', () => {
+    const h = makeHarness('navigate');
+    h.camera.position.set(10, 0, 0);
+    h.controls.target.set(0, 0, 0);
+    h.camera.lookAt(h.controls.target);
+    const startMs = performance.now();
+
+    h.aim.invert();
+    expect(h.aim.isActive()).toBe(true);
+    expect(h.controls.enabled).toBe(false);
+
+    h.aim.tick(startMs + PAST_SWEEP_MS);
+    expect(h.aim.isActive()).toBe(false);
+    expect(h.controls.enabled).toBe(true);
+    expect(h.camera.position.x).toBeCloseTo(-10, 5);
+    expect(h.camera.position.y).toBeCloseTo(0, 5);
+    expect(h.camera.position.z).toBeCloseTo(0, 5);
+  });
+
+  it('sweeps in the plane perpendicular to the camera\'s up, at constant radius', () => {
+    const h = makeHarness('navigate');
+    h.camera.position.set(10, 0, 0);
+    h.controls.target.set(0, 0, 0);
+    h.camera.up.set(0, 1, 0);
+    h.camera.lookAt(h.controls.target);
+    const startMs = performance.now();
+    h.aim.invert();
+
+    // A half turn has no unique axis; pinning it about the camera's up is
+    // what makes the path a horizontal swing rather than an arbitrary
+    // tumble. Every intermediate pose therefore stays in the y = 0 plane.
+    for (const frac of [0.15, 0.35, 0.5, 0.7, 0.9]) {
+      h.aim.tick(startMs + AIM_T_MAX_MS * frac);
+      expect(h.camera.position.y).toBeCloseTo(0, 5);
+      expect(h.camera.position.length()).toBeCloseTo(10, 5);
+    }
+  });
+
+  it('negates the offset when the camera sits off the cardinal axes', () => {
+    const h = makeHarness('navigate');
+    h.camera.position.set(3, -4, 12);
+    h.controls.target.set(1, 1, 1);
+    h.camera.lookAt(h.controls.target);
+    const r = h.camera.position.distanceTo(h.controls.target);
+    const startMs = performance.now();
+
+    h.aim.invert();
+    h.aim.tick(startMs + PAST_SWEEP_MS);
+    // Reflected through the pivot: offset negated, distance untouched.
+    expect(h.camera.position.x).toBeCloseTo(-1, 4);
+    expect(h.camera.position.y).toBeCloseTo(6, 4);
+    expect(h.camera.position.z).toBeCloseTo(-10, 4);
+    expect(h.camera.position.distanceTo(h.controls.target)).toBeCloseTo(r, 4);
+  });
+
+  it('no-ops in navigate when the camera sits on the pivot', () => {
+    const h = makeHarness('navigate');
+    h.controls.target.set(0, 0, 0);
+    h.camera.position.set(AIM_DEGENERATE_DIST_PC / 2, 0, 0);
+    h.aim.invert();
+    expect(h.aim.isActive()).toBe(false);
+    expect(h.controls.enabled).not.toBe(false);
+  });
+
+  it('turns to the reciprocal direction in observe, holding position', () => {
+    const h = makeHarness('observe');
+    h.camera.position.set(5, 6, 7);
+    h.camera.up.set(0, 1, 0);
+    h.camera.lookAt(5, 6, 6); // boresight along −Z
+    const startMs = performance.now();
+
+    h.aim.invert();
+    expect(h.aim.isObserveAimActive()).toBe(true);
+    expect(h.observeControls.disable).toHaveBeenCalled();
+
+    h.aim.tickObserve(startMs + PAST_SWEEP_MS);
+    expect(h.aim.isObserveAimActive()).toBe(false);
+    expect(h.observeControls.enable).toHaveBeenCalled();
+
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(h.camera.quaternion);
+    expect(forward.x).toBeCloseTo(0, 5);
+    expect(forward.y).toBeCloseTo(0, 5);
+    expect(forward.z).toBeCloseTo(1, 5);
+    // The camera never leaves the object it is standing on.
+    expect(h.camera.position.x).toBeCloseTo(5, 10);
+    expect(h.camera.position.y).toBeCloseTo(6, 10);
+    expect(h.camera.position.z).toBeCloseTo(7, 10);
+  });
+
+  it('runs the half-circle duration rather than a nudge', () => {
+    const h = makeHarness('navigate');
+    h.camera.position.set(10, 0, 0);
+    h.controls.target.set(0, 0, 0);
+    h.camera.lookAt(h.controls.target);
+    const startMs = performance.now();
+    h.aim.invert();
+    h.aim.tick(startMs + AIM_T_MAX_MS - 50);
+    expect(h.aim.isActive()).toBe(true);
+  });
+
+  it('is suppressed while an aim already owns the camera', () => {
+    const h = makeHarness('navigate');
+    h.camera.position.set(10, 0, 0);
+    h.controls.target.set(0, 0, 0);
+    h.camera.lookAt(h.controls.target);
+    h.aim.aimAt(new THREE.Vector3(0, 10, 0));
+    h.aim.invert();
+    const startMs = performance.now();
+    h.aim.tick(startMs + PAST_SWEEP_MS);
+    // The original aim landed, not the invert.
+    expect(h.camera.position.y).toBeCloseTo(-10, 5);
+  });
+});
+
+// A navigate aim disables TrackballControls and drives orientation with
+// lookAt per frame, so nothing transports `camera.up` while the view axis
+// sweeps. Aim at whatever sits straight up on screen and the two finish
+// parallel — the projection every lookAt and roll measurement rides is a
+// zero vector there, and TrackballControls preserves the angle it inherits,
+// so the state never repairs itself. `stellata.ts` re-derives `up` on every
+// frame a navigate animation owns the camera; both arms below are pinned so
+// the guard cannot pass vacuously.
+// See camera/controls/input/README.md § The perpendicular invariant.
+describe('AimController — the perpendicular invariant across a sweep', () => {
+  const FRAMES = 40;
+
+  /** Aim at the point straight up on screen — the worst case, and the one
+   *  an ordinary click on something high in the view produces. */
+  function sweepToScreenUp(adoptPerFrame: boolean): number {
+    const roll = new RollController();
+    const h = makeHarness('navigate');
+    h.camera.position.set(0, 0, 30);
+    h.controls.target.set(0, 0, 0);
+    h.camera.up.set(0, 1, 0);
+    h.camera.lookAt(h.controls.target);
+
+    const renderedUp = new THREE.Vector3(0, 1, 0).applyQuaternion(h.camera.quaternion);
+    const startMs = performance.now();
+    h.aim.aimAt(renderedUp.clone().multiplyScalar(10));
+
+    // Span 1.2x the duration so the last ticks are past the end whatever
+    // performance.now() did between the capture above and the controller's
+    // own — a landed aim early-returns, so the extra ticks move nothing.
+    for (let i = 1; i <= FRAMES; i++) {
+      h.aim.tick(startMs + (AIM_T_MAX_MS * 1.2 * i) / FRAMES);
+      if (adoptPerFrame) roll.adoptFromCamera(h.camera);
+    }
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(h.camera.quaternion);
+    return Math.abs(h.camera.up.dot(forward));
+  }
+
+  it('collapses `up` onto the boresight when nothing transports it', () => {
+    expect(sweepToScreenUp(false)).toBeCloseTo(1, 6);
+  });
+
+  it('holds `up` perpendicular when the loop transports it per frame', () => {
+    expect(sweepToScreenUp(true)).toBeCloseTo(0, 9);
+  });
+
+  // Transport must not cost the roll the user flew in with: the adopt writes
+  // `up` from the pose lookAt just rendered, so the image is untouched.
+  it('leaves the rendered pose of every frame alone', () => {
+    const roll = new RollController();
+    const h = makeHarness('navigate');
+    h.camera.position.set(0, 0, 30);
+    h.controls.target.set(0, 0, 0);
+    h.camera.up.set(0, 1, 0);
+    h.camera.lookAt(h.controls.target);
+    const startMs = performance.now();
+    h.aim.aimAt(new THREE.Vector3(7, 3, 0));
+
+    h.aim.tick(startMs + AIM_T_MAX_MS / 4);
+    const posed = h.camera.quaternion.clone();
+    roll.adoptFromCamera(h.camera);
+    // Component equality, not angleTo: a slerped quaternion is unit only to
+    // rounding, and acos near 1 turns that 1e-15 into a ~3e-8 "angle" that
+    // comes and goes with the exact tick. The claim is that the adopt writes
+    // `up` and does not touch the quaternion at all, which is exact.
+    expect(h.camera.quaternion.equals(posed)).toBe(true);
   });
 });

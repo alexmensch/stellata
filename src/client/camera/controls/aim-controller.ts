@@ -7,6 +7,7 @@ import type { TrackballControls } from 'three/examples/jsm/controls/TrackballCon
 import type { CameraMode } from '../../stellata';
 import type { ObserveControls } from '../observe/observe-controls';
 import { AIM_T_MAX_MS, AIM_T_MIN_MS, WARP_BASE_DIR } from '../timing';
+import { cameraLocalUpInto } from './input/roll-pure';
 
 /** Degeneracy guard for aim geometry (zero-length directions). MUST sit
  *  at/below camera.near (1e-12 pc ≈ 31 km) so every renderable framing
@@ -54,6 +55,7 @@ export class AimController {
   private readonly tickQ = new THREE.Quaternion();
   private readonly tickDir = new THREE.Vector3();
   private readonly tickObserveQ = new THREE.Quaternion();
+  private readonly invertUp = new THREE.Vector3();
 
   constructor(deps: AimControllerDeps) {
     this.deps = deps;
@@ -78,6 +80,29 @@ export class AimController {
     } else {
       if (this.navigate !== null) return;
       this.startNavigateAim(pointLocal);
+    }
+  }
+
+  /** Reflect the camera through whatever it is looking at. In navigate the
+   *  offset from the orbit pivot is negated, bringing the far side of the
+   *  focused object into view at the same distance; in observe the camera
+   *  holds its position and turns to face the reciprocal direction.
+   *
+   *  A half turn has no unique axis — every plane containing the two poses is
+   *  an equally valid path — so the sweep is pinned about the camera's own up
+   *  and reads as a horizontal swing rather than an arbitrary tumble. The
+   *  camera's local up is perpendicular to the boresight by construction,
+   *  which is what makes the half turn land exactly on the reciprocal.
+   *
+   *  Same busy-gate contract as `aimAt`: the shell owns the warp / focus-lerp
+   *  / observe-transition checks. */
+  invert(): void {
+    if (this.deps.getCameraMode() === 'observe') {
+      if (this.observe !== null) return;
+      this.startObserveInvert();
+    } else {
+      if (this.navigate !== null) return;
+      this.startNavigateInvert();
     }
   }
 
@@ -163,6 +188,46 @@ export class AimController {
       q0,
       q1,
       radius: r,
+    };
+  }
+
+  /** A half turn about the camera's local up, which both invert branches
+   *  compose onto their own start pose. */
+  private halfTurnAboutUp(): THREE.Quaternion {
+    cameraLocalUpInto(this.invertUp, this.deps.camera);
+    return new THREE.Quaternion().setFromAxisAngle(this.invertUp, Math.PI);
+  }
+
+  private startNavigateInvert(): void {
+    const pivot = this.deps.controls.target;
+    const dir0 = new THREE.Vector3().subVectors(this.deps.camera.position, pivot);
+    const r = dir0.length();
+    if (r < AIM_DEGENERATE_DIST_PC) return; // camera coincident with pivot
+    dir0.divideScalar(r);
+
+    const q0 = new THREE.Quaternion().setFromUnitVectors(WARP_BASE_DIR, dir0);
+    const q1 = this.halfTurnAboutUp().multiply(q0);
+
+    this.deps.controls.enabled = false;
+    this.navigate = {
+      startTimeMs: performance.now(),
+      durationMs: aimDurationMs(Math.PI),
+      q0,
+      q1,
+      radius: r,
+    };
+  }
+
+  private startObserveInvert(): void {
+    const q0 = this.deps.camera.quaternion.clone();
+    const q1 = this.halfTurnAboutUp().multiply(q0);
+
+    this.deps.observeControls.disable();
+    this.observe = {
+      startTimeMs: performance.now(),
+      durationMs: aimDurationMs(Math.PI),
+      q0,
+      q1,
     };
   }
 

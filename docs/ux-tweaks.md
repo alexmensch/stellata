@@ -12,9 +12,9 @@ for the surrounding context.
 - **Orbit feel** — `rotateSpeed` / `dynamicDampingFactor` in
   `stellata.ts` constructor.
 - **Camera pan** — gone; `noPan` stays `true`. Orbit + dolly + roll only.
-- **Roll level-lock strength / pole cone** — `POLE_CONE_DEG` in
-  `camera/controls/input/reference-up-pure.ts`. `SNAP_TO_LEVEL_DEG` beside it
-  is the alignment-guide band the roll sticks inside mid-drag; which frame it
+- **Roll alignment guide** — `SNAP_TO_LEVEL_DEG` in
+  `camera/controls/input/roll-pure.ts` is the band the roll sticks inside
+  mid-drag; which frame it
   sticks to follows the displayed coordinate sphere
   (`coordSphereNorthPole`, `galactic/coord-spheres/README.md`). Roll dead-zone
   is `ROLL_DEADZONE_PX` in `input-controller.ts`.
