@@ -27,8 +27,4 @@ describe('isGaiaCatalogueBibcode', () => {
     // Zacharias's UCAC4, which supplies most of the PM rescue's SIMBAD tier.
     expect(isGaiaCatalogueBibcode('2012yCat.1322....0Z')).toBe(false);
   });
-
-  it('reads an absent bibcode as not-Gaia, so a skip rule cannot fire on it', () => {
-    expect(isGaiaCatalogueBibcode(null)).toBe(false);
-  });
 });

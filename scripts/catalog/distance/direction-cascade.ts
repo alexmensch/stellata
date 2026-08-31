@@ -399,12 +399,16 @@ export function resolveDirection(
     return {
       via: 'cns5',
       dir: directionAtEpoch(
-        cns5.raDeg, cns5.decDeg, cns5.pmRaMasyr, cns5.pmDecMasyr,
+        cns5.raDeg, cns5.decDeg,
+        cns5.pm?.pmRaMasyr ?? null, cns5.pm?.pmDecMasyr ?? null,
         cns5.posEpoch, CATALOG_SCENE_EPOCH,
       ),
       srcRaDeg: cns5.raDeg, srcDecDeg: cns5.decDeg,
-      srcPmraMasyr: cns5.pmRaMasyr, srcPmdecMasyr: cns5.pmDecMasyr,
-      velVia: pmVelVia(cns5.pmRaMasyr, cns5.pmDecMasyr, 'cns5_pm'),
+      srcPmraMasyr: cns5.pm?.pmRaMasyr ?? null,
+      srcPmdecMasyr: cns5.pm?.pmDecMasyr ?? null,
+      velVia: pmVelVia(
+        cns5.pm?.pmRaMasyr ?? null, cns5.pm?.pmDecMasyr ?? null, 'cns5_pm',
+      ),
     };
   }
 
@@ -412,12 +416,16 @@ export function resolveDirection(
     return {
       via: 'simbad',
       dir: directionAtEpoch(
-        simbad.raDeg, simbad.decDeg, simbad.pmRaMasyr, simbad.pmDecMasyr,
+        simbad.raDeg, simbad.decDeg,
+        simbad.pm?.pmRaMasyr ?? null, simbad.pm?.pmDecMasyr ?? null,
         SIMBAD_REF_EPOCH, CATALOG_SCENE_EPOCH,
       ),
       srcRaDeg: simbad.raDeg, srcDecDeg: simbad.decDeg,
-      srcPmraMasyr: simbad.pmRaMasyr, srcPmdecMasyr: simbad.pmDecMasyr,
-      velVia: pmVelVia(simbad.pmRaMasyr, simbad.pmDecMasyr, 'simbad_pm'),
+      srcPmraMasyr: simbad.pm?.pmRaMasyr ?? null,
+      srcPmdecMasyr: simbad.pm?.pmDecMasyr ?? null,
+      velVia: pmVelVia(
+        simbad.pm?.pmRaMasyr ?? null, simbad.pm?.pmDecMasyr ?? null, 'simbad_pm',
+      ),
     };
   }
 

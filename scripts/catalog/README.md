@@ -81,6 +81,13 @@ scripts/catalog/
                                   imported by every subfolder and by
                                   src/client/loaders/. Holds no spectral
                                   symbol — that is `spectral/`, one-way.
+  cited-proper-motion.ts (+ test) `CitedProperMotion` and its only
+                                  constructor: a motion is admitted only
+                                  alongside the bibcode that sourced it, so a
+                                  partial or uncited one is dropped whole and
+                                  no consumer can reach a value the
+                                  Gaia-bibcode skip rules cannot weigh. Both
+                                  second-order pulls below write this shape.
   simbad-values-parse.ts (+ test) data/simbad/simbad_values.tsv indexed by
                                   every namespace the pull keyed on, over the
                                   shared ladder in catalog-pure.ts. The § 5

@@ -520,8 +520,8 @@ export function readStars(
       ? resolvePmRescue(
           {
             tycho2: tycho2Row,
-            cns5: lookupCns5Astrometry(directions.cns5, simbadKeys.gl),
-            simbad: simbadRow?.astrometry ?? null,
+            cns5: lookupCns5Astrometry(directions.cns5, simbadKeys.gl)?.pm ?? null,
+            simbad: simbadRow?.astrometry?.pm ?? null,
           },
           gaiaRow !== null && !gaiaHas5pSolution(gaiaRow),
         )

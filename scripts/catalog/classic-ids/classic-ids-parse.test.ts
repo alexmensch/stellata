@@ -102,13 +102,12 @@ describe('classic-ids-parse / parseCns5Tsv', () => {
 
   it('carries the PM bibcode, and drops an unbibcoded motion whole', () => {
     const rows = parseCns5Tsv(CNS5);
-    expect(rows[0].astrometry?.pmBibcode).toBe('2020yCat.1350....0G');
-    expect(rows[0].astrometry?.pmRaMasyr).toBe(-3781.74);
+    expect(rows[0].astrometry?.pm).toEqual({
+      pmRaMasyr: -3781.74, pmDecMasyr: 769.47, bibcode: '2020yCat.1350....0G',
+    });
     // The position survives the drop; only the motion needed the citation.
     expect(rows[2].astrometry?.plxMas).toBe(100);
-    expect(rows[2].astrometry?.pmRaMasyr).toBeNull();
-    expect(rows[2].astrometry?.pmDecMasyr).toBeNull();
-    expect(rows[2].astrometry?.pmBibcode).toBeNull();
+    expect(rows[2].astrometry?.pm).toBeNull();
   });
 });
 

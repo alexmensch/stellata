@@ -48,12 +48,12 @@ scripts/catalog/classic-ids/
                                   reads back — one GJ fold for the direction
                                   cascade's `cns5` tier and the PM rescue
                                   alike. This folder parses that file,
-                                  ../distance/ routes on it. Its PM carries
-                                  `pmBibcode` because 87% of CNS5's motions are
-                                  Gaia's own republished and the rescue's skip
-                                  rule needs the citation to see that; an
-                                  unbibcoded motion is dropped whole, position
-                                  intact.
+                                  ../distance/ routes on it. Its motion is a
+                                  `CitedProperMotion` (../cited-proper-motion.ts)
+                                  because 87% of CNS5's are Gaia's own
+                                  republished and the rescue's skip rule needs
+                                  the citation to see that; an uncited one is
+                                  dropped whole, position intact.
   cns5-fixture.ts                 Test-only Cns5Row / Cns5Astrometry builders.
                                   A module, not an export from a test file:
                                   four suites across two folders build these,

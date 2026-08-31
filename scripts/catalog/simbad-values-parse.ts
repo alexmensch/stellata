@@ -10,6 +10,7 @@ import {
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
 } from './catalog-pure';
+import { citedProperMotion, type CitedProperMotion } from './cited-proper-motion';
 
 const FILE_LABEL = 'data/simbad/simbad_values.tsv';
 const REFRESH_HINT = 'Re-run `pnpm run refresh:simbad-values`.';
@@ -30,15 +31,12 @@ export interface SimbadRadialVelocity {
 /** One SIMBAD row's position and proper motion, each with the bibcode that is
  *  its actual source. Coordinates are ICRS at {@link SIMBAD_REF_EPOCH}; the
  *  PM is carried separately because SIMBAD bibcodes the two quantities
- *  independently and a row can hold a coordinate without a motion.
- *  `pmRaMasyr` is μ_α*, cos δ already applied. */
+ *  independently and a row can hold a coordinate without a motion. */
 export interface SimbadAstrometry {
   raDeg: number;
   decDeg: number;
   cooBibcode: string;
-  pmRaMasyr: number | null;
-  pmDecMasyr: number | null;
-  pmBibcode: string | null;
+  pm: CitedProperMotion | null;
 }
 
 export interface SimbadValueRow {
@@ -89,15 +87,13 @@ function parseAstrometry(
   const decDeg = parseFloatOrNull(cells[idx.dec]);
   const cooBibcode = nonEmpty(cells[idx.coo_bibcode]);
   if (raDeg === null || decDeg === null || cooBibcode === null) return null;
-  const pmRaMasyr = parseFloatOrNull(cells[idx.pmra]);
-  const pmDecMasyr = parseFloatOrNull(cells[idx.pmdec]);
-  const pmBibcode = nonEmpty(cells[idx.pm_bibcode]);
-  const hasPm = pmRaMasyr !== null && pmDecMasyr !== null && pmBibcode !== null;
   return {
     raDeg, decDeg, cooBibcode,
-    pmRaMasyr: hasPm ? pmRaMasyr : null,
-    pmDecMasyr: hasPm ? pmDecMasyr : null,
-    pmBibcode: hasPm ? pmBibcode : null,
+    pm: citedProperMotion(
+      parseFloatOrNull(cells[idx.pmra]),
+      parseFloatOrNull(cells[idx.pmdec]),
+      nonEmpty(cells[idx.pm_bibcode]),
+    ),
   };
 }
 

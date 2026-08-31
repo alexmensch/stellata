@@ -5,8 +5,7 @@
 import { isGaiaCatalogueBibcode } from '../gaia-distrust';
 import type { VelocityVia } from '../direction-cascade';
 import type { Tycho2Row } from '../../tycho2-parse';
-import type { Cns5Astrometry } from '../../classic-ids/classic-ids-parse';
-import type { SimbadAstrometry } from '../../simbad-values-parse';
+import type { CitedProperMotion } from '../../cited-proper-motion';
 
 export const PM_RESCUE_VIA_VALUES = [
   'tycho2',
@@ -30,12 +29,13 @@ export const VELOCITY_VIA_BY_PM_RESCUE: Record<PmRescueVia, VelocityVia> = {
   none: 'zero',
 };
 
-/** The record's own designation-joined rows, already resolved by the callers
- *  that need them for the direction and V cascades. */
+/** The record's own designation-joined candidates, already resolved by the
+ *  callers that need them for the direction and V cascades. Tycho-2 arrives as
+ *  its whole row because it publishes no per-value citation and needs none. */
 export interface PmRescueSources {
   tycho2: Tycho2Row | null;
-  cns5: Cns5Astrometry | null;
-  simbad: SimbadAstrometry | null;
+  cns5: CitedProperMotion | null;
+  simbad: CitedProperMotion | null;
 }
 
 export interface PmRescueResolution {
@@ -69,17 +69,13 @@ export function resolvePmRescue(
     return { pmRaMasyr: tycho2.pmRaMasyr, pmDecMasyr: tycho2.pmDecMasyr, via: 'tycho2' };
   }
   let skipped = false;
-  if (cns5 !== null && cns5.pmRaMasyr !== null && cns5.pmDecMasyr !== null) {
-    if (!(gaiaIs2p && isGaiaCatalogueBibcode(cns5.pmBibcode))) {
-      return { pmRaMasyr: cns5.pmRaMasyr, pmDecMasyr: cns5.pmDecMasyr, via: 'cns5' };
+  for (const [via, cited] of [['cns5', cns5], ['simbad', simbad]] as const) {
+    if (cited === null) continue;
+    if (gaiaIs2p && isGaiaCatalogueBibcode(cited.bibcode)) {
+      skipped = true;
+      continue;
     }
-    skipped = true;
-  }
-  if (simbad !== null && simbad.pmRaMasyr !== null && simbad.pmDecMasyr !== null) {
-    if (!(gaiaIs2p && isGaiaCatalogueBibcode(simbad.pmBibcode))) {
-      return { pmRaMasyr: simbad.pmRaMasyr, pmDecMasyr: simbad.pmDecMasyr, via: 'simbad' };
-    }
-    skipped = true;
+    return { pmRaMasyr: cited.pmRaMasyr, pmDecMasyr: cited.pmDecMasyr, via };
   }
   return { ...NO_PM, via: skipped ? 'gaia_bibcode_skipped' : 'none' };
 }

@@ -375,13 +375,13 @@ describe('direction-cascade / resolveDirection routing', () => {
   it('SIMBAD is the bottom tier and propagates from J2000', () => {
     const simbad = {
       raDeg: 120, decDeg: 40, cooBibcode: '2020yCat.1350....0G',
-      pmRaMasyr: 200, pmDecMasyr: -100, pmBibcode: '2020yCat.1350....0G',
+      pm: { pmRaMasyr: 200, pmDecMasyr: -100, bibcode: '2020yCat.1350....0G' },
     };
     const res = resolveDirection(inputs({ simbad }), sources())!;
     expect(res.via).toBe('simbad');
     expect(res.velVia).toBe('simbad_pm');
     const expected = directionAtEpoch(
-      simbad.raDeg, simbad.decDeg, simbad.pmRaMasyr, simbad.pmDecMasyr,
+      simbad.raDeg, simbad.decDeg, simbad.pm.pmRaMasyr, simbad.pm.pmDecMasyr,
       SIMBAD_REF_EPOCH, CATALOG_SCENE_EPOCH,
     );
     expect(res.dir.x).toBeCloseTo(expected.x, 12);
@@ -392,8 +392,7 @@ describe('direction-cascade / resolveDirection routing', () => {
   it('a SIMBAD row with a position but no PM keeps the position, zero tangential', () => {
     const res = resolveDirection(inputs({
       simbad: {
-        raDeg: 120, decDeg: 40, cooBibcode: '2020yCat.1350....0G',
-        pmRaMasyr: null, pmDecMasyr: null, pmBibcode: null,
+        raDeg: 120, decDeg: 40, cooBibcode: '2020yCat.1350....0G', pm: null,
       },
     }), sources())!;
     expect(res.via).toBe('simbad');

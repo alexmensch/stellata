@@ -22,7 +22,10 @@ const GAIA_CATALOGUE_BIBCODES: ReadonlySet<string> = new Set([
 
 /** Whether a bibcode names a Gaia catalogue release rather than the
  *  literature. The rv tier's and the PM rescue's skip rules turn on it; the
- *  SIMBAD tiers pin their split by it. */
-export function isGaiaCatalogueBibcode(bibcode: string | null): boolean {
-  return bibcode !== null && GAIA_CATALOGUE_BIBCODES.has(bibcode);
+ *  SIMBAD tiers pin their split by it. Takes a bibcode, never an absence —
+ *  both pulls drop an uncited value whole (`../cited-proper-motion.ts`), so a
+ *  null here could only be a citation that went missing after the parse, and
+ *  reading it as "not Gaia" would silently admit it. */
+export function isGaiaCatalogueBibcode(bibcode: string): boolean {
+  return GAIA_CATALOGUE_BIBCODES.has(bibcode);
 }

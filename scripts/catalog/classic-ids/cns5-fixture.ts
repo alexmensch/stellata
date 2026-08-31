@@ -12,9 +12,7 @@ export function cns5Astrometry(
     decDeg: -7,
     posEpoch: 2000.0,
     plxMas: 100,
-    pmRaMasyr: 50,
-    pmDecMasyr: -20,
-    pmBibcode: '2012yCat.1322....0Z',
+    pm: { pmRaMasyr: 50, pmDecMasyr: -20, bibcode: '2012yCat.1322....0Z' },
     ...overrides,
   };
 }
