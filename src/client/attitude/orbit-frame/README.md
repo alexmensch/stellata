@@ -19,7 +19,7 @@ one level up.
 
 ## Capturing it
 
-Double-click the ball (or `Shift`+`L`) and the active frame becomes **ORB**,
+Double-click the ball and the active frame becomes **ORB**,
 whose pole is the normal of the orbit the focused object *itself* rides. It
 is planted from `orbit-plane.ts`'s answer rather than from the current
 attitude, and `level()` then runs unchanged. Unlike REF it is **live** —

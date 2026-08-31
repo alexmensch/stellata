@@ -84,7 +84,7 @@ themselves.
   focused object (ecliptic / equatorial / galactic, plus a captured REF
   datum and an ORB one on the focused object's own orbital plane — the
   latter owned by `attitude/orbit-frame/`), with click-, double-click-,
-  `L`-, `Shift`+`L`- and right-click affordances, plus three corner chips —
+  `L`-, `Z`- and right-click affordances, plus three corner chips —
   the datum chip (off / REF / TGT), the frame flag, and INV, which swings the
   camera to the reciprocal of the direction it holds. Lives in the bottom-left Instruments panel and is
   **navigate-only**: observe draws a coordinate sphere instead, and the two

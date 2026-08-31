@@ -5,6 +5,10 @@
 export interface ShortcutDescriptor {
   /** Display keys: one chip per entry (`['G']`, `['F', 'F']`, `['+', '−']`). */
   keys: string[];
+  /** Keys held together rather than pressed as alternatives — the help modal
+   *  joins a chord with `+` and everything else with `/`. A repeated key is a
+   *  double-tap and joins with a space, which needs no flag. */
+  chord?: boolean;
   /** Help-modal description. */
   label: string;
   /** Hidden everywhere — the undocumented triple-tap-D debug affordance. */
@@ -24,7 +28,11 @@ export const SHORTCUTS: readonly ShortcutDescriptor[] = [
   { keys: ['O'], label: 'Switch to observe mode when a star is focused' },
   { keys: ['M'], label: 'Toggle star chart mode (in observe mode only)' },
   { keys: ['V'], label: 'Cycle detail level (physical → structure → all)' },
-  { keys: ['⇧', 'V'], label: 'Invert the view — swing to the far side of the focused object' },
+  {
+    keys: ['⇧', 'V'],
+    chord: true,
+    label: 'Invert the view — swing to the far side of the focused object',
+  },
   { keys: ['W'], label: 'Warp to the destination' },
   { keys: ['C'], label: 'Show a constellation' },
   {
@@ -38,8 +46,14 @@ export const SHORTCUTS: readonly ShortcutDescriptor[] = [
       + 'the coordinate sphere in observe',
   },
   {
-    keys: ['⇧', 'L'],
-    label: "Level on the focused object's own orbital plane",
+    keys: ['Z'],
+    label: 'Aim at the reference frame\'s origin — 0° longitude, 0° latitude '
+      + 'on whichever frame is showing',
+  },
+  {
+    keys: ['⇧', 'Z'],
+    chord: true,
+    label: 'Aim at the opposite point — 180° longitude, 0° latitude',
   },
   { keys: ['H'], label: 'Toggle the head-up display (HUD)' },
   { keys: ['R'], label: 'Reset FOV, exposure & exaggeration' },

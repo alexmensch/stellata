@@ -56,17 +56,13 @@ RA/Dec is the frame anyone reading the sky from the surface already thinks in,
 and **galactic** beyond, the only frame out there still defined by something
 real.
 
-**A frame is only offered where it describes something.**
-`frameAvailableFor` reads that off `autoFrameFor` rather than restating "in
-Sol's system", so the two cannot drift: galactic everywhere, the ecliptic
-wherever the focus rule already lands inside Sol's system, RA/Dec on Earth
-alone. `frameAfterFocusChange` then keeps a selected frame across a focus
-change where the new object still allows it and demotes to that object's
-default where it does not — `../galactic/coord-spheres/README.md` § A frame is
-offered where it describes something carries the walk and why the rule is
-keyed on the focus rather than on distance. **A manual pick therefore
-survives** a focus change now, where it used to be reset every time; only a
-pick the new object cannot support is taken away.
+**A frame is only offered where it describes something**, and a focus change
+keeps the selected one wherever the new object still allows it.
+`frameAvailableFor` / `frameAfterFocusChange` implement both;
+`../galactic/coord-spheres/README.md` § A frame is offered where it describes
+something owns the rule, the walk, and why it is keyed on the focus rather
+than on distance. **A manual pick therefore survives** a focus change now,
+where it used to be reset every time.
 
 Two frames sit outside the selection, both held on the instrument and both
 cleared when the focus moves out from under them:
@@ -78,10 +74,9 @@ cleared when the focus moves out from under them:
   everywhere, so the walk always terminates. Picking a sky frame writes
   `filter.coordSphere`; picking ORB arms the same **live** frame the gesture
   does but **does not level**, the flag choosing what the ball reads against
-  and levelling being the gesture's own half of the job. ORB alone is rebuilt
-  every rendered frame rather than captured, so the ball turns with the orbit,
-  and it alone carries a **lock** chip beneath the flag that rides that turn
-  with the camera (`orbit-frame/README.md`).
+  and levelling being the gesture's own half of the job. ORB alone is live
+  rather than captured, and alone carries the **lock** chip beneath the flag
+  (`orbit-frame/README.md`).
 - The **datum chip** top-left runs **off → REF → TGT → off**. Neither datum
   has a fixed place in a rotation — one is planted on a live attitude, the
   other on a bearing — which is why they sit on a chip of their own rather
@@ -119,9 +114,9 @@ only `U` does.
 pitch would move the camera through space in NAVIGATE, where it orbits a
 target rather than turning in place.
 
-One gesture reaches ORB directly: **double-clicking the ball, or `Shift`+`L`,
-captures it** — a frame on the orbital plane of whatever is focused — and
-levels on it. `orbit-frame/README.md`.
+One gesture reaches ORB directly: **double-clicking the ball** arms it — a
+frame on the orbital plane of whatever is focused — and levels on it.
+`orbit-frame/README.md`.
 
 The **INV chip** in the bottom-right corner is not a frame at all; it moves
 the camera rather than choosing what to read it against. § Inverting the view.
@@ -407,8 +402,13 @@ The two camera modes need different calls, matching the split in
 screen in observe: there `L` reads `coordSphereNorthPole(filter.coordSphere)`
 — the pole of the grid actually drawn — and is a **no-op while that is
 `none`**, there being nothing on screen to level to rather than a hidden frame
-to guess at. `Shift`+`L` is navigate-only for the same reason: ORB is the
-instrument's own frame and has no grid behind it.
+to guess at. The double-click that arms ORB and levels on it is navigate-only
+for the same reason: ORB is the instrument's own frame and has no grid behind
+it.
+
+**`Z` aims rather than levels** — onto the showing frame's origin, or its
+antipode shifted, which is where `Z` then an invert would land but in one
+sweep. In observe it reads the drawn grid, and does nothing with none up.
 
 Level is a one-shot state, not a maintained one — orbiting away from here
 rolls the view again, and the ball is what tells you so.

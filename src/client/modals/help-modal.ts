@@ -16,9 +16,11 @@ function renderShortcutList(list: HTMLElement): void {
   const frag = document.createDocumentFragment();
   for (const s of helpModalShortcuts()) {
     const dt = document.createElement('dt');
-    // A repeated key ("F F") is a double-tap; distinct keys ("+ / −") are
-    // alternatives.
-    const sep = s.keys.length === 2 && s.keys[0] === s.keys[1] ? ' ' : ' / ';
+    // Three relationships, one separator each: a repeated key ("F F") is a
+    // double-tap, a chord ("⇧ + V") is held together, and anything else
+    // ("+ / −") is a set of alternatives.
+    const repeated = s.keys.length === 2 && s.keys[0] === s.keys[1];
+    const sep = repeated ? ' ' : s.chord ? ' + ' : ' / ';
     s.keys.forEach((k, i) => {
       if (i > 0) dt.append(sep);
       const kbd = document.createElement('kbd');

@@ -31,6 +31,7 @@ import {
 import { signedAngleAbout } from '../camera/controls/input/roll-pure';
 import { focusFrameInputs } from './focus-frame';
 import { coordSphereNorthPole } from '../galactic/coord-spheres/coord-sphere-frames';
+import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import { focusedOrbitInto, type FocusedOrbit } from './orbit-frame/orbit-plane';
 import type { Target } from '../camera/focus/focus-target';
 import {
@@ -221,13 +222,12 @@ export interface AttitudeIndicator {
   /** Zero the roll against the active frame. Bound to a click on the ball and
    *  to the `L` shortcut. */
   level(): void;
-  /** Capture the focused object's own orbital plane as the ORB frame and
-   *  level on it. A double-click on the ball or `Shift`+`L`; a no-op when
-   *  nothing focused rides an orbit the model has elements for. */
-  levelOnOrbit(): void;
   /** Step the reference frame on. The corner flag's click, and `S` in
    *  navigate — where the ball is what a frame change moves. */
   cycleFrame(): void;
+  /** Aim the camera at the showing frame's origin — 0° longitude, 0°
+   *  latitude — or at its antipode. `Z` and `Shift`+`Z`. */
+  aimAtFrameOrigin(opposite: boolean): void;
 }
 
 export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator | null {
@@ -489,6 +489,28 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     level();
   }
 
+  const aimPoint = new THREE.Vector3();
+
+  /** Aim at where the showing frame reads 0/0 — or, opposite, at where it
+   *  reads 180/0. The point is put on the coordinate sphere's own radius, so
+   *  in observe it is literally the grid intersection you are looking at.
+   *
+   *  Observe reads the drawn grid rather than the instrument, which is not on
+   *  screen there: with no grid up there is no origin to aim at, and a datum
+   *  armed back in navigate is not what the user can see. */
+  function aimAtFrameOrigin(opposite: boolean): void {
+    let origin = frame.zeroLon;
+    if (stellata.focus.getCameraMode() === 'observe') {
+      const selected = stellata.filters.getFilter().coordSphere;
+      if (selected === 'none') return;
+      origin = frames[selected].zeroLon;
+    }
+    aimPoint.copy(origin)
+      .multiplyScalar(opposite ? -SPHERE_RADIUS_PC : SPHERE_RADIUS_PC)
+      .add(stellata.camera.position);
+    stellata.aimAt(aimPoint);
+  }
+
   const clicks = new PendingClickDispatcher(
     DBL_CLICK_MS,
     DBL_CLICK_DIST_PX_SQ,
@@ -642,5 +664,5 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   });
 
   draw();
-  return { level, levelOnOrbit, cycleFrame };
+  return { level, cycleFrame, aimAtFrameOrigin };
 }

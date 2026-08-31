@@ -39,9 +39,9 @@ export interface KeyboardShortcutsDeps {
   /** Step the attitude indicator's reference frame on — what `S` moves in
    *  navigate, where the ball rather than a grid carries the frame. */
   cycleReferenceFrame: () => void;
-  /** Capture the focused object's own orbital plane and level on it — the
-   *  same action as double-clicking the ball. */
-  levelAttitudeOnOrbit: () => void;
+  /** Aim the camera at the origin of whichever reference frame is showing —
+   *  the 8-ball's in navigate, the drawn grid's in observe. */
+  aimAtFrameOrigin: (opposite: boolean) => void;
 }
 
 export function bindKeyboardShortcuts(
@@ -187,7 +187,14 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case 'l': case 'L':
-        if (e.shiftKey) deps.levelAttitudeOnOrbit(); else deps.levelAttitude();
+        deps.levelAttitude();
+        e.preventDefault();
+        break;
+      case 'z': case 'Z':
+        // Shifted aims at the antipode, which is where Z followed by an
+        // invert would land — in one sweep rather than two that would
+        // otherwise gate each other out.
+        deps.aimAtFrameOrigin(e.shiftKey);
         e.preventDefault();
         break;
       case 'f': case 'F':

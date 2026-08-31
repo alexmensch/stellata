@@ -306,7 +306,7 @@ async function main() {
       bindKeyboardShortcuts(stellata, {
         levelAttitude: () => attitude?.level(),
         cycleReferenceFrame: () => attitude?.cycleFrame(),
-        levelAttitudeOnOrbit: () => attitude?.levelOnOrbit(),
+        aimAtFrameOrigin: (opposite) => attitude?.aimAtFrameOrigin(opposite),
         toggleDebugPanel: debugTools.panel,
         timeScrubber,
       });

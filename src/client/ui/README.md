@@ -11,7 +11,11 @@ to existing public APIs — every shortcut is a thin wrapper, so future
 behavioural changes propagate automatically.
 
 **Display metadata is separate from dispatch.** `keyboard-shortcuts-registry.ts`
-holds the descriptor table (keys, label, `debug` flag). It's the single
+holds the descriptor table (keys, label, `chord` and `debug` flags). The three
+key relationships each get their own separator in the modal — a repeated key
+is a double-tap (`F F`), a `chord` is held together (`⇧ + V`), and anything
+else is a set of alternatives (`+ / −`); an unmarked modifier entry would
+render as two alternatives, which is the opposite of what it means. It's the single
 source of truth for the `?` help modal (`../modals/help-modal.ts` renders
 its `<dl>` from it), replacing the hand-authored list that used to live in
 `index.html`. The keydown switch below stays the dispatch mechanism; the
@@ -33,7 +37,8 @@ registry only describes what to display.
 | `Backspace` | Time scrubber (while open): reset to live now (`reset`) |
 | `S` | Step the reference frame on, landing on whichever instrument the mode shows: the attitude indicator's frame flag in navigate, `coordSphere` (which adds a `none` stop) in observe. Any frame the focused object gives no meaning to is skipped (`../attitude/README.md` § Which frame, and who chooses). It never hides an instrument — only `U` does |
 | `L` | Level the camera: zero its roll against the attitude indicator's active frame in navigate (same action as clicking the ball), or against the drawn coordinate sphere in observe, where it is a no-op while none is up (`../attitude/README.md` § Levelling) |
-| `Shift` `L` | Level on the focused object's own orbital plane, capturing it as the ORB frame (`../attitude/orbit-frame/README.md`) — the same action as double-clicking the ball. Navigate only, ORB being the instrument's own frame |
+| `Z` | Aim at the showing frame's origin — 0° longitude, 0° latitude on the 8-ball's frame in navigate, on the drawn grid in observe, where it does nothing with none up (`../attitude/README.md` § Levelling) |
+| `Shift` `Z` | Aim at the opposite point, 180° longitude — where `Z` followed by an invert would land, in one sweep |
 | `Shift` `V` | Invert the view — the INV chip's keyboard path, which observe needs because the chip rides a navigate-only instrument (`../attitude/README.md` § Inverting the view) |
 | `H` | Toggle `showHud` |
 | `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`) — works in every mode. Single `F` opens Find in observe mode only (both are deferred by the double-tap window, like `C`). |
