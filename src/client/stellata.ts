@@ -32,9 +32,9 @@ import { CoordSphere, type DrawnCoordSphereFrame } from './galactic/coord-sphere
 import {
   COORD_SPHERE_SPECS,
   DRAWN_COORD_SPHERE_FRAMES,
-  coordSphereFadeAt,
-  coordSphereReachableAt,
 } from './galactic/coord-spheres/coord-sphere-frames';
+import { frameAfterFocusChange, frameAvailableFor } from './attitude/attitude-pure';
+import { focusFrameInputs } from './attitude/focus-frame';
 import { HudOverlay } from './overlays/hud-overlay';
 import { ChartLabels } from './chart-mode/labels/chart-labels';
 import {
@@ -59,6 +59,7 @@ import { exposureCutMoved } from './render-gate/render-gate-pure';
 import {
   CADENCE_REPORT_STILL,
   cadenceSimBudgetS,
+  cadenceVisibleTurnRad,
   clockFrameDue,
   maxCadenceReport,
   pulsationCadenceBudgetS,
@@ -887,6 +888,14 @@ export class Stellata implements FrameAnchor {
     // the shared ride slot safe when the kind changes but the index
     // collides (planet 3 → probe 3).
     this.on('focus', () => { this._movingRideIdx = null; });
+    // A frame the new focus gives no meaning to is demoted to that object's
+    // own default rather than left measuring nothing — attitude/README.md
+    // § Which frame, and who chooses.
+    this.on('focus', (target) => {
+      const next = frameAfterFocusChange(
+        this.filter.coordSphere, focusFrameInputs(this, target));
+      if (next !== this.filter.coordSphere) this.filters.setFilter({ coordSphere: next });
+    });
     // Every fine-grained mutation the figure's active set reads — focus,
     // filter, cameraMode — pairs with 'state', and so does the observe
     // transition's landing, which no fine-grained event covers.
@@ -905,10 +914,10 @@ export class Stellata implements FrameAnchor {
       // camera never rotated across the switch.
       this.observePinQuat.set(Number.NaN, 0, 0, 0);
     });
-    this.coordSpheres = {
-      galactic: new CoordSphere(COORD_SPHERE_SPECS.galactic, this.chromeLines),
-      equatorial: new CoordSphere(COORD_SPHERE_SPECS.equatorial, this.chromeLines),
-    };
+    this.coordSpheres = Object.fromEntries(
+      DRAWN_COORD_SPHERE_FRAMES.map((frame) =>
+        [frame, new CoordSphere(COORD_SPHERE_SPECS[frame], this.chromeLines)]),
+    ) as Record<DrawnCoordSphereFrame, CoordSphere>;
     for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
       renderScene.add(this.coordSpheres[frame].group);
     }
@@ -1068,18 +1077,11 @@ export class Stellata implements FrameAnchor {
         kind: 'clock',
         rate: (cc) => this.planetBodyField.cadenceReport(cc),
       },
-      update: (ctx) => {
-        // Ride runs right after every moving-body field wrote this
-        // frame's positions — the whole module roster updates ahead of
-        // this, the first inline entry — mirroring the binary ride's
-        // placement after its orbit walk.
-        this.applyMovingFocalRide();
-        // Mesh LOD sizes off the post-ride camera: pre-ride it would
-        // see the focused body a whole per-frame delta away and drop
-        // the mesh under fast scrub. That is why this update lives on
-        // the shell rather than inside the planet module's layer.
-        this.kinds.planet.meshLayer.update(ctx.camera, ctx.t);
-      },
+      // Ride runs right after every moving-body field wrote this
+      // frame's positions — the whole module roster updates ahead of
+      // this, the first inline entry — mirroring the binary ride's
+      // placement after its orbit walk.
+      update: () => this.applyMovingFocalRide(),
       dispose: () => {},
     });
     this.layers.register({
@@ -1115,17 +1117,6 @@ export class Stellata implements FrameAnchor {
     this.layers.register({
       timeBehaviour: {
         kind: 'clock',
-        rate: (cc) => this.planetBodyField.cadenceReport(cc),
-      },
-      // After the field + rings updates it reads; before the main
-      // render its suppression uniforms gate. Owns no GPU resources —
-      // the star mirror it feeds is disposed with the star cluster.
-      update: (ctx) => this.solarCluster.update(ctx.camera),
-      dispose: () => {},
-    });
-    this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
         rate: (cc) => maxCadenceReport(
           this.binaryOrbitField?.cadenceReport(cc) ?? CADENCE_REPORT_STILL,
           this.eclipsePhotometryField?.cadenceReport(cc.simDtS) ?? CADENCE_REPORT_STILL,
@@ -1148,6 +1139,40 @@ export class Stellata implements FrameAnchor {
         this.eclipsePhotometryField?.dispose();
         this.binaryOrbitPathLayer.dispose();
       },
+    });
+    // Sequencing only, owning nothing — the second such entry, and the last
+    // camera WRITE of the frame. Every camera reader is registered below it;
+    // the argument for that, and for `static`, is scene/README.md § Not every
+    // entry owns a layer and § Camera writes, then camera reads.
+    this.layers.register({
+      timeBehaviour: { kind: 'static' },
+      update: () => this.orbitFrameTick?.(),
+      dispose: () => {},
+    });
+    this.layers.register({
+      timeBehaviour: {
+        kind: 'clock',
+        rate: (cc) => this.planetBodyField.cadenceReport(cc),
+      },
+      // Below every camera write in the frame — both focal rides and the
+      // orbit lock — because it caches `camera.matrixWorld` for its
+      // view-space sun, pole and caster uniforms, and sizes the mesh off
+      // camera distance (scene/README.md § Camera writes, then camera reads).
+      // That is why this update lives on the shell rather than inside the
+      // planet module's layer.
+      update: (ctx) => this.kinds.planet.meshLayer.update(ctx.camera, ctx.t),
+      dispose: () => {},
+    });
+    this.layers.register({
+      timeBehaviour: {
+        kind: 'clock',
+        rate: (cc) => this.planetBodyField.cadenceReport(cc),
+      },
+      // After the field, rings and mesh updates it reads; before the main
+      // render its suppression uniforms gate. Owns no GPU resources —
+      // the star mirror it feeds is disposed with the star cluster.
+      update: (ctx) => this.solarCluster.update(ctx.camera),
+      dispose: () => {},
     });
     this.layers.register({
       timeBehaviour: {
@@ -1202,30 +1227,14 @@ export class Stellata implements FrameAnchor {
       dispose: () => this.galacticDisc.dispose(),
     });
     this.layers.register({
-      // Camera-tracked frames; the only distance-dependent behaviour is a
-      // fade window, and distance only moves on a camera move, which
-      // renders anyway.
+      // Camera-tracked frames, so nothing here moves with the clock.
       timeBehaviour: { kind: 'static' },
-      // Both spheres are camera-tracked; a spec's optional fade window is the
-      // only distance-dependent behaviour, and only the equatorial frame has
-      // one (galactic/README.md § Coordinate spheres).
       update: (ctx) => {
-        // `coordSphere` must never name a sphere that can't draw — travelling
-        // out of a frame's fade deselects it rather than leaving the panel's
-        // stop highlighted-yet-disabled, which reads as nothing selected.
-        // Fires once per crossing, since the demotion clears its own trigger,
-        // and it is the single owner of the gone-at-zero-alpha cut.
-        const selected = this.filter.coordSphere;
-        if (selected !== 'none' && !coordSphereReachableAt(selected, ctx.distFromSol)) {
-          this.filters.setFilter({ coordSphere: 'none' });
-        }
         for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
           const sphere = this.coordSpheres[frame];
-          const on = !ctx.warpActive && this.filter.coordSphere === frame;
+          const on = !ctx.warpActive && this.coordSphereDrawn(frame);
           sphere.group.visible = on;
-          if (!on) continue;
-          sphere.setOpacityScale(coordSphereFadeAt(frame, ctx.distFromSol));
-          sphere.update(ctx.camera.position);
+          if (on) sphere.update(ctx.camera.position);
         }
       },
       setMonochrome: (on) => {
@@ -2025,17 +2034,21 @@ export class Stellata implements FrameAnchor {
     this.syncPixelSolidAngle();
   }
 
-  /** Stroke alpha `frame`'s sphere draws at from the camera's current distance
-   *  from Sol. Its SVG edge labels ride the same value. */
-  coordSphereFade(frame: DrawnCoordSphereFrame): number {
-    return coordSphereFadeAt(frame, this.frameCtx.distFromSol);
+  /** Is `frame`'s sphere on screen? Observe mode only — in navigate the
+   *  attitude indicator carries the frame instead, and two instruments
+   *  answering "which way is north" at once is what let them drift apart.
+   *  Warp gating is the layer's, not this: the SVG labels hide in warp
+   *  through `body.warping` rather than through their own predicate. */
+  coordSphereDrawn(frame: DrawnCoordSphereFrame): boolean {
+    return this.filter.coordSphere === frame
+      && this.focus.getCameraMode() === 'observe';
   }
 
-  /** Is `frame`'s sphere visible at all from here? The `S` cycle and the
-   *  panel's 3-stop control both gate on this so neither can select a sphere
-   *  that has faded to nothing. */
-  coordSphereReachable(frame: DrawnCoordSphereFrame): boolean {
-    return this.coordSphereFade(frame) > 0;
+  /** Does `frame` describe anything real from whatever is focused? The `S`
+   *  cycle, the panel's stop control and the focus-change demotion all gate on
+   *  this, so none of them can select a frame the others would reject. */
+  coordSphereAvailable(frame: DrawnCoordSphereFrame): boolean {
+    return frameAvailableFor(frame, focusFrameInputs(this, this.focus.getFocusedTarget()));
   }
 
   // Declutter cycle. detailPermits is the per-frame read path layers gate
@@ -2220,7 +2233,7 @@ export class Stellata implements FrameAnchor {
    * Swing the camera to the reciprocal of the direction it holds — in
    * navigate around to the far side of the focused object at the same
    * distance, in observe a half turn in place. Bound to the instrument's
-   * REV chip (`attitude/README.md` § Inverting the view).
+   * INV chip and `Shift`+`V` (`attitude/README.md` § Inverting the view).
    *
    * Shares `aimAt`'s composition-layer busy gates; the sweep itself lives in
    * `AimController`.
@@ -2335,6 +2348,29 @@ export class Stellata implements FrameAnchor {
   private angularToPx(): number {
     const u = this.sharedUniforms;
     return angularToPxPure(u.uViewport.value.y, u.uFovYRad.value);
+  }
+
+  private orbitFrameTick: (() => void) | null = null;
+
+  /** Install the attitude indicator's per-frame ORB tick — the live datum
+   *  re-read, and the orbit lock's camera write with it. The shell owns WHEN
+   *  it runs, the registry being the only place that can express "after every
+   *  camera write, before every camera read"; the indicator owns what it does
+   *  (`attitude/orbit-frame/README.md` § The lock). Read through the field on
+   *  every frame, so installing it after the layers are registered works,
+   *  exactly as a lazily-attached layer does. */
+  setOrbitFrameTick(tick: () => void): void {
+    this.orbitFrameTick = tick;
+  }
+
+  /** The smallest camera turn two rendered frames could show apart, at the
+   *  current viewport and FOV. A per-frame camera writer below the gate
+   *  reads this and declines anything smaller, which is what keeps it from
+   *  waking the gate on every tick — `render-gate/cadence/README.md`.
+   *  The pixel ratio stays on this side of the call, as it does for the
+   *  layers' rate reports. */
+  visibleCameraTurnRad(): number {
+    return cadenceVisibleTurnRad(this.angularToPx(), this.renderer.getPixelRatio());
   }
 
   // Scratch slot for the non-allocating *LocalPositionInto helpers.
@@ -2738,6 +2774,9 @@ export class Stellata implements FrameAnchor {
     // observeControls owns its own pointer + wheel listeners; disable() is
     // idempotent so it's safe regardless of current mode.
     this.observeControls.disable();
+    // The indicator has no dispose of its own, so the shell drops the closure
+    // rather than holding its ball canvas for the instance's lifetime.
+    this.orbitFrameTick = null;
     this.aim.dispose();
     this.warp.dispose();
     this.observe.dispose();

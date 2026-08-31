@@ -9,8 +9,8 @@ import { ballBasisInto, type ReferenceFrame } from './attitude-pure';
 // of 2; this carries 5.7, so the texture still out-resolves the screen by
 // ~1.7x. Every stroke below is measured in degrees, so the ball's size stays
 // a free parameter — README.md § Rendering.
-const TEX_W = 2048;
-const TEX_H = 1024;
+const TEX_W = 2560;
+const TEX_H = 1280;
 
 /** The instrument's own two tones, held fixed against every page theme. The
  *  ball is a painted object, not a surface of the page, so chrome drawn over

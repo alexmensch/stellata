@@ -142,6 +142,7 @@ export type UserOwnedElementId =
   | 'hudRing'
   | 'poiOverlay'
   | 'galacticCoordSphere'
+  | 'eclipticCoordSphere'
   | 'equatorialCoordSphere'
   | 'focusRing'
   | 'distanceVector'
@@ -155,7 +156,7 @@ export type UserOwnedElementId =
 
 export const USER_OWNED_IDS: readonly UserOwnedElementId[] = [
   'hudArrows', 'hudRing', 'poiOverlay', 'galacticCoordSphere',
-  'equatorialCoordSphere', 'focusRing',
+  'eclipticCoordSphere', 'equatorialCoordSphere', 'focusRing',
   'distanceVector', 'clickRipple', 'scaleBar', 'timeReadout', 'focusCards',
   'hoverTooltip', 'warpPill', 'modePill',
 ];

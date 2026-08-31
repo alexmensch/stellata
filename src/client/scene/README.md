@@ -105,8 +105,8 @@ behaviour-neutral at startup. `applyDetailPreset` runs on `V` / the
 control / a decluttered `?v=` restore, **and on every chart↔realistic
 flip** (`chart-mode.ts`) so the permitted set tracks the active style's
 floor column. `USER_OWNED_IDS` enumerates the chrome the cycle never
-writes (HUD, both coordinate spheres, cards, feedback) — toggled by their
-own affordances (`H` / `S` / `U` / `T`).
+writes (HUD, all three coordinate spheres, cards, feedback) — toggled by
+their own affordances (`H` / `S` / `U` / `T`).
 
 **Chart-content wiring.** The chart-only elements are read per-frame by
 `chart-labels.ts`, which gates each label/glyph tier on
@@ -142,15 +142,15 @@ geometry rather than a `chart-labels` tier) at `all`.
 
 `stellata.ts` registers one adapter entry per render layer in its
 constructor, in draw-dependency order (the continuously-ticking
-entries — the moving-focal ride + planet mesh, orbit rings, binary
-orbits — first; SVG projectors like the HUD after the camera-matrix
-refresh they need). Kind-module layers
+entries — the moving-focal ride, orbit rings, binary orbits — first;
+then the camera readers, planet mesh through to SVG projectors like the
+HUD, which additionally need the camera-matrix refresh —
+§ Camera writes, then camera reads). Kind-module layers
 (`../kinds/README.md`) register first of all: the constructor's roster
 attach loop runs before `registerSceneLayers`, so a module layer
 updates ahead of every inline-wired entry — which is what keeps the
 probe and planet fields' samples frame-fresh for the first inline
-entry, the moving-focal ride (whose post-ride camera the planet mesh
-update then reads). Each inline entry is a
+entry, the moving-focal ride. Each inline entry is a
 closure over the shell's layer field, so a lazily-attached layer
 (binaries) reads whatever is currently attached — `null` before
 attach, the live instance after, with no re-registration.
@@ -225,14 +225,60 @@ which is not a global min in disguise —
 `min(a, a) = a` argument and the per-frame memo that keeps the walk to
 one pass.
 
-**Not every entry owns a layer.** The first inline entry owns no GPU
-resources at all (`dispose` is empty): it exists to sequence the
-moving-focal ride between the module layers' position writes and the
-planet mesh's camera read, both of which belong to other owners. The
-registry is the only place that expresses "between these two", so a
-sequencing-only entry is the intended shape rather than a smell — but
-it is the exception, and it is spelled out here so the next one has to
-justify itself.
+**Not every entry owns a layer.** Two inline entries own no GPU resources
+at all (`dispose` is empty) and exist purely to sequence a camera write
+that belongs to another owner: the **moving-focal ride**, which has to
+land after the module layers' position writes; and the attitude
+indicator's **orbit lock** (`Stellata.setOrbitFrameTick`,
+`../attitude/orbit-frame/README.md` § The lock), which has to land after
+both focal rides, since it reads a datum they produce and pivots about the
+`controls.target` they move. The registry is the only place that expresses
+"between these two", so a sequencing-only entry is the intended shape
+rather than a smell — but it is the exception, and it is spelled out here
+so the next one has to justify itself. The orbit lock declares `'static'`:
+an entry that draws nothing must never ask the cadence for a frame, and
+this one writes only on frames something else already scheduled.
+
+**The generalisation, since a third will come:** a per-frame camera write
+belongs in this registry, never on a bus event. `'frame'` fires after the
+render, so a write there is a frame late; and the ordering that makes a
+write correct is a claim about *other layers*, which only registration order
+can state.
+
+## Camera writes, then camera reads
+
+The orbit lock is the frame's **last** camera write, and every entry that
+reads the camera is registered below it. That split is the contract, not an
+accident of where the lock happened to fit, and it is load-bearing in both
+directions:
+
+- A camera read above a write draws against a pose the frame does not
+  render. For a projector (HUD arrows, distance vector, labels) that is a
+  visible lag; for the **planet mesh** it is subtler and was the defect that
+  established this section. `PlanetMeshLayer.update` caches
+  `camera.matrixWorld` and transforms the host-star direction, the body's
+  pole and every shadow caster into **view space** for its material
+  uniforms, so a camera write after it leaves the lit terminator and the
+  casters rotated against the surface by the write's own angle — the
+  "swim" its own comment warns about. Under the orbit lock at scrub rate
+  that angle is the datum's per-frame turn, degrees rather than
+  hundredths.
+- A camera *write* above a read is fine, so the writes go first: the two
+  focal rides, then the lock.
+
+**What the entries above the lock may rely on.** They read
+`camera.position` only, for distance-based sizing and culling. The ride is
+a rotation about `controls.target`, so it preserves the distance to the
+**pivot** exactly — it does not preserve distance to anything else, and a
+future above-the-lock entry that sizes off a distance to some *other* body
+is relying on the chord of the ride angle being negligible. That is a claim
+to check, not a given.
+
+**A clean "all writes, then all reads" phase split is not reachable**, and
+it is worth knowing why before anyone attempts one: the binary walk both
+*reads* the camera (screen-size gating in `BinaryOrbitField.update`) and
+*precedes* its own focal ride, which is a write. Separating the phases
+means splitting that entry first.
 
 Not in the registry: camera controllers, the star pipeline, and the
 extinction prepass — they aren't scene layers and keep explicit

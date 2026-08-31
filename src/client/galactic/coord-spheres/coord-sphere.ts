@@ -4,7 +4,6 @@
 
 import * as THREE from 'three';
 import { CHART_REFERENCE_INK } from '../../chart-mode/chart-palette';
-import type { SolFrameFadeWindow } from '../galactic-fade';
 import type {
   ChromeFatLine, ChromeLineMaterial, ChromeLineMaterials,
 } from '../../chrome-lines/chrome-line-materials';
@@ -24,7 +23,7 @@ const MERIDIAN_TRIM_LATITUDE_DEG = 80;
 /** Which coordinate sphere the user has up. Mutually exclusive: two grids
  *  drawn together are illegible, and their edge labels would fight in one
  *  repulsion pass. */
-export type CoordSphereFrame = 'none' | 'galactic' | 'equatorial';
+export type CoordSphereFrame = 'none' | 'galactic' | 'ecliptic' | 'equatorial';
 
 /** A frame that has a sphere behind it — every `CoordSphereFrame` but `none`. */
 export type DrawnCoordSphereFrame = Exclude<CoordSphereFrame, 'none'>;
@@ -36,7 +35,7 @@ export type DrawnCoordSphereFrame = Exclude<CoordSphereFrame, 'none'>;
 export type DirToIcrs = (lonRad: number, latRad: number, out: THREE.Vector3) => THREE.Vector3;
 
 /**
- * Everything that differs between the two spheres, in one record so the
+ * Everything that differs between the spheres, in one record so the
  * geometry and its edge labels cannot disagree about the frame or the meridian
  * spacing. The instances live in `coord-sphere-frames.ts`.
  */
@@ -48,9 +47,6 @@ export interface CoordSphereSpec {
   labelGroupId: string;
   lonLabel: (deg: number) => string;
   latLabel: (deg: number) => string;
-  /** Sol-distance self-hide, for a frame that only describes the sky *from*
-   *  Sol. Absent means the frame is meaningful from anywhere and never fades. */
-  fadeWindow?: SolFrameFadeWindow;
 }
 
 /** Absolute latitude extent (degrees) a meridian is drawn to: even indices
@@ -88,16 +84,13 @@ const DARK_LINE_OPACITY = 0.45;
  *
  * Mono mode swaps to dark, fully-opaque strokes for the chart aesthetic; the
  * equator/line opacity split is preserved by stroke weight rather than alpha,
- * since chart-mode fades aren't on the table. `setOpacityScale` is the one
- * exception — a sphere that must self-hide with distance from Sol keeps its
- * alpha in both styles (the fade window is the spec's, `coord-sphere-frames.ts`).
+ * since chart-mode fades aren't on the table.
  */
 export class CoordSphere {
   readonly group: THREE.Group;
   private readonly equator: ChromeFatLine;
   private readonly stroke: ChromeLineMaterial;
   private mono = false;
-  private opacityScale = 1;
 
   constructor(spec: CoordSphereSpec, chromeLines: ChromeLineMaterials) {
     const { dirToIcrs, meridianCount } = spec;
@@ -131,18 +124,6 @@ export class CoordSphere {
     this.group.position.copy(cameraPosition);
   }
 
-  /** Multiply both stroke alphas by `scale`. Safe to call every frame: the
-   *  alphas are plain uniform writes, and the blend-state reconfigure (which
-   *  costs a program recompile via `needsUpdate`) only runs when the sphere
-   *  crosses into or out of being faded at all. */
-  setOpacityScale(scale: number) {
-    if (scale === this.opacityScale) return;
-    const wasFaded = this.opacityScale < 1;
-    this.opacityScale = scale;
-    if (wasFaded !== (scale < 1)) this.applyBlendState();
-    this.applyOpacity();
-  }
-
   setMonochrome(on: boolean) {
     if (this.mono === on) return;
     this.mono = on;
@@ -151,21 +132,18 @@ export class CoordSphere {
   }
 
   private applyOpacity() {
-    this.equator.material.opacity =
-      (this.mono ? 1 : DARK_EQUATOR_OPACITY) * this.opacityScale;
-    this.stroke.material.opacity = (this.mono ? 1 : DARK_LINE_OPACITY) * this.opacityScale;
+    this.equator.material.opacity = this.mono ? 1 : DARK_EQUATOR_OPACITY;
+    this.stroke.material.opacity = this.mono ? 1 : DARK_LINE_OPACITY;
   }
 
   // Colour + blend state. Mono mode runs opaque with blending off for the
-  // paper aesthetic — but a Sol-distance fade still has to composite, so a
-  // scale below 1 keeps alpha blending on in both styles.
+  // paper aesthetic.
   private applyBlendState() {
     const on = this.mono;
-    const opaque = on && this.opacityScale >= 1;
     for (const handle of [this.equator, this.stroke]) {
       setBuiltinChromeColour(
         handle.material.color, on ? CHART_REFERENCE_INK : DARK_COLOUR, on);
-      handle.setOpaque(opaque);
+      handle.setOpaque(on);
     }
   }
 

@@ -8,21 +8,30 @@ import {
   levelUpInto,
   signedAngleAbout,
 } from '../camera/controls/input/roll-pure';
-import { galacticDirToIcrs } from '../galactic/galactic-coords';
+import {
+  COORD_SPHERE_SPECS,
+  DRAWN_COORD_SPHERE_FRAMES,
+} from '../galactic/coord-spheres/coord-sphere-frames';
+import type {
+  CoordSphereFrame,
+  DrawnCoordSphereFrame,
+} from '../galactic/coord-spheres/coord-sphere';
 import type { TargetKind } from '../camera/focus/focus-target';
+import type { CameraMode } from '../stellata';
 
 export type ReferenceFrameKey =
-  | 'equatorial'
-  | 'ecliptic'
-  | 'galactic'
+  | DrawnCoordSphereFrame
   | 'reference'
+  | 'target'
   | 'orbit';
 
-/** Every frame the instrument can reach on its own. The two captured data are
- *  missing on purpose: `reference` is built from an attitude the user is
- *  holding and `orbit` from whatever is focused, so neither can be tabulated
- *  ahead of time. */
-export type AutoFrameKey = Exclude<ReferenceFrameKey, 'reference' | 'orbit'>;
+/** Every frame the instrument can reach on its own — exactly the frames that
+ *  have a sphere behind them, so the ball and the grid can never offer
+ *  different sets. The three captured data are missing on purpose:
+ *  `reference` is built from an attitude the user is holding, `target` from a
+ *  bearing to the destination, and `orbit` from whatever is focused, so none
+ *  can be tabulated ahead of time. */
+export type AutoFrameKey = DrawnCoordSphereFrame;
 
 export interface ReferenceFrame {
   key: ReferenceFrameKey;
@@ -39,11 +48,40 @@ export interface Attitude {
   sinFromPole: number;
 }
 
-const OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
-
 // Boresight this close to a captured pole leaves no zero-longitude
 // direction to project — 1e-3 rad off the axis.
 const DEGENERATE_SEED_COS = Math.cos(1e-3);
+
+/** An empty frame to write into. Only a caller that rebuilds a frame every
+ *  tick needs one — `emptyReferenceFrame()` plus the `*Into` builders below
+ *  keep that path allocation-free. */
+export function emptyReferenceFrame(): ReferenceFrame {
+  return {
+    key: 'galactic',
+    label: '',
+    pole: new THREE.Vector3(0, 1, 0),
+    zeroLon: new THREE.Vector3(1, 0, 0),
+    east: new THREE.Vector3(0, 0, 1),
+  };
+}
+
+function makeFrameInto(
+  out: ReferenceFrame,
+  key: ReferenceFrameKey,
+  label: string,
+  pole: THREE.Vector3,
+  zeroLonSeed: THREE.Vector3,
+): ReferenceFrame {
+  out.key = key;
+  out.label = label;
+  out.pole.copy(pole).normalize();
+  out.zeroLon
+    .copy(zeroLonSeed)
+    .addScaledVector(out.pole, -zeroLonSeed.dot(out.pole))
+    .normalize();
+  out.east.crossVectors(out.pole, out.zeroLon);
+  return out;
+}
 
 function makeFrame(
   key: ReferenceFrameKey,
@@ -51,18 +89,7 @@ function makeFrame(
   pole: THREE.Vector3,
   zeroLonSeed: THREE.Vector3,
 ): ReferenceFrame {
-  const p = pole.clone().normalize();
-  const zeroLon = zeroLonSeed
-    .clone()
-    .addScaledVector(p, -zeroLonSeed.dot(p))
-    .normalize();
-  return {
-    key,
-    label,
-    pole: p,
-    zeroLon,
-    east: new THREE.Vector3().crossVectors(p, zeroLon),
-  };
+  return makeFrameInto(emptyReferenceFrame(), key, label, pole, zeroLonSeed);
 }
 
 /** Shuttle's ATT REF: plant a datum on the attitude the camera holds right
@@ -75,7 +102,7 @@ export function captureReferenceFrame(camera: THREE.Camera): ReferenceFrame {
 }
 
 /** A frame on the focused object's own orbital plane, seeding zero
- *  longitude on `toCentre` — README.md § Levelling on an orbit.
+ *  longitude on `toCentre` — `orbit-frame/README.md`.
  *
  *  Two fallbacks in order, both for degenerate cases a real orbit does not
  *  produce: a `toCentre` collapsing to nothing hands the seed to the
@@ -85,33 +112,196 @@ export function captureOrbitFrame(
   normal: THREE.Vector3,
   toCentre: THREE.Vector3,
 ): ReferenceFrame {
-  const boresight = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-  const fallback = Math.abs(boresight.dot(normal)) > DEGENERATE_SEED_COS
-    ? new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion)
-    : boresight;
-  const inPlane = toCentre.clone().addScaledVector(normal, -toCentre.dot(normal));
-  const seed = inPlane.lengthSq() > 0 ? inPlane : fallback;
-  return makeFrame('orbit', 'ORB', normal, seed);
+  return orbitFrameInto(emptyReferenceFrame(), camera, normal, toCentre);
 }
 
+const orbitBoresight = new THREE.Vector3();
+const orbitSeed = new THREE.Vector3();
+
+/** `captureOrbitFrame` writing into `out`. The instrument rebuilds ORB every
+ *  tick (`orbit-frame/README.md` § Orbit rate), so this path runs per rendered
+ *  frame and allocates nothing. */
+export function orbitFrameInto(
+  out: ReferenceFrame,
+  camera: THREE.Camera,
+  normal: THREE.Vector3,
+  toCentre: THREE.Vector3,
+): ReferenceFrame {
+  orbitBoresight.set(0, 0, -1).applyQuaternion(camera.quaternion);
+  orbitSeed.copy(toCentre).addScaledVector(normal, -toCentre.dot(normal));
+  if (orbitSeed.lengthSq() === 0) {
+    if (Math.abs(orbitBoresight.dot(normal)) > DEGENERATE_SEED_COS) {
+      orbitSeed.set(0, 1, 0).applyQuaternion(camera.quaternion);
+    } else {
+      orbitSeed.copy(orbitBoresight);
+    }
+  }
+  return makeFrameInto(out, 'orbit', 'ORB', normal, orbitSeed);
+}
+
+/** A datum aimed at the distance-vector destination: zero longitude points
+ *  straight at it, so the ball reads 0/0 exactly where the target lies and
+ *  bank still reads against the attitude you were holding. Squaring the
+ *  camera's own up against that direction — rather than handing it to
+ *  `makeFrame` to project — is what puts the target on the equator instead of
+ *  merely somewhere in the frame.
+ *
+ *  `toTarget` is a direction, not a position; the caller resolves it, and the
+ *  datum is a snapshot like REF's. */
+export function captureTargetFrame(
+  camera: THREE.Camera,
+  toTarget: THREE.Vector3,
+): ReferenceFrame {
+  const dir = toTarget.clone().normalize();
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+  // Up runs parallel to the target only with the target exactly at screen-up,
+  // where it leaves no pole to build; the camera's right cannot be parallel
+  // to it at the same time.
+  const seed = Math.abs(up.dot(dir)) > DEGENERATE_SEED_COS
+    ? new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion)
+    : up;
+  return makeFrame('target', 'TGT', seed.addScaledVector(dir, -seed.dot(dir)), dir);
+}
+
+/** Copy a frame's identity and basis into `out`, so a caller can hold the
+ *  frame as it stood at some earlier sample. */
+export function copyReferenceFrame(
+  out: ReferenceFrame,
+  src: ReferenceFrame,
+): ReferenceFrame {
+  out.key = src.key;
+  out.label = src.label;
+  out.pole.copy(src.pole);
+  out.zeroLon.copy(src.zeroLon);
+  out.east.copy(src.east);
+  return out;
+}
+
+const rideFromBasis = new THREE.Matrix4();
+const rideToBasis = new THREE.Matrix4();
+
+// Right-handed ordering: `east` is `pole × zeroLon`, so (zeroLon, pole, east)
+// has determinant −1 and `setFromRotationMatrix` on it returns nonsense.
+function frameBasisInto(out: THREE.Matrix4, frame: ReferenceFrame): THREE.Matrix4 {
+  return out.makeBasis(frame.zeroLon, frame.east, frame.pole);
+}
+
+/** The rotation that carries `from`'s basis onto `to`'s, written into `out`.
+ *  False — and the caller must then leave `from` where it is — when that
+ *  rotation is smaller than `minRad`.
+ *
+ *  **The rotation is read off the two bases rather than modelled**, and that
+ *  is the whole correctness argument. The lock's promise is that the camera
+ *  undergoes exactly the rotation the reference frame did, so the reading
+ *  against it cannot change; taking the frame's own before-and-after is the
+ *  only way to honour that whatever moved — the datum travelling round the
+ *  orbit, the orbital PLANE precessing under it, or both at once, by any
+ *  amount. An axis-angle about the pole shipped here first and assumed the
+ *  pole was static: true of a planet, false of Luna (its node regresses
+ *  0.0529°/day, swinging the normal on a 5.15° cone) and of Triton. Per
+ *  frame that error is second order and invisible; collapse months of node
+ *  motion into one step — a scrub at years per second, or a jump back to now
+ *  — and it is first order and lands about a degree off.
+ *
+ *  Mod 2π is not a loss: a frame that turned 3.7 revolutions and one that
+ *  turned 0.7 are the same basis, and holding an attitude against a basis
+ *  does not care which way round it got there.
+ *
+ *  The threshold is what keeps the lock inside the render gate's schedule
+ *  rather than defeating it. The ride writes the camera below the gate, so
+ *  the next tick reads any write at all as a fresh camera move and renders;
+ *  at live 1× a moon's datum turns a few millionths of a degree per tick,
+ *  which would pin the gate open forever for a step no display can show
+ *  (`orbit-frame/README.md` § The lock). */
+export function orbitRideRotation(
+  out: THREE.Quaternion,
+  from: ReferenceFrame,
+  to: ReferenceFrame,
+  minRad: number,
+): boolean {
+  frameBasisInto(rideFromBasis, from).transpose();
+  frameBasisInto(rideToBasis, to);
+  out.setFromRotationMatrix(rideToBasis.multiply(rideFromBasis));
+  const turn = quaternionTurnRad(out);
+  return turn > 0 && turn >= minRad;
+}
+
+/** A quaternion's rotation angle, always the short way round.
+ *
+ *  `atan2(|xyz|, |w|)`, never `acos(|w|)`: the whole point of this number is
+ *  to be compared against a threshold a few ten-thousandths of a radian wide,
+ *  and `acos` loses most of its significant digits as its argument approaches
+ *  1 — which is exactly where every sub-threshold turn sits. */
+export function quaternionTurnRad(q: THREE.Quaternion): number {
+  return 2 * Math.atan2(Math.hypot(q.x, q.y, q.z), Math.abs(q.w));
+}
+
+const rideOffset = new THREE.Vector3();
+
+/** Carry a camera pose round `pivot` by `rotation`, writing both `position`
+ *  and `up` in place — the orbit lock's whole motion. Rotating the offset
+ *  carries the boresight and rotating `up` carries the roll, so all three
+ *  axes of the reading come through unchanged. */
+export function ridePoseBy(
+  position: THREE.Vector3,
+  up: THREE.Vector3,
+  pivot: THREE.Vector3,
+  rotation: THREE.Quaternion,
+): void {
+  rideOffset.copy(position).sub(pivot).applyQuaternion(rotation);
+  position.copy(pivot).add(rideOffset);
+  up.applyQuaternion(rotation).normalize();
+}
+
+/** Which of the datum chip's three stops is showing. */
+export type DatumStop = 'off' | 'reference' | 'target';
+
+/** Is the padlock chip on screen — which is the whole rule for whether the
+ *  orbit lock exists, for the chip and for `Shift`+`L` alike.
+ *
+ *  All three conditions are absences the user can see. ORB is the one frame
+ *  whose datum travels, so there is nothing to ride otherwise; a REF or TGT
+ *  datum held over the top is a fixed datum again; and in observe the ride
+ *  would orbit the camera about `controls.target`, which is not what that
+ *  mode's camera does — it sits on the object rather than circling it.
+ *
+ *  One rule, read by both paths, is what keeps the key and the chip from
+ *  disagreeing about when the lock exists. Gating the key on the chip
+ *  element's own `hidden` alone is NOT the same rule: the whole panel is
+ *  hidden in observe without that attribute changing, so the key engaged a
+ *  lock nobody could see, which then took effect on the way back to
+ *  navigate. */
+export function orbitLockShowing(state: {
+  orbitActive: boolean;
+  datum: DatumStop;
+  cameraMode: CameraMode;
+}): boolean {
+  return state.orbitActive
+    && state.datum === 'off'
+    && state.cameraMode === 'navigate';
+}
+
+const FRAME_LABELS: Record<AutoFrameKey, string> = {
+  galactic: 'GAL',
+  ecliptic: 'ECL',
+  equatorial: 'EQU',
+};
+
+/** Both axes of every frame are read off the drawn sphere's own `dirToIcrs`,
+ *  which is what stops the instrument and the grid disagreeing about a frame:
+ *  there is one definition of galactic north, not a matching pair. */
 export function buildReferenceFrames(): Record<AutoFrameKey, ReferenceFrame> {
-  const eclipticPole = new THREE.Vector3(
-    0,
-    -Math.sin(OBLIQUITY_RAD),
-    Math.cos(OBLIQUITY_RAD),
-  );
-  const galacticCentre = galacticDirToIcrs(0, 0, new THREE.Vector3());
-  const galacticPole = galacticDirToIcrs(0, Math.PI / 2, new THREE.Vector3());
-  return {
-    equatorial: makeFrame(
-      'equatorial',
-      'EQU',
-      new THREE.Vector3(0, 0, 1),
-      new THREE.Vector3(1, 0, 0),
-    ),
-    ecliptic: makeFrame('ecliptic', 'ECL', eclipticPole, new THREE.Vector3(1, 0, 0)),
-    galactic: makeFrame('galactic', 'GAL', galacticPole, galacticCentre),
-  };
+  const frames = {} as Record<AutoFrameKey, ReferenceFrame>;
+  for (const key of DRAWN_COORD_SPHERE_FRAMES) {
+    const { dirToIcrs } = COORD_SPHERE_SPECS[key];
+    frames[key] = makeFrame(
+      key,
+      FRAME_LABELS[key],
+      dirToIcrs(0, Math.PI / 2, new THREE.Vector3()),
+      dirToIcrs(0, 0, new THREE.Vector3()),
+    );
+  }
+  return frames;
 }
 
 /** What the frame rule needs to know about the focused object, resolved by the
@@ -139,24 +329,54 @@ export function autoFrameFor(focus: FocusFrameInputs): AutoFrameKey {
   return 'galactic';
 }
 
-/** Every frame the flag itself can reach. REF is the one that stays outside:
- *  a datum planted on the attitude being held right now has no fixed place in
- *  a rotation, so it is only ever reached by the gesture that captures it. */
-export type CycleFrameKey = Exclude<ReferenceFrameKey, 'reference'>;
-
-export const FRAME_CYCLE: CycleFrameKey[] = [
-  'orbit',
-  'equatorial',
-  'ecliptic',
-  'galactic',
-];
-
-/** The flag's next stop.
+/** Does `frame` describe anything real from the focused object? Read off the
+ *  focus rule above rather than restating "in Sol's system", so the two can
+ *  never drift apart:
  *
- *  ORB is in the rotation but conditional on the focused object riding an
- *  orbit the model has elements for, and it is skipped when it does not —
- *  the entry is a property of what is focused, not of the instrument.
- *  Skipping one entry is enough because ORB appears exactly once.
+ *  - **galactic** everywhere — the disc is a real structure whichever star you
+ *    are standing on.
+ *  - **ecliptic** wherever the focus rule already lands inside Sol's system,
+ *    which is exactly where its planets' shared orbital plane is a reference
+ *    rather than an arbitrary tilt.
+ *  - **equatorial** on Earth alone. Declination is measured from Earth's own
+ *    rotational axis and right ascension from its equinox, so the frame is a
+ *    property of that one body. */
+export function frameAvailableFor(frame: AutoFrameKey, focus: FocusFrameInputs): boolean {
+  const home = autoFrameFor(focus);
+  if (frame === 'galactic') return true;
+  if (frame === 'ecliptic') return home !== 'galactic';
+  return home === 'equatorial';
+}
+
+/** The frame to hold once the focus has changed: the one already selected
+ *  when the new focus still gives it meaning, otherwise that object's own
+ *  default. Keeping the pick is what lets a tour of Sol's system stay on the
+ *  ecliptic, while stepping outside it demotes rather than leaving a grid
+ *  measuring nothing. `none` survives anywhere — an empty sky is an empty sky.
+ */
+export function frameAfterFocusChange(
+  current: CoordSphereFrame,
+  focus: FocusFrameInputs,
+): CoordSphereFrame {
+  if (current === 'none') return 'none';
+  return frameAvailableFor(current, focus) ? current : autoFrameFor(focus);
+}
+
+/** Every frame the flag itself can reach. The two datums stay outside it:
+ *  neither an attitude being held right now nor a bearing to a destination has
+ *  a fixed place in a rotation, so both are only ever reached by the chip that
+ *  captures them. */
+export type CycleFrameKey = Exclude<ReferenceFrameKey, 'reference' | 'target'>;
+
+export const FRAME_CYCLE: CycleFrameKey[] = ['orbit', ...DRAWN_COORD_SPHERE_FRAMES];
+
+/** The flag's next stop — the navigate-mode `S` cycle, and the same walk the
+ *  panel's stop control offers in observe minus its `none`.
+ *
+ *  Every entry is conditional on what is focused: ORB on the object riding an
+ *  orbit the model has elements for, the three sky frames on `available`. Both
+ *  are properties of the focus rather than of the instrument. Galactic is
+ *  available everywhere, so the walk always terminates.
  *
  *  Leaving REF is the one case with no successor to step to, and it lands on
  *  whatever the focused object implies rather than a fixed first entry, which
@@ -165,12 +385,15 @@ export function nextFrameKey(
   current: ReferenceFrameKey,
   focusDefault: AutoFrameKey,
   orbitAvailable: boolean,
+  available: (frame: AutoFrameKey) => boolean,
 ): CycleFrameKey {
   const at = (FRAME_CYCLE as readonly ReferenceFrameKey[]).indexOf(current);
   if (at < 0) return focusDefault;
-  const next = FRAME_CYCLE[(at + 1) % FRAME_CYCLE.length];
-  if (next !== 'orbit' || orbitAvailable) return next;
-  return FRAME_CYCLE[(at + 2) % FRAME_CYCLE.length];
+  for (let step = 1; step <= FRAME_CYCLE.length; step++) {
+    const next = FRAME_CYCLE[(at + step) % FRAME_CYCLE.length];
+    if (next === 'orbit' ? orbitAvailable : available(next)) return next;
+  }
+  return focusDefault;
 }
 
 /** Bank is the angle to a level up that shrinks to nothing on the pole, so

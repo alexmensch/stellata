@@ -36,9 +36,14 @@ export interface KeyboardShortcutsDeps {
   /** Zero the camera's roll against the attitude indicator's active
    *  reference frame — the same action as clicking its ball. */
   levelAttitude: () => void;
-  /** Capture the focused object's own orbital plane and level on it — the
-   *  same action as double-clicking the ball. */
-  levelAttitudeOnOrbit: () => void;
+  /** Step the attitude indicator's reference frame on — what `S` moves in
+   *  navigate, where the ball rather than a grid carries the frame. */
+  cycleReferenceFrame: () => void;
+  /** Aim the camera at the origin of whichever reference frame is showing —
+   *  the 8-ball's in navigate, the drawn grid's in observe. */
+  aimAtFrameOrigin: (opposite: boolean) => void;
+  /** Engage or release the orbit lock — the 8-ball's padlock chip. */
+  toggleOrbitLock: () => void;
 }
 
 export function bindKeyboardShortcuts(
@@ -177,11 +182,25 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case 's': case 'S':
-        cycleCoordSphere(stellata);
+        // One key, one idea — step the coordinate frame on — landing on
+        // whichever instrument the mode has on screen.
+        if (stellata.focus.getCameraMode() === 'observe') cycleCoordSphere(stellata);
+        else deps.cycleReferenceFrame();
         e.preventDefault();
         break;
       case 'l': case 'L':
-        if (e.shiftKey) deps.levelAttitudeOnOrbit(); else deps.levelAttitude();
+        // Shifted locks the camera to the ball rather than levelling on it:
+        // one key for "square me up to this frame", its modifier for "and
+        // keep me there". A no-op unless the padlock is on screen.
+        if (e.shiftKey) deps.toggleOrbitLock();
+        else deps.levelAttitude();
+        e.preventDefault();
+        break;
+      case 'z': case 'Z':
+        // Shifted aims at the antipode, which is where Z followed by an
+        // invert would land — in one sweep rather than two that would
+        // otherwise gate each other out.
+        deps.aimAtFrameOrigin(e.shiftKey);
         e.preventDefault();
         break;
       case 'f': case 'F':
@@ -225,7 +244,10 @@ export function bindKeyboardShortcuts(
       case 'v': case 'V':
         // Declutter cycle: physical → representational → all → physical,
         // within the current render style. Not mode-gated (unlike M).
-        cycleDetailLevel(stellata);
+        // Shifted, it is the INV chip's keyboard path, which observe needs
+        // because the instrument carrying that chip is navigate-only.
+        if (e.shiftKey) stellata.invertView();
+        else cycleDetailLevel(stellata);
         e.preventDefault();
         break;
       case '?':
@@ -252,7 +274,7 @@ function cycleCoordSphere(stellata: Stellata) {
   stellata.filters.setFilter({
     coordSphere: nextCoordSphereFrame(
       stellata.filters.getFilter().coordSphere,
-      (frame) => stellata.coordSphereReachable(frame),
+      (frame) => stellata.coordSphereAvailable(frame),
     ),
   });
 }

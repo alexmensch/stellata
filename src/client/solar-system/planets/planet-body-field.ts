@@ -975,12 +975,17 @@ export class PlanetBodyField {
    *  orbit about its parent, not its parent's about the host. False when
    *  the host carries no live element source: its rings fall back to
    *  `defaultOrbitGeometry`, whose plane is the host-plane convention
-   *  rather than a measured orientation. */
+   *  rather than a measured orientation.
+   *
+   *  Through `orbitGeometryOfAt`, never the array form: ORB rebuilds every
+   *  rendered frame, and evaluating all 27 of Sol's bodies to read one
+   *  normal reinstates per frame exactly the cost the ring layer's
+   *  visibility gate exists to skip. */
   orbitPlaneNormalOf(instanceIdx: number, t: number, out: THREE.Vector3): boolean {
     const host = this.hostOfInstance(instanceIdx);
     if (!host) return false;
-    const g = host.ps.orbitGeometryAt?.(t)[instanceIdx - host.startInstance];
-    if (g === undefined) return false;
+    const g = host.ps.orbitGeometryOfAt?.(instanceIdx - host.startInstance, t);
+    if (!g) return false;
     orbitPlaneNormalInto(out, g, host.orientation);
     return true;
   }

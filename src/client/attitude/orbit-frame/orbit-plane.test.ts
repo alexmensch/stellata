@@ -7,33 +7,50 @@ import * as THREE from 'three';
 import {
   ECLIPTIC_NORTH_POLE_ICRS,
   orbitPlaneNormalInto,
-} from '../solar-system/ephemerides/orbit-rings-layer';
+} from '../../solar-system/ephemerides/orbit-rings-layer';
 import {
   solOrbitGeometryAt,
   SOL_BODIES,
-} from '../solar-system/planet-system';
-import { PLANET_ORDER } from '../solar-system/ephemerides/ephemeris';
+} from '../../solar-system/planet-system';
+import { PLANET_ORDER } from '../../solar-system/ephemerides/ephemeris';
 import {
   orbitNormalSky,
   projectSkyToICRS,
   type OrbitalElements,
-} from '../binaries/binary-orbit-pure';
-import { innermostRelationOf } from '../binaries/focal-chain';
-import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
-import { starOrbitNormalIcrs } from '../binaries/orbit-relation-cache';
+} from '../../binaries/binary-orbit-pure';
+import { innermostRelationOf } from '../../binaries/focal-chain';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
+import { starOrbitNormalIcrs } from '../../binaries/orbit-relation-cache';
 import {
   makeBinaries,
   makeRelation,
-} from '../binaries/binary-relation-fixture';
+} from '../../binaries/binary-relation-fixture';
 import {
   FLAG_HAS_INCLINATION,
   FLAG_HAS_ORBIT,
   NO_PARENT,
   type BinariesData,
-} from '../binaries/binaries-loader';
-import { captureOrbitFrame } from './attitude-pure';
-import { focusedOrbitInto, type FocusedOrbit } from './orbit-plane';
-import type { Stellata } from '../stellata';
+} from '../../binaries/binaries-loader';
+import {
+  captureOrbitFrame,
+  copyReferenceFrame,
+  emptyReferenceFrame,
+  orbitFrameInto,
+  orbitRideRotation,
+  quaternionTurnRad,
+  readAttitude,
+  ridePoseBy,
+  type Attitude,
+  type ReferenceFrame,
+} from '../attitude-pure';
+import { cadenceVisibleTurnRad } from '../../render-gate/cadence/clock-cadence-pure';
+import {
+  focusedOrbitFrom,
+  focusedOrbitInto,
+  resolveFocusedOrbit,
+  type FocusedOrbit,
+} from './orbit-plane';
+import type { Stellata } from '../../stellata';
 
 const DEG = Math.PI / 180;
 const J2000_T = 0;
@@ -330,6 +347,329 @@ describe('binary orbit normals', () => {
   });
 });
 
+describe('ridePoseBy / orbitRideRotation — the orbit lock', () => {
+  const normal = new THREE.Vector3(0, 1, 0).normalize();
+  const pivot = new THREE.Vector3(4, -1, 2);
+  const NO_MIN = 0;
+
+  const posed = (offset: THREE.Vector3, up: THREE.Vector3) => {
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.copy(pivot).add(offset);
+    camera.up.copy(up);
+    camera.lookAt(pivot);
+    camera.updateMatrixWorld(true);
+    return camera;
+  };
+
+  const attitude = (): Attitude =>
+    ({ pitchRad: 0, bankRad: 0, lonRad: 0, sinFromPole: 1 });
+
+  /** One tick of the lock: hold the frame, move it, ride the camera onto it. */
+  const rideOnto = (
+    camera: THREE.PerspectiveCamera,
+    held: ReferenceFrame,
+    live: ReferenceFrame,
+  ): boolean => {
+    const q = new THREE.Quaternion();
+    if (!orbitRideRotation(q, held, live, NO_MIN)) return false;
+    ridePoseBy(camera.position, camera.up, pivot, q);
+    camera.lookAt(pivot);
+    camera.updateMatrixWorld(true);
+    return true;
+  };
+
+  it('swings the pose about the pivot without changing its distance', () => {
+    const position = pivot.clone().add(new THREE.Vector3(0, 0, 7));
+    const up = new THREE.Vector3(0, 1, 0);
+    const before = position.distanceTo(pivot);
+
+    ridePoseBy(position, up, pivot, new THREE.Quaternion().setFromAxisAngle(normal, 0.9));
+
+    expect(position.distanceTo(pivot)).toBeCloseTo(before, 9);
+    expect(up.length()).toBeCloseTo(1, 12);
+  });
+
+  it('turns the offset and the up by the same angle', () => {
+    const position = pivot.clone().add(new THREE.Vector3(0, 0, 7));
+    const up = new THREE.Vector3(1, 0, 0);
+    const offsetBefore = position.clone().sub(pivot);
+    const upBefore = up.clone();
+
+    ridePoseBy(position, up, pivot, new THREE.Quaternion().setFromAxisAngle(normal, 0.4));
+
+    expect(position.clone().sub(pivot).angleTo(offsetBefore)).toBeCloseTo(0.4, 9);
+    expect(up.angleTo(upBefore)).toBeCloseTo(0.4, 9);
+  });
+
+  // The promise the lock makes: the world turns under you and the instrument
+  // does not move. Advance the orbit, rebuild ORB from it, ride the camera onto
+  // it, and every axis of the reading has to come back identical.
+  it('holds the whole attitude reading as the orbit advances', () => {
+    const step = 0.37;
+    const toCentre = new THREE.Vector3(3, 0, 0);
+    const camera = posed(new THREE.Vector3(1.5, 2, 6), new THREE.Vector3(0.2, 1, 0.1).normalize());
+
+    const live = emptyReferenceFrame();
+    orbitFrameInto(live, camera, normal, toCentre);
+    const out = attitude();
+    const before = { ...readAttitude(camera, live, out) };
+    const held = copyReferenceFrame(emptyReferenceFrame(), live);
+
+    orbitFrameInto(live, camera, normal, toCentre.clone().applyAxisAngle(normal, step));
+    expect(rideOnto(camera, held, live)).toBe(true);
+
+    const after = readAttitude(camera, live, out);
+    expect(after.pitchRad).toBeCloseTo(before.pitchRad, 9);
+    expect(after.lonRad).toBeCloseTo(before.lonRad, 9);
+    expect(after.bankRad).toBeCloseTo(before.bankRad, 9);
+  });
+
+  // The regression that a rotation about the POLE cannot hold, and the reason
+  // the ride reads the frame's own before-and-after instead of modelling what
+  // moved. Luna's node regresses 0.0529 deg/day, so its plane precesses; a
+  // scrub at years per second, or a jump back to now, moves the pole and the
+  // datum together in one step. Observed as the ball landing ~1 deg off from
+  // Luna and dead-on from Algol, whose published elements do not precess.
+  it('holds the reading when the PLANE precesses as well as the datum', () => {
+    const step = 0.9;
+    const precession = 0.25;
+    const precessAxis = new THREE.Vector3(0, 0, 1);
+    const toCentre = new THREE.Vector3(3, 0, 0);
+    const camera = posed(new THREE.Vector3(1.5, 2, 6), new THREE.Vector3(0.2, 1, 0.1).normalize());
+
+    const live = emptyReferenceFrame();
+    orbitFrameInto(live, camera, normal, toCentre);
+    const out = attitude();
+    const before = { ...readAttitude(camera, live, out) };
+    const held = copyReferenceFrame(emptyReferenceFrame(), live);
+
+    // The node swings the pole while the object walks the orbit.
+    const laterNormal = normal.clone().applyAxisAngle(precessAxis, precession);
+    const laterCentre = toCentre.clone()
+      .applyAxisAngle(normal, step)
+      .applyAxisAngle(precessAxis, precession);
+    orbitFrameInto(live, camera, laterNormal, laterCentre);
+    expect(rideOnto(camera, held, live)).toBe(true);
+
+    const after = readAttitude(camera, live, out);
+    expect(after.pitchRad).toBeCloseTo(before.pitchRad, 9);
+    expect(after.lonRad).toBeCloseTo(before.lonRad, 9);
+    expect(after.bankRad).toBeCloseTo(before.bankRad, 9);
+  });
+
+  // A step of any size lands exactly, which is what makes a jump back to live
+  // time — days or years of orbit collapsed into one frame — safe. Mod 2pi is
+  // not a loss: the same basis is the same basis however far round it went.
+  it.each([0.01, 1.7, 3.0, 12.5, 400])('lands exactly for a step of %s rad', (step) => {
+    const toCentre = new THREE.Vector3(3, 0, 0);
+    const camera = posed(new THREE.Vector3(1.5, 2, 6), new THREE.Vector3(0.2, 1, 0.1).normalize());
+
+    const live = emptyReferenceFrame();
+    orbitFrameInto(live, camera, normal, toCentre);
+    const out = attitude();
+    const before = { ...readAttitude(camera, live, out) };
+    const held = copyReferenceFrame(emptyReferenceFrame(), live);
+
+    orbitFrameInto(live, camera, normal, toCentre.clone().applyAxisAngle(normal, step));
+    rideOnto(camera, held, live);
+
+    const after = readAttitude(camera, live, out);
+    expect(after.pitchRad).toBeCloseTo(before.pitchRad, 9);
+    expect(after.lonRad).toBeCloseTo(before.lonRad, 9);
+    expect(after.bankRad).toBeCloseTo(before.bankRad, 9);
+  });
+
+  // The pose is position + up; every reader takes the QUATERNION, which is
+  // derived from them. Riding without re-deriving it leaves the reading short
+  // by exactly the step — the one-frame lag that shipped, and the reason
+  // `rideOnto` calls `lookAt` rather than treating it as scene-setting.
+  it('leaves the reading a whole step short if the quaternion is not re-derived', () => {
+    const step = 0.37;
+    const toCentre = new THREE.Vector3(3, 0, 0);
+    const camera = posed(new THREE.Vector3(1.5, 2, 6), new THREE.Vector3(0.2, 1, 0.1).normalize());
+
+    const live = emptyReferenceFrame();
+    orbitFrameInto(live, camera, normal, toCentre);
+    const out = attitude();
+    const before = { ...readAttitude(camera, live, out) };
+    const held = copyReferenceFrame(emptyReferenceFrame(), live);
+
+    orbitFrameInto(live, camera, normal, toCentre.clone().applyAxisAngle(normal, step));
+    const q = new THREE.Quaternion();
+    orbitRideRotation(q, held, live, NO_MIN);
+    ridePoseBy(camera.position, camera.up, pivot, q);
+    // Deliberately no `camera.lookAt(pivot)` here.
+
+    const after = readAttitude(camera, live, out);
+    expect(Math.abs(after.lonRad - before.lonRad)).toBeCloseTo(step, 9);
+  });
+
+  // Without the ride the same advance moves the reading, which is what makes
+  // the assertions above measurements rather than tautologies.
+  it('is what holds it — the reading moves without the ride', () => {
+    const step = 0.37;
+    const toCentre = new THREE.Vector3(3, 0, 0);
+    const camera = posed(new THREE.Vector3(1.5, 2, 6), new THREE.Vector3(0.2, 1, 0.1).normalize());
+
+    const live = emptyReferenceFrame();
+    orbitFrameInto(live, camera, normal, toCentre);
+    const out = attitude();
+    const before = { ...readAttitude(camera, live, out) };
+
+    orbitFrameInto(live, camera, normal, toCentre.clone().applyAxisAngle(normal, step));
+    const after = readAttitude(camera, live, out);
+    expect(Math.abs(after.lonRad - before.lonRad)).toBeCloseTo(step, 9);
+  });
+});
+
+describe('orbitRideRotation — the threshold that keeps the gate idling', () => {
+  const normal = new THREE.Vector3(0, 1, 0);
+  const camera = new THREE.PerspectiveCamera();
+  camera.position.set(0, 0, 8);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld(true);
+
+  // The threshold at the cadence's own pinned vantage: 900 CSS px of viewport
+  // height, 50 deg vertical FOV, device ratio 2.
+  const PINNED_MIN_RAD = cadenceVisibleTurnRad(1031.32, 2);
+
+  const frameTurnedBy = (rad: number): ReferenceFrame => orbitFrameInto(
+    emptyReferenceFrame(),
+    camera,
+    normal,
+    new THREE.Vector3(3, 0, 0).applyAxisAngle(normal, rad),
+  );
+
+  const held = frameTurnedBy(0);
+  const q = new THREE.Quaternion();
+  const rides = (rad: number, minRad = PINNED_MIN_RAD) =>
+    orbitRideRotation(q, held, frameTurnedBy(rad), minRad);
+  const turnOf = () => quaternionTurnRad(q);
+
+  it('declines a frame that has not moved — a paused clock', () => {
+    expect(rides(0)).toBe(false);
+    // The basis round-trip is not bit-exact, so the guarantee rests on the
+    // threshold rather than on an exact zero — but the residue is rounding,
+    // orders below anything the threshold could be set to.
+    rides(0, 0);
+    expect(turnOf()).toBeLessThan(1e-9);
+  });
+
+  it('declines a turn under the threshold', () => {
+    expect(rides(PINNED_MIN_RAD * 0.9)).toBe(false);
+  });
+
+  it('rides a turn past the threshold, and writes the rotation', () => {
+    const step = PINNED_MIN_RAD * 4;
+    expect(rides(step)).toBe(true);
+    expect(turnOf()).toBeCloseTo(step, 12);
+  });
+
+  it('measures the same turn either way round', () => {
+    expect(rides(PINNED_MIN_RAD * 4)).toBe(true);
+    const forward = turnOf();
+    expect(rides(-PINNED_MIN_RAD * 4)).toBe(true);
+    expect(turnOf()).toBeCloseTo(forward, 12);
+  });
+
+  // The reason a declined turn must leave the held frame where it is: measured
+  // from where it was last RIDDEN from, sub-threshold turns add up into one
+  // ride that carries the whole angle. Advancing it each frame would drop every
+  // one and the lock would slowly slip its grip.
+  it('accumulates sub-threshold turns into one ride that carries them all', () => {
+    const step = PINNED_MIN_RAD / 4;
+    let rodeAt = 0;
+    for (let i = 1; i <= 4; i++) {
+      if (rides(step * i)) rodeAt = i;
+    }
+    expect(rodeAt).toBe(4);
+    expect(turnOf()).toBeCloseTo(step * 4, 12);
+  });
+
+  // A degenerate viewport rides every real step. The safe failure for a
+  // scheduling threshold is a frame too many, never an instrument that stops.
+  it('rides any real turn when the threshold is zero', () => {
+    expect(rides(1e-7, 0)).toBe(true);
+  });
+
+  // What the threshold is worth in frames, which is the whole point of it:
+  // Luna walks ~13.2 deg/day, so at live 1x it turns this little per 60 Hz tick.
+  it('holds the gate for thousands of ticks at live 1x', () => {
+    const lunaRadPerTick = ((13.2 * Math.PI) / 180 / 86400) / 60;
+    expect(PINNED_MIN_RAD / lunaRadPerTick).toBeCloseTo(2727, 0);
+  });
+});
+
+describe('orbitFrameInto — the live rebuild', () => {
+  const cameraLookingAt = (dir: THREE.Vector3): THREE.Camera => {
+    const c = new THREE.PerspectiveCamera();
+    c.position.set(0, 0, 0);
+    c.up.set(0, 0, 1);
+    c.lookAt(dir);
+    c.updateMatrixWorld(true);
+    return c;
+  };
+
+  const normal = new THREE.Vector3(0, 1, 0);
+  const camera = cameraLookingAt(new THREE.Vector3(1, 0, 0));
+
+  it('answers exactly what the allocating builder does', () => {
+    const toCentre = new THREE.Vector3(3, 0, 0);
+    const allocated = captureOrbitFrame(camera, normal, toCentre);
+    const written = orbitFrameInto(emptyReferenceFrame(), camera, normal, toCentre);
+    expect(written.key).toBe(allocated.key);
+    expect(written.label).toBe(allocated.label);
+    for (const axis of ['pole', 'zeroLon', 'east'] as const) {
+      expect(written[axis].angleTo(allocated[axis])).toBeCloseTo(0, 12);
+    }
+  });
+
+  // The instrument runs this every rendered frame while ORB is up, so it has
+  // to reuse the frame it was handed rather than hand back a fresh one.
+  it('writes into the frame it is given and allocates no other', () => {
+    const out = emptyReferenceFrame();
+    const pole = out.pole;
+    const returned = orbitFrameInto(out, camera, normal, new THREE.Vector3(3, 0, 0));
+    expect(returned).toBe(out);
+    expect(returned.pole).toBe(pole);
+  });
+
+  // Orbit rate: the datum is the direction to the orbit's centre, so as the
+  // object walks its orbit the frame turns with it by the same angle. That is
+  // the whole difference from a datum captured once.
+  it('turns zero longitude with the object as the orbit advances', () => {
+    const out = emptyReferenceFrame();
+    orbitFrameInto(out, camera, normal, new THREE.Vector3(3, 0, 0));
+    const before = out.zeroLon.clone();
+
+    // A quarter turn about the orbit normal.
+    const later = new THREE.Vector3(3, 0, 0)
+      .applyAxisAngle(normal, Math.PI / 2);
+    orbitFrameInto(out, camera, normal, later);
+
+    expect(before.angleTo(out.zeroLon)).toBeCloseTo(Math.PI / 2, 9);
+    // The plane it turns in is the orbit's own — the pole never moves.
+    expect(out.pole.angleTo(normal)).toBeCloseTo(0, 12);
+    expect(out.pole.dot(out.zeroLon)).toBeCloseTo(0, 12);
+  });
+
+  it('keeps the basis orthonormal through a full revolution', () => {
+    const out = emptyReferenceFrame();
+    for (let step = 0; step < 16; step++) {
+      const toCentre = new THREE.Vector3(3, 0, 0)
+        .applyAxisAngle(normal, (step / 16) * Math.PI * 2);
+      orbitFrameInto(out, camera, normal, toCentre);
+      for (const v of [out.pole, out.zeroLon, out.east]) {
+        expect(v.length()).toBeCloseTo(1, 12);
+      }
+      expect(out.pole.dot(out.zeroLon)).toBeCloseTo(0, 12);
+      expect(
+        new THREE.Vector3().crossVectors(out.pole, out.zeroLon).angleTo(out.east),
+      ).toBeCloseTo(0, 9);
+    }
+  });
+});
+
 describe('captureOrbitFrame', () => {
   const cameraLookingAt = (dir: THREE.Vector3): THREE.Camera => {
     const c = new THREE.PerspectiveCamera();
@@ -518,6 +858,69 @@ describe('focusedOrbitInto', () => {
   it('declines a planet before the planet kind attaches', () => {
     expect(focusedOrbitInto(out(), starHarness(pair()), { kind: 'planet', idx: 0 }))
       .toBe(false);
+  });
+
+  // The split the per-frame path depends on: a pair's plane is a static
+  // function of frozen elements, so it is resolved once per focus and the
+  // only thing a rendered frame re-reads is the direction to the partner.
+  describe('resolveFocusedOrbit / focusedOrbitFrom', () => {
+    it('carries a pair its plane normal, matching the one-shot exactly', () => {
+      const s = starHarness(pair());
+      const target = { kind: 'star', idx: PRIMARY } as const;
+      const source = resolveFocusedOrbit(s, target)!;
+      expect(source.kind).toBe('pair');
+      const oneShot = out();
+      focusedOrbitInto(oneShot, s, target);
+      expect(source.kind === 'pair' && source.normal.angleTo(oneShot.normal))
+        .toBeCloseTo(0, 12);
+    });
+
+    // The whole point of hoisting it: the members move every frame under the
+    // clock and the plane does not, so re-deriving it per frame was work for
+    // an answer that could not change.
+    it('holds that normal while the members move', () => {
+      const s = starHarness(pair());
+      const source = resolveFocusedOrbit(s, { kind: 'star', idx: PRIMARY })!;
+      expect(source.kind).toBe('pair');
+      const before = out();
+      expect(focusedOrbitFrom(before, source, s)).toBe(true);
+
+      // Swing the partner a quarter of the way round in the local frame.
+      const local = s.localPositions;
+      local[SECONDARY * 3 + 0] = 1;
+      local[SECONDARY * 3 + 1] = 2;
+      const after = out();
+      expect(focusedOrbitFrom(after, source, s)).toBe(true);
+
+      expect(after.normal.angleTo(before.normal)).toBeCloseTo(0, 15);
+      expect(after.toCentre.angleTo(before.toCentre)).toBeGreaterThan(0.5);
+    });
+
+    // A planet keeps no normal on the source: a precessing node genuinely
+    // moves its plane, so `t` still has to reach it every frame.
+    it('carries a planet nothing but its index', () => {
+      const field = {
+        orbitPlaneNormalOf: (_i: number, _t: number, n: THREE.Vector3) => {
+          n.set(0, 0, 1);
+          return true;
+        },
+        orbitCentreOffsetInto: (_i: number, c: THREE.Vector3) => {
+          c.set(-2, 0, 0);
+          return true;
+        },
+      };
+      const s = { kinds: { planet: { field } }, getT: () => 0 } as unknown as Stellata;
+      const source = resolveFocusedOrbit(s, { kind: 'planet', idx: 3 });
+      expect(source).toEqual({ kind: 'planet', bodyIdx: 3 });
+    });
+
+    it('declines a source for a focus that rides no orbit', () => {
+      expect(resolveFocusedOrbit(starHarness(pair()), null)).toBeNull();
+      expect(resolveFocusedOrbit(starHarness(null), { kind: 'star', idx: PRIMARY }))
+        .toBeNull();
+      expect(resolveFocusedOrbit(starHarness(pair()), { kind: 'probe', idx: 0 }))
+        .toBeNull();
+    });
   });
 
   // Both legs must land: a normal with no centre direction would capture a

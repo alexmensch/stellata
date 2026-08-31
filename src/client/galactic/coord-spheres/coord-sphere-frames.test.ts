@@ -3,17 +3,16 @@ import * as THREE from 'three';
 import { unitVectorFromRaDec } from '../../util/equatorial-basis';
 import { GALACTIC_NORTH_POLE_ICRS, galacticDirToIcrs } from '../galactic-coords';
 import type { CoordSphereFrame, CoordSphereSpec, DrawnCoordSphereFrame } from './coord-sphere';
-import { solFrameFadeFactor } from '../galactic-fade';
 import {
   COORD_SPHERE_FRAMES,
   COORD_SPHERE_SPECS,
   DRAWN_COORD_SPHERE_FRAMES,
-  EQUATORIAL_FADE_WINDOW_PC,
   EQUATORIAL_SPHERE_SPEC,
   GALACTIC_SPHERE_SPEC,
-  coordSphereFadeAt,
   coordSphereNorthPole,
-  coordSphereReachableAt,
+  ECLIPTIC_SPHERE_SPEC,
+  OBLIQUITY_RAD,
+  eclipticDirToIcrs,
   equatorialDirToIcrs,
   fmtDecDeg,
   fmtLatDeg,
@@ -76,6 +75,11 @@ const STARS = [
 // galactic node can sit up to ~2″ off a star fixed by its α/δ. Nothing about
 // the rotation itself is that imprecise — GAL_TO_ICRS re-orthogonalises.
 const PUBLISHED_LB_ROUNDING_ARCSEC = 2;
+
+function dirOf(raDeg: number, decDeg: number): THREE.Vector3 {
+  const u = unitVectorFromRaDec(raDeg, decDeg);
+  return new THREE.Vector3(u.x, u.y, u.z);
+}
 
 function sepArcsec(a: THREE.Vector3, b: THREE.Vector3): number {
   return Math.acos(Math.min(1, Math.max(-1, a.dot(b)))) / ARCSEC;
@@ -168,27 +172,31 @@ describe('sphere specs', () => {
     expect(new Set(labels).size).toBe(n);
   });
 
-  it('pools the two label sets under different SVG groups', () => {
-    expect(GALACTIC_SPHERE_SPEC.labelGroupId).not.toBe(EQUATORIAL_SPHERE_SPEC.labelGroupId);
+  // One pool per sphere, so two frames sharing a group would have their
+  // labels fight in a single repulsion pass.
+  it('pools every label set under its own SVG group', () => {
+    const groups = DRAWN_COORD_SPHERE_FRAMES.map(f => COORD_SPHERE_SPECS[f].labelGroupId);
+    expect(new Set(groups).size).toBe(groups.length);
   });
 
-  it('tables every drawn frame exactly once', () => {
-    expect(DRAWN_COORD_SPHERE_FRAMES).toEqual(['galactic', 'equatorial']);
+  it('tables every drawn frame exactly once, widest plane first', () => {
+    expect(DRAWN_COORD_SPHERE_FRAMES).toEqual(['galactic', 'ecliptic', 'equatorial']);
     expect(Object.keys(COORD_SPHERE_SPECS).sort())
       .toEqual([...DRAWN_COORD_SPHERE_FRAMES].sort());
   });
 
-  // Only a frame anchored to Earth self-hides; the galactic one is meaningful
-  // from anywhere, so an accidental window on it would hide the wrong sphere.
-  it('gives a fade window to the equatorial frame alone', () => {
-    expect(GALACTIC_SPHERE_SPEC.fadeWindow).toBeUndefined();
-    expect(EQUATORIAL_SPHERE_SPEC.fadeWindow).toBe(EQUATORIAL_FADE_WINDOW_PC);
+  // Ecliptic longitude is degrees; only the equatorial grid's meridians are
+  // hour circles, and only it may label them in hours.
+  it('gives the ecliptic grid the galactic parametrisation, not the hour circles', () => {
+    expect(ECLIPTIC_SPHERE_SPEC.meridianCount).toBe(GALACTIC_SPHERE_SPEC.meridianCount);
+    expect(ECLIPTIC_SPHERE_SPEC.lonLabel).toBe(GALACTIC_SPHERE_SPEC.lonLabel);
+    expect(EQUATORIAL_SPHERE_SPEC.meridianCount).toBe(24);
   });
 });
 
-// The roll alignment guide levels against this pole, so it has to be the pole
-// of the grid actually drawn — derived through the same dirToIcrs, never a
-// second constant that could drift from the geometry.
+// `L` levels against this pole, so it has to be the pole of the grid actually
+// drawn — derived through the same dirToIcrs, never a second constant that
+// could drift from the geometry.
 describe('coordSphereNorthPole', () => {
   it('is each frame’s own +90° latitude', () => {
     expect(sepArcsec(coordSphereNorthPole('galactic'), GALACTIC_NORTH_POLE_ICRS)).toBeLessThan(1e-6);
@@ -198,15 +206,65 @@ describe('coordSphereNorthPole', () => {
     expect(ncp.z).toBeCloseTo(1, 12);
   });
 
+  it('is the ecliptic pole at α 18h, δ +66.56° for the ecliptic frame', () => {
+    expect(sepArcsec(coordSphereNorthPole('ecliptic'),
+      dirOf(18 * 15, 90 - OBLIQUITY_RAD / DEG))).toBeLessThan(1);
+  });
+
   it('levels against galactic north when no sphere is up', () => {
     expect(coordSphereNorthPole('none')).toBe(coordSphereNorthPole('galactic'));
   });
 
-  // The guide projects the pole into the image plane and reads the residual as
+  // Levelling projects the pole into the image plane and reads the residual as
   // an angle; a non-unit pole would bias it.
   it('returns unit vectors for every frame', () => {
     for (const frame of COORD_SPHERE_FRAMES) {
       expect(coordSphereNorthPole(frame).length()).toBeCloseTo(1, 12);
+    }
+  });
+});
+
+// The ecliptic frame is pinned against three published anchors rather than
+// against the equatorial one it is derived from, which would only restate the
+// rotation. Pole and equinox fix the two axes; the solstice is what catches an
+// obliquity of the wrong sign, which would still land a pole 66.56° from the
+// equator — just the wrong one.
+describe('eclipticDirToIcrs', () => {
+  it('shares the vernal equinox with the equatorial frame', () => {
+    const v = eclipticDirToIcrs(0, 0, new THREE.Vector3());
+    expect(sepArcsec(v, dirOf(0, 0))).toBeLessThan(1e-6);
+  });
+
+  it('puts its pole at α 18h, δ +66.56°', () => {
+    const pole = eclipticDirToIcrs(0, Math.PI / 2, new THREE.Vector3());
+    expect(sepArcsec(pole, dirOf(18 * 15, 90 - OBLIQUITY_RAD / DEG))).toBeLessThan(1);
+  });
+
+  it('puts the summer solstice at α 6h, δ +23.44°', () => {
+    const solstice = eclipticDirToIcrs(Math.PI / 2, 0, new THREE.Vector3());
+    expect(sepArcsec(solstice, dirOf(6 * 15, OBLIQUITY_RAD / DEG))).toBeLessThan(1);
+  });
+
+  it('is a rotation — it preserves angles between directions', () => {
+    const a = eclipticDirToIcrs(0.7, 0.3, new THREE.Vector3());
+    const b = eclipticDirToIcrs(2.1, -0.9, new THREE.Vector3());
+    const ea = dirOf((0.7 / DEG), (0.3 / DEG));
+    const eb = dirOf((2.1 / DEG), (-0.9 / DEG));
+    expect(a.length()).toBeCloseTo(1, 12);
+    expect(a.dot(b)).toBeCloseTo(ea.dot(eb), 12);
+  });
+
+  // A third grid earns its place only by reading differently from both the
+  // others; an ecliptic spec that had collapsed onto one of them would draw a
+  // plausible sphere and pass every assertion above.
+  it('reads a latitude of its own for every pinned star', () => {
+    for (const star of STARS) {
+      const dir = dirOf(star.raDeg, star.decDeg);
+      const ecl = frameCoordsOf(ECLIPTIC_SPHERE_SPEC, dir);
+      const eq = frameCoordsOf(EQUATORIAL_SPHERE_SPEC, dir);
+      const gal = frameCoordsOf(GALACTIC_SPHERE_SPEC, dir);
+      expect(Math.abs(ecl.latDeg - eq.latDeg)).toBeGreaterThan(1);
+      expect(Math.abs(ecl.latDeg - gal.latDeg)).toBeGreaterThan(1);
     }
   });
 });
@@ -241,106 +299,41 @@ describe('label formatters', () => {
   });
 });
 
-const ALPHA_CEN_PC = 1.34;
-// Neptune's semi-major axis, as a stand-in for "still inside the planets".
-const NEPTUNE_PC = 30.07 / 206_264.8;
-
-describe('EQUATORIAL_FADE_WINDOW_PC', () => {
-  it('is the sub-parsec-to-a-few-parsecs window sp4q derived', () => {
-    expect(EQUATORIAL_FADE_WINDOW_PC).toEqual({ innerPc: 0.4, outerPc: 2.0 });
-  });
-
-  it('holds the sphere at full strength across the solar system', () => {
-    expect(coordSphereFadeAt('equatorial', NEPTUNE_PC)).toBe(1);
-  });
-
-  // An Earth-referenced frame has to be mostly gone by the nearest star; the
-  // whole reason it fades is that it stops describing anyone's sky out there.
-  it('has faded most of the way out by α Cen', () => {
-    expect(coordSphereFadeAt('equatorial', ALPHA_CEN_PC)).toBeCloseTo(0.370090, 6);
-  });
-});
-
-describe('coordSphereFadeAt', () => {
-  it('never fades the galactic sphere, at any distance', () => {
-    for (const d of [0, 2, 1e3, 1e6]) expect(coordSphereFadeAt('galactic', d)).toBe(1);
-  });
-
-  it('tracks the shared Sol-frame curve for a frame that has a window', () => {
-    for (const d of [0, 0.4, 1, 1.9, 2, 10]) {
-      expect(coordSphereFadeAt('equatorial', d))
-        .toBe(solFrameFadeFactor(d, EQUATORIAL_FADE_WINDOW_PC));
-    }
-  });
-
-  it('bounds to [0, 1] across the whole travel range', () => {
-    for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
-      for (const d of [0, 0.4, 1, 2, 10, 1e6]) {
-        const f = coordSphereFadeAt(frame, d);
-        expect(f).toBeGreaterThanOrEqual(0);
-        expect(f).toBeLessThanOrEqual(1);
-      }
-    }
-  });
-});
-
-describe('coordSphereReachableAt', () => {
-  it('holds inside the window and fails at or past the outer edge', () => {
-    expect(coordSphereReachableAt('equatorial', 0)).toBe(true);
-    expect(coordSphereReachableAt('equatorial', EQUATORIAL_FADE_WINDOW_PC.innerPc)).toBe(true);
-    expect(coordSphereReachableAt('equatorial', ALPHA_CEN_PC)).toBe(true);
-    expect(coordSphereReachableAt('equatorial', EQUATORIAL_FADE_WINDOW_PC.outerPc)).toBe(false);
-    expect(coordSphereReachableAt('equatorial', 1e6)).toBe(false);
-  });
-
-  it('keeps the galactic sphere reachable from outside the galaxy', () => {
-    expect(coordSphereReachableAt('galactic', 1e6)).toBe(true);
-  });
-
-  // The scene layer deselects on exactly this predicate and then draws at
-  // coordSphereFadeAt, so a reachable sphere must never draw at zero alpha.
-  it('is true exactly when the sphere draws at a positive alpha', () => {
-    for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
-      for (const d of [0, 0.2, 0.4, 1, 1.9, 2, 2.1, 10]) {
-        expect(coordSphereReachableAt(frame, d)).toBe(coordSphereFadeAt(frame, d) > 0);
-      }
-    }
-  });
-});
-
 describe('nextCoordSphereFrame', () => {
   const anywhere = () => true;
-  const nearSolOnly = (frame: DrawnCoordSphereFrame) => frame !== 'equatorial';
+  const offEarth = (frame: DrawnCoordSphereFrame) => frame !== 'equatorial';
 
   const cycle = (
     start: CoordSphereFrame,
-    reachable: (frame: DrawnCoordSphereFrame) => boolean,
+    available: (frame: DrawnCoordSphereFrame) => boolean,
     steps: number,
   ) => {
     const out: CoordSphereFrame[] = [];
     let cur = start;
     for (let i = 0; i < steps; i++) {
-      cur = nextCoordSphereFrame(cur, reachable);
+      cur = nextCoordSphereFrame(cur, available);
       out.push(cur);
     }
     return out;
   };
 
-  it('cycles none → galactic → equatorial → none near Sol', () => {
-    expect(cycle('none', anywhere, 4)).toEqual(['galactic', 'equatorial', 'none', 'galactic']);
+  it('cycles none → galactic → ecliptic → equatorial → none from Earth', () => {
+    expect(cycle('none', anywhere, 5))
+      .toEqual(['galactic', 'ecliptic', 'equatorial', 'none', 'galactic']);
   });
 
-  it('skips the equatorial stop entirely once it has faded out', () => {
-    expect(cycle('none', nearSolOnly, 4)).toEqual(['galactic', 'none', 'galactic', 'none']);
+  it('skips the equatorial stop entirely away from Earth', () => {
+    expect(cycle('none', offEarth, 4))
+      .toEqual(['galactic', 'ecliptic', 'none', 'galactic']);
   });
 
-  // Restoring a `?v=` link written near Sol can land the equatorial sphere on
-  // an unreachable camera; `S` must still walk it back to none.
-  it('leaves an already-selected equatorial sphere when unreachable', () => {
-    expect(nextCoordSphereFrame('equatorial', nearSolOnly)).toBe('none');
+  // A shared link written from Earth can restore the equatorial sphere onto a
+  // focus that gives it no meaning; `S` must still walk it back out.
+  it('leaves an already-selected equatorial sphere when it is unavailable', () => {
+    expect(nextCoordSphereFrame('equatorial', offEarth)).toBe('none');
   });
 
-  it('terminates on none when nothing is reachable', () => {
+  it('terminates on none when nothing is available', () => {
     expect(cycle('none', () => false, 3)).toEqual(['none', 'none', 'none']);
   });
 });

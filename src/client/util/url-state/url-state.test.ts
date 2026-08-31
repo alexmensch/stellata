@@ -648,6 +648,22 @@ describe('url-state', () => {
         .toBeGreaterThan(encodeBlob({ coordSphere: 'galactic' }).length);
     });
 
+    // Bit 26 is the same layering one frame later. A link written before the
+    // ecliptic grid existed cannot carry it, and a client predating the bit
+    // falls back to the galactic sphere rather than to none.
+    it('round-trips an ecliptic coordinate sphere via presence bit 26', () => {
+      const { view } = roundtrip({ coordSphere: 'ecliptic' });
+      expect(view.coordSphere).toBe('ecliptic');
+      expect(encodeBlob({ coordSphere: 'ecliptic' }).length)
+        .toBeGreaterThan(encodeBlob({ coordSphere: 'galactic' }).length);
+    });
+
+    it('keeps the three frames on distinct blobs', () => {
+      const blobs = (['galactic', 'ecliptic', 'equatorial'] as const)
+        .map(coordSphere => encodeBlob({ coordSphere }));
+      expect(new Set(blobs).size).toBe(3);
+    });
+
     it('encodes no sphere for the default', () => {
       expect(encodeBlob({ coordSphere: 'none' })).toBe(encodeBlob({}));
     });

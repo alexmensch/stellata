@@ -14,7 +14,7 @@ gestures below toggle its `noRotate` / `noPan` flags.
   on `camera.up` and on the quaternion, one authority per camera mode.
   Holds no state of its own beyond scratch. § Roll authority.
 - `roll-pure.ts` (+ test) — roll algebra: level-up projection, signed
-  roll angles, camera-local up, and the guide band.
+  roll angles, and camera-local up.
 - `pinch-zoom-pure.ts` (+ test) — pinch-delta → wheel-notch normalisation
   (`PINCH_NOTCH_GAIN`, `pinchStep`).
 - `trackball-settle.ts` (+ test) — `TrackballSettle`: stops the damping
@@ -241,8 +241,13 @@ Two things went with that correction, and neither should come back:
 
 **The rule that replaces the deadband: steady-state navigate writes
 `camera.up` on no frame of its own.** Only a gesture, a level, a URL restore,
-a frame an animation owns (§ The perpendicular invariant), or the landing
-of a captured-endpoint animation writes it. `up → lookAt → quaternion → up`
+a frame an animation owns (§ The perpendicular invariant), the landing
+of a captured-endpoint animation, or the attitude indicator's **orbit lock**
+writes it. That last one is per-frame and is admissible for the reason a
+gesture is: it writes only on a frame where the orbit datum it rides moved far
+enough for the write to show, so a paused clock writes nothing, a live-1× drift
+accumulates instead of writing every frame, and the gate still idles
+(`../../../attitude/orbit-frame/README.md` § The lock). `up → lookAt → quaternion → up`
 is a rounding round-trip that 2-cycles exactly as the old correction did,
 so `adoptFromCamera` must stay out of the navigate steady state — it is an
 observe-mode and seam call only. `roll-controller.test.ts` pins a settled
@@ -329,51 +334,6 @@ Sign convention: pointer/finger rotation CW on screen → world rotates CW.
 `rollCamera(-delta)` achieves this because `applyAxisAngle(forward, θ)`
 rotates CCW viewed from behind the forward vector (right-hand rule), and
 rotating the up CCW in world space makes content appear CW.
-
-### Snap-to-level — an alignment guide, not a release-time fixup
-
-While rolling, the view **sticks** to level for as long as the requested
-roll stays inside `SNAP_TO_LEVEL_DEG` (2°) of it: the image visibly stops
-rotating at level, then breaks free on the way out. That stick *is* the
-feedback — the same affordance as Keynote / PowerPoint alignment guides. A
-release-only snap gives the user no way to feel where level is, which is
-the point of having it.
-
-`applyRollDelta` implements it against a **virtual roll**: while snapped,
-`rollSnapExcursion` keeps accumulating what the pointer asked for while
-the camera holds still, and the gesture leaves the guide once that
-virtual roll passes the band — resuming exactly where the pointer says,
-not where it entered. Tracking the virtual position separately is what
-makes the band un-chatterable with one threshold instead of two.
-
-The residual is measured off whichever slot carries the roll, and the
-split is load-bearing. NAVIGATE reads `upRollError` (`camera.up` vs the
-level pole, about the view axis) because there the quaternion trails
-`camera.up` by a frame — `lookAt` hasn't consumed the newest roll yet.
-OBSERVE reads `renderedRollError` (the quaternion's own screen-up),
-because that is what the user sees.
-
-**Which frame is level follows the displayed coordinate sphere.** The pole
-comes from `coordSphereNorthPole(filter.coordSphere)`
-(`../../../galactic/coord-spheres/README.md`) — the RA/Dec sphere's own NCP
-while that grid is up, galactic north otherwise. The guide has to stick to
-the grid the user is levelling against; the two poles are ~63° apart, so a
-frame-blind guide never engages on the sphere in front of them. Only the snap
-*target* is frame-aware: the reference default, the pole-cone correction, and
-the band are unchanged.
-
-`rollSnapPole` is that pole **captured at the moment the guide engaged**, and
-doubles as the "snapped" flag. `filter.coordSphere` can change *during* a roll
-with no user input: a dolly (the wheel path is not blocked mid-drag) past the
-RA/Dec fade demotes the selection to `none`, and `S` is live too. Re-reading
-the pole on release would then settle against a frame the view never stuck to
-and rotate the image by up to the ~63° between them.
-
-Leaving a gesture on the guide does **nothing** beyond clearing the
-snap state. The guide has already put `camera.up` exactly on level, and
-that IS the roll — there is no separate axis left to re-anchor, and
-re-levelling on release would roll the image a second time on the way out.
-Orbiting away from there rolls the view again, which is the point.
 
 ## Pinch-to-zoom
 

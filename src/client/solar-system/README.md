@@ -104,7 +104,15 @@ satisfies:
   optional `positionsAt(t, out)` resolver writing 3 doubles per planet
   in the host's local orbital-plane frame, optional
   `orbitGeometryAt(t)` (live per-body ring geometry) for the
-  orbit-ring renderer.
+  orbit-ring renderer, and `orbitGeometryOfAt(bodyIdx, t)` — the same
+  geometry for **one** body. **Those two come as a pair off one per-body
+  builder, never one without the other.** A caller wanting a single
+  body's orbit plane (`orbitPlaneNormalOf`, feeding the attitude
+  indicator's ORB frame every rendered frame) must take the per-body
+  form: the array evaluates every body in the system, which for Sol is
+  the lunar theory plus 17 Kepler solves, to answer about one. Both
+  fields are optional, so a host offering only the array silently loses
+  ORB rather than failing.
 
 Sync probe: `hasPlanets(solIndex, idx)` — currently hardwires "planets ⇔ Sol".
 Async resolver: `getPlanetSystem(solIndex, idx)` returns the system or

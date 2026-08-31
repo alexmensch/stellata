@@ -1,0 +1,281 @@
+# ORB — the focused object's own orbital plane
+
+The one reference frame that is a property of what you are looking at rather
+than of the sky. This README is the authority on ORB; `../README.md` keeps the
+instrument that displays it, and `captureOrbitFrame` stays there in
+`../attitude-pure.ts` beside the other frame builders.
+
+## Files
+
+```
+orbit-plane.ts (+ test)  The focused object's own orbit — plane normal and
+                         the direction to the orbit's centre — dispatched to
+                         whichever subsystem holds it. Split in two:
+                         `resolveFocusedOrbit` once per focus,
+                         `focusedOrbitFrom` per rendered frame
+                         (§ What each frame re-reads, and what it must not).
+```
+
+Nothing here imports from the parent folder: the dispatch reaches the
+solar-system and binary subsystems directly, and the frame it feeds is built
+one level up.
+
+## Capturing it
+
+Double-click the ball and the active frame becomes **ORB**,
+whose pole is the normal of the orbit the focused object *itself* rides. It
+is planted from `orbit-plane.ts`'s answer rather than from the current
+attitude, and `level()` then runs unchanged. Unlike REF it is **live** —
+§ Orbit rate.
+
+The frame flag reaches the same frame without the levelling
+(`../README.md` § Which frame, and who chooses). Both routes capture through
+`captureOrbitFrame`, so the two never disagree about what ORB means — they
+differ only in whether the camera moves afterwards.
+
+**Zero longitude points at the centre of the orbit** — the host star, the
+parent body, or the pair's barycentre — which is the same point each
+subsystem anchors the drawn orbit ring on. That is the one difference from
+REF, whose datum is the boresight: ORB's is a property of the orbit, so the
+same object levelled from anywhere reads the same longitude. It is a direction,
+not a distance, so the focus-versus-geometric-centre distinction the ellipse
+carries does not arise. The centre direction already lies in the orbital
+plane, leaving the boresight to seed a degenerate case that a real orbit
+does not produce.
+
+## Orbit rate
+
+**ORB is rebuilt every rendered frame, not captured** — it is the one frame
+on the instrument that is not a snapshot. Zero longitude keeps pointing at the
+orbit's centre as the object travels, so the grid turns beneath the boresight
+at the orbital rate. That is the mode the real FDAI ran in on orbit, and it is
+what makes the instrument read as *riding* an orbit rather than as having been
+told about one: Luna walks ~13° per day of model time, and a fast scrub sweeps
+the ball round with it instead of leaving the datum behind.
+
+**What that costs, stated plainly:** the focused object now sits at zero
+longitude by construction, so the ball no longer measures how far it has
+travelled since you asked. The reading it gives instead is attitude against a
+frame that travels with the object, which is the one the mode exists for. The
+pole is unaffected either way — it is a static function of the elements.
+
+Two consequences anything touching this has to honour:
+
+- **A still camera is not a still instrument.** The mini renderer redraws when
+  the DATUM moved as well as when `camera.quaternion` did — but on that test,
+  not on "a live frame is up": a paused clock rebuilds ORB to the same vector
+  and there is nothing to repaint. Nothing runs while the render gate idles
+  either: if no frame is drawn, the orbit has not advanced.
+- **The per-frame path evaluates ONE body's orbit, and the frame it writes
+  into is preallocated.** `orbitFrameInto` writes a `ReferenceFrame` the
+  instrument holds for the life of the page; `captureOrbitFrame` is the
+  allocating wrapper, kept for callers that want a frame of their own. The
+  dispatch reaches `PlanetBodyField.orbitPlaneNormalOf`, which goes through
+  `PlanetSystem.orbitGeometryOfAt` — **never `orbitGeometryAt`**, whose array
+  form runs the lunar theory and 17 Kepler solves for Sol and discards 26 of
+  the 27 rows. Doing that per frame reinstates exactly the cost the ring
+  layer's visibility gate exists to skip
+  (`../../solar-system/ephemerides/README.md` § Orbit rings).
+
+## What each frame re-reads, and what it must not
+
+ORB is rebuilt per rendered frame, so the split between what moves and what
+does not is a per-frame cost rather than bookkeeping. `resolveFocusedOrbit`
+runs once per focus and `focusedOrbitFrom` runs per frame:
+
+- **A pair's plane normal is resolved once and held.** An orbit is planar and
+  the elements are frozen, and the vantage the sky-frame normal projects
+  through comes from `catalog.positions`, which the clock does not move — so
+  the answer cannot change while the focus stands. Per frame only the
+  direction to the partner is re-read, straight out of `localPositions`. What
+  this replaced re-derived the normal every frame: `innermostRelationOf`,
+  `keplerRelationParams`, `orbitNormalSky` and `projectSkyToICRS`, allocating
+  a handful of short-lived objects each time, to reproduce a constant.
+- **A planet's normal is NOT held**, and that asymmetry is real rather than an
+  oversight: Triton's node precesses, so a moon's plane is genuinely a
+  function of `t` (`../../solar-system/ephemerides/README.md` § Every other
+  moon). The source carries only the body index and `t` reaches the field
+  every frame.
+- **The source is re-asked while it is null.** Both the binaries artifact and
+  the planet kind attach after a focus can be set, so a resolve that failed
+  has to be retried rather than cached as "no orbit" for the life of the
+  focus.
+
+## The lock
+
+The chip under the frame flag — a padlock, with **`Shift`+`L`** as its
+keyboard path — **rides the orbit**: it holds the attitude the instrument is
+showing as the datum turns beneath it, so the camera swings round with the
+object and the ball stands still while the world moves under it. Off by
+default, and shown only where there is something to ride — the rule, and the
+one place it lives, below.
+
+**The ride carries the camera by exactly the rotation the FRAME underwent**,
+read off the frame's own basis before and after (`orbitRideRotation`, then
+`ridePoseBy`). Rotating the offset from the pivot carries the boresight and
+rotating `up` carries the roll, so all three axes of the reading come through
+unchanged.
+
+**Reading that rotation rather than modelling it is the correctness argument,
+and the modelled version shipped first and was wrong.** It was an axis-angle
+about the pole, by the signed turn of the datum, on the premise that *ORB's
+pole is static, so only zero longitude travels*. That premise holds for a
+planet and fails for a moon: **Luna's node regresses 0.0529°/day**, swinging
+the plane's normal round a 5.15° cone, and Triton's precesses too
+(`../../solar-system/ephemerides/README.md` § Every other moon). Per frame the
+error is second order and invisible, which is why a steady scrub looked
+perfect; collapse months of node motion into a single step — a scrub at years
+per second, or Backspace back to live time — and it is first order. It landed
+about a degree off from Luna and dead-on from Algol, whose published elements
+do not precess at all, and that pair of observations is what identified it.
+
+Two properties fall out of taking the basis delta, and both matter:
+
+- **Any step size lands exactly.** A jump of days or years of orbit in one
+  frame is the same arithmetic as a millisecond of it.
+- **Mod 2π is not a loss.** A frame that turned 3.7 revolutions and one that
+  turned 0.7 are the same basis, and holding an attitude against a basis does
+  not care which way round it got there.
+
+**This is a camera writer on the steady-state navigate path**, which
+`../../camera/controls/input/README.md` § Orbit drift otherwise forbids —
+that rule exists because a per-frame write with no fixed point 2-cycles
+between adjacent doubles and the render gate can then never idle. The lock is
+admissible for the reason a gesture is: **it writes only on a frame where the
+datum moved far enough for the write to show.**
+
+**"Actually moved" is not the test, and cannot be.** The ride writes the camera
+*below* the gate, so the next tick reads any write at all as a fresh camera
+move and renders — the § The focal ride loop in
+`../../render-gate/README.md`, which a rotation has no rebase to escape
+through. At live 1× Luna's datum turns ~2.6 × 10⁻⁶ ° per 60 Hz tick, a
+genuinely non-zero turn some 2700× under anything a display can show, and
+writing it every tick pins the gate at 60 fps for a picture that never
+changes.
+
+**The threshold, not a zero, is what lets the gate idle — including with the
+clock paused.** A paused clock rebuilds ORB to the same basis, but the ride is
+read off two bases and that round trip is not bit-exact, so the turn it
+measures is rounding residue rather than a true zero. Orders below any
+threshold worth setting, and pinned in the tests as such; do not rewrite this
+as an exact-zero guarantee.
+
+`orbitRideRotation` therefore rides only past **`cadenceVisibleTurnRad`** —
+the cadence's own 0.25-device-pixel scheduling step converted to a camera turn
+(0.0069° at the pinned vantage), so the lock schedules against the same
+threshold every other driver does. Under a threshold it declines and **the
+frame is left where it was last ridden from**, which is what accumulates those
+turns into one ride carrying the whole angle; advancing it per frame would drop
+each one and the lock would slowly slip its grip. Faster than live the gate
+never idles anyway, so a scrub crosses the threshold every frame and rides
+exactly as before.
+
+**The ride writes the pose; the quaternion is DERIVED from it, and nothing
+re-derives it for you until the next tick.** `ridePoseBy` writes
+`camera.position` and `camera.up`. Every reader downstream — the render, the
+overlays, and the ball's own `readAttitude` — takes `camera.quaternion`, which
+`lookAt` builds from those two, and `TrackballControls.update()` does not run
+again until the next rAF tick (`../../camera/controls/input/README.md`
+§ Roll authority, derivation A). So the ride re-derives it itself. Skip that
+and the frame draws the new position through the old aim while the ball reads
+the new datum against the old attitude: **a lag of exactly one frame's turn**,
+which is invisible at 1×, about a degree at 9 hr/s, and half a revolution once
+the datum turns 180° between frames. It shipped that way once, and it read as
+drag or inertia on the ball rather than as an ordering fault, because the error
+is proportional to the scrub rate rather than accumulating.
+
+Four ordering details that are easy to get wrong, and two of them shipped
+wrong once:
+
+- **The ride runs inside the scene fan-out, not on a bus event.** It is
+  installed through `Stellata.setOrbitFrameTick` and called from a
+  sequencing-only registry entry, because where it lands is an ordering claim
+  about other layers and the registry is the only place that states one
+  (`../../scene/README.md` § Not every entry owns a layer). It has to be
+  **after** every moving field's position writes — the datum's turn is not
+  knowable before them, which rules out riding earlier — and after **both**
+  focal rides, whose translations put `controls.target` on the object it
+  pivots about. It is therefore the frame's **last camera write**, and every
+  entry that READS the camera is registered below it: the projectors (HUD
+  arrows, distance vector, labels) draw against a pose the frame does not
+  render otherwise, and so does the planet mesh, whose view-space lighting
+  uniforms are the subtler half of the same defect
+  (`../../scene/README.md` § Camera writes, then camera reads). `'frame'`
+  fires after the render and fails every part of this, which is the lag
+  above; only the instrument's own *drawing* rides `'frame'`.
+- **The ride is not part of the instrument's draw path.** It moves the CAMERA,
+  not the instrument, so it runs on every rendered frame including the ones
+  the instrument is hidden for — `U`, a collapsed panel, any off-screen check.
+  Hanging it off the drawing path made hiding the UI silently disengage the
+  lock and then replay the whole accumulated turn as one swing when it came
+  back.
+- **The datum's last position is recorded whether or not the ride ran.** A
+  frame skipped because a warp or an observe transition owned the camera must
+  not replay as one enormous swing when the transition ends.
+- **Engaging the lock seeds from wherever the datum is now**, not from where
+  it was when ORB was armed, for the same reason.
+
+**Whether the lock exists at all is `orbitLockShowing`, and there is exactly
+one copy of it.** Three conditions, each an absence the user can see: ORB is
+the frame (nothing else has a travelling datum), no REF or TGT datum is held
+over the top (that is a fixed datum again), and the camera is in **navigate**
+— the ride orbits the camera about `controls.target`, which is not what
+observe's camera does, since it sits on the object rather than circling it.
+`refresh` writes the padlock's `hidden` from that rule and clears the lock
+whenever it goes false, so the lock leaves with the frame, with a datum, and
+with the mode.
+
+**`Shift`+`L` is a silent no-op while the chip is off screen**, gated on the
+chip's `hidden` — the rule's own output, not a second copy of it. Gating on
+that attribute *instead of* the rule is the trap, and it shipped once: the
+whole Instruments panel is hidden in observe without the chip's own `hidden`
+changing, so the key engaged a lock nobody could see, which then took effect
+on the way back to navigate. `L` levels on the frame and `Shift`+`L` holds
+you there, which is why the lock took that chord rather than one of its own —
+and it was free, `S` to ORB then `L` having replaced the arm-and-level
+gesture it used to carry.
+
+Rebuilding rather than only rolling is what makes the gesture legible: rolling
+to a plane the instrument is not displaying leaves the caret reading un-level
+against the *old* frame, so the gesture would look like it had failed.
+
+**Always the innermost orbit the object is on.** Luna levels on its orbit
+about Earth, not Earth's about Sol; Algol Aa2 on its tight inner pair, not
+on the wide Aa-Ab one its primary also belongs to. Each subsystem answers
+from its own elements — `PlanetBodyField.orbitPlaneNormalOf` /
+`orbitCentreOffsetInto` for a body (`../../solar-system/ephemerides/README.md`
+§ Orbit rings), `starOrbitNormalIcrs` plus the returned pair's other member
+for a pair (`../../binaries/README.md` § Which pair a star rides).
+
+**Whatever plane that orbit is drawn in is the plane ORB captures** — a
+published inclination where there is one, the galactic-plane fallback where
+there is not. The rule is "level me on the orbit you are showing me", and
+it holds for every orbit the model draws. Anything narrower makes the
+affordance appear and disappear on a property of the *source data* that
+nothing on screen exposes, which is the same ring either way; a user who
+finds ORB on one companion and not its neighbour has been shown no reason
+why. Dabih is the case: β Cap's Ab and Ab2 sit in a spectroscopic sub-pair
+whose tilt was never published, and they level on it like anything else.
+
+**The obvious shortcut is wrong and must stay unused here.**
+`orbitalPlaneNormalFor()` answers per HOST STAR — the ecliptic for Sol,
+galactic otherwise — so routing a body through it would level every
+solar-system object on the ecliptic and every moon on the wrong plane, while
+looking exactly like a working feature.
+
+Two silent no-ops, and both are absences the user can see, because in each
+case nothing is drawn to level on: a **Tier-3 pair**, which carries no
+orbital elements at all, so no orbit is evaluated and no ring appears; and a
+**host with no live element source** (its rings fall back to
+`defaultOrbitGeometry`, flat on the host plane). Kinds that ride no orbit at
+all — probes, clouds, shells — are the third, and the ordinary one. Where
+there is no ring, there is no ORB.
+
+The normal is a static function of the elements, not a sampled one: an orbit
+is planar, so `r(t) × r(t+dt)` recovers only what `Rz(Ω)·Rx(I)·Rz(ω)` and the
+Thiele-Innes basis already state exactly, and it degenerates whenever the two
+samples come back near-parallel.
+
+Retrograde orbits keep their sense. Triton's normal points south of the
+ecliptic and levelling on it inverts the view, because that is where its
+angular momentum points.

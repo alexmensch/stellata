@@ -223,7 +223,7 @@ async function main() {
     createClickRipple(stellata);
     for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
       createCoordSphereLabels(stellata, COORD_SPHERE_SPECS[frame], () =>
-        stellata.filters.getFilter().coordSphere === frame ? stellata.coordSphereFade(frame) : 0);
+        stellata.coordSphereDrawn(frame) ? 1 : 0);
     }
     createPlanetLabels(stellata);
     // Kind-module SVG label overlays (probe, cloud, lg, shell).
@@ -235,6 +235,7 @@ async function main() {
     createMilkyWayLabel(stellata);
     createScaleBar(stellata);
     const attitude = createAttitudeIndicator(stellata);
+    if (attitude !== null) stellata.setOrbitFrameTick(attitude.tickOrbitFrame);
     bindWarpButton(stellata);
     bindModeToggle(stellata);
     // Hide the #overlay SVG (HUD arrows, focus ring, distance vector,
@@ -305,7 +306,9 @@ async function main() {
       bindControlsHideToggle();
       bindKeyboardShortcuts(stellata, {
         levelAttitude: () => attitude?.level(),
-        levelAttitudeOnOrbit: () => attitude?.levelOnOrbit(),
+        cycleReferenceFrame: () => attitude?.cycleFrame(),
+        aimAtFrameOrigin: (opposite) => attitude?.aimAtFrameOrigin(opposite),
+        toggleOrbitLock: () => attitude?.toggleOrbitLock(),
         toggleDebugPanel: debugTools.panel,
         timeScrubber,
       });

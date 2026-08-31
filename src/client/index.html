@@ -137,6 +137,7 @@
            coord-sphere-labels.ts. Drawn early so the background orientation
            grid sits behind the HUD / POI / star-name overlays. -->
       <g id="gal-grid-labels"></g>
+      <g id="ecl-grid-labels"></g>
       <g id="eq-grid-labels"></g>
       <!-- Chart-mode label + glyph layers, populated per frame by
            chart-labels.ts (which refuses to mint a missing one). This
@@ -609,19 +610,21 @@
               </span>
             </div>
 
-            <!-- Tooltip on the row, not the equatorial button: that button is
-                 the one that gets disabled, and a disabled control's own title
-                 doesn't reliably surface. Same reason as #show-chart-row. -->
+            <!-- Tooltip on the row, not the buttons: those are what get
+                 disabled, and a disabled control's own title doesn't reliably
+                 surface. Same reason as #show-chart-row. -->
             <div
               class="sub-label-row group-block"
               id="coord-sphere-row"
-              title="Equatorial is Earth-referenced — available near Sol only"
+              title="Each frame is offered where it describes something — the ecliptic across Sol's system, equatorial from Earth"
             >
               <label class="sub-label">Coordinate sphere</label>
               <span class="row-actions" id="coord-sphere">
                 <button class="link-btn coord-sphere-stop" data-coord-sphere="none" type="button">none</button>
                 <span class="sep">·</span>
                 <button class="link-btn coord-sphere-stop" data-coord-sphere="galactic" type="button">galactic</button>
+                <span class="sep">·</span>
+                <button class="link-btn coord-sphere-stop" data-coord-sphere="ecliptic" type="button">ecliptic</button>
                 <span class="sep">·</span>
                 <button class="link-btn coord-sphere-stop" data-coord-sphere="equatorial" type="button">equatorial</button>
               </span>
@@ -719,7 +722,23 @@
 
     <div class="ui-bottom">
       <div class="bottom-left-stack">
-        <div id="attitude" class="attitude" hidden></div>
+        <aside class="panel instruments" hidden id="instruments">
+          <div class="panel-header" id="instruments-header">
+            <span>Instruments</span>
+            <button class="panel-toggle" id="instruments-toggle" type="button" aria-label="Collapse instruments" aria-expanded="true">−</button>
+          </div>
+          <div class="panel-inner" id="instruments-inner">
+            <section class="group" data-group="attitude">
+              <header class="group-header">
+                <h3>Attitude indicator</h3>
+                <button class="group-toggle" type="button" aria-label="Toggle Attitude indicator section" aria-expanded="true">−</button>
+              </header>
+              <div class="group-body">
+                <div id="attitude" class="attitude"></div>
+              </div>
+            </section>
+          </div>
+        </aside>
         <div id="scale-bar" class="scale-bar" hidden></div>
       </div>
     </div>

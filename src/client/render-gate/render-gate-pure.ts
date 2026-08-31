@@ -66,11 +66,13 @@ export function writePose(
 }
 
 /** Shift a stored snapshot's position + target slots by a translation
- *  applied AFTER the tick that captured it. Orientation, fov and
- *  worldOffset are untouched: the only such writer is the focal ride,
- *  which translates camera and target together and rotates nothing. A
- *  NaN-seeded slot stays NaN, so a snapshot that has never rendered
- *  still differs from every real pose. */
+ *  applied AFTER the tick that captured it — the focal ride, which
+ *  translates camera and target together and rotates nothing. Orientation,
+ *  fov and worldOffset are untouched, so a rotation applied below the gate
+ *  is NOT absorbable here and must instead decline steps too small to see
+ *  (`README.md` § The focal ride names the second such writer). A
+ *  NaN-seeded slot stays NaN, so a snapshot that has never rendered still
+ *  differs from every real pose. */
 export function rebasePoseTranslation(
   pose: Float64Array, dx: number, dy: number, dz: number,
 ): void {

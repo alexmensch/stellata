@@ -3,13 +3,6 @@
 
 import type * as THREE from 'three';
 
-/** Half-width of the alignment-guide band: a roll gesture sticks to level
- *  while the roll it requests stays within this of it. The only definition
- *  of the band — every consumer and test reads it from here rather than
- *  restating a number. */
-export const SNAP_TO_LEVEL_DEG = 2;
-export const SNAP_TO_LEVEL_RAD = (SNAP_TO_LEVEL_DEG * Math.PI) / 180;
-
 /** Signed angle that rotates `from` onto `to` about `axis`, right-hand
  *  rule. Allocation-free — the cross product is inlined against `axis`. */
 export function signedAngleAbout(

@@ -1,21 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
-  SNAP_TO_LEVEL_DEG,
-  SNAP_TO_LEVEL_RAD,
   cameraLocalUpInto,
   levelUpInto,
   signedAngleAbout,
 } from './roll-pure';
 
 const deg = (d: number) => (d * Math.PI) / 180;
-
-describe('the alignment-guide band', () => {
-  it('pins its width, in both units', () => {
-    expect(SNAP_TO_LEVEL_DEG).toBe(2);
-    expect(SNAP_TO_LEVEL_RAD).toBeCloseTo(deg(2), 15);
-  });
-});
 
 describe('levelUpInto', () => {
   it('returns sin θ and a unit up perpendicular to forward', () => {

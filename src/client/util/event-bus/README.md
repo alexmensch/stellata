@@ -45,6 +45,22 @@ not an accident of whichever sibling you copied:
 The tell is whether the subscriber's own teardown function exists. If
 it does, the unsub belongs in it.
 
+## `frame` fires AFTER the render, and that rules it out for a camera write
+
+It fires once per **rendered** frame, elided on a tick the render gate skips
+(`../../render-gate/README.md`), and it fires *after* the draw. So a handler
+that writes the camera there lands on a frame already on screen: the write
+shows up one frame later, and anything the frame drew from the camera —
+including that handler's own instrument — disagrees with it in the meantime.
+
+**The bus is the wrong seam for that write, not just the wrong event.** Where
+in the frame a camera write belongs is an ordering claim about other layers
+(after the position writes, before the projectors), and the scene registry is
+the only place that can express it — `../../scene/README.md` § Not every entry
+owns a layer. The orbit lock is the worked example: it rides through
+`Stellata.setOrbitFrameTick` from a sequencing-only registry entry, and only
+its *drawing* rides `frame` (`../../attitude/orbit-frame/README.md` § The lock).
+
 ## Authoring a new event
 
 Payload types live in `StellataEventMap` (`../../stellata.ts`, where

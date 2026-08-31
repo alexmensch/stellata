@@ -18,6 +18,9 @@
   --page-margin-x: 14px;
   --page-margin-top: 10px;
   --page-margin-bottom: 16px;
+  /* Both fixed panel stacks are this wide — the settings column top-right
+     and the instruments panel bottom-left, so the two read as one system. */
+  --panel-width: 280px;
 }
 
 * { box-sizing: border-box; }
@@ -124,7 +127,7 @@ html, body {
   top: var(--page-margin-top);
   right: var(--page-margin-x);
   bottom: var(--page-margin-bottom);
-  width: 280px;
+  width: var(--panel-width);
   max-width: calc(100vw - 2 * var(--page-margin-x));
   display: flex;
   flex-direction: column;
@@ -220,7 +223,7 @@ html, body {
 body[data-controls-hidden] #topbar,
 body[data-controls-hidden] #panel,
 body[data-controls-hidden] #card-stack,
-body[data-controls-hidden] #attitude {
+body[data-controls-hidden] #instruments {
   display: none;
 }
 .controls-restore-btn {
@@ -1282,7 +1285,8 @@ body.monochrome .poi-label {
    scale bar; the frame flag and the invert chip sit in the instrument's own
    bottom corners, the way a mode flag sits on an aircraft AI.
 
-   The instrument's size arrives as --ai-box / --ai-ball, set on the host by
+   The instrument's size is its container's: it fills the panel column, and
+   --ai-ball-frac (the ball's share of the square box, set on the host by
    attitude-indicator.ts from the constants its SVG is drawn against. Those
    two are the whole contract: the drawing keeps its own 192-unit design
    space and the rules below scale it, so the instrument resizes from one
@@ -1299,10 +1303,23 @@ body.monochrome .poi-label {
   gap: 8px;
   pointer-events: none;
 }
+/* The instruments panel takes the settings panel's chrome wholesale and
+   differs only in what bounds it: it hangs off the bottom of the viewport
+   rather than the top, so it sizes to its contents instead of sharing a
+   column's height budget. The scale bar underneath aligns to this box's
+   edge — ui/README.md § Bottom-left widget. */
+.instruments {
+  flex: 0 0 auto;
+  width: var(--panel-width);
+  max-width: calc(100vw - 2 * var(--page-margin-x));
+}
+.instruments .panel-inner {
+  overflow: visible;
+}
 .bottom-left-stack > * { pointer-events: auto; }
 .attitude {
   position: relative;
-  width: var(--ai-box);
+  width: 100%;
   color: var(--fg);
   font-size: 10.5px;
   letter-spacing: 0.06em;
@@ -1313,8 +1330,8 @@ body.monochrome .poi-label {
 }
 .attitude-stage {
   position: relative;
-  width: var(--ai-box);
-  height: var(--ai-box);
+  width: 100%;
+  aspect-ratio: 1;
   cursor: pointer;
   pointer-events: auto;
   /* Clips the hit area as well as the paint — the whole point. The outermost
@@ -1340,10 +1357,15 @@ body.monochrome .poi-label {
 .attitude-stage .ai-canvas {
   position: absolute;
   display: block;
-  width: var(--ai-ball);
-  height: var(--ai-ball);
-  left: calc((var(--ai-box) - var(--ai-ball)) / 2);
-  top: calc((var(--ai-box) - var(--ai-ball)) / 2);
+  width: calc(var(--ai-ball-frac) * 100%);
+  height: calc(var(--ai-ball-frac) * 100%);
+  left: calc((1 - var(--ai-ball-frac)) * 50%);
+  top: calc((1 - var(--ai-ball-frac)) * 50%);
+  /* The window the ball is read through. The sphere overflows the canvas
+     under the narrow view FOV, so the square's corners hold ball too — this
+     is what makes the instrument a disc rather than a rounded square, and
+     `BALL_R` is the same circle in design units. */
+  clip-path: circle(50%);
 }
 .attitude-stage .ai-chrome {
   position: absolute;
@@ -1362,12 +1384,12 @@ body.monochrome .poi-label {
   stroke: var(--fg);
   opacity: 0.75;
 }
-/* Both corner chips: the frame flag and the invert control. They sit in the
-   square's free corners, which the disc-clipped stage leaves clear of the
-   outermost tick, so neither steals a click meant for the sky. */
+/* The three corner chips: the REF datum toggle, the frame flag and the invert
+   control. They sit in the square's free corners, which the disc-clipped stage
+   leaves clear of the outermost tick, so none steals a click meant for the
+   sky. */
 .attitude-chip {
   position: absolute;
-  bottom: 0;
   pointer-events: auto;
   background: rgba(7, 9, 18, 0.72);
   border: 1px solid var(--border-strong);
@@ -1378,11 +1400,63 @@ body.monochrome .poi-label {
   letter-spacing: 0.08em;
   padding: 1px 5px;
   cursor: pointer;
+  /* One box for every chip, whatever it contains. A drawn glyph has no line
+     box of its own, so without a pinned content height the lock would sit
+     tighter than the lettered chips beside it — the height comes from the
+     class, and the content is centred in it. */
+  line-height: 1.35;
+  min-height: calc(1.35em + 4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.attitude-frame { left: 0; }
-.attitude-invert { right: 0; }
+.attitude-ref { top: 0; left: 0; }
+.attitude-invert { bottom: 0; right: 0; }
+/* The frame flag and the orbit lock read as one control, so they are a column
+   pinned to the corner rather than two chips placed apart. The flag holds the
+   corner whether or not the lock is there — the lock appears and disappears
+   beneath it as the frame cycles through ORB, and nothing else moves. */
+.attitude-flag-stack {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.attitude-flag-stack > * { pointer-events: auto; }
+.attitude-flag-stack .attitude-chip { position: relative; }
+/* One shared border line rather than two abutting ones. */
+.attitude-lock { margin-top: -1px; }
+.attitude-lock .ai-lock-glyph {
+  display: block;
+  /* Cap height, so the padlock reads at the size of the ORB lettering above
+     it rather than filling the box the class pins. */
+  height: 0.95em;
+  width: 0.8em;
+}
 .attitude-chip:hover,
 .attitude-chip:focus-visible {
+  border-color: var(--fg);
+}
+/* An engaged chip fills in the index cross's own colour — the ball is reading
+   against a datum, or riding one, and the cross is where you see it. Both
+   values come from attitude-indicator.ts's constants, so a chip cannot drift
+   off the cross. Dark ink on the fill, at 9.5:1; the light tone would sit at
+   1.8:1. The lock's glyph is stroked in currentColor, so it inverts with it.
+
+   **The fill stops at the padding box and the border keeps its own colour.**
+   `--border-strong` is translucent, so a fill painted under it would tint it
+   orange — and where the lock meets the flag above it the two share one
+   border line, which the fill would then paint over and break. */
+.attitude-chip.on {
+  background: var(--ai-index);
+  background-clip: padding-box;
+  color: var(--ai-index-ink);
+}
+.attitude-chip.on:hover,
+.attitude-chip.on:focus-visible {
   border-color: var(--fg);
 }
 

@@ -185,6 +185,15 @@ export interface PlanetSystem {
    *  absent the ring layer falls back to `defaultOrbitGeometry`
    *  (static Planet a/e, flat on the host plane, perihelion at +x). */
   orbitGeometryAt?: (t: number) => readonly BodyOrbitGeometry[];
+  /** One body's row of the above. A caller wanting a single body's orbit
+   *  plane — the attitude indicator's ORB frame — must come through here:
+   *  the array form evaluates every body in the system, which for Sol is
+   *  the lunar theory plus 17 Kepler solves, to answer about one.
+   *
+   *  **Implement it with `orbitGeometryAt`, never instead of it.** Both are
+   *  optional and a host offering only the array silently loses ORB, so
+   *  they come as a pair off one per-body builder. */
+  orbitGeometryOfAt?: (bodyIdx: number, t: number) => BodyOrbitGeometry | null;
 }
 
 /** Parent-relative Keplerian ring geometry for one body — the orbit-
@@ -552,12 +561,16 @@ export const SOL_BODIES: readonly Planet[] = [...SOL_PLANETS, ...SOL_MOONS];
 interface MoonCompose {
   readonly elem: MoonElements;
   readonly parent: PlanetName;
+  /** The parent's slot in `PLANET_ORDER`, resolved once here rather than
+   *  scanned per body per frame in the ring geometry below. */
+  readonly parentIdx: number;
 }
 const EARTH_ORDER_INDEX = PLANET_ORDER.indexOf('earth');
 const MOON_COMPOSE: readonly MoonCompose[] = SOL_MOONS.map((m) => {
   const elem = MOON_ELEMENTS_BY_NAME.get(m.name);
   if (!elem) throw new Error(`MOON_COMPOSE: no orbital elements for ${m.name}`);
-  return { elem, parent: elem.parent.toLowerCase() as PlanetName };
+  const parent = elem.parent.toLowerCase() as PlanetName;
+  return { elem, parent, parentIdx: PLANET_ORDER.indexOf(parent) };
 });
 
 const _moonOffset: Vec3 = { x: 0, y: 0, z: 0 };
@@ -581,32 +594,55 @@ export function solOrbitGeometryAt(t: number): BodyOrbitGeometry[] {
     ...s,
     parentIdx: null,
   }));
-  for (const { elem, parent } of MOON_COMPOSE) {
-    const osc = elem.useLunarTheory
-      ? moonOsculatingOrbit(t, EARTH_GRAV_PARAM_GM)
-      : null;
-    // Kepler moons read their node from the same helper the resolver
-    // positions them with, so Triton's precessing node moves its ring
-    // too — reading the static `elem.nodeDeg` here left the ring 14°
-    // out by the present day.
-    const kepler = osc ? null : keplerMoonAnglesAt(elem, t);
-    out.push({
-      aAu: (osc ? osc.aKm : elem.aKm) / AU_KM,
-      e: osc ? osc.e : elem.e,
-      orientation: {
-        inclination: osc ? osc.incRad : elem.incDeg * DEG,
-        longAscNode: osc ? osc.nodeRad : kepler!.nodeRad,
-        argPerihelion: osc ? osc.argPeriRad : elem.periDeg * DEG,
-      },
-      refPoleRaDeg: elem.refPoleRaDeg,
-      refPoleDecDeg: elem.refPoleDecDeg,
-      parentIdx: PLANET_ORDER.indexOf(parent),
-      eccentricAnomaly: osc
-        ? osc.eccAnomalyRad
-        : solveKepler(kepler!.mRad, elem.e),
-    });
-  }
+  for (const compose of MOON_COMPOSE) out.push(moonOrbitGeometry(compose, t));
   return out;
+}
+
+/** Sol's `orbitGeometryOfAt` — one body's row of the array above, without
+ *  evaluating the other 26. A planet's shape comes off
+ *  `getPlanetOrbitShapes`' per-`t` cache, which the body positions have
+ *  already filled this frame; a moon costs its own single Kepler solve, or
+ *  one lunar-theory evaluation for the Moon. */
+export function solOrbitGeometryOfAt(
+  bodyIdx: number,
+  t: number,
+): BodyOrbitGeometry | null {
+  if (bodyIdx < 0) return null;
+  const planetCount = PLANET_ORDER.length;
+  if (bodyIdx < planetCount) {
+    return { ...getPlanetOrbitShapes(t)[bodyIdx], parentIdx: null };
+  }
+  const compose = MOON_COMPOSE[bodyIdx - planetCount];
+  return compose === undefined ? null : moonOrbitGeometry(compose, t);
+}
+
+function moonOrbitGeometry(
+  { elem, parentIdx }: MoonCompose,
+  t: number,
+): BodyOrbitGeometry {
+  const osc = elem.useLunarTheory
+    ? moonOsculatingOrbit(t, EARTH_GRAV_PARAM_GM)
+    : null;
+  // Kepler moons read their node from the same helper the resolver
+  // positions them with, so Triton's precessing node moves its ring
+  // too — reading the static `elem.nodeDeg` here left the ring 14°
+  // out by the present day.
+  const kepler = osc ? null : keplerMoonAnglesAt(elem, t);
+  return {
+    aAu: (osc ? osc.aKm : elem.aKm) / AU_KM,
+    e: osc ? osc.e : elem.e,
+    orientation: {
+      inclination: osc ? osc.incRad : elem.incDeg * DEG,
+      longAscNode: osc ? osc.nodeRad : kepler!.nodeRad,
+      argPerihelion: osc ? osc.argPeriRad : elem.periDeg * DEG,
+    },
+    refPoleRaDeg: elem.refPoleRaDeg,
+    refPoleDecDeg: elem.refPoleDecDeg,
+    parentIdx,
+    eccentricAnomaly: osc
+      ? osc.eccAnomalyRad
+      : solveKepler(kepler!.mRad, elem.e),
+  };
 }
 
 /** Parent/children index maps for a system's body list. */
@@ -676,5 +712,6 @@ export async function getPlanetSystem(
     planets: SOL_BODIES,
     positionsAt: solPositionsAt,
     orbitGeometryAt: solOrbitGeometryAt,
+    orbitGeometryOfAt: solOrbitGeometryOfAt,
   };
 }

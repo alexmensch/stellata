@@ -185,16 +185,19 @@ The declutter `detailLevel` rides its own 1-byte enum field (bit 23,
 `detailLevelField`), present only when the user cycled below the default
 `all` — a fully-cluttered share stays byte-identical to before.
 
-`coordSphere` is a **tri-state carried across two places**, not one field:
-FLAG_GRID (flags bit 0) means "a coordinate sphere is up", and zero-byte
-presence bit 24 (`coordSphereEquatorialField`) says which. Layering rather
-than replacing FLAG_GRID with an enum is what makes both compatibility
-directions free — a pre-equatorial link (FLAG_GRID alone) decodes to the
-galactic sphere, and a client predating bit 24 ignores the unknown high mask
-bit and shows the galactic sphere instead of none. Bit 24 decodes *after*
-`flagsField` (bit 13), so it overwrites the `'galactic'` that `unpackFlags`
-wrote; a new enum field would have cost the galactic case a payload byte
-where it currently costs zero.
+`coordSphere` is a **four-state carried across several places**, not one
+field: FLAG_GRID (flags bit 0) means "a coordinate sphere is selected", and
+one zero-byte presence bit per frame past the galactic default says which —
+bit 24 equatorial, bit 26 ecliptic, both built by `coordSphereFrameField`.
+Layering rather than replacing FLAG_GRID with an enum is what makes both
+compatibility directions free: a pre-equatorial link (FLAG_GRID alone) decodes
+to the galactic sphere, and a client predating a frame's bit ignores the
+unknown high mask bit and shows the galactic sphere instead of none. Each bit
+decodes *after* `flagsField` (bit 13), so it overwrites the `'galactic'` that
+`unpackFlags` wrote; an enum field would have cost the galactic case a payload
+byte where it currently costs zero. **A frame's bit is frozen once it ships**
+— a link in the wild carries it — so a further frame claims the next free bit
+rather than renumbering.
 
 The manual **EV trim** rides bit 25 as a 1-byte field quantised to the
 slider's own `EV_STEP_STOPS` grid, present only when the user moved it off
