@@ -1,6 +1,6 @@
 // Per-row sky-direction resolution for the catalog build: Gaia DR3 5p →
 // HIP2 → Tycho-2 → CNS5 → SIMBAD, with proper-motion propagation to the
-// J2016.0 scene epoch. See scripts/catalog/README.md § Direction resolution.
+// J2016.0 scene epoch. See README.md § Direction resolution.
 
 import {
   equatorialTangentBasis,
@@ -16,11 +16,8 @@ import type { SimbadAstrometry } from '../simbad-values-parse';
 export const GAIA_DR3_REF_EPOCH = 2016.0;
 export const HIP2_REF_EPOCH = 1991.25;
 /** SIMBAD states `basic.ra` / `basic.dec` at J2000.0 whatever epoch the
- *  citation measured them at — measured, not assumed: over the 673 catalogue
- *  rows carrying both a SIMBAD position and a Gaia PM above 500 mas/yr, the
- *  SIMBAD position matches the Gaia one back-propagated to J2000 to a median
- *  0.000″, and not one row is closer to J2016. See README.md § Direction
- *  resolution. */
+ *  citation measured them at. The pull carries no epoch column, so this is
+ *  measured rather than assumed — README.md § Direction resolution. */
 export const SIMBAD_REF_EPOCH = 2000.0;
 // Gaia DR3's native epoch: the catalogue-wide scene epoch every position
 // is normalised onto. The dominant Gaia set lands here with zero
@@ -153,11 +150,10 @@ export interface DirectionResolution {
   velVia: VelocityVia;
 }
 
-
 /** Sky direction at `toEpoch` for a source measured at `fromEpoch` —
  *  RV-free linear space-motion form (accuracy budget + the
- *  perspective-acceleration omission are in scripts/catalog/README.md
- *  § Direction resolution).
+ *  perspective-acceleration omission are in README.md § Direction
+ *  resolution).
  *
  *  `pmraMasyr` is the tier's own μ_α* — the cos δ-applied east-component
  *  rate. Do NOT divide by cos δ before calling. Either PM component
@@ -177,15 +173,9 @@ export function directionAtEpoch(
 }
 
 /** {@link directionAtEpoch} where the two coordinates are measured at
- *  DIFFERENT epochs, so each advances over its own interval.
- *
- *  Tycho-2 is the tier that needs it: its mean position is observed per star
- *  AND per coordinate, so a row can read `ep_ra` 1991.07 against `ep_de`
- *  1991.00 (every one of the 40 mean-solution rows in the no-Gaia cohort has
- *  the two differing). Collapsing them onto one epoch would advance one
- *  coordinate over the wrong baseline. Every other tier states both
- *  coordinates at one epoch and reaches this through the single-epoch form
- *  above. */
+ *  DIFFERENT epochs, so each advances over its own interval — the Tycho-2
+ *  tier's shape, and the only one that needs it (README.md § Every tier
+ *  states its own epoch, and one of them states two). */
 export function directionAtEpochSplit(
   raDeg: number,
   decDeg: number,
@@ -289,9 +279,20 @@ export function hip2PmDisagrees(
   );
 }
 
+/** The velocity source a tier supplies: its own PM where the solution states
+ *  both components, else `zero`. Every tier answers this the same way, so the
+ *  tangential term can only go missing for the one stated reason. */
+function pmVelVia(
+  pmRa: number | null,
+  pmDec: number | null,
+  via: VelocityVia,
+): VelocityVia {
+  return pmRa !== null && pmDec !== null ? via : 'zero';
+}
+
 /** Resolve one spine row's J2016.0 sky direction through the trust cascade.
- *  Route semantics + priority order in scripts/catalog/README.md § Direction
- *  resolution; the Gaia/HIP2 thresholds mirror
+ *  Route semantics + priority order in README.md § Direction resolution; the
+ *  Gaia/HIP2 thresholds mirror
  *  scripts/binaries/stage3_astrometry.py.
  *
  *  Returns null only when no tier reaches the row at all. That is a record
@@ -307,11 +308,9 @@ export function resolveDirection(
     : undefined;
   const hip2 = hip !== null ? sources.hip2.get(hip) : undefined;
 
-  const gaiaVelVia = (): VelocityVia =>
-    gaia !== undefined && gaia.pmraMasyr !== null && gaia.pmdecMasyr !== null
-      ? 'gaia_pm' : 'zero';
-  const hip2VelVia = (h: Hip2AstrometryRow): VelocityVia =>
-    h.pmRaMasyr !== null && h.pmDeMasyr !== null ? 'hip2_pm' : 'zero';
+  const gaiaVelVia = (): VelocityVia => gaia === undefined
+    ? 'zero'
+    : pmVelVia(gaia.pmraMasyr, gaia.pmdecMasyr, 'gaia_pm');
 
   if (gaia !== undefined && gaiaHas5pSolution(gaia)) {
     const fromGaia = (via: DirectionVia): DirectionResolution => ({
@@ -340,7 +339,7 @@ export function resolveDirection(
         ),
         srcRaDeg: hip2.raDeg, srcDecDeg: hip2.decDeg,
         srcPmraMasyr: hip2.pmRaMasyr, srcPmdecMasyr: hip2.pmDeMasyr,
-        velVia: hip2VelVia(hip2),
+        velVia: pmVelVia(hip2.pmRaMasyr, hip2.pmDeMasyr, 'hip2_pm'),
       };
     }
     return fromGaia('gaia_5p');
@@ -355,7 +354,7 @@ export function resolveDirection(
       ),
       srcRaDeg: hip2.raDeg, srcDecDeg: hip2.decDeg,
       srcPmraMasyr: hip2.pmRaMasyr, srcPmdecMasyr: hip2.pmDeMasyr,
-      velVia: hip2VelVia(hip2),
+      velVia: pmVelVia(hip2.pmRaMasyr, hip2.pmDeMasyr, 'hip2_pm'),
     };
   }
 
@@ -389,12 +388,12 @@ export function resolveDirection(
       ),
       srcRaDeg: tycho2.raDeg, srcDecDeg: tycho2.decDeg,
       srcPmraMasyr: tycho2.pmRaMasyr, srcPmdecMasyr: tycho2.pmDecMasyr,
-      velVia: tycho2.pmRaMasyr !== null && tycho2.pmDecMasyr !== null
-        ? 'tycho2_pm' : 'zero',
+      velVia: pmVelVia(tycho2.pmRaMasyr, tycho2.pmDecMasyr, 'tycho2_pm'),
     };
   }
 
-  const cns5 = gl !== null ? sources.cns5.get(normaliseGjKey(gl) ?? '') : undefined;
+  const cns5Key = normaliseGjKey(gl);
+  const cns5 = cns5Key !== null ? sources.cns5.get(cns5Key) : undefined;
   if (cns5 !== undefined) {
     return {
       via: 'cns5',
@@ -404,8 +403,7 @@ export function resolveDirection(
       ),
       srcRaDeg: cns5.raDeg, srcDecDeg: cns5.decDeg,
       srcPmraMasyr: cns5.pmRaMasyr, srcPmdecMasyr: cns5.pmDecMasyr,
-      velVia: cns5.pmRaMasyr !== null && cns5.pmDecMasyr !== null
-        ? 'cns5_pm' : 'zero',
+      velVia: pmVelVia(cns5.pmRaMasyr, cns5.pmDecMasyr, 'cns5_pm'),
     };
   }
 
@@ -418,8 +416,7 @@ export function resolveDirection(
       ),
       srcRaDeg: simbad.raDeg, srcDecDeg: simbad.decDeg,
       srcPmraMasyr: simbad.pmRaMasyr, srcPmdecMasyr: simbad.pmDecMasyr,
-      velVia: simbad.pmRaMasyr !== null && simbad.pmDecMasyr !== null
-        ? 'simbad_pm' : 'zero',
+      velVia: pmVelVia(simbad.pmRaMasyr, simbad.pmDecMasyr, 'simbad_pm'),
     };
   }
 

@@ -11,7 +11,6 @@ import {
   rielloVMagnitude,
   resolveVMagnitude,
   rielloGMinusV,
-  tycho2ColourOutsideRange,
   tycho2VMagnitude,
   vTierIsSystemBlend,
 } from './v-magnitude-pure';
@@ -134,24 +133,24 @@ describe('resolveVMagnitude cascade', () => {
 describe('tycho2VMagnitude', () => {
   // SP-1200 § 1.3: V = VT − 0.090(BT−VT).
   it('reduces VT to Johnson V through the published coefficient', () => {
-    expect(tycho2VMagnitude(9.5, 8.9)).toBeCloseTo(8.9 - 0.090 * 0.6, 12);
+    expect(tycho2VMagnitude(9.5, 8.9).v).toBeCloseTo(8.9 - 0.090 * 0.6, 12);
   });
 
   it('needs both bands', () => {
-    expect(tycho2VMagnitude(null, 8.9)).toBeNull();
-    expect(tycho2VMagnitude(9.5, null)).toBeNull();
-    expect(tycho2VMagnitude(Number.NaN, 8.9)).toBeNull();
+    expect(tycho2VMagnitude(null, 8.9).v).toBeNull();
+    expect(tycho2VMagnitude(9.5, null).v).toBeNull();
+    expect(tycho2VMagnitude(Number.NaN, 8.9).v).toBeNull();
   });
 
   // Ungated on purpose — the rows outside the published range have no tier
   // below them, so refusing the value would cost each its record. The
   // population is counted instead, which is what this pins.
   it('still transforms outside the published colour range, and flags it', () => {
-    expect(tycho2VMagnitude(13.0, 10.31)).not.toBeNull();
-    expect(tycho2ColourOutsideRange(13.0, 10.31)).toBe(true);   // BT−VT 2.69
-    expect(tycho2ColourOutsideRange(9.5, 8.9)).toBe(false);     // BT−VT 0.60
-    expect(tycho2ColourOutsideRange(8.618, 8.9)).toBe(true);    // BT−VT −0.282
-    expect(tycho2ColourOutsideRange(null, 8.9)).toBe(false);
+    expect(tycho2VMagnitude(13.0, 10.31).v).not.toBeNull();
+    expect(tycho2VMagnitude(13.0, 10.31).outsideRange).toBe(true);   // BT−VT 2.69
+    expect(tycho2VMagnitude(9.5, 8.9).outsideRange).toBe(false);     // BT−VT 0.60
+    expect(tycho2VMagnitude(8.618, 8.9).outsideRange).toBe(true);    // BT−VT −0.282
+    expect(tycho2VMagnitude(null, 8.9).outsideRange).toBe(false);
   });
 
   it('pins the published coefficient and range as literals', () => {
