@@ -59,6 +59,7 @@ import { exposureCutMoved } from './render-gate/render-gate-pure';
 import {
   CADENCE_REPORT_STILL,
   cadenceSimBudgetS,
+  cadenceVisibleTurnRad,
   clockFrameDue,
   maxCadenceReport,
   pulsationCadenceBudgetS,
@@ -2331,6 +2332,16 @@ export class Stellata implements FrameAnchor {
   private angularToPx(): number {
     const u = this.sharedUniforms;
     return angularToPxPure(u.uViewport.value.y, u.uFovYRad.value);
+  }
+
+  /** The smallest camera turn two rendered frames could show apart, at the
+   *  current viewport and FOV. A per-frame camera writer below the gate
+   *  reads this and declines anything smaller, which is what keeps it from
+   *  waking the gate on every tick — `render-gate/cadence/README.md`.
+   *  The pixel ratio stays on this side of the call, as it does for the
+   *  layers' rate reports. */
+  visibleCameraTurnRad(): number {
+    return cadenceVisibleTurnRad(this.angularToPx(), this.renderer.getPixelRatio());
   }
 
   // Scratch slot for the non-allocating *LocalPositionInto helpers.

@@ -27,6 +27,25 @@ export const CADENCE_SAFETY_FACTOR = 2;
 export const CADENCE_MOTION_THRESHOLD_DEVICE_PX =
   CADENCE_VISIBLE_STEP_DEVICE_PX / CADENCE_SAFETY_FACTOR;
 
+/** The threshold above as a CAMERA TURN, in radians at the current view.
+ *
+ *  A writer that moves the camera itself cannot report a rate and be
+ *  scheduled — it has already written by the time the gate looks — so the
+ *  one thing it can do is decline to write a step below what a rendered
+ *  frame could show. `RenderGate` compares poses for exact equality, so
+ *  any write at all costs every subsequent tick a frame; this is how a
+ *  per-frame camera writer stays inside the cadence instead of defeating
+ *  it (`../README.md` § The focal ride).
+ *
+ *  A degenerate viewport answers 0 — ride every step — because the safe
+ *  failure here is a frame too many, not an instrument that never moves. */
+export function cadenceVisibleTurnRad(pxPerRadian: number, pixelRatio: number): number {
+  const devicePxPerRadian = pxPerRadian * pixelRatio;
+  return devicePxPerRadian > 0
+    ? CADENCE_MOTION_THRESHOLD_DEVICE_PX / devicePxPerRadian
+    : 0;
+}
+
 /** Just-noticeable brightness change, as a fraction of the changing
  *  body's own flux. The photometric twin of the pixel threshold, and
  *  carrying the same safety factor: 2 % of a body's flux is about the

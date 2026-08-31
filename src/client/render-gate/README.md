@@ -219,6 +219,19 @@ The rebase touches exactly the six translation slots. Orientation, fov and
 `worldOffset` stay: absorbing a rotation would hide a real camera move, and
 a pan that moves `target` alone still wakes the gate.
 
+**A rotation applied below the gate therefore has no rebase to reach for,
+and the only other way to stay inside the schedule is to decline the write.**
+The attitude indicator's orbit lock is the second such writer — it swings the
+camera round with the focused object so the 8-ball stands still
+(`../attitude/orbit-frame/README.md` § The lock) — and it rides only a turn
+past `cadenceVisibleTurnRad`, the scheduling threshold expressed as a camera
+turn, holding the un-ridden remainder so sub-threshold turns accumulate into
+one that is worth a frame. Without that it is this section's loop exactly: at
+live 1× a moon's datum turns a few millionths of a degree per tick, every tick
+writes, and the gate never reaches the cadence. **A camera writer that cannot
+be rebased and does not threshold has no third option** — it will pin the gate
+open, and its own reading will look perfectly correct while it does.
+
 **What that carve-out originally justified itself with was wrong, and cost
 the cadence.** It read "the only writer is a ride, which translates camera
 and target together and rotates nothing". The ride rotates nothing — but

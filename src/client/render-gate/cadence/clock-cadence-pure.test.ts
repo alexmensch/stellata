@@ -8,6 +8,7 @@ import {
   CADENCE_SAFETY_FACTOR,
   CADENCE_VISIBLE_STEP_DEVICE_PX,
   cadenceSimBudgetS,
+  cadenceVisibleTurnRad,
   clockFrameDue,
   fasterRate,
   maxCadenceReport,
@@ -32,6 +33,30 @@ describe('the thresholds', () => {
 
   it('the cap is 30 sim seconds', () => {
     expect(CADENCE_CAP_SIM_S).toBe(30);
+  });
+});
+
+describe('cadenceVisibleTurnRad', () => {
+  // The pinned vantage the budgets are all quoted at: 900 CSS px of viewport
+  // height, 50° vertical FOV, 16:9, device ratio 2.
+  const PX_PER_RADIAN = 1031.32;
+
+  it('is the scheduling threshold in radians at the pinned vantage', () => {
+    const turn = cadenceVisibleTurnRad(PX_PER_RADIAN, 2);
+    expect(turn).toBeCloseTo(CADENCE_MOTION_THRESHOLD_DEVICE_PX / (PX_PER_RADIAN * 2), 15);
+    expect((turn * 180) / Math.PI).toBeCloseTo(0.0069445, 7);
+  });
+
+  it('halves when the display doubles its device pixels', () => {
+    expect(cadenceVisibleTurnRad(PX_PER_RADIAN, 2) * 2)
+      .toBeCloseTo(cadenceVisibleTurnRad(PX_PER_RADIAN, 1), 15);
+  });
+
+  // Zero means "no step is too small", so a viewport that has not resolved
+  // yet writes every frame rather than freezing whatever reads this.
+  it('answers zero for a degenerate viewport rather than infinity', () => {
+    expect(cadenceVisibleTurnRad(0, 2)).toBe(0);
+    expect(cadenceVisibleTurnRad(PX_PER_RADIAN, 0)).toBe(0);
   });
 });
 

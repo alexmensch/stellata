@@ -162,6 +162,29 @@ export function captureTargetFrame(
   return makeFrame('target', 'TGT', seed.addScaledVector(dir, -seed.dot(dir)), dir);
 }
 
+/** How far the orbit lock should carry the camera this frame: the signed
+ *  turn from where the datum was last ridden from to where it is now, read
+ *  about the orbit pole — or **zero while that is under `minRad`**.
+ *
+ *  The threshold is what keeps the lock inside the render gate's schedule
+ *  rather than defeating it. The ride writes the camera below the gate, so
+ *  the next tick reads any write at all as a fresh camera move and renders;
+ *  at live 1x a moon's datum turns a few millionths of a degree per tick,
+ *  which would pin the gate open forever for a step no display can show
+ *  (`orbit-frame/README.md` § The lock).
+ *
+ *  A caller that gets 0 must leave `from` where it is, so the turns
+ *  accumulate into one that is worth riding instead of being dropped. */
+export function orbitRideTurn(
+  from: THREE.Vector3,
+  to: THREE.Vector3,
+  pole: THREE.Vector3,
+  minRad: number,
+): number {
+  const turn = signedAngleAbout(from, to, pole);
+  return Math.abs(turn) < minRad ? 0 : turn;
+}
+
 const rideOffset = new THREE.Vector3();
 
 /** Carry a camera pose round `pivot` by `angle` about `axis`, writing both

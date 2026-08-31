@@ -22,13 +22,13 @@ import {
   nextFrameKey,
   emptyReferenceFrame,
   orbitFrameInto,
+  orbitRideTurn,
   ridePoseAbout,
   readAttitude,
   type Attitude,
   type AutoFrameKey,
   type ReferenceFrame,
 } from './attitude-pure';
-import { signedAngleAbout } from '../camera/controls/input/roll-pure';
 import { focusFrameInputs } from './focus-frame';
 import { coordSphereNorthPole } from '../galactic/coord-spheres/coord-sphere-frames';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
@@ -363,25 +363,30 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // first frame after it comes back, rather than showing a stale attitude.
   let missedWhileHidden = false;
 
-  /** Carry the camera by however far the orbit datum turned since the last
-   *  frame, so its attitude against ORB is unchanged and the ball reads the
-   *  same. The rotation is about the orbit normal by construction — the pole
-   *  is static and only zero longitude moves — so one axis-angle does both the
-   *  swing about the pivot and the roll.
+  /** Carry the camera by however far the orbit datum turned since it was
+   *  last ridden from, so its attitude against ORB is unchanged and the ball
+   *  reads the same. The rotation is about the orbit normal by construction —
+   *  the pole is static and only zero longitude moves — so one axis-angle
+   *  does both the swing about the pivot and the roll. True when it wrote.
    *
    *  **This is a camera writer on the steady-state navigate path**, which
    *  `../camera/controls/input/README.md` § Orbit drift otherwise forbids. It
    *  is admissible for the reason a gesture is: it writes only on a frame
-   *  where the datum actually moved, so a paused clock writes nothing and the
-   *  render gate can still idle. */
-  function rideOrbit(): void {
-    if (!riding) return;
-    const delta = signedAngleAbout(riddenZeroLon, orbitFrame.zeroLon, orbitFrame.pole);
-    if (delta === 0) return;
+   *  where the datum moved far enough for the write to show, so the render
+   *  gate can still idle between rides. */
+  function rideOrbit(): boolean {
+    const turn = orbitRideTurn(
+      riddenZeroLon,
+      orbitFrame.zeroLon,
+      orbitFrame.pole,
+      stellata.visibleCameraTurnRad(),
+    );
+    if (turn === 0) return false;
     const camera = stellata.camera;
     ridePoseAbout(
-      camera.position, camera.up, stellata.controls.target, orbitFrame.pole, delta,
+      camera.position, camera.up, stellata.controls.target, orbitFrame.pole, turn,
     );
+    return true;
   }
 
   /** Re-read ORB and, while the lock is engaged, carry the camera by however
@@ -403,10 +408,15 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     const rideable = orbitLocked
       && stellata.focus.getCameraMode() === 'navigate'
       && !stellata.isCameraTransitionActive();
-    if (rideable) rideOrbit();
-    // Whether or not the ride ran, the datum is where it is now: a frame
-    // skipped under a transition must not replay as one huge swing.
-    riddenZeroLon.copy(orbitFrame.zeroLon);
+    // `riding` false is a seeding frame — the lock has just been engaged, or a
+    // transition has just released the camera — and adopts the datum without
+    // riding it, so neither replays as one enormous swing.
+    const carry = rideable && riding;
+    const rode = carry && rideOrbit();
+    // A turn too small to see is not ridden and NOT forgotten: leaving the
+    // datum where it was last ridden from is what accumulates those turns into
+    // one that is worth a frame, instead of dropping each one.
+    if (!carry || rode) riddenZeroLon.copy(orbitFrame.zeroLon);
     riding = rideable;
   }
 

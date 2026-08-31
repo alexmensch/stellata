@@ -244,8 +244,9 @@ Two things went with that correction, and neither should come back:
 a frame an animation owns (§ The perpendicular invariant), the landing
 of a captured-endpoint animation, or the attitude indicator's **orbit lock**
 writes it. That last one is per-frame and is admissible for the reason a
-gesture is: it writes only on a frame where the orbit datum it rides actually
-moved, so a paused clock writes nothing and the gate still idles
+gesture is: it writes only on a frame where the orbit datum it rides moved far
+enough for the write to show, so a paused clock writes nothing, a live-1× drift
+accumulates instead of writing every frame, and the gate still idles
 (`../../../attitude/orbit-frame/README.md` § The lock). `up → lookAt → quaternion → up`
 is a rounding round-trip that 2-cycles exactly as the old correction did,
 so `adoptFromCamera` must stay out of the navigate steady state — it is an

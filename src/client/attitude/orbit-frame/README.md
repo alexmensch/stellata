@@ -87,8 +87,27 @@ that pole.
 that rule exists because a per-frame write with no fixed point 2-cycles
 between adjacent doubles and the render gate can then never idle. The lock is
 admissible for the reason a gesture is: **it writes only on a frame where the
-datum actually moved.** A paused clock turns the datum by exactly zero, the
-write is skipped, and the gate idles as before.
+datum moved far enough for the write to show.**
+
+**"Actually moved" is not the test, and cannot be.** The ride writes the camera
+*below* the gate, so the next tick reads any write at all as a fresh camera
+move and renders — the § The focal ride loop in
+`../../render-gate/README.md`, which a rotation has no rebase to escape
+through. A paused clock does turn the datum by exactly zero and the gate idles
+as before, but that covers only the paused case: at live 1× Luna's datum turns
+~2.6 × 10⁻⁶ ° per 60 Hz tick, a genuinely non-zero turn some 2700× under
+anything a display can show, and writing it every tick pins the gate at 60 fps
+for a picture that never changes.
+
+`orbitRideTurn` therefore rides only past **`cadenceVisibleTurnRad`** — the
+cadence's own 0.25-device-pixel scheduling step converted to a camera turn
+(0.0069° at the pinned vantage), so the lock schedules against the same
+threshold every other driver does. Under a threshold it returns zero and **the
+datum is left where it was last ridden from**, which is what accumulates those
+turns into one ride carrying the whole angle; advancing it per frame would drop
+each one and the lock would slowly slip its grip. Faster than live the gate
+never idles anyway, so a scrub crosses the threshold every frame and rides
+exactly as before.
 
 Three ordering details that are easy to get wrong, and one of them shipped
 wrong once:

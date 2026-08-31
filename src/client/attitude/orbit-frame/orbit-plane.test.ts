@@ -35,10 +35,12 @@ import {
   captureOrbitFrame,
   emptyReferenceFrame,
   orbitFrameInto,
+  orbitRideTurn,
   readAttitude,
   ridePoseAbout,
   type Attitude,
 } from '../attitude-pure';
+import { cadenceVisibleTurnRad } from '../../render-gate/cadence/clock-cadence-pure';
 import { focusedOrbitInto, type FocusedOrbit } from './orbit-plane';
 import type { Stellata } from '../../stellata';
 
@@ -416,6 +418,70 @@ describe('ridePoseAbout — the orbit lock', () => {
     orbitFrameInto(frame, camera, normal, toCentre.clone().applyAxisAngle(normal, step));
     const after = readAttitude(camera, frame, out);
     expect(Math.abs(after.lonRad - before.lonRad)).toBeCloseTo(step, 9);
+  });
+});
+
+// The lock writes the camera BELOW the render gate, so the gate reads any
+// write at all as a fresh camera move and renders the next tick. Declining a
+// turn no display could show is the whole of what keeps it inside the cadence
+// rather than pinning the gate open — `orbit-frame/README.md` § The lock.
+describe('orbitRideTurn — the threshold that keeps the gate idling', () => {
+  const pole = new THREE.Vector3(0, 1, 0);
+  const datum = new THREE.Vector3(1, 0, 0);
+  // The threshold at the cadence's own pinned vantage: 900 CSS px of viewport
+  // height, 50° vertical FOV, device ratio 2.
+  const PINNED_MIN_RAD = cadenceVisibleTurnRad(1031.32, 2);
+
+  const turnedBy = (rad: number) => datum.clone().applyAxisAngle(pole, rad);
+
+  it('is exactly zero for a datum that has not moved — a paused clock', () => {
+    expect(orbitRideTurn(datum, datum.clone(), pole, PINNED_MIN_RAD)).toBe(0);
+    // And with no threshold at all, so the zero is the datum's, not the band's.
+    expect(orbitRideTurn(datum, datum.clone(), pole, 0)).toBe(0);
+  });
+
+  it('is exactly zero for a turn under the threshold', () => {
+    const turn = orbitRideTurn(datum, turnedBy(PINNED_MIN_RAD * 0.9), pole, PINNED_MIN_RAD);
+    expect(turn).toBe(0);
+  });
+
+  it('rides a turn past the threshold, signed', () => {
+    const step = PINNED_MIN_RAD * 4;
+    expect(orbitRideTurn(datum, turnedBy(step), pole, PINNED_MIN_RAD)).toBeCloseTo(step, 12);
+    expect(orbitRideTurn(datum, turnedBy(-step), pole, PINNED_MIN_RAD)).toBeCloseTo(-step, 12);
+  });
+
+  // The reason a skipped turn must leave the datum un-advanced: measured from
+  // where it was last RIDDEN from, sub-threshold steps add up into one ride
+  // that carries the whole accumulated angle. Advancing it each frame would
+  // drop every step and the lock would slip its grip.
+  it('accumulates sub-threshold steps into one ride that carries them all', () => {
+    const step = PINNED_MIN_RAD / 4;
+    let ridden = 0;
+    let frames = 0;
+    for (let i = 1; i <= 4; i++) {
+      const turn = orbitRideTurn(datum, turnedBy(step * i), pole, PINNED_MIN_RAD);
+      if (turn !== 0) {
+        ridden = turn;
+        frames = i;
+      }
+    }
+    expect(frames).toBe(4);
+    expect(ridden).toBeCloseTo(step * 4, 12);
+  });
+
+  // A degenerate viewport rides every step. The safe failure for a scheduling
+  // threshold is a frame too many, never an instrument that stops moving.
+  it('rides any turn at all when the threshold is zero', () => {
+    const tiny = 1e-9;
+    expect(orbitRideTurn(datum, turnedBy(tiny), pole, 0)).toBeCloseTo(tiny, 15);
+  });
+
+  // What the threshold is worth in frames, which is the whole point of it:
+  // Luna walks ~13.2°/day, so at live 1x it turns this little per 60 Hz tick.
+  it('holds the gate for thousands of ticks at live 1x', () => {
+    const lunaRadPerTick = ((13.2 * Math.PI) / 180 / 86400) / 60;
+    expect(PINNED_MIN_RAD / lunaRadPerTick).toBeCloseTo(2727, 0);
   });
 });
 
