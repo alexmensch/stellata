@@ -205,6 +205,13 @@ export function acquireGpuFrameSampler(
   };
 }
 
+/** True while the debug panel holds the real instrumentation. A raf-delta
+ *  sweep measures wall time, so the panel's per-tick work lands inside its
+ *  samples — `frame-cost/README.md` § Preconditions. */
+export function perfInstrumentationInstalled(): boolean {
+  return installed;
+}
+
 import { type DebugSection, setReadoutText } from './debug-panel';
 
 export function buildPerfSection(gl: WebGL2RenderingContext | null): DebugSection {

@@ -3,7 +3,9 @@
 
 /** How a row's milliseconds were measured. Three different instruments —
  *  never compare numbers across two of them. */
-export type GpuFrameMethod = 'timer-query' | 'timestamp' | 'raf-delta';
+export const GPU_FRAME_METHODS = ['timer-query', 'timestamp', 'raf-delta'] as const;
+
+export type GpuFrameMethod = (typeof GPU_FRAME_METHODS)[number];
 
 export interface DwellStats {
   readonly samples: number;

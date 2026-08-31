@@ -186,7 +186,9 @@ single pass, disable it and difference `gpu.frame`** — automated below.
 The automated form of "disable it and difference `gpu.frame`": dwell,
 re-dwell with one pass disabled, difference the medians. Lives in its
 own folder — `frame-cost/README.md` owns the priced-pass roster, the
-preconditions (camera still, clock paused, and on WebGL2 a CLOSED panel),
+preconditions (camera still, clock paused, and a CLOSED panel — enforced on
+WebGL2, and wanted on either backend under any `raf-delta` sweep, which
+measures wall time and so counts the panel's own per-tick work),
 the drift bracketing, and how to read `noiseMs` / `bracketMs` / `iqrMs`.
 
 Adding a WebGL2 GPU scope: wrap the draw in `gpuBegin('name')` / `gpuEnd('name')`.

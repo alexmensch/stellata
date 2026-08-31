@@ -37,6 +37,18 @@ src/client/debug/frame-cost/
   **On WebGPU there is no such requirement**: wherever the boot probe left
   timestamps live the render loop resolves them every frame whatever is
   listening, and the sweep just subscribes alongside the HUD.
+  **A pinned `raf-delta` sweep escapes that refusal on every backend** — it
+  never calls `acquireGpuFrameSampler`, so nothing consults the panel. It is
+  also the one mode where an open panel corrupts the number rather than
+  merely holding the slot: rAF deltas are wall time, so the panel's per-tick
+  ring fills and DOM writes sit inside the measurement. They largely cancel
+  in a differential and surface as a wider spread; an absolute frame time is
+  biased outright. That corruption belongs to `raf-delta` however it was
+  reached — pinned, or fallen back to where no GPU clock exists — and a
+  panel opened mid-run keeps the samples flowing rather than drying them up
+  as it does on `timer-query`, so the sweep checks at both ends: acquire
+  warns, and release warns again if the panel is open when the sweep ends.
+  Closing it is still on you.
 - **Camera stationary.** The pose is snapshotted and a move warns at the
   end. The run holds the render gate for its duration — a still camera
   over a paused clock would otherwise be exactly the state the gate
@@ -68,7 +80,14 @@ src/client/debug/frame-cost/
   compare numbers across two methods. The sweep picks the source itself and
   says which on the console — it never claims a clock the backend does not
   have, since that would spend the whole warmup before aborting with no
-  rows.
+  rows. **That preference order picks each backend's BEST clock, not a
+  comparable one** — the four browser × backend combinations land on three
+  different methods — so a cross-backend table has to pin the method by
+  hand: `debug.priceFrame({ method: 'raf-delta' })`, the one clock all of
+  them share. A pinned method the backend cannot supply refuses the sweep
+  outright rather than silently switching clocks, and so does a name that is
+  not one of the three — the console is untyped, so a typo would otherwise
+  read as an honoured pin.
 - **Layers that actually render.** A `#renderer=webgpu` boot draws only
   the seam's own scene until each layer's port child lands, so a sweep
   there prices passes that are not drawing: rows read ~0 for a reason that
