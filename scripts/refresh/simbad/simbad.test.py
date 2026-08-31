@@ -21,7 +21,7 @@ from simbad.specs import (  # noqa: E402
     OID, MAIN_ID, SP_TYPE, SP_QUAL, OTYPE, GJ, HIP, GAIA_DR3, TYC,
     PLX_BIBCODE, PLX_ERR, PLX_QUAL, PLX_VALUE,
     RVZ_BIBCODE, RVZ_ERR, RVZ_QUAL, RVZ_RADVEL, RVZ_TYPE,
-    ColumnSpec, FluxBand, IdentLookup,
+    ColumnSpec, FluxBand, IdentLookup, WIDENING_LADDER,
 )
 
 
@@ -544,6 +544,23 @@ class SpineRequestKeysTests(unittest.TestCase):
         ])
         keys = inputs.spine_request_keys(path, inputs.is_simbad_value_cohort)
         self.assertEqual(keys.designations_by_source_id, {2: {"tyc": "3-4-1"}})
+
+    def test_row_designations_cover_the_whole_ladder(self):
+        # A rung whose key this walk cannot read finds no candidates and fails
+        # silently. The no-Gaia partition and the widening both drive off
+        # WIDENING_LADDER, so the two agree on order by construction — this is
+        # the other half: they agree on the SET of namespaces too.
+        path = self._spine([
+            {"gaia_source_id": "1", "hip": "5", "tyc": "1-2-1", "gl": "GJ 9"},
+        ])
+        keys = inputs.spine_request_keys(path)
+        self.assertEqual(
+            set(keys.designations_by_source_id[1]),
+            {lookup.tsv_name for lookup in WIDENING_LADDER},
+        )
+        self.assertEqual(
+            set(keys.by_namespace), {lookup.tsv_name for lookup in WIDENING_LADDER},
+        )
 
 
 class ValueCohortTests(unittest.TestCase):

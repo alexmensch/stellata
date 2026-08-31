@@ -19,6 +19,12 @@ inputs.py    Spine-driven feeders — spine_request_keys partitions rows
              is_simbad_value_cohort is the § 5 value-tier predicate,
              gl_suffix normalises the GJ/Gl spellings. Plus the
              WDS-component oid iterator.
+             Cost: the designation map is a dict per source_id-keyed row —
+             ~98 MB over the whole spine against ~46 MB for three flat
+             per-namespace dicts. Bought deliberately: it is what lets the
+             request side look a namespace up by IdentLookup.tsv_name and
+             stay generic over WIDENING_LADDER. Refresh-time only, never
+             build:catalog and never the browser.
 request.py   Phase A — resolve a SpineRequestKeys partition to the
              deduplicated oid set, with the widening ladder, its
              corroboration rule, and the per-namespace coverage report.
