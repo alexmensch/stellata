@@ -1361,6 +1361,11 @@ body.monochrome .poi-label {
   height: calc(var(--ai-ball-frac) * 100%);
   left: calc((1 - var(--ai-ball-frac)) * 50%);
   top: calc((1 - var(--ai-ball-frac)) * 50%);
+  /* The window the ball is read through. The sphere overflows the canvas
+     under the narrow view FOV, so the square's corners hold ball too — this
+     is what makes the instrument a disc rather than a rounded square, and
+     `BALL_R` is the same circle in design units. */
+  clip-path: circle(50%);
 }
 .attitude-stage .ai-chrome {
   position: absolute;

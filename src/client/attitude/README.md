@@ -80,16 +80,34 @@ both cleared when the focus moves out from under them:
   does but **does not level**, the flag choosing what the ball reads against
   and levelling being the gesture's own half of the job (§ Levelling on an
   orbit).
-- The **REF chip** top-left captures a datum on the attitude held right now,
-  so the ball reads 0/0 level from here. That is the Shuttle's ATT REF button,
-  and it is the answer to "what is level outside the galaxy", where no
-  inherited frame means anything. A datum planted on a live attitude has no
-  fixed place in a rotation, which is why it is a **toggle rather than a flag
-  entry**: one control arms it and clears it, and clearing drops back to
-  whatever the flag is reading rather than to an arbitrary first entry.
-  Right-clicking the ball captures the same datum and drives the same toggle.
-  While REF is held the flag keeps reading the frame underneath — that is
-  what you return to — and the lit chip is what says the ball is not on it.
+- The **datum chip** top-left runs **off → REF → TGT → off**. Neither datum
+  has a fixed place in a rotation — one is planted on a live attitude, the
+  other on a bearing — which is why they sit on a chip of their own rather
+  than as flag entries: one control arms every datum and clears it, and
+  clearing drops back to whatever the flag is reading rather than to an
+  arbitrary first entry.
+  - **REF** is a datum on the attitude held right now, so the ball reads 0/0
+    level from here. That is the Shuttle's ATT REF button, and it is the
+    answer to "what is level outside the galaxy", where no inherited frame
+    means anything. Right-clicking the ball captures the same datum and lands
+    on the same stop.
+  - **TGT** puts zero longitude straight on the distance-vector destination,
+    so the ball reads 0/0 exactly where you are headed while bank still reads
+    against the attitude you were holding. Squaring the camera's up against
+    that direction — rather than letting `makeFrame` project it — is what puts
+    the destination on the equator instead of merely somewhere in the frame.
+    **The stop is skipped outright with no destination set**, rather than
+    offered as a stop that does nothing.
+
+  Both are snapshots, as ORB is: TGT holds the bearing at the instant it was
+  armed and does not chase a destination that moves. While either is held the
+  flag keeps reading the frame underneath — that is what you return to — and
+  the lit chip is what says the ball is not on it.
+
+**Choosing a frame clears the held datum**, returning the chip to its off
+stop. That is watched on the selected value rather than wired into each
+writer, so it holds for the panel and a URL restore as well as for `S` and
+the flag.
 
 `S` steps the flag on from the keyboard, and is the same key that steps the
 drawn grid in observe (`../ui/README.md`). It never hides the instrument;
@@ -189,7 +207,7 @@ ball's edge:
   against the page, so they take `--fg` / `--border-strong` from the stylesheet
   and flip with it. The flag also needs its own `body.monochrome` background
   rule, since a translucent panel ground cannot come from a token. The one
-  crossing of the line is the **held REF chip**, which fills in the index
+  crossing of the line is the **held datum chip**, which fills in the index
   cross's own colour because that is the thing it is reporting on — so
   `attitude-indicator.ts` publishes `INDEX_AMBER` and `BALL_DARK` to the
   stylesheet as `--ai-index` / `--ai-index-ink` rather than letting a second
@@ -239,6 +257,36 @@ correction is clamped near 78°, past which it diverges.
 No red polar zone. The real ball wore one to warn of gimbal lock approaching,
 which is a mechanical failure this has no analogue for.
 
+## The window, not the whole ball
+
+The real instrument is a large sphere behind a small window, and you read a
+cap of it rather than a hemisphere: the solid graticule lines every 30° put a
+single `±30°` square on the face, and little more. The mini-renderer copies
+that arrangement rather than framing the whole ball.
+
+`BALL_VIEW_FOV_DEG` (15°) is narrow enough that **the sphere overflows the
+canvas**, so `BALL_R` is an *aperture* — `BALL_PX / 2`, the window's own
+radius — rather than a silhouette solved from the view. The disc is ball edge
+to edge; what falls outside is simply not drawn, and CSS clips the canvas to
+that circle so the square's corners never show background.
+
+`BALL_VISIBLE_CAP_DEG` is the consequence, derived from the view alone:
+**44.05°** from the boresight at the rim, against the `±30°` square's own
+corner at 41.41°. That ~2.6° is the "little more"; much wider and the
+instrument stops reading like the real one, and `attitude-layout.test.ts` pins
+both the derivation and the margin.
+
+**The aperture must stay inside the sphere's half-angle** (`asin(1/dist)` =
+9.59°, against the 7.5° half-FOV) or the window's rim shows background and the
+whole illusion goes. That is an invariant, not a coincidence of the current
+numbers.
+
+The alternative — moving the camera closer instead — was rejected. It crops
+the same way, but the visible region then ends *at the terminator*, where the
+surface is edge-on and the grid compresses to nothing exactly where the ±30°
+square's corners sit. Reading a small cap from far away keeps the whole window
+near-orthographic.
+
 ## Rendering
 
 `attitude-ball.ts` owns a **second `THREE.WebGLRenderer`** on its own small
@@ -267,17 +315,21 @@ is measured in **degrees** rather than texture pixels, so that pair is a free
 parameter. It is sized off what the ball can actually resolve.
 
 The ball's centre is where the sphere resolves most finely: there its surface
-faces the viewer square-on, so a degree of arc spans `BALL_R` × π/180 pixels
-and nothing on the ball is denser. At a device ratio of at most 2 that is
-**~3.3 device pixels per degree**, against the texture's 5.7 — so the texture
-still out-resolves the screen by ~1.7×, and mip selection lands near the top
-level with anisotropy carrying the oblique periphery.
+faces the viewer square-on and nothing on the ball is denser. A surface arc
+subtends `1 / (BALL_VIEW_DIST − 1)` of itself at the camera, so at a device
+ratio of at most 2 and the panel column's width the centre runs **~5.5 device
+pixels per degree**, against the texture's 8.5 — the texture out-resolves the
+screen by ~1.55×, and mip selection lands near the top level with anisotropy
+carrying the oblique periphery.
 
-That margin is the number to re-check whenever the instrument is resized, and
-it is why `TEX_W` stayed at 2048 through the 240px enlargement: the ratio fell
-from ~2.1× but never approached 1, where the texture would start to blur.
-Restoring a 2× margin would mean 2560 × 1280 — a third more VRAM for a
-permanent instrument texture, against no visible difference.
+**That margin is the number to re-check whenever the view or the instrument's
+width changes**, and narrowing the FOV to 15° is exactly such a change: the
+same pixels now cover a 44° cap rather than an 80° one, magnifying the texture
+~1.34× and dropping the old 2048 × 1024 to **1.03×** — the ratio at which the
+texture starts to blur. `TEX_W` therefore went to 3072 × 1536, which costs
+about 14 MB more VRAM for a permanent instrument texture and buys back a
+margin slightly better than the 1.38× that shipped before. 2560 × 1280 would
+have been the cheaper compromise at 1.29×.
 
 ## Sizing
 
@@ -323,8 +375,8 @@ clips hit-testing as well as paint. The instrument is round and its box is
 square, so the corners are clear of the outermost tick; without the clip they
 would swallow a click meant for the sky and level the camera instead. The
 three corner chips sit in those corners and are therefore siblings of the
-stage, not children of it — REF top-left, the frame flag top-right, INV
-bottom-right. They share `.attitude-chip` and differ only in which corner they
+stage, not children of it — the datum chip top-left, the frame flag
+top-right, INV bottom-right. They share `.attitude-chip` and differ only in which corner they
 hang from.
 
 `U` hides the Instruments panel along with the rest of the controls

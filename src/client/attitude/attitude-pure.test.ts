@@ -5,6 +5,7 @@ import {
   ballBasisInto,
   buildReferenceFrames,
   captureReferenceFrame,
+  captureTargetFrame,
   frameAfterFocusChange,
   frameAvailableFor,
   frameDirToBallInto,
@@ -427,6 +428,65 @@ describe('frameAfterFocusChange', () => {
         expect(frameAfterFocusChange(next, f)).toBe(next);
       }
     }
+  });
+});
+
+describe('captureTargetFrame', () => {
+  const attitude = (): Attitude =>
+    ({ pitchRad: 0, bankRad: 0, lonRad: 0, sinFromPole: 1 });
+
+  // The whole promise of the stop: whatever you were looking at when you
+  // armed it, the destination sits at the ball's origin afterwards.
+  it('reads 0/0 in the direction of the destination', () => {
+    const camera = cameraLookingAt(new THREE.Vector3(0.3, -0.8, 0.5));
+    const toTarget = new THREE.Vector3(-0.2, 0.6, 0.77);
+    const frame = captureTargetFrame(camera, toTarget);
+
+    const atTarget = cameraLookingAt(toTarget.clone());
+    const out = readAttitude(atTarget, frame, attitude());
+    expect(out.pitchRad).toBeCloseTo(0, 9);
+    expect(out.lonRad).toBeCloseTo(0, 9);
+  });
+
+  it('puts zero longitude exactly on the destination, not merely near it', () => {
+    const camera = cameraLookingAt(new THREE.Vector3(1, 0.2, -0.3));
+    const toTarget = new THREE.Vector3(0.1, 0.9, 0.42);
+    const frame = captureTargetFrame(camera, toTarget);
+    expect(frame.zeroLon.angleTo(toTarget.clone().normalize())).toBeCloseTo(0, 9);
+    // Which is only possible because the pole was squared against it first.
+    expect(frame.pole.dot(frame.zeroLon)).toBeCloseTo(0, 12);
+  });
+
+  it('builds the pole from the camera\'s own up', () => {
+    const up = new THREE.Vector3(0, 0, 1);
+    const camera = cameraLookingAt(new THREE.Vector3(1, 0, 0), up);
+    // A destination square to the camera's up leaves that up untouched by the
+    // orthogonalisation, so the pole IS the up the user was holding.
+    const frame = captureTargetFrame(camera, new THREE.Vector3(1, 0, 0));
+    const cameraUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+    expect(frame.pole.angleTo(cameraUp)).toBeCloseTo(0, 9);
+  });
+
+  it('survives a destination sitting exactly at screen-up', () => {
+    const camera = cameraLookingAt(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 1));
+    const cameraUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+    const frame = captureTargetFrame(camera, cameraUp.clone());
+
+    expect(frame.pole.length()).toBeCloseTo(1, 12);
+    expect(frame.zeroLon.length()).toBeCloseTo(1, 12);
+    expect(frame.east.length()).toBeCloseTo(1, 12);
+    expect(frame.pole.dot(frame.zeroLon)).toBeCloseTo(0, 12);
+    // Still aimed at the destination, which is the point of the frame.
+    expect(frame.zeroLon.angleTo(cameraUp)).toBeCloseTo(0, 9);
+  });
+
+  it('is a snapshot — it does not track a destination that moves', () => {
+    const camera = cameraLookingAt(new THREE.Vector3(0, 0, -1));
+    const toTarget = new THREE.Vector3(0.5, 0.5, 0.5);
+    const frame = captureTargetFrame(camera, toTarget);
+    const before = frame.zeroLon.clone();
+    toTarget.set(-1, 0, 0);
+    expect(frame.zeroLon.equals(before)).toBe(true);
   });
 });
 

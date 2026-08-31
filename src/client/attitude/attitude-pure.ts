@@ -18,13 +18,18 @@ import type {
 } from '../galactic/coord-spheres/coord-sphere';
 import type { TargetKind } from '../camera/focus/focus-target';
 
-export type ReferenceFrameKey = DrawnCoordSphereFrame | 'reference' | 'orbit';
+export type ReferenceFrameKey =
+  | DrawnCoordSphereFrame
+  | 'reference'
+  | 'target'
+  | 'orbit';
 
 /** Every frame the instrument can reach on its own — exactly the frames that
  *  have a sphere behind them, so the ball and the grid can never offer
- *  different sets. The two captured data are missing on purpose: `reference`
- *  is built from an attitude the user is holding and `orbit` from whatever is
- *  focused, so neither can be tabulated ahead of time. */
+ *  different sets. The three captured data are missing on purpose:
+ *  `reference` is built from an attitude the user is holding, `target` from a
+ *  bearing to the destination, and `orbit` from whatever is focused, so none
+ *  can be tabulated ahead of time. */
 export type AutoFrameKey = DrawnCoordSphereFrame;
 
 export interface ReferenceFrame {
@@ -93,6 +98,30 @@ export function captureOrbitFrame(
   const inPlane = toCentre.clone().addScaledVector(normal, -toCentre.dot(normal));
   const seed = inPlane.lengthSq() > 0 ? inPlane : fallback;
   return makeFrame('orbit', 'ORB', normal, seed);
+}
+
+/** A datum aimed at the distance-vector destination: zero longitude points
+ *  straight at it, so the ball reads 0/0 exactly where the target lies and
+ *  bank still reads against the attitude you were holding. Squaring the
+ *  camera's own up against that direction — rather than handing it to
+ *  `makeFrame` to project — is what puts the target on the equator instead of
+ *  merely somewhere in the frame.
+ *
+ *  `toTarget` is a direction, not a position; the caller resolves it, and the
+ *  datum is a snapshot like REF's. */
+export function captureTargetFrame(
+  camera: THREE.Camera,
+  toTarget: THREE.Vector3,
+): ReferenceFrame {
+  const dir = toTarget.clone().normalize();
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+  // Up runs parallel to the target only with the target exactly at screen-up,
+  // where it leaves no pole to build; the camera's right cannot be parallel
+  // to it at the same time.
+  const seed = Math.abs(up.dot(dir)) > DEGENERATE_SEED_COS
+    ? new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion)
+    : up;
+  return makeFrame('target', 'TGT', seed.addScaledVector(dir, -seed.dot(dir)), dir);
 }
 
 const FRAME_LABELS: Record<AutoFrameKey, string> = {
@@ -176,10 +205,11 @@ export function frameAfterFocusChange(
   return frameAvailableFor(current, focus) ? current : autoFrameFor(focus);
 }
 
-/** Every frame the flag itself can reach. REF is the one that stays outside:
- *  a datum planted on the attitude being held right now has no fixed place in
- *  a rotation, so it is only ever reached by the gesture that captures it. */
-export type CycleFrameKey = Exclude<ReferenceFrameKey, 'reference'>;
+/** Every frame the flag itself can reach. The two datums stay outside it:
+ *  neither an attitude being held right now nor a bearing to a destination has
+ *  a fixed place in a rotation, so both are only ever reached by the chip that
+ *  captures them. */
+export type CycleFrameKey = Exclude<ReferenceFrameKey, 'reference' | 'target'>;
 
 export const FRAME_CYCLE: CycleFrameKey[] = ['orbit', ...DRAWN_COORD_SPHERE_FRAMES];
 

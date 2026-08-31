@@ -18,6 +18,7 @@ import {
   buildReferenceFrames,
   captureOrbitFrame,
   captureReferenceFrame,
+  captureTargetFrame,
   frameAvailableFor,
   nextFrameKey,
   readAttitude,
@@ -276,7 +277,8 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   const refBtn = cornerChip(
     'attitude-ref',
     'REF',
-    'Reference datum — read the ball against the attitude held right now',
+    'Datum — off, then REF (the attitude held right now), '
+      + 'then TGT (zero longitude on the destination)',
   );
   const frameBtn = cornerChip(
     'attitude-frame',
@@ -313,17 +315,25 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   /** Re-resolve after anything that could have moved the frame. Identity is
    *  the whole test: a table frame is the same object until the selection
    *  changes, and a capture is always a fresh one. */
+  /** Which of the chip's three stops is showing. A captured ORB is not one of
+   *  them — that datum belongs to the flag. */
+  function datumStop(): 'off' | 'reference' | 'target' {
+    if (captured?.key === 'reference') return 'reference';
+    if (captured?.key === 'target') return 'target';
+    return 'off';
+  }
+
   function refresh() {
-    // REF is the one frame with no place on the flag, so the flag keeps
-    // reading the frame underneath it and the chip alone says it is held.
-    refBtn.classList.toggle('on', captured?.key === 'reference');
-    refBtn.setAttribute('aria-pressed', captured?.key === 'reference' ? 'true' : 'false');
+    // Neither datum has a place on the flag, so the flag keeps reading the
+    // frame underneath and the chip alone says one is held.
+    const stop = datumStop();
+    refBtn.textContent = stop === 'target' ? 'TGT' : 'REF';
+    refBtn.classList.toggle('on', stop !== 'off');
+    refBtn.setAttribute('aria-pressed', stop !== 'off' ? 'true' : 'false');
     const next = resolveFrame();
     if (next === frame) return;
     frame = next;
-    frameBtn.textContent = captured?.key === 'reference'
-      ? frames[selectedFrameKey()].label
-      : frame.label;
+    frameBtn.textContent = stop === 'off' ? frame.label : frames[selectedFrameKey()].label;
     draw();
   }
 
@@ -403,13 +413,38 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   frameBtn.addEventListener('click', cycleFrame);
 
-  // Toggling REF off drops back to whatever the flag is reading, which is
-  // what makes the chip the whole mechanism: one control arms the datum and
-  // clears it, with no frame left stranded outside the cycle.
+  const destination = new THREE.Vector3();
+
+  /** Direction from the camera to the distance-vector destination, or null
+   *  when there is none or its position will not resolve — an object whose
+   *  artifact has not attached answers false rather than a stale point. */
+  function toDestination(): THREE.Vector3 | null {
+    const to = stellata.focus.getVectorTarget();
+    if (to === null) return null;
+    if (!stellata.focusables[to.kind].localPositionInto(to.idx, destination)) return null;
+    destination.sub(stellata.camera.position);
+    return destination.lengthSq() > 0 ? destination : null;
+  }
+
+  // off → REF → TGT → off, and TGT is skipped outright with no destination
+  // set rather than offered as a stop that does nothing. Cycling rather than
+  // toggling is what keeps one control the whole mechanism: every datum is
+  // armed and cleared here, and none is stranded outside the flag's rotation.
   refBtn.addEventListener('click', () => {
-    if (captured?.key === 'reference') {
+    const stop = datumStop();
+    if (stop === 'target') {
       captured = null;
       refresh();
+      return;
+    }
+    if (stop === 'reference') {
+      const dir = toDestination();
+      if (dir === null) {
+        captured = null;
+        refresh();
+        return;
+      }
+      capture(captureTargetFrame(stellata.camera, dir));
       return;
     }
     capture(captureReferenceFrame(stellata.camera));
@@ -428,7 +463,19 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     refresh();
   });
 
-  stellata.on('filter', refresh);
+  // Choosing a frame clears whatever datum was held — the chip returns to its
+  // off stop rather than leaving the ball reading a datum the user has just
+  // selected past. Watching the value rather than each writer is what makes
+  // that true of the panel and a URL restore as well as of `S` and the flag.
+  let lastSelected = stellata.filters.getFilter().coordSphere;
+  stellata.on('filter', () => {
+    const selected = stellata.filters.getFilter().coordSphere;
+    if (selected !== lastSelected) {
+      lastSelected = selected;
+      captured = null;
+    }
+    refresh();
+  });
 
   // The instrument is navigate-only: observe has the drawn grid instead, and
   // two answers to "which way is north" on screen at once is what let the
