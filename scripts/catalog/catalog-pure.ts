@@ -13,16 +13,19 @@ export const SOLAR_BV_FALLBACK = 0.65;
 
 // ---- SIMBAD namespace ladder ---------------------------------------------
 
-/** The namespaces every SIMBAD pull is keyed under, in the order the record
- *  side walks them. Doubles as the build-counts partition over the SIMBAD tier.
+/** The namespaces every SIMBAD pull is keyed under. This order IS the record
+ *  side's walk order — `walkSimbadNamespaces` iterates this array — so
+ *  reordering here reorders both SIMBAD joins. Doubles as the build-counts
+ *  partition over the SIMBAD tier.
  *
  *  **Ordered by what an identifier names, not by how many keys it holds.** A GJ
  *  number carries its component letter (`Gl 165A`) and so names one star; a TYC
  *  names the Tycho-2 entry, which for a close pair is the system. Where both
  *  reach a row the component-naming one wins, so a system blend never displaces
  *  a component value. This deliberately no longer mirrors the request order
- *  `spine_request_keys` composes with — see `parse/README.md` § Physical radius
- *  and spectral parsing for why the pull's order is the load-bearing one. */
+ *  `spine_request_keys` composes with — see `spectral/README.md` § The ladder is
+ *  ordered by what an identifier names for why the pull's order is the
+ *  load-bearing one. */
 export const SIMBAD_NAMESPACE_VALUES = ['source_id', 'hip', 'gj', 'tyc'] as const;
 export type SimbadNamespace = (typeof SIMBAD_NAMESPACE_VALUES)[number];
 
@@ -73,6 +76,46 @@ export function simbadHipKey(hip: number | null): number | null {
   return hip !== null && Number.isInteger(hip) && hip > 0 ? hip : null;
 }
 
+type SimbadNamespaceKey = string | number;
+
+/** `Map` is invariant in its key type, so a `Map<string, T>` is not assignable
+ *  to `Map<SimbadNamespaceKey, T>` even though every read and write below stays
+ *  inside the concrete key type its own namespace derives. */
+function keyedMap<K extends SimbadNamespaceKey, T>(
+  map: Map<K, T>,
+): Map<SimbadNamespaceKey, T> {
+  return map as Map<SimbadNamespaceKey, T>;
+}
+
+/** Each namespace's two halves of the join: the key a record offers it, and the
+ *  map that namespace's rows live in. Indexing and lookup both read this table
+ *  and both iterate `SIMBAD_NAMESPACE_VALUES`, so the order there is the only
+ *  statement of walk order, and a key derived for writing cannot diverge from
+ *  the one derived to read it back. */
+const SIMBAD_NAMESPACE_BINDINGS: {
+  readonly [N in SimbadNamespace]: {
+    readonly key: (keys: SimbadRecordKeys) => SimbadNamespaceKey | null;
+    readonly map: <T>(index: SimbadNamespaceIndex<T>) => Map<SimbadNamespaceKey, T>;
+  };
+} = {
+  source_id: {
+    key: (keys) => keys.sourceId || null,
+    map: (index) => keyedMap(index.bySourceId),
+  },
+  hip: {
+    key: (keys) => simbadHipKey(keys.hip),
+    map: (index) => keyedMap(index.byHip),
+  },
+  gj: {
+    key: (keys) => normaliseGjKey(keys.gl),
+    map: (index) => keyedMap(index.byGj),
+  },
+  tyc: {
+    key: (keys) => keys.tyc || null,
+    map: (index) => keyedMap(index.byTyc),
+  },
+};
+
 /** Add one pull row under every namespace it carries; a row carrying none is
  *  joinable by nothing and indexes nowhere. `onDuplicate` fires instead of
  *  overwriting — no key repeats in either committed pull, so a collision is an
@@ -83,18 +126,17 @@ export function indexSimbadRow<T>(
   row: T,
   onDuplicate: (namespace: SimbadNamespace, key: string) => void,
 ): void {
-  const put = <K>(map: Map<K, T>, key: K | null, namespace: SimbadNamespace): void => {
-    if (key === null || (typeof key === 'string' && key.length === 0)) return;
+  for (const namespace of SIMBAD_NAMESPACE_VALUES) {
+    const binding = SIMBAD_NAMESPACE_BINDINGS[namespace];
+    const key = binding.key(keys);
+    if (key === null) continue;
+    const map = binding.map(index);
     if (map.has(key)) {
       onDuplicate(namespace, String(key));
-      return;
+      continue;
     }
     map.set(key, row);
-  };
-  put(index.bySourceId, keys.sourceId, 'source_id');
-  put(index.byHip, simbadHipKey(keys.hip), 'hip');
-  put(index.byTyc, keys.tyc, 'tyc');
-  put(index.byGj, normaliseGjKey(keys.gl), 'gj');
+  }
 }
 
 function takeSimbadRow<T, R>(
@@ -107,32 +149,21 @@ function takeSimbadRow<T, R>(
   return value === null ? null : { value, namespace };
 }
 
-/** Walk `SIMBAD_NAMESPACE_VALUES` — source_id → HIP → GJ → TYC — and return
- *  the first row `accept` takes, with the namespace that found it. `accept`
- *  returning null continues the walk, so a row that exists but carries nothing
- *  usable does not end it — which is why the spectral resolver can fall past a
- *  row whose sp_type will not parse. */
+/** Walk `SIMBAD_NAMESPACE_VALUES` in order — source_id → HIP → GJ → TYC — and
+ *  return the first row `accept` takes, with the namespace that found it.
+ *  `accept` returning null continues the walk, so a row that exists but carries
+ *  nothing usable does not end it — which is why the spectral resolver can fall
+ *  past a row whose sp_type will not parse. */
 export function walkSimbadNamespaces<T, R>(
   index: SimbadNamespaceIndex<T>,
   keys: SimbadRecordKeys,
   accept: (row: T) => R | null,
 ): { value: R; namespace: SimbadNamespace } | null {
-  if (keys.sourceId) {
-    const hit = takeSimbadRow(index.bySourceId.get(keys.sourceId), 'source_id', accept);
-    if (hit) return hit;
-  }
-  const hip = simbadHipKey(keys.hip);
-  if (hip !== null) {
-    const hit = takeSimbadRow(index.byHip.get(hip), 'hip', accept);
-    if (hit) return hit;
-  }
-  const gj = normaliseGjKey(keys.gl);
-  if (gj !== null) {
-    const hit = takeSimbadRow(index.byGj.get(gj), 'gj', accept);
-    if (hit) return hit;
-  }
-  if (keys.tyc) {
-    const hit = takeSimbadRow(index.byTyc.get(keys.tyc), 'tyc', accept);
+  for (const namespace of SIMBAD_NAMESPACE_VALUES) {
+    const binding = SIMBAD_NAMESPACE_BINDINGS[namespace];
+    const key = binding.key(keys);
+    if (key === null) continue;
+    const hit = takeSimbadRow(binding.map(index).get(key), namespace, accept);
     if (hit) return hit;
   }
   return null;

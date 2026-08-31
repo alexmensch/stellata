@@ -3,6 +3,14 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   normaliseGjKey,
+  simbadHipKey,
+  SIMBAD_NAMESPACE_VALUES,
+  emptySimbadNamespaceIndex,
+  indexSimbadRow,
+  walkSimbadNamespaces,
+  type SimbadNamespace,
+  type SimbadNamespaceIndex,
+  type SimbadRecordKeys,
   GAIA_BINDING_G_MINUS_V_REJECT_MAG,
   normalizeGcvsName,
   parseGcvsNumber,
@@ -120,6 +128,94 @@ describe('catalog-pure / normaliseGjKey', () => {
     expect(normaliseGjKey('  ')).toBeNull();
     expect(normaliseGjKey(null)).toBeNull();
     expect(normaliseGjKey('GJ ')).toBeNull();
+  });
+});
+
+describe('catalog-pure / SIMBAD namespace ladder', () => {
+  const ALL_KEYS: SimbadRecordKeys = {
+    sourceId: '99', hip: 22, tyc: '1-2-1', gl: 'Gl 165A',
+  };
+
+  const indexOneRowPerNamespace = (): SimbadNamespaceIndex<string> => {
+    const index = emptySimbadNamespaceIndex<string>();
+    index.bySourceId.set('99', 'source_id');
+    index.byHip.set(22, 'hip');
+    index.byGj.set('165A', 'gj');
+    index.byTyc.set('1-2-1', 'tyc');
+    return index;
+  };
+
+  // The array is the only statement of walk order; withdrawing the winning
+  // namespace's key one at a time must surface the rest in exactly its order.
+  it('walks namespaces in SIMBAD_NAMESPACE_VALUES order', () => {
+    const index = indexOneRowPerNamespace();
+    const keys: SimbadRecordKeys = { ...ALL_KEYS };
+    const withdraw: Record<SimbadNamespace, () => void> = {
+      source_id: () => { keys.sourceId = null; },
+      hip: () => { keys.hip = null; },
+      gj: () => { keys.gl = null; },
+      tyc: () => { keys.tyc = null; },
+    };
+    const seen: SimbadNamespace[] = [];
+    for (let i = 0; i < SIMBAD_NAMESPACE_VALUES.length; i++) {
+      const hit = walkSimbadNamespaces(index, keys, (row) => row);
+      seen.push(hit!.namespace);
+      withdraw[hit!.namespace]();
+    }
+    expect(seen).toEqual([...SIMBAD_NAMESPACE_VALUES]);
+    expect(walkSimbadNamespaces(index, keys, (row) => row)).toBeNull();
+  });
+
+  // indexSimbadRow and walkSimbadNamespaces derive each key from one binding
+  // table, so a row written under a namespace is reachable by it.
+  it('reaches an indexed row under every namespace that keyed it', () => {
+    const index = emptySimbadNamespaceIndex<string>();
+    indexSimbadRow(index, ALL_KEYS, 'row', () => {
+      throw new Error('unexpected duplicate');
+    });
+    for (const namespace of SIMBAD_NAMESPACE_VALUES) {
+      const only: SimbadRecordKeys = {
+        sourceId: namespace === 'source_id' ? ALL_KEYS.sourceId : null,
+        hip: namespace === 'hip' ? ALL_KEYS.hip : null,
+        tyc: namespace === 'tyc' ? ALL_KEYS.tyc : null,
+        gl: namespace === 'gj' ? ALL_KEYS.gl : null,
+      };
+      expect(walkSimbadNamespaces(index, only, (row) => row)).toEqual({
+        value: 'row', namespace,
+      });
+    }
+  });
+
+  it('reports a duplicate per namespace instead of overwriting', () => {
+    const index = emptySimbadNamespaceIndex<string>();
+    indexSimbadRow(index, ALL_KEYS, 'first', () => {
+      throw new Error('unexpected duplicate');
+    });
+    const collisions: SimbadNamespace[] = [];
+    indexSimbadRow(index, ALL_KEYS, 'second', (namespace) => collisions.push(namespace));
+    expect(collisions).toEqual([...SIMBAD_NAMESPACE_VALUES]);
+    expect(walkSimbadNamespaces(index, ALL_KEYS, (row) => row)?.value).toBe('first');
+  });
+
+  // A bogus HIP cell must be no key at all rather than a key nothing looks
+  // up, which is what would make an indexed row unreachable but present.
+  it('takes only a positive integer HIP as a key', () => {
+    expect(simbadHipKey(22)).toBe(22);
+    expect(simbadHipKey(0)).toBeNull();
+    expect(simbadHipKey(-1)).toBeNull();
+    expect(simbadHipKey(22.5)).toBeNull();
+    expect(simbadHipKey(Number.NaN)).toBeNull();
+    expect(simbadHipKey(null)).toBeNull();
+  });
+
+  it('indexes nowhere for a row carrying no namespace key', () => {
+    const index = emptySimbadNamespaceIndex<string>();
+    const none: SimbadRecordKeys = { sourceId: '', hip: 0, tyc: '', gl: '  ' };
+    indexSimbadRow(index, none, 'row', () => {
+      throw new Error('unexpected duplicate');
+    });
+    expect(index.bySourceId.size + index.byHip.size + index.byGj.size + index.byTyc.size)
+      .toBe(0);
   });
 });
 
