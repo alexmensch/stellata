@@ -54,6 +54,26 @@ Do not read the cohort's 273 against Tycho-2's **1,537 `pflag='X'` rows**
 (`data/tycho2/README.md`): that the 2p population and that flag count match to
 the digit is a coincidence of two unrelated catalogues.
 
+**Neither join widens, and that is measured rather than argued.** A 2p row is
+a close pair by construction, so this cohort is exactly where
+`../../classic-ids/README.md`'s warning bites — a TYC names the Tycho entry,
+which for a close pair is the system rather than the component. It does not
+bite here, on either side:
+
+- all **242** Tycho-2 routes key on the full three-part TYC, and not one of
+  those ids is carried by a second spine row, so no rescued motion is shared
+  across records by the join itself (ξ UMa A and B share a motion because
+  Tycho-2 publishes the same photocentre solution under both component ids —
+  `2520-2634-1` and `-2` state identical `pm_ra`/`pm_de` — not because one row
+  was reused);
+- all **31** TYC-less cohort rows reach SIMBAD on their own `gaia_source_id`,
+  none through the widening ladder's HIP / TYC / GJ rungs, so the pull's
+  widening veto has nothing to adjudicate for this cascade.
+
+Both hold today and neither is structural — a re-pull that widens more, or a
+spine that splits a Tycho entry into components, moves them. Re-derive against
+the spine before leaning on either.
+
 ## Why an owned PM on a blended row is admissible at all
 
 A 2p solution says Gaia's own five-parameter fit did not converge on this

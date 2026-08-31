@@ -14,13 +14,9 @@ overlay merged onto the spine's inherited cells (`classic-ids/README.md`). The
 contract is `docs/catalog-driver.md`; the membership term is
 `spine/README.md`.
 
-`build-catalog.ts` is the orchestrator; `catalog-pure.ts` is the single
-source of truth for the v9 binary layout, the override math, and the
-SIMBAD namespace ladder — every subfolder imports it, and so do twelve
-runtime modules under `src/client/`. This file owns the **output
-contract**: the on-disk record layout, SID allocation, the search
-index, and the Apsis surfacing. The per-stage work lives in the
-subfolders.
+This file owns the **output contract**: the on-disk record layout, SID
+allocation, the search index, and the Apsis surfacing. The per-stage work
+lives in the subfolders.
 
 ## Subfolders
 
@@ -82,12 +78,9 @@ scripts/catalog/
                                   src/client/loaders/. Holds no spectral
                                   symbol — that is `spectral/`, one-way.
   cited-proper-motion.ts (+ test) `CitedProperMotion` and its only
-                                  constructor: a motion is admitted only
-                                  alongside the bibcode that sourced it, so a
-                                  partial or uncited one is dropped whole and
-                                  no consumer can reach a value the
-                                  Gaia-bibcode skip rules cannot weigh. Both
-                                  second-order pulls below write this shape.
+                                  constructor: a motion is admitted only with
+                                  the bibcode that sourced it, so an uncited
+                                  one is unrepresentable, not merely dropped.
   simbad-values-parse.ts (+ test) data/simbad/simbad_values.tsv indexed by
                                   every namespace the pull keyed on, over the
                                   shared ladder in catalog-pure.ts. The § 5
