@@ -1215,7 +1215,7 @@ export class Stellata implements FrameAnchor {
       update: (ctx) => {
         for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
           const sphere = this.coordSpheres[frame];
-          const on = !ctx.warpActive && this.filter.coordSphere === frame;
+          const on = !ctx.warpActive && this.coordSphereDrawn(frame);
           sphere.group.visible = on;
           if (on) sphere.update(ctx.camera.position);
         }
@@ -2015,6 +2015,16 @@ export class Stellata implements FrameAnchor {
   setCameraFov(fov: number) {
     this.filters.setCameraFov(fov);
     this.syncPixelSolidAngle();
+  }
+
+  /** Is `frame`'s sphere on screen? Observe mode only — in navigate the
+   *  attitude indicator carries the frame instead, and two instruments
+   *  answering "which way is north" at once is what let them drift apart.
+   *  Warp gating is the layer's, not this: the SVG labels hide in warp
+   *  through `body.warping` rather than through their own predicate. */
+  coordSphereDrawn(frame: DrawnCoordSphereFrame): boolean {
+    return this.filter.coordSphere === frame
+      && this.focus.getCameraMode() === 'observe';
   }
 
   /** Does `frame` describe anything real from whatever is focused? The `S`

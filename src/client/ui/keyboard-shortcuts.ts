@@ -36,6 +36,9 @@ export interface KeyboardShortcutsDeps {
   /** Zero the camera's roll against the attitude indicator's active
    *  reference frame — the same action as clicking its ball. */
   levelAttitude: () => void;
+  /** Step the attitude indicator's reference frame on — what `S` moves in
+   *  navigate, where the ball rather than a grid carries the frame. */
+  cycleReferenceFrame: () => void;
   /** Capture the focused object's own orbital plane and level on it — the
    *  same action as double-clicking the ball. */
   levelAttitudeOnOrbit: () => void;
@@ -177,7 +180,10 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case 's': case 'S':
-        cycleCoordSphere(stellata);
+        // One key, one idea — step the coordinate frame on — landing on
+        // whichever instrument the mode has on screen.
+        if (stellata.focus.getCameraMode() === 'observe') cycleCoordSphere(stellata);
+        else deps.cycleReferenceFrame();
         e.preventDefault();
         break;
       case 'l': case 'L':

@@ -216,13 +216,19 @@ export function bindControls(stellata: Stellata) {
   // turns on the focus alone, so this rides that event rather than the
   // per-frame path the Sol-distance version needed.
   const syncCoordSphereStops = () => {
+    // The whole row is inert in navigate, where nothing draws a grid — the
+    // attitude indicator carries the frame there instead.
+    const observing = stellata.focus.getCameraMode() === 'observe';
     for (const btn of coordSphereStops) {
       const frame = btn.dataset.coordSphere;
-      if (frame === undefined || frame === 'none') continue;
-      btn.disabled = !stellata.coordSphereAvailable(frame as DrawnCoordSphereFrame);
+      if (frame === undefined) continue;
+      btn.disabled = !observing
+        || (frame !== 'none'
+          && !stellata.coordSphereAvailable(frame as DrawnCoordSphereFrame));
     }
   };
   stellata.on('focus', syncCoordSphereStops);
+  stellata.on('cameraMode', syncCoordSphereStops);
   syncCoordSphereStops();
 
   stellata.on('filter', syncFromFilter);

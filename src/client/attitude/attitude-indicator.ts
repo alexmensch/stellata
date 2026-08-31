@@ -22,9 +22,11 @@ import {
   nextFrameKey,
   readAttitude,
   type Attitude,
+  type AutoFrameKey,
   type ReferenceFrame,
 } from './attitude-pure';
 import { focusFrameInputs } from './focus-frame';
+import { coordSphereNorthPole } from '../galactic/coord-spheres/coord-sphere-frames';
 import { focusedOrbitInto, type FocusedOrbit } from './orbit-plane';
 import type { Target } from '../camera/focus/focus-target';
 import {
@@ -179,12 +181,14 @@ export interface AttitudeIndicator {
    *  level on it. A double-click on the ball or `Shift`+`L`; a no-op when
    *  nothing focused rides an orbit the model has elements for. */
   levelOnOrbit(): void;
+  /** Step the reference frame on. The corner flag's click, and `S` in
+   *  navigate — where the ball is what a frame change moves. */
+  cycleFrame(): void;
 }
 
 export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator | null {
   const host = document.getElementById('attitude');
   if (host === null) return null;
-  host.hidden = false;
   host.innerHTML = '';
   // The only two numbers the stylesheet cannot derive. Every rule that
   // consumes them is a class in styles.css — README.md § Sizing.
@@ -193,7 +197,24 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   const frames = buildReferenceFrames();
   let focused: Target | null = stellata.focus.getFocusedTarget();
-  let frame: ReferenceFrame = frames[autoFrameFor(focusFrameInputs(stellata, focused))];
+  // ORB and REF are captured from a gesture rather than chosen off the table,
+  // so the instrument holds them; every other frame is `filter.coordSphere`,
+  // which `S` and the panel write too. The ball can never read against
+  // nothing, so an unselected grid resolves to the focus default.
+  let captured: ReferenceFrame | null = null;
+
+  function selectedFrameKey(): AutoFrameKey {
+    const selected = stellata.filters.getFilter().coordSphere;
+    return selected === 'none'
+      ? autoFrameFor(focusFrameInputs(stellata, focused))
+      : selected;
+  }
+
+  function resolveFrame(): ReferenceFrame {
+    return captured ?? frames[selectedFrameKey()];
+  }
+
+  let frame: ReferenceFrame = resolveFrame();
 
   const ball = createAttitudeBall(BALL_RASTER_PX);
 
@@ -242,10 +263,20 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     bankPointer.setAttribute('transform', `rotate(${bankDeg.toFixed(2)} ${C} ${C})`);
   }
 
-  function setFrame(next: ReferenceFrame) {
+  /** Re-resolve after anything that could have moved the frame. Identity is
+   *  the whole test: a table frame is the same object until the selection
+   *  changes, and a capture is always a fresh one. */
+  function refresh() {
+    const next = resolveFrame();
+    if (next === frame) return;
     frame = next;
     frameBtn.textContent = frame.label;
     draw();
+  }
+
+  function capture(next: ReferenceFrame) {
+    captured = next;
+    refresh();
   }
 
   function level() {
@@ -253,10 +284,16 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     const camera = stellata.camera;
     const roll = stellata.roll;
     if (stellata.focus.getCameraMode() === 'observe') {
-      roll.rollQuaternion(camera, roll.renderedRollError(camera, frame.pole));
-    } else {
-      roll.levelTo(camera, frame.pole);
+      // The instrument is not on screen here, so the drawn grid is what the
+      // user is levelling against — and with none up there is nothing to
+      // level to, rather than a hidden frame to guess at.
+      const selected = stellata.filters.getFilter().coordSphere;
+      if (selected === 'none') return;
+      const pole = coordSphereNorthPole(selected);
+      roll.rollQuaternion(camera, roll.renderedRollError(camera, pole));
+      return;
     }
+    roll.levelTo(camera, frame.pole);
     draw();
   }
 
@@ -266,8 +303,10 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   };
 
   function levelOnOrbit() {
+    // ORB is the instrument's frame, and the instrument is navigate-only.
+    if (stellata.focus.getCameraMode() === 'observe') return;
     if (!focusedOrbitInto(orbit, stellata, focused)) return;
-    setFrame(captureOrbitFrame(stellata.camera, orbit.normal, orbit.toCentre));
+    capture(captureOrbitFrame(stellata.camera, orbit.normal, orbit.toCentre));
     level();
   }
 
@@ -281,14 +320,14 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   stage.addEventListener('click', (e) => clicks.click(e.clientX, e.clientY));
   stage.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    setFrame(captureReferenceFrame(stellata.camera));
+    capture(captureReferenceFrame(stellata.camera));
   });
   stage.setAttribute('role', 'img');
   stage.setAttribute('aria-label', 'Attitude indicator');
   stage.title = 'Click to level · double-click to level on the focused orbit '
     + '· right-click to set REF here';
 
-  frameBtn.addEventListener('click', () => {
+  function cycleFrame() {
     const hasOrbit = focusedOrbitInto(orbit, stellata, focused);
     const inputs = focusFrameInputs(stellata, focused);
     const next = nextFrameKey(
@@ -300,20 +339,40 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     // Cycling into ORB captures the plane exactly as the gesture does, but
     // does not level on it: the flag chooses what the ball reads against,
     // and levelling is the gesture's own half of the job.
-    setFrame(next === 'orbit'
-      ? captureOrbitFrame(stellata.camera, orbit.normal, orbit.toCentre)
-      : frames[next]);
-  });
+    if (next === 'orbit') {
+      capture(captureOrbitFrame(stellata.camera, orbit.normal, orbit.toCentre));
+      return;
+    }
+    captured = null;
+    stellata.filters.setFilter({ coordSphere: next });
+    refresh();
+  }
+
+  frameBtn.addEventListener('click', cycleFrame);
 
   invertBtn.addEventListener('click', () => stellata.invertView());
 
-  // A manual pick holds only until the focus next changes — overriding sticks
-  // while you study one object without freezing the automatic choice forever.
+  // A captured datum belongs to the object it was taken on: ORB reads a plane
+  // that object rides and REF an attitude held while looking at it, so neither
+  // survives the focus moving. The table frames do — the shell demotes the
+  // selection only when the new focus takes its meaning away.
   stellata.on('focus', (target) => {
     focused = target;
     clicks.cancel();
-    setFrame(frames[autoFrameFor(focusFrameInputs(stellata, target))]);
+    captured = null;
+    refresh();
   });
+
+  stellata.on('filter', refresh);
+
+  // The instrument is navigate-only: observe has the drawn grid instead, and
+  // two answers to "which way is north" on screen at once is what let the
+  // roll guide and this disagree.
+  const applyModeVisibility = () => {
+    host.hidden = stellata.focus.getCameraMode() === 'observe';
+  };
+  stellata.on('cameraMode', applyModeVisibility);
+  applyModeVisibility();
 
   stellata.on('frame', () => {
     const moved = !lastQuat.equals(stellata.camera.quaternion);
@@ -327,5 +386,5 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   });
 
   draw();
-  return { level, levelOnOrbit };
+  return { level, levelOnOrbit, cycleFrame };
 }
