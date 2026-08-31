@@ -646,7 +646,7 @@ describe('direction-cascade / directionOnPm', () => {
       tycho2: new Map([[TYC, tycho2Row({
         raDeg: TYCHO2_J2000_RA, decDeg: TYCHO2_J2000_DEC,
         epochRa: TYCHO2_ICRS_EPOCH, epochDec: TYCHO2_ICRS_EPOCH,
-        pmRaMasyr: null, pmDecMasyr: null, flag: 'X', fromIcrs: true,
+        pmRaMasyr: null, pmDecMasyr: null, fromIcrs: true,
       })]]),
     }),
   )!;
