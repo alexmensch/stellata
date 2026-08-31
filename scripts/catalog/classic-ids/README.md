@@ -301,6 +301,17 @@ scored 14 same-star pairs as disagreements), `flam` on the number alone (the
 row is already keyed on one source_id, so a same-number-different-constellation
 match is not reachable).
 
+**That `.0` is a join hazard beyond the merge, and `normaliseGjKey`
+(`../catalog-pure.ts`) is where it is handled once.** `cns5AstrometryByGj`
+keys the direction cascade's `cns5` tier off these same cells, so an index
+built over CNS5 and a record's own `gl` cell have to reduce identically or the
+lookup misses — indistinguishably from an absent row. 17 rows carry the
+artifact. It cost nothing when the tier shipped (all 17 route to the Tycho-2
+tier above CNS5 on their own TYC), which is exactly why it needed collapsing
+before something reached it. Only a ZERO fraction collapses; `Gl 17.1` keeps
+its own. `glieseNumber` states the same rule for the label side, where it also
+has to strip the component letter.
+
 `spineBrightRowsWithoutOverlayEntry` is the count to watch: Gaia saturates near
 G ≈ 3, so a source_id-keyed table structurally cannot carry the brightest
 stars, and a future session reading a high `overlayHd` could otherwise conclude

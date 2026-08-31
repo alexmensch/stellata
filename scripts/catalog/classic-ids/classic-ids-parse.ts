@@ -167,17 +167,26 @@ export function parseCns5Tsv(text: string): Cns5Row[] {
 
 /** CNS5's astrometry keyed the way a record asks for it: on its own `gl`
  *  cell, folded through `normaliseGjKey` so `Gl 165A` / `GJ 165A` / `165 A`
- *  meet as one key — the same reduction the SIMBAD ladder's GJ namespace
- *  uses. The component letter is part of the key because a GJ number carries
- *  one, so this names the component rather than the system. First write wins:
- *  CNS5 is keyed on its own `cns5` number and two rows sharing a GJ number
- *  are the same star's components, whose letters keep them apart anyway. */
+ *  — and CNS5's own `165.0` — meet as one key, the same reduction the SIMBAD
+ *  ladder's GJ namespace uses. The component letter is part of the key because
+ *  a GJ number carries one, so this names the component rather than the system.
+ *
+ *  A repeat throws, as it does in every other index over a committed table
+ *  here: two rows sharing a GJ number would be one star's components, which
+ *  their letters keep apart, so a collision is an upstream change rather than
+ *  a binding to arbitrate silently. */
 export function cns5AstrometryByGj(rows: readonly Cns5Row[]): Map<string, Cns5Astrometry> {
   const out = new Map<string, Cns5Astrometry>();
   for (const row of rows) {
     if (row.astrometry === null) continue;
     const key = normaliseGjKey(`${row.gj}${row.gjComp ?? ''}`);
-    if (key !== null && !out.has(key)) out.set(key, row.astrometry);
+    if (key === null) continue;
+    if (out.has(key)) {
+      throw new Error(
+        `data/classic-ids/cns5.tsv has two rows keyed gj=${key}. ${REFRESH_CLASSIC_IDS}`,
+      );
+    }
+    out.set(key, row.astrometry);
   }
   return out;
 }

@@ -72,7 +72,14 @@ export function normaliseGjKey(cell: string | null): string | null {
   const [word, ...rest] = text.split(' ');
   const suffix = /^(gj|gl)$/i.test(word) ? rest.join(' ') : text;
   const key = suffix.replace(/\s+/g, '').toUpperCase();
-  return key.length === 0 ? null : key;
+  // CNS5 prints whole numbers with a trailing `.0` where every other source
+  // writes the bare number, so collapsing it here is what lets an index built
+  // over CNS5 and a record's own `gl` cell meet. Only a ZERO fraction is the
+  // artifact — the supplement's genuinely fractional entries (`Gl 17.1`) keep
+  // theirs (`glieseNumber` in classic-ids/ states the same rule for the label
+  // merge, where not collapsing it scored 14 same-star pairs as disagreements).
+  const collapsed = key.endsWith('.0') ? key.slice(0, -2) : key;
+  return collapsed.length === 0 ? null : collapsed;
 }
 
 /** Index and lookup must agree on which HIP cells are keys at all, or a row
