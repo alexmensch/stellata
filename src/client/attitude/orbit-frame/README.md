@@ -61,10 +61,11 @@ pole is unaffected either way — it is a static function of the elements.
 
 Two consequences anything touching this has to honour:
 
-- **A still camera is not a still instrument.** The mini renderer redraws on
-  every rendered frame while ORB is up, not only when `camera.quaternion`
-  moves. Nothing runs while the render gate idles, though: if no frame is
-  drawn, the orbit has not advanced either.
+- **A still camera is not a still instrument.** The mini renderer redraws when
+  the DATUM moved as well as when `camera.quaternion` did — but on that test,
+  not on "a live frame is up": a paused clock rebuilds ORB to the same vector
+  and there is nothing to repaint. Nothing runs while the render gate idles
+  either: if no frame is drawn, the orbit has not advanced.
 - **The per-frame path evaluates ONE body's orbit, and the frame it writes
   into is preallocated.** `orbitFrameInto` writes a `ReferenceFrame` the
   instrument holds for the life of the page; `captureOrbitFrame` is the

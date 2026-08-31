@@ -376,6 +376,11 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   const attitude: Attitude = { pitchRad: 0, bankRad: 0, lonRad: 0, sinFromPole: 1 };
   const lastQuat = new THREE.Quaternion(2, 2, 2, 2);
+  // The datum the last draw was against. NaN-seeded so the first draw always
+  // lands, and the pair with `lastQuat` is what makes "the reading moved" the
+  // redraw test rather than "a live frame is up".
+  const drawnZeroLon = new THREE.Vector3(Number.NaN, Number.NaN, Number.NaN);
+  let bankTransform = '';
   // Set while the instrument is off screen so the ball catches up on the
   // first frame after it comes back, rather than showing a stale attitude.
   let missedWhileHidden = false;
@@ -440,10 +445,18 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   function draw() {
     const camera = stellata.camera;
     lastQuat.copy(camera.quaternion);
+    drawnZeroLon.copy(frame.zeroLon);
     ball.render(camera, frame);
     readAttitude(camera, frame, attitude);
     const bankDeg = (attitude.bankRad * 180) / Math.PI;
-    bankPointer.setAttribute('transform', `rotate(${bankDeg.toFixed(2)} ${C} ${C})`);
+    const transform = `rotate(${bankDeg.toFixed(2)} ${C} ${C})`;
+    // Two hundredths of a degree of bank is the caret's own resolution, so
+    // below that there is nothing to write — and an attribute write on an SVG
+    // element invalidates style whether or not the value changed.
+    if (transform !== bankTransform) {
+      bankTransform = transform;
+      bankPointer.setAttribute('transform', transform);
+    }
   }
 
   /** Re-resolve after anything that could have moved the frame. Identity is
@@ -677,11 +690,13 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     // Ahead of the off-screen check, because the lock is a camera behaviour
     // and must not stop when the instrument is hidden.
     tickOrbitFrame();
-    // A live ORB datum turns with the orbit, so the instrument has to redraw
-    // on every rendered frame while it is up rather than only on a camera
-    // move. Nothing runs while the render gate idles — if no frame is drawn,
-    // the orbit has not advanced either.
-    const moved = (orbitActive && captured === null)
+    // A live ORB datum turns with the orbit, so a still camera is not a still
+    // instrument — but the test is that the DATUM moved, not that a live frame
+    // is up: with the clock paused ORB rebuilds to the same vector and there
+    // is nothing to redraw. Nothing runs while the render gate idles either —
+    // if no frame is drawn, the orbit has not advanced.
+    const moved = (orbitActive && captured === null
+      && !drawnZeroLon.equals(orbitFrame.zeroLon))
       || !lastQuat.equals(stellata.camera.quaternion);
     if (offScreen()) {
       missedWhileHidden = missedWhileHidden || moved;

@@ -292,10 +292,10 @@ lands in the HDR target and would take scene exposure and tone-mapping with it
 (`../hdr/README.md`). A separate context is the cheap way to keep instrument
 chrome out of the physical light path.
 
-It redraws only on ticks where `camera.quaternion` actually changed **and the
-instrument is on screen** — `display: none` suppresses the composite, not the
-draw, so a hidden instrument would otherwise keep rendering a sphere nobody can
-see. There are now four ways to hide it and `offScreen()` has to answer all of
+It redraws only on ticks where the reading changed — `camera.quaternion`, or a
+live ORB datum (`orbit-frame/README.md`) — **and the instrument is on screen**:
+`display: none` suppresses the composite, not the draw, so a hidden instrument
+would otherwise keep rendering a sphere nobody can see. There are now four ways to hide it and `offScreen()` has to answer all of
 them: observe mode, `U`, the Instruments panel collapsed, and the Attitude
 indicator section collapsed. All four are class or attribute reads rather than
 layout queries, so the per-tick check stays free. A tick skipped while hidden
