@@ -32,9 +32,9 @@ import { CoordSphere, type DrawnCoordSphereFrame } from './galactic/coord-sphere
 import {
   COORD_SPHERE_SPECS,
   DRAWN_COORD_SPHERE_FRAMES,
-  coordSphereFadeAt,
-  coordSphereReachableAt,
 } from './galactic/coord-spheres/coord-sphere-frames';
+import { frameAfterFocusChange, frameAvailableFor } from './attitude/attitude-pure';
+import { focusFrameInputs } from './attitude/focus-frame';
 import { HudOverlay } from './overlays/hud-overlay';
 import { ChartLabels } from './chart-mode/labels/chart-labels';
 import {
@@ -887,6 +887,14 @@ export class Stellata implements FrameAnchor {
     // the shared ride slot safe when the kind changes but the index
     // collides (planet 3 → probe 3).
     this.on('focus', () => { this._movingRideIdx = null; });
+    // A frame the new focus gives no meaning to is demoted to that object's
+    // own default rather than left measuring nothing — attitude/README.md
+    // § Which frame, and who chooses.
+    this.on('focus', (target) => {
+      const next = frameAfterFocusChange(
+        this.filter.coordSphere, focusFrameInputs(this, target));
+      if (next !== this.filter.coordSphere) this.filters.setFilter({ coordSphere: next });
+    });
     // Every fine-grained mutation the figure's active set reads — focus,
     // filter, cameraMode — pairs with 'state', and so does the observe
     // transition's landing, which no fine-grained event covers.
@@ -905,10 +913,10 @@ export class Stellata implements FrameAnchor {
       // camera never rotated across the switch.
       this.observePinQuat.set(Number.NaN, 0, 0, 0);
     });
-    this.coordSpheres = {
-      galactic: new CoordSphere(COORD_SPHERE_SPECS.galactic, this.chromeLines),
-      equatorial: new CoordSphere(COORD_SPHERE_SPECS.equatorial, this.chromeLines),
-    };
+    this.coordSpheres = Object.fromEntries(
+      DRAWN_COORD_SPHERE_FRAMES.map((frame) =>
+        [frame, new CoordSphere(COORD_SPHERE_SPECS[frame], this.chromeLines)]),
+    ) as Record<DrawnCoordSphereFrame, CoordSphere>;
     for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
       renderScene.add(this.coordSpheres[frame].group);
     }
@@ -1202,30 +1210,14 @@ export class Stellata implements FrameAnchor {
       dispose: () => this.galacticDisc.dispose(),
     });
     this.layers.register({
-      // Camera-tracked frames; the only distance-dependent behaviour is a
-      // fade window, and distance only moves on a camera move, which
-      // renders anyway.
+      // Camera-tracked frames, so nothing here moves with the clock.
       timeBehaviour: { kind: 'static' },
-      // Both spheres are camera-tracked; a spec's optional fade window is the
-      // only distance-dependent behaviour, and only the equatorial frame has
-      // one (galactic/README.md § Coordinate spheres).
       update: (ctx) => {
-        // `coordSphere` must never name a sphere that can't draw — travelling
-        // out of a frame's fade deselects it rather than leaving the panel's
-        // stop highlighted-yet-disabled, which reads as nothing selected.
-        // Fires once per crossing, since the demotion clears its own trigger,
-        // and it is the single owner of the gone-at-zero-alpha cut.
-        const selected = this.filter.coordSphere;
-        if (selected !== 'none' && !coordSphereReachableAt(selected, ctx.distFromSol)) {
-          this.filters.setFilter({ coordSphere: 'none' });
-        }
         for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
           const sphere = this.coordSpheres[frame];
           const on = !ctx.warpActive && this.filter.coordSphere === frame;
           sphere.group.visible = on;
-          if (!on) continue;
-          sphere.setOpacityScale(coordSphereFadeAt(frame, ctx.distFromSol));
-          sphere.update(ctx.camera.position);
+          if (on) sphere.update(ctx.camera.position);
         }
       },
       setMonochrome: (on) => {
@@ -2025,17 +2017,11 @@ export class Stellata implements FrameAnchor {
     this.syncPixelSolidAngle();
   }
 
-  /** Stroke alpha `frame`'s sphere draws at from the camera's current distance
-   *  from Sol. Its SVG edge labels ride the same value. */
-  coordSphereFade(frame: DrawnCoordSphereFrame): number {
-    return coordSphereFadeAt(frame, this.frameCtx.distFromSol);
-  }
-
-  /** Is `frame`'s sphere visible at all from here? The `S` cycle and the
-   *  panel's 3-stop control both gate on this so neither can select a sphere
-   *  that has faded to nothing. */
-  coordSphereReachable(frame: DrawnCoordSphereFrame): boolean {
-    return this.coordSphereFade(frame) > 0;
+  /** Does `frame` describe anything real from whatever is focused? The `S`
+   *  cycle, the panel's stop control and the focus-change demotion all gate on
+   *  this, so none of them can select a frame the others would reject. */
+  coordSphereAvailable(frame: DrawnCoordSphereFrame): boolean {
+    return frameAvailableFor(frame, focusFrameInputs(this, this.focus.getFocusedTarget()));
   }
 
   // Declutter cycle. detailPermits is the per-frame read path layers gate

@@ -18,12 +18,13 @@ import {
   buildReferenceFrames,
   captureOrbitFrame,
   captureReferenceFrame,
+  frameAvailableFor,
   nextFrameKey,
   readAttitude,
   type Attitude,
-  type FocusFrameInputs,
   type ReferenceFrame,
 } from './attitude-pure';
+import { focusFrameInputs } from './focus-frame';
 import { focusedOrbitInto, type FocusedOrbit } from './orbit-plane';
 import type { Target } from '../camera/focus/focus-target';
 import {
@@ -37,16 +38,6 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 // Roll is unbounded out here, so the scale runs the whole way round rather
 // than covering the shallow band an aircraft lives in.
 const BANK_TICK_STEP_DEG = 5;
-function focusInputs(stellata: Stellata, target: Target | null): FocusFrameInputs {
-  return {
-    kind: target?.kind ?? null,
-    planetName:
-      target?.kind === 'planet'
-        ? stellata.kinds.planet?.displayName(target.idx) ?? null
-        : null,
-    isSol: target?.kind === 'star' && target.idx === stellata.catalog.solIndex,
-  };
-}
 
 function el<K extends keyof SVGElementTagNameMap>(
   tag: K,
@@ -202,7 +193,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   const frames = buildReferenceFrames();
   let focused: Target | null = stellata.focus.getFocusedTarget();
-  let frame: ReferenceFrame = frames[autoFrameFor(focusInputs(stellata, focused))];
+  let frame: ReferenceFrame = frames[autoFrameFor(focusFrameInputs(stellata, focused))];
 
   const ball = createAttitudeBall(BALL_RASTER_PX);
 
@@ -299,10 +290,12 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   frameBtn.addEventListener('click', () => {
     const hasOrbit = focusedOrbitInto(orbit, stellata, focused);
+    const inputs = focusFrameInputs(stellata, focused);
     const next = nextFrameKey(
       frame.key,
-      autoFrameFor(focusInputs(stellata, focused)),
+      autoFrameFor(inputs),
       hasOrbit,
+      (candidate) => frameAvailableFor(candidate, inputs),
     );
     // Cycling into ORB captures the plane exactly as the gesture does, but
     // does not level on it: the flag chooses what the ball reads against,
@@ -319,7 +312,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   stellata.on('focus', (target) => {
     focused = target;
     clicks.cancel();
-    setFrame(frames[autoFrameFor(focusInputs(stellata, target))]);
+    setFrame(frames[autoFrameFor(focusFrameInputs(stellata, target))]);
   });
 
   stellata.on('frame', () => {

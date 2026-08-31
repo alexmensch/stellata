@@ -7,6 +7,7 @@ import {
   STAR_K_MULTIPLIER_STEP,
 } from '../../filters/filter-state';
 import { COORD_SPHERE_FRAMES } from '../../galactic/coord-spheres/coord-sphere-frames';
+import type { DrawnCoordSphereFrame } from '../../galactic/coord-spheres/coord-sphere';
 import { EV_MAX_STOPS, EV_STEP_STOPS, steppedEv } from '../../hdr/exposure/exposure-epoch';
 import { DETAIL_LEVELS } from '../../scene/scene-elements';
 import { fmtDist, onUnitChange, getUnit } from '../../ui/distance-util';
@@ -210,21 +211,19 @@ export function bindControls(stellata: Stellata) {
     if (evReadout.textContent !== text) evReadout.textContent = text;
   };
 
-  // The equatorial stop is disabled (not hidden) beyond its Sol-distance fade
-  // — an Earth-referenced frame that would render invisible from there. This
-  // rides 'frame' rather than syncFromFilter because it tracks camera distance,
-  // which no discrete state event announces; the cached flag keeps it to one
-  // DOM write per crossing.
-  const equatorialStop = Array.from(coordSphereStops)
-    .find(btn => btn.dataset.coordSphere === 'equatorial');
-  let equatorialReachable: boolean | null = null;
-  stellata.on('frame', () => {
-    if (!equatorialStop) return;
-    const reachable = stellata.coordSphereReachable('equatorial');
-    if (reachable === equatorialReachable) return;
-    equatorialReachable = reachable;
-    equatorialStop.disabled = !reachable;
-  });
+  // A stop whose frame describes nothing from the focused object is disabled
+  // rather than hidden, with the row's title carrying why. What is available
+  // turns on the focus alone, so this rides that event rather than the
+  // per-frame path the Sol-distance version needed.
+  const syncCoordSphereStops = () => {
+    for (const btn of coordSphereStops) {
+      const frame = btn.dataset.coordSphere;
+      if (frame === undefined || frame === 'none') continue;
+      btn.disabled = !stellata.coordSphereAvailable(frame as DrawnCoordSphereFrame);
+    }
+  };
+  stellata.on('focus', syncCoordSphereStops);
+  syncCoordSphereStops();
 
   stellata.on('filter', syncFromFilter);
   stellata.on('cameraMode', syncFromFilter);

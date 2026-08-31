@@ -8,21 +8,24 @@ import {
   levelUpInto,
   signedAngleAbout,
 } from '../camera/controls/input/roll-pure';
-import { galacticDirToIcrs } from '../galactic/galactic-coords';
+import {
+  COORD_SPHERE_SPECS,
+  DRAWN_COORD_SPHERE_FRAMES,
+} from '../galactic/coord-spheres/coord-sphere-frames';
+import type {
+  CoordSphereFrame,
+  DrawnCoordSphereFrame,
+} from '../galactic/coord-spheres/coord-sphere';
 import type { TargetKind } from '../camera/focus/focus-target';
 
-export type ReferenceFrameKey =
-  | 'equatorial'
-  | 'ecliptic'
-  | 'galactic'
-  | 'reference'
-  | 'orbit';
+export type ReferenceFrameKey = DrawnCoordSphereFrame | 'reference' | 'orbit';
 
-/** Every frame the instrument can reach on its own. The two captured data are
- *  missing on purpose: `reference` is built from an attitude the user is
- *  holding and `orbit` from whatever is focused, so neither can be tabulated
- *  ahead of time. */
-export type AutoFrameKey = Exclude<ReferenceFrameKey, 'reference' | 'orbit'>;
+/** Every frame the instrument can reach on its own — exactly the frames that
+ *  have a sphere behind them, so the ball and the grid can never offer
+ *  different sets. The two captured data are missing on purpose: `reference`
+ *  is built from an attitude the user is holding and `orbit` from whatever is
+ *  focused, so neither can be tabulated ahead of time. */
+export type AutoFrameKey = DrawnCoordSphereFrame;
 
 export interface ReferenceFrame {
   key: ReferenceFrameKey;
@@ -38,8 +41,6 @@ export interface Attitude {
   lonRad: number;
   sinFromPole: number;
 }
-
-const OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
 
 // Boresight this close to a captured pole leaves no zero-longitude
 // direction to project — 1e-3 rad off the axis.
@@ -94,24 +95,27 @@ export function captureOrbitFrame(
   return makeFrame('orbit', 'ORB', normal, seed);
 }
 
+const FRAME_LABELS: Record<AutoFrameKey, string> = {
+  galactic: 'GAL',
+  ecliptic: 'ECL',
+  equatorial: 'EQU',
+};
+
+/** Both axes of every frame are read off the drawn sphere's own `dirToIcrs`,
+ *  which is what stops the instrument and the grid disagreeing about a frame:
+ *  there is one definition of galactic north, not a matching pair. */
 export function buildReferenceFrames(): Record<AutoFrameKey, ReferenceFrame> {
-  const eclipticPole = new THREE.Vector3(
-    0,
-    -Math.sin(OBLIQUITY_RAD),
-    Math.cos(OBLIQUITY_RAD),
-  );
-  const galacticCentre = galacticDirToIcrs(0, 0, new THREE.Vector3());
-  const galacticPole = galacticDirToIcrs(0, Math.PI / 2, new THREE.Vector3());
-  return {
-    equatorial: makeFrame(
-      'equatorial',
-      'EQU',
-      new THREE.Vector3(0, 0, 1),
-      new THREE.Vector3(1, 0, 0),
-    ),
-    ecliptic: makeFrame('ecliptic', 'ECL', eclipticPole, new THREE.Vector3(1, 0, 0)),
-    galactic: makeFrame('galactic', 'GAL', galacticPole, galacticCentre),
-  };
+  const frames = {} as Record<AutoFrameKey, ReferenceFrame>;
+  for (const key of DRAWN_COORD_SPHERE_FRAMES) {
+    const { dirToIcrs } = COORD_SPHERE_SPECS[key];
+    frames[key] = makeFrame(
+      key,
+      FRAME_LABELS[key],
+      dirToIcrs(0, Math.PI / 2, new THREE.Vector3()),
+      dirToIcrs(0, 0, new THREE.Vector3()),
+    );
+  }
+  return frames;
 }
 
 /** What the frame rule needs to know about the focused object, resolved by the
@@ -139,24 +143,53 @@ export function autoFrameFor(focus: FocusFrameInputs): AutoFrameKey {
   return 'galactic';
 }
 
+/** Does `frame` describe anything real from the focused object? Read off the
+ *  focus rule above rather than restating "in Sol's system", so the two can
+ *  never drift apart:
+ *
+ *  - **galactic** everywhere — the disc is a real structure whichever star you
+ *    are standing on.
+ *  - **ecliptic** wherever the focus rule already lands inside Sol's system,
+ *    which is exactly where its planets' shared orbital plane is a reference
+ *    rather than an arbitrary tilt.
+ *  - **equatorial** on Earth alone. Declination is measured from Earth's own
+ *    rotational axis and right ascension from its equinox, so the frame is a
+ *    property of that one body. */
+export function frameAvailableFor(frame: AutoFrameKey, focus: FocusFrameInputs): boolean {
+  const home = autoFrameFor(focus);
+  if (frame === 'galactic') return true;
+  if (frame === 'ecliptic') return home !== 'galactic';
+  return home === 'equatorial';
+}
+
+/** The frame to hold once the focus has changed: the one already selected
+ *  when the new focus still gives it meaning, otherwise that object's own
+ *  default. Keeping the pick is what lets a tour of Sol's system stay on the
+ *  ecliptic, while stepping outside it demotes rather than leaving a grid
+ *  measuring nothing. `none` survives anywhere — an empty sky is an empty sky.
+ */
+export function frameAfterFocusChange(
+  current: CoordSphereFrame,
+  focus: FocusFrameInputs,
+): CoordSphereFrame {
+  if (current === 'none') return 'none';
+  return frameAvailableFor(current, focus) ? current : autoFrameFor(focus);
+}
+
 /** Every frame the flag itself can reach. REF is the one that stays outside:
  *  a datum planted on the attitude being held right now has no fixed place in
  *  a rotation, so it is only ever reached by the gesture that captures it. */
 export type CycleFrameKey = Exclude<ReferenceFrameKey, 'reference'>;
 
-export const FRAME_CYCLE: CycleFrameKey[] = [
-  'orbit',
-  'equatorial',
-  'ecliptic',
-  'galactic',
-];
+export const FRAME_CYCLE: CycleFrameKey[] = ['orbit', ...DRAWN_COORD_SPHERE_FRAMES];
 
-/** The flag's next stop.
+/** The flag's next stop — the navigate-mode `S` cycle, and the same walk the
+ *  panel's stop control offers in observe minus its `none`.
  *
- *  ORB is in the rotation but conditional on the focused object riding an
- *  orbit the model has elements for, and it is skipped when it does not —
- *  the entry is a property of what is focused, not of the instrument.
- *  Skipping one entry is enough because ORB appears exactly once.
+ *  Every entry is conditional on what is focused: ORB on the object riding an
+ *  orbit the model has elements for, the three sky frames on `available`. Both
+ *  are properties of the focus rather than of the instrument. Galactic is
+ *  available everywhere, so the walk always terminates.
  *
  *  Leaving REF is the one case with no successor to step to, and it lands on
  *  whatever the focused object implies rather than a fixed first entry, which
@@ -165,12 +198,15 @@ export function nextFrameKey(
   current: ReferenceFrameKey,
   focusDefault: AutoFrameKey,
   orbitAvailable: boolean,
+  available: (frame: AutoFrameKey) => boolean,
 ): CycleFrameKey {
   const at = (FRAME_CYCLE as readonly ReferenceFrameKey[]).indexOf(current);
   if (at < 0) return focusDefault;
-  const next = FRAME_CYCLE[(at + 1) % FRAME_CYCLE.length];
-  if (next !== 'orbit' || orbitAvailable) return next;
-  return FRAME_CYCLE[(at + 2) % FRAME_CYCLE.length];
+  for (let step = 1; step <= FRAME_CYCLE.length; step++) {
+    const next = FRAME_CYCLE[(at + step) % FRAME_CYCLE.length];
+    if (next === 'orbit' ? orbitAvailable : available(next)) return next;
+  }
+  return focusDefault;
 }
 
 /** Bank is the angle to a level up that shrinks to nothing on the pole, so

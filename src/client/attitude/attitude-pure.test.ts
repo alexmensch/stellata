@@ -5,12 +5,15 @@ import {
   ballBasisInto,
   buildReferenceFrames,
   captureReferenceFrame,
+  frameAfterFocusChange,
+  frameAvailableFor,
   frameDirToBallInto,
   FRAME_CYCLE,
   nextFrameKey,
   POLE_HOLD_DEG,
   readAttitude,
   type Attitude,
+  type AutoFrameKey,
   type FocusFrameInputs,
 } from './attitude-pure';
 
@@ -216,18 +219,23 @@ describe('reference frames', () => {
 });
 
 describe('nextFrameKey', () => {
+  const anywhere = () => true;
+  // Away from Sol's system the sky frames collapse to the one still defined by
+  // something real, which is what makes the walk's termination non-trivial.
+  const galacticOnly = (frame: AutoFrameKey) => frame === 'galactic';
+
   it('advances through the cycle, ignoring the focus default', () => {
-    expect(nextFrameKey('equatorial', 'galactic', false)).toBe('ecliptic');
-    expect(nextFrameKey('ecliptic', 'galactic', false)).toBe('galactic');
-    expect(nextFrameKey('galactic', 'galactic', false)).toBe('equatorial');
+    expect(nextFrameKey('galactic', 'ecliptic', false, anywhere)).toBe('ecliptic');
+    expect(nextFrameKey('ecliptic', 'galactic', false, anywhere)).toBe('equatorial');
+    expect(nextFrameKey('equatorial', 'ecliptic', false, anywhere)).toBe('galactic');
   });
 
   it('leaves a captured REF on the focused object\'s own default', () => {
-    expect(nextFrameKey('reference', 'ecliptic', false)).toBe('ecliptic');
-    expect(nextFrameKey('reference', 'galactic', false)).toBe('galactic');
-    expect(nextFrameKey('reference', 'equatorial', false)).toBe('equatorial');
+    expect(nextFrameKey('reference', 'ecliptic', false, anywhere)).toBe('ecliptic');
+    expect(nextFrameKey('reference', 'galactic', false, anywhere)).toBe('galactic');
+    expect(nextFrameKey('reference', 'equatorial', false, anywhere)).toBe('equatorial');
     // Available or not, a captured datum has no successor of its own.
-    expect(nextFrameKey('reference', 'ecliptic', true)).toBe('ecliptic');
+    expect(nextFrameKey('reference', 'ecliptic', true, anywhere)).toBe('ecliptic');
   });
 
   it('reaches every frame from every frame', () => {
@@ -235,28 +243,28 @@ describe('nextFrameKey', () => {
       const seen = new Set<string>();
       let at: ReturnType<typeof nextFrameKey> = start;
       for (let i = 0; i < 3; i++) {
-        at = nextFrameKey(at, 'galactic', false);
+        at = nextFrameKey(at, 'galactic', false, anywhere);
         seen.add(at);
       }
       expect(seen.size).toBe(3);
     }
   });
 
-  it('runs ORB - EQU - ECL - GAL when the focus rides an orbit', () => {
-    expect(nextFrameKey('orbit', 'galactic', true)).toBe('equatorial');
-    expect(nextFrameKey('equatorial', 'galactic', true)).toBe('ecliptic');
-    expect(nextFrameKey('ecliptic', 'galactic', true)).toBe('galactic');
-    expect(nextFrameKey('galactic', 'galactic', true)).toBe('orbit');
+  it('runs ORB - GAL - ECL - EQU when the focus rides an orbit', () => {
+    expect(nextFrameKey('orbit', 'galactic', true, anywhere)).toBe('galactic');
+    expect(nextFrameKey('galactic', 'galactic', true, anywhere)).toBe('ecliptic');
+    expect(nextFrameKey('ecliptic', 'galactic', true, anywhere)).toBe('equatorial');
+    expect(nextFrameKey('equatorial', 'galactic', true, anywhere)).toBe('orbit');
   });
 
   it('skips ORB when the focused object rides no orbit', () => {
-    expect(nextFrameKey('galactic', 'galactic', false)).toBe('equatorial');
+    expect(nextFrameKey('equatorial', 'galactic', false, anywhere)).toBe('galactic');
   });
 
   it('leaves ORB for the cycle even once the orbit is gone', () => {
     // A captured ORB survives a focus change that strips the elements out
     // from under it; the flag must still have somewhere to go.
-    expect(nextFrameKey('orbit', 'galactic', false)).toBe('equatorial');
+    expect(nextFrameKey('orbit', 'galactic', false, anywhere)).toBe('galactic');
   });
 
   it('reaches all four from every frame while an orbit is on offer', () => {
@@ -264,7 +272,7 @@ describe('nextFrameKey', () => {
       const seen = new Set<string>();
       let at: ReturnType<typeof nextFrameKey> = start;
       for (let i = 0; i < FRAME_CYCLE.length; i++) {
-        at = nextFrameKey(at, 'galactic', true);
+        at = nextFrameKey(at, 'galactic', true, anywhere);
         seen.add(at);
       }
       expect(seen.size).toBe(FRAME_CYCLE.length);
@@ -275,10 +283,22 @@ describe('nextFrameKey', () => {
     for (const start of FRAME_CYCLE) {
       let at: ReturnType<typeof nextFrameKey> = start;
       for (let i = 0; i < 8; i++) {
-        at = nextFrameKey(at, 'galactic', false);
+        at = nextFrameKey(at, 'galactic', false, anywhere);
         expect(at).not.toBe('orbit');
       }
     }
+  });
+
+  it('skips a frame the focused object gives no meaning to', () => {
+    expect(nextFrameKey('galactic', 'galactic', false, galacticOnly)).toBe('galactic');
+    expect(nextFrameKey('ecliptic', 'galactic', false, galacticOnly)).toBe('galactic');
+  });
+
+  // Galactic is available everywhere, so the walk can never run off the end —
+  // but ORB plus one sky frame is the narrowest the cycle ever gets.
+  it('still alternates with ORB when only one sky frame is available', () => {
+    expect(nextFrameKey('galactic', 'galactic', true, galacticOnly)).toBe('orbit');
+    expect(nextFrameKey('orbit', 'galactic', true, galacticOnly)).toBe('galactic');
   });
 });
 
@@ -313,6 +333,99 @@ describe('autoFrameFor', () => {
     expect(autoFrameFor(focus({ kind: 'star' }))).toBe('galactic');
     for (const kind of ['cloud', 'lg', 'shell'] as const) {
       expect(autoFrameFor(focus({ kind }))).toBe('galactic');
+    }
+  });
+});
+
+describe('frameAvailableFor', () => {
+  const focus = (o: Partial<FocusFrameInputs> = {}): FocusFrameInputs => ({
+    kind: null, planetName: null, isSol: false, ...o,
+  });
+  const earth = focus({ kind: 'planet', planetName: 'Earth' });
+  const jupiter = focus({ kind: 'planet', planetName: 'Jupiter' });
+  const algol = focus({ kind: 'star' });
+
+  it('offers galactic from anywhere — the disc is real wherever you stand', () => {
+    for (const f of [earth, jupiter, algol, focus()]) {
+      expect(frameAvailableFor('galactic', f)).toBe(true);
+    }
+  });
+
+  it('offers the ecliptic across Sol\'s system and nowhere else', () => {
+    expect(frameAvailableFor('ecliptic', earth)).toBe(true);
+    expect(frameAvailableFor('ecliptic', jupiter)).toBe(true);
+    expect(frameAvailableFor('ecliptic', focus({ kind: 'probe' }))).toBe(true);
+    expect(frameAvailableFor('ecliptic', focus({ kind: 'star', isSol: true }))).toBe(true);
+    expect(frameAvailableFor('ecliptic', algol)).toBe(false);
+    expect(frameAvailableFor('ecliptic', focus())).toBe(false);
+  });
+
+  // RA/Dec is measured off Earth's own axis and equinox, so it is that one
+  // body's frame — not the solar system's.
+  it('offers RA/Dec from Earth alone', () => {
+    expect(frameAvailableFor('equatorial', earth)).toBe(true);
+    expect(frameAvailableFor('equatorial', jupiter)).toBe(false);
+    expect(frameAvailableFor('equatorial', focus({ kind: 'star', isSol: true }))).toBe(false);
+    expect(frameAvailableFor('equatorial', algol)).toBe(false);
+  });
+
+  // The rule reads off autoFrameFor, so an object's own default can never be
+  // one the availability check would then refuse.
+  it('always offers the frame the focus rule itself picks', () => {
+    for (const f of [earth, jupiter, algol, focus({ kind: 'probe' }), focus()]) {
+      expect(frameAvailableFor(autoFrameFor(f), f)).toBe(true);
+    }
+  });
+});
+
+describe('frameAfterFocusChange', () => {
+  const focus = (o: Partial<FocusFrameInputs> = {}): FocusFrameInputs => ({
+    kind: null, planetName: null, isSol: false, ...o,
+  });
+  const earth = focus({ kind: 'planet', planetName: 'Earth' });
+  const luna = focus({ kind: 'planet', planetName: 'Luna' });
+  const jupiter = focus({ kind: 'planet', planetName: 'Jupiter' });
+  const algol = focus({ kind: 'star' });
+
+  it('keeps a frame the new focus still gives meaning to', () => {
+    expect(frameAfterFocusChange('ecliptic', luna)).toBe('ecliptic');
+    expect(frameAfterFocusChange('ecliptic', jupiter)).toBe('ecliptic');
+    expect(frameAfterFocusChange('ecliptic', earth)).toBe('ecliptic');
+    expect(frameAfterFocusChange('galactic', algol)).toBe('galactic');
+  });
+
+  it('demotes to the new object\'s own default when it does not', () => {
+    expect(frameAfterFocusChange('equatorial', luna)).toBe('ecliptic');
+    expect(frameAfterFocusChange('ecliptic', algol)).toBe('galactic');
+    expect(frameAfterFocusChange('equatorial', algol)).toBe('galactic');
+  });
+
+  // The walk the demotion has to reproduce, one focus change at a time.
+  it('walks Earth → Luna → Jupiter → Algol as RA/Dec, ecliptic, ecliptic, galactic', () => {
+    let frame = frameAfterFocusChange('equatorial', earth);
+    expect(frame).toBe('equatorial');
+    frame = frameAfterFocusChange(frame, luna);
+    expect(frame).toBe('ecliptic');
+    frame = frameAfterFocusChange(frame, jupiter);
+    expect(frame).toBe('ecliptic');
+    frame = frameAfterFocusChange(frame, algol);
+    expect(frame).toBe('galactic');
+  });
+
+  it('holds an empty grid empty, wherever the focus lands', () => {
+    for (const f of [earth, luna, jupiter, algol, focus()]) {
+      expect(frameAfterFocusChange('none', f)).toBe('none');
+    }
+  });
+
+  // Whatever it answers has to survive its own check, or a second focus
+  // change to the same object would move the frame again.
+  it('is idempotent — the demoted frame is available at the new focus', () => {
+    for (const f of [earth, luna, jupiter, algol, focus()]) {
+      for (const start of ['none', 'galactic', 'ecliptic', 'equatorial'] as const) {
+        const next = frameAfterFocusChange(start, f);
+        expect(frameAfterFocusChange(next, f)).toBe(next);
+      }
     }
   });
 });

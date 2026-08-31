@@ -9,7 +9,6 @@ import type {
   CoordSphereSpec,
   DrawnCoordSphereFrame,
 } from './coord-sphere';
-import { solFrameFadeFactor, type SolFrameFadeWindow } from '../galactic-fade';
 import { galacticDirToIcrs } from '../galactic-coords';
 
 /**
@@ -27,6 +26,32 @@ export function equatorialDirToIcrs(
 ): THREE.Vector3 {
   const { u } = equatorialTangentBasisRad(raRad, decRad);
   return out.set(u.x, u.y, u.z);
+}
+
+/** Earth's axial tilt (IAU 2006, J2000): the angle between the equatorial and
+ *  ecliptic planes, and the whole of the rotation between the two frames. */
+export const OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
+const COS_OBLIQUITY = Math.cos(OBLIQUITY_RAD);
+const SIN_OBLIQUITY = Math.sin(OBLIQUITY_RAD);
+
+/**
+ * Ecliptic (λ, β) in radians → the ICRS unit direction, written into `out`.
+ *
+ * The two frames share the vernal equinox as their zero longitude and differ
+ * only by a rotation about it, so this is the equatorial mapping turned about
+ * x by the obliquity: the ecliptic pole lands at α 18h, δ +66.56°.
+ */
+export function eclipticDirToIcrs(
+  lonRad: number,
+  latRad: number,
+  out: THREE.Vector3,
+): THREE.Vector3 {
+  const { u } = equatorialTangentBasisRad(lonRad, latRad);
+  return out.set(
+    u.x,
+    u.y * COS_OBLIQUITY - u.z * SIN_OBLIQUITY,
+    u.y * SIN_OBLIQUITY + u.z * COS_OBLIQUITY,
+  );
 }
 
 /** Whole-degree label wrapped to [0, 360) — galactic longitude. */
@@ -52,12 +77,6 @@ export function fmtDecDeg(deg: number): string {
   return `${d > 0 ? '+' : ''}${d}°`;
 }
 
-/** Where the RA/Dec sphere starts fading and where it is gone, as camera
- *  distance from Sol. Full strength across the solar system, gone before the
- *  first star — see galactic/README.md § The equatorial sphere is Sol-only for
- *  why an Earth-referenced frame needs one at all. */
-export const EQUATORIAL_FADE_WINDOW_PC: SolFrameFadeWindow = { innerPc: 0.4, outerPc: 2.0 };
-
 export const GALACTIC_SPHERE_SPEC: CoordSphereSpec = {
   dirToIcrs: galacticDirToIcrs,
   meridianCount: 36,   // every 10° of l
@@ -75,21 +94,33 @@ export const EQUATORIAL_SPHERE_SPEC: CoordSphereSpec = {
   labelGroupId: 'eq-grid-labels',
   lonLabel: fmtRaHours,
   latLabel: fmtDecDeg,
-  fadeWindow: EQUATORIAL_FADE_WINDOW_PC,
+};
+
+// Ecliptic longitude is measured in degrees, not hours, so this takes the
+// galactic sphere's 10° parametrisation rather than the equatorial one's
+// hour circles.
+export const ECLIPTIC_SPHERE_SPEC: CoordSphereSpec = {
+  dirToIcrs: eclipticDirToIcrs,
+  meridianCount: 36,
+  labelGroupId: 'ecl-grid-labels',
+  lonLabel: fmtLonDeg,
+  latLabel: fmtLatDeg,
 };
 
 export const COORD_SPHERE_SPECS: Record<DrawnCoordSphereFrame, CoordSphereSpec> = {
   galactic: GALACTIC_SPHERE_SPEC,
+  ecliptic: ECLIPTIC_SPHERE_SPEC,
   equatorial: EQUATORIAL_SPHERE_SPEC,
 };
 
-/** Every frame that draws something, in panel order. Each consumer — the
- *  scene layer, the resize hook, the label pools — iterates this rather than
- *  naming the two spheres, so a third frame is a table entry. */
+/** Every frame that draws something, in panel order — widest reference plane
+ *  first. Each consumer — the scene layer, the resize hook, the label pools —
+ *  iterates this rather than naming the spheres, so a further frame is a table
+ *  entry. */
 export const DRAWN_COORD_SPHERE_FRAMES: readonly DrawnCoordSphereFrame[] =
-  ['galactic', 'equatorial'];
+  ['galactic', 'ecliptic', 'equatorial'];
 
-/** Cycle order for the `S` key and the panel's 3-stop control. */
+/** Cycle order for the `S` key and the panel's stop control. */
 export const COORD_SPHERE_FRAMES: readonly CoordSphereFrame[] =
   ['none', ...DRAWN_COORD_SPHERE_FRAMES];
 
@@ -99,50 +130,31 @@ function northPoleOf(spec: CoordSphereSpec): THREE.Vector3 {
 
 const COORD_SPHERE_NORTH_POLES: Record<DrawnCoordSphereFrame, THREE.Vector3> = {
   galactic: northPoleOf(GALACTIC_SPHERE_SPEC),
+  ecliptic: northPoleOf(ECLIPTIC_SPHERE_SPEC),
   equatorial: northPoleOf(EQUATORIAL_SPHERE_SPEC),
 };
 
-/** The pole a roll gesture levels against — the displayed sphere's own north,
- *  galactic when no sphere is up. Derived through the spec's own `dirToIcrs`,
- *  so the alignment guide cannot disagree with the grid it sticks to.
- *  Callers must NOT mutate the returned vector. */
+/** A frame's own north, galactic when no sphere is up. Derived through the
+ *  spec's own `dirToIcrs`, so what `L` levels to and what the grid draws are
+ *  one value rather than two that agree. Precomputed per frame — the level
+ *  path allocates nothing. Callers must NOT mutate the returned vector. */
 export function coordSphereNorthPole(frame: CoordSphereFrame): THREE.Vector3 {
   return COORD_SPHERE_NORTH_POLES[frame === 'none' ? 'galactic' : frame];
 }
 
-/** Stroke alpha `frame` draws at from this distance from Sol — 1 for a frame
- *  with no fade window. The SVG edge labels ride the same value, so text dims
- *  in step with the lines it annotates. */
-export function coordSphereFadeAt(
-  frame: DrawnCoordSphereFrame,
-  distFromSolPc: number,
-): number {
-  const { fadeWindow } = COORD_SPHERE_SPECS[frame];
-  return fadeWindow ? solFrameFadeFactor(distFromSolPc, fadeWindow) : 1;
-}
-
-/** Does `frame` draw anything at all from here? The single cut: the `S` cycle
- *  skips an unreachable stop, the panel disables it, and the scene layer
- *  deselects a sphere that crosses out. */
-export function coordSphereReachableAt(
-  frame: DrawnCoordSphereFrame,
-  distFromSolPc: number,
-): boolean {
-  return coordSphereFadeAt(frame, distFromSolPc) > 0;
-}
-
-/** The next frame in the `S` cycle, skipping any sphere `reachable` rejects —
- *  pressing `S` must never leave an enabled-but-invisible sphere. `none` is
- *  always in the cycle, so this always terminates. */
+/** The next frame in the observe-mode `S` cycle, skipping any sphere
+ *  `available` rejects — pressing `S` must never land on a frame that
+ *  describes nothing from the object you are standing on. `none` is always in
+ *  the cycle, so this always terminates. */
 export function nextCoordSphereFrame(
   cur: CoordSphereFrame,
-  reachable: (frame: DrawnCoordSphereFrame) => boolean,
+  available: (frame: DrawnCoordSphereFrame) => boolean,
 ): CoordSphereFrame {
   const n = COORD_SPHERE_FRAMES.length;
   const from = COORD_SPHERE_FRAMES.indexOf(cur);
   for (let step = 1; step <= n; step++) {
     const next = COORD_SPHERE_FRAMES[(from + step) % n];
-    if (next === 'none' || reachable(next)) return next;
+    if (next === 'none' || available(next)) return next;
   }
   return 'none';
 }
