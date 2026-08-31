@@ -1,6 +1,6 @@
 // High-PM sky-position regression harness: catalog.bin directions vs
 // J2016.0 (scene-epoch) positions in sky-position-corpus.tsv.
-// See scripts/catalog/README.md § Direction resolution.
+// See scripts/catalog/distance/README.md § Direction resolution.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
