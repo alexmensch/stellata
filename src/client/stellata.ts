@@ -1146,7 +1146,7 @@ export class Stellata implements FrameAnchor {
     // entry owns a layer and § Camera writes, then camera reads.
     this.layers.register({
       timeBehaviour: { kind: 'static' },
-      update: () => this.orbitLockRide?.(),
+      update: () => this.orbitFrameTick?.(),
       dispose: () => {},
     });
     this.layers.register({
@@ -2350,16 +2350,17 @@ export class Stellata implements FrameAnchor {
     return angularToPxPure(u.uViewport.value.y, u.uFovYRad.value);
   }
 
-  private orbitLockRide: (() => void) | null = null;
+  private orbitFrameTick: (() => void) | null = null;
 
-  /** Install the attitude indicator's orbit-lock ride into the frame. The
-   *  shell owns WHEN it runs — the registry is the only place that can
-   *  express "after the rides, before the projectors" — and the indicator
-   *  owns what it does (`attitude/orbit-frame/README.md` § The lock). Read
-   *  through the field on every frame, so installing it after the layers are
-   *  registered works, exactly as a lazily-attached layer does. */
-  setOrbitLockRide(ride: () => void): void {
-    this.orbitLockRide = ride;
+  /** Install the attitude indicator's per-frame ORB tick — the live datum
+   *  re-read, and the orbit lock's camera write with it. The shell owns WHEN
+   *  it runs, the registry being the only place that can express "after every
+   *  camera write, before every camera read"; the indicator owns what it does
+   *  (`attitude/orbit-frame/README.md` § The lock). Read through the field on
+   *  every frame, so installing it after the layers are registered works,
+   *  exactly as a lazily-attached layer does. */
+  setOrbitFrameTick(tick: () => void): void {
+    this.orbitFrameTick = tick;
   }
 
   /** The smallest camera turn two rendered frames could show apart, at the
@@ -2773,6 +2774,9 @@ export class Stellata implements FrameAnchor {
     // observeControls owns its own pointer + wheel listeners; disable() is
     // idempotent so it's safe regardless of current mode.
     this.observeControls.disable();
+    // The indicator has no dispose of its own, so the shell drops the closure
+    // rather than holding its ball canvas for the instance's lifetime.
+    this.orbitFrameTick = null;
     this.aim.dispose();
     this.warp.dispose();
     this.observe.dispose();

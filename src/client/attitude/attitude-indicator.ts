@@ -240,11 +240,11 @@ export interface AttitudeIndicator {
    *  Silently does nothing while the chip is off screen. */
   toggleOrbitLock(): void;
   /** Re-read ORB and, while the lock is engaged, carry the camera by however
-   *  far the frame turned. **The shell owns when this runs** — not a bus
-   *  event: it has to land after the fan-out's position writes and both
-   *  focal rides, and ahead of every layer that projects the camera
-   *  (`Stellata.setOrbitLockRide`, `orbit-frame/README.md` § The lock). */
-  tickOrbitLock(): void;
+   *  far the frame turned. Runs on every rendered frame whether or not the
+   *  lock is engaged — the re-read is what makes ORB live, so this is not
+   *  skippable when it is off. **The shell owns when** it runs:
+   *  `Stellata.setOrbitFrameTick`, `orbit-frame/README.md` § The lock. */
+  tickOrbitFrame(): void;
 }
 
 export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator | null {
@@ -418,14 +418,9 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     const camera = stellata.camera;
     const pivot = stellata.controls.target;
     ridePoseBy(camera.position, camera.up, pivot, rideRotation);
-    // `ridePoseBy` writes the pose — position and up. Every reader
-    // downstream takes the QUATERNION, which is derived from those by
-    // `lookAt`, and TrackballControls does not run again until the next tick
-    // (`../camera/controls/input/README.md` § Roll authority, derivation A).
-    // Without this the frame draws the new position through the old aim, and
-    // the ball reads the new datum against the old attitude — a lag of
-    // exactly one frame's turn, which is a degree at 9 hr/s and half a
-    // revolution once the datum turns 180° between frames.
+    // Required: `ridePoseBy` writes only the pose, and nothing re-derives the
+    // quaternion every reader takes until the next tick — drop this and the
+    // frame draws through an aim one turn stale. § The lock.
     camera.lookAt(pivot);
     return true;
   }
@@ -726,8 +721,5 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   });
 
   draw();
-  return {
-    level, cycleFrame, aimAtFrameOrigin, toggleOrbitLock,
-    tickOrbitLock: tickOrbitFrame,
-  };
+  return { level, cycleFrame, aimAtFrameOrigin, toggleOrbitLock, tickOrbitFrame };
 }

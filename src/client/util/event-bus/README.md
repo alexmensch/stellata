@@ -58,7 +58,7 @@ in the frame a camera write belongs is an ordering claim about other layers
 (after the position writes, before the projectors), and the scene registry is
 the only place that can express it — `../../scene/README.md` § Not every entry
 owns a layer. The orbit lock is the worked example: it rides through
-`Stellata.setOrbitLockRide` from a sequencing-only registry entry, and only
+`Stellata.setOrbitFrameTick` from a sequencing-only registry entry, and only
 its *drawing* rides `frame` (`../../attitude/orbit-frame/README.md` § The lock).
 
 ## Authoring a new event

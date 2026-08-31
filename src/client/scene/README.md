@@ -229,7 +229,7 @@ one pass.
 at all (`dispose` is empty) and exist purely to sequence a camera write
 that belongs to another owner: the **moving-focal ride**, which has to
 land after the module layers' position writes; and the attitude
-indicator's **orbit lock** (`Stellata.setOrbitLockRide`,
+indicator's **orbit lock** (`Stellata.setOrbitFrameTick`,
 `../attitude/orbit-frame/README.md` § The lock), which has to land after
 both focal rides, since it reads a datum they produce and pivots about the
 `controls.target` they move. The registry is the only place that expresses

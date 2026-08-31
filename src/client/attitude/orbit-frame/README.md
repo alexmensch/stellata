@@ -103,13 +103,12 @@ runs once per focus and `focusedOrbitFrom` runs per frame:
 
 ## The lock
 
-The chip under the frame flag — a padlock, shown only while ORB is what the
-ball is reading, with **`Shift`+`L`** as its keyboard path — **rides the
-orbit**: it holds the attitude the instrument is
+The chip under the frame flag — a padlock, with **`Shift`+`L`** as its
+keyboard path — **rides the orbit**: it holds the attitude the instrument is
 showing as the datum turns beneath it, so the camera swings round with the
 object and the ball stands still while the world moves under it. Off by
-default, and it leaves with the frame, since every other frame's datum is
-fixed and there would be nothing to ride.
+default, and shown only where there is something to ride — the rule, and the
+one place it lives, below.
 
 **The ride carries the camera by exactly the rotation the FRAME underwent**,
 read off the frame's own basis before and after (`orbitRideRotation`, then
@@ -189,7 +188,7 @@ Four ordering details that are easy to get wrong, and two of them shipped
 wrong once:
 
 - **The ride runs inside the scene fan-out, not on a bus event.** It is
-  installed through `Stellata.setOrbitLockRide` and called from a
+  installed through `Stellata.setOrbitFrameTick` and called from a
   sequencing-only registry entry, because where it lands is an ordering claim
   about other layers and the registry is the only place that states one
   (`../../scene/README.md` § Not every entry owns a layer). It has to be
