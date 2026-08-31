@@ -237,6 +237,12 @@ export interface AttitudeIndicator {
   /** Engage or release the orbit lock. The padlock chip, and `Shift`+`L`.
    *  Silently does nothing while the chip is off screen. */
   toggleOrbitLock(): void;
+  /** Re-read ORB and, while the lock is engaged, carry the camera by however
+   *  far the frame turned. **The shell owns when this runs** — not a bus
+   *  event: it has to land after the fan-out's position writes and both
+   *  focal rides, and ahead of every layer that projects the camera
+   *  (`Stellata.setOrbitLockRide`, `orbit-frame/README.md` § The lock). */
+  tickOrbitLock(): void;
 }
 
 export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator | null {
@@ -704,12 +710,6 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   stellata.on('cameraMode', applyModeVisibility);
   applyModeVisibility();
 
-  // Not 'frame': that fires after the render, so the ride would land on a
-  // frame already drawn and the ball would read this frame's datum against
-  // last frame's attitude. 'preRender' is after the fan-out — so the datum is
-  // current — and before anything reads the camera.
-  stellata.on('preRender', tickOrbitFrame);
-
   stellata.on('frame', () => {
     // A live ORB datum turns with the orbit, so a still camera is not a still
     // instrument — but the test is that the DATUM moved, not that a live frame
@@ -729,5 +729,8 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   });
 
   draw();
-  return { level, cycleFrame, aimAtFrameOrigin, toggleOrbitLock };
+  return {
+    level, cycleFrame, aimAtFrameOrigin, toggleOrbitLock,
+    tickOrbitLock: tickOrbitFrame,
+  };
 }

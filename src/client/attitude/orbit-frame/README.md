@@ -182,12 +182,19 @@ is proportional to the scrub rate rather than accumulating.
 Four ordering details that are easy to get wrong, and two of them shipped
 wrong once:
 
-- **The ride runs on `'preRender'`, not `'frame'`.** `'frame'` fires *after*
-  the render, so a ride there lands on a frame already drawn — the lag above.
-  `'preRender'` fires after the layer fan-out, so the ephemeris is at this
-  frame's `t` and the datum's turn is knowable, and before anything reads the
-  camera for the frame. That the datum is only current *after* the fan-out is
-  what rules out riding earlier.
+- **The ride runs inside the scene fan-out, not on a bus event.** It is
+  installed through `Stellata.setOrbitLockRide` and called from a
+  sequencing-only registry entry, because where it lands is an ordering claim
+  about other layers and the registry is the only place that states one
+  (`../../scene/README.md` § Not every entry owns a layer). It has to be
+  **after** every moving field's position writes — the datum's turn is not
+  knowable before them, which rules out riding earlier — and after **both**
+  focal rides, whose translations put `controls.target` on the object it
+  pivots about. It has to be **before** every entry that projects the camera
+  to screen space, or the HUD arrows, the distance vector and the labels are
+  drawn against a pose the frame does not render. `'frame'` fires after the
+  render and fails both halves, which is the lag above; only the instrument's
+  own *drawing* rides `'frame'`.
 - **The ride is not part of the instrument's draw path.** It moves the CAMERA,
   not the instrument, so it runs on every rendered frame including the ones
   the instrument is hidden for — `U`, a collapsed panel, any off-screen check.

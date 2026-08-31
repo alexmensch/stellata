@@ -229,14 +229,6 @@ export type StellataEventMap = {
   pois: readonly Target[];
   noopClick: { x: number; y: number };
   state: void;
-  /** After the layer fan-out has moved everything this frame, BEFORE the
-   *  first draw. For a subscriber that must write the camera off what the
-   *  fan-out just produced — the attitude indicator's orbit lock, which
-   *  needs the ephemeris at this `t` to know how far the datum turned, and
-   *  has to land before the render or the frame draws a pose one turn stale
-   *  (`attitude/orbit-frame/README.md` § The lock). Elided on a skipped
-   *  tick, exactly like `frame`. */
-  preRender: void;
   frame: void;
 };
 
@@ -1165,6 +1157,27 @@ export class Stellata implements FrameAnchor {
         this.eclipsePhotometryField?.dispose();
         this.binaryOrbitPathLayer.dispose();
       },
+    });
+    // Sequencing only, owning nothing — the second such entry, and
+    // scene/README.md § Not every entry owns a layer asks it to justify
+    // itself. The orbit lock is a camera WRITE, and exactly one slot in the
+    // frame is correct for it: after every moving field wrote this frame's
+    // positions AND after BOTH focal rides (the moving-body one in the first
+    // entry, the binary one directly above), so the datum it reads and the
+    // pivot it swings about are current; and ahead of every entry below,
+    // because those project the camera to screen space and would otherwise
+    // draw the HUD arrows, the distance vector and the labels against a pose
+    // the frame does not render. `static` is the honest declaration: it draws
+    // nothing, so it must never ask the cadence for a frame of its own — it
+    // writes only on frames something else already scheduled.
+    //
+    // The readers ABOVE are indifferent by construction: the ride is a pure
+    // rotation about `controls.target`, so it changes no distance to
+    // anything, and every one of them sizes or culls off distance.
+    this.layers.register({
+      timeBehaviour: { kind: 'static' },
+      update: () => this.orbitLockRide?.(),
+      dispose: () => {},
     });
     this.layers.register({
       timeBehaviour: {
@@ -2342,6 +2355,18 @@ export class Stellata implements FrameAnchor {
     return angularToPxPure(u.uViewport.value.y, u.uFovYRad.value);
   }
 
+  private orbitLockRide: (() => void) | null = null;
+
+  /** Install the attitude indicator's orbit-lock ride into the frame. The
+   *  shell owns WHEN it runs — the registry is the only place that can
+   *  express "after the rides, before the projectors" — and the indicator
+   *  owns what it does (`attitude/orbit-frame/README.md` § The lock). Read
+   *  through the field on every frame, so installing it after the layers are
+   *  registered works, exactly as a lazily-attached layer does. */
+  setOrbitLockRide(ride: () => void): void {
+    this.orbitLockRide = ride;
+  }
+
   /** The smallest camera turn two rendered frames could show apart, at the
    *  current viewport and FOV. A per-frame camera writer below the gate
    *  reads this and declines anything smaller, which is what keeps it from
@@ -2495,10 +2520,6 @@ export class Stellata implements FrameAnchor {
     this._rideAccum.set(0, 0, 0);
     this.layers.updateAll(this.frameCtx);
     this.refreshCadence();
-    // Every position this frame draws is now current, and nothing has read
-    // the camera for the frame yet. A camera writer that depends on both
-    // belongs here rather than on 'frame', which fires after the render.
-    this.bus.emit('preRender');
     // After the layer fan-out so the star cluster's membership is
     // current-frame: a member's core-mask stamp must render even when
     // the physSize-only window misses an appSize-driven member disc.

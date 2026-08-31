@@ -45,22 +45,21 @@ not an accident of whichever sibling you copied:
 The tell is whether the subscriber's own teardown function exists. If
 it does, the unsub belongs in it.
 
-## The two per-frame events, and which one a camera writer wants
+## `frame` fires AFTER the render, and that rules it out for a camera write
 
-`preRender` and `frame` both fire once per **rendered** frame and are both
-elided on a tick the render gate skips (`../../render-gate/README.md`). They
-differ only in where they sit, and for anything that writes the camera that
-difference is the whole story:
+It fires once per **rendered** frame, elided on a tick the render gate skips
+(`../../render-gate/README.md`), and it fires *after* the draw. So a handler
+that writes the camera there lands on a frame already on screen: the write
+shows up one frame later, and anything the frame drew from the camera —
+including that handler's own instrument — disagrees with it in the meantime.
 
-- **`preRender`** — after the layer fan-out, so every position this frame
-  draws is current, and before anything reads the camera for the frame.
-- **`frame`** — after the render. A camera write here lands on a frame that
-  has already been drawn, so the frame shows a pose one step stale.
-
-A subscriber that writes the camera off what the fan-out produced belongs on
-`preRender`, and must re-derive the quaternion itself, since the derived pose
-is only rebuilt by `TrackballControls.update()` on the next tick. The orbit
-lock is the worked example — `../../attitude/orbit-frame/README.md` § The lock.
+**The bus is the wrong seam for that write, not just the wrong event.** Where
+in the frame a camera write belongs is an ordering claim about other layers
+(after the position writes, before the projectors), and the scene registry is
+the only place that can express it — `../../scene/README.md` § Not every entry
+owns a layer. The orbit lock is the worked example: it rides through
+`Stellata.setOrbitLockRide` from a sequencing-only registry entry, and only
+its *drawing* rides `frame` (`../../attitude/orbit-frame/README.md` § The lock).
 
 ## Authoring a new event
 

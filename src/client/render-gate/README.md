@@ -5,10 +5,9 @@
 controllers, and `controls.update()` run every tick regardless — input
 stays responsive and momentum keeps decaying — but on a skipped tick
 everything from the per-frame uniform writes through the GPU passes and
-the `'preRender'` / `'frame'` emits is elided. Both events therefore keep
-their documented meaning — either side of each render — while no longer
-being per-rAF heartbeats. Which of the two a camera writer belongs on is
-`../util/event-bus/README.md` § The two per-frame events.
+the `'frame'` emit is elided. The `'frame'` event therefore keeps its
+documented meaning ("after each render") while no longer being a
+per-rAF heartbeat.
 
 ## Files
 

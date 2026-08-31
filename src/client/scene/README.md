@@ -234,6 +234,27 @@ sequencing-only entry is the intended shape rather than a smell — but
 it is the exception, and it is spelled out here so the next one has to
 justify itself.
 
+There are **two**, and here is the second one's argument. The attitude
+indicator's orbit lock writes the camera (`Stellata.setOrbitLockRide`,
+`../attitude/orbit-frame/README.md` § The lock), and its slot is fixed from
+both sides: after every moving field's position writes and after **both**
+focal rides, since it reads a datum those produce and pivots about the
+`controls.target` they move; and before every entry that projects the camera
+to screen space, or the HUD arrows, the distance vector and the labels draw
+against a pose the frame does not render. It therefore sits directly after
+the binary-orbit entry, the later of the two rides. Entries above it are
+indifferent by construction — the ride is a pure rotation about the target,
+so it changes no distance, and each of them sizes or culls off distance.
+It declares `'static'`: an entry that draws nothing must never ask the
+cadence for a frame, and this one writes only on frames something else
+already scheduled.
+
+**The generalisation, since a third will come:** a per-frame camera write
+belongs in this registry, never on a bus event. `'frame'` fires after the
+render, so a write there is a frame late; and the ordering that makes a
+write correct is a claim about *other layers*, which only registration order
+can state.
+
 Not in the registry: camera controllers, the star pipeline, and the
 extinction prepass — they aren't scene layers and keep explicit
 lifecycle calls in `stellata.ts`. `setMonochrome`'s star-pipeline

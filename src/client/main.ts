@@ -235,6 +235,7 @@ async function main() {
     createMilkyWayLabel(stellata);
     createScaleBar(stellata);
     const attitude = createAttitudeIndicator(stellata);
+    if (attitude !== null) stellata.setOrbitLockRide(attitude.tickOrbitLock);
     bindWarpButton(stellata);
     bindModeToggle(stellata);
     // Hide the #overlay SVG (HUD arrows, focus ring, distance vector,
