@@ -229,6 +229,14 @@ export type StellataEventMap = {
   pois: readonly Target[];
   noopClick: { x: number; y: number };
   state: void;
+  /** After the layer fan-out has moved everything this frame, BEFORE the
+   *  first draw. For a subscriber that must write the camera off what the
+   *  fan-out just produced — the attitude indicator's orbit lock, which
+   *  needs the ephemeris at this `t` to know how far the datum turned, and
+   *  has to land before the render or the frame draws a pose one turn stale
+   *  (`attitude/orbit-frame/README.md` § The lock). Elided on a skipped
+   *  tick, exactly like `frame`. */
+  preRender: void;
   frame: void;
 };
 
@@ -2487,6 +2495,10 @@ export class Stellata implements FrameAnchor {
     this._rideAccum.set(0, 0, 0);
     this.layers.updateAll(this.frameCtx);
     this.refreshCadence();
+    // Every position this frame draws is now current, and nothing has read
+    // the camera for the frame yet. A camera writer that depends on both
+    // belongs here rather than on 'frame', which fires after the render.
+    this.bus.emit('preRender');
     // After the layer fan-out so the star cluster's membership is
     // current-frame: a member's core-mask stamp must render even when
     // the physSize-only window misses an appSize-driven member disc.

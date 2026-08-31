@@ -405,9 +405,17 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     );
     if (turn === 0) return false;
     const camera = stellata.camera;
-    ridePoseAbout(
-      camera.position, camera.up, stellata.controls.target, orbitFrame.pole, turn,
-    );
+    const pivot = stellata.controls.target;
+    ridePoseAbout(camera.position, camera.up, pivot, orbitFrame.pole, turn);
+    // `ridePoseAbout` writes the pose — position and up. Every reader
+    // downstream takes the QUATERNION, which is derived from those by
+    // `lookAt`, and TrackballControls does not run again until the next tick
+    // (`../camera/controls/input/README.md` § Roll authority, derivation A).
+    // Without this the frame draws the new position through the old aim, and
+    // the ball reads the new datum against the old attitude — a lag of
+    // exactly one frame's turn, which is a degree at 9 hr/s and half a
+    // revolution once the datum turns 180° between frames.
+    camera.lookAt(pivot);
     return true;
   }
 
@@ -686,10 +694,13 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   stellata.on('cameraMode', applyModeVisibility);
   applyModeVisibility();
 
+  // Not 'frame': that fires after the render, so the ride would land on a
+  // frame already drawn and the ball would read this frame's datum against
+  // last frame's attitude. 'preRender' is after the fan-out — so the datum is
+  // current — and before anything reads the camera.
+  stellata.on('preRender', tickOrbitFrame);
+
   stellata.on('frame', () => {
-    // Ahead of the off-screen check, because the lock is a camera behaviour
-    // and must not stop when the instrument is hidden.
-    tickOrbitFrame();
     // A live ORB datum turns with the orbit, so a still camera is not a still
     // instrument — but the test is that the DATUM moved, not that a live frame
     // is up: with the clock paused ORB rebuilds to the same vector and there

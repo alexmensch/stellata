@@ -45,6 +45,23 @@ not an accident of whichever sibling you copied:
 The tell is whether the subscriber's own teardown function exists. If
 it does, the unsub belongs in it.
 
+## The two per-frame events, and which one a camera writer wants
+
+`preRender` and `frame` both fire once per **rendered** frame and are both
+elided on a tick the render gate skips (`../../render-gate/README.md`). They
+differ only in where they sit, and for anything that writes the camera that
+difference is the whole story:
+
+- **`preRender`** — after the layer fan-out, so every position this frame
+  draws is current, and before anything reads the camera for the frame.
+- **`frame`** — after the render. A camera write here lands on a frame that
+  has already been drawn, so the frame shows a pose one step stale.
+
+A subscriber that writes the camera off what the fan-out produced belongs on
+`preRender`, and must re-derive the quaternion itself, since the derived pose
+is only rebuilt by `TrackballControls.update()` on the next tick. The orbit
+lock is the worked example — `../../attitude/orbit-frame/README.md` § The lock.
+
 ## Authoring a new event
 
 Payload types live in `StellataEventMap` (`../../stellata.ts`, where

@@ -408,6 +408,28 @@ describe('ridePoseAbout — the orbit lock', () => {
     expect(after.bankRad).toBeCloseTo(before.bankRad, 9);
   });
 
+  // The pose is position + up; every reader takes the QUATERNION, which is
+  // derived from them. Riding without re-deriving it leaves the reading short
+  // by exactly the step — the one-frame lag that shipped, and the reason the
+  // test above calls `lookAt` after the ride rather than as scene-setting.
+  it('leaves the reading a whole step short if the quaternion is not re-derived', () => {
+    const step = 0.37;
+    const toCentre = new THREE.Vector3(3, 0, 0);
+    const camera = posed(new THREE.Vector3(1.5, 2, 6), new THREE.Vector3(0.2, 1, 0.1).normalize());
+
+    const frame = emptyReferenceFrame();
+    orbitFrameInto(frame, camera, normal, toCentre);
+    const out: Attitude = { pitchRad: 0, bankRad: 0, lonRad: 0, sinFromPole: 1 };
+    const before = { ...readAttitude(camera, frame, out) };
+
+    orbitFrameInto(frame, camera, normal, toCentre.clone().applyAxisAngle(normal, step));
+    ridePoseAbout(camera.position, camera.up, pivot, normal, step);
+    // Deliberately no `camera.lookAt(pivot)` here.
+
+    const after = readAttitude(camera, frame, out);
+    expect(Math.abs(after.lonRad - before.lonRad)).toBeCloseTo(step, 9);
+  });
+
   // Without the ride the same advance moves the reading, which is what makes
   // the assertion above a measurement rather than a tautology.
   it('is what holds it — the reading moves without the ride', () => {

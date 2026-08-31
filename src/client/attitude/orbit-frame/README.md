@@ -143,9 +143,29 @@ each one and the lock would slowly slip its grip. Faster than live the gate
 never idles anyway, so a scrub crosses the threshold every frame and rides
 exactly as before.
 
-Three ordering details that are easy to get wrong, and one of them shipped
+**The ride writes the pose; the quaternion is DERIVED from it, and nothing
+re-derives it for you until the next tick.** `ridePoseAbout` writes
+`camera.position` and `camera.up`. Every reader downstream — the render, the
+overlays, and the ball's own `readAttitude` — takes `camera.quaternion`, which
+`lookAt` builds from those two, and `TrackballControls.update()` does not run
+again until the next rAF tick (`../../camera/controls/input/README.md`
+§ Roll authority, derivation A). So the ride re-derives it itself. Skip that
+and the frame draws the new position through the old aim while the ball reads
+the new datum against the old attitude: **a lag of exactly one frame's turn**,
+which is invisible at 1×, about a degree at 9 hr/s, and half a revolution once
+the datum turns 180° between frames. It shipped that way once, and it read as
+drag or inertia on the ball rather than as an ordering fault, because the error
+is proportional to the scrub rate rather than accumulating.
+
+Four ordering details that are easy to get wrong, and two of them shipped
 wrong once:
 
+- **The ride runs on `'preRender'`, not `'frame'`.** `'frame'` fires *after*
+  the render, so a ride there lands on a frame already drawn — the lag above.
+  `'preRender'` fires after the layer fan-out, so the ephemeris is at this
+  frame's `t` and the datum's turn is knowable, and before anything reads the
+  camera for the frame. That the datum is only current *after* the fan-out is
+  what rules out riding earlier.
 - **The ride is not part of the instrument's draw path.** It moves the CAMERA,
   not the instrument, so it runs on every rendered frame including the ones
   the instrument is hidden for — `U`, a collapsed panel, any off-screen check.
