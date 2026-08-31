@@ -98,7 +98,8 @@ literature, led by `2006AstL...32..759G` (2,809) and
 - **`sp_type`** is SIMBAD's canonicalised Morgan-Keenan string —
   variability annotations live in `otype` and never in `sp_type`, so
   the parser
-  ([`classifyFromSimbad`](../../scripts/catalog/catalog-pure.ts)) is
+  ([`classifyFromSimbad`](../../scripts/catalog/spectral/spectral-classify.ts))
+  is
   a strict MK walker.
 - **`wds_xids_overrides.tsv`** is the manual escape hatch for the
   Sirius-B-shaped systems where SIMBAD collapses multiple WDS-J
@@ -121,7 +122,7 @@ The no-Gaia tier (1,371 rows) falls through **HIP → TYC → GJ**: 1,317
 carry a HIP, 41 are keyed on a TYC, 12 on a GJ, and Sol carries none.
 The fall-through is strict, so those 41 are keyed on TYC whether or not
 they also carry a GJ — **5 of them do**, and their GJ is never requested
-(`scripts/catalog/parse/README.md` § The ladder is ordered by what an
+(`scripts/catalog/spectral/README.md` § The ladder is ordered by what an
 identifier names).
 Resolution against SIMBAD's `ident` table is 100% for HIP and TYC and
 10/12 for GJ — `Gl 165A` and `GJ 3406A` are component designations SIMBAD
@@ -163,7 +164,7 @@ The +2,169 into SIMBAD is exactly the 1,821 leaving GSP-Spec plus the 348
 leaving unknown, so no record changed tier for any other reason. 348 fewer
 stars display as unknown. The TYC and GJ rows only reach records because
 the resolver gained matching tiers in the same change — the pull's cross-ID
-columns are inert without them (`scripts/catalog/parse/README.md`
+columns are inert without them (`scripts/catalog/spectral/README.md`
 § The resolver and the radius chain).
 
 **34 records lost a spectral type**, every one of them via a vanished HIP
@@ -218,7 +219,7 @@ after the binaries ones do.
   every namespace the pull keyed on and joined per record source_id → HIP →
   **GJ → TYC** — the join deliberately no longer mirrors the request order,
   because a GJ names the component where a TYC names the system
-  (`scripts/catalog/parse/README.md` § The ladder is ordered by what an
+  (`scripts/catalog/spectral/README.md` § The ladder is ordered by what an
   identifier names). The **rv** cascade consumes it today
   (`scripts/catalog/distance/radial-velocity/README.md`); the direction/PM,
   V and distance cascades follow at `stellata-3bsf.26` / `.28`. The file

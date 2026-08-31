@@ -112,11 +112,12 @@ export const CURATED_SPTYPE_BY_HIP: ReadonlyMap<number, string> = new Map([
   [36850, 'A1.5IV'],
 ]);
 
+export type SpectralSource = 'curated' | 'simbad' | 'gspspec' | 'fallback';
+
 /** Seven-tier spectral resolver: a curated HIP override, the four SIMBAD
  *  namespaces in ladder order, Gaia DR3 GSP-Spec, then SPECTRAL_UNKNOWN.
- *  Which tier exists for which population is in `parse/README.md`
+ *  Which tier exists for which population is in `./README.md`
  *  § The resolver and the radius chain. */
-export type SpectralSource = 'curated' | 'simbad' | 'gspspec' | 'fallback';
 export function resolveSpectralInfo(
   keys: SimbadRecordKeys,
   simbad: SimbadSpectralIndex,

@@ -38,7 +38,7 @@ a spectral symbol at all, so the seam is one-way and a cycle cannot form.
 
 ## The resolver and the radius chain
 
-`resolveSpectralInfo` in `catalog-pure.ts` resolves
+`resolveSpectralInfo` in `spectral-resolve.ts` resolves
 `{ classIdx, subclass, lumClass, isWhiteDwarf }` per star via a seven-tier
 priority chain:
 

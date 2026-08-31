@@ -136,7 +136,8 @@ own area integral `Φ(n)·D²` — `perceptualDiscFluxIntegral` in
 Runtime colour is **two-tier** — `iTeffApsis > 0 ? Ballesteros(iTeffApsis)
 : iCi` in `star.vert.glsl` — where `iCi` is the build-time-baked
 intrinsic B–V (observed AT-HYG cell, or the spectral-class colour
-`spectralClassCi` bakes in `scripts/catalog/catalog-pure.ts`).
+`spectralClassCi` bakes in
+`scripts/catalog/spectral/physical-radius.ts`).
 `bestApsisTeff` decides which Apsis Teff feeds `iTeffApsis`.
 `extinction/` reddens whichever tier wins.
 

@@ -426,13 +426,14 @@ Today's downstream consumers:
   (`star-color-routing-pure.ts`) writes the best Apsis Teff to the
   `iTeffApsis` attribute, and the lower tiers are baked into `iCi` at
   build: a measured B−V from `photometry/`'s three-tier cascade, or the
-  intrinsic spectral-class colour `spectralClassCi` (`catalog-pure.ts`)
-  derives when a no-Apsis star has no measured B−V but a parseable class
-  (`ciSpectralDerived` in build-counts), else the solar fallback.
+  intrinsic spectral-class colour `spectralClassCi`
+  (`spectral/physical-radius.ts`) derives when a no-Apsis star has no
+  measured B−V but a parseable class (`ciSpectralDerived` in build-counts),
+  else the solar fallback.
 - **Spectral classification fall-through** (`resolveSpectralInfo` in
-  `catalog-pure.ts`) — when SIMBAD has no sp_type under any of its four
-  namespaces (source_id, HIP, GJ, TYC), GSP-Spec's `spectraltype_esphs`
-  enum is the tier before `SPECTRAL_UNKNOWN`.
+  `spectral/spectral-resolve.ts`) — when SIMBAD has no sp_type under any of
+  its four namespaces (source_id, HIP, GJ, TYC), GSP-Spec's
+  `spectraltype_esphs` enum is the tier before `SPECTRAL_UNKNOWN`.
 - **Per-record handles** for future Phase 5 consumers (geometric
   occlusion photometry's limb-darkening Teff dependence; mass-ratio
   refinement using direct `logg_gspphot` for giant / subgiant

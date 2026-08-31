@@ -67,7 +67,7 @@ def _lookup_lum_class(window: str) -> int:
 
 def parse_spectral_type(raw: str | None) -> ParsedSpect | None:
     """Minimal SIMBAD/MK parser sufficient to look up a mass table.
-    Handles the same surface shapes catalog-pure.ts.classifyFromSimbad
+    Handles the same surface shapes spectral-classify.ts.classifyFromSimbad
     handles — plain MK ("G2V"), white dwarfs ("DA1.9"), subdwarfs
     ("sdB"), Yerkes ("dM4.0", "gK0"), carbon/S/WR ("C5,2e", "WN5"). For
     composite Am/Ap tags (k/h/m) and chemical peculiarities the parser
