@@ -16,11 +16,12 @@ import {
 import {
   autoFrameFor,
   buildReferenceFrames,
-  captureOrbitFrame,
   captureReferenceFrame,
   captureTargetFrame,
   frameAvailableFor,
   nextFrameKey,
+  emptyReferenceFrame,
+  orbitFrameInto,
   readAttitude,
   type Attitude,
   type AutoFrameKey,
@@ -240,11 +241,28 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   const frames = buildReferenceFrames();
   let focused: Target | null = stellata.focus.getFocusedTarget();
-  // ORB and REF are captured from a gesture rather than chosen off the table,
+  // REF and TGT are captured from a gesture rather than chosen off the table,
   // so the instrument holds them; every other frame is `filter.coordSphere`,
   // which `S` and the panel write too. The ball can never read against
   // nothing, so an unselected grid resolves to the focus default.
   let captured: ReferenceFrame | null = null;
+  // ORB is neither: it is rebuilt from the live orbit every tick, so what the
+  // flag holds is the choice, not a frame — § Orbit rate.
+  let orbitActive = false;
+  const orbitFrame = emptyReferenceFrame();
+  const orbit: FocusedOrbit = {
+    normal: new THREE.Vector3(),
+    toCentre: new THREE.Vector3(),
+  };
+
+  /** Re-read the orbit and rewrite `orbitFrame` in place. False when nothing
+   *  focused rides an orbit the model has elements for, which is also how the
+   *  frame stops being offered the moment that stops being true. */
+  function refreshOrbitFrame(): boolean {
+    if (!focusedOrbitInto(orbit, stellata, focused)) return false;
+    orbitFrameInto(orbitFrame, stellata.camera, orbit.normal, orbit.toCentre);
+    return true;
+  }
 
   function selectedFrameKey(): AutoFrameKey {
     const selected = stellata.filters.getFilter().coordSphere;
@@ -254,7 +272,9 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   }
 
   function resolveFrame(): ReferenceFrame {
-    return captured ?? frames[selectedFrameKey()];
+    if (captured !== null) return captured;
+    if (orbitActive && refreshOrbitFrame()) return orbitFrame;
+    return frames[selectedFrameKey()];
   }
 
   let frame: ReferenceFrame = resolveFrame();
@@ -305,6 +325,12 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   function draw() {
     const camera = stellata.camera;
+    // ORB turns with the orbit, so the frame itself has to be re-read before
+    // it is drawn against — a still camera is not a still instrument here.
+    if (captured === null && orbitActive) {
+      if (refreshOrbitFrame()) frame = orbitFrame;
+      else orbitActive = false;
+    }
     lastQuat.copy(camera.quaternion);
     ball.render(camera, frame);
     readAttitude(camera, frame, attitude);
@@ -327,13 +353,14 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     // Neither datum has a place on the flag, so the flag keeps reading the
     // frame underneath and the chip alone says one is held.
     const stop = datumStop();
+    const flagLabel = orbitActive ? 'ORB' : frames[selectedFrameKey()].label;
     refBtn.textContent = stop === 'target' ? 'TGT' : 'REF';
     refBtn.classList.toggle('on', stop !== 'off');
     refBtn.setAttribute('aria-pressed', stop !== 'off' ? 'true' : 'false');
+    frameBtn.textContent = flagLabel;
     const next = resolveFrame();
     if (next === frame) return;
     frame = next;
-    frameBtn.textContent = stop === 'off' ? frame.label : frames[selectedFrameKey()].label;
     draw();
   }
 
@@ -360,16 +387,13 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     draw();
   }
 
-  const orbit: FocusedOrbit = {
-    normal: new THREE.Vector3(),
-    toCentre: new THREE.Vector3(),
-  };
-
   function levelOnOrbit() {
     // ORB is the instrument's frame, and the instrument is navigate-only.
     if (stellata.focus.getCameraMode() === 'observe') return;
-    if (!focusedOrbitInto(orbit, stellata, focused)) return;
-    capture(captureOrbitFrame(stellata.camera, orbit.normal, orbit.toCentre));
+    if (!refreshOrbitFrame()) return;
+    captured = null;
+    orbitActive = true;
+    refresh();
     level();
   }
 
@@ -399,15 +423,16 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
       hasOrbit,
       (candidate) => frameAvailableFor(candidate, inputs),
     );
-    // Cycling into ORB captures the plane exactly as the gesture does, but
-    // does not level on it: the flag chooses what the ball reads against,
-    // and levelling is the gesture's own half of the job.
-    if (next === 'orbit') {
-      capture(captureOrbitFrame(stellata.camera, orbit.normal, orbit.toCentre));
-      return;
-    }
+    // Cycling into ORB arms the same live frame the gesture does, but does
+    // not level on it: the flag chooses what the ball reads against, and
+    // levelling is the gesture's own half of the job.
     captured = null;
-    stellata.filters.setFilter({ coordSphere: next });
+    orbitActive = false;
+    if (next === 'orbit') {
+      orbitActive = true;
+    } else {
+      stellata.filters.setFilter({ coordSphere: next });
+    }
     refresh();
   }
 
@@ -460,6 +485,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     focused = target;
     clicks.cancel();
     captured = null;
+    orbitActive = false;
     refresh();
   });
 
@@ -473,6 +499,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     if (selected !== lastSelected) {
       lastSelected = selected;
       captured = null;
+      orbitActive = false;
     }
     refresh();
   });
@@ -488,7 +515,12 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   applyModeVisibility();
 
   stellata.on('frame', () => {
-    const moved = !lastQuat.equals(stellata.camera.quaternion);
+    // A live ORB datum turns with the orbit, so the instrument has to redraw
+    // on every rendered frame while it is up rather than only on a camera
+    // move. Nothing runs while the render gate idles — if no frame is drawn,
+    // the orbit has not advanced either.
+    const moved = (orbitActive && captured === null)
+      || !lastQuat.equals(stellata.camera.quaternion);
     if (offScreen()) {
       missedWhileHidden = missedWhileHidden || moved;
       return;

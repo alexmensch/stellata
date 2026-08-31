@@ -68,18 +68,19 @@ keyed on the focus rather than on distance. **A manual pick therefore
 survives** a focus change now, where it used to be reset every time; only a
 pick the new object cannot support is taken away.
 
-Two captured frames sit outside the selection, both held on the instrument and
-both cleared when the focus moves out from under them:
+Two frames sit outside the selection, both held on the instrument and both
+cleared when the focus moves out from under them:
 
 - The corner flag cycles **ORB → GAL → ECL → EQU**, matching the panel's
   order. Every entry is conditional — ORB on the focused object riding an
   orbit the model has elements for, the sky frames on `frameAvailableFor` —
   and `nextFrameKey` skips what is not on offer. Galactic is available
   everywhere, so the walk always terminates. Picking a sky frame writes
-  `filter.coordSphere`; picking ORB captures the plane exactly as the gesture
+  `filter.coordSphere`; picking ORB arms the same **live** frame the gesture
   does but **does not level**, the flag choosing what the ball reads against
-  and levelling being the gesture's own half of the job (§ Levelling on an
-  orbit).
+  and levelling being the gesture's own half of the job. ORB alone is rebuilt
+  every rendered frame rather than captured, so the ball turns with the orbit
+  (`orbit-frame/README.md` § Orbit rate).
 - The **datum chip** top-left runs **off → REF → TGT → off**. Neither datum
   has a fixed place in a rotation — one is planted on a live attitude, the
   other on a bearing — which is why they sit on a chip of their own rather
@@ -99,8 +100,8 @@ both cleared when the focus moves out from under them:
     **The stop is skipped outright with no destination set**, rather than
     offered as a stop that does nothing.
 
-  Both are snapshots, as ORB is: TGT holds the bearing at the instant it was
-  armed and does not chase a destination that moves. While either is held the
+  Both are snapshots, which ORB is not: TGT holds the bearing at the instant
+  it was armed and does not chase a destination that moves. While either is held the
   flag keeps reading the frame underneath — that is what you return to — and
   the lit chip is what says the ball is not on it.
 
@@ -318,18 +319,18 @@ The ball's centre is where the sphere resolves most finely: there its surface
 faces the viewer square-on and nothing on the ball is denser. A surface arc
 subtends `1 / (BALL_VIEW_DIST − 1)` of itself at the camera, so at a device
 ratio of at most 2 and the panel column's width the centre runs **~5.5 device
-pixels per degree**, against the texture's 8.5 — the texture out-resolves the
-screen by ~1.55×, and mip selection lands near the top level with anisotropy
+pixels per degree**, against the texture's 7.1 — the texture out-resolves the
+screen by ~1.29×, and mip selection lands near the top level with anisotropy
 carrying the oblique periphery.
 
 **That margin is the number to re-check whenever the view or the instrument's
 width changes**, and narrowing the FOV to 15° is exactly such a change: the
 same pixels now cover a 44° cap rather than an 80° one, magnifying the texture
 ~1.34× and dropping the old 2048 × 1024 to **1.03×** — the ratio at which the
-texture starts to blur. `TEX_W` therefore went to 3072 × 1536, which costs
-about 14 MB more VRAM for a permanent instrument texture and buys back a
-margin slightly better than the 1.38× that shipped before. 2560 × 1280 would
-have been the cheaper compromise at 1.29×.
+texture starts to blur. `TEX_W` therefore went to 2560 × 1280, which holds
+**1.29×** for about 7 MB more VRAM on a permanent instrument texture. 3072 ×
+1536 would have restored the full 1.55×, at twice that cost and no visible
+difference from a margin already clear of 1.
 
 ## Sizing
 

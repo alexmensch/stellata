@@ -21,8 +21,9 @@ one level up.
 
 Double-click the ball (or `Shift`+`L`) and the active frame becomes **ORB**,
 whose pole is the normal of the orbit the focused object *itself* rides. It
-is a captured datum like REF, planted from `orbit-plane.ts`'s answer rather
-than from the current attitude, and `level()` then runs unchanged.
+is planted from `orbit-plane.ts`'s answer rather than from the current
+attitude, and `level()` then runs unchanged. Unlike REF it is **live** —
+§ Orbit rate.
 
 The frame flag reaches the same frame without the levelling
 (`../README.md` § Which frame, and who chooses). Both routes capture through
@@ -33,24 +34,41 @@ differ only in whether the camera moves afterwards.
 parent body, or the pair's barycentre — which is the same point each
 subsystem anchors the drawn orbit ring on. That is the one difference from
 REF, whose datum is the boresight: ORB's is a property of the orbit, so the
-same object levelled from anywhere reads the same longitude, and the ball's
-longitude reads where the object sits on its own orbit. It is a direction,
+same object levelled from anywhere reads the same longitude. It is a direction,
 not a distance, so the focus-versus-geometric-centre distinction the ellipse
 carries does not arise. The centre direction already lies in the orbital
 plane, leaving the boresight to seed a degenerate case that a real orbit
 does not produce.
 
-**Vantage-invariant, not epoch-invariant** — a captured datum is a
-snapshot, as REF's is. The pole is a static function of the elements and
-barely moves, but zero longitude is the centre direction at the instant of
-capture, and the object keeps going round: Luna walks ~13° off its datum
-per day of model time, and one frame of fast scrub can carry it anywhere on
-the orbit. Double-click again to re-read. Do not "fix" this by recomputing
-the frame per tick — a datum that chases the object reads a constant
-longitude and stops measuring anything.
+## Orbit rate
 
-Capturing rather than only rolling is what makes it legible: rolling to a
-plane the instrument is not displaying leaves the caret reading un-level
+**ORB is rebuilt every rendered frame, not captured** — it is the one frame
+on the instrument that is not a snapshot. Zero longitude keeps pointing at the
+orbit's centre as the object travels, so the grid turns beneath the boresight
+at the orbital rate. That is the mode the real FDAI ran in on orbit, and it is
+what makes the instrument read as *riding* an orbit rather than as having been
+told about one: Luna walks ~13° per day of model time, and a fast scrub sweeps
+the ball round with it instead of leaving the datum behind.
+
+**What that costs, stated plainly:** the focused object now sits at zero
+longitude by construction, so the ball no longer measures how far it has
+travelled since you asked. The reading it gives instead is attitude against a
+frame that travels with the object, which is the one the mode exists for. The
+pole is unaffected either way — it is a static function of the elements.
+
+Two consequences anything touching this has to honour:
+
+- **A still camera is not a still instrument.** The mini renderer redraws on
+  every rendered frame while ORB is up, not only when `camera.quaternion`
+  moves. Nothing runs while the render gate idles, though: if no frame is
+  drawn, the orbit has not advanced either.
+- **The per-frame path allocates nothing.** `orbitFrameInto` writes into one
+  preallocated `ReferenceFrame` that the instrument holds for the life of the
+  page; `captureOrbitFrame` is the allocating wrapper, kept for callers that
+  want a frame of their own.
+
+Rebuilding rather than only rolling is what makes the gesture legible: rolling
+to a plane the instrument is not displaying leaves the caret reading un-level
 against the *old* frame, so the gesture would look like it had failed.
 
 **Always the innermost orbit the object is on.** Luna levels on its orbit

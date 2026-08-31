@@ -51,24 +51,44 @@ export interface Attitude {
 // direction to project — 1e-3 rad off the axis.
 const DEGENERATE_SEED_COS = Math.cos(1e-3);
 
+/** An empty frame to write into. Only a caller that rebuilds a frame every
+ *  tick needs one — `emptyReferenceFrame()` plus the `*Into` builders below
+ *  keep that path allocation-free. */
+export function emptyReferenceFrame(): ReferenceFrame {
+  return {
+    key: 'galactic',
+    label: '',
+    pole: new THREE.Vector3(0, 1, 0),
+    zeroLon: new THREE.Vector3(1, 0, 0),
+    east: new THREE.Vector3(0, 0, 1),
+  };
+}
+
+function makeFrameInto(
+  out: ReferenceFrame,
+  key: ReferenceFrameKey,
+  label: string,
+  pole: THREE.Vector3,
+  zeroLonSeed: THREE.Vector3,
+): ReferenceFrame {
+  out.key = key;
+  out.label = label;
+  out.pole.copy(pole).normalize();
+  out.zeroLon
+    .copy(zeroLonSeed)
+    .addScaledVector(out.pole, -zeroLonSeed.dot(out.pole))
+    .normalize();
+  out.east.crossVectors(out.pole, out.zeroLon);
+  return out;
+}
+
 function makeFrame(
   key: ReferenceFrameKey,
   label: string,
   pole: THREE.Vector3,
   zeroLonSeed: THREE.Vector3,
 ): ReferenceFrame {
-  const p = pole.clone().normalize();
-  const zeroLon = zeroLonSeed
-    .clone()
-    .addScaledVector(p, -zeroLonSeed.dot(p))
-    .normalize();
-  return {
-    key,
-    label,
-    pole: p,
-    zeroLon,
-    east: new THREE.Vector3().crossVectors(p, zeroLon),
-  };
+  return makeFrameInto(emptyReferenceFrame(), key, label, pole, zeroLonSeed);
 }
 
 /** Shuttle's ATT REF: plant a datum on the attitude the camera holds right
@@ -81,7 +101,7 @@ export function captureReferenceFrame(camera: THREE.Camera): ReferenceFrame {
 }
 
 /** A frame on the focused object's own orbital plane, seeding zero
- *  longitude on `toCentre` — README.md § Levelling on an orbit.
+ *  longitude on `toCentre` — `orbit-frame/README.md`.
  *
  *  Two fallbacks in order, both for degenerate cases a real orbit does not
  *  produce: a `toCentre` collapsing to nothing hands the seed to the
@@ -91,13 +111,31 @@ export function captureOrbitFrame(
   normal: THREE.Vector3,
   toCentre: THREE.Vector3,
 ): ReferenceFrame {
-  const boresight = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-  const fallback = Math.abs(boresight.dot(normal)) > DEGENERATE_SEED_COS
-    ? new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion)
-    : boresight;
-  const inPlane = toCentre.clone().addScaledVector(normal, -toCentre.dot(normal));
-  const seed = inPlane.lengthSq() > 0 ? inPlane : fallback;
-  return makeFrame('orbit', 'ORB', normal, seed);
+  return orbitFrameInto(emptyReferenceFrame(), camera, normal, toCentre);
+}
+
+const orbitBoresight = new THREE.Vector3();
+const orbitSeed = new THREE.Vector3();
+
+/** `captureOrbitFrame` writing into `out`. The instrument rebuilds ORB every
+ *  tick (`orbit-frame/README.md` § Orbit rate), so this path runs per rendered
+ *  frame and allocates nothing. */
+export function orbitFrameInto(
+  out: ReferenceFrame,
+  camera: THREE.Camera,
+  normal: THREE.Vector3,
+  toCentre: THREE.Vector3,
+): ReferenceFrame {
+  orbitBoresight.set(0, 0, -1).applyQuaternion(camera.quaternion);
+  orbitSeed.copy(toCentre).addScaledVector(normal, -toCentre.dot(normal));
+  if (orbitSeed.lengthSq() === 0) {
+    if (Math.abs(orbitBoresight.dot(normal)) > DEGENERATE_SEED_COS) {
+      orbitSeed.set(0, 1, 0).applyQuaternion(camera.quaternion);
+    } else {
+      orbitSeed.copy(orbitBoresight);
+    }
+  }
+  return makeFrameInto(out, 'orbit', 'ORB', normal, orbitSeed);
 }
 
 /** A datum aimed at the distance-vector destination: zero longitude points

@@ -31,7 +31,7 @@ import {
   NO_PARENT,
   type BinariesData,
 } from '../../binaries/binaries-loader';
-import { captureOrbitFrame } from '../attitude-pure';
+import { captureOrbitFrame, emptyReferenceFrame, orbitFrameInto } from '../attitude-pure';
 import { focusedOrbitInto, type FocusedOrbit } from './orbit-plane';
 import type { Stellata } from '../../stellata';
 
@@ -326,6 +326,76 @@ describe('binary orbit normals', () => {
       expect(plane.relationIdx, `star ${idx}`).toBe(1);
       const n = new THREE.Vector3(plane.normal.x, plane.normal.y, plane.normal.z);
       expect(n.angleTo(GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(0, 12);
+    }
+  });
+});
+
+describe('orbitFrameInto — the live rebuild', () => {
+  const cameraLookingAt = (dir: THREE.Vector3): THREE.Camera => {
+    const c = new THREE.PerspectiveCamera();
+    c.position.set(0, 0, 0);
+    c.up.set(0, 0, 1);
+    c.lookAt(dir);
+    c.updateMatrixWorld(true);
+    return c;
+  };
+
+  const normal = new THREE.Vector3(0, 1, 0);
+  const camera = cameraLookingAt(new THREE.Vector3(1, 0, 0));
+
+  it('answers exactly what the allocating builder does', () => {
+    const toCentre = new THREE.Vector3(3, 0, 0);
+    const allocated = captureOrbitFrame(camera, normal, toCentre);
+    const written = orbitFrameInto(emptyReferenceFrame(), camera, normal, toCentre);
+    expect(written.key).toBe(allocated.key);
+    expect(written.label).toBe(allocated.label);
+    for (const axis of ['pole', 'zeroLon', 'east'] as const) {
+      expect(written[axis].angleTo(allocated[axis])).toBeCloseTo(0, 12);
+    }
+  });
+
+  // The instrument runs this every rendered frame while ORB is up, so it has
+  // to reuse the frame it was handed rather than hand back a fresh one.
+  it('writes into the frame it is given and allocates no other', () => {
+    const out = emptyReferenceFrame();
+    const pole = out.pole;
+    const returned = orbitFrameInto(out, camera, normal, new THREE.Vector3(3, 0, 0));
+    expect(returned).toBe(out);
+    expect(returned.pole).toBe(pole);
+  });
+
+  // Orbit rate: the datum is the direction to the orbit's centre, so as the
+  // object walks its orbit the frame turns with it by the same angle. That is
+  // the whole difference from a datum captured once.
+  it('turns zero longitude with the object as the orbit advances', () => {
+    const out = emptyReferenceFrame();
+    orbitFrameInto(out, camera, normal, new THREE.Vector3(3, 0, 0));
+    const before = out.zeroLon.clone();
+
+    // A quarter turn about the orbit normal.
+    const later = new THREE.Vector3(3, 0, 0)
+      .applyAxisAngle(normal, Math.PI / 2);
+    orbitFrameInto(out, camera, normal, later);
+
+    expect(before.angleTo(out.zeroLon)).toBeCloseTo(Math.PI / 2, 9);
+    // The plane it turns in is the orbit's own — the pole never moves.
+    expect(out.pole.angleTo(normal)).toBeCloseTo(0, 12);
+    expect(out.pole.dot(out.zeroLon)).toBeCloseTo(0, 12);
+  });
+
+  it('keeps the basis orthonormal through a full revolution', () => {
+    const out = emptyReferenceFrame();
+    for (let step = 0; step < 16; step++) {
+      const toCentre = new THREE.Vector3(3, 0, 0)
+        .applyAxisAngle(normal, (step / 16) * Math.PI * 2);
+      orbitFrameInto(out, camera, normal, toCentre);
+      for (const v of [out.pole, out.zeroLon, out.east]) {
+        expect(v.length()).toBeCloseTo(1, 12);
+      }
+      expect(out.pole.dot(out.zeroLon)).toBeCloseTo(0, 12);
+      expect(
+        new THREE.Vector3().crossVectors(out.pole, out.zeroLon).angleTo(out.east),
+      ).toBeCloseTo(0, 9);
     }
   });
 });
