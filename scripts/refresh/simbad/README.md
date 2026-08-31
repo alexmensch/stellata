@@ -25,7 +25,11 @@ request.py   Phase A — resolve a SpineRequestKeys partition to the
 query.py     ADQL builders + batched TAP executor. Wraps each
              ColumnSpec's adql fragment with `AS <alias>` so ORDER BY
              can reference the alias (SIMBAD rejects qualified names
-             in ORDER BY).
+             in ORDER BY). fetch_ident_lookups and fetch_ident_sets
+             share one query and differ only by an insert strategy —
+             rows must fold straight into their final shape, because at
+             spine scope this accumulator is ~100 MB and an
+             intermediate copy doubles it.
 coverage.py  Fill counting and floor gates over a pull's
              {oid: {alias: value}} rows — one definition of "this cell
              is filled" (neither None nor blank) and one gate message,

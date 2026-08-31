@@ -221,6 +221,31 @@ class FetchIdentLookupsTests(unittest.TestCase):
         self.assertIn("id LIKE 'Gaia DR3 %'", backend.calls[0])
         self.assertIn("id LIKE 'TYC %'", backend.calls[0])
 
+    def test_several_ids_in_one_namespace_ship_the_last_in_table_order(self):
+        # The shipped TSV is single-valued per column, so a widened binding is
+        # only readable back if the winner here is the id that asked. Where
+        # SIMBAD holds two, it need not be — the limitation the read side's
+        # namespace walk cannot recover from, so it is pinned rather than
+        # assumed away.
+        backend = FakeBackend([("FROM ident", ident_table([
+            {"oidref": 100, "id": "HIP 11"},
+            {"oidref": 100, "id": "HIP 22"},
+        ]))])
+        result = query.fetch_ident_lookups(
+            FakeClient(backend), oids=[100], lookups=[HIP],
+        )
+        self.assertEqual(result, {100: {"hip": 22}})
+
+    def test_ident_sets_keep_every_id_a_namespace_holds(self):
+        backend = FakeBackend([("FROM ident", ident_table([
+            {"oidref": 100, "id": "HIP 11"},
+            {"oidref": 100, "id": "HIP 22"},
+        ]))])
+        result = query.fetch_ident_sets(
+            FakeClient(backend), oids=[100], lookups=[HIP],
+        )
+        self.assertEqual(result, {100: {"hip": {11, 22}}})
+
 
 class FetchFluxBandsTests(unittest.TestCase):
 

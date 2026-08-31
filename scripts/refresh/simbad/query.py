@@ -8,7 +8,7 @@ import re
 import sys
 import time
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Sequence, TypeVar
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import refresh_lib as rl  # noqa: E402
@@ -19,6 +19,9 @@ from .specs import ColumnSpec, FluxBand, IdentLookup
 # Per-batch IN-clause size. SIMBAD TAP accepts ~64 KB POST body in
 # practice; 1000 integer ids ≈ 20 KB with headroom.
 DEFAULT_BATCH_SIZE = 1_000
+
+# What one namespace holds for one oid: a single suffix, or the set of them.
+T = TypeVar("T")
 
 
 def _run_batched(
@@ -189,18 +192,22 @@ def fetch_flux_bands(
     )
 
 
-def _fetch_ident_rows(
+def _fetch_idents(
     client: rl.TapClient,
     oids: Sequence[int],
     lookups: Sequence[IdentLookup],
+    insert: Callable[[dict[str, T], str, int | str], None],
     *,
     batch_size: int,
     progress_label: str,
-) -> dict[int, list[tuple[str, int | str]]]:
-    """{oid: [(tsv_name, suffix), …]} for every ``ident`` row matching one of
-    ``lookups``, in the table's own order. A single OR-ed LIKE clause covers
-    every lookup per batch; first matching prefix wins on collisions
-    (vanishingly rare)."""
+) -> dict[int, dict[str, T]]:
+    """{oid: {tsv_name: …}} over every ``ident`` row matching one of
+    ``lookups``, ``insert`` deciding what a namespace holds when SIMBAD
+    publishes more than one id under it. Rows fold straight into their final
+    shape — at spine scope this accumulator runs to ~100 MB, so an
+    intermediate would double it. A single OR-ed LIKE clause covers every
+    lookup per batch; first matching prefix wins on collisions (vanishingly
+    rare)."""
     if not lookups:
         return {}
     or_clause = " OR ".join(f"id LIKE '{l.like_pattern}'" for l in lookups)
@@ -213,7 +220,7 @@ def _fetch_ident_rows(
             f"ORDER BY oidref, id"
         )
 
-    def dispatch(table, out: dict[int, list[tuple[str, int | str]]]) -> None:
+    def dispatch(table, out: dict[int, dict[str, T]]) -> None:
         for row in table:
             id_str = str(rl.coerce_masked(row["id"]) or "")
             for lookup in lookups:
@@ -221,8 +228,10 @@ def _fetch_ident_rows(
                     continue
                 suffix = lookup.parse_suffix(id_str)
                 if suffix is not None:
-                    out.setdefault(int(row["oidref"]), []).append(
-                        (lookup.tsv_name, suffix)
+                    insert(
+                        out.setdefault(int(row["oidref"]), {}),
+                        lookup.tsv_name,
+                        suffix,
                     )
                 break
 
@@ -234,6 +243,18 @@ def _fetch_ident_rows(
         label=progress_label,
         batch_size=batch_size,
     )
+
+
+def _keep_last(
+    per_namespace: dict[str, int | str], tsv_name: str, suffix: int | str
+) -> None:
+    per_namespace[tsv_name] = suffix
+
+
+def _collect(
+    per_namespace: dict[str, set[int | str]], tsv_name: str, suffix: int | str
+) -> None:
+    per_namespace.setdefault(tsv_name, set()).add(suffix)
 
 
 def fetch_ident_lookups(
@@ -248,13 +269,10 @@ def fetch_ident_lookups(
     Where SIMBAD holds several under one namespace the last in table order
     wins; the shipped TSV is single-valued per column, so a winner has to be
     picked somewhere."""
-    return {
-        oid: dict(pairs)
-        for oid, pairs in _fetch_ident_rows(
-            client, oids, lookups,
-            batch_size=batch_size, progress_label=progress_label,
-        ).items()
-    }
+    return _fetch_idents(
+        client, oids, lookups, _keep_last,
+        batch_size=batch_size, progress_label=progress_label,
+    )
 
 
 def fetch_ident_sets(
@@ -269,13 +287,7 @@ def fetch_ident_sets(
     {oid: {tsv_name: {suffix, …}}}. The widening's corroboration asks whether
     an id is present at all, so it may not drop the losers of a namespace
     the way ``fetch_ident_lookups`` does."""
-    out: dict[int, dict[str, set[int | str]]] = {}
-    rows = _fetch_ident_rows(
-        client, oids, lookups,
+    return _fetch_idents(
+        client, oids, lookups, _collect,
         batch_size=batch_size, progress_label=progress_label,
     )
-    for oid, pairs in rows.items():
-        per_namespace = out.setdefault(oid, {})
-        for tsv_name, suffix in pairs:
-            per_namespace.setdefault(tsv_name, set()).add(suffix)
-    return out
