@@ -180,6 +180,15 @@ enough to see it.
   here instead of to AT-HYG's printed cells. It reaches every one of the
   312,275 TYC-bearing spine rows; the mean epochs are what fix the
   printed cells' unpropagated staleness (~27″ worst case).
+- **Gliese third catalogue of nearby stars** (`V/70A/catalog`, whole table
+  at `data/gliese/gliese_v70a.tsv`): Gliese W., Jahreiss H. 1991,
+  *Preliminary Version of the Third Catalogue of Nearby Stars*, CDS
+  `V/70A`. Retrieved 2026-08-27, CDS/VizieR academic use. Printed Johnson
+  V (+ B−V, spectral type, parallax, rv) — the V cascade's tier under
+  Tycho-2, and the first-order catalogue every `mag_src=GJ` cell was
+  transcribing: over all 16 rows it serves, its `Vmag` reproduces the
+  printed cell exactly. CNS5 does not retire it — the newer catalogue
+  publishes no Johnson V at all (Gaia `G`/`BP`/`RP`, 2MASS, WISE only).
 - **GCVS 5.1** (variable-star catalogue + cross-identification):
   http://www.sai.msu.su/gcvs/gcvs/ — Samus et al, Sternberg Astronomical
   Institute. `data/gcvs/gcvs5.txt` (main file) + `data/gcvs/crossid.txt`
