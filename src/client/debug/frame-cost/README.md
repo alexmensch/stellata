@@ -43,7 +43,12 @@ src/client/debug/frame-cost/
   merely holding the slot: rAF deltas are wall time, so the panel's per-tick
   ring fills and DOM writes sit inside the measurement. They largely cancel
   in a differential and surface as a wider spread; an absolute frame time is
-  biased outright. The sweep warns, but closing the panel is still on you.
+  biased outright. That corruption belongs to `raf-delta` however it was
+  reached — pinned, or fallen back to where no GPU clock exists — and a
+  panel opened mid-run keeps the samples flowing rather than drying them up
+  as it does on `timer-query`, so the sweep checks at both ends: acquire
+  warns, and release warns again if the panel is open when the sweep ends.
+  Closing it is still on you.
 - **Camera stationary.** The pose is snapshotted and a move warns at the
   end. The run holds the render gate for its duration — a still camera
   over a paused clock would otherwise be exactly the state the gate

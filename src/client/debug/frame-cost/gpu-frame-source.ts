@@ -22,8 +22,9 @@ const VSYNC_CAVEAT =
   'Differentials below the vsync quantum read as zero unless the frame is ' +
   'already over budget.';
 
-/** No sample source at all: the caller times frames itself, so the release
- *  is a no-op. */
+/** No sample source at all: the caller times frames itself. Acquire and
+ *  release both check the panel — wall time counts its per-tick work, and a
+ *  panel opened mid-sweep would otherwise contaminate silently. */
 function rafDeltaSource(lead: string): GpuFrameSource {
   console.info(`priceFrame: ${lead}. ${VSYNC_CAVEAT}`);
   if (perfInstrumentationInstalled()) {
@@ -35,7 +36,18 @@ function rafDeltaSource(lead: string): GpuFrameSource {
       'recording a cross-backend table.',
     );
   }
-  return { method: 'raf-delta', release: () => {} };
+  return {
+    method: 'raf-delta',
+    release: () => {
+      if (perfInstrumentationInstalled()) {
+        console.warn(
+          'priceFrame: the debug panel was open when this rAF-delta sweep ' +
+          'ended, so its per-tick work sat inside the wall-time samples — ' +
+          'treat these rows as contaminated and re-run with it closed.',
+        );
+      }
+    },
+  };
 }
 
 function rafDelta(reason: string): GpuFrameSource {

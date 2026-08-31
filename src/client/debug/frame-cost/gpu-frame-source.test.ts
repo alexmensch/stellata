@@ -188,6 +188,25 @@ describe('the pricing sweep picks its sample source per backend', () => {
     warn.mockRestore();
   });
 
+  it('warns at release when the panel opened mid-sweep', () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // The acquire-time check passes with the panel closed; on timer-query a
+    // mid-run open dries the samples up and aborts the sweep, but rAF-delta
+    // samples keep flowing, so release is the only place left to catch it.
+    const source = acquireGpuFrameSource(webgpuHost(true), () => {}, 'raf-delta');
+    expect(warn).not.toHaveBeenCalled();
+
+    perfState.panelOpen = true;
+    source!.release();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('contaminated'));
+
+    perfState.panelOpen = false;
+    info.mockRestore();
+    warn.mockRestore();
+  });
+
   // Last: latching the channel unsound is a one-way door for the module.
   it('falls back to rAF deltas where a granted feature resolves garbage', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
