@@ -40,9 +40,19 @@ resolve here.
 `Gl 559 A` and `Gl 559 B` are two rows while `Gl 165 AB` is one row covering
 both. The key is `Name` + `Comp`, reduced to the bare number so the two sides
 can meet: V/70A numbers its entries under four prefixes (`Gl` 1,745 · `NN`
-1,388 · `GJ` 384 · `Wo` 285 · `Sun` 1) where a record's own `gl` cell carries
+1,388 · `GJ` 384 · `Wo` 285) where a record's own `gl` cell carries
 only `Gl` / `GJ`. The GJ 3xxx and 4xxx numbers this tier exists for are
 printed `NN nnnn`, so a prefix-sensitive key would miss every one of them.
+The remaining row is the Sun, whose `Sun` name matches no prefix and so
+indexes under itself — no record's `gl` cell reaches it.
+
+Where the catalogue resolved a system into components and a record's cell
+names none of them, the bare number answers with the **alphabetically first**
+component, which the pull's `order_by=("Name", "Comp")` makes stable across
+re-pulls rather than a function of row order. 403 numbers are in that shape;
+no spine cell reaches one today (measured over all 3,147 `gl` cells, 2,566 of
+them bare), so this decides nothing yet and would need revisiting if the
+magnitude pull widens the cohort.
 
 A record naming a component the catalogue never resolved falls back to the
 system entry — `Gl 165A` reads the `Gl 165 AB` row — which is why a V from

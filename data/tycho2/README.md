@@ -100,8 +100,8 @@ look up to date to the next run and skip itself silently.
 ## The pinned row
 
 `TYC 3694-2544-1` (HD 14039) is the highest-proper-motion row of the 43
-TYC-bearing `directionAthygPrinted` stars, so pinning it holds both the
-tier this ingest replaces and the mean epochs that replace it. Its printed
+`directionTycho2` stars, so pinning it holds both the printed tier this
+ingest replaced and the mean epochs that replace it. Its printed
 AT-HYG cell matches this table's unpropagated mean position to 8 decimal
 places — the ~27″ staleness measured rather than asserted.
 

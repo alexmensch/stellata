@@ -128,13 +128,13 @@ pos_src  dist_src  mag_src  rv_src  pm_src  spect_src
   rewrites.
 - Printed columns are consumed **only** where a per-field cascade
   (§ 5) bottoms out. For everything else the spine contributes
-  membership + designations only. `pm_ra`/`pm_dec` are there because two
-  cascades bottom out at AT-HYG's printed proper motion — the direction
-  cascade's `athyg_printed` tier and the space-motion velocity's
-  `athyg_pm` tier, pinned as `directionAthygPrinted` /
-  `velocityAthygPm` in build-counts (the pins are the authority; prose
-  counts here have drifted once already) — and a frozen artifact cannot
-  grow a column later.
+  membership + designations only. `pm_ra`/`pm_dec` shipped because the
+  direction and velocity cascades once bottomed out at AT-HYG's printed
+  proper motion and a frozen artifact cannot grow a column later; **both
+  those tiers have since retired** (§ 5, direction / PM), and the cells'
+  one remaining consumer is the LMC override's bulk-PM gate
+  (`scripts/catalog/spine/README.md`, which owns this and is the
+  authority — prose counts here have drifted twice).
 - There is no separate keep-list file: no-Gaia rows are ordinary
   spine rows with an empty `gaia_source_id`.
 - Per-column counts are pinned in build-counts, and asserted against the

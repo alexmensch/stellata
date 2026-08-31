@@ -4,7 +4,7 @@
 the frozen external catalogues under `data/`. Never wired into
 `pnpm run build`. The freshness policy is in `data/README.md`
 § Frozen external data; the per-source table is in `data/README.md`
-§ Layer 1 — committed reference data.
+§ Per-source folders.
 
 ## Who runs a refresh
 

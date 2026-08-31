@@ -258,8 +258,12 @@ measured tiers below rather than to a derived colour.
 ## Which tiers give a system blend — `vTierIsSystemBlend`
 
 A printed tier publishes one magnitude per catalogue entry, and a close pair is
-one entry, so `printed_hip` and `catalogued` V sum every component the
-catalogue failed to split. `gaia_riello` does not: Gaia deblends a large part of
+one entry, so `printed_hip`, `tycho2` and `gliese` V all sum every component
+the catalogue failed to split. Each of the two below `printed_hip` has a second
+reason of its own: a Tycho-2 `pflag='P'` row's photometry is an unresolved
+double's photocentre rather than one star's, and a Gliese cell naming a
+component V/70A never resolved falls back to the system entry (`Gl 165A` reads
+the `Gl 165 AB` row). `gaia_riello` does not: Gaia deblends a large part of
 the sub-arcsec population into per-component sources, and on 2,971 of the pairs
 whose secondary row carries the primary's source_id the transformed V lands
 nearer WDS's component-A magnitude than the pair blend in ~46% of cases —

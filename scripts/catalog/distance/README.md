@@ -38,8 +38,10 @@ scripts/catalog/distance/
 
 ## Direction resolution
 
-`direction-cascade.ts` resolves every row's J2000.0 sky direction
-through the same trust cascade the binaries pipeline implements in
+`direction-cascade.ts` resolves every row's sky direction on ICRS axes at
+the J2016.0 scene epoch — every tier propagates its own solution there, so
+the epoch of the output is the scene's, never the source's — through the
+same trust cascade the binaries pipeline implements in
 `scripts/binaries/stage3_astrometry.py`, sharing its thresholds
 (RUWE > 1.4, ipd_frac_multi_peak > 2%, |ΔPM| > 50 mas/yr):
 
@@ -89,7 +91,7 @@ was not really J2000 to begin with, plus 22.0″ of genuine propagation.
 
 Missing source files degrade tiers gracefully (empty map → cascade
 falls through), and the per-route build-counts pins
-(`directionGaia5p` … `directionAthygPrinted`) flag the drift.
+(`directionGaia5p` … `directionCurated`) flag the drift.
 
 The sky-position regression corpus (`sky-position-corpus.tsv` +
 `sky-position.test.ts`) pins the canonical high-PM set (Barnard's,
