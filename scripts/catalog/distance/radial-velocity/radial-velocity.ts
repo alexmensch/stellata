@@ -5,7 +5,11 @@ import {
   VELOCITY_SANITY_CEILING_KM_S,
   type GaiaAstrometryCatalogRow,
 } from '../direction-cascade';
-import { gaiaHas5pSolution, isGaiaCatalogueBibcode } from '../gaia-distrust';
+import {
+  gaiaHas5pSolution,
+  gaiaRowIs2p,
+  isGaiaCatalogueBibcode,
+} from '../gaia-distrust';
 import type { SimbadRadialVelocity } from '../../simbad-values-parse';
 
 // Which source supplied the radial term of the space-motion velocity. Pinned
@@ -100,7 +104,7 @@ export function resolveRadialVelocity(
   if (gaia !== null && gaiaHas5pSolution(gaia) && gaia.radialVelocityKmS !== null) {
     return { ...none, rvKmS: gaia.radialVelocityKmS, via: 'gaia_dr3' };
   }
-  if (gaia !== null && !gaiaHas5pSolution(gaia)
+  if (gaiaRowIs2p(gaia)
       && simbad !== null && isGaiaCatalogueBibcode(simbad.bibcode)) {
     return { ...none, gaiaBibcodeSkipped: true };
   }

@@ -53,7 +53,7 @@ import {
   type VelocityVia,
 } from '../distance/direction-cascade';
 import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
-import { gaiaHas5pSolution } from '../distance/gaia-distrust';
+import { gaiaRowIs2p } from '../distance/gaia-distrust';
 import {
   resolvePmRescue,
   PM_RESCUE_VIA_VALUES,
@@ -523,7 +523,7 @@ export function readStars(
             cns5: lookupCns5Astrometry(directions.cns5, simbadKeys.gl)?.pm ?? null,
             simbad: simbadRow?.astrometry?.pm ?? null,
           },
-          gaiaRow !== null && !gaiaHas5pSolution(gaiaRow),
+          gaiaRowIs2p(gaiaRow),
         )
       : null;
     if (pmRescue !== null) pmRescueVia[pmRescue.via]++;

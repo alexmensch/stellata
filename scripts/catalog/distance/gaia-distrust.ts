@@ -12,6 +12,14 @@ export function gaiaHas5pSolution(row: GaiaAstrometryCatalogRow): boolean {
   return row.parallaxMas !== null;
 }
 
+/** Whether a Gaia fit stands behind this record AND declined to state five
+ *  parameters — the condition both skip rules gate on. A record with no Gaia
+ *  row at all is NOT 2p: there is no blend to distrust, so a Gaia bibcode on
+ *  it is an ordinary citation rather than the withheld fit returning. */
+export function gaiaRowIs2p(row: GaiaAstrometryCatalogRow | null): boolean {
+  return row !== null && !gaiaHas5pSolution(row);
+}
+
 // Gaia's own catalogue releases as a second-order index cites them — VizieR
 // I/345 (DR2), I/350 (EDR3), I/355 (DR3). A DR4 release adds one entry here.
 const GAIA_CATALOGUE_BIBCODES: ReadonlySet<string> = new Set([

@@ -17,13 +17,16 @@ scripts/catalog/distance/
                                   (which position source wins, and the
                                   precision each carries) plus the
                                   space-motion velocity assembly.
-  gaia-distrust.ts (+ test)       `gaiaHas5pSolution` and
+  gaia-distrust.ts (+ test)       `gaiaHas5pSolution`, `gaiaRowIs2p` and
                                   `isGaiaCatalogueBibcode` — one predicate per
                                   way this build refuses a Gaia value on a
                                   blended row. Both terms of the velocity
                                   import them, so the radial and the tangential
                                   distrust a row for the same reason and a DR4
-                                  release is one edit.
+                                  release is one edit. `gaiaRowIs2p` is the
+                                  condition both skip rules gate on, and reads
+                                  a record with no Gaia row as NOT 2p — there
+                                  is no fit behind it to distrust.
   pm-rescue/                      The proper motion for a row whose direction
                                   tier carries none — velocity only, moving no
                                   position. Its own README.

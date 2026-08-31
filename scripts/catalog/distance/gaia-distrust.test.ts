@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
 
 import { gaiaAstrometryRow } from './astrometry-fixture';
-import { gaiaHas5pSolution, isGaiaCatalogueBibcode } from './gaia-distrust';
+import {
+  gaiaHas5pSolution,
+  gaiaRowIs2p,
+  isGaiaCatalogueBibcode,
+} from './gaia-distrust';
 
 describe('gaiaHas5pSolution', () => {
   it('turns on the parallax cell, not on the PM one', () => {
@@ -13,6 +17,20 @@ describe('gaiaHas5pSolution', () => {
 
   it('reads a genuine zero parallax as a solved fit', () => {
     expect(gaiaHas5pSolution(gaiaAstrometryRow({ parallaxMas: 0 }))).toBe(true);
+  });
+});
+
+describe('gaiaRowIs2p', () => {
+  it('is the negation of the 5p condition where a Gaia row stands behind it', () => {
+    expect(gaiaRowIs2p(gaiaAstrometryRow({ parallaxMas: null }))).toBe(true);
+    expect(gaiaRowIs2p(gaiaAstrometryRow({ parallaxMas: 50 }))).toBe(false);
+  });
+
+  it('reads a record with no Gaia row as NOT 2p, so no skip rule fires on it', () => {
+    // No Gaia fit stands behind the record, so there is no blend to distrust
+    // and a Gaia bibcode reaching it is an ordinary citation. Inverting this
+    // would strip the motion from every non-Gaia record citing a release.
+    expect(gaiaRowIs2p(null)).toBe(false);
   });
 });
 
