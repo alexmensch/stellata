@@ -76,8 +76,11 @@ flux V 8,186.
 **V flux is the one field the bibcode policy actually bites.** Pull-wide
 SIMBAD has a B flux for 10,232 oids and a V for 9,680, but publishes a
 bibcode for only 8,187 and 8,186 — so 2,045 B and 1,494 V are dropped as
-unattributable, which is why `mag_src=GJ` reaches 36.8% rather than
-roughly half. Nothing else in the cohort loses a row. The single
+unattributable, which is why `mag_src=GJ` ships 361 of 981 rather than the
+larger share SIMBAD's own V coverage implies. How many that cohort reached
+*before* the policy is not recoverable from the committed file — it holds no
+unbibcoded value by construction — so the pull's own report is the only place
+that number is ever read. Nothing else in the cohort loses a row. The single
 `*_src=OTHER` row in the position / magnitude / PM columns is Sol, which
 is curated rather than sourced.
 
@@ -133,16 +136,21 @@ the component, so they stay unresolved rather than mis-bound.
 **The widening ladder, and its corroboration rule.** A source_id SIMBAD's
 `ident` table does not carry leaves its row unreachable under the Gaia
 namespace — so each pull retries those rows on the record's own **HIP,
-then TYC, then GJ**, the same order the no-Gaia tier and the read-side
-walk use, each rung asking only for what the rungs above left unbound.
+then TYC, then GJ**, the order the no-Gaia tier itself falls through, each
+rung asking only for what the rungs above left unbound. Read-back does not
+depend on that order — see `scripts/refresh/simbad/README.md` § The widening
+falls through on resolution, not on cell presence.
 These are the only bindings here made on a designation alone, so each is
 adjudicated against SIMBAD's own Gaia cross-IDs **across releases**: kept
 where SIMBAD holds the asking id under any release, dropped where it
 holds a *DR3* id that is not the asking one, kept-and-counted where it
-holds none. Over the value cohort, 150 candidates → **8 vetoed** → 142
-kept (62 corroborated, 80 with no Gaia id to check against). Mechanism
-and why only DR3 can contradict: `scripts/refresh/simbad/README.md`
-§ The widening carries its own corroboration rule.
+holds no DR3 id to contradict it. Over the value cohort, **8 vetoed** and
+142 kept (62 corroborated, 80 with no DR3 id against them) out of 150
+candidate bindings — bindings, not rows: a row vetoed on one rung is
+offered again to the next, so the 150 exceeds the distinct rows widened by
+at most the 8 vetoed. Mechanism and why only DR3 can contradict:
+`scripts/refresh/simbad/README.md` § The widening carries its own
+corroboration rule.
 
 Reading a differing DR3 id as a different star is what used to lose the
 six rows of `data/athyg/stale_gaia_source_ids.tsv`, whose spine cell is a

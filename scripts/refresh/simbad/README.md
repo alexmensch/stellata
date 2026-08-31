@@ -92,9 +92,18 @@ A row's primary key is the first namespace it carries, so a populated
 therefore runs a second ladder over the source_ids the Gaia namespace did
 not reach, retrying each on the record's own HIP, then TYC, then GJ. Each
 rung asks only for what the rungs above left unbound, and the order is the
-one `docs/catalog-driver.md` § 5 gives the no-Gaia tier — the same order
-`walkSimbadNamespaces` reads back in, so a widened row is looked up under
-the namespace that bound it.
+one `docs/catalog-driver.md` § 5 gives the no-Gaia tier — both read it off
+`WIDENING_LADDER`, and `spine_request_keys` partitions the no-Gaia rows by
+iterating that same tuple, so the tier and the widening cannot drift apart.
+
+**Read-back does not depend on that order.** A widened row is joinable
+because its emitted row carries the asking designation in the namespace
+that bound it, so `walkSimbadNamespaces` reaches it whichever rung matches
+first — which is what lets the read side order its own walk independently.
+The one binding that cannot recover is an object SIMBAD holds two ids for
+in the binding namespace: the shipped column is single-valued and
+`fetch_ident_lookups` keeps the last in table order, so the winner need not
+be the id that asked. Pinned rather than assumed away in `simbad.test.py`.
 
 **HIP before TYC is load-bearing, not alphabetical.** A TYC names the
 Tycho entry, which for a close pair is the system; SIMBAD frequently

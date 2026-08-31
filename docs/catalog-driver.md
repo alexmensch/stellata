@@ -431,8 +431,10 @@ Rules:
   `allfluxes` — the wider view publishes no bibcode. **An unbibcoded
   value is dropped at write time**, whole quantity at a time, so the
   frozen file cannot hand a cascade a cell this policy forbids and
-  admitting one is a re-pull rather than a filter change. It costs 112
-  of the 471 V fluxes the `mag_src=GJ` cohort reaches.
+  admitting one is a re-pull rather than a filter change. Pull-wide it
+  drops 2,045 B and 1,494 V fluxes as unattributable, which is what holds
+  the `mag_src=GJ` cohort's V flux to 361 of 981
+  (`data/simbad/README.md` § The values pull).
 - Photometric transforms cite **Riello et al. 2021, A&A 649, A3**
   (Gaia EDR3 photometry; Table C.2 relations). The ci relation chain
   was left to implementation, against the parity distribution; the
