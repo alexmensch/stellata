@@ -121,8 +121,12 @@ and returns one of three verdicts per binding:
 - **Vetoed** — SIMBAD holds a DR3 id and it is not the asking one. Only
   DR3 can contradict: each release numbers the same star differently, so a
   differing DR2 id is no evidence either way.
-- **Uncorroborated** — no Gaia id for the object at all, so the binding
-  stands unverified. Kept and reported per pull, never silent.
+- **Uncorroborated** — **no DR3 id to contradict it**, so the binding stands
+  unverified. Kept and reported per pull, never silent. Because only DR3
+  contradicts, this bucket admits an object holding a *differing* DR2 or DR1
+  id as well as one holding no Gaia id at all — the two are the same amount
+  of evidence, which is the whole point of the rule above, so the count does
+  not separate them.
 
 A designation two source_ids both claim binds neither and is dropped
 before the request.

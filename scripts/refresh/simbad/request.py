@@ -28,7 +28,11 @@ def widening_label(lookup: IdentLookup) -> str:
 @dataclass
 class WideningVerdicts:
     """How one widening rung's bindings were adjudicated. `corroborated` is
-    the strong outcome — SIMBAD holds the asking id itself."""
+    the strong outcome — SIMBAD holds the asking id itself. `uncorroborated`
+    is "nothing published that could contradict it", which admits an object
+    holding only a differing EARLIER-release id as well as one holding no Gaia
+    id at all: under § The widening carries its own corroboration rule, only
+    DR3 contradicts."""
 
     corroborated: int = 0
     vetoed: int = 0
@@ -78,7 +82,7 @@ class OidRequest:
                     f"  {'':14s} of the widened: {verdict.corroborated} "
                     f"corroborated by a Gaia cross-ID, {verdict.vetoed} vetoed "
                     f"on a contradicting DR3 id, {verdict.uncorroborated} kept "
-                    f"with no Gaia id to check against"
+                    f"with no DR3 id to contradict them"
                 )
         return lines
 
@@ -168,26 +172,13 @@ def _corroborate(
     candidates: Mapping[int | str, int],
     lookup: IdentLookup,
 ) -> tuple[dict[int | str, int], WideningVerdicts]:
-    """Adjudicate widened bindings against SIMBAD's own Gaia cross-IDs.
+    """Adjudicate widened bindings against SIMBAD's own Gaia cross-IDs, read
+    across every release SIMBAD keys rather than DR3 alone.
 
-    A widened row is one the Gaia namespace could not reach, so a designation
-    is the only thing tying record to object — and a TYC or HIP names the
-    catalogue entry, which for a close pair is the system rather than the
-    component the spine resolved. Three outcomes, read off every Gaia release
-    SIMBAD keys rather than DR3 alone:
-
-    - SIMBAD holds the asking id under **any** release: the strongest
-      evidence there is, so the binding is kept. This is what reaches a spine
-      cell carrying a DR2 id in the DR3 column — a disagreement about the
-      release, not about which star this is.
-    - SIMBAD holds a DR3 id and it is not the asking one: the two disagree
-      about the star and the binding drops. Only DR3 can contradict — each
-      release numbers the same star differently, so a differing DR2 id is no
-      evidence at all.
-    - No Gaia id for the object: the binding stands unverified, kept and
-      counted.
-
-    See README.md § The widening carries its own corroboration rule.
+    Only a DR3 id can contradict the asking one, so the veto reads DR3 while
+    corroboration reads all three releases — the asymmetry, and why a
+    differing DR2 id is not evidence either way, is README.md § The widening
+    carries its own corroboration rule.
     """
     if not widened:
         return {}, WideningVerdicts()

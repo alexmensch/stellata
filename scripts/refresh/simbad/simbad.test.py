@@ -751,6 +751,27 @@ class ResolveSpineKeysTests(unittest.TestCase):
         self.assertEqual(resolved.verdicts[self.TYC_WIDENING].vetoed, 0)
         self.assertEqual(resolved.verdicts[self.TYC_WIDENING].uncorroborated, 1)
 
+    def test_a_differing_earlier_release_id_is_not_evidence_and_is_kept(self):
+        # SIMBAD holds a DR2 id for the object, it is not the asking one, and
+        # there is no DR3 id at all. Only DR3 contradicts, so this is kept —
+        # and it lands in `uncorroborated`, which therefore means "no DR3 id
+        # to contradict it" rather than "no Gaia id whatsoever".
+        keys = inputs.SpineRequestKeys(
+            source_ids=[2], designations_by_source_id={2: {"tyc": "5-6-1"}},
+        )
+        backend = FakeBackend([
+            ("'Gaia DR3 2'", ident_table([])),
+            ("'TYC 5-6-1'", ident_table([{"oidref": 300, "id": "TYC 5-6-1"}])),
+            ("oidref IN (300)", ident_table([
+                {"oidref": 300, "id": "Gaia DR2 777"},
+            ])),
+        ])
+        resolved = request.resolve_spine_keys(FakeClient(backend), keys)
+        self.assertEqual(resolved.oids, {300})
+        self.assertEqual(resolved.verdicts[self.TYC_WIDENING].vetoed, 0)
+        self.assertEqual(resolved.verdicts[self.TYC_WIDENING].corroborated, 0)
+        self.assertEqual(resolved.verdicts[self.TYC_WIDENING].uncorroborated, 1)
+
     def test_the_ladder_stops_asking_once_a_rung_binds_the_row(self):
         # HIP binds source_id 2, so its TYC is never asked for — the
         # fall-through keys on resolution, not on which cells are populated.
