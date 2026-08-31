@@ -18,7 +18,6 @@ import {
   type SpectralInfo,
 } from './spectral-classify';
 
-
 /** Per-source SIMBAD spectral-classification row from
  *  `data/simbad/simbad_sptype.tsv`. `spType` is the canonical
  *  Morgan-Keenan string (free of variability-type contamination by
@@ -51,7 +50,6 @@ export function emptySimbadSpectralIndex(): SimbadSpectralIndex {
 export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
   const index = emptySimbadSpectralIndex();
   const lines = text.split(/\r?\n/);
-  if (lines.length === 0) return index;
   const header = lines[0].split('\t').map((h) => h.trim());
   const idIdx = header.indexOf('source_id');
   const hipIdx = header.indexOf('hip');

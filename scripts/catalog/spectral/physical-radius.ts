@@ -9,7 +9,6 @@ import {
   type SpectralInfo,
 } from './spectral-classify';
 
-
 // Effective temperature (Kelvin) by spectral class + subclass for main-sequence
 // stars. Giants and supergiants of the same letter+digit run ~10-15% cooler;
 // the physical-radius calculation rides mostly on the *relative* scaling, so

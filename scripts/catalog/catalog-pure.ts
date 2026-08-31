@@ -2,6 +2,11 @@
 // build-catalog.ts and its tests — binary layout constants, the SIMBAD
 // namespace ladder, GCVS field extraction, and the distance overrides.
 
+// Keep the .ts extensions. vite.config.ts imports this module, and Vite's
+// native config loader strips types via Node, which resolves no extensions —
+// so everything reachable from the config needs them. Only typecheck and
+// vitest cover the rest of scripts/, and neither fails without them: dropping
+// these breaks `vite build` and `pnpm run dev` alone.
 import { emptyTallyPartition } from '../util/tally.ts';
 import { headerIndex } from './parse/corpus-tsv.ts';
 

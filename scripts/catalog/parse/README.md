@@ -70,8 +70,7 @@ empty map turns a missing file into a silently zeroed join that only surfaces
 as a count drift much later. A valid header with no data rows is a different
 thing and legitimately yields no rows.
 
-Two deliberate exceptions, both streaming walks that carry their own header
-strictness rather than a second copy of this one:
+Three deliberate exceptions:
 
 - `gaia-xmatch.ts` streams a 2.5 M-row table line-by-line and dedups on
   angular distance, so it needs its own accumulator.
@@ -80,6 +79,15 @@ strictness rather than a second copy of this one:
   columns by name in any order. That is the stricter contract on purpose: the
   spine is frozen and its codec writes the header, so a header that merely
   parses is already a file nobody meant to ship.
+- `parseSimbadSptypeTsv` (`../spectral/spectral-resolve.ts`) demands only
+  `source_id` and `sp_type`, treating `hip` / `tyc` / `gj` / `sp_qual` /
+  `otype` as optional. Four of those five ARE the ladder's designation tiers,
+  so a column vanishing from a re-pull zeroes a tier rather than throwing —
+  the failure mode this section otherwise exists to prevent. What catches it
+  instead is downstream: `spectralSimbadByTyc` / `ByGj` are pinned in
+  `../build-catalog-expected.json`, so a zeroed tier fails the build's count
+  assert. Tightening the parser onto `headerIndex` would move that catch
+  upstream to the read.
 
 ## Per-row pipeline
 

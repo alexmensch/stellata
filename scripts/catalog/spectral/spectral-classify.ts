@@ -1,7 +1,6 @@
 // Morgan-Keenan spectral-string parsing: the SIMBAD MK walker, the GSP-Spec
 // letter enum, and the SpectralInfo shape both produce. See README.md.
 
-
 export interface SpectralInfo {
   classIdx: number;     // 0-8 per spectClassIndex
   subclass: number;     // 0-9, defaults to 5 when missing
