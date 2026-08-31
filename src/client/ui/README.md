@@ -37,6 +37,7 @@ registry only describes what to display.
 | `Backspace` | Time scrubber (while open): reset to live now (`reset`) |
 | `S` | Step the reference frame on, landing on whichever instrument the mode shows: the attitude indicator's frame flag in navigate, `coordSphere` (which adds a `none` stop) in observe. Any frame the focused object gives no meaning to is skipped (`../attitude/README.md` § Which frame, and who chooses). It never hides an instrument — only `U` does |
 | `L` | Level the camera: zero its roll against the attitude indicator's active frame in navigate (same action as clicking the ball), or against the drawn coordinate sphere in observe, where it is a no-op while none is up (`../attitude/README.md` § Levelling) |
+| `Shift` `L` | Engage or release the orbit lock — the padlock chip's keyboard path. One key squares you up to the frame, its modifier keeps you there. A silent no-op unless the chip is on screen, which is ORB only (`../attitude/orbit-frame/README.md` § The lock) |
 | `Z` | Aim at the showing frame's origin — 0° longitude, 0° latitude on the 8-ball's frame in navigate, on the drawn grid in observe, where it does nothing with none up (`../attitude/README.md` § Levelling) |
 | `Shift` `Z` | Aim at the opposite point, 180° longitude — where `Z` followed by an invert would land, in one sweep |
 | `Shift` `V` | Invert the view — the INV chip's keyboard path, which observe needs because the chip rides a navigate-only instrument (`../attitude/README.md` § Inverting the view) |

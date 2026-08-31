@@ -24,7 +24,7 @@ describe('modifier chords', () => {
 describe('helpModalShortcuts', () => {
   it('lists every non-debug shortcut in registry order', () => {
     expect(keysOf(helpModalShortcuts())).toEqual([
-      'G', 'F', 'O', 'M', 'V', '⇧V', 'W', 'C', 'S', 'L', 'Z', '⇧Z', 'H', 'R', 'T', '←→', 'Space', 'Backspace', 'FF', 'U', 'K', '+−', '=', 'Esc', '?',
+      'G', 'F', 'O', 'M', 'V', '⇧V', 'W', 'C', 'S', 'L', '⇧L', 'Z', '⇧Z', 'H', 'R', 'T', '←→', 'Space', 'Backspace', 'FF', 'U', 'K', '+−', '=', 'Esc', '?',
     ]);
   });
 

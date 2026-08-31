@@ -234,6 +234,9 @@ export interface AttitudeIndicator {
   /** Aim the camera at the showing frame's origin — 0° longitude, 0°
    *  latitude — or at its antipode. `Z` and `Shift`+`Z`. */
   aimAtFrameOrigin(opposite: boolean): void;
+  /** Engage or release the orbit lock. The padlock chip, and `Shift`+`L`.
+   *  Silently does nothing while the chip is off screen. */
+  toggleOrbitLock(): void;
 }
 
 export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator | null {
@@ -638,14 +641,21 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     capture(captureReferenceFrame(stellata.camera));
   });
 
-  lockBtn.addEventListener('click', () => {
+  /** Toggle the orbit lock — the chip, and `Shift`+`L`. A no-op while the
+   *  chip is not on screen: with any frame but ORB there is no travelling
+   *  datum to ride, and a control acting on something the user cannot see is
+   *  worse than one that does nothing. */
+  function toggleOrbitLock() {
+    if (lockBtn.hidden) return;
     orbitLocked = !orbitLocked;
     // Seed the ride from wherever the datum is now, so engaging the lock
     // never replays the travel since ORB was armed as one jump.
     riding = false;
     refresh();
     draw();
-  });
+  }
+
+  lockBtn.addEventListener('click', toggleOrbitLock);
 
   invertBtn.addEventListener('click', () => stellata.invertView());
 
@@ -719,5 +729,5 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   });
 
   draw();
-  return { level, cycleFrame, aimAtFrameOrigin };
+  return { level, cycleFrame, aimAtFrameOrigin, toggleOrbitLock };
 }

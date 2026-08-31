@@ -307,6 +307,7 @@ async function main() {
         levelAttitude: () => attitude?.level(),
         cycleReferenceFrame: () => attitude?.cycleFrame(),
         aimAtFrameOrigin: (opposite) => attitude?.aimAtFrameOrigin(opposite),
+        toggleOrbitLock: () => attitude?.toggleOrbitLock(),
         toggleDebugPanel: debugTools.panel,
         timeScrubber,
       });

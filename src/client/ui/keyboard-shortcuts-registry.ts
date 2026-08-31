@@ -46,6 +46,12 @@ export const SHORTCUTS: readonly ShortcutDescriptor[] = [
       + 'the coordinate sphere in observe',
   },
   {
+    keys: ['⇧', 'L'],
+    chord: true,
+    label: 'Lock the camera to the orbit — hold this attitude as the object '
+      + 'travels (ORB frame only)',
+  },
+  {
     keys: ['Z'],
     label: 'Aim at the reference frame\'s origin — 0° longitude, 0° latitude '
       + 'on whichever frame is showing',

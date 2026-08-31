@@ -104,7 +104,8 @@ runs once per focus and `focusedOrbitFrom` runs per frame:
 ## The lock
 
 The chip under the frame flag — a padlock, shown only while ORB is what the
-ball is reading — **rides the orbit**: it holds the attitude the instrument is
+ball is reading, with **`Shift`+`L`** as its keyboard path — **rides the
+orbit**: it holds the attitude the instrument is
 showing as the datum turns beneath it, so the camera swings round with the
 object and the ball stands still while the world moves under it. Off by
 default, and it leaves with the frame, since every other frame's datum is
@@ -202,6 +203,13 @@ wrong once:
 Navigate only, and the lock clears on entering observe: the ride orbits the
 camera about `controls.target`, which is not what observe's camera does — it
 sits on the object rather than circling it.
+
+**`Shift`+`L` is a silent no-op while the chip is off screen**, gated on the
+chip's own `hidden` rather than on a second copy of the showing rule, so the
+key and the chip cannot disagree about when the lock exists. `L` levels on the
+frame and `Shift`+`L` holds you there, which is why the lock took that chord
+rather than one of its own — and it was free, `S` to ORB then `L` having
+replaced the arm-and-level gesture it used to carry.
 
 Rebuilding rather than only rolling is what makes the gesture legible: rolling
 to a plane the instrument is not displaying leaves the caret reading un-level

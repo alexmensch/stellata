@@ -42,6 +42,8 @@ export interface KeyboardShortcutsDeps {
   /** Aim the camera at the origin of whichever reference frame is showing —
    *  the 8-ball's in navigate, the drawn grid's in observe. */
   aimAtFrameOrigin: (opposite: boolean) => void;
+  /** Engage or release the orbit lock — the 8-ball's padlock chip. */
+  toggleOrbitLock: () => void;
 }
 
 export function bindKeyboardShortcuts(
@@ -187,7 +189,11 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
       case 'l': case 'L':
-        deps.levelAttitude();
+        // Shifted locks the camera to the ball rather than levelling on it:
+        // one key for "square me up to this frame", its modifier for "and
+        // keep me there". A no-op unless the padlock is on screen.
+        if (e.shiftKey) deps.toggleOrbitLock();
+        else deps.levelAttitude();
         e.preventDefault();
         break;
       case 'z': case 'Z':
