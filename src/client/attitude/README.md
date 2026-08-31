@@ -372,11 +372,6 @@ The two camera modes need different calls, matching the split in
 Level is a one-shot state, not a maintained one — orbiting away from here
 rolls the view again, and the ball is what tells you so.
 
-**Known inconsistency:** the drag-time snap-to-level guide sticks to
-`coordSphereNorthPole(filter.coordSphere)` — the *displayed* grid — while this
-instrument levels against whichever frame the flag holds. Pick `ECL` here and
-the 2° guide during a Shift-drag still sticks to galactic or equatorial.
-
 ## Inverting the view
 
 The **REV chip** reflects the camera through whatever it is looking at, and

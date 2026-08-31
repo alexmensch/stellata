@@ -17,9 +17,7 @@ import {
 import { bestHitBy } from '../../../hover/hover-pick-disambiguator';
 import type { HoverHit } from '../../../hover/hover-types';
 import type { Picker } from '../picker';
-import { coordSphereNorthPole } from '../../../galactic/coord-spheres/coord-sphere-frames';
 import type { RollController } from './roll-controller';
-import { SNAP_TO_LEVEL_RAD } from './roll-pure';
 import { WHEEL_NOTCH_DELTA_PX, pinchStep, scaleStepDeltaPx } from './pinch-zoom-pure';
 
 export interface InputControllerDeps {
@@ -68,16 +66,6 @@ export class InputController {
   // so a Shift press mid-drag can start a roll from the current position.
   private activePointer: { id: number; x: number; y: number } | null = null;
   private shiftHeld = false;
-  // Alignment-guide state: while `rollSnapPole` is set, the view is held
-  // exactly level against that pole and `rollSnapExcursion` accumulates the
-  // roll the pointer asked for. The gesture leaves the guide when that virtual
-  // roll passes the band — tracking it separately is what stops the boundary
-  // chattering. The pole is CAPTURED here rather than re-read on release: the
-  // displayed sphere can change mid-gesture on its own (travelling out of the
-  // RA/Dec fade demotes it), and settling against a pole the view never stuck
-  // to would rotate the image on release.
-  private rollSnapPole: THREE.Vector3 | null = null;
-  private rollSnapExcursion = 0;
   // Sub-notch pinch remainder, carried between wheel events.
   private pinchCarryPx = 0;
 
@@ -383,7 +371,6 @@ export class InputController {
   private onTouchStart = (e: TouchEvent) => {
     if (e.touches.length === 2) {
       this.twoFingerAngle = this.touchAngle(e.touches);
-      this.clearRollSnap();
     } else {
       this.twoFingerAngle = null;
     }
@@ -396,13 +383,12 @@ export class InputController {
     if (d > Math.PI) d -= 2 * Math.PI;
     else if (d < -Math.PI) d += 2 * Math.PI;
     this.twoFingerAngle = a;
-    this.applyRollDelta(-d);
+    this.rollCamera(-d);
   };
 
   private onTouchEnd = (e: TouchEvent) => {
     if (e.touches.length !== 2 && this.twoFingerAngle !== null) {
       this.twoFingerAngle = null;
-      this.clearRollSnap();
     }
   };
 
@@ -418,7 +404,6 @@ export class InputController {
     this.gestureLastRotation = 0;
     this.gestureLastScale = (e as Event & { scale?: number }).scale ?? 1;
     this.gestureActive = true;
-    this.clearRollSnap();
   };
 
   private onGestureChange = (e: Event) => {
@@ -426,7 +411,7 @@ export class InputController {
     const gesture = e as Event & { rotation: number; scale?: number };
     const delta = ((gesture.rotation - this.gestureLastRotation) * Math.PI) / 180;
     this.gestureLastRotation = gesture.rotation;
-    this.applyRollDelta(-delta);
+    this.rollCamera(-delta);
     // The same gesture carries pinch as a cumulative `scale`. Route it
     // through the shared notch normaliser so WebKit and the ctrlKey-wheel
     // path drive zoom identically.
@@ -438,7 +423,6 @@ export class InputController {
   private onGestureEnd = (e: Event) => {
     e.preventDefault();
     this.gestureActive = false;
-    this.clearRollSnap();
   };
 
   private onPointerMove = (e: PointerEvent) => {
@@ -457,7 +441,7 @@ export class InputController {
       let d = bearing - drag.angle;
       if (d > Math.PI) d -= 2 * Math.PI;
       else if (d < -Math.PI) d += 2 * Math.PI;
-      this.applyRollDelta(-d);
+      this.rollCamera(-d);
     }
     drag.angle = bearing;
   };
@@ -539,7 +523,6 @@ export class InputController {
     // A drag that becomes a roll must not also dispatch a click.
     this.pointerDownAt = null;
     this.deps.controls.noRotate = true;
-    this.clearRollSnap();
     this.rollDrag = {
       pointerId: pointer.id,
       angle: this.screenBearing(pointer.x, pointer.y),
@@ -550,57 +533,6 @@ export class InputController {
     if (this.rollDrag === null) return;
     this.rollDrag = null;
     this.deps.controls.noRotate = false;
-    this.clearRollSnap();
-  }
-
-  private clearRollSnap(): void {
-    this.rollSnapPole = null;
-    this.rollSnapExcursion = 0;
-  }
-
-  /** Apply one gesture step of roll through the alignment guide: the view
-   *  sticks to level while the requested roll stays inside
-   *  `SNAP_TO_LEVEL_RAD` of it, so the user *feels* the level axis mid-drag
-   *  instead of being told about it on release. The stick is tracked against
-   *  a virtual roll that keeps advancing, so the band can't chatter and the
-   *  gesture resumes exactly where the pointer says on the way out. */
-  private applyRollDelta(delta: number): void {
-    if (this.rollSnapPole !== null) {
-      this.rollSnapExcursion += delta;
-      if (Math.abs(this.rollSnapExcursion) <= SNAP_TO_LEVEL_RAD) return;
-      const resume = this.rollSnapExcursion;
-      this.clearRollSnap();
-      this.rollCamera(resume);
-      return;
-    }
-    const pole = this.levelPole();
-    const toLevel = this.levelRollError(pole);
-    const residual = delta - toLevel;
-    if (Math.abs(residual) <= SNAP_TO_LEVEL_RAD) {
-      this.rollCamera(toLevel);
-      this.rollSnapPole = pole;
-      this.rollSnapExcursion = residual;
-      return;
-    }
-    this.rollCamera(delta);
-  }
-
-  /** Roll still needed to reach level against `pole`, read off whichever
-   *  slot carries the roll in this mode: `camera.up` in navigate (the
-   *  quaternion trails it by a frame there — `lookAt` hasn't consumed the
-   *  newest roll yet), the rendered quaternion in observe.
-   *  See `README.md` § Roll authority. */
-  private levelRollError(pole: THREE.Vector3): number {
-    return this.deps.getCameraMode() === 'observe'
-      ? this.deps.roll.renderedRollError(this.deps.camera, pole)
-      : this.deps.roll.upRollError(this.deps.camera, pole);
-  }
-
-  /** What "level" means right now: the displayed coordinate sphere's own north
-   *  pole, so the guide sticks to the grid the user is levelling against.
-   *  Galactic when no sphere is up. */
-  private levelPole(): THREE.Vector3 {
-    return coordSphereNorthPole(this.deps.getFilter().coordSphere);
   }
 
   /** Rotate the view around its own axis, through the mode's roll
