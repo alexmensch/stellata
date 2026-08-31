@@ -67,6 +67,37 @@ Two consequences anything touching this has to honour:
   page; `captureOrbitFrame` is the allocating wrapper, kept for callers that
   want a frame of their own.
 
+## The lock
+
+The chip under the frame flag — a padlock, shown only while ORB is what the
+ball is reading — **rides the orbit**: it holds the attitude the instrument is
+showing as the datum turns beneath it, so the camera swings round with the
+object and the ball stands still while the world moves under it. Off by
+default, and it leaves with the frame, since every other frame's datum is
+fixed and there would be nothing to ride.
+
+`ridePoseAbout` is the whole motion, and **one axis-angle does both halves**:
+ORB's pole is static, so only zero longitude travels, and the swing about the
+pivot and the roll are the same rotation about the orbit normal. The angle is
+the signed turn from the datum's last position to its current one, read about
+that pole.
+
+**This is a camera writer on the steady-state navigate path**, which
+`../../camera/controls/input/README.md` § Orbit drift otherwise forbids —
+that rule exists because a per-frame write with no fixed point 2-cycles
+between adjacent doubles and the render gate can then never idle. The lock is
+admissible for the reason a gesture is: **it writes only on a frame where the
+datum actually moved.** A paused clock turns the datum by exactly zero, the
+write is skipped, and the gate idles as before.
+
+Two ordering details that are easy to get wrong:
+
+- **The datum's last position is recorded whether or not the ride ran.** A
+  frame skipped because a warp or an observe transition owned the camera must
+  not replay as one enormous swing when the transition ends.
+- **Engaging the lock seeds from wherever the datum is now**, not from where
+  it was when ORB was armed, for the same reason.
+
 Rebuilding rather than only rolling is what makes the gesture legible: rolling
 to a plane the instrument is not displaying leaves the caret reading un-level
 against the *old* frame, so the gesture would look like it had failed.

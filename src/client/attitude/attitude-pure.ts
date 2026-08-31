@@ -162,6 +162,28 @@ export function captureTargetFrame(
   return makeFrame('target', 'TGT', seed.addScaledVector(dir, -seed.dot(dir)), dir);
 }
 
+const rideOffset = new THREE.Vector3();
+
+/** Carry a camera pose round `pivot` by `angle` about `axis`, writing both
+ *  `position` and `up` in place — the orbit lock's whole motion.
+ *
+ *  Turning the pose by exactly what the frame turned is what leaves the
+ *  attitude reading unchanged, so the ball holds still while the world moves
+ *  under it. One axis-angle covers both halves because ORB's pole is static:
+ *  only zero longitude travels, so the swing about the pivot and the roll are
+ *  the same rotation. */
+export function ridePoseAbout(
+  position: THREE.Vector3,
+  up: THREE.Vector3,
+  pivot: THREE.Vector3,
+  axis: THREE.Vector3,
+  angle: number,
+): void {
+  rideOffset.copy(position).sub(pivot).applyAxisAngle(axis, angle);
+  position.copy(pivot).add(rideOffset);
+  up.applyAxisAngle(axis, angle).normalize();
+}
+
 const FRAME_LABELS: Record<AutoFrameKey, string> = {
   galactic: 'GAL',
   ecliptic: 'ECL',

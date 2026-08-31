@@ -241,8 +241,12 @@ Two things went with that correction, and neither should come back:
 
 **The rule that replaces the deadband: steady-state navigate writes
 `camera.up` on no frame of its own.** Only a gesture, a level, a URL restore,
-a frame an animation owns (§ The perpendicular invariant), or the landing
-of a captured-endpoint animation writes it. `up → lookAt → quaternion → up`
+a frame an animation owns (§ The perpendicular invariant), the landing
+of a captured-endpoint animation, or the attitude indicator's **orbit lock**
+writes it. That last one is per-frame and is admissible for the reason a
+gesture is: it writes only on a frame where the orbit datum it rides actually
+moved, so a paused clock writes nothing and the gate still idles
+(`../../../attitude/orbit-frame/README.md` § The lock). `up → lookAt → quaternion → up`
 is a rounding round-trip that 2-cycles exactly as the old correction did,
 so `adoptFromCamera` must stay out of the navigate steady state — it is an
 observe-mode and seam call only. `roll-controller.test.ts` pins a settled

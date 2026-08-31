@@ -22,11 +22,13 @@ import {
   nextFrameKey,
   emptyReferenceFrame,
   orbitFrameInto,
+  ridePoseAbout,
   readAttitude,
   type Attitude,
   type AutoFrameKey,
   type ReferenceFrame,
 } from './attitude-pure';
+import { signedAngleAbout } from '../camera/controls/input/roll-pure';
 import { focusFrameInputs } from './focus-frame';
 import { coordSphereNorthPole } from '../galactic/coord-spheres/coord-sphere-frames';
 import { focusedOrbitInto, type FocusedOrbit } from './orbit-frame/orbit-plane';
@@ -197,6 +199,24 @@ function cornerChip(variant: string, label: string, title: string) {
   return btn;
 }
 
+/** The lock's padlock, drawn rather than typed: a text glyph would arrive as
+ *  colour emoji on most platforms and at a size the font decides. Sized in
+ *  `em` so it tracks the chip's own text, and stroked in `currentColor` so it
+ *  inverts with the chip when the lock is engaged. */
+function lockGlyph(): SVGSVGElement {
+  const svg = el('svg', { class: 'ai-lock-glyph', viewBox: '0 0 10 12' });
+  svg.appendChild(el('path', {
+    d: 'M3 5 V3.4 a2 2 0 0 1 4 0 V5',
+    fill: 'none',
+    stroke: 'currentColor',
+    'stroke-width': 1.3,
+  }));
+  svg.appendChild(el('rect', {
+    x: 1.4, y: 5, width: 7.2, height: 6, rx: 1, fill: 'currentColor',
+  }));
+  return svg;
+}
+
 export interface AttitudeIndicator {
   /** Zero the roll against the active frame. Bound to a click on the ball and
    *  to the `L` shortcut. */
@@ -249,7 +269,13 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // ORB is neither: it is rebuilt from the live orbit every tick, so what the
   // flag holds is the choice, not a frame — § Orbit rate.
   let orbitActive = false;
+  // Ride the orbit: hold the attitude the ball is showing as the frame turns
+  // beneath it, so the camera swings round with the object. ORB only — it is
+  // the one frame whose datum moves, and there is nothing to ride otherwise.
+  let orbitLocked = false;
   const orbitFrame = emptyReferenceFrame();
+  const riddenZeroLon = new THREE.Vector3();
+  let riding = false;
   const orbit: FocusedOrbit = {
     normal: new THREE.Vector3(),
     toCentre: new THREE.Vector3(),
@@ -310,11 +336,25 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     'INV',
     'Invert the view — swing around to the far side of the focused object',
   );
+  const lockBtn = cornerChip(
+    'attitude-lock',
+    '',
+    'Lock the camera to the orbit — hold this attitude as the object travels',
+  );
+  lockBtn.appendChild(lockGlyph());
+  lockBtn.setAttribute('aria-label', 'Lock the camera to the orbit');
+  // The flag and the lock read as one control, so they share a border rather
+  // than sitting apart: a column pinned to the corner, the lock hanging off
+  // the flag's bottom edge and only while ORB is the frame it could lock to.
+  const flagStack = document.createElement('div');
+  flagStack.className = 'attitude-flag-stack';
+  flagStack.appendChild(frameBtn);
+  flagStack.appendChild(lockBtn);
   host.appendChild(stage);
   // Outside the stage, which is clipped to its disc so the square's corners
   // stay clicks on the sky. The chips sit in three of those corners.
   host.appendChild(refBtn);
-  host.appendChild(frameBtn);
+  host.appendChild(flagStack);
   host.appendChild(invertBtn);
 
   const attitude: Attitude = { pitchRad: 0, bankRad: 0, lonRad: 0, sinFromPole: 1 };
@@ -323,13 +363,42 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // first frame after it comes back, rather than showing a stale attitude.
   let missedWhileHidden = false;
 
+  /** Carry the camera by however far the orbit datum turned since the last
+   *  frame, so its attitude against ORB is unchanged and the ball reads the
+   *  same. The rotation is about the orbit normal by construction — the pole
+   *  is static and only zero longitude moves — so one axis-angle does both the
+   *  swing about the pivot and the roll.
+   *
+   *  **This is a camera writer on the steady-state navigate path**, which
+   *  `../camera/controls/input/README.md` § Orbit drift otherwise forbids. It
+   *  is admissible for the reason a gesture is: it writes only on a frame
+   *  where the datum actually moved, so a paused clock writes nothing and the
+   *  render gate can still idle. */
+  function rideOrbit(): void {
+    if (!riding) return;
+    const delta = signedAngleAbout(riddenZeroLon, orbitFrame.zeroLon, orbitFrame.pole);
+    if (delta === 0) return;
+    const camera = stellata.camera;
+    ridePoseAbout(
+      camera.position, camera.up, stellata.controls.target, orbitFrame.pole, delta,
+    );
+  }
+
   function draw() {
     const camera = stellata.camera;
     // ORB turns with the orbit, so the frame itself has to be re-read before
     // it is drawn against — a still camera is not a still instrument here.
     if (captured === null && orbitActive) {
-      if (refreshOrbitFrame()) frame = orbitFrame;
-      else orbitActive = false;
+      if (refreshOrbitFrame()) {
+        frame = orbitFrame;
+        if (orbitLocked && !stellata.isCameraTransitionActive()) rideOrbit();
+        // Whether or not the ride ran, the datum is where it is now: a frame
+        // skipped under a transition must not replay as one huge swing.
+        riddenZeroLon.copy(orbitFrame.zeroLon);
+        riding = orbitLocked;
+      } else {
+        orbitActive = false;
+      }
     }
     lastQuat.copy(camera.quaternion);
     ball.render(camera, frame);
@@ -354,6 +423,17 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     // frame underneath and the chip alone says one is held.
     const stop = datumStop();
     const flagLabel = orbitActive ? 'ORB' : frames[selectedFrameKey()].label;
+    // The lock has nothing to ride unless ORB is what the ball is reading, so
+    // it leaves with the frame — and with a REF or TGT datum held over the
+    // top — rather than lingering as a control that does nothing.
+    const orbitShowing = orbitActive && stop === 'off';
+    if (!orbitShowing) {
+      orbitLocked = false;
+      riding = false;
+    }
+    lockBtn.hidden = !orbitShowing;
+    lockBtn.classList.toggle('on', orbitLocked);
+    lockBtn.setAttribute('aria-pressed', orbitLocked ? 'true' : 'false');
     refBtn.textContent = stop === 'target' ? 'TGT' : 'REF';
     refBtn.classList.toggle('on', stop !== 'off');
     refBtn.setAttribute('aria-pressed', stop !== 'off' ? 'true' : 'false');
@@ -473,6 +553,15 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
       return;
     }
     capture(captureReferenceFrame(stellata.camera));
+  });
+
+  lockBtn.addEventListener('click', () => {
+    orbitLocked = !orbitLocked;
+    // Seed the ride from wherever the datum is now, so engaging the lock
+    // never replays the travel since ORB was armed as one jump.
+    riding = false;
+    refresh();
+    draw();
   });
 
   invertBtn.addEventListener('click', () => stellata.invertView());

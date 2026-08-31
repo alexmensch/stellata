@@ -1400,25 +1400,58 @@ body.monochrome .poi-label {
   letter-spacing: 0.08em;
   padding: 1px 5px;
   cursor: pointer;
+  /* One box for every chip, whatever it contains. A drawn glyph has no line
+     box of its own, so without a pinned content height the lock would sit
+     tighter than the lettered chips beside it — the height comes from the
+     class, and the content is centred in it. */
+  line-height: 1.35;
+  min-height: calc(1.35em + 4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .attitude-ref { top: 0; left: 0; }
-.attitude-frame { top: 0; right: 0; }
 .attitude-invert { bottom: 0; right: 0; }
+/* The frame flag and the orbit lock read as one control, so they are a column
+   pinned to the corner rather than two chips placed apart. The flag holds the
+   corner whether or not the lock is there — the lock appears and disappears
+   beneath it as the frame cycles through ORB, and nothing else moves. */
+.attitude-flag-stack {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.attitude-flag-stack > * { pointer-events: auto; }
+.attitude-flag-stack .attitude-chip { position: relative; }
+/* One shared border line rather than two abutting ones. */
+.attitude-lock { margin-top: -1px; }
+.attitude-lock .ai-lock-glyph {
+  display: block;
+  /* Cap height, so the padlock reads at the size of the ORB lettering above
+     it rather than filling the box the class pins. */
+  height: 0.95em;
+  width: 0.8em;
+}
 .attitude-chip:hover,
 .attitude-chip:focus-visible {
   border-color: var(--fg);
 }
-/* Held REF fills in the index cross's own colour — the ball is reading against
-   the datum, and the cross is where you see it. Both values come from
-   attitude-indicator.ts's constants, so the chip cannot drift off the cross.
-   Dark ink on the fill, at 9.5:1; the light tone would sit at 1.8:1. */
-.attitude-ref.on {
+/* An engaged chip fills in the index cross's own colour — the ball is reading
+   against a datum, or riding one, and the cross is where you see it. Both
+   values come from attitude-indicator.ts's constants, so a chip cannot drift
+   off the cross. Dark ink on the fill, at 9.5:1; the light tone would sit at
+   1.8:1. The lock's glyph is stroked in currentColor, so it inverts with it. */
+.attitude-chip.on {
   background: var(--ai-index);
   border-color: var(--ai-index);
   color: var(--ai-index-ink);
 }
-.attitude-ref.on:hover,
-.attitude-ref.on:focus-visible {
+.attitude-chip.on:hover,
+.attitude-chip.on:focus-visible {
   border-color: var(--fg);
 }
 

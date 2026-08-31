@@ -79,8 +79,9 @@ cleared when the focus moves out from under them:
   `filter.coordSphere`; picking ORB arms the same **live** frame the gesture
   does but **does not level**, the flag choosing what the ball reads against
   and levelling being the gesture's own half of the job. ORB alone is rebuilt
-  every rendered frame rather than captured, so the ball turns with the orbit
-  (`orbit-frame/README.md` § Orbit rate).
+  every rendered frame rather than captured, so the ball turns with the orbit,
+  and it alone carries a **lock** chip beneath the flag that rides that turn
+  with the camera (`orbit-frame/README.md`).
 - The **datum chip** top-left runs **off → REF → TGT → off**. Neither datum
   has a fixed place in a rotation — one is planted on a live attitude, the
   other on a bearing — which is why they sit on a chip of their own rather
@@ -375,9 +376,9 @@ un-aviation:
 clips hit-testing as well as paint. The instrument is round and its box is
 square, so the corners are clear of the outermost tick; without the clip they
 would swallow a click meant for the sky and level the camera instead. The
-three corner chips sit in those corners and are therefore siblings of the
-stage, not children of it — the datum chip top-left, the frame flag
-top-right, INV bottom-right. They share `.attitude-chip` and differ only in which corner they
+chips sit in those corners and are therefore siblings of the stage, not
+children of it — the datum chip top-left, the frame flag top-right with the
+orbit lock hanging off its bottom border, INV bottom-right. They share `.attitude-chip` and differ only in which corner they
 hang from.
 
 `U` hides the Instruments panel along with the rest of the controls

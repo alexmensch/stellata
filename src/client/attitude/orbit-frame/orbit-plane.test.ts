@@ -31,7 +31,14 @@ import {
   NO_PARENT,
   type BinariesData,
 } from '../../binaries/binaries-loader';
-import { captureOrbitFrame, emptyReferenceFrame, orbitFrameInto } from '../attitude-pure';
+import {
+  captureOrbitFrame,
+  emptyReferenceFrame,
+  orbitFrameInto,
+  readAttitude,
+  ridePoseAbout,
+  type Attitude,
+} from '../attitude-pure';
 import { focusedOrbitInto, type FocusedOrbit } from './orbit-plane';
 import type { Stellata } from '../../stellata';
 
@@ -327,6 +334,88 @@ describe('binary orbit normals', () => {
       const n = new THREE.Vector3(plane.normal.x, plane.normal.y, plane.normal.z);
       expect(n.angleTo(GALACTIC_NORTH_POLE_ICRS)).toBeCloseTo(0, 12);
     }
+  });
+});
+
+describe('ridePoseAbout — the orbit lock', () => {
+  const normal = new THREE.Vector3(0, 1, 0).normalize();
+  const pivot = new THREE.Vector3(4, -1, 2);
+
+  const posed = (offset: THREE.Vector3, up: THREE.Vector3) => {
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.copy(pivot).add(offset);
+    camera.up.copy(up);
+    camera.lookAt(pivot);
+    camera.updateMatrixWorld(true);
+    return camera;
+  };
+
+  it('swings the pose about the pivot without changing its distance', () => {
+    const position = pivot.clone().add(new THREE.Vector3(0, 0, 7));
+    const up = new THREE.Vector3(0, 1, 0);
+    const before = position.distanceTo(pivot);
+
+    ridePoseAbout(position, up, pivot, normal, 0.9);
+
+    expect(position.distanceTo(pivot)).toBeCloseTo(before, 9);
+    expect(up.length()).toBeCloseTo(1, 12);
+  });
+
+  it('turns the offset and the up by the same angle', () => {
+    const position = pivot.clone().add(new THREE.Vector3(0, 0, 7));
+    const up = new THREE.Vector3(1, 0, 0);
+    const offsetBefore = position.clone().sub(pivot);
+    const upBefore = up.clone();
+
+    ridePoseAbout(position, up, pivot, normal, 0.4);
+
+    expect(position.clone().sub(pivot).angleTo(offsetBefore)).toBeCloseTo(0.4, 9);
+    expect(up.angleTo(upBefore)).toBeCloseTo(0.4, 9);
+  });
+
+  // The promise the lock makes: the world turns under you and the instrument
+  // does not move. Advance the orbit, rebuild ORB from it, ride the pose by
+  // the same angle, and every axis of the reading has to come back identical.
+  it('holds the whole attitude reading as the orbit advances', () => {
+    const step = 0.37;
+    const toCentre = new THREE.Vector3(3, 0, 0);
+    const offset = new THREE.Vector3(1.5, 2, 6);
+    const camera = posed(offset, new THREE.Vector3(0.2, 1, 0.1).normalize());
+
+    const frame = emptyReferenceFrame();
+    orbitFrameInto(frame, camera, normal, toCentre);
+    const out: Attitude = { pitchRad: 0, bankRad: 0, lonRad: 0, sinFromPole: 1 };
+    const before = { ...readAttitude(camera, frame, out) };
+
+    // The object walks its orbit, so the datum turns by `step`...
+    const later = toCentre.clone().applyAxisAngle(normal, step);
+    orbitFrameInto(frame, camera, normal, later);
+    // ...and the lock carries the camera with it.
+    ridePoseAbout(camera.position, camera.up, pivot, normal, step);
+    camera.lookAt(pivot);
+    camera.updateMatrixWorld(true);
+
+    const after = readAttitude(camera, frame, out);
+    expect(after.pitchRad).toBeCloseTo(before.pitchRad, 9);
+    expect(after.lonRad).toBeCloseTo(before.lonRad, 9);
+    expect(after.bankRad).toBeCloseTo(before.bankRad, 9);
+  });
+
+  // Without the ride the same advance moves the reading, which is what makes
+  // the assertion above a measurement rather than a tautology.
+  it('is what holds it — the reading moves without the ride', () => {
+    const step = 0.37;
+    const toCentre = new THREE.Vector3(3, 0, 0);
+    const camera = posed(new THREE.Vector3(1.5, 2, 6), new THREE.Vector3(0.2, 1, 0.1).normalize());
+
+    const frame = emptyReferenceFrame();
+    orbitFrameInto(frame, camera, normal, toCentre);
+    const out: Attitude = { pitchRad: 0, bankRad: 0, lonRad: 0, sinFromPole: 1 };
+    const before = { ...readAttitude(camera, frame, out) };
+
+    orbitFrameInto(frame, camera, normal, toCentre.clone().applyAxisAngle(normal, step));
+    const after = readAttitude(camera, frame, out);
+    expect(Math.abs(after.lonRad - before.lonRad)).toBeCloseTo(step, 9);
   });
 });
 
