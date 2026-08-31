@@ -110,11 +110,32 @@ object and the ball stands still while the world moves under it. Off by
 default, and it leaves with the frame, since every other frame's datum is
 fixed and there would be nothing to ride.
 
-`ridePoseAbout` is the whole motion, and **one axis-angle does both halves**:
-ORB's pole is static, so only zero longitude travels, and the swing about the
-pivot and the roll are the same rotation about the orbit normal. The angle is
-the signed turn from the datum's last position to its current one, read about
-that pole.
+**The ride carries the camera by exactly the rotation the FRAME underwent**,
+read off the frame's own basis before and after (`orbitRideRotation`, then
+`ridePoseBy`). Rotating the offset from the pivot carries the boresight and
+rotating `up` carries the roll, so all three axes of the reading come through
+unchanged.
+
+**Reading that rotation rather than modelling it is the correctness argument,
+and the modelled version shipped first and was wrong.** It was an axis-angle
+about the pole, by the signed turn of the datum, on the premise that *ORB's
+pole is static, so only zero longitude travels*. That premise holds for a
+planet and fails for a moon: **Luna's node regresses 0.0529°/day**, swinging
+the plane's normal round a 5.15° cone, and Triton's precesses too
+(`../../solar-system/ephemerides/README.md` § Every other moon). Per frame the
+error is second order and invisible, which is why a steady scrub looked
+perfect; collapse months of node motion into a single step — a scrub at years
+per second, or Backspace back to live time — and it is first order. It landed
+about a degree off from Luna and dead-on from Algol, whose published elements
+do not precess at all, and that pair of observations is what identified it.
+
+Two properties fall out of taking the basis delta, and both matter:
+
+- **Any step size lands exactly.** A jump of days or years of orbit in one
+  frame is the same arithmetic as a millisecond of it.
+- **Mod 2π is not a loss.** A frame that turned 3.7 revolutions and one that
+  turned 0.7 are the same basis, and holding an attitude against a basis does
+  not care which way round it got there.
 
 **This is a camera writer on the steady-state navigate path**, which
 `../../camera/controls/input/README.md` § Orbit drift otherwise forbids —

@@ -33,12 +33,15 @@ import {
 } from '../../binaries/binaries-loader';
 import {
   captureOrbitFrame,
+  copyReferenceFrame,
   emptyReferenceFrame,
   orbitFrameInto,
-  orbitRideTurn,
+  orbitRideRotation,
+  quaternionTurnRad,
   readAttitude,
-  ridePoseAbout,
+  ridePoseBy,
   type Attitude,
+  type ReferenceFrame,
 } from '../attitude-pure';
 import { cadenceVisibleTurnRad } from '../../render-gate/cadence/clock-cadence-pure';
 import {
@@ -344,9 +347,10 @@ describe('binary orbit normals', () => {
   });
 });
 
-describe('ridePoseAbout — the orbit lock', () => {
+describe('ridePoseBy / orbitRideRotation — the orbit lock', () => {
   const normal = new THREE.Vector3(0, 1, 0).normalize();
   const pivot = new THREE.Vector3(4, -1, 2);
+  const NO_MIN = 0;
 
   const posed = (offset: THREE.Vector3, up: THREE.Vector3) => {
     const camera = new THREE.PerspectiveCamera();
@@ -357,12 +361,29 @@ describe('ridePoseAbout — the orbit lock', () => {
     return camera;
   };
 
+  const attitude = (): Attitude =>
+    ({ pitchRad: 0, bankRad: 0, lonRad: 0, sinFromPole: 1 });
+
+  /** One tick of the lock: hold the frame, move it, ride the camera onto it. */
+  const rideOnto = (
+    camera: THREE.PerspectiveCamera,
+    held: ReferenceFrame,
+    live: ReferenceFrame,
+  ): boolean => {
+    const q = new THREE.Quaternion();
+    if (!orbitRideRotation(q, held, live, NO_MIN)) return false;
+    ridePoseBy(camera.position, camera.up, pivot, q);
+    camera.lookAt(pivot);
+    camera.updateMatrixWorld(true);
+    return true;
+  };
+
   it('swings the pose about the pivot without changing its distance', () => {
     const position = pivot.clone().add(new THREE.Vector3(0, 0, 7));
     const up = new THREE.Vector3(0, 1, 0);
     const before = position.distanceTo(pivot);
 
-    ridePoseAbout(position, up, pivot, normal, 0.9);
+    ridePoseBy(position, up, pivot, new THREE.Quaternion().setFromAxisAngle(normal, 0.9));
 
     expect(position.distanceTo(pivot)).toBeCloseTo(before, 9);
     expect(up.length()).toBeCloseTo(1, 12);
@@ -374,35 +395,85 @@ describe('ridePoseAbout — the orbit lock', () => {
     const offsetBefore = position.clone().sub(pivot);
     const upBefore = up.clone();
 
-    ridePoseAbout(position, up, pivot, normal, 0.4);
+    ridePoseBy(position, up, pivot, new THREE.Quaternion().setFromAxisAngle(normal, 0.4));
 
     expect(position.clone().sub(pivot).angleTo(offsetBefore)).toBeCloseTo(0.4, 9);
     expect(up.angleTo(upBefore)).toBeCloseTo(0.4, 9);
   });
 
   // The promise the lock makes: the world turns under you and the instrument
-  // does not move. Advance the orbit, rebuild ORB from it, ride the pose by
-  // the same angle, and every axis of the reading has to come back identical.
+  // does not move. Advance the orbit, rebuild ORB from it, ride the camera onto
+  // it, and every axis of the reading has to come back identical.
   it('holds the whole attitude reading as the orbit advances', () => {
     const step = 0.37;
     const toCentre = new THREE.Vector3(3, 0, 0);
-    const offset = new THREE.Vector3(1.5, 2, 6);
-    const camera = posed(offset, new THREE.Vector3(0.2, 1, 0.1).normalize());
+    const camera = posed(new THREE.Vector3(1.5, 2, 6), new THREE.Vector3(0.2, 1, 0.1).normalize());
 
-    const frame = emptyReferenceFrame();
-    orbitFrameInto(frame, camera, normal, toCentre);
-    const out: Attitude = { pitchRad: 0, bankRad: 0, lonRad: 0, sinFromPole: 1 };
-    const before = { ...readAttitude(camera, frame, out) };
+    const live = emptyReferenceFrame();
+    orbitFrameInto(live, camera, normal, toCentre);
+    const out = attitude();
+    const before = { ...readAttitude(camera, live, out) };
+    const held = copyReferenceFrame(emptyReferenceFrame(), live);
 
-    // The object walks its orbit, so the datum turns by `step`...
-    const later = toCentre.clone().applyAxisAngle(normal, step);
-    orbitFrameInto(frame, camera, normal, later);
-    // ...and the lock carries the camera with it.
-    ridePoseAbout(camera.position, camera.up, pivot, normal, step);
-    camera.lookAt(pivot);
-    camera.updateMatrixWorld(true);
+    orbitFrameInto(live, camera, normal, toCentre.clone().applyAxisAngle(normal, step));
+    expect(rideOnto(camera, held, live)).toBe(true);
 
-    const after = readAttitude(camera, frame, out);
+    const after = readAttitude(camera, live, out);
+    expect(after.pitchRad).toBeCloseTo(before.pitchRad, 9);
+    expect(after.lonRad).toBeCloseTo(before.lonRad, 9);
+    expect(after.bankRad).toBeCloseTo(before.bankRad, 9);
+  });
+
+  // The regression that a rotation about the POLE cannot hold, and the reason
+  // the ride reads the frame's own before-and-after instead of modelling what
+  // moved. Luna's node regresses 0.0529 deg/day, so its plane precesses; a
+  // scrub at years per second, or a jump back to now, moves the pole and the
+  // datum together in one step. Observed as the ball landing ~1 deg off from
+  // Luna and dead-on from Algol, whose published elements do not precess.
+  it('holds the reading when the PLANE precesses as well as the datum', () => {
+    const step = 0.9;
+    const precession = 0.25;
+    const precessAxis = new THREE.Vector3(0, 0, 1);
+    const toCentre = new THREE.Vector3(3, 0, 0);
+    const camera = posed(new THREE.Vector3(1.5, 2, 6), new THREE.Vector3(0.2, 1, 0.1).normalize());
+
+    const live = emptyReferenceFrame();
+    orbitFrameInto(live, camera, normal, toCentre);
+    const out = attitude();
+    const before = { ...readAttitude(camera, live, out) };
+    const held = copyReferenceFrame(emptyReferenceFrame(), live);
+
+    // The node swings the pole while the object walks the orbit.
+    const laterNormal = normal.clone().applyAxisAngle(precessAxis, precession);
+    const laterCentre = toCentre.clone()
+      .applyAxisAngle(normal, step)
+      .applyAxisAngle(precessAxis, precession);
+    orbitFrameInto(live, camera, laterNormal, laterCentre);
+    expect(rideOnto(camera, held, live)).toBe(true);
+
+    const after = readAttitude(camera, live, out);
+    expect(after.pitchRad).toBeCloseTo(before.pitchRad, 9);
+    expect(after.lonRad).toBeCloseTo(before.lonRad, 9);
+    expect(after.bankRad).toBeCloseTo(before.bankRad, 9);
+  });
+
+  // A step of any size lands exactly, which is what makes a jump back to live
+  // time — days or years of orbit collapsed into one frame — safe. Mod 2pi is
+  // not a loss: the same basis is the same basis however far round it went.
+  it.each([0.01, 1.7, 3.0, 12.5, 400])('lands exactly for a step of %s rad', (step) => {
+    const toCentre = new THREE.Vector3(3, 0, 0);
+    const camera = posed(new THREE.Vector3(1.5, 2, 6), new THREE.Vector3(0.2, 1, 0.1).normalize());
+
+    const live = emptyReferenceFrame();
+    orbitFrameInto(live, camera, normal, toCentre);
+    const out = attitude();
+    const before = { ...readAttitude(camera, live, out) };
+    const held = copyReferenceFrame(emptyReferenceFrame(), live);
+
+    orbitFrameInto(live, camera, normal, toCentre.clone().applyAxisAngle(normal, step));
+    rideOnto(camera, held, live);
+
+    const after = readAttitude(camera, live, out);
     expect(after.pitchRad).toBeCloseTo(before.pitchRad, 9);
     expect(after.lonRad).toBeCloseTo(before.lonRad, 9);
     expect(after.bankRad).toBeCloseTo(before.bankRad, 9);
@@ -410,102 +481,119 @@ describe('ridePoseAbout — the orbit lock', () => {
 
   // The pose is position + up; every reader takes the QUATERNION, which is
   // derived from them. Riding without re-deriving it leaves the reading short
-  // by exactly the step — the one-frame lag that shipped, and the reason the
-  // test above calls `lookAt` after the ride rather than as scene-setting.
+  // by exactly the step — the one-frame lag that shipped, and the reason
+  // `rideOnto` calls `lookAt` rather than treating it as scene-setting.
   it('leaves the reading a whole step short if the quaternion is not re-derived', () => {
     const step = 0.37;
     const toCentre = new THREE.Vector3(3, 0, 0);
     const camera = posed(new THREE.Vector3(1.5, 2, 6), new THREE.Vector3(0.2, 1, 0.1).normalize());
 
-    const frame = emptyReferenceFrame();
-    orbitFrameInto(frame, camera, normal, toCentre);
-    const out: Attitude = { pitchRad: 0, bankRad: 0, lonRad: 0, sinFromPole: 1 };
-    const before = { ...readAttitude(camera, frame, out) };
+    const live = emptyReferenceFrame();
+    orbitFrameInto(live, camera, normal, toCentre);
+    const out = attitude();
+    const before = { ...readAttitude(camera, live, out) };
+    const held = copyReferenceFrame(emptyReferenceFrame(), live);
 
-    orbitFrameInto(frame, camera, normal, toCentre.clone().applyAxisAngle(normal, step));
-    ridePoseAbout(camera.position, camera.up, pivot, normal, step);
+    orbitFrameInto(live, camera, normal, toCentre.clone().applyAxisAngle(normal, step));
+    const q = new THREE.Quaternion();
+    orbitRideRotation(q, held, live, NO_MIN);
+    ridePoseBy(camera.position, camera.up, pivot, q);
     // Deliberately no `camera.lookAt(pivot)` here.
 
-    const after = readAttitude(camera, frame, out);
+    const after = readAttitude(camera, live, out);
     expect(Math.abs(after.lonRad - before.lonRad)).toBeCloseTo(step, 9);
   });
 
   // Without the ride the same advance moves the reading, which is what makes
-  // the assertion above a measurement rather than a tautology.
+  // the assertions above measurements rather than tautologies.
   it('is what holds it — the reading moves without the ride', () => {
     const step = 0.37;
     const toCentre = new THREE.Vector3(3, 0, 0);
     const camera = posed(new THREE.Vector3(1.5, 2, 6), new THREE.Vector3(0.2, 1, 0.1).normalize());
 
-    const frame = emptyReferenceFrame();
-    orbitFrameInto(frame, camera, normal, toCentre);
-    const out: Attitude = { pitchRad: 0, bankRad: 0, lonRad: 0, sinFromPole: 1 };
-    const before = { ...readAttitude(camera, frame, out) };
+    const live = emptyReferenceFrame();
+    orbitFrameInto(live, camera, normal, toCentre);
+    const out = attitude();
+    const before = { ...readAttitude(camera, live, out) };
 
-    orbitFrameInto(frame, camera, normal, toCentre.clone().applyAxisAngle(normal, step));
-    const after = readAttitude(camera, frame, out);
+    orbitFrameInto(live, camera, normal, toCentre.clone().applyAxisAngle(normal, step));
+    const after = readAttitude(camera, live, out);
     expect(Math.abs(after.lonRad - before.lonRad)).toBeCloseTo(step, 9);
   });
 });
 
-// The lock writes the camera BELOW the render gate, so the gate reads any
-// write at all as a fresh camera move and renders the next tick. Declining a
-// turn no display could show is the whole of what keeps it inside the cadence
-// rather than pinning the gate open — `orbit-frame/README.md` § The lock.
-describe('orbitRideTurn — the threshold that keeps the gate idling', () => {
-  const pole = new THREE.Vector3(0, 1, 0);
-  const datum = new THREE.Vector3(1, 0, 0);
+describe('orbitRideRotation — the threshold that keeps the gate idling', () => {
+  const normal = new THREE.Vector3(0, 1, 0);
+  const camera = new THREE.PerspectiveCamera();
+  camera.position.set(0, 0, 8);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld(true);
+
   // The threshold at the cadence's own pinned vantage: 900 CSS px of viewport
-  // height, 50° vertical FOV, device ratio 2.
+  // height, 50 deg vertical FOV, device ratio 2.
   const PINNED_MIN_RAD = cadenceVisibleTurnRad(1031.32, 2);
 
-  const turnedBy = (rad: number) => datum.clone().applyAxisAngle(pole, rad);
+  const frameTurnedBy = (rad: number): ReferenceFrame => orbitFrameInto(
+    emptyReferenceFrame(),
+    camera,
+    normal,
+    new THREE.Vector3(3, 0, 0).applyAxisAngle(normal, rad),
+  );
 
-  it('is exactly zero for a datum that has not moved — a paused clock', () => {
-    expect(orbitRideTurn(datum, datum.clone(), pole, PINNED_MIN_RAD)).toBe(0);
-    // And with no threshold at all, so the zero is the datum's, not the band's.
-    expect(orbitRideTurn(datum, datum.clone(), pole, 0)).toBe(0);
+  const held = frameTurnedBy(0);
+  const q = new THREE.Quaternion();
+  const rides = (rad: number, minRad = PINNED_MIN_RAD) =>
+    orbitRideRotation(q, held, frameTurnedBy(rad), minRad);
+  const turnOf = () => quaternionTurnRad(q);
+
+  it('declines a frame that has not moved — a paused clock', () => {
+    expect(rides(0)).toBe(false);
+    // The basis round-trip is not bit-exact, so the guarantee rests on the
+    // threshold rather than on an exact zero — but the residue is rounding,
+    // orders below anything the threshold could be set to.
+    rides(0, 0);
+    expect(turnOf()).toBeLessThan(1e-9);
   });
 
-  it('is exactly zero for a turn under the threshold', () => {
-    const turn = orbitRideTurn(datum, turnedBy(PINNED_MIN_RAD * 0.9), pole, PINNED_MIN_RAD);
-    expect(turn).toBe(0);
+  it('declines a turn under the threshold', () => {
+    expect(rides(PINNED_MIN_RAD * 0.9)).toBe(false);
   });
 
-  it('rides a turn past the threshold, signed', () => {
+  it('rides a turn past the threshold, and writes the rotation', () => {
     const step = PINNED_MIN_RAD * 4;
-    expect(orbitRideTurn(datum, turnedBy(step), pole, PINNED_MIN_RAD)).toBeCloseTo(step, 12);
-    expect(orbitRideTurn(datum, turnedBy(-step), pole, PINNED_MIN_RAD)).toBeCloseTo(-step, 12);
+    expect(rides(step)).toBe(true);
+    expect(turnOf()).toBeCloseTo(step, 12);
   });
 
-  // The reason a skipped turn must leave the datum un-advanced: measured from
-  // where it was last RIDDEN from, sub-threshold steps add up into one ride
-  // that carries the whole accumulated angle. Advancing it each frame would
-  // drop every step and the lock would slip its grip.
-  it('accumulates sub-threshold steps into one ride that carries them all', () => {
+  it('measures the same turn either way round', () => {
+    expect(rides(PINNED_MIN_RAD * 4)).toBe(true);
+    const forward = turnOf();
+    expect(rides(-PINNED_MIN_RAD * 4)).toBe(true);
+    expect(turnOf()).toBeCloseTo(forward, 12);
+  });
+
+  // The reason a declined turn must leave the held frame where it is: measured
+  // from where it was last RIDDEN from, sub-threshold turns add up into one
+  // ride that carries the whole angle. Advancing it each frame would drop every
+  // one and the lock would slowly slip its grip.
+  it('accumulates sub-threshold turns into one ride that carries them all', () => {
     const step = PINNED_MIN_RAD / 4;
-    let ridden = 0;
-    let frames = 0;
+    let rodeAt = 0;
     for (let i = 1; i <= 4; i++) {
-      const turn = orbitRideTurn(datum, turnedBy(step * i), pole, PINNED_MIN_RAD);
-      if (turn !== 0) {
-        ridden = turn;
-        frames = i;
-      }
+      if (rides(step * i)) rodeAt = i;
     }
-    expect(frames).toBe(4);
-    expect(ridden).toBeCloseTo(step * 4, 12);
+    expect(rodeAt).toBe(4);
+    expect(turnOf()).toBeCloseTo(step * 4, 12);
   });
 
-  // A degenerate viewport rides every step. The safe failure for a scheduling
-  // threshold is a frame too many, never an instrument that stops moving.
-  it('rides any turn at all when the threshold is zero', () => {
-    const tiny = 1e-9;
-    expect(orbitRideTurn(datum, turnedBy(tiny), pole, 0)).toBeCloseTo(tiny, 15);
+  // A degenerate viewport rides every real step. The safe failure for a
+  // scheduling threshold is a frame too many, never an instrument that stops.
+  it('rides any real turn when the threshold is zero', () => {
+    expect(rides(1e-7, 0)).toBe(true);
   });
 
   // What the threshold is worth in frames, which is the whole point of it:
-  // Luna walks ~13.2°/day, so at live 1x it turns this little per 60 Hz tick.
+  // Luna walks ~13.2 deg/day, so at live 1x it turns this little per 60 Hz tick.
   it('holds the gate for thousands of ticks at live 1x', () => {
     const lunaRadPerTick = ((13.2 * Math.PI) / 180 / 86400) / 60;
     expect(PINNED_MIN_RAD / lunaRadPerTick).toBeCloseTo(2727, 0);

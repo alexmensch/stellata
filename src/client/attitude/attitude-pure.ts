@@ -162,49 +162,94 @@ export function captureTargetFrame(
   return makeFrame('target', 'TGT', seed.addScaledVector(dir, -seed.dot(dir)), dir);
 }
 
-/** How far the orbit lock should carry the camera this frame: the signed
- *  turn from where the datum was last ridden from to where it is now, read
- *  about the orbit pole — or **zero while that is under `minRad`**.
+/** Copy a frame's identity and basis into `out`, so a caller can hold the
+ *  frame as it stood at some earlier sample. */
+export function copyReferenceFrame(
+  out: ReferenceFrame,
+  src: ReferenceFrame,
+): ReferenceFrame {
+  out.key = src.key;
+  out.label = src.label;
+  out.pole.copy(src.pole);
+  out.zeroLon.copy(src.zeroLon);
+  out.east.copy(src.east);
+  return out;
+}
+
+const rideFromBasis = new THREE.Matrix4();
+const rideToBasis = new THREE.Matrix4();
+
+// Right-handed ordering: `east` is `pole × zeroLon`, so (zeroLon, pole, east)
+// has determinant −1 and `setFromRotationMatrix` on it returns nonsense.
+function frameBasisInto(out: THREE.Matrix4, frame: ReferenceFrame): THREE.Matrix4 {
+  return out.makeBasis(frame.zeroLon, frame.east, frame.pole);
+}
+
+/** The rotation that carries `from`'s basis onto `to`'s, written into `out`.
+ *  False — and the caller must then leave `from` where it is — when that
+ *  rotation is smaller than `minRad`.
+ *
+ *  **The rotation is read off the two bases rather than modelled**, and that
+ *  is the whole correctness argument. The lock's promise is that the camera
+ *  undergoes exactly the rotation the reference frame did, so the reading
+ *  against it cannot change; taking the frame's own before-and-after is the
+ *  only way to honour that whatever moved — the datum travelling round the
+ *  orbit, the orbital PLANE precessing under it, or both at once, by any
+ *  amount. An axis-angle about the pole shipped here first and assumed the
+ *  pole was static: true of a planet, false of Luna (its node regresses
+ *  0.0529°/day, swinging the normal on a 5.15° cone) and of Triton. Per
+ *  frame that error is second order and invisible; collapse months of node
+ *  motion into one step — a scrub at years per second, or a jump back to now
+ *  — and it is first order and lands about a degree off.
+ *
+ *  Mod 2π is not a loss: a frame that turned 3.7 revolutions and one that
+ *  turned 0.7 are the same basis, and holding an attitude against a basis
+ *  does not care which way round it got there.
  *
  *  The threshold is what keeps the lock inside the render gate's schedule
  *  rather than defeating it. The ride writes the camera below the gate, so
  *  the next tick reads any write at all as a fresh camera move and renders;
- *  at live 1x a moon's datum turns a few millionths of a degree per tick,
+ *  at live 1× a moon's datum turns a few millionths of a degree per tick,
  *  which would pin the gate open forever for a step no display can show
- *  (`orbit-frame/README.md` § The lock).
- *
- *  A caller that gets 0 must leave `from` where it is, so the turns
- *  accumulate into one that is worth riding instead of being dropped. */
-export function orbitRideTurn(
-  from: THREE.Vector3,
-  to: THREE.Vector3,
-  pole: THREE.Vector3,
+ *  (`orbit-frame/README.md` § The lock). */
+export function orbitRideRotation(
+  out: THREE.Quaternion,
+  from: ReferenceFrame,
+  to: ReferenceFrame,
   minRad: number,
-): number {
-  const turn = signedAngleAbout(from, to, pole);
-  return Math.abs(turn) < minRad ? 0 : turn;
+): boolean {
+  frameBasisInto(rideFromBasis, from).transpose();
+  frameBasisInto(rideToBasis, to);
+  out.setFromRotationMatrix(rideToBasis.multiply(rideFromBasis));
+  const turn = quaternionTurnRad(out);
+  return turn > 0 && turn >= minRad;
+}
+
+/** A quaternion's rotation angle, always the short way round.
+ *
+ *  `atan2(|xyz|, |w|)`, never `acos(|w|)`: the whole point of this number is
+ *  to be compared against a threshold a few ten-thousandths of a radian wide,
+ *  and `acos` loses most of its significant digits as its argument approaches
+ *  1 — which is exactly where every sub-threshold turn sits. */
+export function quaternionTurnRad(q: THREE.Quaternion): number {
+  return 2 * Math.atan2(Math.hypot(q.x, q.y, q.z), Math.abs(q.w));
 }
 
 const rideOffset = new THREE.Vector3();
 
-/** Carry a camera pose round `pivot` by `angle` about `axis`, writing both
- *  `position` and `up` in place — the orbit lock's whole motion.
- *
- *  Turning the pose by exactly what the frame turned is what leaves the
- *  attitude reading unchanged, so the ball holds still while the world moves
- *  under it. One axis-angle covers both halves because ORB's pole is static:
- *  only zero longitude travels, so the swing about the pivot and the roll are
- *  the same rotation. */
-export function ridePoseAbout(
+/** Carry a camera pose round `pivot` by `rotation`, writing both `position`
+ *  and `up` in place — the orbit lock's whole motion. Rotating the offset
+ *  carries the boresight and rotating `up` carries the roll, so all three
+ *  axes of the reading come through unchanged. */
+export function ridePoseBy(
   position: THREE.Vector3,
   up: THREE.Vector3,
   pivot: THREE.Vector3,
-  axis: THREE.Vector3,
-  angle: number,
+  rotation: THREE.Quaternion,
 ): void {
-  rideOffset.copy(position).sub(pivot).applyAxisAngle(axis, angle);
+  rideOffset.copy(position).sub(pivot).applyQuaternion(rotation);
   position.copy(pivot).add(rideOffset);
-  up.applyAxisAngle(axis, angle).normalize();
+  up.applyQuaternion(rotation).normalize();
 }
 
 const FRAME_LABELS: Record<AutoFrameKey, string> = {

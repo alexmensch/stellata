@@ -22,8 +22,9 @@ import {
   nextFrameKey,
   emptyReferenceFrame,
   orbitFrameInto,
-  orbitRideTurn,
-  ridePoseAbout,
+  copyReferenceFrame,
+  orbitRideRotation,
+  ridePoseBy,
   readAttitude,
   type Attitude,
   type AutoFrameKey,
@@ -279,7 +280,11 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // the one frame whose datum moves, and there is nothing to ride otherwise.
   let orbitLocked = false;
   const orbitFrame = emptyReferenceFrame();
-  const riddenZeroLon = new THREE.Vector3();
+  // ORB as it stood when the lock last rode it — the whole basis, not just the
+  // datum: the plane precesses under a moon and the ride has to carry that
+  // too. § The lock.
+  const riddenFrame = emptyReferenceFrame();
+  const rideRotation = new THREE.Quaternion();
   let riding = false;
   const orbit: FocusedOrbit = {
     normal: new THREE.Vector3(),
@@ -385,11 +390,9 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // first frame after it comes back, rather than showing a stale attitude.
   let missedWhileHidden = false;
 
-  /** Carry the camera by however far the orbit datum turned since it was
-   *  last ridden from, so its attitude against ORB is unchanged and the ball
-   *  reads the same. The rotation is about the orbit normal by construction —
-   *  the pole is static and only zero longitude moves — so one axis-angle
-   *  does both the swing about the pivot and the roll. True when it wrote.
+  /** Carry the camera by exactly the rotation ORB underwent since the lock
+   *  last rode it, so its attitude against ORB is unchanged and the ball reads
+   *  the same. True when it wrote.
    *
    *  **This is a camera writer on the steady-state navigate path**, which
    *  `../camera/controls/input/README.md` § Orbit drift otherwise forbids. It
@@ -397,17 +400,14 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
    *  where the datum moved far enough for the write to show, so the render
    *  gate can still idle between rides. */
   function rideOrbit(): boolean {
-    const turn = orbitRideTurn(
-      riddenZeroLon,
-      orbitFrame.zeroLon,
-      orbitFrame.pole,
-      stellata.visibleCameraTurnRad(),
+    const moved = orbitRideRotation(
+      rideRotation, riddenFrame, orbitFrame, stellata.visibleCameraTurnRad(),
     );
-    if (turn === 0) return false;
+    if (!moved) return false;
     const camera = stellata.camera;
     const pivot = stellata.controls.target;
-    ridePoseAbout(camera.position, camera.up, pivot, orbitFrame.pole, turn);
-    // `ridePoseAbout` writes the pose — position and up. Every reader
+    ridePoseBy(camera.position, camera.up, pivot, rideRotation);
+    // `ridePoseBy` writes the pose — position and up. Every reader
     // downstream takes the QUATERNION, which is derived from those by
     // `lookAt`, and TrackballControls does not run again until the next tick
     // (`../camera/controls/input/README.md` § Roll authority, derivation A).
@@ -446,7 +446,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     // A turn too small to see is not ridden and NOT forgotten: leaving the
     // datum where it was last ridden from is what accumulates those turns into
     // one that is worth a frame, instead of dropping each one.
-    if (!carry || rode) riddenZeroLon.copy(orbitFrame.zeroLon);
+    if (!carry || rode) copyReferenceFrame(riddenFrame, orbitFrame);
     riding = rideable;
   }
 
