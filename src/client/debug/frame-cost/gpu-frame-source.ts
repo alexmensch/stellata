@@ -77,14 +77,13 @@ export function acquireGpuFrameSource(
   pinned?: GpuFrameMethod,
 ): GpuFrameSource | null {
   if (pinned !== undefined && !GPU_FRAME_METHODS.includes(pinned)) {
-    console.warn(
-      `priceFrame: { method: '${pinned}' } is not a clock — expected one of ` +
-      `${GPU_FRAME_METHODS.map((m) => `'${m}'`).join(', ')}. Refusing: the ` +
+    return refusePinned(
+      pinned,
+      `'${pinned}' is not a clock — expected one of ` +
+      `${GPU_FRAME_METHODS.map((m) => `'${m}'`).join(', ')}, and the ` +
       'console is untyped, so falling through to the backend preference ' +
-      'order would leave a typo looking like an honoured pin and rebuild ' +
-      'the mixed-method table pinning exists to prevent.',
+      'order would leave a typo looking like an honoured pin',
     );
-    return null;
   }
   if (pinned === 'raf-delta') {
     return rafDeltaSource(
