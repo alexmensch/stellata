@@ -182,16 +182,6 @@ export function parseCns5Tsv(text: string): Cns5Row[] {
   return out;
 }
 
-/** {@link cns5AstrometryByGj}'s index read the way a record asks for it, so the
- *  direction cascade and the PM rescue fold the `gl` cell identically. */
-export function lookupCns5Astrometry(
-  index: ReadonlyMap<string, Cns5Astrometry>,
-  gl: string | null,
-): Cns5Astrometry | null {
-  const key = gl === null ? null : normaliseGjKey(gl);
-  return key === null ? null : index.get(key) ?? null;
-}
-
 /** CNS5's astrometry keyed the way a record asks for it: on its own `gl`
  *  cell, folded through `normaliseGjKey` so `Gl 165A` / `GJ 165A` / `165 A`
  *  — and CNS5's own `165.0` — meet as one key, the same reduction the SIMBAD
@@ -216,4 +206,14 @@ export function cns5AstrometryByGj(rows: readonly Cns5Row[]): Map<string, Cns5As
     out.set(key, row.astrometry);
   }
   return out;
+}
+
+/** {@link cns5AstrometryByGj}'s index read the way a record asks for it, so the
+ *  direction cascade and the PM rescue fold the `gl` cell identically. */
+export function lookupCns5Astrometry(
+  index: ReadonlyMap<string, Cns5Astrometry>,
+  gl: string | null,
+): Cns5Astrometry | null {
+  const key = gl === null ? null : normaliseGjKey(gl);
+  return key === null ? null : index.get(key) ?? null;
 }
