@@ -28,8 +28,16 @@ const PATH_RENDER_ORDER = 3.2;
 // ring (24 px) takes back over as the "you are here" marker.
 const PATH_MIN_RADIUS_PX = 24;
 
+const _offset = new THREE.Vector3();
+
+/** The one thing this layer needs from the orbit walk: a pair's rendered
+ *  relative offset `R(t)`. `BinaryOrbitField` satisfies it. */
+export interface RelationOffsetSource {
+  relationOffsetPcInto(relationIdx: number, out: THREE.Vector3): boolean;
+}
+
 interface OrbitPathPair {
-  readonly primaryIdx: number;
+  readonly relationIdx: number;
   readonly secondaryIdx: number;
   /** Secondary mass fraction M_s/(M_p+M_s); drives the barycentre split. */
   readonly q: number;
@@ -106,7 +114,7 @@ export class BinaryOrbitPathLayer {
       const charSizePc = Math.max(params.elements.q, 1 - params.elements.q)
         * params.elements.a * AU_PC;
       this.pairs.push({
-        primaryIdx: r.primaryIdx,
+        relationIdx: ri,
         secondaryIdx: r.secondaryIdx,
         q: params.elements.q,
         charSizePc,
@@ -126,8 +134,17 @@ export class BinaryOrbitPathLayer {
    * their own paths. A pair hides once its orbit shrinks below
    * `PATH_MIN_RADIUS_PX` (zoom-out / distant system), mirroring the planet
    * orbit rings' pixel gate.
+   *
+   * The barycentre must come off the secondary's slot and the walk's own
+   * `R(t)`, never the mass-weighted average of the two slots — README
+   * § Anchor.
    */
-  update(localPositions: Float32Array, camera: THREE.PerspectiveCamera, viewportHeightPx: number): void {
+  update(
+    offsets: RelationOffsetSource | null,
+    localPositions: Float32Array,
+    camera: THREE.PerspectiveCamera,
+    viewportHeightPx: number,
+  ): void {
     if (!this.permitted || this.pairs.length === 0) {
       this.group.visible = false;
       this.anyVisible = false;
@@ -137,13 +154,16 @@ export class BinaryOrbitPathLayer {
     const pxPerRad = pixelsPerRadian(camera.fov, viewportHeightPx);
     let anyVisible = false;
     for (const p of this.pairs) {
-      const pB = p.primaryIdx * 3;
       const sB = p.secondaryIdx * 3;
-      const primaryFrac = 1 - p.q;
+      if (offsets?.relationOffsetPcInto(p.relationIdx, _offset) !== true) {
+        p.group.visible = false;
+        continue;
+      }
+      const secondaryFrac = 1 - p.q;
       p.group.position.set(
-        primaryFrac * localPositions[pB] + p.q * localPositions[sB],
-        primaryFrac * localPositions[pB + 1] + p.q * localPositions[sB + 1],
-        primaryFrac * localPositions[pB + 2] + p.q * localPositions[sB + 2],
+        localPositions[sB] - secondaryFrac * _offset.x,
+        localPositions[sB + 1] - secondaryFrac * _offset.y,
+        localPositions[sB + 2] - secondaryFrac * _offset.z,
       );
       const dPc = camera.position.distanceTo(p.group.position);
       const visible = angularRadiusPx(p.charSizePc, dPc, pxPerRad) >= PATH_MIN_RADIUS_PX;

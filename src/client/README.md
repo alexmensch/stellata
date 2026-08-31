@@ -82,7 +82,9 @@ themselves.
 - `attitude/` — the gyro-sphere attitude indicator: an FDAI-style 8-ball
   reading the camera quaternion against a reference frame that follows the
   focused object (ecliptic / equatorial / galactic, plus a captured REF
-  datum), with click-, `L`- and right-click affordances. Draws on its own
+  datum and an ORB one on the focused object's own orbital plane), with
+  click-, double-click-, `L`-, `Shift`+`L`- and right-click affordances.
+  Draws on its own
   small WebGL context rather than the main one, to stay clear of the HDR
   target and its exposure.
 - `calibration/` — the display-calibration screen: authored sRGB step

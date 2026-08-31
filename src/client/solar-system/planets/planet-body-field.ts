@@ -40,6 +40,7 @@ import {
   MESH_FADE_MIN_PX,
 } from './mesh-crossfade';
 import {
+  orbitPlaneNormalInto,
   orbitalPlaneNormalFor,
   placeholderEccentricAnomaly,
   planetLocalPosition,
@@ -968,6 +969,40 @@ export class PlanetBodyField {
     const host = this.hosts.get(hostStarIdx);
     if (!host || planetIdx < 0 || planetIdx >= host.count) return null;
     return host.startInstance + planetIdx;
+  }
+
+  /** Unit ICRS normal of this body's OWN orbital plane at `t` — a moon's
+   *  orbit about its parent, not its parent's about the host. False when
+   *  the host carries no live element source: its rings fall back to
+   *  `defaultOrbitGeometry`, whose plane is the host-plane convention
+   *  rather than a measured orientation. */
+  orbitPlaneNormalOf(instanceIdx: number, t: number, out: THREE.Vector3): boolean {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return false;
+    const g = host.ps.orbitGeometryAt?.(t)[instanceIdx - host.startInstance];
+    if (g === undefined) return false;
+    orbitPlaneNormalInto(out, g, host.orientation);
+    return true;
+  }
+
+  /** Vector from this body to the centre of its own orbit ring — the host
+   *  star for a planet, the parent body for a moon, matching what
+   *  `OrbitRingsLayer` anchors the ring on. False when no attached host
+   *  covers `instanceIdx`. */
+  orbitCentreOffsetInto(instanceIdx: number, out: THREE.Vector3): boolean {
+    const host = this.hostOfInstance(instanceIdx);
+    if (!host) return false;
+    const bodyIdx = instanceIdx - host.startInstance;
+    const parentIdx = systemFamily(host.ps.planets).parentIdx[bodyIdx];
+    const base = instanceIdx * 3;
+    out.set(-this.localRel64[base + 0], -this.localRel64[base + 1], -this.localRel64[base + 2]);
+    if (parentIdx >= 0) {
+      const pBase = (host.startInstance + parentIdx) * 3;
+      out.x += this.localRel64[pBase + 0];
+      out.y += this.localRel64[pBase + 1];
+      out.z += this.localRel64[pBase + 2];
+    }
+    return true;
   }
 
   /** Planet record for a flat instance index, or null. */

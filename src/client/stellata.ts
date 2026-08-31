@@ -597,7 +597,7 @@ export class Stellata implements FrameAnchor {
       parkDistForStar: (idx) => this.focus.parkDistForStar(idx),
       renderedSizePx: (idx) => this.renderedSizePxFor(idx),
       pickStarHit: (x, y, pxThreshold) => this.picker.pickStarHit(x, y, pxThreshold),
-      getBinaries: () => this.binariesData,
+      getBinaries: () => this.getBinaries(),
     });
     // Recentre fan-out, in load-bearing order: star buffer rewrite →
     // camera / orbit-target shift → scene-layer recenter hooks.
@@ -760,7 +760,7 @@ export class Stellata implements FrameAnchor {
     // outer primary leads the union over the member's planet-host role.
     this.systemMembership.register(
       createBinarySystemMembership({
-        getBinaries: () => this.binariesData,
+        getBinaries: () => this.getBinaries(),
         isCollapsed: (i) => this.isCompositeSuppressed(i),
       }),
     );
@@ -1132,7 +1132,12 @@ export class Stellata implements FrameAnchor {
         this.updateBinaryOrbits();
         // After the walk wrote this frame's slots, so each path rides its
         // pair's live barycentre drift.
-        this.binaryOrbitPathLayer.update(this.localPositions, ctx.camera, window.innerHeight);
+        this.binaryOrbitPathLayer.update(
+          this.binaryOrbitField,
+          this.localPositions,
+          ctx.camera,
+          window.innerHeight,
+        );
       },
       recenter: (newOrigin) => this.binaryOrbitField?.recenter(newOrigin),
       dispose: () => {
@@ -1540,6 +1545,9 @@ export class Stellata implements FrameAnchor {
     for (const line of formatVerifyReports(reports)) console.log(line);
     return reports;
   }
+
+  /** The attached binaries.bin runtime table, or null before it lands. */
+  getBinaries(): BinariesData | null { return this.binariesData; }
 
   /** Attach (or replace) the parsed binaries.bin runtime table. Idempotent;
    *  passing null detaches. From the moment the field is attached every

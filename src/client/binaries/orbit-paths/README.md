@@ -40,10 +40,30 @@ system draws, never every catalog pair.
 - **Anchor.** Ellipse vertices are ICRS pc *offsets* from the
   barycentre (frame-independent), built once per focus change. Per frame
   `update` only repositions each pair's group at its live barycentre
-  `(1−q)·primary + q·secondary`, read from the walked `localPositions`
-  right after the orbit walk. Hierarchical inner pairs anchor on their
-  parent-perturbed slots, so an inner ellipse rides the outer orbit —
-  the honest epicyclic decomposition, one ellipse-pair per relation.
+  `secondary − (1−q)·R(t)`, taking the secondary from the walked
+  `localPositions` right after the orbit walk and `R(t)` from
+  `BinaryOrbitField.relationOffsetPcInto`. Hierarchical inner pairs anchor
+  on their parent-perturbed slots, so an inner ellipse rides the outer
+  orbit — the honest epicyclic decomposition, one ellipse-pair per
+  relation.
+
+  **The mass-weighted average of the two slots is the wrong formula, and
+  it looks like the right one.** `(1−q)·primary + q·secondary` is the
+  barycentre only while the primary's slot holds what the relation
+  actually placed the secondary against. A hierarchical outer pair shares
+  its primary slot with an inner pair that splits it AGAIN, after the
+  outer step has already written the secondary — so that average inherits
+  an inner wobble the secondary never saw, and the whole ring swings by
+  `(1−q_outer)·q_inner·R_inner(t)` on the inner pair's period. On Algol
+  that is 0.0115 AU at 2.87 days, against Ab's own ~0.016 AU radius: the
+  star visibly hangs off its ring, displaced along the Aa1–Aa2 line.
+  Anchoring off the secondary and the walk's own `R(t)` puts the secondary
+  on its ellipse by construction, at every depth of hierarchy. The primary
+  of an outer pair then reads OFF its own (small) ellipse by exactly its
+  inner-pair wobble, which is what an epicycle is.
+
+  A pair whose relation the walk has not evaluated draws nothing that
+  frame rather than falling back to a slot-derived guess.
 - **Tier 2** (`has_orbit`, no measured inclination) draws too: period
   and semi-major axis are real, but the orbit plane is the galactic-Z
   fallback, so the ellipse *orientation* is not physical — size and

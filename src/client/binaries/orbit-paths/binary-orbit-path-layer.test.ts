@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { FLAG_HAS_ORBIT, type BinariesData } from '../binaries-loader';
 import { makeRelation } from '../binary-relation-fixture';
 import { relationIndicesInBounds } from '../orbit-relation-cache';
-import { BinaryOrbitPathLayer } from './binary-orbit-path-layer';
+import { BinaryOrbitPathLayer, type RelationOffsetSource } from './binary-orbit-path-layer';
 import { builtinChromeLineMaterials as chromeLines } from '../../chrome-lines/builtin-chrome-lines';
 
 // One Kepler pair 0↔1 (q = 0.4, Tier 2 — no inclination flag). Focusing
@@ -26,11 +26,17 @@ const VISUAL: BinariesData = {
 };
 
 const ABS = new Float32Array([10, 0, 0, 10, 0, 0]);
-// primary slot (idx 0) at (2,0,0); secondary slot (idx 1) at (0,5,0) →
-// barycentre (1−q)·primary + q·secondary = (1.2, 2, 0).
+// primary slot (idx 0) at (2,0,0); secondary slot (idx 1) at (0,5,0), the
+// walk's R(t) between them → barycentre = secondary − (1−q)·R = (1.2, 2, 0).
 const LOCAL = new Float32Array([2, 0, 0, 0, 5, 0]);
+const OFFSET_R = new THREE.Vector3(-2, 5, 0);
 const BARYCENTRE = new THREE.Vector3(1.2, 2, 0);
 const VIEWPORT_H = 1000;
+
+function offsetsOf(r: THREE.Vector3): RelationOffsetSource {
+  return { relationOffsetPcInto: (_ri, out) => { out.copy(r); return true; } };
+}
+const OFFSETS = offsetsOf(OFFSET_R);
 
 function cameraAt(offsetFromBarycentrePc: number): THREE.PerspectiveCamera {
   const cam = new THREE.PerspectiveCamera(60, 1, 1e-6, 100);
@@ -69,10 +75,10 @@ describe('BinaryOrbitPathLayer.setSystem', () => {
 });
 
 describe('BinaryOrbitPathLayer.update', () => {
-  it('parks each pair-group at the barycentre (1−q)·primary + q·secondary', () => {
+  it('parks each pair-group at the barycentre secondary − (1−q)·R(t)', () => {
     const layer = new BinaryOrbitPathLayer(chromeLines());
     layer.setSystem(SINGLE, 0, ABS);
-    layer.update(LOCAL, CLOSE(), VIEWPORT_H);
+    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H);
     const pos = layer.group.children[0].position;
     expect(pos.x).toBeCloseTo(BARYCENTRE.x, 12);
     expect(pos.y).toBeCloseTo(BARYCENTRE.y, 12);
@@ -80,12 +86,38 @@ describe('BinaryOrbitPathLayer.update', () => {
     layer.dispose();
   });
 
+  it('holds the barycentre still when an inner pair splits the shared primary slot', () => {
+    // Algol's shape: the outer pair's primary is also an inner pair's
+    // primary, so the walk moves that slot again AFTER placing the outer
+    // secondary. The outer ellipses must not follow it — the mass-weighted
+    // average of the two slots would drag them 0.6 pc down z here.
+    const layer = new BinaryOrbitPathLayer(chromeLines());
+    layer.setSystem(SINGLE, 0, ABS);
+    const innerSplit = new Float32Array(LOCAL);
+    innerSplit[2] -= 1;
+    layer.update(OFFSETS, innerSplit, CLOSE(), VIEWPORT_H);
+    const pos = layer.group.children[0].position;
+    expect(pos.x).toBeCloseTo(BARYCENTRE.x, 12);
+    expect(pos.y).toBeCloseTo(BARYCENTRE.y, 12);
+    expect(pos.z).toBeCloseTo(BARYCENTRE.z, 12);
+    layer.dispose();
+  });
+
+  it('draws no pair when the walk has not evaluated its relation', () => {
+    const layer = new BinaryOrbitPathLayer(chromeLines());
+    layer.setSystem(SINGLE, 0, ABS);
+    layer.update(null, LOCAL, CLOSE(), VIEWPORT_H);
+    expect(layer.group.children[0].visible).toBe(false);
+    expect(layer.anyOrbitRingVisible()).toBe(false);
+    layer.dispose();
+  });
+
   it('hides a pair once its orbit shrinks below the on-screen-size gate', () => {
     const layer = new BinaryOrbitPathLayer(chromeLines());
     layer.setSystem(SINGLE, 0, ABS);
-    layer.update(LOCAL, CLOSE(), VIEWPORT_H);
+    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H);
     expect(layer.group.children[0].visible).toBe(true);
-    layer.update(LOCAL, FAR(), VIEWPORT_H);
+    layer.update(OFFSETS, LOCAL, FAR(), VIEWPORT_H);
     expect(layer.group.children[0].visible).toBe(false);
     layer.dispose();
   });
@@ -96,14 +128,14 @@ describe('BinaryOrbitPathLayer.anyOrbitRingVisible', () => {
     const layer = new BinaryOrbitPathLayer(chromeLines());
     expect(layer.anyOrbitRingVisible()).toBe(false);
     layer.setSystem(SINGLE, 0, ABS);
-    layer.update(LOCAL, CLOSE(), VIEWPORT_H);
+    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H);
     expect(layer.anyOrbitRingVisible()).toBe(true);
     // Zoomed far out — the orbit is sub-pixel, so the focus ring should
     // take back over.
-    layer.update(LOCAL, FAR(), VIEWPORT_H);
+    layer.update(OFFSETS, LOCAL, FAR(), VIEWPORT_H);
     expect(layer.anyOrbitRingVisible()).toBe(false);
     // Decluttered (representational off) hides it even when close.
-    layer.update(LOCAL, CLOSE(), VIEWPORT_H);
+    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H);
     layer.setPermitted(false);
     expect(layer.anyOrbitRingVisible()).toBe(false);
     layer.dispose();

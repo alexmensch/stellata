@@ -164,8 +164,10 @@ build scripts, tests, and shader uniforms.
   the same reason: it is part of the published series, not a duplicate of
   `J2000_OBLIQUITY_RAD`.
 - `pending-click.ts` — single/double-click disambiguator (hold a
-  click for the double window, fire single on expiry). Drives canvas
-  clicks in both camera modes.
+  click for the double window, fire single on expiry), plus the
+  `DBL_CLICK_MS` / `DBL_CLICK_DIST_PX_SQ` window every surface shares.
+  Drives canvas clicks in both camera modes and the attitude ball's
+  level / level-on-orbit pair (`../attitude/README.md`).
 - `texture-bytes-pure.ts` (+ test) — `texelBytes(format, type)`, the one
   table mapping a three format/type pair to bytes per texel, plus
   `mipmapFactor(texture)` and the `MIP_CHAIN_FACTOR` (4/3) it returns.

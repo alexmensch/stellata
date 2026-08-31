@@ -33,6 +33,7 @@ registry only describes what to display.
 | `Backspace` | Time scrubber (while open): reset to live now (`reset`) |
 | `S` | Cycle `coordSphere`: none → galactic → equatorial → none. The equatorial stop is skipped whenever the camera sits beyond its Sol-distance fade (`../galactic/coord-spheres/README.md`), so `S` never leaves an enabled-but-invisible sphere |
 | `L` | Level the camera: zero its roll against the attitude indicator's active reference frame (`../attitude/README.md` § Levelling). Same action as clicking the ball |
+| `Shift` `L` | Level on the focused object's own orbital plane, capturing it as the ORB frame (`../attitude/README.md` § Levelling on an orbit) — the same action as double-clicking the ball |
 | `H` | Toggle `showHud` |
 | `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`) — works in every mode. Single `F` opens Find in observe mode only (both are deferred by the double-tap window, like `C`). |
 | `U` | Show/hide the top-right controls stack (`controls-hidden.ts`) |

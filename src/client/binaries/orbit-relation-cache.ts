@@ -5,12 +5,16 @@
 import { J2000_JD } from '../util/astronomy-constants';
 import {
   evaluateOrbitOffsetPc,
+  orbitNormalSky,
+  projectSkyToICRS,
   type OrbitalElements,
   type Vec3,
 } from './binary-orbit-pure';
+import { innermostRelationOf } from './focal-chain';
 import {
   FLAG_HAS_ORBIT,
   FLAG_HAS_INCLINATION,
+  NO_PARENT,
   type BinariesData,
   type BinaryRelation,
 } from './binaries-loader';
@@ -78,6 +82,33 @@ export function keplerRelationParams(
   ) return null;
   const tier: 1 | 2 = (r.flags & FLAG_HAS_INCLINATION) !== 0 ? 1 : 2;
   return { tier, elements: relationToElements(r) };
+}
+
+/** The plane `starIdx` itself rides, with the pair it came from — null when
+ *  the star is in no pair, the pair carries no Kepler elements, or the pair
+ *  is Tier 2, whose plane is a convention rather than a measurement
+ *  (README § Which pair a star rides).
+ *
+ *  `relationIdx` is returned so a caller wanting the same pair's other
+ *  member reads it off this answer rather than resolving the innermost
+ *  relation a second time and trusting the two to agree.
+ *
+ *  `systemXyzPc` is the pair's ICRS position, supplying the sky tangent
+ *  basis the sky-frame normal projects through. */
+export function starOrbitNormalIcrs(
+  binaries: BinariesData,
+  starIdx: number,
+  systemXyzPc: Vec3,
+): { normal: Vec3; relationIdx: number } | null {
+  const relationIdx = innermostRelationOf(binaries, starIdx);
+  if (relationIdx === NO_PARENT) return null;
+  const params = keplerRelationParams(binaries.relations[relationIdx]);
+  if (params === null || params.tier !== 1) return null;
+  const n = orbitNormalSky(params.elements);
+  return {
+    normal: projectSkyToICRS(systemXyzPc, n.north, n.east, n.radial),
+    relationIdx,
+  };
 }
 
 /** Both members' xyz triples fall inside a catalog-wide position buffer.

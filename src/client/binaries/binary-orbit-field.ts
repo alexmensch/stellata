@@ -99,6 +99,11 @@ export class BinaryOrbitField {
   // periapsis peak the LOD gate happens to hold.
   private relDelta: Float64Array;
   private prevRelDelta: Float64Array;
+  /** 1 once a walk has written `relDelta` for that cache slot. Zero-init
+   *  fails the first read, so `relationOffsetPcInto` cannot hand out the
+   *  zero vector as if it were an evaluated ΔR. */
+  private relDeltaWritten: Uint8Array;
+  private readonly cacheSlotByRelationIdx: Map<number, number>;
   /** Relations that ran Kepler this frame, in walk order. Exactly the set
    *  that moves anything on screen: gated-out and sub-pixel-suppressed
    *  relations never reach the split. */
@@ -134,6 +139,11 @@ export class BinaryOrbitField {
     this.suppressUploader = new DirtyItemUploader(opts.iCompositeSuppressAttr, memberSlots);
     this.relDelta = new Float64Array(this.relations.length * 3);
     this.prevRelDelta = new Float64Array(this.relations.length * 3);
+    this.relDeltaWritten = new Uint8Array(this.relations.length);
+    this.cacheSlotByRelationIdx = new Map();
+    for (let i = 0; i < this.relations.length; i++) {
+      this.cacheSlotByRelationIdx.set(this.relations[i].relationIdx, i);
+    }
     this.memberOrdinal = new Map();
     for (let i = 0; i < memberSlots.length; i++) this.memberOrdinal.set(memberSlots[i], i);
     this.prevMemberLocal = new Float64Array(memberSlots.length * 3);
@@ -328,6 +338,7 @@ export class BinaryOrbitField {
       this.relDelta[i * 3 + 0] = dxDelta;
       this.relDelta[i * 3 + 1] = dyDelta;
       this.relDelta[i * 3 + 2] = dzDelta;
+      this.relDeltaWritten[i] = 1;
       this.activeRelations.push(i);
       const pCoeff = -rc.elements.q;
       local[pBase + 0] = aPx + dxDelta * pCoeff;
@@ -352,6 +363,27 @@ export class BinaryOrbitField {
     this.lastFovYRad = fovYRad;
     this.lastFocalIdx = focalIdx;
     return activeCount;
+  }
+
+  /** One pair's rendered relative offset `R(t) = baseDiffPc + ΔR(t)` in
+   *  ICRS pc, as the last walk placed it. False when the relation carries
+   *  no Kepler elements or no walk has evaluated it yet.
+   *
+   *  This is the vector between the relation's ANCHOR and its secondary —
+   *  not `local[secondary] − local[primary]`, which for a hierarchical
+   *  outer pair also carries the inner pair's split of the shared primary
+   *  slot. The orbit-path layer needs the anchor form to place the pair's
+   *  barycentre (`orbit-paths/README.md` § Anchor). */
+  relationOffsetPcInto(relationIdx: number, out: THREE.Vector3): boolean {
+    const slot = this.cacheSlotByRelationIdx.get(relationIdx);
+    if (slot === undefined || this.relDeltaWritten[slot] === 0) return false;
+    const rc = this.relations[slot];
+    out.set(
+      rc.baseDiffPc.x + this.relDelta[slot * 3 + 0],
+      rc.baseDiffPc.y + this.relDelta[slot * 3 + 1],
+      rc.baseDiffPc.z + this.relDelta[slot * 3 + 2],
+    );
+    return true;
   }
 
   /** Total float64 perturbation of the focal star's slot from its catalog
@@ -500,6 +532,7 @@ export class BinaryOrbitField {
     this.lastCamPos.set(NaN, NaN, NaN);
     this.relDelta.fill(0);
     this.prevRelDelta.fill(0);
+    this.relDeltaWritten.fill(0);
     this.activeRelations.length = 0;
     this.memberSnapshotValid = false;
     this.observedUsable = false;
