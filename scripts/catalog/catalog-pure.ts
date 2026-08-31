@@ -959,13 +959,13 @@ export const SOL_ABSOLUTE_V_MAGNITUDE = 4.85;
 
 /** Sol's apparent V, curated for the same reason its direction is: it carries
  *  no identifier any cascade can key on, so every machine tier misses it and
- *  V is a membership gate.
+ *  V is a membership gate. Cox 2000, *Allen's Astrophysical Quantities* 4th
+ *  ed. § 12 — the published value, not the printed cell the retired
+ *  AT-HYG-driven build happened to carry.
  *
- *  −26.7 is the value the AT-HYG-driven build carried. It reaches no shipped
- *  byte — absmag takes `SOL_ABSOLUTE_V_MAGNITUDE` above rather than deriving
- *  from this, because Sol sits at distance zero — so it exists to satisfy the
- *  gate with a defensible number rather than to be read. */
-export const SOL_APPARENT_V_MAGNITUDE = -26.7;
+ *  It reaches no shipped byte: absmag takes `SOL_ABSOLUTE_V_MAGNITUDE` above
+ *  rather than deriving from this, because Sol sits at distance zero. */
+export const SOL_APPARENT_V_MAGNITUDE = -26.74;
 
 /** Bits intentionally left free for future use — adding functionality
  *  that fits inside one of these does not require a BINARY_VERSION bump.
