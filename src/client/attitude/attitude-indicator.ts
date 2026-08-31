@@ -108,26 +108,48 @@ function buildBezel() {
 }
 
 /** The fixed index amber. Like the caret below it is read against the ball,
- *  never the page, so it stays put when the page palette flips. */
-const INDEX_AMBER = '#ffd24a';
+ *  never the page, so it stays put when the page palette flips.
+ *
+ *  It clears 9.5:1 against the dark hemisphere and only 1.8:1 against the
+ *  light one — and no warm colour clears the 3:1 a non-text graphic wants on
+ *  both, warmth being brightness. The outline below is what carries it. */
+const INDEX_AMBER = '#ff9d0a';
+
+const SYMBOL_STROKE = 2.2;
+const SYMBOL_DOT_R = 2.4;
+/** Half-width of the cross's outline, in the 192-unit design space — about a
+ *  pixel once CSS stretches the box. `BALL_DARK` against the light hemisphere
+ *  is 16.9:1, so a hairline is the whole fix; anything heavier reads as a
+ *  second graphic rather than an edge. */
+const SYMBOL_OUTLINE = 0.75;
 
 /** A cross rather than aircraft wings: four arms and a centre point, scaled
- *  off the ball and trimmed 5%. */
+ *  off the ball and trimmed 5%. Drawn twice — the dark outline beneath the
+ *  amber — because the amber alone vanishes over the light hemisphere. */
 function buildSymbol() {
-  const g = el('g', { class: 'ai-symbol', stroke: INDEX_AMBER, 'stroke-width': 2.2 });
+  const g = el('g', { class: 'ai-symbol' });
   const inner = BALL_R * 0.163;
   const outer = inner + (BALL_R * 0.489 - inner) * 0.95;
-  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-    g.appendChild(
-      el('line', {
-        x1: C + dx * inner,
-        y1: C + dy * inner,
-        x2: C + dx * outer,
-        y2: C + dy * outer,
-      }),
-    );
+  const arms = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+  for (const [colour, width, dotR] of [
+    [BALL_DARK, SYMBOL_STROKE + 2 * SYMBOL_OUTLINE, SYMBOL_DOT_R + SYMBOL_OUTLINE],
+    [INDEX_AMBER, SYMBOL_STROKE, SYMBOL_DOT_R],
+  ] as const) {
+    const layer = el('g', { stroke: colour, 'stroke-width': width, 'stroke-linecap': 'round' });
+    for (const [dx, dy] of arms) {
+      layer.appendChild(
+        el('line', {
+          x1: C + dx * inner,
+          y1: C + dy * inner,
+          x2: C + dx * outer,
+          y2: C + dy * outer,
+        }),
+      );
+    }
+    layer.appendChild(el('circle', { cx: C, cy: C, r: dotR, fill: colour, stroke: 'none' }));
+    g.appendChild(layer);
   }
-  g.appendChild(el('circle', { cx: C, cy: C, r: 2.4, fill: INDEX_AMBER, stroke: 'none' }));
   return g;
 }
 
@@ -194,6 +216,11 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // cannot derive is the ball's share of the square box it sits in. Every
   // rule consuming it is a class in styles.css — README.md § Sizing.
   host.style.setProperty('--ai-ball-frac', String(BALL_PX / BOX));
+  // The REF chip lights in the index cross's own colour, so the stylesheet
+  // takes it from the constant above rather than keeping a second copy that
+  // could drift off the thing it is supposed to match.
+  host.style.setProperty('--ai-index', INDEX_AMBER);
+  host.style.setProperty('--ai-index-ink', BALL_DARK);
 
   const panel = document.getElementById('instruments');
   const section = host.closest('.group');
@@ -246,19 +273,25 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   svg.appendChild(buildSymbol());
   stage.appendChild(svg);
 
+  const refBtn = cornerChip(
+    'attitude-ref',
+    'REF',
+    'Reference datum — read the ball against the attitude held right now',
+  );
   const frameBtn = cornerChip(
     'attitude-frame',
     frame.label,
-    'Reference frame — click to cycle, right-click the ball to set REF',
+    'Reference frame — click to cycle',
   );
   const invertBtn = cornerChip(
     'attitude-invert',
-    'REV',
+    'INV',
     'Invert the view — swing around to the far side of the focused object',
   );
   host.appendChild(stage);
   // Outside the stage, which is clipped to its disc so the square's corners
-  // stay clicks on the sky. The chips sit in two of those corners.
+  // stay clicks on the sky. The chips sit in three of those corners.
+  host.appendChild(refBtn);
   host.appendChild(frameBtn);
   host.appendChild(invertBtn);
 
@@ -281,10 +314,16 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
    *  the whole test: a table frame is the same object until the selection
    *  changes, and a capture is always a fresh one. */
   function refresh() {
+    // REF is the one frame with no place on the flag, so the flag keeps
+    // reading the frame underneath it and the chip alone says it is held.
+    refBtn.classList.toggle('on', captured?.key === 'reference');
+    refBtn.setAttribute('aria-pressed', captured?.key === 'reference' ? 'true' : 'false');
     const next = resolveFrame();
     if (next === frame) return;
     frame = next;
-    frameBtn.textContent = frame.label;
+    frameBtn.textContent = captured?.key === 'reference'
+      ? frames[selectedFrameKey()].label
+      : frame.label;
     draw();
   }
 
@@ -363,6 +402,18 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   }
 
   frameBtn.addEventListener('click', cycleFrame);
+
+  // Toggling REF off drops back to whatever the flag is reading, which is
+  // what makes the chip the whole mechanism: one control arms the datum and
+  // clears it, with no frame left stranded outside the cycle.
+  refBtn.addEventListener('click', () => {
+    if (captured?.key === 'reference') {
+      captured = null;
+      refresh();
+      return;
+    }
+    capture(captureReferenceFrame(stellata.camera));
+  });
 
   invertBtn.addEventListener('click', () => stellata.invertView());
 

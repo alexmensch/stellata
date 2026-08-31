@@ -231,7 +231,10 @@ export function bindKeyboardShortcuts(
       case 'v': case 'V':
         // Declutter cycle: physical → representational → all → physical,
         // within the current render style. Not mode-gated (unlike M).
-        cycleDetailLevel(stellata);
+        // Shifted, it is the INV chip's keyboard path, which observe needs
+        // because the instrument carrying that chip is navigate-only.
+        if (e.shiftKey) stellata.invertView();
+        else cycleDetailLevel(stellata);
         e.preventDefault();
         break;
       case '?':

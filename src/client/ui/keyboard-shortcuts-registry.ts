@@ -24,10 +24,19 @@ export const SHORTCUTS: readonly ShortcutDescriptor[] = [
   { keys: ['O'], label: 'Switch to observe mode when a star is focused' },
   { keys: ['M'], label: 'Toggle star chart mode (in observe mode only)' },
   { keys: ['V'], label: 'Cycle detail level (physical → structure → all)' },
+  { keys: ['⇧', 'V'], label: 'Invert the view — swing to the far side of the focused object' },
   { keys: ['W'], label: 'Warp to the destination' },
   { keys: ['C'], label: 'Show a constellation' },
-  { keys: ['S'], label: 'Cycle the coordinate sphere: none → galactic → equatorial' },
-  { keys: ['L'], label: 'Level the camera against the attitude indicator' },
+  {
+    keys: ['S'],
+    label: 'Cycle the reference frame: the attitude indicator in navigate, '
+      + 'the coordinate sphere in observe',
+  },
+  {
+    keys: ['L'],
+    label: 'Level the camera — against the attitude indicator in navigate, '
+      + 'the coordinate sphere in observe',
+  },
   {
     keys: ['⇧', 'L'],
     label: "Level on the focused object's own orbital plane",

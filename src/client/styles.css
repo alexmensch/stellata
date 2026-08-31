@@ -1379,12 +1379,12 @@ body.monochrome .poi-label {
   stroke: var(--fg);
   opacity: 0.75;
 }
-/* Both corner chips: the frame flag and the invert control. They sit in the
-   square's free corners, which the disc-clipped stage leaves clear of the
-   outermost tick, so neither steals a click meant for the sky. */
+/* The three corner chips: the REF datum toggle, the frame flag and the invert
+   control. They sit in the square's free corners, which the disc-clipped stage
+   leaves clear of the outermost tick, so none steals a click meant for the
+   sky. */
 .attitude-chip {
   position: absolute;
-  bottom: 0;
   pointer-events: auto;
   background: rgba(7, 9, 18, 0.72);
   border: 1px solid var(--border-strong);
@@ -1396,10 +1396,24 @@ body.monochrome .poi-label {
   padding: 1px 5px;
   cursor: pointer;
 }
-.attitude-frame { left: 0; }
-.attitude-invert { right: 0; }
+.attitude-ref { top: 0; left: 0; }
+.attitude-frame { top: 0; right: 0; }
+.attitude-invert { bottom: 0; right: 0; }
 .attitude-chip:hover,
 .attitude-chip:focus-visible {
+  border-color: var(--fg);
+}
+/* Held REF fills in the index cross's own colour — the ball is reading against
+   the datum, and the cross is where you see it. Both values come from
+   attitude-indicator.ts's constants, so the chip cannot drift off the cross.
+   Dark ink on the fill, at 9.5:1; the light tone would sit at 1.8:1. */
+.attitude-ref.on {
+  background: var(--ai-index);
+  border-color: var(--ai-index);
+  color: var(--ai-index-ink);
+}
+.attitude-ref.on:hover,
+.attitude-ref.on:focus-visible {
   border-color: var(--fg);
 }
 
