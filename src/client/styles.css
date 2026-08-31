@@ -1444,10 +1444,15 @@ body.monochrome .poi-label {
    against a datum, or riding one, and the cross is where you see it. Both
    values come from attitude-indicator.ts's constants, so a chip cannot drift
    off the cross. Dark ink on the fill, at 9.5:1; the light tone would sit at
-   1.8:1. The lock's glyph is stroked in currentColor, so it inverts with it. */
+   1.8:1. The lock's glyph is stroked in currentColor, so it inverts with it.
+
+   **The fill stops at the padding box and the border keeps its own colour.**
+   `--border-strong` is translucent, so a fill painted under it would tint it
+   orange — and where the lock meets the flag above it the two share one
+   border line, which the fill would then paint over and break. */
 .attitude-chip.on {
   background: var(--ai-index);
-  border-color: var(--ai-index);
+  background-clip: padding-box;
   color: var(--ai-index-ink);
 }
 .attitude-chip.on:hover,

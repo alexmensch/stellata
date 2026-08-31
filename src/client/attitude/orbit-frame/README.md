@@ -90,13 +90,24 @@ admissible for the reason a gesture is: **it writes only on a frame where the
 datum actually moved.** A paused clock turns the datum by exactly zero, the
 write is skipped, and the gate idles as before.
 
-Two ordering details that are easy to get wrong:
+Three ordering details that are easy to get wrong, and one of them shipped
+wrong once:
 
+- **The ride is not part of the instrument's draw path.** It moves the CAMERA,
+  not the instrument, so it runs on every rendered frame including the ones
+  the instrument is hidden for — `U`, a collapsed panel, any off-screen check.
+  Hanging it off the drawing path made hiding the UI silently disengage the
+  lock and then replay the whole accumulated turn as one swing when it came
+  back.
 - **The datum's last position is recorded whether or not the ride ran.** A
   frame skipped because a warp or an observe transition owned the camera must
   not replay as one enormous swing when the transition ends.
 - **Engaging the lock seeds from wherever the datum is now**, not from where
   it was when ORB was armed, for the same reason.
+
+Navigate only, and the lock clears on entering observe: the ride orbits the
+camera about `controls.target`, which is not what observe's camera does — it
+sits on the object rather than circling it.
 
 Rebuilding rather than only rolling is what makes the gesture legible: rolling
 to a plane the instrument is not displaying leaves the caret reading un-level

@@ -384,22 +384,34 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     );
   }
 
+  /** Re-read ORB and, while the lock is engaged, carry the camera by however
+   *  far the datum turned.
+   *
+   *  **Deliberately not part of `draw`.** The lock moves the CAMERA, not the
+   *  instrument, so it has to keep running on frames the instrument is hidden
+   *  for — `U`, a collapsed panel, an off-screen check of any kind. Gating it
+   *  on the drawing path made hiding the UI silently disengage the lock and
+   *  then replay the whole accumulated turn as one swing when it came back. */
+  function tickOrbitFrame(): void {
+    if (captured !== null || !orbitActive) return;
+    if (!refreshOrbitFrame()) {
+      orbitActive = false;
+      riding = false;
+      return;
+    }
+    frame = orbitFrame;
+    const rideable = orbitLocked
+      && stellata.focus.getCameraMode() === 'navigate'
+      && !stellata.isCameraTransitionActive();
+    if (rideable) rideOrbit();
+    // Whether or not the ride ran, the datum is where it is now: a frame
+    // skipped under a transition must not replay as one huge swing.
+    riddenZeroLon.copy(orbitFrame.zeroLon);
+    riding = rideable;
+  }
+
   function draw() {
     const camera = stellata.camera;
-    // ORB turns with the orbit, so the frame itself has to be re-read before
-    // it is drawn against — a still camera is not a still instrument here.
-    if (captured === null && orbitActive) {
-      if (refreshOrbitFrame()) {
-        frame = orbitFrame;
-        if (orbitLocked && !stellata.isCameraTransitionActive()) rideOrbit();
-        // Whether or not the ride ran, the datum is where it is now: a frame
-        // skipped under a transition must not replay as one huge swing.
-        riddenZeroLon.copy(orbitFrame.zeroLon);
-        riding = orbitLocked;
-      } else {
-        orbitActive = false;
-      }
-    }
     lastQuat.copy(camera.quaternion);
     ball.render(camera, frame);
     readAttitude(camera, frame, attitude);
@@ -598,12 +610,22 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // roll guide and this disagree. The whole panel goes, not just the ball —
   // an Instruments box holding nothing reads as a fault.
   const applyModeVisibility = () => {
-    if (panel !== null) panel.hidden = stellata.focus.getCameraMode() === 'observe';
+    const observing = stellata.focus.getCameraMode() === 'observe';
+    // The ride orbits the camera about `controls.target`, which is not what
+    // observe's camera does — it sits on the object rather than circling it.
+    if (observing) {
+      orbitLocked = false;
+      riding = false;
+    }
+    if (panel !== null) panel.hidden = observing;
   };
   stellata.on('cameraMode', applyModeVisibility);
   applyModeVisibility();
 
   stellata.on('frame', () => {
+    // Ahead of the off-screen check, because the lock is a camera behaviour
+    // and must not stop when the instrument is hidden.
+    tickOrbitFrame();
     // A live ORB datum turns with the orbit, so the instrument has to redraw
     // on every rendered frame while it is up rather than only on a camera
     // move. Nothing runs while the render gate idles — if no frame is drawn,
