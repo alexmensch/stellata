@@ -76,15 +76,15 @@ describe('shipped scene-layer time declarations', () => {
   it('the static / clock split is pinned, so a silent flip fails here', () => {
     const census: Record<string, number> = { static: 0, clock: 0, realtime: 0 };
     for (const d of declarations) census[d.kind]++;
-    // Eight views of moving content: the planet bodies (their own module
-    // layer, plus the mesh / rings / local-cluster entries anchored to
-    // them) and the binary walk (its module-less orbit entry, plus the
-    // paths, star cluster and constellation figures riding the slots it
-    // writes), with the probe field's marker layer alongside. Everything
-    // else is fixed geometry, pure projection, or the orbit lock's
-    // sequencing-only entry — which draws nothing, so it must never ask the
-    // cadence for a frame of its own.
-    expect(census).toEqual({ static: 11, clock: 8, realtime: 0 });
+    // Nine views of moving content: the planet bodies (their own module
+    // layer, plus the focal-ride / mesh / rings / local-cluster entries
+    // anchored to them) and the binary walk (its module-less orbit entry,
+    // plus the paths, star cluster and constellation figures riding the
+    // slots it writes), with the probe field's marker layer alongside.
+    // Everything else is fixed geometry, pure projection, or the orbit
+    // lock's sequencing-only entry — which draws nothing, so it must never
+    // ask the cadence for a frame of its own.
+    expect(census).toEqual({ static: 11, clock: 9, realtime: 0 });
   });
 
   it('every inline register({...}) in the shell carries a declaration', () => {

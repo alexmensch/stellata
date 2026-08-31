@@ -1077,18 +1077,11 @@ export class Stellata implements FrameAnchor {
         kind: 'clock',
         rate: (cc) => this.planetBodyField.cadenceReport(cc),
       },
-      update: (ctx) => {
-        // Ride runs right after every moving-body field wrote this
-        // frame's positions — the whole module roster updates ahead of
-        // this, the first inline entry — mirroring the binary ride's
-        // placement after its orbit walk.
-        this.applyMovingFocalRide();
-        // Mesh LOD sizes off the post-ride camera: pre-ride it would
-        // see the focused body a whole per-frame delta away and drop
-        // the mesh under fast scrub. That is why this update lives on
-        // the shell rather than inside the planet module's layer.
-        this.kinds.planet.meshLayer.update(ctx.camera, ctx.t);
-      },
+      // Ride runs right after every moving-body field wrote this
+      // frame's positions — the whole module roster updates ahead of
+      // this, the first inline entry — mirroring the binary ride's
+      // placement after its orbit walk.
+      update: () => this.applyMovingFocalRide(),
       dispose: () => {},
     });
     this.layers.register({
@@ -1124,17 +1117,6 @@ export class Stellata implements FrameAnchor {
     this.layers.register({
       timeBehaviour: {
         kind: 'clock',
-        rate: (cc) => this.planetBodyField.cadenceReport(cc),
-      },
-      // After the field + rings updates it reads; before the main
-      // render its suppression uniforms gate. Owns no GPU resources —
-      // the star mirror it feeds is disposed with the star cluster.
-      update: (ctx) => this.solarCluster.update(ctx.camera),
-      dispose: () => {},
-    });
-    this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
         rate: (cc) => maxCadenceReport(
           this.binaryOrbitField?.cadenceReport(cc) ?? CADENCE_REPORT_STILL,
           this.eclipsePhotometryField?.cadenceReport(cc.simDtS) ?? CADENCE_REPORT_STILL,
@@ -1158,25 +1140,38 @@ export class Stellata implements FrameAnchor {
         this.binaryOrbitPathLayer.dispose();
       },
     });
-    // Sequencing only, owning nothing — the second such entry, and
-    // scene/README.md § Not every entry owns a layer asks it to justify
-    // itself. The orbit lock is a camera WRITE, and exactly one slot in the
-    // frame is correct for it: after every moving field wrote this frame's
-    // positions AND after BOTH focal rides (the moving-body one in the first
-    // entry, the binary one directly above), so the datum it reads and the
-    // pivot it swings about are current; and ahead of every entry below,
-    // because those project the camera to screen space and would otherwise
-    // draw the HUD arrows, the distance vector and the labels against a pose
-    // the frame does not render. `static` is the honest declaration: it draws
-    // nothing, so it must never ask the cadence for a frame of its own — it
-    // writes only on frames something else already scheduled.
-    //
-    // The readers ABOVE are indifferent by construction: the ride is a pure
-    // rotation about `controls.target`, so it changes no distance to
-    // anything, and every one of them sizes or culls off distance.
+    // Sequencing only, owning nothing — the second such entry, and the last
+    // camera WRITE of the frame. Every camera reader is registered below it;
+    // the argument for that, and for `static`, is scene/README.md § Not every
+    // entry owns a layer and § Camera writes, then camera reads.
     this.layers.register({
       timeBehaviour: { kind: 'static' },
       update: () => this.orbitLockRide?.(),
+      dispose: () => {},
+    });
+    this.layers.register({
+      timeBehaviour: {
+        kind: 'clock',
+        rate: (cc) => this.planetBodyField.cadenceReport(cc),
+      },
+      // Below every camera write in the frame — both focal rides and the
+      // orbit lock — because it caches `camera.matrixWorld` for its
+      // view-space sun, pole and caster uniforms, and sizes the mesh off
+      // camera distance (scene/README.md § Camera writes, then camera reads).
+      // That is why this update lives on the shell rather than inside the
+      // planet module's layer.
+      update: (ctx) => this.kinds.planet.meshLayer.update(ctx.camera, ctx.t),
+      dispose: () => {},
+    });
+    this.layers.register({
+      timeBehaviour: {
+        kind: 'clock',
+        rate: (cc) => this.planetBodyField.cadenceReport(cc),
+      },
+      // After the field, rings and mesh updates it reads; before the main
+      // render its suppression uniforms gate. Owns no GPU resources —
+      // the star mirror it feeds is disposed with the star cluster.
+      update: (ctx) => this.solarCluster.update(ctx.camera),
       dispose: () => {},
     });
     this.layers.register({
