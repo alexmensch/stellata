@@ -37,10 +37,7 @@ export const CHROME_INSET = C - CHROME_R;
 export const RENDERED_BOX_PX = 240;
 const RENDERED_SCALE = RENDERED_BOX_PX / BOX;
 
-/** The ball's raster size in CSS pixels. `attitude-ball.ts` sizes its drawing
- *  buffer off this; the stylesheet sizes the element to match. */
+/** The ball's drawing-buffer size in CSS pixels — a resolution, not a layout
+ *  size: the element itself fills its panel column, and `RENDERED_BOX_PX` is
+ *  the width that resolution was chosen against. */
 export const BALL_RASTER_PX = BALL_PX * RENDERED_SCALE;
-
-/** `CHROME_INSET` on the page. The scale bar under the instrument pads its
- *  left endcap by this so the two share a left edge — `../ui/scale-bar.ts`. */
-export const CHROME_INSET_PX = CHROME_INSET * RENDERED_SCALE;

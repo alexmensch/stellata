@@ -10,7 +10,6 @@ import {
   BOX,
   C,
   CHROME_INSET,
-  CHROME_INSET_PX,
   CHROME_R,
   RENDERED_BOX_PX,
 } from './attitude-layout';
@@ -43,8 +42,4 @@ describe('attitude layout', () => {
     expect(BALL_RASTER_PX).toBe(200);
   });
 
-  it('reports the optical inset the scale bar aligns to', () => {
-    expect(CHROME_INSET_PX).toBeCloseTo(CHROME_INSET * (RENDERED_BOX_PX / BOX), 12);
-    expect(CHROME_INSET_PX).toBeCloseTo(6.0128, 4);
-  });
 });

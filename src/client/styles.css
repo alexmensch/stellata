@@ -18,6 +18,9 @@
   --page-margin-x: 14px;
   --page-margin-top: 10px;
   --page-margin-bottom: 16px;
+  /* Both fixed panel stacks are this wide — the settings column top-right
+     and the instruments panel bottom-left, so the two read as one system. */
+  --panel-width: 280px;
 }
 
 * { box-sizing: border-box; }
@@ -124,7 +127,7 @@ html, body {
   top: var(--page-margin-top);
   right: var(--page-margin-x);
   bottom: var(--page-margin-bottom);
-  width: 280px;
+  width: var(--panel-width);
   max-width: calc(100vw - 2 * var(--page-margin-x));
   display: flex;
   flex-direction: column;
@@ -220,7 +223,7 @@ html, body {
 body[data-controls-hidden] #topbar,
 body[data-controls-hidden] #panel,
 body[data-controls-hidden] #card-stack,
-body[data-controls-hidden] #attitude {
+body[data-controls-hidden] #instruments {
   display: none;
 }
 .controls-restore-btn {
@@ -1282,7 +1285,8 @@ body.monochrome .poi-label {
    scale bar; the frame flag and the invert chip sit in the instrument's own
    bottom corners, the way a mode flag sits on an aircraft AI.
 
-   The instrument's size arrives as --ai-box / --ai-ball, set on the host by
+   The instrument's size is its container's: it fills the panel column, and
+   --ai-ball-frac (the ball's share of the square box, set on the host by
    attitude-indicator.ts from the constants its SVG is drawn against. Those
    two are the whole contract: the drawing keeps its own 192-unit design
    space and the rules below scale it, so the instrument resizes from one
@@ -1299,10 +1303,23 @@ body.monochrome .poi-label {
   gap: 8px;
   pointer-events: none;
 }
+/* The instruments panel takes the settings panel's chrome wholesale and
+   differs only in what bounds it: it hangs off the bottom of the viewport
+   rather than the top, so it sizes to its contents instead of sharing a
+   column's height budget. The scale bar underneath aligns to this box's
+   edge — ui/README.md § Bottom-left widget. */
+.instruments {
+  flex: 0 0 auto;
+  width: var(--panel-width);
+  max-width: calc(100vw - 2 * var(--page-margin-x));
+}
+.instruments .panel-inner {
+  overflow: visible;
+}
 .bottom-left-stack > * { pointer-events: auto; }
 .attitude {
   position: relative;
-  width: var(--ai-box);
+  width: 100%;
   color: var(--fg);
   font-size: 10.5px;
   letter-spacing: 0.06em;
@@ -1313,8 +1330,8 @@ body.monochrome .poi-label {
 }
 .attitude-stage {
   position: relative;
-  width: var(--ai-box);
-  height: var(--ai-box);
+  width: 100%;
+  aspect-ratio: 1;
   cursor: pointer;
   pointer-events: auto;
   /* Clips the hit area as well as the paint — the whole point. The outermost
@@ -1340,10 +1357,10 @@ body.monochrome .poi-label {
 .attitude-stage .ai-canvas {
   position: absolute;
   display: block;
-  width: var(--ai-ball);
-  height: var(--ai-ball);
-  left: calc((var(--ai-box) - var(--ai-ball)) / 2);
-  top: calc((var(--ai-box) - var(--ai-ball)) / 2);
+  width: calc(var(--ai-ball-frac) * 100%);
+  height: calc(var(--ai-ball-frac) * 100%);
+  left: calc((1 - var(--ai-ball-frac)) * 50%);
+  top: calc((1 - var(--ai-ball-frac)) * 50%);
 }
 .attitude-stage .ai-chrome {
   position: absolute;

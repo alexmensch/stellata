@@ -1,7 +1,9 @@
-// Collapse/expand toggles for the settings panel (top-level + per-group).
+// Collapse/expand toggles for the settings and instruments panels
+// (top-level + per-group).
 // See src/client/ui/README.md § Per-group collapse in the settings panel.
 
 const PANEL_KEY = 'stellata.panel-collapsed';
+const INSTRUMENTS_KEY = 'stellata.instruments-collapsed';
 const GROUP_KEY_PREFIX = 'stellata.group-collapsed.';
 
 export interface CollapseOptions {
@@ -48,14 +50,19 @@ export function bindPanelLayout() {
   bindGroups();
 }
 
+const TOP_LEVEL_PANELS = [
+  { id: 'panel', storageKey: PANEL_KEY, ariaSubject: 'settings' },
+  { id: 'instruments', storageKey: INSTRUMENTS_KEY, ariaSubject: 'instruments' },
+];
+
 function bindTopLevel() {
-  bindCollapse({
-    container: document.getElementById('panel')!,
-    header: document.getElementById('panel-header')!,
-    toggle: document.getElementById('panel-toggle') as HTMLButtonElement,
-    storageKey: PANEL_KEY,
-    ariaSubject: 'settings',
-  });
+  for (const { id, storageKey, ariaSubject } of TOP_LEVEL_PANELS) {
+    const container = document.getElementById(id);
+    const header = document.getElementById(`${id}-header`);
+    const toggle = document.getElementById(`${id}-toggle`) as HTMLButtonElement | null;
+    if (!container || !header || !toggle) continue;
+    bindCollapse({ container, header, toggle, storageKey, ariaSubject });
+  }
 }
 
 function bindGroups() {

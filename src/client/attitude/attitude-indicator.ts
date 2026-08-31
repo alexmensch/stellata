@@ -5,13 +5,13 @@ import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { BALL_DARK, BALL_LIGHT, createAttitudeBall } from './attitude-ball';
 import {
+  BALL_PX,
   BALL_R,
   BALL_RASTER_PX,
   BANK_TICK_MAX_LEN,
   BEZEL_GAP,
   BOX,
   C,
-  RENDERED_BOX_PX,
 } from './attitude-layout';
 import {
   autoFrameFor,
@@ -190,10 +190,25 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   const host = document.getElementById('attitude');
   if (host === null) return null;
   host.innerHTML = '';
-  // The only two numbers the stylesheet cannot derive. Every rule that
-  // consumes them is a class in styles.css — README.md § Sizing.
-  host.style.setProperty('--ai-box', `${RENDERED_BOX_PX}px`);
-  host.style.setProperty('--ai-ball', `${BALL_RASTER_PX}px`);
+  // The instrument fills its panel column, so the one number the stylesheet
+  // cannot derive is the ball's share of the square box it sits in. Every
+  // rule consuming it is a class in styles.css — README.md § Sizing.
+  host.style.setProperty('--ai-ball-frac', String(BALL_PX / BOX));
+
+  const panel = document.getElementById('instruments');
+  const section = host.closest('.group');
+
+  /** Nothing on screen to draw into. `display: none` suppresses the composite
+   *  but not the draw, so every way the instrument can be hidden — the mode,
+   *  `U`, and either collapse — has to be answered here or the mini renderer
+   *  keeps painting a sphere nobody can see. */
+  function offScreen(): boolean {
+    if (document.body.hasAttribute('data-controls-hidden')) return true;
+    if (panel !== null && (panel.hidden || panel.classList.contains('collapsed'))) {
+      return true;
+    }
+    return section !== null && section.classList.contains('collapsed');
+  }
 
   const frames = buildReferenceFrames();
   let focused: Target | null = stellata.focus.getFocusedTarget();
@@ -249,9 +264,8 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   const attitude: Attitude = { pitchRad: 0, bankRad: 0, lonRad: 0, sinFromPole: 1 };
   const lastQuat = new THREE.Quaternion(2, 2, 2, 2);
-  // `U` hides the instrument, but display:none suppresses only the composite —
-  // the mini renderer would keep drawing a sphere nobody can see. Set while
-  // hidden so the ball catches up on the first frame after it comes back.
+  // Set while the instrument is off screen so the ball catches up on the
+  // first frame after it comes back, rather than showing a stale attitude.
   let missedWhileHidden = false;
 
   function draw() {
@@ -367,16 +381,17 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   // The instrument is navigate-only: observe has the drawn grid instead, and
   // two answers to "which way is north" on screen at once is what let the
-  // roll guide and this disagree.
+  // roll guide and this disagree. The whole panel goes, not just the ball —
+  // an Instruments box holding nothing reads as a fault.
   const applyModeVisibility = () => {
-    host.hidden = stellata.focus.getCameraMode() === 'observe';
+    if (panel !== null) panel.hidden = stellata.focus.getCameraMode() === 'observe';
   };
   stellata.on('cameraMode', applyModeVisibility);
   applyModeVisibility();
 
   stellata.on('frame', () => {
     const moved = !lastQuat.equals(stellata.camera.quaternion);
-    if (host.hidden || document.body.hasAttribute('data-controls-hidden')) {
+    if (offScreen()) {
       missedWhileHidden = missedWhileHidden || moved;
       return;
     }
