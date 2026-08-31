@@ -1,10 +1,16 @@
 # Coordinate spheres
 
-The two toggleable "sky from here" reference grids — galactic l/b and
-equatorial RA/Dec — sharing one geometry, one label engine, and one spec
-table. This README replaces `../README.md` for reads inside this folder;
-the parent keeps the galactic frame math, the disc outline, the HUD, and
-the distance-fade curves these grids consume.
+The three toggleable "sky from here" reference grids — galactic l/b,
+ecliptic λ/β and equatorial RA/Dec — sharing one geometry, one label engine,
+and one spec table. This README replaces `../README.md` for reads inside this
+folder; the parent keeps the galactic frame math, the disc outline, and the
+HUD.
+
+**Drawn in OBSERVE mode only.** In navigate the attitude indicator carries the
+frame instead (`../../attitude/README.md`), and the two instruments are never
+on screen together: one answer to "which way is north" at a time is what stops
+them drifting apart. `Stellata.coordSphereDrawn(frame)` is that predicate, and
+both the layer and the label pools read it rather than re-deriving it.
 
 ## Files in this area
 
@@ -13,33 +19,36 @@ src/client/galactic/coord-spheres/
   coord-sphere.ts                 The frame-agnostic CoordSphere grid
                                   geometry plus SPHERE_RADIUS_PC and the
                                   CoordSphereFrame tri-state.
-  coord-sphere-frames.ts (+ test) The spec table: both CoordSphereSpecs
+  coord-sphere-frames.ts (+ test) The spec table: three CoordSphereSpecs
                                   (frame rotation, meridian spacing,
-                                  label formatters, SVG label group,
-                                  optional fade window), the fade /
-                                  reachability readers, and the `S`-cycle
-                                  step. Pinned against published star
-                                  positions.
-  coord-sphere-labels.ts (+ test) SVG edge labels for either sphere:
-                                  one per grid line, dropped to the
-                                  viewport edge that line exits.
+                                  label formatters, SVG label group),
+                                  the shared north-pole reader, and the
+                                  `S`-cycle step. Pinned against
+                                  published star positions.
+  coord-sphere-labels.ts (+ test) SVG edge labels for any sphere: one
+                                  per grid line, dropped to the viewport
+                                  edge that line exits.
 ```
 
-Two imports reach back into the parent, both genuinely shared rather than
+One import reaches back into the parent and is genuinely shared rather than
 split-avoidance: `galacticDirToIcrs` / `GALACTIC_NORTH_POLE_ICRS` from
-`../galactic-coords.ts` (the Milky Way volumetric layer uses them too) and
-`solFrameFadeFactor` from `../galactic-fade.ts` (the disc rides the same
-module’s far-field reveal). `SPHERE_RADIUS_PC` travels the other way — the
+`../galactic-coords.ts`, which the Milky Way volumetric layer uses too.
+`SPHERE_RADIUS_PC` travels the other way — the
 IAU boundary layer imports it from here
 (`../../constellation-boundaries/README.md`), so every sky-sphere layer sits
 on one radius.
 
 ## Coordinate spheres
 
-Two toggleable spheres, **mutually exclusive** — `filter.coordSphere` is a
-`'none' | 'galactic' | 'equatorial'` tri-state, not a pair of booleans. Two
-grids drawn together are illegible, and their edge labels would fight in one
-`separateLabels` pass.
+Three toggleable spheres, **mutually exclusive** — `filter.coordSphere` is a
+`'none' | 'galactic' | 'ecliptic' | 'equatorial'` four-state, not a set of
+booleans. Two grids drawn together are illegible, and their edge labels would
+fight in one `separateLabels` pass.
+
+That same field is **the attitude indicator's frame** in navigate mode, which
+is why it is not called `drawnSphere`: it is the app's one answer to "which
+reference frame is selected", and which instrument shows it follows from the
+camera mode.
 
 `CoordSphere` (`coord-sphere.ts`) is the geometry, built once from a
 `CoordSphereSpec`: equator + 16 latitude rings every 10° (−80° to +80°) +
@@ -48,35 +57,51 @@ reused by the edge labels and the IAU boundary layer
 (`../constellation-boundaries/README.md`), so everything sits on one sphere.
 
 The spec (`coord-sphere-frames.ts`) pairs a frame's rotation with its meridian
-spacing, label formatters, SVG label group, and optional Sol-distance fade in
-one record, so the geometry and its labels cannot disagree about any of them:
+spacing, label formatters and SVG label group in one record, so the geometry
+and its labels cannot disagree about any of them:
 
-| | galactic | equatorial |
-| --- | --- | --- |
-| `dirToIcrs` | `galacticDirToIcrs` (GAL_TO_ICRS) | `equatorialDirToIcrs` (identity — catalog.bin's basis already has x at α 0h, z at the NCP) |
-| meridians | 36, every 10° of *l* | **24, every 15°** — an equatorial grid's meridians ARE the hour circles, which is also what makes every label a whole hour |
-| labels | `l` / `b` in whole degrees | RA in whole hours (`0h`…`23h`), dec signed (`+80°`) so a dec label never reads as a longitude |
-| `fadeWindow` | **absent** — meaningful from anywhere | 0.4 → 2.0 pc (§ below) |
+| | galactic | ecliptic | equatorial |
+| --- | --- | --- | --- |
+| `dirToIcrs` | `galacticDirToIcrs` (GAL_TO_ICRS) | `eclipticDirToIcrs` — the equatorial mapping turned about x by `OBLIQUITY_RAD`, the two frames sharing the equinox as zero longitude | `equatorialDirToIcrs` (identity — catalog.bin's basis already has x at α 0h, z at the NCP) |
+| meridians | 36, every 10° of *l* | 36, every 10° of *λ* | **24, every 15°** — an equatorial grid's meridians ARE the hour circles, which is also what makes every label a whole hour |
+| labels | `l` / `b` in whole degrees | `λ` / `β` in whole degrees | RA in whole hours (`0h`…`23h`), dec signed (`+80°`) so a dec label never reads as a longitude |
+
+The ecliptic grid takes the galactic parametrisation rather than the
+equatorial one it is derived from: ecliptic longitude is measured in degrees,
+and only an equatorial grid's meridians are hour circles.
+
+**The ecliptic frame is pinned against three external anchors**, not against
+the equatorial frame it rotates out of — that would only restate the rotation.
+Pole at α 18h / δ +66.56° and λ=0 at the equinox fix the two axes; λ=90° at
+α 6h / δ +23.44° is what catches an obliquity of the wrong sign, which would
+otherwise still land a pole 66.56° off the equator, just the wrong one.
 
 `coordSphereNorthPole(frame)` is the same table read for the frame's **pole** —
-`dirToIcrs` at latitude +90°, precomputed once per frame (the roll guide reads
-it per gesture event and the input path allocates nothing). Deriving it through
-the spec is what keeps the camera's roll snap-to-level from disagreeing with the
-grid it sticks to: the guide levels against the displayed sphere's pole, `none`
-→ galactic (`../../camera/controls/input/README.md` § Snap-to-level).
+`dirToIcrs` at latitude +90°, precomputed once per frame, `none` → galactic.
+It is what `L` levels the camera to in observe mode, where no instrument is on
+screen and the drawn grid is the reference.
+
+**The attitude indicator's frames are built from this table too.**
+`buildReferenceFrames` (`../../attitude/attitude-pure.ts`) reads each frame's
+pole and zero-longitude direction straight out of the spec's own `dirToIcrs`,
+so there is one definition of galactic north rather than a matching pair that
+could drift. `AutoFrameKey` is `DrawnCoordSphereFrame`, so the instrument
+cannot offer a frame that has no sphere behind it either.
 
 **Nothing outside the table names a sphere.** `DRAWN_COORD_SPHERE_FRAMES` is
-the peer set; the scene layer, the dispose fan-out, and the label pools all
-iterate it and index `COORD_SPHERE_SPECS`, so a third frame is a table entry
-rather than an edit in five files. `CoordSphere` itself is frame-agnostic — the
-equatorial sphere is *not* a subclass, it is the same class handed the other
-spec plus the fade its spec declares.
+the peer set, in panel order — widest reference plane first; the scene layer,
+the sphere construction, the dispose fan-out, the label pools and the
+instrument's frame table all iterate it and index `COORD_SPHERE_SPECS`, so a
+further frame is a table entry plus one `<g>` in `index.html` rather than an
+edit in five files. `CoordSphere` itself is frame-agnostic — no sphere is a
+subclass, each is the same class handed a different spec.
 
-The two frames are pinned against **published star positions**, not against
-each other: `coord-sphere-frames.test.ts` takes four naked-eye stars' catalogue
+The frames are pinned against **published star positions**, not against each
+other: `coord-sphere-frames.test.ts` takes four naked-eye stars' catalogue
 α/δ *and* l/b and requires each sphere to place the star on its own published
-node. A frame that were subtly wrong would still look like a plausible grid, so
-external coordinates are the only check that bites.
+node, and requires the ecliptic grid to read a latitude of its own for every
+one of them. A frame that were subtly wrong would still look like a plausible
+grid, so external coordinates are the only check that bites.
 
 - The **equator** is the chrome line seam's **fat stroke**
   (`../../chrome-lines/README.md` § The fat stroke brings its own object)
@@ -108,7 +133,7 @@ external coordinates are the only check that bites.
   equatorial ones to 12.
 - **No pole markers.** Earlier iterations had small + crosses at
   NGP/SGP; they read as visual clutter and were dropped.
-- Both spheres track the camera each frame
+- Every sphere tracks the camera each frame
   (`group.position.copy(camera.position)`), so each conceptually
   represents "the sky from here". Orientation is fixed in absolute space
   — the geometry is already in ICRS — so b=0 / l=0 and α 0h / δ 0° stay
@@ -116,65 +141,57 @@ external coordinates are the only check that bites.
   layer sits on the same sphere and deliberately does **not** track the
   camera: its partition is only true from Sol, so it stays pinned there and
   fades out instead.
-- **Chart-mode alpha is the one asymmetry.** `setMonochrome` runs the
-  strokes opaque with blending off for the paper aesthetic, which would
-  discard a fade entirely — so `setOpacityScale` keeps alpha blending on
-  whenever the scale is below 1, in both styles. The scale writes are plain
-  material assignments; the blend-state reconfigure (a program recompile via
-  `needsUpdate`) fires only when the sphere crosses into or out of being
-  faded, never per frame. **The flip goes through the seam handle's
+- **Chart mode runs the strokes opaque** with blending off for the paper
+  aesthetic; `setMonochrome` is the only thing that moves either alpha, so the
+  blend-state reconfigure (a program recompile via `needsUpdate`) fires on a
+  style flip and never per frame. **The flip goes through the seam handle's
   `setOpaque`, never `material.transparent`** — the fat stroke's WebGPU
   material answers that flag with a full-frame texture read of the target
   it is drawing into (`../../chrome-lines/README.md` § The layer writes
   `material`, never a wrapper).
 
-### The equatorial sphere is Sol-only
+### A frame is offered where it describes something
 
-Declination is measured from Earth's rotational axis and right ascension
-from the vernal equinox, so — unlike galactic coordinates, defined by the
-Milky Way's actual disc plane and centre and therefore meaningful from
-anywhere in the galaxy (AGENTS.md § Camera-anywhere, any-epoch) — the RA/Dec
-frame carries no meaning away from the solar system. So its spec is the only
-one carrying a `fadeWindow` — `EQUATORIAL_FADE_WINDOW_PC` = **0.4 pc → 2.0 pc**,
-run through `solFrameFadeFactor`: full strength across the whole solar system,
-gone before the first star.
+Declination is measured from Earth's rotational axis and right ascension from
+the vernal equinox, so — unlike galactic coordinates, defined by the Milky
+Way's actual disc plane and centre and therefore meaningful from anywhere in
+the galaxy (AGENTS.md § Camera-anywhere, any-epoch) — the RA/Dec frame is a
+property of one body. The ecliptic sits between: it is the plane Sol's planets
+share, a reference across that system and an arbitrary tilt outside it.
 
-The boundary layer's magnitude-keyed quantile table is deliberately **not**
-reused: its criterion (a star reading as misplaced relative to its cell
-*wall*) has no analogue for a frame grid, which has no walls. Both land in the
-same band anyway. And note what does *not* fade — the sphere is camera-tracked,
-not Sol-pinned, and RA/Dec axes are fixed in absolute space, so the geometry
-stays correctly aimed from anywhere. The fade is a *relevance* boundary.
+That rule is keyed on **what is focused**, not on camera distance, and it lives
+in `../../attitude/attitude-pure.ts` because the same answer governs the
+instrument: `frameAvailableFor` reads it off `autoFrameFor` rather than
+restating "in Sol's system", so the two cannot drift. Galactic everywhere, the
+ecliptic wherever the focus rule already lands inside Sol's system, RA/Dec on
+Earth alone. `Stellata.coordSphereAvailable` binds it to the live focus, and
+the `S` cycle, the panel's stops and the demotion below all gate on that one
+predicate.
 
-`coordSphereFadeAt(frame, distFromSol)` is the alpha — 1 for a frame with no
-window — and `coordSphereReachableAt` is *defined as* "that alpha > 0", not a
-second threshold that could drift from it. `Stellata` binds both to the live
-frame as `coordSphereFade` / `coordSphereReachable`.
+**`coordSphere` never names a frame the focus gives no meaning to.**
+`frameAfterFocusChange` runs on every focus change: it keeps the selected
+frame where the new object still allows it and demotes to that object's own
+default where it does not. Earth → Luna swaps RA/Dec for the ecliptic, Luna →
+Jupiter keeps the ecliptic, Jupiter → Algol falls to galactic; a frame already
+on galactic survives anywhere, and `none` survives anywhere. It is idempotent
+by construction — what it answers is available at the focus it answered for —
+and pinned that way, since otherwise a second focus change onto the same
+object would move the frame again.
 
-**`coordSphere` never names a sphere that can't draw.** The layer's update owns
-the gone-at-zero-alpha cut outright — it is the single place that acts on it —
-and deselects the sphere (`setFilter({ coordSphere: 'none' })`) on the frame
-the camera leaves the window, once, since the demotion clears its own trigger.
-The sphere objects have no distance logic of their own: they take the alpha the
-layer hands them, so there is no second visibility rule to keep in step.
-
-Without the demotion the panel's stop would sit highlighted *and* disabled,
-reading as nothing selected. So travelling out and back does **not** restore the
-sphere: deliberate, and the same shape as chart mode auto-clearing on
-observe→navigate. The affordances then only have to block *entering* the state
-— `S` skips the stop (`nextCoordSphereFrame`), the panel disables it. That
-disabled flag rides `'frame'` with a cached boolean, not `syncFromFilter`,
-since camera distance is what changes and no state event announces it.
+The demotion is what a Sol-distance fade window used to approximate. Keying on
+the focus rather than on parsecs is both narrower and honest: in observe mode
+the camera sits *on* the focused object, so a distance threshold could only
+ever restate where that object is.
 
 **Grid orientation labels** (`coord-sphere-labels.ts`) — SVG `<text>` under
-`#gal-grid-labels` / `#eq-grid-labels`, one pool per sphere, pooled once (one
-per line) and positioned + rotated each frame. `main.ts` passes each pool a
-`groupOpacity` closure — **an alpha, not a boolean**: 0 hides the group, and
-anything below 1 lands on the group's `opacity` so the equatorial labels dim
-in step with the lines they annotate (a boolean would leave mid-fade text
-crisp over a nearly-gone grid). At full strength the attribute is *removed*
-rather than set to `1`, so the galactic grid keeps exactly the CSS alpha it
-always had. Both groups hide in warp via `body.warping #overlay`.
+`#gal-grid-labels` / `#ecl-grid-labels` / `#eq-grid-labels`, one pool per
+sphere, pooled once (one per line) and positioned + rotated each frame.
+`main.ts` passes each pool a `groupOpacity` closure — **an alpha, not a
+boolean**, and the one caller left drives it from `coordSphereDrawn` at 1 or 0.
+The alpha is kept because it is the seam a partially-shown grid would need, and
+because at full strength the attribute is *removed* rather than set to `1`, so
+a grid keeps exactly the CSS alpha it always had. Every group hides in warp via
+`body.warping #overlay`.
 **One label per grid line** — every meridian and every latitude ring (incl.
 the equator; no ring at the ±90° poles). Each line's sample directions are
 precomputed once through the spec's own `dirToIcrs`, the same frame the grid

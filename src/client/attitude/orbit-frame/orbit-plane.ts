@@ -2,9 +2,9 @@
 // direction to the orbit's centre. See README.md § Levelling on an orbit.
 
 import * as THREE from 'three';
-import type { Stellata } from '../stellata';
-import type { Target } from '../camera/focus/focus-target';
-import { starOrbitNormalIcrs } from '../binaries/orbit-relation-cache';
+import type { Stellata } from '../../stellata';
+import type { Target } from '../../camera/focus/focus-target';
+import { starOrbitNormalIcrs } from '../../binaries/orbit-relation-cache';
 
 const systemXyz = { x: 0, y: 0, z: 0 };
 

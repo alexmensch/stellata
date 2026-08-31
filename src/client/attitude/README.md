@@ -5,12 +5,19 @@ tells you which way you are oriented: an FDAI-style gyro-sphere — the Apollo
 8-ball, rendered as a real sphere — reading the camera quaternion against a
 reference frame that follows whatever is focused.
 
+**Navigate mode only.** It lives in the Instruments panel bottom-left
+(`../ui/README.md` § Layout containers) and hides on entering observe, where
+the drawn coordinate sphere carries the frame instead
+(`../galactic/coord-spheres/README.md`). One instrument answering "which way
+is north" at a time is the point: while both were on screen they held separate
+frames and disagreed.
+
 The prior art is worth knowing, because it settles the design: Apollo carried
 no single up either. Its 8-ball read against a REFSMMAT — a matrix the crews
 swapped per mission phase — and the Shuttle ADI put the choice on a switch
 (INRTL / LVLH / REF). Real spacecraft pick a reference by regime, which is what
-the focus rule below does, and capture one on demand, which is what right-click
-does.
+the focus rule below does, and capture one on demand, which is what the REF
+chip does.
 
 ## Files
 
@@ -25,53 +32,79 @@ attitude-layout.ts (+ test) The mini-renderer's view geometry, the sphere's
                            silhouette that follows from it, the design box
                            the chrome is drawn in, and what the instrument
                            measures on the page.
-attitude-indicator.ts      The instrument: canvas + fixed SVG chrome, the two
-                           corner chips, and the level affordances.
-orbit-plane.ts             The focused object's own orbit — plane normal
-                           and the direction to the orbit's centre —
-                           dispatched to whichever subsystem holds it.
+attitude-indicator.ts      The instrument: canvas + fixed SVG chrome, the
+                           three corner chips, and the level affordances.
+orbit-frame/               ORB: the focused object's own orbital plane,
+                           and the gesture that levels on it. Its README
+                           is the authority on that frame.
+focus-frame.ts             The focused object as the frame rules read it,
+                           resolved once so the instrument and the
+                           coordinate spheres ask the same question.
 ```
 
 ## Which frame, and who chooses
 
-`autoFrameFor` reads the focused object: **ecliptic** across Sol's system —
-that is the plane its planets actually orbit in — with **Earth** the single
-exception, where RA/Dec is the frame anyone reading the sky from the surface
-already thinks in, and **galactic** beyond, the only frame out there still
-defined by something real.
+**The selected frame is `filter.coordSphere`** — the same field the panel's
+coordinate-sphere row and `S` write, and the same one that names the drawn grid
+in observe. The instrument does not hold a frame of its own; it reads that
+selection, resolving `none` to the focus default because a ball, unlike a sky,
+cannot read against nothing.
 
-Two overrides, both outranking the rule until the focus next changes: the
-corner flag cycles ORB → EQU → ECL → GAL, and **right-clicking the ball
-captures REF** — a datum planted on the attitude held right now, so the ball
-reads 0/0 level from here. That is the Shuttle's ATT REF button, and it is the
-answer to "what is level outside the galaxy", where no inherited frame means
-anything.
+`autoFrameFor` is that default: **ecliptic** across Sol's system — the plane
+its planets actually orbit in — with **Earth** the single exception, where
+RA/Dec is the frame anyone reading the sky from the surface already thinks in,
+and **galactic** beyond, the only frame out there still defined by something
+real.
 
-**ORB is in the cycle but conditional**, present only while the focused object
-rides an orbit the model has elements for — the entry is a property of what is
-focused, not of the instrument, and `nextFrameKey` skips it when the answer is
-no. Skipping one entry is enough, because ORB appears exactly once. Cycling
-into it captures the plane exactly as the gesture does but **does not level**:
-the flag chooses what the ball reads against, and levelling is the gesture's
-own half of the job (§ Levelling on an orbit).
+**A frame is only offered where it describes something.**
+`frameAvailableFor` reads that off `autoFrameFor` rather than restating "in
+Sol's system", so the two cannot drift: galactic everywhere, the ecliptic
+wherever the focus rule already lands inside Sol's system, RA/Dec on Earth
+alone. `frameAfterFocusChange` then keeps a selected frame across a focus
+change where the new object still allows it and demotes to that object's
+default where it does not — `../galactic/coord-spheres/README.md` § A frame is
+offered where it describes something carries the walk and why the rule is
+keyed on the focus rather than on distance. **A manual pick therefore
+survives** a focus change now, where it used to be reset every time; only a
+pick the new object cannot support is taken away.
 
-REF is the frame that stays outside the rotation — a datum planted on the
-attitude being held right now has no fixed place in one, so it is only ever
-reached by the gesture that captures it. Leaving it is therefore the one step
-with no successor to take, and it lands on whatever the focused object implies
-rather than a fixed first entry, which would strand you on a frame that means
-nothing where you are.
+Two captured frames sit outside the selection, both held on the instrument and
+both cleared when the focus moves out from under them:
+
+- The corner flag cycles **ORB → GAL → ECL → EQU**, matching the panel's
+  order. Every entry is conditional — ORB on the focused object riding an
+  orbit the model has elements for, the sky frames on `frameAvailableFor` —
+  and `nextFrameKey` skips what is not on offer. Galactic is available
+  everywhere, so the walk always terminates. Picking a sky frame writes
+  `filter.coordSphere`; picking ORB captures the plane exactly as the gesture
+  does but **does not level**, the flag choosing what the ball reads against
+  and levelling being the gesture's own half of the job (§ Levelling on an
+  orbit).
+- The **REF chip** top-left captures a datum on the attitude held right now,
+  so the ball reads 0/0 level from here. That is the Shuttle's ATT REF button,
+  and it is the answer to "what is level outside the galaxy", where no
+  inherited frame means anything. A datum planted on a live attitude has no
+  fixed place in a rotation, which is why it is a **toggle rather than a flag
+  entry**: one control arms it and clears it, and clearing drops back to
+  whatever the flag is reading rather than to an arbitrary first entry.
+  Right-clicking the ball captures the same datum and drives the same toggle.
+  While REF is held the flag keeps reading the frame underneath — that is
+  what you return to — and the lit chip is what says the ball is not on it.
+
+`S` steps the flag on from the keyboard, and is the same key that steps the
+drawn grid in observe (`../ui/README.md`). It never hides the instrument;
+only `U` does.
 
 `level()` — a click on the ball, or `L` — zeroes **roll only**. Levelling
 pitch would move the camera through space in NAVIGATE, where it orbits a
 target rather than turning in place.
 
-A third override joins them: **double-clicking the ball, or `Shift`+`L`,
-captures ORB** — a frame on the orbital plane of whatever is focused — and
-levels on it. § Levelling on an orbit.
+One gesture reaches ORB directly: **double-clicking the ball, or `Shift`+`L`,
+captures it** — a frame on the orbital plane of whatever is focused — and
+levels on it. `orbit-frame/README.md`.
 
-The **REV chip** in the opposite corner is not a frame at all; it moves the
-camera rather than choosing what to read it against. § Inverting the view.
+The **INV chip** in the bottom-right corner is not a frame at all; it moves
+the camera rather than choosing what to read it against. § Inverting the view.
 
 ## What it reads
 
@@ -102,8 +135,8 @@ band just beyond.
 
 `ballBasisInto` builds a matrix with **determinant −1**. A direction lands on
 the instrument exactly where it lands on screen in the real view, so the ball's
-grid is a true miniature of the coordinate sphere the scene draws — turn on the
-matching grid with `S` and the lines agree — with the boresight at the centre.
+grid is a true miniature of the coordinate sphere the scene draws in observe —
+step to the same frame and the lines agree — with the boresight at the centre.
 
 A pure rotation cannot do both. A globe read from *outside* is the mirror of a
 sky read from *inside*, so an orientation that puts the boresight at the centre
@@ -141,10 +174,27 @@ ball's edge:
   `attitude-indicator.ts`. Following the page theme here inverts the caret's
   light triangle onto its dark inset under `body.monochrome` and the chevron
   disappears.
-- **Outside it** — the roll scale's ticks, the bezel, and the frame flag. Read
+
+  **The cross is drawn twice**, `INDEX_AMBER` (`#ff9d0a`) over a hairline of
+  `BALL_DARK`. Amber clears 9.5:1 against the dark hemisphere and 1.8:1
+  against the light one, and **no warm colour clears the 3:1 a non-text
+  graphic wants on both** — warmth is brightness, so a colour bright enough to
+  read as amber cannot also separate from a near-white ground. The outline is
+  therefore the fix and the hue is the polish: `BALL_DARK` against the light
+  hemisphere is 16.9:1, and the amber then only has to separate from the
+  outline. `SYMBOL_OUTLINE` is half a design unit either side, about a pixel
+  once CSS stretches the box; heavier reads as a second graphic rather than
+  an edge.
+- **Outside it** — the roll scale's ticks, the bezel, and the chips. Read
   against the page, so they take `--fg` / `--border-strong` from the stylesheet
   and flip with it. The flag also needs its own `body.monochrome` background
-  rule, since a translucent panel ground cannot come from a token. **The mid-tone orbit-ring blue
+  rule, since a translucent panel ground cannot come from a token. The one
+  crossing of the line is the **held REF chip**, which fills in the index
+  cross's own colour because that is the thing it is reporting on — so
+  `attitude-indicator.ts` publishes `INDEX_AMBER` and `BALL_DARK` to the
+  stylesheet as `--ai-index` / `--ai-index-ink` rather than letting a second
+  copy drift off the cross. Dark ink on that fill is 9.5:1; the light tone
+  would be 1.8:1. **The mid-tone orbit-ring blue
 (`../util/orbit-line.ts`'s `ORBIT_LINE_COLOUR`) was considered for the light
 and rejected:** the equator and prime meridian carry a tick every 2°, and a
 hairline at that pitch needs the full contrast range against its ground. Amber survives only on
@@ -199,9 +249,13 @@ chrome out of the physical light path.
 
 It redraws only on ticks where `camera.quaternion` actually changed **and the
 instrument is on screen** — `display: none` suppresses the composite, not the
-draw, so hiding with `U` would otherwise keep a sphere rendering that nobody
-can see. A tick skipped while hidden is remembered, so the ball catches up on
-the first frame after it returns rather than showing a stale attitude.
+draw, so a hidden instrument would otherwise keep rendering a sphere nobody can
+see. There are now four ways to hide it and `offScreen()` has to answer all of
+them: observe mode, `U`, the Instruments panel collapsed, and the Attitude
+indicator section collapsed. All four are class or attribute reads rather than
+layout queries, so the per-tick check stays free. A tick skipped while hidden
+is remembered, so the ball catches up on the first frame after it returns
+rather than showing a stale attitude.
 
 The texture is built once for the life of the page — the frame chip re-aims
 the ball rather than repainting it — and so is the renderer: the instrument is
@@ -232,23 +286,25 @@ split that makes resizing one edit is between **design units** and **rendered
 pixels**.
 
 The SVG chrome is drawn in a fixed 192-unit design space and CSS stretches it
-to `RENDERED_BOX_PX`. Nothing in the drawing code knows the instrument's real
-size, so strokes, tick lengths, the caret and the index cross all scale
-together — a larger instrument is genuinely larger rather than a bigger ball
-inside the same hairlines.
+to whatever width the Instruments panel gives it. Nothing in the drawing code
+knows the instrument's real size, so strokes, tick lengths, the caret and the
+index cross all scale together — a larger instrument is genuinely larger
+rather than a bigger ball inside the same hairlines.
 
-Two numbers cross into CSS, set on the host as `--ai-box` and `--ai-ball`;
-every rule consuming them is a class in `../styles.css`. The invariant holding
-the two spaces together is that **`BALL_RASTER_PX / RENDERED_BOX_PX` equals
-`BALL_PX / BOX`** — the canvas is placed by CSS while the bezel around it is
-drawn in design units, and a bezel that no longer hugs the ball is what
-breaking that ratio looks like. `attitude-layout.test.ts` pins it.
+**The instrument fills its panel column**, so the one number crossing into CSS
+is a ratio rather than a size: `--ai-ball-frac` = `BALL_PX / BOX`, the ball's
+share of the square box, set on the host and consumed only by classes in
+`../styles.css`. The invariant holding the two spaces together is that
+**`BALL_RASTER_PX / RENDERED_BOX_PX` equals `BALL_PX / BOX`** — the canvas is
+placed by CSS while the bezel around it is drawn in design units, and a bezel
+that no longer hugs the ball is what breaking that ratio looks like.
+`attitude-layout.test.ts` pins it.
 
-**The box's edge is not the instrument's edge.** A round face in a square box
-leaves `CHROME_INSET` between the two, and the outermost ink is the 90° bank
-ticks rather than the bezel. Anything aligning to the instrument aligns to
-that inset, not to the box — which is what the scale bar underneath does
-(`../ui/README.md` § Bottom-left widget).
+`RENDERED_BOX_PX` is now the width the ball's raster resolution was **chosen
+against** rather than the width it renders at; `BALL_RASTER_PX` is a drawing
+buffer, not a layout box. The panel column is a little wider than that, so the
+texture margin in § Rendering absorbs a few per cent of upscale — which is the
+number to re-check if `--panel-width` ever grows materially.
 
 ## Case chrome
 
@@ -265,12 +321,13 @@ un-aviation:
 **The stage is clipped to its own disc** (`clip-path: circle(50%)`), which
 clips hit-testing as well as paint. The instrument is round and its box is
 square, so the corners are clear of the outermost tick; without the clip they
-would swallow a click meant for the sky and level the camera instead. The two
-corner chips sit in those corners and are therefore siblings of the stage, not
-children of it — the frame flag bottom-left, the REV chip bottom-right. They
-share `.attitude-chip` and differ only in which edge they hang from.
+would swallow a click meant for the sky and level the camera instead. The
+three corner chips sit in those corners and are therefore siblings of the
+stage, not children of it — REF top-left, the frame flag top-right, INV
+bottom-right. They share `.attitude-chip` and differ only in which corner they
+hang from.
 
-`U` hides the instrument along with the rest of the controls
+`U` hides the Instruments panel along with the rest of the controls
 (`../ui/README.md` § Hide-controls toggle). No focus ring ever appears on it:
 the ball is not a tab stop — the keyboard path is `L` — and the flag's focus
 state is a border brighten rather than a UA outline, because a blue ring over a
@@ -285,83 +342,6 @@ keeps the caret legible whichever hemisphere is passing underneath. Scaling a
 second equilateral triangle inside the first is the wrong shape: it leaves an
 even border rather than a chevron.
 
-## Levelling on an orbit
-
-Double-click the ball (or `Shift`+`L`) and the active frame becomes **ORB**,
-whose pole is the normal of the orbit the focused object *itself* rides. It
-is a captured datum like REF, planted from `orbit-plane.ts`'s answer rather
-than from the current attitude, and `level()` then runs unchanged.
-
-The frame flag reaches the same frame without the levelling (§ Which frame,
-and who chooses). Both routes capture through `captureOrbitFrame`, so the two
-never disagree about what ORB means — they differ only in whether the camera
-moves afterwards.
-
-**Zero longitude points at the centre of the orbit** — the host star, the
-parent body, or the pair's barycentre — which is the same point each
-subsystem anchors the drawn orbit ring on. That is the one difference from
-REF, whose datum is the boresight: ORB's is a property of the orbit, so the
-same object levelled from anywhere reads the same longitude, and the ball's
-longitude reads where the object sits on its own orbit. It is a direction,
-not a distance, so the focus-versus-geometric-centre distinction the ellipse
-carries does not arise. The centre direction already lies in the orbital
-plane, leaving the boresight to seed a degenerate case that a real orbit
-does not produce.
-
-**Vantage-invariant, not epoch-invariant** — a captured datum is a
-snapshot, as REF's is. The pole is a static function of the elements and
-barely moves, but zero longitude is the centre direction at the instant of
-capture, and the object keeps going round: Luna walks ~13° off its datum
-per day of model time, and one frame of fast scrub can carry it anywhere on
-the orbit. Double-click again to re-read. Do not "fix" this by recomputing
-the frame per tick — a datum that chases the object reads a constant
-longitude and stops measuring anything.
-
-Capturing rather than only rolling is what makes it legible: rolling to a
-plane the instrument is not displaying leaves the caret reading un-level
-against the *old* frame, so the gesture would look like it had failed.
-
-**Always the innermost orbit the object is on.** Luna levels on its orbit
-about Earth, not Earth's about Sol; Algol Aa2 on its tight inner pair, not
-on the wide Aa-Ab one its primary also belongs to. Each subsystem answers
-from its own elements — `PlanetBodyField.orbitPlaneNormalOf` /
-`orbitCentreOffsetInto` for a body (`../solar-system/ephemerides/README.md`
-§ Orbit rings), `starOrbitNormalIcrs` plus the returned pair's other member
-for a pair (`../binaries/README.md` § Which pair a star rides).
-
-**Whatever plane that orbit is drawn in is the plane ORB captures** — a
-published inclination where there is one, the galactic-plane fallback where
-there is not. The rule is "level me on the orbit you are showing me", and
-it holds for every orbit the model draws. Anything narrower makes the
-affordance appear and disappear on a property of the *source data* that
-nothing on screen exposes, which is the same ring either way; a user who
-finds ORB on one companion and not its neighbour has been shown no reason
-why. Dabih is the case: β Cap's Ab and Ab2 sit in a spectroscopic sub-pair
-whose tilt was never published, and they level on it like anything else.
-
-**The obvious shortcut is wrong and must stay unused here.**
-`orbitalPlaneNormalFor()` answers per HOST STAR — the ecliptic for Sol,
-galactic otherwise — so routing a body through it would level every
-solar-system object on the ecliptic and every moon on the wrong plane, while
-looking exactly like a working feature.
-
-Two silent no-ops, and both are absences the user can see, because in each
-case nothing is drawn to level on: a **Tier-3 pair**, which carries no
-orbital elements at all, so no orbit is evaluated and no ring appears; and a
-**host with no live element source** (its rings fall back to
-`defaultOrbitGeometry`, flat on the host plane). Kinds that ride no orbit at
-all — probes, clouds, shells — are the third, and the ordinary one. Where
-there is no ring, there is no ORB.
-
-The normal is a static function of the elements, not a sampled one: an orbit
-is planar, so `r(t) × r(t+dt)` recovers only what `Rz(Ω)·Rx(I)·Rz(ω)` and the
-Thiele-Innes basis already state exactly, and it degenerates whenever the two
-samples come back near-parallel.
-
-Retrograde orbits keep their sense. Triton's normal points south of the
-ecliptic and levelling on it inverts the view, because that is where its
-angular momentum points.
-
 ## Levelling
 
 The two camera modes need different calls, matching the split in
@@ -369,12 +349,19 @@ The two camera modes need different calls, matching the split in
 `camera.up` on the frame's pole (`levelTo`), OBSERVE rolls the quaternion by
 `renderedRollError`.
 
+**They also level against different things**, because the instrument is not on
+screen in observe: there `L` reads `coordSphereNorthPole(filter.coordSphere)`
+— the pole of the grid actually drawn — and is a **no-op while that is
+`none`**, there being nothing on screen to level to rather than a hidden frame
+to guess at. `Shift`+`L` is navigate-only for the same reason: ORB is the
+instrument's own frame and has no grid behind it.
+
 Level is a one-shot state, not a maintained one — orbiting away from here
 rolls the view again, and the ball is what tells you so.
 
 ## Inverting the view
 
-The **REV chip** reflects the camera through whatever it is looking at, and
+The **INV chip** reflects the camera through whatever it is looking at, and
 the two camera modes reach that from opposite starting points:
 
 - **NAVIGATE** — the camera orbits the focused object, so the offset from the
@@ -402,3 +389,7 @@ there is one definition of "inverted" rather than a per-mode approximation.
 It is not gated on having a focus: with none, navigate swings around whatever
 `controls.target` currently holds, which is the point the camera was already
 orbiting.
+
+`Shift`+`V` is the keyboard path, and it is not a convenience: the chip rides
+a navigate-only instrument, and inverting the view is just as useful standing
+on a planet.

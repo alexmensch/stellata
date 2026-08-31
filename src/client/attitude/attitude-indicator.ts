@@ -27,7 +27,7 @@ import {
 } from './attitude-pure';
 import { focusFrameInputs } from './focus-frame';
 import { coordSphereNorthPole } from '../galactic/coord-spheres/coord-sphere-frames';
-import { focusedOrbitInto, type FocusedOrbit } from './orbit-plane';
+import { focusedOrbitInto, type FocusedOrbit } from './orbit-frame/orbit-plane';
 import type { Target } from '../camera/focus/focus-target';
 import {
   DBL_CLICK_DIST_PX_SQ,

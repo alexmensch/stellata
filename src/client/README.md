@@ -82,13 +82,14 @@ themselves.
 - `attitude/` — the gyro-sphere attitude indicator: an FDAI-style 8-ball
   reading the camera quaternion against a reference frame that follows the
   focused object (ecliptic / equatorial / galactic, plus a captured REF
-  datum and an ORB one on the focused object's own orbital plane), with
-  click-, double-click-, `L`-, `Shift`+`L`- and right-click affordances,
-  plus two corner chips — the frame flag, whose cycle ORB joins whenever the
-  focused object rides one, and REV, which swings the camera to the
-  reciprocal of the direction it holds. Draws on its own
-  small WebGL context rather than the main one, to stay clear of the HDR
-  target and its exposure.
+  datum and an ORB one on the focused object's own orbital plane — the
+  latter owned by `attitude/orbit-frame/`), with click-, double-click-,
+  `L`-, `Shift`+`L`- and right-click affordances, plus three corner chips —
+  REF, the frame flag, and INV, which swings the camera to the reciprocal of
+  the direction it holds. Lives in the bottom-left Instruments panel and is
+  **navigate-only**: observe draws a coordinate sphere instead, and the two
+  never share the screen. Draws on its own small WebGL context rather than
+  the main one, to stay clear of the HDR target and its exposure.
 - `calibration/` — the display-calibration screen: authored sRGB step
   wedge, black-point and highlight ladders, and gamma match patches.
   Deliberately outside the `hdr/` path — it shows the display's own

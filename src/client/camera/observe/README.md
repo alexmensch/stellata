@@ -153,8 +153,8 @@ to.
   it on the next frame. Shift+drag fires in both modes — armed
   and disarmed live by the Shift key, mid-drag — and the look-around drag
   bails out of a shifted pointerdown so the two never process the same
-  gesture. `../controls/input/README.md` § Roll gestures carries the input paths
-  and the mid-roll snap-to-level guide.
+  gesture. `../controls/input/README.md` § Roll gestures carries the input
+  paths.
 
 **HUD locators:** Sol and Galactic-Centre arrows are part of the HUD
 (`hud-overlay.ts`, gated by `filter.showHud`). In observe their anchor

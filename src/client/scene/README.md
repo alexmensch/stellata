@@ -105,8 +105,8 @@ behaviour-neutral at startup. `applyDetailPreset` runs on `V` / the
 control / a decluttered `?v=` restore, **and on every chart↔realistic
 flip** (`chart-mode.ts`) so the permitted set tracks the active style's
 floor column. `USER_OWNED_IDS` enumerates the chrome the cycle never
-writes (HUD, both coordinate spheres, cards, feedback) — toggled by their
-own affordances (`H` / `S` / `U` / `T`).
+writes (HUD, all three coordinate spheres, cards, feedback) — toggled by
+their own affordances (`H` / `S` / `U` / `T`).
 
 **Chart-content wiring.** The chart-only elements are read per-frame by
 `chart-labels.ts`, which gates each label/glyph tier on

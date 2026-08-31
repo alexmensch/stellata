@@ -2216,7 +2216,7 @@ export class Stellata implements FrameAnchor {
    * Swing the camera to the reciprocal of the direction it holds — in
    * navigate around to the far side of the focused object at the same
    * distance, in observe a half turn in place. Bound to the instrument's
-   * REV chip (`attitude/README.md` § Inverting the view).
+   * INV chip and `Shift`+`V` (`attitude/README.md` § Inverting the view).
    *
    * Shares `aimAt`'s composition-layer busy gates; the sweep itself lives in
    * `AimController`.

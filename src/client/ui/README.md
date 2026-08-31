@@ -31,12 +31,13 @@ registry only describes what to display.
 | `←` / `→` | Time scrubber (while open): rewind / fast-forward — thin wrappers over the widget's `stepBack` / `stepForward` |
 | `Space` | Time scrubber (while open): play / pause (`togglePlay`) — but during an active warp, Space skips the warp (`warp-button.ts`) and leaves the scrubber untouched |
 | `Backspace` | Time scrubber (while open): reset to live now (`reset`) |
-| `S` | Cycle `coordSphere`: none → galactic → equatorial → none. The equatorial stop is skipped whenever the camera sits beyond its Sol-distance fade (`../galactic/coord-spheres/README.md`), so `S` never leaves an enabled-but-invisible sphere |
-| `L` | Level the camera: zero its roll against the attitude indicator's active reference frame (`../attitude/README.md` § Levelling). Same action as clicking the ball |
-| `Shift` `L` | Level on the focused object's own orbital plane, capturing it as the ORB frame (`../attitude/README.md` § Levelling on an orbit) — the same action as double-clicking the ball |
+| `S` | Step the reference frame on, landing on whichever instrument the mode shows: the attitude indicator's frame flag in navigate, `coordSphere` (which adds a `none` stop) in observe. Any frame the focused object gives no meaning to is skipped (`../attitude/README.md` § Which frame, and who chooses). It never hides an instrument — only `U` does |
+| `L` | Level the camera: zero its roll against the attitude indicator's active frame in navigate (same action as clicking the ball), or against the drawn coordinate sphere in observe, where it is a no-op while none is up (`../attitude/README.md` § Levelling) |
+| `Shift` `L` | Level on the focused object's own orbital plane, capturing it as the ORB frame (`../attitude/orbit-frame/README.md`) — the same action as double-clicking the ball. Navigate only, ORB being the instrument's own frame |
+| `Shift` `V` | Invert the view — the INV chip's keyboard path, which observe needs because the chip rides a navigate-only instrument (`../attitude/README.md` § Inverting the view) |
 | `H` | Toggle `showHud` |
 | `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`) — works in every mode. Single `F` opens Find in observe mode only (both are deferred by the double-tap window, like `C`). |
-| `U` | Show/hide the top-right controls stack (`controls-hidden.ts`) |
+| `U` | Show/hide the controls — the top-right stack and the bottom-left Instruments panel (`controls-hidden.ts`) |
 | `K` | Open the display-calibration screen (`../calibration/README.md`) — also reachable from the panel's Camera section |
 | `+` / `-` | EV trim ± one 1/3-stop grid step (`steppedEv`; clamped to ±`EV_MAX_STOPS` by `ExposureController.setEv`) |
 | `=` | Reset the EV trim to 0 |
@@ -136,11 +137,13 @@ that they are not already at.
 
 ## Per-group collapse in the settings panel
 
-Two layers of collapse: the panel as a whole (top-level, key
-`stellata.panel-collapsed`) and each `<section class="group"
-data-group="...">` independently (key
-`stellata.group-collapsed.<name>`). Both default to expanded;
-both persist to `localStorage`. Wired in `panel-layout.ts`, whose
+Two layers of collapse: a panel as a whole (top-level — key
+`stellata.panel-collapsed` for Settings, `stellata.instruments-collapsed` for
+Instruments) and each `<section class="group" data-group="...">`
+independently (key `stellata.group-collapsed.<name>`). Both default to
+expanded; both persist to `localStorage`. `bindGroups` walks every
+`.group[data-group]` in the document, so a section in either panel is wired by
+existing. Wired in `panel-layout.ts`, whose
 exported `bindCollapse` helper carries the header-click pattern with
 optional persistence — the focus card (`../focus-card/README.md`) and
 the POI cards (persistence-free, created collapsed) are the other
@@ -186,7 +189,13 @@ lights the active stop. Both are **value-driven**: the highlight follows state,
 so `V` / `S` / a URL restore light the same stop a click would. Each stop maps
 to a state field, so the sync call passes that field directly.
 
-A stop that the current camera can't reach is **disabled, not hidden**
+The coordinate-sphere row runs `none · galactic · ecliptic · equatorial` —
+widest reference plane first. It stays value-driven in **both** camera modes
+even though a grid only draws in observe: the field it reflects is also the
+attitude indicator's frame, so a navigate frame change lights the matching
+stop rather than leaving the row reading something stale.
+
+A stop the current state can't reach is **disabled, not hidden**
 (`.link-btn:disabled`), and its explanatory `title` goes on the **row**, never
 on the disabled button — see § Disabled-control styling.
 
@@ -213,8 +222,13 @@ Two specific freezes use this:
 
 - **Not in observe mode** disables `#show-chart` — chart mode is
   observe-only, and `f.chart` is preserved across the freeze.
-- **Camera too far from Sol** disables the coordinate sphere's `equatorial`
-  stop (`../galactic/coord-spheres/README.md`).
+- **Navigate mode** disables the coordinate-sphere row outright — nothing
+  draws a grid there, so a click would write a selection with no visible
+  effect. In observe, a frame the focused object gives no meaning to is
+  disabled on its own (`../galactic/coord-spheres/README.md` § A frame is
+  offered where it describes something). Both ride `'focus'` / `'cameraMode'`
+  rather than the per-frame path, since neither turns on camera distance any
+  more.
 
 The third — chart mode freezing the galactic-glow checkbox — went with that
 checkbox: the band is physical light on the declutter floor, not an
@@ -269,7 +283,8 @@ native html/css... we shouldn't dictate layout"). Do not reintroduce it.
   `.ui-top` so the right-side stack's width / wrap behaviour stays
   untouched.
 - `.ui-top` — fixed top-right, `flex-direction: column`, bottom-bounded
-  at the same 16px page margin as `.ui-bottom`. Children in DOM order:
+  at the same 16px page margin as `.ui-bottom`, and `--panel-width` wide.
+  Children in DOM order:
   topbar ("Navigate" heading + Focus/To search), panel (Settings), then
   the `.ui-top-bottom` group — the card rolodex (`#card-stack`,
   `../focus-card/README.md` § Rolodex behaviour) + meta (star count /
@@ -281,11 +296,18 @@ native html/css... we shouldn't dictate layout"). Do not reintroduce it.
   an expanding scrubber pushes the card stack up through normal flex
   layout — no fixed clearances, no measurement.
 - `.ui-bottom` — fixed full-width along the bottom. Its left slot is
-  `.bottom-left-stack`, a column holding the attitude indicator
-  (`../attitude/README.md`) above the scale-bar widget (§ Bottom-left
-  widget below). The stack itself is `pointer-events: none` with `auto`
-  on its children, so the gap between the two never swallows a canvas
-  click.
+  `.bottom-left-stack`, a column holding the **Instruments panel** above the
+  scale-bar widget (§ Bottom-left widget below). The stack itself is
+  `pointer-events: none` with `auto` on its children, so the gap between the
+  two never swallows a canvas click.
+  The Instruments panel takes the Settings panel's chrome wholesale — same
+  `.panel` class, same header collapse, same per-group sections — and holds
+  the attitude indicator (`../attitude/README.md`). **Both stacks are
+  `--panel-width` wide**, one `:root` custom property, so the two read as one
+  system; the instrument inside sizes to that column rather than to a fixed
+  pixel box. It differs from Settings only in what bounds it: hanging off the
+  bottom of the viewport, it sizes to its contents instead of sharing a
+  column's height budget.
 - `.meta` is the catalog count (`.meta-count`, e.g. "313,242 stars") +
   the time readout / scrubber. Focused-object identity + camera
   distance live in the card rolodex (`../focus-card/README.md`).
@@ -311,19 +333,17 @@ offsets.
 
 ## Bottom-left widget: scene-scale bar
 
-Sits under the attitude indicator in `.bottom-left-stack`; the ball owns
-the width of that column, so a scale bar wider than the instrument's box
-pushes the column rather than the ball. The indicator hides with `U`, the
-scale bar does not — same split as the meta readout, which also survives the
-toggle.
+Sits under the Instruments panel in `.bottom-left-stack`; the panel owns the
+width of that column, so a scale bar wider than it pushes the column. The
+panel hides with `U` and on entering observe, the scale bar does neither —
+same split as the meta readout, which also survives the toggle.
 
-**The bar's left pad is an alignment, not a margin.** `PAD_LEFT_PX` is the
-instrument's `CHROME_INSET_PX` (`../attitude/README.md` § Sizing): a round
-face in a square box leaves a gap between the box edge and the outermost bank
-tick, so padding the bar by the same amount puts its left endcap on the
-instrument's *optical* edge rather than its layout edge. One constant governs
-both, so resizing the ball keeps the column's left edge straight — hardcode a
-number here and the two drift apart the next time the instrument moves.
+**The bar's left endcap aligns to the panel's box edge**, which is the stack's
+own left edge, so `PAD_LEFT_PX` is 0 — the same alignment the bottom-right
+time readout takes from the settings column. It used to inset by the
+instrument's optical radius, putting the endcap on the round face's edge
+rather than its layout box; with a panel around the instrument the box edge
+is the line the eye reads, and two boxes in one column have to share it.
 
 `scale-bar.ts` is a single SVG. Targets ~20% of viewport width;
 `niceRound` snaps the represented distance to a 1/2/5×10^N value, then
@@ -372,10 +392,10 @@ the keydown for the exiting keystroke).
 ## Hide-controls toggle
 
 `controls-hidden.ts` toggles `body[data-controls-hidden]`, which hides
-the right-hand column's interactive controls (`#topbar`, `#panel`,
-`#card-stack`). Everything else — brand box, meta readout / time
-scrubber (also in the column, kept visible), scale bar, tooltip, warp
-button, and the `#overlay` SVG (constellations, star names, focus
+the interactive controls in both stacks (`#topbar`, `#panel`,
+`#card-stack`, `#instruments`). Everything else — brand box, meta readout /
+time scrubber (also in the right column, kept visible), scale bar, tooltip,
+warp button, and the `#overlay` SVG (constellations, star names, focus
 ring) — stays visible. `#controls-restore-btn` is a fixed top-right box, `display:
 none` by default and shown via `body[data-controls-hidden]
 .controls-restore-btn`. It sits where the controls were, showing a `+`

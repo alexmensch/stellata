@@ -7,33 +7,33 @@ import * as THREE from 'three';
 import {
   ECLIPTIC_NORTH_POLE_ICRS,
   orbitPlaneNormalInto,
-} from '../solar-system/ephemerides/orbit-rings-layer';
+} from '../../solar-system/ephemerides/orbit-rings-layer';
 import {
   solOrbitGeometryAt,
   SOL_BODIES,
-} from '../solar-system/planet-system';
-import { PLANET_ORDER } from '../solar-system/ephemerides/ephemeris';
+} from '../../solar-system/planet-system';
+import { PLANET_ORDER } from '../../solar-system/ephemerides/ephemeris';
 import {
   orbitNormalSky,
   projectSkyToICRS,
   type OrbitalElements,
-} from '../binaries/binary-orbit-pure';
-import { innermostRelationOf } from '../binaries/focal-chain';
-import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
-import { starOrbitNormalIcrs } from '../binaries/orbit-relation-cache';
+} from '../../binaries/binary-orbit-pure';
+import { innermostRelationOf } from '../../binaries/focal-chain';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
+import { starOrbitNormalIcrs } from '../../binaries/orbit-relation-cache';
 import {
   makeBinaries,
   makeRelation,
-} from '../binaries/binary-relation-fixture';
+} from '../../binaries/binary-relation-fixture';
 import {
   FLAG_HAS_INCLINATION,
   FLAG_HAS_ORBIT,
   NO_PARENT,
   type BinariesData,
-} from '../binaries/binaries-loader';
-import { captureOrbitFrame } from './attitude-pure';
+} from '../../binaries/binaries-loader';
+import { captureOrbitFrame } from '../attitude-pure';
 import { focusedOrbitInto, type FocusedOrbit } from './orbit-plane';
-import type { Stellata } from '../stellata';
+import type { Stellata } from '../../stellata';
 
 const DEG = Math.PI / 180;
 const J2000_T = 0;

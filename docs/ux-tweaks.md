@@ -12,12 +12,10 @@ for the surrounding context.
 - **Orbit feel** — `rotateSpeed` / `dynamicDampingFactor` in
   `stellata.ts` constructor.
 - **Camera pan** — gone; `noPan` stays `true`. Orbit + dolly + roll only.
-- **Roll alignment guide** — `SNAP_TO_LEVEL_DEG` in
-  `camera/controls/input/roll-pure.ts` is the band the roll sticks inside
-  mid-drag; which frame it
-  sticks to follows the displayed coordinate sphere
-  (`coordSphereNorthPole`, `galactic/coord-spheres/README.md`). Roll dead-zone
-  is `ROLL_DEADZONE_PX` in `input-controller.ts`.
+- **Roll** — dead-zone is `ROLL_DEADZONE_PX` in `input-controller.ts`.
+  Levelling is `L` and the attitude indicator (`attitude/README.md`
+  § Levelling); which frame it levels to is whichever the instrument or the
+  drawn coordinate sphere holds.
 - **Pinch-zoom rate** — `PINCH_NOTCH_GAIN` in
   `camera/controls/input/pinch-zoom-pure.ts`: how many scroll notches a
   full two-finger pinch is worth, on both browser pinch signals.

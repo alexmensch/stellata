@@ -88,24 +88,23 @@ orientation.
   Local Group wireframe so both reveal in lockstep.
 - **Sol-frame self-hide** — `solFrameFadeFactor(distFromSol, window)`, the
   inverse, for layers that only describe the sky *from Sol* and so must
-  vanish as the camera leaves. Shared by the IAU boundary arcs and the
-  equatorial sphere. The two consumers pass **different windows** — the
-  curve is what's shared, not the band. Its `!(outerPc > innerPc)` guard is
+  vanish as the camera leaves. The IAU boundary arcs are its consumer.
+  Its `!(outerPc > innerPc)` guard is
   load-bearing (`../constellation-boundaries/README.md` § Chart-mode layer):
   a NaN window has to hide the layer, because a NaN opacity never reads as
   ≤ 0 and would draw a Sol-frame layer at full strength from everywhere.
 
 ## Coordinate spheres
 
-Both grids and their edge labels live in `coord-spheres/` — see
+All three grids and their edge labels live in `coord-spheres/` — see
 `coord-spheres/README.md`, which replaces this file for reads in there.
 What matters from out here: they are **mutually exclusive**
-(`filter.coordSphere` is a `'none' | 'galactic' | 'equatorial'` tri-state),
-both sit at `SPHERE_RADIUS_PC` = 50 kpc, and the equatorial one is the sole
-consumer of `solFrameFadeFactor` besides the IAU boundary arcs. One consumer
-sits outside the layer entirely: the camera's roll snap-to-level reads
-`coordSphereNorthPole(filter.coordSphere)`, so the alignment guide sticks to
-whichever grid is up (`../camera/controls/input/README.md` § Snap-to-level).
+(`filter.coordSphere` is a `'none' | 'galactic' | 'ecliptic' | 'equatorial'`
+four-state), they all sit at `SPHERE_RADIUS_PC` = 50 kpc, and they draw in
+**observe mode only** — in navigate the attitude indicator carries the frame
+instead (`../attitude/README.md`). Two consumers sit outside the layer:
+`filter.coordSphere` is also that instrument's own frame, and
+`coordSphereNorthPole(filter.coordSphere)` is the pole `L` levels to.
 
 ## HUD
 
@@ -292,13 +291,14 @@ the Sol/GC label affordance (warp stays on the `W` key).
 
 **State + UI:** two independent FilterState fields:
 
-- `coordSphere` — which sphere is up (`'none'` default). Panel 3-stop
-  control under **Overlays**, mirroring the detail-level stops; `S` cycles
-  it (`../ui/README.md`). On the wire it is FLAG_GRID plus zero-byte
-  presence bit 24 (`../util/url-state/README.md`): FLAG_GRID alone means
-  galactic, so a pre-equatorial shared link still restores a sphere and a
-  client predating bit 24 ignores it and shows the galactic one rather than
-  none.
+- `coordSphere` — the selected reference frame (`'none'` default): the drawn
+  sphere in observe, the attitude indicator's own frame in navigate
+  (`../attitude/README.md`). Panel stop control under **Overlays**,
+  mirroring the detail-level stops; `S` cycles it (`../ui/README.md`). On the
+  wire it is FLAG_GRID plus one zero-byte presence bit per frame past
+  galactic (`../util/url-state/README.md`): FLAG_GRID alone means galactic, so
+  a pre-equatorial shared link still restores a sphere and a client predating
+  a bit shows the galactic one rather than none.
 - `showHud` — gates the HUD: Sol/GC arrows in both modes, plus the
   OBSERVE-mode ring. URL `hud=1`, default-omitted. Panel checkbox lives
   under **Overlays** ("Head up display (HUD)"), directly after the
@@ -306,9 +306,10 @@ the Sol/GC label affordance (warp stays on the `W` key).
   scene, which is what that section collects, and **Navigation** is now
   units only. Future HUD widgets hang off the same flag.
 
-Neither sphere is in the declutter cycle — both are user-owned chrome
-(`galacticCoordSphere` / `equatorialCoordSphere` in `USER_OWNED_IDS`,
-`../scene/README.md`), too many lines to sweep with a detail level.
+No sphere is in the declutter cycle — all three are user-owned chrome
+(`galacticCoordSphere` / `eclipticCoordSphere` / `equatorialCoordSphere` in
+`USER_OWNED_IDS`, `../scene/README.md`), too many lines to sweep with a
+detail level.
 
 The disc has no *dedicated* checkbox by design — it's the orientation
 primitive the catalog itself was missing, and is hidden in chart mode

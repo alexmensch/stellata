@@ -75,9 +75,9 @@ const DEFAULT_UP: [number, number, number] = [
   GALACTIC_NORTH_POLE_ICRS.x, GALACTIC_NORTH_POLE_ICRS.y, GALACTIC_NORTH_POLE_ICRS.z,
 ];
 // Roll off galactic level under which the `up` field is omitted, and the
-// receiver reproduces it from DEFAULT_UP instead. Three and a half decades
-// below SNAP_TO_LEVEL_RAD (0.0349) and far above the float noise of the
-// projection, so only a camera the user levelled elides it.
+// receiver reproduces it from DEFAULT_UP instead. Far above the float noise
+// of the projection and far below any roll a gesture can hold, so only a
+// camera the user levelled elides it.
 const LEVEL_UP_EPS_RAD = 1e-5;
 // v3's frozen default. A v3 blob was written when world +Y was the reference,
 // so its elided components have to fill from that value or the decode isn't

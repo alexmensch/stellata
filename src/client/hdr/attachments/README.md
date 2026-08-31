@@ -35,7 +35,7 @@ target. Three reasons, each on its own fatal:
   the case the flux-based star gate exists for — is the 28.9x row, and the
   error lands on the branch that governs. The factor also rides
   `kMultiplier`, a debug legibility slider.
-- **Chrome is in there.** Grids, both coordinate spheres, constellation
+- **Chrome is in there.** Grids, the coordinate spheres, constellation
   figures and boundaries, orbit and binary paths, probe markers, fresnel
   and cloud rim shells all render into the target with authored colours
   inverse-mapped through the operator. A mean would count switching on the
