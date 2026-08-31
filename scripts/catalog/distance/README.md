@@ -68,9 +68,9 @@ same trust cascade the binaries pipeline implements in
 | `simbad` | The bottom tier: SIMBAD's bibcoded J2000 coordinates advanced 16 yr on its own bibcoded PM. Gl 863.1A is the corpus exemplar, and the tier's worst mover at 1372 mas/yr. | 13 |
 | `curated` | Sol alone — it carries no identifier any tier above can key on. The vector is arbitrary and unobservable: Sol's distance is zero, so the walk multiplies it to the origin whatever it points at. | 1 |
 
-Epoch propagation (`directionAtEpoch`) advances the measured unit
-vector to the `CATALOG_SCENE_EPOCH` (J2016.0) linearly along the local
-east/north tangent basis and renormalises — exact in cos δ, stable
+Epoch propagation advances the measured unit vector to the
+`CATALOG_SCENE_EPOCH` (J2016.0) linearly along the local east/north
+tangent basis and renormalises — exact in cos δ, stable
 through the poles, <0.002″ error at Barnard's-scale PM over the 24.75-yr
 HIP2 J1991.25→J2016 interval. Gaia rows are native J2016.0 → a zero-Δt
 no-op. Radial velocity (perspective acceleration) is deliberately
@@ -82,16 +82,22 @@ divide by cos δ.
 Tycho-2's mean position is observed per star AND per coordinate, so a row
 reads `ep_ra` 1991.07 against `ep_de` 1991.00 — true of every one of the
 40 mean-solution rows in this cohort. `directionAtEpochSplit` is the form
-that advances each coordinate over its own baseline; `directionAtEpoch`
-delegates to it with the two epochs equal, so there is one implementation.
-Collapsing Tycho-2's pair onto a single epoch would advance Dec over the
-wrong interval — the unit test pins that failure at **3004.792″** (0.8347°),
-which is a 1° tangent-plane error seen on the sphere after renormalisation.
+that advances each coordinate over its own baseline, and the only one the
+build calls. `directionAtEpoch` delegates to it with the two epochs equal —
+the single-epoch statement of the same advance, which is what the unit tests
+read expected values from. Collapsing Tycho-2's pair onto a single epoch would
+advance Dec over the wrong interval — the unit test pins that failure at
+**3004.792″** (0.8347°), which is a 1° tangent-plane error seen on the sphere
+after renormalisation.
 
-Every tier reaches that form through **`directionOnPm`**, which pairs the
-solution's own epochs with whichever proper motion the row ends up carrying —
-its tier's, or the rescue cascade's. That is what keeps the position and the
-velocity reading one motion (§ The proper-motion rescue cascade).
+**`resolveDirection` selects a solution; it does not advance one.**
+`DirectionSolution` carries the tier's position, its two epochs and its own PM,
+and **`directionOnPm`** is the single call that advances it — once, in
+`readStars`, on whichever proper motion the row ends up carrying, its tier's or
+the rescue cascade's. Only the caller knows which won, so a cascade that
+returned a direction would be returning one advanced on a motion the row may
+not keep. That single call site is what keeps the position and the velocity
+reading one motion (§ The proper-motion rescue cascade).
 
 | Tier | Epoch of the position it reads |
 |---|---|

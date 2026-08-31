@@ -113,10 +113,13 @@ never re-derived).
 4. **`MAX_DIST_PC = 50_000` bounded-scope cutoff**
    (`stars-parse.ts`). Drops rows still beyond LMC depth.
 5. **Direction resolution** (`resolveDirection` in
-   `direction-cascade.ts`) and `xyz = direction × distance` in
-   float64. See `../distance/README.md` § Direction resolution. Every
-   tier now propagates its own solution to the scene epoch, so a row
-   no tier reaches resolves to null and the walk drops it —
+   `direction-cascade.ts`) selects the tier's solution; `directionOnPm`
+   advances it to the scene epoch once the motion the row carries is
+   settled (§ Space-motion velocity), and `xyz = direction × distance`
+   in float64. See
+   `../distance/README.md` § Direction resolution. Every solution
+   propagates rather than shipping its source's own epoch, so a row no
+   tier reaches resolves to null and the walk drops it —
    `spineDroppedNoDirection`, pinned at 0.
 6. **Spectral classification** (`resolveSpectralInfo`; Sol special-cased
    to curated G2V in `stars-parse.ts` — no HIP/Gaia/SIMBAD key reaches
@@ -166,7 +169,7 @@ propagate every position to `getT()`. Full design:
 
 `velocityPcPerYr` (`direction-cascade.ts`) assembles
 `v = v_r·û + d·MAS_TO_RAD·(μ_α*·ê + μ_δ·n̂)` from the tier solution
-`resolveDirection` selected (`DirectionResolution.src*` fields), so position
+`resolveDirection` selected (`DirectionSolution.src*` fields), so position
 and velocity come from one astrometric solution wherever that solution states
 both. Where it states only a position, the PM comes from a designation-keyed
 tier instead — and carries that position to the scene epoch as well as the

@@ -466,9 +466,10 @@ export function readStars(
       ? directions.tycho2.get(simbadKeys.tyc) ?? null
       : null;
 
-    // Sky direction through the Gaia 5p → HIP2 → Tycho-2 → CNS5 → SIMBAD
-    // cascade; position is direction × distance, both float64 until the
-    // float32 pack at write time.
+    // Astrometric solution through the Gaia 5p → HIP2 → Tycho-2 → CNS5 →
+    // SIMBAD cascade. It is advanced to the scene epoch below, once the motion
+    // the row carries is known; position is that direction × distance, both
+    // float64 until the float32 pack at write time.
     const dirRes = resolveDirection(
       { ...simbadKeys, simbad: simbadRow?.astrometry ?? null, isSol },
       directions,
@@ -531,13 +532,9 @@ export function readStars(
     const pmRaMasyr = pmRescue === null ? dirRes.srcPmraMasyr : pmRescue.pmRaMasyr;
     const pmDecMasyr = pmRescue === null ? dirRes.srcPmdecMasyr : pmRescue.pmDecMasyr;
 
-    // The rescued motion carries the position to the scene epoch as well as
-    // the velocity, so a tier stating a pre-J2016 position does not track the
-    // right rate from a stale place. Only the tiers whose own solution has no
-    // PM reach this, and only those stating a pre-scene epoch actually move —
-    // the 2p Gaia cohort is already at J2016.0, a zero-Δt no-op.
-    const dir = pmRescue === null ? dirRes.dir
-      : directionOnPm(dirRes, pmRaMasyr, pmDecMasyr);
+    // Must follow the PM rescue: the position advances on the motion the row
+    // ends up carrying, which is the rescue's wherever the tier states none.
+    const dir = directionOnPm(dirRes, pmRaMasyr, pmDecMasyr);
     const x = dir.x * dist;
     const y = dir.y * dist;
     const z = dir.z * dist;
