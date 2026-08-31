@@ -344,6 +344,8 @@ async function main() {
     directionHip2Saturated: 0,
     directionHip2PmDiscrepant: 0,
     directionTycho2: 0,
+    directionTycho2FromIcrs: 0,
+    directionTycho2Photocentre: 0,
     directionCns5: 0,
     directionSimbad: 0,
     directionCurated: 0,
@@ -412,7 +414,9 @@ async function main() {
       `gaia_nss_systemic ${dv.gaia_nss_systemic}, ` +
       `hip2_saturated ${dv.hip2_saturated}, ` +
       `hip2_pm_discrepant ${dv.hip2_pm_discrepant}, ` +
-      `tycho2 ${dv.tycho2}, cns5 ${dv.cns5}, simbad ${dv.simbad}, ` +
+      `tycho2 ${dv.tycho2} (${stats.directionTycho2FromIcrs} at the J2000 ` +
+      `cell with no mean solution, ${stats.directionTycho2Photocentre} a ` +
+      `double's photocentre), cns5 ${dv.cns5}, simbad ${dv.simbad}, ` +
       `curated ${dv.curated}`,
   );
   const mv = stats.vVia;
@@ -490,6 +494,8 @@ async function main() {
   counts.directionCns5 = dv.cns5;
   counts.directionSimbad = dv.simbad;
   counts.directionCurated = dv.curated;
+  counts.directionTycho2FromIcrs = stats.directionTycho2FromIcrs;
+  counts.directionTycho2Photocentre = stats.directionTycho2Photocentre;
   counts.vGaiaRiello = stats.vVia.gaia_riello;
   counts.vPrintedHip = stats.vVia.printed_hip;
   counts.vTycho2 = stats.vVia.tycho2;

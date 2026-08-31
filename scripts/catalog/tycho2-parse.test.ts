@@ -72,7 +72,7 @@ describe('parseTycho2Tsvs', () => {
     expect(r.epochDec).toBe(TYCHO2_ICRS_EPOCH);
     expect(r.fromIcrs).toBe(true);
     expect(r.pmRaMasyr).toBeNull();
-    expect(r.flag).toBe('X');
+    expect(r.isPhotocentre).toBe(false);
   });
 
   it('needs both mean epochs before it prefers the mean position', () => {
@@ -107,7 +107,16 @@ describe('parseTycho2Tsvs', () => {
     const r = index.get('3-3-1')!;
     expect(r.pmRaMasyr).toBeNull();
     expect(r.pmDecMasyr).toBeNull();
-    expect(r.flag).toBe('T');
+    expect(r.isPhotocentre).toBe(false);
+  });
+
+  // pflag='P' means the mean solution is the light-centre of a double
+  // Tycho-2 never split, so both cascades reading the row need to know.
+  it("marks a pflag='P' mean solution as a photocentre", () => {
+    const index = parseTycho2Tsvs(main(mainRow({ pflag: 'P' })), suppl());
+    const r = index.get('1-1-1')!;
+    expect(r.isPhotocentre).toBe(true);
+    expect(r.fromIcrs).toBe(false);
   });
 
   it('drops a row carrying no position at all', () => {

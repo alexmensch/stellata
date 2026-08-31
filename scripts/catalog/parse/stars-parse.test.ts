@@ -57,7 +57,7 @@ function tycho2Sources(
       epochRa: CATALOG_SCENE_EPOCH, epochDec: CATALOG_SCENE_EPOCH,
       pmRaMasyr: 0, pmDecMasyr: 0,
       btMag: r.vMag, vtMag: r.vMag,
-      flag: null, fromIcrs: false,
+      fromIcrs: false, isPhotocentre: false,
     }])),
     ...overrides,
   };

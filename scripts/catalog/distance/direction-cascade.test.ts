@@ -65,7 +65,7 @@ function tycho2Row(overrides: Partial<Tycho2Row> = {}): Tycho2Row {
     epochRa: 1991.07, epochDec: 1991.00,
     pmRaMasyr: 10, pmDecMasyr: -10,
     btMag: 9.5, vtMag: 8.9,
-    flag: null, fromIcrs: false,
+    fromIcrs: false, isPhotocentre: false,
     ...overrides,
   };
 }
@@ -335,11 +335,16 @@ describe('direction-cascade / resolveDirection routing', () => {
       1990.0, 1991.0, CATALOG_SCENE_EPOCH,
     );
     expect(res.dir.z).toBeCloseTo(expected.z, 12);
-    // Against the single-epoch form the Dec advance is a whole degree out.
     const collapsed = directionAtEpoch(
       t.raDeg, t.decDeg, t.pmRaMasyr, t.pmDecMasyr, 1990.0, CATALOG_SCENE_EPOCH,
     );
-    expect(angSepArcsec(res.dir, collapsed)).toBeGreaterThan(3000);
+    // Collapsing the pair advances Dec over 26 yr instead of 25, so the
+    // tangent displacement differs by exactly 1°. On the sphere that lands at
+    // 0.8347°: the displacement is applied in the tangent plane and then
+    // renormalised, so a finished angle is atan(d) — at a 25° displacement,
+    // far outside the linear regime this PM was chosen to escape, that
+    // compresses the degree rather than losing it. Don't "correct" to 3600.
+    expect(angSepArcsec(res.dir, collapsed)).toBeCloseTo(3004.792, 2);
   });
 
   it("a Tycho-2 row with no PM keeps its position and zeroes the tangential term", () => {

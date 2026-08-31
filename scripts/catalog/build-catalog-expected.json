@@ -181,6 +181,8 @@
   "directionHip2Saturated": 2580,
   "directionHip2PmDiscrepant": 124,
   "directionTycho2": 43,
+  "directionTycho2FromIcrs": 3,
+  "directionTycho2Photocentre": 2,
   "directionCns5": 4,
   "directionSimbad": 13,
   "directionCurated": 1,

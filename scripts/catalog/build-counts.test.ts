@@ -131,6 +131,8 @@ function baseCounts(): BuildCounts {
     directionHip2Saturated: 2500,
     directionHip2PmDiscrepant: 146,
     directionTycho2: 43,
+    directionTycho2FromIcrs: 3,
+    directionTycho2Photocentre: 2,
     directionCns5: 4,
     directionSimbad: 13,
     directionCurated: 1,

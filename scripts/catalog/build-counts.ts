@@ -404,6 +404,17 @@ export interface BuildCounts extends LabelMergeCounts {
    *  own mean position propagated to the scene epoch from its per-star,
    *  per-coordinate mean epochs. */
   directionTycho2: number;
+  /** The `directionTycho2` subset with no mean solution at all, placed at the
+   *  row's J2000 `ra_icrs` cell instead. Those rows carry no Tycho-2 PM
+   *  either, so the position is unpropagated unless another tier rescues a
+   *  PM for it — the residual § 5 requires enumerated rather than implied. */
+  directionTycho2FromIcrs: number;
+  /** The `directionTycho2` subset whose mean solution is an unresolved
+   *  double's photocentre (`pflag='P'`) rather than one star's place, so the
+   *  position is the pair's light-centre. Counted, not gated: no tier sits
+   *  below this one for a TYC-keyed row, so gating would cost each its record.
+   *  The V side of the same row is marked a system blend for this reason. */
+  directionTycho2Photocentre: number;
   /** Direction cascade: TYC-less Gliese rows placed at CNS5's own
    *  coordinates, propagated from the row's own `pos_epoch`. */
   directionCns5: number;

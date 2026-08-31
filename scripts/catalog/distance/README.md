@@ -73,14 +73,15 @@ reads `ep_ra` 1991.07 against `ep_de` 1991.00 — true of every one of the
 that advances each coordinate over its own baseline; `directionAtEpoch`
 delegates to it with the two epochs equal, so there is one implementation.
 Collapsing Tycho-2's pair onto a single epoch would advance Dec over the
-wrong interval — the unit test pins that failure at a whole degree.
+wrong interval — the unit test pins that failure at **3004.792″** (0.8347°),
+which is a 1° tangent-plane error seen on the sphere after renormalisation.
 
 | Tier | Epoch of the position it reads |
 |---|---|
 | `gaia_5p` / `gaia_nss_systemic` | J2016.0 — a zero-Δt no-op |
 | `hip2_*` | J1991.25 |
 | `tycho2` | per star and per coordinate, `ep_ra` / `ep_de` (1967.77–1991.74 across the cohort) |
-| `tycho2`, `pflag='X'` rows | J2000 — no mean solution exists, so `ra_icrs` is the only position the row has, and those rows carry no PM either |
+| `tycho2`, `pflag='X'` rows | J2000 — no mean solution exists, so `ra_icrs` is the only position the row has, and those rows carry no PM either. 3 of the 43, pinned `directionTycho2FromIcrs` |
 | `cns5` | the row's own `pos_epoch` (2016.0 on 5,244 rows, 2000.0 on 406, 1991.25 on 138, 2015.5 on 36, 2016.55 on 3) |
 | `simbad` | J2000.0 — **measured, not assumed**: over the 673 catalogue rows carrying both a SIMBAD position and a Gaia PM above 500 mas/yr, SIMBAD's position matches the Gaia one back-propagated to J2000 to a median 0.000″, and not one row is closer to J2016 |
 
@@ -115,6 +116,15 @@ compares distance alone and the build-time regression check compares a
 parallax-derived distance. So the 13 simbad-tier rows verify themselves
 against nothing. That changes when the distance cascade takes its own
 SIMBAD tier, under validators that do check distance.
+
+**Two of the 43 tycho2 rows are a photocentre, not a star.** `pflag='P'`
+means Tycho-2's mean solution is the blended light-centre of a double it
+never split, so the position is the pair's, and `directionTycho2Photocentre`
+pins the count. It is counted rather than gated for the same reason the V
+tier's out-of-range colour is: nothing sits below this tier for a TYC-keyed
+row, so refusing the position would cost the record rather than improve it.
+The same row's V is marked a system blend
+(`../photometry/README.md` § Which tiers give a system blend).
 
 **The tycho2 tier has no corpus row, and cannot have one today.** Its
 records are by construction the ones Gaia and HIP2 both miss, and not one

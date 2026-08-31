@@ -69,7 +69,6 @@ import {
 } from '../simbad-values-parse';
 import {
   resolveVMagnitude,
-  tycho2ColourOutsideRange,
   tycho2VMagnitude,
   V_VIA_VALUES,
   type VVia,
@@ -267,6 +266,8 @@ export function readStars(
     directionVia: Record<DirectionVia, number>; // per-tier direction-cascade routing
     vVia: Record<VVia, number>;    // per-tier V-magnitude cascade routing
     vTycho2OutsideBtVtRange: number; // tycho2-tier rows outside SP-1200's published BT−VT range
+    directionTycho2FromIcrs: number;    // tycho2-tier rows placed at the J2000 cell, no mean solution
+    directionTycho2Photocentre: number; // tycho2-tier rows whose mean solution is a double's photocentre
     velocityVia: Record<VelocityVia, number>;   // per-tier space-motion PM-source routing
     velocityClamped: number;       // rows whose artifact velocity exceeded the sanity ceiling → zeroed
     velocityClampedSample: string[]; // per-clamped-star "id: speed @ dist" for build-log review
@@ -326,6 +327,8 @@ export function readStars(
   const spectralSimbadKey = emptyTallyPartition(SIMBAD_NAMESPACE_VALUES);
   let ciGspcValidatedRange = 0;
   let vTycho2OutsideBtVtRange = 0;
+  let directionTycho2FromIcrs = 0;
+  let directionTycho2Photocentre = 0;
   let rvApplied = 0;
   let velocityClamped = 0;
   const velocityClampedSample: string[] = [];
@@ -446,6 +449,12 @@ export function readStars(
     const proper = nonEmpty(row.proper);
     const isSol = proper === SOL_PROPER_NAME;
 
+    // One lookup serves both cascades that read this row: the direction tier
+    // takes its position and PM, the V cascade its BT/VT.
+    const tycho2Row = simbadKeys.tyc !== null
+      ? directions.tycho2.get(simbadKeys.tyc) ?? null
+      : null;
+
     // Sky direction through the Gaia 5p → HIP2 → Tycho-2 → CNS5 → SIMBAD
     // cascade; position is direction × distance, both float64 until the
     // float32 pack at write time.
@@ -458,33 +467,32 @@ export function readStars(
       continue;
     }
     directionVia[dirRes.via]++;
+    if (dirRes.via === 'tycho2' && tycho2Row !== null) {
+      if (tycho2Row.fromIcrs) directionTycho2FromIcrs++;
+      if (tycho2Row.isPhotocentre) directionTycho2Photocentre++;
+    }
     const x = dirRes.dir.x * dist;
     const y = dirRes.dir.y * dist;
     const z = dirRes.dir.z * dist;
 
     // V through the Riello transform → printed HIP V → Tycho-2's reduced VT →
-    // Gliese's printed Vmag, then absmag from that V and the distance the
-    // whole override stack settled on. See ../photometry/README.md. Sol is
-    // the one record this cannot reach: it sits at distance zero, where the
-    // modulus is undefined.
-    const tycho2Row = simbadKeys.tyc !== null
-      ? directions.tycho2.get(simbadKeys.tyc) ?? null
-      : null;
+    // Gliese's printed Vmag → curated. See ../photometry/README.md. absmag
+    // then derives from that V and the distance the whole override stack
+    // settled on — except for Sol, which sits at distance zero where the
+    // modulus is undefined and takes SOL_ABSOLUTE_V_MAGNITUDE instead.
     const glieseRow = lookupGliese(gliese, simbadKeys.gl);
+    const tychoV = tycho2VMagnitude(
+      tycho2Row?.btMag ?? null, tycho2Row?.vtMag ?? null,
+    );
     const vRes = resolveVMagnitude(
       gaiaRow,
       printedByHip(hipVMag, hip),
-      tycho2VMagnitude(tycho2Row?.btMag ?? null, tycho2Row?.vtMag ?? null),
+      tychoV.v,
       glieseRow?.vMag ?? null,
       isSol ? SOL_APPARENT_V_MAGNITUDE : null,
     );
     vVia[vRes.via]++;
-    if (
-      vRes.via === 'tycho2'
-      && tycho2ColourOutsideRange(tycho2Row?.btMag ?? null, tycho2Row?.vtMag ?? null)
-    ) {
-      vTycho2OutsideBtVtRange++;
-    }
+    if (vRes.via === 'tycho2' && tychoV.outsideRange) vTycho2OutsideBtVtRange++;
     if (vRes.v === null) {
       dropped.noVMagnitude++;
       continue;
@@ -670,6 +678,8 @@ export function readStars(
       ciVia,
       ciGspcValidatedRange,
       vTycho2OutsideBtVtRange,
+      directionTycho2FromIcrs,
+      directionTycho2Photocentre,
     },
   };
 }

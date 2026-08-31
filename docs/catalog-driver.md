@@ -380,7 +380,13 @@ Measured exposure and expected coverage (2026-08-14; pins in
   and is not a gap the cascade can close: three are Tycho-2 `pflag='X'`
   rows, which carry no mean solution and so no proper motion at all (they
   take their `ra_icrs` cell at J2000, unpropagated), and the fourth is Sol,
-  which is curated at zero velocity by construction.
+  which is curated at zero velocity by construction. Those three are pinned
+  as `directionTycho2FromIcrs`, and a further **2** of the 43 are
+  `directionTycho2Photocentre` — a `pflag='P'` mean solution, so the position
+  is an unresolved double's light-centre rather than one star's place. Both
+  are counted rather than gated: no tier sits below this one for a TYC-keyed
+  row, so gating either would cost the record. The V side of a `P` row is
+  marked a system blend for the same reason.
 
   The per-tier epochs also fix the printed cells' unpropagated staleness.
   Worst case in the cohort is **Gl 863.1A at 49.2″** — and that number
