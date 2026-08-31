@@ -411,23 +411,20 @@ Bayer variants shows up once.
 
 ## Gaia DR3 Apsis surfacing
 
-`scripts/catalog/build-catalog.ts` loads
-`data/gaia/gaia_dr3_apsis.tsv` via `parseGaiaApsisTsv` into a
-`Map<source_id, ApsisRow>` and writes seven `float32` Apsis fields
-per record into the v6 binary (offsets 52–79; see § Binary catalog
-format above). Coverage: ~99.6% of records that resolve to a Gaia
-source_id match an Apsis row; ~85% have a non-null Teff in either
-gspphot or gspspec. The remaining ~15% (typically faint Tycho-only
-stars without high-S/N BP/RP photometry, plus hot O/B stars where
-gspphot doesn't converge) are written as `NaN` (the `NO_APSIS`
-sentinel) and the spectral resolver falls through to GSP-Spec's
-letter-only enum or the unknown-class fallback.
+`scripts/catalog/build-catalog.ts` loads `data/gaia/gaia_dr3_apsis.tsv`
+via `parseGaiaApsisTsv` into a `Map<source_id, ApsisRow>` and writes
+seven `float32` Apsis fields per record into the v6 binary (offsets
+52–79; see § Binary catalog format above). Coverage: ~99.6% of records
+that resolve to a Gaia source_id match an Apsis row; ~85% have a
+non-null Teff in either gspphot or gspspec. The remaining ~15%
+(typically faint Tycho-only stars without high-S/N BP/RP photometry,
+plus hot O/B stars where gspphot doesn't converge) are written as
+`NaN` (the `NO_APSIS` sentinel).
 
 The seven floats are surfaced directly to the runtime via
-`catalog-loader.ts`'s per-array views (`teffGspphot`, `loggGspphot`,
-`mhGspphot`, `azeroGspphot`, `teffGspspec`, `loggGspspec`,
-`mhGspspec`). Consumers test absence with `Number.isNaN(arr[i])`.
-Today's downstream consumers:
+`catalog-loader.ts`'s per-array views, one per column named above.
+Consumers test absence with `Number.isNaN(arr[i])`. Today's downstream
+consumers:
 
 - **Per-star colour routing.** The shader is two-tier —
   `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi` — so `bestApsisTeff`
@@ -438,17 +435,15 @@ Today's downstream consumers:
   (`spectral/physical-radius.ts`) derives when a no-Apsis star has no
   measured B−V but a parseable class (`ciSpectralDerived` in build-counts),
   else the solar fallback.
-- **Spectral classification fall-through** (`resolveSpectralInfo` in
-  `spectral/spectral-resolve.ts`) — when SIMBAD has no sp_type under any of
-  its four namespaces (source_id, HIP, GJ, TYC), GSP-Spec's
-  `spectraltype_esphs` enum is the tier before `SPECTRAL_UNKNOWN`.
+- **Spectral classification fall-through** — GSP-Spec's
+  `spectraltype_esphs` enum is the tier above `SPECTRAL_UNKNOWN` in
+  `spectral/README.md`'s resolver chain.
 - **Per-record handles** for future Phase 5 consumers (geometric
   occlusion photometry's limb-darkening Teff dependence; mass-ratio
   refinement using direct `logg_gspphot` for giant / subgiant
   classification) — already loaded; no rebuild needed when those
   consumers come online.
 
-Data refresh: `pnpm run refresh:gaia-apsis`. See
+Data refresh: `pnpm run refresh:gaia-apsis`. Science framing:
 `docs/science-catalog-ingestion.md` § Astrophysical parameters from
-Gaia DR3 Apsis for the science
-framing.
+Gaia DR3 Apsis.
