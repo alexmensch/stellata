@@ -18,7 +18,10 @@ import type { SidResolver } from '../sid-resolver';
 import { isHardTarget, type Target, type TargetKind } from '../../camera/focus/focus-target';
 import { buildSharePath, pickShareBlob } from './share-path-pure';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
-import type { CoordSphereFrame } from '../../galactic/coord-spheres/coord-sphere';
+import type {
+  CoordSphereFrame,
+  DrawnCoordSphereFrame,
+} from '../../galactic/coord-spheres/coord-sphere';
 
 // URL state is a single opaque base64url blob carried in a `/v/<blob>/`
 // path segment (canonical) or a legacy `?v=<blob>` query param (still
@@ -121,7 +124,7 @@ const INDEX_TO_PRESET: LegacyPresetName[] = ['naked-eye', 'binoculars', 'all'];
 //   4 = unit pc, 5 = mode observe, 6 = chart on (only set when also
 //   mode=observe — chart is observe-gated), 7 = constellations disabled.
 // Which sphere is up rides presence bit 24 on top of bit 0 — see
-// coordSphereEquatorialField.
+// coordSphereFrameField.
 const FLAG_GRID         = 1 << 0;
 const FLAG_HUD          = 1 << 1;
 // bit 2 reserved (formerly FLAG_MC_DISABLED — retired; molecular-cloud
@@ -628,21 +631,22 @@ function lgEmissionDisabledField(bit: number): FieldSpec {
   };
 }
 
-// Which coordinate sphere FLAG_GRID means — another zero-byte presence bit,
-// since the flags byte is full. Set = equatorial, clear = galactic.
+// Which coordinate sphere FLAG_GRID means — one zero-byte presence bit per
+// frame past the default, since the flags byte is full. No bit set = galactic.
 //
-// Layering it over FLAG_GRID rather than replacing that bit with a 1-byte enum
-// is what keeps both directions of compatibility free: a pre-equatorial link
-// (FLAG_GRID alone) still decodes to the galactic sphere, and a stale client
-// reading a new link ignores the unknown high mask bit and shows the galactic
-// sphere instead of none. Decodes after flagsField (bit 13 < 24), so it
-// overwrites the 'galactic' that unpackFlags wrote.
-function coordSphereEquatorialField(bit: number): FieldSpec {
+// Layering these over FLAG_GRID rather than replacing that bit with a 1-byte
+// enum is what keeps both directions of compatibility free: a pre-equatorial
+// link (FLAG_GRID alone) still decodes to the galactic sphere, and a client
+// predating a frame's bit ignores the unknown high mask bit and shows the
+// galactic sphere instead of none. Each decodes after flagsField (bit 13), so
+// it overwrites the 'galactic' that unpackFlags wrote. A frame's bit is frozen
+// once it ships — a link in the wild carries it.
+function coordSphereFrameField(bit: number, frame: DrawnCoordSphereFrame): FieldSpec {
   return {
-    bit, key: 'coordSphereEquatorial', ...fixed(0),
-    isPresent: v => v.coordSphere === 'equatorial',
+    bit, key: `coordSphere-${frame}`, ...fixed(0),
+    isPresent: v => v.coordSphere === frame,
     encode: () => 0,
-    decode: v => { v.coordSphere = 'equatorial'; },
+    decode: v => { v.coordSphere = frame; },
   };
 }
 
@@ -891,8 +895,9 @@ const FIELDS_V4: FieldSpec[] = [
   tField(21),
   lgEmissionDisabledField(22),
   detailLevelField(23),
-  coordSphereEquatorialField(24),
+  coordSphereFrameField(24, 'equatorial'),
   u8Field(25, 'ev', { min: -EV_MAX_STOPS, max: EV_MAX_STOPS, step: EV_STEP_STOPS }),
+  coordSphereFrameField(26, 'ecliptic'),
 ];
 
 function packFlags(v: DecodedView): number {
