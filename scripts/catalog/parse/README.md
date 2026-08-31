@@ -1,10 +1,11 @@
 # Per-row pipeline and reference-catalogue parsing
 
 The spine row walk (`readStars` in `stars-parse.ts`) and everything it
-resolves per star: space-motion velocity, physical radius and spectral
-class, the GCVS variability cross-match, and Stellarium stick figures. The
-binary record layout these fields land in is `../README.md` § Binary catalog
-format; the membership term it walks is `../spine/README.md`.
+resolves per star: space-motion velocity, the GCVS variability cross-match,
+and Stellarium stick figures. Spectral class and physical radius are resolved
+here but owned by `../spectral/`. The binary record layout these fields land
+in is `../README.md` § Binary catalog format; the membership term it walks is
+`../spine/README.md`.
 
 ## Files in this area
 
@@ -69,8 +70,7 @@ empty map turns a missing file into a silently zeroed join that only surfaces
 as a count drift much later. A valid header with no data rows is a different
 thing and legitimately yields no rows.
 
-Two deliberate exceptions, both streaming walks that carry their own header
-strictness rather than a second copy of this one:
+Three deliberate exceptions:
 
 - `gaia-xmatch.ts` streams a 2.5 M-row table line-by-line and dedups on
   angular distance, so it needs its own accumulator.
@@ -79,6 +79,15 @@ strictness rather than a second copy of this one:
   columns by name in any order. That is the stricter contract on purpose: the
   spine is frozen and its codec writes the header, so a header that merely
   parses is already a file nobody meant to ship.
+- `parseSimbadSptypeTsv` (`../spectral/spectral-resolve.ts`) demands only
+  `source_id` and `sp_type`, treating `hip` / `tyc` / `gj` / `sp_qual` /
+  `otype` as optional. Four of those five ARE the ladder's designation tiers,
+  so a column vanishing from a re-pull zeroes a tier rather than throwing —
+  the failure mode this section otherwise exists to prevent. What catches it
+  instead is downstream: `spectralSimbadByTyc` / `ByGj` are pinned in
+  `../build-catalog-expected.json`, so a zeroed tier fails the build's count
+  assert. Tightening the parser onto `headerIndex` would move that catch
+  upstream to the read.
 
 ## Per-row pipeline
 
@@ -108,7 +117,7 @@ never re-derived).
    float64. See `../distance/README.md` § Direction resolution.
 6. **Spectral classification** (`resolveSpectralInfo`; Sol special-cased
    to curated G2V in `stars-parse.ts` — no HIP/Gaia/SIMBAD key reaches
-   it). See § Physical radius and spectral parsing.
+   it). See `../spectral/README.md`.
 7. **Constellation** — positional, from the resolved xyz
    (§ Positional constellation membership). Nothing here sets the
    DESIGNATION's constellation: the spine carries no editorial `con` cell.
@@ -326,92 +335,3 @@ the build fails until each is explicitly added to
 `KNOWN_MISSING_HIPS` with rationale. Don't relax the check to a soft
 warning — the whole point of using Stellarium's HIP-indexed data (vs.
 fuzzy RA/Dec position matching) is deterministic mapping.
-
-## Physical radius and spectral parsing
-
-`resolveSpectralInfo` in `catalog-pure.ts` resolves
-`{ classIdx, subclass, lumClass, isWhiteDwarf }` per star via a seven-tier
-priority chain:
-
-0. **Curated HIP → sp_type override** (`CURATED_SPTYPE_BY_HIP`) —
-   saturated stars whose SIMBAD entry is a component-lettered main_id
-   carrying neither hip nor source_id, so both machine tiers below miss
-   (Castor: '* alf Gem A' A1.5IV). Mirrors the binaries pipeline's
-   `component_sptype_overrides.tsv` curated tier. Sol takes the same
-   curated route via a proper-name special case in `stars-parse.ts`.
-1. **SIMBAD `sp_type` by Gaia source_id** (`data/simbad/simbad_sptype.tsv`
-   from `scripts/refresh/refresh-simbad-sptype.py`). SIMBAD canonicalises
-   sp_type to Morgan-Keenan only — variability annotations live in `otype`,
-   never in sp_type — so the parser (`classifyFromSimbad`) is a strict MK
-   walker covering plain MK (`G2V`, `K0III`, `M1.5Iab-b`), white dwarfs
-   (`DA`, `DB2`, `DAH`), subdwarfs (`sdB5`), carbon / Wolf-Rayet (`C5,2e`,
-   `WN5`), and Am/Ap composites (`kA5hA8mF1(III)SiEuBa` → metallic-line
-   type wins).
-2. **SIMBAD `sp_type` by HIP** — the same TSV also carries the
-   Gaia-saturated bright stars (Algol, Alsephina, Betelgeuse, Rigel, Vega,
-   Arcturus, ~700 others) whose SIMBAD row has a valid MK type but **no
-   Gaia source_id**, so tier 1's source_id key misses them. `parseSimbadSptypeTsv`
-   indexes every row under every namespace it carries, throwing rather than
-   picking a winner if a key ever repeats; this tier looks up the star's HIP. Without it the radius chain runs the cool
-   unknown-Teff fallback against a bright absmag and inflates R ~4× (Algol
-   12.47 → 3.2 R☉; Alsephina 12.0 → 4.0). SIMBAD's full MK is preferred
-   over GSP-Spec's letter-only enum, so this tier sits above GSP-Spec.
-3. **SIMBAD `sp_type` by TYC** — the only namespace that reaches an object
-   SIMBAD holds no Gaia id and no HIP for, which is exactly the population
-   the values pull's TYC widening exists for. Same ladder
-   `lookupSimbadValues` walks (`../simbad-values-parse.ts`), and the same
-   caveat: a TYC names the Tycho entry, which for a close pair is the
-   system rather than the component. What reaches the file is already
-   adjudicated — the pull vetoes a widened binding SIMBAD's own Gaia
-   cross-ID contradicts (`scripts/refresh/simbad/README.md` § The TYC
-   widening carries its own veto) — so the risk this tier carries is a
-   system-blend spectral type on an unvetoed pair, never a wrong star.
-   Reaches **1,940** records.
-4. **SIMBAD `sp_type` by GJ**, folded through `normaliseGjKey`
-   (`../catalog-pure.ts`) so `Gl 165A` / `GJ 165A` / `165 A` meet as one
-   key. It closes the ladder against `lookupSimbadValues`, which walks the
-   same four namespaces; it is last because the pull's `gj` block is small
-   (3,727 keys against TYC's 317,487) and reaches only **13** records the
-   TYC tier does not. Unlike TYC, a GJ number carries its component letter,
-   so it names the component rather than the system.
-
-   Which namespace found each SIMBAD-tier row is pinned as
-   `spectralSimbadBySourceId` / `ByHip` / `ByTyc` / `ByGj`, summing to
-   `spectralBySimbad` — so a tier that stops firing shows up as its own
-   count rather than as noise inside a 280k total.
-5. **Gaia DR3 GSP-Spec `spectraltype_esphs`** (a column on
-   `data/gaia/gaia_dr3_apsis.tsv`, keyed by source_id). Letter-only enum;
-   `classifyFromGspspec` maps each letter to its `classIdx` with neutral
-   subclass=5 / lumClass=255.
-6. **`SPECTRAL_UNKNOWN` fallback** — `classIdx=UNKNOWN_CLASS_IDX` (8) /
-   `lumClass=255` for rows no upstream covers.
-
-AT-HYG's contaminated `spect` cell is no longer consulted for
-classification (build-counts: ~89.5% SIMBAD / ~10.1% GSP-Spec / ~0.3%
-fallback against the v3.3 classic-IDs subset); it is still used as a
-last-resort hover-display fallback when both upstream sources are blank.
-
-`physicalRadius` then computes R/R☉ via Stefan–Boltzmann:
-
-```
-T       = Apsis Teff (gspphot → gspspec) when measured, else
-          interp(T_TABLE[classIdx], subclass)
-BC      = interp(BC_TABLE[classIdx], subclass)
-Mbol    = absmag + BC
-L/L☉    = 10^((4.74 − Mbol) / 2.5)
-R/R☉    = sqrt(L/L☉) × (T_sun/T)²
-```
-
-`resolveApsisTeff` supplies the measured Teff (2–60 kK sanity window);
-R ∝ T⁻², so the class-table fallback misized GSP-Spec-tier stars
-(letter-only, subclass defaulted to 5) by up to ~36% and unknown-class
-stars by up to ~2×. Tables are main-sequence values — cooler for
-giants/supergiants in reality — but the Mbol side of the equation
-absorbs the luminosity-class difference, so the end result lands close
-to published radii (`docs/science-stellar-modelling.md` § Physical radius carries the current
-per-star numbers; `known-stars.test.ts` pins them end-to-end via the
-corpus `primary_radius_rsun` / `primary_ci` columns). Clamped to
-`[0.08, 2500]` so pathological catalog rows don't produce absurd
-sizes. White dwarfs are special-cased to 0.013 R☉ (typical WD radius;
-absmag doesn't translate reliably for them); Wolf-Rayets ride their
-own Teff/BC ramps and ignore Apsis.

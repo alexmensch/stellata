@@ -47,8 +47,8 @@ The famous-star radius and colour claims are pinned end-to-end against
 (`primary_radius_rsun` / `primary_ci` corpus columns).
 
 Implementation: `physicalRadius` / `resolveApsisTeff` in
-`scripts/catalog/catalog-pure.ts`, wired in `stars-parse.ts`; see
-`scripts/catalog/parse/README.md` § Physical radius and spectral parsing for
+`scripts/catalog/spectral/physical-radius.ts`, wired in `stars-parse.ts`; see
+`scripts/catalog/spectral/README.md` § The resolver and the radius chain for
 the spectral-string parser and the surrounding pipeline.
 
 ## Stellar perception model
@@ -204,7 +204,8 @@ first match wins:
 3. **Observed AT-HYG B-V** — the row's own `ci` cell (de-reddened at
    build), baked into `iCi`.
 4. **Spectral-class T_TABLE** — when a no-Apsis star has no B-V but a
-   parseable class, `spectralClassCi` (`scripts/catalog/catalog-pure.ts`)
+   parseable class, `spectralClassCi`
+   (`scripts/catalog/spectral/physical-radius.ts`)
    bakes `Ballesteros(tempKelvin(class))` into `iCi` — the intrinsic
    class colour, so a class star renders its true hue rather than
    solar-yellow. Counted `ciSpectralDerived`.

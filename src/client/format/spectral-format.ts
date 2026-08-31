@@ -10,7 +10,8 @@ export interface SpectralDisplay {
   descriptor: string;
 }
 
-// spectClass byte → colour word (indices per catalog-pure spectClassIndex:
+// spectClass byte → colour word (indices per spectral-classify
+// spectClassIndex:
 // O B A F G K M). Index 7 (carbon / S / Wolf-Rayet bucket) and 8 (unknown)
 // are handled as special cases in descriptorFor.
 const COLOUR_BY_CLASS = [

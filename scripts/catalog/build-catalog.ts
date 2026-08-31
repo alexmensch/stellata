@@ -8,11 +8,6 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  resolveSpectralInfo,
-  resolveApsisTeff,
-  resolveSpectDisplay,
-  physicalRadius,
-  UNKNOWN_CLASS_IDX,
   buildHipToIndex,
   inferBinaries,
   FLAG_IS_SOL,
@@ -45,6 +40,17 @@ import {
   emptyDistSrcPartition,
   type CatalogManifest,
 } from './catalog-pure';
+import {
+  UNKNOWN_CLASS_IDX,
+  resolveSpectDisplay,
+} from './spectral/spectral-classify';
+import {
+  resolveSpectralInfo,
+} from './spectral/spectral-resolve';
+import {
+  physicalRadius,
+  resolveApsisTeff,
+} from './spectral/physical-radius';
 import {
   BUILD_COUNTS_EXPECTED_FILE,
   compareBuildCounts,

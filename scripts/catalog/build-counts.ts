@@ -184,9 +184,10 @@ export interface BuildCounts extends LabelMergeCounts {
   spectralBySimbad: number;
   /** The four SIMBAD tiers split by the namespace that found the row, summing
    *  to `spectralBySimbad` — enforced by `spectralSimbadPartitionError`, not
-   *  merely asserted here. `spectralSimbadByTyc` is the only designation join
-   *  of the four, and the only one reaching an object SIMBAD holds no Gaia id
-   *  for. */
+   *  merely asserted here. The split is over which namespace WON, so the
+   *  ladder's order decides it: GJ is walked before TYC, and a record both
+   *  reach credits GJ. `spectralSimbadByTyc` is the only one reaching an
+   *  object SIMBAD holds no Gaia id and no HIP for. */
   spectralSimbadBySourceId: number;
   spectralSimbadByHip: number;
   spectralSimbadByTyc: number;

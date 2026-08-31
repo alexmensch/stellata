@@ -27,9 +27,11 @@ import {
   FLAG_HAS_NAME,
   NO_CONSTELLATION_INDEX,
   SOLAR_BV_FALLBACK,
+} from '../catalog-pure';
+import {
   SPECTRAL_UNKNOWN,
   classifyFromSimbad,
-} from '../catalog-pure';
+} from '../spectral/spectral-classify';
 import { CONSTELLATIONS, createConstellationAssignment } from '../parse/constellations';
 import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
 import type { Star } from '../parse/stars-parse';

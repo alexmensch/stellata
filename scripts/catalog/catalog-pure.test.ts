@@ -2,23 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  spectClassIndex,
-  classifyFromSimbad,
-  classifyFromGspspec,
-  resolveSpectralInfo,
-  resolveSpectDisplay,
-  parseSimbadSptypeTsv,
   normaliseGjKey,
-  SPECTRAL_UNKNOWN,
-  SOLAR_BV_FALLBACK,
-  spectralClassCi,
-  spectralClassColorIsDerivable,
-  tempKelvin,
-  boloCorr,
-  physicalRadius,
-  resolveApsisTeff,
-  absmagFromSpectral,
-  spectralFromAbsmag,
+  simbadHipKey,
+  SIMBAD_NAMESPACE_VALUES,
+  emptySimbadNamespaceIndex,
+  indexSimbadRow,
+  walkSimbadNamespaces,
+  type SimbadNamespace,
+  type SimbadNamespaceIndex,
+  type SimbadRecordKeys,
   GAIA_BINDING_G_MINUS_V_REJECT_MAG,
   normalizeGcvsName,
   parseGcvsNumber,
@@ -93,11 +85,6 @@ import {
   assembleCatalogChunks,
   type CatalogManifest,
   parseGaiaApsisTsv,
-  type ApsisRow,
-  type SimbadRecordKeys,
-  type SimbadSpectralRow,
-  type SimbadSpectralIndex,
-  type SpectralInfo,
   type BinaryStar,
   type DoublesStar,
   parseBailerJonesTsv,
@@ -126,500 +113,6 @@ import {
 } from './catalog-pure';
 import { MAX_DIST_PC } from './parse/stars-parse';
 
-describe('catalog-pure / spectClassIndex', () => {
-  it('maps the seven main MK classes to indices 0..6', () => {
-    expect(spectClassIndex('O')).toBe(0);
-    expect(spectClassIndex('B')).toBe(1);
-    expect(spectClassIndex('A')).toBe(2);
-    expect(spectClassIndex('F')).toBe(3);
-    expect(spectClassIndex('G')).toBe(4);
-    expect(spectClassIndex('K')).toBe(5);
-    expect(spectClassIndex('M')).toBe(6);
-  });
-
-  it('groups carbon and Wolf-Rayet variants under index 7', () => {
-    // C (carbon), S (zirconium oxide), W (Wolf-Rayet), N (legacy carbon),
-    // R (legacy carbon) — all visually-distinct rare classes that share a
-    // single renderer bucket.
-    expect(spectClassIndex('C')).toBe(7);
-    expect(spectClassIndex('S')).toBe(7);
-    expect(spectClassIndex('W')).toBe(7);
-    expect(spectClassIndex('N')).toBe(7);
-    expect(spectClassIndex('R')).toBe(7);
-  });
-
-  it('returns 8 (unknown) for any unrecognised letter', () => {
-    expect(spectClassIndex('X')).toBe(8);
-    expect(spectClassIndex('')).toBe(8);
-    expect(spectClassIndex('?')).toBe(8);
-  });
-});
-
-describe('catalog-pure / spectralClassCi', () => {
-  it('derives a hot-blue B−V for an early-type class (tier 4)', () => {
-    const ci = spectralClassCi(classifyFromSimbad('B2V')!);
-    expect(ci).toBeLessThan(0); // blue
-    expect(ci).not.toBe(SOLAR_BV_FALLBACK);
-  });
-
-  it('derives a cool-red B−V for a late-type class (tier 4)', () => {
-    const ci = spectralClassCi(classifyFromSimbad('M2V')!);
-    expect(ci).toBeGreaterThan(1); // red
-  });
-
-  it('routes a white dwarf through its Sion Teff (tier 5)', () => {
-    const ci = spectralClassCi(classifyFromSimbad('DA2')!);
-    // 50400/2 = 25200 K → deep blue, distinct from the solar fallback.
-    expect(ci).toBeLessThan(0);
-    expect(ci).not.toBe(SOLAR_BV_FALLBACK);
-  });
-
-  it('falls back to solar for an unparseable / unknown class (tier 6)', () => {
-    expect(spectralClassCi(SPECTRAL_UNKNOWN)).toBe(SOLAR_BV_FALLBACK);
-  });
-
-  it('spectralClassColorIsDerivable gates the tier-4/5 bake from the fallback', () => {
-    // The ciSpectralDerived counter reads this, not `ci !== 0.65` — a
-    // parseable class landing exactly on the fallback value must still
-    // count as derived.
-    expect(spectralClassColorIsDerivable(classifyFromSimbad('G2V')!)).toBe(true);
-    expect(spectralClassColorIsDerivable(classifyFromSimbad('DA2')!)).toBe(true);
-    expect(spectralClassColorIsDerivable(SPECTRAL_UNKNOWN)).toBe(false);
-  });
-});
-
-describe('catalog-pure / classifyFromSimbad', () => {
-  it('returns null for empty / nullish input (caller falls through tier)', () => {
-    expect(classifyFromSimbad('')).toBeNull();
-    expect(classifyFromSimbad(null)).toBeNull();
-    expect(classifyFromSimbad(undefined)).toBeNull();
-  });
-
-  it('parses a basic main-sequence type', () => {
-    const info = classifyFromSimbad('G2V');
-    expect(info).not.toBeNull();
-    expect(info!.classIdx).toBe(4); // G
-    expect(info!.subclass).toBe(2);
-    expect(info!.lumClass).toBe(2); // V
-    expect(info!.isWhiteDwarf).toBe(false);
-  });
-
-  it('parses giant and supergiant luminosity classes', () => {
-    expect(classifyFromSimbad('K0III')!.lumClass).toBe(4); // III
-    expect(classifyFromSimbad('M2II')!.lumClass).toBe(5);  // II
-    expect(classifyFromSimbad('B5IV')!.lumClass).toBe(3);  // IV
-    expect(classifyFromSimbad('M1Ia')!.lumClass).toBe(8);  // Ia
-    expect(classifyFromSimbad('M1Iab')!.lumClass).toBe(7); // Iab
-    expect(classifyFromSimbad('B0Ib')!.lumClass).toBe(6);  // Ib
-    expect(classifyFromSimbad('A0VII')!.lumClass).toBe(0); // VII (rare)
-    expect(classifyFromSimbad('K3VI')!.lumClass).toBe(1);  // VI (subdwarf)
-  });
-
-  it('parses Ia+ / 0 hypergiants', () => {
-    expect(classifyFromSimbad('B5Ia+')!.lumClass).toBe(9);
-    expect(classifyFromSimbad('M2 0')!.lumClass).toBe(9);
-  });
-
-  it('treats bare "I" as Iab (intermediate supergiant)', () => {
-    // SIMBAD entries occasionally carry just "I" without the a/b/ab
-    // suffix; assigning it to Iab keeps the renderer's size mapping
-    // centred on the supergiant class rather than over- or under-
-    // promoting.
-    expect(classifyFromSimbad('A0I')!.lumClass).toBe(7);
-  });
-
-  it('handles composite spectra by parsing the first component', () => {
-    // K0III+K7V → primary is K0III. The "+" composite separator is left
-    // for the caller to ignore; the parser doesn't try to split.
-    const info = classifyFromSimbad('K0III+K7V');
-    expect(info!.classIdx).toBe(5); // K
-    expect(info!.subclass).toBe(0);
-    expect(info!.lumClass).toBe(4); // III
-  });
-
-  it('parses subdwarfs (sdB, sdO) with lumClass=1', () => {
-    const info = classifyFromSimbad('sdB5');
-    expect(info!.classIdx).toBe(1);   // B
-    expect(info!.subclass).toBe(5);
-    expect(info!.lumClass).toBe(1);   // VI (subdwarf)
-    expect(info!.isWhiteDwarf).toBe(false);
-  });
-
-  it('parses white dwarfs (DA, DB, DA2, DAH)', () => {
-    expect(classifyFromSimbad('DA')!.isWhiteDwarf).toBe(true);
-    expect(classifyFromSimbad('DB')!.isWhiteDwarf).toBe(true);
-    expect(classifyFromSimbad('DA2')!.wdSubclass).toBe(2);
-    expect(classifyFromSimbad('DA2')!.lumClass).toBe(0); // VII
-    expect(classifyFromSimbad('DAH')!.isWhiteDwarf).toBe(true);
-  });
-
-  it('clamps the white-dwarf subclass digit into [0, 9]', () => {
-    expect(classifyFromSimbad('DA0')!.wdSubclass).toBe(0);
-    expect(classifyFromSimbad('DA9')!.wdSubclass).toBe(9);
-  });
-
-  it('parses fractional subclass digits by taking the integer part', () => {
-    // M1.5Iab-b → subclass=1 (integer part of 1.5)
-    expect(classifyFromSimbad('M1.5Iab-b')!.subclass).toBe(1);
-    expect(classifyFromSimbad('M1.5Iab-b')!.lumClass).toBe(7);
-  });
-
-  it('classifies carbon / S / Wolf-Rayet stars under classIdx=7', () => {
-    // SIMBAD canonical: C5,2e (carbon subclass + abundance index + emission).
-    // WC4 / WN5 (Wolf-Rayet sub-types). No luminosity-class slot for any.
-    const carbon = classifyFromSimbad('C5,2e');
-    expect(carbon!.classIdx).toBe(7);
-    expect(carbon!.subclass).toBe(5);
-    expect(carbon!.lumClass).toBe(255);
-    expect(carbon!.isWhiteDwarf).toBe(false);
-    expect(classifyFromSimbad('WC4')!.classIdx).toBe(7);
-    expect(classifyFromSimbad('WN5')!.classIdx).toBe(7);
-  });
-
-  it('flags Wolf-Rayet types with the ionization subclass', () => {
-    const wn5 = classifyFromSimbad('WN5')!;
-    expect(wn5.isWolfRayet).toBe(true);
-    expect(wn5.subclass).toBe(5);
-    expect(classifyFromSimbad('WN2-w')!.subclass).toBe(2);
-    expect(classifyFromSimbad('WC4')!.subclass).toBe(4);
-    // Carbon / S stars share classIdx 7 but are NOT Wolf-Rayets.
-    expect(classifyFromSimbad('C5,2e')!.isWolfRayet).toBeUndefined();
-  });
-
-  it('classifies WR+MK composites by the V-dominant MK companion', () => {
-    // γ² Vel: the O7.5 giant carries the V light the record's absmag
-    // measures; the WR-first listing is catalog convention, not
-    // brightness order.
-    const gv = classifyFromSimbad('WC8+O7.5III-V')!;
-    expect(gv.classIdx).toBe(0);       // O
-    expect(gv.subclass).toBe(7);
-    expect(gv.lumClass).toBe(4);       // III
-    expect(gv.isWolfRayet).toBeUndefined();
-    // Unclassifiable companion → stays a WR single.
-    const wc4be = classifyFromSimbad('WC4+Be')!;
-    expect(wc4be.classIdx).toBe(1);    // Be parses as B
-    const wnwc = classifyFromSimbad('WN6/WC4')!;
-    expect(wnwc.classIdx).toBe(7);
-    expect(wnwc.isWolfRayet).toBe(true);
-  });
-
-  it('handles Am/Ap composite tags by preferring the m-line (metallic) type', () => {
-    // kA5hA8mF1(III)SiEuBa → metals dominate → F1 III.
-    const info = classifyFromSimbad('kA5hA8mF1(III)SiEuBa');
-    expect(info!.classIdx).toBe(3); // F
-    expect(info!.subclass).toBe(1);
-    expect(info!.lumClass).toBe(4); // III
-  });
-
-  it('handles composite tags without an explicit luminosity class', () => {
-    // kA7hA7mF3 → m-line F3, no Roman → lumClass unknown.
-    const info = classifyFromSimbad('kA7hA7mF3');
-    expect(info!.classIdx).toBe(3);
-    expect(info!.subclass).toBe(3);
-    expect(info!.lumClass).toBe(255);
-  });
-
-  it('returns null when the leading character is not a recognised class', () => {
-    // SIMBAD writes some non-stellar entries; the resolver falls
-    // through to GSP-Spec / the unknown sentinel rather than guessing.
-    expect(classifyFromSimbad('PEC')).toBeNull();
-    expect(classifyFromSimbad('?')).toBeNull();
-  });
-});
-
-// 14 AT-HYG rows whose `spect` cell carries non-MK content (variability
-// annotations like "DELTA DEL" / "CVIIe", Yerkes-notation prefixes like
-// "dK0", or non-WD "D"-prefixed labels). Each entry pairs the
-// SIMBAD-canonical sp_type with the real classIdx / subclass / lumClass
-// the classifier must return. classIdx + lumClass are `toBe(N)` rather
-// than `toBeLessThan` so any drift toward isWhiteDwarf=true fails fast.
-describe('catalog-pure / classifyFromSimbad — non-MK AT-HYG bug rows', () => {
-  interface BugRow {
-    label: string;     // HIP or HD id from the bug table
-    spType: string;    // canonical SIMBAD sp_type
-    classIdx: number;  // expected classIdx after the fix
-    subclass: number;  // expected subclass digit
-    lumClass: number;  // expected lumClass (255 if SIMBAD didn't supply one)
-  }
-  const rows: BugRow[] = [
-    { label: 'HIP 102843', spType: 'A6V',                  classIdx: 2, subclass: 6, lumClass: 2 },
-    { label: 'HIP 60978',  spType: 'A8V',                  classIdx: 2, subclass: 8, lumClass: 2 },
-    { label: 'HIP 32151',  spType: 'kA6hA7mF1(III)',       classIdx: 3, subclass: 1, lumClass: 4 },
-    { label: 'HIP 27192',  spType: 'A3V',                  classIdx: 2, subclass: 3, lumClass: 2 },
-    { label: 'HIP 5588',   spType: 'kA5hA8mF1(III)SiEuBa', classIdx: 3, subclass: 1, lumClass: 4 },
-    { label: 'HIP 40342',  spType: 'F1IV',                 classIdx: 3, subclass: 1, lumClass: 3 },
-    { label: 'HIP 22303',  spType: 'kA7hA7mF3',            classIdx: 3, subclass: 3, lumClass: 255 },
-    { label: 'HIP 45150',  spType: 'F1Vn',                 classIdx: 3, subclass: 1, lumClass: 2 },
-    { label: 'HIP 42297',  spType: 'kA8hF2mF5(III)Eu',     classIdx: 3, subclass: 5, lumClass: 4 },
-    { label: 'HIP 10267',  spType: 'G0',                   classIdx: 4, subclass: 0, lumClass: 255 },
-    { label: 'HD 190780',  spType: 'K0',                   classIdx: 5, subclass: 0, lumClass: 255 },
-    { label: 'HIP 45266',  spType: 'C5,2e',                classIdx: 7, subclass: 5, lumClass: 255 },
-    { label: 'HIP 30449',  spType: 'C6,2e',                classIdx: 7, subclass: 6, lumClass: 255 },
-    { label: 'HIP 51280',  spType: 'K7V',                  classIdx: 5, subclass: 7, lumClass: 2 },
-  ];
-
-  it.each(rows)(
-    '$label / "$spType" → classIdx=$classIdx lumClass=$lumClass (not WD)',
-    ({ spType, classIdx, subclass, lumClass }) => {
-      const info = classifyFromSimbad(spType);
-      expect(info).not.toBeNull();
-      expect(info!.isWhiteDwarf).toBe(false);
-      expect(info!.classIdx).toBe(classIdx);
-      expect(info!.subclass).toBe(subclass);
-      expect(info!.lumClass).toBe(lumClass);
-    },
-  );
-
-  it('covers all 14 known non-MK bug rows', () => {
-    expect(rows).toHaveLength(14);
-  });
-});
-
-// SIMBAD retains Yerkes lowercase prefixes ("d" = dwarf, "g" = giant)
-// on nearby M dwarfs and late-type giants. The prefix IS the luminosity
-// declaration, so it overrides any trailing Roman. Without explicit
-// handling these rows fail the first-char gate and leak to the GSP-Spec
-// tier; counting confirms 169 dM* rows in the live TSV at fix time.
-describe('catalog-pure / classifyFromSimbad — Yerkes prefix', () => {
-  interface YerkesRow {
-    spType: string;
-    classIdx: number;
-    subclass: number;
-    lumClass: number;
-  }
-  const rows: YerkesRow[] = [
-    { spType: 'dM4.0',  classIdx: 6, subclass: 4, lumClass: 2 },
-    { spType: 'dM3.5',  classIdx: 6, subclass: 3, lumClass: 2 },
-    { spType: 'dM5',    classIdx: 6, subclass: 5, lumClass: 2 },
-    { spType: 'dM4.5e', classIdx: 6, subclass: 4, lumClass: 2 },
-    { spType: 'dK0',    classIdx: 5, subclass: 0, lumClass: 2 },
-    { spType: 'gK0',    classIdx: 5, subclass: 0, lumClass: 4 },
-    { spType: 'dM3+dM3', classIdx: 6, subclass: 3, lumClass: 2 },
-  ];
-
-  it.each(rows)(
-    '"$spType" → classIdx=$classIdx subclass=$subclass lumClass=$lumClass (not WD)',
-    ({ spType, classIdx, subclass, lumClass }) => {
-      const info = classifyFromSimbad(spType);
-      expect(info).not.toBeNull();
-      expect(info!.isWhiteDwarf).toBe(false);
-      expect(info!.classIdx).toBe(classIdx);
-      expect(info!.subclass).toBe(subclass);
-      expect(info!.lumClass).toBe(lumClass);
-    },
-  );
-
-  it('does not strip "d" when followed by a non-MK letter (lets the WD branch see it)', () => {
-    expect(classifyFromSimbad('dX0')).toBeNull();
-  });
-});
-
-describe('catalog-pure / resolveSpectDisplay', () => {
-  it('passes through the resolver-supplied string when present', () => {
-    expect(resolveSpectDisplay('A6V', 'DELTA DEL')).toBe('A6V');
-  });
-
-  it('falls back to the cleaned raw cell when the resolver returned null', () => {
-    expect(resolveSpectDisplay(null, '  G2  V**  ')).toBe('G2 V');
-  });
-
-  it('returns null when both resolver and raw cell are blank', () => {
-    expect(resolveSpectDisplay(null, '')).toBeNull();
-    expect(resolveSpectDisplay(null, '   ')).toBeNull();
-  });
-
-  it('strips trailing AT-HYG continuation markers (*+) but not leading ones', () => {
-    expect(resolveSpectDisplay(null, 'M3V***')).toBe('M3V');
-    expect(resolveSpectDisplay(null, '+K0III')).toBe('+K0III');
-  });
-});
-
-describe('catalog-pure / classifyFromGspspec', () => {
-  it('returns null for null, empty, and "unknown" enum values', () => {
-    expect(classifyFromGspspec(null)).toBeNull();
-    expect(classifyFromGspspec(undefined)).toBeNull();
-    expect(classifyFromGspspec('')).toBeNull();
-    expect(classifyFromGspspec('unknown')).toBeNull();
-    expect(classifyFromGspspec('UNKNOWN')).toBeNull();
-  });
-
-  it('maps each MK letter to its classIdx with neutral subclass and lumClass', () => {
-    for (const [letter, idx] of [['O', 0], ['B', 1], ['A', 2], ['F', 3], ['G', 4], ['K', 5], ['M', 6]] as const) {
-      const info = classifyFromGspspec(letter);
-      expect(info).not.toBeNull();
-      expect(info!.classIdx).toBe(idx);
-      expect(info!.subclass).toBe(5);
-      expect(info!.lumClass).toBe(255);
-      expect(info!.isWhiteDwarf).toBe(false);
-    }
-  });
-
-  it('maps CSTAR to the carbon bucket (classIdx=7)', () => {
-    const info = classifyFromGspspec('CSTAR');
-    expect(info!.classIdx).toBe(7);
-    expect(info!.lumClass).toBe(255);
-  });
-
-  it('returns null for any unrecognised letter (no defaulting)', () => {
-    expect(classifyFromGspspec('X')).toBeNull();
-    expect(classifyFromGspspec('Z')).toBeNull();
-  });
-});
-
-describe('catalog-pure / resolveSpectralInfo — tier priority', () => {
-  const GAIA_ID = '1234567890';
-  const HIP = 14576;
-  const APSIS_NONE: ApsisRow = {
-    teffGspphot: null, loggGspphot: null, mhGspphot: null, azeroGspphot: null,
-    teffGspspec: null, loggGspspec: null, mhGspspec: null, spectraltypeEsphs: null,
-  };
-  const idx = (
-    bySourceId: [string, SimbadSpectralRow][] = [],
-    byHip: [number, SimbadSpectralRow][] = [],
-    byTyc: [string, SimbadSpectralRow][] = [],
-    byGj: [string, SimbadSpectralRow][] = [],
-  ): SimbadSpectralIndex => ({
-    bySourceId: new Map(bySourceId), byHip: new Map(byHip),
-    byTyc: new Map(byTyc), byGj: new Map(byGj),
-  });
-  const keys = (
-    sourceId: string | null, hip: number | null,
-    tyc: string | null = null, gl: string | null = null,
-  ): SimbadRecordKeys => ({ sourceId, hip, tyc, gl });
-
-  it('tier 0: curated HIP override outranks every machine tier (Castor)', () => {
-    // HIP 36850 (Castor A) — SIMBAD '* alf Gem A' carries neither hip
-    // nor source_id, so without the curated tier the record is
-    // spectral-unknown and the radius chain inflates ~3×.
-    const simbad = idx([], [[36850, { spType: 'K0III', spQual: 'C', otype: '**' }]]);
-    const out = resolveSpectralInfo(keys(null, 36850), simbad, new Map());
-    expect(out.source).toBe('curated');
-    expect(out.info.classIdx).toBe(2); // A
-    expect(out.info.lumClass).toBe(3); // IV
-    expect(out.spectDisplay).toBe('A1.5IV');
-  });
-
-  it('tier 1: SIMBAD-by-source_id wins when present and parseable', () => {
-    const simbad = idx([[GAIA_ID, { spType: 'A6V', spQual: 'C', otype: 'PM*' }]]);
-    const apsis = new Map<string, ApsisRow>([
-      [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'G' }],
-    ]);
-    const out = resolveSpectralInfo(keys(GAIA_ID, HIP), simbad, apsis);
-    expect(out.source).toBe('simbad');
-    expect(out.info.classIdx).toBe(2); // A
-    expect(out.info.subclass).toBe(6);
-    expect(out.info.lumClass).toBe(2); // V
-    expect(out.spectDisplay).toBe('A6V');
-  });
-
-  it('tier 2: SIMBAD-by-HIP rescues a Gaia-saturated star (no source_id)', () => {
-    const simbad = idx([], [[HIP, { spType: 'B8V', spQual: 'C', otype: 'SB*' }]]);
-    const out = resolveSpectralInfo(keys(null, HIP), simbad, new Map());
-    expect(out.source).toBe('simbad');
-    expect(out.info.classIdx).toBe(1); // B
-    expect(out.info.subclass).toBe(8);
-    expect(out.info.lumClass).toBe(2); // V
-    expect(out.spectDisplay).toBe('B8V');
-  });
-
-  it('tier 2: SIMBAD-by-HIP beats GSP-Spec (full MK over letter-only enum)', () => {
-    const simbad = idx([], [[HIP, { spType: 'A2IV', spQual: 'C', otype: '**' }]]);
-    const apsis = new Map<string, ApsisRow>([
-      [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'K' }],
-    ]);
-    const out = resolveSpectralInfo(keys(GAIA_ID, HIP), simbad, apsis);
-    expect(out.source).toBe('simbad');
-    expect(out.info.classIdx).toBe(2); // A, not K
-    expect(out.info.lumClass).toBe(3); // IV
-  });
-
-  it('tier 3: SIMBAD-by-TYC reaches an object SIMBAD holds no Gaia id for', () => {
-    const simbad = idx([], [], [['1234-5678-1', { spType: 'K2III', spQual: 'C', otype: '*' }]]);
-    const out = resolveSpectralInfo(keys(GAIA_ID, HIP, '1234-5678-1', null), simbad, new Map());
-    expect(out.source).toBe('simbad');
-    expect(out.simbadKey).toBe('tyc');
-    expect(out.info.classIdx).toBe(5); // K
-    expect(out.spectDisplay).toBe('K2III');
-  });
-
-  it('tier 3: SIMBAD-by-TYC beats GSP-Spec, and loses to the source_id tier', () => {
-    const apsis = new Map<string, ApsisRow>([
-      [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'F' }],
-    ]);
-    const tycOnly = idx([], [], [['1-2-1', { spType: 'M4V', spQual: 'C', otype: '*' }]]);
-    expect(resolveSpectralInfo(keys(GAIA_ID, null, '1-2-1', null), tycOnly, apsis).info.classIdx)
-      .toBe(6); // M, not F
-    const both = idx(
-      [[GAIA_ID, { spType: 'A0V', spQual: 'C', otype: '*' }]], [],
-      [['1-2-1', { spType: 'M4V', spQual: 'C', otype: '*' }]],
-    );
-    const out = resolveSpectralInfo(keys(GAIA_ID, null, '1-2-1', null), both, apsis);
-    expect(out.simbadKey).toBe('source_id');
-    expect(out.info.classIdx).toBe(2); // A
-  });
-
-  it('tier 4: SIMBAD-by-GJ, matched on the folded key not the raw cell', () => {
-    const simbad = idx([], [], [], [['165A', { spType: 'M2V', spQual: 'C', otype: '*' }]]);
-    for (const spelling of ['Gl 165A', 'GJ 165A', '165 A']) {
-      const out = resolveSpectralInfo(keys(null, null, null, spelling), simbad, new Map());
-      expect(out.simbadKey, spelling).toBe('gj');
-      expect(out.info.classIdx).toBe(6); // M
-    }
-  });
-
-  it('every SIMBAD tier reports the namespace that found it, in ladder order', () => {
-    const simbad = idx(
-      [[GAIA_ID, { spType: 'A0V', spQual: 'C', otype: '*' }]],
-      [[HIP, { spType: 'B8V', spQual: 'C', otype: '*' }]],
-      [['1-2-1', { spType: 'M4V', spQual: 'C', otype: '*' }]],
-      [['165A', { spType: 'K0V', spQual: 'C', otype: '*' }]],
-    );
-    const key = (
-      sid: string | null, hip: number | null, tyc: string | null, gl: string | null,
-    ): string | undefined =>
-      resolveSpectralInfo(keys(sid, hip, tyc, gl), simbad, new Map()).simbadKey;
-    expect(key(GAIA_ID, HIP, '1-2-1', 'Gl 165A')).toBe('source_id');
-    expect(key(null, HIP, '1-2-1', 'Gl 165A')).toBe('hip');
-    expect(key(null, null, '1-2-1', 'Gl 165A')).toBe('tyc');
-    expect(key(null, null, null, 'Gl 165A')).toBe('gj');
-    expect(key(null, null, null, null)).toBeUndefined();
-  });
-
-  it('tier 5: GSP-Spec when SIMBAD is absent or unparseable', () => {
-    const apsis = new Map<string, ApsisRow>([
-      [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'K' }],
-    ]);
-    const out = resolveSpectralInfo(keys(GAIA_ID, HIP), idx(), apsis);
-    expect(out.source).toBe('gspspec');
-    expect(out.info.classIdx).toBe(5); // K
-    expect(out.spectDisplay).toBe('K');
-  });
-
-  it('tier 5 fires when SIMBAD sp_type is present but unparseable', () => {
-    const simbad = idx([[GAIA_ID, { spType: 'PEC', spQual: 'E', otype: 'V*' }]]);
-    const apsis = new Map<string, ApsisRow>([
-      [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'F' }],
-    ]);
-    const out = resolveSpectralInfo(keys(GAIA_ID, HIP), simbad, apsis);
-    expect(out.source).toBe('gspspec');
-    expect(out.info.classIdx).toBe(3); // F
-  });
-
-  it('tier 6: SPECTRAL_UNKNOWN fallback when every upstream tier misses', () => {
-    const out = resolveSpectralInfo(keys(GAIA_ID, HIP), idx(), new Map());
-    expect(out.source).toBe('fallback');
-    expect(out.info).toBe(SPECTRAL_UNKNOWN);
-    expect(out.spectDisplay).toBeNull();
-  });
-
-  it('tier 6: no source_id and no HIP falls straight through to fallback', () => {
-    const simbad = idx([['9999', { spType: 'A0V', spQual: 'C', otype: 'PM*' }]]);
-    const out = resolveSpectralInfo(keys(null, null), simbad, new Map());
-    expect(out.source).toBe('fallback');
-    expect(out.info).toBe(SPECTRAL_UNKNOWN);
-  });
-});
-
 describe('catalog-pure / normaliseGjKey', () => {
   // The spine spells the catalogue word both ways and SIMBAD stores its own
   // spacing; one folded key is what lets the two meet.
@@ -638,296 +131,91 @@ describe('catalog-pure / normaliseGjKey', () => {
   });
 });
 
-describe('catalog-pure / parseSimbadSptypeTsv', () => {
-  const HDR =
-    'simbad_oid\tsimbad_main_id\tsp_type\tsp_qual\tsp_bibcode\totype\thip\tsource_id\n';
+describe('catalog-pure / SIMBAD namespace ladder', () => {
+  const ALL_KEYS: SimbadRecordKeys = {
+    sourceId: '99', hip: 22, tyc: '1-2-1', gl: 'Gl 165A',
+  };
 
-  it('parses canonical rows into bySourceId and byHip', () => {
-    const tsv = HDR +
-      '57848\t*  56 Cyg\tA6V\tC\t1995ApJS...99..135A\tPM*\t102843\t2067050940754838656\n' +
-      '370513\tHD  47606\tkA6hA7mF1(III)\tD\t2020AJ....160...52M\t*\t32151\t1001011023904917760\n';
-    const { bySourceId, byHip } = parseSimbadSptypeTsv(tsv);
-    expect(bySourceId.size).toBe(2);
-    expect(byHip.size).toBe(2);
-    const a = bySourceId.get('2067050940754838656');
-    expect(a?.spType).toBe('A6V');
-    expect(a?.spQual).toBe('C');
-    expect(a?.otype).toBe('PM*');
-    expect(byHip.get(102843)).toBe(a);
-    const b = bySourceId.get('1001011023904917760');
-    expect(b?.spType).toBe('kA6hA7mF1(III)');
+  const indexOneRowPerNamespace = (): SimbadNamespaceIndex<string> => {
+    const index = emptySimbadNamespaceIndex<string>();
+    index.bySourceId.set('99', 'source_id');
+    index.byHip.set(22, 'hip');
+    index.byGj.set('165A', 'gj');
+    index.byTyc.set('1-2-1', 'tyc');
+    return index;
+  };
+
+  // The array is the only statement of walk order; withdrawing the winning
+  // namespace's key one at a time must surface the rest in exactly its order.
+  it('walks namespaces in SIMBAD_NAMESPACE_VALUES order', () => {
+    const index = indexOneRowPerNamespace();
+    const keys: SimbadRecordKeys = { ...ALL_KEYS };
+    const withdraw: Record<SimbadNamespace, () => void> = {
+      source_id: () => { keys.sourceId = null; },
+      hip: () => { keys.hip = null; },
+      gj: () => { keys.gl = null; },
+      tyc: () => { keys.tyc = null; },
+    };
+    const seen: SimbadNamespace[] = [];
+    for (let i = 0; i < SIMBAD_NAMESPACE_VALUES.length; i++) {
+      const hit = walkSimbadNamespaces(index, keys, (row) => row);
+      seen.push(hit!.namespace);
+      withdraw[hit!.namespace]();
+    }
+    expect(seen).toEqual([...SIMBAD_NAMESPACE_VALUES]);
+    expect(walkSimbadNamespaces(index, keys, (row) => row)).toBeNull();
   });
 
-  it('indexes a blank-source_id row by HIP (Gaia-saturated bright stars)', () => {
-    const tsv = HDR +
-      '51431\t* bet Per\tB8V\tC\t\tSB*\t14576\t\n' +
-      '999\tBlank\t\t\t\t\t\t1234\n';
-    const { bySourceId, byHip } = parseSimbadSptypeTsv(tsv);
-    expect(bySourceId.size).toBe(1);
-    expect(bySourceId.has('1234')).toBe(true);
-    expect(byHip.size).toBe(1);
-    expect(byHip.get(14576)?.spType).toBe('B8V');
-  });
-
-  it('drops rows with no source_id, HIP or TYC', () => {
-    const tsv = HDR + '42\tNo keys\tG2V\t\t\t\t\t\n';
-    const { bySourceId, byHip, byTyc } = parseSimbadSptypeTsv(tsv);
-    expect(bySourceId.size).toBe(0);
-    expect(byHip.size).toBe(0);
-    expect(byTyc.size).toBe(0);
-  });
-
-  it('indexes by TYC, keeping a row SIMBAD gives no Gaia id or HIP', () => {
-    const tsv =
-      'simbad_oid\tsimbad_main_id\tsp_type\tsp_qual\tsp_bibcode\totype\thip\tsource_id\ttyc\tgj\n' +
-      '7\tTYC only\tK2III\tC\t\t*\t\t\t1234-5678-1\t\n';
-    const { bySourceId, byHip, byTyc } = parseSimbadSptypeTsv(tsv);
-    expect(bySourceId.size).toBe(0);
-    expect(byHip.size).toBe(0);
-    expect(byTyc.get('1234-5678-1')?.spType).toBe('K2III');
-  });
-
-  it('a file predating the tyc column parses with an empty byTyc', () => {
-    const tsv = HDR +
-      '57848\t*  56 Cyg\tA6V\tC\t1995ApJS...99..135A\tPM*\t102843\t2067050940754838656\n';
-    const { bySourceId, byTyc } = parseSimbadSptypeTsv(tsv);
-    expect(bySourceId.size).toBe(1);
-    expect(byTyc.size).toBe(0);
-  });
-
-  it('throws rather than pick a winner when a key repeats', () => {
-    // The committed pull has no repeated key in any of the four namespaces, so
-    // a collision is an upstream schema change. Silently keeping one row is how
-    // a record ends up reading its spectral type off the wrong SIMBAD object.
-    const dupHip = HDR +
-      '1\tFirst\tB8V\tC\t\t*\t14576\t\n' +
-      '2\tSecond\tK0III\tD\t\t*\t14576\t\n';
-    expect(() => parseSimbadSptypeTsv(dupHip)).toThrow(/two rows keyed hip=14576/);
-    const dupSource = HDR +
-      '1\tFirst\tB8V\tC\t\t*\t\t9876\n' +
-      '2\tSecond\tK0III\tD\t\t*\t\t9876\n';
-    expect(() => parseSimbadSptypeTsv(dupSource))
-      .toThrow(/two rows keyed source_id=9876/);
-    const WIDE =
-      'simbad_oid\tsimbad_main_id\tsp_type\tsp_qual\tsp_bibcode\totype\thip\tsource_id\ttyc\tgj\n';
-    expect(() => parseSimbadSptypeTsv(WIDE +
-      '1\tA\tB8V\tC\t\t*\t\t\t1-2-1\t\n' +
-      '2\tB\tK0III\tD\t\t*\t\t\t1-2-1\t\n')).toThrow(/two rows keyed tyc=1-2-1/);
-    // The GJ collision is only visible after the fold: `Gl 165A` and `165 A`
-    // are one key, which a raw-cell comparison would miss.
-    expect(() => parseSimbadSptypeTsv(WIDE +
-      '1\tA\tB8V\tC\t\t*\t\t\t\tGl 165A\n' +
-      '2\tB\tK0III\tD\t\t*\t\t\t\t165 A\n')).toThrow(/two rows keyed gj=165A/);
-  });
-
-  it('decodes blank sp_type / sp_qual / otype cells as null', () => {
-    const tsv = HDR + '111\t*\t\t\t\t\t\t9876\n';
-    const { bySourceId } = parseSimbadSptypeTsv(tsv);
-    const r = bySourceId.get('9876');
-    expect(r?.spType).toBeNull();
-    expect(r?.spQual).toBeNull();
-    expect(r?.otype).toBeNull();
-  });
-
-  it('throws on missing required columns', () => {
-    expect(() => parseSimbadSptypeTsv('simbad_oid\tsource_id\n1\t9876\n'))
-      .toThrow(/sp_type/);
-  });
-});
-
-describe('catalog-pure / tempKelvin', () => {
-  function info(classIdx: number, subclass: number, lumClass = 2): SpectralInfo {
-    return { classIdx, subclass, lumClass, isWhiteDwarf: false, wdSubclass: 0 };
-  }
-
-  it('returns Sun-like temperature for G2 (~5778 K target)', () => {
-    // Sun is G2V — interpolated table value should be in the right neighbourhood.
-    const T = tempKelvin(info(4, 2));
-    expect(T).toBeGreaterThan(5500);
-    expect(T).toBeLessThan(6000);
-  });
-
-  it('is hotter for O than for B than for A...', () => {
-    // Spectral class O is the hottest, M the coolest. Monotone non-increasing
-    // along the canonical OBAFGKM order (subclass=5 across the board).
-    const Ts = [0, 1, 2, 3, 4, 5, 6].map(c => tempKelvin(info(c, 5)));
-    for (let i = 1; i < Ts.length; i++) {
-      expect(Ts[i]).toBeLessThan(Ts[i - 1]);
+  // indexSimbadRow and walkSimbadNamespaces derive each key from one binding
+  // table, so a row written under a namespace is reachable by it.
+  it('reaches an indexed row under every namespace that keyed it', () => {
+    const index = emptySimbadNamespaceIndex<string>();
+    indexSimbadRow(index, ALL_KEYS, 'row', () => {
+      throw new Error('unexpected duplicate');
+    });
+    for (const namespace of SIMBAD_NAMESPACE_VALUES) {
+      const only: SimbadRecordKeys = {
+        sourceId: namespace === 'source_id' ? ALL_KEYS.sourceId : null,
+        hip: namespace === 'hip' ? ALL_KEYS.hip : null,
+        tyc: namespace === 'tyc' ? ALL_KEYS.tyc : null,
+        gl: namespace === 'gj' ? ALL_KEYS.gl : null,
+      };
+      expect(walkSimbadNamespaces(index, only, (row) => row)).toEqual({
+        value: 'row', namespace,
+      });
     }
   });
 
-  it('white dwarf temperature scales as 50400 / wdSubclass', () => {
-    const wd: SpectralInfo = { classIdx: 8, subclass: 5, lumClass: 0, isWhiteDwarf: true, wdSubclass: 2 };
-    expect(tempKelvin(wd)).toBeCloseTo(25200, 1);
-
-    const wd5: SpectralInfo = { ...wd, wdSubclass: 5 };
-    expect(tempKelvin(wd5)).toBeCloseTo(10080, 1);
+  it('reports a duplicate per namespace instead of overwriting', () => {
+    const index = emptySimbadNamespaceIndex<string>();
+    indexSimbadRow(index, ALL_KEYS, 'first', () => {
+      throw new Error('unexpected duplicate');
+    });
+    const collisions: SimbadNamespace[] = [];
+    indexSimbadRow(index, ALL_KEYS, 'second', (namespace) => collisions.push(namespace));
+    expect(collisions).toEqual([...SIMBAD_NAMESPACE_VALUES]);
+    expect(walkSimbadNamespaces(index, ALL_KEYS, (row) => row)?.value).toBe('first');
   });
 
-  it('uses the unknown-class neutral table when classIdx is out of range', () => {
-    // classIdx=999 → falls back to T_TABLE[8] (5000 K flat).
-    expect(tempKelvin(info(999, 5))).toBe(5000);
+  // A bogus HIP cell must be no key at all rather than a key nothing looks
+  // up, which is what would make an indexed row unreachable but present.
+  it('takes only a positive integer HIP as a key', () => {
+    expect(simbadHipKey(22)).toBe(22);
+    expect(simbadHipKey(0)).toBeNull();
+    expect(simbadHipKey(-1)).toBeNull();
+    expect(simbadHipKey(22.5)).toBeNull();
+    expect(simbadHipKey(Number.NaN)).toBeNull();
+    expect(simbadHipKey(null)).toBeNull();
   });
 
-  it('routes Wolf-Rayets through the WR table, not the carbon-star row', () => {
-    expect(tempKelvin(classifyFromSimbad('WN5')!)).toBe(75000);
-    expect(tempKelvin(classifyFromSimbad('WN2-w')!)).toBe(114000);
-    // Carbon stars keep the cool row.
-    expect(tempKelvin(classifyFromSimbad('C5,2e')!)).toBe(3000);
-  });
-});
-
-describe('catalog-pure / physicalRadius', () => {
-  function info(classIdx: number, subclass: number, lumClass = 2): SpectralInfo {
-    return { classIdx, subclass, lumClass, isWhiteDwarf: false, wdSubclass: 0 };
-  }
-
-  it('returns ~1 R☉ for the Sun (G2V, absmag=4.83)', () => {
-    // Sun is the calibration point of the whole magnitude system. Within
-    // ~10% of 1.0 R☉ is the contract — the table-based BC introduces some
-    // play but the answer must round-trip near unity.
-    const R = physicalRadius(4.83, info(4, 2));
-    expect(R).toBeGreaterThan(0.9);
-    expect(R).toBeLessThan(1.2);
-  });
-
-  it('returns a tiny radius for white dwarfs (~0.013 R☉, hardcoded)', () => {
-    const wd: SpectralInfo = { classIdx: 8, subclass: 5, lumClass: 0, isWhiteDwarf: true, wdSubclass: 2 };
-    // WDs ignore absmag and return a fixed small radius — the catalog's
-    // absmag for WDs doesn't translate reliably into physical radius via
-    // Stefan-Boltzmann.
-    expect(physicalRadius(11, wd)).toBeCloseTo(0.013, 5);
-    expect(physicalRadius(0, wd)).toBeCloseTo(0.013, 5);
-  });
-
-  it('produces a much larger radius for a supergiant than for the Sun', () => {
-    // Betelgeuse-ish: M2 supergiant, absmag ≈ -5.85. Stefan-Boltzmann gives
-    // the very large radius the chart-mode disc relies on.
-    const big = physicalRadius(-5.85, info(6, 2, 7));
-    const sun = physicalRadius(4.83, info(4, 2));
-    expect(big).toBeGreaterThan(sun * 100);
-  });
-
-  it('clamps absurdly bright catalog rows to the upper bound', () => {
-    // absmag=-30 is unphysical (pre-cap luminosity ≈ 10^14 L☉). The clamp
-    // should saturate at 2500 R☉ rather than letting the ratio explode.
-    const R = physicalRadius(-30, info(0, 0));
-    expect(R).toBeLessThanOrEqual(2500);
-  });
-
-  it('clamps absurdly dim catalog rows to the lower bound', () => {
-    // absmag=+30 makes L tiny; without the floor, R would underflow toward 0.
-    // Lower clamp keeps red-dwarf-ish minimum so renderable.
-    const R = physicalRadius(30, info(6, 9));
-    expect(R).toBeGreaterThanOrEqual(0.08);
-  });
-
-  it('sizes γ² Vel at combined-light order, not the 2077 R☉ carbon artefact', () => {
-    // WC8+O7.5III-V at the corpus absmag −6.001 → the O giant's ~19 R☉
-    // (published: WC8 ~6 R☉ + O7.5 ~17 R☉).
-    const R = physicalRadius(-6.001, classifyFromSimbad('WC8+O7.5III-V')!);
-    expect(R).toBeCloseTo(19.15, 2);
-  });
-
-  it('sizes a single WN5 as a compact hot star', () => {
-    const R = physicalRadius(-4.0, classifyFromSimbad('WN5')!);
-    expect(R).toBeCloseTo(2.1, 1);
-  });
-
-  it('sizes off a measured Apsis Teff when supplied (GSP-Spec-tier shape)', () => {
-    // A real K0 star classified letter-only lands on subclass 5
-    // (T_TABLE 4410 K); its measured Teff 5150 K must win. R ∝ T⁻² so
-    // the ratio is exact for a fixed absmag + BC.
-    const gspspecK = info(5, 5, 255);
-    const tableR = physicalRadius(5.9, gspspecK);
-    const apsisR = physicalRadius(5.9, gspspecK, 5150);
-    expect(apsisR).toBeCloseTo(tableR * (4410 / 5150) ** 2, 6);
-  });
-
-  it('ignores the Teff override for white dwarfs and Wolf-Rayets', () => {
-    const wd: SpectralInfo = { classIdx: 8, subclass: 5, lumClass: 0, isWhiteDwarf: true, wdSubclass: 2 };
-    expect(physicalRadius(11, wd, 5000)).toBeCloseTo(0.013, 5);
-    const wr = classifyFromSimbad('WN5')!;
-    expect(physicalRadius(-4.0, wr, 5000)).toBeCloseTo(physicalRadius(-4.0, wr), 9);
-  });
-});
-
-describe('catalog-pure / resolveApsisTeff', () => {
-  const APSIS_NONE: ApsisRow = {
-    teffGspphot: null, loggGspphot: null, mhGspphot: null, azeroGspphot: null,
-    teffGspspec: null, loggGspspec: null, mhGspspec: null, spectraltypeEsphs: null,
-  };
-
-  it('prefers gspphot, falls back to gspspec', () => {
-    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspphot: 5150, teffGspspec: 4900 })).toBe(5150);
-    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspspec: 4900 })).toBe(4900);
-  });
-
-  it('rejects out-of-window values per solution, absent rows, and null', () => {
-    // gspphot outside the window falls through to a valid gspspec.
-    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspphot: 1500, teffGspspec: 3400 })).toBe(3400);
-    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspphot: 70000 })).toBeNull();
-    expect(resolveApsisTeff(APSIS_NONE)).toBeNull();
-    expect(resolveApsisTeff(null)).toBeNull();
-    expect(resolveApsisTeff(undefined)).toBeNull();
-  });
-});
-
-describe('catalog-pure / boloCorr', () => {
-  function info(classIdx: number, subclass: number, lumClass = 2): SpectralInfo {
-    return { classIdx, subclass, lumClass, isWhiteDwarf: false, wdSubclass: 0 };
-  }
-
-  it('is near zero for solar-type stars', () => {
-    // BC for G2V should be a few hundredths — the Sun is the reference.
-    expect(Math.abs(boloCorr(info(4, 2)))).toBeLessThan(0.5);
-  });
-
-  it('is strongly negative for hot O-class stars (UV-rich)', () => {
-    expect(boloCorr(info(0, 0))).toBeLessThan(-3);
-  });
-
-  it('is strongly negative for cool M-class stars (IR-rich)', () => {
-    expect(boloCorr(info(6, 9))).toBeLessThan(-3);
-  });
-});
-
-describe('catalog-pure / absmagFromSpectral', () => {
-  const mv = (spect: string) => absmagFromSpectral(classifyFromSimbad(spect)!);
-
-  it('pins main-sequence anchors (Pecaut & Mamajek 2013)', () => {
-    expect(mv('G2V')).toBeCloseTo(4.68, 2);
-    expect(mv('K0V')).toBeCloseTo(5.9, 2);
-    expect(mv('M1V')).toBeCloseTo(9.5, 2);
-    expect(mv('B8V')).toBeCloseTo(0.0, 2);
-  });
-
-  it('subgiants sit at the V/III midpoint — Algol Aa2 (K0IV) lands near +2.9 published', () => {
-    expect(mv('K0IV')).toBeCloseTo(3.3, 2);
-  });
-
-  it('giants read the III table', () => {
-    expect(mv('K0III')).toBeCloseTo(0.7, 2);
-    expect(mv('G5III')).toBeCloseTo(0.9, 2);
-  });
-
-  it('supergiants use per-luminosity-class constants', () => {
-    expect(mv('K2II')).toBeCloseTo(-2.3, 2);
-    expect(mv('B5Ib')).toBeCloseTo(-4.5, 2);
-    expect(mv('M2Iab')).toBeCloseTo(-6.0, 2);
-    expect(mv('A0Ia')).toBeCloseTo(-7.5, 2);
-  });
-
-  it('unknown luminosity class defaults to main sequence', () => {
-    expect(absmagFromSpectral(
-      { classIdx: 5, subclass: 0, lumClass: 255, isWhiteDwarf: false, wdSubclass: 0 },
-    )).toBeCloseTo(5.9, 2);
-  });
-
-  it('returns null where a single calibration would be fiction', () => {
-    expect(mv('DA1.9')).toBeNull();                      // white dwarf
-    expect(mv('C5,2e')).toBeNull();                      // carbon
-    expect(absmagFromSpectral(SPECTRAL_UNKNOWN)).toBeNull();
+  it('indexes nowhere for a row carrying no namespace key', () => {
+    const index = emptySimbadNamespaceIndex<string>();
+    const none: SimbadRecordKeys = { sourceId: '', hip: 0, tyc: '', gl: '  ' };
+    indexSimbadRow(index, none, 'row', () => {
+      throw new Error('unexpected duplicate');
+    });
+    expect(index.bySourceId.size + index.byHip.size + index.byGj.size + index.byTyc.size)
+      .toBe(0);
   });
 });
 
@@ -2530,36 +1818,6 @@ describe('catalog-pure / sibling-letter attribution gate', () => {
       gaiaSourceId: null, backfilled: false, magRejected: false,
       siblingRejected: true,
     });
-  });
-});
-
-describe('catalog-pure / spectralFromAbsmag', () => {
-  it('inverts the MS calibration at the table anchors', () => {
-    expect(spectralFromAbsmag(0.65)).toMatchObject({ classIdx: 2, lumClass: 2 });
-    expect(spectralFromAbsmag(0.65).subclass).toBeCloseTo(0, 5);   // A0
-    expect(spectralFromAbsmag(1.9).subclass).toBeCloseTo(5, 5);    // A5
-    const g5 = spectralFromAbsmag(5.1);
-    expect(g5.classIdx).toBe(4);
-    expect(g5.subclass).toBeCloseTo(5, 5);                          // G5
-  });
-
-  it('lands Algol Ab (own M_V ~2.2) in the A range, not the inherited B8', () => {
-    const info = spectralFromAbsmag(2.225);
-    expect(info.classIdx).toBe(2);
-    expect(info.subclass).toBeCloseTo(7, 0);
-  });
-
-  it('clamps outside the [O0, M9] span', () => {
-    expect(spectralFromAbsmag(-9)).toMatchObject({ classIdx: 0, subclass: 0 });
-    expect(spectralFromAbsmag(20)).toMatchObject({ classIdx: 6, subclass: 9 });
-  });
-
-  it('round-trips through absmagFromSpectral inside every class span', () => {
-    for (const mv of [-5.0, -2.0, 1.0, 3.1, 4.9, 6.6, 12.0]) {
-      const back = absmagFromSpectral(spectralFromAbsmag(mv));
-      expect(back).not.toBeNull();
-      expect(back!).toBeCloseTo(mv, 6);
-    }
   });
 });
 
