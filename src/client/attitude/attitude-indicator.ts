@@ -32,7 +32,12 @@ import {
 import { focusFrameInputs } from './focus-frame';
 import { coordSphereNorthPole } from '../galactic/coord-spheres/coord-sphere-frames';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
-import { focusedOrbitInto, type FocusedOrbit } from './orbit-frame/orbit-plane';
+import {
+  focusedOrbitFrom,
+  resolveFocusedOrbit,
+  type FocusedOrbit,
+  type FocusedOrbitSource,
+} from './orbit-frame/orbit-plane';
 import type { Target } from '../camera/focus/focus-target';
 import {
   DBL_CLICK_DIST_PX_SQ,
@@ -280,12 +285,24 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     normal: new THREE.Vector3(),
     toCentre: new THREE.Vector3(),
   };
+  let orbitSource: FocusedOrbitSource | null = null;
+
+  /** Which orbit the focus rides, resolved once and held: for a pair that
+   *  settles the plane normal, which is a static function of frozen elements
+   *  and has no business being re-derived per frame. Re-asked while null
+   *  because the binaries artifact and the planet kind both attach after a
+   *  focus can be set. */
+  function orbitSourceNow(): FocusedOrbitSource | null {
+    orbitSource ??= resolveFocusedOrbit(stellata, focused);
+    return orbitSource;
+  }
 
   /** Re-read the orbit and rewrite `orbitFrame` in place. False when nothing
    *  focused rides an orbit the model has elements for, which is also how the
    *  frame stops being offered the moment that stops being true. */
   function refreshOrbitFrame(): boolean {
-    if (!focusedOrbitInto(orbit, stellata, focused)) return false;
+    const source = orbitSourceNow();
+    if (source === null || !focusedOrbitFrom(orbit, source, stellata)) return false;
     orbitFrameInto(orbitFrame, stellata.camera, orbit.normal, orbit.toCentre);
     return true;
   }
@@ -539,7 +556,8 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     + '· right-click to set REF here';
 
   function cycleFrame() {
-    const hasOrbit = focusedOrbitInto(orbit, stellata, focused);
+    const source = orbitSourceNow();
+    const hasOrbit = source !== null && focusedOrbitFrom(orbit, source, stellata);
     const inputs = focusFrameInputs(stellata, focused);
     const next = nextFrameKey(
       frame.key,
@@ -616,6 +634,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // selection only when the new focus takes its meaning away.
   stellata.on('focus', (target) => {
     focused = target;
+    orbitSource = null;
     clicks.cancel();
     captured = null;
     orbitActive = false;

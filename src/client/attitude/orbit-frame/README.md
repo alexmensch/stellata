@@ -10,7 +10,10 @@ instrument that displays it, and `captureOrbitFrame` stays there in
 ```
 orbit-plane.ts (+ test)  The focused object's own orbit — plane normal and
                          the direction to the orbit's centre — dispatched to
-                         whichever subsystem holds it.
+                         whichever subsystem holds it. Split in two:
+                         `resolveFocusedOrbit` once per focus,
+                         `focusedOrbitFrom` per rendered frame
+                         (§ What each frame re-reads, and what it must not).
 ```
 
 Nothing here imports from the parent folder: the dispatch reaches the
@@ -72,6 +75,30 @@ Two consequences anything touching this has to honour:
   the 27 rows. Doing that per frame reinstates exactly the cost the ring
   layer's visibility gate exists to skip
   (`../../solar-system/ephemerides/README.md` § Orbit rings).
+
+## What each frame re-reads, and what it must not
+
+ORB is rebuilt per rendered frame, so the split between what moves and what
+does not is a per-frame cost rather than bookkeeping. `resolveFocusedOrbit`
+runs once per focus and `focusedOrbitFrom` runs per frame:
+
+- **A pair's plane normal is resolved once and held.** An orbit is planar and
+  the elements are frozen, and the vantage the sky-frame normal projects
+  through comes from `catalog.positions`, which the clock does not move — so
+  the answer cannot change while the focus stands. Per frame only the
+  direction to the partner is re-read, straight out of `localPositions`. What
+  this replaced re-derived the normal every frame: `innermostRelationOf`,
+  `keplerRelationParams`, `orbitNormalSky` and `projectSkyToICRS`, allocating
+  a handful of short-lived objects each time, to reproduce a constant.
+- **A planet's normal is NOT held**, and that asymmetry is real rather than an
+  oversight: Triton's node precesses, so a moon's plane is genuinely a
+  function of `t` (`../../solar-system/ephemerides/README.md` § Every other
+  moon). The source carries only the body index and `t` reaches the field
+  every frame.
+- **The source is re-asked while it is null.** Both the binaries artifact and
+  the planet kind attach after a focus can be set, so a resolve that failed
+  has to be retried rather than cached as "no orbit" for the life of the
+  focus.
 
 ## The lock
 

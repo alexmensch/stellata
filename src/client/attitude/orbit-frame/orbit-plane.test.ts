@@ -41,7 +41,12 @@ import {
   type Attitude,
 } from '../attitude-pure';
 import { cadenceVisibleTurnRad } from '../../render-gate/cadence/clock-cadence-pure';
-import { focusedOrbitInto, type FocusedOrbit } from './orbit-plane';
+import {
+  focusedOrbitFrom,
+  focusedOrbitInto,
+  resolveFocusedOrbit,
+  type FocusedOrbit,
+} from './orbit-plane';
 import type { Stellata } from '../../stellata';
 
 const DEG = Math.PI / 180;
@@ -743,6 +748,69 @@ describe('focusedOrbitInto', () => {
   it('declines a planet before the planet kind attaches', () => {
     expect(focusedOrbitInto(out(), starHarness(pair()), { kind: 'planet', idx: 0 }))
       .toBe(false);
+  });
+
+  // The split the per-frame path depends on: a pair's plane is a static
+  // function of frozen elements, so it is resolved once per focus and the
+  // only thing a rendered frame re-reads is the direction to the partner.
+  describe('resolveFocusedOrbit / focusedOrbitFrom', () => {
+    it('carries a pair its plane normal, matching the one-shot exactly', () => {
+      const s = starHarness(pair());
+      const target = { kind: 'star', idx: PRIMARY } as const;
+      const source = resolveFocusedOrbit(s, target)!;
+      expect(source.kind).toBe('pair');
+      const oneShot = out();
+      focusedOrbitInto(oneShot, s, target);
+      expect(source.kind === 'pair' && source.normal.angleTo(oneShot.normal))
+        .toBeCloseTo(0, 12);
+    });
+
+    // The whole point of hoisting it: the members move every frame under the
+    // clock and the plane does not, so re-deriving it per frame was work for
+    // an answer that could not change.
+    it('holds that normal while the members move', () => {
+      const s = starHarness(pair());
+      const source = resolveFocusedOrbit(s, { kind: 'star', idx: PRIMARY })!;
+      expect(source.kind).toBe('pair');
+      const before = out();
+      expect(focusedOrbitFrom(before, source, s)).toBe(true);
+
+      // Swing the partner a quarter of the way round in the local frame.
+      const local = s.localPositions;
+      local[SECONDARY * 3 + 0] = 1;
+      local[SECONDARY * 3 + 1] = 2;
+      const after = out();
+      expect(focusedOrbitFrom(after, source, s)).toBe(true);
+
+      expect(after.normal.angleTo(before.normal)).toBeCloseTo(0, 15);
+      expect(after.toCentre.angleTo(before.toCentre)).toBeGreaterThan(0.5);
+    });
+
+    // A planet keeps no normal on the source: a precessing node genuinely
+    // moves its plane, so `t` still has to reach it every frame.
+    it('carries a planet nothing but its index', () => {
+      const field = {
+        orbitPlaneNormalOf: (_i: number, _t: number, n: THREE.Vector3) => {
+          n.set(0, 0, 1);
+          return true;
+        },
+        orbitCentreOffsetInto: (_i: number, c: THREE.Vector3) => {
+          c.set(-2, 0, 0);
+          return true;
+        },
+      };
+      const s = { kinds: { planet: { field } }, getT: () => 0 } as unknown as Stellata;
+      const source = resolveFocusedOrbit(s, { kind: 'planet', idx: 3 });
+      expect(source).toEqual({ kind: 'planet', bodyIdx: 3 });
+    });
+
+    it('declines a source for a focus that rides no orbit', () => {
+      expect(resolveFocusedOrbit(starHarness(pair()), null)).toBeNull();
+      expect(resolveFocusedOrbit(starHarness(null), { kind: 'star', idx: PRIMARY }))
+        .toBeNull();
+      expect(resolveFocusedOrbit(starHarness(pair()), { kind: 'probe', idx: 0 }))
+        .toBeNull();
+    });
   });
 
   // Both legs must land: a normal with no centre direction would capture a
