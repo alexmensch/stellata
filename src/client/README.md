@@ -79,6 +79,12 @@ themselves.
   Local Bubble.
 - `hover/`, `overlays/`, `ui/`, `typeahead/`, `modals/`, `debug/` —
   cross-cutting UI.
+- `attitude/` — the gyro-sphere attitude indicator: an FDAI-style 8-ball
+  reading the camera quaternion against a reference frame that follows the
+  focused object (ecliptic / equatorial / galactic, plus a captured REF
+  datum), with click-, `L`- and right-click affordances. Draws on its own
+  small WebGL context rather than the main one, to stay clear of the HDR
+  target and its exposure.
 - `calibration/` — the display-calibration screen: authored sRGB step
   wedge, black-point and highlight ladders, and gamma match patches.
   Deliberately outside the `hdr/` path — it shows the display's own

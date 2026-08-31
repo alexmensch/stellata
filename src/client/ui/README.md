@@ -32,6 +32,7 @@ registry only describes what to display.
 | `Space` | Time scrubber (while open): play / pause (`togglePlay`) — but during an active warp, Space skips the warp (`warp-button.ts`) and leaves the scrubber untouched |
 | `Backspace` | Time scrubber (while open): reset to live now (`reset`) |
 | `S` | Cycle `coordSphere`: none → galactic → equatorial → none. The equatorial stop is skipped whenever the camera sits beyond its Sol-distance fade (`../galactic/coord-spheres/README.md`), so `S` never leaves an enabled-but-invisible sphere |
+| `L` | Level the camera: zero its roll against the attitude indicator's active reference frame (`../attitude/README.md` § Levelling). Same action as clicking the ball |
 | `H` | Toggle `showHud` |
 | `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`) — works in every mode. Single `F` opens Find in observe mode only (both are deferred by the double-tap window, like `C`). |
 | `U` | Show/hide the top-right controls stack (`controls-hidden.ts`) |
@@ -278,8 +279,12 @@ native html/css... we shouldn't dictate layout"). Do not reintroduce it.
   panel is a flex child below the topbar, it can never overlap it, and
   an expanding scrubber pushes the card stack up through normal flex
   layout — no fixed clearances, no measurement.
-- `.ui-bottom` — fixed full-width along the bottom, holding the
-  scale-bar widget (left; see § Bottom-left widget below).
+- `.ui-bottom` — fixed full-width along the bottom. Its left slot is
+  `.bottom-left-stack`, a column holding the attitude indicator
+  (`../attitude/README.md`) above the scale-bar widget (§ Bottom-left
+  widget below). The stack itself is `pointer-events: none` with `auto`
+  on its children, so the gap between the two never swallows a canvas
+  click.
 - `.meta` is the catalog count (`.meta-count`, e.g. "313,242 stars") +
   the time readout / scrubber. Focused-object identity + camera
   distance live in the card rolodex (`../focus-card/README.md`).
@@ -304,6 +309,11 @@ and a document without it degrades to flush placement instead of `NaN`
 offsets.
 
 ## Bottom-left widget: scene-scale bar
+
+Sits under the attitude indicator in `.bottom-left-stack`; the ball owns
+the width of that column, so a scale bar wider than ~192px pushes the
+column rather than the ball. The indicator hides with `U`, the scale bar
+does not — same split as the meta readout, which also survives the toggle.
 
 `scale-bar.ts` is a single SVG. Targets ~20% of viewport width;
 `niceRound` snaps the represented distance to a 1/2/5×10^N value, then

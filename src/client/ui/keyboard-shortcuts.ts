@@ -33,6 +33,9 @@ export interface KeyboardShortcutsDeps {
    *  `←`/`→` step rewind/fast-forward, Space toggles play/pause, and
    *  Backspace resets to live-now. */
   timeScrubber: TimeScrubberWidget;
+  /** Zero the camera's roll against the attitude indicator's active
+   *  reference frame — the same action as clicking its ball. */
+  levelAttitude: () => void;
 }
 
 export function bindKeyboardShortcuts(
@@ -172,6 +175,10 @@ export function bindKeyboardShortcuts(
         break;
       case 's': case 'S':
         cycleCoordSphere(stellata);
+        e.preventDefault();
+        break;
+      case 'l': case 'L':
+        deps.levelAttitude();
         e.preventDefault();
         break;
       case 'f': case 'F':

@@ -14,6 +14,7 @@ import { createPlanetLabels } from './solar-system/planets/labels/planet-labels'
 import { buildKindModules, KIND_ROSTER, loadKindModules } from './kinds/kind-modules';
 import type { KindLoadProgress } from './kinds/kind-module';
 import { createScaleBar } from './ui/scale-bar';
+import { createAttitudeIndicator } from './attitude/attitude-indicator';
 import { createTimeScrubberWidget } from './solar-system/time/time-scrubber-widget';
 import { bindUnitToggle } from './ui/unit-toggle';
 import { createCoordSphereLabels } from './galactic/coord-spheres/coord-sphere-labels';
@@ -233,6 +234,7 @@ async function main() {
     // shares that module's apparent-size ranking pass.
     createMilkyWayLabel(stellata);
     createScaleBar(stellata);
+    const attitude = createAttitudeIndicator(stellata);
     bindWarpButton(stellata);
     bindModeToggle(stellata);
     // Hide the #overlay SVG (HUD arrows, focus ring, distance vector,
@@ -302,6 +304,7 @@ async function main() {
       bindBrandModals(catalog.count);
       bindControlsHideToggle();
       bindKeyboardShortcuts(stellata, {
+        levelAttitude: () => attitude?.level(),
         toggleDebugPanel: debugTools.panel,
         timeScrubber,
       });

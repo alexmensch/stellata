@@ -219,7 +219,8 @@ html, body {
  * the column floor by its .ui-top-bottom wrapper. */
 body[data-controls-hidden] #topbar,
 body[data-controls-hidden] #panel,
-body[data-controls-hidden] #card-stack {
+body[data-controls-hidden] #card-stack,
+body[data-controls-hidden] #attitude {
   display: none;
 }
 .controls-restore-btn {
@@ -1277,6 +1278,97 @@ body.monochrome .poi-label {
   font-family: inherit;
 }
 
+/* Gyro-sphere attitude indicator, drawn in attitude/. Stacks above the
+   scale bar; the frame flag sits in the instrument's own bottom-left
+   corner, the way a mode flag sits on an aircraft AI.
+
+   Only the chrome OUTSIDE the ball is styled here. The caret and the index
+   cross are read against the ball's own fixed two tones rather than the page,
+   so attitude-indicator.ts paints them from those constants directly —
+   attitude/README.md § Markings and palette. */
+.bottom-left-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  pointer-events: none;
+}
+.bottom-left-stack > * { pointer-events: auto; }
+.attitude {
+  position: relative;
+  color: var(--fg);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  /* The instrument is a square box holding a round instrument. Only the round
+     parts take pointer events; the corners of the square are 44px clear of the
+     outermost tick, and a click landing there is a click on the sky. */
+  pointer-events: none;
+}
+.attitude-stage {
+  position: relative;
+  cursor: pointer;
+  pointer-events: auto;
+  /* Clips the hit area as well as the paint — the whole point. The outermost
+     chrome sits at radius 91 of the 96 this leaves, so nothing visible is
+     cut. */
+  clip-path: circle(50%);
+}
+/* The instrument is a click target inside a WebGL-heavy view, and a UA focus
+   ring on it reads as a rendering fault rather than an affordance. The
+   keyboard path is `L`, not a tab stop, so nothing is lost by suppressing it
+   here — the flag below keeps a visible focus state of its own. */
+.attitude-stage,
+.attitude-stage:focus,
+.attitude-stage:focus-visible,
+.attitude-frame:focus,
+.attitude-frame:focus-visible {
+  outline: none;
+}
+.attitude-stage,
+.attitude-frame {
+  -webkit-tap-highlight-color: transparent;
+}
+.attitude-stage .ai-canvas {
+  position: absolute;
+  display: block;
+}
+.attitude-stage .ai-chrome {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.ai-chrome .ai-bezel {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.25;
+}
+.ai-chrome .ai-bank-tick {
+  stroke: var(--fg);
+  opacity: 0.75;
+}
+.attitude-frame {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  pointer-events: auto;
+  background: rgba(7, 9, 18, 0.72);
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  color: var(--fg);
+  font: inherit;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  padding: 1px 5px;
+  cursor: pointer;
+}
+.attitude-frame:hover,
+.attitude-frame:focus-visible {
+  border-color: var(--fg);
+}
+
 .tooltip {
   position: fixed;
   z-index: 11;
@@ -1322,6 +1414,7 @@ body.monochrome .tooltip,
 body.monochrome .search-row,
 body.monochrome .search-results,
 body.monochrome .card-strips,
+body.monochrome .attitude-frame,
 body.monochrome select {
   background: rgba(255, 255, 255, 0.92);
   color: var(--fg);
