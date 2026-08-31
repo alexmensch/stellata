@@ -5,6 +5,8 @@ import {
   SOL_PLANETS,
   getPlanetSystem,
   hasPlanets,
+  solOrbitGeometryAt,
+  solOrbitGeometryOfAt,
   systemFamily,
   type Planet,
   type PlanetType,
@@ -414,5 +416,34 @@ describe('atmosphere shells', () => {
     const titan = atmoOf('Titan');
     const tauBlue = titan.rayleighCoeff[2] + titan.mieCoeff + titan.absorbCoeff[2];
     expect(Math.exp(-tauBlue)).toBeLessThan(0.05);
+  });
+});
+
+// The array form and the per-body form are one builder wearing two shapes, and
+// the pair only stays honest while they agree everywhere. ORB reads the
+// per-body one every rendered frame precisely so it does not evaluate the
+// other 26 bodies; a divergence would show as the instrument levelling on a
+// plane no ring is drawn in.
+describe('solOrbitGeometryOfAt', () => {
+  const T = 0.25;
+
+  it('answers exactly what the whole-system build does, for every body', () => {
+    const all = solOrbitGeometryAt(T);
+    expect(all).toHaveLength(SOL_BODIES.length);
+    for (let i = 0; i < all.length; i++) {
+      expect(solOrbitGeometryOfAt(i, T)).toEqual(all[i]);
+    }
+  });
+
+  it('answers null off either end rather than undefined', () => {
+    expect(solOrbitGeometryOfAt(-1, T)).toBeNull();
+    expect(solOrbitGeometryOfAt(SOL_BODIES.length, T)).toBeNull();
+  });
+
+  it('rides on the system alongside the array form, never instead of it', async () => {
+    const ps = await getPlanetSystem(0, 0);
+    expect(ps).not.toBeNull();
+    expect(ps!.orbitGeometryOfAt).toBe(solOrbitGeometryOfAt);
+    expect(ps!.orbitGeometryAt).toBe(solOrbitGeometryAt);
   });
 });

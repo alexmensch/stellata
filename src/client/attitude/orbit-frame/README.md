@@ -62,10 +62,16 @@ Two consequences anything touching this has to honour:
   every rendered frame while ORB is up, not only when `camera.quaternion`
   moves. Nothing runs while the render gate idles, though: if no frame is
   drawn, the orbit has not advanced either.
-- **The per-frame path allocates nothing.** `orbitFrameInto` writes into one
-  preallocated `ReferenceFrame` that the instrument holds for the life of the
-  page; `captureOrbitFrame` is the allocating wrapper, kept for callers that
-  want a frame of their own.
+- **The per-frame path evaluates ONE body's orbit, and the frame it writes
+  into is preallocated.** `orbitFrameInto` writes a `ReferenceFrame` the
+  instrument holds for the life of the page; `captureOrbitFrame` is the
+  allocating wrapper, kept for callers that want a frame of their own. The
+  dispatch reaches `PlanetBodyField.orbitPlaneNormalOf`, which goes through
+  `PlanetSystem.orbitGeometryOfAt` — **never `orbitGeometryAt`**, whose array
+  form runs the lunar theory and 17 Kepler solves for Sol and discards 26 of
+  the 27 rows. Doing that per frame reinstates exactly the cost the ring
+  layer's visibility gate exists to skip
+  (`../../solar-system/ephemerides/README.md` § Orbit rings).
 
 ## The lock
 
