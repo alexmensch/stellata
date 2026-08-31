@@ -24,10 +24,12 @@ import {
   orbitFrameInto,
   copyReferenceFrame,
   orbitRideRotation,
+  orbitLockShowing,
   ridePoseBy,
   readAttitude,
   type Attitude,
   type AutoFrameKey,
+  type DatumStop,
   type ReferenceFrame,
 } from './attitude-pure';
 import { focusFrameInputs } from './focus-frame';
@@ -481,7 +483,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
    *  changes, and a capture is always a fresh one. */
   /** Which of the chip's three stops is showing. A captured ORB is not one of
    *  them — that datum belongs to the flag. */
-  function datumStop(): 'off' | 'reference' | 'target' {
+  function datumStop(): DatumStop {
     if (captured?.key === 'reference') return 'reference';
     if (captured?.key === 'target') return 'target';
     return 'off';
@@ -492,10 +494,11 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     // frame underneath and the chip alone says one is held.
     const stop = datumStop();
     const flagLabel = orbitActive ? 'ORB' : frames[selectedFrameKey()].label;
-    // The lock has nothing to ride unless ORB is what the ball is reading, so
-    // it leaves with the frame — and with a REF or TGT datum held over the
-    // top — rather than lingering as a control that does nothing.
-    const orbitShowing = orbitActive && stop === 'off';
+    const orbitShowing = orbitLockShowing({
+      orbitActive,
+      datum: stop,
+      cameraMode: stellata.focus.getCameraMode(),
+    });
     if (!orbitShowing) {
       orbitLocked = false;
       riding = false;
@@ -647,10 +650,9 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     capture(captureReferenceFrame(stellata.camera));
   });
 
-  /** Toggle the orbit lock — the chip, and `Shift`+`L`. A no-op while the
-   *  chip is not on screen: with any frame but ORB there is no travelling
-   *  datum to ride, and a control acting on something the user cannot see is
-   *  worse than one that does nothing. */
+  /** Toggle the orbit lock — the chip, and `Shift`+`L`. Gated on the chip's
+   *  own `hidden`, which `refresh` writes from `orbitLockShowing`, so the key
+   *  and the chip cannot disagree about when the lock exists. */
   function toggleOrbitLock() {
     if (lockBtn.hidden) return;
     orbitLocked = !orbitLocked;
@@ -658,7 +660,6 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     // never replays the travel since ORB was armed as one jump.
     riding = false;
     refresh();
-    draw();
   }
 
   lockBtn.addEventListener('click', toggleOrbitLock);
@@ -698,14 +699,10 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // roll guide and this disagree. The whole panel goes, not just the ball —
   // an Instruments box holding nothing reads as a fault.
   const applyModeVisibility = () => {
-    const observing = stellata.focus.getCameraMode() === 'observe';
-    // The ride orbits the camera about `controls.target`, which is not what
-    // observe's camera does — it sits on the object rather than circling it.
-    if (observing) {
-      orbitLocked = false;
-      riding = false;
-    }
-    if (panel !== null) panel.hidden = observing;
+    if (panel !== null) panel.hidden = stellata.focus.getCameraMode() === 'observe';
+    // The mode is one of the padlock's showing conditions, so the lock leaves
+    // with it through the one rule rather than a second copy here.
+    refresh();
   };
   stellata.on('cameraMode', applyModeVisibility);
   applyModeVisibility();

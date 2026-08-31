@@ -11,6 +11,7 @@ import {
   frameDirToBallInto,
   FRAME_CYCLE,
   nextFrameKey,
+  orbitLockShowing,
   POLE_HOLD_DEG,
   readAttitude,
   type Attitude,
@@ -513,5 +514,38 @@ describe('captureReferenceFrame', () => {
     expect(frame.zeroLon.length()).toBeCloseTo(1, 12);
     expect(frame.east.length()).toBeCloseTo(1, 12);
     expect(frame.pole.dot(frame.zeroLon)).toBeCloseTo(0, 12);
+  });
+});
+
+// The one rule for whether the orbit lock exists, read by the padlock chip
+// and by `Shift`+`L` alike. Every false here is an absence the user can see:
+// no travelling datum to ride, or no instrument on screen to ride it from.
+describe('orbitLockShowing', () => {
+  const showing = (over: Partial<Parameters<typeof orbitLockShowing>[0]> = {}) =>
+    orbitLockShowing({
+      orbitActive: true, datum: 'off', cameraMode: 'navigate', ...over,
+    });
+
+  it('shows on ORB in navigate with no datum held', () => {
+    expect(showing()).toBe(true);
+  });
+
+  it('hides without ORB — every other frame\'s datum is fixed', () => {
+    expect(showing({ orbitActive: false })).toBe(false);
+  });
+
+  it.each(['reference', 'target'] as const)(
+    'hides with a %s datum held over the top — a fixed datum again',
+    (datum) => { expect(showing({ datum })).toBe(false); },
+  );
+
+  // The regression: the panel is hidden wholesale in observe without the chip
+  // element's own `hidden` changing, so a gate reading only that attribute
+  // let the key engage a lock nobody could see — which then took effect on
+  // the way back to navigate. The ride is meaningless there too: it orbits
+  // the camera about `controls.target`, and observe's camera sits on the
+  // object rather than circling it.
+  it('hides in observe, even with ORB armed and no datum held', () => {
+    expect(showing({ cameraMode: 'observe' })).toBe(false);
   });
 });

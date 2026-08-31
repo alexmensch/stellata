@@ -17,6 +17,7 @@ import type {
   DrawnCoordSphereFrame,
 } from '../galactic/coord-spheres/coord-sphere';
 import type { TargetKind } from '../camera/focus/focus-target';
+import type { CameraMode } from '../stellata';
 
 export type ReferenceFrameKey =
   | DrawnCoordSphereFrame
@@ -250,6 +251,34 @@ export function ridePoseBy(
   rideOffset.copy(position).sub(pivot).applyQuaternion(rotation);
   position.copy(pivot).add(rideOffset);
   up.applyQuaternion(rotation).normalize();
+}
+
+/** Which of the datum chip's three stops is showing. */
+export type DatumStop = 'off' | 'reference' | 'target';
+
+/** Is the padlock chip on screen — which is the whole rule for whether the
+ *  orbit lock exists, for the chip and for `Shift`+`L` alike.
+ *
+ *  All three conditions are absences the user can see. ORB is the one frame
+ *  whose datum travels, so there is nothing to ride otherwise; a REF or TGT
+ *  datum held over the top is a fixed datum again; and in observe the ride
+ *  would orbit the camera about `controls.target`, which is not what that
+ *  mode's camera does — it sits on the object rather than circling it.
+ *
+ *  One rule, read by both paths, is what keeps the key and the chip from
+ *  disagreeing about when the lock exists. Gating the key on the chip
+ *  element's own `hidden` alone is NOT the same rule: the whole panel is
+ *  hidden in observe without that attribute changing, so the key engaged a
+ *  lock nobody could see, which then took effect on the way back to
+ *  navigate. */
+export function orbitLockShowing(state: {
+  orbitActive: boolean;
+  datum: DatumStop;
+  cameraMode: CameraMode;
+}): boolean {
+  return state.orbitActive
+    && state.datum === 'off'
+    && state.cameraMode === 'navigate';
 }
 
 const FRAME_LABELS: Record<AutoFrameKey, string> = {

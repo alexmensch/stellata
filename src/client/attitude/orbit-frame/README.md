@@ -149,24 +149,30 @@ datum moved far enough for the write to show.**
 *below* the gate, so the next tick reads any write at all as a fresh camera
 move and renders — the § The focal ride loop in
 `../../render-gate/README.md`, which a rotation has no rebase to escape
-through. A paused clock does turn the datum by exactly zero and the gate idles
-as before, but that covers only the paused case: at live 1× Luna's datum turns
-~2.6 × 10⁻⁶ ° per 60 Hz tick, a genuinely non-zero turn some 2700× under
-anything a display can show, and writing it every tick pins the gate at 60 fps
-for a picture that never changes.
+through. At live 1× Luna's datum turns ~2.6 × 10⁻⁶ ° per 60 Hz tick, a
+genuinely non-zero turn some 2700× under anything a display can show, and
+writing it every tick pins the gate at 60 fps for a picture that never
+changes.
 
-`orbitRideTurn` therefore rides only past **`cadenceVisibleTurnRad`** — the
-cadence's own 0.25-device-pixel scheduling step converted to a camera turn
+**The threshold, not a zero, is what lets the gate idle — including with the
+clock paused.** A paused clock rebuilds ORB to the same basis, but the ride is
+read off two bases and that round trip is not bit-exact, so the turn it
+measures is rounding residue rather than a true zero. Orders below any
+threshold worth setting, and pinned in the tests as such; do not rewrite this
+as an exact-zero guarantee.
+
+`orbitRideRotation` therefore rides only past **`cadenceVisibleTurnRad`** —
+the cadence's own 0.25-device-pixel scheduling step converted to a camera turn
 (0.0069° at the pinned vantage), so the lock schedules against the same
-threshold every other driver does. Under a threshold it returns zero and **the
-datum is left where it was last ridden from**, which is what accumulates those
+threshold every other driver does. Under a threshold it declines and **the
+frame is left where it was last ridden from**, which is what accumulates those
 turns into one ride carrying the whole angle; advancing it per frame would drop
 each one and the lock would slowly slip its grip. Faster than live the gate
 never idles anyway, so a scrub crosses the threshold every frame and rides
 exactly as before.
 
 **The ride writes the pose; the quaternion is DERIVED from it, and nothing
-re-derives it for you until the next tick.** `ridePoseAbout` writes
+re-derives it for you until the next tick.** `ridePoseBy` writes
 `camera.position` and `camera.up`. Every reader downstream — the render, the
 overlays, and the ball's own `readAttitude` — takes `camera.quaternion`, which
 `lookAt` builds from those two, and `TrackballControls.update()` does not run
@@ -190,11 +196,14 @@ wrong once:
   **after** every moving field's position writes — the datum's turn is not
   knowable before them, which rules out riding earlier — and after **both**
   focal rides, whose translations put `controls.target` on the object it
-  pivots about. It has to be **before** every entry that projects the camera
-  to screen space, or the HUD arrows, the distance vector and the labels are
-  drawn against a pose the frame does not render. `'frame'` fires after the
-  render and fails both halves, which is the lag above; only the instrument's
-  own *drawing* rides `'frame'`.
+  pivots about. It is therefore the frame's **last camera write**, and every
+  entry that READS the camera is registered below it: the projectors (HUD
+  arrows, distance vector, labels) draw against a pose the frame does not
+  render otherwise, and so does the planet mesh, whose view-space lighting
+  uniforms are the subtler half of the same defect
+  (`../../scene/README.md` § Camera writes, then camera reads). `'frame'`
+  fires after the render and fails every part of this, which is the lag
+  above; only the instrument's own *drawing* rides `'frame'`.
 - **The ride is not part of the instrument's draw path.** It moves the CAMERA,
   not the instrument, so it runs on every rendered frame including the ones
   the instrument is hidden for — `U`, a collapsed panel, any off-screen check.
@@ -207,16 +216,25 @@ wrong once:
 - **Engaging the lock seeds from wherever the datum is now**, not from where
   it was when ORB was armed, for the same reason.
 
-Navigate only, and the lock clears on entering observe: the ride orbits the
-camera about `controls.target`, which is not what observe's camera does — it
-sits on the object rather than circling it.
+**Whether the lock exists at all is `orbitLockShowing`, and there is exactly
+one copy of it.** Three conditions, each an absence the user can see: ORB is
+the frame (nothing else has a travelling datum), no REF or TGT datum is held
+over the top (that is a fixed datum again), and the camera is in **navigate**
+— the ride orbits the camera about `controls.target`, which is not what
+observe's camera does, since it sits on the object rather than circling it.
+`refresh` writes the padlock's `hidden` from that rule and clears the lock
+whenever it goes false, so the lock leaves with the frame, with a datum, and
+with the mode.
 
 **`Shift`+`L` is a silent no-op while the chip is off screen**, gated on the
-chip's own `hidden` rather than on a second copy of the showing rule, so the
-key and the chip cannot disagree about when the lock exists. `L` levels on the
-frame and `Shift`+`L` holds you there, which is why the lock took that chord
-rather than one of its own — and it was free, `S` to ORB then `L` having
-replaced the arm-and-level gesture it used to carry.
+chip's `hidden` — the rule's own output, not a second copy of it. Gating on
+that attribute *instead of* the rule is the trap, and it shipped once: the
+whole Instruments panel is hidden in observe without the chip's own `hidden`
+changing, so the key engaged a lock nobody could see, which then took effect
+on the way back to navigate. `L` levels on the frame and `Shift`+`L` holds
+you there, which is why the lock took that chord rather than one of its own —
+and it was free, `S` to ORB then `L` having replaced the arm-and-level
+gesture it used to carry.
 
 Rebuilding rather than only rolling is what makes the gesture legible: rolling
 to a plane the instrument is not displaying leaves the caret reading un-level
