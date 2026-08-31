@@ -73,10 +73,17 @@ export interface Hip2AstrometryRow {
   pmDeMasyr: number | null;
 }
 
-/** The reference datasets the cascade routes between. Empty maps/sets
- *  degrade gracefully: a row whose every tier is absent resolves to null,
- *  which the walk counts as `spineDroppedNoDirection` — pinned at 0, so the
- *  drift fails the build by name rather than dropping a record quietly. */
+/** The reference datasets this cascade routes between. It is not their only
+ *  reader — `gaiaAstrometry` also carries the photometry the V and ci cascades
+ *  transform and the rv the radial term takes, and `tycho2` the BT/VT the V
+ *  cascade reduces — so a column added for one cascade arrives for all of
+ *  them, and the bundle is named for the cascade that ROUTES on it rather than
+ *  for sole ownership.
+ *
+ *  Empty maps/sets degrade gracefully: a row whose every tier is absent
+ *  resolves to null, which the walk counts as `spineDroppedNoDirection` —
+ *  pinned at 0, so the drift fails the build by name rather than dropping a
+ *  record quietly. */
 export interface DirectionSources {
   gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
   hip2: Map<number, Hip2AstrometryRow>;
