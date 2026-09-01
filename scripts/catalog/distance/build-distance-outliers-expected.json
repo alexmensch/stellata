@@ -1,6 +1,20 @@
 {
   "selfConsistency": [
     {
+      "id": "gaia:1644076926443036928",
+      "distSrc": "HIP",
+      "athygDist": 61.275,
+      "finalDist": 492.878,
+      "logRatio": 0.905
+    },
+    {
+      "id": "gaia:4459913560795849600",
+      "distSrc": "G_R2",
+      "athygDist": 10121.458,
+      "finalDist": 105.263,
+      "logRatio": -1.983
+    },
+    {
       "id": "gaia:4658107884688023040",
       "distSrc": "G_R3",
       "athygDist": 280.148,
@@ -33,12 +47,32 @@
       "reason": "LMC kinematic snap (see sibling entry)."
     },
     {
-      "id": "gaia:5970190191419437696",
+      "id": "gaia:4685876050900066176",
+      "distSrc": "HIP",
+      "athygDist": 724.638,
+      "finalDist": 6250,
+      "logRatio": 0.936
+    },
+    {
+      "id": "gaia:5284151216932205312",
       "distSrc": "G_R2",
-      "athygDist": 146.828,
-      "finalDist": 6655.979,
-      "logRatio": 1.656,
-      "reason": "Noisy Gaia DR2 inverse-parallax (G_R2 input, 147 pc); Bailer-Jones 2021 DR3 posterior re-anchors to multi-kpc — the same override shape as the G_R3 cases above, just on a DR2-sourced input."
+      "athygDist": 20408.163,
+      "finalDist": 487.805,
+      "logRatio": -1.622
+    },
+    {
+      "id": "gaia:6054171095749135360",
+      "distSrc": "HIP",
+      "athygDist": 226.757,
+      "finalDist": 4828.062,
+      "logRatio": 1.328
+    },
+    {
+      "id": "hip:111571",
+      "distSrc": "G_R3",
+      "athygDist": 807.37,
+      "finalDist": 17.117,
+      "logRatio": -1.674
     },
     {
       "id": "hip:116191",
@@ -47,16 +81,36 @@
       "finalDist": 14.541,
       "logRatio": -1.125,
       "reason": "FL Aqr — HIP2 parallax is unusable (5.16 ± 34.71 mas), so AT-HYG's 193.8 pc is noise. Intra-system coherence snaps it to its CPM companion FK Aqr's clean Gaia anchor (14.55 pc), matching FL Aqr's accepted ~14.4 pc. Legitimate correction, not a regression."
+    },
+    {
+      "id": "hip:57146",
+      "distSrc": "HIP",
+      "athygDist": 59.881,
+      "finalDist": 5.342,
+      "logRatio": -1.05
+    },
+    {
+      "id": "hip:72509",
+      "distSrc": "G_R3",
+      "athygDist": 1150.686,
+      "finalDist": 4.658,
+      "logRatio": -2.393
+    },
+    {
+      "id": "hip:95676",
+      "distSrc": "G_R3",
+      "athygDist": 3505.743,
+      "finalDist": 100.604,
+      "logRatio": -1.542
     }
   ],
   "simbad": [
     {
-      "id": "gaia:1998148532777850880",
-      "finalDist": 6346.552,
-      "simbadDist": 1055.966,
-      "simbadMainId": "* rho Cas",
-      "logRatio": 0.779,
-      "reason": "Yellow hypergiant ρ Cas. SIMBAD's distance is 1000/plx_value off the noisy Hipparcos parallax (~1.06 kpc); modern Gaia DR3 + Bailer-Jones posterior places ρ Cas at multi-kpc. Stellata's pipeline value (6.35 kpc) is the more physically correct one — the disagreement reflects SIMBAD lagging modern distance estimates for highly uncertain supergiant parallaxes, not a pipeline bug."
+      "id": "gaia:403764004279645696",
+      "finalDist": 257.732,
+      "simbadDist": 3511.236,
+      "simbadMainId": "HD   7481",
+      "logRatio": -1.134
     }
   ]
 }

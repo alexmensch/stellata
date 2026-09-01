@@ -80,6 +80,15 @@ own clean 5p solution — 2.4744 ± 0.0622 mas, RUWE 1.0689, `ipd` 0 — inverti
 to 404.1 ± 10.2 pc. Schaefer et al. 2016's dynamical parallax, 387.5 ± 1.3 pc,
 agrees at 1.62 σ. Both say the 328.9 pc the floor refused is ~20% wrong.
 
+**The tier's reach is bounded by the request set, not by the sky.** Of the 44
+parked rows `multiples.tsv` carries a row for, 15 have a sibling carrying its
+own `source_id` rather than the blended primary's. Five of those siblings are
+in the frozen astrometry table AND anchor-grade, and the tier fires on exactly
+those; eight are absent from the request set the table was pulled against
+(`stellata-3bsf.36` widens it), and two are present but fail the gate on RUWE
+or a blended image. So `distPairMemberParallax` 5 is a floor rather than the
+measurement of how many pairs could answer.
+
 **A sibling's parallax is read on the sibling's OWN `gaia_source_id`**, and the
 index drops a repeated one per root. Stage 2/3 bind a single blended source to
 every component row of a sub-arcsec pair, so a root's rows routinely repeat the

@@ -238,7 +238,7 @@ being retired; the tier after each is its replacement:
 |---|---|
 | direction / xyz | SHIPPED — Gaia DR3 5p → HIP2 → Tycho-2 position, PM-propagated to J2016 from its per-star, per-coordinate mean epochs (record's own TYC) → CNS5 astrometry, from the row's own `pos_epoch` (GJ) → SIMBAD coordinates (bibcoded, J2000) → curated (Sol) |
 | space-motion velocity | SHIPPED — PM from whichever tier direction selected (Gaia / HIP2 / Tycho-2 / CNS5 / SIMBAD) + rv; where that tier states a position but no PM, a designation-keyed rescue cascade (Tycho-2 by TYC → CNS5 by GJ → bibcoded SIMBAD, Gaia-bibcode skip rule below) supplies the tangential term, and carries that tier's position to J2016.0 as well so the two read one motion; zero where that too finds nothing |
-| distance | B-J posterior → LMC kinematic → HIP2 parallax → DR3 parallax inversion (in-tree pull) → CNS5 parallax → SIMBAD `plx_value` (bibcoded) — ~~spine printed~~ |
+| distance | SHIPPED — B-J posterior → LMC kinematic → DR3 parallax inversion (in-tree pull) → HIP2 parallax (own HIP, above an S/N floor) → CNS5 parallax → Gliese `V/70A` printed trigonometric parallax → SIMBAD `plx_value` (bibcoded) → a bound sibling's clean DR3 parallax → curated (Sol); no owned parallax is a § 6 ledger drop — ~~spine printed~~ |
 | V magnitude | SHIPPED — Riello+ 2021 transform V = G − f(BP−RP) inside validity → printed HIP V (`I/239` Vmag) → Tycho-2 V = VT − 0.090(BT−VT) (SP-1200) → Gliese `V/70A` printed `Vmag` → curated (Sol). **No SIMBAD flux tier**: Gliese reaches every row Tycho-2 misses, and SIMBAD publishes no `V` flux at all for the nine it would have been asked for |
 | absmag | always derived from (V, distance) + build-time de-extinction — one code path, no tabulated absmag |
 | ci (B−V) | Gaia Table-5.9 relation, BP−RP ≤ 1.75 → printed `I/239` B−V (HIP) → GSPC synthetic B−V (BP−RP ≤ 3.0, a **measured** bound — see the ci bullet) → intrinsic spectral-class colour → solar — ~~spine `ci`~~ |
@@ -428,14 +428,70 @@ Measured exposure and expected coverage (2026-08-14; pins in
   10.2″, off mean epochs of 1991.07 (RA) and 1991.00 (Dec) — **the two
   differ per star and per coordinate**, on every one of the 40
   mean-solution rows, so each coordinate advances over its own baseline.
-- **distance** — printed tail 1,199, today **unpinned** (the only
-  cascade without a routing partition; the value work pins `distVia`):
-  in-tree DR3 parallax 126 · CNS5 38 · SIMBAD parallax the ~1,035
-  remainder (bibcodes typically Gaia DR2 — the printed cell's true
-  upstream, now held first-hand). `applyBailerJonesOverride` currently
-  gates on the spine's `dist_src` cell — an AT-HYG editorial value
-  steering an owned cascade; eligibility re-keys on the record's own
-  resolved-tier predicate.
+- **distance** — SHIPPED (`stellata-3bsf.28`). `distVia` is pinned over
+  all 313,257 spine rows: `bailer_jones` **310,070** · `lmc_kinematic`
+  **54** · `gaia_dr3_inversion` **175** · `hip2_parallax` **2,502** ·
+  `cns5_plx` **16** · `gliese_plx` **40** · `simbad_plx` **93** ·
+  `pair_member_parallax` **5** · `curated` **1** · `none` **301**.
+  `applyBailerJonesOverride` no longer gates on the spine's `dist_src`
+  cell — an AT-HYG editorial value steering an owned cascade — but on the
+  record's own resolved tier.
+
+  **Four corrections to what this section projected**, all measured at
+  implementation and recorded in
+  `scripts/catalog/distance/parallax/README.md`:
+
+  1. *Order.* Gaia leads. This section put HIP2 above the inversion, which
+     was right while that tier served only the Gaia-saturated bright set;
+     re-keyed onto the record's own HIP it governs ~2,600 records and that
+     order would hand 115 of them to 1991 Hipparcos over a converged DR3
+     fit. The direction cascade already answers this.
+  2. *HIP2 needs a quality gate.* Ungated it puts 19 rows past 1,000 pc
+     and one at 25,000 pc off a parallax of S/N 0.11 — the catastrophic
+     inversion `stellata-uadc.28` reports. The floor sits at S/N 1, where
+     a parallax stops being distinguishable from zero; the ~20%
+     fractional-error bound above it is *counted*, not gated, because
+     those rows have no second source.
+  3. *Gliese `V/70A` is a distance tier and this section does not list
+     it.* It arrived unplanned in the V cascade, and it is the
+     ground-based trigonometric authority no Gaia release stands behind —
+     which is what keeps 44 Boötis after CNS5's Gaia-cited value is
+     refused.
+  4. *Two more curated exits.* Sol carries no identifier any tier keys on
+     (the third instance in this epic), and a bound pair's clean sibling
+     is an owned route this section did not anticipate — see
+     `pair_member_parallax` below.
+
+  **The residual is a park, and the first non-empty § 6.1 dropped list.**
+  301 rows reach no owned parallax: 284 had a value a skip rule refused,
+  17 had none published. Refusing costs each its record — distance has no
+  defensible null the way rv and PM do — and it was taken strict anyway
+  because the values measure as *wrong* rather than merely uncertain
+  (median 2.19 σ from Hipparcos on the 270 rows where both exist). By
+  `dist_src`: G_R2 246 · G_R3 23 · HIP 32. Records the pipeline stops
+  producing are presence events, so every one keeps its SID and Gaia DR4
+  reinstates it.
+
+  **`pair_member_parallax` is the tier that answers the promotion seam.**
+  A parked primary's components were being re-minted by companion
+  promotion off the multiples.tsv distance — which is the refused value
+  returning through a courier (σ Ori Aa's 328.947368 pc is 3.0400000 mas,
+  the refused HIP2 number to eight significant figures). Promotion now
+  refuses a parked record, and the tier supplies an owned distance where
+  a bound sibling carries a clean DR3 fit: σ Ori ships at HIP 26551 D's
+  404.1 ± 10.2 pc, against a dynamical parallax of 387.5 ± 1.3 pc
+  (Schaefer+ 2016) agreeing at 1.62 σ. Its reach is bounded by the frozen
+  astrometry table rather than by the sky: of the 44 parked rows
+  multiples.tsv covers, 15 have a sibling carrying its own source_id, and
+  8 of those siblings are absent from the request set the table was pulled
+  against (`stellata-3bsf.36`).
+
+  **Validation independence is now real for this field.** A record whose
+  distance came from `simbad_plx` is excluded from both SIMBAD-based
+  distance validators — the sample harness reads
+  `data/athyg/simbad_sourced_distances.tsv`, the in-build regression check
+  reads `distVia` directly. Until this cascade there was no SIMBAD
+  distance tier for the rule to bite on.
 - **spect** — the spine cell is already display-only
   (`resolveSpectralInfo` never classifies from it); it fills the
   hover/search string on the 1,394 `spectralFallback` rows (~672
@@ -564,8 +620,16 @@ test fixture:
 1. **Record parity.** Every prior record either produces a record
    resolving to the **same SID**, or appears on a dropped list with a
    reason code from a closed enum (`merge:<survivor>`,
-   `split:<siblings>`, `out-of-scope`, `no-position`). No silent
-   drops: a count that moves without a ledger entry fails the gate.
+   `split:<siblings>`, `out-of-scope`, `no-position`,
+   `refused_no_defensible_parallax`, `no_parallax_published`). No silent
+   drops: a count that moves without a ledger entry fails the gate. The
+   last two are **parks**, not dissolutions: the record has no owned
+   distance and cannot be placed, so it stops being produced while its
+   SID and identity survive (§ 7, `docs/sid.md`) and Gaia DR4 reinstates
+   it. `data/athyg/parked_no_owned_parallax.tsv` is that ledger, gated
+   by `scripts/catalog/spine/inherited-spine-parity.test.ts`, which
+   subtracts the drop count from the parity arithmetic only as far as the
+   committed file accounts for it.
 2. **Label parity.** Per-identifier coverage must not regress; every
    previously-named record keeps a name or is listed with a reason.
    Overlay-vs-spine designation flips are enumerated with disposition

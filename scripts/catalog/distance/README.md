@@ -234,17 +234,14 @@ order is non-commutative — see `docs/science-catalog-ingestion.md`
 diagram below is the build-side view:
 
 ```
-AT-HYG `dist` column  (whatever dist_src carries)
-   │
+1000 / resolveParallax(...)          the § 5 parallax cascade — parallax/
+   │                                   README.md. No owned parallax parks the
+   │                                   row: it builds no record at all.
    ▼
-[ Layer 1: Bailer-Jones DR3 override ]   only for dist_src ∈ {G_R3, G_R2}
-   │                                       AND gaia_source_id resolved
+[ Layer 1: Bailer-Jones DR3 override ]   only where the cascade resolved
+   │                                       gaia_dr3_inversion (its posterior
+   │                                       treats that measurement)
    │                                       AND bjMap has the source_id
-   ▼
-[ HIP2 full-precision re-derivation  ]   only for dist_src = HIP, and only
-   │                                       when 1000/plx reproduces AT-HYG's
-   │                                       printed dist (± 1e-3 pc) — same
-   │                                       value, 4-dp truncation dropped
    ▼
 [ Layer 2: LMC kinematic override    ]   only inside 15° LMC cone
    │                                       AND |Δμ_α*|, |Δμ_δ| ≤ 0.5 mas/yr
@@ -254,6 +251,14 @@ AT-HYG `dist` column  (whatever dist_src carries)
    ▼
 dist × cascade direction (§ Direction resolution) → `public/catalog.bin` xyz
 ```
+
+**The stack's input is a parallax this build pulled, not a printed cell.**
+The spine's `dist` / `dist_src` columns survive only as the build-time
+diagnostic the regression check below measures drift against. Layer 1's gate
+moved with it: it used to read `dist_src ∈ {G_R3, G_R2}`, which let an AT-HYG
+editorial value decide whether a record was regressed onto B-J's
+Galactic-density prior. It now reads the record's own resolved tier, which is
+something this build knows first-hand.
 
 Each override layer returns a `DistanceOverride` (`dist`, `absmag`) —
 the absmag recompute matters because skipping it places the star at
@@ -288,9 +293,14 @@ preserved / dropped — with the per-bucket count from a dry run. The
 build prints exactly that line per layer:
 
 ```
-  Bailer-Jones override: 310157 / 310849 Gaia-inverse-distance stars (99.8%)
-    by dist_src: G_R3=310110, G_R2=47, HIP=0, GJ=0, N=0, OTHER=0, UNRECOGNISED=0
+  Bailer-Jones override: 310124 / 310299 Gaia-inverse-distance stars (99.9%)
+    by dist_src: G_R3=310110, G_R2=13, HIP=1, GJ=0, N=0, OTHER=0, UNRECOGNISED=0
 ```
+
+Those buckets are no longer the layer's *gate*, only its outcome — the gate
+reads the resolved tier — which is why HIP is now 1 rather than pinned at 0:
+a record AT-HYG marked `HIP` whose own Gaia 5p parallax the cascade took is
+exactly the case the re-key exists to serve.
 
 The matching assertion lands in the same PR: a `DistSrcPartition` field
 on `BuildCounts` (`bjOverriddenByDistSrc`, `lmcOverriddenByDistSrc`),
