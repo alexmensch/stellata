@@ -4,8 +4,7 @@
 
 import { isGaiaCatalogueBibcode, isHipparcos2Bibcode } from '../gaia-distrust';
 import type { GaiaAstrometryCatalogRow, Hip2AstrometryRow } from '../direction-cascade';
-import type { Cns5Astrometry } from '../../classic-ids/classic-ids-parse';
-import type { SimbadParallax } from '../../simbad-values-parse';
+import type { CitedParallax } from '../../cited-parallax';
 import type { GlieseRow } from '../../gliese-parse';
 
 // The two override layers sit above the cascade rather than inside it — each
@@ -64,9 +63,9 @@ export const PARKED_RECORDS_FILE = 'data/athyg/parked_no_owned_parallax.tsv';
 export interface ParallaxSources {
   gaia: GaiaAstrometryCatalogRow | null;
   hip2: Hip2AstrometryRow | null;
-  cns5: Cns5Astrometry | null;
+  cns5: CitedParallax | null;
   gliese: GlieseRow | null;
-  simbad: SimbadParallax | null;
+  simbad: CitedParallax | null;
 }
 
 export interface ParallaxResolution {
@@ -141,9 +140,9 @@ export function resolveParallax(
     refused = true;
   }
 
-  if (cns5 !== null && usable(cns5.plxMas) && cns5.plxBibcode !== null) {
-    if (!(gaiaIs2p && isGaiaCatalogueBibcode(cns5.plxBibcode))) {
-      return hit(cns5.plxMas, 'cns5_plx', null);
+  if (cns5 !== null && usable(cns5.mas)) {
+    if (!(gaiaIs2p && isGaiaCatalogueBibcode(cns5.bibcode))) {
+      return hit(cns5.mas, 'cns5_plx', signalToNoise(cns5.mas, cns5.errMas));
     }
     refused = true;
   }

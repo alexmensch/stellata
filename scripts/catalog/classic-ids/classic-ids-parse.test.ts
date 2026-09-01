@@ -113,11 +113,11 @@ describe('classic-ids-parse / parseCns5Tsv', () => {
   it('drops an unbibcoded PARALLAX whole too — the distance cascade\'s skip '
     + 'rules read that bibcode, so a value without one cannot be weighed', () => {
     const rows = parseCns5Tsv(CNS5);
-    expect(rows[0].astrometry?.plxMas).toBe(768.07);
-    expect(rows[0].astrometry?.plxBibcode).toBe('2020yCat.1350....0G');
-    // Row 3 states plx_mas=100 and no citation: both cells go.
-    expect(rows[2].astrometry?.plxMas).toBeNull();
-    expect(rows[2].astrometry?.plxBibcode).toBeNull();
+    expect(rows[0].astrometry?.parallax).toEqual({
+      mas: 768.07, errMas: null, bibcode: '2020yCat.1350....0G',
+    });
+    // Row 3 states plx_mas=100 and no citation: the whole quantity goes.
+    expect(rows[2].astrometry?.parallax).toBeNull();
   });
 });
 

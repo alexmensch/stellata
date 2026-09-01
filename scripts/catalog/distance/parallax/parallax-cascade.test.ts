@@ -9,9 +9,8 @@ import {
   type ParallaxSources,
 } from './parallax-cascade';
 import { gaiaAstrometryRow } from '../astrometry-fixture';
-import { cns5Astrometry } from '../../classic-ids/cns5-fixture';
+import type { CitedParallax } from '../../cited-parallax';
 import type { GlieseRow } from '../../gliese-parse';
-import type { SimbadParallax } from '../../simbad-values-parse';
 
 const GAIA_DR2 = '2018yCat.1345....0G';
 const GAIA_DR2_PAPER = '2018A&A...616A...1G';
@@ -29,9 +28,12 @@ const gliese = (plxMas: number | null): GlieseRow => ({
   name: 'Gl 423', comp: 'A', vMag: null, bMinusV: null, spectral: null,
   plxMas, plxErrMas: 1.0,
 });
-const simbad = (mas: number, bibcode: string): SimbadParallax => ({
-  mas, errMas: 0.1, bibcode,
-});
+// One builder for both bibcoded tiers — CNS5 and SIMBAD carry the same
+// CitedParallax. CNS5 publishes no error, which is what `errMas` null states.
+const cited = (
+  mas: number, bibcode: string, errMas: number | null = 0.1,
+): CitedParallax => ({ mas, errMas, bibcode });
+const simbad = (mas: number, bibcode: string): CitedParallax => cited(mas, bibcode);
 
 describe('parallax-cascade / tier order', () => {
   it('takes the record\'s own Gaia 5p parallax ahead of every other tier', () => {
@@ -39,7 +41,7 @@ describe('parallax-cascade / tier order', () => {
       ...NONE,
       gaia: gaiaAstrometryRow({ parallaxMas: 40, parallaxErrorMas: 0.1 }),
       hip2: hip2(10, 0.1),
-      cns5: cns5Astrometry({ plxMas: 20, plxBibcode: LITERATURE }),
+      cns5: cited(20, LITERATURE, null),
       gliese: gliese(30),
       simbad: simbad(50, LITERATURE),
     }, false, false);
@@ -57,7 +59,7 @@ describe('parallax-cascade / tier order', () => {
   it('falls Gaia → HIP2 → CNS5 → Gliese → SIMBAD in order', () => {
     const order: Array<[Partial<ParallaxSources>, string]> = [
       [{ hip2: hip2(10, 0.5) }, 'hip2_parallax'],
-      [{ cns5: cns5Astrometry({ plxMas: 20, plxBibcode: LITERATURE }) }, 'cns5_plx'],
+      [{ cns5: cited(20, LITERATURE, null) }, 'cns5_plx'],
       [{ gliese: gliese(30) }, 'gliese_plx'],
       [{ simbad: simbad(50, LITERATURE) }, 'simbad_plx'],
     ];
@@ -128,7 +130,7 @@ describe('parallax-cascade / the Gaia-bibcode skip rule', () => {
     const res = resolveParallax({
       ...NONE,
       gaia: twoP,
-      cns5: cns5Astrometry({ plxMas: 114.49, plxBibcode: GAIA_DR2 }),
+      cns5: cited(114.49, GAIA_DR2, null),
       simbad: simbad(114.5, GAIA_DR2),
     }, true, false);
     expect(res.via).toBe('none');
@@ -139,7 +141,7 @@ describe('parallax-cascade / the Gaia-bibcode skip rule', () => {
     + 'form and SIMBAD the other', () => {
     const res = resolveParallax({
       ...NONE,
-      cns5: cns5Astrometry({ plxMas: 114.49, plxBibcode: GAIA_DR2_PAPER }),
+      cns5: cited(114.49, GAIA_DR2_PAPER, null),
     }, true, false);
     expect(res.via).toBe('none');
   });
@@ -148,7 +150,7 @@ describe('parallax-cascade / the Gaia-bibcode skip rule', () => {
     + 'the rule gates on the 2p fit, not on the tier', () => {
     const res = resolveParallax({
       ...NONE,
-      cns5: cns5Astrometry({ plxMas: 114.49, plxBibcode: GAIA_DR2 }),
+      cns5: cited(114.49, GAIA_DR2, null),
     }, false, false);
     expect(res.via).toBe('cns5_plx');
   });
@@ -158,7 +160,7 @@ describe('parallax-cascade / the Gaia-bibcode skip rule', () => {
     const res = resolveParallax({
       ...NONE,
       gaia: gaiaAstrometryRow({ parallaxMas: null, parallaxErrorMas: null }),
-      cns5: cns5Astrometry({ plxMas: 114.49, plxBibcode: GAIA_DR2 }),
+      cns5: cited(114.49, GAIA_DR2, null),
       gliese: gliese(115.0),
     }, true, false);
     expect(res.via).toBe('gliese_plx');

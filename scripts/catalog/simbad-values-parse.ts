@@ -10,6 +10,7 @@ import {
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
 } from './catalog-pure';
+import { citedParallax, type CitedParallax } from './cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from './cited-proper-motion';
 
 const FILE_LABEL = 'data/simbad/simbad_values.tsv';
@@ -29,16 +30,6 @@ export interface SimbadRadialVelocity {
   bibcode: string;
 }
 
-/** One SIMBAD row's parallax. A third independently-bibcoded quantity rather
- *  than part of the astrometry: SIMBAD routinely holds a parallax for a row
- *  whose position it sources elsewhere, and the distance cascade's skip rules
- *  turn on this bibcode alone. */
-export interface SimbadParallax {
-  mas: number;
-  errMas: number | null;
-  bibcode: string;
-}
-
 /** One SIMBAD row's position and proper motion, each with the bibcode that is
  *  its actual source. Coordinates are ICRS at {@link SIMBAD_REF_EPOCH}; the
  *  PM is carried separately because SIMBAD bibcodes the two quantities
@@ -52,7 +43,11 @@ export interface SimbadAstrometry {
 
 export interface SimbadValueRow {
   rv: SimbadRadialVelocity | null;
-  parallax: SimbadParallax | null;
+  /** A third independently-bibcoded quantity rather than part of the
+   *  astrometry: SIMBAD routinely holds a parallax for a row whose position it
+   *  sources elsewhere, and the distance cascade's skip rules turn on this
+   *  bibcode alone. */
+  parallax: CitedParallax | null;
   astrometry: SimbadAstrometry | null;
 }
 
@@ -80,17 +75,6 @@ function parseRv(cells: string[], idx: Record<string, number>): SimbadRadialVelo
   const bibcode = nonEmpty(cells[idx.rvz_bibcode]);
   if (kmS === null || bibcode === null) return null;
   return { kmS, bibcode };
-}
-
-/** Dropped whole without its bibcode, the same rule the rv and the position
- *  follow: the bibcode is the source, SIMBAD the index that found it. The error
- *  is admitted separately because it is what the cascade's precision floor
- *  reads, and SIMBAD does not always publish one. */
-function parseParallax(cells: string[], idx: Record<string, number>): SimbadParallax | null {
-  const mas = parseFloatOrNull(cells[idx.plx_value]);
-  const bibcode = nonEmpty(cells[idx.plx_bibcode]);
-  if (mas === null || bibcode === null) return null;
-  return { mas, errMas: parseFloatOrNull(cells[idx.plx_err]), bibcode };
 }
 
 /** A position is consumable only with the bibcode that sourced it — the
@@ -135,7 +119,11 @@ export function parseSimbadValuesTsv(text: string): SimbadValueIndex {
     };
     const row: SimbadValueRow = {
       rv: parseRv(cells, idx),
-      parallax: parseParallax(cells, idx),
+      parallax: citedParallax(
+        parseFloatOrNull(cells[idx.plx_value]),
+        parseFloatOrNull(cells[idx.plx_err]),
+        nonEmpty(cells[idx.plx_bibcode]),
+      ),
       astrometry: parseAstrometry(cells, idx),
     };
     indexSimbadRow(index, keys, row, (namespace, key) => {

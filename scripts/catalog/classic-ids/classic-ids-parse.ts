@@ -2,6 +2,7 @@
 // data/classic-ids/. See data/classic-ids/README.md § Provenance.
 import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
 import { normaliseGjKey } from '../catalog-pure';
+import { citedParallax, type CitedParallax } from '../cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
 
 const REFRESH_CLASSIC_IDS = 'Re-run `pnpm run refresh:classic-ids`.';
@@ -113,9 +114,9 @@ export interface Cns5Astrometry {
   posEpoch: number;
   /** Admitted only with the bibcode that sourced it, for the reason the motion
    *  is: CNS5 republishes Gaia's own parallax on most rows, and the distance
-   *  cascade's skip rule cannot see that without the citation. */
-  plxMas: number | null;
-  plxBibcode: string | null;
+   *  cascade's skip rule cannot see that without the citation. CNS5 publishes
+   *  no parallax error, so `errMas` is always null here. */
+  parallax: CitedParallax | null;
   /** 87% of CNS5's proper motions are Gaia's own republished, so the PM
    *  rescue's skip rule cannot weigh one without its citation. Null where the
    *  row states no motion, or states it uncited — the position stands either
@@ -142,19 +143,6 @@ const CNS5_COLUMNS = [
   'pm_ra', 'pm_de', 'pm_bibcode',
 ] as const;
 
-/** An unbibcoded parallax is dropped whole, the same rule the SIMBAD values
- *  pull applies at write time: the bibcode is the source. Every committed CNS5
- *  row carries one, so this guards a re-pull rather than this file. */
-function cns5Parallax(
-  cells: string[], idx: Record<string, number>,
-): Pick<Cns5Astrometry, 'plxMas' | 'plxBibcode'> {
-  const plxMas = parseFloatOrNull(cells[idx.plx_mas]);
-  const plxBibcode = nonEmpty(cells[idx.plx_bibcode]);
-  return plxMas !== null && plxBibcode !== null
-    ? { plxMas, plxBibcode }
-    : { plxMas: null, plxBibcode: null };
-}
-
 export function parseCns5Tsv(text: string): Cns5Row[] {
   const out: Cns5Row[] = [];
   for (const { cells, idx } of dataRows(
@@ -176,7 +164,11 @@ export function parseCns5Tsv(text: string): Cns5Row[] {
       astrometry: raDeg !== null && decDeg !== null && posEpoch !== null
         ? {
             raDeg, decDeg, posEpoch,
-            ...cns5Parallax(cells, idx),
+            parallax: citedParallax(
+              parseFloatOrNull(cells[idx.plx_mas]),
+              null,
+              nonEmpty(cells[idx.plx_bibcode]),
+            ),
             pm: citedProperMotion(
               parseFloatOrNull(cells[idx.pm_ra]),
               parseFloatOrNull(cells[idx.pm_de]),

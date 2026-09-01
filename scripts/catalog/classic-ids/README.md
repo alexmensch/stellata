@@ -53,7 +53,11 @@ scripts/catalog/classic-ids/
                                   because 87% of CNS5's are Gaia's own
                                   republished and the rescue's skip rule needs
                                   the citation to see that; an uncited one is
-                                  dropped whole, position intact.
+                                  dropped whole, position intact. Its parallax
+                                  is a `CitedParallax` (../cited-parallax.ts)
+                                  for the same reason and on the same terms —
+                                  CNS5 publishes no error for it, which is what
+                                  that type's null `errMas` states.
   cns5-fixture.ts                 Test-only Cns5Row / Cns5Astrometry builders.
                                   A module, not an export from a test file:
                                   four suites across two folders build these,
