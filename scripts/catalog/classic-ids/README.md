@@ -55,9 +55,10 @@ scripts/catalog/classic-ids/
                                   the citation to see that; an uncited one is
                                   dropped whole, position intact. Its parallax
                                   is a `CitedParallax` (../cited-parallax.ts)
-                                  for the same reason and on the same terms —
-                                  CNS5 publishes no error for it, which is what
-                                  that type's null `errMas` states.
+                                  for the same reason and on the same terms,
+                                  carrying CNS5's own `e_plx_mas` so the
+                                  cascade's precision floor has an error bar to
+                                  read on this tier as on every other.
   cns5-fixture.ts                 Test-only Cns5Row / Cns5Astrometry builders.
                                   A module, not an export from a test file:
                                   four suites across two folders build these,

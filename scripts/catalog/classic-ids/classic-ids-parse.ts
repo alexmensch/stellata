@@ -114,8 +114,7 @@ export interface Cns5Astrometry {
   posEpoch: number;
   /** Admitted only with the bibcode that sourced it, for the reason the motion
    *  is: CNS5 republishes Gaia's own parallax on most rows, and the distance
-   *  cascade's skip rule cannot see that without the citation. CNS5 publishes
-   *  no parallax error, so `errMas` is always null here. */
+   *  cascade's skip rule cannot see that without the citation. */
   parallax: CitedParallax | null;
   /** 87% of CNS5's proper motions are Gaia's own republished, so the PM
    *  rescue's skip rule cannot weigh one without its citation. Null where the
@@ -139,7 +138,7 @@ export interface Cns5Row {
 
 const CNS5_COLUMNS = [
   'cns5', 'gj', 'gj_comp', 'gaia_source_id', 'hip',
-  'ra_deg', 'de_deg', 'pos_epoch', 'plx_mas', 'plx_bibcode',
+  'ra_deg', 'de_deg', 'pos_epoch', 'plx_mas', 'e_plx_mas', 'plx_bibcode',
   'pm_ra', 'pm_de', 'pm_bibcode',
 ] as const;
 
@@ -166,7 +165,7 @@ export function parseCns5Tsv(text: string): Cns5Row[] {
             raDeg, decDeg, posEpoch,
             parallax: citedParallax(
               parseFloatOrNull(cells[idx.plx_mas]),
-              null,
+              parseFloatOrNull(cells[idx.e_plx_mas]),
               nonEmpty(cells[idx.plx_bibcode]),
             ),
             pm: citedProperMotion(

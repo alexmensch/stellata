@@ -26,12 +26,13 @@ const BSC5 = ['hr\thd\tname', '7001\t172167\t3Alp Lyr', '1\t3\t'].join('\n');
 
 const CNS5 = [
   'cns5\tgj\tgj_comp\tgaia_source_id\thip'
-    + '\tra_deg\tde_deg\tpos_epoch\tplx_mas\tplx_bibcode\tpm_ra\tpm_de\tpm_bibcode',
+    + '\tra_deg\tde_deg\tpos_epoch\tplx_mas\te_plx_mas\tplx_bibcode'
+    + '\tpm_ra\tpm_de\tpm_bibcode',
   '3591\t551\tC\t5853498713190525696\t70890'
-    + '\t217.39232147201\t-62.67607511677\t2016.0\t768.07\t2020yCat.1350....0G'
-    + '\t-3781.74\t769.47\t2020yCat.1350....0G',
-  '0\tSun\t\t\t\t\t\t\t\t\t\t\t\t',
-  '3592\t552\t\t\t\t217.4\t-62.6\t2016.0\t100\t\t-10\t20\t',
+    + '\t217.39232147201\t-62.67607511677\t2016.0\t768.07\t0.05'
+    + '\t2020yCat.1350....0G\t-3781.74\t769.47\t2020yCat.1350....0G',
+  '0\tSun\t\t\t\t\t\t\t\t\t\t\t\t\t',
+  '3592\t552\t\t\t\t217.4\t-62.6\t2016.0\t100\t1.5\t\t-10\t20\t',
 ].join('\n');
 
 describe('classic-ids-parse / parseTyc2HdTsv', () => {
@@ -114,10 +115,21 @@ describe('classic-ids-parse / parseCns5Tsv', () => {
     + 'rules read that bibcode, so a value without one cannot be weighed', () => {
     const rows = parseCns5Tsv(CNS5);
     expect(rows[0].astrometry?.parallax).toEqual({
-      mas: 768.07, errMas: null, bibcode: '2020yCat.1350....0G',
+      mas: 768.07, errMas: 0.05, bibcode: '2020yCat.1350....0G',
     });
     // Row 3 states plx_mas=100 and no citation: the whole quantity goes.
     expect(rows[2].astrometry?.parallax).toBeNull();
+  });
+
+  // CNS5 publishes e_plx_mas on every row that has a parallax, and the
+  // cascade's precision floor is the consumer. Dropping it left this tier the
+  // only one whose signal-to-noise was structurally unknowable, so no cns5 row
+  // could ever be counted low-precision.
+  it('carries the parallax error CNS5 publishes, so the floor can read it', () => {
+    const errs = parseCns5Tsv(CNS5)
+      .map((r) => r.astrometry?.parallax?.errMas)
+      .filter((e) => e !== undefined);
+    expect(errs).toEqual([0.05]);
   });
 });
 
