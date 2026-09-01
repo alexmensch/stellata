@@ -7,7 +7,7 @@ import {
   parseCrossIndexTsv,
   parseTyc2HdTsv,
 } from './classic-ids-parse';
-import { cns5Row } from './cns5-fixture';
+import { cns5Astrometry, cns5Row } from './cns5-fixture';
 
 const TYC2_HD = [
   'tyc1\ttyc2\ttyc3\thd\tn_hd\tn_tyc',
@@ -26,10 +26,12 @@ const BSC5 = ['hr\thd\tname', '7001\t172167\t3Alp Lyr', '1\t3\t'].join('\n');
 
 const CNS5 = [
   'cns5\tgj\tgj_comp\tgaia_source_id\thip'
-    + '\tra_deg\tde_deg\tpos_epoch\tplx_mas\tpm_ra\tpm_de',
+    + '\tra_deg\tde_deg\tpos_epoch\tplx_mas\tpm_ra\tpm_de\tpm_bibcode',
   '3591\t551\tC\t5853498713190525696\t70890'
-    + '\t217.39232147201\t-62.67607511677\t2016.0\t768.07\t-3781.74\t769.47',
-  '0\tSun\t\t\t\t\t\t\t\t\t',
+    + '\t217.39232147201\t-62.67607511677\t2016.0\t768.07\t-3781.74\t769.47'
+    + '\t2020yCat.1350....0G',
+  '0\tSun\t\t\t\t\t\t\t\t\t\t',
+  '3592\t552\t\t\t\t217.4\t-62.6\t2016.0\t100\t-10\t20\t',
 ].join('\n');
 
 describe('classic-ids-parse / parseTyc2HdTsv', () => {
@@ -97,13 +99,20 @@ describe('classic-ids-parse / parseCns5Tsv', () => {
     expect(rows[1].gaiaSourceId).toBeNull();
     expect(rows[1].hip).toBeNull();
   });
+
+  it('carries the PM bibcode, and drops an unbibcoded motion whole', () => {
+    const rows = parseCns5Tsv(CNS5);
+    expect(rows[0].astrometry?.pm).toEqual({
+      pmRaMasyr: -3781.74, pmDecMasyr: 769.47, bibcode: '2020yCat.1350....0G',
+    });
+    // The position survives the drop; only the motion needed the citation.
+    expect(rows[2].astrometry?.plxMas).toBe(100);
+    expect(rows[2].astrometry?.pm).toBeNull();
+  });
 });
 
 describe('classic-ids-parse / cns5AstrometryByGj', () => {
-  const astrometry = {
-    raDeg: 10, decDeg: 20, posEpoch: 2016.0,
-    plxMas: 100, pmRaMasyr: 5, pmDecMasyr: -5,
-  };
+  const astrometry = cns5Astrometry({ raDeg: 10, decDeg: 20, posEpoch: 2016.0 });
 
   it("keys on the record's own gl form, component letter included", () => {
     const index = cns5AstrometryByGj([

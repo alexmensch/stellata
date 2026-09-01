@@ -25,6 +25,7 @@ import {
 } from './direction-cascade';
 import type { Tycho2Row } from '../tycho2-parse';
 import { gaiaAstrometryRow } from './astrometry-fixture';
+import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import {
   equatorialTangentBasis,
   unitVectorFromRaDec,
@@ -357,10 +358,7 @@ describe('direction-cascade / resolveDirection routing', () => {
 
   it('CNS5 takes a TYC-less Gliese row, propagating from its own pos_epoch', () => {
     const res = resolveDirection(inputs({ gl: 'Gl 165A' }), sources({
-      cns5: new Map([['165A', {
-        raDeg: 70, decDeg: -7, posEpoch: 2000.0,
-        plxMas: 100, pmRaMasyr: 50, pmDecMasyr: -20,
-      }]]),
+      cns5: new Map([['165A', cns5Astrometry()]]),
     }));
     expect(res?.via).toBe('cns5');
     expect(res?.velVia).toBe('cns5_pm');
@@ -369,10 +367,7 @@ describe('direction-cascade / resolveDirection routing', () => {
   it('Tycho-2 outranks CNS5 on a row carrying both', () => {
     const res = resolveDirection(inputs({ tyc: TYC, gl: 'Gl 165A' }), sources({
       tycho2: new Map([[TYC, tycho2Row()]]),
-      cns5: new Map([['165A', {
-        raDeg: 70, decDeg: -7, posEpoch: 2000.0,
-        plxMas: 100, pmRaMasyr: 50, pmDecMasyr: -20,
-      }]]),
+      cns5: new Map([['165A', cns5Astrometry()]]),
     }));
     expect(res?.via).toBe('tycho2');
   });
@@ -380,13 +375,13 @@ describe('direction-cascade / resolveDirection routing', () => {
   it('SIMBAD is the bottom tier and propagates from J2000', () => {
     const simbad = {
       raDeg: 120, decDeg: 40, cooBibcode: '2020yCat.1350....0G',
-      pmRaMasyr: 200, pmDecMasyr: -100, pmBibcode: '2020yCat.1350....0G',
+      pm: { pmRaMasyr: 200, pmDecMasyr: -100, bibcode: '2020yCat.1350....0G' },
     };
     const res = resolveDirection(inputs({ simbad }), sources())!;
     expect(res.via).toBe('simbad');
     expect(res.velVia).toBe('simbad_pm');
     const expected = directionAtEpoch(
-      simbad.raDeg, simbad.decDeg, simbad.pmRaMasyr, simbad.pmDecMasyr,
+      simbad.raDeg, simbad.decDeg, simbad.pm.pmRaMasyr, simbad.pm.pmDecMasyr,
       SIMBAD_REF_EPOCH, CATALOG_SCENE_EPOCH,
     );
     expect(res.dir.x).toBeCloseTo(expected.x, 12);
@@ -397,8 +392,7 @@ describe('direction-cascade / resolveDirection routing', () => {
   it('a SIMBAD row with a position but no PM keeps the position, zero tangential', () => {
     const res = resolveDirection(inputs({
       simbad: {
-        raDeg: 120, decDeg: 40, cooBibcode: '2020yCat.1350....0G',
-        pmRaMasyr: null, pmDecMasyr: null, pmBibcode: null,
+        raDeg: 120, decDeg: 40, cooBibcode: '2020yCat.1350....0G', pm: null,
       },
     }), sources())!;
     expect(res.via).toBe('simbad');

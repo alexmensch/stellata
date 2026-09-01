@@ -8,9 +8,13 @@ import {
   type UnitVector,
 } from '../../../src/client/util/equatorial-basis';
 import { headerIndex } from '../parse/corpus-tsv';
-import { normaliseGjKey, type SimbadRecordKeys } from '../catalog-pure';
+import { gaiaHas5pSolution } from './gaia-distrust';
+import type { SimbadRecordKeys } from '../catalog-pure';
 import type { Tycho2Row } from '../tycho2-parse';
-import type { Cns5Astrometry } from '../classic-ids/classic-ids-parse';
+import {
+  lookupCns5Astrometry,
+  type Cns5Astrometry,
+} from '../classic-ids/classic-ids-parse';
 import type { SimbadAstrometry } from '../simbad-values-parse';
 
 export const GAIA_DR3_REF_EPOCH = 2016.0;
@@ -118,12 +122,11 @@ export const DIRECTION_VIA_VALUES = [
 
 export type DirectionVia = (typeof DIRECTION_VIA_VALUES)[number];
 
-// Which source supplied the space-motion PM for this row's velocity. Maps
-// off the direction tier — the position and the PM always come from one
-// solution — degrading to `zero` where that tier carries no usable PM (2p
-// Gaia rows, HIP2 rows with null PM, Tycho-2's `pflag='X'` rows, which have
-// no mean solution and so no proper motion either). Pinned per-tier in
-// build-counts.
+// Which catalogue supplied the space-motion PM for this row's velocity —
+// provenance, not coherence. It maps off the direction tier wherever that tier
+// carries a PM; where it does not, `pm-rescue.ts` re-keys on the record's own
+// designations and this names whichever catalogue that reached. `zero` is what
+// survives both. Pinned per-tier in build-counts.
 export const VELOCITY_VIA_VALUES = [
   'gaia_pm',
   'hip2_pm',
@@ -134,14 +137,6 @@ export const VELOCITY_VIA_VALUES = [
 ] as const;
 
 export type VelocityVia = (typeof VELOCITY_VIA_VALUES)[number];
-
-/** Whether the row carries the full five-parameter solution. A 2p row is
- *  position-only — Gaia fitted neither parallax nor PM, which on a close pair is
- *  the blend the fit could not separate. Both the direction cascade's tier-1
- *  branch and the rv cascade's Gaia tier turn on this. */
-export function gaiaHas5pSolution(row: GaiaAstrometryCatalogRow): boolean {
-  return row.parallaxMas !== null;
-}
 
 export interface DirectionResolution {
   via: DirectionVia;
@@ -399,18 +394,21 @@ export function resolveDirection(
     };
   }
 
-  const cns5Key = normaliseGjKey(gl);
-  const cns5 = cns5Key !== null ? sources.cns5.get(cns5Key) : undefined;
-  if (cns5 !== undefined) {
+  const cns5 = lookupCns5Astrometry(sources.cns5, gl);
+  if (cns5 !== null) {
     return {
       via: 'cns5',
       dir: directionAtEpoch(
-        cns5.raDeg, cns5.decDeg, cns5.pmRaMasyr, cns5.pmDecMasyr,
+        cns5.raDeg, cns5.decDeg,
+        cns5.pm?.pmRaMasyr ?? null, cns5.pm?.pmDecMasyr ?? null,
         cns5.posEpoch, CATALOG_SCENE_EPOCH,
       ),
       srcRaDeg: cns5.raDeg, srcDecDeg: cns5.decDeg,
-      srcPmraMasyr: cns5.pmRaMasyr, srcPmdecMasyr: cns5.pmDecMasyr,
-      velVia: pmVelVia(cns5.pmRaMasyr, cns5.pmDecMasyr, 'cns5_pm'),
+      srcPmraMasyr: cns5.pm?.pmRaMasyr ?? null,
+      srcPmdecMasyr: cns5.pm?.pmDecMasyr ?? null,
+      velVia: pmVelVia(
+        cns5.pm?.pmRaMasyr ?? null, cns5.pm?.pmDecMasyr ?? null, 'cns5_pm',
+      ),
     };
   }
 
@@ -418,12 +416,16 @@ export function resolveDirection(
     return {
       via: 'simbad',
       dir: directionAtEpoch(
-        simbad.raDeg, simbad.decDeg, simbad.pmRaMasyr, simbad.pmDecMasyr,
+        simbad.raDeg, simbad.decDeg,
+        simbad.pm?.pmRaMasyr ?? null, simbad.pm?.pmDecMasyr ?? null,
         SIMBAD_REF_EPOCH, CATALOG_SCENE_EPOCH,
       ),
       srcRaDeg: simbad.raDeg, srcDecDeg: simbad.decDeg,
-      srcPmraMasyr: simbad.pmRaMasyr, srcPmdecMasyr: simbad.pmDecMasyr,
-      velVia: pmVelVia(simbad.pmRaMasyr, simbad.pmDecMasyr, 'simbad_pm'),
+      srcPmraMasyr: simbad.pm?.pmRaMasyr ?? null,
+      srcPmdecMasyr: simbad.pm?.pmDecMasyr ?? null,
+      velVia: pmVelVia(
+        simbad.pm?.pmRaMasyr ?? null, simbad.pm?.pmDecMasyr ?? null, 'simbad_pm',
+      ),
     };
   }
 

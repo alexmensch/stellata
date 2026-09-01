@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 
 import { gaiaAstrometryRow } from '../astrometry-fixture';
 import {
-  isGaiaCatalogueBibcode,
   radialTermExceedsCeiling,
   resolveRadialVelocity,
   rvErrorBand,
@@ -123,15 +122,6 @@ describe('resolveRadialVelocity cascade', () => {
     expect(radialTermExceedsCeiling(650)).toBe(false);
     expect(radialTermExceedsCeiling(0)).toBe(false);
     expect(radialTermExceedsCeiling(null)).toBe(false);
-  });
-
-  it('classes only the Gaia catalogue releases as Gaia bibcodes', () => {
-    expect(isGaiaCatalogueBibcode(GAIA_DR2)).toBe(true);
-    expect(isGaiaCatalogueBibcode('2020yCat.1350....0G')).toBe(true);
-    expect(isGaiaCatalogueBibcode(GAIA_DR3)).toBe(true);
-    // Gontcharov's Pulkovo compilation — a G-initialled author, not Gaia.
-    expect(isGaiaCatalogueBibcode(LITERATURE)).toBe(false);
-    expect(isGaiaCatalogueBibcode('2011yCat.3265....0S')).toBe(false);
   });
 
   it('bands the stated uncertainty on its upper edge, nulls to none', () => {

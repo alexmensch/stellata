@@ -2,6 +2,7 @@
 // data/classic-ids/. See data/classic-ids/README.md § Provenance.
 import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
 import { normaliseGjKey } from '../catalog-pure';
+import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
 
 const REFRESH_CLASSIC_IDS = 'Re-run `pnpm run refresh:classic-ids`.';
 
@@ -105,15 +106,17 @@ export function parseBsc5Tsv(text: string): Bsc5Row[] {
  *  `posEpoch` is per-row and really varies — 5,244 rows state 2016.0 against
  *  406 at 2000.0, 138 at 1991.25, 36 at 2015.5 and 3 at 2016.55 — so a
  *  consumer propagating these coordinates reads the epoch off the row rather
- *  than assuming the catalogue's dominant one. `pmRaMasyr` is μ_α*, cos δ
- *  already applied. */
+ *  than assuming the catalogue's dominant one. */
 export interface Cns5Astrometry {
   raDeg: number;
   decDeg: number;
   posEpoch: number;
   plxMas: number | null;
-  pmRaMasyr: number | null;
-  pmDecMasyr: number | null;
+  /** 87% of CNS5's proper motions are Gaia's own republished, so the PM
+   *  rescue's skip rule cannot weigh one without its citation. Null where the
+   *  row states no motion, or states it uncited — the position stands either
+   *  way. */
+  pm: CitedProperMotion | null;
 }
 
 /** One CNS5 row. `gaiaSourceId` is an EDR3 id, which shares DR3's
@@ -131,7 +134,7 @@ export interface Cns5Row {
 
 const CNS5_COLUMNS = [
   'cns5', 'gj', 'gj_comp', 'gaia_source_id', 'hip',
-  'ra_deg', 'de_deg', 'pos_epoch', 'plx_mas', 'pm_ra', 'pm_de',
+  'ra_deg', 'de_deg', 'pos_epoch', 'plx_mas', 'pm_ra', 'pm_de', 'pm_bibcode',
 ] as const;
 
 export function parseCns5Tsv(text: string): Cns5Row[] {
@@ -156,8 +159,11 @@ export function parseCns5Tsv(text: string): Cns5Row[] {
         ? {
             raDeg, decDeg, posEpoch,
             plxMas: parseFloatOrNull(cells[idx.plx_mas]),
-            pmRaMasyr: parseFloatOrNull(cells[idx.pm_ra]),
-            pmDecMasyr: parseFloatOrNull(cells[idx.pm_de]),
+            pm: citedProperMotion(
+              parseFloatOrNull(cells[idx.pm_ra]),
+              parseFloatOrNull(cells[idx.pm_de]),
+              nonEmpty(cells[idx.pm_bibcode]),
+            ),
           }
         : null,
     });
@@ -189,4 +195,14 @@ export function cns5AstrometryByGj(rows: readonly Cns5Row[]): Map<string, Cns5As
     out.set(key, row.astrometry);
   }
   return out;
+}
+
+/** {@link cns5AstrometryByGj}'s index read the way a record asks for it, so the
+ *  direction cascade and the PM rescue fold the `gl` cell identically. */
+export function lookupCns5Astrometry(
+  index: ReadonlyMap<string, Cns5Astrometry>,
+  gl: string | null,
+): Cns5Astrometry | null {
+  const key = gl === null ? null : normaliseGjKey(gl);
+  return key === null ? null : index.get(key) ?? null;
 }

@@ -2,10 +2,11 @@
 
 import type { GaiaAstrometryCatalogRow } from './direction-cascade';
 
-/** A 5p row with every optional column absent, so a suite states only the
- *  columns its assertion turns on. Centralising the roster is the point: a
- *  column added to the interface lands here once instead of in every suite
- *  that happens to build a row. */
+/** A row with every optional column absent, so a suite states only the columns
+ *  its assertion turns on. Parallax is one of them, which makes the default a
+ *  2p (position-only) row — state `parallaxMas` to get a 5p one. Centralising
+ *  the roster is the point: a column added to the interface lands here once
+ *  instead of in every suite that happens to build a row. */
 export function gaiaAstrometryRow(
   overrides: Partial<GaiaAstrometryCatalogRow> = {},
 ): GaiaAstrometryCatalogRow {

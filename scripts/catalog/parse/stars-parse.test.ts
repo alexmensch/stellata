@@ -12,6 +12,7 @@ import {
   type GaiaAstrometryCatalogRow,
 } from '../distance/direction-cascade';
 import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
+import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import {
   SPINE_COLUMNS,
   serializeSpine,
@@ -199,5 +200,141 @@ describe('readStars constellation assignment', () => {
     );
     expect(stars).toHaveLength(1);
     expect(stars[0].conIndex).toBe(NO_CONSTELLATION_INDEX);
+  });
+});
+
+// resolvePmRescue is pinned in isolation by ../distance/pm-rescue/. What these
+// pin is the wiring readStars owns and no unit test reaches: which rows enter
+// the cascade at all, the 2p condition it hands them, and the velocityVia the
+// route is re-credited to.
+describe('readStars PM rescue', () => {
+  const RESCUE_TYC = '3-3-1';
+  const SOURCE_ID = '756853643638639104';
+  const GJ = 'Gl 423A';
+  // ξ UMa's Tycho-2 mean motion, on a record whose Gaia row fitted a place but
+  // no motion — the shipped cohort's dominant shape.
+  const TYCHO2_PM = { pmRaMasyr: -453.7, pmDecMasyr: -591.4 };
+  const GAIA_EDR3 = '2020yCat.1350....0G';
+
+  const SPINE_ROW: Partial<SpineRow> = {
+    ra: '0', dec: '0', dist: '100', dist_src: 'OTHER', spect: 'K0V',
+    tyc: RESCUE_TYC, proper: 'Rescued',
+  };
+
+  // Tycho-2 serves V here as it does for the AT_ORIGIN rows above; `pm` is
+  // what each case varies. A null PM is the pflag='X' shape — a position with
+  // no mean solution behind it.
+  function sources(
+    pm: { pmRaMasyr: number | null; pmDecMasyr: number | null },
+    overrides: Partial<DirectionSources> = {},
+  ): DirectionSources {
+    return {
+      gaiaAstrometry: new Map(),
+      hip2: new Map(),
+      nssSourceIds: new Set(),
+      cns5: new Map(),
+      tycho2: new Map([[RESCUE_TYC, {
+        raDeg: 0, decDeg: 0,
+        epochRa: CATALOG_SCENE_EPOCH, epochDec: CATALOG_SCENE_EPOCH,
+        pmRaMasyr: pm.pmRaMasyr, pmDecMasyr: pm.pmDecMasyr,
+        btMag: 10, vtMag: 10, fromIcrs: false, isPhotocentre: false,
+      }]]),
+      ...overrides,
+    };
+  }
+
+  const gaiaRow = (overrides: Partial<GaiaAstrometryCatalogRow> = {}) =>
+    new Map([[SOURCE_ID, gaiaAstrometryRow(overrides)]]);
+
+  const speed = (s: { vx: number; vy: number; vz: number }): number =>
+    Math.hypot(s.vx, s.vy, s.vz);
+
+  it('rescues a 2p row off its own TYC, and credits Tycho-2 not the tier', () => {
+    const { stars, stats } = readStars(
+      writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID }]),
+      {
+        conAssignment: CON_ASSIGNMENT,
+        directions: sources(TYCHO2_PM, { gaiaAstrometry: gaiaRow() }),
+      },
+    );
+    // The position still comes from the Gaia anchor — only the motion is
+    // re-keyed.
+    expect(stats.directionVia.gaia_5p).toBe(1);
+    expect(stats.pmRescueVia.tycho2).toBe(1);
+    expect(stats.velocityVia.tycho2_pm).toBe(1);
+    expect(stats.velocityVia.zero).toBe(0);
+    expect(speed(stars[0])).toBeGreaterThan(0);
+  });
+
+  it('ships static where the cascade reaches nothing — the control', () => {
+    const { stars, stats } = readStars(
+      writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID }]),
+      {
+        conAssignment: CON_ASSIGNMENT,
+        directions: sources(
+          { pmRaMasyr: null, pmDecMasyr: null },
+          { gaiaAstrometry: gaiaRow() },
+        ),
+      },
+    );
+    expect(stats.pmRescueVia.none).toBe(1);
+    expect(stats.velocityVia.zero).toBe(1);
+    expect(speed(stars[0])).toBe(0);
+  });
+
+  it('never enters the cascade where the tier states its own motion', () => {
+    const { stats } = readStars(
+      writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID }]),
+      {
+        conAssignment: CON_ASSIGNMENT,
+        directions: sources(TYCHO2_PM, {
+          gaiaAstrometry: gaiaRow({
+            parallaxMas: 50, pmraMasyr: 100, pmdecMasyr: -100,
+          }),
+        }),
+      },
+    );
+    expect(stats.velocityVia.gaia_pm).toBe(1);
+    // Every rescue bucket empty: a 5p row must not reach the cascade at all,
+    // or Tycho-2's blend motion would displace Gaia's own converged fit.
+    expect(Object.values(stats.pmRescueVia).every((n) => n === 0)).toBe(true);
+  });
+
+  it("refuses a Gaia-bibcoded motion on the record's OWN 2p solution", () => {
+    const { stars, stats } = readStars(
+      writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID, gl: GJ }]),
+      {
+        conAssignment: CON_ASSIGNMENT,
+        directions: sources({ pmRaMasyr: null, pmDecMasyr: null }, {
+          gaiaAstrometry: gaiaRow(),
+          cns5: new Map([['423A', cns5Astrometry({
+            pm: { pmRaMasyr: 50, pmDecMasyr: -20, bibcode: GAIA_EDR3 },
+          })]]),
+        }),
+      },
+    );
+    expect(stats.pmRescueVia.gaia_bibcode_skipped).toBe(1);
+    expect(speed(stars[0])).toBe(0);
+  });
+
+  it('takes that same motion where no Gaia fit stands behind the record', () => {
+    // Identical to the case above but for the absent Gaia row, which is the
+    // whole of the difference: with no fit to distrust the citation is
+    // ordinary. Inverting the predicate would strip the motion from these.
+    const { stars, stats } = readStars(
+      writeSpineTsv([{ ...SPINE_ROW, gl: GJ }]),
+      {
+        conAssignment: CON_ASSIGNMENT,
+        directions: sources({ pmRaMasyr: null, pmDecMasyr: null }, {
+          cns5: new Map([['423A', cns5Astrometry({
+            pm: { pmRaMasyr: 50, pmDecMasyr: -20, bibcode: GAIA_EDR3 },
+          })]]),
+        }),
+      },
+    );
+    expect(stats.directionVia.tycho2).toBe(1);
+    expect(stats.pmRescueVia.cns5).toBe(1);
+    expect(stats.velocityVia.cns5_pm).toBe(1);
+    expect(speed(stars[0])).toBeGreaterThan(0);
   });
 });

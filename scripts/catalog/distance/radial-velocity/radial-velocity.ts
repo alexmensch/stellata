@@ -2,10 +2,14 @@
 // → zero radial term, with the Gaia-bibcode skip rule. See README.md.
 
 import {
-  gaiaHas5pSolution,
   VELOCITY_SANITY_CEILING_KM_S,
   type GaiaAstrometryCatalogRow,
 } from '../direction-cascade';
+import {
+  gaiaHas5pSolution,
+  gaiaRowIs2p,
+  isGaiaCatalogueBibcode,
+} from '../gaia-distrust';
 import type { SimbadRadialVelocity } from '../../simbad-values-parse';
 
 // Which source supplied the radial term of the space-motion velocity. Pinned
@@ -50,21 +54,6 @@ export function rvErrorBand(errorKmS: number | null): RvErrorBand {
     if (errorKmS <= edge) return band;
   }
   return 'gt20';
-}
-
-// Gaia's own catalogue releases as SIMBAD cites them — VizieR I/345 (DR2),
-// I/350 (EDR3), I/355 (DR3). A DR4 release adds one entry here.
-const GAIA_CATALOGUE_BIBCODES: ReadonlySet<string> = new Set([
-  '2018yCat.1345....0G',
-  '2020yCat.1350....0G',
-  '2022yCat.1355....0G',
-]);
-
-/** Whether a bibcode names a Gaia catalogue release rather than the
- *  literature. The rv tier's skip rule turns on it; the SIMBAD tiers pin
- *  their split by it. */
-export function isGaiaCatalogueBibcode(bibcode: string): boolean {
-  return GAIA_CATALOGUE_BIBCODES.has(bibcode);
 }
 
 /** Whether a radial term alone is past the space-velocity sanity ceiling.
@@ -115,7 +104,7 @@ export function resolveRadialVelocity(
   if (gaia !== null && gaiaHas5pSolution(gaia) && gaia.radialVelocityKmS !== null) {
     return { ...none, rvKmS: gaia.radialVelocityKmS, via: 'gaia_dr3' };
   }
-  if (gaia !== null && !gaiaHas5pSolution(gaia)
+  if (gaiaRowIs2p(gaia)
       && simbad !== null && isGaiaCatalogueBibcode(simbad.bibcode)) {
     return { ...none, gaiaBibcodeSkipped: true };
   }

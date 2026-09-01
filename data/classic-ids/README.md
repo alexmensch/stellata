@@ -96,6 +96,15 @@ bibcode per quantity. Upstream publishes one proper-motion reference
 (`r_pmRA`, whose own description reads *"Source of the proper motion"*)
 covering both components, so `pm_bibcode` is not a dropped `r_pmDE`.
 
+**`pm_bibcode` is load-bearing, not provenance decoration.** **5,139** of the
+5,908 motions cite Gaia EDR3 (`2020yCat.1350....0G`) and 9 more DR2, so CNS5
+is largely Gaia republished and a consumer taking its PM on a row Gaia refused
+to fit five parameters to would be re-admitting Gaia's own withheld value.
+`scripts/catalog/distance/pm-rescue/` reads the bibcode for exactly that gate;
+`parseCns5Tsv` drops an unbibcoded motion whole, position intact. Every
+committed row carries one, so that drop guards a re-pull rather than this
+file.
+
 **`RAJ2000` upstream names the FRAME, not the position epoch** — that is
 `pos_epoch`, and it is per row. **Treat it as a continuous value, not an
 enumeration**: it spans 1991.25–2017.97 across **72 distinct values**. The

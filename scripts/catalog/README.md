@@ -14,13 +14,9 @@ overlay merged onto the spine's inherited cells (`classic-ids/README.md`). The
 contract is `docs/catalog-driver.md`; the membership term is
 `spine/README.md`.
 
-`build-catalog.ts` is the orchestrator; `catalog-pure.ts` is the single
-source of truth for the v9 binary layout, the override math, and the
-SIMBAD namespace ladder — every subfolder imports it, and so do twelve
-runtime modules under `src/client/`. This file owns the **output
-contract**: the on-disk record layout, SID allocation, the search
-index, and the Apsis surfacing. The per-stage work lives in the
-subfolders.
+This file owns the **output contract**: the on-disk record layout, SID
+allocation, the search index, and the Apsis surfacing. The per-stage work
+lives in the subfolders.
 
 ## Subfolders
 
@@ -50,8 +46,8 @@ subfolders.
   cascade, and system distance coherence.
 - `distance/` — direction resolution, build-time de-extinction, and the
   multi-layer distance-refinement override stack with its authoring
-  discipline and post-build regression check. Its `radial-velocity/`
-  subfolder owns the rv cascade and the Gaia-bibcode skip rule.
+  discipline and post-build regression check. Its `radial-velocity/` and
+  `pm-rescue/` subfolders own the velocity's two fall-back cascades.
 - `photometry/` — the published Gaia broadband relations and the two
   cascades over them: Johnson V, and the B−V colour index.
 - `classic-ids/` — the frozen-CDS overlay build
@@ -81,6 +77,10 @@ scripts/catalog/
                                   imported by every subfolder and by
                                   src/client/loaders/. Holds no spectral
                                   symbol — that is `spectral/`, one-way.
+  cited-proper-motion.ts (+ test) `CitedProperMotion` and its only
+                                  constructor: a motion is admitted only with
+                                  the bibcode that sourced it, so an uncited
+                                  one is unrepresentable, not merely dropped.
   simbad-values-parse.ts (+ test) data/simbad/simbad_values.tsv indexed by
                                   every namespace the pull keyed on, over the
                                   shared ladder in catalog-pure.ts. The § 5
@@ -90,7 +90,7 @@ scripts/catalog/
                                   the position-to-propagate-from choice and
                                   the main-table-wins rule resolved at parse
                                   time (data/tycho2/README.md). Feeds the
-                                  direction, PM and V cascades.
+                                  direction, PM-rescue and V cascades.
   gliese-parse.ts (+ test)        data/gliese/ keyed on the bare Gliese
                                   number + component, so the catalogue's four
                                   name prefixes and a record's `gl` cell meet

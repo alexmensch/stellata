@@ -52,6 +52,14 @@ import {
   type DirectionVia,
   type VelocityVia,
 } from '../distance/direction-cascade';
+import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
+import { gaiaRowIs2p } from '../distance/gaia-distrust';
+import {
+  resolvePmRescue,
+  PM_RESCUE_VIA_VALUES,
+  VELOCITY_VIA_BY_PM_RESCUE,
+  type PmRescueVia,
+} from '../distance/pm-rescue/pm-rescue';
 import {
   radialTermExceedsCeiling,
   resolveRadialVelocity,
@@ -269,6 +277,7 @@ export function readStars(
     directionTycho2FromIcrs: number;    // tycho2-tier rows placed at the J2000 cell, no mean solution
     directionTycho2Photocentre: number; // tycho2-tier rows whose mean solution is a double's photocentre
     velocityVia: Record<VelocityVia, number>;   // per-tier space-motion PM-source routing
+    pmRescueVia: Record<PmRescueVia, number>;   // rescue-cascade routing over the rows the direction tier left without a PM
     velocityClamped: number;       // rows whose artifact velocity exceeded the sanity ceiling → zeroed
     velocityClampedSample: string[]; // per-clamped-star "id: speed @ dist" for build-log review
     velocityAboveEscape: number;   // kept rows above the Galactic escape velocity (tracked ratchet)
@@ -316,6 +325,7 @@ export function readStars(
   const directionVia = emptyTallyPartition(DIRECTION_VIA_VALUES);
   const vVia = emptyTallyPartition(V_VIA_VALUES);
   const velocityVia = emptyTallyPartition(VELOCITY_VIA_VALUES);
+  const pmRescueVia = emptyTallyPartition(PM_RESCUE_VIA_VALUES);
   const rvVia = emptyTallyPartition(RV_VIA_VALUES);
   const rvGaiaErrorBand = emptyTallyPartition(RV_ERROR_BANDS);
   let rvGaiaErrorMaxKmS = 0;
@@ -501,15 +511,37 @@ export function readStars(
       ? SOL_ABSOLUTE_V_MAGNITUDE
       : apparentToAbsoluteMagnitude(vRes.v, dist);
 
-    // Space-motion velocity from the SAME tier's solution + the final
-    // stack distance + the rv cascade's radial term. Sol carries no PM row
-    // and sits at the origin — force it to exactly zero so the advance pass
-    // leaves the world origin fixed.
+    // The direction tier supplies the PM wherever its own solution carries
+    // one. Where it does not — the 2p Gaia cohort, Tycho-2's rows with no mean
+    // solution — the tangential term re-keys on the record's own designations
+    // rather than shipping static. See ../distance/README.md § The
+    // proper-motion rescue cascade.
+    const pmRescue = !isSol && dirRes.velVia === 'zero'
+      ? resolvePmRescue(
+          {
+            tycho2: tycho2Row,
+            cns5: lookupCns5Astrometry(directions.cns5, simbadKeys.gl)?.pm ?? null,
+            simbad: simbadRow?.astrometry?.pm ?? null,
+          },
+          gaiaRowIs2p(gaiaRow),
+        )
+      : null;
+    if (pmRescue !== null) pmRescueVia[pmRescue.via]++;
+    const velVia = pmRescue === null
+      ? dirRes.velVia
+      : VELOCITY_VIA_BY_PM_RESCUE[pmRescue.via];
+
+    // Space-motion velocity from the direction tier's own position + the PM
+    // resolved above + the final stack distance + the rv cascade's radial
+    // term. Sol carries no PM row and sits at the origin — force it to exactly
+    // zero so the advance pass leaves the world origin fixed.
     let vel = isSol
       ? { x: 0, y: 0, z: 0 }
       : velocityPcPerYr(
           dirRes.srcRaDeg, dirRes.srcDecDeg,
-          dirRes.srcPmraMasyr, dirRes.srcPmdecMasyr, dist, rvKmS,
+          pmRescue === null ? dirRes.srcPmraMasyr : pmRescue.pmRaMasyr,
+          pmRescue === null ? dirRes.srcPmdecMasyr : pmRescue.pmDecMasyr,
+          dist, rvKmS,
         );
     // Physical sanity: a space velocity past the ceiling is a PM×distance
     // artifact (spurious PM on a faint distant star). Drop to zero — kept
@@ -541,7 +573,7 @@ export function readStars(
         );
       }
     }
-    velocityVia[isSol || velClamped ? 'zero' : dirRes.velVia]++;
+    velocityVia[isSol || velClamped ? 'zero' : velVia]++;
     if (velClamped) velocityClamped++;
     if (!isSol && !velClamped && rvKmS !== null && rvKmS !== 0) rvApplied++;
 
@@ -658,6 +690,7 @@ export function readStars(
       directionVia,
       vVia,
       velocityVia,
+      pmRescueVia,
       velocityClamped,
       velocityClampedSample,
       velocityAboveEscape,

@@ -10,14 +10,14 @@ resolution and `../../parse/README.md` § Space-motion velocity.
 
 ```
 scripts/catalog/distance/radial-velocity/
-  radial-velocity.ts (+ test)   The cascade, the Gaia-bibcode taxonomy the
-                                skip rule turns on, the error banding, and
-                                the ceiling test that rejects a nonphysical
-                                radial term on its own. Imports
-                                `gaiaHas5pSolution` and the sanity ceiling
-                                from ../direction-cascade — one predicate and
-                                one bound, so the radial and tangential terms
-                                distrust a row for the same reason.
+  radial-velocity.ts (+ test)   The cascade, the error banding, and the
+                                ceiling test that rejects a nonphysical radial
+                                term on its own. Imports `gaiaHas5pSolution`,
+                                `gaiaRowIs2p` and `isGaiaCatalogueBibcode` from
+                                ../gaia-distrust and the sanity ceiling from
+                                ../direction-cascade, so the radial and
+                                tangential terms distrust a row for the same
+                                reason and by the same predicates.
 ```
 
 ## The cascade
@@ -59,8 +59,9 @@ unfitted — is one whose spectrum is a blend of the components, and its median 
 is not the primary's. ξ UMa is the case that fixed the rule: source
 756853643638639104 is 2p with `ipd_frac_multi_peak` 24 on a ~2″ pair, and its
 `radial_velocity` is −26.78 km/s against the printed −15.9. `gaiaHas5pSolution`
-is the same predicate the direction cascade's tier-1 branch turns on, so the
-radial term and the tangential term distrust a row for one reason.
+(`../gaia-distrust.ts`) is the same predicate the direction cascade's tier-1
+branch and the PM rescue's skip rule turn on, so the radial term and the
+tangential term distrust a row for one reason.
 
 ## The Gaia-bibcode skip rule
 
@@ -112,7 +113,14 @@ published an rv for one of them. A tier that can supply the systemic velocity
 honestly — rather than by re-admitting the reduction the 5p gate refused — is
 the fix, not a narrower skip rule.
 
-A DR4 release adds one entry to `GAIA_CATALOGUE_BIBCODES`.
+A DR4 release adds one entry to `GAIA_CATALOGUE_BIBCODES`
+(`../gaia-distrust.ts`), which the PM rescue's skip rule reads too.
+
+**The tangential term now answers the same question the same way.**
+`../pm-rescue/` refuses a Gaia-bibcoded proper motion on a 2p row for the
+reason this section gives, over a 273-row cohort where 241 of the printed
+`pm_src` cells read `G_R2` — so the skip rule and the § 5 retirement land on
+the same number from two directions.
 
 ## What the tier reaches is decided by other fields
 
@@ -162,17 +170,16 @@ nonphysical rv costs the row its radial term and not its tangential motion.
 The whole-vector clamp is the wrong instrument here: it exists for a
 PM×distance artifact, where the *tangential* term is what cannot be trusted.
 
-**On EZ Aqr specifically this moves no shipped bytes**, and the earlier claim
-that the clamp cost it a 3.3″/yr proper motion was wrong. Its Gaia row is 2p
-with no PM at all, and the 2,314.8 / 2,295.3 mas/yr the spine prints under
-`pm_src=GJ` never reaches the velocity assembly — so the record ships at zero
-velocity either way. That gap is real and separate — 1,537 rows carry a
-printed PM their 2p Gaia row does not, 27 of them inside 25 pc — and is
-`stellata-13dx`, not fixed here.
+**On EZ Aqr this moved no shipped bytes when it landed**, and the earlier
+claim that the clamp cost it a 3.3″/yr proper motion was wrong: its Gaia row
+is 2p with no PM at all, so the record shipped at zero velocity either way.
+That gap was separate, and `../pm-rescue/` has since closed it — EZ Aqr takes
+a UCAC4-bibcoded 3.26″/yr and ships **52.63 km/s** of tangential motion with
+its radial term still rejected. It is now the worked example of what this
+rejection was for rather than a case where it made no difference.
 
-What the rejection buys is that the ratchet now names the right failure, and
-that the first row arriving with both a real PM and a nonphysical rv keeps
-the PM. The rejected row is still counted under the tier that supplied the
+What the rejection buys is that the ratchet names the right failure, and
+that a row arriving with both a real PM and a nonphysical rv keeps the PM. The rejected row is still counted under the tier that supplied the
 value (`rvSimbad`) — the cascade routed correctly and the threshold, not the
 cascade, refused it. No |rv| bound is added to the tier itself: § 5
 authorises none, and this reuses the ceiling the assembly already enforces.
