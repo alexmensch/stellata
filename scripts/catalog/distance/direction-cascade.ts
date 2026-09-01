@@ -1,6 +1,6 @@
 // Per-row sky-direction resolution for the catalog build: Gaia DR3 5p →
-// HIP2 → AT-HYG printed ra/dec, with proper-motion propagation to the
-// J2016.0 scene epoch. See scripts/catalog/README.md § Direction resolution.
+// HIP2 → Tycho-2 → CNS5 → SIMBAD, with proper-motion propagation to the
+// J2016.0 scene epoch. See README.md § Direction resolution.
 
 import {
   equatorialTangentBasis,
@@ -8,14 +8,23 @@ import {
   type UnitVector,
 } from '../../../src/client/util/equatorial-basis';
 import { headerIndex } from '../parse/corpus-tsv';
+import { normaliseGjKey, type SimbadRecordKeys } from '../catalog-pure';
+import type { Tycho2Row } from '../tycho2-parse';
+import type { Cns5Astrometry } from '../classic-ids/classic-ids-parse';
+import type { SimbadAstrometry } from '../simbad-values-parse';
 
 export const GAIA_DR3_REF_EPOCH = 2016.0;
 export const HIP2_REF_EPOCH = 1991.25;
+/** SIMBAD states `basic.ra` / `basic.dec` at J2000.0 whatever epoch the
+ *  citation measured them at. The pull carries no epoch column, so this is
+ *  measured rather than assumed — README.md § Direction resolution. */
+export const SIMBAD_REF_EPOCH = 2000.0;
 // Gaia DR3's native epoch: the catalogue-wide scene epoch every position
 // is normalised onto. The dominant Gaia set lands here with zero
-// propagation; only the HIP2 / AT-HYG minority advances. The binaries
-// pipeline mirrors this in scripts/binaries/stage6_multiples.py — keep
-// the two in sync (see data/README.md § Reference epoch and proper motion).
+// propagation; only the HIP2 / Tycho-2 / CNS5 / SIMBAD minority advances.
+// The binaries pipeline mirrors this in scripts/binaries/stage6_multiples.py
+// — keep the two in sync (see data/README.md § Reference epoch and proper
+// motion).
 export const CATALOG_SCENE_EPOCH = 2016.0;
 
 // Gaia 5p reliability + HIP2-preference thresholds, mirrored from
@@ -64,13 +73,36 @@ export interface Hip2AstrometryRow {
   pmDeMasyr: number | null;
 }
 
-/** The three reference datasets the cascade routes between. Empty
- *  maps/sets degrade gracefully: every row falls through to
- *  `athyg_printed` and the build-counts assertion flags the drift. */
+/** The reference datasets this cascade routes between. It is not their only
+ *  reader — `gaiaAstrometry` also carries the photometry the V and ci cascades
+ *  transform and the rv the radial term takes, and `tycho2` the BT/VT the V
+ *  cascade reduces — so a column added for one cascade arrives for all of
+ *  them, and the bundle is named for the cascade that ROUTES on it rather than
+ *  for sole ownership.
+ *
+ *  Empty maps/sets degrade gracefully: a row whose every tier is absent
+ *  resolves to null, which the walk counts as `spineDroppedNoDirection` —
+ *  pinned at 0, so the drift fails the build by name rather than dropping a
+ *  record quietly. */
 export interface DirectionSources {
   gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
   hip2: Map<number, Hip2AstrometryRow>;
   nssSourceIds: Set<string>;
+  tycho2: Map<string, Tycho2Row>;
+  cns5: Map<string, Cns5Astrometry>;
+}
+
+/** One record's own designations, plus the SIMBAD row the namespace ladder
+ *  already resolved for it. Extends `SimbadRecordKeys` rather than restating
+ *  it: the cascade's three designation-joined tiers key on exactly the
+ *  namespaces that ladder walks, so a namespace added there is one the
+ *  cascade can reach without a second shape to keep in step. The resolved
+ *  SIMBAD row rides along because `resolveRadialVelocity` takes its value the
+ *  same way — one lookup per record serves both terms of the velocity. */
+export interface DirectionInputs extends SimbadRecordKeys {
+  simbad: SimbadAstrometry | null;
+  /** Sol, the one record carrying no identifier any tier can key on. */
+  isSol: boolean;
 }
 
 export const DIRECTION_VIA_VALUES = [
@@ -78,20 +110,26 @@ export const DIRECTION_VIA_VALUES = [
   'gaia_nss_systemic',
   'hip2_saturated',
   'hip2_pm_discrepant',
-  'athyg_printed',
+  'tycho2',
+  'cns5',
+  'simbad',
+  'curated',
 ] as const;
 
 export type DirectionVia = (typeof DIRECTION_VIA_VALUES)[number];
 
 // Which source supplied the space-motion PM for this row's velocity. Maps
-// off the direction tier (Gaia tiers → Gaia PM, HIP2 tiers → HIP2 PM,
-// athyg_printed → AT-HYG PM), degrading to `zero` when that source carries
-// no usable PM (2p Gaia rows, AT-HYG rows with blank pm cells). Pinned
-// per-tier in build-counts.
+// off the direction tier — the position and the PM always come from one
+// solution — degrading to `zero` where that tier carries no usable PM (2p
+// Gaia rows, HIP2 rows with null PM, Tycho-2's `pflag='X'` rows, which have
+// no mean solution and so no proper motion either). Pinned per-tier in
+// build-counts.
 export const VELOCITY_VIA_VALUES = [
   'gaia_pm',
   'hip2_pm',
-  'athyg_pm',
+  'tycho2_pm',
+  'cns5_pm',
+  'simbad_pm',
   'zero',
 ] as const;
 
@@ -111,7 +149,7 @@ export interface DirectionResolution {
   /** The astrometric solution the tier selected — position (deg) and PM
    *  (mas/yr, cos δ-applied) at its native epoch. Fed to `velocityPcPerYr`
    *  alongside the final stack distance + RV so position and velocity come
-   *  from one solution. `athyg_printed` carries AT-HYG's own pm cells. */
+   *  from one solution. */
   srcRaDeg: number;
   srcDecDeg: number;
   srcPmraMasyr: number | null;
@@ -119,13 +157,12 @@ export interface DirectionResolution {
   velVia: VelocityVia;
 }
 
-
 /** Sky direction at `toEpoch` for a source measured at `fromEpoch` —
  *  RV-free linear space-motion form (accuracy budget + the
- *  perspective-acceleration omission are in scripts/catalog/README.md
- *  § Direction resolution).
+ *  perspective-acceleration omission are in README.md § Direction
+ *  resolution).
  *
- *  `pmraMasyr` is Gaia/HIP2's μ_α* — the cos δ-applied east-component
+ *  `pmraMasyr` is the tier's own μ_α* — the cos δ-applied east-component
  *  rate. Do NOT divide by cos δ before calling. Either PM component
  *  missing → the measured position is returned unpropagated (best
  *  available estimate, matches stage2_resolve.py's convention). */
@@ -137,11 +174,28 @@ export function directionAtEpoch(
   fromEpoch: number,
   toEpoch: number,
 ): UnitVector {
+  return directionAtEpochSplit(
+    raDeg, decDeg, pmraMasyr, pmdecMasyr, fromEpoch, fromEpoch, toEpoch,
+  );
+}
+
+/** {@link directionAtEpoch} where the two coordinates are measured at
+ *  DIFFERENT epochs, so each advances over its own interval — the Tycho-2
+ *  tier's shape, and the only one that needs it (README.md § Every tier
+ *  states its own epoch, and one of them states two). */
+export function directionAtEpochSplit(
+  raDeg: number,
+  decDeg: number,
+  pmraMasyr: number | null,
+  pmdecMasyr: number | null,
+  fromEpochRa: number,
+  fromEpochDec: number,
+  toEpoch: number,
+): UnitVector {
   const { u, east, north } = equatorialTangentBasis(raDeg, decDeg);
   if (pmraMasyr === null || pmdecMasyr === null) return u;
-  const dt = toEpoch - fromEpoch;
-  const dEast = pmraMasyr * MAS_TO_RAD * dt;
-  const dNorth = pmdecMasyr * MAS_TO_RAD * dt;
+  const dEast = pmraMasyr * MAS_TO_RAD * (toEpoch - fromEpochRa);
+  const dNorth = pmdecMasyr * MAS_TO_RAD * (toEpoch - fromEpochDec);
   const x = u.x + dEast * east.x + dNorth * north.x;
   const y = u.y + dEast * east.y + dNorth * north.y;
   const z = u.z + dEast * east.z + dNorth * north.z;
@@ -232,31 +286,38 @@ export function hip2PmDisagrees(
   );
 }
 
-/** Resolve one AT-HYG row's J2016.0 sky direction through the trust
- *  cascade. Route semantics + priority order in
- *  scripts/catalog/README.md § Direction resolution; thresholds mirror
- *  scripts/binaries/stage3_astrometry.py. Returns null only when the
- *  row has no printed ra/dec either (never in practice — caller drops
- *  and counts). */
+/** The velocity source a tier supplies: its own PM where the solution states
+ *  both components, else `zero`. Every tier answers this the same way, so the
+ *  tangential term can only go missing for the one stated reason. */
+function pmVelVia(
+  pmRa: number | null,
+  pmDec: number | null,
+  via: VelocityVia,
+): VelocityVia {
+  return pmRa !== null && pmDec !== null ? via : 'zero';
+}
+
+/** Resolve one spine row's J2016.0 sky direction through the trust cascade.
+ *  Route semantics + priority order in README.md § Direction resolution; the
+ *  Gaia/HIP2 thresholds mirror
+ *  scripts/binaries/stage3_astrometry.py.
+ *
+ *  Returns null only when no tier reaches the row at all. That is a record
+ *  with no owned direction, which `docs/catalog-driver.md` § 5 makes a § 6
+ *  membership event rather than a silent keep — the walk counts it as
+ *  `spineDroppedNoDirection`, pinned at 0. */
 export function resolveDirection(
-  gaiaSourceId: string | null,
-  hip: number | null,
-  athygRaHours: number | null,
-  athygDecDeg: number | null,
+  { sourceId, hip, tyc, gl, simbad, isSol }: DirectionInputs,
   sources: DirectionSources,
-  athygPmRaMasyr: number | null = null,
-  athygPmDecMasyr: number | null = null,
 ): DirectionResolution | null {
-  const gaia = gaiaSourceId !== null
-    ? sources.gaiaAstrometry.get(gaiaSourceId)
+  const gaia = sourceId !== null
+    ? sources.gaiaAstrometry.get(sourceId)
     : undefined;
   const hip2 = hip !== null ? sources.hip2.get(hip) : undefined;
 
-  const gaiaVelVia = (): VelocityVia =>
-    gaia !== undefined && gaia.pmraMasyr !== null && gaia.pmdecMasyr !== null
-      ? 'gaia_pm' : 'zero';
-  const hip2VelVia = (h: Hip2AstrometryRow): VelocityVia =>
-    h.pmRaMasyr !== null && h.pmDeMasyr !== null ? 'hip2_pm' : 'zero';
+  const gaiaVelVia = (): VelocityVia => gaia === undefined
+    ? 'zero'
+    : pmVelVia(gaia.pmraMasyr, gaia.pmdecMasyr, 'gaia_pm');
 
   if (gaia !== undefined && gaiaHas5pSolution(gaia)) {
     const fromGaia = (via: DirectionVia): DirectionResolution => ({
@@ -270,8 +331,8 @@ export function resolveDirection(
       velVia: gaiaVelVia(),
     });
     if (
-      gaiaSourceId !== null
-      && sources.nssSourceIds.has(gaiaSourceId)
+      sourceId !== null
+      && sources.nssSourceIds.has(sourceId)
       && gaia5pUnreliable(gaia)
     ) {
       return fromGaia('gaia_nss_systemic');
@@ -285,7 +346,7 @@ export function resolveDirection(
         ),
         srcRaDeg: hip2.raDeg, srcDecDeg: hip2.decDeg,
         srcPmraMasyr: hip2.pmRaMasyr, srcPmdecMasyr: hip2.pmDeMasyr,
-        velVia: hip2VelVia(hip2),
+        velVia: pmVelVia(hip2.pmRaMasyr, hip2.pmDeMasyr, 'hip2_pm'),
       };
     }
     return fromGaia('gaia_5p');
@@ -300,7 +361,7 @@ export function resolveDirection(
       ),
       srcRaDeg: hip2.raDeg, srcDecDeg: hip2.decDeg,
       srcPmraMasyr: hip2.pmRaMasyr, srcPmdecMasyr: hip2.pmDeMasyr,
-      velVia: hip2VelVia(hip2),
+      velVia: pmVelVia(hip2.pmRaMasyr, hip2.pmDeMasyr, 'hip2_pm'),
     };
   }
 
@@ -320,16 +381,67 @@ export function resolveDirection(
     };
   }
 
-  if (athygRaHours === null || athygDecDeg === null) return null;
-  const athygRaDeg = athygRaHours * 15;
-  return {
-    via: 'athyg_printed',
-    dir: unitVectorFromRaDec(athygRaDeg, athygDecDeg),
-    srcRaDeg: athygRaDeg, srcDecDeg: athygDecDeg,
-    srcPmraMasyr: athygPmRaMasyr, srcPmdecMasyr: athygPmDecMasyr,
-    velVia: athygPmRaMasyr !== null && athygPmDecMasyr !== null
-      ? 'athyg_pm' : 'zero',
-  };
+  // Designation-joined tiers, for the rows Gaia and HIP2 both miss. Each
+  // joins on the record's OWN identifier — a value join, never positional —
+  // and each propagates from its own stated epoch, so the tier that supplies
+  // the position supplies the proper motion that carries it forward.
+  const tycho2 = tyc !== null ? sources.tycho2.get(tyc) : undefined;
+  if (tycho2 !== undefined) {
+    return {
+      via: 'tycho2',
+      dir: directionAtEpochSplit(
+        tycho2.raDeg, tycho2.decDeg, tycho2.pmRaMasyr, tycho2.pmDecMasyr,
+        tycho2.epochRa, tycho2.epochDec, CATALOG_SCENE_EPOCH,
+      ),
+      srcRaDeg: tycho2.raDeg, srcDecDeg: tycho2.decDeg,
+      srcPmraMasyr: tycho2.pmRaMasyr, srcPmdecMasyr: tycho2.pmDecMasyr,
+      velVia: pmVelVia(tycho2.pmRaMasyr, tycho2.pmDecMasyr, 'tycho2_pm'),
+    };
+  }
+
+  const cns5Key = normaliseGjKey(gl);
+  const cns5 = cns5Key !== null ? sources.cns5.get(cns5Key) : undefined;
+  if (cns5 !== undefined) {
+    return {
+      via: 'cns5',
+      dir: directionAtEpoch(
+        cns5.raDeg, cns5.decDeg, cns5.pmRaMasyr, cns5.pmDecMasyr,
+        cns5.posEpoch, CATALOG_SCENE_EPOCH,
+      ),
+      srcRaDeg: cns5.raDeg, srcDecDeg: cns5.decDeg,
+      srcPmraMasyr: cns5.pmRaMasyr, srcPmdecMasyr: cns5.pmDecMasyr,
+      velVia: pmVelVia(cns5.pmRaMasyr, cns5.pmDecMasyr, 'cns5_pm'),
+    };
+  }
+
+  if (simbad !== null) {
+    return {
+      via: 'simbad',
+      dir: directionAtEpoch(
+        simbad.raDeg, simbad.decDeg, simbad.pmRaMasyr, simbad.pmDecMasyr,
+        SIMBAD_REF_EPOCH, CATALOG_SCENE_EPOCH,
+      ),
+      srcRaDeg: simbad.raDeg, srcDecDeg: simbad.decDeg,
+      srcPmraMasyr: simbad.pmRaMasyr, srcPmdecMasyr: simbad.pmDecMasyr,
+      velVia: pmVelVia(simbad.pmRaMasyr, simbad.pmDecMasyr, 'simbad_pm'),
+    };
+  }
+
+  // Sol carries no source_id, HIP, TYC or GJ, so every tier above misses it
+  // and it would otherwise leave the cascade with no direction and be dropped.
+  // The vector is arbitrary and unobservable: Sol's distance is zero, so the
+  // walk multiplies it to the origin whatever it points at.
+  if (isSol) {
+    return {
+      via: 'curated',
+      dir: unitVectorFromRaDec(0, 0),
+      srcRaDeg: 0, srcDecDeg: 0,
+      srcPmraMasyr: null, srcPmdecMasyr: null,
+      velVia: 'zero',
+    };
+  }
+
+  return null;
 }
 
 // ---- TSV parsers ----------------------------------------------------------

@@ -58,12 +58,12 @@ Rows are emitted in AT-HYG `id` order (readStars preserves CSV order), so
 there is no sort key to disagree about.
 
 `pm_ra` / `pm_dec` / `pm_src` are in the file although § 3's column list
-predates them: the direction cascade's `athyg_printed` tier and the
-space-motion velocity's `athyg_pm` tier both bottom out at AT-HYG's printed
-proper motion — pinned as `directionAthygPrinted` / `velocityAthygPm` in
-`../build-catalog-expected.json`; the pins are the authority, prose counts
-here drifted once already. A frozen artifact cannot grow a column later, so
-they ship now.
+predates them. They were added because the direction cascade's
+`athyg_printed` tier and the velocity's `athyg_pm` tier bottomed out at
+AT-HYG's printed proper motion; **both tiers have since retired**, and the
+cells' one remaining consumer is the LMC override's bulk-PM gate. A frozen
+artifact cannot grow a column later, which is why they shipped, and the
+same reason they stay.
 
 ## The membership gates still run, and must stay at zero
 

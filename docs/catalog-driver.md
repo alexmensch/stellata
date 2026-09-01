@@ -128,13 +128,13 @@ pos_src  dist_src  mag_src  rv_src  pm_src  spect_src
   rewrites.
 - Printed columns are consumed **only** where a per-field cascade
   (§ 5) bottoms out. For everything else the spine contributes
-  membership + designations only. `pm_ra`/`pm_dec` are there because two
-  cascades bottom out at AT-HYG's printed proper motion — the direction
-  cascade's `athyg_printed` tier and the space-motion velocity's
-  `athyg_pm` tier, pinned as `directionAthygPrinted` /
-  `velocityAthygPm` in build-counts (the pins are the authority; prose
-  counts here have drifted once already) — and a frozen artifact cannot
-  grow a column later.
+  membership + designations only. `pm_ra`/`pm_dec` shipped because the
+  direction and velocity cascades once bottomed out at AT-HYG's printed
+  proper motion and a frozen artifact cannot grow a column later; **both
+  those tiers have since retired** (§ 5, direction / PM), and the cells'
+  one remaining consumer is the LMC override's bulk-PM gate
+  (`scripts/catalog/spine/README.md`, which owns this and is the
+  authority — prose counts here have drifted twice).
 - There is no separate keep-list file: no-Gaia rows are ordinary
   spine rows with an empty `gaia_source_id`.
 - Per-column counts are pinned in build-counts, and asserted against the
@@ -236,10 +236,10 @@ being retired; the tier after each is its replacement:
 
 | Field | Cascade (first hit wins) |
 |---|---|
-| direction / xyz | Gaia DR3 5p → HIP2 → Tycho-2 position, PM-propagated to J2016 (record's own TYC) → CNS5 astrometry (GJ) → SIMBAD coordinates (bibcoded) → curated (Sol) — ~~spine printed~~ |
-| space-motion velocity | PM from whichever tier direction selected (Gaia / HIP2 / Tycho-2 / CNS5 / SIMBAD) + rv; zero tangential term where that tier carries no PM — ~~spine printed `pm_ra`/`pm_dec`~~ |
+| direction / xyz | SHIPPED — Gaia DR3 5p → HIP2 → Tycho-2 position, PM-propagated to J2016 from its per-star, per-coordinate mean epochs (record's own TYC) → CNS5 astrometry, from the row's own `pos_epoch` (GJ) → SIMBAD coordinates (bibcoded, J2000) → curated (Sol) |
+| space-motion velocity | SHIPPED — PM from whichever tier direction selected (Gaia / HIP2 / Tycho-2 / CNS5 / SIMBAD) + rv; zero tangential term where that tier carries no PM |
 | distance | B-J posterior → LMC kinematic → HIP2 parallax → DR3 parallax inversion (in-tree pull) → CNS5 parallax → SIMBAD `plx_value` (bibcoded) — ~~spine printed~~ |
-| V magnitude | Riello+ 2021 transform V = G − f(BP−RP) inside validity → printed HIP V (`I/239` Vmag) → Tycho-2 V = VT − 0.090(BT−VT) (SP-1200) → SIMBAD flux V → curated (Sol) — ~~spine `mag`~~ |
+| V magnitude | SHIPPED — Riello+ 2021 transform V = G − f(BP−RP) inside validity → printed HIP V (`I/239` Vmag) → Tycho-2 V = VT − 0.090(BT−VT) (SP-1200) → Gliese `V/70A` printed `Vmag` → curated (Sol). **No SIMBAD flux tier**: Gliese reaches every row Tycho-2 misses, and SIMBAD publishes no `V` flux at all for the nine it would have been asked for |
 | absmag | always derived from (V, distance) + build-time de-extinction — one code path, no tabulated absmag |
 | ci (B−V) | Gaia Table-5.9 relation, BP−RP ≤ 1.75 → printed `I/239` B−V (HIP) → GSPC synthetic B−V (BP−RP ≤ 3.0, a **measured** bound — see the ci bullet) → intrinsic spectral-class colour → solar — ~~spine `ci`~~ |
 | spectral string | SIMBAD sp_type (in-tree; request set keyed source_id → HIP → TYC) → unknown — ~~spine `spect` display fallback~~ |
@@ -259,6 +259,7 @@ which were reproduced from the pinned counts before probing):
 | Hipparcos main, B−V re-slice | `I/239/hip_main` | printed Johnson B−V (widens the existing V slice; 98.9% fill) | ESA 1997, SP-1200 |
 | CNS5 astrometry re-slice | `J/A+A/670/A19/cns5` | ra/dec/parallax/PM for the GJ-keyed cohort (widens the existing id slice) | Golovin et al. 2023, A&A 670, A19 |
 | SIMBAD values pull | `basic` + `flux` | rv / parallax / PM / coordinates with per-value bibcodes, V/B fluxes; keyed source_id → HIP → TYC → GJ, with a corroborated widening ladder over the source_ids that namespace misses | Wenger et al. 2000, A&AS 143, 9 |
+| Gliese third catalogue of nearby stars | `V/70A/catalog` (whole table) | printed Johnson V (+ B−V, spectral type, parallax, rv) — SHIPPED `data/gliese/gliese_v70a.tsv`; the first-order source behind every `mag_src=GJ` cell | Gliese & Jahreiss 1991, CDS `V/70A` |
 
 Measured exposure and expected coverage (2026-08-14; pins in
 `build-catalog-expected.json` unless noted):
@@ -327,28 +328,76 @@ Measured exposure and expected coverage (2026-08-14; pins in
   radial term rather than its tangential motion — pinned as
   `rvRadialRejected` 1, `velocityClamped` unmoved at 8.
   Full detail: `scripts/catalog/distance/radial-velocity/README.md`.
-- **V** — `vCatalogued` 140: Tycho-2 reaches 123 by TYC; the GJ cohort
-  (~16) routes CNS5/SIMBAD; Sol is curated.
-- **direction / PM** — `directionAthygPrinted` 61 /
-  `velocityAthygPm` 60. **Measured 2026-08-25**, once both ingests were in
-  place, over the real 61-row cohort — this supersedes the projection this
-  line carried (which read CNS5 8 and had no unreached bucket at all):
+- **V** — SHIPPED (`stellata-3bsf.26`). `vCatalogued` 140 retires into
+  `vTycho2` **123** · `vGliese` **16** · `vCurated` **1** (Sol), residual
+  `vNone` **0**. Two corrections to what this section projected, both
+  measured at implementation:
+
+  1. *"the GJ cohort (~16) routes CNS5/SIMBAD"* was wrong on both halves.
+     **CNS5 publishes no Johnson V at all** — its photometry is Gaia
+     `G`/`BP`/`RP`, 2MASS `J`/`H`/`Ks` and WISE `W1`–`W4` — so there was
+     never a CNS5 V tier to route to. And **SIMBAD holds no `V` flux** for
+     the nine rows Tycho-2 misses: they carry `B`, `J`, `H`, `K`, `R`, `g`,
+     `r`, `i` and `G` and no `V`, so this is not the bibcode policy biting
+     and no re-pull would fix it. The V cascade therefore has no SIMBAD
+     tier at all — the § 5 rule that a SIMBAD tier serves only cohorts no
+     first-order catalogue reaches leaves it nothing to serve.
+  2. The tier that does reach them is **Gliese `V/70A`**, the first-order
+     catalogue `mag_src=GJ` was transcribing all along: over all 16 rows
+     its `Vmag` reproduces the printed cell **exactly**, zero rows
+     differing, and all 3,147 `gl`-bearing spine cells resolve in it.
+     Retiring the printed cell therefore costs no record and moves no
+     value. Detail: `data/gliese/README.md`.
+
+  The Tycho-2 tier applies SP-1200's `V = VT − 0.090(BT−VT)` **ungated**,
+  and `vTycho2OutsideBtVtRange` pins the **5** rows outside the published
+  `BT−VT` ∈ [−0.25, 2.0] (four red to 2.69, one blue at −0.282), where the
+  linear form runs ~0.19–0.24 mag bright. Gating there would not hand those
+  rows to a better tier — none carries a `gl`, so nothing sits below them —
+  it would cost each its only V and hence its record, V being a membership
+  gate. That is the opposite call from the ci cascade's refusal to
+  extrapolate Table 5.9, and the difference is that the ci cascade HAS
+  tiers underneath.
+- **direction / PM** — SHIPPED (`stellata-3bsf.26`).
+  `directionAthygPrinted` 61 / `velocityAthygPm` 60 retire into the tiers
+  below, residual **none 0** on both axes and `spineDroppedNoDirection`
+  still pinned at 0:
 
   | | Tycho-2 | CNS5 | SIMBAD | curated | none |
   |---|---|---|---|---|---|
-  | direction | 43 | 4 | 9 | 1 (Sol) | **4** |
-  | PM | 40 | 4 | 9 | — | 4 (zero tangential term) |
+  | direction | 43 | 4 | **13** | 1 (Sol) | **0** |
+  | PM | 40 | 4 | **13** | — | **4** (zero tangential term) |
 
-  The mean epochs also fix the printed cells' unpropagated staleness, ~27″
-  worst case today. CNS5 measures 4 rather than the projected 8 because its
-  25 pc volume limit does not carry GJ 3775 / 3981 / 4192 / 4212 — the same
-  four the table counts as **none**: no TYC, no HIP, and a
-  `gaia_source_id` DR3 has no row for because it is a DR2 id
-  (`data/athyg/stale_gaia_source_ids.tsv`). **The none bucket is now
-  reachable**: the values pull's widening ladder falls through to their own
-  GJ and all four carry bibcoded coordinates and PM, so the SIMBAD tier
-  takes them and `stellata-3bsf.26` re-measures the split rather than
-  adjudicating four § 6 membership drops.
+  **The measured split moved twice before it landed, and neither move was
+  a routing change.** The 2026-08-25 measurement read SIMBAD 9 and none 4;
+  the four were GJ 3775 / 3981 / 4192 / 4212, outside CNS5's 25 pc volume
+  limit and carrying a `gaia_source_id` DR3 does not publish because it is
+  a DR2 id (`data/athyg/stale_gaia_source_ids.tsv`). `stellata-3bsf.30`'s
+  widening ladder reaches all four on their own GJ, so the SIMBAD tier
+  takes them and the none bucket empties — no § 6 adjudication.
+
+  The **PM none of 4 is a different set** from the direction none of 0,
+  and is not a gap the cascade can close: three are Tycho-2 `pflag='X'`
+  rows, which carry no mean solution and so no proper motion at all (they
+  take their `ra_icrs` cell at J2000, unpropagated), and the fourth is Sol,
+  which is curated at zero velocity by construction. Those three are pinned
+  as `directionTycho2FromIcrs`, and a further **2** of the 43 are
+  `directionTycho2Photocentre` — a `pflag='P'` mean solution, so the position
+  is an unresolved double's light-centre rather than one star's place. Both
+  are counted rather than gated: no tier sits below this one for a TYC-keyed
+  row, so gating either would cost the record. The V side of a `P` row is
+  marked a system blend for the same reason.
+
+  The per-tier epochs also fix the printed cells' unpropagated staleness.
+  Worst case in the cohort is **Gl 863.1A at 49.2″** — and that number
+  decomposes, which matters because the ~27″ this section used to quote was
+  only half of it: AT-HYG's printed cell sat 27.3″ from SIMBAD's J2000
+  place (about 20 yr of the star's 1372 mas/yr motion, so the cell was never
+  really J2000), and the further 22.0″ is the J2000 → J2016 propagation the
+  tier now performs. The Tycho-2 tier's own worst mover is HD 14039 at
+  10.2″, off mean epochs of 1991.07 (RA) and 1991.00 (Dec) — **the two
+  differ per star and per coordinate**, on every one of the 40
+  mean-solution rows, so each coordinate advances over its own baseline.
 - **distance** — printed tail 1,199, today **unpinned** (the only
   cascade without a routing partition; the value work pins `distVia`):
   in-tree DR3 parallax 126 · CNS5 38 · SIMBAD parallax the ~1,035
@@ -408,8 +457,11 @@ Rules:
   per-tier routing counts (same discipline as the direction cascade).
 - **No-Gaia tier** = empty-`gaia_source_id` spine rows: every cascade
   bottoms out at **designation-keyed first-order tiers** (Tycho-2 by
-  TYC, CNS5 by GJ, SIMBAD by HIP/GJ ident), no longer at the spine's
-  printed columns.
+  TYC, CNS5 and Gliese `V/70A` by GJ, SIMBAD by HIP/GJ ident), no longer
+  at the spine's printed columns. Being designation-keyed is also what
+  makes the cohort unreachable from the frozen corpora, which address a
+  record by HIP / Gaia id / proper name and so can name none of the 43
+  Tycho-2-tier records.
 - **Binding-gate note.** GSPC and the SIMBAD values pull consume the
   spine's already-gated `gaia_source_id`/HIP keys (same shape as Apsis
   and the astrometry catalog), so the § 4 gate does not re-run. Tycho-2
@@ -434,7 +486,9 @@ Rules:
   admitting one is a re-pull rather than a filter change. Pull-wide it
   drops 2,045 B and 1,494 V fluxes as unattributable, which is what holds
   the `mag_src=GJ` cohort's V flux to 361 of 981
-  (`data/simbad/README.md` § The values pull).
+  (`data/simbad/README.md` § The values pull) — a cost the V cascade no
+  longer pays either way, since Gliese `V/70A` reaches that whole cohort
+  first-hand and the cascade has no SIMBAD flux tier.
 - Photometric transforms cite **Riello et al. 2021, A&A 649, A3**
   (Gaia EDR3 photometry; Table C.2 relations). The ci relation chain
   was left to implementation, against the parity distribution; the

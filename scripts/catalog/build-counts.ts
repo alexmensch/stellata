@@ -373,6 +373,15 @@ export interface BuildCounts extends LabelMergeCounts {
   /** Distinct Gaia DR3 source_ids carrying an NSS two-body orbit —
    *  input to the gaia_nss_systemic routing tag. */
   nssSourceIdEntries: number;
+  /** Distinct TYCs across the two committed Tycho-2 tables (main wins on
+   *  the identifiers both carry) — the direction / PM / V tier's reach. */
+  tycho2Entries: number;
+  /** CNS5 rows carrying a position AND the epoch to state it at, keyed on
+   *  their own GJ — the direction cascade's CNS5 tier reach. */
+  cns5AstrometryEntries: number;
+  /** Rows in the committed Gliese V/70A slice — the V cascade's bottom
+   *  tier's reach. */
+  glieseEntries: number;
   /** dist_src=HIP rows whose distance was re-derived as 1000/plx from
    *  the committed HIP2 file (same value AT-HYG catalogued, freed of
    *  its 4-dp print truncation). */
@@ -391,10 +400,31 @@ export interface BuildCounts extends LabelMergeCounts {
   /** Direction cascade: rows whose Gaia-vs-HIP2 PM disagreement
    *  (> 50 mas/yr on either axis) routed the direction to HIP2. */
   directionHip2PmDiscrepant: number;
-  /** Direction cascade: residual rows placed at AT-HYG's printed
-   *  ra/dec as-is (no Gaia astrometry row, no HIP2 row; ξ UMa
-   *  canonical, plus Sol). */
-  directionAthygPrinted: number;
+  /** Direction cascade: rows Gaia and HIP2 both miss, placed at Tycho-2's
+   *  own mean position propagated to the scene epoch from its per-star,
+   *  per-coordinate mean epochs. */
+  directionTycho2: number;
+  /** The `directionTycho2` subset with no mean solution at all, placed at the
+   *  row's J2000 `ra_icrs` cell instead. Those rows carry no Tycho-2 PM
+   *  either, so the position is unpropagated unless another tier rescues a
+   *  PM for it — the residual § 5 requires enumerated rather than implied. */
+  directionTycho2FromIcrs: number;
+  /** The `directionTycho2` subset whose mean solution is an unresolved
+   *  double's photocentre (`pflag='P'`) rather than one star's place, so the
+   *  position is the pair's light-centre. Counted, not gated: no tier sits
+   *  below this one for a TYC-keyed row, so gating would cost each its record.
+   *  The V side of the same row is marked a system blend for this reason. */
+  directionTycho2Photocentre: number;
+  /** Direction cascade: TYC-less Gliese rows placed at CNS5's own
+   *  coordinates, propagated from the row's own `pos_epoch`. */
+  directionCns5: number;
+  /** Direction cascade: the bottom tier — rows no first-order catalogue
+   *  reaches, placed at SIMBAD's bibcoded J2000 coordinates propagated to
+   *  the scene epoch. Sol is NOT here: it has no direction at all. */
+  directionSimbad: number;
+  /** Direction cascade: Sol, whose curated tier exists because it carries no
+   *  identifier any tier above can key on. Pinned at 1. */
+  directionCurated: number;
   /** V cascade: rows whose Johnson V came from the Riello+ 2021 G,BP−RP
    *  transform — unsaturated Gaia photometry inside the relation's
    *  validity range. See scripts/catalog/photometry/README.md. */
@@ -403,9 +433,21 @@ export interface BuildCounts extends LabelMergeCounts {
    *  saturated (G < 4), incomplete, or outside the transform's colour
    *  range, resolved against printed I/239 Vmag instead. */
   vPrintedHip: number;
-  /** V cascade: rows no Gaia photometry and no printed V reached, left on
-   *  the driver's own catalogued magnitude cell. */
-  vCatalogued: number;
+  /** V cascade: rows with no Gaia photometry and no printed HIP V, taking
+   *  Tycho-2's `VT` reduced to Johnson V by the SP-1200 relation. */
+  vTycho2: number;
+  /** The `vTycho2` subset whose `BT−VT` sits outside the range SP-1200
+   *  publishes that relation over. Counted, not gated: none of these rows
+   *  carries a `gl`, so gating would cost each its only V and hence its
+   *  record — ../photometry/v-magnitude-pure.ts `tycho2VMagnitude`. */
+  vTycho2OutsideBtVtRange: number;
+  /** V cascade: the GJ-only cohort, taking Gliese V/70A's printed `Vmag`.
+   *  The tier below Tycho-2 and the last one: SIMBAD publishes no V flux at
+   *  all for the rows that reach here. */
+  vGliese: number;
+  /** V cascade: Sol, curated for the same reason its direction is. Pinned
+   *  at 1. */
+  vCurated: number;
   /** V cascade: rows no tier supplied a V for, and so no absmag either —
    *  readStars drops them. Pinned at 0, which is the assertion that the
    *  absmag-cell membership gate still implies a usable magnitude. */
@@ -417,11 +459,16 @@ export interface BuildCounts extends LabelMergeCounts {
   /** Space-motion velocity: rows whose PM came from HIP2 (the
    *  hip2_saturated + hip2_pm_discrepant tiers with a usable HIP2 PM). */
   velocityHip2Pm: number;
-  /** Space-motion velocity: athyg_printed-tier rows whose PM came from
-   *  AT-HYG's own pm_ra/pm_dec cells. */
-  velocityAthygPm: number;
+  /** Space-motion velocity: tycho2-tier rows whose PM came from Tycho-2's
+   *  own solution. */
+  velocityTycho2Pm: number;
+  /** Space-motion velocity: cns5-tier rows whose PM came from CNS5. */
+  velocityCns5Pm: number;
+  /** Space-motion velocity: simbad-tier rows whose PM came from a bibcoded
+   *  SIMBAD `pmra`/`pmdec`. */
+  velocitySimbadPm: number;
   /** Space-motion velocity: rows with no usable PM from any source —
-   *  zero tangential velocity (2p Gaia rows, PM-less athyg_printed rows,
+   *  zero tangential velocity (2p Gaia rows, Tycho-2 `pflag='X'` rows,
    *  Sol, and the artifact rows the sanity ceiling zeroed). */
   velocityZero: number;
   /** Rows whose computed space velocity exceeded VELOCITY_SANITY_CEILING

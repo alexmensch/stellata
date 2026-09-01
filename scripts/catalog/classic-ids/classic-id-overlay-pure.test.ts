@@ -9,6 +9,7 @@ import {
   serializeOverlay,
   type OverlayInput,
 } from './classic-id-overlay-pure';
+import { cns5Row } from './cns5-fixture';
 
 const VEGA_SRC = '2101372160809792';
 const SIRIUS_SRC = '2947050466531873024';
@@ -104,7 +105,7 @@ describe('buildClassicIdOverlay', () => {
   it('routes a CNS5 row with no EDR3 id through its HIP', () => {
     const { overlay, counts } = buildClassicIdOverlay(
       input({
-        cns5: [{ cns5: 1, gj: '721', gjComp: null, gaiaSourceId: null, hip: 91262 }],
+        cns5: [cns5Row({ gj: '721', hip: 91262 })],
       }),
     );
     expect(overlay.get(VEGA_SRC)!.gj).toEqual(['721']);
@@ -115,7 +116,7 @@ describe('buildClassicIdOverlay', () => {
   it('counts a CNS5 row reachable by neither route as unkeyed', () => {
     const { counts } = buildClassicIdOverlay(
       input({
-        cns5: [{ cns5: 1, gj: '9848', gjComp: null, gaiaSourceId: null, hip: null }],
+        cns5: [cns5Row({ gj: '9848' })],
       }),
     );
     expect(counts.cns5GjUnkeyed).toBe(1);
@@ -302,7 +303,7 @@ describe('parseOverlayTsv', () => {
           { tyc: '3105-2070-1', hd: 172168, nHd: 2, nTyc: 1 },
           { tyc: '5949-2777-1', hd: 48915, nHd: 1, nTyc: 1 },
         ],
-        cns5: [{ cns5: 1, gj: '721', gjComp: 'A', gaiaSourceId: VEGA_SRC, hip: null }],
+        cns5: [cns5Row({ gj: '721', gjComp: 'A', gaiaSourceId: VEGA_SRC })],
       }),
     );
     expect(parseOverlayTsv(serializeOverlay(overlay))).toEqual(overlay);

@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  cns5AstrometryByGj,
   parseBsc5Tsv,
   parseCns5Tsv,
   parseCrossIndexTsv,
   parseTyc2HdTsv,
 } from './classic-ids-parse';
+import { cns5Row } from './cns5-fixture';
 
 const TYC2_HD = [
   'tyc1\ttyc2\ttyc3\thd\tn_hd\tn_tyc',
@@ -23,9 +25,11 @@ const CROSS_INDEX = [
 const BSC5 = ['hr\thd\tname', '7001\t172167\t3Alp Lyr', '1\t3\t'].join('\n');
 
 const CNS5 = [
-  'cns5\tgj\tgj_comp\tgaia_source_id\thip',
-  '3591\t551\tC\t5853498713190525696\t70890',
-  '0\tSun\t\t\t',
+  'cns5\tgj\tgj_comp\tgaia_source_id\thip'
+    + '\tra_deg\tde_deg\tpos_epoch\tplx_mas\tpm_ra\tpm_de',
+  '3591\t551\tC\t5853498713190525696\t70890'
+    + '\t217.39232147201\t-62.67607511677\t2016.0\t768.07\t-3781.74\t769.47',
+  '0\tSun\t\t\t\t\t\t\t\t\t',
 ].join('\n');
 
 describe('classic-ids-parse / parseTyc2HdTsv', () => {
@@ -92,5 +96,46 @@ describe('classic-ids-parse / parseCns5Tsv', () => {
     expect(rows[1].gj).toBe('Sun');
     expect(rows[1].gaiaSourceId).toBeNull();
     expect(rows[1].hip).toBeNull();
+  });
+});
+
+describe('classic-ids-parse / cns5AstrometryByGj', () => {
+  const astrometry = {
+    raDeg: 10, decDeg: 20, posEpoch: 2016.0,
+    plxMas: 100, pmRaMasyr: 5, pmDecMasyr: -5,
+  };
+
+  it("keys on the record's own gl form, component letter included", () => {
+    const index = cns5AstrometryByGj([
+      cns5Row({ gj: '1294', gjComp: 'A', astrometry }),
+      cns5Row({ gj: '1294', gjComp: 'B', astrometry: { ...astrometry, raDeg: 11 } }),
+    ]);
+    expect(index.get('1294A')?.raDeg).toBe(10);
+    expect(index.get('1294B')?.raDeg).toBe(11);
+  });
+
+  // CNS5 prints whole numbers with a trailing .0 where a record's gl cell
+  // carries the bare number; not collapsing it costs the tier those rows
+  // silently, since a miss is indistinguishable from an absent row.
+  it("collapses CNS5's trailing .0 so a bare gl cell reaches the row", () => {
+    const index = cns5AstrometryByGj([cns5Row({ gj: '18.0', astrometry })]);
+    expect(index.get('18')?.raDeg).toBe(10);
+  });
+
+  it('keeps a genuinely fractional Gliese number intact', () => {
+    const index = cns5AstrometryByGj([cns5Row({ gj: '17.1', astrometry })]);
+    expect(index.get('17.1')?.raDeg).toBe(10);
+    expect(index.get('17')).toBeUndefined();
+  });
+
+  it('skips a row stating no astrometry at all', () => {
+    expect(cns5AstrometryByGj([cns5Row({ gj: '42' })]).size).toBe(0);
+  });
+
+  it('throws on a repeated key rather than keeping whichever came first', () => {
+    expect(() => cns5AstrometryByGj([
+      cns5Row({ cns5: 1, gj: '42', astrometry }),
+      cns5Row({ cns5: 2, gj: '42.0', astrometry }),
+    ])).toThrow(/two rows keyed gj=42/);
   });
 });

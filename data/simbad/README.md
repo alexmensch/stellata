@@ -243,12 +243,28 @@ after the binaries ones do.
   **GJ → TYC** — the join deliberately no longer mirrors the request order,
   because a GJ names the component where a TYC names the system
   (`scripts/catalog/spectral/README.md` § The ladder is ordered by what an
-  identifier names). The **rv** cascade consumes it today
-  (`scripts/catalog/distance/radial-velocity/README.md`); the direction/PM,
-  V and distance cascades follow at `stellata-3bsf.26` / `.28`. The file
-  shipped ahead of all of them so each is a build change against a reviewed
-  pull rather than a pull and a build change at once. Only the `rv*` columns
-  are read so far — the parser adds a field per bead.
+  identifier names). The **rv** cascade
+  (`scripts/catalog/distance/radial-velocity/README.md`) and the
+  **direction / PM** cascade both consume it; the distance cascade follows.
+  The file shipped ahead of all of them so each is a build change against a
+  reviewed pull rather than a pull and a build change at once. The `rv*`,
+  `ra`/`dec`/`coo_bibcode` and `pm*` columns are read so far — the parser
+  adds a field per bead.
+
+  Direction is the pull's **bottom tier, on 13 rows**, and its coordinates
+  are J2000.0 — measured rather than assumed, since the pull carries no
+  epoch column: over the 673 catalogue rows holding both a SIMBAD position
+  and a Gaia PM above 500 mas/yr, SIMBAD's position matches the Gaia one
+  back-propagated to J2000 to a median 0.000″ and not one row is closer to
+  J2016. The cascade therefore advances these coordinates 16 yr on the
+  row's own bibcoded PM.
+
+  **The V flux reaches no cascade at all.** `docs/catalog-driver.md` § 5's
+  projected SIMBAD V tier does not exist: Gliese `V/70A` reaches every row
+  Tycho-2 misses, and for the nine that would otherwise have fallen here
+  SIMBAD publishes fluxes in `B`, `J`, `H`, `K`, `R`, `g`, `r`, `i` and `G`
+  and **no `V`** — so the bibcode policy is not what stops them, and no
+  re-pull would change it.
 
 ## Refresh
 

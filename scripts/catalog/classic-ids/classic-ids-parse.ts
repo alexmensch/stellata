@@ -1,6 +1,7 @@
 // Parsers for the frozen CDS classic-designation tables under
 // data/classic-ids/. See data/classic-ids/README.md § Provenance.
-import { dataRows, nonEmpty, parseIntOrNull } from '../parse/corpus-tsv';
+import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
+import { normaliseGjKey } from '../catalog-pure';
 
 const REFRESH_CLASSIC_IDS = 'Re-run `pnpm run refresh:classic-ids`.';
 
@@ -99,6 +100,22 @@ export function parseBsc5Tsv(text: string): Bsc5Row[] {
   return out;
 }
 
+/** CNS5's own astrometric solution for a row.
+ *
+ *  `posEpoch` is per-row and really varies — 5,244 rows state 2016.0 against
+ *  406 at 2000.0, 138 at 1991.25, 36 at 2015.5 and 3 at 2016.55 — so a
+ *  consumer propagating these coordinates reads the epoch off the row rather
+ *  than assuming the catalogue's dominant one. `pmRaMasyr` is μ_α*, cos δ
+ *  already applied. */
+export interface Cns5Astrometry {
+  raDeg: number;
+  decDeg: number;
+  posEpoch: number;
+  plxMas: number | null;
+  pmRaMasyr: number | null;
+  pmDecMasyr: number | null;
+}
+
 /** One CNS5 row. `gaiaSourceId` is an EDR3 id, which shares DR3's
  *  source_id space and so joins the overlay directly. */
 export interface Cns5Row {
@@ -107,9 +124,15 @@ export interface Cns5Row {
   gjComp: string | null;
   gaiaSourceId: string | null;
   hip: number | null;
+  /** Null where the row states no position or no epoch to state it at —
+   *  the § 5 direction cascade's CNS5 tier needs both. */
+  astrometry: Cns5Astrometry | null;
 }
 
-const CNS5_COLUMNS = ['cns5', 'gj', 'gj_comp', 'gaia_source_id', 'hip'] as const;
+const CNS5_COLUMNS = [
+  'cns5', 'gj', 'gj_comp', 'gaia_source_id', 'hip',
+  'ra_deg', 'de_deg', 'pos_epoch', 'plx_mas', 'pm_ra', 'pm_de',
+] as const;
 
 export function parseCns5Tsv(text: string): Cns5Row[] {
   const out: Cns5Row[] = [];
@@ -120,13 +143,50 @@ export function parseCns5Tsv(text: string): Cns5Row[] {
     const gj = nonEmpty(cells[idx.gj]);
     if (cns5 === null || gj === null) continue;
     const src = nonEmpty(cells[idx.gaia_source_id]);
+    const raDeg = parseFloatOrNull(cells[idx.ra_deg]);
+    const decDeg = parseFloatOrNull(cells[idx.de_deg]);
+    const posEpoch = parseFloatOrNull(cells[idx.pos_epoch]);
     out.push({
       cns5,
       gj,
       gjComp: nonEmpty(cells[idx.gj_comp]),
       gaiaSourceId: src !== null && /^\d+$/.test(src) ? src : null,
       hip: parseIntOrNull(cells[idx.hip]),
+      astrometry: raDeg !== null && decDeg !== null && posEpoch !== null
+        ? {
+            raDeg, decDeg, posEpoch,
+            plxMas: parseFloatOrNull(cells[idx.plx_mas]),
+            pmRaMasyr: parseFloatOrNull(cells[idx.pm_ra]),
+            pmDecMasyr: parseFloatOrNull(cells[idx.pm_de]),
+          }
+        : null,
     });
+  }
+  return out;
+}
+
+/** CNS5's astrometry keyed the way a record asks for it: on its own `gl`
+ *  cell, folded through `normaliseGjKey` so `Gl 165A` / `GJ 165A` / `165 A`
+ *  — and CNS5's own `165.0` — meet as one key, the same reduction the SIMBAD
+ *  ladder's GJ namespace uses. The component letter is part of the key because
+ *  a GJ number carries one, so this names the component rather than the system.
+ *
+ *  A repeat throws, as it does in every other index over a committed table
+ *  here: two rows sharing a GJ number would be one star's components, which
+ *  their letters keep apart, so a collision is an upstream change rather than
+ *  a binding to arbitrate silently. */
+export function cns5AstrometryByGj(rows: readonly Cns5Row[]): Map<string, Cns5Astrometry> {
+  const out = new Map<string, Cns5Astrometry>();
+  for (const row of rows) {
+    if (row.astrometry === null) continue;
+    const key = normaliseGjKey(`${row.gj}${row.gjComp ?? ''}`);
+    if (key === null) continue;
+    if (out.has(key)) {
+      throw new Error(
+        `data/classic-ids/cns5.tsv has two rows keyed gj=${key}. ${REFRESH_CLASSIC_IDS}`,
+      );
+    }
+    out.set(key, row.astrometry);
   }
   return out;
 }

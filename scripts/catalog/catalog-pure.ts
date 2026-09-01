@@ -72,7 +72,14 @@ export function normaliseGjKey(cell: string | null): string | null {
   const [word, ...rest] = text.split(' ');
   const suffix = /^(gj|gl)$/i.test(word) ? rest.join(' ') : text;
   const key = suffix.replace(/\s+/g, '').toUpperCase();
-  return key.length === 0 ? null : key;
+  // CNS5 prints whole numbers with a trailing `.0` where every other source
+  // writes the bare number, so collapsing it here is what lets an index built
+  // over CNS5 and a record's own `gl` cell meet. Only a ZERO fraction is the
+  // artifact — the supplement's genuinely fractional entries (`Gl 17.1`) keep
+  // theirs (`glieseNumber` in classic-ids/ states the same rule for the label
+  // merge, where not collapsing it scored 14 same-star pairs as disagreements).
+  const collapsed = key.endsWith('.0') ? key.slice(0, -2) : key;
+  return collapsed.length === 0 ? null : collapsed;
 }
 
 /** Index and lookup must agree on which HIP cells are keys at all, or a row
@@ -956,6 +963,16 @@ export const SOL_PROPER_NAME = 'Sol';
  *  nominal value is 4.83; adopting it is a deliberate recalibration, not a
  *  drift fix, and moves the pinned radius. */
 export const SOL_ABSOLUTE_V_MAGNITUDE = 4.85;
+
+/** Sol's apparent V, curated for the same reason its direction is: it carries
+ *  no identifier any cascade can key on, so every machine tier misses it and
+ *  V is a membership gate. Cox 2000, *Allen's Astrophysical Quantities* 4th
+ *  ed. § 12 — the published value, not the printed cell the retired
+ *  AT-HYG-driven build happened to carry.
+ *
+ *  It reaches no shipped byte: absmag takes `SOL_ABSOLUTE_V_MAGNITUDE` above
+ *  rather than deriving from this, because Sol sits at distance zero. */
+export const SOL_APPARENT_V_MAGNITUDE = -26.74;
 
 /** Bits intentionally left free for future use — adding functionality
  *  that fits inside one of these does not require a BINARY_VERSION bump.

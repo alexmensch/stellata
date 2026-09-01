@@ -8,12 +8,16 @@ import {
 
 const HEADER = [
   'simbad_oid', 'rvz_radvel', 'rvz_type', 'rvz_qual', 'rvz_bibcode',
+  'ra', 'dec', 'coo_bibcode', 'pmra', 'pmdec', 'pm_bibcode',
   'hip', 'source_id', 'tyc', 'gj',
 ].join('\t');
 
 const row = (cells: Partial<Record<string, string>>) => [
   cells.oid ?? '1', cells.rv ?? '', cells.type ?? 'v', cells.qual ?? 'A',
-  cells.bibcode ?? '', cells.hip ?? '', cells.sourceId ?? '',
+  cells.bibcode ?? '',
+  cells.ra ?? '', cells.dec ?? '', cells.cooBibcode ?? '',
+  cells.pmra ?? '', cells.pmdec ?? '', cells.pmBibcode ?? '',
+  cells.hip ?? '', cells.sourceId ?? '',
   cells.tyc ?? '', cells.gj ?? '',
 ].join('\t');
 
