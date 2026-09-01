@@ -114,6 +114,13 @@ ingest replaced and the mean epochs that replace it. Its printed
 AT-HYG cell matches this table's unpropagated mean position to 8 decimal
 places — the ~27″ staleness measured rather than asserted.
 
+It is also the corpus pin for the whole tier, through the only `hd:` record
+ref in the repo (`scripts/catalog/validate/sky-position-corpus.tsv`), and that
+row currently pins a KNOWN-WRONG value: § Which position to propagate from
+below is wrong about which epoch each position cell is stated at, and the
+shipped place is ~8.9 yr of this star's motion — 3.7″ — ahead of Gaia's.
+The corpus header carries the measurement; `stellata-3bsf.37` carries the fix.
+
 ## Provenance
 
 - **Citation**: Høg E. et al. 2000, *A&A* 355, L27 (Tycho-2).

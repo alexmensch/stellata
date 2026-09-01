@@ -1,7 +1,7 @@
 # Sky-position regression corpus for the direction cascade: the
 # canonical high-PM set (tier-1 Gaia) plus one pin per non-Gaia tier —
 # Sirius/Vega for hip2_saturated (the Gaia-saturated bright set),
-# Gl 863.1A for simbad (the cascade's bottom tier).
+# HD 14039 for tycho2, Gl 863.1A for simbad (the cascade's bottom tier).
 #
 # Positions are at the J2016.0 scene epoch (CATALOG_SCENE_EPOCH). There is
 # no longer an unpropagated row: every tier now advances its own solution
@@ -35,21 +35,39 @@
 #   ~2" pair), so the coord is the pair photocentre rather than A alone —
 #   good to ~1", which is why it stays looser than the 0.5" Gaia rows above.
 #
-# NO ROW PINS THE tycho2 TIER, and not for want of trying: a tycho2-tier
-# record is by construction one Gaia and HIP2 both miss, and not one of the
-# 43 carries a HIP, a Gaia source_id or a proper name — the only three
-# things `parseRef` can address a record by. HD 14039 (TYC 3694-2544-1) is
-# the row that would go here, the tier's highest-PM member at 408 mas/yr
-# and a 10.2" propagation off its 1991.07 / 1991.00 mean epochs. The tier's
-# split-epoch propagation is pinned at unit level in
-# ../distance/direction-cascade.test.ts instead. Reaching it from a corpus
-# needs an `hd:` ref kind, and so an HD index built off the search index —
-# the binary carries no HD column.
+# - HD 14039 (tycho2): the tier's highest-PM member at 408 mas/yr, and the
+#   only row here PINNING A KNOWN-WRONG VALUE. Read this before "correcting"
+#   it — the row is doing its job by failing when the fix lands.
 #
-# lookup: hip where the spine row carries one. xi UMa's row carries HIP
-# 55203, but that Hipparcos entry is the unresolved AB pair and xi UMa B
-# holds its own record, so the row is addressed by proper name instead and
-# its hip cell is left blank to keep the lookup unambiguous.
+#   Published truth: Tycho-2's mean position advanced 16 yr on its own PM puts
+#   the star at 34.60526117 / 56.55892069, which agrees with Gaia's own J2016
+#   place to 0.116". This row pins 34.6067982780 / 56.558361692 — 3.685" from
+#   Gaia — because that is what the build emits.
+#
+#   The cause: Tycho-2 states RAmdeg/DEmdeg at J2000, while EpRAm/EpDEm are
+#   the mean epoch OF THE OBSERVATIONS, not of the position. The direction
+#   cascade reads the epoch columns as the position's, so every tycho2-tier
+#   record is advanced 2000 - ep_ra too far — 8.93 yr here. Measured three
+#   ways: the shipped place sits a median 9.13 yr of each star's own motion
+#   ahead of Gaia across the 5 rows above 60 mas/yr; the table's own RA(ICRS)
+#   cell sits at ep_ra - 8.75 relative to RAmdeg across 8,609 high-PM rows,
+#   which is 1991.25 against J2000; and Tycho-2's published column
+#   definitions say so.
+#
+#   So the 0.5" tolerance is NOT the tier's accuracy against the sky. The
+#   propagation itself is reproduced exactly (0.0000" against the same
+#   arithmetic done by hand from the published cells), which is what the
+#   tolerance states — and the split epochs still matter, since the two
+#   intervals differ per coordinate. Reverts to the published truth above
+#   when stellata-3bsf.37 lands.
+#
+# ref addresses the record the way every other frozen corpus does
+# (`../parse/corpus-tsv.ts`). xi UMa's spine row carries HIP 55203, but that
+# Hipparcos entry is the unresolved AB pair and xi UMa B holds its own
+# record, so it is addressed by proper name instead. HD 14039 has none of
+# the three: no HIP, no Gaia source_id, no proper name — which is what a
+# tycho2-tier record is by construction, and why `hd:` exists. It resolves
+# through the search index, since the binary carries no HD column.
 #
 # total_pm_masyr is the published total proper motion (mas/yr). The
 # current-epoch velocity test advances the star's BAKED J2016 position +
@@ -63,14 +81,15 @@
 # only row pinning the simbad velocity tier, off SIMBAD's bibcoded PM —
 # which is the same 1368.0 / 111.0 the printed cell carried, so the tier
 # swap moved this star's velocity not at all.
-name	lookup_name	hip	ra_deg_j2016	dec_deg_j2016	tol_arcsec	total_pm_masyr
-Barnard's Star		87937	269.4485025250	4.739420051	0.5	10392.8
-Kapteyn's Star		24186	77.9599373500	-45.043812699	0.5	8670.5
-Groombridge 1830		57939	178.2673532080	37.692826947	0.5	7058.4
-61 Cyg A		104214	316.7484792940	38.763862446	0.5	5281.0
-61 Cyg B		104217	316.7536627530	38.756072772	0.5	5172.0
-Keid		19849	63.8079530060	-7.668077815	0.5	4088.0
-Gl 863.1A		111293	338.2468515815	53.795091576	1.0	1372.5
-Sirius		32349	101.2846216628	-16.721551666	0.5	1339.4
-Vega		91262	279.2358804374	38.784961091	0.5	350.8
-xi UMa	Alula Australis		169.543285282	31.526916852	1.5
+name	ref	ra_deg_j2016	dec_deg_j2016	tol_arcsec	total_pm_masyr
+Barnard's Star	hip:87937	269.4485025250	4.739420051	0.5	10392.8
+Kapteyn's Star	hip:24186	77.9599373500	-45.043812699	0.5	8670.5
+Groombridge 1830	hip:57939	178.2673532080	37.692826947	0.5	7058.4
+61 Cyg A	hip:104214	316.7484792940	38.763862446	0.5	5281.0
+61 Cyg B	hip:104217	316.7536627530	38.756072772	0.5	5172.0
+Keid	hip:19849	63.8079530060	-7.668077815	0.5	4088.0
+Gl 863.1A	hip:111293	338.2468515815	53.795091576	1.0	1372.5
+Sirius	hip:32349	101.2846216628	-16.721551666	0.5	1339.4
+Vega	hip:91262	279.2358804374	38.784961091	0.5	350.8
+xi UMa	name:Alula Australis	169.543285282	31.526916852	1.5
+HD 14039	hd:14039	34.6067982780	56.558361692	0.5	408.2
