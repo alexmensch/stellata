@@ -457,7 +457,7 @@ export function readStars(
         gliese: glieseRow,
         simbad: simbadRow?.parallax ?? null,
       },
-      gaiaRow !== null && !gaiaHas5pSolution(gaiaRow),
+      gaiaRowIs2p(gaiaRow),
       isSol,
     );
     if (plxRes.via === 'none') {

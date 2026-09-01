@@ -7,7 +7,6 @@
 // so everything reachable from the config needs them. Only typecheck and
 // vitest cover the rest of scripts/, and neither fails without them: dropping
 // these breaks `vite build` and `pnpm run dev` alone.
-import { ballesterosBvFromTeff } from '../colour/blackbody-lut-pure.ts';
 import { emptyTallyPartition } from '../util/tally.ts';
 import { headerIndex } from './parse/corpus-tsv.ts';
 // Type-only: distance/parallax/ reaches back here through its parsers, so a

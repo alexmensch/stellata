@@ -141,7 +141,7 @@ export function resolveParallax(
     refused = true;
   }
 
-  if (cns5 !== null && usable(cns5.plxMas)) {
+  if (cns5 !== null && usable(cns5.plxMas) && cns5.plxBibcode !== null) {
     if (!(gaiaIs2p && isGaiaCatalogueBibcode(cns5.plxBibcode))) {
       return hit(cns5.plxMas, 'cns5_plx', null);
     }

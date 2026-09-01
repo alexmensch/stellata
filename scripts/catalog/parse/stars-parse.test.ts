@@ -389,6 +389,7 @@ describe('readStars advances the position on a rescued PM', () => {
     rowCount: 1,
     byTyc: new Map([[NO_MEAN_TYC, {
       rv: null,
+      parallax: null,
       astrometry: {
         raDeg: J2000_RA, decDeg: J2000_DEC,
         cooBibcode: '2020yCat.1350....0G',
