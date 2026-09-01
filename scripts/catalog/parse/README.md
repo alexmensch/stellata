@@ -206,9 +206,9 @@ direction tier carries none — Gaia 2p solutions, Tycho-2 rows with no mean
 solution — re-key on the record's own designations through
 `../distance/pm-rescue/`. `velocityZero` is what survives that: Sol, 8 clamped
 artifact rows, and the 15 the rescue leaves. The rescued motion then advances
-the tier's position too (`directionOnPm`), so the 3 Tycho-2 rows stating a
-J2000 position stop tracking their rate from a 16-yr-stale place; the 273 Gaia
-rows are already at J2016.0 and do not move.
+the tier's position too (`directionOnPm`), so the 3 Tycho-2 rows stating an
+observed J1991.25 position stop tracking their rate from a 24.75-yr-stale place;
+the 273 Gaia rows are already at J2016.0 and do not move.
 
 The spine's printed `pm_ra`/`pm_dec` is **no longer a velocity source**, and
 routing these rows to it is exactly what the rescue cascade exists to avoid.

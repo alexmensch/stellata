@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { resolvePmRescue, VELOCITY_VIA_BY_PM_RESCUE } from './pm-rescue';
 import type { CitedProperMotion } from '../../cited-proper-motion';
-import type { Tycho2Row } from '../../tycho2-parse';
+import { TYCHO2_MEAN_EPOCH, type Tycho2Row } from '../../tycho2-parse';
 
 const GAIA_DR2 = '2018yCat.1345....0G';
 const GAIA_EDR3 = '2020yCat.1350....0G';
@@ -13,7 +13,7 @@ const FABRICIUS = '2002A&A...384..180F';
 
 function tycho2Row(overrides: Partial<Tycho2Row> = {}): Tycho2Row {
   return {
-    raDeg: 10, decDeg: 20, epochRa: 1991.07, epochDec: 1991.0,
+    raDeg: 10, decDeg: 20, epoch: TYCHO2_MEAN_EPOCH,
     pmRaMasyr: -453.7, pmDecMasyr: -591.4,
     btMag: 5, vtMag: 4.5, fromIcrs: false, isPhotocentre: false,
     ...overrides,

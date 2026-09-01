@@ -78,7 +78,7 @@ function tycho2Sources(
     cns5: new Map(),
     tycho2: new Map(rows.map((r) => [r.tyc, {
       raDeg: r.raDeg, decDeg: r.decDeg,
-      epochRa: CATALOG_SCENE_EPOCH, epochDec: CATALOG_SCENE_EPOCH,
+      epoch: CATALOG_SCENE_EPOCH,
       pmRaMasyr: 0, pmDecMasyr: 0,
       btMag: r.vMag, vtMag: r.vMag,
       fromIcrs: false, isPhotocentre: false,
@@ -273,7 +273,7 @@ describe('readStars PM rescue', () => {
       cns5: new Map(),
       tycho2: new Map([[RESCUE_TYC, {
         raDeg: 0, decDeg: 0,
-        epochRa: CATALOG_SCENE_EPOCH, epochDec: CATALOG_SCENE_EPOCH,
+        epoch: CATALOG_SCENE_EPOCH,
         pmRaMasyr: pm.pmRaMasyr, pmDecMasyr: pm.pmDecMasyr,
         btMag: 10, vtMag: 10, fromIcrs: false, isPhotocentre: false,
       }]]),
@@ -392,8 +392,8 @@ describe('readStars advances the position on a rescued PM', () => {
   // Same reason as the rescue suite above: a 2p row with no owned parallax
   // parks, so Gliese states the distance the position assertions measure at.
   const NO_MEAN_GL = '904';
-  const J2000_RA = 66.25076035;
-  const J2000_DEC = 16.9849519;
+  const OBSERVED_RA = 66.25076035;
+  const OBSERVED_DEC = 16.9849519;
   const RESCUED_PMRA = 91.121;
   const RESCUED_PMDEC = -24.707;
   const DIST_PC = 52.6;
@@ -409,7 +409,7 @@ describe('readStars advances the position on a rescued PM', () => {
       rv: null,
       parallax: null,
       astrometry: {
-        raDeg: J2000_RA, decDeg: J2000_DEC,
+        raDeg: OBSERVED_RA, decDeg: OBSERVED_DEC,
         cooBibcode: '2020yCat.1350....0G',
         pm: {
           pmRaMasyr: RESCUED_PMRA, pmDecMasyr: RESCUED_PMDEC,
@@ -421,7 +421,7 @@ describe('readStars advances the position on a rescued PM', () => {
 
   const built = (): ReturnType<typeof readStars> => readStars(
     writeSpineTsv([{
-      ra: String(J2000_RA / 15), dec: String(J2000_DEC),
+      ra: String(OBSERVED_RA / 15), dec: String(OBSERVED_DEC),
       dist: String(DIST_PC), dist_src: 'OTHER', spect: 'K0V',
       tyc: NO_MEAN_TYC, gl: NO_MEAN_GL,
     }]),
@@ -435,8 +435,8 @@ describe('readStars advances the position on a rescued PM', () => {
         nssSourceIds: new Set(),
         cns5: new Map(),
         tycho2: new Map([[NO_MEAN_TYC, {
-          raDeg: J2000_RA, decDeg: J2000_DEC,
-          epochRa: TYCHO2_ICRS_EPOCH, epochDec: TYCHO2_ICRS_EPOCH,
+          raDeg: OBSERVED_RA, decDeg: OBSERVED_DEC,
+          epoch: TYCHO2_ICRS_EPOCH,
           pmRaMasyr: null, pmDecMasyr: null,
           btMag: 10.0, vtMag: 10.0,
           fromIcrs: true, isPhotocentre: false,
@@ -453,21 +453,22 @@ describe('readStars advances the position on a rescued PM', () => {
     expect(stats.velocityVia.simbad_pm).toBe(1);
   });
 
-  it('ships the advanced place, 1.511″ off the unpropagated J2000 cell', () => {
+  it('ships the advanced place, 2.337″ off the unpropagated observed cell', () => {
     // The assertion with teeth: drop the directionOnPm call in stars-parse and
-    // the record lands on the raw J2000 cell, which is what the second
-    // expectation measures the distance to.
+    // the record lands on the raw observed cell, which is what the second
+    // expectation measures the distance to. 24.75 yr of this star's motion,
+    // since a row with no mean solution states its position at J1991.25.
     const star = built().stars[0];
     const shipped = {
       x: star.x / DIST_PC, y: star.y / DIST_PC, z: star.z / DIST_PC,
     };
     const advanced = directionAtEpoch(
-      J2000_RA, J2000_DEC, RESCUED_PMRA, RESCUED_PMDEC,
+      OBSERVED_RA, OBSERVED_DEC, RESCUED_PMRA, RESCUED_PMDEC,
       TYCHO2_ICRS_EPOCH, CATALOG_SCENE_EPOCH,
     );
     expect(angSepArcsec(shipped, advanced)).toBeCloseTo(0, 6);
-    expect(angSepArcsec(shipped, unitVectorFromRaDec(J2000_RA, J2000_DEC)))
-      .toBeCloseTo(1.5106, 3);
+    expect(angSepArcsec(shipped, unitVectorFromRaDec(OBSERVED_RA, OBSERVED_DEC)))
+      .toBeCloseTo(2.3367, 3);
   });
 
   it('carries the same motion into the velocity it carried into the position', () => {
@@ -477,9 +478,9 @@ describe('readStars advances the position on a rescued PM', () => {
     const speed = Math.hypot(star.vx, star.vy, star.vz);
     expect(speed).toBeGreaterThan(0);
     const moved = {
-      x: star.x / DIST_PC - unitVectorFromRaDec(J2000_RA, J2000_DEC).x,
-      y: star.y / DIST_PC - unitVectorFromRaDec(J2000_RA, J2000_DEC).y,
-      z: star.z / DIST_PC - unitVectorFromRaDec(J2000_RA, J2000_DEC).z,
+      x: star.x / DIST_PC - unitVectorFromRaDec(OBSERVED_RA, OBSERVED_DEC).x,
+      y: star.y / DIST_PC - unitVectorFromRaDec(OBSERVED_RA, OBSERVED_DEC).y,
+      z: star.z / DIST_PC - unitVectorFromRaDec(OBSERVED_RA, OBSERVED_DEC).z,
     };
     const movedNorm = Math.hypot(moved.x, moved.y, moved.z);
     const cos = (moved.x * star.vx + moved.y * star.vy + moved.z * star.vz)

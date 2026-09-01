@@ -10,7 +10,6 @@ import {
   KM_S_TO_PC_YR,
   SIMBAD_REF_EPOCH,
   directionAtEpoch,
-  directionAtEpochSplit,
   directionOnPm,
   gaia5pUnreliable,
   hip2PmDisagrees,
@@ -25,7 +24,9 @@ import {
   type GaiaAstrometryCatalogRow,
   type Hip2AstrometryRow,
 } from './direction-cascade';
-import { TYCHO2_ICRS_EPOCH, type Tycho2Row } from '../tycho2-parse';
+import {
+  TYCHO2_ICRS_EPOCH, TYCHO2_MEAN_EPOCH, type Tycho2Row,
+} from '../tycho2-parse';
 import { gaiaAstrometryRow } from './astrometry-fixture';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import {
@@ -72,7 +73,7 @@ const TYC = '3694-2544-1';
 function tycho2Row(overrides: Partial<Tycho2Row> = {}): Tycho2Row {
   return {
     raDeg: 33.5, decDeg: 12.25,
-    epochRa: 1991.07, epochDec: 1991.00,
+    epoch: TYCHO2_MEAN_EPOCH,
     pmRaMasyr: 10, pmDecMasyr: -10,
     btMag: 9.5, vtMag: 8.9,
     fromIcrs: false, isPhotocentre: false,
@@ -329,32 +330,30 @@ describe('direction-cascade / resolveDirection routing', () => {
     expect(res?.srcRaDeg).toBe(t.raDeg);
   });
 
-  it('Tycho-2 advances each coordinate over its OWN mean epoch', () => {
-    // ep_ra and ep_de differ by a year, so collapsing them onto one epoch
-    // moves Dec over the wrong baseline — the failure this tier's split
-    // propagation exists to prevent.
-    const t = tycho2Row({
-      epochRa: 1990.0, epochDec: 1991.0,
-      pmRaMasyr: 0, pmDecMasyr: 3600_000,   // 1°/yr in Dec, none in RA
-    });
+  it('Tycho-2 advances its mean position from J2000, not from ep_ra/ep_de', () => {
+    // The regression this pins: ep_ra/ep_de date the OBSERVATIONS behind the
+    // mean solution, and the position they produced is stated at J2000.
+    // Reading them as the position's epoch advances every row by an extra
+    // 2000 - ep_ra, which on this table reaches 48 years.
+    const t = tycho2Row({ pmRaMasyr: 0, pmDecMasyr: 3600_000 });  // 1 deg/yr in Dec
     const res = resolveDirection(inputs({ tyc: TYC }), sources({
       tycho2: new Map([[TYC, t]]),
     }))!;
-    const expected = directionAtEpochSplit(
-      t.raDeg, t.decDeg, t.pmRaMasyr, t.pmDecMasyr,
-      1990.0, 1991.0, CATALOG_SCENE_EPOCH,
+    expect(res.srcEpoch).toBe(2000.0);
+    const advanced = dirOf(res);
+    const fromJ2000 = directionAtEpoch(
+      t.raDeg, t.decDeg, t.pmRaMasyr, t.pmDecMasyr, 2000.0, CATALOG_SCENE_EPOCH,
     );
-    expect(dirOf(res).z).toBeCloseTo(expected.z, 12);
-    const collapsed = directionAtEpoch(
-      t.raDeg, t.decDeg, t.pmRaMasyr, t.pmDecMasyr, 1990.0, CATALOG_SCENE_EPOCH,
+    // Componentwise: `angSepArcsec` bottoms out around 0.003" on near-parallel
+    // vectors, where acos(1 - eps) loses the difference to cancellation.
+    expect(advanced.x).toBeCloseTo(fromJ2000.x, 12);
+    expect(advanced.y).toBeCloseTo(fromJ2000.y, 12);
+    expect(advanced.z).toBeCloseTo(fromJ2000.z, 12);
+    // An observation epoch behind J2000 would add years of motion on top.
+    const fromObservationEpoch = directionAtEpoch(
+      t.raDeg, t.decDeg, t.pmRaMasyr, t.pmDecMasyr, 1991.07, CATALOG_SCENE_EPOCH,
     );
-    // Collapsing the pair advances Dec over 26 yr instead of 25, so the
-    // tangent displacement differs by exactly 1°. On the sphere that lands at
-    // 0.8347°: the displacement is applied in the tangent plane and then
-    // renormalised, so a finished angle is atan(d) — at a 25° displacement,
-    // far outside the linear regime this PM was chosen to escape, that
-    // compresses the degree rather than losing it. Don't "correct" to 3600.
-    expect(angSepArcsec(dirOf(res), collapsed)).toBeCloseTo(3004.792, 2);
+    expect(angSepArcsec(advanced, fromObservationEpoch)).toBeGreaterThan(3000);
   });
 
   it("a Tycho-2 row with no PM keeps its position and zeroes the tangential term", () => {
@@ -626,45 +625,48 @@ describe('resolveDirection velocity solution', () => {
 
 describe('direction-cascade / directionOnPm', () => {
   // TYC 1269-128-1 (HD 285742, 52.6 pc), the nearest of the three Tycho-2 rows
-  // with no mean solution: supplement 1 states only the J2000 cell and no PM,
-  // and the rescue cascade reaches it on SIMBAD's bibcoded motion.
-  const TYCHO2_J2000_RA = 66.25076035;
-  const TYCHO2_J2000_DEC = 16.9849519;
+  // with no mean solution: supplement 1 states only the observed cell and no
+  // PM, and the rescue cascade reaches it on SIMBAD's bibcoded motion. That
+  // cell is at J1991.25, so it advances over 24.75 yr where SIMBAD's J2000 one
+  // advances over 16.
+  const TYCHO2_OBSERVED_RA = 66.25076035;
+  const TYCHO2_OBSERVED_DEC = 16.9849519;
   const SIMBAD_J2000_RA = 66.25102960285;
   const SIMBAD_J2000_DEC = 16.98489746366;
   const RESCUED_PMRA = 91.121;
   const RESCUED_PMDEC = -24.707;
   // Where the tier's own PM is null the advance is the identity, so the raw
-  // J2000 cell is what the row ships without a rescued motion. Named rather
+  // observed cell is what the row ships without a rescued motion. Named rather
   // than re-derived through the cascade: an assertion against the same call it
   // is testing proves nothing.
-  const TYCHO2_J2000_DIR = unitVectorFromRaDec(TYCHO2_J2000_RA, TYCHO2_J2000_DEC);
+  const TYCHO2_OBSERVED_DIR = unitVectorFromRaDec(TYCHO2_OBSERVED_RA, TYCHO2_OBSERVED_DEC);
 
   const noMeanSolution = (): DirectionSolution => resolveDirection(
     inputs({ tyc: TYC }),
     sources({
       tycho2: new Map([[TYC, tycho2Row({
-        raDeg: TYCHO2_J2000_RA, decDeg: TYCHO2_J2000_DEC,
-        epochRa: TYCHO2_ICRS_EPOCH, epochDec: TYCHO2_ICRS_EPOCH,
-        pmRaMasyr: null, pmDecMasyr: null, fromIcrs: true,
+        raDeg: TYCHO2_OBSERVED_RA, decDeg: TYCHO2_OBSERVED_DEC,
+        epoch: TYCHO2_ICRS_EPOCH, pmRaMasyr: null, pmDecMasyr: null,
+        fromIcrs: true,
       })]]),
     }),
   )!;
 
-  it('advances a J2000 tier position over the rescued PM', () => {
+  it('advances the observed tier position over the rescued PM', () => {
     const res = noMeanSolution();
-    expect(res.srcEpochRa).toBe(TYCHO2_ICRS_EPOCH);
+    expect(res.srcEpoch).toBe(TYCHO2_ICRS_EPOCH);
     expect(res.velVia).toBe('zero');
     const advanced = directionOnPm(res, RESCUED_PMRA, RESCUED_PMDEC);
-    expect(angSepArcsec(TYCHO2_J2000_DIR, advanced)).toBeCloseTo(1.5106, 3);
+    // 24.75 yr of this star's 94.4 mas/yr motion.
+    expect(angSepArcsec(TYCHO2_OBSERVED_DIR, advanced)).toBeCloseTo(2.3367, 3);
   });
 
-  it('leaves only the two J2000 cells disagreement against an independent J2016 place', () => {
+  it('leaves only the two catalogues frame disagreement, once both reach J2016', () => {
     // The rescued PM is SIMBAD's, and SIMBAD states its own J2000 position, so
-    // advancing that one over the same 16 yr is an independent estimate of
-    // where the star is at the scene epoch. The propagated position lands
-    // exactly the two J2000 cells apart from it — the epoch term has cancelled
-    // and the frame disagreement is all that survives. That identity, not the
+    // advancing that one to the scene epoch is an independent estimate of where
+    // the star is. Both sides now start from the epoch their own catalogue
+    // states — Tycho-2 J1991.25, SIMBAD J2000 — so the epoch term cancels and
+    // the frame disagreement is all that survives. That identity, not the
     // absolute residual, is what says the advance is applied correctly.
     const res = noMeanSolution();
     const advanced = directionOnPm(res, RESCUED_PMRA, RESCUED_PMDEC);
@@ -672,20 +674,30 @@ describe('direction-cascade / directionOnPm', () => {
       SIMBAD_J2000_RA, SIMBAD_J2000_DEC, RESCUED_PMRA, RESCUED_PMDEC,
       SIMBAD_REF_EPOCH, CATALOG_SCENE_EPOCH,
     );
-    const j2000Disagreement = angSepArcsec(
-      TYCHO2_J2000_DIR, unitVectorFromRaDec(SIMBAD_J2000_RA, SIMBAD_J2000_DEC),
+    // Tycho-2's own cell carried to J2000 on the same motion, so the two are
+    // compared at one epoch rather than across a 8.75 yr gap.
+    const tychoAtJ2000 = directionAtEpoch(
+      TYCHO2_OBSERVED_RA, TYCHO2_OBSERVED_DEC, RESCUED_PMRA, RESCUED_PMDEC,
+      TYCHO2_ICRS_EPOCH, SIMBAD_REF_EPOCH,
     );
-    expect(j2000Disagreement).toBeCloseTo(0.9475, 3);
+    const frameDisagreement = angSepArcsec(
+      tychoAtJ2000, unitVectorFromRaDec(SIMBAD_J2000_RA, SIMBAD_J2000_DEC),
+    );
+    expect(frameDisagreement).toBeCloseTo(0.1313, 3);
     // Exact only to the linear form's second-order term (~5 µas here, since
     // the tangent-plane advance is not an isometry); do not tighten.
-    expect(angSepArcsec(advanced, simbadJ2016)).toBeCloseTo(j2000Disagreement, 4);
-    // Against the unpropagated cell the residual carries the epoch term too.
-    expect(angSepArcsec(TYCHO2_J2000_DIR, simbadJ2016)).toBeCloseTo(2.4572, 3);
+    expect(angSepArcsec(advanced, simbadJ2016)).toBeCloseTo(frameDisagreement, 4);
+    // Comparing the raw cells across the epoch gap instead reads 0.9475" — 7x
+    // the real disagreement, and the number the position-source question was
+    // once weighed on.
+    expect(angSepArcsec(
+      TYCHO2_OBSERVED_DIR, unitVectorFromRaDec(SIMBAD_J2000_RA, SIMBAD_J2000_DEC),
+    )).toBeCloseTo(0.9475, 3);
   });
 
   it('is a no-op where the rescue reaches no PM, whatever the tier epoch', () => {
     const res = noMeanSolution();
-    expect(angSepArcsec(TYCHO2_J2000_DIR, directionOnPm(res, null, null)))
+    expect(angSepArcsec(TYCHO2_OBSERVED_DIR, directionOnPm(res, null, null)))
       .toBeCloseTo(0, 9);
   });
 
@@ -702,16 +714,16 @@ describe('direction-cascade / directionOnPm', () => {
     )).toBeCloseTo(0, 9);
   });
 
-  it('advances each coordinate over its own epoch on a mean solution', () => {
+  it('advances a mean solution from J2000 over the rescued PM', () => {
     const res = resolveDirection(inputs({ tyc: TYC }), sources({
-      tycho2: new Map([[TYC, tycho2Row({
-        epochRa: 1990.0, epochDec: 1991.0, pmRaMasyr: null, pmDecMasyr: null,
-      })]]),
+      tycho2: new Map([[TYC, tycho2Row({ pmRaMasyr: null, pmDecMasyr: null })]]),
     }))!;
-    const advanced = directionOnPm(res, 0, 3600_000);   // 1°/yr in Dec alone
-    const collapsed = directionAtEpoch(
-      res.srcRaDeg, res.srcDecDeg, 0, 3600_000, 1990.0, CATALOG_SCENE_EPOCH,
+    expect(res.srcEpoch).toBe(TYCHO2_MEAN_EPOCH);
+    const advanced = directionOnPm(res, 0, 3600_000);   // 1 deg/yr in Dec alone
+    const fromJ2000 = directionAtEpoch(
+      res.srcRaDeg, res.srcDecDeg, 0, 3600_000, 2000.0, CATALOG_SCENE_EPOCH,
     );
-    expect(angSepArcsec(advanced, collapsed)).toBeGreaterThan(3000);
+    expect(advanced.x).toBeCloseTo(fromJ2000.x, 12);
+    expect(advanced.z).toBeCloseTo(fromJ2000.z, 12);
   });
 });
