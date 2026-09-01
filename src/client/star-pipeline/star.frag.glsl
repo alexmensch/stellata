@@ -88,6 +88,13 @@ layout(location = 1) out vec4 outStatistic;
 // in the scene-wide unit — written straight into the target, or put
 // through the operator here when there isn't one.
 //
+// `coreMask` is the lit-surface claim: 1 only where the fragment is
+// emitting a photosphere's true surface brightness over its own physical
+// footprint, which for this pipeline is a disc-pass core. The glow pass
+// passes 0 — it is a PSF peak spread over an exaggerated kernel, and a
+// mask there would hand the exposure pin a point source
+// (src/client/hdr/attachments/README.md § The unit).
+//
 // Alpha stays the kernel value, exactly as before HDR: the glow pass's
 // AdditiveBlending multiplies rgb by it, which is what gives that pass
 // its squared falloff. Peak luminance is identical on both paths, so
@@ -103,12 +110,12 @@ layout(location = 1) out vec4 outStatistic;
 // one blend equation runs over both attachments, so the glow pass's
 // SrcAlpha factor would scale the flux channel a second time and the
 // integral would come out short by ∫glow² / ∫glow.
-void starEmission(float glow) {
+void starEmission(float glow, float coreMask) {
     vec3 emitted = vColor * (vPeakL * glow);
     outColor = uHdrTarget > 0.5
         ? vec4(emitted, glow)
         : vec4(stellataTonemapUndithered(emitted, uWhitePoint, uHighlightDesat), glow);
-    outStatistic = stellataStatisticTexel(vFluxPeakL * glow, 0.0, 1.0);
+    outStatistic = stellataStatisticTexel(vFluxPeakL * glow, coreMask, 1.0);
 }
 
 void main() {
@@ -190,7 +197,7 @@ void main() {
         float tap = 1.0 - smoothstep(
             uThresholdMag, uThresholdMag + STELLATA_SOFT_TAPER_MARGIN_MAG, vAppMag);
         glow *= tap;
-        starEmission(glow);
+        starEmission(glow, 0.0);
     } else {
         // Disc pass — only disc-dominated stars. Per-channel MaxEquation
         // blending (see applyDiscBlendDefaults); depth handling below
@@ -207,8 +214,10 @@ void main() {
         // colour with low alpha but push depth to the far plane, so the
         // later glow pass's background stars pass the depth test and
         // accumulate additively — the haze stays visible while distant
-        // stars peek through it.
-        if (glow < uCoreThreshold) gl_FragDepth = 1.0;
-        starEmission(glow);
+        // stars peek through it. The halo is also where the kernel stops
+        // reading as the photosphere, so the same test gates the claim.
+        float core = step(uCoreThreshold, glow);
+        if (core < 0.5) gl_FragDepth = 1.0;
+        starEmission(glow, core);
     }
 }

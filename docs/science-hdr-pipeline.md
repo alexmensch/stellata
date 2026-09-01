@@ -594,8 +594,11 @@ alternatives:
   the frame: Sirius in view would dim the star field around it. This
   objection killed the highlight guard too, one shipped version late — a
   frame `max` is exactly a maximum statistic, and § 3.2 records what it
-  cost. What replaces it is a second *mean*, restricted to lit resolved
-  surfaces, which inherits none of the objection.
+  cost. What replaces it is a *median* over the lit resolved surfaces
+  alone, which inherits none of the objection: the objection is to an
+  extreme-order statistic, and the median is the one order statistic
+  maximally far from both extremes. It is also over the **masked** set, so
+  the unresolved star that motivated the objection is not in it.
 - **The discriminator is angular extent, not luminance.** Venus filling
   the frame adapts the eye; Sirius as a point does not. Area weighting
   *is* that discriminator, and it is what pupil response physically
@@ -804,12 +807,16 @@ resolved-surface pin below is for, and the ramp between `f_ref/8` and
 perception branch in isolation, and it is what still happens *under* the
 ramp's foot.
 
-**A host star's photosphere never takes the pin, at any distance.** It is
-drawn by the point-source kernel, which writes no lit-surface mask, so Sol
-stays on the perception branch even filling the frame — clipped white,
-bounded by the floor. Deliberate and consistent with the paragraph below:
-the pin protects *resolved surfaces*, and the affordance for looking at a
-star is an instrument, not adaptation.
+**A host star's photosphere takes the pin exactly when it is resolved.**
+Below the disc/glow split it is a PSF peak spread over an exaggerated
+kernel, claims no lit-surface mask, and stays on the perception branch
+bounded by the floor — Sirius from Sol is a brilliant dot and reads as
+one. Above it the star draws its own physical footprint at its own surface
+brightness, which is a resolved surface in exactly the sense this section
+means, and it is exposed like one. What holds Sol at 1 AU clipped white is
+then **coverage**, not the mask: its disc is 103 px of 2.07e6, 172x under
+the ramp's foot, so the pin carries no weight and the floor governs. That
+correction is the whole content of the paragraph below on the known cost.
 
 **Adaptation does not subsume a solar filter.** Sol at 1 AU subtends
 0.53° — 103 px of 2.07e6 — so `L̄` = 6.3e5 *measures* −17.5 mag, the
@@ -959,18 +966,56 @@ pass — the centre is 1.0 exactly — so this is the operator's top end, not
 a stray amplitude.) So:
 
 ```
-D      = S̄ / f,  the lit surface's OWN mean brightness
+D      = coverage-weighted MEDIAN over tiles of Sᵢ / fᵢ
 dm_pin = −2.5·log10(D / L_TARGET),  ≤ 0
-S̄      = mean over the statistic attachment of R × the lit-surface mask
-f      = mean over the same frame of that mask alone
+Sᵢ     = mean over tile i of R × the lit-surface mask
+fᵢ     = mean over tile i of that mask alone
+f      = mean over the whole frame of that mask — the ramp's input
 ```
 
-**What is pinned is a mean, and what makes that possible is measuring
-coverage.** Two frame means divide to the surface's own brightness, free of
-both how much of the frame it fills and how its texture is distributed.
-"Visible" is automatic — an occluded surface's texels were overwritten and
-an off-frame one wrote none — and so is phase: the mask is the lit
-hemisphere, so a crescent is exposed for its crescent.
+**What is pinned is the MODAL masked surface, and what makes that possible
+is measuring coverage per tile.** Dividing a tile's two means gives the
+surface's own brightness there, free of both how much of the frame it
+fills and how its texture is distributed. "Visible" is automatic — an
+occluded surface's texels were overwritten and an off-frame one wrote none
+— and so is phase: the mask is the lit hemisphere, so a crescent is
+exposed for its crescent.
+
+**Why a median across tiles and not a mean across texels.** A single
+pooled `D` is one subject, and that holds only while every masked emitter
+in frame is within ~1 mag of the rest. Two are not: a stellar photosphere
+is a **constant of the model** at 1.82e10 for Sol (surface brightness is
+distance-invariant; an O star runs ~100x that), against ~1e5 for a sunlit
+planet. Ten decades. Measured against a star disc at the ramp foot beside
+a parked planet whose true `D` is 0.89, a `p`-mean lands 23.4 mag out at
+`p` = 1 and still 2.9 mag out as `p` → 0 — **no exponent rescues it**, so
+the subject has to be segmented rather than blended, and a chain reduced
+to a single texel has thrown segmentation away by construction. The
+reduction therefore stops at a ~1024-texel tile grid and the pin takes a
+coverage-weighted median across it
+(`src/client/hdr/exposure/reduction/README.md` § The tile level). Four
+properties of that choice:
+
+- **50 % is the breakdown point.** A subject owning more than half the
+  masked area cannot be displaced however bright the rest is, so the
+  regression guard — parking at Earth with the Sun in frame — is
+  discharged by construction rather than by a threshold: Sol's disc is
+  0.12 % of the masked area there.
+- **Two comparable subjects: the larger wins**, and that IS what "modal
+  masked surface" should mean. A globe and its ring annulus are no longer
+  averaged into a subject that is neither; whichever owns the majority of
+  the masked area is what the frame is exposed for.
+- **The tile grid is the estimator's resolution, not a change of
+  quantity.** A coverage-weighted tile median is a consistent estimator of
+  the per-texel one, so the viewport-dependent tile count is estimator
+  noise and not a framing dependence. It buys the fix nothing in
+  simultaneity, spatial variation or per-object branching, so the global
+  operator is untouched.
+- **The cost, stated: a mis-masked emitter is free until it is fatal.** A
+  claimer counting dark area it has no light over used to cost `D` the
+  whole coverage ratio; now it costs nothing under half the masked area
+  and takes the subject outright over it. That is the same 50 % breakdown
+  point read from the other side.
 
 **Lit, not merely drawn, is the whole content of the mask**, and it binds
 every claimer rather than the body mesh alone. `D` is a ratio, so area
@@ -994,7 +1039,11 @@ Three structural properties, in the sense that no refactor may lose them:
   identical — approach makes a body bigger and never darker. This is the
   binding constraint the pin exists to satisfy, and the reason a
   frame-mean pin (which reads `D · f`) cannot be the answer however the
-  floor is set.
+  floor is set. Past the framing where the lit disc overflows the
+  viewport the frame crops the limb and `D` climbs toward the sub-solar
+  peak (1.41x, 0.37 mag on an ideal Lambert disc); the cut deepens to
+  match, so what stays constant across the whole approach is the
+  **displayed** surface, which is the claim that matters.
 - **The handover is a pure coverage ramp, and both ends are derived.** The
   top is `f_ref` itself, where `dm_pin` and `dm_eye` agree exactly for a
   body-dominated frame — `L_ADAPT = L_TARGET · f_ref` read the other way —
@@ -1002,10 +1051,16 @@ Three structural properties, in the sense that no refactor may lose them:
   reach of the ±3-stop trim. Between them a smoothstep over log coverage,
   stateless, no hysteresis; `dm` is monotone in coverage, so an approach
   cannot brighten a body and then dim it again.
-- **It protects surfaces, not points.** Anything drawing a kernel or a
-  diffuse column writes no mask at all, so Sirius, Sol at 1 AU and the
-  band cannot reach this branch at any framing. A point of light should
-  read as blinding and has no detail to protect.
+- **It protects surfaces, not PSFs.** The claim is a property rather than
+  a list of emitters: coverage is written exactly where a fragment emits
+  surface brightness over its own physical footprint, never where it
+  spreads a point's flux across an exaggerated kernel
+  (`src/client/hdr/attachments/README.md` § The unit). So the star glow
+  pass, the planet glare billboard and the band cannot reach this branch
+  at any framing, and Sirius stays a blinding dot with no detail to
+  protect — while a *resolved* photosphere, which does draw its own
+  footprint at its own surface brightness, reaches it like any other
+  resolved surface.
 
 **What this replaced, and why the replacement was not a retune.** Through
 v3.3 the concession was a **highlight guard**: `max` over a peak-correct
@@ -1026,11 +1081,15 @@ white discs 3.5 to 5.8 mag over-exposed. A maximum statistic also inherits
 § 3.1's own objection to maxima, one shipped version late.
 
 **The known cost, stated rather than quietly fixed: every resolved surface
-still reads the same level.** A stellar photosphere and a planet disc would
-be indistinguishable in brightness — except that a photosphere is never a
-resolved surface here (it draws a kernel), so the case does not arise in
-the build. The smoke anchors put a star ~0.87 mag over a planet; if that
-ordering is ever missed, the fallback is an incomplete-adaptation exponent
+reads the same level.** A resolved stellar photosphere and a planet disc
+are indistinguishable in *brightness* — they differ in chromaticity and in
+limb structure, which is what the fix restores, but not in level. This case
+does now arise in the build: an earlier draft of this paragraph said a
+photosphere is never a resolved surface here because it draws a kernel, and
+that was the sentence a star at closest approach fell through, rendering as
+a flat blown-out white disc at the display floor whatever the star was. The
+smoke anchors put a star ~0.87 mag over a planet; if that ordering is ever
+missed, the fallback is an incomplete-adaptation exponent
 on the perception branch — `dm_eye = −2.5·k·log10(L̄/L_ADAPT)` with
 `k` = 0.776 and `L_ADAPT` = 4.65e-3 fits both anchors exactly — but it
 over-dims the full Moon to −5.06 against a real sky's −2.5 to −3, so it

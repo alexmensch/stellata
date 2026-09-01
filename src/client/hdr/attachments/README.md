@@ -51,7 +51,8 @@ target. Three reasons, each on its own fatal:
 
 ```
 R = flux-correct luminance     → reduce MEAN → L̄
-G = lit-surface mask ∈ [0, 1]  → reduce MEAN → coverage, and R×G → S̄
+G = lit-surface mask ∈ [0, 1]  → reduce MEAN → coverage, and R×G / G per
+                                 tile → the median the pin holds
 ```
 
 **The mask is a fraction, not a flag.** A surface that alpha-composites
@@ -72,21 +73,41 @@ most. It now carries the coverage term the exposure pin divides by
 memory and no extra pass.
 
 **Which emitters may claim coverage is part of the contract, and it is
-pinned** (`statistic-mask.test.ts`) — and **zero for everything that draws a
-kernel or a diffuse column**: stars, planet glare, both volumetric
-emitters. A texel counted as coverage without light in R pulls `D` down and
-over-exposes the surface the pin holds; light in R without coverage inflates
-it. The night side is the case big enough to matter — geometric coverage
-would halve `D` at full phase and gut it on a crescent.
+pinned** (`statistic-mask.test.ts`). The contract is a **property**, not an
+enumerated list, because a list is what a resolved star fell through — it
+read "zero for everything that draws a kernel: stars, planet glare, both
+volumetric emitters", and a stellar photosphere at closest approach is a
+resolved surface in exactly the sense the pin means:
+
+> An emitter claims coverage exactly when it is emitting surface
+> brightness rather than a PSF peak, AND the footprint it draws is its own
+> physical footprint rather than an exaggerated kernel.
+
+The emission unit already draws that line generically —
+`peak_L = L(m) / max(1, π·r_phys_px²)`, so below 1 px the whole flux lands
+on the peak and above it the emission IS true surface brightness
+(`../emission/README.md` § Unit). A texel counted as coverage without light
+in R pulls `D` down and over-exposes the surface the pin holds; light in R
+without coverage leaves it alone. The night side is the dark case big
+enough to matter — geometric coverage would halve `D` at full phase and gut
+it on a crescent.
 
 **Every claimer gates on its own illumination, not on its geometry**, and
-each of the three has a different dark region to exclude:
+each has a different dark region to exclude:
 
 | emitter | claims | the dark region it excludes |
 | --- | --- | --- |
 | planet mesh | its **lit hemisphere** — `step(0, sunCos)·step(0.5, shadow)` | the night side, and an eclipsed surface |
 | ring annulus | the **sunlit strip** — `step(0.5, lit)` | the band in the planet's shadow, and the whole annulus as the sun crosses the ring plane |
 | atmosphere shell | opacity × **`litFrac`** | the night-limb chord, which is the dense one — it occludes fully while scattering nothing toward the eye |
+| star disc pass | its **core** — `step(uCoreThreshold, glow)` | the halo, where the kernel stops reading as the photosphere and starts reading as its PSF skirt |
+
+**The star glow pass, the planet glare billboard and both volumetric
+emitters still claim nothing at any framing**, and by the property rather
+than by name: each is a PSF peak or a diffuse column, neither of which is
+surface brightness over its own footprint. What keeps Sol at 1 AU clipped
+white is therefore *coverage*, not the mask — 103 px of 2.07e6, 172x under
+the exposure ramp's foot (`../exposure/README.md` § Adaptation).
 
 The two non-mesh rows are the ones geometry gets wrong the hardest, because
 neither dark region shrinks when the lit one does. Saturn's annulus is
@@ -235,7 +256,17 @@ rather than a second draw.
 
 - **The disc pass takes a max, not a sum.** `MaxEquation` means attachment
   1's flux channel under-counts where two resolved discs overlap. Rare
-  (close resolved stars) and small; documented rather than fixed.
+  (close resolved stars) and small; documented rather than fixed. It is
+  what makes the disc's coverage claim idempotent, though: the local
+  mirror redraws every member core into the same texels, and `max(1, 1)`
+  is 1 where a sum would claim the area twice.
+- **A star disc's `D` is its core's mean kernel value, not its exact
+  surface brightness.** The flux channel is the display kernel divided by
+  its own area integral, so it peaks at the photosphere's true surface
+  brightness and falls across the core. Over a resolved disc most tiles
+  sit on the profile's plateau, so the median lands within ~0.1 mag of the
+  truth — the same class of approximation as everything else the pin
+  reads, and it moves with the profile knobs rather than with the star.
 - **Absorption layers write no texel.** Molecular-cloud absorption dims
   attachments 0 and 2 but leaves the statistic reading the Milky Way band
   un-extincted. Inert: the band sits two decades under the adaptation

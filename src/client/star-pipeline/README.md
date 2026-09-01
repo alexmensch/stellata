@@ -131,6 +131,17 @@ that integral back, so `vFluxPeakL` carries the same kernel divided by its
 own area integral `Φ(n)·D²` — `perceptualDiscFluxIntegral` in
 `perceptual-disc/perceptual-disc.glsl`, and `../hdr/attachments/README.md` for what reads it.
 
+**The disc pass's core claims lit-surface coverage; the glow pass claims
+none.** That split is not about stars — it is the general rule read off
+the unit: an emitter claims coverage exactly where it emits surface
+brightness over its own physical footprint rather than a PSF peak over an
+exaggerated kernel (`../hdr/attachments/README.md` § The unit). A resolved
+photosphere is the one resolved surface in the model the exposure pin used
+to be unable to see, and a star at closest approach rendered as a flat
+blown-out white disc because of it. The claim is `step(uCoreThreshold,
+glow)` — the same threshold the core depth-mask stamps over, since the
+halo is where the kernel stops reading as the photosphere.
+
 ## Colour routing
 
 Runtime colour is **two-tier** — `iTeffApsis > 0 ? Ballesteros(iTeffApsis)

@@ -24,7 +24,7 @@ states answer that, and `parkable` is the predicate over both. After
 with the applied cut settled where it says, the reduction's draws and the
 statistic attachment's emitter writes both stop. What stays: the
 attachment's **clear** (it must read zero, not stale) and the **readback
-fence** — the 1-texel readback is the frame's only ANGLE submission
+fence** — the tile-level readback is the frame's only ANGLE submission
 barrier, which chart mode may drop and scene mode must not
 (`../reduction/README.md` § Where it runs). The machine ticks from
 `measure()` once per **rendered** frame.
@@ -62,12 +62,20 @@ here, and reading it as this park's justification gets the implication
 backwards: lowering `L̄` is the direction that would take the frame *out*
 of the regime.
 
-The pin is untouched by the same argument for a different reason: `D` and
-the coverage it divides by are both mask-gated, and **nothing that draws a
-kernel or a diffuse column writes a mask** (`../../attachments/README.md`
-§ The unit). So a parked frame cannot hide a rising coverage in the star
-field — only a real measurement sees the pin take over, which is what the
-probe is for.
+**The pin has no exemption from that, and once did.** The argument used to
+be that nothing drawing a kernel or a diffuse column writes a mask, so a
+parked frame could not hide a rising coverage in the star field. A
+**resolved** star disc now claims coverage like any other resolved surface
+(`../../attachments/README.md` § The unit), and the floor regime is the
+app's own default view — precisely where a star is the only masked thing
+that could appear. So the pin rides the same wake bound as `L̄` rather than
+a separate proof, and § Wake below is the whole of it.
+
+**The park POINT is unaffected.** Sol at 5 AU subtends ~1.9 px against the
+9.945 px the apparent-size term caps at, so its `vPhysRatio` is ~0.19 —
+under the 0.5 disc-pass threshold, drawn by the glow pass, claiming
+nothing. The exposure is on the approach, not at the default view, and
+what bounds it is the probe interval.
 
 **The landing struct is caller-owned and reused.** `SceneAdaptation` holds
 one `ParkLanding` and refills its five fields every rendered frame rather
@@ -139,6 +147,16 @@ moment of over-brightness entering a bright scene, which is what light
 adaptation does anyway. `stellata-8cg.23.2` replaces the constant — a
 CPU-side brightness ceiling bounds the deepest cut that could be pending,
 which is what should set how long the probe may wait.
+
+**Against a star disc growing on an approach, six frames is ample.** The
+pin carries no weight at all until the disc reaches `ADAPT_DOT_COVERAGE`
+— 0.86 % of the frame, a 125 px disc on a 1600x900 window — and it does
+not govern alone until 6.85 %, a factor 2.8 in camera distance further
+in. No free-fly approach crosses a band that wide inside the interval
+plus the one frame the probe waits for. The exception is a warp, which
+covers the whole band in one jump and whose landing SNAPS the slew rather
+than ramping it (`../README.md` § Adaptation), so a late probe there is a
+one-frame flash on arrival rather than a sustained over-bright scene.
 
 ## What the park does NOT save
 
