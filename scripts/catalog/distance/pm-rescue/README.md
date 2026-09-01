@@ -104,34 +104,44 @@ pair apart. They ship a tangential 36.81 km/s each.
 
 `directionOnPm` (`../direction-cascade.ts`) re-advances the tier's position over
 the rescued PM, so a row never tracks the right rate from a place its own tier
-left stale. Only the **3** Tycho-2-shaped rows move: their `ra_icrs` is stated at
-J2000 and everything else in the cohort is a Gaia 2p row already native to
-J2016.0, where the advance is a zero-Δt no-op.
+left stale. Only the **3** Tycho-2-shaped rows move: their position is the
+observed `ra_icrs` cell at J1991.25, and everything else in the cohort is a Gaia
+2p row already native to J2016.0, where the advance is a zero-Δt no-op.
 
 | Row | Distance | \|μ\| | Moves |
 |---|---|---|---|
-| TYC 1269-128-1 (HD 285742) | 52.6 pc | 94.4 mas/yr | **1.511″** |
-| TYC 158-2314-1 | 546.7 pc | 6.0 mas/yr | 0.095″ |
-| TYC 1867-2317-1 | 835.9 pc | 4.4 mas/yr | 0.070″ |
+| TYC 1269-128-1 (HD 285742) | 52.6 pc | 94.4 mas/yr | **2.337″** |
+| TYC 158-2314-1 | 546.7 pc | 6.0 mas/yr | 0.149″ |
+| TYC 1867-2317-1 | 835.9 pc | 4.4 mas/yr | 0.109″ |
 
 **What says the advance is right is an identity, not the residual.** The rescued
 PM is SIMBAD's on all three, and SIMBAD states its own J2000 position, so
-advancing *that* over the same 16 yr is an independent J2016 estimate. After the
-change each row sits exactly the two catalogues' J2000 disagreement away from it
-— 0.948″ / 0.395″ / 0.077″ — because the epoch term has cancelled and nothing
-but the frame offset survives. Before, that offset was compounded with a full
-16 yr of uncorrected motion: HD 285742 was **2.457″** out and is now 0.948″.
+advancing that over its own 16 yr is an independent J2016 estimate. Each row
+then sits exactly the two catalogues' disagreement *at a common epoch* away from
+it — 0.131″ / 0.404″ / 0.111″ — because the epoch term has cancelled and nothing
+but the frame offset survives.
 
-Two consequences worth stating rather than discovering:
+### Whether the rescuing source should supply the position too — no
 
-- **The residual is now a positional disagreement, not an epoch error**, and on
-  HD 285742 it is the larger of the two terms. Tycho-2 supplement 1's J2000 cell
-  is a Tycho-1-era position; SIMBAD's is Gaia EDR3 back-propagated. Preferring
-  SIMBAD's *position* where its PM is what rescued the row would close it, at
-  the cost of moving these rows off the `tycho2` tier — `stellata-3bsf.35`.
-- **TYC 1867-2317-1 gets 0.038″ worse** (0.039″ → 0.077″), because its two error
-  terms used to partly cancel by luck. Sub-0.1″ on an 836 pc star, and a
-  systematic correction is preferred over an accidental one.
+`stellata-3bsf.35` asked this, on the measurement that HD 285742 sat **0.948″**
+from SIMBAD's independent place while the other two sat at 0.395″ and 0.077″:
+the residual looked like a real disagreement between a Tycho-1-era Tycho-2 cell
+and a Gaia-EDR3 back-propagated SIMBAD one, and taking SIMBAD's position where
+its PM had already rescued the row would have closed it.
+
+**That 0.948″ was mostly epoch error, not disagreement.** It was measured while
+the observed cell was read as J2000; it is at J1991.25, so 8.75 yr of this
+star's 94.4 mas/yr motion was being scored as a frame offset. Corrected, the
+three residuals are **0.131″ / 0.404″ / 0.111″** — no longer led by the
+high-PM row, no longer PM-dependent at all, and inside what a Tycho-2 position
+and a SIMBAD one are each worth. There is nothing left for a position swap to
+close.
+
+So the direction cascade keeps its general rank, first-order catalogue above
+second-order index, with no exception carved for this shape. The costs the bead
+weighed stand and are now unpaid for: `directionVia` would have moved
+tycho2 43 → 40 and simbad 13 → 16, and tier rank would have become conditional
+on what the rescue happened to find — a coupling the cascade has nowhere else.
 
 ## The Gaia-bibcode skip rule, and what it costs
 
