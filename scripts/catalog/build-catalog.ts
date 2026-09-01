@@ -123,6 +123,10 @@ import {
   type ParkedRecord,
 } from './distance/parallax/parked-ledger';
 import {
+  SIMBAD_SOURCED_DISTANCES_FILE,
+  formatSimbadSourcedDistancesTsv,
+} from './distance/parallax/simbad-sourced-ledger';
+import {
   INHERITED_SPINE_TSV,
   READ_STARS_INPUT_PATHS,
   loadReadStarsInputs,
@@ -212,6 +216,23 @@ async function writeParkedRecords(parked: readonly ParkedRecord[]): Promise<void
   const path = resolve(ROOT, PARKED_RECORDS_FILE);
   await writeFile(path, formatParkedRecordsTsv(parked));
   console.log(`  parked (no owned parallax): ${parked.length} → ${PARKED_RECORDS_FILE}`);
+}
+
+/** § 5's validation independence, made checkable: a record whose distance came
+ *  from the SIMBAD tier cannot be verified against SIMBAD's own parallax, so
+ *  the sample validator needs to know which records those are. It reads
+ *  catalog.bin, which carries no `distVia`, hence the file. */
+async function writeSimbadSourcedDistances(stars: readonly Star[]): Promise<void> {
+  const rows = stars
+    .filter((s) => s.distVia === 'simbad_plx')
+    .map((s) => ({ gaiaSourceId: s.gaiaSourceId, hip: s.hip }));
+  await writeFile(
+    resolve(ROOT, SIMBAD_SOURCED_DISTANCES_FILE),
+    formatSimbadSourcedDistancesTsv(rows),
+  );
+  console.log(
+    `  SIMBAD-sourced distances: ${rows.length} → ${SIMBAD_SOURCED_DISTANCES_FILE}`,
+  );
 }
 
 async function removeStaleCatalogChunks(dir: string): Promise<void> {
@@ -524,6 +545,7 @@ async function main() {
     );
   }
   await writeParkedRecords(stats.parked);
+  await writeSimbadSourcedDistances(stars);
   // recordCount is the final post-promotion count; populated after the
   // companion-promotion pass below.
   counts.spineDroppedNoRaDec = stats.dropped.noRaDec;

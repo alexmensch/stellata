@@ -137,9 +137,10 @@ velocity SIMBAD holds for it.
 validation-independence rule bites where a SIMBAD tier and a SIMBAD validator
 meet the same field; `data/simbad/simbad_sample.tsv` carries no rv column and
 neither `validate-simbad-sample` nor the distance-regression check reads one,
-so there is nothing here for a value to verify itself against. The exclusion
-becomes real at `stellata-3bsf.28`, where the distance cascade gains a SIMBAD
-tier under validators that *do* check distance.
+so there is nothing here for a value to verify itself against. The exclusion is
+real one field over: the distance cascade's SIMBAD tier sits under two
+validators that do check distance, and both skip its records
+(`../parallax/README.md`).
 
 ## `rvz_type` decides whether the value is a velocity at all
 

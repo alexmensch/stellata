@@ -20,6 +20,11 @@ scripts/catalog/distance/parallax/
     (+ test)                    pair rows × the DR3 astrometry table, per WDS
                                 root. Built once before the walk, in
                                 ../../parse/read-stars-inputs.ts.
+  simbad-sourced-ledger.ts      The `simbad_plx` records, by the two keys a
+    (+ test)                    SIMBAD-based validator joins on — § 5's
+                                validation independence. Written by
+                                build-catalog.ts, read by
+                                ../../validate/validate-simbad-sample.ts.
   parked-ledger.ts (+ test)     The § 6.1 dropped list — where it is committed,
                                 its closed reason enum, and the spine key the
                                 parity gate matches it on. The producer is
@@ -124,6 +129,16 @@ parallax cascade is where the general shape became visible.
   stripped of the error bar the refusal was based on — measured at **574**
   records matching to the digit. HIP 37 is the shape: HIP2 states 2.62 ± 2.55
   mas, SIMBAD serves 2.62.
+
+**A SIMBAD-sourced distance is excluded from SIMBAD-based validation**, which
+is § 5's validation-independence rule reaching this field for the first time —
+no earlier cascade had a SIMBAD tier under a validator that checks the same
+quantity. Both validators honour it: `distance-regression-check` reads
+`distVia` in-process, and `validate-simbad-sample` reads
+`data/athyg/simbad_sourced_distances.tsv`, because it runs off `catalog.bin`,
+which carries no tier. Without it 93 records would report a residual of zero
+against the parallax they were derived from and bias the metric toward
+agreement that was never measured.
 
 Gliese `V/70A` is subject to neither: its parallaxes are ground-based
 trigonometric astrometry predating both instruments, so no later reduction

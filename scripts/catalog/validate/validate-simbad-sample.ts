@@ -2,7 +2,7 @@
 // distance against SIMBAD's published values. Run: `pnpm run
 // validate:simbad`. See scripts/catalog/README.md § Validation harness.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -18,7 +18,15 @@ import {
   parseSimbadSampleRows,
   type SimbadSampleRow,
 } from './simbad-sample-parse';
+import {
+  SIMBAD_SOURCED_DISTANCES_FILE,
+  emptySimbadSourcedKeys,
+  parseSimbadSourcedDistancesTsv,
+  type SimbadSourcedKeys,
+} from '../distance/parallax/simbad-sourced-ledger';
 import { REPO_ROOT } from '../../util/paths';
+
+const SIMBAD_SOURCED_PATH = resolve(REPO_ROOT, SIMBAD_SOURCED_DISTANCES_FILE);
 
 const __filename = fileURLToPath(import.meta.url);
 const DEFAULT_SAMPLE_PATH = resolve(REPO_ROOT, 'data/simbad/simbad_sample.tsv');
@@ -73,6 +81,9 @@ export interface MatchStats {
   sampleRows: number;
   matchedByGaia: number;
   matchedByHip: number;
+  /** Matched rows dropped before the residual because the catalogue took its
+   *  distance from SIMBAD — see `isSimbadSourced`. */
+  simbadSourced: number;
   unmatched: number;
   usable: number;
 }
@@ -261,6 +272,10 @@ export function formatReport(report: ResidualReport): string {
   lines.push(`- Matched: ${m.matchedByGaia + m.matchedByHip} (${matchedPct.toFixed(2)} %)`);
   lines.push(`  - via Gaia source_id: ${m.matchedByGaia}`);
   lines.push(`  - via HIP fallback: ${m.matchedByHip}`);
+  lines.push(
+    `- Excluded, distance came from SIMBAD: ${m.simbadSourced} `
+    + '(a value cannot verify itself)',
+  );
   lines.push(`- Unmatched: ${m.unmatched}`);
   lines.push(`- Usable for residuals (matched ∧ absmag ∧ distance present): ${m.usable}`);
   lines.push('');
@@ -365,6 +380,19 @@ function lookupRow(
   return null;
 }
 
+/** The record a sample row resolved to shipped its distance from the SIMBAD
+ *  tier, so comparing it against SIMBAD's parallax measures nothing — the two
+ *  are the same number. § 5's validation-independence rule; the producer is
+ *  build-catalog.ts. Either match route can land on one, hence both key
+ *  sets. */
+function isSimbadSourced(
+  row: SimbadSampleRow,
+  excluded: SimbadSourcedKeys,
+): boolean {
+  return (row.gaiaSourceId !== null && excluded.gaia.has(row.gaiaSourceId))
+    || (row.hip !== null && excluded.hip.has(row.hip));
+}
+
 interface RunOptions {
   samplePath?: string;
   reportPath?: string;
@@ -380,14 +408,23 @@ export async function runValidation(opts: RunOptions = {}): Promise<{
   const sample = parseSimbadSampleRows(readFileSync(samplePath, 'utf8'));
   const catalog = await loadCatalog({ catalogManifestPath: opts.catalogManifestPath });
 
+  const excludedKeys = existsSync(SIMBAD_SOURCED_PATH)
+    ? parseSimbadSourcedDistancesTsv(readFileSync(SIMBAD_SOURCED_PATH, 'utf8'))
+    : emptySimbadSourcedKeys();
+
   const residuals: ResidualRow[] = [];
   let matchedByGaia = 0;
   let matchedByHip = 0;
   let unmatched = 0;
+  let simbadSourced = 0;
   for (const row of sample) {
     const hit = lookupRow(catalog, row);
     if (!hit) {
       unmatched += 1;
+      continue;
+    }
+    if (isSimbadSourced(row, excludedKeys)) {
+      simbadSourced += 1;
       continue;
     }
     if (hit.matchedBy === 'gaia') matchedByGaia += 1;
@@ -401,6 +438,7 @@ export async function runValidation(opts: RunOptions = {}): Promise<{
     matchedByGaia,
     matchedByHip,
     unmatched,
+    simbadSourced,
     usable: residuals.length,
   };
   const report = buildReport(residuals, matchStats, new Date().toISOString());

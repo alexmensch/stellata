@@ -187,6 +187,7 @@ describe('buildReport', () => {
       matchedByGaia: 3,
       matchedByHip: 0,
       unmatched: 7,
+      simbadSourced: 0,
       usable: rows.length,
     };
     const report = buildReport(rows, matchStats, '2026-05-22T00:00:00Z');
@@ -277,5 +278,8 @@ function mkResidual(over: Partial<ResidualRow>): ResidualRow {
 }
 
 function emptyStats(n: number): MatchStats {
-  return { sampleRows: n, matchedByGaia: n, matchedByHip: 0, unmatched: 0, usable: n };
+  return {
+    sampleRows: n, matchedByGaia: n, matchedByHip: 0, unmatched: 0,
+    simbadSourced: 0, usable: n,
+  };
 }
