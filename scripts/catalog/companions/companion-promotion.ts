@@ -1706,6 +1706,13 @@ function promoteRow(
     hip: companionHip,
     hd: null,
     hr: null,
+    // An anchor's alternative HD is often the pair's OTHER component number,
+    // which makes handing it to this record tempting and wrong: the overlay
+    // asserts both numbers against one Gaia source and names no component, so
+    // attributing one here would invent evidence. They stay search aliases of
+    // the record holding the blended light.
+    hdAlt: [],
+    hrAlt: [],
     flam: null,
     gl: null,
     tyc: null,

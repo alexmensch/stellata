@@ -152,6 +152,13 @@ export interface Star {
   hip: number | null;
   hd: number | null;
   hr: number | null;
+  /** Further HD / HR numbers naming this star, filled by the classic-ID label
+   *  merge where an overlay cell asserted more than the field could hold
+   *  (`../classic-ids/README.md` § The label merge). Never written to the
+   *  binary: they reach the runtime through the search index and the SID
+   *  ledger through `starDesignations`. */
+  hdAlt: number[];
+  hrAlt: number[];
   flam: number | null;
   gl: string | null;
   /** Tycho-2 designation. Build-time only — never written to the binary; it
@@ -727,6 +734,7 @@ export function readStars(
       desigConIndex: NO_CONSTELLATION_INDEX,
       flags,
       proper, bayer, hip, hd, hr, flam,
+      hdAlt: [], hrAlt: [],
       gl: simbadKeys.gl,
       tyc: simbadKeys.tyc,
       gaiaSourceId,

@@ -27,6 +27,7 @@ function entry(over: Partial<OverlayEntry> = {}): OverlayEntry {
 function record(over: Partial<LabelMergeRecord> = {}): LabelMergeRecord {
   return {
     gaiaSourceId: SRC_A, hip: null, hd: null, hr: null, gl: null, flam: null,
+    hdAlt: [], hrAlt: [],
     ...over,
   };
 }
@@ -98,15 +99,51 @@ describe('mergeClassicIdLabels', () => {
     expect(counts.labelSpineOnly.hip).toBe(1);
   });
 
-  it('enumerates the values a single-valued field cannot carry', () => {
+  it('aliases the values a single-valued field cannot display', () => {
     const records = [record({ hd: 172167 })];
     const { counts, flips } = merge(
       records, new Map([[SRC_A, entry({ hd: [172167, 172168] })]]),
     );
     expect(records[0].hd).toBe(172167);
-    expect(counts.labelExtraDropped.hd).toBe(1);
+    expect(records[0].hdAlt).toEqual([172168]);
+    expect(counts.labelExtraAlias.hd).toBe(1);
+    expect(counts.labelExtraDropped.hd).toBe(0);
     expect(flips.map((f) => [f.applied, f.disposition]))
-      .toEqual([['172168', 'extra-dropped']]);
+      .toEqual([['172168', 'extra-alias']]);
+  });
+
+  it('aliases every extra value, not just the first', () => {
+    const records = [record({ hr: 7001 })];
+    const { counts } = merge(
+      records, new Map([[SRC_A, entry({ hr: [7001, 7002, 7003] })]]),
+    );
+    expect(records[0].hr).toBe(7001);
+    expect(records[0].hrAlt).toEqual([7002, 7003]);
+    expect(counts.labelExtraAlias.hr).toBe(2);
+  });
+
+  // gl has no alias list, so its extras stay labels the record will not answer
+  // to — the disposition split is what keeps the two outcomes distinguishable.
+  it('drops an extra the field has nowhere to carry', () => {
+    const records = [record({ gl: 'GJ 559' })];
+    const { counts, flips } = merge(
+      records, new Map([[SRC_A, entry({ gj: ['559', '560'] })]]),
+    );
+    expect(counts.labelExtraAlias.gl).toBe(0);
+    expect(counts.labelExtraDropped.gl).toBe(1);
+    expect(flips.map((f) => [f.applied, f.disposition]))
+      .toEqual([['GJ 560', 'extra-dropped']]);
+  });
+
+  // An alias adds a designation without displacing the spine's, which is the
+  // one place the delta's two questions part company.
+  it('an aliased extra adds a designation and removes none', () => {
+    const records = [record({ hd: 172167 })];
+    const { flips } = merge(
+      records, new Map([[SRC_A, entry({ hd: [172167, 172168] })]]),
+    );
+    expect([...labelFlipDesignationDelta(flips)]).toEqual([['hd:172168', 1]]);
+    expect(spineDesignationsRemovedBy(flips)).toEqual([]);
   });
 
   // The p Eridani / Gl 277A shape: HIP 7751 already keys record A off the

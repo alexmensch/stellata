@@ -24,6 +24,8 @@ export function makeStar(overrides: Partial<Star> = {}): Star {
     hip: null,
     hd: null,
     hr: null,
+    hdAlt: [],
+    hrAlt: [],
     flam: null,
     gl: null,
     tyc: null,

@@ -37,6 +37,10 @@ export interface LabelMergeRecord {
   hr: number | null;
   gl: string | null;
   flam: number | null;
+  /** Written by the merge, never read by it: the further values of an
+   *  ambiguous designation the single-valued field above cannot hold. */
+  hdAlt: number[];
+  hrAlt: number[];
 }
 
 export type LabelDisposition =
@@ -45,6 +49,7 @@ export type LabelDisposition =
   | 'override-spine'
   | 'override-value'
   | 'suppressed-collision'
+  | 'extra-alias'
   | 'extra-dropped';
 
 /** One row of the committed review queue — every place the merge's output
@@ -60,6 +65,9 @@ export interface LabelFlip {
   field: LabelField;
   spine: string;
   overlay: string;
+  /** The value this row is ABOUT, which is what the record took only where the
+   *  disposition writes: on an `extra-alias` / `extra-dropped` row it is the
+   *  value the field did not take, and the record carries `spine`. */
   applied: string;
   disposition: LabelDisposition;
 }
@@ -84,7 +92,11 @@ export interface LabelMergeCounts {
   labelSpineOnly: LabelPartition;
   /** Proposals withheld by the collision guard. */
   labelSuppressed: LabelPartition;
-  /** Overlay values a single-valued field cannot carry beside the one it took. */
+  /** Overlay values the field could not display but the record still answers
+   *  to — a search key and a same-as designation. */
+  labelExtraAlias: LabelPartition;
+  /** Overlay values a single-valued field cannot carry beside the one it took
+   *  AND has no alias list to hold, so the record will not answer to them. */
   labelExtraDropped: LabelPartition;
   /** Cells a curated override decided. */
   labelOverridden: LabelPartition;
@@ -98,6 +110,7 @@ export function emptyLabelMergeCounts(): LabelMergeCounts {
     labelFlipped: emptyLabelPartition(),
     labelSpineOnly: emptyLabelPartition(),
     labelSuppressed: emptyLabelPartition(),
+    labelExtraAlias: emptyLabelPartition(),
     labelExtraDropped: emptyLabelPartition(),
     labelOverridden: emptyLabelPartition(),
   };
@@ -127,11 +140,17 @@ interface FieldSpec {
   candidates: (e: OverlayEntry) => string[];
   /** Comparison key — the two conventions normalised onto one form. */
   same: (value: string) => string;
+  /** Where the values the single-valued field cannot hold go, or null where
+   *  the field has nowhere to put them. Null is what separates the two extra
+   *  dispositions: a carried value stays searchable and keys the same-as
+   *  class, a dropped one is a label the record will not answer to. */
+  writeAlt: ((r: LabelMergeRecord, values: readonly string[]) => void) | null;
 }
 
 function numericSpec(
   field: 'hip' | 'hd' | 'hr',
   candidates: (e: OverlayEntry) => readonly number[],
+  writeAlt: FieldSpec['writeAlt'] = null,
 ): FieldSpec {
   return {
     field,
@@ -144,19 +163,25 @@ function numericSpec(
     },
     candidates: (e) => [...candidates(e)].sort((a, b) => a - b).map(String),
     same: (value) => value,
+    writeAlt,
   };
 }
 
 export const LABEL_FIELD_SPECS: readonly FieldSpec[] = [
   numericSpec('hip', (e) => e.hip),
-  numericSpec('hd', (e) => e.hd),
-  numericSpec('hr', (e) => e.hr),
+  numericSpec('hd', (e) => e.hd, (r, values) => {
+    r.hdAlt = values.map(Number);
+  }),
+  numericSpec('hr', (e) => e.hr, (r, values) => {
+    r.hrAlt = values.map(Number);
+  }),
   {
     field: 'gl',
     read: (r) => r.gl,
     write: (r, value) => {
       r.gl = value;
     },
+    writeAlt: null,
     candidates: (e) => [...e.gj].sort().map(formatGlieseDisplay),
     same: (value) => glieseNumber(value) ?? value,
   },
@@ -166,6 +191,7 @@ export const LABEL_FIELD_SPECS: readonly FieldSpec[] = [
     write: (r, value) => {
       r.flam = Number(value);
     },
+    writeAlt: null,
     candidates: (e) => {
       const nums = e.flamsteed
         .map(flamsteedNumber)
@@ -227,6 +253,8 @@ export function spineLabelMergeRecord(
       hr: parseIntOrNull(row.hr),
       gl: nonEmpty(row.gl),
       flam: parseIntOrNull(row.flam),
+      hdAlt: [],
+      hrAlt: [],
     },
     label: labelForReview({
       proper: nonEmpty(row.proper),
@@ -290,17 +318,22 @@ function designationFor(field: LabelField, value: string): string | null {
   return starDesignations(fields)[0] ?? null;
 }
 
-/** Whether the disposition writes the overlay's value over the spine's, or
- *  leaves the record carrying the spine's. Total over the union, so a new
- *  disposition has to be classified here before anything reading the queue
- *  compiles. */
-const WRITES_OVER_SPINE: Record<LabelDisposition, boolean> = {
-  added: true,
-  'overlay-wins': true,
-  'override-value': true,
-  'override-spine': false,
-  'suppressed-collision': false,
-  'extra-dropped': false,
+/** What the disposition does to the record's designation set: whether it puts
+ *  the queue's value on the record, and whether the spine's value leaves. The
+ *  two part company on `extra-alias`, which adds a second designation without
+ *  displacing the first. Total over the union, so a new disposition has to be
+ *  classified here before anything reading the queue compiles. */
+const DISPOSITION_EFFECT: Record<
+  LabelDisposition,
+  { adds: boolean; removesSpine: boolean }
+> = {
+  added: { adds: true, removesSpine: true },
+  'overlay-wins': { adds: true, removesSpine: true },
+  'override-value': { adds: true, removesSpine: true },
+  'override-spine': { adds: false, removesSpine: false },
+  'suppressed-collision': { adds: false, removesSpine: false },
+  'extra-alias': { adds: true, removesSpine: false },
+  'extra-dropped': { adds: false, removesSpine: false },
 };
 
 /** Net designation change the queue describes, as a multiset delta. Applying
@@ -317,7 +350,7 @@ export function labelFlipDesignationDelta(
   };
   for (const designation of spineDesignationsRemovedBy(flips)) move(designation, -1);
   for (const flip of flips) {
-    if (!WRITES_OVER_SPINE[flip.disposition]) continue;
+    if (!DISPOSITION_EFFECT[flip.disposition].adds) continue;
     move(designationFor(flip.field, flip.applied), +1);
   }
   return delta;
@@ -331,7 +364,7 @@ export function labelFlipDesignationDelta(
 export function spineDesignationsRemovedBy(flips: readonly LabelFlip[]): string[] {
   const removed: string[] = [];
   for (const flip of flips) {
-    if (!WRITES_OVER_SPINE[flip.disposition] || flip.spine === '') continue;
+    if (!DISPOSITION_EFFECT[flip.disposition].removesSpine || flip.spine === '') continue;
     const designation = designationFor(flip.field, flip.spine);
     if (designation !== null) removed.push(designation);
   }
@@ -467,14 +500,22 @@ export function mergeClassicIdLabels<R extends LabelMergeRecord>(
     }
 
     // A single-valued field can carry one of an ambiguous designation's
-    // several values; the rest are labels the record will not answer to. A
+    // several values. The rest go to the record's alias list where it has one,
+    // and are labels the record will not answer to where it does not. A
     // suppressed or overridden cell is already its own review row.
     if (p.suppressed || p.override !== undefined) continue;
     const applied = spec.read(record);
-    for (const extra of candidates) {
-      if (applied !== null && spec.same(extra) === spec.same(applied)) continue;
-      counts.labelExtraDropped[field]++;
-      pushFlip(extra, 'extra-dropped');
+    const extras = candidates.filter(
+      (c) => applied === null || spec.same(c) !== spec.same(applied),
+    );
+    if (extras.length === 0) continue;
+    if (spec.writeAlt === null) {
+      counts.labelExtraDropped[field] += extras.length;
+      for (const extra of extras) pushFlip(extra, 'extra-dropped');
+    } else {
+      spec.writeAlt(record, extras);
+      counts.labelExtraAlias[field] += extras.length;
+      for (const extra of extras) pushFlip(extra, 'extra-alias');
     }
   }
 
