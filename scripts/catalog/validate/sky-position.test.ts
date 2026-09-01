@@ -12,9 +12,9 @@ import {
   type Catalog,
   type CatalogRecord,
   loadCatalog,
-  lookupByHip,
-  lookupByName,
+  lookupByRef,
 } from '../catalog-lookup';
+import { parseRef, type RecordRef } from '../parse/corpus-tsv';
 import { unitVectorFromRaDec, type UnitVector } from '../../../src/client/util/equatorial-basis';
 import {
   CATALOG_SCENE_EPOCH_JYR,
@@ -38,8 +38,7 @@ if (!CATALOG_BIN_PRESENT) {
 
 interface CorpusRow {
   name: string;
-  lookupName: string | null;
-  hip: number | null;
+  ref: RecordRef;
   raDegJ2016: number;
   decDegJ2016: number;
   tolArcsec: number;
@@ -59,8 +58,7 @@ function loadCorpus(): CorpusRow[] {
   }) as Record<string, string>[];
   return rows.map((r) => ({
     name: r.name,
-    lookupName: r.lookup_name || null,
-    hip: r.hip ? Number(r.hip) : null,
+    ref: parseRef(r.ref, r.name, 'ref'),
     raDegJ2016: Number(r.ra_deg_j2016),
     decDegJ2016: Number(r.dec_deg_j2016),
     tolArcsec: Number(r.tol_arcsec),
@@ -80,21 +78,20 @@ describe.skipIf(!CATALOG_BIN_PRESENT)('sky-position corpus', () => {
   const corpus = loadCorpus();
 
   beforeAll(async () => {
-    catalog = await loadCatalog();
+    catalog = await loadCatalog({ withSearchIndex: true });
   });
 
   it('corpus covers the high-PM set plus one pin per non-Gaia tier', () => {
-    expect(corpus.map((r) => r.hip ?? r.lookupName)).toEqual([
-      87937, 24186, 57939, 104214, 104217, 19849,
-      111293, 32349, 91262, 'Alula Australis',
+    expect(corpus.map((r) => `${r.ref.kind}:${r.ref.value}`)).toEqual([
+      'hip:87937', 'hip:24186', 'hip:57939', 'hip:104214', 'hip:104217',
+      'hip:19849', 'hip:111293', 'hip:32349', 'hip:91262',
+      'name:Alula Australis', 'hd:14039',
     ]);
   });
 
   for (const row of corpus) {
     it(`${row.name} sits within ${row.tolArcsec}″ of its J2016.0 position`, () => {
-      const rec: CatalogRecord | null = row.hip !== null
-        ? lookupByHip(catalog, row.hip)
-        : lookupByName(catalog, row.lookupName!);
+      const rec: CatalogRecord | null = lookupByRef(catalog, row.ref);
       expect(rec, `${row.name} missing from catalog.bin`).not.toBeNull();
       const dist = Math.hypot(rec!.x, rec!.y, rec!.z);
       expect(dist).toBeGreaterThan(0);
@@ -122,9 +119,7 @@ describe.skipIf(!CATALOG_BIN_PRESENT)('sky-position corpus', () => {
   for (const row of corpus) {
     if (row.totalPmMasyr === null) continue;
     it(`${row.name} advances by its published proper motion (${row.totalPmMasyr} mas/yr) over ${dt} yr`, () => {
-      const rec = row.hip !== null
-        ? lookupByHip(catalog, row.hip)
-        : lookupByName(catalog, row.lookupName!);
+      const rec = lookupByRef(catalog, row.ref);
       expect(rec, `${row.name} missing from catalog.bin`).not.toBeNull();
       const pos = new Float32Array([rec!.x, rec!.y, rec!.z]);
       const vel = new Float32Array([rec!.vx, rec!.vy, rec!.vz]);

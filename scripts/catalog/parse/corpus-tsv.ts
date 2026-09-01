@@ -65,9 +65,16 @@ export function parseIntOrNull(s: string | undefined): number | null {
   return v === null ? null : Math.trunc(v);
 }
 
-/** How a corpus row addresses a catalog.bin record. */
+/** How a corpus row addresses a catalog.bin record. `hd` reaches the records
+ *  the other three cannot: a no-Gaia astrometry-tier record carries no HIP, no
+ *  source_id and no proper name, and HD is the only designation left. It
+ *  resolves through the search index rather than the binary, which carries no
+ *  HD column (`../catalog-lookup.ts` § Per-key indexes). */
+export const RECORD_REF_KINDS = ['hip', 'gaia', 'name', 'hd'] as const;
+export type RecordRefKind = (typeof RECORD_REF_KINDS)[number];
+
 export interface RecordRef {
-  kind: 'hip' | 'gaia' | 'name';
+  kind: RecordRefKind;
   value: string;
 }
 
@@ -75,10 +82,13 @@ export function parseRef(cell: string, rowName: string, col: string): RecordRef 
   const idx = cell.indexOf(':');
   const kind = idx > 0 ? cell.slice(0, idx) : '';
   const value = cell.slice(idx + 1).trim();
-  if ((kind !== 'hip' && kind !== 'gaia' && kind !== 'name') || !value) {
-    throw new Error(`${rowName}: malformed ${col} "${cell}" — expected hip:<n> | gaia:<id> | name:<name>`);
+  if (!(RECORD_REF_KINDS as readonly string[]).includes(kind) || !value) {
+    throw new Error(
+      `${rowName}: malformed ${col} "${cell}" — expected `
+        + RECORD_REF_KINDS.map((k) => `${k}:<${k === 'name' ? 'name' : 'n'}>`).join(' | '),
+    );
   }
-  return { kind, value };
+  return { kind: kind as RecordRefKind, value };
 }
 
 export function parseOptionalRef(

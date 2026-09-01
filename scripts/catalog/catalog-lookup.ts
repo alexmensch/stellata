@@ -23,6 +23,7 @@ import {
   readRecordFieldBig,
   type CatalogHeaderFields,
   type CatalogManifest,
+  type SearchEntry,
 } from './catalog-pure';
 import { REPO_ROOT } from '../util/paths';
 import type { RecordRef } from './parse/corpus-tsv';
@@ -86,11 +87,19 @@ export interface Catalog {
   readonly count: number;
   record(i: number): CatalogRecord;
   records(): IterableIterator<CatalogRecord>;
+  /** Present only when loaded `withSearchIndex`. The binary carries no HD
+   *  column, so `hd:` refs resolve through here or not at all. */
+  readonly searchIndex?: readonly SearchEntry[];
 }
 
 export interface LoadCatalogOptions {
   catalogManifestPath?: string;
   constellationsJsonPath?: string;
+  /** Read `public/search-index.json` alongside the binary, which `hd:` record
+   *  refs need. Off by default: it is ~15 MB of JSON, and every other lookup
+   *  key is in the binary already. */
+  withSearchIndex?: boolean;
+  searchIndexPath?: string;
 }
 
 interface ConstellationEntry { code: string }
@@ -98,10 +107,12 @@ interface ConstellationEntry { code: string }
 export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalog> {
   const manifestPath = opts.catalogManifestPath ?? DEFAULT_CATALOG_MANIFEST;
   const conPath = opts.constellationsJsonPath ?? DEFAULT_CONSTELLATIONS_JSON;
+  const searchIndexPath = opts.searchIndexPath ?? DEFAULT_SEARCH_INDEX;
 
-  const [ab, conText] = await Promise.all([
+  const [ab, conText, searchIndexText] = await Promise.all([
     readCatalogBuffer(manifestPath),
     readFile(conPath, 'utf-8'),
+    opts.withSearchIndex ? readFile(searchIndexPath, 'utf-8') : Promise.resolve(null),
   ]);
   const view = new DataView(ab);
   const header = readCatalogHeader(ab);
@@ -159,6 +170,9 @@ export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalo
     *records() {
       for (let i = 0; i < count; i++) yield readRecord(i);
     },
+    ...(searchIndexText === null
+      ? {}
+      : { searchIndex: JSON.parse(searchIndexText) as SearchEntry[] }),
   };
 }
 
@@ -171,6 +185,11 @@ interface CatalogIndexes {
   byHip: Map<number, number>;
   byGaiaSourceId: Map<string, number>;
   byName: Map<string, number>;
+  /** Every HD number a record answers to, alternatives included — the same
+   *  many-keys-onto-one-record shape the runtime's `hdMap` builds
+   *  (`src/client/typeahead/README.md` § Star search). Empty where the catalog
+   *  was loaded without its search index. */
+  byHd: Map<number, number>;
 }
 const INDEX_CACHE = new WeakMap<Catalog, CatalogIndexes>();
 
@@ -185,7 +204,12 @@ function getIndexes(catalog: Catalog): CatalogIndexes {
     if (r.gaiaSourceId !== null) byGaiaSourceId.set(r.gaiaSourceId.toString(), r.i);
     if (r.name) byName.set(r.name, r.i);
   }
-  const built = { byHip, byGaiaSourceId, byName };
+  const byHd = new Map<number, number>();
+  for (const e of catalog.searchIndex ?? []) {
+    if (e.hd !== undefined) byHd.set(e.hd, e.i);
+    for (const hd of e.hda ?? []) byHd.set(hd, e.i);
+  }
+  const built = { byHip, byGaiaSourceId, byName, byHd };
   INDEX_CACHE.set(catalog, built);
   return built;
 }
@@ -206,9 +230,23 @@ export function lookupByName(catalog: Catalog, name: string): CatalogRecord | nu
   return i === undefined ? null : catalog.record(i);
 }
 
+/** Throws rather than answering null when the catalog was loaded without its
+ *  search index: a silent miss would read as "no such record" and quietly
+ *  weaken every corpus row addressed this way. */
+export function lookupByHd(catalog: Catalog, hd: number): CatalogRecord | null {
+  if (catalog.searchIndex === undefined) {
+    throw new Error(
+      'hd: record refs need the search index — loadCatalog({ withSearchIndex: true })',
+    );
+  }
+  const i = getIndexes(catalog).byHd.get(hd);
+  return i === undefined ? null : catalog.record(i);
+}
+
 export function lookupByRef(catalog: Catalog, ref: RecordRef): CatalogRecord | null {
   return ref.kind === 'hip' ? lookupByHip(catalog, Number(ref.value))
     : ref.kind === 'gaia' ? lookupByGaiaSourceId(catalog, ref.value)
+    : ref.kind === 'hd' ? lookupByHd(catalog, Number(ref.value))
     : lookupByName(catalog, ref.value);
 }
 
