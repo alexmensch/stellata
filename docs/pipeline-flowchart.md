@@ -183,17 +183,23 @@ magnitude and the distance the refinements below settled on, never read
 from a table, so a star cannot be placed at one distance and lit for
 another.
 
-**Distances.** A star's naive distance (one over its parallax) is
-biased and noisy, so distances are refined in a fixed order: the
-Bailer-Jones probabilistic distance replaces the naive value for
-Gaia-sourced stars; Hipparcos-sourced stars get their distance
-re-derived at full precision from the original parallax; stars in the
-direction of the Large Magellanic Cloud that also share its motion are
-snapped to its precisely known distance of 49.6 kpc (from eclipsing
-binaries — parallax is useless that far out); and anything still
-beyond 50 kpc is out of scope and dropped. Because intrinsic brightness
-is derived from the final distance rather than tabulated, a star moved
-to a new distance is lit correctly for it by construction.
+**Distances.** Every distance starts from a parallax the build looks up
+itself, taking the best available measurement of that particular star:
+Gaia DR3 first, then Hipparcos, then the nearby-star catalogues, then a
+published value carrying its own citation. A star for which no such
+measurement exists cannot be placed at all, so it leaves the catalogue
+and is listed as having done so — it keeps its identity and returns when
+a future Gaia release measures it.
+
+One over a parallax is biased and noisy, so the raw inversion is then
+refined in a fixed order: the Bailer-Jones probabilistic distance
+replaces it for Gaia-measured stars; stars in the direction of the Large
+Magellanic Cloud that also share its motion are snapped to its precisely
+known distance of 49.6 kpc (from eclipsing binaries — parallax is
+useless that far out); and anything still beyond 50 kpc is out of scope
+and dropped. Because intrinsic brightness is derived from the final
+distance rather than tabulated, a star moved to a new distance is lit
+correctly for it by construction.
 
 **Directions.** Sky positions use the same trust ladder as the
 multiple-star pipeline: Gaia by default, Gaia's centre-of-mass

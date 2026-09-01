@@ -1157,7 +1157,7 @@ export const OPTICAL_DOUBLE_MIN_SEP_PC = 1.0;
  *  because a separation is only trustworthy when both stars' distances are: a
  *  Hipparcos or courier parallax carries error bars wide enough to put a bound
  *  pair kiloparsecs apart, which reads as an optical double. */
-export function hasGaiaQualityDistance(distVia: DistVia): boolean {
+export function hasGaiaQualityDistance(distVia: DistVia | null): boolean {
   return distVia === 'gaia_dr3_inversion' || distVia === 'bailer_jones';
 }
 
@@ -1171,7 +1171,7 @@ export interface OpticalDoubleStar {
   /** The tier this record's own distance came from — see `hasGaiaQualityDistance`.
    *  Was the spine's editorial `dist_src` cell until the parallax cascade gave
    *  the build a first-hand answer to the same question. */
-  distVia: DistVia;
+  distVia: DistVia | null;
   varType: number;
 }
 

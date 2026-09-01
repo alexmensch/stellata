@@ -171,10 +171,12 @@ export interface Star {
   athygDist: number | null;     // printed `dist`, pre-override
   athygDistSrc: string | null;  // printed `dist_src`
   /** Which parallax tier (or override layer) this record's distance came from.
-   *  Build-time only, like `vVia`. The optical-double suppression reads it to
-   *  ask whether a separation is trustworthy — a question the spine's editorial
-   *  `dist_src` cell used to answer. */
-  distVia: DistVia;
+   *  Build-time only, like `vVia`, and `null` on the same terms: a promoted
+   *  companion with no anchor to inherit a tier from was placed by no cascade.
+   *  The optical-double suppression reads it to ask whether a separation is
+   *  trustworthy — a question the spine's editorial `dist_src` cell used to
+   *  answer. */
+  distVia: DistVia | null;
   /** Which cascade tier supplied the V this record's absmag was derived from,
    *  `null` on records minted rather than read (promoted companions). Read by
    *  companion promotion's flux conservation, which may only subtract a
@@ -283,14 +285,14 @@ export function readStars(
     bjEligible: number;            // rows with a Gaia DR3 source_id
     bjOverridden: number;          // bjEligible rows that hit a B-J entry
     bjOverriddenByDistSrc: DistSrcPartition;   // bjOverridden split by AT-HYG dist_src
-    /** Rows whose parallax the cascade admits but whose fractional error
-     *  exceeds 20%, so the inverted distance is biased. They ship — no second
-     *  source reaches them — and this count is how they stay visible for a
-     *  Gaia DR4 revisit. Recompute at any time as
-     *  `plx / e_plx < PARALLAX_LOW_PRECISION_SN` over the `hip2_parallax` tier. */
     /** The § 6.1 dropped list — enumerated, because these rows leave the
      *  catalogue and nothing else records that they existed. */
     parked: ParkedRecord[];
+    /** Rows whose SHIPPED distance inverts a parallax with worse than 20%
+     *  fractional error, so the result is biased. They ship — no second source
+     *  reaches them — and this count is how they stay visible for a Gaia DR4
+     *  revisit. Bailer-Jones rows are excluded: there the posterior, not the
+     *  inversion, handles the low-S/N case. */
     distLowPrecisionParallax: number;
     /** Of the rows dropped for no owned parallax, those a skip rule refused a
      *  value for rather than those nothing measured at all. */
@@ -485,7 +487,9 @@ export function readStars(
     // the spine's editorial `dist_src`: a non-Gaia parallax must not be
     // regressed onto B-J's Galactic-density prior tail (~10–40 kpc), and which
     // parallax a record carries is something this build now knows first-hand.
-    let dist = isSol ? 0 : 1000 / (plxRes.plxMas as number);
+    // A null parallax here is the curated exit (Sol, distance zero by
+    // construction); `none` returned above.
+    let dist = plxRes.plxMas === null ? 0 : 1000 / plxRes.plxMas;
     let distVia: DistVia = plxRes.via;
     const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, plxRes.via);
     if (bjEligibleRow) bjEligible++;

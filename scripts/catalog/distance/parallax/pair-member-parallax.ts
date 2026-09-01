@@ -95,10 +95,15 @@ export function buildPairMemberParallaxIndex(
     if (seen.has(row.gaiaSourceId)) continue;
     seen.add(row.gaiaSourceId);
     const g = gaiaAstrometry.get(row.gaiaSourceId);
-    if (g === undefined || !isCoherenceAnchorGrade(g)) continue;
+    // `isCoherenceAnchorGrade` requires a positive parallax, so the null check
+    // is redundant to it — stated anyway, because a cast here would be the one
+    // place this module trusts another module's predicate to narrow a type.
+    if (g === undefined || g.parallaxMas === null || !isCoherenceAnchorGrade(g)) {
+      continue;
+    }
     const candidate: SiblingParallax = {
       sourceId: row.gaiaSourceId,
-      mas: g.parallaxMas as number,
+      mas: g.parallaxMas,
       errMas: g.parallaxErrorMas,
     };
     // Below the floor the inversion is undefined, so such a sibling anchors

@@ -213,8 +213,10 @@ audited 2026-08-09. Counts are pinned in `../build-catalog-expected.json`
 unless another home is named; the committed gates are the two suites in
 this folder plus `../classic-ids/parity-ledger.test.ts`.
 
-- **Record parity — zero drops.** `recordCount` (329,657) is unchanged
-  across the swap. Membership is exactly the spine, the five walk gates
+- **Record parity — zero drops.** `recordCount` was unchanged across the
+  swap itself, at the 329,657 of the build the spine snapshots; the live
+  figure is `../build-catalog-expected.json`. Membership is exactly the
+  spine, the five walk gates
   are pinned at 0 (`spineDropped*`), and `sid:check` resolves every
   record with zero mints — so the § 6.1 dropped list was empty and its
   reason enum had no rows. The only per-record routing deltas are the

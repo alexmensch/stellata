@@ -40,10 +40,13 @@ export function parkedSpineKey(cells: {
 }
 
 export function formatParkedRecordsTsv(parked: readonly ParkedRecord[]): string {
-  const sorted = [...parked].sort((a, b) => (a.tyc ?? '').localeCompare(b.tyc ?? ''));
-  const lines = sorted.map((p) => [
+  // Sorted on the whole row, not on `tyc` alone: every row carries a TYC today,
+  // but a park with none would tie with every other and leave the file's order
+  // a function of the spine walk. The committed file is diffed in CI, so a
+  // reordering that moves no row would read as a change.
+  const lines = parked.map((p) => [
     p.tyc ?? '', p.hip ?? '', p.hd ?? '', p.gl ?? '', p.gaiaSourceId ?? '', p.reason,
-  ].join('\t'));
+  ].join('\t')).sort();
   return [COLUMNS.join('\t'), ...lines].join('\n') + '\n';
 }
 
@@ -57,7 +60,7 @@ export function parseParkedRecordsTsv(text: string): ParkedLedgerRow[] {
   if (header !== COLUMNS.join('\t')) {
     throw new Error(`${PARKED_RECORDS_FILE}: unexpected header "${header}"`);
   }
-  return lines.map((line) => {
+  return lines.filter((line) => line !== '').map((line) => {
     const [tyc, hip, hd, gl, gaia_source_id, reason] = line.split('\t');
     return {
       spineKey: parkedSpineKey({ tyc, hip, hd, gl, gaia_source_id }),

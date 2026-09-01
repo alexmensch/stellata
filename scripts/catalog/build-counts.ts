@@ -364,8 +364,8 @@ export interface BuildCounts extends LabelMergeCounts {
    *  (parsed map size) — direction-cascade tier 1 coverage. */
   gaiaAstrometryEntries: number;
   /** Total entries in the HIP2 van Leeuwen TSV (parsed map size) —
-   *  direction-cascade tier 2 coverage + dist_src=HIP full-precision
-   *  distances. */
+   *  direction-cascade tier 2 coverage, and the `hip2_parallax` tier's reach
+   *  in the parallax cascade. */
   hip2Entries: number;
   /** Total entries in the printed-V slice of I/239/hip_main (parsed map
    *  size) — the V cascade's bright-tier coverage. */

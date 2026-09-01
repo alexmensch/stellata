@@ -230,7 +230,8 @@ Per WDS root with ≥2 resolved own-record members:
   Gaia fitted no parallax for at all, one pass earlier
   (`../distance/parallax/README.md`). Two mechanisms doing their own
   job — the tier decides where a member ships, this pass then snaps it
-  onto the anchor RECORD's distance for intra-system consistency. HIP2's long baseline beats Gaia exactly where Gaia is
+  onto the anchor RECORD's distance for intra-system consistency.
+  HIP2's long baseline beats Gaia exactly where Gaia is
   saturated or binarity-corrupted (Acrux). A member hosting its own
   sub-pair (Acrux C = Ca,Cb) never takes the clean-Gaia tier —
   photocentre wobble on periods beyond Gaia's baseline corrupts the 5p

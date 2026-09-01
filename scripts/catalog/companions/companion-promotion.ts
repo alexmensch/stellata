@@ -1720,8 +1720,10 @@ function promoteRow(
     athygDistSrc: null,
     // A promoted companion is placed at its anchor's distance, so it inherits
     // the anchor's tier rather than claiming a parallax of its own — the
-    // optical-double suppression must weigh both members the same way.
-    distVia: inheritAnchor?.distVia ?? 'none',
+    // optical-double suppression must weigh both members the same way. Null
+    // where there is no anchor to inherit from, never `none`: that value is a
+    // membership event, and this record ships.
+    distVia: inheritAnchor?.distVia ?? null,
     vVia: null,
     syntheticId: usesSynth ? synthId : null,
   });
