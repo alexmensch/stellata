@@ -133,8 +133,13 @@ every star an identifier-less card labels "Gaia DR3 …" or
 
 `buildSearchIndex` (pure, tested) builds both the fuzzy corpus and the
 exact direct-lookup maps for numeric IDs (HIP/HD/HR/Gl) and Flamsteed.
-The numeric-ID maps are 1:1 and echo the matched identifier in the
-dropdown ("Vega (HIP 91262)"). The Flamsteed map keys `<num> <con>` to
+The numeric-ID maps echo the matched identifier in the dropdown
+("Vega (HIP 91262)"). `hdMap` / `hrMap` are many-keys-to-one-record rather
+than 1:1: an entry's `hda` / `hra` aliases are inserted alongside its `hd` /
+`hr`, so a user typing either HD number of a close pair the Henry Draper
+catalogue numbered twice lands on the record that holds it. The echo is still
+the query's own identifier, and the direction the dropdown reads — record to
+label — is unchanged. The Flamsteed map keys `<num> <con>` to
 **an array** of every component sharing that designation, so an exact
 "61 Cyg" returns each of 61 Cyg A/B/… with its own display name —
 never collapsed to one, never echoing the raw query. Anonymous

@@ -214,9 +214,34 @@ constellation those cells carry reaches the build through the separate
 designation-keyed route below.
 
 Record fields are single-valued while overlay cells are not, so where the
-overlay asserts several values the field takes one and the rest are enumerated
-as `extra-dropped` — labels the record will not answer to. Multi-valued
-identifier support is a wire + ledger change, not a merge rule.
+overlay asserts several values the field takes ONE for display and the rest go
+to the record's alias list — `hdAlt` / `hrAlt`, queued as `extra-alias`. The
+record answers to every one of them: they become extra keys on the search
+index's `hdMap` / `hrMap` (`src/client/typeahead/README.md` § Star search) and
+extra `hd:` / `hr:` designations in its same-as class (`docs/sid.md` § 4.1).
+130 values today, 129 hd + 1 hr, across 129 records.
+
+**HD and HR are the only fields with an alias list**, and that follows from the
+join rather than from today's data: HD numbered both components of many close
+pairs, and the `hr` route resolves through `hd`. `sourcesWithMultipleGj` and
+`sourcesWithMultipleFlamsteed` are 0 because a GJ carries its component letter
+and a Flamsteed number names one star. `hip`, `gl` and `flam` therefore have
+nowhere to put an extra and queue it as `extra-dropped` instead — a label the
+record will not answer to. Both counts are per-identifier partitions, and
+`extra-dropped` is 0 on every field today; it exists so a future overlay change
+surfaces as a count rather than as a silently lost label.
+
+Nothing about this makes an alias ambiguous. Not one of the 130 is carried by
+another record off the spine or off the overlay, and none keys a ledger row, so
+the additions cannot fuse two same-as classes or move a canonical key —
+`sid:check` resolves all 329,603 objects with nothing minted. The three
+ambiguous designations `sid:allocate` still drops (`hd:219175`, `hd:181199`,
+`gl:Gl_277A`) are spine-side component pairs, unrelated to this list.
+
+A promoted companion inherits neither list. An anchor's alternative HD is often
+the pair's *other* component number, but the overlay asserts both against one
+Gaia source and names no component, so attributing one to the companion would
+invent evidence (`../companions/README.md` § Fields a promoted record carries).
 
 ### The collision guard
 

@@ -96,9 +96,9 @@ scripts/catalog/
                                   name prefixes and a record's `gl` cell meet
                                   (data/gliese/README.md). Bottom tier of the
                                   V cascade, trigonometric tier of parallax.
-  catalog-lookup.ts               Reads a built catalog back (loadCatalog) —
-                                  the shared reader for verify-catalog,
-                                  validate-simbad-sample, and sid:allocate.
+  catalog-lookup.ts (+ test)      Reads a built catalog back (loadCatalog) — the
+                                  shared reader for verify-catalog, the frozen
+                                  corpora, validate-simbad-sample, sid:allocate.
   build-counts.ts (+ test)        Per-strategy / per-tier count snapshot
                                   comparator, pinned by
                                   build-catalog-expected.json. Generic over
@@ -348,8 +348,9 @@ decoding it.
 Separate from `catalog.bin` so the main binary stays rendering-focused.
 One JSON array entry per star that has at least one searchable identifier
 (proper name, Bayer, Flamsteed, GCVS designation, HIP, HD, HR, or Gliese).
-Short keys (`i/p/b/f/g/hip/hd/hr/gl/c/dc/s/cl/cp`) to keep wire size down — file is
-~15 MB raw, ~4 MB gzipped. Loaded in parallel with `catalog.bin` in
+Short keys (`i/p/b/f/g/hip/hd/hr/hda/hra/gl/c/dc/s/cl/cp`) to keep wire size down — file is
+~15 MB raw, ~4 MB gzipped. `hda`/`hra` carry the further HD / HR numbers a record
+answers to but does not display, on 129 entries (`classic-ids/README.md` § The label merge). Loaded in parallel with `catalog.bin` in
 `main.ts`. The `s` field carries the raw spectral designation from the
 spine's printed `spect` cell ("G2 V", "M1.5Iab-b", "K0III+K7V", …) for the
 hover tooltip display. The `g` field carries the GCVS variable-star designation
@@ -381,10 +382,9 @@ label is built against. `dc` is emitted only where the two diverge AND
 the entry carries a constellation-relative designation (`b`/`f`/`g`/`cl`)
 — **65** entries today, `designationConMismatch` in build-counts, so the
 reader's `designationConIndex(dc, c)` fallback carries everything else at no
-wire cost. Mostly Flamsteed numbers the 1930 boundaries reassigned (15 LMi sits
-in Ursa Major), plus ρ Aql, boundary-straddling promoted companions and 3 GCVS
-variables. Source and precedence: `classic-ids/README.md` § The designation
-constellation.
+wire cost. What that population is made of, and where each entry's `dc` comes
+from: `parse/README.md` § Positional constellation membership and
+`classic-ids/README.md` § The designation constellation.
 
 Field shape pinned in `scripts/catalog/catalog-pure.ts` as the `SearchEntry`
 interface — the writer (`build-catalog.ts`) and the reader

@@ -394,7 +394,7 @@ companion never gets one without the other.
 | `syntheticId` | per-component | `synth-<wds_id>-<comp>` when no own id survives the gates. |
 | `companionIdx` | post-pass | set by geometric binary inference (`../multiplicity/README.md` § Geometric binary inference). |
 | `period`, `amplitude`, `varType`, `gcvsName` | unset | companion variability isn't tracked at promotion. |
-| `hd`, `hr`, `flam`, `bayer`, `gl`, `tyc` | unset | not carried on multiples.tsv rows. |
+| `hd`, `hr`, `flam`, `bayer`, `gl`, `tyc` | unset | not carried on multiples.tsv rows. `hdAlt`/`hrAlt` are empty for a different reason — deliberately not inherited: an anchor's alternative HD is often the pair's OTHER component number, which makes handing it to this record tempting and wrong. The overlay asserts both numbers against one Gaia source and names no component, so attributing one here would invent evidence (`../classic-ids/README.md` § The label merge). |
 
 ### Component-letter stamping
 
