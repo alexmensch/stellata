@@ -11,6 +11,7 @@ import {
   SIMBAD_REF_EPOCH,
   directionAtEpoch,
   directionAtEpochSplit,
+  directionOnPm,
   gaia5pUnreliable,
   hip2PmDisagrees,
   parseGaiaAstrometryCatalogTsv,
@@ -19,11 +20,12 @@ import {
   resolveDirection,
   velocityPcPerYr,
   type DirectionInputs,
+  type DirectionSolution,
   type DirectionSources,
   type GaiaAstrometryCatalogRow,
   type Hip2AstrometryRow,
 } from './direction-cascade';
-import type { Tycho2Row } from '../tycho2-parse';
+import { TYCHO2_ICRS_EPOCH, type Tycho2Row } from '../tycho2-parse';
 import { gaiaAstrometryRow } from './astrometry-fixture';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import {
@@ -33,6 +35,13 @@ import {
 } from '../../../src/client/util/equatorial-basis';
 
 const ARCSEC_PER_RAD = (180 * 3600) / Math.PI;
+
+// The cascade returns a solution, not a direction — production advances it at
+// the one call site in stars-parse, on the motion the row ends up with. These
+// assertions want the tier's own advance, which is that call with the tier's
+// own PM.
+const dirOf = (s: DirectionSolution): UnitVector =>
+  directionOnPm(s, s.srcPmraMasyr, s.srcPmdecMasyr);
 
 function angSepArcsec(a: UnitVector, b: UnitVector): number {
   const dot = Math.max(-1, Math.min(1, a.x * b.x + a.y * b.y + a.z * b.z));
@@ -233,7 +242,7 @@ describe('direction-cascade / resolveDirection routing', () => {
       g.raDeg, g.decDeg, g.pmraMasyr, g.pmdecMasyr,
       GAIA_DR3_REF_EPOCH, CATALOG_SCENE_EPOCH,
     );
-    expect(angSepArcsec(res!.dir, expected)).toBe(0);
+    expect(angSepArcsec(dirOf(res!), expected)).toBe(0);
   });
 
   it('NSS + unreliable 5p routes gaia_nss_systemic and keeps the Gaia direction', () => {
@@ -246,7 +255,7 @@ describe('direction-cascade / resolveDirection routing', () => {
     const gaia5p = resolveDirection(inputs({ sourceId: SID }), sources({
       gaiaAstrometry: new Map([[SID, g]]),
     }));
-    expect(angSepArcsec(res!.dir, gaia5p!.dir)).toBe(0);
+    expect(angSepArcsec(dirOf(res!), dirOf(gaia5p!))).toBe(0);
   });
 
   it('NSS membership alone (clean 5p) stays gaia_5p', () => {
@@ -272,9 +281,9 @@ describe('direction-cascade / resolveDirection routing', () => {
     // angSepArcsec's acos floors at ~0.004″ for a unit vector against
     // itself (self-dot rounds to 1−1 ULP), which the larger 24.75 yr
     // HIP2 Δt now surfaces.
-    expect(res!.dir.x).toBeCloseTo(expected.x, 12);
-    expect(res!.dir.y).toBeCloseTo(expected.y, 12);
-    expect(res!.dir.z).toBeCloseTo(expected.z, 12);
+    expect(dirOf(res!).x).toBeCloseTo(expected.x, 12);
+    expect(dirOf(res!).y).toBeCloseTo(expected.y, 12);
+    expect(dirOf(res!).z).toBeCloseTo(expected.z, 12);
   });
 
   it('gaia_nss_systemic outranks hip2_pm_discrepant (stage3 priority order)', () => {
@@ -307,7 +316,7 @@ describe('direction-cascade / resolveDirection routing', () => {
       gaiaAstrometry: new Map([[SID, g]]),
     }));
     expect(res?.via).toBe('gaia_5p');
-    expect(angSepArcsec(res!.dir, unitVectorFromRaDec(g.raDeg, g.decDeg))).toBe(0);
+    expect(angSepArcsec(dirOf(res!), unitVectorFromRaDec(g.raDeg, g.decDeg))).toBe(0);
   });
 
   it('Tycho-2 takes the row Gaia and HIP2 both miss, on its own TYC', () => {
@@ -335,7 +344,7 @@ describe('direction-cascade / resolveDirection routing', () => {
       t.raDeg, t.decDeg, t.pmRaMasyr, t.pmDecMasyr,
       1990.0, 1991.0, CATALOG_SCENE_EPOCH,
     );
-    expect(res.dir.z).toBeCloseTo(expected.z, 12);
+    expect(dirOf(res).z).toBeCloseTo(expected.z, 12);
     const collapsed = directionAtEpoch(
       t.raDeg, t.decDeg, t.pmRaMasyr, t.pmDecMasyr, 1990.0, CATALOG_SCENE_EPOCH,
     );
@@ -345,7 +354,7 @@ describe('direction-cascade / resolveDirection routing', () => {
     // renormalised, so a finished angle is atan(d) — at a 25° displacement,
     // far outside the linear regime this PM was chosen to escape, that
     // compresses the degree rather than losing it. Don't "correct" to 3600.
-    expect(angSepArcsec(res.dir, collapsed)).toBeCloseTo(3004.792, 2);
+    expect(angSepArcsec(dirOf(res), collapsed)).toBeCloseTo(3004.792, 2);
   });
 
   it("a Tycho-2 row with no PM keeps its position and zeroes the tangential term", () => {
@@ -384,9 +393,9 @@ describe('direction-cascade / resolveDirection routing', () => {
       simbad.raDeg, simbad.decDeg, simbad.pm.pmRaMasyr, simbad.pm.pmDecMasyr,
       SIMBAD_REF_EPOCH, CATALOG_SCENE_EPOCH,
     );
-    expect(res.dir.x).toBeCloseTo(expected.x, 12);
-    expect(res.dir.y).toBeCloseTo(expected.y, 12);
-    expect(res.dir.z).toBeCloseTo(expected.z, 12);
+    expect(dirOf(res).x).toBeCloseTo(expected.x, 12);
+    expect(dirOf(res).y).toBeCloseTo(expected.y, 12);
+    expect(dirOf(res).z).toBeCloseTo(expected.z, 12);
   });
 
   it('a SIMBAD row with a position but no PM keeps the position, zero tangential', () => {
@@ -400,9 +409,9 @@ describe('direction-cascade / resolveDirection routing', () => {
     // Component-wise: angSepArcsec's acos floors near 0.004″ for a unit
     // vector against itself, as the hip2_pm_discrepant case above notes.
     const unpropagated = unitVectorFromRaDec(120, 40);
-    expect(res.dir.x).toBeCloseTo(unpropagated.x, 12);
-    expect(res.dir.y).toBeCloseTo(unpropagated.y, 12);
-    expect(res.dir.z).toBeCloseTo(unpropagated.z, 12);
+    expect(dirOf(res).x).toBeCloseTo(unpropagated.x, 12);
+    expect(dirOf(res).y).toBeCloseTo(unpropagated.y, 12);
+    expect(dirOf(res).z).toBeCloseTo(unpropagated.z, 12);
   });
 
   it('no tier reaches the row → null, which the walk counts as a dropped record', () => {
@@ -612,5 +621,97 @@ describe('resolveDirection velocity solution', () => {
     expect(r.via).toBe('tycho2');
     expect(r.srcPmraMasyr).toBe(12);
     expect(r.velVia).toBe('tycho2_pm');
+  });
+});
+
+describe('direction-cascade / directionOnPm', () => {
+  // TYC 1269-128-1 (HD 285742, 52.6 pc), the nearest of the three Tycho-2 rows
+  // with no mean solution: supplement 1 states only the J2000 cell and no PM,
+  // and the rescue cascade reaches it on SIMBAD's bibcoded motion.
+  const TYCHO2_J2000_RA = 66.25076035;
+  const TYCHO2_J2000_DEC = 16.9849519;
+  const SIMBAD_J2000_RA = 66.25102960285;
+  const SIMBAD_J2000_DEC = 16.98489746366;
+  const RESCUED_PMRA = 91.121;
+  const RESCUED_PMDEC = -24.707;
+  // Where the tier's own PM is null the advance is the identity, so the raw
+  // J2000 cell is what the row ships without a rescued motion. Named rather
+  // than re-derived through the cascade: an assertion against the same call it
+  // is testing proves nothing.
+  const TYCHO2_J2000_DIR = unitVectorFromRaDec(TYCHO2_J2000_RA, TYCHO2_J2000_DEC);
+
+  const noMeanSolution = (): DirectionSolution => resolveDirection(
+    inputs({ tyc: TYC }),
+    sources({
+      tycho2: new Map([[TYC, tycho2Row({
+        raDeg: TYCHO2_J2000_RA, decDeg: TYCHO2_J2000_DEC,
+        epochRa: TYCHO2_ICRS_EPOCH, epochDec: TYCHO2_ICRS_EPOCH,
+        pmRaMasyr: null, pmDecMasyr: null, fromIcrs: true,
+      })]]),
+    }),
+  )!;
+
+  it('advances a J2000 tier position over the rescued PM', () => {
+    const res = noMeanSolution();
+    expect(res.srcEpochRa).toBe(TYCHO2_ICRS_EPOCH);
+    expect(res.velVia).toBe('zero');
+    const advanced = directionOnPm(res, RESCUED_PMRA, RESCUED_PMDEC);
+    expect(angSepArcsec(TYCHO2_J2000_DIR, advanced)).toBeCloseTo(1.5106, 3);
+  });
+
+  it('leaves only the two J2000 cells disagreement against an independent J2016 place', () => {
+    // The rescued PM is SIMBAD's, and SIMBAD states its own J2000 position, so
+    // advancing that one over the same 16 yr is an independent estimate of
+    // where the star is at the scene epoch. The propagated position lands
+    // exactly the two J2000 cells apart from it — the epoch term has cancelled
+    // and the frame disagreement is all that survives. That identity, not the
+    // absolute residual, is what says the advance is applied correctly.
+    const res = noMeanSolution();
+    const advanced = directionOnPm(res, RESCUED_PMRA, RESCUED_PMDEC);
+    const simbadJ2016 = directionAtEpoch(
+      SIMBAD_J2000_RA, SIMBAD_J2000_DEC, RESCUED_PMRA, RESCUED_PMDEC,
+      SIMBAD_REF_EPOCH, CATALOG_SCENE_EPOCH,
+    );
+    const j2000Disagreement = angSepArcsec(
+      TYCHO2_J2000_DIR, unitVectorFromRaDec(SIMBAD_J2000_RA, SIMBAD_J2000_DEC),
+    );
+    expect(j2000Disagreement).toBeCloseTo(0.9475, 3);
+    // Exact only to the linear form's second-order term (~5 µas here, since
+    // the tangent-plane advance is not an isometry); do not tighten.
+    expect(angSepArcsec(advanced, simbadJ2016)).toBeCloseTo(j2000Disagreement, 4);
+    // Against the unpropagated cell the residual carries the epoch term too.
+    expect(angSepArcsec(TYCHO2_J2000_DIR, simbadJ2016)).toBeCloseTo(2.4572, 3);
+  });
+
+  it('is a no-op where the rescue reaches no PM, whatever the tier epoch', () => {
+    const res = noMeanSolution();
+    expect(angSepArcsec(TYCHO2_J2000_DIR, directionOnPm(res, null, null)))
+      .toBeCloseTo(0, 9);
+  });
+
+  it('is a zero-dt no-op on the Gaia tier, which already states J2016.0', () => {
+    // The 273 Gaia 2p rows are the bulk of the rescue cohort and none of them
+    // may move: their position is native to the scene epoch.
+    const g = gaiaRow({ parallaxMas: null, pmraMasyr: null, pmdecMasyr: null });
+    const res = resolveDirection(inputs({ sourceId: '1' }), sources({
+      gaiaAstrometry: new Map([['1', g]]),
+    }))!;
+    expect(res.velVia).toBe('zero');
+    expect(angSepArcsec(
+      unitVectorFromRaDec(g.raDeg, g.decDeg), directionOnPm(res, 500, -500),
+    )).toBeCloseTo(0, 9);
+  });
+
+  it('advances each coordinate over its own epoch on a mean solution', () => {
+    const res = resolveDirection(inputs({ tyc: TYC }), sources({
+      tycho2: new Map([[TYC, tycho2Row({
+        epochRa: 1990.0, epochDec: 1991.0, pmRaMasyr: null, pmDecMasyr: null,
+      })]]),
+    }))!;
+    const advanced = directionOnPm(res, 0, 3600_000);   // 1°/yr in Dec alone
+    const collapsed = directionAtEpoch(
+      res.srcRaDeg, res.srcDecDeg, 0, 3600_000, 1990.0, CATALOG_SCENE_EPOCH,
+    );
+    expect(angSepArcsec(advanced, collapsed)).toBeGreaterThan(3000);
   });
 });

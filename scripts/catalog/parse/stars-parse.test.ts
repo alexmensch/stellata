@@ -8,11 +8,15 @@ import { NO_CONSTELLATION_INDEX, SOLAR_BV_FALLBACK } from '../catalog-pure';
 import { avSolToStar, R_V, type DustGrid } from '../distance/dust-deextinction-pure';
 import {
   CATALOG_SCENE_EPOCH,
+  directionAtEpoch,
   type DirectionSources,
   type GaiaAstrometryCatalogRow,
 } from '../distance/direction-cascade';
 import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
+import { TYCHO2_ICRS_EPOCH } from '../tycho2-parse';
+import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad-values-parse';
+import { unitVectorFromRaDec, type UnitVector } from '../../../src/client/util/equatorial-basis';
 import {
   SPINE_COLUMNS,
   serializeSpine,
@@ -336,5 +340,106 @@ describe('readStars PM rescue', () => {
     expect(stats.pmRescueVia.cns5).toBe(1);
     expect(stats.velocityVia.cns5_pm).toBe(1);
     expect(speed(stars[0])).toBeGreaterThan(0);
+  });
+});
+
+describe('readStars advances the position on a rescued PM', () => {
+  // TYC 1269-128-1 (HD 285742), the largest of the three movers, on its real
+  // numbers: Tycho-2 supplement 1 states a J2000 cell and no PM, so the
+  // direction tier wins on rank while the motion comes from SIMBAD. The unit
+  // pins live in ../distance/direction-cascade.test.ts; this one is the wiring,
+  // which is the half that ships the position.
+  const NO_MEAN_TYC = '1269-128-1';
+  const J2000_RA = 66.25076035;
+  const J2000_DEC = 16.9849519;
+  const RESCUED_PMRA = 91.121;
+  const RESCUED_PMDEC = -24.707;
+  const DIST_PC = 52.6;
+
+  const angSepArcsec = (a: UnitVector, b: UnitVector): number =>
+    Math.acos(Math.max(-1, Math.min(1, a.x * b.x + a.y * b.y + a.z * b.z)))
+    * ((180 * 3600) / Math.PI);
+
+  const simbadPmOnly = (): SimbadValueIndex => ({
+    ...emptySimbadValueIndex(),
+    rowCount: 1,
+    byTyc: new Map([[NO_MEAN_TYC, {
+      rv: null,
+      astrometry: {
+        raDeg: J2000_RA, decDeg: J2000_DEC,
+        cooBibcode: '2020yCat.1350....0G',
+        pm: {
+          pmRaMasyr: RESCUED_PMRA, pmDecMasyr: RESCUED_PMDEC,
+          bibcode: '2020yCat.1350....0G',
+        },
+      },
+    }]]),
+  });
+
+  const built = (): ReturnType<typeof readStars> => readStars(
+    writeSpineTsv([{
+      ra: String(J2000_RA / 15), dec: String(J2000_DEC),
+      dist: String(DIST_PC), dist_src: 'OTHER', spect: 'K0V',
+      tyc: NO_MEAN_TYC,
+    }]),
+    {
+      conAssignment: CON_ASSIGNMENT,
+      simbadValues: simbadPmOnly(),
+      directions: {
+        gaiaAstrometry: new Map(),
+        hip2: new Map(),
+        nssSourceIds: new Set(),
+        cns5: new Map(),
+        tycho2: new Map([[NO_MEAN_TYC, {
+          raDeg: J2000_RA, decDeg: J2000_DEC,
+          epochRa: TYCHO2_ICRS_EPOCH, epochDec: TYCHO2_ICRS_EPOCH,
+          pmRaMasyr: null, pmDecMasyr: null,
+          btMag: 10.0, vtMag: 10.0,
+          fromIcrs: true, isPhotocentre: false,
+        }]]),
+      },
+    },
+  );
+
+  it('routes the row through the rescue and credits SIMBAD for the motion', () => {
+    const { stars, stats } = built();
+    expect(stars).toHaveLength(1);
+    expect(stats.directionVia.tycho2).toBe(1);
+    expect(stats.pmRescueVia.simbad).toBe(1);
+    expect(stats.velocityVia.simbad_pm).toBe(1);
+  });
+
+  it('ships the advanced place, 1.511″ off the unpropagated J2000 cell', () => {
+    // The assertion with teeth: drop the directionOnPm call in stars-parse and
+    // the record lands on the raw J2000 cell, which is what the second
+    // expectation measures the distance to.
+    const star = built().stars[0];
+    const shipped = {
+      x: star.x / DIST_PC, y: star.y / DIST_PC, z: star.z / DIST_PC,
+    };
+    const advanced = directionAtEpoch(
+      J2000_RA, J2000_DEC, RESCUED_PMRA, RESCUED_PMDEC,
+      TYCHO2_ICRS_EPOCH, CATALOG_SCENE_EPOCH,
+    );
+    expect(angSepArcsec(shipped, advanced)).toBeCloseTo(0, 6);
+    expect(angSepArcsec(shipped, unitVectorFromRaDec(J2000_RA, J2000_DEC)))
+      .toBeCloseTo(1.5106, 3);
+  });
+
+  it('carries the same motion into the velocity it carried into the position', () => {
+    // One motion, both terms: the tangential velocity direction must agree with
+    // the direction the position moved in.
+    const star = built().stars[0];
+    const speed = Math.hypot(star.vx, star.vy, star.vz);
+    expect(speed).toBeGreaterThan(0);
+    const moved = {
+      x: star.x / DIST_PC - unitVectorFromRaDec(J2000_RA, J2000_DEC).x,
+      y: star.y / DIST_PC - unitVectorFromRaDec(J2000_RA, J2000_DEC).y,
+      z: star.z / DIST_PC - unitVectorFromRaDec(J2000_RA, J2000_DEC).z,
+    };
+    const movedNorm = Math.hypot(moved.x, moved.y, moved.z);
+    const cos = (moved.x * star.vx + moved.y * star.vy + moved.z * star.vz)
+      / (movedNorm * speed);
+    expect(cos).toBeCloseTo(1, 6);
   });
 });

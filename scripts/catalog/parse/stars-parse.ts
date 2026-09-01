@@ -42,6 +42,7 @@ import {
 } from '../spectral/physical-radius';
 import {
   resolveDirection,
+  directionOnPm,
   velocityPcPerYr,
   DIRECTION_VIA_VALUES,
   VELOCITY_VIA_VALUES,
@@ -465,9 +466,10 @@ export function readStars(
       ? directions.tycho2.get(simbadKeys.tyc) ?? null
       : null;
 
-    // Sky direction through the Gaia 5p → HIP2 → Tycho-2 → CNS5 → SIMBAD
-    // cascade; position is direction × distance, both float64 until the
-    // float32 pack at write time.
+    // Astrometric solution through the Gaia 5p → HIP2 → Tycho-2 → CNS5 →
+    // SIMBAD cascade. It is advanced to the scene epoch below, once the motion
+    // the row carries is known; position is that direction × distance, both
+    // float64 until the float32 pack at write time.
     const dirRes = resolveDirection(
       { ...simbadKeys, simbad: simbadRow?.astrometry ?? null, isSol },
       directions,
@@ -481,9 +483,6 @@ export function readStars(
       if (tycho2Row.fromIcrs) directionTycho2FromIcrs++;
       if (tycho2Row.isPhotocentre) directionTycho2Photocentre++;
     }
-    const x = dirRes.dir.x * dist;
-    const y = dirRes.dir.y * dist;
-    const z = dirRes.dir.z * dist;
 
     // V through the Riello transform → printed HIP V → Tycho-2's reduced VT →
     // Gliese's printed Vmag → curated. See ../photometry/README.md. absmag
@@ -530,6 +529,15 @@ export function readStars(
     const velVia = pmRescue === null
       ? dirRes.velVia
       : VELOCITY_VIA_BY_PM_RESCUE[pmRescue.via];
+    const pmRaMasyr = pmRescue === null ? dirRes.srcPmraMasyr : pmRescue.pmRaMasyr;
+    const pmDecMasyr = pmRescue === null ? dirRes.srcPmdecMasyr : pmRescue.pmDecMasyr;
+
+    // Must follow the PM rescue: the position advances on the motion the row
+    // ends up carrying, which is the rescue's wherever the tier states none.
+    const dir = directionOnPm(dirRes, pmRaMasyr, pmDecMasyr);
+    const x = dir.x * dist;
+    const y = dir.y * dist;
+    const z = dir.z * dist;
 
     // Space-motion velocity from the direction tier's own position + the PM
     // resolved above + the final stack distance + the rv cascade's radial
@@ -538,10 +546,7 @@ export function readStars(
     let vel = isSol
       ? { x: 0, y: 0, z: 0 }
       : velocityPcPerYr(
-          dirRes.srcRaDeg, dirRes.srcDecDeg,
-          pmRescue === null ? dirRes.srcPmraMasyr : pmRescue.pmRaMasyr,
-          pmRescue === null ? dirRes.srcPmdecMasyr : pmRescue.pmDecMasyr,
-          dist, rvKmS,
+          dirRes.srcRaDeg, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr, dist, rvKmS,
         );
     // Physical sanity: a space velocity past the ceiling is a PM×distance
     // artifact (spurious PM on a faint distant star). Drop to zero — kept

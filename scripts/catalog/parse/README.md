@@ -113,10 +113,13 @@ never re-derived).
 4. **`MAX_DIST_PC = 50_000` bounded-scope cutoff**
    (`stars-parse.ts`). Drops rows still beyond LMC depth.
 5. **Direction resolution** (`resolveDirection` in
-   `direction-cascade.ts`) and `xyz = direction × distance` in
-   float64. See `../distance/README.md` § Direction resolution. Every
-   tier now propagates its own solution to the scene epoch, so a row
-   no tier reaches resolves to null and the walk drops it —
+   `direction-cascade.ts`) selects the tier's solution; `directionOnPm`
+   advances it to the scene epoch once the motion the row carries is
+   settled (§ Space-motion velocity), and `xyz = direction × distance`
+   in float64. See
+   `../distance/README.md` § Direction resolution. Every solution
+   propagates rather than shipping its source's own epoch, so a row no
+   tier reaches resolves to null and the walk drops it —
    `spineDroppedNoDirection`, pinned at 0.
 6. **Spectral classification** (`resolveSpectralInfo`; Sol special-cased
    to curated G2V in `stars-parse.ts` — no HIP/Gaia/SIMBAD key reaches
@@ -166,11 +169,13 @@ propagate every position to `getT()`. Full design:
 
 `velocityPcPerYr` (`direction-cascade.ts`) assembles
 `v = v_r·û + d·MAS_TO_RAD·(μ_α*·ê + μ_δ·n̂)` from the tier solution
-`resolveDirection` selected (`DirectionResolution.src*` fields), so position
+`resolveDirection` selected (`DirectionSolution.src*` fields), so position
 and velocity come from one astrometric solution wherever that solution states
 both. Where it states only a position, the PM comes from a designation-keyed
-tier instead and the pairing rests on both quantities describing the same
-object — `../distance/pm-rescue/README.md` § Why an owned PM on a blended row
+tier instead — and carries that position to the scene epoch as well as the
+velocity, so the two still read one motion. The pairing rests on both
+quantities describing the same object:
+`../distance/pm-rescue/README.md` § Why an owned PM on a blended row
 is admissible at all. The
 east/north tangent basis is `equatorialTangentBasis`
 (`src/client/util/equatorial-basis.ts`), shared with `directionAtEpoch`,
@@ -190,9 +195,11 @@ Velocity source per row (pinned in build-counts as `velocity*`):
 **A tier with no PM of its own does not end the search.** The 276 rows whose
 direction tier carries none — Gaia 2p solutions, Tycho-2 rows with no mean
 solution — re-key on the record's own designations through
-`../distance/pm-rescue/`, which supplies the tangential term without moving
-the position. `velocityZero` is what survives that: Sol, 8 clamped artifact
-rows, and the 15 the rescue leaves.
+`../distance/pm-rescue/`. `velocityZero` is what survives that: Sol, 8 clamped
+artifact rows, and the 15 the rescue leaves. The rescued motion then advances
+the tier's position too (`directionOnPm`), so the 3 Tycho-2 rows stating a
+J2000 position stop tracking their rate from a 16-yr-stale place; the 273 Gaia
+rows are already at J2016.0 and do not move.
 
 The spine's printed `pm_ra`/`pm_dec` is **no longer a velocity source**, and
 routing these rows to it is exactly what the rescue cascade exists to avoid.

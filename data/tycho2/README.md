@@ -23,6 +23,13 @@ and it is what a propagation to the scene epoch must start from.
 `ra_icrs`/`de_icrs` is Tycho-2's own propagation of that same solution to
 J2000; propagating it again compounds its error rather than correcting it.
 
+**That prohibition is about the mean solution, not about the J2000 cell.** A
+`pflag='X'` or supplement row has no mean solution for `ra_icrs` to be a
+propagation *of*, so there is nothing to double-count: it is a plain J2000
+position, and advancing it on the motion `pm-rescue/` reaches the row with is a
+first propagation. Only a row that also carries `ra_mdeg` may not be advanced
+from its J2000 cell.
+
 The two mean epochs differ per star and per coordinate (a row can read
 `ep_ra` 1991.07 against `ep_de` 1991.00), so RA and Dec advance over
 different intervals. `pm_ra` is μ_α* — the cos δ factor is already
