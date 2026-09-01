@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildPairMemberParallaxIndex,
   lookupPairMemberParallax,
+  pairMemberSourceIds,
 } from './pair-member-parallax';
 import { PARALLAX_SN_FLOOR } from './parallax-cascade';
 import { gaiaAstrometryRow } from '../astrometry-fixture';
@@ -125,5 +126,33 @@ describe('pair-member-parallax / what the index admits', () => {
     ], new Map([[SIBLING_SOURCE, clean()]]));
     expect(index.entryCount).toBe(0);
     expect(lookupPairMemberParallax(index, BLEND_SOURCE, null)).toBeNull();
+  });
+});
+
+describe('pair-member-parallax / the astrometry request contribution', () => {
+  const rows = [
+    multiplesRow({ systemId: `${ROOT}-AB`, comp: 'A', gaiaSourceId: BLEND_SOURCE, orbitRole: 'primary' }),
+    multiplesRow({ systemId: `${ROOT}-AB`, comp: 'B', gaiaSourceId: BLEND_SOURCE }),
+    multiplesRow({ systemId: `${ROOT}-AB,D`, comp: 'D', gaiaSourceId: SIBLING_SOURCE }),
+    multiplesRow({ systemId: `${ROOT}-_Z`, comp: 'Z', gaiaSourceId: '999', orbitRole: 'standalone' }),
+    multiplesRow({ systemId: `${ROOT}-AE`, comp: 'E', gaiaSourceId: null }),
+  ];
+
+  it('names every kept-physical pair member the tier could read, once', () => {
+    expect([...pairMemberSourceIds(rows)].sort())
+      .toEqual([BLEND_SOURCE, SIBLING_SOURCE].sort());
+  });
+
+  it('leaves standalone rows out, matching what the index will read', () => {
+    expect(pairMemberSourceIds(rows).has('999')).toBe(false);
+  });
+
+  it('asks for a source whether or not the table already answers — the request '
+    + 'cannot be keyed on which rows park, since that is the build it feeds', () => {
+    // No astrometry at all: the request still has to name these sources, or
+    // the pull can never turn them into candidates.
+    const index = buildPairMemberParallaxIndex(rows, new Map());
+    expect(index.entryCount).toBe(0);
+    expect(pairMemberSourceIds(rows).size).toBe(2);
   });
 });

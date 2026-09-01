@@ -432,7 +432,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
   all 313,257 spine rows: `bailer_jones` **310,070** · `lmc_kinematic`
   **54** · `gaia_dr3_inversion` **175** · `hip2_parallax` **2,502** ·
   `cns5_plx` **16** · `gliese_plx` **40** · `simbad_plx` **93** ·
-  `pair_member_parallax` **5** · `curated` **1** · `none` **301**.
+  `pair_member_parallax` **8** · `curated` **1** · `none` **298**.
   `applyBailerJonesOverride` no longer gates on the spine's `dist_src`
   cell — an AT-HYG editorial value steering an owned cascade — but on the
   record's own resolved tier.
@@ -463,12 +463,12 @@ Measured exposure and expected coverage (2026-08-14; pins in
      `pair_member_parallax` below.
 
   **The residual is a park, and the first non-empty § 6.1 dropped list.**
-  301 rows reach no owned parallax: 284 had a value a skip rule refused,
-  17 had none published. Refusing costs each its record — distance has no
+  298 rows reach no owned parallax: 283 had a value a skip rule refused,
+  15 had none published. Refusing costs each its record — distance has no
   defensible null the way rv and PM do — and it was taken strict anyway
   because the values measure as *wrong* rather than merely uncertain
   (median 2.19 σ from Hipparcos on the 270 rows where both exist). By
-  `dist_src`: G_R2 246 · G_R3 23 · HIP 32. Records the pipeline stops
+  `dist_src`: G_R2 244 · G_R3 22 · HIP 32. Records the pipeline stops
   producing are presence events, so every one keeps its SID and Gaia DR4
   reinstates it.
 
@@ -480,11 +480,14 @@ Measured exposure and expected coverage (2026-08-14; pins in
   refuses a parked record, and the tier supplies an owned distance where
   a bound sibling carries a clean DR3 fit: σ Ori ships at HIP 26551 D's
   404.1 ± 10.2 pc, against a dynamical parallax of 387.5 ± 1.3 pc
-  (Schaefer+ 2016) agreeing at 1.62 σ. Its reach is bounded by the frozen
-  astrometry table rather than by the sky: of the 44 parked rows
-  multiples.tsv covers, 15 have a sibling carrying its own source_id, and
-  8 of those siblings are absent from the request set the table was pulled
-  against (`stellata-3bsf.36`).
+  (Schaefer+ 2016) agreeing at 1.62 σ. Of the 44 parked rows multiples.tsv
+  covers, 15 have a sibling carrying its own source_id and 8 rescue; the
+  other 7 have a sibling the anchor gate refuses on RUWE or a blended
+  image. The astrometry request was widened to cover those siblings — they
+  are not spine rows, so nothing had ever asked for them — which is a third
+  contribution to a union that had two, and the same fault the second one
+  was added to fix (§ The request is a union in
+  `scripts/catalog/astrometry-request/README.md`).
 
   **Validation independence is now real for this field.** A record whose
   distance came from `simbad_plx` is excluded from both SIMBAD-based

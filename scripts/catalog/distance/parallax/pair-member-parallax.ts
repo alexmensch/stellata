@@ -38,6 +38,25 @@ function signalToNoise({ mas, errMas }: SiblingParallax): number {
   return errMas !== null && errMas > 0 ? mas / errMas : 0;
 }
 
+/** Every source the sibling tier may read a parallax from — the pair-row half
+ *  of the astrometry request (`../../astrometry-request/README.md`).
+ *
+ *  Deliberately every kept-physical pair member rather than only the roots
+ *  holding a parked row: which rows park is an output of the build the request
+ *  feeds, so keying the request on it would make the two define each other and
+ *  leave the set unstable under any cascade change. */
+export function pairMemberSourceIds(
+  multiplesRows: readonly MultiplesTsvRow[],
+): Set<string> {
+  const ids = new Set<string>();
+  for (const row of multiplesRows) {
+    if (row.orbitRole === 'standalone') continue;
+    if (wdsRootOf(row.systemId) === null) continue;
+    if (row.gaiaSourceId !== null) ids.add(row.gaiaSourceId);
+  }
+  return ids;
+}
+
 /** Index the kept-physical pair rows of `multiples.tsv` by WDS root, carrying
  *  each root's anchor-grade member parallaxes.
  *

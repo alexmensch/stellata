@@ -33,6 +33,14 @@ the build decided. Regenerate them with `pnpm run build:catalog` — never by
 hand. `scripts/catalog/distance/parallax/README.md` owns what the two newest
 mean.
 
+**The small ones are exempted from LFS in `.gitattributes`, and must stay
+exempt.** `data/athyg/*.tsv` is a blanket LFS rule written for the 40 MB spine,
+so a new file here is LFS by default — which for a review queue defeats the
+point twice over: `git diff` shows an oid instead of the rows a reviewer is
+meant to check, and a checkout without LFS hands the parity gate a pointer
+where it expects a header. Any further small file added here needs its own
+`!filter` line.
+
 ## Provenance
 
 - **Maintainer**: David Nash, [Codeberg/astronexus/athyg](https://codeberg.org/astronexus/athyg).
