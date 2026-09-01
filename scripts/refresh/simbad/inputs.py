@@ -13,6 +13,8 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import refresh_lib as rl  # noqa: E402
 
+from .specs import GJ, HIP, TYC, WIDENING_LADDER
+
 
 SpineRow = Mapping[str, str]
 RowFilter = Callable[[SpineRow], bool]
@@ -24,16 +26,20 @@ class SpineRequestKeys:
     under. A row contributes exactly one key, so the four lists sum to the
     cohort's row count minus the rows carrying no usable key at all.
 
-    ``tyc_by_source_id`` rides along from the same pass: it is the widening
-    key for source_id-keyed rows SIMBAD's ident table does not hold, and
-    reading it here rather than from a second walk is what stops the two
+    ``designations_by_source_id`` rides along from the same pass: for each
+    source_id-keyed row it carries every OTHER namespace that row can be
+    asked under, keyed by ``IdentLookup.tsv_name``. Those are the widening
+    keys for rows SIMBAD's ident table does not hold the Gaia id of, and
+    reading them here rather than from a second walk is what stops the two
     from covering different cohorts."""
 
     source_ids: list[int] = field(default_factory=list)
     hips: list[int] = field(default_factory=list)
     tycs: list[str] = field(default_factory=list)
     gls: list[str] = field(default_factory=list)
-    tyc_by_source_id: dict[int, str] = field(default_factory=dict)
+    designations_by_source_id: dict[int, dict[str, int | str]] = field(
+        default_factory=dict
+    )
     keyless: int = 0
 
     @property
@@ -43,34 +49,64 @@ class SpineRequestKeys:
             + len(self.gls) + self.keyless
         )
 
+    @property
+    def by_namespace(self) -> dict[str, list]:
+        """Which no-Gaia key list each widening namespace fills, keyed by
+        ``IdentLookup.tsv_name``. Says nothing about the fall-through order —
+        that is ``WIDENING_LADDER``'s alone."""
+        return {
+            HIP.tsv_name: self.hips,
+            TYC.tsv_name: self.tycs,
+            GJ.tsv_name: self.gls,
+        }
+
 
 def spine_request_keys(
     spine_path: Path, row_filter: RowFilter | None = None
 ) -> SpineRequestKeys:
     """Partition the spine into per-prefix SIMBAD lookup keys.
 
-    A row with a resolved `gaia_source_id` is keyed on it; the no-Gaia tier
-    falls through HIP → TYC → GJ, the designation-keyed ladder
-    `docs/catalog-driver.md` § 5 gives that tier. Sol carries none of the
-    four and lands in `keyless`.
+    A row with a resolved `gaia_source_id` is keyed on it, and its other
+    designations ride along as that row's widening keys. The no-Gaia tier
+    falls through `WIDENING_LADDER` itself rather than restating its order, so
+    the tier and the widening that retries under it cannot come to disagree —
+    the property `docs/catalog-driver.md` § 5 relies on. Sol carries none of
+    the namespaces and lands in `keyless`.
     """
     keys = SpineRequestKeys()
+    by_namespace = keys.by_namespace
     for row in rl.iter_spine_rows(spine_path):
         if row_filter is not None and not row_filter(row):
             continue
+        designations = _row_designations(row)
         if source_id := row[rl.SPINE_SOURCE_ID_COLUMN].strip():
             keys.source_ids.append(int(source_id))
-            if tyc := row["tyc"].strip():
-                keys.tyc_by_source_id[int(source_id)] = tyc
-        elif hip := row["hip"].strip():
-            keys.hips.append(int(hip))
-        elif tyc := row["tyc"].strip():
-            keys.tycs.append(tyc)
-        elif gl := gl_suffix(row["gl"]):
-            keys.gls.append(gl)
+            if designations:
+                keys.designations_by_source_id[int(source_id)] = designations
+            continue
+        for lookup in WIDENING_LADDER:
+            if (key := designations.get(lookup.tsv_name)) is not None:
+                by_namespace[lookup.tsv_name].append(key)
+                break
         else:
             keys.keyless += 1
     return keys
+
+
+def _row_designations(row: SpineRow) -> dict[str, int | str]:
+    """Every widening namespace this row carries a key for, keyed by
+    ``IdentLookup.tsv_name`` so the request side never spells the namespace
+    out a second time. Must cover every namespace in ``WIDENING_LADDER`` — a
+    rung this cannot read finds no candidates and fails silently rather than
+    loudly; pinned by ``test_row_designations_cover_the_whole_ladder``."""
+    out: dict[str, int | str] = {}
+    if hip := row["hip"].strip():
+        out[HIP.tsv_name] = int(hip)
+    if tyc := row["tyc"].strip():
+        out[TYC.tsv_name] = tyc
+    if gl := gl_suffix(row["gl"]):
+        out[GJ.tsv_name] = gl
+    return out
 
 
 _GL_CATALOGUE_WORDS = frozenset({"GJ", "Gl"})

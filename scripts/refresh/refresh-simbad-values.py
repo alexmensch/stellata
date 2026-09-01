@@ -67,7 +67,7 @@ def collect_oid_requests(client: rl.TapClient) -> list[int]:
         diagnosis="the request set or SIMBAD's ident table has drifted",
     )
     print(f"oids: {len(resolved.oids)} "
-          f"(+{resolved.gained_by_widening} the TYC widening reached alone)")
+          f"(+{resolved.total_gained_by_widening} the widening reached alone)")
     return sorted(resolved.oids)
 
 

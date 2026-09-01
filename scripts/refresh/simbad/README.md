@@ -9,22 +9,33 @@ the entire stack.
 specs.py     Declarative dataclasses — ColumnSpec for basic-table
              columns (sp_type / otype / the § 5 value columns and
              their bibcodes), IdentLookup for an identifier namespace
-             (HIP, Gaia DR3, TYC, GJ), FluxBand for one band of the
-             long-format flux table, BibcodedGroup for the columns that
-             ship only alongside their bibcode. Canonical catalogue of
-             instances.
+             (HIP, Gaia DR3/DR2/DR1, TYC, GJ), FluxBand for one band of
+             the long-format flux table, BibcodedGroup for the columns
+             that ship only alongside their bibcode. Canonical catalogue
+             of instances, plus WIDENING_LADDER and GAIA_RELEASES.
 inputs.py    Spine-driven feeders — spine_request_keys partitions rows
-             into per-namespace lookup keys AND collects the widening
-             map in the same pass, is_simbad_value_cohort is the § 5
-             value-tier predicate, gl_suffix normalises the GJ/Gl
-             spellings. Plus the WDS-component oid iterator.
+             into per-namespace lookup keys AND collects each
+             source_id-keyed row's other designations in the same pass,
+             is_simbad_value_cohort is the § 5 value-tier predicate,
+             gl_suffix normalises the GJ/Gl spellings. Plus the
+             WDS-component oid iterator.
+             Cost: the designation map is a dict per source_id-keyed row —
+             ~98 MB over the whole spine against ~46 MB for three flat
+             per-namespace dicts. Bought deliberately: it is what lets the
+             request side look a namespace up by IdentLookup.tsv_name and
+             stay generic over WIDENING_LADDER. Refresh-time only, never
+             build:catalog and never the browser.
 request.py   Phase A — resolve a SpineRequestKeys partition to the
-             deduplicated oid set, with the TYC widening, its veto, and
-             the per-namespace coverage report.
+             deduplicated oid set, with the widening ladder, its
+             corroboration rule, and the per-namespace coverage report.
 query.py     ADQL builders + batched TAP executor. Wraps each
              ColumnSpec's adql fragment with `AS <alias>` so ORDER BY
              can reference the alias (SIMBAD rejects qualified names
-             in ORDER BY).
+             in ORDER BY). fetch_ident_lookups and fetch_ident_sets
+             share one query and differ only by an insert strategy —
+             rows must fold straight into their final shape, because at
+             spine scope this accumulator is ~100 MB and an
+             intermediate copy doubles it.
 coverage.py  Fill counting and floor gates over a pull's
              {oid: {alias: value}} rows — one definition of "this cell
              is filled" (neither None nor blank) and one gate message,
@@ -73,26 +84,61 @@ not a filter change**, on the same terms as widening the cohort; the
 per-run report prints values reached before values shipped so the cost is
 never invisible.
 
-## The TYC widening carries its own veto
+## The widening falls through on resolution, not on cell presence
 
-A source_id SIMBAD's `ident` table does not hold leaves its row
-unreachable under the Gaia namespace, so `resolve_spine_keys` retries it
-on the record's own TYC. That retry is the one binding in the stack made
-on a designation alone — and a TYC names the **Tycho entry**, which for a
-close pair is the system, not the component the spine resolved. Left
-unchecked it attaches rv / parallax / PM / coordinates from the wrong
-star, the same failure the GJ keys avoid by refusing to strip a component
-letter.
+A row's primary key is the first namespace it carries, so a populated
+`gaia_source_id` cell keeps it out of every other namespace's request —
+**even when SIMBAD's `ident` table has no such id**. `resolve_spine_keys`
+therefore runs a second ladder over the source_ids the Gaia namespace did
+not reach, retrying each on the record's own HIP, then TYC, then GJ. Each
+rung asks only for what the rungs above left unbound, and the order is the
+one `docs/catalog-driver.md` § 5 gives the no-Gaia tier — both read it off
+`WIDENING_LADDER`, and `spine_request_keys` partitions the no-Gaia rows by
+iterating that same tuple, so the tier and the widening cannot drift apart.
 
-`_veto_contradicted` closes it with the evidence the pull already has:
-where SIMBAD holds a Gaia DR3 cross-ID for the widened oid and it is not
-the source_id that asked, the two disagree about which star this is and
-the binding is dropped. (It can only ever disagree — had SIMBAD held the
-asking source_id, the Gaia pass would have resolved the row and it would
-never have been a widening candidate.) A TYC two source_ids both claim
-binds neither and is dropped before the request. What survives is the
-uncorroborated remainder: SIMBAD holds no Gaia id for the object at all,
-so the TYC binding stands unverified — reported per pull, never silent.
+**Read-back does not depend on that order.** A widened row is joinable
+because its emitted row carries the asking designation in the namespace
+that bound it, so `walkSimbadNamespaces` reaches it whichever rung matches
+first — which is what lets the read side order its own walk independently.
+The one binding that cannot recover is an object SIMBAD holds two ids for
+in the binding namespace: the shipped column is single-valued and
+`fetch_ident_lookups` keeps the last in table order, so the winner need not
+be the id that asked. Pinned rather than assumed away in `simbad.test.py`.
+
+**HIP before TYC is load-bearing, not alphabetical.** A TYC names the
+Tycho entry, which for a close pair is the system; SIMBAD frequently
+splits that into a component-lettered object carrying a coarse PM and no
+parallax at all, beside the star's own entry carrying everything. Asking
+under HIP first lands on the latter. Measured over the values cohort when
+the ladder landed: 67 rows moved off a `HD nnnnnA`-style component entry
+onto the star's entry, gaining a parallax on every one, and no row lost
+the row it had.
+
+## The widening carries its own corroboration rule
+
+A widened binding is made on a designation alone, so it needs evidence
+before it may attach rv / parallax / PM / coordinates. `_corroborate`
+reads **every Gaia release SIMBAD keys a cross-ID under**, not DR3 alone,
+and returns one of three verdicts per binding:
+
+- **Corroborated** — SIMBAD holds the asking id itself, under any release.
+  This is what reaches a spine cell carrying a **DR2 id in the DR3
+  column**: the Gaia namespace misses, SIMBAD's DR3 id for the object
+  differs, and reading that difference as "these are different stars"
+  would be wrong — it is a disagreement about the release
+  (`data/athyg/stale_gaia_source_ids.tsv` enumerates the six).
+- **Vetoed** — SIMBAD holds a DR3 id and it is not the asking one. Only
+  DR3 can contradict: each release numbers the same star differently, so a
+  differing DR2 id is no evidence either way.
+- **Uncorroborated** — **no DR3 id to contradict it**, so the binding stands
+  unverified. Kept and reported per pull, never silent. Because only DR3
+  contradicts, this bucket admits an object holding a *differing* DR2 or DR1
+  id as well as one holding no Gaia id at all — the two are the same amount
+  of evidence, which is the whole point of the rule above, so the count does
+  not separate them.
+
+A designation two source_ids both claim binds neither and is dropped
+before the request.
 
 ## Used by
 

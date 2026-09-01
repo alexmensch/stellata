@@ -258,7 +258,7 @@ which were reproduced from the pinned counts before probing):
 | Tycho-2 main + supplement 1 | `I/259` `tyc2`+`suppl_1`, filtered to mentioned TYCs | positions (per-star mean epochs), PM, BT/VT — keyed on the record's own TYC | Høg et al. 2000, A&A 355, L27 |
 | Hipparcos main, B−V re-slice | `I/239/hip_main` | printed Johnson B−V (widens the existing V slice; 98.9% fill) | ESA 1997, SP-1200 |
 | CNS5 astrometry re-slice | `J/A+A/670/A19/cns5` | ra/dec/parallax/PM for the GJ-keyed cohort (widens the existing id slice) | Golovin et al. 2023, A&A 670, A19 |
-| SIMBAD values pull | `basic` + `flux` | rv / parallax / PM / coordinates with per-value bibcodes, V/B fluxes; keyed source_id → HIP → TYC → GJ, with a vetoed TYC widening | Wenger et al. 2000, A&AS 143, 9 |
+| SIMBAD values pull | `basic` + `flux` | rv / parallax / PM / coordinates with per-value bibcodes, V/B fluxes; keyed source_id → HIP → TYC → GJ, with a corroborated widening ladder over the source_ids that namespace misses | Wenger et al. 2000, A&AS 143, 9 |
 
 Measured exposure and expected coverage (2026-08-14; pins in
 `build-catalog-expected.json` unless noted):
@@ -341,12 +341,14 @@ Measured exposure and expected coverage (2026-08-14; pins in
 
   The mean epochs also fix the printed cells' unpropagated staleness, ~27″
   worst case today. CNS5 measures 4 rather than the projected 8 because its
-  25 pc volume limit does not carry GJ 3775 / 3981 / 4192 / 4212; those same
-  four are the **none** bucket — no TYC, no HIP, a `gaia_source_id` DR3 has
-  no row for (they are DR2 ids — `stellata-3bsf.30`), and no row in the
-  committed SIMBAD values pull. Four rows with no owned direction is a § 6
-  membership adjudication, not a silent keep, and it is what
-  `stellata-3bsf.26` has to decide before `athyg_printed` can retire.
+  25 pc volume limit does not carry GJ 3775 / 3981 / 4192 / 4212 — the same
+  four the table counts as **none**: no TYC, no HIP, and a
+  `gaia_source_id` DR3 has no row for because it is a DR2 id
+  (`data/athyg/stale_gaia_source_ids.tsv`). **The none bucket is now
+  reachable**: the values pull's widening ladder falls through to their own
+  GJ and all four carry bibcoded coordinates and PM, so the SIMBAD tier
+  takes them and `stellata-3bsf.26` re-measures the split rather than
+  adjudicating four § 6 membership drops.
 - **distance** — printed tail 1,199, today **unpinned** (the only
   cascade without a routing partition; the value work pins `distVia`):
   in-tree DR3 parallax 126 · CNS5 38 · SIMBAD parallax the ~1,035
@@ -413,19 +415,26 @@ Rules:
   and the astrometry catalog), so the § 4 gate does not re-run. Tycho-2
   and CNS5 value columns join on the record's own TYC/GJ designation —
   value joins, not identity joins, and never positional. The SIMBAD
-  pulls' **TYC widening** is the one place a value join carries binding
+  pulls' **widening ladder** is the one place a value join carries binding
   risk: a source_id SIMBAD's `ident` table lacks is retried on the
-  record's own TYC, and a TYC names the Tycho entry, which for a close
-  pair is the system rather than the component. It is therefore vetoed
-  where SIMBAD's own Gaia DR3 cross-ID names a different star, and the
-  uncorroborated remainder is counted per pull
-  (`scripts/refresh/simbad/README.md` § The TYC widening carries its own
-  veto). Fluxes come from the long-format `flux` table, never
+  record's own HIP, TYC then GJ, and a HIP or TYC names the catalogue
+  entry, which for a close pair is the system rather than the component.
+  Each widened binding is therefore adjudicated against SIMBAD's Gaia
+  cross-IDs **across releases** — kept where SIMBAD holds the asking id
+  under any release, vetoed where it holds a differing DR3 id, and the
+  uncorroborated remainder counted per pull
+  (`scripts/refresh/simbad/README.md` § The widening carries its own
+  corroboration rule). Only DR3 can contradict: releases number the same
+  star differently, which is why a DR2 id in the DR3 column reads as a
+  release mismatch rather than a mis-binding. Fluxes come from the
+  long-format `flux` table, never
   `allfluxes` — the wider view publishes no bibcode. **An unbibcoded
   value is dropped at write time**, whole quantity at a time, so the
   frozen file cannot hand a cascade a cell this policy forbids and
-  admitting one is a re-pull rather than a filter change. It costs 112
-  of the 471 V fluxes the `mag_src=GJ` cohort reaches.
+  admitting one is a re-pull rather than a filter change. Pull-wide it
+  drops 2,045 B and 1,494 V fluxes as unattributable, which is what holds
+  the `mag_src=GJ` cohort's V flux to 361 of 981
+  (`data/simbad/README.md` § The values pull).
 - Photometric transforms cite **Riello et al. 2021, A&A 649, A3**
   (Gaia EDR3 photometry; Table C.2 relations). The ci relation chain
   was left to implementation, against the parity distribution; the

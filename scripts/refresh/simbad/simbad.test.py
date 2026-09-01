@@ -21,7 +21,7 @@ from simbad.specs import (  # noqa: E402
     OID, MAIN_ID, SP_TYPE, SP_QUAL, OTYPE, GJ, HIP, GAIA_DR3, TYC,
     PLX_BIBCODE, PLX_ERR, PLX_QUAL, PLX_VALUE,
     RVZ_BIBCODE, RVZ_ERR, RVZ_QUAL, RVZ_RADVEL, RVZ_TYPE,
-    ColumnSpec, FluxBand, IdentLookup,
+    ColumnSpec, FluxBand, IdentLookup, WIDENING_LADDER,
 )
 
 
@@ -220,6 +220,31 @@ class FetchIdentLookupsTests(unittest.TestCase):
         self.assertIn("id LIKE 'HIP %'", backend.calls[0])
         self.assertIn("id LIKE 'Gaia DR3 %'", backend.calls[0])
         self.assertIn("id LIKE 'TYC %'", backend.calls[0])
+
+    def test_several_ids_in_one_namespace_ship_the_last_in_table_order(self):
+        # The shipped TSV is single-valued per column, so a widened binding is
+        # only readable back if the winner here is the id that asked. Where
+        # SIMBAD holds two, it need not be — the limitation the read side's
+        # namespace walk cannot recover from, so it is pinned rather than
+        # assumed away.
+        backend = FakeBackend([("FROM ident", ident_table([
+            {"oidref": 100, "id": "HIP 11"},
+            {"oidref": 100, "id": "HIP 22"},
+        ]))])
+        result = query.fetch_ident_lookups(
+            FakeClient(backend), oids=[100], lookups=[HIP],
+        )
+        self.assertEqual(result, {100: {"hip": 22}})
+
+    def test_ident_sets_keep_every_id_a_namespace_holds(self):
+        backend = FakeBackend([("FROM ident", ident_table([
+            {"oidref": 100, "id": "HIP 11"},
+            {"oidref": 100, "id": "HIP 22"},
+        ]))])
+        result = query.fetch_ident_sets(
+            FakeClient(backend), oids=[100], lookups=[HIP],
+        )
+        self.assertEqual(result, {100: {"hip": {11, 22}}})
 
 
 class FetchFluxBandsTests(unittest.TestCase):
@@ -497,16 +522,19 @@ class SpineRequestKeysTests(unittest.TestCase):
         keys = inputs.spine_request_keys(path, inputs.is_simbad_value_cohort)
         self.assertEqual(keys.source_ids, [2])
 
-    def test_tyc_by_source_id_covers_only_source_id_keyed_rows(self):
+    def test_designations_cover_only_source_id_keyed_rows(self):
         # Same pass as the partition, so the widening map can never cover a
         # different cohort than the request set it widens.
         path = self._spine([
-            {"gaia_source_id": "1", "tyc": "1-2-1"},
+            {"gaia_source_id": "1", "hip": "5", "tyc": "1-2-1", "gl": "GJ 9"},
             {"gaia_source_id": "2"},
             {"tyc": "9-9-1"},
         ])
         keys = inputs.spine_request_keys(path)
-        self.assertEqual(keys.tyc_by_source_id, {1: "1-2-1"})
+        self.assertEqual(
+            keys.designations_by_source_id,
+            {1: {"hip": 5, "tyc": "1-2-1", "gj": "9"}},
+        )
         self.assertEqual(keys.tycs, ["9-9-1"])
 
     def test_row_filter_narrows_the_widening_map_too(self):
@@ -515,7 +543,24 @@ class SpineRequestKeysTests(unittest.TestCase):
             {"gaia_source_id": "2", "tyc": "3-4-1", "rv_src": "HYG"},
         ])
         keys = inputs.spine_request_keys(path, inputs.is_simbad_value_cohort)
-        self.assertEqual(keys.tyc_by_source_id, {2: "3-4-1"})
+        self.assertEqual(keys.designations_by_source_id, {2: {"tyc": "3-4-1"}})
+
+    def test_row_designations_cover_the_whole_ladder(self):
+        # A rung whose key this walk cannot read finds no candidates and fails
+        # silently. The no-Gaia partition and the widening both drive off
+        # WIDENING_LADDER, so the two agree on order by construction — this is
+        # the other half: they agree on the SET of namespaces too.
+        path = self._spine([
+            {"gaia_source_id": "1", "hip": "5", "tyc": "1-2-1", "gl": "GJ 9"},
+        ])
+        keys = inputs.spine_request_keys(path)
+        self.assertEqual(
+            set(keys.designations_by_source_id[1]),
+            {lookup.tsv_name for lookup in WIDENING_LADDER},
+        )
+        self.assertEqual(
+            set(keys.by_namespace), {lookup.tsv_name for lookup in WIDENING_LADDER},
+        )
 
 
 class ValueCohortTests(unittest.TestCase):
@@ -624,9 +669,14 @@ class IterWdsXidsOidsTests(unittest.TestCase):
 
 class ResolveSpineKeysTests(unittest.TestCase):
 
+    TYC_WIDENING = request.widening_label(TYC)
+    GJ_WIDENING = request.widening_label(GJ)
+    HIP_WIDENING = request.widening_label(HIP)
+
     def test_widens_on_tyc_only_where_the_gaia_namespace_missed(self):
         keys = inputs.SpineRequestKeys(
-            source_ids=[1, 2], tyc_by_source_id={1: "1-2-1", 2: "5-6-1"},
+            source_ids=[1, 2],
+            designations_by_source_id={1: {"tyc": "1-2-1"}, 2: {"tyc": "5-6-1"}},
         )
         backend = FakeBackend([
             ("'Gaia DR3 1','Gaia DR3 2'", ident_table([
@@ -638,15 +688,16 @@ class ResolveSpineKeysTests(unittest.TestCase):
         resolved = request.resolve_spine_keys(FakeClient(backend), keys)
         # source_id 1 resolved, so only 2's TYC is asked for.
         self.assertEqual(resolved.oids, {100, 300})
-        self.assertEqual(resolved.gained_by_widening, 1)
-        self.assertEqual(resolved.requested[request.TYC_WIDENING], 1)
+        self.assertEqual(resolved.total_gained_by_widening, 1)
+        self.assertEqual(resolved.requested[self.TYC_WIDENING], 1)
 
     def test_widened_binding_is_vetoed_when_simbad_names_another_source(self):
         # oid 300 answers 'TYC 5-6-1' but SIMBAD calls it Gaia DR3 999 —
         # a different star from the source_id 2 that asked, so the TYC
         # bound the system rather than the component.
         keys = inputs.SpineRequestKeys(
-            source_ids=[1, 2], tyc_by_source_id={1: "1-2-1", 2: "5-6-1"},
+            source_ids=[1, 2],
+            designations_by_source_id={1: {"tyc": "1-2-1"}, 2: {"tyc": "5-6-1"}},
         )
         backend = FakeBackend([
             ("'Gaia DR3 1','Gaia DR3 2'", ident_table([
@@ -659,13 +710,34 @@ class ResolveSpineKeysTests(unittest.TestCase):
         ])
         resolved = request.resolve_spine_keys(FakeClient(backend), keys)
         self.assertEqual(resolved.oids, {100})
-        self.assertEqual(resolved.widening_vetoed, 1)
-        self.assertEqual(resolved.gained_by_widening, 0)
-        self.assertEqual(resolved.resolved[request.TYC_WIDENING], 0)
+        self.assertEqual(resolved.verdicts[self.TYC_WIDENING].vetoed, 1)
+        self.assertEqual(resolved.total_gained_by_widening, 0)
+        self.assertEqual(resolved.resolved[self.TYC_WIDENING], 0)
+
+    def test_asking_id_under_an_earlier_release_corroborates_the_binding(self):
+        # The spine cell is a DR2 id sitting in the DR3 column, so the Gaia
+        # namespace misses and SIMBAD's DR3 id for the object differs. That
+        # is a disagreement about the RELEASE, not about which star this is,
+        # and SIMBAD holding the asking id under DR2 settles it.
+        keys = inputs.SpineRequestKeys(
+            source_ids=[2], designations_by_source_id={2: {"gj": "4192"}},
+        )
+        backend = FakeBackend([
+            ("'Gaia DR3 2'", ident_table([])),
+            ("'GJ 4192'", ident_table([{"oidref": 300, "id": "GJ 4192"}])),
+            ("oidref IN (300)", ident_table([
+                {"oidref": 300, "id": "Gaia DR2 2"},
+                {"oidref": 300, "id": "Gaia DR3 999"},
+            ])),
+        ])
+        resolved = request.resolve_spine_keys(FakeClient(backend), keys)
+        self.assertEqual(resolved.oids, {300})
+        self.assertEqual(resolved.verdicts[self.GJ_WIDENING].corroborated, 1)
+        self.assertEqual(resolved.verdicts[self.GJ_WIDENING].vetoed, 0)
 
     def test_widened_binding_survives_when_simbad_names_no_gaia_id(self):
         keys = inputs.SpineRequestKeys(
-            source_ids=[2], tyc_by_source_id={2: "5-6-1"},
+            source_ids=[2], designations_by_source_id={2: {"tyc": "5-6-1"}},
         )
         backend = FakeBackend([
             ("'Gaia DR3 2'", ident_table([])),
@@ -676,17 +748,79 @@ class ResolveSpineKeysTests(unittest.TestCase):
         ])
         resolved = request.resolve_spine_keys(FakeClient(backend), keys)
         self.assertEqual(resolved.oids, {300})
-        self.assertEqual(resolved.widening_vetoed, 0)
-        self.assertEqual(resolved.widening_uncorroborated, 1)
+        self.assertEqual(resolved.verdicts[self.TYC_WIDENING].vetoed, 0)
+        self.assertEqual(resolved.verdicts[self.TYC_WIDENING].uncorroborated, 1)
+
+    def test_a_differing_earlier_release_id_is_not_evidence_and_is_kept(self):
+        # SIMBAD holds a DR2 id for the object, it is not the asking one, and
+        # there is no DR3 id at all. Only DR3 contradicts, so this is kept —
+        # and it lands in `uncorroborated`, which therefore means "no DR3 id
+        # to contradict it" rather than "no Gaia id whatsoever".
+        keys = inputs.SpineRequestKeys(
+            source_ids=[2], designations_by_source_id={2: {"tyc": "5-6-1"}},
+        )
+        backend = FakeBackend([
+            ("'Gaia DR3 2'", ident_table([])),
+            ("'TYC 5-6-1'", ident_table([{"oidref": 300, "id": "TYC 5-6-1"}])),
+            ("oidref IN (300)", ident_table([
+                {"oidref": 300, "id": "Gaia DR2 777"},
+            ])),
+        ])
+        resolved = request.resolve_spine_keys(FakeClient(backend), keys)
+        self.assertEqual(resolved.oids, {300})
+        self.assertEqual(resolved.verdicts[self.TYC_WIDENING].vetoed, 0)
+        self.assertEqual(resolved.verdicts[self.TYC_WIDENING].corroborated, 0)
+        self.assertEqual(resolved.verdicts[self.TYC_WIDENING].uncorroborated, 1)
+
+    def test_the_ladder_stops_asking_once_a_rung_binds_the_row(self):
+        # HIP binds source_id 2, so its TYC is never asked for — the
+        # fall-through keys on resolution, not on which cells are populated.
+        keys = inputs.SpineRequestKeys(
+            source_ids=[2],
+            designations_by_source_id={2: {"hip": 7, "tyc": "5-6-1"}},
+        )
+        backend = FakeBackend([
+            ("'Gaia DR3 2'", ident_table([])),
+            ("'HIP 7'", ident_table([{"oidref": 300, "id": "HIP 7"}])),
+            ("oidref IN (300)", ident_table([
+                {"oidref": 300, "id": "Gaia DR2 2"},
+            ])),
+        ])
+        resolved = request.resolve_spine_keys(FakeClient(backend), keys)
+        self.assertEqual(resolved.oids, {300})
+        self.assertEqual(resolved.requested[self.HIP_WIDENING], 1)
+        self.assertNotIn(self.TYC_WIDENING, resolved.requested)
+
+    def test_a_vetoed_rung_leaves_the_row_for_the_next_one(self):
+        keys = inputs.SpineRequestKeys(
+            source_ids=[2],
+            designations_by_source_id={2: {"hip": 7, "tyc": "5-6-1"}},
+        )
+        backend = FakeBackend([
+            ("'Gaia DR3 2'", ident_table([])),
+            ("'HIP 7'", ident_table([{"oidref": 300, "id": "HIP 7"}])),
+            ("oidref IN (300)", ident_table([
+                {"oidref": 300, "id": "Gaia DR3 999"},
+            ])),
+            ("'TYC 5-6-1'", ident_table([{"oidref": 400, "id": "TYC 5-6-1"}])),
+            ("oidref IN (400)", ident_table([
+                {"oidref": 400, "id": "Gaia DR2 2"},
+            ])),
+        ])
+        resolved = request.resolve_spine_keys(FakeClient(backend), keys)
+        self.assertEqual(resolved.oids, {400})
+        self.assertEqual(resolved.verdicts[self.HIP_WIDENING].vetoed, 1)
+        self.assertEqual(resolved.verdicts[self.TYC_WIDENING].corroborated, 1)
 
     def test_tyc_two_source_ids_claim_is_never_widened(self):
         keys = inputs.SpineRequestKeys(
-            source_ids=[1, 2], tyc_by_source_id={1: "5-6-1", 2: "5-6-1"},
+            source_ids=[1, 2],
+            designations_by_source_id={1: {"tyc": "5-6-1"}, 2: {"tyc": "5-6-1"}},
         )
         backend = FakeBackend([("'Gaia DR3 1','Gaia DR3 2'", ident_table([]))])
         resolved = request.resolve_spine_keys(FakeClient(backend), keys)
         self.assertEqual(resolved.oids, set())
-        self.assertEqual(resolved.requested[request.TYC_WIDENING], 0)
+        self.assertNotIn(self.TYC_WIDENING, resolved.requested)
 
     def test_no_widening_map_leaves_the_request_at_its_namespaces(self):
         keys = inputs.SpineRequestKeys(source_ids=[1], hips=[7], tycs=[], gls=[])
@@ -696,8 +830,8 @@ class ResolveSpineKeysTests(unittest.TestCase):
         ])
         resolved = request.resolve_spine_keys(FakeClient(backend), keys)
         self.assertEqual(resolved.oids, {100, 200})
-        self.assertEqual(resolved.gained_by_widening, 0)
-        self.assertNotIn(request.TYC_WIDENING, resolved.requested)
+        self.assertEqual(resolved.total_gained_by_widening, 0)
+        self.assertNotIn(self.TYC_WIDENING, resolved.requested)
         self.assertAlmostEqual(resolved.coverage(GAIA_DR3.tsv_name), 1.0)
 
 

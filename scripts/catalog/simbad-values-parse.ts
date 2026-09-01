@@ -79,13 +79,15 @@ export function parseSimbadValuesTsv(text: string): SimbadValueIndex {
   return index;
 }
 
-/** The record's SIMBAD row, resolved source_id → HIP → GJ → TYC — the shared
- *  ladder, ordered by what each identifier names (`catalog-pure.ts`
- *  § SIMBAD_NAMESPACE_VALUES). A row reached only by TYC is one the Gaia
- *  namespace could not reach; the pull already dropped the widened bindings
- *  SIMBAD's own Gaia cross-ID contradicts (`scripts/refresh/simbad/README.md`
- *  § The TYC widening carries its own veto), so what arrives here is
- *  adjudicated. */
+/** The record's SIMBAD row over the namespaces `resolve_spine_keys` composed
+ *  the request from, source_id → HIP → TYC → GJ. A widened row is readable
+ *  not because the two ladders share an order but because its emitted row
+ *  carries the asking designation in the namespace that bound it, so this
+ *  walk reaches it whichever rung matches first. What arrives here is already
+ *  adjudicated (`scripts/refresh/simbad/README.md` § The widening carries its
+ *  own corroboration rule). Its `source_id` cell may name a DIFFERENT source
+ *  from the record's — the DR2/DR3 case, inert because no record asks for it,
+ *  and pinned in `spine/inherited-spine-guard.test.ts`. */
 export function lookupSimbadValues(
   index: SimbadValueIndex,
   keys: SimbadRecordKeys,

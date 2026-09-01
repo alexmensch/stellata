@@ -175,3 +175,15 @@ HIP = IdentLookup(prefix="HIP ", tsv_name="hip")
 GAIA_DR3 = IdentLookup(prefix="Gaia DR3 ", tsv_name="source_id")
 TYC = IdentLookup(prefix="TYC ", tsv_name="tyc", numeric=False)
 GJ = IdentLookup(prefix="GJ ", tsv_name="gj", numeric=False)
+
+# Earlier Gaia releases, read only by the widening's corroboration check —
+# never shipped as a column. A release's ids are their own number space, so
+# these are not interchangeable with GAIA_DR3 anywhere else.
+GAIA_DR2 = IdentLookup(prefix="Gaia DR2 ", tsv_name="source_id_dr2")
+GAIA_DR1 = IdentLookup(prefix="Gaia DR1 ", tsv_name="source_id_dr1")
+GAIA_RELEASES = (GAIA_DR3, GAIA_DR2, GAIA_DR1)
+
+# The designation namespaces a source_id-keyed row falls through to when
+# SIMBAD's ident table does not hold its Gaia id, tried in this order — the
+# same ladder `docs/catalog-driver.md` § 5 gives the no-Gaia tier.
+WIDENING_LADDER = (HIP, TYC, GJ)

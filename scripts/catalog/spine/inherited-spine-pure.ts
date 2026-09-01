@@ -10,6 +10,7 @@ import type { Star } from '../parse/stars-parse';
 export const INHERITED_SPINE_FILE = 'data/athyg/inherited-spine.tsv';
 export const INHERITED_SPINE_EXPECTED_FILE =
   'scripts/catalog/spine/inherited-spine-expected.json';
+export const STALE_GAIA_SOURCE_IDS_FILE = 'data/athyg/stale_gaia_source_ids.tsv';
 
 /** Identifier fields the build resolved — the designation set
  *  `starDesignations` reads, plus the label columns the naming ladder will. */
