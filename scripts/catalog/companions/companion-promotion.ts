@@ -3,6 +3,7 @@
 // See ./README.md § Companion promotion from `data/binaries/multiples.tsv`.
 
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import {
   FLAG_HAS_NAME,
@@ -32,6 +33,7 @@ import {
   RIELLO_G_MINUS_V_SIGMA,
   vTierIsSystemBlend,
 } from '../photometry/v-magnitude-pure';
+import { REPO_ROOT } from '../../util/paths';
 import { ARCSEC_TO_RAD } from '../../../src/client/util/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
 import type { ConstellationAssignment } from '../parse/constellations';
@@ -240,6 +242,10 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
   return rows;
 }
 
+/** The Stage-6 pair table, named here because this module owns its shape —
+ *  the parallax cascade's sibling index reads the same file. */
+export const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
+
 export function readMultiplesTsv(path: string): MultiplesTsvRow[] {
   return parseMultiplesTsv(readFileSync(path, 'utf8'));
 }
@@ -417,6 +423,41 @@ export interface PromotionStats {
   /** Promoted companions whose own positional constellation differs from
    *  their anchor's — a pair wide enough to straddle an IAU boundary. */
   constellationSplitFromAnchor: number;
+  /** Pair rows refused because the record they name is parked — see
+   *  {@link ParkedIdentifiers}. Without this the parked list names rows that
+   *  ship anyway. */
+  droppedParkedRecord: number;
+}
+
+/** The identifiers of records the parallax cascade parked (§ 6.1 ledger). A
+ *  pair row naming one of them may not be promoted: multiples.tsv states a
+ *  distance for every component, and for a parked row that distance is the
+ *  measurement a tier above already refused — sigma Ori Aa's
+ *  `hip2_long_baseline` 328.947 pc inverts to the 3.04 mas the S/N floor threw
+ *  out. Promoting would re-serve it through the courier the skip rules exist to
+ *  close. */
+export interface ParkedIdentifiers {
+  gaia: ReadonlySet<string>;
+  hip: ReadonlySet<number>;
+}
+
+export function emptyParkedIdentifiers(): ParkedIdentifiers {
+  return { gaia: new Set(), hip: new Set() };
+}
+
+/** The § 6.1 ledger rows keyed the way a pair row names them. Takes the
+ *  structural minimum rather than `ParkedRecord`, so the promotion pass does
+ *  not import the walk that produced it. */
+export function parkedIdentifiers(
+  parked: readonly { gaiaSourceId: string | null; hip: number | null }[],
+): ParkedIdentifiers {
+  const gaia = new Set<string>();
+  const hip = new Set<number>();
+  for (const p of parked) {
+    if (p.gaiaSourceId !== null) gaia.add(p.gaiaSourceId);
+    if (p.hip !== null && p.hip > 0) hip.add(p.hip);
+  }
+  return { gaia, hip };
 }
 
 export function emptyPromotionStats(): PromotionStats {
@@ -448,6 +489,7 @@ export function emptyPromotionStats(): PromotionStats {
     blendDimMembersBeyondSeparation: 0,
     blendDimMembersMisfit: 0,
     constellationSplitFromAnchor: 0,
+    droppedParkedRecord: 0,
   };
 }
 
@@ -1329,6 +1371,7 @@ interface PromoteRowContext {
 
 interface PromotionState {
   existing: ExistingIndexes;
+  parked: ParkedIdentifiers;
   existingStars: Star[];
   existingStarsLength: number;
   newStars: Star[];
@@ -1495,6 +1538,14 @@ function promoteRow(
   if (rowHasOwnHip && companionGaia === null
       && state.promotedByHip.has(row.hip as number)) {
     stats.alreadyInCatalog++;
+    return null;
+  }
+  // Every "this row is already a record" exit has returned by here, so a
+  // remaining identifier match is the parked record itself arriving by the
+  // promotion route.
+  if ((row.gaiaSourceId !== null && state.parked.gaia.has(row.gaiaSourceId))
+      || (rowHasOwnHip && state.parked.hip.has(row.hip as number))) {
+    stats.droppedParkedRecord++;
     return null;
   }
 
@@ -1780,6 +1831,7 @@ export function promoteCompanions(
   constellations: { code: string; name: string }[],
   conAssignment: ConstellationAssignment,
   dustGrid: DustGrid | null = null,
+  parked: ParkedIdentifiers = emptyParkedIdentifiers(),
 ): { newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor> } {
   const stats = emptyPromotionStats();
   const existing = buildExistingIndexes(existingStars);
@@ -1796,6 +1848,7 @@ export function promoteCompanions(
   // as a parent in the BD/BE groups).
   const state: PromotionState = {
     existing,
+    parked,
     existingStars,
     existingStarsLength: existingStars.length,
     newStars,

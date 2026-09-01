@@ -62,7 +62,6 @@ import {
 import {
   DIST_VIA_VALUES,
   DIST_VIA_COUNT_KEY,
-  PARKED_RECORDS_FILE,
 } from './distance/parallax/parallax-cascade';
 import {
   buildRegressionReport,
@@ -87,6 +86,8 @@ import {
   backfillPrimaryIdentifiers,
   promoteCompanions,
   readMultiplesTsv,
+  MULTIPLES_TSV,
+  parkedIdentifiers,
   resolveComponentNameCollisions,
   stampComponentLetters,
 } from './companions/companion-promotion';
@@ -115,7 +116,12 @@ import {
   CLASSIC_ID_LABEL_INPUT_PATHS,
 } from './classic-ids/apply-classic-id-labels';
 import { emptyLabelMergeCounts, LABEL_FIELDS } from './classic-ids/label-merge-pure';
-import { readStars, type ParkedRecord, type Star } from './parse/stars-parse';
+import { readStars, type Star } from './parse/stars-parse';
+import {
+  PARKED_RECORDS_FILE,
+  formatParkedRecordsTsv,
+  type ParkedRecord,
+} from './distance/parallax/parked-ledger';
 import {
   INHERITED_SPINE_TSV,
   READ_STARS_INPUT_PATHS,
@@ -144,7 +150,6 @@ const SRC_GCVS_XREF = resolve(ROOT, 'data/gcvs/crossid.txt');
 const SRC_GAIA_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
 const SRC_HIP_CCDM = resolve(ROOT, 'data/hipparcos/hip_ccdm.tsv');
 const SRC_SIMBAD_SAMPLE = resolve(ROOT, 'data/simbad/simbad_sample.tsv');
-const SRC_MULTIPLES = resolve(ROOT, 'data/binaries/multiples.tsv');
 const PUBLIC_DIR = resolve(ROOT, 'public');
 const OUT_MANIFEST = resolve(PUBLIC_DIR, CATALOG_MANIFEST_FILENAME);
 const OUT_CON = resolve(ROOT, 'public/constellations.json');
@@ -189,7 +194,7 @@ function isUpToDate(): boolean {
     ...READ_STARS_INPUT_PATHS,
     ...CLASSIC_ID_LABEL_INPUT_PATHS,
     SRC_STELLARIUM, SRC_GCVS, SRC_GCVS_XREF, SRC_GAIA_HIP_XMATCH, SRC_HIP_CCDM,
-    SRC_SIMBAD_SAMPLE, SRC_MULTIPLES,
+    SRC_SIMBAD_SAMPLE, MULTIPLES_TSV,
     LEDGER_PATH, HEAD_PATH, OVERRIDES_PATH, RETIREMENTS_PATH, REINSTATEMENTS_PATH,
     ...scriptFiles,
   ]);
@@ -205,14 +210,7 @@ function isUpToDate(): boolean {
  *  a membership change, and Gaia DR4 should empty most of it. */
 async function writeParkedRecords(parked: readonly ParkedRecord[]): Promise<void> {
   const path = resolve(ROOT, PARKED_RECORDS_FILE);
-  const sorted = [...parked].sort((a, b) => (a.tyc ?? '').localeCompare(b.tyc ?? ''));
-  const lines = sorted.map((p) => [
-    p.tyc ?? '', p.hip ?? '', p.hd ?? '', p.gl ?? '', p.gaiaSourceId ?? '', p.reason,
-  ].join('\t'));
-  await writeFile(
-    path,
-    ['tyc\thip\thd\tgl\tgaia_source_id\treason', ...lines].join('\n') + '\n',
-  );
+  await writeFile(path, formatParkedRecordsTsv(parked));
   console.log(`  parked (no owned parallax): ${parked.length} → ${PARKED_RECORDS_FILE}`);
 }
 
@@ -335,6 +333,7 @@ async function main() {
     companionDroppedNoAbsmag: 0,
     companionDroppedCompoundComp: 0,
     companionDroppedCollocatedPrimary: 0,
+    companionDroppedParkedRecord: 0,
     companionAbsmagSpectralDerived: 0,
     companionSpectMsFromOwnAbsmag: 0,
     companionAbsmagWdsMagDerived: 0,
@@ -361,6 +360,7 @@ async function main() {
     tycho2Entries: 0,
     cns5AstrometryEntries: 0,
     glieseEntries: 0,
+    pairMemberParallaxEntries: 0,
     distBailerJones: 0,
     distLmcKinematic: 0,
     distGaiaDr3Inversion: 0,
@@ -368,6 +368,7 @@ async function main() {
     distCns5Plx: 0,
     distGliesePlx: 0,
     distSimbadPlx: 0,
+    distPairMemberParallax: 0,
     distCurated: 0,
     distNone: 0,
     distLowPrecisionParallax: 0,
@@ -637,8 +638,8 @@ async function main() {
   // whose identifier isn't already in AT-HYG. Promoted companions ride
   // catalog.bin with FLAG_BINARY_COMPANION_ONLY set; the renderer/picker
   // hover/focus stack picks them up with zero code change.
-  const multiplesRows = existsSync(SRC_MULTIPLES)
-    ? readMultiplesTsv(SRC_MULTIPLES)
+  const multiplesRows = existsSync(MULTIPLES_TSV)
+    ? readMultiplesTsv(MULTIPLES_TSV)
     : null;
   if (multiplesRows !== null) {
     // Identifier backfill BEFORE promotion: HD-only AT-HYG primaries
@@ -694,6 +695,7 @@ async function main() {
     const tProm = Date.now();
     const { newStars, stats: ps, groups } = promoteCompanions(
       multiplesRows, stars, CONSTELLATIONS, conAssignment, dustGrid,
+      parkedIdentifiers(stats.parked),
     );
     for (const ns of newStars) stars.push(ns);
     console.log(
@@ -731,6 +733,7 @@ async function main() {
     counts.companionDroppedNoAbsmag = ps.droppedNoAbsmag;
     counts.companionDroppedCompoundComp = ps.droppedCompoundComp;
     counts.companionDroppedCollocatedPrimary = ps.droppedCollocatedPrimary;
+    counts.companionDroppedParkedRecord = ps.droppedParkedRecord;
     counts.companionAbsmagSpectralDerived = ps.absmagSpectralDerived;
     counts.companionSpectMsFromOwnAbsmag = ps.spectMsFromOwnAbsmag;
     counts.companionAbsmagWdsMagDerived = ps.absmagWdsMagDerived;

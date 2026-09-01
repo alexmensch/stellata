@@ -67,6 +67,19 @@ export interface CoherenceSources {
 
 const COMPONENT_TOKEN_RE = /^[A-Z][a-z]?\d?$/;
 
+/** The clean-Gaia bar a 5p solution must clear to carry a whole system's
+ *  distance — its own parallax, unsaturated, un-blended and with a RUWE the
+ *  fit itself stands behind. Shared with the parallax cascade's
+ *  `pair_member_parallax` tier, which lends a sibling's distance to a member
+ *  Gaia fitted no parallax for at all. */
+export function isCoherenceAnchorGrade(g: GaiaAstrometryCatalogRow): boolean {
+  return g.parallaxMas !== null && g.parallaxMas > 0
+    && (g.ruwe === null || g.ruwe <= GAIA_RUWE_UNRELIABLE_THRESHOLD)
+    && (g.ipdFracMultiPeak === null
+      || g.ipdFracMultiPeak <= ANCHOR_IPD_MAX_PERCENT)
+    && g.gMag !== null && g.gMag >= GAIA_UNSATURATED_G_MIN;
+}
+
 function anchorTier(
   star: Star, sources: CoherenceSources, hostsSubsystem: boolean,
 ): number {
@@ -78,14 +91,7 @@ function anchorTier(
   // the long baseline averages orbital wobble by design.
   if (!hostsSubsystem && star.gaiaSourceId !== null) {
     const g = sources.gaiaAstrometry.get(star.gaiaSourceId);
-    if (
-      g !== undefined
-      && g.parallaxMas !== null && g.parallaxMas > 0
-      && (g.ruwe === null || g.ruwe <= GAIA_RUWE_UNRELIABLE_THRESHOLD)
-      && (g.ipdFracMultiPeak === null
-        || g.ipdFracMultiPeak <= ANCHOR_IPD_MAX_PERCENT)
-      && g.gMag !== null && g.gMag >= GAIA_UNSATURATED_G_MIN
-    ) {
+    if (g !== undefined && isCoherenceAnchorGrade(g)) {
       return ANCHOR_TIER_GAIA_CLEAN;
     }
   }

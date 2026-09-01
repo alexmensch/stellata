@@ -10,6 +10,7 @@ import {
 } from './parallax-cascade';
 import { gaiaAstrometryRow } from '../astrometry-fixture';
 import type { CitedParallax } from '../../cited-parallax';
+import type { SiblingParallax } from './pair-member-parallax';
 import type { GlieseRow } from '../../gliese-parse';
 
 const GAIA_DR2 = '2018yCat.1345....0G';
@@ -18,7 +19,7 @@ const VAN_LEEUWEN = '2007A&A...474..653V';
 const LITERATURE = '2014ApJ...784..156D';
 
 const NONE: ParallaxSources = {
-  gaia: null, hip2: null, cns5: null, gliese: null, simbad: null,
+  gaia: null, hip2: null, cns5: null, gliese: null, simbad: null, pairMember: null,
 };
 
 const hip2 = (plxMas: number, plxErrorMas: number | null) => ({
@@ -30,6 +31,9 @@ const gliese = (plxMas: number | null): GlieseRow => ({
 });
 // One builder for both bibcoded tiers — CNS5 and SIMBAD carry the same
 // CitedParallax. CNS5 publishes no error, which is what `errMas` null states.
+const sibling = (mas: number): SiblingParallax => ({
+  sourceId: '3216486478101982592', mas, errMas: 0.0622,
+});
 const cited = (
   mas: number, bibcode: string, errMas: number | null = 0.1,
 ): CitedParallax => ({ mas, errMas, bibcode });
@@ -62,6 +66,7 @@ describe('parallax-cascade / tier order', () => {
       [{ cns5: cited(20, LITERATURE, null) }, 'cns5_plx'],
       [{ gliese: gliese(30) }, 'gliese_plx'],
       [{ simbad: simbad(50, LITERATURE) }, 'simbad_plx'],
+      [{ pairMember: sibling(2.47) }, 'pair_member_parallax'],
     ];
     for (const [src, via] of order) {
       expect(resolveParallax({ ...NONE, ...src }, false, false).via).toBe(via);
@@ -203,6 +208,39 @@ describe('parallax-cascade / the van Leeuwen laundering rule', () => {
     }, false, false);
     expect(res.via).toBe('simbad_plx');
     expect(res.plxMas).toBe(24.7);
+  });
+});
+
+describe('parallax-cascade / the bound-sibling tier', () => {
+  it('places a record no owned tier reached on its sibling\'s clean fit — this '
+    + 'is what keeps sigma Orionis', () => {
+    const res = resolveParallax(
+      { ...NONE, gaia: gaiaAstrometryRow({ parallaxMas: null }), pairMember: sibling(2.4744) },
+      true, false,
+    );
+    expect(res.via).toBe('pair_member_parallax');
+    expect(1000 / (res.plxMas as number)).toBeCloseTo(404.14, 2);
+    expect(res.refused).toBe(false);
+  });
+
+  it('lends a neighbour\'s measurement only after every tier stating the '
+    + 'record\'s OWN has been asked', () => {
+    const res = resolveParallax(
+      { ...NONE, simbad: simbad(50, LITERATURE), pairMember: sibling(2.47) },
+      false, false,
+    );
+    expect(res.via).toBe('simbad_plx');
+  });
+
+  it('rescues a row a skip rule refused, and stops calling it refused', () => {
+    const res = resolveParallax({
+      ...NONE,
+      gaia: gaiaAstrometryRow({ parallaxMas: null }),
+      simbad: simbad(3.04, GAIA_DR2),
+      pairMember: sibling(2.4744),
+    }, true, false);
+    expect(res.via).toBe('pair_member_parallax');
+    expect(res.refused).toBe(false);
   });
 });
 

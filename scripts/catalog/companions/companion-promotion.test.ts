@@ -15,6 +15,7 @@ import {
   parseMultiplesTsv,
   projectFromSepPa,
   backfillPrimaryIdentifiers,
+  parkedIdentifiers,
   promoteCompanions,
   stampComponentLetters,
   stripBlendedSiblingLetter,
@@ -3006,5 +3007,58 @@ describe('stampComponentLetters', () => {
     expect(stats.systemsStamped).toBe(0);
     expect(stats.rowsStamped).toBe(0);
     expect(blend.proper).toBeNull();
+  });
+});
+
+describe('promoteCompanions / a parked record does not arrive by promotion', () => {
+  // σ Ori's shape at the promotion seam: HIP 26549's spine row parks (Gaia
+  // fitted no parallax; HIP2's 3.04 ± 8.92 mas is under the S/N floor) and the
+  // pair row states the very distance that refused value inverts to, carried
+  // as `hip2_long_baseline`. Promoting would re-serve it.
+  const PARKED_HIP = 26549;
+  const PARKED_SOURCE = '3216486443742786048';
+  const anchor = makeStar({
+    hip: 26551, gaiaSourceId: '3216486478101982592', proper: 'Sibling',
+    x: 37.361449, y: 401.989966, z: -18.330760,
+  });
+  const rows: MultiplesTsvRow[] = [
+    multiplesRow({
+      systemId: '05387-0236-AB,D', comp: 'D', hip: 26551,
+      gaiaSourceId: '3216486478101982592', orbitRole: 'primary',
+      distPc: 404.138377, x_pc: 37.361449, y_pc: 401.989966, z_pc: -18.330760,
+    }),
+    multiplesRow({
+      systemId: '05387-0236-AB,D', comp: 'AB', hip: PARKED_HIP,
+      gaiaSourceId: PARKED_SOURCE, orbitRole: 'secondary',
+      astrometryVia: 'hip2_long_baseline', distPc: 328.947368,
+      x_pc: 30.429843, y_pc: 327.196781, z_pc: -14.921882,
+      sepArcsec: 13.5, paDeg: 84.0, dmag: -2.8, magPri: 6.56, magSec: 3.76,
+    }),
+  ];
+
+  it('mints the row where nothing is parked — the control', () => {
+    const { newStars, stats } = promoteCompanions(
+      rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT,
+    );
+    expect(newStars).toHaveLength(1);
+    expect(stats.droppedParkedRecord).toBe(0);
+  });
+
+  it('refuses it once the ledger names the record, and counts the refusal', () => {
+    const { newStars, stats } = promoteCompanions(
+      rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT, null,
+      parkedIdentifiers([{ gaiaSourceId: PARKED_SOURCE, hip: PARKED_HIP }]),
+    );
+    expect(newStars).toHaveLength(0);
+    expect(stats.droppedParkedRecord).toBe(1);
+    expect(stats.promoted).toBe(0);
+  });
+
+  it('names a parked record by its HIP alone — the no-Gaia half of the cohort', () => {
+    const { stats } = promoteCompanions(
+      rows, [anchor], CONSTELLATIONS, CON_ASSIGNMENT, null,
+      parkedIdentifiers([{ gaiaSourceId: null, hip: PARKED_HIP }]),
+    );
+    expect(stats.droppedParkedRecord).toBe(1);
   });
 });

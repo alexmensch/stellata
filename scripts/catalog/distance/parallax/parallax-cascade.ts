@@ -5,6 +5,7 @@
 import { isGaiaCatalogueBibcode, isHipparcos2Bibcode } from '../gaia-distrust';
 import type { GaiaAstrometryCatalogRow, Hip2AstrometryRow } from '../direction-cascade';
 import type { CitedParallax } from '../../cited-parallax';
+import type { SiblingParallax } from './pair-member-parallax';
 import type { GlieseRow } from '../../gliese-parse';
 
 // The two override layers sit above the cascade rather than inside it — each
@@ -18,6 +19,7 @@ export const DIST_VIA_VALUES = [
   'cns5_plx',
   'gliese_plx',
   'simbad_plx',
+  'pair_member_parallax',
   'curated',
   'none',
 ] as const;
@@ -35,6 +37,7 @@ export const DIST_VIA_COUNT_KEY = {
   cns5_plx: 'distCns5Plx',
   gliese_plx: 'distGliesePlx',
   simbad_plx: 'distSimbadPlx',
+  pair_member_parallax: 'distPairMemberParallax',
   curated: 'distCurated',
   none: 'distNone',
 } as const satisfies Record<DistVia, string>;
@@ -57,15 +60,15 @@ export const PARALLAX_SN_FLOOR = 1.0;
  *  Gaia DR4 revisit. */
 export const PARALLAX_LOW_PRECISION_SN = 5.0;
 
-/** Where the § 6.1 dropped list is committed. */
-export const PARKED_RECORDS_FILE = 'data/athyg/parked_no_owned_parallax.tsv';
-
 export interface ParallaxSources {
   gaia: GaiaAstrometryCatalogRow | null;
   hip2: Hip2AstrometryRow | null;
   cns5: CitedParallax | null;
   gliese: GlieseRow | null;
   simbad: CitedParallax | null;
+  /** The best anchor-grade parallax this record's own bound siblings measured
+   *  — `lookupPairMemberParallax`. */
+  pairMember: SiblingParallax | null;
 }
 
 export interface ParallaxResolution {
@@ -111,7 +114,7 @@ function signalToNoise(plx: number, err: number | null): number | null {
  *  Gliese V/70A needs neither: its parallaxes are ground-based trigonometric
  *  astrometry predating both instruments. */
 export function resolveParallax(
-  { gaia, hip2, cns5, gliese, simbad }: ParallaxSources,
+  { gaia, hip2, cns5, gliese, simbad, pairMember }: ParallaxSources,
   gaiaIs2p: boolean,
   isSol: boolean,
 ): ParallaxResolution {
@@ -159,6 +162,17 @@ export function resolveParallax(
       return hit(simbad.mas, 'simbad_plx', signalToNoise(simbad.mas, simbad.errMas));
     }
     refused = true;
+  }
+
+  // A bound pair's components share a distance to a part in a million, so a
+  // sibling's clean fit places this record where nothing measured on the record
+  // itself survived — the claim applySystemDistanceCoherence already ships
+  // catalogue-wide, reaching one tier further down. Below the second-order
+  // indices because it lends a neighbour's measurement rather than serving this
+  // star's own; above `none` because the alternative is no record at all.
+  if (pairMember !== null) {
+    return hit(pairMember.mas, 'pair_member_parallax',
+      signalToNoise(pairMember.mas, pairMember.errMas));
   }
 
   // Sol carries no identifier any tier keys on, and its distance is zero rather

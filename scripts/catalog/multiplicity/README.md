@@ -221,11 +221,16 @@ camera-anywhere failure the single-star distance stack can't see.
 Per WDS root with ≥2 resolved own-record members:
 
 - **Anchor pick — purpose-aware, not recency-aware.** Best tier wins:
-  clean unsaturated Gaia 5p (parallax > 0, RUWE ≤ 1.4,
-  ipd_frac_multi_peak ≤ 2 **percent** — the column is 0–100 here,
-  unlike direction-cascade's fraction-scale threshold — and
+  clean unsaturated Gaia 5p (`isCoherenceAnchorGrade` — parallax > 0,
+  RUWE ≤ 1.4, ipd_frac_multi_peak ≤ 2 **percent**, the column being
+  0–100 here unlike direction-cascade's fraction-scale threshold, and
   G ≥ 3.0), then HIP2 coverage, then Bailer-Jones membership, then
-  inherited. HIP2's long baseline beats Gaia exactly where Gaia is
+  inherited. That predicate is exported: the parallax cascade's
+  `pair_member_parallax` tier lends the same grade of fit to a member
+  Gaia fitted no parallax for at all, one pass earlier
+  (`../distance/parallax/README.md`). Two mechanisms doing their own
+  job — the tier decides where a member ships, this pass then snaps it
+  onto the anchor RECORD's distance for intra-system consistency. HIP2's long baseline beats Gaia exactly where Gaia is
   saturated or binarity-corrupted (Acrux). A member hosting its own
   sub-pair (Acrux C = Ca,Cb) never takes the clean-Gaia tier —
   photocentre wobble on periods beyond Gaia's baseline corrupts the 5p

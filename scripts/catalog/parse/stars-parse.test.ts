@@ -239,6 +239,16 @@ describe('readStars PM rescue', () => {
   const RESCUE_TYC = '3-3-1';
   const SOURCE_ID = '756853643638639104';
   const GJ = 'Gl 423A';
+  // The rescue cohort is 2p rows, which is exactly the cohort the parallax
+  // cascade parks: Gaia fitted no parallax and Tycho-2 publishes none, so
+  // without an owned one these rows build no record at all and there is no
+  // motion left to assert on. Gliese supplies it — the one parallax tier the
+  // DIRECTION cascade never reads, so which tier resolves the position and
+  // which the motion are both untouched.
+  const RESCUE_GL = '903';
+  const PARALLAXES = glieseParallaxes([
+    { gl: RESCUE_GL, distPc: 100 }, { gl: '423A', distPc: 100 },
+  ]);
   // ξ UMa's Tycho-2 mean motion, on a record whose Gaia row fitted a place but
   // no motion — the shipped cohort's dominant shape.
   const TYCHO2_PM = { pmRaMasyr: -453.7, pmDecMasyr: -591.4 };
@@ -246,7 +256,7 @@ describe('readStars PM rescue', () => {
 
   const SPINE_ROW: Partial<SpineRow> = {
     ra: '0', dec: '0', dist: '100', dist_src: 'OTHER', spect: 'K0V',
-    tyc: RESCUE_TYC, proper: 'Rescued',
+    tyc: RESCUE_TYC, gl: RESCUE_GL, proper: 'Rescued',
   };
 
   // Tycho-2 serves V here as it does for the AT_ORIGIN rows above; `pm` is
@@ -282,6 +292,7 @@ describe('readStars PM rescue', () => {
       writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID }]),
       {
         conAssignment: CON_ASSIGNMENT,
+        gliese: PARALLAXES,
         directions: sources(TYCHO2_PM, { gaiaAstrometry: gaiaRow() }),
       },
     );
@@ -299,6 +310,7 @@ describe('readStars PM rescue', () => {
       writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID }]),
       {
         conAssignment: CON_ASSIGNMENT,
+        gliese: PARALLAXES,
         directions: sources(
           { pmRaMasyr: null, pmDecMasyr: null },
           { gaiaAstrometry: gaiaRow() },
@@ -315,6 +327,7 @@ describe('readStars PM rescue', () => {
       writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID }]),
       {
         conAssignment: CON_ASSIGNMENT,
+        gliese: PARALLAXES,
         directions: sources(TYCHO2_PM, {
           gaiaAstrometry: gaiaRow({
             parallaxMas: 50, pmraMasyr: 100, pmdecMasyr: -100,
@@ -333,6 +346,7 @@ describe('readStars PM rescue', () => {
       writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID, gl: GJ }]),
       {
         conAssignment: CON_ASSIGNMENT,
+        gliese: PARALLAXES,
         directions: sources({ pmRaMasyr: null, pmDecMasyr: null }, {
           gaiaAstrometry: gaiaRow(),
           cns5: new Map([['423A', cns5Astrometry({
@@ -353,6 +367,7 @@ describe('readStars PM rescue', () => {
       writeSpineTsv([{ ...SPINE_ROW, gl: GJ }]),
       {
         conAssignment: CON_ASSIGNMENT,
+        gliese: PARALLAXES,
         directions: sources({ pmRaMasyr: null, pmDecMasyr: null }, {
           cns5: new Map([['423A', cns5Astrometry({
             pm: { pmRaMasyr: 50, pmDecMasyr: -20, bibcode: GAIA_EDR3 },
@@ -374,6 +389,9 @@ describe('readStars advances the position on a rescued PM', () => {
   // pins live in ../distance/direction-cascade.test.ts; this one is the wiring,
   // which is the half that ships the position.
   const NO_MEAN_TYC = '1269-128-1';
+  // Same reason as the rescue suite above: a 2p row with no owned parallax
+  // parks, so Gliese states the distance the position assertions measure at.
+  const NO_MEAN_GL = '904';
   const J2000_RA = 66.25076035;
   const J2000_DEC = 16.9849519;
   const RESCUED_PMRA = 91.121;
@@ -405,11 +423,12 @@ describe('readStars advances the position on a rescued PM', () => {
     writeSpineTsv([{
       ra: String(J2000_RA / 15), dec: String(J2000_DEC),
       dist: String(DIST_PC), dist_src: 'OTHER', spect: 'K0V',
-      tyc: NO_MEAN_TYC,
+      tyc: NO_MEAN_TYC, gl: NO_MEAN_GL,
     }]),
     {
       conAssignment: CON_ASSIGNMENT,
       simbadValues: simbadPmOnly(),
+      gliese: glieseParallaxes([{ gl: NO_MEAN_GL, distPc: DIST_PC }]),
       directions: {
         gaiaAstrometry: new Map(),
         hip2: new Map(),

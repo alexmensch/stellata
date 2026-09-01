@@ -21,7 +21,7 @@ scripts/catalog/companions/
                                   resolveComponentNameCollisions. Runs
                                   before the absmag sort so promoted records
                                   take the same final indexing as
-                                  everything else.
+                                  everything else. Names `MULTIPLES_TSV`.
   multiples-fixture.ts            Default-valued MultiplesTsvRow factory.
                                   A module, NOT an export from
                                   companion-promotion.test.ts: importing one
@@ -86,6 +86,11 @@ Per-row gates and resolution:
   strips it rather than colliding with the primary in every
   gaia-keyed lookup, and build-runtime-binaries retries the
   synth key when its id-first resolve degenerates.
+- **Parked-record refusal.** A row naming a record the distance cascade
+  parked never promotes: its stated distance inverts the parallax a tier
+  above refused (σ Ori Aa's 328.947368 pc is 3.0400000 mas, the refused
+  HIP2 value to 8 sig figs), so promoting launders a refusal. On the row's
+  own gaia/HIP; counted `companionDroppedParkedRecord`.
 - **Cursor-primary anchor.** findExistingPrimary walks gaia →
   hip → proper name (position-guarded, for GJ-only AT-HYG rows
   carrying neither id — ξ UMa A). An unresolvable primary would

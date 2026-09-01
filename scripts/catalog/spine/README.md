@@ -160,17 +160,30 @@ The spine is only worth freezing if it stands in for the build exactly, so
 `inherited-spine-parity.test.ts` asserts that on both axes:
 
 - **Record count**, from the two committed snapshots — `rows` here equals
-  `recordCount` − `companionPromoted` in
+  `recordCount` − `companionPromoted` + `distNone` in
   `../build-catalog-expected.json`. No artifacts and no LFS, so it runs in
   every job; a record-build change that moves `recordCount` without
   regenerating the spine fails here.
+- **The ledgered drops**, three assertions that make that `distNone` term
+  honest rather than a licence to lose rows: the committed
+  `data/athyg/parked_no_owned_parallax.tsv` must hold exactly `distNone`
+  entries (§ 6.1's no-silent-drops rule — a count that moves without a ledger
+  entry fails), every reason on it must be in the closed enum
+  (`../distance/parallax/parked-ledger.ts`), and the five `spineDropped*`
+  gates must still read zero. The last one is what keeps the two events
+  apart: a park is deliberate, a gate firing means a reference table moved
+  under the snapshot.
 - **Designation multiset**, against the built artifacts — the
   `catalogRecordDesignations` walk (`../../sid/catalog-designations.ts`,
   the same one `sid:allocate` resolves against the ledger) over every
   non-`FLAG_BINARY_COMPANION_ONLY` record must tally identically to
-  `spineDesignations` over the committed TSV, **replayed through
-  `data/classic-ids/label_flips.tsv`**. Needs a built catalogue, so it runs in
-  the `build-catalog` job and locally.
+  `spineDesignations` over the committed TSV, **less the ledgered drops** and
+  **replayed through `data/classic-ids/label_flips.tsv`**. Needs a built
+  catalogue, so it runs in the `build-catalog` job and locally. A ledger row
+  is matched to its spine row on the whole five-cell identifier tuple
+  (`tyc`/`hip`/`hd`/`gl`/`gaia_source_id`), which both files carry under those
+  names — a park with no identifier at all is still named by the empty tuple,
+  rather than left to a guess about which id identifies.
 
 The classic-ID label layer moves designations off the spine's inherited cells
 by design (`docs/catalog-driver.md` § 4), so the raw equality died with it. The
@@ -180,9 +193,9 @@ replays it instead of relaxing: "every departure from the spine's designation
 set is accounted for" is the property that keeps every SID preserved by
 construction, and a queue that failed to list one would fail this gate.
 
-Membership itself stays tautological, which is the point: it IS the spine, so
-that equality holds by construction and any future change that breaks it has
-broken the membership term.
+Membership is the spine less the ledger, and nothing else: both subtractions
+above are enumerated files rather than counts, so any future change that breaks
+the equality has broken the membership term.
 
 ## The swap parity ledger
 
@@ -194,9 +207,13 @@ this folder plus `../classic-ids/parity-ledger.test.ts`.
 - **Record parity — zero drops.** `recordCount` (329,657) is unchanged
   across the swap. Membership is exactly the spine, the five walk gates
   are pinned at 0 (`spineDropped*`), and `sid:check` resolves every
-  record with zero mints — so the § 6.1 dropped list is empty and its
-  reason enum has no rows. The only per-record routing deltas are the
-  four-record set enumerated above.
+  record with zero mints — so the § 6.1 dropped list was empty and its
+  reason enum had no rows. The only per-record routing deltas are the
+  four-record set enumerated above. The value-half children have since
+  opened that list: retiring the printed `dist` cell parks the rows no owned
+  parallax reaches (`../distance/parallax/README.md` § Why the residual drops
+  rather than degrading), which is the first non-empty dropped list this
+  ledger has carried and the reason the parity gate now subtracts it.
 - **Label parity — strict gain.** No previously-labeled record lost a
   label: per identifier the shipped coverage is the spine's keyed count
   plus the overlay's additions (hd +148, hr +4, gl +198, flam +69,

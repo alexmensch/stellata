@@ -16,7 +16,12 @@ scripts/catalog/parse/
   read-stars-inputs.ts            The spine path, plus source paths + loaders
                                   for every reference table readStars
                                   consumes, and the mtime set derived
-                                  artifacts invalidate against.
+                                  artifacts invalidate against. One loader is
+                                  a derived index rather than a file read: the
+                                  bound-sibling parallaxes the distance
+                                  cascade's bottom tier lends, which cross
+                                  multiples.tsv with the Gaia table already
+                                  loaded here.
   gaia-xmatch.ts (+ test)         Gaia DR3 best-neighbour cross-walk parsing
                                   (HIP + TYC, one shared accumulator) plus the
                                   Apsis and 5p astrometry side-tables. The HIP
@@ -98,21 +103,22 @@ re-running them here would re-decide a binding against reference tables that
 have since moved (`../spine/README.md` § The identifier columns are read,
 never re-derived).
 
+0. **Parallax resolution** (`resolveParallax` in
+   `../distance/parallax/`), and `dist = 1000/plx`. Every tier is a
+   catalogue this build pulled itself; the spine's printed `dist` cell
+   is no longer one. A row no tier reaches is parked as a § 6.1 ledger
+   drop and builds no record — the one place the walk stops producing a
+   record deliberately rather than through a pinned-at-zero gate.
 1. **Bailer-Jones (DR3) distance override** (`applyBailerJonesOverride`
-   in `catalog-pure.ts`). See `../distance/README.md` § Multi-layer distance refinement.
-2. **HIP2 full-precision distance** for `dist_src=HIP` rows: the same
-   value AT-HYG catalogued, re-derived as 1000/plx from
-   `data/hipparcos/hip2_van_leeuwen.tsv` so the 4-dp print truncation
-   drops out. Gated on HIP2 reproducing AT-HYG's printed distance
-   (±1e-3 pc) — HIP 57146's unresolved-binary HIP2 refit (187 mas,
-   gof 99, vs AT-HYG's sane 59.9 pc) is the case the gate exists for;
-   disagreeing rows keep the curated AT-HYG value. Fires on 1,901 of
-   1,903 dist_src=HIP rows.
-3. **LMC kinematic override** (`applyLmcKinematicOverride`). See
+   in `catalog-pure.ts`), eligible where the tier above resolved
+   `gaia_dr3_inversion` — the posterior treats that measurement, so a
+   non-Gaia parallax must not be regressed onto its Galactic-density
+   prior. See `../distance/README.md` § Multi-layer distance refinement.
+2. **LMC kinematic override** (`applyLmcKinematicOverride`). See
    `../distance/README.md` § Multi-layer distance refinement.
-4. **`MAX_DIST_PC = 50_000` bounded-scope cutoff**
+3. **`MAX_DIST_PC = 50_000` bounded-scope cutoff**
    (`stars-parse.ts`). Drops rows still beyond LMC depth.
-5. **Direction resolution** (`resolveDirection` in
+4. **Direction resolution** (`resolveDirection` in
    `direction-cascade.ts`) selects the tier's solution; `directionOnPm`
    advances it to the scene epoch once the motion the row carries is
    settled (§ Space-motion velocity), and `xyz = direction × distance`
@@ -121,13 +127,13 @@ never re-derived).
    propagates rather than shipping its source's own epoch, so a row no
    tier reaches resolves to null and the walk drops it —
    `spineDroppedNoDirection`, pinned at 0.
-6. **Spectral classification** (`resolveSpectralInfo`; Sol special-cased
+5. **Spectral classification** (`resolveSpectralInfo`; Sol special-cased
    to curated G2V in `stars-parse.ts` — no HIP/Gaia/SIMBAD key reaches
    it). See `../spectral/README.md`.
-7. **Constellation** — positional, from the resolved xyz
+6. **Constellation** — positional, from the resolved xyz
    (§ Positional constellation membership). Nothing here sets the
    DESIGNATION's constellation: the spine carries no editorial `con` cell.
-8. **Johnson V and absmag** (`resolveVMagnitude`, then
+7. **Johnson V and absmag** (`resolveVMagnitude`, then
    `apparentToAbsoluteMagnitude` on the distance the whole override stack
    settled). See `../photometry/README.md` § The V cascade. The spine's
    printed `mag` cell is no longer read by anything. The tier that
@@ -135,14 +141,14 @@ never re-derived).
    magnitude is the system's blend or one component's — companion
    promotion's flux conservation may only subtract a companion's light
    from a blend (`../companions/README.md` § Anchor flux conservation).
-9. **B−V** (`resolveColourIndex`) — the Gaia relation, else printed
+8. **B−V** (`resolveColourIndex`) — the Gaia relation, else printed
    `I/239` B−V, else Gaia's synthetic B−V, else the intrinsic
    spectral-class colour, else solar. See
    `../photometry/README.md` § The ci cascade. Its `isObserved` verdict is
    what decides whether de-extinction de-reddens the value, so the two
    measured tiers and the two derived ones part company here rather than at
    the dust integral.
-10. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
+9. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
    and the resolved Teff — the measured Apsis Teff (gspphot → gspspec
    via `resolveApsisTeff`, 2–60 kK sanity window) when present, else
    the class-table value; BC always class-table. White dwarfs

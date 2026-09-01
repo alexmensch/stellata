@@ -280,6 +280,10 @@ export interface BuildCounts extends LabelMergeCounts {
    *  proxy — so collocating on the anchor would render a false
    *  coincident star (Alsephina C). */
   companionDroppedCollocatedPrimary: number;
+  /** Pair rows refused because the record they name is parked with no owned
+   *  parallax — promoting would re-serve the measurement the cascade
+   *  refused. */
+  companionDroppedParkedRecord: number;
   /** Promoted secondaries whose absmag came from the class→M_V
    *  spectral calibration (inherited/missing photometry, no WDS Δmag,
    *  per-component spect_via=curated/simbad). */
@@ -382,6 +386,9 @@ export interface BuildCounts extends LabelMergeCounts {
   /** Rows in the committed Gliese V/70A slice — the V cascade's bottom
    *  tier's reach. */
   glieseEntries: number;
+  /** Anchor-grade sibling parallaxes indexed off the kept-physical pair rows
+   *  of multiples.tsv — the `pair_member_parallax` tier's reach. */
+  pairMemberParallaxEntries: number;
   /** Distance cascade: the parallax tier each record's distance inverts,
    *  before the two override layers. `distNone` is the § 6 ledger drop —
    *  records no owned parallax reaches, which do not ship. */
@@ -392,6 +399,7 @@ export interface BuildCounts extends LabelMergeCounts {
   distCns5Plx: number;
   distGliesePlx: number;
   distSimbadPlx: number;
+  distPairMemberParallax: number;
   distCurated: number;
   distNone: number;
   /** Rows whose SHIPPED distance inverts a parallax with worse than 20%

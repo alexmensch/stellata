@@ -16,6 +16,15 @@ scripts/catalog/distance/parallax/
                                 constants, and the `DistVia → BuildCounts` key
                                 map. Imports both skip predicates from
                                 ../gaia-distrust.
+  pair-member-parallax.ts       The `pair_member_parallax` index: multiples.tsv
+    (+ test)                    pair rows × the DR3 astrometry table, per WDS
+                                root. Built once before the walk, in
+                                ../../parse/read-stars-inputs.ts.
+  parked-ledger.ts (+ test)     The § 6.1 dropped list — where it is committed,
+                                its closed reason enum, and the spine key the
+                                parity gate matches it on. The producer is
+                                build-catalog.ts, the consumer
+                                ../../spine/inherited-spine-parity.test.ts.
 ```
 
 ## The cascade
@@ -30,6 +39,7 @@ unless an override layer replaces it. Counts pin as `dist*`.
 | `cns5_plx` | its own GJ, non-Gaia citation only | |
 | `gliese_plx` | its own GJ in V/70A | |
 | `simbad_plx` | bibcoded, neither skip rule firing | |
+| `pair_member_parallax` | a bound sibling's clean DR3 fit | |
 | `curated` | Sol alone | 1 |
 | `none` | — | § 6 ledger drop |
 
@@ -44,6 +54,32 @@ that order would hand 115 of them to 1991 Hipparcos over a converged DR3 fit.
 The direction cascade already answers this — `hip2_saturated` fires only where
 Gaia states no usable parallax — so distance follows the same astrometric
 solution the position did.
+
+**The bottom tier lends rather than serves.** Every tier above it states a
+measurement of *this* record; `pair_member_parallax` states one of its bound
+sibling's. That is why it sits below even the second-order indices — a
+neighbour's fit is a weaker claim than a poor citation of the star's own — and
+above `none` only because the alternative is no record at all. The physical
+warrant is the one `applySystemDistanceCoherence` already ships
+catalogue-wide (`../../multiplicity/README.md` § System distance coherence): a
+bound pair's components share a distance to a part in a million. It borrows
+that pass's anchor gate outright (`isCoherenceAnchorGrade` — parallax > 0,
+RUWE ≤ 1.4, `ipd_frac_multi_peak` ≤ 2 on the 0–100 scale, G ≥ 3.0), plus this
+cascade's own S/N floor, so a sibling that could not anchor a system cannot
+place a member either.
+
+σ Orionis is the case the tier was built for. Its own source publishes no
+parallax at all and reads `ipd_frac_multi_peak` 37; HIP2 states 3.04 ± 8.92 mas
+(S/N 0.34), which the floor refuses. The same WDS root holds HIP 26551 D on its
+own clean 5p solution — 2.4744 ± 0.0622 mas, RUWE 1.0689, `ipd` 0 — inverting
+to 404.1 ± 10.2 pc. Schaefer et al. 2016's dynamical parallax, 387.5 ± 1.3 pc,
+agrees at 1.62 σ. Both say the 328.9 pc the floor refused is ~20% wrong.
+
+**A sibling's parallax is read on the sibling's OWN `gaia_source_id`**, and the
+index drops a repeated one per root. Stage 2/3 bind a single blended source to
+every component row of a sub-arcsec pair, so a root's rows routinely repeat the
+primary's id; reading the astrometry table on it twice would hand a member back
+the fit it already carries, dressed as a sibling's.
 
 **Sol needs a curated tier** for the third time in this epic: it carries no
 identifier any tier keys on, and its distance is zero rather than a parallax.
@@ -135,3 +171,23 @@ Records the pipeline stops producing are **presence events, not retirements**
 (`docs/sid.md`), so every dropped record keeps its SID and reinstates on the
 same identity when Gaia DR4 fits these blends. The drop is a park, and the
 reason code says so.
+
+**A park is a ledger entry, never a membership-gate drop.** The five
+`spineDropped*` counts are the spine's own promises and stay pinned at zero —
+a non-zero one means a refreshed reference table moved a row out from under the
+snapshot, which is a different and unintended event. The park is counted as
+`distNone`, enumerated in `parked_no_owned_parallax.tsv`, and gated by
+`../../spine/inherited-spine-parity.test.ts`, which subtracts it from the
+parity arithmetic only as far as the committed ledger accounts for it.
+
+**Companion promotion may not walk a parked record back in.** multiples.tsv
+states a distance for every component, and for a parked row that distance is
+the measurement a tier above already refused — σ Ori Aa's pair row reads
+`astrometry_via=hip2_long_baseline` at 328.947368 pc, which is 3.0400000 mas,
+the refused HIP2 value to eight significant figures. Promoting it would
+re-serve a refusal through a courier, which is the general rule at the head of
+§ The skip rules. Measured across all 44 parked rows multiples.tsv carries a
+row for: `astrometry_via` is `system_inherited` 65 and `hip2_long_baseline` 61,
+and `gaia_5p` **zero** — not one of them has an independent per-component fit
+behind it, so there is no case where promotion supplies an owned distance. The
+refusal is counted as `companionDroppedParkedRecord`.

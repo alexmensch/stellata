@@ -59,6 +59,12 @@ import {
   DIST_VIA_VALUES,
   type DistVia,
 } from '../distance/parallax/parallax-cascade';
+import type { ParkedRecord } from '../distance/parallax/parked-ledger';
+import {
+  emptyPairMemberParallaxIndex,
+  lookupPairMemberParallax,
+  type PairMemberParallaxIndex,
+} from '../distance/parallax/pair-member-parallax';
 import {
   resolvePmRescue,
   PM_RESCUE_VIA_VALUES,
@@ -210,20 +216,6 @@ export interface ReadStarsDrops {
   noVMagnitude: number;
 }
 
-/** One spine row that reaches no owned parallax and so cannot be placed. The
- *  § 6.1 dropped list, enumerated rather than counted: these records leave the
- *  catalogue entirely, so nothing else in the build records that they existed.
- *  `reason` distinguishes a row nothing measured from one whose only
- *  measurement a skip rule refused — the two have different futures. */
-export interface ParkedRecord {
-  tyc: string | null;
-  hip: number | null;
-  hd: number | null;
-  gl: string | null;
-  gaiaSourceId: string | null;
-  reason: 'refused_no_defensible_parallax' | 'no_parallax_published';
-}
-
 /** Every reference table a readStars walk consumes, as one bundle.
  *
  *  `loadReadStarsInputs` assembles the production set and satisfies this whole
@@ -254,6 +246,10 @@ export interface ReadStarsOptions {
    *  cascade's tier below Tycho-2, and the only one reaching the GJ-only
    *  cohort. Absent costs those rows their V, hence their record. */
   gliese?: GlieseIndex;
+  /** Anchor-grade parallaxes of each record's own bound siblings — the
+   *  cascade's tier below SIMBAD. Absent parks the rows it would have
+   *  rescued. */
+  pairMemberParallax?: PairMemberParallaxIndex;
   dustGrid?: DustGrid | null;
 }
 
@@ -276,6 +272,7 @@ export function readStars(
     hipVMag = new Map(),
     hipBv = new Map(),
     gliese = emptyGlieseIndex(),
+    pairMemberParallax = emptyPairMemberParallaxIndex(),
     dustGrid = null,
   }: ReadStarsOptions,
 ): {
@@ -453,16 +450,21 @@ export function readStars(
       {
         gaia: gaiaRow,
         hip2: hip !== null ? directions.hip2.get(hip) ?? null : null,
-        cns5: lookupCns5Astrometry(directions.cns5, simbadKeys.gl),
+        cns5: lookupCns5Astrometry(directions.cns5, simbadKeys.gl)?.parallax ?? null,
         gliese: glieseRow,
         simbad: simbadRow?.parallax ?? null,
+        pairMember: lookupPairMemberParallax(
+          pairMemberParallax, gaiaSourceId, hip,
+        ),
       },
       gaiaRowIs2p(gaiaRow),
       isSol,
     );
+    // Not a `dropped` gate: those five are the spine's own promises, pinned at
+    // zero, and a park is a deliberate § 6.1 ledger entry rather than a
+    // reference table having moved under the snapshot.
     if (plxRes.via === 'none') {
       distViaCounts.none++;
-      dropped.noDist++;
       if (plxRes.refused) distRefusedNoOwnedParallax++;
       parked.push({
         tyc: simbadKeys.tyc,
