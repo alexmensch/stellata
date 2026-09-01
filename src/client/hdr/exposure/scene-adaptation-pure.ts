@@ -2,6 +2,11 @@
 // statistic drives, and the cut they imply. See README.md § Adaptation.
 
 import { EV_MAX_STOPS } from './exposure-epoch';
+import {
+  createTileScratch,
+  type TileReduction,
+  weightedMedian,
+} from './reduction/reduction-pure';
 import { tonemapWhitePoint } from '../tonemap/tonemap-pure';
 
 /** Display luminance a correctly-exposed sunlit disc reads at —
@@ -64,23 +69,17 @@ export function slewDm(applied: number, measured: number, blend: number): number
   return Math.abs(measured) <= ADAPT_SLEW_SETTLE_MAG ? 0 : applied;
 }
 
-/** The three numbers one frame's reduction returns, all at the base
- *  instrument exposure (`reduction/README.md`). `surfaceL` and
- *  `coverage` are both frame means, so their ratio is the lit surface's
- *  own mean brightness — free of both its texture and its coverage. */
-export interface FrameStatistic {
-  /** Area-weighted mean of the flux channel over the whole frame. */
-  meanL: number;
-  /** Area-weighted mean of `L · lit-surface mask` over the whole frame. */
-  surfaceL: number;
-  /** Frame fraction covered by a lit resolved surface. */
-  coverage: number;
-}
+/** The three numbers one frame's reduction returns, the two luminances at
+ *  the base instrument exposure (`reduction/README.md`). `discL` is the
+ *  coverage-weighted median across tiles, so it is the MODAL lit surface's
+ *  own brightness — free of its texture, of its coverage, and of anything
+ *  else in frame that owns less than half the masked area. */
+export type FrameStatistic = TileReduction;
 
 export const EMPTY_FRAME_STATISTIC: FrameStatistic = {
   meanL: 0,
-  surfaceL: 0,
   coverage: 0,
+  discL: 0,
 };
 
 /** The two levels the branches are measured against. Ships at the
@@ -110,22 +109,17 @@ export function eyeAdaptationDm(meanL: number, lAdapt = L_ADAPT): number {
   return -2.5 * Math.log10(meanL / lAdapt);
 }
 
-/** The lit surface's own mean brightness: the masked mean over the masked
- *  area. Zero where nothing lit and resolved is in frame. */
-export function surfaceMeanL(stat: FrameStatistic): number {
-  return stat.coverage > 0 ? stat.surfaceL / stat.coverage : 0;
-}
-
 /**
- * The resolved-surface branch: hold the dominant lit surface's own mean
- * brightness at `L_TARGET`. Independent of that surface's texture and of
- * how much of the frame it fills, which is what makes approach neither
- * dim nor brighten it. Clamped at 0 like the perception branch.
+ * The resolved-surface branch: hold the MODAL lit surface's own brightness
+ * at `L_TARGET`. Independent of that surface's texture and of how much of
+ * the frame it fills, which is what makes approach neither dim nor
+ * brighten it — and, because the subject is a median rather than a pooled
+ * mean, independent of a brighter emitter owning less than half the masked
+ * area. Clamped at 0 like the perception branch.
  */
 export function surfacePinDm(stat: FrameStatistic, lTarget = L_TARGET): number {
-  const d = surfaceMeanL(stat);
-  if (d <= lTarget) return 0;
-  return -2.5 * Math.log10(d / lTarget);
+  if (stat.discL <= lTarget) return 0;
+  return -2.5 * Math.log10(stat.discL / lTarget);
 }
 
 /** The deepest cut any displayed frame can justify: the perception
@@ -193,7 +187,7 @@ export function adaptationBranches(
     eye,
     pin,
     floor,
-    discL: surfaceMeanL(stat),
+    discL: stat.discL,
     coverage: stat.coverage,
     weight,
     dm,
@@ -223,17 +217,21 @@ export interface SurfacePatch {
 }
 
 /** The frame a set of lit resolved surfaces presents, with nothing unmasked
- *  in it. `D` comes out area-weighted across them — a globe and its ring
- *  annulus are one subject, exposed together rather than for whichever is
- *  brighter. */
+ *  in it — the tile grid idealised to one uniform tile per patch. `D` is
+ *  the coverage-weighted median across them, so whichever patch owns more
+ *  than half the masked area IS the subject and the rest cannot move it,
+ *  however bright or dark they are. */
 export function surfacesStatistic(patches: readonly SurfacePatch[]): FrameStatistic {
-  let surfaceL = 0;
+  const scratch = createTileScratch(patches.length);
+  let meanL = 0;
   let coverage = 0;
-  for (const patch of patches) {
-    surfaceL += patch.discMeanL * patch.coverage;
+  for (const [i, patch] of patches.entries()) {
+    meanL += patch.discMeanL * patch.coverage;
     coverage += patch.coverage;
+    scratch.values[i] = patch.discMeanL;
+    scratch.weights[i] = patch.coverage;
   }
-  return { meanL: surfaceL, surfaceL, coverage };
+  return { meanL, coverage, discL: weightedMedian(scratch, patches.length) };
 }
 
 /** The frame a lone body of `discMeanL` at `coverage` presents: every lit

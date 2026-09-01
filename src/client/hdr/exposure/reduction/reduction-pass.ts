@@ -1,5 +1,5 @@
-// The GPU reduction of the HDR target's statistic attachment down to one
-// texel, and the frame-late readback of it. See README.md.
+// The GPU reduction of the HDR target's statistic attachment down to a
+// tile grid, and the frame-late readback of it. See README.md.
 
 import * as THREE from 'three';
 import { fullscreenTriangleGeometry } from '../../../util/fullscreen-pass';
@@ -7,7 +7,12 @@ import fullscreenVert from '../../../util/fullscreen-pass.vert.glsl?raw';
 import reduceFrag from './reduce.frag.glsl?raw';
 import type { ReducedStatistic, ReductionSeam } from '../../hdr-seam';
 import { ReductionReadback } from './reduction-readback';
-import { reductionLevelSizes } from './reduction-pure';
+import {
+  createTileScratch,
+  reduceTileLevel,
+  reductionChainSizes,
+  type TileScratch,
+} from './reduction-pure';
 
 export type { ReducedStatistic } from '../../hdr-seam';
 
@@ -28,6 +33,7 @@ export class LuminanceReduction implements ReductionSeam {
   private sourceWidth = 0;
   private sourceHeight = 0;
   private readback: ReductionReadback | null = null;
+  private scratch: TileScratch = createTileScratch(0);
   private pendingExposure = 0;
   private latest: ReducedStatistic | null = null;
   // Whether the readback in flight was requested with the draws skipped,
@@ -57,7 +63,7 @@ export class LuminanceReduction implements ReductionSeam {
 
   /**
    * Reduce `source` — the statistic attachment, at the drawing buffer's
-   * size — and ask for its one texel back. A frame whose predecessor has
+   * size — and ask for its tile level back. A frame whose predecessor has
    * not landed does no GPU work at all, so the measurement refreshes every
    * other frame at worst, far inside `ADAPT_SLEW_TAU_S`.
    *
@@ -117,10 +123,11 @@ export class LuminanceReduction implements ReductionSeam {
     // wrong exposure.
     this.floatRenderable ??= gl.getExtension('EXT_color_buffer_float') !== null;
     if (!this.floatRenderable) return;
-    this.readback ??= new ReductionReadback(gl, 1);
-    if (this.readback.pending) return;
-    this.ensureLevels(width, height);
-    if (this.levels.length === 0) return;
+    // Before ensureLevels, which reallocates the targets the in-flight
+    // readback is reading out of.
+    if (this.readback?.pending === true) return;
+    this.ensureLevels(gl, width, height);
+    if (this.levels.length === 0 || this.readback === null) return;
 
     const drawing = this.enabled && !parked && source !== null;
     if (drawing) {
@@ -140,11 +147,11 @@ export class LuminanceReduction implements ReductionSeam {
     } else {
       renderer.setRenderTarget(this.levels[this.levels.length - 1].target);
     }
-    // The last level is still bound, which is the framebuffer readPixels
-    // reads from. Disabled, that texel is from an older frame: the request
-    // goes out anyway to keep the fence in the frame, and poll() drops
-    // what it lands so the statistic holds still.
-    this.readback.request(1);
+    // The tile level is still bound, which is the framebuffer readPixels
+    // reads from. Disabled, those texels are from an older frame: the
+    // request goes out anyway to keep the fence in the frame, and poll()
+    // drops what it lands so the statistic holds still.
+    this.readback.request();
     this.pendingIsStale = !drawing;
     if (drawing) this.pendingExposure = renderExposure;
     renderer.setRenderTarget(null);
@@ -171,6 +178,7 @@ export class LuminanceReduction implements ReductionSeam {
     this.sourceHeight = 0;
     this.readback?.dispose();
     this.readback = null;
+    this.scratch = createTileScratch(0);
     this.floatRenderable = null;
     this.latest = null;
     this.pendingExposure = 0;
@@ -188,22 +196,25 @@ export class LuminanceReduction implements ReductionSeam {
       return;
     }
     this.latest = {
-      meanL: landed.pixels[0],
-      surfaceL: landed.pixels[1],
-      coverage: landed.pixels[2],
+      ...reduceTileLevel(landed.pixels, landed.count, this.scratch),
       renderExposure: this.pendingExposure,
     };
   }
 
-  /** The chain halves with `ceil` down to 1x1. Only the last level is
-   *  RGBA32F — `readPixels` guarantees the RGBA/FLOAT pair for that format
-   *  alone, and one texel of it costs nothing. */
-  private ensureLevels(width: number, height: number): void {
+  /** The chain halves with `ceil` down to the tile level. Only that last
+   *  level is RGBA32F — `readPixels` guarantees the RGBA/FLOAT pair for
+   *  that format alone, and the fp16 levels above it keep the chain's
+   *  memory in the megabytes. */
+  private ensureLevels(gl: WebGL2RenderingContext, width: number, height: number): void {
     if (this.sourceWidth === width && this.sourceHeight === height) return;
     for (const level of this.levels) level.target.dispose();
+    this.readback?.dispose();
     this.sourceWidth = width;
     this.sourceHeight = height;
-    const sizes = reductionLevelSizes(width, height);
+    const sizes = reductionChainSizes(width, height);
+    const tile = sizes[sizes.length - 1];
+    this.readback = tile === undefined ? null : new ReductionReadback(gl, tile[0], tile[1]);
+    this.scratch = createTileScratch(tile === undefined ? 0 : tile[0] * tile[1]);
     this.levels = sizes.map(([w, h], i) => ({
       target: new THREE.WebGLRenderTarget(w, h, {
         type: i === sizes.length - 1 ? THREE.FloatType : THREE.HalfFloatType,

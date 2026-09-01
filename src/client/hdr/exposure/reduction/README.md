@@ -1,21 +1,23 @@
 # Reduction — the frame measures itself
 
 The mip chain that turns the HDR target's **statistic attachment** into
-three numbers — the frame's area-weighted mean luminance, the same mean
-restricted to lit resolved surfaces, and the frame fraction those surfaces
-cover — and the frame-late readback of them. `../README.md` § Adaptation
-owns what the three numbers then do; `../../attachments/README.md` owns
-what writes the two channels they come out of.
+three numbers — the frame's area-weighted mean luminance, the frame
+fraction lit resolved surfaces cover, and the **modal** lit surface's own
+brightness — and the frame-late readback of them. `../README.md`
+§ Adaptation owns what the three numbers then do;
+`../../attachments/README.md` owns what writes the two channels they come
+out of.
 
 ## Files
 
 ```
 src/client/hdr/exposure/reduction/
-  reduction-pure.ts (+ test)  The level sizes, the weighted 2x2 combine the
-                              shader runs (the EXECUTABLE SPEC, not a CPU
-                              mirror anything invokes at runtime), the
-                              level-0 channel expansion, and the
-                              base-exposure rescale.
+  reduction-pure.ts (+ test)  The level sizes, where the chain stops, the
+                              weighted 2x2 combine the shader runs (the
+                              EXECUTABLE SPEC, not a CPU mirror anything
+                              invokes at runtime), the level-0 channel
+                              expansion, the tile level's CPU combine and
+                              median, and the base-exposure rescale.
   reduce.frag.glsl            One level: three weighted means, and the
                               masked-mean product formed at level 0.
   reduction-pass.ts           LuminanceReduction — the chain of targets, the
@@ -49,8 +51,8 @@ statistic texels too.
 ## The chain
 
 Level 0 is the statistic attachment itself. Each level after it is
-`ceil(size / 2)` on both axes, down to 1x1, and each output texel reads
-the (at most four) parent texels that exist:
+`ceil(size / 2)` on both axes, down to the **tile level** (§ below), and
+each output texel reads the (at most four) parent texels that exist:
 
 ```
 mean = Σ wᵢ·meanᵢ / Σ wᵢ    surface, coverage likewise    w = Σ wᵢ / 4
@@ -58,10 +60,10 @@ mean = Σ wᵢ·meanᵢ / Σ wᵢ    surface, coverage likewise    w = Σ wᵢ /
 
 **Every channel is a weighted mean, including the coverage one**, because
 the fraction of a region that is lit surface is the mean of a 0/1 indicator
-over it. The exposure pin then divides two of them — `surface / coverage`
-is the mean of `L` over the masked texels alone, so light *outside* the
-mask (a glare halo, the star field, the band) raises `L̄` and cannot touch
-the pin.
+over it. Dividing two of them — `surface / coverage` — is the mean of `L`
+over that region's masked texels alone, so light *outside* the mask (a
+glare halo, the star field, the band) raises `L̄` and cannot touch the pin.
+That division is what each **tile** hands the median (§ The tile level).
 
 **The masked product is formed at level 0 and nowhere else.** The
 attachment is RG16F — flux in R, mask in G — so the first pass expands
@@ -75,17 +77,74 @@ attachment texel should carry.
 texel's `w · 4^k` is the number of level-0 texels behind it, that product
 is additive down the chain, and the ragged last row and column of an odd
 level therefore carry proportionally less. Without it the chain would
-either drop or duplicate an edge at every odd step, and the 1x1 would be
-an edge-biased approximation rather than the frame mean.
+either drop or duplicate an edge at every odd step, and any level's mean
+would be an edge-biased approximation rather than the frame mean.
 
 Level 0 has no weight channel and needs none: the attachment is **RG16F**,
 so a `texelFetch` returns alpha 1, which is the weight it should carry.
 That is the reason the weight rides alpha rather than blue.
 
 **Only the last level is RGBA32F.** `readPixels` guarantees the
-RGBA/FLOAT pair for that format and not for RGBA16F; one texel of it costs
-nothing, and the fp16 levels above keep the chain's memory in the
-megabytes.
+RGBA/FLOAT pair for that format and not for RGBA16F; the tile level is a
+few tens of kilobytes of it, and the fp16 levels above keep the chain's
+memory in the megabytes.
+
+## The tile level, and why the subject is a median
+
+**The chain stops at a tile grid, not at 1x1**, and the CPU takes it from
+there. `REDUCTION_TILE_TEXELS` (1024) is the budget, and the level nearest
+it *in log ratio* is the one that wins — the sequence quarters, so the two
+candidates either side are a factor 4 apart. At 1600x900 that is level 5,
+50x29 = 1450 texels, 23 KB read back.
+
+**`L̄` and the coverage come out exactly as the dropped tail produced
+them.** A texel's `w · 4^k` is the count of level-0 texels behind it and
+`4^k` is constant across one level, so weighting by `w` alone over the
+whole tile level IS the frame mean. This is a SHORTER chain and one
+readback, never an extra tap: 6 draws go at 1600x900, together reading
+0.14 % of the chain's texels, and the cost lands almost entirely in the
+first pass either way.
+
+**What the tiles buy is `D`.** Two frame means divided give the
+area-weighted mean over *every* masked texel, which pools every masked
+emitter into one subject — fine while they are within ~1 mag of each
+other, and hopeless otherwise. Measured, against a star disc at the ramp
+foot beside a parked planet whose true `D` is 0.89:
+
+| pooling | resulting `D` | error |
+| --- | --- | --- |
+| arithmetic mean (`p` = 1) | 2.02e9 | 23.4 mag |
+| `p` = 1/4 | 3.01e6 | 16.3 mag |
+| `p` = 1/16 | 152 | 5.6 mag |
+| geometric (`p` → 0) | 12.4 | 2.9 mag |
+
+**No exponent rescues it.** A ten-decade brightness gap cannot be pooled
+away; the subject has to be **segmented**, and a chain reduced to one
+texel has thrown segmentation away by construction. So `D` is the
+**coverage-weighted median** across tiles of each tile's own masked mean,
+weighted by the masked area behind it (`w · coverage`):
+
+- **50 % is the breakdown point**, so a subject owning more than half the
+  masked area cannot be displaced however bright the rest is. Sol's disc
+  at Earth park is 71 px² against Earth's 57 255 — 0.12 % of the masked
+  area — so the regression guard is discharged by construction rather
+  than by a threshold.
+- **Two comparable subjects: the larger wins.** A globe and its ring
+  annulus are no longer one blended subject; whichever owns the majority
+  of the masked area *is* the modal masked surface, which is what the pin
+  should be exposing for.
+- **The tile grid is the estimator's RESOLUTION, not a change of
+  quantity.** A coverage-weighted tile median is a consistent estimator of
+  the per-texel coverage-weighted median, so the viewport-dependent tile
+  count is estimator noise rather than the framing dependence the pin's
+  inputs are supposed to be free of. No dedicated resample pass to a fixed
+  grid, and no per-tile solid-angle normalisation.
+- **Selection, never a sort.** The median runs on the main thread inside
+  `measure()`; a three-way-partition quickselect over preallocated typed
+  arrays is linear in the tile count, where a sort of ~1500 tiles costs
+  several times the rest of the landing. It partitions the scratch in
+  place, which is safe because the scratch is refilled from every
+  readback.
 
 **Three means fit the four channels an RGBA level target already had** —
 R, G, B and the weight in A — so the coverage term costs no new pass, no
@@ -136,6 +195,13 @@ the loop converges **from above**, bounded at
 Sol from wide open settles in two frames, well inside `ADAPT_SLEW_TAU_S`.
 At a settled cut nothing is clamped: Sol's pixels sit near 3500.
 
+**A quantile inherits that argument unchanged, in one line.** A median is
+monotone in every sample and the clamp lowers every sample, so the median
+of the clamped tiles is at or under the median of the true ones — a lower
+bound exactly as the mean was, and the same convergence-from-above bound
+restates verbatim. A resolved photosphere rails five decades over the
+ceiling at the base exposure and still settles in ~3 measurements.
+
 **The mask channel never clamps and never rescales**, which is what keeps
 the pin open-loop where the retired guard was not. A railed *peak* fed the
 cut it had produced — clamp before `rescaleToBaseExposure` and the reported
@@ -168,10 +234,13 @@ arrived.
 
 **The pack buffer is orphaned before every `readPixels`.** One `STREAM_READ`
 buffer re-read every other frame otherwise leaves the driver preserving the
-previous texel across the new write; ANGLE stages a shadow copy to make the
-`getBufferSubData` cheap, then discards it, and says so in the console once
-per request. Re-declaring the storage says the old texel is dead — nothing
-reads it after `poll()` has landed it.
+previous contents across the new write; ANGLE stages a shadow copy to make
+the `getBufferSubData` cheap, then discards it, and says so in the console
+once per request. Re-declaring the storage says the old grid is dead —
+nothing reads it after `poll()` has landed it. The buffer is sized to the
+tile level and rebuilt with the level chain on resize, which is safe
+because `measure()` refuses to touch the levels while a readback is in
+flight.
 
 ## Where it runs in the frame
 
@@ -227,10 +296,14 @@ What is still unexplained is the row itself: at the default Sol view,
 with the fence held and the cadence identical either side, `reduction`
 prices **−15.8 ms** against a `bracketMs` of 0.23 — the tightest bracket
 in the dataset, so the sign is not noise. Neither the missing fence, the
-stale readback, nor the cadence accounts for it.
+stale readback, nor the cadence accounts for it. Reproduced on Safari
+WebGL *and* Safari WebGPU (−1 to −1.5 ms, small but resolved), so it is
+neither the ANGLE translation layer nor anything WebGL-specific.
+`stellata-8cg.29` owns it, and the tile stop above is the next natural
+occasion to re-take the row.
 
 **What it lands is then thrown away, and that part is not optional.**
-The texel is from whichever frame last ran the draws, while
+The grid is from whichever frame last ran the draws, while
 `renderExposure` is live; pairing them breaks the invariant above and
 the cut is computed from a mismatched ratio. That is a feedback loop,
 not a one-off error — a wrong cut moves the exposure, which moves

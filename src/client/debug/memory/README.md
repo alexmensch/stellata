@@ -100,7 +100,7 @@ size.
 | --- | --- | --- | --- |
 | HDR MRT | drawing buffer | 8 (RGBA16F) + 4 (RG16F) + 8 (RGBA16F) + 4 (depth24) = **24 B** | `../../hdr/README.md` § Three attachments |
 | Rod summation | half on each axis (¼ the texels) | 8 B (RGBA16F) | `../../hdr/summation/README.md` |
-| Reduction chain | quartering levels from the statistic attachment | 8 B/level, 16 B at the 1-texel tail | `../../hdr/exposure/reduction/README.md` § The chain |
+| Reduction chain | quartering levels from the statistic attachment | 8 B/level, 16 B at the RGBA32F tile level | `../../hdr/exposure/reduction/README.md` § The chain |
 | Extinction positions | `AV_TEX_WIDTH` × ⌈stars ÷ `AV_TEX_WIDTH`⌉ | 16 B (RGBA32F), plus the same array retained on the heap | `../../star-pipeline/extinction/README.md` |
 
 The A_V target itself is **measured** on a WebGL2 boot, not hand-priced —

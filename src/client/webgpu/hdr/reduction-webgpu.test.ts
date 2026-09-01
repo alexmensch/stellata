@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { FloatType, HalfFloatType, RenderTarget, type Texture, type WebGPURenderer } from 'three/webgpu';
 import { WebGpuLuminanceReduction } from './reduction-webgpu';
-import { reductionLevelSizes } from '../../hdr/exposure/reduction/reduction-pure';
+import { reductionChainSizes } from '../../hdr/exposure/reduction/reduction-pure';
 
 /** A renderer whose readback promises resolve only when the test says so —
  *  the frame-decoupled semantics the render gate and the park rely on. */
@@ -25,12 +25,22 @@ function fakeRenderer() {
 const statistic = () => new THREE.Texture() as unknown as Texture;
 const flush = () => new Promise<void>((r) => { setTimeout(r, 0); });
 
+/** A uniform tile level of the size the chain stops at for `w`×`h`, so a
+ *  landing is the whole grid rather than one texel. */
+function tileLevel(w: number, h: number, texel: readonly number[]): Float32Array {
+  const sizes = reductionChainSizes(w, h);
+  const [tw, th] = sizes[sizes.length - 1];
+  const pixels = new Float32Array(tw * th * 4);
+  for (let i = 0; i < tw * th; i++) pixels.set(texel, 4 * i);
+  return pixels;
+}
+
 describe('the chain', () => {
-  it('builds one level per halving, fp16 until the one float32 texel read back', () => {
+  it('builds one level per halving, fp16 until the float32 tile level read back', () => {
     const { renderer, rendersInto, readbacks } = fakeRenderer();
     const reduction = new WebGpuLuminanceReduction(renderer);
     reduction.measure(statistic(), 40, 24, 2, false);
-    const sizes = reductionLevelSizes(40, 24);
+    const sizes = reductionChainSizes(40, 24);
     expect(rendersInto).toHaveLength(sizes.length);
     rendersInto.forEach((target, i) => {
       expect([target!.width, target!.height]).toEqual([...sizes[i]]);
@@ -66,11 +76,11 @@ describe('one readback in flight', () => {
     const reduction = new WebGpuLuminanceReduction(renderer);
     reduction.measure(statistic(), 8, 8, 42, false);
     expect(reduction.current()).toBeNull();
-    readbacks[0].land(new Float32Array([0.5, 0.25, 0.125, 1]));
+    readbacks[0].land(tileLevel(8, 8, [0.5, 0.25, 0.125, 1]));
     await flush();
     expect(reduction.readbackPending).toBe(false);
     expect(reduction.current()).toEqual({
-      meanL: 0.5, surfaceL: 0.25, coverage: 0.125, renderExposure: 42,
+      meanL: 0.5, coverage: 0.125, discL: 2, renderExposure: 42,
     });
   });
 });
@@ -80,7 +90,7 @@ describe('the disabled and parked paths', () => {
     const { renderer, rendersInto, readbacks } = fakeRenderer();
     const reduction = new WebGpuLuminanceReduction(renderer);
     reduction.measure(statistic(), 8, 8, 1, false);
-    readbacks[0].land(new Float32Array([1, 1, 1, 1]));
+    readbacks[0].land(tileLevel(8, 8, [1, 1, 1, 1]));
     await flush();
     const before = reduction.current();
     expect(before).not.toBeNull();
@@ -92,7 +102,7 @@ describe('the disabled and parked paths', () => {
     expect(readbacks).toHaveLength(2);
     // A stale texel paired with a live exposure is a feedback loop, not a
     // one-off error — the landing is dropped and the statistic holds still.
-    readbacks[1].land(new Float32Array([9, 9, 9, 1]));
+    readbacks[1].land(tileLevel(8, 8, [9, 9, 9, 1]));
     await flush();
     expect(reduction.current()).toEqual(before);
   });
@@ -109,7 +119,7 @@ describe('the disabled and parked paths', () => {
     const { renderer, readbacks } = fakeRenderer();
     const reduction = new WebGpuLuminanceReduction(renderer);
     reduction.measure(statistic(), 8, 8, 1, false);
-    readbacks[0].land(new Float32Array([1, 1, 1, 1]));
+    readbacks[0].land(tileLevel(8, 8, [1, 1, 1, 1]));
     await flush();
     expect(reduction.current()).not.toBeNull();
     reduction.reset();

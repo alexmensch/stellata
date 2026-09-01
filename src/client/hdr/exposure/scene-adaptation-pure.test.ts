@@ -32,7 +32,6 @@ import {
   loneBodyStatistic,
   slewDm,
   surfacesStatistic,
-  surfaceMeanL,
   surfacePinDm,
   surfacePinWeight,
   trimStopsForCoverage,
@@ -73,7 +72,7 @@ function contribution(appMag: number): number {
  *  point-source disc, the band. Every emitter that draws a kernel or a
  *  diffuse column writes mask 0. */
 function pointFrame(meanL: number) {
-  return { meanL, surfaceL: 0, coverage: 0 };
+  return { meanL, coverage: 0, discL: 0 };
 }
 
 describe('scene-adaptation constants', () => {
@@ -144,11 +143,17 @@ describe('§ 3.1 contribution table', () => {
     expect(mean).toBeCloseTo(6.3e5, -4);
     // The scene measurement is untouched by the floor…
     expect(eyeAdaptationDm(mean)).toBeCloseTo(-17.54, 2);
-    // …and the applied cut is the floor exactly. A host star draws a
-    // kernel, so it writes no mask however much of the frame it fills:
-    // the pin cannot reach this frame at any distance.
+    // …and the applied cut is the floor exactly. The disc IS a resolved
+    // surface at this framing — 11.45 px against the 9.945 px the apparent
+    // term caps at, so it draws in the disc pass and claims the mask — but
+    // 103 px of 2.07e6 is 172x under the ramp's foot, so the pin carries no
+    // weight and the perception branch governs, bounded. Coverage is what
+    // keeps Sol at 1 AU clipped white, not the mask contract.
     const discL = surfaceBrightnessLuminance(EXPOSURE, -10.59, OMEGA_PX);
-    expect(adaptationDm(pointFrame(mean))).toBe(ADAPT_DISPLAY_FLOOR_DM);
+    const solAt1Au = loneBodyStatistic(103 / VIEWPORT_AREA_PX, discL);
+    expect(surfacePinWeight(solAt1Au.coverage)).toBe(0);
+    expect(adaptationBranches(solAt1Au).regime).toBe('floor');
+    expect(adaptationDm(solAt1Au)).toBe(ADAPT_DISPLAY_FLOOR_DM);
     // § 3.2's accepted exception survives, by a wider margin than before:
     // the disc needs −22 mag to fall under the white point and the floor
     // plus a full negative trim reaches −8.55, so it stays clipped white.
@@ -231,7 +236,7 @@ describe('dm', () => {
   it('is exactly zero on an empty dark frame', () => {
     expect(eyeAdaptationDm(0)).toBe(0);
     expect(eyeAdaptationDm(L_ADAPT)).toBe(0);
-    expect(adaptationDm({ meanL: 0, surfaceL: 0, coverage: 0 })).toBe(0);
+    expect(adaptationDm({ meanL: 0, coverage: 0, discL: 0 })).toBe(0);
   });
 
   it('never goes positive — nothing adapts to see fainter than threshold', () => {
@@ -265,40 +270,67 @@ describe('the resolved-surface pin', () => {
   });
 
   it('is independent of everything else in the frame', () => {
-    // D is a masked mean over masked area, so a glare halo, a star field or
-    // the band raise L̄ without moving the pin — the coverage- and
+    // D is taken over the masked texels alone, so a glare halo, a star field
+    // or the band raise L̄ without moving the pin — the coverage- and
     // texture-independence the whole fix rests on.
     const body = loneBodyStatistic(0.3, 3.6e5);
     const withField = { ...body, meanL: body.meanL * 40 };
-    expect(surfaceMeanL(withField)).toBe(surfaceMeanL(body));
+    expect(withField.discL).toBe(body.discL);
     expect(adaptationDm(withField)).toBe(adaptationDm(body));
   });
 
-  it('area-weights the surfaces sharing one frame', () => {
-    // A globe and its ring annulus are one subject: D is the mean over every
-    // masked texel, so the larger area leads and neither is exposed for alone.
+  it('takes the MODAL surface as the subject, not a pooled mean', () => {
+    // A globe and its ring annulus: the annulus is 3.5x the globe's area, so
+    // it owns more than half the masked area and IS the subject. Pooling them
+    // was the old answer and cannot survive — a ten-decade gap between two
+    // masked emitters is not something any exponent averages away, so the
+    // subject has to be segmented rather than blended.
     const globe = { coverage: 0.02, discMeanL: 4e5 };
     const rings = { coverage: 0.07, discMeanL: 1e5 };
     const stat = surfacesStatistic([globe, rings]);
     expect(stat.coverage).toBeCloseTo(0.09, 12);
-    expect(surfaceMeanL(stat)).toBeCloseTo((0.02 * 4e5 + 0.07 * 1e5) / 0.09, 6);
-    // Between the two, and nearer the annulus, which covers 3.5x the globe.
-    expect(surfaceMeanL(stat)).toBeGreaterThan(rings.discMeanL);
-    expect(surfaceMeanL(stat)).toBeLessThan(globe.discMeanL);
+    expect(stat.discL).toBe(rings.discMeanL);
+    // Order of the patches cannot decide it.
+    expect(surfacesStatistic([rings, globe]).discL).toBe(rings.discMeanL);
+    // Flip the areas and the globe becomes the subject on the same rule.
+    expect(surfacesStatistic([
+      { coverage: 0.07, discMeanL: 4e5 },
+      { coverage: 0.02, discMeanL: 1e5 },
+    ]).discL).toBe(4e5);
   });
 
-  it('over-exposes by exactly the dark area a mis-masked emitter claims', () => {
+  it('cannot be moved by a minority emitter, however bright', () => {
+    // The regression guard the whole bead turns on, discharged by
+    // construction rather than by a threshold: Sol's disc at Earth park is
+    // 71 px² of a masked 57 326 px², so it owns 0.12 % of the masked area
+    // and five decades of extra brightness buy it nothing.
+    const earth = { coverage: 57255 / 1440000, discMeanL: 8.6e4 };
+    const sol = { coverage: 71 / 1440000, discMeanL: 1.82e10 };
+    const stat = surfacesStatistic([earth, sol]);
+    const alone = surfacesStatistic([earth]);
+    expect(sol.coverage / (earth.coverage + sol.coverage)).toBeCloseTo(0.00124, 5);
+    expect(stat.discL).toBe(earth.discMeanL);
+    // Sol still raises L̄ by three decades and the coverage by 0.12 %. The
+    // first is invisible (the floor already bounds the perception branch
+    // here), and the second moves the ramp weight by 0.0005 — 0.003 mag.
+    expect(stat.meanL / alone.meanL).toBeCloseTo(263.4, 1);
+    expect(adaptationDm(stat) - adaptationDm(alone)).toBeCloseTo(0, 2);
+  });
+
+  it('ignores a mis-masked dark claim under half the masked area', () => {
     // The defect the ring-shadow and night-limb gates exist to prevent: a
-    // claimer counting area its own light term has gone to zero over. D falls
-    // by the coverage ratio, and every stop of that lands on the subject.
-    // Both framings sit above ADAPT_PIN_COVERAGE, so the pin governs alone in
-    // each and the ramp weight cannot muddy the comparison.
+    // claimer counting area its own light term has gone to zero over. Under
+    // a mean it cost D the whole coverage ratio; under a median it costs
+    // nothing at all until it owns the majority — and then it takes the
+    // subject outright, which is the 50 % breakdown point stated as a cost.
     const body = { coverage: 0.2, discMeanL: 3.6e5 };
     const honest = surfacesStatistic([body]);
-    const withDark = surfacesStatistic([body, { coverage: 0.2, discMeanL: 0 }]);
-    expect(surfaceMeanL(withDark)).toBeCloseTo(0.5 * surfaceMeanL(honest), 6);
-    // Half the measured surface brightness is 0.75 mag of cut not applied.
-    expect(adaptationDm(withDark) - adaptationDm(honest)).toBeCloseTo(0.753, 3);
+    const minorityDark = surfacesStatistic([body, { coverage: 0.15, discMeanL: 0 }]);
+    expect(minorityDark.discL).toBe(honest.discL);
+    expect(adaptationDm(minorityDark)).toBe(adaptationDm(honest));
+    const majorityDark = surfacesStatistic([body, { coverage: 0.25, discMeanL: 0 }]);
+    expect(majorityDark.discL).toBe(0);
+    expect(adaptationDm(majorityDark)).toBe(0);
   });
 
   it('lifts the display floor, which the perception branch never does', () => {
@@ -313,10 +345,13 @@ describe('the resolved-surface pin', () => {
     expect(b.dm).toBe(b.pin);
   });
 
-  it('leaves a point source clipped — it protects surfaces, not points', () => {
-    // Sol's disc at 1 AU writes no mask at all, so the perception branch
-    // governs (floored) and § 3.2's accepted exception stands.
-    const b = adaptationBranches(pointFrame(contribution(-26.74)));
+  it('leaves an unresolved point clipped — it protects surfaces, not PSFs', () => {
+    // The app's own default view, 5 AU from Sol: L̄ = 68.6 against a white
+    // point of 20. Sol's disc is ~1.9 px across there, under the disc
+    // pass's own threshold, so every photon in frame arrives as a kernel
+    // and claims nothing — the perception branch governs, floored, and
+    // § 3.2's accepted exception stands.
+    const b = adaptationBranches(pointFrame(68.6));
     expect(b.coverage).toBe(0);
     expect(b.pin).toBe(0);
     expect(b.dm).toBe(ADAPT_DISPLAY_FLOOR_DM);
@@ -331,6 +366,26 @@ describe('the resolved-surface pin', () => {
       expect(dm).toBeGreaterThanOrEqual(ADAPT_DISPLAY_FLOOR_DM);
       expect(dm).toBe(Math.max(eyeAdaptationDm(meanL), ADAPT_DISPLAY_FLOOR_DM));
     }
+  });
+
+  it('takes a resolved photosphere past the display floor', () => {
+    // The bug this bead is: a star at closest approach used to collapse onto
+    // max(eye, floor) — a flat blown-out white disc at −6.29 whatever the
+    // star was — because the disc pass claimed no coverage. A photosphere's
+    // surface brightness is a constant of the model (Sol 1.82e10 at the base
+    // exposure, distance-invariant), so the cut it needs is far past the
+    // floor and the pin is the only branch allowed to give it.
+    const SOL_PHOTOSPHERE_L = 1.82e10;
+    // The zoom floor parks the disc at 0.9 of the viewport's minor axis.
+    const atZoomFloor = loneBodyStatistic(
+      (Math.PI * (0.5 * 0.9 * VIEWPORT_H) ** 2) / VIEWPORT_AREA_PX, SOL_PHOTOSPHERE_L);
+    expect(atZoomFloor.coverage).toBeCloseTo(0.3578, 4);
+    const b = adaptationBranches(atZoomFloor);
+    expect(b.regime).toBe('surface');
+    expect(b.dm).toBeCloseTo(-25.78, 2);
+    expect(b.dm).toBeLessThan(ADAPT_DISPLAY_FLOOR_DM);
+    expect(adaptedDiscMeanL(atZoomFloor.coverage, SOL_PHOTOSPHERE_L))
+      .toBeCloseTo(L_TARGET, 9);
   });
 });
 
@@ -349,7 +404,8 @@ describe('the display floor (§ 3.2)', () => {
     // the scene measurement.
     const meanL = contribution(-12.7);
     expect(eyeAdaptationDm(meanL)).toBeCloseTo(-3.50, 2);
-    expect(adaptationDm({ meanL, surfaceL: meanL, coverage: 103 / VIEWPORT_AREA_PX }))
+    const coverage = 103 / VIEWPORT_AREA_PX;
+    expect(adaptationDm({ meanL, coverage, discL: meanL / coverage }))
       .toBe(eyeAdaptationDm(meanL));
   });
 
@@ -381,7 +437,7 @@ describe('the branch decomposition', () => {
       loneBodyStatistic(0.4, BRIGHT),
       loneBodyStatistic(1e-3, BRIGHT),
       loneBodyStatistic(0.02, 12),
-      { meanL: 0, surfaceL: 0, coverage: 0 },
+      { meanL: 0, coverage: 0, discL: 0 },
     ]) {
       expect(adaptationDm(stat)).toBe(adaptationBranches(stat).dm);
     }

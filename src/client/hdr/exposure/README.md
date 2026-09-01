@@ -174,11 +174,11 @@ two of lag sits far inside the ramp.
 
 ```
 L̄        = mean over the frame of the statistic attachment's R channel
-S̄        = mean over the frame of R × the lit-surface mask in G
-f        = mean over the frame of that mask alone — the coverage
-           L̄ and S̄ rescaled to the BASE instrument exposure; f is a
+f        = mean over the frame of the lit-surface mask in G — the coverage
+D        = coverage-weighted MEDIAN across the reduction's tiles of each
+           tile's own masked mean (R×G / G over that tile)
+           L̄ and D rescaled to the BASE instrument exposure; f is a
            fraction and must NOT be
-D        = S̄ / f — the lit surface's OWN mean brightness
 eye      = min(0, −2.5·log10(L̄ / L_ADAPT))
 pin      = min(0, −2.5·log10(D  / L_TARGET))
 floor    =         −2.5·log10(Lw / L_ADAPT)
@@ -191,9 +191,17 @@ dm       = mix(max(eye, floor), pin, w)
 have.** A frame mean alone is `D × f`, so it tracks coverage and a body
 dims as the camera closes on it; a frame *max* is `D ×` the body's own
 peak-over-mean, so it tracks texture and every body wants a different
-constant. Dividing two frame means recovers `D` free of both, which is what
-lets one setting expose every body and lets an approach neither dim nor
-brighten the subject.
+constant. `D` is free of both, which is what lets one setting expose every
+body and lets an approach neither dim nor brighten the subject.
+
+**`D` is a median over tiles rather than a mean over texels**, and that is
+what makes it the MODAL masked surface rather than a pool of everything
+masked. Pooling holds only while the masked emitters are within ~1 mag of
+each other; a resolved photosphere beside a parked planet is ten decades
+apart and no pooling exponent closes that. The breakdown point is 50 % of
+the masked area, so a small blinding emitter cannot move the subject and
+a body's larger annulus can. Derivation, the measured pooling table and
+the estimator argument: `reduction/README.md` § The tile level.
 
 `adaptationBranches` is the **only** implementation of that block —
 `adaptationDm` reads its `dm`, and the readout reads the same object, so a
@@ -223,12 +231,19 @@ the two ends of the operator's range — `docs/science-hdr-pipeline.md`
 and the only place the reasoning lives. Four properties the implementation
 must keep, because callers depend on them rather than on the formula:
 
-- **The floor bounds every frame the pin does not govern.** Nothing
-  entering the frame as a kernel or a diffuse column can darken it past
-  `ADAPT_DISPLAY_FLOOR_DM`, because none of them writes a mask. The pin
-  *is* allowed past the floor, and must be: a parked Venus needs 14 mag
-  and the floor stops at 6.29. This replaces the walk-era
-  `dm ≥ max(eye, guard)`, which the pin deliberately breaks.
+- **The floor bounds every frame the pin does not govern.** It is a bound
+  on the *perception* branch, and what lifts it is the pin's ramp weight —
+  not a property of who wrote a mask. Anything drawing a kernel or a
+  diffuse column claims no coverage and therefore cannot darken a frame
+  past `ADAPT_DISPLAY_FLOOR_DM`; a **resolved** star disc does claim
+  coverage (`../attachments/README.md` § The unit) and reaches the pin
+  like any other resolved surface, which is exactly the fix that stopped
+  a star at closest approach rendering as a flat blown-out white disc.
+  What keeps Sol at 1 AU clipped is coverage, not the mask: its disc is
+  103 px of 2.07e6, 172x under the ramp's foot. The pin *is* allowed past
+  the floor, and must be: a parked Venus needs 14 mag and the floor stops
+  at 6.29. This replaces the walk-era `dm ≥ max(eye, guard)`, which the
+  pin deliberately breaks.
 - **The ramp is stateless and its two ends are derived** — nothing caches
   which branch governed last frame, and nothing may start to.
   `ADAPT_PIN_COVERAGE` is the park framing, where the two branches agree
@@ -237,9 +252,24 @@ must keep, because callers depend on them rather than on the formula:
   `ADAPT_DOT_COVERAGE` is `f_ref / 2^EV_MAX_STOPS` — the smallest framing
   the trim could still pull back to `L_TARGET`, under which § 3.2's
   brilliant dot is the honest reading. Neither is a tuned constant.
-- **Approaching a body only ever deepens the cut.** `pin` is constant in
-  coverage and `w` rises with it, so `dm` is monotone along an approach —
-  the model cannot brighten a body and then dim it again on the way in.
+- **Approaching a body deepens the cut while its whole lit disc is in
+  frame.** `pin` is constant in coverage and `w` rises with it, so `dm` is
+  monotone over that range and the model cannot brighten a body and then
+  dim it again on the way in. Past the framing where the disc overflows
+  the viewport the frame crops the limb, `D` climbs toward the sub-solar
+  peak (1.41x, 0.37 mag on an ideal Lambert disc) and the cut deepens to
+  match. **What holds across the whole approach is the DISPLAYED
+  surface**, which is the property the pin exists for.
+- **`D` is phase-dependent by construction, and the fall is geometric
+  rather than textural.** The mask is the lit hemisphere unweighted, so
+  `D` is the median of the incidence cosine over it: on an ideal Lambert
+  sphere 0.707 of the sub-solar radiance at full phase, 0.404 at
+  quadrature and 0.126 by a thin crescent (α = 150°). Holding that median
+  at `L_TARGET` is why the **brightest** lit strip runs away from target
+  as the phase angle opens — peak-over-median goes 1.41 at full phase to
+  3.94 at a thin crescent, which is the blown limb smoke reports.
+  Weighting the mask by the incidence cosine is the fix and is
+  `stellata-xypg.42`.
 - **`D` is undefined without coverage, and reads 0 there** — a frame with
   no lit resolved surface hands the pin a zero, which clamps its branch to
   zero, and `w` is zero anyway. The two agree rather than one covering for
@@ -306,7 +336,10 @@ ramping from a cut stale by the whole hold.
 **No spatial weighting.** A plain mean over the target is the shape the
 scanned-observer premise implies; centre weighting or a fovea-like radial
 term would re-introduce the gaze dependence it rejects, and the buffer
-gives the plain mean for free.
+gives the plain mean for free. The pin's tile median is not a breach of
+this: it is invariant under any permutation of the tiles, so it depends
+on how much masked area sits at each level and never on **where** in the
+frame that area is.
 
 **`DISC_PEAK_OVER_MEAN` retired with the guard, and must not come back as
 a real-body ratio.** The 3/2 was the exact Lambert value for a *smooth
@@ -354,8 +387,8 @@ what the park does not save.
 The panel's **Exposure** section (`exposure-tuning.ts`, first section in
 `debug/debug.ts`) reads this folder and writes three overrides.
 
-Readout, per frame: `L̄`, the lit-surface coverage and the `D` they divide
-to, all at the base exposure · the three branch terms, the ramp weight and
+Readout, per frame: `L̄`, the lit-surface coverage and the modal surface's
+`D`, all at the base exposure · the three branch terms, the ramp weight and
 the governing regime · **measured vs applied `dm`**, which is the slew lag
 made visible · `m_lim`, EV and the effective limiting magnitude · live
 `uExposure` · both ends of the coverage ramp. **`dm_eye` minus the applied

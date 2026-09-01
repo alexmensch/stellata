@@ -1,12 +1,13 @@
-// Non-blocking readback of the reduction's 1x1 level: a pixel-pack buffer
+// Non-blocking readback of the reduction's tile level: a pixel-pack buffer
 // plus a fence, polled once a frame. See README.md § Latency.
 
 export class ReductionReadback {
   private readonly gl: WebGL2RenderingContext;
   private readonly buffer: WebGLBuffer | null;
   private readonly pixels: Float32Array;
+  private readonly width: number;
+  private readonly height: number;
   private fence: WebGLSync | null = null;
-  private pendingCount = 0;
   private issued = 0;
 
   /** Readbacks actually issued since construction; a `request` that
@@ -17,9 +18,11 @@ export class ReductionReadback {
     return this.issued;
   }
 
-  constructor(gl: WebGL2RenderingContext, maxTexels: number) {
+  constructor(gl: WebGL2RenderingContext, width: number, height: number) {
     this.gl = gl;
-    this.pixels = new Float32Array(maxTexels * 4);
+    this.width = width;
+    this.height = height;
+    this.pixels = new Float32Array(width * height * 4);
     this.buffer = gl.createBuffer();
     if (this.buffer === null) return;
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, this.buffer);
@@ -33,14 +36,14 @@ export class ReductionReadback {
     return this.fence !== null;
   }
 
-  /** Read `count`×1 RGBA float texels out of the **currently bound**
-   *  framebuffer. No-op while one is already in flight.
+  /** Read the whole tile level out of the **currently bound** framebuffer.
+   *  No-op while one is already in flight.
    *
    *  RGBA/FLOAT is guaranteed only for an RGBA32F attachment, which is why
    *  the chain's last level alone is 32-bit (README.md § The chain). */
-  request(count: number): void {
+  request(): void {
     const gl = this.gl;
-    if (this.buffer === null || this.fence !== null || count <= 0) return;
+    if (this.buffer === null || this.fence !== null) return;
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, this.buffer);
     // Orphan before the write. Without it the driver must treat the previous
     // contents as live across this readPixels, and ANGLE spends a shadow copy
@@ -48,13 +51,12 @@ export class ReductionReadback {
     // request, i.e. continuously. Re-declaring the storage says the old texel
     // is dead; nothing reads it after poll() has landed it.
     gl.bufferData(gl.PIXEL_PACK_BUFFER, this.pixels.byteLength, gl.STREAM_READ);
-    gl.readPixels(0, 0, count, 1, gl.RGBA, gl.FLOAT, 0);
+    gl.readPixels(0, 0, this.width, this.height, gl.RGBA, gl.FLOAT, 0);
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
     const fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
     if (fence === null) return;
     gl.flush();
     this.fence = fence;
-    this.pendingCount = count;
     this.issued++;
   }
 
@@ -68,11 +70,10 @@ export class ReductionReadback {
     if (gl.getSyncParameter(fence, gl.SYNC_STATUS) !== gl.SIGNALED) return null;
     gl.deleteSync(fence);
     this.fence = null;
-    const count = this.pendingCount;
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, this.buffer);
-    gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, this.pixels, 0, count * 4);
+    gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, this.pixels);
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-    return { pixels: this.pixels, count };
+    return { pixels: this.pixels, count: this.width * this.height };
   }
 
   dispose(): void {
@@ -82,6 +83,5 @@ export class ReductionReadback {
       this.fence = null;
     }
     if (this.buffer !== null) gl.deleteBuffer(this.buffer);
-    this.pendingCount = 0;
   }
 }
