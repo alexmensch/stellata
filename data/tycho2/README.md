@@ -18,42 +18,47 @@ tycho2_suppl1.tsv   2,713 rows from I/259/suppl_1 — Tycho-1 and
 
 ## Which position to propagate from
 
-> **THIS SECTION IS WRONG ON BOTH POSITION CELLS, and the build follows it.**
-> Tycho-2 states `RAmdeg`/`DEmdeg` at **J2000**, while `EpRAm`/`EpDEm` are the
-> mean epoch **of the observations** the solution was fitted to — not of the
-> position. `RA(ICRS)`/`DE(ICRS)` is the *observed* place near 1991.25, not a
-> J2000 propagation of the mean solution. So every tycho2-tier record is
-> advanced `2000 − ep_ra` too far, ~8.9 yr, and the `pflag='X'` cohort's cell
-> is not at the epoch claimed below either. Measured three ways in
-> `stellata-3bsf.37`, which carries the fix and the rewrite of this section;
-> § The pinned row records what the corpus pins meanwhile. Read nothing below
-> as settled until that lands.
+Tycho-2 states two positions per star, at two different epochs, and neither
+epoch is written in the column beside it.
 
-`ra_mdeg`/`de_mdeg` is the **observed mean position** at `ep_ra`/`ep_de`,
-and it is what a propagation to the scene epoch must start from.
-`ra_icrs`/`de_icrs` is Tycho-2's own propagation of that same solution to
-J2000; propagating it again compounds its error rather than correcting it.
+| Cell | What it is | Epoch |
+|---|---|---|
+| `ra_mdeg` / `de_mdeg` | the mean solution's position — what a propagation starts from | **J2000** |
+| `ra_icrs` / `de_icrs` | the observed Tycho-2 position | **J1991.25** |
+| `ep_ra` / `ep_de` | mean epoch of the OBSERVATIONS behind the mean solution | — |
 
-**That prohibition is about the mean solution, not about the J2000 cell.** A
-`pflag='X'` or supplement row has no mean solution for `ra_icrs` to be a
-propagation *of*, so there is nothing to double-count: it is a plain J2000
-position, and advancing it on the motion `pm-rescue/` reaches the row with is a
-first propagation. Only a row that also carries `ra_mdeg` may not be advanced
-from its J2000 cell.
+**`ep_ra` / `ep_de` are not the mean position's epoch**, and reading them as one
+is the trap this table exists to close: they date the observations, the position
+they produced is referred to J2000, and advancing from them adds `2000 - ep_ra`
+of extra motion to every row. Those epochs run 1967.77–1991.74 in the direction
+tier's own cohort, so the error reaches decades, not months. Nothing reads them.
 
-The two mean epochs differ per star and per coordinate (a row can read
-`ep_ra` 1991.07 against `ep_de` 1991.00), so RA and Dec advance over
-different intervals. `pm_ra` is μ_α* — the cos δ factor is already
-applied — so it is added along the local east tangent directly, never
-divided by cos δ again.
+Both epochs are **measured, not assumed** — the same discipline
+`../../scripts/catalog/distance/README.md` § Direction resolution applies to the
+SIMBAD tier:
 
-`ra_icrs` earns its place on the **1,537 `pflag='X'` rows**, which have no
-mean solution at all: `ra_mdeg`, `ep_ra`, `pm_ra` and their Dec siblings
-are all empty there and the J2000 cell is the only position the row has.
-(That 1,537 and the 1,537 Gaia 2p rows in the spine are unrelated counts
-that happen to match — see the PM rescue's README.)
-`pflag='P'` (3,953 rows) means the mean solution is the photocentre of an
-unresolved double, not one star's place.
+- Over the 1,145 rows carrying a mean solution, a Gaia-grade SIMBAD position and
+  a proper motion above 100 mas/yr, propagating from J2000 lands a median
+  **0.061″** from SIMBAD's own J2016 place (p90 0.284″) against **1.817″**
+  (p90 5.427″) propagating from `ep_ra`/`ep_de`. Expressed as years of each
+  star's own motion, the second reads a median 8.97 yr adrift, and dividing that
+  by `2000 - ep_ra` gives **1.009** — the signature of a position that sits at
+  J2000.
+- The observed cell solves to **1991.67** over the 133 measurable `pflag='X'`
+  rows and **1991.25** over the 81 measurable supplement rows, against the
+  catalogue's stated J1991.25. It is 8.75 yr behind `ra_mdeg`, which is the same
+  fact from the other side: across 8,609 rows above 150 mas/yr the two cells sit
+  `ep_ra - 8.75` apart when solved against each other.
+
+`pm_ra` is μ_α* — the cos δ factor is already applied — so it is added along the
+local east tangent directly, never divided by cos δ again.
+
+`ra_icrs` earns its place on the **1,537 `pflag='X'` rows**, which have no mean
+solution at all: `ra_mdeg`, `ep_ra`, `pm_ra` and their Dec siblings are all empty
+there and the observed cell is the only position the row has. (That 1,537 and
+the 1,537 Gaia 2p rows in the spine are unrelated counts that happen to match —
+see the PM rescue's README.) `pflag='P'` (3,953 rows) means the mean solution is
+the photocentre of an unresolved double, not one star's place.
 
 ## The two tables overlap on 254 TYCs
 
@@ -125,12 +130,11 @@ ingest replaced and the mean epochs that replace it. Its printed
 AT-HYG cell matches this table's unpropagated mean position to 8 decimal
 places — the ~27″ staleness measured rather than asserted.
 
-It is also the corpus pin for the whole tier, through the only `hd:` record
-ref in the repo (`scripts/catalog/validate/sky-position-corpus.tsv`), and that
-row currently pins a KNOWN-WRONG value: § Which position to propagate from
-**above** is wrong about which epoch each position cell is stated at, and the
-shipped place is ~8.9 yr of this star's motion — 3.7″ — ahead of Gaia's.
-The corpus header carries the measurement; `stellata-3bsf.37` carries the fix.
+It is also the corpus pin for the whole tier, through the only `hd:` record ref
+in the repo (`scripts/catalog/validate/sky-position-corpus.tsv`). Being the
+tier's fastest mover is what makes it the row that pins § Which position to
+propagate from above: it lands 0.113″ from Gaia's own place on the J2000 epoch
+and 3.7″ away on the observation epochs.
 
 ## Provenance
 
