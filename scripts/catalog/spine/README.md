@@ -173,13 +173,22 @@ The spine is only worth freezing if it stands in for the build exactly, so
   gates must still read zero. The last one is what keeps the two events
   apart: a park is deliberate, a gate firing means a reference table moved
   under the snapshot.
+
+  These three read the ledger's **length**, not its rows. What pins the rows is
+  the reproduce-and-diff step on `data/athyg/parked_no_owned_parallax.tsv` in
+  the `build-catalog` job — `build:catalog` writes that file, so without the
+  diff a build parking a different star for the same total would land silently.
 - **Designation multiset**, against the built artifacts — the
   `catalogRecordDesignations` walk (`../../sid/catalog-designations.ts`,
   the same one `sid:allocate` resolves against the ledger) over every
   non-`FLAG_BINARY_COMPANION_ONLY` record must tally identically to
   `spineDesignations` over the committed TSV, **less the ledgered drops** and
   **replayed through `data/classic-ids/label_flips.tsv`**. Needs a built
-  catalogue, so it runs in the `build-catalog` job and locally. A ledger row
+  catalogue as well as a smudged spine, so it self-skips in the bare `test` job
+  and runs in **`tier-a-corpus`**, which downloads the artifacts — that job
+  names its suites one by one, so a suite absent from that list runs smudged
+  nowhere. It ran nowhere in CI until the ledgered drops made it load-bearing.
+  A ledger row
   is matched to its spine row on the whole five-cell identifier tuple
   (`tyc`/`hip`/`hd`/`gl`/`gaia_source_id`), which both files carry under those
   names — a park with no identifier at all is still named by the empty tuple,
