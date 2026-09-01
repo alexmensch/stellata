@@ -32,8 +32,8 @@ import {
   markPrimary,
   markPrimaryIfUnflagged,
   applyDoublesFlag,
+  hasGaiaQualityDistance,
   isOpticalDoublePrimary,
-  isGaiaQualityDist,
   OPTICAL_DOUBLE_MIN_SEP_PC,
   type OpticalDoubleStar,
   type OpticalDoubleContext,
@@ -96,7 +96,6 @@ import {
   parseGaiaSourceIdStr,
   parseSimbadWdsXidsTsv,
   isSiblingLetterAttribution,
-  BJ_ELIGIBLE_DIST_SRCS,
   DIST_SRC_BUCKETS,
   distSrcBucket,
   emptyDistSrcPartition,
@@ -809,15 +808,18 @@ describe('catalog-pure / markPrimaryIfUnflagged suppress hook', () => {
   });
 });
 
-describe('catalog-pure / isGaiaQualityDist', () => {
-  it('accepts Gaia inverse-parallax dist_src (G_R3, G_R2)', () => {
-    expect(isGaiaQualityDist('G_R3')).toBe(true);
-    expect(isGaiaQualityDist('G_R2')).toBe(true);
+describe('catalog-pure / hasGaiaQualityDistance', () => {
+  it('accepts the two tiers that rest on a Gaia parallax', () => {
+    expect(hasGaiaQualityDistance('gaia_dr3_inversion')).toBe(true);
+    expect(hasGaiaQualityDistance('bailer_jones')).toBe(true);
   });
-  it('rejects non-Gaia and null dist_src', () => {
-    expect(isGaiaQualityDist('HIP')).toBe(false);
-    expect(isGaiaQualityDist('GJ')).toBe(false);
-    expect(isGaiaQualityDist(null)).toBe(false);
+  it('rejects every tier resting on someone else\'s measurement', () => {
+    for (const via of [
+      'hip2_parallax', 'cns5_plx', 'gliese_plx', 'simbad_plx',
+      'pair_member_parallax', 'lmc_kinematic', 'curated', 'none',
+    ] as const) {
+      expect(hasGaiaQualityDistance(via), via).toBe(false);
+    }
   });
 });
 
@@ -1519,9 +1521,6 @@ describe('catalog-pure / dist_src partition', () => {
     expect([...DIST_SRC_BUCKETS]).toEqual([
       'G_R3', 'G_R2', 'HIP', 'GJ', 'N', 'OTHER', 'UNRECOGNISED',
     ]);
-    expect([...BJ_ELIGIBLE_DIST_SRCS].every(
-      (s) => (DIST_SRC_BUCKETS as readonly string[]).includes(s),
-    )).toBe(true);
   });
 
   it('buckets each AT-HYG dist_src under its own name', () => {

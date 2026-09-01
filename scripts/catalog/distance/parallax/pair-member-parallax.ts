@@ -6,7 +6,7 @@ import type { GaiaAstrometryCatalogRow } from '../direction-cascade';
 import type { MultiplesTsvRow } from '../../companions/companion-promotion';
 import { wdsRootOf } from '../../companions/companion-promotion';
 import { isCoherenceAnchorGrade } from '../../multiplicity/system-coherence';
-import { PARALLAX_SN_FLOOR } from './parallax-cascade';
+import { belowParallaxSnFloor, parallaxSignalToNoise } from './parallax-cascade';
 
 /** One sibling's parallax, with the DR3 source it was measured on. */
 export interface SiblingParallax {
@@ -34,8 +34,11 @@ export function emptyPairMemberParallaxIndex(): PairMemberParallaxIndex {
   };
 }
 
-function signalToNoise({ mas, errMas }: SiblingParallax): number {
-  return errMas !== null && errMas > 0 ? mas / errMas : 0;
+/** Sort key for "most precise sibling first". A sibling stating no error bar
+ *  clears the floor (`belowParallaxSnFloor`) but cannot be ranked against one
+ *  that does, so it sorts last rather than best. */
+function precisionRank(s: SiblingParallax): number {
+  return parallaxSignalToNoise(s.mas, s.errMas) ?? -Infinity;
 }
 
 /** Every source the sibling tier may read a parallax from — the pair-row half
@@ -99,8 +102,9 @@ export function buildPairMemberParallaxIndex(
       errMas: g.parallaxErrorMas,
     };
     // Below the floor the inversion is undefined, so such a sibling anchors
-    // nothing — the same bar the HIP2 tier applies to a record's own parallax.
-    if (signalToNoise(candidate) < PARALLAX_SN_FLOOR) continue;
+    // nothing — the same bar, from the same predicate, the HIP2 tier applies to
+    // a record's own parallax.
+    if (belowParallaxSnFloor(candidate.mas, candidate.errMas)) continue;
     let candidates = index.candidatesByRoot.get(root);
     if (candidates === undefined) {
       candidates = [];
@@ -110,7 +114,7 @@ export function buildPairMemberParallaxIndex(
     index.entryCount++;
   }
   for (const candidates of index.candidatesByRoot.values()) {
-    candidates.sort((a, b) => signalToNoise(b) - signalToNoise(a)
+    candidates.sort((a, b) => precisionRank(b) - precisionRank(a)
       || a.sourceId.localeCompare(b.sourceId));
   }
   return index;

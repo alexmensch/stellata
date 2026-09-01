@@ -89,8 +89,25 @@ function usable(plx: number | null): plx is number {
   return plx !== null && plx > 0;
 }
 
-function signalToNoise(plx: number, err: number | null): number | null {
+/** `plx / e_plx`, or null where the index publishes no usable error bar. */
+export function parallaxSignalToNoise(
+  plx: number, err: number | null,
+): number | null {
   return err !== null && err > 0 ? plx / err : null;
+}
+
+/** Whether `PARALLAX_SN_FLOOR` refuses this parallax — the single statement of
+ *  the rule, shared with the sibling index so the two cannot drift.
+ *
+ *  **An unstated error bar gets the benefit of the doubt.** The floor refuses a
+ *  parallax measured to be indistinguishable from zero, which is a claim about
+ *  a published error rather than about its absence; refusing on a missing one
+ *  would discard a value on no evidence. No row of any index this cascade reads
+ *  states a parallax without an error today, so the rule is a contract for the
+ *  next re-pull rather than a live branch. */
+export function belowParallaxSnFloor(plx: number, err: number | null): boolean {
+  const sn = parallaxSignalToNoise(plx, err);
+  return sn !== null && sn < PARALLAX_SN_FLOOR;
 }
 
 /** The parallax a record's distance inverts, resolved through the § 5 cascade.
@@ -131,15 +148,15 @@ export function resolveParallax(
 
   if (gaia !== null && usable(gaia.parallaxMas)) {
     return hit(gaia.parallaxMas, 'gaia_dr3_inversion',
-      signalToNoise(gaia.parallaxMas, gaia.parallaxErrorMas));
+      parallaxSignalToNoise(gaia.parallaxMas, gaia.parallaxErrorMas));
   }
 
   let refused = false;
   let hip2Refused = false;
   if (hip2 !== null && usable(hip2.plxMas)) {
-    const sn = signalToNoise(hip2.plxMas, hip2.plxErrorMas);
-    if (sn === null || sn >= PARALLAX_SN_FLOOR) {
-      return hit(hip2.plxMas, 'hip2_parallax', sn);
+    if (!belowParallaxSnFloor(hip2.plxMas, hip2.plxErrorMas)) {
+      return hit(hip2.plxMas, 'hip2_parallax',
+        parallaxSignalToNoise(hip2.plxMas, hip2.plxErrorMas));
     }
     hip2Refused = true;
     refused = true;
@@ -147,21 +164,23 @@ export function resolveParallax(
 
   if (cns5 !== null && usable(cns5.mas)) {
     if (!(gaiaIs2p && isGaiaCatalogueBibcode(cns5.bibcode))) {
-      return hit(cns5.mas, 'cns5_plx', signalToNoise(cns5.mas, cns5.errMas));
+      return hit(cns5.mas, 'cns5_plx',
+        parallaxSignalToNoise(cns5.mas, cns5.errMas));
     }
     refused = true;
   }
 
   if (gliese !== null && usable(gliese.plxMas)) {
     return hit(gliese.plxMas, 'gliese_plx',
-      signalToNoise(gliese.plxMas, gliese.plxErrMas));
+      parallaxSignalToNoise(gliese.plxMas, gliese.plxErrMas));
   }
 
   if (simbad !== null && usable(simbad.mas)) {
     const laundered = (gaiaIs2p && isGaiaCatalogueBibcode(simbad.bibcode))
       || (hip2Refused && isHipparcos2Bibcode(simbad.bibcode));
     if (!laundered) {
-      return hit(simbad.mas, 'simbad_plx', signalToNoise(simbad.mas, simbad.errMas));
+      return hit(simbad.mas, 'simbad_plx',
+        parallaxSignalToNoise(simbad.mas, simbad.errMas));
     }
     refused = true;
   }
@@ -174,7 +193,7 @@ export function resolveParallax(
   // star's own; above `none` because the alternative is no record at all.
   if (pairMember !== null) {
     return hit(pairMember.mas, 'pair_member_parallax',
-      signalToNoise(pairMember.mas, pairMember.errMas));
+      parallaxSignalToNoise(pairMember.mas, pairMember.errMas));
   }
 
   // Sol carries no identifier any tier keys on, and its distance is zero rather

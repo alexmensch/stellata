@@ -1186,15 +1186,6 @@ export interface OpticalDoubleContext {
   minSepPc: number;
 }
 
-// A star's distance is Gaia-quality — a Gaia DR3 parallax or its
-// Bailer-Jones posterior — iff its AT-HYG dist_src marks the distance as a
-// Gaia inverse-parallax (the final distance is then G_R3 or the BJ
-// override). Same set as B-J eligibility: both mean "Gaia-anchored". Only
-// such distances are trusted for the 3D-separation optical test.
-export function isGaiaQualityDist(distSrc: string | null): boolean {
-  return distSrc !== null && BJ_ELIGIBLE_DIST_SRCS.has(distSrc);
-}
-
 // True when a CCDM group's picked primary should NOT be winged: it's an
 // optical double with no independent physical evidence. See
 // scripts/catalog/README.md § CCDM double-star cross-match.
@@ -1330,21 +1321,12 @@ export function inferBinaries(
 
 // ---- Bailer-Jones (DR3) distance override -------------------------------
 
-// AT-HYG `dist_src` values whose underlying distance is a Gaia
-// inverse-parallax estimate. Only these rows are eligible for the
-// Bailer-Jones override — for low-S/N Gaia parallaxes the inverse is
-// catastrophic and B-J's posterior is the principled replacement.
-// Rows whose dist_src is HIP / GJ / N / OTHER already carry a
-// non-Gaia parallax or canonical distance; overriding them with B-J
-// regresses them onto B-J's Galactic-density prior tail (~10–40 kpc
-// at mid-latitudes), which is a strict loss of information.
+// The three `dist_src` values AT-HYG's vocabulary names below. They survive as
+// bucket labels for the per-layer outcome partition, never as a gate: which
+// parallax a record carries is `distVia`, which this build resolves first-hand.
 export const DIST_SRC_GAIA_DR3 = 'G_R3';
 export const DIST_SRC_GAIA_DR2 = 'G_R2';
 export const DIST_SRC_HIP = 'HIP';
-
-export const BJ_ELIGIBLE_DIST_SRCS: ReadonlySet<string> = new Set([
-  DIST_SRC_GAIA_DR3, DIST_SRC_GAIA_DR2,
-]);
 
 /** AT-HYG's `dist_src` vocabulary, plus an `UNRECOGNISED` catch-all for a
  *  value the column has never carried. Every distance-override layer states

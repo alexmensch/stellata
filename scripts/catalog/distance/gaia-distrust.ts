@@ -28,18 +28,16 @@ export function gaiaRowIs2p(row: GaiaAstrometryCatalogRow | null): boolean {
 // SIMBAD cites the VizieR table, CNS5 the paper (45 of its parallaxes and 45 of
 // its motions read `2018A&A...616A...1G`), so a set holding only one form lets
 // the other walk a withdrawn Gaia value straight back into a cascade.
+//
+// DR1/TGAS (`2016A&A...595A...1G`, `2016A&A...595A...2G`) is deliberately
+// absent. Its astrometry is a JOINT solution over Gaia and the
+// Hipparcos/Tycho-2 positions, not a Gaia-only reduction, so a value citing it
+// is not the same fit returning — it is a different measurement with a ~24-yr
+// baseline this build has no other route to.
 const GAIA_CATALOGUE_BIBCODES: ReadonlySet<string> = new Set([
   '2018yCat.1345....0G', '2018A&A...616A...1G',
   '2020yCat.1350....0G', '2021A&A...649A...1G',
   '2022yCat.1355....0G', '2023A&A...674A...1G',
-]);
-
-// DR1/TGAS is deliberately absent. Its astrometry is a JOINT solution over Gaia
-// and the Hipparcos/Tycho-2 positions, not a Gaia-only reduction, so a value
-// citing it is not the same fit returning — it is a different measurement with
-// a ~24-yr baseline this build has no other route to.
-const GAIA_DR1_TGAS_BIBCODES: ReadonlySet<string> = new Set([
-  '2016A&A...595A...1G', '2016A&A...595A...2G',
 ]);
 
 /** Whether a bibcode names a Gaia catalogue release rather than the
@@ -64,11 +62,4 @@ export function isGaiaCatalogueBibcode(bibcode: string): boolean {
  *  refusal was based on — measured at 574 records, matching to the digit. */
 export function isHipparcos2Bibcode(bibcode: string | null): boolean {
   return bibcode === '2007A&A...474..653V';
-}
-
-/** Whether a Gaia bibcode belongs to DR1/TGAS, whose joint Gaia+Tycho solution
- *  the skip rule deliberately does not refuse. Exported so a pull can count what
- *  it is keeping rather than leaving the exemption invisible. */
-export function isGaiaDr1TgasBibcode(bibcode: string | null): boolean {
-  return bibcode !== null && GAIA_DR1_TGAS_BIBCODES.has(bibcode);
 }
