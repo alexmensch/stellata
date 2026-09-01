@@ -172,14 +172,48 @@ describe('classic-ids-parse / cns5AstrometryByGj', () => {
     for (const letter of 'ABCD') {
       expect(index.get(`423${letter}`)?.raDeg).toBe(10);
     }
-    expect(index.get('423')?.raDeg).toBe(10);
   });
 
-  it('keeps the first write on a repeated key rather than throwing', () => {
+  // A per-letter alias must never displace a row naming that component
+  // outright, or a blend entry would shadow the resolved component's own
+  // position. Same precedence parseGlieseTsv gives its derived keys.
+  it('prefers an exact component row over a combined row aliasing onto it', () => {
     const index = cns5AstrometryByGj([
+      cns5Row({ cns5: 1, gj: '800', gjComp: 'AB', astrometry }),
+      cns5Row({
+        cns5: 2, gj: '800', gjComp: 'A', astrometry: { ...astrometry, raDeg: 11 },
+      }),
+    ]);
+    expect(index.get('800A')?.raDeg).toBe(11);
+    expect(index.get('800B')?.raDeg).toBe(10);
+  });
+
+  it('throws on a repeated exact key rather than picking a winner', () => {
+    expect(() => cns5AstrometryByGj([
       cns5Row({ cns5: 1, gj: '42', astrometry }),
       cns5Row({ cns5: 2, gj: '42.0', astrometry: { ...astrometry, raDeg: 11 } }),
+    ])).toThrow(/two rows keyed gj=42/);
+  });
+
+  // A position and a proper motion belong to one component. 278 bare GJ
+  // numbers in the committed table are claimed by two or more rows, 45 of them
+  // stating parallaxes more than 1% apart (worst: GJ 428 at 17.4%), and the
+  // tier BELOW this one resolves per object — so a bare cell must miss here
+  // rather than be answered with whichever component the file lists first.
+  it('leaves a bare number unresolved where only components are catalogued', () => {
+    const index = cns5AstrometryByGj([
+      cns5Row({ cns5: 1, gj: '1294', gjComp: 'A', astrometry }),
+      cns5Row({
+        cns5: 2, gj: '1294', gjComp: 'B', astrometry: { ...astrometry, raDeg: 11 },
+      }),
     ]);
-    expect(index.get('42')?.raDeg).toBe(10);
+    expect(index.get('1294A')?.raDeg).toBe(10);
+    expect(index.get('1294B')?.raDeg).toBe(11);
+    expect(index.get('1294')).toBeUndefined();
+  });
+
+  it('still keys a component-less row on its bare number', () => {
+    const index = cns5AstrometryByGj([cns5Row({ gj: '551', astrometry })]);
+    expect(index.get('551')?.raDeg).toBe(10);
   });
 });

@@ -185,23 +185,38 @@ export function parseCns5Tsv(text: string): Cns5Row[] {
  *  — and CNS5's own `165.0` — meet as one key, the same reduction the SIMBAD
  *  ladder's GJ namespace uses. The component letter is part of the key because
  *  a GJ number carries one, so this names the component rather than the system.
- *  First write wins: CNS5 is keyed on its own `cns5` number and two rows
- *  sharing a GJ number are the same star's components, whose letters keep them
- *  apart anyway.
+ *  Exact `number+comp` keys are laid down first and a repeat throws, as it does
+ *  in every other index over a committed table here: two rows claiming one
+ *  component is an upstream change rather than a binding to arbitrate silently.
  *
  *  **`gj_comp` states the letters COMBINED, not one per row** — Gl 423 reads
  *  `ABCD` on a single entry — so the exact key alone reaches no record, whose
  *  own cell names one component (`Gl 423A`). Each letter therefore aliases onto
- *  its row, and the bare number closes the fold. Both are the same reduction
- *  `parseGlieseTsv` performs on V/70A's `comp`, and both name a value measured
- *  for the system: for a parallax that is exact rather than approximate, since
- *  a bound pair's components share a distance. */
+ *  its row, never displacing an exact key, which is the same two-pass reduction
+ *  `parseGlieseTsv` performs on V/70A's `comp`.
+ *
+ *  **Unlike V/70A's, this index carries NO bare-number fold**, and the
+ *  difference is what the two tiers serve rather than an oversight. A V read off
+ *  a system entry is a blend and advertises itself as one; a parallax read off
+ *  it is a distance the components share. A POSITION and a PROPER MOTION are
+ *  neither — they belong to one component, and the tier below this one (SIMBAD)
+ *  resolves per object, so answering a bare `Gl 1294` with whichever component
+ *  the file lists first would swap a per-object measurement for a sibling's
+ *  from a HIGHER tier. Where lending a bound sibling's parallax is right, the
+ *  cascade has a tier for it, gated on anchor-grade quality
+ *  (`../distance/parallax/pair-member-parallax.ts`) rather than on file order. */
 export function cns5AstrometryByGj(rows: readonly Cns5Row[]): Map<string, Cns5Astrometry> {
   const out = new Map<string, Cns5Astrometry>();
   for (const row of rows) {
     if (row.astrometry === null) continue;
     const key = normaliseGjKey(`${row.gj}${row.gjComp ?? ''}`);
-    if (key !== null && !out.has(key)) out.set(key, row.astrometry);
+    if (key === null) continue;
+    if (out.has(key)) {
+      throw new Error(
+        `data/classic-ids/cns5.tsv has two rows keyed gj=${key}. ${REFRESH_CLASSIC_IDS}`,
+      );
+    }
+    out.set(key, row.astrometry);
   }
   for (const row of rows) {
     if (row.astrometry === null) continue;
@@ -211,7 +226,6 @@ export function cns5AstrometryByGj(rows: readonly Cns5Row[]): Map<string, Cns5As
       const alias = `${bare}${letter}`.toUpperCase();
       if (!out.has(alias)) out.set(alias, row.astrometry);
     }
-    if (!out.has(bare)) out.set(bare, row.astrometry);
   }
   return out;
 }
