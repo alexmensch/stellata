@@ -399,6 +399,12 @@ export interface BuildCounts extends LabelMergeCounts {
   distCns5Plx: number;
   distGliesePlx: number;
   distSimbadPlx: number;
+  /** Records placed by a V/70A photometric or spectroscopic parallax — a
+   *  distance from colour and spectral type rather than astrometry, which is
+   *  why it is its own tier below every bibcoded measurement of the star and
+   *  why it is counted apart. Ratchet DOWN: each of these is a record waiting
+   *  for someone to measure its parallax. */
+  distGliesePhotometricPlx: number;
   distPairMemberParallax: number;
   distCurated: number;
   distNone: number;

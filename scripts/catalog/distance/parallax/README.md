@@ -45,8 +45,36 @@ unless an override layer replaces it. Counts pin as `dist*`.
 | `gliese_plx` | its own GJ in V/70A | |
 | `simbad_plx` | bibcoded, neither skip rule firing | |
 | `pair_member_parallax` | a bound sibling's clean DR3 fit | |
+| `gliese_photometric_plx` | V/70A's colour/spectral estimate — not astrometry | 14 |
 | `curated` | Sol alone | 1 |
 | `none` | — | § 6 ledger drop |
+
+**V/70A appears twice, and the order is the whole point.** Its resulting
+parallax is trigonometric on about half its rows and a photometric or
+spectroscopic estimate on the rest (`data/gliese/README.md` § The parallax is
+half the column), so the two ship as separate tiers: the measurement above
+SIMBAD, the estimate at the bottom of the cascade. Reading the column
+unconditionally put an estimate above every bibcoded measurement of the star
+itself, which is what Gl 92.1 / HD 14039 measured — 41.0 mas under `n_plx=r`
+inverted to **24.390 pc**, against SIMBAD's bibcoded 29.9357 ± 0.1389 (S/N 216)
+at **33.405 pc**, ~27% further out. 21 records moved onto a real parallax that
+way. `distGliesePhotometricPlx` ratchets DOWN: each of its 14 is a record
+waiting for someone to measure its parallax.
+
+The estimate sits below even the bound-sibling tier, which is the only place the
+ranking is not obvious. A sibling's fit measures a *different* star — but it
+measures one, at this distance, and a colour-magnitude estimate measures
+nothing. It is also **circular** here in a way no other tier is: a distance
+derived from colour and spectral type, inverted, then used to derive the
+record's own absolute magnitude, assumes the answer.
+
+ξ UMa (Gl 423 A/B, V 4.33/4.80) is what the bottom tier keeps, and it is kept
+rather than parked because nothing else reaches it: Gaia fitted position only
+for both components, HIP 55203 is absent from HIP2 as orbit-corrupted, and CNS5
+and SIMBAD both serve the withdrawn DR2 parallax the skip rule refuses. Its
+distance is V/70A's 96.0 mas — 10.4167 pc, which is also what the printed cell
+said, `dist_src=GJ` having been a transcription of this catalogue all along.
+`distVia` is now what says so out loud.
 
 Most `gaia_dr3_inversion` rows are then superseded by `bailer_jones`, which is
 counted in its place rather than alongside it, so the two never double-count.
@@ -115,13 +143,28 @@ failures, which is why the tighter one does not gate:
 - **Between 1 and 5** the inversion is biased (the ~20% fractional-error bound;
   Bailer-Jones 2015) but still carries information. These rows have no second
   source, so refusing would cost each its record rather than its precision.
-  They ship, counted as `distHip2LowPrecision`.
+  They ship, counted as `distLowPrecisionParallax`.
 
 That count is the whole mechanism keeping the low-precision population visible
 for a Gaia DR4 revisit. It is deliberately a count and not a committed list: the
-set is one predicate away — `plx / e_plx < PARALLAX_LOW_PRECISION_SN` over the
-`hip2_parallax` tier — and a derived file would drift against a HIP2 refresh
-while reading as authoritative.
+set is one predicate away — `plx / e_plx < PARALLAX_LOW_PRECISION_SN` over every
+tier the count covers — and a derived file would drift against a refresh while
+reading as authoritative.
+
+**It counts the SHIPPED tier, so Bailer-Jones rows are out of it**: where the
+posterior supersedes the inversion, the posterior is what handles a low-S/N
+parallax, and flagging those rows would report a bias the record does not carry.
+The LMC snap replaces the distance outright, likewise. Every other tier is in.
+
+**The floor gates HIP2 and the sibling index, and nothing else needs it.** That
+is not a scope decision so much as a measurement: no row of any other index this
+cascade reads states a parallax below S/N 1 — CNS5 0 of 5,908, Gliese 0 of the
+1,904 trigonometric rows it admits. The Gaia tier is deliberately ungated even
+so, because B-J's posterior sits above it for exactly the low-S/N case (47 rows
+of the astrometry table are sub-floor); a gate there would strip a record of
+B-J eligibility and park it despite a posterior existing for it. SIMBAD's index
+holds 53 sub-floor rows catalogue-wide, few of them reachable on a tier only 93
+records take. Extending the floor to every tier is the available override.
 
 ## The skip rules — one principle, two publications
 
@@ -152,11 +195,11 @@ which carries no tier. Without it 93 records would report a residual of zero
 against the parallax they were derived from and bias the metric toward
 agreement that was never measured.
 
-Gliese `V/70A` is subject to neither: its parallaxes are ground-based
-trigonometric astrometry predating both instruments, so no later reduction
-stands behind them to withdraw. That is also what makes it the tier that keeps
-44 Boötis (Gl 423 A/B, V 4.33/4.80 at 10.4 pc) — CNS5 holds a parallax for the
-pair, cites Gaia DR2, and is refused.
+Gliese `V/70A` is subject to neither, for two different reasons — which is why
+it is two tiers rather than one (§ The cascade). Its **trigonometric** parallaxes
+predate both instruments, so no later reduction stands behind them to withdraw.
+Its photometric and spectroscopic ones are not measurements at all, so there is
+nothing to withdraw either; that same fact is what ranks them last.
 
 **Both indices cite Gaia by two different forms** and `../gaia-distrust.ts`
 must hold both: SIMBAD names the VizieR table (`2018yCat.1345....0G`), CNS5 the
@@ -218,3 +261,19 @@ row for: `astrometry_via` is `system_inherited` 65 and `hip2_long_baseline` 61,
 and `gaia_5p` **zero** — not one of them has an independent per-component fit
 behind it, so there is no case where promotion supplies an owned distance. The
 refusal is counted as `companionDroppedParkedRecord`.
+
+**Most rows it refuses are the parked primary's siblings, not the parked record
+arriving twice.** Stage 2/3 bind one blended source to every component row of a
+sub-arcsec pair (§ The cascade, on why the sibling index dedups on exactly
+this), so the parked primary's `gaia_source_id` and HIP sit on its siblings'
+rows too, and those rows state the same refused distance. WDS 01425+5000 is the
+shape: comp A and comp B both read HIP 7979 / source 405578335904111744.
+
+That is why the refusal runs **before** companion promotion's HIP and Gaia
+inheritance gates rather than after. Those gates exist to strip an id a
+component only borrowed, minting `synth-<wds_id>-<comp>` in its place — so a
+sibling reaching them would ship as `synth-01425+5000-B` at exactly the
+distance the cascade threw out, with no id left to recognise it by. Each such
+row is a **presence event** in the SID ledger naming DR4 as the reinstating
+event, never a dissolution: the pair is unchanged, only its placement is
+unavailable (`data/sid/retirements.tsv`).

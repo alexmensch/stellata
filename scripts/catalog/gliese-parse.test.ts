@@ -111,32 +111,30 @@ describe('parseGlieseTsv', () => {
 // estimate. Inverting one of those and then deriving the record's own absolute
 // magnitude from the result assumes the answer, so the parser must not
 // represent it at all. data/gliese/README.md § The parallax is half the column.
-describe('parseGlieseTsv / only the trigonometric parallax is representable', () => {
-  it('carries the resulting parallax and its error where n_plx is blank', () => {
+describe('parseGlieseTsv / the parallax carries which kind it is', () => {
+  it('marks a blank n_plx trigonometric — the catalogue saying its resulting '
+    + 'parallax IS the trigonometric one', () => {
     const index = parseGlieseTsv(tsv(plxRow('Gl 559', '749.0', '4.7', '', '749.0')));
-    const r = lookupGliese(index, 'Gl 559')!;
-    expect(r.plxMas).toBe(749.0);
-    expect(r.plxErrMas).toBe(4.7);
+    expect(lookupGliese(index, 'Gl 559')?.parallax).toEqual({
+      mas: 749.0, errMas: 4.7, trigonometric: true,
+    });
   });
 
-  it('nulls BOTH cells on every non-trigonometric code, so no consumer can '
-    + 'reach an estimate and no floor can be fooled by a bare value', () => {
+  it('marks every code the column carries NOT trigonometric, since each names '
+    + 'a photometric or spectroscopic estimate', () => {
     // r spectral-type/colour · w white-dwarf photometric · s and o Strömgren
     // · p other colours. Gl 423 (ξ UMa) is the real `r` row: resulting 96.0
     // against its own trigonometric 130.5.
     for (const code of ['r', 'w', 's', 'o', 'p']) {
       const index = parseGlieseTsv(tsv(plxRow('Gl 423', '96.0', '13.0', code, '130.5')));
-      const r = lookupGliese(index, 'Gl 423')!;
-      expect(r.plxMas, `n_plx=${code}`).toBeNull();
-      expect(r.plxErrMas, `n_plx=${code}`).toBeNull();
+      expect(lookupGliese(index, 'Gl 423')?.parallax, `n_plx=${code}`).toEqual({
+        mas: 96.0, errMas: 13.0, trigonometric: false,
+      });
     }
   });
 
-  it('keeps V and colour on a row whose parallax it refuses — the V cascade '
-    + 'reads this tier independently of the distance one', () => {
-    const index = parseGlieseTsv(tsv(plxRow('Gl 423', '96.0', '13.0', 'r')));
-    const r = lookupGliese(index, 'Gl 423')!;
-    expect(r.vMag).toBe(9.9);
-    expect(r.plxMas).toBeNull();
+  it('leaves the whole quantity null where no parallax is printed', () => {
+    const index = parseGlieseTsv(tsv(plxRow('Gl 700', '', '', '')));
+    expect(lookupGliese(index, 'Gl 700')?.parallax).toBeNull();
   });
 });

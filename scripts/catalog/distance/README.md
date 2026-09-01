@@ -5,7 +5,9 @@ distance-override stack that refines AT-HYG's parallax-inverted distances.
 The authoring discipline for adding an override layer is the load-bearing
 part of this file — read it before touching the stack.
 
-The space-motion velocity's two fall-back cascades have their own subfolders:
+Three subfolders carry their own cascade and their own README: `parallax/`,
+which owns the measured parallax every distance inverts and is where this
+stack's input comes from, plus the space-motion velocity's two fall-backs,
 `radial-velocity/` and `pm-rescue/`. This one owns the assembly, and the
 proper motion each direction tier supplies alongside its own position.
 
@@ -27,6 +29,13 @@ scripts/catalog/distance/
                                   condition both skip rules gate on, and reads
                                   a record with no Gaia row as NOT 2p — there
                                   is no fit behind it to distrust.
+  parallax/                       The measured parallax every distance inverts
+                                  — the cascade, its two precision constants,
+                                  the bound-sibling index, and the two ledgers
+                                  the build commits (§ 6.1 parked rows and the
+                                  SIMBAD-sourced exclusion list). Its own
+                                  README; this file's override stack sits above
+                                  it.
   pm-rescue/                      The proper motion for a row whose direction
                                   tier carries none, carrying both the velocity
                                   and that tier's epoch advance. Its own README.
@@ -334,12 +343,18 @@ al. 2021 (CDS I/352). The pipeline:
    numeric parse would silently corrupt the join. Photogeometric
    `r_med_photogeo` is preferred; `r_med_geo` is the fallback when
    photogeo is absent.
-2. During `readStars`, every AT-HYG row with a non-empty `gaia`
-   source_id AND `dist_src ∈ {G_R3, G_R2}` is looked up in the map.
-   The eligibility predicate `isBailerJonesEligible` is the single
-   gate; rows with `dist_src ∈ {HIP, GJ, N, OTHER}` are excluded
-   deliberately (their distances are non-Gaia parallaxes B-J would
-   silently regress onto its Galactic prior tail).
+2. During `readStars`, every row with a non-empty `gaia` source_id
+   whose parallax cascade resolved `gaia_dr3_inversion` is looked up
+   in the map. The eligibility predicate `isBailerJonesEligible` is
+   the single gate, and it reads the **resolved tier** — a record
+   whose distance rests on Hipparcos, CNS5, Gliese, SIMBAD or a bound
+   sibling is excluded deliberately, since B-J publishes a posterior
+   over a *Gaia* parallax and applying it elsewhere discards a
+   measurement for one computed from a different, worse one (the
+   Galactic prior tail, ~10–40 kpc). It used to gate on the spine's
+   `dist_src` cell instead — an AT-HYG editorial value standing in for
+   the question — which is what § Multi-layer distance refinement
+   means by the gate having moved with the printed cell.
 3. On a hit, `applyBailerJonesOverride` returns
    `{ dist, absmag }` with `absmag = mag − 5·log₁₀(dist / 10)`.
 4. The override fires for ~99.5% of Gaia-DR3-bearing AT-HYG rows.

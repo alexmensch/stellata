@@ -20,6 +20,7 @@ export const DIST_VIA_VALUES = [
   'gliese_plx',
   'simbad_plx',
   'pair_member_parallax',
+  'gliese_photometric_plx',
   'curated',
   'none',
 ] as const;
@@ -38,6 +39,7 @@ export const DIST_VIA_COUNT_KEY = {
   gliese_plx: 'distGliesePlx',
   simbad_plx: 'distSimbadPlx',
   pair_member_parallax: 'distPairMemberParallax',
+  gliese_photometric_plx: 'distGliesePhotometricPlx',
   curated: 'distCurated',
   none: 'distNone',
 } as const satisfies Record<DistVia, string>;
@@ -46,7 +48,7 @@ export const DIST_VIA_COUNT_KEY = {
  *  unbounded above and carries no distance at all — a different failure from
  *  imprecision, which is why this is the gate rather than the ~20% bound that
  *  governs how BIASED an inversion is (Bailer-Jones 2015). Rows between the two
- *  ship, counted as `distHip2LowPrecision`.
+ *  ship, counted as `distLowPrecisionParallax`.
  *
  *  Ungated, re-keying this tier off the spine's editorial `dist_src` puts 19
  *  rows past 1,000 pc and one at 25,000 pc off a parallax of S/N 0.11 — the
@@ -128,10 +130,13 @@ export function belowParallaxSnFloor(plx: number, err: number | null): boolean {
  *     SIMBAD's parallax usually IS van Leeuwen's, so without this the floor
  *     refuses a value and re-admits the same number without its error bar.
  *
- *  Gliese V/70A needs neither, and its parser is what earns the exemption: only
- *  the trigonometric half of V/70A's resulting-parallax column is represented,
- *  so what reaches this tier predates both instruments and no later reduction
- *  stands behind it to withdraw. */
+ *  Gliese V/70A is subject to neither, for two different reasons, which is why
+ *  it is TWO tiers on either side of SIMBAD. Its trigonometric parallaxes
+ *  predate both instruments, so no later reduction stands behind them to
+ *  withdraw. Its photometric and spectroscopic ones are not measurements at
+ *  all, so there is nothing to withdraw either — but for the same reason they
+ *  rank below a bibcoded parallax of the star itself, and below is where the
+ *  cascade puts them. `GlieseParallax.trigonometric` is the split. */
 export function resolveParallax(
   { gaia, hip2, cns5, gliese, simbad, pairMember }: ParallaxSources,
   gaiaIs2p: boolean,
@@ -145,6 +150,18 @@ export function resolveParallax(
     lowPrecision: sn !== null && sn < PARALLAX_LOW_PRECISION_SN,
     refused: false,
   });
+
+  /** V/70A's two tiers differ only in which kind of parallax they take, so one
+   *  form serves both and the cascade order below states the ranking. */
+  const glieseHit = (
+    trigonometric: boolean, via: DistVia,
+  ): ParallaxResolution | null => {
+    const p = gliese?.parallax ?? null;
+    if (p === null || p.trigonometric !== trigonometric || !usable(p.mas)) {
+      return null;
+    }
+    return hit(p.mas, via, parallaxSignalToNoise(p.mas, p.errMas));
+  };
 
   if (gaia !== null && usable(gaia.parallaxMas)) {
     return hit(gaia.parallaxMas, 'gaia_dr3_inversion',
@@ -170,10 +187,8 @@ export function resolveParallax(
     refused = true;
   }
 
-  if (gliese !== null && usable(gliese.plxMas)) {
-    return hit(gliese.plxMas, 'gliese_plx',
-      parallaxSignalToNoise(gliese.plxMas, gliese.plxErrMas));
-  }
+  const trigonometric = glieseHit(true, 'gliese_plx');
+  if (trigonometric !== null) return trigonometric;
 
   if (simbad !== null && usable(simbad.mas)) {
     const laundered = (gaiaIs2p && isGaiaCatalogueBibcode(simbad.bibcode))
@@ -190,11 +205,22 @@ export function resolveParallax(
   // itself survived — the claim applySystemDistanceCoherence already ships
   // catalogue-wide, reaching one tier further down. Below the second-order
   // indices because it lends a neighbour's measurement rather than serving this
-  // star's own; above `none` because the alternative is no record at all.
+  // star's own.
   if (pairMember !== null) {
     return hit(pairMember.mas, 'pair_member_parallax',
       parallaxSignalToNoise(pairMember.mas, pairMember.errMas));
   }
+
+  // V/70A's photometric and spectroscopic parallaxes: a distance from colour and
+  // spectral type, which is circular for a build that then derives the record's
+  // own absolute magnitude from it. The bottom tier because it is the only one
+  // that is not a parallax measurement of anything — even a bound sibling's fit
+  // outranks it, being a measurement of a star at this distance. Above `none`
+  // only because the alternative is no record: xi UMa (Gl 423 A/B, V 4.33/4.80)
+  // is what sits here, its Gaia rows position-only, HIP 55203 absent from HIP2,
+  // and its CNS5 and SIMBAD parallaxes both withdrawn DR2 fits.
+  const photometric = glieseHit(false, 'gliese_photometric_plx');
+  if (photometric !== null) return photometric;
 
   // Sol carries no identifier any tier keys on, and its distance is zero rather
   // than a parallax — the same curated exit the direction and V cascades take.

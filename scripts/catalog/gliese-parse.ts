@@ -12,6 +12,22 @@ const COLUMNS = [
   'name', 'comp', 'vmag', 'bv', 'sp', 'plx_mas', 'e_plx_mas', 'n_plx',
 ] as const;
 
+/** V/70A's resulting parallax, carrying which KIND of parallax it is.
+ *
+ *  `trigonometric` is `n_plx` blank — the catalogue stating that its resulting
+ *  parallax is the trigonometric one. Every code the column carries (`r` `w`
+ *  `s` `o` `p`) names a photometric or spectroscopic estimate instead, and the
+ *  split is close to even over the catalogue. The flag travels with the value
+ *  because the two are separate tiers of the parallax cascade sitting on either
+ *  side of SIMBAD, so a consumer that ignored it would silently invert an
+ *  estimate as though it were a measurement — see
+ *  `data/gliese/README.md` § The parallax is half the column. */
+export interface GlieseParallax {
+  mas: number;
+  errMas: number | null;
+  trigonometric: boolean;
+}
+
 export interface GlieseRow {
   /** The catalogue entry's own name, prefix included (`Gl 559`, `NN 3417`). */
   name: string;
@@ -20,13 +36,7 @@ export interface GlieseRow {
   vMag: number | null;
   bMinusV: number | null;
   spectral: string | null;
-  /** V/70A's resulting parallax, represented ONLY where that value is the
-   *  trigonometric one — half the catalogue's is not, and a photometric
-   *  parallax may not serve a distance here (§ The parallax is half the
-   *  column in data/gliese/README.md). Null on every other row, so no
-   *  consumer can reach an estimate it would then invert. */
-  plxMas: number | null;
-  plxErrMas: number | null;
+  parallax: GlieseParallax | null;
 }
 
 export interface GlieseIndex {
@@ -66,18 +76,21 @@ export function parseGlieseTsv(text: string): GlieseIndex {
     const comp = (cells[idx.comp] ?? '').trim();
     const key = catalogueKey(name, comp);
     if (key === null) continue;
-    // A blank `n_plx` is V/70A stating that its resulting parallax IS the
-    // trigonometric one; every code the column carries names a photometric or
-    // spectroscopic estimate instead.
-    const trigonometric = nonEmpty(cells[idx.n_plx]) === null;
+    const plxMas = parseFloatOrNull(cells[idx.plx_mas]);
     const row: GlieseRow = {
       name,
       comp,
       vMag: parseFloatOrNull(cells[idx.vmag]),
       bMinusV: parseFloatOrNull(cells[idx.bv]),
       spectral: nonEmpty(cells[idx.sp]),
-      plxMas: trigonometric ? parseFloatOrNull(cells[idx.plx_mas]) : null,
-      plxErrMas: trigonometric ? parseFloatOrNull(cells[idx.e_plx_mas]) : null,
+      parallax: plxMas === null ? null : {
+        mas: plxMas,
+        errMas: parseFloatOrNull(cells[idx.e_plx_mas]),
+        // A blank `n_plx` is V/70A stating that its resulting parallax IS the
+        // trigonometric one; every code the column carries names a photometric
+        // or spectroscopic estimate.
+        trigonometric: nonEmpty(cells[idx.n_plx]) === null,
+      },
     };
     if (index.byKey.has(key)) {
       throw new Error(`${FILE_LABEL} has two rows keyed ${key}. ${REFRESH_HINT}`);

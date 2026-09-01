@@ -133,6 +133,7 @@ function baseCounts(): BuildCounts {
     distHip2Parallax: 0,
     distCns5Plx: 0,
     distGliesePlx: 0,
+    distGliesePhotometricPlx: 0,
     distSimbadPlx: 0,
     distPairMemberParallax: 0,
     distCurated: 0,

@@ -86,20 +86,13 @@ Per-row gates and resolution:
   strips it rather than colliding with the primary in every
   gaia-keyed lookup, and build-runtime-binaries retries the
   synth key when its id-first resolve degenerates.
-- **Parked-record refusal.** A row carrying an identifier of a record the
-  distance cascade parked never promotes: its stated distance inverts the
-  parallax a tier above refused (σ Ori Aa's 328.947368 pc is 3.0400000 mas, the
-  refused HIP2 value to 8 sig figs), so promoting launders a refusal. Counted
-  `companionDroppedParkedRecord`.
-  **Most rows it catches are the parked primary's siblings, not the parked
-  record**: Stage 2/3 bind one blended source to every component of a
-  sub-arcsec pair, so the primary's id sits on its siblings' rows too and they
-  state the same refused distance. WDS 01425+5000 is the shape — comp A and
-  comp B both read HIP 7979 / source 405578335904111744. **It runs before the
-  HIP and Gaia inheritance gates** for that reason: left later, those gates
-  strip the borrowed ids and mint `synth-01425+5000-B` at exactly the refused
-  distance. Each such row is a presence event in the SID ledger naming DR4 as
-  the reinstating event, never a dissolution — the pair is unchanged.
+- **Parked-record refusal.** A row carrying a parked record's identifier never
+  promotes — its stated distance inverts the parallax a tier above refused.
+  Mostly the parked primary's SIBLINGS, which inherit its blended id, so this
+  runs **before** the inheritance gates below: those would strip the borrowed
+  id and mint a synth record at that same refused distance. Counted
+  `companionDroppedParkedRecord`; argument and worked case in
+  `../distance/parallax/README.md` § Companion promotion.
 - **Cursor-primary anchor.** findExistingPrimary walks gaia →
   hip → proper name (position-guarded, for GJ-only AT-HYG rows
   carrying neither id — ξ UMa A). An unresolvable primary would
@@ -367,11 +360,9 @@ everything else. Addressing those records afterwards — the
 component-letter search designations — is `record-index/README.md`;
 nothing in this file reads back from it.
 
-The companion-promotion path is the seam where bugs in the
-binaries pipeline become user-visible. The Tier A regression
-corpus in `known-stars.tsv` pins Sirius B's record specifically
-(addressed by gaia_source_id, no HIP) as a stand-in for the
-broader category.
+The Tier A regression corpus in `known-stars.tsv` pins Sirius B's
+record specifically (addressed by gaia_source_id, no HIP) as a
+stand-in for the broader category.
 
 #### Promoted-companion field inheritance
 

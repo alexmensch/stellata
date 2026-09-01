@@ -389,6 +389,7 @@ async function main() {
     distCns5Plx: 0,
     distGliesePlx: 0,
     distSimbadPlx: 0,
+    distGliesePhotometricPlx: 0,
     distPairMemberParallax: 0,
     distCurated: 0,
     distNone: 0,

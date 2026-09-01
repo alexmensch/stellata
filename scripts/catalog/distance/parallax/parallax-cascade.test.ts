@@ -25,12 +25,14 @@ const NONE: ParallaxSources = {
 const hip2 = (plxMas: number, plxErrorMas: number | null) => ({
   raDeg: 0, decDeg: 0, plxMas, plxErrorMas, pmRaMasyr: null, pmDeMasyr: null,
 });
-const gliese = (plxMas: number | null): GlieseRow => ({
+const gliese = (plxMas: number | null, trigonometric = true): GlieseRow => ({
   name: 'Gl 423', comp: 'A', vMag: null, bMinusV: null, spectral: null,
-  plxMas, plxErrMas: 1.0,
+  parallax: plxMas === null
+    ? null
+    : { mas: plxMas, errMas: 1.0, trigonometric },
 });
 // One builder for both bibcoded tiers — CNS5 and SIMBAD carry the same
-// CitedParallax. CNS5 publishes no error, which is what `errMas` null states.
+// CitedParallax shape.
 const sibling = (mas: number): SiblingParallax => ({
   sourceId: '3216486478101982592', mas, errMas: 0.0622,
 });
@@ -161,7 +163,7 @@ describe('parallax-cascade / the Gaia-bibcode skip rule', () => {
   });
 
   it('falls THROUGH a refused tier to Gliese, which no Gaia release stands '
-    + 'behind — this is what keeps 44 Boötis', () => {
+    + 'behind', () => {
     const res = resolveParallax({
       ...NONE,
       gaia: gaiaAstrometryRow({ parallaxMas: null, parallaxErrorMas: null }),
@@ -179,6 +181,73 @@ describe('parallax-cascade / the Gaia-bibcode skip rule', () => {
       simbad: simbad(7.2, '2016A&A...595A...2G'),
     }, true, false);
     expect(res.via).toBe('simbad_plx');
+  });
+});
+
+// V/70A prints a resulting parallax that is trigonometric on about half its
+// rows and a photometric or spectroscopic estimate on the rest. The two are
+// separate tiers on either side of SIMBAD: a colour-magnitude estimate is not a
+// measurement, and inverting one to derive the record's own absolute magnitude
+// assumes the answer, so any bibcoded parallax of the star outranks it.
+describe('parallax-cascade / V/70A\'s two tiers straddle SIMBAD', () => {
+  const SIMBAD_EDR3 = '2020yCat.1350....0G';
+
+  it('takes a trigonometric V/70A parallax ABOVE a bibcoded SIMBAD one', () => {
+    const res = resolveParallax({
+      ...NONE,
+      gliese: gliese(115.0, true),
+      simbad: simbad(29.9357, SIMBAD_EDR3),
+    }, false, false);
+    expect(res.via).toBe('gliese_plx');
+    expect(res.plxMas).toBe(115.0);
+  });
+
+  // Gl 92.1 / HD 14039: V/70A prints 41.0 +/- 6.0 under n_plx='r', which
+  // inverted to 24.390 pc. The record carries no Gaia source_id, so there is no
+  // 2p fit to distrust and SIMBAD's EDR3-cited 29.9357 is admissible — 33.405
+  // pc, ~27% further out and the value a measurement actually supports.
+  it('takes SIMBAD ABOVE a photometric V/70A parallax — Gl 92.1', () => {
+    const res = resolveParallax({
+      ...NONE,
+      gliese: gliese(41.0, false),
+      simbad: simbad(29.9357, SIMBAD_EDR3),
+    }, false, false);
+    expect(res.via).toBe('simbad_plx');
+    expect(1000 / (res.plxMas as number)).toBeCloseTo(33.405, 3);
+  });
+
+  // xi UMa (Gl 423 A/B, V 4.33/4.80): Gaia fitted position only, HIP 55203 is
+  // absent from HIP2, and both CNS5's and SIMBAD's parallaxes are withdrawn DR2
+  // fits the skip rule refuses. The photometric estimate is the only thing left,
+  // and the alternative to taking it is no record at all.
+  it('reaches the photometric tier where every measurement is refused, rather '
+    + 'than parking the row', () => {
+    const res = resolveParallax({
+      ...NONE,
+      gaia: gaiaAstrometryRow({ parallaxMas: null, parallaxErrorMas: null }),
+      cns5: cited(114.49, GAIA_DR2, null),
+      simbad: simbad(114.4867, GAIA_DR2),
+      gliese: gliese(96.0, false),
+    }, true, false);
+    expect(res.via).toBe('gliese_photometric_plx');
+    expect(res.plxMas).toBe(96.0);
+  });
+
+  it('parks a row whose only V/70A parallax is photometric and absent', () => {
+    const res = resolveParallax({ ...NONE, gliese: gliese(null, false) }, false, false);
+    expect(res.via).toBe('none');
+  });
+
+  // The bottom tier, because it is the only one that is not a parallax
+  // measurement of anything. A bound sibling's clean fit at least measures a
+  // star at this distance, so it outranks a colour estimate of this one.
+  it('ranks below a bound sibling\'s measured fit', () => {
+    const res = resolveParallax({
+      ...NONE,
+      gliese: gliese(96.0, false),
+      pairMember: sibling(2.4744),
+    }, false, false);
+    expect(res.via).toBe('pair_member_parallax');
   });
 });
 
