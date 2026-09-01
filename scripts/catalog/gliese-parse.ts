@@ -8,7 +8,9 @@ import { normaliseGjKey } from './catalog-pure';
 const FILE_LABEL = 'data/gliese/gliese_v70a.tsv';
 const REFRESH_HINT = 'Re-run `pnpm run refresh:gliese`.';
 
-const COLUMNS = ['name', 'comp', 'vmag', 'bv', 'sp', 'plx_mas', 'e_plx_mas'] as const;
+const COLUMNS = [
+  'name', 'comp', 'vmag', 'bv', 'sp', 'plx_mas', 'e_plx_mas', 'n_plx',
+] as const;
 
 export interface GlieseRow {
   /** The catalogue entry's own name, prefix included (`Gl 559`, `NN 3417`). */
@@ -18,9 +20,11 @@ export interface GlieseRow {
   vMag: number | null;
   bMinusV: number | null;
   spectral: string | null;
-  /** V/70A's own printed parallax — ground-based trigonometric astrometry
-   *  predating Hipparcos, so it is the one nearby-star tier no Gaia release
-   *  stands behind and the skip rule never touches. */
+  /** V/70A's resulting parallax, represented ONLY where that value is the
+   *  trigonometric one — half the catalogue's is not, and a photometric
+   *  parallax may not serve a distance here (§ The parallax is half the
+   *  column in data/gliese/README.md). Null on every other row, so no
+   *  consumer can reach an estimate it would then invert. */
   plxMas: number | null;
   plxErrMas: number | null;
 }
@@ -62,14 +66,18 @@ export function parseGlieseTsv(text: string): GlieseIndex {
     const comp = (cells[idx.comp] ?? '').trim();
     const key = catalogueKey(name, comp);
     if (key === null) continue;
+    // A blank `n_plx` is V/70A stating that its resulting parallax IS the
+    // trigonometric one; every code the column carries names a photometric or
+    // spectroscopic estimate instead.
+    const trigonometric = nonEmpty(cells[idx.n_plx]) === null;
     const row: GlieseRow = {
       name,
       comp,
       vMag: parseFloatOrNull(cells[idx.vmag]),
       bMinusV: parseFloatOrNull(cells[idx.bv]),
       spectral: nonEmpty(cells[idx.sp]),
-      plxMas: parseFloatOrNull(cells[idx.plx_mas]),
-      plxErrMas: parseFloatOrNull(cells[idx.e_plx_mas]),
+      plxMas: trigonometric ? parseFloatOrNull(cells[idx.plx_mas]) : null,
+      plxErrMas: trigonometric ? parseFloatOrNull(cells[idx.e_plx_mas]) : null,
     };
     if (index.byKey.has(key)) {
       throw new Error(`${FILE_LABEL} has two rows keyed ${key}. ${REFRESH_HINT}`);

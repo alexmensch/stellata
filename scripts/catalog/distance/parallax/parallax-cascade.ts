@@ -111,8 +111,10 @@ function signalToNoise(plx: number, err: number | null): number | null {
  *     SIMBAD's parallax usually IS van Leeuwen's, so without this the floor
  *     refuses a value and re-admits the same number without its error bar.
  *
- *  Gliese V/70A needs neither: its parallaxes are ground-based trigonometric
- *  astrometry predating both instruments. */
+ *  Gliese V/70A needs neither, and its parser is what earns the exemption: only
+ *  the trigonometric half of V/70A's resulting-parallax column is represented,
+ *  so what reaches this tier predates both instruments and no later reduction
+ *  stands behind it to withdraw. */
 export function resolveParallax(
   { gaia, hip2, cns5, gliese, simbad, pairMember }: ParallaxSources,
   gaiaIs2p: boolean,

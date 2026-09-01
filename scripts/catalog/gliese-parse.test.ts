@@ -9,6 +9,14 @@ const HEADER = ['name', 'comp', 'vmag', 'n_vmag', 'r_vmag', 'bv', 'n_bv',
 const row = (name: string, comp: string, vmag: string, bv = '', sp = '') =>
   [name, comp, vmag, '', '', bv, '', '', sp, '', '', '', '', '', '', '', ''].join('\t');
 
+/** The same row with V/70A's four parallax cells filled: resulting value, its
+ *  error, the `n_plx` code stating which kind of parallax that is, and the
+ *  trigonometric value the code decides against. */
+const plxRow = (
+  name: string, plx: string, ePlx: string, nPlx: string, trPlx = '',
+) => [name, '', '9.9', '', '', '', '', '', '', '', plx, ePlx, nPlx, trPlx,
+  '', '', ''].join('\t');
+
 const tsv = (...rows: string[]) => [HEADER, ...rows].join('\n');
 
 describe('parseGlieseTsv', () => {
@@ -95,5 +103,40 @@ describe('parseGlieseTsv', () => {
   it('leaves an absent V null rather than zero', () => {
     const index = parseGlieseTsv(tsv(row('Gl 700', '', '')));
     expect(lookupGliese(index, 'Gl 700')?.vMag).toBeNull();
+  });
+});
+
+// V/70A's resulting parallax is the trigonometric one only where `n_plx` is
+// blank; every code the column carries names a photometric or spectroscopic
+// estimate. Inverting one of those and then deriving the record's own absolute
+// magnitude from the result assumes the answer, so the parser must not
+// represent it at all. data/gliese/README.md § The parallax is half the column.
+describe('parseGlieseTsv / only the trigonometric parallax is representable', () => {
+  it('carries the resulting parallax and its error where n_plx is blank', () => {
+    const index = parseGlieseTsv(tsv(plxRow('Gl 559', '749.0', '4.7', '', '749.0')));
+    const r = lookupGliese(index, 'Gl 559')!;
+    expect(r.plxMas).toBe(749.0);
+    expect(r.plxErrMas).toBe(4.7);
+  });
+
+  it('nulls BOTH cells on every non-trigonometric code, so no consumer can '
+    + 'reach an estimate and no floor can be fooled by a bare value', () => {
+    // r spectral-type/colour · w white-dwarf photometric · s and o Strömgren
+    // · p other colours. Gl 423 (ξ UMa) is the real `r` row: resulting 96.0
+    // against its own trigonometric 130.5.
+    for (const code of ['r', 'w', 's', 'o', 'p']) {
+      const index = parseGlieseTsv(tsv(plxRow('Gl 423', '96.0', '13.0', code, '130.5')));
+      const r = lookupGliese(index, 'Gl 423')!;
+      expect(r.plxMas, `n_plx=${code}`).toBeNull();
+      expect(r.plxErrMas, `n_plx=${code}`).toBeNull();
+    }
+  });
+
+  it('keeps V and colour on a row whose parallax it refuses — the V cascade '
+    + 'reads this tier independently of the distance one', () => {
+    const index = parseGlieseTsv(tsv(plxRow('Gl 423', '96.0', '13.0', 'r')));
+    const r = lookupGliese(index, 'Gl 423')!;
+    expect(r.vMag).toBe(9.9);
+    expect(r.plxMas).toBeNull();
   });
 });
