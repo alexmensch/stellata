@@ -390,6 +390,33 @@ describe('allocation', () => {
     expect(r.objectSids).toEqual([1]);
   });
 
+  // The 3 HIP-less records whose overlay cell holds a LOWER second HD than the
+  // one they display. The alternative sorts ahead of the stored key, so this is
+  // the shape that would re-key if the ledger row were recomputed rather than
+  // read — it joins the class instead, and the sid does not move.
+  it('a lower alternative HD joins the class without moving the stored key', () => {
+    const ledger: LedgerRow[] = [
+      { sid: 1, canonicalKey: 'hd:281098', kind: 'star', firstSeen: '2026-07-01' },
+    ];
+    const r = allocate({
+      objects: [{
+        designations: starDesignations({
+          isSol: false, hip: null, hd: 281098, hr: null, hdAlt: [35908],
+          gl: null, gaiaSourceId: null, syntheticId: null,
+        }),
+        kind: 'star',
+        label: 'record 0 (HD 281098)',
+      }],
+      storedEdges: [],
+      ledger,
+      retirements: [],
+      today,
+    });
+    expect(r.errors).toEqual([]);
+    expect(r.minted).toEqual([]);
+    expect(r.objectSids).toEqual([1]);
+  });
+
   it('a stored edge resolves a re-lettered synth key to its frozen sid', () => {
     const ledger: LedgerRow[] = [
       { sid: 1, canonicalKey: 'synth:04357+1010-Aa,Ab', kind: 'star', firstSeen: '2026-07-01' },
@@ -558,6 +585,21 @@ describe('starDesignations', () => {
       'gl:Gl_244_A',
       'gaia_dr3:2947050466531873024',
     ]);
+  });
+
+  it('emits an alternative HD/HR straight after the field it extends', () => {
+    expect(
+      starDesignations({
+        isSol: false,
+        hip: null,
+        hd: 281098,
+        hr: null,
+        hdAlt: [35908],
+        gl: null,
+        gaiaSourceId: null,
+        syntheticId: null,
+      }),
+    ).toEqual(['hd:281098', 'hd:35908']);
   });
 
   it('prepends sol:sun for the Sol record and strips the synth- prefix', () => {

@@ -843,6 +843,13 @@ export interface SearchEntry {
   hip?: number;  // Hipparcos catalogue number
   hd?: number;   // Henry Draper number
   hr?: number;   // Harvard Revised / Yale BSC number
+  // Further HD / HR numbers the record answers to but does not display. HD
+  // numbered both components of many close pairs and HR routes through HD, so
+  // these two are the identifiers an overlay cell can be ambiguous on
+  // (classic-ids/README.md § The label merge). Search resolves them; the
+  // dropdown label stays the record's own designation.
+  hda?: number[];
+  hra?: number[];
   gl?: string;   // Gliese / GJ designation
   cl?: string;   // multiple-star component letter (A/B/C/Ab…) — see search.ts
   cp?: number;   // system primary's record index; base for "<designation> <cl>"
@@ -857,6 +864,8 @@ export interface SearchEntrySource {
   hip: number | null;
   hd: number | null;
   hr: number | null;
+  hdAlt: readonly number[];
+  hrAlt: readonly number[];
   gl: string | null;
   gcvsName: string | null;
   conIndex: number;
@@ -901,6 +910,8 @@ export function buildSearchEntry(
   if (s.hip !== null) entry.hip = s.hip;
   if (s.hd !== null) entry.hd = s.hd;
   if (s.hr !== null) entry.hr = s.hr;
+  if (s.hdAlt.length > 0) entry.hda = [...s.hdAlt];
+  if (s.hrAlt.length > 0) entry.hra = [...s.hrAlt];
   if (s.gl) entry.gl = s.gl;
   if (s.gcvsName) entry.g = s.gcvsName;
   if (s.conIndex !== NO_CONSTELLATION_INDEX) entry.c = s.conIndex;

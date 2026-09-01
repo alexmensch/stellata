@@ -45,6 +45,12 @@ export interface StarDesignationFields {
   hip: number | null;
   hd: number | null;
   hr: number | null;
+  /** Further HD / HR numbers naming the same star, beyond the one the
+   *  single-valued field carries — an ambiguous designation attaches to every
+   *  record it matches (`scripts/catalog/classic-ids/README.md` § The label
+   *  merge). Both numbers name the star, so both key the same-as class. */
+  hdAlt?: readonly number[];
+  hrAlt?: readonly number[];
   /** Raw AT-HYG Gliese/GJ cell; whitespace collapses to `_` per § 3. */
   gl: string | null;
   gaiaSourceId: string | null;
@@ -61,7 +67,9 @@ export function starDesignations(f: StarDesignationFields): string[] {
   if (f.isSol) d.push('sol:sun');
   if (f.hip !== null && f.hip > 0) d.push(`hip:${f.hip}`);
   if (f.hd !== null) d.push(`hd:${f.hd}`);
+  for (const hd of f.hdAlt ?? []) d.push(`hd:${hd}`);
   if (f.hr !== null) d.push(`hr:${f.hr}`);
+  for (const hr of f.hrAlt ?? []) d.push(`hr:${hr}`);
   if (f.gl) d.push(`gl:${f.gl.trim().replace(/\s+/g, '_')}`);
   if (f.syntheticId) {
     if (!f.syntheticId.startsWith(SYNTH_RUNTIME_PREFIX)) {

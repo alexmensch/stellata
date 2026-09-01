@@ -183,6 +183,11 @@ export function buildSearchIndex(
     if (entry.hip !== undefined) hipMap.set(entry.hip, entry.i);
     if (entry.hd !== undefined) hdMap.set(entry.hd, entry.i);
     if (entry.hr !== undefined) hrMap.set(entry.hr, entry.i);
+    // Several keys onto one record, not one key onto several: the extra
+    // numbers name the same star, so the maps stay 1:1 in the direction the
+    // dropdown reads them and the echoed identifier is still the query's.
+    for (const hd of entry.hda ?? []) hdMap.set(hd, entry.i);
+    for (const hr of entry.hra ?? []) hrMap.set(hr, entry.i);
     if (entry.gl !== undefined) {
       const norm = normalizeGlKey(entry.gl);
       if (norm) glMap.set(norm, entry.i);

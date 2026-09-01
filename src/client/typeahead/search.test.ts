@@ -449,6 +449,18 @@ describe('search / buildSearchIndex', () => {
     expect(glMap.get('559a')).toBe(1);
   });
 
+  it('resolves every HD/HR number a record answers to onto that record', () => {
+    const raw: SearchEntry[] = [
+      { i: 0, hd: 49618, hda: [49619], hr: 7001, hra: [7002] },
+      { i: 1, hd: 172167 },
+    ];
+    const { hdMap, hrMap } = buildSearchIndex(raw, CONS);
+    expect(hdMap.get(49618)).toBe(0);
+    expect(hdMap.get(49619)).toBe(0);
+    expect(hrMap.get(7002)).toBe(0);
+    expect(hdMap.get(172167)).toBe(1);
+  });
+
   it('builds designations from dc while the dropdown context line stays positional', () => {
     // ρ Aql: positionally in Delphinus (byte 34), designated in Aquila. Every
     // alias must be Aquila's; the row's constellation line must read
