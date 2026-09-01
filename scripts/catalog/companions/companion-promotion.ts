@@ -423,19 +423,27 @@ export interface PromotionStats {
   /** Promoted companions whose own positional constellation differs from
    *  their anchor's — a pair wide enough to straddle an IAU boundary. */
   constellationSplitFromAnchor: number;
-  /** Pair rows refused because the record they name is parked — see
+  /** Pair rows refused because an identifier on them belongs to a parked
+   *  record — mostly the parked primary's siblings, which inherit its blended
+   *  source_id or HIP, rather than the parked record itself. See
    *  {@link ParkedIdentifiers}. Without this the parked list names rows that
    *  ship anyway. */
   droppedParkedRecord: number;
 }
 
 /** The identifiers of records the parallax cascade parked (§ 6.1 ledger). A
- *  pair row naming one of them may not be promoted: multiples.tsv states a
+ *  pair row carrying one of them may not be promoted: multiples.tsv states a
  *  distance for every component, and for a parked row that distance is the
  *  measurement a tier above already refused — sigma Ori Aa's
  *  `hip2_long_baseline` 328.947 pc inverts to the 3.04 mas the S/N floor threw
  *  out. Promoting would re-serve it through the courier the skip rules exist to
- *  close. */
+ *  close.
+ *
+ *  **A sibling counts as carrying it.** Stage 2/3 bind one blended source to
+ *  every component row of a sub-arcsec pair, so the parked primary's id sits on
+ *  its siblings' rows too, and those rows state the same refused distance. The
+ *  SID ledger records each as a presence event naming DR4 as the reinstating
+ *  event, never a dissolution — the pair is unchanged. */
 export interface ParkedIdentifiers {
   gaia: ReadonlySet<string>;
   hip: ReadonlySet<number>;
@@ -1540,9 +1548,13 @@ function promoteRow(
     stats.alreadyInCatalog++;
     return null;
   }
-  // Every "this row is already a record" exit has returned by here, so a
-  // remaining identifier match is the parked record itself arriving by the
-  // promotion route.
+  // Runs BEFORE the inheritance gates below, which is what gives it reach:
+  // Stage 2/3 bind one blended source to every component of a sub-arcsec pair,
+  // so most rows caught here are the parked primary's SIBLINGS carrying its id,
+  // not the parked record arriving twice. Either way the row's stated distance
+  // is the primary's — the measurement a tier above refused — so promoting it
+  // launders that refusal. Strip the ids first and the sibling would mint a
+  // synth record at the refused distance instead.
   if ((row.gaiaSourceId !== null && state.parked.gaia.has(row.gaiaSourceId))
       || (rowHasOwnHip && state.parked.hip.has(row.hip as number))) {
     stats.droppedParkedRecord++;

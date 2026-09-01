@@ -3061,4 +3061,55 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
     );
     expect(stats.droppedParkedRecord).toBe(1);
   });
+
+  // The population this refusal mostly catches, and the reason it sits where it
+  // does. WDS 01425+5000 is the real shape: Stage 2/3 bind ONE blended source
+  // to both components, so comp A (primary, parked) and comp B (secondary) each
+  // read hip 7979 / source 405578335904111744, and B's row states the primary's
+  // refused 1030.93 pc. Left to run, the HIP and Gaia inheritance gates below
+  // strip B's borrowed ids and mint it a synth record at exactly that distance
+  // — which is why the refusal has to come first. The SID ledger records this
+  // one as a presence event on 01425+5000 B.
+  const BLEND_HIP = 7979;
+  const BLEND_SOURCE = '405578335904111744';
+  const blendedPrimary = makeStar({
+    hip: BLEND_HIP, gaiaSourceId: BLEND_SOURCE, proper: 'Blended Primary',
+    x: 300, y: 900, z: -40,
+  });
+  const blendedRows: MultiplesTsvRow[] = [
+    multiplesRow({
+      systemId: '01425+5000-AB', comp: 'A', hip: BLEND_HIP,
+      gaiaSourceId: BLEND_SOURCE, orbitRole: 'primary',
+      astrometryVia: 'hip2_long_baseline', distPc: 1030.927835,
+      x_pc: 300, y_pc: 900, z_pc: -40,
+    }),
+    multiplesRow({
+      systemId: '01425+5000-AB', comp: 'B', hip: BLEND_HIP,
+      gaiaSourceId: BLEND_SOURCE, orbitRole: 'secondary',
+      astrometryVia: 'hip2_long_baseline', distPc: 1030.927835,
+      x_pc: 300, y_pc: 900, z_pc: -40,
+      sepArcsec: 0.3, paDeg: 112.0, dmag: 1.0, magPri: 6.5, magSec: 7.5,
+    }),
+  ];
+
+  it('mints the sibling from the blended id where nothing is parked, stripping '
+    + 'the borrowed ids to a synth key — the control', () => {
+    const { newStars, stats } = promoteCompanions(
+      blendedRows, [blendedPrimary], CONSTELLATIONS, CON_ASSIGNMENT,
+    );
+    expect(newStars).toHaveLength(1);
+    expect(newStars[0].hip).toBeNull();
+    expect(newStars[0].syntheticId).toBe('synth-01425+5000-B');
+    expect(stats.droppedParkedRecord).toBe(0);
+  });
+
+  it('refuses that sibling once the ledger names the id it borrowed, before '
+    + 'the inheritance gates can turn it into a synth record', () => {
+    const { newStars, stats } = promoteCompanions(
+      blendedRows, [blendedPrimary], CONSTELLATIONS, CON_ASSIGNMENT, null,
+      parkedIdentifiers([{ gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP }]),
+    );
+    expect(newStars).toHaveLength(0);
+    expect(stats.droppedParkedRecord).toBe(1);
+  });
 });
