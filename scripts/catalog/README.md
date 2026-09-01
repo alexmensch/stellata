@@ -77,15 +77,15 @@ scripts/catalog/
                                   imported by every subfolder and by
                                   src/client/loaders/. Holds no spectral
                                   symbol — that is `spectral/`, one-way.
-  cited-proper-motion.ts (+ test) `CitedProperMotion` and its only
-                                  constructor: a motion is admitted only with
-                                  the bibcode that sourced it, so an uncited
-                                  one is unrepresentable, not merely dropped.
+  cited-proper-motion.ts (+ test) `CitedProperMotion` and `CitedParallax`,
+  cited-parallax.ts               with their only constructors: a value is
+                                  admitted only with the bibcode that sourced
+                                  it, so an uncited one is unrepresentable.
   simbad-values-parse.ts (+ test) data/simbad/simbad_values.tsv indexed by
                                   every namespace the pull keyed on, over the
-                                  shared ladder in catalog-pure.ts. The § 5
-                                  value cascades share it; the rv and
-                                  direction/PM ones consume it today.
+                                  shared ladder in catalog-pure.ts. Bottom
+                                  tier of the rv, direction/PM and distance
+                                  cascades alike.
   tycho2-parse.ts (+ test)        data/tycho2/ indexed on the full TYC, with
                                   the position-to-propagate-from choice and
                                   the main-table-wins rule resolved at parse
@@ -94,8 +94,8 @@ scripts/catalog/
   gliese-parse.ts (+ test)        data/gliese/ keyed on the bare Gliese
                                   number + component, so the catalogue's four
                                   name prefixes and a record's `gl` cell meet
-                                  (data/gliese/README.md). The V cascade's
-                                  bottom tier.
+                                  (data/gliese/README.md). Bottom tier of the
+                                  V cascade, trigonometric tier of parallax.
   catalog-lookup.ts               Reads a built catalog back (loadCatalog) —
                                   the shared reader for verify-catalog,
                                   validate-simbad-sample, and sid:allocate.

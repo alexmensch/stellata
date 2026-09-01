@@ -414,7 +414,11 @@ direction cascade is what that swap inherits, not something it revisits.
 Each row's *sky direction* is resolved at build time through the same
 trust cascade the
 multiple-star pipeline already implements
-(`scripts/binaries/stage3_astrometry.py`), sharing its thresholds:
+(`scripts/binaries/stage3_astrometry.py`), sharing its thresholds. The three
+tiers below are that research's snapshot; the shipped cascade has since grown
+Tycho-2, CNS5, SIMBAD and curated tiers in place of the printed one, and
+`scripts/catalog/distance/README.md` § Direction resolution is the live table
+with the per-tier counts:
 
 1. **Gaia DR3 5p** (ra, dec at J2016.0, the scene epoch — no
    propagation) for every row that resolves to a source_id with usable
@@ -430,14 +434,17 @@ multiple-star pipeline already implements
    HIP 55203 excluded from HIP2 as orbit-corrupted). Mirrors
    Stage 3's `athyg_position`.
 
-Distances are untouched: the Bailer-Jones → LMC-kinematic → cutoff
-stack above stays the radial source of truth, with HIP rows keeping
-their HIP2-parallax distances (computed from the committed file at
-full precision rather than AT-HYG's 4 dp print — same values, gated
-on actually reproducing the printed value: HIP 57146's
-unresolved-binary HIP2 refit at 187 ± 37 mas / gof 99 is the one
-row where blind substitution would have moved a curated 59.9 pc
-star to 5.3 pc). Every row's xyz is `direction × distance` computed
+Distance is resolved the same way, from a parallax this build pulls
+first-hand: an ordered cascade over Gaia DR3, HIP2, CNS5, Gliese
+V/70A and bibcoded SIMBAD values settles which parallax a record
+inverts, and the Bailer-Jones → LMC-kinematic → cutoff stack above
+then overrides that inversion where its own gate fires. A record no
+tier reaches is a ledgered § 6.1 drop rather than a silent keep of a
+printed cell. The tier order, the two precision constants, and why
+the residual drops rather than degrading are
+`scripts/catalog/distance/parallax/README.md`; the override stack is
+`scripts/catalog/distance/README.md` § Multi-layer distance
+refinement. Every row's xyz is `direction × distance` computed
 in float64 and written float32; the stored `x0/y0/z0` columns are
 no longer consumed. Both build pipelines derive every shared star
 from the same astrometry files, closing the consistency gap by

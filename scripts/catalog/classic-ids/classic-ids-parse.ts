@@ -2,6 +2,7 @@
 // data/classic-ids/. See data/classic-ids/README.md § Provenance.
 import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
 import { normaliseGjKey } from '../catalog-pure';
+import { citedParallax, type CitedParallax } from '../cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
 
 const REFRESH_CLASSIC_IDS = 'Re-run `pnpm run refresh:classic-ids`.';
@@ -111,7 +112,10 @@ export interface Cns5Astrometry {
   raDeg: number;
   decDeg: number;
   posEpoch: number;
-  plxMas: number | null;
+  /** Admitted only with the bibcode that sourced it, for the reason the motion
+   *  is: CNS5 republishes Gaia's own parallax on most rows, and the distance
+   *  cascade's skip rule cannot see that without the citation. */
+  parallax: CitedParallax | null;
   /** 87% of CNS5's proper motions are Gaia's own republished, so the PM
    *  rescue's skip rule cannot weigh one without its citation. Null where the
    *  row states no motion, or states it uncited — the position stands either
@@ -134,7 +138,8 @@ export interface Cns5Row {
 
 const CNS5_COLUMNS = [
   'cns5', 'gj', 'gj_comp', 'gaia_source_id', 'hip',
-  'ra_deg', 'de_deg', 'pos_epoch', 'plx_mas', 'pm_ra', 'pm_de', 'pm_bibcode',
+  'ra_deg', 'de_deg', 'pos_epoch', 'plx_mas', 'e_plx_mas', 'plx_bibcode',
+  'pm_ra', 'pm_de', 'pm_bibcode',
 ] as const;
 
 export function parseCns5Tsv(text: string): Cns5Row[] {
@@ -158,7 +163,11 @@ export function parseCns5Tsv(text: string): Cns5Row[] {
       astrometry: raDeg !== null && decDeg !== null && posEpoch !== null
         ? {
             raDeg, decDeg, posEpoch,
-            plxMas: parseFloatOrNull(cells[idx.plx_mas]),
+            parallax: citedParallax(
+              parseFloatOrNull(cells[idx.plx_mas]),
+              parseFloatOrNull(cells[idx.e_plx_mas]),
+              nonEmpty(cells[idx.plx_bibcode]),
+            ),
             pm: citedProperMotion(
               parseFloatOrNull(cells[idx.pm_ra]),
               parseFloatOrNull(cells[idx.pm_de]),
@@ -176,11 +185,26 @@ export function parseCns5Tsv(text: string): Cns5Row[] {
  *  — and CNS5's own `165.0` — meet as one key, the same reduction the SIMBAD
  *  ladder's GJ namespace uses. The component letter is part of the key because
  *  a GJ number carries one, so this names the component rather than the system.
+ *  Exact `number+comp` keys are laid down first and a repeat throws, as it does
+ *  in every other index over a committed table here: two rows claiming one
+ *  component is an upstream change rather than a binding to arbitrate silently.
  *
- *  A repeat throws, as it does in every other index over a committed table
- *  here: two rows sharing a GJ number would be one star's components, which
- *  their letters keep apart, so a collision is an upstream change rather than
- *  a binding to arbitrate silently. */
+ *  **`gj_comp` states the letters COMBINED, not one per row** — Gl 423 reads
+ *  `ABCD` on a single entry — so the exact key alone reaches no record, whose
+ *  own cell names one component (`Gl 423A`). Each letter therefore aliases onto
+ *  its row, never displacing an exact key, which is the same two-pass reduction
+ *  `parseGlieseTsv` performs on V/70A's `comp`.
+ *
+ *  **Unlike V/70A's, this index carries NO bare-number fold**, and the
+ *  difference is what the two tiers serve rather than an oversight. A V read off
+ *  a system entry is a blend and advertises itself as one; a parallax read off
+ *  it is a distance the components share. A POSITION and a PROPER MOTION are
+ *  neither — they belong to one component, and the tier below this one (SIMBAD)
+ *  resolves per object, so answering a bare `Gl 1294` with whichever component
+ *  the file lists first would swap a per-object measurement for a sibling's
+ *  from a HIGHER tier. Where lending a bound sibling's parallax is right, the
+ *  cascade has a tier for it, gated on anchor-grade quality
+ *  (`../distance/parallax/pair-member-parallax.ts`) rather than on file order. */
 export function cns5AstrometryByGj(rows: readonly Cns5Row[]): Map<string, Cns5Astrometry> {
   const out = new Map<string, Cns5Astrometry>();
   for (const row of rows) {
@@ -193,6 +217,15 @@ export function cns5AstrometryByGj(rows: readonly Cns5Row[]): Map<string, Cns5As
       );
     }
     out.set(key, row.astrometry);
+  }
+  for (const row of rows) {
+    if (row.astrometry === null) continue;
+    const bare = normaliseGjKey(row.gj);
+    if (bare === null) continue;
+    for (const letter of row.gjComp ?? '') {
+      const alias = `${bare}${letter}`.toUpperCase();
+      if (!out.has(alias)) out.set(alias, row.astrometry);
+    }
   }
   return out;
 }

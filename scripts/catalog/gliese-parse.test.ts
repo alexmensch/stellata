@@ -9,6 +9,14 @@ const HEADER = ['name', 'comp', 'vmag', 'n_vmag', 'r_vmag', 'bv', 'n_bv',
 const row = (name: string, comp: string, vmag: string, bv = '', sp = '') =>
   [name, comp, vmag, '', '', bv, '', '', sp, '', '', '', '', '', '', '', ''].join('\t');
 
+/** The same row with V/70A's four parallax cells filled: resulting value, its
+ *  error, the `n_plx` code stating which kind of parallax that is, and the
+ *  trigonometric value the code decides against. */
+const plxRow = (
+  name: string, plx: string, ePlx: string, nPlx: string, trPlx = '',
+) => [name, '', '9.9', '', '', '', '', '', '', '', plx, ePlx, nPlx, trPlx,
+  '', '', ''].join('\t');
+
 const tsv = (...rows: string[]) => [HEADER, ...rows].join('\n');
 
 describe('parseGlieseTsv', () => {
@@ -95,5 +103,38 @@ describe('parseGlieseTsv', () => {
   it('leaves an absent V null rather than zero', () => {
     const index = parseGlieseTsv(tsv(row('Gl 700', '', '')));
     expect(lookupGliese(index, 'Gl 700')?.vMag).toBeNull();
+  });
+});
+
+// V/70A's resulting parallax is the trigonometric one only where `n_plx` is
+// blank; every code the column carries names a photometric or spectroscopic
+// estimate. Inverting one of those and then deriving the record's own absolute
+// magnitude from the result assumes the answer, so the parser must not
+// represent it at all. data/gliese/README.md § The parallax is half the column.
+describe('parseGlieseTsv / the parallax carries which kind it is', () => {
+  it('marks a blank n_plx trigonometric — the catalogue saying its resulting '
+    + 'parallax IS the trigonometric one', () => {
+    const index = parseGlieseTsv(tsv(plxRow('Gl 559', '749.0', '4.7', '', '749.0')));
+    expect(lookupGliese(index, 'Gl 559')?.parallax).toEqual({
+      mas: 749.0, errMas: 4.7, trigonometric: true,
+    });
+  });
+
+  it('marks every code the column carries NOT trigonometric, since each names '
+    + 'a photometric or spectroscopic estimate', () => {
+    // r spectral-type/colour · w white-dwarf photometric · s and o Strömgren
+    // · p other colours. Gl 423 (ξ UMa) is the real `r` row: resulting 96.0
+    // against its own trigonometric 130.5.
+    for (const code of ['r', 'w', 's', 'o', 'p']) {
+      const index = parseGlieseTsv(tsv(plxRow('Gl 423', '96.0', '13.0', code, '130.5')));
+      expect(lookupGliese(index, 'Gl 423')?.parallax, `n_plx=${code}`).toEqual({
+        mas: 96.0, errMas: 13.0, trigonometric: false,
+      });
+    }
+  });
+
+  it('leaves the whole quantity null where no parallax is printed', () => {
+    const index = parseGlieseTsv(tsv(plxRow('Gl 700', '', '', '')));
+    expect(lookupGliese(index, 'Gl 700')?.parallax).toBeNull();
   });
 });

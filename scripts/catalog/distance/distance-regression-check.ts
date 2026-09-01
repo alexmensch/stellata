@@ -102,11 +102,15 @@ export function detectSelfConsistencyOutlier(
 
 /** Detect the SIMBAD-anchored outlier for one star, or null if it isn't
  *  in the sample / its SIMBAD row lacks a usable distance / it sits within
- *  tolerance. */
+ *  tolerance / its distance came from SIMBAD in the first place. */
 export function detectSimbadOutlier(
   star: Star,
   simbadSample: ReadonlyMap<string, SimbadDistanceEntry>,
 ): SimbadOutlier | null {
+  // § 5's validation independence: a distance the SIMBAD tier supplied would
+  // be checked against the parallax it was derived from, so its residual is
+  // zero by construction and reports agreement that was never measured.
+  if (star.distVia === 'simbad_plx') return null;
   const id = starKey(star);
   if (!id) return null;
   const entry = simbadSample.get(id);

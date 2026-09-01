@@ -17,6 +17,7 @@ import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import { TYCHO2_ICRS_EPOCH } from '../tycho2-parse';
 import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad-values-parse';
 import { unitVectorFromRaDec, type UnitVector } from '../../../src/client/util/equatorial-basis';
+import type { GlieseIndex } from '../gliese-parse';
 import {
   SPINE_COLUMNS,
   serializeSpine,
@@ -47,6 +48,24 @@ function writeSpineTsv(rows: readonly Partial<SpineRow>[]): string {
 // reduced Johnson V at exactly VT.
 const ORIGIN_TYC = '1-1-1';
 const RHO_AQL_TYC = '2-2-1';
+// Distance now inverts a parallax too, and Tycho-2 publishes none. Gliese is
+// the one parallax tier the DIRECTION cascade never reads, so seeding it places
+// the fixture rows without moving which tier resolves their position.
+const ORIGIN_GL = '901';
+const RHO_AQL_GL = '902';
+
+function glieseParallaxes(
+  rows: ReadonlyArray<{ gl: string; distPc: number }>,
+): GlieseIndex {
+  return {
+    byKey: new Map(rows.map((r) => [r.gl, {
+      name: `Gl ${r.gl}`, comp: '',
+      vMag: null, bMinusV: null, spectral: null,
+      parallax: { mas: 1000 / r.distPc, errMas: 0.001, trigonometric: true },
+    }])),
+    rowCount: rows.length,
+  };
+}
 
 function tycho2Sources(
   rows: ReadonlyArray<{ tyc: string; raDeg: number; decDeg: number; vMag: number }>,
@@ -71,7 +90,7 @@ function tycho2Sources(
 // ra=0 h, dec=0°, dist=100 pc → xyz=(100,0,0). V 10 at 100 pc is absmag 5.
 const AT_ORIGIN_SIGHTLINE: Partial<SpineRow> = {
   ra: '0', dec: '0', dist: '100', dist_src: 'OTHER', spect: 'K0V',
-  tyc: ORIGIN_TYC,
+  tyc: ORIGIN_TYC, gl: ORIGIN_GL,
 };
 const AT_ORIGIN_DIRECTIONS = (): DirectionSources =>
   tycho2Sources([{ tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: 10.0 }]);
@@ -106,6 +125,7 @@ describe('readStars build-time de-extinction of ci', () => {
         dustGrid: grid,
         hipBv: new Map([[11111, 0.5]]),
         directions: AT_ORIGIN_DIRECTIONS(),
+        gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
       },
     );
     expect(stars).toHaveLength(2);
@@ -164,18 +184,22 @@ describe('readStars constellation assignment', () => {
   const RHO_AQL: Partial<SpineRow> = {
     dist: '46.5', dist_src: 'OTHER', ci: '0.08', spect: 'A2V', bayer: 'Rho',
     flam: '67', hip: '99742', hd: '192425', hr: '7724',
-    ra: '20.23796', dec: '15.1975', tyc: RHO_AQL_TYC,
+    ra: '20.23796', dec: '15.1975', tyc: RHO_AQL_TYC, gl: RHO_AQL_GL,
   };
   // 20.23796 h × 15 = 303.5694°.
   const RHO_AQL_DIRECTIONS = (): DirectionSources => tycho2Sources([
     { tyc: RHO_AQL_TYC, raDeg: 303.5694, decDeg: 15.1975, vMag: 4.94 },
     { tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: 10.0 },
   ]);
+  const RHO_AQL_GLIESE = (): GlieseIndex => glieseParallaxes([
+    { gl: RHO_AQL_GL, distPc: 46.5 },
+    { gl: ORIGIN_GL, distPc: 100 },
+  ]);
 
   it('resolves byte 34 positionally', () => {
     const { stars } = readStars(
       writeSpineTsv([RHO_AQL]),
-      { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS() },
+      { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS(), gliese: RHO_AQL_GLIESE() },
     );
     expect(stars).toHaveLength(1);
     expect(stars[0].conIndex).toBe(conIndexOf('del'));
@@ -188,7 +212,7 @@ describe('readStars constellation assignment', () => {
     // the positional index until the overlay supplies one.
     const { stars } = readStars(
       writeSpineTsv([RHO_AQL, { ...AT_ORIGIN_SIGHTLINE, proper: 'Anon' }]),
-      { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS() },
+      { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS(), gliese: RHO_AQL_GLIESE() },
     );
     expect(stars.map((s) => s.desigConIndex))
       .toEqual([NO_CONSTELLATION_INDEX, NO_CONSTELLATION_INDEX]);
@@ -215,6 +239,16 @@ describe('readStars PM rescue', () => {
   const RESCUE_TYC = '3-3-1';
   const SOURCE_ID = '756853643638639104';
   const GJ = 'Gl 423A';
+  // The rescue cohort is 2p rows, which is exactly the cohort the parallax
+  // cascade parks: Gaia fitted no parallax and Tycho-2 publishes none, so
+  // without an owned one these rows build no record at all and there is no
+  // motion left to assert on. Gliese supplies it — the one parallax tier the
+  // DIRECTION cascade never reads, so which tier resolves the position and
+  // which the motion are both untouched.
+  const RESCUE_GL = '903';
+  const PARALLAXES = glieseParallaxes([
+    { gl: RESCUE_GL, distPc: 100 }, { gl: '423A', distPc: 100 },
+  ]);
   // ξ UMa's Tycho-2 mean motion, on a record whose Gaia row fitted a place but
   // no motion — the shipped cohort's dominant shape.
   const TYCHO2_PM = { pmRaMasyr: -453.7, pmDecMasyr: -591.4 };
@@ -222,7 +256,7 @@ describe('readStars PM rescue', () => {
 
   const SPINE_ROW: Partial<SpineRow> = {
     ra: '0', dec: '0', dist: '100', dist_src: 'OTHER', spect: 'K0V',
-    tyc: RESCUE_TYC, proper: 'Rescued',
+    tyc: RESCUE_TYC, gl: RESCUE_GL, proper: 'Rescued',
   };
 
   // Tycho-2 serves V here as it does for the AT_ORIGIN rows above; `pm` is
@@ -258,6 +292,7 @@ describe('readStars PM rescue', () => {
       writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID }]),
       {
         conAssignment: CON_ASSIGNMENT,
+        gliese: PARALLAXES,
         directions: sources(TYCHO2_PM, { gaiaAstrometry: gaiaRow() }),
       },
     );
@@ -275,6 +310,7 @@ describe('readStars PM rescue', () => {
       writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID }]),
       {
         conAssignment: CON_ASSIGNMENT,
+        gliese: PARALLAXES,
         directions: sources(
           { pmRaMasyr: null, pmDecMasyr: null },
           { gaiaAstrometry: gaiaRow() },
@@ -291,6 +327,7 @@ describe('readStars PM rescue', () => {
       writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID }]),
       {
         conAssignment: CON_ASSIGNMENT,
+        gliese: PARALLAXES,
         directions: sources(TYCHO2_PM, {
           gaiaAstrometry: gaiaRow({
             parallaxMas: 50, pmraMasyr: 100, pmdecMasyr: -100,
@@ -309,6 +346,7 @@ describe('readStars PM rescue', () => {
       writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID, gl: GJ }]),
       {
         conAssignment: CON_ASSIGNMENT,
+        gliese: PARALLAXES,
         directions: sources({ pmRaMasyr: null, pmDecMasyr: null }, {
           gaiaAstrometry: gaiaRow(),
           cns5: new Map([['423A', cns5Astrometry({
@@ -329,6 +367,7 @@ describe('readStars PM rescue', () => {
       writeSpineTsv([{ ...SPINE_ROW, gl: GJ }]),
       {
         conAssignment: CON_ASSIGNMENT,
+        gliese: PARALLAXES,
         directions: sources({ pmRaMasyr: null, pmDecMasyr: null }, {
           cns5: new Map([['423A', cns5Astrometry({
             pm: { pmRaMasyr: 50, pmDecMasyr: -20, bibcode: GAIA_EDR3 },
@@ -350,6 +389,9 @@ describe('readStars advances the position on a rescued PM', () => {
   // pins live in ../distance/direction-cascade.test.ts; this one is the wiring,
   // which is the half that ships the position.
   const NO_MEAN_TYC = '1269-128-1';
+  // Same reason as the rescue suite above: a 2p row with no owned parallax
+  // parks, so Gliese states the distance the position assertions measure at.
+  const NO_MEAN_GL = '904';
   const J2000_RA = 66.25076035;
   const J2000_DEC = 16.9849519;
   const RESCUED_PMRA = 91.121;
@@ -365,6 +407,7 @@ describe('readStars advances the position on a rescued PM', () => {
     rowCount: 1,
     byTyc: new Map([[NO_MEAN_TYC, {
       rv: null,
+      parallax: null,
       astrometry: {
         raDeg: J2000_RA, decDeg: J2000_DEC,
         cooBibcode: '2020yCat.1350....0G',
@@ -380,11 +423,12 @@ describe('readStars advances the position on a rescued PM', () => {
     writeSpineTsv([{
       ra: String(J2000_RA / 15), dec: String(J2000_DEC),
       dist: String(DIST_PC), dist_src: 'OTHER', spect: 'K0V',
-      tyc: NO_MEAN_TYC,
+      tyc: NO_MEAN_TYC, gl: NO_MEAN_GL,
     }]),
     {
       conAssignment: CON_ASSIGNMENT,
       simbadValues: simbadPmOnly(),
+      gliese: glieseParallaxes([{ gl: NO_MEAN_GL, distPc: DIST_PC }]),
       directions: {
         gaiaAstrometry: new Map(),
         hip2: new Map(),

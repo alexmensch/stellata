@@ -176,6 +176,17 @@ describe('detectSimbadOutlier', () => {
     const star = starAt(18_500, { hip: 25097 });
     expect(detectSimbadOutlier(star, sample)).toBeNull();
   });
+
+  it('never checks a distance the SIMBAD tier supplied — a value cannot '
+    + 'verify itself', () => {
+    const sample = sampleWith(
+      { simbadOid: 999, simbadMainId: '* alf Cas', distancePc: 100 },
+      'gaia:42',
+    );
+    // Same 6× disagreement the first case trips on: only the tier differs.
+    const star = starAt(600, { gaiaSourceId: '42', distVia: 'simbad_plx' });
+    expect(detectSimbadOutlier(star, sample)).toBeNull();
+  });
 });
 
 describe('parseSimbadSampleTsv', () => {

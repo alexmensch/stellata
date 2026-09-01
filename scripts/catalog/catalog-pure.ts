@@ -9,6 +9,9 @@
 // these breaks `vite build` and `pnpm run dev` alone.
 import { emptyTallyPartition } from '../util/tally.ts';
 import { headerIndex } from './parse/corpus-tsv.ts';
+// Type-only: distance/parallax/ reaches back here through its parsers, so a
+// value import would close a cycle. Erased at compile.
+import type { DistVia } from './distance/parallax/parallax-cascade.ts';
 
 /** Solar-type B-V used as a fallback when no chromaticity input is
  *  available. ~0.65 yields a yellow disc rather than a hot blue or
@@ -1149,6 +1152,15 @@ export function applyDoublesFlag(
 export const OPTICAL_DOUBLE_MIN_SEP_PC = 1.0;
 
 // Fields isOpticalDoublePrimary reads. Star satisfies this structurally.
+/** Whether a record's distance rests on a Gaia parallax, raw or through the
+ *  Bailer-Jones posterior over it. The optical-double suppression needs it
+ *  because a separation is only trustworthy when both stars' distances are: a
+ *  Hipparcos or courier parallax carries error bars wide enough to put a bound
+ *  pair kiloparsecs apart, which reads as an optical double. */
+export function hasGaiaQualityDistance(distVia: DistVia | null): boolean {
+  return distVia === 'gaia_dr3_inversion' || distVia === 'bailer_jones';
+}
+
 export interface OpticalDoubleStar {
   absmag: number;
   x: number;
@@ -1156,7 +1168,10 @@ export interface OpticalDoubleStar {
   z: number;
   hip: number | null;
   gaiaSourceId: string | null;
-  athygDistSrc: string | null;
+  /** The tier this record's own distance came from — see `hasGaiaQualityDistance`.
+   *  Was the spine's editorial `dist_src` cell until the parallax cascade gave
+   *  the build a first-hand answer to the same question. */
+  distVia: DistVia | null;
   varType: number;
 }
 
@@ -1169,15 +1184,6 @@ export interface OpticalDoubleContext {
   physicalHips: ReadonlySet<number>;
   physicalGaia: ReadonlySet<string>;
   minSepPc: number;
-}
-
-// A star's distance is Gaia-quality — a Gaia DR3 parallax or its
-// Bailer-Jones posterior — iff its AT-HYG dist_src marks the distance as a
-// Gaia inverse-parallax (the final distance is then G_R3 or the BJ
-// override). Same set as B-J eligibility: both mean "Gaia-anchored". Only
-// such distances are trusted for the 3D-separation optical test.
-export function isGaiaQualityDist(distSrc: string | null): boolean {
-  return distSrc !== null && BJ_ELIGIBLE_DIST_SRCS.has(distSrc);
 }
 
 // True when a CCDM group's picked primary should NOT be winged: it's an
@@ -1204,13 +1210,13 @@ export function isOpticalDoublePrimary(
   if (p.varType === VAR_TYPE_ECLIPSING) return false;
   if (p.hip !== null && ctx.physicalHips.has(p.hip)) return false;
   if (p.gaiaSourceId !== null && ctx.physicalGaia.has(p.gaiaSourceId)) return false;
-  if (!isGaiaQualityDist(p.athygDistSrc)) return false;
+  if (!hasGaiaQualityDistance(p.distVia)) return false;
 
   let nearestSq = Infinity;
   for (const j of memberIndices) {
     if (j === primaryIdx) continue;
     const q = stars[j];
-    if (!isGaiaQualityDist(q.athygDistSrc)) continue;
+    if (!hasGaiaQualityDistance(q.distVia)) continue;
     const dx = q.x - p.x;
     const dy = q.y - p.y;
     const dz = q.z - p.z;
@@ -1315,21 +1321,12 @@ export function inferBinaries(
 
 // ---- Bailer-Jones (DR3) distance override -------------------------------
 
-// AT-HYG `dist_src` values whose underlying distance is a Gaia
-// inverse-parallax estimate. Only these rows are eligible for the
-// Bailer-Jones override — for low-S/N Gaia parallaxes the inverse is
-// catastrophic and B-J's posterior is the principled replacement.
-// Rows whose dist_src is HIP / GJ / N / OTHER already carry a
-// non-Gaia parallax or canonical distance; overriding them with B-J
-// regresses them onto B-J's Galactic-density prior tail (~10–40 kpc
-// at mid-latitudes), which is a strict loss of information.
+// The three `dist_src` values AT-HYG's vocabulary names below. They survive as
+// bucket labels for the per-layer outcome partition, never as a gate: which
+// parallax a record carries is `distVia`, which this build resolves first-hand.
 export const DIST_SRC_GAIA_DR3 = 'G_R3';
 export const DIST_SRC_GAIA_DR2 = 'G_R2';
 export const DIST_SRC_HIP = 'HIP';
-
-export const BJ_ELIGIBLE_DIST_SRCS: ReadonlySet<string> = new Set([
-  DIST_SRC_GAIA_DR3, DIST_SRC_GAIA_DR2,
-]);
 
 /** AT-HYG's `dist_src` vocabulary, plus an `UNRECOGNISED` catch-all for a
  *  value the column has never carried. Every distance-override layer states
@@ -1368,14 +1365,24 @@ export function tallyDistSrc(
   partition[distSrcBucket(distSrc)]++;
 }
 
-/** Whether an AT-HYG row is eligible for the Bailer-Jones override:
- *  has a Gaia DR3 source_id AND its AT-HYG dist_src marks the
- *  catalogued distance as a Gaia inverse-parallax estimate. */
+/** Whether a record is eligible for the Bailer-Jones override: it resolves to a
+ *  Gaia DR3 source_id AND the parallax its own cascade settled on is Gaia's.
+ *
+ *  B-J publishes a Bayesian posterior over a Gaia parallax, so it may only
+ *  supersede that same parallax. Applied to a record whose distance rests on
+ *  Hipparcos, CNS5 or Gliese instead, it would discard a measurement and
+ *  substitute a posterior computed from a different, worse one — which is how
+ *  the override originally shipped without a filter and moved ~11 stars onto the
+ *  Galactic-density prior tail at ~10–40 kpc.
+ *
+ *  This used to gate on the spine's `dist_src` cell, an AT-HYG editorial value
+ *  standing in for the question. `docs/catalog-driver.md` § 5 forbids that: the
+ *  build now resolves the parallax first-hand, so the tier IS the predicate. */
 export function isBailerJonesEligible(
   gaiaSourceId: string | null,
-  distSrc: string | null,
+  distVia: DistVia,
 ): boolean {
-  return !!gaiaSourceId && isGaiaQualityDist(distSrc);
+  return !!gaiaSourceId && distVia === 'gaia_dr3_inversion';
 }
 
 /** Parse a Gaia DR3 source_id cell into a decimal string suitable for

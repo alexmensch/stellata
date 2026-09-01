@@ -56,7 +56,52 @@ magnitude pull widens the cohort.
 
 A record naming a component the catalogue never resolved falls back to the
 system entry — `Gl 165A` reads the `Gl 165 AB` row — which is why a V from
-this tier is a **system blend** (`vTierIsSystemBlend`).
+this tier is a **system blend** (`vTierIsSystemBlend`). Both derived keys are
+sound for what this tier serves: a blended V is what the fallback advertises,
+and a parallax read off the system entry is a distance the components share.
+
+## The parallax is half the column, and the other half is not astrometry
+
+`plx_mas` is V/70A's **resulting** parallax, which is the trigonometric one
+only sometimes. The catalogue states the rule itself: the resulting parallax
+"is always the trigonometric parallax — if the relative error of the
+trigonometric parallax is smaller than 14 percent", and "is the photometric or
+spectroscopic parallax only if no trigonometric parallax is available or if the
+standard error of the trigonometric parallax is considerably larger."
+
+`n_plx` is how a row says which it did, and **every code the column carries
+names a non-trigonometric value**: `r` a parallax from spectral types and
+broad-band colours, `w` a photometric parallax for white dwarfs, `s` and `o`
+photometric parallaxes from Strömgren photometry, `p` one from other colours.
+A blank is the catalogue stating the resulting parallax IS the trigonometric
+one. The split is close to even — 1,905 blank against 1,898 coded — so reading
+the column unconditionally takes an estimate about half the time:
+
+```
+awk -F'\t' 'NR>1{c[$13]++} END{for(k in c) print (k==""?"(trigonometric)":k), c[k]}' \
+  data/gliese/gliese_v70a.tsv
+```
+
+**So `parseGlieseTsv` represents `plxMas` only where `n_plx` is blank**, and
+nulls it everywhere else — a photometric parallax is unrepresentable rather
+than merely discouraged, the same shape `citedParallax` gives an uncited value.
+That is what makes the parallax cascade's exemption honest: it excuses this
+tier from both skip rules because nothing later withdrew the measurement, and a
+colour-magnitude estimate is not a measurement that could be withdrawn. It is
+also **circular** for this build in a way the skip rules do not otherwise
+reach: a distance from spectral type and colour, inverted and then used to
+derive the record's own absolute magnitude, assumes the answer.
+
+Verified against the catalogue's own statement rather than trusted: on the
+1,905 blank rows `plx_mas` equals the row's `trplx_mas` on 1,898, and not one
+carries a resulting parallax without a trigonometric one. The 7 that differ are
+three resolved systems where the adopted value is the system's — still
+trigonometric in origin. None of the 1,904 usable rows falls below the
+cascade's S/N floor, and 312 sit in the 1–5 band it counts but ships.
+
+`trplx_mas` is in the table and deliberately not the value read: its own error
+column (`e_trplx`) is not in this slice, so gating on `n_plx` and reading the
+resulting parallax keeps value and error bar from the same pair of columns.
 
 ## Provenance
 
@@ -76,9 +121,11 @@ the newer catalogue does not retire this one.
 ## Consumed by
 
 - `scripts/catalog/gliese-parse.ts` → the V cascade's `gliese` tier
-  (`scripts/catalog/photometry/README.md` § The V cascade). Only the `vmag`
-  column is read so far — the parser adds a field per bead, the same terms as
-  `data/simbad/simbad_values.tsv`.
+  (`scripts/catalog/photometry/README.md` § The V cascade) and the parallax
+  cascade's trigonometric tier
+  (`scripts/catalog/distance/parallax/README.md`). `vmag`, `bv`, `sp` and the
+  `n_plx`-gated `plx_mas` / `e_plx_mas` are read; the parser adds a field per
+  bead, the same terms as `data/simbad/simbad_values.tsv`.
 
 ## Refresh
 

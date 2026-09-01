@@ -10,6 +10,7 @@ import {
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
 } from './catalog-pure';
+import { citedParallax, type CitedParallax } from './cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from './cited-proper-motion';
 
 const FILE_LABEL = 'data/simbad/simbad_values.tsv';
@@ -18,6 +19,7 @@ const REFRESH_HINT = 'Re-run `pnpm run refresh:simbad-values`.';
 const COLUMNS = [
   'rvz_radvel', 'rvz_type', 'rvz_bibcode',
   'ra', 'dec', 'coo_bibcode', 'pmra', 'pmdec', 'pm_bibcode',
+  'plx_value', 'plx_err', 'plx_bibcode',
   'hip', 'source_id', 'tyc', 'gj',
 ] as const;
 
@@ -41,6 +43,11 @@ export interface SimbadAstrometry {
 
 export interface SimbadValueRow {
   rv: SimbadRadialVelocity | null;
+  /** A third independently-bibcoded quantity rather than part of the
+   *  astrometry: SIMBAD routinely holds a parallax for a row whose position it
+   *  sources elsewhere, and the distance cascade's skip rules turn on this
+   *  bibcode alone. */
+  parallax: CitedParallax | null;
   astrometry: SimbadAstrometry | null;
 }
 
@@ -112,6 +119,11 @@ export function parseSimbadValuesTsv(text: string): SimbadValueIndex {
     };
     const row: SimbadValueRow = {
       rv: parseRv(cells, idx),
+      parallax: citedParallax(
+        parseFloatOrNull(cells[idx.plx_value]),
+        parseFloatOrNull(cells[idx.plx_err]),
+        nonEmpty(cells[idx.plx_bibcode]),
+      ),
       astrometry: parseAstrometry(cells, idx),
     };
     indexSimbadRow(index, keys, row, (namespace, key) => {

@@ -13,19 +13,27 @@ human has to be the one to type it.** Claude Code sessions have network
 access and run every target on this page directly, including the long
 batched pulls.
 
-So a column a frozen table lacks is a **re-pull to execute**, not a
-constraint to design around. Adding `radial_velocity` to the 5p schema,
-re-slicing a VizieR table for one more column, re-stratifying the SIMBAD
-sample — all are in-session work. Never scope a design down, defer a
-field, or hand a pull back to the user on the assumption that a network
-fetch is out of reach; the cost is the pull's wall-clock time, and
-`--force` / the `.ckpt` resume path (§ Resuming a long pull) bound the
-retry risk.
+So a column a frozen table lacks — or a row, or a whole request set that
+misses a consumer — is a **re-pull to execute**, not a constraint to design
+around. Adding `radial_velocity` to the 5p schema, re-slicing a VizieR table
+for one more column, widening a request set, re-stratifying the SIMBAD sample
+— all are in-session work. Never scope a design down, defer a field, or hand a
+pull back to the user on the assumption that a network fetch is out of reach;
+the cost is the pull's wall-clock time, and `--force` / the `.ckpt` resume path
+(§ Resuming a long pull) bound the retry risk.
+
+**None of these is a reason to defer a pull to its own PR**, and each has been
+used as one: the artifact is tens of MB and tracked in LFS; the re-pull moves
+an entries pin and every count derived from it; the coverage diff wants
+reviewing. Every PR is reviewed, so "a human reviews the diff" describes
+review, not a gate on doing the work — and a re-pull landing in the PR whose
+design needs it is what makes that diff *reviewable*, because the reason for
+each moved count is in the same change. Splitting it out ships a design whose
+measured reach is a property of the stale table.
 
 What still needs a human: deciding to **freeze** a newly-pulled table
-(`data/README.md` § Frozen external data governs when a refresh is
-warranted at all), and reviewing the count/coverage diff a re-pull
-produces.
+(`data/README.md` § Frozen external data governs when a refresh is warranted
+at all) — a judgement about scope, not about effort.
 
 ## Layer 2 — refresh scripts
 
@@ -51,6 +59,14 @@ After that, prefix every `python3` invocation with `.venv/bin/`, or
 shell-activate via `source .venv/bin/activate`. The pnpm targets below
 call bare `python3` — activate the venv (or alias `python3` to the
 venv binary) in the shell that runs them.
+
+**`.venv` is gitignored, so a git worktree has none** — a refresh run from
+one dies on `ModuleNotFoundError: astropy` after resolving its paths
+perfectly well, which reads like a code fault and is not one. Point the
+absolute path at the main checkout's venv
+(`<main-checkout>/.venv/bin/python scripts/refresh/<script>.py`); the
+scripts resolve `REPO_ROOT` from their own location, so they still read and
+write the worktree's `data/`.
 
 ### Per-script targets
 

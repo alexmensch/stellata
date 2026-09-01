@@ -41,6 +41,15 @@ import {
   parseGlieseTsv,
   type GlieseIndex,
 } from '../gliese-parse';
+import {
+  MULTIPLES_TSV,
+  readMultiplesTsv,
+} from '../companions/companion-promotion';
+import {
+  buildPairMemberParallaxIndex,
+  emptyPairMemberParallaxIndex,
+  type PairMemberParallaxIndex,
+} from '../distance/parallax/pair-member-parallax';
 import { INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
 import type { ReadStarsOptions } from './stars-parse';
 import { REPO_ROOT as ROOT } from '../../util/paths';
@@ -68,7 +77,7 @@ export const READ_STARS_INPUT_PATHS: readonly string[] = [
   INHERITED_SPINE_TSV, SRC_BAILER_JONES, SRC_GAIA_APSIS, SRC_GAIA_GSPC,
   SRC_GAIA_ASTROMETRY, SRC_GAIA_NSS, SRC_HIP2, SRC_HIP_VMAG, SRC_SIMBAD_SPTYPE,
   SRC_SIMBAD_VALUES, SRC_TYCHO2_MAIN, SRC_TYCHO2_SUPPL1, SRC_CNS5, SRC_GLIESE,
-  SRC_DUST_MANIFEST, STELLARIUM_SKYCULTURE_JSON,
+  SRC_DUST_MANIFEST, STELLARIUM_SKYCULTURE_JSON, MULTIPLES_TSV,
 ];
 
 /** Upstream table sizes — the `BuildCounts` fields this loader owns, so a
@@ -88,6 +97,7 @@ export type ReadStarsInputSizes = Pick<
   | 'tycho2Entries'
   | 'cns5AstrometryEntries'
   | 'glieseEntries'
+  | 'pairMemberParallaxEntries'
 >;
 
 /** The loaded form of `ReadStarsOptions`: every table present, none optional,
@@ -116,6 +126,7 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     tycho2Entries: 0,
     cns5AstrometryEntries: 0,
     glieseEntries: 0,
+    pairMemberParallaxEntries: 0,
   };
 
   // Bailer-Jones DR3 distance posteriors. Optional in CI / fresh-clone
@@ -331,6 +342,25 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     );
   }
 
+  // The kept-physical pair rows crossed with the Gaia table already loaded —
+  // the parallax cascade's sibling tier. Absent multiples.tsv leaves it empty
+  // and its rows park, which the distPairMemberParallax pin then flags.
+  let pairMemberParallax: PairMemberParallaxIndex = emptyPairMemberParallaxIndex();
+  if (existsSync(MULTIPLES_TSV)) {
+    console.log('Indexing bound-pair sibling parallaxes...');
+    const t = Date.now();
+    pairMemberParallax = buildPairMemberParallaxIndex(
+      readMultiplesTsv(MULTIPLES_TSV), directions.gaiaAstrometry,
+    );
+    console.log(`  ${pairMemberParallax.entryCount} anchor-grade siblings in ${Date.now() - t}ms`);
+    sizes.pairMemberParallaxEntries = pairMemberParallax.entryCount;
+  } else {
+    console.warn(
+      `WARNING: ${MULTIPLES_TSV} not found — the parallax cascade's sibling\n` +
+      `         tier is unavailable and its rows park instead of shipping.`,
+    );
+  }
+
   // Build-time de-extinction integral. Absent dust is a HARD FAIL (not
   // the Bailer-Jones soft-continue): a soft-continue would carry
   // extincted absmags into a runtime that assumes de-extincted, silently
@@ -350,6 +380,6 @@ export function loadReadStarsInputs(): ReadStarsInputs {
 
   return {
     bjMap, apsisMap, gspcMap, simbadSpectral, simbadValues, directions,
-    hipVMag, hipBv, gliese, dustGrid, conAssignment, sizes,
+    hipVMag, hipBv, gliese, pairMemberParallax, dustGrid, conAssignment, sizes,
   };
 }

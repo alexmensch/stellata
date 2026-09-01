@@ -2,8 +2,8 @@
 
 The source_id list the Gaia 5p pull is made against. `pnpm run
 build:astrometry-request` emits `data/gaia/gaia_catalog_source_id_request.tsv`
-— **312,654** ids, the union of two contributions the table's two consumers
-need (§ The request is a union). Not a network pull and not on the
+— **320,553** ids, the union of three contributions the table's three
+consumers need (§ The request is a union). Not a network pull and not on the
 `build:catalog` path: this is **input preparation** for `scripts/refresh/`,
 which is why it sits beside the record build rather than inside it
 (`../README.md` owns the output contract).
@@ -14,7 +14,8 @@ which is why it sits beside the record build rather than inside it
 scripts/catalog/astrometry-request/
   export-astrometry-request.ts    The generator. Streams the spine through
                                   iterSpineTsv for the membership half, adds
-                                  the gate candidates, sorts, writes.
+                                  the gate candidates and the bound-pair
+                                  siblings, sorts, writes.
   export-astrometry-request-pure.ts
     (+ test)                      sortSourceIdsNumeric — the BigInt sort.
                                   Also imported by ../classic-ids/ and
@@ -23,9 +24,10 @@ scripts/catalog/astrometry-request/
                                   this script's private half.
 ```
 
-The candidate half lives in `../classic-ids/binding-candidates.ts`, with the
-gate that consumes it, not here — this folder decides what to *request*, not
-what a classic-ID route may propose.
+Each non-spine contribution lives with the consumer that defines it, not here
+— this folder decides what to *request*, not what a route may propose:
+`bindingCandidateSourceIds` in `../classic-ids/binding-candidates.ts`, and
+`pairMemberSourceIds` in `../distance/parallax/pair-member-parallax.ts`.
 
 **source_ids exceed 2^53.** A lexicographic sort misorders unequal-length
 ids and a `Number` sort collides them, so `BigInt` is the only correct
@@ -59,13 +61,29 @@ ever requested their tier-1 astrometry.
 
 ## The request is a union, and why that is not a compromise
 
-`data/gaia/gaia_dr3_astrometry_catalog.tsv` has **two** consumers wanting
-different sets, so the request is the union of both:
+`data/gaia/gaia_dr3_astrometry_catalog.tsv` has **three** consumers wanting
+different sets, so the request is the union of all three:
 
 | Contribution | Ids | Consumer |
 |---|---|---|
 | the spine's `gaia_source_id` column | 311,886 | the record build: direction / rv / V / ci cascades |
 | `../classic-ids/`' binding-gate candidates | +768 beyond the spine | the gate's `phot_g_mean_mag` evidence |
+| `multiples.tsv`' kept-physical pair members | 16,108, +7,899 beyond the two above | the parallax cascade's `pair_member_parallax` tier |
+
+**The third one is the same shape as the second**, and arrived the same way —
+by a consumer being added without the request following. A bound pair's member
+is routinely not a spine row (a component Gaia resolved that AT-HYG never
+carried), and the tier lends that member's parallax to the sibling Gaia fitted
+none for. Measured before the widening: of the 44 parked rows `multiples.tsv`
+covers, 15 had a sibling carrying its own source_id and **8 of those siblings
+had no row in the table**, so the tier's reach was a property of the request
+rather than of the sky.
+
+It asks for every kept-physical pair member rather than only the roots holding
+a parked row. Which rows park is an *output* of the build this request feeds,
+so keying the request on it would leave the two defining each other and the set
+unstable under any cascade change (`pairMemberSourceIds` says so at the
+definition).
 
 **The second one is not optional, and a spine-only request silently breaks
 the gate.** The gate vets a *candidate* — whatever source a cross-walk
@@ -102,8 +120,9 @@ archive returns no row for lands the gate right back in pass-by-default, which
 is why `gateSkippedNoGMag` is pinned at **0**: it counts candidates that reached
 the gate with no row in the pull, so a request that quietly stops covering them
 fails the overlay snapshot instead of silently accepting bindings. It reads 0
-today — the pull does return 6 fewer rows than the request (312,648 of 312,654),
-but all 6 are spine members rather than candidates. What it cannot fix is
+today — the pull does return 6 fewer rows than the request (320,547 of 320,553),
+but all 6 are spine members rather than candidates, and the widening did not
+add to them: every pair-member id the request gained came back with a row. What it cannot fix is
 `gateSkippedNullGMag` (63): sources Gaia has a row for and publishes no
 `phot_g_mean_mag` for, which stay unvettable at any request size.
 

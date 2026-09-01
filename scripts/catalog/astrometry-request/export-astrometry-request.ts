@@ -1,6 +1,6 @@
 // Emit data/gaia/gaia_catalog_source_id_request.tsv — every Gaia source the
-// build needs a row for: the spine's membership column, plus the classic-ID
-// gate's candidates. See README.md.
+// build needs a row for: spine membership, gate candidates, bound-pair
+// siblings. See README.md.
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -9,6 +9,8 @@ import {
   bindingCandidateSourceIds,
   loadBindingCandidateInputs,
 } from '../classic-ids/binding-candidates';
+import { MULTIPLES_TSV, readMultiplesTsv } from '../companions/companion-promotion';
+import { pairMemberSourceIds } from '../distance/parallax/pair-member-parallax';
 import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
 import { INHERITED_SPINE_FILE, iterSpineTsv } from '../spine/inherited-spine-pure';
 import { readRequired, REPO_ROOT as ROOT } from '../../util/paths';
@@ -35,6 +37,10 @@ function main(): void {
   const candidates = bindingCandidateSourceIds(loadBindingCandidateInputs(), hipVMag);
   for (const id of candidates) ids.add(id);
 
+  const beforeSiblings = ids.size;
+  const siblings = pairMemberSourceIds(readMultiplesTsv(MULTIPLES_TSV));
+  for (const id of siblings) ids.add(id);
+
   const sorted = sortSourceIdsNumeric(ids);
   writeFileSync(OUT, `gaia_source_id\n${sorted.join('\n')}\n`);
   console.log(
@@ -42,7 +48,11 @@ function main(): void {
   );
   console.log(
     `classic-ID gate candidates: ${candidates.size} ` +
-      `(+${sorted.length - membership} beyond the spine)`,
+      `(+${beforeSiblings - membership} beyond the spine)`,
+  );
+  console.log(
+    `bound-pair siblings: ${siblings.size} ` +
+      `(+${sorted.length - beforeSiblings} beyond the two above)`,
   );
   console.log(`wrote ${OUT} (${sorted.length} source_ids)`);
 }

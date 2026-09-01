@@ -13,12 +13,33 @@ inherited-spine.tsv        ~40 MB, LFS. Generated provenance data, and the
 stale_gaia_source_ids.tsv  ~1 KB, regular git. Review queue: the 6 spine
                            rows whose gaia_source_id Gaia DR3 publishes no
                            row for — see § Six DR2 ids in the DR3 column.
+parked_no_owned_parallax.tsv
+                           ~21 KB, regular git. The § 6.1 dropped list: the
+                           spine rows no owned parallax reaches, which build
+                           no record. The parity gate subtracts exactly this
+                           many rows and no more, so a park that is not on
+                           this list fails the build rather than vanishing.
+simbad_sourced_distances.tsv
+                           ~2 KB, regular git. The records whose distance
+                           came from the cascade's SIMBAD tier, excluded from
+                           SIMBAD-based validation of the same field.
 ```
 
-The two are different kinds of file: the CSV is frozen **external** data
-under the policy in [`../README.md`](../README.md) § Frozen external data;
-the spine is a frozen **Stellata build artifact** that happens to live
-beside it.
+Three kinds of file: the CSV is frozen **external** data under the policy in
+[`../README.md`](../README.md) § Frozen external data; the spine is a frozen
+**Stellata build artifact** that happens to live beside it; the last three are
+**emitted by every build** and committed so a reviewer and a test can read what
+the build decided. Regenerate them with `pnpm run build:catalog` — never by
+hand. `scripts/catalog/distance/parallax/README.md` owns what the two newest
+mean.
+
+**The small ones are exempted from LFS in `.gitattributes`, and must stay
+exempt.** `data/athyg/*.tsv` is a blanket LFS rule written for the 40 MB spine,
+so a new file here is LFS by default — which for a review queue defeats the
+point twice over: `git diff` shows an oid instead of the rows a reviewer is
+meant to check, and a checkout without LFS hands the parity gate a pointer
+where it expects a header. Any further small file added here needs its own
+`!filter` line.
 
 ## Provenance
 

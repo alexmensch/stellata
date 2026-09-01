@@ -5,7 +5,9 @@ distance-override stack that refines AT-HYG's parallax-inverted distances.
 The authoring discipline for adding an override layer is the load-bearing
 part of this file — read it before touching the stack.
 
-The space-motion velocity's two fall-back cascades have their own subfolders:
+Three subfolders carry their own cascade and their own README: `parallax/`,
+which owns the measured parallax every distance inverts and is where this
+stack's input comes from, plus the space-motion velocity's two fall-backs,
 `radial-velocity/` and `pm-rescue/`. This one owns the assembly, and the
 proper motion each direction tier supplies alongside its own position.
 
@@ -27,6 +29,13 @@ scripts/catalog/distance/
                                   condition both skip rules gate on, and reads
                                   a record with no Gaia row as NOT 2p — there
                                   is no fit behind it to distrust.
+  parallax/                       The measured parallax every distance inverts
+                                  — the cascade, its two precision constants,
+                                  the bound-sibling index, and the two ledgers
+                                  the build commits (§ 6.1 parked rows and the
+                                  SIMBAD-sourced exclusion list). Its own
+                                  README; this file's override stack sits above
+                                  it.
   pm-rescue/                      The proper motion for a row whose direction
                                   tier carries none, carrying both the velocity
                                   and that tier's epoch advance. Its own README.
@@ -234,17 +243,14 @@ order is non-commutative — see `docs/science-catalog-ingestion.md`
 diagram below is the build-side view:
 
 ```
-AT-HYG `dist` column  (whatever dist_src carries)
-   │
+1000 / resolveParallax(...)          the § 5 parallax cascade — parallax/
+   │                                   README.md. No owned parallax parks the
+   │                                   row: it builds no record at all.
    ▼
-[ Layer 1: Bailer-Jones DR3 override ]   only for dist_src ∈ {G_R3, G_R2}
-   │                                       AND gaia_source_id resolved
+[ Layer 1: Bailer-Jones DR3 override ]   only where the cascade resolved
+   │                                       gaia_dr3_inversion (its posterior
+   │                                       treats that measurement)
    │                                       AND bjMap has the source_id
-   ▼
-[ HIP2 full-precision re-derivation  ]   only for dist_src = HIP, and only
-   │                                       when 1000/plx reproduces AT-HYG's
-   │                                       printed dist (± 1e-3 pc) — same
-   │                                       value, 4-dp truncation dropped
    ▼
 [ Layer 2: LMC kinematic override    ]   only inside 15° LMC cone
    │                                       AND |Δμ_α*|, |Δμ_δ| ≤ 0.5 mas/yr
@@ -254,6 +260,14 @@ AT-HYG `dist` column  (whatever dist_src carries)
    ▼
 dist × cascade direction (§ Direction resolution) → `public/catalog.bin` xyz
 ```
+
+**The stack's input is a parallax this build pulled, not a printed cell.**
+The spine's `dist` / `dist_src` columns survive only as the build-time
+diagnostic the regression check below measures drift against. Layer 1's gate
+moved with it: it used to read `dist_src ∈ {G_R3, G_R2}`, which let an AT-HYG
+editorial value decide whether a record was regressed onto B-J's
+Galactic-density prior. It now reads the record's own resolved tier, which is
+something this build knows first-hand.
 
 Each override layer returns a `DistanceOverride` (`dist`, `absmag`) —
 the absmag recompute matters because skipping it places the star at
@@ -288,9 +302,14 @@ preserved / dropped — with the per-bucket count from a dry run. The
 build prints exactly that line per layer:
 
 ```
-  Bailer-Jones override: 310157 / 310849 Gaia-inverse-distance stars (99.8%)
-    by dist_src: G_R3=310110, G_R2=47, HIP=0, GJ=0, N=0, OTHER=0, UNRECOGNISED=0
+  Bailer-Jones override: 310124 / 310299 Gaia-inverse-distance stars (99.9%)
+    by dist_src: G_R3=310110, G_R2=13, HIP=1, GJ=0, N=0, OTHER=0, UNRECOGNISED=0
 ```
+
+Those buckets are no longer the layer's *gate*, only its outcome — the gate
+reads the resolved tier — which is why HIP is now 1 rather than pinned at 0:
+a record AT-HYG marked `HIP` whose own Gaia 5p parallax the cascade took is
+exactly the case the re-key exists to serve.
 
 The matching assertion lands in the same PR: a `DistSrcPartition` field
 on `BuildCounts` (`bjOverriddenByDistSrc`, `lmcOverriddenByDistSrc`),
@@ -324,12 +343,18 @@ al. 2021 (CDS I/352). The pipeline:
    numeric parse would silently corrupt the join. Photogeometric
    `r_med_photogeo` is preferred; `r_med_geo` is the fallback when
    photogeo is absent.
-2. During `readStars`, every AT-HYG row with a non-empty `gaia`
-   source_id AND `dist_src ∈ {G_R3, G_R2}` is looked up in the map.
-   The eligibility predicate `isBailerJonesEligible` is the single
-   gate; rows with `dist_src ∈ {HIP, GJ, N, OTHER}` are excluded
-   deliberately (their distances are non-Gaia parallaxes B-J would
-   silently regress onto its Galactic prior tail).
+2. During `readStars`, every row with a non-empty `gaia` source_id
+   whose parallax cascade resolved `gaia_dr3_inversion` is looked up
+   in the map. The eligibility predicate `isBailerJonesEligible` is
+   the single gate, and it reads the **resolved tier** — a record
+   whose distance rests on Hipparcos, CNS5, Gliese, SIMBAD or a bound
+   sibling is excluded deliberately, since B-J publishes a posterior
+   over a *Gaia* parallax and applying it elsewhere discards a
+   measurement for one computed from a different, worse one (the
+   Galactic prior tail, ~10–40 kpc). It used to gate on the spine's
+   `dist_src` cell instead — an AT-HYG editorial value standing in for
+   the question — which is what § Multi-layer distance refinement
+   means by the gate having moved with the printed cell.
 3. On a hit, `applyBailerJonesOverride` returns
    `{ dist, absmag }` with `absmag = mag − 5·log₁₀(dist / 10)`.
 4. The override fires for ~99.5% of Gaia-DR3-bearing AT-HYG rows.

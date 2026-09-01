@@ -46,14 +46,22 @@ scripts/catalog/classic-ids/
                                   slice, which `cns5AstrometryByGj` keys on the
                                   record's own GJ and `lookupCns5Astrometry`
                                   reads back — one GJ fold for the direction
-                                  cascade's `cns5` tier and the PM rescue
-                                  alike. This folder parses that file,
-                                  ../distance/ routes on it. Its motion is a
+                                  cascade's `cns5` tier, the PM rescue and the
+                                  parallax cascade's `cns5_plx` tier alike, and
+                                  no bare-number fold beneath it (§ The GJ fold
+                                  stops at the component). This folder parses
+                                  that file, ../distance/ routes on it. Its
+                                  motion is a
                                   `CitedProperMotion` (../cited-proper-motion.ts)
                                   because 87% of CNS5's are Gaia's own
                                   republished and the rescue's skip rule needs
                                   the citation to see that; an uncited one is
-                                  dropped whole, position intact.
+                                  dropped whole, position intact. Its parallax
+                                  is a `CitedParallax` (../cited-parallax.ts)
+                                  for the same reason and on the same terms,
+                                  carrying CNS5's own `e_plx_mas` so the
+                                  cascade's precision floor has an error bar to
+                                  read on this tier as on every other.
   cns5-fixture.ts                 Test-only Cns5Row / Cns5Astrometry builders.
                                   A module, not an export from a test file:
                                   four suites across two folders build these,
@@ -319,6 +327,43 @@ tier above CNS5 on their own TYC), which is exactly why it needed collapsing
 before something reached it. Only a ZERO fraction collapses; `Gl 17.1` keeps
 its own. `glieseNumber` states the same rule for the label side, where it also
 has to strip the component letter.
+
+### The GJ fold stops at the component
+
+`gj_comp` states a system's letters **combined** — Gl 423 is one entry reading
+`ABCD` — so the exact `number+comp` key reaches no record, whose own cell names
+a single component. Each letter therefore aliases onto its row, and an alias
+never displaces a row that names that component outright.
+
+**The fold stops there: no bare number is written from a component row.** What
+this index carries is a position, a proper motion and a parallax as one bundle,
+and the first two belong to one component. The tier below `cns5` in both the
+direction cascade and the PM rescue is SIMBAD, which resolves per object — so
+answering a bare `Gl 1294` with whichever component CNS5 lists first would
+substitute a sibling's measurement for the star's own, from a *higher* tier.
+
+The exposure is not hypothetical: **278 bare GJ numbers in the committed slice
+are claimed by two or more rows**, 45 of them stating parallaxes more than 1%
+apart (worst GJ 428, 17.4%), and on 102 the first row listed carries a wider
+error bar than a sibling on the same number. GJ 1294 is the shape — component A
+at 65.24 ± 1.76 mas against component B at 58.99 ± 0.02, which is 15.33 pc
+against 16.95. **38 spine rows** carry a bare `gl` cell that such a fold would
+reach.
+
+```
+awk -F'\t' 'NR>1 && $10!="" {gj=$2; sub(/\.0$/,"",gj); n[gj]++}
+  END{for(k in n) if(n[k]>1) c++; print c+0}' data/classic-ids/cns5.tsv
+```
+
+Where lending a bound sibling's parallax IS right, the cascade has a tier for
+it — `pair_member_parallax`, at the bottom, gated on anchor-grade fit quality
+(`../distance/parallax/README.md`) rather than on file order.
+
+V/70A's index *does* fold to the bare number
+(`data/gliese/README.md` § The join key), and the asymmetry is deliberate: a V
+read off a system entry is a blend that advertises itself as one
+(`vTierIsSystemBlend`), and a parallax off it is a distance the components
+share. Neither is true of a position.
 
 `spineBrightRowsWithoutOverlayEntry` is the count to watch: Gaia saturates near
 G ≈ 3, so a source_id-keyed table structurally cannot carry the brightest

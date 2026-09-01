@@ -15,7 +15,8 @@ scripts/catalog/validate/
   validate-simbad-sample.ts       pnpm run validate:simbad — cross-checks a
     (+ test)                      built catalog against the frozen SIMBAD
                                   sample and writes
-                                  docs/validation-residuals.md.
+                                  docs/validation-residuals.md. Excludes the
+                                  records whose distance came from SIMBAD.
   simbad-sample-parse.ts (+ test) Parser for data/simbad/simbad_sample.tsv.
   known-stars.test.ts             Tier-A corpus: named stars pinned against
   known-stars.tsv                 public/catalog.bin, plus the exact-set
@@ -102,7 +103,13 @@ Three tiers, all snapshot-pinned:
   `public/catalog.bin` against a stratified random 10k SIMBAD sample
   in `data/simbad/simbad_sample.tsv`. Manual run; the
   distance-regression check above is the build-time automated subset
-  of the same cross-check.
+  of the same cross-check. **Both skip a record whose distance the SIMBAD
+  tier supplied** — `data/athyg/simbad_sourced_distances.tsv` names them,
+  since this harness reads `catalog.bin` and cannot see a build-time tier.
+  Their residual is zero by construction, so including them would report
+  agreement nothing measured (`docs/catalog-driver.md` § 5, validation
+  independence). Counted in the report as an exclusion rather than folded
+  into `unmatched`, which means something else.
 
 ## Adding to the known-stars corpus
 

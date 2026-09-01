@@ -172,7 +172,10 @@ const KNOWN_DUPLICATE_DISPLAY_NAMES = 3;
 // 1489 → 1485: the Stage-2 sibling-identity claims gate — pairs whose
 // members had been placed off a stolen sibling identity leave the
 // sweep (their pairs re-anchor honestly or drop with the identity).
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1485;
+// 1485 → 1465: the parked-record promotion refusal. 55 fewer pairs are
+// emitted at all, because a component whose primary reaches no owned
+// parallax no longer mints a record for the pair to resolve against.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1465;
 
 // ---- Corpus row types ----------------------------------------------------
 

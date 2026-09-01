@@ -280,6 +280,10 @@ export interface BuildCounts extends LabelMergeCounts {
    *  proxy — so collocating on the anchor would render a false
    *  coincident star (Alsephina C). */
   companionDroppedCollocatedPrimary: number;
+  /** Pair rows refused because the record they name is parked with no owned
+   *  parallax — promoting would re-serve the measurement the cascade
+   *  refused. */
+  companionDroppedParkedRecord: number;
   /** Promoted secondaries whose absmag came from the class→M_V
    *  spectral calibration (inherited/missing photometry, no WDS Δmag,
    *  per-component spect_via=curated/simbad). */
@@ -360,8 +364,8 @@ export interface BuildCounts extends LabelMergeCounts {
    *  (parsed map size) — direction-cascade tier 1 coverage. */
   gaiaAstrometryEntries: number;
   /** Total entries in the HIP2 van Leeuwen TSV (parsed map size) —
-   *  direction-cascade tier 2 coverage + dist_src=HIP full-precision
-   *  distances. */
+   *  direction-cascade tier 2 coverage, and the `hip2_parallax` tier's reach
+   *  in the parallax cascade. */
   hip2Entries: number;
   /** Total entries in the printed-V slice of I/239/hip_main (parsed map
    *  size) — the V cascade's bright-tier coverage. */
@@ -382,10 +386,41 @@ export interface BuildCounts extends LabelMergeCounts {
   /** Rows in the committed Gliese V/70A slice — the V cascade's bottom
    *  tier's reach. */
   glieseEntries: number;
-  /** dist_src=HIP rows whose distance was re-derived as 1000/plx from
-   *  the committed HIP2 file (same value AT-HYG catalogued, freed of
-   *  its 4-dp print truncation). */
-  hipDistFullPrecision: number;
+  /** Anchor-grade sibling parallaxes indexed off the kept-physical pair rows
+   *  of multiples.tsv — the `pair_member_parallax` tier's reach. */
+  pairMemberParallaxEntries: number;
+  /** Distance cascade: the parallax tier each record's distance inverts,
+   *  before the two override layers. `distNone` is the § 6 ledger drop —
+   *  records no owned parallax reaches, which do not ship. */
+  distBailerJones: number;
+  distLmcKinematic: number;
+  distGaiaDr3Inversion: number;
+  distHip2Parallax: number;
+  distCns5Plx: number;
+  distGliesePlx: number;
+  distSimbadPlx: number;
+  /** Records placed by a V/70A photometric or spectroscopic parallax — a
+   *  distance from colour and spectral type rather than astrometry, which is
+   *  why it is its own tier below every bibcoded measurement of the star and
+   *  why it is counted apart. Ratchet DOWN: each of these is a record waiting
+   *  for someone to measure its parallax. */
+  distGliesePhotometricPlx: number;
+  distPairMemberParallax: number;
+  distCurated: number;
+  distNone: number;
+  /** Rows whose SHIPPED distance inverts a parallax with worse than 20%
+   *  fractional error, so the result is biased. Bailer-Jones rows are excluded:
+   *  there the posterior, not the inversion, handles the low-S/N case.
+   *
+   *  These rows have no second source, so refusing one would cost it its record
+   *  rather than its precision — this count is how the population stays visible
+   *  for a Gaia DR4 revisit instead of dissolving into the catalogue. Recompute
+   *  the set at any time as `plx / e_plx < PARALLAX_LOW_PRECISION_SN` over the
+   *  non-Bailer-Jones tiers. */
+  distLowPrecisionParallax: number;
+  /** Of `distNone`, the rows a skip rule refused a value for — as against rows
+   *  nothing measured at all. § 5's residual policy counts the two apart. */
+  distRefusedNoOwnedParallax: number;
   /** Direction cascade: rows whose sky direction came from a clean
    *  Gaia DR3 5p solution (includes the handful of 2p position-only
    *  fall-through rows with no HIP2 cover). */

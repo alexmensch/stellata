@@ -21,7 +21,7 @@ scripts/catalog/companions/
                                   resolveComponentNameCollisions. Runs
                                   before the absmag sort so promoted records
                                   take the same final indexing as
-                                  everything else.
+                                  everything else. Names `MULTIPLES_TSV`.
   multiples-fixture.ts            Default-valued MultiplesTsvRow factory.
                                   A module, NOT an export from
                                   companion-promotion.test.ts: importing one
@@ -86,6 +86,13 @@ Per-row gates and resolution:
   strips it rather than colliding with the primary in every
   gaia-keyed lookup, and build-runtime-binaries retries the
   synth key when its id-first resolve degenerates.
+- **Parked-record refusal.** A row carrying a parked record's identifier never
+  promotes — its stated distance inverts the parallax a tier above refused.
+  Mostly the parked primary's SIBLINGS, which inherit its blended id, so this
+  runs **before** the inheritance gates below: those would strip the borrowed
+  id and mint a synth record at that same refused distance. Counted
+  `companionDroppedParkedRecord`; argument and worked case in
+  `../distance/parallax/README.md` § Companion promotion.
 - **Cursor-primary anchor.** findExistingPrimary walks gaia →
   hip → proper name (position-guarded, for GJ-only AT-HYG rows
   carrying neither id — ξ UMa A). An unresolvable primary would
@@ -353,11 +360,9 @@ everything else. Addressing those records afterwards — the
 component-letter search designations — is `record-index/README.md`;
 nothing in this file reads back from it.
 
-The companion-promotion path is the seam where bugs in the
-binaries pipeline become user-visible. The Tier A regression
-corpus in `known-stars.tsv` pins Sirius B's record specifically
-(addressed by gaia_source_id, no HIP) as a stand-in for the
-broader category.
+The Tier A regression corpus in `known-stars.tsv` pins Sirius B's
+record specifically (addressed by gaia_source_id, no HIP) as a
+stand-in for the broader category.
 
 #### Promoted-companion field inheritance
 
