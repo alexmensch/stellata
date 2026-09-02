@@ -108,30 +108,35 @@ export function gouldDesignation(num: number, half: string | undefined, dc: stri
   return `${num} G. ${dc}${half ? ` ${half}` : ''}`;
 }
 
-/** How this designation set renders at ONE tier, ignoring every other —
- *  the question "does the system carry the same designation my component
- *  does?", which is what decides whether that designation distinguishes the
- *  component or merely names the system it sits in. */
+/** How this designation set renders at ONE tier, ignoring every other.
+ *  Total over `NAME_TIERS`, and the single statement of every tier's
+ *  rendering — `ownDesignation` walks it rather than restating the ladder,
+ *  so the two cannot answer one tier differently. */
 export function designationAtTier(
   d: DesignationSet,
   tier: NameTier,
 ): string | null {
-  if (tier === 'override') return d.override ?? null;
-  if (tier === 'iau') return d.iauName ?? null;
-  if (tier === 'eponym') return d.eponym ?? null;
-  if (tier === 'gcvs') return d.gcvs === undefined ? null : formatGcvsDesignation(d.gcvs);
-  if (d.dc !== undefined) {
-    if (tier === 'bayer' && d.bayer !== undefined) {
-      return bayerDesignation(d.bayer, d.bayerSup, d.dc);
-    }
-    if (tier === 'flamsteed' && d.flamsteed !== undefined) {
-      return `${d.flamsteed} ${d.dc}`;
-    }
-    if (tier === 'gould' && d.gould !== undefined) {
-      return gouldDesignation(d.gould, d.gouldHalf, d.dc);
-    }
+  if (tier === 'override') return d.override || null;
+  if (tier === 'iau') return d.iauName || null;
+  if (tier === 'eponym') return d.eponym || null;
+  if (tier === 'gcvs') return d.gcvs ? formatGcvsDesignation(d.gcvs) : null;
+  if (tier === 'catalogue') {
+    if (d.hip !== undefined) return `HIP ${d.hip}`;
+    if (d.hd !== undefined) return `HD ${d.hd}`;
+    if (d.hr !== undefined) return `HR ${d.hr}`;
+    return d.gl || null;
   }
-  return null;
+  // The constellation-relative tiers are unrenderable without the
+  // constellation the designation is NAMED for, so the ladder falls past
+  // them rather than siting them by position (docs/star-naming.md § 6).
+  if (!d.dc) return null;
+  if (tier === 'bayer') {
+    return d.bayer ? bayerDesignation(d.bayer, d.bayerSup, d.dc) : null;
+  }
+  if (tier === 'flamsteed') {
+    return d.flamsteed === undefined ? null : `${d.flamsteed} ${d.dc}`;
+  }
+  return d.gould === undefined ? null : gouldDesignation(d.gould, d.gouldHalf, d.dc);
 }
 
 /** The highest tier the star carries in its own right, rendered without a
@@ -139,25 +144,10 @@ export function designationAtTier(
 export function ownDesignation(
   d: DesignationSet,
 ): { base: string; tier: NameTier } | null {
-  if (d.override) return { base: d.override, tier: 'override' };
-  if (d.iauName) return { base: d.iauName, tier: 'iau' };
-  if (d.eponym) return { base: d.eponym, tier: 'eponym' };
-  if (d.dc) {
-    if (d.bayer) {
-      return { base: bayerDesignation(d.bayer, d.bayerSup, d.dc), tier: 'bayer' };
-    }
-    if (d.flamsteed !== undefined) {
-      return { base: `${d.flamsteed} ${d.dc}`, tier: 'flamsteed' };
-    }
-    if (d.gould !== undefined) {
-      return { base: gouldDesignation(d.gould, d.gouldHalf, d.dc), tier: 'gould' };
-    }
+  for (const tier of NAME_TIERS) {
+    const base = designationAtTier(d, tier);
+    if (base !== null) return { base, tier };
   }
-  if (d.gcvs) return { base: formatGcvsDesignation(d.gcvs), tier: 'gcvs' };
-  if (d.hip !== undefined) return { base: `HIP ${d.hip}`, tier: 'catalogue' };
-  if (d.hd !== undefined) return { base: `HD ${d.hd}`, tier: 'catalogue' };
-  if (d.hr !== undefined) return { base: `HR ${d.hr}`, tier: 'catalogue' };
-  if (d.gl) return { base: d.gl, tier: 'catalogue' };
   return null;
 }
 
@@ -233,16 +223,18 @@ export function resolveDisplayNames<K>(
     // read. A sky designation of its own wins outright however high the
     // system's tier: β² Sco stays β² Sco rather than becoming a lettered
     // Acrab, and θ¹ Tau stays θ¹ Tau rather than borrowing θ² Tau's
-    // approved name. Two identifiers of the same tier trade nothing.
-    const anchorInput = input.anchorKey === undefined
-      ? undefined : byKey.get(input.anchorKey);
-    const anchor = input.anchorKey === undefined
-      ? undefined : own.get(input.anchorKey);
-    const borrows = anchor !== undefined && anchorInput !== undefined && anchor !== o
+    // approved name. Two DIFFERENT identifiers of one tier trade nothing.
+    // The anchor is included in its own root with its own letter, and a
+    // record lends itself nothing.
+    const anchorKey = input.anchorKey === input.key ? undefined : input.anchorKey;
+    const anchorInput = anchorKey === undefined ? undefined : byKey.get(anchorKey);
+    const anchor = anchorKey === undefined ? undefined : own.get(anchorKey);
+    const borrows = anchor !== undefined && anchorInput !== undefined
       && (o === undefined
-        // A sky designation the SYSTEM also carries names the system, not
-        // this component: ξ UMa B's Flamsteed number 53 is ξ UMa's, so it
-        // reads "Alula Australis B" rather than "53 UMa".
+        // A designation the SYSTEM also carries names the system, not this
+        // component: ξ UMa B's Flamsteed number 53 is ξ UMa's, so it reads
+        // "Alula Australis B" rather than "53 UMa" — and the same holds of
+        // a catalogue number the anchor displays too.
         || designationAtTier(anchorInput.set, o.tier) === o.base
         || (!SKY_DESIGNATION_TIERS.has(o.tier)
           && (TIER_RANK.get(anchor.tier) ?? 0) < (TIER_RANK.get(o.tier) ?? 0)));
