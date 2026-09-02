@@ -134,12 +134,24 @@ every star an identifier-less card labels "Gaia DR3 …" or
 `buildSearchIndex` (pure, tested) builds both the fuzzy corpus and the
 exact direct-lookup maps for numeric IDs (HIP/HD/HR/Gl) and Flamsteed.
 The numeric-ID maps echo the matched identifier in the dropdown
-("Vega (HIP 91262)"). `hdMap` / `hrMap` are many-keys-to-one-record rather
-than 1:1: an entry's `hda` / `hra` aliases are inserted alongside its `hd` /
-`hr`, so a user typing either HD number of a close pair the Henry Draper
-catalogue numbered twice lands on the record that holds it. The echo is still
-the query's own identifier, and the direction the dropdown reads — record to
-label — is unchanged. The Flamsteed map keys `<num> <con>` to
+("Vega (HIP 91262)") — though a star with no proper name has nothing to echo
+*against*, so its row reads as the bare identifier the user typed.
+
+`hdMap` / `hrMap` are many-keys-to-one-record rather than 1:1, built by
+`buildAliasedIdIndex` (`scripts/catalog/catalog-pure.ts`) rather than inline:
+numbers records DISPLAY are laid down first, then the `hda` / `hra` aliases,
+first write winning. That one rule settles two collisions — 57 HD and 11 HR
+numbers are displayed by two records each (a component pair sharing one
+catalogue number), and entries arrive brightest-first, so an ambiguous number
+resolves to the brighter record; and an alias never displaces a record that
+displays that number outright. `catalog-lookup.ts`'s `byHd` uses the same
+builder, so a frozen corpus row and the search box cannot resolve one number
+differently. Which numbers become aliases at all is the write side's rule
+(`scripts/catalog/classic-ids/README.md` § An alias stops at the blend): only
+where the pair is unresolved, so the record carries both components' light.
+The direction the dropdown reads — record to label — stays single-valued.
+
+The Flamsteed map keys `<num> <con>` to
 **an array** of every component sharing that designation, so an exact
 "61 Cyg" returns each of 61 Cyg A/B/… with its own display name —
 never collapsed to one, never echoing the raw query. Anonymous

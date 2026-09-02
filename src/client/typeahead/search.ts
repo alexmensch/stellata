@@ -7,6 +7,7 @@ import { displayNameOf, KIND_ROSTER, type KindModules } from '../kinds/kind-modu
 import { SEARCH_DEBOUNCE_MS, TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
 import { Typeahead, TypeaheadGroup } from './typeahead';
 import {
+  buildAliasedIdIndex,
   designationConIndex,
   NO_CONSTELLATION_INDEX,
   type SearchEntry,
@@ -162,8 +163,10 @@ export function buildSearchIndex(
   constellations: { code: string; name: string }[],
 ): SearchIndex {
   const hipMap = new Map<number, number>();
-  const hdMap = new Map<number, number>();
-  const hrMap = new Map<number, number>();
+  // HD and HR are the two identifiers a record can answer to under more than
+  // one number, so they carry a precedence rule the other maps do not need.
+  const hdMap = buildAliasedIdIndex(raw, (e) => e.hd, (e) => e.hda);
+  const hrMap = buildAliasedIdIndex(raw, (e) => e.hr, (e) => e.hra);
   const glMap = new Map<string, number>();
   const flamMap = new Map<string, FuzzyEntry[]>();
   const fuzzyEntries: FuzzyEntry[] = [];
@@ -181,13 +184,6 @@ export function buildSearchIndex(
 
   for (const entry of raw) {
     if (entry.hip !== undefined) hipMap.set(entry.hip, entry.i);
-    if (entry.hd !== undefined) hdMap.set(entry.hd, entry.i);
-    if (entry.hr !== undefined) hrMap.set(entry.hr, entry.i);
-    // Several keys onto one record, not one key onto several: the extra
-    // numbers name the same star, so the maps stay 1:1 in the direction the
-    // dropdown reads them and the echoed identifier is still the query's.
-    for (const hd of entry.hda ?? []) hdMap.set(hd, entry.i);
-    for (const hr of entry.hra ?? []) hrMap.set(hr, entry.i);
     if (entry.gl !== undefined) {
       const norm = normalizeGlKey(entry.gl);
       if (norm) glMap.set(norm, entry.i);

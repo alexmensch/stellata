@@ -894,6 +894,39 @@ export function designationConIndex(
 // with no identifier a user could type. Each optional field is set only
 // when present, so JSON.stringify never emits an explicit null/undefined
 // key — the reader treats a missing key and an absent value alike.
+/** Index every number a record answers to onto its record index: the numbers
+ *  records DISPLAY first, then the aliases beside them.
+ *
+ *  Two passes and first-write-wins, which settles two collisions with one rule.
+ *  Entries arrive brightest-first (the absmag sort fixes record order), so an
+ *  ambiguous designation resolves to the brightest record carrying it — 57 HD
+ *  and 11 HR numbers are displayed by two records each, always a component pair
+ *  sharing one catalogue number. And an alias never displaces a record that
+ *  displays that number outright, whichever way the absmag sort happened to
+ *  order the two. `classic-ids/README.md` § An alias stops at the blend is the
+ *  same rule on the write side; `cns5AstrometryByGj` is the same two-pass
+ *  reduction over CNS5's component letters.
+ *
+ *  Many keys onto one record, never one key onto several: the direction the
+ *  dropdown reads — record to label — stays single-valued. */
+export function buildAliasedIdIndex<K>(
+  entries: readonly SearchEntry[],
+  displayed: (e: SearchEntry) => K | undefined,
+  aliases: (e: SearchEntry) => readonly K[] | undefined,
+): Map<K, number> {
+  const out = new Map<K, number>();
+  for (const entry of entries) {
+    const key = displayed(entry);
+    if (key !== undefined && !out.has(key)) out.set(key, entry.i);
+  }
+  for (const entry of entries) {
+    for (const key of aliases(entry) ?? []) {
+      if (!out.has(key)) out.set(key, entry.i);
+    }
+  }
+  return out;
+}
+
 export function buildSearchEntry(
   s: SearchEntrySource,
   i: number,

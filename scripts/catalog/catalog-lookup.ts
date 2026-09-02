@@ -20,6 +20,7 @@ import {
   readCatalogHeader,
   readNameTable,
   readRecordField,
+  buildAliasedIdIndex,
   readRecordFieldBig,
   type CatalogHeaderFields,
   type CatalogManifest,
@@ -185,10 +186,10 @@ interface CatalogIndexes {
   byHip: Map<number, number>;
   byGaiaSourceId: Map<string, number>;
   byName: Map<string, number>;
-  /** Every HD number a record answers to, alternatives included — the same
-   *  many-keys-onto-one-record shape the runtime's `hdMap` builds
-   *  (`src/client/typeahead/README.md` § Star search). Empty where the catalog
-   *  was loaded without its search index. */
+  /** Every HD number a record answers to, aliases included, through the same
+   *  `buildAliasedIdIndex` the runtime's `hdMap` uses — so a corpus row and the
+   *  search box resolve one number to one record. Empty where the catalog was
+   *  loaded without its search index. */
   byHd: Map<number, number>;
 }
 const INDEX_CACHE = new WeakMap<Catalog, CatalogIndexes>();
@@ -204,11 +205,9 @@ function getIndexes(catalog: Catalog): CatalogIndexes {
     if (r.gaiaSourceId !== null) byGaiaSourceId.set(r.gaiaSourceId.toString(), r.i);
     if (r.name) byName.set(r.name, r.i);
   }
-  const byHd = new Map<number, number>();
-  for (const e of catalog.searchIndex ?? []) {
-    if (e.hd !== undefined) byHd.set(e.hd, e.i);
-    for (const hd of e.hda ?? []) byHd.set(hd, e.i);
-  }
+  const byHd = buildAliasedIdIndex(
+    catalog.searchIndex ?? [], (e) => e.hd, (e) => e.hda,
+  );
   const built = { byHip, byGaiaSourceId, byName, byHd };
   INDEX_CACHE.set(catalog, built);
   return built;

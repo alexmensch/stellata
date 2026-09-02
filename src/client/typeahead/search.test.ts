@@ -449,6 +449,27 @@ describe('search / buildSearchIndex', () => {
     expect(glMap.get('559a')).toBe(1);
   });
 
+  // Two records DISPLAY one HD on 57 numbers today, always a component pair
+  // sharing one catalogue number, and entries arrive brightest-first — so the
+  // brighter record is the one an ambiguous number resolves to.
+  it('resolves an ambiguous HD to the brightest record displaying it', () => {
+    const raw: SearchEntry[] = [{ i: 0, hd: 159574 }, { i: 5, hd: 159574 }];
+    expect(buildSearchIndex(raw, CONS).hdMap.get(159574)).toBe(0);
+  });
+
+  // An alias must never displace a record that displays the number outright,
+  // whichever way the absmag sort happened to order the two.
+  it('lets a displayed HD outrank another record alias, in either order', () => {
+    const aliasFirst: SearchEntry[] = [
+      { i: 0, hd: 49618, hda: [49619] }, { i: 5, hd: 49619 },
+    ];
+    expect(buildSearchIndex(aliasFirst, CONS).hdMap.get(49619)).toBe(5);
+    const displayFirst: SearchEntry[] = [
+      { i: 0, hd: 49619 }, { i: 5, hd: 49618, hda: [49619] },
+    ];
+    expect(buildSearchIndex(displayFirst, CONS).hdMap.get(49619)).toBe(0);
+  });
+
   it('resolves every HD/HR number a record answers to onto that record', () => {
     const raw: SearchEntry[] = [
       { i: 0, hd: 49618, hda: [49619], hr: 7001, hra: [7002] },

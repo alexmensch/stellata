@@ -42,6 +42,16 @@ describe('lookupByHd', () => {
     expect(() => lookupByHd(stubCatalog(), 49618)).toThrow(/withSearchIndex/);
   });
 
+  // Same precedence as the runtime's hdMap: a record that displays the number
+  // outranks another record's alias for it.
+  it('prefers the record displaying an HD over another record aliasing it', () => {
+    const catalog = stubCatalog([
+      { i: 0, hd: 49618, hda: [49619] },
+      { i: 2, hd: 49619 },
+    ]);
+    expect(lookupByHd(catalog, 49619)?.i).toBe(2);
+  });
+
   it('dispatches an hd: ref through the same index', () => {
     const ref = parseRef('hd:49619', 'row', 'ref');
     expect(ref).toEqual({ kind: 'hd', value: '49619' });
