@@ -243,7 +243,7 @@ without saying which component is which. Three outcomes:
 | Disposition | Values | When |
 |---|---|---|
 | `extra-alias` | 95 | the pair is unresolved — one record, both components' light |
-| `extra-sibling-rendered` | 34 | the secondary is a record of its own, so the number is its |
+| `extra-sibling-rendered` | 35 | the secondary is a record of its own, so the number is its |
 | `extra-dropped` | 0 | the field has no alias list, or the guard withheld the value |
 
 Where the pair is unresolved the single record **is** the granularity the
@@ -259,7 +259,8 @@ The predicate is `sourceIdsWithSiblingComponent`
 rather than the source_id — a secondary routinely carries its own source_id or
 none, so grouping by source_id misses the sibling on exactly the resolved pairs
 this asks about. Promotion can still decline to render a member row, so the set
-is a **superset** of what ships (34 withheld against 33 rendered today), and
+is a **superset** of what ships (35 withheld — 34 hd + the 1 hr — across the 34
+records whose system names a sibling, of which 33 render one today), and
 that direction is deliberate: withholding one alias too many is a reviewable
 queue row, leaving one on the wrong record is a wrong answer. It must be derived
 from the committed table by BOTH merge callers, or the two review queues stop
