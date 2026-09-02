@@ -137,18 +137,40 @@ export interface Star {
   /** The constellation this star's designation is named for — editorial, not
    *  positional, so it diverges from `conIndex` where a boundary has since
    *  moved past the star. `NO_CONSTELLATION_INDEX` when unknown, in which case
-   *  designations fall back to `conIndex`.
-   *
-   *  Only a GCVS name supplies it today. Bayer and Flamsteed designations no
-   *  longer reach it — their source was AT-HYG's editorial `con` cell, which
-   *  left with the driver — so ρ Aql, the star the field exists for, takes the
-   *  fallback and searches under Delphinus. Known regression, not the intended
-   *  rule: ./README.md § Positional constellation membership has the standing
-   *  behaviour and who restores it. */
+   *  designations fall back to `conIndex`. Filled downstream of this walk:
+   *  the IAU WGSN designation the naming ladder resolves states it, else
+   *  IV/27A keyed on HD/HIP, else a GCVS designation's own trailing
+   *  abbreviation. See ./README.md § Positional constellation membership. */
   desigConIndex: number;
   flags: number;
+  /** The record's display name — what `catalog.bin`'s name table carries.
+   *  The spine's printed cell until the naming ladder runs, then the
+   *  composer's output for the NAME tiers only; a record displaying a
+   *  designation carries null and the runtime composes its label from the
+   *  structure below (`../naming/README.md`). */
   proper: string | null;
+  /** IAU WGSN approved name — the ladder's authority tier. */
+  iauName: string | null;
+  /** A published designation no structured source states, carried as a
+   *  string (`Ross 128`, `Cygnus X-1`) — docs/star-naming.md § 2. */
+  eponym: string | null;
+  /** Bayer letter as the Unicode glyph — Greek (`α`) or the bare Latin
+   *  overflow series (`p`). The spine's ASCII cell (`Alp`) until the naming
+   *  ladder replaces it; no consumer parses it either way. */
   bayer: string | null;
+  bayerSup: number | null;
+  /** The component the authority attributes this Bayer designation to.
+   *  `κ Her` names component A, so NEC's row for the B component states it
+   *  — and the letter then renders unconditionally, where a WDS letter
+   *  renders only to break a tie (docs/star-naming.md § 3). */
+  bayerComponent: string | null;
+  gould: number | null;
+  /** Serpens' Gould halves are numbered separately (`4 G. Ser Cau`). */
+  gouldHalf: string | null;
+  /** Published spellings that resolve a search and never display — a name
+   *  the ladder displaced, or an approved alternate. Only strings no
+   *  structure implies (docs/star-naming.md § 5). */
+  aliases: string[];
   hip: number | null;
   hd: number | null;
   hr: number | null;
@@ -734,6 +756,13 @@ export function readStars(
       desigConIndex: NO_CONSTELLATION_INDEX,
       flags,
       proper, bayer, hip, hd, hr, flam,
+      iauName: null,
+      eponym: null,
+      bayerSup: null,
+      bayerComponent: null,
+      gould: null,
+      gouldHalf: null,
+      aliases: [],
       hdAlt: [], hrAlt: [],
       gl: simbadKeys.gl,
       tyc: simbadKeys.tyc,
