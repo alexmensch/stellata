@@ -2,51 +2,32 @@
 // label, spectral designation, Bayer parts. Leaf module — the star kind
 // module builds these at load without a cycle through search.ts.
 
+import { type SearchEntry } from '../../../scripts/catalog/catalog-pure';
 import {
-  designationConIndex,
-  NO_CONSTELLATION_INDEX,
-  type SearchEntry,
-} from '../../../scripts/catalog/catalog-pure';
-import type { Catalog } from '../loaders/catalog-loader';
-import {
-  BAYER_GREEK,
-  formatBayerDisplay,
-  formatGcvsDesignation,
-  splitBayer,
+  displayNamesFromSearchIndex,
   superscript,
-} from './star-designations';
+} from '../../../scripts/catalog/naming/star-naming-pure';
+import type { Catalog } from '../loaders/catalog-loader';
 
-// Best human-readable label for a star, falling back through identifier
-// tiers: proper name → Bayer → Flamsteed → GCVS designation → HIP → HD →
-// HR → Gl. For use in the focus display, meta bar, tooltip, and the
-// search-box value when a star is picked.
+/** Display label per star, composed by the SAME pure ladder the record
+ *  build used — `catalog.bin`'s name table carries the NAME tiers, and
+ *  every designation below them is composed here from the structured wire
+ *  (docs/star-naming.md § 6). Two of the ladder's rules are relational (a
+ *  component borrows its system's base; a letter is appended only where the
+ *  designation fails to single the star out), which is why one pass over
+ *  the whole corpus replaces the old per-entry fallback chain.
+ *
+ *  Records the search index does not carry — no identifier a user could
+ *  type — keep the name table's entry where they have one and otherwise
+ *  fall to `resolveStarName`'s `Gaia DR3` / `SID #` last resort. */
 export function buildStarLabels(
   catalog: Catalog,
   raw: SearchEntry[],
 ): Map<number, string> {
   const labels = new Map<number, string>();
   for (const [idx, name] of catalog.names) labels.set(idx, name);
-
-  for (const entry of raw) {
-    if (labels.has(entry.i)) continue;
-    const conIdx = designationConIndex(entry.dc, entry.c);
-    const con = conIdx !== NO_CONSTELLATION_INDEX ? catalog.constellations[conIdx] : null;
-    const conCode = con?.code ?? '';
-    if (entry.b && conCode) {
-      labels.set(entry.i, formatBayerDisplay(entry.b, conCode));
-    } else if (entry.f !== undefined && conCode) {
-      labels.set(entry.i, `${entry.f} ${conCode}`);
-    } else if (entry.g) {
-      labels.set(entry.i, formatGcvsDesignation(entry.g));
-    } else if (entry.hip !== undefined) {
-      labels.set(entry.i, `HIP ${entry.hip}`);
-    } else if (entry.hd !== undefined) {
-      labels.set(entry.i, `HD ${entry.hd}`);
-    } else if (entry.hr !== undefined) {
-      labels.set(entry.i, `HR ${entry.hr}`);
-    } else if (entry.gl) {
-      labels.set(entry.i, entry.gl);
-    }
+  for (const [idx, composed] of displayNamesFromSearchIndex(raw, catalog.constellations)) {
+    if (!labels.has(idx)) labels.set(idx, composed.label);
   }
   return labels;
 }
@@ -63,26 +44,23 @@ export function buildSpectralMap(raw: SearchEntry[]): Map<number, string> {
 }
 
 export interface BayerInfo {
-  /** Greek letter glyph, e.g. "α". */
+  /** Bayer letter glyph, e.g. "α". */
   greek: string;
-  /** Optional unicode-superscript suffix for A/B components, e.g. "¹". */
+  /** Optional unicode-superscript index, e.g. "¹". */
   suffix: string;
 }
 
 // Map star idx → its Bayer designation parts. Used by chart mode to render
-// Greek-letter labels alongside proper names. Entries without a parseable
-// Bayer string or a designation constellation are skipped — a Bayer letter
-// only means anything paired with one.
+// the letter glyph + optional superscript alongside proper names. The wire
+// carries the glyph itself, so there is nothing to parse.
 export function buildBayerMap(raw: SearchEntry[]): Map<number, BayerInfo> {
   const out = new Map<number, BayerInfo>();
   for (const entry of raw) {
-    if (!entry.b) continue;
-    if (designationConIndex(entry.dc, entry.c) === NO_CONSTELLATION_INDEX) continue;
-    const split = splitBayer(entry.b);
-    if (!split) continue;
-    const greek = BAYER_GREEK[split.letter3];
-    const suffix = split.suffix ? superscript(split.suffix.slice(1)) : '';
-    out.set(entry.i, { greek, suffix });
+    if (entry.b === undefined) continue;
+    out.set(entry.i, {
+      greek: entry.b,
+      suffix: entry.bx === undefined ? '' : superscript(entry.bx),
+    });
   }
   return out;
 }

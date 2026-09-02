@@ -30,7 +30,7 @@ describe.skipIf(!built)('designation constellation on the wire', () => {
   // how the regression shipped once already.
   it('gives ρ Aql / 67 Aql its Aquila designation, not its Delphinus position', () => {
     const entry = byHip.get(99742);
-    expect(entry?.b).toBe('Rho');
+    expect(entry?.b).toBe('ρ');
     expect(entry?.f).toBe(67);
     expect(entry?.c).toBe(con('del'));
     expect(entry?.dc).toBe(con('aql'));
