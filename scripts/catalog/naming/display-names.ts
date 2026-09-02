@@ -105,6 +105,21 @@ export function assignDisplayNames(
   overrides: Map<number, string>,
   recordSids: readonly number[],
 ): DisplayNameResult {
+  // A curated row is the one tier no published source can be re-read to
+  // check, so an unmatched SID has to fail rather than count as applied —
+  // the same review-join discipline as the § 2 residual gate.
+  if (overrides.size > 0) {
+    const present = new Set(recordSids);
+    const unmatched = [...overrides.keys()].filter((sid) => !present.has(sid));
+    if (unmatched.length > 0) {
+      throw new Error(
+        `data/naming/name_overrides.tsv names ${unmatched.length} SID(s) no record `
+        + `carries: ${unmatched.join(', ')} — a retired or mistyped SID, so the `
+        + 'override would silently display nothing (docs/star-naming.md § 7)',
+      );
+    }
+  }
+
   const inputs: DisplayNameInput<number>[] = stars.map((star, i) => {
     const component = components.get(i);
     const input: DisplayNameInput<number> = {

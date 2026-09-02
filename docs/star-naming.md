@@ -305,7 +305,9 @@ A committed override table, `data/naming/name_overrides.tsv`, mirroring
 `data/simbad/wds_xids_overrides.tsv`: keyed on **SID** (frozen identity,
 survives re-indexing, and a no-Gaia record has no source_id), columns
 `sid`, `display_name`, `reason`, `source`. Applied after SID resolution,
-before the name table is written; every row is a reviewable diff.
+before the name table is written; every row is a reviewable diff, and a
+`sid` no record carries hard-fails the build rather than counting as an
+applied override that displays nothing.
 
 Expected to stay near-empty. It exists for review findings the authority
 cannot express — not as a home for folk names § 2 routes to aliases. A

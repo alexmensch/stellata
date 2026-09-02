@@ -11,7 +11,11 @@ name_overrides.tsv  Hand-curated, header-only today. Columns: sid,
                     Stellata ID (docs/sid.md § 7) — a record's identity
                     survives re-indexing, and a no-Gaia record has no
                     source_id to key on. Applied as ladder tier 1, above
-                    the IAU name, so a row wins outright.
+                    the IAU name, so a row wins outright. A SID no record
+                    carries FAILS the build: this is the one tier no
+                    published source can be re-read to check, so a
+                    retired or mistyped SID must not pass review as an
+                    applied row that displays nothing.
 ```
 
 ## What does NOT belong in it

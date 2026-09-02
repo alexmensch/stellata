@@ -67,10 +67,11 @@ scripts/catalog/naming/
                                 rules, the wire adapter. Imported by the
                                 build AND by the runtime
                                 (§ Two callers, one composer).
-  display-names.ts              The build's half of the composer: every
+  display-names.ts (+ test)     The build's half of the composer: every
                                 record's designation set → its display
                                 name, with the NAME tiers written into
-                                `proper`.
+                                `proper`. Also the curated override's join,
+                                which hard-fails on an unmatched SID.
   naming-parity-pure.ts         Ledger codec + the record-identity key and
                                 the shared label resolver.
   build-naming-parity.ts        Refreshes the ledger from the built
@@ -233,7 +234,10 @@ never something the renderer should qualify away.
 `display-names.ts` and `designationSetOfEntry` are the two adapters, and
 `catalog.bin`'s name table carries the NAME tiers alone (725 records) so
 first paint has names while the runtime composes every designation off
-`search-index.json` through the same function. That split is why
+`search-index.json` through the same function. A BORROWED label carries
+its anchor's tier, so `Sirius B` is a name-table entry too — which is why
+the table holds 725 records where the authority names only 447
+(`namingTierIau` + `namingTierEponym`, not `namingIauNamed`). That split is why
 `FLAG_HAS_NAME` now means *an authority named this star* — a record
 displaying a designation carries no name-table entry, and
 `../catalog-lookup.ts`'s `name:` record refs resolve through the composer
