@@ -22,23 +22,33 @@ scripts/catalog/distance/pm-rescue/
 `resolvePmRescue` fires only where the winning direction tier's own solution
 carries no PM. The motion it supplies then carries **both** terms: the velocity,
 and the tier's position forward to the scene epoch (§ The rescued motion
-advances the position too). It reaches **276** rows in two shapes:
+advances the position too). It reaches **39** rows in two shapes:
 
-- **273** resolve to a Gaia row with a 2p (position-only) solution and have no
-  HIP2 cover, so they take the `gaia_5p` route's PM-less anchor. The 1,264
-  other 2p rows route `hip2_saturated`, take HIP2's motion, and were never
-  static — the whole 2p population is 1,537, and only this slice of it was the
-  bug.
+- **36** resolve to a Gaia row with a 2p (position-only) solution and have no
+  HIP2 cover, so they take the `gaia_5p` route's PM-less anchor.
 - **3** are Tycho-2 rows with no mean solution (`pflag='X'`, plus one
   supplement `flag='T'`), whose PM cells are empty.
+
+**Most of the 2p population never arrives, because the parallax cascade parks
+it.** A 2p fit states neither a parallax nor a proper motion, so the same defect
+that would bring a row here also leaves it with no owned parallax — and a row no
+parallax tier reaches builds no record at all (`../README.md` § Multi-layer
+distance refinement). Of the spine's **1,537** 2p rows: **1,219** route
+`hip2_saturated`, take HIP2's motion and were never static; **282** are parked
+(272 of the 283 `distRefusedNoOwnedParallax` rows are 2p); **36** reach this
+cascade. The cascade did not narrow — the catalogue stopped building the records.
+
+Do not read that 1,537 against Tycho-2's **1,537 `pflag='X'` rows**
+(`data/tycho2/README.md`): the two counts matching to the digit is a coincidence
+of unrelated catalogues.
 
 Routing, pinned in `../../build-catalog-expected.json` as `pmRescue*`:
 
 | Route | Key | Rows |
 |---|---|---|
-| `tycho2` | the record's own TYC | **242** |
-| `cns5` | its own GJ, non-Gaia citation only | **2** |
-| `simbad` | bibcoded `pmra`/`pmdec`, non-Gaia citation only | **17** |
+| `tycho2` | the record's own TYC | **5** |
+| `cns5` | its own GJ, non-Gaia citation only | **5** |
+| `simbad` | bibcoded `pmra`/`pmdec`, non-Gaia citation only | **14** |
 | `gaia_bibcode_skipped` | — | **13** |
 | `none` | — | **2** |
 
@@ -47,13 +57,10 @@ first-order catalogue always outranks the second-order index.
 
 **`velocityVia` credits the catalogue, not the route to it.** A row's PM came
 from Tycho-2 whether the direction tier or this cascade found it, so
-`velocityTycho2Pm` reads **282** against a `directionTycho2` of 43 and the two
-counts answer different questions. `velocityZero` drops 285 → **24**: Sol, the
-8 rows the sanity ceiling clamped, and the 15 this cascade leaves.
-
-Do not read the cohort's 273 against Tycho-2's **1,537 `pflag='X'` rows**
-(`data/tycho2/README.md`): that the 2p population and that flag count match to
-the digit is a coincidence of two unrelated catalogues.
+`velocityTycho2Pm` reads **43** — the direction tier's 38 plus this cascade's
+5 — against a `directionTycho2` of 41, and the two counts answer different
+questions. `velocityZero` is **22**: Sol, the 6 rows the sanity ceiling
+clamped, and the 15 this cascade leaves.
 
 **Neither join widens, and that is measured rather than argued.** A 2p row is
 a close pair by construction, so this cohort is exactly where
@@ -61,12 +68,12 @@ a close pair by construction, so this cohort is exactly where
 which for a close pair is the system rather than the component. It does not
 bite here, on either side:
 
-- all **242** Tycho-2 routes key on the full three-part TYC, and not one of
-  those ids is carried by a second spine row, so no rescued motion is shared
-  across records by the join itself (ξ UMa A and B share a motion because
-  Tycho-2 publishes the same photocentre solution under both component ids —
-  `2520-2634-1` and `-2` state identical `pm_ra`/`pm_de` — not because one row
-  was reused);
+- all **5** Tycho-2 routes key on the full three-part TYC, and no TYC is
+  carried by a second spine row anywhere in the catalogue, so no rescued motion
+  is shared across records by the join itself (ξ UMa A and B share a motion
+  because Tycho-2 publishes the same photocentre solution under both component
+  ids — `2520-2634-1` and `-2` state an identical `ra_mdeg` of 169.54548201 and
+  identical `pm_ra`/`pm_de` — not because one row was reused);
 - all **31** TYC-less cohort rows reach SIMBAD on their own `gaia_source_id`,
   none through the widening ladder's HIP / TYC / GJ rungs, so the pull's
   widening veto has nothing to adjudicate for this cascade.
@@ -110,7 +117,7 @@ observed `ra_icrs` cell at J1991.25, and everything else in the cohort is a Gaia
 
 | Row | Distance | \|μ\| | Moves |
 |---|---|---|---|
-| TYC 1269-128-1 (HD 285742) | 52.6 pc | 94.4 mas/yr | **2.337″** |
+| TYC 1269-128-1 (HD 285742) | 54.5 pc | 94.4 mas/yr | **2.337″** |
 | TYC 158-2314-1 | 546.7 pc | 6.0 mas/yr | 0.149″ |
 | TYC 1867-2317-1 | 835.9 pc | 4.4 mas/yr | 0.109″ |
 
@@ -140,7 +147,7 @@ close.
 So the direction cascade keeps its general rank, first-order catalogue above
 second-order index, with no exception carved for this shape. The costs the bead
 weighed stand and are now unpaid for: `directionVia` would have moved
-tycho2 43 → 40 and simbad 13 → 16, and tier rank would have become conditional
+tycho2 41 → 38 and simbad 13 → 16, and tier rank would have become conditional
 on what the rescue happened to find — a coupling the cascade has nowhere else.
 
 ## The Gaia-bibcode skip rule, and what it costs
@@ -148,12 +155,13 @@ on what the rescue happened to find — a coupling the cascade has nowhere else.
 CNS5 and SIMBAD both republish Gaia's own earlier fit of the same source under
 a Gaia release bibcode — 87% of CNS5's proper motions cite one — so on a 2p row
 the cascade **skips** those candidates and falls through. Admitting them would
-return the motion DR3 declined to state, and they are not a marginal case of
-that: for **241** of the 273 the spine's retired `pm_src` reads `G_R2`, and the
-printed cell matches the SIMBAD value to the digit on **253**. Reading the
-printed cell back in and taking the DR2 tier are the same number under
-different labels, and `docs/catalog-driver.md` § 5 retires that number either
-way.
+return the motion DR3 declined to state, and on this cohort that is the same
+value the printed cell held: across the 36 2p rows the spine's retired `pm_src`
+reads `G_R2` on **17** and `GJ` on 17, and the printed cell matches the SIMBAD
+value to the digit on **31** of the 36 (2 differ, 3 carry no SIMBAD PM at all).
+Reading the printed cell back in and taking the DR2 tier are the same number
+under different labels, and `docs/catalog-driver.md` § 5 retires that number
+either way.
 
 Tycho-2 needs no such check — it is a completed 1997-epoch publication and no
 Gaia reduction can hide behind its citation.
@@ -165,7 +173,7 @@ EDR3-cited PM for exactly that reason. This mirrors the rv cascade, which
 keeps 363 ordinary Gaia citations while skipping 309 on blended rows.
 
 **The cost is 13 rows that stay static, concentrated where it hurts most**:
-Gl 1245A at 4.69 pc and Gl 791.2 at 7.47 pc are the two nearest, and zero is
+Gl 1245A at 4.72 pc and Gl 791.2 at 8.76 pc are the two nearest, and zero is
 not a better estimate than the value refused. The rule is preferred anyway for
 the reason the rv cascade gives (`../radial-velocity/README.md` § The
 Gaia-bibcode skip rule) — a value this build cannot defend does not become
@@ -182,11 +190,16 @@ reaches them at all.
 
 | Star | Distance | Route | Tangential |
 |---|---|---|---|
-| EZ Aqr (Gl 866A) | 3.41 pc | `simbad`, UCAC4 | **52.63 km/s** |
-| Gl 747A | 8.32 pc | `simbad` | 66.20 km/s |
+| EZ Aqr (Gl 866A) | 3.41 pc | `cns5`, UCAC4-cited | **52.63 km/s** |
+| Gl 747A | 8.32 pc | `cns5` | 66.20 km/s |
 | ξ UMa A / B | 10.42 pc | `tycho2` | 36.81 km/s each |
-| Gl 1245A | 4.69 pc | skipped | 0 |
-| Gl 791.2 | 7.47 pc | skipped | 0 |
+| Gl 1245A | 4.72 pc | skipped | 0 |
+| Gl 791.2 | 8.76 pc | skipped | 0 |
+
+EZ Aqr and Gl 747A route `cns5` rather than `simbad` because CNS5's GJ coverage
+now reaches them, and the cascade's order prefers the catalogue to the index.
+The value is unchanged on EZ Aqr — CNS5 and SIMBAD both carry Zacharias 2012's
+2314.8 / 2295.3 mas/yr, so only the credited route moved.
 
 EZ Aqr is the case the rv cascade predicted: its 6,824.7 km/s SIMBAD velocity
 is still rejected on its own, and the row keeps the 3.26″/yr motion the
