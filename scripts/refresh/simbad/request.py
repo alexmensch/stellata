@@ -48,6 +48,12 @@ class OidRequest:
     oids: set[int] = field(default_factory=set)
     requested: dict[str, int] = field(default_factory=dict)
     resolved: dict[str, int] = field(default_factory=dict)
+    #: {IdentLookup.tsv_name: {key: oid}} — what each namespace actually
+    #: bound, which is what a later pass needs to tell "asked and answered
+    #: with an absence" from "never asked". Keyed on the namespace rather
+    #: than the report label so a widening rung folds into its own
+    #: namespace: read-back does not care which rung bound a row.
+    bindings: dict[str, dict[int | str, int]] = field(default_factory=dict)
     gained_by_widening: dict[str, int] = field(default_factory=dict)
     verdicts: dict[str, WideningVerdicts] = field(default_factory=dict)
 
@@ -56,10 +62,12 @@ class OidRequest:
         label: str,
         requested: Sequence[int | str],
         resolved: Mapping[int | str, int],
+        namespace: str | None = None,
     ) -> None:
         self.requested[label] = len(requested)
         self.resolved[label] = len(resolved)
         self.oids.update(resolved.values())
+        self.bindings.setdefault(namespace or label, {}).update(resolved)
 
     def coverage(self, label: str) -> float:
         return self.resolved[label] / max(1, self.requested[label])
@@ -140,7 +148,7 @@ def _widen(
     )
     kept, verdicts = _corroborate(client, widened, candidates, lookup)
     before = len(request.oids)
-    request.add(label, list(candidates), kept)
+    request.add(label, list(candidates), kept, namespace=lookup.tsv_name)
     request.gained_by_widening[label] = len(request.oids) - before
     request.verdicts[label] = verdicts
 

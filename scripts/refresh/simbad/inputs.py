@@ -78,7 +78,7 @@ def spine_request_keys(
     for row in rl.iter_spine_rows(spine_path):
         if row_filter is not None and not row_filter(row):
             continue
-        designations = _row_designations(row)
+        designations = row_designations(row)
         if source_id := row[rl.SPINE_SOURCE_ID_COLUMN].strip():
             keys.source_ids.append(int(source_id))
             if designations:
@@ -93,7 +93,7 @@ def spine_request_keys(
     return keys
 
 
-def _row_designations(row: SpineRow) -> dict[str, int | str]:
+def row_designations(row: SpineRow) -> dict[str, int | str]:
     """Every widening namespace this row carries a key for, keyed by
     ``IdentLookup.tsv_name`` so the request side never spells the namespace
     out a second time. Must cover every namespace in ``WIDENING_LADDER`` — a

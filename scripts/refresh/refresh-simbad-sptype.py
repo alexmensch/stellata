@@ -4,6 +4,7 @@ sp_qual, sp_bibcode, otype, and HIP / Gaia DR3 / TYC / GJ cross-IDs."""
 
 from __future__ import annotations
 
+import itertools
 import sys
 import time
 from pathlib import Path
@@ -14,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 import simbad  # noqa: E402
-from simbad import coverage, inputs, query, request, tsv  # noqa: E402
+from simbad import coverage, inputs, query, request, tsv, union  # noqa: E402
 from simbad.specs import (  # noqa: E402
     OID, MAIN_ID, SP_TYPE, SP_QUAL, SP_BIBCODE, OTYPE, GAIA_DR3, GJ, HIP, TYC,
 )
@@ -33,10 +34,15 @@ IDENT_LOOKUPS = [HIP, GAIA_DR3, TYC, GJ]
 # 50% is the rough lower bound observed; below this the pull is likely broken.
 SP_TYPE_COVERAGE_MIN = 0.50
 
+# Recovered rows printed per run. The union adds rows to a frozen table, so
+# a sample of what it recovered belongs in the run log beside the counts;
+# the whole set is the build's own `spectralSimbadBy*` partition.
+RECOVERED_SAMPLE = 25
 
-def collect_oid_requests(client: rl.TapClient) -> list[int]:
+
+def collect_oid_requests(client: rl.TapClient) -> request.OidRequest:
     """Compose every input source, resolve non-oid identifiers via the
-    ident table, union into a deduplicated sorted oid list."""
+    ident table, union into a deduplicated oid set."""
     print("[1/2] spine identifier keys → SIMBAD oid (via ident)…")
     keys = inputs.spine_request_keys(SPINE)
     print(f"      spine rows: {keys.total} ({keys.keyless} carrying no key)")
@@ -53,7 +59,7 @@ def collect_oid_requests(client: rl.TapClient) -> list[int]:
           f"{new_from_wds} not already covered by the spine")
     resolved.oids.update(wds_oids)
 
-    return sorted(resolved.oids)
+    return resolved
 
 
 def main() -> None:
@@ -68,7 +74,8 @@ def main() -> None:
     client = rl.TapClient(backends=[rl.simbad_backend()])
 
     print("\n=== Phase A: collect SIMBAD oid request set ===")
-    oids = collect_oid_requests(client)
+    resolved = collect_oid_requests(client)
+    oids = sorted(resolved.oids)
     print(f"\nTotal unique oids to query: {len(oids)} "
           f"(elapsed {(time.time()-start)/60:.1f}m)")
 
@@ -76,6 +83,25 @@ def main() -> None:
     basic_rows = query.fetch_basic_columns(
         client, oids, BASIC_COLUMNS, progress_label="basic",
     )
+
+    print("\n=== Phase B2: union the namespaces of every unanswered row ===")
+    added, added_bindings, union_report = union.union_unanswered(
+        client,
+        spine_path=SPINE,
+        bindings=resolved.bindings,
+        rows=basic_rows,
+        columns=BASIC_COLUMNS,
+        value_alias=SP_TYPE.alias,
+    )
+    for line in union_report.report_lines():
+        print(line)
+    for row, namespace, value in itertools.islice(
+        union.iter_recovered_rows(SPINE, added_bindings, added, SP_TYPE.alias),
+        RECOVERED_SAMPLE,
+    ):
+        print(f"      recovered via {namespace:9s} "
+              f"hip={row['hip'] or '-':>7s} hd={row['hd'] or '-':>7s} → {value}")
+    oids = union.merge_rows(basic_rows, added)
 
     print("\n=== Phase C: pull cross-IDs from ident table ===")
     ident_rows = query.fetch_ident_lookups(
