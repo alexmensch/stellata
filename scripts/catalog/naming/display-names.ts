@@ -69,8 +69,8 @@ export interface DisplayNameCounts {
   namingTier: Record<NameTier, number>;
   /** Records whose base came from their system's naming anchor. */
   namingBorrowed: number;
-  /** Records carrying a component letter because their own designation
-   *  fails to single them out (θ¹ Ori A/B/C/D). */
+  /** Records carrying a component letter because a sibling owns the same
+   *  designation (θ¹ Ori A/B/C/D). */
   namingLettered: number;
   /** Records whose name reaches catalog.bin's name table. */
   namingNameTable: number;

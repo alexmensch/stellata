@@ -165,8 +165,8 @@ export function buildSearchIndex(
   for (const entry of raw) byIndex.set(entry.i, entry);
 
   // One composer pass over the corpus: a component borrows its WDS root
-  // anchor's base and a letter is appended only where the designation fails
-  // to single the star out, so both rules need every entry in hand
+  // anchor's base and a letter is appended only where a sibling owns the
+  // same designation, so both rules need every entry in hand
   // (docs/star-naming.md § 6).
   const composed = displayNamesFromSearchIndex(raw, constellations);
 

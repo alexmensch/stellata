@@ -13,9 +13,9 @@ import type { Catalog } from '../loaders/catalog-loader';
  *  build used — `catalog.bin`'s name table carries the NAME tiers, and
  *  every designation below them is composed here from the structured wire
  *  (docs/star-naming.md § 6). Two of the ladder's rules are relational (a
- *  component borrows its system's base; a letter is appended only where the
- *  designation fails to single the star out), which is why one pass over
- *  the whole corpus replaces the old per-entry fallback chain.
+ *  component borrows its system's base; a letter is appended only where a
+ *  sibling owns the same designation), which is why one pass over the whole
+ *  corpus replaces the old per-entry fallback chain.
  *
  *  Records the search index does not carry — no identifier a user could
  *  type — keep the name table's entry where they have one and otherwise

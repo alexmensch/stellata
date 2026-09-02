@@ -31,7 +31,7 @@ composer the record build wrote it with
 `buildStarLabels` is a single pass of that composer over the corpus rather
 than a per-entry fallback chain: two of the ladder's rules are relational
 (a component borrows its system's base, and a letter is appended only
-where the designation fails to single the star out), which no per-entry
+where a sibling OWNS the same designation), which no per-entry
 function can answer. `catalog.bin`'s name table supplies the NAME tiers,
 and the composer supplies everything below them.
 

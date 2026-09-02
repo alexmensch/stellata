@@ -114,7 +114,7 @@ describe('component letters', () => {
       .toEqual(['θ¹ Ori Aa', 'θ¹ Ori B', 'θ¹ Ori C', 'θ¹ Ori D']);
   });
 
-  it('appends none where the designation singles the star out (β² Sco)', () => {
+  it('appends none where no sibling owns the designation (β² Sco)', () => {
     // β² Sco is WDS component C of the Acrab system, and its own Bayer
     // designation already names it alone — the letter would say nothing.
     const inputs: DisplayNameInput<string>[] = [
@@ -131,6 +131,27 @@ describe('component letters', () => {
     expect(label(inputs, 'aa')).toBe('Acrab');
     expect(label(inputs, 'c')).toBe('β² Sco');
     expect(label(inputs, 'b')).toBe('Acrab B');
+  });
+
+  it('keeps the letter where the sibling that owns the designation borrows (δ Cep A)', () => {
+    // OWNERSHIP decides the letter, not label uniqueness. δ Cep's B owns
+    // the same Bayer designation, then borrows the system's — so A is the
+    // only record left displaying the bare base, and must still read
+    // "δ Cep A" beside its lettered siblings. Reading the rule as "the
+    // label has to be unique" strips the letter off 29 records.
+    const inputs: DisplayNameInput<string>[] = [
+      {
+        key: 'a', set: { bayer: 'δ', dc: 'Cep', hip: 110991 },
+        component: 'A', anchorKey: 'a',
+      },
+      {
+        key: 'b', set: { bayer: 'δ', dc: 'Cep' }, component: 'B', anchorKey: 'a',
+      },
+      { key: 'c', set: {}, component: 'C', anchorKey: 'a' },
+    ];
+    expect(label(inputs, 'a')).toBe('δ Cep A');
+    expect(label(inputs, 'b')).toBe('δ Cep B');
+    expect(label(inputs, 'c')).toBe('δ Cep C');
   });
 
   it('appends the one the AUTHORITY attributes, with no WDS letter to go on', () => {

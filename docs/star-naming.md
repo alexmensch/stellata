@@ -35,7 +35,7 @@ runtime already had.
 Two of the composer's rules are RELATIONAL, so it is a collection pass
 rather than a per-star function: a component with no designation of its
 own takes its WDS root anchor's base, and a component letter is appended
-only where the designation fails to single the star out.
+only where a sibling OWNS the same designation.
 `scripts/catalog/naming/README.md` § Two callers, one composer carries the
 implementation's own statement of all three rules.
 
@@ -153,9 +153,14 @@ Display resolution order, first hit wins:
 
 A **component letter** from WDS/CCDM appends to whichever tier won
 (`θ¹ Ori C`, `p Eri B`, `HIP 81702 Ab`) — appended by the composer, never
-baked into the tier's own string. Where the authority names a specific
-component, that name attaches to that record alone; siblings resolve down
-the ladder on their own.
+baked into the tier's own string. It appends where a sibling OWNS the same
+designation, which is a stronger test than the label needing to be unique:
+a sibling that owns the designation and then borrows a higher tier
+displays a lettered form of it regardless, so δ Cep A keeps its letter
+beside δ Cep C/D/E even though nothing else displays the bare base. 29 of
+the 79 lettered records are that shape. Where the authority names a
+specific component, that name attaches to that record alone; siblings
+resolve down the ladder on their own.
 
 AT-HYG's `proper` column appears nowhere in this list. Its 442 confirmed
 names arrive through tier 2 (the authority asserts them); the rest are

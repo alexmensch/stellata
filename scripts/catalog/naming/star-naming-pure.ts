@@ -165,7 +165,10 @@ export interface DisplayNameInput<K> {
   key: K;
   set: DesignationSet;
   /** WDS / CCDM component letter, stated relative to the WDS root. Renders
-   *  only where the designation fails to single the star out. */
+   *  only where a SIBLING OWNS the same designation — which is not the same
+   *  as the label needing it to be unique, since a sibling that owns the
+   *  designation and then borrows a higher tier displays a lettered form of
+   *  it anyway (δ Cep A beside δ Cep C/D/E). */
   component?: string;
   /** The component the AUTHORITY attributes the star's own designation to.
    *  `κ Her` names component A, so the row for the B component states B and
@@ -195,10 +198,13 @@ export interface DisplayName {
  *
  *  - a star with no designation of its own takes the WDS root anchor's base
  *    plus its own component letter (`Sirius B`, `HIP 82676 Ab`);
- *  - a component letter is appended to a DESIGNATION only where the
- *    designation fails to single the star out — several records own
- *    `θ¹ Ori`, so each takes its letter, while β² Sco owns its designation
- *    alone and stays bare.
+ *  - a component letter is appended to a DESIGNATION only where a SIBLING
+ *    OWNS the same designation — several records own `θ¹ Ori`, so each
+ *    takes its letter, while β² Sco owns its designation alone and stays
+ *    bare. Ownership, not label uniqueness: a sibling that owns the
+ *    designation and then borrows a higher tier still displays a lettered
+ *    form of it, so δ Cep A reads as such beside δ Cep C/D/E rather than
+ *    reverting to the bare designation its siblings no longer claim.
  *
  *  Injective given (naming anchor, component letter). A surviving duplicate
  *  is therefore a data finding — two catalogue entries claiming one
