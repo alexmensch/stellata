@@ -22,16 +22,18 @@ import {
   type LabelMergeCounts,
   type LabelOverrides,
 } from './label-merge-pure';
+import { parseMultiplesTsv, sourceIdsWithSiblingComponent } from '../companions/companion-promotion';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 
 const SRC_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
 const SRC_CROSS_INDEX = resolve(ROOT, 'data/classic-ids/cross_index.tsv');
 const SRC_OVERRIDES = resolve(ROOT, CLASSIC_ID_OVERRIDES_FILE);
 const SRC_LABEL_FLIPS = resolve(ROOT, LABEL_FLIPS_FILE);
+const SRC_MULTIPLES = resolve(ROOT, 'data/binaries/multiples.tsv');
 
 /** The label layer's inputs, for the artifact's mtime invalidation. */
 export const CLASSIC_ID_LABEL_INPUT_PATHS: readonly string[] = [
-  SRC_OVERLAY, SRC_CROSS_INDEX, SRC_OVERRIDES, SRC_LABEL_FLIPS,
+  SRC_OVERLAY, SRC_CROSS_INDEX, SRC_OVERRIDES, SRC_LABEL_FLIPS, SRC_MULTIPLES,
 ];
 
 export interface ClassicIdLabelInputs {
@@ -40,6 +42,7 @@ export interface ClassicIdLabelInputs {
   overrides: LabelOverrides;
   /** The committed review queue, for the equality check in the pass below. */
   committedFlipsTsv: string;
+  siblingRenderedSourceIds: ReadonlySet<string>;
   crossIndexUnknownCst: number;
 }
 
@@ -68,6 +71,9 @@ export function loadClassicIdLabelInputs(): ClassicIdLabelInputs {
       ? parseLabelOverridesTsv(readFileSync(SRC_OVERRIDES, 'utf8'))
       : new Map(),
     committedFlipsTsv: readFileSync(SRC_LABEL_FLIPS, 'utf8'),
+    siblingRenderedSourceIds: existsSync(SRC_MULTIPLES)
+      ? sourceIdsWithSiblingComponent(parseMultiplesTsv(readFileSync(SRC_MULTIPLES, 'utf8')))
+      : new Set<string>(),
     crossIndexUnknownCst: counts.crossIndexUnknownCst,
   };
 }
@@ -98,6 +104,7 @@ export function applyClassicIdLabels(
     labels,
     overlay: inputs.overlay,
     overrides: inputs.overrides,
+    siblingRenderedSourceIds: inputs.siblingRenderedSourceIds,
   });
 
   // The committed queue is written by `build:classic-ids` from the spine, this

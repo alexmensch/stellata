@@ -50,6 +50,7 @@ export type LabelDisposition =
   | 'override-value'
   | 'suppressed-collision'
   | 'extra-alias'
+  | 'extra-sibling-rendered'
   | 'extra-dropped';
 
 /** One row of the committed review queue — every place the merge's output
@@ -95,6 +96,9 @@ export interface LabelMergeCounts {
   /** Overlay values the field could not display but the record still answers
    *  to — a search key and a same-as designation. */
   labelExtraAlias: LabelPartition;
+  /** Extras withheld because the pair's other component is a record of its
+   *  own: the number names that record, not this one. */
+  labelExtraSiblingRendered: LabelPartition;
   /** Overlay values a single-valued field cannot carry beside the one it took
    *  AND has no alias list to hold, so the record will not answer to them. */
   labelExtraDropped: LabelPartition;
@@ -111,6 +115,7 @@ export function emptyLabelMergeCounts(): LabelMergeCounts {
     labelSpineOnly: emptyLabelPartition(),
     labelSuppressed: emptyLabelPartition(),
     labelExtraAlias: emptyLabelPartition(),
+    labelExtraSiblingRendered: emptyLabelPartition(),
     labelExtraDropped: emptyLabelPartition(),
     labelOverridden: emptyLabelPartition(),
   };
@@ -333,6 +338,7 @@ const DISPOSITION_EFFECT: Record<
   'override-spine': { adds: false, removesSpine: false },
   'suppressed-collision': { adds: false, removesSpine: false },
   'extra-alias': { adds: true, removesSpine: false },
+  'extra-sibling-rendered': { adds: false, removesSpine: false },
   'extra-dropped': { adds: false, removesSpine: false },
 };
 
@@ -398,6 +404,14 @@ export interface LabelMergeInput<R extends LabelMergeRecord> {
   labels: readonly string[];
   overlay: ClassicIdOverlay;
   overrides: LabelOverrides;
+  /** Source_ids whose `multiples.tsv` system names more than one component, so
+   *  a second HD naming the pair's other component has a record of its own to
+   *  belong to (§ An alias stops at the blend). Promotion only ever renders a
+   *  secondary that exists as a member row, so this over-approximates the
+   *  rendered set by design — withholding one alias too many is reviewable,
+   *  leaving one on the wrong record is not. Both callers derive it from the
+   *  committed table, which is what keeps the two review queues identical. */
+  siblingRenderedSourceIds: ReadonlySet<string>;
 }
 
 export interface LabelMergeResult {
@@ -415,6 +429,11 @@ interface Proposal {
   value: string | null;
   override: string | null | undefined;
   suppressed: boolean;
+  /** Set by `partitionExtras`: the candidates the field cannot display, split
+   *  by what becomes of each. Disjoint, and together they are every extra. */
+  aliasExtras: string[];
+  siblingExtras: string[];
+  droppedExtras: string[];
 }
 
 /** Merge the source_id-keyed classic-ID overlay onto each record's inherited
@@ -429,7 +448,7 @@ interface Proposal {
 export function mergeClassicIdLabels<R extends LabelMergeRecord>(
   input: LabelMergeInput<R>,
 ): LabelMergeResult {
-  const { records, labels, overlay, overrides } = input;
+  const { records, labels, overlay, overrides, siblingRenderedSourceIds } = input;
   const counts = emptyLabelMergeCounts();
   const flips: LabelFlip[] = [];
   const proposals: Proposal[] = [];
@@ -457,11 +476,13 @@ export function mergeClassicIdLabels<R extends LabelMergeRecord>(
         value: override !== undefined ? override : agrees ? null : candidates[0],
         override,
         suppressed: false,
+        aliasExtras: [], siblingExtras: [], droppedExtras: [],
       });
     }
   });
 
   applyCollisionGuard(records, proposals);
+  partitionExtras(records, proposals, siblingRenderedSourceIds);
 
   for (const p of proposals) {
     const { spec, spine, candidates } = p;
@@ -499,28 +520,32 @@ export function mergeClassicIdLabels<R extends LabelMergeRecord>(
       pushFlip(p.value, 'overlay-wins');
     }
 
-    // A single-valued field can carry one of an ambiguous designation's
-    // several values. The rest go to the record's alias list where it has one,
-    // and are labels the record will not answer to where it does not. A
-    // suppressed or overridden cell is already its own review row.
-    if (p.suppressed || p.override !== undefined) continue;
-    const applied = spec.read(record);
-    const extras = candidates.filter(
-      (c) => applied === null || spec.same(c) !== spec.same(applied),
-    );
-    if (extras.length === 0) continue;
-    if (spec.writeAlt === null) {
-      counts.labelExtraDropped[field] += extras.length;
-      for (const extra of extras) pushFlip(extra, 'extra-dropped');
-    } else {
-      spec.writeAlt(record, extras);
-      counts.labelExtraAlias[field] += extras.length;
-      for (const extra of extras) pushFlip(extra, 'extra-alias');
+    // A single-valued field carries one of an ambiguous designation's several
+    // values; `partitionExtras` decided what becomes of the rest.
+    if (spec.writeAlt !== null && p.aliasExtras.length > 0) {
+      spec.writeAlt(record, p.aliasExtras);
+    }
+    for (const [extras, partition, disposition] of [
+      [p.aliasExtras, counts.labelExtraAlias, 'extra-alias'],
+      [p.siblingExtras, counts.labelExtraSiblingRendered, 'extra-sibling-rendered'],
+      [p.droppedExtras, counts.labelExtraDropped, 'extra-dropped'],
+    ] as const) {
+      partition[field] += extras.length;
+      for (const extra of extras) pushFlip(extra, disposition);
     }
   }
 
   return { counts, flips };
 }
+
+const cellKey = (spec: FieldSpec, value: string): string =>
+  `${spec.field}:${spec.same(value)}`;
+
+const tally = (values: Iterable<string>): Map<string, number> => {
+  const out = new Map<string, number>();
+  for (const v of values) out.set(v, (out.get(v) ?? 0) + 1);
+  return out;
+};
 
 /** Withhold any proposal that would turn an unambiguous spine designation into
  *  an ambiguous one.
@@ -542,14 +567,6 @@ function applyCollisionGuard<R extends LabelMergeRecord>(
   records: readonly R[],
   proposals: readonly Proposal[],
 ): void {
-  const cellKey = (spec: FieldSpec, value: string): string =>
-    `${spec.field}:${spec.same(value)}`;
-  const tally = (values: Iterable<string>): Map<string, number> => {
-    const out = new Map<string, number>();
-    for (const v of values) out.set(v, (out.get(v) ?? 0) + 1);
-    return out;
-  };
-
   const spineCells: string[] = [];
   for (const r of records) {
     for (const spec of LABEL_FIELD_SPECS) {
@@ -595,4 +612,98 @@ function applyCollisionGuard<R extends LabelMergeRecord>(
       );
     }
   }
+}
+
+/** Decide what becomes of each value a single-valued field could not display.
+ *
+ *  Three outcomes, and the field's `writeAlt` is only the first of the gates:
+ *
+ *  - **`extra-dropped`** — the field has no alias list, so there is nowhere to
+ *    put the value and the record will not answer to it.
+ *  - **`extra-sibling-rendered`** — the pair's other component is a record of
+ *    its own, so the number names THAT record. HD numbered two spectra of a
+ *    pair Tycho-2 sees as one entry, and the overlay hangs both numbers on the
+ *    one source_id without saying which component is which; where the pair is
+ *    resolved, letting the primary answer to both would point a number at a
+ *    star we draw separately.
+ *  - **`extra-alias`** — the pair is unresolved, so the single record carries
+ *    both components' light and answers to both numbers. That is the
+ *    granularity the catalogue has, not a misattribution: 93 of these have no
+ *    `multiples.tsv` row at all, so no separation, position angle or component
+ *    magnitude exists to split them with.
+ *
+ *  An alias also has to clear the collision guard's own rule, which
+ *  `applyCollisionGuard` cannot apply for it: aliases are not display cells, so
+ *  the guard's tally never sees them, and an alias equal to a value another
+ *  record DISPLAYS would go ambiguous under `docs/sid.md` § 4.1 and cost both
+ *  records the key. Such a value is withheld to `extra-dropped` — the record
+ *  keeps its own display value and the queue carries the withheld label. */
+function partitionExtras<R extends LabelMergeRecord>(
+  records: readonly R[],
+  proposals: readonly Proposal[],
+  siblingRenderedSourceIds: ReadonlySet<string>,
+): void {
+  /** Candidates the field will not display, deduplicated on the comparison key
+   *  so one overlay cell repeating a value cannot propose it twice. */
+  const extrasOf = (p: Proposal): string[] => {
+    const applied = p.value ?? p.spine;
+    const appliedKey = applied === null ? null : p.spec.same(applied);
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const candidate of p.candidates) {
+      const key = p.spec.same(candidate);
+      if (key === appliedKey || seen.has(key)) continue;
+      seen.add(key);
+      out.push(candidate);
+    }
+    return out;
+  };
+
+  const active = proposals.filter((p) => !p.suppressed && p.override === undefined);
+  const byCell = new Map<string, Proposal>();
+  for (const p of proposals) byCell.set(`${p.recordIdx}\t${p.spec.field}`, p);
+  const spineOwners = tally(cellsOf(records, (r, spec) => spec.read(r)));
+  const displayOwners = tally(cellsOf(
+    records,
+    (r, spec, i) => byCell.get(`${i}\t${spec.field}`)?.value ?? spec.read(r),
+  ));
+  const aliasProposed = tally(
+    active.flatMap((p) => (p.spec.writeAlt === null ? [] : extrasOf(p).map((e) => cellKey(p.spec, e)))),
+  );
+
+  for (const p of active) {
+    const extras = extrasOf(p);
+    if (p.spec.writeAlt === null) {
+      p.droppedExtras = extras;
+      continue;
+    }
+    const sourceId = records[p.recordIdx].gaiaSourceId;
+    for (const extra of extras) {
+      const key = cellKey(p.spec, extra);
+      const claims = (displayOwners.get(key) ?? 0) + (aliasProposed.get(key) ?? 0);
+      if (sourceId !== null && siblingRenderedSourceIds.has(sourceId)) {
+        p.siblingExtras.push(extra);
+      } else if (claims > 1 && (spineOwners.get(key) ?? 0) <= 1) {
+        p.droppedExtras.push(extra);
+      } else {
+        p.aliasExtras.push(extra);
+      }
+    }
+  }
+}
+
+/** Every record's cell per field, as comparison keys, skipping the fields a
+ *  record has no value for. */
+function cellsOf<R extends LabelMergeRecord>(
+  records: readonly R[],
+  value: (r: R, spec: FieldSpec, i: number) => string | null,
+): string[] {
+  const out: string[] = [];
+  records.forEach((r, i) => {
+    for (const spec of LABEL_FIELD_SPECS) {
+      const v = value(r, spec, i);
+      if (v !== null) out.push(cellKey(spec, v));
+    }
+  });
+  return out;
 }

@@ -38,11 +38,13 @@ import {
   spineLabelMergeRecord,
   type LabelMergeRecord,
 } from './label-merge-pure';
+import { parseMultiplesTsv, sourceIdsWithSiblingComponent } from '../companions/companion-promotion';
 import { readRequired, REPO_ROOT as ROOT } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
 
 const SRC_CROSS_INDEX = resolve(ROOT, 'data/classic-ids/cross_index.tsv');
 const SRC_BSC5 = resolve(ROOT, 'data/classic-ids/bsc5.tsv');
+const SRC_MULTIPLES = resolve(ROOT, 'data/binaries/multiples.tsv');
 const SRC_GAIA_ASTROMETRY = resolve(ROOT, 'data/gaia/gaia_dr3_astrometry_catalog.tsv');
 const SRC_HIP_VMAG = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
 const SRC_SIMBAD_WDS_XIDS = resolve(ROOT, 'data/simbad/simbad_wds_xids.tsv');
@@ -237,6 +239,11 @@ async function main(): Promise<void> {
     labels: spine.labels,
     overlay,
     overrides,
+    // Read here as well as in the record build, so both runs classify an extra
+    // the same way and the committed queue stays byte-identical.
+    siblingRenderedSourceIds: sourceIdsWithSiblingComponent(
+      parseMultiplesTsv(readRequired(SRC_MULTIPLES, 'Run `pnpm run build:binaries`.')),
+    ),
   });
 
   const counts: ClassicIdOverlayCounts = {

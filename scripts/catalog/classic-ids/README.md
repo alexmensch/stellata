@@ -227,22 +227,61 @@ pairs, and the `hr` route resolves through `hd`. `sourcesWithMultipleGj` and
 `sourcesWithMultipleFlamsteed` are 0 because a GJ carries its component letter
 and a Flamsteed number names one star. `hip`, `gl` and `flam` therefore have
 nowhere to put an extra and queue it as `extra-dropped` instead — a label the
-record will not answer to. Both counts are per-identifier partitions, and
-`extra-dropped` is 0 on every field today; it exists so a future overlay change
-surfaces as a count rather than as a silently lost label.
+record will not answer to.
 
-Nothing about this makes an alias ambiguous. Not one of the 130 is carried by
-another record off the spine or off the overlay, and none keys a ledger row, so
-the additions cannot fuse two same-as classes or move a canonical key —
-`sid:check` resolves all 329,603 objects with nothing minted. The **69**
-ambiguous designations `sid:allocate` still drops (57 `hd:`, 11 `hr:`, 1 `gl:`)
-are spine-side component pairs, unrelated to this list — `../../sid/README.md`
-§ Ambiguous designations carries the regenerating command.
+### An alias stops at the blend
 
-A promoted companion inherits neither list. An anchor's alternative HD is often
-the pair's *other* component number, but the overlay asserts both against one
-Gaia source and names no component, so attributing one to the companion would
-invent evidence (`../companions/README.md` § Fields a promoted record carries).
+**A second HD number names the pair's other COMPONENT, not a second name for
+one star**, so whether the record may answer to it turns on whether that
+component is a record of its own. 14 Lyncis is the shape: the Henry Draper
+survey photographed two spectra of a 0.3″ pair and numbered them 49618 and
+49619, Tycho-2 carries the pair as the single entry TYC 3778-1982-1 (IV/25
+flags it `n_hd=2`), and the overlay hangs both numbers on the one Gaia source
+without saying which component is which. Three outcomes:
+
+| Disposition | Values | When |
+|---|---|---|
+| `extra-alias` | 95 | the pair is unresolved — one record, both components' light |
+| `extra-sibling-rendered` | 34 | the secondary is a record of its own, so the number is its |
+| `extra-dropped` | 0 | the field has no alias list, or the guard withheld the value |
+
+Where the pair is unresolved the single record **is** the granularity the
+catalogue has, and answering to both numbers is accurate rather than sloppy:
+**93 of the 95 have no `multiples.tsv` row at all**, so no separation, position
+angle or component magnitude exists to split them with, and the two HD numbers
+are the entire trace of duplicity. Where it IS resolved, 14 Lyn B holds its own
+record and letting the primary claim 49619 would point the number at a star we
+draw separately.
+
+The predicate is `sourceIdsWithSiblingComponent`
+(`../companions/companion-promotion.ts`), keyed on the `multiples.tsv` SYSTEM
+rather than the source_id — a secondary routinely carries its own source_id or
+none, so grouping by source_id misses the sibling on exactly the resolved pairs
+this asks about. Promotion can still decline to render a member row, so the set
+is a **superset** of what ships (34 withheld against 33 rendered today), and
+that direction is deliberate: withholding one alias too many is a reviewable
+queue row, leaving one on the wrong record is a wrong answer. It must be derived
+from the committed table by BOTH merge callers, or the two review queues stop
+being byte-identical.
+
+An alias also clears the collision guard's rule, which the guard itself cannot
+apply: aliases are not display cells, so its tally never sees them, and an alias
+equal to a value another record DISPLAYS would go ambiguous under
+`docs/sid.md` § 4.1 and cost both records the key. Those are withheld to
+`extra-dropped`. 0 fire today — measured, and now also guarded.
+
+The **69** ambiguous designations `sid:allocate` still drops (57 `hd:`, 11
+`hr:`, 1 `gl:`) are spine-side component pairs, unrelated to this list;
+`../../sid/README.md` § Ambiguous designations carries the regenerating command.
+No carried alias is among them, and none keys a ledger row, so the additions
+cannot fuse two same-as classes or move a canonical key.
+
+A promoted companion inherits neither list. The overlay names no component, so
+handing the anchor's alternative HD to the companion would invent the very
+attribution the table declines to make (`../companions/README.md` § Fields a
+promoted record carries). Attributing each number to its component where
+IV/27A's own columns disambiguate — 49618 carries HR 2520 and HIP 33048 where
+49619 carries neither — is `stellata-3bsf.39`.
 
 ### The collision guard
 
