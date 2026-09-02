@@ -127,6 +127,20 @@ export function buildComponentLabels(
   return [...labels];
 }
 
+/** The constellation a designation on this entry is NAMED for, which is
+ *  what every derived label is built against — byte 34 is only where the
+ *  star sits (`scripts/catalog/README.md` § Search index). Resolved per
+ *  entry, so a component's aliases are built against its ANCHOR's, the
+ *  same source the display-name composer takes the base from. */
+function designationCon(
+  entry: SearchEntry,
+  constellations: { code: string; name: string }[],
+): { code: string; name: string } {
+  const idx = designationConIndex(entry.dc, entry.c);
+  const con = idx !== NO_CONSTELLATION_INDEX ? constellations[idx] : null;
+  return { code: con?.code ?? '', name: con?.name ?? '' };
+}
+
 export interface SearchIndex {
   fuzzyEntries: FuzzyEntry[];
   hipMap: Map<number, number>;
@@ -187,16 +201,13 @@ export function buildSearchIndex(
     // designation's constellation; `displayCon` is the dropdown's context
     // line and stays positional. The two differ only where a boundary has
     // moved past a named star (ρ Aql reads Delphinus, searches as 67 Aql).
-    const desigConIdx = designationConIndex(entry.dc, entry.c);
-    const con = desigConIdx !== NO_CONSTELLATION_INDEX ? constellations[desigConIdx] : null;
-    const conCode = con?.code ?? '';
-    const conName = con?.name ?? '';
+    const { code: conCode, name: conName } = designationCon(entry, constellations);
     const posConIdx = entry.c ?? NO_CONSTELLATION_INDEX;
     const displayCon = posConIdx !== NO_CONSTELLATION_INDEX
       ? constellations[posConIdx]?.name ?? '' : '';
 
-    const isConExpansion = (label: string): boolean =>
-      conName !== '' && label.includes(conName);
+    const isConExpansion = (label: string, name: string): boolean =>
+      name !== '' && label.includes(name);
 
     const properName = entry.p ?? null;
     const bayerDisplay = entry.b && conCode
@@ -210,14 +221,15 @@ export function buildSearchIndex(
     // that exists nowhere else. Every bare designation is already reached
     // by its own tier's derived labels or its exact-match map, and
     // fuzzy-indexing 300k catalogue numbers would only dilute the corpus.
-    const indexDisplay = display !== undefined
-      && (properName !== null || display.lettered || display.borrowed);
+    const indexedLabel = display !== undefined
+      && (properName !== null || display.lettered || display.borrowed)
+      ? display.label : null;
     const hasNamedDisplay = properName !== null || bayerDisplay !== null;
 
     if (primary !== null) {
-      if (indexDisplay) {
+      if (indexedLabel !== null) {
         fuzzyEntries.push({
-          kind: 'star', index: entry.i, label: display!.label, primary, displayCon,
+          kind: 'star', index: entry.i, label: indexedLabel, primary, displayCon,
         });
       }
       // Published spellings the ladder displaced. Only strings no structure
@@ -229,7 +241,7 @@ export function buildSearchIndex(
         for (const label of buildBayerLabels(entry.b, conCode, conName)) {
           fuzzyEntries.push({
             kind: 'star', index: entry.i, label, primary, displayCon,
-            conExpansion: isConExpansion(label),
+            conExpansion: isConExpansion(label, conName),
           });
         }
       }
@@ -251,25 +263,31 @@ export function buildSearchIndex(
       for (const label of buildGcvsLabels(entry.g, conCode, conName)) {
         fuzzyEntries.push({
           kind: 'star', index: entry.i, label, primary: gcvsPrimary, displayCon,
-          conExpansion: isConExpansion(label),
+          conExpansion: isConExpansion(label, conName),
         });
       }
     }
 
     // Multiple-star component aliases: "<system> <letter>" → this component.
-    // Base designation comes from the system primary (entry.cp); the labels
-    // fall through to the component's own display, or the first alias when it
-    // is otherwise anonymous.
+    // Base designation comes from the WDS root anchor (entry.cp), so it is
+    // built against the ANCHOR's designation constellation — the composer
+    // takes the base from the same place, and reading this entry's would
+    // spell the anchor's letter against the wrong constellation. The labels
+    // fall through to the component's own display, or the first alias when
+    // it is otherwise anonymous.
     if (entry.cl && entry.cp !== undefined) {
       const primaryEntry = byIndex.get(entry.cp);
       if (primaryEntry) {
-        const labels = buildComponentLabels(primaryEntry, conCode, conName, entry.cl);
+        const anchorCon = designationCon(primaryEntry, constellations);
+        const labels = buildComponentLabels(
+          primaryEntry, anchorCon.code, anchorCon.name, entry.cl,
+        );
         if (labels.length > 0) {
           const compDisplay = primary ?? labels[0];
           for (const label of labels) {
             fuzzyEntries.push({
               kind: 'star', index: entry.i, label, primary: compDisplay, displayCon,
-              conExpansion: isConExpansion(label),
+              conExpansion: isConExpansion(label, anchorCon.name),
             });
           }
         }
