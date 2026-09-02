@@ -161,6 +161,7 @@ function reportCoverage(counts: ClassicIdOverlayCounts): void {
         `flipped ${counts.labelFlipped[field]}, ` +
         `suppressed ${counts.labelSuppressed[field]}, ` +
         `extras aliased ${counts.labelExtraAlias[field]}, ` +
+        `sibling-rendered ${counts.labelExtraSiblingRendered[field]}, ` +
         `extras dropped ${counts.labelExtraDropped[field]}, ` +
         `overridden ${counts.labelOverridden[field]}`,
     );

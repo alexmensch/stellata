@@ -350,7 +350,7 @@ One JSON array entry per star that has at least one searchable identifier
 (proper name, Bayer, Flamsteed, GCVS designation, HIP, HD, HR, or Gliese).
 Short keys (`i/p/b/f/g/hip/hd/hr/hda/hra/gl/c/dc/s/cl/cp`) to keep wire size down — file is
 ~15 MB raw, ~4 MB gzipped. `hda`/`hra` carry the further HD / HR numbers a record
-answers to but does not display, on 129 entries (`classic-ids/README.md` § The label merge). Loaded in parallel with `catalog.bin` in
+answers to but does not display, on 95 entries (`classic-ids/README.md` § An alias stops at the blend). Loaded in parallel with `catalog.bin` in
 `main.ts`. The `s` field carries the raw spectral designation from the
 spine's printed `spect` cell ("G2 V", "M1.5Iab-b", "K0III+K7V", …) for the
 hover tooltip display. The `g` field carries the GCVS variable-star designation

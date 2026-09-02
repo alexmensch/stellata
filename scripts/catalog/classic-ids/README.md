@@ -219,7 +219,8 @@ to the record's alias list — `hdAlt` / `hrAlt`, queued as `extra-alias`. The
 record answers to every one of them: they become extra keys on the search
 index's `hdMap` / `hrMap` (`src/client/typeahead/README.md` § Star search) and
 extra `hd:` / `hr:` designations in its same-as class (`docs/sid.md` § 4.1).
-130 values today, 129 hd + 1 hr, across 129 records.
+The overlay asserts 130 such values today (129 hd + 1 hr); **95 are carried**,
+and which ones is the next section's rule.
 
 **HD and HR are the only fields with an alias list**, and that follows from the
 join rather than from today's data: HD numbered both components of many close

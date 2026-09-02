@@ -58,7 +58,14 @@
   },
   "labelExtraAlias": {
     "hip": 0,
-    "hd": 129,
+    "hd": 95,
+    "hr": 0,
+    "gl": 0,
+    "flam": 0
+  },
+  "labelExtraSiblingRendered": {
+    "hip": 0,
+    "hd": 34,
     "hr": 1,
     "gl": 0,
     "flam": 0
