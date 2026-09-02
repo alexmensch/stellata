@@ -401,7 +401,7 @@ describe('allocation', () => {
     const r = allocate({
       objects: [{
         designations: starDesignations({
-          isSol: false, hip: null, hd: 281098, hr: null, hdAlt: [35908],
+          isSol: false, hip: null, hd: 281098, hr: null, hdAlt: [35908], hrAlt: [],
           gl: null, gaiaSourceId: null, syntheticId: null,
         }),
         kind: 'star',
@@ -574,6 +574,8 @@ describe('starDesignations', () => {
         hip: 32349,
         hd: 48915,
         hr: 2491,
+        hdAlt: [],
+        hrAlt: [],
         gl: 'Gl 244 A',
         gaiaSourceId: '2947050466531873024',
         syntheticId: null,
@@ -595,6 +597,7 @@ describe('starDesignations', () => {
         hd: 281098,
         hr: null,
         hdAlt: [35908],
+        hrAlt: [],
         gl: null,
         gaiaSourceId: null,
         syntheticId: null,
@@ -609,6 +612,8 @@ describe('starDesignations', () => {
         hip: 0,
         hd: null,
         hr: null,
+        hdAlt: [],
+        hrAlt: [],
         gl: null,
         gaiaSourceId: null,
         syntheticId: 'synth-01234+5678-Ab',
@@ -619,7 +624,7 @@ describe('starDesignations', () => {
   it('throws when a synthetic id lacks the runtime prefix', () => {
     expect(() =>
       starDesignations({
-        isSol: false, hip: null, hd: null, hr: null, gl: null,
+        isSol: false, hip: null, hd: null, hr: null, hdAlt: [], hrAlt: [], gl: null,
         gaiaSourceId: null, syntheticId: '01234+5678-Ab',
       }),
     ).toThrow(/synth-/);

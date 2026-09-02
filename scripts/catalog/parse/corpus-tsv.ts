@@ -73,6 +73,12 @@ export function parseIntOrNull(s: string | undefined): number | null {
 export const RECORD_REF_KINDS = ['hip', 'gaia', 'name', 'hd'] as const;
 export type RecordRefKind = (typeof RECORD_REF_KINDS)[number];
 
+/** What each kind's value looks like, for the parse error. Total over the
+ *  union, so a new kind cannot be added without describing itself. */
+const REF_VALUE_SHAPE: Record<RecordRefKind, string> = {
+  hip: 'n', gaia: 'id', name: 'name', hd: 'n',
+};
+
 export interface RecordRef {
   kind: RecordRefKind;
   value: string;
@@ -85,7 +91,7 @@ export function parseRef(cell: string, rowName: string, col: string): RecordRef 
   if (!(RECORD_REF_KINDS as readonly string[]).includes(kind) || !value) {
     throw new Error(
       `${rowName}: malformed ${col} "${cell}" — expected `
-        + RECORD_REF_KINDS.map((k) => `${k}:<${k === 'name' ? 'name' : 'n'}>`).join(' | '),
+        + RECORD_REF_KINDS.map((k) => `${k}:<${REF_VALUE_SHAPE[k]}>`).join(' | '),
     );
   }
   return { kind: kind as RecordRefKind, value };

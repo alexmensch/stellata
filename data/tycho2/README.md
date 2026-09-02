@@ -18,6 +18,17 @@ tycho2_suppl1.tsv   2,713 rows from I/259/suppl_1 — Tycho-1 and
 
 ## Which position to propagate from
 
+> **THIS SECTION IS WRONG ON BOTH POSITION CELLS, and the build follows it.**
+> Tycho-2 states `RAmdeg`/`DEmdeg` at **J2000**, while `EpRAm`/`EpDEm` are the
+> mean epoch **of the observations** the solution was fitted to — not of the
+> position. `RA(ICRS)`/`DE(ICRS)` is the *observed* place near 1991.25, not a
+> J2000 propagation of the mean solution. So every tycho2-tier record is
+> advanced `2000 − ep_ra` too far, ~8.9 yr, and the `pflag='X'` cohort's cell
+> is not at the epoch claimed below either. Measured three ways in
+> `stellata-3bsf.37`, which carries the fix and the rewrite of this section;
+> § The pinned row records what the corpus pins meanwhile. Read nothing below
+> as settled until that lands.
+
 `ra_mdeg`/`de_mdeg` is the **observed mean position** at `ep_ra`/`ep_de`,
 and it is what a propagation to the scene epoch must start from.
 `ra_icrs`/`de_icrs` is Tycho-2's own propagation of that same solution to
@@ -117,7 +128,7 @@ places — the ~27″ staleness measured rather than asserted.
 It is also the corpus pin for the whole tier, through the only `hd:` record
 ref in the repo (`scripts/catalog/validate/sky-position-corpus.tsv`), and that
 row currently pins a KNOWN-WRONG value: § Which position to propagate from
-below is wrong about which epoch each position cell is stated at, and the
+**above** is wrong about which epoch each position cell is stated at, and the
 shipped place is ~8.9 yr of this star's motion — 3.7″ — ahead of Gaia's.
 The corpus header carries the measurement; `stellata-3bsf.37` carries the fix.
 

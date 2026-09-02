@@ -315,7 +315,7 @@ function designationFor(field: LabelField, value: string): string | null {
   if (field === 'flam') return null;
   const empty = {
     isSol: false, hip: null, hd: null, hr: null, gl: null,
-    gaiaSourceId: null, syntheticId: null,
+    hdAlt: [], hrAlt: [], gaiaSourceId: null, syntheticId: null,
   };
   const fields = field === 'gl'
     ? { ...empty, gl: value }
