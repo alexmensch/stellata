@@ -572,6 +572,17 @@ describe('search / starDesignations', () => {
     expect(starDesignations(entry, constellations, 0n)).toEqual(['HD 1']);
   });
 
+  // The record answers to both numbers because it renders both components'
+  // light, so the card says so rather than denying a number search accepted.
+  it('lists every HD/HR number the record answers to, in numeric order', () => {
+    const entry: SearchEntry = {
+      i: 0, hr: 7002, hra: [7001], hd: 181615, hda: [181616], hip: 95168,
+    };
+    expect(starDesignations(entry, constellations, 0n)).toEqual([
+      'HR 7001', 'HR 7002', 'HD 181615', 'HD 181616', 'HIP 95168',
+    ]);
+  });
+
   it('skips a Bayer-form GCVS designation (already covered by the real Bayer)', () => {
     const entry: SearchEntry = { i: 0, p: 'Algol', b: 'Bet', c: 0, g: 'bet Lyr', hip: 14576 };
     // Fixture constellation is Lyr; the point is the lowercase Greek

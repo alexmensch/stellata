@@ -82,8 +82,21 @@ export function starDesignations(
   if (entry.g && !(/^[a-z]/.test(gcvsFirst) && splitBayer(gcvsFirst))) {
     out.push(formatGcvsDesignation(entry.g));
   }
-  if (entry.hr !== undefined) out.push(`HR ${entry.hr}`);
-  if (entry.hd !== undefined) out.push(`HD ${entry.hd}`);
+  // An alias rides the record only where the pair is unresolved, so this ONE
+  // record is what both catalogue numbers reach — listing both is what makes
+  // that legible, rather than a card denying a number the search box just
+  // accepted (scripts/catalog/classic-ids/README.md § An alias stops at the
+  // blend). Sorted, so the line does not depend on overlay cell order.
+  if (entry.hr !== undefined) {
+    for (const hr of [entry.hr, ...(entry.hra ?? [])].sort((a, b) => a - b)) {
+      out.push(`HR ${hr}`);
+    }
+  }
+  if (entry.hd !== undefined) {
+    for (const hd of [entry.hd, ...(entry.hda ?? [])].sort((a, b) => a - b)) {
+      out.push(`HD ${hd}`);
+    }
+  }
   if (entry.hip !== undefined) out.push(`HIP ${entry.hip}`);
   if (entry.gl) out.push(entry.gl);
   if (gaiaSourceId !== 0n) out.push(`Gaia DR3 ${gaiaSourceId}`);

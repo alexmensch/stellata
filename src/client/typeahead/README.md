@@ -120,7 +120,11 @@ system. `cl`/`cp` are emitted at build time (see `scripts/catalog/README.md`
 
 `starDesignations` (pure, tested) renders a star's full tier-ordered
 designation list (proper → Bayer → Flamsteed → GCVS → HR → HD → HIP →
-Gliese → Gaia DR3) for the focus card's identity line. Bayer-form GCVS
+Gliese → Gaia DR3) for the focus card's identity line. **The HR and HD tiers
+list every number the record answers to**, `hra` / `hda` beside the displayed
+value in numeric order: an alias rides a record only where the pair is
+unresolved, so that one record is what both catalogue numbers reach, and a card
+showing one of them would deny a number the search box had just accepted. Bayer-form GCVS
 designations ("bet Per") are skipped — they duplicate the real Bayer
 display and are search aliases, not display names.
 
