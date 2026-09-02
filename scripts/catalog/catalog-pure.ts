@@ -833,9 +833,19 @@ export function readNameTable(
 // writer + reader is the contract: drift here ships a broken index.
 export interface SearchEntry {
   i: number;     // record index in the binary catalog
-  p?: string;    // proper name (Sol, Sirius, …)
-  b?: string;    // Bayer designation as in AT-HYG (Alp, Alp-1, …)
+  /** Display NAME — the ladder's authority tiers only (Sirius, Ross 128,
+   *  Sirius B). A record displaying a DESIGNATION carries none: the runtime
+   *  composes that from the structure below, through the same composer the
+   *  build used (docs/star-naming.md § 6). */
+  p?: string;
+  b?: string;    // Bayer letter glyph — Greek (α) or bare Latin (p, A)
+  bx?: number;   // Bayer superscript, absent when none
+  /** Component the authority attributes the Bayer designation to (κ Her B).
+   *  Unlike `cl` it renders unconditionally — see star-naming-pure.ts. */
+  bc?: string;
   f?: number;    // Flamsteed number
+  gd?: number;   // Gould number
+  gh?: string;   // Gould Serpens half (Cap / Cau), part of the designation
   c?: number;    // positional constellation index (255 = none, omitted)
   dc?: number;   // designation's constellation index, only when it differs from c
   s?: string;    // spectral designation, cleaned for display
@@ -852,7 +862,11 @@ export interface SearchEntry {
   hra?: number[];
   gl?: string;   // Gliese / GJ designation
   cl?: string;   // multiple-star component letter (A/B/C/Ab…) — see search.ts
-  cp?: number;   // system primary's record index; base for "<designation> <cl>"
+  cp?: number;   // WDS root anchor's record index; base for "<designation> <cl>"
+  /** Published spellings that resolve a search and never display — a name
+   *  the ladder displaced, or an approved alternate. Strings no structure
+   *  implies; every derivable spelling is derived (docs/star-naming.md § 5). */
+  al?: string[];
 }
 
 // Structural subset of Star the search index draws from. Local so this
@@ -860,6 +874,11 @@ export interface SearchEntry {
 export interface SearchEntrySource {
   proper: string | null;
   bayer: string | null;
+  bayerSup: number | null;
+  bayerComponent: string | null;
+  gould: number | null;
+  gouldHalf: string | null;
+  aliases: readonly string[];
   flam: number | null;
   hip: number | null;
   hd: number | null;
@@ -932,14 +951,24 @@ export function buildSearchEntry(
   i: number,
   component: { comp: string; primaryIdx: number } | undefined,
 ): SearchEntry | null {
+  // A promoted companion carries none of these — its display name is
+  // composed from its WDS root anchor's designation plus its own letter, so
+  // the component designation is itself a searchable identifier and the
+  // entry has to exist for the runtime composer to reach it.
   if (!s.proper && !s.bayer && s.hip === null && s.hd === null
-      && s.hr === null && s.flam === null && !s.gl && !s.gcvsName) {
+      && s.hr === null && s.flam === null && s.gould === null && !s.gl
+      && !s.gcvsName && component === undefined) {
     return null;
   }
   const entry: SearchEntry = { i };
   if (s.proper) entry.p = s.proper;
   if (s.bayer) entry.b = s.bayer;
+  if (s.bayerSup !== null) entry.bx = s.bayerSup;
+  if (s.bayerComponent !== null) entry.bc = s.bayerComponent;
   if (s.flam !== null) entry.f = s.flam;
+  if (s.gould !== null) entry.gd = s.gould;
+  if (s.gouldHalf !== null) entry.gh = s.gouldHalf;
+  if (s.aliases.length > 0) entry.al = [...s.aliases];
   if (s.hip !== null) entry.hip = s.hip;
   if (s.hd !== null) entry.hd = s.hd;
   if (s.hr !== null) entry.hr = s.hr;
@@ -957,7 +986,8 @@ export function buildSearchEntry(
   // findable solely by catalogue number gains nothing from carrying it. Every
   // other star rides the reader's `dc ?? c` fallback at no wire cost.
   const hasConRelativeDesignation =
-    Boolean(entry.b) || entry.f !== undefined || Boolean(entry.g) || component !== undefined;
+    Boolean(entry.b) || entry.f !== undefined || entry.gd !== undefined
+    || Boolean(entry.g) || component !== undefined;
   if (hasConRelativeDesignation
       && s.desigConIndex !== NO_CONSTELLATION_INDEX
       && s.desigConIndex !== s.conIndex) {
