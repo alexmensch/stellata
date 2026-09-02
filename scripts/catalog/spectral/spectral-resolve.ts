@@ -30,6 +30,10 @@ export interface SimbadSpectralRow {
   spType: string | null;
   spQual: string | null;
   otype: string | null;
+  /** SIMBAD's own Gaia DR3 id for the object. A designation tier reaching a
+   *  row that states a DIFFERENT one has reached another star — see
+   *  README.md § A stated Gaia id the record contradicts ends the walk. */
+  sourceId: string | null;
 }
 
 /** SIMBAD sp_type under all four namespaces. The HIP index carries the
@@ -45,7 +49,7 @@ export function emptySimbadSpectralIndex(): SimbadSpectralIndex {
 /** Parse the TSV produced by `scripts/refresh/refresh-simbad-sptype.py`
  *  into a `SimbadSpectralIndex`. source_id is kept as a string for the
  *  same > Number.MAX_SAFE_INTEGER reason that `parseGaiaApsisTsv` uses.
- *  A row is indexed under every namespace it carries; the 1,107 rows the
+ *  A row is indexed under every namespace it carries; the 1,104 rows the
  *  pull enumerated by SIMBAD oid alone carry none and index nowhere. */
 export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
   const index = emptySimbadSpectralIndex();
@@ -82,14 +86,11 @@ export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
       gl: gjIdx >= 0 ? ((cells[gjIdx] ?? '').trim() || null) : null,
     };
     indexSimbadRow(
-      index, keys, { spType, spQual, otype },
-      // The pull unions namespaces, so one HIP or TYC reaches two SIMBAD
-      // objects — a component-lettered entry carrying no sp_type beside the
-      // star's own entry carrying the type. The row with the value wins,
-      // which is the read side of "merge on non-empty value"
-      // (scripts/refresh/simbad/README.md § The union asks every namespace a
-      // record reaches). Two rows both stating a type cannot be ordered, and
-      // that is a curation fault rather than a shape the union produces.
+      index, keys, { spType, spQual, otype, sourceId: keys.sourceId },
+      // No key repeats in the committed file (README.md § The union adds rows,
+      // never a second row under one key). The row stating a type is the
+      // verdict a pull that did emit two would need; two rows both stating one
+      // cannot be ordered here and are a curation fault.
       (namespace, key, incumbent, candidate) => {
         if (incumbent.spType === null) return candidate;
         if (candidate.spType === null) return incumbent;
@@ -105,10 +106,17 @@ export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
   return index;
 }
 
+/** A row is this record's only while nothing in it says otherwise. Both ids
+ *  present and differing is SIMBAD stating they are separate stars, so the
+ *  match is refused and the walk continues — the read side of the pull's
+ *  corroboration rule (README.md § A stated Gaia id the record contradicts
+ *  ends the walk). On the source_id tier the two are equal by construction. */
 function matchSimbadRow(
   row: SimbadSpectralRow,
+  recordSourceId: string | null,
 ): { info: SpectralInfo; spectDisplay: string } | null {
   if (!row.spType) return null;
+  if (recordSourceId && row.sourceId && row.sourceId !== recordSourceId) return null;
   const info = classifyFromSimbad(row.spType);
   return info ? { info, spectDisplay: row.spType } : null;
 }
@@ -148,7 +156,9 @@ export function resolveSpectralInfo(
       return { info, source: 'curated', spectDisplay: curated };
     }
   }
-  const hit = walkSimbadNamespaces(simbad, keys, matchSimbadRow);
+  const hit = walkSimbadNamespaces(
+    simbad, keys, (row) => matchSimbadRow(row, keys.sourceId),
+  );
   if (hit) {
     return { ...hit.value, source: 'simbad', simbadKey: hit.namespace };
   }

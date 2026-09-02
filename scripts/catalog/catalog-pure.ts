@@ -132,18 +132,17 @@ const SIMBAD_NAMESPACE_BINDINGS: {
 };
 
 /** Add one pull row under every namespace it carries; a row carrying none is
- *  joinable by nothing and indexes nowhere. `onDuplicate` fires instead of
- *  overwriting — no key repeats in either committed pull, so a collision is an
- *  upstream schema change and not a binding to arbitrate silently. */
+ *  joinable by nothing and indexes nowhere. */
 export function indexSimbadRow<T>(
   index: SimbadNamespaceIndex<T>,
   keys: SimbadRecordKeys,
   row: T,
-  /** Which of two rows sharing one key to index. A pull that unions
-   *  namespaces reaches the same star under two SIMBAD objects — a
-   *  component-lettered entry beside the star's own — so the consumer that
-   *  knows which cell it came for resolves it, or throws where neither row
-   *  can be preferred. */
+  /** Which of two rows sharing one key to index. No key repeats in either
+   *  committed pull, so this decides nothing today; it is what a pull that
+   *  did emit two rows for one key would merge through instead of failing,
+   *  and the consumer that knows which cell it came for is the only thing
+   *  able to order them. Returning neither — by throwing — is a valid
+   *  verdict for a consumer that cannot. */
   onDuplicate: (
     namespace: SimbadNamespace,
     key: string,
