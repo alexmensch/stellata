@@ -72,7 +72,7 @@ same trust cascade the binaries pipeline implements in
 | `gaia_nss_systemic` | Source has an NSS two-body orbit AND the 5p fit is flagged unreliable (RUWE / ipd). Same Gaia row values — DR3 refits `gaia_source` to the centre of mass for NSS sources — the tag carries provenance parity with Stage 3. | ~10.0k |
 | `hip2_saturated` | No usable Gaia parallax (no source_id, no 5p row, or parallax NULL) and HIP2 covers the HIP. The Gaia-saturated bright set: Sirius, Vega, α Cen, Capella, … (J1991.25). | ~2.5k |
 | `hip2_pm_discrepant` | Gaia 5p present but Gaia-vs-HIP2 PM disagrees by > 50 mas/yr on either axis — orbit-corrupted 5p PM; HIP2's long baseline is closer to systemic. Unlike Stage 3 there is no ρ ≤ 5″ companion gate (no per-row WDS context at catalog build); the PM discrepancy alone routes. | ~138 |
-| `tycho2` | No Gaia astrometry row AND no HIP2 row, but the record carries a TYC. Tycho-2's **mean** position (`ra_mdeg`/`de_mdeg`), advanced from its own `ep_ra`/`ep_de`. | 43 |
+| `tycho2` | No Gaia astrometry row AND no HIP2 row, but the record carries a TYC. Tycho-2's **mean** position (`ra_mdeg`/`de_mdeg`), which the catalogue states at J2000. | 41 |
 | `cns5` | The above, with no TYC but a `gl` CNS5 carries. CNS5's own coordinates, advanced from the row's own `pos_epoch`. | 4 |
 | `simbad` | The bottom tier: SIMBAD's bibcoded J2000 coordinates advanced 16 yr on its own bibcoded PM. Gl 863.1A is the corpus exemplar, and the tier's worst mover at 1372 mas/yr. | 13 |
 | `curated` | Sol alone — it carries no identifier any tier above can key on. The vector is arbitrary and unobservable: Sol's distance is zero, so the walk multiplies it to the origin whatever it points at. | 1 |
@@ -87,20 +87,16 @@ omitted; the full tuple belongs to future current-epoch propagation.
 μ_α* inputs are the cos δ-applied rates straight from the tier — never
 divide by cos δ.
 
-**Every tier states its own epoch, and one of them states two.**
-Tycho-2's mean position is observed per star AND per coordinate, so a row
-reads `ep_ra` 1991.07 against `ep_de` 1991.00 — true of every one of the
-40 mean-solution rows in this cohort. `directionAtEpochSplit` is the form
-that advances each coordinate over its own baseline, and the only one the
-build calls. `directionAtEpoch` delegates to it with the two epochs equal —
-the single-epoch statement of the same advance, which is what the unit tests
-read expected values from. Collapsing Tycho-2's pair onto a single epoch would
-advance Dec over the wrong interval — the unit test pins that failure at
-**3004.792″** (0.8347°), which is a 1° tangent-plane error seen on the sphere
-after renormalisation.
+**Every tier states its own epoch, and it is measured rather than assumed.**
+The two Tycho-2 cells were the trap: `ra_mdeg` is stated at J2000 while
+`ep_ra`/`ep_de` date the OBSERVATIONS behind it, and `ra_icrs` is the observed
+position at J1991.25 — so reading either epoch off the column beside it is
+wrong, in opposite directions. `data/tycho2/README.md` § Which position to
+propagate from carries the measurement; `directionAtEpoch` is the single form
+every tier reaches through `directionOnPm`.
 
 **`resolveDirection` selects a solution; it does not advance one.**
-`DirectionSolution` carries the tier's position, its two epochs and its own PM,
+`DirectionSolution` carries the tier's position, its own epoch and its own PM,
 and **`directionOnPm`** is the single call that advances it — once, in
 `readStars`, on whichever proper motion the row ends up carrying, its tier's or
 the rescue cascade's. Only the caller knows which won, so a cascade that
@@ -112,8 +108,8 @@ reading one motion (§ The proper-motion rescue cascade).
 |---|---|
 | `gaia_5p` / `gaia_nss_systemic` | J2016.0 — a zero-Δt no-op |
 | `hip2_*` | J1991.25 |
-| `tycho2` | per star and per coordinate, `ep_ra` / `ep_de` (1967.77–1991.74 across the cohort) |
-| `tycho2`, `pflag='X'` rows | J2000 — no mean solution exists, so `ra_icrs` is the only position the row has. Their PM comes from `pm-rescue/` instead, and advances this position like any other. 3 of the 43, pinned `directionTycho2FromIcrs` |
+| `tycho2` | J2000 — **measured**: over the 1,145 mean-solution rows with a Gaia-grade SIMBAD place above 100 mas/yr, propagating from J2000 lands a median 0.061″ from it against 1.817″ propagating from `ep_ra`/`ep_de`, whose 1967.77–1991.74 spread is the size of the error that buys |
+| `tycho2`, `pflag='X'` rows | J1991.25 — no mean solution exists, so the observed `ra_icrs` is the only position the row has. Their PM comes from `pm-rescue/` instead, and advances this position like any other. 3 of the 41, pinned `directionTycho2FromIcrs` |
 | `cns5` | the row's own `pos_epoch` (2016.0 on 5,244 rows, 2000.0 on 406, 1991.25 on 138, 2015.5 on 36, 2016.55 on 3) |
 | `simbad` | J2000.0 — **measured, not assumed**: over the 673 catalogue rows carrying both a SIMBAD position and a Gaia PM above 500 mas/yr, SIMBAD's position matches the Gaia one back-propagated to J2000 to a median 0.000″, and not one row is closer to J2016 |
 
@@ -149,7 +145,7 @@ parallax-derived distance. So the 13 simbad-tier rows verify themselves
 against nothing. That changes when the distance cascade takes its own
 SIMBAD tier, under validators that do check distance.
 
-**Two of the 43 tycho2 rows are a photocentre, not a star.** `pflag='P'`
+**Two of the 41 tycho2 rows are a photocentre, not a star.** `pflag='P'`
 means Tycho-2's mean solution is the blended light-centre of a double it
 never split, so the position is the pair's, and `directionTycho2Photocentre`
 pins the count. It is counted rather than gated for the same reason the V
@@ -158,15 +154,15 @@ row, so refusing the position would cost the record rather than improve it.
 The same row's V is marked a system blend
 (`../photometry/README.md` § Which tiers give a system blend).
 
-**The tycho2 tier has no corpus row, and cannot have one today.** Its
-records are by construction the ones Gaia and HIP2 both miss, and not one
-of the 43 carries a HIP, a Gaia source_id or a proper name — the only
-three things `parseRef` addresses a record by. Its split-epoch
-propagation is pinned at unit level instead.
+**The tycho2 tier's corpus row is HD 14039**, reached through the `hd:` ref
+kind — its records are by construction the ones Gaia and HIP2 both miss, and not
+one of the 41 carries a HIP, a Gaia source_id or a proper name, so the other
+three ref kinds cannot name one. It is the tier's highest-PM member, which is
+what makes it the row that pins the epoch.
 
 ## The proper-motion rescue cascade
 
-The direction cascade leaves **276** rows without a PM — 273 on a Gaia 2p
+The direction cascade leaves **39** rows without a PM — 36 on a Gaia 2p
 (position-only) solution with no HIP2 cover, 3 on a Tycho-2 row with no mean
 solution. `pm-rescue/` re-keys those on the record's own designations rather
 than shipping them static. Its README carries the routing, why an owned PM on a
@@ -174,14 +170,15 @@ blend is admissible at all, and the Gaia-bibcode skip rule's 13-row cost.
 
 **The rescued motion advances the position as well as the velocity**, through
 the same `directionOnPm` every tier's own PM goes through, so no row tracks a
-rate from a place its tier left stale. Only the 3 Tycho-2 rows move (1.511″ /
-0.095″ / 0.070″); the 273 Gaia rows are native J2016.0 and the advance is a
+rate from a place its tier left stale. Only the 3 Tycho-2 rows move (2.337″ /
+0.149″ / 0.109″); the 36 Gaia rows are native J2016.0 and the advance is a
 zero-Δt no-op. `pm-rescue/README.md` § The rescued motion advances the position
-too carries the check that says it lands right.
+too carries the check that says it lands right, and § Whether the rescuing
+source should supply the position too records why it does not.
 
 `velocityVia` credits the catalogue rather than the route to it, so
-`velocityTycho2Pm` **282** counts this cascade's 242 rows alongside the
-direction tier's 40.
+`velocityTycho2Pm` **43** counts this cascade's 5 rows alongside the
+direction tier's 38.
 
 ## Build-time de-extinction
 

@@ -8,52 +8,77 @@ Gaia solution.
 
 ```
 tycho2_main.tsv     370,140 rows from I/259/tyc2. Mean position
-                    (ra_mdeg/de_mdeg) at per-star mean epochs
+                    (ra_mdeg/de_mdeg), the observation epochs behind it
                     (ep_ra/ep_de), proper motion + errors, BT/VT + errors,
-                    prox, HIP, pflag, and the J2000 ra_icrs/de_icrs.
+                    prox, HIP, pflag, and the observed ra_icrs/de_icrs.
+                    Which cell a propagation starts from and at which
+                    epoch: § Which position to propagate from.
 tycho2_suppl1.tsv   2,713 rows from I/259/suppl_1 — Tycho-1 and
-                    Hipparcos stars. J2000 position only (no mean epoch),
-                    PM where flag='H', BT/VT + errors, prox, HIP, flag.
+                    Hipparcos stars. Observed position only (no mean
+                    solution), PM where flag='H', BT/VT + errors, prox,
+                    HIP, flag.
 ```
 
 ## Which position to propagate from
 
-> **THIS SECTION IS WRONG ON BOTH POSITION CELLS, and the build follows it.**
-> Tycho-2 states `RAmdeg`/`DEmdeg` at **J2000**, while `EpRAm`/`EpDEm` are the
-> mean epoch **of the observations** the solution was fitted to — not of the
-> position. `RA(ICRS)`/`DE(ICRS)` is the *observed* place near 1991.25, not a
-> J2000 propagation of the mean solution. So every tycho2-tier record is
-> advanced `2000 − ep_ra` too far, ~8.9 yr, and the `pflag='X'` cohort's cell
-> is not at the epoch claimed below either. Measured three ways in
-> `stellata-3bsf.37`, which carries the fix and the rewrite of this section;
-> § The pinned row records what the corpus pins meanwhile. Read nothing below
-> as settled until that lands.
+Tycho-2 states two positions per star, at two different epochs, and neither
+epoch is written in the column beside it.
 
-`ra_mdeg`/`de_mdeg` is the **observed mean position** at `ep_ra`/`ep_de`,
-and it is what a propagation to the scene epoch must start from.
-`ra_icrs`/`de_icrs` is Tycho-2's own propagation of that same solution to
-J2000; propagating it again compounds its error rather than correcting it.
+| Cell | What it is | Epoch |
+|---|---|---|
+| `ra_mdeg` / `de_mdeg` | the mean solution's position — what a propagation starts from | **J2000** |
+| `ra_icrs` / `de_icrs` | the observed Tycho-2 position | **J1991.25** |
+| `ep_ra` / `ep_de` | mean epoch of the OBSERVATIONS behind the mean solution | — |
 
-**That prohibition is about the mean solution, not about the J2000 cell.** A
-`pflag='X'` or supplement row has no mean solution for `ra_icrs` to be a
-propagation *of*, so there is nothing to double-count: it is a plain J2000
-position, and advancing it on the motion `pm-rescue/` reaches the row with is a
-first propagation. Only a row that also carries `ra_mdeg` may not be advanced
-from its J2000 cell.
+**`ep_ra` / `ep_de` are not the mean position's epoch**, and reading them as one
+is the trap this table exists to close: they date the observations, the position
+they produced is referred to J2000, and advancing from them adds `2000 - ep_ra`
+of extra motion to every row. Those epochs run 1967.77–1991.74 in the direction
+tier's own cohort and **1918.34–1992.47** across the whole table, so the error
+reaches 32 yr on a tier row and 81.7 yr at the table's worst — decades, not
+months. Nothing reads them.
 
-The two mean epochs differ per star and per coordinate (a row can read
-`ep_ra` 1991.07 against `ep_de` 1991.00), so RA and Dec advance over
-different intervals. `pm_ra` is μ_α* — the cos δ factor is already
-applied — so it is added along the local east tangent directly, never
-divided by cos δ again.
+```bash
+awk -F'\t' 'NR>1 && $7!="" {if (m==""||$7<m) m=$7} END {print m, 2000-m}' \
+  data/tycho2/tycho2_main.tsv
+```
 
-`ra_icrs` earns its place on the **1,537 `pflag='X'` rows**, which have no
-mean solution at all: `ra_mdeg`, `ep_ra`, `pm_ra` and their Dec siblings
-are all empty there and the J2000 cell is the only position the row has.
-(That 1,537 and the 1,537 Gaia 2p rows in the spine are unrelated counts
-that happen to match — see the PM rescue's README.)
-`pflag='P'` (3,953 rows) means the mean solution is the photocentre of an
-unresolved double, not one star's place.
+Both epochs are **measured, not assumed** — the same discipline
+`../../scripts/catalog/distance/README.md` § Direction resolution applies to the
+SIMBAD tier:
+
+- Over the 1,145 rows carrying a mean solution, a Gaia-grade SIMBAD position and
+  a proper motion above 100 mas/yr, propagating from J2000 lands a median
+  **0.061″** from SIMBAD's own J2016 place (p90 0.284″) against **1.817″**
+  (p90 5.427″) propagating from `ep_ra`/`ep_de`. Expressed as years of each
+  star's own motion, the second reads a median 8.97 yr adrift, and dividing that
+  by `2000 - ep_ra` gives **1.009** — the signature of a position that sits at
+  J2000.
+- The observed cell solves to **1991.67** over the 133 measurable `pflag='X'`
+  rows and **1991.25** over the 81 measurable supplement rows, against the
+  catalogue's stated J1991.25. It is 8.75 yr behind `ra_mdeg`, which is the same
+  fact from the other side: across 8,609 rows above 150 mas/yr the two cells sit
+  `ep_ra - 8.75` apart when solved against each other.
+
+**The parse takes the published J1991.25, not the `pflag='X'` fit's 1991.67.**
+The two halves of that measurement are not equally good: a `pflag='X'` row
+carries no proper motion of its own, so solving it borrows a rate from another
+catalogue and inherits that catalogue's disagreement, while the supplement half
+solves on its own footing and lands on the published value to the digit. The
+0.42 yr difference is also bounded to nothing — the tier's two `pflag='X'` rows
+move at 4.4 and 6.0 mas/yr, so preferring the fit would shift them by
+**0.003″** — so the published epoch is taken and the residual is recorded here
+rather than tuned away.
+
+`pm_ra` is μ_α* — the cos δ factor is already applied — so it is added along the
+local east tangent directly, never divided by cos δ again.
+
+`ra_icrs` earns its place on the **1,537 `pflag='X'` rows**, which have no mean
+solution at all: `ra_mdeg`, `ep_ra`, `pm_ra` and their Dec siblings are all empty
+there and the observed cell is the only position the row has. (That 1,537 and
+the 1,537 Gaia 2p rows in the spine are unrelated counts that happen to match —
+see the PM rescue's README.) `pflag='P'` (3,953 rows) means the mean solution is
+the photocentre of an unresolved double, not one star's place.
 
 ## The two tables overlap on 254 TYCs
 
@@ -119,18 +144,17 @@ look up to date to the next run and skip itself silently.
 
 ## The pinned row
 
-`TYC 3694-2544-1` (HD 14039) is the highest-proper-motion row of the 43
+`TYC 3694-2544-1` (HD 14039) is the highest-proper-motion row of the 41
 `directionTycho2` stars, so pinning it holds both the printed tier this
-ingest replaced and the mean epochs that replace it. Its printed
+ingest replaced and the J2000 mean cell that replaces it. Its printed
 AT-HYG cell matches this table's unpropagated mean position to 8 decimal
 places — the ~27″ staleness measured rather than asserted.
 
-It is also the corpus pin for the whole tier, through the only `hd:` record
-ref in the repo (`scripts/catalog/validate/sky-position-corpus.tsv`), and that
-row currently pins a KNOWN-WRONG value: § Which position to propagate from
-**above** is wrong about which epoch each position cell is stated at, and the
-shipped place is ~8.9 yr of this star's motion — 3.7″ — ahead of Gaia's.
-The corpus header carries the measurement; `stellata-3bsf.37` carries the fix.
+It is also the corpus pin for the whole tier, through the only `hd:` record ref
+in the repo (`scripts/catalog/validate/sky-position-corpus.tsv`). Being the
+tier's fastest mover is what makes it the row that pins § Which position to
+propagate from above: it lands 0.113″ from Gaia's own place on the J2000 epoch
+and 3.7″ away on the observation epochs.
 
 ## Provenance
 
@@ -146,24 +170,27 @@ republish; a re-pull is warranted only when the request set moves.
 ## Consumed by
 
 - `scripts/catalog/tycho2-parse.ts` → the direction, PM and V cascades'
-  `tycho2` tier, on **43** direction rows (40 of them with a PM) and
-  **123** V rows. That is the whole no-Gaia astrometry cohort minus the
+  `tycho2` tier, on **41** direction rows (38 of them with a PM) and
+  **111** V rows. That is the whole no-Gaia astrometry cohort minus the
   Gliese-numbered remainder, which has no TYC and routes CNS5 / SIMBAD /
   Gliese instead (`docs/catalog-driver.md` § 5).
 - The same parse feeds the **PM rescue cascade**
-  (`scripts/catalog/distance/pm-rescue/README.md`) on a further **242** rows —
-  its widest reach in this build. These carry a Gaia position but a 2p
-  solution Gaia fitted no proper motion to, and Tycho-2 is the tier admitted
-  without a bibcode check, because a 1997 publication cannot be Gaia's own
-  reduction returning. **2** are `pflag='P'` (ξ UMa A and B), where the light
-  centre's motion is the quantity wanted and the flag's warning is about the
-  position.
+  (`scripts/catalog/distance/pm-rescue/README.md`) on a further **5** rows.
+  These carry a Gaia position but a 2p solution Gaia fitted no proper motion
+  to, and Tycho-2 is the tier admitted without a bibcode check, because a
+  1997 publication cannot be Gaia's own reduction returning. **2** are
+  `pflag='P'` (ξ UMa A and B), where the light centre's motion is the
+  quantity wanted and the flag's warning is about the position.
+
+Every count above is pinned in `scripts/catalog/build-catalog-expected.json`
+(`directionTycho2`, `vTycho2`, `pmRescueTycho2`) and moves with membership —
+read it rather than this list when they disagree.
 
 The parser resolves § Which position to propagate from at parse time, so
 no consumer re-decides it: a row with a mean solution exposes
-`ra_mdeg`/`de_mdeg` and its two epochs, a `pflag='X'` row exposes
-`ra_icrs` at J2000 and `fromIcrs: true`, and the main table's row wins on
-the 254 identifiers both tables carry.
+`ra_mdeg`/`de_mdeg` at J2000, a row with none exposes `ra_icrs` at J1991.25
+and `fromIcrs: true`, and the main table's row wins on the 254 identifiers
+both tables carry.
 
 ## Refresh
 

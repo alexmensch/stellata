@@ -35,31 +35,20 @@
 #   ~2" pair), so the coord is the pair photocentre rather than A alone —
 #   good to ~1", which is why it stays looser than the 0.5" Gaia rows above.
 #
-# - HD 14039 (tycho2): the tier's highest-PM member at 408 mas/yr, and the
-#   only row here PINNING A KNOWN-WRONG VALUE. Read this before "correcting"
-#   it — the row is doing its job by failing when the fix lands.
+# - HD 14039 (tycho2): the tier's highest-PM member at 408 mas/yr, and the row
+#   that pins its epoch. Tycho-2 states the mean position at J2000 — NOT at
+#   ep_ra/ep_de, which date the observations behind it — so this advances 16 yr
+#   on Tycho-2's own PM, 6.5" of motion. Reading the epoch columns as the
+#   position's instead advances it 24.93 yr and lands 3.7" away, which is where
+#   this row sat when it was added; data/tycho2/README.md § Which position to
+#   propagate from carries the measurement that settled both cells.
 #
-#   Published truth: Tycho-2's mean position advanced 16 yr on its own PM puts
-#   the star at 34.60526117 / 56.55892069, which agrees with Gaia's own J2016
-#   place to 0.116". This row pins 34.6067982780 / 56.558361692 — 3.685" from
-#   Gaia — because that is what the build emits.
-#
-#   The cause: Tycho-2 states RAmdeg/DEmdeg at J2000, while EpRAm/EpDEm are
-#   the mean epoch OF THE OBSERVATIONS, not of the position. The direction
-#   cascade reads the epoch columns as the position's, so every tycho2-tier
-#   record is advanced 2000 - ep_ra too far — 8.93 yr here. Measured three
-#   ways: the shipped place sits a median 9.13 yr of each star's own motion
-#   ahead of Gaia across the 5 rows above 60 mas/yr; the table's own RA(ICRS)
-#   cell sits at ep_ra - 8.75 relative to RAmdeg across 8,609 high-PM rows,
-#   which is 1991.25 against J2000; and Tycho-2's published column
-#   definitions say so.
-#
-#   So the 0.5" tolerance is NOT the tier's accuracy against the sky. The
-#   propagation itself is reproduced exactly (0.0000" against the same
-#   arithmetic done by hand from the published cells), which is what the
-#   tolerance states — and the split epochs still matter, since the two
-#   intervals differ per coordinate. Reverts to the published truth above
-#   when stellata-3bsf.37 lands.
+#   The expected value is computed from the published cells rather than taken
+#   from a catalogue's own J2016 statement, since no catalogue publishes one for
+#   a star Gaia and HIP2 both miss. It agrees with Gaia's place — SIMBAD's
+#   J2000 coordinate advanced on its own PM — to 0.113", so the 0.5" tolerance
+#   states the same thing it does on the Gaia rows: reproducibility, with the
+#   source's own accuracy comfortably inside it.
 #
 # ref addresses the record the way every other frozen corpus does
 # (`../parse/corpus-tsv.ts`). xi UMa's spine row carries HIP 55203, but that
@@ -92,4 +81,4 @@ Gl 863.1A	hip:111293	338.2468515815	53.795091576	1.0	1372.5
 Sirius	hip:32349	101.2846216628	-16.721551666	0.5	1339.4
 Vega	hip:91262	279.2358804374	38.784961091	0.5	350.8
 xi UMa	name:Alula Australis	169.543285282	31.526916852	1.5
-HD 14039	hd:14039	34.6067982780	56.558361692	0.5	408.2
+HD 14039	hd:14039	34.6052611700	56.558920690	0.5	408.2

@@ -147,8 +147,7 @@ export interface DirectionSolution {
   via: DirectionVia;
   srcRaDeg: number;
   srcDecDeg: number;
-  srcEpochRa: number;
-  srcEpochDec: number;
+  srcEpoch: number;
   srcPmraMasyr: number | null;
   srcPmdecMasyr: number | null;
   velVia: VelocityVia;
@@ -171,30 +170,10 @@ export function directionAtEpoch(
   fromEpoch: number,
   toEpoch: number,
 ): UnitVector {
-  return directionAtEpochSplit(
-    raDeg, decDeg, pmraMasyr, pmdecMasyr, fromEpoch, fromEpoch, toEpoch,
-  );
-}
-
-/** {@link directionAtEpoch} where the two coordinates are measured at
- *  DIFFERENT epochs, so each advances over its own interval — the Tycho-2
- *  tier's shape, and the only one that needs it (./README.md § Every tier
- *  states its own epoch, and one of them states two). Every tier reaches this
- *  form through `directionOnPm`, which passes a solution's own pair — the same
- *  epoch twice where the tier states only one. */
-export function directionAtEpochSplit(
-  raDeg: number,
-  decDeg: number,
-  pmraMasyr: number | null,
-  pmdecMasyr: number | null,
-  fromEpochRa: number,
-  fromEpochDec: number,
-  toEpoch: number,
-): UnitVector {
   const { u, east, north } = equatorialTangentBasis(raDeg, decDeg);
   if (pmraMasyr === null || pmdecMasyr === null) return u;
-  const dEast = pmraMasyr * MAS_TO_RAD * (toEpoch - fromEpochRa);
-  const dNorth = pmdecMasyr * MAS_TO_RAD * (toEpoch - fromEpochDec);
+  const dEast = pmraMasyr * MAS_TO_RAD * (toEpoch - fromEpoch);
+  const dNorth = pmdecMasyr * MAS_TO_RAD * (toEpoch - fromEpoch);
   const x = u.x + dEast * east.x + dNorth * north.x;
   const y = u.y + dEast * east.y + dNorth * north.y;
   const z = u.z + dEast * east.z + dNorth * north.z;
@@ -214,9 +193,9 @@ export function directionOnPm(
   pmraMasyr: number | null,
   pmdecMasyr: number | null,
 ): UnitVector {
-  return directionAtEpochSplit(
+  return directionAtEpoch(
     solution.srcRaDeg, solution.srcDecDeg, pmraMasyr, pmdecMasyr,
-    solution.srcEpochRa, solution.srcEpochDec, CATALOG_SCENE_EPOCH,
+    solution.srcEpoch, CATALOG_SCENE_EPOCH,
   );
 }
 
@@ -338,14 +317,14 @@ export function resolveDirection(
   const gaiaSolution = (via: DirectionVia, g: GaiaAstrometryCatalogRow): DirectionSolution => ({
     via,
     srcRaDeg: g.raDeg, srcDecDeg: g.decDeg,
-    srcEpochRa: GAIA_DR3_REF_EPOCH, srcEpochDec: GAIA_DR3_REF_EPOCH,
+    srcEpoch: GAIA_DR3_REF_EPOCH,
     srcPmraMasyr: g.pmraMasyr, srcPmdecMasyr: g.pmdecMasyr,
     velVia: pmVelVia(g.pmraMasyr, g.pmdecMasyr, 'gaia_pm'),
   });
   const hip2Solution = (via: DirectionVia, h: Hip2AstrometryRow): DirectionSolution => ({
     via,
     srcRaDeg: h.raDeg, srcDecDeg: h.decDeg,
-    srcEpochRa: HIP2_REF_EPOCH, srcEpochDec: HIP2_REF_EPOCH,
+    srcEpoch: HIP2_REF_EPOCH,
     srcPmraMasyr: h.pmRaMasyr, srcPmdecMasyr: h.pmDeMasyr,
     velVia: pmVelVia(h.pmRaMasyr, h.pmDeMasyr, 'hip2_pm'),
   });
@@ -380,7 +359,7 @@ export function resolveDirection(
     return {
       via: 'tycho2',
       srcRaDeg: tycho2.raDeg, srcDecDeg: tycho2.decDeg,
-      srcEpochRa: tycho2.epochRa, srcEpochDec: tycho2.epochDec,
+      srcEpoch: tycho2.epoch,
       srcPmraMasyr: tycho2.pmRaMasyr, srcPmdecMasyr: tycho2.pmDecMasyr,
       velVia: pmVelVia(tycho2.pmRaMasyr, tycho2.pmDecMasyr, 'tycho2_pm'),
     };
@@ -391,7 +370,7 @@ export function resolveDirection(
     return {
       via: 'cns5',
       srcRaDeg: cns5.raDeg, srcDecDeg: cns5.decDeg,
-      srcEpochRa: cns5.posEpoch, srcEpochDec: cns5.posEpoch,
+      srcEpoch: cns5.posEpoch,
       srcPmraMasyr: cns5.pm?.pmRaMasyr ?? null,
       srcPmdecMasyr: cns5.pm?.pmDecMasyr ?? null,
       velVia: pmVelVia(
@@ -404,7 +383,7 @@ export function resolveDirection(
     return {
       via: 'simbad',
       srcRaDeg: simbad.raDeg, srcDecDeg: simbad.decDeg,
-      srcEpochRa: SIMBAD_REF_EPOCH, srcEpochDec: SIMBAD_REF_EPOCH,
+      srcEpoch: SIMBAD_REF_EPOCH,
       srcPmraMasyr: simbad.pm?.pmRaMasyr ?? null,
       srcPmdecMasyr: simbad.pm?.pmDecMasyr ?? null,
       velVia: pmVelVia(
@@ -421,7 +400,7 @@ export function resolveDirection(
     return {
       via: 'curated',
       srcRaDeg: 0, srcDecDeg: 0,
-      srcEpochRa: CATALOG_SCENE_EPOCH, srcEpochDec: CATALOG_SCENE_EPOCH,
+      srcEpoch: CATALOG_SCENE_EPOCH,
       srcPmraMasyr: null, srcPmdecMasyr: null,
       velVia: 'zero',
     };

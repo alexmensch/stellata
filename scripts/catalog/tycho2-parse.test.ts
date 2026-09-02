@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
-import { TYCHO2_ICRS_EPOCH, parseTycho2Tsvs, tycho2Key } from './tycho2-parse';
+import {
+  TYCHO2_ICRS_EPOCH, TYCHO2_MEAN_EPOCH, parseTycho2Tsvs, tycho2Key,
+} from './tycho2-parse';
 
 const MAIN_HEADER = [
   'tyc1', 'tyc2', 'tyc3', 'pflag', 'ra_mdeg', 'de_mdeg', 'ep_ra', 'ep_de',
@@ -42,15 +44,16 @@ const main = (...rows: string[]) => [MAIN_HEADER, ...rows].join('\n');
 const suppl = (...rows: string[]) => [SUPPL_HEADER, ...rows].join('\n');
 
 describe('parseTycho2Tsvs', () => {
-  it('takes the mean position and its two separate epochs', () => {
+  // ep_ra / ep_de sit in the fixture at 1991.07 / 1991.00 precisely so this
+  // asserts they are NOT read as the position's epoch: they date the
+  // observations, and the mean position they produced is stated at J2000.
+  it('states the mean position at J2000, not at the observation epochs', () => {
     const index = parseTycho2Tsvs(main(mainRow()), suppl());
     const r = index.get('1-1-1')!;
     expect(r.raDeg).toBe(33.5);
     expect(r.decDeg).toBe(12.25);
-    // The two coordinates are observed over different intervals; collapsing
-    // them would advance Dec over the wrong baseline.
-    expect(r.epochRa).toBe(1991.07);
-    expect(r.epochDec).toBe(1991.00);
+    expect(r.epoch).toBe(TYCHO2_MEAN_EPOCH);
+    expect(r.epoch).toBe(2000.0);
     expect(r.fromIcrs).toBe(false);
     expect(r.pmRaMasyr).toBe(10);
     expect(r.btMag).toBe(9.5);
@@ -58,9 +61,9 @@ describe('parseTycho2Tsvs', () => {
   });
 
   // pflag='X' rows carry no mean solution at all — ra_mdeg, ep_ra, pm_ra and
-  // their Dec siblings are empty, and the J2000 cell is the only position
-  // the row has.
-  it("falls a mean-solution-less row back to its J2000 cell at J2000", () => {
+  // their Dec siblings are empty, and the observed cell is the only position
+  // the row has. It is stated at J1991.25, not J2000.
+  it('falls a mean-solution-less row back to its observed cell at J1991.25', () => {
     const index = parseTycho2Tsvs(
       main(mainRow({ pflag: 'X', mean: ['', '', '', ''], pm: ['', ''] })),
       suppl(),
@@ -68,19 +71,24 @@ describe('parseTycho2Tsvs', () => {
     const r = index.get('1-1-1')!;
     expect(r.raDeg).toBe(33.6);
     expect(r.decDeg).toBe(12.3);
-    expect(r.epochRa).toBe(TYCHO2_ICRS_EPOCH);
-    expect(r.epochDec).toBe(TYCHO2_ICRS_EPOCH);
+    expect(r.epoch).toBe(TYCHO2_ICRS_EPOCH);
+    expect(r.epoch).toBe(1991.25);
     expect(r.fromIcrs).toBe(true);
     expect(r.pmRaMasyr).toBeNull();
     expect(r.isPhotocentre).toBe(false);
   });
 
-  it('needs both mean epochs before it prefers the mean position', () => {
+  // A row is taken to have a mean solution on its position cells alone. The
+  // epoch columns no longer gate that, because nothing reads their values.
+  it('prefers the mean position without consulting the epoch columns', () => {
     const index = parseTycho2Tsvs(
-      main(mainRow({ mean: ['33.5', '12.25', '1991.07', ''] })),
+      main(mainRow({ mean: ['33.5', '12.25', '', ''] })),
       suppl(),
     );
-    expect(index.get('1-1-1')!.fromIcrs).toBe(true);
+    const r = index.get('1-1-1')!;
+    expect(r.fromIcrs).toBe(false);
+    expect(r.raDeg).toBe(33.5);
+    expect(r.epoch).toBe(TYCHO2_MEAN_EPOCH);
   });
 
   it('reads the supplement only where the main table has no row', () => {
@@ -88,14 +96,14 @@ describe('parseTycho2Tsvs', () => {
       main(mainRow({ tyc: ['1', '1', '1'] })),
       suppl(supplRow(['1', '1', '1']), supplRow(['2', '2', '1'])),
     );
-    // The main row wins the shared identifier: it has a mean epoch and a PM
+    // The main row wins the shared identifier: it has a mean solution and a PM
     // where 1,404 supplement rows carry no PM at all.
     expect(index.get('1-1-1')!.fromIcrs).toBe(false);
     expect(index.get('1-1-1')!.raDeg).toBe(33.5);
     // The supplement-only identifier still lands.
     const s = index.get('2-2-1')!;
     expect(s.raDeg).toBe(40.0);
-    expect(s.epochRa).toBe(TYCHO2_ICRS_EPOCH);
+    expect(s.epoch).toBe(TYCHO2_ICRS_EPOCH);
     expect(s.fromIcrs).toBe(true);
     expect(s.pmRaMasyr).toBe(5);
   });
