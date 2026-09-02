@@ -260,9 +260,10 @@ export function buildComponentDesignations(
   rows: MultiplesTsvRow[],
   rowIndexMap: CatalogRowIndexMap,
 ): Map<number, ComponentDesignation> {
+  const systems = groupBySystem(rows);
   const resolved: { root: string; pair: ResolvedSystem }[] = [];
   const anchors = new Map<string, { comp: string; idx: number }>();
-  for (const cursor of groupBySystem(rows).values()) {
+  for (const cursor of systems.values()) {
     const pair = resolvePairComponents(cursor, rowIndexMap);
     if (pair === null) continue;
     const root = wdsRootOf(pair.systemId);
@@ -308,7 +309,7 @@ export function buildComponentDesignations(
   // requiring the cursor to resolve left Bb with no letter and no base to
   // compose against. The wings pass genuinely needs both ends of a pair, so
   // it keeps `resolvePairComponents`; naming needs the letter and the root.
-  for (const cursor of groupBySystem(rows).values()) {
+  for (const cursor of systems.values()) {
     const primary = cursor.primary;
     if (primary === null) continue;
     const root = wdsRootOf(primary.systemId);

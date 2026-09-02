@@ -95,8 +95,8 @@ function main(): void {
   writeFileSync(DUPLICATES, formatDuplicateLedger(duplicates));
 
   console.log(
-    `naming-parity.tsv: ${changed.length} display changes of ${rows.length} ` +
-      `records the pre-ladder build labelled ` +
+    `naming-parity.tsv: ${changed.length} of ${rows.length} frozen pre-ladder ` +
+      `labels still differ ` +
       `(${changed.filter((r) => r.new === '').length} now unlabelled, ` +
       `${changed.filter((r) => !r.resolves).length} whose old label no longer ` +
       `resolves)`,
