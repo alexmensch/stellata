@@ -6,14 +6,12 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import {
-  FLAG_HAS_NAME,
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_COMPANION_SYNTHETIC,
   NO_CONSTELLATION_INDEX,
   OPTICAL_DOUBLE_MIN_SEP_PC,
   absoluteToApparentMagnitude,
   apparentToAbsoluteMagnitude,
-  designationConIndex,
   parseGaiaSourceIdStr,
 } from '../catalog-pure';
 import {
@@ -1075,167 +1073,25 @@ function resolveCompanionSpectral(row: MultiplesTsvRow): {
   return { info: SPECTRAL_UNKNOWN, display: null };
 }
 
-// Compose the companion's display name as "<base> <canonicalComp>".
-// Base falls through five sources in order of preference:
-//   1. row's own `name` cell (Stage 6 populates when source=athyg).
-//   2. multiples primary row's `name` cell (Achird / Porrima / Capella
-//      class — secondary row is source=wds but primary has AT-HYG
-//      proper).
-//   3. primary Star's `proper` (post-override; covers cases where
-//      Stage 6 didn't carry the AT-HYG proper into multiples.tsv).
-//   4. primary Star's Bayer + constellation abbrev → "Xi Boo".
-//   5. primary Star's Flamsteed + constellation abbrev → "70 Oph".
-// Constellation abbrev alone is NOT a fallback — refuse and return
-// null rather than colliding with every other star in the same
-// constellation. Without a base the promoted record stays nameless
-// (searchable through synth-ID, but no display name).
-function composeCompanionName(
-  row: MultiplesTsvRow,
-  primary: MultiplesTsvRow | null,
-  canonicalComp: string,
-  primaryStar: Star | null,
-  constellations: { code: string; name: string }[],
-  systemPrimaryStar: Star | null = null,
-): string | null {
-  const base = resolveCompanionNameBase(
-    row, primary, primaryStar, constellations, systemPrimaryStar, true,
-  );
-  if (!base) return null;
-  const systemBase = starNameBase(systemPrimaryStar, constellations)
-    ?? starNameBase(primaryStar, constellations);
-  return joinComponentName(
-    stripDoubledParentToken(
-      stripBlendedSiblingLetter(base, canonicalComp, systemBase),
-      canonicalComp, primary?.comp ?? null,
-    ),
-    canonicalComp,
-  );
-}
-
-/** Strip a trailing single-letter component token when a blended
- *  component inherited a SIBLING's composed name. Acrab's WDS E shares
- *  β² Sco's (WDS C) Gaia source, so Stage 6 stamps E's row name as
- *  "Acrab B" (β² Sco's own name); appending the canonical letter would
- *  read "Acrab B E". The canonical comp already encodes the full path
- *  from the root, so strip the trailing " <letter>" when the prefix is
- *  exactly the system's resolved base name — "Acrab B" → "Acrab" →
- *  "Acrab E", and the sub-letter "Eb" → "Acrab Eb". A real proper name
- *  ending in a capital-letter word never equals the system base, so it
- *  survives. Sub-letters need this too: stripDoubledParentToken only
- *  matches the comp's OWN parent token ("E" for "Eb"), never a sibling's
- *  inherited letter, so " B" would otherwise survive into "Acrab B Eb". */
-export function stripBlendedSiblingLetter(
-  base: string,
-  canonicalComp: string,
-  systemBase: string | null,
-): string {
-  if (systemBase === null || !/^[A-Z]/.test(canonicalComp)) return base;
-  const m = /^(.+) [A-Z]$/.exec(base);
-  if (m && m[1] === systemBase) return m[1];
-  return base;
-}
-
-/** "<base> <comp>", or just base when comp is empty. */
-function joinComponentName(base: string, comp: string): string {
-  return comp ? `${base} ${comp}` : base;
-}
-
-/** proper → "Bayer con" → "Flamsteed con" for a catalog Star, then —
- *  only when `allowDesignation` — a "HIP n"/"HD n"/"HR n"/Gl catalogue
- *  designation tail. The tail mirrors the runtime `buildStarLabels` tier
- *  order (src/client/typeahead/search.ts) so a promoted companion of a
- *  name-less system reads "HIP 22812 Bb" instead of the "Unnamed #idx"
- *  sentinel; it deliberately has no Gaia tier, as buildStarLabels also
- *  stops before Gaia (a Gaia-only system stays name-less on both sides).
- *  The tail is a PRIMARY designation shared down onto the companion, so
- *  it is gated off for stampComponentLetters — two distinct first-class
- *  rows each own their HIP and must not both wear the primary's. */
-function starNameBase(
-  star: Star | null,
-  constellations: { code: string; name: string }[],
-  allowDesignation = false,
-): string | null {
-  if (star === null) return null;
-  const proper = (star.proper ?? '').trim();
-  if (proper) return proper;
-  const conCode = constellationCode(
-    designationConIndex(star.desigConIndex, star.conIndex), constellations,
-  );
-  if (conCode !== null) {
-    const bayer = (star.bayer ?? '').trim();
-    if (bayer) return `${bayer} ${conCode}`;
-    if (star.flam !== null) return `${star.flam} ${conCode}`;
-  }
-  if (!allowDesignation) return null;
-  if (star.hip !== null && star.hip > 0) return `HIP ${star.hip}`;
-  if (star.hd !== null) return `HD ${star.hd}`;
-  if (star.hr !== null) return `HR ${star.hr}`;
-  const gl = (star.gl ?? '').trim();
-  if (gl) return gl;
-  return null;
-}
-
-function resolveCompanionNameBase(
-  row: MultiplesTsvRow,
-  primary: MultiplesTsvRow | null,
-  primaryStar: Star | null,
-  constellations: { code: string; name: string }[],
-  systemPrimaryStar: Star | null = null,
-  allowDesignation = false,
-): string | null {
-  const ownBase = row.name.trim();
-  if (ownBase) return ownBase;
-  const primaryBase = (primary?.name ?? '').trim();
-  if (primaryBase) return primaryBase;
-  // A human name (proper / Bayer / Flamsteed) anywhere in the system wins:
-  // local pair anchor first, then the WDS-root system primary — a sub-pair
-  // whose local primary is nameless/unpromotable climbs to the system
-  // primary (δ Vel CD's C → "Alsephina D"; ε Equ's C climbs past nameless
-  // B → "Eps Equ C").
-  const humanName = starNameBase(primaryStar, constellations)
-    ?? starNameBase(systemPrimaryStar, constellations);
-  if (humanName !== null) return humanName;
-  // Last resort for a wholly name-less system: the primary's catalogue
-  // designation (HIP/HD/HR/Gl), local anchor then system primary, so the
-  // companion reads "HIP 22812 Bb" rather than the "Unnamed #idx" sentinel.
-  if (!allowDesignation) return null;
-  return starNameBase(primaryStar, constellations, true)
-    ?? starNameBase(systemPrimaryStar, constellations, true);
-}
-
-/** Strip a trailing component-letter token from a name base when the
- *  canonical comp about to be appended would double it. Two shapes:
- *   - The base ends in the comp's own PARENT token — a subdivided inner
- *     pair whose local anchor is the parent component's record, already
- *     carrying that letter (Castor's YY Gem primary Ca resolves onto the
- *     "Castor C" record; "Castor C" + "Cb" → "Castor Cb").
- *   - The base ends in the LOCAL PRIMARY's comp — a chained pair-row
- *     promotion whose anchor is itself a promoted "<designation> <letter>"
- *     record (AR Cas's F,G pair: "HIP 115990 F" + "G" → "HIP 115990 G").
- *  The canonical comp already encodes the full path from the root, so the
- *  intermediate letter belongs to the comp, not the base. Only a trailing
- *  " <token>" that exactly matches one of those component letters is
- *  stripped; a base like "15 Mon" or "HIP 22812" is untouched. */
-export function stripDoubledParentToken(
-  base: string,
-  canonicalComp: string,
-  primaryComp: string | null = null,
-): string {
-  for (const tok of [parentComponentToken(canonicalComp), primaryComp]) {
-    if (!tok) continue;
-    const suffix = ` ${tok}`;
-    if (base.endsWith(suffix)) return base.slice(0, base.length - suffix.length);
-  }
-  return base;
-}
-
-function constellationCode(
-  conIndex: number,
-  constellations: { code: string; name: string }[],
-): string | null {
-  if (conIndex < 0 || conIndex >= constellations.length) return null;
-  const entry = constellations[conIndex];
-  return entry ? entry.code : null;
+/** Every name AT-HYG could be carrying this pair's secondary under, used
+ *  only to find the collocated double entry it sometimes ships alongside
+ *  the primary (see promoteRow). Not display names — the ladder composes
+ *  those from structure (`../naming/README.md`). These probe AT-HYG's OWN
+ *  convention, a name cell or the anchor's name with the component letter
+ *  appended, against the records AT-HYG itself named; the index they hit
+ *  holds nothing but spine `proper` cells, so a base composed off a Bayer
+ *  or catalogue designation could never match one and none is tried. */
+function athygDoubleProbeNames(
+  ctx: PromoteRowContext,
+  anchorStar: Star | null,
+): string[] {
+  const { row, anchorPrimaryRow, systemAnchorStar, canonicalComp } = ctx;
+  if (!canonicalComp) return [];
+  const bases = [
+    row.name, anchorPrimaryRow.name, anchorStar?.proper ?? '',
+    systemAnchorStar?.proper ?? '',
+  ].map((b) => b.trim()).filter((b) => b !== '');
+  return [...new Set(bases.map((base) => `${base} ${canonicalComp}`))];
 }
 
 /** Extracts the WDS positional ID from a Stage 6 system_id. The system_id
@@ -1323,7 +1179,11 @@ interface SystemAnchor {
  *  anchor is the row whose comp letter is shortest and alphabetically
  *  first. Used by buildWdsRootAnchors when several cursors map to one
  *  WDS root (40 Eri has A,BC / AC / BC / BD / BE rows all sharing
- *  `04153-0739`; we want A as the system anchor, not B). */
+ *  `04153-0739`; we want A as the system anchor, not B).
+ *
+ *  This anchor is a source of POSITION and velocity, which is why it is
+ *  not the naming anchor: the two answer different questions, and
+ *  `record-index/`'s branch-first rule would move records here. */
 function isMoreCanonicalAnchor(
   candidateComp: string,
   incumbentComp: string,
@@ -1372,18 +1232,16 @@ function buildWdsRootAnchors(
  *  Increments the matching stats counter on each drop. */
 interface PromoteRowContext {
   row: MultiplesTsvRow;
-  /** Multiples row of the anchor primary — drives composeCompanionName's
-   *  primary-row-name fallback and the inherited-HIP gate. For the
-   *  secondary loop this is cursor.primary; for the pair-row-primary
+  /** Multiples row of the anchor primary — drives the inherited-HIP gate.
+   *  For the secondary loop this is cursor.primary; for the pair-row-primary
    *  escape this is the WDS-root system anchor's primary row. */
   anchorPrimaryRow: MultiplesTsvRow;
-  /** Catalog Star of the anchor primary — drives composeCompanionName's
-   *  Bayer/Flamsteed/constellation fallback and the inherited-HIP gate. */
+  /** Catalog Star of the anchor primary — the inherited-HIP gate and the
+   *  field-inheritance source. */
   anchorStar: Star | null;
-  /** Catalog Star of the WDS-root system primary — the naming fallback
-   *  when the local anchor is nameless/unresolved (δ Vel CD's local
-   *  primary C never promotes, so D's name climbs to the system primary
-   *  A = "Alsephina" → "Alsephina D" rather than Unnamed). */
+  /** Catalog Star of the WDS-root system primary — the inheritance source
+   *  when the local anchor is unresolved (δ Vel CD's local primary C never
+   *  promotes). */
   systemAnchorStar: Star | null;
   /** Catalog index of the anchor primary — used by the inherited-HIP
    *  collision escape so the row's HIP-match-against-anchor doesn't
@@ -1394,8 +1252,8 @@ interface PromoteRowContext {
    *  for pair-row primaries). Null signals the position couldn't be
    *  resolved — drop with droppedNoPosition. */
   position: CompanionPlacement | null;
-  /** Canonical comp letter for the row — drives both the synthetic ID
-   *  and the display name. */
+  /** Canonical comp letter for the row — drives the synthetic ID and,
+   *  post-sort, the composer's component letter. */
   canonicalComp: string;
   /** True when this row is a pair-row-primary escape (the cursor primary
    *  itself, promoted as a companion of the WDS-root anchor); drives
@@ -1504,7 +1362,6 @@ function registerExistingMemberForAnchorDim(
 function promoteRow(
   ctx: PromoteRowContext,
   state: PromotionState,
-  constellations: { code: string; name: string }[],
   stats: PromotionStats,
   dustGrid: DustGrid | null,
 ): number | null {
@@ -1650,10 +1507,6 @@ function promoteRow(
   // The row's own observed ci embeds A_V too; a derived ci (Ballesteros /
   // solar fallback) is already intrinsic.
   if (companionCiIsObserved(row)) ci -= av / R_V;
-  const properName = composeCompanionName(
-    row, anchorPrimaryRow, canonicalComp, anchorStar, constellations,
-    systemAnchorStar,
-  );
   // System-level inheritance source: the local anchor primary, falling
   // back to the WDS-root system primary when the local anchor never made
   // it into the catalog (δ Vel CD class — local primary C never promotes).
@@ -1680,9 +1533,10 @@ function promoteRow(
   // with the primary, once at the projected separation. Reposition
   // the existing record instead, and backfill the row's Gaia id so
   // the runtime binaries resolver can address it.
-  if (properName !== null && anchorStar !== null && anchorCatalogIdx !== null) {
-    const dupIdx = state.existing.byProper.get(properName);
-    if (dupIdx !== undefined && dupIdx !== anchorCatalogIdx) {
+  if (anchorStar !== null && anchorCatalogIdx !== null) {
+    for (const probe of athygDoubleProbeNames(ctx, anchorStar)) {
+      const dupIdx = state.existing.byProper.get(probe);
+      if (dupIdx === undefined || dupIdx === anchorCatalogIdx) continue;
       const dup = state.existingStars[dupIdx];
       if (dup.x === anchorStar.x && dup.y === anchorStar.y
           && dup.z === anchorStar.z) {
@@ -1704,7 +1558,6 @@ function promoteRow(
     }
   }
   let flags = FLAG_BINARY_COMPANION_ONLY;
-  if (properName) flags |= FLAG_HAS_NAME;
   if (usesSynth) flags |= FLAG_BINARY_COMPANION_SYNTHETIC;
 
   // Constellation: positional from the companion's own placement, so a pair
@@ -1727,8 +1580,17 @@ function promoteRow(
     conIndex,
     desigConIndex,
     flags,
-    proper: properName,
+    // Every display name is composed post-sort from the structured
+    // designation set, so a minted record ships none of its own.
+    proper: null,
+    iauName: null,
+    eponym: null,
     bayer: null,
+    bayerSup: null,
+    bayerComponent: null,
+    gould: null,
+    gouldHalf: null,
+    aliases: [],
     hip: companionHip,
     hd: null,
     hr: null,
@@ -1875,7 +1737,6 @@ export function backfillPrimaryIdentifiers(
 export function promoteCompanions(
   multiplesRows: MultiplesTsvRow[],
   existingStars: Star[],
-  constellations: { code: string; name: string }[],
   conAssignment: ConstellationAssignment,
   dustGrid: DustGrid | null = null,
   parked: ParkedIdentifiers = emptyParkedIdentifiers(),
@@ -1981,7 +1842,7 @@ export function promoteCompanions(
       const escaped =
         (synthKey !== null ? state.promotedBySynth.get(synthKey) : undefined)
         ?? tryPromoteCursorPrimary(
-          cursor, wdsRootAnchors, state, constellations, stats, dustGrid,
+          cursor, wdsRootAnchors, state, stats, dustGrid,
         );
       if (escaped !== null && escaped !== undefined) {
         primaryCatalogIdx = escaped;
@@ -1998,7 +1859,7 @@ export function promoteCompanions(
       // secondary of A, so the existing secondary loop never
       // reached it).
       primaryCatalogIdx = tryPromoteCursorPrimary(
-        cursor, wdsRootAnchors, state, constellations, stats, dustGrid,
+        cursor, wdsRootAnchors, state, stats, dustGrid,
       );
     }
     const anchor: ProjectionAnchor | null = primaryCatalogIdx !== null
@@ -2058,7 +1919,7 @@ export function promoteCompanions(
           canonicalComp,
           isPairRowPrimary: false,
         },
-        state, constellations, stats, dustGrid,
+        state, stats, dustGrid,
       );
       // A promoted secondary is authoritative for its token — it resolves
       // through the inherited-id escape onto its own record, so it
@@ -2440,7 +2301,6 @@ function tryPromoteCursorPrimary(
   cursor: PairCursor,
   wdsRootAnchors: Map<string, SystemAnchor>,
   state: PromotionState,
-  constellations: { code: string; name: string }[],
   stats: PromotionStats,
   dustGrid: DustGrid | null,
 ): number | null {
@@ -2502,178 +2362,6 @@ function tryPromoteCursorPrimary(
       canonicalComp: primary.comp,
       isPairRowPrimary: true,
     },
-    state, constellations, stats, dustGrid,
+    state, stats, dustGrid,
   );
-}
-
-// ---- Component-letter stamping -----------------------------------------
-
-export interface ComponentStampStats {
-  /** Systems where ≥2 first-class AT-HYG records were stamped. */
-  systemsStamped: number;
-  /** Individual AT-HYG records given a composed component name. */
-  rowsStamped: number;
-}
-
-/** Post-promotion pass for pairs AT-HYG left anonymous. When BOTH halves
- *  of a multiples.tsv pair already exist as first-class AT-HYG records
- *  AND none carries a proper name, they render with identical
- *  Bayer/Flamsteed labels and are individually unsearchable (61 Cyg A /
- *  61 Cyg B both print "61 Cyg"). Stamp each such record's `proper` with
- *  the shared name base (resolveCompanionNameBase) + its comp letter.
- *  Skips systems where any resolved component already has a proper (don't
- *  overwrite Sirius A → "Sirius A"), where the primary yields no usable
- *  base, or where fewer than two DISTINCT first-class records resolve — a
- *  blended single entry (both rows sharing one identifier) is one star,
- *  not two components. Mutates `stars` in place, so it must run before the
- *  name-table / search-index write. */
-export function stampComponentLetters(
-  groups: Map<string, PairCursor>,
-  stars: Star[],
-  constellations: { code: string; name: string }[],
-): ComponentStampStats {
-  const stats: ComponentStampStats = { systemsStamped: 0, rowsStamped: 0 };
-  const existing = buildExistingIndexes(stars);
-  for (const cursor of groups.values()) {
-    const primaryRow = cursor.primary;
-    if (primaryRow === null) continue;
-    const primaryIdx = findExistingPrimary(primaryRow, existing, stars);
-    if (primaryIdx === null) continue;
-    // Distinct first-class (non-promoted) AT-HYG records, one per resolved
-    // component. A secondary that shares the primary's identifier resolves
-    // back to the primary's record (AT-HYG carries the pair as one blended
-    // entry); dedup by index so it collapses to one and the length gate
-    // below drops the system rather than stamping the blend as its faint
-    // secondary. Promoted companions already carry composed names — exclude.
-    const seen = new Set<number>();
-    const resolved: { idx: number; comp: string }[] = [];
-    const add = (idx: number, comp: string) => {
-      if (seen.has(idx)) return;
-      seen.add(idx);
-      resolved.push({ idx, comp });
-    };
-    add(primaryIdx, primaryRow.comp);
-    for (const sec of cursor.secondaries) {
-      if (sec.orbitRole !== 'secondary') continue;
-      const idx = findExisting(sec, existing);
-      if (idx === null) continue;
-      if ((stars[idx].flags & FLAG_BINARY_COMPANION_ONLY) !== 0) continue;
-      add(idx, canonicalCompLetter(primaryRow.comp, sec.comp));
-    }
-    if (resolved.length < 2) continue;
-    if (resolved.some((r) => stars[r.idx].proper)) continue;
-    const base = resolveCompanionNameBase(
-      primaryRow, primaryRow, stars[primaryIdx], constellations,
-    );
-    if (base === null) continue;
-    for (const r of resolved) {
-      const s = stars[r.idx];
-      s.proper = joinComponentName(base, r.comp);
-      s.flags |= FLAG_HAS_NAME;
-      stats.rowsStamped++;
-    }
-    stats.systemsStamped++;
-  }
-  return stats;
-}
-
-export interface NameCollisionStats {
-  /** Display names two+ records in one WDS root both claimed. */
-  collisionsResolved: number;
-  /** Records whose `proper` was recomposed from their own comp letter. */
-  recordsRenamed: number;
-  /** Collisions left alone — recomposing would have collided again. */
-  unresolved: number;
-}
-
-/** Enforce one display name per component within a WDS root. Two naming
- *  schemes meet here: ours composes `<system base> <WDS comp>`, while
- *  AT-HYG's `proper` column carries its own component labels for 9 systems
- *  — and where the two letter the same system differently they collide.
- *  β² Sco is AT-HYG's "Acrab B" but WDS component C, so it landed on the
- *  same name as the WDS-B companion promotion mints, and a focus card
- *  listed "Acrab B" twice.
- *
- *  Precedence: the record whose `proper` already equals its own letter
- *  composition keeps the name; every other claimant is recomposed from its
- *  own comp ("Acrab B" on the C component → "Acrab C"). Deterministic, so
- *  no per-system curation — but it only settles claimants inside ONE root.
- *  Cross-root collisions (the Trapezium spans 05353-0523 / 05353-0524 /
- *  05354-0525, so two distinct stars are both "The-1 Ori Cb") and AT-HYG
- *  naming two records alike (p Eridani) need a designation policy instead;
- *  the ratchet in multi-star-regression.test.ts pins those.
- *
- *  Mutates `stars` in place, so it must run before the name-table /
- *  search-index write. */
-export function resolveComponentNameCollisions(
-  groups: Map<string, PairCursor>,
-  stars: Star[],
-  constellations: { code: string; name: string }[],
-): NameCollisionStats {
-  const stats: NameCollisionStats = {
-    collisionsResolved: 0, recordsRenamed: 0, unresolved: 0,
-  };
-  const existing = buildExistingIndexes(stars);
-  const anchors = buildWdsRootAnchors(groups, existing, stars);
-  const synthIdx = new Map<string, number>();
-  for (let i = 0; i < stars.length; i++) {
-    const sid = stars[i].syntheticId;
-    if (sid && !synthIdx.has(sid)) synthIdx.set(sid, i);
-  }
-
-  // Per root: catalog index → canonical comp. A synth slot is consulted
-  // BEFORE the id indexes: it exists only for a row whose ids were
-  // inherited from the anchor then stripped, so it is always the truer
-  // target — resolving by the inherited id would attribute the anchor's
-  // own record to the companion's letter.
-  const compsByRoot = new Map<string, Map<number, string>>();
-  for (const cursor of groups.values()) {
-    const primaryRow = cursor.primary;
-    if (primaryRow === null) continue;
-    const root = wdsRootOf(primaryRow.systemId);
-    if (root === null) continue;
-    let comps = compsByRoot.get(root);
-    if (!comps) { comps = new Map(); compsByRoot.set(root, comps); }
-    const claim = (comp: string, idx: number | null) => {
-      const own = synthIdx.get(`synth-${root}-${comp}`) ?? idx;
-      if (own !== null && own !== undefined && !comps.has(own)) comps.set(own, comp);
-    };
-    claim(primaryRow.comp, findExistingPrimary(primaryRow, existing, stars));
-    for (const sec of cursor.secondaries) {
-      claim(canonicalCompLetter(primaryRow.comp, sec.comp), findExisting(sec, existing));
-    }
-  }
-
-  for (const [root, comps] of compsByRoot) {
-    const anchor = anchors.get(root);
-    if (anchor === undefined) continue;
-    const base = resolveCompanionNameBase(
-      anchor.primaryRow, anchor.primaryRow, anchor.star, constellations,
-    );
-    if (base === null) continue;
-    const claimants = new Map<string, number[]>();
-    for (const idx of comps.keys()) {
-      const proper = (stars[idx].proper ?? '').trim();
-      if (!proper) continue;
-      const b = claimants.get(proper);
-      if (b) b.push(idx); else claimants.set(proper, [idx]);
-    }
-    const taken = new Set(claimants.keys());
-    for (const [name, idxs] of claimants) {
-      if (idxs.length < 2) continue;
-      let resolved = false;
-      for (const idx of idxs) {
-        const composed = joinComponentName(base, comps.get(idx) as string);
-        if (composed === name) continue;
-        if (taken.has(composed)) { stats.unresolved++; continue; }
-        stars[idx].proper = composed;
-        stars[idx].flags |= FLAG_HAS_NAME;
-        taken.add(composed);
-        stats.recordsRenamed++;
-        resolved = true;
-      }
-      if (resolved) stats.collisionsResolved++;
-    }
-  }
-  return stats;
 }
