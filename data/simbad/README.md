@@ -10,7 +10,7 @@ exactly the gap AT-HYG (system-level spectra) and Gaia DR3
 
 ```
 simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 10k stars.
-simbad_sptype.tsv          ~24 MB, LFS. 333,429 rows. Per-source sp_type /
+simbad_sptype.tsv          ~24 MB, LFS. 333,372 rows. Per-source sp_type /
                            sp_qual / sp_bibcode / otype + HIP / Gaia DR3 /
                            TYC / GJ cross-IDs; the resolver keys all four.
 simbad_values.tsv          ~2.8 MB, LFS. 11,044 rows. Bibcoded rv,
@@ -140,8 +140,8 @@ then TYC, then GJ**, the order the no-Gaia tier itself falls through, each
 rung asking only for what the rungs above left unbound. Read-back does not
 depend on that order — see `scripts/refresh/simbad/README.md` § The widening
 falls through on resolution, not on cell presence.
-These are the only bindings here made on a designation alone, so each is
-adjudicated against SIMBAD's own Gaia cross-IDs **across releases**: kept
+Every binding made on a designation alone — these, and the union's below —
+is adjudicated against SIMBAD's own Gaia cross-IDs **across releases**: kept
 where SIMBAD holds the asking id under any release, dropped where it
 holds a *DR3* id that is not the asking one, kept-and-counted where it
 holds no DR3 id to contradict it. Over the value cohort, **8 vetoed** and
@@ -195,54 +195,86 @@ The pull now asks every namespace a record reaches wherever the object it
 bound answers with nothing (`scripts/refresh/simbad/README.md` § The union
 asks every namespace a record reaches), and the reach is far wider than
 those 34: of 313,257 spine rows, 280,676 are answered by a bound object and
-ask nothing at all, 32,581 are not, and **3,245 of those are recovered** —
-2,590 under HIP, 650 under TYC, 5 under GJ. `simbad_sptype.tsv` is 333,429
-rows against the previous 330,141 and reads 86.3% `sp_type`-filled.
+ask nothing at all, 32,581 are not, and **3,267 of those are recovered** on
+3,188 added objects. `simbad_sptype.tsv` is 333,372 rows against the
+previous 330,141 and reads 86.3% `sp_type`-filled.
+
+Every one of those bindings rests on a designation alone, so every one goes
+through the corroboration rule above — the guard the union does NOT get to
+skip for being a union, and one shared implementation with the widening
+ladder rather than a second one. It **vetoed 111 bindings**
+on a contradicting Gaia DR3 id (50 HIP, 57 TYC, 4 GJ); without it 57 records
+would have taken a spectral type, and so a rendered radius, from a star
+SIMBAD names as a different object.
 
 | build-count | before → after |
 |---|---|
-| `spectralBySimbad` | 280,236 → **283,663** |
+| `spectralBySimbad` | 280,236 → **283,606** |
 | … by `source_id` | 276,809 → 276,810 |
-| … by **HIP** | 1,482 → **4,281** |
-| … by TYC | 1,927 → 2,545 |
-| … by GJ | 18 → 27 |
-| `spectralByGspspec` | 31,696 → **28,756** |
-| `spectralFallback` | 1,025 → **538** |
+| … by **HIP** | 1,482 → **4,236** |
+| … by TYC | 1,927 → 2,538 |
+| … by GJ | 18 → 22 |
+| `spectralByGspspec` | 31,696 → **28,787** |
+| `spectralFallback` | 1,025 → **564** |
 
-The +3,427 into SIMBAD is exactly the 2,940 leaving GSP-Spec plus the 487
-leaving unknown, so no record changed tier for any other reason. **487
-fewer stars render with an unknown class**, and 2,940 trade GSP-Spec's
+The +3,370 into SIMBAD is exactly the 2,909 leaving GSP-Spec plus the 461
+leaving unknown, so no record changed tier for any other reason. **461
+fewer stars render with an unknown class**, and 2,909 trade GSP-Spec's
 letter-only enum — subclass defaulted to 5, no luminosity class — for a
 full Morgan-Keenan type, which moves their rendered radius. `ν Scorpii` is
 the shape, and its `known-stars.tsv` row had recorded the defect before the
 fix existed: SIMBAD's `* nu. Sco A` carries no type for the record's Gaia
 source, so it took GSP-Spec's bare `O`, where `* nu. Sco` under HIP 79374
-says `B2V`. 10 records also leave the solar colour fallback for the
-intrinsic spectral-class colour their new class supports.
+says `B2V` — and that object carries no Gaia id at all, so nothing
+contradicts the binding. 5 records also leave the solar colour fallback for
+the intrinsic spectral-class colour their new class supports.
 
-**One object per key is no longer the invariant.** Two SIMBAD objects
-reaching one record is what the union is for, so `parseSimbadSptypeTsv`
-keeps whichever row states a type and throws only where both do — an
-ambiguity the union cannot produce and curation has to settle. The
-committed file has none. `data/binaries/multiples.tsv` is byte-identical
-across the re-pull: the binaries-side join keys on `simbad_oid` through
-`simbad_wds_xids.tsv`, so it never sees the namespace collision at all.
+`multiplicityUnresolved` moves by **1** on the same pull, which is the one
+place the sp_type index is read for something other than a spectral type:
+`build-catalog.ts` takes the `otype = '**'` unresolved-multiplicity flag off
+`bySourceId`. A vetoed object leaves the file, and its `otype` leaves with
+it. Expected rather than incidental — the veto's judgement is about which
+star the object IS, so every cell it carries is subject to it.
 
-**7 spectral strings changed** on records that kept a type, all through
-`source_id`, all upstream re-typings rather than re-bindings: `G0V:`→`G1V`,
-`B5`→`B2V`, `G5V`→`G5`, `G0/2`→`F9`, `G0IV-V`→`G0V`, `K7`→`M0`,
-`M7`→`M7/10`. The fifth is 26 Draconis, whose `known-stars.tsv` row pinned
-the old string and is re-pinned in the same change with the reason recorded
-— SIMBAD is a living database with no citable release, so a re-typing is
-the expected cost of the tier, not a regression.
+**One object per key is still the invariant, and the union does not
+threaten it.** Two SIMBAD objects for one star both reach the pull, but
+under different keys: SIMBAD's `ident` table maps an id to exactly one
+object, so a designation the union asks under can only resolve to the
+object that holds it, and an object an earlier phase already pulled adds
+nothing (`scripts/refresh/simbad/README.md` § The union adds rows, never a
+second row under one key — it carries the check to re-run). No key repeats
+in any of the four namespaces. What the union did change is that
+`parseSimbadSptypeTsv` now MERGES a repeat rather than failing on one,
+keeping whichever row states a type; that decides nothing today.
+`data/binaries/multiples.tsv` is byte-identical across the re-pull: the
+binaries-side join keys on `simbad_oid` through `simbad_wds_xids.tsv`, so
+the sp_type namespaces are not on its path at all.
+
+**7 spectral strings changed at the 2026-08-25 pull** on records that kept
+a type, all through `source_id`, all upstream re-typings rather than
+re-bindings: `G0V:`→`G1V`, `B5`→`B2V`, `G5V`→`G5`, `G0/2`→`F9`,
+`G0IV-V`→`G0V`, `K7`→`M0`, `M7`→`M7/10`. The fifth was 26 Draconis, whose
+`known-stars.tsv` row pinned the old string and was re-pinned with the
+reason recorded. SIMBAD is a living database with no citable release, so a
+re-typing is the expected cost of the tier, not a regression — and the
+corpus is where each one gets caught, since `known-stars.test.ts` pins
+`primary_spect` per row.
 
 **A re-pull is not done when the file lands.** `simbad_sptype.tsv` feeds two
 pipelines — § Consumed by names both — and they pin separate count snapshots.
-Refreshing the file means running `pnpm run build:binaries` (which moves
-`data/binaries/multiples.tsv` and its per-component `spect` provenance),
-`pnpm run build:binaries-runtime`, and `pnpm run build:catalog`, in that order:
-the catalogue reads the regenerated `multiples.tsv`, so its own counts move
-after the binaries ones do.
+Refreshing the file means three builds, and **`build:binaries-runtime` goes
+last, not in the middle**:
+
+```bash
+pnpm run build:binaries          # data/binaries/multiples.tsv + spect provenance
+pnpm run build:catalog           # reads that multiples.tsv; writes catalog-row-index-map.json
+pnpm run build:binaries-runtime  # reads BOTH of the above
+```
+
+`build-runtime-binaries.py` resolves every component through
+`public/catalog-row-index-map.json`, which `build:catalog` writes, so running
+it before the catalogue leaves `public/binaries.bin` older than an input —
+which is exactly what `tests/artifact-freshness.test.ts` fails on.
 
 ## Consumed by
 
