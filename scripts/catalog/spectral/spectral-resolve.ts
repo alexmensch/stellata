@@ -81,12 +81,26 @@ export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
       tyc: tycIdx >= 0 ? ((cells[tycIdx] ?? '').trim() || null) : null,
       gl: gjIdx >= 0 ? ((cells[gjIdx] ?? '').trim() || null) : null,
     };
-    indexSimbadRow(index, keys, { spType, spQual, otype }, (namespace, key) => {
-      throw new Error(
-        `data/simbad/simbad_sptype.tsv has two rows keyed ${namespace}=${key}. ` +
-          `Re-run scripts/refresh/refresh-simbad-sptype.py.`,
-      );
-    });
+    indexSimbadRow(
+      index, keys, { spType, spQual, otype },
+      // The pull unions namespaces, so one HIP or TYC reaches two SIMBAD
+      // objects — a component-lettered entry carrying no sp_type beside the
+      // star's own entry carrying the type. The row with the value wins,
+      // which is the read side of "merge on non-empty value"
+      // (scripts/refresh/simbad/README.md § The union asks every namespace a
+      // record reaches). Two rows both stating a type cannot be ordered, and
+      // that is a curation fault rather than a shape the union produces.
+      (namespace, key, incumbent, candidate) => {
+        if (incumbent.spType === null) return candidate;
+        if (candidate.spType === null) return incumbent;
+        throw new Error(
+          `data/simbad/simbad_sptype.tsv has two rows keyed ${namespace}=${key}, `
+            + `both stating a spectral type (${incumbent.spType} / `
+            + `${candidate.spType}). Curate the pair or re-run `
+            + `scripts/refresh/refresh-simbad-sptype.py.`,
+        );
+      },
+    );
   }
   return index;
 }

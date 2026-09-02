@@ -139,18 +139,30 @@ export function indexSimbadRow<T>(
   index: SimbadNamespaceIndex<T>,
   keys: SimbadRecordKeys,
   row: T,
-  onDuplicate: (namespace: SimbadNamespace, key: string) => void,
+  /** Which of two rows sharing one key to index. A pull that unions
+   *  namespaces reaches the same star under two SIMBAD objects — a
+   *  component-lettered entry beside the star's own — so the consumer that
+   *  knows which cell it came for resolves it, or throws where neither row
+   *  can be preferred. */
+  onDuplicate: (
+    namespace: SimbadNamespace,
+    key: string,
+    incumbent: T,
+    candidate: T,
+  ) => T,
 ): void {
   for (const namespace of SIMBAD_NAMESPACE_VALUES) {
     const binding = SIMBAD_NAMESPACE_BINDINGS[namespace];
     const key = binding.key(keys);
     if (key === null) continue;
     const map = binding.map(index);
-    if (map.has(key)) {
-      onDuplicate(namespace, String(key));
-      continue;
-    }
-    map.set(key, row);
+    const incumbent = map.get(key);
+    map.set(
+      key,
+      incumbent === undefined
+        ? row
+        : onDuplicate(namespace, String(key), incumbent, row),
+    );
   }
 }
 
