@@ -11,6 +11,7 @@ function stubCatalog(searchIndex?: readonly SearchEntry[]): Catalog {
   return {
     header: {} as Catalog['header'],
     count: 4,
+    constellations: [{ code: 'Ori' }],
     record,
     *records() {
       for (let i = 0; i < 4; i++) yield record(i);

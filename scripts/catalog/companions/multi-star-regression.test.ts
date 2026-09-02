@@ -15,6 +15,7 @@ import {
   loadCatalog,
   lookupByGaiaSourceId,
   lookupByHip,
+  displayLabel,
   lookupByName,
   lookupByRef,
 } from '../catalog-lookup';
@@ -53,6 +54,7 @@ const CORPUS_TSV = resolve(__dirname, 'multi-star-regression.tsv');
 const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
 const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');
 const ROW_INDEX_MAP = resolve(REPO_ROOT, 'public/catalog-row-index-map.json');
+const NAMING_DUPLICATES = resolve(REPO_ROOT, 'scripts/catalog/naming/naming-duplicates.tsv');
 
 // Same fixture gate as known-stars.test.ts, plus binaries.bin (also
 // generated). CI's plain `pnpm test` job skips; the Tier-A corpus job
@@ -96,18 +98,6 @@ const PERIOD_REL_TOLERANCE = 1e-3;   // stored P vs curated ORB6 P
 // a row whose gaia misses the existing index but whose HIP names a
 // non-anchor record IS that record, so no colliding twin is minted.
 const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
-
-// Display names still claimed by two records after
-// resolveComponentNameCollisions. Same-WDS-root collisions are settled by
-// re-lettering (the test below pins that at zero); these are the two shapes
-// re-lettering cannot reach, both awaiting a naming-authority ladder:
-//  - Cross-root, one physical system. WDS splits the Trapezium across
-//    05353-0523 / 05353-0524 / 05354-0525, so two distinct stars are each
-//    the "Cb" of their own root and compose the identical name off the
-//    shared base ("The-1 Ori Cb", "The-1 Ori E").
-//  - AT-HYG naming two distinct records alike ("p Eridani" on both
-//    components of the pair) — an editorial-column defect, not ours.
-const KNOWN_DUPLICATE_DISPLAY_NAMES = 3;
 
 // Corpus-wide count of non-collocated Tier-1 pairs whose baked catalog
 // placement disagrees with the elements-alone R(epoch) by more than half
@@ -337,7 +327,7 @@ const ORBIT_PINNED = CORPUS.filter(r => r.orbitPDays !== null);
 let catalog: Catalog;
 
 beforeAll(async () => {
-  catalog = await loadCatalog();
+  catalog = await loadCatalog({ withSearchIndex: true });
 });
 
 function resolveRef(ref: RecordRef, label: string): CatalogRecord {
@@ -692,7 +682,7 @@ describe.runIf(FIXTURES_READY)('multi-star regression corpus', () => {
       // The two showcase pairs must surface: quadrant ambiguity (Algol Aa,Ab)
       // and the tangent-only bake missing R(epoch)'s radial term (Eta Ori Aa,Ab).
       const algolAb = lookupByName(catalog, 'Algol Ab');
-      const etaOriAb = lookupByName(catalog, 'Eta Ori Ab');
+      const etaOriAb = lookupByName(catalog, 'η Ori Ab');
       expect(algolAb, 'Algol Ab in catalog.bin').not.toBeNull();
       expect(etaOriAb, 'Eta Ori Ab in catalog.bin').not.toBeNull();
       expect(disagreeing.has((algolAb as CatalogRecord).i), 'Algol Aa,Ab expected in the disagreement set').toBe(true);
@@ -709,45 +699,44 @@ describe.runIf(FIXTURES_READY)('multi-star regression corpus', () => {
 
 describe.runIf(FIXTURES_READY)('component display-name uniqueness', () => {
   it('no two records in one WDS root share a display name', () => {
-    // resolveComponentNameCollisions settles this class by re-lettering the
-    // claimant whose name isn't its own letter composition, so the invariant
-    // is exact — a failure is a system where re-lettering couldn't (both
-    // claimants owning their letter means one letter is wrong upstream).
+    // The composer is injective given (naming anchor, component letter), so
+    // the invariant is exact within a root. A failure means two records in
+    // one root claim one letter, or one root's designation reached two
+    // stars — either way a data finding upstream, never a renderer
+    // concession (docs/star-naming.md § 8.4). The catalog-WIDE residual,
+    // where two catalogue entries claim one designation across roots, is
+    // enumerated in ../naming/naming-duplicates.tsv.
     const offenders: string[] = [];
     for (const [root, idxs] of buildWdsRootToIndices()) {
-      const byName = new Map<string, Set<number>>();
+      const byLabel = new Map<string, Set<number>>();
       for (const idx of idxs) {
-        const name = catalog.record(idx).name;
-        if (name === null || name === '') continue;
-        const b = byName.get(name);
-        if (b) b.add(idx); else byName.set(name, new Set([idx]));
+        const label = displayLabel(catalog, idx);
+        if (label === null || label === '') continue;
+        const b = byLabel.get(label);
+        if (b) b.add(idx); else byLabel.set(label, new Set([idx]));
       }
-      for (const [name, claimants] of byName) {
+      for (const [label, claimants] of byLabel) {
         if (claimants.size > 1) {
-          offenders.push(`${root}: "${name}" claimed by ${[...claimants].join(', ')}`);
+          offenders.push(`${root}: "${label}" claimed by ${[...claimants].join(', ')}`);
         }
       }
     }
+    // Every survivor must already be an enumerated data finding: two
+    // catalogue entries claiming one designation, or one physical star held
+    // as two records. A NEW one is a regression in the composer.
+    const pinned = new Set(
+      readFileSync(NAMING_DUPLICATES, 'utf-8').split('\n').slice(1)
+        .filter((l) => l.trim() !== '').map((l) => l.split('\t')[0]),
+    );
+    const unpinned = offenders.filter(
+      (o) => !pinned.has(o.slice(o.indexOf('"') + 1, o.lastIndexOf('"'))),
+    );
     expect(
-      offenders,
-      `records in one WDS root sharing a display name — a focus card lists ` +
-      `the same name twice:\n${offenders.slice(0, 10).join('\n')}`,
+      unpinned,
+      `records in one WDS root sharing a display name that ../naming/` +
+      `naming-duplicates.tsv does not enumerate — a focus card lists the ` +
+      `same name twice:\n${unpinned.slice(0, 10).join('\n')}`,
     ).toEqual([]);
-  });
-
-  it('catalog-wide duplicate display names stay at the known count (ratchet)', () => {
-    const byName = new Map<string, number[]>();
-    for (const r of catalog.records()) {
-      if (r.name === null || r.name === '') continue;
-      const b = byName.get(r.name);
-      if (b) b.push(r.i); else byName.set(r.name, [r.i]);
-    }
-    const duplicated = [...byName.entries()].filter(([, v]) => v.length > 1);
-    expect(
-      duplicated.map(([name, idxs]) => `"${name}" -> ${idxs.join(', ')}`),
-      `display names claimed by more than one record. Above the pin = a new ` +
-      `collision; below = one was resolved, drop the pin (target 0).`,
-    ).toHaveLength(KNOWN_DUPLICATE_DISPLAY_NAMES);
   });
 });
 
