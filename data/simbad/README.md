@@ -10,7 +10,7 @@ exactly the gap AT-HYG (system-level spectra) and Gaia DR3
 
 ```
 simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 10k stars.
-simbad_sptype.tsv          ~24 MB, LFS. 330,141 rows. Per-source sp_type /
+simbad_sptype.tsv          ~24 MB, LFS. 333,429 rows. Per-source sp_type /
                            sp_qual / sp_bibcode / otype + HIP / Gaia DR3 /
                            TYC / GJ cross-IDs; the resolver keys all four.
 simbad_values.tsv          ~2.8 MB, LFS. 11,044 rows. Bibcoded rv,
@@ -159,11 +159,11 @@ star disagreement. All six now reach the pull. The ladder also moved 67
 rows off `HD nnnnnA`-style WDS-component entries onto the star's own
 entry, every one gaining a parallax, and cost no row the row it had.
 
-**The sp_type pull has taken the widening** (re-pulled 2026-08-25;
-`simbad_sptype.tsv` is 330,141 rows against the previous 329,268, gains
-`tyc` / `gj` cross-ID columns, and reads 86.1% `sp_type`-filled). It had
-34,849 no-`sp_type` rows carrying a TYC; what the widening reaches and what
-reaches a RECORD are different numbers, and only the second one matters:
+**What the widening itself was worth**, measured when it landed
+(2026-08-25, the pull that added the `tyc` / `gj` cross-ID columns and took
+the file from 329,268 rows to 330,141). It had 34,849 no-`sp_type` rows
+carrying a TYC; what the widening reaches and what reaches a RECORD are
+different numbers, and only the second one matters:
 
 | build-count | before → after |
 |---|---|
@@ -182,26 +182,51 @@ the resolver gained matching tiers in the same change — the pull's cross-ID
 columns are inert without them (`scripts/catalog/spectral/README.md`
 § The resolver and the radius chain).
 
-**34 records lost a spectral type**, every one of them via a vanished HIP
-key, and the pattern is uniform: the object that owned that HIP in the old
-pull carried **no `source_id`** (`HD 1209`, `[R78b] 16`, `HD 6194`, …).
-The AT-HYG-derived request set pulled those objects; the spine-derived one
-asks under the record's own resolved `source_id` and gets SIMBAD's
-Gaia-keyed object for the same star, which carries no `sp_type`. SIMBAD
-holds both, and the HIP index of the day silently kept whichever row it met
-first, so which one supplied the type was never a decision the pipeline made.
-Reaching both would mean the request unioning namespaces instead of picking
-one. **The ladder above is not that union** and does not fix these 34: it
-falls through only where the Gaia namespace fails to *resolve*, and here it
-resolved — onto an oid carrying no `sp_type`. The union stays open work.
-The index no longer resolves such a clash quietly: `parseSimbadSptypeTsv`
-throws on a repeated key in any namespace, which the committed file has
-none of.
+**The union closed the 34 the ladder could not** (re-pulled 2026-09-02).
+Those 34 records had lost a spectral type to a vanished HIP key: the object
+that owned the HIP in the AT-HYG-derived request carried **no
+`source_id`** (`HD 1209`, `[R78b] 16`, `HD 6194`, …), while the
+spine-derived request asks under the record's own resolved `source_id` and
+gets SIMBAD's Gaia-keyed object for the same star, which carries no
+`sp_type`. The widening ladder falls through on *resolution* and here it
+resolved, so no rung ever fired.
 
-`simbad_sptype.tsv` was not re-pulled when the ladder landed: a rebased
-request set does not rewrite its output (`scripts/refresh/README.md`
-§ Request sets are spine-derived), so it takes the ladder at its next
-refresh and the numbers above are the 2026-08-25 TYC-only pull's.
+The pull now asks every namespace a record reaches wherever the object it
+bound answers with nothing (`scripts/refresh/simbad/README.md` § The union
+asks every namespace a record reaches), and the reach is far wider than
+those 34: of 313,257 spine rows, 280,676 are answered by a bound object and
+ask nothing at all, 32,581 are not, and **3,245 of those are recovered** —
+2,590 under HIP, 650 under TYC, 5 under GJ. `simbad_sptype.tsv` is 333,429
+rows against the previous 330,141 and reads 86.3% `sp_type`-filled.
+
+| build-count | before → after |
+|---|---|
+| `spectralBySimbad` | 280,236 → **283,663** |
+| … by `source_id` | 276,809 → 276,810 |
+| … by **HIP** | 1,482 → **4,281** |
+| … by TYC | 1,927 → 2,545 |
+| … by GJ | 18 → 27 |
+| `spectralByGspspec` | 31,696 → **28,756** |
+| `spectralFallback` | 1,025 → **538** |
+
+The +3,427 into SIMBAD is exactly the 2,940 leaving GSP-Spec plus the 487
+leaving unknown, so no record changed tier for any other reason. **487
+fewer stars render with an unknown class**, and 2,940 trade GSP-Spec's
+letter-only enum — subclass defaulted to 5, no luminosity class — for a
+full Morgan-Keenan type, which moves their rendered radius. `ν Scorpii` is
+the shape, and its `known-stars.tsv` row had recorded the defect before the
+fix existed: SIMBAD's `* nu. Sco A` carries no type for the record's Gaia
+source, so it took GSP-Spec's bare `O`, where `* nu. Sco` under HIP 79374
+says `B2V`. 10 records also leave the solar colour fallback for the
+intrinsic spectral-class colour their new class supports.
+
+**One object per key is no longer the invariant.** Two SIMBAD objects
+reaching one record is what the union is for, so `parseSimbadSptypeTsv`
+keeps whichever row states a type and throws only where both do — an
+ambiguity the union cannot produce and curation has to settle. The
+committed file has none. `data/binaries/multiples.tsv` is byte-identical
+across the re-pull: the binaries-side join keys on `simbad_oid` through
+`simbad_wds_xids.tsv`, so it never sees the namespace collision at all.
 
 **7 spectral strings changed** on records that kept a type, all through
 `source_id`, all upstream re-typings rather than re-bindings: `G0V:`→`G1V`,

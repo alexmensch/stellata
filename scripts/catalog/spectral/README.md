@@ -59,12 +59,23 @@ priority chain:
 2. **SIMBAD `sp_type` by HIP** — the same TSV also carries the
    Gaia-saturated bright stars (Algol, Alsephina, Betelgeuse, Rigel, Vega,
    Arcturus, ~700 others) whose SIMBAD row has a valid MK type but **no
-   Gaia source_id**, so tier 1's source_id key misses them. `parseSimbadSptypeTsv`
-   indexes every row under every namespace it carries, throwing rather than
-   picking a winner if a key ever repeats; this tier looks up the star's HIP. Without it the radius chain runs the cool
-   unknown-Teff fallback against a bright absmag and inflates R ~4× (Algol
-   12.47 → 3.2 R☉; Alsephina 12.0 → 4.0). SIMBAD's full MK is preferred
-   over GSP-Spec's letter-only enum, so this tier sits above GSP-Spec.
+   Gaia source_id**, so tier 1's source_id key misses them. Without it the
+   radius chain runs the cool unknown-Teff fallback against a bright absmag
+   and inflates R ~4× (Algol 12.47 → 3.2 R☉; Alsephina 12.0 → 4.0).
+   SIMBAD's full MK is preferred over GSP-Spec's letter-only enum, so this
+   tier sits above GSP-Spec.
+
+   It also carries the population tier 1 reaches and cannot answer: a
+   source_id that resolves onto a component-lettered object with no
+   `sp_type`, beside the star's own HD/HIP-keyed object that has one. The
+   pull unions the namespaces a record reaches so BOTH objects ship
+   (`scripts/refresh/simbad/README.md` § The union asks every namespace a
+   record reaches), which means one HIP or TYC now legitimately keys two
+   rows. `parseSimbadSptypeTsv` indexes every row under every namespace it
+   carries and **keeps whichever row states a type**, throwing only where
+   both do — an ambiguity the union cannot produce and curation has to
+   settle. The walk itself already passes over a typeless row: `accept`
+   returns null and the ladder keeps going.
 3. **SIMBAD `sp_type` by GJ**, folded through `normaliseGjKey`
    (`../catalog-pure.ts`) so `Gl 165A` / `GJ 165A` / `165 A` meet as one
    key. Above TYC per § The ladder is ordered by what an identifier names.
@@ -153,7 +164,10 @@ not fetch. Of the 54 spine rows with neither source_id nor HIP, 41 go by TYC and
 5 as above, reachable by GJ only because the TYC-keyed request returned an
 object carrying a GJ cross-id.
 
-So this order is correct-by-policy and cheap insurance for the day two distinct
-rows exist; it does not close the component-vs-system exposure. That needs the
-pull to ask every namespace a record reaches — the union `stellata-3bsf.34`
-already needs.
+So this order was correct-by-policy and cheap insurance for the day two
+distinct rows exist — which the union has since made the ordinary case. The
+pull now asks every namespace a record reaches wherever no object it bound
+carries a type, so both rows exist and this order is what chooses between
+them: the component-naming identifier wins, and a system blend cannot
+displace a component value. What the pull's own order still decides is
+which rung spends the request, not which value a record takes.

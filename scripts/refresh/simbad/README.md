@@ -36,6 +36,10 @@ query.py     ADQL builders + batched TAP executor. Wraps each
              rows must fold straight into their final shape, because at
              spine scope this accumulator is ~100 MB and an
              intermediate copy doubles it.
+union.py     Phase B2 — the value-keyed union (§ The union asks every
+             namespace a record reaches). Reads Phase A's per-namespace
+             bindings and Phase B's rows, asks what no bound object
+             answered, and returns the objects that do.
 coverage.py  Fill counting and floor gates over a pull's
              {oid: {alias: value}} rows — one definition of "this cell
              is filled" (neither None nor blank) and one gate message,
@@ -113,6 +117,45 @@ under HIP first lands on the latter. Measured over the values cohort when
 the ladder landed: 67 rows moved off a `HD nnnnnA`-style component entry
 onto the star's entry, gaining a parallax on every one, and no row lost
 the row it had.
+
+## The union asks every namespace a record reaches
+
+The widening above falls through on RESOLUTION, so it never fires for a row
+whose Gaia lookup resolved — onto an object carrying no value. SIMBAD holds
+two objects for those stars: a Gaia-keyed one with no `sp_type`, and an
+HD/HIP-keyed one that has it (`HD 224738A` beside `HD 224738`, and ~4.7k
+more). A ladder that stops at the first BINDING cannot reach them; only a
+union over the namespaces the record itself carries can.
+
+`union.py` runs after the basic-table pull, because the question it asks is
+about the VALUE and nothing before Phase B knows it:
+
+1. Walk the spine. For each row, collect every namespace it can be asked
+   under and look each up in Phase A's bindings.
+2. A row one bound object answers is done — **`answered` is the common
+   case and it costs no request at all**, which is what keeps the pass
+   cheap over the whole spine: 280,676 of 313,257 rows ask nothing.
+3. Otherwise ask the namespaces Phase A never bound. A namespace it DID
+   bind is not re-asked: it has answered, with the absence of a value.
+4. Keep an object only where its value cell is filled. One that answers
+   with nothing would add a row saying nothing and — keyed under the same
+   identifiers — would collide with one that does.
+
+**The pull unions; the record build orders.** Every namespace that answers
+ships its row, and `SIMBAD_NAMESPACE_VALUES` decides which one a record
+takes, so nothing in the request may pick a winner between two objects.
+That is `stellata-3bsf.31`'s settled rule applied rather than re-decided:
+identifiers rank by WHAT THEY NAME, so a GJ (which carries its component
+letter) outranks a TYC (which on a close pair names the system), and a
+system-blend value can never displace a component one. The union's own
+namespace order is therefore not load-bearing — it only decides which rung
+spends the request.
+
+**The read side has to merge too.** Two objects reaching one record means
+two rows sharing one key, which `indexSimbadRow` used to treat as a fault.
+It now hands both to the consumer: the sp_type index keeps whichever row
+states a type, and throws only where BOTH do — an ambiguity the union
+cannot produce and curation has to settle.
 
 ## The widening carries its own corroboration rule
 
