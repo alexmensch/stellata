@@ -29,9 +29,9 @@ const SPINE = resolve(REPO_ROOT, 'data/athyg/inherited-spine.tsv');
 
 /** Published names reaching no record: the wgsnFaints hosts whose only key
  *  was a survey id the normaliser drops (they name stars outside the
- *  catalogue), plus AT-HYG's `Onkaria`, whose spine row carries neither a
- *  HIP nor an HD (docs/star-naming.md § 2). RATCHET DOWN. */
-const PUBLISHED_NAMES_UNREACHED = 60;
+ *  catalogue), plus AT-HYG's `Red Rectangle`, which names the nebula around
+ *  HD 44179 rather than the star (docs/star-naming.md § 2). RATCHET DOWN. */
+const PUBLISHED_NAMES_UNREACHED = 55;
 const FIXTURES_READY = existsSync(SEARCH_INDEX) && existsSync(ROW_INDEX_MAP)
   && existsSync(CONSTELLATIONS);
 
@@ -42,7 +42,14 @@ const duplicates = parseDuplicateLedger(
   readFileSync(resolve(HERE, 'naming-duplicates.tsv'), 'utf8'),
 );
 
-describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
+interface Fixtures {
+  raw: SearchEntry[];
+  constellations: { code: string; name: string }[];
+  labelByKey: Map<string, string>;
+  entryByKey: Map<string, SearchEntry>;
+}
+
+function loadFixtures(): Fixtures {
   const raw = readJson<SearchEntry[]>(SEARCH_INDEX);
   const constellations = readJson<{ code: string; name: string }[]>(CONSTELLATIONS);
   const keys = ledgerKeys(readJson<RowIndexMap>(ROW_INDEX_MAP));
@@ -55,8 +62,16 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
     labelByKey.set(key, composed.get(entry.i)?.label ?? '');
     entryByKey.set(key, entry);
   }
+  return { raw, constellations, labelByKey, entryByKey };
+}
 
+// Read here, not in the describe body: vitest runs a skipped suite's factory
+// to collect its tests, so a read inside it throws whatever the gate says.
+const FIXTURES: Fixtures | null = FIXTURES_READY ? loadFixtures() : null;
+
+describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
   it('every enumerated display change is exactly what the ladder composes', () => {
+    const { labelByKey } = FIXTURES!;
     // § 8.2: display changes are enumerated, not counted. Reviewed once,
     // then pinned — a drift here means a record's label moved without the
     // ledger being refreshed (`pnpm run build:naming-parity`).
@@ -66,7 +81,10 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
     expect(drifted.slice(0, 20)).toEqual([]);
   });
 
-  it('the ledger enumerates every display change and no others', () => {
+  it('every ledger row is a change, keyed once', () => {
+    // The pre-ladder label is knowable only from the committed `old`
+    // column, so a change the ledger omits is unreachable from here — a
+    // re-seed is what enumerates the set (README.md § The parity ledger).
     const enumerated = new Set(parity.map((row) => row.key));
     const missing: string[] = [];
     for (const row of parity) {
@@ -83,6 +101,7 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
     // itself has none, so § 5 lets it disappear with the composition —
     // which is what the ledger's `resolves` column enumerates, reviewed
     // once and pinned so a later change cannot quietly widen the set.
+    const { raw, constellations, entryByKey } = FIXTURES!;
     const index = buildSearchIndex(raw, constellations);
     const byLabel = labelIndexOf(index);
     const anyRecord = (label: string): boolean =>
@@ -105,7 +124,7 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
     const unfindable = [...published]
       .filter((name) => !anyRecord(name) && !folded.has(foldNameKey(name)));
     expect(unfindable.length, `published names that resolve nothing: ${
-      unfindable.slice(0, 20).join(', ')}`).toBeLessThanOrEqual(PUBLISHED_NAMES_UNREACHED);
+      unfindable.slice(0, 20).join(', ')}`).toBe(PUBLISHED_NAMES_UNREACHED);
 
     const drifted: string[] = [];
     for (const row of parity) {
@@ -124,6 +143,7 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
     // letter), so a duplicate is two catalogue entries claiming one
     // designation. RATCHET DOWN — every row is a curation finding, and the
     // fix is upstream rather than a qualifier bolted onto the label.
+    const { labelByKey } = FIXTURES!;
     const claimants = new Map<string, string[]>();
     for (const [key, label] of labelByKey) {
       if (label === '') continue;
