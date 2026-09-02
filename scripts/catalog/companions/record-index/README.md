@@ -83,15 +83,46 @@ row exists for it even with nothing rendered apart.
 
 ## Component-letter search designations
 
-`buildComponentDesignations` maps each component to a system-relative
-designation so the runtime can offer "<base> <letter>" aliases ("Alpha
-Centauri C" / "α Cen C" → Proxima). The base expands from the SYSTEM
-PRIMARY's own designation, never the component's: Proxima carries no
-Bayer, and the primary's proper would make it "Rigil Kentaurus C". The
-primary is included with its own letter so "α Cen A" focuses it, and a
-record shared across pairs takes first-write-wins (α Cen A appears in
-both the AB and AC rows).
+`buildComponentDesignations` maps each component to its letter plus the
+record its system's designation comes from, which the display-name
+composer and the runtime's "<base> <letter>" aliases both build on
+("Alpha Centauri C" / "α Cen C" → Proxima). The base expands from the
+system, never the component's own designation: Proxima carries no Bayer.
+The anchor is included with its own letter so "α Cen A" focuses it, and a
+record shared across pairs takes first-write-wins (α Cen A appears in both
+the AB and AC rows).
+
+**The anchor is the WDS ROOT's, not the pair cursor's**, because a
+component letter is stated relative to the root. WDS lists θ¹ Ori C as
+component D of the θ² Ori root (`05354-0525`), so taking the cursor
+primary composed that root's E as "θ¹ Ori E" — colliding with the real
+θ¹ Ori E in root `05353-0523`. Two rules follow, and both cost a wrong
+name before they were written:
+
+- **The top-level letter decides which cursor primary is the anchor**,
+  then depth. Comparing whole comps by length put "Aa" below every
+  single-letter branch, so 15 Mon's root (`06410+0954`, whose only
+  A-branch cursor is Aa,Ab) anchored on its E component and every letter
+  in it composed against HD 261938. This is deliberately not promotion's
+  own `isMoreCanonicalAnchor`, which picks the record a companion inherits
+  its POSITION from — that choice decides where records land, so the two
+  questions keep their own rules.
+- **A root may not borrow its identity from a star another root already
+  owns.** `05353-0524` is an Orion Nebula Cluster multiple whose only
+  identified member is θ¹ Ori C, arriving as its component I, so every
+  letter in it composed against θ¹ Ori — asserting an identity the data
+  does not support. Refusing that anchor leaves those records on their own
+  designations, which is what `docs/star-naming.md` § 8.4 means by a
+  surviving collision being a data finding rather than a renderer
+  concession.
+
+A letter is root-relative, so a component is addressable even when its own
+pair cursor is not: Rigil's `Ba,Bb` cursor has an unresolvable Ba, and
+requiring the cursor to resolve left Bb with no letter and no base to
+compose against. The wings pass genuinely needs both ends of a pair and
+keeps `resolvePairComponents`; naming needs only the letter and the root.
 
 Emitted as the search index's `cl` / `cp` fields —
-`../../README.md` § Search index and `src/client/typeahead/README.md`
-§ Star search. `componentDesignations` pins the total.
+`../../README.md` § Search index, `src/client/typeahead/README.md`
+§ Star search, and `../../naming/README.md` § Two callers, one composer.
+`componentDesignations` pins the total.

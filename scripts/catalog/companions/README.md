@@ -1,10 +1,16 @@
 # Companion promotion
 
 Promotion of `data/binaries/multiples.tsv` secondaries into first-class
-`catalog.bin` records, and the two passes that ride it — the
-renderable-companion wings bit and component-letter stamping. This is
-the seam where bugs in the binary-system pipeline
+`catalog.bin` records, plus the renderable-companion wings bit that rides
+it. This is the seam where bugs in the binary-system pipeline
 (`scripts/binaries/README.md`) become user-visible.
+
+**Promotion names nothing.** A minted record ships no `proper`: what it
+displays is composed post-sort from its structured designation set and its
+WDS component letter, by the one ladder the runtime renders with
+(`../naming/README.md`). So "Sirius B" is not a string this folder writes —
+it is the anchor's approved name plus the letter, re-derived on both
+sides.
 
 The science of *why* each decomposition rule is what it is lives in
 `docs/science-multiple-star-pipeline.md`; this file is the engineering
@@ -16,9 +22,7 @@ counted metrics.
 ```
 scripts/catalog/companions/
   companion-promotion.ts          promoteCompanions +
-    (+ test)                      backfillPrimaryIdentifiers +
-                                  stampComponentLetters +
-                                  resolveComponentNameCollisions. Runs
+    (+ test)                      backfillPrimaryIdentifiers. Runs
                                   before the absmag sort so promoted records
                                   take the same final indexing as
                                   everything else. Names `MULTIPLES_TSV`.
@@ -97,13 +101,16 @@ Per-row gates and resolution:
   hip → proper name (position-guarded, for GJ-only AT-HYG rows
   carrying neither id — ξ UMa A). An unresolvable primary would
   otherwise run its whole cursor anchor-less.
-- **Collocated AT-HYG double merge.** When the composed companion
-  name matches an existing record sitting bit-identical on the
-  anchor (AT-HYG carries both members of a resolved pair at the
-  same printed blend coordinates — ξ UMa's "Alula Australis" +
-  "Alula Australis B" is the only case in the catalog), that
-  record IS the companion: it is repositioned in place (gaia
-  backfilled from the row) instead of minting a duplicate.
+- **Collocated AT-HYG double merge.** When a record AT-HYG named
+  `<its name for the anchor> <letter>` sits bit-identical on the anchor
+  (AT-HYG carries both members of a resolved pair at the same printed
+  blend coordinates — ξ UMa's "Alula Australis" + "Alula Australis B"
+  is the only case in the catalog), that record IS the companion: it is
+  repositioned in place (gaia backfilled from the row) instead of minting
+  a duplicate. The probe reads AT-HYG's own convention and nothing else —
+  the index it hits holds spine `proper` cells alone, so a base composed
+  off a Bayer or catalogue designation could never match one and none is
+  tried.
 - **Position.** Prefer the row's own xyz when its astrometry is a
   real per-component fit AND its xyz differs from the primary row's
   xyz. Else apply a sky-tangent projection from the EXISTING catalog
@@ -333,23 +340,6 @@ Per-row gates and resolution:
   brighter component; inheriting it would collide with the
   primary in every HIP-keyed lookup (url-state's `refFromIndex`
   notably).
-- **Proper name.** Compose as `<primary_proper> <comp>` —
-  "Sirius B", "Achird B", "Porrima B". The secondary's own `name`
-  cell wins when populated (source=athyg); the primary row's name
-  is the fallback when the secondary's row is source=wds with no
-  AT-HYG entry of its own. Two doubling guards strip an already-present
-  component letter so the canonical comp isn't appended twice:
-  `stripDoubledParentToken` for a base ending in the comp's parent /
-  local-primary letter (Castor "C" + "Cb" → "Castor Cb"; AR Cas
-  "HIP 115990 F" + "G" → "HIP 115990 G"), and `stripBlendedSiblingLetter`
-  when a blended component inherited a SIBLING's composed name
-  — Acrab's WDS E shares β² Sco's (WDS C) Gaia source, so E's row name is
-  "Acrab B"; the canonical comp encodes the full path from the root, so
-  "Acrab B" + "E" strips to "Acrab E", not "Acrab B E". Sub-letters need
-  the sibling guard as well as the parent-token one: Eb's parent token is
-  "E", so nothing matched the inherited " B" and the name composed as
-  "Acrab B Eb".
-
 Promoted records carry `FLAG_BINARY_COMPANION_ONLY = 0x08`, and
 additionally `FLAG_BINARY_COMPANION_SYNTHETIC = 0x20` when the
 record lacks own gaia/hip and is addressed exclusively through a
@@ -381,10 +371,10 @@ companion never gets one without the other.
 | Field(s) | Origin | Source |
 | --- | --- | --- |
 | `conIndex` | per-component | the IAU boundary region the minted position falls in (`../parse/README.md` § Positional constellation membership) — so a pair wide enough to straddle a boundary lands its members on the correct sides, and an anchor-less row still resolves. Counted `companionConstellationSplitFromAnchor` where it differs from the anchor's. |
+| `proper` | post-pass | null at mint; the display-name pass writes the NAME tiers alone (`../naming/README.md` § Two callers, one composer). |
 | `desigConIndex` | inherited | anchor's designation index — a composed name ("Xi Boo B") is named for whatever the primary's designation is. Sourced from IV/27A keyed on the anchor's HD/HIP, so a boundary-straddling companion composes against the primary's designation (Fomalhaut C is "α PsA C" though it sits in Aquarius) rather than its own positional index (`../classic-ids/README.md` § The designation constellation). |
 | `vx/vy/vz` | inherited | anchor's systemic velocity — a static companion shears off the primary under the epoch-advance otherwise (`../parse/README.md` § Space-motion velocity, Pair coherence). Truly anchor-less escapes fall back to zero. |
 | `x/y/z` | system-derived | anchor ICRS position + WDS (ρ, θ) tangent projection at the anchor's distance. |
-| `proper` | system-derived | `<primary_proper> <comp>` (own `name` cell wins when present). |
 | `hip`, `gaiaSourceId` | per-component | the row's own id — stripped to `null` (→ `synth-<wds_id>-<comp>`) when it equals the anchor's shared id, per the inheritance gates above. |
 | `absmag` | per-component | Stage-5 decomposition / dmag / blend split. |
 | `ci` | per-component | own observed B–V, else Ballesteros from the resolved spectral type. |
@@ -396,54 +386,20 @@ companion never gets one without the other.
 | `period`, `amplitude`, `varType`, `gcvsName` | unset | companion variability isn't tracked at promotion. |
 | `hd`, `hr`, `flam`, `bayer`, `gl`, `tyc` | unset | not carried on multiples.tsv rows. `hdAlt`/`hrAlt` are empty for a different reason — deliberately not inherited: an anchor's alternative HD is often the pair's OTHER component number, which makes handing it to this record tempting and wrong. The overlay asserts both numbers against one Gaia source and names no component, so attributing one here would invent evidence (`../classic-ids/README.md` § The label merge). |
 
-### Component-letter stamping
+### Where the display name comes from
 
-`stampComponentLetters` runs immediately after `promoteCompanions`
-(over the same grouped `multiples.tsv` rows `promoteCompanions`
-returns), before the absmag sort and the name-table / search-index
-write. Promotion only ADDS records; when BOTH halves of a pair
-already exist as first-class AT-HYG rows AND neither carries a
-`proper` name, they render with identical Bayer/Flamsteed labels and
-are individually unsearchable (61 Cyg A and 61 Cyg B both print
-"61 Cyg"). For each system where ≥2 **distinct** first-class
-(non-promoted) AT-HYG records resolve and none is already named, the
-pass writes `<base> <comp>` into each record's `proper` (base via
-`resolveCompanionNameBase`) and sets `FLAG_HAS_NAME`. Components are
-deduped by record index: a blended single entry whose rows share one
-identifier (no own gaia + shared HIP) resolves to one record and is
-skipped — it is one star, not two components, and must not be
-mislabelled as its faint secondary. It also **skips** any system
-where a component already carries a real `proper` (never rename
-Sirius A → "Sirius A") or where the primary yields no usable base.
-`componentLettersStamped` counts the records renamed.
+The `<system> <letter>` label a promoted record shows is composed
+post-sort from the WDS root anchor's designation plus the record's own
+canonical component letter, and the same pure function composes it again
+at runtime off `search-index.json` (`../naming/README.md`). Three defects
+that used to need guarding here dissolve in that ladder: the base is
+always the ROOT anchor's designation rather than an intermediate lettered
+record, so nothing doubles the letter it is about to append, nothing
+inherits a sibling's composed name, and one root cannot letter one star
+twice.
 
-### Display-name uniqueness
-
-`resolveComponentNameCollisions` is the last naming pass. Two schemes
-meet in a WDS system: ours composes `<system base> <WDS comp>`, while
-AT-HYG's `proper` column carries its own component labels for 9 of its
-495 names (`Acrab B`, `Albireo B`, `Alula Australis B`, `Cor Caroli B`,
-`Revati B`, `Alkalurops B`, `Marsic B`, `Dziban B`, `Alya B`). Where the
-two letter one system differently they collide: β² Sco is AT-HYG's
-"Acrab B" but WDS component **C**, so it landed on the same name as the
-WDS-B companion promotion mints and a focus card listed "Acrab B" twice.
-
-Precedence: the claimant whose `proper` already equals its own letter
-composition keeps the name; every other claimant is recomposed from its
-own comp ("Acrab B" on the C component → "Acrab C"). Deterministic — no
-per-system curation — and a synth slot is consulted before the id
-indexes when attributing a record to a letter, since a row whose ids were
-inherited then stripped would otherwise resolve onto the anchor's own
-record. Counted `componentNameCollisionsResolved`;
-`componentNameCollisionsUnresolved` ratchets down (nonzero means both
-claimants own their letter, so one letter is wrong upstream).
-
-Two collision shapes this pass deliberately cannot reach, both pinned by
-`KNOWN_DUPLICATE_DISPLAY_NAMES` in `multi-star-regression.test.ts`:
-**cross-root within one physical system** (WDS splits the Trapezium
-across `05353-0523` / `05353-0524` / `05354-0525`, so two distinct stars
-are each their own root's "Cb" and compose the identical name), and
-**AT-HYG naming two records alike** (`p Eridani` on both components).
-Both need a naming-authority ladder rather than a letter swap — the same
-work that owns the 536 display names composed off AT-HYG's ASCII-only
-`bayer` column (`The-1 Ori C` where an astronomer reads θ¹ Ori C).
+The letter and the anchor a record composes against are
+`record-index/README.md` § Component-letter search designations; the
+duplicate labels that survive the ladder are data findings, enumerated in
+`../naming/naming-duplicates.tsv` and ratcheted by
+`multi-star-regression.test.ts`.

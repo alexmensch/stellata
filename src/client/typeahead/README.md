@@ -7,22 +7,36 @@ elements are moved into the modal on open and restored on close).
 
 ## Star search
 
-Two leaves sit below `search.ts` so the star kind module's provider
+Three leaves sit below `search.ts` so the star kind module's provider
 chain can import them without a cycle through `search.ts` →
-`kind-modules.ts`. `search.ts` re-exports both, so either import path
-stays valid.
+`kind-modules.ts`, and so the build's naming parity gate can import the
+corpus builder without pulling THREE in. `search.ts` re-exports all
+three, so either import path stays valid.
 
-- `star-designations.ts` — pure per-entry designation formatters
-  (`splitBayer`, `formatBayerDisplay`, `superscript`,
-  `formatGcvsDesignation`, `starDesignations`).
+- `star-designations.ts` — the per-entry designation list
+  (`starDesignations`) plus the wire adapter onto the composer.
 - `star-name-tables.ts` — the per-catalog derived maps
   (`buildStarLabels`, `buildSpectralMap`, `buildBayerMap`). The star
   module builds the first two inside its own `load`; `buildBayerMap` is
   the one derivation no module consumes, so boot still calls it for
   chart mode.
+- `search-corpus.ts` — the fuzzy corpus and the exact-match identifier
+  maps (`buildSearchIndex` and the label builders).
 
-`search.ts` is fuse.js-backed; ranks against name + constellation +
-Bayer designation. Every constellation-relative *designation* — Bayer,
+**Nothing here parses a designation string.** The wire carries the Bayer
+letter as a glyph with its index alongside (`b` / `bx`), and every label —
+display and search alike — is rendered from that structure by the one pure
+composer the record build wrote it with
+(`scripts/catalog/naming/README.md` § Two callers, one composer). So
+`buildStarLabels` is a single pass of that composer over the corpus rather
+than a per-entry fallback chain: two of the ladder's rules are relational
+(a component borrows its system's base, and a letter is appended only
+where the designation fails to single the star out), which no per-entry
+function can answer. `catalog.bin`'s name table supplies the NAME tiers,
+and the composer supplies everything below them.
+
+`search-corpus.ts` builds what `search.ts` ranks with: fuse.js over name +
+constellation + Bayer designation. Every constellation-relative *designation* — Bayer,
 Flamsteed, GCVS, the component aliases below — resolves through
 `designationConIndex(entry.dc, entry.c)`, never `entry.c` alone: byte 34
 is where the star *is*, `dc` is what its name is *named for*, and the two
@@ -107,25 +121,28 @@ today (zero entries disagree, since `desigConIndex` is set *from* the
 designation) and stays correct if they ever diverge.
 
 **Multiple-star component aliases.** A component whose SearchEntry carries
-`cl` (WDS letter) + `cp` (system-primary record index) gets extra fuzzy
+`cl` (WDS letter) + `cp` (its WDS root's naming anchor) gets extra fuzzy
 labels "<system designation> <letter>" — "α Cen C" / "Alpha Centaurus C" /
 "Alf Cen C" all focus Proxima, and "Alpha Cen A"/"B" the right members.
-`buildComponentLabels` expands them by running the PRIMARY's Bayer through
-`buildBayerLabels` (shared Greek/Alf expansion) plus its Flamsteed form,
-then appending the letter. Base comes from the primary because a component
-often has no Bayer of its own (Proxima); proper names are excluded on
-purpose — the primary's proper (Rigil Kentaurus) names component A, not the
-system. `cl`/`cp` are emitted at build time (see `scripts/catalog/README.md`
-§ Search index); coverage is whatever decomposes in `multiples.tsv`.
+`buildComponentLabels` expands them by running the ANCHOR's Bayer through
+`buildBayerLabels` (shared Greek/Alf expansion) plus its Flamsteed and
+Gould forms, then appending the letter. The base comes from the system
+because a component often has no designation of its own (Proxima);
+approved NAMES are excluded on purpose — Rigil Kentaurus names component
+A, not the system, so "Rigil Kentaurus C" would be an invention. The
+composed DISPLAY label is indexed separately, which is what keeps
+"Sirius B" and "θ¹ Ori C" typeable. `cl`/`cp` are emitted at build time
+(`scripts/catalog/companions/record-index/README.md`); coverage is
+whatever decomposes in `multiples.tsv`.
 
 `starDesignations` (pure, tested) renders a star's full tier-ordered
-designation list (proper → Bayer → Flamsteed → GCVS → HR → HD → HIP →
-Gliese → Gaia DR3) for the focus card's identity line. **The HR and HD tiers
-list every number the record answers to**, `hra` / `hda` beside the displayed
-value in numeric order: an alias rides a record only where the pair is
-unresolved, so that one record is what both catalogue numbers reach, and a card
-showing one of them would deny a number the search box had just accepted. Bayer-form GCVS
-designations ("bet Per") are skipped — they duplicate the real Bayer
+designation list (name → Bayer → Flamsteed → Gould → GCVS → HR → HD →
+HIP → Gliese → Gaia DR3) for the focus card's identity line. **The HR and HD
+tiers list every number the record answers to**, `hra` / `hda` beside the
+displayed value in numeric order: an alias rides a record only where the pair
+is unresolved, so that one record is what both catalogue numbers reach, and a
+card showing one of them would deny a number the search box had just accepted.
+Bayer-form GCVS designations ("bet Per") are skipped — they duplicate the real Bayer
 display and are search aliases, not display names.
 
 Beyond the index-backed ID forms, the runner dispatches two
@@ -137,6 +154,14 @@ every star an identifier-less card labels "Gaia DR3 …" or
 
 `buildSearchIndex` (pure, tested) builds both the fuzzy corpus and the
 exact direct-lookup maps for numeric IDs (HIP/HD/HR/Gl) and Flamsteed.
+A composed label enters the corpus only where no other path emits it — a
+NAME, or a component composite ("θ¹ Ori C", "HIP 82676 Ab") that exists
+nowhere else. Every bare designation is already reached by its own tier's
+derived labels or its exact-match map, and fuzzy-indexing 300k catalogue
+numbers would only dilute the ranking. A record's `al` aliases index
+alongside: those are the published spellings the ladder displaced
+(`docs/star-naming.md` § 5), and every derivable spelling is derived
+rather than shipped.
 The numeric-ID maps echo the matched identifier in the dropdown
 ("Vega (HIP 91262)") — though a star with no proper name has nothing to echo
 *against*, so its row reads as the bare identifier the user typed.
