@@ -96,8 +96,9 @@ write the worktree's `data/`.
 `refresh-msc.py` don't yet have dedicated pnpm targets — invoke
 directly with `python3 scripts/refresh/<script>.py`. The SIMBAD
 scripts share `scripts/refresh/simbad/` plumbing (`specs.py`,
-`inputs.py`, `request.py`, `query.py`, `tsv.py`) so adding new
-SIMBAD-anchored pulls reuses the entire stack. `refresh-msc.py` pulls the
+`inputs.py`, `request.py`, `query.py`, `union.py`, `coverage.py`,
+`tsv.py`) so adding new SIMBAD-anchored pulls reuses the entire stack —
+that folder's own README carries the per-module roster. `refresh-msc.py` pulls the
 three Pulkovo MSC tables (VizieR `J/ApJS/235/6`) into `data/msc/` with
 per-table schema validation and row bounds — source detail in
 `data/msc/README.md`.

@@ -95,12 +95,14 @@ def main() -> None:
     )
     for line in union_report.report_lines():
         print(line)
-    for row, namespace, value in itertools.islice(
-        union.iter_recovered_rows(SPINE, added_bindings, added, SP_TYPE.alias),
+    for row, namespace, oid in itertools.islice(
+        union.iter_recovered_rows(SPINE, added_bindings),
         RECOVERED_SAMPLE,
     ):
+        cells = added.get(oid) or basic_rows[oid]
         print(f"      recovered via {namespace:9s} "
-              f"hip={row['hip'] or '-':>7s} hd={row['hd'] or '-':>7s} → {value}")
+              f"hip={row['hip'] or '-':>7s} hd={row['hd'] or '-':>7s} "
+              f"→ {cells.get(SP_TYPE.alias)}")
     oids = union.merge_rows(basic_rows, added)
 
     print("\n=== Phase C: pull cross-IDs from ident table ===")

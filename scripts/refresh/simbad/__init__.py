@@ -1,6 +1,6 @@
-"""Reusable SIMBAD-pull plumbing — specs (ColumnSpec / IdentLookup),
-inputs (spine feeders), request (oid resolution), query (ADQL builders +
-batched executors), coverage (fill gates), tsv (spec-driven writer)."""
+"""Reusable SIMBAD-pull plumbing — specs, inputs (spine feeders), request
+(oid resolution + corroboration), query (ADQL + batched executors), union
+(the value-keyed pass), coverage (fill gates), tsv (writer)."""
 
 from pathlib import Path
 
