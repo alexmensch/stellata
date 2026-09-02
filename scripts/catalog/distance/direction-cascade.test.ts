@@ -334,26 +334,32 @@ describe('direction-cascade / resolveDirection routing', () => {
     // The regression this pins: ep_ra/ep_de date the OBSERVATIONS behind the
     // mean solution, and the position they produced is stated at J2000.
     // Reading them as the position's epoch advances every row by an extra
-    // 2000 - ep_ra, which on this table reaches 48 years.
+    // 2000 - ep_ra, which reaches 81.7 years on this table.
     const t = tycho2Row({ pmRaMasyr: 0, pmDecMasyr: 3600_000 });  // 1 deg/yr in Dec
     const res = resolveDirection(inputs({ tyc: TYC }), sources({
       tycho2: new Map([[TYC, t]]),
     }))!;
-    expect(res.srcEpoch).toBe(2000.0);
+    expect(res.srcEpoch).toBe(TYCHO2_MEAN_EPOCH);
     const advanced = dirOf(res);
     const fromJ2000 = directionAtEpoch(
-      t.raDeg, t.decDeg, t.pmRaMasyr, t.pmDecMasyr, 2000.0, CATALOG_SCENE_EPOCH,
+      t.raDeg, t.decDeg, t.pmRaMasyr, t.pmDecMasyr,
+      TYCHO2_MEAN_EPOCH, CATALOG_SCENE_EPOCH,
     );
     // Componentwise: `angSepArcsec` bottoms out around 0.003" on near-parallel
     // vectors, where acos(1 - eps) loses the difference to cancellation.
     expect(advanced.x).toBeCloseTo(fromJ2000.x, 12);
     expect(advanced.y).toBeCloseTo(fromJ2000.y, 12);
     expect(advanced.z).toBeCloseTo(fromJ2000.z, 12);
-    // An observation epoch behind J2000 would add years of motion on top.
+    // The fixture's own ep_ra, read as the position's epoch, adds 8.93 yr of
+    // this PM. Pinned exactly rather than bounded: a loose floor here would
+    // still pass on a one-year epoch error, which is the regression itself.
+    // The tangent displacement is applied before renormalisation, so a
+    // finished angle is atan(d) — at this displacement that compresses the
+    // 8.93 degrees rather than losing it. Don't "correct" toward 32148".
     const fromObservationEpoch = directionAtEpoch(
       t.raDeg, t.decDeg, t.pmRaMasyr, t.pmDecMasyr, 1991.07, CATALOG_SCENE_EPOCH,
     );
-    expect(angSepArcsec(advanced, fromObservationEpoch)).toBeGreaterThan(3000);
+    expect(angSepArcsec(advanced, fromObservationEpoch)).toBeCloseTo(28482.604, 2);
   });
 
   it("a Tycho-2 row with no PM keeps its position and zeroes the tangential term", () => {
@@ -721,9 +727,16 @@ describe('direction-cascade / directionOnPm', () => {
     expect(res.srcEpoch).toBe(TYCHO2_MEAN_EPOCH);
     const advanced = directionOnPm(res, 0, 3600_000);   // 1 deg/yr in Dec alone
     const fromJ2000 = directionAtEpoch(
-      res.srcRaDeg, res.srcDecDeg, 0, 3600_000, 2000.0, CATALOG_SCENE_EPOCH,
+      res.srcRaDeg, res.srcDecDeg, 0, 3600_000,
+      TYCHO2_MEAN_EPOCH, CATALOG_SCENE_EPOCH,
     );
     expect(advanced.x).toBeCloseTo(fromJ2000.x, 12);
+    expect(advanced.y).toBeCloseTo(fromJ2000.y, 12);
     expect(advanced.z).toBeCloseTo(fromJ2000.z, 12);
+    // Same counter-assertion as the routing suite's, on the rescued-PM path:
+    // the rescue must not reintroduce the observation epoch.
+    expect(angSepArcsec(advanced, directionAtEpoch(
+      res.srcRaDeg, res.srcDecDeg, 0, 3600_000, 1991.07, CATALOG_SCENE_EPOCH,
+    ))).toBeCloseTo(28482.604, 2);
   });
 });

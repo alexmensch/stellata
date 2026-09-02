@@ -28,7 +28,8 @@ const SUPPL1_COLUMNS = [
  *  NOT `ep_ra` / `ep_de`. Those are the mean epoch of the OBSERVATIONS the mean
  *  solution was fitted to — they describe when the star was watched, not when
  *  its position holds — and reading them as the position's epoch over-advances
- *  every row by `2000 - ep_ra`, up to 48 years on this table
+ *  every row by `2000 - ep_ra`, which reaches 81.7 years on this table and
+ *  32.2 across the direction tier's own cohort
  *  (data/tycho2/README.md § Which position to propagate from). */
 export const TYCHO2_MEAN_EPOCH = 2000.0;
 
