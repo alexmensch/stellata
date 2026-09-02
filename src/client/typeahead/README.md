@@ -120,7 +120,11 @@ system. `cl`/`cp` are emitted at build time (see `scripts/catalog/README.md`
 
 `starDesignations` (pure, tested) renders a star's full tier-ordered
 designation list (proper → Bayer → Flamsteed → GCVS → HR → HD → HIP →
-Gliese → Gaia DR3) for the focus card's identity line. Bayer-form GCVS
+Gliese → Gaia DR3) for the focus card's identity line. **The HR and HD tiers
+list every number the record answers to**, `hra` / `hda` beside the displayed
+value in numeric order: an alias rides a record only where the pair is
+unresolved, so that one record is what both catalogue numbers reach, and a card
+showing one of them would deny a number the search box had just accepted. Bayer-form GCVS
 designations ("bet Per") are skipped — they duplicate the real Bayer
 display and are search aliases, not display names.
 
@@ -133,8 +137,25 @@ every star an identifier-less card labels "Gaia DR3 …" or
 
 `buildSearchIndex` (pure, tested) builds both the fuzzy corpus and the
 exact direct-lookup maps for numeric IDs (HIP/HD/HR/Gl) and Flamsteed.
-The numeric-ID maps are 1:1 and echo the matched identifier in the
-dropdown ("Vega (HIP 91262)"). The Flamsteed map keys `<num> <con>` to
+The numeric-ID maps echo the matched identifier in the dropdown
+("Vega (HIP 91262)") — though a star with no proper name has nothing to echo
+*against*, so its row reads as the bare identifier the user typed.
+
+`hdMap` / `hrMap` are many-keys-to-one-record rather than 1:1, built by
+`buildAliasedIdIndex` (`scripts/catalog/catalog-pure.ts`) rather than inline:
+numbers records DISPLAY are laid down first, then the `hda` / `hra` aliases,
+first write winning. That one rule settles two collisions — 57 HD and 11 HR
+numbers are displayed by two records each (a component pair sharing one
+catalogue number), and entries arrive brightest-first, so an ambiguous number
+resolves to the brighter record; and an alias never displaces a record that
+displays that number outright. `catalog-lookup.ts`'s `byHd` uses the same
+builder, so a frozen corpus row and the search box cannot resolve one number
+differently. Which numbers become aliases at all is the write side's rule
+(`scripts/catalog/classic-ids/README.md` § An alias stops at the blend): only
+where the pair is unresolved, so the record carries both components' light.
+The direction the dropdown reads — record to label — stays single-valued.
+
+The Flamsteed map keys `<num> <con>` to
 **an array** of every component sharing that designation, so an exact
 "61 Cyg" returns each of 61 Cyg A/B/… with its own display name —
 never collapsed to one, never echoing the raw query. Anonymous

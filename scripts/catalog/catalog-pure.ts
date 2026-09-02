@@ -843,6 +843,13 @@ export interface SearchEntry {
   hip?: number;  // Hipparcos catalogue number
   hd?: number;   // Henry Draper number
   hr?: number;   // Harvard Revised / Yale BSC number
+  // Further HD / HR numbers the record answers to but does not display. HD
+  // numbered both components of many close pairs and HR routes through HD, so
+  // these two are the identifiers an overlay cell can be ambiguous on
+  // (classic-ids/README.md § The label merge). Search resolves them; the
+  // dropdown label stays the record's own designation.
+  hda?: number[];
+  hra?: number[];
   gl?: string;   // Gliese / GJ designation
   cl?: string;   // multiple-star component letter (A/B/C/Ab…) — see search.ts
   cp?: number;   // system primary's record index; base for "<designation> <cl>"
@@ -857,6 +864,8 @@ export interface SearchEntrySource {
   hip: number | null;
   hd: number | null;
   hr: number | null;
+  hdAlt: readonly number[];
+  hrAlt: readonly number[];
   gl: string | null;
   gcvsName: string | null;
   conIndex: number;
@@ -885,6 +894,39 @@ export function designationConIndex(
 // with no identifier a user could type. Each optional field is set only
 // when present, so JSON.stringify never emits an explicit null/undefined
 // key — the reader treats a missing key and an absent value alike.
+/** Index every number a record answers to onto its record index: the numbers
+ *  records DISPLAY first, then the aliases beside them.
+ *
+ *  Two passes and first-write-wins, which settles two collisions with one rule.
+ *  Entries arrive brightest-first (the absmag sort fixes record order), so an
+ *  ambiguous designation resolves to the brightest record carrying it — 57 HD
+ *  and 11 HR numbers are displayed by two records each, always a component pair
+ *  sharing one catalogue number. And an alias never displaces a record that
+ *  displays that number outright, whichever way the absmag sort happened to
+ *  order the two. `classic-ids/README.md` § An alias stops at the blend is the
+ *  same rule on the write side; `cns5AstrometryByGj` is the same two-pass
+ *  reduction over CNS5's component letters.
+ *
+ *  Many keys onto one record, never one key onto several: the direction the
+ *  dropdown reads — record to label — stays single-valued. */
+export function buildAliasedIdIndex<K>(
+  entries: readonly SearchEntry[],
+  displayed: (e: SearchEntry) => K | undefined,
+  aliases: (e: SearchEntry) => readonly K[] | undefined,
+): Map<K, number> {
+  const out = new Map<K, number>();
+  for (const entry of entries) {
+    const key = displayed(entry);
+    if (key !== undefined && !out.has(key)) out.set(key, entry.i);
+  }
+  for (const entry of entries) {
+    for (const key of aliases(entry) ?? []) {
+      if (!out.has(key)) out.set(key, entry.i);
+    }
+  }
+  return out;
+}
+
 export function buildSearchEntry(
   s: SearchEntrySource,
   i: number,
@@ -901,6 +943,8 @@ export function buildSearchEntry(
   if (s.hip !== null) entry.hip = s.hip;
   if (s.hd !== null) entry.hd = s.hd;
   if (s.hr !== null) entry.hr = s.hr;
+  if (s.hdAlt.length > 0) entry.hda = [...s.hdAlt];
+  if (s.hrAlt.length > 0) entry.hra = [...s.hrAlt];
   if (s.gl) entry.gl = s.gl;
   if (s.gcvsName) entry.g = s.gcvsName;
   if (s.conIndex !== NO_CONSTELLATION_INDEX) entry.c = s.conIndex;

@@ -152,6 +152,9 @@ export function spineDesignations(row: SpineRow): string[] {
     hip: intCell(row.hip),
     hd: intCell(row.hd),
     hr: intCell(row.hr),
+    // The spine states one value per identifier; the alias lists are the
+    // overlay's addition, and the review queue is what accounts for them.
+    hdAlt: [], hrAlt: [],
     gl: row.gl === '' ? null : row.gl,
     gaiaSourceId: row.gaia_source_id === '' ? null : row.gaia_source_id,
     syntheticId: null,

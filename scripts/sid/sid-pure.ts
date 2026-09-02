@@ -45,6 +45,16 @@ export interface StarDesignationFields {
   hip: number | null;
   hd: number | null;
   hr: number | null;
+  /** Further HD / HR numbers this record answers to, beyond the one the
+   *  single-valued field carries. Carried only where the pair is unresolved, so
+   *  the record renders both components' light and both numbers reach it
+   *  (`scripts/catalog/classic-ids/README.md` § An alias stops at the blend) —
+   *  which is why both key the same-as class. Required, not optional: this
+   *  extractor has to derive one designation set for `sid:allocate` and the
+   *  spine parity gate alike, and an omitted field is exactly the silent
+   *  divergence `catalog-designations.ts` exists to prevent. */
+  hdAlt: readonly number[];
+  hrAlt: readonly number[];
   /** Raw AT-HYG Gliese/GJ cell; whitespace collapses to `_` per § 3. */
   gl: string | null;
   gaiaSourceId: string | null;
@@ -61,7 +71,9 @@ export function starDesignations(f: StarDesignationFields): string[] {
   if (f.isSol) d.push('sol:sun');
   if (f.hip !== null && f.hip > 0) d.push(`hip:${f.hip}`);
   if (f.hd !== null) d.push(`hd:${f.hd}`);
+  for (const hd of f.hdAlt) d.push(`hd:${hd}`);
   if (f.hr !== null) d.push(`hr:${f.hr}`);
+  for (const hr of f.hrAlt) d.push(`hr:${hr}`);
   if (f.gl) d.push(`gl:${f.gl.trim().replace(/\s+/g, '_')}`);
   if (f.syntheticId) {
     if (!f.syntheticId.startsWith(SYNTH_RUNTIME_PREFIX)) {

@@ -44,7 +44,10 @@ scripts/catalog/parse/
                                   createConstellationAssignment, which binds
                                   the boundary lookup to the table's indices
                                   (§ Positional constellation membership).
-  corpus-tsv.ts                   Shared TSV header + cell parsing. headerIndex
+  corpus-tsv.ts                   Shared TSV header, cell and record-ref
+                                  parsing. RECORD_REF_KINDS is the one list of
+                                  ways a corpus row addresses a record —
+                                  hip / gaia / name / hd. headerIndex
                                   is the one header walk for every committed
                                   table (see § TSV header resolution) and
                                   dataRows is the row iterator over it; the

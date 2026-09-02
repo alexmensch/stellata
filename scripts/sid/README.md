@@ -85,7 +85,9 @@ half of this, so `sid:allocate` and
 different sets from the same artifacts.
 
 Per catalog record: `hip:` + `gaia_dr3:` from the record fields,
-`hd:`/`hr:`/`gl:` from its `search-index.json` entry, `synth:` from
+`hd:`/`hr:`/`gl:` from its `search-index.json` entry — plus a second `hd:` or
+`hr:` per `hda`/`hra` alias, since both numbers name the star
+(`scripts/catalog/classic-ids/README.md` § The label merge) — `synth:` from
 `catalog-row-index-map.json` `bySynth` (runtime `synth-` prefix
 stripped), `sol:sun` from `FLAG_IS_SOL`. Clouds and Local Group carry
 their artifact `id` slugs; planets, moons, and probes all come from
@@ -99,9 +101,9 @@ to `_` (`gl:Gl_804`) to satisfy the § 3 no-whitespace grammar.
 
 ## Ambiguous designations are dropped, not assigned
 
-A designation carried by more than one record (57 `hd:`, 11 `hr:`,
-1 `gl:` in the 2026-07-10 build — always an AT-HYG component pair
-sharing one catalogue number, e.g. 3 Peg A/B on `hd:205811`) names a
+A designation carried by more than one record — **69 in the 2026-09-01
+build: 57 `hd:`, 11 `hr:`, 1 `gl:`**, always a component pair sharing one
+catalogue number — names a
 catalogue granularity, not one physical object. Assigning it to either
 record would freeze an arbitrary claim into the append-only ledger;
 unioning through it would fuse two distinct objects' identities. So it
@@ -109,6 +111,13 @@ is excluded from the same-as graph entirely — it can neither key a
 ledger row nor merge classes. Every affected record keys off its own
 unique HIP/Gaia id; a record whose ONLY designation is ambiguous would
 hard-fail allocation as keyless (zero such records today).
+
+Re-derive the count rather than trusting this line — `sid:check` prints one
+line per dropped designation, and the total moves with membership:
+
+```bash
+pnpm run sid:check | grep -c '^ambiguous (dropped)'
+```
 
 ## Ownership pin — synth churn resolves here
 

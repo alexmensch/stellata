@@ -22,7 +22,14 @@ scripts/catalog/validate/
   known-stars.tsv                 public/catalog.bin, plus the exact-set
   system-pair-topology.tsv        pair-topology fixture.
   sky-position.test.ts            Sky-position corpus (RA/Dec per named
-  sky-position-corpus.tsv         star) against the built catalog.
+  sky-position-corpus.tsv         star) against the built catalog. Rows
+                                  address records through the shared
+                                  `parseRef` scheme, and its HD 14039 row is
+                                  the only `hd:` ref in any corpus — the
+                                  tycho2 tier carries no HIP, source_id or
+                                  proper name. Loads the catalog
+                                  `withSearchIndex`, which is where an HD
+                                  resolves; the binary has no HD column.
   gaia-hip-xmatch-parity.test.ts  Cross-language parity: gaia-xmatch.ts vs
   gaia-hip-xmatch-parity.tsv      scripts/binaries/parsers.py over one
                                   shared fixture.

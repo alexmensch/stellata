@@ -70,10 +70,24 @@
     "gl": 8,
     "flam": 2
   },
+  "labelExtraAlias": {
+    "hip": 0,
+    "hd": 95,
+    "hr": 0,
+    "gl": 0,
+    "flam": 0
+  },
+  "labelExtraSiblingRendered": {
+    "hip": 0,
+    "hd": 34,
+    "hr": 1,
+    "gl": 0,
+    "flam": 0
+  },
   "labelExtraDropped": {
     "hip": 0,
-    "hd": 129,
-    "hr": 1,
+    "hd": 0,
+    "hr": 0,
     "gl": 0,
     "flam": 0
   },

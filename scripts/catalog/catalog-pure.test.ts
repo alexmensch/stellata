@@ -1197,7 +1197,8 @@ describe('catalog-pure / search-index wire contract', () => {
   // key strings so a rename trips here, mirroring the binary
   // record-layout pin above.
   const SEARCH_ENTRY_KEYS = [
-    'i', 'p', 'b', 'f', 'c', 'dc', 's', 'g', 'hip', 'hd', 'hr', 'gl', 'cl', 'cp',
+    'i', 'p', 'b', 'f', 'c', 'dc', 's', 'g', 'hip', 'hd', 'hr', 'hda', 'hra',
+    'gl', 'cl', 'cp',
   ];
 
   it('SearchEntry exposes exactly the documented wire keys', () => {
@@ -1205,14 +1206,15 @@ describe('catalog-pure / search-index wire contract', () => {
     // compile error on this literal; the runtime assertion pins the names.
     const full: Required<SearchEntry> = {
       i: 0, p: 'Sirius', b: 'Alp', f: 9, c: 34, dc: 3, s: 'A1V', g: 'R CrB',
-      hip: 32349, hd: 48915, hr: 2491, gl: 'GJ 244', cl: 'B', cp: 5,
+      hip: 32349, hd: 48915, hr: 2491, hda: [48916], hra: [2492],
+      gl: 'GJ 244', cl: 'B', cp: 5,
     };
     expect(Object.keys(full).sort()).toEqual([...SEARCH_ENTRY_KEYS].sort());
   });
 
   const source = (over: Partial<SearchEntrySource>): SearchEntrySource => ({
     proper: null, bayer: null, flam: null, hip: null, hd: null, hr: null,
-    gl: null, gcvsName: null, conIndex: NO_CONSTELLATION_INDEX,
+    hdAlt: [], hrAlt: [], gl: null, gcvsName: null, conIndex: NO_CONSTELLATION_INDEX,
     desigConIndex: NO_CONSTELLATION_INDEX, spectDisplay: null, ...over,
   });
 
@@ -1220,7 +1222,8 @@ describe('catalog-pure / search-index wire contract', () => {
     const entry = buildSearchEntry(
       source({
         proper: 'Sirius', bayer: 'Alp', flam: 9, hip: 32349, hd: 48915,
-        hr: 2491, gl: 'GJ 244', gcvsName: 'R CrB', conIndex: 34,
+        hr: 2491, hdAlt: [48916], hrAlt: [2492],
+        gl: 'GJ 244', gcvsName: 'R CrB', conIndex: 34,
         desigConIndex: 3, spectDisplay: 'A1V',
       }),
       0,

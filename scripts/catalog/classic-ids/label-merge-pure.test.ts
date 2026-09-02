@@ -27,6 +27,7 @@ function entry(over: Partial<OverlayEntry> = {}): OverlayEntry {
 function record(over: Partial<LabelMergeRecord> = {}): LabelMergeRecord {
   return {
     gaiaSourceId: SRC_A, hip: null, hd: null, hr: null, gl: null, flam: null,
+    hdAlt: [], hrAlt: [],
     ...over,
   };
 }
@@ -35,12 +36,14 @@ function merge(
   records: LabelMergeRecord[],
   overlay: ClassicIdOverlay,
   overrides = new Map<string, string | null>(),
+  siblingRenderedSourceIds: ReadonlySet<string> = new Set<string>(),
 ) {
   return mergeClassicIdLabels({
     records,
     labels: records.map((_, i) => `record ${i}`),
     overlay,
     overrides,
+    siblingRenderedSourceIds,
   });
 }
 
@@ -98,15 +101,123 @@ describe('mergeClassicIdLabels', () => {
     expect(counts.labelSpineOnly.hip).toBe(1);
   });
 
-  it('enumerates the values a single-valued field cannot carry', () => {
+  it('aliases the values a single-valued field cannot display', () => {
     const records = [record({ hd: 172167 })];
     const { counts, flips } = merge(
       records, new Map([[SRC_A, entry({ hd: [172167, 172168] })]]),
     );
     expect(records[0].hd).toBe(172167);
-    expect(counts.labelExtraDropped.hd).toBe(1);
+    expect(records[0].hdAlt).toEqual([172168]);
+    expect(counts.labelExtraAlias.hd).toBe(1);
+    expect(counts.labelExtraDropped.hd).toBe(0);
     expect(flips.map((f) => [f.applied, f.disposition]))
-      .toEqual([['172168', 'extra-dropped']]);
+      .toEqual([['172168', 'extra-alias']]);
+  });
+
+  it('aliases every extra value, not just the first', () => {
+    const records = [record({ hr: 7001 })];
+    const { counts } = merge(
+      records, new Map([[SRC_A, entry({ hr: [7001, 7002, 7003] })]]),
+    );
+    expect(records[0].hr).toBe(7001);
+    expect(records[0].hrAlt).toEqual([7002, 7003]);
+    expect(counts.labelExtraAlias.hr).toBe(2);
+  });
+
+  // gl has no alias list, so its extras stay labels the record will not answer
+  // to — the disposition split is what keeps the two outcomes distinguishable.
+  it('drops an extra the field has nowhere to carry', () => {
+    const records = [record({ gl: 'GJ 559' })];
+    const { counts, flips } = merge(
+      records, new Map([[SRC_A, entry({ gj: ['559', '560'] })]]),
+    );
+    expect(counts.labelExtraAlias.gl).toBe(0);
+    expect(counts.labelExtraDropped.gl).toBe(1);
+    expect(flips.map((f) => [f.applied, f.disposition]))
+      .toEqual([['GJ 560', 'extra-dropped']]);
+  });
+
+  // The 14 Lyn shape: HD numbered both components of a 0.3" pair Tycho-2 sees
+  // as one entry, and stellata renders the secondary as its own record. Letting
+  // the primary answer to 49619 would point that number at a star we draw
+  // separately, so it is withheld rather than aliased.
+  it('withholds an extra whose pair component is a record of its own', () => {
+    const records = [record({ hd: 49618 })];
+    const { counts, flips } = merge(
+      records, new Map([[SRC_A, entry({ hd: [49618, 49619] })]]),
+      undefined, new Set([SRC_A]),
+    );
+    expect(records[0].hd).toBe(49618);
+    expect(records[0].hdAlt).toEqual([]);
+    expect(counts.labelExtraSiblingRendered.hd).toBe(1);
+    expect(counts.labelExtraAlias.hd).toBe(0);
+    expect(flips.map((f) => [f.applied, f.disposition]))
+      .toEqual([['49619', 'extra-sibling-rendered']]);
+  });
+
+  // The same overlay cell on a record whose pair is unresolved: one record
+  // carries both components' light, so it answers to both numbers.
+  it('aliases the extra where no sibling component is rendered', () => {
+    const records = [record({ hd: 49618 })];
+    const { counts } = merge(
+      records, new Map([[SRC_A, entry({ hd: [49618, 49619] })]]),
+      undefined, new Set(['some-other-source']),
+    );
+    expect(records[0].hdAlt).toEqual([49619]);
+    expect(counts.labelExtraAlias.hd).toBe(1);
+    expect(counts.labelExtraSiblingRendered.hd).toBe(0);
+  });
+
+  // An alias becomes an hd: designation, so a value another record DISPLAYS
+  // would go ambiguous and cost both records the key — the collision guard's
+  // own rule, on a path its tally cannot see.
+  it('withholds an alias a different record already displays', () => {
+    const records = [record({ hd: 49618 }), record({ gaiaSourceId: SRC_B, hd: 49619 })];
+    const { counts, flips } = merge(
+      records, new Map([[SRC_A, entry({ hd: [49618, 49619] })]]),
+    );
+    expect(records[0].hdAlt).toEqual([]);
+    expect(records[1].hd).toBe(49619);
+    expect(counts.labelExtraDropped.hd).toBe(1);
+    expect(counts.labelExtraAlias.hd).toBe(0);
+    expect(flips.map((f) => [f.applied, f.disposition]))
+      .toEqual([['49619', 'extra-dropped']]);
+  });
+
+  // Two records aliasing one value make it ambiguous just as surely, and
+  // neither displays it, so neither may claim it.
+  it('withholds an alias two records would both claim', () => {
+    const records = [record({ hd: 49618 }), record({ gaiaSourceId: SRC_B, hd: 49620 })];
+    const { counts } = merge(records, new Map([
+      [SRC_A, entry({ hd: [49618, 49619] })],
+      [SRC_B, entry({ hd: [49620, 49619] })],
+    ]));
+    expect(records[0].hdAlt).toEqual([]);
+    expect(records[1].hdAlt).toEqual([]);
+    expect(counts.labelExtraDropped.hd).toBe(2);
+  });
+
+  // An overlay cell repeating a value must not propose it twice, which would
+  // read as two records claiming it and withhold a legitimate alias.
+  it('deduplicates a repeated overlay value before scoring it', () => {
+    const records = [record({ hd: 172167 })];
+    const { counts } = merge(
+      records, new Map([[SRC_A, entry({ hd: [172167, 172168, 172168] })]]),
+    );
+    expect(records[0].hdAlt).toEqual([172168]);
+    expect(counts.labelExtraAlias.hd).toBe(1);
+    expect(counts.labelExtraDropped.hd).toBe(0);
+  });
+
+  // An alias adds a designation without displacing the spine's, which is the
+  // one place the delta's two questions part company.
+  it('an aliased extra adds a designation and removes none', () => {
+    const records = [record({ hd: 172167 })];
+    const { flips } = merge(
+      records, new Map([[SRC_A, entry({ hd: [172167, 172168] })]]),
+    );
+    expect([...labelFlipDesignationDelta(flips)]).toEqual([['hd:172168', 1]]);
+    expect(spineDesignationsRemovedBy(flips)).toEqual([]);
   });
 
   // The p Eridani / Gl 277A shape: HIP 7751 already keys record A off the

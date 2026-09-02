@@ -449,6 +449,39 @@ describe('search / buildSearchIndex', () => {
     expect(glMap.get('559a')).toBe(1);
   });
 
+  // Two records DISPLAY one HD on 57 numbers today, always a component pair
+  // sharing one catalogue number, and entries arrive brightest-first — so the
+  // brighter record is the one an ambiguous number resolves to.
+  it('resolves an ambiguous HD to the brightest record displaying it', () => {
+    const raw: SearchEntry[] = [{ i: 0, hd: 159574 }, { i: 5, hd: 159574 }];
+    expect(buildSearchIndex(raw, CONS).hdMap.get(159574)).toBe(0);
+  });
+
+  // An alias must never displace a record that displays the number outright,
+  // whichever way the absmag sort happened to order the two.
+  it('lets a displayed HD outrank another record alias, in either order', () => {
+    const aliasFirst: SearchEntry[] = [
+      { i: 0, hd: 49618, hda: [49619] }, { i: 5, hd: 49619 },
+    ];
+    expect(buildSearchIndex(aliasFirst, CONS).hdMap.get(49619)).toBe(5);
+    const displayFirst: SearchEntry[] = [
+      { i: 0, hd: 49619 }, { i: 5, hd: 49618, hda: [49619] },
+    ];
+    expect(buildSearchIndex(displayFirst, CONS).hdMap.get(49619)).toBe(0);
+  });
+
+  it('resolves every HD/HR number a record answers to onto that record', () => {
+    const raw: SearchEntry[] = [
+      { i: 0, hd: 49618, hda: [49619], hr: 7001, hra: [7002] },
+      { i: 1, hd: 172167 },
+    ];
+    const { hdMap, hrMap } = buildSearchIndex(raw, CONS);
+    expect(hdMap.get(49618)).toBe(0);
+    expect(hdMap.get(49619)).toBe(0);
+    expect(hrMap.get(7002)).toBe(0);
+    expect(hdMap.get(172167)).toBe(1);
+  });
+
   it('builds designations from dc while the dropdown context line stays positional', () => {
     // ρ Aql: positionally in Delphinus (byte 34), designated in Aquila. Every
     // alias must be Aquila's; the row's constellation line must read
@@ -537,6 +570,17 @@ describe('search / starDesignations', () => {
   it('skips absent fields and the Gaia sentinel', () => {
     const entry: SearchEntry = { i: 0, hd: 1 };
     expect(starDesignations(entry, constellations, 0n)).toEqual(['HD 1']);
+  });
+
+  // The record answers to both numbers because it renders both components'
+  // light, so the card says so rather than denying a number search accepted.
+  it('lists every HD/HR number the record answers to, in numeric order', () => {
+    const entry: SearchEntry = {
+      i: 0, hr: 7002, hra: [7001], hd: 181615, hda: [181616], hip: 95168,
+    };
+    expect(starDesignations(entry, constellations, 0n)).toEqual([
+      'HR 7001', 'HR 7002', 'HD 181615', 'HD 181616', 'HIP 95168',
+    ]);
   });
 
   it('skips a Bayer-form GCVS designation (already covered by the real Bayer)', () => {

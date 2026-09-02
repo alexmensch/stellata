@@ -971,6 +971,8 @@ async function main() {
       hip: s.hip,
       hd: s.hd,
       hr: s.hr,
+      hdAlt: s.hdAlt,
+      hrAlt: s.hrAlt,
       gl: s.gl,
       gaiaSourceId: s.gaiaSourceId,
       syntheticId: s.syntheticId,
