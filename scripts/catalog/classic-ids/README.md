@@ -234,9 +234,10 @@ surfaces as a count rather than as a silently lost label.
 Nothing about this makes an alias ambiguous. Not one of the 130 is carried by
 another record off the spine or off the overlay, and none keys a ledger row, so
 the additions cannot fuse two same-as classes or move a canonical key —
-`sid:check` resolves all 329,603 objects with nothing minted. The three
-ambiguous designations `sid:allocate` still drops (`hd:219175`, `hd:181199`,
-`gl:Gl_277A`) are spine-side component pairs, unrelated to this list.
+`sid:check` resolves all 329,603 objects with nothing minted. The **69**
+ambiguous designations `sid:allocate` still drops (57 `hd:`, 11 `hr:`, 1 `gl:`)
+are spine-side component pairs, unrelated to this list — `../../sid/README.md`
+§ Ambiguous designations carries the regenerating command.
 
 A promoted companion inherits neither list. An anchor's alternative HD is often
 the pair's *other* component number, but the overlay asserts both against one
