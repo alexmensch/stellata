@@ -64,6 +64,12 @@ table. Reference: `scripts/perf/README.md`. Interpretation authority:
   is not a record, and the raw samples are only in the file.
 - `--headed` for a headed control run. Headed and headless never compare.
 
+A flag the chosen mode does not read is **refused**, not ignored — `--method`,
+`--passes` and the priceFrame knobs belong to `--mode differential`, `--frames`
+to dwell and sweep, `--scales` to sweep. Fix the command rather than working
+around it. `--json` and `--baseline` paths are checked before the marker is
+consumed, so a typo costs no arm.
+
 ## Interpretation traps
 
 **A non-zero exit means do not read the rows** — a tainted sweep still prints
@@ -80,9 +86,11 @@ server against a production build; never sum the column.
 Per mode (`scripts/perf/README.md` § Dwell mode, § Sweep mode, § Comparing
 against a baseline):
 
-- **`vsyncClamped` true throws the dwell away.** A p50 under 17 ms inside a
-  1 ms spread measured the panel, not the frame. Do not quote it; re-measure
-  at a heavier vantage.
+- **`vsyncClamped` true throws the dwell away.** A p50 sitting on the display
+  period the run measured, inside a 1 ms spread, measured the panel rather
+  than the frame. Do not quote it; re-measure at a heavier vantage. The
+  console line names the cadence the verdict was judged against, and the GPU
+  row is never clamped — no compositor pads a hardware timestamp.
 - **A sweep with any clamped point reads `bound inconclusive`** — say
   inconclusive, don't quote the slope.
 - **`savedMs` going UP is a regression**, not an improvement: the field is
