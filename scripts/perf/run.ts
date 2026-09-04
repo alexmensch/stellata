@@ -2,8 +2,8 @@
 // and exit codes: README.md. The only Playwright value import in the tree.
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { accessSync, constants, existsSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { chromium, type Browser } from 'playwright';
 import type { PriceFrameOptions } from '../../src/client/debug/frame-cost/frame-cost';
 import {
@@ -14,8 +14,16 @@ import {
 import { ArgError, parseRunArgs, usage, type BackendRequest, type RunArgs } from './args';
 import { diffRuns } from './diff-pure';
 import type { DwellSummary } from './dwell-pure';
-import { measureDwell, measureSweep, DWELL_METHOD } from './measure';
+import { measureDwell, measureSweep } from './measure';
 import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './perf-go-lib';
+import {
+  DWELL_METHOD,
+  describeProbe,
+  markerVerdict,
+  methodFor,
+  softwareRenderer,
+  type MarkerVerdict,
+} from './run-pure';
 import {
   BootError,
   awaitSettle,
@@ -41,7 +49,6 @@ const REPO_ROOT = resolve(import.meta.dirname, '../..');
 const MARKER = resolve(REPO_ROOT, PERF_GO_MARKER_NAME);
 const MARKER_MAX_AGE_MS = PERF_GO_MAX_AGE_S * 1000;
 const REACHABILITY_TIMEOUT_MS = 5000;
-const SOFTWARE_RENDERER = /swiftshader|llvmpipe|software/i;
 const DEFAULT_CHROME_ARGS = ['--ignore-gpu-blocklist', '--enable-unsafe-webgpu'];
 const BOOT_TIMEOUT_MS = 120_000;
 const SETTLE_TIMEOUT_MS = 120_000;
@@ -52,13 +59,11 @@ const EXIT = { ok: 0, failed: 1, usage: 2, unarmed: 3 } as const;
 class SoftwareAdapter extends Error {}
 class PageCrash extends Error {}
 
-type MarkerVerdict = 'armed' | 'absent' | 'stale';
-
 function consumeMarker(): MarkerVerdict {
-  if (!existsSync(MARKER)) return 'absent';
-  const ageMs = Date.now() - statSync(MARKER).mtimeMs;
-  unlinkSync(MARKER);
-  return ageMs > MARKER_MAX_AGE_MS ? 'stale' : 'armed';
+  const exists = existsSync(MARKER);
+  const ageMs = exists ? Date.now() - statSync(MARKER).mtimeMs : 0;
+  if (exists) unlinkSync(MARKER);
+  return markerVerdict(exists, ageMs, MARKER_MAX_AGE_MS);
 }
 
 async function unreachable(url: string): Promise<string | null> {
@@ -68,24 +73,6 @@ async function unreachable(url: string): Promise<string | null> {
   } catch (e) {
     return (e as Error).message;
   }
-}
-
-function describeProbe(p: AdapterProbe): string {
-  const webgl = p.webgl
-    ? `${p.webgl.renderer} · ${p.webgl.vendor} · EXT_disjoint_timer_query_webgl2 ${p.webgl.timerQuery ? 'present' : 'ABSENT'}`
-    : 'no WebGL2 context';
-  const webgpu = p.webgpu
-    ? `${p.webgpu.description || p.webgpu.device || '(unnamed)'} · ${p.webgpu.vendor}/${p.webgpu.architecture} · ` +
-      `fallback ${p.webgpu.isFallbackAdapter} · timestampsAvailable ${p.webgpu.timestampsAvailable ?? 'n/a on a webgl2 boot'}`
-    : 'no adapter';
-  return `webgl : ${webgl}\nwebgpu: ${webgpu}`;
-}
-
-function softwareRenderer(p: AdapterProbe): string | null {
-  const candidates = [p.webgl?.renderer, p.webgpu?.description, p.webgpu?.device];
-  const hit = candidates.find((s) => s !== undefined && SOFTWARE_RENDERER.test(s));
-  if (hit !== undefined) return hit;
-  return p.webgpu?.isFallbackAdapter ? 'WebGPU fallback adapter' : null;
 }
 
 function priceFrameOptions(a: RunArgs, method: GpuFrameMethod | undefined): PriceFrameOptions {
@@ -102,24 +89,6 @@ function priceFrameOptions(a: RunArgs, method: GpuFrameMethod | undefined): Pric
 
 function backendsFor(request: BackendRequest): readonly Backend[] {
   return request === 'both' ? BACKENDS : [request];
-}
-
-/**
- * The clock the run will use. `both` pins rAF wall time because the
- * backends' best clocks are three different instruments — taking each
- * one's best would build exactly the mixed-method table that must never be
- * compared. An explicit `--method` wins, on the caller's head.
- */
-function methodFor(args: RunArgs): { method: GpuFrameMethod | undefined; why: string | null } {
-  if (args.method !== undefined) return { method: args.method, why: null };
-  if (args.backend !== 'both') return { method: undefined, why: null };
-  return {
-    method: DWELL_METHOD,
-    why:
-      `--backend both pins --method ${DWELL_METHOD}: it is the one clock WebGL2 and WebGPU ` +
-      'share, and a table mixing timer-query with timestamp compares two instruments. ' +
-      'Pass --method explicitly to override.',
-  };
 }
 
 function gitMeta(): { commit: string; dirty: boolean } {
@@ -237,6 +206,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
         frames: args.frames,
         warmupFrames: args.warmupFrames ?? WARMUP_FRAMES,
         backend,
+        cadenceMs: record.idleRafMs,
       };
       record.method = DWELL_METHOD;
       if (args.mode === 'dwell') {
@@ -249,7 +219,8 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
           console.log(formatDwellTable(clocks));
           console.log(
             `gpu stream: ${dwelt.value.gpuNote} · readback ${dwelt.value.readbackPerFrame.toFixed(3)}/frame · ` +
-            `limit ${dwelt.value.limitMag.toFixed(3)} mag at dm ${dwelt.value.dm.toFixed(3)}`,
+            `limit ${dwelt.value.limitMag.toFixed(3)} mag at dm ${dwelt.value.dm.toFixed(3)} · ` +
+            `clamp judged against the ${record.idleRafMs?.toFixed(2) ?? '?'} ms idle cadence`,
           );
         }
         if (dwelt.failure !== null) {
@@ -302,17 +273,39 @@ function writeJson(path: string, file: PerfFile): void {
   console.log(`\nperf: wrote ${path} (${PERF_SCHEMA})`);
 }
 
-function printBaseline(path: string, current: PerfFile): void {
-  let baseline: PerfFile;
-  try {
-    baseline = assertPerfFile(JSON.parse(readFileSync(path, 'utf-8')), path);
-  } catch (e) {
-    console.error(`perf: --baseline ${path} unreadable — ${(e as Error).message}`);
-    if (!(e instanceof SchemaError || e instanceof SyntaxError)) throw e;
-    return;
-  }
+function printBaseline(path: string, baseline: PerfFile, current: PerfFile): void {
   console.log(`\nperf: against baseline ${path} (${baseline.run.git.commit.slice(0, 8)}${baseline.run.git.dirty ? '-dirty' : ''})`);
   console.log(formatDiffTable(diffRuns(baseline, current)));
+}
+
+/**
+ * Both output paths are proved usable BEFORE the marker is consumed, because
+ * a run is authorised one launch at a time: a directory that does not exist
+ * would otherwise surface as an exception thrown over the finished samples,
+ * discarding minutes of measurement and costing a fresh human arm to redo.
+ * So a bad path is a flag error like any other — exit 2, marker untouched.
+ */
+function preflightPaths(args: RunArgs): { baseline: PerfFile | null; error: string | null } {
+  if (args.json !== undefined) {
+    const dir = dirname(resolve(args.json)) || '.';
+    try {
+      accessSync(dir, constants.W_OK);
+    } catch {
+      return { baseline: null, error: `--json ${args.json}: ${dir} is not a writable directory` };
+    }
+  }
+  if (args.baseline === undefined) return { baseline: null, error: null };
+  try {
+    return {
+      baseline: assertPerfFile(JSON.parse(readFileSync(args.baseline, 'utf-8')), args.baseline),
+      error: null,
+    };
+  } catch (e) {
+    const why = e instanceof SchemaError || e instanceof SyntaxError
+      ? (e as Error).message
+      : `unreadable — ${(e as Error).message}`;
+    return { baseline: null, error: `--baseline ${why}` };
+  }
 }
 
 async function main(): Promise<number> {
@@ -332,6 +325,12 @@ async function main(): Promise<number> {
   const down = await unreachable(args.url);
   if (down !== null) {
     console.error(`perf: ${args.url} is not reachable (${down}). The runner never starts a dev server — point --url at the one that is running.`);
+    return EXIT.usage;
+  }
+
+  const { baseline, error } = preflightPaths(args);
+  if (error !== null) {
+    console.error(`perf: ${error}`);
     return EXIT.usage;
   }
 
@@ -402,8 +401,19 @@ async function main(): Promise<number> {
     scenarios: records,
   };
 
-  if (args.json !== undefined) writeJson(args.json, file);
-  if (args.baseline !== undefined) printBaseline(args.baseline, file);
+  // The preflight proved the directory writable, so a throw here is the disk
+  // or a race. Report it and carry on to the diff: the samples are already in
+  // hand and a lost table helps nobody.
+  let writeFailure: string | null = null;
+  if (args.json !== undefined) {
+    try {
+      writeJson(args.json, file);
+    } catch (e) {
+      writeFailure = (e as Error).message;
+      console.error(`perf: could not write ${args.json} — ${writeFailure}`);
+    }
+  }
+  if (baseline !== null && args.baseline !== undefined) printBaseline(args.baseline, baseline, file);
 
   const failed = records.filter((r) => r.failed).map((r) => `${r.name}/${r.backend.requested}`);
   const tainted = records.filter((r) => r.tainted).map((r) => `${r.name}/${r.backend.requested}`);
@@ -411,7 +421,7 @@ async function main(): Promise<number> {
     `\nperf: ${records.length} scenario run(s), ${failed.length} failed${failed.length ? ` (${failed.join(', ')})` : ''}` +
     (tainted.length ? `, tainted: ${tainted.join(', ')}` : ''),
   );
-  return failed.length + tainted.length > 0 ? EXIT.failed : EXIT.ok;
+  return failed.length + tainted.length > 0 || writeFailure !== null ? EXIT.failed : EXIT.ok;
 }
 
 process.exitCode = await main();
