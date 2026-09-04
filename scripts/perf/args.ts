@@ -88,8 +88,9 @@ export function usage(): string {
 
 export function parseRunArgs(argv: readonly string[]): RunArgs {
   let values: Record<string, unknown>;
+  const tokens = argv[0] === '--' ? argv.slice(1) : [...argv];
   try {
-    ({ values } = parseArgs({ args: [...argv], options: OPTIONS, strict: true }));
+    ({ values } = parseArgs({ args: tokens, options: OPTIONS, strict: true }));
   } catch (e) {
     throw new ArgError((e as Error).message);
   }

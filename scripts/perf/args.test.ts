@@ -39,6 +39,10 @@ describe('parseRunArgs', () => {
     expect(a.chromeArgs).toEqual(['--use-angle=metal', '--foo']);
   });
 
+  it('drops the -- that pnpm run forwards ahead of the flags', () => {
+    expect(parseRunArgs(['--', '--scenario', 'lg']).scenarios).toEqual(['lg']);
+  });
+
   it('expands all to the five canon vantages in canon order', () => {
     expect(parseRunArgs(['--scenario', 'all']).scenarios).toEqual(SCENARIO_NAMES);
   });
