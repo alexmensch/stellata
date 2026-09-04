@@ -10,6 +10,7 @@ import {
   buildPriceRow,
   fitDwellFrames,
   summarizeDwell,
+  WARMUP_FRAMES,
   type DwellStats,
   type GpuFrameMethod,
   type PriceFrameRow,
@@ -76,7 +77,7 @@ const DEFAULTS = {
   // baseline was still recovering — visible as an 8-14 ms bracketMs on the
   // hdrChain and reduction rows while every other row sat under 4.5.
   settleFrames: 30,
-  warmupFrames: 180,
+  warmupFrames: WARMUP_FRAMES,
   interleave: true,
   pauseClock: true,
   budgetMs: 180_000,

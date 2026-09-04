@@ -19,6 +19,13 @@ export const PRICED_PASS_KEYS = [
 
 export type PricedPassKey = (typeof PRICED_PASS_KEYS)[number];
 
+/** Frames discarded before the first dwell of a measurement. Long because
+ *  an Apple-silicon GPU ramps its clocks under sustained load, so a
+ *  measurement started cold walks its frame time down for tens of
+ *  seconds. Shared with the headless runner's dwell mode, which needs the
+ *  same ramp absorbed for the same reason. */
+export const WARMUP_FRAMES = 180;
+
 export interface DwellStats {
   readonly samples: number;
   readonly medianMs: number;
@@ -151,6 +158,12 @@ export function percentile(xs: readonly number[], p: number): number {
   return sorted[Math.min(sorted.length - 1, Math.max(0, rank))];
 }
 
+/** Interquartile spread on nearest-rank quartiles — the robust width both
+ *  the differential's noise floor and the runner's dwell summary report. */
+export function interquartileRange(xs: readonly number[]): number {
+  return percentile(xs, 0.75) - percentile(xs, 0.25);
+}
+
 /** Average rank, ties shared, so one hitched frame carries the weight of
  *  one sample instead of the weight of its magnitude. */
 function ranks(xs: readonly number[]): number[] {
@@ -197,7 +210,7 @@ export function summarizeDwell(
   return {
     samples: samples.length,
     medianMs: median(samples),
-    iqrMs: percentile(samples, 0.75) - percentile(samples, 0.25),
+    iqrMs: interquartileRange(samples),
     lag1: lag1Autocorrelation(samples),
     readbackPerFrame: context.readbackPerFrame,
     effectiveLimitMag: context.effectiveLimitMag,
@@ -216,10 +229,15 @@ export function summarizeDwell(
  * `priceFrameRepeat` together with the end-of-run baseline drift.
  */
 export function differentialNoiseMs(a: DwellStats, b: DwellStats): number {
-  return Math.hypot(medianStandardError(a), medianStandardError(b));
+  return Math.hypot(medianStandardErrorMs(a), medianStandardErrorMs(b));
 }
 
-function medianStandardError(stats: DwellStats): number {
+/** Standard error of one dwell's median, from a robust σ. Takes the two
+ *  fields it reads rather than a `DwellStats`, so the runner's own dwell
+ *  summary feeds the same estimator its baseline diff band is built on. */
+export function medianStandardErrorMs(
+  stats: { readonly samples: number; readonly iqrMs: number },
+): number {
   if (stats.samples <= 0) return 0;
   return (MEDIAN_SE_FACTOR * stats.iqrMs * IQR_TO_SIGMA) / Math.sqrt(stats.samples);
 }
@@ -264,11 +282,11 @@ export function buildInterleavedRow(
 ): PriceFrameRow {
   const referenceMs = (before.medianMs + after.medianMs) / 2;
   const referenceSe =
-    Math.hypot(medianStandardError(before), medianStandardError(after)) / 2;
+    Math.hypot(medianStandardErrorMs(before), medianStandardErrorMs(after)) / 2;
   return assembleRow(pass, method, referenceMs, disabled.medianMs, {
     samples: Math.min(before.samples, after.samples, disabled.samples),
     iqrMs: Math.max(before.iqrMs, after.iqrMs, disabled.iqrMs),
-    noiseMs: Math.hypot(referenceSe, medianStandardError(disabled)),
+    noiseMs: Math.hypot(referenceSe, medianStandardErrorMs(disabled)),
     bracketMs: Math.abs(after.medianMs - before.medianMs),
     baselineLag1: (before.lag1 + after.lag1) / 2,
     disabledLag1: disabled.lag1,
