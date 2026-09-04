@@ -94,6 +94,39 @@ change: the user-visible change drives the bump tier. Pipeline PR
 that ALSO touches a renderer knob → bump. Pipeline PR that only
 touches scripts / data files unused by the deployed bundle → skip.
 
+## Citation and archiving
+
+Zenodo (CERN) archives every GitHub release through its GitHub integration
+and mints a DOI for it — third-party, timestamped provenance that a
+published record can only supersede, never edit or delete. Two kinds of
+DOI come out of it:
+
+- **Concept DOI** — version-independent, always resolves to the newest
+  release. This is the one to quote: README badge, `public/llms.txt`,
+  `CITATION.cff`.
+- **Version DOI** — one per release, cites that exact snapshot.
+
+`CITATION.cff` at the repo root is the metadata Zenodo reads for each
+record, and what GitHub's *Cite this repository* sidebar renders. Validate
+edits with `cffconvert --validate -i CITATION.cff`.
+
+What each record archives is the git tree at the tag — source. The
+catalogue and rendered artifacts under `public/` are built from it, and the
+LFS-tracked inputs under `data/` arrive as pointer stubs, because GitHub's
+source tarballs never resolve LFS objects. That is the same line README
+§ Licence draws between this repository's AGPL-3.0-only code and the
+third-party data licences.
+
+Each release page carries the merging PR's `## Release notes` prose
+(§ Release notes per PR), so every Zenodo version record inherits a
+readable changelog at no extra cost.
+
+Turning it on is a one-time manual step needing a Zenodo login: connect
+`alexmensch/stellata` in Zenodo's GitHub integration, after dry-running the
+whole flow on `sandbox.zenodo.org`, since real DOIs are permanent. Releases
+cut before the switch is flipped are not archived; the first release after
+it mints both DOIs at once.
+
 ## Catalogue refresh policy
 
 External catalogues (AT-HYG, Gaia DR3 cross-walks + 5p astrometry +

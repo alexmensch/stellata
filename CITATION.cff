@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: If you use Stellata in your work, please cite it using this metadata.
+title: Stellata
+type: software
+abstract: >-
+  Stellata is a browser-based 3D model of the real universe that you fly
+  through. It places over 330,000 real stars and objects: the Solar System's
+  planets and moons, hundreds of thousands of nearby stars and multiple-star
+  systems, the interstellar dust and molecular clouds between them, the Milky
+  Way, and the nearest galaxies. Every object is placed from published
+  astronomical observation; nothing is invented or procedurally generated.
+  Everything is shown in true colour and at the apparent brightness your eyes
+  would actually see from any point in space: no infrared, radio, or
+  false-colour imagery. It runs in the browser with no install (WebGL2), and
+  its scope grows toward everything astronomy has measured.
+authors:
+  - given-names: Alex
+    family-names: Marshall
+    website: https://alxm.me
+license: AGPL-3.0-only
+repository-code: https://github.com/alexmensch/stellata
+url: https://stellata.xyz
+keywords:
+  - astronomy
+  - astronomical visualisation
+  - star catalogue
+  - Gaia
+  - interstellar dust
+  - Local Group
+  - WebGL
+  - real-time rendering
