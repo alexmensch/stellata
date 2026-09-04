@@ -30,7 +30,7 @@ scripts/perf/
   page-protocol.ts          Every page.evaluate: boot, gate snapshot, adapter
                             probe, rAF probe, drawing-buffer read, the
                             priceFrame call, the dwell loop.
-  measure.ts                What each mode does to a settled page.
+  measure.ts (+ test)       What each mode does to a settled page.
   schema.ts (+ test)        The on-disk record types, PERF_SCHEMA, and
                             assertPerfFile. Owns the adapter/scenario/mode
                             shapes the runner, the tables and the diff share.
