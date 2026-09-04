@@ -200,12 +200,9 @@ describe('diffRuns — sign conventions', () => {
 });
 
 describe('diffRuns — refusals', () => {
-  it('refuses the whole run across two schemas', () => {
-    const stale = { ...withDifferential([priceRow({ pass: 'localDepth' })]), schema: 'stellata-perf/0' };
-    const diff = diffRuns(stale as unknown as PerfFile, withDifferential([priceRow({ pass: 'localDepth' })]));
-    expect(diff.refusedWholeRun).toContain('stellata-perf/0');
-    expect(diff.rows).toEqual([]);
-  });
+  // A foreign schema never reaches diffRuns: assertPerfFile refuses the file
+  // before a diff is asked for (schema.test.ts pins that). Re-checking it here
+  // would be a branch the runner cannot take.
 
   it('refuses the whole run across two adapters', () => {
     const diff = diffRuns(
@@ -281,6 +278,19 @@ describe('diffRuns — refusals', () => {
     expect(diff.refusals[0].key).toBe('sol|webgl2|reduction');
   });
 
+  it('says a vantage measured on the other backend was not absent', () => {
+    const diff = diffRuns(
+      withDifferential([priceRow({ pass: 'localDepth' })]),
+      file([scenario({
+        backend: { requested: 'webgpu', actual: 'webgpu' },
+        differential: [priceRow({ pass: 'localDepth' })],
+      })]),
+    );
+    expect(diff.refusals[0].key).toBe('sol|webgl2');
+    expect(diff.refusals[0].reason).toContain('measured on webgpu in the current run');
+    expect(diff.refusals[0].reason).not.toContain('absent');
+  });
+
   it('keys the two backends of one scenario apart', () => {
     const both = (adapterRows: readonly PriceFrameRow[]): PerfFile => file([
       scenario({ differential: adapterRows }),
@@ -293,7 +303,7 @@ describe('diffRuns — refusals', () => {
   it('does not pretend a sweep is a cost', () => {
     const swept = file([scenario({
       mode: 'sweep',
-      sweep: { points: [], fit: { slope: 1, r2: 1, bound: 'fill', points: 0 }, bracketMs: 0 },
+      sweep: { points: [], fit: { slope: 1, r2: 1, bound: 'fill', fitted: 0 }, bracketMs: 0 },
     })]);
     const diff = diffRuns(swept, swept);
     expect(diff.rows).toEqual([]);

@@ -3,7 +3,7 @@
 // README.md § Comparing against a baseline.
 
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { PERF_SCHEMA, type PerfFile, type ScenarioRecord } from './schema';
+import type { PerfFile, ScenarioRecord } from './schema';
 
 /** How far the two buffers may differ and still be compared. Both dominant
  *  passes scale with area, so a resized window is a different measurement
@@ -58,6 +58,23 @@ function adapterKey(file: PerfFile): string {
 
 function scenarioKey(record: ScenarioRecord): string {
   return `${record.name}|${record.backend.actual ?? 'unbooted'}`;
+}
+
+/**
+ * Why a baseline scenario found no partner. The key already carries the
+ * backend, so a WebGL2 baseline against a WebGPU run reads as an absent
+ * scenario unless the vantage is checked separately — and "you measured a
+ * different backend" is the fixable half of that.
+ */
+function absenceReason(record: ScenarioRecord, current: readonly ScenarioRecord[]): string {
+  const backends = current
+    .filter((s) => s.name === record.name)
+    .map((s) => s.backend.actual ?? 'unbooted');
+  if (backends.length === 0) return 'scenario absent from the current run';
+  return (
+    `measured on ${backends.join(' and ')} in the current run, ${record.backend.actual ?? 'unbooted'} ` +
+    'in the baseline — a frame time is a property of the backend that drew it'
+  );
 }
 
 function comparabilityRefusal(a: ScenarioRecord, b: ScenarioRecord): string | null {
@@ -144,18 +161,12 @@ function dwellRow(key: string, a: ScenarioRecord, b: ScenarioRecord): DiffRow | 
  * function as much as the rows are: two runs on different clocks, buffers
  * or adapters produce a table that looks like a comparison and is not, so
  * every incomparable pair is named rather than dropped.
+ *
+ * Both files reach here through `assertPerfFile`, which refuses a foreign
+ * schema suffix before anything is read as v1 — so the schema is settled by
+ * the time a diff is asked for, and this function does not re-litigate it.
  */
 export function diffRuns(baseline: PerfFile, current: PerfFile): RunDiff {
-  if (baseline.schema !== current.schema) {
-    return {
-      refusedWholeRun: `schema ${baseline.schema} vs ${current.schema}`,
-      rows: [],
-      refusals: [],
-    };
-  }
-  if (baseline.schema !== PERF_SCHEMA) {
-    return { refusedWholeRun: `unknown schema ${baseline.schema}`, rows: [], refusals: [] };
-  }
   const [ka, kb] = [adapterKey(baseline), adapterKey(current)];
   if (ka !== kb) {
     return {
@@ -172,7 +183,7 @@ export function diffRuns(baseline: PerfFile, current: PerfFile): RunDiff {
     const key = scenarioKey(a);
     const b = currentByKey.get(key);
     if (b === undefined) {
-      refusals.push({ key, reason: 'scenario absent from the current run' });
+      refusals.push({ key, reason: absenceReason(a, current.scenarios) });
       continue;
     }
     if (a.failed || b.failed || a.tainted || b.tainted) {
