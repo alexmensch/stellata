@@ -107,11 +107,11 @@ fixing it. Same shape as `~/.claude/hooks/worktree-guard.sh` (the
 
 ## How prime-guard works
 
-`bd prime --hook-json` emits ~24KB of SessionStart context. The host
-inlines a 2KB preview and persists the rest, so the 17 memories sit
+`bd prime --hook-json` emits roughly 12KB of SessionStart context. The
+host inlines a 2KB preview and persists the rest, so the memories sit
 past the cutoff — a session that doesn't read the persisted file runs
-on roughly the first third of the memory list. Shrinking the payload
-doesn't help: the memories alone are 19.6KB, so even
+on the header boilerplate alone. Shrinking the payload doesn't help:
+the memories by themselves run to several KB, so even
 `bd prime --memories-only` truncates.
 
 prime-guard replaces `bd prime --hook-json` in the SessionStart slot

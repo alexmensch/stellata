@@ -29,7 +29,7 @@ render-rules.md         What every layer owes the frame: draw at visible
                         submits and passes as costs, and the measurement
                         canon (wall clock is the total, only
                         differentials price a pass, every renderer PR
-                        states its cost against the pin). Read before
+                        states its measured cost). Read before
                         adding or touching a render layer, a pass, or a
                         per-frame buffer write.
 bd-workflow.md          Long-form bd procedures that fire on a trigger

@@ -104,7 +104,7 @@ starting `permitted = false` so it agrees with its constructor's
 (`scene/README.md` § Declaring how time moves a layer is the model: a
 required discriminated union, because an omitted hook reads as an answer
 and the failure it prevents is silence). The design gate and the
-per-layer adoption are the liveness epic under stellata-8cg;
+per-layer adoption are the liveness epic stellata-8cg.50;
 stellata-9mm.231 (sub-pixel shells) is its first child.
 
 ## 3. Reduced-resolution additive sums for band-limited emitters
@@ -121,9 +121,9 @@ compositing (`hdr/summation/README.md`). Anything a reduced-resolution
 render loses, that average was already removing — provided the upsample
 happens before or inside the summation. The band is pure fill: it priced
 at 36–60 % of frame across the canonical vantages and scaled 7.2× with
-pixel count while a 50°→120° FOV change made it *cheaper*
-(`frame-cost/README.md`). Early-z buys nothing here, because no occluder
-sits in front of most band pixels.
+pixel count while a 50°→120° FOV change made it *cheaper* (the
+cross-vantage sweeps in stellata-8cg.18's notes). Early-z buys nothing
+here, because no occluder sits in front of most band pixels.
 
 **How to apply.** The sum is what is bandlimited, so keep it linear all
 the way to the upsample: rgb and the scalar the knee runs on are stored
@@ -131,7 +131,8 @@ raw, and the knee is applied to the *summed* field. Attachments of one
 render target must share dimensions, so a reduced-resolution emitter is
 a separate pass and target — which also removes an attachment from the
 main target, and the main target's extra attachments priced at 53–86 %
-of frame, so that side effect may be the larger prize. Depth tests
+of frame (the HDR-chain decomposition in stellata-8cg.23's notes), so
+that side effect may be the larger prize. Depth tests
 against foreground occluders blur at the reduced edge; the exposure
 statistic those emitters write needs its own path. Whole-frame
 downscaling is **not** this rule — it degrades resolved content, and
@@ -197,15 +198,18 @@ so pad node bounds by the catalogue's maximum displacement at build
 time, or rebuild the index past a threshold; do not let a drifted member
 be culled at a node edge.
 
-**Where.** Design bead under stellata-cns.1; the HDR peak of a stand-in
+**Where.** Design bead stellata-cns.1.1; the HDR peak of a stand-in
 comes through `stellataPointSourcePeak` from the summed flux, and the
 extinction prepass provides one texel per stand-in.
 
 ## 6. Depth is a pipeline property
 
-**Rule.** No static fragment-depth write anywhere in a pipeline; a depth
-contract is satisfied by removing writes, never by adding draws; draw
-count per subsystem is part of parity.
+**Rule.** No new static fragment-depth write anywhere in a pipeline; a
+depth contract is satisfied by removing writes, never by adding draws;
+draw count per subsystem is part of parity. The WebGL2 star fragment
+shader is the one allowlisted exception today — its unconditional
+`gl_FragDepth` write costs all three star passes their early-z — and
+removing it is the port contract, not a tolerated state.
 
 **Why.** Any static `gl_FragDepth` / `frag_depth` write disables early-z
 — the hardware skipping a pixel's shading when it is already known to be
@@ -216,9 +220,12 @@ that answers "one program per pass" with a second draw over the same
 replaced.
 
 **How to apply.** `src/client/webgpu/README.md` § Early-z is the
-authority for the star layer's depth-honest design and stays so; the
-vitest scanners `tests/shader-frag-depth.test.ts` and
-`tests/tsl-frag-depth.test.ts` hold the allowlist at empty.
+authority for the star layer's depth-honest design and stays so. Two
+vitest scanners hold the line: `tests/shader-frag-depth.test.ts` allows
+exactly one GLSL file (`star-pipeline/star.frag.glsl`) and fails on any
+other, and `tests/tsl-frag-depth.test.ts` holds the TSL allowlist at
+empty. Shrinking the GLSL allowlist to empty is the WebGL2 path's
+deletion (stellata-0it.14).
 
 ## 7. One writer per buffer per submit
 
@@ -229,9 +236,11 @@ once per submit, or it is given per-draw slots.
 frame lands before any command recorded in that frame's submit executes.
 So N draws that share one uniform or storage buffer, each preceded by a
 `writeBuffer`, all read the *last* bytes written — the first N−1 draws
-render with the wrong data and nothing reports it. Three.js's own
-material uniforms are per-object and unaffected; the exposure is in
-anything we write directly.
+render with the wrong data and nothing reports it. The hazard lives
+*within one render call*, where every draw of the scene shares one
+submit; separate `renderer.render` calls are separate submits (rule 8),
+which is a cost, not a protection. Three.js's own material uniforms are
+per-object and unaffected; the exposure is in anything we write directly.
 
 **How to apply.** Per-draw buffers, 256-byte dynamic-offset slots within
 one buffer, or a per-view ring sized to the number of draws sharing a
@@ -243,8 +252,8 @@ kernel. Related validation trap, already guarded in
 in a not-yet-submitted encoder fails — defer the map to a microtask
 after the submit.
 
-**Where.** The audit of the existing storage-buffer designs is a bead
-under stellata-0it; `webgpu/README.md` carries the pointer.
+**Where.** The audit of the existing storage-buffer designs is
+stellata-0it.36; `webgpu/README.md` carries the pointer.
 
 ## 8. Submits and passes are costs
 
@@ -267,14 +276,17 @@ empty extra pass, differenced), then read every "add a pass" proposal
 against it; stellata-8cg.48 (reduce 4×4 per level, halving the chain)
 is the shape of the fix.
 
-**Where.** Submit-and-pass count spike under stellata-0it.
+**Where.** Submit-and-pass count spike stellata-0it.37.
 
 ## 9. Measurement canon
 
 **Rule.** Wall clock is the total; GPU slots are attribution. Only a
 differential prices a pass. Every renderer-touching PR states its
-measured frame cost against the current pin — the cost of a feature is
-known before it merges, not discovered in an audit.
+measured frame cost — the cost of a feature is known before it merges,
+not discovered in an audit. Once the perf pin exists (stellata-8cg.49.11
+decides it, .12 builds it) the statement is the runner's diff against
+the pin; until then it is a `debug.priceFrame()` differential at the
+canonical vantages, before and after, pasted into the PR body.
 
 **Why and how, as a list — each line has been paid for:**
 
@@ -317,8 +329,9 @@ known before it merges, not discovered in an audit.
   drawn and stays the authority.
 
 **Where.** `debug/gpu-timing/README.md` (the clocks), `debug/frame-cost/
-README.md` (the differential), the perf-runner sub-epic under
-stellata-8cg (the headless instrument and the pin).
+README.md` (the differential), stellata-8cg.49 (the headless instrument
+and the pin). stellata-8cg.1's notes carry the empirics behind every
+number above; this section states the rules.
 
 ## 10. Pointers into the write-time rules
 
