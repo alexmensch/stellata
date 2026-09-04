@@ -1,8 +1,7 @@
 # Multiple-star pipeline
 
-Split out of `SCIENCE.md` § Multiple-star pipeline — the science
-side (detection philosophy, blend-split math, worked examples). The
-engineering side (layered strategies, file roster) lives in
+Covers detection philosophy, blend-split math and worked examples.
+The engineering side (layered strategies, file roster) lives in
 `scripts/catalog/README.md` and `scripts/binaries/README.md`. Spans
 `scripts/catalog/`, `scripts/binaries/`, `data/wds/`.
 
@@ -33,7 +32,7 @@ is intentional so each can evolve independently as upstream catalogues
 update.
 
 **Layer 1 — committed reference data.** Frozen under `data/` per the
-freshness policy in `scripts/README.md` § Frozen external data:
+freshness policy in `data/README.md` § Frozen external data:
 
 - **Washington Double Star Catalog (WDS)** + **Sixth Catalog of Orbits
   of Visual Binary Stars (ORB6)** — Mason et al. 2001, *AJ* 122, 3466
@@ -656,8 +655,8 @@ pipeline (engineer walk-through in `scripts/binaries/README.md`);
 `scripts/binaries/build-runtime-binaries.py` for the runtime artifact;
 `scripts/catalog/build-catalog.ts` + `visual-doubles.ts` +
 `companion-promotion.ts` for the catalog-side passes (see
-`scripts/README.md` § Geometric binary inference and § TDSC double-
-star cross-match for per-pass detail).
+`scripts/catalog/multiplicity/README.md` § Geometric binary inference
+and § TDSC double-star cross-match for per-pass detail).
 
 ## Intra-system distance coherence
 

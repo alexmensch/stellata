@@ -219,11 +219,19 @@ not just a refactor.
    and repoint each hit at where the content now lives. Leaving the old
    heading behind as a pointer does not discharge this: the ref resolves,
    the claim it was attached to is gone, and a comment quoting the moved
-   sentence now cites a file that no longer contains it. Verify the
-   heading a `§` names actually exists — a **bolded bullet** is not a
-   heading, and refs to one dangle silently from the day they are written.
+   sentence now cites a file that no longer contains it.
+8. **`§` pointers are checked; the basename half of step 7 is not.**
+   `tests/doc-pointer-resolution.test.ts` fails the suite when a
+   `<file>.md § <Heading>` pointer names a heading that no longer
+   exists, so a split that moves a section breaks the build until its
+   inbound pointers are repointed. A **bolded bullet** counts as a
+   heading — that is house style, and the guard resolves against one.
+   Two renames it cannot see, and why narrowing costs more than it
+   buys: `tests/README.md` § Doc-pointer resolution.
 
-No test catches stale prose; the next reader is misled.
+Only `§` pointers are checked. Every other stale claim — a data-flow
+sentence, a file roster, "X doesn't ingest Y" — is caught by the reader
+or not at all.
 
 ## Test coverage at write time
 

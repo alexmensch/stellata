@@ -38,7 +38,8 @@ float stellataPxPerRadian(float omegaPxArcsec2) {
  *
  *  Load-bearing for the display convolution, not cosmetic: the convolution
  *  can only average what the rasteriser sampled, and an aliased Sérsic cusp
- *  survives it — 3.95 mag on M31's nucleus. summation/README.md § Footprint. */
+ *  survives it — 3.95 mag on M31's nucleus. ../summation/README.md §
+ *  Footprint. */
 float stellataFootprintPc(float distancePc, float omegaPxArcsec2) {
     return distancePc / (stellataPxPerRadian(omegaPxArcsec2) * STELLATA_SQRT12);
 }
@@ -82,7 +83,7 @@ float stellataPointSourcePeak(float exposure, float appMag, float physRadiusPx) 
  *  integral `fluxIntegral * D^2` (perceptualDiscFluxIntegral) makes the
  *  integral return stellataLuminanceForMag instead. Clamped like the display
  *  peak: a clamped read is a lower bound the adaptation loop closes from
- *  above. See attachments/README.md § The unit. */
+ *  above. See ../attachments/README.md § The unit. */
 float stellataKernelFluxPeak(
     float exposure,
     float appMag,
@@ -105,7 +106,7 @@ float stellataKernelFluxPeak(
  *  pre-divided R, and one compositing premultiplied premultiplies the mask
  *  too. The flux clamps at the ceiling for the reason the display peak
  *  does: a clamped read is a lower bound the adaptation loop closes from
- *  above (exposure/reduction/README.md § Measure at the base exposure). */
+ *  above (../exposure/reduction/README.md § Measure at the base exposure). */
 vec4 stellataStatisticTexel(float fluxL, float litSurface, float alpha) {
     return vec4(
         min(fluxL, STELLATA_LUMA_CEIL),

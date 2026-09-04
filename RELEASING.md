@@ -134,7 +134,7 @@ NSS + Apsis, Bailer-Jones DR3, Hipparcos-2 van Leeuwen, SIMBAD pulls)
 are refreshed by manual `pnpm run refresh:*` invocations, **not** by
 `pnpm run build` or the deploy workflow. The build reads the committed
 files under `data/<source>/` and never hits the network — see
-`scripts/README.md` § Frozen external data for the rationale.
+`data/README.md` § Frozen external data for the rationale.
 
 **Cadence.** Refresh is event-driven, not scheduled. The trigger is an
 upstream catalogue release:
@@ -155,7 +155,7 @@ upstream catalogue release:
   catalogues and a sample-time anchor is fine for the validation tier.
 
 The full refresh recipe + ordering constraints + post-refresh
-validation steps are in `scripts/binaries/README.md` § Refreshing data when
+validation steps are in `scripts/refresh/README.md` § Refreshing data when
 DR4 / new AT-HYG lands.
 
 **Version bump on catalogue refresh.** A catalogue refresh PR that

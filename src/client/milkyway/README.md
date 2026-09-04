@@ -138,7 +138,7 @@ Two more consequences a future session needs:
   the tint, because the tint's channels exceed 1 (the disc's red sits at
   1.13) and an `<input type="color">` cannot round-trip that.
 - **The Local Group layer no longer seeds from here.** It derives its own
-  two family indices (`../local-group/README.md` § Population tints),
+  two family indices (`../local-group/emission/README.md` § Population tints),
   sharing only the SSP spheroid constant and the solve — so this palette
   is the band's alone.
 

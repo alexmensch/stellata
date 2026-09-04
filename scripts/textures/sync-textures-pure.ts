@@ -3,7 +3,7 @@
 // originals stay out of the public bundle.
 
 // Every colour map carries its rung width; a body ships one file per rung
-// it can fill (`data/textures/README.md` § Size ladder). The width is
+// it can fill (`scripts/textures/README.md` § Size ladder). The width is
 // required rather than optional so a stale pre-ladder `<body>.jpg` left in
 // the tree cannot ship as a file the renderer never asks for.
 const BODY_PATTERN = /^[a-z]+-\d+\.jpg$/;

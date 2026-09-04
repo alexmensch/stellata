@@ -1,6 +1,6 @@
 // Single-scattering atmosphere model (Nishita/O'Neil few-sample) — the CPU
 // mirror of atmosphere-scatter.glsl. Geometry in planet-radius units, planet
-// centred at origin. Model + calibration: README.md § Atmospheres.
+// centred at origin. Model + calibration: README.md § The model.
 
 import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
 import type { PlanetAtmosphere } from '../planet-system';

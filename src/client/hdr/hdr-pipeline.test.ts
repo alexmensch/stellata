@@ -89,7 +89,8 @@ describe('the MRT target the seam builds', () => {
 
   // The three inputs three's getInternalDepthFormat reads to land on
   // DEPTH_COMPONENT24 rather than a 16-bit renderbuffer, which would coarsen
-  // every close-range z-test by 256x (../local-depth/README.md § Precision).
+  // every close-range z-test by 256x (../local-depth/bracket/README.md §
+  // Precision).
   it('carries the 24-bit depth attachment the local-depth bound assumes', () => {
     const rt = createHdrTarget(8, 8);
     expect(rt.depthBuffer).toBe(true);

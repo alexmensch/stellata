@@ -248,7 +248,7 @@ function isMoreCanonicalNamingAnchor(
  *  support. Refusing the anchor leaves those records on their own
  *  designations, which is what the gate means by a surviving collision
  *  being a data finding rather than a renderer concession
- *  (docs/star-naming.md § 8.4).
+ *  (docs/star-naming.md § 8).
  *
  *  Map each multiples.tsv component to a root-relative designation so the
  *  composer and the runtime can both build "<base> <letter>". The anchor is

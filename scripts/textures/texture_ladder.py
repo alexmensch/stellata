@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Per-body texture size ladder: which widths a body ships, given the width
-its frozen master actually has (contract in data/textures/README.md § Ladder)."""
+its frozen master actually has (contract in scripts/textures/README.md § Size
+ladder)."""
 
 # Power-of-two rungs the runtime selects between. 1024 is the floor a
 # distant body holds; 8192 is what a 5K display asks for at the camera

@@ -250,7 +250,8 @@ luminance in R and the **lit-surface mask** in G. R needs its own
 normalisation because the display kernel preserves *peak*, not energy, so
 summing what attachment 0 holds would over-count a threshold star's flux
 by 1.96x and a knee-saturated bright one by 28.9x; R divides that kernel
-by its own area integral (`../../star-pipeline/README.md` § Star intensity
+by its own area integral (`../../star-pipeline/perceptual-disc/README.md` §
+Star intensity
 profile owns the integral, `../attachments/README.md` the texel rule).
 **G was peak-correct luminance and is not any more.** The highlight guard
 was its only consumer and retired with it, and for a resolved surface R

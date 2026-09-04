@@ -46,7 +46,7 @@ step with whatever is actually on screen.
   second. Divide the threshold by it and you have the budget above.
 - **`observed`** — what actually moved, measured independently of the
   rate model. This is the safety net's input
-  (`../../render-gate/README.md` § The safety net); when it exceeds a
+  (`../../render-gate/cadence/README.md` § The safety net); when it exceeds a
   visible step on a *scheduled* frame, `trust` drops and the headline
   turns red. **Printed as a rate, normalised over the gap it was
   measured across**, which is the only form comparable to `reported`

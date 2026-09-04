@@ -94,35 +94,31 @@ science-hdr-pipeline.md Design gate for the HDR epic: the
                         spans star-pipeline, milkyway, solar-system,
                         local-group, chart-mode and the future
                         src/client/hdr/.
-science-catalog-ingestion.md   Split out of SCIENCE.md: AT-HYG/Gaia/
-                        Hipparcos merge, Bailer-Jones + LMC-kinematic
-                        distance overrides, driver astrometry,
-                        current-epoch space-motion propagation. Its
-                        AT-HYG-framed sections are superseded by
-                        catalog-driver.md; it says which and why.
-science-stellar-modelling.md   Split out of SCIENCE.md: physical
-                        radius, brightness/size perception model,
-                        colour temperature routing + Teff calibration,
-                        variable-star pulsation.
-science-solar-system.md        Split out of SCIENCE.md: planet
-                        rendering, phase functions, naked-eye colour
-                        calibration (solar reference white), atmosphere
-                        shells + their per-body optical-depth sources,
-                        heliopause boundary.
-science-local-group.md         Split out of SCIENCE.md: wireframe
-                        layer + per-object luminosity/density model
-                        for the volumetric emission raymarch.
-science-galactic-structure.md  Split out of SCIENCE.md: galactic
-                        coordinate frame, Milky Way density profiles,
-                        interstellar dust extinction, constellation
-                        stick figures.
+science-catalog-ingestion.md   AT-HYG/Gaia/Hipparcos merge, Bailer-
+                        Jones + LMC-kinematic distance overrides,
+                        driver astrometry, current-epoch space-motion
+                        propagation. Its AT-HYG-framed sections are
+                        superseded by catalog-driver.md; it says which
+                        and why.
+science-stellar-modelling.md   Physical radius, brightness/size
+                        perception model, colour temperature routing +
+                        Teff calibration, variable-star pulsation.
+science-solar-system.md        Planet rendering, phase functions,
+                        naked-eye colour calibration (solar reference
+                        white), atmosphere shells + their per-body
+                        optical-depth sources, heliopause boundary.
+science-local-group.md         Wireframe layer + per-object
+                        luminosity/density model for the volumetric
+                        emission raymarch.
+science-galactic-structure.md  Galactic coordinate frame, Milky Way
+                        density profiles, interstellar dust extinction,
+                        constellation stick figures.
 science-molecular-clouds.md    Extinction units chain, calibrated Zucker
                         density model, taxonomy + embedded-star cavities,
                         isosurface-traced presence pass, anti-aliasing
                         rules.
-science-multiple-star-pipeline.md  Split out of SCIENCE.md:
-                        binary/multiple detection philosophy,
-                        blend-split math, worked examples.
+science-multiple-star-pipeline.md  Binary/multiple detection
+                        philosophy, blend-split math, worked examples.
 screenshots/            Marketing + README hero images.
 ```
 

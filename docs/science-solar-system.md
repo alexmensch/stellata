@@ -1,7 +1,6 @@
 # Solar system
 
-Split out of `SCIENCE.md` § Solar system. Spans
-`src/client/solar-system/`.
+Spans `src/client/solar-system/`.
 
 When a host star with planets is focused, Stellata renders the eight
 planets, Pluto, faint orbit rings, and the heliopause boundary in the

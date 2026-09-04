@@ -52,7 +52,7 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     // window, chart disc sizing and the MW chart isobar; uThresholdMag is
     // where a source lands on the just-visible floor, and is the taper
     // anchor; uCullMag is the static population bound the vertex stage
-    // culls at. `../../hdr/exposure/README.md` § One writer, five slots.
+    // culls at. `../hdr/exposure/README.md` § One writer, five slots.
     uLimitMag: { value: baseLimitMag },
     uThresholdMag: { value: baseLimitMag },
     uCullMag: { value: cullMagFor(baseLimitMag) },

@@ -1,6 +1,6 @@
 // Pure helpers for the build-catalog count assertion — diff a
 // BuildCounts record against the committed snapshot. See
-// scripts/catalog/README.md § Validation harness.
+// scripts/catalog/validate/README.md § Validation harness.
 import { DIST_SRC_BUCKETS, type DistSrcPartition } from './catalog-pure';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity';
 import type { LabelMergeCounts } from './classic-ids/label-merge-pure';
@@ -76,7 +76,7 @@ export interface BuildCounts extends LabelMergeCounts {
    *  moved under it — a refreshed Bailer-Jones or LMC input pushing a row past
    *  MAX_DIST_PC, or an astrometry table that stopped resolving a direction.
    *  Pinning them here is what turns that into a build failure instead of a
-   *  record silently leaving the catalogue (docs/catalog-driver.md § 6.1). */
+   *  record silently leaving the catalogue (docs/catalog-driver.md § 6). */
   spineDroppedNoRaDec: number;
   spineDroppedNoDist: number;
   spineDroppedNoDirection: number;
@@ -409,7 +409,7 @@ export interface BuildCounts extends LabelMergeCounts {
    *  claiming them. Ratchet DOWN: the composer is injective given (naming
    *  anchor, component letter), so every survivor is two catalogue entries
    *  claiming one designation — a data finding, never something the
-   *  renderer should qualify away (docs/star-naming.md § 8.4). */
+   *  renderer should qualify away (docs/star-naming.md § 8). */
   namingDuplicateLabels: number;
   namingDuplicateRecords: number;
   /** Total entries in the full-catalog Gaia DR3 5p astrometry TSV

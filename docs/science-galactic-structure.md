@@ -1,6 +1,6 @@
 # Galactic structure — coordinates, density, dust, constellations
 
-Split out of `SCIENCE.md`. Covers the shared galactic coordinate
+Covers the shared galactic coordinate
 frame, Milky Way stellar density profiles, interstellar dust
 extinction, and constellation stick-figure geometry. Spans
 `src/client/galactic/galactic-coords.ts`, `src/client/milkyway/`,

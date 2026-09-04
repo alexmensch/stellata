@@ -1,6 +1,6 @@
 /** Intra-system radial coherence: own-record members of a physical WDS
  *  system move to the system's best-tier distance anchor. See
- *  scripts/catalog/README.md § System distance coherence. */
+ *  scripts/catalog/multiplicity/README.md § System distance coherence. */
 
 import type { Star } from '../parse/stars-parse';
 import type {

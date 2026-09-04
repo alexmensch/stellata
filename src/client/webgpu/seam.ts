@@ -80,7 +80,7 @@ export interface WebGpuSeam {
   readonly uniformNodes: SharedUniformNodes | null;
   bindSharedUniforms(shared: SharedUniforms): void;
   /** Per-frame scalar copy from the WebGL-side map into the nodes —
-   *  called from animate() before the render (README.md § Shared
+   *  called from animate() before the render (tsl/README.md § Shared
    *  uniform nodes). */
   syncUniformNodes(): void;
   /** Build the TSL star layer into the seam's scene. Requires

@@ -68,7 +68,8 @@ clamp is named for (`../ephemerides/README.md`). A
 running clock **pins at the bound** with its rate intact: the readout
 freezes there, no invisible overshoot accrues (the clock re-anchors at
 the bound), and the first opposite-direction transport step moves off
-it immediately. See SCIENCE.md § Solar system for the decision record.
+it immediately. See docs/science-solar-system.md § Solar system for the
+decision record.
 
 ## Timescales
 
@@ -289,5 +290,6 @@ panel background carries an explicit light-mode override in `styles.css`.
 The catalogue moves with the scrubbed clock too — star positions
 re-advance off their J2016.0 baseline on 1/20-Julian-year bucket
 crossings (`../../loaders/README.md` on `epoch-advance-pure.ts`;
-SCIENCE.md § Current-epoch star positions) — but this widget stays
+docs/science-catalog-ingestion.md § Current-epoch star positions) — but this
+widget stays
 clock-only and never touches positions itself.

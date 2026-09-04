@@ -1,5 +1,5 @@
 // The focused object's own orbit as an ICRS frame — plane normal plus the
-// direction to the orbit's centre. See README.md § Levelling on an orbit.
+// direction to the orbit's centre. See ../README.md § Levelling on an orbit.
 
 import * as THREE from 'three';
 import type { Stellata } from '../../stellata';

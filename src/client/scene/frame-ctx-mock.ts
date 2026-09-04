@@ -24,7 +24,8 @@ export function makeFrameCtx(
 
 /** The pinned acceptance plate scale: a 900 CSS-px-tall viewport at the
  *  default 50° vertical FOV, which is what
- *  `render-gate/README.md` § Pinned vantages quotes every rate against.
+ *  `../render-gate/cadence/README.md` § Pinned vantages quotes every rate
+ *  against.
  *  `angularToPx` is viewport height over FOV in radians. */
 export const ACCEPTANCE_PX_PER_RADIAN = 900 / ((50 * Math.PI) / 180);
 

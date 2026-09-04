@@ -192,7 +192,7 @@ describe('meshSurfaceLuminance', () => {
     // Titan's row: π/p·⟨inscatter⟩ = 1.14, so the model's haze is already
     // brighter than the measured body and there is no flux left for the
     // ground. Reading that off the clamp beats hiding it behind a gain on a
-    // calibrated quantity — atmosphere/README.md § Flux bookkeeping.
+    // calibrated quantity — ../../atmosphere/README.md § Flux bookkeeping.
     const titanish = { surface: 0.0062, sky: 0.0016, airlight: 0.0796 };
     expect(meshSurfaceLuminance(
       BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, 0.22, 1, titanish,

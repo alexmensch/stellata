@@ -1,9 +1,8 @@
 # Stellar catalog ingestion
 
-Split out of `SCIENCE.md` § Stellar catalog ingestion. Covers the
-AT-HYG/Gaia/Hipparcos merge, the Bailer-Jones and LMC-kinematic
-distance overrides, driver-astrometry precision, and current-epoch
-space-motion propagation. Spans `scripts/catalog/`, `data/athyg/`,
+Covers the AT-HYG/Gaia/Hipparcos merge, the Bailer-Jones and
+LMC-kinematic distance overrides, driver-astrometry precision, and
+current-epoch space-motion propagation. Spans `scripts/catalog/`, `data/athyg/`,
 `data/gaia/`, `data/bailer-jones/`. See `SCIENCE.md` for scope
 principles and data-source policy that apply across the whole catalog,
 and `docs/catalog-driver.md` for where the row set itself is going.
@@ -264,7 +263,7 @@ spectral-type enum (`O`, `B`, `A`, `F`, `G`, `K`, `M`, `CSTAR`,
 Stellata pulls all seven Apsis floats plus the gspspec spectral-type
 enum per Gaia DR3 source_id into `data/gaia/gaia_dr3_apsis.tsv` and
 writes them per record into the binary at offsets 52–79 (see
-`scripts/README.md` § Binary catalog format). Coverage: ~99.6% of
+`scripts/catalog/README.md` § Binary catalog format). Coverage: ~99.6% of
 AT-HYG rows that resolve to a Gaia DR3 source_id match an Apsis row;
 ~85% have a non-null T_eff in at least one of gspphot or gspspec. That
 last number is the population the renderer's colour LUT path can re-
@@ -470,7 +469,7 @@ placement/tier-routing pin; the propagation formula (tangent / sign /
 cos δ) is exercised by the HIP2 tier and pinned independently against
 SIMBAD J2000 in `direction-cascade.test.ts`. Gaia DR4 slots in as a
 source-file swap inside the same cascade (`scripts/refresh/README.md`
-§ DR4 transition).
+§ Refreshing data when DR4 / new AT-HYG lands).
 
 ## Current-epoch star positions — space-motion propagation to `t`
 

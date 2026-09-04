@@ -52,7 +52,7 @@ runs on. Testing there keeps the extinction read (one `texelFetch` on the
 prepass path, the 48-tap raymarch on the fallback) off the whole culled
 population; the second call, on the extincted value, is the exact one.
 The TSL twin needs one test only because no extinction read is ported yet
-(`../../webgpu/star/README.md` § What is deliberately NOT here yet) — when
+(`../../webgpu/star/README.md` § Dust extinction) — when
 one lands it wants the same split.
 
 ## Kernel collapse — flux-preserving

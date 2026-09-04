@@ -132,7 +132,7 @@ describe('shared chunk constants', () => {
 
   // How far a raymarch step smooths its profile, and therefore whether the
   // display convolution averages a resolved field or an aliased cusp
-  // (summation/README.md § Footprint). Both the √12 and the arcsec
+  // (../summation/README.md § Footprint). Both the √12 and the arcsec
   // conversion are GLSL literals; too small leaves the cusp, too large dims
   // the core, and neither failure mode stops the shader compiling.
   it('emission.glsl derives the same footprint radius as emission-pure does', () => {

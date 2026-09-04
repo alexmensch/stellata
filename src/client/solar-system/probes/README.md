@@ -211,7 +211,7 @@ all: reversed-z deleted the chunks it guards
 
 Neither shader writes `gl_FragDepth`, and neither may: a static write
 costs the whole draw its early-z, so only `star.frag.glsl` carries one
-(`../../star-pipeline/README.md` § Early-z, pinned by
+(`../../star-pipeline/README.md` § Depth encoding, pinned by
 `tests/shader-frag-depth.test.ts`). The marker is a non-raw
 `ShaderMaterial`, so in the main pass three's `logdepthbuf_fragment`
 writes the depth; in the local pass fixed-function depth is already

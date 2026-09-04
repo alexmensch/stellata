@@ -190,7 +190,7 @@ export class InputController {
   /** Deliberately narrower than `FocusController.isCameraBusy()`: the focus-park
    *  and unfocus lerps are *cancelled* by a click, not blocked by it, so
    *  including them here would make every click self-block. See
-   *  `../README.md` § Camera-activity predicates. */
+   *  `../../README.md` § Camera-activity predicates. */
   private blocksClick(): boolean {
     return this.deps.isWarpActive()
       || this.deps.isAimActive()

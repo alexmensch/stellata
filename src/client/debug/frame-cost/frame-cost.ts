@@ -196,7 +196,7 @@ export function buildPassToggles(stellata: Stellata): PassToggle[] {
  * whole-frame GPU scope with the pass disabled, difference the median
  * against baselines measured either side of it. One pass at a time —
  * differentials are the only honest per-pass price on ANGLE/Metal
- * (README.md § GPU timing).
+ * (../README.md § GPU timing).
  *
  * The sample source is per backend (`gpu-frame-source.ts`): the WebGPU
  * renderer's own timestamp resolve, a WebGL2 timer query, or the rAF-delta

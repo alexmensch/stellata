@@ -391,7 +391,8 @@ describe('atmosphere shells', () => {
   it('stays optically thin over the texture — Titan the deliberate exception', () => {
     // Nadir T_view per channel, pinned per body: the texture IS the visible
     // disc, so the overlay must not extinguish it and replace it with a
-    // featureless ball (README.md § The texture carries the disc). The pins
+    // featureless ball (atmosphere/README.md § The texture carries the disc).
+    // The pins
     // are the guard — a published-value refinement should register here and
     // be read, not trip a threshold it happens to sit near. Earth's blue is
     // the thickest of the three at 0.76, and the bound below (the texture

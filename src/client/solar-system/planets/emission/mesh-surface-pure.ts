@@ -42,7 +42,8 @@ export function lambertLimbDiscMean(limbFloor: number, limbExp: number): number 
  *
  *  `E · Ω_px`: the host's irradiance at the body on the luminance scale,
  *  times the solid angle one pixel subtends. Ω_px is why zooming dims an
- *  extended source (`../../hdr/emission/README.md` § Unit) — the same factor that
+ *  extended source (`../../../hdr/emission/README.md` § Unit) — the same
+ *  factor that
  *  dims a resolved disc's peak under the point-source rule, which is what
  *  keeps mesh and glare continuous at any FOV. */
 export function hostIrradianceLuminance(

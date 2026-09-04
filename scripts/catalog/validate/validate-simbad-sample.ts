@@ -1,6 +1,6 @@
 // Manual-run Tier-C validator cross-checking catalog.bin absmag and
 // distance against SIMBAD's published values. Run: `pnpm run
-// validate:simbad`. See scripts/catalog/README.md § Validation harness.
+// validate:simbad`. See scripts/catalog/validate/README.md § Validation harness.
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';

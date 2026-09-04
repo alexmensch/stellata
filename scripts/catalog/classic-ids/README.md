@@ -280,8 +280,9 @@ cannot fuse two same-as classes or move a canonical key.
 
 A promoted companion inherits neither list. The overlay names no component, so
 handing the anchor's alternative HD to the companion would invent the very
-attribution the table declines to make (`../companions/README.md` § Fields a
-promoted record carries). Attributing each number to its component where
+attribution the table declines to make (`../companions/README.md` §
+Promoted-companion
+field inheritance). Attributing each number to its component where
 IV/27A's own columns disambiguate — 49618 carries HR 2520 and HIP 33048 where
 49619 carries neither — is `stellata-3bsf.39`.
 

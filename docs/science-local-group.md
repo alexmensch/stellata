@@ -1,6 +1,6 @@
 # Local Group — wireframes & luminosity model
 
-Split out of `SCIENCE.md`. Covers the Local Group wireframe layer
+Covers the Local Group wireframe layer
 (member selection, geometry) and the per-object luminosity/density
 model used to calibrate the volumetric emission raymarch. Spans
 `src/client/local-group/`, `data/local-group/`.
@@ -75,7 +75,7 @@ capture, and add the two major spirals LVDB's `dwarf_all` table omits:
   from the Cepheid measurement of Bonanos et al. 2006, *ApJ* 652, 313
   (DOI 10.1086/508140). Standalone row.
 
-Per the build's data-freshness policy (`scripts/README.md`
+Per the build's data-freshness policy (`data/README.md`
 § Frozen external data), refreshing the LVDB snapshot is an explicit
 manual step (curl + `pnpm run build:local-group --force`) — `pnpm run
 build` never touches the network.

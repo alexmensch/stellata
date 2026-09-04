@@ -1,6 +1,6 @@
 # Stellar physics, perception & colour modelling
 
-Split out of `SCIENCE.md`. Covers per-star physical radius, the
+Covers per-star physical radius, the
 render-time brightness/size perception model, colour temperature
 routing and calibration, and variable-star pulsation. Spans
 `src/client/star-pipeline/`, `scripts/colour/`, and the GCVS
