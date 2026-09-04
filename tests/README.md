@@ -68,12 +68,9 @@ doc-pointer-resolution.test.ts
                          scripts/, tests/, docs/, data/, research/ plus the
                          repo-root docs resolves to a heading that exists —
                          the codebase's wiki links, checked. Scans .ts .js
-                         .glsl .md .py. Its resolution is the first two
-                         words of the cited section, because a pointer
-                         routinely names a heading's opening and then runs
-                         on in prose; a rename that leaves those two words
-                         alone reads as a truncated citation and passes,
-                         which the suite asserts rather than hides.
+                         .glsl .md .py, and pins the pointer total. Grammar,
+                         resolution order and the two limits it cannot see:
+                         § Doc-pointer resolution below.
 folder-readme-coverage.test.ts
                          The "every folder under src/, scripts/, data/,
                          docs/ has a README.md" invariant (AGENTS.md
@@ -127,10 +124,8 @@ webgpu-import-boundary.test.ts
                          boundary).
 doc-pointer-pure.ts      Not a test — extraction, resolution and heading
                          matching for doc-pointer-resolution.test.ts.
-                         Carries what a pointer may legitimately name: ATX
-                         headings, bold leaders (ordered lists included, and
-                         those whose `**` closes on the next line), and a
-                         Files roster's backticked module name.
+                         Behaviour is documented in § Doc-pointer
+                         resolution below, not in the module.
 walk-files.ts            Not a test — the recursive file walk the
                          scanners above share (code-comment-rules,
                          bundle-content, shader-frag-depth, both TSL
@@ -142,6 +137,68 @@ walk-files.ts            Not a test — the recursive file walk the
 Per-subsystem tests live next to their code (`*.test.ts` / `*.test.py`
 co-located with the module under test); only repo-wide invariants
 belong here.
+
+## Doc-pointer resolution
+
+`doc-pointer-pure.ts` owns the grammar and matching behind
+`doc-pointer-resolution.test.ts`. This section is the authority; the
+module carries one-line pointers back here.
+
+**What counts as a pointer.** A path ending `.md`, optionally
+backticked, then `§`, then the section name. A leading `~` or `/`
+disqualifies the path — the user's global rules live outside the repo
+and cannot be resolved. The name runs to the first clause terminator,
+except that a period before a digit stays in, so a numbered section
+survives the cut. `§ <named section>` and `§ …` cite the syntax rather
+than naming a section and are skipped.
+
+**Corpus.** Only pointers that name a file. A bare `§ 5` whose document
+is implied by context is not checked, so "every pointer resolves" means
+every pointer carrying a path. The pointer total is pinned by the suite:
+a matcher regression that stops *seeing* pointers would otherwise leave
+it green, which is the direction that reads as success.
+
+**Where a path resolves.** Pointers are written root-relative and
+file-relative in the same folder, so both readings are tried: the
+referring file's own directory first, then the repo root — which is how
+`SCIENCE.md` and `AGENTS.md` are cited from anywhere — then
+`src/client/`, the shorthand `docs/` uses for subsystem READMEs. A
+`../` chain that climbs out of the repo resolves to nothing.
+
+**What a pointer may name.** `#` headings, and also the bold leaders the
+READMEs use for named sub-topics — ordered-list leaders included, and
+those whose closing `**` falls on the next line — and a Files roster's
+backticked module name, which is how a pointer names one file's entry.
+63 of the tree's pointers name a leader rather than a heading, so this
+is house style, not tolerance.
+
+**Wrapping.** A section name wraps with the comment around it, so each
+line is joined with its successor before matching. A path wrapped at one
+of its own slashes rejoins with no space, and its second half alone
+reads as a bare `README.md` — suppressed, since the previous join
+already saw it whole. The two windows straddling a pointer both see it;
+the longer reading wins, and on a tie the later one, whose window starts
+on the line the pointer is actually on. That collapse is scoped to
+adjacent lines: widen it and a stale pointer that happens to be the
+opening of a valid one elsewhere in the file is dropped unchecked.
+
+**Two limits, both asserted rather than assumed.** Matching is a
+word-boundary character prefix in either direction, so `§ Time` will not
+resolve to `## Timescales`. But:
+
+- **Two shared opening words are enough.** A pointer routinely names a
+  heading's opening and runs straight on in prose, so the first two
+  words are the citation. A rename leaving those two alone reads as a
+  truncated citation and passes. Tightening to strict prefix-only was
+  tried: it rejects 24 legitimate pointers.
+- **A bold sentence can stand in for a renamed heading.** Because a
+  leader is a legitimate target, prose that opens with the same two
+  words is an equally legitimate one. `hdr/exposure/README.md` carries
+  both an `## Adaptation` heading and a bold sentence starting
+  "Adaptation is deliberately absent…", so renaming the heading would
+  not fail the guard. 104 pointers match more than one candidate this
+  way. Narrowing it would cost the leader support above, which more
+  pointers depend on than are exposed by this.
 
 ## The three upgrade audit
 
