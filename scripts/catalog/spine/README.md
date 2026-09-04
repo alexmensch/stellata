@@ -12,7 +12,8 @@ retired with the driver swap: it ran `readStars` over the AT-HYG CSV, and
 that walk no longer exists — `readStars` reads this file instead.
 `stellata-3bsf.8` replaces the spine by re-sourcing every record from the
 primaries AT-HYG merged, which is a new artifact, not a regeneration of
-this one.
+this one; the rule it re-sources under, and the measurement behind it, are
+`docs/catalog-driver.md` § 3.1 and § The primaries audit below.
 
 ## Files in this area
 
@@ -34,6 +35,16 @@ scripts/catalog/spine/
                                   snapshot of — record count and designation
                                   multiset (§ Parity with the shipped build).
   inherited-spine-expected.json   Pinned count snapshot.
+  primaries-audit-pure.ts         The retirement's measurement: per-row
+    (+ test)                      designation attestation against the
+                                  frozen primaries, source_id reproduction
+                                  from the raw cross-walks with SIMBAD's
+                                  cross-IDs as the witness, and the records
+                                  the primaries admit that the spine lacks.
+  primaries-audit.ts              `pnpm run audit:spine-primaries` — loads
+                                  the tables, prints the report; --out=<dir>
+                                  writes every row behind every count
+                                  (§ The primaries audit).
 ```
 
 ## Where each column comes from
@@ -88,6 +99,13 @@ moved since — and a scrubbed source_id changes the record's designation
 set, hence its SID. `resolveGaiaSourceId` therefore has no caller on the
 `build:catalog` path; it survives for `../astrometry-request/export-astrometry-request.ts`
 and the classic-ID overlay's own gate.
+
+What re-deriving would decide differently is now measured rather than
+feared: § The primaries audit puts it at 11,736 bindings no raw walk reaches
+or agrees with, 11,697 of them corroborated by SIMBAD's cross-IDs for the
+same id, and 233 empty cells a raw walk would fill. The retirement carries
+the corroborated bindings forward and leaves the 233 empty
+(`docs/catalog-driver.md` § 3.1); until then this rule stands unchanged.
 
 The classic-ID label merge is not an exception to this. It runs as a post-pass
 over the walk's output and rewrites LABELS (`hip`/`hd`/`hr`/`gl`/`flam`) — never
@@ -205,6 +223,50 @@ construction, and a queue that failed to list one would fail this gate.
 Membership is the spine less the ledger, and nothing else: both subtractions
 above are enumerated files rather than counts, so any future change that breaks
 the equality has broken the membership term.
+
+## The primaries audit
+
+`pnpm run audit:spine-primaries` measures the spine against the frozen tables
+AT-HYG merged — IV/25, V/50, IV/27A, CNS5, V/70A, I/239, HIP2, the WGSN
+tables, Tycho-2 and the two DR3 best-neighbour walks — and is the evidence
+behind `docs/catalog-driver.md` § 3.1, which owns the decisions. Three
+questions, one pass over the rows:
+
+- **Attestation** — for each classical cell (`hd` `hr` `hip` `gl` `bayer`
+  `flam` `proper`), which primary publishes it. A row none of whose carried
+  cells is attested exists on AT-HYG's authority alone. **0 rows** do; 168
+  carry one unattested *label* (2 HDE numbers, 120 Flamsteed cells, the 46
+  disposed proper names).
+- **Identity** — the spine's `gaia_source_id` against what the raw TYC / HIP /
+  CNS5 walks bind, pre-gate. 300,150 agree, 11,726 no walk reaches, 10 a walk
+  contradicts; on 11,697 of those 11,736 SIMBAD's object for the same id
+  carries the record's own TYC, HIP or bare GJ number, 21 name a different
+  designation, 12 have no object, 6 no cross-id. A GJ compares on its bare
+  number because SIMBAD names a Gaia source by the system entry where the
+  record names the component.
+- **Additions** — what the primaries admit that no spine row carries, per
+  table: 60,344 IV/25 stars by TYC (55,008 below HD 100,000, the AT-HYG link
+  defect § 3.1 explains), 566 I/239 HIPs, 3,362 CNS5 census rows, 90 IV/27A
+  and 103 V/50 rows — the latter being 89 bright-double secondaries plus the
+  14 non-stellar V/50 entries § 3.1 rules out by class.
+
+**`flam` is compared by value, `bayer` only by star.** A Flamsteed cell
+counts as sourced only where IV/27A or WGSN publishes *that number* for the
+record's HD/HIP; a Bayer cell counts where those tables publish *any* Bayer
+designation for the star, because HYG's `Alp-1` and IV/27A's `alf01` meet
+only through the naming ladder's normalisers, which are `../naming/`'s to
+own. The value check is what makes the Flamsteed residual 120 rather than
+115 — § 3.1 names the five it separates.
+
+The audit also reads `data/athyg/athyg_33_classic_ids.csv` for one
+measurement, the HD-provenance split behind the link defect. It is the only
+reader of that file outside CI, and it is not on the `build:catalog` path.
+
+The counts are measured, not pinned: the audit is a design-gate instrument
+and the swap's own gate (§ 3.1's manifest) is what will hold them. Re-run it
+with `--out=<dir>` to get the rows before trusting a number quoted here —
+every count above has a file, `attestation.tsv` carrying one row per spine
+row with the primary behind each of its cells.
 
 ## The swap parity ledger
 

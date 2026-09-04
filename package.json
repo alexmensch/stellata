@@ -31,6 +31,7 @@
     "build:classic-ids": "tsx scripts/catalog/classic-ids/build-classic-id-overlay.ts",
     "build:wgsn": "tsx scripts/catalog/naming/build-wgsn-tables.ts",
     "build:naming-parity": "tsx scripts/catalog/naming/build-naming-parity.ts",
+    "audit:spine-primaries": "tsx scripts/catalog/spine/primaries-audit.ts",
     "refresh:iau-wgsn": "python3 scripts/refresh/refresh-iau-wgsn.py",
     "sid:allocate": "tsx scripts/sid/allocate.ts",
     "sid:check": "tsx scripts/sid/allocate.ts --check",

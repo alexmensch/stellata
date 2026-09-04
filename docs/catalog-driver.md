@@ -25,6 +25,8 @@ fields            = per-field source cascades keyed on gaia_source_id
 - **Inherited spine** (§ 3): a frozen, committed enumeration of every
   AT-HYG-derived record in the final AT-HYG-driven build. After the
   swap the spine file is data; AT-HYG the catalogue is not consulted.
+  Its own retirement replaces this term with the primaries-derived
+  membership of § 3.1, keeping the spine only as the parity baseline.
 - **Magnitude pull**: the Gaia-native `V ≤ floor` union term. It ships
   **off** at the swap — membership is exactly the spine, so record
   parity holds by construction. The completeness phase turns it on
@@ -33,12 +35,14 @@ fields            = per-field source cascades keyed on gaia_source_id
   Gliese tail) ship forever because the spine term never drops — the
   "classic rescue tier" IS the spine.
 
-Membership is **not** derived by re-joining the classic catalogues:
-the frozen cross-walks cannot reproduce a `gaia_source_id` for a
-~14.7k-row residual (measured 2026-07-27) that AT-HYG matched by
-routes we cannot replay, and re-deriving them positionally is
-forbidden (source-ID anchoring, never position). The spine enumerates
-them instead.
+Membership is **not** derived by re-binding the classic catalogues to
+Gaia: the frozen cross-walks cannot reproduce a `gaia_source_id` for
+11,736 rows AT-HYG matched by routes we cannot replay, and re-deriving
+them positionally is forbidden (source-ID anchoring, never position).
+The spine enumerates them for now. § 3.1 measured what those rows are —
+zero records that exist on AT-HYG's authority alone, and bindings
+SIMBAD's frozen cross-IDs corroborate on 11,697 — and settles the
+primaries-derived membership term that retires the spine.
 
 Companion promotion (`multiples.tsv` secondaries) is
 driver-independent and unchanged; only its anchor records re-derive
@@ -153,6 +157,156 @@ pos_src  dist_src  mag_src  rv_src  pm_src  spect_src
 
 Sol is an AT-HYG row (`id` 1, addressable only by `proper = "Sol"`), so it
 is a spine row like any other — no hand-emitted special case.
+
+### 3.1 Retiring the spine — the membership rule, measured against the primaries
+
+Measured 2026-09-04 by `pnpm run audit:spine-primaries`
+(`scripts/catalog/spine/primaries-audit.ts`). **Every figure in this section
+comes from that one command**, and `--out=<dir>` writes the rows behind each
+of them — including the per-row `attestation.tsv` backing each "attested by"
+count. The retirement turns on whether a record can exist without AT-HYG's
+say-so, so the measurement is per spine row against the frozen tables of § 2
+plus Tycho-2 `I/259`, Gliese `V/70A`, HIP2, the WGSN tables and the two DR3
+best-neighbour walks — never against the overlay's post-join columns, which
+under-state it: a designation can attest a record that has no source_id to
+key an overlay row on. The audit is also the one thing outside CI that still
+reads `data/athyg/athyg_33_classic_ids.csv`, for the HD-provenance split
+below and nothing else: characterising AT-HYG's own defect needs AT-HYG's own
+file, and the instrument is off the `build:catalog` path, so this does not
+put the CSV back in the input set § 3 removed it from.
+
+**Record residual: zero.** Every one of the 313,257 rows carries at least
+one classical designation a primary publishes — hd 293,326 in IV/25 ·
+hip 117,652 in I/239 · hr 9,013 in V/50 · gl 1,994 in CNS5 + 1,153 in
+V/70A · Bayer 1,522 via IV/27A · Flamsteed 2,596 via IV/27A + 8 via WGSN ·
+proper 445 WGSN + Sol. No record exists on AT-HYG's authority alone, so the
+retirement is a re-keying, not a rescue. That also settles the Gliese
+question `stellata-3bsf.8` flagged as open: **no** `gl` cell is unsourced,
+CNS5 and V/70A between them carrying all 3,147, including the 1,396 in the
+`GJ 3xxx` / `4xxx` / `9xxx` supplement bands.
+
+Three **label** residuals remain, 168 rows in all, one unsourced cell each:
+2 HDE numbers no primary carries (HD 330122, HD 336196 — both HIP stars,
+records intact); **120** Flamsteed cells; and 46 proper names, exactly
+`data/iau-wgsn/athyg_proper_dispositions.tsv`. The 120 Flamsteed numbers are
+the only label cells the retirement cannot source. They drop to the § 6.2
+ledger as `flamsteed_unattested` unless a Flamsteed primary is pulled first
+(IV/27A's full VizieR table rather than its TAP subset is the candidate).
+
+**A Flamsteed cell is checked by value; a Bayer cell only by star.** The
+number in the cell has to be the number IV/27A or WGSN publishes for that
+HD/HIP — which is why the count is 120 and not the 115 a star-level check
+gives. The five it separates are stars those tables do list, under something
+else: HD 85762 carries Flamsteed 8 where IV/27A publishes **9 Sex**, and
+HD 91369 / HD 141652 / HD 159217 carry a Flamsteed number against an IV/27A
+row that gives only a Bayer letter. Bayer cells are not compared that way —
+HYG's `Alp-1` and IV/27A's `alf01` meet only through the naming ladder's
+normalisers (`docs/star-naming.md`), so 1,522 means "IV/27A publishes a
+Bayer designation for this star", not "for this letter". Every Bayer-bearing
+row clears that bar; whether it clears the stricter one is wgp3's to
+measure, not this gate's.
+
+**Identity: 11,736 bindings only AT-HYG asserts, 11,697 of them
+corroborated.** Against the raw pre-gate walks the spine's `gaia_source_id`
+agrees on 300,150 rows (tyc 200,422 · tyc+hip 97,148 · cns5 837 · hip 786 ·
+other combinations 957); no walk reaches 11,726 and a walk contradicts 10.
+Those 11,736 are the source_ids AT-HYG obtained through routes we cannot
+replay, and dropping them was the proposed route. Measured, they need no
+dropping: the frozen sp_type pull asked SIMBAD under each spine id, and on
+**11,697** the object SIMBAD holds under that id carries the record's own
+TYC, HIP or bare GJ number — the across-release cross-ID adjudication § 5's
+widening ladder already relies on, here applied as corroboration of a
+binding rather than as its source. SIMBAD is still no identity source: it
+confirms a binding AT-HYG made, it never makes one. The remainder is **39**
+rows: 21 where SIMBAD's object carries a different designation — 20 of them
+fractional `Gl nnn.n` supplement numbers whose SIMBAD entry reads CNS5's
+`GJ 9xxx` renumbering (`Gl 157.1` → `GJ 9140`; the five
+`data/sid/sameas-overrides.tsv` bridges are among them), and HD 151054, where
+SIMBAD's object carries TYC 8725-299-**2** against the spine's `-1` — 12 where SIMBAD holds
+no object under the id (six are the DR2 ids of
+`data/athyg/stale_gaia_source_ids.tsv`), 6 where the object carries no
+cross-id to compare. Every one of the 11,736 carries a HIP, HD, HR or GJ,
+so none is SID-keyed on its Gaia id and no outcome here moves a canonical
+key. The remaining 1,370 rows carry no `gaia_source_id` at all, and split on
+whether a raw walk would supply one: **233** where one would — the bindings
+the freeze-time gates scrubbed or AT-HYG never made, which stay empty because
+admitting them is the re-derivation § 3 forbids — and **1,137** no walk
+reaches, the no-Gaia cohort that ships designation-keyed on the § 5 tiers.
+With Sol that accounts for all 313,257.
+
+**Additions: the primaries admit ~64k records the spine lacks, and 55,008 of
+them are one upstream defect.** IV/25 numbers **60,344** Tycho-2 stars no
+spine row carries (a further 394 HD numbers, on 393 TYCs, land on existing
+records). AT-HYG's version notes take HD "from HYG if known, otherwise
+Tycho-2" through the Fabricius 2002 link table — IV/25 itself — yet of its
+Tycho-2-sourced HD rows 198,130 carry a six-digit number and **74** a shorter
+one, against 53,956 / 44,899 for its HYG-sourced rows. AT-HYG publishes no
+per-row HD provenance, so that split reads "descends from HYG" off the `hyg`
+id its own CSV carries; a row whose HYG entry simply had no HD therefore
+counts as HYG-sourced, which blunts the split rather than manufacturing it.
+AT-HYG's link dropped every HD below 100,000 that HYG had not already
+supplied: the spine's IV/25 coverage reads 45.0% below HD 100,000
+(44,880 of 99,788) against 97.9% at or above it (248,389 of 253,731), and
+55,008 of the 60,344 sit below it. The cohort is ordinary Tycho-2 — 60,324
+have a Tycho-2 row, 55,873 a DR3 best-neighbour, 20 an ambiguity flag, and
+56,955 of them read VT 8–10. The other 5,336 (HD ≥ 100,000, largely HDE) are
+stragglers of AT-HYG's merge. Three smaller cohorts: **566 I/239 HIPs** (312
+with a HIP2 solution, 252 with a DR3 best-neighbour, 123 named by a Tycho-2
+row); **3,362 CNS5 rows** — its own
+`GJ 10001`–`13459` census numbering, 2,848 with a DR3 id, none with a HIP:
+the 25 pc volume AT-HYG has no Tycho-2 row for (a further 320 CNS5 rows land
+on records the spine already carries); and **89 V/50 + 90 IV/27A
+rows** (overlapping) that are the secondary components of bright doubles
+AT-HYG v3.3 omitted by its own policy — Castor B (HR 2890), Acrux B
+(HR 4731), 14 Lyn B (HD 49619), Alnitak's HR 1949. The audit reports the
+V/50 side as 103, which is those 89 plus the catalogue's 14 non-stellar
+entries (novae/SNe, four clusters, M 31) it prints as `HD-less`; those 14
+are out of scope by class and are never records. Most of those components
+already ship as promoted
+`multiples.tsv` records; theirs is `stellata-3bsf.39`'s attribution problem,
+not a membership one. Bright stars genuinely absent are few: β Phe
+(HIP 5165), ξ Tuc (HIP 1902).
+
+**The rule.** Membership is the set of stars a frozen primary names by a
+classical designation — HD (IV/25), HR (V/50), Bayer / Flamsteed (WGSN,
+IV/27A), HIP (I/239), GJ (CNS5, V/70A), IAU proper name (WGSN) — keyed on
+that designation, with a `gaia_source_id` where a cross-walk binds one and
+the § 4 gate passes, or where the spine's frozen binding is
+SIMBAD-corroborated as above. That is AT-HYG's *stated* selection rule
+reproduced from the primaries. AT-HYG's *realised* membership is that rule
+minus its link defect and merge drops, and reproducing the realised set
+would freeze a defect into a second spine — so the additions ship, each on
+a § 6.1 ledger row under a closed reason enum: `admitted:hd_link_gap`
+(55,008) · `admitted:hd_omitted` (5,336) · `admitted:hip_omitted` (566) ·
+`admitted:cns5_census` (3,362) · `component:<anchor>` for a bright-double
+secondary that resolves onto an existing promoted record. An addition then
+walks the § 5 cascades like any row, and one no owned parallax or V reaches
+parks on the existing ledger under the existing codes — Tycho-2 publishes no
+parallax, so most of the ~4.5k with neither a DR3 neighbour nor a HIP park,
+as do CNS5's 514 without a DR3 id, which no V tier reaches. Identity rows:
+`binding:simbad_corroborated` keeps the binding and writes nothing; the 39
+uncorroborated lose their source_id (`binding:uncorroborated`,
+`binding:contradicted`) into a review queue, a SID event only where the
+canonical key was the Gaia id — zero rows. Scale for the swap: ~64k mints,
+zero retirements, zero reinstatements beyond what the review queue decides.
+
+**The replacement parity gate.** The spine could not be regenerated (§ 3)
+because it snapshots a build that no longer exists; the primaries-derived
+membership is a pure function of committed inputs, so it can be, and that
+is what replaces the byte guard with a regenerate-and-diff. The swap emits a
+committed **membership manifest** — one row per admitted record: admitting
+designations, route, source_id and its provenance class — regenerated in CI
+and diffed like `classic_id_overlay.tsv`. The gate asserts three things:
+(i) every row of the 2026-07-28 spine maps through its designation class to
+exactly one manifest row — the same SID — or to a § 6.1 drop row; (ii) every
+manifest row absent from the spine is on the additions ledger under a reason
+above; (iii) the built catalogue's designation multiset equals the
+manifest's. The frozen spine stays committed as the baseline (i) and (ii)
+read, and nothing else reads it; `label_flips.tsv` collapses into the
+manifest, because labels and membership now come from one join and there is
+no second designation set to flip against. After the swap release the
+baseline becomes the previous manifest, and the gate is the ordinary
+regenerate-and-diff every other derived artifact already has.
 
 ## 4. How HD reaches Gaia
 
@@ -624,8 +778,10 @@ test fixture:
    resolving to the **same SID**, or appears on a dropped list with a
    reason code from a closed enum (`merge:<survivor>`,
    `split:<siblings>`, `out-of-scope`, `no-position`,
-   `refused_no_defensible_parallax`, `no_parallax_published`). No silent
-   drops: a count that moves without a ledger entry fails the gate. The
+   `refused_no_defensible_parallax`, `no_parallax_published`, and the
+   spine retirement's `admitted:*` / `component:*` / `binding:*` codes of
+   § 3.1, which ledger additions and identity outcomes the same way). No
+   silent drops: a count that moves without a ledger entry fails the gate. The
    last two are **parks**, not dissolutions: the record has no owned
    distance and cannot be placed, so it stops being produced while its
    SID and identity survive (§ 7, `docs/sid.md`) and Gaia DR4 reinstates
@@ -693,5 +849,6 @@ Applications of `docs/sid.md` (which remains the authority):
 
 **Dead patterns — do not rebuild:** a bright/fill two-tier hybrid
 membership; positional joins at any stage; live SIMBAD in the build; a
-keep-list file separate from the spine; membership re-derivation from
-classic catalogues (they are label overlays).
+keep-list file separate from the membership term; re-deriving a Gaia
+*binding* from a raw cross-walk without the § 4 gate — a frozen
+designation may admit a record (§ 3.1), it never binds one.
