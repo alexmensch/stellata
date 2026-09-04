@@ -1,12 +1,20 @@
 // The perf runner: human-armed, Chrome only, clocks only. Protocol, flags
 // and exit codes: README.md. The only Playwright value import in the tree.
 
-import { existsSync, statSync, unlinkSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium, type Browser } from 'playwright';
 import type { PriceFrameOptions } from '../../src/client/debug/frame-cost/frame-cost';
-import { median } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { ArgError, parseRunArgs, usage, type RunArgs } from './args';
+import {
+  median,
+  WARMUP_FRAMES,
+  type GpuFrameMethod,
+} from '../../src/client/debug/frame-cost/frame-cost-pure';
+import { ArgError, parseRunArgs, usage, type BackendRequest, type RunArgs } from './args';
+import { diffRuns } from './diff-pure';
+import type { DwellSummary } from './dwell-pure';
+import { measureDwell, measureSweep, DWELL_METHOD } from './measure';
 import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './perf-go-lib';
 import {
   BootError,
@@ -17,10 +25,17 @@ import {
   readDrawingBuffer,
   runDifferential,
   seedDismissals,
-  type AdapterProbe,
 } from './page-protocol';
-import { SCENARIOS, scenarioUrl, type ScenarioName } from './scenarios';
-import { formatPriceTable } from './table-pure';
+import {
+  PERF_SCHEMA,
+  assertPerfFile,
+  SchemaError,
+  type AdapterProbe,
+  type PerfFile,
+  type ScenarioRecord,
+} from './schema';
+import { BACKENDS, SCENARIOS, scenarioUrl, type Backend, type ScenarioName } from './scenarios';
+import { formatDiffTable, formatDwellTable, formatPriceTable, formatSweepTable } from './table-pure';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../..');
 const MARKER = resolve(REPO_ROOT, PERF_GO_MARKER_NAME);
@@ -73,10 +88,10 @@ function softwareRenderer(p: AdapterProbe): string | null {
   return p.webgpu?.isFallbackAdapter ? 'WebGPU fallback adapter' : null;
 }
 
-function priceFrameOptions(a: RunArgs): PriceFrameOptions {
+function priceFrameOptions(a: RunArgs, method: GpuFrameMethod | undefined): PriceFrameOptions {
   return {
     passes: a.passes,
-    method: a.method,
+    method,
     budgetMs: a.budgetMs,
     dwellFrames: a.dwellFrames,
     warmupFrames: a.warmupFrames,
@@ -85,15 +100,56 @@ function priceFrameOptions(a: RunArgs): PriceFrameOptions {
   };
 }
 
-interface ScenarioOutcome {
-  readonly name: ScenarioName;
-  readonly failed: boolean;
-  readonly tainted: boolean;
+function backendsFor(request: BackendRequest): readonly Backend[] {
+  return request === 'both' ? BACKENDS : [request];
 }
 
-async function runScenario(browser: Browser, args: RunArgs, name: ScenarioName): Promise<ScenarioOutcome> {
+/**
+ * The clock the run will use. `both` pins rAF wall time because the
+ * backends' best clocks are three different instruments — taking each
+ * one's best would build exactly the mixed-method table that must never be
+ * compared. An explicit `--method` wins, on the caller's head.
+ */
+function methodFor(args: RunArgs): { method: GpuFrameMethod | undefined; why: string | null } {
+  if (args.method !== undefined) return { method: args.method, why: null };
+  if (args.backend !== 'both') return { method: undefined, why: null };
+  return {
+    method: DWELL_METHOD,
+    why:
+      `--backend both pins --method ${DWELL_METHOD}: it is the one clock WebGL2 and WebGPU ` +
+      'share, and a table mixing timer-query with timestamp compares two instruments. ' +
+      'Pass --method explicitly to override.',
+  };
+}
+
+function gitMeta(): { commit: string; dirty: boolean } {
+  const git = (...argv: string[]): string =>
+    execFileSync('git', argv, { cwd: REPO_ROOT, encoding: 'utf-8' }).trim();
+  try {
+    return { commit: git('rev-parse', 'HEAD'), dirty: git('status', '--porcelain').length > 0 };
+  } catch (e) {
+    return { commit: `unavailable (${(e as Error).message})`, dirty: true };
+  }
+}
+
+interface ScenarioPlan {
+  readonly name: ScenarioName;
+  readonly backend: Backend;
+  readonly method: GpuFrameMethod | undefined;
+}
+
+interface ScenarioOutcome {
+  readonly record: ScenarioRecord;
+  /** Whichever adapter this scenario's context saw. The run-level `gpu`
+   *  block takes the first one; a diff refuses across two adapters, so it
+   *  is a property of the run rather than of a row. */
+  readonly probe: AdapterProbe | null;
+}
+
+async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan): Promise<ScenarioOutcome> {
+  const { name, backend } = plan;
   const scenario = SCENARIOS[name];
-  const url = scenarioUrl(args.url, scenario.blob, args.backend);
+  const url = scenarioUrl(args.url, scenario.blob, backend);
   const context = await browser.newContext({
     viewport: { width: args.width, height: args.height },
     deviceScaleFactor: args.dpr,
@@ -101,14 +157,14 @@ async function runScenario(browser: Browser, args: RunArgs, name: ScenarioName):
   await seedDismissals(context);
   const page = await context.newPage();
 
+  const consoleLines: string[] = [];
   const pageErrors: string[] = [];
-  let lastConsoleLine = '';
   let measuring = false;
   let tainted = false;
   let crashed = false;
   page.on('console', (message) => {
     if (message.type() === 'table') return;
-    lastConsoleLine = message.text();
+    consoleLines.push(`[${message.type()}] ${message.text()}`);
     console.log(`[page:${message.type()}] ${message.text()}`);
   });
   page.on('pageerror', (error) => {
@@ -118,51 +174,145 @@ async function runScenario(browser: Browser, args: RunArgs, name: ScenarioName):
   });
   page.on('crash', () => { crashed = true; });
 
-  console.log(`\n== ${name} — ${scenario.label} · ${args.backend} · ${args.headed ? 'headed' : 'headless'} · ${url}`);
-  let failed = false;
-  try {
-    await bootScenario(page, url, { backend: args.backend, timeoutMs: BOOT_TIMEOUT_MS });
-    if (pageErrors.length > 0) throw new BootError(`page error during boot: ${pageErrors[0]}`);
+  console.log(`\n== ${name} — ${scenario.label} · ${backend} · ${args.headed ? 'headed' : 'headless'} · ${url}`);
 
-    const probe = await probeAdapters(page);
+  const record = {
+    name,
+    blob: scenario.blob,
+    backend: { requested: backend, actual: null as Backend | null },
+    viewport: { width: args.width, height: args.height, dpr: args.dpr },
+    buffer: null as { width: number; height: number } | null,
+    bufferMpx: null as number | null,
+    mode: args.mode,
+    method: null as GpuFrameMethod | null,
+    params: {} as Record<string, unknown>,
+    settleMs: null as number | null,
+    idleRafMs: null as number | null,
+    differential: null as ScenarioRecord['differential'],
+    dwell: null as ScenarioRecord['dwell'],
+    sweep: null as ScenarioRecord['sweep'],
+    failed: false,
+    failure: null as string | null,
+  };
+
+  let probe: AdapterProbe | null = null;
+  try {
+    await bootScenario(page, url, { backend, timeoutMs: BOOT_TIMEOUT_MS });
+    if (pageErrors.length > 0) throw new BootError(`page error during boot: ${pageErrors[0]}`);
+    record.backend.actual = backend;
+
+    probe = await probeAdapters(page);
     console.log(describeProbe(probe));
     const software = softwareRenderer(probe);
     if (software !== null) throw new SoftwareAdapter(software);
 
-    const settleMs = await awaitSettle(page, { quietMs: args.quietMs, timeoutMs: SETTLE_TIMEOUT_MS });
-    const rafMs = median(await probeRafDeltas(page, RAF_PROBE_FRAMES));
+    record.settleMs = await awaitSettle(page, { quietMs: args.quietMs, timeoutMs: SETTLE_TIMEOUT_MS });
+    record.idleRafMs = median(await probeRafDeltas(page, RAF_PROBE_FRAMES));
     const buffer = await readDrawingBuffer(page);
+    record.buffer = buffer;
+    record.bufferMpx = Number(((buffer.width * buffer.height) / 1e6).toFixed(3));
     console.log(
-      `settled after ${settleMs} ms · idle rAF period ${rafMs.toFixed(2)} ms (${(1000 / rafMs).toFixed(1)} Hz) · ` +
-      `drawing buffer ${buffer.width}x${buffer.height} (${((buffer.width * buffer.height) / 1e6).toFixed(3)} Mpx)`,
+      `settled after ${record.settleMs} ms · idle rAF period ${record.idleRafMs.toFixed(2)} ms ` +
+      `(${(1000 / record.idleRafMs).toFixed(1)} Hz) · drawing buffer ${buffer.width}x${buffer.height} ` +
+      `(${record.bufferMpx} Mpx)`,
     );
 
+    measuring = true;
     if (args.mode === 'differential') {
-      measuring = true;
-      const rows = await runDifferential(page, priceFrameOptions(args));
+      record.params = { ...priceFrameOptions(args, plan.method) };
+      const rows = await runDifferential(page, priceFrameOptions(args, plan.method));
       if (rows.length === 0) {
-        failed = true;
-        console.error(
+        record.failed = true;
+        record.failure =
           `priceFrame returned no rows${args.passes ? ` for --passes ${args.passes.join(',')}` : ''} — ` +
-          `either it refused the sweep, or no requested pass was active at this vantage. ` +
-          `Last console line: ${lastConsoleLine}`,
-        );
+          'either it refused the sweep, or no requested pass was active at this vantage';
+        console.error(`${record.failure}. Last console line: ${consoleLines.at(-1) ?? '(none)'}`);
       } else {
+        record.differential = rows;
+        record.method = rows[0].method;
         console.log(formatPriceTable(rows));
       }
-      if (tainted) {
-        console.error(`${name} TAINTED: ${pageErrors.length} page error(s) landed inside the sweep — the rows above priced a broken page.`);
+    } else if (args.mode === 'dwell' || args.mode === 'sweep') {
+      const dwellPlan = {
+        frames: args.frames,
+        warmupFrames: args.warmupFrames ?? WARMUP_FRAMES,
+        backend,
+      };
+      record.method = DWELL_METHOD;
+      if (args.mode === 'dwell') {
+        record.params = { ...dwellPlan };
+        const dwelt = await measureDwell(page, dwellPlan);
+        record.dwell = dwelt.value;
+        if (dwelt.value !== null) {
+          const clocks: (readonly [string, DwellSummary])[] = [[DWELL_METHOD, dwelt.value.stats]];
+          if (dwelt.value.gpuStats !== null) clocks.push(['gpu-timestamp', dwelt.value.gpuStats]);
+          console.log(formatDwellTable(clocks));
+          console.log(
+            `gpu stream: ${dwelt.value.gpuNote} · readback ${dwelt.value.readbackPerFrame.toFixed(3)}/frame · ` +
+            `limit ${dwelt.value.limitMag.toFixed(3)} mag at dm ${dwelt.value.dm.toFixed(3)}`,
+          );
+        }
+        if (dwelt.failure !== null) {
+          record.failed = true;
+          record.failure = dwelt.failure;
+          console.error(`${name} FAILED: ${dwelt.failure}`);
+        }
+      } else {
+        record.params = { ...dwellPlan, scales: args.scales };
+        const swept = await measureSweep(page, {
+          ...dwellPlan,
+          scales: args.scales,
+          width: args.width,
+          height: args.height,
+          quietMs: args.quietMs,
+          settleTimeoutMs: SETTLE_TIMEOUT_MS,
+        });
+        record.sweep = swept.value;
+        if (swept.value !== null) {
+          console.log(formatSweepTable(swept.value.points, swept.value.fit, swept.value.bracketMs));
+        }
+        if (swept.failure !== null) {
+          record.failed = true;
+          record.failure = swept.failure;
+          console.error(`${name} FAILED: ${swept.failure}`);
+        }
       }
+    }
+    if (tainted) {
+      console.error(
+        `${name} TAINTED: ${pageErrors.length} page error(s) landed inside the measurement — ` +
+        'the numbers above priced a broken page.',
+      );
     }
   } catch (e) {
     if (crashed) throw new PageCrash(`${name}: the page crashed`);
     if (e instanceof SoftwareAdapter) throw e;
-    failed = true;
-    console.error(`${name} FAILED: ${(e as Error).message}`);
+    record.failed = true;
+    record.failure = (e as Error).message;
+    console.error(`${name} FAILED: ${record.failure}`);
   } finally {
     await context.close();
   }
-  return { name, failed, tainted };
+
+  return { record: { ...record, console: consoleLines, pageErrors, tainted }, probe };
+}
+
+function writeJson(path: string, file: PerfFile): void {
+  writeFileSync(path, `${JSON.stringify(file, null, 2)}\n`);
+  console.log(`\nperf: wrote ${path} (${PERF_SCHEMA})`);
+}
+
+function printBaseline(path: string, current: PerfFile): void {
+  let baseline: PerfFile;
+  try {
+    baseline = assertPerfFile(JSON.parse(readFileSync(path, 'utf-8')), path);
+  } catch (e) {
+    console.error(`perf: --baseline ${path} unreadable — ${(e as Error).message}`);
+    if (!(e instanceof SchemaError || e instanceof SyntaxError)) throw e;
+    return;
+  }
+  console.log(`\nperf: against baseline ${path} (${baseline.run.git.commit.slice(0, 8)}${baseline.run.git.dirty ? '-dirty' : ''})`);
+  console.log(formatDiffTable(diffRuns(baseline, current)));
 }
 
 async function main(): Promise<number> {
@@ -193,18 +343,30 @@ async function main(): Promise<number> {
     return EXIT.unarmed;
   }
 
+  const { method, why } = methodFor(args);
+  if (why !== null) console.log(`perf: ${why}`);
+
   const chromeArgs = [...DEFAULT_CHROME_ARGS, ...args.chromeArgs];
+  const startedAt = new Date().toISOString();
   const browser = await chromium.launch({ channel: 'chromium', headless: !args.headed, args: chromeArgs });
+  const browserVersion = browser.version();
   console.log(
-    `perf: ${browser.browserType().name()} ${browser.version()} · channel chromium · ${args.headed ? 'HEADED' : 'HEADLESS'} · ` +
+    `perf: ${browser.browserType().name()} ${browserVersion} · channel chromium · ${args.headed ? 'HEADED' : 'HEADLESS'} · ` +
     `${process.platform}/${process.arch}\nargs: ${chromeArgs.join(' ')}\n` +
     `viewport ${args.width}x${args.height} @ dpr ${args.dpr} · mode ${args.mode} · backend ${args.backend}` +
-    (args.method ? ` · method pinned ${args.method}` : ''),
+    (method ? ` · method pinned ${method}` : ''),
   );
 
-  const outcomes: ScenarioOutcome[] = [];
+  const records: ScenarioRecord[] = [];
+  const probes: AdapterProbe[] = [];
   try {
-    for (const name of args.scenarios) outcomes.push(await runScenario(browser, args, name));
+    for (const name of args.scenarios) {
+      for (const backend of backendsFor(args.backend)) {
+        const outcome = await runScenario(browser, args, { name, backend, method });
+        records.push(outcome.record);
+        if (outcome.probe !== null) probes.push(outcome.probe);
+      }
+    }
   } catch (e) {
     if (e instanceof SoftwareAdapter) {
       console.error(`perf: ABORT — software renderer (${e.message}). Nothing measured on it counts.`);
@@ -219,10 +381,34 @@ async function main(): Promise<number> {
     await browser.close();
   }
 
-  const failed = outcomes.filter((o) => o.failed).map((o) => o.name);
-  const tainted = outcomes.filter((o) => o.tainted).map((o) => o.name);
+  const file: PerfFile = {
+    schema: PERF_SCHEMA,
+    run: {
+      startedAt,
+      finishedAt: new Date().toISOString(),
+      url: args.url,
+      argv: process.argv.slice(2),
+      git: gitMeta(),
+      browser: {
+        name: 'chromium',
+        version: browserVersion,
+        channel: 'chromium',
+        headless: !args.headed,
+        args: chromeArgs,
+      },
+      gpu: probes[0] ?? null,
+      host: { platform: process.platform, arch: process.arch },
+    },
+    scenarios: records,
+  };
+
+  if (args.json !== undefined) writeJson(args.json, file);
+  if (args.baseline !== undefined) printBaseline(args.baseline, file);
+
+  const failed = records.filter((r) => r.failed).map((r) => `${r.name}/${r.backend.requested}`);
+  const tainted = records.filter((r) => r.tainted).map((r) => `${r.name}/${r.backend.requested}`);
   console.log(
-    `\nperf: ${outcomes.length} scenario(s), ${failed.length} failed${failed.length ? ` (${failed.join(', ')})` : ''}` +
+    `\nperf: ${records.length} scenario run(s), ${failed.length} failed${failed.length ? ` (${failed.join(', ')})` : ''}` +
     (tainted.length ? `, tainted: ${tainted.join(', ')}` : ''),
   );
   return failed.length + tainted.length > 0 ? EXIT.failed : EXIT.ok;

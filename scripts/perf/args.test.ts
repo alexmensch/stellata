@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ARG_DEFAULTS, ArgError, parseRunArgs, usage } from './args';
+import { ARG_DEFAULTS, ArgError, BACKEND_REQUESTS, MODES, parseRunArgs, usage } from './args';
+import { DEFAULT_SWEEP_SCALES } from './sweep-pure';
 import { SCENARIO_NAMES } from './scenarios';
 
 describe('parseRunArgs', () => {
@@ -24,6 +25,10 @@ describe('parseRunArgs', () => {
       dpr: ARG_DEFAULTS.dpr,
       quietMs: ARG_DEFAULTS.quietMs,
       chromeArgs: [],
+      frames: ARG_DEFAULTS.frames,
+      scales: [...DEFAULT_SWEEP_SCALES],
+      json: undefined,
+      baseline: undefined,
     });
   });
 
@@ -67,11 +72,35 @@ describe('parseRunArgs', () => {
     expect(a.mode).toBe('probe');
   });
 
+  it('takes the new modes, the both backend and the two paths', () => {
+    const a = parseRunArgs([
+      '--mode', 'sweep', '--backend', 'both', '--frames', '480',
+      '--scales', '0.25, 1, 3', '--json', '/tmp/a.json', '--baseline', '/tmp/b.json',
+    ]);
+    expect(a.mode).toBe('sweep');
+    expect(a.backend).toBe('both');
+    expect(a.frames).toBe(480);
+    expect(a.scales).toEqual([0.25, 1, 3]);
+    expect(a.json).toBe('/tmp/a.json');
+    expect(a.baseline).toBe('/tmp/b.json');
+  });
+
+  it('accepts every mode and backend request it advertises', () => {
+    for (const mode of MODES) expect(parseRunArgs(['--mode', mode]).mode).toBe(mode);
+    for (const backend of BACKEND_REQUESTS) {
+      expect(parseRunArgs(['--backend', backend]).backend).toBe(backend);
+    }
+  });
+
   it.each([
     [['--scenario', 'mars'], /--scenario/],
     [['--backend', 'metal'], /--backend/],
-    [['--mode', 'dwell'], /--mode/],
+    [['--mode', 'stopwatch'], /--mode/],
     [['--method', 'stopwatch'], /--method/],
+    [['--frames', '0'], /--frames/],
+    [['--scales', '0'], /--scales/],
+    [['--scales', 'half'], /--scales/],
+    [['--scales', ' , '], /names nothing/],
     [['--passes', 'localDepht'], /no such pass/],
     [['--passes', 'localDepth,mwBnad'], /no such pass/],
     [['--budget-ms', 'soon'], /--budget-ms/],
@@ -90,8 +119,11 @@ describe('parseRunArgs', () => {
       '--scenario', '--backend', '--mode', '--passes', '--method', '--budget-ms',
       '--dwell-frames', '--warmup-frames', '--settle-frames', '--no-interleave',
       '--headed', '--width', '--height', '--dpr', '--quiet-ms', '--url', '--chrome-arg',
+      '--frames', '--scales', '--json', '--baseline',
     ]) {
       expect(text).toContain(flag);
     }
+    for (const mode of MODES) expect(text).toContain(mode);
+    for (const backend of BACKEND_REQUESTS) expect(text).toContain(backend);
   });
 });
