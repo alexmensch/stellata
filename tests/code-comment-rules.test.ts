@@ -166,6 +166,11 @@ describe('forbidden-pattern shapes', () => {
       '// bumped to v3.16.0 this release',
       '// hip-2.5 is not a bead',
       '// see stellata-events.test.ts for the wiring',
+      // A slash makes it a path or a namespaced identifier. No bead ID is
+      // ever followed by one, and the 3-5 char slug window cannot tell
+      // 'perf' from a real epic slug like 'cns' or 'dch' any other way.
+      "const PERF_SCHEMA = 'stellata-perf/1';",
+      '// the arm protocol lives in .claude/skills/stellata-perf/SKILL.md',
       '// writes public/catalog.bin.0 and .bin.1',
       '// Table 24.3 gives the integrated starlight',
       '// a tab-escaped TSV cell like \\t20.85 in the Python parser',
