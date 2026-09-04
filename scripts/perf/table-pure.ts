@@ -2,7 +2,7 @@
 // column order console.table shows them in-app, dwell summaries, sweep
 // points and the baseline diff.
 
-import type { PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import { round3, type PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { VERDICT_MARK, type RunDiff } from './diff-pure';
 import type { DwellSummary } from './dwell-pure';
 import type { SweepFit, SweepPoint } from './sweep-pure';
@@ -87,8 +87,4 @@ export function formatDiffTable(diff: RunDiff): string {
 
 function cellText(value: Cell): string {
   return value === undefined ? '' : String(value);
-}
-
-function round3(x: number): number {
-  return Number(x.toFixed(3));
 }

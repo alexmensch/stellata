@@ -91,7 +91,7 @@ describe('formatSweepTable', () => {
   ];
 
   it('appends the fit under the points', () => {
-    const text = formatSweepTable(points, { slope: 1, r2: 1, bound: 'fill', points: 2 }, 0.75);
+    const text = formatSweepTable(points, { slope: 1, r2: 1, bound: 'fill', fitted: 2 }, 0.75);
     expect(text.split('\n')).toHaveLength(4);
     expect(text).toContain('4.096');
     expect(text).toContain('slope 1.000 · r² 1.000 · bound fill · sweep bracket 0.750 ms');

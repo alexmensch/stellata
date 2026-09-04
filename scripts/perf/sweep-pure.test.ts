@@ -53,7 +53,7 @@ describe('fitLogLog', () => {
     expect(fit.slope).toBeCloseTo(1, 9);
     expect(fit.r2).toBeCloseTo(1, 9);
     expect(fit.bound).toBe('fill');
-    expect(fit.points).toBe(4);
+    expect(fit.fitted).toBe(4);
   });
 
   it('pins slope 0 for a frame that does not track area', () => {
@@ -95,7 +95,7 @@ describe('fitLogLog', () => {
 
   it('drops a non-positive sample instead of taking log of it', () => {
     const withZero = [...PROPORTIONAL, point(3, 36e6, 0)];
-    expect(fitLogLog(withZero).points).toBe(4);
+    expect(fitLogLog(withZero).fitted).toBe(4);
     expect(fitLogLog(withZero).slope).toBeCloseTo(1, 9);
   });
 });

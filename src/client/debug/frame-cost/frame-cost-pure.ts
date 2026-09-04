@@ -336,7 +336,9 @@ function assembleRow(
   };
 }
 
-function round3(x: number): number {
+/** Three decimals, the precision every printed millisecond in this codebase
+ *  is quoted to — shared with the headless runner's tables. */
+export function round3(x: number): number {
   return Number(x.toFixed(3));
 }
 

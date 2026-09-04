@@ -24,7 +24,11 @@ src/client/debug/frame-cost/
                               differential rows. Owns GpuFrameMethod and
                               PRICED_PASS_KEYS — the roster below, kept
                               here so a caller can validate a requested
-                              key without importing the renderer.
+                              key without importing the renderer — plus
+                              WARMUP_FRAMES, the median standard error,
+                              the interquartile spread and round3, which
+                              the headless runner imports rather than
+                              re-deriving (`scripts/perf/README.md`).
   gpu-frame-source.ts         Which sample source a sweep gets, per
     (+ test)                  backend, and the method label it stamps.
 ```

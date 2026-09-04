@@ -27,7 +27,9 @@ export interface SweepFit {
   readonly slope: number;
   readonly r2: number;
   readonly bound: Bound;
-  readonly points: number;
+  /** How many points the line was fitted through — never the points
+   *  themselves, which are `SweepRecord.points` one level up. */
+  readonly fitted: number;
 }
 
 /**
@@ -52,7 +54,7 @@ export function sweepOrder(scales: readonly number[]): number[] {
 export function fitLogLog(points: readonly SweepPoint[]): SweepFit {
   const usable = points.filter((p) => p.px > 0 && p.ms > 0);
   if (usable.length < 2) {
-    return { slope: 0, r2: 0, bound: 'inconclusive', points: usable.length };
+    return { slope: 0, r2: 0, bound: 'inconclusive', fitted: usable.length };
   }
   const xs = usable.map((p) => Math.log(p.px));
   const ys = usable.map((p) => Math.log(p.ms));
@@ -69,7 +71,7 @@ export function fitLogLog(points: readonly SweepPoint[]): SweepFit {
     varianceY += dy * dy;
   }
   if (varianceX === 0) {
-    return { slope: 0, r2: 0, bound: 'inconclusive', points: usable.length };
+    return { slope: 0, r2: 0, bound: 'inconclusive', fitted: usable.length };
   }
   const slope = covariance / varianceX;
   const r2 = varianceY === 0 ? 1 : (covariance * covariance) / (varianceX * varianceY);
@@ -77,7 +79,7 @@ export function fitLogLog(points: readonly SweepPoint[]): SweepFit {
     slope,
     r2,
     bound: classifyBound(slope, points),
-    points: usable.length,
+    fitted: usable.length,
   };
 }
 
