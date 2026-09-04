@@ -86,11 +86,14 @@ server against a production build; never sum the column.
 Per mode (`scripts/perf/README.md` § Dwell mode, § Sweep mode, § Comparing
 against a baseline):
 
-- **`vsyncClamped` true throws the dwell away.** A p50 sitting on the display
-  period the run measured, inside a 1 ms spread, measured the panel rather
-  than the frame. Do not quote it; re-measure at a heavier vantage. The
-  console line names the cadence the verdict was judged against, and the GPU
-  row is never clamped — no compositor pads a hardware timestamp.
+- **`vsyncClamped` true throws the dwell away.** A p50 sitting on any whole
+  number of the display period the run measured, inside a spread tighter than
+  6 % of that period (1 ms at 60 Hz), measured the panel rather than the
+  frame — a frame that overran one interval and was held to the next is still
+  the panel's number. Do not quote it; re-measure at a heavier vantage. The
+  console line names the cadence the verdict was judged against (headless
+  Chromium idles at 60 Hz, like a 60 Hz panel), and the GPU row is never
+  clamped — no compositor pads a hardware timestamp.
 - **A sweep with any clamped point reads `bound inconclusive`** — say
   inconclusive, don't quote the slope.
 - **`savedMs` going UP is a regression**, not an improvement: the field is

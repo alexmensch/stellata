@@ -237,19 +237,25 @@ the stream is absent the `gpu stream:` line says which reason applied.
 
 `p50 / p90 / p99` are nearest-rank, so every number printed is a frame that
 happened. **`vsyncClamped` invalidates the dwell rather than annotating it**:
-a p50 sitting on the display's own period inside a 1 ms spread is the
-compositor's cadence, not the frame's cost — the frame finished early and the
-panel supplied the rest. A clamped dwell is refused by `--baseline` and makes
-a sweep inconclusive.
+a p50 sitting on a whole number of the display's period, inside a spread
+tighter than the tolerance, is the compositor's cadence, not the frame's
+cost — the frame finished early and the panel supplied the rest. Any whole
+number, because a frame that overran one interval is held to the next: 12 ms
+of work on a 120 Hz panel reads 16.67, still the display's number. A clamped
+dwell is refused by `--baseline` and makes a sweep inconclusive.
 
 **The period is the one the run measured, not 60 Hz assumed.** The rAF probe
 taken after settle (step 4) is the display's cadence with the gate idle, and
 the clamp test is judged against it: 16.67 ms on a 60 Hz panel, 8.33 on a
-120 Hz one, and on an unthrottled headless display a sub-millisecond period,
-where a fixed 60 Hz ceiling threw away every genuinely fast frame as though a
-compositor it does not have had padded it. The console line says which cadence
-the verdict was judged against. **The GPU row is never clamped**: a resolved
-timestamp is a span the hardware reports, and no compositor can pad it.
+120 Hz one. Headless Chromium's virtual display idles at 16.70 ms (59.9 Hz),
+measured on every canon vantage on both backends (stellata-8cg.49.13's
+notes) — the same cadence as a 60 Hz panel, though headed and headless still
+never compare. The tolerance is `VSYNC_CLAMP_TOLERANCE` (6 %) of the measured
+interval — 1 ms at 60 Hz, 0.5 ms at 120 — never a fixed millisecond, which on
+a small interval sits within reach of some multiple whatever the frame cost.
+The console line says which cadence the verdict was judged against. **The GPU
+row is never clamped**: a resolved timestamp is a span the hardware reports,
+and no compositor can pad it.
 
 **Four checks, each able to fail.** A hold already live when the dwell starts
 fails it — settle requires an unheld gate, and the debug panel takes one,

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_DWELL_FRAMES,
-  VSYNC_CLAMP_IQR_MS,
+  VSYNC_CLAMP_TOLERANCE,
   isVsyncClamped,
   summarizeFrameDwell,
+  vsyncClampToleranceMs,
 } from './dwell-pure';
 
 /** 1..20 ms, so every percentile lands on a value that is easy to name. */
@@ -40,7 +41,7 @@ describe('summarizeFrameDwell', () => {
 
   it('flags a dwell sitting on the measured cadence', () => {
     const stats = summarizeFrameDwell(VSYNC, HZ_60)!;
-    expect(stats.iqrMs).toBeLessThan(VSYNC_CLAMP_IQR_MS);
+    expect(stats.iqrMs).toBeLessThan(vsyncClampToleranceMs(HZ_60));
     expect(stats.vsyncClamped).toBe(true);
   });
 
@@ -69,25 +70,42 @@ describe('summarizeFrameDwell', () => {
 });
 
 describe('isVsyncClamped — the cadence is measured, not assumed', () => {
-  it('clamps at the cadence the runner actually saw', () => {
-    expect(isVsyncClamped(HZ_60, 0.4, HZ_60)).toBe(true);
-    expect(isVsyncClamped(HZ_120, 0.4, HZ_120)).toBe(true);
+  it('scales the tolerance with the interval: 1 ms at 60 Hz, 0.5 ms at 120 Hz', () => {
+    expect(VSYNC_CLAMP_TOLERANCE).toBe(0.06);
+    expect(vsyncClampToleranceMs(HZ_60)).toBeCloseTo(1, 6);
+    expect(vsyncClampToleranceMs(HZ_120)).toBeCloseTo(0.5, 6);
   });
 
-  it('keeps a genuinely fast frame on an unthrottled display', () => {
-    // The failure a fixed 60 Hz ceiling produced: headless Chromium hands
-    // back a sub-millisecond idle period, so a real 6 ms frame was thrown
-    // away as though a compositor it does not have had padded it.
+  it('clamps on the first interval of the cadence the runner actually saw', () => {
+    expect(isVsyncClamped(HZ_60, 0.4, HZ_60)).toBe(true);
+    expect(isVsyncClamped(HZ_120, 0.4, HZ_120)).toBe(true);
+    expect(isVsyncClamped(HZ_60 + 0.8, 0.4, HZ_60)).toBe(true);
+    expect(isVsyncClamped(HZ_60 + 1.2, 0.4, HZ_60)).toBe(false);
+  });
+
+  it('clamps a frame held to a second interval — 16.67 on a 120 Hz panel is still the display', () => {
+    expect(isVsyncClamped(HZ_60, 0.3, HZ_120)).toBe(true);
+    expect(isVsyncClamped(3 * HZ_120, 0.3, HZ_120)).toBe(true);
+    expect(isVsyncClamped(2 * HZ_60, 0.4, HZ_60)).toBe(true);
+  });
+
+  it('reads a tight p50 between two intervals as the frame, not the display', () => {
+    expect(isVsyncClamped(12, 0.4, HZ_60)).toBe(false);
+    expect(isVsyncClamped(12, 0.3, HZ_120)).toBe(false);
+  });
+
+  it('does not mark everything clamped on a small interval', () => {
+    // Under a flat 1 ms every one of these sits within reach of some
+    // multiple of 0.5 ms; the scaled tolerance is 0.03 ms.
+    expect(vsyncClampToleranceMs(0.5)).toBeCloseTo(0.03, 6);
+    for (const p50 of [6.1, 6.2, 6.3, 6.4, 6.6, 6.8]) {
+      expect(isVsyncClamped(p50, 0.02, 0.5)).toBe(false);
+    }
     expect(isVsyncClamped(6, 0.4, 0.5)).toBe(false);
   });
 
-  it('clamps a 12 ms dwell on a 60 Hz panel but not on a 120 Hz one', () => {
-    expect(isVsyncClamped(12, 0.4, HZ_60)).toBe(true);
-    expect(isVsyncClamped(12, 0.4, HZ_120)).toBe(false);
-  });
-
   it('needs the spread as well as the level', () => {
-    expect(isVsyncClamped(HZ_60, VSYNC_CLAMP_IQR_MS, HZ_60)).toBe(false);
+    expect(isVsyncClamped(HZ_60, vsyncClampToleranceMs(HZ_60), HZ_60)).toBe(false);
   });
 
   it('reads nothing as clamped when no cadence was measured', () => {
