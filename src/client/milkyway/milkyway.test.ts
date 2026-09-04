@@ -648,7 +648,7 @@ describe('MilkyWay surface-brightness calibration', () => {
   // resolved-surface pin, and its own level sits 3.5 stops under the
   // perception branch's anchor. The margin is measured on the Ω_px value the
   // statistic actually carries, not on the 12x-larger level the band
-  // displays at (attachments/README.md § The unit).
+  // displays at (../hdr/attachments/README.md § The unit).
   it('writes a statistic the adaptation cut cannot act on', () => {
     const statisticL = surfaceBrightnessLuminance(
       BASE_EPOCH_EXPOSURE,

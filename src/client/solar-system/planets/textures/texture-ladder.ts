@@ -39,7 +39,7 @@ export function rungsOf(body: string): readonly number[] | null {
  * Shared rather than per-rung because the renderer divides it out of
  * `uSurfaceLuminance`: if two rungs disagreed even slightly, every tier
  * swap would step the disc's brightness on a body whose magnitude is
- * physically pinned (`emission/README.md` § Two disc means).
+ * physically pinned (`../emission/README.md` § Two disc means).
  */
 export function meanLuminanceOf(body: string): number | null {
   return TEXTURE_LADDER[body]?.meanLuminance ?? null;

@@ -703,7 +703,7 @@ describe.runIf(FIXTURES_READY)('component display-name uniqueness', () => {
     // the invariant is exact within a root. A failure means two records in
     // one root claim one letter, or one root's designation reached two
     // stars — either way a data finding upstream, never a renderer
-    // concession (docs/star-naming.md § 8.4). The catalog-WIDE residual,
+    // concession (docs/star-naming.md § 8). The catalog-WIDE residual,
     // where two catalogue entries claim one designation across roots, is
     // enumerated in ../naming/naming-duplicates.tsv.
     const offenders: string[] = [];

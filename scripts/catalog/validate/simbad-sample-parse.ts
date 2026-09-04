@@ -1,6 +1,6 @@
 // Row shape + TSV parser for `data/simbad/simbad_sample.tsv`, the
 // stratified 10k SIMBAD cross-check sample. See
-// scripts/catalog/README.md § Validation harness (Tier C).
+// scripts/catalog/validate/README.md § Validation harness (Tier C).
 import { headerIndex } from '../parse/corpus-tsv';
 
 /** Full-row view of the SIMBAD sample TSV — every field downstream

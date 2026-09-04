@@ -152,7 +152,7 @@ BC03 Chabrier SSP, Z = 0.02, 10 Gyr, the same `data/bc03/` row the band's
 Υ\*_V comes off. It is a *population* constant, not either layer's: the
 Galactic bulge, M31's bulge and the luminous early-type spheroids are the
 same population. It is **not** the metal-poor dwarf spheroids
-(`../../local-group/README.md` § Population tints).
+(`../../local-group/emission/README.md` § Population tints).
 
 Its hue, `OLD_SPHEROID_COLOR_RGB`, is derived here for the same reason —
 one population, one triplet. `BULGE_COLOR_RGB` and `SPHEROID_COLOR_RGB`

@@ -680,7 +680,7 @@ export class ChartLabels {
 
     // 5) Planet bodies — name labels beside the chart disc, gated by the
     // same magnitude rule as the ink disc itself: magnitude disc +
-    // star-style name label, no glyph vocabulary. See README.md § Star
+    // star-style name label, no glyph vocabulary. See ../README.md § Star
     // disc sizing.
     perfMark('chart.planets');
     const planetField = stellata.kinds.planet.field;

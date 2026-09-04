@@ -112,7 +112,7 @@ name before they were written:
   identified member is θ¹ Ori C, arriving as its component I, so every
   letter in it composed against θ¹ Ori — asserting an identity the data
   does not support. Refusing that anchor leaves those records on their own
-  designations, which is what `docs/star-naming.md` § 8.4 means by a
+  designations, which is what `docs/star-naming.md` § 8 means by a
   surviving collision being a data finding rather than a renderer
   concession.
 

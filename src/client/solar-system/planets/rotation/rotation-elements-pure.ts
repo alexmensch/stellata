@@ -1,6 +1,6 @@
 // IAU rotation elements (pole RA/Dec + prime-meridian angle W) for the
 // Sol planets, evaluated at model time `t`. Sources + dropped-terms
-// rationale in README.md § Planet rotation.
+// rationale in ../README.md § Planet rotation.
 
 import { J2000_JD } from '../../../util/astronomy-constants';
 import { tToJdTdb } from '../../time/time';
@@ -162,7 +162,7 @@ export const PLUTO_ROTATION: RotationElements = {
 };
 
 // The 18 major moons — same IAU WG 2015 linear terms as the planets
-// (sub-degree periodic librations dropped; README.md § Planet
+// (sub-degree periodic librations dropped; ../README.md § Planet
 // rotation). Every entry is tidally locked, so |wDegPerDay| equals the
 // orbital mean motion 360/periodDays (rotation-elements-pure.test.ts
 // pins the parity against MOON_ELEMENTS). mapCenterLonDeg matches each

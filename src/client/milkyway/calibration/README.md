@@ -275,7 +275,7 @@ the extended-source threshold itself, which is the instrument's
 sources).
 
 The Local Group emission layer runs the same mapping, the same constant
-(`../../local-group/README.md` § Zero free parameters) and now the same
+(`../../local-group/emission/README.md` § Zero free parameters) and now the same
 solve. The two layers are one unit system: same zero point, same
 `stellataSurfaceBrightnessLuminance` gain, same `ρ₀ = d²·F/G`, both
 mag/arcsec² in one exposure. All that differs is which magnitude goes in

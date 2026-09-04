@@ -1,6 +1,6 @@
 // Per-star A_V cache: renders one camera→star dust raymarch per star
 // into a star-indexed float target, recomputed only when the camera
-// moves beyond RECOMPUTE_EPSILON_PC. See README.md § Dust extinction.
+// moves beyond RECOMPUTE_EPSILON_PC. See README.md § The prepass cache.
 
 import * as THREE from 'three';
 import prepassVert from '../../util/fullscreen-pass.vert.glsl?raw';

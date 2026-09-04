@@ -33,7 +33,7 @@ rejected_bindings.tsv              268 rows. Pipeline-derived review queue —
 label_flips.tsv                    719 rows. Pipeline-derived. EVERY departure
                                    of the shipped labels from the spine's, with
                                    a disposition each — the parity ledger
-                                   `docs/catalog-driver.md` § 6.2 requires, and
+                                   `docs/catalog-driver.md` § 6 requires, and
                                    the delta the spine's designation-multiset
                                    gate replays.
 classic_id_overrides.tsv           Hand-curated. Empty by design; the escape

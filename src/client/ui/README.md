@@ -267,7 +267,7 @@ Everything else in the panel rides the discrete `'filter'` /
 
 For the underlying instrument / FOV / star-size model (aperture-derived
 `m_lim`, override flags, plate-scale K, soft-knee saturation), see
-`../filters/README.md` and `../star-pipeline/README.md`
+`../filters/README.md` and `../star-pipeline/perceptual-disc/README.md`
 § Angular-size calibration.
 
 ## Theme

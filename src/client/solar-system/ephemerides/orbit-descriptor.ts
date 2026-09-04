@@ -1,6 +1,6 @@
 // Parent/orbit descriptor for the focus card: every body's breadcrumb,
 // orbit distance, and period derived from its parent (planet ← host star;
-// moon ← parent planet), with no solar-mass assumption. See README.md § Moons.
+// moon ← parent planet), no solar-mass assumption. README.md § Moon ephemeris.
 
 import { AU_KM } from '../../util/astronomy-constants';
 import { formatKm, planetPeriodYears } from '../../format/physical-format';

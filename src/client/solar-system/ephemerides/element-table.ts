@@ -93,7 +93,7 @@ function splineColumn(
  * control points by offset. Cubic rather than linear because the residual
  * scales as step⁴ instead of step²: at equal accuracy the outer-planet tables
  * are several times coarser, which is the whole artifact-size budget
- * (`../../../../data/ephemerides/README.md` § Cadence).
+ * (`../../../../data/ephemerides/README.md` § Accuracy).
  *
  * In the first and last interval the missing outer control point is
  * **extrapolated** (`2·p1 − p2`), not clamped to the endpoint. Clamping halves

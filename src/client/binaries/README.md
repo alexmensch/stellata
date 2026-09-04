@@ -228,7 +228,8 @@ shear from a drifting primary. Full systemic coherence for *every*
 binaries.bin pair — keyed on this file's authoritative resolved pairing,
 which the catalog build can't replicate — is `stellata-zau1`; until it
 lands, the ~950 divergent-velocity Tier-3 wide pairs shear up to tens of
-arcminutes at the scrub-range extremes (SCIENCE.md § Current-epoch star
+arcminutes at the scrub-range extremes (docs/science-catalog-ingestion.md §
+Current-epoch star
 positions).
 
 ### Focal-frame ride (no rebase)

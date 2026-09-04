@@ -125,7 +125,7 @@ float perceptualDiscProfile(
 // This is what makes the adaptation statistic's flux channel correct: the
 // kernel preserves PEAK, not energy, so its integral over-counts a point
 // source's frame flux and cannot be summed as-is.
-// See ../hdr/attachments/README.md § The unit.
+// See ../../hdr/attachments/README.md § The unit.
 float perceptualDiscFluxIntegral(float n) {
   float x = 1.0 / max(n, 1e-6);
   return 0.774519065

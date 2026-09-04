@@ -87,7 +87,8 @@ export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
     };
     indexSimbadRow(
       index, keys, { spType, spQual, otype, sourceId: keys.sourceId },
-      // No key repeats in the committed file (README.md § The union adds rows,
+      // No key repeats in the committed file (../naming/README.md § The union
+      // adds rows,
       // never a second row under one key). The row stating a type is the
       // verdict a pull that did emit two would need; two rows both stating one
       // cannot be ordered here and are a curation fault.

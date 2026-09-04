@@ -297,7 +297,7 @@ deliberate edit.
   the last one outside it; it takes the same
   `stellataSurfaceBrightnessLuminance` gain as the band, off a zero
   point derived from the solver's flux units rather than a tuned
-  constant (`../local-group/README.md` § Zero free parameters).
+  constant (`../local-group/emission/README.md` § Zero free parameters).
 
 ## Dev switches
 

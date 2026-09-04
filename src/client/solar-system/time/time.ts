@@ -53,7 +53,8 @@ export function julianEpochYearToT(jyr: number): number {
 }
 
 // Model-clock clamp: the Standish 1992 ephemeris window (3000 BC – 3000 AD;
-// SCIENCE.md § Solar system). Outside it planet positions are garbage and
+// docs/science-solar-system.md § Solar system). Outside it planet positions
+// are garbage and
 // linear star propagation has long since degraded, so `t` never leaves it.
 export const T_CLAMP_MIN_S = julianEpochYearToT(-2999.0);
 export const T_CLAMP_MAX_S = julianEpochYearToT(3001.0);

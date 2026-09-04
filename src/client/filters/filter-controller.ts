@@ -30,7 +30,7 @@ import {
 /** The star-pipeline sharedUniforms subset this controller writes. All
  *  three star passes share the value objects, so a single write here
  *  propagates to every pass. The magnitude bounds and `uExposure` are
- *  NOT here — `ExposureController` owns those (`../hdr/README.md`
+ *  NOT here — `ExposureController` owns those (`../hdr/exposure/README.md`
  *  § The three terms). */
 export interface FilterUniforms {
   uMinDistSol: { value: number };

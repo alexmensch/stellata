@@ -1,7 +1,7 @@
 // Resolve the HDR render target to the canvas: attachment 0 plus the
 // diffuse attachment averaged over the eye's summation patch, then the
 // operator. uTonemapEnabled = 0 is the pass-through A/B path
-// (README.md § Dev switches).
+// (../README.md § Dev switches).
 precision highp float;
 precision highp int;
 

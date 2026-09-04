@@ -335,7 +335,7 @@ export class Stellata implements FrameAnchor {
   // (hdr/exposure/README.md § One writer, five slots).
   readonly exposure!: ExposureController;
   // Per-frame scene-luminance measurement feeding the automatic exposure
-  // cut (hdr/README.md § Adaptation).
+  // cut (hdr/exposure/README.md § Adaptation).
   readonly adaptation!: SceneAdaptation;
   readonly reduction: ReductionSeam;
   private readonly drawingBufferSize = new THREE.Vector2();

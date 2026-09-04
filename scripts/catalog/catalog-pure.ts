@@ -558,7 +558,7 @@ export const RECORD_LAYOUT = {
   sid: 80,          // Stellata ID (0 = NO_SID; docs/sid.md § 7)
   // Space-motion velocity, equatorial Cartesian pc/yr (Sol at origin).
   // Consumed once at load by the epoch-advance pass; positions stay at
-  // the fixed J2016.0 scene epoch on disk. See scripts/catalog/README.md
+  // the fixed J2016.0 scene epoch on disk. See scripts/catalog/parse/README.md
   // § Space-motion velocity and docs/science-catalog-ingestion.md
   // § Current-epoch star positions.
   vx: 84,
@@ -1273,7 +1273,7 @@ export interface OpticalDoubleContext {
 
 // True when a CCDM group's picked primary should NOT be winged: it's an
 // optical double with no independent physical evidence. See
-// scripts/catalog/README.md § CCDM double-star cross-match.
+// scripts/catalog/multiplicity/README.md § CCDM double-star cross-match.
 //
 // Suppression fires only on positive evidence the asserted pair is optical
 // — the nearest same-group sibling with a Gaia-quality distance sits
@@ -1415,7 +1415,7 @@ export const DIST_SRC_HIP = 'HIP';
 
 /** AT-HYG's `dist_src` vocabulary, plus an `UNRECOGNISED` catch-all for a
  *  value the column has never carried. Every distance-override layer states
- *  an outcome for each bucket — see scripts/catalog/README.md
+ *  an outcome for each bucket — see scripts/catalog/distance/README.md
  *  § Override-layer authoring discipline. */
 export const DIST_SRC_BUCKETS = [
   DIST_SRC_GAIA_DR3, DIST_SRC_GAIA_DR2, DIST_SRC_HIP,

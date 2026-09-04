@@ -129,7 +129,8 @@ export class SolarSystemCluster implements LocalCluster {
    * a trail spans Sol to the probe, so it contributes a Sol-centred sphere of
    * the probe's heliocentric radius. Voyager 1 at 167 AU widens the bracket
    * to 8e13 — still four slices at the default `maxSliceRatio`, the same count
-   * the planet members already need (../local-depth/README.md § Depth slices).
+   * the planet members already need (../local-depth/bracket/README.md § Depth
+   * slices).
    */
   private collectProbes(camera: THREE.PerspectiveCamera, active: boolean): void {
     this.probeField.setLocalPassActive(active);

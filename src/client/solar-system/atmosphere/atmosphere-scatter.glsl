@@ -1,6 +1,6 @@
 // Single-scattering atmosphere integrator shared by the planet mesh (disc
 // airlight) and atmosphere shell (limb halo). CPU mirror + calibration in
-// atmosphere-scattering-pure.ts; model rationale in README.md § Atmospheres.
+// atmosphere-scattering-pure.ts; model rationale in README.md § The model.
 // Requires ATMO_N_VIEW / ATMO_N_LIGHT as #defines (material `defines`).
 // Geometry is planet-radius units, planet centred at origin (rPlanet = 1).
 

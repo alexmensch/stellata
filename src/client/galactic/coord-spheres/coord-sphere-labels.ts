@@ -10,7 +10,7 @@ import { projectToScreenInto } from '../../overlays/overlay-project';
 import { setNumAttr, setStrAttr, setStyle, setText } from '../../overlays/dirty-attr';
 
 // Orientation labels for a coordinate sphere, one per grid line, riding each
-// line to its viewport-edge exit. See galactic/README.md § Grid orientation
+// line to its viewport-edge exit. See README.md § Grid orientation
 // labels.
 
 const DEG = Math.PI / 180;

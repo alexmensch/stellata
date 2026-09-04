@@ -44,7 +44,7 @@ The Fresnel shell material + shader pair + gating base live in
   `frustumCulled = false` (bounding-sphere culling is unreliable with the
   camera interior).
 - **renderOrder −1**, additive, `depthWrite:false`: a dim rim glow the
-  local stars composite over. See `src/client/README.md` § Render order.
+  local stars composite over. See `src/client/README.md` § Full render stack.
 - **Label** (`localBubbleLabel`, a `labels`-tier declutter element at
   floor `all`) is an SVG `<text>` bound through the shared distance-gated
   label engine over ~96 shell-surface samples, so it hugs the silhouette.

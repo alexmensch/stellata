@@ -1,5 +1,5 @@
 // Fetches the five probe trajectory JSONs from public/probes/ and parses
-// each into a runtime ProbeTrajectory. See README.md § Loading.
+// each into a runtime ProbeTrajectory. See README.md § Files in this area.
 
 import { PROBE_MISSIONS } from '../../../../scripts/probes/probe-roster';
 import { probeTrajectoryFilename } from '../../../../scripts/probes/sync-probes-pure';

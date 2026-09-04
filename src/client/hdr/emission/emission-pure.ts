@@ -92,7 +92,7 @@ export function pxPerRadianFromSolidAngle(omegaPxArcsec2: number): number {
  * This is load-bearing for the display convolution rather than cosmetic: the
  * convolution can only average what the rasteriser sampled, and an aliased
  * Sérsic cusp survives it — 3.95 mag on M31's nucleus.
- * `summation/README.md` § Footprint carries the measurement.
+ * `../summation/README.md` § Footprint carries the measurement.
  */
 export function footprintRadiusPc(distancePc: number, omegaPxArcsec2: number): number {
   return distancePc / (pxPerRadianFromSolidAngle(omegaPxArcsec2) * FOOTPRINT_SQRT12);

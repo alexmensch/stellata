@@ -161,7 +161,8 @@ def calibrate(
     #
     # Free because the map's ABSOLUTE level carries no information: the
     # renderer divides each map's own mean luminance back out
-    # (planets/emission/README.md § Two disc means), so only the ratios
+    # (src/client/solar-system/planets/emission/README.md § Two disc means),
+    # so only the ratios
     # between channels survive to the screen. What this drops is the old
     # mean-luminance-preserving property, which was never observable and
     # which clipping silently broke anyway.

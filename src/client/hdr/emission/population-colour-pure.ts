@@ -16,7 +16,7 @@ import { linearSrgbFromColourIndex } from '../../../../scripts/colour/blackbody-
  * early-type spheroids (M 32, NGC 205) are the same population, so this
  * is a *population* constant rather than either layer's own. It is not
  * the metal-poor dwarf spheroids — see
- * `../../local-group/README.md` § Population tints.
+ * `../../local-group/emission/README.md` § Population tints.
  */
 export const OLD_SPHEROID_COLOUR_INDEX_BV = 0.9574;
 

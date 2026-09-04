@@ -1,6 +1,6 @@
 // Build-time Sol→star extinction integral through the same encoded
 // Edenhofer dust grid star.vert.glsl raymarches. See
-// scripts/catalog/README.md § Build-time de-extinction.
+// scripts/catalog/distance/README.md § Build-time de-extinction.
 
 // Reddening ratio A_V / E(B−V). MUST equal R_V in
 // src/client/star-pipeline/star.vert.glsl — the shader re-reddens by the

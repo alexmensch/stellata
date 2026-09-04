@@ -150,7 +150,7 @@ wrong, and each cost a wrong name before it was pinned:
 star, so its number is the least component-specific of the three: NEC
 lists both p Eri rows against HIP 7751 and separates them only by HR
 (486 / 487) and HD (10360 / 10361). A HIP-first join collapses p Eri A and
-B onto one record — the very duplicate `docs/star-naming.md` § 8.4 expects
+B onto one record — the very duplicate `docs/star-naming.md` § 8 expects
 the ladder to dissolve. `docs/star-naming.md` § 3 states HIP first and is
 wrong; the order here is the measured one.
 

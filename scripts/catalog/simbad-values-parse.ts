@@ -1,6 +1,6 @@
 // Parser and per-record lookup for data/simbad/simbad_values.tsv — the
-// bibcoded bottom tier of the § 5 value cascades. See README.md § The
-// SIMBAD values index.
+// bibcoded bottom tier of the § 5 value cascades. See README.md § Files in
+// this area.
 
 import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from './parse/corpus-tsv';
 import {

@@ -145,7 +145,7 @@ describe('horizon maps', () => {
     // colour and normal maps own — inside one output texel a caster is half a
     // colour-map texel, so nothing on screen can throw the shadow. The step
     // stays at the DEM's resolution so a narrow ridge at range is sampled
-    // rather than averaged away (README.md § Cast shadows).
+    // rather than averaged away (data/textures/relief/README.md § Cast shadows).
     expect(pyNumber('HORIZON_MARCH_START_TEXELS')).toBe(2);
     expect(pySource).toContain(
       'return HORIZON_MARCH_START_TEXELS * 2 * np.pi / out_width');

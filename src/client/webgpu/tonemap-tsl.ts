@@ -1,5 +1,5 @@
 // TSL mirror of the stellata_tonemap chunk's undithered operator. Thin
-// composition over tonemap-pure's constants (README.md § TSL test
+// composition over tonemap-pure's constants (tsl/README.md § TSL test
 // pattern); tonemap-pure.ts carries the math and its tests.
 
 import {
