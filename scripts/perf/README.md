@@ -122,6 +122,11 @@ it marks the scenario tainted. A crash aborts the run. Any failure exits 1.
 
 ## Traps
 
+- **The machine must be idle for the whole run.** Foreground work on the
+  same GPU shows up as a wide `iqrMs` (20 ms against 1–2 ms idle), a
+  baseline that walks upward across the sweep, and rows that fall under
+  their brackets — measured on the parity spike, where the one run taken
+  during other work was the one that looked like a headless defect.
 - Everything in `docs/render-rules.md` § Measurement canon and
   `src/client/debug/frame-cost/README.md` § Reading a row: a `savedMs` under
   `noiseMs` or `bracketMs` did not resolve; the limit-mag columns must

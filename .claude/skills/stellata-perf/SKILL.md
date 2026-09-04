@@ -37,6 +37,9 @@ table. Reference: `scripts/perf/README.md`. Interpretation authority:
 3. When it reports ARMED, run the command. The runner deletes the marker
    before launching the browser — one arm authorises one launch, success or
    not. A second run means a second announce.
+4. Say in the announcement that the machine has to stay idle for the run
+   (~2 min at the defaults). Foreground work on the same GPU widens `iqrMs`
+   tenfold and walks the baseline; such a run is discarded, not read.
 
 ## Flags
 
