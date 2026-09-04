@@ -27,6 +27,15 @@
             "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/commit-sweep-guard.sh"
           }
         ]
+      },
+      {
+        "matcher": "Bash|Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/perf-guard.sh"
+          }
+        ]
       }
     ],
     "SessionStart": [

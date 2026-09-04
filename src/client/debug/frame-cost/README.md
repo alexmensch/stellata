@@ -21,7 +21,10 @@ src/client/debug/frame-cost/
   frame-cost.ts               runPriceFrame / runPriceFrameRepeat, the
                               pass toggles, the dwell loop.
   frame-cost-pure.ts (+ test) Dwell statistics, the noise floor, and the
-                              differential rows. Owns GpuFrameMethod.
+                              differential rows. Owns GpuFrameMethod and
+                              PRICED_PASS_KEYS — the roster below, kept
+                              here so a caller can validate a requested
+                              key without importing the renderer.
   gpu-frame-source.ts         Which sample source a sweep gets, per
     (+ test)                  backend, and the method label it stamps.
 ```

@@ -13,11 +13,13 @@ import {
   type DwellStats,
   type GpuFrameMethod,
   type PriceFrameRow,
+  type PricedPassKey,
 } from './frame-cost-pure';
 
 export interface PassToggle {
-  /** Row label in the output table. */
-  readonly key: string;
+  /** Row label in the output table. Adding one means adding it to
+   *  `PRICED_PASS_KEYS`, which is what callers validate against. */
+  readonly key: PricedPassKey;
   /** False when the pass is not contributing at the current view/state —
    *  the row is skipped with a note rather than measured as a
    *  meaningless zero, and the pass's state is never touched. */

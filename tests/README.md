@@ -75,6 +75,15 @@ folder-readme-coverage.test.ts
                          The "every folder under src/, scripts/, data/,
                          docs/ has a README.md" invariant (AGENTS.md
                          § Folder READMEs).
+perf-guard.test.ts       Behavioural pins for scripts/hooks/perf-guard.sh's
+                         two gates: every launch spelling denied unarmed and
+                         allowed under a fresh marker (including the
+                         non-pnpm managers and a launch on its own line in a
+                         multi-line command, both of which once bypassed
+                         it), every mention or Write of the marker denied
+                         armed or not, and the fail-closed paths — no git
+                         checkout, unreadable marker age. The protocol and
+                         the escape routes are asserted in the deny reason.
 prime-guard.test.ts      Behavioural pins for the bd-prime session hook.
 readme-size.test.ts      450-line cap per folder README — length is a tax
                          on every future session, so the answer over the
