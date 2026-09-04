@@ -172,7 +172,7 @@ Rendering is **three passes over the same instanced geometry**:
   (members stamp regardless of the physSize window —
   `local-pass/README.md`). The gate walks a bounded window of the
   Sol-distance-sorted index and skips the whole draw call when no star
-  is close enough to subtend `CORE_MASK_MIN_PX`; the window derivation
+  is close enough to subtend `RESOLVED_DISC_MIN_PX`; the window derivation
   is `star-frame/README.md` § `forEachStarNearCamera`.
 - **Disc pass** (`renderOrder = 0`). Stars where `vPhysRatio ≥ 0.5` —
   i.e. the physical-size term dominates the final

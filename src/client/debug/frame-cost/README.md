@@ -88,11 +88,6 @@ src/client/debug/frame-cost/
   outright rather than silently switching clocks, and so does a name that is
   not one of the three — the console is untyped, so a typo would otherwise
   read as an honoured pin.
-- **Layers that actually render.** A `#renderer=webgpu` boot draws only
-  the seam's own scene until each layer's port child lands, so a sweep
-  there prices passes that are not drawing: rows read ~0 for a reason that
-  has nothing to do with WebGPU. The plumbing is ported so the instrument
-  is ready as layers arrive; the rows mean nothing before then.
 
 ## Priced passes
 

@@ -74,6 +74,9 @@ here is the always-loaded hook pointing to which section to open.
 - **A frozen table lacks a column you need** → run the re-pull; you
   have network access. Never scope a design around it or hand the
   fetch back. `scripts/refresh/README.md` § Who runs a refresh.
+- **Adding or touching a render layer, pass, or per-frame buffer
+  write** → read `docs/render-rules.md` first (visible-count draws,
+  liveness gating, single-writer buffers, measurement canon).
 
 ## Folder READMEs — read before you touch the folder; update at commit
 
@@ -191,9 +194,9 @@ How to apply: state the **vantage** and the **epoch offset** behind any
 claim, defaulting to the extremes the model allows — closest realistic
 viewpoint, clock's limit. "Negligible / invisible / doesn't matter"
 without both is not a claim. Physical accuracy is the mandate; "you
-can't see the difference" never overrides it. SCIENCE.md § Detail-floor
-principle is the complementary upper-bound rule (don't add detail the
-user can never get close enough to see).
+can't see the difference" never overrides it. SCIENCE.md § Defer detail
+until zoom affordance is the complementary upper-bound rule (don't add
+detail the user can never get close enough to see).
 
 ## Repo layout — the structure is the index
 
@@ -218,7 +221,7 @@ src/      Worker entry (worker.ts) + client. src/client/ has one
           ui/, typeahead/, modals/, debug/, util/, loaders/, dust/, binaries/,
           chrome-lines/, render-gate/) — each with its own README.
 docs/     Genuinely cross-cutting docs that don't belong to one
-          folder: authoring-patterns.md, ux-tweaks.md,
+          folder: authoring-patterns.md, render-rules.md, ux-tweaks.md,
           extragalactic-roadmap.md. New docs default to "find the
           right folder and put a README.md there"; only add to docs/
           if the topic truly spans the whole codebase.
@@ -241,8 +244,8 @@ pnpm run build:catalog   # regenerate public/catalog.bin (idempotent)
 pnpm run build:binaries  # regenerate data/binaries/multiples.tsv
 pnpm run dev             # preprocess + Vite dev server
 pnpm run build           # full production build
-pnpm run typecheck       # tsc --noEmit over src/ and scripts/
-pnpm test                # vitest (regression-prevention suite)
+pnpm run typecheck       # tsc --noEmit
+pnpm test                # vitest
 pnpm run deploy          # wrangler deploy (requires auth)
 ```
 
