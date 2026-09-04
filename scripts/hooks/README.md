@@ -31,16 +31,22 @@ scripts/hooks/
                            tests/code-comment-rules.test.ts).
                            Behaviour pinned by
                            tests/commit-sweep-guard.test.ts.
-  perf-guard.sh            Blocks every spelling of a perf-runner launch
-                           (`pnpm run perf`, `tsx scripts/perf/run.ts`,
-                           …) while the repo root lacks a `.perf-go`
-                           marker fresher than an hour, and blocks any
-                           command that both creates the marker and
-                           launches. The deny reason carries the arm
-                           protocol. Marker path and freshness come from
+  perf-guard.sh            Two independent gates on Bash / Write / Edit /
+                           NotebookEdit: any tool call that names the
+                           `.perf-go` arm marker is denied outright, and a
+                           perf-runner launch (`pnpm|npm|yarn|bun [run]
+                           perf`, `tsx scripts/perf/run.ts`, …) is denied
+                           while the repo root lacks a marker fresher than
+                           an hour. Splitting them is what stops a launch
+                           spelling the hook misses from carrying a
+                           self-arm through with it. Fails CLOSED —
+                           § How perf-guard fails closed. The deny reason
+                           carries the arm protocol. Marker name and
+                           freshness come from
                            scripts/perf/perf-go-lib.sh, shared with the
-                           poller; scripts/perf/README.md § Human-armed
-                           owns the design. Behaviour pinned by
+                           poller and (parsed) the runner;
+                           scripts/perf/README.md § Human-armed owns the
+                           design. Behaviour pinned by
                            tests/perf-guard.test.ts.
   comment-rules.json       The forbidden comment patterns, once. Read
                            by tests/code-comment-rules.test.ts and by
@@ -206,6 +212,23 @@ breakdown and the relevant AGENTS.md § Code comments substitution.
 Scope caveat: `-a` / `--all` commits aren't fully inspected; only
 already-staged files are checked. The standard `git add <files> &&
 git commit` flow Claude uses is covered correctly.
+
+## How perf-guard fails closed
+
+The other guards here enforce hygiene; this one enforces **consent**, and
+that inverts the failure posture. `prime-guard` fails open on purpose — a
+session without memories beats a session that cannot call a tool. A consent
+gate cannot: the harness treats a hook exiting non-zero as a malfunction and
+lets the call through, so any error in perf-guard would silently permit an
+unasked-for GPU run.
+
+So every route out of the script other than an explicit pass is a denial. An
+`ERR` trap denies with the failing line; a marker whose age cannot be read
+denies rather than assuming it is fresh; a missing `jq` prints the reason to
+stderr and exits **2**, the harness's other blocking spelling, instead of
+dying mid-pipe. The `stat` portability trap that first exposed this — the
+hook erroring, and therefore permitting, on every Linux checkout while the
+macOS suite stayed green — is `scripts/perf/README.md` § Traps.
 
 ## Disabling
 

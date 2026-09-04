@@ -24,8 +24,11 @@ table. Reference: `scripts/perf/README.md`. Interpretation authority:
   the browser.
 - **Starting a dev server.** Alex always has one running; `--url` targets it
   (a worktree server sits on another port).
-- **Creating `.perf-go`.** Including `touch .perf-go && pnpm run perf`, which
-  the guard denies outright. The guard's deny reason IS the protocol; do not
+- **Naming `.perf-go` in any tool call.** The guard denies every Bash command
+  containing the string and every Write/Edit of the marker, whether or not the
+  same call launches anything. Need it in a commit message or a PR body? Use
+  `git commit -F <file>` / `gh pr create --body-file <file>`; need to search
+  for it? Use the Grep tool. The guard's deny reason IS the protocol; do not
   work around the hook.
 
 ## Protocol — announce → arm → run, one run per arm
@@ -52,6 +55,10 @@ table. Reference: `scripts/perf/README.md`. Interpretation authority:
 - `--headed` for a headed control run. Headed and headless never compare.
 
 ## Interpretation traps
+
+**A non-zero exit means do not read the rows** — a tainted sweep still prints
+its table, and exit 1 is the part that says the page threw inside the
+measurement.
 
 `docs/render-rules.md` § Measurement canon and
 `src/client/debug/frame-cost/README.md` § Reading a row. The short form: a
