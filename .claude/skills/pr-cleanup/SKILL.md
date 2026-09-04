@@ -130,6 +130,21 @@ CI-side verification is yours and you never poll it (`Never wait on PR CI
 checks`), so do not wait for green. Everything below turns on
 `mergeStateStatus` — read it, do not infer it from the checks page:
 
+**First, check stack membership — `gh pr merge` is refused on any PR in a
+stack**, whatever its position, including a bottom PR that already targets
+`main` and reads `CLEAN`. GitHub answers `This pull request is part of a stack
+and must be merged using the asynchronous merge REST API`, and the route is
+`gh stack merge` (same `--squash`), which lands the whole chain up to that PR
+atomically — so it is the *stack* Alex must have named, not just this PR:
+
+```bash
+gh api graphql -f query='{repository(owner:"alexmensch",name:"stellata"){
+  pullRequest(number:<N>){ stack{ number size }}}}'   # null => not stacked
+```
+
+Non-null → hand off to the `gh-stack` skill; the rest of this section assumes
+a standalone PR.
+
 | | |
 |---|---|
 | `CLEAN` | mergeable, all required checks passed — merge now |
@@ -211,12 +226,12 @@ often has none. Say so and move on.
 
 ## 6. Worktree, branches, main
 
-Order matters — you cannot remove the worktree from inside it. **How you
-leave depends on how you got there.**
+Order matters — you cannot remove the worktree from inside it. **What decides
+the route is who OWNS the worktree, not whether the session is pinned.**
+`ExitWorktree` removes only what this session's own `EnterWorktree` *created*.
 
-- **Session is worktree-*isolated*** (you called `EnterWorktree`, or the PR's
-  branch is this session's own): `cd` is not enough — the session's working
-  directory is pinned. Use the `ExitWorktree` tool with
+- **This session created it** (`EnterWorktree` with a `name`): `cd` is not
+  enough — the working directory is pinned. Use `ExitWorktree` with
   `action: "remove"`.
 
   **It will refuse after a squash merge** — the squash is a *new* commit, so
@@ -233,8 +248,18 @@ leave depends on how you got there.**
   whether the path exists, which it did before the PR too. Test for something
   the PR **introduced**.
 
-- **Session is not isolated** (the worktree belongs to an earlier session):
-  plain `cd` to the main checkout, then `git worktree remove`.
+- **An earlier session created it** — the normal case here, since the PR's
+  worktree usually predates this session. Reaching it with
+  `EnterWorktree({path})` does **not** confer ownership, so `ExitWorktree`
+  refuses on ownership grounds, naming `EnterWorktree({path})` or another
+  session's liveness lock. **`discard_changes: true` cannot override that
+  refusal** — it answers the unmerged-work check above, a different gate — so
+  do not reach for it here, and do not read the refusal as the squash-merge
+  one. Leave with `action: "keep"` (plain `cd` if the session never entered),
+  then `git worktree remove <path>` from the main checkout.
+
+  Still run the squash-commit check before removing: `git worktree remove`
+  drops the directory whether or not the work landed.
 
 Then, from the main checkout:
 
