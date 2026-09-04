@@ -5,6 +5,7 @@ import type { BrowserContext, Page } from 'playwright';
 import type { DebugTools } from '../../src/client/debug/debug';
 import type { PriceFrameOptions, PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost';
 import type { Stellata } from '../../src/client/stellata';
+import type { AdapterProbe, WebGlProbe, WebGpuProbe } from './schema';
 import type { Backend } from './scenarios';
 import { settleVerdict, type GateSnapshot } from './settle-pure';
 
@@ -87,26 +88,6 @@ export async function awaitSettle(page: Page, { quietMs, timeoutMs, pollMs = 250
   }
 }
 
-export interface WebGlProbe {
-  readonly renderer: string;
-  readonly vendor: string;
-  readonly timerQuery: boolean;
-}
-
-export interface WebGpuProbe {
-  readonly vendor: string;
-  readonly architecture: string;
-  readonly device: string;
-  readonly description: string;
-  readonly isFallbackAdapter: boolean;
-  readonly timestampsAvailable: boolean | null;
-}
-
-export interface AdapterProbe {
-  readonly webgl: WebGlProbe | null;
-  readonly webgpu: WebGpuProbe | null;
-}
-
 export function probeAdapters(page: Page): Promise<AdapterProbe> {
   return page.evaluate(async () => {
     const s = (window as unknown as PerfWindow).stellata;
@@ -169,4 +150,106 @@ export function readDrawingBuffer(page: Page): Promise<{ width: number; height: 
 
 export function runDifferential(page: Page, options: PriceFrameOptions): Promise<PriceFrameRow[]> {
   return page.evaluate((o) => (window as unknown as PerfWindow).debug.priceFrame(o), options);
+}
+
+export interface DwellParams {
+  readonly frames: number;
+  readonly warmupFrames: number;
+  /** Subscribe the WebGPU frame-sample stream alongside the rAF deltas.
+   *  Only a WebGPU boot has one, and nothing there is exclusive — the
+   *  render loop resolves for whoever is listening. */
+  readonly wantGpuStream: boolean;
+  /** Where the dev server serves the sample module from. The stream has no
+   *  window surface, so the dwell reaches it through the module graph. */
+  readonly samplesModuleUrl: string;
+}
+
+export interface DwellRaw {
+  readonly deltasMs: number[];
+  readonly gpuMs: number[];
+  readonly gpuNote: string;
+  readonly readbackPerFrame: number;
+  readonly effectiveLimitMag: number;
+  readonly dm: number;
+  readonly rateBefore: number;
+  readonly rateAfter: number;
+}
+
+/**
+ * Dwell on the live frame under a render-gate hold, with the simulation
+ * clock stopped and the exposure pinned where the warmup left it — the
+ * same three preconditions the in-app differential establishes, for the
+ * same reasons (`src/client/debug/frame-cost/README.md` § Preconditions).
+ *
+ * rAF deltas are the primary metric because they are the one clock every
+ * backend supplies. The WebGPU timestamp stream rides alongside where it
+ * is sound, as a second opinion on the same frames rather than a
+ * replacement: the two are different instruments and are never
+ * differenced against each other.
+ */
+export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
+  return page.evaluate(async (p) => {
+    const s = (window as unknown as PerfWindow).stellata;
+    const gpuMs: number[] = [];
+    let stopGpu: (() => void) | null = null;
+    let gpuNote = 'not requested — rAF wall-clock deltas are the metric';
+    if (p.wantGpuStream) {
+      try {
+        const samples = await import(p.samplesModuleUrl) as {
+          gpuFrameSamplesAreSound(): boolean;
+          onGpuFrameSample(fn: (ms: number) => void): () => void;
+        };
+        if (samples.gpuFrameSamplesAreSound()) {
+          stopGpu = samples.onGpuFrameSample((ms) => gpuMs.push(ms));
+          gpuNote = 'subscribed';
+        } else {
+          gpuNote = 'timestamp-query granted but resolving durations no frame can have';
+        }
+      } catch (e) {
+        gpuNote = `${p.samplesModuleUrl} did not load (${(e as Error).message})`;
+      }
+    }
+
+    const clock = s.timeClock;
+    const rateBefore = clock.getRate();
+    const releaseHold = s.renderGate.hold();
+    const deltasMs: number[] = [];
+    let readbacks = 0;
+    let effectiveLimitMag = 0;
+    let dm = 0;
+    try {
+      if (rateBefore !== 0) clock.setRate(0);
+      for (let f = 0; f < p.warmupFrames; f++) {
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+      s.adaptation.setHeld(true);
+      dm = s.adaptation.getDm();
+      gpuMs.length = 0;
+      const readbacksBefore = s.reduction.readbackRequests;
+      let last = await new Promise<number>((r) => requestAnimationFrame(r));
+      for (let f = 0; f < p.frames; f++) {
+        const now = await new Promise<number>((r) => requestAnimationFrame(r));
+        deltasMs.push(now - last);
+        last = now;
+      }
+      readbacks = s.reduction.readbackRequests - readbacksBefore;
+      effectiveLimitMag = s.exposure.getEffectiveLimitMag();
+    } finally {
+      stopGpu?.();
+      s.adaptation.setHeld(false);
+      if (clock.getRate() !== rateBefore) clock.setRate(rateBefore);
+      releaseHold();
+    }
+
+    return {
+      deltasMs,
+      gpuMs,
+      gpuNote,
+      readbackPerFrame: p.frames > 0 ? readbacks / p.frames : 0,
+      effectiveLimitMag,
+      dm,
+      rateBefore,
+      rateAfter: clock.getRate(),
+    };
+  }, params);
 }

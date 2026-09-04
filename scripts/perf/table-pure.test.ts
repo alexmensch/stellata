@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { PRICE_ROW_COLUMNS, formatPriceTable } from './table-pure';
+import type { DwellSummary } from './dwell-pure';
+import type { RunDiff } from './diff-pure';
+import type { SweepPoint } from './sweep-pure';
+import {
+  PRICE_ROW_COLUMNS,
+  formatDiffTable,
+  formatDwellTable,
+  formatPriceTable,
+  formatSweepTable,
+  formatTable,
+} from './table-pure';
 
 const row: PriceFrameRow = {
   pass: 'localDepth',
@@ -43,5 +53,84 @@ describe('formatPriceTable', () => {
 
   it('prints the header alone for no rows', () => {
     expect(formatPriceTable([]).split('\n')).toHaveLength(1);
+  });
+});
+
+describe('formatTable', () => {
+  it('widens a column to its header when every cell is narrower', () => {
+    expect(formatTable(['header', 'x'], [[1, 2]])).toBe('header  x\n     1  2');
+  });
+});
+
+const dwell: DwellSummary = {
+  samples: 240, p50: 30.125, p90: 33.5, p99: 41.75, iqrMs: 1.25, lag1: -0.31, vsyncClamped: false,
+};
+
+describe('formatDwellTable', () => {
+  it('prints one row per clock, the rAF deltas first', () => {
+    const lines = formatDwellTable([
+      ['raf-delta', dwell],
+      ['gpu-timestamp', { ...dwell, p50: 28.5 }],
+    ]).split('\n');
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toContain('vsyncClamped');
+    expect(lines[1]).toContain('raf-delta');
+    expect(lines[1]).toContain('30.125');
+    expect(lines[2]).toContain('gpu-timestamp');
+  });
+
+  it('prints the clamp flag as a word rather than blanking a false', () => {
+    expect(formatDwellTable([['raf-delta', dwell]])).toContain('false');
+  });
+});
+
+describe('formatSweepTable', () => {
+  const points: SweepPoint[] = [
+    { scale: 1, width: 1280, height: 800, px: 4_096_000, ms: 40, vsyncClamped: false },
+    { scale: 2, width: 2560, height: 1600, px: 16_384_000, ms: 160, vsyncClamped: false },
+  ];
+
+  it('appends the fit under the points', () => {
+    const text = formatSweepTable(points, { slope: 1, r2: 1, bound: 'fill', points: 2 }, 0.75);
+    expect(text.split('\n')).toHaveLength(4);
+    expect(text).toContain('4.096');
+    expect(text).toContain('slope 1.000 · r² 1.000 · bound fill · sweep bracket 0.750 ms');
+  });
+});
+
+describe('formatDiffTable', () => {
+  it('marks the three verdicts', () => {
+    const diff: RunDiff = {
+      refusedWholeRun: null,
+      refusals: [],
+      rows: [
+        { key: 'sol|webgl2|a', metric: 'savedMs', baselineMs: 10, currentMs: 10, deltaMs: 0, bandMs: 2, verdict: 'same' },
+        { key: 'sol|webgl2|b', metric: 'savedMs', baselineMs: 10, currentMs: 4, deltaMs: -6, bandMs: 2, verdict: 'cheaper' },
+        { key: 'sol|webgl2|dwell', metric: 'p50', baselineMs: 30, currentMs: 38, deltaMs: 8, bandMs: 2, verdict: 'dearer' },
+      ],
+    };
+    const lines = formatDiffTable(diff).split('\n');
+    expect(lines[1]).toContain('~');
+    expect(lines[2]).toContain('✓');
+    expect(lines[3]).toContain('✗');
+  });
+
+  it('says only that the run was refused, with no rows to read past it', () => {
+    const text = formatDiffTable({ refusedWholeRun: 'adapter A vs B', rows: [], refusals: [] });
+    expect(text).toBe('baseline: REFUSED — adapter A vs B');
+  });
+
+  it('lists refusals under the table', () => {
+    const text = formatDiffTable({
+      refusedWholeRun: null,
+      rows: [],
+      refusals: [{ key: 'sol|webgl2', reason: 'method raf-delta vs timer-query' }],
+    });
+    expect(text).toContain('not compared: sol|webgl2 — method raf-delta vs timer-query');
+  });
+
+  it('says so when neither run had anything comparable', () => {
+    expect(formatDiffTable({ refusedWholeRun: null, rows: [], refusals: [] }))
+      .toBe('baseline: nothing comparable in either run');
   });
 });
