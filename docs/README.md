@@ -21,6 +21,17 @@ authoring-patterns.md   Write-time consistency rules (lifecycle pairing,
                         adding a bus.on() call, a sibling helper, a
                         sentinel-init dirty-track pattern, or any state
                         struct shifted mid-animation.
+render-rules.md         What every layer owes the frame: draw at visible
+                        count, contribution-gated liveness, invisible is
+                        not free, reduced-resolution additive sums,
+                        flux-conserving aggregation, depth as a pipeline
+                        property, one writer per buffer per submit,
+                        submits and passes as costs, and the measurement
+                        canon (wall clock is the total, only
+                        differentials price a pass, every renderer PR
+                        states its measured cost). Read before
+                        adding or touching a render layer, a pass, or a
+                        per-frame buffer write.
 bd-workflow.md          Long-form bd procedures that fire on a trigger
                         rather than in every session: memory + bead
                         grooming passes, the bug-sweep handoff format,

@@ -62,8 +62,7 @@
     "test": "vitest run",
     "test:spotcheck": "python3 scripts/binaries/build-binaries-spotcheck.py",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "build:omp-rules": "tsx scripts/hooks/build-omp-rules.ts"
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "fuse.js": "^7.0.0",

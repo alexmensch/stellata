@@ -1,10 +1,8 @@
 # Harness guard hooks
 
-Tool-call guards for both harnesses this repo is worked in. The three
-`.sh` files are PreToolUse / SessionStart hooks Claude Code fires,
-registered in `.claude/settings.json`; `omp-bridge.ts` replays those
-same scripts under omp, which reads none of that file. One
-implementation, two harnesses, so their behaviour cannot drift.
+Tool-call guards for Claude Code. The three `.sh` files are PreToolUse /
+SessionStart hooks registered in `.claude/settings.json`; each reads the
+hook payload as JSON on stdin and answers with a `permissionDecision`.
 
 ## Files in this area
 
@@ -33,37 +31,13 @@ scripts/hooks/
                            tests/code-comment-rules.test.ts).
                            Behaviour pinned by
                            tests/commit-sweep-guard.test.ts.
-  omp-bridge.ts            omp extension factory. Replays readme-guard
-                           and commit-sweep-guard against omp's
-                           `tool_call` event, and natively enforces the
-                           two rules no .sh guard covers: writes belong
-                           in a secondary worktree, and main/master
-                           takes no commit or push. No prime gate —
-                           see § There is no prime gate under omp.
-                           Pinned by tests/omp-bridge.test.ts.
-  omp-bridge-pure.ts       Path extraction and command classification
-                           for the bridge — no I/O. Pinned by
-                           tests/omp-bridge-pure.test.ts, with the
-                           tool roster held against the installed omp
-                           by tests/omp-tool-roster.test.ts.
   comment-rules.json       The forbidden comment patterns, once. Read
-                           by tests/code-comment-rules.test.ts, by
-                           commit-sweep-guard.sh, and by the generator
-                           below. The two hand-copied sets that
-                           preceded it had already drifted apart.
+                           by tests/code-comment-rules.test.ts and by
+                           commit-sweep-guard.sh. The two hand-copied
+                           sets that preceded it had already drifted
+                           apart.
   comment-rules.ts         Typed reader for that file.
-  comment-rule-body.md     Prose the generated TTSR rule shows the
-                           model. A separate file so the generator
-                           carries no literal the rules forbid.
-  build-omp-rules.ts       Writes .omp/rules/*.md. `--check` verifies
-                           the deterministic one; see § Regenerating
-                           the rules.
 ```
-
-`.omp/extensions/stellata-guards.ts` re-exports the bridge factory;
-that plus `.omp/rules/` and `.omp/config.yml` is the whole of omp's
-wiring. See `.omp/README.md` for why the entry point sits there rather
-than in `.omp/hooks/pre/`.
 
 ## How readme-guard works
 
@@ -75,10 +49,10 @@ parent PID, a Claude restart starts a fresh PID, concurrent sessions
 run under different parents and never collide. No SessionStart hook
 needed — process lifetime is the natural scope.
 
-`$GUARD_SESSION` overrides that key, and the omp bridge sets it,
-because omp spawns a fresh shell per guard call — `$PPID` would differ
-on every call and the seen-set would never accumulate. Unset,
-behaviour is exactly as before.
+`$GUARD_SESSION` overrides that key for a caller that spawns a fresh
+shell per guard invocation, where `$PPID` would differ on every call
+and the seen-set would never accumulate. Unset, behaviour is exactly
+as before.
 
 The hook walks up from the tool's `file_path` to the nearest
 `README.md` inside the repo. If that README is in the session's
@@ -99,11 +73,11 @@ its files") works without intervention.
 harness that refuses to modify a file the session hasn't Read. There,
 a call reaching the hook either authored that README this session or
 read it earlier, so the authoring flow ("write the new folder's
-README, then its files") also works. omp has no read-before-write
-rule, so the bridge sets `GUARD_NO_READ_BEFORE_WRITE=1` and only
-`Read` marks. Without that split, a write to a README the agent never
-opened would disarm the gate for every file in that folder — the
-authoring convenience becomes a hole precisely where the harness stops
+README, then its files") also works. A caller without that
+read-before-write rule sets `GUARD_NO_READ_BEFORE_WRITE=1` so only
+`Read` marks; otherwise a write to a README the agent never opened
+would disarm the gate for every file in that folder — the authoring
+convenience becomes a hole precisely where the harness stops
 guaranteeing the read.
 
 A folder whose README has **never** existed — none on disk *and*
@@ -133,11 +107,11 @@ fixing it. Same shape as `~/.claude/hooks/worktree-guard.sh` (the
 
 ## How prime-guard works
 
-`bd prime --hook-json` emits ~24KB of SessionStart context. The host
-inlines a 2KB preview and persists the rest, so the 17 memories sit
+`bd prime --hook-json` emits roughly 12KB of SessionStart context. The
+host inlines a 2KB preview and persists the rest, so the memories sit
 past the cutoff — a session that doesn't read the persisted file runs
-on roughly the first third of the memory list. Shrinking the payload
-doesn't help: the memories alone are 19.6KB, so even
+on the header boilerplate alone. Shrinking the payload doesn't help:
+the memories by themselves run to several KB, so even
 `bd prime --memories-only` truncates.
 
 prime-guard replaces `bd prime --hook-json` in the SessionStart slot
@@ -222,176 +196,6 @@ Scope caveat: `-a` / `--all` commits aren't fully inspected; only
 already-staged files are checked. The standard `git add <files> &&
 git commit` flow Claude uses is covered correctly.
 
-## How the omp bridge works
-
-omp does not read the `hooks` block in `.claude/settings.json` — it
-loads that file as *settings*, and Claude's hook schema is not part of
-its own. Without the bridge, all four guards (including the user-level
-worktree guard) are inert under omp.
-
-`omp-bridge.ts` registers two handlers:
-
-- **`tool_call`** — translates the call into the PreToolUse stdin
-  payload the `.sh` guards already parse, and translates a
-  `permissionDecision: "deny"` back into `{ block: true, reason }`.
-  omp fails a throwing `tool_call` handler closed, so a guard that
-  cannot even be spawned blocks rather than passing.
-- **`session_compact`** — re-arms the prime gate (below).
-
-### Path extraction is the load-bearing part
-
-A tool whose paths the bridge cannot resolve is silently ungated
-rather than loudly broken, so `toolTargets` is inverted: **a tool
-absent from `KNOWN_TOOLS` blocks**, and so does a known tool that must
-name a file and doesn't. Growing `KNOWN_TOOLS` is a deliberate edit,
-and `tests/omp-tool-roster.test.ts` fails when the installed omp grows
-a tool the map has not triaged. `STELLATA_OMP_ALLOW_UNKNOWN_TOOLS=1`
-unblocks a session while that edit is being made.
-
-**`xd://` devices are a fourth roster**, and the only one no
-completion list or `--help` section carries: `resolve`, `reject`,
-`propose`, `report_issue`, `goal`. They arrive as a `write` whose path
-names them, and they face the same roster gate a top-level call does —
-checking only after parsing the body meant an unrecognised device
-passed on prose and blocked on JSON, which is the fail-open the
-inversion exists to prevent. The roster test scrapes them from the
-installed binary, since the published source tree is behind it.
-
-Per-tool notes that are not obvious from the schemas:
-
-- `edit` carries its paths as `[path#TAG]` hashline headers plus any
-  `MV DEST` destination. Under `edit.mode: replace`/`patch` there are
-  no headers, so a direct `path`/`file` is used instead.
-- `apply_patch` is the same internal tool under a different wire name
-  (`edit.mode: apply_patch`) and gates identically. It appears in no
-  `--tools` roster, which is why the roster test pins it by name.
-- `ast_edit` and `lsp` also arrive as a `write` to `xd://<tool>` whose
-  `content` is that tool's own JSON arguments; the extractor recurses
-  and reports the device as the effective tool.
-- `lsp` mutates for `rename`, `rename_file`, `code_actions` and
-  `request` — omp's own write-approval set. `request` is included
-  because a raw LSP method can return a `workspace/applyEdit` the
-  client applies; its document comes from the `payload`, which is
-  walked for `uri`-shaped keys rather than one fixed shape, so an
-  ordinary request gates on the file it names instead of blocking.
-  `rename_file` gates `new_name` as well as `file`: the destination
-  can land in a folder no other argument names.
-- `grep` splits several roots out of one `;`-delimited string; a
-  `read` path containing `;` stays literal.
-- A wildcard read is a listing and gates nothing; a wildcard rewrite
-  is charged to the deepest folder it descends into.
-
-### The trunk rule is a handler, not a `bash.patterns` glob
-
-Whether a push is allowed depends on where HEAD is, not on the text of
-the command, so no pattern over command text can express it. Four
-directories can decide, and the bridge resolves them in this order:
-`git -C <path>`, a `cd <path>` earlier in the chain (omp rewrites a
-*leading* one into the structured `cwd` field, but only after this hook
-has run, and only when `cwd` was not already set), the bash tool's own
-`cwd` argument, then the session cwd.
-
-`gitHistoryOps` walks shell segments rather than matching one regex,
-because a regex could not see any of these: `git push; echo done`,
-`(cd main; git push)`, `{ git push; }`, a loop body's `do git -C $d
-push`, a `-C` path containing a space, or a `cd` that is not the first
-word. Quotes are honoured, `(` and `)` scope a `cd` the way the shell
-does, and one command reports every op it carries, so
-`git commit && git push` is two checks and not one.
-
-**The destination is checked, not only the checked-out branch.**
-`git push origin HEAD:main` writes trunk from a feature worktree, and
-`symbolic-ref` cannot see it. Every refspec's right-hand side is
-resolved — `main`, `HEAD:main`, `+feature:refs/heads/main`,
-`--delete origin main` all name `main` — and a protected destination
-blocks whatever branch is checked out.
-
-A repo whose HEAD names no branch blocks. `git symbolic-ref` returns
-nothing on a detached HEAD, which reads as "unknown", not "not main".
-A path in no repository at all is allowed — there is no branch to
-protect.
-
-`github` op `pr_push` bypasses the bash tool entirely, so it is gated
-separately, on the `branch` argument and on the `ompPrHeadRef` that
-`pr_checkout` recorded in branch config — the remote ref the push
-actually writes.
-
-### There is no prime gate under omp
-
-Under Claude Code there has to be one: `bd prime --hook-json` emits more
-SessionStart context than the host will inline, so prime-guard persists
-the rest and blocks until it is read.
-
-omp has no such limit. `.omp/rules/bd-prime.md` carries the same
-`bd prime --full` output as an **always-apply rule**, which omp renders
-into the system prompt's `<generic-rules>` block every turn. Compaction
-rebuilds the system prompt rather than summarising it, so the content
-cannot be lost — there is nothing to re-arm, no sentinel, and no
-`session_compact` handler. The bead proposed stashing the text in
-`preserveData`; both that and the gate are answers to a problem this
-harness does not have.
-
-A rule carrying a `condition` is sorted into the TTSR bucket *instead
-of* the always-apply one — `bucketRules` tests `condition` first and
-`continue`s on a hit, so `alwaysApply: true` is never read. Adding a
-condition to `bd-prime.md` would therefore stop the memories reaching
-the system prompt while the file still reads as though they do, with no
-error anywhere. `tests/omp-rules.test.ts` fails if one appears, and
-pins the two frontmatter choices in `code-comments.md` that are equally
-silent when wrong: `interruptMode: tool-only`, and path-shaped globs
-rather than `*.ts`, which matches on basename.
-
-### Regenerating the rules
-
-`pnpm run build:omp-rules` writes both files in `.omp/rules/`:
-
-- `code-comments.md` — deterministic, generated from
-  `comment-rules.json`. `tests/code-comment-rules.test.ts` runs the
-  generator with `--check` and fails when it is stale.
-- `bd-prime.md` — `bd prime --full`, so it cannot be checked in CI,
-  which has no bd. Staleness here is soft: an out-of-date memory list,
-  not the missing one the Claude-side gate exists to prevent. Re-run
-  after `bd remember` / `bd forget`.
-
-## What the omp bridge cannot reach
-
-Documented rather than pretended away — and where omp's own approval
-layer reaches further than a `tool_call` handler can, it is used
-instead: `.omp/config.yml` routes `eval` and `hub` to an operator
-prompt, because `tools.approval.<tool>` is honoured in every mode.
-- **`debug`** can open a file with no static argument naming it.
-- **`browser` and `computer`** drive software that can write files.
-- **`eval` and `hub`** reach the filesystem through a persistent kernel
-  and an arbitrary `application` + `args`. Neither is classifiable
-  here, so both are routed to approval in `.omp/config.yml` rather
-  than listed as unreachable.
-- **An MCP or custom tool** mounts under `xd://<name>` as soon as its
-  `loadMode` is `discoverable`, so the device namespace is not a fixed
-  list. `KNOWN_TOOLS` cannot enumerate one ahead of time and it will
-  block until triaged. That is the fail-closed trade taken knowingly.
-
-`task` subagents are **not** on this list. They were, on the belief that
-they load no extensions; the source says otherwise — the task executor
-initialises an `extensionRunner` and emits `tool_call` on it, and
-re-initialises after a revive precisely so the fail-closed gate keeps
-working. Delegated work is gated by the same bridge.
-  including a descriptor prefix — every form that names its target as
-  a literal argument. A write reached through command substitution, a
-  heredoc with no redirect on the same line, a script file, `cp`/`mv`,
-  `sort -o`, `dd`, `install`, or a compiled program is not seen. omp's
-  `bashInterceptor` covers some of the same commands but is explicitly
-  best-effort routing rather than a security boundary — a rule goes
-  inert when its target tool is disabled — so it is not used here.
-- **`debug`** can open a file with no static argument naming it.
-- **`task` subagents** run as separate processes, and a subagent
-  spawned with restricted tools loads no extensions at all. Treat
-  delegated work as possibly ungated.
-- **`browser` and `computer`** drive software that can write files.
-- **`eval` and `hub`** reach the filesystem through a persistent kernel
-  and an arbitrary `application` + `args`. Neither is classifiable
-  here, so both are routed to approval in `.omp/config.yml` rather
-  than listed as unreachable.
-
 ## Disabling
 
 Two paths:
@@ -405,10 +209,7 @@ Two paths:
    the `rm` isn't itself blocked.
 2. **Across the session.** Remove the entry from
    `.claude/settings.json`'s `hooks.PreToolUse` array, or
-   temporarily move the hook script aside. Under omp the whole bridge
-   goes away with
-   `disabledExtensions: [extension-module:stellata-guards]`, or
-   `--no-extensions` for one run.
+   temporarily move the hook script aside.
 
 Disabling is the right call when investigating a folder that
 genuinely has no subsystem ownership (e.g. ad-hoc scratch) — but the

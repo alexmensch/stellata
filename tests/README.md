@@ -78,6 +78,13 @@ readme-guard.test.ts     Behavioural pins for scripts/hooks/readme-guard.sh:
                          session is creating, and the neighbouring cases
                          that must stay gated (unread README on disk,
                          committed folder missing one).
+render-rules-citations.test.ts
+                         Every `file.md § Heading` citation in
+                         docs/render-rules.md and AGENTS.md resolves to a
+                         heading that exists in the cited file (first two
+                         words, prefix match), so a heading rename fails
+                         CI instead of leaving a dangling pointer — the
+                         failure that had already happened twice.
 shader-frag-depth.test.ts
                          gl_FragDepth roster: only star.frag.glsl may
                          write frag depth (a static write defeats

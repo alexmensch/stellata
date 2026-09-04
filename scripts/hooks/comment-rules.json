@@ -1,5 +1,5 @@
 {
-  "$comment": "Single source of truth for the forbidden code-comment patterns. Consumed by tests/code-comment-rules.test.ts, scripts/hooks/commit-sweep-guard.sh, and the generated TTSR rule .omp/rules/code-comments.md. Regex dialect is the intersection of JavaScript, Perl and Rust-free PCRE: \\b, \\d, \\w, (?:), (?=), (?!), (?<!). Rationale for the epic shape is in scripts/hooks/README.md.",
+  "$comment": "Single source of truth for the forbidden code-comment patterns. Consumed by tests/code-comment-rules.test.ts and scripts/hooks/commit-sweep-guard.sh. Regex dialect is the intersection of JavaScript, Perl and Rust-free PCRE: \\b, \\d, \\w, (?:), (?=), (?!), (?<!). Rationale for the epic shape is in scripts/hooks/README.md.",
   "patterns": [
     {
       "name": "bead-ID with stellata- prefix",

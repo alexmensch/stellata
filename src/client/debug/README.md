@@ -164,10 +164,12 @@ from a production build, or with the inspector closed.** Under the
 inspector even the *ratios* between rows are unusable: the per-star loops
 lose far more than the DOM and submit rows do.
 
-Second comparison trap while the port is in flight: a `#renderer=webgpu`
-boot draws an **empty scene** (`../webgpu/README.md`), so its rows read
-fast for a reason that has nothing to do with WebGPU. Cross-backend
-numbers only mean something once a port child actually draws stars.
+Second comparison trap: the two backends land on different clocks — a
+WebGL2 boot in Chrome gets `timer-query`, a `#renderer=webgpu` boot falls
+to `raf-delta` where the timestamps resolve garbage
+([`gpu-timing/`](gpu-timing/README.md)) — so cross-backend rows compare
+only under one pinned `method` at the same `bufferMpx`
+(`docs/render-rules.md` § Measurement canon).
 
 ## GPU timing
 
@@ -180,6 +182,9 @@ and the resolve-every-frame invariant.
 The two rules a reader needs before looking at any `gpu.*` row:
 `gpu.frame` is the only figure that prices a frame, and **to price a
 single pass, disable it and difference `gpu.frame`** — automated below.
+The canon those two belong to — wall clock is the total, GPU slots are
+attribution, same buffer and same clock or no comparison — is
+`docs/render-rules.md` § Measurement canon.
 
 ## Frame pricing — `debug.priceFrame()`
 

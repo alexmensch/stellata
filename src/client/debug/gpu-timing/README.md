@@ -33,7 +33,10 @@ it by unrelated means.
 
 **To price a single pass, disable it and difference `gpu.frame`.** That
 is true on both backends, for different reasons (§ WebGL2, § WebGPU), and
-`../frame-cost/` automates it.
+`../frame-cost/` automates it. This README owns the clocks; the canon
+they feed — wall clock is the total, slots are attribution, same buffer
+and same clock or no comparison — is `docs/render-rules.md`
+§ Measurement canon.
 
 ## WebGL2 — one query at a time, and it over-attributes
 

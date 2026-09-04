@@ -17,5 +17,5 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["vite/client"]
   },
-  "include": ["src/**/*", "scripts/**/*", ".omp/**/*.ts"]
+  "include": ["src/**/*", "scripts/**/*"]
 }
