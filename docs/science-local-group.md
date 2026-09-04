@@ -1,6 +1,6 @@
 # Local Group — wireframes & luminosity model
 
-Split out of `SCIENCE.md`. Covers the Local Group wireframe layer
+Covers the Local Group wireframe layer
 (member selection, geometry) and the per-object luminosity/density
 model used to calibrate the volumetric emission raymarch. Spans
 `src/client/local-group/`, `data/local-group/`.
