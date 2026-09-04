@@ -3,12 +3,11 @@
 // page-protocol.ts. README.md § What a run does.
 
 import type { Page } from 'playwright';
-import type { GpuFrameMethod } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { summarizeFrameDwell } from './dwell-pure';
 import {
   awaitSettle,
   readDrawingBuffer,
-  readGateSnapshot,
+  readRestoreState,
   runDwell,
   type DwellRaw,
 } from './page-protocol';
@@ -38,21 +37,22 @@ export interface DwellPlan {
   readonly frames: number;
   readonly warmupFrames: number;
   readonly backend: Backend;
+  /** The idle rAF period measured for this scenario — what the wall-clock
+   *  row's `vsyncClamped` verdict is judged against. */
+  readonly cadenceMs: number | null;
 }
 
-/** rAF wall-clock deltas, whatever else was subscribed alongside. The GPU
- *  stream is a second opinion on the same frames, never the row's clock. */
-export const DWELL_METHOD: GpuFrameMethod = 'raf-delta';
-
-function toRecord(raw: DwellRaw): DwellRecord | null {
-  const stats = summarizeFrameDwell(raw.deltasMs);
+// The GPU row passes no cadence: a resolved timestamp span is not wall time,
+// so no compositor can have padded it and `vsyncClamped` cannot apply.
+function toRecord(raw: DwellRaw, cadenceMs: number | null): DwellRecord | null {
+  const stats = summarizeFrameDwell(raw.deltasMs, cadenceMs);
   if (stats === null) return null;
   return {
     deltasMs: raw.deltasMs,
     gpuMs: raw.gpuMs.length > 0 ? raw.gpuMs : null,
     gpuNote: raw.gpuNote,
     stats,
-    gpuStats: summarizeFrameDwell(raw.gpuMs),
+    gpuStats: summarizeFrameDwell(raw.gpuMs, null),
     limitMag: raw.effectiveLimitMag,
     dm: raw.dm,
     readbackPerFrame: raw.readbackPerFrame,
@@ -60,10 +60,11 @@ function toRecord(raw: DwellRaw): DwellRecord | null {
 }
 
 /**
- * One dwell, plus the check that it put the page back. A dwell holds the
- * render gate and stops the simulation clock; leaking either would make
- * every later scenario in the run measure a different machine, so the
- * leak fails this scenario rather than being reported as a note.
+ * One dwell, plus the three checks that it measured what it meant to and put
+ * the page back. A dwell holds the render gate and stops the simulation
+ * clock; leaking either would make every later scenario in the run measure a
+ * different machine, so a leak fails this scenario rather than being noted.
+ * The restore is verified from outside the page function that performed it.
  */
 export async function measureDwell(page: Page, plan: DwellPlan): Promise<Measured<DwellRecord>> {
   const raw = await runDwell(page, {
@@ -72,21 +73,43 @@ export async function measureDwell(page: Page, plan: DwellPlan): Promise<Measure
     wantGpuStream: plan.backend === 'webgpu',
     samplesModuleUrl: GPU_SAMPLES_MODULE_URL,
   });
-  const record = toRecord(raw);
+  const record = toRecord(raw, plan.cadenceMs);
   if (record === null) {
     return { value: null, failure: `no rAF deltas over ${plan.frames} frames` };
   }
-  if (raw.rateAfter !== raw.rateBefore) {
+  // Settle already requires an unheld gate, so a hold live here means the
+  // page was not in the state the dwell assumes. The debug panel takes one,
+  // and under rAF wall time its per-tick DOM writes sit inside the numbers
+  // (`src/client/debug/frame-cost/README.md` § Preconditions).
+  if (raw.holdsBefore !== 0) {
     return {
       value: record,
-      failure: `the dwell left the clock at ${raw.rateAfter}x, not the ${raw.rateBefore}x it found`,
+      failure:
+        `${raw.holdsBefore} render-gate hold(s) were already live when the dwell started — ` +
+        'an open debug panel is one, and its writes would sit inside a wall-clock dwell',
     };
   }
-  const snap = await readGateSnapshot(page);
-  if (snap.holds !== 0) {
+  if (raw.rateDuring !== 0) {
     return {
       value: record,
-      failure: `the dwell leaked ${snap.holds} render-gate hold(s)`,
+      failure:
+        `the clock ran at ${raw.rateDuring}x during the dwell, not stopped — ` +
+        'the frames priced a moving scene',
+    };
+  }
+  const after = await readRestoreState(page);
+  if (after.clockRate !== raw.rateBefore) {
+    return {
+      value: record,
+      failure: `the dwell left the clock at ${after.clockRate}x, not the ${raw.rateBefore}x it found`,
+    };
+  }
+  if (after.holds !== raw.holdsBefore) {
+    return {
+      value: record,
+      failure:
+        `the dwell leaked ${after.holds - raw.holdsBefore} render-gate hold(s) ` +
+        `(${raw.holdsBefore} were live before it started)`,
     };
   }
   return { value: record, failure: null };

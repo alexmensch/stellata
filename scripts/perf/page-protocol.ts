@@ -172,7 +172,12 @@ export interface DwellRaw {
   readonly effectiveLimitMag: number;
   readonly dm: number;
   readonly rateBefore: number;
-  readonly rateAfter: number;
+  /** The rate the timed frames actually ran at, sampled before the restore.
+   *  Zero unless something outside the dwell moved the clock mid-measurement. */
+  readonly rateDuring: number;
+  /** Holds live before the dwell took its own, so a hold the page already
+   *  owned (an open debug panel takes one) does not read as a leak. */
+  readonly holdsBefore: number;
 }
 
 /**
@@ -212,11 +217,17 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
 
     const clock = s.timeClock;
     const rateBefore = clock.getRate();
+    const holdsBefore = s.renderGate.debugState.holds;
     const releaseHold = s.renderGate.hold();
     const deltasMs: number[] = [];
     let readbacks = 0;
     let effectiveLimitMag = 0;
     let dm = 0;
+    // Sampled before the finally restores. A rate read back after the same
+    // block wrote it could only ever fail if setRate itself refused; read
+    // here it answers the question worth asking — did anything move the
+    // clock while the frames being timed were drawn.
+    let rateDuring = 0;
     try {
       if (rateBefore !== 0) clock.setRate(0);
       for (let f = 0; f < p.warmupFrames; f++) {
@@ -235,9 +246,10 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       readbacks = s.reduction.readbackRequests - readbacksBefore;
       effectiveLimitMag = s.exposure.getEffectiveLimitMag();
     } finally {
+      rateDuring = clock.getRate();
       stopGpu?.();
       s.adaptation.setHeld(false);
-      if (clock.getRate() !== rateBefore) clock.setRate(rateBefore);
+      if (rateDuring !== rateBefore) clock.setRate(rateBefore);
       releaseHold();
     }
 
@@ -249,7 +261,19 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       effectiveLimitMag,
       dm,
       rateBefore,
-      rateAfter: clock.getRate(),
+      rateDuring,
+      holdsBefore,
     };
   }, params);
+}
+
+/**
+ * Clock rate and hold count read from OUTSIDE the dwell, so the restore is
+ * checked by something other than the block that performed it.
+ */
+export function readRestoreState(page: Page): Promise<{ holds: number; clockRate: number }> {
+  return page.evaluate(() => {
+    const s = (window as unknown as PerfWindow).stellata;
+    return { holds: s.renderGate.debugState.holds, clockRate: s.timeClock.getRate() };
+  });
 }
