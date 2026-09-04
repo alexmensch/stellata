@@ -26,8 +26,12 @@ scripts/perf/
   settle-pure.ts (+ test)   settleVerdict over one render-gate snapshot.
   table-pure.ts (+ test)    The text table, in console.table column order.
   await-go.sh (+ test)      The arm poller the agent runs in the background.
-  perf-go-lib.sh            Marker path + freshness, sourced by await-go.sh
-                            and scripts/hooks/perf-guard.sh.
+  perf-go-lib.sh (+ test)   Marker name, path and freshness — the single
+                            source, sourced by await-go.sh and
+                            scripts/hooks/perf-guard.sh.
+  perf-go-lib.ts            The same two scalars parsed out of the .sh for
+                            run.ts and the tests, so no second copy of the
+                            marker name or the hour can drift from the hook.
 ```
 
 ## Invocation
@@ -47,9 +51,13 @@ straight through; unset ones take priceFrame's own defaults. `--mode probe`
 boots, settles and prints the adapter block and the idle rAF period without
 a sweep.
 
-Exit codes: **0** ok · **1** a scenario failed, priceFrame refused, or the
-adapter was software · **2** bad flags or unreachable URL (marker untouched)
-· **3** not armed (marker absent or stale).
+Exit codes: **0** ok · **1** a scenario failed, was tainted, priceFrame
+refused, or the adapter was software · **2** bad flags or unreachable URL
+(marker untouched) · **3** not armed (marker absent or stale).
+
+**A tainted scenario exits 1 even though its rows printed.** A page error
+inside the sweep means the numbers describe a broken page, and the exit code
+is the only part of a run a caller reads without parsing.
 
 One-time setup: `pnpm exec playwright install chromium` — the runner uses
 `channel: 'chromium'`, the full build with a GPU process, not the headless
@@ -58,13 +66,48 @@ shell.
 ## Human-armed
 
 A marker file `.perf-go` at the repo root (gitignored) authorises exactly one
-launch. **Only Alex creates it.** `scripts/hooks/perf-guard.sh`, a
-PreToolUse hook on Bash, denies every spelling of a launch — `pnpm run perf`,
-`tsx scripts/perf/run.ts`, `./scripts/perf/run.ts`, via `npx` / `node` /
-`bun` / `deno` / `pnpm exec` — while the marker is absent or older than an
-hour, and denies any command that both touches `.perf-go` and launches, so
-arming yourself is impossible by construction. Reading `run.ts`, running the
-pure tests, and `await-go.sh` all pass through.
+launch. **Only Alex creates it.** `scripts/hooks/perf-guard.sh`, a PreToolUse
+hook on Bash / Write / Edit / NotebookEdit, enforces that as **two
+independent gates**:
+
+1. **The marker gate.** Any tool call that so much as names `.perf-go` is
+   denied — a Bash command containing the string, or a Write/Edit whose
+   target is the marker. Unconditional, and deliberately blunt: it does not
+   ask whether the same call also launches.
+2. **The launch gate.** A recognised launch — `pnpm|npm|yarn|bun [run] perf`
+   with flags anywhere, `tsx|node|npx|bun|deno … scripts/perf/run[.ts]`,
+   `./scripts/perf/run.ts`, `pnpm exec|dlx` forms — is denied while the
+   marker is absent or older than an hour.
+
+**Independence is the point.** As one condition — deny a command that both
+arms and launches — the whole gate rested on recognising the launch, and a
+spelling it missed (`npm run perf`, or a launch on its own line in a
+multi-line command) took the self-arm through with it. Split, a missed launch
+spelling degrades to the runner's own exit 3, because there is no route to a
+marker for it to pair with. `cd scripts/perf && tsx run.ts` is the known
+residual: matching a bare `run.ts` would deny unrelated commands, and
+over-denying a launch is worse than deferring to exit 3.
+
+Newlines are flattened to `;`, not to spaces, so a line boundary stays a
+command boundary. The cost is a false positive: a multi-line commit message
+quoting a launch spelling at the start of a line reads as a launch. Take the
+same route the marker gate names for that — `git commit -F <file>`.
+
+**Legitimately naming the marker** — a commit message, a PR body, a search —
+goes around the Bash gate rather than through it: `git commit -F <file>` and
+`gh pr create --body-file <file>` (the route a worktree session already
+needs, since the worktree guard rejects `$( )` and heredoc bodies), and the
+Grep tool for searching. The deny reason carries both.
+
+**The hook fails closed.** An unhandled error would exit non-zero, which the
+harness reads as a broken hook and lets the call through — so an `ERR` trap
+denies, an unreadable marker age denies, and a missing `jq` falls back to a
+bare exit 2 (the harness's other blocking spelling) rather than to silence.
+That is the opposite posture from `prime-guard`, which fails open on purpose:
+a missing memory is survivable, an unasked-for GPU run is not.
+
+Reading `run.ts`, running the pure tests, `await-go.sh`, and
+`perf-go-lib.sh` all pass through.
 
 The agent's protocol, which the deny reason carries verbatim:
 
@@ -99,7 +142,9 @@ neither modal ever shows:
    silent fallback is never mislabelled as a measurement.
 2. **Adapter probe.** WebGL renderer/vendor via `WEBGL_debug_renderer_info`
    and `EXT_disjoint_timer_query_webgl2` presence (the live context on a
-   WebGL2 boot, a throwaway one otherwise); WebGPU `requestAdapter().info`,
+   WebGL2 boot, a throwaway one otherwise — dropped via `WEBGL_lose_context`
+   before the sweep, so the instrument leaves no second GPU context alive in
+   the page it is about to price); WebGPU `requestAdapter().info`,
    the fallback flag, and `stellata.webgpu.timestampsAvailable`. A software
    renderer (`/swiftshader|llvmpipe|software/i`, or a fallback adapter)
    **aborts the whole run** — nothing measured on it counts.
@@ -118,7 +163,8 @@ neither modal ever shows:
 
 Page console is forwarded as `[page:<type>]` except `table` (the rows come
 back as data). A `pageerror` during boot fails the scenario; during the sweep
-it marks the scenario tainted. A crash aborts the run. Any failure exits 1.
+it marks the scenario tainted, which exits 1 too. A crash aborts the run.
+Any failure exits 1.
 
 ## Traps
 
@@ -138,6 +184,17 @@ it marks the scenario tainted. A crash aborts the run. Any failure exits 1.
   that does not exist once Playwright serialises the body into the page.
   The symptom is `ReferenceError: __name is not defined` from inside the
   page.
+- **`stat` cannot be probed by failure.** `perf_go_age_s` asks GNU first
+  (`stat -c %Y`) because that spelling *fails* on BSD, while BSD's `stat -f`
+  is GNU's `--file-system` and **succeeds** on Linux — printing a filesystem
+  block where a mtime was expected. Ordered the other way, the marker's age
+  came back as prose, the arithmetic tripped `set -u`, the hook exited
+  non-zero, and a PreToolUse hook that errors lets the call through: the
+  consent gate was absent on every Linux checkout while the macOS suite
+  stayed green. Each spelling also assigns separately — one shared
+  `$( a || b )` capture concatenates both outputs. Pinned by
+  `perf-go-lib.test.ts`, which asserts bare seconds rather than a
+  non-zero exit.
 - The default viewport is 1280×800 @ dpr 2 = 4.096 Mpx. The hand-run tables
   in the frame-cost README were taken at 6.774 Mpx (a 2560×2646 buffer);
   they are not comparable to a default-viewport run.

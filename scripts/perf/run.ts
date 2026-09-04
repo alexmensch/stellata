@@ -7,6 +7,7 @@ import { chromium, type Browser } from 'playwright';
 import type { PriceFrameOptions } from '../../src/client/debug/frame-cost/frame-cost';
 import { median } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { ArgError, parseRunArgs, usage, type RunArgs } from './args';
+import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './perf-go-lib';
 import {
   BootError,
   awaitSettle,
@@ -22,8 +23,9 @@ import { SCENARIOS, scenarioUrl, type ScenarioName } from './scenarios';
 import { formatPriceTable } from './table-pure';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../..');
-const MARKER = resolve(REPO_ROOT, '.perf-go');
-const MARKER_MAX_AGE_MS = 3_600_000;
+const MARKER = resolve(REPO_ROOT, PERF_GO_MARKER_NAME);
+const MARKER_MAX_AGE_MS = PERF_GO_MAX_AGE_S * 1000;
+const REACHABILITY_TIMEOUT_MS = 5000;
 const SOFTWARE_RENDERER = /swiftshader|llvmpipe|software/i;
 const DEFAULT_CHROME_ARGS = ['--ignore-gpu-blocklist', '--enable-unsafe-webgpu'];
 const BOOT_TIMEOUT_MS = 120_000;
@@ -46,7 +48,7 @@ function consumeMarker(): MarkerVerdict {
 
 async function unreachable(url: string): Promise<string | null> {
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(REACHABILITY_TIMEOUT_MS) });
     return response.ok ? null : `HTTP ${response.status}`;
   } catch (e) {
     return (e as Error).message;
@@ -140,11 +142,17 @@ async function runScenario(browser: Browser, args: RunArgs, name: ScenarioName):
       const rows = await runDifferential(page, priceFrameOptions(args));
       if (rows.length === 0) {
         failed = true;
-        console.error(`priceFrame refused the sweep — last console line: ${lastConsoleLine}`);
+        console.error(
+          `priceFrame returned no rows${args.passes ? ` for --passes ${args.passes.join(',')}` : ''} — ` +
+          `either it refused the sweep, or no requested pass was active at this vantage. ` +
+          `Last console line: ${lastConsoleLine}`,
+        );
       } else {
         console.log(formatPriceTable(rows));
       }
-      if (tainted) console.warn(`tainted: ${pageErrors.length} page error(s) landed during the sweep`);
+      if (tainted) {
+        console.error(`${name} TAINTED: ${pageErrors.length} page error(s) landed inside the sweep — the rows above priced a broken page.`);
+      }
     }
   } catch (e) {
     if (crashed) throw new PageCrash(`${name}: the page crashed`);
@@ -217,7 +225,7 @@ async function main(): Promise<number> {
     `\nperf: ${outcomes.length} scenario(s), ${failed.length} failed${failed.length ? ` (${failed.join(', ')})` : ''}` +
     (tainted.length ? `, tainted: ${tainted.join(', ')}` : ''),
   );
-  return failed.length > 0 ? EXIT.failed : EXIT.ok;
+  return failed.length + tainted.length > 0 ? EXIT.failed : EXIT.ok;
 }
 
 process.exitCode = await main();

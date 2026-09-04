@@ -110,8 +110,8 @@ export interface AdapterProbe {
 export function probeAdapters(page: Page): Promise<AdapterProbe> {
   return page.evaluate(async () => {
     const s = (window as unknown as PerfWindow).stellata;
-    const gl = (s.rendererGL?.getContext() ?? document.createElement('canvas').getContext('webgl2')) as
-      WebGL2RenderingContext | null;
+    const live = s.rendererGL?.getContext() as WebGL2RenderingContext | undefined;
+    const gl = (live ?? document.createElement('canvas').getContext('webgl2')) as WebGL2RenderingContext | null;
     let webgl: WebGlProbe | null = null;
     if (gl !== null) {
       const info = gl.getExtension('WEBGL_debug_renderer_info');
@@ -120,6 +120,10 @@ export function probeAdapters(page: Page): Promise<AdapterProbe> {
         vendor: String(gl.getParameter(info ? info.UNMASKED_VENDOR_WEBGL : gl.VENDOR)),
         timerQuery: gl.getExtension('EXT_disjoint_timer_query_webgl2') !== null,
       };
+      // A WebGPU boot has no live GL context, so this probe made one. Drop it
+      // before the sweep: the instrument must not leave a second GPU context
+      // alive in the page whose frame it is about to price.
+      if (live === undefined) gl.getExtension('WEBGL_lose_context')?.loseContext();
     }
 
     type AdapterLike = { readonly info?: Record<string, unknown>; readonly isFallbackAdapter?: boolean };
