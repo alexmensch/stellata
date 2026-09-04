@@ -39,6 +39,12 @@ cross-script policy and pointers.
   classifier, and `sid:stamp` (stamps sids onto clouds.json /
   local-group.json). The catalog build resolves stellar sids in-record
   from the ledger. See `docs/sid.md`.
+- `perf/` — the human-armed headless perf runner (`pnpm run perf`):
+  drives `debug.priceFrame()` in Playwright Chromium at the canon
+  vantages and prints the differential table. Clocks only, never a
+  pixel; launches only past the operator's `.perf-go` marker
+  (`hooks/perf-guard.sh`). Not part of `pnpm test` or the build.
+- `hooks/` — Claude Code guard hooks (PreToolUse / SessionStart).
 - `clouds/`, `cloud-surfaces/`, `dust/`, `local-group/`,
   `local-bubble/`, `textures/` — per-layer build helpers.
   `local-bubble/` turns the Zucker 2022 inner-surface HEALPix map into
