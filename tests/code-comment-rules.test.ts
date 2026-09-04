@@ -4,7 +4,6 @@
 // docs/authoring-patterns.md § Code-comment hygiene for the rules.
 
 import { describe, expect, it } from 'vitest';
-import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { walkFiles } from './walk-files';
@@ -251,18 +250,5 @@ describe('module docstring length', () => {
       'allowlist exists to shrink over time, and stale entries hide real ' +
       'progress.\n'
     );
-  });
-});
-
-describe('generated omp rule', () => {
-  it('matches the pattern source it is generated from', () => {
-    // .omp/rules/code-comments.md is the TTSR trigger omp fires as an edit is
-    // written. It is generated from the same comment-rules.json this suite
-    // reads, so a pattern change that skips the regen would silently leave
-    // omp enforcing the old set.
-    execFileSync('npx', ['tsx', 'scripts/hooks/build-omp-rules.ts', '--check'], {
-      cwd: ROOT,
-      encoding: 'utf-8',
-    });
   });
 });

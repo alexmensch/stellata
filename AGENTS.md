@@ -223,9 +223,8 @@ docs/     Genuinely cross-cutting docs that don't belong to one
           right folder and put a README.md there"; only add to docs/
           if the topic truly spans the whole codebase.
 tests/    Repo-meta tests (AGENTS.md size guard, etc.).
-.claude/  Harness config, deliberately outside this index: hooks and
-.omp/     guard wiring for Claude Code and omp. Bodies live in
-          scripts/hooks/; each folder has its own README.
+.claude/  Harness config, deliberately outside this index: hook wiring
+          for Claude Code. Bodies live in scripts/hooks/ (own README).
 ```
 
 `SCIENCE.md` carries scope principles, data sources, and non-goals;
@@ -245,7 +244,6 @@ pnpm run build           # full production build
 pnpm run typecheck       # tsc --noEmit over src/ and scripts/
 pnpm test                # vitest (regression-prevention suite)
 pnpm run deploy          # wrangler deploy (requires auth)
-pnpm run build:omp-rules # regenerate .omp/rules/ (after bd remember/forget)
 ```
 
 Watch/coverage variants of `pnpm test`, the catalogue verify script,
