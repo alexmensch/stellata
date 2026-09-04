@@ -285,6 +285,10 @@ rationale and how to write a useful bug report or feature request.
 The code in this repository is licensed under AGPL-3.0-only. See
 [`LICENSE`](./LICENSE).
 
+To cite Stellata, use the metadata in
+[`CITATION.cff`](./CITATION.cff) — GitHub's *Cite this repository*
+sidebar renders it as APA or BibTeX.
+
 Data sources retain their own licences:
 
 - **AT-HYG v3.3** (stellar catalogue) — David Nash,
