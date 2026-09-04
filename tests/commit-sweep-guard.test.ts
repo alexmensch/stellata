@@ -107,3 +107,49 @@ describe('commit-sweep-guard', () => {
     expect(allowed(`git commit -F ${join(repo, 'absent.txt')}`)).toBe(false);
   });
 });
+
+// The comment sweep compiles scripts/hooks/comment-rules.json through Perl
+// qr//, while tests/code-comment-rules.test.ts compiles the same strings
+// through JavaScript RegExp. Only a case run through the hook proves the two
+// dialects agree — the two hand-copied sets that preceded that shared file
+// had already drifted apart (scripts/hooks/README.md).
+describe('commit-sweep-guard — the comment patterns, through Perl', () => {
+  function stageComment(line: string): void {
+    write('src/thing/README.md', '# thing\n');
+    write('src/thing/thing.ts', 'export const x = 1;\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'seed');
+    write('src/thing/thing.ts', `${line}\nexport const x = 1;\n`);
+    git('add', '-A');
+  }
+
+  // Every fixture below splices its slug in at run time. Written literally,
+  // each would be scanned by this very hook on the commit that adds it —
+  // the bead IDs because they are bead IDs, the exempt pair because the hook
+  // registered in .claude/settings.json reads the MAIN checkout's rules,
+  // which do not carry the exemption until this lands. What reaches the
+  // staged file the hook under test inspects is the real string either way.
+  const BEAD_ID = `stellata-${'8cg'}.49`;
+  const SCHEMA = `stellata-${'perf'}/1`;
+  const SKILL_DIR = `.claude/skills/stellata-${'perf'}`;
+
+  it('denies a staged bead ID', () => {
+    stageComment(`// per the ${BEAD_ID} probe`);
+    expect(allowed(`git commit -m "a thing ${SKIP_REASON}"`)).toBe(false);
+  });
+
+  it('allows a trailing-slash namespace, which no bead ID ever wears', () => {
+    stageComment(`const PERF_SCHEMA = '${SCHEMA}';`);
+    expect(allowed(`git commit -m "a thing ${SKIP_REASON}"`)).toBe(true);
+  });
+
+  it('allows a path under a same-shaped skill folder', () => {
+    stageComment(`// the arm protocol lives in ${SKILL_DIR}/SKILL.md`);
+    expect(allowed(`git commit -m "a thing ${SKIP_REASON}"`)).toBe(true);
+  });
+
+  it('still catches a bead ID that happens to sit inside a path', () => {
+    stageComment(`// see notes/${BEAD_ID}/summary.md`);
+    expect(allowed(`git commit -m "a thing ${SKIP_REASON}"`)).toBe(false);
+  });
+});

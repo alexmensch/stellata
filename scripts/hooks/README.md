@@ -213,6 +213,28 @@ Scope caveat: `-a` / `--all` commits aren't fully inspected; only
 already-staged files are checked. The standard `git add <files> &&
 git commit` flow Claude uses is covered correctly.
 
+## The trailing-slash exemption
+
+`stellata-perf/1` (the perf runner's schema string) and
+`.claude/skills/stellata-perf/` are not bead IDs, and nothing about their
+*shape* says so: the epic-slug window is 3–5 characters with no digit
+required, which `perf` fits exactly as `cns`, `dch`, `uadc` and `hhaw` do.
+The discriminator is what follows. **No bead ID is ever followed by `/`; a
+path or a namespace always is** — so the `stellata-` pattern ends `(?!/)`.
+
+Two things that look like holes and are not. A bead ID buried mid-path
+(`notes/stellata-8cg.49/summary.md`) is still caught, because the pattern
+backtracks off the `.49` and matches the bare `stellata-8cg` in front of the
+`.`, which is followed by a dot rather than a slash. And the exemption is
+deliberately **prefix-form only** — the bare `<epic>.NN` pattern below it
+keeps no such escape, because a bare slug needs the dotted number to match at
+all and no namespace in this tree wears one.
+
+The residual is a bead ID written with a trailing slash (`stellata-cns/`),
+which is not a shape anyone writes. The alternative considered and rejected
+was renaming the schema to `stellata/perf/1`: that clears one linter and puts
+the string beyond reach of everyone who greps for the project prefix.
+
 ## How perf-guard fails closed
 
 The other guards here enforce hygiene; this one enforces **consent**, and
