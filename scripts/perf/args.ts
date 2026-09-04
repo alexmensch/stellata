@@ -61,7 +61,7 @@ export const ARG_DEFAULTS = {
 
 export class ArgError extends Error {}
 
-const OPTIONS: ParseArgsConfig['options'] = {
+const OPTIONS = {
   help: { type: 'boolean', short: 'h', default: false },
   url: { type: 'string', default: ARG_DEFAULTS.url },
   scenario: { type: 'string', default: ARG_DEFAULTS.scenario },
@@ -84,7 +84,7 @@ const OPTIONS: ParseArgsConfig['options'] = {
   scales: { type: 'string', default: ARG_DEFAULTS.scales },
   json: { type: 'string' },
   baseline: { type: 'string' },
-};
+} satisfies ParseArgsConfig['options'];
 
 export function usage(): string {
   return [
@@ -110,11 +110,37 @@ export function usage(): string {
   ].join('\n');
 }
 
+/**
+ * Which flags each mode actually reads. A flag the chosen mode ignores is an
+ * error rather than a no-op: the in-app instrument refuses a pin it cannot
+ * honour rather than switching clocks underneath the caller
+ * (`src/client/debug/frame-cost/README.md` § Preconditions), and a table
+ * stamped `raf-delta` after `--method timer-query` was asked for is the same
+ * lie with a typed command line in front of it.
+ */
+const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
+  passes: ['differential'],
+  method: ['differential'],
+  'budget-ms': ['differential'],
+  'dwell-frames': ['differential'],
+  'settle-frames': ['differential'],
+  'no-interleave': ['differential'],
+  frames: ['dwell', 'sweep'],
+  scales: ['sweep'],
+};
+
 export function parseRunArgs(argv: readonly string[]): RunArgs {
   let values: Record<string, unknown>;
-  const tokens = argv[0] === '--' ? argv.slice(1) : [...argv];
+  // Which flags were actually typed, as against which carry a default. Only
+  // the typed set can be checked for mode compatibility.
+  let supplied: Set<string>;
+  const args = argv[0] === '--' ? argv.slice(1) : [...argv];
   try {
-    ({ values } = parseArgs({ args: tokens, options: OPTIONS, strict: true }));
+    const parsed = parseArgs({ args, options: OPTIONS, strict: true, tokens: true });
+    values = parsed.values;
+    supplied = new Set(
+      parsed.tokens.flatMap((t) => (t.kind === 'option' ? [t.name] : [])),
+    );
   } catch (e) {
     throw new ArgError((e as Error).message);
   }
@@ -173,12 +199,22 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
   });
   if (scenarios.length === 0) throw new ArgError('--scenario names nothing');
 
+  const mode = oneOf('mode', MODES);
+  for (const [flag, modes] of Object.entries(MODE_ONLY_FLAGS)) {
+    if (supplied.has(flag) && !modes.includes(mode)) {
+      throw new ArgError(
+        `--${flag} is read by --mode ${modes.join(' and ')} only; this run is --mode ${mode}, ` +
+        'which would ignore it. Drop the flag or change the mode.',
+      );
+    }
+  }
+
   return {
     help: values.help as boolean,
     url: str('url')!,
     scenarios,
     backend: oneOf('backend', BACKEND_REQUESTS),
-    mode: oneOf('mode', MODES),
+    mode,
     passes,
     method: optionalOneOf('method', GPU_FRAME_METHODS),
     budgetMs: num('budget-ms'),

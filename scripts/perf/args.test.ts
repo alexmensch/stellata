@@ -57,7 +57,7 @@ describe('parseRunArgs', () => {
       '--budget-ms', '90000', '--dwell-frames', '240', '--warmup-frames', '60',
       '--settle-frames', '12', '--width', '1920', '--height', '1080', '--dpr', '1',
       '--quiet-ms', '2000', '--no-interleave', '--headed', '--method', 'raf-delta',
-      '--backend', 'webgpu', '--mode', 'probe',
+      '--backend', 'webgpu', '--mode', 'differential',
     ]);
     expect(a.budgetMs).toBe(90000);
     expect(a.dwellFrames).toBe(240);
@@ -69,7 +69,18 @@ describe('parseRunArgs', () => {
     expect(a.headed).toBe(true);
     expect(a.method).toBe('raf-delta');
     expect(a.backend).toBe('webgpu');
-    expect(a.mode).toBe('probe');
+    expect(a.mode).toBe('differential');
+  });
+
+  it('takes a bare probe run, which reads none of the mode-only knobs', () => {
+    const a = parseRunArgs(['--mode', 'probe', '--backend', 'webgpu', '--headed']);
+    expect([a.mode, a.backend, a.headed]).toEqual(['probe', 'webgpu', true]);
+  });
+
+  it('lets --warmup-frames through in every mode, since every mode absorbs the same ramp', () => {
+    for (const mode of ['differential', 'probe', 'dwell', 'sweep']) {
+      expect(parseRunArgs(['--mode', mode, '--warmup-frames', '90']).warmupFrames).toBe(90);
+    }
   });
 
   it('takes the new modes, the both backend and the two paths', () => {
@@ -97,10 +108,15 @@ describe('parseRunArgs', () => {
     [['--backend', 'metal'], /--backend/],
     [['--mode', 'stopwatch'], /--mode/],
     [['--method', 'stopwatch'], /--method/],
-    [['--frames', '0'], /--frames/],
-    [['--scales', '0'], /--scales/],
-    [['--scales', 'half'], /--scales/],
-    [['--scales', ' , '], /names nothing/],
+    [['--mode', 'dwell', '--frames', '0'], /--frames/],
+    [['--mode', 'sweep', '--scales', '0'], /--scales/],
+    [['--mode', 'sweep', '--scales', 'half'], /--scales/],
+    [['--mode', 'sweep', '--scales', ' , '], /names nothing/],
+    [['--mode', 'dwell', '--method', 'raf-delta'], /--mode dwell, which would ignore it/],
+    [['--mode', 'sweep', '--passes', 'localDepth'], /--mode sweep, which would ignore it/],
+    [['--mode', 'probe', '--no-interleave'], /--mode probe, which would ignore it/],
+    [['--mode', 'differential', '--frames', '120'], /--mode differential, which would ignore it/],
+    [['--mode', 'dwell', '--scales', '1,2'], /--mode dwell, which would ignore it/],
     [['--passes', 'localDepht'], /no such pass/],
     [['--passes', 'localDepth,mwBnad'], /no such pass/],
     [['--budget-ms', 'soon'], /--budget-ms/],
