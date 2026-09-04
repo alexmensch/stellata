@@ -76,7 +76,8 @@ export function reductionChainSizes(
  * Each texel's weight times its level's `4^k` is the number of level-0
  * texels behind it, that product is additive down the chain, and dividing
  * by the summed weight is therefore the true area-weighted mean at every
- * level — including the 1x1, where it is the mean over the whole frame.
+ * level — including the tile level the chain stops at, which is what lets
+ * the CPU combine there reproduce the frame mean exactly.
  */
 export function combineReductionTexels(taps: readonly ReductionTexel[]): ReductionTexel {
   let weight = 0;

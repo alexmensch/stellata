@@ -84,9 +84,9 @@ export class SceneAdaptation {
     if (reduced !== null) {
       this.lastLanded = reduced;
       const base = this.deps.baseExposure();
-      // The median is monotone in every tile, so rescaling it is the same
-      // number as taking it over rescaled tiles — the division may land
-      // either side of the quantile.
+      // Rescaling the landed median is exact, not an approximation: the
+      // divisor is positive, so it orders the tiles the same way and the
+      // same tile wins either side of it. No need to rescale per tile.
       this.stat = {
         meanL: rescaleToBaseExposure(reduced.meanL, reduced.renderExposure, base),
         discL: rescaleToBaseExposure(reduced.discL, reduced.renderExposure, base),
