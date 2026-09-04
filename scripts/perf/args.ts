@@ -3,8 +3,10 @@
 import { parseArgs, type ParseArgsConfig } from 'node:util';
 import {
   GPU_FRAME_METHODS,
+  PRICED_PASS_KEYS,
   type GpuFrameMethod,
 } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import { DEFAULT_QUIET_MS } from './settle-pure';
 import { BACKENDS, SCENARIO_NAMES, type Backend, type ScenarioName } from './scenarios';
 
 export const MODES = ['differential', 'probe'] as const;
@@ -40,7 +42,7 @@ export const ARG_DEFAULTS = {
   width: 1280,
   height: 800,
   dpr: 2,
-  quietMs: 5000,
+  quietMs: DEFAULT_QUIET_MS,
 } as const;
 
 export class ArgError extends Error {}
@@ -121,6 +123,13 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
   const list = (name: string): string[] | undefined =>
     str(name)?.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
 
+  const passes = list('passes');
+  for (const key of passes ?? []) {
+    if (!PRICED_PASS_KEYS.includes(key as (typeof PRICED_PASS_KEYS)[number])) {
+      throw new ArgError(`--passes names no such pass: '${key}'. Known: ${PRICED_PASS_KEYS.join(', ')}`);
+    }
+  }
+
   const requested = list('scenario') ?? [];
   const scenarios = requested.includes('all') ? [...SCENARIO_NAMES] : requested.map((name) => {
     if (!SCENARIO_NAMES.includes(name as ScenarioName)) {
@@ -136,7 +145,7 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     scenarios,
     backend: oneOf('backend', BACKENDS),
     mode: oneOf('mode', MODES),
-    passes: list('passes'),
+    passes,
     method: optionalOneOf('method', GPU_FRAME_METHODS),
     budgetMs: num('budget-ms'),
     dwellFrames: optionalNum('dwell-frames'),

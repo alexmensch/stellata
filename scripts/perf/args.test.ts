@@ -72,6 +72,8 @@ describe('parseRunArgs', () => {
     [['--backend', 'metal'], /--backend/],
     [['--mode', 'dwell'], /--mode/],
     [['--method', 'stopwatch'], /--method/],
+    [['--passes', 'localDepht'], /no such pass/],
+    [['--passes', 'localDepth,mwBnad'], /no such pass/],
     [['--budget-ms', 'soon'], /--budget-ms/],
     [['--dpr', '0'], /--dpr/],
     [['--scenario', ' , '], /names nothing/],

@@ -7,6 +7,18 @@ export const GPU_FRAME_METHODS = ['timer-query', 'timestamp', 'raf-delta'] as co
 
 export type GpuFrameMethod = (typeof GPU_FRAME_METHODS)[number];
 
+/** Every row `buildPassToggles` can produce, in table order. Lives here
+ *  rather than with the toggles so a caller can check a requested key
+ *  without pulling the renderer in: an unrecognised key would otherwise
+ *  filter the roster to empty and read as the sweep being refused. */
+export const PRICED_PASS_KEYS = [
+  'localDepth', 'mwBand', 'lgEmission', 'cloudAbsorption', 'hdrChain',
+  'tonemapOp', 'statisticWrites', 'summation', 'summationTaps', 'mrtAttachments',
+  'reduction', 'coreMask', 'extinctionPrepass',
+] as const;
+
+export type PricedPassKey = (typeof PRICED_PASS_KEYS)[number];
+
 export interface DwellStats {
   readonly samples: number;
   readonly medianMs: number;
