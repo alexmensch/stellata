@@ -1,9 +1,8 @@
-// Perceptual disc abstraction (stellata-3re.16 prep).
+// Perceptual disc abstraction.
 //
 // The "how a point of light reads on the retina + on the screen" math,
-// shared between the star pipeline and any future point-source layer
-// (planets in stellata-3re.16, exoplanet bodies in stellata-bk5,
-// asteroids/moons later). Three pieces:
+// shared between the star pipeline and the planet glare pass. Three
+// pieces:
 //
 //   perceptualDmEff     — soft-knee dM saturation (vert)
 //   perceptualAppSizePx — √Δm disc-radius-from-magnitude (vert)
@@ -22,7 +21,7 @@
 //
 // So the chunk encapsulates the shared mapping. The star pipeline
 // supplies the source's apparent magnitude from catalog absmag +
-// distance + dust extinction; the planet pipeline (3re.16) supplies
+// distance + dust extinction; the planet pipeline supplies
 // it from the host's apparent magnitude minus reflected-light terms.
 // Same downstream math from there.
 //
