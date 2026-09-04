@@ -30,6 +30,7 @@
     "build:astrometry-request": "tsx scripts/catalog/astrometry-request/export-astrometry-request.ts",
     "build:classic-ids": "tsx scripts/catalog/classic-ids/build-classic-id-overlay.ts",
     "build:wgsn": "tsx scripts/catalog/naming/build-wgsn-tables.ts",
+    "audit:spine-primaries": "tsx scripts/catalog/spine/primaries-audit.ts",
     "build:naming-parity": "tsx scripts/catalog/naming/build-naming-parity.ts",
     "refresh:iau-wgsn": "python3 scripts/refresh/refresh-iau-wgsn.py",
     "sid:allocate": "tsx scripts/sid/allocate.ts",
