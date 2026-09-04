@@ -4,14 +4,12 @@
 
 import type * as THREE from 'three';
 import type { HdrEmitterUniforms } from './hdr-pipeline';
+import type { TileReduction } from './exposure/reduction/reduction-pure';
 
 /** One frame's reduced statistic. The two luminance channels are still in
  *  the exposure the frame was RENDERED with — `rescaleToBaseExposure` is
  *  the caller's step. `coverage` is a fraction and needs no rescale. */
-export interface ReducedStatistic {
-  meanL: number;
-  surfaceL: number;
-  coverage: number;
+export interface ReducedStatistic extends TileReduction {
   renderExposure: number;
 }
 

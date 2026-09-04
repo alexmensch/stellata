@@ -130,7 +130,7 @@ after exiting chart mode (otherwise the average would lag forever).
 | `gpu.main`              | timer query (WebGL2)             | Main-pass timer scope. Over-attributes — a relative signal, not a cost. Every per-pass row below is WebGL2-only (`gpu-timing/README.md`). |
 | `gpu.localDepth`        | timer query (WebGL2)             | Local-depth-pass timer scope. Same caveat. |
 | `gpu.tonemap`           | timer query (WebGL2)             | Fullscreen HDR resolve timer scope, **including** the rod-summation downsample it runs first (`../hdr/summation/README.md`). Same caveat. |
-| `gpu.reduction`         | timer query (WebGL2)             | The chain of ever-smaller weighted-mean draws down to one texel. Same caveat. |
+| `gpu.reduction`         | timer query (WebGL2)             | The chain of ever-smaller weighted-mean draws down to the tile level. Same caveat. |
 | `frame.handlers`        | `stellata.ts` `animate()`       | The full `'frame'` emit loop (overlays, chart labels). |
 | `solar.bodies`          | `planet-body-field.ts` `update()` | Ephemeris walk + eclipse-dim collection across attached hosts. |
 | `solar.mesh`            | `planet-mesh-layer.ts` `update()` | Mesh-LOD per-body uniforms, casters, rotation, ring + atmosphere shells. |

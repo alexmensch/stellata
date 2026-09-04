@@ -84,9 +84,12 @@ export class SceneAdaptation {
     if (reduced !== null) {
       this.lastLanded = reduced;
       const base = this.deps.baseExposure();
+      // Rescaling the landed median is exact, not an approximation: the
+      // divisor is positive, so it orders the tiles the same way and the
+      // same tile wins either side of it. No need to rescale per tile.
       this.stat = {
         meanL: rescaleToBaseExposure(reduced.meanL, reduced.renderExposure, base),
-        surfaceL: rescaleToBaseExposure(reduced.surfaceL, reduced.renderExposure, base),
+        discL: rescaleToBaseExposure(reduced.discL, reduced.renderExposure, base),
         coverage: reduced.coverage,
       };
     }
@@ -186,8 +189,9 @@ export class SceneAdaptation {
     return this.dm;
   }
 
-  /** The whole frame statistic at the base exposure: `L̄`, the masked mean
-   *  and the lit-surface coverage the pin divides them into. */
+  /** The whole frame statistic at the base exposure: `L̄`, the lit-surface
+   *  coverage, and the modal masked surface's own brightness the pin
+   *  holds. */
   getStatistic(): FrameStatistic {
     return this.stat;
   }

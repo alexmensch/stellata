@@ -18,7 +18,6 @@ function maskArg(frag: string): string {
 // instead of its coverage. Nothing else pins which emitters may claim area.
 describe('the statistic attachment mask', () => {
   const KERNELS = [
-    { label: 'star quad', frag: '../../star-pipeline/star.frag.glsl' },
     {
       label: 'planet reflected glare',
       frag: '../../solar-system/planets/glare/planet.frag.glsl',
@@ -32,6 +31,21 @@ describe('the statistic attachment mask', () => {
     });
   }
 
+  it('claims the resolved disc core alone for the star quad', () => {
+    // The claim is a PROPERTY, not a whitelist: an emitter claims coverage
+    // exactly where it emits surface brightness over its own physical
+    // footprint rather than a PSF peak over an exaggerated kernel. For this
+    // pipeline that is the disc pass restricted to the core — the glow pass
+    // passes a literal zero at every framing, and a resolved photosphere is
+    // the one resolved surface that used to be excluded by the old
+    // enumerated contract.
+    const src = read('../../star-pipeline/star.frag.glsl');
+    expect(glslCallArgs(src, 'stellataStatisticTexel')[1]).toBe('coreMask');
+    expect(src).toContain('float core = step(uCoreThreshold, glow);');
+    expect(src).toContain('starEmission(glow, core);');
+    expect(src).toContain('starEmission(glow, 0.0);');
+  });
+
   // TSL is TypeScript, so the ported writers read off the same argument
   // walker rather than a second mechanism. Their helper takes the park mask
   // FIRST and scales the whole texel by it — masking the flux alone would
@@ -39,7 +53,12 @@ describe('the statistic attachment mask', () => {
   // over the attachment the WebGL gate would have shut
   // (webgpu/hdr/README.md § The gate becomes the output struct).
   const TSL_WRITERS = [
-    { label: 'star quad', src: '../../webgpu/star/star-emission-tsl.ts', mask: '0.0', alpha: '1.0' },
+    {
+      label: 'star quad',
+      src: '../../webgpu/star/star-emission-tsl.ts',
+      mask: 'coreMask(glow)',
+      alpha: '1.0',
+    },
     {
       label: 'planet reflected glare',
       src: '../../webgpu/solar-system/planet-glare-tsl.ts',
@@ -74,6 +93,16 @@ describe('the statistic attachment mask', () => {
       expect(args[3]).toBe(alpha);
     });
   }
+
+  it('routes the star quad\'s TSL mask per pass, disc core against glow zero', () => {
+    // The two colour passes share one fragment builder, so the claim is the
+    // argument each hands it — the GLSL twin's two `starEmission` call sites
+    // expressed as a node. Same core threshold the depth-only mask stamps.
+    expect(read('../../webgpu/star/star-disc-tsl.ts'))
+      .toContain('step(deps.u.uCoreThreshold, glow)');
+    expect(read('../../webgpu/star/star-glow-tsl.ts'))
+      .toContain('const coreMask = () => float(0.0);');
+  });
 
   it('writes no statistic at all from the TSL probe glyph', () => {
     // Chrome, so the slot takes the blend's identity element rather than a

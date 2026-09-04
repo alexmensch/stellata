@@ -11,7 +11,12 @@ import {
   Fn, If, float, int, ivec2, screenCoordinate, select, texture, vec3, vec4,
 } from 'three/tsl';
 import type { ReducedStatistic, ReductionSeam } from '../../hdr/hdr-seam';
-import { reductionLevelSizes } from '../../hdr/exposure/reduction/reduction-pure';
+import {
+  createTileScratch,
+  reduceTileLevel,
+  reductionChainSizes,
+  type TileScratch,
+} from '../../hdr/exposure/reduction/reduction-pure';
 
 interface Level {
   target: RenderTarget;
@@ -77,6 +82,8 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
    *  is the same guarantee expressed for a promise. */
   private disposed = false;
   private landed: Float32Array | null = null;
+  private landedCount = 0;
+  private scratch: TileScratch = createTileScratch(0);
   private pendingExposure = 0;
   private pendingIsStale = false;
   private latest: ReducedStatistic | null = null;
@@ -118,20 +125,22 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
         level.quad.render(this.renderer);
       }
     }
-    // Disabled or parked, the last level's texel is from an older frame:
+    // Disabled or parked, the tile level's texels are from an older frame:
     // the readback goes out anyway and poll() drops what it lands, so the
-    // statistic holds still rather than pairing a stale texel with a live
+    // statistic holds still rather than pairing stale texels with a live
     // exposure (../../hdr/exposure/reduction/README.md § Where it runs).
     const last = this.levels[this.levels.length - 1];
     this.inFlight = true;
     this.issued++;
     this.pendingIsStale = !drawing;
     if (drawing) this.pendingExposure = renderExposure;
+    const count = last.width * last.height;
     this.renderer
-      .readRenderTargetPixelsAsync(last.target, 0, 0, 1, 1)
+      .readRenderTargetPixelsAsync(last.target, 0, 0, last.width, last.height)
       .then((pixels) => {
         if (this.disposed) return;
         this.landed = pixels as Float32Array;
+        this.landedCount = count;
         this.inFlight = false;
       })
       .catch(() => {
@@ -160,6 +169,8 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
     this.sourceHeight = 0;
     this.inFlight = false;
     this.landed = null;
+    this.landedCount = 0;
+    this.scratch = createTileScratch(0);
     this.latest = null;
     this.pendingExposure = 0;
     this.pendingIsStale = false;
@@ -174,22 +185,22 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
       return;
     }
     this.latest = {
-      meanL: landed[0],
-      surfaceL: landed[1],
-      coverage: landed[2],
+      ...reduceTileLevel(landed, this.landedCount, this.scratch),
       renderExposure: this.pendingExposure,
     };
   }
 
-  /** The chain halves with `ceil` down to 1x1. Only the last level is
-   *  float32 — one texel of it costs nothing, and the fp16 levels above
-   *  keep the chain's memory in the megabytes. */
+  /** The chain halves with `ceil` down to the tile level. Only that last
+   *  level is float32 — the fp16 levels above it keep the chain's memory
+   *  in the megabytes. */
   private ensureLevels(width: number, height: number): void {
     if (this.sourceWidth === width && this.sourceHeight === height) return;
     this.releaseLevels();
     this.sourceWidth = width;
     this.sourceHeight = height;
-    const sizes = reductionLevelSizes(width, height);
+    const sizes = reductionChainSizes(width, height);
+    const tile = sizes[sizes.length - 1];
+    this.scratch = createTileScratch(tile === undefined ? 0 : tile[0] * tile[1]);
     let srcW = width;
     let srcH = height;
     this.levels = sizes.map(([w, h], i) => {

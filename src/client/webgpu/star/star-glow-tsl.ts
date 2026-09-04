@@ -41,9 +41,14 @@ export function buildStarGlowMaterial(
     return glow;
   });
 
+  // A PSF peak spread over an exaggerated kernel, never a photosphere's
+  // own footprint, so this pass claims no lit-surface coverage at any
+  // framing (../../hdr/attachments/README.md § The unit).
+  const coreMask = () => float(0.0);
+
   const material = new NodeMaterial();
   material.name = localMirror ? 'star-glow-local-tsl' : 'star-glow-tsl';
   material.vertexNode = buildStarVertexNode(deps, STAR_PASS_GLOW, v, localMirror);
   applyGlowBlendDefaults(material);
-  return finishStarColourMaterial(material, deps.u, v, gates, entryGate, kernel);
+  return finishStarColourMaterial(material, deps.u, v, gates, entryGate, kernel, coreMask);
 }

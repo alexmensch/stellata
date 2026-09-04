@@ -2,8 +2,8 @@
 // output of any kind — the core-mask draw stamps the depth this one
 // reads. README.md § The disc draw writes no depth.
 
-import { Discard, Fn } from 'three/tsl';
-import { NodeMaterial } from 'three/webgpu';
+import { Discard, Fn, step } from 'three/tsl';
+import { NodeMaterial, type Node } from 'three/webgpu';
 import type * as THREE from 'three';
 import { applyDiscBlendDefaults } from '../../star-pipeline/star-pipeline';
 import { STAR_PASS_DISC } from '../../star-pipeline/star-pass';
@@ -46,10 +46,16 @@ export function buildStarDiscMaterial(
     return glow;
   });
 
+  // The core is where the kernel reads as the photosphere rather than as
+  // its halo, so it is exactly the fragment set that may claim lit-surface
+  // coverage (../../hdr/attachments/README.md § The unit). Same threshold
+  // the core mask stamps depth over.
+  const coreMask = (glow: Node<'float'>) => step(deps.u.uCoreThreshold, glow);
+
   const material = new NodeMaterial();
   material.name = localMirror ? 'star-disc-local-tsl' : 'star-disc-tsl';
   material.vertexNode = buildStarVertexNode(deps, STAR_PASS_DISC, v, localMirror);
   applyStarDiscTslBlend(material);
   return finishStarColourMaterial(
-    material, deps.u, v, gates, () => discPassEntryGate(v), kernel);
+    material, deps.u, v, gates, () => discPassEntryGate(v), kernel, coreMask);
 }

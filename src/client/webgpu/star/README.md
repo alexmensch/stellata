@@ -115,6 +115,17 @@ chain bypasses the HDR seam entirely, and the pipeline's chart bypass
 unbinds the target, so every colour material is already in its
 single-output mode by the time the branch runs.
 
+## The lit-surface claim is per pass
+
+Both colour passes share one fragment builder
+(`finishStarColourMaterial`), so the statistic mask each one claims is an
+argument it hands that builder rather than a branch inside it — the GLSL
+twin's two `starEmission` call sites in node form. D4 claims
+`step(uCoreThreshold, glow)`, its resolved core; D2 claims a literal zero
+at every framing. Why the split is the general rule and not a star-shaped
+exception: `../../hdr/attachments/README.md` § The unit. Both are pinned
+against the GLSL by `../../hdr/attachments/statistic-mask.test.ts`.
+
 The MRT emission/statistic write side is here (`starMrtStruct`,
 `setMrtOutputs`) but engages only while the HDR pipeline binds its
 target; single-output frames run the inline operator, which is exact

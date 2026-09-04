@@ -27,8 +27,8 @@ const BASE_EXPOSURE = exposureForMagLimit(7.8);
 function frame(discMeanL: number, coverage: number): ReducedStatistic {
   return {
     meanL: discMeanL * coverage,
-    surfaceL: discMeanL * coverage,
     coverage,
+    discL: discMeanL,
     renderExposure: BASE_EXPOSURE,
   };
 }
@@ -94,7 +94,7 @@ describe('SceneAdaptation', () => {
     const adaptation = makeAdaptation();
     expect(settle(adaptation)).toBe(0);
     expect(adaptation.getStatistic().meanL).toBe(0);
-    expect(adaptation.getStatistic()).toEqual({ meanL: 0, surfaceL: 0, coverage: 0 });
+    expect(adaptation.getStatistic()).toEqual({ meanL: 0, coverage: 0, discL: 0 });
   });
 
   it('cuts on the reduced mean once it does', () => {
@@ -113,12 +113,13 @@ describe('SceneAdaptation', () => {
     const cutExposure = BASE_EXPOSURE * 10 ** (0.4 * -4);
     reduced = {
       meanL: L_ADAPT * (cutExposure / BASE_EXPOSURE),
-      surfaceL: L_ADAPT * (cutExposure / BASE_EXPOSURE),
       coverage: 0.3,
+      discL: L_ADAPT * (cutExposure / BASE_EXPOSURE),
       renderExposure: cutExposure,
     };
     expect(adaptation.measure(false, 0, false)).toBe(0);
     expect(adaptation.getStatistic().meanL).toBeCloseTo(L_ADAPT, 9);
+    expect(adaptation.getStatistic().discL).toBeCloseTo(L_ADAPT, 9);
     expect(adaptation.getStatistic().coverage).toBe(0.3);
   });
 
@@ -241,7 +242,7 @@ describe('SceneAdaptation — the measurement park', () => {
    *  per landing, since freshness is reference identity, exactly as a new
    *  `poll()` landing is in the reduction. */
   function darkLanding(): ReducedStatistic {
-    return { meanL: 0.1 * L_ADAPT, surfaceL: 0, coverage: 0, renderExposure: BASE_EXPOSURE };
+    return { meanL: 0.1 * L_ADAPT, coverage: 0, discL: 0, renderExposure: BASE_EXPOSURE };
   }
 
   let now = 0;
@@ -322,8 +323,8 @@ describe('SceneAdaptation — the measurement park', () => {
   function floorLanding(): ReducedStatistic {
     return {
       meanL: 3.4 * tonemapWhitePoint(),
-      surfaceL: 0,
       coverage: 0,
+      discL: 0,
       renderExposure: BASE_EXPOSURE,
     };
   }

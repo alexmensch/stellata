@@ -123,6 +123,11 @@ export type StarColourMaterial = MrtEmitterMaterial;
  * Alpha 1 on the statistic attachment: one blend equation runs over every
  * attachment, so the glow pass's SrcAlpha factor would scale the flux
  * channel a second time and its integral would come out short.
+ *
+ * `coreMask` is the pass's lit-surface claim over its own kernel: 1 only
+ * where the fragment emits a photosphere's true surface brightness across
+ * its own physical footprint, which the glow pass never does
+ * (`../../hdr/attachments/README.md` § The unit).
  */
 export function finishStarColourMaterial(
   material: NodeMaterial,
@@ -131,6 +136,7 @@ export function finishStarColourMaterial(
   gates: EmitterGateNodes,
   entryGate: () => void,
   colourKernel: () => Node<'float'>,
+  coreMask: (glow: Node<'float'>) => Node<'float'>,
 ): StarColourMaterial {
   return finishMrtMaterial(material, () => {
     entryGate();
@@ -142,7 +148,7 @@ export function finishStarColourMaterial(
       const glow = colourKernel();
       colour.assign(starEmissionColour(u, v, glow));
       statistic.assign(maskedStatisticTexelTsl(
-        gates.statisticWrites, v.vFluxPeakL.mul(glow), 0.0, 1.0));
+        gates.statisticWrites, v.vFluxPeakL.mul(glow), coreMask(glow), 1.0));
     });
     return { colour, statistic, diffuse: vec4(0.0) };
   });
