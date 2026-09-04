@@ -112,10 +112,28 @@ edits with `cffconvert --validate -i CITATION.cff`.
 
 What each record archives is the git tree at the tag — source. The
 catalogue and rendered artifacts under `public/` are built from it, and the
-LFS-tracked inputs under `data/` arrive as pointer stubs, because GitHub's
-source tarballs never resolve LFS objects. That is the same line README
-§ Licence draws between this repository's AGPL-3.0-only code and the
-third-party data licences.
+LFS-tracked inputs under `data/` arrive as pointer stubs. That is the same
+line README § Licence draws between this repository's AGPL-3.0-only code
+and the third-party data licences.
+
+**Invariant: GitHub's *Settings → Archives → Include Git LFS objects in
+archives* stays off.** With it on, GitHub resolves all 1.1 GB of `data/`
+into the source archive — v3.44.1 weighs 12 MB with it off, 656 MB with it
+on — and every download of that archive, Zenodo's fetch included, bills the
+account's Git LFS bandwidth quota. It also redistributes the third-party
+`data/` inputs inside a record whose stated licence covers this
+repository's code, erasing the line the paragraph above draws. Off, storage
+is a non-issue at either end: Zenodo allows unlimited records under 50 GB
+each, and ~2 releases a day of a 12 MB archive is under 1 GB a month.
+
+**Record metadata stays editable; record files do not.** A published
+record's title, abstract, authors and keywords can be edited at any time
+without affecting its DOI; changing its files needs Zenodo support. A
+stale abstract is therefore fixed in `CITATION.cff` — each release's record
+is built from that file as it stood at the tag — and earlier records are
+left as the snapshots they are, since the concept DOI resolves to the
+newest. Adding a `.zenodo.json` makes Zenodo ignore `CITATION.cff`
+entirely.
 
 Each release page carries the merging PR's `## Release notes` prose
 (§ Release notes per PR), so every Zenodo version record inherits a
