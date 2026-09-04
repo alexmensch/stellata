@@ -127,6 +127,12 @@ it marks the scenario tainted. A crash aborts the run. Any failure exits 1.
   `noiseMs` or `bracketMs` did not resolve; the limit-mag columns must
   agree; never compare across `method`, `bufferMpx`, headed/headless, or
   browsers; never sum the column.
+- A page function (anything handed to `page.evaluate` / `waitForFunction`
+  / `addInitScript`) must hold no inner named helper — no
+  `const f = () => …` — because tsx wraps those in a `__name(...)` call
+  that does not exist once Playwright serialises the body into the page.
+  The symptom is `ReferenceError: __name is not defined` from inside the
+  page.
 - The default viewport is 1280×800 @ dpr 2 = 4.096 Mpx. The hand-run tables
   in the frame-cost README were taken at 6.774 Mpx (a 2560×2646 buffer);
   they are not comparable to a default-viewport run.

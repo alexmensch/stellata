@@ -128,12 +128,11 @@ export function probeAdapters(page: Page): Promise<AdapterProbe> {
     let webgpu: WebGpuProbe | null = null;
     if (adapter !== null) {
       const info = adapter.info ?? {};
-      const field = (k: string) => String(info[k] ?? '');
       webgpu = {
-        vendor: field('vendor'),
-        architecture: field('architecture'),
-        device: field('device'),
-        description: field('description'),
+        vendor: String(info.vendor ?? ''),
+        architecture: String(info.architecture ?? ''),
+        device: String(info.device ?? ''),
+        description: String(info.description ?? ''),
         isFallbackAdapter: Boolean(info.isFallbackAdapter ?? adapter.isFallbackAdapter ?? false),
         timestampsAvailable: s.webgpu?.timestampsAvailable ?? null,
       };
@@ -142,13 +141,14 @@ export function probeAdapters(page: Page): Promise<AdapterProbe> {
   });
 }
 
+// Page functions hold no inner named helpers: tsx wraps those in a `__name`
+// call that does not exist once Playwright serialises the body into the page.
 export function probeRafDeltas(page: Page, frames: number): Promise<number[]> {
   return page.evaluate(async (count) => {
-    const next = () => new Promise<number>((r) => requestAnimationFrame(r));
-    let last = await next();
+    let last = await new Promise<number>((r) => requestAnimationFrame(r));
     const deltas: number[] = [];
     for (let i = 0; i < count; i++) {
-      const now = await next();
+      const now = await new Promise<number>((r) => requestAnimationFrame(r));
       deltas.push(now - last);
       last = now;
     }
