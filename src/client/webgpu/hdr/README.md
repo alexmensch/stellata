@@ -74,6 +74,14 @@ the render-time-exposure pairing are all kept verbatim from
 name and behaviour for the frame-cost harness even though the ANGLE
 submission-barrier rationale has no analogue here.
 
+**The landing array is three's, so it is a fresh allocation per readback**
+where the WebGL2 half refills one buffer it owns. At the tile level that
+is ~23 KB every second-to-fourth frame rather than the 16 B the 1x1 tail
+cost, so this backend alone carries a garbage-collection term the other
+does not — the one place the two readbacks differ in cost rather than in
+mechanism, and the thing to look at first if `stellata-8cg.29`'s re-take
+splits by backend.
+
 ## The depth format is requested, not asserted
 
 The target carries an explicit `FloatType` `DepthTexture` because

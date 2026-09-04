@@ -103,7 +103,10 @@ them.** A texel's `w · 4^k` is the count of level-0 texels behind it and
 whole tile level IS the frame mean. This is a SHORTER chain and one
 readback, never an extra tap: 6 draws go at 1600x900, together reading
 0.14 % of the chain's texels, and the cost lands almost entirely in the
-first pass either way.
+first pass either way. Each level is its own render pass, and a pass has
+a floor independent of what it draws, so the count is itself the cost —
+`docs/render-rules.md` § Submits and passes are costs is the general
+rule and names this chain as its example.
 
 **What the tiles buy is `D`.** Two frame means divided give the
 area-weighted mean over *every* masked texel, which pools every masked
