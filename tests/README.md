@@ -63,6 +63,17 @@ code-comment-rules.test.ts
                          shader comments rest on review alone.
 commit-sweep-guard.test.ts
                          Pins the commit-time doc-sweep hook's contract.
+doc-pointer-resolution.test.ts
+                         Every `<file>.md § <Heading>` pointer under src/,
+                         scripts/, tests/, docs/, data/, research/ plus the
+                         repo-root docs resolves to a heading that exists —
+                         the codebase's wiki links, checked. Scans .ts .js
+                         .glsl .md .py. Its resolution is the first two
+                         words of the cited section, because a pointer
+                         routinely names a heading's opening and then runs
+                         on in prose; a rename that leaves those two words
+                         alone reads as a truncated citation and passes,
+                         which the suite asserts rather than hides.
 folder-readme-coverage.test.ts
                          The "every folder under src/, scripts/, data/,
                          docs/ has a README.md" invariant (AGENTS.md
@@ -78,13 +89,6 @@ readme-guard.test.ts     Behavioural pins for scripts/hooks/readme-guard.sh:
                          session is creating, and the neighbouring cases
                          that must stay gated (unread README on disk,
                          committed folder missing one).
-render-rules-citations.test.ts
-                         Every `file.md § Heading` citation in
-                         docs/render-rules.md and AGENTS.md resolves to a
-                         heading that exists in the cited file (first two
-                         words, prefix match), so a heading rename fails
-                         CI instead of leaving a dangling pointer — the
-                         failure that had already happened twice.
 shader-frag-depth.test.ts
                          gl_FragDepth roster: only star.frag.glsl may
                          write frag depth (a static write defeats
@@ -121,6 +125,12 @@ webgpu-import-boundary.test.ts
                          copy of three's core stays out of the WebGL2
                          bundle (src/client/webgpu/README.md § Import
                          boundary).
+doc-pointer-pure.ts      Not a test — extraction, resolution and heading
+                         matching for doc-pointer-resolution.test.ts.
+                         Carries what a pointer may legitimately name: ATX
+                         headings, bold leaders (ordered lists included, and
+                         those whose `**` closes on the next line), and a
+                         Files roster's backticked module name.
 walk-files.ts            Not a test — the recursive file walk the
                          scanners above share (code-comment-rules,
                          bundle-content, shader-frag-depth, both TSL
