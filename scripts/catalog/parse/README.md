@@ -297,14 +297,17 @@ Two properties follow from the boundaries partitioning the whole sphere:
 - **A row needs no catalogue entry to be classified.** The uncatalogued
   Gaia fill tier resolves on position like everything else.
 
-**The designation's constellation comes from IV/27A, not from this walk.** A
+**The designation's constellation does not come from this walk.** A
 star's *designation* constellation is fixed by nomenclature and diverges from
 position once a boundary moves past a named star: ρ Aql / 67 Aql (HIP 99742) has
 been positionally in **Delphinus** since 1992 and is ρ **Aquilae** permanently.
 AT-HYG's editorial `con` cell used to seed it; the spine carries no such column,
 so the walk leaves `desigConIndex` (search-index `dc`) at
-`NO_CONSTELLATION_INDEX` and the classic-ID label pass fills it from IV/27A
-keyed on the record's own HD/HIP — cascade, coverage and the GCVS precedence in
+`NO_CONSTELLATION_INDEX` and three later passes fill it — the IAU WGSN
+designation the naming ladder resolves states its own constellation and wins
+(`../naming/README.md` § The designation constellation), else the classic-ID
+label pass fills it from IV/27A keyed on the record's own HD/HIP, else a GCVS
+designation's trailing abbreviation. Cascade, coverage and the GCVS precedence:
 `../classic-ids/README.md` § The designation constellation.
 `designationConIndex(dc, c)` in `../catalog-pure.ts` is still the single
 statement of which field a Bayer / Flamsteed / GCVS designation reads, and the

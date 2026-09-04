@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  splitBayer,
-  formatBayerDisplay,
   superscript,
+  bayerDesignation,
   buildBayerLabels,
   buildComponentLabels,
   buildBayerMap,
@@ -35,49 +34,6 @@ function kindsWith(kind: TargetKind, entries: KindSearchEntry[]): KindModules {
   ) as unknown as KindModules;
 }
 
-describe('search / splitBayer', () => {
-  it('parses a Latin 3-letter Bayer with no suffix', () => {
-    expect(splitBayer('Alp')).toEqual({ letter3: 'Alp', suffix: '' });
-    expect(splitBayer('Bet')).toEqual({ letter3: 'Bet', suffix: '' });
-    expect(splitBayer('Ome')).toEqual({ letter3: 'Ome', suffix: '' });
-  });
-
-  it('parses a Bayer with -1 / -2 component suffix', () => {
-    expect(splitBayer('Alp-1')).toEqual({ letter3: 'Alp', suffix: '-1' });
-    expect(splitBayer('Tau-2')).toEqual({ letter3: 'Tau', suffix: '-2' });
-  });
-
-  it('parses 2-letter Bayer (Mu, Nu, Xi, Pi)', () => {
-    // The Greek letters whose canonical 3-letter abbreviation is shorter
-    // than 3 chars must still parse — they appear in source data verbatim.
-    expect(splitBayer('Mu')).toEqual({ letter3: 'Mu', suffix: '' });
-    expect(splitBayer('Nu')).toEqual({ letter3: 'Nu', suffix: '' });
-    expect(splitBayer('Xi')).toEqual({ letter3: 'Xi', suffix: '' });
-    expect(splitBayer('Pi')).toEqual({ letter3: 'Pi', suffix: '' });
-  });
-
-  it('normalises mixed-case input', () => {
-    // Canonical capitalisation: first letter upper, rest lower.
-    expect(splitBayer('alp')).toEqual({ letter3: 'Alp', suffix: '' });
-    expect(splitBayer('ALP')).toEqual({ letter3: 'Alp', suffix: '' });
-    expect(splitBayer('aLp')).toEqual({ letter3: 'Alp', suffix: '' });
-  });
-
-  it('returns null for unknown Greek letters', () => {
-    // The dictionary only knows the canonical 24 — anything else is data
-    // we don't recognise and shouldn't fabricate a glyph for.
-    expect(splitBayer('Foo')).toBeNull();
-    expect(splitBayer('Xxx')).toBeNull();
-  });
-
-  it('returns null for malformed input', () => {
-    expect(splitBayer('')).toBeNull();
-    expect(splitBayer('Alp-')).toBeNull(); // trailing dash with no digit
-    expect(splitBayer('Alp-12')).toBeNull(); // multi-digit suffix not supported
-    expect(splitBayer('Alp 1')).toBeNull(); // space-separated suffix
-  });
-});
-
 describe('search / superscript', () => {
   it('maps decimal digits to unicode superscript glyphs', () => {
     expect(superscript('1')).toBe('¹');
@@ -102,29 +58,30 @@ describe('search / superscript', () => {
   });
 });
 
-describe('search / formatBayerDisplay', () => {
-  it('formats a basic Bayer letter as Greek glyph + constellation code', () => {
-    expect(formatBayerDisplay('Alp', 'Cen')).toBe('α Cen');
-    expect(formatBayerDisplay('Bet', 'Ori')).toBe('β Ori');
+describe('search / bayerDesignation', () => {
+  it('renders the glyph the wire carries against the designation code', () => {
+    expect(bayerDesignation('α', undefined, 'Cen')).toBe('α Cen');
+    expect(bayerDesignation('β', undefined, 'Ori')).toBe('β Ori');
   });
 
-  it('attaches a unicode superscript for component suffixes', () => {
+  it('attaches a unicode superscript for the Bayer index', () => {
     // α¹ Cen (Rigil Kentaurus) — the superscript is what visually
-    // distinguishes the A and B components of a Bayer-multiple system.
-    expect(formatBayerDisplay('Alp-1', 'Cen')).toBe('α¹ Cen');
-    expect(formatBayerDisplay('Tau-2', 'Cet')).toBe('τ² Cet');
+    // distinguishes the two Bayer designations of one system.
+    expect(bayerDesignation('α', 1, 'Cen')).toBe('α¹ Cen');
+    expect(bayerDesignation('τ', 2, 'Cet')).toBe('τ² Cet');
+    // NEC's deepest index; the doc's "1-9" understates it by one.
+    expect(bayerDesignation('π', 10, 'Ori')).toBe('π¹⁰ Ori');
   });
 
-  it('falls through to raw-Bayer + code when the letter is unknown', () => {
-    // Unknown letters preserve the raw input so the user can still see
-    // *something*, rather than swallowing the data silently.
-    expect(formatBayerDisplay('Xxx', 'Cen')).toBe('Xxx Cen');
+  it('renders the Latin overflow series as the bare letter', () => {
+    expect(bayerDesignation('p', undefined, 'Eri')).toBe('p Eri');
+    expect(bayerDesignation('A', 2, 'Aqr')).toBe('A² Aqr');
   });
 });
 
 describe('search / buildBayerLabels', () => {
   it('returns multiple search forms for a Bayer star', () => {
-    const labels = buildBayerLabels('Alp', 'Cen', 'Centauri');
+    const labels = buildBayerLabels('α', 'Cen', 'Centauri');
     // Forms users actually type: full Latin name, 3-letter abbrev, Greek glyph,
     // both with code and full constellation name.
     expect(labels).toContain('Alpha Cen');
@@ -137,40 +94,36 @@ describe('search / buildBayerLabels', () => {
   it('includes the "Alf Cen" alternate spelling for Alpha only', () => {
     // "Alf" is a common transliteration that some users will type for Alpha.
     // No equivalent transliteration is included for Beta/Gamma/etc.
-    const alpha = buildBayerLabels('Alp', 'Cen', 'Centauri');
+    const alpha = buildBayerLabels('α', 'Cen', 'Centauri');
     expect(alpha).toContain('Alf Cen');
     expect(alpha).toContain('Alf Centauri');
 
-    const beta = buildBayerLabels('Bet', 'Cen', 'Centauri');
+    const beta = buildBayerLabels('β', 'Cen', 'Centauri');
     expect(beta.find(l => l.startsWith('Alf'))).toBeUndefined();
   });
 
-  it('drops the component-suffix from search forms', () => {
-    // The "-1/-2" suffix exists for binary disambiguation; in search we
-    // want users to find the system from "Alpha Cen" without typing the
-    // component number. Both A and B share the same labels and surface
-    // together in results.
-    const aLabels = buildBayerLabels('Alp-1', 'Cen', 'Centauri');
-    const noSuffix = buildBayerLabels('Alp', 'Cen', 'Centauri');
-    // Must be identical: same lookup keys for both components.
-    expect(aLabels.sort()).toEqual(noSuffix.sort());
+  it('takes no Bayer index — α¹ and α² share one set of search keys', () => {
+    // The index exists for display disambiguation; users type "Alpha Cen"
+    // to mean the system, and both components surface together.
+    expect(buildBayerLabels.length).toBe(3);
   });
 
   it('returns deduped labels (Set semantics)', () => {
-    const labels = buildBayerLabels('Alp', 'Cen', 'Centauri');
+    const labels = buildBayerLabels('α', 'Cen', 'Centauri');
     expect(new Set(labels).size).toBe(labels.length);
   });
 
-  it('falls back to raw-Bayer + code when the letter is unknown', () => {
-    // Unparseable Bayer strings still produce one label so the star isn't
-    // unfindable, even though we can't generate the variants.
-    expect(buildBayerLabels('Xxx', 'Cen', 'Centauri')).toEqual(['Xxx Cen']);
+  it('emits the letter alone for the Latin overflow series', () => {
+    // No ASCII spelling exists for "p" or "A", so there is nothing to
+    // derive beyond the constellation expansion.
+    expect(buildBayerLabels('p', 'Eri', 'Eridani').sort())
+      .toEqual(['p Eri', 'p Eridani']);
   });
 });
 
 describe('search / buildComponentLabels', () => {
   it('expands "<system> <letter>" across every Bayer + Flamsteed form', () => {
-    const primary: SearchEntry = { i: 0, b: 'Alp-1', f: 21, c: 0 };
+    const primary: SearchEntry = { i: 0, b: 'α', bx: 1, f: 21, c: 0 };
     const labels = buildComponentLabels(primary, 'Cen', 'Centauri', 'C');
     expect(labels).toContain('Alpha Cen C');
     expect(labels).toContain('Alpha Centauri C');
@@ -180,8 +133,8 @@ describe('search / buildComponentLabels', () => {
     expect(labels).toContain('21 Centauri C');
   });
 
-  it('drops the primary component suffix — the base is the system, not α¹', () => {
-    const primary: SearchEntry = { i: 0, b: 'Alp-1', c: 0 };
+  it('drops the Bayer index — the base is the system, not α¹', () => {
+    const primary: SearchEntry = { i: 0, b: 'α', bx: 1, c: 0 };
     const labels = buildComponentLabels(primary, 'Cen', 'Centauri', 'B');
     expect(labels).not.toContain('α¹ Cen B');
     expect(labels).toContain('α Cen B');
@@ -199,8 +152,8 @@ describe('search / component-letter aliases', () => {
   // α Cen: Rigil (A) carries the Bayer; Toliman (B) and Proxima (C) reference
   // it via cp. Proxima has no Bayer of its own — its aliases come from α Cen.
   const raw: SearchEntry[] = [
-    { i: 0, p: 'Rigil Kentaurus', b: 'Alp-1', c: 0, cl: 'A', cp: 0 },
-    { i: 1, p: 'Toliman', b: 'Alp-2', c: 0, cl: 'B', cp: 0 },
+    { i: 0, p: 'Rigil Kentaurus', b: 'α', bx: 1, c: 0, cl: 'A', cp: 0 },
+    { i: 1, p: 'Toliman', b: 'α', bx: 2, c: 0, cl: 'B', cp: 0 },
     { i: 2, p: 'Proxima Centauri', c: 0, cl: 'C', cp: 0 },
   ];
 
@@ -235,8 +188,8 @@ describe('search / component-letter aliases', () => {
 describe('search / buildBayerMap', () => {
   it('produces an entry per Bayer-tagged star with parseable letter and constellation', () => {
     const raw: SearchEntry[] = [
-      { i: 0, b: 'Alp', c: 1 },
-      { i: 1, b: 'Bet', c: 2 },
+      { i: 0, b: 'α', c: 1 },
+      { i: 1, b: 'β', c: 2 },
     ];
     const map = buildBayerMap(raw);
     expect(map.size).toBe(2);
@@ -245,7 +198,7 @@ describe('search / buildBayerMap', () => {
   });
 
   it('encodes -1/-2 component suffix as a unicode superscript', () => {
-    const raw: SearchEntry[] = [{ i: 0, b: 'Alp-1', c: 5 }];
+    const raw: SearchEntry[] = [{ i: 0, b: 'α', bx: 1, c: 5 }];
     const map = buildBayerMap(raw);
     expect(map.get(0)).toEqual({ greek: 'α', suffix: '¹' });
   });
@@ -253,42 +206,31 @@ describe('search / buildBayerMap', () => {
   it('skips entries with no Bayer string', () => {
     const raw: SearchEntry[] = [
       { i: 0, p: 'Sirius', c: 1 },
-      { i: 1, b: 'Alp', c: 2 },
+      { i: 1, b: 'α', c: 2 },
     ];
     const map = buildBayerMap(raw);
     expect(map.has(0)).toBe(false);
     expect(map.has(1)).toBe(true);
   });
 
-  it('skips entries with no constellation (a Bayer letter needs one)', () => {
+  it('needs no constellation — chart mode draws the glyph alone', () => {
     const raw: SearchEntry[] = [
-      { i: 0, b: 'Alp', c: 255 },
-      { i: 1, b: 'Bet' /* no c */ },
+      { i: 0, b: 'α', c: 255 },
+      { i: 1, b: 'β' /* no c */ },
     ];
-    expect(buildBayerMap(raw).size).toBe(0);
+    expect(buildBayerMap(raw).size).toBe(2);
   });
 
-  it('takes the designation constellation over the positional one', () => {
-    // ρ Aql's shape: positionally in Delphinus, designated in Aquila. The
-    // glyph is the same either way, but the gate must read the field the
-    // Bayer letter belongs to.
-    const raw: SearchEntry[] = [
-      { i: 0, b: 'Rho', c: 31, dc: 3 },
-      { i: 1, b: 'Alp', c: 255, dc: 3 },
-    ];
-    const map = buildBayerMap(raw);
-    expect(map.get(0)).toEqual({ greek: 'ρ', suffix: '' });
-    expect(map.has(1)).toBe(true);
+  it('renders the Bayer index as a unicode superscript', () => {
+    const raw: SearchEntry[] = [{ i: 0, b: 'ο', bx: 2, c: 1 }];
+    expect(buildBayerMap(raw).get(0)).toEqual({ greek: 'ο', suffix: '²' });
   });
 
-  it('skips entries whose Bayer letter is unknown', () => {
-    const raw: SearchEntry[] = [
-      { i: 0, b: 'Xxx', c: 1 },
-      { i: 1, b: 'Alp', c: 1 },
-    ];
-    const map = buildBayerMap(raw);
-    expect(map.has(0)).toBe(false);
-    expect(map.has(1)).toBe(true);
+  it('passes the Latin overflow series through unchanged', () => {
+    // There is nothing to look up: the wire carries the glyph itself, so a
+    // bare Latin Bayer letter reaches chart mode as it stands.
+    const raw: SearchEntry[] = [{ i: 0, b: 'p', c: 1 }];
+    expect(buildBayerMap(raw).get(0)).toEqual({ greek: 'p', suffix: '' });
   });
 });
 
@@ -431,7 +373,7 @@ describe('search / buildSearchIndex', () => {
   });
 
   it('shares one display form across a star\'s fuzzy labels', () => {
-    const raw: SearchEntry[] = [{ i: 3, p: 'Keid', b: 'Omi-2', f: 40, c: 1 }];
+    const raw: SearchEntry[] = [{ i: 3, p: 'Keid', b: 'ο', bx: 2, f: 40, c: 1 }];
     const { fuzzyEntries } = buildSearchIndex(raw, CONS);
     const primaries = new Set(fuzzyEntries.filter((e) => e.index === 3).map((e) => e.primary));
     expect([...primaries]).toEqual(['Keid (ο² Ori)']);
@@ -490,7 +432,7 @@ describe('search / buildSearchIndex', () => {
       { code: 'Aql', name: 'Aquila' },
       { code: 'Del', name: 'Delphinus' },
     ];
-    const raw: SearchEntry[] = [{ i: 0, b: 'Rho', f: 67, c: 1, dc: 0 }];
+    const raw: SearchEntry[] = [{ i: 0, b: 'ρ', f: 67, c: 1, dc: 0 }];
     const { fuzzyEntries, flamMap } = buildSearchIndex(raw, CONS_RHO);
     expect(fuzzyEntries.map((e) => e.label).sort())
       .toEqual(['67 Aql', '67 Aquila', 'Rho Aql', 'Rho Aquila', 'ρ Aql', 'ρ Aquila']);
@@ -558,7 +500,7 @@ describe('search / starDesignations', () => {
 
   it('lists every designation tier in order, Gaia last', () => {
     const entry: SearchEntry = {
-      i: 0, p: 'Vega', b: 'Alp', f: 3, c: 0, g: 'V0473 Lyr',
+      i: 0, p: 'Vega', b: 'α', f: 3, c: 0, g: 'V0473 Lyr',
       hr: 7001, hd: 172167, hip: 91262, gl: 'Gl 721',
     };
     expect(starDesignations(entry, constellations, 123n)).toEqual([
@@ -584,7 +526,7 @@ describe('search / starDesignations', () => {
   });
 
   it('skips a Bayer-form GCVS designation (already covered by the real Bayer)', () => {
-    const entry: SearchEntry = { i: 0, p: 'Algol', b: 'Bet', c: 0, g: 'bet Lyr', hip: 14576 };
+    const entry: SearchEntry = { i: 0, p: 'Algol', b: 'β', c: 0, g: 'bet Lyr', hip: 14576 };
     // Fixture constellation is Lyr; the point is the lowercase Greek
     // first token, which duplicates the β display form.
     expect(starDesignations(entry, constellations, 0n)).toEqual([
@@ -598,13 +540,13 @@ describe('search / starDesignations', () => {
   });
 
   it('takes the designation constellation over the positional one', () => {
-    const entry: SearchEntry = { i: 0, b: 'Rho', f: 67, c: 1, dc: 0, hip: 99742 };
+    const entry: SearchEntry = { i: 0, b: 'ρ', f: 67, c: 1, dc: 0, hip: 99742 };
     expect(starDesignations(entry, [{ code: 'Aql' }, { code: 'Del' }], 0n))
       .toEqual(['ρ Aql', '67 Aql', 'HIP 99742']);
   });
 
   it('drops Bayer/Flamsteed forms when the constellation is unknown', () => {
-    const entry: SearchEntry = { i: 0, b: 'Alp', f: 3, hip: 5 };
+    const entry: SearchEntry = { i: 0, b: 'α', f: 3, hip: 5 };
     expect(starDesignations(entry, constellations, 0n)).toEqual(['HIP 5']);
   });
 });
@@ -691,10 +633,10 @@ describe('search / ranking tiers', () => {
   // Andromeda", "V366 Andromeda", "43 Andromeda") all contain the
   // constellation name — the rows that used to bury the galaxy.
   const raw: SearchEntry[] = [
-    { i: 0, p: 'Almach', b: 'Gam-1', c: 0 },
-    { i: 1, p: 'Alpheratz', b: 'Alp', c: 0 },
+    { i: 0, p: 'Almach', b: 'γ', bx: 1, c: 0 },
+    { i: 1, p: 'Alpheratz', b: 'α', c: 0 },
     { i: 2, g: 'V0366 And', c: 0 },
-    { i: 3, p: 'Mirach', b: 'Bet', c: 0, f: 43 },
+    { i: 3, p: 'Mirach', b: 'β', c: 0, f: 43 },
   ];
   const catalog = {
     ...makeEmptyCatalog(4),

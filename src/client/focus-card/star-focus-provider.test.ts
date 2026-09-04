@@ -27,7 +27,7 @@ function buildConfig(overrides: Partial<StarFocusProviderConfig> = {}): StarFocu
   catalog.hip.set([91262, 0, 0]);
   catalog.gaiaSourceId[1] = 123456789n;
   const searchEntries = new Map<number, SearchEntry>([
-    [0, { i: 0, p: 'Vega', b: 'Alp', c: 0, hr: 7001, hd: 172167, hip: 91262 }],
+    [0, { i: 0, p: 'Vega', b: 'α', c: 0, hr: 7001, hd: 172167, hip: 91262 }],
   ]);
   return {
     catalog,

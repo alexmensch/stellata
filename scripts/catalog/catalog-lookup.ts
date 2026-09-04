@@ -26,6 +26,7 @@ import {
   type CatalogManifest,
   type SearchEntry,
 } from './catalog-pure';
+import { displayNamesFromSearchIndex } from './naming/star-naming-pure';
 import { REPO_ROOT } from '../util/paths';
 import type { RecordRef } from './parse/corpus-tsv';
 
@@ -89,16 +90,20 @@ export interface Catalog {
   record(i: number): CatalogRecord;
   records(): IterableIterator<CatalogRecord>;
   /** Present only when loaded `withSearchIndex`. The binary carries no HD
-   *  column, so `hd:` refs resolve through here or not at all. */
+   *  column, so `hd:` refs resolve through here or not at all, and it is
+   *  what a `name:` ref needs to reach a record displaying a DESIGNATION. */
   readonly searchIndex?: readonly SearchEntry[];
+  readonly constellations: readonly ConstellationEntry[];
 }
 
 export interface LoadCatalogOptions {
   catalogManifestPath?: string;
   constellationsJsonPath?: string;
-  /** Read `public/search-index.json` alongside the binary, which `hd:` record
-   *  refs need. Off by default: it is ~15 MB of JSON, and every other lookup
-   *  key is in the binary already. */
+  /** Read `public/search-index.json` alongside the binary. `hd:` refs need
+   *  it, and so does any `name:` ref naming a record that displays a
+   *  designation rather than a name — catalog.bin's name table carries the
+   *  NAME tiers alone (`naming/README.md`). Off by default: it is ~15 MB of
+   *  JSON, and every other lookup key is in the binary already. */
   withSearchIndex?: boolean;
   searchIndexPath?: string;
 }
@@ -167,6 +172,7 @@ export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalo
   return {
     header,
     count,
+    constellations,
     record: readRecord,
     *records() {
       for (let i = 0; i < count; i++) yield readRecord(i);
@@ -185,7 +191,14 @@ export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalo
 interface CatalogIndexes {
   byHip: Map<number, number>;
   byGaiaSourceId: Map<string, number>;
+  /** Every string a record DISPLAYS: the name table, plus — where the
+   *  search index was loaded — the labels the display-name composer builds
+   *  from the wire, which is where a Bayer / Flamsteed / component
+   *  designation lives (`naming/README.md`). The name table wins a tie. */
   byName: Map<string, number>;
+  /** The composed display label per record index — the reverse of the
+   *  designation half of `byName`. Empty without the search index. */
+  labelByIndex: Map<number, string>;
   /** Every HD number a record answers to, aliases included, through the same
    *  `buildAliasedIdIndex` the runtime's `hdMap` uses — so a corpus row and the
    *  search box resolve one number to one record. Empty where the catalog was
@@ -208,9 +221,28 @@ function getIndexes(catalog: Catalog): CatalogIndexes {
   const byHd = buildAliasedIdIndex(
     catalog.searchIndex ?? [], (e) => e.hd, (e) => e.hda,
   );
-  const built = { byHip, byGaiaSourceId, byName, byHd };
+  const labelByIndex = new Map<number, string>();
+  if (catalog.searchIndex !== undefined) {
+    for (const [i, label] of displayNamesFromSearchIndex(
+      catalog.searchIndex, catalog.constellations,
+    )) {
+      labelByIndex.set(i, label.label);
+      if (!byName.has(label.label)) byName.set(label.label, i);
+    }
+  }
+  const built = { byHip, byGaiaSourceId, byName, byHd, labelByIndex };
   INDEX_CACHE.set(catalog, built);
   return built;
+}
+
+/** What a record DISPLAYS: its name-table entry, else the label the
+ *  display-name composer builds from the wire. Null where the record is
+ *  outside the search index, which is where the runtime falls back to
+ *  `Gaia DR3` / `SID #`. */
+export function displayLabel(catalog: Catalog, i: number): string | null {
+  const name = catalog.record(i).name;
+  if (name !== null) return name;
+  return getIndexes(catalog).labelByIndex.get(i) ?? null;
 }
 
 export function lookupByHip(catalog: Catalog, hip: number): CatalogRecord | null {
@@ -224,9 +256,21 @@ export function lookupByGaiaSourceId(catalog: Catalog, sourceId: bigint | string
   return i === undefined ? null : catalog.record(i);
 }
 
+/** Throws rather than answering null when a name misses and the catalog was
+ *  loaded without its search index: the name table holds only the NAME
+ *  tiers, so a corpus row naming a star by its DESIGNATION would read as
+ *  "no such record" and silently stop testing anything. */
 export function lookupByName(catalog: Catalog, name: string): CatalogRecord | null {
   const i = getIndexes(catalog).byName.get(name);
-  return i === undefined ? null : catalog.record(i);
+  if (i !== undefined) return catalog.record(i);
+  if (catalog.searchIndex === undefined) {
+    throw new Error(
+      `name: record ref "${name}" missed catalog.bin's name table, which carries `
+      + 'only the naming ladder\'s NAME tiers — a designation needs the search '
+      + 'index: loadCatalog({ withSearchIndex: true })',
+    );
+  }
+  return null;
 }
 
 /** Throws rather than answering null when the catalog was loaded without its

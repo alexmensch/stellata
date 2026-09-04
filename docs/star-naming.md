@@ -24,13 +24,20 @@ composer** from the star's structured designation set:
 display(star) = render(highest tier the star carries) [+ component letter]
 ```
 
-The composer (`scripts/catalog/naming/star-naming-pure.ts`, `stellata-wgp3.3`)
-is imported by the build — which fills `catalog.bin`'s name table with its
-output — and by the runtime, which renders labels, typeahead rows and the
-focus card from the same function. **No caller composes a display string of
-its own.** That single rule is what fixes the 536 names currently spelled
-`The-1 Ori C`: the build composed them by hand and never reached the glyph
-renderer the runtime already had.
+The composer (`scripts/catalog/naming/star-naming-pure.ts`) is imported by
+the build — which fills `catalog.bin`'s name table with the NAME tiers —
+and by the runtime, which renders every designation below them from the
+same function. **No caller composes a display string of its own.** That
+single rule is what retired the 536 names once spelled `The-1 Ori C`: the
+build composed them by hand and never reached the glyph renderer the
+runtime already had.
+
+Two of the composer's rules are RELATIONAL, so it is a collection pass
+rather than a per-star function: a component with no designation of its
+own takes its WDS root anchor's base, and a component letter is appended
+only where a sibling OWNS the same designation.
+`scripts/catalog/naming/README.md` § Two callers, one composer carries the
+implementation's own statement of all three rules.
 
 ## 2. Authority — one source approves names; everything else compiles them
 
@@ -120,19 +127,40 @@ refresh, never a code edit — which is why the list is committed at ingest
 Display resolution order, first hit wins:
 
 1. **Curated override** (§ 7) — the escape hatch, empty by default.
-2. **IAU WGSN approved name** — `NEC` ∪ `wgsnFaints`, keyed HIP → HR → HD.
+2. **IAU WGSN approved name** — `NEC` ∪ `wgsnFaints`, keyed HR → HD → HIP,
+   then the record's own printed name. HIP is LAST, not first: Hipparcos
+   resolved close pairs as one star, so NEC lists both p Eri rows against
+   HIP 7751 and separates them only by HR and HD — a HIP-first join
+   collapses p Eri A and B onto one record, the very duplicate § 8.4
+   expects to dissolve.
 3. **Bayer** — glyph + superscript + designation constellation.
 4. **Flamsteed** — `<number> <dc>`.
 5. **Gould** — `<number> G. <dc>`. New tier; the authority carries 936.
 6. **GCVS variable designation** — `R CrB`, `V645 Cen`.
-7. **Catalogue designation** — HR → HD → HIP → GJ → Gaia DR3, as today.
-8. **`SID #<n>`** — the existing last-resort identity label.
+7. **Catalogue designation** — HIP → HD → HR → GJ, as today. The order
+   is the DISPLAY label's, which is not the focus card's identity-line
+   order (HR → HD → HIP): this section originally stated the latter for
+   both, and taking it literally moved 85,354 records off their HIP label
+   onto an HD one and raised the duplicate-label count from 42 to 65,
+   since an ambiguous HD reaches two records where a HIP reaches one.
+   Reversing it is still open as a deliberate change — measured, not
+   accidental.
+8. **Gaia DR3, then `SID #<n>`** — the runtime's last resort
+   (`resolveStarName`), not the composer's: neither is a designation a
+   catalogue published, neither reaches the search index, and composing
+   them would give every record a base and stop components borrowing
+   their system's.
 
 A **component letter** from WDS/CCDM appends to whichever tier won
 (`θ¹ Ori C`, `p Eri B`, `HIP 81702 Ab`) — appended by the composer, never
-baked into the tier's own string. Where the authority names a specific
-component, that name attaches to that record alone; siblings resolve down
-the ladder on their own.
+baked into the tier's own string. It appends where a sibling OWNS the same
+designation, which is a stronger test than the label needing to be unique:
+a sibling that owns the designation and then borrows a higher tier
+displays a lettered form of it regardless, so δ Cep A keeps its letter
+beside δ Cep C/D/E even though nothing else displays the bare base. 29 of
+the 79 lettered records are that shape. Where the authority names a
+specific component, that name attaches to that record alone; siblings
+resolve down the ladder on their own.
 
 AT-HYG's `proper` column appears nowhere in this list. Its 442 confirmed
 names arrive through tier 2 (the authority asserts them); the rest are
@@ -147,11 +175,12 @@ carries **structure**; every spelling is derived (§ 5).
 | Kind | Canonical | Wire (`SearchEntry`) |
 |---|---|---|
 | Bayer letter | the Unicode glyph — `α` for Greek, bare letter for Latin (`p`, `A`) | `b` |
-| Bayer superscript | integer 1–9, absent when none | `bx` |
+| Bayer superscript | integer 1–10, absent when none (NEC's deepest is ψ¹⁰ Aur) | `bx` |
 | Flamsteed | integer | `f` |
 | Gould | integer | `gd` |
 | designation constellation | IAU 3-letter code | `dc` (`stellata-sp4q.2`), mandatory wherever `b`/`f`/`gd` is set |
-| component | WDS/CCDM letter string | `cl` + `cp`, as today |
+| component | WDS/CCDM letter string | `cl` + `cp` (the WDS ROOT's naming anchor) |
+| component the authority attributes a Bayer designation to | WDS letter string | `bc` |
 
 The glyph *is* the canonical letter, so rendering is `b + sup(bx) + ' ' + dc`
 and no consumer parses a Bayer string. This retires the `"Alp-1"` /
@@ -217,8 +246,11 @@ The dividing line, and the reason the search index does not grow much:
   already work this way and keep doing so.
 - **Shipped in `al?: string[]`.** Only strings no structure implies:
   displaced AT-HYG names (`Acrab B`, `Deltoton`), IAU alternates split out
-  of a multi-name cell, and — optionally, `stellata-wgp3.2`'s call —
-  Stellarium's 659 folk names with their reference provenance.
+  of a multi-name cell, the full-genitive Latin-Bayer spellings the tier's
+  own form does not derive (`p Eridani` against the rendered `p Eri`), and
+  a Flamsteed designation displaced when the authority's Bayer names a
+  different constellation (16 Lyn is also ψ¹⁰ Aur). 24 records today.
+  Stellarium's 659 folk names are not ingested.
 
 **An alias must have been published outside this repository.** Its purpose
 is to keep resolving a string a user could have encountered elsewhere; a
@@ -229,7 +261,7 @@ provenance, not plausibility:
 | String | Origin | Alias? |
 |---|---|---|
 | `Acrab B` | AT-HYG's own `proper` cell, on β² Sco | **yes** — published upstream |
-| `Acrab C` | our `resolveComponentNameCollisions`, rewriting the above | **no** |
+| `Acrab C` | our own collision re-lettering, rewriting the above | **no** |
 | `The-1 Ori C`, `3 Gem B`, `HIP 81702 Ab` | our build's composition (536 + 517 + 7,967 records) | **no** |
 | `p Eridani B` | our promotion pass; AT-HYG has only `p Eridani` ×2 | **no** |
 
@@ -249,26 +281,23 @@ invariant the parity gate (§ 8) enforces.
 
 ## 6. Rendering — glyphs everywhere, no fallback path
 
-Unicode Greek + superscript digits render in every surface today (typeahead
-primary lines, chart-mode SVG labels, focus card) via `BAYER_GREEK` /
-`superscript` in `src/client/typeahead/search.ts`; α¹ Cen ships now. So the
-glyph policy is **no ASCII fallback and no font-detection machinery** — the
-only surface missing glyphs is the build-composed name table, which stops
-being hand-composed (§ 1).
+Unicode Greek + superscript digits render on every surface — typeahead
+primary lines, chart-mode SVG labels, focus card — so the glyph policy is
+**no ASCII fallback and no font-detection machinery**: the glyph the wire
+carries is the letter, and nothing derives it from an abbreviation.
 
-Two couplings the composer must get right, both currently latent bugs:
+Two couplings the composer gets right, both latent bugs before it:
 
-- **Render against `dc`, never the positional constellation.** Today
-  `formatBayerDisplay(entry.b, conCode)` reads `entry.c`. Once
-  `stellata-sp4q.2` makes `c` IAU-positional, that path renames ρ Aql to
-  `ρ Del`. The composer takes `dc ?? c` explicitly; the positional
-  constellation stays a membership attribute (hover line, focus-card
-  Constellation row, `highlightCon`, chart centroids).
-- **One composer, both sides.** The build fills the name table by calling
-  the same pure function the runtime renders with, so `catalog.bin` keeps a
-  display name per record (no first-paint regression while
-  `search-index.json` is in flight) and cannot drift from the runtime's
-  spelling.
+- **Render against `dc`, never the positional constellation.** The old
+  runtime path read `entry.c`, and once `stellata-sp4q.2` made `c`
+  IAU-positional that renamed ρ Aql to `ρ Del`. The composer takes
+  `dc ?? c` explicitly; the positional constellation stays a membership
+  attribute (hover line, focus-card Constellation row, `highlightCon`,
+  chart centroids).
+- **One composer, both sides.** `catalog.bin`'s name table carries the
+  authority tiers — 725 records, so first paint has names — and the
+  runtime composes every designation below them off `search-index.json`
+  through the same pure function, so the two cannot drift.
 
 ## 7. Curation seam
 
@@ -276,7 +305,9 @@ A committed override table, `data/naming/name_overrides.tsv`, mirroring
 `data/simbad/wds_xids_overrides.tsv`: keyed on **SID** (frozen identity,
 survives re-indexing, and a no-Gaia record has no source_id), columns
 `sid`, `display_name`, `reason`, `source`. Applied after SID resolution,
-before the name table is written; every row is a reviewable diff.
+before the name table is written; every row is a reviewable diff, and a
+`sid` no record carries hard-fails the build rather than counting as an
+applied override that displays nothing.
 
 Expected to stay near-empty. It exists for review findings the authority
 cannot express — not as a home for folk names § 2 routes to aliases. A
@@ -297,29 +328,35 @@ committed as a test fixture:
 3. **Tier routing counts pinned** in build-counts: records named per tier,
    IAU names matched / unmatched / unreachable, override rows, alias count,
    and the § 2 residual classes.
-4. **`KNOWN_DUPLICATE_DISPLAY_NAMES` → 0** (`stellata-wgp3.4`). Two of
-   today's three duplicates dissolve here: `p Eridani` ×2 becomes
-   `p Eri A` / `p Eri B` per the authority, and `The-1 Ori Cb` /
-   `The-1 Ori E` become correctly-rendered θ¹ Ori forms. The residual
-   cross-root Trapezium collision is a WDS rooting defect, not a naming one
-   — the composer must be injective given (system root, component letter),
-   and a surviving collision is a data finding, never a renderer concession.
+4. **`KNOWN_DUPLICATE_DISPLAY_NAMES` → 0**, and the constant retired: all
+   three dissolved, `p Eridani` ×2 into `p Eri A` / `p Eri B` per the
+   authority and both `The-1 Ori` collisions into correctly-rendered θ¹ Ori
+   forms. The measurement it pinned covered the name table alone, so it is
+   replaced by one over every COMPOSED label, catalogue-wide:
+   `scripts/catalog/naming/naming-duplicates.tsv`, with a within-one-WDS-root
+   assertion on top of it. The composer is injective given (naming anchor,
+   component letter), so each survivor is two catalogue entries claiming one
+   designation — a data finding, never a renderer concession. The cross-root
+   Trapezium case is one: WDS root `05353-0524` is an Orion Nebula Cluster
+   multiple whose only identified member is θ¹ Ori C, arriving as its
+   component I, so the ladder refuses that root a base rather than asserting
+   an identity the data does not support.
 5. The frozen corpora (known-stars, sky-position, multi-star-regression)
    stay green; `known-stars.test.ts` is where a famous star silently losing
    its name surfaces.
 
-## 9. What each child does
+## 9. Where it lives
 
-- **`stellata-wgp3.2`** — ingest `NEC.csv` + `wgsnFaints.csv` to
-  `data/iau-wgsn/` (frozen, `data/README.md` § Frozen external data steps
-  1–5, refresh helper under `scripts/refresh/`), both normalisers, the
-  keyed name + designation tables, the § 2 residual list, counts.
-- **`stellata-wgp3.3`** — the composer module + ladder, the `SearchEntry`
-  shape of § 4, the name-table rewrite, retirement of the 536 ASCII
-  composites and of runtime Bayer-string parsing.
-- **`stellata-wgp3.4`** — duplicates to 0 on top of the composer.
-- **`stellata-jel8.6`** — chart-mode glyph rendering + system-level
-  designation preference; falls out of the composer, keeps its own smoke.
+The ingest, the normalisers, the record-side join, the composer and the
+parity ledger are all `scripts/catalog/naming/` — read its README for the
+implementation's own account, including the four things about the
+record-side join that each cost a wrong name before they were pinned. The
+component letter and the anchor a record composes against are
+`scripts/catalog/companions/record-index/README.md`; the runtime's half is
+`src/client/typeahead/README.md`.
+
+Chart-mode glyph rendering and its system-level designation preference
+(`stellata-jel8.6`) fall out of the composer and keep their own smoke.
 
 Sequencing note: the ladder is independent of the driver swap
 (`stellata-3bsf.4`) — it reads designations, whichever source produced them
@@ -334,4 +371,7 @@ the composer; storing an ASCII Bayer convention as the canonical form;
 parsing a Bayer string at runtime; rendering a designation against the
 positional constellation; a curated table of folk names; an "also known as"
 UI surface (a displaced string is either a designation, and belongs on the
-identity line, or an invention, and belongs only in the alias index).
+identity line, or an invention, and belongs only in the alias index); a
+guard that strips a component letter a composed base doubled — the base is
+the ROOT anchor's designation and the canonical comp encodes the full path
+from the root, so nothing doubles.

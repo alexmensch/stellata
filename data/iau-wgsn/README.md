@@ -87,9 +87,11 @@ IV/27A Bayer tail) and `data/athyg/inherited-spine.tsv` (the § 2 residual
 verification), and writes the two derived tables. CI re-runs the build
 and fails on any diff, so artifact and code land together.
 
-The derived tables' consumer is the display-name composer
-(`stellata-wgp3.3`); nothing on the `build:catalog` path reads this
-folder yet.
+`build-catalog.ts` reads the derived tables through
+`scripts/catalog/naming/apply-star-names.ts`, which writes each record's
+approved name, glyph-bearing designations, aliases and designation
+constellation. The display-name composer renders from those
+(`scripts/catalog/naming/README.md`).
 
 ## Refresh
 

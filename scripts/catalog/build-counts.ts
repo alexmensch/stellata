@@ -344,22 +344,74 @@ export interface BuildCounts extends LabelMergeCounts {
    *  their anchor's — a pair wide enough to straddle a boundary, which
    *  inheriting the anchor's index used to hide. */
   companionConstellationSplitFromAnchor: number;
-  /** First-class AT-HYG records given a composed component name by the
-   *  stamp-component-letters pass — pairs AT-HYG left anonymous so both
-   *  halves printed the same Bayer/Flamsteed label (61 Cyg A/B class). */
-  componentLettersStamped: number;
-  /** Same-WDS-root display-name collisions settled by re-lettering the
-   *  claimant whose name wasn't its own letter composition (β² Sco's
-   *  AT-HYG "Acrab B" → "Acrab C"). */
-  componentNameCollisionsResolved: number;
-  /** Same-root collisions left in place because the re-lettered name was
-   *  itself already claimed. Ratchet DOWN — a nonzero value means a system
-   *  needs a designation policy, not a letter swap. */
-  componentNameCollisionsUnresolved: number;
   /** Catalog records carrying a multiples.tsv component designation
-   *  (`cl`/`cp` on their SearchEntry) — the base for "<system> <letter>"
-   *  search aliases (Alpha Centauri A/B/C). */
+   *  (`cl`/`cp` on their SearchEntry) — the WDS root's naming anchor plus
+   *  the letter, which both the display-name composer and the
+   *  "<system> <letter>" search aliases build from. */
   componentDesignations: number;
+
+  // ---- Naming ladder (docs/star-naming.md, naming/README.md) ----------
+  /** Records the IAU WGSN names, and how many of those the identifier join
+   *  missed and the record's own printed spelling rescued. */
+  namingIauNamed: number;
+  namingIauNamedByProper: number;
+  /** Approved names no record carries an identifier or spelling for —
+   *  overwhelmingly the wgsnFaints hosts whose only key was a survey id
+   *  the normaliser drops, naming stars the catalogue does not hold. */
+  namingIauUnreached: number;
+  /** Records displaying a § 2 string designation (`Ross 128`). */
+  namingEponym: number;
+  /** Records the authority gives a glyph-bearing Bayer designation, of
+   *  which `Added` had no spine Bayer cell at all and `Dropped` had one the
+   *  authority does not reach — its designation belongs to a sibling
+   *  record, so the record borrows the system's instead. */
+  namingBayer: number;
+  namingBayerAdded: number;
+  /** Bayer designations the authority attributes to a named component, whose
+   *  letter therefore renders unconditionally (κ Her B). */
+  namingBayerComponent: number;
+  namingBayerDropped: number;
+  namingGould: number;
+  /** Published spellings shipped as search-only aliases (`al`), and the
+   *  records carrying them. */
+  namingAliases: number;
+  namingAliasRecords: number;
+  /** Designation constellations the authority states, and how many of them
+   *  contradict the IV/27A cascade the label merge had already set. */
+  namingDesigConFromWgsn: number;
+  namingDesigConWgsnConflict: number;
+  /** Records displaying each ladder tier. */
+  namingTierOverride: number;
+  namingTierIau: number;
+  namingTierEponym: number;
+  namingTierBayer: number;
+  namingTierFlamsteed: number;
+  namingTierGould: number;
+  namingTierGcvs: number;
+  namingTierCatalogue: number;
+  /** Records whose base came from their system's naming anchor rather than
+   *  a designation of their own (`Sirius B`, `HIP 82676 Ab`). */
+  namingBorrowed: number;
+  /** Records carrying a component letter because a sibling owns the same
+   *  designation (θ¹ Ori A/B/C/D). */
+  namingLettered: number;
+  /** Records whose name reaches catalog.bin's name table — the NAME tiers
+   *  alone. Everything below is composed at runtime. */
+  namingNameTable: number;
+  /** Curated override rows applied (docs/star-naming.md § 7). Expected to
+   *  stay at zero; growth is a signal the ingest is wrong. */
+  namingOverrides: number;
+  /** Records with no composed label — no designation of their own and no
+   *  anchor to borrow from, so they display the runtime's `Gaia DR3` /
+   *  `SID #` last resort. */
+  namingUnlabelled: number;
+  /** Display labels two or more records both compose, and the records
+   *  claiming them. Ratchet DOWN: the composer is injective given (naming
+   *  anchor, component letter), so every survivor is two catalogue entries
+   *  claiming one designation — a data finding, never something the
+   *  renderer should qualify away (docs/star-naming.md § 8.4). */
+  namingDuplicateLabels: number;
+  namingDuplicateRecords: number;
   /** Total entries in the full-catalog Gaia DR3 5p astrometry TSV
    *  (parsed map size) — direction-cascade tier 1 coverage. */
   gaiaAstrometryEntries: number;

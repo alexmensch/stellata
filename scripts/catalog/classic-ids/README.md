@@ -324,8 +324,14 @@ proper motion carries a star across a 1930 Delporte boundary, so it cannot be
 derived from the record's position. The cascade:
 
 ```
-IV/27A `cst` by HD -> by HIP -> GCVS trailing abbreviation -> positional conIndex
+IAU WGSN designation -> IV/27A `cst` by HD -> by HIP
+  -> GCVS trailing abbreviation -> positional conIndex
 ```
+
+The authority tops it because it states which constellation its OWN
+designation is named for; this folder's route runs beneath it and is what
+carries the Flamsteed-only records the authority does not reach
+(`../naming/README.md` § The designation constellation).
 
 Keyed on the DESIGNATION, deliberately, where the label overlay is keyed on
 `gaia_source_id`:

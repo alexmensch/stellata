@@ -36,11 +36,13 @@ lives in the subfolders.
   magnitude-keyed fade-quantile table the chart-mode layer derives its
   fade window from.
 - `companions/` — promotion of `data/binaries/multiples.tsv` secondaries
-  into first-class catalog records, plus component-letter stamping and
-  display-name collision resolution. Its `record-index/` subfolder holds
+  into first-class catalog records. Its `record-index/` subfolder holds
   everything that addresses records *after* the absmag sort: the row-index
   sidecar, the renderable-companion wings bit, and the component-letter
-  search designations.
+  designations the display-name composer builds on.
+- `naming/` — the IAU WGSN authority ladder end to end: ingest, the
+  designation normalisers, the record-side join, and the one pure composer
+  the build and the runtime both render display names with.
 - `multiplicity/` — multiplicity status, geometric binary inference, the
   CCDM double-star cross-match with its optical-double suppression
   cascade, and system distance coherence.
@@ -99,6 +101,10 @@ scripts/catalog/
   catalog-lookup.ts (+ test)      Reads a built catalog back (loadCatalog) — the
                                   shared reader for verify-catalog, the frozen
                                   corpora, validate-simbad-sample, sid:allocate.
+                                  A `name:` record ref resolves through the
+                                  name table AND the composed display labels,
+                                  so a corpus row may name a star by the
+                                  designation it displays (`naming/README.md`).
   build-counts.ts (+ test)        Per-strategy / per-tier count snapshot
                                   comparator, pinned by
                                   build-catalog-expected.json. Generic over
@@ -153,7 +159,10 @@ for its coverage and the runtime colour-LUT re-key it enables.
                           the build asserts it. The constellation a
                           designation is *named* for is a separate field,
                           search-index `dc` (§ Search index).
-  - 35    `uint8`        flags (bit 0=has_name, 1=is_sol, 2=has_bayer, 4=is_binary_primary)
+  - 35    `uint8`        flags (bit 0=has_name, 1=is_sol, 2=has_bayer,
+                          4=is_binary_primary). `has_name` means an authority
+                          NAMED this star — the name table carries the naming
+                          ladder's authority tiers alone (`naming/README.md`).
   - 36    `uint8`        **variability amplitude** in 0.05 mag units (0 = not variable)
   - 37    `uint8`        **variability type** (`VAR_TYPE_*`: 0=unknown,
                           1=pulsating, 2=eclipsing, 3=other; 4+ refine
@@ -325,17 +334,10 @@ builds each record's designation set, and `resolveSids` maps it to the
 existing ledger sid. The build **never mints** — `sid:allocate` is the sole
 ledger writer (docs/sid.md § 4.4).
 
-Bootstrap when the record set changes (a new spine, new companions):
-
-1. `pnpm run build:catalog` resolves every record. Any object absent from the
-   ledger is written with `NO_SID` (0) so the artifact still lands, then the
-   build **hard-fails** listing the unallocated records.
-2. `pnpm run sid:allocate` reads that catalog.bin + search-index +
-   row-index-map, mints the missing sids (an explicit, reviewable
-   `ledger.tsv` diff), and rewrites `ledger-head.json`.
-3. `pnpm run build:catalog` again — now every record resolves and the build
-   succeeds (it logs `SID: <n> / <n> records resolved`; any shortfall is a
-   hard fail, never a shipped artifact).
+A record set that changes (a new spine, new companions) therefore needs a
+build → `sid:allocate` → build cycle: the first build writes `NO_SID` for
+anything the ledger lacks so the artifact still lands, then hard-fails
+listing it. `scripts/sid/README.md` carries the mint and its review.
 
 The runtime reader (`catalog-loader.ts`) decodes the column into
 `Catalog.sid`, the star domain of the runtime SID resolver
@@ -346,65 +348,60 @@ decoding it.
 ## Search index (`public/search-index.json`)
 
 Separate from `catalog.bin` so the main binary stays rendering-focused.
-One JSON array entry per star that has at least one searchable identifier
-(proper name, Bayer, Flamsteed, GCVS designation, HIP, HD, HR, or Gliese).
-Short keys (`i/p/b/f/g/hip/hd/hr/hda/hra/gl/c/dc/s/cl/cp`) to keep wire size down — file is
-~15 MB raw, ~4 MB gzipped. `hda`/`hra` carry the further HD / HR numbers a record
-answers to but does not display, on 95 entries (`classic-ids/README.md` § An alias stops at the blend). Loaded in parallel with `catalog.bin` in
-`main.ts`. The `s` field carries the raw spectral designation from the
+One JSON array entry per star with at least one searchable identifier — a
+name, a designation, a catalogue number, or a WDS component letter, since
+a component composes its label from its system. Short keys
+(`i/p/b/bx/bc/f/gd/gh/g/hip/hd/hr/hda/hra/gl/c/dc/s/cl/cp/al`) to keep
+wire size down — file is ~15 MB raw, ~4 MB gzipped. Loaded in parallel
+with `catalog.bin` in `main.ts`.
+
+**The entry is a structured designation SET, not a set of labels** — `p`
+the record's NAME, `b`/`bx`/`bc` the Bayer glyph with its index and the
+component the authority attributes it to, `f`/`gd`/`gh` the Flamsteed and
+Gould numbers, `al` the spellings the ladder displaced. Nothing on the
+wire is a composed string and nothing parses one; `naming/README.md`
+§ Two callers, one composer owns the rest.
+
+`hda`/`hra` carry the further HD / HR numbers a record answers to but does
+not display, on 95 entries (`classic-ids/README.md` § An alias stops at the
+blend). The `s` field carries the raw spectral designation from the
 spine's printed `spect` cell ("G2 V", "M1.5Iab-b", "K0III+K7V", …) for the
-hover tooltip display. The `g` field carries the GCVS variable-star designation
-(`R CrB`, `VY CMa`, `V0645 Cen`) attached during the GCVS cross-match
-(`parse/gcvs/README.md`) — the lookup key the cross-match already
-computes, now also emitted so variables become searchable by their
-familiar variable name rather than only HIP/HD. ~14.1k stars are named
-(`gcvsNamed`); this is a superset of the ~4.1k with a renderable period
-(`gcvsMatched`), because a designation is attached on name-resolution
-alone — aperiodic variables (Proxima = V0645 Cen, R CrB, T Tau, novae) are
-searchable but never pulsate.
+hover tooltip display. The `g` field carries the GCVS variable-star
+designation (`R CrB`, `VY CMa`, `V0645 Cen`) the cross-match attaches
+(`parse/gcvs/README.md`). ~14.1k stars are named (`gcvsNamed`), a superset
+of the ~4.1k with a renderable period (`gcvsMatched`): a designation is
+attached on name-resolution alone, so aperiodic variables (Proxima =
+V0645 Cen, R CrB, T Tau, novae) are searchable but never pulsate.
 
 Multiple-star components additionally carry `cl` (canonical WDS component
-letter) + `cp` (the system primary's record index), emitted by
-`buildComponentDesignations` (`companions/record-index/`) after the
+letter) + `cp` (the record its system's designation comes from), emitted
+by `buildComponentDesignations` (`companions/record-index/`) after the
 row-index map is built — resolving each `multiples.tsv` component through
 the same `gaia → hip → synth` priority `build-runtime-binaries.py` uses.
-These drive the runtime "<system> <letter>" aliases ("Alpha Centauri C" /
-"α Cen C" → Proxima) — see `src/client/typeahead/README.md` § Star
-search. The base designation expands from the PRIMARY (`cp`), not the
-component's own name: Proxima has no Bayer, and "Rigil Kentaurus C" (the
-primary's proper) would be wrong. Coverage is bounded by what decomposes
-in `multiples.tsv` (`componentDesignations` in build-counts pins the total).
+The pair drives both the composed display label ("Sirius B") and the
+runtime "<system> <letter>" aliases ("Alpha Centauri C" / "α Cen C" →
+Proxima). `cp` is the WDS ROOT's anchor, not the pair cursor's:
+`companions/record-index/README.md` § Component-letter search
+designations. Coverage is bounded by what decomposes in `multiples.tsv`
+(`componentDesignations` in build-counts pins the total).
 
 `c` is the record's **positional** constellation (byte 34) and drives the
-dropdown's context line; `dc` is the constellation its Bayer / Flamsteed /
-GCVS designation is *named* for, and is the one every alias and display
-label is built against. `dc` is emitted only where the two diverge AND
-the entry carries a constellation-relative designation (`b`/`f`/`g`/`cl`)
-— **65** entries today, `designationConMismatch` in build-counts, so the
-reader's `designationConIndex(dc, c)` fallback carries everything else at no
-wire cost. What that population is made of, and where each entry's `dc` comes
-from: `parse/README.md` § Positional constellation membership and
-`classic-ids/README.md` § The designation constellation.
+dropdown's context line; `dc` is the constellation a designation is *named*
+for, and is the one every alias and display label is built against. `dc`
+ships only where the two diverge AND the entry carries a
+constellation-relative designation (`b`/`f`/`gd`/`g`/`cl`) — **68** entries,
+`designationConMismatch` — so the reader's `designationConIndex(dc, c)`
+fallback carries the rest at no wire cost. The cascade behind the field:
+`naming/README.md` § The designation constellation.
 
 Field shape pinned in `scripts/catalog/catalog-pure.ts` as the `SearchEntry`
 interface — the writer (`build-catalog.ts`) and the reader
 (`src/client/typeahead/search.ts`) both import it; drift = compile error.
 
-Identifier dispatch in `search.ts`:
-- Regex-prefix forms (`HIP 27989`, `HD 39801`, `HR 2061`, `Gl 559A`) go
-  through `Map<number, number>` direct lookups — no fuzzy scoring.
-- Flamsteed (`58 Ori`) also uses a direct `"${num} ${con}"` map.
-- Everything else (proper name, Bayer forms, GCVS designations) is
-  Fuse-fuzzy.
-- For each Bayer'd star, multiple index entries are emitted so any of
-  `α Cen` / `Alpha Cen` / `Alp Cen` / `Alf Cen` / `Alpha Centaurus` find
-  the star. "Alf" is added only for α (most-commonly alternate-spelled).
-- GCVS designations (`g` field) emit an abbreviated + con-name-expanded
-  label pair (`V645 Cen` / `V645 Centaurus`); the V-number zero-padding
-  GCVS stores (`V0645`) is stripped to the common form (`V645`). The
-  expansion fires only when the trailing token IS the constellation code,
-  so the 6,079 NSV / Magellanic designations emit one label
-  (`src/client/typeahead/README.md` § Star search).
+Which forms dispatch to an exact-match map and which are Fuse-fuzzy, and
+every ASCII / constellation-expanded spelling derived off the structure
+above, are the reader's own:
+`src/client/typeahead/README.md` § Star search.
 
 The dropdown deduplicates by star index so a star with multiple matching
 Bayer variants shows up once.

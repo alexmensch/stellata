@@ -17,18 +17,52 @@ export function foldCurlyGreek(s: string): string {
   return s.replace(/[ϕϵϑϱϰς]/g, (ch) => CURLY_GREEK_FOLDS[ch]);
 }
 
+/** Every published spelling of each Greek Bayer letter, keyed by the glyph
+ *  the wire carries. `abbr` is the three-letter form AT-HYG prints and
+ *  SIMBAD/IV/27A lowercase (`Alp` / `alp`); `variants` are the further
+ *  lowercase ASCII conventions the same letter appears under. The build's
+ *  normalisers read the lowercased set (`ASCII_GREEK`), the runtime's search
+ *  labels title-case it — one table, so a spelling added for either side
+ *  reaches both. */
+export const GREEK_SPELLINGS: Record<string, {
+  full: string;
+  abbr: string;
+  variants: readonly string[];
+}> = {
+  'α': { full: 'Alpha', abbr: 'Alp', variants: ['alf'] },
+  'β': { full: 'Beta', abbr: 'Bet', variants: [] },
+  'γ': { full: 'Gamma', abbr: 'Gam', variants: [] },
+  'δ': { full: 'Delta', abbr: 'Del', variants: [] },
+  'ε': { full: 'Epsilon', abbr: 'Eps', variants: [] },
+  'ζ': { full: 'Zeta', abbr: 'Zet', variants: [] },
+  'η': { full: 'Eta', abbr: 'Eta', variants: [] },
+  'θ': { full: 'Theta', abbr: 'The', variants: ['tet'] },
+  'ι': { full: 'Iota', abbr: 'Iot', variants: [] },
+  'κ': { full: 'Kappa', abbr: 'Kap', variants: [] },
+  'λ': { full: 'Lambda', abbr: 'Lam', variants: [] },
+  'μ': { full: 'Mu', abbr: 'Mu', variants: [] },
+  'ν': { full: 'Nu', abbr: 'Nu', variants: [] },
+  'ξ': { full: 'Xi', abbr: 'Xi', variants: ['ksi'] },
+  'ο': { full: 'Omicron', abbr: 'Omi', variants: [] },
+  'π': { full: 'Pi', abbr: 'Pi', variants: [] },
+  'ρ': { full: 'Rho', abbr: 'Rho', variants: [] },
+  'σ': { full: 'Sigma', abbr: 'Sig', variants: [] },
+  'τ': { full: 'Tau', abbr: 'Tau', variants: [] },
+  'υ': { full: 'Upsilon', abbr: 'Ups', variants: [] },
+  'φ': { full: 'Phi', abbr: 'Phi', variants: [] },
+  'χ': { full: 'Chi', abbr: 'Chi', variants: ['khi'] },
+  'ψ': { full: 'Psi', abbr: 'Psi', variants: [] },
+  'ω': { full: 'Omega', abbr: 'Ome', variants: ['omega'] },
+};
+
 /** Lowercase ASCII Greek abbreviations → glyph, covering both the SIMBAD
  *  convention NEC's `* kap01 Scl B` rows use and IV/27A's cells (`alf`,
  *  `ksi`, trailing-period `mu.` / `nu.` / `pi.` — strip the period before
- *  lookup). AT-HYG's capitalised forms (`Alp`) are
- *  src/client/typeahead/star-designations.ts BAYER_GREEK. */
-export const ASCII_GREEK: Record<string, string> = {
-  alf: 'α', alp: 'α', bet: 'β', gam: 'γ', del: 'δ', eps: 'ε',
-  zet: 'ζ', eta: 'η', tet: 'θ', the: 'θ', iot: 'ι', kap: 'κ',
-  lam: 'λ', mu: 'μ', nu: 'ν', ksi: 'ξ', xi: 'ξ', omi: 'ο',
-  pi: 'π', rho: 'ρ', sig: 'σ', tau: 'τ', ups: 'υ', phi: 'φ',
-  chi: 'χ', khi: 'χ', psi: 'ψ', ome: 'ω', omega: 'ω',
-};
+ *  lookup). */
+export const ASCII_GREEK: Record<string, string> = Object.fromEntries(
+  Object.entries(GREEK_SPELLINGS).flatMap(([glyph, s]) =>
+    [s.abbr.toLowerCase(), ...s.variants].map((k) => [k, glyph])),
+);
 
 /** Constellation genitive → IAU 3-letter code, the 88 IAU constellations.
  *  Multi-word genitives are single map keys — match longest-first. */

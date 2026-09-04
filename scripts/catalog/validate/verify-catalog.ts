@@ -11,7 +11,7 @@ import {
   lookupByName,
 } from '../catalog-lookup';
 
-const catalog = await loadCatalog();
+const catalog = await loadCatalog({ withSearchIndex: true });
 const { magic, version, count, nameTableOffset, nameTableLength } = catalog.header;
 
 console.log(`magic=${magic} version=${version} count=${count} recordSize=${RECORD_SIZE}`);

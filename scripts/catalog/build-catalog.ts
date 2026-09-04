@@ -88,8 +88,6 @@ import {
   readMultiplesTsv,
   MULTIPLES_TSV,
   parkedIdentifiers,
-  resolveComponentNameCollisions,
-  stampComponentLetters,
 } from './companions/companion-promotion';
 import {
   buildCatalogRowIndexMap,
@@ -116,6 +114,12 @@ import {
   CLASSIC_ID_LABEL_INPUT_PATHS,
 } from './classic-ids/apply-classic-id-labels';
 import { emptyLabelMergeCounts, LABEL_FIELDS } from './classic-ids/label-merge-pure';
+import {
+  applyStarNames,
+  loadNameOverrides,
+  loadStarNamingInputs,
+} from './naming/apply-star-names';
+import { assignDisplayNames } from './naming/display-names';
 import { readStars, type Star } from './parse/stars-parse';
 import {
   PARKED_RECORDS_FILE,
@@ -290,6 +294,34 @@ async function main() {
     multiplicityResolved: 0,
     multiplicityUnresolved: 0,
     componentDesignations: 0,
+    namingIauNamed: 0,
+    namingIauNamedByProper: 0,
+    namingIauUnreached: 0,
+    namingEponym: 0,
+    namingBayer: 0,
+    namingBayerAdded: 0,
+    namingBayerComponent: 0,
+    namingBayerDropped: 0,
+    namingGould: 0,
+    namingAliases: 0,
+    namingAliasRecords: 0,
+    namingDesigConFromWgsn: 0,
+    namingDesigConWgsnConflict: 0,
+    namingTierOverride: 0,
+    namingTierIau: 0,
+    namingTierEponym: 0,
+    namingTierBayer: 0,
+    namingTierFlamsteed: 0,
+    namingTierGould: 0,
+    namingTierGcvs: 0,
+    namingTierCatalogue: 0,
+    namingBorrowed: 0,
+    namingLettered: 0,
+    namingNameTable: 0,
+    namingOverrides: 0,
+    namingUnlabelled: 0,
+    namingDuplicateLabels: 0,
+    namingDuplicateRecords: 0,
     ...emptyLabelMergeCounts(),
     desigConFromCrossIndex: 0,
     crossIndexUnknownCst: 0,
@@ -370,9 +402,6 @@ async function main() {
     companionBlendDimMisfit: 0,
     companionRepositionedCollocatedDouble: 0,
     companionConstellationSplitFromAnchor: 0,
-    componentLettersStamped: 0,
-    componentNameCollisionsResolved: 0,
-    componentNameCollisionsUnresolved: 0,
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
     hipVMagEntries: 0,
@@ -644,6 +673,28 @@ async function main() {
       `${labelCounts.desigConFromCrossIndex}`,
   );
 
+  // Naming ladder, authority half: the IAU WGSN approved name and the
+  // glyph-bearing Bayer / Gould designations, keyed on the identifiers the
+  // label merge above has just settled. Composition itself is post-sort,
+  // once every promoted record exists and its component letter is known.
+  console.log('Applying the IAU WGSN naming ladder...');
+  const namingCounts = applyStarNames(stars, loadStarNamingInputs(), CONSTELLATIONS);
+  Object.assign(counts, namingCounts);
+  console.log(
+    `  ${namingCounts.namingIauNamed} IAU names ` +
+      `(${namingCounts.namingIauNamedByProper} via the record's own spelling, ` +
+      `${namingCounts.namingIauUnreached} approved names unreached), ` +
+      `${namingCounts.namingEponym} string designations`,
+  );
+  console.log(
+    `  ${namingCounts.namingBayer} Bayer designations ` +
+      `(${namingCounts.namingBayerAdded} added, ` +
+      `${namingCounts.namingBayerDropped} spine cells the authority does not ` +
+      `reach), ${namingCounts.namingGould} Gould, ` +
+      `${namingCounts.namingAliases} aliases on ` +
+      `${namingCounts.namingAliasRecords} records`,
+  );
+
   const simbadPct = ((stats.spectralBySimbad / stars.length) * 100).toFixed(1);
   const gspspecPct = ((stats.spectralByGspspec / stars.length) * 100).toFixed(1);
   const fallbackPct = ((stats.spectralFallback / stars.length) * 100).toFixed(1);
@@ -716,8 +767,8 @@ async function main() {
       coherence.anchorPlacementInconsistent;
     console.log('Promoting binary companions from multiples.tsv...');
     const tProm = Date.now();
-    const { newStars, stats: ps, groups } = promoteCompanions(
-      multiplesRows, stars, CONSTELLATIONS, conAssignment, dustGrid,
+    const { newStars, stats: ps } = promoteCompanions(
+      multiplesRows, stars, conAssignment, dustGrid,
       parkedIdentifiers(stats.parked),
     );
     for (const ns of newStars) stars.push(ns);
@@ -773,33 +824,6 @@ async function main() {
     counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
     counts.companionConstellationSplitFromAnchor = ps.constellationSplitFromAnchor;
 
-    // Stamp component letters onto pairs AT-HYG left anonymous — both
-    // halves first-class but printing the same Bayer/Flamsteed label
-    // (61 Cyg A/B). Mutates proper/flags in place, so it must precede
-    // the name-table + search-index write below.
-    const stampStats = stampComponentLetters(groups, stars, CONSTELLATIONS);
-    if (stampStats.rowsStamped > 0) {
-      console.log(
-        `  stamped ${stampStats.rowsStamped} component names across ` +
-          `${stampStats.systemsStamped} anonymous-pair systems`,
-      );
-    }
-    counts.componentLettersStamped = stampStats.rowsStamped;
-
-    // Last naming pass: settle records inside one WDS root that ended up
-    // claiming the same display name (AT-HYG's component letters vs ours).
-    const collisionStats = resolveComponentNameCollisions(
-      groups, stars, CONSTELLATIONS,
-    );
-    if (collisionStats.recordsRenamed > 0 || collisionStats.unresolved > 0) {
-      console.log(
-        `  re-lettered ${collisionStats.recordsRenamed} record(s) across ` +
-          `${collisionStats.collisionsResolved} same-system name collision(s)` +
-          `${collisionStats.unresolved > 0 ? `; ${collisionStats.unresolved} left unresolved` : ''}`,
-      );
-    }
-    counts.componentNameCollisionsResolved = collisionStats.collisionsResolved;
-    counts.componentNameCollisionsUnresolved = collisionStats.unresolved;
   } else {
     console.log('multiples.tsv not found; skipping companion promotion.');
   }
@@ -989,8 +1013,49 @@ async function main() {
   });
   const recordSids = sidResolution.objectSids;
 
-  // Build name table — just proper names. Bayer/Flam/HIP/etc. go in
-  // search-index.json so the main binary stays compact.
+  // Naming ladder, composition half. Runs here because it needs every
+  // record final: the promoted companions exist, indices are sorted, each
+  // component's WDS root anchor resolves through the row-index map, and the
+  // SIDs the override table keys on are known. Writes `proper` for the NAME
+  // tiers alone — the runtime composes every designation off the search
+  // index through the same pure function (docs/star-naming.md § 6).
+  const display = assignDisplayNames(
+    stars, componentDesignations, CONSTELLATIONS, loadNameOverrides(), recordSids,
+  );
+  Object.assign(counts, {
+    namingTierOverride: display.counts.namingTier.override,
+    namingTierIau: display.counts.namingTier.iau,
+    namingTierEponym: display.counts.namingTier.eponym,
+    namingTierBayer: display.counts.namingTier.bayer,
+    namingTierFlamsteed: display.counts.namingTier.flamsteed,
+    namingTierGould: display.counts.namingTier.gould,
+    namingTierGcvs: display.counts.namingTier.gcvs,
+    namingTierCatalogue: display.counts.namingTier.catalogue,
+    namingBorrowed: display.counts.namingBorrowed,
+    namingLettered: display.counts.namingLettered,
+    namingNameTable: display.counts.namingNameTable,
+    namingOverrides: display.counts.namingOverrides,
+    namingUnlabelled: display.counts.namingUnlabelled,
+    namingDuplicateLabels: display.counts.namingDuplicateLabels,
+    namingDuplicateRecords: display.counts.namingDuplicateRecords,
+  });
+  console.log(
+    `Display names: ${display.labels.size} composed ` +
+      `(${display.counts.namingNameTable} names in catalog.bin, ` +
+      `${display.counts.namingBorrowed} borrowed from a system anchor, ` +
+      `${display.counts.namingLettered} lettered, ` +
+      `${display.counts.namingUnlabelled} unlabelled)`,
+  );
+  if (display.counts.namingDuplicateLabels > 0) {
+    console.log(
+      `  ${display.counts.namingDuplicateLabels} duplicate label(s) across ` +
+        `${display.counts.namingDuplicateRecords} records — see ` +
+        'naming/naming-parity.test.ts',
+    );
+  }
+
+  // Build name table — the NAME tiers only. Every designation is composed
+  // at runtime off search-index.json so the main binary stays compact.
   const encoder = new TextEncoder();
   const nameChunks: Uint8Array[] = [];
   const nameOffsets = new Uint32Array(stars.length);

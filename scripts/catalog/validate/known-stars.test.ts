@@ -36,6 +36,7 @@ import {
   loadCatalog,
   lookupByHip,
   lookupByGaiaSourceId,
+  displayLabel,
   lookupByName,
   lookupByRef,
 } from '../catalog-lookup';
@@ -379,7 +380,7 @@ const multiplesByWds = MULTIPLES_BY_WDS;
 beforeAll(async () => {
   // The tier-column cases below run fixture-free; only the corpus
   // assertions need catalog.bin, so loading it must stay gated too.
-  if (FIXTURES_READY) catalog = await loadCatalog();
+  if (FIXTURES_READY) catalog = await loadCatalog({ withSearchIndex: true });
 });
 
 // ---- Per-row assertions -------------------------------------------------
@@ -497,13 +498,11 @@ function assertSynthPromotedCompanion(
   companion: CorpusCompanion,
   primary: CatalogRecord,
 ): void {
-  // composeCompanionName in scripts/catalog/companions/companion-promotion.ts emits
-  // `${base} ${canonicalComp}` where base is the primary's name cell or
-  // resolveCompanionNameBase's `HIP <n>` fallback for name-less primaries
-  // (AR Cas) — reconstruct the same shape so a naming drift on either
-  // side surfaces here as a missing-lookup failure.
-  const base = primary.name
-    ?? (row.primaryHip !== null ? `HIP ${row.primaryHip}` : null);
+  // The composer emits `<the system anchor's own designation> <letter>`
+  // for a component carrying nothing better of its own, so reconstruct
+  // that shape from what the primary actually displays — a naming drift on
+  // either side then surfaces here as a missing-lookup failure.
+  const base = displayLabel(catalog, primary.i);
   const companionName = base !== null
     ? `${base} ${companion.letter}`
     : null;
