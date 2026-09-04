@@ -36,6 +36,12 @@ query.py     ADQL builders + batched TAP executor. Wraps each
              rows must fold straight into their final shape, because at
              spine scope this accumulator is ~100 MB and an
              intermediate copy doubles it.
+union.py     Phase B2 — the value-keyed union (§ The union asks every
+             namespace a record reaches). Reads Phase A's per-namespace
+             bindings and Phase B's rows, asks what no bound object
+             answered, and returns the objects that do — each binding
+             adjudicated by request.py's shared `corroborate`, because
+             every one of them rests on a designation alone.
 coverage.py  Fill counting and floor gates over a pull's
              {oid: {alias: value}} rows — one definition of "this cell
              is filled" (neither None nor blank) and one gate message,
@@ -114,12 +120,84 @@ the ladder landed: 67 rows moved off a `HD nnnnnA`-style component entry
 onto the star's entry, gaining a parallax on every one, and no row lost
 the row it had.
 
-## The widening carries its own corroboration rule
+## The union asks every namespace a record reaches
 
-A widened binding is made on a designation alone, so it needs evidence
-before it may attach rv / parallax / PM / coordinates. `_corroborate`
-reads **every Gaia release SIMBAD keys a cross-ID under**, not DR3 alone,
-and returns one of three verdicts per binding:
+The widening above falls through on RESOLUTION, so it never fires for a row
+whose Gaia lookup resolved — onto an object carrying no value. SIMBAD holds
+two objects for those stars: a Gaia-keyed one with no `sp_type`, and an
+HD/HIP-keyed one that has it (`HD 224738A` beside `HD 224738`, and ~4.7k
+more). A ladder that stops at the first BINDING cannot reach them; only a
+union over the namespaces the record itself carries can.
+
+`union.py` runs after the basic-table pull, because the question it asks is
+about the VALUE and nothing before Phase B knows it:
+
+1. Walk the spine. For each row, collect every namespace it can be asked
+   under and look each up in Phase A's bindings.
+2. A row one bound object answers is done — **`answered` is the common
+   case and it costs no request at all**, which is what keeps the pass
+   cheap over the whole spine: 280,676 of 313,257 rows ask nothing.
+3. Otherwise ask the namespaces Phase A never bound. A namespace it DID
+   bind is not re-asked: it has answered, with the absence of a value.
+4. **Adjudicate every binding.** Each one rests on a designation alone, so
+   it goes through the same `corroborate` a widening rung uses, on the same
+   terms — § The corroboration rule below. This is the guard the union
+   would otherwise have dropped, and it is not decoration: on the pass that
+   landed it, it vetoed bindings that would have given 63 records another
+   star's spectral type, and so another star's rendered radius.
+5. Keep an object only where its value cell is filled. One that answers
+   with nothing would add a row saying nothing and — keyed under the same
+   identifiers — would collide with one that does.
+
+**The pull unions; the record build orders.** Every namespace that answers
+ships its row, and `SIMBAD_NAMESPACE_VALUES` decides which one a record
+takes, so nothing in the request may pick a winner between two objects.
+That is `stellata-3bsf.31`'s settled rule applied rather than re-decided:
+identifiers rank by WHAT THEY NAME, so a GJ (which carries its component
+letter) outranks a TYC (which on a close pair names the system), and a
+system-blend value can never displace a component one. The union's own
+namespace order is therefore not load-bearing — it only decides which rung
+spends the request.
+
+## The union adds rows, never a second row under one key
+
+Worth stating because the opposite is the intuitive reading, and a session
+acting on it would go looking for a merge that has nothing to merge.
+SIMBAD's `ident` table maps an id string to exactly ONE object, so a
+designation the union asks under resolves to whichever object holds it — and
+if a row already in the pull held that id, the oid is one Phase B already
+has and the union adds nothing. It cannot manufacture a second row under a
+key. Measured on the committed file, under the read side's own key
+normalisation: **no key repeats in any of the four namespaces.**
+
+```bash
+python3 - <<'EOF'
+import collections, csv
+seen = collections.Counter()
+with open('data/simbad/simbad_sptype.tsv', newline='') as f:
+    for row in csv.DictReader(f, delimiter='\t'):
+        for ns in ('hip', 'source_id', 'tyc', 'gj'):
+            if row[ns].strip():
+                seen[ns, row[ns].strip()] += 1
+print(sum(1 for n in seen.values() if n > 1), 'repeated keys')
+EOF
+```
+
+What the union DOES change is the shape space: two objects for one star both
+reach the pull, under different keys. So `indexSimbadRow`'s duplicate
+callback is a resolver rather than a fault — the sp_type index keeps
+whichever row states a type and throws only where both do. That decides
+nothing today; it is what a pull that did emit two rows for one key would
+merge through instead of failing.
+
+## The corroboration rule
+
+Shared by the widening ladder and the union — `corroborate` in
+`request.py`, one implementation, because both make the same kind of claim.
+A binding made on a designation alone needs evidence before it may attach a
+value, whether that value is rv / parallax / PM / coordinates or a spectral
+type. It reads **every Gaia release SIMBAD keys a cross-ID under**, not DR3
+alone, and returns one of three verdicts per binding:
 
 - **Corroborated** — SIMBAD holds the asking id itself, under any release.
   This is what reaches a spine cell carrying a **DR2 id in the DR3
@@ -137,8 +215,23 @@ and returns one of three verdicts per binding:
   of evidence, which is the whole point of the rule above, so the count does
   not separate them.
 
-A designation two source_ids both claim binds neither and is dropped
-before the request.
+**A designation two source_ids both claim** has no single asking id, and the
+two callers part company on it — the same fact, two different stakes. The
+widening **drops** it before the request: that binding is the row's only
+route to a value, so an unadjudicable one is worth nothing. The union
+**keeps** it, uncorroborated: nothing can contradict an id that was never
+singular, and adjudicating against an arbitrary one of the claimants would
+veto on a coin toss. One spine designation is in this position (`GJ 277A`).
+
+## Why the union asks no Gaia rung
+
+`UNION_NAMESPACES` is `WIDENING_LADDER` — HIP, TYC, GJ — and deliberately
+not Gaia. A source_id reaches the union only when Phase A's Gaia lookup
+failed to RESOLVE it, so asking again puts the same id to the same `ident`
+table for the same answer: ~3.3k ids, one batched round trip, no recovery
+possible. The distinction the pass has to hold is between "asked, and
+answered with no such object" and "never asked" — the first is Phase A's
+job and is finished; only the second is the union's.
 
 ## Used by
 

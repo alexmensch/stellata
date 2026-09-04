@@ -132,25 +132,36 @@ const SIMBAD_NAMESPACE_BINDINGS: {
 };
 
 /** Add one pull row under every namespace it carries; a row carrying none is
- *  joinable by nothing and indexes nowhere. `onDuplicate` fires instead of
- *  overwriting — no key repeats in either committed pull, so a collision is an
- *  upstream schema change and not a binding to arbitrate silently. */
+ *  joinable by nothing and indexes nowhere. */
 export function indexSimbadRow<T>(
   index: SimbadNamespaceIndex<T>,
   keys: SimbadRecordKeys,
   row: T,
-  onDuplicate: (namespace: SimbadNamespace, key: string) => void,
+  /** Which of two rows sharing one key to index. No key repeats in either
+   *  committed pull, so this decides nothing today; it is what a pull that
+   *  did emit two rows for one key would merge through instead of failing,
+   *  and the consumer that knows which cell it came for is the only thing
+   *  able to order them. Returning neither — by throwing — is a valid
+   *  verdict for a consumer that cannot. */
+  onDuplicate: (
+    namespace: SimbadNamespace,
+    key: string,
+    incumbent: T,
+    candidate: T,
+  ) => T,
 ): void {
   for (const namespace of SIMBAD_NAMESPACE_VALUES) {
     const binding = SIMBAD_NAMESPACE_BINDINGS[namespace];
     const key = binding.key(keys);
     if (key === null) continue;
     const map = binding.map(index);
-    if (map.has(key)) {
-      onDuplicate(namespace, String(key));
-      continue;
-    }
-    map.set(key, row);
+    const incumbent = map.get(key);
+    map.set(
+      key,
+      incumbent === undefined
+        ? row
+        : onDuplicate(namespace, String(key), incumbent, row),
+    );
   }
 }
 

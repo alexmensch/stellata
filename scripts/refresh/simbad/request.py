@@ -26,13 +26,13 @@ def widening_label(lookup: IdentLookup) -> str:
 
 
 @dataclass
-class WideningVerdicts:
-    """How one widening rung's bindings were adjudicated. `corroborated` is
-    the strong outcome — SIMBAD holds the asking id itself. `uncorroborated`
-    is "nothing published that could contradict it", which admits an object
-    holding only a differing EARLIER-release id as well as one holding no Gaia
-    id at all: under § The widening carries its own corroboration rule, only
-    DR3 contradicts."""
+class CorroborationVerdicts:
+    """How one pass's designation-only bindings were adjudicated — a widening
+    rung's, or the union's. `corroborated` is the strong outcome: SIMBAD holds
+    the asking id itself. `uncorroborated` is "nothing published that could
+    contradict it", which admits an object holding only a differing
+    EARLIER-release id as well as one holding no Gaia id at all: under
+    § The corroboration rule, only DR3 contradicts."""
 
     corroborated: int = 0
     vetoed: int = 0
@@ -48,18 +48,26 @@ class OidRequest:
     oids: set[int] = field(default_factory=set)
     requested: dict[str, int] = field(default_factory=dict)
     resolved: dict[str, int] = field(default_factory=dict)
+    #: {IdentLookup.tsv_name: {key: oid}} — what each namespace actually
+    #: bound, which is what a later pass needs to tell "asked and answered
+    #: with an absence" from "never asked". Keyed on the namespace rather
+    #: than the report label so a widening rung folds into its own
+    #: namespace: read-back does not care which rung bound a row.
+    bindings: dict[str, dict[int | str, int]] = field(default_factory=dict)
     gained_by_widening: dict[str, int] = field(default_factory=dict)
-    verdicts: dict[str, WideningVerdicts] = field(default_factory=dict)
+    verdicts: dict[str, CorroborationVerdicts] = field(default_factory=dict)
 
     def add(
         self,
         label: str,
         requested: Sequence[int | str],
         resolved: Mapping[int | str, int],
+        namespace: str | None = None,
     ) -> None:
         self.requested[label] = len(requested)
         self.resolved[label] = len(resolved)
         self.oids.update(resolved.values())
+        self.bindings.setdefault(namespace or label, {}).update(resolved)
 
     def coverage(self, label: str) -> float:
         return self.resolved[label] / max(1, self.requested[label])
@@ -138,9 +146,12 @@ def _widen(
         client, list(candidates), lookup,
         progress_label=f"{lookup.tsv_name} widening",
     )
-    kept, verdicts = _corroborate(client, widened, candidates, lookup)
+    kept, verdicts = corroborate(
+        client, widened, candidates,
+        progress_label=f"{lookup.tsv_name} widening corroboration",
+    )
     before = len(request.oids)
-    request.add(label, list(candidates), kept)
+    request.add(label, list(candidates), kept, namespace=lookup.tsv_name)
     request.gained_by_widening[label] = len(request.oids) - before
     request.verdicts[label] = verdicts
 
@@ -166,34 +177,37 @@ def _widening_candidates(
     return {suffix: ids[0] for suffix, ids in claims.items() if len(ids) == 1}
 
 
-def _corroborate(
+def corroborate(
     client: rl.TapClient,
-    widened: Mapping[int | str, int],
-    candidates: Mapping[int | str, int],
-    lookup: IdentLookup,
-) -> tuple[dict[int | str, int], WideningVerdicts]:
-    """Adjudicate widened bindings against SIMBAD's own Gaia cross-IDs, read
-    across every release SIMBAD keys rather than DR3 alone.
+    bound: Mapping[int | str, int],
+    asking_ids: Mapping[int | str, int | None],
+    *,
+    progress_label: str,
+) -> tuple[dict[int | str, int], CorroborationVerdicts]:
+    """Adjudicate designation-only bindings against SIMBAD's own Gaia
+    cross-IDs, read across every release SIMBAD keys rather than DR3 alone.
 
     Only a DR3 id can contradict the asking one, so the veto reads DR3 while
     corroboration reads all three releases — the asymmetry, and why a
-    differing DR2 id is not evidence either way, is README.md § The widening
-    carries its own corroboration rule.
+    differing DR2 id is not evidence either way, is README.md § The
+    corroboration rule. An asking id of None has nothing a
+    cross-ID could contradict, so it lands uncorroborated rather than skipping
+    the rule: a no-Gaia spine row binds on its designation alone too.
     """
-    if not widened:
-        return {}, WideningVerdicts()
+    if not bound:
+        return {}, CorroborationVerdicts()
     gaia_ids = query.fetch_ident_sets(
-        client, sorted(set(widened.values())), GAIA_RELEASES,
-        progress_label=f"{lookup.tsv_name} widening corroboration",
+        client, sorted(set(bound.values())), GAIA_RELEASES,
+        progress_label=progress_label,
     )
     kept: dict[int | str, int] = {}
-    verdicts = WideningVerdicts()
-    for suffix, oid in widened.items():
+    verdicts = CorroborationVerdicts()
+    for suffix, oid in bound.items():
         releases = gaia_ids.get(oid, {})
-        asking = candidates[suffix]
-        if any(asking in ids for ids in releases.values()):
+        asking = asking_ids.get(suffix)
+        if asking is not None and any(asking in ids for ids in releases.values()):
             verdicts.corroborated += 1
-        elif releases.get(GAIA_DR3.tsv_name):
+        elif asking is not None and releases.get(GAIA_DR3.tsv_name):
             verdicts.vetoed += 1
             continue
         else:

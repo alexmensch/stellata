@@ -186,15 +186,29 @@ describe('catalog-pure / SIMBAD namespace ladder', () => {
     }
   });
 
-  it('reports a duplicate per namespace instead of overwriting', () => {
+  it('hands every colliding namespace to the resolver', () => {
     const index = emptySimbadNamespaceIndex<string>();
     indexSimbadRow(index, ALL_KEYS, 'first', () => {
       throw new Error('unexpected duplicate');
     });
     const collisions: SimbadNamespace[] = [];
-    indexSimbadRow(index, ALL_KEYS, 'second', (namespace) => collisions.push(namespace));
+    indexSimbadRow(index, ALL_KEYS, 'second', (namespace, _key, incumbent) => {
+      collisions.push(namespace);
+      return incumbent;
+    });
     expect(collisions).toEqual([...SIMBAD_NAMESPACE_VALUES]);
     expect(walkSimbadNamespaces(index, ALL_KEYS, (row) => row)?.value).toBe('first');
+  });
+
+  it('indexes the row the resolver picks, under every shared key', () => {
+    // A pull that unions namespaces reaches one star under two objects, so
+    // the consumer that knows which cell it came for decides.
+    const index = emptySimbadNamespaceIndex<string>();
+    indexSimbadRow(index, ALL_KEYS, 'first', () => {
+      throw new Error('unexpected duplicate');
+    });
+    indexSimbadRow(index, ALL_KEYS, 'second', (_ns, _key, _incumbent, candidate) => candidate);
+    expect(walkSimbadNamespaces(index, ALL_KEYS, (row) => row)?.value).toBe('second');
   });
 
   // A bogus HIP cell must be no key at all rather than a key nothing looks

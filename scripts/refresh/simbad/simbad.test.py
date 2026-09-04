@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from test_helpers import load_kebab_sibling  # noqa: E402
 import simbad  # noqa: E402
-from simbad import coverage, inputs, query, request, tsv  # noqa: E402
+from simbad import coverage, inputs, query, request, tsv, union  # noqa: E402
 from simbad.specs import (  # noqa: E402
     OID, MAIN_ID, SP_TYPE, SP_QUAL, OTYPE, GJ, HIP, GAIA_DR3, TYC,
     PLX_BIBCODE, PLX_ERR, PLX_QUAL, PLX_VALUE,
@@ -855,9 +855,234 @@ class CollectOidRequestsTests(unittest.TestCase):
         with mock.patch.object(sptype, "SPINE", spine), \
              mock.patch.object(sptype.inputs, "iter_wds_xids_oids",
                                return_value=iter([200, 100])):
-            oids = sptype.collect_oid_requests(FakeClient(backend))
-        # gaia oid 100 ∪ hip oid 300 ∪ wds {200, 100} → deduped + sorted.
-        self.assertEqual(oids, [100, 200, 300])
+            resolved = sptype.collect_oid_requests(FakeClient(backend))
+        # gaia oid 100 ∪ hip oid 300 ∪ wds {200, 100} → deduped.
+        self.assertEqual(sorted(resolved.oids), [100, 200, 300])
+        # The bindings the union pass reads back are per NAMESPACE, so a
+        # widening rung folds into the namespace it asked under.
+        self.assertEqual(resolved.bindings["source_id"], {12345: 100})
+        self.assertEqual(resolved.bindings["hip"], {777: 300})
+
+
+
+def basic_table(rows):
+    """A basic-table response carrying just the columns the union reads."""
+    return FakeTable(
+        colnames=["oid", "main_id", "sp_type", "sp_qual", "sp_bibcode", "otype"],
+        dtypes={"oid": int, "main_id": str, "sp_type": str, "sp_qual": str,
+                "sp_bibcode": str, "otype": str},
+        rows=[{"main_id": "", "sp_qual": "", "sp_bibcode": "", "otype": "",
+               **r} for r in rows],
+    )
+
+
+UNION_COLUMNS = [OID, MAIN_ID, SP_TYPE, SP_QUAL, OTYPE]
+
+
+class UnionUnansweredTests(unittest.TestCase):
+    """The value-keyed union: ask every namespace a row reaches only where
+    no object it already bound carries the value."""
+
+    def _run(self, spine_rows, bindings, rows, responses):
+        with tempfile.TemporaryDirectory() as d:
+            spine = write_spine(Path(d), spine_rows)
+            backend = FakeBackend(responses)
+            found, added, report = union.union_unanswered(
+                FakeClient(backend),
+                spine_path=spine,
+                bindings=bindings,
+                rows=rows,
+                columns=UNION_COLUMNS,
+                value_alias=SP_TYPE.alias,
+            )
+            return found, added, report, backend
+
+    def test_recovers_a_row_whose_bound_object_carries_no_type(self):
+        # The Gaia lookup RESOLVED — onto a component-lettered object with no
+        # sp_type — so no resolution-keyed rung ever fires for this row.
+        found, added, report, _ = self._run(
+            [{"gaia_source_id": "12345", "hip": "777"}],
+            {"source_id": {12345: 100}},
+            {100: {"sp_type": None}},
+            [("HIP 777", ident_table([{"oidref": 300, "id": "HIP 777"}])),
+             ("oidref IN (300)", ident_table([])),
+             ("b.oid IN (300)", basic_table([{"oid": 300, "sp_type": "K0III"}]))],
+        )
+        self.assertEqual(found, {300: {"oid": 300, "main_id": "",
+                                       "sp_type": "K0III", "sp_qual": "",
+                                       "otype": ""}})
+        self.assertEqual(added, {"hip": {777: 300}})
+        self.assertEqual(report.unanswered, 1)
+        self.assertEqual(report.with_unasked_namespace, 1)
+        self.assertEqual(report.rows_recovered, 1)
+        self.assertEqual(report.verdicts["hip"].uncorroborated, 1)
+
+    def test_leaves_an_answered_row_alone(self):
+        # Nothing is asked at all: the row's bound object states a type, so
+        # the pass has no question to put to any other namespace.
+        found, added, report, backend = self._run(
+            [{"gaia_source_id": "12345", "hip": "777"}],
+            {"source_id": {12345: 100}},
+            {100: {"sp_type": "G2V"}},
+            [],
+        )
+        self.assertEqual((found, added), ({}, {}))
+        self.assertEqual(report.answered, 1)
+        self.assertEqual(backend.calls, [])
+
+    def test_vetoes_a_binding_simbad_names_another_source_for(self):
+        # oid 300 answers 'HIP 777', but SIMBAD calls it Gaia DR3 999 where
+        # the asking row is 12345 — SIMBAD's own statement that these are
+        # separate stars, so no type may cross between them. The union binds
+        # on a designation alone, exactly as a widening rung does, and takes
+        # the same veto.
+        found, added, report, backend = self._run(
+            [{"gaia_source_id": "12345", "hip": "777"}],
+            {"source_id": {12345: 100}},
+            {100: {"sp_type": None}},
+            [("HIP 777", ident_table([{"oidref": 300, "id": "HIP 777"}])),
+             ("oidref IN (300)", ident_table([
+                 {"oidref": 300, "id": "Gaia DR3 999"}]))],
+        )
+        self.assertEqual((found, added), ({}, {"hip": {}}))
+        self.assertEqual(report.verdicts["hip"].vetoed, 1)
+        self.assertEqual(report.rows_recovered, 0)
+        # Vetoed before the basic table is ever asked for.
+        self.assertFalse(any("b.oid IN" in q for q in backend.calls))
+
+    def test_the_asking_id_under_an_earlier_release_corroborates(self):
+        # The spine cell is a DR2 id in the DR3 column, so SIMBAD's DR3 id for
+        # the object differs — a disagreement about the release, not about
+        # which star this is.
+        _, added, report, _ = self._run(
+            [{"gaia_source_id": "12345", "hip": "777"}],
+            {"source_id": {12345: 100}},
+            {100: {"sp_type": None}},
+            [("HIP 777", ident_table([{"oidref": 300, "id": "HIP 777"}])),
+             ("oidref IN (300)", ident_table([
+                 {"oidref": 300, "id": "Gaia DR2 12345"},
+                 {"oidref": 300, "id": "Gaia DR3 999"}])),
+             ("b.oid IN (300)", basic_table([{"oid": 300, "sp_type": "K0III"}]))],
+        )
+        self.assertEqual(added, {"hip": {777: 300}})
+        self.assertEqual(report.verdicts["hip"].corroborated, 1)
+        self.assertEqual(report.verdicts["hip"].vetoed, 0)
+
+    def test_a_designation_two_source_ids_claim_is_not_adjudicated(self):
+        # Two rows ask under one HIP, so there is no single asking id for a
+        # cross-ID to contradict. Adjudicating against an arbitrary one of
+        # them would veto on a coin toss, so the binding stands unverified.
+        _, added, report, _ = self._run(
+            [{"gaia_source_id": "12345", "hip": "777"},
+             {"gaia_source_id": "23456", "hip": "777"}],
+            {"source_id": {12345: 100, 23456: 101}},
+            {100: {"sp_type": None}, 101: {"sp_type": None}},
+            [("HIP 777", ident_table([{"oidref": 300, "id": "HIP 777"}])),
+             ("oidref IN (300)", ident_table([
+                 {"oidref": 300, "id": "Gaia DR3 999"}])),
+             ("b.oid IN (300)", basic_table([{"oid": 300, "sp_type": "K0III"}]))],
+        )
+        self.assertEqual(added, {"hip": {777: 300}})
+        self.assertEqual(report.verdicts["hip"].uncorroborated, 1)
+        self.assertEqual(report.verdicts["hip"].vetoed, 0)
+        self.assertEqual(report.rows_recovered, 2)
+
+    def test_drops_an_object_that_answers_with_nothing(self):
+        # An added row carrying no type would say nothing AND would collide,
+        # under the same identifiers, with a row that does.
+        found, added, report, _ = self._run(
+            [{"gaia_source_id": "12345", "hip": "777"}],
+            {"source_id": {12345: 100}},
+            {100: {"sp_type": None}},
+            [("HIP 777", ident_table([{"oidref": 300, "id": "HIP 777"}])),
+             ("oidref IN (300)", ident_table([])),
+             ("b.oid IN (300)", basic_table([{"oid": 300, "sp_type": ""}]))],
+        )
+        self.assertEqual(found, {})
+        self.assertEqual(added, {"hip": {}})
+        self.assertEqual(report.rows_recovered, 0)
+
+    def test_credits_a_row_reaching_an_object_phase_b_already_pulled(self):
+        # oid 100 was pulled for its own source_id row and states a type; this
+        # row reaches it under a HIP nothing indexed it by, so it IS recovered
+        # even though there is no row to add. Counting only fresh pulls would
+        # under-report the pass against the build's own tier counts.
+        found, added, report, backend = self._run(
+            [{"gaia_source_id": "12345", "hip": "777"},
+             {"gaia_source_id": "999", "hip": "777"}],
+            {"source_id": {999: 100}},
+            {100: {"sp_type": "K0III"}},
+            [("HIP 777", ident_table([{"oidref": 100, "id": "HIP 777"}])),
+             ("oidref IN (100)", ident_table([]))],
+        )
+        self.assertEqual(found, {})
+        self.assertEqual(added, {"hip": {777: 100}})
+        self.assertFalse(any("b.oid IN" in q for q in backend.calls))
+        # One row asked; the source_id 999 row shares the HIP but its own
+        # binding already answered it, so it is not a recovery.
+        self.assertEqual((report.unanswered, report.rows_recovered), (1, 1))
+
+    def test_does_not_re_ask_a_namespace_that_already_bound(self):
+        # A bound namespace has answered — with the absence of a value — so
+        # re-asking it would spend a request to be told the same thing.
+        _, _, report, _ = self._run(
+            [{"gaia_source_id": "12345", "hip": "777", "tyc": "1-2-1"}],
+            {"source_id": {12345: 100}, "hip": {777: 100}},
+            {100: {"sp_type": None}},
+            [("TYC 1-2-1", ident_table([])), ],
+        )
+        self.assertEqual(report.requested["hip"], 0)
+        self.assertEqual(report.requested["tyc"], 1)
+
+    def test_a_later_namespace_skips_a_row_the_first_recovered(self):
+        found, _, report, _ = self._run(
+            [{"gaia_source_id": "12345", "hip": "777", "tyc": "1-2-1"}],
+            {"source_id": {12345: 100}},
+            {100: {"sp_type": None}},
+            [("HIP 777", ident_table([{"oidref": 300, "id": "HIP 777"}])),
+             ("oidref IN (300)", ident_table([])),
+             ("b.oid IN (300)", basic_table([{"oid": 300, "sp_type": "K0III"}]))],
+        )
+        self.assertEqual(list(found), [300])
+        self.assertEqual(report.requested["tyc"], 0)
+
+    def test_merge_rows_returns_the_whole_sorted_oid_list(self):
+        rows = {100: {"sp_type": None}}
+        self.assertEqual(union.merge_rows(rows, {300: {"sp_type": "K0III"}}),
+                         [100, 300])
+        self.assertEqual(rows[300], {"sp_type": "K0III"})
+
+    def test_the_union_asks_the_widening_ladder_and_no_gaia_rung(self):
+        # Every designation namespace a row can carry, and NOT Gaia: a
+        # source_id reaches this pass only when Phase A already failed to
+        # resolve it, so a Gaia rung here spends a request on an id SIMBAD's
+        # ident table has been proved not to hold.
+        self.assertEqual(
+            {lookup.tsv_name for lookup in union.UNION_NAMESPACES},
+            {lookup.tsv_name for lookup in WIDENING_LADDER},
+        )
+        self.assertNotIn(
+            GAIA_DR3.tsv_name,
+            {lookup.tsv_name for lookup in union.UNION_NAMESPACES},
+        )
+
+    def test_iter_recovered_rows_honours_the_row_filter(self):
+        # The enumeration has to answer for the same cohort the pass probed,
+        # or a filtered pull reports rows it never asked about.
+        with tempfile.TemporaryDirectory() as d:
+            spine = write_spine(Path(d), [
+                {"gaia_source_id": "12345", "hip": "777"},
+                {"gaia_source_id": "23456", "hip": "778"},
+            ])
+            added = {"hip": {777: 300, 778: 301}}
+            everything = list(union.iter_recovered_rows(spine, added))
+            filtered = list(union.iter_recovered_rows(
+                spine, added,
+                row_filter=lambda row: row["hip"] == "777",
+            ))
+        self.assertEqual([r[1:] for r in everything],
+                         [("hip", 300), ("hip", 301)])
+        self.assertEqual([r[1:] for r in filtered], [("hip", 300)])
 
 
 class ValuesCollectOidRequestsTests(unittest.TestCase):
