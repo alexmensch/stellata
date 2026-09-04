@@ -2,14 +2,13 @@
 // stale one, and gives up at the timeout.
 
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdtempSync, readFileSync, realpathSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, realpathSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { PERF_GO_MAX_AGE_S } from './perf-go-lib';
 
 const SCRIPT = resolve(__dirname, 'await-go.sh');
-const LIB = resolve(__dirname, 'perf-go-lib.sh');
-const MAX_AGE_S = Number(/PERF_GO_MAX_AGE_S=(\d+)/.exec(readFileSync(LIB, 'utf-8'))![1]);
 
 let repo: string;
 
@@ -66,7 +65,7 @@ describe('await-go', () => {
   }, 15_000);
 
   it('treats a stale marker as absent', async () => {
-    arm(MAX_AGE_S + 60);
+    arm(PERF_GO_MAX_AGE_S + 60);
     const r = await run({ PERF_GO_POLL_S: '0.2', PERF_GO_TIMEOUT_S: '1' });
     expect(r.code).toBe(1);
   }, 15_000);
