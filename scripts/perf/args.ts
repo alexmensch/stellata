@@ -6,17 +6,24 @@ import {
   PRICED_PASS_KEYS,
   type GpuFrameMethod,
 } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import { DEFAULT_DWELL_FRAMES } from './dwell-pure';
+import { DEFAULT_SWEEP_SCALES } from './sweep-pure';
 import { DEFAULT_QUIET_MS } from './settle-pure';
-import { BACKENDS, SCENARIO_NAMES, type Backend, type ScenarioName } from './scenarios';
+import { BACKENDS, SCENARIO_NAMES, type ScenarioName } from './scenarios';
 
-export const MODES = ['differential', 'probe'] as const;
+export const MODES = ['differential', 'probe', 'dwell', 'sweep'] as const;
 export type Mode = (typeof MODES)[number];
+
+/** `both` measures each scenario twice, in its own context. It is not a
+ *  `Backend`: nothing boots "both", so it never reaches a URL or a record. */
+export const BACKEND_REQUESTS = [...BACKENDS, 'both'] as const;
+export type BackendRequest = (typeof BACKEND_REQUESTS)[number];
 
 export interface RunArgs {
   readonly help: boolean;
   readonly url: string;
   readonly scenarios: readonly ScenarioName[];
-  readonly backend: Backend;
+  readonly backend: BackendRequest;
   readonly mode: Mode;
   readonly passes: readonly string[] | undefined;
   readonly method: GpuFrameMethod | undefined;
@@ -31,6 +38,11 @@ export interface RunArgs {
   readonly dpr: number;
   readonly quietMs: number;
   readonly chromeArgs: readonly string[];
+  /** dwell and sweep: frames whose deltas count, per dwell. */
+  readonly frames: number;
+  readonly scales: readonly number[];
+  readonly json: string | undefined;
+  readonly baseline: string | undefined;
 }
 
 export const ARG_DEFAULTS = {
@@ -43,11 +55,13 @@ export const ARG_DEFAULTS = {
   height: 800,
   dpr: 2,
   quietMs: DEFAULT_QUIET_MS,
+  frames: DEFAULT_DWELL_FRAMES,
+  scales: DEFAULT_SWEEP_SCALES.join(','),
 } as const;
 
 export class ArgError extends Error {}
 
-const OPTIONS: ParseArgsConfig['options'] = {
+const OPTIONS = {
   help: { type: 'boolean', short: 'h', default: false },
   url: { type: 'string', default: ARG_DEFAULTS.url },
   scenario: { type: 'string', default: ARG_DEFAULTS.scenario },
@@ -66,14 +80,18 @@ const OPTIONS: ParseArgsConfig['options'] = {
   dpr: { type: 'string', default: String(ARG_DEFAULTS.dpr) },
   'quiet-ms': { type: 'string', default: String(ARG_DEFAULTS.quietMs) },
   'chrome-arg': { type: 'string', multiple: true, default: [] },
-};
+  frames: { type: 'string', default: String(ARG_DEFAULTS.frames) },
+  scales: { type: 'string', default: ARG_DEFAULTS.scales },
+  json: { type: 'string' },
+  baseline: { type: 'string' },
+} satisfies ParseArgsConfig['options'];
 
 export function usage(): string {
   return [
     'Usage: pnpm run perf -- [flags]',
     `  --scenario <names>       comma list of ${SCENARIO_NAMES.join('|')}, or all   (default ${ARG_DEFAULTS.scenario})`,
-    `  --backend <name>         ${BACKENDS.join('|')}                              (default ${ARG_DEFAULTS.backend})`,
-    `  --mode <name>            ${MODES.join('|')}                        (default ${ARG_DEFAULTS.mode})`,
+    `  --backend <name>         ${BACKEND_REQUESTS.join('|')}                         (default ${ARG_DEFAULTS.backend})`,
+    `  --mode <name>            ${MODES.join('|')}   (default ${ARG_DEFAULTS.mode})`,
     '  --passes <keys>          comma list of priceFrame pass keys        (default: every present pass)',
     `  --method <clock>         ${GPU_FRAME_METHODS.join('|')}       (default: the backend\'s best)`,
     `  --budget-ms <n>          whole-sweep wall-clock ceiling            (default ${ARG_DEFAULTS.budgetMs})`,
@@ -84,15 +102,45 @@ export function usage(): string {
     `  --quiet-ms <n>           render-gate idle required before measuring (default ${ARG_DEFAULTS.quietMs})`,
     `  --url <base>             a RUNNING dev server                       (default ${ARG_DEFAULTS.url})`,
     '  --chrome-arg=<switch>    extra Chromium switch, repeatable (the = form, since the value starts with a dash)',
+    `  --frames <n>             dwell and sweep: frames per dwell         (default ${ARG_DEFAULTS.frames})`,
+    `  --scales <list>          sweep: viewport scales                    (default ${ARG_DEFAULTS.scales})`,
+    '  --json <path>            write the whole run as stellata-perf/1',
+    '  --baseline <path>        diff this run against a saved one and print the verdicts',
     'Exit codes: 0 ok · 1 scenario failed / refused / software adapter · 2 bad flags or unreachable url · 3 not armed',
   ].join('\n');
 }
 
+/**
+ * Which flags each mode actually reads. A flag the chosen mode ignores is an
+ * error rather than a no-op: the in-app instrument refuses a pin it cannot
+ * honour rather than switching clocks underneath the caller
+ * (`src/client/debug/frame-cost/README.md` § Preconditions), and a table
+ * stamped `raf-delta` after `--method timer-query` was asked for is the same
+ * lie with a typed command line in front of it.
+ */
+const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
+  passes: ['differential'],
+  method: ['differential'],
+  'budget-ms': ['differential'],
+  'dwell-frames': ['differential'],
+  'settle-frames': ['differential'],
+  'no-interleave': ['differential'],
+  frames: ['dwell', 'sweep'],
+  scales: ['sweep'],
+};
+
 export function parseRunArgs(argv: readonly string[]): RunArgs {
   let values: Record<string, unknown>;
-  const tokens = argv[0] === '--' ? argv.slice(1) : [...argv];
+  // Which flags were actually typed, as against which carry a default. Only
+  // the typed set can be checked for mode compatibility.
+  let supplied: Set<string>;
+  const args = argv[0] === '--' ? argv.slice(1) : [...argv];
   try {
-    ({ values } = parseArgs({ args: tokens, options: OPTIONS, strict: true }));
+    const parsed = parseArgs({ args, options: OPTIONS, strict: true, tokens: true });
+    values = parsed.values;
+    supplied = new Set(
+      parsed.tokens.flatMap((t) => (t.kind === 'option' ? [t.name] : [])),
+    );
   } catch (e) {
     throw new ArgError((e as Error).message);
   }
@@ -123,6 +171,18 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
   const list = (name: string): string[] | undefined =>
     str(name)?.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
 
+  const numberList = (name: string): number[] => {
+    const parsed = (list(name) ?? []).map((raw) => {
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n <= 0) {
+        throw new ArgError(`--${name} takes positive numbers; got '${raw}'`);
+      }
+      return n;
+    });
+    if (parsed.length === 0) throw new ArgError(`--${name} names nothing`);
+    return parsed;
+  };
+
   const passes = list('passes');
   for (const key of passes ?? []) {
     if (!PRICED_PASS_KEYS.includes(key as (typeof PRICED_PASS_KEYS)[number])) {
@@ -139,12 +199,22 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
   });
   if (scenarios.length === 0) throw new ArgError('--scenario names nothing');
 
+  const mode = oneOf('mode', MODES);
+  for (const [flag, modes] of Object.entries(MODE_ONLY_FLAGS)) {
+    if (supplied.has(flag) && !modes.includes(mode)) {
+      throw new ArgError(
+        `--${flag} is read by --mode ${modes.join(' and ')} only; this run is --mode ${mode}, ` +
+        'which would ignore it. Drop the flag or change the mode.',
+      );
+    }
+  }
+
   return {
     help: values.help as boolean,
     url: str('url')!,
     scenarios,
-    backend: oneOf('backend', BACKENDS),
-    mode: oneOf('mode', MODES),
+    backend: oneOf('backend', BACKEND_REQUESTS),
+    mode,
     passes,
     method: optionalOneOf('method', GPU_FRAME_METHODS),
     budgetMs: num('budget-ms'),
@@ -158,5 +228,9 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     dpr: num('dpr'),
     quietMs: num('quiet-ms'),
     chromeArgs: values['chrome-arg'] as string[],
+    frames: num('frames'),
+    scales: numberList('scales'),
+    json: str('json'),
+    baseline: str('baseline'),
   };
 }

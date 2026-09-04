@@ -17,14 +17,31 @@ scripts/perf/
                             marker consumed), launch, per-scenario loop,
                             exit codes. The only Playwright value import in
                             the tree; never imported by a test.
-  args.ts (+ test)          Flags → RunArgs (node:util parseArgs).
+  args.ts (+ test)          Flags → RunArgs (node:util parseArgs), plus the
+                            mode-compatibility check over the flags actually
+                            typed.
+  run-pure.ts (+ test)      The decisions around a launch: which clock a
+                            backend request gets, which adapters disqualify a
+                            run, how the probe reads, whether a marker arms.
+                            Here rather than in run.ts so a test can import
+                            them without launching a browser.
   scenarios.ts (+ test)     The five canon vantages as share blobs, and
                             scenarioUrl().
   page-protocol.ts          Every page.evaluate: boot, gate snapshot, adapter
                             probe, rAF probe, drawing-buffer read, the
-                            priceFrame call.
+                            priceFrame call, the dwell loop.
+  measure.ts                What each mode does to a settled page.
+  schema.ts (+ test)        The on-disk record types, PERF_SCHEMA, and
+                            assertPerfFile. Owns the adapter/scenario/mode
+                            shapes the runner, the tables and the diff share.
   settle-pure.ts (+ test)   settleVerdict over one render-gate snapshot.
-  table-pure.ts (+ test)    The text table, in console.table column order.
+  dwell-pure.ts (+ test)    One dwell's percentiles and the vsync-clamp flag.
+  sweep-pure.ts (+ test)    Measurement order, the log-log fit, fill/vertex
+                            classification, the sweep bracket.
+  diff-pure.ts (+ test)     Two runs differenced: bands, verdicts, and the
+                            refusals that stop an invalid comparison.
+  table-pure.ts (+ test)    Every text table. formatTable is the shared
+                            width/alignment pass.
   await-go.sh (+ test)      The arm poller the agent runs in the background.
   perf-go-lib.sh (+ test)   Marker name, path and freshness — the single
                             source, sourced by await-go.sh and
@@ -37,10 +54,13 @@ scripts/perf/
 ## Invocation
 
 ```
-pnpm run perf -- [--scenario sol,earth,mw50,mw120,lg | all] [--backend webgl2|webgpu]
-                 [--mode differential|probe] [--passes a,b] [--method timer-query|timestamp|raf-delta]
+pnpm run perf -- [--scenario sol,earth,mw50,mw120,lg | all] [--backend webgl2|webgpu|both]
+                 [--mode differential|probe|dwell|sweep] [--passes a,b]
+                 [--method timer-query|timestamp|raf-delta]
                  [--budget-ms N] [--dwell-frames N] [--warmup-frames N] [--settle-frames N] [--no-interleave]
+                 [--frames 240] [--scales 0.5,1,1.5,2]
                  [--headed] [--width 1280] [--height 800] [--dpr 2] [--quiet-ms 5000]
+                 [--json <path>] [--baseline <path>]
                  [--url http://localhost:5173] [--chrome-arg=<switch>]...
 ```
 
@@ -51,9 +71,41 @@ straight through; unset ones take priceFrame's own defaults. `--mode probe`
 boots, settles and prints the adapter block and the idle rAF period without
 a sweep.
 
+`--frames` sizes a dwell (dwell and sweep modes); `--scales` is the sweep's
+viewport set. `--warmup-frames` is shared: it is priceFrame's own warmup in
+differential mode and the dwell's in the other two, defaulting to the same
+`WARMUP_FRAMES` either way, since it exists to absorb the same clock ramp.
+
+**`--backend both` runs each scenario twice, in separate contexts, and pins
+`--method raf-delta`.** The two backends' best clocks are different
+instruments — WebGL2's timer query against WebGPU's timestamp resolve — so
+taking each one's best builds exactly the mixed-method table that must never
+be compared. rAF wall time is the one clock both supply. An explicit
+`--method` overrides the pin, and the run says it did.
+
+**A flag the chosen mode does not read is an error, not a no-op.**
+`--mode dwell --method timer-query` is refused rather than quietly stamping
+the table `raf-delta`, and the same goes for `--passes`, `--budget-ms`,
+`--dwell-frames`, `--settle-frames` and `--no-interleave` outside
+`differential`, `--frames` outside dwell and sweep, and `--scales` outside
+sweep. Only flags actually typed are checked, so a default never trips it,
+and `--warmup-frames` is exempt because every mode absorbs the same ramp.
+The in-app instrument takes the same posture on a pin it cannot honour
+(`src/client/debug/frame-cost/README.md` § Preconditions); a typed command
+line is no improvement if the honoured-pin illusion survives it.
+
 Exit codes: **0** ok · **1** a scenario failed, was tainted, priceFrame
-refused, or the adapter was software · **2** bad flags or unreachable URL
+refused, the adapter was software, or the JSON could not be written · **2**
+bad flags, an unreachable URL, or an unusable `--json` / `--baseline` path
 (marker untouched) · **3** not armed (marker absent or stale).
+
+**Both output paths are proved usable before the marker is consumed.** A
+`--json` directory that does not exist, or a `--baseline` that is missing,
+malformed or a foreign schema, would otherwise surface as an exception
+thrown over the finished samples — discarding minutes of measurement and
+costing a fresh human arm to redo. So they are flag errors like any other:
+exit 2, nothing launched, marker untouched. The baseline is read once, at
+that point, and the parsed file is what the diff runs against.
 
 **A tainted scenario exits 1 even though its rows printed.** A page error
 inside the sweep means the numbers describe a broken page, and the exit code
@@ -165,6 +217,124 @@ Page console is forwarded as `[page:<type>]` except `table` (the rows come
 back as data). A `pageerror` during boot fails the scenario; during the sweep
 it marks the scenario tainted, which exits 1 too. A crash aborts the run.
 Any failure exits 1.
+
+## Dwell mode
+
+`--mode dwell` measures the whole frame instead of pricing passes: one rAF
+loop under a render-gate hold, with the simulation clock stopped and the
+exposure pinned where the warmup left it. Those are the differential's own
+three preconditions
+(`src/client/debug/frame-cost/README.md` § Preconditions) and they hold here
+for the same reasons — a running clock re-arms the binary orbit upload inside
+the timed scope, and an unpinned exposure lets the dwell drift onto a
+different star population.
+
+**rAF wall-clock deltas are the metric.** On a WebGPU boot the frame-sample
+stream is subscribed alongside where `gpuFrameSamplesAreSound()` says the
+adapter resolves believable durations, and reported as a second row. The two
+are different instruments: read them side by side, never differenced. Where
+the stream is absent the `gpu stream:` line says which reason applied.
+
+`p50 / p90 / p99` are nearest-rank, so every number printed is a frame that
+happened. **`vsyncClamped` invalidates the dwell rather than annotating it**:
+a p50 sitting on the display's own period inside a 1 ms spread is the
+compositor's cadence, not the frame's cost — the frame finished early and the
+panel supplied the rest. A clamped dwell is refused by `--baseline` and makes
+a sweep inconclusive.
+
+**The period is the one the run measured, not 60 Hz assumed.** The rAF probe
+taken after settle (step 4) is the display's cadence with the gate idle, and
+the clamp test is judged against it: 16.67 ms on a 60 Hz panel, 8.33 on a
+120 Hz one, and on an unthrottled headless display a sub-millisecond period,
+where a fixed 60 Hz ceiling threw away every genuinely fast frame as though a
+compositor it does not have had padded it. The console line says which cadence
+the verdict was judged against. **The GPU row is never clamped**: a resolved
+timestamp is a span the hardware reports, and no compositor can pad it.
+
+**Four checks, each able to fail.** A hold already live when the dwell starts
+fails it — settle requires an unheld gate, and the debug panel takes one,
+whose per-tick DOM writes would sit inside a wall-clock dwell. A clock that
+was not still stopped at the end of the timed frames fails it: the frames
+priced a moving scene. Then the rate and the hold count are read back
+**from outside the page function that restored them** — a value re-read
+inside the same block that just wrote it could only ever fail if `setRate`
+itself refused, which is not the question worth asking. The hold check is
+differential against the count seen before the dwell, so a hold the page
+already owned is named as such instead of read as a leak. Any of the four
+fails the scenario, because each would leave every later scenario in the run
+measuring a different machine.
+
+## Sweep mode
+
+`--mode sweep` answers what the frame is bound by, rather than what a pass
+costs: dwell at each viewport scale, fit log(frame time) against log(backing
+-store pixels), and report the exponent.
+
+Scale 1 is measured **first and last**, with the requested scales ascending
+in between (`--scales 0.5,1,1.5,2` → `1, 0.5, 1.5, 2, 1`). The spread of
+those two scale-1 medians is `bracketMs`, and it is the floor any slope claim
+sits on for the same reason the differential brackets each row: an instrument
+that ramped its clocks across the sweep produces a dependence on elapsed time
+that fits as a dependence on area.
+
+The viewport moves; **dpr does not**. Scaling both would confound area with
+the per-pixel work dpr also multiplies.
+
+Reading the slope: `≥ 0.8` fill-bound, `≤ 0.3` vertex- or CPU-bound, between
+them mixed. In the JSON the fit is its own block — `sweep.fit.slope`, `.r2`,
+`.bound`, and `.fitted`, the number of points the line was drawn through, so
+named because `sweep.points` one level up is the points themselves. **Any vsync-clamped point makes the whole fit inconclusive**, not
+merely noisier — that point measured the panel, so it flattens the line and a
+fill-bound frame reads as vertex-bound. The first point pays a full warmup;
+later scales pay `SWEEP_RESIZE_WARMUP_FRAMES` (60), enough to absorb the HDR
+target rebuild the resize forces, since the clock ramp was already paid.
+
+## JSON output
+
+`--json <path>` writes the whole run as schema `stellata-perf/1`:
+`run` (timestamps, url, argv, git commit and dirty flag, browser and its
+switches, the adapter probe, host) plus one record per scenario × backend
+(backend requested and actual, viewport, buffer and Mpx, mode, method,
+params, settle time, the mode's own block, forwarded console, page errors,
+`tainted` and `failed`).
+
+**Raw samples are always retained** — every rAF delta and every GPU sample,
+not just the summary. A re-analysis with a different estimator has to be
+possible from the file alone, and a summary cannot be un-summarised.
+
+`assertPerfFile` checks the schema string by equality before reading
+anything else, and it is the only place the suffix is judged — a `--baseline`
+carrying another one is refused in the preflight, so the diff never sees a
+file it would have to reason about. Removing a field or changing what one MEANS bumps the suffix;
+adding one does not. A bump abandons every recorded baseline, because
+`--baseline` refuses across two suffixes rather than mapping between them.
+
+## Comparing against a baseline
+
+`--baseline <path>` differences this run against a saved one and prints
+`✓` cheaper · `✗` dearer · `~` inside the band, keyed
+`scenario|backend|pass` (or `|dwell`).
+
+A row counts as moved only past **two sigma of the pair's own uncertainty**.
+Differential rows combine the two `noiseMs` floors, then take the larger of
+that and the two `bracketMs` values — the bracket is instrument drift, which
+no amount of sampling reduces. Dwell rows use the median's standard error,
+`1.2533·(iqr/1.349)/√n`, on both sides.
+
+**`savedMs` is the trap.** It names what disabling the pass saved, i.e. the
+pass's own price — so a row whose `savedMs` went UP got *dearer*, not better.
+Dwell `p50` reads the same direction for the obvious reason. Both print `✗`.
+
+**The refusals matter as much as the rows.** Two runs on different clocks,
+buffers or adapters produce a table that looks like a comparison and is not,
+so an incomparable pair is named and skipped rather than dropped silently:
+a differing adapter string refuses the whole run (a differing schema never
+reaches the diff — see § JSON output); a differing method or mode, a buffer
+more than 1 % apart, a failed or tainted scenario, a vsync-clamped dwell, or a
+row missing from one side refuses just that key. The key carries the backend,
+so a vantage the other run measured on the *other* backend says exactly that
+rather than reporting itself absent.
+Sweeps are never diffed — a slope is not a cost.
 
 ## Traps
 

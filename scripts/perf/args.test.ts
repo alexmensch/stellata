@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ARG_DEFAULTS, ArgError, parseRunArgs, usage } from './args';
+import { ARG_DEFAULTS, ArgError, BACKEND_REQUESTS, MODES, parseRunArgs, usage } from './args';
+import { DEFAULT_SWEEP_SCALES } from './sweep-pure';
 import { SCENARIO_NAMES } from './scenarios';
 
 describe('parseRunArgs', () => {
@@ -24,6 +25,10 @@ describe('parseRunArgs', () => {
       dpr: ARG_DEFAULTS.dpr,
       quietMs: ARG_DEFAULTS.quietMs,
       chromeArgs: [],
+      frames: ARG_DEFAULTS.frames,
+      scales: [...DEFAULT_SWEEP_SCALES],
+      json: undefined,
+      baseline: undefined,
     });
   });
 
@@ -52,7 +57,7 @@ describe('parseRunArgs', () => {
       '--budget-ms', '90000', '--dwell-frames', '240', '--warmup-frames', '60',
       '--settle-frames', '12', '--width', '1920', '--height', '1080', '--dpr', '1',
       '--quiet-ms', '2000', '--no-interleave', '--headed', '--method', 'raf-delta',
-      '--backend', 'webgpu', '--mode', 'probe',
+      '--backend', 'webgpu', '--mode', 'differential',
     ]);
     expect(a.budgetMs).toBe(90000);
     expect(a.dwellFrames).toBe(240);
@@ -64,14 +69,54 @@ describe('parseRunArgs', () => {
     expect(a.headed).toBe(true);
     expect(a.method).toBe('raf-delta');
     expect(a.backend).toBe('webgpu');
-    expect(a.mode).toBe('probe');
+    expect(a.mode).toBe('differential');
+  });
+
+  it('takes a bare probe run, which reads none of the mode-only knobs', () => {
+    const a = parseRunArgs(['--mode', 'probe', '--backend', 'webgpu', '--headed']);
+    expect([a.mode, a.backend, a.headed]).toEqual(['probe', 'webgpu', true]);
+  });
+
+  it('lets --warmup-frames through in every mode, since every mode absorbs the same ramp', () => {
+    for (const mode of ['differential', 'probe', 'dwell', 'sweep']) {
+      expect(parseRunArgs(['--mode', mode, '--warmup-frames', '90']).warmupFrames).toBe(90);
+    }
+  });
+
+  it('takes the new modes, the both backend and the two paths', () => {
+    const a = parseRunArgs([
+      '--mode', 'sweep', '--backend', 'both', '--frames', '480',
+      '--scales', '0.25, 1, 3', '--json', '/tmp/a.json', '--baseline', '/tmp/b.json',
+    ]);
+    expect(a.mode).toBe('sweep');
+    expect(a.backend).toBe('both');
+    expect(a.frames).toBe(480);
+    expect(a.scales).toEqual([0.25, 1, 3]);
+    expect(a.json).toBe('/tmp/a.json');
+    expect(a.baseline).toBe('/tmp/b.json');
+  });
+
+  it('accepts every mode and backend request it advertises', () => {
+    for (const mode of MODES) expect(parseRunArgs(['--mode', mode]).mode).toBe(mode);
+    for (const backend of BACKEND_REQUESTS) {
+      expect(parseRunArgs(['--backend', backend]).backend).toBe(backend);
+    }
   });
 
   it.each([
     [['--scenario', 'mars'], /--scenario/],
     [['--backend', 'metal'], /--backend/],
-    [['--mode', 'dwell'], /--mode/],
+    [['--mode', 'stopwatch'], /--mode/],
     [['--method', 'stopwatch'], /--method/],
+    [['--mode', 'dwell', '--frames', '0'], /--frames/],
+    [['--mode', 'sweep', '--scales', '0'], /--scales/],
+    [['--mode', 'sweep', '--scales', 'half'], /--scales/],
+    [['--mode', 'sweep', '--scales', ' , '], /names nothing/],
+    [['--mode', 'dwell', '--method', 'raf-delta'], /--mode dwell, which would ignore it/],
+    [['--mode', 'sweep', '--passes', 'localDepth'], /--mode sweep, which would ignore it/],
+    [['--mode', 'probe', '--no-interleave'], /--mode probe, which would ignore it/],
+    [['--mode', 'differential', '--frames', '120'], /--mode differential, which would ignore it/],
+    [['--mode', 'dwell', '--scales', '1,2'], /--mode dwell, which would ignore it/],
     [['--passes', 'localDepht'], /no such pass/],
     [['--passes', 'localDepth,mwBnad'], /no such pass/],
     [['--budget-ms', 'soon'], /--budget-ms/],
@@ -90,8 +135,11 @@ describe('parseRunArgs', () => {
       '--scenario', '--backend', '--mode', '--passes', '--method', '--budget-ms',
       '--dwell-frames', '--warmup-frames', '--settle-frames', '--no-interleave',
       '--headed', '--width', '--height', '--dpr', '--quiet-ms', '--url', '--chrome-arg',
+      '--frames', '--scales', '--json', '--baseline',
     ]) {
       expect(text).toContain(flag);
     }
+    for (const mode of MODES) expect(text).toContain(mode);
+    for (const backend of BACKEND_REQUESTS) expect(text).toContain(backend);
   });
 });

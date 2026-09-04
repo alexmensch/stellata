@@ -52,7 +52,23 @@ table. Reference: `scripts/perf/README.md`. Interpretation authority:
 - `pnpm run perf -- --scenario all --backend webgpu`
 - `pnpm run perf -- --mode probe` — adapter strings, timer-query presence and
   the rAF period, no sweep.
+- `pnpm run perf -- --mode dwell --scenario mw120 --frames 240` — the whole
+  frame rather than per-pass prices. Cheap; the one to reach for when the
+  question is "did the frame get slower".
+- `pnpm run perf -- --mode sweep --scenario sol --scales 0.5,1,1.5,2` — what
+  the frame is bound by (fill vs vertex/CPU), from the log-log slope.
+- `pnpm run perf -- --backend both --scenario earth --mode dwell` — both
+  backends, on the one clock they share. Pins `--method raf-delta` itself.
+- `--json <path>` to save the run, `--baseline <path>` to diff against a
+  saved one. Always `--json` a run worth citing: the table in your scrollback
+  is not a record, and the raw samples are only in the file.
 - `--headed` for a headed control run. Headed and headless never compare.
+
+A flag the chosen mode does not read is **refused**, not ignored — `--method`,
+`--passes` and the priceFrame knobs belong to `--mode differential`, `--frames`
+to dwell and sweep, `--scales` to sweep. Fix the command rather than working
+around it. `--json` and `--baseline` paths are checked before the marker is
+consumed, so a typo costs no arm.
 
 ## Interpretation traps
 
@@ -66,6 +82,24 @@ measurement.
 and `disabledLimitMag` must agree or the row priced a different scene; never
 compare across `method`, `bufferMpx`, headed/headless, browsers, or a dev
 server against a production build; never sum the column.
+
+Per mode (`scripts/perf/README.md` § Dwell mode, § Sweep mode, § Comparing
+against a baseline):
+
+- **`vsyncClamped` true throws the dwell away.** A p50 sitting on the display
+  period the run measured, inside a 1 ms spread, measured the panel rather
+  than the frame. Do not quote it; re-measure at a heavier vantage. The
+  console line names the cadence the verdict was judged against, and the GPU
+  row is never clamped — no compositor pads a hardware timestamp.
+- **A sweep with any clamped point reads `bound inconclusive`** — say
+  inconclusive, don't quote the slope.
+- **`savedMs` going UP is a regression**, not an improvement: the field is
+  the pass's own price. `--baseline` prints `✗` for it; believe the mark
+  over the field name.
+- **A `~` is not "no change" — it is "not resolved".** The band is two sigma
+  of the pair, so a real move smaller than the band reads the same as none.
+- Rows `--baseline` refuses are not passes; they are comparisons that would
+  have been invalid. Report the refusal, don't work around it.
 
 ## Recording
 
