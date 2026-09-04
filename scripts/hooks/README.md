@@ -1,6 +1,6 @@
 # Harness guard hooks
 
-Tool-call guards for Claude Code. The three `.sh` files are PreToolUse /
+Tool-call guards for Claude Code. The four `.sh` files are PreToolUse /
 SessionStart hooks registered in `.claude/settings.json`; each reads the
 hook payload as JSON on stdin and answers with a `permissionDecision`.
 
@@ -31,6 +31,17 @@ scripts/hooks/
                            tests/code-comment-rules.test.ts).
                            Behaviour pinned by
                            tests/commit-sweep-guard.test.ts.
+  perf-guard.sh            Blocks every spelling of a perf-runner launch
+                           (`pnpm run perf`, `tsx scripts/perf/run.ts`,
+                           …) while the repo root lacks a `.perf-go`
+                           marker fresher than an hour, and blocks any
+                           command that both creates the marker and
+                           launches. The deny reason carries the arm
+                           protocol. Marker path and freshness come from
+                           scripts/perf/perf-go-lib.sh, shared with the
+                           poller; scripts/perf/README.md § Human-armed
+                           owns the design. Behaviour pinned by
+                           tests/perf-guard.test.ts.
   comment-rules.json       The forbidden comment patterns, once. Read
                            by tests/code-comment-rules.test.ts and by
                            commit-sweep-guard.sh. The two hand-copied
