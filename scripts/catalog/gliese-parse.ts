@@ -1,6 +1,6 @@
 // Parser and per-record lookup for data/gliese/gliese_v70a.tsv — the printed
-// first-order tier under Tycho-2 in the § 5 V cascade. See README.md § Files in
-// this area.
+// first-order tier under Tycho-2 in the V cascade of
+// docs/catalog-driver.md § 5.
 
 import { dataRows, nonEmpty, parseFloatOrNull } from './parse/corpus-tsv';
 import { normaliseGjKey } from './catalog-pure';

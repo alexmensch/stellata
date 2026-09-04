@@ -1,6 +1,5 @@
 // Parser and per-record lookup for data/simbad/simbad_values.tsv — the
-// bibcoded bottom tier of the § 5 value cascades. See README.md § Files in
-// this area.
+// bibcoded bottom tier of the value cascades in docs/catalog-driver.md § 5.
 
 import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from './parse/corpus-tsv';
 import {

@@ -469,7 +469,7 @@ placement/tier-routing pin; the propagation formula (tangent / sign /
 cos δ) is exercised by the HIP2 tier and pinned independently against
 SIMBAD J2000 in `direction-cascade.test.ts`. Gaia DR4 slots in as a
 source-file swap inside the same cascade (`scripts/refresh/README.md`
-§ Refreshing data when DR4).
+§ Refreshing data when DR4 / new AT-HYG lands).
 
 ## Current-epoch star positions — space-motion propagation to `t`
 
