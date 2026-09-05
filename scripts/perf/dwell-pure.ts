@@ -59,6 +59,24 @@ export interface DwellSummary {
  * `cadenceMs` is the idle rAF period measured for this scenario, or null for
  * samples that are not wall clock (`isVsyncClamped`).
  */
+export function summarizeFrameDwell(
+  samples: readonly number[],
+  cadenceMs: number | null,
+): DwellSummary | null {
+  if (samples.length === 0) return null;
+  const p50 = percentile(samples, 0.5);
+  const iqrMs = interquartileRange(samples);
+  return {
+    samples: samples.length,
+    p50,
+    p90: percentile(samples, 0.9),
+    p99: percentile(samples, 0.99),
+    iqrMs,
+    lag1: lag1Autocorrelation(samples),
+    vsyncClamped: isVsyncClamped(p50, iqrMs, cadenceMs),
+  };
+}
+
 /** What a WebGPU dwell counts per frame on the API surface: queue submits,
  *  the command buffers those carried, and the render / compute passes
  *  encoded. README.md § Dwell mode. */
@@ -84,22 +102,4 @@ export function summarizePassCounts(perFrame: PassCountsPerFrame): PassCountsSum
     summary[counter] = { min: Math.min(...xs), p50: percentile(xs, 0.5), max: Math.max(...xs) };
   }
   return summary;
-}
-
-export function summarizeFrameDwell(
-  samples: readonly number[],
-  cadenceMs: number | null,
-): DwellSummary | null {
-  if (samples.length === 0) return null;
-  const p50 = percentile(samples, 0.5);
-  const iqrMs = interquartileRange(samples);
-  return {
-    samples: samples.length,
-    p50,
-    p90: percentile(samples, 0.9),
-    p99: percentile(samples, 0.99),
-    iqrMs,
-    lag1: lag1Autocorrelation(samples),
-    vsyncClamped: isVsyncClamped(p50, iqrMs, cadenceMs),
-  };
 }
