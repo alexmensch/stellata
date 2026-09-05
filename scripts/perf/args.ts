@@ -5,6 +5,7 @@ import {
   GPU_FRAME_METHODS,
   PRICED_PASS_KEYS,
   type GpuFrameMethod,
+  type PricedPassKey,
 } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { DEFAULT_DWELL_FRAMES } from './dwell-pure';
 import { DEFAULT_SWEEP_SCALES } from './sweep-pure';
@@ -22,6 +23,7 @@ export type BackendRequest = (typeof BACKEND_REQUESTS)[number];
 /** `--roundtrip idle`: the same frames between the two dwells with nothing
  *  toggled — the time-matched control for a pass round trip. */
 export const ROUNDTRIP_IDLE = 'idle';
+export type RoundTrip = PricedPassKey | typeof ROUNDTRIP_IDLE;
 
 export interface RunArgs {
   readonly help: boolean;
@@ -45,7 +47,7 @@ export interface RunArgs {
   /** dwell and sweep: frames whose deltas count, per dwell. */
   readonly frames: number;
   /** dwell: a priceFrame pass key, or `idle`, applied between two dwells. */
-  readonly roundtrip: string | undefined;
+  readonly roundtrip: RoundTrip | undefined;
   readonly scales: readonly number[];
   readonly json: string | undefined;
   readonly baseline: string | undefined;
@@ -192,8 +194,8 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     return parsed;
   };
 
-  const isPassKey = (key: string): boolean =>
-    PRICED_PASS_KEYS.includes(key as (typeof PRICED_PASS_KEYS)[number]);
+  const isPassKey = (key: string): key is PricedPassKey =>
+    PRICED_PASS_KEYS.includes(key as PricedPassKey);
 
   const passes = list('passes');
   for (const key of passes ?? []) {
@@ -202,11 +204,14 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     }
   }
 
-  const roundtrip = str('roundtrip');
-  if (roundtrip !== undefined && roundtrip !== ROUNDTRIP_IDLE && !isPassKey(roundtrip)) {
+  const requestedRoundTrip = str('roundtrip');
+  if (requestedRoundTrip !== undefined
+    && requestedRoundTrip !== ROUNDTRIP_IDLE && !isPassKey(requestedRoundTrip)) {
     throw new ArgError(
-      `--roundtrip names no such pass: '${roundtrip}'. Known: ${PRICED_PASS_KEYS.join(', ')}, or ${ROUNDTRIP_IDLE}`);
+      `--roundtrip names no such pass: '${requestedRoundTrip}'. `
+      + `Known: ${PRICED_PASS_KEYS.join(', ')}, or ${ROUNDTRIP_IDLE}`);
   }
+  const roundtrip: RoundTrip | undefined = requestedRoundTrip;
 
   const requested = list('scenario') ?? [];
   const scenarios = requested.includes('all') ? [...SCENARIO_NAMES] : requested.map((name) => {
