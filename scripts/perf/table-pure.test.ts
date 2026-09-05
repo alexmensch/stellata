@@ -9,6 +9,7 @@ import {
   formatDiffTable,
   formatDwellTable,
   formatPassCountTable,
+  formatPinTable,
   formatPriceTable,
   formatRoundTripLine,
   formatSweepTable,
@@ -172,3 +173,29 @@ describe('formatDiffTable', () => {
       .toBe('baseline: nothing comparable in either run');
   });
 });
+
+describe('formatPinTable', () => {
+  it('prints the mark, the key, the metric and the note per row, and names refusals', () => {
+    const text = formatPinTable({
+      refusedWholeRun: null,
+      rows: [{
+        key: 'sol|webgpu', metric: 'gpu-p50', pinnedMs: 21.8, currentMs: 22.6, deltaMs: 0.8,
+        bandMs: 0.654, verdict: 'dearer', note: '',
+      }, {
+        key: 'mw120|webgpu', metric: 'cadence', pinnedMs: 16.7, currentMs: 21.6, deltaMs: 4.9,
+        bandMs: 0, verdict: 'dearer', note: 'left the display cadence',
+      }],
+      refusals: [{ key: 'lg|webgpu', reason: 'not measured in this run' }],
+    });
+    const lines = text.split('\n');
+    expect(lines[0]).toContain('pinned');
+    expect(lines[1]).toMatch(/^\s*✗\s+sol\|webgpu\s+gpu-p50\s+21\.8\s+22\.6\s+0\.8\s+0\.654/);
+    expect(lines[2]).toContain('left the display cadence');
+    expect(lines[3]).toBe('  not compared: lg|webgpu — not measured in this run');
+  });
+
+  it('prints a whole-run refusal as one line', () => {
+    expect(formatPinTable({ refusedWholeRun: 'a headed run', rows: [], refusals: [] })).toBe('pin: REFUSED — a headed run');
+  });
+});
+
