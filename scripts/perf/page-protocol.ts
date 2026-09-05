@@ -226,32 +226,6 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     let origSubmit: unknown = null;
     let origRenderPass: unknown = null;
     let origComputePass: unknown = null;
-    if (perFrame !== null) {
-      if (queueProto !== undefined && encoderProto !== undefined) {
-        origSubmit = queueProto.submit;
-        origRenderPass = encoderProto.beginRenderPass;
-        origComputePass = encoderProto.beginComputePass;
-        const submit = origSubmit as (this: unknown, b: readonly unknown[]) => void;
-        const renderPass = origRenderPass as (this: unknown, d: unknown) => unknown;
-        const computePass = origComputePass as (this: unknown, d?: unknown) => unknown;
-        queueProto.submit = function (this: unknown, buffers: readonly unknown[]) {
-          live.submits += 1;
-          live.commandBuffers += buffers.length;
-          return submit.call(this, buffers);
-        };
-        encoderProto.beginRenderPass = function (this: unknown, descriptor: unknown) {
-          live.renderPasses += 1;
-          return renderPass.call(this, descriptor);
-        };
-        encoderProto.beginComputePass = function (this: unknown, descriptor?: unknown) {
-          live.computePasses += 1;
-          return computePass.call(this, descriptor);
-        };
-        passNote = 'counted on GPUQueue.submit and GPUCommandEncoder.beginRenderPass/beginComputePass';
-      } else {
-        passNote = 'no GPUQueue / GPUCommandEncoder prototype on this page';
-      }
-    }
 
     if (p.wantGpuStream) {
       try {
@@ -284,6 +258,34 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     // clock while the frames being timed were drawn.
     let rateDuring = 0;
     try {
+      // Inside the try: the restore is in its finally, so the wrap must not
+      // be reachable without it.
+      if (perFrame !== null) {
+        if (queueProto !== undefined && encoderProto !== undefined) {
+          origSubmit = queueProto.submit;
+          origRenderPass = encoderProto.beginRenderPass;
+          origComputePass = encoderProto.beginComputePass;
+          const submit = origSubmit as (this: unknown, b: readonly unknown[]) => void;
+          const renderPass = origRenderPass as (this: unknown, d: unknown) => unknown;
+          const computePass = origComputePass as (this: unknown, d?: unknown) => unknown;
+          queueProto.submit = function (this: unknown, buffers: readonly unknown[]) {
+            live.submits += 1;
+            live.commandBuffers += buffers.length;
+            return submit.call(this, buffers);
+          };
+          encoderProto.beginRenderPass = function (this: unknown, descriptor: unknown) {
+            live.renderPasses += 1;
+            return renderPass.call(this, descriptor);
+          };
+          encoderProto.beginComputePass = function (this: unknown, descriptor?: unknown) {
+            live.computePasses += 1;
+            return computePass.call(this, descriptor);
+          };
+          passNote = 'counted on GPUQueue.submit and GPUCommandEncoder.beginRenderPass/beginComputePass';
+        } else {
+          passNote = 'no GPUQueue / GPUCommandEncoder prototype on this page';
+        }
+      }
       if (rateBefore !== 0) clock.setRate(0);
       for (let f = 0; f < p.warmupFrames; f++) {
         await new Promise((r) => requestAnimationFrame(r));
