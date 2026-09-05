@@ -86,11 +86,14 @@ server against a production build; never sum the column.
 Per mode (`scripts/perf/README.md` § Dwell mode, § Sweep mode, § Comparing
 against a baseline):
 
-- **`vsyncClamped` true throws the dwell away.** A p50 sitting on the display
-  period the run measured, inside a 1 ms spread, measured the panel rather
-  than the frame. Do not quote it; re-measure at a heavier vantage. The
-  console line names the cadence the verdict was judged against, and the GPU
-  row is never clamped — no compositor pads a hardware timestamp.
+- **`vsyncClamped` true throws the dwell away.** A p50 sitting on any whole
+  number of the display period the run measured, inside a spread tighter than
+  6 % of that period (1 ms at 60 Hz), measured the panel rather than the
+  frame — a frame that overran one interval and was held to the next is still
+  the panel's number. Do not quote it; re-measure at a heavier vantage. The
+  console line names the cadence the verdict was judged against (headless
+  Chromium idles at 60 Hz, like a 60 Hz panel), and the GPU row is never
+  clamped — no compositor pads a hardware timestamp.
 - **A sweep with any clamped point reads `bound inconclusive`** — say
   inconclusive, don't quote the slope.
 - **`savedMs` going UP is a regression**, not an improvement: the field is
@@ -103,6 +106,13 @@ against a baseline):
 
 ## Recording
 
-Results go to the bead's notes with the path of the saved output, never into
-a README. Paste the table and the adapter block, and say which vantage,
+Write every run under `.perf-runs/<date>/` in the **main checkout** — the
+`--json` path and a `tee` of the console log — never inside a worktree, the
+home directory or `/tmp`. The worktree goes when its PR lands and the runs
+would go with it; the main checkout persists and the folder is gitignored
+there. From a worktree, run `git rev-parse --path-format=absolute
+--git-common-dir` first (it prints `<main checkout>/.git`) and pass its parent
+spelled out — the worktree guard rejects `$( )` in a command. Results go to
+the bead's notes with the `.perf-runs/<date>/<file>` path, never into a
+README. Paste the table and the adapter block, and say which vantage,
 backend, method, headless flag and buffer size the run used.

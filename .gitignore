@@ -15,6 +15,10 @@ dist/
 # (scripts/perf/README.md § Human-armed).
 /.perf-go
 
+# Perf runner output (--json runs and their logs), one folder per date.
+# Local-only; bead notes carry the paths (scripts/perf/README.md § Recording).
+/.perf-runs/
+
 # Generated catalog artifacts (regenerated from source CSV). catalog.bin
 # ships as transport chunks (catalog.bin.<i>) + catalog-manifest.json.
 public/catalog.bin.*

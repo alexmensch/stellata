@@ -15,9 +15,11 @@ import type { Backend } from './scenarios';
 import type { DwellRecord, SweepRecord } from './schema';
 import { fitLogLog, sweepBracketMs, sweepOrder, type SweepPoint } from './sweep-pure';
 
-/** The dev server's own module URL for the WebGPU sample stream. It has no
- *  window surface, so a dwell reaches it through the module graph. */
-export const GPU_SAMPLES_MODULE_URL = '/src/client/debug/gpu-timing/gpu-frame-samples.ts';
+/** The dev server's own module URL for the WebGPU sample stream, relative to
+ *  the Vite root (`src/client`). It has no window surface, so a dwell reaches
+ *  it through the module graph; a wrong path is served the SPA fallback HTML
+ *  and the import fails, not 404s. */
+export const GPU_SAMPLES_MODULE_URL = '/debug/gpu-timing/gpu-frame-samples.ts';
 
 /**
  * Frames discarded after a resize, before the sweep's next dwell. Shorter
