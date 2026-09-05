@@ -46,9 +46,8 @@ scripts/perf/
   table-pure.ts (+ test)    Every text table. formatTable is the shared
                             width/alignment pass.
   await-go.sh (+ test)      The arm poller the agent runs in the background.
-  perf-section-check.sh     The perf-section-guard workflow's check: a
-    (+ test)                render-path diff needs a `## Perf` section with
-                            every ✗ accepted. RELEASING.md § Perf pin.
+  perf-section-check.sh     perf-section-guard's check: a render-path diff
+    (+ test)                needs a `## Perf` section, every ✗ accepted.
   perf-go-lib.sh (+ test)   Marker name, path and freshness — the single
                             source, sourced by await-go.sh and
                             scripts/hooks/perf-guard.sh.
@@ -274,13 +273,9 @@ The console line says which cadence the verdict was judged against. **The GPU
 row is never clamped**: a resolved timestamp is a span the hardware reports,
 and no compositor can pad it.
 
-**Every summary carries a state guard.** The dwell is read in four
-consecutive quarters (`quarterMedians`); a monotonic run of their medians
-wider than `STATE_GUARD_TREND_MS` (1 ms) end to end reads `trending` — the
-machine changed state under the dwell (the sustained-load GPU power step,
-stellata-0it.38) — and `--baseline` and `--against-pin` refuse the row, since
-frames either side of that transition never compare. `--cooldown-ms` idles
-between contexts so each one starts cold.
+**Every summary carries a state guard** (`quarterMedians`, `stateGuard`):
+a dwell that trended is refused by `--baseline` and `--against-pin` —
+`pins/README.md` § State guard.
 
 **A WebGPU dwell also counts what the frame submits.** For the timed frames
 it wraps `GPUQueue.submit` and `GPUCommandEncoder.beginRenderPass` /
