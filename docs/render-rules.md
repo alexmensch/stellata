@@ -271,9 +271,12 @@ Chromium on an M4 at 4.096 Mpx, wall clock
 (`.perf-runs/2026-09-05/arm12-emptyPass-sol-earth-both.json`): one
 extra empty pass over the three-attachment HDR target plus its float
 depth costs 0.1 ms at Earth close approach (resolved, bracket 0) and at
-most 0.5 ms at Sol (−0.45 at a 0.5 bracket, unresolved); ~0 on WebGL2,
-where a clear is a state command inside the bound framebuffer. That is
-well under a full store-and-reload of the ~200 MB the attachments hold.
+most 0.5 ms at Sol (−0.45 at a 0.5 bracket, unresolved). That is well
+under a full store-and-reload of the ~200 MB the attachments hold. The
+WebGL2 rows did not resolve (−0.025 / −0.05 against 1.6–1.95 ms of noise,
+baselines under one 16.7 ms refresh, where frame-to-frame wall time cannot
+show a sub-millisecond addition); the expectation there is ~0, because a
+WebGL2 clear is a state command inside the bound framebuffer, not a pass.
 
 **Counts** (stellata-0it.37, arm 4, same machine and buffer): the
 steady-state WebGPU frame is 4 render passes on 4 submits at the cut

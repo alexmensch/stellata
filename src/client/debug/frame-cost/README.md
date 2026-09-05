@@ -126,7 +126,9 @@ Four rows are not what they look like:
   carries one such pass wherever a local cluster is active: the
   `clearDepth()` between the main render and the local repaint. On WebGL2
   a clear is a state command inside the current framebuffer, so the row
-  should read ~0 there.
+  should read ~0 there — an expectation, not yet a measurement: on
+  `raf-delta` a baseline under one refresh interval cannot show a
+  sub-millisecond addition, and the WebGL2 rows taken so far sat there.
 - **`reduction`** keeps its readback fence while disabled and drops only
   the chain draws. Dropping the fence too priced the loss of the frame's
   only ANGLE submission barrier — see
