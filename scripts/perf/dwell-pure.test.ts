@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_DWELL_FRAMES,
+  PASS_COUNTERS,
   VSYNC_CLAMP_TOLERANCE,
   isVsyncClamped,
   summarizeFrameDwell,
+  summarizePassCounts,
   vsyncClampToleranceMs,
 } from './dwell-pure';
 
@@ -111,6 +113,32 @@ describe('isVsyncClamped — the cadence is measured, not assumed', () => {
   it('reads nothing as clamped when no cadence was measured', () => {
     expect(isVsyncClamped(1, 0, null)).toBe(false);
     expect(isVsyncClamped(1, 0, 0)).toBe(false);
+  });
+});
+
+describe('summarizePassCounts', () => {
+  it('names the four things a WebGPU frame is counted on', () => {
+    expect(PASS_COUNTERS).toEqual(['submits', 'commandBuffers', 'renderPasses', 'computePasses']);
+  });
+
+  it('returns null for an empty dwell', () => {
+    expect(summarizePassCounts({ submits: [], commandBuffers: [], renderPasses: [], computePasses: [] }))
+      .toBeNull();
+  });
+
+  // A readback frame carries the reduction chain's extra passes, so the
+  // per-frame count is bimodal: min and max are the two modes, p50 the
+  // common one.
+  it('reports min, nearest-rank p50 and max per counter', () => {
+    const s = summarizePassCounts({
+      submits: [3, 3, 3, 5],
+      commandBuffers: [3, 3, 3, 5],
+      renderPasses: [4, 4, 4, 12],
+      computePasses: [0, 0, 0, 1],
+    })!;
+    expect(s.submits).toEqual({ min: 3, p50: 3, max: 5 });
+    expect(s.renderPasses).toEqual({ min: 4, p50: 4, max: 12 });
+    expect(s.computePasses).toEqual({ min: 0, p50: 0, max: 1 });
   });
 });
 

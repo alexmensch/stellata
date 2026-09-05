@@ -54,7 +54,12 @@ table. Reference: `scripts/perf/README.md`. Interpretation authority:
   the rAF period, no sweep.
 - `pnpm run perf -- --mode dwell --scenario mw120 --frames 240` — the whole
   frame rather than per-pass prices. Cheap; the one to reach for when the
-  question is "did the frame get slower".
+  question is "did the frame get slower". A WebGPU dwell also prints
+  submits / command buffers / render passes / compute passes per frame.
+- `pnpm run perf -- --mode dwell --scenario earth --backend webgpu --roundtrip localDepth`
+  — dwell, hold the pass off for `--frames`, restore it, dwell again; prints
+  the second against the first as a ratio. Pair it with `--roundtrip idle`,
+  the time-matched control, in the same session.
 - `pnpm run perf -- --mode sweep --scenario sol --scales 0.5,1,1.5,2` — what
   the frame is bound by (fill vs vertex/CPU), from the log-log slope.
 - `pnpm run perf -- --backend both --scenario earth --mode dwell` — both
@@ -66,7 +71,8 @@ table. Reference: `scripts/perf/README.md`. Interpretation authority:
 
 A flag the chosen mode does not read is **refused**, not ignored — `--method`,
 `--passes` and the priceFrame knobs belong to `--mode differential`, `--frames`
-to dwell and sweep, `--scales` to sweep. Fix the command rather than working
+to dwell and sweep, `--roundtrip` to dwell, `--scales` to sweep. Fix the
+command rather than working
 around it. `--json` and `--baseline` paths are checked before the marker is
 consumed, so a typo costs no arm.
 

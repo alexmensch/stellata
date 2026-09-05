@@ -3,16 +3,19 @@
 // page-protocol.ts. README.md § What a run does.
 
 import type { Page } from 'playwright';
-import { summarizeFrameDwell } from './dwell-pure';
+import { SETTLE_FRAMES } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import { ROUNDTRIP_IDLE } from './args';
+import { summarizeFrameDwell, summarizePassCounts } from './dwell-pure';
 import {
   awaitSettle,
   readDrawingBuffer,
   readRestoreState,
   runDwell,
+  runRoundTrip,
   type DwellRaw,
 } from './page-protocol';
 import type { Backend } from './scenarios';
-import type { DwellRecord, SweepRecord } from './schema';
+import type { DwellRecord, RoundTripRecord, SweepRecord } from './schema';
 import { fitLogLog, sweepBracketMs, sweepOrder, type SweepPoint } from './sweep-pure';
 
 /** The dev server's own module URL for the WebGPU sample stream, relative to
@@ -20,6 +23,11 @@ import { fitLogLog, sweepBracketMs, sweepOrder, type SweepPoint } from './sweep-
  *  it through the module graph; a wrong path is served the SPA fallback HTML
  *  and the import fails, not 404s. */
 export const GPU_SAMPLES_MODULE_URL = '/debug/gpu-timing/gpu-frame-samples.ts';
+
+/** The frame-cost module, same route: `--roundtrip` applies a pass's own
+ *  priceFrame toggle rather than a second spelling of it. */
+export const FRAME_COST_MODULE_URL = '/debug/frame-cost/frame-cost.ts';
+
 
 /**
  * Frames discarded after a resize, before the sweep's next dwell. Shorter
@@ -49,6 +57,7 @@ export interface DwellPlan {
 function toRecord(raw: DwellRaw, cadenceMs: number | null): DwellRecord | null {
   const stats = summarizeFrameDwell(raw.deltasMs, cadenceMs);
   if (stats === null) return null;
+  const counts = raw.passCounts === null ? null : summarizePassCounts(raw.passCounts);
   return {
     deltasMs: raw.deltasMs,
     gpuMs: raw.gpuMs.length > 0 ? raw.gpuMs : null,
@@ -58,6 +67,9 @@ function toRecord(raw: DwellRaw, cadenceMs: number | null): DwellRecord | null {
     limitMag: raw.effectiveLimitMag,
     dm: raw.dm,
     readbackPerFrame: raw.readbackPerFrame,
+    passCounts: raw.passCounts !== null && counts !== null
+      ? { perFrame: raw.passCounts, summary: counts, note: raw.passNote }
+      : null,
   };
 }
 
@@ -74,6 +86,7 @@ export async function measureDwell(page: Page, plan: DwellPlan): Promise<Measure
     warmupFrames: plan.warmupFrames,
     wantGpuStream: plan.backend === 'webgpu',
     samplesModuleUrl: GPU_SAMPLES_MODULE_URL,
+    countPasses: plan.backend === 'webgpu',
   });
   const record = toRecord(raw, plan.cadenceMs);
   if (record === null) {
@@ -115,6 +128,26 @@ export async function measureDwell(page: Page, plan: DwellPlan): Promise<Measure
     };
   }
   return { value: record, failure: null };
+}
+
+/**
+ * The intervention between a `--roundtrip` run's two dwells: the pass held
+ * off for one dwell's worth of frames under priceFrame's own preconditions,
+ * restored, and left to settle for priceFrame's own `SETTLE_FRAMES`.
+ * Returns what was done, for the record; the second dwell is the caller's,
+ * through `measureDwell` like the first.
+ */
+export async function applyRoundTrip(
+  page: Page,
+  plan: { readonly pass: string; readonly offFrames: number },
+): Promise<RoundTripRecord> {
+  const record = { pass: plan.pass, offFrames: plan.offFrames, settleFrames: SETTLE_FRAMES };
+  await runRoundTrip(page, {
+    ...record,
+    idleKey: ROUNDTRIP_IDLE,
+    toggleModuleUrl: FRAME_COST_MODULE_URL,
+  });
+  return record;
 }
 
 export interface SweepPlan extends DwellPlan {

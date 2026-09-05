@@ -3,8 +3,11 @@
 
 import type { BrowserContext, Page } from 'playwright';
 import type { DebugTools } from '../../src/client/debug/debug';
-import type { PriceFrameOptions, PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost';
+import type {
+  PassToggle, PriceFrameOptions, PriceFrameRow,
+} from '../../src/client/debug/frame-cost/frame-cost';
 import type { Stellata } from '../../src/client/stellata';
+import type { PassCounter } from './dwell-pure';
 import type { AdapterProbe, WebGlProbe, WebGpuProbe } from './schema';
 import type { Backend } from './scenarios';
 import { settleVerdict, type GateSnapshot } from './settle-pure';
@@ -162,12 +165,17 @@ export interface DwellParams {
   /** Where the dev server serves the sample module from. The stream has no
    *  window surface, so the dwell reaches it through the module graph. */
   readonly samplesModuleUrl: string;
+  /** Count queue submits, command buffers and encoded passes per timed
+   *  frame by wrapping the WebGPU prototypes for the dwell's duration. */
+  readonly countPasses: boolean;
 }
 
 export interface DwellRaw {
   readonly deltasMs: number[];
   readonly gpuMs: number[];
   readonly gpuNote: string;
+  readonly passCounts: Record<PassCounter, number[]> | null;
+  readonly passNote: string;
   readonly readbackPerFrame: number;
   readonly effectiveLimitMag: number;
   readonly dm: number;
@@ -191,6 +199,13 @@ export interface DwellRaw {
  * is sound, as a second opinion on the same frames rather than a
  * replacement: the two are different instruments and are never
  * differenced against each other.
+ *
+ * The pass counts wrap `GPUQueue.submit` and the two `GPUCommandEncoder`
+ * begin-pass methods on their prototypes for the timed frames only, and
+ * put the originals back in the same `finally` as the other restores.
+ * Prototype members are assigned rather than declared as helpers because
+ * tsx wraps a named inner function in `__name`, which does not exist once
+ * the body is serialised into the page.
  */
 export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
   return page.evaluate(async (p) => {
@@ -198,6 +213,20 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     const gpuMs: number[] = [];
     let stopGpu: (() => void) | null = null;
     let gpuNote = 'not requested — rAF wall-clock deltas are the metric';
+
+    type Proto = Record<string, unknown>;
+    const g = globalThis as unknown as Record<string, { prototype: Proto } | undefined>;
+    const queueProto = g.GPUQueue?.prototype;
+    const encoderProto = g.GPUCommandEncoder?.prototype;
+    const live = { submits: 0, commandBuffers: 0, renderPasses: 0, computePasses: 0 };
+    const perFrame: Record<PassCounter, number[]> | null = p.countPasses
+      ? { submits: [], commandBuffers: [], renderPasses: [], computePasses: [] }
+      : null;
+    let passNote = 'not requested — a WebGL2 boot has no queue to count on';
+    let origSubmit: unknown = null;
+    let origRenderPass: unknown = null;
+    let origComputePass: unknown = null;
+
     if (p.wantGpuStream) {
       try {
         const samples = await import(p.samplesModuleUrl) as {
@@ -229,6 +258,34 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     // clock while the frames being timed were drawn.
     let rateDuring = 0;
     try {
+      // Inside the try: the restore is in its finally, so the wrap must not
+      // be reachable without it.
+      if (perFrame !== null) {
+        if (queueProto !== undefined && encoderProto !== undefined) {
+          origSubmit = queueProto.submit;
+          origRenderPass = encoderProto.beginRenderPass;
+          origComputePass = encoderProto.beginComputePass;
+          const submit = origSubmit as (this: unknown, b: readonly unknown[]) => void;
+          const renderPass = origRenderPass as (this: unknown, d: unknown) => unknown;
+          const computePass = origComputePass as (this: unknown, d?: unknown) => unknown;
+          queueProto.submit = function (this: unknown, buffers: readonly unknown[]) {
+            live.submits += 1;
+            live.commandBuffers += buffers.length;
+            return submit.call(this, buffers);
+          };
+          encoderProto.beginRenderPass = function (this: unknown, descriptor: unknown) {
+            live.renderPasses += 1;
+            return renderPass.call(this, descriptor);
+          };
+          encoderProto.beginComputePass = function (this: unknown, descriptor?: unknown) {
+            live.computePasses += 1;
+            return computePass.call(this, descriptor);
+          };
+          passNote = 'counted on GPUQueue.submit and GPUCommandEncoder.beginRenderPass/beginComputePass';
+        } else {
+          passNote = 'no GPUQueue / GPUCommandEncoder prototype on this page';
+        }
+      }
       if (rateBefore !== 0) clock.setRate(0);
       for (let f = 0; f < p.warmupFrames; f++) {
         await new Promise((r) => requestAnimationFrame(r));
@@ -238,16 +295,35 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       gpuMs.length = 0;
       const readbacksBefore = s.reduction.readbackRequests;
       let last = await new Promise<number>((r) => requestAnimationFrame(r));
+      live.submits = 0;
+      live.commandBuffers = 0;
+      live.renderPasses = 0;
+      live.computePasses = 0;
       for (let f = 0; f < p.frames; f++) {
         const now = await new Promise<number>((r) => requestAnimationFrame(r));
         deltasMs.push(now - last);
         last = now;
+        if (perFrame !== null) {
+          perFrame.submits.push(live.submits);
+          perFrame.commandBuffers.push(live.commandBuffers);
+          perFrame.renderPasses.push(live.renderPasses);
+          perFrame.computePasses.push(live.computePasses);
+          live.submits = 0;
+          live.commandBuffers = 0;
+          live.renderPasses = 0;
+          live.computePasses = 0;
+        }
       }
       readbacks = s.reduction.readbackRequests - readbacksBefore;
       effectiveLimitMag = s.exposure.getEffectiveLimitMag();
     } finally {
       rateDuring = clock.getRate();
       stopGpu?.();
+      if (origSubmit !== null && queueProto !== undefined && encoderProto !== undefined) {
+        queueProto.submit = origSubmit;
+        encoderProto.beginRenderPass = origRenderPass;
+        encoderProto.beginComputePass = origComputePass;
+      }
       s.adaptation.setHeld(false);
       if (rateDuring !== rateBefore) clock.setRate(rateBefore);
       releaseHold();
@@ -257,6 +333,8 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       deltasMs,
       gpuMs,
       gpuNote,
+      passCounts: origSubmit !== null ? perFrame : null,
+      passNote,
       readbackPerFrame: p.frames > 0 ? readbacks / p.frames : 0,
       effectiveLimitMag,
       dm,
@@ -264,6 +342,65 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       rateDuring,
       holdsBefore,
     };
+  }, params);
+}
+
+export interface RoundTripParams {
+  /** A priceFrame pass key, or the idle sentinel the caller passes through
+   *  for the time-matched control. */
+  readonly pass: string;
+  readonly idleKey: string;
+  readonly offFrames: number;
+  readonly settleFrames: number;
+  /** Where the dev server serves the frame-cost module from: the pass
+   *  roster is `buildPassToggles`, reached through the module graph. */
+  readonly toggleModuleUrl: string;
+}
+
+/**
+ * Between two dwells: hold the render gate, stop the clock and pin the
+ * exposure exactly as priceFrame does around its own disabled dwell, apply
+ * the pass's own toggle, render `offFrames`, restore it, render
+ * `settleFrames`, and put every precondition back. The idle key does the
+ * same frames with nothing toggled. Throws if the pass is not in the
+ * roster or not active at this vantage — a round trip of nothing is not a
+ * control, it is the idle case wearing a pass's name.
+ */
+export function runRoundTrip(page: Page, params: RoundTripParams): Promise<void> {
+  return page.evaluate(async (p) => {
+    const s = (window as unknown as PerfWindow).stellata;
+    const clock = s.timeClock;
+    const rateBefore = clock.getRate();
+    const releaseHold = s.renderGate.hold();
+    let restore: (() => void) | null = null;
+    try {
+      if (rateBefore !== 0) clock.setRate(0);
+      s.adaptation.setHeld(true);
+      if (p.pass !== p.idleKey) {
+        const mod = await import(p.toggleModuleUrl) as {
+          buildPassToggles(stellata: Stellata): PassToggle[];
+        };
+        const toggle = mod.buildPassToggles(s).find((t) => t.key === p.pass);
+        if (toggle === undefined) throw new Error(`no pass '${p.pass}' in the priceFrame roster`);
+        if (!toggle.present()) {
+          throw new Error(`'${p.pass}' is not active at this vantage — nothing to round-trip`);
+        }
+        restore = toggle.disable();
+      }
+      for (let f = 0; f < p.offFrames; f++) {
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+      restore?.();
+      restore = null;
+      for (let f = 0; f < p.settleFrames; f++) {
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+    } finally {
+      restore?.();
+      s.adaptation.setHeld(false);
+      if (clock.getRate() !== rateBefore) clock.setRate(rateBefore);
+      releaseHold();
+    }
   }, params);
 }
 

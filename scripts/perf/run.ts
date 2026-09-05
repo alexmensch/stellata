@@ -14,7 +14,7 @@ import {
 import { ArgError, parseRunArgs, usage, type BackendRequest, type RunArgs } from './args';
 import { diffRuns } from './diff-pure';
 import type { DwellSummary } from './dwell-pure';
-import { measureDwell, measureSweep } from './measure';
+import { applyRoundTrip, measureDwell, measureSweep, type Measured } from './measure';
 import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './perf-go-lib';
 import {
   DWELL_METHOD,
@@ -39,11 +39,15 @@ import {
   assertPerfFile,
   SchemaError,
   type AdapterProbe,
+  type DwellRecord,
   type PerfFile,
   type ScenarioRecord,
 } from './schema';
 import { BACKENDS, SCENARIOS, scenarioUrl, type Backend, type ScenarioName } from './scenarios';
-import { formatDiffTable, formatDwellTable, formatPriceTable, formatSweepTable } from './table-pure';
+import {
+  formatDiffTable, formatDwellTable, formatPassCountTable, formatPriceTable,
+  formatRoundTripLine, formatSweepTable,
+} from './table-pure';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../..');
 const MARKER = resolve(REPO_ROOT, PERF_GO_MARKER_NAME);
@@ -107,6 +111,28 @@ interface ScenarioPlan {
   readonly method: GpuFrameMethod | undefined;
 }
 
+/** One dwell's tables and gate line, the same for the first dwell and a
+ *  round trip's second. */
+function printDwell(
+  label: string,
+  dwelt: Measured<DwellRecord>,
+  idleRafMs: number | null,
+): void {
+  const d = dwelt.value;
+  if (d === null) return;
+  const clocks: (readonly [string, DwellSummary])[] = [[DWELL_METHOD, d.stats]];
+  if (d.gpuStats !== null) clocks.push(['gpu-timestamp', d.gpuStats]);
+  console.log(`${label}\n${formatDwellTable(clocks)}`);
+  console.log(
+    `gpu stream: ${d.gpuNote} · readback ${d.readbackPerFrame.toFixed(3)}/frame · ` +
+    `limit ${d.limitMag.toFixed(3)} mag at dm ${d.dm.toFixed(3)} · ` +
+    `clamp judged against the ${idleRafMs?.toFixed(2) ?? '?'} ms idle cadence`,
+  );
+  if (d.passCounts !== null) {
+    console.log(`${formatPassCountTable(d.passCounts.summary)}\npass counts: ${d.passCounts.note}`);
+  }
+}
+
 interface ScenarioOutcome {
   readonly record: ScenarioRecord;
   /** Whichever adapter this scenario's context saw. The run-level `gpu`
@@ -159,6 +185,8 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
     idleRafMs: null as number | null,
     differential: null as ScenarioRecord['differential'],
     dwell: null as ScenarioRecord['dwell'],
+    dwellAfter: null as ScenarioRecord['dwellAfter'],
+    roundtrip: null as ScenarioRecord['roundtrip'],
     sweep: null as ScenarioRecord['sweep'],
     failed: false,
     failure: null as string | null,
@@ -210,23 +238,30 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
       };
       record.method = DWELL_METHOD;
       if (args.mode === 'dwell') {
-        record.params = { ...dwellPlan };
+        record.params = { ...dwellPlan, roundtrip: args.roundtrip ?? null };
         const dwelt = await measureDwell(page, dwellPlan);
         record.dwell = dwelt.value;
-        if (dwelt.value !== null) {
-          const clocks: (readonly [string, DwellSummary])[] = [[DWELL_METHOD, dwelt.value.stats]];
-          if (dwelt.value.gpuStats !== null) clocks.push(['gpu-timestamp', dwelt.value.gpuStats]);
-          console.log(formatDwellTable(clocks));
-          console.log(
-            `gpu stream: ${dwelt.value.gpuNote} · readback ${dwelt.value.readbackPerFrame.toFixed(3)}/frame · ` +
-            `limit ${dwelt.value.limitMag.toFixed(3)} mag at dm ${dwelt.value.dm.toFixed(3)} · ` +
-            `clamp judged against the ${record.idleRafMs?.toFixed(2) ?? '?'} ms idle cadence`,
-          );
-        }
+        printDwell(args.roundtrip === undefined ? 'dwell' : 'dwell BEFORE the round trip', dwelt, record.idleRafMs);
         if (dwelt.failure !== null) {
           record.failed = true;
           record.failure = dwelt.failure;
           console.error(`${name} FAILED: ${dwelt.failure}`);
+        } else if (args.roundtrip !== undefined) {
+          record.roundtrip = await applyRoundTrip(page, { pass: args.roundtrip, offFrames: args.frames });
+          console.log(
+            `round trip applied: ${args.roundtrip} off for ${record.roundtrip.offFrames} frames, ` +
+            `restored, ${record.roundtrip.settleFrames} frames to settle`,
+          );
+          const again = await measureDwell(page, dwellPlan);
+          record.dwellAfter = again.value;
+          printDwell('dwell AFTER the round trip', again, record.idleRafMs);
+          if (again.failure !== null) {
+            record.failed = true;
+            record.failure = `after the round trip: ${again.failure}`;
+            console.error(`${name} FAILED: ${record.failure}`);
+          } else if (dwelt.value !== null && again.value !== null) {
+            console.log(formatRoundTripLine(args.roundtrip, dwelt.value, again.value));
+          }
         }
       } else {
         record.params = { ...dwellPlan, scales: args.scales };

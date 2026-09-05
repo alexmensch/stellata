@@ -55,6 +55,8 @@ function scenario(overrides: Partial<ScenarioRecord> = {}): ScenarioRecord {
     idleRafMs: 16.7,
     differential: null,
     dwell: null,
+    dwellAfter: null,
+    roundtrip: null,
     sweep: null,
     console: [],
     pageErrors: [],
@@ -102,6 +104,7 @@ function withDwell(stats: DwellSummary, overrides: Partial<ScenarioRecord> = {})
       limitMag: 1.5,
       dm: -6.29,
       readbackPerFrame: 0.25,
+      passCounts: null,
     },
     ...overrides,
   })]);

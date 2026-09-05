@@ -139,36 +139,38 @@ describe('StarLayer', () => {
     }
   });
 
-  it('constructs single-output (inert) and swaps every colour material to the MRT struct', () => {
+  // The core mask is in the set although its writes are masked off: three's
+  // render-pipeline cache is keyed on program ids plus attachment 0's format
+  // only, so a material whose fragment program did not change with the
+  // target's attachment count is handed the pipeline built for the other
+  // count, and every command buffer carrying it is dropped
+  // (star-core-mask-tsl.ts).
+  it('constructs single-output (inert) and swaps every target material to the MRT struct', () => {
     const { layer } = makeLayer();
     type FragMaterial = THREE.Material & {
       fragmentNode: { isOutputStructNode?: boolean } | null; version: number;
     };
-    const colour = [layer.discMesh, layer.glowMesh]
+    const target = [layer.coreMaskMesh, layer.discMesh, layer.glowMesh]
       .map((m) => m.material as FragMaterial);
-    const coreMask = layer.coreMaskMesh.material as FragMaterial;
-    const singles = colour.map((m) => m.fragmentNode);
+    const singles = target.map((m) => m.fragmentNode);
     for (const single of singles) {
       expect(single?.isOutputStructNode).toBeUndefined();
     }
 
-    const versions = colour.map((m) => m.version);
+    const versions = target.map((m) => m.version);
     layer.setMrtOutputs(true);
-    colour.forEach((m, i) => {
+    target.forEach((m, i) => {
       expect(m.fragmentNode?.isOutputStructNode).toBe(true);
       expect(m.version).toBe(versions[i] + 1);
     });
-    // The core mask never swaps: colorWrite off, one output is valid
-    // under either target (star-layer.ts § setMrtOutputs).
-    expect(coreMask.fragmentNode?.isOutputStructNode).toBeUndefined();
 
     // Swapping back restores the SAME single node — no rebuild churn.
     layer.setMrtOutputs(false);
-    colour.forEach((m, i) => expect(m.fragmentNode).toBe(singles[i]));
+    target.forEach((m, i) => expect(m.fragmentNode).toBe(singles[i]));
     // Idempotent: repeating a state must not invalidate the pipeline.
-    const settled = colour.map((m) => m.version);
+    const settled = target.map((m) => m.version);
     layer.setMrtOutputs(false);
-    colour.forEach((m, i) => expect(m.version).toBe(settled[i]));
+    target.forEach((m, i) => expect(m.version).toBe(settled[i]));
   });
 
   it('first rendered frame re-packs unconditionally — the sentinel fails first write', () => {

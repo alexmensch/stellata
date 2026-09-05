@@ -33,7 +33,10 @@ src/client/webgpu/star/
                                no depth write — § The disc draw writes
                                no depth.
   star-core-mask-tsl.ts        The D3 material: depth-only, colour
-                               writes off, over the shared disc gate.
+                               writes off, over the shared disc gate;
+                               takes the MRT swap for three's pipeline
+                               cache (../hdr/README.md § The gate
+                               becomes the output struct).
   star-emission-tsl.ts         Fragment pieces the passes share: the
                                kernel and the two halves of the disc gate
                                BOTH disc and core mask run, chart mode's
@@ -126,10 +129,14 @@ at every framing. Why the split is the general rule and not a star-shaped
 exception: `../../hdr/attachments/README.md` § The unit. Both are pinned
 against the GLSL by `../../hdr/attachments/statistic-mask.test.ts`.
 
-The MRT emission/statistic write side is here (`starMrtStruct`,
-`setMrtOutputs`) but engages only while the HDR pipeline binds its
-target; single-output frames run the inline operator, which is exact
-for point sources (`../../hdr/README.md` § Fallback).
+The MRT emission/statistic write side is here (`finishStarColourMaterial`,
+`StarLayer.setMrtOutputs`) but engages only while the HDR pipeline binds
+its target; single-output frames run the inline operator, which is exact
+for point sources (`../../hdr/README.md` § Fallback). All three
+pipelines swap, the depth-only core mask included — its writes are
+masked, but an unchanged fragment program is handed the stale
+three-target pipeline from three's cache when the target drops to one
+attachment (`../hdr/README.md` § The gate becomes the output struct).
 
 ## Dynamic attributes — who uploads what
 

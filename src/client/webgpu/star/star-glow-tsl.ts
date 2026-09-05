@@ -8,9 +8,9 @@ import { applyGlowBlendDefaults } from '../../star-pipeline/star-pipeline';
 import { STAR_PASS_GLOW } from '../../star-pipeline/star-pass';
 import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
+import type { MrtEmitterMaterial } from '../hdr/mrt-material';
 import {
   discardOutsideKernel, finishStarColourMaterial, starGlowNode,
-  type StarColourMaterial,
 } from './star-emission-tsl';
 import {
   buildStarVaryings, buildStarVertexNode, type StarTslDeps,
@@ -20,7 +20,7 @@ export function buildStarGlowMaterial(
   deps: StarTslDeps,
   gates: EmitterGateNodes,
   localMirror = false,
-): StarColourMaterial {
+): MrtEmitterMaterial {
   const v = buildStarVaryings();
 
   // The disc/glow split is a property of the star, not of the render

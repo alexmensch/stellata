@@ -8,9 +8,9 @@ import type * as THREE from 'three';
 import { applyDiscBlendDefaults } from '../../star-pipeline/star-pipeline';
 import { STAR_PASS_DISC } from '../../star-pipeline/star-pass';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
+import type { MrtEmitterMaterial } from '../hdr/mrt-material';
 import {
   discPassEntryGate, discPassKernel, finishStarColourMaterial,
-  type StarColourMaterial,
 } from './star-emission-tsl';
 import {
   buildStarVaryings, buildStarVertexNode, type StarTslDeps,
@@ -34,7 +34,7 @@ export function buildStarDiscMaterial(
   deps: StarTslDeps,
   gates: EmitterGateNodes,
   localMirror = false,
-): StarColourMaterial {
+): MrtEmitterMaterial {
   const v = buildStarVaryings();
 
   const kernel = Fn(() => {

@@ -4,7 +4,7 @@
 
 import type { GpuFrameMethod, PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import type { Backend, ScenarioName } from './scenarios';
-import type { DwellSummary } from './dwell-pure';
+import type { DwellSummary, PassCountsPerFrame, PassCountsSummary } from './dwell-pure';
 import type { SweepFit, SweepPoint } from './sweep-pure';
 
 /**
@@ -37,6 +37,15 @@ export interface AdapterProbe {
   readonly webgpu: WebGpuProbe | null;
 }
 
+/** Per-frame WebGPU API counts over the timed frames, and their summary.
+ *  Null on a WebGL2 boot, and wherever the page had no GPUQueue to count
+ *  on — `note` says which. */
+export interface PassCountsRecord {
+  readonly perFrame: PassCountsPerFrame;
+  readonly summary: PassCountsSummary;
+  readonly note: string;
+}
+
 export interface DwellRecord {
   /** Every sample, never just the summary: a re-analysis with a different
    *  estimator has to be possible from the file alone. */
@@ -50,6 +59,16 @@ export interface DwellRecord {
   readonly limitMag: number;
   readonly dm: number;
   readonly readbackPerFrame: number;
+  readonly passCounts: PassCountsRecord | null;
+}
+
+/** What `--roundtrip` did between the two dwells: the pass held off for
+ *  `offFrames`, then re-enabled and left for `settleFrames` before the
+ *  second dwell's own warmup. `idle` is the time-matched control. */
+export interface RoundTripRecord {
+  readonly pass: string;
+  readonly offFrames: number;
+  readonly settleFrames: number;
 }
 
 export interface SweepRecord {
@@ -75,6 +94,9 @@ export interface ScenarioRecord {
   readonly idleRafMs: number | null;
   readonly differential: readonly PriceFrameRow[] | null;
   readonly dwell: DwellRecord | null;
+  /** The second dwell of a `--roundtrip` run, after `roundtrip` was applied. */
+  readonly dwellAfter: DwellRecord | null;
+  readonly roundtrip: RoundTripRecord | null;
   readonly sweep: SweepRecord | null;
   readonly console: readonly string[];
   readonly pageErrors: readonly string[];

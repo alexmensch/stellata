@@ -26,6 +26,12 @@ export type PricedPassKey = (typeof PRICED_PASS_KEYS)[number];
  *  same ramp absorbed for the same reason. */
 export const WARMUP_FRAMES = 180;
 
+/** Frames after a pass is restored before the next dwell, so the trailing
+ *  baseline is not sampled while the exposure is still re-converging —
+ *  README.md § Restore transients. The headless runner's `--roundtrip`
+ *  waits the same count for the same reason (`scripts/perf/README.md`). */
+export const SETTLE_FRAMES = 30;
+
 export interface DwellStats {
   readonly samples: number;
   readonly medianMs: number;

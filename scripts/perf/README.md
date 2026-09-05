@@ -58,7 +58,7 @@ pnpm run perf -- [--scenario sol,earth,mw50,mw120,lg | all] [--backend webgl2|we
                  [--mode differential|probe|dwell|sweep] [--passes a,b]
                  [--method timer-query|timestamp|raf-delta]
                  [--budget-ms N] [--dwell-frames N] [--warmup-frames N] [--settle-frames N] [--no-interleave]
-                 [--frames 240] [--scales 0.5,1,1.5,2]
+                 [--frames 240] [--roundtrip <pass>|idle] [--scales 0.5,1,1.5,2]
                  [--headed] [--width 1280] [--height 800] [--dpr 2] [--quiet-ms 5000]
                  [--json <path>] [--baseline <path>]
                  [--url http://localhost:5173] [--chrome-arg=<switch>]...
@@ -87,8 +87,9 @@ be compared. rAF wall time is the one clock both supply. An explicit
 `--mode dwell --method timer-query` is refused rather than quietly stamping
 the table `raf-delta`, and the same goes for `--passes`, `--budget-ms`,
 `--dwell-frames`, `--settle-frames` and `--no-interleave` outside
-`differential`, `--frames` outside dwell and sweep, and `--scales` outside
-sweep. Only flags actually typed are checked, so a default never trips it,
+`differential`, `--frames` outside dwell and sweep, `--roundtrip` outside
+dwell, and `--scales` outside sweep. Only flags actually typed are checked,
+so a default never trips it,
 and `--warmup-frames` is exempt because every mode absorbs the same ramp.
 The in-app instrument takes the same posture on a pin it cannot honour
 (`src/client/debug/frame-cost/README.md` § Preconditions); a typed command
@@ -256,6 +257,40 @@ a small interval sits within reach of some multiple whatever the frame cost.
 The console line says which cadence the verdict was judged against. **The GPU
 row is never clamped**: a resolved timestamp is a span the hardware reports,
 and no compositor can pad it.
+
+**A WebGPU dwell also counts what the frame submits.** For the timed frames
+it wraps `GPUQueue.submit` and `GPUCommandEncoder.beginRenderPass` /
+`beginComputePass` on their prototypes and records, per rAF interval, the
+submits, the command buffers they carried, and the render and compute
+passes encoded — then puts the originals back in the same `finally` as the
+clock and the hold. The table prints min / p50 / max per counter, since a
+count is small and quantised: a readback frame carries the reduction
+chain's extra passes, so the distribution is bimodal and the extremes are
+the two modes. It is an API-surface count, not a GPU cost — the per-pass
+floor is still a differential (`docs/render-rules.md` § 8). A WebGL2 dwell
+has no queue to count on and records null.
+
+**The counters sit inside the timed frames, and only on WebGPU.** Each
+wrapped call adds one JavaScript frame: at the counts a canon vantage
+actually reads (2–4 submits and 2–4 render passes per frame, up to 12 on a
+readback frame), that is under twenty extra calls against a 16.7 ms
+interval. Stated rather than assumed, because it is the instrument sitting
+inside its own measurement — and it is one more reason never to difference
+a WebGL2 dwell against a WebGPU one.
+
+**`--roundtrip <pass>` asks whether a toggle leaves the frame where it found
+it.** Dwell; then, under the differential's own conditions (gate held, clock
+stopped, exposure pinned), apply the pass's own priceFrame toggle, render
+`--frames` frames with it off, restore it, render `SETTLE_FRAMES` more; then
+dwell again. Both dwells print, plus one line with the second against the
+first as a ratio on each clock and the limit-mag / dm pair as the check that
+both priced the same population. `--roundtrip idle` renders the same frames
+with nothing toggled — the time-matched control, because the GPU's
+sustained-load ramp also moves the frame between two dwells and only the
+control separates the toggle from the clock. The toggle is reached through
+the frame-cost module over the dev server (`FRAME_COST_MODULE_URL`), never a
+second spelling of it; a pass not active at the vantage fails the scenario
+rather than round-tripping nothing under the pass's name.
 
 **Four checks, each able to fail.** A hold already live when the dwell starts
 fails it — settle requires an unheld gate, and the debug panel takes one,

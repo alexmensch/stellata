@@ -153,6 +153,23 @@ single-attachment frame-cost lever both ride the same swap. The flips
 are rare (mode changes, not frames), so the pipeline rebuild is paid
 where the WebGL build re-linked programs anyway.
 
+**Every material drawn into the target takes the swap, the depth-only
+core mask included — for three's pipeline cache, not for validity.** A
+lone `@location(0)` output under a three-target pipeline IS valid when
+`colorWrite` is off (the write mask is zero on every target). But three
+builds a pipeline's colour-target list from the bound target's texture
+count while keying its render-pipeline cache on the two program ids plus
+attachment 0's format alone (`WebGPUBackend.getRenderCacheKey`, r185).
+Attachment 0 is RGBA16F in both target modes, so a material whose fragment
+program is identical in both was handed the cached three-target pipeline
+inside the one-target pass: `Attachment state of [RenderPipeline
+"renderPipeline_star-core-mask-tsl"] is not compatible with
+[RenderPassEncoder]`, and Dawn dropped every command buffer carrying it —
+the whole star pass, 600 validation errors per frame-cost sweep at Sol and
+Earth. Swapping the mask's fragment graph changes its program id, which is
+what makes the cache miss. A new depth-only or colour-masked material on
+this target owes the same swap.
+
 ### Composing over three's fragment
 
 `fragmentNode` *replaces* the fragment stage, which is right for every

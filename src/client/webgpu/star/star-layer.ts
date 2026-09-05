@@ -22,7 +22,7 @@ import { buildStarCoreMaskMaterial } from './star-core-mask-tsl';
 import { applyStarDiscTslBlend, buildStarDiscMaterial } from './star-disc-tsl';
 import { buildStarGlowMaterial } from './star-glow-tsl';
 import { StarLocalMirrorTsl } from './star-local-mirror-tsl';
-import type { StarColourMaterial } from './star-emission-tsl';
+import type { MrtEmitterMaterial } from '../hdr/mrt-material';
 import type { StarTslDeps } from './star-vertex-tsl';
 
 interface DynamicWatcher {
@@ -52,7 +52,9 @@ export class StarLayer {
   private readonly build: StarGeometryBuild;
   private readonly dynArrays: Float32Array[];
   private readonly watchers: DynamicWatcher[];
-  private readonly colourMaterials: StarColourMaterial[];
+  /** Every material that draws into the HDR target, mask included — the
+   *  set `setMrtOutputs` swaps. */
+  private readonly targetMaterials: MrtEmitterMaterial[];
   /** The two materials chart mode swaps to flat ink. The mirror's clones
    *  never take the swap: local-pass membership parks in chart mode, so
    *  they have nothing to draw — the same split the GLSL
@@ -104,12 +106,13 @@ export class StarLayer {
     };
     // renderOrder mirrors the WebGL stack exactly, three draws and no
     // more: core mask (−4) → background layers → disc (0) → glow (1).
+    const mask = buildStarCoreMaskMaterial(deps);
     const disc = buildStarDiscMaterial(deps, gates);
     const glow = buildStarGlowMaterial(deps, gates);
-    this.colourMaterials = [disc, glow];
+    this.targetMaterials = [mask, disc, glow];
     this.discMaterial = disc.material;
     this.glowMaterial = glow.material;
-    this.coreMaskMesh = mesh(buildStarCoreMaskMaterial(deps), 'star-core-mask-webgpu', -4);
+    this.coreMaskMesh = mesh(mask.material, 'star-core-mask-webgpu', -4);
     this.coreMaskMesh.visible = false;
     this.discMesh = mesh(disc.material, 'star-disc-webgpu', 0);
     this.glowMesh = mesh(glow.material, 'star-glow-webgpu', 1);
@@ -122,15 +125,15 @@ export class StarLayer {
     return [this.coreMaskMesh, this.discMesh, this.glowMesh];
   }
 
-  /** Swap every colour material between its single-output fragment and
-   *  the three-member MRT struct — driven by the HDR pipeline in
-   *  lockstep with its target mode (../hdr/README.md § The gate becomes
-   *  the output struct). The core masks never swap: colour writes are
-   *  off, so their lone location-0 output is valid under either target.
-   *  The mirror's colour draws land in the same target, so they ride the
-   *  same swap. */
+  /** Swap every material that draws into the target between its
+   *  single-output fragment and the three-member MRT struct — driven by
+   *  the HDR pipeline in lockstep with its target mode (../hdr/README.md
+   *  § The gate becomes the output struct). The core mask swaps too, for
+   *  three's pipeline cache rather than for validity
+   *  (star-core-mask-tsl.ts). The mirror's draws land in the same target,
+   *  so they ride the same swap. */
   setMrtOutputs(on: boolean): void {
-    for (const m of this.colourMaterials) m.setMrtOutputs(on);
+    for (const m of this.targetMaterials) m.setMrtOutputs(on);
     this.localMirror.setMrtOutputs(on);
   }
 
@@ -145,8 +148,9 @@ export class StarLayer {
    *  `setMonochromeBlend` takes — only the disc-defaults argument differs.
    *  `uMonochrome` is a shared node the shell writes; swap-back goes
    *  through the construction helper, so the two cannot drift
-   *  (star-disc-tsl.ts § applyStarDiscTslBlend). The core mask needs no
-   *  swap: colour writes are off, so its blend state is unobservable. */
+   *  (star-disc-tsl.ts § applyStarDiscTslBlend). The core mask takes no
+   *  BLEND swap (colour writes are off, so its blend state is
+   *  unobservable) even though it does take the MRT one above. */
   setMonochrome(on: boolean): void {
     applyChartBlendSwap(
       this.discMaterial, this.glowMaterial, on, applyStarDiscTslBlend);

@@ -101,8 +101,6 @@ export function starEmissionColour(
   );
 }
 
-export type StarColourMaterial = MrtEmitterMaterial;
-
 /**
  * Give a colour pass both of its fragment graphs and the swap between
  * them, over the shared output-struct helper — and the chart branch, since
@@ -137,7 +135,7 @@ export function finishStarColourMaterial(
   entryGate: () => void,
   colourKernel: () => Node<'float'>,
   coreMask: (glow: Node<'float'>) => Node<'float'>,
-): StarColourMaterial {
+): MrtEmitterMaterial {
   return finishMrtMaterial(material, () => {
     entryGate();
     const colour = vec4(0.0).toVar();

@@ -76,3 +76,30 @@ export function summarizeFrameDwell(
     vsyncClamped: isVsyncClamped(p50, iqrMs, cadenceMs),
   };
 }
+
+/** What a WebGPU dwell counts per frame on the API surface: queue submits,
+ *  the command buffers those carried, and the render / compute passes
+ *  encoded. README.md § Dwell mode. */
+export const PASS_COUNTERS = ['submits', 'commandBuffers', 'renderPasses', 'computePasses'] as const;
+export type PassCounter = (typeof PASS_COUNTERS)[number];
+export type PassCountsPerFrame = Readonly<Record<PassCounter, readonly number[]>>;
+
+export interface CountSummary {
+  readonly min: number;
+  readonly p50: number;
+  readonly max: number;
+}
+
+export type PassCountsSummary = Readonly<Record<PassCounter, CountSummary>>;
+
+/** Nearest-rank p50 with the extremes: a per-frame count is small and
+ *  quantised, so the spread matters more than any percentile between. */
+export function summarizePassCounts(perFrame: PassCountsPerFrame): PassCountsSummary | null {
+  if (perFrame.submits.length === 0) return null;
+  const summary = {} as Record<PassCounter, CountSummary>;
+  for (const counter of PASS_COUNTERS) {
+    const xs = perFrame[counter];
+    summary[counter] = { min: Math.min(...xs), p50: percentile(xs, 0.5), max: Math.max(...xs) };
+  }
+  return summary;
+}
