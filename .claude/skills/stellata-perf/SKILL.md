@@ -70,6 +70,11 @@ table. Reference: `scripts/perf/README.md`. Interpretation authority:
 - `--json <path>` to save the run, `--baseline <path>` to diff against a
   saved one. Always `--json` a run worth citing: the table in your scrollback
   is not a record, and the raw samples are only in the file.
+- `pnpm run perf -- --mode dwell --scenario all --backend both --cooldown-ms 120000 --json <run> --pin scripts/perf/pins/<slug>.json`
+  — take the perf pin, cold: one launch, idle between contexts, every
+  context state-guarded. `--against-pin <path>` prints the verdicts a
+  render-path PR pastes into its `## Perf` section; any `✗` exits 1.
+  Rules: `RELEASING.md` § Perf pin; mechanics: `scripts/perf/pins/README.md`.
 - `--headed` for a headed control run. Headed and headless never compare.
 
 A flag the chosen mode does not read is **refused**, not ignored — `--method`,
