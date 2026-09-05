@@ -4,7 +4,8 @@
 
 import { round3, type PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { VERDICT_MARK, type RunDiff } from './diff-pure';
-import type { DwellSummary } from './dwell-pure';
+import { PASS_COUNTERS, type DwellSummary, type PassCountsSummary } from './dwell-pure';
+import type { DwellRecord } from './schema';
 import type { SweepFit, SweepPoint } from './sweep-pure';
 
 export type Cell = string | number | undefined;
@@ -48,6 +49,31 @@ export function formatDwellTable(
       round3(s.iqrMs), round3(s.lag1), String(s.vsyncClamped),
     ]),
   );
+}
+
+export const PASS_COUNT_COLUMNS = ['perFrame', 'min', 'p50', 'max'] as const;
+
+export function formatPassCountTable(summary: PassCountsSummary): string {
+  return formatTable(
+    PASS_COUNT_COLUMNS,
+    PASS_COUNTERS.map((counter) => {
+      const s = summary[counter];
+      return [counter, s.min, s.p50, s.max];
+    }),
+  );
+}
+
+/** The second dwell against the first, both clocks, as ratios — absolute
+ *  milliseconds do not reproduce, ratios at one buffer and one clock do. */
+export function formatRoundTripLine(pass: string, before: DwellRecord, after: DwellRecord): string {
+  const ratio = (a: number, b: number): string => `${round3(a)} → ${round3(b)} (×${(b / a).toFixed(3)})`;
+  const parts = [`round trip ${pass}: raf p50 ${ratio(before.stats.p50, after.stats.p50)}`];
+  if (before.gpuStats !== null && after.gpuStats !== null) {
+    parts.push(`gpu p50 ${ratio(before.gpuStats.p50, after.gpuStats.p50)}`);
+  }
+  parts.push(`limit ${round3(before.limitMag)} → ${round3(after.limitMag)} mag`);
+  parts.push(`dm ${round3(before.dm)} → ${round3(after.dm)}`);
+  return parts.join(' · ');
 }
 
 export const SWEEP_COLUMNS = ['scale', 'width', 'height', 'Mpx', 'ms', 'vsyncClamped'] as const;

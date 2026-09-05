@@ -19,6 +19,10 @@ export type Mode = (typeof MODES)[number];
 export const BACKEND_REQUESTS = [...BACKENDS, 'both'] as const;
 export type BackendRequest = (typeof BACKEND_REQUESTS)[number];
 
+/** `--roundtrip idle`: the same frames between the two dwells with nothing
+ *  toggled — the time-matched control for a pass round trip. */
+export const ROUNDTRIP_IDLE = 'idle';
+
 export interface RunArgs {
   readonly help: boolean;
   readonly url: string;
@@ -40,6 +44,8 @@ export interface RunArgs {
   readonly chromeArgs: readonly string[];
   /** dwell and sweep: frames whose deltas count, per dwell. */
   readonly frames: number;
+  /** dwell: a priceFrame pass key, or `idle`, applied between two dwells. */
+  readonly roundtrip: string | undefined;
   readonly scales: readonly number[];
   readonly json: string | undefined;
   readonly baseline: string | undefined;
@@ -81,6 +87,7 @@ const OPTIONS = {
   'quiet-ms': { type: 'string', default: String(ARG_DEFAULTS.quietMs) },
   'chrome-arg': { type: 'string', multiple: true, default: [] },
   frames: { type: 'string', default: String(ARG_DEFAULTS.frames) },
+  roundtrip: { type: 'string' },
   scales: { type: 'string', default: ARG_DEFAULTS.scales },
   json: { type: 'string' },
   baseline: { type: 'string' },
@@ -103,6 +110,7 @@ export function usage(): string {
     `  --url <base>             a RUNNING dev server                       (default ${ARG_DEFAULTS.url})`,
     '  --chrome-arg=<switch>    extra Chromium switch, repeatable (the = form, since the value starts with a dash)',
     `  --frames <n>             dwell and sweep: frames per dwell         (default ${ARG_DEFAULTS.frames})`,
+    `  --roundtrip <pass|${ROUNDTRIP_IDLE}>  dwell: dwell, hold the pass off for --frames then restore it, dwell again`,
     `  --scales <list>          sweep: viewport scales                    (default ${ARG_DEFAULTS.scales})`,
     '  --json <path>            write the whole run as stellata-perf/1',
     '  --baseline <path>        diff this run against a saved one and print the verdicts',
@@ -126,6 +134,7 @@ const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
   'settle-frames': ['differential'],
   'no-interleave': ['differential'],
   frames: ['dwell', 'sweep'],
+  roundtrip: ['dwell'],
   scales: ['sweep'],
 };
 
@@ -183,11 +192,20 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     return parsed;
   };
 
+  const isPassKey = (key: string): boolean =>
+    PRICED_PASS_KEYS.includes(key as (typeof PRICED_PASS_KEYS)[number]);
+
   const passes = list('passes');
   for (const key of passes ?? []) {
-    if (!PRICED_PASS_KEYS.includes(key as (typeof PRICED_PASS_KEYS)[number])) {
+    if (!isPassKey(key)) {
       throw new ArgError(`--passes names no such pass: '${key}'. Known: ${PRICED_PASS_KEYS.join(', ')}`);
     }
+  }
+
+  const roundtrip = str('roundtrip');
+  if (roundtrip !== undefined && roundtrip !== ROUNDTRIP_IDLE && !isPassKey(roundtrip)) {
+    throw new ArgError(
+      `--roundtrip names no such pass: '${roundtrip}'. Known: ${PRICED_PASS_KEYS.join(', ')}, or ${ROUNDTRIP_IDLE}`);
   }
 
   const requested = list('scenario') ?? [];
@@ -229,6 +247,7 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     quietMs: num('quiet-ms'),
     chromeArgs: values['chrome-arg'] as string[],
     frames: num('frames'),
+    roundtrip,
     scales: numberList('scales'),
     json: str('json'),
     baseline: str('baseline'),

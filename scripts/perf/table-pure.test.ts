@@ -3,11 +3,14 @@ import type { PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost
 import type { DwellSummary } from './dwell-pure';
 import type { RunDiff } from './diff-pure';
 import type { SweepPoint } from './sweep-pure';
+import type { DwellRecord } from './schema';
 import {
   PRICE_ROW_COLUMNS,
   formatDiffTable,
   formatDwellTable,
+  formatPassCountTable,
   formatPriceTable,
+  formatRoundTripLine,
   formatSweepTable,
   formatTable,
 } from './table-pure';
@@ -81,6 +84,40 @@ describe('formatDwellTable', () => {
 
   it('prints the clamp flag as a word rather than blanking a false', () => {
     expect(formatDwellTable([['raf-delta', dwell]])).toContain('false');
+  });
+});
+
+describe('formatPassCountTable', () => {
+  it('prints one row per counter in roster order', () => {
+    const one = { min: 3, p50: 3, max: 5 };
+    const lines = formatPassCountTable({
+      submits: one, commandBuffers: one, renderPasses: { min: 4, p50: 4, max: 12 }, computePasses: { min: 0, p50: 0, max: 0 },
+    }).split('\n');
+    expect(lines).toHaveLength(5);
+    expect(lines[0]).toContain('perFrame');
+    expect(lines[1]).toContain('submits');
+    expect(lines[3]).toContain('renderPasses');
+    expect(lines[3]).toContain('12');
+  });
+});
+
+describe('formatRoundTripLine', () => {
+  const record = (p50: number, gpu: number | null): DwellRecord => ({
+    deltasMs: [p50], gpuMs: null, gpuNote: '', stats: { ...dwell, p50 },
+    gpuStats: gpu === null ? null : { ...dwell, p50: gpu },
+    limitMag: 7.8, dm: 0, readbackPerFrame: 0.25, passCounts: null,
+  });
+
+  it('reads the second dwell against the first as a ratio on each clock', () => {
+    const line = formatRoundTripLine('localDepth', record(20, 17), record(25, 22.1));
+    expect(line).toContain('round trip localDepth');
+    expect(line).toContain('raf p50 20 → 25 (×1.250)');
+    expect(line).toContain('gpu p50 17 → 22.1 (×1.300)');
+    expect(line).toContain('limit 7.8 → 7.8 mag');
+  });
+
+  it('omits the GPU clock where either dwell lacks a stream', () => {
+    expect(formatRoundTripLine('idle', record(20, null), record(20, 17))).not.toContain('gpu p50');
   });
 });
 

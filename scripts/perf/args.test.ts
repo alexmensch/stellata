@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { ARG_DEFAULTS, ArgError, BACKEND_REQUESTS, MODES, parseRunArgs, usage } from './args';
+import {
+  ARG_DEFAULTS, ArgError, BACKEND_REQUESTS, MODES, ROUNDTRIP_IDLE, parseRunArgs, usage,
+} from './args';
 import { DEFAULT_SWEEP_SCALES } from './sweep-pure';
 import { SCENARIO_NAMES } from './scenarios';
 
@@ -26,10 +28,16 @@ describe('parseRunArgs', () => {
       quietMs: ARG_DEFAULTS.quietMs,
       chromeArgs: [],
       frames: ARG_DEFAULTS.frames,
+      roundtrip: undefined,
       scales: [...DEFAULT_SWEEP_SCALES],
       json: undefined,
       baseline: undefined,
     });
+  });
+
+  it('takes a pass key or the idle control as --roundtrip, in dwell mode', () => {
+    expect(parseRunArgs(['--mode', 'dwell', '--roundtrip', 'localDepth']).roundtrip).toBe('localDepth');
+    expect(parseRunArgs(['--mode', 'dwell', '--roundtrip', ROUNDTRIP_IDLE]).roundtrip).toBe('idle');
   });
 
   it('parses comma lists and repeated flags', () => {
@@ -119,6 +127,9 @@ describe('parseRunArgs', () => {
     [['--mode', 'dwell', '--scales', '1,2'], /--mode dwell, which would ignore it/],
     [['--passes', 'localDepht'], /no such pass/],
     [['--passes', 'localDepth,mwBnad'], /no such pass/],
+    [['--mode', 'dwell', '--roundtrip', 'localDepht'], /--roundtrip names no such pass/],
+    [['--mode', 'differential', '--roundtrip', 'localDepth'], /--mode differential, which would ignore it/],
+    [['--mode', 'sweep', '--roundtrip', 'idle'], /--mode sweep, which would ignore it/],
     [['--budget-ms', 'soon'], /--budget-ms/],
     [['--dpr', '0'], /--dpr/],
     [['--scenario', ' , '], /names nothing/],
@@ -135,7 +146,7 @@ describe('parseRunArgs', () => {
       '--scenario', '--backend', '--mode', '--passes', '--method', '--budget-ms',
       '--dwell-frames', '--warmup-frames', '--settle-frames', '--no-interleave',
       '--headed', '--width', '--height', '--dpr', '--quiet-ms', '--url', '--chrome-arg',
-      '--frames', '--scales', '--json', '--baseline',
+      '--frames', '--roundtrip', '--scales', '--json', '--baseline',
     ]) {
       expect(text).toContain(flag);
     }
