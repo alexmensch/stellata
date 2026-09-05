@@ -1,0 +1,98 @@
+{
+  "labelNoOverlayEntry": 15017,
+  "labelAgree": {
+    "hip": 99029,
+    "hd": 280528,
+    "hr": 7282,
+    "gl": 1820,
+    "flam": 2028
+  },
+  "labelAdded": {
+    "hip": 0,
+    "hd": 148,
+    "hr": 4,
+    "gl": 198,
+    "flam": 69
+  },
+  "labelFlipped": {
+    "hip": 0,
+    "hd": 43,
+    "hr": 23,
+    "gl": 65,
+    "flam": 2
+  },
+  "labelSpineOnly": {
+    "hip": 18623,
+    "hd": 12755,
+    "hr": 1707,
+    "gl": 1262,
+    "flam": 694
+  },
+  "labelSuppressed": {
+    "hip": 2,
+    "hd": 24,
+    "hr": 1,
+    "gl": 8,
+    "flam": 2
+  },
+  "labelExtraAlias": {
+    "hip": 0,
+    "hd": 95,
+    "hr": 0,
+    "gl": 0,
+    "flam": 0
+  },
+  "labelExtraSiblingRendered": {
+    "hip": 0,
+    "hd": 34,
+    "hr": 1,
+    "gl": 0,
+    "flam": 0
+  },
+  "labelExtraDropped": {
+    "hip": 0,
+    "hd": 0,
+    "hr": 0,
+    "gl": 0,
+    "flam": 0
+  },
+  "labelOverridden": {
+    "hip": 0,
+    "hd": 0,
+    "hr": 0,
+    "gl": 0,
+    "flam": 0
+  },
+  "rows": 376934,
+  "spineRows": 313257,
+  "additionRows": 63677,
+  "additionsByReason": {
+    "admitted:hd_link_gap": 54817,
+    "admitted:hd_omitted": 5060,
+    "admitted:hip_omitted": 444,
+    "admitted:cns5_census": 3356
+  },
+  "componentRows": 466,
+  "bindingByClass": {
+    "crosswalk_gated": 358575,
+    "simbad_corroborated": 11697,
+    "none": 6662
+  },
+  "bindingReviewRows": 39,
+  "unattestedByCell": {
+    "hd": 2,
+    "hr": 0,
+    "hip": 0,
+    "gl": 0,
+    "bayer": 0,
+    "flam": 119,
+    "proper": 46
+  },
+  "additionSourceOnSpine": 105,
+  "additionSourceGateRefused": 13,
+  "additionSourceShared": 0,
+  "additionGaiaKeyedOnly": 0,
+  "additionRouteSourceDisagree": 3,
+  "rowsWithHdAlt": 102,
+  "rowsWithHrAlt": 0
+}

@@ -549,7 +549,7 @@ export function checkAppendOnly(
 
 // ---- Same-as classes + allocation (docs/sid.md §§ 4.1, 4.4, 5) -----------
 
-class UnionFind {
+export class UnionFind {
   private parent = new Map<string, string>();
 
   find(x: string): string {

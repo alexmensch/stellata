@@ -1,0 +1,724 @@
+// The primaries-derived membership manifest: row assembly from the spine plus
+// the primaries' additions, the two ledgers, the TSV codecs, and the
+// spine ↔ manifest matcher the parity gate runs. Contract: docs/catalog-driver.md § 3.1.
+
+import { SOL_PROPER_NAME, normaliseGjKey } from '../catalog-pure';
+import type { Cns5Row } from '../classic-ids/classic-ids-parse';
+import type { ClassicIdOverlay } from '../classic-ids/classic-id-overlay-pure';
+import {
+  mergeClassicIdLabels,
+  spineLabelMergeRecord,
+  type LabelFlip,
+  type LabelMergeCounts,
+  type LabelMergeRecord,
+  type LabelOverrides,
+} from '../classic-ids/label-merge-pure';
+import { parkedSpineKey } from '../distance/parallax/parked-ledger';
+import { parseIntOrNull } from '../parse/corpus-tsv';
+import type { SpineRow } from '../spine/inherited-spine-pure';
+import {
+  ATHYG_HD_LINK_FLOOR,
+  CLASSICAL_CELLS,
+  attestSpineRow,
+  bareGjKey,
+  checkIdentity,
+  findAdditions,
+  indexPrimaries,
+  spineKeys,
+  type ClassicalCell,
+  type HdAddition,
+  type HipAddition,
+  type IdentityCheck,
+  type PrimaryIndex,
+  type PrimaryTables,
+} from '../spine/primaries-audit-pure';
+import {
+  UnionFind,
+  canonicalKeyOf,
+  compareDesignations,
+  starDesignations,
+  type SameasEdge,
+} from '../../sid/sid-pure';
+
+export const MEMBERSHIP_MANIFEST_FILE = 'data/membership/membership-manifest.tsv';
+export const ADDITIONS_LEDGER_FILE = 'data/membership/additions-ledger.tsv';
+export const BINDING_REVIEW_FILE = 'data/membership/binding-review.tsv';
+export const MEMBERSHIP_EXPECTED_FILE =
+  'scripts/catalog/membership/membership-manifest-expected.json';
+
+/** Multi-value separator inside `hd_alt` / `hr_alt` / `routes`. */
+export const MANIFEST_VALUE_SEPARATOR = '|';
+
+export const MANIFEST_COLUMNS = [
+  'tyc', 'hip', 'hd', 'hd_alt', 'hr', 'hr_alt', 'gl', 'flam', 'bayer', 'proper',
+  'gaia_source_id', 'binding', 'routes',
+] as const;
+export type ManifestColumn = (typeof MANIFEST_COLUMNS)[number];
+export type ManifestRow = Record<ManifestColumn, string>;
+
+/** How the row's `gaia_source_id` is justified. `crosswalk_gated` is a raw
+ *  cross-walk binding the § 4 gate passed; `simbad_corroborated` is a spine
+ *  binding no walk reproduces but SIMBAD's object for that id carries the
+ *  record's own TYC / HIP / GJ; `none` is an empty cell. */
+export const BINDING_CLASSES = ['crosswalk_gated', 'simbad_corroborated', 'none'] as const;
+export type BindingClass = (typeof BINDING_CLASSES)[number];
+
+/** The § 6.1 reason enum for records the primaries admit that the spine lacked. */
+export const ADDITION_REASONS = [
+  'admitted:hd_link_gap',
+  'admitted:hd_omitted',
+  'admitted:hip_omitted',
+  'admitted:cns5_census',
+] as const;
+export type AdditionReason = (typeof ADDITION_REASONS)[number];
+
+/** A primary's row whose every designation a spine record already answers to,
+ *  so admitting it would make that record's SID key ambiguous. Ledgered onto
+ *  the record it resolves to rather than admitted; the suffix is that record's
+ *  designation. */
+export const COMPONENT_REASON_PREFIX = 'component:';
+
+export const LEDGER_COLUMNS = ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'] as const;
+export type AdditionLedgerRow = Record<(typeof LEDGER_COLUMNS)[number], string>;
+
+export const BINDING_REVIEW_COLUMNS = [
+  'tyc', 'hip', 'hd', 'hr', 'gl', 'gaia_source_id', 'verdict', 'via_tyc', 'via_hip',
+  'via_cns5', 'simbad', 'simbad_hip', 'simbad_tyc', 'simbad_gj',
+] as const;
+export type BindingReviewRow = Record<(typeof BINDING_REVIEW_COLUMNS)[number], string>;
+
+export interface MembershipInput {
+  spine: readonly SpineRow[];
+  tables: PrimaryTables;
+  /** The committed post-gate overlay: `has(source)` is the § 4 gate's verdict
+   *  on every raw cross-walk binding, spine row or not. */
+  overlay: ClassicIdOverlay;
+  overrides: LabelOverrides;
+  siblingRenderedSourceIds: ReadonlySet<string>;
+}
+
+export interface MembershipCounts extends LabelMergeCounts {
+  rows: number;
+  spineRows: number;
+  additionRows: number;
+  additionsByReason: Record<AdditionReason, number>;
+  /** Groups a primary admits that resolve onto an existing record instead. */
+  componentRows: number;
+  bindingByClass: Record<BindingClass, number>;
+  /** Spine bindings dropped into the review queue. */
+  bindingReviewRows: number;
+  /** Manifest cells no primary attests, per identifier. */
+  unattestedByCell: Record<ClassicalCell, number>;
+  /** Addition groups whose raw source is a spine record's, so the cell stays
+   *  empty: Gaia fitted one source where Tycho-2 resolved two stars. */
+  additionSourceOnSpine: number;
+  /** Addition groups whose raw source the § 4 gate refused. */
+  additionSourceGateRefused: number;
+  /** Raw sources two or more addition groups reach; no group takes one. */
+  additionSourceShared: number;
+  /** Admitted rows whose only designation is the Gaia id — the mints
+   *  `sid:allocate` will key `gaia_dr3:`. */
+  additionGaiaKeyedOnly: number;
+  /** Groups whose TYC route and HIP route bind different sources; the TYC
+   *  route's stands, as the HD route does for labels (§ 4). */
+  additionRouteSourceDisagree: number;
+  rowsWithHdAlt: number;
+  rowsWithHrAlt: number;
+}
+
+export interface MembershipResult {
+  rows: ManifestRow[];
+  ledger: AdditionLedgerRow[];
+  bindingReview: BindingReviewRow[];
+  /** The spine-side label merge's review queue — must equal the committed
+   *  `label_flips.tsv` while the record build still merges for itself. */
+  flips: LabelFlip[];
+  counts: MembershipCounts;
+}
+
+// ---- codecs ------------------------------------------------------------------
+
+function joinValues(values: readonly (string | number)[]): string {
+  return values.map(String).join(MANIFEST_VALUE_SEPARATOR);
+}
+
+function splitValues(cell: string): string[] {
+  return cell === '' ? [] : cell.split(MANIFEST_VALUE_SEPARATOR);
+}
+
+export function serializeManifest(rows: readonly ManifestRow[]): string {
+  const lines = [MANIFEST_COLUMNS.join('\t')];
+  for (const row of rows) {
+    lines.push(MANIFEST_COLUMNS.map((c) => {
+      if (/[\t\n\r]/.test(row[c])) {
+        throw new Error(`manifest cell ${c}="${row[c]}" contains a TSV delimiter`);
+      }
+      return row[c];
+    }).join('\t'));
+  }
+  return `${lines.join('\n')}\n`;
+}
+
+/** Demands the header byte for byte, as `iterSpineTsv` does: the only writer is
+ *  `serializeManifest`, so a header that merely parses was never shipped. */
+export function* iterManifestTsv(text: string): Generator<ManifestRow> {
+  const headerEnd = text.indexOf('\n');
+  const header = headerEnd === -1 ? text : text.slice(0, headerEnd);
+  if (header !== MANIFEST_COLUMNS.join('\t')) {
+    throw new Error(`membership-manifest header mismatch: got ${header}`);
+  }
+  let start = headerEnd === -1 ? text.length : headerEnd + 1;
+  while (start < text.length) {
+    const end = text.indexOf('\n', start);
+    const line = text.slice(start, end === -1 ? text.length : end);
+    start = end === -1 ? text.length : end + 1;
+    if (line === '') continue;
+    const cells = line.split('\t');
+    if (cells.length !== MANIFEST_COLUMNS.length) {
+      throw new Error(
+        `membership-manifest row has ${cells.length} cells, expected ${MANIFEST_COLUMNS.length}`,
+      );
+    }
+    const row = {} as ManifestRow;
+    MANIFEST_COLUMNS.forEach((c, i) => { row[c] = cells[i]; });
+    yield row;
+  }
+}
+
+export function parseManifestTsv(text: string): ManifestRow[] {
+  return [...iterManifestTsv(text)];
+}
+
+export function serializeLedger(rows: readonly AdditionLedgerRow[]): string {
+  const lines = rows.map((r) => LEDGER_COLUMNS.map((c) => r[c]).join('\t')).sort();
+  return `${[LEDGER_COLUMNS.join('\t'), ...lines].join('\n')}\n`;
+}
+
+export function parseLedgerTsv(text: string): AdditionLedgerRow[] {
+  const [header, ...lines] = text.trimEnd().split('\n');
+  if (header !== LEDGER_COLUMNS.join('\t')) {
+    throw new Error(`${ADDITIONS_LEDGER_FILE}: unexpected header "${header}"`);
+  }
+  return lines.filter((l) => l !== '').map((line) => {
+    const cells = line.split('\t');
+    const row = {} as AdditionLedgerRow;
+    LEDGER_COLUMNS.forEach((c, i) => { row[c] = cells[i] ?? ''; });
+    return row;
+  });
+}
+
+function compareBigIntStrings(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a === '') return -1;
+  if (b === '') return 1;
+  const ba = BigInt(a);
+  const bb = BigInt(b);
+  return ba < bb ? -1 : ba > bb ? 1 : 0;
+}
+
+export function serializeBindingReview(rows: readonly BindingReviewRow[]): string {
+  const lines = [...rows]
+    .sort((a, b) => compareBigIntStrings(a.gaia_source_id, b.gaia_source_id))
+    .map((r) => BINDING_REVIEW_COLUMNS.map((c) => r[c]).join('\t'));
+  return `${[BINDING_REVIEW_COLUMNS.join('\t'), ...lines].join('\n')}\n`;
+}
+
+/** The identifier tuple a ledger row and a manifest row share — the same five
+ *  cells the parked ledger keys on. */
+export function manifestKey(
+  row: Pick<ManifestRow, 'tyc' | 'hip' | 'hd' | 'gl' | 'gaia_source_id'>,
+): string {
+  return parkedSpineKey(row);
+}
+
+// ---- designations ------------------------------------------------------------
+
+/** The `starDesignations` set a manifest row stands in for — the membership
+ *  term's half of SID resolution once the build reads this file. */
+export function manifestDesignations(row: ManifestRow): string[] {
+  return starDesignations({
+    isSol: row.proper === SOL_PROPER_NAME,
+    hip: parseIntOrNull(row.hip),
+    hd: parseIntOrNull(row.hd),
+    hr: parseIntOrNull(row.hr),
+    hdAlt: splitValues(row.hd_alt).map(Number),
+    hrAlt: splitValues(row.hr_alt).map(Number),
+    gl: row.gl === '' ? null : row.gl,
+    gaiaSourceId: row.gaia_source_id === '' ? null : row.gaia_source_id,
+    syntheticId: null,
+  });
+}
+
+/** Rows in SID canonical-key order, then TYC, then source — a total order over
+ *  committed inputs, so a regeneration diffs by content and never by walk order. */
+export function sortManifestRows(rows: readonly ManifestRow[]): ManifestRow[] {
+  return rows
+    .map((row) => ({ row, key: canonicalKeyOf(manifestDesignations(row)) }))
+    .sort((a, b) => compareDesignations(a.key, b.key)
+      || (a.row.tyc < b.row.tyc ? -1 : a.row.tyc > b.row.tyc ? 1 : 0)
+      || compareBigIntStrings(a.row.gaia_source_id, b.row.gaia_source_id))
+    .map((d) => d.row);
+}
+
+// ---- the spine side ----------------------------------------------------------
+
+/** Every designation the spine's records answer to after the label merge, in
+ *  the forms an addition's cells compare on. An addition may take none of them:
+ *  a designation on two records names a granularity and keys no SID
+ *  (docs/sid.md § 4.1), so attaching one a spine record holds would cost that
+ *  record its key — the collision guard's rule, applied at admission. */
+interface SpineClaims {
+  hd: Set<number>;
+  hr: Set<number>;
+  hip: Set<number>;
+  /** `normaliseGjKey` form: number + component letter. */
+  gl: Set<string>;
+  gaia: Set<string>;
+}
+
+function spineClaims(records: readonly LabelMergeRecord[]): SpineClaims {
+  const claims: SpineClaims = {
+    hd: new Set(), hr: new Set(), hip: new Set(), gl: new Set(), gaia: new Set(),
+  };
+  for (const r of records) {
+    if (r.hd !== null) claims.hd.add(r.hd);
+    for (const hd of r.hdAlt) claims.hd.add(hd);
+    if (r.hr !== null) claims.hr.add(r.hr);
+    for (const hr of r.hrAlt) claims.hr.add(hr);
+    if (r.hip !== null) claims.hip.add(r.hip);
+    const gl = normaliseGjKey(r.gl);
+    if (gl !== null) claims.gl.add(gl);
+    if (r.gaiaSourceId !== null) claims.gaia.add(r.gaiaSourceId);
+  }
+  return claims;
+}
+
+function bindingFor(check: IdentityCheck): { binding: BindingClass; keep: boolean } {
+  if (check.spine === null || check.verdict === 'sol') return { binding: 'none', keep: false };
+  if (check.verdict === 'agree') return { binding: 'crosswalk_gated', keep: true };
+  if (check.simbad === 'corroborates') return { binding: 'simbad_corroborated', keep: true };
+  return { binding: 'none', keep: false };
+}
+
+function bindingReviewRow(
+  row: SpineRow, check: IdentityCheck, tables: PrimaryTables,
+): BindingReviewRow {
+  const xids = tables.simbadBySourceId.get(check.spine ?? '');
+  return {
+    tyc: row.tyc, hip: row.hip, hd: row.hd, hr: row.hr, gl: row.gl,
+    gaia_source_id: check.spine ?? '',
+    verdict: check.verdict,
+    via_tyc: check.viaTyc ?? '', via_hip: check.viaHip ?? '', via_cns5: check.viaCns5 ?? '',
+    simbad: check.simbad ?? '',
+    simbad_hip: xids?.hip == null ? '' : String(xids.hip),
+    simbad_tyc: xids?.tyc ?? '',
+    simbad_gj: xids?.gj ?? '',
+  };
+}
+
+function routesCell(row: ManifestRow, tables: PrimaryTables, idx: PrimaryIndex): {
+  routes: string; unattested: ClassicalCell[];
+} {
+  const a = attestSpineRow(row, tables, idx);
+  const routes: string[] = [];
+  for (const cell of CLASSICAL_CELLS) {
+    const by = a.attestation[cell];
+    if (by !== null) routes.push(`${cell}:${by}`);
+  }
+  if (a.attestation.tyc !== null) routes.push('tyc:tycho2');
+  return { routes: joinValues(routes), unattested: a.unattested };
+}
+
+function intCell(v: number | null): string {
+  return v === null ? '' : String(v);
+}
+
+function manifestRowFromRecord(
+  cells: { tyc: string; bayer: string; proper: string },
+  r: LabelMergeRecord,
+  binding: BindingClass,
+): ManifestRow {
+  return {
+    tyc: cells.tyc,
+    hip: intCell(r.hip),
+    hd: intCell(r.hd),
+    hd_alt: joinValues(r.hdAlt),
+    hr: intCell(r.hr),
+    hr_alt: joinValues(r.hrAlt),
+    gl: r.gl ?? '',
+    flam: intCell(r.flam),
+    bayer: cells.bayer,
+    proper: cells.proper,
+    gaia_source_id: r.gaiaSourceId ?? '',
+    binding,
+    routes: '',
+  };
+}
+
+// ---- the additions -----------------------------------------------------------
+
+/** One primary's row the spine lacks, before the cohorts are merged: the same
+ *  star reaches this list once per primary that names it. */
+interface AdditionItem {
+  key: string;
+  hd: HdAddition | null;
+  hip: HipAddition | null;
+  cns5: Cns5Row | null;
+  rawSource: string | null;
+}
+
+/** Designation-keyed indexes over the primaries the additions join through. */
+interface AdditionIndex {
+  hrByHd: Map<number, number[]>;
+  hipByHdIv27a: Map<number, number[]>;
+  flamByHd: Map<number, number>;
+  flamByHip: Map<number, number>;
+}
+
+function indexAdditions(tables: PrimaryTables): AdditionIndex {
+  const hrByHd = new Map<number, number[]>();
+  for (const r of tables.v50) {
+    if (r.hd === null) continue;
+    hrByHd.set(r.hd, [...(hrByHd.get(r.hd) ?? []), r.hr]);
+  }
+  const hipByHdIv27a = new Map<number, number[]>();
+  const flamByHd = new Map<number, number>();
+  const flamByHip = new Map<number, number>();
+  for (const r of tables.iv27a) {
+    if (r.hip !== null) hipByHdIv27a.set(r.hd, [...(hipByHdIv27a.get(r.hd) ?? []), r.hip]);
+    if (r.flamsteed === null) continue;
+    if (!flamByHd.has(r.hd)) flamByHd.set(r.hd, r.flamsteed);
+    if (r.hip !== null && !flamByHip.has(r.hip)) flamByHip.set(r.hip, r.flamsteed);
+  }
+  return { hrByHd, hipByHdIv27a, flamByHd, flamByHip };
+}
+
+/** Merge the three cohorts into one group per star: an HD item joins the HIP
+ *  item Tycho-2's own `hip` column (or IV/27A) names for it, and items naming
+ *  one raw source are one star — except two TYC items, which are two Tycho-2
+ *  stars whatever the best-neighbour walk says, and take no side. */
+function groupAdditions(
+  items: readonly AdditionItem[],
+  tables: PrimaryTables,
+  index: AdditionIndex,
+): AdditionItem[][] {
+  const uf = new UnionFind();
+  const byKey = new Map(items.map((i) => [i.key, i]));
+  for (const i of items) uf.add(i.key);
+  const hipKey = (hip: number): string => `hip:${hip}`;
+  for (const i of items) {
+    if (i.hd === null) continue;
+    const linked = [tables.tycho2HipByTyc.get(i.hd.tyc)];
+    for (const hd of i.hd.hds) linked.push(...(index.hipByHdIv27a.get(hd) ?? []));
+    for (const hip of linked) {
+      if (hip !== undefined && byKey.has(hipKey(hip))) uf.union(i.key, hipKey(hip));
+    }
+  }
+  const bySource = new Map<string, AdditionItem[]>();
+  for (const i of items) {
+    if (i.rawSource === null) continue;
+    bySource.set(i.rawSource, [...(bySource.get(i.rawSource) ?? []), i]);
+  }
+  for (const list of bySource.values()) {
+    const tycItems = list.filter((i) => i.hd !== null);
+    const rest = list.filter((i) => i.hd === null);
+    const anchor = tycItems.length === 1 ? tycItems[0] : rest[0];
+    if (anchor === undefined) continue;
+    for (const i of rest) uf.union(anchor.key, i.key);
+  }
+  const groups = new Map<string, AdditionItem[]>();
+  for (const i of items) {
+    const root = uf.find(i.key);
+    groups.set(root, [...(groups.get(root) ?? []), i]);
+  }
+  return [...groups.values()];
+}
+
+interface Admission {
+  row: ManifestRow | null;
+  ledger: AdditionLedgerRow;
+  sourceOnSpine: boolean;
+  sourceGateRefused: boolean;
+  routeSourceDisagree: boolean;
+}
+
+function admitGroup(
+  group: readonly AdditionItem[],
+  claims: SpineClaims,
+  tables: PrimaryTables,
+  index: AdditionIndex,
+  overlay: ClassicIdOverlay,
+  sharedSources: ReadonlySet<string>,
+): Admission {
+  const hdItem = group.find((i) => i.hd !== null)?.hd ?? null;
+  const hipItem = group.find((i) => i.hip !== null)?.hip ?? null;
+  const cns5Item = group.find((i) => i.cns5 !== null)?.cns5 ?? null;
+  const rawGl = cns5Item === null ? null : `GJ ${cns5Item.gj}${cns5Item.gjComp ?? ''}`;
+  const blocked: string[] = [];
+
+  const hds = [...(hdItem?.hds ?? [])].sort((a, b) => a - b).filter((hd) => {
+    if (!claims.hd.has(hd)) return true;
+    blocked.push(`hd:${hd}`);
+    return false;
+  });
+  let hip: number | null = hipItem?.hip ?? null;
+  if (hip !== null && claims.hip.has(hip)) {
+    blocked.push(`hip:${hip}`);
+    hip = null;
+  }
+  const hrs: number[] = [];
+  for (const hd of hds) {
+    for (const hr of index.hrByHd.get(hd) ?? []) {
+      if (claims.hr.has(hr)) blocked.push(`hr:${hr}`);
+      else if (!hrs.includes(hr)) hrs.push(hr);
+    }
+  }
+  hrs.sort((a, b) => a - b);
+  let gl = rawGl;
+  const glKey = normaliseGjKey(gl);
+  if (gl !== null && glKey !== null && (claims.gl.has(glKey) || claims.gl.has(bareGjKey(glKey)))) {
+    blocked.push(`gl:${gl.replace(/\s+/g, '_')}`);
+    gl = null;
+  }
+  let flam: number | null = null;
+  for (const hd of hds) flam ??= index.flamByHd.get(hd) ?? null;
+  if (hip !== null) flam ??= index.flamByHip.get(hip) ?? null;
+
+  const tycSource = hdItem === null ? null : tables.tycToSource.get(hdItem.tyc) ?? null;
+  const hipSource = hipItem?.gaiaSourceId ?? null;
+  const rawSource = tycSource ?? hipSource ?? cns5Item?.gaiaSourceId ?? null;
+  const sourceOnSpine = rawSource !== null && claims.gaia.has(rawSource);
+  const sourceGateRefused = rawSource !== null && !sourceOnSpine && !overlay.has(rawSource);
+  const source = rawSource !== null && !sourceOnSpine && !sourceGateRefused
+    && !sharedSources.has(rawSource)
+    ? rawSource
+    : null;
+  const routeSourceDisagree = tycSource !== null && hipSource !== null && tycSource !== hipSource;
+
+  const tyc = hdItem?.tyc ?? '';
+  if (hds.length === 0 && hip === null && gl === null) {
+    // Ledgered under the designations it arrived with; the first blocked one
+    // in ladder order names the record it resolves onto.
+    return {
+      row: null,
+      ledger: {
+        tyc,
+        hip: intCell(hipItem?.hip ?? null),
+        hd: intCell(hdItem === null ? null : Math.min(...hdItem.hds)),
+        gl: rawGl ?? '',
+        gaia_source_id: '',
+        reason: `${COMPONENT_REASON_PREFIX}${blocked.sort(compareDesignations)[0]}`,
+      },
+      sourceOnSpine, sourceGateRefused, routeSourceDisagree,
+    };
+  }
+  const reason: AdditionReason = hds.length > 0
+    ? (hds[0] < ATHYG_HD_LINK_FLOOR ? 'admitted:hd_link_gap' : 'admitted:hd_omitted')
+    : hip !== null ? 'admitted:hip_omitted' : 'admitted:cns5_census';
+  const record: LabelMergeRecord = {
+    gaiaSourceId: source,
+    hip, hd: hds[0] ?? null, hr: hrs[0] ?? null, gl, flam,
+    hdAlt: hds.slice(1), hrAlt: hrs.slice(1),
+  };
+  const row = manifestRowFromRecord(
+    { tyc, bayer: '', proper: '' }, record, source === null ? 'none' : 'crosswalk_gated',
+  );
+  return {
+    row,
+    ledger: {
+      tyc, hip: row.hip, hd: row.hd, gl: row.gl, gaia_source_id: row.gaia_source_id, reason,
+    },
+    sourceOnSpine, sourceGateRefused, routeSourceDisagree,
+  };
+}
+
+// ---- the build -----------------------------------------------------------------
+
+export function buildMembership(input: MembershipInput): MembershipResult {
+  const { spine, tables, overlay, overrides, siblingRenderedSourceIds } = input;
+  const idx = indexPrimaries(tables);
+
+  const spineSides = spine.map(spineLabelMergeRecord);
+  const records = spineSides.map((s) => s.record);
+  const merge = mergeClassicIdLabels({
+    records,
+    labels: spineSides.map((s) => s.label),
+    overlay,
+    overrides,
+    siblingRenderedSourceIds,
+  });
+
+  const bindingByClass: Record<BindingClass, number> = {
+    crosswalk_gated: 0, simbad_corroborated: 0, none: 0,
+  };
+  const unattestedByCell = Object.fromEntries(
+    CLASSICAL_CELLS.map((c) => [c, 0]),
+  ) as Record<ClassicalCell, number>;
+  const bindingReview: BindingReviewRow[] = [];
+  const rows: ManifestRow[] = [];
+  const attest = (row: ManifestRow): void => {
+    const { routes, unattested } = routesCell(row, tables, idx);
+    row.routes = routes;
+    for (const cell of unattested) unattestedByCell[cell]++;
+    bindingByClass[row.binding as BindingClass]++;
+    rows.push(row);
+  };
+
+  spine.forEach((spineRow, i) => {
+    const check = checkIdentity(spineRow, tables, idx);
+    const { binding, keep } = bindingFor(check);
+    if (!keep && check.spine !== null && check.verdict !== 'sol') {
+      bindingReview.push(bindingReviewRow(spineRow, check, tables));
+    }
+    const record = records[i];
+    if (!keep) record.gaiaSourceId = null;
+    attest(manifestRowFromRecord(spineRow, record, binding));
+  });
+
+  const claims = spineClaims(records);
+  const additions = findAdditions(tables, spineKeys(spine), idx);
+  const items: AdditionItem[] = [
+    ...additions.hd.map((hd) => ({
+      key: `tyc:${hd.tyc}`, hd, hip: null, cns5: null,
+      rawSource: tables.tycToSource.get(hd.tyc) ?? null,
+    })),
+    ...additions.hip.map((hip) => ({
+      key: `hip:${hip.hip}`, hd: null, hip, cns5: null, rawSource: hip.gaiaSourceId,
+    })),
+    ...additions.cns5.newRecords.map((cns5) => ({
+      key: `cns5:${cns5.cns5}`, hd: null, hip: null, cns5, rawSource: cns5.gaiaSourceId,
+    })),
+  ];
+  const index = indexAdditions(tables);
+  const groups = groupAdditions(items, tables, index);
+  const sourceGroups = new Map<string, number>();
+  for (const g of groups) {
+    const sources = new Set(g.map((i) => i.rawSource).filter((s): s is string => s !== null));
+    for (const s of sources) sourceGroups.set(s, (sourceGroups.get(s) ?? 0) + 1);
+  }
+  const sharedSources = new Set([...sourceGroups].filter(([, n]) => n > 1).map(([s]) => s));
+
+  const ledger: AdditionLedgerRow[] = [];
+  const additionsByReason = Object.fromEntries(
+    ADDITION_REASONS.map((r) => [r, 0]),
+  ) as Record<AdditionReason, number>;
+  let componentRows = 0;
+  let additionSourceOnSpine = 0;
+  let additionSourceGateRefused = 0;
+  let additionRouteSourceDisagree = 0;
+  let additionGaiaKeyedOnly = 0;
+  for (const g of groups) {
+    const a = admitGroup(g, claims, tables, index, overlay, sharedSources);
+    if (a.sourceOnSpine) additionSourceOnSpine++;
+    if (a.sourceGateRefused) additionSourceGateRefused++;
+    if (a.routeSourceDisagree) additionRouteSourceDisagree++;
+    ledger.push(a.ledger);
+    if (a.row === null) {
+      componentRows++;
+      continue;
+    }
+    additionsByReason[a.ledger.reason as AdditionReason]++;
+    const designations = manifestDesignations(a.row);
+    if (designations.length === 1 && designations[0].startsWith('gaia_dr3:')) additionGaiaKeyedOnly++;
+    attest(a.row);
+  }
+
+  const sorted = sortManifestRows(rows);
+  const counts: MembershipCounts = {
+    ...merge.counts,
+    rows: sorted.length,
+    spineRows: spine.length,
+    additionRows: sorted.length - spine.length,
+    additionsByReason,
+    componentRows,
+    bindingByClass,
+    bindingReviewRows: bindingReview.length,
+    unattestedByCell,
+    additionSourceOnSpine,
+    additionSourceGateRefused,
+    additionSourceShared: sharedSources.size,
+    additionGaiaKeyedOnly,
+    additionRouteSourceDisagree,
+    rowsWithHdAlt: sorted.filter((r) => r.hd_alt !== '').length,
+    rowsWithHrAlt: sorted.filter((r) => r.hr_alt !== '').length,
+  };
+  return { rows: sorted, ledger, bindingReview, flips: merge.flips, counts };
+}
+
+// ---- the parity gate's matcher -----------------------------------------------
+
+export interface SpineMatch {
+  /** Per spine row: the index of the one manifest row its designation class
+   *  reaches, or null. */
+  manifestIndex: (number | null)[];
+  /** Spine rows none of whose designations the manifest knows. */
+  unmatched: number[];
+  /** Spine rows whose canonical key's class holds more than one manifest row —
+   *  a stored bridge joining two records. */
+  multiple: number[];
+  /** Manifest rows no spine row reaches — the additions. */
+  unreached: number[];
+}
+
+/** Resolve every spine row through the manifest's designation classes the way
+ *  `sid:allocate` resolves a record: the same-as graph over each manifest row's
+ *  designations plus the stored bridges, a designation on more than one
+ *  manifest row dropped first (docs/sid.md § 4.1), and the row keyed on its
+ *  first ladder-ranked designation the graph knows — its canonical key. A
+ *  lower-ranked designation the label merge moved to a sibling therefore does
+ *  not split the match: the SID never rode on it. */
+export function matchSpineToManifest(
+  spineDesignations: readonly (readonly string[])[],
+  manifestRows: readonly ManifestRow[],
+  storedEdges: readonly SameasEdge[],
+): SpineMatch {
+  const owners = new Map<string, number>();
+  const manifestSets = manifestRows.map(manifestDesignations);
+  for (const set of manifestSets) {
+    for (const d of new Set(set)) owners.set(d, (owners.get(d) ?? 0) + 1);
+  }
+  const uf = new UnionFind();
+  const rowByDesignation = new Map<string, number>();
+  manifestSets.forEach((set, i) => {
+    const kept = set.filter((d) => owners.get(d) === 1);
+    for (const d of kept) {
+      uf.add(d);
+      rowByDesignation.set(d, i);
+    }
+    for (let k = 1; k < kept.length; k++) uf.union(kept[0], kept[k]);
+  });
+  const endpoints = new Set<string>();
+  for (const e of storedEdges) {
+    uf.add(e.a);
+    uf.add(e.b);
+    uf.union(e.a, e.b);
+    endpoints.add(e.a);
+    endpoints.add(e.b);
+  }
+  const rowsByRoot = new Map<string, Set<number>>();
+  for (const [d, i] of rowByDesignation) {
+    const root = uf.find(d);
+    const set = rowsByRoot.get(root) ?? new Set<number>();
+    set.add(i);
+    rowsByRoot.set(root, set);
+  }
+  const manifestIndex: (number | null)[] = [];
+  const unmatched: number[] = [];
+  const multiple: number[] = [];
+  const reached = new Set<number>();
+  spineDesignations.forEach((set, s) => {
+    const key = [...set].sort(compareDesignations)
+      .find((d) => rowByDesignation.has(d) || endpoints.has(d));
+    const hits = key === undefined ? new Set<number>() : rowsByRoot.get(uf.find(key)) ?? new Set<number>();
+    if (hits.size === 1) {
+      const [i] = hits;
+      manifestIndex.push(i);
+      reached.add(i);
+    } else {
+      manifestIndex.push(null);
+      (hits.size === 0 ? unmatched : multiple).push(s);
+    }
+  });
+  const unreached = manifestRows.map((_, i) => i).filter((i) => !reached.has(i));
+  return { manifestIndex, unmatched, multiple, unreached };
+}
