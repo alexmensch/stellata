@@ -18,6 +18,10 @@ authors:
     family-names: Marshall
     website: https://alxm.me
 license: AGPL-3.0-only
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.22392528
+    description: Concept DOI — resolves to the latest archived release.
 repository-code: https://github.com/alexmensch/stellata
 url: https://stellata.xyz
 keywords:

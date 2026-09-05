@@ -101,10 +101,11 @@ and mints a DOI for it — third-party, timestamped provenance that a
 published record can only supersede, never edit or delete. Two kinds of
 DOI come out of it:
 
-- **Concept DOI** — version-independent, always resolves to the newest
-  release. This is the one to quote: README badge, `public/llms.txt`,
-  `CITATION.cff`.
+- **Concept DOI** — `10.5281/zenodo.22392528`. Version-independent,
+  always resolves to the newest release. This is the one to quote:
+  README badge, README § Licence, `public/llms.txt`, `CITATION.cff`.
 - **Version DOI** — one per release, cites that exact snapshot.
+  v3.44.2, the first archived release, is `10.5281/zenodo.22392529`.
 
 `CITATION.cff` at the repo root is the metadata Zenodo reads for each
 record, and what GitHub's *Cite this repository* sidebar renders. Validate
@@ -135,15 +136,16 @@ left as the snapshots they are, since the concept DOI resolves to the
 newest. Adding a `.zenodo.json` makes Zenodo ignore `CITATION.cff`
 entirely.
 
-Each release page carries the merging PR's `## Release notes` prose
-(§ Release notes per PR), so every Zenodo version record inherits a
-readable changelog at no extra cost.
+**A record's description is `CITATION.cff`'s abstract**, and its notes
+field the file's `message`. Zenodo builds both from that file and ignores
+the GitHub release body, so a release's `## Release notes` prose
+(§ Release notes per PR) stays on its GitHub release page; the record
+points there through the git tree at the tag it lists as a related
+identifier.
 
-Turning it on is a one-time manual step needing a Zenodo login: connect
-`alexmensch/stellata` in Zenodo's GitHub integration, after dry-running the
-whole flow on `sandbox.zenodo.org`, since real DOIs are permanent. Releases
-cut before the switch is flipped are not archived; the first release after
-it mints both DOIs at once.
+`alexmensch/stellata` is connected in Zenodo's GitHub integration, so
+every GitHub release is archived and gets a version DOI with no further
+action. Archiving starts at v3.44.2, the release that minted both DOIs.
 
 ## Catalogue refresh policy
 
