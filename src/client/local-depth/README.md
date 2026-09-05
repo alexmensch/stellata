@@ -56,8 +56,11 @@ Celestia, Outerra), generalised:
    universe: stars, MW, grids, and every body of systems with no
    active cluster.
 2. **Local pass** — for each active cluster: `autoClear = false`,
-   then per depth slice far→near (K = 1 on WebGPU, so one pass):
-   `clearDepth()` (colour kept),
+   then per depth slice far→near (K = 1 on WebGPU, so one slice):
+   `clearDepth()` (colour kept — on WebGPU three encodes this as its
+   own render pass and submit, every attachment loaded and stored, so
+   the slice costs two pass boundaries; the frame-cost `emptyPass` row
+   prices one),
    camera near/far set to the slice bracket, standard (non-log)
    depth, render the cluster's renderables. The z-buffer then handles
    ALL close-range occlusion natively: oblate limbs, moon↔planet,

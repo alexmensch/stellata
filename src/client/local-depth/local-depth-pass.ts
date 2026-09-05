@@ -40,6 +40,12 @@ export class LocalDepthPass {
    *  leaves this false outside a measurement dwell. */
   enabled = true;
 
+  /** Debug-scoped (frame-cost `emptyPass` row): extra `clearDepth()`
+   *  calls issued before the slices. On WebGPU each is a whole empty
+   *  render pass over the bound target, so pricing one pins the
+   *  per-pass floor. Never non-zero outside a measurement dwell. */
+  extraEmptyPasses = 0;
+
   private readonly clusters = new Set<LocalCluster>();
   private readonly spheres: MemberSphere[] = [];
   private readonly tmpSize = new THREE.Vector2();
@@ -65,6 +71,7 @@ export class LocalDepthPass {
    *  autoClear before returning. */
   render(renderer: StellataRenderer, camera: THREE.PerspectiveCamera): void {
     if (!this.enabled) return;
+    for (let i = 0; i < this.extraEmptyPasses; i++) renderer.clearDepth();
     this.spheres.length = 0;
     for (const cluster of this.clusters) {
       cluster.collectSpheres(camera, this.spheres);

@@ -96,7 +96,8 @@ function nextFrame(): Promise<void> {
  *  The four rows after it decompose that aggregate (README.md § Priced
  *  passes). extinctionPrepass reports the consumer A/B: disabling ADDS
  *  the in-vertex raymarch, so its savedMs is normally negative (what the
- *  cache saves). */
+ *  cache saves). emptyPass ADDS one empty render pass, so its savedMs is
+ *  minus the per-pass floor. */
 export function buildPassToggles(stellata: Stellata): PassToggle[] {
   const flag = (set: (on: boolean) => void): (() => void) => {
     set(false);
@@ -187,6 +188,14 @@ export function buildPassToggles(stellata: Stellata): PassToggle[] {
       key: 'extinctionPrepass',
       present: () => stellata.isExtinctionPrepassActive(),
       disable: () => flag((on) => stellata.setExtinctionPrepassEnabled(on)),
+    },
+    {
+      key: 'emptyPass',
+      present: () => true,
+      disable: () => {
+        stellata.localDepthPass.extraEmptyPasses = 1;
+        return () => { stellata.localDepthPass.extraEmptyPasses = 0; };
+      },
     },
   ];
 }

@@ -99,4 +99,24 @@ describe('LocalDepthPass.render', () => {
     pass.render(disabled.renderer, makeCamera());
     expect(disabled.renders).toHaveLength(0);
   });
+
+  it('issues extraEmptyPasses clears even with no members, none while disabled', () => {
+    const pass = new LocalDepthPass();
+    pass.extraEmptyPasses = 1;
+    const empty = mockRenderer(true);
+    pass.render(empty.renderer, makeCamera());
+    expect(empty.clearDepths()).toBe(1);
+    expect(empty.renders).toHaveLength(0);
+
+    pass.register(cluster(WIDE_SPHERES));
+    const withMembers = mockRenderer(true);
+    pass.render(withMembers.renderer, makeCamera());
+    expect(withMembers.clearDepths()).toBe(2);
+    expect(withMembers.renders).toHaveLength(1);
+
+    pass.enabled = false;
+    const disabled = mockRenderer(true);
+    pass.render(disabled.renderer, makeCamera());
+    expect(disabled.clearDepths()).toBe(0);
+  });
 });

@@ -106,7 +106,7 @@ reduction (`reduction.enabled`), the star core depth-mask
 (`setCoreMaskEnabled`), and the extinction prepass A/B. A pass inactive
 at the current view/state is skipped, not measured as zero.
 
-Three rows are not what they look like:
+Four rows are not what they look like:
 
 - **`hdrChain`** disables via `hdr.setChartMode(true)` — the whole-target
   park, which also stops the statistic attachment and flips emitters to
@@ -118,6 +118,15 @@ Three rows are not what they look like:
   confound).
 - **`extinctionPrepass`** ADDS the in-vertex raymarch when disabled, so
   its `savedMs` is normally negative: the row is what the cache saves.
+- **`emptyPass`** ADDS one `clearDepth()` to the local depth pass when
+  disabled (`localDepthPass.extraEmptyPasses`). On WebGPU three encodes a
+  clear as its own render pass and submit — every colour attachment loaded
+  and stored, nothing drawn — so `−savedMs` is the per-pass floor at the
+  current buffer size (`docs/render-rules.md` § 8). The real frame already
+  carries one such pass wherever a local cluster is active: the
+  `clearDepth()` between the main render and the local repaint. On WebGL2
+  a clear is a state command inside the current framebuffer, so the row
+  should read ~0 there.
 - **`reduction`** keeps its readback fence while disabled and drops only
   the chain draws. Dropping the fence too priced the loss of the frame's
   only ANGLE submission barrier — see
