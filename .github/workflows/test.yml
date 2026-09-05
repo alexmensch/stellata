@@ -108,6 +108,15 @@ jobs:
               "'pnpm run build:wgsn' and commit the regenerated files";
             exit 1;
           }
+      # The membership manifest is a pure function of committed inputs, so it
+      # takes the regenerate-and-diff gate the frozen spine could not.
+      - run: pnpm run build:membership
+      - run: |
+          git diff --exit-code -- data/membership/ || {
+            echo "::error::committed membership manifest is stale — run" \
+              "'pnpm run build:membership' and commit the regenerated files";
+            exit 1;
+          }
       # Hard-fails on any record the SID ledger doesn't cover (the mint
       # side of ledger consistency; the drop side is the job below).
       - run: pnpm run build:catalog
@@ -178,7 +187,7 @@ jobs:
           name: public-artifacts
           path: public/
       - run: pnpm run build:binaries-runtime
-      - run: pnpm exec vitest run scripts/catalog/validate/known-stars.test.ts scripts/catalog/companions/multi-star-regression.test.ts scripts/catalog/validate/sky-position.test.ts scripts/catalog/spine/inherited-spine-parity.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts
+      - run: pnpm exec vitest run scripts/catalog/validate/known-stars.test.ts scripts/catalog/companions/multi-star-regression.test.ts scripts/catalog/validate/sky-position.test.ts scripts/catalog/spine/inherited-spine-parity.test.ts scripts/catalog/membership/membership-manifest-gate.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts
 
   # Append-only ledger guard (needs full history for the merge-base
   # read), the DR-reconciliation classifier against its committed dry-run
