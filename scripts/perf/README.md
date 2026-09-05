@@ -46,6 +46,9 @@ scripts/perf/
   table-pure.ts (+ test)    Every text table. formatTable is the shared
                             width/alignment pass.
   await-go.sh (+ test)      The arm poller the agent runs in the background.
+  perf-section-check.sh     The perf-section-guard workflow's check: a
+    (+ test)                render-path diff needs a `## Perf` section with
+                            every ✗ accepted. RELEASING.md § Perf pin.
   perf-go-lib.sh (+ test)   Marker name, path and freshness — the single
                             source, sourced by await-go.sh and
                             scripts/hooks/perf-guard.sh.
