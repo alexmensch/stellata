@@ -267,23 +267,29 @@ encodes a clear as an empty render pass with every attachment loaded
 and stored. A pass boundary on a tile-based GPU (Apple silicon shades
 the screen in small tiles held in fast on-chip memory) is where the
 target goes out to main memory and back. Measured, 2026-09-05, headless
-Chromium on an M4 at 4.096 Mpx, wall clock
-(`.perf-runs/2026-09-05/arm12-emptyPass-sol-earth-both.json`): one
-extra empty pass over the three-attachment HDR target plus its float
-depth costs 0.1 ms at Earth close approach (resolved, bracket 0) and at
-most 0.5 ms at Sol (−0.45 at a 0.5 bracket, unresolved). That is well
-under a full store-and-reload of the ~200 MB the attachments hold. The
+Chromium on an M4 at 4.096 Mpx, wall clock (arm 12, stellata-0it.37
+notes): one extra empty pass over the three-attachment HDR target plus
+its float depth costs 0.1 ms at Earth close approach (resolved, bracket
+0) and at most 0.5 ms at Sol (−0.45 at a 0.5 bracket, unresolved).
+**So the boundary is not paying a full store-and-reload.** Those
+attachments hold ~115 MB at this buffer, and moving them out and back
+across an M4's memory bandwidth is of the order of 2 ms — an order above
+what the row reads, so the tile store is partial, deferred, or elided,
+not the round trip the tile-memory model suggests. The
 WebGL2 rows did not resolve (−0.025 / −0.05 against 1.6–1.95 ms of noise,
 baselines under one 16.7 ms refresh, where frame-to-frame wall time cannot
 show a sub-millisecond addition); the expectation there is ~0, because a
 WebGL2 clear is a state command inside the bound framebuffer, not a pass.
 
 **Counts** (stellata-0it.37, arm 4, same machine and buffer): the
-steady-state WebGPU frame is 4 render passes on 4 submits at the cut
-vantages — main, the local pass's depth clear, the local repaint, the
-resolve — and 2 on 2 away from the cut. A readback frame adds 2 submits
-(the exposure copy, no pass) and, at Earth alone under the exposure
-pin, the 6 reduction-chain passes.
+steady-state WebGPU frame is 4 render passes on 4 submits wherever a
+local cluster is active — main, the local pass's depth clear, the local
+repaint, the resolve — and 2 render passes on 2–3 submits where none is
+(mw50 2, mw120 and LG 3, and unstable between dwells). **What gates the
+extra two is the cluster, not the exposure cut**; Sol and Earth carry
+both, so the counts alone cannot tell them apart. A readback frame adds
+2 submits (the exposure copy, no pass) and, at Earth alone under the
+exposure pin, the 6 reduction-chain passes on 6 more submits.
 
 **How to apply.** Read every add-a-pass or fold-a-pass proposal against
 the `emptyPass` row (`src/client/debug/frame-cost/README.md` § Priced
@@ -292,7 +298,13 @@ At ≤ 0.5 ms a boundary, folding the local pass's depth clear into the
 repaint saves under 2 % of a Sol frame, and stellata-8cg.48 (4×4
 reduction) removes under one pass per frame amortised — its case is
 intermediate bandwidth, not pass count. A pass that draws is priced by
-what it draws, not by its boundary.
+what it draws, not by its boundary. One empty pass often falls under
+`bracketMs` and the row then does not resolve; add several
+(`--empty-passes N`) and divide.
+
+**Where.** The counts and the floor are stellata-0it.37's notes, which
+name the `.perf-runs` file each arm wrote in the main checkout. The
+instrument is `src/client/debug/frame-cost/README.md` § Priced passes.
 
 ## 9. Measurement canon
 
