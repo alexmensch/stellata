@@ -10,6 +10,7 @@ import {
   buildPriceRow,
   fitDwellFrames,
   summarizeDwell,
+  SETTLE_FRAMES,
   WARMUP_FRAMES,
   type DwellStats,
   type GpuFrameMethod,
@@ -72,11 +73,7 @@ export interface PriceFrameOptions {
 
 const DEFAULTS = {
   dwellFrames: 120,
-  // Long enough for the exposure to re-converge after a toggle that reset
-  // the statistic: the chart-mode park does, and at 12 frames the trailing
-  // baseline was still recovering — visible as an 8-14 ms bracketMs on the
-  // hdrChain and reduction rows while every other row sat under 4.5.
-  settleFrames: 30,
+  settleFrames: SETTLE_FRAMES,
   warmupFrames: WARMUP_FRAMES,
   interleave: true,
   pauseClock: true,
@@ -340,6 +337,7 @@ export async function runPriceFrame(
         );
         break;
       }
+      console.info(`priceFrame: '${toggle.key}' disabled — dwelling`);
       restore = toggle.disable();
       let disabled: DwellStats | null = null;
       try {

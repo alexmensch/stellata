@@ -26,6 +26,12 @@ export type PricedPassKey = (typeof PRICED_PASS_KEYS)[number];
  *  same ramp absorbed for the same reason. */
 export const WARMUP_FRAMES = 180;
 
+/** Frames after a pass is restored before the next dwell — long enough for
+ *  the exposure to re-converge after a toggle that reset the statistic. At
+ *  12 the trailing baseline was still recovering, read as an 8–14 ms
+ *  bracketMs on the hdrChain and reduction rows alone. */
+export const SETTLE_FRAMES = 30;
+
 export interface DwellStats {
   readonly samples: number;
   readonly medianMs: number;
