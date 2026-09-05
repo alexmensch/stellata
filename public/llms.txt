@@ -9,6 +9,7 @@ Stellata simulates what it would actually look like to move through the universe
 - [Stellata](https://stellata.xyz/): the live WebGL application.
 - [Source on GitHub](https://github.com/alexmensch/stellata): full source, released under AGPL-3.0-only.
 - [SCIENCE.md](https://github.com/alexmensch/stellata/blob/main/SCIENCE.md): data sources, modelling notes, and project scope.
+- [10.5281/zenodo.22392528](https://doi.org/10.5281/zenodo.22392528): Zenodo archive — the concept DOI to cite, resolving to the latest release.
 
 ## Data sources
 

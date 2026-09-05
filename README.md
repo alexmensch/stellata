@@ -2,6 +2,8 @@
 
 *Explore the universe.*
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22392528.svg)](https://doi.org/10.5281/zenodo.22392528)
+
 A physically accurate 3D model of our local corner of the universe at every
 scale astronomy has measured it. Experience what it would actually look
 like to *be there*: from individual stars and their planets, through the local
@@ -287,7 +289,10 @@ The code in this repository is licensed under AGPL-3.0-only. See
 
 To cite Stellata, use the metadata in
 [`CITATION.cff`](./CITATION.cff) — GitHub's *Cite this repository*
-sidebar renders it as APA or BibTeX.
+sidebar renders it as APA or BibTeX. Every release is archived on
+Zenodo with its own DOI; quote the concept DOI
+[10.5281/zenodo.22392528](https://doi.org/10.5281/zenodo.22392528),
+which resolves to the latest.
 
 Data sources retain their own licences:
 
