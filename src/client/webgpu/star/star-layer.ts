@@ -148,8 +148,9 @@ export class StarLayer {
    *  `setMonochromeBlend` takes — only the disc-defaults argument differs.
    *  `uMonochrome` is a shared node the shell writes; swap-back goes
    *  through the construction helper, so the two cannot drift
-   *  (star-disc-tsl.ts § applyStarDiscTslBlend). The core mask needs no
-   *  swap: colour writes are off, so its blend state is unobservable. */
+   *  (star-disc-tsl.ts § applyStarDiscTslBlend). The core mask takes no
+   *  BLEND swap (colour writes are off, so its blend state is
+   *  unobservable) even though it does take the MRT one above. */
   setMonochrome(on: boolean): void {
     applyChartBlendSwap(
       this.discMaterial, this.glowMaterial, on, applyStarDiscTslBlend);
