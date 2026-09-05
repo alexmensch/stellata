@@ -3,6 +3,7 @@
 // README.md § Dwell mode.
 
 import {
+  CADENCE_TOLERANCE,
   interquartileRange,
   lag1Autocorrelation,
   median,
@@ -47,8 +48,9 @@ export function stateGuardVerdict(
 
 /** The clamp tolerance as a fraction of the measured idle interval: 1 ms on
  *  a 60 Hz panel, 0.5 ms at 120 Hz. A fixed millisecond would sit within
- *  reach of some multiple of a small interval whatever the frame cost. */
-export const VSYNC_CLAMP_TOLERANCE = 0.06;
+ *  reach of some multiple of a small interval whatever the frame cost. The
+ *  differential's under-cadence rule shares the number. */
+export const VSYNC_CLAMP_TOLERANCE = CADENCE_TOLERANCE;
 
 export function vsyncClampToleranceMs(cadenceMs: number): number {
   return cadenceMs * VSYNC_CLAMP_TOLERANCE;

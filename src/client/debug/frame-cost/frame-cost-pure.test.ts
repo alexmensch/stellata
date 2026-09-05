@@ -9,6 +9,8 @@ import {
   buildInterleavedRow,
   fitDwellFrames,
   SETTLE_FRAMES,
+  CADENCE_TOLERANCE,
+  isUnderCadence,
   WARMUP_FRAMES,
 } from './frame-cost-pure';
 
@@ -253,6 +255,27 @@ describe('frame-cost-pure', () => {
   // round trip waits SETTLE_FRAMES after restoring a pass and stamps the
   // count into its record, so a silent change there moves what a recorded
   // measurement means.
+  it('isUnderCadence: on or under one display interval, within the clamp tolerance', () => {
+    expect(CADENCE_TOLERANCE).toBe(0.06);
+    expect(isUnderCadence(15.98, 16.7)).toBe(true);
+    expect(isUnderCadence(16.7, 16.7)).toBe(true);
+    expect(isUnderCadence(17.7, 16.7)).toBe(true);
+    expect(isUnderCadence(17.71, 16.7)).toBe(false);
+    expect(isUnderCadence(18.7, 16.7)).toBe(false);
+    expect(isUnderCadence(10, 0)).toBe(false);
+  });
+
+  it('stamps underCadence on raf-delta rows given a cadence, and nothing otherwise', () => {
+    const under = dwell(120, 16.0, 0.2);
+    const over = dwell(120, 18.7, 0.2);
+    expect(buildPriceRow('emptyPass', 'raf-delta', under, under, 16.7).underCadence).toBe(true);
+    expect(buildPriceRow('emptyPass', 'raf-delta', over, over, 16.7).underCadence).toBe(false);
+    expect(buildPriceRow('emptyPass', 'raf-delta', over, under, 16.7).underCadence).toBe(true);
+    expect(buildInterleavedRow('emptyPass', 'raf-delta', over, over, under, 16.7).underCadence).toBe(true);
+    expect(buildPriceRow('emptyPass', 'raf-delta', under, under).underCadence).toBeUndefined();
+    expect(buildPriceRow('emptyPass', 'timestamp', under, under, 16.7).underCadence).toBeUndefined();
+  });
+
   it('pins the two frame counts the runner shares with the sweep', () => {
     expect(SETTLE_FRAMES).toBe(30);
     expect(WARMUP_FRAMES).toBe(180);

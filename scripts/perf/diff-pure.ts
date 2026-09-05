@@ -113,6 +113,13 @@ function differentialRows(key: string, a: ScenarioRecord, b: ScenarioRecord): {
       refusals.push({ key: `${key}|${baseline.pass}`, reason: 'row absent from the current run' });
       continue;
     }
+    if (baseline.underCadence === true || row.underCadence === true) {
+      refusals.push({
+        key: `${key}|${baseline.pass}`,
+        reason: 'a raf-delta row sat on or under the display cadence — the wall clock cannot show a sub-quantum delta',
+      });
+      continue;
+    }
     const deltaMs = row.savedMs - baseline.savedMs;
     // The bracket floor overrides the standard error whenever it is
     // larger: it is how far the instrument moved between the baselines

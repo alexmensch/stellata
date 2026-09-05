@@ -257,6 +257,15 @@ describe('diffRuns — refusals', () => {
     }
   });
 
+  it('refuses a differential row that sat on or under the display cadence', () => {
+    const diff = diffRuns(
+      withDifferential([priceRow({ pass: 'emptyPass', savedMs: -0.025, underCadence: true })]),
+      withDifferential([priceRow({ pass: 'emptyPass', savedMs: -0.4, underCadence: true })]),
+    );
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('display cadence');
+  });
+
   it('refuses a dwell that measured the panel', () => {
     const diff = diffRuns(
       withDwell(dwellStats(30)),

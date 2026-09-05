@@ -34,6 +34,7 @@ const row: PriceFrameRow = {
   baselineLimitMag: 1.511,
   disabledLimitMag: 1.511,
   bufferMpx: 4.096,
+  underCadence: false,
 };
 
 describe('formatPriceTable', () => {
@@ -42,16 +43,17 @@ describe('formatPriceTable', () => {
       'pass', 'method', 'baselineMs', 'disabledMs', 'savedMs', 'savedPct', 'samples',
       'iqrMs', 'noiseMs', 'bracketMs', 'baselineLag1', 'disabledLag1',
       'baselineReadback', 'disabledReadback', 'baselineLimitMag', 'disabledLimitMag', 'bufferMpx',
+      'underCadence',
     ]);
   });
 
   it('right-aligns every column to its widest cell and blanks a missing bracket', () => {
     const { bracketMs: _dropped, ...single } = row;
-    const text = formatPriceTable([row, { ...single, pass: 'mwBand' }]);
+    const text = formatPriceTable([row, { ...single, pass: 'mwBand', underCadence: true }]);
     expect(text).toBe([
-      '      pass       method  baselineMs  disabledMs  savedMs  savedPct  samples  iqrMs  noiseMs  bracketMs  baselineLag1  disabledLag1  baselineReadback  disabledReadback  baselineLimitMag  disabledLimitMag  bufferMpx',
-      'localDepth  timer-query        41.4        30.1     11.3      27.3      120    2.1      0.4        0.9         -0.12          0.03              0.25              0.25             1.511             1.511      4.096',
-      '    mwBand  timer-query        41.4        30.1     11.3      27.3      120    2.1      0.4                    -0.12          0.03              0.25              0.25             1.511             1.511      4.096',
+      '      pass       method  baselineMs  disabledMs  savedMs  savedPct  samples  iqrMs  noiseMs  bracketMs  baselineLag1  disabledLag1  baselineReadback  disabledReadback  baselineLimitMag  disabledLimitMag  bufferMpx  underCadence',
+      'localDepth  timer-query        41.4        30.1     11.3      27.3      120    2.1      0.4        0.9         -0.12          0.03              0.25              0.25             1.511             1.511      4.096         false',
+      '    mwBand  timer-query        41.4        30.1     11.3      27.3      120    2.1      0.4                    -0.12          0.03              0.25              0.25             1.511             1.511      4.096          true',
     ].join('\n'));
   });
 

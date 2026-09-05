@@ -389,8 +389,10 @@ buffers or adapters produce a table that looks like a comparison and is not,
 so an incomparable pair is named and skipped rather than dropped silently:
 a differing adapter string refuses the whole run (a differing schema never
 reaches the diff — see § JSON output); a differing method or mode, a buffer
-more than 1 % apart, a failed or tainted scenario, a vsync-clamped dwell, or a
-row missing from one side refuses just that key. The key carries the backend,
+more than 1 % apart, a failed or tainted scenario, a vsync-clamped dwell, a
+`raf-delta` differential row stamped `underCadence` (either state on or
+under the idle period the runner measured), or a row missing from one side
+refuses just that key. The key carries the backend,
 so a vantage the other run measured on the *other* backend says exactly that
 rather than reporting itself absent.
 Sweeps are never diffed — a slope is not a cost.

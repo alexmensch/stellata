@@ -83,7 +83,10 @@ src/client/debug/frame-cost/
   (`../gpu-timing/README.md` § WebGPU, § A granted feature can still
   resolve garbage).
   Under `raf-delta` a differential below the vsync quantum reads as zero
-  unless the frame is already over budget. `method` labels every row; never
+  unless the frame is already over budget — a caller that measured the
+  display's idle period passes `{ cadenceMs }` (the headless runner does),
+  and every row either of whose states sat on or under one interval is
+  stamped `underCadence: true`. `method` labels every row; never
   compare numbers across two methods. The sweep picks the source itself and
   says which on the console — it never claims a clock the backend does not
   have, since that would spend the whole warmup before aborting with no
@@ -369,6 +372,11 @@ single-baseline sweep when the instrument is known to be settled.
   self-describing. **Only compare tables at the same buffer size**: the
   frame is fill-bound, so halving the window area moved the whole frame
   ~3x and moved `mwBand` ~7x.
+- **`underCadence`** — `raf-delta` rows with a known cadence only: true
+  when either state's median sat on or under one display interval (within
+  the 6 % clamp tolerance), so the row could not have shown a
+  sub-millisecond delta whatever `savedMs` and `noiseMs` read. Such a row
+  is an expectation at best, never a result; `--baseline` refuses it.
 - **`baselineLimitMag` / `disabledLimitMag`** — the gate that invalidates
   a row outright rather than widening it. The faintest magnitude each
   state rendered: **if these differ, the toggle changed what the frame

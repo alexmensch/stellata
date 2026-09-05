@@ -27,12 +27,16 @@ export const PRICE_ROW_COLUMNS = [
   'pass', 'method', 'baselineMs', 'disabledMs', 'savedMs', 'savedPct', 'samples',
   'iqrMs', 'noiseMs', 'bracketMs', 'baselineLag1', 'disabledLag1',
   'baselineReadback', 'disabledReadback', 'baselineLimitMag', 'disabledLimitMag', 'bufferMpx',
+  'underCadence',
 ] as const satisfies readonly (keyof PriceFrameRow)[];
 
 export function formatPriceTable(rows: readonly PriceFrameRow[]): string {
   return formatTable(
     PRICE_ROW_COLUMNS,
-    rows.map((row) => PRICE_ROW_COLUMNS.map((column) => row[column])),
+    rows.map((row) => PRICE_ROW_COLUMNS.map((column) => {
+      const value = row[column];
+      return typeof value === 'boolean' ? String(value) : value;
+    })),
   );
 }
 

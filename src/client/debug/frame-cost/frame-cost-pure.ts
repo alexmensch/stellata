@@ -32,6 +32,26 @@ export const WARMUP_FRAMES = 180;
  *  waits the same count for the same reason (`scripts/perf/README.md`). */
 export const SETTLE_FRAMES = 30;
 
+/** A `raf-delta` row either of whose states sat on or under one display
+ *  interval, within this fraction, cannot show a sub-quantum delta: the
+ *  frame finished early and the compositor supplied the rest. The same
+ *  tolerance the runner's dwell clamp uses. README.md § Reading a row. */
+export const CADENCE_TOLERANCE = 0.06;
+
+export function isUnderCadence(ms: number, cadenceMs: number): boolean {
+  return cadenceMs > 0 && ms <= cadenceMs * (1 + CADENCE_TOLERANCE);
+}
+
+function underCadenceFlag(
+  method: GpuFrameMethod,
+  referenceMs: number,
+  disabledMs: number,
+  cadenceMs: number | undefined,
+): boolean | undefined {
+  if (method !== 'raf-delta' || cadenceMs === undefined) return undefined;
+  return isUnderCadence(Math.min(referenceMs, disabledMs), cadenceMs);
+}
+
 export interface DwellStats {
   readonly samples: number;
   readonly medianMs: number;
@@ -82,6 +102,11 @@ export interface PriceFrameRow {
    *  drew, so `savedMs` prices a different scene rather than the pass. */
   readonly baselineLimitMag: number;
   readonly disabledLimitMag: number;
+  /** `raf-delta` rows, when the caller supplied the display's idle period:
+   *  true when either state's median sat on or under one interval, so the
+   *  row could not have resolved a sub-quantum delta whatever `savedMs`
+   *  says. Absent on a GPU clock or without a cadence. */
+  readonly underCadence?: boolean;
   /** Drawing-buffer megapixels the sweep ran at, stamped by the harness —
    *  run metadata, not a dwell statistic. Both dominant passes scale with
    *  it, so a table without it cannot be compared to another table. */
@@ -255,8 +280,10 @@ export function buildPriceRow(
   method: PriceFrameRow['method'],
   baseline: DwellStats,
   disabled: DwellStats,
+  cadenceMs?: number,
 ): PriceFrameRow {
   return assembleRow(pass, method, baseline.medianMs, disabled.medianMs, {
+    underCadence: underCadenceFlag(method, baseline.medianMs, disabled.medianMs, cadenceMs),
     samples: Math.min(baseline.samples, disabled.samples),
     iqrMs: Math.max(baseline.iqrMs, disabled.iqrMs),
     noiseMs: differentialNoiseMs(baseline, disabled),
@@ -285,11 +312,13 @@ export function buildInterleavedRow(
   before: DwellStats,
   after: DwellStats,
   disabled: DwellStats,
+  cadenceMs?: number,
 ): PriceFrameRow {
   const referenceMs = (before.medianMs + after.medianMs) / 2;
   const referenceSe =
     Math.hypot(medianStandardErrorMs(before), medianStandardErrorMs(after)) / 2;
   return assembleRow(pass, method, referenceMs, disabled.medianMs, {
+    underCadence: underCadenceFlag(method, referenceMs, disabled.medianMs, cadenceMs),
     samples: Math.min(before.samples, after.samples, disabled.samples),
     iqrMs: Math.max(before.iqrMs, after.iqrMs, disabled.iqrMs),
     noiseMs: Math.hypot(referenceSe, medianStandardErrorMs(disabled)),
@@ -309,6 +338,7 @@ function assembleRow(
   referenceMs: number,
   disabledMs: number,
   stats: {
+    underCadence?: boolean;
     samples: number;
     iqrMs: number;
     noiseMs: number;
@@ -339,6 +369,7 @@ function assembleRow(
     disabledReadback: round3(stats.disabledReadback),
     baselineLimitMag: round3(stats.baselineLimitMag),
     disabledLimitMag: round3(stats.disabledLimitMag),
+    ...(stats.underCadence === undefined ? {} : { underCadence: stats.underCadence }),
   };
 }
 

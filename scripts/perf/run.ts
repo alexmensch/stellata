@@ -246,8 +246,9 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
 
     measuring = true;
     if (args.mode === 'differential') {
-      record.params = { ...priceFrameOptions(args, plan.method) };
-      const rows = await runDifferential(page, priceFrameOptions(args, plan.method));
+      const priceOptions = { ...priceFrameOptions(args, plan.method), cadenceMs: record.idleRafMs };
+      record.params = { ...priceOptions };
+      const rows = await runDifferential(page, priceOptions);
       if (rows.length === 0) {
         record.failed = true;
         record.failure =

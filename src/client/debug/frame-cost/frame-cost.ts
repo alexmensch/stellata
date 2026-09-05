@@ -57,6 +57,10 @@ export interface PriceFrameOptions {
    *  before the sweep starts; only a sweep that cannot fit even at
    *  `MIN_DWELL_FRAMES` truncates. */
   budgetMs?: number;
+  /** The display's idle rAF period, where the caller measured it (the
+   *  headless runner does). On `raf-delta` every row is then stamped
+   *  `underCadence` when either state sat on or under one interval. */
+  cadenceMs?: number;
   /** Freeze the exposure cut for the sweep, after the warmup has let it
    *  converge. Passes that write the statistic attachment move the cut
    *  when toggled, and the differential then prices a different star
@@ -371,7 +375,7 @@ export async function runPriceFrame(
         continue;
       }
       if (!interleave) {
-        rows.push(buildPriceRow(toggle.key, method, baseline, disabled));
+        rows.push(buildPriceRow(toggle.key, method, baseline, disabled, options.cadenceMs));
         continue;
       }
       const after = await dwell();
@@ -381,7 +385,7 @@ export async function runPriceFrame(
         );
         continue;
       }
-      rows.push(buildInterleavedRow(toggle.key, method, baseline, after, disabled));
+      rows.push(buildInterleavedRow(toggle.key, method, baseline, after, disabled, options.cadenceMs));
       // The trailing baseline is the next row's leading one: 2N+1 dwells,
       // not 3N.
       baseline = after;
