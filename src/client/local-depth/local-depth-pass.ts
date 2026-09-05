@@ -66,8 +66,9 @@ export class LocalDepthPass {
    *  once per depth slice, far→near, clearing depth (never colour)
    *  between slices. Reversed-z Depth32Float (`reversedDepthBuffer`,
    *  the WebGPU boot) is ratio-free, so that path renders the whole
-   *  bracket as one slice — bracket/README.md § Decision. No-op when
-   *  no cluster reports members. Restores camera near/far and renderer
+   *  bracket as one slice — bracket/README.md § Decision. No-op when no
+   *  cluster reports members, save for `extraEmptyPasses`, which issue
+   *  whatever the clusters report. Restores camera near/far and renderer
    *  autoClear before returning. */
   render(renderer: StellataRenderer, camera: THREE.PerspectiveCamera): void {
     if (!this.enabled) return;

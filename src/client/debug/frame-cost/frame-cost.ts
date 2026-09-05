@@ -62,6 +62,12 @@ export interface PriceFrameOptions {
    *  when toggled, and the differential then prices a different star
    *  population instead of the pass. Set false to price the live path. */
   pinExposure?: boolean;
+  /** How many empty render passes the `emptyPass` row adds while
+   *  "disabled". Its `savedMs` is minus the total, so the per-pass floor
+   *  is that over this count — the passes are independent boundaries, so
+   *  the total is linear in it. Raise it wherever one pass falls under
+   *  `bracketMs` and the row will not resolve. */
+  emptyPasses?: number;
   /** Pin the sample clock instead of taking the backend's best. The
    *  per-backend preference order picks a different method per browser ×
    *  backend, and numbers from two methods must never be compared — so a
@@ -79,6 +85,7 @@ const DEFAULTS = {
   pauseClock: true,
   budgetMs: 180_000,
   pinExposure: true,
+  emptyPasses: 1,
 } as const;
 
 /** Shortening past this stops buying anything — the medians get noisy
@@ -96,9 +103,13 @@ function nextFrame(): Promise<void> {
  *  The four rows after it decompose that aggregate (README.md § Priced
  *  passes). extinctionPrepass reports the consumer A/B: disabling ADDS
  *  the in-vertex raymarch, so its savedMs is normally negative (what the
- *  cache saves). emptyPass ADDS one empty render pass, so its savedMs is
- *  minus the per-pass floor. */
-export function buildPassToggles(stellata: Stellata): PassToggle[] {
+ *  cache saves). emptyPass ADDS `emptyPasses` empty render passes, so its
+ *  savedMs is minus the floor times that count. */
+export function buildPassToggles(
+  stellata: Stellata,
+  options?: Pick<PriceFrameOptions, 'emptyPasses'>,
+): PassToggle[] {
+  const emptyPasses = Math.max(1, Math.round(options?.emptyPasses ?? DEFAULTS.emptyPasses));
   const flag = (set: (on: boolean) => void): (() => void) => {
     set(false);
     return () => set(true);
@@ -193,7 +204,7 @@ export function buildPassToggles(stellata: Stellata): PassToggle[] {
       key: 'emptyPass',
       present: () => true,
       disable: () => {
-        stellata.localDepthPass.extraEmptyPasses = 1;
+        stellata.localDepthPass.extraEmptyPasses = emptyPasses;
         return () => { stellata.localDepthPass.extraEmptyPasses = 0; };
       },
     },

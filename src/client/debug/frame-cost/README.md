@@ -118,11 +118,17 @@ Four rows are not what they look like:
   confound).
 - **`extinctionPrepass`** ADDS the in-vertex raymarch when disabled, so
   its `savedMs` is normally negative: the row is what the cache saves.
-- **`emptyPass`** ADDS one `clearDepth()` to the local depth pass when
+- **`emptyPass`** ADDS `clearDepth()` calls to the local depth pass when
   disabled (`localDepthPass.extraEmptyPasses`). On WebGPU three encodes a
   clear as its own render pass and submit — every colour attachment loaded
   and stored, nothing drawn — so `−savedMs` is the per-pass floor at the
-  current buffer size (`docs/render-rules.md` § 8). The real frame already
+  current buffer size, times the count (`docs/render-rules.md` § 8).
+  **One pass is often under `bracketMs`, and the row then does not
+  resolve** — it read −0.45 at a 0.5 bracket at Sol. The clears are
+  independent boundaries, so the total is linear in the count: add
+  several and divide. `{ passes: ['emptyPass'], emptyPasses: 4 }`, or
+  `--empty-passes 4` on the runner, which stamps the count into the saved
+  run's `params`. The real frame already
   carries one such pass wherever a local cluster is active: the
   `clearDepth()` between the main render and the local repaint. On WebGL2
   a clear is a state command inside the current framebuffer, so the row

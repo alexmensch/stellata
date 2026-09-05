@@ -119,4 +119,18 @@ describe('LocalDepthPass.render', () => {
     pass.render(disabled.renderer, makeCamera());
     expect(disabled.clearDepths()).toBe(0);
   });
+
+  it('issues one clear per extraEmptyPasses, so the floor divides out', () => {
+    const pass = new LocalDepthPass();
+    pass.extraEmptyPasses = 4;
+    const empty = mockRenderer(true);
+    pass.render(empty.renderer, makeCamera());
+    expect(empty.clearDepths()).toBe(4);
+
+    pass.register(cluster(WIDE_SPHERES));
+    const withMembers = mockRenderer(true);
+    pass.render(withMembers.renderer, makeCamera());
+    expect(withMembers.clearDepths()).toBe(5);
+    expect(withMembers.renders).toHaveLength(1);
+  });
 });
