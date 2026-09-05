@@ -8,18 +8,18 @@ import {
 } from '../../star-pipeline/local-pass/star-mirror-slots';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import type { MrtOutputLayer } from '../hdr/hdr-pipeline-webgpu';
+import type { MrtEmitterMaterial } from '../hdr/mrt-material';
 import { buildStarCoreMaskMaterial } from './star-core-mask-tsl';
 import { buildStarDiscMaterial } from './star-disc-tsl';
 import { buildStarGlowMaterial } from './star-glow-tsl';
-import type { StarColourMaterial } from './star-emission-tsl';
 import type { StarTslDeps } from './star-vertex-tsl';
 
 export class StarLocalMirrorTsl implements StarMirror, MrtOutputLayer {
   readonly group: THREE.Group;
 
   private readonly slots: MirrorSlots;
-  private readonly maskMaterial: THREE.Material;
-  private readonly colourMaterials: StarColourMaterial[];
+  /** Mask, disc, glow — every draw into the HDR target takes the swap. */
+  private readonly targetMaterials: MrtEmitterMaterial[];
   private readonly syncSources: () => void;
 
   /** `source` is the layer's PACKED instanced geometry, mirrored slot for
@@ -39,17 +39,16 @@ export class StarLocalMirrorTsl implements StarMirror, MrtOutputLayer {
     const mask = buildStarCoreMaskMaterial(deps, true);
     const disc = buildStarDiscMaterial(deps, gates, true);
     const glow = buildStarGlowMaterial(deps, gates, true);
-    this.maskMaterial = mask;
-    this.colourMaterials = [disc, glow];
+    this.targetMaterials = [mask, disc, glow];
 
     this.group = this.slots.buildGroup(
-      { mask, disc: disc.material, glow: glow.material }, 'webgpu').group;
+      { mask: mask.material, disc: disc.material, glow: glow.material }, 'webgpu').group;
   }
 
   /** Driven by the owning StarLayer in lockstep with the main-pass
-   *  materials — the mirror's colour draws land in the same HDR target. */
+   *  materials — the mirror's draws land in the same HDR target. */
   setMrtOutputs(on: boolean): void {
-    for (const m of this.colourMaterials) m.setMrtOutputs(on);
+    for (const m of this.targetMaterials) m.setMrtOutputs(on);
   }
 
   setMembers(members: readonly number[]): void {
@@ -62,7 +61,6 @@ export class StarLocalMirrorTsl implements StarMirror, MrtOutputLayer {
 
   dispose(): void {
     this.slots.dispose();
-    this.maskMaterial.dispose();
-    for (const m of this.colourMaterials) m.material.dispose();
+    for (const m of this.targetMaterials) m.material.dispose();
   }
 }

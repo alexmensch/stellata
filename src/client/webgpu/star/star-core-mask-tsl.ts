@@ -2,9 +2,10 @@
 // writes off, member stamp in the shared vertex stage — no fragment
 // depth (../README.md § Early-z). The CPU visible gate is the shell's.
 
-import { Discard, Fn, If, vec4 } from 'three/tsl';
+import { Discard, If, vec4 } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';
 import { STAR_PASS_CORE_MASK } from '../../star-pipeline/star-pass';
+import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material';
 import {
   chartDiscCoverage, discPassEntryGate, discPassKernel,
 } from './star-emission-tsl';
@@ -12,13 +13,30 @@ import {
   buildStarVaryings, buildStarVertexNode, type StarTslDeps,
 } from './star-vertex-tsl';
 
+/**
+ * Colour writes are off, so every output this fragment declares is
+ * discarded by the write mask — yet it still carries the single↔struct
+ * swap. three keys its render-pipeline cache on the shader program ids plus
+ * attachment 0's format alone (`WebGPUBackend.getRenderCacheKey`), and
+ * builds the pipeline's colour-target list from the bound target. A
+ * material whose fragment program is identical under both attachment
+ * counts is therefore handed the pipeline built for the OTHER count when
+ * the target is rebuilt, and Dawn drops every command buffer it appears in
+ * (../hdr/README.md § The gate becomes the output struct).
+ */
 export function buildStarCoreMaskMaterial(
   deps: StarTslDeps,
   localMirror = false,
-): NodeMaterial {
+): MrtEmitterMaterial {
   const v = buildStarVaryings();
 
-  const fragmentNode = Fn(() => {
+  const material = new NodeMaterial();
+  material.name = localMirror ? 'star-core-mask-local-tsl' : 'star-core-mask-tsl';
+  material.vertexNode = buildStarVertexNode(deps, STAR_PASS_CORE_MASK, v, localMirror);
+  material.colorWrite = false;
+  material.depthWrite = true;
+  material.depthTest = true;
+  return finishMrtMaterial(material, () => {
     // This draw is the ONLY depth a disc core gets, so its gate has to
     // stay the disc draw's own — hence the shared helpers rather than a
     // second copy of the tests (star-emission-tsl.ts). Chart mode stamps
@@ -30,16 +48,6 @@ export function buildStarCoreMaskMaterial(
     }).Else(() => {
       Discard(discPassKernel(deps.u, v).lessThan(deps.u.uCoreThreshold));
     });
-    // Ignored — colour writes are off on this material.
-    return vec4(0.0);
+    return { colour: vec4(0.0), statistic: vec4(0.0), diffuse: vec4(0.0) };
   });
-
-  const material = new NodeMaterial();
-  material.name = localMirror ? 'star-core-mask-local-tsl' : 'star-core-mask-tsl';
-  material.vertexNode = buildStarVertexNode(deps, STAR_PASS_CORE_MASK, v, localMirror);
-  material.fragmentNode = fragmentNode();
-  material.colorWrite = false;
-  material.depthWrite = true;
-  material.depthTest = true;
-  return material;
 }

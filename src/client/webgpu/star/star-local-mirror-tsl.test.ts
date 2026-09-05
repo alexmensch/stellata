@@ -146,19 +146,18 @@ describe('StarLocalMirrorTsl sync', () => {
 });
 
 describe('StarLocalMirrorTsl MRT swap', () => {
-  it('rides the layer swap: mirror colour materials flip, its mask never does', () => {
+  // The mask flips with the colour pair for the same pipeline-cache reason
+  // the main layer's does (star-core-mask-tsl.ts).
+  it('rides the layer swap: all three mirror materials flip together', () => {
     const { layer } = makeLayer();
     type FragMaterial = THREE.Material & {
       fragmentNode: { isOutputStructNode?: boolean } | null;
     };
-    const [mask, disc, glow] = meshes(layer).map((m) => m.material as FragMaterial);
+    const all = meshes(layer).map((m) => m.material as FragMaterial);
     layer.setMrtOutputs(true);
-    expect(disc.fragmentNode?.isOutputStructNode).toBe(true);
-    expect(glow.fragmentNode?.isOutputStructNode).toBe(true);
-    expect(mask.fragmentNode?.isOutputStructNode).toBeUndefined();
+    for (const m of all) expect(m.fragmentNode?.isOutputStructNode).toBe(true);
     layer.setMrtOutputs(false);
-    expect(disc.fragmentNode?.isOutputStructNode).toBeUndefined();
-    expect(glow.fragmentNode?.isOutputStructNode).toBeUndefined();
+    for (const m of all) expect(m.fragmentNode?.isOutputStructNode).toBeUndefined();
   });
 
   it('disposes its geometry and all three materials', () => {
