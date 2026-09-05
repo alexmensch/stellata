@@ -143,6 +143,12 @@ function dwellRow(key: string, a: ScenarioRecord, b: ScenarioRecord): DiffRow | 
       reason: 'a dwell was vsync-clamped — it measured the panel, not the frame',
     };
   }
+  if (da.stats.stateGuard === 'trending' || db.stats.stateGuard === 'trending') {
+    return {
+      key: `${key}|dwell`,
+      reason: 'a dwell trended across its quarters — it straddled a load-state transition',
+    };
+  }
   const deltaMs = db.stats.p50 - da.stats.p50;
   const bandMs = band(medianStandardErrorMs(da.stats), medianStandardErrorMs(db.stats), 0);
   return {

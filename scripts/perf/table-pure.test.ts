@@ -67,6 +67,7 @@ describe('formatTable', () => {
 
 const dwell: DwellSummary = {
   samples: 240, p50: 30.125, p90: 33.5, p99: 41.75, iqrMs: 1.25, lag1: -0.31, vsyncClamped: false,
+  quarterMedians: [30, 30.125, 30.125, 30.25], stateGuard: 'steady',
 };
 
 describe('formatDwellTable', () => {

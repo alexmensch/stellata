@@ -36,6 +36,8 @@ function dwellStats(p50: number, overrides: Partial<DwellSummary> = {}): DwellSu
     iqrMs: 1.349,
     lag1: 0,
     vsyncClamped: false,
+    quarterMedians: [p50, p50, p50, p50],
+    stateGuard: 'steady',
     ...overrides,
   };
 }
@@ -262,6 +264,15 @@ describe('diffRuns — refusals', () => {
     );
     expect(diff.rows).toEqual([]);
     expect(diff.refusals[0].reason).toContain('measured the panel');
+  });
+
+  it('refuses a dwell that trended across its quarters', () => {
+    const diff = diffRuns(
+      withDwell(dwellStats(30)),
+      withDwell(dwellStats(30, { quarterMedians: [28, 29, 30, 31.5], stateGuard: 'trending' })),
+    );
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('load-state transition');
   });
 
   it('names a scenario the current run did not measure', () => {

@@ -36,7 +36,7 @@ export function formatPriceTable(rows: readonly PriceFrameRow[]): string {
 }
 
 export const DWELL_COLUMNS = [
-  'clock', 'samples', 'p50', 'p90', 'p99', 'iqrMs', 'lag1', 'vsyncClamped',
+  'clock', 'samples', 'p50', 'p90', 'p99', 'iqrMs', 'lag1', 'vsyncClamped', 'stateGuard',
 ] as const;
 
 export function formatDwellTable(
@@ -46,7 +46,7 @@ export function formatDwellTable(
     DWELL_COLUMNS,
     labelled.map(([clock, s]) => [
       clock, s.samples, round3(s.p50), round3(s.p90), round3(s.p99),
-      round3(s.iqrMs), round3(s.lag1), String(s.vsyncClamped),
+      round3(s.iqrMs), round3(s.lag1), String(s.vsyncClamped), s.stateGuard,
     ]),
   );
 }
