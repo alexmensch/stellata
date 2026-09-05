@@ -61,7 +61,7 @@ const tables: PrimaryTables = {
   gliese: parseGlieseTsv(GLIESE_TSV),
   hipI239: new Set([10, 20, 70890]),
   hip2: new Set([70890]),
-  tycho2Hip: new Set([10]),
+  tycho2HipByTyc: new Map([['1-1-1', 10]]),
   wgsn: {
     names: new Set(['Alpheratz']),
     hd: new Set([900001]),

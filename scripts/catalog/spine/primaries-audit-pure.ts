@@ -59,8 +59,8 @@ export interface PrimaryTables {
   hipI239: ReadonlySet<number>;
   /** HIP numbers carrying a van Leeuwen HIP2 re-reduction solution. */
   hip2: ReadonlySet<number>;
-  /** HIP numbers a Tycho-2 row names in its own `hip` column. */
-  tycho2Hip: ReadonlySet<number>;
+  /** The HIP a Tycho-2 row names in its own `hip` column, by TYC. */
+  tycho2HipByTyc: ReadonlyMap<string, number>;
   wgsn: WgsnKeys;
   tycho2: ReadonlyMap<string, Tycho2Row>;
   tycToSource: ReadonlyMap<string, string>;
@@ -209,8 +209,14 @@ function attestFlam(
   return null;
 }
 
+/** The identifier cells attestation reads — a spine row's, or a membership
+ *  manifest row's, which carries the same columns. */
+export type IdentifierCells = Pick<
+  SpineRow, 'tyc' | 'hip' | 'hd' | 'hr' | 'gl' | 'flam' | 'bayer' | 'proper'
+>;
+
 export function attestSpineRow(
-  row: SpineRow,
+  row: IdentifierCells,
   tables: PrimaryTables,
   idx: PrimaryIndex,
 ): RowAttestation {
@@ -468,13 +474,14 @@ export function findAdditions(
   hd.sort((a, b) => a.lowestHd - b.lowestHd);
 
   const hip: HipAddition[] = [];
+  const tycho2Hips = new Set(tables.tycho2HipByTyc.values());
   for (const h of [...tables.hipI239].sort((a, b) => a - b)) {
     if (spine.hip.has(h)) continue;
     hip.push({
       hip: h,
       gaiaSourceId: tables.hipToSource.get(h) ?? null,
       inHip2: tables.hip2.has(h),
-      inTycho2: tables.tycho2Hip.has(h),
+      inTycho2: tycho2Hips.has(h),
     });
   }
 
