@@ -267,11 +267,17 @@ encodes a clear as an empty render pass with every attachment loaded
 and stored. A pass boundary on a tile-based GPU (Apple silicon shades
 the screen in small tiles held in fast on-chip memory) is where the
 target goes out to main memory and back. Measured, 2026-09-05, headless
-Chromium on an M4 at 4.096 Mpx, wall clock (arm 12, stellata-0it.37
-notes): one extra empty pass over the three-attachment HDR target plus
-its float depth costs 0.1 ms at Earth close approach (resolved, bracket
-0) and at most 0.5 ms at Sol (−0.45 at a 0.5 bracket, unresolved).
-**So the boundary is not paying a full store-and-reload.** Those
+Chromium on an M4 at 4.096 Mpx, wall clock (arms 12 and 13,
+stellata-0it.37 notes), over the three-attachment HDR target plus its
+float depth: **0.1 ms** for one extra empty pass at Earth close approach
+(resolved, bracket 0), and **0.1 ms for four of them** at Sol
+(unresolved, and that is the bracket — so a bound on the four together,
+not a reading). Sol's bound per boundary is therefore an order under
+Earth's resolved figure. Whether that gap is the vantage — Earth is the
+one canon vantage where the reduction chain draws under the pin — or the
+four clears coalescing is untested; § How to apply says what not to
+conclude from it.
+**Either way the boundary is not paying a full store-and-reload.** Those
 attachments hold ~115 MB at this buffer, and moving them out and back
 across an M4's memory bandwidth is of the order of 2 ms — an order above
 what the row reads, so the tile store is partial, deferred, or elided,
@@ -299,8 +305,14 @@ repaint saves under 2 % of a Sol frame, and stellata-8cg.48 (4×4
 reduction) removes under one pass per frame amortised — its case is
 intermediate bandwidth, not pass count. A pass that draws is priced by
 what it draws, not by its boundary. One empty pass often falls under
-`bracketMs` and the row then does not resolve; add several
-(`--empty-passes N`) and divide.
+`bracketMs` and the row then does not resolve; `--empty-passes N` buys a
+tighter bound on N boundaries together. **Quote that total, not a
+per-pass division** — dividing assumes the boundaries add, and N
+consecutive `clearDepth()` calls with nothing drawn between them are the
+shape a driver may coalesce. Nothing has tested it: at both counts run so
+far the row was a bound, and a small linear cost and a coalesced one look
+identical from a bound. `--empty-passes 16` at Sol separates them (linear
+resolves near 0.4 ms; coalescing stays pinned near 0.1).
 
 **Where.** The counts and the floor are stellata-0it.37's notes, which
 name the `.perf-runs` file each arm wrote in the main checkout. The

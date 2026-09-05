@@ -124,11 +124,15 @@ Four rows are not what they look like:
   and stored, nothing drawn — so `−savedMs` is the per-pass floor at the
   current buffer size, times the count (`docs/render-rules.md` § 8).
   **One pass is often under `bracketMs`, and the row then does not
-  resolve** — it read −0.45 at a 0.5 bracket at Sol. The clears are
-  independent boundaries, so the total is linear in the count: add
-  several and divide. `{ passes: ['emptyPass'], emptyPasses: 4 }`, or
-  `--empty-passes 4` on the runner, which stamps the count into the saved
-  run's `params`. The real frame already
+  resolve** — it read −0.45 at a 0.5 bracket at Sol. Raising the count
+  (`{ passes: ['emptyPass'], emptyPasses: 4 }`, or `--empty-passes 4` on
+  the runner, which stamps it into the saved run's `params`) buys a
+  tighter bound on the boundaries together: four read −0.10 at a 0.10
+  bracket at Sol. **Read that as the total, not as four times a per-pass
+  figure.** Dividing assumes the clears add, and consecutive clears with
+  nothing drawn between them are what a driver would coalesce — untested,
+  and a bound cannot tell a small linear cost from a coalesced one
+  (`docs/render-rules.md` § 8). The real frame already
   carries one such pass wherever a local cluster is active: the
   `clearDepth()` between the main render and the local repaint. On WebGL2
   a clear is a state command inside the current framebuffer, so the row

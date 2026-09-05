@@ -73,10 +73,12 @@ boots, settles and prints the adapter block and the idle rAF period without
 a sweep.
 
 `--empty-passes` is the `emptyPass` row's own knob: how many empty render
-passes it adds while "disabled", so the per-pass floor is `savedMs` over that
-count. One pass often falls under `bracketMs` and the row does not resolve;
-four resolves it and divides out (`src/client/debug/frame-cost/README.md`
-§ Priced passes).
+passes it adds while "disabled". One pass often falls under `bracketMs` and
+the row does not resolve; raising the count tightens the bound on that many
+boundaries together. Quote the total, not `savedMs` over the count — dividing
+assumes the clears add, and consecutive clears with nothing drawn between them
+are what a driver would coalesce (`src/client/debug/frame-cost/README.md`
+§ Priced passes, `docs/render-rules.md` § 8).
 
 `--frames` sizes a dwell (dwell and sweep modes); `--scales` is the sweep's
 viewport set. `--warmup-frames` is shared: it is priceFrame's own warmup in
