@@ -94,6 +94,59 @@ change: the user-visible change drives the bump tier. Pipeline PR
 that ALSO touches a renderer knob → bump. Pipeline PR that only
 touches scripts / data files unused by the deployed bundle → skip.
 
+## Perf pin
+
+The cost of a render change is a merge-time fact, not an audit finding.
+The pin is a committed summary of the headless perf runner's whole-frame
+readings — `scripts/perf/pins/<adapter-slug>.json`, one file per GPU, the
+current pin only — and every PR that touches a render path diffs against
+it and re-takes it. Design record: stellata-8cg.49.11; tooling:
+stellata-8cg.49.12.
+
+**What is pinned.** `--mode dwell` at the five canon vantages (sol, earth,
+mw50, mw120, lg), 1280×800 at dpr 2 (4.096 Mpx), `raf-delta`, exposure
+pinned: wall p50 / p90 and, on WebGPU, the GPU-stream p50 — the number
+that reproduces to about 1 % run to run. WebGL2 rows exist until the
+cutover removes the backend. The per-pass differential is attribution,
+run when a row moves or when the PR touches a pass directly; it explains
+a mark and never fails one.
+
+**Taken cold, always.** Apple-silicon GPUs enter a sustained-load power
+state after roughly 2–2.5 min of continuous frames, and rows either side
+of that transition never compare (stellata-0it.38). A pin run is one
+launch with an idle cool-down between contexts, and every context carries
+a state-guard verdict — a dwell whose quarter medians trend one way by
+more than 1 ms is refused by name. Two runs compare only on the same
+adapter slug, buffer, method and state.
+
+**What a mark means.** A row is `✗` past the `--baseline` band *and* past
+`max(0.5 ms, 3 %)` of the pinned value; a row pinned on the display
+cadence marks when it leaves it; any canon vantage over 33.4 ms wall
+(two 60 Hz intervals) on WebGPU marks regardless. `✓` is cheaper, `~`
+is not resolved — not "no change".
+
+**The `## Perf` section.** Required in the PR body when the diff touches
+`src/client/**/*.glsl`, `*.wgsl`, or the `.ts` files (not `*.md`, not
+`*.test.ts`) of `webgpu/`, `hdr/`, `star-pipeline/`, `milkyway/`,
+`local-depth/`, `render-gate/`, `scene/`, or any file calling
+`renderer.render`. It carries the `--against-pin` table, the pin commit it
+was read against, the adapter slug, the state-guard line per context, and
+one `accepted: <row> <reason> (<bead-id>)` line per `✗`. The
+`perf-section-guard` workflow fails the PR when the section is missing,
+empty, or has a `✗` without an `accepted:` line — CI has no GPU, so it
+checks the section the way `release-notes-guard` does — and the
+`pr-review` skill refuses a render-path diff without it. There is no
+skip label: a change that costs nothing shows a table of `~`.
+
+**How the pin advances.** The re-taken pin is committed in the same PR, so
+the pin always describes what the version bump deploys. A `✗` is fixed in
+the PR or accepted with a bead; an accepted `✗` becomes the new pinned
+value. A three bump or the cutover re-pins every row under its own bead.
+
+**Who runs it.** The agent, human-armed: one arm per pin run, the machine
+idle throughout — about 15–25 min for the ten dwell contexts at a 120 s
+cool-down, less as the cool-down is tuned down.
+
 ## Citation and archiving
 
 Zenodo (CERN) archives every GitHub release through its GitHub integration

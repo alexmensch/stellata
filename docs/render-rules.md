@@ -323,10 +323,10 @@ instrument is `src/client/debug/frame-cost/README.md` § Priced passes.
 **Rule.** Wall clock is the total; GPU slots are attribution. Only a
 differential prices a pass. Every renderer-touching PR states its
 measured frame cost — the cost of a feature is known before it merges,
-not discovered in an audit. Once the perf pin exists (stellata-8cg.49.11
-decides it, .12 builds it) the statement is the runner's diff against
-the pin; until then it is a `debug.priceFrame()` differential at the
-canonical vantages, before and after, pasted into the PR body.
+not discovered in an audit. The statement is the runner's diff against
+the perf pin (`RELEASING.md` § Perf pin; stellata-8cg.49.12 builds the
+tooling); until that lands it is a `debug.priceFrame()` differential at
+the canonical vantages, before and after, pasted into the PR body.
 
 **Why and how, as a list — each line has been paid for:**
 
