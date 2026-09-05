@@ -100,9 +100,16 @@ and the epoch offset, at the extremes the model allows.
 
 Only `gpu.frame` differentials price a pass. Per-scope magnitudes over-attribute
 on ANGLE/Metal, absolute numbers are not reproducible (ratios and differentials
-only), and Safari exposes no GPU timer at all. Measurement canon lives in the
-notes of bead `stellata-8cg.1`; the standing perf program is epic
-`stellata-8cg`. An unmeasured perf claim is a hypothesis and must be called one.
+only), and Safari exposes no GPU timer at all. Measurement canon is
+`docs/render-rules.md` § 9 (the empirics behind it in bead `stellata-8cg.1`);
+the standing perf program is epic `stellata-8cg`. An unmeasured perf claim is a
+hypothesis and must be called one.
+
+**A render-path diff without a `## Perf` section is a blocking finding.** The
+globs are `RELEASING.md` § Perf pin; the section carries the runner's
+`--against-pin` table, the pin commit, the adapter slug and the state-guard
+line per context. Refuse the review until it is there. A `✗` row without an
+`accepted: <row> <reason> (<bead-id>)` line is P1, and the bead must exist.
 
 **A perf or VRAM regression is a finding to fix in this PR, not a follow-up
 bead.**
