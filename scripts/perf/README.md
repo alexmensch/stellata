@@ -270,6 +270,14 @@ the two modes. It is an API-surface count, not a GPU cost — the per-pass
 floor is still a differential (`docs/render-rules.md` § 8). A WebGL2 dwell
 has no queue to count on and records null.
 
+**The counters sit inside the timed frames, and only on WebGPU.** Each
+wrapped call adds one JavaScript frame: at the counts a canon vantage
+actually reads (2–4 submits and 2–4 render passes per frame, up to 12 on a
+readback frame), that is under twenty extra calls against a 16.7 ms
+interval. Stated rather than assumed, because it is the instrument sitting
+inside its own measurement — and it is one more reason never to difference
+a WebGL2 dwell against a WebGPU one.
+
 **`--roundtrip <pass>` asks whether a toggle leaves the frame where it found
 it.** Dwell; then, under the differential's own conditions (gate held, clock
 stopped, exposure pinned), apply the pass's own priceFrame toggle, render
