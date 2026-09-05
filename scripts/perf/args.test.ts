@@ -63,7 +63,8 @@ describe('parseRunArgs', () => {
   it('coerces the numeric knobs and the two booleans', () => {
     const a = parseRunArgs([
       '--budget-ms', '90000', '--dwell-frames', '240', '--warmup-frames', '60',
-      '--settle-frames', '12', '--width', '1920', '--height', '1080', '--dpr', '1',
+      '--settle-frames', '12', '--empty-passes', '4',
+      '--width', '1920', '--height', '1080', '--dpr', '1',
       '--quiet-ms', '2000', '--no-interleave', '--headed', '--method', 'raf-delta',
       '--backend', 'webgpu', '--mode', 'differential',
     ]);
@@ -71,6 +72,7 @@ describe('parseRunArgs', () => {
     expect(a.dwellFrames).toBe(240);
     expect(a.warmupFrames).toBe(60);
     expect(a.settleFrames).toBe(12);
+    expect(a.emptyPasses).toBe(4);
     expect([a.width, a.height, a.dpr]).toEqual([1920, 1080, 1]);
     expect(a.quietMs).toBe(2000);
     expect(a.interleave).toBe(false);
@@ -125,6 +127,8 @@ describe('parseRunArgs', () => {
     [['--mode', 'probe', '--no-interleave'], /--mode probe, which would ignore it/],
     [['--mode', 'differential', '--frames', '120'], /--mode differential, which would ignore it/],
     [['--mode', 'dwell', '--scales', '1,2'], /--mode dwell, which would ignore it/],
+    [['--mode', 'dwell', '--empty-passes', '4'], /--mode dwell, which would ignore it/],
+    [['--empty-passes', 'four'], /--empty-passes/],
     [['--passes', 'localDepht'], /no such pass/],
     [['--passes', 'localDepth,mwBnad'], /no such pass/],
     [['--mode', 'dwell', '--roundtrip', 'localDepht'], /--roundtrip names no such pass/],
@@ -144,7 +148,8 @@ describe('parseRunArgs', () => {
     const text = usage();
     for (const flag of [
       '--scenario', '--backend', '--mode', '--passes', '--method', '--budget-ms',
-      '--dwell-frames', '--warmup-frames', '--settle-frames', '--no-interleave',
+      '--dwell-frames', '--warmup-frames', '--settle-frames', '--empty-passes',
+      '--no-interleave',
       '--headed', '--width', '--height', '--dpr', '--quiet-ms', '--url', '--chrome-arg',
       '--frames', '--roundtrip', '--scales', '--json', '--baseline',
     ]) {

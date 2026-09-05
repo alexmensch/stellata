@@ -106,7 +106,7 @@ reduction (`reduction.enabled`), the star core depth-mask
 (`setCoreMaskEnabled`), and the extinction prepass A/B. A pass inactive
 at the current view/state is skipped, not measured as zero.
 
-Three rows are not what they look like:
+Four rows are not what they look like:
 
 - **`hdrChain`** disables via `hdr.setChartMode(true)` — the whole-target
   park, which also stops the statistic attachment and flips emitters to
@@ -118,6 +118,27 @@ Three rows are not what they look like:
   confound).
 - **`extinctionPrepass`** ADDS the in-vertex raymarch when disabled, so
   its `savedMs` is normally negative: the row is what the cache saves.
+- **`emptyPass`** ADDS `clearDepth()` calls to the local depth pass when
+  disabled (`localDepthPass.extraEmptyPasses`). On WebGPU three encodes a
+  clear as its own render pass and submit — every colour attachment loaded
+  and stored, nothing drawn — so `−savedMs` is the per-pass floor at the
+  current buffer size, times the count (`docs/render-rules.md` § 8).
+  **One pass is often under `bracketMs`, and the row then does not
+  resolve** — it read −0.45 at a 0.5 bracket at Sol. Raising the count
+  (`{ passes: ['emptyPass'], emptyPasses: 4 }`, or `--empty-passes 4` on
+  the runner, which stamps it into the saved run's `params`) buys a
+  tighter bound on the boundaries together: four read −0.10 at a 0.10
+  bracket at Sol. **Read that as the total, not as four times a per-pass
+  figure.** Dividing assumes the clears add, and consecutive clears with
+  nothing drawn between them are what a driver would coalesce — untested,
+  and a bound cannot tell a small linear cost from a coalesced one
+  (`docs/render-rules.md` § 8). The real frame already
+  carries one such pass wherever a local cluster is active: the
+  `clearDepth()` between the main render and the local repaint. On WebGL2
+  a clear is a state command inside the current framebuffer, so the row
+  should read ~0 there — an expectation, not yet a measurement: on
+  `raf-delta` a baseline under one refresh interval cannot show a
+  sub-millisecond addition, and the WebGL2 rows taken so far sat there.
 - **`reduction`** keeps its readback fence while disabled and drops only
   the chain draws. Dropping the fence too priced the loss of the frame's
   only ANGLE submission barrier — see

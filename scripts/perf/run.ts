@@ -85,6 +85,7 @@ function priceFrameOptions(a: RunArgs, method: GpuFrameMethod | undefined): Pric
     method,
     budgetMs: a.budgetMs,
     dwellFrames: a.dwellFrames,
+    emptyPasses: a.emptyPasses,
     warmupFrames: a.warmupFrames,
     settleFrames: a.settleFrames,
     interleave: a.interleave,

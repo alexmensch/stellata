@@ -154,9 +154,9 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
     },
     encodeView: () => encodeBlob(currentStateOf(stellata, idMaps)),
     priceFrame: (options) =>
-      runPriceFrame(stellata, buildPassToggles(stellata), options),
+      runPriceFrame(stellata, buildPassToggles(stellata, options), options),
     priceFrameRepeat: (runs, options) =>
-      runPriceFrameRepeat(stellata, buildPassToggles(stellata), runs, options),
+      runPriceFrameRepeat(stellata, buildPassToggles(stellata, options), runs, options),
     memory: () => {
       const inventory = collectMemoryInventory(stellata);
       printMemoryInventory(inventory);

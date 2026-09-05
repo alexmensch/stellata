@@ -35,6 +35,7 @@ export interface RunArgs {
   readonly method: GpuFrameMethod | undefined;
   readonly budgetMs: number;
   readonly dwellFrames: number | undefined;
+  readonly emptyPasses: number | undefined;
   readonly warmupFrames: number | undefined;
   readonly settleFrames: number | undefined;
   readonly interleave: boolean;
@@ -79,6 +80,7 @@ const OPTIONS = {
   method: { type: 'string' },
   'budget-ms': { type: 'string', default: String(ARG_DEFAULTS.budgetMs) },
   'dwell-frames': { type: 'string' },
+  'empty-passes': { type: 'string' },
   'warmup-frames': { type: 'string' },
   'settle-frames': { type: 'string' },
   'no-interleave': { type: 'boolean', default: false },
@@ -105,6 +107,7 @@ export function usage(): string {
     `  --method <clock>         ${GPU_FRAME_METHODS.join('|')}       (default: the backend\'s best)`,
     `  --budget-ms <n>          whole-sweep wall-clock ceiling            (default ${ARG_DEFAULTS.budgetMs})`,
     '  --dwell-frames <n>  --warmup-frames <n>  --settle-frames <n>       (default: priceFrame\'s own)',
+    '  --empty-passes <n>       emptyPass row: empty passes added, floor = savedMs/n (default 1)',
     '  --no-interleave          single-baseline sweep (drift-exposed)',
     '  --headed                 headed Chrome; headed and headless never compare',
     `  --width <px> --height <px> --dpr <n>                               (default ${ARG_DEFAULTS.width}x${ARG_DEFAULTS.height} @ ${ARG_DEFAULTS.dpr})`,
@@ -133,6 +136,7 @@ const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
   method: ['differential'],
   'budget-ms': ['differential'],
   'dwell-frames': ['differential'],
+  'empty-passes': ['differential'],
   'settle-frames': ['differential'],
   'no-interleave': ['differential'],
   frames: ['dwell', 'sweep'],
@@ -242,6 +246,7 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     method: optionalOneOf('method', GPU_FRAME_METHODS),
     budgetMs: num('budget-ms'),
     dwellFrames: optionalNum('dwell-frames'),
+    emptyPasses: optionalNum('empty-passes'),
     warmupFrames: optionalNum('warmup-frames'),
     settleFrames: optionalNum('settle-frames'),
     interleave: !(values['no-interleave'] as boolean),

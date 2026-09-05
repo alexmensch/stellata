@@ -36,7 +36,10 @@ table. Reference: `scripts/perf/README.md`. Interpretation authority:
 1. Say what you want to measure and why, with the exact command you will run.
 2. Start `bash scripts/perf/await-go.sh` in the background (Bash
    `run_in_background`). It polls every 15 s for up to an hour and prints one
-   line when a fresh marker exists.
+   line when a fresh marker exists. The poll and the runner both resolve the
+   marker at the top level of the checkout they are launched from — from a
+   worktree, the worktree root, not the main checkout — so the announcement
+   names which root to arm.
 3. When it reports ARMED, run the command. The runner deletes the marker
    before launching the browser — one arm authorises one launch, success or
    not. A second run means a second announce.

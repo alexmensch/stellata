@@ -58,6 +58,7 @@ pnpm run perf -- [--scenario sol,earth,mw50,mw120,lg | all] [--backend webgl2|we
                  [--mode differential|probe|dwell|sweep] [--passes a,b]
                  [--method timer-query|timestamp|raf-delta]
                  [--budget-ms N] [--dwell-frames N] [--warmup-frames N] [--settle-frames N] [--no-interleave]
+                 [--empty-passes N]
                  [--frames 240] [--roundtrip <pass>|idle] [--scales 0.5,1,1.5,2]
                  [--headed] [--width 1280] [--height 800] [--dpr 2] [--quiet-ms 5000]
                  [--json <path>] [--baseline <path>]
@@ -70,6 +71,14 @@ clock, 1280×800 at dpr 2 (4.096 Mpx), headless. The priceFrame knobs
 straight through; unset ones take priceFrame's own defaults. `--mode probe`
 boots, settles and prints the adapter block and the idle rAF period without
 a sweep.
+
+`--empty-passes` is the `emptyPass` row's own knob: how many empty render
+passes it adds while "disabled". One pass often falls under `bracketMs` and
+the row does not resolve; raising the count tightens the bound on that many
+boundaries together. Quote the total, not `savedMs` over the count — dividing
+assumes the clears add, and consecutive clears with nothing drawn between them
+are what a driver would coalesce (`src/client/debug/frame-cost/README.md`
+§ Priced passes, `docs/render-rules.md` § 8).
 
 `--frames` sizes a dwell (dwell and sweep modes); `--scales` is the sweep's
 viewport set. `--warmup-frames` is shared: it is priceFrame's own warmup in

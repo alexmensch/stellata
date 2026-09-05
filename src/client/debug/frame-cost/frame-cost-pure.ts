@@ -14,7 +14,7 @@ export type GpuFrameMethod = (typeof GPU_FRAME_METHODS)[number];
 export const PRICED_PASS_KEYS = [
   'localDepth', 'mwBand', 'lgEmission', 'cloudAbsorption', 'hdrChain',
   'tonemapOp', 'statisticWrites', 'summation', 'summationTaps', 'mrtAttachments',
-  'reduction', 'coreMask', 'extinctionPrepass',
+  'reduction', 'coreMask', 'extinctionPrepass', 'emptyPass',
 ] as const;
 
 export type PricedPassKey = (typeof PRICED_PASS_KEYS)[number];

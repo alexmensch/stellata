@@ -258,25 +258,65 @@ stellata-0it.36; `webgpu/README.md` carries the pointer.
 ## 8. Submits and passes are costs
 
 **Rule.** Count render passes and queue submits per frame before
-splitting any pass for attribution or convenience; prefer fewer, wider
-passes.
+splitting any pass for attribution or convenience, and price a pass
+fold before building it: on this hardware the boundary is cheap.
 
 **Why.** On the WebGPU backend each `renderer.render` call is its own
-command encoder and submit, and each render pass on a tile-based GPU
-(Apple silicon shades the screen in small tiles held in fast on-chip
-memory) pays a full store and reload of the target through main memory
-at the pass boundary — of the order of half a millisecond to two
-milliseconds per pass at 5–7 Mpx, independent of what the pass draws.
-The exposure reduction chain is one render per level; the local-depth
-pass, the tone map and the extinction prepass are more. A dozen submits
-where one would do is a cost with no pixel attached to it.
+command encoder and submit, and so is `renderer.clearDepth()` — three
+encodes a clear as an empty render pass with every attachment loaded
+and stored. A pass boundary on a tile-based GPU (Apple silicon shades
+the screen in small tiles held in fast on-chip memory) is where the
+target goes out to main memory and back. Measured, 2026-09-05, headless
+Chromium on an M4 at 4.096 Mpx, wall clock (arms 12 and 13,
+stellata-0it.37 notes), over the three-attachment HDR target plus its
+float depth: **0.1 ms** for one extra empty pass at Earth close approach
+(resolved, bracket 0), and **0.1 ms for four of them** at Sol
+(unresolved, and that is the bracket — so a bound on the four together,
+not a reading). Sol's bound per boundary is therefore an order under
+Earth's resolved figure. Whether that gap is the vantage — Earth is the
+one canon vantage where the reduction chain draws under the pin — or the
+four clears coalescing is untested; § How to apply says what not to
+conclude from it.
+**Either way the boundary is not paying a full store-and-reload.** Those
+attachments hold ~115 MB at this buffer, and moving them out and back
+across an M4's memory bandwidth is of the order of 2 ms — an order above
+what the row reads, so the tile store is partial, deferred, or elided,
+not the round trip the tile-memory model suggests. The
+WebGL2 rows did not resolve (−0.025 / −0.05 against 1.6–1.95 ms of noise,
+baselines under one 16.7 ms refresh, where frame-to-frame wall time cannot
+show a sub-millisecond addition); the expectation there is ~0, because a
+WebGL2 clear is a state command inside the bound framebuffer, not a pass.
 
-**How to apply.** Measure the per-pass floor once with the runner (an
-empty extra pass, differenced), then read every "add a pass" proposal
-against it; stellata-8cg.48 (reduce 4×4 per level, halving the chain)
-is the shape of the fix.
+**Counts** (stellata-0it.37, arm 4, same machine and buffer): the
+steady-state WebGPU frame is 4 render passes on 4 submits wherever a
+local cluster is active — main, the local pass's depth clear, the local
+repaint, the resolve — and 2 render passes on 2–3 submits where none is
+(mw50 2, mw120 and LG 3, and unstable between dwells). **What gates the
+extra two is the cluster, not the exposure cut**; Sol and Earth carry
+both, so the counts alone cannot tell them apart. A readback frame adds
+2 submits (the exposure copy, no pass) and, at Earth alone under the
+exposure pin, the 6 reduction-chain passes on 6 more submits.
 
-**Where.** Submit-and-pass count spike stellata-0it.37.
+**How to apply.** Read every add-a-pass or fold-a-pass proposal against
+the `emptyPass` row (`src/client/debug/frame-cost/README.md` § Priced
+passes) at the vantage in question and against the frame it lands in.
+At ≤ 0.5 ms a boundary, folding the local pass's depth clear into the
+repaint saves under 2 % of a Sol frame, and stellata-8cg.48 (4×4
+reduction) removes under one pass per frame amortised — its case is
+intermediate bandwidth, not pass count. A pass that draws is priced by
+what it draws, not by its boundary. One empty pass often falls under
+`bracketMs` and the row then does not resolve; `--empty-passes N` buys a
+tighter bound on N boundaries together. **Quote that total, not a
+per-pass division** — dividing assumes the boundaries add, and N
+consecutive `clearDepth()` calls with nothing drawn between them are the
+shape a driver may coalesce. Nothing has tested it: at both counts run so
+far the row was a bound, and a small linear cost and a coalesced one look
+identical from a bound. `--empty-passes 16` at Sol separates them (linear
+resolves near 0.4 ms; coalescing stays pinned near 0.1).
+
+**Where.** The counts and the floor are stellata-0it.37's notes, which
+name the `.perf-runs` file each arm wrote in the main checkout. The
+instrument is `src/client/debug/frame-cost/README.md` § Priced passes.
 
 ## 9. Measurement canon
 
