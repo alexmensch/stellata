@@ -8,6 +8,8 @@ import {
   buildPriceRow,
   buildInterleavedRow,
   fitDwellFrames,
+  SETTLE_FRAMES,
+  WARMUP_FRAMES,
 } from './frame-cost-pure';
 
 const FIT = {
@@ -245,5 +247,14 @@ describe('frame-cost-pure', () => {
     const zero = dwell(5, 0, 0);
     expect(buildPriceRow('x', 'timer-query', zero, zero).savedPct).toBe(0);
     expect(buildPriceRow('x', 'timer-query', zero, zero).noiseMs).toBe(0);
+  });
+
+  // Both are read by the headless runner as well as the in-app sweep — the
+  // round trip waits SETTLE_FRAMES after restoring a pass and stamps the
+  // count into its record, so a silent change there moves what a recorded
+  // measurement means.
+  it('pins the two frame counts the runner shares with the sweep', () => {
+    expect(SETTLE_FRAMES).toBe(30);
+    expect(WARMUP_FRAMES).toBe(180);
   });
 });
