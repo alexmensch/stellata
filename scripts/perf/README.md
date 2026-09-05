@@ -377,9 +377,11 @@ Sweeps are never diffed — a slope is not a cost.
 
 ## Recording
 
-`--json` output and the run's log go under `.perf-runs/<date>/` at the repo
-root (gitignored; never the home directory or `/tmp`). Results go to the
-bead's notes with that repo-relative path, never into this README. Say which
-vantage, backend, method, headless flag and buffer size the run used. The
-folder lives in whichever checkout ran the runner, so a worktree's results
-move to the main checkout's `.perf-runs/` before the worktree is removed.
+`--json` output and the run's log go under `.perf-runs/<date>/` in the
+**main checkout** (gitignored; never a worktree, the home directory or
+`/tmp`). A worktree is deleted with its PR and would take the runs with it;
+the main checkout persists. From a worktree, `git rev-parse
+--path-format=absolute --git-common-dir` prints `<main checkout>/.git`, and
+its parent is the directory to pass. Results go to the bead's notes with the
+`.perf-runs/<date>/<file>` path, never into this README. Say which vantage,
+backend, method, headless flag and buffer size the run used.
