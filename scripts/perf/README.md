@@ -377,6 +377,9 @@ Sweeps are never diffed — a slope is not a cost.
 
 ## Recording
 
-Results go to the bead's notes with the path of the saved output, never into
-this README. Say which vantage, backend, method, headless flag and buffer
-size the run used.
+`--json` output and the run's log go under `.perf-runs/<date>/` at the repo
+root (gitignored; never the home directory or `/tmp`). Results go to the
+bead's notes with that repo-relative path, never into this README. Say which
+vantage, backend, method, headless flag and buffer size the run used. The
+folder lives in whichever checkout ran the runner, so a worktree's results
+move to the main checkout's `.perf-runs/` before the worktree is removed.

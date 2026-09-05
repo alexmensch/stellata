@@ -106,6 +106,10 @@ against a baseline):
 
 ## Recording
 
-Results go to the bead's notes with the path of the saved output, never into
-a README. Paste the table and the adapter block, and say which vantage,
-backend, method, headless flag and buffer size the run used.
+Write every run under `.perf-runs/<date>/` at the repo root — the `--json`
+path and a `tee` of the console log — never under the home directory or
+`/tmp`. The folder is gitignored; a worktree's copy moves to the main
+checkout's `.perf-runs/` before the worktree goes. Results go to the bead's
+notes with that repo-relative path, never into a README. Paste the table and
+the adapter block, and say which vantage, backend, method, headless flag and
+buffer size the run used.
