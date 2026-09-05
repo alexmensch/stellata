@@ -40,6 +40,9 @@ scripts/perf/
                             classification, the sweep bracket.
   diff-pure.ts (+ test)     Two runs differenced: bands, verdicts, and the
                             refusals that stop an invalid comparison.
+  pin-pure.ts (+ test)      The perf pin: adapter slug, pinFromRun,
+                            compareToPin and its floor, cadence and ceiling
+                            rules. pins/<slug>.json is the committed pin.
   table-pure.ts (+ test)    Every text table. formatTable is the shared
                             width/alignment pass.
   await-go.sh (+ test)      The arm poller the agent runs in the background.
@@ -61,7 +64,8 @@ pnpm run perf -- [--scenario sol,earth,mw50,mw120,lg | all] [--backend webgl2|we
                  [--empty-passes N]
                  [--frames 240] [--roundtrip <pass>|idle] [--scales 0.5,1,1.5,2]
                  [--headed] [--width 1280] [--height 800] [--dpr 2] [--quiet-ms 5000]
-                 [--json <path>] [--baseline <path>]
+                 [--json <path>] [--baseline <path>] [--cooldown-ms 0]
+                 [--pin <path> [--accept <scenario>|<backend>:<bead>]...] [--against-pin <path>]
                  [--url http://localhost:5173] [--chrome-arg=<switch>]...
 ```
 
@@ -267,6 +271,14 @@ The console line says which cadence the verdict was judged against. **The GPU
 row is never clamped**: a resolved timestamp is a span the hardware reports,
 and no compositor can pad it.
 
+**Every summary carries a state guard.** The dwell is read in four
+consecutive quarters (`quarterMedians`); a monotonic run of their medians
+wider than `STATE_GUARD_TREND_MS` (1 ms) end to end reads `trending` — the
+machine changed state under the dwell (the sustained-load GPU power step,
+stellata-0it.38) — and `--baseline` and `--against-pin` refuse the row, since
+frames either side of that transition never compare. `--cooldown-ms` idles
+between contexts so each one starts cold.
+
 **A WebGPU dwell also counts what the frame submits.** For the timed frames
 it wraps `GPUQueue.submit` and `GPUCommandEncoder.beginRenderPass` /
 `beginComputePass` on their prototypes and records, per rAF interval, the
@@ -385,6 +397,14 @@ row missing from one side refuses just that key. The key carries the backend,
 so a vantage the other run measured on the *other* backend says exactly that
 rather than reporting itself absent.
 Sweeps are never diffed — a slope is not a cost.
+
+## Pinning
+
+`--mode dwell --json <run> --pin pins/<slug>.json` summarises a run as the
+committed perf pin; `--against-pin <path>` prints the verdicts and exits 1
+on any `✗`. The file, the floor, the cadence and ceiling rules and the
+refusals: `pins/README.md`. When a PR must run it and what a mark means:
+`RELEASING.md` § Perf pin.
 
 ## Traps
 

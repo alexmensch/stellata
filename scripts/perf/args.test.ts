@@ -32,7 +32,42 @@ describe('parseRunArgs', () => {
       scales: [...DEFAULT_SWEEP_SCALES],
       json: undefined,
       baseline: undefined,
+      pin: undefined,
+      againstPin: undefined,
+      accept: [],
+      cooldownMs: ARG_DEFAULTS.cooldownMs,
     });
+  });
+
+  it('takes the pin flags in dwell mode, --accept as key:bead pairs, and a zero cool-down', () => {
+    const a = parseRunArgs([
+      '--mode', 'dwell', '--json', 'run.json', '--pin', 'scripts/perf/pins/x.json',
+      '--accept', 'sol|webgpu:bead-1', '--accept', 'mw50|webgl2: bead-2',
+      '--against-pin', 'scripts/perf/pins/y.json', '--cooldown-ms', '120000',
+    ]);
+    expect(a.pin).toBe('scripts/perf/pins/x.json');
+    expect(a.againstPin).toBe('scripts/perf/pins/y.json');
+    expect(a.accept).toEqual([
+      { key: 'sol|webgpu', bead: 'bead-1' },
+      { key: 'mw50|webgl2', bead: 'bead-2' },
+    ]);
+    expect(a.cooldownMs).toBe(120000);
+    expect(parseRunArgs(['--cooldown-ms', '0']).cooldownMs).toBe(0);
+  });
+
+  it('refuses --pin without --json, --accept without --pin, a malformed --accept, and a negative cool-down', () => {
+    expect(() => parseRunArgs(['--mode', 'dwell', '--pin', 'p.json'])).toThrow(/needs --json/);
+    expect(() => parseRunArgs(['--mode', 'dwell', '--accept', 'sol|webgpu:bead-1'])).toThrow(/needs --pin/);
+    expect(() => parseRunArgs(['--mode', 'dwell', '--json', 'r.json', '--pin', 'p.json', '--accept', 'sol:bead-1']))
+      .toThrow(/<scenario>\|<backend>:<bead-id>/);
+    expect(() => parseRunArgs(['--mode', 'dwell', '--json', 'r.json', '--pin', 'p.json', '--accept', 'sol|webgpu']))
+      .toThrow(ArgError);
+    expect(() => parseRunArgs(['--cooldown-ms=-1'])).toThrow(/zero or a positive/);
+  });
+
+  it('refuses the pin flags outside dwell mode', () => {
+    expect(() => parseRunArgs(['--json', 'r.json', '--pin', 'p.json'])).toThrow(/--mode dwell only/);
+    expect(() => parseRunArgs(['--against-pin', 'p.json'])).toThrow(/--mode dwell only/);
   });
 
   it('takes a pass key or the idle control as --roundtrip, in dwell mode', () => {

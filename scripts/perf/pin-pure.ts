@@ -1,6 +1,6 @@
 // The perf pin: a committed summary of the whole frame at the canon vantages
 // on one GPU, and the verdicts of a later run against it. Operator rules:
-// RELEASING.md § Perf pin; mechanics: README.md § Pinning.
+// RELEASING.md § Perf pin; mechanics: pins/README.md.
 
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { BUFFER_MPX_TOLERANCE, band, type DiffRefusal, type Verdict } from './diff-pure';
@@ -11,7 +11,7 @@ import type { Backend, ScenarioName } from './scenarios';
 
 /** Removing a field or changing what one MEANS bumps the suffix; adding one
  *  does not — the same contract as `PERF_SCHEMA`. */
-export const PIN_SCHEMA = 'stellata-perf-pin/1';
+export const PIN_SCHEMA = 'stellata-perf/pin-1';
 
 /** A row moves only past the pair's two-sigma band AND past this floor,
  *  whichever of the two forms is larger: cold GPU-stream medians reproduce

@@ -107,13 +107,13 @@ describe('adapterSlug', () => {
 
 describe('pinFromRun', () => {
   it('summarises every dwell row, GPU stream where sound, and carries the provenance', () => {
-    const { pin } = pinFromRun(file([SOL_GPU, MW120_GPU, SOL_GL]), { ...SOURCE, accepted: { 'sol|webgpu': { bead: 'stellata-x.1' } } });
+    const { pin } = pinFromRun(file([SOL_GPU, MW120_GPU, SOL_GL]), { ...SOURCE, accepted: { 'sol|webgpu': { bead: 'bead-1' } } });
     expect(pin!.schema).toBe(PIN_SCHEMA);
     expect(pin!.adapterSlug).toBe('apple-m4-metal-3');
     expect(pin!.version).toBe('3.44.3');
     expect(pin!.takenAt).toBe('2026-09-05T20:03:00.000Z');
     expect(pin!.sourceRun).toBe(SOURCE.sourceRun);
-    expect(pin!.accepted['sol|webgpu'].bead).toBe('stellata-x.1');
+    expect(pin!.accepted['sol|webgpu'].bead).toBe('bead-1');
     expect(pin!.rows.map((r) => r.key)).toEqual(['sol|webgpu', 'mw120|webgpu', 'sol|webgl2']);
     expect(pin!.rows[0].gpu!.p50).toBe(21.8);
     expect(pin!.rows[1].wall.vsyncClamped).toBe(true);

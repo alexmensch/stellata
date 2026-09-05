@@ -2,7 +2,7 @@
 // and exit codes: README.md. The only Playwright value import in the tree.
 
 import { execFileSync } from 'node:child_process';
-import { accessSync, constants, existsSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { accessSync, constants, existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { chromium, type Browser } from 'playwright';
 import type { PriceFrameOptions } from '../../src/client/debug/frame-cost/frame-cost';
@@ -16,6 +16,7 @@ import { diffRuns } from './diff-pure';
 import type { DwellSummary } from './dwell-pure';
 import { applyRoundTrip, measureDwell, measureSweep, type Measured } from './measure';
 import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './perf-go-lib';
+import { PIN_SCHEMA, PinError, assertPinFile, compareToPin, pinFromRun, type PinFile } from './pin-pure';
 import {
   DWELL_METHOD,
   describeProbe,
@@ -45,7 +46,7 @@ import {
 } from './schema';
 import { BACKENDS, SCENARIOS, scenarioUrl, type Backend, type ScenarioName } from './scenarios';
 import {
-  formatDiffTable, formatDwellTable, formatPassCountTable, formatPriceTable,
+  formatDiffTable, formatDwellTable, formatPassCountTable, formatPinTable, formatPriceTable,
   formatRoundTripLine, formatSweepTable,
 } from './table-pure';
 
@@ -95,6 +96,12 @@ function priceFrameOptions(a: RunArgs, method: GpuFrameMethod | undefined): Pric
 function backendsFor(request: BackendRequest): readonly Backend[] {
   return request === 'both' ? BACKENDS : [request];
 }
+
+function packageVersion(): string {
+  return (JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf-8')) as { version: string }).version;
+}
+
+const sleep = (ms: number): Promise<void> => new Promise((done) => { setTimeout(done, ms); });
 
 function gitMeta(): { commit: string; dirty: boolean } {
   const git = (...argv: string[]): string =>
@@ -321,27 +328,79 @@ function printBaseline(path: string, baseline: PerfFile, current: PerfFile): voi
  * discarding minutes of measurement and costing a fresh human arm to redo.
  * So a bad path is a flag error like any other — exit 2, marker untouched.
  */
-function preflightPaths(args: RunArgs): { baseline: PerfFile | null; error: string | null } {
-  if (args.json !== undefined) {
-    const dir = dirname(resolve(args.json)) || '.';
-    try {
-      accessSync(dir, constants.W_OK);
-    } catch {
-      return { baseline: null, error: `--json ${args.json}: ${dir} is not a writable directory` };
-    }
-  }
-  if (args.baseline === undefined) return { baseline: null, error: null };
+interface Preflight {
+  readonly baseline: PerfFile | null;
+  readonly pin: PinFile | null;
+  readonly error: string | null;
+}
+
+function writableDir(flag: string, path: string, create: boolean): string | null {
+  const dir = dirname(resolve(path)) || '.';
   try {
-    return {
-      baseline: assertPerfFile(JSON.parse(readFileSync(args.baseline, 'utf-8')), args.baseline),
-      error: null,
-    };
+    if (create) mkdirSync(dir, { recursive: true });
+    accessSync(dir, constants.W_OK);
+    return null;
+  } catch {
+    return `${flag} ${path}: ${dir} is not a writable directory`;
+  }
+}
+
+function readJsonFlag<T>(
+  flag: string,
+  path: string,
+  parse: (value: unknown, source: string) => T,
+): { value: T | null; error: string | null } {
+  try {
+    return { value: parse(JSON.parse(readFileSync(path, 'utf-8')), path), error: null };
   } catch (e) {
-    const why = e instanceof SchemaError || e instanceof SyntaxError
+    const why = e instanceof SchemaError || e instanceof PinError || e instanceof SyntaxError
       ? (e as Error).message
       : `unreadable — ${(e as Error).message}`;
-    return { baseline: null, error: `--baseline ${why}` };
+    return { value: null, error: `${flag} ${why}` };
   }
+}
+
+function preflightPaths(args: RunArgs): Preflight {
+  const none: Preflight = { baseline: null, pin: null, error: null };
+  const dirError = (args.json !== undefined ? writableDir('--json', args.json, false) : null)
+    ?? (args.pin !== undefined ? writableDir('--pin', args.pin, true) : null);
+  if (dirError !== null) return { ...none, error: dirError };
+  let baseline: PerfFile | null = null;
+  if (args.baseline !== undefined) {
+    const read = readJsonFlag('--baseline', args.baseline, assertPerfFile);
+    if (read.error !== null) return { ...none, error: read.error };
+    baseline = read.value;
+  }
+  let pin: PinFile | null = null;
+  if (args.againstPin !== undefined) {
+    const read = readJsonFlag('--against-pin', args.againstPin, assertPinFile);
+    if (read.error !== null) return { ...none, error: read.error };
+    pin = read.value;
+  }
+  return { baseline, pin, error: null };
+}
+
+/** The verdicts against the pin, and whether they fail the run: a ✗ row, or
+ *  a comparison the pin refused outright, since a refused comparison is not
+ *  a pass. */
+function printAgainstPin(path: string, pin: PinFile, current: PerfFile): boolean {
+  console.log(`\nperf: against pin ${path} (${pin.git.commit.slice(0, 8)}, v${pin.version}, ${pin.adapterSlug})`);
+  const diff = compareToPin(pin, current);
+  console.log(formatPinTable(diff));
+  return diff.refusedWholeRun !== null || diff.rows.some((row) => row.verdict === 'dearer');
+}
+
+/** Write the run as the pin, or say why it cannot be one. Returns whether it failed. */
+function writePin(args: RunArgs, file: PerfFile): boolean {
+  const accepted = Object.fromEntries(args.accept.map((mark) => [mark.key, { bead: mark.bead }]));
+  const { pin, refusals } = pinFromRun(file, { sourceRun: args.json!, version: packageVersion(), accepted });
+  if (pin === null) {
+    console.error(`perf: no pin written —\n  ${refusals.join('\n  ')}`);
+    return true;
+  }
+  writeFileSync(args.pin!, `${JSON.stringify(pin, null, 2)}\n`);
+  console.log(`perf: wrote pin ${args.pin} (${PIN_SCHEMA}, ${pin.rows.length} rows, ${pin.adapterSlug}, v${pin.version})`);
+  return false;
 }
 
 async function main(): Promise<number> {
@@ -364,7 +423,7 @@ async function main(): Promise<number> {
     return EXIT.usage;
   }
 
-  const { baseline, error } = preflightPaths(args);
+  const { baseline, pin, error } = preflightPaths(args);
   if (error !== null) {
     console.error(`perf: ${error}`);
     return EXIT.usage;
@@ -394,13 +453,17 @@ async function main(): Promise<number> {
 
   const records: ScenarioRecord[] = [];
   const probes: AdapterProbe[] = [];
+  const plans: ScenarioPlan[] = args.scenarios.flatMap((name) =>
+    backendsFor(args.backend).map((backend) => ({ name, backend, method })));
   try {
-    for (const name of args.scenarios) {
-      for (const backend of backendsFor(args.backend)) {
-        const outcome = await runScenario(browser, args, { name, backend, method });
-        records.push(outcome.record);
-        if (outcome.probe !== null) probes.push(outcome.probe);
+    for (const [i, plan] of plans.entries()) {
+      if (i > 0 && args.cooldownMs > 0) {
+        console.log(`\nperf: cooling down ${(args.cooldownMs / 1000).toFixed(0)} s before the next context`);
+        await sleep(args.cooldownMs);
       }
+      const outcome = await runScenario(browser, args, plan);
+      records.push(outcome.record);
+      if (outcome.probe !== null) probes.push(outcome.probe);
     }
   } catch (e) {
     if (e instanceof SoftwareAdapter) {
@@ -450,14 +513,19 @@ async function main(): Promise<number> {
     }
   }
   if (baseline !== null && args.baseline !== undefined) printBaseline(args.baseline, baseline, file);
+  const pinFailed = pin !== null && args.againstPin !== undefined && printAgainstPin(args.againstPin, pin, file);
+  const pinUnwritten = args.pin !== undefined && writeFailure === null && writePin(args, file);
 
   const failed = records.filter((r) => r.failed).map((r) => `${r.name}/${r.backend.requested}`);
   const tainted = records.filter((r) => r.tainted).map((r) => `${r.name}/${r.backend.requested}`);
   console.log(
     `\nperf: ${records.length} scenario run(s), ${failed.length} failed${failed.length ? ` (${failed.join(', ')})` : ''}` +
-    (tainted.length ? `, tainted: ${tainted.join(', ')}` : ''),
+    (tainted.length ? `, tainted: ${tainted.join(', ')}` : '') +
+    (pinFailed ? ' · against pin: FAILED' : ''),
   );
-  return failed.length + tainted.length > 0 || writeFailure !== null ? EXIT.failed : EXIT.ok;
+  return failed.length + tainted.length > 0 || writeFailure !== null || pinFailed || pinUnwritten
+    ? EXIT.failed
+    : EXIT.ok;
 }
 
 process.exitCode = await main();
