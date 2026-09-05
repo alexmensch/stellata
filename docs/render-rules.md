@@ -258,25 +258,38 @@ stellata-0it.36; `webgpu/README.md` carries the pointer.
 ## 8. Submits and passes are costs
 
 **Rule.** Count render passes and queue submits per frame before
-splitting any pass for attribution or convenience; prefer fewer, wider
-passes.
+splitting any pass for attribution or convenience, and price a pass
+fold before building it: on this hardware the boundary is cheap.
 
 **Why.** On the WebGPU backend each `renderer.render` call is its own
-command encoder and submit, and each render pass on a tile-based GPU
-(Apple silicon shades the screen in small tiles held in fast on-chip
-memory) pays a full store and reload of the target through main memory
-at the pass boundary — of the order of half a millisecond to two
-milliseconds per pass at 5–7 Mpx, independent of what the pass draws.
-The exposure reduction chain is one render per level; the local-depth
-pass, the tone map and the extinction prepass are more. A dozen submits
-where one would do is a cost with no pixel attached to it.
+command encoder and submit, and so is `renderer.clearDepth()` — three
+encodes a clear as an empty render pass with every attachment loaded
+and stored. A pass boundary on a tile-based GPU (Apple silicon shades
+the screen in small tiles held in fast on-chip memory) is where the
+target goes out to main memory and back. Measured, 2026-09-05, headless
+Chromium on an M4 at 4.096 Mpx, wall clock
+(`.perf-runs/2026-09-05/arm12-emptyPass-sol-earth-both.json`): one
+extra empty pass over the three-attachment HDR target plus its float
+depth costs 0.1 ms at Earth close approach (resolved, bracket 0) and at
+most 0.5 ms at Sol (−0.45 at a 0.5 bracket, unresolved); ~0 on WebGL2,
+where a clear is a state command inside the bound framebuffer. That is
+well under a full store-and-reload of the ~200 MB the attachments hold.
 
-**How to apply.** Measure the per-pass floor once with the runner (an
-empty extra pass, differenced), then read every "add a pass" proposal
-against it; stellata-8cg.48 (reduce 4×4 per level, halving the chain)
-is the shape of the fix.
+**Counts** (stellata-0it.37, arm 4, same machine and buffer): the
+steady-state WebGPU frame is 4 render passes on 4 submits at the cut
+vantages — main, the local pass's depth clear, the local repaint, the
+resolve — and 2 on 2 away from the cut. A readback frame adds 2 submits
+(the exposure copy, no pass) and, at Earth alone under the exposure
+pin, the 6 reduction-chain passes.
 
-**Where.** Submit-and-pass count spike stellata-0it.37.
+**How to apply.** Read every add-a-pass or fold-a-pass proposal against
+the `emptyPass` row (`src/client/debug/frame-cost/README.md` § Priced
+passes) at the vantage in question and against the frame it lands in.
+At ≤ 0.5 ms a boundary, folding the local pass's depth clear into the
+repaint saves under 2 % of a Sol frame, and stellata-8cg.48 (4×4
+reduction) removes under one pass per frame amortised — its case is
+intermediate bandwidth, not pass count. A pass that draws is priced by
+what it draws, not by its boundary.
 
 ## 9. Measurement canon
 
