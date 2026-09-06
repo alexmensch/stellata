@@ -98,8 +98,11 @@ needed was to stop being *unreachable*: the SIMBAD widening ladder now
 falls through to their own TYC / GJ and corroborates the binding across
 releases, so all six carry bibcoded coordinates, PM and parallax
 (`../simbad/README.md` § The widening ladder, and its corroboration rule).
-`stellata-3bsf.8` re-sources the spine from the primaries and is where the
-ids themselves would change, if they change at all.
+The membership manifest carries all six unchanged, each on a review
+disposition whose basis is that SIMBAD corroboration
+(`../membership/binding-review-dispositions.tsv`, `simbad_dr2_object`); a
+DR-reconciliation run is where the ids themselves would change, if they
+change at all.
 
 ## Consumed by
 

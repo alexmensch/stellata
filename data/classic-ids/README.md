@@ -57,11 +57,12 @@ all four; cite the paper per table.
   `n_tyc` are the upstream ambiguity flags (394 rows with `n_hd` > 1,
   16 with `n_tyc` > 1).
 - **`cross_index.tsv`** ← VizieR `IV/27A/catalog`. Kostjuk N.D. 2004 —
-  the HD-DM-GC-HR-HIP-Bayer-Flamsteed cross index. As TAP serves it this
-  is the Bayer/Flamsteed-bearing subset only (3,690 rows; HR 8832 is
-  absent), which is all we ask of it — HR routes via `bsc5.tsv`, HD via
-  `tyc2_hd.tsv`. 2,185 rows carry a Bayer letter, 2,757 a Flamsteed
-  number. `bayer` is IV/27A's own lowercase three-letter form (`alf`,
+  the HD-DM-GC-HR-HIP-Bayer-Flamsteed cross index. The whole table is
+  3,690 rows, every one Bayer- or Flamsteed-bearing (HR 8832 is absent) —
+  a cross index for those designations, with no larger slice behind it;
+  HR routes via `bsc5.tsv`, HD via `tyc2_hd.tsv`. 2,185 rows carry a Bayer
+  letter, 2,757 a Flamsteed number — 119 Flamsteed numbers the spine
+  carries are not among them (`data/membership/README.md`). `bayer` is IV/27A's own lowercase three-letter form (`alf`,
   `kap`), **not** AT-HYG's (`Alp`) — and neither is canonical:
   `docs/star-naming.md` § 4 stores the Unicode glyph, sourced from the
   IAU WGSN naked-eye catalogue, and demotes this table to the V > 6.5

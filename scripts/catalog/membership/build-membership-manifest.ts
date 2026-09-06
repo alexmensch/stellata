@@ -23,11 +23,15 @@ import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pu
 import { LFS_HINT, loadPrimaryTables } from '../spine/primaries-tables';
 import {
   ADDITIONS_LEDGER_FILE,
+  BINDING_DISPOSITIONS_FILE,
   BINDING_REVIEW_FILE,
+  LABEL_DROPS_FILE,
   MEMBERSHIP_EXPECTED_FILE,
   MEMBERSHIP_MANIFEST_FILE,
   buildMembership,
+  parseBindingDispositionsTsv,
   serializeBindingReview,
+  serializeLabelDrops,
   serializeLedger,
   serializeManifest,
   type MembershipCounts,
@@ -35,6 +39,7 @@ import {
 
 const SRC_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
 const OVERLAY_HINT = 'run `pnpm run build:classic-ids`.';
+const DISPOSITIONS_HINT = 'dispose every row of binding-review.tsv there (README.md § The spine side).';
 
 function writeArtifact(repoRelative: string, text: string): void {
   const path = resolve(ROOT, repoRelative);
@@ -55,6 +60,9 @@ async function main(): Promise<void> {
       ? parseLabelOverridesTsv(readFileSync(overridesPath, 'utf8'))
       : new Map(),
     siblingRenderedSourceIds: sourceIdsWithSiblingComponent(readMultiplesTsv(MULTIPLES_TSV)),
+    dispositions: parseBindingDispositionsTsv(
+      readRequired(resolve(ROOT, BINDING_DISPOSITIONS_FILE), DISPOSITIONS_HINT),
+    ),
   });
 
   // The record build still merges labels for itself and asserts its queue
@@ -71,6 +79,7 @@ async function main(): Promise<void> {
   writeArtifact(MEMBERSHIP_MANIFEST_FILE, serializeManifest(result.rows));
   writeArtifact(ADDITIONS_LEDGER_FILE, serializeLedger(result.ledger));
   writeArtifact(BINDING_REVIEW_FILE, serializeBindingReview(result.bindingReview));
+  writeArtifact(LABEL_DROPS_FILE, serializeLabelDrops(result.labelDrops));
 
   const c = result.counts;
   console.log(
@@ -80,14 +89,16 @@ async function main(): Promise<void> {
   );
   console.log(
     `bindings: crosswalk_gated ${c.bindingByClass.crosswalk_gated}, ` +
-      `simbad_corroborated ${c.bindingByClass.simbad_corroborated}, none ${c.bindingByClass.none}; ` +
+      `simbad_corroborated ${c.bindingByClass.simbad_corroborated}, ` +
+      `reviewed ${c.bindingByClass.reviewed}, none ${c.bindingByClass.none}; ` +
       `${c.bindingReviewRows} spine bindings in review; additions with a source on the spine ` +
       `${c.additionSourceOnSpine}, gate-refused ${c.additionSourceGateRefused}, ` +
       `shared ${c.additionSourceShared}, TYC/HIP route disagreement ${c.additionRouteSourceDisagree}; ` +
       `${c.additionGaiaKeyedOnly} admitted rows keyed on the Gaia id alone`,
   );
   console.log(
-    `unattested cells: ${Object.entries(c.unattestedByCell).map(([k, v]) => `${k} ${v}`).join(', ')}`,
+    `unattested cells: ${Object.entries(c.unattestedByCell).map(([k, v]) => `${k} ${v}`).join(', ')}; ` +
+      `labels dropped: ${Object.entries(c.labelDropsByReason).map(([k, v]) => `${k} ${v}`).join(', ')}`,
   );
 
   await assertOrUpdateSnapshot<MembershipCounts>({

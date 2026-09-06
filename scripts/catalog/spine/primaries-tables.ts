@@ -14,7 +14,10 @@ import {
 } from '../classic-ids/classic-ids-parse';
 import { parseGlieseTsv } from '../gliese-parse';
 import { parseTycho2Tsvs } from '../tycho2-parse';
-import { addKeyed, type PrimaryTables, type SimbadXids, type WgsnKeys } from './primaries-audit-pure';
+import { loadStoredEdges } from '../../sid/registry-io';
+import {
+  addKeyed, glAliasesFromEdges, type PrimaryTables, type SimbadXids, type WgsnKeys,
+} from './primaries-audit-pure';
 
 export const SRC_BSC5 = resolve(ROOT, 'data/classic-ids/bsc5.tsv');
 export const SRC_CROSS_INDEX = resolve(ROOT, 'data/classic-ids/cross_index.tsv');
@@ -31,11 +34,19 @@ export const LFS_HINT = 'run `git lfs pull`.';
 const HIP_VMAG_HINT = 'run `pnpm run refresh:hip-vmag`.';
 const WGSN_HINT = 'run `pnpm run build:wgsn`.';
 
-function readHipColumn(path: string, hint: string, label: string): Set<number> {
-  const into = new Set<number>();
-  for (const { cells, idx } of dataRows(readRequired(path, hint), ['hip'], label, hint)) {
-    const hip = parseIntOrNull(cells[idx.hip]);
-    if (hip !== null) into.add(hip);
+/** One pass per file, however many columns the caller wants as key sets:
+ *  `hip_main_vmag.tsv` answers for two of them. */
+function readIntColumns<C extends string>(
+  path: string, hint: string, label: string, columns: readonly C[],
+): Record<C, Set<number>> {
+  const into = Object.fromEntries(
+    columns.map((c) => [c, new Set<number>()]),
+  ) as Record<C, Set<number>>;
+  for (const { cells, idx } of dataRows(readRequired(path, hint), columns, label, hint)) {
+    for (const column of columns) {
+      const value = parseIntOrNull(cells[idx[column]]);
+      if (value !== null) into[column].add(value);
+    }
   }
   return into;
 }
@@ -102,14 +113,17 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
   const iv25 = parseTyc2HdTsv(readRequired(SRC_TYC2_HD, LFS_HINT));
   const keep = new Set<string>(iv25.map((r) => r.tyc));
   for (const tyc of keepTycs) keep.add(tyc);
+  const i239 = readIntColumns(SRC_HIP_MAIN, HIP_VMAG_HINT, 'hip_main_vmag.tsv', ['hip', 'hd']);
   return {
     iv25,
     v50: parseBsc5Tsv(readRequired(SRC_BSC5, LFS_HINT)),
     iv27a: parseCrossIndexTsv(readRequired(SRC_CROSS_INDEX, LFS_HINT)),
     cns5: parseCns5Tsv(readRequired(SRC_CNS5, LFS_HINT)),
     gliese: parseGlieseTsv(readRequired(SRC_GLIESE, LFS_HINT)),
-    hipI239: readHipColumn(SRC_HIP_MAIN, HIP_VMAG_HINT, 'hip_main_vmag.tsv'),
-    hip2: readHipColumn(SRC_HIP2, LFS_HINT, 'hip2_van_leeuwen.tsv'),
+    hipI239: i239.hip,
+    hdI239: i239.hd,
+    glAliases: glAliasesFromEdges(loadStoredEdges()),
+    hip2: readIntColumns(SRC_HIP2, LFS_HINT, 'hip2_van_leeuwen.tsv', ['hip']).hip,
     wgsn: readWgsn(),
     tycho2: parseTycho2Tsvs(
       readRequired(SRC_TYCHO2_MAIN, LFS_HINT), readRequired(SRC_TYCHO2_SUPPL1, LFS_HINT),

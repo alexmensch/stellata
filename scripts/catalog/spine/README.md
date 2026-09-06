@@ -47,7 +47,9 @@ scripts/catalog/spine/
                                   behind every count (§ The primaries audit).
   primaries-tables.ts             Loads the frozen primary tables the audit
                                   and ../membership/ both measure against —
-                                  one table set for both instruments.
+                                  one table set for both instruments — plus
+                                  the gl: ↔ gl: bridges of
+                                  data/sid/sameas-overrides.tsv.
 ```
 
 ## Where each column comes from
@@ -104,11 +106,12 @@ set, hence its SID. `resolveGaiaSourceId` therefore has no caller on the
 and the classic-ID overlay's own gate.
 
 What re-deriving would decide differently is now measured rather than
-feared: § The primaries audit puts it at 11,736 bindings no raw walk reaches
+feared: § The primaries audit puts it at 11,731 bindings no raw walk reaches
 or agrees with, 11,697 of them corroborated by SIMBAD's cross-IDs for the
-same id, and 233 empty cells a raw walk would fill. The retirement carries
-the corroborated bindings forward and leaves the 233 empty
-(`docs/catalog-driver.md` § 3.1); until then this rule stands unchanged.
+same id and the other 34 by a committed review disposition, and 233 empty
+cells a raw walk would fill. The retirement carries every binding forward
+and leaves the 233 empty (`docs/catalog-driver.md` § 3.1); until then this
+rule stands unchanged.
 
 The classic-ID label merge is not an exception to this. It runs as a post-pass
 over the walk's output and rewrites LABELS (`hip`/`hd`/`hr`/`gl`/`flam`) — never
@@ -236,17 +239,20 @@ behind `docs/catalog-driver.md` § 3.1, which owns the decisions. Three
 questions, one pass over the rows:
 
 - **Attestation** — for each classical cell (`hd` `hr` `hip` `gl` `bayer`
-  `flam` `proper`), which primary publishes it. A row none of whose carried
-  cells is attested exists on AT-HYG's authority alone. **0 rows** do; 168
-  carry one unattested *label* (2 HDE numbers, 120 Flamsteed cells, the 46
-  disposed proper names).
+  `flam` `proper`), which primary publishes it: HD by IV/25, then V/50, then
+  I/239's own `HD` column. A row none of whose carried cells is attested
+  exists on AT-HYG's authority alone. **0 rows** do; 167 carry one
+  unattested *label* (1 HDE number, 120 Flamsteed cells, the 46 disposed
+  proper names — `../membership/README.md` § The spine side disposes them).
 - **Identity** — the spine's `gaia_source_id` against what the raw TYC / HIP /
-  CNS5 walks bind, pre-gate. 300,150 agree, 11,726 no walk reaches, 10 a walk
-  contradicts; on 11,697 of those 11,736 SIMBAD's object for the same id
-  carries the record's own TYC, HIP or bare GJ number, 21 name a different
+  CNS5 walks bind, pre-gate. 300,155 agree, 11,721 no walk reaches, 10 a walk
+  contradicts; on 11,697 of those 11,731 SIMBAD's object for the same id
+  carries the record's own TYC, HIP or bare GJ number, 16 name a different
   designation, 12 have no object, 6 no cross-id. A GJ compares on its bare
   number because SIMBAD names a Gaia source by the system entry where the
-  record names the component.
+  record names the component, and through the `gl:` ↔ `gl:` bridges of
+  `data/sid/sameas-overrides.tsv` in both the CNS5 walk and the SIMBAD
+  witness — CNS5's `GJ 9140` row answers for `Gl 157.1`.
 - **Additions** — what the primaries admit that no spine row carries, per
   table: 60,344 IV/25 stars by TYC (55,008 below HD 100,000, the AT-HYG link
   defect § 3.1 explains), 566 I/239 HIPs, 3,362 CNS5 census rows, 90 IV/27A

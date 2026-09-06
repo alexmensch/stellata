@@ -17,8 +17,8 @@ from vizier_slice import VizierSlice, pull_slices  # noqa: E402
 HIP_MAIN_VMAG = VizierSlice(
     table="I/239/hip_main",
     output=REPO_ROOT / "data" / "hipparcos" / "hip_main_vmag.tsv",
-    columns={"HIP": "hip", "Vmag": "vmag", "B-V": "bv"},
-    schema={"HIP": int, "Vmag": float, "B-V": float},
+    columns={"HIP": "hip", "Vmag": "vmag", "B-V": "bv", "HD": "hd"},
+    schema={"HIP": int, "Vmag": float, "B-V": float, "HD": int},
     row_count_min=117_000,
     row_count_max=119_000,
     order_by=("HIP",),

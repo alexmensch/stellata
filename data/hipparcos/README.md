@@ -5,9 +5,9 @@ Two distinct Hipparcos-derived pulls:
 ```
 hip_ccdm.tsv              ~2.2 MB, LFS. HIP↔CCDM cross-reference +
                           MultFlag — the curated visual-doubles flag.
-hip_main_vmag.tsv         ~1.9 MB, LFS. Printed Johnson V and B−V per
+hip_main_vmag.tsv         ~2.1 MB, LFS. Printed Johnson V and B−V per
                           HIP — the printed tiers of the V-magnitude
-                          and ci cascades.
+                          and ci cascades — plus I/239's own HD number.
 hip2_van_leeuwen.tsv      ~8.5 MB, LFS. Hipparcos-2 reduction —
                           long-baseline astrometry for Gaia-saturated
                           bright primaries.
@@ -44,10 +44,10 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
 
 ## `hip_main_vmag.tsv`
 
-- **Source**: VizieR `I/239/hip_main`, three-column slice (`HIP`, `Vmag`,
-  `B-V`), 118,218 rows — one with a null `Vmag`, 1,281 with a null `B-V`
-  (98.9% fill). Rounded to 3 dp on write so the committed file is
-  byte-stable across numpy versions.
+- **Source**: VizieR `I/239/hip_main`, four-column slice (`HIP`, `Vmag`,
+  `B-V`, `HD`), 118,218 rows — one with a null `Vmag`, 1,281 with a null
+  `B-V` (98.9% fill), 98,880 with an `HD`. Rounded to 3 dp on write so the
+  committed file is byte-stable across numpy versions.
 - **The `_vmag` in the filename is historical** and so are the names built
   on it — `pnpm run refresh:hip-vmag`, `refresh-hipparcos-vmag.py`, the
   `hipVMagEntries` count key. The slice carries both printed columns; the
@@ -72,6 +72,10 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
   needs a V keyed by a designation the overlay itself carries, not by an
   AT-HYG row, so the gate survives AT-HYG's retirement.
   `data/classic-ids/README.md` § The binding gate. All share the one parser.
+  `scripts/catalog/spine/primaries-tables.ts` reads the `hip` and `hd`
+  columns as I/239's attestation sets — the HIPs the catalogue publishes,
+  and the HD numbers it names for them, the route behind `hd:i239` in the
+  membership manifest (`scripts/catalog/membership/README.md`).
 - **Refresh**: `pnpm run refresh:hip-vmag`.
 
 ## `hip2_van_leeuwen.tsv`

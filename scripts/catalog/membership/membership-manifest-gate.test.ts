@@ -9,7 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { OVERRIDES_PATH } from '../../sid/registry-io';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
-import { parseSameasTsv } from '../../sid/sid-pure';
+import { canonicalKeyOf, compareDesignations, parseSameasTsv } from '../../sid/sid-pure';
 import {
   DEFAULT_CATALOG_MANIFEST,
   DEFAULT_ROW_INDEX_MAP,
@@ -32,13 +32,17 @@ import {
 import {
   ADDITIONS_LEDGER_FILE,
   ADDITION_REASONS,
+  BINDING_DISPOSITIONS_FILE,
   BINDING_REVIEW_FILE,
   COMPONENT_REASON_PREFIX,
+  LABEL_DROPS_FILE,
   MEMBERSHIP_EXPECTED_FILE,
   MEMBERSHIP_MANIFEST_FILE,
   manifestDesignations,
   manifestKey,
   matchSpineToManifest,
+  parseBindingDispositionsTsv,
+  parseLabelDropsTsv,
   parseLedgerTsv,
   parseManifestTsv,
   type ManifestRow,
@@ -49,6 +53,21 @@ import {
 const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE_FILE);
 const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 const LEDGER_PATH = resolve(REPO_ROOT, ADDITIONS_LEDGER_FILE);
+
+const REVIEW_KEY_COLUMNS = ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id'] as const;
+
+function reviewRows(): Array<Record<(typeof REVIEW_KEY_COLUMNS)[number], string>> {
+  return [...dataRows(
+    readFileSync(resolve(REPO_ROOT, BINDING_REVIEW_FILE), 'utf-8'),
+    REVIEW_KEY_COLUMNS, BINDING_REVIEW_FILE, 'Re-run `pnpm run build:membership`.',
+  )].map(({ cells, idx }) => Object.fromEntries(
+    REVIEW_KEY_COLUMNS.map((c) => [c, cells[idx[c]]]),
+  ) as Record<(typeof REVIEW_KEY_COLUMNS)[number], string>);
+}
+
+const dispositions = parseBindingDispositionsTsv(
+  readFileSync(resolve(REPO_ROOT, BINDING_DISPOSITIONS_FILE), 'utf-8'),
+);
 
 const inputsReadable = [SPINE_PATH, MANIFEST_PATH, LEDGER_PATH].every(lfsContentReadable);
 const built = [DEFAULT_CATALOG_MANIFEST, DEFAULT_SEARCH_INDEX, DEFAULT_ROW_INDEX_MAP]
@@ -72,6 +91,15 @@ function differences(a: Map<string, number>, b: Map<string, number>): string[] {
     .map((d) => `${d}: ${a.get(d) ?? 0} vs ${b.get(d) ?? 0}`)
     .sort();
 }
+
+// Both files are regular git, so this runs in every job.
+describe('binding review dispositions', () => {
+  it('disposes every review-queue row, and nothing else', () => {
+    const queue = reviewRows().map((r) => r.gaia_source_id).sort();
+    expect([...dispositions.keys()].sort()).toEqual(queue);
+    expect(queue).toHaveLength(expected.bindingReviewRows);
+  });
+});
 
 // The three inputs ride LFS, so the bare CI `test` job sees pointer stubs and
 // this self-skips; it runs smudged in tier-a-corpus, which names this file.
@@ -165,16 +193,54 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     expect(shared).toHaveLength(expected.sharedDesignations);
   });
 
-  it('holds the review queue to the pinned size', () => {
-    const rows = readFileSync(resolve(REPO_ROOT, BINDING_REVIEW_FILE), 'utf-8')
-      .trimEnd().split('\n').length - 1;
-    expect(rows).toBe(expected.bindingReviewRows);
+  it('carries every kept review binding, and none the disposition dropped', () => {
+    const byId = new Map(manifest.map((r) => [r.gaia_source_id, r]));
+    for (const [id, d] of dispositions) {
+      expect(byId.get(id)?.binding, id).toBe(d.disposition === 'keep' ? 'reviewed' : undefined);
+    }
+  });
+
+  // § 6.2: every spine label the manifest leaves out is on the label ledger,
+  // keyed on the manifest row it left, under a closed reason.
+  it('ledgers every dropped spine label onto its manifest row', () => {
+    const drops = parseLabelDropsTsv(readFileSync(resolve(REPO_ROOT, LABEL_DROPS_FILE), 'utf-8'));
+    const manifestKeys = new Set(manifest.map(manifestKey));
+    for (const d of drops) {
+      expect(manifestKeys.has(manifestKey(d)), `label drop keys a manifest row: ${manifestKey(d)}`).toBe(true);
+      expect(['hd', 'flam']).toContain(d.cell);
+    }
+    const byReason = new Map<string, number>();
+    for (const d of drops) byReason.set(d.reason, (byReason.get(d.reason) ?? 0) + 1);
+    expect(Object.fromEntries(byReason)).toEqual(expected.labelDropsByReason);
+  });
+
+  // A dropped label is a designation leaving a record, so § 7 asks whether it
+  // was the one keying it. A Flamsteed number is no designation at all, and an
+  // HD only keys a record no higher-laddered cell reaches — but "the row that
+  // lost one happened to carry a HIP" is a fact about today's data, not a rule.
+  // This is the rule: whatever keys the row now already outranked the cell it
+  // lost, so the drop cannot have moved a canonical key.
+  it('drops no label that was keying its record', () => {
+    const drops = parseLabelDropsTsv(readFileSync(resolve(REPO_ROOT, LABEL_DROPS_FILE), 'utf-8'));
+    const byKey = new Map(manifest.map((r) => [manifestKey(r), r]));
+    const moved: string[] = [];
+    for (const d of drops) {
+      if (d.cell === 'flam') {
+        expect(manifestDesignations(byKey.get(manifestKey(d))!)
+          .some((x) => x.startsWith('flam:'))).toBe(false);
+        continue;
+      }
+      const key = canonicalKeyOf(manifestDesignations(byKey.get(manifestKey(d))!));
+      if (compareDesignations(key, `hd:${d.value}`) >= 0) moved.push(`${key} vs hd:${d.value}`);
+    }
+    expect(moved).toEqual([]);
   });
 
   // (iii) The built catalogue's designation multiset equals the manifest's
   // over the records the build produces. Until the record build reads the
   // manifest, that is the spine-origin rows less the parked ledger, and the
-  // build still carries the bindings the manifest sent to review.
+  // build still carries the bindings the manifest dropped to review and the
+  // HD labels it dropped to the label ledger.
   describe.skipIf(!built)('↔ built catalogue', () => {
     it('(iii) ships exactly the manifest\'s designations', async () => {
       const catalog = await loadCatalog();
@@ -196,17 +262,15 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
         if (i !== null && !parked.has(parkedSpineKey(row))) produced.push(manifest[i]);
       });
       const fromManifest = tally(produced.map(manifestDesignations));
-      for (const { cells, idx } of dataRows(
-        readFileSync(resolve(REPO_ROOT, BINDING_REVIEW_FILE), 'utf-8'),
-        ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id'], BINDING_REVIEW_FILE,
-        'Re-run `pnpm run build:membership`.',
-      )) {
-        const review = Object.fromEntries(
-          (['tyc', 'hip', 'hd', 'gl', 'gaia_source_id'] as const).map((c) => [c, cells[idx[c]]]),
-        ) as Record<'tyc' | 'hip' | 'hd' | 'gl' | 'gaia_source_id', string>;
+      const bump = (d: string): void => { fromManifest.set(d, (fromManifest.get(d) ?? 0) + 1); };
+      for (const review of reviewRows()) {
         if (parked.has(parkedSpineKey(review))) continue;
-        const d = `gaia_dr3:${review.gaia_source_id}`;
-        fromManifest.set(d, (fromManifest.get(d) ?? 0) + 1);
+        if (dispositions.get(review.gaia_source_id)?.disposition === 'keep') continue;
+        bump(`gaia_dr3:${review.gaia_source_id}`);
+      }
+      const producedKeys = new Set(produced.map(manifestKey));
+      for (const drop of parseLabelDropsTsv(readFileSync(resolve(REPO_ROOT, LABEL_DROPS_FILE), 'utf-8'))) {
+        if (drop.cell === 'hd' && producedKeys.has(manifestKey(drop))) bump(`hd:${drop.value}`);
       }
       const diff = differences(fromBuild, fromManifest);
       expect(diff.slice(0, 20)).toEqual([]);

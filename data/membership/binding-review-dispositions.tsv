@@ -1,0 +1,35 @@
+gaia_source_id	disposition	basis	evidence
+48190190192608896	keep	v70a_astrometry	Gl 168.1: V/70A B1950 position vs Gaia DR3 at 1950 sep 6.2" (V/70A precision ~6"); PM 0.003"/yr vs 0.002"/yr, both below V/70A resolution; V 15.04 vs G 14.34. V/70A trig plx 70±19 mas against Gaia 0.82 mas: the 1991 parallax is spurious, the binding is not
+48191667661477120	keep	v70a_astrometry	Gl 168.2: sep 3.3"; PM 0.28"/yr@148° vs Gaia 0.301"/yr@148°; V 15.77 vs G 14.66; plx 59±15 vs 13.4 mas
+329448322594099072	keep	v70a_astrometry	Gl 85.1: sep 4.2"; PM 0.567"/yr@213° vs 0.551"/yr@215°; V 13.74 vs G 12.71; plx 45±10 vs 30.5 mas
+413774782779964544	keep	simbad_dr2_object	SIMBAD holds the id as Gaia DR2 413774782779964544 and that object carries TYC 3678-338-1 and HD 236699; DR3 renumbered the star to 413774782786117120 (data/athyg/stale_gaia_source_ids.tsv)
+766993095440555520	keep	v70a_astrometry	GJ 3673 (V/70A NN 3673): Gaia 2p solution, so the 46.3" offset at 1950 is V/70A's own PM 0.701"/yr × 66 yr unapplied; V 13.11 vs G 12.43
+917113609487713920	keep	v70a_astrometry	Gl 318.1: sep 10.8"; PM 0.468"/yr@242° vs 0.448"/yr@242°; V 14.11 vs G 13.06; plx 47±10 vs 19.4 mas
+1147659521129543040	keep	v70a_astrometry	GJ 3536 (V/70A NN 3536): Gaia 2p solution, so the 41.2" offset at 1950 is V/70A's own PM 0.669"/yr × 66 yr unapplied; V 11.92 vs G 11.38
+1191584186029145088	keep	tycho2_position	TYC 955-793-1 / HD 142127: Tycho-2 J2000 position vs Gaia DR3 propagated with its PM sep 0.44"; VT 8.78 vs G 8.57; PM 0.057"/yr@149° vs 0.054"/yr@139°
+1275744757390360064	keep	v70a_astrometry	Gl 575.1: sep 6.1"; PM 0.295"/yr@125° vs 0.295"/yr@125°; V 12.75 vs G 11.78; plx 45±9 vs 33.4 mas
+1375767325868833152	keep	tycho2_position	TYC 3053-2051-1 / HIP 76202 / Gl 588.1: Tycho-2 supplement (Hipparcos) position at J1991.25 sep 0.16"; VT 11.35 vs G 10.79; PM 0.080"/yr@181° vs 0.082"/yr@179°; V/70A position sep 1.8", PM 0.08"/yr@166°
+1740318205718571392	keep	simbad_dr2_object	SIMBAD holds the id as Gaia DR2 1740318205718571392 and that object carries GJ 4192 (G 93-6); DR3 renumbered the star to 1740318210014704256
+1800587798162719232	keep	simbad_dr2_object	SIMBAD holds the id as Gaia DR2 1800587798162719232 and that object carries GJ 4212 (G 188-19, LP 342-14); DR3 renumbered the star to 1800587802453920640
+1918504514656151680	keep	tycho2_position	TYC 3225-2746-1 / HD 219334: sep 0.14"; VT 8.53 vs G 8.71; PM 0.009"/yr@207° vs 0.009"/yr@202°
+1998711340986028800	keep	tycho2_position	TYC 4008-1653-1 / HD 240345: sep 0.65"; VT 9.13 vs G 8.92; PM 0.082"/yr@241° vs 0.084"/yr@245°; RUWE 2.3
+2125370033920918784	keep	v70a_astrometry	Gl 705.2: sep 3.1"; PM 0.403"/yr@261° vs 0.402"/yr@260°; V 12.51 vs G 11.76; plx 51±12 vs 35.3 mas
+2313603126059612032	keep	simbad_dr2_object	SIMBAD holds the id as Gaia DR2 2313603126059612032 and that object carries TYC 6989-91-1 and HD 225284; DR3 renumbered the star to 2313603126060528512
+2631876970245863552	keep	v70a_astrometry	Gl 893.1: sep 5.2"; PM 0.376"/yr@245° vs 0.382"/yr@244°; V 15.42 vs G 15.32 (DQ6 white dwarf); plx 41±7 vs 38.6 mas
+2735478934409535872	keep	v70a_astrometry	Gl 852.1: sep 1.2"; PM 0.226"/yr@105° vs 0.218"/yr@107°; V 13.55 vs G 12.53; plx 52±14 vs 26.0 mas
+3032685482982244096	keep	v70a_astrometry	Gl 268.5: sep 5.8"; PM 0.267"/yr@216° vs 0.274"/yr@208°; V 12.11 vs G 11.47; resulting plx 19±4 vs 20.8 mas
+3296932482569720192	keep	v70a_astrometry	GJ 3261 (V/70A NN 3261): sep 4.1"; PM 0.152"/yr@146° vs Gaia 0.048"/yr@136° (RUWE 5.1, an unresolved pair); V 12.89 vs G 12.03; photometric plx 63±8 vs 16.1 mas
+3476618044331100416	keep	tycho2_position	TYC 6685-358-1 / HD 107282: sep 0.63"; VT 8.90 vs G 8.87; PM 0.072"/yr@274° vs 0.070"/yr@270°
+3683686865871462912	keep	tycho2_position	TYC 4949-1115-1 / HD 110298: sep 0.40"; VT 9.53 vs G 9.65; PM 0.050"/yr@237° vs 0.050"/yr@242°
+3688439268658769664	keep	simbad_dr2_object	SIMBAD holds the id as Gaia DR2 3688439268658769664 and that object carries GJ 3775 (G 62-28, LP 557-46); no DR3 successor recorded
+4217525702758504960	keep	tycho2_position	TYC 5170-2166-1 / HD 192792: sep 0.25"; VT 9.84 vs G 9.72; PM 0.019"/yr@138° vs 0.013"/yr@131°; RUWE 7.3
+4474053727005666816	keep	tycho2_position	TYC 424-55-1 / HD 161698: sep 0.10"; VT 8.28 vs G 8.37; PM 0.007"/yr@201° vs 0.008"/yr@188°
+4545365955238156800	keep	simbad_dr2_object	SIMBAD holds the id as Gaia DR2 4545365955238156800 and that object carries GJ 3981 (G 139-3); no DR3 successor recorded
+4770375340505228928	keep	v70a_astrometry	Gl 200.1: sep 3.1"; PM 0.512"/yr@154° vs 0.539"/yr@151°; V 13.19 vs G 12.74; plx 45±10 vs 11.4 mas (RUWE 5.5)
+4895737258258001536	keep	v70a_astrometry	Gl 167.2: sep 12.4"; PM 0.700"/yr@59° vs 0.701"/yr@60°; V 11.80 vs G 11.02; plx 52±10 vs 28.1 mas (RUWE 9.9)
+5339147929617900800	keep	tycho2_position	TYC 8628-1221-1 / HD 98279: Tycho-2 supplement (Tycho-1) position at J1991.25 sep 0.01"; VT 9.57 vs G 9.58; IV/25 names this TYC for HD 98279
+5926885994686361728	keep	tycho2_position	TYC 8725-299-1 / HD 151054: sep 0.03"; VT 9.58 vs G 9.56; IV/25 gives HD 151054 to component -1 and Tycho-2 publishes no -2 row in the pull, so SIMBAD's TYC 8725-299-2 cross-id contradicts the primaries, not the binding
+5940508153511960192	keep	v70a_astrometry	Gl 629.3: PM 0.599"/yr@185° vs 0.582"/yr@185°; V 12.38 vs G 11.69; plx 52±14 vs 36.5 mas. V/70A position 99" off, a coordinate slip in the catalogue beside a proper motion that matches to 3%
+6484660576915985408	keep	tycho2_position	TYC 7977-931-1 / HD 199814: Gaia 2p solution; sep 0.47" propagating with Tycho-2's PM 0.071"/yr@62°; VT 9.91 vs G 10.10
+6673307841343417856	keep	v70a_astrometry	Gl 776.1: sep 1.7"; PM 0.584"/yr@271° vs 0.592"/yr@270°; V 12.15 vs G 11.40; resulting plx 23±5 vs 27.3 mas
+6844519325638029184	keep	v70a_astrometry	Gl 836.4: sep 3.0"; PM 0.695"/yr@174° vs 0.693"/yr@171°; V 12.80 vs G 11.62; plx 32±5 vs 31.2 mas
