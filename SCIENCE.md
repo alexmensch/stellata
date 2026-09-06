@@ -62,7 +62,7 @@ When scoping data-processing / cross-match / catalog-ingest work:
 ### Detail gradient — highest-density measurable info near Earth, simpler model further out
 
 Per-object near, statistical far. When scoping a layer beyond the
-AT-HYG catalog reach, prefer statistical / aggregate sources (HiPS-
+star catalogue's own reach, prefer statistical / aggregate sources (HiPS-
 derived counts, binned populations) over hand-extending per-object
 data. Each tier in the catalogue ecosystem (CDS / VizieR / Gaia /
 HiPS surveys) earns its keep in a specific distance regime — pick
@@ -125,18 +125,20 @@ enough to see it.
       red rows the relation's colour bound excludes
       (`scripts/catalog/photometry/README.md` § The ci cascade).
 - **AT-HYG v3.3** (stellar catalogue): https://codeberg.org/astronexus/athyg
-  — maintained by David Nash. **No longer consumed.** Membership is the
-  primaries-derived manifest at `data/membership/membership-manifest.tsv`,
-  which the record build walks; every field on a record is sourced from a
-  first-order catalogue this build pulls itself. What survives of AT-HYG is
-  the frozen `data/athyg/inherited-spine.tsv`, read only for its record of
-  AT-HYG's merge decisions — which designations name one star, and which Gaia
-  source it bound — that no primary supplies. Licence CC-BY-SA-4.0 follows the
-  subset it derives from (`data/athyg/athyg_33_classic_ids.csv`). Contract:
-  `docs/catalog-driver.md` § 3 and § 3.1.
+  — maintained by David Nash. The build's one AT-HYG-derived input is the
+  frozen `data/athyg/inherited-spine.tsv`, read for its record of AT-HYG's
+  merge decisions — which designations name one star, and which Gaia source
+  it bound — that no primary supplies. The upstream
+  `data/athyg/athyg_33_classic_ids.csv` stays committed as provenance and is
+  **not** a build input; nothing on the `build:catalog` path may read it.
+  Membership is the primaries-derived manifest at
+  `data/membership/membership-manifest.tsv`, which the record build walks;
+  every field on a record is sourced from a first-order catalogue this build
+  pulls itself. Licence CC-BY-SA-4.0 follows the subset it derives from.
+  Contract: `docs/catalog-driver.md` § 3 and § 3.1.
 - **Classic-designation cross indexes** (HD / HR / Bayer / Flamsteed /
-  Gliese), the identifier half of the AT-HYG retirement and part of the
-  membership term it derives from — four frozen
+  Gliese), the classic-ID label overlay and part of the membership term
+  it derives from — four frozen
   VizieR tables under `data/classic-ids/`, joined onto Gaia DR3
   source_ids by `pnpm run build:classic-ids`. Per-table provenance,
   licences and the measured per-identifier coverage are in
@@ -428,14 +430,17 @@ project-wide non-goals list. Per-subsystem physics, formulas, and
 modelling decisions split out into `docs/`:
 
 ```
-docs/science-catalog-ingestion.md      The merge AT-HYG performed and
-                                        what replaced it, Bailer-Jones +
-                                        LMC-kinematic distance overrides,
-                                        driver astrometry, current-epoch
-                                        space-motion propagation. The
-                                        durable contract that retired
-                                        AT-HYG as the driver is
-                                        docs/catalog-driver.md.
+docs/science-catalog-ingestion.md      The merge AT-HYG performed,
+                                        Bailer-Jones + LMC-kinematic
+                                        distance overrides, driver
+                                        astrometry, current-epoch
+                                        space-motion propagation.
+                                        docs/catalog-driver.md is the
+                                        authority on membership,
+                                        identifiers and per-field
+                                        sourcing, and overrides this file
+                                        wherever the two differ on the
+                                        driver.
 docs/science-stellar-modelling.md      Physical radius, brightness/
                                         size perception model, colour
                                         temperature routing + Teff

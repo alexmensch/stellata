@@ -18,7 +18,11 @@ Every object is placed from a published observational catalogue or direct measur
 ### Stars
 
 - [Gaia DR3](https://gea.esac.esa.int/archive/): ESA / DPAC — raw astrometry, broadband photometry, astrophysical parameters (Teff, log g, [M/H]), and non-single-star orbits.
-- [AT-HYG v3.3](https://codeberg.org/astronexus/athyg): David Nash's combined Tycho-2 / Hipparcos / Gaia catalogue — the star backbone.
+- [Tycho-2](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/259): Høg et al. 2000 — positions at each star's own mean epoch, proper motions, BT/VT photometry.
+- [CNS5](https://doi.org/10.1051/0004-6361/202244250): Golovin et al. 2023 — the fifth catalogue of nearby stars, supplying GJ designations and parallaxes inside 25 pc.
+- Classic designation cross indexes: Tycho-2 HD identifications (Fabricius et al. 2002), the Bayer / Flamsteed cross index (Kostjuk 2004), and the [Bright Star Catalogue](https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50) 5th revised (Hoffleit & Warren 1991) — every classical designation the catalogue carries.
+- [IAU Working Group on Star Names](https://www.iau.org/science/scientific_bodies/working_groups/280/): the naming authority behind every proper name displayed.
+- [AT-HYG v3.3](https://codeberg.org/astronexus/athyg): David Nash's combined Tycho-2 / Hipparcos / Gaia catalogue — the authority on which stars are one object and which Gaia source each is bound to.
 - [SIMBAD](https://simbad.cds.unistra.fr/simbad/): CDS Strasbourg — cross-identifications and catalogue validation.
 - [Riello et al. 2021](https://doi.org/10.1051/0004-6361/202039587): Gaia photometric relations — the G → Johnson V transform every star's brightness is derived through.
 - [Hipparcos catalogue](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239): ESA SP-1200 — printed Johnson V for stars too bright for Gaia's detectors.
