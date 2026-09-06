@@ -119,7 +119,11 @@ middle-half spread of a whole interval, and its median turns on whether
 marked. A row carrying no GPU stream is recorded and not gated — every
 WebGL2 row, since the backend supplies no such clock, and any WebGPU row
 whose adapter resolves no believable durations. The cutover
-(stellata-0it.13) leaves only gated rows behind.
+(stellata-0it.13) leaves only gated rows behind. A vantage that does not
+reproduce cold-to-cold is recorded and not gated on the same footing —
+today that is lg alone, and the paragraph on the floor below says why.
+It keeps its GPU reading, so unlike a row with no such clock it still
+meets the ceiling.
 
 **Taken cold, always.** Apple-silicon GPUs enter a sustained-load power
 state after roughly 2–2.5 min of continuous frames, and rows either side
@@ -130,19 +134,39 @@ more than 1 ms is refused by name. Two runs compare only on the same
 adapter slug, buffer, method and state.
 
 **What a mark means.** A row is `✗` when its GPU-stream p50 moves past the
-`--baseline` band *and* past `max(0.5 ms, 3 %)` of the pinned value, or
+`--baseline` band *and* past `max(0.25 ms, 1 %)` of the pinned value, or
 when it crosses the ceiling — 33.4 ms of GPU-stream p50 at any canon
-vantage, two 60 Hz intervals of hardware time — whatever the band says.
-mw50 at 31.451 is the nearest row today, 1.9 ms under. `✓` is cheaper,
-`~` is not resolved — not "no change".
+vantage, two 60 Hz intervals of hardware time — whatever the band says
+and whether or not the vantage is gated. mw50 at 31.451 is the nearest
+row today, 1.9 ms under. `✓` is cheaper, `~` is not resolved — not "no
+change".
 
-**The 3 % floor is provisional.** It is three times a reproducibility
-measured across three runs on 2026-09-05, none of which used a cool-down,
-and against those same runs the first cold pin moves lg by 0.57–1.02 ms
-where the floor allows 0.36 ms. stellata-8cg.49.17 re-derives it from the
-spread between two cold pins — a second armed run, which is why it is not
-the tooling bead; until it does, a `✗` carried by the floor alone is a
-prompt to re-run rather than a verdict.
+**The floor is measured, and lg is the reason it is not one number.** Two
+cold pins taken on identical code — 2026-09-05 and 2026-09-06, `--mode
+dwell --scenario all --backend both --cooldown-ms 120000`, with no
+render-path file changed between them — put sol, earth, mw50 and mw120
+inside 0.18 % of each other, the largest absolute move being 0.030 ms. The
+floor sits about 8× that.
+
+lg does not reproduce: 11.891 → 13.360 ms, 12.35 %, across the same pair.
+It is a level shift *between* runs rather than jitter inside one — each
+run's four quarter medians are near-flat, and the two runs sit ~1.4 ms
+apart — which is precisely what the state guard cannot see, since it only
+compares quarters within a single dwell. No cool-down and no longer dwell
+suppresses it. So lg is recorded and never marked by the band, until
+stellata-8cg.49.18 explains the shift. A single floor wide enough to cover
+lg would have to be ~12 %, which would hide a 3.9 ms regression at mw50 —
+the gate would be a formality.
+
+**What ungating lg costs, and what still watches it.** lg is the only
+canon vantage that sees the Local Group, so until 49.18 lands a render
+change under `src/client/local-group/` is priced by no row of its own: it
+reads five `~` and a `·`, and `perf-section-guard` demands an `accepted:`
+line only for a `✗`. The ceiling is what remains — it applies to lg like
+any other row carrying a GPU reading, so a frame that doubles there is
+still `✗`. That is a backstop, not a gate: it catches a collapse and
+nothing smaller. Weigh a `local-group/` diff accordingly, and prefer a
+per-pass differential at lg to a pin table for it.
 
 **The `## Perf` section.** Required in the PR body when the diff touches
 anything under `src/client/` — `.ts`, `.glsl` and `.wgsl` alike — outside
@@ -296,8 +320,13 @@ fix PR hits the same block.
 - To diagnose a stuck merge, compare the ruleset's required contexts
   against the reported CheckRun names: `gh pr view N --json
   statusCheckRollup`. The required set is the `test.yml` pipeline job
-  display names plus `version-guard` — enumerate it live rather than
-  trusting a written-down list.
+  display names plus `version-guard`, `release-notes-guard` and
+  `perf-section-guard` — enumerate it live rather than trusting a
+  written-down list.
+- **A job skipped by its own `if:` still satisfies a required context.**
+  `version-guard` and `release-notes-guard` both stand down under
+  `skip-version-bump` and report `skipping`, which GitHub counts as
+  met — so requiring a label-exempt guard does not wedge metadata PRs.
 
 ## What the deploy workflow does
 

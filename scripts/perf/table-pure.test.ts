@@ -180,7 +180,7 @@ describe('formatPinTable', () => {
       refusedWholeRun: null,
       rows: [{
         key: 'sol|webgpu', metric: 'gpu-p50', pinnedMs: 21.8, currentMs: 22.6, deltaMs: 0.8,
-        bandMs: 0.654, verdict: 'dearer', note: '',
+        bandMs: 0.25, verdict: 'dearer', note: '',
       }, {
         key: 'mw120|webgl2', metric: 'wall-p50', pinnedMs: 16.7, currentMs: 16.7, deltaMs: 0,
         bandMs: 0, verdict: 'ungated', note: 'no GPU stream — WebGL2 supplies none',
@@ -189,7 +189,7 @@ describe('formatPinTable', () => {
     });
     const lines = text.split('\n');
     expect(lines[0]).toContain('pinned');
-    expect(lines[1]).toMatch(/^\s*✗\s+sol\|webgpu\s+gpu-p50\s+21\.8\s+22\.6\s+0\.8\s+0\.654/);
+    expect(lines[1]).toMatch(/^\s*✗\s+sol\|webgpu\s+gpu-p50\s+21\.8\s+22\.6\s+0\.8\s+0\.25/);
     expect(lines[2]).toMatch(/^\s*·\s+mw120\|webgl2\s+wall-p50/);
     expect(lines[2]).toContain('no GPU stream — WebGL2 supplies none');
     expect(lines[3]).toBe('  not compared: lg|webgpu — not measured in this run');
