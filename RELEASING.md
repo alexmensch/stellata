@@ -104,12 +104,22 @@ it and re-takes it. Design record: stellata-8cg.49.11; tooling:
 stellata-8cg.49.12.
 
 **What is pinned.** `--mode dwell` at the five canon vantages (sol, earth,
-mw50, mw120, lg), 1280×800 at dpr 2 (4.096 Mpx), `raf-delta`, exposure
-pinned: wall p50 / p90 and, on WebGPU, the GPU-stream p50 — the number
-that reproduces to about 1 % run to run. WebGL2 rows exist until the
-cutover removes the backend. The per-pass differential is attribution,
-run when a row moves or when the PR touches a pass directly; it explains
-a mark and never fails one.
+mw50, mw120, lg), 1280×800 at dpr 2 (4.096 Mpx), 240 frames, `raf-delta`,
+exposure pinned. Every row records the wall p50 / p90 and, on WebGPU, the
+GPU-stream p50. The per-pass differential is attribution, run when a row
+moves or when the PR touches a pass directly; it explains a mark and never
+fails one.
+
+**The GPU-stream p50 is the only number that gates.** It is the one
+continuous whole-frame reading the pin holds — the middle half of a canon
+row spans 0.03–0.36 ms. Wall time is quantised to the display's refresh
+interval, so every canon row's wall p50 reads 16.7–17.5 ms with a
+middle-half spread of a whole interval, and its median turns on whether
+50.1 % or 49.9 % of the frames made the deadline: wall is recorded, never
+marked. A row carrying no GPU stream is recorded and not gated — every
+WebGL2 row, since the backend supplies no such clock, and any WebGPU row
+whose adapter resolves no believable durations. The cutover
+(stellata-0it.13) leaves only gated rows behind.
 
 **Taken cold, always.** Apple-silicon GPUs enter a sustained-load power
 state after roughly 2–2.5 min of continuous frames, and rows either side
@@ -119,17 +129,31 @@ a state-guard verdict — a dwell whose quarter medians trend one way by
 more than 1 ms is refused by name. Two runs compare only on the same
 adapter slug, buffer, method and state.
 
-**What a mark means.** A row is `✗` past the `--baseline` band *and* past
-`max(0.5 ms, 3 %)` of the pinned value; a row pinned on the display
-cadence marks when it leaves it; any canon vantage over 33.4 ms wall
-(two 60 Hz intervals) on WebGPU marks regardless. `✓` is cheaper, `~`
-is not resolved — not "no change".
+**What a mark means.** A row is `✗` when its GPU-stream p50 moves past the
+`--baseline` band *and* past `max(0.5 ms, 3 %)` of the pinned value, or
+when it crosses the ceiling — 33.4 ms of GPU-stream p50 at any canon
+vantage, two 60 Hz intervals of hardware time — whatever the band says.
+mw50 at 31.451 is the nearest row today, 1.9 ms under. `✓` is cheaper,
+`~` is not resolved — not "no change".
+
+**The 3 % floor is provisional.** It is three times a reproducibility
+measured across three runs on 2026-09-05, none of which used a cool-down,
+and against those same runs the first cold pin moves lg by 0.57–1.02 ms
+where the floor allows 0.36 ms. stellata-8cg.49.12 re-derives it from the
+spread between two cold pins; until it does, a `✗` carried by the floor
+alone is a prompt to re-run rather than a verdict.
 
 **The `## Perf` section.** Required in the PR body when the diff touches
-`src/client/**/*.glsl`, `*.wgsl`, or the `.ts` files (not `*.md`, not
-`*.test.ts`) of `webgpu/`, `hdr/`, `star-pipeline/`, `milkyway/`,
-`local-depth/`, `render-gate/`, `scene/`, or any file calling
-`renderer.render`. It carries the `--against-pin` table, the pin commit it
+anything under `src/client/` — `.ts`, `.glsl` and `.wgsl` alike — outside
+`*.md`, `*.test.ts`, and the folders that neither draw nor decide what is
+drawn: `calibration/`, `debug/`, `focus-card/`, `format/`, `hover/`,
+`kinds/`, `loaders/`, `modals/`, `overlays/`, `poi/`,
+`system-membership/`, `typeahead/`, `ui/`. **Naming what is exempt rather
+than what is covered is the invariant**: a list of render folders exempts
+by omission, so a layer folder added later escapes the gate until somebody
+notices. `overlays/` is exempt because its per-frame work is SVG on the
+CPU, which the gating clock does not see; `debug/` because the instrument
+is not the frame. It carries the `--against-pin` table, the pin commit it
 was read against, the adapter slug, the state-guard line per context, and
 one `accepted: <row> <reason> (<bead-id>)` line per `✗`. The
 `perf-section-guard` workflow fails the PR when the section is missing,
@@ -141,7 +165,13 @@ skip label: a change that costs nothing shows a table of `~`.
 **How the pin advances.** The re-taken pin is committed in the same PR, so
 the pin always describes what the version bump deploys. A `✗` is fixed in
 the PR or accepted with a bead; an accepted `✗` becomes the new pinned
-value. A three bump or the cutover re-pins every row under its own bead.
+value, and the ceiling is the only thing stopping accepted marks from
+ratcheting the frame upward one PR at a time. Two render-path PRs in
+flight re-take one file: whichever merges second rebases and re-takes,
+the same way `version-guard` (§ Version policy) makes the second bump
+rebase — and here that is another armed run, so check for an open
+render-path PR before arming. A three bump or the cutover re-pins every
+row under its own bead.
 
 **Who runs it.** The agent, human-armed: one arm per pin run, the machine
 idle throughout — about 15–25 min for the ten dwell contexts at a 120 s

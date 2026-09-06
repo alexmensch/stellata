@@ -338,6 +338,14 @@ the canonical vantages, before and after, pasted into the PR body.
   to a frame rate. `debug.priceFrame()` automates the differential
   (`debug/frame-cost/README.md` owns the roster, the gates `noiseMs` /
   `bracketMs`, and how to read a row).
+- **The whole-frame comparison reads the GPU-stream median, not wall.**
+  Wall time at a canon vantage is quantised to the display's refresh
+  interval: the median sits on a multiple of it whatever the frame costs,
+  so it resolves nothing under one interval and jumps a whole one when it
+  moves. The pin gates on the GPU-stream p50 where the backend supplies
+  one and records wall beside it (`RELEASING.md` § Perf pin). This is the
+  frame's own span, not a per-pass slot — attribution is still a
+  differential.
 - **Absolute numbers do not reproduce; ratios at the same buffer and the
   same clock do.** The frame is linear in pixels, so `bufferMpx` is
   stamped on every row and only same-buffer tables compare. `method`
