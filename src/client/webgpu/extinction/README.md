@@ -94,7 +94,7 @@ none.
 Both figures below are the WebGL2 pass's unchanged — the port moved no
 work and allocated nothing new, which is the claim worth having written
 down rather than re-derived. **Re-derive rather than trust them**: they
-are `recordCount` (384,115 — `../../../../scripts/catalog/build-catalog-expected.json`)
+are `recordCount` (384,116 — `../../../../scripts/catalog/build-catalog-expected.json`)
 through `avTexHeight`, which gives 376 rows, and both move with the
 catalog. `debug.memory()` prices the live app
 (`../../debug/memory/README.md`), and on a WebGL2 boot it *measures* the
@@ -113,12 +113,12 @@ inside every `maxTextureDimension2D` — the layout's width was chosen for
 that.
 
 **A recompute is ~18.4M volume samples**: one fragment per star × 48
-taps, 384,115 × 48. That is the whole per-recompute cost and it is paid
+taps, 384,116 × 48. That is the whole per-recompute cost and it is paid
 *per frame* while the camera keeps moving more than
 `RECOMPUTE_EPSILON_PC` between frames — a warp pays it every frame, which
 is the case to measure, not the idle one. An idle camera costs zero, and
 the visibility prefilter never applies here: the prepass marches every
-texel, including the 71 past the catalog, because the pass has no
+texel, including the 908 past the catalog, because the pass has no
 per-star magnitude to gate on. Unmeasured on this backend — no
 `gpu.frame` differential has been taken for it yet, so treat the parity
 claim as structural (same algorithm, same tap count, same layout) rather

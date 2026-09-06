@@ -195,7 +195,7 @@ The 25.01 is *not* published; `diffuse-reference.ts` builds it:
 | | mag/arcsec² |
 | --- | --- |
 | Leinert et al. 1998 Table 24, NGP — **total** starlight | 23.83 |
-| The 384,115 catalogue stars Stellata already draws | 24.275 |
+| The 384,116 catalogue stars Stellata already draws | 24.275 |
 | Residual left for the diffuse band | **25.01** |
 
 **The catalogue row is re-derived per build, and the residual moves with
@@ -203,8 +203,11 @@ it.** The manifest-driven catalogue took the pole from 24.286 to 24.275 —
 the additions are faint, so the centre does not move at three decimals and
 the pole gains 0.011 mag — which widens this check by 0.021 and no more.
 The reduction ran at 384,119; the four records dropped after it sit 84° or
-further from both cap centres, so the row holds unchanged at 384,115.
-Nothing rendered moves: both constants are read by tests alone.
+further from both cap centres, so the row holds unchanged at 384,116.
+Replaying it over the current build reproduces both constants exactly
+(22.3737 / 24.2748 over 11,662 and 1,154 stars) — a record has to land
+INSIDE a 10° cap to move one, which the promoted VV Crv B does not at 71.7°
+and 40.2°. Nothing rendered moves: both constants are read by tests alone.
 
 Leinert's table is a sky model (Wainscoat et al. 1992) for *all* stars,
 resolved or not, so pinning the published figure would double-count the
