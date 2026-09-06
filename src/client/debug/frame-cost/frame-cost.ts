@@ -9,7 +9,9 @@ import {
   buildInterleavedRow,
   buildPriceRow,
   fitDwellFrames,
+  median,
   summarizeDwell,
+  RAF_PROBE_FRAMES,
   SETTLE_FRAMES,
   WARMUP_FRAMES,
   type DwellStats,
@@ -57,6 +59,11 @@ export interface PriceFrameOptions {
    *  before the sweep starts; only a sweep that cannot fit even at
    *  `MIN_DWELL_FRAMES` truncates. */
   budgetMs?: number;
+  /** The display's refresh interval. Supplied by the headless runner, which
+   *  probes it after settle; a `raf-delta` sweep that is not given one
+   *  probes for itself wherever the clock is stopped. Rows are then stamped
+   *  `cadenceBound` where the display set the number. */
+  cadenceMs?: number;
   /** Freeze the exposure cut for the sweep, after the warmup has let it
    *  converge. Passes that write the statistic attachment move the cut
    *  when toggled, and the differential then prices a different star
@@ -94,6 +101,21 @@ const MIN_DWELL_FRAMES = 30;
 
 function nextFrame(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+/** The display's refresh interval, from the gaps between animation-frame
+ *  callbacks while nothing is drawing. The median, not the minimum, so the
+ *  estimate errs toward refusing a row rather than trusting one. */
+async function probeIdleCadenceMs(): Promise<number> {
+  const deltas: number[] = [];
+  let last = performance.now();
+  for (let f = 0; f < RAF_PROBE_FRAMES; f++) {
+    await nextFrame();
+    const now = performance.now();
+    deltas.push(now - last);
+    last = now;
+  }
+  return median(deltas);
 }
 
 /** The passes the 2026-08 audit prices. hdrChain (the chart-mode
@@ -259,6 +281,27 @@ export async function runPriceFrame(
     );
   }
 
+  // Before the render hold, so the gate is still free to skip: over a
+  // stopped clock and a still camera nothing redraws, and the deltas are
+  // the display's period rather than what a frame costs. The runner probes
+  // its own for the same reason, after settle and before it holds.
+  const cadenceMs = options.cadenceMs ?? (
+    method === 'raf-delta' && clock.getRate() === 0
+      ? await probeIdleCadenceMs()
+      : undefined
+  );
+  if (method === 'raf-delta') {
+    console.info(
+      cadenceMs === undefined
+        ? 'priceFrame: no display cadence — the clock is running, so an idle ' +
+          'rAF probe would measure frame cost. Rows carry no cadenceBound ' +
+          'verdict; pass { cadenceMs } if you know the refresh interval.'
+        : `priceFrame: display cadence ${cadenceMs.toFixed(2)} ms ` +
+          `(${(1000 / cadenceMs).toFixed(1)} Hz) — a row whose dwells sat on ` +
+          'it is stamped cadenceBound and resolves nothing.',
+    );
+  }
+
   const dwell = async (): Promise<DwellStats | null> => {
     for (let f = 0; f < settleFrames; f++) await nextFrame();
     sink.length = 0;
@@ -371,7 +414,7 @@ export async function runPriceFrame(
         continue;
       }
       if (!interleave) {
-        rows.push(buildPriceRow(toggle.key, method, baseline, disabled));
+        rows.push(buildPriceRow(toggle.key, method, baseline, disabled, cadenceMs));
         continue;
       }
       const after = await dwell();
@@ -381,7 +424,7 @@ export async function runPriceFrame(
         );
         continue;
       }
-      rows.push(buildInterleavedRow(toggle.key, method, baseline, after, disabled));
+      rows.push(buildInterleavedRow(toggle.key, method, baseline, after, disabled, cadenceMs));
       // The trailing baseline is the next row's leading one: 2N+1 dwells,
       // not 3N.
       baseline = after;

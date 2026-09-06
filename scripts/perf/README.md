@@ -265,9 +265,9 @@ the clamp test is judged against it: 16.67 ms on a 60 Hz panel, 8.33 on a
 120 Hz one. Headless Chromium's virtual display idles at 16.70 ms (59.9 Hz),
 measured on every canon vantage on both backends (stellata-8cg.49.13's
 notes) — the same cadence as a 60 Hz panel, though headed and headless still
-never compare. The tolerance is `VSYNC_CLAMP_TOLERANCE` (6 %) of the measured
-interval — 1 ms at 60 Hz, 0.5 ms at 120 — never a fixed millisecond, which on
-a small interval sits within reach of some multiple whatever the frame cost.
+never compare. The tolerance is `CADENCE_TOLERANCE` (6 %) of the measured
+interval, and `isVsyncClamped` is shared with the differential's own
+`cadenceBound` rule — both live in `frame-cost-pure.ts`.
 The console line says which cadence the verdict was judged against. **The GPU
 row is never clamped**: a resolved timestamp is a span the hardware reports,
 and no compositor can pad it.
@@ -389,10 +389,10 @@ buffers or adapters produce a table that looks like a comparison and is not,
 so an incomparable pair is named and skipped rather than dropped silently:
 a differing adapter string refuses the whole run (a differing schema never
 reaches the diff — see § JSON output); a differing method or mode, a buffer
-more than 1 % apart, a failed or tainted scenario, a vsync-clamped dwell, or a
-row missing from one side refuses just that key. The key carries the backend,
-so a vantage the other run measured on the *other* backend says exactly that
-rather than reporting itself absent.
+more than 1 % apart, a failed or tainted scenario, a vsync-clamped dwell, a
+`cadenceBound` row (either side), or a row missing from one side refuses that
+key. The key carries the backend, so a vantage the other run measured on the
+*other* backend says exactly that rather than reporting itself absent.
 Sweeps are never diffed — a slope is not a cost.
 
 ## Pinning
