@@ -399,9 +399,8 @@ Sweeps are never diffed — a slope is not a cost.
 
 `--mode dwell --json <run> --pin pins/<slug>.json` summarises a run as the
 committed perf pin; `--against-pin <path>` prints the verdicts and exits 1 on
-any `✗`. Only the GPU-stream p50 gates; wall rows are recorded ungated. File,
-floor, ceiling and refusals: `pins/README.md`. When a PR must run it and what
-a mark means: `RELEASING.md` § Perf pin.
+a `✗` or a refused row. Metric, floor, ceiling, refusals: `pins/README.md`.
+When a PR must run it and what a mark means: `RELEASING.md` § Perf pin.
 
 ## Traps
 

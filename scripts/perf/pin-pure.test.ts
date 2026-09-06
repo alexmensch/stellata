@@ -252,7 +252,7 @@ describe('unacceptedMarks — writing a pin must not ratchet the frame upward', 
     const dearer = scenario('sol', 'webgpu', dwell(stats(25.2), stats(22.6)));
     const diff = compareToPin(pinOf([SOL_GPU]), file([dearer]));
     expect(unacceptedMarks(diff, {})).toEqual(['sol|webgpu']);
-    expect(unacceptedMarks(diff, { 'sol|webgpu': { bead: 'stellata-8cg.49.12' } })).toEqual([]);
+    expect(unacceptedMarks(diff, { 'sol|webgpu': { bead: 'bead-7' } })).toEqual([]);
     expect(unacceptedMarks(diff, { 'mw120|webgpu': { bead: 'other' } })).toEqual(['sol|webgpu']);
   });
 

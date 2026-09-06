@@ -139,8 +139,8 @@ export function usage(): string {
     '  --json <path>            write the whole run as stellata-perf/1',
     '  --baseline <path>        diff this run against a saved one and print the verdicts',
     '  --pin <path>             dwell: write this run as the perf pin (with --json; RELEASING.md § Perf pin)',
-    '  --against-pin <path>     dwell: verdicts against a pin; any ✗ exits 1',
-    '  --accept <scenario>|<backend>:<bead>  dwell, with --pin: record an accepted mark, repeatable',
+    '  --against-pin <path>     dwell: verdicts against a pin; a ✗ or a refused row exits 1',
+    '  --accept <scenario>|<backend>:<bead>  dwell, with --pin: accept a ✗ and pin its value, repeatable',
     `  --cooldown-ms <n>        idle between contexts so each starts cold    (default ${ARG_DEFAULTS.cooldownMs})`,
     'Exit codes: 0 ok · 1 scenario failed / refused / software adapter · 2 bad flags or unreachable url · 3 not armed',
   ].join('\n');

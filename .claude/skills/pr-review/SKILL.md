@@ -105,11 +105,15 @@ only), and Safari exposes no GPU timer at all. Measurement canon is
 the standing perf program is epic `stellata-8cg`. An unmeasured perf claim is a
 hypothesis and must be called one.
 
-**A render-path diff without a `## Perf` section is a blocking finding.** The
-globs are `RELEASING.md` § Perf pin; the section carries the runner's
+**A render-path diff without a `## Perf` section is a blocking finding.** A
+render path is any `.ts`, `.glsl` or `.wgsl` under `src/client/` outside the
+folders `RELEASING.md` § Perf pin exempts; the section carries the runner's
 `--against-pin` table, the pin commit, the adapter slug and the state-guard
 line per context. Refuse the review until it is there. A `✗` row without an
 `accepted: <row> <reason> (<bead-id>)` line is P1, and the bead must exist.
+Only the GPU-stream p50 is marked — a `·` row is recorded and not gated, and
+reading a wall-clock median as a verdict is the mistake the pin exists to
+prevent.
 
 **A perf or VRAM regression is a finding to fix in this PR, not a follow-up
 bead.**

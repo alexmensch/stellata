@@ -73,7 +73,11 @@ table. Reference: `scripts/perf/README.md`. Interpretation authority:
 - `pnpm run perf -- --mode dwell --scenario all --backend both --cooldown-ms 120000 --json <run> --pin scripts/perf/pins/<slug>.json`
   — take the perf pin, cold: one launch, idle between contexts, every
   context state-guarded. `--against-pin <path>` prints the verdicts a
-  render-path PR pastes into its `## Perf` section; any `✗` exits 1.
+  render-path PR pastes into its `## Perf` section. Only the GPU-stream p50
+  is marked; every WebGL2 row reads `·` ungated. A `✗` exits 1, and so does
+  a refused row — a run whose rows were all refused shows a table with no
+  `✗` in it. Taking the pin in the same run as `--against-pin` needs
+  `--accept <row>:<bead>` for each `✗`, or nothing is written.
   Rules: `RELEASING.md` § Perf pin; mechanics: `scripts/perf/pins/README.md`.
 - `--headed` for a headed control run. Headed and headless never compare.
 
