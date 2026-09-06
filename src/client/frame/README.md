@@ -159,15 +159,22 @@ canonical default focus and *omits* the field when focused on Sol;
 
 ### URL round-trip
 
-URL round-trip works without special handling for the focused case
-because sender and receiver both recenter on the same focus star.
-Camera/target serialise in local frame; loading the URL recenters to
-the same absolute origin and the local coordinates apply unchanged.
+The focused case needs the sender to normalise, because the two ends do
+**not** recentre at the same moments. The receiver recentres onto the focus
+the instant it applies; the sender's own recentre waits for the camera to
+drift `FOCAL_ORIGIN_DRIFT_RATIO` × the eye distance, and until it fires the
+moving-focal ride carries camera and target along with the object. Raw local
+coordinates are therefore in a frame the receiver never rebuilds. The URL
+writer serialises camera/target measured **from the focal object**
+(`../util/url-state/README.md` § What counts as a camera move), which is
+the frame the receiver does rebuild, and which a ride leaves untouched.
 
 For unfocused-but-not-at-Sol, the URL serialises a `worldOffset` field
 (FIELDS_V2 bit 20, vec3 Float32, appended to the end for forward-compat
-with older clients). The encoder emits it when `focusedStar === null`
-AND `worldOffset` isn't ≈Sol; cam/tgt then encode in the local frame
+with older clients). The encoder emits it when nothing is focused AND
+`worldOffset` sits far enough from Sol to move the pose at this scale
+(`../util/url-state/README.md` § What counts as a camera move); cam/tgt
+then encode in the local frame
 and round-trip with full Float32 precision. The loader applies
 `setWorldOffset` *before* cam/tgt and resets cam/tgt to defaults so a
 missing `view.cam` / `view.tgt` produces a sane pose in the new local

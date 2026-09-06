@@ -9,16 +9,14 @@ import {
   writeVarint,
   readVarint,
   varintLen,
-  frameTriggerEps,
   type DecodedView,
   type StarRef,
   type IdMaps,
 } from './url-state';
 import type { Stellata } from '../../stellata';
-import type { Target } from '../../camera/focus/focus-target';
+import type { FocusableProvider, Target } from '../../camera/focus/focus-target';
 import { DEFAULT_FILTER, DEFAULT_FOV } from '../../filters/filter-state';
 import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
-import { AU_PC } from '../astronomy-constants';
 import { SidResolver, arrayDomain } from '../sid-resolver';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 
@@ -116,6 +114,21 @@ function rollStub() {
 
 // Duck-typed THREE.Vector3 — url-state only ever reads x/y/z and calls
 // set/normalize, so the wire suite stays independent of THREE.
+// Every kind's focal anchor at the local origin — what a frame recentred on
+// the focus means, and the state url-state's own gates are written against.
+// A test needing the drifted frame between two recentres passes its own offset.
+function mockFocusables(x = 0, y = 0, z = 0) {
+  const leg = partialOf<FocusableProvider>({
+    localPositionInto: (_idx, out) => {
+      out.set(x, y, z);
+      return true;
+    },
+  });
+  return partialOf<Stellata['focusables']>({
+    star: leg, planet: leg, probe: leg, cloud: leg, lg: leg, shell: leg,
+  });
+}
+
 function mockVec3(x = 0, y = 0, z = 0) {
   return {
     x, y, z,
@@ -241,6 +254,7 @@ function makeStatefulStellata() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getWorldOffset: () => mockVec3() as any,
     setWorldOffset: () => {},
+    focusables: mockFocusables(),
     focus: partialOf<Stellata['focus']>({
       getFocusedStar: () => state.focusedStar,
       getFocusedTarget: () => {
@@ -1050,6 +1064,9 @@ describe('url-state', () => {
       target?: [number, number, number];
       up?: [number, number, number];
       focusedStar?: number | null;
+      /** Focal object's local position — non-zero is the drifted frame
+       *  between two origin recentres. */
+      anchor?: [number, number, number];
     } = {}): Stellata {
       const mode = opts.mode ?? 'navigate';
       const camPos = opts.camPos ?? [0, 0, 30];
@@ -1064,6 +1081,7 @@ describe('url-state', () => {
           getEv: () => 0,
           setEv: () => {},
         }),
+        focusables: mockFocusables(...(opts.anchor ?? [0, 0, 0])),
         focus: partialOf<Stellata['focus']>({
           getFocusedStar: () => opts.focusedStar ?? null,
           getFocusedTarget: () => (opts.focusedStar != null
@@ -1132,6 +1150,53 @@ describe('url-state', () => {
         idMaps,
       );
       expect(view.cam).toBeUndefined();
+    });
+
+    // The sender's origin recentres only at 16x the eye distance, and until it
+    // fires the focal ride carries camera and target along with the object. The
+    // receiver ALWAYS recentres onto the focus, so raw local values land in a
+    // frame it never rebuilds — the pose has to leave measured from the object.
+    it('encodes a focused pose relative to the focal object, not the local origin', () => {
+      const drifted = currentStateOf(
+        makeMockStellata({
+          focusedStar: 7,
+          anchor: [100, 0, 0],
+          camPos: [100, 0, 40],
+          target: [100, 0, 0],
+        }),
+        idMaps,
+      );
+      expect(drifted.cam).toEqual([0, 0, 40]);
+      expect(drifted.tgt).toBeUndefined();
+    });
+
+    it('omits a focused default pose whatever the frame has drifted to', () => {
+      // Same pose, same bytes, wherever the un-recentred origin happens to sit
+      // — which is what stops a ride rewriting the URL every frame.
+      const near = currentStateOf(
+        makeMockStellata({ focusedStar: 7, anchor: [0, 0, 0], camPos: [0, 0, 30] }),
+        idMaps,
+      );
+      const far = currentStateOf(
+        makeMockStellata({
+          focusedStar: 7, anchor: [1e3, -2e3, 5e2], camPos: [1e3, -2e3, 5e2 + 30],
+          target: [1e3, -2e3, 5e2],
+        }),
+        idMaps,
+      );
+      expect(near.cam).toBeUndefined();
+      expect(far.cam).toBeUndefined();
+      expect(encodeBlob(far)).toBe(encodeBlob(near));
+    });
+
+    // Nothing focused: no anchor to measure from, so raw local values are
+    // already what the receiver rebuilds against worldOffset.
+    it('leaves an unfocused pose in the local frame', () => {
+      const view = currentStateOf(
+        makeMockStellata({ focusedStar: null, anchor: [100, 0, 0], camPos: [1, 2, 3] }),
+        idMaps,
+      );
+      expect(view.cam).toEqual([1, 2, 3]);
     });
   });
 
@@ -1762,61 +1827,6 @@ describe('url-state', () => {
     });
   });
 
-  describe('startUrlSync per-frame change-detector threshold', () => {
-    // The per-component trigger threshold is min(EPS, mag * EPS_REL),
-    // floored at EPS_FLOOR. This pins the regime boundaries so a
-    // future tweak that flips a constant doesn't silently re-introduce
-    // the "1e-3 pc absolute everywhere" bug — at solar-system scales
-    // (cam at AU magnitudes) that threshold equals ~206 AU and a zoom-
-    // out from the first-load 5 AU park doesn't trip any axis until
-    // the camera has moved hundreds of AU.
-
-    it('caps at EPS = 1e-3 pc for scene-scale magnitudes', () => {
-      // 0.1 pc (where mag * 0.01 = 1e-3 = EPS) is the boundary.
-      expect(frameTriggerEps(0.1)).toBe(1e-3);
-      expect(frameTriggerEps(30)).toBe(1e-3);     // navigate-default cam
-      expect(frameTriggerEps(8500)).toBe(1e-3);   // ~Sol-to-GC distance
-      expect(frameTriggerEps(1e6)).toBe(1e-3);    // ~Andromeda
-    });
-
-    it('scales to 1% of magnitude at solar-system scales', () => {
-      // At the first-load 5 AU park, a zoom of ~0.05 AU per frame
-      // crosses the per-axis threshold for the dominant component —
-      // far below the prior 206-AU absolute threshold.
-      const fiveAU = 5 * AU_PC;
-      expect(frameTriggerEps(fiveAU)).toBeCloseTo(fiveAU * 0.01, 12);
-      const oneAU = 1 * AU_PC;
-      expect(frameTriggerEps(oneAU)).toBeCloseTo(oneAU * 0.01, 12);
-    });
-
-    it('floors at 1e-9 pc to avoid noise-triggering at the origin', () => {
-      // observe-mode cam pins to [0, 0, 0]. A magnitude of zero with
-      // no floor would let any float-noise tick trigger a URL write.
-      expect(frameTriggerEps(0)).toBe(1e-9);
-      // Magnitudes below the EPS_REL crossover (1e-9 / 0.01 = 1e-7 pc
-      // ≈ 0.02 AU) clamp to the floor.
-      expect(frameTriggerEps(1e-8)).toBe(1e-9);
-      expect(frameTriggerEps(1e-7)).toBeCloseTo(1e-9, 12);
-    });
-
-    it('demonstrates the zoom-out fix at first-load 5 AU magnitude', () => {
-      // First-load parks the camera at 5 AU on a ~(-0.063, 0.799,
-      // 0.600) unit vector. The dominant component is y at ~0.8 of
-      // magnitude. Threshold for y to trip = eps / |y_unit|.
-      // Pre-fix: eps = 1e-3 pc absolute → trip distance = 1e-3 /
-      //   0.799 ≈ 1.25e-3 pc ≈ 258 AU.
-      // Post-fix: eps = mag * 0.01 = 5 AU * 0.01 = 0.05 AU per axis,
-      //   so the y-component trips after a zoom of 0.05 / 0.8 ≈ 0.06
-      //   AU — orders of magnitude finer.
-      const fiveAU = 5 * AU_PC;
-      const eps = frameTriggerEps(fiveAU);
-      const yUnit = 0.799;
-      const tripDistanceAU = eps / yUnit / AU_PC;
-      // At least 1000× tighter than the prior 258 AU — exact value
-      // here is ~0.0626 AU.
-      expect(tripDistanceAU).toBeLessThan(0.1);
-    });
-  });
 });
 
 // Wiring around the pure path helpers (share-path-pure.test.ts covers the
@@ -1861,6 +1871,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       getWorldOffset: () => mockVec3() as any,
       setWorldOffset: () => {},
+      focusables: mockFocusables(),
       focus: partialOf<Stellata['focus']>({
         getFocusedStar: () => state.focusedStar,
         getFocusedTarget: () =>
