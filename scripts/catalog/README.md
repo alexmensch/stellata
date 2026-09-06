@@ -9,11 +9,9 @@ Stellarium → `public/catalog.bin.<i>` transport chunks +
 Run via `pnpm run build:catalog`.
 
 Membership is `data/membership/membership-manifest.tsv` less the § 6.1 parks,
-and nothing else — `data/athyg/` left this build's input set entirely.
-Classic designations arrive on the manifest already merged, so this build
-applies no label layer of its own (`classic-ids/README.md` § The label merge).
-The contract is `docs/catalog-driver.md`; the membership term is
-`membership/README.md`.
+and nothing else — `data/athyg/` left this build's input set entirely. Classic
+designations arrive already merged, so this build applies no label layer of its
+own. Contract: `docs/catalog-driver.md`; term: `membership/README.md`.
 
 This file owns the **output contract**: the on-disk record layout, SID
 allocation, the search index, and the Apsis surfacing. The per-stage work
@@ -22,8 +20,8 @@ lives in the subfolders.
 ## Subfolders
 
 - `astrometry-request/` — the Gaia 5p pull's source_id list: the manifest's
-  `gaia_source_id` column plus the classic-ID gate's candidates. Input
-  preparation for `scripts/refresh/`, not on the `build:catalog` path.
+  `gaia_source_id` column plus the classic-ID gate's candidates and the
+  bound-pair siblings. Input preparation, not on the `build:catalog` path.
 - `parse/` — the per-row pipeline (`readStars`), reference-catalogue
   parsers, space-motion velocity, and Stellarium stick figures. Its
   `gcvs/` subfolder owns the variable-star parsing and the variability
@@ -54,16 +52,15 @@ lives in the subfolders.
 - `photometry/` — the published Gaia broadband relations and the two
   cascades over them: Johnson V, and the B−V colour index.
 - `classic-ids/` — the frozen-CDS overlay build
-  (`pnpm run build:classic-ids` → `data/classic-ids/`) AND the label layer
-  `build:membership` applies with it: the per-identifier merge with its
-  collision guard. The record build takes only the
-  designation-constellation cascade, as a post-pass over `readStars`.
+  (`pnpm run build:classic-ids` → `data/classic-ids/`) and the per-identifier
+  label merge `build:membership` applies with it. The record build takes only
+  the designation-constellation cascade, as a post-pass over `readStars`.
 - `membership/` — the membership term: the primaries-derived manifest
-  (`pnpm run build:membership` → `data/membership/`), its parity gate, and
-  the § 6.1 ledgers. `parse/` streams it through `iterManifestTsv`.
+  (`pnpm run build:membership` → `data/membership/`), its parity gate and the
+  § 6.1 ledgers. `parse/` streams it through `iterManifestTsv`.
 - `spine/` — AT-HYG's merge decisions, frozen: `data/athyg/inherited-spine.tsv`,
-  its codec, and the guard holding it byte-stable. Read by `build:membership`
-  and by the manifest's gate, not by `build:catalog`.
+  its codec and byte guard. Read by `build:membership` and the manifest gate,
+  never by `build:catalog`.
 - `validate/` — the Tier-A/B validation harness, `verify-catalog`, the
   SIMBAD-sample cross-check, and the frozen regression corpora.
 
@@ -272,7 +269,7 @@ read shapes exist because the sinks differ, not the bytes: the AoS reader
 yields one `CatalogRecord` object per call, while the SoA loader fills
 parallel typed arrays and does so **column-at-a-time** — one kind
 dispatch per column, then a tight constant-getter loop, which decodes the
-330k-record catalog ~35% faster than a per-record pass over every field.
+380k-record catalog ~35% faster than a per-record pass over every field.
 `scripts/catalog/catalog-pure.test.ts` § record reader surface pins the
 two read shapes against each other and against the writer. Free flag bits today are `0x40`, `0x80` (see
 `FLAG_*` exports). `0x08` is `FLAG_BINARY_COMPANION_ONLY` — set on

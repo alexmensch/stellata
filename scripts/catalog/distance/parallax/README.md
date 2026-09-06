@@ -255,17 +255,32 @@ above it, which is a different and unintended event. The park is counted as
 `../../membership/membership-manifest-gate.test.ts`, which subtracts the ledger
 from the manifest by key before comparing designation multisets.
 
-**Companion promotion may not walk a parked record back in.** multiples.tsv
-states a distance for every component, and for a parked row that distance is
-the measurement a tier above already refused — σ Ori Aa's pair row reads
-`astrometry_via=hip2_long_baseline` at 328.947368 pc, which is 3.0400000 mas,
-the refused HIP2 value to eight significant figures. Promoting it would
-re-serve a refusal through a courier, which is the general rule at the head of
-§ The skip rules. Measured across all 44 parked rows multiples.tsv carries a
-row for: `astrometry_via` is `system_inherited` 65 and `hip2_long_baseline` 61,
-and `gaia_5p` **zero** — not one of them has an independent per-component fit
-behind it, so there is no case where promotion supplies an owned distance. The
-refusal is counted as `companionDroppedParkedRecord`.
+**Companion promotion may not walk a REFUSED record back in.** multiples.tsv
+states a distance for every component, and for a row parked on
+`refused_no_defensible_parallax` that distance is the refused measurement
+itself — σ Ori Aa's pair row reads `astrometry_via=hip2_long_baseline` at
+328.947368 pc, which is 3.0400000 mas, the refused HIP2 value to eight
+significant figures. Promoting it would re-serve a refusal through a courier,
+which is the general rule at the head of § The skip rules. Measured across all
+44 parked rows multiples.tsv carries a row for: `astrometry_via` is
+`system_inherited` 65 and `hip2_long_baseline` 61, and `gaia_5p` **zero** — not
+one of them has an independent per-component fit behind it, so there is no case
+where promotion supplies an owned distance. The refusal is counted as
+`companionDroppedParkedRecord`.
+
+**The other two park reasons do not reach it, and widening the refusal to every
+park is a bug.** There is nothing to launder on a row parked because *nothing
+was ever published*: the pair row's distance is then the anchor's own, not a
+refused value — α Her's components read 110.25 pc, which is Rasalgethi's HIP2
+distance, while the blend it shares an id with (HD 156015) has no parallax at
+all. `no_v_magnitude` is further still: that row was placed, only unlit. The
+discriminator that makes this safe is structural — where a parallax genuinely
+*was* refused the primary parks too, so the whole system leaves together and no
+component is stranded, whereas the other reasons routinely park a companion
+whose primary is still in the catalogue. Measured over the 35 pair rows the
+gate sees: all 9 refused-parallax systems have no primary record, against 6 of
+13 on the other two reasons. Widening it is what cost Rasalgethi its B and Bb
+when the primaries began admitting HD 156015.
 
 **Most rows it refuses are the parked primary's siblings, not the parked record
 arriving twice.** Stage 2/3 bind one blended source to every component row of a

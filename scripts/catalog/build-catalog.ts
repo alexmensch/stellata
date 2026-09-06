@@ -322,7 +322,6 @@ async function main() {
     namingDuplicateRecords: 0,
     desigConFromCrossIndex: 0,
     crossIndexUnknownCst: 0,
-    droppedNoDirection: 0,
     droppedTooFar: 0,
     bjEntries: 0,
     bjEligible: 0,
@@ -395,6 +394,7 @@ async function main() {
     companionBlendDimMisfit: 0,
     companionRepositionedCollocatedDouble: 0,
     companionConstellationSplitFromAnchor: 0,
+    companionExistingDesigConFromAnchor: 0,
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
     hipVMagEntries: 0,
@@ -568,7 +568,6 @@ async function main() {
   await writeSimbadSourcedDistances(stars);
   // recordCount is the final post-promotion count; populated after the
   // companion-promotion pass below.
-  counts.droppedNoDirection = stats.dropped.noDirection;
   counts.droppedTooFar = stats.dropped.tooFar;
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
@@ -797,6 +796,7 @@ async function main() {
     counts.companionBlendDimMisfit = ps.blendDimMembersMisfit;
     counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
     counts.companionConstellationSplitFromAnchor = ps.constellationSplitFromAnchor;
+  counts.companionExistingDesigConFromAnchor = ps.existingDesigConFromAnchor;
 
   } else {
     console.log('multiples.tsv not found; skipping companion promotion.');

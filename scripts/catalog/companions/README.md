@@ -90,13 +90,15 @@ Per-row gates and resolution:
   strips it rather than colliding with the primary in every
   gaia-keyed lookup, and build-runtime-binaries retries the
   synth key when its id-first resolve degenerates.
-- **Parked-record refusal.** A row carrying a parked record's identifier never
-  promotes — its stated distance inverts the parallax a tier above refused.
-  Mostly the parked primary's SIBLINGS, which inherit its blended id, so this
-  runs **before** the inheritance gates below: those would strip the borrowed
-  id and mint a synth record at that same refused distance. Counted
-  `companionDroppedParkedRecord`; argument and worked case in
-  `../distance/parallax/README.md` § Companion promotion.
+- **Refused-parallax refusal.** A row carrying the identifier of a record
+  parked on `refused_no_defensible_parallax` never promotes — its stated
+  distance inverts the parallax a tier above refused. Mostly that primary's
+  SIBLINGS, which inherit its blended id, so this runs **before** the
+  inheritance gates below: those would strip the borrowed id and mint a synth
+  record at that same refused distance. The other two park reasons deliberately
+  do NOT block promotion; `parkedIdentifiers` filters them out at construction
+  and says why. Counted `companionDroppedParkedRecord`; argument and worked
+  case in `../distance/parallax/README.md` § Companion promotion.
 - **Cursor-primary anchor.** findExistingPrimary walks gaia →
   hip → proper name (position-guarded, for GJ-only AT-HYG rows
   carrying neither id — ξ UMa A). An unresolvable primary would
@@ -108,9 +110,9 @@ Per-row gates and resolution:
   is the only case in the catalog), that record IS the companion: it is
   repositioned in place (gaia backfilled from the row) instead of minting
   a duplicate. The probe reads AT-HYG's own convention and nothing else —
-  the index it hits holds spine `proper` cells alone, so a base composed
-  off a Bayer or catalogue designation could never match one and none is
-  tried.
+  the index it hits holds the manifest's `proper` cells alone, so a base
+  composed off a Bayer or catalogue designation could never match one and none
+  is tried.
 - **Position.** Prefer the row's own xyz when its astrometry is a
   real per-component fit AND its xyz differs from the primary row's
   xyz. Else apply a sky-tangent projection from the EXISTING catalog

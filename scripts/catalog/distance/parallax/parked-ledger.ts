@@ -11,11 +11,15 @@ export const PARKED_LEDGER_FILE = 'data/membership/parked-ledger.tsv';
  *  refused; `no_parallax_published` is a row nothing ever measured. The two
  *  have different futures — the first reinstates when Gaia DR4 fits the blend,
  *  the second needs someone to measure the star. `no_v_magnitude` is a row
- *  placed but unlit: no V tier reaches it, and a record needs both. */
+ *  placed but unlit: no V tier reaches it, and a record needs both.
+ *  `no_position` is the mirror of that last one — lit, and given a distance by
+ *  a bound sibling, but no direction tier states where on the sky it is, so
+ *  there is nothing to multiply the distance by. */
 export const PARKED_REASONS = [
   'refused_no_defensible_parallax',
   'no_parallax_published',
   'no_v_magnitude',
+  'no_position',
 ] as const;
 
 export type ParkedReason = (typeof PARKED_REASONS)[number];

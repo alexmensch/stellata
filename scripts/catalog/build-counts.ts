@@ -65,15 +65,6 @@ export interface BuildCounts {
    *  multiples.tsv member row — multiplicityStatus =
    *  MULTIPLICITY_UNRESOLVED (spectroscopic binaries, 64 Vir class). */
   multiplicityUnresolved: number;
-  /** Manifest rows `readStars` dropped past the § 6.1 parks, per gate. **Both
-   *  must stay 0.** A row that reaches a parallax and a V but no direction, or
-   *  lands past MAX_DIST_PC after every override, is a reference table
-   *  disagreeing with the tiers above it — a refreshed Bailer-Jones or LMC
-   *  input pushing a row out, or an astrometry table that stopped resolving a
-   *  direction. Pinning them here is what turns that into a build failure
-   *  instead of a record silently leaving the catalogue
-   *  (docs/catalog-driver.md § 6). */
-  droppedNoDirection: number;
   droppedTooFar: number;
   /** Total entries in the Bailer-Jones DR3 distance TSV (parsed map size). */
   bjEntries: number;
@@ -330,6 +321,9 @@ export interface BuildCounts {
    *  their anchor's — a pair wide enough to straddle a boundary, which
    *  inheriting the anchor's index used to hide. */
   companionConstellationSplitFromAnchor: number;
+  /** Existing records a pair row resolved to that took the anchor's
+   *  designation constellation, carrying none of their own. */
+  companionExistingDesigConFromAnchor: number;
   /** Catalog records carrying a multiples.tsv component designation
    *  (`cl`/`cp` on their SearchEntry) — the WDS root's naming anchor plus
    *  the letter, which both the display-name composer and the

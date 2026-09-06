@@ -238,13 +238,11 @@ function altCells(cell: string): number[] {
   return cell === '' ? [] : cell.split(MANIFEST_VALUE_SEPARATOR).map(Number);
 }
 
-/** The gates a manifest row can still fail after the § 6.1 parks. Both are
- *  pinned at 0 in build-catalog-expected.json: a row that reaches a parallax
- *  and a V but no direction, or lands past MAX_DIST_PC after every override,
- *  is a reference table disagreeing with the tiers above it, never a
- *  membership decision — those are the parked ledger's. */
+/** The one gate a manifest row can still fail that is NOT a § 6.1 park.
+ *  Pinned at 0 in build-catalog-expected.json: a row landing past MAX_DIST_PC
+ *  after every override is a reference table disagreeing with the tiers above
+ *  it, never a membership decision — those are the parked ledger's. */
 export interface ReadStarsDrops {
-  noDirection: number;
   tooFar: number;
 }
 
@@ -363,7 +361,7 @@ export function readStars(
   const rows = iterManifestTsv(readFileSync(manifestTsvPath, 'utf8'));
 
   const stars: Star[] = [];
-  const dropped: ReadStarsDrops = { noDirection: 0, tooFar: 0 };
+  const dropped: ReadStarsDrops = { tooFar: 0 };
   let total = 0;
   const parked: ParkedRecord[] = [];
   let bjEligible = 0;
@@ -508,8 +506,13 @@ export function readStars(
       { ...simbadKeys, simbad: simbadRow?.astrometry ?? null, isSol },
       directions,
     );
+    // A § 6.1 park, not a drop: no tier states where this row is, so its
+    // distance has nothing to multiply. Mostly HIP-only additions a bound
+    // sibling placed and printed HIP photometry lit, which no positional tier
+    // reaches — the SIMBAD values cohort is still keyed on the spine and holds
+    // no row for them.
     if (dirRes === null) {
-      dropped.noDirection++;
+      parked.push(parkedRecord('no_position'));
       continue;
     }
 

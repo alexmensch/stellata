@@ -22,13 +22,17 @@ const UNLIT: ParkedRecord = {
   gaiaSourceId: '4576147844112599424',
   reason: 'no_v_magnitude',
 };
+const PLACELESS: ParkedRecord = {
+  tyc: null, hip: 10270, hd: null, gl: null, gaiaSourceId: null,
+  reason: 'no_position',
+};
 
 describe('parked-ledger', () => {
   it('round-trips a written ledger back to the keys the parity gate matches on', () => {
     const rows = parseParkedRecordsTsv(
-      formatParkedRecordsTsv([SIGMA_ORI, NO_IDS, UNLIT]),
+      formatParkedRecordsTsv([SIGMA_ORI, NO_IDS, UNLIT, PLACELESS]),
     );
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(4);
     expect(rows.map((r) => r.reason).sort()).toEqual([...PARKED_REASONS].sort());
     expect(rows.map((r) => r.recordKey)).toContain(parkedRecordKey({
       tyc: '4771-1188-1', hip: '26549', hd: '37468', gl: '',
@@ -42,6 +46,15 @@ describe('parked-ledger', () => {
     expect(row.recordKey).toBe(parkedRecordKey({
       tyc: '1234-567-1', hip: '', hd: '999999', gl: '',
       gaia_source_id: '4576147844112599424',
+    }));
+  });
+
+  it('carries a park no direction tier could place — lit and given a distance '
+    + 'by a bound sibling, with nothing to point it at', () => {
+    const [row] = parseParkedRecordsTsv(formatParkedRecordsTsv([PLACELESS]));
+    expect(row.reason).toBe('no_position');
+    expect(row.recordKey).toBe(parkedRecordKey({
+      tyc: '', hip: '10270', hd: '', gl: '', gaia_source_id: '',
     }));
   });
 

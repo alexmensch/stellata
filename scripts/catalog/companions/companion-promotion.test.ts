@@ -2690,7 +2690,10 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   it('refuses it once the ledger names the record, and counts the refusal', () => {
     const { newStars, stats } = promoteCompanions(
       rows, [anchor], CON_ASSIGNMENT, null,
-      parkedIdentifiers([{ gaiaSourceId: PARKED_SOURCE, hip: PARKED_HIP }]),
+      parkedIdentifiers([{
+        gaiaSourceId: PARKED_SOURCE, hip: PARKED_HIP,
+        reason: 'refused_no_defensible_parallax',
+      }]),
     );
     expect(newStars).toHaveLength(0);
     expect(stats.droppedParkedRecord).toBe(1);
@@ -2700,7 +2703,10 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   it('names a parked record by its HIP alone — the no-Gaia half of the cohort', () => {
     const { stats } = promoteCompanions(
       rows, [anchor], CON_ASSIGNMENT, null,
-      parkedIdentifiers([{ gaiaSourceId: null, hip: PARKED_HIP }]),
+      parkedIdentifiers([{
+        gaiaSourceId: null, hip: PARKED_HIP,
+        reason: 'refused_no_defensible_parallax',
+      }]),
     );
     expect(stats.droppedParkedRecord).toBe(1);
   });
@@ -2750,9 +2756,36 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
     + 'the inheritance gates can turn it into a synth record', () => {
     const { newStars, stats } = promoteCompanions(
       blendedRows, [blendedPrimary], CON_ASSIGNMENT, null,
-      parkedIdentifiers([{ gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP }]),
+      parkedIdentifiers([{
+        gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP,
+        reason: 'refused_no_defensible_parallax',
+      }]),
     );
     expect(newStars).toHaveLength(0);
     expect(stats.droppedParkedRecord).toBe(1);
   });
+
+  // alpha Her's shape: the primaries admit HD 156015, no parallax is published
+  // for the blend, and it parks. The pair row's distance is Rasalgethi's own
+  // HIP2 value, so there is no refused measurement here to launder — refusing
+  // the row would strand B and Bb beside a primary that is still in the
+  // catalogue.
+  it.each([
+    ['no_parallax_published'],
+    ['no_v_magnitude'],
+  ] as const)(
+    'promotes the sibling anyway where the park was %s — no measurement was '
+    + 'refused, so there is nothing for the row to be laundering',
+    (reason) => {
+      const { newStars, stats } = promoteCompanions(
+        blendedRows, [blendedPrimary], CON_ASSIGNMENT, null,
+        parkedIdentifiers([{
+          gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP, reason,
+        }]),
+      );
+      expect(newStars).toHaveLength(1);
+      expect(newStars[0].syntheticId).toBe('synth-01425+5000-B');
+      expect(stats.droppedParkedRecord).toBe(0);
+    },
+  );
 });

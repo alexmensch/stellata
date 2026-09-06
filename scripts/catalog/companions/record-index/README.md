@@ -25,7 +25,7 @@ scripts/catalog/companions/record-index/
 turns a `multiples.tsv` row back into a record, and
 `resolvePairComponents` is the **TypeScript twin of
 `build-runtime-binaries.py`'s `resolve_idx`**, including both of that
-writer's blended-sibling synth retries: each pair end re-homes onto its
+writer's blended-sibling synth retries (the wings pass adds a third, below): each pair end re-homes onto its
 own distinct synth slot whenever promotion minted one, and a synth slot
 exists only for a row whose ids were inherited then stripped, so it is
 always the truer target (Castor Ca inside the outer pair,
@@ -37,11 +37,21 @@ different languages in different processes. `multi-star-regression.test.ts`
 pins the correspondence against the real artifact, so drift on either
 side fails.
 
-Two of the writer's post-resolution steps are **not** replicated
-(`override_inner_primary_indices`, the relation-winner dedup). They
-change *which* index anchors a pair, never the distinct-pair boolean the
-wings gate keys on, and root-grouping plus the brightest-participant pick
-absorb the difference.
+The writer's **`override_inner_primary_indices`** — an inner pair's primary
+forced onto its PARENT component's slot — is replicated, by
+`reHomeToParent`. It was left out while it only changed *which* index
+anchors a pair, which root-grouping and the brightest-participant pick
+absorb. That stopped being true once the primaries began admitting
+components in their own right: where a component carries no identifier of
+its own AND its parent does, the re-home is the only thing that resolves
+the pair at all, so skipping it drops the system from the wings set
+entirely. WDS 02536-6420 is the case — Ba resolves to nothing while B
+(HD 18341, an addition) and synth Bb both ship, and `binaries.bin` renders
+the pair through B.
+
+The relation-winner dedup is still **not** replicated: it changes only which
+of several rows wins one relation, never whether two distinct records face
+each other.
 
 ## Renderable-companion wings
 
