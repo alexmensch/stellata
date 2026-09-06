@@ -54,7 +54,7 @@ const GLIESE_TSV = [
 
 /** Spine: Sol; HD 100001 / HIP 10 bound and reproduced by the TYC walk; HD 5
  *  bound by AT-HYG alone with SIMBAD corroborating; HD 40 bound by AT-HYG alone
- *  and contradicted; Gl 165A with a HIP the HIP walk binds; HIP 50 carrying an
+ *  and contradicted; Gl 165A with a HIP the HIP walk binds; HIP 70 carrying an
  *  HD and a Flamsteed number no primary publishes. */
 const spine: SpineRow[] = [
   spineRow({ proper: 'Sol' }),
@@ -62,7 +62,7 @@ const spine: SpineRow[] = [
   spineRow({ tyc: '1-2-1', hd: '5', gaia_source_id: '222' }),
   spineRow({ tyc: '9-8-1', hd: '40', gaia_source_id: '888' }),
   spineRow({ tyc: '7-7-1', hip: '20', gl: 'Gl 165A', gaia_source_id: '333' }),
-  spineRow({ hip: '50', hd: '70000', flam: '5' }),
+  spineRow({ hip: '70', hd: '70000', flam: '5' }),
 ];
 
 /** Primaries admitting, beyond the spine: TYC 2-1-1 (HD 60, below the link
@@ -110,7 +110,7 @@ const tables: PrimaryTables = {
     { cns5: 0, gj: 'Sun', gjComp: null, gaiaSourceId: null, hip: null, astrometry: null },
   ],
   gliese: parseGlieseTsv(GLIESE_TSV),
-  hipI239: new Set([10, 20, 30, 40, 50]),
+  hipI239: new Set([10, 20, 30, 40, 50, 70]),
   hdI239: new Set<number>(),
   glAliases: new Map<string, string[]>(),
   hip2: new Set<number>(),
@@ -180,11 +180,11 @@ describe('buildMembership — the spine side', () => {
   });
 
   it('drops the spine labels no primary attests onto the label ledger', () => {
-    const row = result.rows.find((r) => r.hip === '50')!;
+    const row = result.rows.find((r) => r.hip === '70')!;
     expect(row).toMatchObject({ hd: '', flam: '', routes: 'hip:i239' });
     expect(result.labelDrops).toEqual([
-      { tyc: '', hip: '50', hd: '', gl: '', gaia_source_id: '', cell: 'hd', value: '70000', reason: 'hd_unattested' },
-      { tyc: '', hip: '50', hd: '', gl: '', gaia_source_id: '', cell: 'flam', value: '5', reason: 'flamsteed_unattested' },
+      { tyc: '', hip: '70', hd: '', gl: '', gaia_source_id: '', cell: 'hd', value: '70000', reason: 'hd_unattested' },
+      { tyc: '', hip: '70', hd: '', gl: '', gaia_source_id: '', cell: 'flam', value: '5', reason: 'flamsteed_unattested' },
     ]);
     expect(result.counts.labelDropsByReason).toEqual({ flamsteed_unattested: 1, hd_unattested: 1 });
     expect(result.counts.unattestedByCell.hd).toBe(0);

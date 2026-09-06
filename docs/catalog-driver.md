@@ -37,7 +37,7 @@ fields            = per-field source cascades keyed on gaia_source_id
 
 Membership is **not** derived by re-binding the classic catalogues to
 Gaia: the frozen cross-walks cannot reproduce a `gaia_source_id` for
-11,736 rows AT-HYG matched by routes we cannot replay, and re-deriving
+11,731 rows AT-HYG matched by routes we cannot replay, and re-deriving
 them positionally is forbidden (source-ID anchoring, never position).
 The spine enumerates them for now. § 3.1 measured what those rows are —
 zero records that exist on AT-HYG's authority alone, and bindings
@@ -330,13 +330,13 @@ parks on the existing ledger under the existing codes — Tycho-2 publishes no
 parallax, so most of the ~4.5k with neither a DR3 neighbour nor a HIP park,
 as do CNS5's 514 without a DR3 id, which no V tier reaches. Identity rides
 on the manifest's `binding` column, four classes: `crosswalk_gated`
-358,580 (a gated walk binds the source, or reproduces the spine's) ·
+358,576 (a gated walk binds the source, or reproduces the spine's) ·
 `simbad_corroborated` 11,697 (the spine's binding, corroborated as above) ·
 `reviewed` 34 (the spine's binding, kept by its disposition row) · `none`
-6,623 (the 1,371 spine rows with no id, Sol among them; additions no gated
+6,622 (the 1,371 spine rows with no id, Sol among them; additions no gated
 walk binds). The review queue is `data/membership/binding-review.tsv` with
 its dispositions beside it — a SID event only where the canonical key was
-the Gaia id — zero rows. Scale for the swap: 63,677 mints, zero
+the Gaia id — zero rows. Scale for the swap: 63,672 mints, zero
 retirements, zero reinstatements.
 
 **The replacement parity gate.** The spine could not be regenerated (§ 3)
