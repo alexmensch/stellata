@@ -28,8 +28,9 @@ render-rules.md         What every layer owes the frame: draw at visible
                         property, one writer per buffer per submit,
                         submits and passes as costs, and the measurement
                         canon (wall clock is the total, only
-                        differentials price a pass, every renderer PR
-                        states its measured cost). Read before
+                        differentials price a pass, the whole-frame gate
+                        reads the GPU stream, every renderer PR states
+                        its measured cost). Read before
                         adding or touching a render layer, a pass, or a
                         per-frame buffer write.
 bd-workflow.md          Long-form bd procedures that fire on a trigger

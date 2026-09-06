@@ -323,10 +323,10 @@ instrument is `src/client/debug/frame-cost/README.md` § Priced passes.
 **Rule.** Wall clock is the total; GPU slots are attribution. Only a
 differential prices a pass. Every renderer-touching PR states its
 measured frame cost — the cost of a feature is known before it merges,
-not discovered in an audit. Once the perf pin exists (stellata-8cg.49.11
-decides it, .12 builds it) the statement is the runner's diff against
-the pin; until then it is a `debug.priceFrame()` differential at the
-canonical vantages, before and after, pasted into the PR body.
+not discovered in an audit. The statement is the runner's diff against
+the perf pin (`RELEASING.md` § Perf pin; stellata-8cg.49.12 builds the
+tooling); until that lands it is a `debug.priceFrame()` differential at
+the canonical vantages, before and after, pasted into the PR body.
 
 **Why and how, as a list — each line has been paid for:**
 
@@ -338,6 +338,14 @@ canonical vantages, before and after, pasted into the PR body.
   to a frame rate. `debug.priceFrame()` automates the differential
   (`debug/frame-cost/README.md` owns the roster, the gates `noiseMs` /
   `bracketMs`, and how to read a row).
+- **The whole-frame comparison reads the GPU-stream median, not wall.**
+  Wall time at a canon vantage is quantised to the display's refresh
+  interval: the median sits on a multiple of it whatever the frame costs,
+  so it resolves nothing under one interval and jumps a whole one when it
+  moves. The pin gates on the GPU-stream p50 where the backend supplies
+  one and records wall beside it (`RELEASING.md` § Perf pin). This is the
+  frame's own span, not a per-pass slot — attribution is still a
+  differential.
 - **Absolute numbers do not reproduce; ratios at the same buffer and the
   same clock do.** The frame is linear in pixels, so `bufferMpx` is
   stamped on every row and only same-buffer tables compare. `method`
