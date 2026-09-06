@@ -366,6 +366,16 @@ describe('codecs', () => {
     expect(() => parseManifestTsv('hip\ttyc\n')).toThrow(/header mismatch/);
   });
 
+  // One reader behind all four codecs, so a short row throws wherever it lands
+  // rather than parsing into blanks the ledger's key columns cannot tell from
+  // a genuinely empty cell.
+  it('refuses a row that does not carry every column', () => {
+    const ledger = `${['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'].join('\t')}\n`;
+    expect(() => parseLedgerTsv(`${ledger}1-1-1\t\t\n`)).toThrow(/3 cells, expected 6/);
+    const drops = `${['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'cell', 'value', 'reason'].join('\t')}\n`;
+    expect(() => parseLabelDropsTsv(`${drops}1-1-1\t\t\n`)).toThrow(/3 cells, expected 8/);
+  });
+
   it('parses dispositions under the closed enums, refusing an unstated basis or evidence', () => {
     const header = 'gaia_source_id\tdisposition\tbasis\tevidence\n';
     const parsed = parseBindingDispositionsTsv(`${header}888\tkeep\ttycho2_position\tsep 0.1"\n`);

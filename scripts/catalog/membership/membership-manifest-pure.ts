@@ -217,13 +217,17 @@ export function serializeManifest(rows: readonly ManifestRow[]): string {
   return `${lines.join('\n')}\n`;
 }
 
-/** Demands the header byte for byte, as `iterSpineTsv` does: the only writer is
- *  `serializeManifest`, so a header that merely parses was never shipped. */
-export function* iterManifestTsv(text: string): Generator<ManifestRow> {
+/** Demands the header byte for byte, as `iterSpineTsv` does: the only writers
+ *  are this module's serializers, so a header that merely parses was never
+ *  shipped. Walks the text rather than splitting it — the manifest runs to tens
+ *  of megabytes, and every reader here shares the walk. */
+function* tsvRows(
+  text: string, columns: readonly string[], label: string,
+): Generator<string[]> {
   const headerEnd = text.indexOf('\n');
   const header = headerEnd === -1 ? text : text.slice(0, headerEnd);
-  if (header !== MANIFEST_COLUMNS.join('\t')) {
-    throw new Error(`membership-manifest header mismatch: got ${header}`);
+  if (header !== columns.join('\t')) {
+    throw new Error(`${label}: header mismatch: got ${header}`);
   }
   let start = headerEnd === -1 ? text.length : headerEnd + 1;
   while (start < text.length) {
@@ -232,14 +236,26 @@ export function* iterManifestTsv(text: string): Generator<ManifestRow> {
     start = end === -1 ? text.length : end + 1;
     if (line === '') continue;
     const cells = line.split('\t');
-    if (cells.length !== MANIFEST_COLUMNS.length) {
+    if (cells.length !== columns.length) {
       throw new Error(
-        `membership-manifest row has ${cells.length} cells, expected ${MANIFEST_COLUMNS.length}`,
+        `${label}: row has ${cells.length} cells, expected ${columns.length}: "${line}"`,
       );
     }
-    const row = {} as ManifestRow;
-    MANIFEST_COLUMNS.forEach((c, i) => { row[c] = cells[i]; });
-    yield row;
+    yield cells;
+  }
+}
+
+function rowFrom<C extends string>(
+  columns: readonly C[], cells: readonly string[],
+): Record<C, string> {
+  const row = {} as Record<C, string>;
+  columns.forEach((c, i) => { row[c] = cells[i]; });
+  return row;
+}
+
+export function* iterManifestTsv(text: string): Generator<ManifestRow> {
+  for (const cells of tsvRows(text, MANIFEST_COLUMNS, MEMBERSHIP_MANIFEST_FILE)) {
+    yield rowFrom(MANIFEST_COLUMNS, cells);
   }
 }
 
@@ -253,16 +269,8 @@ export function serializeLedger(rows: readonly AdditionLedgerRow[]): string {
 }
 
 export function parseLedgerTsv(text: string): AdditionLedgerRow[] {
-  const [header, ...lines] = text.trimEnd().split('\n');
-  if (header !== LEDGER_COLUMNS.join('\t')) {
-    throw new Error(`${ADDITIONS_LEDGER_FILE}: unexpected header "${header}"`);
-  }
-  return lines.filter((l) => l !== '').map((line) => {
-    const cells = line.split('\t');
-    const row = {} as AdditionLedgerRow;
-    LEDGER_COLUMNS.forEach((c, i) => { row[c] = cells[i] ?? ''; });
-    return row;
-  });
+  return [...tsvRows(text, LEDGER_COLUMNS, ADDITIONS_LEDGER_FILE)]
+    .map((cells) => rowFrom(LEDGER_COLUMNS, cells));
 }
 
 function compareBigIntStrings(a: string, b: string): number {
@@ -281,18 +289,6 @@ export function serializeBindingReview(rows: readonly BindingReviewRow[]): strin
   return `${[BINDING_REVIEW_COLUMNS.join('\t'), ...lines].join('\n')}\n`;
 }
 
-function tsvLines(text: string, header: readonly string[], label: string): string[][] {
-  const [first, ...lines] = text.replace(/\n$/, '').split('\n');
-  if (first !== header.join('\t')) throw new Error(`${label}: unexpected header "${first}"`);
-  return lines.filter((l) => l !== '').map((line) => {
-    const cells = line.split('\t');
-    if (cells.length !== header.length) {
-      throw new Error(`${label}: row has ${cells.length} cells, expected ${header.length}: "${line}"`);
-    }
-    return cells;
-  });
-}
-
 function oneOf<T extends string>(
   value: string, allowed: readonly T[], what: string, label: string,
 ): T {
@@ -304,7 +300,7 @@ function oneOf<T extends string>(
 
 export function parseBindingDispositionsTsv(text: string): Map<string, BindingDispositionRow> {
   const out = new Map<string, BindingDispositionRow>();
-  for (const [gaia_source_id, disposition, basis, evidence] of tsvLines(
+  for (const [gaia_source_id, disposition, basis, evidence] of tsvRows(
     text, BINDING_DISPOSITION_COLUMNS, BINDING_DISPOSITIONS_FILE,
   )) {
     if (!/^\d+$/.test(gaia_source_id)) {
@@ -332,9 +328,8 @@ export function serializeLabelDrops(rows: readonly LabelDropRow[]): string {
 }
 
 export function parseLabelDropsTsv(text: string): LabelDropRow[] {
-  return tsvLines(text, LABEL_DROP_COLUMNS, LABEL_DROPS_FILE).map((cells) => {
-    const row = {} as LabelDropRow;
-    LABEL_DROP_COLUMNS.forEach((c, i) => { row[c] = cells[i]; });
+  return [...tsvRows(text, LABEL_DROP_COLUMNS, LABEL_DROPS_FILE)].map((cells) => {
+    const row = rowFrom(LABEL_DROP_COLUMNS, cells);
     oneOf(row.reason, LABEL_DROP_REASONS, 'reason', LABEL_DROPS_FILE);
     return row;
   });
