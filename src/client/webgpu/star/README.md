@@ -171,8 +171,8 @@ Two paths, picked by whether the writer reported three.js update ranges:
   `MAX_PARTIAL_RANGES` and collapse into a full upload.
 - **Whole-buffer** — a bare `needsUpdate`, which is what
   `EclipsePhotometryField` and the shell's re-attach inits set. Costs a
-  380k-iteration re-pack on the CPU plus a **6.1 MB** `writeBuffer`
-  (380k × vec4 × 4 B), against 1.5 MB for the WebGL scalar it replaces.
+  390k-iteration re-pack on the CPU plus a **6.2 MB** `writeBuffer`
+  (390k × vec4 × 4 B), against 1.6 MB for the WebGL scalar it replaces.
   During an active eclipse that is **every frame**: ~320 MB/s of upload
   traffic at 60 Hz, which on a low-end integrated or mobile GPU sharing
   system memory with the display is the kind of figure that shows up in
@@ -281,7 +281,7 @@ be a second write of a value already in the buffer:
 
 Splitting the draw in two — a depth-writing core plus a
 depthWrite-off halo — was the first cut, and it worked, but it doubled
-this pass's per-corner cost: a second full 380k-instance draw running
+this pass's per-corner cost: a second full 390k-instance draw running
 the whole distance / magnitude / pulsation / colour-lookup chain to
 re-derive varyings the first draw already had. Three draws is WebGL2's
 own count; four was the migration costing more than the renderer it

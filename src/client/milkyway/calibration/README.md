@@ -195,20 +195,21 @@ The 25.01 is *not* published; `diffuse-reference.ts` builds it:
 | | mag/arcsec² |
 | --- | --- |
 | Leinert et al. 1998 Table 24, NGP — **total** starlight | 23.83 |
-| The 384,113 catalogue stars Stellata already draws | 24.275 |
+| The PENDING_COUNT catalogue stars Stellata already draws | PENDING_NGP |
 | Residual left for the diffuse band | **25.01** |
 
 **The catalogue row is re-derived per build, and the residual moves with
 it.** The manifest-driven catalogue took the pole from 24.286 to 24.275 —
 the additions are faint, so the centre does not move at three decimals and
 the pole gains 0.011 mag — which widens this check by 0.021 and no more.
-Replaying the reduction over the current build reproduces both constants
-exactly (22.3737 / 24.2748 over 11,662 and 1,154 stars): a record has to land
-INSIDE a 10° cap to move one, and every record the set has gained or lost
-since sits far outside both. So `recordCount` moves without moving this row —
-re-derive the constants when a record lands within 10° of a pole, not
-whenever the count changes. Nothing rendered moves either: both constants are
-read by tests alone.
+**A record has to land INSIDE a 10° cap to move a constant**, so
+`recordCount` can move without moving either row — re-derive when a record
+lands within 10° of a pole, not whenever the count changes. The branch-first
+anchor change reproduced both exactly (22.3737 / 24.2748 over 11,662 and 1,154
+stars) for that reason: the records it gained and lost sit far outside both
+caps. The widened SIMBAD value cohort does not, and that is the distinction
+worth reading twice: PENDING_GC_NOTE Nothing rendered moves either way —
+both constants are read by tests alone.
 
 Leinert's table is a sky model (Wainscoat et al. 1992) for *all* stars,
 resolved or not, so pinning the published figure would double-count the
