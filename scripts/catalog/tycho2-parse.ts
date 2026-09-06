@@ -2,7 +2,7 @@
 // — the first-order tier under HIP2 in the § 5 direction, PM and V cascades.
 // See data/tycho2/README.md.
 
-import { dataRows, parseFloatOrNull } from './parse/corpus-tsv';
+import { dataRows, parseFloatOrNull, parseIntOrNull } from './parse/corpus-tsv';
 
 const MAIN_LABEL = 'data/tycho2/tycho2_main.tsv';
 const SUPPL1_LABEL = 'data/tycho2/tycho2_suppl1.tsv';
@@ -15,12 +15,12 @@ const MAIN_PFLAG_PHOTOCENTRE = 'P';
 const MAIN_COLUMNS = [
   'tyc1', 'tyc2', 'tyc3', 'pflag',
   'ra_mdeg', 'de_mdeg', 'pm_ra', 'pm_de',
-  'ra_icrs', 'de_icrs', 'bt_mag', 'vt_mag',
+  'ra_icrs', 'de_icrs', 'bt_mag', 'vt_mag', 'hip',
 ] as const;
 
 const SUPPL1_COLUMNS = [
   'tyc1', 'tyc2', 'tyc3',
-  'ra_icrs', 'de_icrs', 'pm_ra', 'pm_de', 'bt_mag', 'vt_mag',
+  'ra_icrs', 'de_icrs', 'pm_ra', 'pm_de', 'bt_mag', 'vt_mag', 'hip',
 ] as const;
 
 /** The epoch `ra_mdeg` / `de_mdeg` is stated at.
@@ -59,6 +59,9 @@ export interface Tycho2Row {
    *  cascades reading the row need it: the direction tier counts it, and a V
    *  from it is a system blend. */
   isPhotocentre: boolean;
+  /** The HIP number Tycho-2 itself names for this entry, its own cross-index
+   *  to I/239 rather than a walk's verdict. */
+  hip: number | null;
 }
 
 export function tycho2Key(tyc1: string, tyc2: string, tyc3: string): string {
@@ -106,6 +109,7 @@ export function parseTycho2Tsvs(mainText: string, suppl1Text: string): Map<strin
       btMag: parseFloatOrNull(cells[idx.bt_mag]),
       vtMag: parseFloatOrNull(cells[idx.vt_mag]),
       isPhotocentre: (cells[idx.pflag] ?? '').trim() === MAIN_PFLAG_PHOTOCENTRE,
+      hip: parseIntOrNull(cells[idx.hip]),
     });
   }
 
@@ -125,6 +129,7 @@ export function parseTycho2Tsvs(mainText: string, suppl1Text: string): Map<strin
       btMag: parseFloatOrNull(cells[idx.bt_mag]),
       vtMag: parseFloatOrNull(cells[idx.vt_mag]),
       isPhotocentre: false,
+      hip: parseIntOrNull(cells[idx.hip]),
     });
   }
 

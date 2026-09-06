@@ -13,7 +13,7 @@ import {
   parseBsc5Tsv, parseCns5Tsv, parseCrossIndexTsv, parseTyc2HdTsv,
 } from '../classic-ids/classic-ids-parse';
 import { parseGlieseTsv } from '../gliese-parse';
-import { parseTycho2Tsvs, tycho2Key } from '../tycho2-parse';
+import { parseTycho2Tsvs } from '../tycho2-parse';
 import { addKeyed, type PrimaryTables, type SimbadXids, type WgsnKeys } from './primaries-audit-pure';
 
 export const SRC_BSC5 = resolve(ROOT, 'data/classic-ids/bsc5.tsv');
@@ -31,13 +31,6 @@ export const LFS_HINT = 'run `git lfs pull`.';
 const HIP_VMAG_HINT = 'run `pnpm run refresh:hip-vmag`.';
 const WGSN_HINT = 'run `pnpm run build:wgsn`.';
 
-/** Every path `loadPrimaryTables` reads, for a derived artifact's mtime set. */
-export const PRIMARY_TABLE_PATHS: readonly string[] = [
-  SRC_TYC2_HD, SRC_BSC5, SRC_CROSS_INDEX, SRC_CNS5, SRC_GLIESE, SRC_HIP_MAIN, SRC_HIP2,
-  SRC_TYCHO2_MAIN, SRC_TYCHO2_SUPPL1, SRC_WGSN_NAMES, SRC_WGSN_DESIGNATIONS,
-  SRC_TYC_XMATCH, SRC_HIP_XMATCH, SRC_SIMBAD_SPTYPE,
-];
-
 function readHipColumn(path: string, hint: string, label: string): Set<number> {
   const into = new Set<number>();
   for (const { cells, idx } of dataRows(readRequired(path, hint), ['hip'], label, hint)) {
@@ -45,25 +38,6 @@ function readHipColumn(path: string, hint: string, label: string): Set<number> {
     if (hip !== null) into.add(hip);
   }
   return into;
-}
-
-const TYCHO2_HIP_COLUMNS = ['tyc1', 'tyc2', 'tyc3', 'hip'] as const;
-
-function readTycho2HipColumn(): Map<string, number> {
-  const out = new Map<string, number>();
-  for (const [path, label] of [
-    [SRC_TYCHO2_MAIN, 'tycho2_main.tsv'], [SRC_TYCHO2_SUPPL1, 'tycho2_suppl1.tsv'],
-  ] as const) {
-    for (const { cells, idx } of dataRows(
-      readRequired(path, LFS_HINT), TYCHO2_HIP_COLUMNS, label, LFS_HINT,
-    )) {
-      const hip = parseIntOrNull(cells[idx.hip]);
-      if (hip === null) continue;
-      const tyc = tycho2Key(cells[idx.tyc1], cells[idx.tyc2], cells[idx.tyc3]);
-      if (!out.has(tyc)) out.set(tyc, hip);
-    }
-  }
-  return out;
 }
 
 function readWgsn(): WgsnKeys {
@@ -136,7 +110,6 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
     gliese: parseGlieseTsv(readRequired(SRC_GLIESE, LFS_HINT)),
     hipI239: readHipColumn(SRC_HIP_MAIN, HIP_VMAG_HINT, 'hip_main_vmag.tsv'),
     hip2: readHipColumn(SRC_HIP2, LFS_HINT, 'hip2_van_leeuwen.tsv'),
-    tycho2HipByTyc: readTycho2HipColumn(),
     wgsn: readWgsn(),
     tycho2: parseTycho2Tsvs(
       readRequired(SRC_TYCHO2_MAIN, LFS_HINT), readRequired(SRC_TYCHO2_SUPPL1, LFS_HINT),

@@ -15,7 +15,7 @@ function tycho2Row(overrides: Partial<Tycho2Row> = {}): Tycho2Row {
   return {
     raDeg: 10, decDeg: 20, epoch: TYCHO2_MEAN_EPOCH,
     pmRaMasyr: -453.7, pmDecMasyr: -591.4,
-    btMag: 5, vtMag: 4.5, fromIcrs: false, isPhotocentre: false,
+    btMag: 5, vtMag: 4.5, fromIcrs: false, isPhotocentre: false, hip: null,
     ...overrides,
   };
 }

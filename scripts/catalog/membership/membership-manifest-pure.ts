@@ -138,6 +138,12 @@ export interface MembershipResult {
 
 // ---- codecs ------------------------------------------------------------------
 
+function pushKeyed<K, V>(by: Map<K, V[]>, key: K, value: V): void {
+  const list = by.get(key);
+  if (list === undefined) by.set(key, [value]);
+  else list.push(value);
+}
+
 function joinValues(values: readonly (string | number)[]): string {
   return values.map(String).join(MANIFEST_VALUE_SEPARATOR);
 }
@@ -379,13 +385,13 @@ function indexAdditions(tables: PrimaryTables): AdditionIndex {
   const hrByHd = new Map<number, number[]>();
   for (const r of tables.v50) {
     if (r.hd === null) continue;
-    hrByHd.set(r.hd, [...(hrByHd.get(r.hd) ?? []), r.hr]);
+    pushKeyed(hrByHd, r.hd, r.hr);
   }
   const hipByHdIv27a = new Map<number, number[]>();
   const flamByHd = new Map<number, number>();
   const flamByHip = new Map<number, number>();
   for (const r of tables.iv27a) {
-    if (r.hip !== null) hipByHdIv27a.set(r.hd, [...(hipByHdIv27a.get(r.hd) ?? []), r.hip]);
+    if (r.hip !== null) pushKeyed(hipByHdIv27a, r.hd, r.hip);
     if (r.flamsteed === null) continue;
     if (!flamByHd.has(r.hd)) flamByHd.set(r.hd, r.flamsteed);
     if (r.hip !== null && !flamByHip.has(r.hip)) flamByHip.set(r.hip, r.flamsteed);
@@ -408,16 +414,17 @@ function groupAdditions(
   const hipKey = (hip: number): string => `hip:${hip}`;
   for (const i of items) {
     if (i.hd === null) continue;
-    const linked = [tables.tycho2HipByTyc.get(i.hd.tyc)];
+    const tycho2Hip = tables.tycho2.get(i.hd.tyc)?.hip ?? null;
+    const linked = tycho2Hip === null ? [] : [tycho2Hip];
     for (const hd of i.hd.hds) linked.push(...(index.hipByHdIv27a.get(hd) ?? []));
     for (const hip of linked) {
-      if (hip !== undefined && byKey.has(hipKey(hip))) uf.union(i.key, hipKey(hip));
+      if (byKey.has(hipKey(hip))) uf.union(i.key, hipKey(hip));
     }
   }
   const bySource = new Map<string, AdditionItem[]>();
   for (const i of items) {
     if (i.rawSource === null) continue;
-    bySource.set(i.rawSource, [...(bySource.get(i.rawSource) ?? []), i]);
+    pushKeyed(bySource, i.rawSource, i);
   }
   for (const list of bySource.values()) {
     const tycItems = list.filter((i) => i.hd !== null);
@@ -427,10 +434,7 @@ function groupAdditions(
     for (const i of rest) uf.union(anchor.key, i.key);
   }
   const groups = new Map<string, AdditionItem[]>();
-  for (const i of items) {
-    const root = uf.find(i.key);
-    groups.set(root, [...(groups.get(root) ?? []), i]);
-  }
+  for (const i of items) pushKeyed(groups, uf.find(i.key), i);
   return [...groups.values()];
 }
 

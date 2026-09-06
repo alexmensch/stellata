@@ -24,10 +24,10 @@ function row(cells: Partial<SpineRow>): SpineRow {
   return out;
 }
 
-function tycho2(vtMag: number): Tycho2Row {
+function tycho2(vtMag: number, hip: number | null = null): Tycho2Row {
   return {
     raDeg: 0, decDeg: 0, epoch: 2000, pmRaMasyr: null, pmDecMasyr: null,
-    btMag: null, vtMag, fromIcrs: false, isPhotocentre: false,
+    btMag: null, vtMag, fromIcrs: false, isPhotocentre: false, hip,
   };
 }
 
@@ -61,7 +61,6 @@ const tables: PrimaryTables = {
   gliese: parseGlieseTsv(GLIESE_TSV),
   hipI239: new Set([10, 20, 70890]),
   hip2: new Set([70890]),
-  tycho2HipByTyc: new Map([['1-1-1', 10]]),
   wgsn: {
     names: new Set(['Alpheratz']),
     hd: new Set([900001]),
@@ -69,7 +68,7 @@ const tables: PrimaryTables = {
     flamByHd: new Map([[900001, new Set([12])]]),
     flamByHip: new Map<number, Set<number>>(),
   },
-  tycho2: new Map([['1-1-1', tycho2(8.5)], ['1-2-1', tycho2(10.2)], ['9-9-1', tycho2(11.7)]]),
+  tycho2: new Map([['1-1-1', tycho2(8.5, 10)], ['1-2-1', tycho2(10.2)], ['9-9-1', tycho2(11.7)]]),
   tycToSource: new Map([['1-1-1', '111'], ['1-2-1', '222'], ['9-9-1', '999']]),
   hipToSource: new Map([[10, '111'], [20, '333']]),
   simbadBySourceId: new Map([

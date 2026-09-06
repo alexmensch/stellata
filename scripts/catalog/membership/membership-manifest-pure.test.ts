@@ -32,10 +32,10 @@ function manifestRow(cells: Partial<ManifestRow>): ManifestRow {
   return out;
 }
 
-function tycho2(vtMag: number): Tycho2Row {
+function tycho2(vtMag: number, hip: number | null = null): Tycho2Row {
   return {
     raDeg: 0, decDeg: 0, epoch: 2000, pmRaMasyr: null, pmDecMasyr: null,
-    btMag: null, vtMag, fromIcrs: false, isPhotocentre: false,
+    btMag: null, vtMag, fromIcrs: false, isPhotocentre: false, hip,
   };
 }
 
@@ -91,7 +91,6 @@ const tables: PrimaryTables = {
   gliese: parseGlieseTsv(GLIESE_TSV),
   hipI239: new Set([10, 20, 30, 40]),
   hip2: new Set<number>(),
-  tycho2HipByTyc: new Map([['1-1-1', 10], ['2-1-1', 30]]),
   wgsn: {
     names: new Set<string>(),
     hd: new Set<number>(),
@@ -100,7 +99,7 @@ const tables: PrimaryTables = {
     flamByHip: new Map<number, Set<number>>(),
   },
   tycho2: new Map([
-    ['1-1-1', tycho2(8.5)], ['1-2-1', tycho2(10.2)], ['2-1-1', tycho2(9.1)],
+    ['1-1-1', tycho2(8.5, 10)], ['1-2-1', tycho2(10.2)], ['2-1-1', tycho2(9.1, 30)],
     ['2-2-1', tycho2(9.9)], ['2-3-1', tycho2(11)], ['2-4-1', tycho2(11)], ['2-5-1', tycho2(11)],
   ]),
   tycToSource: new Map([

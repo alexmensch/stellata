@@ -23,6 +23,7 @@ interface MainCells {
   pm?: [string, string];
   icrs?: [string, string];
   photometry?: [string, string];             // bt, vt
+  hip?: string;
 }
 
 function mainRow(c: MainCells = {}): string {
@@ -32,12 +33,14 @@ function mainRow(c: MainCells = {}): string {
   const [raI, deI] = c.icrs ?? ['33.6', '12.3'];
   const [bt, vt] = c.photometry ?? ['9.5', '8.9'];
   return [t1, t2, t3, c.pflag ?? '', ra, de, epRa, epDe,
-    pmRa, pmDe, '1', '1', raI, deI, bt, '0.01', vt, '0.01', '', ''].join('\t');
+    pmRa, pmDe, '1', '1', raI, deI, bt, '0.01', vt, '0.01', '', c.hip ?? ''].join('\t');
 }
 
-function supplRow(tyc: [string, string, string], flag = 'H', pm = ['5', '-5']): string {
+function supplRow(
+  tyc: [string, string, string], flag = 'H', pm = ['5', '-5'], hip = '',
+): string {
   return [...tyc, flag, '40.0', '20.0', pm[0], pm[1], '1', '1',
-    '10.5', '0.01', '10.0', '0.01', '', ''].join('\t');
+    '10.5', '0.01', '10.0', '0.01', '', hip].join('\t');
 }
 
 const main = (...rows: string[]) => [MAIN_HEADER, ...rows].join('\n');
@@ -132,6 +135,16 @@ describe('parseTycho2Tsvs', () => {
       main(mainRow({ mean: ['', '', '', ''], icrs: ['', ''] })), suppl(),
     );
     expect(index.size).toBe(0);
+  });
+
+  it("carries Tycho-2's own hip cross-index off both tables", () => {
+    const index = parseTycho2Tsvs(
+      main(mainRow({ hip: '10' }), mainRow({ tyc: ['1', '2', '1'] })),
+      suppl(supplRow(['2', '1', '1'], 'H', ['5', '-5'], '20')),
+    );
+    expect(index.get('1-1-1')?.hip).toBe(10);
+    expect(index.get('1-2-1')?.hip).toBeNull();
+    expect(index.get('2-1-1')?.hip).toBe(20);
   });
 
   it('composes the unpadded key the spine tyc column carries', () => {

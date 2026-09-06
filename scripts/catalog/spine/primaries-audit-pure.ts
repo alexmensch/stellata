@@ -59,8 +59,6 @@ export interface PrimaryTables {
   hipI239: ReadonlySet<number>;
   /** HIP numbers carrying a van Leeuwen HIP2 re-reduction solution. */
   hip2: ReadonlySet<number>;
-  /** The HIP a Tycho-2 row names in its own `hip` column, by TYC. */
-  tycho2HipByTyc: ReadonlyMap<string, number>;
   wgsn: WgsnKeys;
   tycho2: ReadonlyMap<string, Tycho2Row>;
   tycToSource: ReadonlyMap<string, string>;
@@ -474,7 +472,8 @@ export function findAdditions(
   hd.sort((a, b) => a.lowestHd - b.lowestHd);
 
   const hip: HipAddition[] = [];
-  const tycho2Hips = new Set(tables.tycho2HipByTyc.values());
+  const tycho2Hips = new Set<number>();
+  for (const row of tables.tycho2.values()) if (row.hip !== null) tycho2Hips.add(row.hip);
   for (const h of [...tables.hipI239].sort((a, b) => a - b)) {
     if (spine.hip.has(h)) continue;
     hip.push({
