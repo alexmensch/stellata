@@ -17,12 +17,15 @@ and fails on any diff under `data/membership/`.
 scripts/catalog/membership/
   membership-manifest-pure.ts     Row assembly (spine side, additions), the
     (+ test)                      admission rule, the § 6.1 reason codes, the
-                                  three TSV codecs, and the spine ↔ manifest
-                                  matcher the gate runs. Pure.
+                                  label drops, the TSV codecs (manifest,
+                                  additions ledger, review queue, its
+                                  dispositions, label ledger), and the
+                                  spine ↔ manifest matcher the gate runs. Pure.
   build-membership-manifest.ts    `pnpm run build:membership` — loads the
-                                  spine, the primaries, the overlay and
-                                  multiples.tsv, writes data/membership/, and
-                                  pins membership-manifest-expected.json.
+                                  spine, the primaries, the overlay,
+                                  multiples.tsv and the review dispositions,
+                                  writes data/membership/, and pins
+                                  membership-manifest-expected.json.
   membership-manifest-gate.test.ts
                                   The replacement parity gate, (i)–(iii) below,
                                   over the COMMITTED artifacts. LFS-gated;
@@ -52,15 +55,16 @@ gaia_source_id  binding  routes
 - `binding` says how `gaia_source_id` is justified: `crosswalk_gated` (a raw
   cross-walk binding the § 4 gate passed, or the spine's frozen binding a raw
   walk reproduces), `simbad_corroborated` (a spine binding no walk reaches, but
-  SIMBAD's object for that id carries the record's own TYC / HIP / GJ), or
-  `none`.
+  SIMBAD's object for that id carries the record's own TYC / HIP / GJ),
+  `reviewed` (a spine binding neither reaches, kept by its row in
+  `data/membership/binding-review-dispositions.tsv`), or `none`.
 - `routes` names the primary attesting each classical cell
   (`hd:iv25|hip:i239|gl:cns5|tyc:tycho2`), computed by the audit's
   `attestSpineRow` over the merged cells. A cell absent from the list is one
-  no primary publishes — 167 today: 2 HDE numbers, 119 Flamsteed numbers, 46
-  disposed proper names (`stellata-3bsf.8.4` disposes them). The audit counts
-  120 Flamsteed cells because it reads the spine's pre-merge cell; the overlay
-  corrected one.
+  no primary publishes — 46 today, the proper names
+  `data/iau-wgsn/athyg_proper_dispositions.tsv` disposes; an unattested
+  Flamsteed or HD cell leaves the row for `label-drops.tsv` instead (§ The
+  spine side).
 
 Rows are sorted by SID canonical key (`sortManifestRows`), then TYC, then
 source — a total order over content, so a regeneration diffs by what changed
@@ -78,13 +82,38 @@ to the committed `label_flips.tsv`: while the record build still merges labels
 for itself, that equality is what says the manifest's labels are the labels
 that ship.
 
-The binding is `checkIdentity`'s verdict, unchanged from the audit: `agree` →
+The binding is `checkIdentity`'s verdict, as the audit grades it, with the
+`gl:` ↔ `gl:` bridges of `data/sid/sameas-overrides.tsv` read as one
+designation so CNS5's `GJ 9140` row answers for `Gl 157.1`: `agree` →
 `crosswalk_gated`; `unreachable` / `disagree` with SIMBAD corroborating →
-`simbad_corroborated`; the **39** uncorroborated bindings lose their
-`gaia_source_id` and go to `data/membership/binding-review.tsv` with the SIMBAD
-witness columns. None of the 39 was SID-keyed on its Gaia id, so no canonical
-key moves. The 233 empty cells a raw walk would fill stay empty (§ 3 forbids
-the re-derivation).
+`simbad_corroborated`. The **34** bindings neither reaches go to
+`data/membership/binding-review.tsv` with the SIMBAD witness columns, and each
+has a row in `binding-review-dispositions.tsv`: `keep` or `drop`, a `basis`
+from a closed enum, and the measured evidence. A kept binding stays on the row
+as `reviewed`; a dropped one leaves it. All 34 are kept — 11 on
+`tycho2_position` (the record's own Tycho-2 position against the Gaia source,
+every one within 0.65″ at matching brightness), 17 on `v70a_astrometry`
+(V/70A's B1950 position and proper motion against the Gaia source: proper
+motions agree to a few per cent in size and direction, and the 1991
+trigonometric parallaxes that disagree are the catalogue's, not the
+binding's), 6 on `simbad_dr2_object` (SIMBAD holds the id as `Gaia DR2` and
+that object carries the record's TYC / GJ —
+`data/athyg/stale_gaia_source_ids.tsv`). None of the 34 was SID-keyed on its
+Gaia id, so no canonical key moves. The 233 empty cells a raw walk would fill
+stay empty (§ 3 forbids the re-derivation).
+
+**A label no primary attests leaves the row.** After the merge, an HD —
+display cell or alias — that IV/25, V/50 and I/239's own `HD` column all
+lack, and a Flamsteed number neither IV/27A nor WGSN publishes for the star,
+are emptied into `data/membership/label-drops.tsv`: one row per cell, keyed on
+the manifest row as it stands afterwards, under `hd_unattested` or
+`flamsteed_unattested`. Today that is 1 HD — HD 336196 on HIP 90265, where
+I/239 prints HD 336187 — and 119 Flamsteed numbers. Those 119 are real
+designations with no frozen primary behind them: IV/27A is the whole
+3,690-row table and publishes 2,757 Flamsteed numbers, and SIMBAD lists every
+one of the 119 as `* NN Con` (measured 2026-09-06). Attesting them from a
+frozen SIMBAD identifier pull is the open option; until one exists the
+manifest ships without them and the ledger says which.
 
 ## The additions
 
@@ -178,13 +207,18 @@ arithmetic and label-flips replay:
 - **(iii)** the built catalogue's designation multiset equals the manifest's
   over the records the build produces. Until the record build reads the
   manifest (`stellata-3bsf.8.3`) that is the spine-origin rows less the parked
-  ledger, plus the review queue's bindings the spine-driven build still ships.
+  ledger, plus the review bindings a disposition dropped and the HD labels the
+  label ledger dropped, both of which the spine-driven build still ships.
   Needs a built catalogue, so it self-skips in the bare `test` job and runs in
   `tier-a-corpus`.
+- **The two joins.** Every `binding-review.tsv` row has exactly one
+  disposition row and every disposition names a queue row (both regular git,
+  so this runs in every job); every `label-drops.tsv` row keys a manifest
+  row, and the per-reason counts are pinned.
 
 ## What the record-build swap changes here
 
-When `readStars` walks the manifest: gate (iii) drops both exclusions;
+When `readStars` walks the manifest: gate (iii) drops all three exclusions;
 `label_flips.tsv` and the record build's own merge retire, since the labels are
 the manifest's; the spine stays committed as the baseline (i) reads and the
 generator's merge-decision input, and nothing else reads it. After the swap

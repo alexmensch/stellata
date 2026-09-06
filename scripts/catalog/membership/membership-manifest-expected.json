@@ -63,29 +63,34 @@
     "gl": 0,
     "flam": 0
   },
-  "rows": 376929,
+  "rows": 376934,
   "spineRows": 313257,
-  "additionRows": 63672,
+  "additionRows": 63677,
   "additionsByReason": {
-    "admitted:hd_link_gap": 54812,
+    "admitted:hd_link_gap": 54817,
     "admitted:hd_omitted": 5060,
     "admitted:hip_omitted": 444,
     "admitted:cns5_census": 3356
   },
-  "componentRows": 471,
+  "componentRows": 466,
   "bindingByClass": {
-    "crosswalk_gated": 358571,
+    "crosswalk_gated": 358580,
     "simbad_corroborated": 11697,
-    "none": 6661
+    "reviewed": 34,
+    "none": 6623
   },
-  "bindingReviewRows": 39,
+  "bindingReviewRows": 34,
+  "labelDropsByReason": {
+    "flamsteed_unattested": 119,
+    "hd_unattested": 1
+  },
   "unattestedByCell": {
-    "hd": 2,
+    "hd": 0,
     "hr": 0,
     "hip": 0,
     "gl": 0,
     "bayer": 0,
-    "flam": 119,
+    "flam": 0,
     "proper": 46
   },
   "additionSourceOnSpine": 105,
@@ -93,8 +98,6 @@
   "additionSourceShared": 0,
   "additionGaiaKeyedOnly": 0,
   "additionRouteSourceDisagree": 3,
-  "additionsWithBlockedDesignation": 2,
-  "sharedDesignations": 69,
   "rowsWithHdAlt": 102,
   "rowsWithHrAlt": 0
 }

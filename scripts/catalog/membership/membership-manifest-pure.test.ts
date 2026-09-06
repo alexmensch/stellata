@@ -13,10 +13,14 @@ import {
   manifestDesignations,
   manifestKey,
   matchSpineToManifest,
+  parseBindingDispositionsTsv,
+  parseLabelDropsTsv,
   parseLedgerTsv,
   parseManifestTsv,
+  serializeLabelDrops,
   serializeLedger,
   serializeManifest,
+  type BindingDispositionRow,
   type ManifestRow,
 } from './membership-manifest-pure';
 
@@ -50,13 +54,15 @@ const GLIESE_TSV = [
 
 /** Spine: Sol; HD 100001 / HIP 10 bound and reproduced by the TYC walk; HD 5
  *  bound by AT-HYG alone with SIMBAD corroborating; HD 40 bound by AT-HYG alone
- *  and contradicted; Gl 165A with a HIP the HIP walk binds. */
+ *  and contradicted; Gl 165A with a HIP the HIP walk binds; HIP 50 carrying an
+ *  HD and a Flamsteed number no primary publishes. */
 const spine: SpineRow[] = [
   spineRow({ proper: 'Sol' }),
   spineRow({ tyc: '1-1-1', hip: '10', hd: '100001', gaia_source_id: '111' }),
   spineRow({ tyc: '1-2-1', hd: '5', gaia_source_id: '222' }),
   spineRow({ tyc: '9-8-1', hd: '40', gaia_source_id: '888' }),
   spineRow({ tyc: '7-7-1', hip: '20', gl: 'Gl 165A', gaia_source_id: '333' }),
+  spineRow({ hip: '50', hd: '70000', flam: '5' }),
 ];
 
 /** Primaries admitting, beyond the spine: TYC 2-1-1 (HD 60, below the link
@@ -105,6 +111,8 @@ const tables: PrimaryTables = {
   ],
   gliese: parseGlieseTsv(GLIESE_TSV),
   hipI239: new Set([10, 20, 30, 40, 50]),
+  hdI239: new Set<number>(),
+  glAliases: new Map<string, string[]>(),
   hip2: new Set<number>(),
   wgsn: {
     names: new Set<string>(),
@@ -143,17 +151,44 @@ const overlay: ClassicIdOverlay = new Map([
   ['1313', entry({ hd: [82] })],
 ]);
 
-const result = buildMembership({
-  spine, tables, overlay, overrides: new Map(), siblingRenderedSourceIds: new Set(),
-});
+const input = {
+  spine, tables, overlay, overrides: new Map(), siblingRenderedSourceIds: new Set<string>(),
+  dispositions: new Map<string, BindingDispositionRow>(),
+};
+const result = buildMembership(input);
 const byTyc = new Map(result.rows.map((r) => [r.tyc, r]));
 
 describe('buildMembership — the spine side', () => {
   it('keeps every spine row and classifies its binding', () => {
-    expect(result.counts.spineRows).toBe(5);
+    expect(result.counts.spineRows).toBe(6);
     expect(byTyc.get('1-1-1')?.binding).toBe('crosswalk_gated');
     expect(byTyc.get('1-2-1')?.binding).toBe('simbad_corroborated');
     expect(byTyc.get('1-2-1')?.gaia_source_id).toBe('222');
+  });
+
+  it('keeps a reviewed binding on a committed keep disposition, queue row intact', () => {
+    const disposed = buildMembership({
+      ...input,
+      dispositions: new Map([['888', {
+        gaia_source_id: '888', disposition: 'keep', basis: 'tycho2_position', evidence: '0.1"',
+      }]]),
+    });
+    const row = disposed.rows.find((r) => r.tyc === '9-8-1')!;
+    expect(row).toMatchObject({ gaia_source_id: '888', binding: 'reviewed' });
+    expect(disposed.bindingReview).toHaveLength(1);
+    expect(disposed.counts.bindingByClass.reviewed).toBe(1);
+  });
+
+  it('drops the spine labels no primary attests onto the label ledger', () => {
+    const row = result.rows.find((r) => r.hip === '50')!;
+    expect(row).toMatchObject({ hd: '', flam: '', routes: 'hip:i239' });
+    expect(result.labelDrops).toEqual([
+      { tyc: '', hip: '50', hd: '', gl: '', gaia_source_id: '', cell: 'hd', value: '70000', reason: 'hd_unattested' },
+      { tyc: '', hip: '50', hd: '', gl: '', gaia_source_id: '', cell: 'flam', value: '5', reason: 'flamsteed_unattested' },
+    ]);
+    expect(result.counts.labelDropsByReason).toEqual({ flamsteed_unattested: 1, hd_unattested: 1 });
+    expect(result.counts.unattestedByCell.hd).toBe(0);
+    expect(result.counts.unattestedByCell.flam).toBe(0);
   });
 
   it('drops an uncorroborated binding into the review queue with the SIMBAD witness', () => {
@@ -294,7 +329,7 @@ describe('buildMembership — the additions', () => {
         .toBeGreaterThan(0);
     }
     expect(result.counts.additionGaiaKeyedOnly).toBe(0);
-    expect(result.counts.rows).toBe(17);
+    expect(result.counts.rows).toBe(18);
   });
 });
 
@@ -311,31 +346,44 @@ describe('a group holding two items of one cohort', () => {
       tycho2: new Map([...tables.tycho2,
         ['4-1-1', tycho2(11, 60)], ['4-2-1', tycho2(11, 60)]]),
     };
-    expect(() => buildMembership({
-      spine, tables: twoTycsOneHip, overlay, overrides: new Map(),
-      siblingRenderedSourceIds: new Set(),
-    })).toThrow(/2 hd items \(tyc:4-1-1, tyc:4-2-1\)/);
+    expect(() => buildMembership({ ...input, tables: twoTycsOneHip }))
+      .toThrow(/2 hd items \(tyc:4-1-1, tyc:4-2-1\)/);
   });
 });
 
 describe('codecs', () => {
-  it('round-trips the manifest and the ledger', () => {
+  it('round-trips the manifest, the ledger and the label drops', () => {
     expect(parseManifestTsv(serializeManifest(result.rows))).toEqual(result.rows);
     const ledger = parseLedgerTsv(serializeLedger(result.ledger));
     expect(ledger).toHaveLength(result.ledger.length);
     expect(new Set(ledger.map(manifestKey))).toEqual(new Set(result.ledger.map(manifestKey)));
+    const drops = parseLabelDropsTsv(serializeLabelDrops(result.labelDrops));
+    expect(new Set(drops.map((d) => JSON.stringify(d))))
+      .toEqual(new Set(result.labelDrops.map((d) => JSON.stringify(d))));
   });
 
   it('refuses a manifest whose header is not the column list byte for byte', () => {
     expect(() => parseManifestTsv('hip\ttyc\n')).toThrow(/header mismatch/);
   });
 
-  it('is deterministic across a re-run', () => {
-    const again = buildMembership({
-      spine, tables, overlay, overrides: new Map(), siblingRenderedSourceIds: new Set(),
+  it('parses dispositions under the closed enums, refusing an unstated basis or evidence', () => {
+    const header = 'gaia_source_id\tdisposition\tbasis\tevidence\n';
+    const parsed = parseBindingDispositionsTsv(`${header}888\tkeep\ttycho2_position\tsep 0.1"\n`);
+    expect(parsed.get('888')).toEqual({
+      gaia_source_id: '888', disposition: 'keep', basis: 'tycho2_position', evidence: 'sep 0.1"',
     });
+    expect(() => parseBindingDispositionsTsv(`${header}888\tkeep\tguesswork\tx\n`)).toThrow(/basis/);
+    expect(() => parseBindingDispositionsTsv(`${header}888\tmaybe\ttycho2_position\tx\n`)).toThrow(/disposition/);
+    expect(() => parseBindingDispositionsTsv(`${header}888\tkeep\ttycho2_position\t\n`)).toThrow(/evidence/);
+    expect(() => parseBindingDispositionsTsv(`${header}888\tkeep\ttycho2_position\tx\n888\tdrop\ttycho2_position\ty\n`))
+      .toThrow(/duplicate/);
+  });
+
+  it('is deterministic across a re-run', () => {
+    const again = buildMembership(input);
     expect(serializeManifest(again.rows)).toBe(serializeManifest(result.rows));
     expect(serializeLedger(again.ledger)).toBe(serializeLedger(result.ledger));
+    expect(serializeLabelDrops(again.labelDrops)).toBe(serializeLabelDrops(result.labelDrops));
   });
 });
 
