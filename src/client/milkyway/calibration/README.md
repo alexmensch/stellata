@@ -187,16 +187,22 @@ Neither is an anchor. Both are pinned in `../milkyway.test.ts`.
 
 | check | published | model | model is |
 | --- | --- | --- | --- |
-| NGP diffuse residual | 24.99 | 23.31 | **1.676 mag brighter** |
+| NGP diffuse residual | 25.01 | 23.31 | **1.697 mag brighter** |
 | Galactic centre, Leinert total | 22.92 | 21.88 | **1.043 mag brighter** |
 
-The 24.99 is *not* published; `diffuse-reference.ts` builds it:
+The 25.01 is *not* published; `diffuse-reference.ts` builds it:
 
 | | mag/arcsec² |
 | --- | --- |
 | Leinert et al. 1998 Table 24, NGP — **total** starlight | 23.83 |
-| The 329,657 catalogue stars Stellata already draws | 24.286 |
-| Residual left for the diffuse band | **24.99** |
+| The 384,119 catalogue stars Stellata already draws | 24.275 |
+| Residual left for the diffuse band | **25.01** |
+
+**The catalogue row is re-derived per build, and the residual moves with
+it.** The manifest-driven catalogue took the pole from 24.286 to 24.275 —
+the additions are faint, so the centre does not move at three decimals and
+the pole gains 0.011 mag — which widens this check by 0.021 and no more.
+Nothing rendered moves: both constants are read by tests alone.
 
 Leinert's table is a sky model (Wainscoat et al. 1992) for *all* stars,
 resolved or not, so pinning the published figure would double-count the
