@@ -7,6 +7,7 @@ import {
   NO_CONSTELLATION_INDEX,
   type SearchEntry,
 } from '../catalog-pure';
+import { GREEK_GLYPHS } from './greek-forms';
 
 // The ladder stops at the catalogue tier. Its Gaia tail and the `SID #<n>`
 // last resort below it are the runtime's `resolveStarName`
@@ -15,8 +16,8 @@ import {
 // them here would only give every record a base and stop components
 // borrowing their system's.
 export const NAME_TIERS = [
-  'override', 'iau', 'eponym', 'bayer', 'flamsteed', 'gould', 'gcvs',
-  'catalogue',
+  'override', 'iau', 'eponym', 'bayer', 'flamsteed', 'bayer_latin', 'gould',
+  'gcvs', 'catalogue',
 ] as const;
 export type NameTier = typeof NAME_TIERS[number];
 
@@ -34,13 +35,13 @@ export function isApprovedName(tier: NameTier): boolean {
 }
 
 /** Tiers that name a star's PLACE IN THE SKY rather than identify it: a
- *  Bayer letter, a Flamsteed number and a Gould number are all
- *  constellation-relative designations a reader can site. A GCVS serial and
+ *  Bayer letter (either series), a Flamsteed number and a Gould number are
+ *  all constellation-relative designations a reader can site. A GCVS serial and
  *  a catalogue number identify the star and say nothing about the system it
  *  sits in, which is why a component wearing one prefers its system's
  *  designation instead. */
 const SKY_DESIGNATION_TIERS: ReadonlySet<NameTier> = new Set<NameTier>([
-  'bayer', 'flamsteed', 'gould',
+  'bayer', 'flamsteed', 'bayer_latin', 'gould',
 ]);
 
 const TIER_RANK: ReadonlyMap<NameTier, number> = new Map(
@@ -130,8 +131,16 @@ export function designationAtTier(
   // constellation the designation is NAMED for, so the ladder falls past
   // them rather than siting them by position (docs/star-naming.md § 6).
   if (!d.dc) return null;
-  if (tier === 'bayer') {
-    return d.bayer ? bayerDesignation(d.bayer, d.bayerSup, d.dc) : null;
+  if (tier === 'bayer' || tier === 'bayer_latin') {
+    if (!d.bayer) return null;
+    // Bayer ran out of Greek and carried on into Latin, and the two halves
+    // of that series are read differently. The Greek letter is how every
+    // reference names the star; the Latin overflow is real and published but
+    // the Flamsteed number is what atlases and observing lists print, so it
+    // sits BELOW Flamsteed rather than above — docs/star-naming.md § 3.
+    const greek = GREEK_GLYPHS.has(d.bayer);
+    if (greek !== (tier === 'bayer')) return null;
+    return bayerDesignation(d.bayer, d.bayerSup, d.dc);
   }
   if (tier === 'flamsteed') {
     return d.flamsteed === undefined ? null : `${d.flamsteed} ${d.dc}`;

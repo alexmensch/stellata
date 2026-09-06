@@ -133,11 +133,25 @@ Display resolution order, first hit wins:
    HIP 7751 and separates them only by HR and HD — a HIP-first join
    collapses p Eri A and B onto one record, the very duplicate § 8.4
    expects to dissolve.
-3. **Bayer** — glyph + superscript + designation constellation.
+3. **Bayer, Greek series** — glyph + superscript + designation constellation.
 4. **Flamsteed** — `<number> <dc>`.
-5. **Gould** — `<number> G. <dc>`. New tier; the authority carries 936.
-6. **GCVS variable designation** — `R CrB`, `V645 Cen`.
-7. **Catalogue designation** — HIP → HD → HR → GJ, as today. The order
+5. **Bayer, Latin overflow series** — the same rendering, one tier lower.
+   Bayer ran out of Greek and carried on into lowercase Latin and then
+   uppercase, and the two halves are read differently: nobody writes `50 UMa`
+   for α UMa, while atlases and observing lists print `15 UMa` rather than
+   `f UMa`. Splitting the tier reverts 312 records to their Flamsteed number
+   and leaves the 20 Greek ones, which were always right. Below Flamsteed
+   rather than out of the ladder, so a star with no Flamsteed number keeps its
+   letter — Flamsteed catalogued only what Greenwich could see, so the far
+   southern `p Eri` / `f Pup` series has nothing to lose to. Both forms stay
+   typeable either way; only the card, chart label and hover line move.
+   The 48 UPPERCASE cases are the sharpest: a Latin `A` collides with the
+   component-letter namespace this ladder appends in, and `2 Sco B` composed
+   as `A Sco B` reads as a component of something. `A² Aqr` is one half of a
+   § 8 duplicate for the same reason.
+6. **Gould** — `<number> G. <dc>`. New tier; the authority carries 936.
+7. **GCVS variable designation** — `R CrB`, `V645 Cen`.
+8. **Catalogue designation** — HIP → HD → HR → GJ, as today. The order
    is the DISPLAY label's, which is not the focus card's identity-line
    order (HR → HD → HIP): this section originally stated the latter for
    both, and taking it literally moved 85,354 records off their HIP label
@@ -145,7 +159,7 @@ Display resolution order, first hit wins:
    since an ambiguous HD reaches two records where a HIP reaches one.
    Reversing it is still open as a deliberate change — measured, not
    accidental.
-8. **Gaia DR3, then `SID #<n>`** — the runtime's last resort
+9. **Gaia DR3, then `SID #<n>`** — the runtime's last resort
    (`resolveStarName`), not the composer's: neither is a designation a
    catalogue published, neither reaches the search index, and composing
    them would give every record a base and stop components borrowing

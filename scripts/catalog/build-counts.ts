@@ -366,6 +366,7 @@ export interface BuildCounts {
   namingTierEponym: number;
   namingTierBayer: number;
   namingTierFlamsteed: number;
+  namingTierBayerLatin: number;
   namingTierGould: number;
   namingTierGcvs: number;
   namingTierCatalogue: number;

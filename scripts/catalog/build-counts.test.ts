@@ -127,6 +127,7 @@ function baseCounts(): BuildCounts {
     namingTierEponym: 27,
     namingTierBayer: 1669,
     namingTierFlamsteed: 1568,
+    namingTierBayerLatin: 300,
     namingTierGould: 935,
     namingTierGcvs: 12438,
     namingTierCatalogue: 295909,
