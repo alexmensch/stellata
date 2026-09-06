@@ -31,6 +31,7 @@ import {
   type IdentityCheck,
   type PrimaryIndex,
   type PrimaryTables,
+  type RowAttestation,
 } from '../spine/primaries-audit-pure';
 import {
   UnionFind,
@@ -458,10 +459,13 @@ function bindingReviewRow(
 
 /** Empty the spine-label cells no primary attests — the Flamsteed number, and
  *  the HD number with its aliases — into § 6.2 ledger rows keyed on the row as
- *  it stands afterwards, so each joins the manifest row it left. */
+ *  it stands afterwards, so each joins the manifest row it left. Returns the
+ *  attestation of the row it leaves behind, which is the one `routesCell`
+ *  needs: the HD drop runs first because IV/27A can publish a Flamsteed number
+ *  against an HD no HD primary attests. */
 function dropUnattestedLabels(
   row: ManifestRow, tables: PrimaryTables, idx: PrimaryIndex, into: LabelDropRow[],
-): void {
+): RowAttestation {
   const dropped: Array<{ cell: 'hd' | 'flam'; value: string; reason: LabelDropReason }> = [];
   const hds = [row.hd, ...splitValues(row.hd_alt)].filter((h) => h !== '');
   const kept = hds.filter((h) => {
@@ -472,9 +476,11 @@ function dropUnattestedLabels(
   });
   row.hd = kept[0] ?? '';
   row.hd_alt = joinValues(kept.slice(1));
-  if (row.flam !== '' && attestSpineRow(row, tables, idx).attestation.flam === null) {
+  let attestation = attestSpineRow(row, tables, idx);
+  if (row.flam !== '' && attestation.attestation.flam === null) {
     dropped.push({ cell: 'flam', value: row.flam, reason: 'flamsteed_unattested' });
     row.flam = '';
+    attestation = attestSpineRow(row, tables, idx);
   }
   for (const d of dropped) {
     into.push({
@@ -482,12 +488,12 @@ function dropUnattestedLabels(
       cell: d.cell, value: d.value, reason: d.reason,
     });
   }
+  return attestation;
 }
 
-function routesCell(row: ManifestRow, tables: PrimaryTables, idx: PrimaryIndex): {
+function routesCell(a: RowAttestation): {
   routes: string; unattested: ClassicalCell[];
 } {
-  const a = attestSpineRow(row, tables, idx);
   const routes: string[] = [];
   for (const cell of CLASSICAL_CELLS) {
     const by = a.attestation[cell];
@@ -791,8 +797,8 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   const bindingReview: BindingReviewRow[] = [];
   const labelDrops: LabelDropRow[] = [];
   const rows: ManifestRow[] = [];
-  const attest = (row: ManifestRow): void => {
-    const { routes, unattested } = routesCell(row, tables, idx);
+  const attest = (row: ManifestRow, a?: RowAttestation): void => {
+    const { routes, unattested } = routesCell(a ?? attestSpineRow(row, tables, idx));
     row.routes = routes;
     for (const cell of unattested) unattestedByCell[cell]++;
     bindingByClass[row.binding as BindingClass]++;
@@ -812,8 +818,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     const record = records[i];
     if (!keep) record.gaiaSourceId = null;
     const row = manifestRowFromRecord(spineRow, record, binding);
-    dropUnattestedLabels(row, tables, idx, labelDrops);
-    attest(row);
+    attest(row, dropUnattestedLabels(row, tables, idx, labelDrops));
   });
 
   const claims = spineClaims(records);
