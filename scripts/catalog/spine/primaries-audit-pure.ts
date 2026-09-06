@@ -57,6 +57,11 @@ export interface PrimaryTables {
   gliese: GlieseIndex;
   /** HIP numbers I/239 publishes a row for. */
   hipI239: ReadonlySet<number>;
+  /** HD numbers I/239's own `HD` column publishes. */
+  hdI239: ReadonlySet<number>;
+  /** Normalised GJ key → the other GJ keys a stored same-as bridge declares the
+   *  same star (`data/sid/sameas-overrides.tsv`, `gl:` ↔ `gl:` rows). */
+  glAliases: ReadonlyMap<string, readonly string[]>;
   /** HIP numbers carrying a van Leeuwen HIP2 re-reduction solution. */
   hip2: ReadonlySet<number>;
   wgsn: WgsnKeys;
@@ -135,7 +140,41 @@ export function indexPrimaries(t: PrimaryTables): PrimaryIndex {
   };
 }
 
-export type HdAttestation = 'iv25' | 'v50' | null;
+export type HdAttestation = 'iv25' | 'v50' | 'i239' | null;
+
+export function attestHd(hd: number, idx: PrimaryIndex, tables: PrimaryTables): HdAttestation {
+  if (idx.hdToTycs.has(hd)) return 'iv25';
+  if (idx.v50Hd.has(hd)) return 'v50';
+  return tables.hdI239.has(hd) ? 'i239' : null;
+}
+
+const GL_DESIGNATION_PREFIX = 'gl:';
+
+/** The `gl:` ↔ `gl:` rows of the stored same-as edges, as normalised GJ keys
+ *  each way: a designation-renumbering bridge says both numbers name one star,
+ *  so a primary or SIMBAD naming either names the record. */
+export function glAliasesFromEdges(
+  edges: readonly { a: string; b: string }[],
+): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  const keyOf = (d: string): string | null => d.startsWith(GL_DESIGNATION_PREFIX)
+    ? normaliseGjKey(d.slice(GL_DESIGNATION_PREFIX.length).replace(/_/g, ' '))
+    : null;
+  for (const { a, b } of edges) {
+    const ka = keyOf(a);
+    const kb = keyOf(b);
+    if (ka === null || kb === null) continue;
+    out.set(ka, [...(out.get(ka) ?? []), kb]);
+    out.set(kb, [...(out.get(kb) ?? []), ka]);
+  }
+  return out;
+}
+
+/** A record's normalised GJ key with every bridged spelling, each also bare. */
+function glKeyForms(key: string, aliases: ReadonlyMap<string, readonly string[]>): string[] {
+  const forms = [key, ...(aliases.get(key) ?? []), ...(aliases.get(bareGjKey(key)) ?? [])];
+  return [...new Set(forms.flatMap((k) => [k, bareGjKey(k)]))];
+}
 export type GlAttestation = 'cns5' | 'v70a' | null;
 
 /** IV/27A or WGSN publishes a Bayer designation for this star. The letter
@@ -223,7 +262,7 @@ export function attestSpineRow(
   const hip = parseIntOrNull(row.hip);
   const flam = parseIntOrNull(row.flam);
   const attestation: Attestation = {
-    hd: hd === null ? null : idx.hdToTycs.has(hd) ? 'iv25' : idx.v50Hd.has(hd) ? 'v50' : null,
+    hd: hd === null ? null : attestHd(hd, idx, tables),
     hr: hr === null ? null : idx.hrSet.has(hr) ? 'v50' : null,
     hip: hip === null ? null : tables.hipI239.has(hip) ? 'i239' : null,
     gl: row.gl === '' ? null : attestGl(row.gl, idx, tables.gliese),
@@ -297,15 +336,19 @@ function bareGj(cell: string | null): string | null {
   return key === null ? null : bareGjKey(key);
 }
 
-function corroborate(row: SpineRow, xids: SimbadXids | undefined): SimbadCorroboration {
+function corroborate(
+  row: SpineRow, xids: SimbadXids | undefined, aliases: ReadonlyMap<string, readonly string[]>,
+): SimbadCorroboration {
   if (xids === undefined) return 'no_object';
   const hip = parseIntOrNull(row.hip);
-  const gl = bareGj(row.gl === '' ? null : row.gl);
+  const glKey = normaliseGjKey(row.gl === '' ? null : row.gl);
   const simbadGl = bareGj(xids.gj);
   const compared: boolean[] = [];
   if (row.tyc !== '' && xids.tyc !== null) compared.push(row.tyc === xids.tyc);
   if (hip !== null && xids.hip !== null) compared.push(hip === xids.hip);
-  if (gl !== null && simbadGl !== null) compared.push(gl === simbadGl);
+  if (glKey !== null && simbadGl !== null) {
+    compared.push(glKeyForms(glKey, aliases).some((k) => bareGjKey(k) === simbadGl));
+  }
   if (compared.length === 0) return 'no_crossid';
   return compared.some(Boolean) ? 'corroborates' : 'contradicts';
 }
@@ -322,7 +365,7 @@ export function checkIdentity(
   const glKey = normaliseGjKey(row.gl === '' ? null : row.gl);
   const cns5Row = glKey === null
     ? undefined
-    : idx.cns5ByKey.get(glKey) ?? idx.cns5ByKey.get(bareGjKey(glKey));
+    : glKeyForms(glKey, tables.glAliases).map((k) => idx.cns5ByKey.get(k)).find((r) => r !== undefined);
   const viaCns5 = cns5Row?.gaiaSourceId ?? null;
   const agreeing: IdentityCheck['agreeing'] = [];
   if (spine !== null) {
@@ -340,7 +383,7 @@ export function checkIdentity(
   return {
     spine, viaTyc, viaHip, viaCns5, verdict, agreeing,
     simbad: unreproduced && spine !== null
-      ? corroborate(row, tables.simbadBySourceId.get(spine))
+      ? corroborate(row, tables.simbadBySourceId.get(spine), tables.glAliases)
       : null,
     gaiaKeyed: hip === null && row.hd === '' && row.hr === '' && row.gl === '',
   };

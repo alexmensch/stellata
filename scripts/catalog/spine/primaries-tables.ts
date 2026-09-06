@@ -14,7 +14,10 @@ import {
 } from '../classic-ids/classic-ids-parse';
 import { parseGlieseTsv } from '../gliese-parse';
 import { parseTycho2Tsvs } from '../tycho2-parse';
-import { addKeyed, type PrimaryTables, type SimbadXids, type WgsnKeys } from './primaries-audit-pure';
+import { loadStoredEdges } from '../../sid/registry-io';
+import {
+  addKeyed, glAliasesFromEdges, type PrimaryTables, type SimbadXids, type WgsnKeys,
+} from './primaries-audit-pure';
 
 export const SRC_BSC5 = resolve(ROOT, 'data/classic-ids/bsc5.tsv');
 export const SRC_CROSS_INDEX = resolve(ROOT, 'data/classic-ids/cross_index.tsv');
@@ -31,11 +34,11 @@ export const LFS_HINT = 'run `git lfs pull`.';
 const HIP_VMAG_HINT = 'run `pnpm run refresh:hip-vmag`.';
 const WGSN_HINT = 'run `pnpm run build:wgsn`.';
 
-function readHipColumn(path: string, hint: string, label: string): Set<number> {
+function readIntColumn(path: string, hint: string, label: string, column: string): Set<number> {
   const into = new Set<number>();
-  for (const { cells, idx } of dataRows(readRequired(path, hint), ['hip'], label, hint)) {
-    const hip = parseIntOrNull(cells[idx.hip]);
-    if (hip !== null) into.add(hip);
+  for (const { cells, idx } of dataRows(readRequired(path, hint), [column], label, hint)) {
+    const value = parseIntOrNull(cells[idx[column]]);
+    if (value !== null) into.add(value);
   }
   return into;
 }
@@ -108,8 +111,10 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
     iv27a: parseCrossIndexTsv(readRequired(SRC_CROSS_INDEX, LFS_HINT)),
     cns5: parseCns5Tsv(readRequired(SRC_CNS5, LFS_HINT)),
     gliese: parseGlieseTsv(readRequired(SRC_GLIESE, LFS_HINT)),
-    hipI239: readHipColumn(SRC_HIP_MAIN, HIP_VMAG_HINT, 'hip_main_vmag.tsv'),
-    hip2: readHipColumn(SRC_HIP2, LFS_HINT, 'hip2_van_leeuwen.tsv'),
+    hipI239: readIntColumn(SRC_HIP_MAIN, HIP_VMAG_HINT, 'hip_main_vmag.tsv', 'hip'),
+    hdI239: readIntColumn(SRC_HIP_MAIN, HIP_VMAG_HINT, 'hip_main_vmag.tsv', 'hd'),
+    glAliases: glAliasesFromEdges(loadStoredEdges()),
+    hip2: readIntColumn(SRC_HIP2, LFS_HINT, 'hip2_van_leeuwen.tsv', 'hip'),
     wgsn: readWgsn(),
     tycho2: parseTycho2Tsvs(
       readRequired(SRC_TYCHO2_MAIN, LFS_HINT), readRequired(SRC_TYCHO2_SUPPL1, LFS_HINT),

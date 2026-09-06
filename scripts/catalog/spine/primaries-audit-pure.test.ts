@@ -11,6 +11,7 @@ import {
   checkIdentity,
   findAdditions,
   formatAuditReport,
+  glAliasesFromEdges,
   indexPrimaries,
   spineKeys,
   tallyAthygHdProvenance,
@@ -56,10 +57,16 @@ const tables: PrimaryTables = {
   cns5: [
     { cns5: 1, gj: '551.0', gjComp: null, gaiaSourceId: '555', hip: 70890, astrometry: null },
     { cns5: 2, gj: '423', gjComp: 'AB', gaiaSourceId: null, hip: null, astrometry: null },
+    { cns5: 3, gj: '9140', gjComp: null, gaiaSourceId: '9140000', hip: null, astrometry: null },
     { cns5: 0, gj: 'Sun', gjComp: null, gaiaSourceId: null, hip: null, astrometry: null },
   ],
   gliese: parseGlieseTsv(GLIESE_TSV),
   hipI239: new Set([10, 20, 70890]),
+  hdI239: new Set([330122]),
+  glAliases: glAliasesFromEdges([
+    { a: 'gl:Gl_157.1', b: 'gl:GJ_9140' },
+    { a: 'synth:00047+3416-Db', b: 'gaia_dr3:2875176250406193920' },
+  ]),
   hip2: new Set([70890]),
   wgsn: {
     names: new Set(['Alpheratz']),
@@ -76,6 +83,7 @@ const tables: PrimaryTables = {
     ['777', { hip: 21, tyc: '5-5-5', gj: null }],
     ['666', { hip: null, tyc: null, gj: null }],
     ['444', { hip: null, tyc: null, gj: 'GJ 3239' }],
+    ['9141', { hip: null, tyc: null, gj: '9140' }],
   ]),
 };
 
@@ -135,6 +143,11 @@ describe('attestSpineRow', () => {
   it('attests Sol by name and an HD that only V/50 carries by V/50', () => {
     expect(attestSpineRow(sol, tables, idx).attestation.proper).toBe('sol');
     expect(attestSpineRow(row({ hd: '123456' }), tables, idx).attestation.hd).toBe('v50');
+  });
+
+  it('attests an HD neither IV/25 nor V/50 carries by I/239\'s own HD column', () => {
+    expect(attestSpineRow(row({ hip: '10', hd: '330122' }), tables, idx).attestation.hd).toBe('i239');
+    expect(attestSpineRow(row({ hip: '10', hd: '336196' }), tables, idx).unattested).toEqual(['hd']);
   });
 
   it('rejects a Flamsteed number IV/27A does not publish for that star', () => {
@@ -198,10 +211,25 @@ describe('checkIdentity', () => {
       .toBe('contradicts');
   });
 
+  it('reads a renumbered GJ through its stored bridge, in the CNS5 walk and the SIMBAD witness', () => {
+    const viaCns5 = checkIdentity(row({ gl: 'Gl 157.1', gaia_source_id: '9140000' }), tables, idx);
+    expect(viaCns5.verdict).toBe('agree');
+    expect(viaCns5.agreeing).toEqual(['cns5']);
+    const viaSimbad = checkIdentity(row({ gl: 'Gl 157.1', gaia_source_id: '9141' }), tables, idx);
+    expect(viaSimbad.verdict).toBe('disagree');
+    expect(viaSimbad.simbad).toBe('corroborates');
+  });
+
   it('separates the empty-cell rows by whether a walk would bind one', () => {
     expect(checkIdentity(noGaia, tables, idx).verdict).toBe('no_spine_id_walk_binds');
     expect(checkIdentity(athygOnly, tables, idx).verdict).toBe('no_spine_id_unreachable');
     expect(checkIdentity(sol, tables, idx).verdict).toBe('sol');
+  });
+});
+
+describe('glAliasesFromEdges', () => {
+  it('keeps only gl ↔ gl bridges, as normalised keys both ways', () => {
+    expect(tables.glAliases).toEqual(new Map([['157.1', ['9140']], ['9140', ['157.1']]]));
   });
 });
 
@@ -234,7 +262,7 @@ describe('findAdditions', () => {
     expect(additions.hip).toEqual([
       { hip: 70890, gaiaSourceId: null, inHip2: true, inTycho2: false },
     ]);
-    expect(additions.cns5.newRecords.map((r) => r.gj)).toEqual(['423']);
+    expect(additions.cns5.newRecords.map((r) => r.gj)).toEqual(['423', '9140']);
     expect(additions.cns5.onExistingRecord).toEqual([]);
     expect(additions.iv27a.map((r) => r.hd)).toEqual([123456]);
     expect(additions.v50.map((r) => r.hr)).toEqual([9999, 50]);
