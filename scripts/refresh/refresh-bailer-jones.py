@@ -23,11 +23,11 @@ OUT = ROOT / "data" / "bailer-jones" / "bailer-jones-dr3.tsv"
 # (superlinear server cost in IN-clause length).
 BATCH_SIZE = 5_000
 
-# Pinned coverage bounds. The manifest binds ~370 k source_ids; the empirical
-# first 5000-id probe returned 98.7%, so ≥ 90% is the floor and the upper
-# bound is just the input set itself (a match cannot exceed it).
+# Pinned coverage floor. The empirical first 5000-id probe returned 98.7%, so
+# ≥ 90%. The ceiling is the input set itself — a match cannot exceed it — so it
+# is read off `total` rather than pinned; a literal beside it drifts above the
+# request set and stops catching the duplicate rows it is there to catch.
 EXPECTED_COVERAGE_MIN = 0.90
-EXPECTED_ROW_COUNT_MAX = 400_000
 
 # Distance precision: B-J posterior intervals are typically ±10% of the
 # median (e.g. ±30 pc on a 350 pc star), so 0.001 pc (millipc) preserves
@@ -182,11 +182,11 @@ def main() -> None:
             f"{EXPECTED_COVERAGE_MIN:.0%} — VizieR table or the manifest's "
             f"source_id set has changed; investigate before re-pinning."
         )
-    if matched > EXPECTED_ROW_COUNT_MAX:
+    if matched > total:
         raise SystemExit(
-            f"{SCRIPT_NAME}: row count {matched} above ceiling "
-            f"{EXPECTED_ROW_COUNT_MAX} — input set must have grown; "
-            f"raise the ceiling intentionally."
+            f"{SCRIPT_NAME}: matched {matched} of a {total}-id request set — "
+            f"a match cannot exceed its input, so the pull returned duplicate "
+            f"source_ids."
         )
 
     rows_by_id = {int(r["source_id"]): r for r in rows}

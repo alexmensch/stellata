@@ -88,30 +88,35 @@ wins**: it carries a mean epoch and a proper motion, and the supplement's
 `flag='T'` rows (1,404 of 2,713) carry no PM at all. Consumers read the
 supplement only where the main table has no row.
 
-## The request set — spine ∪ IV/25
+## The request set — manifest ∪ IV/25
 
-`refresh-tycho2.py` derives the mentioned-TYC set from the spine's `tyc`
-column (312,275) unioned with IV/25's own TYCs (60,344 more), for
-372,619 requested. The IV/25 half is there so the membership rework —
-which redefines the record set from the primaries rather than from
-AT-HYG's subset — consumes this same pull instead of forcing a second
-one.
+`refresh-tycho2.py` derives the mentioned-TYC set from the membership
+manifest's `tyc` column (372,153) unioned with IV/25's own TYCs (466 more
+than the manifest already names), for 372,619 requested. The union is
+unchanged in size from the spine-era `spine ∪ IV/25`: the manifest admits
+the IV/25 TYCs that the union was widened to cover in the first place.
 
-Coverage measured 2026-08-25:
+Coverage, re-measured 2026-09-06 against the committed tables:
 
 | Cohort | Requested | Reached |
 |---|---|---|
-| Spine TYCs | 312,275 | **312,275 (100%)** |
-| IV/25-only TYCs | 60,344 | 60,324 |
+| Manifest TYCs | 372,153 | 372,135 |
+| IV/25-only TYCs | 466 | 464 |
 | Union | 372,619 | 372,599 |
 
-Every TYC-bearing spine row reaches a Tycho-2 solution, and the refresh
-hard-fails if that ever stops being true — the cascade has no tier below
-this one for a TYC-keyed row, so an unreached spine TYC is a record with
-no owned direction, which § 6 adjudicates as a membership event rather
-than landing quietly.
+The refresh hard-fails on an unreached MANIFEST TYC — the cascade has no
+tier below this one for a TYC-keyed row, so § 6 should adjudicate it as a
+membership event rather than let it land quietly. **18 rows now trip that
+assert, and none of them is the event it is looking for.** All 18 are in
+the `TYC3=2` residual below, all reach a position another way — 17 park on
+an unrelated refused parallax, and `5619-1257-2` carries a
+`gaia_source_id` and is placed by the 5p tier — so none is a record left
+with no owned direction. The assert reads "unreached ⇒ unplaced", which
+was true while the cohort was the spine's and stopped being true when the
+primaries admitted IV/25's secondary components. Deciding what it should
+test instead is `stellata-3bsf.8`'s, not this pull's.
 
-The 20-row residual is **IV/25-only and entirely `TYC3=2`** — secondary
+The 20-row residual is entirely `TYC3=2` — secondary
 components IV/25 names that Tycho-2 does not carry as separate entries:
 `103-2864-2`, `724-2738-2`, `1065-3144-2`, `1454-1134-2`, `1623-800-2`,
 `1655-484-2`, `2013-959-2`, `2133-2964-2`, `2156-1015-2`, `2859-2231-2`,
@@ -124,7 +129,7 @@ The filter runs locally, over 24 queries that each scan a contiguous TYC1
 band, because VizieR can express no server-side filter on the full
 identifier. Its ADQL parser rejects `CAST`, and without one its Postgres
 backend overflows int32 composing `TYC1*1000000 + TYC2*10 + TYC3` into a
-single key. Restricting by TYC1 alone saves nothing either — the spine
+single key. Restricting by TYC1 alone saves nothing either — the manifest
 mentions all 9,537 regions. The range scans are cheap (~2 min for the
 whole 2,539,913-row main table), so the pull transfers the table and
 keeps 15% of it.

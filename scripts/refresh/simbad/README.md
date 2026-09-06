@@ -136,7 +136,8 @@ about the VALUE and nothing before Phase B knows it:
    under and look each up in Phase A's bindings.
 2. A row one bound object answers is done — **`answered` is the common
    case and it costs no request at all**, which is what keeps the pass
-   cheap over the whole manifest: 280,676 of 313,257 rows ask nothing.
+   cheap over the whole manifest: on the spine-scoped pull that introduced
+   the union, 280,676 of 313,257 rows asked nothing.
 3. Otherwise ask the namespaces Phase A never bound. A namespace it DID
    bind is not re-asked: it has answered, with the absence of a value.
 4. **Adjudicate every binding.** Each one rests on a designation alone, so

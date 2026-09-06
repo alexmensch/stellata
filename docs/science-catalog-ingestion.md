@@ -201,7 +201,7 @@ into `resolveGaiaSourceId` — the `gaiaSourceIdBackfilled` build count)
 posterior. Coverage next improves with Gaia DR4 and a B-J-successor
 republication, not with more cross-walk work.
 
-Data file: `data/bailer-jones/bailer-jones-dr3.tsv` (~310k rows,
+Data file: `data/bailer-jones/bailer-jones-dr3.tsv` (365,762 rows,
 refreshed by `scripts/refresh/refresh-bailer-jones.py`).
 
 **Distance-override validation against Vaidman et al. 2025.** Vaidman,
@@ -484,7 +484,7 @@ J2016.0 snapshot and track the scene's time base `t`, the way
 planets and binary orbits already do? The time readout claims the
 scene renders "the moment being rendered"; today that claim holds
 for the solar system and binary orbital motion but not for the
-~322k catalog star positions, which sit frozen ~10 years stale. The
+~384k catalog star positions, which sit frozen ~10 years stale. The
 error is concentrated exactly in the stars users recognise and
 focus on — the high-PM nearby neighbours (drift table:
 `data/README.md` § Reference epoch and proper motion; worst case
@@ -569,7 +569,7 @@ compose with the planned time scrubber (`stellata-nmu`). Instead:
   regression corpus remain valid.
 - At startup, immediately after catalog load, one pure pass
   advances `catalog.positions` to `getT()` (float64 math, float32
-  write-back; ~322k rows, milliseconds). Every consumer downstream
+  write-back; ~384k rows, milliseconds). Every consumer downstream
   — the `iPosition` instance buffer, hover picking, focus/warp
   targets, constellation lines, binaries baselines, eclipse
   photometry — inherits current-epoch positions *coherently by

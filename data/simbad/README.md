@@ -10,10 +10,10 @@ exactly the gap AT-HYG (system-level spectra) and Gaia DR3
 
 ```
 simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 10k stars.
-simbad_sptype.tsv          ~24 MB, LFS. 333,372 rows. Per-source sp_type /
+simbad_sptype.tsv          ~29 MB, LFS. 395,543 rows. Per-source sp_type /
                            sp_qual / sp_bibcode / otype + HIP / Gaia DR3 /
                            TYC / GJ cross-IDs; the resolver keys all four.
-simbad_values.tsv          ~2.8 MB, LFS. 11,044 rows. Bibcoded rv,
+simbad_values.tsv          ~2.7 MB, LFS. 11,044 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
                            the § 5 value cohort — see § The values pull.
 simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
@@ -194,10 +194,14 @@ resolved, so no rung ever fired.
 The pull now asks every namespace a record reaches wherever the object it
 bound answers with nothing (`scripts/refresh/simbad/README.md` § The union
 asks every namespace a record reaches), and the reach is far wider than
-those 34: of 313,257 spine rows, 280,676 are answered by a bound object and
-ask nothing at all, 32,581 are not, and **3,267 of those are recovered** on
-3,188 added objects. `simbad_sptype.tsv` is 333,372 rows against the
-previous 330,141 and reads 86.3% `sp_type`-filled.
+those 34: measured on the spine-scoped pull that introduced it, 280,676 of
+313,257 rows were answered by a bound object and asked nothing at all,
+32,581 were not, and **3,267 of those were recovered** on 3,188 added
+objects. That ratio is what the union is for; the rebase onto the manifest
+re-ran it over a larger request without changing the rule, and the pull's
+own report is where its figures come from. `simbad_sptype.tsv` is now
+**395,543 rows** and reads 87.6% `sp_type`-filled
+(`awk -F'\t' 'NR>1{t++; if($3!="") f++} END{print f/t}'`).
 
 Every one of those bindings rests on a designation alone, so every one goes
 through the corroboration rule above — the guard the union does NOT get to
