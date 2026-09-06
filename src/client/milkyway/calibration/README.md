@@ -202,6 +202,8 @@ The 25.01 is *not* published; `diffuse-reference.ts` builds it:
 it.** The manifest-driven catalogue took the pole from 24.286 to 24.275 —
 the additions are faint, so the centre does not move at three decimals and
 the pole gains 0.011 mag — which widens this check by 0.021 and no more.
+The reduction ran at 384,119; the four records dropped after it sit 84° or
+further from both cap centres, so the row holds unchanged at 384,115.
 Nothing rendered moves: both constants are read by tests alone.
 
 Leinert's table is a sky model (Wainscoat et al. 1992) for *all* stars,
