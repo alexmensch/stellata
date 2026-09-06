@@ -104,10 +104,10 @@ export function unionIv27aBayer(
   return union;
 }
 
-/** Spine propers and disposition rows meet on this key, so both sides
+/** Manifest propers and disposition rows meet on this key, so both sides
  *  build it here — a format that drifts turns the § 2 gate into a
  *  comparison of two disjoint sets that both look populated. */
-export function spineProperKey(
+export function membershipProperKey(
   proper: string,
   hip: string,
   hd: string,
@@ -120,7 +120,7 @@ export function parseDispositionKeys(tsv: string): Set<string> {
   const keys = new Set<string>();
   for (const line of lines.slice(1)) {
     const [proper, , hip = '', hd = ''] = line.split('\t');
-    keys.add(spineProperKey(proper, hip, hd));
+    keys.add(membershipProperKey(proper, hip, hd));
   }
   return keys;
 }

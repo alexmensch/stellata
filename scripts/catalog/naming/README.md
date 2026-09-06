@@ -47,7 +47,7 @@ scripts/catalog/naming/
                                 comparison, the key sets both sides of the
                                 union share, and the total sort order the
                                 committed table's byte-for-byte CI diff
-                                rests on. `spineProperKey` is the one
+                                rests on. `membershipProperKey` is the one
                                 place the gate's join key is built.
   build-wgsn-tables.ts          Orchestrator: read, normalise, delegate
                                 the joins, write the two derived tables,
@@ -108,15 +108,17 @@ names have no HIP, HR or HD at all** (`namesKeyless`). They are wgsnFaints
 exoplanet hosts whose only identifier is the survey id in the dropped cell
 — `WASP-32`, `HAT-P-29` — and the file's WDS column, which would otherwise
 root them, is empty in every row (`faintsWdsCells`, pinned at 0).
-Positionally, all but one sit outside the spine entirely, so they name
-stars the catalogue does not carry; the pins are there to catch a refresh
-that changes either fact.
+Positionally, all but one sit outside the membership manifest entirely, so
+they name stars the catalogue does not carry; the pins are there to catch a
+refresh that changes either fact.
 
 ## The § 2 residual gate
 
-Every spine `proper` must either match a WGSN name key
+Every manifest `proper` must either match a WGSN name key
 (diacritic-folded, post multi-name-split — 445 of 491 do) or appear in
 the hand-curated `data/iau-wgsn/athyg_proper_dispositions.tsv` (46 rows).
+The key is `proper|hip|hd` on the manifest's FINAL cells, so a disposition
+keyed on a label the classic-ID merge flipped is a stale disposition.
 The build hard-fails on exact set inequality in either direction — the
 route-disagreements review-join discipline — so a WGSN refresh that
 approves a disposed name surfaces as a *stale disposition* failure, and
@@ -124,13 +126,13 @@ the fix is a data-row deletion, never a code edit.
 
 ## Measured coverage
 
-Of the spine's 1,522 Bayer-bearing rows, the unioned table reaches 1,520
+Of the manifest's 1,522 Bayer-bearing rows, the unioned table reaches 1,520
 by HD or HIP. The 2 uncovered are close-pair component rows whose Bayer
 belongs to the sibling record (ξ UMa B / HD 98230, and HD 79096's Pi-1
 cell): both drop their own Bayer (`namingBayerDropped`) and take their
 system's designation with their component letter instead, which is what
 the authority's coverage actually asserts. Over the whole record set the
-table reaches **2,005** records, 485 of which the spine printed no Bayer
+table reaches **2,005** records, 485 of which the manifest carries no Bayer
 cell for at all.
 
 Three designation rows carry no key at all (`designationsKeyless`):
@@ -261,7 +263,7 @@ for exactly that reason.
   refuses any within-one-WDS-root duplicate this file does not enumerate.
 
 The gate is stated over strings with EXTERNAL provenance — every name the
-authority approves and every name the spine printed must reach a record.
+authority approves and every name the manifest carries must reach a record.
 A string the build composed itself has no external existence, so § 5 lets
 it disappear with the composition that made it; 1,994 do, and the ledger's
 `resolves` column is where each one is reviewable.

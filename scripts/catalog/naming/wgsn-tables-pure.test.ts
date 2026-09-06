@@ -9,7 +9,7 @@ import {
   diffDispositions,
   parseDispositionKeys,
   sortDesignations,
-  spineProperKey,
+  membershipProperKey,
   unionIv27aBayer,
   type DesignationRow,
 } from './wgsn-tables-pure';
@@ -110,23 +110,23 @@ describe('the § 2 disposition gate', () => {
 
   it('keys a short row the same way the spine side keys it', () => {
     expect(parseDispositionKeys(tsv)).toEqual(new Set([
-      spineProperKey("Kapteyn's Star", '24186', '33793'),
-      spineProperKey('Ross 248', '', ''),
-      spineProperKey('p Eridani', '', '10361'),
+      membershipProperKey("Kapteyn's Star", '24186', '33793'),
+      membershipProperKey('Ross 248', '', ''),
+      membershipProperKey('p Eridani', '', '10361'),
     ]));
   });
 
   it('fails an unmatched proper missing from the file, and a stale row', () => {
     const disposed = parseDispositionKeys(tsv);
     const unmatched = new Set([
-      spineProperKey('Ross 248', '', ''),
-      spineProperKey('Vega', '91262', '172167'),
+      membershipProperKey('Ross 248', '', ''),
+      membershipProperKey('Vega', '91262', '172167'),
     ]);
     expect(diffDispositions(unmatched, disposed)).toEqual({
-      missing: [spineProperKey('Vega', '91262', '172167')],
+      missing: [membershipProperKey('Vega', '91262', '172167')],
       stale: [
-        spineProperKey("Kapteyn's Star", '24186', '33793'),
-        spineProperKey('p Eridani', '', '10361'),
+        membershipProperKey("Kapteyn's Star", '24186', '33793'),
+        membershipProperKey('p Eridani', '', '10361'),
       ],
     });
   });

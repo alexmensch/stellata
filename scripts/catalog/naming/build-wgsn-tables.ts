@@ -22,7 +22,7 @@ import {
   diffDispositions,
   parseDispositionKeys,
   sortDesignations,
-  spineProperKey,
+  membershipProperKey,
   unionIv27aBayer,
   type DesignationRow,
 } from './wgsn-tables-pure';
@@ -101,7 +101,7 @@ function readManifest(): MembershipNaming {
     const hd = cells[hdIdx]?.trim() ?? '';
     const proper = (cells[properIdx] ?? '').trim();
     if (proper && proper !== 'Sol') {
-      propers.set(spineProperKey(proper, hip, hd), proper);
+      propers.set(membershipProperKey(proper, hip, hd), proper);
     }
     if ((cells[bayerIdx] ?? '').trim()) {
       bayerKeys.push({ hip: parseIntOrNull(hip), hd: parseIntOrNull(hd) });
