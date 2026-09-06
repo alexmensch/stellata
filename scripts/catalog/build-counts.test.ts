@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { emptyLabelMergeCounts } from './classic-ids/label-merge-pure';
+import { emptyTallyPartition } from '../util/tally';
 import {
   compareBuildCounts,
   formatCountDiff,
-  formatDistSrcPartition,
+  formatPartition,
   spectralSimbadPartitionError,
   type BuildCounts,
 } from './build-counts';
+import { DIST_VIA_VALUES } from './distance/parallax/parallax-cascade';
 
 function baseCounts(): BuildCounts {
   return {
@@ -36,24 +37,17 @@ function baseCounts(): BuildCounts {
     multiplicityResolved: 20000,
     multiplicityUnresolved: 5000,
     componentDesignations: 16000,
-    ...emptyLabelMergeCounts(),
     desigConFromCrossIndex: 3180,
     crossIndexUnknownCst: 0,
-    spineDroppedNoRaDec: 0,
-    spineDroppedNoDist: 0,
-    spineDroppedNoDirection: 0,
-    spineDroppedTooFar: 0,
-    spineDroppedNoVMagnitude: 0,
+    droppedNoDirection: 0,
+    droppedTooFar: 0,
     bjEntries: 310000,
     bjEligible: 305000,
     bjOverridden: 304000,
-    bjOverriddenByDistSrc: {
-      G_R3: 303200, G_R2: 800, HIP: 0, GJ: 0, N: 0, OTHER: 0, UNRECOGNISED: 0,
-    },
     lmcCandidates: 1200,
     lmcOverridden: 60,
-    lmcOverriddenByDistSrc: {
-      G_R3: 58, G_R2: 2, HIP: 0, GJ: 0, N: 0, OTHER: 0, UNRECOGNISED: 0,
+    lmcOverriddenByDistVia: {
+      ...emptyTallyPartition(DIST_VIA_VALUES), bailer_jones: 58, gaia_dr3_inversion: 2,
     },
     nameTableEntries: 350,
     variableCount: 3677,
@@ -242,11 +236,11 @@ describe('compareBuildCounts', () => {
   it('names the drifting bucket of a partition, not the whole partition', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    actual.bjOverriddenByDistSrc.HIP = 11;
+    actual.lmcOverriddenByDistVia.hip2_parallax = 11;
     const mismatches = compareBuildCounts(expected, actual)
       .filter((d) => d.status === 'mismatch');
     expect(mismatches).toEqual([{
-      key: 'bjOverriddenByDistSrc.HIP',
+      key: 'lmcOverriddenByDistVia.hip2_parallax',
       status: 'mismatch',
       expected: 0,
       actual: 11,
@@ -256,11 +250,11 @@ describe('compareBuildCounts', () => {
   it('flags a partition bucket the snapshot has no entry for', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    delete (expected.bjOverriddenByDistSrc as Partial<Record<string, number>>).G_R2;
+    delete (expected.lmcOverriddenByDistVia as Partial<Record<string, number>>).gaia_dr3_inversion;
     const mismatches = compareBuildCounts(expected, actual)
       .filter((d) => d.status === 'mismatch');
     expect(mismatches).toHaveLength(1);
-    expect(mismatches[0].key).toBe('bjOverriddenByDistSrc.G_R2');
+    expect(mismatches[0].key).toBe('lmcOverriddenByDistVia.gaia_dr3_inversion');
     expect(mismatches[0].status === 'mismatch'
       && Number.isNaN(mismatches[0].expected)).toBe(true);
   });
@@ -305,29 +299,29 @@ describe('formatCountDiff', () => {
   it('labels a partition mismatch with its dotted bucket key', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    actual.lmcOverriddenByDistSrc.N = 3;
+    actual.lmcOverriddenByDistVia.cns5_plx = 3;
     const out = formatCountDiff(compareBuildCounts(expected, actual));
     expect(out).toMatch(
-      /lmcOverriddenByDistSrc\.N\s+expected 0, got 3 \(\+3\)/,
+      /lmcOverriddenByDistVia\.cns5_plx\s+expected 0, got 3 \(\+3\)/,
     );
   });
 
   it('says "absent from snapshot" rather than printing a NaN delta', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    delete (expected.lmcOverriddenByDistSrc as Partial<Record<string, number>>).G_R3;
+    delete (expected.lmcOverriddenByDistVia as Partial<Record<string, number>>).bailer_jones;
     const out = formatCountDiff(compareBuildCounts(expected, actual));
     expect(out).toMatch(
-      /lmcOverriddenByDistSrc\.G_R3\s+absent from snapshot, got 58/,
+      /lmcOverriddenByDistVia\.bailer_jones\s+absent from snapshot, got 58/,
     );
     expect(out).not.toMatch(/NaN/);
   });
 });
 
-describe('formatDistSrcPartition', () => {
-  it('lists every bucket including the zeros', () => {
-    expect(formatDistSrcPartition(baseCounts().lmcOverriddenByDistSrc)).toBe(
-      'G_R3=58, G_R2=2, HIP=0, GJ=0, N=0, OTHER=0, UNRECOGNISED=0',
+describe('formatPartition', () => {
+  it('lists every bucket in declaration order, zeros included', () => {
+    expect(formatPartition({ bailer_jones: 58, gaia_dr3_inversion: 2, curated: 0 })).toBe(
+      'bailer_jones=58, gaia_dr3_inversion=2, curated=0',
     );
   });
 });

@@ -55,9 +55,9 @@ export type LabelDisposition =
 
 /** One row of the committed review queue — every place the merge's output
  *  departs from the spine's labels, plus the values a single-valued field could
- *  not carry. The queue is therefore the COMPLETE delta, which is what lets
- *  `../spine/inherited-spine-parity.test.ts` keep asserting an exact
- *  designation multiset: spine ∘ queue = build. Sort by `disposition` to read
+ *  not carry. The queue is therefore the COMPLETE delta, and the membership
+ *  manifest build asserts its own merge reproduces it byte for byte
+ *  (`../membership/README.md` § The spine side). Sort by `disposition` to read
  *  it as a review list — `overlay-wins` and the two `override-*` rows are the
  *  adjudications, `added` rows are monotone coverage gains. */
 export interface LabelFlip {

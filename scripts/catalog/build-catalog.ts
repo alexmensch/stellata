@@ -37,7 +37,6 @@ import {
   planCatalogChunks,
   buildSearchEntry,
   type SearchEntry,
-  emptyDistSrcPartition,
   type CatalogManifest,
 } from './catalog-pure';
 import {
@@ -55,7 +54,7 @@ import {
   BUILD_COUNTS_EXPECTED_FILE,
   compareBuildCounts,
   formatCountDiff,
-  formatDistSrcPartition,
+  formatPartition,
   spectralSimbadPartitionError,
   type BuildCounts,
 } from './build-counts';
@@ -109,11 +108,10 @@ import {
 import { RV_ERROR_BANDS } from './distance/radial-velocity/radial-velocity';
 import { emptyTallyPartition } from '../util/tally';
 import {
-  applyClassicIdLabels,
-  loadClassicIdLabelInputs,
-  CLASSIC_ID_LABEL_INPUT_PATHS,
-} from './classic-ids/apply-classic-id-labels';
-import { emptyLabelMergeCounts, LABEL_FIELDS } from './classic-ids/label-merge-pure';
+  applyDesignationConstellations,
+  loadDesignationConstellationInputs,
+  DESIGNATION_CONSTELLATION_INPUT_PATHS,
+} from './classic-ids/apply-designation-constellation';
 import {
   applyStarNames,
   loadNameOverrides,
@@ -131,7 +129,7 @@ import {
   formatSimbadSourcedDistancesTsv,
 } from './distance/parallax/simbad-sourced-ledger';
 import {
-  INHERITED_SPINE_TSV,
+  MEMBERSHIP_MANIFEST_TSV,
   READ_STARS_INPUT_PATHS,
   loadReadStarsInputs,
 } from './parse/read-stars-inputs';
@@ -153,7 +151,7 @@ const __dirname = dirname(__filename);
 
 const SRC_GCVS = resolve(ROOT, 'data/gcvs/gcvs5.txt');
 const SRC_GCVS_XREF = resolve(ROOT, 'data/gcvs/crossid.txt');
-// GCVS keys on HIP and HD; this cross-walk is what lets a spine row carrying
+// GCVS keys on HIP and HD; this cross-walk is what lets a record carrying
 // only a source_id still resolve a variable-star designation.
 const SRC_GAIA_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
 const SRC_HIP_CCDM = resolve(ROOT, 'data/hipparcos/hip_ccdm.tsv');
@@ -200,7 +198,7 @@ function isUpToDate(): boolean {
   // Adding a new source is one array entry.
   const newest = maxMtimeOfSources([
     ...READ_STARS_INPUT_PATHS,
-    ...CLASSIC_ID_LABEL_INPUT_PATHS,
+    ...DESIGNATION_CONSTELLATION_INPUT_PATHS,
     SRC_STELLARIUM, SRC_GCVS, SRC_GCVS_XREF, SRC_GAIA_HIP_XMATCH, SRC_HIP_CCDM,
     SRC_SIMBAD_SAMPLE, MULTIPLES_TSV,
     LEDGER_PATH, HEAD_PATH, OVERRIDES_PATH, RETIREMENTS_PATH, REINSTATEMENTS_PATH,
@@ -248,8 +246,8 @@ async function removeStaleCatalogChunks(dir: string): Promise<void> {
 }
 
 async function main() {
-  if (!existsSync(INHERITED_SPINE_TSV)) {
-    console.error(`Inherited spine not found: ${INHERITED_SPINE_TSV}`);
+  if (!existsSync(MEMBERSHIP_MANIFEST_TSV)) {
+    console.error(`Membership manifest not found: ${MEMBERSHIP_MANIFEST_TSV}`);
     process.exit(1);
   }
   if (!existsSync(SRC_STELLARIUM)) {
@@ -322,21 +320,16 @@ async function main() {
     namingUnlabelled: 0,
     namingDuplicateLabels: 0,
     namingDuplicateRecords: 0,
-    ...emptyLabelMergeCounts(),
     desigConFromCrossIndex: 0,
     crossIndexUnknownCst: 0,
-    spineDroppedNoRaDec: 0,
-    spineDroppedNoDist: 0,
-    spineDroppedNoDirection: 0,
-    spineDroppedTooFar: 0,
-    spineDroppedNoVMagnitude: 0,
+    droppedNoDirection: 0,
+    droppedTooFar: 0,
     bjEntries: 0,
     bjEligible: 0,
     bjOverridden: 0,
-    bjOverriddenByDistSrc: emptyDistSrcPartition(),
     lmcCandidates: 0,
     lmcOverridden: 0,
-    lmcOverriddenByDistSrc: emptyDistSrcPartition(),
+    lmcOverriddenByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
     nameTableEntries: 0,
     variableCount: 0,
     searchEntries: 0,
@@ -472,20 +465,17 @@ async function main() {
   } = inputs;
   Object.assign(counts, sizes);
 
-  console.log(`Reading ${INHERITED_SPINE_TSV}...`);
+  console.log(`Reading ${MEMBERSHIP_MANIFEST_TSV}...`);
   const t0 = Date.now();
-  const { stars, stats } = readStars(INHERITED_SPINE_TSV, inputs);
+  const { stars, stats } = readStars(MEMBERSHIP_MANIFEST_TSV, inputs);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
-  console.log(`  kept ${stars.length} stars`);
+  console.log(`  kept ${stars.length} stars; parked ${stats.parked.length}`);
   console.log(`  dropped:`, stats.dropped);
   if (stats.bjEligible > 0) {
     const pct = ((stats.bjOverridden / stats.bjEligible) * 100).toFixed(1);
     console.log(
       `  Bailer-Jones override: ${stats.bjOverridden} / ${stats.bjEligible} ` +
         `Gaia-inverse-distance stars (${pct}%)`,
-    );
-    console.log(
-      `    by dist_src: ${formatDistSrcPartition(stats.bjOverriddenByDistSrc)}`,
     );
   }
   if (stats.lmcCandidates > 0) {
@@ -495,7 +485,7 @@ async function main() {
         `LMC-cone stars (${pct}%)`,
     );
     console.log(
-      `    by dist_src: ${formatDistSrcPartition(stats.lmcOverriddenByDistSrc)}`,
+      `    displacing: ${formatPartition(stats.lmcOverriddenByDistVia)}`,
     );
   }
   const dv = stats.directionVia;
@@ -578,20 +568,16 @@ async function main() {
   await writeSimbadSourcedDistances(stars);
   // recordCount is the final post-promotion count; populated after the
   // companion-promotion pass below.
-  counts.spineDroppedNoRaDec = stats.dropped.noRaDec;
-  counts.spineDroppedNoDist = stats.dropped.noDist;
-  counts.spineDroppedNoDirection = stats.dropped.noDirection;
-  counts.spineDroppedTooFar = stats.dropped.tooFar;
-  counts.spineDroppedNoVMagnitude = stats.dropped.noVMagnitude;
+  counts.droppedNoDirection = stats.dropped.noDirection;
+  counts.droppedTooFar = stats.dropped.tooFar;
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
-  counts.bjOverriddenByDistSrc = stats.bjOverriddenByDistSrc;
   counts.distLowPrecisionParallax = stats.distLowPrecisionParallax;
   counts.distRefusedNoOwnedParallax = stats.distRefusedNoOwnedParallax;
   for (const v of DIST_VIA_VALUES) counts[DIST_VIA_COUNT_KEY[v]] = stats.distVia[v];
   counts.lmcCandidates = stats.lmcCandidates;
   counts.lmcOverridden = stats.lmcOverridden;
-  counts.lmcOverriddenByDistSrc = stats.lmcOverriddenByDistSrc;
+  counts.lmcOverriddenByDistVia = stats.lmcOverriddenByDistVia;
   counts.directionGaia5p = dv.gaia_5p;
   counts.directionGaiaNssSystemic = dv.gaia_nss_systemic;
   counts.directionHip2Saturated = dv.hip2_saturated;
@@ -649,34 +635,22 @@ async function main() {
   counts.ciSpectralDerived = stats.ciVia.spectral_derived;
   counts.ciSolarFallback = stats.ciVia.solar_fallback;
 
-  // Classic-ID label layer: the frozen CDS joins replace AT-HYG's inherited
-  // cross-IDs, and IV/27A supplies each Bayer / Flamsteed designation's own
-  // constellation. A post-pass, not a walk tier — the field cascades above key
-  // on the spine's frozen identifiers.
-  console.log('Merging the classic-ID label overlay...');
-  const labelCounts = applyClassicIdLabels(stars, loadClassicIdLabelInputs());
-  Object.assign(counts, labelCounts);
-  for (const field of LABEL_FIELDS) {
-    console.log(
-      `  ${field.padEnd(5)} agree ${labelCounts.labelAgree[field]}, ` +
-        `added ${labelCounts.labelAdded[field]}, ` +
-        `flipped ${labelCounts.labelFlipped[field]}, ` +
-        `spine-only ${labelCounts.labelSpineOnly[field]}, ` +
-        `suppressed ${labelCounts.labelSuppressed[field]}, ` +
-        `extras dropped ${labelCounts.labelExtraDropped[field]}, ` +
-        `overridden ${labelCounts.labelOverridden[field]}`,
-    );
-  }
+  // The labels are the manifest's (docs/catalog-driver.md § 3.1); what the
+  // classic-ID tables still supply per record is IV/27A's constellation for
+  // each Bayer / Flamsteed designation.
+  console.log('Resolving designation constellations from IV/27A...');
+  const desigConCounts = applyDesignationConstellations(
+    stars, loadDesignationConstellationInputs(),
+  );
+  Object.assign(counts, desigConCounts);
   console.log(
-    `  ${labelCounts.labelNoOverlayEntry} records have no overlay row (spine ` +
-      `backstop); designation constellation from IV/27A on ` +
-      `${labelCounts.desigConFromCrossIndex}`,
+    `  designation constellation from IV/27A on ${desigConCounts.desigConFromCrossIndex}`,
   );
 
   // Naming ladder, authority half: the IAU WGSN approved name and the
-  // glyph-bearing Bayer / Gould designations, keyed on the identifiers the
-  // label merge above has just settled. Composition itself is post-sort,
-  // once every promoted record exists and its component letter is known.
+  // glyph-bearing Bayer / Gould designations, keyed on the record's
+  // identifiers. Composition itself is post-sort, once every promoted record
+  // exists and its component letter is known.
   console.log('Applying the IAU WGSN naming ladder...');
   const namingCounts = applyStarNames(stars, loadStarNamingInputs(), CONSTELLATIONS);
   Object.assign(counts, namingCounts);
@@ -709,17 +683,17 @@ async function main() {
 
   // Companion promotion — read data/binaries/multiples.tsv and add
   // first-class catalog records for the secondary of every physical pair
-  // whose identifier isn't already in AT-HYG. Promoted companions ride
+  // whose identifier isn't already a record. Promoted companions ride
   // catalog.bin with FLAG_BINARY_COMPANION_ONLY set; the renderer/picker
   // hover/focus stack picks them up with zero code change.
   const multiplesRows = existsSync(MULTIPLES_TSV)
     ? readMultiplesTsv(MULTIPLES_TSV)
     : null;
   if (multiplesRows !== null) {
-    // Identifier backfill BEFORE promotion: HD-only AT-HYG primaries
-    // (ξ UMa) gain the HIP + Gaia source_id the binaries pipeline
-    // resolved, so promotion's cursor-primary anchor and every
-    // downstream HIP/Gaia lookup address the record.
+    // Identifier backfill BEFORE promotion: HD-only primaries (ξ UMa) gain
+    // the HIP + Gaia source_id the binaries pipeline resolved, so
+    // promotion's cursor-primary anchor and every downstream HIP/Gaia
+    // lookup address the record.
     counts.multiplesIdentifierBackfill =
       backfillPrimaryIdentifiers(multiplesRows, stars, (star) => {
         if (star.spectClass !== UNKNOWN_CLASS_IDX) return;
@@ -854,8 +828,8 @@ async function main() {
 
   // GCVS variable-star cross-match. Optional — if the files aren't present
   // we just skip, no variability rendered. xref.byGaia is bridged from
-  // byHip via gaia_dr3_hip_xmatch.tsv when present, so spine rows that
-  // carry a gaia_source_id but no HIP still resolve.
+  // byHip via gaia_dr3_hip_xmatch.tsv when present, so records that carry
+  // a gaia_source_id but no HIP still resolve.
   if (existsSync(SRC_GCVS) && existsSync(SRC_GCVS_XREF)) {
     console.log('Parsing GCVS variable-star catalogue...');
     const tGcvs = Date.now();
@@ -1110,7 +1084,7 @@ async function main() {
     const periodUnits = isVariable ? encodePeriodUnits(s.periodDays) : 0;
     if (ampUnits > 0 && periodUnits > 0) variableCount++;
     // Gaia DR3 source_ids exceed Number.MAX_SAFE_INTEGER; parse the
-    // AT-HYG column as BigInt to preserve every bit before writing.
+    // manifest column as BigInt to preserve every bit before writing.
     const gaiaSourceId = s.gaiaSourceId ? BigInt(s.gaiaSourceId) : NO_GAIA_SOURCE_ID;
     if (gaiaSourceId !== NO_GAIA_SOURCE_ID) gaiaSourceIdResolved++;
 

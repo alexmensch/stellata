@@ -43,8 +43,8 @@ export function makeStar(overrides: Partial<Star> = {}): Star {
     amplitudeMag: 0,
     varType: 0,
     gcvsName: null,
-    athygDist: null,
-    athygDistSrc: null,
+    plxDistPc: null,
+    plxVia: null,
     distVia: 'bailer_jones',
     // The production majority (310,939 of 313,257), so a test whose star must
     // read as a system blend has to opt into a printed tier explicitly.

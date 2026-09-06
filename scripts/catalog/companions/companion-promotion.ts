@@ -1611,8 +1611,8 @@ function promoteRow(
     amplitudeMag: 0,
     varType: 0,
     gcvsName: null,
-    athygDist: null,
-    athygDistSrc: null,
+    plxDistPc: null,
+    plxVia: null,
     // A promoted companion is placed at its anchor's distance, so it inherits
     // the anchor's tier rather than claiming a parallax of its own — the
     // optical-double suppression must weigh both members the same way. Null

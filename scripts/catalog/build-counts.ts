@@ -1,20 +1,15 @@
 // Pure helpers for the build-catalog count assertion — diff a
 // BuildCounts record against the committed snapshot. See
 // scripts/catalog/validate/README.md § Validation harness.
-import { DIST_SRC_BUCKETS, type DistSrcPartition } from './catalog-pure';
+import type { DistVia } from './distance/parallax/parallax-cascade';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity';
-import type { LabelMergeCounts } from './classic-ids/label-merge-pure';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
  *  path. The generic comparator below is reused with other snapshots. */
 export const BUILD_COUNTS_EXPECTED_FILE = 'scripts/catalog/build-catalog-expected.json';
 
-/** Extends the label merge's own partitions rather than restating them: the
- *  merge module owns what those counts mean, and `build:classic-ids` pins the
- *  same set from the spine side — the two snapshots agreeing is what proves the
- *  committed review queue describes the shipped labels. */
-export interface BuildCounts extends LabelMergeCounts {
+export interface BuildCounts {
   /** Records written to catalog.bin after filtering and sort. */
   recordCount: number;
   /** `inferBinaries` companion assignments. */
@@ -70,47 +65,38 @@ export interface BuildCounts extends LabelMergeCounts {
    *  multiples.tsv member row — multiplicityStatus =
    *  MULTIPLICITY_UNRESOLVED (spectroscopic binaries, 64 Vir class). */
   multiplicityUnresolved: number;
-  /** Spine rows `readStars` dropped, per gate. **All five must stay 0.** Each
-   *  row cleared every one of them in the build the spine snapshots, so a
-   *  non-zero entry is the spine disagreeing with a reference table that has
-   *  moved under it — a refreshed Bailer-Jones or LMC input pushing a row past
-   *  MAX_DIST_PC, or an astrometry table that stopped resolving a direction.
-   *  Pinning them here is what turns that into a build failure instead of a
-   *  record silently leaving the catalogue (docs/catalog-driver.md § 6). */
-  spineDroppedNoRaDec: number;
-  spineDroppedNoDist: number;
-  spineDroppedNoDirection: number;
-  spineDroppedTooFar: number;
-  spineDroppedNoVMagnitude: number;
+  /** Manifest rows `readStars` dropped past the § 6.1 parks, per gate. **Both
+   *  must stay 0.** A row that reaches a parallax and a V but no direction, or
+   *  lands past MAX_DIST_PC after every override, is a reference table
+   *  disagreeing with the tiers above it — a refreshed Bailer-Jones or LMC
+   *  input pushing a row out, or an astrometry table that stopped resolving a
+   *  direction. Pinning them here is what turns that into a build failure
+   *  instead of a record silently leaving the catalogue
+   *  (docs/catalog-driver.md § 6). */
+  droppedNoDirection: number;
+  droppedTooFar: number;
   /** Total entries in the Bailer-Jones DR3 distance TSV (parsed map size). */
   bjEntries: number;
-  /** AT-HYG rows the Bailer-Jones override is allowed to fire on:
-   *  Gaia DR3 source_id present AND dist_src ∈ {G_R3, G_R2} (the Gaia
-   *  inverse-parallax population the posterior is the principled
-   *  replacement for). HIP / GJ / N / OTHER rows are excluded — their
-   *  underlying distance isn't a Gaia inverse and B-J would silently
-   *  move them to the prior's distant tail at low parallax S/N. */
+  /** Rows the Bailer-Jones override is allowed to fire on: a Gaia DR3
+   *  source_id present AND the parallax cascade resolved `gaia_dr3_inversion`
+   *  (the Gaia inverse-parallax population the posterior is the principled
+   *  replacement for). Rows on any other tier are excluded — their distance
+   *  isn't a Gaia inverse and B-J would silently move them to the prior's
+   *  distant tail at low parallax S/N. */
   bjEligible: number;
   /** bjEligible rows whose source_id was also in the B-J catalogue —
    *  the count actually overridden. Coverage = bjOverridden / bjEligible. */
   bjOverridden: number;
-  /** bjOverridden split by the row's AT-HYG dist_src. HIP / GJ / N /
-   *  OTHER must stay 0: a non-zero entry means the eligibility gate
-   *  stopped holding and non-Gaia distances are being regressed onto
-   *  B-J's Galactic-density prior. UNRECOGNISED must stay 0 too — a
-   *  dist_src value no override layer has reasoned about. */
-  bjOverriddenByDistSrc: DistSrcPartition;
-  /** AT-HYG rows whose (ra, dec) falls inside the LMC sky cone — the
+  /** Rows whose resolved direction falls inside the LMC sky cone — the
    *  population the LMC kinematic PM gate is evaluated against. */
   lmcCandidates: number;
   /** Rows that ALSO pass the LMC bulk-PM gate; their dist/x/y/z/absmag
    *  were snapped to Pietrzyński 2019's eclipsing-binary distance. */
   lmcOverridden: number;
-  /** lmcOverridden split by the row's AT-HYG dist_src. Unlike B-J this
-   *  layer gates on sky cone + PM, not on dist_src, so every bucket is
-   *  legitimately reachable — the split states which catalogued-distance
-   *  populations the snap actually displaces. */
-  lmcOverriddenByDistSrc: DistSrcPartition;
+  /** lmcOverridden split by the distance tier the snap displaced — B-J's
+   *  posterior or the raw inversion on most rows; the split states which
+   *  populations the override actually moves. */
+  lmcOverriddenByDistVia: Record<DistVia, number>;
   /** Stars with a proper name written into the name table. */
   nameTableEntries: number;
   /** Stars with both nonzero amplitude and period after quantisation —
@@ -640,7 +626,7 @@ export type CountDiff =
     };
 
 /** Compare actual counts against an expected manifest and emit a per-key
- *  diff. Partition-valued entries (a `DistSrcPartition`) expand to one
+ *  diff. Partition-valued entries (a `Record<tier, number>`) expand to one
  *  `parent.bucket` row each, so a single drifting bucket names itself.
  *  Pure — no I/O. The caller decides whether mismatches are fatal.
  *
@@ -672,10 +658,10 @@ function compareOne(key: string, expected: number, actual: number): CountDiff {
   return { key, status: 'mismatch', expected, actual };
 }
 
-/** One-line `bucket=n` rundown of an override layer's row partition, zeros
- *  included — the per-partition dry-run figure an override PR quotes. */
-export function formatDistSrcPartition(partition: DistSrcPartition): string {
-  return DIST_SRC_BUCKETS.map((b) => `${b}=${partition[b]}`).join(', ');
+/** One-line `bucket=n` rundown of a row partition, zeros included — the
+ *  per-partition dry-run figure an override PR quotes. */
+export function formatPartition(partition: Readonly<Record<string, number>>): string {
+  return Object.entries(partition).map(([b, n]) => `${b}=${n}`).join(', ');
 }
 
 /** Pretty-printer for the diff. Used by the build script and any future

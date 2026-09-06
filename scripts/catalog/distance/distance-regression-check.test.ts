@@ -40,14 +40,22 @@ describe('starKey + finalDistance', () => {
 });
 
 describe('threshold constants', () => {
-  it('treats HIP/GJ/N as strict (factor 3)', () => {
-    expect(SELF_CONSISTENCY_THRESHOLDS.HIP).toBeCloseTo(Math.log10(3), 10);
-    expect(SELF_CONSISTENCY_THRESHOLDS.GJ).toBeCloseTo(Math.log10(3), 10);
-    expect(SELF_CONSISTENCY_THRESHOLDS.N).toBeCloseTo(Math.log10(3), 10);
+  it('holds every measured non-Gaia tier strictly (factor 3)', () => {
+    for (const tier of [
+      'hip2_parallax', 'cns5_plx', 'gliese_plx', 'simbad_plx',
+      'pair_member_parallax', 'gliese_photometric_plx',
+    ] as const) {
+      expect(SELF_CONSISTENCY_THRESHOLDS[tier], tier).toBeCloseTo(Math.log10(3), 10);
+    }
   });
-  it('treats G_R3/G_R2 as loose (factor 30)', () => {
-    expect(SELF_CONSISTENCY_THRESHOLDS.G_R3).toBeCloseTo(Math.log10(30), 10);
-    expect(SELF_CONSISTENCY_THRESHOLDS.G_R2).toBeCloseTo(Math.log10(30), 10);
+  it('holds the Gaia inversion loosely (factor 30) — Bailer-Jones territory', () => {
+    expect(SELF_CONSISTENCY_THRESHOLDS.gaia_dr3_inversion).toBeCloseTo(Math.log10(30), 10);
+  });
+  it('has no opinion on the override layers, Sol or a park', () => {
+    expect(SELF_CONSISTENCY_THRESHOLDS.bailer_jones).toBeUndefined();
+    expect(SELF_CONSISTENCY_THRESHOLDS.lmc_kinematic).toBeUndefined();
+    expect(SELF_CONSISTENCY_THRESHOLDS.curated).toBeUndefined();
+    expect(SELF_CONSISTENCY_THRESHOLDS.none).toBeUndefined();
   });
   it('uses factor-5 for SIMBAD cross-check', () => {
     expect(SIMBAD_DISTANCE_THRESHOLD).toBeCloseTo(Math.log10(5), 10);
@@ -55,57 +63,56 @@ describe('threshold constants', () => {
 });
 
 describe('detectSelfConsistencyOutlier', () => {
-  it('trips on a HIP-sourced star shifted ~60× from its parallax-anchored input', () => {
+  it('trips on a HIP2-tier star shifted ~60× from its own inversion', () => {
     const star = starAt(18_500, {
       hip: 25097,
-      athygDist: 305,
-      athygDistSrc: 'HIP',
+      plxDistPc: 305,
+      plxVia: 'hip2_parallax',
     });
     const o = detectSelfConsistencyOutlier(star);
     expect(o).not.toBeNull();
     expect(o!.id).toBe('hip:25097');
-    expect(o!.distSrc).toBe('HIP');
-    expect(o!.athygDist).toBe(305);
+    expect(o!.plxVia).toBe('hip2_parallax');
+    expect(o!.plxDist).toBe(305);
     expect(o!.finalDist).toBe(18_500);
     // log10(18500 / 305) ≈ 1.783
     expect(o!.logRatio).toBeCloseTo(1.783, 2);
   });
 
-  it('passes a G_R3 star shifted 5× — Bailer-Jones override territory', () => {
-    // Gaia inverse parallax pulled to 5× by B-J is within the loose threshold.
+  it('passes a Gaia inversion shifted 5× — Bailer-Jones override territory', () => {
     const star = starAt(2500, {
       gaiaSourceId: '1234567890',
-      athygDist: 500,
-      athygDistSrc: 'G_R3',
+      plxDistPc: 500,
+      plxVia: 'gaia_dr3_inversion',
     });
     expect(detectSelfConsistencyOutlier(star)).toBeNull();
   });
 
-  it('trips on a G_R3 star shifted 50× — beyond catastrophic-inversion tolerance', () => {
+  it('trips on a Gaia inversion shifted 50× — beyond catastrophic-inversion tolerance', () => {
     const star = starAt(25_000, {
       gaiaSourceId: '9876543210',
-      athygDist: 500,
-      athygDistSrc: 'G_R3',
+      plxDistPc: 500,
+      plxVia: 'gaia_dr3_inversion',
     });
     const o = detectSelfConsistencyOutlier(star);
     expect(o).not.toBeNull();
-    expect(o!.distSrc).toBe('G_R3');
+    expect(o!.plxVia).toBe('gaia_dr3_inversion');
   });
 
-  it('skips rows whose dist_src has no threshold opinion', () => {
+  it('skips rows whose tier has no threshold opinion', () => {
     const star = starAt(18_500, {
       hip: 12345,
-      athygDist: 305,
-      athygDistSrc: 'OTHER',
+      plxDistPc: 305,
+      plxVia: 'curated',
     });
     expect(detectSelfConsistencyOutlier(star)).toBeNull();
   });
 
-  it('skips rows with no AT-HYG input distance', () => {
+  it('skips rows with no inversion of their own — minted companions', () => {
     const star = starAt(300, {
       hip: 12345,
-      athygDist: null,
-      athygDistSrc: 'HIP',
+      plxDistPc: null,
+      plxVia: null,
     });
     expect(detectSelfConsistencyOutlier(star)).toBeNull();
   });
@@ -114,18 +121,18 @@ describe('detectSelfConsistencyOutlier', () => {
     const star = starAt(18_500, {
       hip: null,
       gaiaSourceId: null,
-      athygDist: 305,
-      athygDistSrc: 'HIP',
+      plxDistPc: 305,
+      plxVia: 'hip2_parallax',
     });
     expect(detectSelfConsistencyOutlier(star)).toBeNull();
   });
 
-  it('catches inward shifts (final < athyg) symmetrically', () => {
-    // A HIP star catalogued at 1000 pc rendered at 100 pc (factor 10 inward).
+  it('catches inward shifts (final < inversion) symmetrically', () => {
+    // A HIP2 star whose parallax says 1000 pc, shipped at 100 pc (factor 10 inward).
     const star = starAt(100, {
       hip: 99999,
-      athygDist: 1000,
-      athygDistSrc: 'HIP',
+      plxDistPc: 1000,
+      plxVia: 'hip2_parallax',
     });
     const o = detectSelfConsistencyOutlier(star);
     expect(o).not.toBeNull();
@@ -227,11 +234,15 @@ describe('parseSimbadSampleTsv', () => {
   });
 });
 
+const hip2Outlier = (id: number, plxDist: number, finalDist: number, logRatio: number) => ({
+  id: `hip:${id}`, plxVia: 'hip2_parallax' as const, plxDist, finalDist, logRatio,
+});
+
 describe('buildRegressionReport', () => {
   it('returns empty arrays for an outlier-free catalog', () => {
     const stars = [
-      starAt(300, { hip: 1, athygDist: 305, athygDistSrc: 'HIP' }),
-      starAt(2000, { gaiaSourceId: '9', athygDist: 500, athygDistSrc: 'G_R3' }),
+      starAt(300, { hip: 1, plxDistPc: 305, plxVia: 'hip2_parallax' }),
+      starAt(2000, { gaiaSourceId: '9', plxDistPc: 500, plxVia: 'gaia_dr3_inversion' }),
     ];
     const report = buildRegressionReport(stars, new Map());
     expect(report.selfConsistency).toEqual([]);
@@ -240,7 +251,7 @@ describe('buildRegressionReport', () => {
 
   it('runs SIMBAD check against an empty sample without crashing', () => {
     const stars = [
-      starAt(18_500, { hip: 25097, athygDist: 305, athygDistSrc: 'HIP' }),
+      starAt(18_500, { hip: 25097, plxDistPc: 305, plxVia: 'hip2_parallax' }),
     ];
     const report = buildRegressionReport(stars, new Map());
     expect(report.selfConsistency).toHaveLength(1);
@@ -249,8 +260,8 @@ describe('buildRegressionReport', () => {
 
   it('emits both halves and sorts by id', () => {
     const stars = [
-      starAt(18_500, { hip: 25097, athygDist: 305, athygDistSrc: 'HIP' }),
-      starAt(40_000, { hip: 23527, athygDist: 250, athygDistSrc: 'HIP' }),
+      starAt(18_500, { hip: 25097, plxDistPc: 305, plxVia: 'hip2_parallax' }),
+      starAt(40_000, { hip: 23527, plxDistPc: 250, plxVia: 'hip2_parallax' }),
     ];
     const sample = new Map<string, SimbadDistanceEntry>([
       ['hip:25097', { simbadOid: 1, simbadMainId: 'HIP 25097', distancePc: 305 }],
@@ -266,9 +277,7 @@ describe('compareRegressionReports + formatRegressionDiff', () => {
 
   it('reports all unchanged when reports match', () => {
     const r: RegressionReport = {
-      selfConsistency: [
-        { id: 'hip:1', distSrc: 'HIP', athygDist: 100, finalDist: 1000, logRatio: 1 },
-      ],
+      selfConsistency: [hip2Outlier(1, 100, 1000, 1)],
       simbad: [],
     };
     const diff = compareRegressionReports(r, r);
@@ -278,21 +287,18 @@ describe('compareRegressionReports + formatRegressionDiff', () => {
 
   it('flags an added outlier', () => {
     const actual: RegressionReport = {
-      selfConsistency: [
-        { id: 'hip:1', distSrc: 'HIP', athygDist: 100, finalDist: 1000, logRatio: 1 },
-      ],
+      selfConsistency: [hip2Outlier(1, 100, 1000, 1)],
       simbad: [],
     };
     const diff = compareRegressionReports(empty, actual);
     expect(diff.some((d) => d.status === 'added')).toBe(true);
     expect(formatRegressionDiff(diff)).toMatch(/\+selfConsistency hip:1/);
+    expect(formatRegressionDiff(diff)).toMatch(/plx_via=hip2_parallax/);
   });
 
   it('flags a removed outlier', () => {
     const expected: RegressionReport = {
-      selfConsistency: [
-        { id: 'hip:1', distSrc: 'HIP', athygDist: 100, finalDist: 1000, logRatio: 1 },
-      ],
+      selfConsistency: [hip2Outlier(1, 100, 1000, 1)],
       simbad: [],
     };
     const diff = compareRegressionReports(expected, empty);
@@ -301,15 +307,11 @@ describe('compareRegressionReports + formatRegressionDiff', () => {
 
   it('flags a changed outlier', () => {
     const expected: RegressionReport = {
-      selfConsistency: [
-        { id: 'hip:1', distSrc: 'HIP', athygDist: 100, finalDist: 1000, logRatio: 1 },
-      ],
+      selfConsistency: [hip2Outlier(1, 100, 1000, 1)],
       simbad: [],
     };
     const actual: RegressionReport = {
-      selfConsistency: [
-        { id: 'hip:1', distSrc: 'HIP', athygDist: 100, finalDist: 1200, logRatio: 1.079 },
-      ],
+      selfConsistency: [hip2Outlier(1, 100, 1200, 1.079)],
       simbad: [],
     };
     const diff = compareRegressionReports(expected, actual);
@@ -318,23 +320,12 @@ describe('compareRegressionReports + formatRegressionDiff', () => {
 
   it('ignores reason-only differences (hand-edited metadata never trips the gate)', () => {
     const expected: RegressionReport = {
-      selfConsistency: [
-        {
-          id: 'hip:1',
-          distSrc: 'HIP',
-          athygDist: 100,
-          finalDist: 1000,
-          logRatio: 1,
-          reason: 'old rationale',
-        },
-      ],
+      selfConsistency: [{ ...hip2Outlier(1, 100, 1000, 1), reason: 'old rationale' }],
       simbad: [],
     };
     const actual: RegressionReport = {
-      selfConsistency: [
-        // Same data, reason missing (as freshly detected).
-        { id: 'hip:1', distSrc: 'HIP', athygDist: 100, finalDist: 1000, logRatio: 1 },
-      ],
+      // Same data, reason missing (as freshly detected).
+      selfConsistency: [hip2Outlier(1, 100, 1000, 1)],
       simbad: [],
     };
     const diff = compareRegressionReports(expected, actual);
@@ -345,16 +336,7 @@ describe('compareRegressionReports + formatRegressionDiff', () => {
 describe('mergeReasonsFromSnapshot', () => {
   it('carries hand-edited reasons over on matching ids', () => {
     const expected: RegressionReport = {
-      selfConsistency: [
-        {
-          id: 'hip:1',
-          distSrc: 'HIP',
-          athygDist: 100,
-          finalDist: 1000,
-          logRatio: 1,
-          reason: 'known calibrated outlier',
-        },
-      ],
+      selfConsistency: [{ ...hip2Outlier(1, 100, 1000, 1), reason: 'known calibrated outlier' }],
       simbad: [
         {
           id: 'gaia:42',
@@ -367,10 +349,8 @@ describe('mergeReasonsFromSnapshot', () => {
       ],
     };
     const actual: RegressionReport = {
-      selfConsistency: [
-        // Slightly refreshed numbers, no reason.
-        { id: 'hip:1', distSrc: 'HIP', athygDist: 100, finalDist: 1010, logRatio: 1.004 },
-      ],
+      // Slightly refreshed numbers, no reason.
+      selfConsistency: [hip2Outlier(1, 100, 1010, 1.004)],
       simbad: [
         { id: 'gaia:42', finalDist: 6050, simbadDist: 1000, simbadMainId: '* rho Cas', logRatio: 0.782 },
       ],
@@ -385,9 +365,7 @@ describe('mergeReasonsFromSnapshot', () => {
   it('leaves new outliers without a reason for the human to fill in', () => {
     const expected: RegressionReport = { selfConsistency: [], simbad: [] };
     const actual: RegressionReport = {
-      selfConsistency: [
-        { id: 'hip:999', distSrc: 'HIP', athygDist: 50, finalDist: 500, logRatio: 1 },
-      ],
+      selfConsistency: [hip2Outlier(999, 50, 500, 1)],
       simbad: [],
     };
     const merged = mergeReasonsFromSnapshot(expected, actual);
@@ -398,16 +376,7 @@ describe('mergeReasonsFromSnapshot', () => {
     // A star that used to be an outlier (with a reason) is no longer detected.
     // The fresh actual report omits it; mergeReasons must not resurrect it.
     const expected: RegressionReport = {
-      selfConsistency: [
-        {
-          id: 'hip:1',
-          distSrc: 'HIP',
-          athygDist: 100,
-          finalDist: 1000,
-          logRatio: 1,
-          reason: 'historical',
-        },
-      ],
+      selfConsistency: [{ ...hip2Outlier(1, 100, 1000, 1), reason: 'historical' }],
       simbad: [],
     };
     const actual: RegressionReport = { selfConsistency: [], simbad: [] };

@@ -96,10 +96,6 @@ import {
   parseGaiaSourceIdStr,
   parseSimbadWdsXidsTsv,
   isSiblingLetterAttribution,
-  DIST_SRC_BUCKETS,
-  distSrcBucket,
-  emptyDistSrcPartition,
-  tallyDistSrc,
   applyLmcKinematicOverride,
   isInLmcCone,
   angularSeparationDeg,
@@ -1535,49 +1531,6 @@ describe('catalog-pure / isBailerJonesEligible', () => {
     // Both rows carry dist_src=G_R3 upstream; only the resolved tier decides.
     expect(isBailerJonesEligible('123', 'hip2_parallax')).toBe(false);
     expect(isBailerJonesEligible('123', 'gaia_dr3_inversion')).toBe(true);
-  });
-});
-
-describe('catalog-pure / dist_src partition', () => {
-  it('DIST_SRC_BUCKETS covers AT-HYG v3.3 dist_src plus the catch-all', () => {
-    expect([...DIST_SRC_BUCKETS]).toEqual([
-      'G_R3', 'G_R2', 'HIP', 'GJ', 'N', 'OTHER', 'UNRECOGNISED',
-    ]);
-  });
-
-  it('buckets each AT-HYG dist_src under its own name', () => {
-    for (const src of ['G_R3', 'G_R2', 'HIP', 'GJ', 'N', 'OTHER']) {
-      expect(distSrcBucket(src), src).toBe(src);
-    }
-  });
-
-  it('routes a null, blank, or never-seen dist_src to UNRECOGNISED', () => {
-    // Keeps a newly-introduced AT-HYG dist_src from hiding inside the
-    // literal 'OTHER' bucket, where no override layer has reasoned about it.
-    expect(distSrcBucket(null)).toBe('UNRECOGNISED');
-    expect(distSrcBucket('')).toBe('UNRECOGNISED');
-    expect(distSrcBucket('G_R4')).toBe('UNRECOGNISED');
-  });
-
-  it('emptyDistSrcPartition zeroes every bucket', () => {
-    const p = emptyDistSrcPartition();
-    expect(Object.keys(p)).toEqual([...DIST_SRC_BUCKETS]);
-    expect(Object.values(p).every((n) => n === 0)).toBe(true);
-  });
-
-  it('tallyDistSrc accumulates per bucket and leaves the rest at zero', () => {
-    const p = emptyDistSrcPartition();
-    tallyDistSrc(p, 'G_R3');
-    tallyDistSrc(p, 'G_R3');
-    tallyDistSrc(p, 'HIP');
-    tallyDistSrc(p, 'G_R4');
-    expect(p.G_R3).toBe(2);
-    expect(p.HIP).toBe(1);
-    expect(p.UNRECOGNISED).toBe(1);
-    expect(p.G_R2).toBe(0);
-    expect(p.GJ).toBe(0);
-    expect(p.N).toBe(0);
-    expect(p.OTHER).toBe(0);
   });
 });
 

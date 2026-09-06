@@ -9,15 +9,17 @@ export const PARKED_RECORDS_FILE = 'data/athyg/parked_no_owned_parallax.tsv';
  *  `refused_no_defensible_parallax` is a row whose only measurement a skip rule
  *  refused; `no_parallax_published` is a row nothing ever measured. The two
  *  have different futures — the first reinstates when Gaia DR4 fits the blend,
- *  the second needs someone to measure the star. */
+ *  the second needs someone to measure the star. `no_v_magnitude` is a row
+ *  placed but unlit: no V tier reaches it, and a record needs both. */
 export const PARKED_REASONS = [
   'refused_no_defensible_parallax',
   'no_parallax_published',
+  'no_v_magnitude',
 ] as const;
 
 export type ParkedReason = (typeof PARKED_REASONS)[number];
 
-/** One spine row the cascade could not place. Records leave the catalogue
+/** One manifest row the walk could not ship. Records leave the catalogue
  *  entirely, so nothing else in the build records that they existed. */
 export interface ParkedRecord {
   tyc: string | null;
@@ -30,9 +32,9 @@ export interface ParkedRecord {
 
 const COLUMNS = ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'] as const;
 
-/** The five identifier cells, joined — the spine carries all of them under the
- *  same names, so the parity gate matches ledger row to spine row on the whole
- *  tuple rather than guessing which id is the one that identifies. */
+/** The five identifier cells, joined — the manifest carries all of them under
+ *  the same names, so the parity gate matches ledger row to manifest row on the
+ *  whole tuple rather than guessing which id is the one that identifies. */
 export function parkedSpineKey(cells: {
   tyc: string; hip: string; hd: string; gl: string; gaia_source_id: string;
 }): string {

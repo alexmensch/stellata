@@ -19,10 +19,10 @@ import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad-values-p
 import { unitVectorFromRaDec, type UnitVector } from '../../../src/client/util/equatorial-basis';
 import type { GlieseIndex } from '../gliese-parse';
 import {
-  SPINE_COLUMNS,
-  serializeSpine,
-  type SpineRow,
-} from '../spine/inherited-spine-pure';
+  MANIFEST_COLUMNS,
+  serializeManifest,
+  type ManifestRow,
+} from '../membership/membership-manifest-pure';
 import { CONSTELLATIONS, createConstellationAssignment } from './constellations';
 import { readStars } from './stars-parse';
 
@@ -31,25 +31,24 @@ const conIndexOf = (code: string): number =>
   CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === code);
 
 // Emitted through the shipped codec, so a column added or renamed in
-// COLUMN_SPEC fails here rather than silently shifting every cell.
-function writeSpineTsv(rows: readonly Partial<SpineRow>[]): string {
-  const dir = mkdtempSync(join(tmpdir(), 'spine-'));
-  const path = join(dir, 'inherited-spine.tsv');
+// MANIFEST_COLUMNS fails here rather than silently shifting every cell.
+function writeManifestTsv(rows: readonly Partial<ManifestRow>[]): string {
+  const dir = mkdtempSync(join(tmpdir(), 'manifest-'));
+  const path = join(dir, 'membership-manifest.tsv');
   const blank = Object.fromEntries(
-    SPINE_COLUMNS.map((column) => [column, '']),
-  ) as SpineRow;
-  writeFileSync(path, serializeSpine(rows.map((row) => ({ ...blank, ...row }))));
+    MANIFEST_COLUMNS.map((column) => [column, '']),
+  ) as ManifestRow;
+  writeFileSync(path, serializeManifest(rows.map((row) => ({ ...blank, ...row }))));
   return path;
 }
 
-// The spine's printed ra/dec and `mag` cells are no longer tiers of any
-// cascade, so a fixture row needs a real source to be both placed and lit or
-// the walk drops it. Tycho-2 serves both terms at once, and BT = VT puts the
-// reduced Johnson V at exactly VT.
+// The manifest carries designations alone, so a fixture row needs a real
+// source to be both placed and lit or the walk parks it. Tycho-2 serves both
+// terms at once, and BT = VT puts the reduced Johnson V at exactly VT.
 const ORIGIN_TYC = '1-1-1';
 const RHO_AQL_TYC = '2-2-1';
-// Distance now inverts a parallax too, and Tycho-2 publishes none. Gliese is
-// the one parallax tier the DIRECTION cascade never reads, so seeding it places
+// Distance inverts a parallax too, and Tycho-2 publishes none. Gliese is the
+// one parallax tier the DIRECTION cascade never reads, so seeding it places
 // the fixture rows without moving which tier resolves their position.
 const ORIGIN_GL = '901';
 const RHO_AQL_GL = '902';
@@ -68,7 +67,7 @@ function glieseParallaxes(
 }
 
 function tycho2Sources(
-  rows: ReadonlyArray<{ tyc: string; raDeg: number; decDeg: number; vMag: number }>,
+  rows: ReadonlyArray<{ tyc: string; raDeg: number; decDeg: number; vMag: number | null }>,
   overrides: Partial<DirectionSources> = {},
 ): DirectionSources {
   return {
@@ -87,11 +86,8 @@ function tycho2Sources(
   };
 }
 
-// ra=0 h, dec=0°, dist=100 pc → xyz=(100,0,0). V 10 at 100 pc is absmag 5.
-const AT_ORIGIN_SIGHTLINE: Partial<SpineRow> = {
-  ra: '0', dec: '0', dist: '100', dist_src: 'OTHER', spect: 'K0V',
-  tyc: ORIGIN_TYC, gl: ORIGIN_GL,
-};
+// Placed at ra=0°, dec=0°, 100 pc → xyz=(100,0,0). V 10 at 100 pc is absmag 5.
+const AT_ORIGIN_SIGHTLINE: Partial<ManifestRow> = { tyc: ORIGIN_TYC, gl: ORIGIN_GL };
 const AT_ORIGIN_DIRECTIONS = (): DirectionSources =>
   tycho2Sources([{ tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: 10.0 }]);
 
@@ -112,11 +108,10 @@ function uniformDustGrid(): DustGrid {
 describe('readStars build-time de-extinction of ci', () => {
   it('de-reddens an observed ci but never the solar fallback', () => {
     const grid = uniformDustGrid();
-    // The observed colour arrives through the printed I/239 tier — the spine's
-    // own `ci` cell is no longer a tier, so a row with one would still take the
-    // fallback and the assertion below would be vacuous.
+    // The observed colour arrives through the printed I/239 tier — the one
+    // measured colour a row with no Gaia source can reach.
     const { stars } = readStars(
-      writeSpineTsv([
+      writeManifestTsv([
         { ...AT_ORIGIN_SIGHTLINE, proper: 'BlankCi' },
         { ...AT_ORIGIN_SIGHTLINE, proper: 'ObservedCi', hip: '11111' },
       ]),
@@ -145,11 +140,11 @@ describe('readStars build-time de-extinction of ci', () => {
 });
 
 describe('readStars Gaia source_id', () => {
-  // The spine froze each binding after the native → cross-walk precedence and
-  // both gates ran. Re-applying the G−V gate here would re-decide it against
-  // photometry the frozen build already weighed, and a scrubbed source_id
-  // changes the record's designation set — so every SID keyed on it moves.
-  it('takes the frozen column even where the G−V gate would scrub it', () => {
+  // The manifest justified each binding (docs/catalog-driver.md § 3.1).
+  // Re-applying the G−V gate here would re-decide it against photometry the
+  // manifest build already weighed, and a scrubbed source_id changes the
+  // record's designation set — so every SID keyed on it moves.
+  it('takes the manifest column even where the G−V gate would scrub it', () => {
     const sourceId = '5853498713190525696';
     const gaiaAstrometry = new Map<string, GaiaAstrometryCatalogRow>([
       [sourceId, gaiaAstrometryRow({
@@ -159,7 +154,7 @@ describe('readStars Gaia source_id', () => {
       })],
     ]);
     const { stars } = readStars(
-      writeSpineTsv([{
+      writeManifestTsv([{
         ...AT_ORIGIN_SIGHTLINE, gaia_source_id: sourceId,
       }]),
       {
@@ -176,15 +171,53 @@ describe('readStars Gaia source_id', () => {
   });
 });
 
+describe('readStars manifest labels', () => {
+  it('carries the alias lists and the cascade diagnostics onto the record', () => {
+    const { stars } = readStars(
+      writeManifestTsv([{
+        ...AT_ORIGIN_SIGHTLINE, hd: '100', hd_alt: '101|102', hr: '7', hr_alt: '8',
+      }]),
+      {
+        conAssignment: CON_ASSIGNMENT,
+        directions: AT_ORIGIN_DIRECTIONS(),
+        gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
+      },
+    );
+    expect(stars).toHaveLength(1);
+    expect(stars[0]).toMatchObject({
+      hd: 100, hdAlt: [101, 102], hr: 7, hrAlt: [8],
+      plxVia: 'gliese_plx', distVia: 'gliese_plx',
+    });
+    expect(stars[0].plxDistPc).toBeCloseTo(100, 9);
+  });
+
+  it('parks a row no V tier lights, under its own § 6.1 reason', () => {
+    const { stars, stats } = readStars(
+      writeManifestTsv([{ ...AT_ORIGIN_SIGHTLINE, hd: '55' }]),
+      {
+        conAssignment: CON_ASSIGNMENT,
+        directions: tycho2Sources([{ tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: null }]),
+        gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
+      },
+    );
+    expect(stars).toHaveLength(0);
+    expect(stats.parked).toEqual([{
+      tyc: ORIGIN_TYC, hip: null, hd: 55, gl: ORIGIN_GL, gaiaSourceId: null,
+      reason: 'no_v_magnitude',
+    }]);
+    expect(stats.vVia.none).toBe(1);
+    expect(stats.distVia.gliese_plx).toBe(0);
+  });
+});
+
 describe('readStars constellation assignment', () => {
   // ra=20h14m16.6s / dec=+15°11'51" — ρ Aql, whose 1992 boundary crossing by
   // proper motion is the whole reason the two constellations are separate
   // fields. See src/client/constellation-boundaries/iau-geometry/README.md
   // § ρ Aquilae.
-  const RHO_AQL: Partial<SpineRow> = {
-    dist: '46.5', dist_src: 'OTHER', ci: '0.08', spect: 'A2V', bayer: 'Rho',
-    flam: '67', hip: '99742', hd: '192425', hr: '7724',
-    ra: '20.23796', dec: '15.1975', tyc: RHO_AQL_TYC, gl: RHO_AQL_GL,
+  const RHO_AQL: Partial<ManifestRow> = {
+    bayer: 'Rho', flam: '67', hip: '99742', hd: '192425', hr: '7724',
+    tyc: RHO_AQL_TYC, gl: RHO_AQL_GL,
   };
   // 20.23796 h × 15 = 303.5694°.
   const RHO_AQL_DIRECTIONS = (): DirectionSources => tycho2Sources([
@@ -198,20 +231,20 @@ describe('readStars constellation assignment', () => {
 
   it('resolves byte 34 positionally', () => {
     const { stars } = readStars(
-      writeSpineTsv([RHO_AQL]),
+      writeManifestTsv([RHO_AQL]),
       { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS(), gliese: RHO_AQL_GLIESE() },
     );
     expect(stars).toHaveLength(1);
     expect(stars[0].conIndex).toBe(conIndexOf('del'));
   });
 
-  it('names no designation constellation — the spine has no editorial cell', () => {
+  it('names no designation constellation — the manifest has no editorial cell', () => {
     // ρ Aql is the sharpest case: the walk used to read "Aql" off AT-HYG's
-    // `con` column, and nothing replaces it here. A GCVS designation is the
-    // only source left, and this row has none, so its aliases fall back to
-    // the positional index until the overlay supplies one.
+    // `con` column, and nothing replaces it here. The IV/27A, WGSN and GCVS
+    // passes downstream are the only sources, and this row reaches none of
+    // them in a bare walk, so its aliases fall back to the positional index.
     const { stars } = readStars(
-      writeSpineTsv([RHO_AQL, { ...AT_ORIGIN_SIGHTLINE, proper: 'Anon' }]),
+      writeManifestTsv([RHO_AQL, { ...AT_ORIGIN_SIGHTLINE, proper: 'Anon' }]),
       { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS(), gliese: RHO_AQL_GLIESE() },
     );
     expect(stars.map((s) => s.desigConIndex))
@@ -220,14 +253,12 @@ describe('readStars constellation assignment', () => {
 
   it('leaves Sol unclassified — the origin has no sky direction', () => {
     const { stars } = readStars(
-      writeSpineTsv([{
-        ra: '0', dec: '0', dist: '0', dist_src: 'OTHER', ci: '0.656',
-        spect: 'G2V', proper: 'Sol',
-      }]),
+      writeManifestTsv([{ proper: 'Sol' }]),
       { conAssignment: CON_ASSIGNMENT },
     );
     expect(stars).toHaveLength(1);
     expect(stars[0].conIndex).toBe(NO_CONSTELLATION_INDEX);
+    expect(stars[0]).toMatchObject({ plxDistPc: null, plxVia: 'curated', distVia: 'curated' });
   });
 });
 
@@ -254,8 +285,7 @@ describe('readStars PM rescue', () => {
   const TYCHO2_PM = { pmRaMasyr: -453.7, pmDecMasyr: -591.4 };
   const GAIA_EDR3 = '2020yCat.1350....0G';
 
-  const SPINE_ROW: Partial<SpineRow> = {
-    ra: '0', dec: '0', dist: '100', dist_src: 'OTHER', spect: 'K0V',
+  const MANIFEST_ROW: Partial<ManifestRow> = {
     tyc: RESCUE_TYC, gl: RESCUE_GL, proper: 'Rescued',
   };
 
@@ -289,7 +319,7 @@ describe('readStars PM rescue', () => {
 
   it('rescues a 2p row off its own TYC, and credits Tycho-2 not the tier', () => {
     const { stars, stats } = readStars(
-      writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID }]),
+      writeManifestTsv([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
       {
         conAssignment: CON_ASSIGNMENT,
         gliese: PARALLAXES,
@@ -307,7 +337,7 @@ describe('readStars PM rescue', () => {
 
   it('ships static where the cascade reaches nothing — the control', () => {
     const { stars, stats } = readStars(
-      writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID }]),
+      writeManifestTsv([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
       {
         conAssignment: CON_ASSIGNMENT,
         gliese: PARALLAXES,
@@ -324,7 +354,7 @@ describe('readStars PM rescue', () => {
 
   it('never enters the cascade where the tier states its own motion', () => {
     const { stats } = readStars(
-      writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID }]),
+      writeManifestTsv([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
       {
         conAssignment: CON_ASSIGNMENT,
         gliese: PARALLAXES,
@@ -343,7 +373,7 @@ describe('readStars PM rescue', () => {
 
   it("refuses a Gaia-bibcoded motion on the record's OWN 2p solution", () => {
     const { stars, stats } = readStars(
-      writeSpineTsv([{ ...SPINE_ROW, gaia_source_id: SOURCE_ID, gl: GJ }]),
+      writeManifestTsv([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID, gl: GJ }]),
       {
         conAssignment: CON_ASSIGNMENT,
         gliese: PARALLAXES,
@@ -364,7 +394,7 @@ describe('readStars PM rescue', () => {
     // whole of the difference: with no fit to distrust the citation is
     // ordinary. Inverting the predicate would strip the motion from these.
     const { stars, stats } = readStars(
-      writeSpineTsv([{ ...SPINE_ROW, gl: GJ }]),
+      writeManifestTsv([{ ...MANIFEST_ROW, gl: GJ }]),
       {
         conAssignment: CON_ASSIGNMENT,
         gliese: PARALLAXES,
@@ -420,11 +450,7 @@ describe('readStars advances the position on a rescued PM', () => {
   });
 
   const built = (): ReturnType<typeof readStars> => readStars(
-    writeSpineTsv([{
-      ra: String(OBSERVED_RA / 15), dec: String(OBSERVED_DEC),
-      dist: String(DIST_PC), dist_src: 'OTHER', spect: 'K0V',
-      tyc: NO_MEAN_TYC, gl: NO_MEAN_GL,
-    }]),
+    writeManifestTsv([{ tyc: NO_MEAN_TYC, gl: NO_MEAN_GL }]),
     {
       conAssignment: CON_ASSIGNMENT,
       simbadValues: simbadPmOnly(),
