@@ -62,7 +62,7 @@ When scoping data-processing / cross-match / catalog-ingest work:
 ### Detail gradient — highest-density measurable info near Earth, simpler model further out
 
 Per-object near, statistical far. When scoping a layer beyond the
-AT-HYG catalog reach, prefer statistical / aggregate sources (HiPS-
+star catalogue's own reach, prefer statistical / aggregate sources (HiPS-
 derived counts, binned populations) over hand-extending per-object
 data. Each tier in the catalogue ecosystem (CDS / VizieR / Gaia /
 HiPS surveys) earns its keep in a specific distance regime — pick
