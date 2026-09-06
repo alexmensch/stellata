@@ -9,7 +9,7 @@ import { PIN_VERDICT_MARK, type PinDiff } from './pin-pure';
 import type { DwellRecord } from './schema';
 import type { SweepFit, SweepPoint } from './sweep-pure';
 
-export type Cell = string | number | undefined;
+export type Cell = string | number | boolean | undefined;
 
 export function formatTable(
   columns: readonly string[],
@@ -27,17 +27,17 @@ export const PRICE_ROW_COLUMNS = [
   'pass', 'method', 'baselineMs', 'disabledMs', 'savedMs', 'savedPct', 'samples',
   'iqrMs', 'noiseMs', 'bracketMs', 'baselineLag1', 'disabledLag1',
   'baselineReadback', 'disabledReadback', 'baselineLimitMag', 'disabledLimitMag', 'bufferMpx',
-  'underCadence',
+  'cadenceBound',
 ] as const satisfies readonly (keyof PriceFrameRow)[];
 
+/** A column no row carries is dropped rather than printed empty: on a GPU
+ *  clock `cadenceBound` is absent from every row, and a non-interleaved
+ *  sweep has no `bracketMs` on any. */
 export function formatPriceTable(rows: readonly PriceFrameRow[]): string {
-  return formatTable(
-    PRICE_ROW_COLUMNS,
-    rows.map((row) => PRICE_ROW_COLUMNS.map((column) => {
-      const value = row[column];
-      return typeof value === 'boolean' ? String(value) : value;
-    })),
-  );
+  const columns = rows.length === 0
+    ? PRICE_ROW_COLUMNS
+    : PRICE_ROW_COLUMNS.filter((column) => rows.some((row) => row[column] !== undefined));
+  return formatTable(columns, rows.map((row) => columns.map((column) => row[column])));
 }
 
 export const DWELL_COLUMNS = [
@@ -51,7 +51,7 @@ export function formatDwellTable(
     DWELL_COLUMNS,
     labelled.map(([clock, s]) => [
       clock, s.samples, round3(s.p50), round3(s.p90), round3(s.p99),
-      round3(s.iqrMs), round3(s.lag1), String(s.vsyncClamped), s.stateGuard,
+      round3(s.iqrMs), round3(s.lag1), s.vsyncClamped, s.stateGuard,
     ]),
   );
 }
@@ -87,7 +87,7 @@ export function formatSweepTable(points: readonly SweepPoint[], fit: SweepFit, b
   const table = formatTable(
     SWEEP_COLUMNS,
     points.map((p) => [
-      p.scale, p.width, p.height, round3(p.px / 1e6), round3(p.ms), String(p.vsyncClamped),
+      p.scale, p.width, p.height, round3(p.px / 1e6), round3(p.ms), p.vsyncClamped,
     ]),
   );
   return `${table}\nslope ${fit.slope.toFixed(3)} · r² ${fit.r2.toFixed(3)} · ` +

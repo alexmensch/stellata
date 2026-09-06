@@ -10,9 +10,17 @@ import {
   fitDwellFrames,
   SETTLE_FRAMES,
   CADENCE_TOLERANCE,
-  isUnderCadence,
+  isCadenceBound,
+  isVsyncClamped,
+  vsyncClampToleranceMs,
   WARMUP_FRAMES,
 } from './frame-cost-pure';
+
+const HZ_60 = 1000 / 60;
+const HZ_120 = 1000 / 120;
+
+/** The cadence the headless runner measures on Chromium's virtual display. */
+const HEADLESS = 16.7;
 
 const FIT = {
   dwellFrames: 120,
@@ -255,29 +263,95 @@ describe('frame-cost-pure', () => {
   // round trip waits SETTLE_FRAMES after restoring a pass and stamps the
   // count into its record, so a silent change there moves what a recorded
   // measurement means.
-  it('isUnderCadence: on or under one display interval, within the clamp tolerance', () => {
+  it('isCadenceBound: at or under one interval, whatever the spread', () => {
     expect(CADENCE_TOLERANCE).toBe(0.06);
-    expect(isUnderCadence(15.98, 16.7)).toBe(true);
-    expect(isUnderCadence(16.7, 16.7)).toBe(true);
-    expect(isUnderCadence(17.7, 16.7)).toBe(true);
-    expect(isUnderCadence(17.71, 16.7)).toBe(false);
-    expect(isUnderCadence(18.7, 16.7)).toBe(false);
-    expect(isUnderCadence(10, 0)).toBe(false);
+    // The arm-12 WebGL2 rows: Sol and Earth baselines against the 16.7 ms
+    // cadence the runner measured, with the spreads those dwells had.
+    expect(isCadenceBound(15.975, 1.6, HEADLESS)).toBe(true);
+    expect(isCadenceBound(15.75, 1.95, HEADLESS)).toBe(true);
+    expect(isCadenceBound(HEADLESS, 8, HEADLESS)).toBe(true);
+    expect(isCadenceBound(17.7, 8, HEADLESS)).toBe(true);
+    // The arm-12 WebGPU Earth row stays resolvable.
+    expect(isCadenceBound(18.7, 0.2, HEADLESS)).toBe(false);
+    expect(isCadenceBound(10, 0.2, 0)).toBe(false);
   });
 
-  it('stamps underCadence on raf-delta rows given a cadence, and nothing otherwise', () => {
-    const under = dwell(120, 16.0, 0.2);
-    const over = dwell(120, 18.7, 0.2);
-    expect(buildPriceRow('emptyPass', 'raf-delta', under, under, 16.7).underCadence).toBe(true);
-    expect(buildPriceRow('emptyPass', 'raf-delta', over, over, 16.7).underCadence).toBe(false);
-    expect(buildPriceRow('emptyPass', 'raf-delta', over, under, 16.7).underCadence).toBe(true);
-    expect(buildInterleavedRow('emptyPass', 'raf-delta', over, over, under, 16.7).underCadence).toBe(true);
-    expect(buildPriceRow('emptyPass', 'raf-delta', under, under).underCadence).toBeUndefined();
-    expect(buildPriceRow('emptyPass', 'timestamp', under, under, 16.7).underCadence).toBeUndefined();
+  it('isCadenceBound: on a HIGHER multiple with a tight spread, which one interval alone misses', () => {
+    // Two intervals of hardware time is the pin's own ceiling, and a frame
+    // consistently missing one refresh sits there — quantised, and a
+    // one-interval test reads it as resolvable.
+    expect(isCadenceBound(2 * HEADLESS, 0.2, HEADLESS)).toBe(true);
+    expect(isCadenceBound(3 * HEADLESS, 0.2, HEADLESS)).toBe(true);
+    // Comfortably between two intervals, spread showing it is not pinned:
+    // the one honest wall-clock case.
+    expect(isCadenceBound(25, 4, HEADLESS)).toBe(false);
+    // On a multiple but too loose to be the display's number.
+    expect(isCadenceBound(2 * HEADLESS, 4, HEADLESS)).toBe(false);
+  });
+
+  it('stamps cadenceBound from EVERY dwell of the row, not their mean', () => {
+    const bound = dwell(120, 16.0, 0.2);
+    const free = dwell(120, 18.7, 0.2);
+    expect(buildPriceRow('emptyPass', 'raf-delta', bound, bound, HEADLESS).cadenceBound).toBe(true);
+    expect(buildPriceRow('emptyPass', 'raf-delta', free, free, HEADLESS).cadenceBound).toBe(false);
+    expect(buildPriceRow('emptyPass', 'raf-delta', free, bound, HEADLESS).cadenceBound).toBe(true);
+    expect(buildInterleavedRow('emptyPass', 'raf-delta', free, free, bound, HEADLESS).cadenceBound).toBe(true);
+    // A bracketed row's leading baseline was pinned to the refresh while the
+    // trailing one ran long: their mean clears one interval, the state did not.
+    expect(
+      buildInterleavedRow('emptyPass', 'raf-delta', bound, dwell(120, 28, 4), free, HEADLESS).cadenceBound,
+    ).toBe(true);
+    expect(buildPriceRow('emptyPass', 'raf-delta', bound, bound).cadenceBound).toBeUndefined();
+    expect(buildPriceRow('emptyPass', 'timestamp', bound, bound, HEADLESS).cadenceBound).toBeUndefined();
   });
 
   it('pins the two frame counts the runner shares with the sweep', () => {
     expect(SETTLE_FRAMES).toBe(30);
     expect(WARMUP_FRAMES).toBe(180);
+  });
+});
+
+describe('isVsyncClamped — the cadence is measured, not assumed', () => {
+  it('scales the tolerance with the interval: 1 ms at 60 Hz, 0.5 ms at 120 Hz', () => {
+    expect(CADENCE_TOLERANCE).toBe(0.06);
+    expect(vsyncClampToleranceMs(HZ_60)).toBeCloseTo(1, 6);
+    expect(vsyncClampToleranceMs(HZ_120)).toBeCloseTo(0.5, 6);
+  });
+
+  it('clamps on the first interval of the cadence the runner actually saw', () => {
+    expect(isVsyncClamped(HZ_60, 0.4, HZ_60)).toBe(true);
+    expect(isVsyncClamped(HZ_120, 0.4, HZ_120)).toBe(true);
+    expect(isVsyncClamped(HZ_60 + 0.8, 0.4, HZ_60)).toBe(true);
+    expect(isVsyncClamped(HZ_60 + 1.2, 0.4, HZ_60)).toBe(false);
+  });
+
+  it('clamps a frame held to a second interval — 16.67 on a 120 Hz panel is still the display', () => {
+    expect(isVsyncClamped(HZ_60, 0.3, HZ_120)).toBe(true);
+    expect(isVsyncClamped(3 * HZ_120, 0.3, HZ_120)).toBe(true);
+    expect(isVsyncClamped(2 * HZ_60, 0.4, HZ_60)).toBe(true);
+  });
+
+  it('reads a tight p50 between two intervals as the frame, not the display', () => {
+    expect(isVsyncClamped(12, 0.4, HZ_60)).toBe(false);
+    expect(isVsyncClamped(12, 0.3, HZ_120)).toBe(false);
+  });
+
+  it('does not mark everything clamped on a small interval', () => {
+    // Under a flat 1 ms every one of these sits within reach of some
+    // multiple of 0.5 ms; the scaled tolerance is 0.03 ms.
+    expect(vsyncClampToleranceMs(0.5)).toBeCloseTo(0.03, 6);
+    for (const p50 of [6.1, 6.2, 6.3, 6.4, 6.6, 6.8]) {
+      expect(isVsyncClamped(p50, 0.02, 0.5)).toBe(false);
+    }
+    expect(isVsyncClamped(6, 0.4, 0.5)).toBe(false);
+  });
+
+  it('needs the spread as well as the level', () => {
+    expect(isVsyncClamped(HZ_60, vsyncClampToleranceMs(HZ_60), HZ_60)).toBe(false);
+  });
+
+  it('reads nothing as clamped when no cadence was measured', () => {
+    expect(isVsyncClamped(1, 0, null)).toBe(false);
+    expect(isVsyncClamped(1, 0, 0)).toBe(false);
   });
 });

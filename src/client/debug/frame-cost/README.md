@@ -26,9 +26,13 @@ src/client/debug/frame-cost/
                               here so a caller can validate a requested
                               key without importing the renderer — plus
                               WARMUP_FRAMES, the median standard error,
-                              the interquartile spread and round3, which
-                              the headless runner imports rather than
-                              re-deriving (`scripts/perf/README.md`).
+                              the interquartile spread, round3 and the
+                              cadence rules (CADENCE_TOLERANCE,
+                              isVsyncClamped, isCadenceBound), which the
+                              headless runner imports rather than
+                              re-deriving — its dwell clamp and this
+                              folder's cadenceBound are one predicate pair
+                              (`scripts/perf/README.md`).
   gpu-frame-source.ts         Which sample source a sweep gets, per
     (+ test)                  backend, and the method label it stamps.
 ```
@@ -83,10 +87,11 @@ src/client/debug/frame-cost/
   (`../gpu-timing/README.md` § WebGPU, § A granted feature can still
   resolve garbage).
   Under `raf-delta` a differential below the vsync quantum reads as zero
-  unless the frame is already over budget — a caller that measured the
-  display's idle period passes `{ cadenceMs }` (the headless runner does),
-  and every row either of whose states sat on or under one interval is
-  stamped `underCadence: true`. `method` labels every row; never
+  unless the frame is already over budget *and* not itself pinned to a
+  higher multiple of the refresh — so every row whose dwells the display
+  decided is stamped `cadenceBound: true` (§ Reading a row), wherever the
+  caller passed the `{ cadenceMs }` it measured (the headless runner does).
+  `method` labels every row; never
   compare numbers across two methods. The sweep picks the source itself and
   says which on the console — it never claims a clock the backend does not
   have, since that would spend the whole warmup before aborting with no
@@ -142,6 +147,7 @@ Four rows are not what they look like:
   should read ~0 there — an expectation, not yet a measurement: on
   `raf-delta` a baseline under one refresh interval cannot show a
   sub-millisecond addition, and the WebGL2 rows taken so far sat there.
+  Those rows now say so themselves — `cadenceBound` (§ Reading a row).
 - **`reduction`** keeps its readback fence while disabled and drops only
   the chain draws. Dropping the fence too priced the loss of the frame's
   only ANGLE submission barrier — see
@@ -372,11 +378,19 @@ single-baseline sweep when the instrument is known to be settled.
   self-describing. **Only compare tables at the same buffer size**: the
   frame is fill-bound, so halving the window area moved the whole frame
   ~3x and moved `mwBand` ~7x.
-- **`underCadence`** — `raf-delta` rows with a known cadence only: true
-  when either state's median sat on or under one display interval (within
-  the 6 % clamp tolerance), so the row could not have shown a
-  sub-millisecond delta whatever `savedMs` and `noiseMs` read. Such a row
-  is an expectation at best, never a result; `--baseline` refuses it.
+- **`cadenceBound`** — `raf-delta` rows with a known cadence only: true when
+  the display's refresh interval set the median of ANY of the row's dwells,
+  so the row could not have shown a sub-interval delta whatever `savedMs`
+  and `noiseMs` read. Two ways in, and the second is the one a single-interval
+  test misses: **at or under one interval whatever the spread** (the frame
+  made every deadline with room over), or **on a higher multiple with a
+  spread tighter than the 6 % tolerance** — `isVsyncClamped`, the dwell
+  mode's own rule, because a frame that overran one interval is held to the
+  next and 33.4 ms on a 60 Hz panel is still the display's number. Every
+  dwell is tested, not their mean: a bracketed row's leading baseline can be
+  pinned to the refresh while the trailing one runs long. Such a row is an
+  expectation at best, never a result; `--baseline` refuses it, and one side
+  carrying the flag is enough.
 - **`baselineLimitMag` / `disabledLimitMag`** — the gate that invalidates
   a row outright rather than widening it. The faintest magnitude each
   state rendered: **if these differ, the toggle changed what the frame

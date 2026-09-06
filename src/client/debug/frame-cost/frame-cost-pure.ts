@@ -32,24 +32,63 @@ export const WARMUP_FRAMES = 180;
  *  waits the same count for the same reason (`scripts/perf/README.md`). */
 export const SETTLE_FRAMES = 30;
 
-/** A `raf-delta` row either of whose states sat on or under one display
- *  interval, within this fraction, cannot show a sub-quantum delta: the
- *  frame finished early and the compositor supplied the rest. The same
- *  tolerance the runner's dwell clamp uses. README.md § Reading a row. */
+/** How close to a whole number of display intervals counts as sitting on
+ *  one, as a fraction of the interval: 1 ms at 60 Hz, 0.5 ms at 120. Never
+ *  a fixed millisecond, which on a small interval sits within reach of some
+ *  multiple whatever the frame cost. README.md § Reading a row. */
 export const CADENCE_TOLERANCE = 0.06;
 
-export function isUnderCadence(ms: number, cadenceMs: number): boolean {
-  return cadenceMs > 0 && ms <= cadenceMs * (1 + CADENCE_TOLERANCE);
+export function vsyncClampToleranceMs(cadenceMs: number): number {
+  return cadenceMs * CADENCE_TOLERANCE;
 }
 
-function underCadenceFlag(
+/**
+ * A wall-clock median the display decided rather than the frame: it sits on
+ * a whole number of the measured idle interval, with a spread tighter than
+ * the tolerance. Any whole number, because a frame that overran one interval
+ * is held to the next — 12 ms of work on a 120 Hz panel reads 16.67, still
+ * the display's number.
+ *
+ * `null` means the samples are not wall clock — a GPU duration is a span the
+ * hardware reports, and nothing holds it to a display period.
+ */
+export function isVsyncClamped(p50: number, iqrMs: number, cadenceMs: number | null): boolean {
+  if (cadenceMs === null || !(cadenceMs > 0)) return false;
+  const toleranceMs = vsyncClampToleranceMs(cadenceMs);
+  if (iqrMs >= toleranceMs) return false;
+  const intervals = Math.max(1, Math.round(p50 / cadenceMs));
+  return Math.abs(p50 - intervals * cadenceMs) <= toleranceMs;
+}
+
+/**
+ * A dwell whose wall-clock median the display's refresh interval set, so a
+ * differential across it cannot resolve a sub-interval cost. Two ways in,
+ * and both are needed:
+ *
+ * - **at or under one interval, whatever the spread** — the frame made every
+ *   deadline with room to spare, so an addition smaller than the interval
+ *   cannot appear at all. A wide spread here is dropped frames, not evidence
+ *   the median measured the frame.
+ * - **on a higher multiple with a tight spread** — `isVsyncClamped`. The
+ *   frame overran, but consistently enough that the compositor still set the
+ *   number.
+ *
+ * Between them lies the only honest wall-clock case: a frame comfortably
+ * over one interval whose spread shows it is not pinned to the panel.
+ */
+export function isCadenceBound(medianMs: number, iqrMs: number, cadenceMs: number): boolean {
+  if (!(cadenceMs > 0)) return false;
+  return medianMs <= cadenceMs * (1 + CADENCE_TOLERANCE)
+    || isVsyncClamped(medianMs, iqrMs, cadenceMs);
+}
+
+function cadenceBoundFlag(
   method: GpuFrameMethod,
-  referenceMs: number,
-  disabledMs: number,
+  states: readonly DwellStats[],
   cadenceMs: number | undefined,
 ): boolean | undefined {
   if (method !== 'raf-delta' || cadenceMs === undefined) return undefined;
-  return isUnderCadence(Math.min(referenceMs, disabledMs), cadenceMs);
+  return states.some((s) => isCadenceBound(s.medianMs, s.iqrMs, cadenceMs));
 }
 
 export interface DwellStats {
@@ -102,11 +141,12 @@ export interface PriceFrameRow {
    *  drew, so `savedMs` prices a different scene rather than the pass. */
   readonly baselineLimitMag: number;
   readonly disabledLimitMag: number;
-  /** `raf-delta` rows, when the caller supplied the display's idle period:
-   *  true when either state's median sat on or under one interval, so the
-   *  row could not have resolved a sub-quantum delta whatever `savedMs`
-   *  says. Absent on a GPU clock or without a cadence. */
-  readonly underCadence?: boolean;
+  /** `raf-delta` rows, against the display's idle period: true when ANY of
+   *  the row's dwells had its median set by the refresh interval rather than
+   *  by the frame (`isCadenceBound`), so the row could not have resolved a
+   *  sub-interval delta whatever `savedMs` says. Absent on a GPU clock, and
+   *  where no cadence was measured. */
+  readonly cadenceBound?: boolean;
   /** Drawing-buffer megapixels the sweep ran at, stamped by the harness —
    *  run metadata, not a dwell statistic. Both dominant passes scale with
    *  it, so a table without it cannot be compared to another table. */
@@ -283,7 +323,7 @@ export function buildPriceRow(
   cadenceMs?: number,
 ): PriceFrameRow {
   return assembleRow(pass, method, baseline.medianMs, disabled.medianMs, {
-    underCadence: underCadenceFlag(method, baseline.medianMs, disabled.medianMs, cadenceMs),
+    cadenceBound: cadenceBoundFlag(method, [baseline, disabled], cadenceMs),
     samples: Math.min(baseline.samples, disabled.samples),
     iqrMs: Math.max(baseline.iqrMs, disabled.iqrMs),
     noiseMs: differentialNoiseMs(baseline, disabled),
@@ -318,7 +358,7 @@ export function buildInterleavedRow(
   const referenceSe =
     Math.hypot(medianStandardErrorMs(before), medianStandardErrorMs(after)) / 2;
   return assembleRow(pass, method, referenceMs, disabled.medianMs, {
-    underCadence: underCadenceFlag(method, referenceMs, disabled.medianMs, cadenceMs),
+    cadenceBound: cadenceBoundFlag(method, [before, after, disabled], cadenceMs),
     samples: Math.min(before.samples, after.samples, disabled.samples),
     iqrMs: Math.max(before.iqrMs, after.iqrMs, disabled.iqrMs),
     noiseMs: Math.hypot(referenceSe, medianStandardErrorMs(disabled)),
@@ -338,7 +378,7 @@ function assembleRow(
   referenceMs: number,
   disabledMs: number,
   stats: {
-    underCadence?: boolean;
+    cadenceBound?: boolean;
     samples: number;
     iqrMs: number;
     noiseMs: number;
@@ -369,7 +409,7 @@ function assembleRow(
     disabledReadback: round3(stats.disabledReadback),
     baselineLimitMag: round3(stats.baselineLimitMag),
     disabledLimitMag: round3(stats.disabledLimitMag),
-    ...(stats.underCadence === undefined ? {} : { underCadence: stats.underCadence }),
+    ...(stats.cadenceBound === undefined ? {} : { cadenceBound: stats.cadenceBound }),
   };
 }
 

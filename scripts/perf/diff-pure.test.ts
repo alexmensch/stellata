@@ -257,10 +257,19 @@ describe('diffRuns — refusals', () => {
     }
   });
 
-  it('refuses a differential row that sat on or under the display cadence', () => {
+  it('refuses a differential row whose median the display cadence set', () => {
     const diff = diffRuns(
-      withDifferential([priceRow({ pass: 'emptyPass', savedMs: -0.025, underCadence: true })]),
-      withDifferential([priceRow({ pass: 'emptyPass', savedMs: -0.4, underCadence: true })]),
+      withDifferential([priceRow({ pass: 'emptyPass', savedMs: -0.025, cadenceBound: true })]),
+      withDifferential([priceRow({ pass: 'emptyPass', savedMs: -0.4, cadenceBound: true })]),
+    );
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('display cadence');
+  });
+
+  it('refuses when only ONE side is cadence-bound — a pre-flag baseline still compares', () => {
+    const diff = diffRuns(
+      withDifferential([priceRow({ pass: 'emptyPass', savedMs: -0.025 })]),
+      withDifferential([priceRow({ pass: 'emptyPass', savedMs: -0.4, cadenceBound: true })]),
     );
     expect(diff.rows).toEqual([]);
     expect(diff.refusals[0].reason).toContain('display cadence');

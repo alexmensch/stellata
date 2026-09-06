@@ -113,10 +113,10 @@ function differentialRows(key: string, a: ScenarioRecord, b: ScenarioRecord): {
       refusals.push({ key: `${key}|${baseline.pass}`, reason: 'row absent from the current run' });
       continue;
     }
-    if (baseline.underCadence === true || row.underCadence === true) {
+    if (baseline.cadenceBound === true || row.cadenceBound === true) {
       refusals.push({
         key: `${key}|${baseline.pass}`,
-        reason: 'a raf-delta row sat on or under the display cadence — the wall clock cannot show a sub-quantum delta',
+        reason: 'a raf-delta row the display cadence set — the wall clock cannot show a sub-interval delta',
       });
       continue;
     }

@@ -57,9 +57,9 @@ export interface PriceFrameOptions {
    *  before the sweep starts; only a sweep that cannot fit even at
    *  `MIN_DWELL_FRAMES` truncates. */
   budgetMs?: number;
-  /** The display's idle rAF period, where the caller measured it (the
-   *  headless runner does). On `raf-delta` every row is then stamped
-   *  `underCadence` when either state sat on or under one interval. */
+  /** The display's refresh interval, where the caller measured it (the
+   *  headless runner probes it after settle). On `raf-delta` rows are then
+   *  stamped `cadenceBound` where the display set the number. */
   cadenceMs?: number;
   /** Freeze the exposure cut for the sweep, after the warmup has let it
    *  converge. Passes that write the statistic attachment move the cut

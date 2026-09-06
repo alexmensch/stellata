@@ -3,8 +3,8 @@
 // README.md § Dwell mode.
 
 import {
-  CADENCE_TOLERANCE,
   interquartileRange,
+  isVsyncClamped,
   lag1Autocorrelation,
   median,
   percentile,
@@ -44,36 +44,6 @@ export function stateGuardVerdict(
 ): StateGuard {
   if (quarters.length < 2) return 'steady';
   return Math.max(...quarters) - Math.min(...quarters) > trendMs ? 'trending' : 'steady';
-}
-
-/** The clamp tolerance as a fraction of the measured idle interval: 1 ms on
- *  a 60 Hz panel, 0.5 ms at 120 Hz. A fixed millisecond would sit within
- *  reach of some multiple of a small interval whatever the frame cost. The
- *  differential's under-cadence rule shares the number. */
-export const VSYNC_CLAMP_TOLERANCE = CADENCE_TOLERANCE;
-
-export function vsyncClampToleranceMs(cadenceMs: number): number {
-  return cadenceMs * VSYNC_CLAMP_TOLERANCE;
-}
-
-/**
- * A dwell measured the display, not the frame, when it barely moved and its
- * p50 sits on a whole number of the idle interval the runner measured for
- * this scenario: the frame finished early and the compositor held it to the
- * next refresh. Any whole number, because a frame that overran one interval
- * is held to the one after — 12 ms of work on a 120 Hz panel reads 16.67,
- * still the display's number. Such a dwell is refused by `--baseline` and
- * makes a sweep inconclusive.
- *
- * `null` means the samples are not wall clock — a GPU duration is a span
- * the hardware reports, and nothing holds it to a display period.
- */
-export function isVsyncClamped(p50: number, iqrMs: number, cadenceMs: number | null): boolean {
-  if (cadenceMs === null || !(cadenceMs > 0)) return false;
-  const toleranceMs = vsyncClampToleranceMs(cadenceMs);
-  if (iqrMs >= toleranceMs) return false;
-  const intervals = Math.max(1, Math.round(p50 / cadenceMs));
-  return Math.abs(p50 - intervals * cadenceMs) <= toleranceMs;
 }
 
 export interface DwellSummary {
