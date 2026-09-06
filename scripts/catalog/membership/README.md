@@ -115,6 +115,14 @@ one of the 119 as `* NN Con` (measured 2026-09-06). Attesting them from a
 frozen SIMBAD identifier pull is the open option; until one exists the
 manifest ships without them and the ledger says which.
 
+**No dropped label was keying its record**, which is the same question § 7 asks
+of a dropped binding and the reason neither queue writes a SID event. A
+Flamsteed number is not a designation at all, so the 119 cannot move a key. An
+HD can, so the gate states the rule rather than the coincidence: whatever keys
+the row after the drop must already outrank the cell it lost. Dropping the
+display HD promotes the first surviving alias into it, so the cell a record
+publishes stays the one a primary attests.
+
 ## The additions
 
 `findAdditions` (the audit) yields three cohorts the spine lacks: IV/25 Tycho-2

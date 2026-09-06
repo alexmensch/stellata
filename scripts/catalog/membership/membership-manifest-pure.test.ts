@@ -179,6 +179,38 @@ describe('buildMembership — the spine side', () => {
     expect(disposed.counts.bindingByClass.reviewed).toBe(1);
   });
 
+  // The committed file is all `keep` today, so nothing else exercises the other
+  // half of the enum — and gate (iii) re-adds exactly the bindings a drop takes
+  // out of the manifest.
+  it('strips a binding its disposition drops', () => {
+    const disposed = buildMembership({
+      ...input,
+      dispositions: new Map([['888', {
+        gaia_source_id: '888', disposition: 'drop', basis: 'tycho2_position', evidence: '4.1"',
+      }]]),
+    });
+    expect(disposed.rows.find((r) => r.tyc === '9-8-1'))
+      .toMatchObject({ gaia_source_id: '', binding: 'none' });
+    expect(disposed.bindingReview).toHaveLength(1);
+    expect(disposed.counts.bindingByClass.reviewed).toBe(0);
+  });
+
+  // The display cell is not privileged: when it is the cell no primary
+  // attests, the first alias that survives takes its place rather than the
+  // record shipping HD-less beside an HD a primary does publish.
+  it('promotes a surviving hd alias into the display cell', () => {
+    const promoted = buildMembership({
+      ...input,
+      spine: [...spine, spineRow({ tyc: '5-5-1', hd: '70002', gaia_source_id: '1515' })],
+      tables: { ...tables, hdI239: new Set([70003]) },
+      overlay: new Map([...overlay, ['1515', entry({ hd: [70002, 70003] })]]),
+    });
+    expect(promoted.rows.find((r) => r.tyc === '5-5-1')).toMatchObject({ hd: '70003' });
+    expect(promoted.labelDrops).toContainEqual(expect.objectContaining({
+      cell: 'hd', value: '70002', reason: 'hd_unattested',
+    }));
+  });
+
   it('drops the spine labels no primary attests onto the label ledger', () => {
     const row = result.rows.find((r) => r.hip === '70')!;
     expect(row).toMatchObject({ hd: '', flam: '', routes: 'hip:i239' });

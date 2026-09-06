@@ -9,7 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { OVERRIDES_PATH } from '../../sid/registry-io';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
-import { parseSameasTsv } from '../../sid/sid-pure';
+import { canonicalKeyOf, compareDesignations, parseSameasTsv } from '../../sid/sid-pure';
 import {
   DEFAULT_CATALOG_MANIFEST,
   DEFAULT_ROW_INDEX_MAP,
@@ -212,6 +212,28 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     const byReason = new Map<string, number>();
     for (const d of drops) byReason.set(d.reason, (byReason.get(d.reason) ?? 0) + 1);
     expect(Object.fromEntries(byReason)).toEqual(expected.labelDropsByReason);
+  });
+
+  // A dropped label is a designation leaving a record, so § 7 asks whether it
+  // was the one keying it. A Flamsteed number is no designation at all, and an
+  // HD only keys a record no higher-laddered cell reaches — but "the row that
+  // lost one happened to carry a HIP" is a fact about today's data, not a rule.
+  // This is the rule: whatever keys the row now already outranked the cell it
+  // lost, so the drop cannot have moved a canonical key.
+  it('drops no label that was keying its record', () => {
+    const drops = parseLabelDropsTsv(readFileSync(resolve(REPO_ROOT, LABEL_DROPS_FILE), 'utf-8'));
+    const byKey = new Map(manifest.map((r) => [manifestKey(r), r]));
+    const moved: string[] = [];
+    for (const d of drops) {
+      if (d.cell === 'flam') {
+        expect(manifestDesignations(byKey.get(manifestKey(d))!)
+          .some((x) => x.startsWith('flam:'))).toBe(false);
+        continue;
+      }
+      const key = canonicalKeyOf(manifestDesignations(byKey.get(manifestKey(d))!));
+      if (compareDesignations(key, `hd:${d.value}`) >= 0) moved.push(`${key} vs hd:${d.value}`);
+    }
+    expect(moved).toEqual([]);
   });
 
   // (iii) The built catalogue's designation multiset equals the manifest's
