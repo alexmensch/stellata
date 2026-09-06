@@ -190,7 +190,8 @@ The declutter `detailLevel` rides its own 1-byte enum field (bit 23,
 `all` — a fully-cluttered share stays byte-identical to before.
 
 `coordSphere` is a **four-state carried across several places**, not one
-field: FLAG_GRID (flags bit 0) means "a coordinate sphere is selected", and
+field — and it does not carry ORB, which is § ORB and the orbit lock.
+FLAG_GRID (flags bit 0) means "a coordinate sphere is selected", and
 one zero-byte presence bit per frame past the galactic default says which —
 bit 24 equatorial, bit 26 ecliptic, both built by `coordSphereFrameField`.
 Layering rather than replacing FLAG_GRID with an enum is what makes both
@@ -202,6 +203,44 @@ decodes *after* `flagsField` (bit 13), so it overwrites the `'galactic'` that
 byte where it currently costs zero. **A frame's bit is frozen once it ships**
 — a link in the wild carries it — so a further frame claims the next free bit
 rather than renumbering.
+
+## ORB and the orbit lock
+
+**ORB is not a `coordSphere` value.** The sky frames (galactic / ecliptic /
+equatorial) are what that field carries; ORB — the focused object's own
+orbital plane — and the orbit lock over it are held by the attitude
+instrument itself (`../../attitude/orbit-frame/README.md`). So a view with
+ORB armed used to encode whichever sky frame was selected *before* ORB was
+picked, and the lock encoded nothing at all: the link came back reading
+against the wrong datum, with the camera no longer riding the orbit.
+
+Both ride **zero-payload presence bits** — 27 (ORB armed) and 28 (lock
+engaged) — because each is reconstructible from the focus the blob already
+carries. The flags byte is full, so this is the § Adding a field route
+rather than a flag bit. Bit 28 opens the LEB128 mask's fifth 7-bit group,
+which is the lock's whole cost.
+
+They reach the instrument through `OrbitFramePort`
+(`../../attitude/attitude-pure.ts`), installed by the instrument onto the
+shell — the codec talks to `Stellata`, and this is state no controller owns.
+
+**A restore lands LAST in `applyDecodedView`, and that is the field's whole
+difficulty.** Three of the steps before it disarm ORB on their way past: the
+instrument drops it on a focus change, on a `coordSphere` change, and with
+the camera mode. A restore anywhere earlier is silently undone by a later
+step of the same function, and lands unlocked. It runs again inside the
+deferred-sid focus callback for the one case that settles after
+`applyDecodedView` returns, so `restore` is idempotent.
+
+**The blob is a request, not an instruction.** `restore` re-applies the
+receiver's own `orbitLockShowing`, so a link asking for a lock this focus
+cannot carry lands armed-but-unlocked, exactly as the gesture would. And an
+absent bit is a positive statement — a sky-frame link disarms an ORB the
+receiving session was already holding rather than leaving it standing.
+
+The REF and TGT datums stay off the wire: both are snapshots of an attitude
+rather than properties of the focus, so they need real payload and a separate
+decision about whether a captured datum means anything to a receiver.
 
 The manual **EV trim** rides bit 25 as a 1-byte field quantised to the
 slider's own `EV_STEP_STOPS` grid, present only when the user moved it off

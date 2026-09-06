@@ -140,6 +140,16 @@ the `attach*` family, and the star-frame reads (`localPositions`,
 render machinery. A new zero-logic pass-through belongs on the
 controller.
 
+**Install seams are the other admissible shape**, and they are not
+pass-throughs: a UI surface built after the shell registers itself here so
+code that only holds a `Stellata` can reach it. `setOrbitFrameTick` (the
+attitude instrument's per-frame ORB re-read, whose *ordering* only the scene
+registry can express) and `setOrbitFramePort` / `getOrbitFramePort` (ORB and
+the orbit lock on the share URL — state no controller owns,
+`util/url-state/README.md` § ORB and the orbit lock) are both of that kind.
+Each reads through its field every time, so installing after construction
+works exactly as a lazily-attached layer does, and `dispose` clears both.
+
 ## Event bus on `Stellata`
 
 Subscribers register via `stellata.on(name, fn)` and receive a typed

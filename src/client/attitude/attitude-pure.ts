@@ -281,6 +281,21 @@ export function orbitLockShowing(state: {
     && state.cameraMode === 'navigate';
 }
 
+/** The two pieces of view state the instrument holds itself — ORB armed, and
+ *  the orbit lock — reached by the URL codec through `Stellata`. Every other
+ *  frame is `filter.coordSphere`, which the blob already carries; neither of
+ *  these is, which is why they need a seam of their own.
+ *
+ *  `restore` is idempotent and re-applies the receiver's own rules rather than
+ *  trusting the wire: a link asking for a lock the receiver's
+ *  `orbitLockShowing` refuses lands armed-but-unlocked, exactly as the gesture
+ *  would. */
+export interface OrbitFramePort {
+  isArmed(): boolean;
+  isLocked(): boolean;
+  restore(armed: boolean, locked: boolean): void;
+}
+
 const FRAME_LABELS: Record<AutoFrameKey, string> = {
   galactic: 'GAL',
   ecliptic: 'ECL',

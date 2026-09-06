@@ -657,6 +657,25 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     refresh();
   }
 
+  // The URL seam. Arming through the same two fields the flag writes, then
+  // letting `refresh` apply `orbitLockShowing`, is what keeps a restore
+  // honest: a blob is a request, and the receiver's own rule still decides
+  // whether the lock can exist here. Ordering is the caller's problem — a
+  // restore has to land after the focus, the filter and the camera mode have
+  // settled, since each of those clears ORB
+  // (`../util/url-state/README.md` § ORB and the orbit lock).
+  stellata.setOrbitFramePort({
+    isArmed: () => orbitActive,
+    isLocked: () => orbitLocked,
+    restore: (armed, locked) => {
+      if (armed) captured = null;
+      orbitActive = armed;
+      orbitLocked = armed && locked;
+      riding = false;
+      refresh();
+    },
+  });
+
   lockBtn.addEventListener('click', toggleOrbitLock);
 
   invertBtn.addEventListener('click', () => stellata.invertView());

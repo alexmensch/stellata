@@ -215,6 +215,17 @@ wrong once:
 - **Engaging the lock seeds from wherever the datum is now**, not from where
   it was when ORB was armed, for the same reason.
 
+**ORB and the lock ride the share URL**, on two zero-payload presence bits —
+the frame itself rebuilds from the focus the blob already carries, so neither
+needs more. They are the instrument's own state rather than
+`filter.coordSphere`, so they reach it through `OrbitFramePort`
+(`../attitude-pure.ts`), and a restore has to land after the focus, the
+filter and the camera mode have settled, since each of those disarms ORB:
+`../../util/url-state/README.md` § ORB and the orbit lock owns the ordering
+and the compatibility argument. A restore goes through the same two fields
+the flag writes and then lets `refresh` apply the rule below, so a link
+cannot arm a lock the receiver would refuse.
+
 **Whether the lock exists at all is `orbitLockShowing`, and there is exactly
 one copy of it.** Three conditions, each an absence the user can see: ORB is
 the frame (nothing else has a travelling datum), no REF or TGT datum is held
