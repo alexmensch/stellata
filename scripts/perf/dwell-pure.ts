@@ -11,10 +11,10 @@ import {
 
 export const DEFAULT_DWELL_FRAMES = 240;
 
-/** A dwell is read in this many consecutive slices; a monotonic run of
- *  their medians wider than `STATE_GUARD_TREND_MS` end to end is the
- *  machine changing state under the dwell (the sustained-load GPU power
- *  step), and such a row compares with nothing — README.md § Dwell mode. */
+/** A dwell is read in this many consecutive slices; their medians spanning
+ *  more than `STATE_GUARD_TREND_MS` is the machine changing state under the
+ *  dwell (the sustained-load GPU power step), and such a row compares with
+ *  nothing — README.md § Dwell mode. */
 export const STATE_GUARD_QUARTERS = 4;
 export const STATE_GUARD_TREND_MS = 1;
 
@@ -30,16 +30,19 @@ export function quarterMedians(
     median(samples.slice(Math.floor(i * size), Math.floor((i + 1) * size))));
 }
 
+/**
+ * The spread of the quarter medians, not a monotonic run through them: the
+ * power step is a step, so it lands as `[16.9, 16.9, 21.8, 21.8]` — flat,
+ * then flat higher — which no strictly-rising test sees. Spread also catches
+ * a dwell that was merely unstable, which a pin should decline for the same
+ * reason.
+ */
 export function stateGuardVerdict(
   quarters: readonly number[],
   trendMs: number = STATE_GUARD_TREND_MS,
 ): StateGuard {
   if (quarters.length < 2) return 'steady';
-  const steps = quarters.slice(1).map((q, i) => q - quarters[i]);
-  const monotonic = steps.every((d) => d > 0) || steps.every((d) => d < 0);
-  return monotonic && Math.abs(quarters[quarters.length - 1] - quarters[0]) > trendMs
-    ? 'trending'
-    : 'steady';
+  return Math.max(...quarters) - Math.min(...quarters) > trendMs ? 'trending' : 'steady';
 }
 
 /** The clamp tolerance as a fraction of the measured idle interval: 1 ms on

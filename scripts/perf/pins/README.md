@@ -24,11 +24,14 @@ provenance for the value now pinned; it never filters a verdict.
 ## State guard
 
 Every dwell summary is read in four consecutive quarters
-(`quarterMedians`); a monotonic run of their medians wider than
-`STATE_GUARD_TREND_MS` (1 ms) end to end reads `trending`: the machine
-changed state under the dwell — the sustained-load GPU power step
-(stellata-0it.38), entered after roughly 2–2.5 min of continuous frames
-and re-entered inside one row when warm. Frames either side of that
+(`quarterMedians`); their medians spanning more than
+`STATE_GUARD_TREND_MS` (1 ms) reads `trending`: the machine changed state
+under the dwell — the sustained-load GPU power step (stellata-0it.38),
+entered after roughly 2–2.5 min of continuous frames and re-entered
+inside one row when warm. **The test is the spread, not a rise through
+the quarters**: that power step is a step, so it lands as
+`[16.9, 16.9, 21.8, 21.8]`, flat and then flat higher, which a
+strictly-rising test reads as steady. Frames either side of the
 transition never compare, so a trending row refuses the pin and refuses a
 comparison. `--cooldown-ms` idles between contexts so each one starts
 cold; tune it until every context in a pin run reads `steady`.

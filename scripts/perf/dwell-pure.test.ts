@@ -82,18 +82,24 @@ describe('state guard — a dwell that straddled the load transition', () => {
     expect(quarterMedians([1, 2, 3])).toEqual([]);
   });
 
-  it('calls a monotonic run wider than the trend threshold trending', () => {
+  it('calls a run wider than the trend threshold trending, either direction', () => {
     expect(STATE_GUARD_TREND_MS).toBe(1);
     expect(stateGuardVerdict([17.4, 18.2, 19.6, 21.0])).toBe('trending');
     expect(stateGuardVerdict([21.0, 19.6, 18.2, 17.4])).toBe('trending');
   });
 
-  it('calls a flat dwell, a non-monotonic one and a sub-threshold drift steady', () => {
+  it('catches the power step, which is flat then flat higher rather than rising', () => {
+    expect(stateGuardVerdict([16.9, 16.9, 21.8, 21.8])).toBe('trending');
+    expect(stateGuardVerdict([21.8, 21.8, 21.8, 16.9])).toBe('trending');
+    expect(stateGuardVerdict([17, 19, 18, 21])).toBe('trending');
+  });
+
+  it('calls a flat dwell and a sub-threshold drift steady', () => {
     expect(stateGuardVerdict([21, 21, 21, 21])).toBe('steady');
-    expect(stateGuardVerdict([17, 19, 18, 21])).toBe('steady');
     expect(stateGuardVerdict([17.0, 17.2, 17.5, 17.9])).toBe('steady');
     expect(stateGuardVerdict([17.0, 17.2, 17.5, 18.0])).toBe('steady');
     expect(stateGuardVerdict([17.0, 17.2, 17.5, 18.1])).toBe('trending');
+    expect(stateGuardVerdict([17.9, 17.0, 17.5, 17.2])).toBe('steady');
     expect(stateGuardVerdict([])).toBe('steady');
   });
 
