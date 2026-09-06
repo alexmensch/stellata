@@ -399,6 +399,18 @@ describe('search / buildSearchIndex', () => {
     expect(buildSearchIndex(raw, CONS).hdMap.get(159574)).toBe(0);
   });
 
+  // The rule follows the identifier being ambiguous, not the map carrying
+  // aliases: Gl 277A is displayed by both members of a component pair, and HIP
+  // is unambiguous today but built the same way so it cannot regress silently.
+  it('resolves an ambiguous Gliese number and HIP to the brightest record', () => {
+    const raw: SearchEntry[] = [
+      { i: 0, gl: 'Gl 277A', hip: 36208 }, { i: 5, gl: 'GJ 277 A', hip: 36208 },
+    ];
+    const { glMap, hipMap } = buildSearchIndex(raw, CONS);
+    expect(glMap.get('277a')).toBe(0);
+    expect(hipMap.get(36208)).toBe(0);
+  });
+
   // An alias must never displace a record that displays the number outright,
   // whichever way the absmag sort happened to order the two.
   it('lets a displayed HD outrank another record alias, in either order', () => {
