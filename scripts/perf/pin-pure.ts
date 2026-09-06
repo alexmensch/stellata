@@ -21,15 +21,21 @@ export const PIN_SCHEMA = 'stellata-perf/pin-1';
 export const PIN_FLOOR_MS = 0.25;
 export const PIN_FLOOR_FRACTION = 0.01;
 
-/** Vantages the pin records but never marks, because they do not reproduce
- *  cold-to-cold. lg shifts level BETWEEN runs while staying flat inside each,
- *  which is exactly what the state guard cannot catch — so a steady verdict
- *  on an lg row is not evidence it is comparable. pins/README.md § Reading
- *  `--against-pin`. */
-export const PIN_UNGATED_SCENARIOS: readonly ScenarioName[] = ['lg'];
+/** Vantages the band never marks, mapped to the reason, which the row's note
+ *  carries. lg shifts level BETWEEN runs while staying flat inside each, which
+ *  is exactly what the state guard cannot catch — so a steady verdict on an lg
+ *  row is not evidence it is comparable. The ceiling still applies: a vantage
+ *  that wanders 1.5 ms is no licence for a frame that doubled.
+ *  pins/README.md § Reading `--against-pin`. */
+export const PIN_UNGATED_SCENARIOS: Readonly<Partial<Record<ScenarioName, string>>> = {
+  lg: 'does not reproduce cold-to-cold',
+};
 
 /** Two 60 Hz intervals of hardware time. A canon vantage whose GPU-stream
- *  p50 crosses it marks whatever the band says. */
+ *  p50 crosses it marks whatever the band says, and whether or not the
+ *  vantage is gated — it is the backstop on every row carrying a GPU
+ *  reading, which is what makes it the one bound accepted marks cannot
+ *  ratchet past. */
 export const PIN_CEILING_MS = 33.4;
 
 export class PinError extends Error {}
@@ -79,10 +85,11 @@ export interface PinFile {
  *  an ungated row may equally carry `gpu-p50` as context. */
 export type PinMetric = 'gpu-p50' | 'wall-p50';
 
-/** `ungated` is a row the pin records but never marks, on either of two
- *  grounds: it carries no GPU-stream median on one side or the other, and
- *  wall time is quantised to the display's refresh interval; or its vantage
- *  is in `PIN_UNGATED_SCENARIOS`. RELEASING.md § Perf pin. */
+/** `ungated` is a row the band never marks, on either of two grounds: it
+ *  carries no GPU-stream median on one side or the other, and wall time is
+ *  quantised to the display's refresh interval; or its vantage is in
+ *  `PIN_UNGATED_SCENARIOS`. The ceiling reaches the second kind, so an
+ *  ungated vantage can still read `dearer`. RELEASING.md § Perf pin. */
 export type PinVerdict = Verdict | 'ungated';
 
 export const PIN_VERDICT_MARK: Record<PinVerdict, string> = { ...VERDICT_MARK, ungated: '·' };
@@ -247,48 +254,45 @@ function ungatedNote(pinned: PinRow, current: PinClock | null): string {
     : 'the pin carries a GPU stream for this row; this run resolved none';
 }
 
+function ungatedRow(
+  key: string, metric: PinMetric, pinnedMs: number, currentMs: number, note: string,
+): PinVerdictRow {
+  return { key, metric, pinnedMs, currentMs, deltaMs: currentMs - pinnedMs, bandMs: 0, verdict: 'ungated', note };
+}
+
+/** Applied to every row carrying a GPU reading, ungated ones included: the
+ *  ceiling is an absolute bound, and the rows the band cannot mark are
+ *  exactly the ones with nothing else watching them. */
+function underCeiling(row: PinVerdictRow): PinVerdictRow {
+  if (row.currentMs <= PIN_CEILING_MS) return row;
+  return { ...row, verdict: 'dearer', note: `GPU-stream p50 over the ${PIN_CEILING_MS} ms ceiling` };
+}
+
 function compareRow(pinned: PinRow, record: ScenarioRecord): PinVerdictRow {
   const dwell = record.dwell!;
-  const base = { key: pinned.key };
 
   if (pinned.gpu === null || dwell.gpuStats === null) {
-    return {
-      ...base,
-      metric: 'wall-p50',
-      pinnedMs: pinned.wall.p50,
-      currentMs: dwell.stats.p50,
-      deltaMs: dwell.stats.p50 - pinned.wall.p50,
-      bandMs: 0,
-      verdict: 'ungated',
-      note: ungatedNote(pinned, dwell.gpuStats),
-    };
+    return ungatedRow(
+      pinned.key, 'wall-p50', pinned.wall.p50, dwell.stats.p50, ungatedNote(pinned, dwell.gpuStats),
+    );
   }
 
-  if (PIN_UNGATED_SCENARIOS.includes(pinned.name)) {
-    return {
-      ...base,
-      metric: 'gpu-p50',
-      pinnedMs: pinned.gpu.p50,
-      currentMs: dwell.gpuStats.p50,
-      deltaMs: dwell.gpuStats.p50 - pinned.gpu.p50,
-      bandMs: 0,
-      verdict: 'ungated',
-      note: `${pinned.name} does not reproduce cold-to-cold — recorded, never marked`,
-    };
+  const ungatedBecause = PIN_UNGATED_SCENARIOS[pinned.name];
+  if (ungatedBecause !== undefined) {
+    return underCeiling(ungatedRow(
+      pinned.key, 'gpu-p50', pinned.gpu.p50, dwell.gpuStats.p50,
+      `${pinned.name} ${ungatedBecause} — recorded, never marked below the ceiling`,
+    ));
   }
 
   const deltaMs = dwell.gpuStats.p50 - pinned.gpu.p50;
   const bandMs = band(
     medianStandardErrorMs(pinned.gpu), medianStandardErrorMs(dwell.gpuStats), pinFloorMs(pinned.gpu.p50),
   );
-  const row: PinVerdictRow = {
-    ...base, metric: 'gpu-p50', pinnedMs: pinned.gpu.p50, currentMs: dwell.gpuStats.p50,
+  return underCeiling({
+    key: pinned.key, metric: 'gpu-p50', pinnedMs: pinned.gpu.p50, currentMs: dwell.gpuStats.p50,
     deltaMs, bandMs, verdict: verdictFor(deltaMs, bandMs), note: '',
-  };
-  if (dwell.gpuStats.p50 > PIN_CEILING_MS) {
-    return { ...row, verdict: 'dearer', note: `GPU-stream p50 over the ${PIN_CEILING_MS} ms ceiling` };
-  }
-  return row;
+  });
 }
 
 /**

@@ -122,6 +122,8 @@ whose adapter resolves no believable durations. The cutover
 (stellata-0it.13) leaves only gated rows behind. A vantage that does not
 reproduce cold-to-cold is recorded and not gated on the same footing —
 today that is lg alone, and the paragraph on the floor below says why.
+It keeps its GPU reading, so unlike a row with no such clock it still
+meets the ceiling.
 
 **Taken cold, always.** Apple-silicon GPUs enter a sustained-load power
 state after roughly 2–2.5 min of continuous frames, and rows either side
@@ -134,9 +136,10 @@ adapter slug, buffer, method and state.
 **What a mark means.** A row is `✗` when its GPU-stream p50 moves past the
 `--baseline` band *and* past `max(0.25 ms, 1 %)` of the pinned value, or
 when it crosses the ceiling — 33.4 ms of GPU-stream p50 at any canon
-vantage, two 60 Hz intervals of hardware time — whatever the band says.
-mw50 at 31.451 is the nearest row today, 1.9 ms under. `✓` is cheaper,
-`~` is not resolved — not "no change".
+vantage, two 60 Hz intervals of hardware time — whatever the band says
+and whether or not the vantage is gated. mw50 at 31.451 is the nearest
+row today, 1.9 ms under. `✓` is cheaper, `~` is not resolved — not "no
+change".
 
 **The floor is measured, and lg is the reason it is not one number.** Two
 cold pins taken on identical code — 2026-09-05 and 2026-09-06, `--mode
@@ -150,10 +153,20 @@ It is a level shift *between* runs rather than jitter inside one — each
 run's four quarter medians are near-flat, and the two runs sit ~1.4 ms
 apart — which is precisely what the state guard cannot see, since it only
 compares quarters within a single dwell. No cool-down and no longer dwell
-suppresses it. So lg is recorded and never marked, on the same footing as
-a row carrying no GPU stream, until stellata-8cg.49.18 explains the shift.
-A single floor wide enough to cover lg would have to be ~12 %, which would
-hide a 3.9 ms regression at mw50 — the gate would be a formality.
+suppresses it. So lg is recorded and never marked by the band, until
+stellata-8cg.49.18 explains the shift. A single floor wide enough to cover
+lg would have to be ~12 %, which would hide a 3.9 ms regression at mw50 —
+the gate would be a formality.
+
+**What ungating lg costs, and what still watches it.** lg is the only
+canon vantage that sees the Local Group, so until 49.18 lands a render
+change under `src/client/local-group/` is priced by no row of its own: it
+reads five `~` and a `·`, and `perf-section-guard` demands an `accepted:`
+line only for a `✗`. The ceiling is what remains — it applies to lg like
+any other row carrying a GPU reading, so a frame that doubles there is
+still `✗`. That is a backstop, not a gate: it catches a collapse and
+nothing smaller. Weigh a `local-group/` diff accordingly, and prefer a
+per-pass differential at lg to a pin table for it.
 
 **The `## Perf` section.** Required in the PR body when the diff touches
 anything under `src/client/` — `.ts`, `.glsl` and `.wgsl` alike — outside

@@ -45,12 +45,18 @@ cold; tune it until every context in a pin run reads `steady`.
   display's refresh interval, so it is recorded and never marked: a row
   with no GPU stream on either side, every WebGL2 row among them, reads
   `·` ungated with its wall p50 shown as context.
-- **Ungated vantages.** `PIN_UNGATED_SCENARIOS` names rows recorded with
-  their GPU reading but never marked. `lg` is there because it does not
-  reproduce cold-to-cold — 11.891 → 13.360 ms between those two pins, a
-  level shift *between* runs while each run's own quarters stay flat, so
-  the state guard cannot see it and no cool-down suppresses it
-  (stellata-8cg.49.18).
+- **Ungated vantages.** `PIN_UNGATED_SCENARIOS` maps a vantage the band
+  never marks to the reason, which the row's note prints. `lg` is there
+  because it does not reproduce cold-to-cold — 11.891 → 13.360 ms between
+  those two pins, a level shift *between* runs while each run's own
+  quarters stay flat, so the state guard cannot see it and no cool-down
+  suppresses it (stellata-8cg.49.18). Only the *band* stands down: the
+  ceiling below still marks the row, and the refusals below still refuse
+  it, since a trending or resized lg indicts the run's state rather than
+  lg's own reproducibility. **`lg` is the only canon vantage that sees the
+  Local Group**, so while it is ungated a `src/client/local-group/` render
+  change has no row that prices it short of the ceiling — the gap
+  stellata-8cg.49.18 closes.
 - **Band.** The pair's two-sigma standard error, floored at
   `max(PIN_FLOOR_MS 0.25 ms, PIN_FLOOR_FRACTION 1 % × pinned)` — about 8×
   the largest cold-to-cold move those four rows showed. A `✗` is past
@@ -58,7 +64,9 @@ cold; tune it until every context in a pin run reads `steady`.
   the larger of the two at every canon row but mw50, so it is what sets
   sensitivity in practice.
 - **Ceiling.** A GPU-stream p50 over `PIN_CEILING_MS` (33.4 ms, two 60 Hz
-  intervals of hardware time) is `✗` whatever the band says.
+  intervals of hardware time) is `✗` whatever the band says — and on an
+  ungated vantage too, which is where it earns its keep: those rows have
+  nothing else watching them.
 - **Refusals.** Another adapter slug or a headed run refuses the whole
   comparison; a missing, failed, tainted, resized (> 1 % buffer) or
   trending row refuses that row. A refused comparison is not a pass:

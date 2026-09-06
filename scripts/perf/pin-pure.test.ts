@@ -6,6 +6,7 @@ import {
   PIN_FLOOR_FRACTION,
   PIN_FLOOR_MS,
   PIN_SCHEMA,
+  PIN_UNGATED_SCENARIOS,
   PinError,
   adapterSlug,
   assertPinFile,
@@ -82,6 +83,11 @@ function file(scenarios: readonly ScenarioRecord[], overrides: { gpu?: AdapterPr
 const SOL_GPU = scenario('sol', 'webgpu', dwell(stats(25.2), stats(21.8)));
 const MW120_GPU = scenario('mw120', 'webgpu', dwell(stats(16.7, { iqrMs: 0.4, vsyncClamped: true }), stats(21.0)));
 const SOL_GL = scenario('sol', 'webgl2', dwell(stats(16.0, { iqrMs: 21 }), null));
+
+/** The pinned lg row and a later one, at the wall clock lg actually reads:
+ *  quantised to the refresh interval whatever the GPU stream does. */
+const lgAt = (gpuP50: number) => scenario('lg', 'webgpu', dwell(stats(16.7), stats(gpuP50)));
+const LG_GPU = lgAt(11.891);
 const SOURCE = { sourceRun: '.perf-runs/2026-09-05/pin.json', version: '3.44.3', accepted: {} };
 
 function pinOf(scenarios: readonly ScenarioRecord[] = [SOL_GPU, MW120_GPU, SOL_GL]): PinFile {
@@ -180,15 +186,26 @@ describe('compareToPin', () => {
     expect(compareToPin(pinOf([SOL_GPU]), file([cheaper])).rows[0].verdict).toBe('cheaper');
   });
 
-  it('records lg and never marks it, however far the GPU stream moved', () => {
-    const lgPin = scenario('lg', 'webgpu', dwell(stats(16.7), stats(11.891)));
-    const moved = scenario('lg', 'webgpu', dwell(stats(16.7), stats(13.36)));
-    const row = compareToPin(pinOf([lgPin]), file([moved])).rows[0];
+  it('names lg alone as ungated, carrying the reason the row note prints', () => {
+    expect(PIN_UNGATED_SCENARIOS).toEqual({ lg: 'does not reproduce cold-to-cold' });
+  });
+
+  it('records lg and never marks it below the ceiling, at the full 1.47 ms it moved', () => {
+    const diff = compareToPin(pinOf([LG_GPU]), file([lgAt(13.36)]));
+    const row = diff.rows[0];
     expect([row.metric, row.verdict]).toEqual(['gpu-p50', 'ungated']);
     expect(row.currentMs).toBe(13.36);
     expect(row.bandMs).toBe(0);
     expect(row.note).toContain('does not reproduce cold-to-cold');
-    expect(pinDiffFails(compareToPin(pinOf([lgPin]), file([moved])))).toBe(false);
+    expect(pinDiffFails(diff)).toBe(false);
+  });
+
+  it('marks lg over the ceiling: ungated by the band is not ungated by the bound', () => {
+    const diff = compareToPin(pinOf([LG_GPU]), file([lgAt(33.5)]));
+    expect(diff.rows[0].verdict).toBe('dearer');
+    expect(diff.rows[0].note).toContain('33.4 ms ceiling');
+    expect(pinDiffFails(diff)).toBe(true);
+    expect(unacceptedMarks(diff, {})).toEqual(['lg|webgpu']);
   });
 
   it('never marks on the wall clock: the cadence may move under a steady GPU stream', () => {
