@@ -1199,23 +1199,27 @@ interface SystemAnchor {
   catalogIdx: number;
 }
 
-/** Pick the more-canonical of two pair primaries sharing a WDS root.
- *  Prefer comp="A" over "Aa" over "B" etc. — the system's canonical
- *  anchor is the row whose comp letter is shortest and alphabetically
- *  first. Used by buildWdsRootAnchors when several cursors map to one
- *  WDS root (40 Eri has A,BC / AC / BC / BD / BE rows all sharing
- *  `04153-0739`; we want A as the system anchor, not B).
+/** Pick the more-canonical of two pair primaries sharing a WDS root: the
+ *  top-level letter decides, then depth, then alphabetical order. Used by
+ *  buildWdsRootAnchors when several cursors map to one WDS root (40 Eri has
+ *  A,BC / AC / BC / BD / BE rows all sharing `04153-0739`; we want A as the
+ *  system anchor, not B), and by `record-index/`'s naming anchor.
  *
- *  This anchor is a source of POSITION and velocity, which is why it is
- *  not the naming anchor: the two answer different questions, and
- *  `record-index/`'s branch-first rule would move records here. */
-function isMoreCanonicalAnchor(
+ *  Comparing whole comps by length ranks every single letter above "Aa", so a
+ *  root whose only A-branch cursor is Aa,Ab anchors on an unrelated branch —
+ *  15 Mon's `06410+0954` also carries EP, FG, FO, GO, JI and MN, and resolved
+ *  to E = HD 261938. A deeper cursor inside the A branch is still the A
+ *  branch, and "A" itself no longer needs a case of its own: it wins its own
+ *  branch on depth and every other branch on the letter. */
+export function isMoreCanonicalAnchor(
   candidateComp: string,
   incumbentComp: string,
 ): boolean {
   if (candidateComp === incumbentComp) return false;
-  if (candidateComp === 'A' && incumbentComp !== 'A') return true;
-  if (candidateComp !== 'A' && incumbentComp === 'A') return false;
+  const branch = (comp: string) => comp.charAt(0);
+  if (branch(candidateComp) !== branch(incumbentComp)) {
+    return branch(candidateComp) < branch(incumbentComp);
+  }
   if (candidateComp.length !== incumbentComp.length) {
     return candidateComp.length < incumbentComp.length;
   }
@@ -1524,7 +1528,14 @@ function promoteRow(
     return null;
   }
   let spectral = resolveCompanionSpectral(row);
-  const idsInheritedFromAnchor = usesSynth && (inheritedGaia || inheritedHip);
+  // An inherited id is evidence about the catalogue entry, and a surviving
+  // id of the row's OWN says nothing about it: AT-HYG keys photometry on the
+  // record it merged, so a row whose HD/HIP is the anchor's carries the
+  // SYSTEM's magnitude however Gaia later resolved the component. VV Crv B
+  // keeps its own DR3 source and still read HIP 61910's blended V 5.17 as its
+  // own light, twice over. Which tier can hold a member is the anchor's V
+  // tier's question, resolved in the dim post-pass and not here.
+  const idsInheritedFromAnchor = inheritedGaia || inheritedHip;
   const imputed = imputeCompanionAbsmag(
     row, anchorPrimaryRow, spectral.info, !isPairRowPrimary,
     isPairRowPrimary && idsInheritedFromAnchor,

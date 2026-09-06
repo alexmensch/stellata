@@ -215,10 +215,14 @@ Per-row gates and resolution:
   metric: curate types to shrink it). For a **pair-row-primary
   escape** the row's Δmag describes the sub-pair it heads, not the
   anchor→row separation (40 Eri B's Δmag is the B→C delta), so both
-  `primary + Δmag` paths are suppressed; and when the escape row's
-  only ids were inherited from the anchor its "own" AT-HYG photometry
-  is the anchor's BLEND magnitude, so the own path is skipped too
-  (Acrux B takes its WDS V=1.55, not the −4.2 blend). Absent any
+  `primary + Δmag` paths are suppressed; and when the escape row carries
+  an id inherited from the anchor its "own" AT-HYG photometry is the
+  anchor's BLEND magnitude, so the own path is skipped too (Acrux B takes
+  its WDS V=1.55, not the −4.2 blend). **An id of the row's own does not
+  buy the cell back.** AT-HYG keys photometry on the record it merged, so a
+  row sharing the anchor's HD/HIP reads the system's magnitude however Gaia
+  resolved the component afterwards — VV Crv B kept its own DR3 source and
+  claimed HIP 61910's blended V 5.17, which its A branch was claiming too. Absent any
   honest brightness the record inherits the anchor's collocated
   brightness (`companionAbsmagAnchorCollocated`) rather than a
   corrupted A+Δmag.
@@ -284,8 +288,12 @@ Per-row gates and resolution:
     separation for is EXCLUDED — no measurement is no evidence of blending
     (AU Mic AB). Structural members skip the bound in BOTH tiers — ids inherited
     from the anchor are evidence about THIS pair and outrank a population
-    threshold — which is not the same as bypassing the fit, and 350 Gaia-tier
-    candidates turn on the difference.
+    threshold — which is not the same as bypassing the fit, and 349 Gaia-tier
+    candidates turn on the difference. **Inherited means inherited, not
+    inherited-then-stripped**: an id the row kept of its own says nothing
+    about what the anchor's catalogue entry contained, and reading it as
+    evidence let a printed-tier member escape the dim while shipping the
+    entry's whole light.
 
   Apply, once per anchor with exact conservation: `own` / `wds_mag` members
   subtract their actual flux, guarded against a member as bright as the blend
@@ -369,6 +377,13 @@ per-field detail; this is the whole-record contract.
 primary when the local anchor never made it into the catalog (δ Vel CD
 class). Both inherited fields below resolve that same anchor, so a
 companion never gets one without the other.
+
+Which cursor primary is the ROOT's is `isMoreCanonicalAnchor`: the
+top-level letter first, then depth, then alphabetical order. Ranking whole
+comps by length instead puts "Aa" below every single-letter branch, so a
+root whose only A-branch cursor is Aa,Ab inherits position and velocity
+from an unrelated branch — 15 Mon's `06410+0954` anchored on its E
+component. `record-index/`'s naming anchor imports the same predicate.
 
 | Field(s) | Origin | Source |
 | --- | --- | --- |

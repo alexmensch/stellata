@@ -113,10 +113,11 @@ name before they were written:
   then depth. Comparing whole comps by length put "Aa" below every
   single-letter branch, so 15 Mon's root (`06410+0954`, whose only
   A-branch cursor is Aa,Ab) anchored on its E component and every letter
-  in it composed against HD 261938. This is deliberately not promotion's
-  own `isMoreCanonicalAnchor`, which picks the record a companion inherits
-  its POSITION from — that choice decides where records land, so the two
-  questions keep their own rules.
+  in it composed against HD 261938. Promotion's `isMoreCanonicalAnchor`
+  (`../companion-promotion.ts`) is the same predicate, imported: the
+  position anchor and the naming anchor ask different questions of the
+  same root, but both want the branch the root is named for, and the
+  length rule got that wrong for either.
 - **A root may not borrow its identity from a star another root already
   owns.** `05353-0524` is an Orion Nebula Cluster multiple whose only
   identified member is θ¹ Ori C, arriving as its component I, so every
