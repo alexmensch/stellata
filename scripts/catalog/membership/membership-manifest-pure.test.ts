@@ -65,7 +65,10 @@ const spine: SpineRow[] = [
  *  whose walk binds the spine record's own source; TYC 2-5-1 (HD 62) whose
  *  source the gate refused; HIP 40 alone; CNS5's GJ 10001. Two IV/25 pairs
  *  resolve one HD onto two Tycho-2 stars with no spine record to lose it to:
- *  HD 60 again on TYC 2-6-1, and HD 70 on TYC 2-7-1 (unbound) + 2-8-1. */
+ *  HD 60 again on TYC 2-6-1, and HD 70 on TYC 2-7-1 (unbound) + 2-8-1.
+ *  TYC 3-1-1 / 3-2-1 reach one raw source between them; TYC 3-3-1's TYC and
+ *  HIP routes bind different ones; CNS5 numbers GJ 10002 on two census rows;
+ *  TYC 3-4-1 carries HD 83 alongside HD 5, which a spine record holds. */
 const tables: PrimaryTables = {
   iv25: [
     { tyc: '1-1-1', hd: 100001, nHd: 1, nTyc: 1 },
@@ -79,6 +82,11 @@ const tables: PrimaryTables = {
     { tyc: '2-6-1', hd: 60, nHd: 1, nTyc: 2 },
     { tyc: '2-7-1', hd: 70, nHd: 1, nTyc: 2 },
     { tyc: '2-8-1', hd: 70, nHd: 1, nTyc: 2 },
+    { tyc: '3-1-1', hd: 80, nHd: 1, nTyc: 1 },
+    { tyc: '3-2-1', hd: 81, nHd: 1, nTyc: 1 },
+    { tyc: '3-3-1', hd: 82, nHd: 1, nTyc: 1 },
+    { tyc: '3-4-1', hd: 83, nHd: 2, nTyc: 1 },
+    { tyc: '3-4-1', hd: 5, nHd: 2, nTyc: 1 },
   ],
   v50: [
     { hr: 1, hd: 100001, name: null },
@@ -91,10 +99,12 @@ const tables: PrimaryTables = {
   cns5: [
     { cns5: 1, gj: '165', gjComp: 'AB', gaiaSourceId: null, hip: 20, astrometry: null },
     { cns5: 2, gj: '10001', gjComp: null, gaiaSourceId: '555', hip: null, astrometry: null },
+    { cns5: 3, gj: '10002', gjComp: null, gaiaSourceId: null, hip: null, astrometry: null },
+    { cns5: 4, gj: '10002', gjComp: null, gaiaSourceId: null, hip: null, astrometry: null },
     { cns5: 0, gj: 'Sun', gjComp: null, gaiaSourceId: null, hip: null, astrometry: null },
   ],
   gliese: parseGlieseTsv(GLIESE_TSV),
-  hipI239: new Set([10, 20, 30, 40]),
+  hipI239: new Set([10, 20, 30, 40, 50]),
   hip2: new Set<number>(),
   wgsn: {
     names: new Set<string>(),
@@ -107,12 +117,14 @@ const tables: PrimaryTables = {
     ['1-1-1', tycho2(8.5, 10)], ['1-2-1', tycho2(10.2)], ['2-1-1', tycho2(9.1, 30)],
     ['2-2-1', tycho2(9.9)], ['2-3-1', tycho2(11)], ['2-4-1', tycho2(11)], ['2-5-1', tycho2(11)],
     ['2-6-1', tycho2(11)], ['2-7-1', tycho2(11)], ['2-8-1', tycho2(11)],
+    ['3-1-1', tycho2(11)], ['3-2-1', tycho2(11)], ['3-3-1', tycho2(11, 50)],
+    ['3-4-1', tycho2(11)],
   ]),
   tycToSource: new Map([
     ['1-1-1', '111'], ['2-1-1', '444'], ['2-2-1', '666'], ['2-4-1', '111'], ['2-5-1', '777'],
-    ['2-8-1', '1010'],
+    ['2-8-1', '1010'], ['3-1-1', '1212'], ['3-2-1', '1212'], ['3-3-1', '1313'],
   ]),
-  hipToSource: new Map([[10, '111'], [20, '333'], [30, '444'], [40, '999']]),
+  hipToSource: new Map([[10, '111'], [20, '333'], [30, '444'], [40, '999'], [50, '1414']]),
   simbadBySourceId: new Map([
     ['222', { hip: null, tyc: '1-2-1', gj: null }],
     ['888', { hip: null, tyc: '9-9-9', gj: null }],
@@ -127,6 +139,8 @@ const overlay: ClassicIdOverlay = new Map([
   ['999', entry({ hip: [40] })],
   ['333', entry({ hip: [20], gj: ['165AB'] })],
   ['1010', entry({ hd: [70] })],
+  ['1212', entry({ hd: [80, 81] })],
+  ['1313', entry({ hd: [82] })],
 ]);
 
 const result = buildMembership({
@@ -188,8 +202,8 @@ describe('buildMembership — the additions', () => {
     expect(reasons.get(manifestKey(gj))).toBe('admitted:cns5_census');
     expect(gj.gaia_source_id).toBe('555');
     expect(result.counts.additionsByReason).toEqual({
-      'admitted:hd_link_gap': 4, 'admitted:hd_omitted': 1,
-      'admitted:hip_omitted': 1, 'admitted:cns5_census': 1,
+      'admitted:hd_link_gap': 8, 'admitted:hd_omitted': 1,
+      'admitted:hip_omitted': 1, 'admitted:cns5_census': 2,
     });
     for (const l of result.ledger) {
       expect(
@@ -204,7 +218,7 @@ describe('buildMembership — the additions', () => {
     expect(result.ledger).toContainEqual({
       tyc: '2-3-1', hip: '', hd: '100001', gl: '', gaia_source_id: '', reason: 'component:hd:100001',
     });
-    expect(result.counts.componentRows).toBe(3);
+    expect(result.counts.componentRows).toBe(4);
   });
 
   // IV/25 resolving one HD onto two Tycho-2 stars, neither on the spine: the
@@ -239,11 +253,68 @@ describe('buildMembership — the additions', () => {
     expect(result.counts.additionSourceGateRefused).toBe(1);
   });
 
-  it('carries no duplicate source_id and keys every row on a designation', () => {
+  // Two census rows under one GJ number are one star, and the second resolves
+  // onto the first — the anchor naming that record's own cell. A component
+  // letter is a different star and keeps its own record (GJ 3131B is not
+  // GJ 3131A), so the guard is keyed on the normalised GJ, letter included.
+  it('resolves a second census row under one GJ onto the first', () => {
+    expect(result.rows.filter((r) => r.gl === 'GJ 10002')).toHaveLength(1);
+    expect(result.ledger).toContainEqual({
+      tyc: '', hip: '', hd: '', gl: 'GJ 10002', gaia_source_id: '',
+      reason: 'component:gl:GJ_10002',
+    });
+  });
+
+  it('leaves a source no group takes where two groups reach it', () => {
+    expect(byTyc.get('3-1-1')).toMatchObject({ hd: '80', gaia_source_id: '' });
+    expect(byTyc.get('3-2-1')).toMatchObject({ hd: '81', gaia_source_id: '' });
+    expect(result.counts.additionSourceShared).toBe(1);
+  });
+
+  // § 4 gives the HD route label authority; the source follows it too.
+  it("takes the TYC route's source where the HIP route binds another", () => {
+    expect(byTyc.get('3-3-1')).toMatchObject({ hip: '50', gaia_source_id: '1313' });
+    expect(result.counts.additionRouteSourceDisagree).toBe(1);
+  });
+
+  // Admitted, but one designation short: HD 5 is a spine record's, so the
+  // record ships without a number the primaries publish for it.
+  it('counts an admitted row the guard withheld a designation from', () => {
+    expect(byTyc.get('3-4-1')).toMatchObject({ hd: '83', hd_alt: '' });
+    expect(result.counts.additionsWithBlockedDesignation).toBe(1);
+  });
+
+  it('carries no duplicate source_id and keys every row on a classical designation', () => {
     const ids = result.rows.map((r) => r.gaia_source_id).filter((s) => s !== '');
     expect(new Set(ids).size).toBe(ids.length);
-    for (const row of result.rows) expect(manifestDesignations(row).length).toBeGreaterThan(0);
-    expect(result.counts.rows).toBe(12);
+    // Never the Gaia id alone: a group with no classical designation left is
+    // ledgered, not admitted, so `sid:allocate` keys every mint hd / hip / gl.
+    for (const row of result.rows) {
+      expect(manifestDesignations(row).filter((d) => !d.startsWith('gaia_dr3:')).length)
+        .toBeGreaterThan(0);
+    }
+    expect(result.counts.additionGaiaKeyedOnly).toBe(0);
+    expect(result.counts.rows).toBe(17);
+  });
+});
+
+// § 6.1 forbids a silent drop, and admission reads one item per cohort: a
+// group holding two would leave a primary's row in no manifest row and on no
+// ledger line. Two IV/25 TYCs naming one HIP is the shape that gets there.
+describe('a group holding two items of one cohort', () => {
+  it('refuses to build rather than admit the first and drop the rest', () => {
+    const twoTycsOneHip: PrimaryTables = {
+      ...tables,
+      iv25: [...tables.iv25, { tyc: '4-1-1', hd: 90, nHd: 1, nTyc: 2 },
+        { tyc: '4-2-1', hd: 91, nHd: 1, nTyc: 2 }],
+      hipI239: new Set([...tables.hipI239, 60]),
+      tycho2: new Map([...tables.tycho2,
+        ['4-1-1', tycho2(11, 60)], ['4-2-1', tycho2(11, 60)]]),
+    };
+    expect(() => buildMembership({
+      spine, tables: twoTycsOneHip, overlay, overrides: new Map(),
+      siblingRenderedSourceIds: new Set(),
+    })).toThrow(/2 hd items \(tyc:4-1-1, tyc:4-2-1\)/);
   });
 });
 

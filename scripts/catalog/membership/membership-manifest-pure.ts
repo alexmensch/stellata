@@ -20,7 +20,6 @@ import {
   ATHYG_HD_LINK_FLOOR,
   CLASSICAL_CELLS,
   attestSpineRow,
-  bareGjKey,
   checkIdentity,
   findAdditions,
   indexPrimaries,
@@ -117,9 +116,12 @@ export interface MembershipCounts extends LabelMergeCounts {
   /** Raw sources two or more addition groups reach; no group takes one. */
   additionSourceShared: number;
   /** Admitted rows whose only designation is the Gaia id — the mints
-   *  `sid:allocate` will key `gaia_dr3:`. Says what it says only alongside
-   *  `sharedDesignations`: a designation two rows carry keys neither of them,
-   *  so a row can reach the Gaia id as its key with a classical cell filled. */
+   *  `sid:allocate` would key `gaia_dr3:`. Zero by construction, since a group
+   *  with no classical designation left is ledgered rather than admitted; the
+   *  pin is the tripwire on an admission branch that stops holding that. It
+   *  says what it says only alongside `sharedDesignations` — a designation two
+   *  rows carry keys neither of them, so a row can fall through to the Gaia id
+   *  with a classical cell filled. */
   additionGaiaKeyedOnly: number;
   /** Designations more than one manifest row carries, so they key no SID
    *  (docs/sid.md § 4.1). Admission leaves none that involves an addition;
@@ -128,6 +130,10 @@ export interface MembershipCounts extends LabelMergeCounts {
   /** Groups whose TYC route and HIP route bind different sources; the TYC
    *  route's stands, as the HD route does for labels (§ 4). */
   additionRouteSourceDisagree: number;
+  /** Admitted rows the guard withheld a designation from — the record ships,
+   *  but without a designation the primaries publish for it, because another
+   *  record answers to it. */
+  additionsWithBlockedDesignation: number;
   rowsWithHdAlt: number;
   rowsWithHrAlt: number;
 }
@@ -286,12 +292,30 @@ interface Claims {
   hd: Set<number>;
   hr: Set<number>;
   hip: Set<number>;
-  /** `normaliseGjKey` form: number + component letter. */
-  gl: Set<string>;
+  /** Keyed by `normaliseGjKey` form (number + component letter); the value is
+   *  the claiming record's own designation, which is what a component row has
+   *  to name. */
+  gl: Map<string, string>;
   /** The spine's alone, and it needs no sequential growth: `sharedSources`
    *  drops any raw source two addition groups reach, so no admitted row can
    *  take a source another group would have. */
   gaia: Set<string>;
+}
+
+/** The `gl:` designation a record answers to — `starDesignations`' form, which
+ *  is the raw cell and not the normalised key. */
+function glDesignation(cell: string): string {
+  return `gl:${cell.trim().replace(/\s+/g, '_')}`;
+}
+
+/** The designation of the record already answering to this GJ key, or null.
+ *  Matched on the normalised key alone, letter included: `GJ 3131B` is the
+ *  other component of `GJ 3131A`'s pair, a second star under a second
+ *  designation, and blocking it would drop a record rather than protect a key.
+ *  Whether the system is already represented at all is the cohort filter's
+ *  question, and `spineKeys` answers it against the bare number there. */
+function claimedGl(claims: Claims, key: string): string | null {
+  return claims.gl.get(key) ?? null;
 }
 
 function claimRecord(claims: Claims, r: LabelMergeRecord): void {
@@ -301,12 +325,12 @@ function claimRecord(claims: Claims, r: LabelMergeRecord): void {
   for (const hr of r.hrAlt) claims.hr.add(hr);
   if (r.hip !== null) claims.hip.add(r.hip);
   const gl = normaliseGjKey(r.gl);
-  if (gl !== null) claims.gl.add(gl);
+  if (gl !== null && r.gl !== null) claims.gl.set(gl, glDesignation(r.gl));
 }
 
 function spineClaims(records: readonly LabelMergeRecord[]): Claims {
   const claims: Claims = {
-    hd: new Set(), hr: new Set(), hip: new Set(), gl: new Set(), gaia: new Set(),
+    hd: new Set(), hr: new Set(), hip: new Set(), gl: new Map(), gaia: new Set(),
   };
   for (const r of records) {
     claimRecord(claims, r);
@@ -477,6 +501,19 @@ function additionGroup(
   overlay: ClassicIdOverlay,
   sharedSources: ReadonlySet<string>,
 ): AdditionGroup {
+  // One item per cohort is what the grouping rules produce and what admission
+  // reads; a second would leave a primary's row in no manifest row and on no
+  // ledger line, which § 6.1 forbids outright. Loud beats silent: the shape is
+  // new, and what it should admit is a decision, not a default.
+  for (const cohort of ['hd', 'hip', 'cns5'] as const) {
+    const named = items.filter((i) => i[cohort] !== null);
+    if (named.length > 1) {
+      throw new Error(
+        `addition group holds ${named.length} ${cohort} items (${named.map((i) => i.key).join(', ')}); `
+          + 'groupAdditions merges one star\'s items, so admission drops all but the first',
+      );
+    }
+  }
   const hd = items.find((i) => i.hd !== null)?.hd ?? null;
   const hip = items.find((i) => i.hip !== null)?.hip ?? null;
   const cns5 = items.find((i) => i.cns5 !== null)?.cns5 ?? null;
@@ -524,6 +561,10 @@ interface Admission {
   /** The admitted row's record, for the claim set — null on a component row. */
   record: LabelMergeRecord | null;
   ledger: AdditionLedgerRow;
+  /** Designations the guard withheld. Every one on a component row; on an
+   *  admitted row it is a designation the primaries publish for this star that
+   *  the record ships without, so the count is pinned. */
+  blocked: readonly string[];
 }
 
 function admitGroup(
@@ -554,9 +595,12 @@ function admitGroup(
   hrs.sort((a, b) => a - b);
   let gl = rawGl;
   const glKey = normaliseGjKey(gl);
-  if (gl !== null && glKey !== null && (claims.gl.has(glKey) || claims.gl.has(bareGjKey(glKey)))) {
-    blocked.push(`gl:${gl.replace(/\s+/g, '_')}`);
-    gl = null;
+  if (glKey !== null) {
+    const held = claimedGl(claims, glKey);
+    if (held !== null) {
+      blocked.push(held);
+      gl = null;
+    }
   }
   let flam: number | null = null;
   for (const hd of hds) flam ??= index.flamByHd.get(hd) ?? null;
@@ -568,6 +612,7 @@ function admitGroup(
     return {
       row: null,
       record: null,
+      blocked,
       ledger: {
         tyc,
         hip: intCell(hipItem?.hip ?? null),
@@ -592,6 +637,7 @@ function admitGroup(
   return {
     row,
     record,
+    blocked,
     ledger: {
       tyc, hip: row.hip, hd: row.hd, gl: row.gl, gaia_source_id: row.gaia_source_id, reason,
     },
@@ -676,6 +722,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   let additionSourceGateRefused = 0;
   let additionRouteSourceDisagree = 0;
   let additionGaiaKeyedOnly = 0;
+  let additionsWithBlockedDesignation = 0;
   for (const g of groups) {
     const a = admitGroup(g, claims, index);
     if (g.sourceOnSpine) additionSourceOnSpine++;
@@ -687,6 +734,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
       continue;
     }
     additionsByReason[a.ledger.reason as AdditionReason]++;
+    if (a.blocked.length > 0) additionsWithBlockedDesignation++;
     const designations = manifestDesignations(a.row);
     if (designations.length === 1 && designations[0].startsWith('gaia_dr3:')) additionGaiaKeyedOnly++;
     claimRecord(claims, a.record);
@@ -713,6 +761,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     additionSourceShared: sharedSources.size,
     additionGaiaKeyedOnly,
     additionRouteSourceDisagree,
+    additionsWithBlockedDesignation,
     sharedDesignations: [...owners.values()].filter((n) => n > 1).length,
     rowsWithHdAlt: sorted.filter((r) => r.hd_alt !== '').length,
     rowsWithHrAlt: sorted.filter((r) => r.hr_alt !== '').length,
