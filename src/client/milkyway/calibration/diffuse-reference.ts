@@ -149,7 +149,7 @@ export const LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2 = {
 /**
  * Surface brightness of the stars **Stellata already draws** — the
  * catalogue summed as Σ10^(−0.4·V) inside a 10° cap and divided by the
- * cap's solid angle, from `public/catalog.bin.*` at build v9 (384,115
+ * cap's solid angle, from `public/catalog.bin.*` at build v9 (384,116
  * records, `recordCount` in scripts/catalog/build-catalog-expected.json).
  * The caps centre on the ICRS J2000 galactic poles — (266.404988,
  * −28.936178) and (192.859508, +27.128336) — and 10° is 9.5456e−2 sr.
