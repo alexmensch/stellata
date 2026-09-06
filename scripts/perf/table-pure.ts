@@ -5,7 +5,7 @@
 import { round3, type PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { VERDICT_MARK, type RunDiff } from './diff-pure';
 import { PASS_COUNTERS, type DwellSummary, type PassCountsSummary } from './dwell-pure';
-import type { PinDiff } from './pin-pure';
+import { PIN_VERDICT_MARK, type PinDiff } from './pin-pure';
 import type { DwellRecord } from './schema';
 import type { SweepFit, SweepPoint } from './sweep-pure';
 
@@ -123,7 +123,7 @@ export function formatPinTable(diff: PinDiff): string {
     parts.push(formatTable(
       PIN_DIFF_COLUMNS,
       diff.rows.map((row) => [
-        VERDICT_MARK[row.verdict], row.key, row.metric,
+        PIN_VERDICT_MARK[row.verdict], row.key, row.metric,
         round3(row.pinnedMs), round3(row.currentMs), round3(row.deltaMs), round3(row.bandMs), row.note,
       ]),
     ));

@@ -16,7 +16,10 @@ import { diffRuns } from './diff-pure';
 import type { DwellSummary } from './dwell-pure';
 import { applyRoundTrip, measureDwell, measureSweep, type Measured } from './measure';
 import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './perf-go-lib';
-import { PIN_SCHEMA, PinError, assertPinFile, compareToPin, pinFromRun, type PinFile } from './pin-pure';
+import {
+  PIN_SCHEMA, PinError, assertPinFile, compareToPin, pinDiffFails, pinFromRun, unacceptedMarks,
+  type PinDiff, type PinFile,
+} from './pin-pure';
 import {
   DWELL_METHOD,
   bufferShortfall,
@@ -384,19 +387,28 @@ function preflightPaths(args: RunArgs): Preflight {
   return { baseline, pin, error: null };
 }
 
-/** The verdicts against the pin, and whether they fail the run: a ✗ row, or
- *  a comparison the pin refused outright, since a refused comparison is not
- *  a pass. */
-function printAgainstPin(path: string, pin: PinFile, current: PerfFile): boolean {
+/** The verdicts against the pin. Returns the comparison so a `--pin` in the
+ *  same run can refuse to pin over a mark nobody accepted. */
+function printAgainstPin(path: string, pin: PinFile, current: PerfFile): PinDiff {
   console.log(`\nperf: against pin ${path} (${pin.git.commit.slice(0, 8)}, v${pin.version}, ${pin.adapterSlug})`);
   const diff = compareToPin(pin, current);
   console.log(formatPinTable(diff));
-  return diff.refusedWholeRun !== null || diff.rows.some((row) => row.verdict === 'dearer');
+  return diff;
 }
 
 /** Write the run as the pin, or say why it cannot be one. Returns whether it failed. */
-function writePin(args: RunArgs, file: PerfFile): boolean {
+function writePin(args: RunArgs, file: PerfFile, against: PinDiff | null): boolean {
   const accepted = Object.fromEntries(args.accept.map((mark) => [mark.key, { bead: mark.bead }]));
+  if (against !== null) {
+    const unaccepted = unacceptedMarks(against, accepted);
+    if (unaccepted.length > 0) {
+      console.error(
+        `perf: no pin written — ${unaccepted.join(', ')} marked ✗ against the pin being replaced. ` +
+        'Fix the regression, or re-run with --accept <row>:<bead-id> to pin the accepted value.',
+      );
+      return true;
+    }
+  }
   const { pin, refusals } = pinFromRun(file, { sourceRun: args.json!, version: packageVersion(), accepted });
   if (pin === null) {
     console.error(`perf: no pin written —\n  ${refusals.join('\n  ')}`);
@@ -517,8 +529,11 @@ async function main(): Promise<number> {
     }
   }
   if (baseline !== null && args.baseline !== undefined) printBaseline(args.baseline, baseline, file);
-  const pinFailed = pin !== null && args.againstPin !== undefined && printAgainstPin(args.againstPin, pin, file);
-  const pinUnwritten = args.pin !== undefined && writeFailure === null && writePin(args, file);
+  const against = pin !== null && args.againstPin !== undefined
+    ? printAgainstPin(args.againstPin, pin, file)
+    : null;
+  const pinFailed = against !== null && pinDiffFails(against);
+  const pinUnwritten = args.pin !== undefined && writeFailure === null && writePin(args, file, against);
 
   const failed = records.filter((r) => r.failed).map((r) => `${r.name}/${r.backend.requested}`);
   const tainted = records.filter((r) => r.tainted).map((r) => `${r.name}/${r.backend.requested}`);

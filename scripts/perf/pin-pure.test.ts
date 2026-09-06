@@ -10,9 +10,11 @@ import {
   adapterSlug,
   assertPinFile,
   compareToPin,
+  pinDiffFails,
   pinFloorMs,
   pinFromRun,
   pinPathFor,
+  unacceptedMarks,
   type PinFile,
 } from './pin-pure';
 import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type PerfFile, type ScenarioRecord } from './schema';
@@ -156,9 +158,10 @@ describe('compareToPin', () => {
     expect(diff.rows.map((r) => [r.key, r.metric, r.verdict])).toEqual([
       ['sol|webgpu', 'gpu-p50', 'same'],
       ['mw120|webgpu', 'gpu-p50', 'same'],
-      ['sol|webgl2', 'wall-p50', 'same'],
+      ['sol|webgl2', 'wall-p50', 'ungated'],
     ]);
     expect(diff.rows[0].bandMs).toBe(pinFloorMs(21.8));
+    expect(pinDiffFails(diff)).toBe(false);
   });
 
   it('marks a GPU-stream move past the floor dearer, and one inside it not at all', () => {
@@ -170,32 +173,40 @@ describe('compareToPin', () => {
     expect(compareToPin(pinOf([SOL_GPU]), file([cheaper])).rows[0].verdict).toBe('cheaper');
   });
 
-  it('marks a row that leaves the display cadence, whatever the GPU stream did', () => {
+  it('never marks on the wall clock: the cadence may move under a steady GPU stream', () => {
     const left = scenario('mw120', 'webgpu', dwell(stats(21.6), stats(21.0)));
     const row = compareToPin(pinOf([MW120_GPU]), file([left])).rows[0];
-    expect(row.metric).toBe('cadence');
-    expect(row.verdict).toBe('dearer');
-    expect(row.note).toContain('left the display cadence');
+    expect(row.metric).toBe('gpu-p50');
+    expect(row.verdict).toBe('same');
 
     const onto = scenario('sol', 'webgl2', dwell(stats(16.7, { iqrMs: 0.4, vsyncClamped: true }), null));
-    expect(compareToPin(pinOf([SOL_GL]), file([onto])).rows[0].verdict).toBe('cheaper');
+    expect(compareToPin(pinOf([SOL_GL]), file([onto])).rows[0].verdict).toBe('ungated');
   });
 
-  it('reads a clamped row without a GPU stream as still on the cadence', () => {
-    const clampedGl = scenario('lg', 'webgl2', dwell(stats(16.7, { iqrMs: 0.4, vsyncClamped: true }), null));
-    const row = compareToPin(pinOf([clampedGl]), file([clampedGl])).rows[0];
-    expect(row.metric).toBe('cadence');
-    expect(row.verdict).toBe('same');
+  it('records a row with no GPU stream and never gates it, naming the side that lacks one', () => {
+    const row = compareToPin(pinOf([SOL_GL]), file([SOL_GL])).rows[0];
+    expect([row.metric, row.verdict]).toEqual(['wall-p50', 'ungated']);
+    expect(row.note).toContain('WebGL2 supplies none');
+    expect(row.bandMs).toBe(0);
+
+    const lost = scenario('sol', 'webgpu', dwell(stats(25.2), null));
+    expect(compareToPin(pinOf([SOL_GPU]), file([lost])).rows[0].note)
+      .toContain('this run resolved none');
+    const gained = scenario('sol', 'webgl2', dwell(stats(16.0, { iqrMs: 21 }), stats(15.2)));
+    expect(compareToPin(pinOf([SOL_GL]), file([gained])).rows[0].note).toContain('this run does');
   });
 
-  it('marks a WebGPU vantage over the ceiling regardless of the band', () => {
+  it('marks a GPU-stream p50 over the ceiling regardless of the band, and reads wall never', () => {
     expect(PIN_CEILING_MS).toBe(33.4);
-    const hot = scenario('sol', 'webgpu', dwell(stats(34.1), stats(21.8)));
+    const hot = scenario('sol', 'webgpu', dwell(stats(25.2), stats(33.5)));
     const row = compareToPin(pinOf([SOL_GPU]), file([hot])).rows[0];
     expect(row.verdict).toBe('dearer');
     expect(row.note).toContain('33.4 ms ceiling');
-    const hotGl = scenario('sol', 'webgl2', dwell(stats(34.1, { iqrMs: 21 }), null));
-    expect(compareToPin(pinOf([SOL_GL]), file([hotGl])).rows[0].note).not.toContain('ceiling');
+
+    // Wall p50 is quantised to the refresh interval, so it can sit far over
+    // the ceiling while the hardware time the gate reads is well under it.
+    const slowWall = scenario('sol', 'webgpu', dwell(stats(50.1), stats(21.8)));
+    expect(compareToPin(pinOf([SOL_GPU]), file([slowWall])).rows[0].verdict).toBe('same');
   });
 
   it('refuses the whole run on another GPU or a headed browser', () => {
@@ -213,6 +224,41 @@ describe('compareToPin', () => {
     expect(diff.refusals[0].reason).toContain('load-state transition');
     expect(diff.refusals[1].reason).toBe('not measured in this run');
     expect(compareToPin(pinOf([SOL_GPU]), file([resized])).refusals[0].reason).toContain('Mpx');
+  });
+});
+
+describe('pinDiffFails — a refused comparison is not a pass', () => {
+  it('fails on a ✗ row, on a whole-run refusal, and on a per-row refusal', () => {
+    const dearer = scenario('sol', 'webgpu', dwell(stats(25.2), stats(22.6)));
+    expect(pinDiffFails(compareToPin(pinOf([SOL_GPU]), file([dearer])))).toBe(true);
+    expect(pinDiffFails(compareToPin(pinOf(), file([SOL_GPU], { headless: false })))).toBe(true);
+
+    // Every row refused prints a table with no ✗ in it, which would read as
+    // a clean run if only the marks were counted.
+    const trended = scenario('sol', 'webgpu', dwell(stats(25.2, { quarterMedians: [24, 25, 26, 27], stateGuard: 'trending' }), stats(21.8)));
+    const allRefused = compareToPin(pinOf([SOL_GPU]), file([trended]));
+    expect(allRefused.rows).toEqual([]);
+    expect(pinDiffFails(allRefused)).toBe(true);
+  });
+
+  it('passes a run whose only unmarked rows are ungated', () => {
+    expect(pinDiffFails(compareToPin(pinOf([SOL_GL]), file([SOL_GL])))).toBe(false);
+  });
+});
+
+describe('unacceptedMarks — writing a pin must not ratchet the frame upward', () => {
+  it('names every ✗ no --accept covers, and nothing once one does', () => {
+    const dearer = scenario('sol', 'webgpu', dwell(stats(25.2), stats(22.6)));
+    const diff = compareToPin(pinOf([SOL_GPU]), file([dearer]));
+    expect(unacceptedMarks(diff, {})).toEqual(['sol|webgpu']);
+    expect(unacceptedMarks(diff, { 'sol|webgpu': { bead: 'stellata-8cg.49.12' } })).toEqual([]);
+    expect(unacceptedMarks(diff, { 'mw120|webgpu': { bead: 'other' } })).toEqual(['sol|webgpu']);
+  });
+
+  it('never asks acceptance of a cheaper, unchanged or ungated row', () => {
+    const cheaper = scenario('sol', 'webgpu', dwell(stats(25.2), stats(20.9)));
+    expect(unacceptedMarks(compareToPin(pinOf([SOL_GPU]), file([cheaper])), {})).toEqual([]);
+    expect(unacceptedMarks(compareToPin(pinOf([SOL_GL]), file([SOL_GL])), {})).toEqual([]);
   });
 });
 

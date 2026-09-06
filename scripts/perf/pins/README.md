@@ -35,20 +35,26 @@ cold; tune it until every context in a pin run reads `steady`.
 
 ## Reading `--against-pin`
 
-- **Metric.** The GPU-stream p50 where both sides have one (reproduces to
-  ~1 % cold); else wall p50.
+- **Metric.** The GPU-stream p50 alone — the one continuous whole-frame
+  reading the pin holds, reproducing to ~1 % cold. Wall time is quantised
+  to the display's refresh interval, so it is recorded and never marked:
+  a row with no GPU stream on either side, every WebGL2 row among them,
+  reads `·` ungated with its wall p50 shown as context.
 - **Band.** The pair's two-sigma standard error, floored at
   `max(PIN_FLOOR_MS 0.5 ms, PIN_FLOOR_FRACTION 3 % × pinned)`. A `✗` is
-  past both; `~` is not resolved, never "no change".
-- **Cadence.** A row pinned on the display cadence marks `✗` the moment it
-  leaves it, whatever the GPU stream did; a row that lands on the cadence
-  reads `✓`; both clamped and no GPU stream reads `~ still on the cadence`.
-- **Ceiling.** A WebGPU wall p50 over `PIN_CEILING_MS` (33.4 ms, two 60 Hz
-  intervals) is `✗` whatever the band says.
+  past both; `~` is not resolved, never "no change". The 3 % is
+  provisional — a floor-only mark is a prompt to re-run rather than a
+  verdict (`RELEASING.md` § Perf pin).
+- **Ceiling.** A GPU-stream p50 over `PIN_CEILING_MS` (33.4 ms, two 60 Hz
+  intervals of hardware time) is `✗` whatever the band says.
 - **Refusals.** Another adapter slug or a headed run refuses the whole
   comparison; a missing, failed, tainted, resized (> 1 % buffer) or
-  trending row refuses that row. A refused comparison is not a pass: the
-  run exits 1.
+  trending row refuses that row. A refused comparison is not a pass:
+  either kind exits 1, since a run whose rows were all refused prints a
+  table with no `✗` in it.
+- **Writing while comparing.** `--pin` alongside `--against-pin` refuses
+  to write while any `✗` lacks an `--accept <row>:<bead>`, so an
+  unexamined regression cannot quietly become the pinned value.
 
 The slug is the chip plus the WebGPU architecture from the adapter probe
 (`apple-m4-metal-3`); two machines with the same silicon share a pin, which

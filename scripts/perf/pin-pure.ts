@@ -3,7 +3,7 @@
 // RELEASING.md § Perf pin; mechanics: pins/README.md.
 
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { BUFFER_MPX_TOLERANCE, band, type DiffRefusal, type Verdict } from './diff-pure';
+import { BUFFER_MPX_TOLERANCE, VERDICT_MARK, band, type DiffRefusal, type Verdict } from './diff-pure';
 import type { StateGuard } from './dwell-pure';
 import { DWELL_METHOD } from './run-pure';
 import type { AdapterProbe, DwellRecord, PerfFile, ScenarioRecord } from './schema';
@@ -14,16 +14,15 @@ import type { Backend, ScenarioName } from './scenarios';
 export const PIN_SCHEMA = 'stellata-perf/pin-1';
 
 /** A row moves only past the pair's two-sigma band AND past this floor,
- *  whichever of the two forms is larger: cold GPU-stream medians reproduce
- *  to about 1 % run to run, so 3 % is three times that, and 0.5 ms is the
- *  absolute floor under which the wall clock resolves nothing. */
+ *  whichever of the two forms is larger. The 3 % is provisional — a
+ *  floor-only mark is a prompt to re-run, not a verdict:
+ *  RELEASING.md § Perf pin. */
 export const PIN_FLOOR_MS = 0.5;
 export const PIN_FLOOR_FRACTION = 0.03;
 
-/** Two 60 Hz intervals. A canon vantage over it on the pinned backend
- *  marks whatever the band says. */
+/** Two 60 Hz intervals of hardware time. A canon vantage whose GPU-stream
+ *  p50 crosses it marks whatever the band says. */
 export const PIN_CEILING_MS = 33.4;
-export const PIN_CEILING_BACKEND: Backend = 'webgpu';
 
 export class PinError extends Error {}
 
@@ -67,7 +66,16 @@ export interface PinFile {
   readonly accepted: Readonly<Record<string, PinAcceptance>>;
 }
 
-export type PinMetric = 'gpu-p50' | 'wall-p50' | 'cadence';
+/** Which clock the row's numbers came from. `wall-p50` appears only on an
+ *  ungated row, where it is context rather than a reading the gate acts on. */
+export type PinMetric = 'gpu-p50' | 'wall-p50';
+
+/** `ungated` is a row the pin records but never marks: it carries no
+ *  GPU-stream median on one side or the other, and wall time is quantised to
+ *  the display's refresh interval. RELEASING.md § Perf pin. */
+export type PinVerdict = Verdict | 'ungated';
+
+export const PIN_VERDICT_MARK: Record<PinVerdict, string> = { ...VERDICT_MARK, ungated: '·' };
 
 export interface PinVerdictRow {
   readonly key: string;
@@ -76,7 +84,7 @@ export interface PinVerdictRow {
   readonly currentMs: number;
   readonly deltaMs: number;
   readonly bandMs: number;
-  readonly verdict: Verdict;
+  readonly verdict: PinVerdict;
   readonly note: string;
 }
 
@@ -203,52 +211,47 @@ function verdictFor(deltaMs: number, bandMs: number): Verdict {
   return deltaMs < 0 ? 'cheaper' : 'dearer';
 }
 
+/** Which side is missing the GPU stream, so an ungated row says why rather
+ *  than only that it is ungated — the pin having one and the run not is an
+ *  instrument regression, not the WebGL2 backend being itself. */
+function ungatedNote(pinned: PinRow, current: PinClock | null): string {
+  if (pinned.gpu === null && current === null) {
+    return pinned.backend === 'webgl2'
+      ? 'no GPU stream — WebGL2 supplies none'
+      : 'no GPU stream on either side — the adapter resolved no believable durations';
+  }
+  return pinned.gpu === null
+    ? 'the pin carries no GPU stream for this row; this run does'
+    : 'the pin carries a GPU stream for this row; this run resolved none';
+}
+
 function compareRow(pinned: PinRow, record: ScenarioRecord): PinVerdictRow {
   const dwell = record.dwell!;
-  const wall = dwell.stats;
-  const base = { key: pinned.key, bandMs: 0 };
+  const base = { key: pinned.key };
 
-  if (pinned.wall.vsyncClamped !== wall.vsyncClamped) {
-    const left = pinned.wall.vsyncClamped;
+  if (pinned.gpu === null || dwell.gpuStats === null) {
     return {
       ...base,
-      metric: 'cadence',
+      metric: 'wall-p50',
       pinnedMs: pinned.wall.p50,
-      currentMs: wall.p50,
-      deltaMs: wall.p50 - pinned.wall.p50,
-      verdict: left ? 'dearer' : 'cheaper',
-      note: left ? 'left the display cadence' : 'onto the display cadence',
+      currentMs: dwell.stats.p50,
+      deltaMs: dwell.stats.p50 - pinned.wall.p50,
+      bandMs: 0,
+      verdict: 'ungated',
+      note: ungatedNote(pinned, dwell.gpuStats),
     };
   }
 
-  let row: PinVerdictRow;
-  if (pinned.gpu !== null && dwell.gpuStats !== null) {
-    const deltaMs = dwell.gpuStats.p50 - pinned.gpu.p50;
-    const bandMs = band(
-      medianStandardErrorMs(pinned.gpu), medianStandardErrorMs(dwell.gpuStats), pinFloorMs(pinned.gpu.p50),
-    );
-    row = {
-      ...base, metric: 'gpu-p50', pinnedMs: pinned.gpu.p50, currentMs: dwell.gpuStats.p50,
-      deltaMs, bandMs, verdict: verdictFor(deltaMs, bandMs), note: '',
-    };
-  } else if (pinned.wall.vsyncClamped) {
-    row = {
-      ...base, metric: 'cadence', pinnedMs: pinned.wall.p50, currentMs: wall.p50,
-      deltaMs: wall.p50 - pinned.wall.p50, verdict: 'same', note: 'still on the display cadence',
-    };
-  } else {
-    const deltaMs = wall.p50 - pinned.wall.p50;
-    const bandMs = band(
-      medianStandardErrorMs(pinned.wall), medianStandardErrorMs(wall), pinFloorMs(pinned.wall.p50),
-    );
-    row = {
-      ...base, metric: 'wall-p50', pinnedMs: pinned.wall.p50, currentMs: wall.p50,
-      deltaMs, bandMs, verdict: verdictFor(deltaMs, bandMs), note: '',
-    };
-  }
-
-  if (pinned.backend === PIN_CEILING_BACKEND && wall.p50 > PIN_CEILING_MS) {
-    return { ...row, verdict: 'dearer', note: `wall p50 over the ${PIN_CEILING_MS} ms ceiling` };
+  const deltaMs = dwell.gpuStats.p50 - pinned.gpu.p50;
+  const bandMs = band(
+    medianStandardErrorMs(pinned.gpu), medianStandardErrorMs(dwell.gpuStats), pinFloorMs(pinned.gpu.p50),
+  );
+  const row: PinVerdictRow = {
+    ...base, metric: 'gpu-p50', pinnedMs: pinned.gpu.p50, currentMs: dwell.gpuStats.p50,
+    deltaMs, bandMs, verdict: verdictFor(deltaMs, bandMs), note: '',
+  };
+  if (dwell.gpuStats.p50 > PIN_CEILING_MS) {
+    return { ...row, verdict: 'dearer', note: `GPU-stream p50 over the ${PIN_CEILING_MS} ms ceiling` };
   }
   return row;
 }
@@ -296,6 +299,32 @@ export function compareToPin(pin: PinFile, current: PerfFile): PinDiff {
     rows.push(compareRow(pinned, record));
   }
   return { refusedWholeRun: null, rows, refusals };
+}
+
+/**
+ * Whether a comparison fails the run. A per-row refusal counts: a run whose
+ * rows were every one refused — all trending, all resized — would otherwise
+ * print a table with no `✗` in it and exit 0, which reads as a pass.
+ */
+export function pinDiffFails(diff: PinDiff): boolean {
+  return diff.refusedWholeRun !== null
+    || diff.refusals.length > 0
+    || diff.rows.some((row) => row.verdict === 'dearer');
+}
+
+/**
+ * The marked rows no `--accept` covers. Writing a pin over one of those is
+ * the ratchet RELEASING.md § Perf pin names: an unexamined regression
+ * becomes the pinned value, and the frame walks upward a PR at a time with
+ * only the ceiling ever catching it.
+ */
+export function unacceptedMarks(
+  diff: PinDiff,
+  accepted: Readonly<Record<string, PinAcceptance>>,
+): string[] {
+  return diff.rows
+    .filter((row) => row.verdict === 'dearer' && accepted[row.key] === undefined)
+    .map((row) => row.key);
 }
 
 export function assertPinFile(value: unknown, source: string): PinFile {
