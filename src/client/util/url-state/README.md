@@ -46,6 +46,10 @@ src/client/util/url-state/
                                   Pure string helpers, split out so the
                                   path regex is unit-testable without
                                   url-state.ts's location/history writes.
+  pose-change-pure.ts (+ test)    the one scale-free test behind both the
+                                  per-frame write trigger and the encoder's
+                                  cam / tgt / worldOffset elision. See
+                                  § What counts as a camera move.
   url-state.ts (+ test)           blob encode / decode (v1–v4 formats),
                                   default-compression presence mask,
                                   per-component vec3 sub-masks,
@@ -135,11 +139,11 @@ bit order, so mode isn't known until the field loop completes).
   snaps the camera to the park pose — URL restore must not surface as a
   2 s glide on page load. If camera params are also present, it uses
   `setOrbitTarget` so the explicit camera wins.
-- Camera changes are tracked via the `'frame'` event with a per-component
-  epsilon comparison (no per-frame allocations) feeding a 1 s debounced
-  writer. The comparison covers position, target, **and** `camera.up` — so
-  a roll gesture (which moves neither position nor target) still triggers a
-  URL update.
+- Camera changes are tracked via the `'frame'` event with the scale-free
+  comparison of § What counts as a camera move (no per-frame allocations)
+  feeding a 1 s debounced writer. The comparison covers position, target,
+  **and** `camera.up` — so a roll gesture (which moves neither position nor
+  target) still triggers a URL update.
   The same frame check also watches the **pinned `t`** (`isLive(t) ? null
   : t`, mirroring `currentStateOf`'s encode gate): the scrubber drives
   `getT()` directly without a `'state'` event, so without this a time
@@ -205,10 +209,56 @@ slider's own `EV_STEP_STOPS` grid, present only when the user moved it off
 from the aperture, so a receiver on a different build gets that build's
 limit and the trim applies on top.
 
-`worldOffset` (FIELDS_V2 bit 20, vec3 Float32) serialises only when
-`focusedStar === null` AND the offset isn't ≈Sol — see
+`worldOffset` (FIELDS_V2 bit 20, vec3 Float32) serialises only when nothing
+is focused AND the anchor is far enough from Sol to move the pose — see
 `src/client/frame/README.md` § URL round-trip for the precision-anchor
-semantics that make this round-trip safe.
+semantics that make this round-trip safe, and § What counts as a camera move
+for "far enough".
+
+## What counts as a camera move
+
+Every threshold on a pose vector — the per-frame write trigger and the
+encoder's cam / tgt / worldOffset elision alike — is **a fraction of the
+orbit radius `|cam − tgt|`, never a distance**. `pose-change-pure.ts` owns
+the rule and the one constant, `POSE_CHANGE_EPS`.
+
+The rule is angular and metric at once, which is why it needs no cases:
+`|Δcam| / r` IS the angle the move subtends at the orbit target, so an orbit
+gesture and a dolly land on the same test. Pan and OBSERVE's look-around
+land in `tgt` against the same radius; roll moves neither point and is read
+off `camera.up`, a unit axis whose delta is the roll angle itself. OBSERVE
+has no orbit pivot but still carries a radius — the serialised look pin a
+parsec down the forward axis (`../../camera/observe/README.md`).
+
+**An absolute threshold is wrong at every vantage but one**, and this camera
+reaches lunar orbit and the Local Group in a session (`AGENTS.md`
+§ Camera-anywhere). The rule this replaced was `max(1e-9 pc, min(1e-3 pc,
+1 % of magnitude))`, and each term failed somewhere: the 1e-9 pc floor is
+**30,857 km**, so beside the Moon the camera had to travel seven times its
+own distance from the body before the URL was rewritten and a whole orbit
+went unrecorded; the 1e-3 pc encoder band called a 30-billion-km pan
+"default", and called the anchor of every unfocused view inside the solar
+system "Sol", so the receiver rebuilt the pose 1 AU away.
+
+**The pose is measured from the anchor the RECEIVER rebuilds**, not from the
+local origin — `url-state.ts`'s `anchoredPose`, which both writers read so
+they cannot disagree about what has moved. A hard focus recentres the origin
+onto the object at apply time, while the sender's own recentre fires only
+once the camera has drifted 16× the eye distance
+(`../../camera/focus/focal-ride-pure.ts`). Between two of those the
+moving-focal ride carries camera and target along with the object: raw local
+values drift out of any frame the receiver reconstructs, and they carry
+motion the viewer cannot see, which under a scale-relative trigger is
+unbounded URL churn against a *trailing* debounce — that is, no URL write at
+all. Subtracting the anchor removes both. Nothing focused has no anchor to
+subtract, and raw local values are already what `worldOffset` is read
+against.
+
+Two bounds fix the constant: below ~1e-3 the round-trip error is sub-pixel
+on any display, and it has to stay well clear of the float32 wire's own
+6e-8 resolution or a settled camera would rewrite the URL forever. Its
+tests pin the behaviour at five vantages spanning ten orders of magnitude,
+which is the property that matters — not the value.
 
 **Adding a field.** Claim the next free presence bit in `FIELDS_V4`,
 declare its type and bytes, and add encode/decode logic in
