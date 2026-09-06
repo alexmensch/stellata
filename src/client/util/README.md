@@ -44,7 +44,11 @@ build scripts, tests, and shader uniforms.
   worth carrying to avoid an extra call. The uploader binds its
   attribute at construction and reads `itemSize` + the backing array off
   it, so the ranges it emits cannot address a different stride than the
-  buffer they upload into. Its shadow is NaN-seeded at construction and
+  buffer they upload into — **while that attribute is a vertex
+  attribute**. Move one to a WebGPU storage buffer and the backend
+  reassigns both off a padded copy the uploader never sees, silently
+  (`../webgpu/README.md` § One writer per buffer per submit).
+  Its shadow is NaN-seeded at construction and
   by `reset()` — NaN compares unequal to everything, so the first flush
   after either reports every tracked item, which is the truth in both
   cases (no GPU buffer yet / a stale one). Consumer + the invariants it
