@@ -167,14 +167,20 @@ The numeric-ID maps echo the matched identifier in the dropdown
 ("Vega (HIP 91262)") — though a star with no proper name has nothing to echo
 *against*, so its row reads as the bare identifier the user typed.
 
-`hdMap` / `hrMap` are many-keys-to-one-record rather than 1:1, built by
-`buildAliasedIdIndex` (`scripts/catalog/catalog-pure.ts`) rather than inline:
+All four identifier maps — `hipMap`, `hdMap`, `hrMap`, `glMap` — are built by
+`buildAliasedIdIndex` (`scripts/catalog/catalog-pure.ts`) rather than inline.
+`hdMap` / `hrMap` are many-keys-to-one-record rather than 1:1:
 numbers records DISPLAY are laid down first, then the `hda` / `hra` aliases,
 first write winning. That one rule settles two collisions — 57 HD and 11 HR
 numbers are displayed by two records each (a component pair sharing one
 catalogue number), and entries arrive brightest-first, so an ambiguous number
 resolves to the brighter record; and an alias never displaces a record that
-displays that number outright. `catalog-lookup.ts`'s `byHd` uses the same
+displays that number outright. The other two carry no aliases and still take
+the first-write pass, because brightest-wins follows the identifier being
+ambiguous rather than the map having an alias list: `Gl 277A` is displayed by
+both members of a component pair, and an unconditional `set` resolved it to
+the fainter one. HIP carries no duplicate key today and is built the same way
+so it cannot acquire one silently. `catalog-lookup.ts`'s `byHd` uses the same
 builder, so a frozen corpus row and the search box cannot resolve one number
 differently. Which numbers become aliases at all is the write side's rule
 (`scripts/catalog/classic-ids/README.md` § An alias stops at the blend): only

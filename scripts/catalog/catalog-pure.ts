@@ -930,27 +930,35 @@ export function designationConIndex(
  *  Entries arrive brightest-first (the absmag sort fixes record order), so an
  *  ambiguous designation resolves to the brightest record carrying it — 57 HD
  *  and 11 HR numbers are displayed by two records each, always a component pair
- *  sharing one catalogue number. And an alias never displaces a record that
- *  displays that number outright, whichever way the absmag sort happened to
- *  order the two. `classic-ids/README.md` § An alias stops at the blend is the
- *  same rule on the write side; `cns5AstrometryByGj` is the same two-pass
- *  reduction over CNS5's component letters.
+ *  sharing one catalogue number, and `Gl 277A` likewise. And an alias never
+ *  displaces a record that displays that number outright, whichever way the
+ *  absmag sort happened to order the two. `classic-ids/README.md` § An alias
+ *  stops at the blend is the same rule on the write side;
+ *  `cns5AstrometryByGj` is the same two-pass reduction over CNS5's component
+ *  letters.
+ *
+ *  Every identifier map the search box dispatches on is built here, including
+ *  the two that carry no aliases: the brightest-wins rule is a property of the
+ *  identifier being ambiguous, not of it having an alias list, and an inline
+ *  unconditional `set` silently resolved `Gl 277A` to the fainter record.
  *
  *  Many keys onto one record, never one key onto several: the direction the
  *  dropdown reads — record to label — stays single-valued. */
 export function buildAliasedIdIndex<K>(
   entries: readonly SearchEntry[],
   displayed: (e: SearchEntry) => K | undefined,
-  aliases: (e: SearchEntry) => readonly K[] | undefined,
+  aliases?: (e: SearchEntry) => readonly K[] | undefined,
 ): Map<K, number> {
   const out = new Map<K, number>();
   for (const entry of entries) {
     const key = displayed(entry);
     if (key !== undefined && !out.has(key)) out.set(key, entry.i);
   }
-  for (const entry of entries) {
-    for (const key of aliases(entry) ?? []) {
-      if (!out.has(key)) out.set(key, entry.i);
+  if (aliases !== undefined) {
+    for (const entry of entries) {
+      for (const key of aliases(entry) ?? []) {
+        if (!out.has(key)) out.set(key, entry.i);
+      }
     }
   }
   return out;
