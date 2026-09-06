@@ -307,8 +307,13 @@ fix PR hits the same block.
 - To diagnose a stuck merge, compare the ruleset's required contexts
   against the reported CheckRun names: `gh pr view N --json
   statusCheckRollup`. The required set is the `test.yml` pipeline job
-  display names plus `version-guard` — enumerate it live rather than
-  trusting a written-down list.
+  display names plus `version-guard`, `release-notes-guard` and
+  `perf-section-guard` — enumerate it live rather than trusting a
+  written-down list.
+- **A job skipped by its own `if:` still satisfies a required context.**
+  `version-guard` and `release-notes-guard` both stand down under
+  `skip-version-bump` and report `skipping`, which GitHub counts as
+  met — so requiring a label-exempt guard does not wedge metadata PRs.
 
 ## What the deploy workflow does
 
