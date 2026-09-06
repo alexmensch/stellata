@@ -33,7 +33,7 @@ difference.
 
 Each shard carries its own frozen SID column; the kind's resolver domain
 is their flat-order concatenation (`StarShardTable.sids` — the sole
-shard's column by reference, no 330k copy), so the SID resolver and the
+shard's column by reference, no 380k copy), so the SID resolver and the
 URL wire need no shard awareness.
 
 ## Chunk-local coordinates — the format law

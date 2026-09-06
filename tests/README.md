@@ -253,7 +253,7 @@ Work every line, then record the findings in the PR body:
 `vitest.config.ts` pins `testTimeout` / `hookTimeout` to **30 s**, not
 vitest's 5 s default. The artifact-backed corpus suites
 (`multi-star-regression`, `known-stars`, `sky-position`) each sweep the
-full 330k-record catalog and its derived buffers, so their tests are
+full 380k-record catalog and its derived buffers, so their tests are
 seconds long even solo — and their wall time scales with machine load:
 under a full-suite run the slowest sit at 2.5–3.5 s locally, and CI's
 corpus job runs three of those files concurrently on a 2-core runner.

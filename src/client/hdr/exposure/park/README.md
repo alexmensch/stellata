@@ -57,7 +57,7 @@ every landing the machine ever sees is a full-frame one. The lower-bound
 argument — glow additive-blended, disc per-channel max, both monotone
 non-decreasing in what is drawn, so a partial `L̄` already at or above `Lw`
 proves the full one is too — belongs to `stellata-8cg.34`, which keeps
-measuring *while* it closes the 330k field draw. It is not load-bearing
+measuring *while* it closes the 380k field draw. It is not load-bearing
 here, and reading it as this park's justification gets the implication
 backwards: lowering `L̄` is the direction that would take the frame *out*
 of the regime.
@@ -165,6 +165,6 @@ keep probing to notice the scene changing, so its steady-state saving is
 roughly 60 % of the parked-frame figure rather than all of it
 (`../../../debug/frame-cost/README.md` § These rows price the fully parked
 frame). Taking the remainder needs the measurement to stay *live* for the
-few emitters that supply the frame mean while the 330k-instance field draw
+few emitters that supply the frame mean while the 380k-instance field draw
 stops writing at all — `stellata-8cg.34`, which is a different mechanism
 and not a tuning of this one.

@@ -164,7 +164,7 @@ sky.
 
 ## Cost
 
-The sweep is one nearest-wall query per shipped record — ~330k against 781
+The sweep is one nearest-wall query per shipped record — ~380k against 781
 arcs. The linear scan (`angularDistanceToNearestEdgeDeg`) would be a
 quarter-billion arc evaluations and minutes of build time, so
 `createIauConstellationLookup` routes through `createNearestEdgeIndex`,

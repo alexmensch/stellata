@@ -336,7 +336,7 @@ fill marching each ray at half a voxel (2.44 pc, 512 samples to the coverage
 edge).** The cell angle is not a round number chosen for the table — it is one
 summation-patch diameter, derived from `DEFAULT_SUMMATION_ARCSEC2`, so an
 instrument change moves it. Fetches are counted against the shipped per-star
-extinction prepass — 330k stars × 48 steps = **15.8M fetches per rebuild**,
+extinction prepass — 380k stars × 48 steps = **18.2M fetches per rebuild**,
 which recomputes every frame during a warp — because that is a shipped GPU
 workload doing the same fetch against the same texture. Wall-clock GPU timings
 are not measured here.

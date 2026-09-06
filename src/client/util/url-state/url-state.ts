@@ -108,7 +108,7 @@ function defaultCamForMode(mode: 'navigate' | 'observe' | undefined): [number, n
 const FOCUS_HIP_TAG = 0x80000000;
 const FOCUS_ID_MASK = 0x7fffffff;
 // v2 packs the same tag + id space into 3 bytes: 1 tag bit + 23-bit id
-// (8.4M row indices against a 330k-row catalog, and HIP ≤ ~120k).
+// (8.4M row indices against a 380k-row catalog, and HIP ≤ ~120k).
 const FOCUS_HIP_TAG_V2 = 0x800000;
 const FOCUS_ID_MASK_V2 = 0x7fffff;
 

@@ -20,7 +20,7 @@ export const DIRECTION_DECIMALS = 7;
 /** Decimals kept per fade offset. 1e-4 pc ≈ 20 AU against a smallest emitted
  *  offset near 0.02 pc, so three significant figures survive on the tightest
  *  row. Rounding also keeps the emitted width fixed: unrounded, these are the
- *  only float64s in the artifact, they derive from a 330k-star sweep, and a
+ *  only float64s in the artifact, they derive from a 380k-star sweep, and a
  *  last-bit difference in one star's trig moves the file size — which
  *  `boundaryArtifactKb` would then report as a change. */
 export const FADE_OFFSET_DECIMALS = 4;
