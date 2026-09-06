@@ -111,9 +111,9 @@ cannot launder a withheld value back in. The rest are literature, led by
   inside
   [`scripts/refresh/wds_xids_overrides.py`](../../scripts/refresh/README.md).
 
-## Request sets come off the spine
+## Request sets come off the membership term
 
-Every SIMBAD pull keys on `data/athyg/inherited-spine.tsv`, the membership
+Every SIMBAD pull keys on the membership
 term — **no refresh script reads the AT-HYG CSV** (`data/athyg/README.md`
 § Consumed by). The spine's `gaia_source_id` is the resolved, gate-passed
 binding rather than a raw cell, so request and record build name the same
@@ -291,9 +291,9 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   cascade) + `scripts/catalog/classic-ids/build-classic-id-overlay.ts`
   (sibling-letter attribution gate on the overlay's bindings — see
   `data/classic-ids/README.md` § The binding gate). **The record build no
-  longer reads it**: `readStars` takes each binding off the spine column,
+  longer reads it**: `readStars` takes each binding off the manifest column,
   already gated, so the gate runs where bindings are still being decided
-  (`scripts/catalog/spine/README.md` § The identifier columns are read,
+  (`scripts/catalog/membership/README.md` § The identifier columns are read,
   never re-derived).
 - `simbad_values.tsv` → `scripts/catalog/simbad-values-parse.ts`, indexed by
   every namespace the pull keyed on and joined per record source_id → HIP →

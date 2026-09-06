@@ -1,21 +1,21 @@
 # Classic-ID overlay build
 
-Joins the four frozen CDS classic-designation tables onto Gaia DR3
-source_ids, writes `data/classic-ids/classic_id_overlay.tsv`, and merges it
-onto the record build's spine-derived labels. The contract it implements is
+Joins the four frozen CDS classic-designation tables onto Gaia DR3 source_ids
+and writes `data/classic-ids/classic_id_overlay.tsv`. Contract:
 `docs/catalog-driver.md` § 2 (sources), § 4 (HD route, ambiguity, precedence)
-and § 5 (the designation-constellation cascade); the measured coverage the join
-achieves — and why the inherited spine is load-bearing beside it — is
-`data/classic-ids/README.md` § Coverage.
+and § 5 (the designation-constellation cascade); measured coverage, and why the
+inherited spine is load-bearing beside it, `data/classic-ids/README.md`
+§ Coverage.
 
 Two entry points, both on the shipping path:
 
 - `pnpm run build:classic-ids` regenerates the committed overlay and the label
-  merge's review queue. CI asserts both are byte-identical to what the
-  committed code produces, so artifact and code always land together.
-- `build-catalog.ts` calls `applyClassicIdLabels` as a post-pass over
-  `readStars`' output — this folder is where the record build's LABELS come
-  from, while its membership is the spine alone.
+  merge's review queue, both asserted byte-identical in CI so artifact and code
+  land together.
+- `build:membership` calls `mergeClassicIdLabels` as it assembles each manifest
+  row — this folder is where the shipped LABELS come from. The record build
+  reads them off the manifest and applies only
+  `applyDesignationConstellations` (§ The designation constellation).
 
 ## Files in this area
 
@@ -73,16 +73,20 @@ scripts/catalog/classic-ids/
   label-merge-pure.ts (+ test)    The merge itself: the per-identifier rule,
                                   the collision guard, the curated overrides,
                                   the review-queue codec, the designation
-                                  delta the spine parity gate replays, and
+                                  delta the manifest parity gate replays, and
                                   the unnetted removals the parity ledger's
                                   canonical-key audit reads. Pure.
   designation-constellation-pure.ts
                                   IV/27A's `cst` keyed by HD/HIP — the
                                   constellation a Bayer / Flamsteed
                                   designation is NAMED for. Pure.
-  apply-classic-id-labels.ts      The record build's entry point: loads the
-                                  committed tables and applies both of the
-                                  above to the Star array.
+  apply-designation-constellation.ts
+                                  The record build's one remaining classic-ID
+                                  pass: loads IV/27A's cross-index and applies
+                                  designation-constellation-pure to the Star
+                                  array. The label merge does NOT run here —
+                                  the manifest's cells are already final
+                                  (§ The label merge).
   designation-constellation.test.ts
                                   Pins the cascade's output on the WIRE
                                   (ρ Aql, 15 LMi, Fomalhaut C) against the
@@ -141,27 +145,15 @@ is often not the star, so the request has to carry them explicitly:
 `../astrometry-request/README.md` § The request is a union.
 
 `gateRejectedMag` measures the difference directly, and it is the count to
-watch if this request ever changes again:
+watch if this request ever changes again. Today the union pulls the evidence
+for every candidate and the queue reads `gateRejectedMag` **218** ·
+`gateRejectedSibling` 50 · **268** rows; a membership-column-only request drops
+`gateRejectedMag` to **0**, every candidate unvettable and silently accepted.
 
-| Request | `gateRejectedMag` | `gateRejectedSibling` | rows |
-|---|---|---|---|
-| spine column alone | **0** — every candidate unvettable, all silently accepted | 101 | 101 |
-| the AT-HYG walk this replaced | 102 | 85 | 187 |
-| spine ∪ candidates (today) | **218** | 50 | **268** |
-
-The walk was never complete either — it over-pulled by accident rather than
-covering the candidate set on purpose — so the queue grows by **81 bindings it
-could not weigh and now refuses**. None of the 81 had reached a record: the
-label merge's per-identifier routing is unchanged and `label_flips.tsv` is
-byte-identical, which is what says the gain is coverage, not a label change.
-
-**`gateRejectedMag` moves by 116, not 81, and `gateRejectedSibling` falls — both
-because `reason` is the FIRST gate that fired**, `verdict.magRejected ? 'mag' :
-'sibling'`. A candidate with no `G` cannot fail the magnitude check, so 35 rows
-the sibling-letter check had already refused are now refused by the magnitude
-check instead and re-labelled: 116 = 81 new + 35 re-labelled, and sibling 85 →
-50 is those same 35 leaving. No binding the gate used to refuse is accepted
-today; read the two reason counts as one queue, not as two independent gates.
+**Read the two reason counts as one queue, not as two independent gates**:
+`reason` is the FIRST gate that fired (`verdict.magRejected ? 'mag' :
+'sibling'`), so a candidate whose `G` arrives moves from the sibling-letter
+count to the magnitude count without any binding changing verdict.
 
 **Two counts say whether the evidence actually arrived**, because a missing `G`
 is a pass either way and only one of the causes is fixable:
@@ -190,12 +182,16 @@ as one string peaks near a gigabyte alongside the join's own maps.
 
 ## The label merge
 
-`mergeClassicIdLabels` (`label-merge-pure.ts`) runs over the same overlay from
-two places — `build:classic-ids` over the spine rows, `build:catalog` over the
-records those rows produced — through one pure function, and the record build
-then asserts its own review queue is byte-identical to the committed one. That
-equality is the guarantee that `data/classic-ids/label_flips.tsv` describes the
-labels actually shipped.
+`mergeClassicIdLabels` (`label-merge-pure.ts`) runs over the overlay from two
+places — `build:classic-ids` over the spine rows, and `build:membership` over
+the same rows as it assembles the manifest — through one pure function, and the
+generator asserts the resulting review queue is byte-identical to the committed
+one. That equality is the guarantee that `data/classic-ids/label_flips.tsv`
+describes the labels actually shipped.
+
+**`build:catalog` runs no merge**: `readStars` reads the manifest's cells,
+`hd_alt` / `hr_alt` included, as FINAL. A second pass would re-apply an overlay
+already applied.
 
 Per identifier (`hip`, `hd`, `hr`, `gl`, `flam`), first hit wins:
 

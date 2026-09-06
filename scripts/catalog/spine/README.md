@@ -1,19 +1,24 @@
-# The inherited spine — the record build's membership term
+# The inherited spine — AT-HYG's merge decisions, frozen
 
 `data/athyg/inherited-spine.tsv` is one row per AT-HYG-derived record of the
 final AT-HYG-driven build, carrying that record's resolved designation set
-plus AT-HYG's printed cells. `readStars` walks it; membership is exactly
-these rows. The contract is `docs/catalog-driver.md` § 3; why the spine is
-load-bearing rather than a rare fallback is `data/classic-ids/README.md`
-§ Coverage.
+plus AT-HYG's printed cells. The contract is `docs/catalog-driver.md` § 3; why
+the spine is load-bearing rather than a rare fallback is
+`data/classic-ids/README.md` § Coverage.
+
+**Two readers, and the record build is not one of them.** `readStars` walks
+the membership manifest (`../membership/README.md`), which this file is an
+input to and a baseline for. What the spine still supplies is the one thing no
+primary does: **which designations name one star, and which Gaia source AT-HYG
+bound to it**. `build:membership` reads it for those merge decisions, and the
+manifest's parity gate (i) reads it as the baseline every manifest row must
+account for. After the swap release that baseline becomes the previous
+manifest.
 
 **The file is frozen and nothing regenerates it.** The one-shot generator
-retired with the driver swap: it ran `readStars` over the AT-HYG CSV, and
-that walk no longer exists — `readStars` reads this file instead.
-`stellata-3bsf.8` replaces the spine by re-sourcing every record from the
-primaries AT-HYG merged, which is a new artifact, not a regeneration of
-this one: `../membership/README.md` — the membership manifest, built and
-gated against this file. The rule it re-sources under, and the measurement
+retired with the driver swap: it ran `readStars` over the AT-HYG CSV, and that
+walk no longer exists. The manifest that supersedes it is a new artifact, not
+a regeneration of this one; the rule it re-sources under, and the measurement
 behind it, are `docs/catalog-driver.md` § 3.1 and § The primaries audit below.
 
 ## Files in this area
@@ -23,18 +28,16 @@ scripts/catalog/spine/
   inherited-spine-pure.ts         Column layout, row assembly, TSV codec,
     (+ test)                      per-column counts, and the designation
                                   recovery (spineDesignations). Pure, and on
-                                  the build:catalog path — ../parse/ streams
-                                  the walk's rows through iterSpineTsv;
-                                  parseSpineTsv is the materialising form the
-                                  two gates below need.
+                                  the build:membership path, not
+                                  build:catalog — ../membership/ streams the
+                                  rows through iterSpineTsv; parseSpineTsv is
+                                  the materialising form the guard and the
+                                  manifest gate need.
   inherited-spine-guard.test.ts   Assertions over the COMMITTED artifact —
                                   byte identity, counts, keyless rows, Sol,
                                   duplicate source_ids (§ Why a guard, not a
                                   rebuild), plus the stale-source_id queue
                                   (§ Six source_ids DR3 does not publish).
-  inherited-spine-parity.test.ts  Assertions against the BUILD the spine is a
-                                  snapshot of — record count and designation
-                                  multiset (§ Parity with the shipped build).
   inherited-spine-expected.json   Pinned count snapshot.
   primaries-audit-pure.ts         The retirement's measurement: per-row
     (+ test)                      designation attestation against the
@@ -74,50 +77,27 @@ Rows are emitted in AT-HYG `id` order (readStars preserves CSV order), so
 there is no sort key to disagree about.
 
 `pm_ra` / `pm_dec` / `pm_src` are in the file although § 3's column list
-predates them. They were added because the direction cascade's
-`athyg_printed` tier and the velocity's `athyg_pm` tier bottomed out at
-AT-HYG's printed proper motion; **both tiers have since retired**, and the
-cells' one remaining consumer is the LMC override's bulk-PM gate. A frozen
-artifact cannot grow a column later, which is why they shipped, and the
-same reason they stay.
-
-## The membership gates still run, and must stay at zero
-
-Every spine row already passed `readStars`' five drop gates in the build it
-snapshots — no ra/dec, no distance, no direction, past `MAX_DIST_PC`, no V.
-The walk keeps them, and each is pinned at **0** in
-`build-catalog-expected.json` as `spineDroppedNoRaDec` / `…NoDist` /
-`…NoDirection` / `…TooFar` / `…NoVMagnitude`: a refreshed Bailer-Jones or LMC
-input that moves a row past the distance cutoff, or an astrometry table that
-stops resolving a direction, is a disagreement between the spine and the
-tables it was frozen against, and it fails the count assertion by name
-instead of dropping a record the spine promised. `recordCount` would move
-too, but it names the symptom rather than the gate.
+predates them: a frozen artifact cannot grow a column later, so they shipped
+against a need that might arise, and for the same reason they stay. Nothing
+reads them.
 
 ## The identifier columns are read, never re-derived
 
-`gaia_source_id` comes off the column. The native → HIP-cross-walk
-precedence and both binding gates (G−V magnitude, sibling-letter
-attribution) ran when the spine was generated, so re-running them in the
-walk would re-decide a frozen binding against reference tables that have
-moved since — and a scrubbed source_id changes the record's designation
-set, hence its SID. `resolveGaiaSourceId` therefore has no caller on the
-`build:catalog` path; it survives for `../astrometry-request/export-astrometry-request.ts`
-and the classic-ID overlay's own gate.
+`gaia_source_id` comes off the column, and the manifest carries it forward
+rather than re-deciding it (`../membership/README.md` § The identifier columns
+are read, never re-derived, which is where the rule now binds the build). The
+native → HIP-cross-walk precedence and both binding gates (G−V magnitude,
+sibling-letter attribution) ran when the spine was generated, so re-running
+them would re-decide a frozen binding against reference tables that have moved
+since — and a scrubbed source_id changes the record's designation set, hence
+its SID.
 
-What re-deriving would decide differently is now measured rather than
-feared: § The primaries audit puts it at 11,731 bindings no raw walk reaches
-or agrees with, 11,697 of them corroborated by SIMBAD's cross-IDs for the
-same id and the other 34 by a committed review disposition, and 233 empty
-cells a raw walk would fill. The retirement carries every binding forward
-and leaves the 233 empty (`docs/catalog-driver.md` § 3.1); until then this
-rule stands unchanged.
-
-The classic-ID label merge is not an exception to this. It runs as a post-pass
-over the walk's output and rewrites LABELS (`hip`/`hd`/`hr`/`gl`/`flam`) — never
-`gaia_source_id`, and never before the direction / distance / V / spectral
-cascades have keyed on the spine's frozen `hip`
-(`../classic-ids/README.md` § The label merge).
+What re-deriving would decide differently is measured rather than feared:
+§ The primaries audit puts it at 11,731 bindings no raw walk reaches or agrees
+with, 11,697 of them corroborated by SIMBAD's cross-IDs for the same id and
+the other 34 by a committed review disposition, and 233 empty cells a raw walk
+would fill. The manifest carries every binding forward and leaves the 233
+empty (`docs/catalog-driver.md` § 3.1).
 
 **Four rows carry identifiers the frozen build resolved *after* its walk**:
 the three `multiples.tsv` HD-only primaries `backfillPrimaryIdentifiers`
@@ -178,57 +158,32 @@ snapshot, so a regeneration would otherwise refresh its own guard. Editing
 the two literals is what unfreezes the spine, and it shows up in review as
 a diff in a test rather than in a 40 MB LFS blob.
 
-## Parity with the shipped build
+## Parity is the manifest's gate now
 
-The spine is only worth freezing if it stands in for the build exactly, so
-`inherited-spine-parity.test.ts` asserts that on both axes:
+`../membership/membership-manifest-gate.test.ts` is where the spine is held
+against the shipped build: its **(i)** resolves every spine row to exactly one
+manifest row, and its **(iii)** tallies the built catalogue's designation
+multiset against the manifest less the parked ledger. Together those chain the
+spine to the records that ship, which is what the retired
+`inherited-spine-parity.test.ts` did directly.
 
-- **Record count**, from the two committed snapshots — `rows` here equals
-  `recordCount` − `companionPromoted` + `distNone` in
-  `../build-catalog-expected.json`. No artifacts and no LFS, so it runs in
-  every job; a record-build change that moves `recordCount` without
-  regenerating the spine fails here.
-- **The ledgered drops**, three assertions that make that `distNone` term
-  honest rather than a licence to lose rows: the committed
-  `data/athyg/parked_no_owned_parallax.tsv` must hold exactly `distNone`
-  entries (§ 6.1's no-silent-drops rule — a count that moves without a ledger
-  entry fails), every reason on it must be in the closed enum
-  (`../distance/parallax/parked-ledger.ts`), and the five `spineDropped*`
-  gates must still read zero. The last one is what keeps the two events
-  apart: a park is deliberate, a gate firing means a reference table moved
-  under the snapshot.
+The property both rest on: **every departure from the spine's designation set
+is accounted for by an enumerated file**, never by a relaxed comparison. The
+classic-ID label layer moves designations off the spine's inherited cells by
+design (`docs/catalog-driver.md` § 4), and `data/classic-ids/label_flips.tsv`
+is the COMPLETE enumeration of that delta — flips, additions, suppressions and
+dropped extras. That is what keeps every SID preserved by construction, and a
+queue failing to list one departure fails the gate.
 
-  These three read the ledger's **length**, not its rows. What pins the rows is
-  the reproduce-and-diff step on `data/athyg/parked_no_owned_parallax.tsv` in
-  the `build-catalog` job — `build:catalog` writes that file, so without the
-  diff a build parking a different star for the same total would land silently.
-- **Designation multiset**, against the built artifacts — the
-  `catalogRecordDesignations` walk (`../../sid/catalog-designations.ts`,
-  the same one `sid:allocate` resolves against the ledger) over every
-  non-`FLAG_BINARY_COMPANION_ONLY` record must tally identically to
-  `spineDesignations` over the committed TSV, **less the ledgered drops** and
-  **replayed through `data/classic-ids/label_flips.tsv`**. Needs a built
-  catalogue as well as a smudged spine, so it self-skips in the bare `test` job
-  and runs in **`tier-a-corpus`**, which downloads the artifacts — that job
-  names its suites one by one, so a suite absent from that list runs smudged
-  nowhere. It ran nowhere in CI until the ledgered drops made it load-bearing.
-  A ledger row
-  is matched to its spine row on the whole five-cell identifier tuple
-  (`tyc`/`hip`/`hd`/`gl`/`gaia_source_id`), which both files carry under those
-  names — a park with no identifier at all is still named by the empty tuple,
-  rather than left to a guess about which id identifies.
-
-The classic-ID label layer moves designations off the spine's inherited cells
-by design (`docs/catalog-driver.md` § 4), so the raw equality died with it. The
-committed review queue is the COMPLETE enumeration of that delta — flips,
-additions, suppressions and dropped extras — which is exactly why the gate
-replays it instead of relaxing: "every departure from the spine's designation
-set is accounted for" is the property that keeps every SID preserved by
-construction, and a queue that failed to list one would fail this gate.
-
-Membership is the spine less the ledger, and nothing else: both subtractions
-above are enumerated files rather than counts, so any future change that breaks
-the equality has broken the membership term.
+The ledgered drops are subtracted by **key**, not by count: a ledger row is
+matched on the whole five-cell identifier tuple
+(`tyc`/`hip`/`hd`/`gl`/`gaia_source_id`), so a park with no identifier at all
+is still named by the empty tuple rather than left to a guess about which id
+identifies. `../distance/parallax/parked-ledger.ts` holds the closed reason
+enum, pinned by its own test. What pins the ledger's *rows* is the
+reproduce-and-diff step on `data/membership/parked-ledger.tsv` in the
+`build-catalog` job — `build:catalog` writes that file, so without the diff a
+build parking a different star for the same total would land silently.
 
 ## The primaries audit
 
@@ -281,21 +236,21 @@ row with the primary behind each of its cells.
 
 The instantiation of `docs/catalog-driver.md` § 6 for the driver swap,
 audited 2026-08-09. Counts are pinned in `../build-catalog-expected.json`
-unless another home is named; the committed gates are the two suites in
-this folder plus `../classic-ids/parity-ledger.test.ts`.
+unless another home is named; the committed gates are
+`inherited-spine-guard.test.ts` here, `../membership/`'s manifest gate and
+`../classic-ids/parity-ledger.test.ts`.
 
 - **Record parity — zero drops.** `recordCount` was unchanged across the
   swap itself, at the 329,657 of the build the spine snapshots; the live
-  figure is `../build-catalog-expected.json`. Membership is exactly the
-  spine, the five walk gates
-  are pinned at 0 (`spineDropped*`), and `sid:check` resolves every
+  figure is `../build-catalog-expected.json`. Membership was exactly the
+  spine, every walk gate read 0, and `sid:check` resolved every
   record with zero mints — so the § 6.1 dropped list was empty and its
   reason enum had no rows. The only per-record routing deltas are the
   four-record set enumerated above. The value-half children have since
   opened that list: retiring the printed `dist` cell parks the rows no owned
   parallax reaches (`../distance/parallax/README.md` § Why the residual drops
   rather than degrading), which is the first non-empty dropped list this
-  ledger has carried and the reason the parity gate now subtracts it.
+  ledger has carried and the reason the parity gate subtracts it.
 - **Label parity — strict gain.** No previously-labeled record lost a
   label: per identifier the shipped coverage is the spine's keyed count
   plus the overlay's additions (hd +148, hr +4, gl +198, flam +69,

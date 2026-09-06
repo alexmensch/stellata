@@ -84,8 +84,8 @@ runs, and the generator asserts the resulting review queue is byte-identical
 to the committed `label_flips.tsv`. **That merge happens once, here.** The
 record build reads the manifest's cells as final and runs no merge of its own,
 so the equality is what says the flips queue still enumerates every departure
-from the spine's cells — the property `../spine/README.md` § Parity with the
-shipped build replays.
+from the spine's cells — the property replayed by
+`../spine/README.md` § Parity is the manifest's gate now.
 
 The binding is `checkIdentity`'s verdict, as the audit grades it, with the
 `gl:` ↔ `gl:` bridges of `data/sid/sameas-overrides.tsv` read as one

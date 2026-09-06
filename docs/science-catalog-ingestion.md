@@ -28,13 +28,14 @@ What that means for reading the rest of this file:
   space-motion propagation are all driver-independent — they key on
   `gaia_source_id`, and the swap does not touch them. That is why the
   astrometry decision below is a *scoped* decision that survives.
-- **Historical at the swap.** Everything framed on AT-HYG's own columns
-  — the `*_src` provenance survey, the Tycho/HIP magnitude-family split,
-  the cross-match completeness artefact — describes the input set the
-  shipped build reads. Membership becomes a frozen *inherited spine*
-  (one committed enumeration of every AT-HYG-derived record, already
-  shipped) unioned with a Gaia-native magnitude pull, and AT-HYG the
-  catalogue leaves the input set entirely.
+- **Historical.** Everything framed on AT-HYG's own columns — the `*_src`
+  provenance survey, the Tycho/HIP magnitude-family split, the cross-match
+  completeness artefact — describes the input set a build that no longer
+  exists read. AT-HYG has left the input set entirely: membership is the
+  primaries-derived manifest (`data/membership/membership-manifest.tsv`,
+  `docs/catalog-driver.md` § 3.1), which `readStars` walks, and the frozen
+  inherited spine survives only as that manifest's baseline and its record of
+  AT-HYG's merge decisions.
 - **Already moved.** Johnson V and absolute magnitude no longer come
   from AT-HYG at all: V is transformed from Gaia photometry with a
   printed-Hipparcos rescue tier, and absmag is always derived from
@@ -57,16 +58,18 @@ which underlying catalog supplied each piece of data:
   from HIP / Gaia DR2 / Gliese.
 - `mag_src` — origin of apparent `mag`. ~62.5% Tycho-2 V_T (`T`),
   ~37.2% Hipparcos (`HIP`), <1% Gliese.
-- `pm_src` — origin of proper motion. Read by the space-motion cascade's
-  bottom tier (§ Current-epoch star positions), which is why the inherited
-  spine carries `pm_ra`/`pm_dec` forward past the swap.
+- `pm_src` — origin of proper motion. Nothing reads it: the space-motion
+  cascade takes its PM from whichever tier the direction cascade selected,
+  and re-keys through the rescue cascade where that tier states none
+  (§ Current-epoch star positions).
 
 The two source families have meaningfully different magnitude
 distributions: HIP-sourced rows average `mag ≈ 8.4`, while Tycho-sourced
 rows average `mag ≈ 10.2` and reach the Tycho-2 completeness limit at
 V_T ≈ 11.5. This is a statement about **which rows exist**, and it
-outlives the driver swap — the spine inherits exactly this population, so
-the `naked-eye` (m_lim = 6.5) preset still draws essentially only from
+outlives the driver swap — the manifest's spine-origin rows are exactly this
+population, so the `naked-eye` (m_lim = 6.5) preset still draws essentially
+only from
 the HIP family while `binoculars` (10.5) and `all` (15) progressively
 expose the Tycho-dominated one. What each of those rows is *rendered* at
 is no longer AT-HYG's `mag`: the V cascade resolves it per record
@@ -74,30 +77,29 @@ is no longer AT-HYG's `mag`: the V cascade resolves it per record
 deeper — a Gaia-native V ≤ 11 floor — is the completeness phase, not this
 document.
 
-**What we keep at build time.** `scripts/catalog/build-catalog.ts` (`readStars`)
-applies three filters and nothing else:
+**What we keep at build time.** No AT-HYG cell gates membership any more. A
+manifest row leaves without a record in one of two ways
+(`scripts/catalog/parse/README.md` § Per-row pipeline):
 
-1. Drop rows missing `ra`/`dec` or `dist` (no usable 3D position).
-2. Drop rows missing `absmag` — a **presence** gate, not a value read:
-   the shipped absmag is derived from the V cascade
-   (`scripts/catalog/photometry/README.md`), never AT-HYG's cell. The cell
-   still decides membership because 3,917 rows carry `mag` without it, and
-   admitting them would be a membership change rather than a field-cascade
-   one. Rows no cascade tier can give a V to drop as well.
-3. Drop rows with `dist > 50,000 pc`. This is a **bounded-scope
-   statement about which populations the model represents**, not a
-   primary include/exclude filter. The cutoff is positioned just past
-   the LMC distance (49.59 kpc, Pietrzyński et al. 2019) because the
-   stellar populations currently modelled reach from Sol out to and
-   including the LMC. Stars beyond LMC depth are unmodelled
-   extragalactic by construction; SMC, Sgr dSph, and M31 supergiants
-   would be candidates for future modelled populations, and the cutoff
-   bumps in sync with each new population the renderer takes
-   responsibility for. The filter runs
-   **after** the multi-layer distance-refinement stack below, so a
-   star that B-J or the LMC kinematic override rescued from a
-   catastrophic 1/π estimate keeps its corrected distance whenever
-   that distance falls inside scope.
+1. **A park**, ledgered in `data/membership/parked-ledger.tsv` — the parallax
+   cascade reaches no owned measurement, or the V cascade reaches no
+   magnitude. A record needs both a place and a brightness, and § 6.1 requires
+   every such row be named rather than counted.
+2. **A drop**, pinned at zero — no direction tier resolves, or the row is
+   past `dist > 50,000 pc` after every override. Both mean a reference table
+   disagreeing with the tiers above it, never a membership decision.
+
+That distance cutoff is a **bounded-scope statement about which populations
+the model represents**, not a primary include/exclude filter. It is positioned
+just past the LMC distance (49.59 kpc, Pietrzyński et al. 2019) because the
+stellar populations currently modelled reach from Sol out to and including the
+LMC. Stars beyond LMC depth are unmodelled extragalactic by construction; SMC,
+Sgr dSph, and M31 supergiants would be candidates for future modelled
+populations, and the cutoff bumps in sync with each new population the renderer
+takes responsibility for. The cutoff runs **after** the multi-layer
+distance-refinement stack below, so a star that B-J or the LMC kinematic
+override rescued from a catastrophic 1/π estimate keeps its corrected distance
+whenever that distance falls inside scope.
 
 There is no source-aware filtering. The 100-byte v9 binary record
 preserves none of the `*_src` columns either, so the renderer can't
@@ -310,14 +312,18 @@ Tycho+Gaia-DR3 composite rows are the bulk of the new population.
 Treatment (filter by source, wait for Gaia DR4, or live with it) is
 deferred until a denser-than-mag-11 ingest makes the call necessary.
 
-The driver swap neither fixes nor worsens this: the inherited spine
-enumerates exactly the rows AT-HYG's cross-match luck admitted, so the
-artefact is carried forward verbatim. What changes its shape is the
-completeness phase's Gaia-native magnitude pull, which selects on `V`
-rather than on whether a Tycho row found a DR3 distance — a different
-selection function over the same sky, so the rectangles dilute rather
-than move. Judging that is a job for the parity ledger the swap and every
-floor move run through (`docs/catalog-driver.md` § Parity).
+The driver swap carried the artefact forward verbatim: the inherited spine
+enumerated exactly the rows AT-HYG's cross-match luck admitted. The spine
+retirement is the first thing to change its shape — the membership manifest
+admits every IV/25 Tycho-2 star the AT-HYG subset's HD link defect had
+dropped (`docs/catalog-driver.md` § 3.1), which is a selection on what the
+frozen primaries publish rather than on whether a Tycho row found a DR3
+distance. Whether that dilutes the rectangles or sharpens them is a
+measurement nobody has taken; it is not what the additions were made for.
+The completeness phase's Gaia-native magnitude pull selects on `V` and is a
+third selection function again. Judging any of them is a job for the parity
+ledger every membership change runs through (`docs/catalog-driver.md`
+§ Parity).
 
 Implementation: `scripts/catalog/build-catalog.ts` (filters live in `readStars`,
 binary schema in the `pack*` helpers); see `scripts/README.md` for

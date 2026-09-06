@@ -179,9 +179,9 @@ noisy parallax can never strip real wings:
   Galactic tidal-disruption limit, mirroring the binaries
   pipeline's Stage-5 `SEPARATION_LIMIT_PC`) marks it optical and
   drops the wings. Both the primary and the sibling must carry a
-  Gaia-quality distance (`isGaiaQualityDist` — same dist_src set as
-  B-J eligibility, {G_R3, G_R2} → G_R3/BJ final) for the separation
-  to be trusted; absent that, the wings stand. Nearest-sibling means
+  Gaia-quality distance (`hasGaiaQualityDistance` on the record's own
+  `distVia` — the `gaia_dr3_inversion` and `bailer_jones` tiers) for the
+  separation to be trusted; absent that, the wings stand. Nearest-sibling means
   a physically-close catalog member keeps the wings regardless of a
   wide background star that merely shares the CCDM string — the
   failure mode that made a naive "3D-separation over full CCDM

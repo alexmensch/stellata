@@ -197,7 +197,7 @@ with open('data/simbad/simbad_sptype.tsv', newline='') as f:
         if gj(r['gj']): byGj[gj(r['gj'])] = sp
         if r['tyc'].strip(): byTyc[r['tyc'].strip()] = sp
 both = differ = 0
-with open('data/athyg/inherited-spine.tsv', newline='') as f:
+with open('data/membership/membership-manifest.tsv', newline='') as f:
     for r in csv.DictReader(f, delimiter='\t'):
         a, b = byGj.get(gj(r['gl'])), byTyc.get(r['tyc'].strip())
         if a and b:
@@ -208,7 +208,7 @@ EOF
 ```
 
 **The pull's own order still decides something else: which rung spends the
-request.** `spine_request_keys` (`scripts/refresh/simbad/inputs.py`) is a
+request.** `membership_request_keys` (`scripts/refresh/simbad/inputs.py`) is a
 strict fall-through — `elif tyc … elif gl` — so a no-Gaia row carrying
 **both** ids is requested by TYC alone and its GJ is never asked for; no
 record-side reorder can reach a row the pull did not fetch. Of the 54 spine
