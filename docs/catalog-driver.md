@@ -180,8 +180,9 @@ put the CSV back in the input set § 3 removed it from.
 
 **Record residual: zero.** Every one of the 313,257 rows carries at least
 one classical designation a primary publishes — hd 293,326 in IV/25 + 1 in
-I/239's own HD column · hip 117,652 in I/239 · hr 9,013 in V/50 · gl 1,994 in CNS5 + 1,153 in
-V/70A · Bayer 1,522 via IV/27A · Flamsteed 2,596 via IV/27A + 8 via WGSN ·
+I/239's own HD column · hip 117,652 in I/239 · hr 9,013 in V/50 · gl 1,994 in
+CNS5 + 1,153 in V/70A · Bayer 1,522 via IV/27A · Flamsteed 2,596 via IV/27A +
+8 via WGSN ·
 proper 445 WGSN + Sol. No record exists on AT-HYG's authority alone, so the
 retirement is a re-keying, not a rescue. That also settles the Gliese
 question `stellata-3bsf.8` flagged as open: **no** `gl` cell is unsourced,
@@ -206,12 +207,17 @@ them until one exists.
 
 **A Flamsteed cell is checked by value; a Bayer cell only by star.** The
 number in the cell has to be the number IV/27A or WGSN publishes for that
-HD/HIP — which is why the count is 120 and not the 115 a star-level check
-gives. The five it separates are stars those tables do list, under something
+HD/HIP — which is why the count is 120 and not the 116 a star-level check
+gives. The four it separates are stars those tables do list, under something
 else: HD 85762 carries Flamsteed 8 where IV/27A publishes **9 Sex**, and
 HD 91369 / HD 141652 / HD 159217 carry a Flamsteed number against an IV/27A
-row that gives only a Bayer letter. Bayer cells are not compared that way —
-HYG's `Alp-1` and IV/27A's `alf01` meet only through the naming ladder's
+row that gives only a Bayer letter. Re-derive by joining
+`data/membership/label-drops.tsv`'s `flamsteed_unattested` rows to
+`data/classic-ids/cross_index.tsv` and `data/iau-wgsn/wgsn_designations.tsv`
+on `hd` / `hip`: three survive there, and HD 85762 is the fourth, already
+corrected by the label merge and so absent from the ledger. Bayer cells are
+not compared that way — HYG's `Alp-1` and IV/27A's `alf01` meet only through
+the naming ladder's
 normalisers (`docs/star-naming.md`), so 1,522 means "IV/27A publishes a
 Bayer designation for this star", not "for this letter". Every Bayer-bearing
 row clears that bar; whether it clears the stricter one is wgp3's to
@@ -298,9 +304,10 @@ classical designation — HD (IV/25, V/50, I/239's HD column), HR (V/50),
 Bayer / Flamsteed (WGSN, IV/27A), HIP (I/239), GJ (CNS5, V/70A), IAU proper
 name (WGSN) — keyed on that designation, with a `gaia_source_id` where a
 cross-walk binds one and the § 4 gate passes, or where the spine's frozen
-binding is SIMBAD-corroborated as above or kept by a review disposition. That is AT-HYG's *stated* selection rule
-reproduced from the primaries. AT-HYG's *realised* membership is that rule
-minus its link defect and merge drops, and reproducing the realised set
+binding is SIMBAD-corroborated as above or kept by a review disposition. That
+is AT-HYG's *stated* selection rule reproduced from the primaries. AT-HYG's
+*realised* membership is that rule minus its link defect and merge drops, and
+reproducing the realised set
 would freeze a defect into a second spine — so the additions ship, each on
 a § 6.1 ledger row under a closed reason enum: `admitted:hd_link_gap` ·
 `admitted:hd_omitted` · `admitted:hip_omitted` · `admitted:cns5_census` ·
