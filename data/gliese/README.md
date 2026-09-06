@@ -9,8 +9,24 @@ Tycho-2 does not carry.
 gliese_v70a.tsv   3,803 rows from V/70A/catalog. Printed Johnson V (+ its
                   quality and reference flags), B−V, spectral type, the
                   weighted and trigonometric parallaxes, radial velocity,
-                  and HD. Every row carries a `vmag`.
+                  HD, the B1950 position with the total proper motion and
+                  its position angle, and the DM / Giclas / LHS / other
+                  names. Every row carries a `vmag`.
 ```
+
+## The astrometry and cross-name columns
+
+`ra_b1950_deg` / `de_b1950_deg` are the catalogue's own B1950 equinox and
+epoch coordinates, printed to 0.1 arcmin in declination and 0.1 min of time
+in right ascension, so a position is good to ~6–10″; `pm_arcsec_yr` and
+`pm_pa_deg` are the total proper motion and its position angle. No value
+cascade reads them: they are the frozen witness the binding review is
+measured against — a spine `gaia_source_id` only AT-HYG asserts, on a
+GJ-keyed record, is kept where V/70A's position propagated to Gaia's epoch
+and its proper motion match the Gaia source
+(`data/membership/README.md`). The four name columns (`dm`, `giclas`,
+`lhs`, `other_name`) are the same review's cross-names. `parseGlieseTsv`
+adds a field per bead, so today it reads none of the eight.
 
 ## Why this table exists at all
 
@@ -109,7 +125,8 @@ resulting parallax keeps value and error bar from the same pair of columns.
   Catalogue of Nearby Stars*, CDS `V/70A`.
 - **VizieR**: `V/70A/catalog`, over the CDS TAP endpoint
   `refresh_lib.CDS_TAP_URL` names.
-- **Retrieved**: 2026-08-27.
+- **Retrieved**: 2026-08-27; re-sliced 2026-09-06 with the astrometry and
+  cross-name columns, same 3,803 rows.
 - **Licence**: CDS/VizieR standard academic use; cite Gliese & Jahreiss 1991.
 
 V/70A is a completed 1991 publication, so upstream will not republish; the
