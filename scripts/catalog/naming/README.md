@@ -207,7 +207,13 @@ pass rather than a per-star function because two of its three rules are
 relational:
 
 1. **The ladder** — curated override → IAU name → § 2 string designation →
-   Bayer → Flamsteed → Gould → GCVS → catalogue (HIP → HD → HR → GJ).
+   Bayer (Greek) → Flamsteed → Bayer (Latin) → Gould → GCVS → catalogue
+   (HIP → HD → HR → GJ). **The Bayer tier is split**, because Bayer's Greek
+   letters and his Latin overflow are read differently: `α UMa` outranks
+   `50 UMa`, while atlases print `15 UMa` over `f UMa`. 313 records take
+   their Flamsteed number back; the 237 with no Flamsteed number to take
+   keep their letter (`namingTierBayerLatin` — the far-southern `p Eri` /
+   `f Pup` series, outside what Greenwich could catalogue).
    The Gaia tail and the `SID #<n>` last resort below it belong to the
    runtime's `resolveStarName`: neither is a designation a catalogue
    published, neither reaches the search index, and composing them here
