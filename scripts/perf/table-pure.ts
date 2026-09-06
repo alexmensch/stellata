@@ -5,6 +5,7 @@
 import { round3, type PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { VERDICT_MARK, type RunDiff } from './diff-pure';
 import { PASS_COUNTERS, type DwellSummary, type PassCountsSummary } from './dwell-pure';
+import { PIN_VERDICT_MARK, type PinDiff } from './pin-pure';
 import type { DwellRecord } from './schema';
 import type { SweepFit, SweepPoint } from './sweep-pure';
 
@@ -36,7 +37,7 @@ export function formatPriceTable(rows: readonly PriceFrameRow[]): string {
 }
 
 export const DWELL_COLUMNS = [
-  'clock', 'samples', 'p50', 'p90', 'p99', 'iqrMs', 'lag1', 'vsyncClamped',
+  'clock', 'samples', 'p50', 'p90', 'p99', 'iqrMs', 'lag1', 'vsyncClamped', 'stateGuard',
 ] as const;
 
 export function formatDwellTable(
@@ -46,7 +47,7 @@ export function formatDwellTable(
     DWELL_COLUMNS,
     labelled.map(([clock, s]) => [
       clock, s.samples, round3(s.p50), round3(s.p90), round3(s.p99),
-      round3(s.iqrMs), round3(s.lag1), String(s.vsyncClamped),
+      round3(s.iqrMs), round3(s.lag1), String(s.vsyncClamped), s.stateGuard,
     ]),
   );
 }
@@ -109,6 +110,28 @@ export function formatDiffTable(diff: RunDiff): string {
     parts.push(`  not compared: ${refusal.key} — ${refusal.reason}`);
   }
   return parts.length > 0 ? parts.join('\n') : 'baseline: nothing comparable in either run';
+}
+
+export const PIN_DIFF_COLUMNS = ['', 'row', 'metric', 'pinned', 'current', 'delta', 'band', 'note'] as const;
+
+export function formatPinTable(diff: PinDiff): string {
+  if (diff.refusedWholeRun !== null) {
+    return `pin: REFUSED — ${diff.refusedWholeRun}`;
+  }
+  const parts: string[] = [];
+  if (diff.rows.length > 0) {
+    parts.push(formatTable(
+      PIN_DIFF_COLUMNS,
+      diff.rows.map((row) => [
+        PIN_VERDICT_MARK[row.verdict], row.key, row.metric,
+        round3(row.pinnedMs), round3(row.currentMs), round3(row.deltaMs), round3(row.bandMs), row.note,
+      ]),
+    ));
+  }
+  for (const refusal of diff.refusals) {
+    parts.push(`  not compared: ${refusal.key} — ${refusal.reason}`);
+  }
+  return parts.length > 0 ? parts.join('\n') : 'pin: nothing comparable';
 }
 
 function cellText(value: Cell): string {

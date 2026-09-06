@@ -1,0 +1,33 @@
+name: perf-section-guard
+
+on:
+  pull_request:
+    branches: [main]
+    # `edited` so the check re-runs when the body is updated.
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+# Asserts that a PR whose diff touches a render path carries a non-empty
+# `## Perf` section with an `accepted:` line for every ✗ row. CI has no GPU,
+# so this checks the section, not the numbers — the runner produces those
+# on the developer's machine. Rules: RELEASING.md § Perf pin; the check
+# itself is scripts/perf/perf-section-check.sh so it can be tested.
+
+jobs:
+  perf-section-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: List the files this PR changes
+        run: git diff --name-only "origin/${{ github.base_ref }}...HEAD" > "$RUNNER_TEMP/changed.txt"
+      - name: Check the `## Perf` section
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "${PR_BODY:-}" > "$RUNNER_TEMP/body.md"
+          bash scripts/perf/perf-section-check.sh "$RUNNER_TEMP/body.md" "$RUNNER_TEMP/changed.txt"

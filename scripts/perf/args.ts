@@ -25,6 +25,13 @@ export type BackendRequest = (typeof BACKEND_REQUESTS)[number];
 export const ROUNDTRIP_IDLE = 'idle';
 export type RoundTrip = PricedPassKey | typeof ROUNDTRIP_IDLE;
 
+/** `--accept <scenario>|<backend>:<bead>` — a mark the PR accepted, recorded
+ *  in the pin as provenance for the value now pinned. */
+export interface AcceptedMark {
+  readonly key: string;
+  readonly bead: string;
+}
+
 export interface RunArgs {
   readonly help: boolean;
   readonly url: string;
@@ -52,6 +59,13 @@ export interface RunArgs {
   readonly scales: readonly number[];
   readonly json: string | undefined;
   readonly baseline: string | undefined;
+  /** dwell: write this run as the pin (needs --json, the run it cites). */
+  readonly pin: string | undefined;
+  /** dwell: compare this run against a pin; any ✗ fails the run. */
+  readonly againstPin: string | undefined;
+  readonly accept: readonly AcceptedMark[];
+  /** Idle time between contexts, so each starts cold. */
+  readonly cooldownMs: number;
 }
 
 export const ARG_DEFAULTS = {
@@ -66,6 +80,7 @@ export const ARG_DEFAULTS = {
   quietMs: DEFAULT_QUIET_MS,
   frames: DEFAULT_DWELL_FRAMES,
   scales: DEFAULT_SWEEP_SCALES.join(','),
+  cooldownMs: 0,
 } as const;
 
 export class ArgError extends Error {}
@@ -95,6 +110,10 @@ const OPTIONS = {
   scales: { type: 'string', default: ARG_DEFAULTS.scales },
   json: { type: 'string' },
   baseline: { type: 'string' },
+  pin: { type: 'string' },
+  'against-pin': { type: 'string' },
+  accept: { type: 'string', multiple: true, default: [] },
+  'cooldown-ms': { type: 'string', default: String(ARG_DEFAULTS.cooldownMs) },
 } satisfies ParseArgsConfig['options'];
 
 export function usage(): string {
@@ -119,6 +138,10 @@ export function usage(): string {
     `  --scales <list>          sweep: viewport scales                    (default ${ARG_DEFAULTS.scales})`,
     '  --json <path>            write the whole run as stellata-perf/1',
     '  --baseline <path>        diff this run against a saved one and print the verdicts',
+    '  --pin <path>             dwell: write this run as the perf pin (with --json; RELEASING.md § Perf pin)',
+    '  --against-pin <path>     dwell: verdicts against a pin; a ✗ or a refused row exits 1',
+    '  --accept <scenario>|<backend>:<bead>  dwell, with --pin: accept a ✗ and pin its value, repeatable',
+    `  --cooldown-ms <n>        idle between contexts so each starts cold    (default ${ARG_DEFAULTS.cooldownMs})`,
     'Exit codes: 0 ok · 1 scenario failed / refused / software adapter · 2 bad flags or unreachable url · 3 not armed',
   ].join('\n');
 }
@@ -142,7 +165,22 @@ const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
   frames: ['dwell', 'sweep'],
   roundtrip: ['dwell'],
   scales: ['sweep'],
+  pin: ['dwell'],
+  'against-pin': ['dwell'],
+  accept: ['dwell'],
 };
+
+const ACCEPT_KEY = new RegExp(`^(${SCENARIO_NAMES.join('|')})\\|(${BACKENDS.join('|')})$`);
+
+function parseAccept(raw: string): AcceptedMark {
+  const at = raw.indexOf(':');
+  const key = at < 0 ? raw : raw.slice(0, at);
+  const bead = at < 0 ? '' : raw.slice(at + 1).trim();
+  if (!ACCEPT_KEY.test(key) || bead.length === 0) {
+    throw new ArgError(`--accept takes <scenario>|<backend>:<bead-id>; got '${raw}'`);
+  }
+  return { key, bead };
+}
 
 export function parseRunArgs(argv: readonly string[]): RunArgs {
   let values: Record<string, unknown>;
@@ -182,6 +220,13 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
 
   const optionalNum = (name: string): number | undefined =>
     str(name) === undefined ? undefined : num(name);
+
+  const nonNegativeNum = (name: string): number => {
+    const raw = str(name)!;
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0) throw new ArgError(`--${name} must be zero or a positive number; got '${raw}'`);
+    return n;
+  };
 
   const list = (name: string): string[] | undefined =>
     str(name)?.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
@@ -236,6 +281,14 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     }
   }
 
+  const accept = (values.accept as string[]).map(parseAccept);
+  if (str('pin') !== undefined && str('json') === undefined) {
+    throw new ArgError('--pin needs --json: the pin cites the run file its rows were summarised from');
+  }
+  if (accept.length > 0 && str('pin') === undefined) {
+    throw new ArgError('--accept records a mark into the pin being written; it needs --pin');
+  }
+
   return {
     help: values.help as boolean,
     url: str('url')!,
@@ -261,5 +314,9 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     scales: numberList('scales'),
     json: str('json'),
     baseline: str('baseline'),
+    pin: str('pin'),
+    againstPin: str('against-pin'),
+    accept,
+    cooldownMs: nonNegativeNum('cooldown-ms'),
   };
 }

@@ -5,10 +5,45 @@
 import {
   interquartileRange,
   lag1Autocorrelation,
+  median,
   percentile,
 } from '../../src/client/debug/frame-cost/frame-cost-pure';
 
 export const DEFAULT_DWELL_FRAMES = 240;
+
+/** A dwell is read in this many consecutive slices; their medians spanning
+ *  more than `STATE_GUARD_TREND_MS` is the machine changing state under the
+ *  dwell (the sustained-load GPU power step), and such a row compares with
+ *  nothing — README.md § Dwell mode. */
+export const STATE_GUARD_QUARTERS = 4;
+export const STATE_GUARD_TREND_MS = 1;
+
+export type StateGuard = 'steady' | 'trending';
+
+export function quarterMedians(
+  samples: readonly number[],
+  quarters: number = STATE_GUARD_QUARTERS,
+): number[] {
+  if (samples.length < quarters) return [];
+  const size = samples.length / quarters;
+  return Array.from({ length: quarters }, (_, i) =>
+    median(samples.slice(Math.floor(i * size), Math.floor((i + 1) * size))));
+}
+
+/**
+ * The spread of the quarter medians, not a monotonic run through them: the
+ * power step is a step, so it lands as `[16.9, 16.9, 21.8, 21.8]` — flat,
+ * then flat higher — which no strictly-rising test sees. Spread also catches
+ * a dwell that was merely unstable, which a pin should decline for the same
+ * reason.
+ */
+export function stateGuardVerdict(
+  quarters: readonly number[],
+  trendMs: number = STATE_GUARD_TREND_MS,
+): StateGuard {
+  if (quarters.length < 2) return 'steady';
+  return Math.max(...quarters) - Math.min(...quarters) > trendMs ? 'trending' : 'steady';
+}
 
 /** The clamp tolerance as a fraction of the measured idle interval: 1 ms on
  *  a 60 Hz panel, 0.5 ms at 120 Hz. A fixed millisecond would sit within
@@ -49,6 +84,9 @@ export interface DwellSummary {
    *  positive drift inside the dwell. */
   readonly lag1: number;
   readonly vsyncClamped: boolean;
+  /** Medians of the dwell's consecutive quarters, in time order. */
+  readonly quarterMedians: readonly number[];
+  readonly stateGuard: StateGuard;
 }
 
 /**
@@ -66,6 +104,7 @@ export function summarizeFrameDwell(
   if (samples.length === 0) return null;
   const p50 = percentile(samples, 0.5);
   const iqrMs = interquartileRange(samples);
+  const quarters = quarterMedians(samples);
   return {
     samples: samples.length,
     p50,
@@ -74,6 +113,8 @@ export function summarizeFrameDwell(
     iqrMs,
     lag1: lag1Autocorrelation(samples),
     vsyncClamped: isVsyncClamped(p50, iqrMs, cadenceMs),
+    quarterMedians: quarters,
+    stateGuard: stateGuardVerdict(quarters),
   };
 }
 

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { DWELL_METHOD, describeProbe, markerVerdict, methodFor, softwareRenderer } from './run-pure';
+import {
+  DWELL_METHOD, bufferShortfall, describeProbe, markerVerdict, methodFor, softwareRenderer,
+} from './run-pure';
 import type { AdapterProbe } from './schema';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -92,6 +94,21 @@ describe('describeProbe', () => {
     });
     expect(text).toContain('n/a on a webgl2 boot');
     expect(text).toContain('no WebGL2 context');
+  });
+});
+
+describe('bufferShortfall — the buffer the app drew against the one the flags asked for', () => {
+  it('names the capped ratio when --dpr 3 comes back as a dpr 2 buffer', () => {
+    const why = bufferShortfall({ width: 1280, height: 800, dpr: 3 }, { width: 2560, height: 1600 });
+    expect(why).toContain('2560x1600 is under the requested 1280x800 @ dpr 3 = 3840x2400');
+    expect(why).toContain('effective dpr 2.00');
+    expect(why).toContain('--width/--height');
+  });
+
+  it('passes an honoured request, a larger viewport at the cap, and one pixel of rounding', () => {
+    expect(bufferShortfall({ width: 1280, height: 800, dpr: 2 }, { width: 2560, height: 1600 })).toBeNull();
+    expect(bufferShortfall({ width: 1920, height: 1200, dpr: 2 }, { width: 3840, height: 2400 })).toBeNull();
+    expect(bufferShortfall({ width: 1281, height: 801, dpr: 1.5 }, { width: 1921, height: 1201 })).toBeNull();
   });
 });
 

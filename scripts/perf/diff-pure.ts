@@ -13,7 +13,7 @@ export const BUFFER_MPX_TOLERANCE = 0.01;
 /** A row has to move further than this multiple of the pair's combined
  *  standard error to count. Two sigma either side, not one: a one-sigma
  *  band calls roughly a third of unchanged rows a regression. */
-const BAND_SIGMAS = 2;
+export const BAND_SIGMAS = 2;
 
 export type Verdict = 'cheaper' | 'dearer' | 'same';
 
@@ -96,7 +96,7 @@ function verdictFor(deltaMs: number, bandMs: number): Verdict {
   return deltaMs < 0 ? 'cheaper' : 'dearer';
 }
 
-function band(seA: number, seB: number, floorMs: number): number {
+export function band(seA: number, seB: number, floorMs: number): number {
   return Math.max(BAND_SIGMAS * Math.hypot(seA, seB), floorMs);
 }
 
@@ -141,6 +141,12 @@ function dwellRow(key: string, a: ScenarioRecord, b: ScenarioRecord): DiffRow | 
     return {
       key: `${key}|dwell`,
       reason: 'a dwell was vsync-clamped — it measured the panel, not the frame',
+    };
+  }
+  if (da.stats.stateGuard === 'trending' || db.stats.stateGuard === 'trending') {
+    return {
+      key: `${key}|dwell`,
+      reason: 'a dwell trended across its quarters — it straddled a load-state transition',
     };
   }
   const deltaMs = db.stats.p50 - da.stats.p50;

@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_DWELL_FRAMES,
   PASS_COUNTERS,
+  STATE_GUARD_QUARTERS,
+  STATE_GUARD_TREND_MS,
   VSYNC_CLAMP_TOLERANCE,
   isVsyncClamped,
+  quarterMedians,
+  stateGuardVerdict,
   summarizeFrameDwell,
   summarizePassCounts,
   vsyncClampToleranceMs,
@@ -68,6 +72,42 @@ describe('summarizeFrameDwell', () => {
 
   it('never clamps a GPU row, which no compositor can pad', () => {
     expect(summarizeFrameDwell(VSYNC, null)!.vsyncClamped).toBe(false);
+  });
+});
+
+describe('state guard — a dwell that straddled the load transition', () => {
+  it('reads four quarters in time order, each a nearest-rank median', () => {
+    expect(STATE_GUARD_QUARTERS).toBe(4);
+    expect(quarterMedians(RAMP)).toEqual([3, 8, 13, 18]);
+    expect(quarterMedians([1, 2, 3])).toEqual([]);
+  });
+
+  it('calls a run wider than the trend threshold trending, either direction', () => {
+    expect(STATE_GUARD_TREND_MS).toBe(1);
+    expect(stateGuardVerdict([17.4, 18.2, 19.6, 21.0])).toBe('trending');
+    expect(stateGuardVerdict([21.0, 19.6, 18.2, 17.4])).toBe('trending');
+  });
+
+  it('catches the power step, which is flat then flat higher rather than rising', () => {
+    expect(stateGuardVerdict([16.9, 16.9, 21.8, 21.8])).toBe('trending');
+    expect(stateGuardVerdict([21.8, 21.8, 21.8, 16.9])).toBe('trending');
+    expect(stateGuardVerdict([17, 19, 18, 21])).toBe('trending');
+  });
+
+  it('calls a flat dwell and a sub-threshold drift steady', () => {
+    expect(stateGuardVerdict([21, 21, 21, 21])).toBe('steady');
+    expect(stateGuardVerdict([17.0, 17.2, 17.5, 17.9])).toBe('steady');
+    expect(stateGuardVerdict([17.0, 17.2, 17.5, 18.0])).toBe('steady');
+    expect(stateGuardVerdict([17.0, 17.2, 17.5, 18.1])).toBe('trending');
+    expect(stateGuardVerdict([17.9, 17.0, 17.5, 17.2])).toBe('steady');
+    expect(stateGuardVerdict([])).toBe('steady');
+  });
+
+  it('is carried on the summary', () => {
+    expect(summarizeFrameDwell(RAMP, HZ_60)!.stateGuard).toBe('trending');
+    expect(summarizeFrameDwell(RAMP, HZ_60)!.quarterMedians).toEqual([3, 8, 13, 18]);
+    expect(summarizeFrameDwell(VSYNC, HZ_60)!.stateGuard).toBe('steady');
+    expect(summarizeFrameDwell(OVER_BUDGET, HZ_60)!.stateGuard).toBe('steady');
   });
 });
 

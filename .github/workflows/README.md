@@ -34,6 +34,16 @@ CI check on every PR. Fails the PR if the `## Release notes` block in
 the PR body is empty (HTML comments don't count). Skipped on PRs
 labelled `skip-version-bump`. See `RELEASING.md` for the block format.
 
+## `perf-section-guard.yml`
+
+CI check on every PR. When the diff touches a render path — any `.ts`,
+`.glsl` or `.wgsl` under `src/client/` outside the folders `RELEASING.md`
+§ Perf pin exempts — fails the PR unless the body carries a non-empty
+`## Perf` section with an `accepted:` line for every `✗` row. The check is
+`scripts/perf/perf-section-check.sh`, tested in vitest; CI has no GPU, so it
+checks the section, never the numbers. The exempt list is stated once, in
+`RELEASING.md`, and a test fails when the script drifts from it.
+
 ## `version-guard.yml`
 
 CI check on every PR. Fails the PR if `package.json#version` was bumped

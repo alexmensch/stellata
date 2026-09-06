@@ -139,9 +139,10 @@ mw50 at 31.451 is the nearest row today, 1.9 ms under. `✓` is cheaper,
 **The 3 % floor is provisional.** It is three times a reproducibility
 measured across three runs on 2026-09-05, none of which used a cool-down,
 and against those same runs the first cold pin moves lg by 0.57–1.02 ms
-where the floor allows 0.36 ms. stellata-8cg.49.12 re-derives it from the
-spread between two cold pins; until it does, a `✗` carried by the floor
-alone is a prompt to re-run rather than a verdict.
+where the floor allows 0.36 ms. stellata-8cg.49.17 re-derives it from the
+spread between two cold pins — a second armed run, which is why it is not
+the tooling bead; until it does, a `✗` carried by the floor alone is a
+prompt to re-run rather than a verdict.
 
 **The `## Perf` section.** Required in the PR body when the diff touches
 anything under `src/client/` — `.ts`, `.glsl` and `.wgsl` alike — outside
