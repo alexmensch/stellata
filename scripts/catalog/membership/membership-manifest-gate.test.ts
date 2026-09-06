@@ -142,6 +142,29 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     expect(manifest.filter((r) => manifestDesignations(r).includes('sol:sun'))).toHaveLength(1);
   });
 
+  // A designation two rows carry keys neither of them (docs/sid.md § 4.1), so
+  // the row it would have keyed falls to its next rung — the Gaia id, or
+  // nothing. Admission refuses one an existing record answers to, which leaves
+  // the spine's own pairs: those key on a HIP the merge left alone, and the
+  // count pins them so a label change that makes a new one is visible.
+  it('admits no designation another record already answers to', () => {
+    const owners = new Map<string, number[]>();
+    manifest.forEach((row, i) => {
+      for (const d of new Set(manifestDesignations(row))) {
+        const list = owners.get(d);
+        if (list) list.push(i);
+        else owners.set(d, [i]);
+      }
+    });
+    const additions = new Set(match.unreached);
+    const shared = [...owners].filter(([, rows]) => rows.length > 1);
+    const reachingAnAddition = shared
+      .filter(([, rows]) => rows.some((i) => additions.has(i)))
+      .map(([d, rows]) => `${d}: ${rows.map((i) => manifest[i].tyc || '(no tyc)').join(', ')}`);
+    expect(reachingAnAddition.slice(0, 20)).toEqual([]);
+    expect(shared).toHaveLength(expected.sharedDesignations);
+  });
+
   it('holds the review queue to the pinned size', () => {
     const rows = readFileSync(resolve(REPO_ROOT, BINDING_REVIEW_FILE), 'utf-8')
       .trimEnd().split('\n').length - 1;

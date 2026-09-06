@@ -117,8 +117,14 @@ export interface MembershipCounts extends LabelMergeCounts {
   /** Raw sources two or more addition groups reach; no group takes one. */
   additionSourceShared: number;
   /** Admitted rows whose only designation is the Gaia id — the mints
-   *  `sid:allocate` will key `gaia_dr3:`. */
+   *  `sid:allocate` will key `gaia_dr3:`. Says what it says only alongside
+   *  `sharedDesignations`: a designation two rows carry keys neither of them,
+   *  so a row can reach the Gaia id as its key with a classical cell filled. */
   additionGaiaKeyedOnly: number;
+  /** Designations more than one manifest row carries, so they key no SID
+   *  (docs/sid.md § 4.1). Admission leaves none that involves an addition;
+   *  what remains is the spine's own, which key on a higher rung. */
+  sharedDesignations: number;
   /** Groups whose TYC route and HIP route bind different sources; the TYC
    *  route's stands, as the HD route does for labels (§ 4). */
   additionRouteSourceDisagree: number;
@@ -268,32 +274,42 @@ export function sortManifestRows(rows: readonly ManifestRow[]): ManifestRow[] {
 
 // ---- the spine side ----------------------------------------------------------
 
-/** Every designation the spine's records answer to after the label merge, in
- *  the forms an addition's cells compare on. An addition may take none of them:
- *  a designation on two records names a granularity and keys no SID
- *  (docs/sid.md § 4.1), so attaching one a spine record holds would cost that
- *  record its key — the collision guard's rule, applied at admission. */
-interface SpineClaims {
+/** Every designation a record already answers to, in the forms an addition's
+ *  cells compare on. An addition may take none of them: a designation on two
+ *  records names a granularity and keys no SID (docs/sid.md § 4.1), so
+ *  attaching one another record holds would cost that record its key — the
+ *  collision guard's rule, applied at admission.
+ *
+ *  Seeded from the spine after the label merge and grown as each addition is
+ *  admitted, so two addition groups cannot take one designation either. */
+interface Claims {
   hd: Set<number>;
   hr: Set<number>;
   hip: Set<number>;
   /** `normaliseGjKey` form: number + component letter. */
   gl: Set<string>;
+  /** The spine's alone, and it needs no sequential growth: `sharedSources`
+   *  drops any raw source two addition groups reach, so no admitted row can
+   *  take a source another group would have. */
   gaia: Set<string>;
 }
 
-function spineClaims(records: readonly LabelMergeRecord[]): SpineClaims {
-  const claims: SpineClaims = {
+function claimRecord(claims: Claims, r: LabelMergeRecord): void {
+  if (r.hd !== null) claims.hd.add(r.hd);
+  for (const hd of r.hdAlt) claims.hd.add(hd);
+  if (r.hr !== null) claims.hr.add(r.hr);
+  for (const hr of r.hrAlt) claims.hr.add(hr);
+  if (r.hip !== null) claims.hip.add(r.hip);
+  const gl = normaliseGjKey(r.gl);
+  if (gl !== null) claims.gl.add(gl);
+}
+
+function spineClaims(records: readonly LabelMergeRecord[]): Claims {
+  const claims: Claims = {
     hd: new Set(), hr: new Set(), hip: new Set(), gl: new Set(), gaia: new Set(),
   };
   for (const r of records) {
-    if (r.hd !== null) claims.hd.add(r.hd);
-    for (const hd of r.hdAlt) claims.hd.add(hd);
-    if (r.hr !== null) claims.hr.add(r.hr);
-    for (const hr of r.hrAlt) claims.hr.add(hr);
-    if (r.hip !== null) claims.hip.add(r.hip);
-    const gl = normaliseGjKey(r.gl);
-    if (gl !== null) claims.gl.add(gl);
+    claimRecord(claims, r);
     if (r.gaiaSourceId !== null) claims.gaia.add(r.gaiaSourceId);
   }
   return claims;
@@ -438,26 +454,84 @@ function groupAdditions(
   return [...groups.values()];
 }
 
-interface Admission {
-  row: ManifestRow | null;
-  ledger: AdditionLedgerRow;
+/** One star's items merged across the primaries, with the § 4 gate's verdict on
+ *  the source they reach. Everything admission needs except the claim set,
+ *  which grows under it — so these are resolved before the first group is
+ *  admitted and fix the order the contested designations go in. */
+interface AdditionGroup {
+  hd: HdAddition | null;
+  hip: HipAddition | null;
+  cns5: Cns5Row | null;
+  rawGl: string | null;
+  tyc: string;
+  source: string | null;
   sourceOnSpine: boolean;
   sourceGateRefused: boolean;
   routeSourceDisagree: boolean;
 }
 
-function admitGroup(
-  group: readonly AdditionItem[],
-  claims: SpineClaims,
+function additionGroup(
+  items: readonly AdditionItem[],
+  claims: Claims,
   tables: PrimaryTables,
-  index: AdditionIndex,
   overlay: ClassicIdOverlay,
   sharedSources: ReadonlySet<string>,
+): AdditionGroup {
+  const hd = items.find((i) => i.hd !== null)?.hd ?? null;
+  const hip = items.find((i) => i.hip !== null)?.hip ?? null;
+  const cns5 = items.find((i) => i.cns5 !== null)?.cns5 ?? null;
+
+  const tycSource = hd === null ? null : tables.tycToSource.get(hd.tyc) ?? null;
+  const hipSource = hip?.gaiaSourceId ?? null;
+  const rawSource = tycSource ?? hipSource ?? cns5?.gaiaSourceId ?? null;
+  const sourceOnSpine = rawSource !== null && claims.gaia.has(rawSource);
+  const sourceGateRefused = rawSource !== null && !sourceOnSpine && !overlay.has(rawSource);
+  return {
+    hd, hip, cns5,
+    rawGl: cns5 === null ? null : `GJ ${cns5.gj}${cns5.gjComp ?? ''}`,
+    tyc: hd?.tyc ?? '',
+    source: rawSource !== null && !sourceOnSpine && !sourceGateRefused
+      && !sharedSources.has(rawSource)
+      ? rawSource
+      : null,
+    sourceOnSpine,
+    sourceGateRefused,
+    routeSourceDisagree: tycSource !== null && hipSource !== null && tycSource !== hipSource,
+  };
+}
+
+/** Two groups can arrive with the same designation and no spine record to lose
+ *  it to — IV/25 resolving one HD onto two Tycho-2 stars is the shape, and it
+ *  flags them `n_tyc > 1`. Admission is sequential, so this order decides which
+ *  one takes the designation and which ledgers onto it as a component: the
+ *  group whose Gaia binding survives the § 4 gate first, since the other
+ *  component would otherwise park for want of a parallax this one has, then by
+ *  TYC, HIP and GJ — a total order over content, never over walk order. */
+function compareAdditionGroups(a: AdditionGroup, b: AdditionGroup): number {
+  const bound = Number(a.source === null) - Number(b.source === null);
+  if (bound !== 0) return bound;
+  if (a.tyc !== b.tyc) return a.tyc < b.tyc ? -1 : 1;
+  const hipA = a.hip?.hip ?? 0;
+  const hipB = b.hip?.hip ?? 0;
+  if (hipA !== hipB) return hipA - hipB;
+  const glA = a.rawGl ?? '';
+  const glB = b.rawGl ?? '';
+  return glA < glB ? -1 : glA > glB ? 1 : 0;
+}
+
+interface Admission {
+  row: ManifestRow | null;
+  /** The admitted row's record, for the claim set — null on a component row. */
+  record: LabelMergeRecord | null;
+  ledger: AdditionLedgerRow;
+}
+
+function admitGroup(
+  group: AdditionGroup,
+  claims: Claims,
+  index: AdditionIndex,
 ): Admission {
-  const hdItem = group.find((i) => i.hd !== null)?.hd ?? null;
-  const hipItem = group.find((i) => i.hip !== null)?.hip ?? null;
-  const cns5Item = group.find((i) => i.cns5 !== null)?.cns5 ?? null;
-  const rawGl = cns5Item === null ? null : `GJ ${cns5Item.gj}${cns5Item.gjComp ?? ''}`;
+  const { hd: hdItem, hip: hipItem, rawGl, tyc, source } = group;
   const blocked: string[] = [];
 
   const hds = [...(hdItem?.hds ?? [])].sort((a, b) => a - b).filter((hd) => {
@@ -488,23 +562,12 @@ function admitGroup(
   for (const hd of hds) flam ??= index.flamByHd.get(hd) ?? null;
   if (hip !== null) flam ??= index.flamByHip.get(hip) ?? null;
 
-  const tycSource = hdItem === null ? null : tables.tycToSource.get(hdItem.tyc) ?? null;
-  const hipSource = hipItem?.gaiaSourceId ?? null;
-  const rawSource = tycSource ?? hipSource ?? cns5Item?.gaiaSourceId ?? null;
-  const sourceOnSpine = rawSource !== null && claims.gaia.has(rawSource);
-  const sourceGateRefused = rawSource !== null && !sourceOnSpine && !overlay.has(rawSource);
-  const source = rawSource !== null && !sourceOnSpine && !sourceGateRefused
-    && !sharedSources.has(rawSource)
-    ? rawSource
-    : null;
-  const routeSourceDisagree = tycSource !== null && hipSource !== null && tycSource !== hipSource;
-
-  const tyc = hdItem?.tyc ?? '';
   if (hds.length === 0 && hip === null && gl === null) {
     // Ledgered under the designations it arrived with; the first blocked one
     // in ladder order names the record it resolves onto.
     return {
       row: null,
+      record: null,
       ledger: {
         tyc,
         hip: intCell(hipItem?.hip ?? null),
@@ -513,7 +576,6 @@ function admitGroup(
         gaia_source_id: '',
         reason: `${COMPONENT_REASON_PREFIX}${blocked.sort(compareDesignations)[0]}`,
       },
-      sourceOnSpine, sourceGateRefused, routeSourceDisagree,
     };
   }
   const reason: AdditionReason = hds.length > 0
@@ -529,10 +591,10 @@ function admitGroup(
   );
   return {
     row,
+    record,
     ledger: {
       tyc, hip: row.hip, hd: row.hd, gl: row.gl, gaia_source_id: row.gaia_source_id, reason,
     },
-    sourceOnSpine, sourceGateRefused, routeSourceDisagree,
   };
 }
 
@@ -594,13 +656,16 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     })),
   ];
   const index = indexAdditions(tables);
-  const groups = groupAdditions(items, tables, index);
+  const itemGroups = groupAdditions(items, tables, index);
   const sourceGroups = new Map<string, number>();
-  for (const g of groups) {
+  for (const g of itemGroups) {
     const sources = new Set(g.map((i) => i.rawSource).filter((s): s is string => s !== null));
     for (const s of sources) sourceGroups.set(s, (sourceGroups.get(s) ?? 0) + 1);
   }
   const sharedSources = new Set([...sourceGroups].filter(([, n]) => n > 1).map(([s]) => s));
+  const groups = itemGroups
+    .map((g) => additionGroup(g, claims, tables, overlay, sharedSources))
+    .sort(compareAdditionGroups);
 
   const ledger: AdditionLedgerRow[] = [];
   const additionsByReason = Object.fromEntries(
@@ -612,22 +677,27 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   let additionRouteSourceDisagree = 0;
   let additionGaiaKeyedOnly = 0;
   for (const g of groups) {
-    const a = admitGroup(g, claims, tables, index, overlay, sharedSources);
-    if (a.sourceOnSpine) additionSourceOnSpine++;
-    if (a.sourceGateRefused) additionSourceGateRefused++;
-    if (a.routeSourceDisagree) additionRouteSourceDisagree++;
+    const a = admitGroup(g, claims, index);
+    if (g.sourceOnSpine) additionSourceOnSpine++;
+    if (g.sourceGateRefused) additionSourceGateRefused++;
+    if (g.routeSourceDisagree) additionRouteSourceDisagree++;
     ledger.push(a.ledger);
-    if (a.row === null) {
+    if (a.row === null || a.record === null) {
       componentRows++;
       continue;
     }
     additionsByReason[a.ledger.reason as AdditionReason]++;
     const designations = manifestDesignations(a.row);
     if (designations.length === 1 && designations[0].startsWith('gaia_dr3:')) additionGaiaKeyedOnly++;
+    claimRecord(claims, a.record);
     attest(a.row);
   }
 
   const sorted = sortManifestRows(rows);
+  const owners = new Map<string, number>();
+  for (const row of sorted) {
+    for (const d of new Set(manifestDesignations(row))) owners.set(d, (owners.get(d) ?? 0) + 1);
+  }
   const counts: MembershipCounts = {
     ...merge.counts,
     rows: sorted.length,
@@ -643,6 +713,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     additionSourceShared: sharedSources.size,
     additionGaiaKeyedOnly,
     additionRouteSourceDisagree,
+    sharedDesignations: [...owners.values()].filter((n) => n > 1).length,
     rowsWithHdAlt: sorted.filter((r) => r.hd_alt !== '').length,
     rowsWithHrAlt: sorted.filter((r) => r.hr_alt !== '').length,
   };

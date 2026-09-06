@@ -63,7 +63,9 @@ const spine: SpineRow[] = [
  *  floor, with HIP 30 through Tycho-2's own column); TYC 2-2-1 (HD 200500);
  *  TYC 2-3-1 carrying only HD 100001, a spine record's; TYC 2-4-1 (HD 61)
  *  whose walk binds the spine record's own source; TYC 2-5-1 (HD 62) whose
- *  source the gate refused; HIP 40 alone; CNS5's GJ 10001. */
+ *  source the gate refused; HIP 40 alone; CNS5's GJ 10001. Two IV/25 pairs
+ *  resolve one HD onto two Tycho-2 stars with no spine record to lose it to:
+ *  HD 60 again on TYC 2-6-1, and HD 70 on TYC 2-7-1 (unbound) + 2-8-1. */
 const tables: PrimaryTables = {
   iv25: [
     { tyc: '1-1-1', hd: 100001, nHd: 1, nTyc: 1 },
@@ -74,6 +76,9 @@ const tables: PrimaryTables = {
     { tyc: '2-3-1', hd: 100001, nHd: 1, nTyc: 2 },
     { tyc: '2-4-1', hd: 61, nHd: 1, nTyc: 1 },
     { tyc: '2-5-1', hd: 62, nHd: 1, nTyc: 1 },
+    { tyc: '2-6-1', hd: 60, nHd: 1, nTyc: 2 },
+    { tyc: '2-7-1', hd: 70, nHd: 1, nTyc: 2 },
+    { tyc: '2-8-1', hd: 70, nHd: 1, nTyc: 2 },
   ],
   v50: [
     { hr: 1, hd: 100001, name: null },
@@ -101,9 +106,11 @@ const tables: PrimaryTables = {
   tycho2: new Map([
     ['1-1-1', tycho2(8.5, 10)], ['1-2-1', tycho2(10.2)], ['2-1-1', tycho2(9.1, 30)],
     ['2-2-1', tycho2(9.9)], ['2-3-1', tycho2(11)], ['2-4-1', tycho2(11)], ['2-5-1', tycho2(11)],
+    ['2-6-1', tycho2(11)], ['2-7-1', tycho2(11)], ['2-8-1', tycho2(11)],
   ]),
   tycToSource: new Map([
     ['1-1-1', '111'], ['2-1-1', '444'], ['2-2-1', '666'], ['2-4-1', '111'], ['2-5-1', '777'],
+    ['2-8-1', '1010'],
   ]),
   hipToSource: new Map([[10, '111'], [20, '333'], [30, '444'], [40, '999']]),
   simbadBySourceId: new Map([
@@ -119,6 +126,7 @@ const overlay: ClassicIdOverlay = new Map([
   ['555', entry({ gj: ['10001'] })],
   ['999', entry({ hip: [40] })],
   ['333', entry({ hip: [20], gj: ['165AB'] })],
+  ['1010', entry({ hd: [70] })],
 ]);
 
 const result = buildMembership({
@@ -180,7 +188,7 @@ describe('buildMembership — the additions', () => {
     expect(reasons.get(manifestKey(gj))).toBe('admitted:cns5_census');
     expect(gj.gaia_source_id).toBe('555');
     expect(result.counts.additionsByReason).toEqual({
-      'admitted:hd_link_gap': 3, 'admitted:hd_omitted': 1,
+      'admitted:hd_link_gap': 4, 'admitted:hd_omitted': 1,
       'admitted:hip_omitted': 1, 'admitted:cns5_census': 1,
     });
     for (const l of result.ledger) {
@@ -196,7 +204,29 @@ describe('buildMembership — the additions', () => {
     expect(result.ledger).toContainEqual({
       tyc: '2-3-1', hip: '', hd: '100001', gl: '', gaia_source_id: '', reason: 'component:hd:100001',
     });
-    expect(result.counts.componentRows).toBe(1);
+    expect(result.counts.componentRows).toBe(3);
+  });
+
+  // IV/25 resolving one HD onto two Tycho-2 stars, neither on the spine: the
+  // second is a component of the first, never a second record answering to the
+  // same designation — which would key no SID for either (docs/sid.md § 4.1).
+  it('admits one record per designation when two groups arrive with the same HD', () => {
+    expect(byTyc.has('2-6-1')).toBe(false);
+    expect(result.ledger).toContainEqual({
+      tyc: '2-6-1', hip: '', hd: '60', gl: '', gaia_source_id: '', reason: 'component:hd:60',
+    });
+    expect(byTyc.get('2-1-1')?.hd).toBe('60');
+    expect(result.counts.sharedDesignations).toBe(0);
+  });
+
+  // The contested designation goes to the component a gated walk bound, not to
+  // the lower TYC: the other would park for want of the parallax this one has.
+  it('gives a contested designation to the group whose binding survives', () => {
+    expect(byTyc.get('2-8-1')).toMatchObject({ hd: '70', gaia_source_id: '1010' });
+    expect(byTyc.has('2-7-1')).toBe(false);
+    expect(result.ledger).toContainEqual({
+      tyc: '2-7-1', hip: '', hd: '70', gl: '', gaia_source_id: '', reason: 'component:hd:70',
+    });
   });
 
   it('leaves the source empty where the walk binds a spine record\'s own source', () => {
@@ -213,7 +243,7 @@ describe('buildMembership — the additions', () => {
     const ids = result.rows.map((r) => r.gaia_source_id).filter((s) => s !== '');
     expect(new Set(ids).size).toBe(ids.length);
     for (const row of result.rows) expect(manifestDesignations(row).length).toBeGreaterThan(0);
-    expect(result.counts.rows).toBe(11);
+    expect(result.counts.rows).toBe(12);
   });
 });
 

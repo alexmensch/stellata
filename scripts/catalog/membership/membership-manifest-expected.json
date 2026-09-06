@@ -63,20 +63,20 @@
     "gl": 0,
     "flam": 0
   },
-  "rows": 376934,
+  "rows": 376929,
   "spineRows": 313257,
-  "additionRows": 63677,
+  "additionRows": 63672,
   "additionsByReason": {
-    "admitted:hd_link_gap": 54817,
+    "admitted:hd_link_gap": 54812,
     "admitted:hd_omitted": 5060,
     "admitted:hip_omitted": 444,
     "admitted:cns5_census": 3356
   },
-  "componentRows": 466,
+  "componentRows": 471,
   "bindingByClass": {
-    "crosswalk_gated": 358575,
+    "crosswalk_gated": 358571,
     "simbad_corroborated": 11697,
-    "none": 6662
+    "none": 6661
   },
   "bindingReviewRows": 39,
   "unattestedByCell": {
@@ -93,6 +93,7 @@
   "additionSourceShared": 0,
   "additionGaiaKeyedOnly": 0,
   "additionRouteSourceDisagree": 3,
+  "sharedDesignations": 69,
   "rowsWithHdAlt": 102,
   "rowsWithHrAlt": 0
 }
