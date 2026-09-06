@@ -2,12 +2,32 @@
 // path, and what the `## Perf` section must carry when one is touched.
 
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const SCRIPT = resolve(__dirname, 'perf-section-check.sh');
+const RELEASING = resolve(__dirname, '../../RELEASING.md');
+
+/** The exempt list as the script spells it: `exempt='a|b|c'`. */
+function scriptExemptions(): string[] {
+  const line = /^exempt='([^']+)'$/m.exec(readFileSync(SCRIPT, 'utf-8'));
+  expect(line, 'perf-section-check.sh no longer declares exempt=').not.toBeNull();
+  return line![1].split('|');
+}
+
+/** The same list as RELEASING.md § Perf pin states it, which is the design
+ *  record the script implements: the backticked `folder/` names in the
+ *  sentence naming what neither draws nor decides what is drawn. */
+function releasingExemptions(): string[] {
+  const text = readFileSync(RELEASING, 'utf-8');
+  const sentence = /neither draw nor decide what is\s+drawn:([\s\S]*?)\*\*Naming/.exec(text);
+  expect(sentence, 'RELEASING.md § Perf pin no longer names the exempt folders').not.toBeNull();
+  return [...sentence![1].matchAll(/`([a-z-]+)\/`/g)].map((m) => m[1]);
+}
+
+const EXEMPT_FOLDERS = scriptExemptions();
 
 let repo: string;
 
@@ -46,6 +66,19 @@ afterEach(() => {
   rmSync(repo, { recursive: true, force: true });
 });
 
+describe('the exempt list has exactly one authority', () => {
+  it('matches RELEASING.md § Perf pin folder for folder', () => {
+    expect([...scriptExemptions()].sort()).toEqual([...releasingExemptions()].sort());
+  });
+
+  it('names folders that exist, so a rename cannot silently widen the gate', () => {
+    for (const folder of EXEMPT_FOLDERS) {
+      const path = resolve(__dirname, '../../src/client', folder);
+      expect(readFileSync(join(path, 'README.md'), 'utf-8').length, folder).toBeGreaterThan(0);
+    }
+  });
+});
+
 describe('perf-section-check', () => {
   it('passes a diff that touches no render path, whatever the body says', () => {
     const r = check('## Summary\n\nx\n', ['src/client/ui/panel.ts', 'scripts/perf/run.ts', 'README.md']);
@@ -53,7 +86,7 @@ describe('perf-section-check', () => {
     expect(r.stdout).toContain('no render path touched');
   });
 
-  it('counts shaders and the render folders, not their READMEs or tests', () => {
+  it('counts shaders and TypeScript under src/client, not READMEs or tests', () => {
     expect(check('', ['src/client/star-pipeline/README.md', 'src/client/hdr/hdr-pipeline.test.ts']).code).toBe(0);
     const r = check('## Summary\n\nx\n', ['src/client/hdr/hdr-pipeline.ts']);
     expect(r.code).toBe(1);
@@ -62,12 +95,28 @@ describe('perf-section-check', () => {
     expect(check('## Summary\n\nx\n', ['src/client/webgpu/tsl/disc.wgsl']).code).toBe(1);
   });
 
-  it('counts a file outside those folders when it calls renderer.render', () => {
-    mkdirSync(join(repo, 'src/client/attitude'), { recursive: true });
-    writeFileSync(join(repo, 'src/client/attitude/ball.ts'), 'renderer.render(scene, view);\n');
-    writeFileSync(join(repo, 'src/client/attitude/pure.ts'), 'export const x = 1;\n');
-    expect(check('## Summary\n\nx\n', ['src/client/attitude/ball.ts']).code).toBe(1);
-    expect(check('## Summary\n\nx\n', ['src/client/attitude/pure.ts']).code).toBe(0);
+  it('exempts the folders that neither draw nor decide what is drawn', () => {
+    for (const folder of EXEMPT_FOLDERS) {
+      expect(check('## Summary\n\nx\n', [`src/client/${folder}/thing.ts`]).code).toBe(0);
+    }
+  });
+
+  it('gates every layer folder the old inclusion list left out', () => {
+    // The six the 476 review named, plus the top-level integration shell.
+    const missed = [
+      'dust', 'molecular-clouds', 'solar-system', 'local-group', 'galactic', 'filters',
+    ].map((f) => `src/client/${f}/layer.ts`);
+    for (const file of [...missed, 'src/client/stellata.ts']) {
+      expect(check('## Summary\n\nx\n', [file]).code, file).toBe(1);
+    }
+  });
+
+  it('gates a folder nobody has thought of yet — the point of exempting by name', () => {
+    expect(check('## Summary\n\nx\n', ['src/client/warp-bubble/renderer.ts']).code).toBe(1);
+  });
+
+  it('leaves the page shell and the stylesheet alone', () => {
+    expect(check('## Summary\n\nx\n', ['src/client/index.html', 'src/client/styles.css']).code).toBe(0);
   });
 
   it('does not count template scaffolding as content', () => {

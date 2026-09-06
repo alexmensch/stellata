@@ -19,11 +19,10 @@ detail lives below.
 ## Perf
 
 <!--
-Required when the diff touches a render path: src/client/**/*.glsl, *.wgsl,
-or the .ts files (not *.md, not *.test.ts) of webgpu/, hdr/, star-pipeline/,
-milkyway/, local-depth/, render-gate/, scene/, or any file calling
-renderer.render. Paste the runner's --against-pin table with the pin commit,
-the adapter slug and the state-guard line per context; one
+Required when the diff touches a render path: any .ts, .glsl or .wgsl under
+src/client/, outside *.test.ts and the folders RELEASING.md § Perf pin
+exempts. Paste the runner's --against-pin table with the pin commit, the
+adapter slug and the state-guard line per context; one
 `accepted: <row> <reason> (<bead-id>)` line per ✗. perf-section-guard checks
 this section. RELEASING.md § Perf pin. Other PRs leave it empty.
 -->

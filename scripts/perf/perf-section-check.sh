@@ -7,19 +7,19 @@ set -euo pipefail
 body_file="$1"
 files_file="$2"
 
-render_path='^src/client/.*\.(glsl|wgsl)$|^src/client/(webgpu|hdr|star-pipeline|milkyway|local-depth|render-gate|scene)/.*\.ts$'
+# Naming what is EXEMPT rather than what is covered is the invariant: a list
+# of render folders exempts by omission, so a layer folder added later
+# escapes the gate until somebody notices. RELEASING.md § Perf pin owns this
+# list, and perf-section-check.test.ts fails when the two drift apart.
+exempt='calibration|debug|focus-card|format|hover|kinds|loaders|modals|overlays|poi|system-membership|typeahead|ui'
 
 touched=()
 while IFS= read -r f; do
-  [ -z "$f" ] && continue
-  case "$f" in
-    *.test.ts|*.md) continue ;;
-  esac
-  if [[ "$f" =~ $render_path ]]; then
-    touched+=("$f")
-  elif [[ "$f" == src/client/*.ts ]] && [ -f "$f" ] && grep -q 'renderer\.render(' "$f"; then
-    touched+=("$f")
-  fi
+  if [ -z "$f" ]; then continue; fi
+  if [[ "$f" == *.test.ts ]]; then continue; fi
+  if [[ ! "$f" =~ ^src/client/.*\.(ts|glsl|wgsl)$ ]]; then continue; fi
+  if [[ "$f" =~ ^src/client/($exempt)/ ]]; then continue; fi
+  touched+=("$f")
 done < "$files_file"
 
 if [ ${#touched[@]} -eq 0 ]; then
