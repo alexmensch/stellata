@@ -205,6 +205,14 @@ export interface DecodedView {
   toc?: number;
   /** Chart mode (observe-only). Only encoded when `mode === 'observe'`. */
   chart?: boolean;
+  /** ORB armed on the attitude instrument — the focused object's own orbital
+   *  plane. Not a `coordSphere` value: the instrument holds this one, and the
+   *  frame itself rebuilds from the focus, so the bit needs no payload
+   *  (`../../attitude/orbit-frame/README.md`). */
+  orb?: boolean;
+  /** The orbit lock engaged. ORB-only, and the receiver's own
+   *  `orbitLockShowing` rule still decides whether it can exist. */
+  orbLock?: boolean;
   /** Legacy v1–v3 pinned points-of-interest as HIP IDs — decode-only;
    *  v4 persists POIs in `poiSids`. */
   pois?: number[];
@@ -622,6 +630,18 @@ function lgEmissionDisabledField(bit: number): FieldSpec {
   };
 }
 
+// A boolean whose presence bit IS the value: set means true, absent means the
+// default. Zero payload, so it costs nothing but the mask bit — which is what
+// the flags byte being full leaves as the cheap way to add one.
+function boolBitField(bit: number, key: 'orb' | 'orbLock'): FieldSpec {
+  return {
+    bit, key, ...fixed(0),
+    isPresent: v => v[key] === true,
+    encode: () => 0,
+    decode: v => { v[key] = true; },
+  };
+}
+
 // Which coordinate sphere FLAG_GRID means — one zero-byte presence bit per
 // frame past the default, since the flags byte is full. No bit set = galactic.
 //
@@ -889,6 +909,8 @@ const FIELDS_V4: FieldSpec[] = [
   coordSphereFrameField(24, 'equatorial'),
   u8Field(25, 'ev', { min: -EV_MAX_STOPS, max: EV_MAX_STOPS, step: EV_STEP_STOPS }),
   coordSphereFrameField(26, 'ecliptic'),
+  boolBitField(27, 'orb'),
+  boolBitField(28, 'orbLock'),
 ];
 
 function packFlags(v: DecodedView): number {
@@ -1161,6 +1183,15 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
     view.up = [u.x, u.y, u.z];
   }
 
+  // ORB and its lock live on the instrument rather than in filter.coordSphere,
+  // so they reach the wire through the port and nowhere else. Both are single
+  // bits: the frame itself rebuilds from the focus this blob already carries.
+  const orbitPort = stellata.getOrbitFramePort();
+  if (orbitPort?.isArmed()) {
+    view.orb = true;
+    if (orbitPort.isLocked()) view.orbLock = true;
+  }
+
   // Scrubber-pinned `t` only — when the user is on live wall-clock,
   // omit so the share link resolves to the receiver's local now (the
   // contract baked into the solar-system contract). v1 always lands in the live
@@ -1293,6 +1324,9 @@ export function applyDecodedView(
         if (idx === null) return;
         if (snap) stellata.focus.setOrbitTarget({ kind, idx });
         else stellata.focus.flyTo({ kind, idx }, { animate: false });
+        // A sid whose domain attaches after this function returns fires its
+        // 'focus' event then, disarming the ORB the tail already restored.
+        restoreOrbitFrame(stellata, view);
       });
     } else {
       const idx = resolveStarRef(view.focus, idMaps, idMaps.solIndex);
@@ -1411,6 +1445,21 @@ export function applyDecodedView(
     }
     if (resolved.length > 0) stellata.pois.set(resolved);
   }
+
+  // LAST, and that is the whole of this field's difficulty. Every one of the
+  // three clearing rules above disarms ORB on its way past — the instrument
+  // drops it on a focus change, on a coordSphere change, and with the camera
+  // mode — so a restore anywhere earlier is silently undone by a later step of
+  // this same function. Applied again from the deferred focus callback for the
+  // one case that lands after this returns; `restore` is idempotent.
+  restoreOrbitFrame(stellata, view);
+}
+
+/** Re-arm ORB and the orbit lock from the blob. Absent bits mean the gesture
+ *  was never made, which is a positive statement — a sky-frame link has to
+ *  disarm an ORB the session was already holding, not leave it standing. */
+function restoreOrbitFrame(stellata: Stellata, view: DecodedView): void {
+  stellata.getOrbitFramePort()?.restore(view.orb === true, view.orbLock === true);
 }
 
 // The fragment is not URL state — boot flags (`#renderer=webgpu`,

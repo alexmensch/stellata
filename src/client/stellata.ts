@@ -33,7 +33,9 @@ import {
   COORD_SPHERE_SPECS,
   DRAWN_COORD_SPHERE_FRAMES,
 } from './galactic/coord-spheres/coord-sphere-frames';
-import { frameAfterFocusChange, frameAvailableFor } from './attitude/attitude-pure';
+import {
+  frameAfterFocusChange, frameAvailableFor, type OrbitFramePort,
+} from './attitude/attitude-pure';
 import { focusFrameInputs } from './attitude/focus-frame';
 import { HudOverlay } from './overlays/hud-overlay';
 import { ChartLabels } from './chart-mode/labels/chart-labels';
@@ -2363,6 +2365,23 @@ export class Stellata implements FrameAnchor {
     this.orbitFrameTick = tick;
   }
 
+  private orbitFramePort: OrbitFramePort | null = null;
+
+  /** Install the attitude instrument's URL seam. ORB and the orbit lock are
+   *  the two pieces of view state the instrument holds itself rather than in
+   *  `filter.coordSphere`, so the blob cannot reach them any other way
+   *  (`util/url-state/README.md` § ORB and the orbit lock). Same lazy shape as
+   *  the tick above: the instrument is built after the shell. */
+  setOrbitFramePort(port: OrbitFramePort): void {
+    this.orbitFramePort = port;
+  }
+
+  /** Null before the instrument is built, and on a boot that has none —
+   *  callers treat that as "neither armed nor locked". */
+  getOrbitFramePort(): OrbitFramePort | null {
+    return this.orbitFramePort;
+  }
+
   /** The smallest camera turn two rendered frames could show apart, at the
    *  current viewport and FOV. A per-frame camera writer below the gate
    *  reads this and declines anything smaller, which is what keeps it from
@@ -2777,6 +2796,7 @@ export class Stellata implements FrameAnchor {
     // The indicator has no dispose of its own, so the shell drops the closure
     // rather than holding its ball canvas for the instance's lifetime.
     this.orbitFrameTick = null;
+    this.orbitFramePort = null;
     this.aim.dispose();
     this.warp.dispose();
     this.observe.dispose();

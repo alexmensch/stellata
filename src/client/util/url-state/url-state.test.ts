@@ -15,6 +15,7 @@ import {
 } from './url-state';
 import type { Stellata } from '../../stellata';
 import type { FocusableProvider, Target } from '../../camera/focus/focus-target';
+import type { OrbitFramePort } from '../../attitude/attitude-pure';
 import { DEFAULT_FILTER, DEFAULT_FOV } from '../../filters/filter-state';
 import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
 import { SidResolver, arrayDomain } from '../sid-resolver';
@@ -117,6 +118,20 @@ function rollStub() {
 // Every kind's focal anchor at the local origin — what a frame recentred on
 // the focus means, and the state url-state's own gates are written against.
 // A test needing the drifted frame between two recentres passes its own offset.
+/** The attitude instrument's URL seam. `restore` mirrors the instrument's own
+ *  rule that a lock cannot exist without ORB, so a test sees what the receiver
+ *  would actually end up holding rather than what the blob asked for. */
+function mockOrbitPort(state: { armed: boolean; locked: boolean }): OrbitFramePort {
+  return {
+    isArmed: () => state.armed,
+    isLocked: () => state.locked,
+    restore: (armed, locked) => {
+      state.armed = armed;
+      state.locked = armed && locked;
+    },
+  };
+}
+
 function mockFocusables(x = 0, y = 0, z = 0) {
   const leg = partialOf<FocusableProvider>({
     localPositionInto: (_idx, out) => {
@@ -225,6 +240,7 @@ function makeStatefulStellata() {
     vectorToCloud: null as number | null,
     pois: [] as Target[],
     mode: 'navigate' as 'navigate' | 'observe',
+    orbit: { armed: false, locked: false },
   };
   const clearFocus = () => {
     state.focusedStar = null;
@@ -255,6 +271,7 @@ function makeStatefulStellata() {
     getWorldOffset: () => mockVec3() as any,
     setWorldOffset: () => {},
     focusables: mockFocusables(),
+    getOrbitFramePort: () => mockOrbitPort(state.orbit),
     focus: partialOf<Stellata['focus']>({
       getFocusedStar: () => state.focusedStar,
       getFocusedTarget: () => {
@@ -1067,6 +1084,8 @@ describe('url-state', () => {
       /** Focal object's local position — non-zero is the drifted frame
        *  between two origin recentres. */
       anchor?: [number, number, number];
+      /** ORB armed / orbit lock engaged on the attitude instrument. */
+      orbit?: { armed: boolean; locked: boolean };
     } = {}): Stellata {
       const mode = opts.mode ?? 'navigate';
       const camPos = opts.camPos ?? [0, 0, 30];
@@ -1082,6 +1101,9 @@ describe('url-state', () => {
           setEv: () => {},
         }),
         focusables: mockFocusables(...(opts.anchor ?? [0, 0, 0])),
+        getOrbitFramePort: () => mockOrbitPort(
+          opts.orbit ?? { armed: false, locked: false },
+        ),
         focus: partialOf<Stellata['focus']>({
           getFocusedStar: () => opts.focusedStar ?? null,
           getFocusedTarget: () => (opts.focusedStar != null
@@ -1197,6 +1219,77 @@ describe('url-state', () => {
         idMaps,
       );
       expect(view.cam).toEqual([1, 2, 3]);
+    });
+  });
+
+  describe('ORB and the orbit lock on the wire', () => {
+    it('carries neither bit for a view holding neither', () => {
+      const { stellata } = makeStatefulStellata();
+      const view = currentStateOf(stellata, makeFixtureBuild());
+      expect(view.orb).toBeUndefined();
+      expect(view.orbLock).toBeUndefined();
+    });
+
+    it('encodes ORB armed, and the lock only over it', () => {
+      const armedOnly = makeStatefulStellata();
+      armedOnly.state.orbit = { armed: true, locked: false };
+      const armed = currentStateOf(armedOnly.stellata, makeFixtureBuild());
+      expect(armed.orb).toBe(true);
+      expect(armed.orbLock).toBeUndefined();
+
+      const both = makeStatefulStellata();
+      both.state.orbit = { armed: true, locked: true };
+      const locked = currentStateOf(both.stellata, makeFixtureBuild());
+      expect(locked.orb).toBe(true);
+      expect(locked.orbLock).toBe(true);
+    });
+
+    it('round-trips both bits through the blob', () => {
+      expect(roundtrip({ orb: true }).view).toMatchObject({ orb: true });
+      const both = roundtrip({ orb: true, orbLock: true }).view;
+      expect(both).toMatchObject({ orb: true, orbLock: true });
+    });
+
+    // Zero payload — the frame rebuilds from the focus the blob already
+    // carries — so the only cost is the LEB128 mask reaching the bit. Bit 28
+    // opens a fifth 7-bit group, which is why the lock adds a byte and ORB
+    // alone does not; both are still payload-free.
+    it('costs mask bytes and no payload', () => {
+      expect(blobBytes(encodeBlob({}))).toBe(2);
+      expect(blobBytes(encodeBlob({ orb: true }))).toBe(5);
+      expect(blobBytes(encodeBlob({ orb: true, orbLock: true }))).toBe(6);
+    });
+
+    it('restores ORB and the lock onto the instrument', () => {
+      const { stellata, state } = makeStatefulStellata();
+      applyDecodedView(stellata, { orb: true, orbLock: true }, makeFixtureBuild());
+      expect(state.orbit).toEqual({ armed: true, locked: true });
+    });
+
+    // A blob is a request. The instrument's own orbitLockShowing still rules,
+    // and no-ORB is one of the three absences it refuses on.
+    it('refuses a lock the blob asks for without ORB', () => {
+      const { stellata, state } = makeStatefulStellata();
+      applyDecodedView(stellata, { orbLock: true }, makeFixtureBuild());
+      expect(state.orbit).toEqual({ armed: false, locked: false });
+    });
+
+    // Absence is a positive statement: a sky-frame link has to disarm an ORB
+    // the receiving session was already holding.
+    it('disarms ORB a link does not carry', () => {
+      const { stellata, state } = makeStatefulStellata();
+      state.orbit = { armed: true, locked: true };
+      applyDecodedView(stellata, { coordSphere: 'ecliptic' }, makeFixtureBuild());
+      expect(state.orbit).toEqual({ armed: false, locked: false });
+    });
+
+    // The pre-change corpus has neither bit, so every link in the wild still
+    // decodes to its sky frame with no ORB over the top.
+    it('leaves a link predating the bits on its sky frame', () => {
+      const { view } = roundtrip({ coordSphere: 'equatorial' });
+      expect(view.coordSphere).toBe('equatorial');
+      expect(view.orb).toBeUndefined();
+      expect(view.orbLock).toBeUndefined();
     });
   });
 
@@ -1872,6 +1965,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       getWorldOffset: () => mockVec3() as any,
       setWorldOffset: () => {},
       focusables: mockFocusables(),
+      getOrbitFramePort: () => null,
       focus: partialOf<Stellata['focus']>({
         getFocusedStar: () => state.focusedStar,
         getFocusedTarget: () =>
