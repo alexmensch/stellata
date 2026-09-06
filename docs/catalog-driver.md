@@ -583,8 +583,9 @@ Measured exposure and expected coverage (2026-08-14; pins in
   tiers underneath.
 - **direction / PM** — SHIPPED (`stellata-3bsf.26`).
   `directionAthygPrinted` 61 / `velocityAthygPm` 60 retire into the tiers
-  below, residual **none 0** on both axes and `droppedNoDirection`
-  still pinned at 0:
+  below, residual **none 0** on both axes over the spine's rows (the
+  primaries then admit 27 rows no tier states, which § 6 parks as
+  `no_position` rather than dropping):
 
   | | Tycho-2 | CNS5 | SIMBAD | curated | none |
   |---|---|---|---|---|---|
@@ -846,15 +847,19 @@ test fixture:
 1. **Record parity.** Every prior record either produces a record
    resolving to the **same SID**, or appears on a dropped list with a
    reason code from a closed enum (`merge:<survivor>`,
-   `split:<siblings>`, `out-of-scope`, `no-position`,
-   `refused_no_defensible_parallax`, `no_parallax_published`, and the
+   `split:<siblings>`, `out-of-scope`, and the four **park** codes
+   `refused_no_defensible_parallax`, `no_parallax_published`,
+   `no_v_magnitude`, `no_position`, plus the
    spine retirement's `admitted:*` / `component:*` / `binding:*` codes of
    § 3.1, which ledger additions and identity outcomes the same way). No
    silent drops: a count that moves without a ledger entry fails the gate. The
-   last two are **parks**, not dissolutions: the record has no owned
-   distance and cannot be placed, so it stops being produced while its
-   SID and identity survive (§ 7, `docs/sid.md`) and Gaia DR4 reinstates
-   it. `data/membership/parked-ledger.tsv` is that ledger, gated
+   four park codes are **not** dissolutions: the record reaches no owned
+   parallax, no V or no direction and so cannot be built, but it stops being
+   produced while its SID and identity survive (§ 7, `docs/sid.md`) and Gaia
+   DR4 reinstates it. A record needs a place AND a brightness, which is why
+   the V and direction residuals park on the same ledger as the parallax
+   ones rather than dropping through a gate.
+   `data/membership/parked-ledger.tsv` is that ledger, gated
    by `scripts/catalog/membership/membership-manifest-gate.test.ts`, which
    subtracts it from the manifest by key before comparing designation
    multisets.

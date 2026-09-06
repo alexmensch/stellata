@@ -24,6 +24,16 @@ export const PARKED_REASONS = [
 
 export type ParkedReason = (typeof PARKED_REASONS)[number];
 
+/** The build-counts key each reason is pinned under. The ledger file
+ *  enumerates the rows; these pin how many, so a reason that starts or stops
+ *  firing fails the build rather than only moving a committed TSV. */
+export const PARKED_COUNT_KEY = {
+  refused_no_defensible_parallax: 'parkedRefusedNoDefensibleParallax',
+  no_parallax_published: 'parkedNoParallaxPublished',
+  no_v_magnitude: 'parkedNoVMagnitude',
+  no_position: 'parkedNoPosition',
+} as const satisfies Record<ParkedReason, string>;
+
 /** One manifest row the walk could not ship. Records leave the catalogue
  *  entirely, so nothing else in the build records that they existed. */
 export interface ParkedRecord {

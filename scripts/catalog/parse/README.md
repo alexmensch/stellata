@@ -109,12 +109,13 @@ labels already FINAL, so no label merge runs here (`../classic-ids/README.md`
 § The label merge).
 
 **Two rows leave without a record, and the difference is what the count means.**
-A **park** (steps 0 and 1) is a membership decision: the row reaches no
-parallax, or no V, so the § 6.1 ledger records it leaving and
-`data/membership/parked-ledger.tsv` names it. A **drop** (steps 2 and 5)
-is a reference table disagreeing with the tiers above it — never a membership
-decision — so both are pinned at 0 in `../build-catalog-expected.json` and a
-non-zero entry fails the build.
+A **park** (steps 0, 1 and 2) is a membership decision: the row reaches no
+parallax, no V, or no position, so the § 6.1 ledger records it leaving and
+`data/membership/parked-ledger.tsv` names it. A **drop** (step 5) is a
+reference table disagreeing with the tiers above it — never a membership
+decision — so it is pinned at 0 in `../build-catalog-expected.json` and a
+non-zero entry fails the build. Parks are pinned too, but at their measured
+counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
 
 0. **Parallax resolution** (`resolveParallax` in `../distance/parallax/`).
    Every tier is a catalogue this build pulled itself. A row no tier reaches
@@ -130,8 +131,10 @@ non-zero entry fails the build.
 2. **Direction resolution** (`resolveDirection` in `direction-cascade.ts`)
    selects the tier's solution. See `../distance/README.md` § Direction
    resolution. Every solution propagates rather than shipping its source's own
-   epoch, so a row no tier reaches resolves to null and the walk **drops** it —
-   `droppedNoDirection`.
+   epoch, so a row no tier reaches resolves to null and **parks** as
+   `no_position`: a distance with no direction has nothing to multiply. Mostly
+   HIP-only additions a bound sibling's parallax placed and printed HIP
+   photometry lit, which no positional tier covers.
 3. **Proper-motion rescue** (`resolvePmRescue`), where the direction tier
    states a position but no motion. See § Space-motion velocity.
 4. **Distance overrides**, in order, each superseding the last on the rows it
@@ -170,8 +173,11 @@ non-zero entry fails the build.
     (§ Positional constellation membership). Nothing here sets the
     DESIGNATION's constellation: the manifest carries no editorial `con` cell.
 
-Every tally the walk returns is incremented **after** step 5, so each partition
-sums to the record count rather than to the rows entering the walk.
+Every cascade tally the walk returns is incremented **after** step 5, so each
+partition sums to the record count rather than to the rows entering the walk.
+A parked row is therefore in none of them — `parkedVia`, over the closed reason
+enum, is the one place it is a number, and `distNone` / `vNone` stay pinned at
+0 because a shipped record cannot have reached no tier.
 
 `plxDistPc` / `plxVia` are build-time-only, like `vVia`: step 0's own inversion
 and the tier that supplied it, captured before any override layer fires so the

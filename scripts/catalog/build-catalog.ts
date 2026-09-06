@@ -121,6 +121,8 @@ import { assignDisplayNames } from './naming/display-names';
 import { readStars, type Star } from './parse/stars-parse';
 import {
   PARKED_LEDGER_FILE,
+  PARKED_COUNT_KEY,
+  PARKED_REASONS,
   formatParkedRecordsTsv,
   type ParkedRecord,
 } from './distance/parallax/parked-ledger';
@@ -416,7 +418,10 @@ async function main() {
     distCurated: 0,
     distNone: 0,
     distLowPrecisionParallax: 0,
-    distRefusedNoOwnedParallax: 0,
+    parkedRefusedNoDefensibleParallax: 0,
+    parkedNoParallaxPublished: 0,
+    parkedNoVMagnitude: 0,
+    parkedNoPosition: 0,
     directionGaia5p: 0,
     directionGaiaNssSystemic: 0,
     directionHip2Saturated: 0,
@@ -572,7 +577,7 @@ async function main() {
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
   counts.distLowPrecisionParallax = stats.distLowPrecisionParallax;
-  counts.distRefusedNoOwnedParallax = stats.distRefusedNoOwnedParallax;
+  for (const r of PARKED_REASONS) counts[PARKED_COUNT_KEY[r]] = stats.parkedVia[r];
   for (const v of DIST_VIA_VALUES) counts[DIST_VIA_COUNT_KEY[v]] = stats.distVia[v];
   counts.lmcCandidates = stats.lmcCandidates;
   counts.lmcOverridden = stats.lmcOverridden;

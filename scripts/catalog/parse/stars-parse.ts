@@ -53,7 +53,11 @@ import {
   DIST_VIA_VALUES,
   type DistVia,
 } from '../distance/parallax/parallax-cascade';
-import type { ParkedRecord } from '../distance/parallax/parked-ledger';
+import {
+  PARKED_REASONS,
+  type ParkedReason,
+  type ParkedRecord,
+} from '../distance/parallax/parked-ledger';
 import {
   emptyPairMemberParallaxIndex,
   lookupPairMemberParallax,
@@ -315,15 +319,16 @@ export function readStars(
     /** The § 6.1 dropped list — enumerated, because these rows leave the
      *  catalogue and nothing else records that they existed. */
     parked: ParkedRecord[];
+    /** The same rows counted per reason. The cascade partitions below run over
+     *  RECORDS, so a parked row is in none of them — this is the one place a
+     *  park is a number rather than a ledger line. */
+    parkedVia: Record<ParkedReason, number>;
     /** Rows whose SHIPPED distance inverts a parallax with worse than 20%
      *  fractional error, so the result is biased. They ship — no second source
      *  reaches them — and this count is how they stay visible for a Gaia DR4
      *  revisit. Bailer-Jones rows are excluded: there the posterior, not the
      *  inversion, handles the low-S/N case. */
     distLowPrecisionParallax: number;
-    /** Of the rows dropped for no owned parallax, those a skip rule refused a
-     *  value for rather than those nothing measured at all. */
-    distRefusedNoOwnedParallax: number;
     distVia: Record<DistVia, number>;
     lmcCandidates: number;         // rows inside the LMC sky cone (any PM)
     lmcOverridden: number;         // lmcCandidates passing the PM gate (snapped to LMC)
@@ -364,9 +369,9 @@ export function readStars(
   const dropped: ReadStarsDrops = { tooFar: 0 };
   let total = 0;
   const parked: ParkedRecord[] = [];
+  const parkedVia = emptyTallyPartition(PARKED_REASONS);
   let bjEligible = 0;
   let distLowPrecisionParallax = 0;
-  let distRefusedNoOwnedParallax = 0;
   let bjOverridden = 0;
   let lmcCandidates = 0;
   let lmcOverridden = 0;
@@ -444,14 +449,17 @@ export function readStars(
       ? directions.tycho2.get(simbadKeys.tyc) ?? null
       : null;
     const glieseRow = lookupGliese(gliese, simbadKeys.gl);
-    const parkedRecord = (reason: ParkedRecord['reason']): ParkedRecord => ({
-      tyc: simbadKeys.tyc,
-      hip,
-      hd: parseIntOrNull(row.hd),
-      gl: simbadKeys.gl,
-      gaiaSourceId,
-      reason,
-    });
+    const park = (reason: ParkedReason): void => {
+      parked.push({
+        tyc: simbadKeys.tyc,
+        hip,
+        hd: parseIntOrNull(row.hd),
+        gl: simbadKeys.gl,
+        gaiaSourceId,
+        reason,
+      });
+      parkedVia[reason]++;
+    };
 
     // Every distance inverts a parallax this build pulled itself. See
     // ../distance/parallax/README.md.
@@ -471,11 +479,9 @@ export function readStars(
     );
     // Not a `dropped` gate: a park is a deliberate § 6.1 ledger entry.
     if (plxRes.via === 'none') {
-      distViaCounts.none++;
-      if (plxRes.refused) distRefusedNoOwnedParallax++;
-      parked.push(parkedRecord(
-        plxRes.refused ? 'refused_no_defensible_parallax' : 'no_parallax_published',
-      ));
+      park(plxRes.refused
+        ? 'refused_no_defensible_parallax'
+        : 'no_parallax_published');
       continue;
     }
 
@@ -493,8 +499,7 @@ export function readStars(
       isSol ? SOL_APPARENT_V_MAGNITUDE : null,
     );
     if (vRes.v === null) {
-      vVia.none++;
-      parked.push(parkedRecord('no_v_magnitude'));
+      park('no_v_magnitude');
       continue;
     }
 
@@ -512,7 +517,7 @@ export function readStars(
     // reaches — the SIMBAD values cohort is still keyed on the spine and holds
     // no row for them.
     if (dirRes === null) {
-      parked.push(parkedRecord('no_position'));
+      park('no_position');
       continue;
     }
 
@@ -769,8 +774,8 @@ export function readStars(
       bjEligible,
       bjOverridden,
       parked,
+      parkedVia,
       distLowPrecisionParallax,
-      distRefusedNoOwnedParallax,
       distVia: distViaCounts,
       lmcCandidates,
       lmcOverridden,

@@ -205,8 +205,53 @@ describe('readStars manifest labels', () => {
       tyc: ORIGIN_TYC, hip: null, hd: 55, gl: ORIGIN_GL, gaiaSourceId: null,
       reason: 'no_v_magnitude',
     }]);
-    expect(stats.vVia.none).toBe(1);
+    expect(stats.parkedVia.no_v_magnitude).toBe(1);
     expect(stats.distVia.gliese_plx).toBe(0);
+  });
+
+  // The shipped cohort's shape: a HIP-only addition a bound sibling's parallax
+  // places and printed HIP photometry lights, which no positional tier reaches.
+  it('parks a row placed and lit but that no direction tier states', () => {
+    const { stars, stats } = readStars(
+      writeManifestTsv([{ hip: '4242', gl: ORIGIN_GL }]),
+      {
+        conAssignment: CON_ASSIGNMENT,
+        directions: tycho2Sources([]),
+        gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
+        hipVMag: new Map([[4242, 7.5]]),
+      },
+    );
+    expect(stars).toHaveLength(0);
+    expect(stats.parked).toEqual([{
+      tyc: null, hip: 4242, hd: null, gl: ORIGIN_GL, gaiaSourceId: null,
+      reason: 'no_position',
+    }]);
+    expect(stats.parkedVia.no_position).toBe(1);
+  });
+
+  // A park is counted once, in the park partition, and in none of the
+  // cascades — which is what lets every cascade partition sum to the record
+  // count, as claimed in ./README.md § Per-row pipeline.
+  it('counts a park in the park partition alone', () => {
+    const { stars, stats } = readStars(
+      writeManifestTsv([
+        { ...AT_ORIGIN_SIGHTLINE, hd: '55' },
+        { hip: '4242', gl: ORIGIN_GL },
+      ]),
+      {
+        conAssignment: CON_ASSIGNMENT,
+        directions: tycho2Sources([{ tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: null }]),
+        gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
+        hipVMag: new Map([[4242, 7.5]]),
+      },
+    );
+    expect(stars).toHaveLength(0);
+    const sum = (p: Record<string, number>): number =>
+      Object.values(p).reduce((a, b) => a + b, 0);
+    expect(sum(stats.parkedVia)).toBe(stats.parked.length);
+    expect(sum(stats.distVia)).toBe(stars.length);
+    expect(sum(stats.vVia)).toBe(stars.length);
+    expect(sum(stats.directionVia)).toBe(stars.length);
   });
 });
 

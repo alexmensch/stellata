@@ -450,9 +450,15 @@ export interface BuildCounts {
    *  the set at any time as `plx / e_plx < PARALLAX_LOW_PRECISION_SN` over the
    *  non-Bailer-Jones tiers. */
   distLowPrecisionParallax: number;
-  /** Of `distNone`, the rows a skip rule refused a value for — as against rows
-   *  nothing measured at all. § 5's residual policy counts the two apart. */
-  distRefusedNoOwnedParallax: number;
+  /** The § 6.1 parks, per reason — rows that reach no parallax, no V, or no
+   *  position and so build no record. They are in no cascade partition: those
+   *  run over records, and a parked row is not one. `refused_*` against
+   *  `no_parallax_published` is § 5's residual policy counting a refused
+   *  measurement apart from an absent one. */
+  parkedRefusedNoDefensibleParallax: number;
+  parkedNoParallaxPublished: number;
+  parkedNoVMagnitude: number;
+  parkedNoPosition: number;
   /** Direction cascade: rows whose sky direction came from a clean
    *  Gaia DR3 5p solution (includes the handful of 2p position-only
    *  fall-through rows with no HIP2 cover). */

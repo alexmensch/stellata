@@ -243,15 +243,17 @@ same identity when Gaia DR4 fits these blends. The drop is a park, and the
 reason code says so.
 
 **One ledger holds every § 6.1 park.** A row the V cascade never lights parks
-as `no_v_magnitude` alongside the two parallax reasons, because a single
-enumerated file per membership event is what § 6.1's no-silent-drops rule can
-be gated on. The `reason` column says which.
+as `no_v_magnitude`, and one no direction tier states as `no_position`,
+alongside the two parallax reasons — a single enumerated file per membership
+event is what § 6.1's no-silent-drops rule can be gated on. The `reason` column
+says which.
 
-**A park is a ledger entry, never a walk-gate drop.** The two
-`dropped*` counts (`droppedNoDirection`, `droppedTooFar`) stay pinned at zero —
-a non-zero one means a refreshed reference table disagreeing with the tiers
-above it, which is a different and unintended event. The park is counted as
-`distNone`, enumerated in `parked-ledger.tsv`, and gated by
+**A park is a ledger entry, never a walk-gate drop.** `droppedTooFar` — the one
+`dropped*` count left — stays pinned at zero: a non-zero entry means a
+refreshed reference table disagreeing with the tiers above it, which is a
+different and unintended event. Parks are pinned at their measured counts
+instead, one `parked*` key per reason (`PARKED_COUNT_KEY`), enumerated in
+`parked-ledger.tsv` and gated by
 `../../membership/membership-manifest-gate.test.ts`, which subtracts the ledger
 from the manifest by key before comparing designation multisets.
 
