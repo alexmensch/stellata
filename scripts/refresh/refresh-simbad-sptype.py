@@ -21,7 +21,7 @@ from simbad.specs import (  # noqa: E402
 )
 
 ROOT = REPO_ROOT
-SPINE = ROOT / "data" / "athyg" / "inherited-spine.tsv"
+MEMBERSHIP = ROOT / "data" / "membership" / "membership-manifest.tsv"
 WDS_XIDS_TSV = ROOT / "data" / "simbad" / "simbad_wds_xids.tsv"
 OUT = ROOT / "data" / "simbad" / "simbad_sptype.tsv"
 
@@ -43,20 +43,20 @@ RECOVERED_SAMPLE = 25
 def collect_oid_requests(client: rl.TapClient) -> request.OidRequest:
     """Compose every input source, resolve non-oid identifiers via the
     ident table, union into a deduplicated oid set."""
-    print("[1/2] spine identifier keys → SIMBAD oid (via ident)…")
-    keys = inputs.spine_request_keys(SPINE)
-    print(f"      spine rows: {keys.total} ({keys.keyless} carrying no key)")
-    resolved = request.resolve_spine_keys(client, keys)
+    print("[1/2] manifest identifier keys → SIMBAD oid (via ident)…")
+    keys = inputs.membership_request_keys(MEMBERSHIP)
+    print(f"      manifest rows: {keys.total} ({keys.keyless} carrying no key)")
+    resolved = request.resolve_membership_keys(client, keys)
     for line in resolved.report_lines():
         print(line)
-    print(f"      oids from the spine: {len(resolved.oids)} "
+    print(f"      oids from the manifest: {len(resolved.oids)} "
           f"(+{resolved.total_gained_by_widening} the widening reached alone)")
 
     print("[2/2] simbad_wds_xids.tsv simbad_oid → direct…")
     wds_oids = list(inputs.iter_wds_xids_oids(WDS_XIDS_TSV))
     new_from_wds = len(set(wds_oids) - resolved.oids)
     print(f"      WDS-xref oids: {len(wds_oids)}; "
-          f"{new_from_wds} not already covered by the spine")
+          f"{new_from_wds} not already covered by the manifest")
     resolved.oids.update(wds_oids)
 
     return resolved
@@ -65,7 +65,7 @@ def collect_oid_requests(client: rl.TapClient) -> request.OidRequest:
 def main() -> None:
     force = "--force" in sys.argv
 
-    sources = [SPINE, WDS_XIDS_TSV, Path(__file__), *simbad.source_files()]
+    sources = [MEMBERSHIP, WDS_XIDS_TSV, Path(__file__), *simbad.source_files()]
     if not force and rl.is_up_to_date(OUT, sources):
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
@@ -87,7 +87,7 @@ def main() -> None:
     print("\n=== Phase B2: union the namespaces of every unanswered row ===")
     added, added_bindings, union_report = union.union_unanswered(
         client,
-        spine_path=SPINE,
+        membership_path=MEMBERSHIP,
         bindings=resolved.bindings,
         rows=basic_rows,
         columns=BASIC_COLUMNS,
@@ -96,7 +96,7 @@ def main() -> None:
     for line in union_report.report_lines():
         print(line)
     for row, namespace, oid in itertools.islice(
-        union.iter_recovered_rows(SPINE, added_bindings),
+        union.iter_recovered_rows(MEMBERSHIP, added_bindings),
         RECOVERED_SAMPLE,
     ):
         cells = added.get(oid) or basic_rows[oid]

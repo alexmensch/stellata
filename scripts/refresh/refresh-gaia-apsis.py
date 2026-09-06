@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Refresh data/gaia/gaia_dr3_apsis.tsv — Gaia DR3 Apsis astrophysical
-parameters (Teff, logg, [M/H], A0, ESP-HS spectral type) per spine
+parameters (Teff, logg, [M/H], A0, ESP-HS spectral type) per membership
 source_id."""
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
-SPINE = ROOT / "data" / "athyg" / "inherited-spine.tsv"
+MEMBERSHIP = ROOT / "data" / "membership" / "membership-manifest.tsv"
 OUT = ROOT / "data" / "gaia" / "gaia_dr3_apsis.tsv"
 
 TSV_COLUMNS = [
@@ -63,15 +63,12 @@ EXPECTED_SCHEMA: dict[str, type | tuple[type, ...]] = {
 BATCH_SIZE = 5_000
 
 # DR3 is frozen — the 1000-source-id probe returned 999 rows (99.9% of
-# input). AT-HYG.gaia has 314,865 source_ids, so ~314,550 ± 5% is the
-# expected count. The earlier draft of the bead spec quoted ~266k; that
-# is the UNION-(teff+logg) coverage projection (~84.8%), not the query's
-# Matched-row count (unfiltered TAP returns all matched rows, incl. all-NULL
-# Apsis rows). Wider slack than the frozen-cross-walk pulls because this
-# count tracks the AT-HYG.gaia subset size, which shifts with each AT-HYG
-# release, not just archive re-indexing.
-EXPECTED_ROW_COUNT_MIN = 298_000
-EXPECTED_ROW_COUNT_MAX = 330_000
+# input). The manifest binds ~370 k source_ids, so ~370 k ± 5% is the
+# expected count: the query's matched-row count (unfiltered TAP returns
+# every matched row, all-NULL Apsis rows included), not the union-(teff+logg)
+# coverage projection below it. The band tracks the membership term's size.
+EXPECTED_ROW_COUNT_MIN = 350_000
+EXPECTED_ROW_COUNT_MAX = 390_000
 
 # Union-(teff+logg) coverage — the actual ingestable bucket. Floor sits
 # ~5 pts below the ~84.8% observed at last probe, absorbing Apsis
@@ -183,17 +180,17 @@ def write_row(row: Any) -> dict[str, Any]:
 def main() -> None:
     force = "--force" in sys.argv
 
-    if not force and rl.is_up_to_date(OUT, [Path(__file__), SPINE]):
+    if not force and rl.is_up_to_date(OUT, [Path(__file__), MEMBERSHIP]):
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
 
-    source_ids = rl.read_spine_source_ids(SPINE)
+    source_ids = rl.read_membership_source_ids(MEMBERSHIP)
     total = len(source_ids)
     if total == 0:
-        raise SystemExit(f"refresh-gaia-apsis: no source_ids in {SPINE}")
+        raise SystemExit(f"refresh-gaia-apsis: no source_ids in {MEMBERSHIP}")
     n_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
     print(
-        f"reading {total} spine source_ids → {n_batches} batches of "
+        f"reading {total} manifest source_ids → {n_batches} batches of "
         f"{BATCH_SIZE} on Gaia TAP (gaiadr3.astrophysical_parameters)"
     )
 
@@ -216,7 +213,7 @@ def main() -> None:
 
     rl.assert_row_count(
         matched, EXPECTED_ROW_COUNT_MIN, EXPECTED_ROW_COUNT_MAX, SCRIPT_NAME,
-        hint="upstream selection or AT-HYG.gaia subset has changed; "
+        hint="upstream selection or the manifest's source_id set has changed; "
         "investigate before re-pinning.",
     )
 
@@ -228,14 +225,14 @@ def main() -> None:
             ("(teff_gspspec AND logg_gspspec)",
              lambda r: _has_teff_logg(r, "teff_gspspec", "logg_gspspec")),
         ],
-        label="AT-HYG source_ids",
+        label="manifest source_ids",
     )
     if union_coverage < EXPECTED_UNION_COVERAGE_MIN:
         raise SystemExit(
             f"refresh-gaia-apsis: union (teff+logg) coverage "
             f"{union_coverage:.1%} below floor "
             f"{EXPECTED_UNION_COVERAGE_MIN:.0%} — Apsis pipeline output "
-            f"or AT-HYG cross-match has regressed; investigate."
+            f"or the manifest's bindings have regressed; investigate."
         )
 
     spectraltype_filled = sum(

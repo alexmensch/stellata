@@ -84,32 +84,33 @@ def athyg_str_or_none(cell: str | None) -> str | None:
     return s
 
 
-# ─── The inherited spine ──────────────────────────────────────────────
+# ─── The membership term ──────────────────────────────────────────────
 
-SPINE_SOURCE_ID_COLUMN = "gaia_source_id"
+MEMBERSHIP_SOURCE_ID_COLUMN = "gaia_source_id"
 
 
-def iter_spine_rows(path: Path) -> Iterator[Mapping[str, str]]:
-    """Stream `data/athyg/inherited-spine.tsv` as raw cell mappings.
+def iter_membership_rows(path: Path) -> Iterator[Mapping[str, str]]:
+    """Stream a membership table — `data/membership/membership-manifest.tsv`,
+    or the frozen spine it retired — as raw cell mappings.
 
-    The spine is the membership term (`docs/catalog-driver.md` § 3), so a
-    catalog-scoped request set derives from it and never from AT-HYG's own
+    The manifest is the membership term (`docs/catalog-driver.md` § 3.1), so
+    a catalog-scoped request set derives from it and never from AT-HYG's own
     CSV — which no refresh script reads.
     """
     with path.open(newline="") as fh:
         yield from csv.DictReader(fh, delimiter="\t")
 
 
-def read_spine_source_ids(path: Path) -> list[int]:
-    """Gaia DR3 source_ids off the spine's `gaia_source_id` column, in file
-    order. The column holds what the frozen build resolved rather than an
-    AT-HYG cell, so it carries no '0' sentinel and an empty cell means the
+def read_membership_source_ids(path: Path) -> list[int]:
+    """Gaia DR3 source_ids off the table's `gaia_source_id` column, in file
+    order. The column holds a binding the manifest justified rather than a
+    raw cell, so it carries no '0' sentinel and an empty cell means the
     no-Gaia tier.
     """
     return [
         int(cell)
-        for row in iter_spine_rows(path)
-        if (cell := row[SPINE_SOURCE_ID_COLUMN].strip())
+        for row in iter_membership_rows(path)
+        if (cell := row[MEMBERSHIP_SOURCE_ID_COLUMN].strip())
     ]
 
 

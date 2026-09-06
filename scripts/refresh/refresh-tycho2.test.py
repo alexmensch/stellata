@@ -57,11 +57,11 @@ class ParseTyc(unittest.TestCase):
 
 
 class RequestSet(unittest.TestCase):
-    def test_unions_the_spine_column_with_iv25s_own_tycs(self):
+    def test_unions_the_manifest_column_with_iv25s_own_tycs(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            spine = _write(
-                root, "spine.tsv", ["tyc", "hip"],
+            manifest = _write(
+                root, "manifest.tsv", ["tyc", "hip"],
                 [["1-2-1", "10"], ["3-4-1", "11"], ["", "12"]],
             )
             iv25 = _write(
@@ -69,17 +69,17 @@ class RequestSet(unittest.TestCase):
                 [["3", "4", "1", "999"], ["5", "6", "1", "998"]],
             )
             self.assertEqual(
-                t2.read_mentioned_tycs(spine, iv25),
+                t2.read_mentioned_tycs(manifest, iv25),
                 {(1, 2, 1), (3, 4, 1), (5, 6, 1)},
             )
-            self.assertEqual(t2.read_spine_tycs(spine), {(1, 2, 1), (3, 4, 1)})
+            self.assertEqual(t2.read_membership_tycs(manifest), {(1, 2, 1), (3, 4, 1)})
 
-    def test_a_spine_row_with_no_tyc_contributes_nothing(self):
+    def test_a_manifest_row_with_no_tyc_contributes_nothing(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            spine = _write(root, "spine.tsv", ["tyc"], [[""], ["  "]])
+            manifest = _write(root, "manifest.tsv", ["tyc"], [[""], ["  "]])
             iv25 = _write(root, "tyc2_hd.tsv", ["tyc1", "tyc2", "tyc3"], [])
-            self.assertEqual(t2.read_mentioned_tycs(spine, iv25), set())
+            self.assertEqual(t2.read_mentioned_tycs(manifest, iv25), set())
 
 
 class Tyc1Ranges(unittest.TestCase):
@@ -220,13 +220,13 @@ class WriteTable(unittest.TestCase):
 
 class SpineCoverage(unittest.TestCase):
     def test_full_cover_passes(self):
-        t2.assert_spine_covered(
+        t2.assert_membership_covered(
             {(1, 2, 1)}, {(1, 2, 1), (5, 5, 1)}, log=lambda _: None
         )
 
-    def test_an_unreached_spine_tyc_is_a_membership_event_not_a_short_pull(self):
+    def test_an_unreached_manifest_tyc_is_a_membership_event_not_a_short_pull(self):
         with self.assertRaises(SystemExit) as caught:
-            t2.assert_spine_covered(
+            t2.assert_membership_covered(
                 {(1, 2, 1), (3, 4, 1)}, {(1, 2, 1)}, log=lambda _: None
             )
         self.assertIn("3-4-1", str(caught.exception))

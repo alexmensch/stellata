@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Refresh data/bailer-jones/bailer-jones-dr3.tsv — Bailer-Jones 2021
-(VizieR I/352) Bayesian DR3 distance posteriors per spine source_id."""
+(VizieR I/352) Bayesian DR3 distance posteriors per membership source_id."""
 
 from __future__ import annotations
 
@@ -16,18 +16,18 @@ import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
-SPINE = ROOT / "data" / "athyg" / "inherited-spine.tsv"
+MEMBERSHIP = ROOT / "data" / "membership" / "membership-manifest.tsv"
 OUT = ROOT / "data" / "bailer-jones" / "bailer-jones-dr3.tsv"
 
 # 5000 ids → ~98 KB query, ~80 s round-trip on CDS TAP. 10000 was ~5 min
 # (superlinear server cost in IN-clause length).
 BATCH_SIZE = 5_000
 
-# Pinned coverage bounds. AT-HYG has ~315 k source_ids; the empirical first
-# 5000-id probe returned 98.7%, so ≥ 90% (~283 k) is the floor and the
-# upper bound is just AT-HYG itself (can't exceed input set size).
+# Pinned coverage bounds. The manifest binds ~370 k source_ids; the empirical
+# first 5000-id probe returned 98.7%, so ≥ 90% is the floor and the upper
+# bound is just the input set itself (a match cannot exceed it).
 EXPECTED_COVERAGE_MIN = 0.90
-EXPECTED_ROW_COUNT_MAX = 320_000
+EXPECTED_ROW_COUNT_MAX = 400_000
 
 # Distance precision: B-J posterior intervals are typically ±10% of the
 # median (e.g. ±30 pc on a 350 pc star), so 0.001 pc (millipc) preserves
@@ -135,17 +135,17 @@ def rename_row(row, vizier_to_paper: dict[str, str]) -> dict[str, object]:
 def main() -> None:
     force = "--force" in sys.argv
 
-    if not force and rl.is_up_to_date(OUT, [Path(__file__), SPINE]):
+    if not force and rl.is_up_to_date(OUT, [Path(__file__), MEMBERSHIP]):
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
 
-    source_ids = rl.read_spine_source_ids(SPINE)
+    source_ids = rl.read_membership_source_ids(MEMBERSHIP)
     total = len(source_ids)
     if total == 0:
-        raise SystemExit(f"refresh-bailer-jones: no source_ids in {SPINE}")
+        raise SystemExit(f"refresh-bailer-jones: no source_ids in {MEMBERSHIP}")
     n_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
     print(
-        f"reading {total} spine source_ids → {n_batches} batches of "
+        f"reading {total} manifest source_ids → {n_batches} batches of "
         f"{BATCH_SIZE} on CDS TAP (I/352/gedr3dis)"
     )
 
@@ -174,13 +174,13 @@ def main() -> None:
             ("r_med_photogeo",
              lambda r: rl.coerce_masked(r["r_med_photogeo"]) is not None),
         ],
-        label="AT-HYG source_ids",
+        label="manifest source_ids",
     )
     if coverage < EXPECTED_COVERAGE_MIN:
         raise SystemExit(
             f"{SCRIPT_NAME}: coverage {coverage:.1%} below floor "
-            f"{EXPECTED_COVERAGE_MIN:.0%} — VizieR table or AT-HYG source_id "
-            f"set has changed; investigate before re-pinning."
+            f"{EXPECTED_COVERAGE_MIN:.0%} — VizieR table or the manifest's "
+            f"source_id set has changed; investigate before re-pinning."
         )
     if matched > EXPECTED_ROW_COUNT_MAX:
         raise SystemExit(

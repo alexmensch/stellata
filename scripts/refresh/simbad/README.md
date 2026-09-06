@@ -13,19 +13,19 @@ specs.py     Declarative dataclasses — ColumnSpec for basic-table
              the long-format flux table, BibcodedGroup for the columns
              that ship only alongside their bibcode. Canonical catalogue
              of instances, plus WIDENING_LADDER and GAIA_RELEASES.
-inputs.py    Spine-driven feeders — spine_request_keys partitions rows
+inputs.py    Manifest-driven feeders — membership_request_keys partitions rows
              into per-namespace lookup keys AND collects each
              source_id-keyed row's other designations in the same pass,
              is_simbad_value_cohort is the § 5 value-tier predicate,
              gl_suffix normalises the GJ/Gl spellings. Plus the
              WDS-component oid iterator.
              Cost: the designation map is a dict per source_id-keyed row —
-             ~98 MB over the whole spine against ~46 MB for three flat
+             ~98 MB over the whole manifest against ~46 MB for three flat
              per-namespace dicts. Bought deliberately: it is what lets the
              request side look a namespace up by IdentLookup.tsv_name and
              stay generic over WIDENING_LADDER. Refresh-time only, never
              build:catalog and never the browser.
-request.py   Phase A — resolve a SpineRequestKeys partition to the
+request.py   Phase A — resolve a MembershipRequestKeys partition to the
              deduplicated oid set, with the widening ladder, its
              corroboration rule, and the per-namespace coverage report.
 query.py     ADQL builders + batched TAP executor. Wraps each
@@ -34,7 +34,7 @@ query.py     ADQL builders + batched TAP executor. Wraps each
              in ORDER BY). fetch_ident_lookups and fetch_ident_sets
              share one query and differ only by an insert strategy —
              rows must fold straight into their final shape, because at
-             spine scope this accumulator is ~100 MB and an
+             manifest scope this accumulator is ~100 MB and an
              intermediate copy doubles it.
 union.py     Phase B2 — the value-keyed union (§ The union asks every
              namespace a record reaches). Reads Phase A's per-namespace
@@ -51,7 +51,7 @@ tsv.py       Spec-driven TSV writer — basic columns, then ordered
              bibcode policy below; atomic rename via the shared
              refresh_lib path.
 simbad.test.py   stdlib unittest pins covering spec definitions,
-                 spine feeders, request composition, the widening
+                 manifest feeders, request composition, the widening
                  veto, query builders, coverage gates and TSV emit.
 __init__.py      Package marker + source_files(), the module list a
                  shell folds into its is_up_to_date sources.
@@ -94,12 +94,12 @@ never invisible.
 
 A row's primary key is the first namespace it carries, so a populated
 `gaia_source_id` cell keeps it out of every other namespace's request —
-**even when SIMBAD's `ident` table has no such id**. `resolve_spine_keys`
+**even when SIMBAD's `ident` table has no such id**. `resolve_membership_keys`
 therefore runs a second ladder over the source_ids the Gaia namespace did
 not reach, retrying each on the record's own HIP, then TYC, then GJ. Each
 rung asks only for what the rungs above left unbound, and the order is the
 one `docs/catalog-driver.md` § 5 gives the no-Gaia tier — both read it off
-`WIDENING_LADDER`, and `spine_request_keys` partitions the no-Gaia rows by
+`WIDENING_LADDER`, and `membership_request_keys` partitions the no-Gaia rows by
 iterating that same tuple, so the tier and the widening cannot drift apart.
 
 **Read-back does not depend on that order.** A widened row is joinable
@@ -132,11 +132,11 @@ union over the namespaces the record itself carries can.
 `union.py` runs after the basic-table pull, because the question it asks is
 about the VALUE and nothing before Phase B knows it:
 
-1. Walk the spine. For each row, collect every namespace it can be asked
+1. Walk the manifest. For each row, collect every namespace it can be asked
    under and look each up in Phase A's bindings.
 2. A row one bound object answers is done — **`answered` is the common
    case and it costs no request at all**, which is what keeps the pass
-   cheap over the whole spine: 280,676 of 313,257 rows ask nothing.
+   cheap over the whole manifest: 280,676 of 313,257 rows ask nothing.
 3. Otherwise ask the namespaces Phase A never bound. A namespace it DID
    bind is not re-asked: it has answered, with the absence of a value.
 4. **Adjudicate every binding.** Each one rests on a designation alone, so
@@ -200,7 +200,7 @@ type. It reads **every Gaia release SIMBAD keys a cross-ID under**, not DR3
 alone, and returns one of three verdicts per binding:
 
 - **Corroborated** — SIMBAD holds the asking id itself, under any release.
-  This is what reaches a spine cell carrying a **DR2 id in the DR3
+  This is what reaches a membership cell carrying a **DR2 id in the DR3
   column**: the Gaia namespace misses, SIMBAD's DR3 id for the object
   differs, and reading that difference as "these are different stars"
   would be wrong — it is a disagreement about the release
@@ -221,7 +221,7 @@ widening **drops** it before the request: that binding is the row's only
 route to a value, so an unadjudicable one is worth nothing. The union
 **keeps** it, uncorroborated: nothing can contradict an id that was never
 singular, and adjudicating against an arbitrary one of the claimants would
-veto on a coin toss. One spine designation is in this position (`GJ 277A`).
+veto on a coin toss. One membership designation is in this position (`GJ 277A`).
 
 ## Why the union asks no Gaia rung
 
@@ -236,7 +236,7 @@ job and is finished; only the second is the union's.
 ## Used by
 
 - [`refresh-simbad-sptype.py`](../README.md) — per-source `sp_type` /
-  `sp_qual` / `sp_bibcode` / `otype` + cross-IDs, over the whole spine.
+  `sp_qual` / `sp_bibcode` / `otype` + cross-IDs, over the whole manifest.
 - [`refresh-simbad-values.py`](../README.md) — bibcoded rv / parallax /
   PM / coordinates + B/V fluxes, over the § 5 value cohort.
 - [`refresh-simbad-wds-xids.py`](../README.md) — per-WDS-component
