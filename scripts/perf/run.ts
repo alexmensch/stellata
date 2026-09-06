@@ -17,7 +17,8 @@ import type { DwellSummary } from './dwell-pure';
 import { applyRoundTrip, measureDwell, measureSweep, type Measured } from './measure';
 import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './perf-go-lib';
 import {
-  PIN_SCHEMA, PinError, assertPinFile, compareToPin, pinDiffFails, pinFromRun, unacceptedMarks,
+  PIN_SCHEMA, PinError, assertPinFile, citeRunPath, compareToPin, pinDiffFails, pinFromRun,
+  unacceptedMarks,
   type PinDiff, type PinFile,
 } from './pin-pure';
 import {
@@ -107,6 +108,20 @@ function packageVersion(): string {
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((done) => { setTimeout(done, ms); });
+
+/** Runs are filed in the main checkout, which is not this worktree's root:
+ *  `--git-common-dir` prints `<main checkout>/.git` from either. */
+function mainCheckout(): string {
+  try {
+    const common = execFileSync(
+      'git', ['rev-parse', '--path-format=absolute', '--git-common-dir'],
+      { cwd: REPO_ROOT, encoding: 'utf-8' },
+    ).trim();
+    return dirname(common);
+  } catch {
+    return REPO_ROOT;
+  }
+}
 
 function gitMeta(): { commit: string; dirty: boolean } {
   const git = (...argv: string[]): string =>
@@ -409,7 +424,9 @@ function writePin(args: RunArgs, file: PerfFile, against: PinDiff | null): boole
       return true;
     }
   }
-  const { pin, refusals } = pinFromRun(file, { sourceRun: args.json!, version: packageVersion(), accepted });
+  const { pin, refusals } = pinFromRun(file, {
+    sourceRun: citeRunPath(args.json!, mainCheckout()), version: packageVersion(), accepted,
+  });
   if (pin === null) {
     console.error(`perf: no pin written —\n  ${refusals.join('\n  ')}`);
     return true;

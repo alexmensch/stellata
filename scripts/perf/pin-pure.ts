@@ -2,6 +2,7 @@
 // on one GPU, and the verdicts of a later run against it. Operator rules:
 // RELEASING.md § Perf pin; mechanics: pins/README.md.
 
+import { basename, relative, resolve } from 'node:path';
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { BUFFER_MPX_TOLERANCE, VERDICT_MARK, band, type DiffRefusal, type Verdict } from './diff-pure';
 import type { StateGuard } from './dwell-pure';
@@ -200,6 +201,18 @@ export function pinFromRun(file: PerfFile, source: PinSource): { pin: PinFile | 
     },
     refusals,
   };
+}
+
+/**
+ * How the pin cites the run it was summarised from. Runs are filed under
+ * `.perf-runs/<date>/` in the main checkout (README.md § Recording), so that
+ * is the path worth committing: an absolute one names one machine's home
+ * directory, resolves nowhere else, and this file ships in a public repo.
+ * A run stored outside the checkout keeps its name and loses its location.
+ */
+export function citeRunPath(jsonPath: string, mainCheckout: string): string {
+  const rel = relative(mainCheckout, resolve(jsonPath));
+  return rel === '' || rel.startsWith('..') ? basename(jsonPath) : rel;
 }
 
 export function pinFloorMs(pinnedMs: number): number {

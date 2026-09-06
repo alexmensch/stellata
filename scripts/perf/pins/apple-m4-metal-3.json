@@ -22,7 +22,7 @@
   },
   "version": "3.44.4",
   "takenAt": "2026-09-05T21:54:47.012Z",
-  "sourceRun": "/Users/alexm/github/alexmensch/stellata/.perf-runs/2026-09-05/pin-1-all-both-dwell-cold.json",
+  "sourceRun": ".perf-runs/2026-09-05/pin-1-all-both-dwell-cold.json",
   "rows": [
     {
       "key": "sol|webgl2",

@@ -9,6 +9,7 @@ import {
   PinError,
   adapterSlug,
   assertPinFile,
+  citeRunPath,
   compareToPin,
   pinDiffFails,
   pinFloorMs,
@@ -259,6 +260,17 @@ describe('unacceptedMarks — writing a pin must not ratchet the frame upward', 
     const cheaper = scenario('sol', 'webgpu', dwell(stats(25.2), stats(20.9)));
     expect(unacceptedMarks(compareToPin(pinOf([SOL_GPU]), file([cheaper])), {})).toEqual([]);
     expect(unacceptedMarks(compareToPin(pinOf([SOL_GL]), file([SOL_GL])), {})).toEqual([]);
+  });
+});
+
+describe('citeRunPath — the pin ships in a public repo', () => {
+  it('cites a run under the main checkout by its repo-relative path', () => {
+    expect(citeRunPath('/Users/alexm/github/stellata/.perf-runs/2026-09-05/pin.json', '/Users/alexm/github/stellata'))
+      .toBe('.perf-runs/2026-09-05/pin.json');
+  });
+
+  it('keeps the name and drops the location of a run stored elsewhere', () => {
+    expect(citeRunPath('/tmp/scratch/pin.json', '/Users/alexm/github/stellata')).toBe('pin.json');
   });
 });
 

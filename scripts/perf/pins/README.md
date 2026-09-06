@@ -5,7 +5,8 @@ the canon vantages on one GPU, taken cold: what every render-path PR diffs
 against and re-takes. Operator rules — when a PR must run it, what a mark
 means, how the pin advances — are `RELEASING.md` § Perf pin; the code is
 `../pin-pure.ts`, the flags `../README.md` § Invocation. Runs stay under
-`.perf-runs/` in the main checkout; the pin cites the file it came from.
+`.perf-runs/` in the main checkout; the pin cites the file it came from by
+its path relative to that checkout, since this file ships in a public repo.
 
 ## Taking one
 
