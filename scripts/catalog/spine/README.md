@@ -243,7 +243,7 @@ unless another home is named; the committed gates are
 - **Record parity — zero drops.** `recordCount` was unchanged across the
   swap itself. The figure it held then is not quoted here: it has moved
   twice since — the value-half children park rows, and the manifest admits
-  63,677 more — and quoting it invites a later reader to take it for the
+  63,672 more — and quoting it invites a later reader to take it for the
   count before some other change. `../build-catalog-expected.json` is
   always the live one. Membership was exactly the
   spine, every walk gate read 0, and `sid:check` resolved every

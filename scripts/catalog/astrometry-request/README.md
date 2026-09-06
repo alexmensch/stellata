@@ -37,7 +37,7 @@ comparator — and it is what matches the ordering
 
 ## Request and record build name the same set by construction
 
-**370,311 source_ids** over 376,934 manifest rows; the 6,623 rows carrying
+**370,307 source_ids** over 376,929 manifest rows; the 6,622 rows carrying
 none are the no-Gaia tier.
 
 Reading the column is what makes the two agree — `readStars` reads the same
@@ -54,7 +54,7 @@ different sets, so the request is the union of all three:
 
 | Contribution | Ids | Consumer |
 |---|---|---|
-| the manifest's `gaia_source_id` column | 370,311 | the record build: direction / rv / V / ci cascades |
+| the manifest's `gaia_source_id` column | 370,307 | the record build: direction / rv / V / ci cascades |
 | `../classic-ids/`' binding-gate candidates | 99,799, +521 beyond the manifest | the gate's `phot_g_mean_mag` evidence |
 | `multiples.tsv`' kept-physical pair members | 16,108, +7,279 beyond the two above | the parallax cascade's `pair_member_parallax` tier |
 
