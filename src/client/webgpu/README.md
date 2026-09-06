@@ -341,7 +341,7 @@ carries the argument, what it gives up, and the fallbacks).
 
 **The contract is satisfied by removing writes, never by adding draws.**
 A port child that answers "one program per pass" with a second draw over
-the same 380k instances has made the migration cost more per frame than
+the same 390k instances has made the migration cost more per frame than
 the renderer it replaces — which is the one outcome the port is not
 allowed to have. Draw count per subsystem is part of parity, alongside
 what the pixels look like.

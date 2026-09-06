@@ -55,7 +55,7 @@ re-upload flag and `BinaryOrbitField`'s baseline invalidation — is
 passed in by the shell, which is the only thing that knows the
 attribute and the lazily-attached binary field.
 
-**One rewrite per frame.** Rewriting the 380k-star local buffer costs
+**One rewrite per frame.** Rewriting the 390k-star local buffer costs
 a full pass plus a GPU re-upload, and two of them can be provoked in
 the same frame: a fast time-scrub crosses an epoch bucket while a hard
 focus has drifted past `FOCAL_ORIGIN_DRIFT_RATIO`, so the epoch
@@ -75,7 +75,7 @@ new landing there has to sit after the flush instead.
 `star-frame.ts`. The core depth-mask gate (`shouldEnableCoreMask`) and
 the star local-depth membership scan both need "which stars sit
 within `dThresh` pc of the camera?" The original implementation
-scanned all 380k positions every frame in every mode.
+scanned all 390k positions every frame in every mode.
 
 Build-time setup: sort the indices by distance from Sol once; store
 the sorted index and parallel distances as `Uint32Array` +
@@ -86,4 +86,4 @@ for `[camDistFromSol − dThresh, camDistFromSol + dThresh]`, and
 walk only that window. Triangle-inequality guarantees no candidate
 falls outside it.
 
-Typical window: 50–500 candidates instead of 380k.
+Typical window: 50–500 candidates instead of 390k.

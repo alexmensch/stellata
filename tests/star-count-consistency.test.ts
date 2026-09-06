@@ -48,7 +48,7 @@ describe('the catalogue states its own size', () => {
     // A catalogue refresh that moves this fails here rather than silently
     // ageing every README: re-derive with
     // `grep -rn '\b380k\b' src docs scripts tests`, sweep, then update.
-    expect(`${Math.round(count / 10_000) * 10}k`).toBe('380k');
+    expect(`${Math.round(count / 10_000) * 10}k`).toBe('390k');
   });
 
   // The rendered set has been larger than the AT-HYG spine ever since

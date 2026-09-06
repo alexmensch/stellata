@@ -66,7 +66,7 @@ describe('StarShardTable mapping', () => {
 });
 
 describe('StarShardTable SID domain', () => {
-  it('single shard answers the catalog column itself — no 380k copy', () => {
+  it('single shard answers the catalog column itself — no 390k copy', () => {
     const cat = makeEmptyCatalog(3);
     const table = new StarShardTable([catalogShard(cat)]);
     expect(table.sids()).toBe(cat.sid);

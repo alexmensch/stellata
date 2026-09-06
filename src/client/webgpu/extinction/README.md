@@ -94,31 +94,31 @@ none.
 Both figures below are the WebGL2 pass's unchanged — the port moved no
 work and allocated nothing new, which is the claim worth having written
 down rather than re-derived. **Re-derive rather than trust them**: they
-are `recordCount` (384,115 — `../../../../scripts/catalog/build-catalog-expected.json`)
-through `avTexHeight`, which gives 376 rows, and both move with the
+are `recordCount` (388,070 — `../../../../scripts/catalog/build-catalog-expected.json`)
+through `avTexHeight`, which gives 379 rows, and both move with the
 catalog. `debug.memory()` prices the live app
 (`../../debug/memory/README.md`), and on a WebGL2 boot it *measures* the
 A_V target rather than taking this table's word.
 
 | Resident | Size |
 | --- | --- |
-| A_V target (`RedFormat` + `FloatType`, 4 B/texel) | 1024 × 376 × 4 B ≈ 1.47 MiB |
-| Position texture (`RGBAFormat` + `FloatType`, 16 B/texel) | 1024 × 376 × 16 B ≈ 5.88 MiB |
+| A_V target (`RedFormat` + `FloatType`, 4 B/texel) | 1024 × 379 × 4 B ≈ 1.48 MiB |
+| Position texture (`RGBAFormat` + `FloatType`, 16 B/texel) | 1024 × 379 × 16 B ≈ 5.93 MiB |
 
-So ~7.3 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
+So ~7.4 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
 `Float32Array` the position `DataTexture` keeps on the JS heap after
 upload (three does not release it, and the WebGL2 twin holds the same).
 Both survive on an integrated or mobile GPU without argument, and 1024 is
 inside every `maxTextureDimension2D` — the layout's width was chosen for
 that.
 
-**A recompute is ~18.4M volume samples**: one fragment per star × 48
-taps, 384,115 × 48. That is the whole per-recompute cost and it is paid
+**A recompute is ~18.6M volume samples**: one fragment per star × 48
+taps, 388,070 × 48. That is the whole per-recompute cost and it is paid
 *per frame* while the camera keeps moving more than
 `RECOMPUTE_EPSILON_PC` between frames — a warp pays it every frame, which
 is the case to measure, not the idle one. An idle camera costs zero, and
 the visibility prefilter never applies here: the prepass marches every
-texel, including the 71 past the catalog, because the pass has no
+texel, including the 26 past the catalog, because the pass has no
 per-star magnitude to gate on. Unmeasured on this backend — no
 `gpu.frame` differential has been taken for it yet, so treat the parity
 claim as structural (same algorithm, same tap count, same layout) rather
