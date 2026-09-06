@@ -19,6 +19,7 @@ import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './perf-go-lib';
 import { PIN_SCHEMA, PinError, assertPinFile, compareToPin, pinFromRun, type PinFile } from './pin-pure';
 import {
   DWELL_METHOD,
+  bufferShortfall,
   describeProbe,
   markerVerdict,
   methodFor,
@@ -62,6 +63,7 @@ const RAF_PROBE_FRAMES = 60;
 const EXIT = { ok: 0, failed: 1, usage: 2, unarmed: 3 } as const;
 
 class SoftwareAdapter extends Error {}
+class BufferShortfall extends Error {}
 class PageCrash extends Error {}
 
 function consumeMarker(): MarkerVerdict {
@@ -221,6 +223,8 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
       `(${(1000 / record.idleRafMs).toFixed(1)} Hz) · drawing buffer ${buffer.width}x${buffer.height} ` +
       `(${record.bufferMpx} Mpx)`,
     );
+    const shortfall = bufferShortfall(record.viewport, buffer);
+    if (shortfall !== null) throw new BufferShortfall(shortfall);
 
     measuring = true;
     if (args.mode === 'differential') {
@@ -300,7 +304,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
     }
   } catch (e) {
     if (crashed) throw new PageCrash(`${name}: the page crashed`);
-    if (e instanceof SoftwareAdapter) throw e;
+    if (e instanceof SoftwareAdapter || e instanceof BufferShortfall) throw e;
     record.failed = true;
     record.failure = (e as Error).message;
     console.error(`${name} FAILED: ${record.failure}`);
@@ -470,7 +474,7 @@ async function main(): Promise<number> {
       console.error(`perf: ABORT — software renderer (${e.message}). Nothing measured on it counts.`);
       return EXIT.failed;
     }
-    if (e instanceof PageCrash) {
+    if (e instanceof PageCrash || e instanceof BufferShortfall) {
       console.error(`perf: ABORT — ${e.message}`);
       return EXIT.failed;
     }

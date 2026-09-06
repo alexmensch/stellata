@@ -46,6 +46,24 @@ export function softwareRenderer(p: AdapterProbe): string | null {
   return p.webgpu?.isFallbackAdapter ? 'WebGPU fallback adapter' : null;
 }
 
+/** The app caps its pixel ratio, so a `--dpr` past the cap draws at the cap
+ *  while the header claims more. Aborts the run, not one scenario: every
+ *  context would price the same smaller buffer under the same wrong label. */
+export function bufferShortfall(
+  viewport: { width: number; height: number; dpr: number },
+  buffer: { width: number; height: number },
+): string | null {
+  const wanted = { width: Math.round(viewport.width * viewport.dpr), height: Math.round(viewport.height * viewport.dpr) };
+  if (buffer.width >= wanted.width - 1 && buffer.height >= wanted.height - 1) return null;
+  const effective = (buffer.width / viewport.width).toFixed(2);
+  return (
+    `drawing buffer ${buffer.width}x${buffer.height} is under the requested ` +
+    `${viewport.width}x${viewport.height} @ dpr ${viewport.dpr} = ${wanted.width}x${wanted.height}: ` +
+    `the app capped the pixel ratio (effective dpr ${effective}). ` +
+    'A larger buffer comes from --width/--height, not --dpr.'
+  );
+}
+
 export function describeProbe(p: AdapterProbe): string {
   const webgl = p.webgl
     ? `${p.webgl.renderer} · ${p.webgl.vendor} · EXT_disjoint_timer_query_webgl2 ${p.webgl.timerQuery ? 'present' : 'ABSENT'}`

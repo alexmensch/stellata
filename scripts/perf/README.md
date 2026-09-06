@@ -75,8 +75,7 @@ Defaults: Sol, WebGL2, differential, every present pass, the backend's best
 clock, 1280×800 at dpr 2 (4.096 Mpx), headless. The priceFrame knobs
 (`--dwell-frames`, `--warmup-frames`, `--settle-frames`, `--budget-ms`) pass
 straight through; unset ones take priceFrame's own defaults. `--mode probe`
-boots, settles and prints the adapter block and the idle rAF period without
-a sweep.
+boots, settles and prints the adapter block and the idle rAF period, no sweep.
 
 `--empty-passes` is the `emptyPass` row's own knob: how many empty render
 passes it adds while "disabled". One pass often falls under `bracketMs` and
@@ -104,11 +103,11 @@ the table `raf-delta`, and the same goes for `--passes`, `--budget-ms`,
 `--dwell-frames`, `--settle-frames` and `--no-interleave` outside
 `differential`, `--frames` outside dwell and sweep, `--roundtrip` outside
 dwell, and `--scales` outside sweep. Only flags actually typed are checked,
-so a default never trips it,
-and `--warmup-frames` is exempt because every mode absorbs the same ramp.
-The in-app instrument takes the same posture on a pin it cannot honour
-(`src/client/debug/frame-cost/README.md` § Preconditions); a typed command
-line is no improvement if the honoured-pin illusion survives it.
+so a default never trips it, and `--warmup-frames` is exempt because every
+mode absorbs the same ramp. The in-app instrument takes the same posture on a
+pin it cannot honour (`src/client/debug/frame-cost/README.md`
+§ Preconditions); a typed command line is no improvement if the honoured-pin
+illusion survives it.
 
 Exit codes: **0** ok · **1** a scenario failed, was tainted, priceFrame
 refused, the adapter was software, or the JSON could not be written · **2**
@@ -399,10 +398,9 @@ Sweeps are never diffed — a slope is not a cost.
 ## Pinning
 
 `--mode dwell --json <run> --pin pins/<slug>.json` summarises a run as the
-committed perf pin; `--against-pin <path>` prints the verdicts and exits 1
-on any `✗`. The file, the floor, the cadence and ceiling rules and the
-refusals: `pins/README.md`. When a PR must run it and what a mark means:
-`RELEASING.md` § Perf pin.
+committed perf pin; `--against-pin <path>` prints the verdicts and exits 1 on
+any `✗`. File, floor, cadence and ceiling rules, refusals: `pins/README.md`.
+When a PR must run it and what a mark means: `RELEASING.md` § Perf pin.
 
 ## Traps
 
@@ -433,9 +431,11 @@ refusals: `pins/README.md`. When a PR must run it and what a mark means:
   `$( a || b )` capture concatenates both outputs. Pinned by
   `perf-go-lib.test.ts`, which asserts bare seconds rather than a
   non-zero exit.
-- The default viewport is 1280×800 @ dpr 2 = 4.096 Mpx. The hand-run tables
-  in the frame-cost README were taken at 6.774 Mpx (a 2560×2646 buffer);
-  they are not comparable to a default-viewport run.
+- **A larger buffer comes from `--width`/`--height`, never `--dpr` above 2.**
+  The app caps its pixel ratio at 2 (`stellata.ts`, `setPixelRatio`): a higher
+  `--dpr` draws at 2 while the header claims more, so the runner aborts (exit
+  1) when the buffer comes back under viewport × dpr, naming the effective
+  ratio. The frame-cost README's hand-run tables (6.774 Mpx) never compare.
 
 ## Recording
 
