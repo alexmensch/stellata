@@ -124,14 +124,15 @@ the same number from two directions.
 
 ## What the tier reaches is decided by other fields
 
-`is_simbad_value_cohort` (`scripts/refresh/simbad/inputs.py`) enumerates a
-spine row when **any** of `pos_src` / `dist_src` / `mag_src` / `rv_src` /
-`pm_src` carries a non-first-order mark, or the row has no source_id at all.
-So this tier's reach is the union cohort, not an rv-specific one: it is why
-734 rows gain a velocity they never had a printed cell for, and why 562 rows
-the printed cell used to cover are not in the pull. A row whose rv was absent
-and whose every other mark is first-order is unreachable here however good a
-velocity SIMBAD holds for it.
+`simbad_value_cohort` (`scripts/refresh/simbad/inputs.py`) enumerates a
+manifest row unless Gaia's own 5p table states every § 5 value for its
+source_id **and** its identity is first-hand (a `crosswalk_gated` binding
+plus a TYC or a HIP). So this tier's reach is the union cohort, not an
+rv-specific one — but the value half now includes Gaia's own `radial_velocity`
+column, so a row Gaia published no velocity for is in the pull whatever its
+identity says. That is what the spine-scoped predicate could not express: it
+reached a row only where AT-HYG had *printed* a second-order rv, and 5,135 of
+the rows it selected were `rv_src`-only for that reason.
 
 **No SIMBAD-based rv validation exists to exclude these rows from.** § 5's
 validation-independence rule bites where a SIMBAD tier and a SIMBAD validator

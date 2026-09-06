@@ -93,6 +93,8 @@ def athyg_str_or_none(cell: str | None) -> str | None:
 
 MEMBERSHIP_SOURCE_ID_COLUMN = "gaia_source_id"
 
+MEMBERSHIP_BINDING_COLUMN = "binding"
+
 MEMBERSHIP_MANIFEST = REPO_ROOT / "data" / "membership" / "membership-manifest.tsv"
 
 
