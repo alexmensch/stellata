@@ -12,8 +12,9 @@ retired with the driver swap: it ran `readStars` over the AT-HYG CSV, and
 that walk no longer exists — `readStars` reads this file instead.
 `stellata-3bsf.8` replaces the spine by re-sourcing every record from the
 primaries AT-HYG merged, which is a new artifact, not a regeneration of
-this one; the rule it re-sources under, and the measurement behind it, are
-`docs/catalog-driver.md` § 3.1 and § The primaries audit below.
+this one: `../membership/README.md` — the membership manifest, built and
+gated against this file. The rule it re-sources under, and the measurement
+behind it, are `docs/catalog-driver.md` § 3.1 and § The primaries audit below.
 
 ## Files in this area
 
@@ -41,10 +42,12 @@ scripts/catalog/spine/
                                   from the raw cross-walks with SIMBAD's
                                   cross-IDs as the witness, and the records
                                   the primaries admit that the spine lacks.
-  primaries-audit.ts              `pnpm run audit:spine-primaries` — loads
-                                  the tables, prints the report; --out=<dir>
-                                  writes every row behind every count
-                                  (§ The primaries audit).
+  primaries-audit.ts              `pnpm run audit:spine-primaries` — prints
+                                  the report; --out=<dir> writes every row
+                                  behind every count (§ The primaries audit).
+  primaries-tables.ts             Loads the frozen primary tables the audit
+                                  and ../membership/ both measure against —
+                                  one table set for both instruments.
 ```
 
 ## Where each column comes from

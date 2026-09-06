@@ -81,7 +81,7 @@ function tycho2Sources(
       epoch: CATALOG_SCENE_EPOCH,
       pmRaMasyr: 0, pmDecMasyr: 0,
       btMag: r.vMag, vtMag: r.vMag,
-      fromIcrs: false, isPhotocentre: false,
+      fromIcrs: false, isPhotocentre: false, hip: null,
     }])),
     ...overrides,
   };
@@ -275,7 +275,7 @@ describe('readStars PM rescue', () => {
         raDeg: 0, decDeg: 0,
         epoch: CATALOG_SCENE_EPOCH,
         pmRaMasyr: pm.pmRaMasyr, pmDecMasyr: pm.pmDecMasyr,
-        btMag: 10, vtMag: 10, fromIcrs: false, isPhotocentre: false,
+        btMag: 10, vtMag: 10, fromIcrs: false, isPhotocentre: false, hip: null,
       }]]),
       ...overrides,
     };
@@ -439,7 +439,7 @@ describe('readStars advances the position on a rescued PM', () => {
           epoch: TYCHO2_ICRS_EPOCH,
           pmRaMasyr: null, pmDecMasyr: null,
           btMag: 10.0, vtMag: 10.0,
-          fromIcrs: true, isPhotocentre: false,
+          fromIcrs: true, isPhotocentre: false, hip: null,
         }]]),
       },
     },

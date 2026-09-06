@@ -59,6 +59,9 @@ lives in the subfolders.
 - `spine/` — the membership term: the frozen
   `data/athyg/inherited-spine.tsv`, its codec, and the two gates holding it
   to the build it snapshots. `parse/` streams it through `iterSpineTsv`.
+- `membership/` — the primaries-derived membership manifest
+  (`pnpm run build:membership` → `data/membership/`) and its replacement
+  parity gate. `readStars` switches onto it in `stellata-3bsf.8.3`.
 - `validate/` — the Tier-A/B validation harness, `verify-catalog`, the
   SIMBAD-sample cross-check, and the frozen regression corpora.
 

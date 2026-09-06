@@ -38,6 +38,19 @@ ownership alone is not. An `in_progress` bead with matching uncommitted edits
 in a worktree usually means another live session owns it: do **not** pick it
 up, run gates against it, commit, push, or close it without confirming first.
 
+**A claim is that session's lock, and clearing one interrupts it.** So never
+write `--status` or `--assignee` on a bead you did not claim yourself — not to
+tidy a field, and above all not to undo something you take for your own side
+effect. `bd update --claim` is the only thing that claims; a plain
+`--body-file` / `--title` / `--notes` write does not, so a bead that is
+`in_progress` after your edit was already claimed by someone else.
+
+The trap is a **stale read**: `bd show` output from earlier in the session says
+nothing about now, and a bead can be claimed between your read and your write.
+Re-read immediately before writing, and where a field's history decides it,
+read Dolt (§ Recovering a wiped field) rather than inferring from what you
+remember seeing.
+
 ## Recovering a wiped field
 
 bd auto-commits every write to Dolt, so a blanked description is recoverable:

@@ -164,8 +164,11 @@ Measured 2026-09-04 by `pnpm run audit:spine-primaries`
 (`scripts/catalog/spine/primaries-audit.ts`). **Every figure in this section
 comes from that one command**, and `--out=<dir>` writes the rows behind each
 of them — including the per-row `attestation.tsv` backing each "attested by"
-count. The retirement turns on whether a record can exist without AT-HYG's
-say-so, so the measurement is per spine row against the frozen tables of § 2
+count. The exceptions are the post-admission counts and the binding classes
+under *The rule* below, which `pnpm run build:membership` prints and
+`scripts/catalog/membership/membership-manifest-expected.json` pins. The
+retirement turns on whether a record can exist without AT-HYG's say-so, so the
+measurement is per spine row against the frozen tables of § 2
 plus Tycho-2 `I/259`, Gliese `V/70A`, HIP2, the WGSN tables and the two DR3
 best-neighbour walks — never against the overlay's post-join columns, which
 under-state it: a designation can attest a record that has no source_id to
@@ -235,7 +238,10 @@ reaches, the no-Gaia cohort that ships designation-keyed on the § 5 tiers.
 With Sol that accounts for all 313,257.
 
 **Additions: the primaries admit ~64k records the spine lacks, and 55,008 of
-them are one upstream defect.** IV/25 numbers **60,344** Tycho-2 stars no
+them are one upstream defect.** Every figure in this paragraph is counted per
+primary, before the grouping and admission *The rule* below applies; what ships
+is 63,672 records, and that paragraph reconciles the two. IV/25 numbers
+**60,344** Tycho-2 stars no
 spine row carries (a further 394 HD numbers, on 393 TYCs, land on existing
 records). AT-HYG's version notes take HD "from HYG if known, otherwise
 Tycho-2" through the Fabricius 2002 link table — IV/25 itself — yet of its
@@ -276,33 +282,65 @@ SIMBAD-corroborated as above. That is AT-HYG's *stated* selection rule
 reproduced from the primaries. AT-HYG's *realised* membership is that rule
 minus its link defect and merge drops, and reproducing the realised set
 would freeze a defect into a second spine — so the additions ship, each on
-a § 6.1 ledger row under a closed reason enum: `admitted:hd_link_gap`
-(55,008) · `admitted:hd_omitted` (5,336) · `admitted:hip_omitted` (566) ·
-`admitted:cns5_census` (3,362) · `component:<anchor>` for a bright-double
-secondary that resolves onto an existing promoted record. An addition then
+a § 6.1 ledger row under a closed reason enum: `admitted:hd_link_gap` ·
+`admitted:hd_omitted` · `admitted:hip_omitted` · `admitted:cns5_census` ·
+`component:<anchor>`. The audit's cohorts above (55,008 / 5,336 / 566 /
+3,362) are counted per primary, before grouping and admission.
+`pnpm run build:membership` (measured 2026-09-06) groups one star's items
+across primaries and **admits a group only on designations no record already
+answers to** — a designation on two records keys no SID (`docs/sid.md` § 4.1),
+so attaching one another record holds would cost that record its key. The claim
+set is the spine's after the label merge and grows as each group is admitted,
+so an earlier addition blocks a later one exactly as a spine row does. That
+lands **63,672** records — `hd_link_gap` 54,812 · `hd_omitted` 5,060 ·
+`hip_omitted` 444 · `cns5_census` 3,356 — and ledgers **471** groups as
+`component:<anchor>`, not as records. They are not the ~90 bright-double
+secondaries above, which reach the manifest as HD-addition records or as second
+HD numbers on spine TYCs: 466 are the second Tycho-2 entry of a pair Tycho-2
+resolved whose HD (and, through Tycho-2's `hip` column, HIP) a spine record
+already carries, and 5 are the second of such a pair with neither component on
+the spine — HD 23068, 37703, 45900, 63846, 86269, which IV/25 flags `n_tyc > 1`
+and which would otherwise have minted `gaia_dr3:`-keyed SIDs, one of them
+keyless. The per-outcome table, the two source-left-empty outcomes (105 + 13),
+the order that decides which of two groups takes a contested designation, and
+the admission rule in full: `scripts/catalog/membership/README.md`
+§ The additions. An addition then
 walks the § 5 cascades like any row, and one no owned parallax or V reaches
 parks on the existing ledger under the existing codes — Tycho-2 publishes no
 parallax, so most of the ~4.5k with neither a DR3 neighbour nor a HIP park,
-as do CNS5's 514 without a DR3 id, which no V tier reaches. Identity rows:
-`binding:simbad_corroborated` keeps the binding and writes nothing; the 39
-uncorroborated lose their source_id (`binding:uncorroborated`,
-`binding:contradicted`) into a review queue, a SID event only where the
-canonical key was the Gaia id — zero rows. Scale for the swap: ~64k mints,
-zero retirements, zero reinstatements beyond what the review queue decides.
+as do CNS5's 514 without a DR3 id, which no V tier reaches. Identity rides
+on the manifest's `binding` column, three classes: `crosswalk_gated`
+358,571 (a gated walk binds the source, or reproduces the spine's) ·
+`simbad_corroborated` 11,697 (the spine's binding, corroborated as above) ·
+`none` 6,661 (the 1,371 spine rows with no id, Sol among them; the 39
+uncorroborated, stripped; additions no gated walk binds). The 39 go to
+`data/membership/binding-review.tsv` with their SIMBAD witness — a SID event
+only where the canonical key was the Gaia id — zero rows. Scale for the
+swap: 63,672 mints, zero retirements, zero reinstatements beyond what the
+review queue decides.
 
 **The replacement parity gate.** The spine could not be regenerated (§ 3)
 because it snapshots a build that no longer exists; the primaries-derived
 membership is a pure function of committed inputs, so it can be, and that
 is what replaces the byte guard with a regenerate-and-diff. The swap emits a
-committed **membership manifest** — one row per admitted record: admitting
-designations, route, source_id and its provenance class — regenerated in CI
-and diffed like `classic_id_overlay.tsv`. The gate asserts three things:
-(i) every row of the 2026-07-28 spine maps through its designation class to
-exactly one manifest row — the same SID — or to a § 6.1 drop row; (ii) every
-manifest row absent from the spine is on the additions ledger under a reason
-above; (iii) the built catalogue's designation multiset equals the
-manifest's. The frozen spine stays committed as the baseline (i) and (ii)
-read, and nothing else reads it; `label_flips.tsv` collapses into the
+committed **membership manifest** (`data/membership/membership-manifest.tsv`,
+376,929 rows = 313,257 spine + 63,672 admitted) — one row per admitted
+record: admitting designations, route, source_id and its provenance class —
+regenerated in CI and diffed like `classic_id_overlay.tsv`. Columns and
+sort order: `scripts/catalog/membership/README.md` § Columns. The gate
+asserts three things: (i) every row of the 2026-07-28 spine maps through its
+designation class to exactly one manifest row — the same SID — or to a § 6.1
+drop row; (ii) every manifest row absent from the spine is on the additions
+ledger under a reason above; (iii) the built catalogue's designation multiset
+equals the manifest's. A fourth assertion holds the admission rule itself: no
+designation an addition carries sits on a second manifest row, which is what
+says every mint keys `hd:` / `hip:` / `gl:` rather than falling through to a
+Gaia id. The frozen spine stays committed as the baseline (i)
+and (ii) read **and as the generator's input**: it is the one record of
+AT-HYG's merge decisions — which designations name one star, and which Gaia
+source it bound — that no primary supplies, so `build:membership` reads it
+for those and re-keys every row on the designations the primaries publish.
+Nothing else reads it after the swap. `label_flips.tsv` collapses into the
 manifest, because labels and membership now come from one join and there is
 no second designation set to flip against. After the swap release the
 baseline becomes the previous manifest, and the gate is the ordinary

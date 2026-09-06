@@ -112,6 +112,10 @@ build it snapshots.
 `pnpm run build:classic-ids` reads it as well, as the label merge's spine
 side: its review queue has to describe the same records the record build
 labels (`scripts/catalog/classic-ids/README.md` § The label merge).
+`pnpm run build:membership` reads it as the frozen record of AT-HYG's merge
+decisions and bindings — which designations name one star, and which Gaia
+source it bound — that the primaries-derived manifest re-keys
+(`scripts/catalog/membership/README.md` § The spine side).
 Reference epoch J2000.0.
 
 `athyg_33_classic_ids.csv` is **no longer an input to the record build, and no

@@ -20,7 +20,7 @@ const SKIP_DIRS = new Set(['node_modules', 'public', 'dist', '.git', '.claude'])
 
 // Bump deliberately, having read the diff: a drop means the extractor stopped
 // seeing pointers, which passes the resolution check by finding nothing.
-const POINTER_COUNT = 1835;
+const POINTER_COUNT = 1854;
 
 // Fixtures interpolate their § from here, so the `<path>.md §` a pointer
 // needs never appears literally and this file stays out of its own scan.
