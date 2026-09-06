@@ -25,9 +25,10 @@ src/client/debug/frame-cost/
                               PRICED_PASS_KEYS — the roster below, kept
                               here so a caller can validate a requested
                               key without importing the renderer — plus
-                              WARMUP_FRAMES, the median standard error,
-                              the interquartile spread, round3 and the
-                              cadence rules (CADENCE_TOLERANCE,
+                              WARMUP_FRAMES, RAF_PROBE_FRAMES, the median
+                              standard error, the interquartile spread,
+                              round3 and the cadence rules
+                              (CADENCE_TOLERANCE,
                               isVsyncClamped, isCadenceBound), which the
                               headless runner imports rather than
                               re-deriving — its dwell clamp and this
@@ -89,8 +90,13 @@ src/client/debug/frame-cost/
   Under `raf-delta` a differential below the vsync quantum reads as zero
   unless the frame is already over budget *and* not itself pinned to a
   higher multiple of the refresh — so every row whose dwells the display
-  decided is stamped `cadenceBound: true` (§ Reading a row), wherever the
-  caller passed the `{ cadenceMs }` it measured (the headless runner does).
+  decided is stamped `cadenceBound: true` (§ Reading a row). The cadence is
+  the sweep's own idle rAF probe, taken after the clock stops and before the
+  render gate is held, which is the one window where nothing redraws and the
+  deltas are the panel rather than the frame; `{ cadenceMs }` supplies it
+  instead, as the headless runner does with the period it measured after
+  settle. A sweep over a *running* clock cannot probe and its rows carry no
+  verdict — the console says which of the two applied.
   `method` labels every row; never
   compare numbers across two methods. The sweep picks the source itself and
   says which on the console — it never claims a clock the backend does not

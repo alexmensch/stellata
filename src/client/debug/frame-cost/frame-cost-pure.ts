@@ -38,6 +38,9 @@ export const SETTLE_FRAMES = 30;
  *  multiple whatever the frame cost. README.md § Reading a row. */
 export const CADENCE_TOLERANCE = 0.06;
 
+/** Frames the idle rAF probe samples to find the display's period. */
+export const RAF_PROBE_FRAMES = 60;
+
 export function vsyncClampToleranceMs(cadenceMs: number): number {
   return cadenceMs * CADENCE_TOLERANCE;
 }

@@ -8,6 +8,7 @@ import { chromium, type Browser } from 'playwright';
 import type { PriceFrameOptions } from '../../src/client/debug/frame-cost/frame-cost';
 import {
   median,
+  RAF_PROBE_FRAMES,
   WARMUP_FRAMES,
   type GpuFrameMethod,
 } from '../../src/client/debug/frame-cost/frame-cost-pure';
@@ -62,7 +63,6 @@ const REACHABILITY_TIMEOUT_MS = 5000;
 const DEFAULT_CHROME_ARGS = ['--ignore-gpu-blocklist', '--enable-unsafe-webgpu'];
 const BOOT_TIMEOUT_MS = 120_000;
 const SETTLE_TIMEOUT_MS = 120_000;
-const RAF_PROBE_FRAMES = 60;
 
 const EXIT = { ok: 0, failed: 1, usage: 2, unarmed: 3 } as const;
 

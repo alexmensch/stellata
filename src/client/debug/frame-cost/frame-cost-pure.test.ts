@@ -10,6 +10,7 @@ import {
   fitDwellFrames,
   SETTLE_FRAMES,
   CADENCE_TOLERANCE,
+  RAF_PROBE_FRAMES,
   isCadenceBound,
   isVsyncClamped,
   vsyncClampToleranceMs,
@@ -305,9 +306,10 @@ describe('frame-cost-pure', () => {
     expect(buildPriceRow('emptyPass', 'timestamp', bound, bound, HEADLESS).cadenceBound).toBeUndefined();
   });
 
-  it('pins the two frame counts the runner shares with the sweep', () => {
+  it('pins the frame counts the runner shares with the sweep', () => {
     expect(SETTLE_FRAMES).toBe(30);
     expect(WARMUP_FRAMES).toBe(180);
+    expect(RAF_PROBE_FRAMES).toBe(60);
   });
 });
 
