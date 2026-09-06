@@ -10,6 +10,7 @@ import {
   imputeCompanionAbsmag,
   imputeCompanionCi,
   isDisjointSingleLetter,
+  isMoreCanonicalAnchor,
   parentComponentToken,
   parseMultiplesTsv,
   projectFromSepPa,
@@ -465,13 +466,28 @@ describe('anchor flux dimming', () => {
     expect(anchor.absmag).toBe(1.0);
   });
 
-  it('does not dim when the member keeps its own distinct identifier', () => {
+  it('dims under a printed tier even where the member kept its own Gaia source', () => {
+    // A printed tier publishes one magnitude per catalogue ENTRY, so a member
+    // sharing the entry's HIP is inside it and Gaia resolving the component
+    // afterwards does not take its light back out. Identity decides membership
+    // only at the tier that resolves per source — a gaia_riello anchor, where
+    // an own source_id is `blendDimGaiaResolved`.
     const anchor = blendAnchor();
     const rows = dimRows(2.0);
-    rows[1].gaiaSourceId = '999900001111';  // own gaia — light not in the AT-HYG blend claim
+    rows[1].gaiaSourceId = '999900001111';
+    const { newStars, stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(anchor.absmag).toBeCloseTo(1.15973, 4);
+    expect(newStars[0].absmag).toBeCloseTo(3.15973, 4);
+  });
+
+  it('holds an own-Gaia member out of a gaia_riello anchor, where the tier resolves per source', () => {
+    const anchor = blendAnchor({ vVia: 'gaia_riello' });
+    const rows = dimRows(2.0);
+    rows[1].gaiaSourceId = '999900001111';
     const { stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    expect(stats.blendDimGaiaResolved).toBe(1);
     expect(stats.blendDimmedAnchors).toBe(0);
-    expect(stats.blendDimMembersOutside).toBe(1);
     expect(anchor.absmag).toBe(1.0);
   });
 
@@ -2700,6 +2716,29 @@ describe('canonicalCompLetter', () => {
 
   it('passes through for single-character primary (no stem to extract)', () => {
     expect(canonicalCompLetter('A', '2')).toBe('2');
+  });
+});
+
+describe('isMoreCanonicalAnchor', () => {
+  it('ranks the A branch above every other branch, at any depth', () => {
+    // 15 Mon (06410+0954): its only A-branch cursor is Aa,Ab, and the root
+    // also carries EP, FG, FO, GO, JI, MN. Ranking by length anchored it on E.
+    expect(isMoreCanonicalAnchor('Aa', 'E')).toBe(true);
+    expect(isMoreCanonicalAnchor('E', 'Aa')).toBe(false);
+    expect(isMoreCanonicalAnchor('Aa1', 'B')).toBe(true);
+  });
+
+  it('ranks by depth then alphabetically inside one branch', () => {
+    expect(isMoreCanonicalAnchor('A', 'Aa')).toBe(true);
+    expect(isMoreCanonicalAnchor('Aa', 'Ab')).toBe(true);
+    expect(isMoreCanonicalAnchor('Ab', 'Aa')).toBe(false);
+    expect(isMoreCanonicalAnchor('A', 'A')).toBe(false);
+  });
+
+  it('is the predicate the naming anchor uses', () => {
+    // record-index/ imports this one rather than keeping a twin: both want
+    // the branch the root is named for.
+    expect(isMoreCanonicalAnchor('B', 'C')).toBe(true);
   });
 });
 
