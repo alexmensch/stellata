@@ -1,14 +1,15 @@
 # Bailer-Jones DR3 — Bayesian distance posteriors
 
-Layer 1 of the multi-layer distance refinement stack — replaces
-AT-HYG's naïve `1 / π` Gaia parallax inversion with well-calibrated
-Bayesian posteriors. Targets the noisy low-S/N regime that hosts the
+Layer 1 of the multi-layer distance refinement stack — replaces the parallax
+cascade's naïve `1 / π` Gaia inversion with well-calibrated Bayesian
+posteriors. Targets the noisy low-S/N regime that hosts the
 brightest, most luminous, longest-baseline stars (B/A supergiants,
 AGB stars) where the inverse-parallax estimator catastrophically
 fails.
 
 ```
-bailer-jones-dr3.tsv   ~23 MB, LFS. Keyed by Gaia DR3 source_id.
+bailer-jones-dr3.tsv   ~26 MB, LFS. Keyed by Gaia DR3 source_id.
+                       365,762 rows.
 ```
 
 ## Provenance
@@ -28,13 +29,21 @@ bailer-jones-dr3.tsv   ~23 MB, LFS. Keyed by Gaia DR3 source_id.
 
 `scripts/catalog/build-catalog.ts` via
 `applyBailerJonesOverride` in
-[`scripts/catalog/catalog-pure.ts`](../../scripts/catalog/). Fires
-only when AT-HYG's `dist_src ∈ {G_R3, G_R2}` AND the row's
-`gaia_source_id` resolves AND the B-J map covers it (~99.5 % of
-Gaia-DR3-bearing AT-HYG rows). See `docs/science-catalog-ingestion.md`
-§ Multi-layer distance refinement.
+[`scripts/catalog/catalog-pure.ts`](../../scripts/catalog/). Fires only when
+the parallax cascade resolved **`gaia_dr3_inversion`** — the record's own DR3
+parallax, which is the measurement this posterior treats — AND the B-J map
+covers it. A record placed by Hipparcos, CNS5, Gliese, SIMBAD or a bound
+sibling is excluded deliberately: regressing a non-Gaia parallax onto B-J's
+Galactic-density prior discards a measurement for one computed from a
+different, worse one. Coverage pins as `bjOverridden / bjEligible` in
+`scripts/catalog/build-catalog-expected.json`. See
+`scripts/catalog/distance/README.md` § Multi-layer distance refinement.
 
 ## Refresh
 
 `pnpm run refresh:bailer-jones` →
 [`scripts/refresh/refresh-bailer-jones.py`](../../scripts/refresh/README.md).
+The request set is the membership manifest's `gaia_source_id` column
+(`scripts/refresh/README.md` § Request sets are membership-derived); the pull
+batches over it and checkpoints per batch, so `--force` resumes rather than
+restarting.
