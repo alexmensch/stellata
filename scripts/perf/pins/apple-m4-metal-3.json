@@ -1,0 +1,229 @@
+{
+  "schema": "stellata-perf/pin-1",
+  "adapterSlug": "apple-m4-metal-3",
+  "adapter": {
+    "webgl": {
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "vendor": "Google Inc. (Apple)",
+      "timerQuery": true
+    },
+    "webgpu": {
+      "vendor": "apple",
+      "architecture": "metal-3",
+      "device": "",
+      "description": "",
+      "isFallbackAdapter": false,
+      "timestampsAvailable": null
+    }
+  },
+  "git": {
+    "commit": "194f817dc79384d33ced5093b8752ccc29cf62c2",
+    "dirty": false
+  },
+  "version": "3.44.4",
+  "takenAt": "2026-09-05T21:54:47.012Z",
+  "sourceRun": "/Users/alexm/github/alexmensch/stellata/.perf-runs/2026-09-05/pin-1-all-both-dwell-cold.json",
+  "rows": [
+    {
+      "key": "sol|webgl2",
+      "name": "sol",
+      "backend": "webgl2",
+      "bufferMpx": 4.096,
+      "idleRafMs": 16.700000000000728,
+      "method": "raf-delta",
+      "wall": {
+        "p50": 16.700000000000728,
+        "p90": 66.60000000000218,
+        "iqrMs": 16.799999999997453,
+        "samples": 240,
+        "stateGuard": "steady",
+        "vsyncClamped": false
+      },
+      "gpu": null
+    },
+    {
+      "key": "sol|webgpu",
+      "name": "sol",
+      "backend": "webgpu",
+      "bufferMpx": 4.096,
+      "idleRafMs": 16.700000000000728,
+      "method": "raf-delta",
+      "wall": {
+        "p50": 17.5,
+        "p90": 33.400000000001455,
+        "iqrMs": 16.600000000002183,
+        "samples": 240,
+        "stateGuard": "steady",
+        "vsyncClamped": false
+      },
+      "gpu": {
+        "p50": 21.79846,
+        "p90": 22.241410000000002,
+        "iqrMs": 0.3562450000000048,
+        "samples": 58,
+        "stateGuard": "steady"
+      }
+    },
+    {
+      "key": "earth|webgl2",
+      "name": "earth",
+      "backend": "webgl2",
+      "bufferMpx": 4.096,
+      "idleRafMs": 16.69999999999891,
+      "method": "raf-delta",
+      "wall": {
+        "p50": 16.700000000000728,
+        "p90": 34,
+        "iqrMs": 15.999999999998181,
+        "samples": 240,
+        "stateGuard": "steady",
+        "vsyncClamped": false
+      },
+      "gpu": null
+    },
+    {
+      "key": "earth|webgpu",
+      "name": "earth",
+      "backend": "webgpu",
+      "bufferMpx": 4.096,
+      "idleRafMs": 16.69999999999891,
+      "method": "raf-delta",
+      "wall": {
+        "p50": 16.700000000000728,
+        "p90": 33,
+        "iqrMs": 0.1999999999989086,
+        "samples": 240,
+        "stateGuard": "steady",
+        "vsyncClamped": true
+      },
+      "gpu": {
+        "p50": 16.920659999999998,
+        "p90": 18.309805,
+        "iqrMs": 0.3879939999999955,
+        "samples": 55,
+        "stateGuard": "steady"
+      }
+    },
+    {
+      "key": "mw50|webgl2",
+      "name": "mw50",
+      "backend": "webgl2",
+      "bufferMpx": 4.096,
+      "idleRafMs": 16.699999999999818,
+      "method": "raf-delta",
+      "wall": {
+        "p50": 16.700000000000728,
+        "p90": 50,
+        "iqrMs": 1.000000000001819,
+        "samples": 240,
+        "stateGuard": "steady",
+        "vsyncClamped": true
+      },
+      "gpu": null
+    },
+    {
+      "key": "mw50|webgpu",
+      "name": "mw50",
+      "backend": "webgpu",
+      "bufferMpx": 4.096,
+      "idleRafMs": 16.69999999999891,
+      "method": "raf-delta",
+      "wall": {
+        "p50": 16.799999999999272,
+        "p90": 33.400000000001455,
+        "iqrMs": 16.600000000002183,
+        "samples": 240,
+        "stateGuard": "steady",
+        "vsyncClamped": false
+      },
+      "gpu": {
+        "p50": 31.450853000000002,
+        "p90": 31.525977,
+        "iqrMs": 0.043707999999995195,
+        "samples": 56,
+        "stateGuard": "steady"
+      }
+    },
+    {
+      "key": "mw120|webgl2",
+      "name": "mw120",
+      "backend": "webgl2",
+      "bufferMpx": 4.096,
+      "idleRafMs": 16.699999999999818,
+      "method": "raf-delta",
+      "wall": {
+        "p50": 16.69999999999891,
+        "p90": 31.5,
+        "iqrMs": 0.2999999999992724,
+        "samples": 240,
+        "stateGuard": "steady",
+        "vsyncClamped": true
+      },
+      "gpu": null
+    },
+    {
+      "key": "mw120|webgpu",
+      "name": "mw120",
+      "backend": "webgpu",
+      "bufferMpx": 4.096,
+      "idleRafMs": 16.69999999999891,
+      "method": "raf-delta",
+      "wall": {
+        "p50": 16.69999999999891,
+        "p90": 17.30000000000109,
+        "iqrMs": 0.1000000000003638,
+        "samples": 240,
+        "stateGuard": "steady",
+        "vsyncClamped": true
+      },
+      "gpu": {
+        "p50": 20.968389000000002,
+        "p90": 20.985888,
+        "iqrMs": 0.016501000000001653,
+        "samples": 59,
+        "stateGuard": "steady"
+      }
+    },
+    {
+      "key": "lg|webgl2",
+      "name": "lg",
+      "backend": "webgl2",
+      "bufferMpx": 4.096,
+      "idleRafMs": 16.699999999999818,
+      "method": "raf-delta",
+      "wall": {
+        "p50": 16.69999999999891,
+        "p90": 17.899999999999636,
+        "iqrMs": 0.6000000000003638,
+        "samples": 240,
+        "stateGuard": "steady",
+        "vsyncClamped": true
+      },
+      "gpu": null
+    },
+    {
+      "key": "lg|webgpu",
+      "name": "lg",
+      "backend": "webgpu",
+      "bufferMpx": 4.096,
+      "idleRafMs": 16.699999999999818,
+      "method": "raf-delta",
+      "wall": {
+        "p50": 16.69999999999891,
+        "p90": 18.100000000000364,
+        "iqrMs": 1.2000000000007276,
+        "samples": 240,
+        "stateGuard": "steady",
+        "vsyncClamped": false
+      },
+      "gpu": {
+        "p50": 11.891152,
+        "p90": 12.245688000000001,
+        "iqrMs": 0.2687020000000011,
+        "samples": 150,
+        "stateGuard": "steady"
+      }
+    }
+  ],
+  "accepted": {}
+}
