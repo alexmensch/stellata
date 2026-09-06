@@ -13,7 +13,7 @@ import {
   type LabelMergeRecord,
   type LabelOverrides,
 } from '../classic-ids/label-merge-pure';
-import { parkedSpineKey } from '../distance/parallax/parked-ledger';
+import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { parseIntOrNull } from '../parse/corpus-tsv';
 import type { SpineRow } from '../spine/inherited-spine-pure';
 import {
@@ -341,7 +341,7 @@ export function parseLabelDropsTsv(text: string): LabelDropRow[] {
 export function manifestKey(
   row: Pick<ManifestRow, 'tyc' | 'hip' | 'hd' | 'gl' | 'gaia_source_id'>,
 ): string {
-  return parkedSpineKey(row);
+  return parkedRecordKey(row);
 }
 
 // ---- designations ------------------------------------------------------------

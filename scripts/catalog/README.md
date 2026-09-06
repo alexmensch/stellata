@@ -1,6 +1,6 @@
 # Catalog build
 
-Single-star catalogue build pipeline: the inherited spine + GCVS + CCDM +
+Single-star catalogue build pipeline: the membership manifest + GCVS + CCDM +
 Bailer-Jones + Gaia Apsis + SIMBAD sp_type +
 Stellarium → `public/catalog.bin.<i>` transport chunks +
 `public/catalog-manifest.json` + `public/constellations.json` +
@@ -8,11 +8,12 @@ Stellarium → `public/catalog.bin.<i>` transport chunks +
 `public/constellation-boundaries.json`.
 Run via `pnpm run build:catalog`.
 
-Membership is `data/athyg/inherited-spine.tsv` and nothing else — AT-HYG the
-catalogue left this build's input set. Classic designations are the frozen-CDS
-overlay merged onto the spine's inherited cells (`classic-ids/README.md`). The
-contract is `docs/catalog-driver.md`; the membership term is
-`spine/README.md`.
+Membership is `data/membership/membership-manifest.tsv` less the § 6.1 parks,
+and nothing else — `data/athyg/` left this build's input set entirely.
+Classic designations arrive on the manifest already merged, so this build
+applies no label layer of its own (`classic-ids/README.md` § The label merge).
+The contract is `docs/catalog-driver.md`; the membership term is
+`membership/README.md`.
 
 This file owns the **output contract**: the on-disk record layout, SID
 allocation, the search index, and the Apsis surfacing. The per-stage work
@@ -20,9 +21,9 @@ lives in the subfolders.
 
 ## Subfolders
 
-- `astrometry-request/` — the Gaia 5p pull's source_id list: the spine
-  column plus the classic-ID gate's candidates. Input preparation for
-  `scripts/refresh/`, not on the `build:catalog` path.
+- `astrometry-request/` — the Gaia 5p pull's source_id list: the manifest's
+  `gaia_source_id` column plus the classic-ID gate's candidates. Input
+  preparation for `scripts/refresh/`, not on the `build:catalog` path.
 - `parse/` — the per-row pipeline (`readStars`), reference-catalogue
   parsers, space-motion velocity, and Stellarium stick figures. Its
   `gcvs/` subfolder owns the variable-star parsing and the variability
@@ -53,15 +54,16 @@ lives in the subfolders.
 - `photometry/` — the published Gaia broadband relations and the two
   cascades over them: Johnson V, and the B−V colour index.
 - `classic-ids/` — the frozen-CDS overlay build
-  (`pnpm run build:classic-ids` → `data/classic-ids/`) AND the record build's
-  label layer: the per-identifier merge with its collision guard, plus the
-  designation-constellation cascade. Applied as a post-pass over `readStars`.
-- `spine/` — the membership term: the frozen
-  `data/athyg/inherited-spine.tsv`, its codec, and the two gates holding it
-  to the build it snapshots. `parse/` streams it through `iterSpineTsv`.
-- `membership/` — the primaries-derived membership manifest
-  (`pnpm run build:membership` → `data/membership/`) and its replacement
-  parity gate. `readStars` switches onto it in `stellata-3bsf.8.3`.
+  (`pnpm run build:classic-ids` → `data/classic-ids/`) AND the label layer
+  `build:membership` applies with it: the per-identifier merge with its
+  collision guard. The record build takes only the
+  designation-constellation cascade, as a post-pass over `readStars`.
+- `membership/` — the membership term: the primaries-derived manifest
+  (`pnpm run build:membership` → `data/membership/`), its parity gate, and
+  the § 6.1 ledgers. `parse/` streams it through `iterManifestTsv`.
+- `spine/` — AT-HYG's merge decisions, frozen: `data/athyg/inherited-spine.tsv`,
+  its codec, and the guard holding it byte-stable. Read by `build:membership`
+  and by the manifest's gate, not by `build:catalog`.
 - `validate/` — the Tier-A/B validation harness, `verify-catalog`, the
   SIMBAD-sample cross-check, and the frozen regression corpora.
 
@@ -188,10 +190,11 @@ for its coverage and the runtime colour-LUT re-key it enables.
                           17 bits) so 24 bits would suffice, but `uint32`
                           keeps the record stride a multiple of 4.
   - 44–51 `uint64`       **Gaia DR3 source_id** little-endian (0 = none).
-                          Read off the spine column, which froze the
-                          native-cell → HIP-cross-walk precedence and both
-                          binding gates; the build re-derives nothing
-                          (`spine/README.md`). IDs routinely exceed 2^53 so
+                          Read off the manifest column, whose `binding`
+                          cell says how it is justified; the build
+                          re-derives nothing (`membership/README.md`
+                          § The identifier columns are read, never
+                          re-derived). IDs routinely exceed 2^53 so
                           the JS reader exposes them via `BigUint64Array`.
                           The ~0.4% residual is dominated by Gaia-saturated
                           bright binaries (Sirius, Vega, Procyon, …) absent
@@ -324,8 +327,8 @@ when the sources are unchanged, so an up-to-date tree can still refresh a
 snapshot. `isUpToDate` walks `scripts/catalog/` recursively plus `scripts/util/` and
 `scripts/sid/`, so editing any build module invalidates the artifact — with no
 exclusions: `classic-ids/` used to be skipped as a one-shot generator and is now
-the label layer, `spine/` is in because `parse/` imports its codec, and so is
-`validate/`.
+the label layer, `membership/` is in because `parse/` imports its codec, and
+so is `validate/`.
 
 ## SID allocation
 
@@ -337,7 +340,7 @@ builds each record's designation set, and `resolveSids` maps it to the
 existing ledger sid. The build **never mints** — `sid:allocate` is the sole
 ledger writer (docs/sid.md § 4.4).
 
-A record set that changes (a new spine, new companions) therefore needs a
+A record set that changes (a new manifest, new companions) therefore needs a
 build → `sid:allocate` → build cycle: the first build writes `NO_SID` for
 anything the ledger lacks so the artifact still lands, then hard-fails
 listing it. `scripts/sid/README.md` carries the mint and its review.
@@ -366,10 +369,10 @@ wire is a composed string and nothing parses one; `naming/README.md`
 § Two callers, one composer owns the rest.
 
 `hda`/`hra` carry the further HD / HR numbers a record answers to but does
-not display, on 95 entries (`classic-ids/README.md` § An alias stops at the
-blend). The `s` field carries the raw spectral designation from the
-spine's printed `spect` cell ("G2 V", "M1.5Iab-b", "K0III+K7V", …) for the
-hover tooltip display. The `g` field carries the GCVS variable-star
+not display — the manifest's `hd_alt` / `hr_alt` cells
+(`classic-ids/README.md` § An alias stops at the blend). The `s` field carries
+the raw spectral designation the spectral resolver settled on ("G2 V",
+"M1.5Iab-b", "K0III+K7V", …) for the hover tooltip display. The `g` field carries the GCVS variable-star
 designation (`R CrB`, `VY CMa`, `V0645 Cen`) the cross-match attaches
 (`parse/gcvs/README.md`). ~14.1k stars are named (`gcvsNamed`), a superset
 of the ~4.1k with a renderable period (`gcvsMatched`): a designation is

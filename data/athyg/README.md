@@ -1,24 +1,20 @@
 # AT-HYG v3.3 — stellar catalogue (classic-IDs subset)
 
-The catalogue Stellata's membership descends from, plus the frozen spine
-that now carries it. Every row in the subset carries at least one classical
-designation (proper name, Bayer, Flamsteed, HIP, HD, HR, or Gliese).
+The catalogue Stellata's membership descends from, plus the frozen spine that
+records its merge decisions. Neither is a `build:catalog` input — the record
+build walks `../membership/membership-manifest.tsv`. Every row in the subset
+carries at least one classical designation (proper name, Bayer, Flamsteed,
+HIP, HD, HR, or Gliese).
 
 ```
 athyg_33_classic_ids.csv   ~64 MB, LFS. Upstream. ~317k rows. NOT a build
                            input — see § Consumed by.
-inherited-spine.tsv        ~40 MB, LFS. Generated provenance data, and the
-                           record build's membership term — see § The
-                           inherited spine. 313,257 rows.
+inherited-spine.tsv        ~40 MB, LFS. Generated provenance data: AT-HYG's
+                           merge decisions, frozen — see § The inherited
+                           spine. 313,257 rows.
 stale_gaia_source_ids.tsv  ~1 KB, regular git. Review queue: the 6 spine
                            rows whose gaia_source_id Gaia DR3 publishes no
                            row for — see § Six DR2 ids in the DR3 column.
-parked_no_owned_parallax.tsv
-                           ~21 KB, regular git. The § 6.1 dropped list: the
-                           spine rows no owned parallax reaches, which build
-                           no record. The parity gate subtracts exactly this
-                           many rows and no more, so a park that is not on
-                           this list fails the build rather than vanishing.
 simbad_sourced_distances.tsv
                            ~2 KB, regular git. The records whose distance
                            came from the cascade's SIMBAD tier, excluded from
@@ -70,9 +66,11 @@ provenance columns). `gaia_source_id` is empty on 1,371 rows — the no-Gaia
 residual; there is no separate keep-list file.
 
 It exists so catalogue membership and labels survive AT-HYG's retirement as
-the build driver, which has happened: membership is the spine, and AT-HYG
-the catalogue is not consulted. Contract:
-[`docs/catalog-driver.md`](../../docs/catalog-driver.md) § 3. Generator,
+the build driver, which has happened. It has since handed the membership term
+to the primaries-derived manifest, and what it still uniquely supplies is the
+merge decisions behind it. Contract:
+[`docs/catalog-driver.md`](../../docs/catalog-driver.md) § 3 and § 3.1.
+Generator,
 column origins, and why nothing regenerates it in CI:
 [`scripts/catalog/spine/README.md`](../../scripts/catalog/spine/README.md).
 Licence follows the CSV it derives from (CC-BY-SA-4.0).
@@ -106,20 +104,18 @@ change at all.
 
 ## Consumed by
 
-`inherited-spine.tsv` → `scripts/catalog/build-catalog.ts` (`readStars` in
-`scripts/catalog/parse/stars-parse.ts`), as the membership term: every row
-is a record, and no other source adds one. Two test files in
-`scripts/catalog/spine/` also read it — the guard pins its bytes,
-committed counts and the queue above, the parity gate holds it to the
-build it snapshots.
-`pnpm run build:classic-ids` reads it as well, as the label merge's spine
-side: its review queue has to describe the same records the record build
-labels (`scripts/catalog/classic-ids/README.md` § The label merge).
-`pnpm run build:membership` reads it as the frozen record of AT-HYG's merge
-decisions and bindings — which designations name one star, and which Gaia
-source it bound — that the primaries-derived manifest re-keys
-(`scripts/catalog/membership/README.md` § The spine side).
-Reference epoch J2000.0.
+`inherited-spine.tsv` → **`pnpm run build:membership`**, which reads it as the
+frozen record of AT-HYG's merge decisions and bindings — which designations
+name one star, and which Gaia source it bound — that the primaries-derived
+manifest re-keys (`scripts/catalog/membership/README.md` § The spine side).
+`pnpm run build:classic-ids` reads it as the label merge's spine side, and the
+manifest's parity gate reads it as the baseline every manifest row must
+account for. `scripts/catalog/spine/inherited-spine-guard.test.ts` pins its
+bytes, committed counts and the queue above.
+
+**`build:catalog` does not read it.** `readStars` walks
+`../membership/membership-manifest.tsv`; membership is that file less the
+§ 6.1 parks. Reference epoch J2000.0.
 
 `athyg_33_classic_ids.csv` is **no longer an input to the record build, and no
 refresh script reads it.** It stays committed as the spine's provenance and for
@@ -130,11 +126,8 @@ TypeScript reader left, and it spells the path itself) and
 `scripts/binaries/build-binaries.py` (Stage 1's AT-HYG parse, on the
 `build:binaries` path, not `build:catalog`).
 
-Every request set moved onto the spine's own columns. The Gaia pull list went
-first with `export-astrometry-request.ts`; the Bailer-Jones, Apsis and SIMBAD
-pulls followed. Request and record build now name the same source_ids by
-construction rather than by agreeing, and each rebase drops what the CSV walk
-over-pulled — for the SIMBAD sp_type set, 3,172 source_ids the walk requested
-that never became records, against 193 the spine's resolved column gains
-(measured 2026-08-15). A new AT-HYG release therefore no longer moves the
-catalogue — replacing the spine is `stellata-3bsf.8`.
+Every request set is derived from the membership term — the spine's own
+columns first, and the manifest's since the record build swapped onto it
+(`scripts/refresh/README.md` § Request sets are membership-derived). Request
+and record build name the same source_ids by construction rather than by
+agreeing. A new AT-HYG release therefore no longer moves the catalogue.

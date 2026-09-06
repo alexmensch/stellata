@@ -19,7 +19,7 @@ import {
 import { FLAG_BINARY_COMPANION_ONLY, type SearchEntry } from '../catalog-pure';
 import { dataRows } from '../parse/corpus-tsv';
 import {
-  PARKED_RECORDS_FILE,
+  PARKED_LEDGER_FILE,
   parseParkedRecordsTsv,
 } from '../distance/parallax/parked-ledger';
 import {
@@ -251,8 +251,8 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
           .map((r) => r.designations),
       );
       const parked = new Set(parseParkedRecordsTsv(
-        readFileSync(resolve(REPO_ROOT, PARKED_RECORDS_FILE), 'utf-8'),
-      ).map((r) => r.spineKey));
+        readFileSync(resolve(REPO_ROOT, PARKED_LEDGER_FILE), 'utf-8'),
+      ).map((r) => r.recordKey));
       const fromManifest = tally(
         manifest.filter((row) => !parked.has(manifestKey(row))).map(manifestDesignations),
       );

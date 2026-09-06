@@ -120,7 +120,7 @@ import {
 import { assignDisplayNames } from './naming/display-names';
 import { readStars, type Star } from './parse/stars-parse';
 import {
-  PARKED_RECORDS_FILE,
+  PARKED_LEDGER_FILE,
   formatParkedRecordsTsv,
   type ParkedRecord,
 } from './distance/parallax/parked-ledger';
@@ -215,9 +215,9 @@ function isUpToDate(): boolean {
  *  these existed. Committed so the set is diffable: a refresh that moves it is
  *  a membership change, and Gaia DR4 should empty most of it. */
 async function writeParkedRecords(parked: readonly ParkedRecord[]): Promise<void> {
-  const path = resolve(ROOT, PARKED_RECORDS_FILE);
+  const path = resolve(ROOT, PARKED_LEDGER_FILE);
   await writeFile(path, formatParkedRecordsTsv(parked));
-  console.log(`  parked (no owned parallax): ${parked.length} → ${PARKED_RECORDS_FILE}`);
+  console.log(`  parked (§ 6.1): ${parked.length} → ${PARKED_LEDGER_FILE}`);
 }
 
 /** § 5's validation independence, made checkable: a record whose distance came

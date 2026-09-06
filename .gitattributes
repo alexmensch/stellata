@@ -5,7 +5,6 @@ data/gcvs/*.txt filter=lfs diff=lfs merge=lfs -text
 data/athyg/*.csv filter=lfs diff=lfs merge=lfs -text
 data/athyg/*.tsv filter=lfs diff=lfs merge=lfs -text
 data/athyg/stale_gaia_source_ids.tsv !filter !diff !merge text=auto
-data/athyg/parked_no_owned_parallax.tsv !filter !diff !merge text=auto
 data/athyg/simbad_sourced_distances.tsv !filter !diff !merge text=auto
 data/bailer-jones/*.tsv filter=lfs diff=lfs merge=lfs -text
 data/simbad/*.tsv filter=lfs diff=lfs merge=lfs -text
@@ -34,3 +33,4 @@ data/membership/*.tsv filter=lfs diff=lfs merge=lfs -text
 data/membership/binding-review.tsv !filter !diff !merge text=auto
 data/membership/binding-review-dispositions.tsv !filter !diff !merge text=auto
 data/membership/label-drops.tsv !filter !diff !merge text=auto
+data/membership/parked-ledger.tsv !filter !diff !merge text=auto

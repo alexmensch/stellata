@@ -12,10 +12,20 @@ membership-manifest.tsv  ~30 MB, LFS. One row per admitted record: final
 additions-ledger.tsv     ~3.6 MB, LFS. The § 6.1 ledger for everything the
                          primaries admit that the spine lacked: one row per
                          group, keyed on the same five identifier cells as
-                         ../athyg/parked_no_owned_parallax.tsv, under the
+                         parked-ledger.tsv, under the
                          closed reason enum (admitted:hd_link_gap ·
                          admitted:hd_omitted · admitted:hip_omitted ·
                          admitted:cns5_census · component:<anchor>).
+parked-ledger.tsv        ~21 KB, regular git. The § 6.1 ledger for manifest
+                         rows that build no record: no owned parallax, or no
+                         V. Same five identifier cells as additions-ledger.tsv,
+                         under the closed reason enum
+                         (refused_no_defensible_parallax · no_parallax_published
+                         · no_v_magnitude). Written by build:catalog, not
+                         build:membership — which rows park is an output of the
+                         record walk. The parity gate subtracts exactly these
+                         rows and no more, so a park that is not on this list
+                         fails the build rather than vanishing.
 binding-review.tsv       ~3 KB, regular git. The 34 spine bindings only AT-HYG
                          asserts and SIMBAD does not corroborate, with the
                          SIMBAD witness columns. Pipeline-derived.
@@ -51,9 +61,13 @@ through the spine.
 
 ## Consumed by
 
-`scripts/catalog/membership/membership-manifest-gate.test.ts` — the parity
-gate over these files against the spine, the SID bridges and the built
-catalogue, including the two row-for-row joins (queue ↔ dispositions,
-label drops ↔ manifest). The record build does not read them yet;
-`stellata-3bsf.8.3` switches `readStars` onto the manifest and retires the
-spine as an input.
+`membership-manifest.tsv` → **`scripts/catalog/build-catalog.ts`** (`readStars`
+in `scripts/catalog/parse/stars-parse.ts`), as the membership term: every row
+is a record unless it parks, and no other source adds one. It is also the
+request set every catalog-scoped refresh pull is derived from
+(`scripts/refresh/README.md` § Request sets are membership-derived).
+
+`scripts/catalog/membership/membership-manifest-gate.test.ts` reads all of
+these — the parity gate over them against the spine, the SID bridges and the
+built catalogue, including the two row-for-row joins (queue ↔ dispositions,
+label drops ↔ manifest).

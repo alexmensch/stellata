@@ -126,7 +126,7 @@ jobs:
       # snapshot — and a build that parks a different star for the same total
       # would land silently.
       - run: |
-          git diff --exit-code -- data/athyg/parked_no_owned_parallax.tsv \
+          git diff --exit-code -- data/membership/parked-ledger.tsv \
             data/athyg/simbad_sourced_distances.tsv || {
             echo "::error::committed build ledgers are stale — run" \
               "'pnpm run build:catalog' and commit the regenerated files";

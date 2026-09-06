@@ -26,10 +26,10 @@ scripts/catalog/distance/parallax/
                                 build-catalog.ts, read by
                                 ../../validate/validate-simbad-sample.ts.
   parked-ledger.ts (+ test)     The § 6.1 dropped list — where it is committed,
-                                its closed reason enum, and the spine key the
-                                parity gate matches it on. The producer is
+                                its closed reason enum, and the identifier key
+                                the parity gate matches it on. The producer is
                                 build-catalog.ts, the consumer
-                                ../../spine/inherited-spine-parity.test.ts.
+                                ../../membership/membership-manifest-gate.test.ts.
 ```
 
 ## The cascade
@@ -242,13 +242,18 @@ Records the pipeline stops producing are **presence events, not retirements**
 same identity when Gaia DR4 fits these blends. The drop is a park, and the
 reason code says so.
 
-**A park is a ledger entry, never a membership-gate drop.** The five
-`spineDropped*` counts are the spine's own promises and stay pinned at zero —
-a non-zero one means a refreshed reference table moved a row out from under the
-snapshot, which is a different and unintended event. The park is counted as
-`distNone`, enumerated in `parked_no_owned_parallax.tsv`, and gated by
-`../../spine/inherited-spine-parity.test.ts`, which subtracts it from the
-parity arithmetic only as far as the committed ledger accounts for it.
+**One ledger holds every § 6.1 park.** A row the V cascade never lights parks
+as `no_v_magnitude` alongside the two parallax reasons, because a single
+enumerated file per membership event is what § 6.1's no-silent-drops rule can
+be gated on. The `reason` column says which.
+
+**A park is a ledger entry, never a walk-gate drop.** The two
+`dropped*` counts (`droppedNoDirection`, `droppedTooFar`) stay pinned at zero —
+a non-zero one means a refreshed reference table disagreeing with the tiers
+above it, which is a different and unintended event. The park is counted as
+`distNone`, enumerated in `parked-ledger.tsv`, and gated by
+`../../membership/membership-manifest-gate.test.ts`, which subtracts the ledger
+from the manifest by key before comparing designation multisets.
 
 **Companion promotion may not walk a parked record back in.** multiples.tsv
 states a distance for every component, and for a parked row that distance is
