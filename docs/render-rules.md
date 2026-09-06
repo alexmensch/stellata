@@ -216,7 +216,7 @@ removing it is the port contract, not a tolerated state.
 hidden — for the *whole* pipeline, not the branch that needed it, and
 neither GLSL ES nor WGSL has a conservative-depth qualifier. A port child
 that answers "one program per pass" with a second draw over the same
-330 k instances has made the frame cost more than the renderer it
+380k instances has made the frame cost more than the renderer it
 replaced.
 
 **How to apply.** `src/client/webgpu/README.md` § Early-z is the
@@ -252,8 +252,11 @@ kernel. Related validation trap, already guarded in
 in a not-yet-submitted encoder fails — defer the map to a microtask
 after the submit.
 
-**Where.** The audit of the existing storage-buffer designs is
-stellata-0it.36; `webgpu/README.md` carries the pointer.
+**Where.** `webgpu/README.md` § One writer per buffer per submit carries
+the backend mechanics and what the audit of the two existing designs
+found: nothing outside three writes a GPU buffer today, and an attribute
+moved to a storage buffer loses the `itemSize` and `array` its uploader
+cached.
 
 ## 8. Submits and passes are costs
 
