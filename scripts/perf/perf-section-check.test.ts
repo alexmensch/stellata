@@ -49,8 +49,8 @@ x
 <!-- template scaffolding -->
 pin 09b675c2 · apple-m4-metal-3 · every context steady
     row            metric   pinned  current  delta  band
- ~  sol|webgpu     gpu-p50  21.8    21.9     0.1    0.654
- ✗  mw50|webgpu    gpu-p50  31.5    33.2     1.7    0.945
+ ~  sol|webgpu     gpu-p50  21.8    21.9     0.1    0.250
+ ✗  mw50|webgpu    gpu-p50  31.5    33.2     1.7    0.315
 accepted: mw50|webgpu the new band pass draws at mw50 (bead-7)
 
 ## Release notes
