@@ -298,10 +298,11 @@ Data sources retain their own licences:
 
 - **AT-HYG v3.3** — David Nash,
   [Codeberg](https://codeberg.org/astronexus/athyg), CC-BY-SA-4.0.
-  Contributes the merge decisions — which stars are the same object,
-  and which Gaia source each is bound to; every field is sourced from
+  No longer a source of any shipped value: which stars are the same
+  object, and which Gaia source each is bound to, are the merge
+  decisions it still contributes, and every field is now sourced from
   the first-order catalogues below. The generated `catalog.bin` and
-  `search-index.json` are derivatives and carry the same licence.
+  `search-index.json` remain derivatives and carry the same licence.
 - **Gaia DR3** (astrometry, broadband and synthetic photometry,
   astrophysical parameters, NSS orbits) —
   ESA / Gaia / DPAC, [Gaia archive](https://gea.esac.esa.int/archive/),
