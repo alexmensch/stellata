@@ -145,11 +145,17 @@ describe('pinFromRun', () => {
 });
 
 describe('compareToPin', () => {
-  it('pins the floor at 0.5 ms or 3 %, whichever is larger', () => {
-    expect(PIN_FLOOR_MS).toBe(0.5);
-    expect(PIN_FLOOR_FRACTION).toBe(0.03);
-    expect(pinFloorMs(10)).toBe(0.5);
-    expect(pinFloorMs(25)).toBe(0.75);
+  it('pins the floor at 0.25 ms or 1 %, whichever is larger', () => {
+    expect(PIN_FLOOR_MS).toBe(0.25);
+    expect(PIN_FLOOR_FRACTION).toBe(0.01);
+    expect(pinFloorMs(10)).toBe(0.25);
+    expect(pinFloorMs(40)).toBe(0.4);
+  });
+
+  it('binds on the millisecond term at every canon row but mw50, where 1 % is larger', () => {
+    expect(pinFloorMs(21.8)).toBe(PIN_FLOOR_MS);
+    expect(pinFloorMs(16.9)).toBe(PIN_FLOOR_MS);
+    expect(pinFloorMs(31.451)).toBe(0.31451);
   });
 
   it('calls a run against its own pin unchanged, on the GPU stream where the pin has one', () => {
@@ -166,12 +172,23 @@ describe('compareToPin', () => {
   });
 
   it('marks a GPU-stream move past the floor dearer, and one inside it not at all', () => {
-    const dearer = scenario('sol', 'webgpu', dwell(stats(25.2), stats(22.6)));
-    const inside = scenario('sol', 'webgpu', dwell(stats(25.2), stats(22.4)));
+    const dearer = scenario('sol', 'webgpu', dwell(stats(25.2), stats(22.15)));
+    const inside = scenario('sol', 'webgpu', dwell(stats(25.2), stats(22.0)));
     expect(compareToPin(pinOf([SOL_GPU]), file([dearer])).rows[0].verdict).toBe('dearer');
     expect(compareToPin(pinOf([SOL_GPU]), file([inside])).rows[0].verdict).toBe('same');
-    const cheaper = scenario('sol', 'webgpu', dwell(stats(25.2), stats(20.9)));
+    const cheaper = scenario('sol', 'webgpu', dwell(stats(25.2), stats(21.4)));
     expect(compareToPin(pinOf([SOL_GPU]), file([cheaper])).rows[0].verdict).toBe('cheaper');
+  });
+
+  it('records lg and never marks it, however far the GPU stream moved', () => {
+    const lgPin = scenario('lg', 'webgpu', dwell(stats(16.7), stats(11.891)));
+    const moved = scenario('lg', 'webgpu', dwell(stats(16.7), stats(13.36)));
+    const row = compareToPin(pinOf([lgPin]), file([moved])).rows[0];
+    expect([row.metric, row.verdict]).toEqual(['gpu-p50', 'ungated']);
+    expect(row.currentMs).toBe(13.36);
+    expect(row.bandMs).toBe(0);
+    expect(row.note).toContain('does not reproduce cold-to-cold');
+    expect(pinDiffFails(compareToPin(pinOf([lgPin]), file([moved])))).toBe(false);
   });
 
   it('never marks on the wall clock: the cadence may move under a steady GPU stream', () => {

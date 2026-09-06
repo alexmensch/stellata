@@ -15,11 +15,18 @@ import type { Backend, ScenarioName } from './scenarios';
 export const PIN_SCHEMA = 'stellata-perf/pin-1';
 
 /** A row moves only past the pair's two-sigma band AND past this floor,
- *  whichever of the two forms is larger. The 3 % is provisional — a
- *  floor-only mark is a prompt to re-run, not a verdict:
- *  RELEASING.md § Perf pin. */
-export const PIN_FLOOR_MS = 0.5;
-export const PIN_FLOOR_FRACTION = 0.03;
+ *  whichever of the two forms is larger. Both derived from the cold-to-cold
+ *  spread of two pins on identical code: pins/README.md § Reading
+ *  `--against-pin`. */
+export const PIN_FLOOR_MS = 0.25;
+export const PIN_FLOOR_FRACTION = 0.01;
+
+/** Vantages the pin records but never marks, because they do not reproduce
+ *  cold-to-cold. lg shifts level BETWEEN runs while staying flat inside each,
+ *  which is exactly what the state guard cannot catch — so a steady verdict
+ *  on an lg row is not evidence it is comparable. pins/README.md § Reading
+ *  `--against-pin`. */
+export const PIN_UNGATED_SCENARIOS: readonly ScenarioName[] = ['lg'];
 
 /** Two 60 Hz intervals of hardware time. A canon vantage whose GPU-stream
  *  p50 crosses it marks whatever the band says. */
@@ -68,12 +75,14 @@ export interface PinFile {
 }
 
 /** Which clock the row's numbers came from. `wall-p50` appears only on an
- *  ungated row, where it is context rather than a reading the gate acts on. */
+ *  ungated row, where it is context rather than a reading the gate acts on;
+ *  an ungated row may equally carry `gpu-p50` as context. */
 export type PinMetric = 'gpu-p50' | 'wall-p50';
 
-/** `ungated` is a row the pin records but never marks: it carries no
- *  GPU-stream median on one side or the other, and wall time is quantised to
- *  the display's refresh interval. RELEASING.md § Perf pin. */
+/** `ungated` is a row the pin records but never marks, on either of two
+ *  grounds: it carries no GPU-stream median on one side or the other, and
+ *  wall time is quantised to the display's refresh interval; or its vantage
+ *  is in `PIN_UNGATED_SCENARIOS`. RELEASING.md § Perf pin. */
 export type PinVerdict = Verdict | 'ungated';
 
 export const PIN_VERDICT_MARK: Record<PinVerdict, string> = { ...VERDICT_MARK, ungated: '·' };
@@ -252,6 +261,19 @@ function compareRow(pinned: PinRow, record: ScenarioRecord): PinVerdictRow {
       bandMs: 0,
       verdict: 'ungated',
       note: ungatedNote(pinned, dwell.gpuStats),
+    };
+  }
+
+  if (PIN_UNGATED_SCENARIOS.includes(pinned.name)) {
+    return {
+      ...base,
+      metric: 'gpu-p50',
+      pinnedMs: pinned.gpu.p50,
+      currentMs: dwell.gpuStats.p50,
+      deltaMs: dwell.gpuStats.p50 - pinned.gpu.p50,
+      bandMs: 0,
+      verdict: 'ungated',
+      note: `${pinned.name} does not reproduce cold-to-cold — recorded, never marked`,
     };
   }
 

@@ -40,15 +40,23 @@ cold; tune it until every context in a pin run reads `steady`.
 ## Reading `--against-pin`
 
 - **Metric.** The GPU-stream p50 alone — the one continuous whole-frame
-  reading the pin holds, reproducing to ~1 % cold. Wall time is quantised
-  to the display's refresh interval, so it is recorded and never marked:
-  a row with no GPU stream on either side, every WebGL2 row among them,
-  reads `·` ungated with its wall p50 shown as context.
+  reading the pin holds. Two cold pins on identical code put four of the
+  five canon vantages inside 0.18 %. Wall time is quantised to the
+  display's refresh interval, so it is recorded and never marked: a row
+  with no GPU stream on either side, every WebGL2 row among them, reads
+  `·` ungated with its wall p50 shown as context.
+- **Ungated vantages.** `PIN_UNGATED_SCENARIOS` names rows recorded with
+  their GPU reading but never marked. `lg` is there because it does not
+  reproduce cold-to-cold — 11.891 → 13.360 ms between those two pins, a
+  level shift *between* runs while each run's own quarters stay flat, so
+  the state guard cannot see it and no cool-down suppresses it
+  (stellata-8cg.49.18).
 - **Band.** The pair's two-sigma standard error, floored at
-  `max(PIN_FLOOR_MS 0.5 ms, PIN_FLOOR_FRACTION 3 % × pinned)`. A `✗` is
-  past both; `~` is not resolved, never "no change". The 3 % is
-  provisional — a floor-only mark is a prompt to re-run rather than a
-  verdict (`RELEASING.md` § Perf pin).
+  `max(PIN_FLOOR_MS 0.25 ms, PIN_FLOOR_FRACTION 1 % × pinned)` — about 8×
+  the largest cold-to-cold move those four rows showed. A `✗` is past
+  both; `~` is not resolved, never "no change". The millisecond term is
+  the larger of the two at every canon row but mw50, so it is what sets
+  sensitivity in practice.
 - **Ceiling.** A GPU-stream p50 over `PIN_CEILING_MS` (33.4 ms, two 60 Hz
   intervals of hardware time) is `✗` whatever the band says.
 - **Refusals.** Another adapter slug or a headed run refuses the whole
