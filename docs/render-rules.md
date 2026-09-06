@@ -216,7 +216,7 @@ removing it is the port contract, not a tolerated state.
 hidden — for the *whole* pipeline, not the branch that needed it, and
 neither GLSL ES nor WGSL has a conservative-depth qualifier. A port child
 that answers "one program per pass" with a second draw over the same
-330 k instances has made the frame cost more than the renderer it
+380k instances has made the frame cost more than the renderer it
 replaced.
 
 **How to apply.** `src/client/webgpu/README.md` § Early-z is the
