@@ -29,9 +29,10 @@ const MANIFEST = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
 
 /** Published names reaching no record: the wgsnFaints hosts whose only key
  *  was a survey id the normaliser drops (they name stars outside the
- *  catalogue), plus AT-HYG's `Red Rectangle`, which names the nebula around
- *  HD 44179 rather than the star (docs/star-naming.md § 2). RATCHET DOWN. */
-const PUBLISHED_NAMES_UNREACHED = 55;
+ *  catalogue), plus `Red Rectangle`, which names the nebula around HD 44179
+ *  rather than the star (docs/star-naming.md § 2). RATCHET DOWN — it last
+ *  moved when the membership manifest admitted a record for one of them. */
+const PUBLISHED_NAMES_UNREACHED = 54;
 const FIXTURES_READY = existsSync(SEARCH_INDEX) && existsSync(ROW_INDEX_MAP)
   && existsSync(CONSTELLATIONS);
 

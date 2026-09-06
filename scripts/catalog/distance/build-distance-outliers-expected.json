@@ -1,107 +1,140 @@
 {
   "selfConsistency": [
     {
-      "id": "gaia:1644076926443036928",
-      "distSrc": "HIP",
-      "athygDist": 61.275,
-      "finalDist": 492.878,
-      "logRatio": 0.905
+      "id": "gaia:2028288753531171072",
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 90090.09,
+      "finalDist": 1942.617,
+      "logRatio": -1.666,
+      "reason": "Bailer-Jones posterior replacing a catastrophic 1/π inversion — the DR3 parallax is at or below its own error (S/N 0.03, RUWE 26.35), so the naive inversion runs to 90,090 pc. The photogeometric posterior returns 1,943 pc. This is precisely the low-S/N tail Layer 1 exists for; the ratio is large because the input was meaningless, not because the override moved a measured star."
     },
     {
-      "id": "gaia:4459913560795849600",
-      "distSrc": "G_R2",
-      "athygDist": 10121.458,
-      "finalDist": 105.263,
-      "logRatio": -1.983
+      "id": "gaia:207196987659993088",
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 1428571.429,
+      "finalDist": 1921.731,
+      "logRatio": -2.871,
+      "reason": "Bailer-Jones posterior replacing a catastrophic 1/π inversion — the DR3 parallax is at or below its own error (S/N 0.00, RUWE 14.04), so the naive inversion runs to 1,428,571 pc. The photogeometric posterior returns 1,922 pc. This is precisely the low-S/N tail Layer 1 exists for; the ratio is large because the input was meaningless, not because the override moved a measured star."
+    },
+    {
+      "id": "gaia:4090758750963891584",
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 243902.439,
+      "finalDist": 1352.005,
+      "logRatio": -2.256,
+      "reason": "Bailer-Jones posterior replacing a catastrophic 1/π inversion — the DR3 parallax is at or below its own error (S/N 0.01, RUWE 24.46), so the naive inversion runs to 243,902 pc. The photogeometric posterior returns 1,352 pc. This is precisely the low-S/N tail Layer 1 exists for; the ratio is large because the input was meaningless, not because the override moved a measured star."
+    },
+    {
+      "id": "gaia:4576709698859915136",
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 45045.045,
+      "finalDist": 1183.102,
+      "logRatio": -1.581,
+      "reason": "Bailer-Jones posterior replacing a catastrophic 1/π inversion — the DR3 parallax is at or below its own error (S/N 0.05, RUWE 13.00), so the naive inversion runs to 45,045 pc. The photogeometric posterior returns 1,183 pc. This is precisely the low-S/N tail Layer 1 exists for; the ratio is large because the input was meaningless, not because the override moved a measured star."
+    },
+    {
+      "id": "gaia:4655036845657109504",
+      "plxVia": "hip2_parallax",
+      "plxDist": 249.377,
+      "finalDist": 49594,
+      "logRatio": 2.299,
+      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (DR3 parallax NEGATIVE, -0.1334 ± 0.0170 mas) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. See SCIENCE.md § LMC kinematic override."
+    },
+    {
+      "id": "gaia:4657383027347819392",
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 625000,
+      "finalDist": 11352.279,
+      "logRatio": -1.741,
+      "reason": "Bailer-Jones posterior replacing a catastrophic 1/π inversion — the DR3 parallax is at or below its own error (S/N 0.05, RUWE 0.94), so the naive inversion runs to 625,000 pc. The photogeometric posterior returns 11,352 pc. This is precisely the low-S/N tail Layer 1 exists for; the ratio is large because the input was meaningless, not because the override moved a measured star."
+    },
+    {
+      "id": "gaia:4657680513972093952",
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 5000000,
+      "finalDist": 49594,
+      "logRatio": -2.004,
+      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (DR3 parallax 0.0002 ± 0.0122 mas, S/N 0.02) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. See SCIENCE.md § LMC kinematic override."
     },
     {
       "id": "gaia:4658107884688023040",
-      "distSrc": "G_R3",
-      "athygDist": 280.148,
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 280.151,
       "finalDist": 49594,
       "logRatio": 2.248,
-      "reason": "LMC kinematic snap — sky cone + bulk-PM gate matched, distance snapped to Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. See SCIENCE.md § LMC kinematic override."
+      "reason": "KNOWN MISFIRE, not a legitimate snap — this is a FOREGROUND star the LMC override captured. Its DR3 parallax is 3.5695 ± 0.0105 mas (S/N 340, RUWE 0.67), placing it at 280 pc; an LMC member sits at 49.6 kpc where the parallax would be ~0.02 mas and unmeasurable, so a 340-sigma detection rules LMC membership out. The override gates on sky cone + bulk proper motion ONLY (applyLmcKinematicOverride) and has no parallax-quality test, so a nearby star that happens to lie toward the LMC and share its apparent motion is snapped 177x too far. Tracked as stellata-uadc.39; the entry stays pinned so the misfire is visible rather than silent."
+    },
+    {
+      "id": "gaia:4660444931050856832",
+      "plxVia": "hip2_parallax",
+      "plxDist": 298.507,
+      "finalDist": 49594,
+      "logRatio": 2.22,
+      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (DR3 parallax NEGATIVE, -0.0318 ± 0.0170 mas) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. See SCIENCE.md § LMC kinematic override."
     },
     {
       "id": "gaia:4660699674131931008",
-      "distSrc": "G_R3",
-      "athygDist": 999.492,
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 999.5,
       "finalDist": 49594,
       "logRatio": 1.696,
-      "reason": "LMC kinematic snap (see sibling entry). Bright supergiant whose AT-HYG G_R3 distance underestimated the LMC anchor by ~50×."
+      "reason": "KNOWN MISFIRE, not a legitimate snap — this is a FOREGROUND star the LMC override captured. Its DR3 parallax is 1.0005 ± 0.0118 mas (S/N 85, RUWE 0.85), placing it at 1,000 pc; an LMC member sits at 49.6 kpc where the parallax would be ~0.02 mas and unmeasurable, so a 85-sigma detection rules LMC membership out. The override gates on sky cone + bulk proper motion ONLY (applyLmcKinematicOverride) and has no parallax-quality test, so a nearby star that happens to lie toward the LMC and share its apparent motion is snapped 50x too far. Tracked as stellata-uadc.39; the entry stays pinned so the misfire is visible rather than silent."
     },
     {
       "id": "gaia:4661719299382753408",
-      "distSrc": "G_R3",
-      "athygDist": 1142.874,
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 1142.857,
       "finalDist": 49594,
       "logRatio": 1.637,
-      "reason": "LMC kinematic snap (see sibling entry)."
+      "reason": "KNOWN MISFIRE, not a legitimate snap — this is a FOREGROUND star the LMC override captured. Its DR3 parallax is 0.8750 ± 0.0163 mas (S/N 54, RUWE 1.09), placing it at 1,143 pc; an LMC member sits at 49.6 kpc where the parallax would be ~0.02 mas and unmeasurable, so a 54-sigma detection rules LMC membership out. The override gates on sky cone + bulk proper motion ONLY (applyLmcKinematicOverride) and has no parallax-quality test, so a nearby star that happens to lie toward the LMC and share its apparent motion is snapped 43x too far. Tracked as stellata-uadc.39; the entry stays pinned so the misfire is visible rather than silent."
     },
     {
       "id": "gaia:4677073601271449856",
-      "distSrc": "G_R3",
-      "athygDist": 1419.513,
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 1419.446,
       "finalDist": 49594,
       "logRatio": 1.543,
-      "reason": "LMC kinematic snap (see sibling entry)."
+      "reason": "KNOWN MISFIRE, not a legitimate snap — this is a FOREGROUND star the LMC override captured. Its DR3 parallax is 0.7045 ± 0.0153 mas (S/N 46, RUWE 0.97), placing it at 1,419 pc; an LMC member sits at 49.6 kpc where the parallax would be ~0.02 mas and unmeasurable, so a 46-sigma detection rules LMC membership out. The override gates on sky cone + bulk proper motion ONLY (applyLmcKinematicOverride) and has no parallax-quality test, so a nearby star that happens to lie toward the LMC and share its apparent motion is snapped 35x too far. Tracked as stellata-uadc.39; the entry stays pinned so the misfire is visible rather than silent."
     },
     {
-      "id": "gaia:4685876050900066176",
-      "distSrc": "HIP",
-      "athygDist": 724.638,
-      "finalDist": 6250,
-      "logRatio": 0.936
+      "id": "gaia:5254233539939587712",
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 149253.731,
+      "finalDist": 1612.936,
+      "logRatio": -1.966,
+      "reason": "Bailer-Jones posterior replacing a catastrophic 1/π inversion — the DR3 parallax is at or below its own error (S/N 0.02, RUWE 22.02), so the naive inversion runs to 149,254 pc. The photogeometric posterior returns 1,613 pc. This is precisely the low-S/N tail Layer 1 exists for; the ratio is large because the input was meaningless, not because the override moved a measured star."
     },
     {
-      "id": "gaia:5284151216932205312",
-      "distSrc": "G_R2",
-      "athygDist": 20408.163,
-      "finalDist": 487.805,
-      "logRatio": -1.622
+      "id": "gaia:5342334829672399616",
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 2500000,
+      "finalDist": 2503.699,
+      "logRatio": -2.999,
+      "reason": "Bailer-Jones posterior replacing a catastrophic 1/π inversion — the DR3 parallax is at or below its own error (S/N 0.00, RUWE 9.72), so the naive inversion runs to 2,500,000 pc. The photogeometric posterior returns 2,504 pc. This is precisely the low-S/N tail Layer 1 exists for; the ratio is large because the input was meaningless, not because the override moved a measured star."
     },
     {
-      "id": "gaia:6054171095749135360",
-      "distSrc": "HIP",
-      "athygDist": 226.757,
-      "finalDist": 4828.062,
-      "logRatio": 1.328
+      "id": "gaia:5499230431643171456",
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 453.124,
+      "finalDist": 49594,
+      "logRatio": 2.039,
+      "reason": "KNOWN MISFIRE, not a legitimate snap — this is a FOREGROUND star the LMC override captured. Its DR3 parallax is 2.2069 ± 0.0134 mas (S/N 165, RUWE 0.93), placing it at 453 pc; an LMC member sits at 49.6 kpc where the parallax would be ~0.02 mas and unmeasurable, so a 165-sigma detection rules LMC membership out. The override gates on sky cone + bulk proper motion ONLY (applyLmcKinematicOverride) and has no parallax-quality test, so a nearby star that happens to lie toward the LMC and share its apparent motion is snapped 109x too far. Tracked as stellata-uadc.39; the entry stays pinned so the misfire is visible rather than silent."
     },
     {
-      "id": "hip:111571",
-      "distSrc": "G_R3",
-      "athygDist": 807.37,
-      "finalDist": 17.117,
-      "logRatio": -1.674
+      "id": "gaia:5734952393060737536",
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 78125,
+      "finalDist": 2216.092,
+      "logRatio": -1.547,
+      "reason": "Bailer-Jones posterior replacing a catastrophic 1/π inversion — the DR3 parallax is at or below its own error (S/N 0.06, RUWE 6.65), so the naive inversion runs to 78,125 pc. The photogeometric posterior returns 2,216 pc. This is precisely the low-S/N tail Layer 1 exists for; the ratio is large because the input was meaningless, not because the override moved a measured star."
     },
     {
-      "id": "hip:116191",
-      "distSrc": "HIP",
-      "athygDist": 193.798,
-      "finalDist": 14.541,
-      "logRatio": -1.125,
-      "reason": "FL Aqr — HIP2 parallax is unusable (5.16 ± 34.71 mas), so AT-HYG's 193.8 pc is noise. Intra-system coherence snaps it to its CPM companion FK Aqr's clean Gaia anchor (14.55 pc), matching FL Aqr's accepted ~14.4 pc. Legitimate correction, not a regression."
-    },
-    {
-      "id": "hip:57146",
-      "distSrc": "HIP",
-      "athygDist": 59.881,
-      "finalDist": 5.342,
-      "logRatio": -1.05
-    },
-    {
-      "id": "hip:72509",
-      "distSrc": "G_R3",
-      "athygDist": 1150.686,
-      "finalDist": 4.658,
-      "logRatio": -2.393
-    },
-    {
-      "id": "hip:95676",
-      "distSrc": "G_R3",
-      "athygDist": 3505.743,
-      "finalDist": 100.604,
-      "logRatio": -1.542
+      "id": "gaia:6055993604974078464",
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 75187.97,
+      "finalDist": 1510.87,
+      "logRatio": -1.697,
+      "reason": "Bailer-Jones posterior replacing a catastrophic 1/π inversion — the DR3 parallax is at or below its own error (S/N 0.05, RUWE 13.41), so the naive inversion runs to 75,188 pc. The photogeometric posterior returns 1,511 pc. This is precisely the low-S/N tail Layer 1 exists for; the ratio is large because the input was meaningless, not because the override moved a measured star."
     }
   ],
   "simbad": [
@@ -110,7 +143,8 @@
       "finalDist": 257.732,
       "simbadDist": 3511.236,
       "simbadMainId": "HD   7481",
-      "logRatio": -1.134
+      "logRatio": -1.134,
+      "reason": "SIMBAD's own parallax is the noise here, not our distance: 0.2848 ± 0.8358 mas (S/N 0.34) for HD 7481, which is what its 3,511 pc inverts from. A value consistent with zero at 1/3 sigma states no distance at all. The build places the record at 258 pc from a measured tier. Pinned so a future SIMBAD refresh that publishes a real parallax for it surfaces as a change."
     }
   ]
 }
