@@ -2,7 +2,7 @@
 
 `data/membership/membership-manifest.tsv` is one row per record the frozen
 primaries admit: the spine's 313,257 rows re-keyed on the designations the
-primaries publish for them, plus the 63,677 records the primaries name that
+primaries publish for them, plus the 63,672 records the primaries name that
 AT-HYG's subset never carried. It is the artifact that retires
 `data/athyg/inherited-spine.tsv`; the contract is `docs/catalog-driver.md`
 § 3.1, the measurement behind it `../spine/README.md` § The primaries audit.
@@ -97,27 +97,54 @@ one star (6 CNS5 ↔ TYC groups) — except two TYC items, which are two Tycho-2
 stars whatever the best-neighbour walk says.
 
 **Admission applies the collision guard's rule at the door.** A group takes
-only designations no spine record answers to after the label merge — display
-cell or alias, compared on `hd` / `hr` / `hip` / normalised GJ — and only a
-raw source no spine record carries. A designation on two records names a
-granularity and keys no SID (`docs/sid.md` § 4.1), so attaching one a spine
-record holds would cost that record its key for nothing. The consequences,
-measured 2026-09-05:
+only designations **no record already answers to** — display cell or alias,
+compared on `hd` / `hr` / `hip` / normalised GJ — and only a raw source no
+spine record carries. A designation on two records names a granularity and
+keys no SID (`docs/sid.md` § 4.1), so attaching one another record holds would
+cost that record its key for nothing. The claim set is the spine's after the
+label merge and **grows as each group is admitted**, so the rule reads the same
+whether the record already answering is a spine row or an earlier addition.
+The consequences, measured 2026-09-06:
 
 | Outcome | Groups | What it is |
 |---|---|---|
-| `admitted:hd_link_gap` | 54,817 | IV/25 star, lowest admitted HD < 100,000 — AT-HYG's link defect |
+| `admitted:hd_link_gap` | 54,812 | IV/25 star, lowest admitted HD < 100,000 — AT-HYG's link defect |
 | `admitted:hd_omitted` | 5,060 | IV/25 star, HD ≥ 100,000 |
 | `admitted:hip_omitted` | 444 | I/239 HIP with no IV/25 star |
 | `admitted:cns5_census` | 3,356 | CNS5 `GJ 1xxxx` row |
-| `component:<anchor>` | 466 | every designation it arrived with is a spine record's — the second Tycho-2 entry of a resolved pair whose HD (and, through Tycho-2's `hip`, HIP) the primary already carries. Not a row; ledgered onto the record it resolves to |
+| `component:<anchor>` | 471 | every designation it arrived with is another record's. 466 are the second Tycho-2 entry of a resolved pair whose HD (and, through Tycho-2's `hip`, HIP) a spine record carries; 5 are the second of a pair neither component of which is on the spine. Not a row; ledgered onto the record it resolves to |
 | source left empty, on a spine record | 105 | Gaia fitted one source where Tycho-2 resolved two stars |
 | source left empty, gate refused | 13 | the raw binding is in `rejected_bindings.tsv` |
 
 The audit's headline cohort sizes (60,344 / 566 / 3,362) are pre-grouping and
-pre-admission; the table above is what the manifest carries. Zero admitted rows
-key on a Gaia id alone (`additionGaiaKeyedOnly`), so `sid:allocate` mints
-every addition under `hd:` / `hip:` / `gl:`.
+pre-admission; the table above is what the manifest carries.
+
+**Those 5 are two groups arriving with one designation and no spine record to
+lose it to.** IV/25 resolves HD 23068, 37703, 45900, 63846 and 86269 onto two
+Tycho-2 stars each — close doubles at 1.5–3″, HD 45900's pair at 8.5″, flagged
+`n_tyc > 1` — and neither component is on the spine. Admission is sequential,
+so its order fixes which one takes the designation: the group whose Gaia
+binding survives the § 4 gate first, since the other would park for want of a
+parallax this one has (HD 86269 is the pair where that outranks the lower TYC),
+then TYC, HIP, GJ. A total order over content, never over walk order.
+
+The guard is keyed on the **normalised GJ, letter included**: `GJ 3131B` is the
+other component of `GJ 3131A`'s pair, a second star under a second designation,
+and matching the bare number as well ledgers 21 CNS5 component stars away as
+components of their own primaries. Whether the system is represented at all is
+the cohort filter's question, and `spineKeys` answers it against the bare
+number there.
+
+Two admitted rows ship without a designation their primaries publish
+(`additionsWithBlockedDesignation`): TYC 8188-4142-1 on HIP 50798 without
+HD 90034, TYC 1567-2517-2 on HD 166479 without HR 6803, both held by a spine
+record. The record ships; only the label is withheld.
+
+No admitted row keys on a Gaia id alone (`additionGaiaKeyedOnly`), and no
+designation one carries sits on a second row (`sharedDesignations`, 69, every
+one a spine-side pair), so `sid:allocate` mints every addition under `hd:` /
+`hip:` / `gl:`. The two counts answer only together: the first says the row has
+a classical designation, the second that the designation is its own.
 
 An addition's other labels come by **designation-keyed** joins over the same
 primaries — HR from V/50 by HD, HIP and Flamsteed from IV/27A by HD, HIP from
@@ -144,6 +171,10 @@ arithmetic and label-flips replay:
 - **(ii)** the manifest rows no spine row reaches are exactly the
   `admitted:*` rows of `additions-ledger.tsv`, per-reason counts pinned; every
   `component:` row names a manifest designation and is itself no manifest row.
+- **No addition shares a designation with another record**, which is what says
+  each mints on a classical key rather than falling through to its Gaia id.
+  The 69 designations two rows do share are the spine's own — pinned, so a
+  label change that makes a seventieth fails here.
 - **(iii)** the built catalogue's designation multiset equals the manifest's
   over the records the build produces. Until the record build reads the
   manifest (`stellata-3bsf.8.3`) that is the spine-origin rows less the parked
