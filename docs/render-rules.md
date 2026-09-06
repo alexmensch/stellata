@@ -252,8 +252,11 @@ kernel. Related validation trap, already guarded in
 in a not-yet-submitted encoder fails — defer the map to a microtask
 after the submit.
 
-**Where.** The audit of the existing storage-buffer designs is
-stellata-0it.36; `webgpu/README.md` carries the pointer.
+**Where.** `webgpu/README.md` § One writer per buffer per submit carries
+the backend mechanics and what the audit of the two existing designs
+found: nothing outside three writes a GPU buffer today, and an attribute
+moved to a storage buffer loses the `itemSize` and `array` its uploader
+cached.
 
 ## 8. Submits and passes are costs
 

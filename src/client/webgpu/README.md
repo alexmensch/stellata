@@ -346,6 +346,35 @@ the renderer it replaces — which is the one outcome the port is not
 allowed to have. Draw count per subsystem is part of parity, alongside
 what the pixels look like.
 
+## One writer per buffer per submit
+
+`GPUQueue.writeBuffer` is a queue operation: every write in a frame lands
+before any command in that frame's submit executes, so N draws sharing one
+buffer, each preceded by a write, all read the *last* bytes and the first
+N−1 draw wrong with nothing reporting it. The rule and its remedies —
+per-draw buffers, 256-byte dynamic-offset slots, a per-view ring — are
+`docs/render-rules.md` § 7.
+
+**Nothing here writes a GPU buffer directly**, which is what keeps the rule
+cheap today: no `writeBuffer` / `createBuffer` / `copyBufferToBuffer` call
+exists outside three. Every upload is staged as `BufferAttribute` update
+ranges, and the backend turns those into one `writeBuffer` per range
+against a *single* `array` reference read at upload time
+(`WebGPUAttributeUtils.updateAttribute`) — so the plural writes deposit one
+consistent state, and overlapping ranges, which `util/attribute-upload.ts`
+accumulates across frames when no render consumed them, carry identical
+bytes rather than racing.
+
+**A storage attribute breaks that silently.** WGSL has no packed `vec3` in
+a storage buffer, so for `itemSize === 3` the backend pads to 4 — and for a
+storage attribute alone it *reassigns* `bufferAttribute.itemSize` and
+`.array` to the padded copy. Anything holding the originals then diffs a
+stride and an array the GPU will never see. `DirtyItemUploader` caches both
+at construction and `iPosition` is itemSize 3; it is correct only because
+that attribute is a vertex attribute. Moving one to storage — which is what
+the compute prepass (`0it.15`) does — has to re-read them per flush or bind
+a buffer it owns outright. Requirement recorded in that bead's design field.
+
 ## Timestamps
 
 The renderer boots with `trackTimestamp: true`, and `animate()` resolves on
