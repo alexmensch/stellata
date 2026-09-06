@@ -221,3 +221,4 @@ void main() {
         starEmission(glow, core);
     }
 }
+
