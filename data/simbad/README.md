@@ -48,30 +48,30 @@ costs is visible in the pull's own report, which prints values reached
 before it prints values shipped.
 
 **The request set is an enumerated cohort, not the catalogue.** It is the
-spine rows some field's printed cell marks non-first-order (`HYG`,
-`OTHER`, `G_R2`, `GJ`) plus the whole no-Gaia tier — 11,050 rows, keyed
-`gaia_source_id` → HIP → TYC → GJ. Rows a first-order catalogue already
-covers are absent by construction, so a consumer cannot quietly reach for
-SIMBAD outside the cohort. **Widening the cohort is a re-pull**, not a
-filter change: the predicate is `is_simbad_value_cohort` in
-`scripts/refresh/simbad/inputs.py`.
+**membership manifest** rows a § 5 value tier can reach — 75,035 of 376,929
+(19.9%), keyed `gaia_source_id` → HIP → TYC → GJ. Four rows in five are
+absent by construction, so a consumer cannot quietly reach for SIMBAD where a
+first-hand catalogue already serves. **Widening the cohort is a re-pull**, not
+a filter change: the predicate is `simbad_value_cohort` in
+`scripts/refresh/simbad/inputs.py`, and a row is OUT only where Gaia's own 5p
+table states every § 5 value for it AND its identity is first-hand too (a
+`crosswalk_gated` binding plus a TYC or a HIP). Why it takes both halves —
+and what an identity-only predicate loses — is
+`scripts/refresh/simbad/README.md` § The cohort is two questions.
 
-Coverage over the cohort, measured at the 2026-08-26 pull. Every count
-below is what **ships**, i.e. post-policy — the file holds no unbibcoded
-value, so each field's value count equals its bibcode count: coordinates
-11,044 · PM 10,992 · parallax 10,896 · rv 9,557 · flux B 8,187 ·
-flux V 8,186.
+Coverage over the cohort, measured at the 2026-09-06 pull (74,442 oids, up
+from 11,045 rows on the spine-scoped one it replaced). Every count below is
+what **ships**, i.e. post-policy — the file holds no unbibcoded value, so each
+field's value count equals its bibcode count.
 
-| Spine cohort | Field | Reaches a shipped value |
-|---|---|---|
-| `rv_src=HYG` 7,965 | rv | 7,710 (96.8%) |
-| `rv_src=OTHER` 871 | rv | 559 (64.2%) |
-| `rv_src=G_R2` 295 | rv | 241 (81.7%) |
-| `dist_src=G_R2` 898 | parallax | 887 (98.8%) |
-| `dist_src=GJ` 38 | parallax | 30 (78.9%) |
-| `pos_src=GJ` 981 | coordinates | 979 (99.8%) |
-| `pm_src=HYG` 2,472 | PM | 2,424 (98.1%) |
-| `mag_src=GJ` 981 | V flux | 361 (36.8%) |
+| Field | Reaches a shipped value |
+|---|---|
+| coordinates | 74,442 (100.0%) |
+| proper motion | 74,263 (99.8%) |
+| parallax | 69,907 (93.9%) |
+| flux B | 70,853 (95.2%) |
+| flux V | 69,774 (93.7%) |
+| radial velocity | 34,571 (46.4%) |
 
 **V flux is the one field the bibcode policy actually bites.** Pull-wide
 SIMBAD has a B flux for 10,232 oids and a V for 9,680, but publishes a

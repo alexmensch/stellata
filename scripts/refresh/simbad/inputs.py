@@ -7,7 +7,7 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Iterator, Mapping
+from typing import AbstractSet, Callable, Iterator, Mapping
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -124,28 +124,64 @@ def gl_suffix(cell: str) -> str | None:
     return text or None
 
 
-# Spine `*_src` marks that do NOT open a SIMBAD tier. Tycho-2 (`T`),
-# Hipparcos printed and cross-walk (`HIP`, `HIP_X`) and Gaia DR3 (`G_R3`)
-# each name a catalogue we hold first-hand, so their own cascade tier sits
-# above SIMBAD; `N` and an empty cell mark an absent value rather than a
-# source. Everything else — `HYG`, `OTHER`, `G_R2`, `GJ` — is what
-# `docs/catalog-driver.md` § 5 retires, and is reachable by a SIMBAD tier.
-NO_SIMBAD_TIER_SRC: frozenset[str] = frozenset({"T", "HIP", "HIP_X", "G_R3", "N", ""})
+# The binding verdict that says a raw cross-walk reproduces the row's Gaia
+# id — `../../catalog/membership/README.md` § The spine side grades the four.
+# The other three rest on the spine's frozen claim, SIMBAD's object, or a
+# human disposition, none of which a value cascade may lean on the same way.
+GATE_REPRODUCED_BINDING = "crosswalk_gated"
 
-VALUE_SRC_COLUMNS = ("pos_src", "dist_src", "mag_src", "rv_src", "pm_src")
+# The identifiers the printed first-hand tiers key on: Tycho-2 (I/259) and
+# Hipparcos (I/239 + the HIP2 reduction). A row carrying neither can be
+# served by neither, whatever its Gaia binding says.
+PRINTED_TIER_ID_COLUMNS = ("tyc", "hip")
 
 
-def is_simbad_value_cohort(row: TableRow) -> bool:
-    """Whether a § 5 SIMBAD value tier can reach this row: some field's
-    printed cell carries a non-first-order provenance mark, or it is a
-    no-Gaia row (every cascade bottoms out at a designation-keyed tier
-    there)."""
-    if not row[rl.MEMBERSHIP_SOURCE_ID_COLUMN].strip():
-        return True
-    return any(
-        row[column].strip() not in NO_SIMBAD_TIER_SRC
-        for column in VALUE_SRC_COLUMNS
-    )
+# The 5p columns whose absence drops a cascade to a tier below Gaia: the
+# parallax the distance cascade inverts, the proper motion the direction and
+# PM-rescue cascades propagate on, and the radial velocity. All three are
+# `docs/catalog-driver.md` § 5 fields a SIMBAD tier serves.
+GAIA_VALUE_COLUMNS = ("parallax", "pmra", "radial_velocity")
+
+
+def gaia_complete_source_ids(astrometry_catalog_path: Path) -> set[str]:
+    """Source_ids the committed Gaia DR3 5p table states EVERY § 5 value for.
+    A row keyed on one of these needs no tier below Gaia for any of them; an
+    id absent from the table, or present with any of the three cells blank,
+    is not in the set."""
+    complete: set[str] = set()
+    with astrometry_catalog_path.open(newline="") as fh:
+        for row in csv.DictReader(fh, delimiter="\t"):
+            if all(row[column].strip() for column in GAIA_VALUE_COLUMNS):
+                complete.add(row["source_id"].strip())
+    return complete
+
+
+def simbad_value_cohort(gaia_complete: AbstractSet[str]) -> RowFilter:
+    """Build the `docs/catalog-driver.md` § 5 value-cohort predicate. A row is
+    OUT only where BOTH halves of the first-hand claim hold: Gaia's own 5p
+    solution states every § 5 value for its source_id, AND its identity rests
+    on a cross-walk-reproduced binding plus a printed identifier the Tycho-2 /
+    Hipparcos tiers can be keyed on. Everything else is in.
+
+    Two halves because the manifest answers only one of the questions the
+    predicate this replaced answered with one column each. That one read the
+    spine's `pos_src` / `dist_src` / `mag_src` / `rv_src` / `pm_src` marks —
+    per-field value provenance no manifest column carries. Identity alone is
+    not a substitute and silently loses the exact class § 5 retires: HIP 22255
+    and HD 150688 both carry `dist_src=G_R2`, a Gaia DR2 distance the driver
+    swap retired, on a `crosswalk_gated` binding with a TYC and a HIP. So the
+    value half is read where it is actually stated — Gaia's own table — and
+    5,135 rows the identity half misses are `rv_src`-only.
+    """
+    def in_cohort(row: TableRow) -> bool:
+        source_id = row[rl.MEMBERSHIP_SOURCE_ID_COLUMN].strip()
+        if not source_id or source_id not in gaia_complete:
+            return True
+        if row[rl.MEMBERSHIP_BINDING_COLUMN].strip() != GATE_REPRODUCED_BINDING:
+            return True
+        return not any(row[column].strip() for column in PRINTED_TIER_ID_COLUMNS)
+
+    return in_cohort
 
 
 def iter_wds_xids_oids(tsv_path: Path) -> Iterator[int]:

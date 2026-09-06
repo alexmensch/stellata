@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Refresh data/simbad/simbad_values.tsv — bibcoded SIMBAD rv, parallax,
-proper motion, coordinates and B/V fluxes for the spine rows a
+proper motion, coordinates and B/V fluxes for the membership rows a
 docs/catalog-driver.md § 5 SIMBAD value tier can reach."""
 
 from __future__ import annotations
@@ -24,7 +24,8 @@ from simbad.specs import (  # noqa: E402
 )
 
 ROOT = REPO_ROOT
-SPINE = ROOT / "data" / "athyg" / "inherited-spine.tsv"
+MEMBERSHIP = rl.MEMBERSHIP_MANIFEST
+GAIA_ASTROMETRY = ROOT / "data" / "gaia" / "gaia_dr3_astrometry_catalog.tsv"
 OUT = ROOT / "data" / "simbad" / "simbad_values.tsv"
 
 
@@ -52,9 +53,13 @@ GAIA_RESOLUTION_MIN = 0.95
 
 
 def collect_oid_requests(client: rl.TapClient) -> list[int]:
-    """Resolve the § 5 value cohort's spine keys to a sorted oid list."""
-    keys = inputs.membership_request_keys(SPINE, inputs.is_simbad_value_cohort)
-    print(f"value cohort: {keys.total} spine rows "
+    """Resolve the § 5 value cohort's manifest keys to a sorted oid list."""
+    gaia_complete = inputs.gaia_complete_source_ids(GAIA_ASTROMETRY)
+    print(f"gaia 5p states every § 5 value for {len(gaia_complete)} source_ids")
+    keys = inputs.membership_request_keys(
+        MEMBERSHIP, inputs.simbad_value_cohort(gaia_complete),
+    )
+    print(f"value cohort: {keys.total} manifest rows "
           f"({keys.keyless} carrying no key)")
     resolved = request.resolve_membership_keys(client, keys)
     for line in resolved.report_lines():
@@ -74,7 +79,7 @@ def collect_oid_requests(client: rl.TapClient) -> list[int]:
 def main() -> None:
     force = "--force" in sys.argv
 
-    sources = [SPINE, Path(__file__), *simbad.source_files()]
+    sources = [MEMBERSHIP, GAIA_ASTROMETRY, Path(__file__), *simbad.source_files()]
     if not force and rl.is_up_to_date(OUT, sources):
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
