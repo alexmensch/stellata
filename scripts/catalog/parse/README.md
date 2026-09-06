@@ -382,11 +382,13 @@ Pipeline in `scripts/catalog/build-catalog.ts`:
 
 **Reliability rule: any unresolved HIP is a hard build error** — unless
 it's in `KNOWN_MISSING_HIPS`. That map documents HIPs that Stellarium
-references but HYG has no 3D position for (empty x/y/z/parallax in the
-CSV), with a human-readable justification each. Currently:
+references but that build no record, with a human-readable justification
+each. Both entries are on the manifest and both **park**: a parallax exists
+and a skip rule refuses it, so they hold their SIDs and reinstate when Gaia
+DR4 fits the blend (`../distance/parallax/README.md`).
 
-- `5165` (α Phe / Ankaa) — Phoenix loses most of its figure without this
-  star, but HYG can't carry it.
+- `5165` (β Phe, HD 6595 — not α Phe, which is Ankaa at HIP 2081) —
+  Phoenix loses most of its figure without this star.
 - `89341` (μ Sgr / Polis) — one Sagittarius polyline degrades from 3
   points to 2, shape still recognisable.
 

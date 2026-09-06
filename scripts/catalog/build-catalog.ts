@@ -801,7 +801,7 @@ async function main() {
     counts.companionBlendDimMisfit = ps.blendDimMembersMisfit;
     counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
     counts.companionConstellationSplitFromAnchor = ps.constellationSplitFromAnchor;
-  counts.companionExistingDesigConFromAnchor = ps.existingDesigConFromAnchor;
+    counts.companionExistingDesigConFromAnchor = ps.existingDesigConFromAnchor;
 
   } else {
     console.log('multiples.tsv not found; skipping companion promotion.');

@@ -122,8 +122,8 @@ export const CON_INDEX: Map<string, number> = new Map(
 // has been fixed. `buildFigureLines` silently skips these; any other
 // unmatched HIP is a hard build error.
 export const KNOWN_MISSING_HIPS: Map<number, string> = new Map([
-  [5165, 'α Phoenicis (Ankaa) — HYG lacks parallax for this multiple-star system; upstream data gap'],
-  [89341, 'μ Sagittarii (Polis) — HYG lacks parallax; upstream data gap'],
+  [5165, 'β Phoenicis (HD 6595) — parked refused_no_defensible_parallax; reinstates when Gaia DR4 fits the blend'],
+  [89341, 'μ Sagittarii (Polis, HD 166937) — parked refused_no_defensible_parallax; same'],
 ]);
 
 const IAU_EDGES_EPOCH = 'B1875';

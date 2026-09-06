@@ -15,11 +15,19 @@ const ATHYG_SPINE_ROWS = '313,257';
 
 const MYTHOS = /\b313,000\b|\b313000\b|\b313k\b/;
 
+// Root-level config and metadata carry the figure too, and listing the
+// directories alone let `vitest.config.ts` hold `313k` through the sweep that
+// exists to remove it.
+const ROOT_FILES = [
+  'AGENTS.md', 'README.md', 'SCIENCE.md', 'RELEASING.md', 'CITATION.cff',
+  'vitest.config.ts', 'vite.config.ts', 'package.json',
+];
+
 function scannedFiles(): string[] {
   return execFileSync('git', ['ls-files', 'src', 'docs', 'scripts', 'tests',
-    'AGENTS.md', 'README.md', 'SCIENCE.md'], { cwd: ROOT, encoding: 'utf8' })
+    ...ROOT_FILES], { cwd: ROOT, encoding: 'utf8' })
     .trim().split('\n')
-    .filter((f) => /\.(ts|js|md|html|css)$/.test(f))
+    .filter((f) => /\.(ts|js|md|html|css|cff|json)$/.test(f))
     .filter((f) => f !== 'tests/star-count-consistency.test.ts');
 }
 

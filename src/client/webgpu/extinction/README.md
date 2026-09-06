@@ -94,26 +94,26 @@ none.
 Both figures below are the WebGL2 pass's unchanged — the port moved no
 work and allocated nothing new, which is the claim worth having written
 down rather than re-derived. **Re-derive rather than trust them**: they
-are `recordCount` (329,657 — `../../../../scripts/catalog/spine/README.md`)
-through `avTexHeight`, which gives 322 rows, and both move with the
+are `recordCount` (384,119 — `../../../../scripts/catalog/build-catalog-expected.json`)
+through `avTexHeight`, which gives 376 rows, and both move with the
 catalog. `debug.memory()` prices the live app
 (`../../debug/memory/README.md`), and on a WebGL2 boot it *measures* the
 A_V target rather than taking this table's word.
 
 | Resident | Size |
 | --- | --- |
-| A_V target (`RedFormat` + `FloatType`, 4 B/texel) | 1024 × 322 × 4 B ≈ 1.26 MiB |
-| Position texture (`RGBAFormat` + `FloatType`, 16 B/texel) | 1024 × 322 × 16 B ≈ 5.03 MiB |
+| A_V target (`RedFormat` + `FloatType`, 4 B/texel) | 1024 × 376 × 4 B ≈ 1.47 MiB |
+| Position texture (`RGBAFormat` + `FloatType`, 16 B/texel) | 1024 × 376 × 16 B ≈ 5.88 MiB |
 
-So ~6.3 MiB of video memory for the pass's whole life, plus the ~5 MiB
+So ~7.3 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
 `Float32Array` the position `DataTexture` keeps on the JS heap after
 upload (three does not release it, and the WebGL2 twin holds the same).
 Both survive on an integrated or mobile GPU without argument, and 1024 is
 inside every `maxTextureDimension2D` — the layout's width was chosen for
 that.
 
-**A recompute is ~15.8M volume samples**: one fragment per star × 48
-taps, 329,657 × 48. That is the whole per-recompute cost and it is paid
+**A recompute is ~18.4M volume samples**: one fragment per star × 48
+taps, 384,119 × 48. That is the whole per-recompute cost and it is paid
 *per frame* while the camera keeps moving more than
 `RECOMPUTE_EPSILON_PC` between frames — a warp pays it every frame, which
 is the case to measure, not the idle one. An idle camera costs zero, and

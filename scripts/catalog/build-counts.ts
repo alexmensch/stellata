@@ -122,7 +122,7 @@ export interface BuildCounts {
   designationConMismatch: number;
   /** Stars whose designation constellation came from their own GCVS
    *  designation — the only nomenclature source the build has left, since the
-   *  spine carries no editorial `con` cell. See `parse/README.md`
+   *  manifest carries no editorial `con` cell. See `parse/README.md`
    *  § Positional constellation membership. */
   gcvsDesignationCon: number;
   /** Record index of Sol after sort. -1 if Sol is not found in source. */
@@ -132,7 +132,7 @@ export interface BuildCounts {
   /** Constellations that carry at least one stick-figure polyline. */
   figureConstellations: number;
   /** Records emitted with a non-zero Gaia DR3 source_id at
-   *  RECORD_LAYOUT.gaiaSourceId. The spine carries one on all but its
+   *  RECORD_LAYOUT.gaiaSourceId. The manifest carries one on all but its
    *  no-Gaia residual; a sharp drop here means the builder lost the
    *  plumbing, since nothing re-derives the binding. */
   gaiaSourceIdResolved: number;
@@ -220,7 +220,7 @@ export interface BuildCounts {
    *  (excludes standalone rows). */
   companionRowsScanned: number;
   /** Newly minted catalog records — companions whose identifier wasn't
-   *  already in AT-HYG and that survived the position + absmag gates. */
+   *  already a record and that survived the position + absmag gates. */
   companionPromoted: number;
   /** Subset of `companionPromoted` addressable only via a synthetic
    *  identifier (`synth-<wds_id>-<comp>`) because the row carried no
@@ -229,7 +229,7 @@ export interface BuildCounts {
   companionPromotedSynthetic: number;
   /** Pair rows whose identifier already resolved to an existing
    *  catalog row (most pair rows fall here — the brighter component is
-   *  almost always AT-HYG'd). */
+   *  almost always a record already). */
   companionAlreadyInCatalog: number;
   /** Pair rows dropped because both gaia_source_id AND hip were blank
    *  on the secondary — no way for runtime code to address them. */
@@ -314,7 +314,7 @@ export interface BuildCounts {
   companionBlendDimMisfit: number;
   /** Dim candidates skipped by the M_member > M_blend + 0.05 guard. */
   companionBlendDimSkipped: number;
-  /** Existing AT-HYG blend-coordinate double entries repositioned in
+  /** Existing blend-coordinate double entries repositioned in
    *  place by companion promotion (ξ UMa B class). */
   companionRepositionedCollocatedDouble: number;
   /** Promoted companions whose own IAU-positional constellation differs from

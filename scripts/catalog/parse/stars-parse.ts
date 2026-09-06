@@ -238,8 +238,18 @@ export function nonEmpty(s: string | undefined | null): string | null {
   return t ? t : null;
 }
 
-function altCells(cell: string): number[] {
-  return cell === '' ? [] : cell.split(MANIFEST_VALUE_SEPARATOR).map(Number);
+/** Throws rather than admitting a NaN: these reach the search index and the
+ *  SID ledger through `starDesignations`, where a NaN designation is a key
+ *  nothing can resolve and nothing would report. */
+function altCells(cell: string, column: string): number[] {
+  if (cell === '') return [];
+  return cell.split(MANIFEST_VALUE_SEPARATOR).map((v) => {
+    const n = parseIntOrNull(v);
+    if (n === null) {
+      throw new Error(`manifest ${column} cell "${cell}" holds a non-numeric value`);
+    }
+    return n;
+  });
 }
 
 /** The one gate a manifest row can still fail that is NOT a § 6.1 park.
@@ -747,8 +757,8 @@ export function readStars(
       gould: null,
       gouldHalf: null,
       aliases: [],
-      hdAlt: altCells(row.hd_alt),
-      hrAlt: altCells(row.hr_alt),
+      hdAlt: altCells(row.hd_alt, 'hd_alt'),
+      hrAlt: altCells(row.hr_alt, 'hr_alt'),
       gl: simbadKeys.gl,
       tyc: simbadKeys.tyc,
       gaiaSourceId,

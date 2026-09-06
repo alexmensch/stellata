@@ -686,7 +686,7 @@ export interface PairCursor {
 }
 
 // Group decomposing-pair rows by system_id so the promotion of a secondary
-// can read the primary's resolved AT-HYG absmag for the Δmag imputation.
+// can read the primary record's resolved absmag for the Δmag imputation.
 // Standalone-role rows are emitted in their own bucket (one per row) since
 // they aren't sides of a WDS pair.
 export function groupBySystem(rows: MultiplesTsvRow[]): Map<string, PairCursor> {
