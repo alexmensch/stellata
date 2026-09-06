@@ -136,7 +136,7 @@ export interface ObjectKindModule<K extends TargetKind = TargetKind> {
   /** SIDs in localIndex order (localIndex = Target idx), or null when
    *  the domain can never attach this session (resolver concludes it).
    *  ArrayLike so the star module answers its Uint32Array column
-   *  without a 330k-element copy. */
+   *  without a 380k-element copy. */
   sids(): ArrayLike<number> | null;
   /** SVG label overlay factory — separate from `attach` because label
    *  overlays mount into the DOM, which the shell constructor must not

@@ -25,9 +25,9 @@
   "designationsKeyless": 3,
   "designationDuplicateRows": 7,
   "nameDuplicateRows": 7,
-  "spinePropers": 491,
-  "spineProperMatched": 445,
-  "spineProperResiduals": 46,
-  "spineBayerRows": 1522,
-  "spineBayerRowsCovered": 1520
+  "membershipPropers": 491,
+  "membershipProperMatched": 445,
+  "membershipProperResiduals": 46,
+  "membershipBayerRows": 1522,
+  "membershipBayerRowsCovered": 1520
 }

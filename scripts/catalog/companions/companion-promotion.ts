@@ -20,6 +20,7 @@ import {
   classifyFromSimbad,
   resolveSpectDisplay,
 } from '../spectral/spectral-classify';
+import type { ParkedReason } from '../distance/parallax/parked-ledger';
 import {
   absmagFromSpectral,
   physicalRadius,
@@ -447,21 +448,25 @@ export interface PromotionStats {
   /** Promoted companions whose own positional constellation differs from
    *  their anchor's — a pair wide enough to straddle an IAU boundary. */
   constellationSplitFromAnchor: number;
-  /** Pair rows refused because an identifier on them belongs to a parked
-   *  record — mostly the parked primary's siblings, which inherit its blended
-   *  source_id or HIP, rather than the parked record itself. See
-   *  {@link ParkedIdentifiers}. Without this the parked list names rows that
+  /** Records already in the catalogue that a pair row resolved to, and that
+   *  took the anchor's designation constellation because they carried none of
+   *  their own. See {@link inheritAnchorDesignationCon}. */
+  existingDesigConFromAnchor: number;
+  /** Pair rows refused because an identifier on them belongs to a record
+   *  parked on a REFUSED parallax — mostly that primary's siblings, which
+   *  inherit its blended source_id or HIP, rather than the parked record
+   *  itself. See {@link ParkedIdentifiers}, which owns why the other park
+   *  reasons do not reach here. Without this the parked list names rows that
    *  ship anyway. */
   droppedParkedRecord: number;
 }
 
-/** The identifiers of records the parallax cascade parked (§ 6.1 ledger). A
+/** The identifiers of records parked because a tier REFUSED their parallax. A
  *  pair row carrying one of them may not be promoted: multiples.tsv states a
- *  distance for every component, and for a parked row that distance is the
- *  measurement a tier above already refused — sigma Ori Aa's
- *  `hip2_long_baseline` 328.947 pc inverts to the 3.04 mas the S/N floor threw
- *  out. Promoting would re-serve it through the courier the skip rules exist to
- *  close.
+ *  distance for every component, and for such a row that distance is the
+ *  refused measurement itself — sigma Ori Aa's `hip2_long_baseline` 328.947 pc
+ *  inverts to the 3.04 mas the S/N floor threw out. Promoting would re-serve it
+ *  through the courier the skip rules exist to close.
  *
  *  **A sibling counts as carrying it.** Stage 2/3 bind one blended source to
  *  every component row of a sub-arcsec pair, so the parked primary's id sits on
@@ -479,13 +484,32 @@ export function emptyParkedIdentifiers(): ParkedIdentifiers {
 
 /** The § 6.1 ledger rows keyed the way a pair row names them. Takes the
  *  structural minimum rather than `ParkedRecord`, so the promotion pass does
- *  not import the walk that produced it. */
+ *  not import the walk that produced it.
+ *
+ *  **Only `refused_no_defensible_parallax` rows are kept, and widening this to
+ *  every park is a bug.** The gate launders nothing on a row parked because
+ *  NOTHING was ever published: there is no refused measurement for the pair row
+ *  to be carrying, and the distance it does state is the anchor's own — alpha
+ *  Her's components read 110.25 pc, which is Rasalgethi's HIP2 distance, not
+ *  the blend's. The other two reasons are further still from the rule, each
+ *  failing a different half of it: a `no_v_magnitude` row was placed and not
+ *  lit, a `no_position` row lit and not placed, and neither had a parallax
+ *  refused. Including any of them strands a component whose primary is still in
+ *  the catalogue, which is how Rasalgethi lost its B and Bb when the primaries
+ *  began admitting HD 156015. Where a parallax genuinely was refused the
+ *  primary parks too, so the whole system leaves together and the components
+ *  have nothing to hang off. */
 export function parkedIdentifiers(
-  parked: readonly { gaiaSourceId: string | null; hip: number | null }[],
+  parked: readonly {
+    gaiaSourceId: string | null;
+    hip: number | null;
+    reason: ParkedReason;
+  }[],
 ): ParkedIdentifiers {
   const gaia = new Set<string>();
   const hip = new Set<number>();
   for (const p of parked) {
+    if (p.reason !== 'refused_no_defensible_parallax') continue;
     if (p.gaiaSourceId !== null) gaia.add(p.gaiaSourceId);
     if (p.hip !== null && p.hip > 0) hip.add(p.hip);
   }
@@ -521,6 +545,7 @@ export function emptyPromotionStats(): PromotionStats {
     blendDimMembersBeyondSeparation: 0,
     blendDimMembersMisfit: 0,
     constellationSplitFromAnchor: 0,
+    existingDesigConFromAnchor: 0,
     droppedParkedRecord: 0,
   };
 }
@@ -661,7 +686,7 @@ export interface PairCursor {
 }
 
 // Group decomposing-pair rows by system_id so the promotion of a secondary
-// can read the primary's resolved AT-HYG absmag for the Δmag imputation.
+// can read the primary record's resolved absmag for the Δmag imputation.
 // Standalone-role rows are emitted in their own bucket (one per row) since
 // they aren't sides of a WDS pair.
 export function groupBySystem(rows: MultiplesTsvRow[]): Map<string, PairCursor> {
@@ -1359,6 +1384,27 @@ function registerExistingMemberForAnchorDim(
   });
 }
 
+/** A record a pair row resolves to displays a name composed off the anchor
+ *  ("Fomalhaut C"), so it is named for the ANCHOR's designation whatever its
+ *  own position says — the same rule the mint path applies. It reaches
+ *  existing records only since the primaries began admitting components in
+ *  their own right: Fomalhaut C arrives as CNS5's GJ 13282, sits in Aquarius,
+ *  and is α PsA C. Only fills an empty value, so a record IV/27A or the naming
+ *  ladder already answered for keeps its own. */
+function inheritAnchorDesignationCon(
+  member: Star,
+  anchor: Star | null,
+  stats: PromotionStats,
+): void {
+  if (anchor === null
+      || member.desigConIndex !== NO_CONSTELLATION_INDEX
+      || anchor.desigConIndex === NO_CONSTELLATION_INDEX) {
+    return;
+  }
+  member.desigConIndex = anchor.desigConIndex;
+  stats.existingDesigConFromAnchor++;
+}
+
 function promoteRow(
   ctx: PromoteRowContext,
   state: PromotionState,
@@ -1402,6 +1448,9 @@ function promoteRow(
       && existingIdx === anchorCatalogIdx;
     if (existingIdx !== null && !inheritedIdCollision) {
       stats.alreadyInCatalog++;
+      inheritAnchorDesignationCon(
+        state.existingStars[existingIdx], anchorStar ?? systemAnchorStar, stats,
+      );
       registerExistingMemberForAnchorDim(ctx, state, existingIdx, dustGrid);
       return null;
     }
@@ -1611,8 +1660,8 @@ function promoteRow(
     amplitudeMag: 0,
     varType: 0,
     gcvsName: null,
-    athygDist: null,
-    athygDistSrc: null,
+    plxDistPc: null,
+    plxVia: null,
     // A promoted companion is placed at its anchor's distance, so it inherits
     // the anchor's tier rather than claiming a parallax of its own — the
     // optical-double suppression must weigh both members the same way. Null

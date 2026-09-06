@@ -10,10 +10,10 @@ exactly the gap AT-HYG (system-level spectra) and Gaia DR3
 
 ```
 simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 10k stars.
-simbad_sptype.tsv          ~24 MB, LFS. 333,372 rows. Per-source sp_type /
+simbad_sptype.tsv          ~29 MB, LFS. 395,543 rows. Per-source sp_type /
                            sp_qual / sp_bibcode / otype + HIP / Gaia DR3 /
                            TYC / GJ cross-IDs; the resolver keys all four.
-simbad_values.tsv          ~2.8 MB, LFS. 11,044 rows. Bibcoded rv,
+simbad_values.tsv          ~2.7 MB, LFS. 11,044 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
                            the § 5 value cohort — see § The values pull.
 simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
@@ -111,9 +111,9 @@ cannot launder a withheld value back in. The rest are literature, led by
   inside
   [`scripts/refresh/wds_xids_overrides.py`](../../scripts/refresh/README.md).
 
-## Request sets come off the spine
+## Request sets come off the membership term
 
-Every SIMBAD pull keys on `data/athyg/inherited-spine.tsv`, the membership
+Every SIMBAD pull keys on the membership
 term — **no refresh script reads the AT-HYG CSV** (`data/athyg/README.md`
 § Consumed by). The spine's `gaia_source_id` is the resolved, gate-passed
 binding rather than a raw cell, so request and record build name the same
@@ -194,10 +194,14 @@ resolved, so no rung ever fired.
 The pull now asks every namespace a record reaches wherever the object it
 bound answers with nothing (`scripts/refresh/simbad/README.md` § The union
 asks every namespace a record reaches), and the reach is far wider than
-those 34: of 313,257 spine rows, 280,676 are answered by a bound object and
-ask nothing at all, 32,581 are not, and **3,267 of those are recovered** on
-3,188 added objects. `simbad_sptype.tsv` is 333,372 rows against the
-previous 330,141 and reads 86.3% `sp_type`-filled.
+those 34: measured on the spine-scoped pull that introduced it, 280,676 of
+313,257 rows were answered by a bound object and asked nothing at all,
+32,581 were not, and **3,267 of those were recovered** on 3,188 added
+objects. That ratio is what the union is for; the rebase onto the manifest
+re-ran it over a larger request without changing the rule, and the pull's
+own report is where its figures come from. `simbad_sptype.tsv` is now
+**395,543 rows** and reads 87.6% `sp_type`-filled
+(`awk -F'\t' 'NR>1{t++; if($3!="") f++} END{print f/t}'`).
 
 Every one of those bindings rests on a designation alone, so every one goes
 through the corroboration rule above — the guard the union does NOT get to
@@ -291,9 +295,9 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   cascade) + `scripts/catalog/classic-ids/build-classic-id-overlay.ts`
   (sibling-letter attribution gate on the overlay's bindings — see
   `data/classic-ids/README.md` § The binding gate). **The record build no
-  longer reads it**: `readStars` takes each binding off the spine column,
+  longer reads it**: `readStars` takes each binding off the manifest column,
   already gated, so the gate runs where bindings are still being decided
-  (`scripts/catalog/spine/README.md` § The identifier columns are read,
+  (`scripts/catalog/membership/README.md` § The identifier columns are read,
   never re-derived).
 - `simbad_values.tsv` → `scripts/catalog/simbad-values-parse.ts`, indexed by
   every namespace the pull keyed on and joined per record source_id → HIP →

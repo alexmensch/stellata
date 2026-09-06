@@ -271,7 +271,7 @@ hard-fails rather than degrading.
 
 `classic_id_overlay.tsv` + `cross_index.tsv` + `classic_id_overrides.tsv` are
 then read by `build-catalog.ts` itself
-(`scripts/catalog/classic-ids/apply-classic-id-labels.ts`): the overlay is the
+(`mergeClassicIdLabels`, run by `build:membership`): the overlay is the
 record build's label layer, and IV/27A's `cst` is the only source for the
 constellation a Bayer / Flamsteed designation is NAMED for.
 

@@ -922,25 +922,25 @@ class AthygMissingSentinelTests(unittest.TestCase):
         self.assertEqual(rl.athyg_str_or_none("4669-731-1"), "4669-731-1")
 
 
-class SpineReaderTests(unittest.TestCase):
+class MembershipReaderTests(unittest.TestCase):
     HEADER = "tyc\thip\tgaia_source_id\trv_src\n"
 
-    def _spine(self, body: str) -> Path:
+    def _table(self, body: str) -> Path:
         d = self.enterContext(tempfile.TemporaryDirectory())
-        p = Path(d) / "inherited-spine.tsv"
+        p = Path(d) / "membership-manifest.tsv"
         p.write_text(self.HEADER + body)
         return p
 
     def test_source_ids_skip_the_no_gaia_tier_and_keep_file_order(self) -> None:
-        ids = rl.read_spine_source_ids(self._spine(
+        ids = rl.read_membership_source_ids(self._table(
             "1-2-1\t2\t2341871673090078592\tG_R3\n"
             "3-4-1\t5\t\tHYG\n"                      # no-Gaia tier
             "5-6-1\t7\t4472832130942575872\tN\n"
         ))
         self.assertEqual(ids, [2341871673090078592, 4472832130942575872])
 
-    def test_iter_spine_rows_yields_named_cells(self) -> None:
-        rows = list(rl.iter_spine_rows(self._spine("1-2-1\t2\t99\tHYG\n")))
+    def test_iter_membership_rows_yields_named_cells(self) -> None:
+        rows = list(rl.iter_membership_rows(self._table("1-2-1\t2\t99\tHYG\n")))
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["tyc"], "1-2-1")
         self.assertEqual(rows[0]["rv_src"], "HYG")

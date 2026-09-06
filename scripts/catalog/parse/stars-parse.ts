@@ -1,6 +1,6 @@
-// Inherited-spine reader: per-row parallax cascade + its two override layers ×
-// direction cascade → in-memory Star records for every downstream builder step.
-// See scripts/catalog/README.md.
+// Membership-manifest reader: per-row parallax cascade + its two override
+// layers × direction cascade → in-memory Star records for every downstream
+// builder step. See scripts/catalog/README.md.
 import { readFileSync } from 'node:fs';
 
 import {
@@ -9,8 +9,6 @@ import {
   applyLmcKinematicOverride,
   apparentToAbsoluteMagnitude,
   isInLmcCone,
-  emptyDistSrcPartition,
-  tallyDistSrc,
   SOL_ABSOLUTE_V_MAGNITUDE,
   SOL_APPARENT_V_MAGNITUDE,
   SOL_PROPER_NAME,
@@ -20,14 +18,10 @@ import {
   NO_CONSTELLATION_INDEX,
   SIMBAD_NAMESPACE_VALUES,
   type ApsisRow,
-  type DistSrcPartition,
   type SimbadNamespace,
   type SimbadRecordKeys,
 } from '../catalog-pure';
-import {
-  classifyFromSimbad,
-  resolveSpectDisplay,
-} from '../spectral/spectral-classify';
+import { classifyFromSimbad } from '../spectral/spectral-classify';
 import {
   type SimbadSpectralIndex,
   emptySimbadSpectralIndex,
@@ -59,7 +53,11 @@ import {
   DIST_VIA_VALUES,
   type DistVia,
 } from '../distance/parallax/parallax-cascade';
-import type { ParkedRecord } from '../distance/parallax/parked-ledger';
+import {
+  PARKED_REASONS,
+  type ParkedReason,
+  type ParkedRecord,
+} from '../distance/parallax/parked-ledger';
 import {
   emptyPairMemberParallaxIndex,
   lookupPairMemberParallax,
@@ -105,10 +103,13 @@ import {
 import type { GspcColour } from '../photometry/gspc-parse';
 import { printedByHip } from '../photometry/hip-photometry-parse';
 import { emptyTallyPartition } from '../../util/tally';
-import { iterSpineTsv } from '../spine/inherited-spine-pure';
+import {
+  MANIFEST_VALUE_SEPARATOR,
+  iterManifestTsv,
+} from '../membership/membership-manifest-pure';
 import { type ConstellationAssignment } from './constellations';
 
-// Drop stars farther than this from Sol. AT-HYG carries a handful of
+// Drop stars farther than this from Sol. The catalogue carries a handful of
 // extragalactic stragglers (LMC supergiants pre-override, plus a few
 // distant outliers) that the renderer's float32 origin can't keep
 // stable; the LMC override snaps those back inside the cutoff before
@@ -144,7 +145,7 @@ export interface Star {
   desigConIndex: number;
   flags: number;
   /** The record's display name — what `catalog.bin`'s name table carries.
-   *  The spine's printed cell until the naming ladder runs, then the
+   *  The manifest's printed cell until the naming ladder runs, then the
    *  composer's output for the NAME tiers only; a record displaying a
    *  designation carries null and the runtime composes its label from the
    *  structure below (`../naming/README.md`). */
@@ -155,7 +156,7 @@ export interface Star {
    *  string (`Ross 128`, `Cygnus X-1`) — docs/star-naming.md § 2. */
   eponym: string | null;
   /** Bayer letter as the Unicode glyph — Greek (`α`) or the bare Latin
-   *  overflow series (`p`). The spine's ASCII cell (`Alp`) until the naming
+   *  overflow series (`p`). The manifest's ASCII cell (`Alp`) until the naming
    *  ladder replaces it; no consumer parses it either way. */
   bayer: string | null;
   bayerSup: number | null;
@@ -174,8 +175,9 @@ export interface Star {
   hip: number | null;
   hd: number | null;
   hr: number | null;
-  /** Further HD / HR numbers naming this star, filled by the classic-ID label
-   *  merge where an overlay cell asserted more than the field could hold
+  /** Further HD / HR numbers naming this star — the manifest's `hd_alt` /
+   *  `hr_alt` cells, which the classic-ID label merge filled where an overlay
+   *  cell asserted more than the field could hold
    *  (`../classic-ids/README.md` § The label merge). Never written to the
    *  binary: they reach the runtime through the search index and the SID
    *  ledger through `starDesignations`. */
@@ -194,17 +196,18 @@ export interface Star {
   amplitudeMag: number;     // 0 if not variable
   varType: number;          // VAR_TYPE_* enum from classifyGcvsVarType
   gcvsName: string | null;  // GCVS designation attached by applyVariability (R CrB, VY CMa, V0645 Cen); null when not cross-matched
-  // Build-time-only diagnostic fields. The spine's printed AT-HYG cells,
-  // captured before any override fires; consumed by the post-build
-  // distance-regression check and NOT written to the binary.
-  athygDist: number | null;     // printed `dist`, pre-override
-  athygDistSrc: string | null;  // printed `dist_src`
+  /** Build-time-only diagnostics: the parallax cascade's own inversion, before
+   *  any override layer fires, and the tier that supplied it. The post-build
+   *  distance-regression check measures override drift against them; neither
+   *  is written to the binary. Null on Sol (distance zero by construction) and
+   *  on records minted rather than walked. */
+  plxDistPc: number | null;
+  plxVia: DistVia | null;
   /** Which parallax tier (or override layer) this record's distance came from.
    *  Build-time only, like `vVia`, and `null` on the same terms: a promoted
    *  companion with no anchor to inherit a tier from was placed by no cascade.
    *  The optical-double suppression reads it to ask whether a separation is
-   *  trustworthy — a question the spine's editorial `dist_src` cell used to
-   *  answer. */
+   *  trustworthy. */
   distVia: DistVia | null;
   /** Which cascade tier supplied the V this record's absmag was derived from,
    *  `null` on records minted rather than read (promoted companions). Read by
@@ -235,16 +238,26 @@ export function nonEmpty(s: string | undefined | null): string | null {
   return t ? t : null;
 }
 
-/** The membership gates a spine row can still fail. Every one is pinned at 0
- *  in build-catalog-expected.json, so a non-zero entry fails the build rather
- *  than dropping a record the spine promised — see ../spine/README.md
- *  § The membership gates still run, and must stay at zero. */
+/** Throws rather than admitting a NaN: these reach the search index and the
+ *  SID ledger through `starDesignations`, where a NaN designation is a key
+ *  nothing can resolve and nothing would report. */
+function altCells(cell: string, column: string): number[] {
+  if (cell === '') return [];
+  return cell.split(MANIFEST_VALUE_SEPARATOR).map((v) => {
+    const n = parseIntOrNull(v);
+    if (n === null) {
+      throw new Error(`manifest ${column} cell "${cell}" holds a non-numeric value`);
+    }
+    return n;
+  });
+}
+
+/** The one gate a manifest row can still fail that is NOT a § 6.1 park.
+ *  Pinned at 0 in build-catalog-expected.json: a row landing past MAX_DIST_PC
+ *  after every override is a reference table disagreeing with the tiers above
+ *  it, never a membership decision — those are the parked ledger's. */
 export interface ReadStarsDrops {
-  noRaDec: number;
-  noDist: number;
-  noDirection: number;
   tooFar: number;
-  noVMagnitude: number;
 }
 
 /** Every reference table a readStars walk consumes, as one bundle.
@@ -275,7 +288,7 @@ export interface ReadStarsOptions {
   hipBv?: Map<number, number>;
   /** Printed Gliese V/70A values keyed on the record's own `gl` — the V
    *  cascade's tier below Tycho-2, and the only one reaching the GJ-only
-   *  cohort. Absent costs those rows their V, hence their record. */
+   *  cohort. Absent parks those rows. */
   gliese?: GlieseIndex;
   /** Anchor-grade parallaxes of each record's own bound siblings — the
    *  cascade's tier below SIMBAD. Absent parks the rows it would have
@@ -285,7 +298,7 @@ export interface ReadStarsOptions {
 }
 
 export function readStars(
-  spineTsvPath: string,
+  manifestTsvPath: string,
   {
     conAssignment,
     bjMap = new Map(),
@@ -313,23 +326,25 @@ export function readStars(
     dropped: ReadStarsDrops;
     bjEligible: number;            // rows with a Gaia DR3 source_id
     bjOverridden: number;          // bjEligible rows that hit a B-J entry
-    bjOverriddenByDistSrc: DistSrcPartition;   // bjOverridden split by AT-HYG dist_src
     /** The § 6.1 dropped list — enumerated, because these rows leave the
      *  catalogue and nothing else records that they existed. */
     parked: ParkedRecord[];
+    /** The same rows counted per reason. The cascade partitions below run over
+     *  RECORDS, so a parked row is in none of them — this is the one place a
+     *  park is a number rather than a ledger line. */
+    parkedVia: Record<ParkedReason, number>;
     /** Rows whose SHIPPED distance inverts a parallax with worse than 20%
      *  fractional error, so the result is biased. They ship — no second source
      *  reaches them — and this count is how they stay visible for a Gaia DR4
      *  revisit. Bailer-Jones rows are excluded: there the posterior, not the
      *  inversion, handles the low-S/N case. */
     distLowPrecisionParallax: number;
-    /** Of the rows dropped for no owned parallax, those a skip rule refused a
-     *  value for rather than those nothing measured at all. */
-    distRefusedNoOwnedParallax: number;
     distVia: Record<DistVia, number>;
     lmcCandidates: number;         // rows inside the LMC sky cone (any PM)
     lmcOverridden: number;         // lmcCandidates passing the PM gate (snapped to LMC)
-    lmcOverriddenByDistSrc: DistSrcPartition;  // lmcOverridden split by AT-HYG dist_src
+    /** lmcOverridden split by the tier the snap displaced — which populations
+     *  the override actually moves. */
+    lmcOverriddenByDistVia: Record<DistVia, number>;
     directionVia: Record<DirectionVia, number>; // per-tier direction-cascade routing
     vVia: Record<VVia, number>;    // per-tier V-magnitude cascade routing
     vTycho2OutsideBtVtRange: number; // tycho2-tier rows outside SP-1200's published BT−VT range
@@ -358,31 +373,19 @@ export function readStars(
     ciGspcValidatedRange: number;  // gspc-tier rows the archive calls in-range
   };
 } {
-  const spineRows = iterSpineTsv(readFileSync(spineTsvPath, 'utf8'));
+  const rows = iterManifestTsv(readFileSync(manifestTsvPath, 'utf8'));
 
   const stars: Star[] = [];
-  // Every spine row already passed each of these in the build it snapshots,
-  // so all five are zero by construction. They stay as the assertion that the
-  // spine and the reference tables it was frozen against still agree — a
-  // refreshed table that moves a row past MAX_DIST_PC would otherwise drop a
-  // record the spine promised.
-  const dropped: ReadStarsDrops = {
-    noRaDec: 0,
-    noDist: 0,
-    noDirection: 0,
-    tooFar: 0,
-    noVMagnitude: 0,
-  };
+  const dropped: ReadStarsDrops = { tooFar: 0 };
   let total = 0;
   const parked: ParkedRecord[] = [];
+  const parkedVia = emptyTallyPartition(PARKED_REASONS);
   let bjEligible = 0;
   let distLowPrecisionParallax = 0;
-  let distRefusedNoOwnedParallax = 0;
   let bjOverridden = 0;
-  const bjOverriddenByDistSrc = emptyDistSrcPartition();
   let lmcCandidates = 0;
   let lmcOverridden = 0;
-  const lmcOverriddenByDistSrc = emptyDistSrcPartition();
+  const lmcOverriddenByDistVia = emptyTallyPartition(DIST_VIA_VALUES);
   const distViaCounts = emptyTallyPartition(DIST_VIA_VALUES);
   const directionVia = emptyTallyPartition(DIRECTION_VIA_VALUES);
   const vVia = emptyTallyPartition(V_VIA_VALUES);
@@ -411,29 +414,13 @@ export function readStars(
   let spectralByGspspec = 0;
   let spectralFallback = 0;
 
-  for (const row of spineRows) {
+  for (const row of rows) {
     total++;
-    const ra = parseFloatOrNull(row.ra);   // hours
-    const dec = parseFloatOrNull(row.dec); // degrees
-    if (ra === null || dec === null) {
-      dropped.noRaDec++;
-      continue;
-    }
-    const athygDist = parseFloatOrNull(row.dist);
-    if (athygDist === null) {
-      dropped.noDist++;
-      continue;
-    }
-
     const hip = parseIntOrNull(row.hip);
-    // Printed proper motion (mas/yr, cos δ-applied). Its only remaining
-    // consumer is the LMC override's bulk-PM gate — the velocity assembly
-    // takes its PM from whichever tier the direction cascade selected.
-    const athygPmRa = parseFloatOrNull(row.pm_ra);
-    const athygPmDec = parseFloatOrNull(row.pm_dec);
-    // Read off the spine column, never re-derived: the native → HIP-cross-walk
-    // precedence and both binding gates ran when the spine was generated, and
-    // re-running them here would re-decide a binding the spine froze.
+    // Read off the manifest column, never re-derived: the binding is the one
+    // the manifest justified (docs/catalog-driver.md § 3.1), and re-deciding
+    // it here would re-run a cross-walk against reference tables that have
+    // moved since.
     const gaiaSourceId = nonEmpty(row.gaia_source_id);
     const gaiaRow = gaiaSourceId !== null
       ? directions.gaiaAstrometry.get(gaiaSourceId) ?? null
@@ -464,7 +451,6 @@ export function readStars(
       if (rvErr !== null && rvErr > rvGaiaErrorMaxKmS) rvGaiaErrorMaxKmS = rvErr;
     }
 
-    const athygDistSrc = nonEmpty(row.dist_src);
     const proper = nonEmpty(row.proper);
     const isSol = proper === SOL_PROPER_NAME;
     // One lookup serves both cascades that read this row: the direction tier
@@ -473,9 +459,19 @@ export function readStars(
       ? directions.tycho2.get(simbadKeys.tyc) ?? null
       : null;
     const glieseRow = lookupGliese(gliese, simbadKeys.gl);
+    const park = (reason: ParkedReason): void => {
+      parked.push({
+        tyc: simbadKeys.tyc,
+        hip,
+        hd: parseIntOrNull(row.hd),
+        gl: simbadKeys.gl,
+        gaiaSourceId,
+        reason,
+      });
+      parkedVia[reason]++;
+    };
 
-    // Every distance now inverts a parallax this build pulled itself — the
-    // spine's printed `dist` cell is no longer a tier. See
+    // Every distance inverts a parallax this build pulled itself. See
     // ../distance/parallax/README.md.
     const plxRes = resolveParallax(
       {
@@ -491,71 +487,29 @@ export function readStars(
       gaiaRowIs2p(gaiaRow),
       isSol,
     );
-    // Not a `dropped` gate: those five are the spine's own promises, pinned at
-    // zero, and a park is a deliberate § 6.1 ledger entry rather than a
-    // reference table having moved under the snapshot.
+    // Not a `dropped` gate: a park is a deliberate § 6.1 ledger entry.
     if (plxRes.via === 'none') {
-      distViaCounts.none++;
-      if (plxRes.refused) distRefusedNoOwnedParallax++;
-      parked.push({
-        tyc: simbadKeys.tyc,
-        hip,
-        hd: parseIntOrNull(row.hd),
-        gl: simbadKeys.gl,
-        gaiaSourceId,
-        reason: plxRes.refused
-          ? 'refused_no_defensible_parallax'
-          : 'no_parallax_published',
-      });
+      park(plxRes.refused
+        ? 'refused_no_defensible_parallax'
+        : 'no_parallax_published');
       continue;
     }
 
-    // Bailer-Jones supersedes the raw inversion wherever the parallax the
-    // cascade settled on is Gaia's own — its Bayesian posterior treats exactly
-    // that measurement. The eligibility predicate is the resolved tier, never
-    // the spine's editorial `dist_src`: a non-Gaia parallax must not be
-    // regressed onto B-J's Galactic-density prior tail (~10–40 kpc), and which
-    // parallax a record carries is something this build now knows first-hand.
-    // A null parallax here is the curated exit (Sol, distance zero by
-    // construction); `none` returned above.
-    let dist = plxRes.plxMas === null ? 0 : 1000 / plxRes.plxMas;
-    let distVia: DistVia = plxRes.via;
-    const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, plxRes.via);
-    if (bjEligibleRow) bjEligible++;
-    if (bjEligibleRow && bjMap.size > 0) {
-      const ovr = applyBailerJonesOverride(gaiaSourceId, bjMap);
-      if (ovr !== null) {
-        dist = ovr;
-        distVia = 'bailer_jones';
-        bjOverridden++;
-        tallyDistSrc(bjOverriddenByDistSrc, athygDistSrc);
-      }
-    }
-
-    // LMC kinematic override: B-J's Galactic-density prior pulls real
-    // LMC supergiants to ~5-20 kpc instead of 49.59 kpc. Sky-cone + bulk-PM
-    // filter snaps the ~60 affected rows back to Pietrzyński 2019's
-    // eclipsing-binary distance. Runs AFTER B-J so it overrides B-J's
-    // mis-anchored value on the same rows.
-    if (isInLmcCone(ra, dec)) {
-      lmcCandidates++;
-      const ovr = applyLmcKinematicOverride(ra, dec, athygPmRa, athygPmDec);
-      if (ovr !== null) {
-        dist = ovr;
-        distVia = 'lmc_kinematic';
-        lmcOverridden++;
-        tallyDistSrc(lmcOverriddenByDistSrc, athygDistSrc);
-      }
-    }
-    distViaCounts[distVia]++;
-    // Counted against the SHIPPED tier, not the resolved parallax: where
-    // Bailer-Jones supersedes the inversion its posterior is what handles a
-    // low-S/N parallax, so flagging those rows would report a bias the record
-    // does not carry. The LMC snap replaces the distance outright.
-    if (plxRes.lowPrecision && distVia === plxRes.via) distLowPrecisionParallax++;
-
-    if (dist > MAX_DIST_PC) {
-      dropped.tooFar++;
+    // V through the Riello transform → printed HIP V → Tycho-2's reduced VT →
+    // Gliese's printed Vmag → curated. See ../photometry/README.md. A row no
+    // tier lights parks like one no tier places: a record needs both.
+    const tychoV = tycho2VMagnitude(
+      tycho2Row?.btMag ?? null, tycho2Row?.vtMag ?? null,
+    );
+    const vRes = resolveVMagnitude(
+      gaiaRow,
+      printedByHip(hipVMag, hip),
+      tychoV.v,
+      glieseRow?.vMag ?? null,
+      isSol ? SOL_APPARENT_V_MAGNITUDE : null,
+    );
+    if (vRes.v === null) {
+      park('no_v_magnitude');
       continue;
     }
 
@@ -567,40 +521,15 @@ export function readStars(
       { ...simbadKeys, simbad: simbadRow?.astrometry ?? null, isSol },
       directions,
     );
+    // A § 6.1 park, not a drop: no tier states where this row is, so its
+    // distance has nothing to multiply. Mostly HIP-only additions a bound
+    // sibling placed and printed HIP photometry lit, which no positional tier
+    // reaches — the SIMBAD values cohort is still keyed on the spine and holds
+    // no row for them.
     if (dirRes === null) {
-      dropped.noDirection++;
+      park('no_position');
       continue;
     }
-    directionVia[dirRes.via]++;
-    if (dirRes.via === 'tycho2' && tycho2Row !== null) {
-      if (tycho2Row.fromIcrs) directionTycho2FromIcrs++;
-      if (tycho2Row.isPhotocentre) directionTycho2Photocentre++;
-    }
-
-    // V through the Riello transform → printed HIP V → Tycho-2's reduced VT →
-    // Gliese's printed Vmag → curated. See ../photometry/README.md. absmag
-    // then derives from that V and the distance the whole override stack
-    // settled on — except for Sol, which sits at distance zero where the
-    // modulus is undefined and takes SOL_ABSOLUTE_V_MAGNITUDE instead.
-    const tychoV = tycho2VMagnitude(
-      tycho2Row?.btMag ?? null, tycho2Row?.vtMag ?? null,
-    );
-    const vRes = resolveVMagnitude(
-      gaiaRow,
-      printedByHip(hipVMag, hip),
-      tychoV.v,
-      glieseRow?.vMag ?? null,
-      isSol ? SOL_APPARENT_V_MAGNITUDE : null,
-    );
-    vVia[vRes.via]++;
-    if (vRes.via === 'tycho2' && tychoV.outsideRange) vTycho2OutsideBtVtRange++;
-    if (vRes.v === null) {
-      dropped.noVMagnitude++;
-      continue;
-    }
-    let absmag = isSol
-      ? SOL_ABSOLUTE_V_MAGNITUDE
-      : apparentToAbsoluteMagnitude(vRes.v, dist);
 
     // The direction tier supplies the PM wherever its own solution carries
     // one. Where it does not — the 2p Gaia cohort, Tycho-2's rows with no mean
@@ -617,12 +546,78 @@ export function readStars(
           gaiaRowIs2p(gaiaRow),
         )
       : null;
-    if (pmRescue !== null) pmRescueVia[pmRescue.via]++;
     const velVia = pmRescue === null
       ? dirRes.velVia
       : VELOCITY_VIA_BY_PM_RESCUE[pmRescue.via];
     const pmRaMasyr = pmRescue === null ? dirRes.srcPmraMasyr : pmRescue.pmRaMasyr;
     const pmDecMasyr = pmRescue === null ? dirRes.srcPmdecMasyr : pmRescue.pmDecMasyr;
+
+    // Bailer-Jones supersedes the raw inversion wherever the parallax the
+    // cascade settled on is Gaia's own — its Bayesian posterior treats exactly
+    // that measurement, and a non-Gaia parallax must not be regressed onto
+    // B-J's Galactic-density prior tail (~10–40 kpc). A null parallax here is
+    // the curated exit (Sol, distance zero by construction); `none` returned
+    // above.
+    const plxDistPc = plxRes.plxMas === null ? null : 1000 / plxRes.plxMas;
+    let dist = plxDistPc ?? 0;
+    let distVia: DistVia = plxRes.via;
+    const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, plxRes.via);
+    if (bjEligibleRow) bjEligible++;
+    if (bjEligibleRow && bjMap.size > 0) {
+      const ovr = applyBailerJonesOverride(gaiaSourceId, bjMap);
+      if (ovr !== null) {
+        dist = ovr;
+        distVia = 'bailer_jones';
+        bjOverridden++;
+      }
+    }
+
+    // LMC kinematic override: B-J's Galactic-density prior pulls real LMC
+    // supergiants to ~5-20 kpc instead of 49.59 kpc. Sky-cone + bulk-PM
+    // filter on the direction tier's own place and the motion the row
+    // carries snaps the ~60 affected rows back to Pietrzyński 2019's
+    // eclipsing-binary distance. Runs AFTER B-J so it overrides B-J's
+    // mis-anchored value on the same rows.
+    const raHours = dirRes.srcRaDeg / 15;
+    if (isInLmcCone(raHours, dirRes.srcDecDeg)) {
+      lmcCandidates++;
+      const ovr = applyLmcKinematicOverride(raHours, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr);
+      if (ovr !== null) {
+        lmcOverriddenByDistVia[distVia]++;
+        dist = ovr;
+        distVia = 'lmc_kinematic';
+        lmcOverridden++;
+      }
+    }
+
+    if (dist > MAX_DIST_PC) {
+      dropped.tooFar++;
+      continue;
+    }
+
+    // Tallies run once the row is known to ship, so every partition below
+    // sums to the record count.
+    distViaCounts[distVia]++;
+    // Counted against the SHIPPED tier, not the resolved parallax: where
+    // Bailer-Jones supersedes the inversion its posterior is what handles a
+    // low-S/N parallax, so flagging those rows would report a bias the record
+    // does not carry. The LMC snap replaces the distance outright.
+    if (plxRes.lowPrecision && distVia === plxRes.via) distLowPrecisionParallax++;
+    directionVia[dirRes.via]++;
+    if (dirRes.via === 'tycho2' && tycho2Row !== null) {
+      if (tycho2Row.fromIcrs) directionTycho2FromIcrs++;
+      if (tycho2Row.isPhotocentre) directionTycho2Photocentre++;
+    }
+    if (pmRescue !== null) pmRescueVia[pmRescue.via]++;
+    vVia[vRes.via]++;
+    if (vRes.via === 'tycho2' && tychoV.outsideRange) vTycho2OutsideBtVtRange++;
+
+    // absmag derives from that V and the distance the whole override stack
+    // settled on — except for Sol, which sits at distance zero where the
+    // modulus is undefined and takes SOL_ABSOLUTE_V_MAGNITUDE instead.
+    let absmag = isSol
+      ? SOL_ABSOLUTE_V_MAGNITUDE
+      : apparentToAbsoluteMagnitude(vRes.v, dist);
 
     // Must follow the PM rescue: the position advances on the motion the row
     // ends up carrying, which is the rescue's wherever the tier states none.
@@ -732,10 +727,6 @@ export function readStars(
       : conAssignment.indexAt(x, y, z);
 
     const bayer = nonEmpty(row.bayer);
-    const flam = parseIntOrNull(row.flam);
-    const hd = parseIntOrNull(row.hd);
-    const hr = parseIntOrNull(row.hr);
-    const spectDisplay = resolveSpectDisplay(spectral.spectDisplay, row.spect ?? '');
 
     let flags = 0;
     if (proper) flags |= FLAG_HAS_NAME;
@@ -750,12 +741,15 @@ export function readStars(
       lumClass: spectInfo.lumClass,
       physicalRadius: physRadius,
       conIndex,
-      // The spine carries no editorial `con` cell, so nothing here names a
-      // designation's constellation. The GCVS pass supplies it downstream
-      // where a designation carries one; everything else reads `conIndex`.
+      // The manifest carries no editorial constellation cell, so nothing here
+      // names a designation's constellation. The IAU WGSN, IV/27A and GCVS
+      // passes supply it downstream; everything else reads `conIndex`.
       desigConIndex: NO_CONSTELLATION_INDEX,
       flags,
-      proper, bayer, hip, hd, hr, flam,
+      proper, bayer, hip,
+      hd: parseIntOrNull(row.hd),
+      hr: parseIntOrNull(row.hr),
+      flam: parseIntOrNull(row.flam),
       iauName: null,
       eponym: null,
       bayerSup: null,
@@ -763,19 +757,20 @@ export function readStars(
       gould: null,
       gouldHalf: null,
       aliases: [],
-      hdAlt: [], hrAlt: [],
+      hdAlt: altCells(row.hd_alt, 'hd_alt'),
+      hrAlt: altCells(row.hr_alt, 'hr_alt'),
       gl: simbadKeys.gl,
       tyc: simbadKeys.tyc,
       gaiaSourceId,
-      spectDisplay,
+      spectDisplay: spectral.spectDisplay,
       companionIdx: -1,
       periodDays: 0,
       amplitudeMag: 0,
       varType: 0,
       gcvsName: null,
-      athygDist,
+      plxDistPc,
+      plxVia: plxRes.via,
       distVia,
-      athygDistSrc,
       vVia: vRes.via,
       syntheticId: null,
     });
@@ -788,14 +783,13 @@ export function readStars(
       dropped,
       bjEligible,
       bjOverridden,
-      bjOverriddenByDistSrc,
       parked,
+      parkedVia,
       distLowPrecisionParallax,
-      distRefusedNoOwnedParallax,
       distVia: distViaCounts,
       lmcCandidates,
       lmcOverridden,
-      lmcOverriddenByDistSrc,
+      lmcOverriddenByDistVia,
       directionVia,
       vVia,
       velocityVia,

@@ -9,7 +9,7 @@ what is specific to stellata.
 
 ## What this is
 
-Browser-based interactive 3D star catalog viewer. Loads the ~330k-star
+Browser-based interactive 3D star catalog viewer. Loads the ~380k-star
 catalog derived from AT-HYG v3.3 + GCVS variables, rendered on
 the GPU as instanced quads with three-pass shading (depth-mask /
 opaque disc for close stars / additive point-glow for distant).

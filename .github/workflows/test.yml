@@ -126,7 +126,7 @@ jobs:
       # snapshot — and a build that parks a different star for the same total
       # would land silently.
       - run: |
-          git diff --exit-code -- data/athyg/parked_no_owned_parallax.tsv \
+          git diff --exit-code -- data/membership/parked-ledger.tsv \
             data/athyg/simbad_sourced_distances.tsv || {
             echo "::error::committed build ledgers are stale — run" \
               "'pnpm run build:catalog' and commit the regenerated files";
@@ -187,7 +187,7 @@ jobs:
           name: public-artifacts
           path: public/
       - run: pnpm run build:binaries-runtime
-      - run: pnpm exec vitest run scripts/catalog/validate/known-stars.test.ts scripts/catalog/companions/multi-star-regression.test.ts scripts/catalog/validate/sky-position.test.ts scripts/catalog/spine/inherited-spine-parity.test.ts scripts/catalog/membership/membership-manifest-gate.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts
+      - run: pnpm exec vitest run scripts/catalog/validate/known-stars.test.ts scripts/catalog/companions/multi-star-regression.test.ts scripts/catalog/validate/sky-position.test.ts scripts/catalog/membership/membership-manifest-gate.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts
 
   # Append-only ledger guard (needs full history for the merge-base
   # read), the DR-reconciliation classifier against its committed dry-run

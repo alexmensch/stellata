@@ -81,7 +81,7 @@ why.
 
 `catalogRecordDesignations` (`catalog-designations.ts`) owns the catalog
 half of this, so `sid:allocate` and
-`scripts/catalog/spine/inherited-spine-parity.test.ts` cannot derive
+`scripts/catalog/membership/membership-manifest-gate.test.ts` cannot derive
 different sets from the same artifacts.
 
 Per catalog record: `hip:` + `gaia_dr3:` from the record fields,

@@ -16,13 +16,13 @@ import refresh_lib as rl  # noqa: E402
 from .specs import GJ, HIP, TYC, WIDENING_LADDER
 
 
-SpineRow = Mapping[str, str]
-RowFilter = Callable[[SpineRow], bool]
+TableRow = Mapping[str, str]
+RowFilter = Callable[[TableRow], bool]
 
 
 @dataclass
-class SpineRequestKeys:
-    """Spine rows partitioned by the SIMBAD ident prefix each is looked up
+class MembershipRequestKeys:
+    """Membership rows partitioned by the SIMBAD ident prefix each is looked up
     under. A row contributes exactly one key, so the four lists sum to the
     cohort's row count minus the rows carrying no usable key at all.
 
@@ -61,10 +61,10 @@ class SpineRequestKeys:
         }
 
 
-def spine_request_keys(
-    spine_path: Path, row_filter: RowFilter | None = None
-) -> SpineRequestKeys:
-    """Partition the spine into per-prefix SIMBAD lookup keys.
+def membership_request_keys(
+    membership_path: Path, row_filter: RowFilter | None = None
+) -> MembershipRequestKeys:
+    """Partition the manifest into per-prefix SIMBAD lookup keys.
 
     A row with a resolved `gaia_source_id` is keyed on it, and its other
     designations ride along as that row's widening keys. The no-Gaia tier
@@ -73,13 +73,13 @@ def spine_request_keys(
     the property `docs/catalog-driver.md` § 5 relies on. Sol carries none of
     the namespaces and lands in `keyless`.
     """
-    keys = SpineRequestKeys()
+    keys = MembershipRequestKeys()
     by_namespace = keys.by_namespace
-    for row in rl.iter_spine_rows(spine_path):
+    for row in rl.iter_membership_rows(membership_path):
         if row_filter is not None and not row_filter(row):
             continue
         designations = row_designations(row)
-        if source_id := row[rl.SPINE_SOURCE_ID_COLUMN].strip():
+        if source_id := row[rl.MEMBERSHIP_SOURCE_ID_COLUMN].strip():
             keys.source_ids.append(int(source_id))
             if designations:
                 keys.designations_by_source_id[int(source_id)] = designations
@@ -93,7 +93,7 @@ def spine_request_keys(
     return keys
 
 
-def row_designations(row: SpineRow) -> dict[str, int | str]:
+def row_designations(row: TableRow) -> dict[str, int | str]:
     """Every widening namespace this row carries a key for, keyed by
     ``IdentLookup.tsv_name`` so the request side never spells the namespace
     out a second time. Must cover every namespace in ``WIDENING_LADDER`` — a
@@ -113,8 +113,8 @@ _GL_CATALOGUE_WORDS = frozenset({"GJ", "Gl"})
 
 
 def gl_suffix(cell: str) -> str | None:
-    """The designation part of a spine ``gl`` cell — both ``Gl 165A`` and
-    ``GJ 165A`` yield ``165A``. The spine carries both spellings and SIMBAD
+    """The designation part of a manifest ``gl`` cell — both ``Gl 165A`` and
+    ``GJ 165A`` yield ``165A``. The manifest carries both spellings and SIMBAD
     resolves them onto its one ``GJ`` identifier, so the request composes
     that prefix onto this suffix."""
     text = cell.strip()
@@ -135,12 +135,12 @@ NO_SIMBAD_TIER_SRC: frozenset[str] = frozenset({"T", "HIP", "HIP_X", "G_R3", "N"
 VALUE_SRC_COLUMNS = ("pos_src", "dist_src", "mag_src", "rv_src", "pm_src")
 
 
-def is_simbad_value_cohort(row: SpineRow) -> bool:
+def is_simbad_value_cohort(row: TableRow) -> bool:
     """Whether a § 5 SIMBAD value tier can reach this row: some field's
     printed cell carries a non-first-order provenance mark, or it is a
     no-Gaia row (every cascade bottoms out at a designation-keyed tier
     there)."""
-    if not row[rl.SPINE_SOURCE_ID_COLUMN].strip():
+    if not row[rl.MEMBERSHIP_SOURCE_ID_COLUMN].strip():
         return True
     return any(
         row[column].strip() not in NO_SIMBAD_TIER_SRC

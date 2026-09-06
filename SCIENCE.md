@@ -24,9 +24,8 @@ below should be consistent with these.
 ### Data fidelity — "best possible model based on current observational data and knowledge"
 
 Stellata is a physical-accuracy project, not a stylised visualisation.
-The catalog grows in well-defined releases (Gaia DR4 expected late 2026;
-until the driver swap lands, periodic AT-HYG refreshes), not
-continuously, so one-time data-processing investment pays off forever.
+The catalog grows in well-defined releases (Gaia DR4 expected late 2026),
+not continuously, so one-time data-processing investment pays off forever.
 There is no manual review path — 300k+ stars cannot be hand-checked, so
 the data-processing infrastructure itself has to be correct.
 
@@ -126,15 +125,18 @@ enough to see it.
       red rows the relation's colour bound excludes
       (`scripts/catalog/photometry/README.md` § The ci cascade).
 - **AT-HYG v3.3** (stellar catalogue): https://codeberg.org/astronexus/athyg
-  — maintained by David Nash. The classic-IDs subset at
-  `data/athyg/athyg_33_classic_ids.csv` is what we consume (every star
-  carries at least one classical designation: IAU proper name, Bayer,
-  Flamsteed, HIP, HD, HR, or Gliese). Licence CC-BY-SA-4.0. **Being
-  retired as the driver**: it is already down to membership, identifiers
-  and names, with the frozen `data/athyg/inherited-spine.tsv` standing in
-  for it after the swap. Contract: `docs/catalog-driver.md`.
+  — maintained by David Nash. **No longer consumed.** Membership is the
+  primaries-derived manifest at `data/membership/membership-manifest.tsv`,
+  which the record build walks; every field on a record is sourced from a
+  first-order catalogue this build pulls itself. What survives of AT-HYG is
+  the frozen `data/athyg/inherited-spine.tsv`, read only for its record of
+  AT-HYG's merge decisions — which designations name one star, and which Gaia
+  source it bound — that no primary supplies. Licence CC-BY-SA-4.0 follows the
+  subset it derives from (`data/athyg/athyg_33_classic_ids.csv`). Contract:
+  `docs/catalog-driver.md` § 3 and § 3.1.
 - **Classic-designation cross indexes** (HD / HR / Bayer / Flamsteed /
-  Gliese), the identifier half of the AT-HYG retirement — four frozen
+  Gliese), the identifier half of the AT-HYG retirement and part of the
+  membership term it derives from — four frozen
   VizieR tables under `data/classic-ids/`, joined onto Gaia DR3
   source_ids by `pnpm run build:classic-ids`. Per-table provenance,
   licences and the measured per-identifier coverage are in
@@ -177,8 +179,8 @@ enough to see it.
   TYC-bearing rows Gaia does not reach — mean positions with **per-star,
   per-coordinate mean epochs**, proper motions, and BT/VT photometry, so
   the direction, PM and V cascades of `docs/catalog-driver.md` § 5 route
-  here instead of to AT-HYG's printed cells. It reaches every one of the
-  312,275 TYC-bearing spine rows; the mean epochs are what fix the
+  here rather than to any printed cell. It reaches every one of the
+  TYC-bearing membership rows; the mean epochs are what fix the
   printed cells' unpropagated staleness (~27″ worst case).
 - **Gliese third catalogue of nearby stars** (`V/70A/catalog`, whole table
   at `data/gliese/gliese_v70a.tsv`): Gliese W., Jahreiss H. 1991,
@@ -269,10 +271,11 @@ enough to see it.
   `docs/catalog-driver.md` § 5, where SIMBAD is the index and the
   bibcode is the source. Values SIMBAD publishes without one are
   dropped at write time rather than shipped for a consumer to filter,
-  so every column's value count equals its bibcode count. Scoped to an enumerated cohort (the spine
-  rows whose printed cell is non-first-order, plus the no-Gaia tier —
-  11,050 rows), keyed `gaia_source_id` → HIP → TYC → GJ, and committed
-  as `data/simbad/simbad_values.tsv` (11,037 rows, ~2.7 MB, LFS).
+  so every column's value count equals its bibcode count. Scoped to an
+  enumerated cohort (the spine rows whose printed cell is non-first-order,
+  plus the no-Gaia tier — the one request set still keyed on the spine rather
+  than the manifest), keyed `gaia_source_id` → HIP → TYC → GJ, and committed
+  as `data/simbad/simbad_values.tsv` (11,044 rows, ~2.7 MB, LFS).
   Refresh: `pnpm run refresh:simbad-values`. Fluxes come from the
   long-format `flux` table rather than the `allfluxes` view, which
   publishes no bibcode. Retrieved 2026-08-15; per-cohort coverage in
@@ -425,15 +428,14 @@ project-wide non-goals list. Per-subsystem physics, formulas, and
 modelling decisions split out into `docs/`:
 
 ```
-docs/science-catalog-ingestion.md      AT-HYG/Gaia/Hipparcos merge,
-                                        Bailer-Jones + LMC-kinematic
-                                        distance overrides, driver
-                                        astrometry, current-epoch
-                                        space-motion propagation. Where
-                                        the row set is HEADED is
-                                        docs/catalog-driver.md, the
-                                        durable contract for retiring
-                                        AT-HYG as the driver.
+docs/science-catalog-ingestion.md      The merge AT-HYG performed and
+                                        what replaced it, Bailer-Jones +
+                                        LMC-kinematic distance overrides,
+                                        driver astrometry, current-epoch
+                                        space-motion propagation. The
+                                        durable contract that retired
+                                        AT-HYG as the driver is
+                                        docs/catalog-driver.md.
 docs/science-stellar-modelling.md      Physical radius, brightness/
                                         size perception model, colour
                                         temperature routing + Teff

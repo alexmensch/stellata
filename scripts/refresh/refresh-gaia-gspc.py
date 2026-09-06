@@ -68,9 +68,9 @@ BATCH_SIZE = 5_000
 # GSPC exists only for sources with published BP/RP mean spectra, and it
 # drops the hot-blue and very-red bright ends of this catalogue entirely
 # (probe 2026-08-15: 4,378 rows over a 5,000-id stratified sample =
-# 87.6%). 312,654 request ids therefore project to ~274k rows.
-EXPECTED_ROW_COUNT_MIN = 255_000
-EXPECTED_ROW_COUNT_MAX = 300_000
+# 87.6%). 378,111 request ids therefore project to ~331k rows.
+EXPECTED_ROW_COUNT_MIN = 320_000
+EXPECTED_ROW_COUNT_MAX = 370_000
 
 # Presence floor over the request set, ~8 pts below the probed 87.6% so a
 # DR-side re-issue that trims the XP-spectra population does not

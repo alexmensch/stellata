@@ -1,4 +1,4 @@
-"""Phase A of every spine-keyed SIMBAD pull: turn a SpineRequestKeys
+"""Phase A of every manifest-keyed SIMBAD pull: turn a MembershipRequestKeys
 partition into the deduplicated oid request set, and report what each
 identifier namespace reached."""
 
@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import refresh_lib as rl  # noqa: E402
 
 from . import query
-from .inputs import SpineRequestKeys
+from .inputs import MembershipRequestKeys
 from .specs import (
     GAIA_DR3, GAIA_RELEASES, GJ, HIP, IdentLookup, TYC, WIDENING_LADDER,
 )
@@ -95,10 +95,10 @@ class OidRequest:
         return lines
 
 
-def resolve_spine_keys(
-    client: rl.TapClient, keys: SpineRequestKeys
+def resolve_membership_keys(
+    client: rl.TapClient, keys: MembershipRequestKeys
 ) -> OidRequest:
-    """Resolve a spine key partition to SIMBAD oids.
+    """Resolve a manifest key partition to SIMBAD oids.
 
     Gaia DR3 first, then the no-Gaia tier's HIP / TYC / GJ keys, then the
     widening ladder over every source_id the Gaia namespace did not reach —
@@ -131,7 +131,7 @@ def resolve_spine_keys(
 def _widen(
     client: rl.TapClient,
     request: OidRequest,
-    keys: SpineRequestKeys,
+    keys: MembershipRequestKeys,
     lookup: IdentLookup,
     unbound: Sequence[int],
 ) -> list[int]:
@@ -160,7 +160,7 @@ def _widen(
 
 
 def _widening_candidates(
-    keys: SpineRequestKeys,
+    keys: MembershipRequestKeys,
     lookup: IdentLookup,
     unbound: Sequence[int],
 ) -> dict[int | str, int]:
@@ -192,7 +192,7 @@ def corroborate(
     differing DR2 id is not evidence either way, is README.md § The
     corroboration rule. An asking id of None has nothing a
     cross-ID could contradict, so it lands uncorroborated rather than skipping
-    the rule: a no-Gaia spine row binds on its designation alone too.
+    the rule: a no-Gaia manifest row binds on its designation alone too.
     """
     if not bound:
         return {}, CorroborationVerdicts()

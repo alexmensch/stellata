@@ -28,7 +28,7 @@ UNION_NAMESPACES: tuple[IdentLookup, ...] = WIDENING_LADDER
 
 @dataclass(frozen=True)
 class UnansweredRow:
-    """One spine row no bound object answers: the namespaces its request
+    """One manifest row no bound object answers: the namespaces its request
     never asked, and the row's own Gaia id — the only thing SIMBAD's
     cross-IDs can be adjudicated against."""
 
@@ -55,7 +55,7 @@ class UnionReport:
 
     def report_lines(self) -> list[str]:
         lines = [
-            f"      spine rows probed: {self.rows}; {self.answered} answered by "
+            f"      manifest rows probed: {self.rows}; {self.answered} answered by "
             f"a bound object, {self.unanswered} not "
             f"({self.with_unasked_namespace} of those carrying a namespace the "
             f"request never asked)",
@@ -75,33 +75,33 @@ class UnionReport:
                     f"with no DR3 id to contradict them"
                 )
         lines.append(
-            f"      recovered {self.rows_recovered} spine rows on "
+            f"      recovered {self.rows_recovered} manifest rows on "
             f"{self.oids_added} added objects"
         )
         return lines
 
 
 def _row_keys(row: Mapping[str, str]) -> dict[str, int | str]:
-    """Every namespace this spine row can be asked under, Gaia included."""
+    """Every namespace this manifest row can be asked under, Gaia included."""
     keys = dict(row_designations(row))
-    if source_id := row[rl.SPINE_SOURCE_ID_COLUMN].strip():
+    if source_id := row[rl.MEMBERSHIP_SOURCE_ID_COLUMN].strip():
         keys[GAIA_DR3.tsv_name] = int(source_id)
     return keys
 
 
 def _unanswered(
-    spine_path: Path,
+    membership_path: Path,
     bindings: Mapping[str, Mapping[int | str, int]],
     answered_oids: frozenset[int],
     row_filter: RowFilter | None,
     report: UnionReport,
 ) -> list[UnansweredRow]:
-    """Every spine row no bound object answers, with the namespaces already
+    """Every manifest row no bound object answers, with the namespaces already
     bound dropped — those have been asked and their answer is the absence
     this pass exists to fill."""
     askable = {lookup.tsv_name for lookup in UNION_NAMESPACES}
     out: list[UnansweredRow] = []
-    for row in rl.iter_spine_rows(spine_path):
+    for row in rl.iter_membership_rows(membership_path):
         if row_filter is not None and not row_filter(row):
             continue
         report.rows += 1
@@ -152,14 +152,14 @@ def _asking_ids(
 def union_unanswered(
     client: rl.TapClient,
     *,
-    spine_path: Path,
+    membership_path: Path,
     bindings: Mapping[str, Mapping[int | str, int]],
     rows: Mapping[int, Mapping[str, Any]],
     columns: Sequence[ColumnSpec],
     value_alias: str,
     row_filter: RowFilter | None = None,
 ) -> tuple[dict[int, dict[str, Any]], dict[str, dict[int | str, int]], UnionReport]:
-    """Ask every namespace an unanswered spine row reaches, and return the
+    """Ask every namespace an unanswered manifest row reaches, and return the
     basic-table rows of the objects that answer plus the bindings that
     reached them.
 
@@ -176,7 +176,7 @@ def union_unanswered(
     answered = frozenset(
         oid for oid, cells in rows.items() if coverage.is_filled(cells, value_alias)
     )
-    probed = _unanswered(spine_path, bindings, answered, row_filter, report)
+    probed = _unanswered(membership_path, bindings, answered, row_filter, report)
     if not probed:
         return {}, {}, report
     unanswered = probed
@@ -233,7 +233,7 @@ def union_unanswered(
         ]
 
     report.oids_added = len(found)
-    # Counted over the rows this pass PROBED, not over the spine: a row a
+    # Counted over the rows this pass PROBED, not over the manifest: a row a
     # bound object already answered can share a designation with one of these
     # bindings without ever having needed it.
     report.rows_recovered = sum(
@@ -257,17 +257,17 @@ def merge_rows(
 
 
 def iter_recovered_rows(
-    spine_path: Path,
+    membership_path: Path,
     added: Mapping[str, Mapping[int | str, int]],
     *,
     row_filter: RowFilter | None = None,
 ) -> Iterable[tuple[Mapping[str, str], str, int]]:
-    """(spine row, namespace, oid) for each spine row a union binding answers
-    — the sample a review reads instead of a count. Walks the spine because
+    """(manifest row, namespace, oid) for each manifest row a union binding answers
+    — the sample a review reads instead of a count. Walks the manifest because
     the whole row is what a reader recognises a star by; `rows_recovered` is
     the exact figure and is counted over the probed rows alone.
     """
-    for row in rl.iter_spine_rows(spine_path):
+    for row in rl.iter_membership_rows(membership_path):
         if row_filter is not None and not row_filter(row):
             continue
         for name, key in _row_keys(row).items():

@@ -25,15 +25,16 @@ fields            = per-field source cascades keyed on gaia_source_id
 - **Inherited spine** (§ 3): a frozen, committed enumeration of every
   AT-HYG-derived record in the final AT-HYG-driven build. After the
   swap the spine file is data; AT-HYG the catalogue is not consulted.
-  Its own retirement replaces this term with the primaries-derived
-  membership of § 3.1, keeping the spine only as the parity baseline.
+  Its retirement has since replaced this term with the primaries-derived
+  membership of § 3.1: the record build walks the manifest, and the spine
+  is the parity baseline plus the generator's merge-decision input.
 - **Magnitude pull**: the Gaia-native `V ≤ floor` union term. It ships
-  **off** at the swap — membership is exactly the spine, so record
-  parity holds by construction. The completeness phase turns it on
+  **off** at the swap — membership was exactly the spine, so record
+  parity held by construction. The completeness phase turns it on
   (V ≤ 11); deepening later is a re-pull, not a redesign.
 - Classic stars fainter than any floor (Proxima V = 11.1, the faint
-  Gliese tail) ship forever because the spine term never drops — the
-  "classic rescue tier" IS the spine.
+  Gliese tail) ship forever because the membership term never drops on
+  magnitude — the "classic rescue tier" IS that term.
 
 Membership is **not** derived by re-binding the classic catalogues to
 Gaia: the frozen cross-walks cannot reproduce a `gaia_source_id` for
@@ -146,10 +147,10 @@ pos_src  dist_src  mag_src  rv_src  pm_src  spect_src
   a build that no longer exists after the swap, so a rebuild-and-diff gate
   would demand rewriting the one file whose purpose is to stop moving. The
   file's byte length + sha256 are pinned in test source instead, and two
-  parity gates hold it to the build it stands in for — row count against
-  `recordCount` − `companionPromoted`, and the per-record designation
-  multiset against the built artifacts
-  (`scripts/catalog/spine/README.md` § Parity with the shipped build).
+  parity gate holds it to the build it stands in for: every spine row resolves
+  to one manifest row, whose designation multiset is then held against the
+  built artifacts
+  (`scripts/catalog/spine/README.md` § Parity is the manifest's gate now).
   `data/athyg/README.md` documents it as *generated provenance
   data* (source: AT-HYG v3.3 final build, dated), distinct from the
   upstream CSV, which stays committed but leaves the build's input
@@ -359,17 +360,20 @@ asserts three things: (i) every row of the 2026-07-28 spine maps through its
 designation class to exactly one manifest row — the same SID — or to a § 6.1
 drop row; (ii) every manifest row absent from the spine is on the additions
 ledger under a reason above; (iii) the built catalogue's designation multiset
-equals the manifest's. A fourth assertion holds the admission rule itself: no
-designation an addition carries sits on a second manifest row, which is what
-says every mint keys `hd:` / `hip:` / `gl:` rather than falling through to a
-Gaia id. The frozen spine stays committed as the baseline (i)
+equals the manifest's, over every manifest row less the § 6.1 parks. A fourth
+assertion holds the admission rule itself: no designation an addition carries
+sits on a second manifest row, which is what says every mint keys `hd:` /
+`hip:` / `gl:` rather than falling through to a Gaia id. The frozen spine stays
+committed as the baseline (i)
 and (ii) read **and as the generator's input**: it is the one record of
 AT-HYG's merge decisions — which designations name one star, and which Gaia
 source it bound — that no primary supplies, so `build:membership` reads it
 for those and re-keys every row on the designations the primaries publish.
-Nothing else reads it after the swap. `label_flips.tsv` collapses into the
-manifest, because labels and membership now come from one join and there is
-no second designation set to flip against. After the swap release the
+Nothing else reads it. The record build's own label merge retires with the
+swap: labels and membership come from one join, and `readStars` reads the
+manifest's cells as final, so there is no second designation set to flip
+against. `label_flips.tsv` stays as the generator's assertion baseline and the
+label-parity ledger of § 6. After the swap release the
 baseline becomes the previous manifest, and the gate is the ordinary
 regenerate-and-diff every other derived artifact already has.
 
@@ -573,14 +577,15 @@ Measured exposure and expected coverage (2026-08-14; pins in
   `BT−VT` ∈ [−0.25, 2.0] (four red to 2.69, one blue at −0.282), where the
   linear form runs ~0.19–0.24 mag bright. Gating there would not hand those
   rows to a better tier — none carries a `gl`, so nothing sits below them —
-  it would cost each its only V and hence its record, V being a membership
-  gate. That is the opposite call from the ci cascade's refusal to
+  it would cost each its only V and hence its record, a row with no V being
+  a § 6.1 park. That is the opposite call from the ci cascade's refusal to
   extrapolate Table 5.9, and the difference is that the ci cascade HAS
   tiers underneath.
 - **direction / PM** — SHIPPED (`stellata-3bsf.26`).
   `directionAthygPrinted` 61 / `velocityAthygPm` 60 retire into the tiers
-  below, residual **none 0** on both axes and `spineDroppedNoDirection`
-  still pinned at 0:
+  below, residual **none 0** on both axes over the spine's rows (the
+  primaries then admit 27 rows no tier states, which § 6 parks as
+  `no_position` rather than dropping):
 
   | | Tycho-2 | CNS5 | SIMBAD | curated | none |
   |---|---|---|---|---|---|
@@ -736,9 +741,9 @@ Rules:
   event adjudicated through the § 6 parity ledger with an explicit
   dropped-list reason code. **Record survival is not a goal in
   itself** — the spine is not a relic whose every row must be rescued.
-  The `spineDropped*` zero-pins are tripwires against *accidental*
+  The walk's `dropped*` zero-pins are tripwires against *accidental*
   drops; a record whose provenance cannot justify its existence is
-  dropped deliberately, on the ledger, with a reason.
+  parked deliberately, on the ledger, with a reason.
 - **SIMBAD's role — second-order by design.** SIMBAD aggregates
   first-order catalogues; it measures nothing, its "best value"
   selection is editorial, and it is a living database with no citable
@@ -842,26 +847,30 @@ test fixture:
 1. **Record parity.** Every prior record either produces a record
    resolving to the **same SID**, or appears on a dropped list with a
    reason code from a closed enum (`merge:<survivor>`,
-   `split:<siblings>`, `out-of-scope`, `no-position`,
-   `refused_no_defensible_parallax`, `no_parallax_published`, and the
+   `split:<siblings>`, `out-of-scope`, and the four **park** codes
+   `refused_no_defensible_parallax`, `no_parallax_published`,
+   `no_v_magnitude`, `no_position`, plus the
    spine retirement's `admitted:*` / `component:*` / `binding:*` codes of
    § 3.1, which ledger additions and identity outcomes the same way). No
    silent drops: a count that moves without a ledger entry fails the gate. The
-   last two are **parks**, not dissolutions: the record has no owned
-   distance and cannot be placed, so it stops being produced while its
-   SID and identity survive (§ 7, `docs/sid.md`) and Gaia DR4 reinstates
-   it. `data/athyg/parked_no_owned_parallax.tsv` is that ledger, gated
-   by `scripts/catalog/spine/inherited-spine-parity.test.ts`, which
-   subtracts the drop count from the parity arithmetic only as far as the
-   committed file accounts for it.
+   four park codes are **not** dissolutions: the record reaches no owned
+   parallax, no V or no direction and so cannot be built, but it stops being
+   produced while its SID and identity survive (§ 7, `docs/sid.md`) and Gaia
+   DR4 reinstates it. A record needs a place AND a brightness, which is why
+   the V and direction residuals park on the same ledger as the parallax
+   ones rather than dropping through a gate.
+   `data/membership/parked-ledger.tsv` is that ledger, gated
+   by `scripts/catalog/membership/membership-manifest-gate.test.ts`, which
+   subtracts it from the manifest by key before comparing designation
+   multisets.
 2. **Label parity.** Per-identifier coverage must not regress; every
    previously-named record keeps a name or is listed with a reason.
    Overlay-vs-spine designation flips are enumerated with disposition
    (§ 4 precedence) — `data/classic-ids/label_flips.tsv` is that ledger, and it
    is the COMPLETE delta: the spine's designation multiset replayed through it
-   must equal the built catalogue's, which is the gate that keeps "every SID is
-   preserved by construction" checkable now that labels are no longer the
-   spine's verbatim.
+   must equal the manifest's, which the built catalogue is then held to, and
+   that chain is what keeps "every SID is preserved by construction" checkable
+   now that labels are no longer the spine's verbatim.
 3. **Field parity.** |ΔV|, |Δabsmag|, |Δci| distributions pinned
    (p50/p99/max) once reviewed; spectral-string change count pinned.
 4. The dropped and merged lists must agree row-for-row with any SID

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { DIST_SRC_BUCKETS } from '../catalog/catalog-pure';
 import {
   DIRECTION_VIA_VALUES,
   VELOCITY_VIA_VALUES,
 } from '../catalog/distance/direction-cascade';
+import { DIST_VIA_VALUES } from '../catalog/distance/parallax/parallax-cascade';
 import { V_VIA_VALUES } from '../catalog/photometry/v-magnitude-pure';
 import { emptyTallyPartition } from './tally';
 
@@ -26,7 +26,7 @@ describe('util/tally / emptyTallyPartition', () => {
     ['direction', DIRECTION_VIA_VALUES],
     ['velocity', VELOCITY_VIA_VALUES],
     ['V', V_VIA_VALUES],
-    ['dist_src', DIST_SRC_BUCKETS],
+    ['distance', DIST_VIA_VALUES],
   ])('covers every %s tier', (_label, values) => {
     const partition = emptyTallyPartition(values);
     expect(Object.keys(partition).sort()).toEqual([...values].sort());

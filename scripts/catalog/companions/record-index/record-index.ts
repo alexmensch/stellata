@@ -9,6 +9,7 @@ import {
   canonicalCompLetter,
   composeSyntheticId,
   groupBySystem,
+  parentComponentToken,
   wdsRootOf,
   type MultiplesTsvRow,
   type PairCursor,
@@ -138,6 +139,56 @@ function resolvePairComponents(
   return { systemId: primary.systemId, primaryIdx, components };
 }
 
+function cursorSystemId(cursor: PairCursor): string {
+  return cursor.primary?.systemId ?? cursor.secondaries[0]?.systemId ?? '';
+}
+
+/** The cursor's rows with the comp letter each one is ADDRESSED by — a
+ *  secondary's synth key is keyed on `canonicalCompLetter`, not on the raw
+ *  cell, exactly as {@link resolvePairComponents} keys it. */
+function cursorRows(
+  cursor: PairCursor,
+): { row: MultiplesTsvRow; comp: string }[] {
+  const secondaries = cursor.secondaries
+    .filter((sec) => sec.orbitRole === 'secondary')
+    .map((sec) => ({
+      row: sec,
+      comp: canonicalCompLetter(cursor.primary?.comp ?? sec.comp, sec.comp),
+    }));
+  return cursor.primary === null
+    ? secondaries
+    : [{ row: cursor.primary, comp: cursor.primary.comp }, ...secondaries];
+}
+
+function resolveRowIdx(
+  row: MultiplesTsvRow,
+  comp: string,
+  rowIndexMap: CatalogRowIndexMap,
+): number | null {
+  const synth = composeSyntheticId(row.systemId, comp);
+  const id = resolveMultiplesIdx(row.gaiaSourceId, row.hip, synth, rowIndexMap);
+  if (id === null) return null;
+  return synthSlotIdx(synth, rowIndexMap, id) ?? id;
+}
+
+/** A component carrying no identifier of its own renders through the PARENT
+ *  component's slot — `build-runtime-binaries.py` forces exactly this before
+ *  emitting (§ Hierarchical walk), so the winged set has to mirror it or a
+ *  system renders a companion with no wings bit anywhere on it. Castor Ba is
+ *  the shape it was written for; WDS 02536-6420 is the shape that needs it
+ *  here, its Ba resolving to nothing while B (HD 18341) and synth Bb both
+ *  ship. Walks up until a token resolves — `Aa1` falls back to `Aa`, then `A`. */
+function reHomeToParent(
+  comp: string,
+  byComp: ReadonlyMap<string, number>,
+): number | null {
+  for (let tok = parentComponentToken(comp); tok; tok = parentComponentToken(tok)) {
+    const idx = byComp.get(tok);
+    if (idx !== undefined) return idx;
+  }
+  return null;
+}
+
 /** OR FLAG_BINARY_PRIMARY (chart-mode wings) onto the anchor of every
  *  physical system that renders a companion but which build-catalog's three
  *  wings passes (geometric, CCDM, eclipsing) all missed (Canopus, 16 Cyg A).
@@ -161,21 +212,48 @@ export function wingRenderablePrimaries(
   rowIndexMap: CatalogRowIndexMap,
 ): { winged: number; memberIndices: Set<number> } {
   const memberIndices = new Set<number>();
+  const cursors = [...groupBySystem(rows).values()];
+  // Where each component token resolves on its own, per WDS root. Built over
+  // every row first, because the re-home below reads a SIBLING cursor's
+  // component and cursor order says nothing about nesting depth.
+  const perRootComp = new Map<string, Map<string, number>>();
+  for (const cursor of cursors) {
+    const root = wdsRootOf(cursorSystemId(cursor));
+    if (root === null) continue;
+    let byComp = perRootComp.get(root);
+    if (!byComp) { byComp = new Map(); perRootComp.set(root, byComp); }
+    for (const { row, comp } of cursorRows(cursor)) {
+      const idx = resolveRowIdx(row, comp, rowIndexMap);
+      if (idx !== null) byComp.set(comp, idx);
+    }
+  }
+
   // Catalog indices participating in a rendered pair, grouped by WDS root.
   const perSystem = new Map<string, Set<number>>();
-  for (const cursor of groupBySystem(rows).values()) {
+  for (const cursor of cursors) {
     const resolved = resolvePairComponents(cursor, rowIndexMap);
-    if (resolved === null) continue;
-    for (const c of resolved.components) memberIndices.add(c.idx);
-    const root = wdsRootOf(resolved.systemId);
+    if (resolved !== null) {
+      for (const c of resolved.components) memberIndices.add(c.idx);
+    }
+    const root = wdsRootOf(cursorSystemId(cursor));
     if (root === null) continue;
-    const secIdxs = resolved.components
-      .filter((c) => c.idx !== resolved.primaryIdx)
-      .map((c) => c.idx);
+    // `sides[0]` is the pair's primary ONLY while this holds — cursorRows puts
+    // the primary first, and returns secondaries alone when there is none, so
+    // dropping this guard silently promotes a secondary into that role.
+    // resolvePairComponents refuses such a cursor for the same reason.
+    if (cursor.primary === null) continue;
+    const byComp = perRootComp.get(root) ?? new Map<string, number>();
+    const sides = cursorRows(cursor)
+      .map(({ row, comp }) => resolveRowIdx(row, comp, rowIndexMap)
+        ?? reHomeToParent(comp, byComp));
+    const primaryIdx = sides[0];
+    if (primaryIdx === null) continue;
+    const secIdxs = sides.slice(1)
+      .filter((idx): idx is number => idx !== null && idx !== primaryIdx);
     if (secIdxs.length === 0) continue;
     let set = perSystem.get(root);
     if (!set) { set = new Set(); perSystem.set(root, set); }
-    set.add(resolved.primaryIdx);
+    set.add(primaryIdx);
     for (const idx of secIdxs) set.add(idx);
   }
 

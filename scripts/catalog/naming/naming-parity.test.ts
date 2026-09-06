@@ -25,13 +25,14 @@ const SEARCH_INDEX = resolve(REPO_ROOT, 'public/search-index.json');
 const ROW_INDEX_MAP = resolve(REPO_ROOT, 'public/catalog-row-index-map.json');
 const CONSTELLATIONS = resolve(REPO_ROOT, 'public/constellations.json');
 const WGSN_NAMES = resolve(REPO_ROOT, 'data/iau-wgsn/wgsn_names.tsv');
-const SPINE = resolve(REPO_ROOT, 'data/athyg/inherited-spine.tsv');
+const MANIFEST = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
 
 /** Published names reaching no record: the wgsnFaints hosts whose only key
  *  was a survey id the normaliser drops (they name stars outside the
- *  catalogue), plus AT-HYG's `Red Rectangle`, which names the nebula around
- *  HD 44179 rather than the star (docs/star-naming.md § 2). RATCHET DOWN. */
-const PUBLISHED_NAMES_UNREACHED = 55;
+ *  catalogue), plus `Red Rectangle`, which names the nebula around HD 44179
+ *  rather than the star (docs/star-naming.md § 2). RATCHET DOWN — it last
+ *  moved when the membership manifest admitted a record for one of them. */
+const PUBLISHED_NAMES_UNREACHED = 54;
 const FIXTURES_READY = existsSync(SEARCH_INDEX) && existsSync(ROW_INDEX_MAP)
   && existsSync(CONSTELLATIONS);
 
@@ -97,7 +98,7 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
   it('every published name resolves, and every displaced label as pinned', () => {
     // § 8.1's hard invariant, stated over the strings that HAVE external
     // provenance: every name the authority approves and every name the
-    // spine printed must reach a record. A string the build composed
+    // manifest carries must reach a record. A string the build composed
     // itself has none, so § 5 lets it disappear with the composition —
     // which is what the ledger's `resolves` column enumerates, reviewed
     // once and pinned so a later change cannot quietly widen the set.
@@ -111,9 +112,9 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
     for (const row of parseWgsnNamesTsv(readFileSync(WGSN_NAMES, 'utf8'))) {
       for (const spelling of [row.name, ...row.aliases]) published.add(spelling);
     }
-    const spine = readFileSync(SPINE, 'utf8').split('\n');
-    const properCol = spine[0].split('\t').indexOf('proper');
-    for (const line of spine.slice(1)) {
+    const manifest = readFileSync(MANIFEST, 'utf8').split('\n');
+    const properCol = manifest[0].split('\t').indexOf('proper');
+    for (const line of manifest.slice(1)) {
       const cell = (line.split('\t')[properCol] ?? '').trim();
       if (cell !== '') published.add(cell);
     }

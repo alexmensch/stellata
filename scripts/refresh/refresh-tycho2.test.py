@@ -10,6 +10,7 @@ import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -57,11 +58,11 @@ class ParseTyc(unittest.TestCase):
 
 
 class RequestSet(unittest.TestCase):
-    def test_unions_the_spine_column_with_iv25s_own_tycs(self):
+    def test_unions_the_manifest_column_with_iv25s_own_tycs(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            spine = _write(
-                root, "spine.tsv", ["tyc", "hip"],
+            manifest = _write(
+                root, "manifest.tsv", ["tyc", "hip"],
                 [["1-2-1", "10"], ["3-4-1", "11"], ["", "12"]],
             )
             iv25 = _write(
@@ -69,17 +70,17 @@ class RequestSet(unittest.TestCase):
                 [["3", "4", "1", "999"], ["5", "6", "1", "998"]],
             )
             self.assertEqual(
-                t2.read_mentioned_tycs(spine, iv25),
+                t2.read_mentioned_tycs(manifest, iv25),
                 {(1, 2, 1), (3, 4, 1), (5, 6, 1)},
             )
-            self.assertEqual(t2.read_spine_tycs(spine), {(1, 2, 1), (3, 4, 1)})
+            self.assertEqual(t2.read_membership_tycs(manifest), {(1, 2, 1), (3, 4, 1)})
 
-    def test_a_spine_row_with_no_tyc_contributes_nothing(self):
+    def test_a_manifest_row_with_no_tyc_contributes_nothing(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            spine = _write(root, "spine.tsv", ["tyc"], [[""], ["  "]])
+            manifest = _write(root, "manifest.tsv", ["tyc"], [[""], ["  "]])
             iv25 = _write(root, "tyc2_hd.tsv", ["tyc1", "tyc2", "tyc3"], [])
-            self.assertEqual(t2.read_mentioned_tycs(spine, iv25), set())
+            self.assertEqual(t2.read_mentioned_tycs(manifest, iv25), set())
 
 
 class Tyc1Ranges(unittest.TestCase):
@@ -218,15 +219,43 @@ class WriteTable(unittest.TestCase):
                              [["1", "2", "1"], ["2", "3", "1"]])
 
 
-class SpineCoverage(unittest.TestCase):
+class MainEntry(unittest.TestCase):
+    """`main()` is the one path the unit tests above never enter, so a module
+    constant it alone names can be renamed out from under it and still ship
+    green. Driving the up-to-date short-circuit resolves every one of them."""
+
+    def test_reaches_its_short_circuit_naming_only_defined_constants(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            out_dir = root / "data" / "tycho2"
+            out_dir.mkdir(parents=True)
+            manifest = root / "membership-manifest.tsv"
+            manifest.write_text("tyc\n")
+            tyc2_hd = root / "tyc2_hd.tsv"
+            tyc2_hd.write_text("tyc1\ttyc2\ttyc3\n")
+            tables = tuple(
+                replace(spec, output=out_dir / f"{i}.tsv")
+                for i, spec in enumerate(t2.TABLES)
+            )
+            for spec in tables:
+                spec.output.write_text("")
+
+            with mock.patch.multiple(
+                t2, ROOT=root, OUT_DIR=out_dir, MEMBERSHIP=manifest,
+                TYC2_HD=tyc2_hd, TABLES=tables,
+            ), mock.patch.object(sys, "argv", ["refresh-tycho2.py"]):
+                t2.main()
+
+
+class MembershipCoverage(unittest.TestCase):
     def test_full_cover_passes(self):
-        t2.assert_spine_covered(
+        t2.assert_membership_covered(
             {(1, 2, 1)}, {(1, 2, 1), (5, 5, 1)}, log=lambda _: None
         )
 
-    def test_an_unreached_spine_tyc_is_a_membership_event_not_a_short_pull(self):
+    def test_an_unreached_manifest_tyc_is_a_membership_event_not_a_short_pull(self):
         with self.assertRaises(SystemExit) as caught:
-            t2.assert_spine_covered(
+            t2.assert_membership_covered(
                 {(1, 2, 1), (3, 4, 1)}, {(1, 2, 1)}, log=lambda _: None
             )
         self.assertIn("3-4-1", str(caught.exception))

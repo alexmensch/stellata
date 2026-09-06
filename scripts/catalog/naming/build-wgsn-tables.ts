@@ -22,7 +22,7 @@ import {
   diffDispositions,
   parseDispositionKeys,
   sortDesignations,
-  spineProperKey,
+  membershipProperKey,
   unionIv27aBayer,
   type DesignationRow,
 } from './wgsn-tables-pure';
@@ -34,7 +34,7 @@ const DISPOSITIONS = resolve(DATA, 'athyg_proper_dispositions.tsv');
 const OUT_NAMES = resolve(DATA, 'wgsn_names.tsv');
 const OUT_DESIGNATIONS = resolve(DATA, 'wgsn_designations.tsv');
 const CROSS_INDEX = resolve(REPO_ROOT, 'data/classic-ids/cross_index.tsv');
-const SPINE = resolve(REPO_ROOT, 'data/athyg/inherited-spine.tsv');
+const MANIFEST = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
 const SNAPSHOT = resolve(REPO_ROOT, 'scripts/catalog/naming/wgsn-expected.json');
 
 export interface WgsnCounts {
@@ -64,28 +64,28 @@ export interface WgsnCounts {
   designationsKeyless: number;
   designationDuplicateRows: number;
   nameDuplicateRows: number;
-  spinePropers: number;
-  spineProperMatched: number;
-  spineProperResiduals: number;
-  spineBayerRows: number;
-  spineBayerRowsCovered: number;
+  membershipPropers: number;
+  membershipProperMatched: number;
+  membershipProperResiduals: number;
+  membershipBayerRows: number;
+  membershipBayerRowsCovered: number;
 }
 
 const cellStr = (v: string | number | null): string =>
   v === null ? '' : String(v);
 
-interface SpineNaming {
+interface MembershipNaming {
   /** proper-row key ("<proper>|<hip>|<hd>") → the raw proper string. */
   propers: Map<string, string>;
   bayerKeys: { hip: number | null; hd: number | null }[];
 }
 
-function readSpine(): SpineNaming {
-  const lines = readFileSync(SPINE, 'utf8').split('\n');
+function readManifest(): MembershipNaming {
+  const lines = readFileSync(MANIFEST, 'utf8').split('\n');
   const header = lines[0].split('\t');
   const col = (name: string) => {
     const i = header.indexOf(name);
-    if (i < 0) throw new Error(`inherited-spine.tsv is missing '${name}'`);
+    if (i < 0) throw new Error(`membership-manifest.tsv is missing '${name}'`);
     return i;
   };
   const properIdx = col('proper');
@@ -101,7 +101,7 @@ function readSpine(): SpineNaming {
     const hd = cells[hdIdx]?.trim() ?? '';
     const proper = (cells[properIdx] ?? '').trim();
     if (proper && proper !== 'Sol') {
-      propers.set(spineProperKey(proper, hip, hd), proper);
+      propers.set(membershipProperKey(proper, hip, hd), proper);
     }
     if ((cells[bayerIdx] ?? '').trim()) {
       bayerKeys.push({ hip: parseIntOrNull(hip), hd: parseIntOrNull(hd) });
@@ -157,10 +157,10 @@ async function main(): Promise<void> {
   );
   designations.push(...iv27a.added);
 
-  const spine = readSpine();
+  const membership = readManifest();
   const unmatched = new Set<string>();
   let matched = 0;
-  for (const [key, proper] of spine.propers) {
+  for (const [key, proper] of membership.propers) {
     if (nameKeys.has(foldNameKey(proper))) matched++;
     else unmatched.add(key);
   }
@@ -169,19 +169,19 @@ async function main(): Promise<void> {
     parseDispositionKeys(readFileSync(DISPOSITIONS, 'utf8')),
   );
   if (missing.length > 0 || stale.length > 0) {
-    for (const k of missing) console.error(`undisposed spine proper: ${k}`);
+    for (const k of missing) console.error(`undisposed membership proper: ${k}`);
     for (const k of stale) {
-      console.error(`stale disposition (now matches WGSN or left the spine): ${k}`);
+      console.error(`stale disposition (now matches WGSN or left the manifest): ${k}`);
     }
     console.error(
       '\ndata/iau-wgsn/athyg_proper_dispositions.tsv must enumerate exactly '
-      + 'the spine propers no WGSN name matches (docs/star-naming.md § 2).',
+      + 'the manifest propers no WGSN name matches (docs/star-naming.md § 2).',
     );
     process.exit(1);
   }
 
   const unioned = bayerKeySets(designations);
-  const spineBayerRowsCovered = spine.bayerKeys.filter(
+  const membershipBayerRowsCovered = membership.bayerKeys.filter(
     (k) => unioned.reaches(k.hip, k.hd),
   ).length;
 
@@ -229,11 +229,11 @@ async function main(): Promise<void> {
     ).length,
     designationDuplicateRows: duplicateRows,
     nameDuplicateRows: nameRowKeys.length - new Set(nameRowKeys).size,
-    spinePropers: spine.propers.size,
-    spineProperMatched: matched,
-    spineProperResiduals: unmatched.size,
-    spineBayerRows: spine.bayerKeys.length,
-    spineBayerRowsCovered,
+    membershipPropers: membership.propers.size,
+    membershipProperMatched: matched,
+    membershipProperResiduals: unmatched.size,
+    membershipBayerRows: membership.bayerKeys.length,
+    membershipBayerRowsCovered,
   };
 
   console.log(`wgsn_names.tsv: ${nameLines.length} rows`);

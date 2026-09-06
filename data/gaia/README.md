@@ -12,33 +12,33 @@ gaia_dr3_hip_xmatch.tsv                ~3.7 MB, LFS. HIP → DR3 source_id.
 gaia_dr3_tyc_xmatch.tsv                ~106 MB, LFS. Tycho-2 → DR3 source_id.
 gaia_dr3_astrometry.tsv                ~1.2 MB, LFS. 5p astrometry for the
                                        resolved source_ids Stage 2 requests.
-gaia_dr3_astrometry_catalog.tsv        ~50 MB, LFS. 5p astrometry +
+gaia_dr3_astrometry_catalog.tsv        ~58 MB, LFS. 5p astrometry +
                                        radial_velocity{,_error} for every
                                        catalog source_id, the classic-ID
                                        gate's candidates and the bound-pair
-                                       siblings (320,547 rows) — tier 1 of
+                                       siblings (378,105 rows) — tier 1 of
                                        the direction, rv, V and ci cascades,
                                        the binding gate's G evidence, and the
                                        parallax cascade's sibling tier.
 gaia_dr3_nss_two_body.tsv              ~90 MB, LFS. NSS two-body orbits.
-gaia_dr3_apsis.tsv                     ~17 MB, LFS. gspphot ∪ gspspec
+gaia_dr3_apsis.tsv                     ~20 MB, LFS. gspphot ∪ gspspec
                                        Teff/logg/[M/H]/A0 + spectraltype_esphs.
-gaia_dr3_gspc.tsv                      ~30 MB, LFS. Johnson-Kron-Cousins B and
+gaia_dr3_gspc.tsv                      ~31 MB, LFS. Johnson-Kron-Cousins B and
                                        V synthesised from each source's BP/RP
                                        spectrum, + fluxes, flux errors and the
-                                       per-band validated-range flag. 284,568
+                                       per-band validated-range flag. 342,464
                                        rows, pulled against the catalog request
-                                       at its then-size of 312,654 ids — the ci
+                                       at its then-size of 378,111 ids — the ci
                                        cascade's tier below the Table-5.9
                                        relation.
 gaia_astrometry_source_id_request.tsv  ~440 KB, LFS. Stage 2 → Stage 3 deduped
                                        source_id request list (build-binaries.py output).
-gaia_catalog_source_id_request.tsv     ~6.4 MB, LFS. Full-catalog deduped
-                                       source_id request list — the spine's
-                                       gaia_source_id column UNION the
-                                       classic-ID binding gate's candidates
+gaia_catalog_source_id_request.tsv     ~7.2 MB, LFS. Full-catalog deduped
+                                       source_id request list — the membership
+                                       manifest's gaia_source_id column UNION
+                                       the classic-ID binding gate's candidates
                                        UNION the kept-physical multiples.tsv
-                                       pair members, 320,553 ids
+                                       pair members, 378,111 ids
                                        (scripts/catalog/astrometry-request/).
 gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        Gaia-only catalog stars (no HIP/HD/HR/GJ)
@@ -142,13 +142,14 @@ re-deriving:
 ## Consumed by
 
 - `scripts/catalog/build-catalog.ts` — `gaia_dr3_hip_xmatch.tsv` bridges the
-  GCVS cross-reference onto `gaia_source_id`, so a spine row carrying no HIP
+  GCVS cross-reference onto `gaia_source_id`, so a record carrying no HIP
   still resolves a variable-star designation. It no longer backfills
-  `gaia_source_id` itself: the record build reads each binding off the spine
-  column rather than re-deriving it (`scripts/catalog/spine/README.md`),
-  leaving the classic-ID overlay's binding gate as the cross-walk's only
-  resolution consumer — the astrometry request reads the spine column too
-  now (`scripts/catalog/astrometry-request/README.md`). Also: Apsis
+  `gaia_source_id` itself: the record build reads each binding off the
+  manifest column rather than re-deriving it
+  (`scripts/catalog/membership/README.md` § The identifier columns are read,
+  never re-derived), leaving the classic-ID overlay's binding gate as the
+  cross-walk's only resolution consumer — the astrometry request reads the
+  manifest column too (`scripts/catalog/astrometry-request/README.md`). Also: Apsis
   Teff/logg/[M/H]/A0 + GSP-Spec
   `spectraltype_esphs` for the six-tier spectral resolver;
   `gaia_dr3_astrometry_catalog.tsv` as direction-cascade tier 1 and
@@ -184,8 +185,9 @@ it has the same ordering constraint:
   so it must run **after** a fresh `pnpm run build:binaries`.
 - `refresh:gaia-astrometry-catalog` reads
   `gaia_catalog_source_id_request.tsv`, so it must run **after**
-  `pnpm run build:astrometry-request` — which reads the spine alone and so
-  no longer waits on `refresh:gaia-hip`.
+  `pnpm run build:astrometry-request` — which reads the membership manifest
+  plus both cross-walks, so it runs after `refresh:gaia-hip` /
+  `refresh:gaia-tyc`.
 - `refresh:gaia-dr2-neighbourhood` reads
   `gaia_dr2_neighbourhood_request.tsv`, a frozen snapshot of the
   Gaia-only risk set derived from a built `public/catalog.bin` +

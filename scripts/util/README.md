@@ -37,12 +37,12 @@ need the same thing — single-use helpers stay with their consumer.
   is why the guard is here and not in either.
   `paths.test.ts` pins the `maxMtimeOfSources` and pointer-probe cases.
   **No data paths live here.** `ATHYG_CSV` used to, back when three folders
-  read the catalogue; the astrometry request moved onto the spine and the
-  boundary-epoch cross-check is the last reader left, so the literal sits in
-  that suite (`data/athyg/README.md` § Consumed by).
+  read the catalogue; the astrometry request moved onto the membership
+  manifest and the boundary-epoch cross-check is the last reader left, so the
+  literal sits in that suite (`data/athyg/README.md` § Consumed by).
 - `tally.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
   counting record every routing cascade in the catalog build tallies
-  into (direction, velocity, V, `dist_src`). Buckets are derived from
+  into (direction, velocity, V, distance). Buckets are derived from
   the string-literal tuple that DEFINES each tier set, so a new tier
   cannot tally onto an absent key — `undefined + 1` is NaN, which
   reaches the pinned count snapshot as a hole instead of a drift

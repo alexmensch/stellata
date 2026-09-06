@@ -63,7 +63,7 @@ function bc03ColourIndexAt10Gyr(
 // count, which is exactly what the retired GC anchor did.
 describe('MilkyWay diffuse reference', () => {
   it('subtracts the resolved catalogue from the published NGP total', () => {
-    expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2).toBeCloseTo(24.99, 2);
+    expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2).toBeCloseTo(25.01, 2);
     expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2).toBeGreaterThan(
       LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole,
     );
@@ -74,7 +74,7 @@ describe('MilkyWay diffuse reference', () => {
     const share =
       fluxNumber(RESOLVED_CATALOGUE_MAG_ARCSEC2.northGalacticPole) /
       fluxNumber(LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole);
-    expect(share).toBeCloseTo(0.657, 3);
+    expect(share).toBeCloseTo(0.664, 3);
   });
 
   // De-extincted catalogue vs observed sky model through a ~30 mag column:

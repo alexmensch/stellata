@@ -53,10 +53,10 @@ GAIA_RESOLUTION_MIN = 0.95
 
 def collect_oid_requests(client: rl.TapClient) -> list[int]:
     """Resolve the § 5 value cohort's spine keys to a sorted oid list."""
-    keys = inputs.spine_request_keys(SPINE, inputs.is_simbad_value_cohort)
+    keys = inputs.membership_request_keys(SPINE, inputs.is_simbad_value_cohort)
     print(f"value cohort: {keys.total} spine rows "
           f"({keys.keyless} carrying no key)")
-    resolved = request.resolve_spine_keys(client, keys)
+    resolved = request.resolve_membership_keys(client, keys)
     for line in resolved.report_lines():
         print(line)
     coverage.assert_floor(

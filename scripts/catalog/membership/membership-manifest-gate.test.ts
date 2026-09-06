@@ -19,8 +19,7 @@ import {
 import { FLAG_BINARY_COMPANION_ONLY, type SearchEntry } from '../catalog-pure';
 import { dataRows } from '../parse/corpus-tsv';
 import {
-  PARKED_RECORDS_FILE,
-  parkedSpineKey,
+  PARKED_LEDGER_FILE,
   parseParkedRecordsTsv,
 } from '../distance/parallax/parked-ledger';
 import {
@@ -237,10 +236,8 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   });
 
   // (iii) The built catalogue's designation multiset equals the manifest's
-  // over the records the build produces. Until the record build reads the
-  // manifest, that is the spine-origin rows less the parked ledger, and the
-  // build still carries the bindings the manifest dropped to review and the
-  // HD labels it dropped to the label ledger.
+  // over the records the build produces: every manifest row less the parked
+  // ledger, matched on the five identifier cells both files carry.
   describe.skipIf(!built)('↔ built catalogue', () => {
     it('(iii) ships exactly the manifest\'s designations', async () => {
       const catalog = await loadCatalog();
@@ -254,24 +251,11 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
           .map((r) => r.designations),
       );
       const parked = new Set(parseParkedRecordsTsv(
-        readFileSync(resolve(REPO_ROOT, PARKED_RECORDS_FILE), 'utf-8'),
-      ).map((r) => r.spineKey));
-      const produced: ManifestRow[] = [];
-      spine.forEach((row, s) => {
-        const i = match.manifestIndex[s];
-        if (i !== null && !parked.has(parkedSpineKey(row))) produced.push(manifest[i]);
-      });
-      const fromManifest = tally(produced.map(manifestDesignations));
-      const bump = (d: string): void => { fromManifest.set(d, (fromManifest.get(d) ?? 0) + 1); };
-      for (const review of reviewRows()) {
-        if (parked.has(parkedSpineKey(review))) continue;
-        if (dispositions.get(review.gaia_source_id)?.disposition === 'keep') continue;
-        bump(`gaia_dr3:${review.gaia_source_id}`);
-      }
-      const producedKeys = new Set(produced.map(manifestKey));
-      for (const drop of parseLabelDropsTsv(readFileSync(resolve(REPO_ROOT, LABEL_DROPS_FILE), 'utf-8'))) {
-        if (drop.cell === 'hd' && producedKeys.has(manifestKey(drop))) bump(`hd:${drop.value}`);
-      }
+        readFileSync(resolve(REPO_ROOT, PARKED_LEDGER_FILE), 'utf-8'),
+      ).map((r) => r.recordKey));
+      const fromManifest = tally(
+        manifest.filter((row) => !parked.has(manifestKey(row))).map(manifestDesignations),
+      );
       const diff = differences(fromBuild, fromManifest);
       expect(diff.slice(0, 20)).toEqual([]);
       expect(diff).toHaveLength(0);

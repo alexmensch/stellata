@@ -170,7 +170,7 @@ BASIC_BIBCODED_GROUPS = (
 # Canonical identifier namespaces — SIMBAD encodes ``HIP <int>``,
 # ``Gaia DR3 <int>``, ``TYC <tyc>`` and ``GJ <gl>`` with single spaces.
 # ``Gl`` is an accepted alias SIMBAD resolves onto the ``GJ`` spelling, so
-# a spine ``gl`` cell normalises to this one prefix.
+# a membership ``gl`` cell normalises to this one prefix.
 HIP = IdentLookup(prefix="HIP ", tsv_name="hip")
 GAIA_DR3 = IdentLookup(prefix="Gaia DR3 ", tsv_name="source_id")
 TYC = IdentLookup(prefix="TYC ", tsv_name="tyc", numeric=False)

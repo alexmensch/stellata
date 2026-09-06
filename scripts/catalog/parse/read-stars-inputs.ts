@@ -1,5 +1,5 @@
 // Source paths and loaders for every reference table readStars consumes,
-// plus the inherited spine it walks as the membership term. See README.md.
+// plus the membership manifest it walks as the membership term. See README.md.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -50,11 +50,11 @@ import {
   emptyPairMemberParallaxIndex,
   type PairMemberParallaxIndex,
 } from '../distance/parallax/pair-member-parallax';
-import { INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
+import { MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-pure';
 import type { ReadStarsOptions } from './stars-parse';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 
-export const INHERITED_SPINE_TSV = resolve(ROOT, INHERITED_SPINE_FILE);
+export const MEMBERSHIP_MANIFEST_TSV = resolve(ROOT, MEMBERSHIP_MANIFEST_FILE);
 const SRC_BAILER_JONES = resolve(ROOT, 'data/bailer-jones/bailer-jones-dr3.tsv');
 const SRC_GAIA_APSIS = resolve(ROOT, 'data/gaia/gaia_dr3_apsis.tsv');
 const SRC_GAIA_GSPC = resolve(ROOT, 'data/gaia/gaia_dr3_gspc.tsv');
@@ -74,7 +74,7 @@ const SRC_DUST_MANIFEST = resolve(SRC_DUST_DIR, 'manifest.json');
 /** Every file a readStars walk reads — the mtime set an artifact derived
  *  from that walk must invalidate against. */
 export const READ_STARS_INPUT_PATHS: readonly string[] = [
-  INHERITED_SPINE_TSV, SRC_BAILER_JONES, SRC_GAIA_APSIS, SRC_GAIA_GSPC,
+  MEMBERSHIP_MANIFEST_TSV, SRC_BAILER_JONES, SRC_GAIA_APSIS, SRC_GAIA_GSPC,
   SRC_GAIA_ASTROMETRY, SRC_GAIA_NSS, SRC_HIP2, SRC_HIP_VMAG, SRC_SIMBAD_SPTYPE,
   SRC_SIMBAD_VALUES, SRC_TYCHO2_MAIN, SRC_TYCHO2_SUPPL1, SRC_CNS5, SRC_GLIESE,
   SRC_DUST_MANIFEST, STELLARIUM_SKYCULTURE_JSON, MULTIPLES_TSV,
@@ -131,7 +131,7 @@ export function loadReadStarsInputs(): ReadStarsInputs {
 
   // Bailer-Jones DR3 distance posteriors. Optional in CI / fresh-clone
   // builds where the LFS file hasn't pulled yet — without it every star
-  // keeps its naive 1/π AT-HYG distance.
+  // keeps the cascade's naive 1/π inversion.
   let bjMap = new Map<string, number>();
   if (existsSync(SRC_BAILER_JONES)) {
     console.log('Parsing Bailer-Jones DR3 distance posteriors...');
@@ -216,8 +216,7 @@ export function loadReadStarsInputs(): ReadStarsInputs {
   // Direction-cascade inputs: Gaia DR3 5p astrometry, HIP2 van Leeuwen,
   // and the NSS two-body source_id set. Each optional in CI / fresh-clone
   // builds — a missing file degrades that tier and the cascade falls
-  // through (ultimately to AT-HYG's printed ra/dec), which the
-  // build-counts assertion then flags.
+  // through, which the build-counts assertion then flags.
   const directions: DirectionSources = {
     gaiaAstrometry: new Map(),
     hip2: new Map(),
@@ -234,8 +233,8 @@ export function loadReadStarsInputs(): ReadStarsInputs {
   } else {
     console.warn(
       `WARNING: ${SRC_GAIA_ASTROMETRY} not found — direction cascade tier 1\n` +
-      `         unavailable; sky directions fall back to HIP2 / AT-HYG printed\n` +
-      `         ra/dec. Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.`,
+      `         unavailable; sky directions fall back to HIP2 / Tycho-2 / CNS5.\n` +
+      `         Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.`,
     );
   }
   if (existsSync(SRC_HIP2)) {
@@ -246,8 +245,8 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     sizes.hip2Entries = directions.hip2.size;
   } else {
     console.warn(
-      `WARNING: ${SRC_HIP2} not found — direction cascade tier 2 unavailable\n` +
-      `         and dist_src=HIP rows keep AT-HYG's 4-dp distance print.`,
+      `WARNING: ${SRC_HIP2} not found — direction cascade tier 2 and the\n` +
+      `         parallax cascade's hip2_parallax tier are unavailable.`,
     );
   }
   if (existsSync(SRC_GAIA_NSS)) {
@@ -324,9 +323,9 @@ export function loadReadStarsInputs(): ReadStarsInputs {
 
   // Printed Gliese V/70A values — the V cascade's tier under Tycho-2, and the
   // only source reaching the GJ-only cohort at all (SIMBAD holds no V flux
-  // for those rows). Absent costs each of them its V, and V is a membership
-  // gate, so this shows up as `spineDroppedNoVMagnitude` rather than a
-  // routing drift.
+  // for those rows). Absent costs each of them its V, and a row with no V
+  // parks, so this shows up on the § 6.1 ledger rather than as a routing
+  // drift.
   let gliese: GlieseIndex = emptyGlieseIndex();
   if (existsSync(SRC_GLIESE)) {
     console.log('Parsing printed Gliese V/70A values...');

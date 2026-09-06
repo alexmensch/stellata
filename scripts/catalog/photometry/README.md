@@ -315,7 +315,7 @@ Three joined rows sit at G > 15 against a bright printed V (|ΔV| up to 19.7).
 Those are cross-walk mis-bindings, not photometry, and never reach this
 cascade: the `resolveGaiaSourceId` gates scrubbed them when the inherited
 spine was frozen, and the record build reads the surviving binding off the
-spine column rather than re-deciding it (`../spine/README.md` § The
+manifest column rather than re-deciding it (`../membership/README.md` § The
 identifier columns are read, never re-derived; `data/classic-ids/README.md`
 § The binding gate for the same gate on the label side).
 

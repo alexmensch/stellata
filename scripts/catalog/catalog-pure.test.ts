@@ -96,10 +96,6 @@ import {
   parseGaiaSourceIdStr,
   parseSimbadWdsXidsTsv,
   isSiblingLetterAttribution,
-  DIST_SRC_BUCKETS,
-  distSrcBucket,
-  emptyDistSrcPartition,
-  tallyDistSrc,
   applyLmcKinematicOverride,
   isInLmcCone,
   angularSeparationDeg,
@@ -1449,7 +1445,7 @@ describe('catalog-pure / apparentToAbsoluteMagnitude', () => {
 });
 
 describe('catalog-pure / applyBailerJonesOverride', () => {
-  // Tier-A fixtures: real AT-HYG + Bailer-Jones DR3 values for the
+  // Tier-A fixtures: real pre-override + Bailer-Jones DR3 values for the
   // four catastrophic parallax-inversion supergiants and a
   // well-measured F-dwarf control. Numbers pin the override outcome:
   // drift here means the override changed semantics or the upstream
@@ -1457,15 +1453,15 @@ describe('catalog-pure / applyBailerJonesOverride', () => {
   interface Fixture {
     label: string;
     ra: number; dec: number; mag: number; sourceId: string;
-    athygDist: number;       // AT-HYG dist (pre-override)
+    preOverrideDist: number;       // the parallax inversion, pre-override
     bjDist: number;          // r_med_photogeo from data/bailer-jones-dr3.tsv
   }
   const FIVE_HIPS: Fixture[] = [
-    { label: 'HIP 22365', ra: 4.81481859, dec:  43.27557981, mag:  7.7,  sourceId: '204531088580182016', athygDist:  9963.4514, bjDist: 6244.791 },
-    { label: 'HIP 25733', ra: 5.49517982, dec:  35.37501942, mag:  6.78, sourceId: '183255985260080896', athygDist: 14326.6476, bjDist: 5466.246 },
-    { label: 'HIP 38430', ra: 7.87230124, dec: -26.42963691, mag:  9.19, sourceId: '5602025904044961536', athygDist: 12658.2278, bjDist: 6215.232 },
-    { label: 'HIP 46144', ra: 9.41038175, dec:  62.43823034, mag: 10.14, sourceId: '1040043514891491968', athygDist:  9189.7878, bjDist: 7515.496 },
-    { label: 'HIP 23785', ra: 5.11164486, dec: -50.94139857, mag:  8.39, sourceId: '4773096563064098432', athygDist:    93.1801, bjDist:   92.871 },
+    { label: 'HIP 22365', ra: 4.81481859, dec:  43.27557981, mag:  7.7,  sourceId: '204531088580182016', preOverrideDist:  9963.4514, bjDist: 6244.791 },
+    { label: 'HIP 25733', ra: 5.49517982, dec:  35.37501942, mag:  6.78, sourceId: '183255985260080896', preOverrideDist: 14326.6476, bjDist: 5466.246 },
+    { label: 'HIP 38430', ra: 7.87230124, dec: -26.42963691, mag:  9.19, sourceId: '5602025904044961536', preOverrideDist: 12658.2278, bjDist: 6215.232 },
+    { label: 'HIP 46144', ra: 9.41038175, dec:  62.43823034, mag: 10.14, sourceId: '1040043514891491968', preOverrideDist:  9189.7878, bjDist: 7515.496 },
+    { label: 'HIP 23785', ra: 5.11164486, dec: -50.94139857, mag:  8.39, sourceId: '4773096563064098432', preOverrideDist:    93.1801, bjDist:   92.871 },
   ];
   const bjMap = new Map(FIVE_HIPS.map((f) => [f.sourceId, f.bjDist] as const));
 
@@ -1491,7 +1487,7 @@ describe('catalog-pure / applyBailerJonesOverride', () => {
     for (const label of ['HIP 22365', 'HIP 25733', 'HIP 38430']) {
       const f = FIVE_HIPS.find((x) => x.label === label)!;
       const out = applyBailerJonesOverride(f.sourceId, bjMap)!;
-      const drop = (f.athygDist - out) / f.athygDist;
+      const drop = (f.preOverrideDist - out) / f.preOverrideDist;
       expect(drop, `${label} drop ratio`).toBeGreaterThan(0.25);
     }
   });
@@ -1499,7 +1495,7 @@ describe('catalog-pure / applyBailerJonesOverride', () => {
   it('HIP 46144 pulls back ~18% (lower-S/N outlier)', () => {
     const f = FIVE_HIPS.find((x) => x.label === 'HIP 46144')!;
     const out = applyBailerJonesOverride(f.sourceId, bjMap)!;
-    const drop = (f.athygDist - out) / f.athygDist;
+    const drop = (f.preOverrideDist - out) / f.preOverrideDist;
     expect(drop).toBeGreaterThan(0.15);
     expect(drop).toBeLessThan(0.20);
   });
@@ -1507,7 +1503,7 @@ describe('catalog-pure / applyBailerJonesOverride', () => {
   it('leaves the well-measured F-dwarf HIP 23785 within 5%', () => {
     const f = FIVE_HIPS.find((x) => x.label === 'HIP 23785')!;
     const out = applyBailerJonesOverride(f.sourceId, bjMap)!;
-    expect(Math.abs(f.athygDist - out) / f.athygDist).toBeLessThan(0.05);
+    expect(Math.abs(f.preOverrideDist - out) / f.preOverrideDist).toBeLessThan(0.05);
   });
 
 });
@@ -1530,54 +1526,11 @@ describe('catalog-pure / isBailerJonesEligible', () => {
     expect(isBailerJonesEligible('', 'gaia_dr3_inversion')).toBe(false);
   });
 
-  it('does not consult the spine dist_src cell at all — the AT-HYG editorial '
-    + 'value that used to gate it steers nothing now', () => {
-    // Both rows carry dist_src=G_R3 upstream; only the resolved tier decides.
+  it('gates on the resolved tier alone — no editorial source cell '
+    + 'steers it, and the manifest carries none', () => {
+    // Only the resolved tier decides.
     expect(isBailerJonesEligible('123', 'hip2_parallax')).toBe(false);
     expect(isBailerJonesEligible('123', 'gaia_dr3_inversion')).toBe(true);
-  });
-});
-
-describe('catalog-pure / dist_src partition', () => {
-  it('DIST_SRC_BUCKETS covers AT-HYG v3.3 dist_src plus the catch-all', () => {
-    expect([...DIST_SRC_BUCKETS]).toEqual([
-      'G_R3', 'G_R2', 'HIP', 'GJ', 'N', 'OTHER', 'UNRECOGNISED',
-    ]);
-  });
-
-  it('buckets each AT-HYG dist_src under its own name', () => {
-    for (const src of ['G_R3', 'G_R2', 'HIP', 'GJ', 'N', 'OTHER']) {
-      expect(distSrcBucket(src), src).toBe(src);
-    }
-  });
-
-  it('routes a null, blank, or never-seen dist_src to UNRECOGNISED', () => {
-    // Keeps a newly-introduced AT-HYG dist_src from hiding inside the
-    // literal 'OTHER' bucket, where no override layer has reasoned about it.
-    expect(distSrcBucket(null)).toBe('UNRECOGNISED');
-    expect(distSrcBucket('')).toBe('UNRECOGNISED');
-    expect(distSrcBucket('G_R4')).toBe('UNRECOGNISED');
-  });
-
-  it('emptyDistSrcPartition zeroes every bucket', () => {
-    const p = emptyDistSrcPartition();
-    expect(Object.keys(p)).toEqual([...DIST_SRC_BUCKETS]);
-    expect(Object.values(p).every((n) => n === 0)).toBe(true);
-  });
-
-  it('tallyDistSrc accumulates per bucket and leaves the rest at zero', () => {
-    const p = emptyDistSrcPartition();
-    tallyDistSrc(p, 'G_R3');
-    tallyDistSrc(p, 'G_R3');
-    tallyDistSrc(p, 'HIP');
-    tallyDistSrc(p, 'G_R4');
-    expect(p.G_R3).toBe(2);
-    expect(p.HIP).toBe(1);
-    expect(p.UNRECOGNISED).toBe(1);
-    expect(p.G_R2).toBe(0);
-    expect(p.GJ).toBe(0);
-    expect(p.N).toBe(0);
-    expect(p.OTHER).toBe(0);
   });
 });
 
@@ -1622,7 +1575,7 @@ describe('catalog-pure / resolveGaiaSourceId', () => {
     [3, '2881742980523997824'],
   ]);
 
-  it('returns AT-HYG native source_id untouched (precedence over cross-walk)', () => {
+  it('returns the manifest source_id untouched (precedence over cross-walk)', () => {
     expect(resolveGaiaSourceId('999', 2, map)).toEqual({
       gaiaSourceId: '999',
       backfilled: false,
@@ -1631,7 +1584,7 @@ describe('catalog-pure / resolveGaiaSourceId', () => {
     });
   });
 
-  it('backfills from HIP cross-walk when AT-HYG gaia is null', () => {
+  it('backfills from HIP cross-walk when the manifest gaia cell is null', () => {
     expect(resolveGaiaSourceId(null, 2, map)).toEqual({
       gaiaSourceId: '2341871673090078592',
       backfilled: true,
@@ -1946,25 +1899,25 @@ describe('catalog-pure / LMC distance vs MAX_DIST_PC invariant', () => {
 });
 
 describe('catalog-pure / applyLmcKinematicOverride', () => {
-  // Tier-A fixtures from AT-HYG / Gaia DR3 — three real LMC supergiants
+  // Tier-A fixtures from Gaia DR3 — three real LMC supergiants
   // (HDE 268xxx range) and one halo-PM outlier inside the LMC cone.
-  // AT-HYG distances are the pre-override values that get smeared
+  // The distances are the pre-override values that get smeared
   // 5-200 kpc by 1/π inversion.
   interface Fixture {
     label: string;
     ra: number; dec: number; mag: number;
     pmRa: number | null; pmDec: number | null;
-    athygDist: number;
+    preOverrideDist: number;
   }
   const LMC_HITS: Fixture[] = [
-    { label: 'HD 268749 (B7 IAB LMC supergiant)', ra: 4.8915, dec: -69.409, mag: 12.029, pmRa: 2.044, pmDec: -0.096, athygDist: 13368.7 },
-    { label: 'HD 268718',                         ra: 4.866, dec: -69.426, mag: 10.596, pmRa: 2.093, pmDec: -0.138, athygDist: 46323.4 },
-    { label: 'HD 268654 (smeared to 196 kpc)',    ra: 4.820, dec: -69.457, mag: 10.5,   pmRa: 2.033, pmDec: -0.198, athygDist: 196078.4 },
+    { label: 'HD 268749 (B7 IAB LMC supergiant)', ra: 4.8915, dec: -69.409, mag: 12.029, pmRa: 2.044, pmDec: -0.096, preOverrideDist: 13368.7 },
+    { label: 'HD 268718',                         ra: 4.866, dec: -69.426, mag: 10.596, pmRa: 2.093, pmDec: -0.138, preOverrideDist: 46323.4 },
+    { label: 'HD 268654 (smeared to 196 kpc)',    ra: 4.820, dec: -69.457, mag: 10.5,   pmRa: 2.033, pmDec: -0.198, preOverrideDist: 196078.4 },
   ];
   const LMC_PM_NON_HITS: Fixture[] = [
     // Inside the LMC cone but PM ≠ LMC bulk — a halo star or runaway,
     // should pass through unchanged.
-    { label: 'HD 270752 (halo in LMC direction)', ra: 4.792, dec: -65.331, mag: 11.214, pmRa: 14.925, pmDec: -3.62, athygDist: 5298.5 },
+    { label: 'HD 270752 (halo in LMC direction)', ra: 4.792, dec: -65.331, mag: 11.214, pmRa: 14.925, pmDec: -3.62, preOverrideDist: 5298.5 },
   ];
 
   it('LMC-direction + LMC-PM star is snapped to 49.594 kpc', () => {
@@ -1993,8 +1946,8 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
 
   it('returns null when pm_ra or pm_dec is missing', () => {
     // A star in the LMC cone with null proper motion — should NOT be
-    // overridden. AT-HYG carries blank pm_ra/pm_dec for pre-Hipparcos
-    // entries; treat them as ineligible for the kinematic gate.
+    // overridden. A row can reach a position tier that states no proper
+    // motion; treat those as ineligible for the kinematic gate.
     expect(applyLmcKinematicOverride(
       LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, null, 0,
     )).toBeNull();

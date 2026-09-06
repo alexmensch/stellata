@@ -3,9 +3,12 @@
 `data/membership/membership-manifest.tsv` is one row per record the frozen
 primaries admit: the spine's 313,257 rows re-keyed on the designations the
 primaries publish for them, plus the 63,672 records the primaries name that
-AT-HYG's subset never carried. It is the artifact that retires
-`data/athyg/inherited-spine.tsv`; the contract is `docs/catalog-driver.md`
-§ 3.1, the measurement behind it `../spine/README.md` § The primaries audit.
+AT-HYG's subset never carried — 376,929 rows. **`readStars` walks it, and
+membership is exactly these rows less the § 6.1 parks**
+(`../parse/README.md` § Per-row pipeline). It is the artifact that retires
+`data/athyg/inherited-spine.tsv` as the build's input; the contract is
+`docs/catalog-driver.md` § 3.1, the measurement behind it
+`../spine/README.md` § The primaries audit.
 
 The manifest is a **pure function of committed inputs**, so unlike the spine it
 takes the ordinary regenerate-and-diff gate: CI runs `pnpm run build:membership`
@@ -78,9 +81,11 @@ star, and which Gaia source it bound — which is the one thing AT-HYG supplies
 that no primary does (`docs/catalog-driver.md` § 3.1). The spine's identifier
 cells pass through the same `mergeClassicIdLabels` call `build:classic-ids`
 runs, and the generator asserts the resulting review queue is byte-identical
-to the committed `label_flips.tsv`: while the record build still merges labels
-for itself, that equality is what says the manifest's labels are the labels
-that ship.
+to the committed `label_flips.tsv`. **That merge happens once, here.** The
+record build reads the manifest's cells as final and runs no merge of its own,
+so the equality is what says the flips queue still enumerates every departure
+from the spine's cells — the property replayed by
+`../spine/README.md` § Parity is the manifest's gate now.
 
 The binding is `checkIdentity`'s verdict, as the audit grades it, with the
 `gl:` ↔ `gl:` bridges of `data/sid/sameas-overrides.tsv` read as one
@@ -183,6 +188,12 @@ one a spine-side pair), so `sid:allocate` mints every addition under `hd:` /
 `hip:` / `gl:`. The two counts answer only together: the first says the row has
 a classical designation, the second that the designation is its own.
 
+**Admission is not a promise of a record.** An admitted row walks the § 5
+cascades like any other, so one that reaches no owned parallax or no V parks on
+`data/membership/parked-ledger.tsv` under the existing reason codes
+(`../parse/README.md` § Per-row pipeline). Manifest rows are the membership
+term; the record count is that term less the parks.
+
 An addition's other labels come by **designation-keyed** joins over the same
 primaries — HR from V/50 by HD, HIP and Flamsteed from IV/27A by HD, HIP from
 Tycho-2's own column — never through the source-keyed overlay, whose gate the
@@ -213,21 +224,37 @@ arithmetic and label-flips replay:
   The 69 designations two rows do share are the spine's own — pinned, so a
   label change that makes a seventieth fails here.
 - **(iii)** the built catalogue's designation multiset equals the manifest's
-  over the records the build produces. Until the record build reads the
-  manifest (`stellata-3bsf.8.3`) that is the spine-origin rows less the parked
-  ledger, plus the review bindings a disposition dropped and the HD labels the
-  label ledger dropped, both of which the spine-driven build still ships.
-  Needs a built catalogue, so it self-skips in the bare `test` job and runs in
-  `tier-a-corpus`.
+  over the records the build produces — **every manifest row less the § 6.1
+  parks**, with no exclusions. The three the gate used to carry (spine-origin
+  rows only, plus the dropped review bindings and dropped HD labels the
+  spine-driven build still shipped) went when `readStars` swapped onto the
+  manifest: the build now reads the same cells the manifest publishes, so a
+  dropped label is dropped in both. Needs a built catalogue, so it self-skips
+  in the bare `test` job and runs in `tier-a-corpus`.
 - **The two joins.** Every `binding-review.tsv` row has exactly one
   disposition row and every disposition names a queue row (both regular git,
   so this runs in every job); every `label-drops.tsv` row keys a manifest
   row, and the per-reason counts are pinned.
 
-## What the record-build swap changes here
+## The identifier columns are read, never re-derived
 
-When `readStars` walks the manifest: gate (iii) drops all three exclusions;
-`label_flips.tsv` and the record build's own merge retire, since the labels are
-the manifest's; the spine stays committed as the baseline (i) reads and the
-generator's merge-decision input, and nothing else reads it. After the swap
-release the baseline becomes the previous manifest.
+`readStars` takes `gaia_source_id` off the manifest column. The binding is the
+one the manifest justified — `binding` says on what basis, and § The spine side
+grades it — and re-deriving it in the walk would re-decide it against reference
+tables that have moved since. A scrubbed source_id changes the record's
+designation set, hence its SID. `resolveGaiaSourceId` therefore has no caller
+on the `build:catalog` path; it survives for
+`../astrometry-request/export-astrometry-request.ts` and the classic-ID
+overlay's own gate.
+
+The same holds for the classical cells: they are FINAL, the merge having run in
+the generator, so the record build applies no label pass to them
+(`../classic-ids/README.md` § The label merge).
+
+## What the spine is still for
+
+The spine stays committed as the baseline gate (i) reads and as the generator's
+own merge-decision input — the one record of AT-HYG's merge decisions and
+bindings that no primary supplies. Nothing else reads it
+(`../spine/README.md`). After the swap release the baseline becomes the
+previous manifest.

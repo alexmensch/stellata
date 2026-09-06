@@ -102,9 +102,9 @@ Three tiers, all snapshot-pinned:
   2 and Phase 3 — `scripts/binaries/stage7_counts.py` mirrors
   `scripts/catalog/build-counts.ts` so the per-strategy assertion shape
   reads identically across the two builds. A `BuildCounts` entry is
-  either a scalar or a `DistSrcPartition`; the latter diffs as one
-  `parent.bucket` row per bucket, so a single drifting population names
-  itself (`../distance/README.md` § Override-layer authoring discipline).
+  either a scalar or a per-tier partition (`emptyTallyPartition`); the latter
+  diffs as one `parent.bucket` row per bucket, so a single drifting population
+  names itself (`../distance/README.md` § Override-layer authoring discipline).
 - **Tier C — SIMBAD random sample.**
   `scripts/catalog/validate/validate-simbad-sample.ts` cross-checks the built
   `public/catalog.bin` against a stratified random 10k SIMBAD sample

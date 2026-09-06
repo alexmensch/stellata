@@ -17,6 +17,7 @@ import {
   spineDesignationsRemovedBy,
 } from './label-merge-pure';
 
+const ADDITIONS_PATH = resolve(REPO_ROOT, 'data/membership/additions-ledger.tsv');
 const QUEUE_PATH = resolve(REPO_ROOT, 'data/classic-ids/hd_hip_route_disagreements.tsv');
 const REVIEW_PATH = resolve(REPO_ROOT, 'data/classic-ids/hd_hip_route_disagreements_review.tsv');
 const BSC5_PATH = resolve(REPO_ROOT, 'data/classic-ids/bsc5.tsv');
@@ -90,14 +91,40 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
     const removedCanonical = spineDesignationsRemovedBy(flips)
       .filter((d) => canonical.has(d));
 
-    expect(removedCanonical.filter((d) => !bridgeEndpoints.has(d))).toEqual([]);
-    expect(removedCanonical.sort()).toEqual([
+    // A removed key the primaries then ADMIT is not an orphan needing a
+    // bridge — it is the merge handing a mis-attributed designation back to
+    // the star that owns it, which the manifest admits as its own record.
+    // Bridging one would declare two distinct stars the same object. HD 164668
+    // is the shape: the spine printed it on HIP 88267 (Bodu), the overlay
+    // flipped that record to 164669, and the primaries admit 164668 itself.
+    const admittedHd = new Set(
+      [...dataRows(
+        readFileSync(ADDITIONS_PATH, 'utf-8'),
+        ['hd', 'reason'],
+        'additions-ledger.tsv',
+        'Re-run `pnpm run build:membership`.',
+      )]
+        .filter(({ cells, idx }) => cells[idx.reason].startsWith('admitted:'))
+        .map(({ cells, idx }) => nonEmpty(cells[idx.hd]))
+        .filter((hd): hd is string => hd !== null)
+        .map((hd) => `hd:${hd}`),
+    );
+    const reOwned = removedCanonical.filter((d) => admittedHd.has(d));
+    const orphaned = removedCanonical.filter((d) => !admittedHd.has(d));
+
+    expect(orphaned.filter((d) => !bridgeEndpoints.has(d))).toEqual([]);
+    expect(orphaned.sort()).toEqual([
       'gl:Gl_157.1',
       'gl:Gl_181.1',
       'gl:Gl_223.2',
       'gl:Gl_226.1',
       'gl:Gl_231.3',
     ]);
+    // Pinned, not merely allowed: every one of these is a designation two
+    // records could answer to, so the set growing is a collision-guard
+    // question, not routine drift.
+    expect(reOwned.length).toBe(21);
+    expect(reOwned.filter((d) => bridgeEndpoints.has(d))).toEqual([]);
   });
 });
 

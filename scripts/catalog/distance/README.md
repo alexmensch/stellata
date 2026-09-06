@@ -1,7 +1,8 @@
 # Distance refinement and de-extinction
 
 Direction resolution, build-time de-extinction, and the multi-layer
-distance-override stack that refines AT-HYG's parallax-inverted distances.
+distance-override stack that refines the parallax cascade's inverted
+distances.
 The authoring discipline for adding an override layer is the load-bearing
 part of this file — read it before touching the stack.
 
@@ -258,13 +259,11 @@ diagram below is the build-side view:
 dist × cascade direction (§ Direction resolution) → `public/catalog.bin` xyz
 ```
 
-**The stack's input is a parallax this build pulled, not a printed cell.**
-The spine's `dist` / `dist_src` columns survive only as the build-time
-diagnostic the regression check below measures drift against. Layer 1's gate
-moved with it: it used to read `dist_src ∈ {G_R3, G_R2}`, which let an AT-HYG
-editorial value decide whether a record was regressed onto B-J's
-Galactic-density prior. It now reads the record's own resolved tier, which is
-something this build knows first-hand.
+**The stack's input is a parallax this build pulled, and so is its gate.**
+Layer 1 fires on the record's own resolved tier (`plxVia`), something this
+build knows first-hand; the build-time `plxDistPc` / `plxVia` diagnostics the
+regression check below measures drift against are that same cascade's own
+output, captured pre-override.
 
 Each override layer returns a `DistanceOverride` (`dist`, `absmag`) —
 the absmag recompute matters because skipping it places the star at
@@ -288,40 +287,34 @@ row, the override re-checks on the handful of rows that reach it.
 An override layer fires on a population keyed by one column and is
 *gated* by others. The failure mode is a partition nobody enumerated:
 a set of rows the transform reroutes onto a prior whose semantics were
-never validated for them. That is how the B-J override shipped without
-a `dist_src` filter and moved ~11 stars carrying a canonical HIP / GJ
+never validated for them. That is how the B-J override once shipped without
+a distance-provenance filter and moved ~11 stars carrying a canonical HIP / GJ
 distance onto B-J's Galactic-density prior tail (~10–40 kpc at
 mid-latitudes).
 
 Any new or changed override layer states, **in the PR description**, an
-outcome for every `dist_src` bucket in `DIST_SRC_BUCKETS` — overridden /
-preserved / dropped — with the per-bucket count from a dry run. The
-build prints exactly that line per layer:
+outcome for every tier in `DIST_VIA_VALUES` — overridden / preserved /
+dropped — with the per-tier count from a dry run. The build prints exactly
+that line per layer:
 
 ```
-  Bailer-Jones override: 310124 / 310299 Gaia-inverse-distance stars (99.9%)
-    by dist_src: G_R3=310110, G_R2=13, HIP=1, GJ=0, N=0, OTHER=0, UNRECOGNISED=0
+  LMC kinematic override: <overridden> / <candidates> LMC-cone stars (<pct>%)
+    displacing: gaia_dr3_inversion=…, bailer_jones=…, hip2_parallax=…, …
 ```
 
-Those buckets are no longer the layer's *gate*, only its outcome — the gate
-reads the resolved tier — which is why HIP is now 1 rather than pinned at 0:
-a record AT-HYG marked `HIP` whose own Gaia 5p parallax the cascade took is
-exactly the case the re-key exists to serve.
+The matching assertion lands in the same PR: a per-tier partition field on
+`BuildCounts` (`lmcOverriddenByDistVia` is the built example), refreshed into
+`build-catalog-expected.json`. Tiers the layer's gate is supposed to exclude
+are pinned at **0** — that is the assertion with teeth, because it reads as a
+stated invariant rather than whatever the last build produced. The partition's
+buckets come from the tuple that DEFINES the tier set (`emptyTallyPartition`,
+`../../util/README.md`), so a tier added later cannot tally onto an absent key
+and slip past a layer that never reasoned about it.
 
-The matching assertion lands in the same PR: a `DistSrcPartition` field
-on `BuildCounts` (`bjOverriddenByDistSrc`, `lmcOverriddenByDistSrc`),
-refreshed into `build-catalog-expected.json`. Buckets the layer's gate is
-supposed to exclude are pinned at **0** — that is the assertion with
-teeth, because it reads as a stated invariant rather than whatever the
-last build produced. `UNRECOGNISED` is pinned at 0 on every layer: a
-`dist_src` value AT-HYG has never carried must not slip in under the
-literal `OTHER` bucket, where no layer has reasoned about it.
-
-`dist_src` is the partition that has bitten us. It is not necessarily
+Distance provenance is the partition that has bitten us. It is not necessarily
 the only one a given layer needs — a layer keyed on proper motion or
 cross-match coverage enumerates that dimension too. The rule is to name
-the dimensions the gate depends on and count them, not to stop at
-`dist_src`.
+the dimensions the gate depends on and count them.
 
 `distance-regression-check.ts` (§ Post-build distance-regression check)
 is the after-the-fact detector for the same class of bug; this section is
@@ -329,8 +322,8 @@ the write-time complement.
 
 ### Layer 1 — Bailer-Jones (DR3) override
 
-`scripts/catalog/build-catalog.ts` swaps AT-HYG's naive `1 / π`
-distances for the Bayesian posteriors published by Bailer-Jones et
+`scripts/catalog/build-catalog.ts` swaps the cascade's naive `1 / π`
+inversion for the Bayesian posteriors published by Bailer-Jones et
 al. 2021 (CDS I/352). The pipeline:
 
 1. Load `data/bailer-jones/bailer-jones-dr3.tsv` via
@@ -348,27 +341,24 @@ al. 2021 (CDS I/352). The pipeline:
    sibling is excluded deliberately, since B-J publishes a posterior
    over a *Gaia* parallax and applying it elsewhere discards a
    measurement for one computed from a different, worse one (the
-   Galactic prior tail, ~10–40 kpc). It used to gate on the spine's
-   `dist_src` cell instead — an AT-HYG editorial value standing in for
-   the question — which is what § Multi-layer distance refinement
-   means by the gate having moved with the printed cell.
+   Galactic prior tail, ~10–40 kpc).
 3. On a hit, `applyBailerJonesOverride` returns
    `{ dist, absmag }` with `absmag = mag − 5·log₁₀(dist / 10)`.
-4. The override fires for ~99.5% of Gaia-DR3-bearing AT-HYG rows.
-   The residual ~0.5% are source_ids absent from the Bailer-Jones
-   publication and keep their AT-HYG values unchanged.
-5. The build also rescues ~15 stars previously dropped at Layer 3:
+4. Coverage is `bjOverridden / bjEligible`, printed per build and pinned
+   in `../build-catalog-expected.json`. The residual are source_ids absent
+   from the Bailer-Jones publication, which keep the cascade's inversion.
+5. The override also rescues stars the Layer 3 cap would otherwise drop:
    catastrophic-parallax-inversion supergiants whose Bayesian
-   distance falls below the cap.
+   distance falls below it.
 
 If `data/bailer-jones/bailer-jones-dr3.tsv` is absent (fresh clone
 without LFS pulled), the build logs and continues — every star keeps
-its naive AT-HYG distance. Data refresh: `pnpm run refresh:bailer-jones`.
+the cascade's naive inversion. Data refresh: `pnpm run refresh:bailer-jones`.
 
 ### Layer 2 — LMC kinematic override
 
 Bailer-Jones's Galactic-density prior doesn't cover the LMC, so the
-~60 AT-HYG LMC supergiants (HDE 268xxx range) land somewhere
+LMC supergiants in the catalogue (HDE 268xxx range) land somewhere
 intermediate (5–20 kpc) after Layer 1 instead of the LMC's true
 ~50 kpc. Layer 2 identifies these stars by sky-cone + bulk proper
 motion and snaps their distance to the eclipsing-binary anchor in
@@ -425,10 +415,14 @@ After the binary is written, `scripts/catalog/distance/distance-regression-check
 sweeps the catalogue and emits two snapshot sections into
 `scripts/catalog/distance/build-distance-outliers-expected.json`:
 
-- **Self-consistency outliers** — stars whose final distance has
-  drifted from their AT-HYG input beyond per-`dist_src` thresholds
-  (`HIP`/`GJ`/`N`: 3× ratio; `G_R3`/`G_R2`: 30× ratio since B-J
-  legitimately re-anchors low-S/N Gaia parallaxes).
+- **Self-consistency outliers** — stars whose final distance has drifted from
+  their own pre-override inversion (`plxDistPc`) beyond a threshold keyed on
+  the tier that supplied it (`SELF_CONSISTENCY_THRESHOLDS` on `plxVia`):
+  30× for `gaia_dr3_inversion`, since B-J legitimately re-anchors the low-S/N
+  Gaia tail; 3× for every other measured tier, which is parallax-anchored
+  ground truth where a shift that large signals an override misfire. The
+  curated and `none` tiers and the two override layers themselves are not
+  checked — there is no independent input to measure them against.
 - **SIMBAD-anchored outliers** — stars whose final distance disagrees
   with SIMBAD's parallax-derived distance by more than 5× on the
   random 10k stratified sample in `data/simbad/simbad_sample.tsv`.

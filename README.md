@@ -23,7 +23,7 @@ Try it at **[https://stellata.xyz](https://stellata.xyz)**.
 
 ## Highlights
 
-- **Everything is rendered live, from where you are.** Over 330,000
+- **Everything is rendered live, from where you are.** Over 380,000
   real stars and objects — planets and moons, multiple-star systems,
   the volumetric Milky Way, the Local Group dwarf galaxies, and the 3D
   dust between them continually re-render against the current camera
@@ -46,7 +46,7 @@ Try it at **[https://stellata.xyz](https://stellata.xyz)**.
   silhouettes traced directly from the Edenhofer field, and dim the
   diffuse background behind them.
 
-- **Variable stars pulsate.** ~3,700 stars cross-matched with GCVS
+- **Variable stars pulsate.** ~4,300 stars cross-matched with GCVS
   pulse at their true catalogue period on the model clock — brightness,
   disc radius, and colour all swing together. Open the time scrubber
   (`T`) to accelerate time and watch a Cepheid or Mira run through a
@@ -157,7 +157,7 @@ map.
 ### Visual doubles, in chart mode
 
 Switch to chart mode while observing from a focused star to see
-the double-star wings glyph. The model flags ~13,000 doubles via
+the double-star wings glyph. The model resolves ~12,400 doubles via
 the Hipparcos CCDM cross-match.
 
 - **Mizar + Alcor (ζ + 80 UMa)** — the classic naked-eye double.
@@ -191,7 +191,7 @@ anchor. From there:
 
 ### Watch the dust shape the sky
 
-Set the magnitude limit to "All" (showing all ~330,000 stars) and
+Set the magnitude limit to "All" (showing all ~380,000 stars) and
 pull the camera out to ~3 kpc from Sol, then orbit around. The
 Edenhofer 2023 3D dust grid is real volumetric structure, not an
 analytical shell — as you move, extinction patterns paint
@@ -259,10 +259,10 @@ navigation (orbit, zoom, pan) works the same everywhere.
 
 ## Known limitations
 
-- **Only ~3,700 variables pulse** — those successfully cross-matched
-  between AT-HYG (via HIP or HD) and GCVS. Variables without a
-  HIP/HD cross-reference, or whose GCVS entry lacks a parseable
-  period, render as non-variable.
+- **Only ~4,300 variables pulse** — those successfully cross-matched
+  against GCVS via HIP or HD. Variables without a HIP/HD
+  cross-reference, or whose GCVS entry lacks a parseable period,
+  render as non-variable.
 - **Emission and reflection nebulae are not modelled yet.** The local
   molecular clouds (Zucker 2020/2021) now render as traced dust
   silhouettes, but catalogued H II regions, planetary nebulae, and
@@ -296,14 +296,38 @@ which resolves to the latest.
 
 Data sources retain their own licences:
 
-- **AT-HYG v3.3** (stellar catalogue) — David Nash,
+- **AT-HYG v3.3** — David Nash,
   [Codeberg](https://codeberg.org/astronexus/athyg), CC-BY-SA-4.0.
-  The generated `catalog.bin` and `search-index.json` are
-  derivatives and carry the same licence.
-- **Gaia DR3** (astrometry, broadband photometry, astrophysical
-  parameters, NSS orbits) —
+  No longer a source of any shipped value: which stars are the same
+  object, and which Gaia source each is bound to, are the merge
+  decisions it still contributes, and every field is now sourced from
+  the first-order catalogues below. The generated `catalog.bin` and
+  `search-index.json` remain derivatives and carry the same licence.
+- **Gaia DR3** (astrometry, broadband and synthetic photometry,
+  astrophysical parameters, NSS orbits) —
   ESA / Gaia / DPAC, [Gaia archive](https://gea.esac.esa.int/archive/),
   CC-BY-4.0 (Gaia data-release policy).
+- **Tycho-2** (positions at each star's own mean epoch, proper
+  motions, `BT`/`VT` photometry) — Høg et al. 2000, via
+  [CDS/VizieR](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/259);
+  cite the paper.
+- **CNS5** (the fifth catalogue of nearby stars — `GJ` designations,
+  astrometry and parallaxes inside 25 pc) — Golovin et al. 2023,
+  [10.1051/0004-6361/202244250](https://doi.org/10.1051/0004-6361/202244250),
+  via CDS/VizieR (`J/A+A/670/A19`).
+- **Gliese & Jahreiss third catalogue of nearby stars** (`V/70A`) —
+  printed Johnson `V`, `B−V`, spectral types and ground-based
+  trigonometric parallaxes for the `GJ` cohort no Gaia release
+  reaches. Via [CDS/VizieR](https://cdsarc.cds.unistra.fr/viz-bin/cat/V/70A).
+- **Classic designation cross indexes** — Tycho-2 `HD`
+  identifications (`IV/25`, Fabricius et al. 2002), the Bayer /
+  Flamsteed cross index (`IV/27A`, Kostjuk 2004), and the Bright Star
+  Catalogue 5th revised (`V/50`, Hoffleit & Warren 1991). Via
+  CDS/VizieR; these supply every classical designation the catalogue
+  carries.
+- **IAU Working Group on Star Names** (approved proper names) —
+  [IAU WGSN](https://www.iau.org/science/scientific_bodies/working_groups/280/),
+  the naming authority for every star that displays a proper name.
 - **Riello et al. 2021** (Gaia EDR3 photometric relations — the
   `G` → Johnson `V` transform every star's brightness is derived
   through) — cite the paper

@@ -1,11 +1,11 @@
 # Per-row pipeline and reference-catalogue parsing
 
-The spine row walk (`readStars` in `stars-parse.ts`) and everything it
-resolves per star: space-motion velocity, the GCVS variability cross-match,
-and Stellarium stick figures. Spectral class and physical radius are resolved
-here but owned by `../spectral/`. The binary record layout these fields land
-in is `../README.md` § Binary catalog format; the membership term it walks is
-`../spine/README.md`.
+The membership-manifest row walk (`readStars` in `stars-parse.ts`) and
+everything it resolves per star: space-motion velocity, the GCVS variability
+cross-match, and Stellarium stick figures. Spectral class and physical radius
+are resolved here but owned by `../spectral/`. The binary record layout these
+fields land in is `../README.md` § Binary catalog format; the membership term
+it walks is `../membership/README.md`.
 
 ## Files in this area
 
@@ -13,8 +13,8 @@ in is `../README.md` § Binary catalog format; the membership term it walks is
 scripts/catalog/parse/
   stars-parse.ts (+ test)         readStars — the per-row pipeline. The hub
                                   every other subfolder imports.
-  read-stars-inputs.ts            The spine path, plus source paths + loaders
-                                  for every reference table readStars
+  read-stars-inputs.ts            The manifest path, plus source paths +
+                                  loaders for every reference table readStars
                                   consumes, and the mtime set derived
                                   artifacts invalidate against. One loader is
                                   a derived index rather than a file read: the
@@ -82,11 +82,14 @@ Three deliberate exceptions:
 
 - `gaia-xmatch.ts` streams a 2.5 M-row table line-by-line and dedups on
   angular distance, so it needs its own accumulator.
-- `iterSpineTsv` (`../spine/inherited-spine-pure.ts`) demands the header be
-  the column list **byte for byte, in order**, where `headerIndex` resolves
-  columns by name in any order. That is the stricter contract on purpose: the
-  spine is frozen and its codec writes the header, so a header that merely
-  parses is already a file nobody meant to ship.
+- `iterManifestTsv` (`../membership/membership-manifest-pure.ts`) and
+  `iterSpineTsv` (`../spine/inherited-spine-pure.ts`) each demand the header be
+  their column list **byte for byte, in order**, where `headerIndex` resolves
+  columns by name in any order. That is the stricter contract on purpose: both
+  files are generated, and the codec that writes each one also writes its
+  header, so a header that merely parses is already a file nobody meant to
+  ship. `iterManifestTsv` additionally rejects any row whose cell count differs
+  from the column count.
 - `parseSimbadSptypeTsv` (`../spectral/spectral-resolve.ts`) demands only
   `source_id` and `sp_type`, treating `hip` / `tyc` / `gj` / `sp_qual` /
   `otype` as optional. Four of those five ARE the ladder's designation tiers,
@@ -99,51 +102,60 @@ Three deliberate exceptions:
 
 ## Per-row pipeline
 
-Each spine row walks through, inside `readStars`. The row arrives with its
-`gaia_source_id` already resolved — the native-cell → HIP-cross-walk
-precedence and both binding gates ran when the spine was frozen, and
-re-running them here would re-decide a binding against reference tables that
-have since moved (`../spine/README.md` § The identifier columns are read,
-never re-derived).
+Each manifest row walks through, inside `readStars`. The row arrives with its
+`gaia_source_id` already resolved and justified — `../membership/README.md`
+§ The identifier columns are read, never re-derived — and with its classic-ID
+labels already FINAL, so no label merge runs here (`../classic-ids/README.md`
+§ The label merge).
 
-0. **Parallax resolution** (`resolveParallax` in
-   `../distance/parallax/`), and `dist = 1000/plx`. Every tier is a
-   catalogue this build pulled itself; the spine's printed `dist` cell
-   is no longer one. A row no tier reaches is parked as a § 6.1 ledger
-   drop and builds no record — the one place the walk stops producing a
-   record deliberately rather than through a pinned-at-zero gate.
-1. **Bailer-Jones (DR3) distance override** (`applyBailerJonesOverride`
-   in `catalog-pure.ts`), eligible where the tier above resolved
-   `gaia_dr3_inversion` — the posterior treats that measurement, so a
-   non-Gaia parallax must not be regressed onto its Galactic-density
-   prior. See `../distance/README.md` § Multi-layer distance refinement.
-2. **LMC kinematic override** (`applyLmcKinematicOverride`). See
+**Two rows leave without a record, and the difference is what the count means.**
+A **park** (steps 0, 1 and 2) is a membership decision: the row reaches no
+parallax, no V, or no position, so the § 6.1 ledger records it leaving and
+`data/membership/parked-ledger.tsv` names it. A **drop** (step 5) is a
+reference table disagreeing with the tiers above it — never a membership
+decision — so it is pinned at 0 in `../build-catalog-expected.json` and a
+non-zero entry fails the build. Parks are pinned too, but at their measured
+counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
+
+0. **Parallax resolution** (`resolveParallax` in `../distance/parallax/`).
+   Every tier is a catalogue this build pulled itself. A row no tier reaches
+   **parks** — `no_parallax_published`, or `refused_no_defensible_parallax`
+   where a parallax existed but no tier would defend it.
+1. **Johnson V** (`resolveVMagnitude`). See `../photometry/README.md` § The V
+   cascade. A row no tier lights **parks** as `no_v_magnitude`: a record needs
+   both a place and a brightness. The tier that won is kept on the record as
+   `vVia`, because it decides whether the magnitude is the system's blend or
+   one component's — companion promotion's flux conservation may only subtract
+   a companion's light from a blend (`../companions/README.md` § Anchor flux
+   conservation).
+2. **Direction resolution** (`resolveDirection` in `direction-cascade.ts`)
+   selects the tier's solution. See `../distance/README.md` § Direction
+   resolution. Every solution propagates rather than shipping its source's own
+   epoch, so a row no tier reaches resolves to null and **parks** as
+   `no_position`: a distance with no direction has nothing to multiply. Mostly
+   HIP-only additions a bound sibling's parallax placed and printed HIP
+   photometry lit, which no positional tier covers.
+3. **Proper-motion rescue** (`resolvePmRescue`), where the direction tier
+   states a position but no motion. See § Space-motion velocity.
+4. **Distance overrides**, in order, each superseding the last on the rows it
+   claims. `dist = 1000/plx` from step 0, then **Bailer-Jones (DR3)**
+   (`applyBailerJonesOverride`), eligible where step 0 resolved
+   `gaia_dr3_inversion` — the posterior treats that measurement, so a non-Gaia
+   parallax must not be regressed onto its Galactic-density prior — then the
+   **LMC kinematic override** (`applyLmcKinematicOverride`), which gates on the
+   direction tier's own place and the motion steps 2–3 settled. See
    `../distance/README.md` § Multi-layer distance refinement.
-3. **`MAX_DIST_PC = 50_000` bounded-scope cutoff**
-   (`stars-parse.ts`). Drops rows still beyond LMC depth.
-4. **Direction resolution** (`resolveDirection` in
-   `direction-cascade.ts`) selects the tier's solution; `directionOnPm`
-   advances it to the scene epoch once the motion the row carries is
-   settled (§ Space-motion velocity), and `xyz = direction × distance`
-   in float64. See
-   `../distance/README.md` § Direction resolution. Every solution
-   propagates rather than shipping its source's own epoch, so a row no
-   tier reaches resolves to null and the walk drops it —
-   `spineDroppedNoDirection`, pinned at 0.
-5. **Spectral classification** (`resolveSpectralInfo`; Sol special-cased
+5. **`MAX_DIST_PC = 50_000` bounded-scope cutoff** (`stars-parse.ts`).
+   **Drops** rows still beyond LMC depth after every override —
+   `droppedTooFar`.
+6. **absmag** — `apparentToAbsoluteMagnitude` on step 1's V and the distance
+   the whole override stack settled; **position** — `directionOnPm` advances
+   the step-2 solution to the scene epoch on the motion the row ends up
+   carrying, and `xyz = direction × distance` in float64; then **velocity**
+   assembly (§ Space-motion velocity).
+7. **Spectral classification** (`resolveSpectralInfo`; Sol special-cased
    to curated G2V in `stars-parse.ts` — no HIP/Gaia/SIMBAD key reaches
    it). See `../spectral/README.md`.
-6. **Constellation** — positional, from the resolved xyz
-   (§ Positional constellation membership). Nothing here sets the
-   DESIGNATION's constellation: the spine carries no editorial `con` cell.
-7. **Johnson V and absmag** (`resolveVMagnitude`, then
-   `apparentToAbsoluteMagnitude` on the distance the whole override stack
-   settled). See `../photometry/README.md` § The V cascade. The spine's
-   printed `mag` cell is no longer read by anything. The tier that
-   won is kept on the record as `vVia`, because it decides whether the
-   magnitude is the system's blend or one component's — companion
-   promotion's flux conservation may only subtract a companion's light
-   from a blend (`../companions/README.md` § Anchor flux conservation).
 8. **B−V** (`resolveColourIndex`) — the Gaia relation, else printed
    `I/239` B−V, else Gaia's synthetic B−V, else the intrinsic
    spectral-class colour, else solar. See
@@ -157,15 +169,26 @@ never re-derived).
    the class-table value; BC always class-table. White dwarfs
    special-cased to 0.013 R☉; Wolf-Rayets keep their own ramps (Apsis
    models neither). Clamped to [0.08, 2500] R☉.
+10. **Constellation** — positional, from the resolved xyz
+    (§ Positional constellation membership). Nothing here sets the
+    DESIGNATION's constellation: the manifest carries no editorial `con` cell.
 
-`athygDist` / `athygDistSrc` are build-time-only, like `vVia`: the spine's
-printed `dist` / `dist_src` cells, kept pre-override so the post-build
-distance-regression check has the input to measure drift against.
+Every cascade tally the walk returns is incremented **after** step 5, so each
+partition sums to the record count rather than to the rows entering the walk.
+A parked row is therefore in none of them — `parkedVia`, over the closed reason
+enum, is the one place it is a number, and `distNone` / `vNone` stay pinned at
+0 because a shipped record cannot have reached no tier.
 
-The spine carries no `x0/y0/z0`, and AT-HYG's was never consumed: it is a mixed-epoch
-merge artifact, tabulated at ~3 dp (a 206 AU grid) and internally
-inconsistent with the same row's printed ra/dec by up to tens of
-arcsec on high-PM stars (`docs/science-catalog-ingestion.md` § Driver astrometry).
+`plxDistPc` / `plxVia` are build-time-only, like `vVia`: step 0's own inversion
+and the tier that supplied it, captured before any override layer fires so the
+post-build distance-regression check has the input to measure drift against.
+Both are null on Sol, which sits at distance zero by construction, and on
+records minted rather than walked.
+
+The manifest carries no `x0/y0/z0`, and AT-HYG's was never consumed: it is a
+mixed-epoch merge artifact, tabulated at ~3 dp (a 206 AU grid) and internally
+inconsistent with the same row's printed ra/dec by up to tens of arcsec on
+high-PM stars (`docs/science-catalog-ingestion.md` § Driver astrometry).
 
 ## Space-motion velocity
 
@@ -209,10 +232,6 @@ artifact rows, and the 15 the rescue leaves. The rescued motion then advances
 the tier's position too (`directionOnPm`), so the 3 Tycho-2 rows stating an
 observed J1991.25 position stop tracking their rate from a 24.75-yr-stale place;
 the 36 Gaia rows are already at J2016.0 and do not move.
-
-The spine's printed `pm_ra`/`pm_dec` is **no longer a velocity source**, and
-routing these rows to it is exactly what the rescue cascade exists to avoid.
-Its one remaining consumer is the LMC override's bulk-PM gate.
 
 `velocityAboveEscape` moved when the rv cascade took its SIMBAD tier — a
 published-but-wrong velocity is what these thresholds are for, and which rows
@@ -301,7 +320,7 @@ Two properties follow from the boundaries partitioning the whole sphere:
 star's *designation* constellation is fixed by nomenclature and diverges from
 position once a boundary moves past a named star: ρ Aql / 67 Aql (HIP 99742) has
 been positionally in **Delphinus** since 1992 and is ρ **Aquilae** permanently.
-AT-HYG's editorial `con` cell used to seed it; the spine carries no such column,
+The manifest carries no editorial `con` column,
 so the walk leaves `desigConIndex` (search-index `dc`) at
 `NO_CONSTELLATION_INDEX` and three later passes fill it — the IAU WGSN
 designation the naming ladder resolves states its own constellation and wins
@@ -349,7 +368,7 @@ work.
 
 Pipeline in `scripts/catalog/build-catalog.ts`:
 
-1. The HYG CSV parser reads the `hip` column into each star record.
+1. `readStars` reads the manifest's `hip` column into each star record.
 2. After sorting stars by absmag (so record indices are final), a
    `hipToIndex: Map<number, number>` is built from the post-sort order.
    Duplicate HIPs (rare — binary companions) keep the brightest entry
@@ -363,11 +382,13 @@ Pipeline in `scripts/catalog/build-catalog.ts`:
 
 **Reliability rule: any unresolved HIP is a hard build error** — unless
 it's in `KNOWN_MISSING_HIPS`. That map documents HIPs that Stellarium
-references but HYG has no 3D position for (empty x/y/z/parallax in the
-CSV), with a human-readable justification each. Currently:
+references but that build no record, with a human-readable justification
+each. Both entries are on the manifest and both **park**: a parallax exists
+and a skip rule refuses it, so they hold their SIDs and reinstate when Gaia
+DR4 fits the blend (`../distance/parallax/README.md`).
 
-- `5165` (α Phe / Ankaa) — Phoenix loses most of its figure without this
-  star, but HYG can't carry it.
+- `5165` (β Phe, HD 6595 — not α Phe, which is Ankaa at HIP 2081) —
+  Phoenix loses most of its figure without this star.
 - `89341` (μ Sgr / Polis) — one Sagittarius polyline degrades from 3
   points to 2, shape still recognisable.
 

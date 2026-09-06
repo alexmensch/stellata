@@ -1,21 +1,24 @@
 // Post-build self-consistency + SIMBAD distance gate: flags stars whose
-// pipeline distance has drifted from its AT-HYG input or from SIMBAD's
-// parallax-derived value. Snapshot-pinned by build-catalog.ts.
+// shipped distance has drifted from the parallax cascade's own inversion or
+// from SIMBAD's parallax-derived value. Snapshot-pinned by build-catalog.ts.
 
 import { parseSimbadSampleRows } from '../validate/simbad-sample-parse';
 import type { Star } from '../parse/stars-parse';
+import type { DistVia } from './parallax/parallax-cascade';
 
-// HIP/GJ/N are parallax-anchored ground truth — a 3× shift signals an
-// override misfire. G_R3/G_R2 are Gaia inverse parallaxes whose low-S/N
-// tail legitimately gets re-anchored by Bailer-Jones, so only the very
-// largest residuals are flagged. Categories absent here (OTHER, blank)
-// are not checked.
-export const SELF_CONSISTENCY_THRESHOLDS: Readonly<Record<string, number>> = {
-  HIP: Math.log10(3),
-  GJ: Math.log10(3),
-  N: Math.log10(3),
-  G_R3: Math.log10(30),
-  G_R2: Math.log10(30),
+// Only an override layer moves a record off its own inversion. Bailer-Jones
+// legitimately re-anchors the low-S/N tail of Gaia parallaxes, so that tier
+// is held loosely; every other measured tier is parallax-anchored ground truth
+// and a 3× shift signals an override misfire. Tiers absent here (curated,
+// none, and the two override layers themselves) are not checked.
+export const SELF_CONSISTENCY_THRESHOLDS: Readonly<Partial<Record<DistVia, number>>> = {
+  gaia_dr3_inversion: Math.log10(30),
+  hip2_parallax: Math.log10(3),
+  cns5_plx: Math.log10(3),
+  gliese_plx: Math.log10(3),
+  simbad_plx: Math.log10(3),
+  pair_member_parallax: Math.log10(3),
+  gliese_photometric_plx: Math.log10(3),
 };
 
 export const SIMBAD_DISTANCE_THRESHOLD = Math.log10(5);
@@ -35,10 +38,10 @@ export interface SimbadDistanceEntry {
 // the build.
 export interface SelfConsistencyOutlier {
   id: string;          // canonical join key — "gaia:<source_id>" or "hip:<N>"
-  distSrc: string;     // AT-HYG dist_src category that tripped the threshold
-  athygDist: number;   // AT-HYG input distance (pc)
+  plxVia: DistVia;     // the parallax tier whose inversion tripped the threshold
+  plxDist: number;     // the cascade's own inversion (pc), pre-override
   finalDist: number;   // pipeline final distance (pc)
-  logRatio: number;    // log10(finalDist / athygDist), rounded to 3 decimals
+  logRatio: number;    // log10(finalDist / plxDist), rounded to 3 decimals
   reason?: string;
 }
 
@@ -57,16 +60,16 @@ export interface RegressionReport {
 }
 
 /** Stable identifier used as the snapshot join key. Gaia DR3 source_id
- *  wins where present (more reliable than HIP for the AT-HYG-Gaia bulk);
- *  HIP is the fallback. Returns null when the star carries neither. */
+ *  wins where present (more reliable than HIP for the Gaia bulk); HIP is the
+ *  fallback. Returns null when the star carries neither. */
 export function starKey(star: Pick<Star, 'gaiaSourceId' | 'hip'>): string | null {
   if (star.gaiaSourceId) return `gaia:${star.gaiaSourceId}`;
   if (star.hip !== null) return `hip:${star.hip}`;
   return null;
 }
 
-/** Floating-origin AT-HYG positions are in pc from Sol; the pipeline's
- *  final distance is the Euclidean magnitude. */
+/** Positions are in pc from Sol; the pipeline's final distance is the
+ *  Euclidean magnitude. */
 export function finalDistance(star: Pick<Star, 'x' | 'y' | 'z'>): number {
   return Math.hypot(star.x, star.y, star.z);
 }
@@ -75,26 +78,27 @@ function round3(n: number): number {
   return Math.round(n * 1000) / 1000;
 }
 
-/** Detect the self-consistency outlier for one star, or null if the row
- *  has no threshold opinion, is missing inputs, or sits within tolerance. */
+/** Detect the self-consistency outlier for one star, or null if the row's
+ *  tier has no threshold opinion, is missing inputs, or sits within
+ *  tolerance. */
 export function detectSelfConsistencyOutlier(
   star: Star,
 ): SelfConsistencyOutlier | null {
-  const distSrc = star.athygDistSrc;
-  if (!distSrc) return null;
-  const threshold = SELF_CONSISTENCY_THRESHOLDS[distSrc];
+  const plxVia = star.plxVia;
+  if (plxVia === null) return null;
+  const threshold = SELF_CONSISTENCY_THRESHOLDS[plxVia];
   if (threshold === undefined) return null;
-  if (star.athygDist === null || star.athygDist <= 0) return null;
+  if (star.plxDistPc === null || star.plxDistPc <= 0) return null;
   const id = starKey(star);
   if (!id) return null;
   const final = finalDistance(star);
   if (final <= 0) return null;
-  const logRatio = Math.log10(final / star.athygDist);
+  const logRatio = Math.log10(final / star.plxDistPc);
   if (Math.abs(logRatio) <= threshold) return null;
   return {
     id,
-    distSrc,
-    athygDist: round3(star.athygDist),
+    plxVia,
+    plxDist: round3(star.plxDistPc),
     finalDist: round3(final),
     logRatio: round3(logRatio),
   };
@@ -288,8 +292,8 @@ export function formatRegressionDiff(diff: readonly OutlierDiff[]): string {
 }
 
 function formatOutlier(o: SelfConsistencyOutlier | SimbadOutlier): string {
-  if ('athygDist' in o) {
-    return `dist_src=${o.distSrc} athyg=${o.athygDist}pc final=${o.finalDist}pc logRatio=${o.logRatio}`;
+  if ('plxDist' in o) {
+    return `plx_via=${o.plxVia} plx=${o.plxDist}pc final=${o.finalDist}pc logRatio=${o.logRatio}`;
   }
   return `final=${o.finalDist}pc simbad=${o.simbadDist}pc (${o.simbadMainId}) logRatio=${o.logRatio}`;
 }

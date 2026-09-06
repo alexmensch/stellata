@@ -7,7 +7,6 @@
 // so everything reachable from the config needs them. Only typecheck and
 // vitest cover the rest of scripts/, and neither fails without them: dropping
 // these breaks `vite build` and `pnpm run dev` alone.
-import { emptyTallyPartition } from '../util/tally.ts';
 import { headerIndex } from './parse/corpus-tsv.ts';
 // Type-only: distance/parallax/ reaches back here through its parsers, so a
 // value import would close a cycle. Erased at compile.
@@ -725,7 +724,7 @@ export interface DecodeRecordColumnOptions {
 /** Decode one field across all `count` records into a parallel array — the
  *  bulk counterpart of `readRecordField` for the SoA runtime loader.
  *  Column-at-a-time (one kind dispatch per column, then a tight
- *  constant-getter loop) decodes the 330k-record catalog measurably faster
+ *  constant-getter loop) decodes the 380k-record catalog measurably faster
  *  than a per-record pass over every field. */
 export function decodeRecordColumn(
   view: DataView,
@@ -1405,50 +1404,6 @@ export function inferBinaries(
 }
 
 // ---- Bailer-Jones (DR3) distance override -------------------------------
-
-// The three `dist_src` values AT-HYG's vocabulary names below. They survive as
-// bucket labels for the per-layer outcome partition, never as a gate: which
-// parallax a record carries is `distVia`, which this build resolves first-hand.
-export const DIST_SRC_GAIA_DR3 = 'G_R3';
-export const DIST_SRC_GAIA_DR2 = 'G_R2';
-export const DIST_SRC_HIP = 'HIP';
-
-/** AT-HYG's `dist_src` vocabulary, plus an `UNRECOGNISED` catch-all for a
- *  value the column has never carried. Every distance-override layer states
- *  an outcome for each bucket — see scripts/catalog/distance/README.md
- *  § Override-layer authoring discipline. */
-export const DIST_SRC_BUCKETS = [
-  DIST_SRC_GAIA_DR3, DIST_SRC_GAIA_DR2, DIST_SRC_HIP,
-  'GJ', 'N', 'OTHER', 'UNRECOGNISED',
-] as const;
-
-export type DistSrcBucket = (typeof DIST_SRC_BUCKETS)[number];
-
-/** Per-`dist_src` row counts for one override layer. */
-export type DistSrcPartition = Record<DistSrcBucket, number>;
-
-export const DIST_SRC_UNRECOGNISED: DistSrcBucket = 'UNRECOGNISED';
-
-const ATHYG_DIST_SRCS: ReadonlySet<string> = new Set(
-  DIST_SRC_BUCKETS.filter((b) => b !== DIST_SRC_UNRECOGNISED),
-);
-
-export function distSrcBucket(distSrc: string | null): DistSrcBucket {
-  return distSrc !== null && ATHYG_DIST_SRCS.has(distSrc)
-    ? (distSrc as DistSrcBucket)
-    : DIST_SRC_UNRECOGNISED;
-}
-
-export function emptyDistSrcPartition(): DistSrcPartition {
-  return emptyTallyPartition(DIST_SRC_BUCKETS);
-}
-
-export function tallyDistSrc(
-  partition: DistSrcPartition,
-  distSrc: string | null,
-): void {
-  partition[distSrcBucket(distSrc)]++;
-}
 
 /** Whether a record is eligible for the Bailer-Jones override: it resolves to a
  *  Gaia DR3 source_id AND the parallax its own cascade settled on is Gaia's.
