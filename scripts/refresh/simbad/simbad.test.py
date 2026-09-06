@@ -25,24 +25,6 @@ from simbad.specs import (  # noqa: E402
 )
 
 
-SPINE_HEADER = (
-    "tyc\thip\thd\thr\tgl\tflam\tbayer\tproper\tgaia_source_id\tra\tdec\tdist\t"
-    "mag\tci\tspect\trv\tpm_ra\tpm_dec\tpos_src\tdist_src\tmag_src\trv_src\t"
-    "pm_src\tspect_src"
-)
-SPINE_COLUMNS = SPINE_HEADER.split("\t")
-
-
-def write_spine(directory: Path, rows: list[dict[str, str]]) -> Path:
-    """Materialise a spine fixture — named cells set, the rest blank."""
-    path = directory / "inherited-spine.tsv"
-    lines = [SPINE_HEADER]
-    for row in rows:
-        lines.append("\t".join(row.get(c, "") for c in SPINE_COLUMNS))
-    path.write_text("\n".join(lines) + "\n")
-    return path
-
-
 # Mirrors MANIFEST_COLUMNS in scripts/catalog/membership/membership-manifest-pure.ts.
 MANIFEST_HEADER = (
     "tyc\thip\thd\thd_alt\thr\thr_alt\tgl\tflam\tbayer\tproper\tgaia_source_id\t"
@@ -52,10 +34,8 @@ MANIFEST_COLUMNS = MANIFEST_HEADER.split("\t")
 
 
 def write_manifest(directory: Path, rows: list[dict[str, str]]) -> Path:
-    """Materialise a membership-manifest fixture. Distinct from the spine
-    fixture on purpose: the manifest carries none of the spine's value or
-    `*_src` columns, so a feeder reading one of those against a manifest
-    would be reading a column that does not exist."""
+    """Materialise a membership-manifest fixture — named cells set, the rest
+    blank. The one table shape every SIMBAD feeder reads."""
     path = directory / "membership-manifest.tsv"
     lines = [MANIFEST_HEADER]
     for row in rows:
@@ -519,12 +499,6 @@ class MembershipRequestKeysTests(unittest.TestCase):
         d = self.enterContext(tempfile.TemporaryDirectory())
         return write_manifest(Path(d), rows)
 
-    def _spine(self, rows):
-        """The cohort predicate reads `*_src` marks, which only the spine
-        carries — `refresh-simbad-values.py` still feeds it one."""
-        d = self.enterContext(tempfile.TemporaryDirectory())
-        return write_spine(Path(d), rows)
-
     def test_partitions_by_the_no_gaia_key_ladder(self):
         path = self._manifest([
             {"gaia_source_id": "12345", "hip": "1", "tyc": "1-2-1"},
@@ -542,11 +516,12 @@ class MembershipRequestKeysTests(unittest.TestCase):
         self.assertEqual(keys.total, 5)
 
     def test_row_filter_narrows_the_partition(self):
-        path = self._spine([
-            {"gaia_source_id": "1", "rv_src": "G_R3"},
-            {"gaia_source_id": "2", "rv_src": "HYG"},
+        path = self._manifest([
+            {"gaia_source_id": "1", "binding": "crosswalk_gated", "hip": "5"},
+            {"gaia_source_id": "2", "binding": "reviewed", "hip": "6"},
         ])
-        keys = inputs.membership_request_keys(path, inputs.is_simbad_value_cohort)
+        keys = inputs.membership_request_keys(
+            path, inputs.simbad_value_cohort({"1", "2"}))
         self.assertEqual(keys.source_ids, [2])
 
     def test_designations_cover_only_source_id_keyed_rows(self):
@@ -565,11 +540,12 @@ class MembershipRequestKeysTests(unittest.TestCase):
         self.assertEqual(keys.tycs, ["9-9-1"])
 
     def test_row_filter_narrows_the_widening_map_too(self):
-        path = self._spine([
-            {"gaia_source_id": "1", "tyc": "1-2-1", "rv_src": "G_R3"},
-            {"gaia_source_id": "2", "tyc": "3-4-1", "rv_src": "HYG"},
+        path = self._manifest([
+            {"gaia_source_id": "1", "binding": "crosswalk_gated", "tyc": "1-2-1"},
+            {"gaia_source_id": "2", "binding": "simbad_corroborated", "tyc": "3-4-1"},
         ])
-        keys = inputs.membership_request_keys(path, inputs.is_simbad_value_cohort)
+        keys = inputs.membership_request_keys(
+            path, inputs.simbad_value_cohort({"1", "2"}))
         self.assertEqual(keys.designations_by_source_id, {2: {"tyc": "3-4-1"}})
 
     def test_row_designations_cover_the_whole_ladder(self):
@@ -593,28 +569,60 @@ class MembershipRequestKeysTests(unittest.TestCase):
 class ValueCohortTests(unittest.TestCase):
 
     def _row(self, **cells):
-        return {c: cells.get(c, "") for c in SPINE_COLUMNS}
+        return {c: cells.get(c, "") for c in MANIFEST_COLUMNS}
 
-    def test_first_order_marks_open_no_simbad_tier(self):
-        row = self._row(
-            gaia_source_id="1", pos_src="T", dist_src="G_R3",
-            mag_src="HIP", rv_src="G_R3", pm_src="G_R3",
-        )
-        self.assertFalse(inputs.is_simbad_value_cohort(row))
+    COMPLETE = frozenset({"1"})
 
-    def test_absent_rv_is_not_a_non_first_order_mark(self):
-        row = self._row(gaia_source_id="1", pos_src="T", rv_src="N")
-        self.assertFalse(inputs.is_simbad_value_cohort(row))
+    def _in_cohort(self, row, complete=None):
+        return inputs.simbad_value_cohort(
+            self.COMPLETE if complete is None else complete)(row)
 
-    def test_any_retired_mark_admits_the_row(self):
-        for mark in ("HYG", "OTHER", "G_R2", "GJ"):
-            with self.subTest(mark=mark):
-                row = self._row(gaia_source_id="1", pos_src="T", rv_src=mark)
-                self.assertTrue(inputs.is_simbad_value_cohort(row))
+    def test_both_halves_of_the_first_hand_claim_keep_a_row_out(self):
+        for printed in ("tyc", "hip"):
+            with self.subTest(printed=printed):
+                row = self._row(
+                    gaia_source_id="1", binding="crosswalk_gated",
+                    **{printed: "7"},
+                )
+                self.assertFalse(self._in_cohort(row))
+
+    def test_a_gaia_solution_missing_a_value_admits_the_row(self):
+        # The half identity cannot answer. HIP 22255 is this shape: a
+        # crosswalk_gated binding carrying both printed ids, on a source Gaia
+        # publishes no parallax for.
+        row = self._row(gaia_source_id="1", binding="crosswalk_gated",
+                        hip="7", tyc="1-2-1")
+        self.assertTrue(self._in_cohort(row, complete=frozenset()))
+
+    def test_a_binding_no_raw_walk_reproduces_admits_the_row(self):
+        # Every verdict but crosswalk_gated rests on the spine's own claim, on
+        # SIMBAD's object, or on a human disposition.
+        for binding in ("simbad_corroborated", "reviewed", "none", ""):
+            with self.subTest(binding=binding):
+                row = self._row(gaia_source_id="1", binding=binding, hip="7")
+                self.assertTrue(self._in_cohort(row))
+
+    def test_no_printed_identifier_admits_the_row(self):
+        # Neither the Tycho-2 nor the Hipparcos tier can be asked about it.
+        row = self._row(gaia_source_id="1", binding="crosswalk_gated", gl="GJ 9")
+        self.assertTrue(self._in_cohort(row))
 
     def test_no_gaia_row_is_always_in_the_cohort(self):
-        row = self._row(hip="7", pos_src="T", dist_src="HIP", rv_src="N")
-        self.assertTrue(inputs.is_simbad_value_cohort(row))
+        # The 26 of 27 no_position parks this places are exactly this shape —
+        # HIP-only additions the spine-scoped request never asked for.
+        row = self._row(hip="7", binding="none")
+        self.assertTrue(self._in_cohort(row))
+
+    def test_gaia_complete_needs_every_value_column(self):
+        d = self.enterContext(tempfile.TemporaryDirectory())
+        path = Path(d) / "gaia.tsv"
+        path.write_text(
+            "source_id\tparallax\tpmra\tradial_velocity\n"
+            "10\t1.0\t2.0\t3.0\n"
+            "20\t1.0\t2.0\t\n"
+            "30\t\t2.0\t3.0\n"
+        )
+        self.assertEqual(inputs.gaia_complete_source_ids(path), {"10"})
 
 
 class GlSuffixTests(unittest.TestCase):
@@ -869,7 +877,7 @@ class CollectOidRequestsTests(unittest.TestCase):
             __file__, "refresh_simbad_sptype", "../refresh-simbad-sptype.py",
         )
         d = self.enterContext(tempfile.TemporaryDirectory())
-        spine = write_spine(Path(d), [
+        manifest = write_manifest(Path(d), [
             {"gaia_source_id": "12345", "tyc": "1-2-1"},
             {"hip": "777"},
         ])
@@ -879,7 +887,7 @@ class CollectOidRequestsTests(unittest.TestCase):
             ])),
             ("HIP 777", ident_table([{"oidref": 300, "id": "HIP 777"}])),
         ])
-        with mock.patch.object(sptype, "MEMBERSHIP", spine), \
+        with mock.patch.object(sptype, "MEMBERSHIP", manifest), \
              mock.patch.object(sptype.inputs, "iter_wds_xids_oids",
                                return_value=iter([200, 100])):
             resolved = sptype.collect_oid_requests(FakeClient(backend))
@@ -910,13 +918,13 @@ class UnionUnansweredTests(unittest.TestCase):
     """The value-keyed union: ask every namespace a row reaches only where
     no object it already bound carries the value."""
 
-    def _run(self, spine_rows, bindings, rows, responses):
+    def _run(self, manifest_rows, bindings, rows, responses):
         with tempfile.TemporaryDirectory() as d:
-            spine = write_spine(Path(d), spine_rows)
+            manifest = write_manifest(Path(d), manifest_rows)
             backend = FakeBackend(responses)
             found, added, report = union.union_unanswered(
                 FakeClient(backend),
-                membership_path=spine,
+                membership_path=manifest,
                 bindings=bindings,
                 rows=rows,
                 columns=UNION_COLUMNS,
@@ -1097,14 +1105,14 @@ class UnionUnansweredTests(unittest.TestCase):
         # The enumeration has to answer for the same cohort the pass probed,
         # or a filtered pull reports rows it never asked about.
         with tempfile.TemporaryDirectory() as d:
-            spine = write_spine(Path(d), [
+            manifest = write_manifest(Path(d), [
                 {"gaia_source_id": "12345", "hip": "777"},
                 {"gaia_source_id": "23456", "hip": "778"},
             ])
             added = {"hip": {777: 300, 778: 301}}
-            everything = list(union.iter_recovered_rows(spine, added))
+            everything = list(union.iter_recovered_rows(manifest, added))
             filtered = list(union.iter_recovered_rows(
-                spine, added,
+                manifest, added,
                 row_filter=lambda row: row["hip"] == "777",
             ))
         self.assertEqual([r[1:] for r in everything],
@@ -1119,33 +1127,62 @@ class ValuesCollectOidRequestsTests(unittest.TestCase):
             __file__, "refresh_simbad_values", "../refresh-simbad-values.py",
         )
 
+    def _gaia(self, directory, source_ids):
+        """A 5p table stating every value for each id, so the cohort turns on
+        the identity half alone unless a test withholds an id."""
+        path = Path(directory) / "gaia_dr3_astrometry_catalog.tsv"
+        lines = ["source_id\tparallax\tpmra\tradial_velocity"]
+        lines += [f"{sid}\t1.0\t2.0\t3.0" for sid in source_ids]
+        path.write_text("\n".join(lines) + "\n")
+        return path
+
     def test_cohort_predicate_narrows_the_request_set(self):
         shell = self._shell()
         d = self.enterContext(tempfile.TemporaryDirectory())
-        spine = write_spine(Path(d), [
-            # first-order in every field → no SIMBAD tier reaches it
-            {"gaia_source_id": "1", "pos_src": "T", "dist_src": "G_R3",
-             "mag_src": "HIP", "rv_src": "G_R3", "pm_src": "G_R3"},
-            {"gaia_source_id": "2", "rv_src": "HYG"},
+        manifest = write_manifest(Path(d), [
+            # both halves first-hand → no SIMBAD tier needs to reach it
+            {"gaia_source_id": "1", "binding": "crosswalk_gated", "hip": "5"},
+            {"gaia_source_id": "2", "binding": "reviewed", "hip": "6"},
             {"hip": "777"},
         ])
+        gaia = self._gaia(d, ["1", "2"])
         backend = FakeBackend([
             ("'Gaia DR3 2'", ident_table([{"oidref": 100, "id": "Gaia DR3 2"}])),
             ("'HIP 777'", ident_table([{"oidref": 300, "id": "HIP 777"}])),
         ])
-        with mock.patch.object(shell, "SPINE", spine):
+        with mock.patch.object(shell, "MEMBERSHIP", manifest), \
+                mock.patch.object(shell, "GAIA_ASTROMETRY", gaia):
             oids = shell.collect_oid_requests(FakeClient(backend))
         self.assertEqual(oids, [100, 300])
+
+    def test_a_gaia_value_gap_widens_the_request_set(self):
+        # Same manifest, same identity verdicts — only the 5p table changes,
+        # and row 1 joins the cohort because Gaia states no value for it.
+        shell = self._shell()
+        d = self.enterContext(tempfile.TemporaryDirectory())
+        manifest = write_manifest(Path(d), [
+            {"gaia_source_id": "1", "binding": "crosswalk_gated", "hip": "5"},
+        ])
+        gaia = self._gaia(d, [])
+        backend = FakeBackend([
+            ("'Gaia DR3 1'", ident_table([{"oidref": 100, "id": "Gaia DR3 1"}])),
+        ])
+        with mock.patch.object(shell, "MEMBERSHIP", manifest), \
+                mock.patch.object(shell, "GAIA_ASTROMETRY", gaia):
+            oids = shell.collect_oid_requests(FakeClient(backend))
+        self.assertEqual(oids, [100])
 
     def test_gaia_resolution_floor_fails_the_pull(self):
         shell = self._shell()
         d = self.enterContext(tempfile.TemporaryDirectory())
-        spine = write_spine(Path(d), [
-            {"gaia_source_id": "2", "rv_src": "HYG"},
-            {"gaia_source_id": "3", "rv_src": "HYG"},
+        manifest = write_manifest(Path(d), [
+            {"gaia_source_id": "2", "binding": "reviewed"},
+            {"gaia_source_id": "3", "binding": "reviewed"},
         ])
+        gaia = self._gaia(d, ["2", "3"])
         backend = FakeBackend([("FROM ident", ident_table([]))])
-        with mock.patch.object(shell, "SPINE", spine):
+        with mock.patch.object(shell, "MEMBERSHIP", manifest), \
+                mock.patch.object(shell, "GAIA_ASTROMETRY", gaia):
             with self.assertRaises(SystemExit) as caught:
                 shell.collect_oid_requests(FakeClient(backend))
         self.assertIn("Gaia DR3 ident resolution", str(caught.exception))

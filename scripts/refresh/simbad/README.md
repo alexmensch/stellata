@@ -16,9 +16,9 @@ specs.py     Declarative dataclasses — ColumnSpec for basic-table
 inputs.py    Manifest-driven feeders — membership_request_keys partitions rows
              into per-namespace lookup keys AND collects each
              source_id-keyed row's other designations in the same pass,
-             is_simbad_value_cohort is the § 5 value-tier predicate,
-             gl_suffix normalises the GJ/Gl spellings. Plus the
-             WDS-component oid iterator.
+             simbad_value_cohort builds the § 5 value-tier predicate
+             over gaia_complete_source_ids, gl_suffix normalises the
+             GJ/Gl spellings. Plus the WDS-component oid iterator.
              Cost: the designation map is a dict per source_id-keyed row —
              ~98 MB over the whole manifest against ~46 MB for three flat
              per-namespace dicts. Bought deliberately: it is what lets the
@@ -56,6 +56,27 @@ simbad.test.py   stdlib unittest pins covering spec definitions,
 __init__.py      Package marker + source_files(), the module list a
                  shell folds into its is_up_to_date sources.
 ```
+
+## The cohort is two questions, and the manifest answers one
+
+`simbad_value_cohort` takes a set of source_ids and returns the § 5 value-tier
+predicate. The set is `gaia_complete_source_ids` over
+`data/gaia/gaia_dr3_astrometry_catalog.tsv` — the ids Gaia's own 5p table
+states a parallax AND a proper motion AND a radial velocity for. A row is OUT
+of the cohort only where that holds **and** its identity is first-hand too: a
+`crosswalk_gated` binding plus a TYC or a HIP.
+
+**Both halves, because the manifest carries value provenance for neither.**
+The predicate this replaced read the spine's `pos_src` / `dist_src` /
+`mag_src` / `rv_src` / `pm_src` marks. Nothing in
+`../../catalog/membership/README.md` § Columns restates them — the record
+build resolves each cascade's tier itself — so an identity-only rebase drops
+the exact class § 5 retires. Measured: of the 11,050 spine rows the old
+predicate selected, an identity-only predicate covers 5,799 and loses 5,238,
+of which **5,135 are `rv_src`-only**. HIP 22255 and HD 150688 are the
+other shape — `dist_src=G_R2`, a Gaia DR2 distance the driver swap retired,
+on a `crosswalk_gated` binding carrying both printed ids. Reading the value
+half off Gaia's own table is what recovers them.
 
 ## Two invariants the ADQL depends on
 
