@@ -45,15 +45,13 @@ scripts/catalog/companions/
 
 ## Companion promotion from `data/binaries/multiples.tsv`
 
-Before promotion runs, `backfillPrimaryIdentifiers` (same module)
-sweeps the pair-primary rows and backfills HIP + Gaia source_id onto
-identifier-less catalog records, joined by the TSV's `hd` column —
-never by position: the nearest-position record to ξ UMa A is ξ UMa
-B's, so a position join would stamp A's identifiers onto B. This is
-what makes HD-only AT-HYG systems addressable by `lookupByHip` /
-URL refs. Guards: unique HD in the catalog, target record carries no
-id of its own, no id duplicated from another record. Counted
-`multiplesIdentifierBackfill`.
+**A record's identifiers are the manifest's, and this folder adds none.**
+Promotion mints records; it does not amend one. The manifest states each
+record's HIP and Gaia source_id, its `binding` cell says on what basis, and a
+cell it leaves empty is the § 4 gate's decision rather than an omission
+(`../membership/README.md` § The identifier columns are read, never
+re-derived). So a pair-primary row's own ids stay on the promoted companion
+and never reach the anchor's record.
 
 `companion-promotion.ts` runs BEFORE the absmag sort. It reads the
 binaries pipeline output and adds first-class catalog records for

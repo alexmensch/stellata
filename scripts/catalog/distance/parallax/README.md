@@ -156,15 +156,25 @@ posterior supersedes the inversion, the posterior is what handles a low-S/N
 parallax, and flagging those rows would report a bias the record does not carry.
 The LMC snap replaces the distance outright, likewise. Every other tier is in.
 
-**The floor gates HIP2 and the sibling index, and nothing else needs it.** That
-is not a scope decision so much as a measurement: no row of any other index this
-cascade reads states a parallax below S/N 1 — CNS5 0 of 5,908, Gliese 0 of the
-1,904 trigonometric rows it admits. The Gaia tier is deliberately ungated even
-so, because B-J's posterior sits above it for exactly the low-S/N case (47 rows
-of the astrometry table are sub-floor); a gate there would strip a record of
-B-J eligibility and park it despite a posterior existing for it. SIMBAD's index
-holds 53 sub-floor rows catalogue-wide, few of them reachable on a tier only 93
-records take. Extending the floor to every tier is the available override.
+**The floor gates every tier below Gaia.** It used to gate HIP2 and the sibling
+index alone, on a measurement rather than a scope decision: no row of any other
+index this cascade reads stated a parallax below S/N 1 that a record could
+reach — CNS5 0 of 5,908, Gliese 0 of the 1,904 trigonometric rows it admits,
+and SIMBAD's 53 sub-floor rows barely reachable on a tier only 93 records took.
+**Rebasing the value cohort onto the membership manifest made that tier serve
+4,067 records, and 8 of those 53 became reachable**: parallaxes of S/N
+0.01–0.33, each indistinguishable from zero, inverting to 54,000–714,000 pc.
+They left the walk through `readStars`'s `MAX_DIST_PC` exit — the one gate that
+is not a § 6.1 park, pinned at zero — so eight manifest rows neither shipped
+nor parked. Extending the floor, which this paragraph already named as the
+available override, is what closed it; the refused rows park
+`refused_no_defensible_parallax` like any other. CNS5 and Gliese still lose
+nothing to it, which is the same measurement restated as a gate.
+
+The Gaia tier stays deliberately ungated, because B-J's posterior sits above it
+for exactly the low-S/N case (47 rows of the astrometry table are sub-floor); a
+gate there would strip a record of B-J eligibility and park it despite a
+posterior existing for it.
 
 ## The skip rules — one principle, two publications
 

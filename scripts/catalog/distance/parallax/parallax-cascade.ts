@@ -130,7 +130,19 @@ export function belowParallaxSnFloor(plx: number, err: number | null): boolean {
  *     SIMBAD's parallax usually IS van Leeuwen's, so without this the floor
  *     refuses a value and re-admits the same number without its error bar.
  *
- *  Gliese V/70A is subject to neither, for two different reasons, which is why
+ *  **The S/N floor gates every tier below Gaia**, not HIP2 alone. It used to
+ *  gate HIP2 and the sibling index because no other index HELD a sub-floor row
+ *  a record could reach — true while the SIMBAD value cohort was spine-scoped
+ *  and its tier served 93 records. Rebased onto the membership manifest that
+ *  tier serves thousands, and 8 of SIMBAD's sub-floor rows became reachable:
+ *  parallaxes of S/N 0.01–0.33, each one indistinguishable from zero, inverting
+ *  to 54,000–714,000 pc. Those rows left `readStars` through the MAX_DIST_PC
+ *  drop — the one exit that is not a § 6.1 park and is pinned at zero — instead
+ *  of being refused here. Gaia stays ungated for the reason it always was:
+ *  Bailer-Jones sits above it for exactly the low-S/N case, and a gate here
+ *  would strip a record of a posterior that exists for it.
+ *
+ *  Gliese V/70A is subject to neither skip rule, for two different reasons, which is why
  *  it is TWO tiers on either side of SIMBAD. Its trigonometric parallaxes
  *  predate both instruments, so no later reduction stands behind them to
  *  withdraw. Its photometric and spectroscopic ones are not measurements at
@@ -157,7 +169,8 @@ export function resolveParallax(
     trigonometric: boolean, via: DistVia,
   ): ParallaxResolution | null => {
     const p = gliese?.parallax ?? null;
-    if (p === null || p.trigonometric !== trigonometric || !usable(p.mas)) {
+    if (p === null || p.trigonometric !== trigonometric || !usable(p.mas)
+        || belowParallaxSnFloor(p.mas, p.errMas)) {
       return null;
     }
     return hit(p.mas, via, parallaxSignalToNoise(p.mas, p.errMas));
@@ -180,7 +193,8 @@ export function resolveParallax(
   }
 
   if (cns5 !== null && usable(cns5.mas)) {
-    if (!(gaiaIs2p && isGaiaCatalogueBibcode(cns5.bibcode))) {
+    if (!(gaiaIs2p && isGaiaCatalogueBibcode(cns5.bibcode))
+        && !belowParallaxSnFloor(cns5.mas, cns5.errMas)) {
       return hit(cns5.mas, 'cns5_plx',
         parallaxSignalToNoise(cns5.mas, cns5.errMas));
     }
@@ -193,7 +207,7 @@ export function resolveParallax(
   if (simbad !== null && usable(simbad.mas)) {
     const laundered = (gaiaIs2p && isGaiaCatalogueBibcode(simbad.bibcode))
       || (hip2Refused && isHipparcos2Bibcode(simbad.bibcode));
-    if (!laundered) {
+    if (!laundered && !belowParallaxSnFloor(simbad.mas, simbad.errMas)) {
       return hit(simbad.mas, 'simbad_plx',
         parallaxSignalToNoise(simbad.mas, simbad.errMas));
     }

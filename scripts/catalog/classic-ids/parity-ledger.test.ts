@@ -123,7 +123,14 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
     // Pinned, not merely allowed: every one of these is a designation two
     // records could answer to, so the set growing is a collision-guard
     // question, not routine drift.
-    expect(reOwned.length).toBe(21);
+    //
+    // 21 → 25 with the manifest-scoped SIMBAD value cohort: hd:42126,
+    // hd:99103, hd:126128 and hd:155885 are `admitted:` additions that used
+    // to park for want of a parallax, so no ledger row carried their key and
+    // `canonical.has` filtered them out. They reach one now and mint. The
+    // collision-guard half is the assertion below and the `orphaned` set
+    // above, and neither moves.
+    expect(reOwned.length).toBe(25);
     expect(reOwned.filter((d) => bridgeEndpoints.has(d))).toEqual([]);
   });
 });
