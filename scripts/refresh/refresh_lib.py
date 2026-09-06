@@ -9,9 +9,14 @@ import hashlib
 import os
 import random
 import re
+import sys
 import time
 from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence, TypeVar
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
+
+from paths import REPO_ROOT  # noqa: E402
 
 T = TypeVar("T")
 R = TypeVar("R")
@@ -88,14 +93,16 @@ def athyg_str_or_none(cell: str | None) -> str | None:
 
 MEMBERSHIP_SOURCE_ID_COLUMN = "gaia_source_id"
 
+MEMBERSHIP_MANIFEST = REPO_ROOT / "data" / "membership" / "membership-manifest.tsv"
+
 
 def iter_membership_rows(path: Path) -> Iterator[Mapping[str, str]]:
-    """Stream a membership table — `data/membership/membership-manifest.tsv`,
-    or the frozen spine it retired — as raw cell mappings.
+    """Stream a membership table as raw cell mappings — the one place a
+    membership table is opened.
 
-    The manifest is the membership term (`docs/catalog-driver.md` § 3.1), so
-    a catalog-scoped request set derives from it and never from AT-HYG's own
-    CSV — which no refresh script reads.
+    Takes the path rather than reading ``MEMBERSHIP_MANIFEST`` directly:
+    ``refresh-simbad-values.py`` still passes the spine for its cohort
+    predicate.
     """
     with path.open(newline="") as fh:
         yield from csv.DictReader(fh, delimiter="\t")

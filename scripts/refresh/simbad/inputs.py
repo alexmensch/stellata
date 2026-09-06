@@ -16,13 +16,13 @@ import refresh_lib as rl  # noqa: E402
 from .specs import GJ, HIP, TYC, WIDENING_LADDER
 
 
-SpineRow = Mapping[str, str]
-RowFilter = Callable[[SpineRow], bool]
+TableRow = Mapping[str, str]
+RowFilter = Callable[[TableRow], bool]
 
 
 @dataclass
 class MembershipRequestKeys:
-    """Spine rows partitioned by the SIMBAD ident prefix each is looked up
+    """Membership rows partitioned by the SIMBAD ident prefix each is looked up
     under. A row contributes exactly one key, so the four lists sum to the
     cohort's row count minus the rows carrying no usable key at all.
 
@@ -93,7 +93,7 @@ def membership_request_keys(
     return keys
 
 
-def row_designations(row: SpineRow) -> dict[str, int | str]:
+def row_designations(row: TableRow) -> dict[str, int | str]:
     """Every widening namespace this row carries a key for, keyed by
     ``IdentLookup.tsv_name`` so the request side never spells the namespace
     out a second time. Must cover every namespace in ``WIDENING_LADDER`` — a
@@ -135,7 +135,7 @@ NO_SIMBAD_TIER_SRC: frozenset[str] = frozenset({"T", "HIP", "HIP_X", "G_R3", "N"
 VALUE_SRC_COLUMNS = ("pos_src", "dist_src", "mag_src", "rv_src", "pm_src")
 
 
-def is_simbad_value_cohort(row: SpineRow) -> bool:
+def is_simbad_value_cohort(row: TableRow) -> bool:
     """Whether a § 5 SIMBAD value tier can reach this row: some field's
     printed cell carries a non-first-order provenance mark, or it is a
     no-Gaia row (every cascade bottoms out at a designation-keyed tier

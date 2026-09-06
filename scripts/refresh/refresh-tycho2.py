@@ -19,7 +19,7 @@ import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
-MEMBERSHIP = ROOT / "data" / "membership" / "membership-manifest.tsv"
+MEMBERSHIP = rl.MEMBERSHIP_MANIFEST
 TYC2_HD = ROOT / "data" / "classic-ids" / "tyc2_hd.tsv"
 OUT_DIR = ROOT / "data" / "tycho2"
 OUT_MAIN = OUT_DIR / "tycho2_main.tsv"
@@ -53,10 +53,9 @@ def _display_path(path: Path) -> Path:
 
 def read_membership_tycs(manifest: Path) -> set[Tyc]:
     tycs: set[Tyc] = set()
-    with manifest.open(encoding="utf-8") as f:
-        for row in csv.DictReader(f, delimiter="\t"):
-            if tyc := parse_tyc(row.get("tyc") or ""):
-                tycs.add(tyc)
+    for row in rl.iter_membership_rows(manifest):
+        if tyc := parse_tyc(row.get("tyc") or ""):
+            tycs.add(tyc)
     return tycs
 
 
@@ -316,7 +315,7 @@ def assert_membership_covered(
 
 def main() -> None:
     force = "--force" in sys.argv
-    sources = [Path(__file__), SPINE, TYC2_HD]
+    sources = [Path(__file__), MEMBERSHIP, TYC2_HD]
     outputs = [t.output for t in TABLES]
     if not force and all(rl.is_up_to_date(out, sources) for out in outputs):
         print(
@@ -325,11 +324,11 @@ def main() -> None:
         )
         return
 
-    membership_tycs = read_membership_tycs(SPINE)
-    wanted = read_mentioned_tycs(SPINE, TYC2_HD)
+    membership_tycs = read_membership_tycs(MEMBERSHIP)
+    wanted = read_mentioned_tycs(MEMBERSHIP, TYC2_HD)
     if not wanted:
         raise SystemExit(
-            f"refresh-tycho2: {SPINE.relative_to(ROOT)} and "
+            f"refresh-tycho2: {MEMBERSHIP.relative_to(ROOT)} and "
             f"{TYC2_HD.relative_to(ROOT)} name no TYC between them — the "
             "request set is empty, so there is nothing to pull."
         )

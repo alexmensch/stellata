@@ -21,7 +21,7 @@ from simbad.specs import (  # noqa: E402
 )
 
 ROOT = REPO_ROOT
-MEMBERSHIP = ROOT / "data" / "membership" / "membership-manifest.tsv"
+MEMBERSHIP = rl.MEMBERSHIP_MANIFEST
 WDS_XIDS_TSV = ROOT / "data" / "simbad" / "simbad_wds_xids.tsv"
 OUT = ROOT / "data" / "simbad" / "simbad_sptype.tsv"
 

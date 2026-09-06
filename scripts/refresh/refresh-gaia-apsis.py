@@ -17,7 +17,7 @@ import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
-MEMBERSHIP = ROOT / "data" / "membership" / "membership-manifest.tsv"
+MEMBERSHIP = rl.MEMBERSHIP_MANIFEST
 OUT = ROOT / "data" / "gaia" / "gaia_dr3_apsis.tsv"
 
 TSV_COLUMNS = [

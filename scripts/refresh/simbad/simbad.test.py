@@ -43,6 +43,27 @@ def write_spine(directory: Path, rows: list[dict[str, str]]) -> Path:
     return path
 
 
+# Mirrors MANIFEST_COLUMNS in scripts/catalog/membership/membership-manifest-pure.ts.
+MANIFEST_HEADER = (
+    "tyc\thip\thd\thd_alt\thr\thr_alt\tgl\tflam\tbayer\tproper\tgaia_source_id\t"
+    "binding\troutes"
+)
+MANIFEST_COLUMNS = MANIFEST_HEADER.split("\t")
+
+
+def write_manifest(directory: Path, rows: list[dict[str, str]]) -> Path:
+    """Materialise a membership-manifest fixture. Distinct from the spine
+    fixture on purpose: the manifest carries none of the spine's value or
+    `*_src` columns, so a feeder reading one of those against a manifest
+    would be reading a column that does not exist."""
+    path = directory / "membership-manifest.tsv"
+    lines = [MANIFEST_HEADER]
+    for row in rows:
+        lines.append("\t".join(row.get(c, "") for c in MANIFEST_COLUMNS))
+    path.write_text("\n".join(lines) + "\n")
+    return path
+
+
 class FakeBackend:
     """In-memory backend that returns a precomputed table per query.
     ``responses`` is a list of (substring, table) pairs — first match wins."""
@@ -494,12 +515,18 @@ class TsvRoundtripTests(unittest.TestCase):
 
 class MembershipRequestKeysTests(unittest.TestCase):
 
+    def _manifest(self, rows):
+        d = self.enterContext(tempfile.TemporaryDirectory())
+        return write_manifest(Path(d), rows)
+
     def _spine(self, rows):
+        """The cohort predicate reads `*_src` marks, which only the spine
+        carries — `refresh-simbad-values.py` still feeds it one."""
         d = self.enterContext(tempfile.TemporaryDirectory())
         return write_spine(Path(d), rows)
 
     def test_partitions_by_the_no_gaia_key_ladder(self):
-        path = self._spine([
+        path = self._manifest([
             {"gaia_source_id": "12345", "hip": "1", "tyc": "1-2-1"},
             {"hip": "777", "tyc": "3-4-1"},
             {"tyc": "5-6-1", "gl": "GJ 3207"},
@@ -525,7 +552,7 @@ class MembershipRequestKeysTests(unittest.TestCase):
     def test_designations_cover_only_source_id_keyed_rows(self):
         # Same pass as the partition, so the widening map can never cover a
         # different cohort than the request set it widens.
-        path = self._spine([
+        path = self._manifest([
             {"gaia_source_id": "1", "hip": "5", "tyc": "1-2-1", "gl": "GJ 9"},
             {"gaia_source_id": "2"},
             {"tyc": "9-9-1"},
@@ -550,7 +577,7 @@ class MembershipRequestKeysTests(unittest.TestCase):
         # silently. The no-Gaia partition and the widening both drive off
         # WIDENING_LADDER, so the two agree on order by construction — this is
         # the other half: they agree on the SET of namespaces too.
-        path = self._spine([
+        path = self._manifest([
             {"gaia_source_id": "1", "hip": "5", "tyc": "1-2-1", "gl": "GJ 9"},
         ])
         keys = inputs.membership_request_keys(path)
@@ -667,7 +694,7 @@ class IterWdsXidsOidsTests(unittest.TestCase):
         self.assertEqual(list(inputs.iter_wds_xids_oids(p)), [100, 200])
 
 
-class ResolveSpineKeysTests(unittest.TestCase):
+class ResolveMembershipKeysTests(unittest.TestCase):
 
     TYC_WIDENING = request.widening_label(TYC)
     GJ_WIDENING = request.widening_label(GJ)
@@ -837,7 +864,7 @@ class ResolveSpineKeysTests(unittest.TestCase):
 
 class CollectOidRequestsTests(unittest.TestCase):
 
-    def test_unions_spine_keys_and_wds_oids(self):
+    def test_unions_membership_keys_and_wds_oids(self):
         sptype = load_kebab_sibling(
             __file__, "refresh_simbad_sptype", "../refresh-simbad-sptype.py",
         )

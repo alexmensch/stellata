@@ -204,7 +204,7 @@ def _fetch_idents(
     """{oid: {tsv_name: …}} over every ``ident`` row matching one of
     ``lookups``, ``insert`` deciding what a namespace holds when SIMBAD
     publishes more than one id under it. Rows fold straight into their final
-    shape — at spine scope this accumulator runs to ~100 MB, so an
+    shape — at manifest scope this accumulator runs to ~100 MB, so an
     intermediate would double it. A single OR-ed LIKE clause covers every
     lookup per batch; first matching prefix wins on collisions (vanishingly
     rare)."""

@@ -16,7 +16,7 @@ import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
-MEMBERSHIP = ROOT / "data" / "membership" / "membership-manifest.tsv"
+MEMBERSHIP = rl.MEMBERSHIP_MANIFEST
 OUT = ROOT / "data" / "bailer-jones" / "bailer-jones-dr3.tsv"
 
 # 5000 ids → ~98 KB query, ~80 s round-trip on CDS TAP. 10000 was ~5 min
