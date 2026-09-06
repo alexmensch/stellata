@@ -75,7 +75,6 @@ function baseCounts(): BuildCounts {
     ciGspcValidatedRange: 0,
     ciSpectralDerived: 1200,
     ciSolarFallback: 3000,
-    multiplesIdentifierBackfill: 30,
     companionRowsScanned: 13000,
     companionPromoted: 4500,
     companionPromotedSynthetic: 12,

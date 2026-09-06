@@ -33,28 +33,12 @@
       "reason": "Bailer-Jones posterior replacing a catastrophic 1/π inversion — the DR3 parallax is at or below its own error (S/N 0.05, RUWE 13.00), so the naive inversion runs to 45,045 pc. The photogeometric posterior returns 1,183 pc. This is precisely the low-S/N tail Layer 1 exists for; the ratio is large because the input was meaningless, not because the override moved a measured star."
     },
     {
-      "id": "gaia:4651835308326981504",
-      "plxVia": "simbad_plx",
-      "plxDist": 13927.577,
-      "finalDist": 49594,
-      "logRatio": 0.552,
-      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR2 parallax 0.0718 ± 0.0743 mas, S/N 0.97) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
-    },
-    {
       "id": "gaia:4655036845657109504",
       "plxVia": "hip2_parallax",
       "plxDist": 249.377,
       "finalDist": 49594,
       "logRatio": 2.299,
       "reason": "LMC kinematic snap, and the parallax it displaced carries no information (DR3 parallax NEGATIVE, -0.1334 ± 0.0170 mas) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. See SCIENCE.md § LMC kinematic override."
-    },
-    {
-      "id": "gaia:4657274283151403520",
-      "plxVia": "simbad_plx",
-      "plxDist": 12500,
-      "finalDist": 49594,
-      "logRatio": 0.599,
-      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.08 ± 0.34 mas, S/N 0.24) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
     },
     {
       "id": "gaia:4657383027347819392",
@@ -73,36 +57,12 @@
       "reason": "LMC kinematic snap, and the parallax it displaced carries no information (DR3 parallax 0.0002 ± 0.0122 mas, S/N 0.02) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. See SCIENCE.md § LMC kinematic override."
     },
     {
-      "id": "gaia:4657692338057418624",
-      "plxVia": "simbad_plx",
-      "plxDist": 4166.667,
-      "finalDist": 49594,
-      "logRatio": 1.076,
-      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.24 ± 0.5 mas, S/N 0.48) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
-    },
-    {
       "id": "gaia:4658107884688023040",
       "plxVia": "gaia_dr3_inversion",
       "plxDist": 280.151,
       "finalDist": 49594,
       "logRatio": 2.248,
       "reason": "KNOWN MISFIRE, not a legitimate snap — this is a FOREGROUND star the LMC override captured. Its DR3 parallax is 3.5695 ± 0.0105 mas (S/N 340, RUWE 0.67), placing it at 280 pc; an LMC member sits at 49.6 kpc where the parallax would be ~0.02 mas and unmeasurable, so a 340-sigma detection rules LMC membership out. The override gates on sky cone + bulk proper motion ONLY (applyLmcKinematicOverride) and has no parallax-quality test, so a nearby star that happens to lie toward the LMC and share its apparent motion is snapped 177x too far. Tracked as stellata-uadc.39; the entry stays pinned so the misfire is visible rather than silent."
-    },
-    {
-      "id": "gaia:4658137739001073280",
-      "plxVia": "simbad_plx",
-      "plxDist": 7692.308,
-      "finalDist": 49594,
-      "logRatio": 0.809,
-      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.13 ± 0.24 mas, S/N 0.54) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
-    },
-    {
-      "id": "gaia:4658173851087935744",
-      "plxVia": "simbad_plx",
-      "plxDist": 169491.525,
-      "finalDist": 49594,
-      "logRatio": -0.534,
-      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR2 parallax 0.0059 ± 0.0356 mas, S/N 0.17) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
     },
     {
       "id": "gaia:4658488105260061184",
@@ -113,14 +73,6 @@
       "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.6 ± 0.39 mas, S/N 1.54) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
     },
     {
-      "id": "gaia:4658664198918565376",
-      "plxVia": "simbad_plx",
-      "plxDist": 9090.909,
-      "finalDist": 49594,
-      "logRatio": 0.737,
-      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.11 ± 0.37 mas, S/N 0.30) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
-    },
-    {
       "id": "gaia:4658691244352650880",
       "plxVia": "simbad_plx",
       "plxDist": 14025.245,
@@ -129,44 +81,12 @@
       "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR2 parallax 0.0713 ± 0.0292 mas, S/N 2.44) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
     },
     {
-      "id": "gaia:4658729722934782976",
-      "plxVia": "simbad_plx",
-      "plxDist": 1754.386,
-      "finalDist": 49594,
-      "logRatio": 1.451,
-      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.57 ± 0.78 mas, S/N 0.73) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
-    },
-    {
-      "id": "gaia:4658895925327997440",
-      "plxVia": "simbad_plx",
-      "plxDist": 3448.276,
-      "finalDist": 49594,
-      "logRatio": 1.158,
-      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.29 ± 0.46 mas, S/N 0.63) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
-    },
-    {
-      "id": "gaia:4658940283745559168",
-      "plxVia": "simbad_plx",
-      "plxDist": 3333.333,
-      "finalDist": 49594,
-      "logRatio": 1.173,
-      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.3 ± 0.42 mas, S/N 0.71) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
-    },
-    {
       "id": "gaia:4660130883045318016",
       "plxVia": "simbad_plx",
       "plxDist": 2173.913,
       "finalDist": 49594,
       "logRatio": 1.358,
       "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.46 ± 0.33 mas, S/N 1.39) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
-    },
-    {
-      "id": "gaia:4660151464529858432",
-      "plxVia": "simbad_plx",
-      "plxDist": 4761.905,
-      "finalDist": 49594,
-      "logRatio": 1.018,
-      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.21 ± 0.28 mas, S/N 0.75) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
     },
     {
       "id": "gaia:4660158817514447104",
@@ -185,14 +105,6 @@
       "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.63 ± 0.53 mas, S/N 1.19) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
     },
     {
-      "id": "gaia:4660170151886182912",
-      "plxVia": "simbad_plx",
-      "plxDist": 3571.429,
-      "finalDist": 49594,
-      "logRatio": 1.143,
-      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.28 ± 0.32 mas, S/N 0.88) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
-    },
-    {
       "id": "gaia:4660211009965687808",
       "plxVia": "simbad_plx",
       "plxDist": 757.576,
@@ -201,28 +113,12 @@
       "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 1.32 ± 0.41 mas, S/N 3.22) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
     },
     {
-      "id": "gaia:4660230453226332288",
-      "plxVia": "simbad_plx",
-      "plxDist": 3448.276,
-      "finalDist": 49594,
-      "logRatio": 1.158,
-      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.29 ± 0.32 mas, S/N 0.91) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
-    },
-    {
       "id": "gaia:4660260178702038656",
       "plxVia": "simbad_plx",
       "plxDist": 1886.792,
       "finalDist": 49594,
       "logRatio": 1.42,
       "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.53 ± 0.36 mas, S/N 1.47) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
-    },
-    {
-      "id": "gaia:4660278492484698112",
-      "plxVia": "simbad_plx",
-      "plxDist": 192307.692,
-      "finalDist": 49594,
-      "logRatio": -0.589,
-      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR2 parallax 0.0052 ± 0.0295 mas, S/N 0.18) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
     },
     {
       "id": "gaia:4660299383207361280",
@@ -287,22 +183,6 @@
       "finalDist": 49594,
       "logRatio": 1.637,
       "reason": "KNOWN MISFIRE, not a legitimate snap — this is a FOREGROUND star the LMC override captured. Its DR3 parallax is 0.8750 ± 0.0163 mas (S/N 54, RUWE 1.09), placing it at 1,143 pc; an LMC member sits at 49.6 kpc where the parallax would be ~0.02 mas and unmeasurable, so a 54-sigma detection rules LMC membership out. The override gates on sky cone + bulk proper motion ONLY (applyLmcKinematicOverride) and has no parallax-quality test, so a nearby star that happens to lie toward the LMC and share its apparent motion is snapped 43x too far. Tracked as stellata-uadc.39; the entry stays pinned so the misfire is visible rather than silent."
-    },
-    {
-      "id": "gaia:4661728915783666560",
-      "plxVia": "simbad_plx",
-      "plxDist": 12500,
-      "finalDist": 49594,
-      "logRatio": 0.599,
-      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.08 ± 0.55 mas, S/N 0.15) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
-    },
-    {
-      "id": "gaia:4661778810433099776",
-      "plxVia": "simbad_plx",
-      "plxDist": 1886.792,
-      "finalDist": 49594,
-      "logRatio": 1.42,
-      "reason": "LMC kinematic snap, and the parallax it displaced carries no information (Gaia DR1/TGAS parallax 0.53 ± 0.61 mas, S/N 0.87) — sky cone + bulk-PM gate matched and the distance is Pietrzyński 2019's 49.594 kpc eclipsing-binary anchor. An LMC member's true parallax is ~0.02 mas, unmeasurable at this error, so nothing here contradicts membership the way a high-S/N detection would. Reached the simbad_plx tier for the first time when the § 5 value cohort moved onto the membership manifest; the laundering guard does not fire because Gaia states no competing solution for these rows. See SCIENCE.md § LMC kinematic override."
     },
     {
       "id": "gaia:4661827841784748032",

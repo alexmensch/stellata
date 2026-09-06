@@ -40,17 +40,6 @@ import {
   type CatalogManifest,
 } from './catalog-pure';
 import {
-  UNKNOWN_CLASS_IDX,
-  resolveSpectDisplay,
-} from './spectral/spectral-classify';
-import {
-  resolveSpectralInfo,
-} from './spectral/spectral-resolve';
-import {
-  physicalRadius,
-  resolveApsisTeff,
-} from './spectral/physical-radius';
-import {
   BUILD_COUNTS_EXPECTED_FILE,
   compareBuildCounts,
   formatCountDiff,
@@ -82,7 +71,6 @@ import {
   collectPhysicalPairKeys,
 } from './multiplicity/visual-doubles';
 import {
-  backfillPrimaryIdentifiers,
   promoteCompanions,
   readMultiplesTsv,
   MULTIPLES_TSV,
@@ -364,7 +352,6 @@ async function main() {
     ciGspcValidatedRange: 0,
     ciSpectralDerived: 0,
     ciSolarFallback: 0,
-    multiplesIdentifierBackfill: 0,
     systemCoherenceSystems: 0,
     systemCoherenceRepositioned: 0,
     systemCoherenceMemberAnchorWins: 0,
@@ -694,35 +681,6 @@ async function main() {
     ? readMultiplesTsv(MULTIPLES_TSV)
     : null;
   if (multiplesRows !== null) {
-    // Identifier backfill BEFORE promotion: HD-only primaries (ξ UMa) gain
-    // the HIP + Gaia source_id the binaries pipeline resolved, so
-    // promotion's cursor-primary anchor and every downstream HIP/Gaia
-    // lookup address the record.
-    counts.multiplesIdentifierBackfill =
-      backfillPrimaryIdentifiers(multiplesRows, stars, (star) => {
-        if (star.spectClass !== UNKNOWN_CLASS_IDX) return;
-        const spectral = resolveSpectralInfo(
-          {
-            sourceId: star.gaiaSourceId, hip: star.hip,
-            tyc: star.tyc, gl: star.gl,
-          },
-          simbadSpectral, apsisMap,
-        );
-        if (spectral.info.classIdx === UNKNOWN_CLASS_IDX) return;
-        const apsisTeff = resolveApsisTeff(
-          star.gaiaSourceId ? apsisMap.get(star.gaiaSourceId) : null,
-        );
-        star.spectClass = spectral.info.classIdx;
-        star.lumClass = spectral.info.lumClass;
-        star.spectDisplay = resolveSpectDisplay(
-          spectral.spectDisplay, star.spectDisplay ?? '',
-        );
-        star.physicalRadius = physicalRadius(star.absmag, spectral.info, apsisTeff);
-      });
-    console.log(
-      `  backfilled identifiers onto ${counts.multiplesIdentifierBackfill} ` +
-        `HD-only primaries from multiples.tsv`,
-    );
     // Intra-system radial coherence BEFORE promotion, so minted members
     // project off already-coherent anchor positions.
     const coherence = applySystemDistanceCoherence(multiplesRows, stars, {

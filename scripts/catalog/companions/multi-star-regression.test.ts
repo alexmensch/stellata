@@ -165,7 +165,10 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // 1485 → 1465: the parked-record promotion refusal. 55 fewer pairs are
 // emitted at all, because a component whose primary reaches no owned
 // parallax no longer mints a record for the pair to resolve against.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1465;
+// 1465 → 1464: the manifest-scoped SIMBAD value cohort. One more primary
+// reaches a parallax whose inversion the S/N floor refuses, so its pair
+// stops being emitted on the same terms as the 55 above.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1464;
 
 // ---- Corpus row types ----------------------------------------------------
 

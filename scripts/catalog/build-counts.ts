@@ -196,10 +196,6 @@ export interface BuildCounts {
   ciSpectralDerived: number;
   /** Records no tier covers, taking `SOLAR_BV_FALLBACK`. */
   ciSolarFallback: number;
-  /** Identifier-less catalog primaries that gained HIP / Gaia source_id
-   *  from a multiples.tsv pair-primary row, joined by HD
-   *  (backfillPrimaryIdentifiers — the ξ UMa HD-only shape). */
-  multiplesIdentifierBackfill: number;
   /** WDS systems with ≥2 distinct own-record members walked by the
    *  intra-system radial-coherence pass (system-coherence.ts). */
   systemCoherenceSystems: number;
