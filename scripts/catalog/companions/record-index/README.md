@@ -129,8 +129,12 @@ name before they were written:
 A letter is root-relative, so a component is addressable even when its own
 pair cursor is not: Rigil's `Ba,Bb` cursor has an unresolvable Ba, and
 requiring the cursor to resolve left Bb with no letter and no base to
-compose against. The wings pass genuinely needs both ends of a pair and
-keeps `resolvePairComponents`; naming needs only the letter and the root.
+compose against. Naming needs only the letter and the root. The wings pass
+needs both ends of a pair, and resolves them itself so the parent re-home can
+reach a component `resolvePairComponents` gives up on; it still calls that
+function for the `MULTIPLICITY_RESOLVED` member set. Both refuse a cursor with
+no primary row — there is no side to anchor the pair on, and taking the first
+row instead would attribute a glyph off a pairing the data never states.
 
 Emitted as the search index's `cl` / `cp` fields —
 `../../README.md` § Search index, `src/client/typeahead/README.md`

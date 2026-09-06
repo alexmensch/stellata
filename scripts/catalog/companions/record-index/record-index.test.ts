@@ -98,6 +98,41 @@ describe('wingRenderablePrimaries', () => {
     expect(isWinged(a)).toBe(false);
   });
 
+  it('re-homes a pair primary carrying no identifier onto its PARENT component', () => {
+    // WDS 02536-6420: Ba resolves to nothing while B and synth Bb both ship,
+    // and binaries.bin renders the pair through B. Without the parent re-home
+    // the Ba,Bb cursor resolves no primary side and the system leaves the
+    // winged set entirely. The BC cursor is what puts B in the per-root
+    // component index; its own secondary resolves to nothing, so it renders
+    // no pair of its own.
+    const b = makeStar({ hip: 200, absmag: 4.0 });
+    const bb = makeStar({ syntheticId: 'synth-W1-Bb', absmag: 9.0 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-BC', comp: 'B', hip: 200, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-BC', comp: 'C', orbitRole: 'secondary' }),
+      multiplesRow({ systemId: 'W1-Ba,Bb', comp: 'Ba', orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-Ba,Bb', comp: 'Bb', orbitRole: 'secondary' }),
+    ];
+    expect(wing(rows, [b, bb])).toBe(1);
+    expect(isWinged(b)).toBe(true);
+    expect(isWinged(bb)).toBe(false);
+  });
+
+  it('wings nothing for a cursor with no primary row', () => {
+    // Two secondaries and no primary: there is no side to anchor the pair on,
+    // and taking the first row as the primary would attribute a glyph off a
+    // pairing the data never states.
+    const a = makeStar({ hip: 100, absmag: 1.0 });
+    const b = makeStar({ hip: 200, absmag: 4.0 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-AB', comp: 'A', hip: 100, orbitRole: 'secondary' }),
+      multiplesRow({ systemId: 'W1-AB', comp: 'B', hip: 200, orbitRole: 'secondary' }),
+    ];
+    expect(wing(rows, [a, b])).toBe(0);
+    expect(isWinged(a)).toBe(false);
+    expect(isWinged(b)).toBe(false);
+  });
+
   it('resolves a blended secondary through its synth slot (id-first collides on the primary)', () => {
     // Aa and Ab share the primary's Gaia source; promotion minted a synth
     // record for Ab. id-first resolve lands on Aa, the synth retry recovers

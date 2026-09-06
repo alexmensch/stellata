@@ -491,12 +491,14 @@ export function emptyParkedIdentifiers(): ParkedIdentifiers {
  *  NOTHING was ever published: there is no refused measurement for the pair row
  *  to be carrying, and the distance it does state is the anchor's own — alpha
  *  Her's components read 110.25 pc, which is Rasalgethi's HIP2 distance, not
- *  the blend's. A `no_v_magnitude` park is further still from the rule: that
- *  row was placed, just not lit. Including either strands a component whose
- *  primary is still in the catalogue, which is how Rasalgethi lost its B and Bb
- *  when the primaries began admitting HD 156015. Where a parallax genuinely was
- *  refused the primary parks too, so the whole system leaves together and the
- *  components have nothing to hang off. */
+ *  the blend's. The other two reasons are further still from the rule, each
+ *  failing a different half of it: a `no_v_magnitude` row was placed and not
+ *  lit, a `no_position` row lit and not placed, and neither had a parallax
+ *  refused. Including any of them strands a component whose primary is still in
+ *  the catalogue, which is how Rasalgethi lost its B and Bb when the primaries
+ *  began admitting HD 156015. Where a parallax genuinely was refused the
+ *  primary parks too, so the whole system leaves together and the components
+ *  have nothing to hang off. */
 export function parkedIdentifiers(
   parked: readonly {
     gaiaSourceId: string | null;

@@ -1371,6 +1371,70 @@ describe('promoteCompanions', () => {
     expect([b.vx, b.vy, b.vz]).toEqual([a.vx, a.vy, a.vz]);
   });
 
+  // Fomalhaut C's shape. It arrives as CNS5's GJ 13282 — its own record since
+  // the primaries began admitting components — sits positionally in Aquarius,
+  // and displays a name composed off the anchor, so it is alpha PsA C. The
+  // mint path already took the anchor's designation constellation; the
+  // already-in-catalog path returned before it could.
+  it('gives an existing member the anchor designation constellation it composes against', () => {
+    const psa = CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === 'psa');
+    const aqr = CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === 'aqr');
+    const anchor = makeStar({
+      x: 10, y: 0, z: 0, absmag: 1.0, proper: 'Fomalhaut', gaiaSourceId: 'A',
+      conIndex: psa, desigConIndex: psa,
+    });
+    const member = makeStar({
+      x: 10.0005, y: 0, z: 0, absmag: 9.0, gaiaSourceId: 'C',
+      conIndex: aqr, desigConIndex: NO_CONSTELLATION_INDEX,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: 'FOM-AC', comp: 'A', gaiaSourceId: 'A',
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: 'Fomalhaut',
+        orbitRole: 'primary',
+      }),
+      multiplesRow({
+        systemId: 'FOM-AC', comp: 'C', gaiaSourceId: 'C',
+        x_pc: 10.0005, y_pc: 0, z_pc: 0, distPc: 10,
+        absmag: 9.0, orbitRole: 'secondary',
+      }),
+    ];
+    const { stats } = promoteCompanions(rows, [anchor, member], CON_ASSIGNMENT);
+    expect(stats.alreadyInCatalog).toBe(1);
+    expect(stats.existingDesigConFromAnchor).toBe(1);
+    expect(member.desigConIndex).toBe(psa);
+    // Positional membership is untouched — the two answer different questions.
+    expect(member.conIndex).toBe(aqr);
+  });
+
+  it('leaves a member that already answers for its own designation constellation', () => {
+    const psa = CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === 'psa');
+    const aqr = CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === 'aqr');
+    const anchor = makeStar({
+      x: 10, y: 0, z: 0, absmag: 1.0, proper: 'Fomalhaut', gaiaSourceId: 'A',
+      conIndex: psa, desigConIndex: psa,
+    });
+    const member = makeStar({
+      x: 10.0005, y: 0, z: 0, absmag: 9.0, gaiaSourceId: 'C',
+      conIndex: aqr, desigConIndex: aqr,
+    });
+    const rows: MultiplesTsvRow[] = [
+      multiplesRow({
+        systemId: 'FOM-AC', comp: 'A', gaiaSourceId: 'A',
+        x_pc: 10, y_pc: 0, z_pc: 0, distPc: 10, name: 'Fomalhaut',
+        orbitRole: 'primary',
+      }),
+      multiplesRow({
+        systemId: 'FOM-AC', comp: 'C', gaiaSourceId: 'C',
+        x_pc: 10.0005, y_pc: 0, z_pc: 0, distPc: 10,
+        absmag: 9.0, orbitRole: 'secondary',
+      }),
+    ];
+    const { stats } = promoteCompanions(rows, [anchor, member], CON_ASSIGNMENT);
+    expect(stats.existingDesigConFromAnchor).toBe(0);
+    expect(member.desigConIndex).toBe(aqr);
+  });
+
   it('own-gaia miss + HIP naming a NON-anchor existing record is alreadyInCatalog, not a twin', () => {
     // The G−V magnitude gate can scrub a component's source from its
     // own AT-HYG record while multiples.tsv keeps it on the row
@@ -2773,6 +2837,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   it.each([
     ['no_parallax_published'],
     ['no_v_magnitude'],
+    ['no_position'],
   ] as const)(
     'promotes the sibling anyway where the park was %s — no measurement was '
     + 'refused, so there is nothing for the row to be laundering',

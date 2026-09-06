@@ -237,6 +237,11 @@ export function wingRenderablePrimaries(
     }
     const root = wdsRootOf(cursorSystemId(cursor));
     if (root === null) continue;
+    // `sides[0]` is the pair's primary ONLY while this holds — cursorRows puts
+    // the primary first, and returns secondaries alone when there is none, so
+    // dropping this guard silently promotes a secondary into that role.
+    // resolvePairComponents refuses such a cursor for the same reason.
+    if (cursor.primary === null) continue;
     const byComp = perRootComp.get(root) ?? new Map<string, number>();
     const sides = cursorRows(cursor)
       .map(({ row, comp }) => resolveRowIdx(row, comp, rowIndexMap)
