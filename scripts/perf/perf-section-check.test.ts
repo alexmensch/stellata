@@ -136,4 +136,30 @@ describe('perf-section-check', () => {
     expect(r.stdout).toContain('mw50|webgpu');
     expect(r.stdout).toContain('accepted:');
   });
+
+  // The row markers are multibyte, and BSD awk in a UTF-8 locale reads · and
+  // § as equal to ✗ — so a real table demanded an accepted: line for every
+  // unmarked row and for the § in a doc pointer, failing a body CI passes.
+  // Both halves are asserted because mawk on the runner is bytewise anyway
+  // and would pass the behavioural case either way.
+  it('reads the marker bytewise, so a · row and a § pointer are not marks', () => {
+    const table = [
+      '## Perf',
+      '',
+      'pin 194f817d · apple-m4-metal-3 · RELEASING.md § Perf pin',
+      '·  sol|webgl2   wall-p50  16.7    16.7    0    0',
+      '✗  mw50|webgpu  gpu-p50   31.451  33.2    1.7  0.315',
+      'accepted: mw50|webgpu the new band pass draws at mw50 (bead-7)',
+      '',
+      '## Release notes',
+      '',
+      '- x',
+    ].join('\n');
+    const r = check(table, ['src/client/milkyway/band.ts']);
+    expect(r.code, r.stdout).toBe(0);
+  });
+
+  it('declares that locale itself, so the caller-s awk cannot decide it', () => {
+    expect(readFileSync(SCRIPT, 'utf-8')).toMatch(/^export LC_ALL=C$/m);
+  });
 });

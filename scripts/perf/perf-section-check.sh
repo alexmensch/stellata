@@ -4,6 +4,11 @@
 # Usage: perf-section-check.sh <body-file> <changed-files-file>. RELEASING.md § Perf pin.
 set -euo pipefail
 
+# Byte comparisons, not collated ones: the row markers are multibyte, and BSD
+# awk in a UTF-8 locale reads · and § as equal to ✗ — every non-marked row then
+# demands an accepted: line and the check fails on a body CI would pass.
+export LC_ALL=C
+
 body_file="$1"
 files_file="$2"
 
