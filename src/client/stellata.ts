@@ -151,6 +151,7 @@ import { exposureForMagLimit } from './hdr/exposure/exposure-epoch';
 import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
 import { LuminanceReduction } from './hdr/exposure/reduction/reduction-pass';
 import { SceneLayerRegistry, updateWarpGatedRefLayer, type FrameCtx } from './scene/scene-layer';
+import { findGlslResidents } from './scene/glsl-residents-pure';
 import {
   type SceneElementBinds,
   type SceneElementId,
@@ -407,6 +408,7 @@ export class Stellata implements FrameAnchor {
   readonly renderGate = new RenderGate();
   private readonly trackballSettle: TrackballSettle;
   private lastInvalidatedDm = Number.NaN;
+  private glslResidentsChecked = false;
   // Clock-cadence state (render-gate/README.md § The clock cadence).
   // The budget seeds 0 so the first tick under a running clock is due;
   // the NaN sim stamp makes clockFrameDue's first read due too and marks
@@ -2586,6 +2588,21 @@ export class Stellata implements FrameAnchor {
     perfGpuBegin('main');
     this.hdr.bind();
     this.webgpu?.syncUniformNodes();
+    // One walk on the first rendered frame: every layer is parented by
+    // then (the roster attach loop and registerSceneLayers both run in
+    // this constructor, ahead of animate), and a GLSL material here
+    // discards the whole submit rather than dropping one layer
+    // (webgpu/README.md § One scene per boot).
+    if (this.webgpu !== null && !this.glslResidentsChecked) {
+      this.glslResidentsChecked = true;
+      const residents = findGlslResidents(this.scene);
+      if (residents.length > 0) {
+        console.error(
+          'GLSL materials in the rendered scene on a WebGPU boot — the submit '
+          + `will draw nothing: ${residents.join(', ')}`,
+        );
+      }
+    }
     this.renderer.render(this.scene, this.camera);
     perfGpuEnd('main');
     perfMeasure('submit.main');
