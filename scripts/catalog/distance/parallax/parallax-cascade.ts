@@ -163,14 +163,20 @@ export function resolveParallax(
     refused: false,
   });
 
+  let refused = false;
+  let hip2Refused = false;
+
   /** V/70A's two tiers differ only in which kind of parallax they take, so one
    *  form serves both and the cascade order below states the ranking. */
   const glieseHit = (
     trigonometric: boolean, via: DistVia,
   ): ParallaxResolution | null => {
     const p = gliese?.parallax ?? null;
-    if (p === null || p.trigonometric !== trigonometric || !usable(p.mas)
-        || belowParallaxSnFloor(p.mas, p.errMas)) {
+    if (p === null || p.trigonometric !== trigonometric || !usable(p.mas)) {
+      return null;
+    }
+    if (belowParallaxSnFloor(p.mas, p.errMas)) {
+      refused = true;
       return null;
     }
     return hit(p.mas, via, parallaxSignalToNoise(p.mas, p.errMas));
@@ -181,8 +187,6 @@ export function resolveParallax(
       parallaxSignalToNoise(gaia.parallaxMas, gaia.parallaxErrorMas));
   }
 
-  let refused = false;
-  let hip2Refused = false;
   if (hip2 !== null && usable(hip2.plxMas)) {
     if (!belowParallaxSnFloor(hip2.plxMas, hip2.plxErrorMas)) {
       return hit(hip2.plxMas, 'hip2_parallax',

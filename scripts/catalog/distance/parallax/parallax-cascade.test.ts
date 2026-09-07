@@ -129,6 +129,60 @@ describe('parallax-cascade / the precision floor', () => {
     expect(PARALLAX_SN_FLOOR).toBe(1.0);
     expect(PARALLAX_LOW_PRECISION_SN).toBe(5.0);
   });
+
+  // The floor gates every tier BELOW Gaia, not HIP2 alone. Before it did, 8
+  // sub-floor SIMBAD parallaxes reached records and inverted to 54,000-714,000
+  // pc, leaving the walk through MAX_DIST_PC — the one exit that is not a
+  // § 6.1 park — so those rows neither shipped nor parked.
+  it('refuses a sub-floor parallax on every tier below Gaia, and parks each '
+    + 'as a refusal rather than as nothing published', () => {
+    const subFloor: Array<[Partial<ParallaxSources>, string]> = [
+      [{ cns5: cited(0.05, LITERATURE, 0.5) }, 'cns5'],
+      [{ gliese: gliese(0.5) }, 'gliese trigonometric'],
+      [{ simbad: cited(0.05, LITERATURE, 0.5) }, 'simbad'],
+      [{ gliese: gliese(0.5, false) }, 'gliese photometric'],
+    ];
+    for (const [src, tier] of subFloor) {
+      const res = resolveParallax({ ...NONE, ...src }, false, false);
+      expect(res.via, tier).toBe('none');
+      expect(res.plxMas, tier).toBeNull();
+      // `refused` is what picks refused_no_defensible_parallax over
+      // no_parallax_published on the § 6.1 ledger the parity gate subtracts.
+      expect(res.refused, tier).toBe(true);
+    }
+  });
+
+  it('leaves the Gaia tier ungated, because Bailer-Jones sits above it for '
+    + 'exactly the low-S/N case', () => {
+    const res = resolveParallax({
+      ...NONE,
+      gaia: gaiaAstrometryRow({ parallaxMas: 0.04, parallaxErrorMas: 0.36 }),
+    }, false, false);
+    expect(res.via).toBe('gaia_dr3_inversion');
+    expect(res.refused).toBe(false);
+  });
+
+  it('falls THROUGH a sub-floor tier to the next one that clears the floor', () => {
+    const res = resolveParallax({
+      ...NONE,
+      cns5: cited(0.05, LITERATURE, 0.5),
+      gliese: gliese(30),
+    }, false, false);
+    expect(res.via).toBe('gliese_plx');
+    expect(res.plxMas).toBe(30);
+    expect(res.refused).toBe(false);
+  });
+
+  it('admits a sub-floor-looking Gliese parallax whose error is unpublished, '
+    + 'on the same benefit-of-the-doubt rule HIP2 gets', () => {
+    const noError: GlieseRow = {
+      name: 'Gl 423', comp: 'A', vMag: null, bMinusV: null, spectral: null,
+      parallax: { mas: 0.5, errMas: null, trigonometric: true },
+    };
+    const res = resolveParallax({ ...NONE, gliese: noError }, false, false);
+    expect(res.via).toBe('gliese_plx');
+    expect(res.refused).toBe(false);
+  });
 });
 
 describe('parallax-cascade / the Gaia-bibcode skip rule', () => {
