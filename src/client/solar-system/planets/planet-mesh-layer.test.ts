@@ -3,6 +3,8 @@ import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { glslCallArgs } from '../../util/glsl-call-args';
+import { pickHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import { makeGlslSolarSystemMaterials } from '../materials/glsl-materials';
 import { makeMockHdrEmitterUniforms } from '../../kinds/kind-context-mock';
 import { SOL_BODIES } from '../planet-system';
 import { PLANET_MESH_TEXTURE_SLOTS } from '../materials/texture-slots';
@@ -63,6 +65,38 @@ describe('the planet surfaces occlude the diffuse attachment', () => {
     const src = read('./planet-mesh-layer.ts');
     expect(src.match(/markOccludingEmitter\(mesh\)/g)).toHaveLength(SURFACES.length);
     expect(src).not.toContain('markStatisticEmitter');
+  });
+});
+
+// The stand-in every mesh and annulus slot is cloned from. Nearest on BOTH
+// filters is what makes the WGSL builder bake an unfiltered fetch for the
+// material's whole life, so this pair is the fix for the WebGPU terminator
+// staircase and nothing else pins it — the roster guard asks only that a
+// pair be stated (../../webgpu/solar-system/README.md § A stand-in's filters).
+describe('the mesh stand-in is filterable', () => {
+  it('hands the materials factory a placeholder that is not nearest/nearest', () => {
+    const hdr = { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } };
+    const handed: THREE.Texture[] = [];
+    const layer = new PlanetMeshLayer(
+      {} as unknown as PlanetBodyField,
+      '/',
+      hdr,
+      () => {},
+      8192,
+      (placeholder) => {
+        handed.push(placeholder);
+        return makeGlslSolarSystemMaterials({
+          hdr: pickHdrEmitterUniforms(hdr), placeholder,
+        });
+      },
+    );
+    expect(handed).toHaveLength(1);
+    const [standIn] = handed;
+    expect(
+      standIn.minFilter === THREE.NearestFilter
+      && standIn.magFilter === THREE.NearestFilter,
+    ).toBe(false);
+    layer.dispose();
   });
 });
 

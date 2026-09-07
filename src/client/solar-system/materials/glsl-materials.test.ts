@@ -13,7 +13,12 @@ import {
   PLANET_MESH_TEXTURE_SLOTS, PLANET_RINGS_TEXTURE_SLOTS,
 } from './texture-slots';
 
+// Carries PlanetMeshLayer.placeholder's own pair. A fixture on the
+// nearest/nearest default builds every TSL surface here against an
+// unfiltered fetch — the shipped defect, exercised as if it were correct.
 const placeholder = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+placeholder.minFilter = THREE.LinearFilter;
+placeholder.magFilter = THREE.LinearFilter;
 const hdr = makeHdrEmitterUniforms();
 const HDR_KEYS = Object.keys(pickHdrEmitterUniforms(hdr));
 
@@ -240,6 +245,22 @@ describe('the solar-system material seam', () => {
     expect(loadedDisposed).toBe(false);
     expect(placeholderDisposed).toBe(false);
   });
+
+  // The clones are what the WGSL is generated against, so the filter pair
+  // has to survive the clone — not merely be right on the source
+  // placeholder. Nearest on BOTH is the single condition that flips the
+  // builder to an unfiltered fetch, and no roster guard catches it: that
+  // one only asks each site to state a pair, not to state this one.
+  for (const [surface, roster] of TEXTURE_ROSTERS) {
+    if (roster.length === 0) continue;
+    it(`${surface}: every per-slot stand-in is filterable`, () => {
+      for (const t of textureStandIns(makeTsl()[surface]())) {
+        expect(
+          t.minFilter === THREE.NearestFilter && t.magFilter === THREE.NearestFilter,
+        ).toBe(false);
+      }
+    });
+  }
 
   it('gives the annulus its own stand-in too', () => {
     const built = makeTsl().planetRings();
