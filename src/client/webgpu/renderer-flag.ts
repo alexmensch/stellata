@@ -1,4 +1,4 @@
-// Parse the dual-boot renderer flag and the gate override from the URL
+// Parse the renderer escape hatch and the gate override from the URL
 // fragment — the one URL slot the address-bar writers preserve verbatim
 // (see README.md).
 

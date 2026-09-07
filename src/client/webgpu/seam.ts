@@ -1,5 +1,5 @@
-// The dual-boot contract between the integration shell and the WebGPU
-// boot path. Type-only — every three/webgpu VALUE import stays behind
+// The contract between the integration shell and the WebGPU boot
+// path. Type-only — every three/webgpu VALUE import stays behind
 // boot-webgpu.ts's dynamic import (see README.md § Import boundary).
 
 import type * as THREE from 'three';

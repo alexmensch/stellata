@@ -654,7 +654,7 @@ export class Stellata implements FrameAnchor {
     // Shared uniforms passed by reference so floating-origin recenters,
     // resize updates, and dust loads propagate to the particle pass
     // automatically. On a WebGPU boot the sprite takes its slots off the
-    // uniform-node mirror instead and lands in the scene that renders.
+    // uniform-node mirror instead.
     this.dustParticles = new DustParticleLayer(
       this.scene,
       sharedUniforms,
@@ -945,8 +945,6 @@ export class Stellata implements FrameAnchor {
       uLimitMag: sharedUniforms.uLimitMag,
       hdr: this.hdr.emitterUniforms,
     }, this.webgpu?.bandMaterials);
-    // The band has ported, so on a WebGPU boot it belongs in the scene
-    // that renders.
     this.scene.add(this.milkyway.group);
 
     this.filters = new FilterController({

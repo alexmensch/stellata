@@ -1,4 +1,4 @@
-// Bundle boundary for the WebGPU dual boot: three/webgpu duplicates
+// Bundle boundary for the WebGPU renderer: three/webgpu duplicates
 // three's core (~1 MB) and nothing tree-shakes an eagerly-imported
 // renderer, so its value imports may exist only inside the async chunk
 // behind main.ts's import('./webgpu/boot-webgpu') — see
