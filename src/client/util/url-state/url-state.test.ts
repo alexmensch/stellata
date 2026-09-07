@@ -1072,6 +1072,7 @@ describe('url-state', () => {
   });
 
   describe('currentStateOf cam-omission', () => {
+    const star = (idx: number): Target => ({ kind: 'star', idx });
     // Minimal mock — currentStateOf only reads getters and the camera /
     // controls vec3-shaped fields. Anything not exercised by these tests
     // returns the "default" sentinel so encoder skips that field.
@@ -1080,10 +1081,15 @@ describe('url-state', () => {
       camPos?: [number, number, number];
       target?: [number, number, number];
       up?: [number, number, number];
-      focusedStar?: number | null;
+      /** Any kind, because only a HARD one recentres the origin — which is
+       *  what decides whether the pose leaves anchored and whether
+       *  worldOffset has to carry the frame. */
+      focused?: Target | null;
       /** Focal object's local position — non-zero is the drifted frame
        *  between two origin recentres. */
       anchor?: [number, number, number];
+      /** The floating origin's absolute position. */
+      worldOffset?: [number, number, number];
       /** ORB armed / orbit lock engaged on the attitude instrument. */
       orbit?: { armed: boolean; locked: boolean };
     } = {}): Stellata {
@@ -1091,6 +1097,8 @@ describe('url-state', () => {
       const camPos = opts.camPos ?? [0, 0, 30];
       const tgt = opts.target ?? [0, 0, 0];
       const up = opts.up ?? GN_UP;
+      const focused = opts.focused ?? null;
+      const wo = opts.worldOffset ?? [0, 0, 0];
       const stub: Partial<Stellata> = {
         filters: partialOf<Stellata['filters']>({
           getFilter: () => ({ ...DEFAULT_FILTER }),
@@ -1105,10 +1113,8 @@ describe('url-state', () => {
           opts.orbit ?? { armed: false, locked: false },
         ),
         focus: partialOf<Stellata['focus']>({
-          getFocusedStar: () => opts.focusedStar ?? null,
-          getFocusedTarget: () => (opts.focusedStar != null
-            ? { kind: 'star' as const, idx: opts.focusedStar }
-            : null),
+          getFocusedStar: () => (focused?.kind === 'star' ? focused.idx : null),
+          getFocusedTarget: () => focused,
           getVectorTarget: () => null,
           getCameraMode: () => mode,
         }),
@@ -1117,7 +1123,7 @@ describe('url-state', () => {
         // wall-clock now keeps the existing assertions at "no t in URL".
         getT: () => Date.now() / 1000,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getWorldOffset: () => ({ x: 0, y: 0, z: 0 } as any),
+        getWorldOffset: () => ({ x: wo[0], y: wo[1], z: wo[2] } as any),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         camera: {
           position: { x: camPos[0], y: camPos[1], z: camPos[2] },
@@ -1141,7 +1147,7 @@ describe('url-state', () => {
       // URL. Regression: a future change that points camDefault elsewhere
       // for observe would silently re-introduce the 16 chars.
       const view = currentStateOf(
-        makeMockStellata({ mode: 'observe', camPos: [0, 0, 0], focusedStar: 5 }),
+        makeMockStellata({ mode: 'observe', camPos: [0, 0, 0], focused: star(5) }),
         idMaps,
       );
       expect(view.cam).toBeUndefined();
@@ -1150,7 +1156,7 @@ describe('url-state', () => {
 
     it('emits cam when observe-mode camera is *not* at the focal origin', () => {
       const view = currentStateOf(
-        makeMockStellata({ mode: 'observe', camPos: [1, 2, 3], focusedStar: 5 }),
+        makeMockStellata({ mode: 'observe', camPos: [1, 2, 3], focused: star(5) }),
         idMaps,
       );
       expect(view.cam).toEqual([1, 2, 3]);
@@ -1181,7 +1187,7 @@ describe('url-state', () => {
     it('encodes a focused pose relative to the focal object, not the local origin', () => {
       const drifted = currentStateOf(
         makeMockStellata({
-          focusedStar: 7,
+          focused: star(7),
           anchor: [100, 0, 0],
           camPos: [100, 0, 40],
           target: [100, 0, 0],
@@ -1196,12 +1202,12 @@ describe('url-state', () => {
       // Same pose, same bytes, wherever the un-recentred origin happens to sit
       // — which is what stops a ride rewriting the URL every frame.
       const near = currentStateOf(
-        makeMockStellata({ focusedStar: 7, anchor: [0, 0, 0], camPos: [0, 0, 30] }),
+        makeMockStellata({ focused: star(7), anchor: [0, 0, 0], camPos: [0, 0, 30] }),
         idMaps,
       );
       const far = currentStateOf(
         makeMockStellata({
-          focusedStar: 7, anchor: [1e3, -2e3, 5e2], camPos: [1e3, -2e3, 5e2 + 30],
+          focused: star(7), anchor: [1e3, -2e3, 5e2], camPos: [1e3, -2e3, 5e2 + 30],
           target: [1e3, -2e3, 5e2],
         }),
         idMaps,
@@ -1215,9 +1221,51 @@ describe('url-state', () => {
     // already what the receiver rebuilds against worldOffset.
     it('leaves an unfocused pose in the local frame', () => {
       const view = currentStateOf(
-        makeMockStellata({ focusedStar: null, anchor: [100, 0, 0], camPos: [1, 2, 3] }),
+        makeMockStellata({ focused: null, anchor: [100, 0, 0], camPos: [1, 2, 3] }),
         idMaps,
       );
+      expect(view.cam).toEqual([1, 2, 3]);
+    });
+
+    // worldOffset rides the wire on the exact complement of the anchoring
+    // above, and HARD-ness is the whole of that test: only a hard kind
+    // recentres the origin, so these three cases are one rule, not three.
+    const ANCHOR: [number, number, number] = [51.6, 257, -37.7];
+
+    it('emits worldOffset when nothing is focused', () => {
+      const view = currentStateOf(
+        makeMockStellata({ focused: null, worldOffset: ANCHOR, camPos: [1, 2, 3] }),
+        idMaps,
+      );
+      expect(view.worldOffset).toEqual(ANCHOR);
+    });
+
+    it('omits worldOffset under a hard focus the receiver recentres onto', () => {
+      const view = currentStateOf(
+        makeMockStellata({ focused: star(7), worldOffset: ANCHOR, camPos: [1, 2, 3] }),
+        idMaps,
+      );
+      expect(view.worldOffset).toBeUndefined();
+    });
+
+    // A cloud / LG object / shell is focusable without the origin moving, so a
+    // link to one carries its frame here or nowhere. Gating on "nothing
+    // focused" instead put the receiver back at Sol — 257 pc from the view
+    // that was shared — while the anchor sat unread in the sender.
+    it.each<[string, Target]>([
+      ['cloud', { kind: 'cloud', idx: 0 }],
+      ['lg', { kind: 'lg', idx: 0 }],
+      ['shell', { kind: 'shell', idx: 0 }],
+    ])('emits worldOffset under a soft %s focus, and leaves the pose raw', (_k, focused) => {
+      const view = currentStateOf(
+        makeMockStellata({
+          focused, worldOffset: ANCHOR, anchor: [100, 0, 0], camPos: [1, 2, 3],
+        }),
+        idMaps,
+      );
+      expect(view.worldOffset).toEqual(ANCHOR);
+      // Un-anchored despite the provider offering one: subtracting a frame
+      // the receiver never rebuilds is what worldOffset is here to avoid.
       expect(view.cam).toEqual([1, 2, 3]);
     });
   });
@@ -1935,7 +1983,13 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
   const liveT = () => Date.now() / 1000;
   const scrubbedT = () => Date.now() / 1000 - 100_000;
 
-  function makeSyncStellata() {
+  function makeSyncStellata(opts: {
+    /** ORB / lock as the instrument holds them. Neither is a pose and
+     *  neither is FilterState, so a bare 'state' emit is the only thing
+     *  that can put them on the wire. */
+    orbit?: { armed: boolean; locked: boolean };
+  } = {}) {
+    const orbit = opts.orbit ?? { armed: false, locked: false };
     const state = {
       fov: DEFAULT_FOV,
       t: liveT(),
@@ -1965,7 +2019,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       getWorldOffset: () => mockVec3() as any,
       setWorldOffset: () => {},
       focusables: mockFocusables(),
-      getOrbitFramePort: () => null,
+      getOrbitFramePort: () => mockOrbitPort(orbit),
       focus: partialOf<Stellata['focus']>({
         getFocusedStar: () => state.focusedStar,
         getFocusedTarget: () =>
@@ -1999,8 +2053,9 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     }) as unknown as Stellata['on'];
     return {
       stellata: stub as Stellata,
-      state, cam, controls, roll,
+      state, cam, controls, roll, orbit,
       frame: () => handlers.frame.forEach((h) => h(undefined)),
+      emitState: () => handlers.state.forEach((h) => h(undefined)),
     };
   }
 
@@ -2154,6 +2209,41 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       vi.advanceTimersByTime(1000);
       expect(loc.pathname.startsWith('/v/')).toBe(true);
       expect(loc.hash).toBe('#renderer=webgpu');
+    });
+  });
+
+  // ORB and the lock are the only URL fields that are neither a pose nor
+  // FilterState, so the detector cannot see them and no fine-grained event
+  // announces them: the instrument owes a bare 'state' emit
+  // (`Stellata.notifyOrbitFrameChanged`). Without it the bits reached the
+  // address bar only when some unrelated change happened to write it
+  // afterwards — which is why an arm survived a refresh and the lock, being
+  // the last thing a user touches, did not.
+  describe('startUrlSync — instrument state needs its own write trigger', () => {
+    it('writes ORB and the lock on a bare state emit, camera still', () => {
+      const { loc } = installUrl('/');
+      const { stellata, emitState } = makeSyncStellata({
+        orbit: { armed: true, locked: true },
+      });
+      startUrlSync(stellata, syncIdMaps());
+      emitState();
+      vi.advanceTimersByTime(1000);
+      expect(loc.pathname.startsWith('/v/')).toBe(true);
+      const { view } = decodeBlob(loc.pathname.split('/')[2]);
+      expect(view).toMatchObject({ orb: true, orbLock: true });
+    });
+
+    it('never reaches the URL from a still camera without one', () => {
+      const { replaceState } = installUrl('/');
+      const { stellata, frame } = makeSyncStellata({
+        orbit: { armed: true, locked: true },
+      });
+      startUrlSync(stellata, syncIdMaps());
+      // Every rendered frame, and the pose never moves — engaging the lock
+      // below the visible-turn threshold moves nothing either.
+      frame(); frame(); frame();
+      vi.advanceTimersByTime(1000);
+      expect(replaceState).not.toHaveBeenCalled();
     });
   });
 });

@@ -171,9 +171,14 @@ the frame the receiver does rebuild, and which a ride leaves untouched.
 
 For unfocused-but-not-at-Sol, the URL serialises a `worldOffset` field
 (FIELDS_V2 bit 20, vec3 Float32, appended to the end for forward-compat
-with older clients). The encoder emits it when nothing is focused AND
-`worldOffset` sits far enough from Sol to move the pose at this scale
-(`../util/url-state/README.md` § What counts as a camera move); cam/tgt
+with older clients). The encoder emits it on the exact complement of the
+normalisation above — whenever the receiver will **not** rebuild the anchor
+for itself — AND `worldOffset` sits far enough from Sol to move the pose at
+this scale (`../util/url-state/README.md` § What counts as a camera move).
+That covers a **soft-kind focus** as well as no focus at all: only a hard
+kind recentres the origin (`../camera/focus/focus-target.ts` `KIND_TRAITS`),
+so a cloud, an LG object or a shell is focusable without the frame moving,
+and this field is the only thing that can carry the sender's. cam/tgt
 then encode in the local frame
 and round-trip with full Float32 precision. The loader applies
 `setWorldOffset` *before* cam/tgt and resets cam/tgt to defaults so a

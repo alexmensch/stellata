@@ -1126,49 +1126,25 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
 
   const c = encodeCam;
   const t = encodeTgt;
-  anchoredPose(stellata, c, t);
+  anchoredPose(stellata, focused, c, t);
   const u = stellata.camera.up;
-  // Skip each independently. Under floating origin, a focused-orbit URL
-  // has tgt=[0,0,0] (the focal star's local position) and observe-mode
-  // has cam=[0,0,0] (camera is parked *at* the focal star), so omitting
-  // them when at default trims ~16 base64url chars from nearly every
-  // URL. Cam's default depends on mode — receiver re-snaps cam to
-  // origin via setCameraMode('observe', { animate: false }) on apply.
+  // README.md § What counts as a camera move owns every gate below — each a
+  // fraction of the orbit radius, none a distance.
   //
-  // Frame: cam/tgt are emitted as raw camera.position / controls.target
-  // — i.e. in worldOffset-local frame. With focus, the focal object's
-  // setFocus call has already recentred worldOffset to that object's
-  // absolute position, so cam/tgt are object-local. Without focus, the
-  // origin rides along with whatever object was most recently anchored
-  // (the unfocus path no longer recentres to Sol). The
-  // worldOffset field below carries the absolute anchor position so
-  // the loader can re-establish the same frame on page-load. Old-style
-  // URLs without worldOffset always had worldOffset=(0,0,0) at save
-  // time, so the local frame was Sol — backward-compatible.
+  // Don't collapse this to one predicate: vec3FieldV3.isPresent re-checks at
+  // strict equality, and that inner layer is what keeps sub-µpc floating-origin
+  // cam values any outer band would round to the frame origin.
   //
-  // Emit worldOffset only when nothing is focused AND the anchor is far
-  // enough from Sol to move the pose. With focus, the loader's own focus
-  // dispatch recentres the origin. Nothing focused and the anchor at Sol
-  // leaves the local frame implicitly Sol-relative (which is what a legacy
-  // URL means), so omitting saves 12 bytes on every default-pose URL.
-  //
-  // Two-layer elision is intentional: this site populates view.cam/tgt/up
-  // when the value is far enough off-default to be seen, then
-  // vec3FieldV3.isPresent re-checks at strict equality to decide whether the
-  // field claims its outer presence bit. Both layers are load-bearing — the
-  // inner strict equality preserves floating-origin sub-µpc cam values that
-  // any outer band would round to default. Don't collapse to one predicate
-  // without preserving both regimes.
-  //
-  // Every gate here scales with the orbit radius, so the same rule holds at a
-  // lunar orbit and across the Local Group (`pose-change-pure.ts`). An
-  // absolute band cannot: 1e-3 pc beside the Moon elided a pan of thirty
-  // billion kilometres, and elided the anchor of every unfocused view inside
-  // the solar system, which came back at Sol.
+  // `worldOffset` rides the wire exactly when the receiver will NOT rebuild the
+  // anchor itself — the complement of the subtraction `anchoredPose` just made,
+  // which is why a soft-kind focus carries it as an unfocused view does. Only
+  // a hard focus recentres the origin (`../../camera/focus/focus-target.ts`
+  // KIND_TRAITS), so a cloud, an LG object or a shell leaves the sender's frame
+  // reachable through this field and no other.
   const wo = stellata.getWorldOffset();
   const scale = orbitRadius(c, t);
   const camDefault = defaultCamForMode(mode);
-  if (stellata.focus.getFocusedTarget() === null
+  if (!isHardTarget(focused)
     && divergesFromDefault(wo, DEFAULT_WORLD_OFFSET, scale)) {
     view.worldOffset = [wo.x, wo.y, wo.z];
   }
@@ -1552,13 +1528,20 @@ const encodeTgt = new THREE.Vector3();
  * URL churn. Subtracting the anchor removes both at once.
  *
  * Both writers read this, so the change detector and the encoder cannot
- * disagree about what has moved.
+ * disagree about what has moved. A pose left un-anchored — no focus, a
+ * soft-kind one, or a source that will not resolve — is one the receiver
+ * rebuilds from `worldOffset` instead, which `currentStateOf` emits on
+ * exactly the complement of this test.
  */
-function anchoredPose(stellata: Stellata, outCam: THREE.Vector3, outTgt: THREE.Vector3): void {
+function anchoredPose(
+  stellata: Stellata,
+  focused: Target | null,
+  outCam: THREE.Vector3,
+  outTgt: THREE.Vector3,
+): void {
   outCam.copy(stellata.camera.position);
   outTgt.copy(stellata.controls.target);
-  const focused = stellata.focus.getFocusedTarget();
-  if (focused === null || !isHardTarget(focused)) return;
+  if (!isHardTarget(focused)) return;
   if (!stellata.focusables[focused.kind].localPositionInto(focused.idx, anchorScratch)) return;
   outCam.sub(anchorScratch);
   outTgt.sub(anchorScratch);
@@ -1590,7 +1573,7 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
   // applyFromUrl/applyFirstLoadView just applied) until the user
   // actually moves the camera, scrubs time, or changes a setting.
   const lastCam = new Float64Array(9);
-  anchoredPose(stellata, frameCam, frameTgt);
+  anchoredPose(stellata, stellata.focus.getFocusedTarget(), frameCam, frameTgt);
   snapshotCam(lastCam, frameCam, frameTgt, stellata.camera.up);
   let lastT = persistedT(stellata);
 
@@ -1620,7 +1603,7 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
       changed = true;
     }
 
-    anchoredPose(stellata, frameCam, frameTgt);
+    anchoredPose(stellata, stellata.focus.getFocusedTarget(), frameCam, frameTgt);
     const u = stellata.camera.up;
     // Steady-state path: one scale-free comparison against the snapshot
     // (`pose-change-pure.ts`). No allocations on the no-change path — this
