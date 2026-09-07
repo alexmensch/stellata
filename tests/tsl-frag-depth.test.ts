@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import { walkFiles } from './walk-files';
+import { isProductionTs, walkFiles } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
 const ALLOWED = new Set<string>([]);
@@ -36,8 +36,6 @@ export function writesTslFragDepth(src: string): boolean {
   return WRITE_FORMS.some((re) => re.test(src));
 }
 
-const isProductionTs = (p: string) =>
-  p.endsWith('.ts') && !p.endsWith('.test.ts') && !p.endsWith('.d.ts');
 
 describe('TSL frag-depth roster', () => {
   it('no module outside the allowlist writes fragment depth', () => {

@@ -166,7 +166,13 @@ walk-files.ts            Not a test — the recursive file walk the
                          bundle-content, shader-frag-depth, both TSL
                          rosters), taking `include` / `skipDir`
                          predicates. Follows symlinked directories, which
-                         public/ carries.
+                         public/ carries. Also `isProductionTs`, the
+                         include predicate the three TSL scanners share:
+                         a .ts that is neither a test nor an ambient
+                         declaration. webgpu-import-boundary.test.ts keeps
+                         its own broader `isClientSource` — a declaration
+                         file can carry an import, so that corpus wants
+                         globals.d.ts in scope.
 ```
 
 Per-subsystem tests live next to their code (`*.test.ts` / `*.test.py`
