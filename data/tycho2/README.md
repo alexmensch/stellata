@@ -105,15 +105,30 @@ Coverage, re-measured 2026-09-07 against the committed tables:
 | Union | 372,619 | 372,599 |
 
 The refresh hard-fails on a manifest TYC that reaches neither table **and**
-has no pair entry carrying it — the cascade has no tier below this one for a
-TYC-keyed row, so § 6 should adjudicate it as a membership event rather than
-let it land quietly. All 371,417 manifest TYCs with `TYC3=1` reach Tycho-2, so
-the whole residual sits in the 731-row component cohort (`TYC3>1`), 713 of
-which reach. What admits the remaining 18 is that Tycho-2 carries the pair's
-`TYC3=1` entry in every case: it lists a pair IV/25 resolves as a single star,
-so the component's own row never existed to be pulled. A component whose pair
-entry is also unreached fails the gate — nothing in Tycho-2 covers that star
-at all.
+whose pair entry is unreached too. All 371,417 manifest TYCs with `TYC3=1`
+reach Tycho-2, so a primary that misses is a membership event for § 6 to
+adjudicate, or an upstream regression — not a refresh landing short. The whole
+residual sits in the 731-row component cohort (`TYC3>1`), 713 of which reach,
+and Tycho-2 carries the pair's `TYC3=1` entry for all 18 that do not: it lists
+as one star a pair IV/25 resolves, so the component's own row never existed to
+be pulled.
+
+**That pair entry is evidence of the merge, not a solution the component
+inherits.** `scripts/catalog/tycho2-parse.ts` indexes on the full
+`TYC1-TYC2-TYC3` and the direction cascade looks the record's own TYC up in
+it, so a `TYC3=2` component draws nothing from Tycho-2 whichever verdict this
+gate reaches. What places the 18 is the tier below: every one carries SIMBAD
+astrometry in `data/simbad/simbad_values.tsv` and routes to the cascade's
+`simbad` tier. **This gate measures the pull's reach, never a record's
+placement** — an unreached TYC does not imply an unplaced record, and reading
+it that way is what the pre-manifest wording got wrong.
+
+One limit to know: `reached` is the filtered pull, so a pair entry is visible
+to the gate only when the request set names it too. 619 of the 969 requested
+`TYC3>1` components have no pair primary in the request set, and an unreached
+one among those would fail the gate even where Tycho-2 carries the pair. None
+is unreached today; widening the request set to cover every component's pair
+primary is the fix if one ever is.
 
 The 20-row residual across the whole request set is entirely `TYC3=2` —
 secondary components IV/25 names that Tycho-2 does not carry as separate
