@@ -1,11 +1,10 @@
-# WebGPU dual-boot seam
+# WebGPU renderer
 
-The boot seam the WebGPU migration lands behind: the renderer flag, the
-async `WebGPURenderer` boot, what that boot draws today, and the rules a
-port child lands under (output colour space, import boundary, early-z,
-timestamps). The authoring scaffolding it builds *with* is `tsl/`. The
-shipped WebGL2 app is untouched while the flag is off; nothing here
-reaches the WebGL2 bundle (§ Import boundary).
+The renderer the app boots: the capability route, the async
+`WebGPURenderer` boot, what it draws, and the rules a layer lands under
+(output colour space, import boundary, early-z, timestamps). The
+authoring scaffolding it builds *with* is `tsl/`. Only the entry-bundle
+members reach a browser that cannot run it (§ Import boundary).
 
 ## Files in this area
 
@@ -14,16 +13,20 @@ src/client/webgpu/
   renderer-flag.ts (+ test)         Parse #renderer=webgpu|webgl2 and the
                                     #webgpu-gate=<verdict> dev switch from
                                     the URL fragment.
+  boot-route.ts (+ test)            resolveBootRoute — gate page or
+                                    renderer, off the fragment and the
+                                    capability probe. In the entry
+                                    bundle (§ Import boundary).
   chrome-lines/                     The line overlays' strokes — solid
                                     and dashed, over three's own line
                                     fragment — its own README.
   gate/                             The user-facing "requires WebGPU" page,
-                                    landed dark until the cutover. Outside
-                                    the import boundary by necessity — its
-                                    own README.
+                                    shown on a failing capability verdict.
+                                    Outside the import boundary by
+                                    necessity — its own README.
   seam.ts                           WebGpuSeam — the type-only contract the
-                                    integration shell holds when the flag
-                                    is on. StellataRenderer union type.
+                                    integration shell holds on this boot.
+                                    StellataRenderer union type.
   boot-webgpu.ts                    Async boot: construct + init the
                                     WebGPURenderer, build the seam handle.
                                     The dynamic-import boundary.
@@ -91,42 +94,45 @@ src/client/webgpu/
                                     README.
 ```
 
-## The flag — `#renderer=webgpu`
+## The renderer is WebGPU
 
-The flag rides the **URL fragment**, read once at boot by `main.ts`.
-Why the fragment: `util/url-state`'s writers replaceState the address
-bar on every state change, dropping query and fragment alike — they now
-re-append `location.hash` verbatim (`util/url-state/README.md`
+`resolveBootRoute` settles every load before the catalogue is fetched:
+no fragment boots WebGPU, and a browser failing `detectWebGpuSupport`
+gets the gate page instead of a dead canvas (`gate/README.md`). A
+`bootWebGpu` that returns null after a *passing* probe — `init()`
+rejected, or the renderer dropped `reversedDepthBuffer` — lands on the
+same page with the `no-adapter` advice. **There is no automatic WebGL2
+fallback**; the only route to that renderer is naming it.
+
+`#renderer=webgl2` is the escape hatch, and it is undocumented on
+purpose: rollback is flipping one default back, not asking users to edit
+a URL. It skips the probe entirely, so it settles on a browser that
+would fail one.
+
+Both spellings ride the **URL fragment**, read once at boot by
+`main.ts`. Why the fragment: `util/url-state`'s writers replaceState the
+address bar on every state change, dropping query and fragment alike —
+they re-append `location.hash` verbatim (`util/url-state/README.md`
 § Transport), and the fragment is the one slot that is *not* URL state,
-so the seam costs url-state no renderer knowledge. A query param would
-re-introduce query emission into a transport that deliberately retired
-it, and `resetJunkUrl` would need a renderer-aware exemption.
+so the renderer choice costs url-state no knowledge of it. A query param
+would re-introduce query emission into a transport that deliberately
+retired it, and `resetJunkUrl` would need a renderer-aware exemption.
 
 Consequences that make the A/B smoke work:
 
-- Composes with a share blob: `/v/<blob>/#renderer=webgpu`, and with
-  the legacy query form `/?v=<blob>#renderer=webgpu`.
+- Composes with a share blob: `/v/<blob>/#renderer=webgl2`, and with
+  the legacy query form `/?v=<blob>#renderer=webgl2`.
 - Survives refresh, camera moves, share-link apply, and the junk-URL
   reset.
 - Parity smoke is "same `/v/<blob>/`, add or drop the fragment, reload"
   — editing only the hash does not reload; hit reload yourself.
-- `#renderer=webgl2` parses too: it is the explicit escape hatch the
-  cutover keeps for one release after WebGPU becomes the default.
 
-If WebGPU is unavailable or `renderer.init()` rejects, `bootWebGpu`
-returns null and `main.ts` falls back to the shipped WebGL2 boot with a
-console warning — the flag is a dev seam until the cutover. The
-user-facing "requires WebGPU" gate page is built and lands dark in
-`gate/`, reachable only through `#webgpu-gate=<verdict>`; `0it.13` is what
-puts it on a real capability verdict.
+## What this boot draws
 
-## What the flag boots today
-
-The **star field and the solar system's main-pass surfaces, with the full
-app alive**: every CPU subsystem (catalog, star frame, focus, picker,
-typeahead, URL state, overlays, HUD, render gate) runs identically; the
-renderer draws the seam's own scene (`WebGpuSeam.scene`), which gains
-layers as port children land. The star layer (`star/README.md`) carries
+**The whole app.** Every CPU subsystem (catalog, star frame, focus,
+picker, typeahead, URL state, overlays, HUD, render gate) is
+backend-blind, and the renderer draws the shell's one scene
+(§ One scene per boot). The star layer (`star/README.md`) carries
 all three depth-honest pipelines plus their local-mirror clones, dust
 extinction on both tiers, and chart mode. The
 solar-system family (`solar-system/README.md`) draws whole: glare
@@ -150,15 +156,22 @@ the Local Group wireframe — each on the chrome line seam, the equator
 through its fat stroke (`../chrome-lines/README.md`).
 The HDR chain runs for real through `hdr/` — MRT target, summation,
 resolve, exposure reduction — behind the same `HdrSeam` interface the
-WebGL pipeline implements (`../hdr/hdr-seam.ts`). The shell's WebGL
-scene still exists and is never rendered on a WebGPU boot — no
-per-layer gating, no material ever reaches the wrong backend.
+WebGL pipeline implements (`../hdr/hdr-seam.ts`).
 
-**A ported layer has to move scenes, and nothing warns if it does not.**
-A layer built into the shell's scene renders on WebGL and silently
-nowhere on WebGPU, so every material swap pairs with
-`(webgpu?.scene ?? scene).add(group)` at its call site — the probe
-markers, both shells and the dust sprite all read that way.
+### One scene per boot
+
+The shell builds THE scene and hands it to `attachStarLayer` /
+`attachPlanetGlare`; the seam owns none. So `scene.add(group)` is the
+whole story at every call site, on either backend, and a new layer
+cannot land in a graph nothing renders.
+
+Two GLSL twins stay **unparented** here instead — the star pipeline's
+three meshes (`StarPipeline` takes `scene: null`) and the planet body
+field's group. Both still construct: their attributes are the live
+source buffers the TSL layers watch, and the writers keep writing them.
+Unparented rather than parked in a second scene, because a `Mesh` in no
+graph is the same zero draws with nothing to add a layer to by mistake.
+`0it.14` deletes them with the rest of the GLSL path.
 
 The dust voxel volume streams and uploads on both backends
 (`loaders/README.md` § Dust voxel upload); the star vertex stage's
@@ -221,11 +234,14 @@ The three local-depth rows went with `0it.12`/`0it.4.8`: the pass renders
 on both boots, the `localPassLive` flag is deleted from both clusters,
 and the TSL star mirror + glare mirror repaint what collapses.
 
-At cutover (`0it.13`) `rendererGL` is null forever and every surviving
-gate becomes a permanently-false branch, so the WebGL2 deletion
-(`0it.14`) sweeps whatever is left. That sweep is the backstop, not the
-plan — a gate still standing then means its feature was dead for a
-release.
+The cutover swept for survivors and found none — every `rendererGL`
+test left is a live backend branch the escape hatch still takes (the
+WebGL renderer's own construction, its HDR pipeline and prepass, the
+timer-query frame source, the `maxTextureSize` read), not a feature
+parked off. `StellataRenderer` therefore stays a union and
+`Stellata.renderer` stays narrowed until `0it.14` deletes the hatch.
+That deletion is the backstop for a future park, not the plan — a gate
+still standing then means its feature was dead for a release.
 
 **A park that REMOVES rather than skips is invisible to that backstop,
 and the line-layer row was one.** It keyed on `webgpu !== null` — a
@@ -298,8 +314,10 @@ removes an eagerly-imported renderer. The rule:
   `import('./webgpu/boot-webgpu')` (Vite code-splits that whole graph
   into an async chunk the WebGL2 boot never fetches).
 - Modules outside this folder may import from it **statically only for
-  `renderer-flag.ts` and type-only imports** (`import type` is erased at
-  compile time and costs nothing).
+  `renderer-flag.ts`, `boot-route.ts`, `gate/` and type-only imports**
+  (`import type` is erased at compile time and costs nothing). Those
+  three run on a browser with no WebGPU at all, and the boundary test
+  guards each against acquiring a `three/webgpu` import.
 - A port child's TSL layer module is therefore also loaded dynamically
   — construct it through the seam, never `import` it from `stellata.ts`.
 

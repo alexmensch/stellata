@@ -99,18 +99,17 @@ themselves.
   and collapsed-pick-to-primary resolution; implemented by
   `binaries/` and `solar-system/`.
 - `loaders/` — runtime fetch/parse of `public/` artifacts.
-- `webgpu/` — the WebGPU dual-boot seam: the `#renderer=webgpu` flag,
-  the async renderer boot behind a dynamic-import boundary, the
-  port scaffolding (shared uniform nodes, TSL shim, attribute packing,
-  the TSL test pattern), and the ported TSL layers (`webgpu/star/`,
+- `webgpu/` — **the renderer this app boots.** The capability route, the
+  async renderer boot behind a dynamic-import boundary, the authoring
+  scaffolding (shared uniform nodes, TSL shim, attribute packing, the
+  TSL test pattern), and the TSL layers (`webgpu/star/`,
   `webgpu/solar-system/`, `webgpu/hdr/`, `webgpu/extinction/`,
-  `webgpu/chrome-lines/`). Flag on
-  renders the seam's own scene — layers accumulate there as port children
-  land — while every CPU subsystem runs identically; flag off leaves the
-  shipped boot untouched. `webgpu/gate/` is the exception to the folder's
-  dynamic-import boundary: the "requires WebGPU" page has to render where
-  WebGPU does not exist, so `main.ts` imports it statically. It lands
-  dark — only `#webgpu-gate=<verdict>` reaches it until the cutover.
+  `webgpu/chrome-lines/`). Every CPU subsystem is backend-blind, and the
+  seam owns no scene — layers add to the one below either way.
+  `webgpu/gate/` and `webgpu/boot-route.ts` are the exceptions to the
+  folder's dynamic-import boundary: the "requires WebGPU" page has to
+  render where WebGPU does not exist, so `main.ts` imports both
+  statically. `#renderer=webgl2` is the undocumented escape hatch.
 
 ## Public surface of `Stellata`
 
@@ -121,9 +120,8 @@ forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
 `localDepthPass` / `reduction` handles (frame-cost levers,
 `debug/frame-cost/README.md`), `sceneGraphs` (read-only handles on every
 scene this boot draws, for the memory inventory —
-`debug/memory/README.md`; PLURAL because a dual boot renders the seam's
-scene and not the shell's, so either alone prices a scene that is not on
-screen), and `renderGate` (`render-gate/README.md`). Callers write
+`debug/memory/README.md`), and `renderGate`
+(`render-gate/README.md`). Callers write
 `stellata.filters.setFilter(patch)`; each namespace's own README is the
 reference for what it answers. `camera/README.md` § Camera mode covers
 the one split pair (read on `focus`, write on `observe`).

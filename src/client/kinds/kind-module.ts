@@ -67,11 +67,10 @@ export interface KindContext {
    *  `reason` is a short stable slug the render watcher prints, so a
    *  frame rate pinned by one of these is attributable. */
   requestRender(reason: string): void;
-  /** The WebGPU boot seam, or null on the shipped WebGL2 boot. A kind
-   *  whose layers have ported reads its TSL surfaces and its scene from
-   *  here; every other kind ignores it and keeps drawing into the scene
-   *  above, which a WebGPU boot never renders
-   *  (`../webgpu/README.md` § What the flag boots today). */
+  /** The WebGPU seam, or null on the WebGL2 escape hatch. A kind reads
+   *  its TSL surfaces from here and adds its groups to `scene` either
+   *  way — the seam owns no scene of its own
+   *  (`../webgpu/README.md` § One scene per boot). */
   readonly webgpu: WebGpuSeam | null;
   /** The chrome line strokes for this boot, already resolved to the
    *  backend — a kind that draws overlay lines takes them from here

@@ -132,12 +132,12 @@ export function createPlanetKindModule(): PlanetKindModule {
         kindCtx.maxTextureSize,
         webgpu ? (placeholder) => webgpu.solarSystemMaterials(placeholder) : undefined,
       );
-      // The GLSL main-pass glare still hangs off this group on a WebGPU
-      // boot; the shell's scene simply never renders, and the TSL billboard
-      // below draws in its place — its local-pass mirror joins the field's
-      // localGroup, which DOES render there (the local depth pass).
-      kindCtx.scene.add(field.group);
-      glare = webgpu?.attachPlanetGlare(field.glareSources(), field.localGroup) ?? null;
+      // The group carries the GLSL main-pass glare, which the TSL billboard
+      // below draws in place of — so on a WebGPU boot it stays unparented,
+      // while its local-pass mirror still joins the field's localGroup.
+      if (webgpu === null) kindCtx.scene.add(field.group);
+      glare = webgpu?.attachPlanetGlare(
+        kindCtx.scene, field.glareSources(), field.localGroup) ?? null;
 
       // Horizons element tables — 1.5 MB that upgrades the ephemeris from
       // the Standish series' 0.06 AU to ~5e-6 AU across 1900–2100. Fired

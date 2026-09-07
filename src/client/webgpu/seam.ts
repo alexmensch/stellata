@@ -63,9 +63,6 @@ export interface WebGpuHdrSeam extends HdrSeam {
 
 export interface WebGpuSeam {
   readonly renderer: WebGPURenderer;
-  /** Rendered in place of the shell's scene on a WebGPU boot — empty
-   *  until port children add their TSL layers to it. */
-  readonly scene: THREE.Scene;
   /** The boot probe's verdict on whether timestamp queries survive
    *  validation, NOT the adapter's grant — Safari 26 grants the feature and
    *  then refuses the query set. Every GPU-timing consumer must ask here,
@@ -83,10 +80,13 @@ export interface WebGpuSeam {
    *  called from animate() before the render (tsl/README.md § Shared
    *  uniform nodes). */
   syncUniformNodes(): void;
-  /** Build the TSL star layer into the seam's scene. Requires
+  /** Build the TSL star layer into the shell's scene. Requires
    *  bindSharedUniforms to have run — the materials take their slots
    *  from the uniform-node mirror. */
-  attachStarLayer(sources: StarGeometrySources): WebGpuStarLayer;
+  attachStarLayer(
+    scene: THREE.Scene,
+    sources: StarGeometrySources,
+  ): WebGpuStarLayer;
   /** Bind (or release) the dust volume for every TSL consumer that samples
    *  it. One node, shared by object identity between the star vertex
    *  stage's fallback march and the extinction prepass, so the shell's
@@ -142,7 +142,7 @@ export interface WebGpuSeam {
    *  slots the two components share by reference are built per factory, so
    *  two reads would give two independent dust models. */
   readonly bandMaterials: BandMaterials;
-  /** Build the TSL reflected-glare billboard into the seam's scene. The
+  /** Build the TSL reflected-glare billboard into the shell's scene. The
    *  one solar-system surface that does not port as a material swap: its
    *  13 per-instance attributes exceed WebGPU's 8 vertex buffers, so it
    *  carries its own packed geometry over the field's live arrays.
@@ -150,6 +150,7 @@ export interface WebGpuSeam {
    *  `localGroup`, which the solar-system cluster parents into the pass
    *  scene. */
   attachPlanetGlare(
+    scene: THREE.Scene,
     sources: PlanetGlareSources,
     mirrorParent: THREE.Object3D,
   ): WebGpuPlanetGlare;

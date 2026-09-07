@@ -2,10 +2,11 @@
 
 The TSL half of the solar-system shader family: the spheroid mesh, its
 ring annulus and atmosphere shell, the reflected-glare billboard, the
-probe glyph, and the single-scattering integrator two of them share. The
-WebGL2 shaders (`../../solar-system/`) stay the shipped renderer and the
-semantic reference; parity is the A/B smoke, same `/v/<blob>/` with and
-without the `#renderer=webgpu` fragment.
+probe glyph, and the single-scattering integrator two of them share.
+**These are the shipped surfaces.** The WebGL2 shaders
+(`../../solar-system/`) stay the semantic reference until `0it.14`
+deletes them; parity is the A/B smoke, same `/v/<blob>/` with and without the
+`#renderer=webgl2` fragment.
 
 **Four of the five port as a material swap, not a layer.** The CPU
 layers keep every line they had and take their surfaces through
@@ -33,7 +34,7 @@ src/client/webgpu/solar-system/
   planet-glare-geometry.ts    Its packed instanced geometry (§ The glare
                               packs).
   planet-glare-layer.ts       PlanetGlareLayer: the main mesh into the
-    (+ test)                  seam's scene, the mirror into the field's
+    (+ test)                  the scene, the mirror into the field's
                               localGroup (the pass scene), the per-frame
                               re-pack, the chart blend swap, dispose.
   planet-glare-uniforms.ts    The four slots PlanetBodyField owns rather

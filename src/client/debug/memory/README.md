@@ -200,10 +200,10 @@ graphs and three's own counters, so it runs on either backend — but three
 things change the comparison and all three must be stated when quoting a
 before/after:
 
-- **A dual boot draws the seam's scene**, which is why `sceneGraphs` is
-  plural and the walk visits every entry. Rows carry a `shell:` or
-  `webgpu:` prefix once there is more than one scene, so a total can be
-  split by backend.
+- **`sceneGraphs` is a list**, and the walk visits every entry. One
+  scene is what a boot draws today (`../../webgpu/README.md` § One scene
+  per boot); rows carry the entry's name as a prefix once there is more
+  than one, so a total can be split.
 - **A TSL material binds its textures through nodes, not through
   `uniforms`.** `eachTexture` finds a `THREE.Texture` on a material
   property or a uniform slot; a `NodeMaterial` holds neither, so the walk

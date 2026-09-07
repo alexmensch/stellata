@@ -88,7 +88,11 @@ export const STAR_QUAD_CORNERS = new Float32Array([-0.5, -0.5, 0.5, -0.5, -0.5, 
 export const STAR_QUAD_INDEX = [0, 1, 2, 1, 3, 2];
 
 export interface StarPipelineOptions {
-  scene: THREE.Scene;
+  /** Null where the TSL star layer draws these instances instead: the
+   *  geometry and its attributes are still the live source buffers that
+   *  layer watches, so the pipeline constructs on either backend and only
+   *  its meshes stay unparented. */
+  scene: THREE.Scene | null;
   catalog: Catalog;
   /** Per-star log10(physicalRadius_solar). Decoded shader-side via
    *  `pow(10, iLogRadius)` and multiplied by `uRSunPc` to recover parsecs. */
@@ -176,7 +180,7 @@ export class StarPipeline {
   readonly glowMesh: THREE.Mesh;
   readonly coreMaskMesh: THREE.Mesh;
 
-  private scene: THREE.Scene;
+  private scene: THREE.Scene | null;
 
   constructor(opts: StarPipelineOptions) {
     const {
@@ -277,19 +281,19 @@ export class StarPipeline {
     this.coreMaskMesh.frustumCulled = false;
     this.coreMaskMesh.renderOrder = -4;
     this.coreMaskMesh.visible = false;
-    scene.add(this.coreMaskMesh);
+    scene?.add(this.coreMaskMesh);
 
     this.discMesh = new THREE.Mesh(this.geometry, this.discMaterial);
     this.discMesh.frustumCulled = false;
     this.discMesh.renderOrder = 0;
     markStatisticEmitter(this.discMesh);
-    scene.add(this.discMesh);
+    scene?.add(this.discMesh);
 
     this.glowMesh = new THREE.Mesh(this.geometry, this.glowMaterial);
     this.glowMesh.frustumCulled = false;
     this.glowMesh.renderOrder = 1;
     markStatisticEmitter(this.glowMesh);
-    scene.add(this.glowMesh);
+    scene?.add(this.glowMesh);
   }
 
   /** Swap disc + glow blend state for chart mode, over the shared pair
@@ -302,9 +306,9 @@ export class StarPipeline {
   }
 
   dispose() {
-    this.scene.remove(this.coreMaskMesh);
-    this.scene.remove(this.discMesh);
-    this.scene.remove(this.glowMesh);
+    this.scene?.remove(this.coreMaskMesh);
+    this.scene?.remove(this.discMesh);
+    this.scene?.remove(this.glowMesh);
     // One shared InstancedBufferGeometry feeds the disc, glow, and
     // core-mask passes, so it's disposed once. Each pass has its own
     // ShaderMaterial.

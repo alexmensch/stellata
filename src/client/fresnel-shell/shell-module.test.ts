@@ -111,11 +111,11 @@ describe('shell kind module', () => {
     expect(card.format(1).name).toBe('Heliopause');
   });
 
-  // A ported layer has to move scenes and NOTHING warns if it does not:
-  // a shell built into the shell's scene renders on WebGL and silently
-  // nowhere on WebGPU (`../webgpu/README.md` § What the flag boots
-  // today). This is the only guard on that.
-  it('builds both shells into whichever scene the boot renders', async () => {
+  // One scene per boot, and NOTHING warns about a layer parented
+  // elsewhere — it renders nowhere while every CPU mirror believes it
+  // draws (`../webgpu/README.md` § One scene per boot). This is the only
+  // guard on that.
+  it('builds both shells into the context scene on either backend', async () => {
     stubFetch(true);
 
     const webgl = createShellKindModule();
@@ -124,17 +124,12 @@ describe('shell kind module', () => {
     webgl.attach(glCtx);
     expect(glCtx.scene.children).toHaveLength(2);
 
-    const seamScene = new THREE.Scene();
-    const seam = {
-      scene: seamScene,
-      shellMaterials: makeGlslShellMaterials(),
-    } as unknown as WebGpuSeam;
+    const seam = { shellMaterials: makeGlslShellMaterials() } as unknown as WebGpuSeam;
     const webgpu = createShellKindModule();
     await webgpu.load('/');
     const gpuCtx = makeCtx({ webgpu: seam });
     webgpu.attach(gpuCtx);
-    expect(seamScene.children).toHaveLength(2);
-    expect(gpuCtx.scene.children).toHaveLength(0);
+    expect(gpuCtx.scene.children).toHaveLength(2);
   });
 
   it('picks the drawn silhouette once the declutter push permits it', async () => {

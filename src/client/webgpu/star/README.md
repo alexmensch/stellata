@@ -1,17 +1,17 @@
 # Star layer on WebGPU
 
-The TSL star pipeline behind `#renderer=webgpu`, constructed through
-`WebGpuSeam.attachStarLayer` (never imported from `stellata.ts` — the
-import boundary in `../README.md`). It carries the three depth-honest
+**The shipped star pipeline**, constructed through
+`WebGpuSeam.attachStarLayer` over the shell's scene (never imported from
+`stellata.ts` — the import boundary in `../README.md`). It carries the three depth-honest
 pipelines of `../README.md` § Early-z: D2 glow (no depth output), D3
 core mask (depth-only, member stamp in the vertex stage), and D4 disc
 (colour only, no depth output either — § The disc draw writes no
 depth) — plus their local-depth-pass mirror variants (§ The local
 mirror). No pipeline here writes fragment depth, and the draw count
-matches the WebGL2 stack one for one, mirror draws included. The WebGL2 pipeline
-(`../../star-pipeline/`) stays the shipped renderer and the semantic
-reference; parity is verified by the A/B smoke, same `/v/<blob>/` with
-and without the fragment.
+matches the WebGL2 stack one for one, mirror draws included. That stack
+(`../../star-pipeline/`) stays the semantic reference until `0it.14`
+deletes it; parity is verified by the A/B smoke, same `/v/<blob>/` with
+and without the `#renderer=webgl2` fragment.
 
 ## Files in this area
 
@@ -44,7 +44,7 @@ src/client/webgpu/star/
                                select, the MRT output struct +
                                single↔struct mode swap (../hdr/README.md).
   star-layer.ts (+ test)       StarLayer: geometry + the three meshes into
-                               the seam's scene, the local mirror, the
+                               the scene, the local mirror, the
                                per-frame dynamic re-pack, the shell's
                                core-mask gate, the chart blend swap,
                                dispose.

@@ -2,7 +2,7 @@
 // and the seam handle. Loaded via import() from main.ts — the module (and
 // three/webgpu with it) never reaches the WebGL2 bundle.
 
-import { LinearSRGBColorSpace, Scene, WebGPURenderer } from 'three/webgpu';
+import { LinearSRGBColorSpace, WebGPURenderer } from 'three/webgpu';
 import type * as THREE from 'three';
 import type { SharedUniforms } from '../frame/shared-uniforms';
 import type {
@@ -78,7 +78,6 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // into every frame (README.md § Output colour space).
   renderer.outputColorSpace = LinearSRGBColorSpace;
   let registry: SharedUniformNodeRegistry | null = null;
-  const scene = new Scene();
   const hdr = new WebGpuHdrPipeline(renderer);
   // One pair of texture slots for the whole boot: the star vertex stage's
   // fallback march and the prepass march sample the SAME dust node, so
@@ -97,7 +96,6 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   let bandMaterialsCache: BandMaterials | null = null;
   return {
     renderer,
-    scene,
     hdr,
     timestampsAvailable: timestampsLive,
     get uniformNodes() { return registry?.nodes ?? null; },
@@ -149,7 +147,11 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
       });
       return bandMaterialsCache;
     },
-    attachPlanetGlare(sources: PlanetGlareSources, mirrorParent: THREE.Object3D) {
+    attachPlanetGlare(
+      scene: THREE.Scene,
+      sources: PlanetGlareSources,
+      mirrorParent: THREE.Object3D,
+    ) {
       const layer = new PlanetGlareLayer(
         scene, nodesOrThrow('attachPlanetGlare'), sources, hdr.gates, mirrorParent);
       const unregister = hdr.registerMrtLayer(layer);
@@ -162,7 +164,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
         },
       };
     },
-    attachStarLayer(sources: StarGeometrySources) {
+    attachStarLayer(scene: THREE.Scene, sources: StarGeometrySources) {
       const layer = new StarLayer(
         scene, nodesOrThrow('attachStarLayer'), sources, hdr.gates, extinctionTextures);
       // Registration is what keeps the layer's output count in lockstep
