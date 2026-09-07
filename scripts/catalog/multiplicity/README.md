@@ -209,9 +209,9 @@ geometric pass still runs and chart mode still works, just with the
 
 ## System distance coherence
 
-`system-coherence.ts` (`applySystemDistanceCoherence`) runs after the
-HD identifier backfill and **before companion promotion**, over the
-kept-physical pair rows of `multiples.tsv`. Two members of a bound WDS
+`system-coherence.ts` (`applySystemDistanceCoherence`) runs **before
+companion promotion**, over the kept-physical pair rows of
+`multiples.tsv`. Two members of a bound WDS
 system carry independently-measured catalog distances whose noise
 scatter (a fraction of a parsec at ~50 pc) dwarfs the pair's true
 physical size (hundreds of AU), so without this pass the pair renders

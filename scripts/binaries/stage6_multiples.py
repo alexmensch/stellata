@@ -267,10 +267,6 @@ class MultiplesRow:
     # wds_mag absmag path reads them; standalone rows leave both empty.
     mag_pri: float | None = None
     mag_sec: float | None = None
-    # HD number from the component's AT-HYG row. The join key for
-    # catalog-side identifier backfill on HD-only AT-HYG systems
-    # (ξ UMa = HD 98231 carries neither hip nor gaia in AT-HYG, so HD
-    # is the only non-position key that can match the catalog record).
     hd: int | None = None
 
 

@@ -133,11 +133,11 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // The 564 → 563 step is the ORB6 slice widening + HIP-xwalk magnitude
 // gate: a corrected period/binding brings one pair's R(epoch) back into
 // agreement with its baked placement.
-// The 563 → 566 step is the HD-keyed identifier backfill: three HD-only
-// AT-HYG primaries (ξ UMa, ξ Sco, HD 75632) became addressable, so their
-// long-period ORB6 visual pairs render for the first time and enter the
+// The 563 → 566 step is three HD-only primaries (ξ UMa, ξ Sco, HD 75632)
+// becoming addressable on the HIP and Gaia ids their pair rows resolved, so
+// their long-period ORB6 visual pairs render for the first time and enter the
 // sweep with athyg-print baked placements — new coverage, not placement
-// regressions.
+// regressions. The manifest states those ids at walk time now.
 // The 566 → 1498 step is the blank-components rescue tier: ~1.7k
 // previously-dropped WDS pairs (Antares and other studied binaries with
 // an ORB6 orbit or SIMBAD xid) now decompose, and their WDS static

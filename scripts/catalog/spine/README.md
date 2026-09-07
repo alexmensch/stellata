@@ -100,9 +100,10 @@ would fill. The manifest carries every binding forward and leaves the 233
 empty (`docs/catalog-driver.md` § 3.1).
 
 **Four rows carry identifiers the frozen build resolved *after* its walk**:
-the three `multiples.tsv` HD-only primaries `backfillPrimaryIdentifiers`
-wrote (ξ UMa / HD 98231, ξ Sco / HD 144069, HD 75632), plus ξ UMa B's
-source_id, written by companion promotion's collocated-double merge. Feeding
+the three `multiples.tsv` HD-only primaries it stamped from their
+pair-primary rows (ξ UMa / HD 98231, ξ Sco / HD 144069, HD 75632), plus
+ξ UMa B's source_id, written by companion promotion's collocated-double
+merge. Feeding
 them into the walk is what makes each record's designation set — and so its
 SID — identical by construction. It also routes those four records
 differently from the build the spine snapshots, and **every count the swap
@@ -110,10 +111,9 @@ moved that is not a retired gate traces to these four**:
 
 | Count | Δ | Which of the four, and why |
 |---|---|---|
-| `spectralBySimbad` / `spectralFallback` | +4 / −4 | all four: a source_id at walk time resolves SIMBAD sp_type in the walk instead of via the backfill's reclassify callback |
+| `spectralBySimbad` / `spectralFallback` | +4 / −4 | all four: a source_id at walk time resolves SIMBAD sp_type in the walk instead of in a re-classification after it |
 | `ciSpectralDerived` (now `ciVia.spectral_derived`) | +2 | ξ Sco and ξ UMa B — the two with an empty printed `ci` and no Apsis Teff, so the now-parseable class supplied the colour where classIdx=8 had fallen through to solar. **At the swap only:** `stellata-3bsf.12` put a Gaia relation above that tier and the same pull reached these sources, so both now route `ciVia.gaia_relation` and neither is in the 279 (`../photometry/README.md` § The ci cascade) |
 | `vPrintedHip` / `vCatalogued` | +3 / −3 | the three primaries: a HIP reaches the V cascade's printed tier |
-| `multiplesIdentifierBackfill` | 3 → 0 | the three primaries: the pass finds its work already done |
 | `companionAlreadyInCatalog` | +1 | ξ UMa B: its record now carries the source_id, so `findExisting` hits and the pair row returns early |
 | `companionRepositionedCollocatedDouble` | 1 → 0 | ξ UMa B: that early return precedes the collocated-double merge, which is what used to write the source_id |
 | `companionAbsmagWdsMagDerived` | −1 | ξ UMa B: the early return also precedes `imputeCompanionAbsmag` |

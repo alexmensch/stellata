@@ -81,7 +81,6 @@ describe('parseMultiplesTsv', () => {
     expect(r.comp).toBe('A');
     expect(r.hip).toBe(12345);
     expect(r.gaiaSourceId).toBe('1234567890123456');
-    expect(r.hd).toBe(48915);
     expect(r.x_pc).toBe(1.0);
     expect(r.absmag).toBe(5.5);
     expect(r.spect).toBe('G2V');

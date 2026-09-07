@@ -21,11 +21,10 @@ counted metrics.
 
 ```
 scripts/catalog/companions/
-  companion-promotion.ts          promoteCompanions +
-    (+ test)                      backfillPrimaryIdentifiers. Runs
-                                  before the absmag sort so promoted records
-                                  take the same final indexing as
-                                  everything else. Names `MULTIPLES_TSV`.
+  companion-promotion.ts          promoteCompanions. Runs before the absmag
+    (+ test)                      sort so promoted records take the same
+                                  final indexing as everything else. Names
+                                  `MULTIPLES_TSV`.
   multiples-fixture.ts            Default-valued MultiplesTsvRow factory.
                                   A module, NOT an export from
                                   companion-promotion.test.ts: importing one
@@ -56,7 +55,8 @@ and never reach the anchor's record.
 `companion-promotion.ts` runs BEFORE the absmag sort. It reads the
 binaries pipeline output and adds first-class catalog records for
 the secondary of every physical pair whose identifier isn't already
-in AT-HYG. ~16.4k companions promoted into the current build
+a record the membership manifest admitted. ~16.4k companions promoted
+into the current build
 (Sirius B, Achird B, Porrima B, Fomalhaut C, Algol Ab, …) — about
 a third via real Gaia/HIP keys, two-thirds via synthetic identifiers
 (see the identifier gate below).

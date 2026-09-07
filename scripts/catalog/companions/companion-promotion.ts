@@ -56,8 +56,6 @@ export interface MultiplesTsvRow {
   comp: string;
   hip: number | null;
   gaiaSourceId: string | null;
-  /** HD number (the row's own, ORB6 fallback for pair primaries). */
-  hd: number | null;
   x_pc: number | null;
   y_pc: number | null;
   z_pc: number | null;
@@ -190,7 +188,6 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
     comp: col('comp'),
     hip: col('hip'),
     gaiaSourceId: col('gaia_source_id'),
-    hd: col('hd'),
     x_pc: col('x_pc'),
     y_pc: col('y_pc'),
     z_pc: col('z_pc'),
@@ -232,7 +229,6 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
       comp: cells[idx.comp],
       hip: parseIntOrNull(cells[idx.hip]),
       gaiaSourceId: parseGaiaSourceIdStr(cells[idx.gaiaSourceId]),
-      hd: parseIntOrNull(cells[idx.hd]),
       x_pc: parseFloatOrNull(cells[idx.x_pc]),
       y_pc: parseFloatOrNull(cells[idx.y_pc]),
       z_pc: parseFloatOrNull(cells[idx.z_pc]),

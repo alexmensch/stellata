@@ -23,7 +23,7 @@ function pairRow(
   overrides: Partial<MultiplesTsvRow> & { systemId: string; comp: string },
 ): MultiplesTsvRow {
   return {
-    hip: null, gaiaSourceId: null, hd: null,
+    hip: null, gaiaSourceId: null,
     x_pc: null, y_pc: null, z_pc: null, absmag: null, ci: null,
     spect: '', name: '', source: 'athyg',
     astrometryVia: 'gaia_5p', spectVia: 'none', photometryVia: 'none',
