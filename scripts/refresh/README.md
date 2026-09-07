@@ -105,7 +105,8 @@ per-table schema validation and row bounds — source detail in
 
 ### Request sets are membership-derived
 
-**No refresh script reads AT-HYG's own CSV** (`data/athyg/athyg_33_classic_ids.csv`).
+**No refresh script reads `data/athyg/`** — neither AT-HYG's own CSV
+(`athyg_33_classic_ids.csv`) nor the inherited spine.
 Every catalog-scoped request set
 traces to `data/membership/membership-manifest.tsv` — the membership term
 (`docs/catalog-driver.md` § 3.1) — by one of two routes: directly, through
@@ -117,9 +118,6 @@ traces to `data/membership/membership-manifest.tsv` — the membership term
 lives; a script naming the path itself has drifted from it.
 `data/simbad/README.md` § Request sets come off the membership term carries
 the measured drop/gain of the SIMBAD rebase.
-
-**One exception, tracked:** `refresh-simbad-values.py` still reads the spine
-for its cohort predicate.
 
 The manifest's `gaia_source_id` is the binding the manifest **justified**, its
 `binding` cell saying on what basis, so a request derived from it and the

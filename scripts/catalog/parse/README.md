@@ -132,9 +132,11 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
    selects the tier's solution. See `../distance/README.md` § Direction
    resolution. Every solution propagates rather than shipping its source's own
    epoch, so a row no tier reaches resolves to null and **parks** as
-   `no_position`: a distance with no direction has nothing to multiply. Mostly
-   HIP-only additions a bound sibling's parallax placed and printed HIP
-   photometry lit, which no positional tier covers.
+   `no_position`: a distance with no direction has nothing to multiply. **One
+   row**, HIP 88759 — a HIP-only addition a bound sibling's parallax placed and
+   printed HIP photometry lit, for which SIMBAD resolves no object at all, so
+   the coordinate tier has nothing to serve it either. Every other row of that
+   shape reaches SIMBAD coordinates (`data/simbad/README.md` § The values pull).
 3. **Proper-motion rescue** (`resolvePmRescue`), where the direction tier
    states a position but no motion. See § Space-motion velocity.
 4. **Distance overrides**, in order, each superseding the last on the rows it
