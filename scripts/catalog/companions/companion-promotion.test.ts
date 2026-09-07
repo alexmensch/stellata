@@ -10,6 +10,7 @@ import {
   imputeCompanionAbsmag,
   imputeCompanionCi,
   isDisjointSingleLetter,
+  isMoreCanonicalAnchor,
   parentComponentToken,
   parseMultiplesTsv,
   projectFromSepPa,
@@ -403,6 +404,65 @@ describe('imputeCompanionAbsmag wds_mag tier', () => {
   });
 });
 
+describe('a pair whose two ends resolve to one record', () => {
+  // p Eri's `01398-5612`: the A row carries B's HD, HIP and Gaia cells, so the
+  // cursor anchors on the B record and the B row's ids then strip as inherited.
+  // That is the Sirius-B shape by identifiers alone, and the only thing that
+  // separates them is the authority's component attribution — it already
+  // letters the anchor record B, so there is no second star to mint.
+  const selfPairRows = () => [
+    multiplesRow({
+      systemId: '01398-5612-AB', comp: 'A', hip: 7751,
+      gaiaSourceId: '4911306239828325760', hd: 10361,
+      x_pc: 8, y_pc: 0, z_pc: 0, distPc: 8, absmag: 6.232, spect: 'K1',
+      source: 'athyg', photometryVia: 'athyg_own', orbitRole: 'primary',
+      sepArcsec: 11.3, paDeg: 185.0, dmag: 0.12,
+    }),
+    multiplesRow({
+      systemId: '01398-5612-AB', comp: 'B', hip: 7751,
+      gaiaSourceId: '4911306239828325760', hd: 10361,
+      x_pc: 8, y_pc: 0, z_pc: 0, distPc: 8, absmag: 6.232, spect: 'K1',
+      photometryVia: 'athyg_system_inherited', orbitRole: 'secondary',
+      sepArcsec: 11.3, paDeg: 185.0, dmag: 0.12,
+    }),
+  ];
+
+  const pEriB = (overrides: Partial<Star> = {}) => makeStar({
+    hip: 7751, gaiaSourceId: '4911306239828325760', hd: 10361, hr: 487,
+    bayer: 'p', bayerComponent: 'B', absmag: 6.308, x: 8, y: 0, z: 0,
+    ...overrides,
+  });
+
+  it('mints nothing when the authority letters the anchor as this component', () => {
+    const anchor = pEriB();
+    const { newStars, stats } = promoteCompanions(
+      selfPairRows(), [anchor], CON_ASSIGNMENT,
+    );
+    expect(stats.anchorIsComponent).toBe(1);
+    expect(newStars).toHaveLength(0);
+  });
+
+  it('still mints the Sirius-B shape, where the anchor is a different component', () => {
+    // Same identifiers on both rows — what makes Sirius B a real star is that
+    // the authority attributes the anchor's designation to A, not to B.
+    const anchor = pEriB({ bayerComponent: 'A' });
+    const { newStars, stats } = promoteCompanions(
+      selfPairRows(), [anchor], CON_ASSIGNMENT,
+    );
+    expect(stats.anchorIsComponent).toBe(0);
+    expect(newStars).toHaveLength(1);
+  });
+
+  it('still mints where the authority attributes no component at all', () => {
+    const anchor = pEriB({ bayerComponent: null });
+    const { newStars, stats } = promoteCompanions(
+      selfPairRows(), [anchor], CON_ASSIGNMENT,
+    );
+    expect(stats.anchorIsComponent).toBe(0);
+    expect(newStars).toHaveLength(1);
+  });
+});
+
 describe('anchor flux dimming', () => {
   // A structural member only bypasses the subset fit when the anchor's V is the
   // system blend, so every fixture below that exercises the bypass pins the
@@ -465,13 +525,28 @@ describe('anchor flux dimming', () => {
     expect(anchor.absmag).toBe(1.0);
   });
 
-  it('does not dim when the member keeps its own distinct identifier', () => {
+  it('dims under a printed tier even where the member kept its own Gaia source', () => {
+    // A printed tier publishes one magnitude per catalogue ENTRY, so a member
+    // sharing the entry's HIP is inside it and Gaia resolving the component
+    // afterwards does not take its light back out. Identity decides membership
+    // only at the tier that resolves per source — a gaia_riello anchor, where
+    // an own source_id is `blendDimGaiaResolved`.
     const anchor = blendAnchor();
     const rows = dimRows(2.0);
-    rows[1].gaiaSourceId = '999900001111';  // own gaia — light not in the AT-HYG blend claim
+    rows[1].gaiaSourceId = '999900001111';
+    const { newStars, stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(anchor.absmag).toBeCloseTo(1.15973, 4);
+    expect(newStars[0].absmag).toBeCloseTo(3.15973, 4);
+  });
+
+  it('holds an own-Gaia member out of a gaia_riello anchor, where the tier resolves per source', () => {
+    const anchor = blendAnchor({ vVia: 'gaia_riello' });
+    const rows = dimRows(2.0);
+    rows[1].gaiaSourceId = '999900001111';
     const { stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    expect(stats.blendDimGaiaResolved).toBe(1);
     expect(stats.blendDimmedAnchors).toBe(0);
-    expect(stats.blendDimMembersOutside).toBe(1);
     expect(anchor.absmag).toBe(1.0);
   });
 
@@ -2700,6 +2775,29 @@ describe('canonicalCompLetter', () => {
 
   it('passes through for single-character primary (no stem to extract)', () => {
     expect(canonicalCompLetter('A', '2')).toBe('2');
+  });
+});
+
+describe('isMoreCanonicalAnchor', () => {
+  it('ranks the A branch above every other branch, at any depth', () => {
+    // 15 Mon (06410+0954): its only A-branch cursor is Aa,Ab, and the root
+    // also carries EP, FG, FO, GO, JI, MN. Ranking by length anchored it on E.
+    expect(isMoreCanonicalAnchor('Aa', 'E')).toBe(true);
+    expect(isMoreCanonicalAnchor('E', 'Aa')).toBe(false);
+    expect(isMoreCanonicalAnchor('Aa1', 'B')).toBe(true);
+  });
+
+  it('ranks by depth then alphabetically inside one branch', () => {
+    expect(isMoreCanonicalAnchor('A', 'Aa')).toBe(true);
+    expect(isMoreCanonicalAnchor('Aa', 'Ab')).toBe(true);
+    expect(isMoreCanonicalAnchor('Ab', 'Aa')).toBe(false);
+    expect(isMoreCanonicalAnchor('A', 'A')).toBe(false);
+  });
+
+  it('is the predicate the naming anchor uses', () => {
+    // record-index/ imports this one rather than keeping a twin: both want
+    // the branch the root is named for.
+    expect(isMoreCanonicalAnchor('B', 'C')).toBe(true);
   });
 });
 

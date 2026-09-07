@@ -355,8 +355,10 @@ ways —
   check reading the designation constellation off the cell.
 
 Those two plus CM Ind (named for Indus, positionally in Pavo) are the GCVS
-share of the **65** entries `designationConMismatch` pins; the rest come from
-IV/27A.
+share of the entries `designationConMismatch` pins; the rest come from IV/27A.
+The count itself lives in `../README.md` § Search index — it moves with the
+record set, so restating it here only goes stale (this line read 65 against a
+pinned 68).
 
 ## Stick figures from Stellarium
 

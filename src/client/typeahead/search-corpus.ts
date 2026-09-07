@@ -164,12 +164,13 @@ export function buildSearchIndex(
   raw: SearchEntry[],
   constellations: { code: string; name: string }[],
 ): SearchIndex {
-  const hipMap = new Map<number, number>();
-  // HD and HR are the two identifiers a record can answer to under more than
-  // one number, so they carry a precedence rule the other maps do not need.
+  const hipMap = buildAliasedIdIndex(raw, (e) => e.hip);
   const hdMap = buildAliasedIdIndex(raw, (e) => e.hd, (e) => e.hda);
   const hrMap = buildAliasedIdIndex(raw, (e) => e.hr, (e) => e.hra);
-  const glMap = new Map<string, number>();
+  const glMap = buildAliasedIdIndex(
+    raw,
+    (e) => (e.gl !== undefined ? normalizeGlKey(e.gl) || undefined : undefined),
+  );
   const flamMap = new Map<string, FuzzyEntry[]>();
   const fuzzyEntries: FuzzyEntry[] = [];
 
@@ -191,12 +192,6 @@ export function buildSearchIndex(
   };
 
   for (const entry of raw) {
-    if (entry.hip !== undefined) hipMap.set(entry.hip, entry.i);
-    if (entry.gl !== undefined) {
-      const norm = normalizeGlKey(entry.gl);
-      if (norm) glMap.set(norm, entry.i);
-    }
-
     // Every alias below is a DESIGNATION, so it is built against the
     // designation's constellation; `displayCon` is the dropdown's context
     // line and stays positional. The two differ only where a boundary has

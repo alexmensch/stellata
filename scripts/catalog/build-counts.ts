@@ -257,6 +257,12 @@ export interface BuildCounts {
    *  proxy — so collocating on the anchor would render a false
    *  coincident star (Alsephina C). */
   companionDroppedCollocatedPrimary: number;
+  /** Pair rows whose ids resolved onto the anchor record while the naming
+   *  authority already letters that record as the row's own component: the
+   *  pair's two ends are one star, so minting would bake a twin and the
+   *  pair's orbit would animate a star against its own copy. Ratchets down —
+   *  each is a mis-keyed multiples.tsv row upstream. */
+  companionAnchorIsComponent: number;
   /** Pair rows refused because the record they name is parked with no owned
    *  parallax — promoting would re-serve the measurement the cascade
    *  refused. */
@@ -366,6 +372,7 @@ export interface BuildCounts {
   namingTierEponym: number;
   namingTierBayer: number;
   namingTierFlamsteed: number;
+  namingTierBayerLatin: number;
   namingTierGould: number;
   namingTierGcvs: number;
   namingTierCatalogue: number;

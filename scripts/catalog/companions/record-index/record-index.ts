@@ -9,6 +9,7 @@ import {
   canonicalCompLetter,
   composeSyntheticId,
   groupBySystem,
+  isMoreCanonicalAnchor,
   parentComponentToken,
   wdsRootOf,
   type MultiplesTsvRow,
@@ -287,32 +288,6 @@ export interface ComponentDesignation {
   primaryIdx: number;
 }
 
-/** Which of two pair primaries sharing a WDS root NAMES the system: the
- *  top-level letter decides, then depth. Comparing whole comps by length
- *  would put "Aa" below every single-letter branch, and 15 Mon's root
- *  (`06410+0954`, whose only A-branch cursor is Aa,Ab) would name itself
- *  after its E component — every letter in it composing against HD 261938
- *  rather than 15 Mon. A deeper cursor inside the A branch is still the A
- *  branch.
- *
- *  Deliberately not promotion's own anchor pick, which chooses the record a
- *  companion inherits its POSITION from: that choice decides where records
- *  land, so the two questions keep their own rules. */
-function isMoreCanonicalNamingAnchor(
-  candidateComp: string,
-  incumbentComp: string,
-): boolean {
-  if (candidateComp === incumbentComp) return false;
-  const branch = (comp: string) => comp.charAt(0);
-  if (branch(candidateComp) !== branch(incumbentComp)) {
-    return branch(candidateComp) < branch(incumbentComp);
-  }
-  if (candidateComp.length !== incumbentComp.length) {
-    return candidateComp.length < incumbentComp.length;
-  }
-  return candidateComp < incumbentComp;
-}
-
 /** A component letter is stated relative to the WDS ROOT, so the base it
  *  attaches to has to be the root's, not the cursor primary's. WDS lists
  *  θ¹ Ori C as component D of the θ² Ori root (`05354-0525`), and taking
@@ -349,7 +324,7 @@ export function buildComponentDesignations(
     resolved.push({ root, pair });
     const comp = pair.components[0].comp;
     const incumbent = anchors.get(root);
-    if (!incumbent || isMoreCanonicalNamingAnchor(comp, incumbent.comp)) {
+    if (!incumbent || isMoreCanonicalAnchor(comp, incumbent.comp)) {
       anchors.set(root, { comp, idx: pair.primaryIdx });
     }
   }
