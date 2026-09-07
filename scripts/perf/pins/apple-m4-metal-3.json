@@ -227,16 +227,16 @@
   ],
   "accepted": {
     "sol|webgpu": {
-      "bead": "stellata-0it.13"
+      "bead": "stellata-3bsf.8.7"
     },
     "earth|webgpu": {
-      "bead": "stellata-0it.13"
+      "bead": "stellata-3bsf.8.7"
     },
     "mw50|webgpu": {
-      "bead": "stellata-0it.13"
+      "bead": "stellata-3bsf.8.7"
     },
     "mw120|webgpu": {
-      "bead": "stellata-0it.13"
+      "bead": "stellata-3bsf.8.7"
     }
   }
 }
