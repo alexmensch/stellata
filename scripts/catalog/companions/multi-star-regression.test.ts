@@ -133,11 +133,11 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // The 564 → 563 step is the ORB6 slice widening + HIP-xwalk magnitude
 // gate: a corrected period/binding brings one pair's R(epoch) back into
 // agreement with its baked placement.
-// The 563 → 566 step is the HD-keyed identifier backfill: three HD-only
-// AT-HYG primaries (ξ UMa, ξ Sco, HD 75632) became addressable, so their
-// long-period ORB6 visual pairs render for the first time and enter the
+// The 563 → 566 step is three HD-only primaries (ξ UMa, ξ Sco, HD 75632)
+// becoming addressable on the HIP and Gaia ids their pair rows resolved, so
+// their long-period ORB6 visual pairs render for the first time and enter the
 // sweep with athyg-print baked placements — new coverage, not placement
-// regressions.
+// regressions. The manifest states those ids at walk time now.
 // The 566 → 1498 step is the blank-components rescue tier: ~1.7k
 // previously-dropped WDS pairs (Antares and other studied binaries with
 // an ORB6 orbit or SIMBAD xid) now decompose, and their WDS static
@@ -165,7 +165,14 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // 1485 → 1465: the parked-record promotion refusal. 55 fewer pairs are
 // emitted at all, because a component whose primary reaches no owned
 // parallax no longer mints a record for the pair to resolve against.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1464;
+// 1465 → 1464: the branch-first WDS root anchor, which re-homes a pair onto
+// the branch its authority letters rather than the root's first member.
+// 1464 → 1463: the manifest-scoped SIMBAD value cohort, on the same terms as
+// the 55 above — one more primary reaches a parallax whose inversion the S/N
+// floor refuses, so its pair stops being emitted at all. The two steps are
+// independent and neither subsumes the other, which is why the count is 1463
+// and not the 1464 either change reaches alone.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1463;
 
 // ---- Corpus row types ----------------------------------------------------
 

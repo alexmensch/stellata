@@ -111,6 +111,21 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
                          ledger.tsv is an LFS pointer stub (the bare CI
                          test job); runs for real in the sid-ledger-guard
                          job and locally.
+star-count-consistency.test.ts
+                         The catalogue's own size, stated once. Rounds the
+                         BUILT header to `PROSE_ROUNDED` (artifact-backed,
+                         so it self-skips unbuilt), scans the corpus for
+                         the superseded figure `MYTHOS` names — digit
+                         separators included, which is how an
+                         underscore-separated literal in a dust-cost
+                         script outlived two count changes — and holds
+                         every size figure on the four user-facing prose
+                         surfaces to that one rounding, `public/llms.txt`
+                         among them since `public/` is gitignored and no
+                         directory root reaches it. The AT-HYG spine's own
+                         row count is a different quantity and stays.
+                         **This entry may not quote either figure: the
+                         scan reads it.**
 three-version-audit.test.ts
                          Tripwire pinning the three version the runtime
                          audit below was last run against. Fails on any
@@ -253,7 +268,7 @@ Work every line, then record the findings in the PR body:
 `vitest.config.ts` pins `testTimeout` / `hookTimeout` to **30 s**, not
 vitest's 5 s default. The artifact-backed corpus suites
 (`multi-star-regression`, `known-stars`, `sky-position`) each sweep the
-full 380k-record catalog and its derived buffers, so their tests are
+full 390k-record catalog and its derived buffers, so their tests are
 seconds long even solo — and their wall time scales with machine load:
 under a full-suite run the slowest sit at 2.5–3.5 s locally, and CI's
 corpus job runs three of those files concurrently on a 2-core runner.

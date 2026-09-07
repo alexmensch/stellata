@@ -336,7 +336,7 @@ fill marching each ray at half a voxel (2.44 pc, 512 samples to the coverage
 edge).** The cell angle is not a round number chosen for the table — it is one
 summation-patch diameter, derived from `DEFAULT_SUMMATION_ARCSEC2`, so an
 instrument change moves it. Fetches are counted against the shipped per-star
-extinction prepass — 380k stars × 48 steps = **18.2M fetches per rebuild**,
+extinction prepass — 390k stars × 48 steps = **18.6M fetches per rebuild**,
 which recomputes every frame during a warp — because that is a shipped GPU
 workload doing the same fetch against the same texture. Wall-clock GPU timings
 are not measured here.
@@ -350,10 +350,10 @@ whole frustum.
 
 | grid | cells | memory | fill per rebuild | rebuilt on |
 | --- | --- | --- | --- | --- |
-| all-sky, camera-anchored | 877k | 53.5 MiB | 449M (29.9× the prepass) | translation > ε |
+| all-sky, camera-anchored | 877k | 53.5 MiB | 449M (24.1× the prepass) | translation > ε |
 | frustum, 10° FOV | 3.8k | 0.2 MiB | 1.9M (0.1×) | any camera change |
-| **frustum, 50° FOV (default)** | **108k** | **6.6 MiB** | **55M (3.7×)** | any camera change |
-| frustum, 120° FOV | 1.5M | 90.9 MiB | 763M (50.8×) | any camera change |
+| **frustum, 50° FOV (default)** | **108k** | **6.6 MiB** | **55M (3.0×)** | any camera change |
+| frustum, 120° FOV | 1.5M | 90.9 MiB | 763M (40.9×) | any camera change |
 
 The **read** is identical either way and is the larger per-frame term: one fetch
 per march step per band pixel, 166M/frame at 1920 × 1080 @dpr1 (32 disc steps +
@@ -447,7 +447,7 @@ overrode:
   view-parameterised grid is stale the moment the camera *rotates*, so it
   rebuilds on any camera change; the ε predicate the per-star prepass uses has
   no analogue here. That is the trade the 8.1× fill advantage pays for, and it
-  is why the fill's absolute cost (3.7× the prepass, every frame the camera
+  is why the fill's absolute cost (3.0× the prepass, every frame the camera
   moves) is the number ty4.7 has to land rather than a per-frame average.
 
 #### What is not measured, and what to turn if it is too slow

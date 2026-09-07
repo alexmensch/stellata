@@ -48,48 +48,47 @@ costs is visible in the pull's own report, which prints values reached
 before it prints values shipped.
 
 **The request set is an enumerated cohort, not the catalogue.** It is the
-spine rows some field's printed cell marks non-first-order (`HYG`,
-`OTHER`, `G_R2`, `GJ`) plus the whole no-Gaia tier — 11,050 rows, keyed
-`gaia_source_id` → HIP → TYC → GJ. Rows a first-order catalogue already
-covers are absent by construction, so a consumer cannot quietly reach for
-SIMBAD outside the cohort. **Widening the cohort is a re-pull**, not a
-filter change: the predicate is `is_simbad_value_cohort` in
-`scripts/refresh/simbad/inputs.py`.
+**membership manifest** rows a § 5 value tier can reach — 75,035 of 376,929
+(19.9%), keyed `gaia_source_id` → HIP → TYC → GJ. Four rows in five are
+absent by construction, so a consumer cannot quietly reach for SIMBAD where a
+first-hand catalogue already serves. **Widening the cohort is a re-pull**, not
+a filter change: the predicate is `simbad_value_cohort` in
+`scripts/refresh/simbad/inputs.py`, and a row is OUT only where Gaia's own 5p
+table states every § 5 value for it AND its identity is first-hand too (a
+`crosswalk_gated` binding plus a TYC or a HIP). Why it takes both halves —
+and what an identity-only predicate loses — is
+`scripts/refresh/simbad/README.md` § The cohort is two questions.
 
-Coverage over the cohort, measured at the 2026-08-26 pull. Every count
-below is what **ships**, i.e. post-policy — the file holds no unbibcoded
-value, so each field's value count equals its bibcode count: coordinates
-11,044 · PM 10,992 · parallax 10,896 · rv 9,557 · flux B 8,187 ·
-flux V 8,186.
+Coverage over the cohort, measured at the 2026-09-06 pull (74,442 oids, up
+from 11,045 rows on the spine-scoped one it replaced). Every count below is
+what **ships**, i.e. post-policy — the file holds no unbibcoded value, so each
+field's value count equals its bibcode count.
 
-| Spine cohort | Field | Reaches a shipped value |
-|---|---|---|
-| `rv_src=HYG` 7,965 | rv | 7,710 (96.8%) |
-| `rv_src=OTHER` 871 | rv | 559 (64.2%) |
-| `rv_src=G_R2` 295 | rv | 241 (81.7%) |
-| `dist_src=G_R2` 898 | parallax | 887 (98.8%) |
-| `dist_src=GJ` 38 | parallax | 30 (78.9%) |
-| `pos_src=GJ` 981 | coordinates | 979 (99.8%) |
-| `pm_src=HYG` 2,472 | PM | 2,424 (98.1%) |
-| `mag_src=GJ` 981 | V flux | 361 (36.8%) |
+| Field | Reaches a shipped value |
+|---|---|
+| coordinates | 74,442 (100.0%) |
+| proper motion | 74,263 (99.8%) |
+| parallax | 69,907 (93.9%) |
+| flux B | 62,469 (83.9%) |
+| flux V | 62,416 (83.8%) |
+| radial velocity | 34,571 (46.4%) |
 
-**V flux is the one field the bibcode policy actually bites.** Pull-wide
-SIMBAD has a B flux for 10,232 oids and a V for 9,680, but publishes a
-bibcode for only 8,187 and 8,186 — so 2,045 B and 1,494 V are dropped as
-unattributable, which is why `mag_src=GJ` ships 361 of 981 rather than the
-larger share SIMBAD's own V coverage implies. How many that cohort reached
-*before* the policy is not recoverable from the committed file — it holds no
-unbibcoded value by construction — so the pull's own report is the only place
-that number is ever read. Nothing else in the cohort loses a row. The single
-`*_src=OTHER` row in the position / magnitude / PM columns is Sol, which
-is curated rather than sourced.
+**The two fluxes are the sparsest fields after rv, and the bibcode policy is
+why.** They sit at 83.9% and 83.8% against parallax's 93.9% and PM's 99.8%,
+because `allfluxes` — the view whose B/V coverage is wider — carries no bibcode
+at all, so the long-format `flux` table is the only consumable source and an
+unattributable value is dropped whole. How many the cohort reached *before* the
+policy is not recoverable from the committed file, which holds no unbibcoded
+value by construction, so the pull's own report is the only place that number
+is ever read.
 
-**rv Gaia-bibcode skip rule** (§ 5): of the 9,557 rv values in the pull,
-**1,421 carry a Gaia catalogue bibcode** — 1,219 `2018yCat.1345....0G`
-(DR2) and 202 `2022yCat.1355....0G` (DR3). Those are the values the rv
+**rv Gaia-bibcode skip rule** (§ 5): of the 34,571 rv values in the pull,
+**14,692 carry a Gaia catalogue bibcode** — 13,360 `2018yCat.1345....0G`
+(DR2) and 1,332 `2022yCat.1355....0G` (DR3). Those are the values the rv
 cascade must skip on rows whose own 5p gate withheld Gaia rv, so the pull
 cannot launder a withheld value back in. The rest are literature, led by
-`2006AstL...32..759G` (2,827) and `2007AN....328..889K` (950).
+`2020AJ....160..120J` (4,007), `2006AstL...32..759G` (3,764) and
+`2020AJ....160...83S` (1,618).
 
 ## Provenance
 

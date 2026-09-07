@@ -13,21 +13,39 @@ const CHUNK = join(ROOT, 'public', catalogChunkFilename(0));
  *  superseded one. */
 const ATHYG_SPINE_ROWS = '313,257';
 
-const MYTHOS = /\b313,000\b|\b313000\b|\b313k\b/;
+/** The rounding every prose surface quotes. § rounds to the figure the prose
+ *  quotes derives the same string from the built artifact, so a refresh that
+ *  moves the catalogue fails there and the sweep starts from this constant. */
+const PROSE_ROUNDED = '390k';
+
+// A digit separator hides the figure from a bare `313,000` pattern, which is
+// how `scripts/dust/prefilter/cost.ts` held `313_000` through two count
+// changes — 24 % low, and driving every ratio that tool prints.
+const MYTHOS = /\b313[,_]?000\b|\b313k\b/;
 
 // Root-level config and metadata carry the figure too, and listing the
 // directories alone let `vitest.config.ts` hold `313k` through the sweep that
 // exists to remove it.
 const ROOT_FILES = [
   'AGENTS.md', 'README.md', 'SCIENCE.md', 'RELEASING.md', 'CITATION.cff',
-  'vitest.config.ts', 'vite.config.ts', 'package.json',
+  'vitest.config.ts', 'vite.config.ts', 'package.json', 'public/llms.txt',
 ];
+
+/** The surfaces a reader meets the catalogue's size on, where the figure IS
+ *  the claim rather than a passing aside. `public/llms.txt` is here because
+ *  `public/` is otherwise gitignored, so no directory root reaches it. */
+const PROSE_SURFACES = [
+  'README.md', 'CITATION.cff', 'public/llms.txt', 'src/client/index.html',
+];
+
+/** Any three-hundred-thousand-odd star figure: `380,000`, `~384k`, `390k`. */
+const SIZE_FIGURE = /\b3\d\d(?:,\d{3}|k)\b/g;
 
 function scannedFiles(): string[] {
   return execFileSync('git', ['ls-files', 'src', 'docs', 'scripts', 'tests',
     ...ROOT_FILES], { cwd: ROOT, encoding: 'utf8' })
     .trim().split('\n')
-    .filter((f) => /\.(ts|js|md|html|css|cff|json)$/.test(f))
+    .filter((f) => /\.(ts|js|md|html|css|cff|json|txt)$/.test(f))
     .filter((f) => f !== 'tests/star-count-consistency.test.ts');
 }
 
@@ -46,9 +64,28 @@ describe('the catalogue states its own size', () => {
     const { count } = readCatalogHeader(bytes as ArrayBuffer);
 
     // A catalogue refresh that moves this fails here rather than silently
-    // ageing every README: re-derive with
-    // `grep -rn '\b380k\b' src docs scripts tests`, sweep, then update.
-    expect(`${Math.round(count / 10_000) * 10}k`).toBe('380k');
+    // ageing every README: grep the corpus for the PROSE_ROUNDED figure
+    // below, sweep, then move the constant.
+    expect(`${Math.round(count / 10_000) * 10}k`).toBe(PROSE_ROUNDED);
+  });
+
+  // "Over 380,000" stayed literally true of 388,068 while landing a whole
+  // 10k bucket below the rounding above, so nothing caught it: the rounding
+  // assertion never greps, and the 313k scan looks for one retired figure.
+  // This reads every size figure on the surfaces and holds them to one answer.
+  it('quotes one catalogue size on every surface a reader meets it on', () => {
+    const allowed = new Set([PROSE_ROUNDED, PROSE_ROUNDED.replace('k', ',000')]);
+    const offenders: string[] = [];
+    for (const f of PROSE_SURFACES) {
+      readFileSync(join(ROOT, f), 'utf8').split('\n').forEach((line, i) => {
+        for (const found of line.replaceAll(ATHYG_SPINE_ROWS, '').matchAll(SIZE_FIGURE)) {
+          if (!allowed.has(found[0])) {
+            offenders.push(`${f}:${i + 1}: ${found[0]} — ${line.trim()}`);
+          }
+        }
+      });
+    }
+    expect(offenders).toEqual([]);
   });
 
   // The rendered set has been larger than the AT-HYG spine ever since

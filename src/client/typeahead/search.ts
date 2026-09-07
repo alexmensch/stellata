@@ -84,7 +84,7 @@ export function createSearchRunner(
   });
 
   // Gaia / SID lookup maps, built lazily on the first matching query —
-  // they cover the full 380k-row catalog (unlike the search-index maps
+  // they cover the full 390k-row catalog (unlike the search-index maps
   // above), and most sessions never type either form.
   let gaiaMap: Map<bigint, number> | null = null;
   const gaiaLookup = (id: bigint): number | undefined => {

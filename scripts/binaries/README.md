@@ -666,12 +666,13 @@ secondary's baked xyz on the same epoch as its primary so the static
 relative sep/PA is the pair's true J2016.0 geometry, not corrupted by
 (epoch gap × systemic PM). See `data/README.md` § Reference epoch.
 
-`hd` carries the HD number from the component's AT-HYG row, with the
-pair primary falling back to the coord-validated ORB6 entry's HD
-(stashed on the Stage-2 `ResolvedComponent`). It is the join key for
-`build-catalog.ts`'s identifier backfill on HD-only AT-HYG systems
-(ξ UMa — see `scripts/catalog/companions/README.md` § Companion promotion);
-counted `multiples_hd_populated`. Two other Stage-6 accounting
+`hd` carries the component's own HD number, with the pair primary
+falling back to the coord-validated ORB6 entry's HD (stashed on the
+Stage-2 `ResolvedComponent`); counted `multiples_hd_populated`. It is
+this pipeline's own designation record for the pair — a record's HD is
+the membership manifest's cell, which the catalog build reads there and
+amends from nothing (`scripts/catalog/membership/README.md` § The
+identifier columns are read, never re-derived). Two other Stage-6 accounting
 mechanisms guard silent drops: WDS summary rows duplicated on
 (wds_id, discoverer, components) are collapsed at the parse boundary
 (`dedup_wds_pair_rows`, most-observed row wins — Pismis 24 CD carried

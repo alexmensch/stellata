@@ -14,7 +14,6 @@ import {
   parentComponentToken,
   parseMultiplesTsv,
   projectFromSepPa,
-  backfillPrimaryIdentifiers,
   parkedIdentifiers,
   promoteCompanions,
   type MultiplesTsvRow,
@@ -82,7 +81,6 @@ describe('parseMultiplesTsv', () => {
     expect(r.comp).toBe('A');
     expect(r.hip).toBe(12345);
     expect(r.gaiaSourceId).toBe('1234567890123456');
-    expect(r.hd).toBe(48915);
     expect(r.x_pc).toBe(1.0);
     expect(r.absmag).toBe(5.5);
     expect(r.spect).toBe('G2V');
@@ -129,64 +127,6 @@ describe('parseMultiplesTsv', () => {
   it('throws when a required column is missing from the header', () => {
     const header = 'system_id\tcomp';
     expect(() => parseMultiplesTsv(header)).toThrowError(/missing required column/);
-  });
-});
-
-describe('backfillPrimaryIdentifiers', () => {
-  const XU_ROW = {
-    systemId: '11182+3132-AB', comp: 'A', orbitRole: 'primary' as const,
-    hip: 55203, gaiaSourceId: '756853643638639104', hd: 98231,
-  };
-
-  it('backfills HIP + Gaia onto the identifier-less HD match (ξ UMa)', () => {
-    const stars = [
-      makeStar({ hd: 98231 }),
-      makeStar({ hd: 98230, gaiaSourceId: '756853643637996160' }),
-    ];
-    const n = backfillPrimaryIdentifiers([multiplesRow(XU_ROW)], stars);
-    expect(n).toBe(1);
-    expect(stars[0].hip).toBe(55203);
-    expect(stars[0].gaiaSourceId).toBe('756853643638639104');
-    // The collocated sibling (ξ UMa B) is untouched — the HD join is
-    // what makes this safe where nearest-position stamps A's ids onto B.
-    expect(stars[1].hip).toBeNull();
-    expect(stars[1].gaiaSourceId).toBe('756853643637996160');
-  });
-
-  it('never overwrites a record that already carries an identifier', () => {
-    const stars = [makeStar({ hd: 98231, gaiaSourceId: '999' })];
-    expect(backfillPrimaryIdentifiers([multiplesRow(XU_ROW)], stars)).toBe(0);
-    expect(stars[0].gaiaSourceId).toBe('999');
-    expect(stars[0].hip).toBeNull();
-  });
-
-  it('invokes reclassify exactly for backfilled records', () => {
-    // readStars classified these records before they carried any key, so
-    // the caller must get a chance to re-resolve with the stamped ids.
-    const stars = [
-      makeStar({ hd: 98231 }),
-      makeStar({ hd: 12345, gaiaSourceId: '999' }),
-    ];
-    const seen: (number | null)[] = [];
-    backfillPrimaryIdentifiers([multiplesRow(XU_ROW)], stars, (s) => seen.push(s.hip));
-    expect(seen).toEqual([55203]);
-  });
-
-  it('skips ambiguous HDs, non-primary rows, and ids already in the catalog', () => {
-    const twins = [makeStar({ hd: 98231 }), makeStar({ hd: 98231 })];
-    expect(backfillPrimaryIdentifiers([multiplesRow(XU_ROW)], twins)).toBe(0);
-
-    const stars = [makeStar({ hd: 98231 })];
-    const secondary = multiplesRow({ ...XU_ROW, orbitRole: 'secondary' });
-    expect(backfillPrimaryIdentifiers([secondary], stars)).toBe(0);
-
-    const taken = [
-      makeStar({ hd: 98231 }),
-      makeStar({ hip: 55203, gaiaSourceId: '756853643638639104' }),
-    ];
-    expect(backfillPrimaryIdentifiers([multiplesRow(XU_ROW)], taken)).toBe(0);
-    expect(taken[0].hip).toBeNull();
-    expect(taken[0].gaiaSourceId).toBeNull();
   });
 });
 
@@ -405,7 +345,7 @@ describe('imputeCompanionAbsmag wds_mag tier', () => {
 });
 
 describe('a pair whose two ends resolve to one record', () => {
-  // p Eri's `01398-5612`: the A row carries B's HD, HIP and Gaia cells, so the
+  // p Eri's `01398-5612`: the A row carries B's HIP and Gaia cells, so the
   // cursor anchors on the B record and the B row's ids then strip as inherited.
   // That is the Sirius-B shape by identifiers alone, and the only thing that
   // separates them is the authority's component attribution — it already
@@ -413,14 +353,14 @@ describe('a pair whose two ends resolve to one record', () => {
   const selfPairRows = () => [
     multiplesRow({
       systemId: '01398-5612-AB', comp: 'A', hip: 7751,
-      gaiaSourceId: '4911306239828325760', hd: 10361,
+      gaiaSourceId: '4911306239828325760',
       x_pc: 8, y_pc: 0, z_pc: 0, distPc: 8, absmag: 6.232, spect: 'K1',
       source: 'athyg', photometryVia: 'athyg_own', orbitRole: 'primary',
       sepArcsec: 11.3, paDeg: 185.0, dmag: 0.12,
     }),
     multiplesRow({
       systemId: '01398-5612-AB', comp: 'B', hip: 7751,
-      gaiaSourceId: '4911306239828325760', hd: 10361,
+      gaiaSourceId: '4911306239828325760',
       x_pc: 8, y_pc: 0, z_pc: 0, distPc: 8, absmag: 6.232, spect: 'K1',
       photometryVia: 'athyg_system_inherited', orbitRole: 'secondary',
       sepArcsec: 11.3, paDeg: 185.0, dmag: 0.12,

@@ -89,7 +89,7 @@ write the worktree's `data/`.
 | `refresh:tycho2` | `refresh-tycho2.py` | `data/tycho2/{tycho2_main,tycho2_suppl1}.tsv` | Tycho-2 (`I/259` `tyc2` + `suppl_1`) mean positions with per-star mean epochs, PM, BT/VT — filtered to the TYCs the manifest and IV/25 mention. Range-batched over TYC1 and filtered locally; VizieR can express no server-side filter on the full identifier (`data/tycho2/README.md` § Why the pull is range-batched). |
 | `refresh:gliese` | `refresh-gliese.py` | `data/gliese/gliese_v70a.tsv` | Gliese & Jahreiss third catalogue of nearby stars (`V/70A`, whole table) — printed Johnson V + B−V, spectral type, parallax and rv, plus the B1950 position, proper motion and cross-names the binding review measures against. The V cascade's tier under Tycho-2, and the first-order source behind every `mag_src=GJ` cell (`data/gliese/README.md`). |
 | `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 10k SIMBAD sample (validation corpus). |
-| `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the `docs/catalog-driver.md` § 5 value cohort — the spine rows a SIMBAD value tier can reach. **Still spine-bound** — rebasing the cohort predicate onto the manifest is tracked separately. Cohort predicate and coverage: `data/simbad/README.md` § The values pull. |
+| `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the `docs/catalog-driver.md` § 5 value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: `data/simbad/README.md` § The values pull. |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
 `refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py`, and
@@ -105,7 +105,8 @@ per-table schema validation and row bounds — source detail in
 
 ### Request sets are membership-derived
 
-**No refresh script reads AT-HYG's own CSV** (`data/athyg/athyg_33_classic_ids.csv`).
+**No refresh script reads `data/athyg/`** — neither AT-HYG's own CSV
+(`athyg_33_classic_ids.csv`) nor the inherited spine.
 Every catalog-scoped request set
 traces to `data/membership/membership-manifest.tsv` — the membership term
 (`docs/catalog-driver.md` § 3.1) — by one of two routes: directly, through
@@ -117,9 +118,6 @@ traces to `data/membership/membership-manifest.tsv` — the membership term
 lives; a script naming the path itself has drifted from it.
 `data/simbad/README.md` § Request sets come off the membership term carries
 the measured drop/gain of the SIMBAD rebase.
-
-**One exception, tracked:** `refresh-simbad-values.py` still reads the spine
-for its cohort predicate.
 
 The manifest's `gaia_source_id` is the binding the manifest **justified**, its
 `binding` cell saying on what basis, so a request derived from it and the

@@ -151,9 +151,9 @@ class BuildMultiplesRowsTests(unittest.TestCase):
         self.assertEqual(dropped_no_position, ["WDS-1AB"])
 
     def test_hd_surfaces_from_component_athyg_row(self) -> None:
-        # ξ UMa shape: the AT-HYG row carries HD; the emitted row must
-        # surface it so the catalog-side identifier backfill can join
-        # HD-only catalog records by HD instead of position.
+        # ξ UMa shape: the component row carries HD and no other key, so
+        # the emitted row has to surface it or the pair's designation
+        # record loses the only one it has.
         pair = _wds_pair(components="AB")
         athyg = [
             _athyg_row(gaia=1, hd=98231),

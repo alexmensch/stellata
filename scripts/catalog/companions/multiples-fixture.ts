@@ -9,7 +9,6 @@ export function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): Multiple
     comp: 'B',
     hip: null,
     gaiaSourceId: null,
-    hd: null,
     x_pc: 100, y_pc: 0, z_pc: 0,
     absmag: 5.0, ci: 0.6, spect: '',
     name: '',

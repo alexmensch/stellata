@@ -1,12 +1,12 @@
 {
   "pairs_total": 18668,
-  "pairs_emitted": 13060,
-  "pairs_dropped_primary_unresolved": 4517,
-  "pairs_dropped_secondary_unresolved": 738,
-  "pairs_dropped_degenerate_idx": 348,
+  "pairs_emitted": 13062,
+  "pairs_dropped_primary_unresolved": 4511,
+  "pairs_dropped_secondary_unresolved": 739,
+  "pairs_dropped_degenerate_idx": 351,
   "pairs_dropped_same_relation_alias": 3,
   "pairs_dropped_duplicate_relation": 2,
-  "pairs_with_orbit": 3364,
-  "pairs_with_inclination": 2886,
-  "pairs_inner_of_hierarchy": 1719
+  "pairs_with_orbit": 3362,
+  "pairs_with_inclination": 2884,
+  "pairs_inner_of_hierarchy": 1716
 }
