@@ -126,11 +126,12 @@ per-star `minOrbitDistForStar` floor (sub-pc for Sol-class) plus the
 `uPinFocusToCenter` shader pin which sidesteps the float32
 cancellation entirely. The near plane must stay
 **strictly less** than the closest orbit distance, otherwise a centered
-star lands on the clip plane at max zoom and gets culled. The log depth
-buffer (`logarithmicDepthBuffer: true` on the WebGL renderer) gives this
-configuration uniform precision in `log(z)`, so the
-multi-decade range from sub-AU close approach to 100 kpc background
-renders without z-fighting.
+star lands on the clip plane at max zoom and gets culled. Depth
+precision over that multi-decade range — sub-AU close approach to 100 kpc
+background — comes from reversed-z float32 on the shipped renderer, and
+from `logarithmicDepthBuffer: true` on the WebGL2 escape hatch. Neither
+is what resolves intra-system ordering: that is the local depth pass
+(`../../local-depth/README.md`).
 
 When a star is focused, two distinct distances are in play —
 deliberately decoupled so manual zoom can push past the auto-park

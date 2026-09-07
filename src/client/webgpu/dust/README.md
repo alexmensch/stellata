@@ -1,7 +1,8 @@
 # Dust particle sprite on WebGPU
 
-The TSL half of the dust-particle billboard. The WebGL2 shaders
-(`../../dust/`) stay the shipped renderer and the semantic reference.
+The TSL half of the dust-particle billboard, and the shipped one. The
+WebGL2 shaders (`../../dust/`) stay the semantic reference until `0it.14`
+deletes them.
 
 **The layer it belongs to is shelved, and this folder is slated to go
 with it** (`../../dust/README.md`): strength is 0, the mesh is hidden,

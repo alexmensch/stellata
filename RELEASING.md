@@ -118,8 +118,8 @@ middle-half spread of a whole interval, and its median turns on whether
 50.1 % or 49.9 % of the frames made the deadline: wall is recorded, never
 marked. A row carrying no GPU stream is recorded and not gated — every
 WebGL2 row, since the backend supplies no such clock, and any WebGPU row
-whose adapter resolves no believable durations. The cutover
-(stellata-0it.13) leaves only gated rows behind. A vantage that does not
+whose adapter resolves no believable durations. Deleting the WebGL2 path
+(stellata-0it.14) leaves only gated rows behind. A vantage that does not
 reproduce cold-to-cold is recorded and not gated on the same footing —
 today that is lg alone, and the paragraph on the floor below says why.
 It keeps its GPU reading, so unlike a row with no such clock it still

@@ -2,9 +2,9 @@
 
 The TSL half of the cloud layer's two surfaces: the absorption raymarch
 that dims every diffuse layer behind a cloud, and the rim shell that
-annotates its silhouette. The WebGL2 shaders (`../../molecular-clouds/`)
-stay the shipped renderer and the semantic reference; the physics is not
-re-decided here.
+annotates its silhouette. **These are the shipped surfaces.** The WebGL2
+shaders (`../../molecular-clouds/`) stay the semantic reference until
+`0it.14` deletes them; the physics is not re-decided here.
 
 **Both port as a material swap, not a layer.** The cloud layer keeps every
 line of its CPU logic — geometry, per-cloud transforms, declutter and

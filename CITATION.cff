@@ -11,7 +11,7 @@ abstract: >-
   astronomical observation; nothing is invented or procedurally generated.
   Everything is shown in true colour and at the apparent brightness your eyes
   would actually see from any point in space: no infrared, radio, or
-  false-colour imagery. It runs in the browser with no install (WebGL2), and
+  false-colour imagery. It runs in the browser with no install (WebGPU), and
   its scope grows toward everything astronomy has measured.
 authors:
   - given-names: Alex
@@ -31,5 +31,5 @@ keywords:
   - Gaia
   - interstellar dust
   - Local Group
-  - WebGL
+  - WebGPU
   - real-time rendering

@@ -164,9 +164,9 @@ from a production build, or with the inspector closed.** Under the
 inspector even the *ratios* between rows are unusable: the per-star loops
 lose far more than the DOM and submit rows do.
 
-Second comparison trap: the two backends land on different clocks — a
-WebGL2 boot in Chrome gets `timer-query`, a `#renderer=webgpu` boot falls
-to `raf-delta` where the timestamps resolve garbage
+Second comparison trap: the two backends land on different clocks — the
+shipped boot in Chrome falls to `raf-delta` where the timestamps resolve
+garbage, while a `#renderer=webgl2` boot there gets `timer-query`
 ([`gpu-timing/`](gpu-timing/README.md)) — so cross-backend rows compare
 only under one pinned `method` at the same `bufferMpx`
 (`docs/render-rules.md` § Measurement canon).
