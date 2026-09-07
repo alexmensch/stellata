@@ -2152,9 +2152,7 @@ export class Stellata implements FrameAnchor {
   // dominate from the user's current vantage, even when the user has
   // travelled deep into 3D space.
   aimAtConstellation(conIndex: number) {
-    this.focus.cancelUnfocusLerp();
-    this.focus.cancelFocusLerp();
-    if (this.observe.isActive()) return;
+    if (!this.claimCameraForAim()) return;
     const cons = this.catalog.constellations;
     const lines = conIndex >= 0 && conIndex < cons.length ? cons[conIndex].lines : undefined;
     if (!lines || lines.length === 0) return;
@@ -2215,8 +2213,8 @@ export class Stellata implements FrameAnchor {
    * Mode-aware: in navigate the orbit-pivot is held and the camera
    * sweeps around it; in observe the camera position is held and only
    * the quaternion rotates. Called by the Sol / GC label click handlers,
-   * the constellation picker, the POI overlay, and the observe-mode
-   * double-click.
+   * the search typeahead, the distance-vector label, and the POI overlay.
+   * A caller holding a direction rather than an object wants `aimAlong`.
    *
    * No-ops during warp, mid-aim, focus-lerp, or observe-transition. The
    * actual slerp + controls.enabled / observeControls handoff lives in
@@ -2224,11 +2222,32 @@ export class Stellata implements FrameAnchor {
    * gates the controller doesn't see.
    */
   aimAt(pointLocal: THREE.Vector3) {
-    if (this.warp.isActive() || this.aim.isActive()) return;
+    if (!this.claimCameraForAim()) return;
+    this.aim.aimAt(pointLocal);
+  }
+
+  /**
+   * Smoothly rotate the camera to look along `dirLocal` — the aim for a
+   * caller that holds a direction rather than an object, where standing a
+   * point up at some radius and aiming at that would land the boresight
+   * elsewhere in navigate (`camera/controls/README.md` § Aim controller).
+   *
+   * Shares `aimAt`'s composition-layer busy gates.
+   */
+  aimAlong(dirLocal: THREE.Vector3) {
+    if (!this.claimCameraForAim()) return;
+    this.aim.aimAlong(dirLocal);
+  }
+
+  /** Take the camera for an aim, reporting whether it was free: false while
+   *  warp, another aim, or an observe transition owns it. Cancels the focus
+   *  lerps on the way through, so a granted claim hands the camera over with
+   *  nothing else still driving it. */
+  private claimCameraForAim(): boolean {
+    if (this.warp.isActive() || this.aim.isActive()) return false;
     this.focus.cancelUnfocusLerp();
     this.focus.cancelFocusLerp();
-    if (this.observe.isActive()) return;
-    this.aim.aimAt(pointLocal);
+    return !this.observe.isActive();
   }
 
   /**
@@ -2241,10 +2260,7 @@ export class Stellata implements FrameAnchor {
    * `AimController`.
    */
   invertView() {
-    if (this.warp.isActive() || this.aim.isActive()) return;
-    this.focus.cancelUnfocusLerp();
-    this.focus.cancelFocusLerp();
-    if (this.observe.isActive()) return;
+    if (!this.claimCameraForAim()) return;
     this.aim.invert();
   }
 
@@ -2309,6 +2325,7 @@ export class Stellata implements FrameAnchor {
       unfocus: () => this.focus.unfocus(),
       togglePoi: (target) => this.pois.toggle(target),
       aimAt: (p) => this.aimAt(p),
+      aimAlong: (d) => this.aimAlong(d),
     });
   }
 

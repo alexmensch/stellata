@@ -33,6 +33,12 @@ interface NavigateAimState {
   radius: number;             // |camera - pivot| at start; held constant
 }
 
+interface NavigateStartPose {
+  dir0: THREE.Vector3;        // unit radial direction, pivot → camera
+  r: number;                  // orbit radius, held for the whole sweep
+  q0: THREE.Quaternion;       // rotates WARP_BASE_DIR to dir0
+}
+
 interface ObserveAimState {
   startTimeMs: number;
   durationMs: number;
@@ -56,6 +62,7 @@ export class AimController {
   private readonly tickDir = new THREE.Vector3();
   private readonly tickObserveQ = new THREE.Quaternion();
   private readonly invertUp = new THREE.Vector3();
+  private readonly alongDir = new THREE.Vector3();
 
   constructor(deps: AimControllerDeps) {
     this.deps = deps;
@@ -80,6 +87,32 @@ export class AimController {
     } else {
       if (this.navigate !== null) return;
       this.startNavigateAim(pointLocal);
+    }
+  }
+
+  /** Smoothly rotate the camera to look **along** `dirLocal` — a direction,
+   *  at no distance.
+   *
+   *  A caller holding only a direction must not stand a point up at some
+   *  large radius and aim at that: navigate crosses the camera to the far
+   *  side of the pivot before it looks, so the boresight lands along
+   *  `pivot → point` rather than along the direction the point was built to
+   *  express. That is exact only while the orbit radius is small against the
+   *  radius chosen, and inverts entirely past it. Aiming along the direction
+   *  is exact at every orbit radius.
+   *
+   *  Same busy-gate contract as `aimAt`. */
+  aimAlong(dirLocal: THREE.Vector3): void {
+    const dir = this.alongDir.copy(dirLocal);
+    const len = dir.length();
+    if (len < AIM_DEGENERATE_DIST_PC) return;
+    dir.divideScalar(len);
+    if (this.deps.getCameraMode() === 'observe') {
+      if (this.observe !== null) return;
+      this.startObserveAim(dir.add(this.deps.camera.position));
+    } else {
+      if (this.navigate !== null) return;
+      this.beginNavigateAim(dir.negate());
     }
   }
 
@@ -153,42 +186,59 @@ export class AimController {
   }
 
   private startNavigateAim(pointLocal: THREE.Vector3): void {
-    const camera = this.deps.camera;
     const pivot = this.deps.controls.target;
-    const offsetX = camera.position.x - pivot.x;
-    const offsetY = camera.position.y - pivot.y;
-    const offsetZ = camera.position.z - pivot.z;
-    const r = Math.sqrt(offsetX * offsetX + offsetY * offsetY + offsetZ * offsetZ);
-    if (r < AIM_DEGENERATE_DIST_PC) return; // camera coincident with pivot — no orbit to rotate
-
-    const aimX = pointLocal.x - pivot.x;
-    const aimY = pointLocal.y - pivot.y;
-    const aimZ = pointLocal.z - pivot.z;
-    const aimLen = Math.sqrt(aimX * aimX + aimY * aimY + aimZ * aimZ);
+    const aim = new THREE.Vector3().subVectors(pointLocal, pivot);
+    const aimLen = aim.length();
     if (aimLen < AIM_DEGENERATE_DIST_PC) return; // target coincides with pivot
 
-    // Start radial direction = camera - pivot, normalised.
-    const dir0 = new THREE.Vector3(offsetX / r, offsetY / r, offsetZ / r);
-    // End radial direction = -(point - pivot) normalised. Putting the
-    // camera on the opposite side of pivot from the target makes the
-    // forward vector (pivot - camera) point toward the target.
-    const dir1 = new THREE.Vector3(-aimX / aimLen, -aimY / aimLen, -aimZ / aimLen);
+    // Camera, pivot and point come out collinear, so the point lands at view
+    // centre whatever the orbit radius.
+    this.beginNavigateAim(aim.divideScalar(-aimLen));
+  }
 
-    const dot = Math.max(-1, Math.min(1, dir0.dot(dir1)));
-    if (dot > 0.99999) return; // already aimed
+  /** The orbit pose the sweep starts from, or null when the camera sits on
+   *  the pivot and there is no orbit to rotate. */
+  private navigateStartPose(): NavigateStartPose | null {
+    const dir0 = new THREE.Vector3()
+      .subVectors(this.deps.camera.position, this.deps.controls.target);
+    const r = dir0.length();
+    if (r < AIM_DEGENERATE_DIST_PC) return null;
+    dir0.divideScalar(r);
+    return { dir0, r, q0: new THREE.Quaternion().setFromUnitVectors(WARP_BASE_DIR, dir0) };
+  }
 
-    const angle = Math.acos(dot);
-    const q0 = new THREE.Quaternion().setFromUnitVectors(WARP_BASE_DIR, dir0);
-    const q1 = new THREE.Quaternion().setFromUnitVectors(WARP_BASE_DIR, dir1);
-
+  /** Hand the orbit slot a sweep from `start` to `q1` over `angle`, and take
+   *  TrackballControls out of the loop until the tick completes it. */
+  private startNavigateSweep(
+    start: NavigateStartPose,
+    q1: THREE.Quaternion,
+    angle: number,
+  ): void {
     this.deps.controls.enabled = false;
     this.navigate = {
       startTimeMs: performance.now(),
       durationMs: aimDurationMs(angle),
-      q0,
+      q0: start.q0,
       q1,
-      radius: r,
+      radius: start.r,
     };
+  }
+
+  /** Slerp the orbit pose so the camera ends on `dir1` — the unit radial
+   *  direction from the pivot. The camera looks at the pivot, so the
+   *  boresight comes out as `-dir1`. */
+  private beginNavigateAim(dir1: THREE.Vector3): void {
+    const start = this.navigateStartPose();
+    if (start === null) return;
+
+    const dot = Math.max(-1, Math.min(1, start.dir0.dot(dir1)));
+    if (dot > 0.99999) return; // already aimed
+
+    this.startNavigateSweep(
+      start,
+      new THREE.Quaternion().setFromUnitVectors(WARP_BASE_DIR, dir1),
+      Math.acos(dot),
+    );
   }
 
   /** A half turn about the camera's local up, which both invert branches
@@ -199,23 +249,9 @@ export class AimController {
   }
 
   private startNavigateInvert(): void {
-    const pivot = this.deps.controls.target;
-    const dir0 = new THREE.Vector3().subVectors(this.deps.camera.position, pivot);
-    const r = dir0.length();
-    if (r < AIM_DEGENERATE_DIST_PC) return; // camera coincident with pivot
-    dir0.divideScalar(r);
-
-    const q0 = new THREE.Quaternion().setFromUnitVectors(WARP_BASE_DIR, dir0);
-    const q1 = this.halfTurnAboutUp().multiply(q0);
-
-    this.deps.controls.enabled = false;
-    this.navigate = {
-      startTimeMs: performance.now(),
-      durationMs: aimDurationMs(Math.PI),
-      q0,
-      q1,
-      radius: r,
-    };
+    const start = this.navigateStartPose();
+    if (start === null) return;
+    this.startNavigateSweep(start, this.halfTurnAboutUp().multiply(start.q0), Math.PI);
   }
 
   private startObserveInvert(): void {

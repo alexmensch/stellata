@@ -46,9 +46,12 @@ the ladder's pure decision function is
 
 The controller sees the rest of the app only through its deps
 closures (busy gates, Target-keyed focus/vector reads, flyTo /
-setOrbitTarget / unfocus / togglePoi / aimAt) — it owns
+setOrbitTarget / unfocus / togglePoi / aimAt / aimAlong) — it owns
 dispatch order and gesture math, never focus or camera-transition
-state. Roll math delegates to `RollController`, which owns the
+state. The observe double-click holds a ray, so it takes `aimAlong`
+and never stands a point up along it (`../README.md` § Aim controller);
+it normalises first, the raw unprojection landing close enough to the
+near plane to sink under that path's degeneracy guard. Roll math delegates to `RollController`, which owns the
 scratch vectors; the per-gesture-event path allocates nothing.
 
 ## TrackballControls tuning
