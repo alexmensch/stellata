@@ -98,11 +98,11 @@ unrelated.
 
 ### Split, don't shave
 
-**Over the cap the default is a folder split, not a rewording pass.** The
-observed failure is rounds of re-tightening already-tight prose to claw
-back single lines: a session burnt, a denser and worse README. Reword only
-genuinely redundant prose — a claim stated twice, superseded history
-another doc carries; never delete invariants to fit.
+**Over the cap the default is a folder split, not a rewording pass.** Do
+not re-tighten already-tight prose to claw back single lines: that costs
+a session and yields a denser, worse README. Reword only genuinely
+redundant prose — a claim stated twice, superseded history another doc
+carries; never delete invariants to fit.
 
 Seam: the README's largest self-contained topic plus the leaf module
 owning it. Right when the moved code imports nothing from the parent and a
