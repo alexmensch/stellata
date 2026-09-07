@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import type { Stellata } from '../../stellata';
 import {
   type FilterState,
@@ -17,6 +18,9 @@ import { isLive } from '../../solar-system/time/time';
 import type { SidResolver } from '../sid-resolver';
 import { isHardTarget, type Target, type TargetKind } from '../../camera/focus/focus-target';
 import { buildSharePath, pickShareBlob } from './share-path-pure';
+import {
+  divergesFromDefault, orbitRadius, poseChanged, type Vec3Like,
+} from './pose-change-pure';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 import type {
   CoordSphereFrame,
@@ -45,23 +49,10 @@ const SCHEMA_VERSION_V1 = 1;
 const SCHEMA_VERSION_V2 = 2;
 const SCHEMA_VERSION_V3 = 3;
 const SCHEMA_VERSION = 4;
-const EPS = 1e-3;
-// Per-frame URL-write change detector: 1% of vector magnitude, capped
-// at EPS (1e-3 pc) and floored at EPS_FLOOR (well below float32 ULP at
-// any reasonable scene scale). The cap preserves the original absolute
-// behaviour at scene scale (>= 0.1 pc, where float32 noise can approach
-// 5e-4 pc); the relative floor handles solar-system scales where the
-// fixed 1e-3 pc threshold equals ~206 AU and a zoom-out from the
-// first-load 5 AU park wouldn't trip any axis until far past where
-// the user expects the URL to update.
-const EPS_REL = 0.01;
-const EPS_FLOOR = 1e-9;
-
-// Per-component change-detector threshold for `startUrlSync`. Exported
-// for unit-level coverage of the scene-scale clamp / AU-scale floor.
-export function frameTriggerEps(magnitude: number): number {
-  return Math.max(EPS_FLOOR, Math.min(EPS, magnitude * EPS_REL));
-}
+// Quantised-scalar slots only — `fov` in degrees and `ev` in stops, each far
+// coarser than this. Pose vectors carry no absolute threshold at all; they go
+// through `pose-change-pure.ts`.
+const SCALAR_EPS = 1e-3;
 
 // Default values that the encoder uses to decide whether to omit a field.
 const DEFAULT_CAM: [number, number, number] = [0, 0, 30];
@@ -214,6 +205,14 @@ export interface DecodedView {
   toc?: number;
   /** Chart mode (observe-only). Only encoded when `mode === 'observe'`. */
   chart?: boolean;
+  /** ORB armed on the attitude instrument — the focused object's own orbital
+   *  plane. Not a `coordSphere` value: the instrument holds this one, and the
+   *  frame itself rebuilds from the focus, so the bit needs no payload
+   *  (`../../attitude/orbit-frame/README.md`). */
+  orb?: boolean;
+  /** The orbit lock engaged. ORB-only, and the receiver's own
+   *  `orbitLockShowing` rule still decides whether it can exist. */
+  orbLock?: boolean;
   /** Legacy v1–v3 pinned points-of-interest as HIP IDs — decode-only;
    *  v4 persists POIs in `poiSids`. */
   pois?: number[];
@@ -631,6 +630,18 @@ function lgEmissionDisabledField(bit: number): FieldSpec {
   };
 }
 
+// A boolean whose presence bit IS the value: set means true, absent means the
+// default. Zero payload, so it costs nothing but the mask bit — which is what
+// the flags byte being full leaves as the cheap way to add one.
+function boolBitField(bit: number, key: 'orb' | 'orbLock'): FieldSpec {
+  return {
+    bit, key, ...fixed(0),
+    isPresent: v => v[key] === true,
+    encode: () => 0,
+    decode: v => { v[key] = true; },
+  };
+}
+
 // Which coordinate sphere FLAG_GRID means — one zero-byte presence bit per
 // frame past the default, since the flags byte is full. No bit set = galactic.
 //
@@ -898,6 +909,8 @@ const FIELDS_V4: FieldSpec[] = [
   coordSphereFrameField(24, 'equatorial'),
   u8Field(25, 'ev', { min: -EV_MAX_STOPS, max: EV_MAX_STOPS, step: EV_STEP_STOPS }),
   coordSphereFrameField(26, 'ecliptic'),
+  boolBitField(27, 'orb'),
+  boolBitField(28, 'orbLock'),
 ];
 
 function packFlags(v: DecodedView): number {
@@ -1111,65 +1124,48 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
     }
   }
 
-  const c = stellata.camera.position;
-  const t = stellata.controls.target;
+  const c = encodeCam;
+  const t = encodeTgt;
+  anchoredPose(stellata, focused, c, t);
   const u = stellata.camera.up;
-  // Skip each independently. Under floating origin, a focused-orbit URL
-  // has tgt=[0,0,0] (the focal star's local position) and observe-mode
-  // has cam=[0,0,0] (camera is parked *at* the focal star), so omitting
-  // them when at default trims ~16 base64url chars from nearly every
-  // URL. Cam's default depends on mode — receiver re-snaps cam to
-  // origin via setCameraMode('observe', { animate: false }) on apply.
+  // README.md § What counts as a camera move owns every gate below — each a
+  // fraction of the orbit radius, none a distance.
   //
-  // Frame: cam/tgt are emitted as raw camera.position / controls.target
-  // — i.e. in worldOffset-local frame. With focus, the focal object's
-  // setFocus call has already recentred worldOffset to that object's
-  // absolute position, so cam/tgt are object-local. Without focus, the
-  // origin rides along with whatever object was most recently anchored
-  // (the unfocus path no longer recentres to Sol). The
-  // worldOffset field below carries the absolute anchor position so
-  // the loader can re-establish the same frame on page-load. Old-style
-  // URLs without worldOffset always had worldOffset=(0,0,0) at save
-  // time, so the local frame was Sol — backward-compatible.
+  // Don't collapse this to one predicate: vec3FieldV3.isPresent re-checks at
+  // strict equality, and that inner layer is what keeps sub-µpc floating-origin
+  // cam values any outer band would round to the frame origin.
   //
-  // Emit worldOffset only when no focus is active AND the anchor isn't
-  // Sol. With focus, the loader's focusStar call recentres origin
-  // automatically. With anchor at Sol, the local frame is implicitly
-  // Sol-relative (matches the legacy default), so omitting saves
-  // 12 bytes on every default-pose URL.
+  // `worldOffset` rides the wire exactly when the receiver will NOT rebuild the
+  // anchor itself — the complement of the subtraction `anchoredPose` just made,
+  // which is why a soft-kind focus carries it as an unfocused view does. Only
+  // a hard focus recentres the origin (`../../camera/focus/focus-target.ts`
+  // KIND_TRAITS), so a cloud, an LG object or a shell leaves the sender's frame
+  // reachable through this field and no other.
   const wo = stellata.getWorldOffset();
-  const woNonSol = stellata.focus.getFocusedStar() === null
-    && (!approx(wo.x, 0) || !approx(wo.y, 0) || !approx(wo.z, 0));
-  if (woNonSol) {
+  const scale = orbitRadius(c, t);
+  const camDefault = defaultCamForMode(mode);
+  if (!isHardTarget(focused)
+    && divergesFromDefault(wo, DEFAULT_WORLD_OFFSET, scale)) {
     view.worldOffset = [wo.x, wo.y, wo.z];
   }
-  // Two-layer elision is intentional: this site populates view.cam/tgt/up
-  // when any component is meaningfully off-default at 1e-3 epsilon (so
-  // tiny per-frame numerical noise from controls.update doesn't keep
-  // re-triggering URL writes), then vec3FieldV3.isPresent re-checks at
-  // strict equality to decide whether the field claims its outer
-  // presence bit. Both layers are load-bearing — the inner strict
-  // equality preserves floating-origin sub-µpc cam values
-  // that would round to default under the outer
-  // epsilon if the inner check were also approx. Don't collapse to one
-  // predicate without preserving both regimes.
-  //
-  // When the anchor is non-Sol, always populate cam/tgt explicitly so
-  // the decoder doesn't fall back to default-pose reconstruction in a
-  // shifted local frame; vec3FieldV3.isPresent will still elide cam/tgt
-  // from the wire if they happen to match default (the decoder's
-  // worldOffset branch resets them to default anyway, so the net pose
-  // is identical), but populating them here keeps the path explicit.
-  const camDefault = defaultCamForMode(mode);
-  if (woNonSol || !approx(c.x, camDefault[0]) || !approx(c.y, camDefault[1]) || !approx(c.z, camDefault[2])) {
+  if (view.worldOffset || divergesFromDefault(c, camDefault, scale)) {
     view.cam = [c.x, c.y, c.z];
   }
-  if (woNonSol || !approx(t.x, DEFAULT_TGT[0]) || !approx(t.y, DEFAULT_TGT[1]) || !approx(t.z, DEFAULT_TGT[2])) {
+  if (view.worldOffset || divergesFromDefault(t, DEFAULT_TGT, scale)) {
     view.tgt = [t.x, t.y, t.z];
   }
   if (Math.abs(stellata.roll.upRollError(stellata.camera, GALACTIC_NORTH_POLE_ICRS))
     > LEVEL_UP_EPS_RAD) {
     view.up = [u.x, u.y, u.z];
+  }
+
+  // ORB and its lock live on the instrument rather than in filter.coordSphere,
+  // so they reach the wire through the port and nowhere else. Both are single
+  // bits: the frame itself rebuilds from the focus this blob already carries.
+  const orbitPort = stellata.getOrbitFramePort();
+  if (orbitPort?.isArmed()) {
+    view.orb = true;
+    if (orbitPort.isLocked()) view.orbLock = true;
   }
 
   // Scrubber-pinned `t` only — when the user is on live wall-clock,
@@ -1304,6 +1300,9 @@ export function applyDecodedView(
         if (idx === null) return;
         if (snap) stellata.focus.setOrbitTarget({ kind, idx });
         else stellata.focus.flyTo({ kind, idx }, { animate: false });
+        // A sid whose domain attaches after this function returns fires its
+        // 'focus' event then, disarming the ORB the tail already restored.
+        restoreOrbitFrame(stellata, view);
       });
     } else {
       const idx = resolveStarRef(view.focus, idMaps, idMaps.solIndex);
@@ -1422,6 +1421,21 @@ export function applyDecodedView(
     }
     if (resolved.length > 0) stellata.pois.set(resolved);
   }
+
+  // LAST, and that is the whole of this field's difficulty. Every one of the
+  // three clearing rules above disarms ORB on its way past — the instrument
+  // drops it on a focus change, on a coordSphere change, and with the camera
+  // mode — so a restore anywhere earlier is silently undone by a later step of
+  // this same function. Applied again from the deferred focus callback for the
+  // one case that lands after this returns; `restore` is idempotent.
+  restoreOrbitFrame(stellata, view);
+}
+
+/** Re-arm ORB and the orbit lock from the blob. Absent bits mean the gesture
+ *  was never made, which is a positive statement — a sky-frame link has to
+ *  disarm an ORB the session was already holding, not leave it standing. */
+function restoreOrbitFrame(stellata: Stellata, view: DecodedView): void {
+  stellata.getOrbitFramePort()?.restore(view.orb === true, view.orbLock === true);
 }
 
 // The fragment is not URL state — boot flags (`#renderer=webgpu`,
@@ -1494,10 +1508,46 @@ export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): boolean {
 //   [0..2] camera.position, [3..5] controls.target, [6..8] reference up
 // Single source of truth for that layout so seed and per-frame update
 // can't drift apart on index.
-function snapshotCam(stellata: Stellata, out: Float64Array): void {
-  const c = stellata.camera.position;
-  const t = stellata.controls.target;
-  const u = stellata.camera.up;
+const anchorScratch = new THREE.Vector3();
+const frameCam = new THREE.Vector3();
+const frameTgt = new THREE.Vector3();
+const encodeCam = new THREE.Vector3();
+const encodeTgt = new THREE.Vector3();
+
+/**
+ * cam and tgt as the wire means them: relative to the anchor the RECEIVER
+ * re-establishes, which for a hard focus is the focal object itself
+ * (`applyDecodedView` recentres onto it before either lands).
+ *
+ * The sender's own origin recentres only once the camera has drifted 16× the
+ * eye distance (`../../camera/focus/focal-ride-pure.ts`), and between two of
+ * those the moving-focal ride translates camera and target together every
+ * frame. Raw local values therefore drift out of any frame the receiver
+ * rebuilds — up to 16 eye distances of pose error — while carrying motion the
+ * viewer cannot see, which on a scale-relative change detector is unbounded
+ * URL churn. Subtracting the anchor removes both at once.
+ *
+ * Both writers read this, so the change detector and the encoder cannot
+ * disagree about what has moved. A pose left un-anchored — no focus, a
+ * soft-kind one, or a source that will not resolve — is one the receiver
+ * rebuilds from `worldOffset` instead, which `currentStateOf` emits on
+ * exactly the complement of this test.
+ */
+function anchoredPose(
+  stellata: Stellata,
+  focused: Target | null,
+  outCam: THREE.Vector3,
+  outTgt: THREE.Vector3,
+): void {
+  outCam.copy(stellata.camera.position);
+  outTgt.copy(stellata.controls.target);
+  if (!isHardTarget(focused)) return;
+  if (!stellata.focusables[focused.kind].localPositionInto(focused.idx, anchorScratch)) return;
+  outCam.sub(anchorScratch);
+  outTgt.sub(anchorScratch);
+}
+
+function snapshotCam(out: Float64Array, c: Vec3Like, t: Vec3Like, u: Vec3Like): void {
   out[0] = c.x; out[1] = c.y; out[2] = c.z;
   out[3] = t.x; out[4] = t.y; out[5] = t.z;
   out[6] = u.x; out[7] = u.y; out[8] = u.z;
@@ -1523,7 +1573,8 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
   // applyFromUrl/applyFirstLoadView just applied) until the user
   // actually moves the camera, scrubs time, or changes a setting.
   const lastCam = new Float64Array(9);
-  snapshotCam(stellata, lastCam);
+  anchoredPose(stellata, stellata.focus.getFocusedTarget(), frameCam, frameTgt);
+  snapshotCam(lastCam, frameCam, frameTgt, stellata.camera.up);
   let lastT = persistedT(stellata);
 
   const schedule = () => {
@@ -1552,25 +1603,13 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
       changed = true;
     }
 
-    const c = stellata.camera.position;
-    const tg = stellata.controls.target;
+    anchoredPose(stellata, stellata.focus.getFocusedTarget(), frameCam, frameTgt);
     const u = stellata.camera.up;
-    // Component-wise epsilon comparison on the steady-state path. The
-    // per-vector threshold scales with magnitude (frameTriggerEps) so
-    // a zoom-out from solar-system scale trips at AU-resolution rather
-    // than waiting for the camera to move 1e-3 pc ≈ 206 AU. At scene
-    // scale (>= 0.1 pc) the threshold caps at EPS, preserving the
-    // original behaviour. No allocations on the no-change path — used
-    // to be 10+ string allocations per frame from a toFixed(3)×9 hash.
-    const cEps = frameTriggerEps(Math.hypot(c.x, c.y, c.z));
-    const tEps = frameTriggerEps(Math.hypot(tg.x, tg.y, tg.z));
-    const uEps = frameTriggerEps(Math.hypot(u.x, u.y, u.z));
-    const camMoved =
-      Math.abs(c.x - lastCam[0]) >= cEps || Math.abs(c.y - lastCam[1]) >= cEps || Math.abs(c.z - lastCam[2]) >= cEps ||
-      Math.abs(tg.x - lastCam[3]) >= tEps || Math.abs(tg.y - lastCam[4]) >= tEps || Math.abs(tg.z - lastCam[5]) >= tEps ||
-      Math.abs(u.x - lastCam[6]) >= uEps || Math.abs(u.y - lastCam[7]) >= uEps || Math.abs(u.z - lastCam[8]) >= uEps;
-    if (camMoved) {
-      snapshotCam(stellata, lastCam);
+    // Steady-state path: one scale-free comparison against the snapshot
+    // (`pose-change-pure.ts`). No allocations on the no-change path — this
+    // used to be 10+ string allocations per frame from a toFixed(3)×9 hash.
+    if (poseChanged(lastCam, frameCam, frameTgt, u)) {
+      snapshotCam(lastCam, frameCam, frameTgt, u);
       changed = true;
     }
 
@@ -1579,5 +1618,5 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
 }
 
 function approx(a: number, b: number): boolean {
-  return Math.abs(a - b) < EPS;
+  return Math.abs(a - b) < SCALAR_EPS;
 }

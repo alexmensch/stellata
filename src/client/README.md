@@ -140,6 +140,16 @@ the `attach*` family, and the star-frame reads (`localPositions`,
 render machinery. A new zero-logic pass-through belongs on the
 controller.
 
+**Install seams are the other admissible shape**, and they are not
+pass-throughs: a UI surface built after the shell registers itself here so
+code that only holds a `Stellata` can reach it. `setOrbitFrameTick` (the
+attitude instrument's per-frame ORB re-read, whose *ordering* only the scene
+registry can express) and `setOrbitFramePort` / `getOrbitFramePort` (ORB and
+the orbit lock on the share URL — state no controller owns,
+`util/url-state/README.md` § ORB and the orbit lock) are both of that kind.
+Each reads through its field every time, so installing after construction
+works exactly as a lazily-attached layer does, and `dispose` clears both.
+
 ## Event bus on `Stellata`
 
 Subscribers register via `stellata.on(name, fn)` and receive a typed
@@ -180,9 +190,13 @@ mutation without enumerating the fine-grained names. `'planetSystem'`
 (derived from a focus change that already paired with `'state'`),
 `'frame'`, `'focusLerp'`, `'noopClick'` (transient feedback, not a
 state mutation), and the warp-end edge emit alone. The pairing also runs
-the other way once: a discrete clock jump has no fine-grained event of
-its own and emits bare `'state'` from
-`Stellata.notifyClockJumped()`.
+the other way, for the two mutations that are URL state with no
+fine-grained event of their own — each emits bare `'state'`: a discrete
+clock jump, from `Stellata.notifyClockJumped()`, and ORB / the orbit lock,
+from `Stellata.notifyOrbitFrameChanged()`. **A mutation the URL carries but
+no event announces reaches the address bar only by luck** — the URL writer
+otherwise wakes on `'state'` or on a detected pose change, and engaging the
+orbit lock moves neither.
 
 ## Click-state machine (`camera/controls/input/input-controller.ts`)
 

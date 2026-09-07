@@ -23,9 +23,9 @@ chip does.
 
 ```
 attitude-pure.ts (+ test)  Frame table (equatorial / ecliptic / galactic,
-                           plus the captured REF and ORB), the
-                           camera→(pitch, bank, longitude) read, and the
-                           ball's model matrix.
+                           plus REF and ORB), the camera→(pitch, bank,
+                           longitude) read, the ball's model matrix, and
+                           `OrbitFramePort` (`orbit-frame/README.md` § The lock).
 attitude-ball.ts           The painted grid texture and the standalone mini
                            renderer that draws the sphere.
 attitude-layout.ts (+ test) The mini-renderer's view geometry, the sphere's

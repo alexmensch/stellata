@@ -252,7 +252,16 @@ two points (`cam`, `tgt`) and rebuilds the look direction with `lookAt` on
 load. So the shell manufactures a `tgt` one parsec along the camera's
 forward axis (`LOOK_PIN_DIST_PC`). The distance is arbitrary — any
 non-zero value encodes the same direction — and the pin's only consumer is
-the URL writer. `scale-bar.ts` branches to angular extent in OBSERVE and
+the URL writer.
+
+**The pin is also OBSERVE's only signal that the view turned**, since the
+change detector reads cam, tgt and `camera.up` and a look-around moves none
+of the other two (`../../util/url-state/README.md` § What counts as a camera
+move). The distance stays arbitrary there as well, and not by luck: a turn of
+θ moves the pin by `D·θ` against a radius of `D`, so the ratio the detector
+tests IS θ whatever `D` is. **Replacing the two-point pin with a serialised
+direction has to carry that term with it**, or an OBSERVE look-around stops
+reaching the URL altogether. `scale-bar.ts` branches to angular extent in OBSERVE and
 never reads it; the galactic arrows deliberately use the focal position
 instead (`../../galactic/README.md`), since a target-based origin would
 report every distance ~1 pc off.

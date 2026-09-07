@@ -46,6 +46,10 @@ src/client/util/url-state/
                                   Pure string helpers, split out so the
                                   path regex is unit-testable without
                                   url-state.ts's location/history writes.
+  pose-change-pure.ts (+ test)    the one scale-free test behind both the
+                                  per-frame write trigger and the encoder's
+                                  cam / tgt / worldOffset elision. See
+                                  § What counts as a camera move.
   url-state.ts (+ test)           blob encode / decode (v1–v4 formats),
                                   default-compression presence mask,
                                   per-component vec3 sub-masks,
@@ -135,11 +139,11 @@ bit order, so mode isn't known until the field loop completes).
   snaps the camera to the park pose — URL restore must not surface as a
   2 s glide on page load. If camera params are also present, it uses
   `setOrbitTarget` so the explicit camera wins.
-- Camera changes are tracked via the `'frame'` event with a per-component
-  epsilon comparison (no per-frame allocations) feeding a 1 s debounced
-  writer. The comparison covers position, target, **and** `camera.up` — so
-  a roll gesture (which moves neither position nor target) still triggers a
-  URL update.
+- Camera changes are tracked via the `'frame'` event with the scale-free
+  comparison of § What counts as a camera move (no per-frame allocations)
+  feeding a 1 s debounced writer. The comparison covers position, target,
+  **and** `camera.up` — so a roll gesture (which moves neither position nor
+  target) still triggers a URL update.
   The same frame check also watches the **pinned `t`** (`isLive(t) ? null
   : t`, mirroring `currentStateOf`'s encode gate): the scrubber drives
   `getT()` directly without a `'state'` event, so without this a time
@@ -186,7 +190,8 @@ The declutter `detailLevel` rides its own 1-byte enum field (bit 23,
 `all` — a fully-cluttered share stays byte-identical to before.
 
 `coordSphere` is a **four-state carried across several places**, not one
-field: FLAG_GRID (flags bit 0) means "a coordinate sphere is selected", and
+field — and it does not carry ORB, which is § ORB and the orbit lock.
+FLAG_GRID (flags bit 0) means "a coordinate sphere is selected", and
 one zero-byte presence bit per frame past the galactic default says which —
 bit 24 equatorial, bit 26 ecliptic, both built by `coordSphereFrameField`.
 Layering rather than replacing FLAG_GRID with an enum is what makes both
@@ -199,16 +204,118 @@ byte where it currently costs zero. **A frame's bit is frozen once it ships**
 — a link in the wild carries it — so a further frame claims the next free bit
 rather than renumbering.
 
+## ORB and the orbit lock
+
+**ORB is not a `coordSphere` value.** The sky frames (galactic / ecliptic /
+equatorial) are what that field carries; ORB — the focused object's own
+orbital plane — and the orbit lock over it are held by the attitude
+instrument itself (`../../attitude/orbit-frame/README.md`). So a view with
+ORB armed used to encode whichever sky frame was selected *before* ORB was
+picked, and the lock encoded nothing at all: the link came back reading
+against the wrong datum, with the camera no longer riding the orbit.
+
+Both ride **zero-payload presence bits** — 27 (ORB armed) and 28 (lock
+engaged) — because each is reconstructible from the focus the blob already
+carries. The flags byte is full, so this is the § Adding a field route
+rather than a flag bit. Bit 28 opens the LEB128 mask's fifth 7-bit group,
+which is the lock's whole cost.
+
+They reach the instrument through `OrbitFramePort`
+(`../../attitude/attitude-pure.ts`), installed by the instrument onto the
+shell — the codec talks to `Stellata`, and this is state no controller owns.
+
+**Being on the wire is not enough: a write has to be triggered too.** The
+writer wakes on a `'state'` event or on a detected pose change, and these two
+are the only URL fields that are neither `FilterState` (whose every mutation
+emits `'state'`) nor a pose — arming ORB writes an instrument-local variable,
+and engaging the lock moves nothing a still camera would show. So the
+instrument announces them itself, through
+`Stellata.notifyOrbitFrameChanged()`, on any change to either
+(`../../attitude/orbit-frame/README.md` § The lock). Without that the bits
+reached the address bar only when some unrelated change happened to write it
+afterwards, which is why the arm survived a refresh and the lock — the last
+thing a user touches — did not.
+
+**A restore lands LAST in `applyDecodedView`, and that is the field's whole
+difficulty.** Three of the steps before it disarm ORB on their way past: the
+instrument drops it on a focus change, on a `coordSphere` change, and with
+the camera mode. A restore anywhere earlier is silently undone by a later
+step of the same function, and lands unlocked. It runs again inside the
+deferred-sid focus callback for the one case that settles after
+`applyDecodedView` returns, so `restore` is idempotent.
+
+**The blob is a request, not an instruction.** `restore` re-applies the
+receiver's own `orbitLockShowing`, so a link asking for a lock this focus
+cannot carry lands armed-but-unlocked, exactly as the gesture would. And an
+absent bit is a positive statement — a sky-frame link disarms an ORB the
+receiving session was already holding rather than leaving it standing.
+
+The REF and TGT datums stay off the wire: both are snapshots of an attitude
+rather than properties of the focus, so they need real payload and a separate
+decision about whether a captured datum means anything to a receiver.
+
 The manual **EV trim** rides bit 25 as a 1-byte field quantised to the
 slider's own `EV_STEP_STOPS` grid, present only when the user moved it off
 0. The instrument's limiting magnitude is *not* on the wire — it is derived
 from the aperture, so a receiver on a different build gets that build's
 limit and the trim applies on top.
 
-`worldOffset` (FIELDS_V2 bit 20, vec3 Float32) serialises only when
-`focusedStar === null` AND the offset isn't ≈Sol — see
+`worldOffset` (FIELDS_V2 bit 20, vec3 Float32) serialises only when nothing
+is focused AND the anchor is far enough from Sol to move the pose — see
 `src/client/frame/README.md` § URL round-trip for the precision-anchor
-semantics that make this round-trip safe.
+semantics that make this round-trip safe, and § What counts as a camera move
+for "far enough".
+
+## What counts as a camera move
+
+Every threshold on a pose vector — the per-frame write trigger and the
+encoder's cam / tgt / worldOffset elision alike — is **a fraction of the
+orbit radius `|cam − tgt|`, never a distance**. `pose-change-pure.ts` owns
+the rule and the one constant, `POSE_CHANGE_EPS`.
+
+The rule is angular and metric at once, which is why it needs no cases:
+`|Δcam| / r` IS the angle the move subtends at the orbit target, so an orbit
+gesture and a dolly land on the same test. Pan and OBSERVE's look-around
+land in `tgt` against the same radius; roll moves neither point and is read
+off `camera.up`, a unit axis whose delta is the roll angle itself. OBSERVE
+has no orbit pivot but still carries a radius — the serialised look pin a
+parsec down the forward axis (`../../camera/observe/README.md`).
+
+**An absolute threshold is wrong at every vantage but one**, and this camera
+reaches lunar orbit and the Local Group in a session (`AGENTS.md`
+§ Camera-anywhere). The rule this replaced was `max(1e-9 pc, min(1e-3 pc,
+1 % of magnitude))`, and each term failed somewhere: the 1e-9 pc floor is
+**30,857 km**, so beside the Moon the camera had to travel seven times its
+own distance from the body before the URL was rewritten and a whole orbit
+went unrecorded; the 1e-3 pc encoder band called a 30-billion-km pan
+"default", and called the anchor of every unfocused view inside the solar
+system "Sol", so the receiver rebuilt the pose 1 AU away.
+
+**The pose is measured from the anchor the RECEIVER rebuilds**, not from the
+local origin — `url-state.ts`'s `anchoredPose`, which both writers read so
+they cannot disagree about what has moved. A hard focus recentres the origin
+onto the object at apply time, while the sender's own recentre fires only
+once the camera has drifted 16× the eye distance
+(`../../camera/focus/focal-ride-pure.ts`). Between two of those the
+moving-focal ride carries camera and target along with the object: raw local
+values drift out of any frame the receiver reconstructs, and they carry
+motion the viewer cannot see, which under a scale-relative trigger is
+unbounded URL churn against a *trailing* debounce — that is, no URL write at
+all. Subtracting the anchor removes both.
+
+**Where no anchor is subtracted, `worldOffset` carries the frame instead**, and
+the encoder gates that field on the exact complement of this test rather than
+on a second rule of its own. Three cases leave the pose un-anchored: nothing
+focused, a source that will not resolve, and a **soft-kind focus** — only a
+hard kind recentres the origin (`../../camera/focus/focus-target.ts`
+`KIND_TRAITS`), so a cloud, an LG object or a shell can be focused with the
+frame still sitting on whatever was focused before it.
+
+Two bounds fix the constant: below ~1e-3 the round-trip error is sub-pixel
+on any display, and it has to stay well clear of the float32 wire's own
+6e-8 resolution or a settled camera would rewrite the URL forever. Its
+tests pin the behaviour at five vantages spanning ten orders of magnitude,
+which is the property that matters — not the value.
 
 **Adding a field.** Claim the next free presence bit in `FIELDS_V4`,
 declare its type and bytes, and add encode/decode logic in

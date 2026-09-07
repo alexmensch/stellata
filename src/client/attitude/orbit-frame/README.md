@@ -215,6 +215,30 @@ wrong once:
 - **Engaging the lock seeds from wherever the datum is now**, not from where
   it was when ORB was armed, for the same reason.
 
+**ORB and the lock ride the share URL**, on two zero-payload presence bits —
+the frame itself rebuilds from the focus the blob already carries, so neither
+needs more. They are the instrument's own state rather than
+`filter.coordSphere`, so they reach it through `OrbitFramePort`
+(`../attitude-pure.ts`), and a restore has to land after the focus, the
+filter and the camera mode have settled, since each of those disarms ORB:
+`../../util/url-state/README.md` § ORB and the orbit lock owns the ordering
+and the compatibility argument. A restore goes through the same two fields
+the flag writes and then lets `refresh` apply the rule below, so a link
+cannot arm a lock the receiver would refuse.
+
+**`refresh` is also where the pair is published to the URL**, on change and
+through `Stellata.notifyOrbitFrameChanged()` — not from the gestures, because
+the paths that *clear* the lock without touching it have to publish too, a
+datum armed over the top being the one a per-gesture emit misses. Suppressed
+across a restore, which is applying the blob it would ask to rewrite.
+
+**A restore arms optimistically**, without the orbit-availability check the
+flag and the gesture both make: a source can still be attaching when the blob
+lands, so refusing then would drop a legitimate ORB. `tickOrbitFrame` is
+therefore what makes an arm with nothing behind it visible — it disarms
+through `refresh` rather than by writing the two fields, so the flag cannot
+sit on ORB over a ball that has fallen back to the sky frame.
+
 **Whether the lock exists at all is `orbitLockShowing`, and there is exactly
 one copy of it.** Three conditions, each an absence the user can see: ORB is
 the frame (nothing else has a travelling datum), no REF or TGT datum is held

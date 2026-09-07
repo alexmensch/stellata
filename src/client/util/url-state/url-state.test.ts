@@ -9,16 +9,15 @@ import {
   writeVarint,
   readVarint,
   varintLen,
-  frameTriggerEps,
   type DecodedView,
   type StarRef,
   type IdMaps,
 } from './url-state';
 import type { Stellata } from '../../stellata';
-import type { Target } from '../../camera/focus/focus-target';
+import type { FocusableProvider, Target } from '../../camera/focus/focus-target';
+import type { OrbitFramePort } from '../../attitude/attitude-pure';
 import { DEFAULT_FILTER, DEFAULT_FOV } from '../../filters/filter-state';
 import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
-import { AU_PC } from '../astronomy-constants';
 import { SidResolver, arrayDomain } from '../sid-resolver';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 
@@ -116,6 +115,35 @@ function rollStub() {
 
 // Duck-typed THREE.Vector3 — url-state only ever reads x/y/z and calls
 // set/normalize, so the wire suite stays independent of THREE.
+// Every kind's focal anchor at the local origin — what a frame recentred on
+// the focus means, and the state url-state's own gates are written against.
+// A test needing the drifted frame between two recentres passes its own offset.
+/** The attitude instrument's URL seam. `restore` mirrors the instrument's own
+ *  rule that a lock cannot exist without ORB, so a test sees what the receiver
+ *  would actually end up holding rather than what the blob asked for. */
+function mockOrbitPort(state: { armed: boolean; locked: boolean }): OrbitFramePort {
+  return {
+    isArmed: () => state.armed,
+    isLocked: () => state.locked,
+    restore: (armed, locked) => {
+      state.armed = armed;
+      state.locked = armed && locked;
+    },
+  };
+}
+
+function mockFocusables(x = 0, y = 0, z = 0) {
+  const leg = partialOf<FocusableProvider>({
+    localPositionInto: (_idx, out) => {
+      out.set(x, y, z);
+      return true;
+    },
+  });
+  return partialOf<Stellata['focusables']>({
+    star: leg, planet: leg, probe: leg, cloud: leg, lg: leg, shell: leg,
+  });
+}
+
 function mockVec3(x = 0, y = 0, z = 0) {
   return {
     x, y, z,
@@ -212,6 +240,7 @@ function makeStatefulStellata() {
     vectorToCloud: null as number | null,
     pois: [] as Target[],
     mode: 'navigate' as 'navigate' | 'observe',
+    orbit: { armed: false, locked: false },
   };
   const clearFocus = () => {
     state.focusedStar = null;
@@ -241,6 +270,8 @@ function makeStatefulStellata() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getWorldOffset: () => mockVec3() as any,
     setWorldOffset: () => {},
+    focusables: mockFocusables(),
+    getOrbitFramePort: () => mockOrbitPort(state.orbit),
     focus: partialOf<Stellata['focus']>({
       getFocusedStar: () => state.focusedStar,
       getFocusedTarget: () => {
@@ -1041,6 +1072,7 @@ describe('url-state', () => {
   });
 
   describe('currentStateOf cam-omission', () => {
+    const star = (idx: number): Target => ({ kind: 'star', idx });
     // Minimal mock — currentStateOf only reads getters and the camera /
     // controls vec3-shaped fields. Anything not exercised by these tests
     // returns the "default" sentinel so encoder skips that field.
@@ -1049,12 +1081,24 @@ describe('url-state', () => {
       camPos?: [number, number, number];
       target?: [number, number, number];
       up?: [number, number, number];
-      focusedStar?: number | null;
+      /** Any kind, because only a HARD one recentres the origin — which is
+       *  what decides whether the pose leaves anchored and whether
+       *  worldOffset has to carry the frame. */
+      focused?: Target | null;
+      /** Focal object's local position — non-zero is the drifted frame
+       *  between two origin recentres. */
+      anchor?: [number, number, number];
+      /** The floating origin's absolute position. */
+      worldOffset?: [number, number, number];
+      /** ORB armed / orbit lock engaged on the attitude instrument. */
+      orbit?: { armed: boolean; locked: boolean };
     } = {}): Stellata {
       const mode = opts.mode ?? 'navigate';
       const camPos = opts.camPos ?? [0, 0, 30];
       const tgt = opts.target ?? [0, 0, 0];
       const up = opts.up ?? GN_UP;
+      const focused = opts.focused ?? null;
+      const wo = opts.worldOffset ?? [0, 0, 0];
       const stub: Partial<Stellata> = {
         filters: partialOf<Stellata['filters']>({
           getFilter: () => ({ ...DEFAULT_FILTER }),
@@ -1064,11 +1108,13 @@ describe('url-state', () => {
           getEv: () => 0,
           setEv: () => {},
         }),
+        focusables: mockFocusables(...(opts.anchor ?? [0, 0, 0])),
+        getOrbitFramePort: () => mockOrbitPort(
+          opts.orbit ?? { armed: false, locked: false },
+        ),
         focus: partialOf<Stellata['focus']>({
-          getFocusedStar: () => opts.focusedStar ?? null,
-          getFocusedTarget: () => (opts.focusedStar != null
-            ? { kind: 'star' as const, idx: opts.focusedStar }
-            : null),
+          getFocusedStar: () => (focused?.kind === 'star' ? focused.idx : null),
+          getFocusedTarget: () => focused,
           getVectorTarget: () => null,
           getCameraMode: () => mode,
         }),
@@ -1077,7 +1123,7 @@ describe('url-state', () => {
         // wall-clock now keeps the existing assertions at "no t in URL".
         getT: () => Date.now() / 1000,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getWorldOffset: () => ({ x: 0, y: 0, z: 0 } as any),
+        getWorldOffset: () => ({ x: wo[0], y: wo[1], z: wo[2] } as any),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         camera: {
           position: { x: camPos[0], y: camPos[1], z: camPos[2] },
@@ -1101,7 +1147,7 @@ describe('url-state', () => {
       // URL. Regression: a future change that points camDefault elsewhere
       // for observe would silently re-introduce the 16 chars.
       const view = currentStateOf(
-        makeMockStellata({ mode: 'observe', camPos: [0, 0, 0], focusedStar: 5 }),
+        makeMockStellata({ mode: 'observe', camPos: [0, 0, 0], focused: star(5) }),
         idMaps,
       );
       expect(view.cam).toBeUndefined();
@@ -1110,7 +1156,7 @@ describe('url-state', () => {
 
     it('emits cam when observe-mode camera is *not* at the focal origin', () => {
       const view = currentStateOf(
-        makeMockStellata({ mode: 'observe', camPos: [1, 2, 3], focusedStar: 5 }),
+        makeMockStellata({ mode: 'observe', camPos: [1, 2, 3], focused: star(5) }),
         idMaps,
       );
       expect(view.cam).toEqual([1, 2, 3]);
@@ -1132,6 +1178,166 @@ describe('url-state', () => {
         idMaps,
       );
       expect(view.cam).toBeUndefined();
+    });
+
+    // The sender's origin recentres only at 16x the eye distance, and until it
+    // fires the focal ride carries camera and target along with the object. The
+    // receiver ALWAYS recentres onto the focus, so raw local values land in a
+    // frame it never rebuilds — the pose has to leave measured from the object.
+    it('encodes a focused pose relative to the focal object, not the local origin', () => {
+      const drifted = currentStateOf(
+        makeMockStellata({
+          focused: star(7),
+          anchor: [100, 0, 0],
+          camPos: [100, 0, 40],
+          target: [100, 0, 0],
+        }),
+        idMaps,
+      );
+      expect(drifted.cam).toEqual([0, 0, 40]);
+      expect(drifted.tgt).toBeUndefined();
+    });
+
+    it('omits a focused default pose whatever the frame has drifted to', () => {
+      // Same pose, same bytes, wherever the un-recentred origin happens to sit
+      // — which is what stops a ride rewriting the URL every frame.
+      const near = currentStateOf(
+        makeMockStellata({ focused: star(7), anchor: [0, 0, 0], camPos: [0, 0, 30] }),
+        idMaps,
+      );
+      const far = currentStateOf(
+        makeMockStellata({
+          focused: star(7), anchor: [1e3, -2e3, 5e2], camPos: [1e3, -2e3, 5e2 + 30],
+          target: [1e3, -2e3, 5e2],
+        }),
+        idMaps,
+      );
+      expect(near.cam).toBeUndefined();
+      expect(far.cam).toBeUndefined();
+      expect(encodeBlob(far)).toBe(encodeBlob(near));
+    });
+
+    // Nothing focused: no anchor to measure from, so raw local values are
+    // already what the receiver rebuilds against worldOffset.
+    it('leaves an unfocused pose in the local frame', () => {
+      const view = currentStateOf(
+        makeMockStellata({ focused: null, anchor: [100, 0, 0], camPos: [1, 2, 3] }),
+        idMaps,
+      );
+      expect(view.cam).toEqual([1, 2, 3]);
+    });
+
+    // worldOffset rides the wire on the exact complement of the anchoring
+    // above, and HARD-ness is the whole of that test: only a hard kind
+    // recentres the origin, so these three cases are one rule, not three.
+    const ANCHOR: [number, number, number] = [51.6, 257, -37.7];
+
+    it('emits worldOffset when nothing is focused', () => {
+      const view = currentStateOf(
+        makeMockStellata({ focused: null, worldOffset: ANCHOR, camPos: [1, 2, 3] }),
+        idMaps,
+      );
+      expect(view.worldOffset).toEqual(ANCHOR);
+    });
+
+    it('omits worldOffset under a hard focus the receiver recentres onto', () => {
+      const view = currentStateOf(
+        makeMockStellata({ focused: star(7), worldOffset: ANCHOR, camPos: [1, 2, 3] }),
+        idMaps,
+      );
+      expect(view.worldOffset).toBeUndefined();
+    });
+
+    // A cloud / LG object / shell is focusable without the origin moving, so a
+    // link to one carries its frame here or nowhere. Gating on "nothing
+    // focused" instead put the receiver back at Sol — 257 pc from the view
+    // that was shared — while the anchor sat unread in the sender.
+    it.each<[string, Target]>([
+      ['cloud', { kind: 'cloud', idx: 0 }],
+      ['lg', { kind: 'lg', idx: 0 }],
+      ['shell', { kind: 'shell', idx: 0 }],
+    ])('emits worldOffset under a soft %s focus, and leaves the pose raw', (_k, focused) => {
+      const view = currentStateOf(
+        makeMockStellata({
+          focused, worldOffset: ANCHOR, anchor: [100, 0, 0], camPos: [1, 2, 3],
+        }),
+        idMaps,
+      );
+      expect(view.worldOffset).toEqual(ANCHOR);
+      // Un-anchored despite the provider offering one: subtracting a frame
+      // the receiver never rebuilds is what worldOffset is here to avoid.
+      expect(view.cam).toEqual([1, 2, 3]);
+    });
+  });
+
+  describe('ORB and the orbit lock on the wire', () => {
+    it('carries neither bit for a view holding neither', () => {
+      const { stellata } = makeStatefulStellata();
+      const view = currentStateOf(stellata, makeFixtureBuild());
+      expect(view.orb).toBeUndefined();
+      expect(view.orbLock).toBeUndefined();
+    });
+
+    it('encodes ORB armed, and the lock only over it', () => {
+      const armedOnly = makeStatefulStellata();
+      armedOnly.state.orbit = { armed: true, locked: false };
+      const armed = currentStateOf(armedOnly.stellata, makeFixtureBuild());
+      expect(armed.orb).toBe(true);
+      expect(armed.orbLock).toBeUndefined();
+
+      const both = makeStatefulStellata();
+      both.state.orbit = { armed: true, locked: true };
+      const locked = currentStateOf(both.stellata, makeFixtureBuild());
+      expect(locked.orb).toBe(true);
+      expect(locked.orbLock).toBe(true);
+    });
+
+    it('round-trips both bits through the blob', () => {
+      expect(roundtrip({ orb: true }).view).toMatchObject({ orb: true });
+      const both = roundtrip({ orb: true, orbLock: true }).view;
+      expect(both).toMatchObject({ orb: true, orbLock: true });
+    });
+
+    // Zero payload — the frame rebuilds from the focus the blob already
+    // carries — so the only cost is the LEB128 mask reaching the bit. Bit 28
+    // opens a fifth 7-bit group, which is why the lock adds a byte and ORB
+    // alone does not; both are still payload-free.
+    it('costs mask bytes and no payload', () => {
+      expect(blobBytes(encodeBlob({}))).toBe(2);
+      expect(blobBytes(encodeBlob({ orb: true }))).toBe(5);
+      expect(blobBytes(encodeBlob({ orb: true, orbLock: true }))).toBe(6);
+    });
+
+    it('restores ORB and the lock onto the instrument', () => {
+      const { stellata, state } = makeStatefulStellata();
+      applyDecodedView(stellata, { orb: true, orbLock: true }, makeFixtureBuild());
+      expect(state.orbit).toEqual({ armed: true, locked: true });
+    });
+
+    // A blob is a request. The instrument's own orbitLockShowing still rules,
+    // and no-ORB is one of the three absences it refuses on.
+    it('refuses a lock the blob asks for without ORB', () => {
+      const { stellata, state } = makeStatefulStellata();
+      applyDecodedView(stellata, { orbLock: true }, makeFixtureBuild());
+      expect(state.orbit).toEqual({ armed: false, locked: false });
+    });
+
+    // Absence is a positive statement: a sky-frame link has to disarm an ORB
+    // the receiving session was already holding.
+    it('disarms ORB a link does not carry', () => {
+      const { stellata, state } = makeStatefulStellata();
+      state.orbit = { armed: true, locked: true };
+      applyDecodedView(stellata, { coordSphere: 'ecliptic' }, makeFixtureBuild());
+      expect(state.orbit).toEqual({ armed: false, locked: false });
+    });
+
+    // The pre-change corpus has neither bit, so every link in the wild still
+    // decodes to its sky frame with no ORB over the top.
+    it('leaves a link predating the bits on its sky frame', () => {
+      const { view } = roundtrip({ coordSphere: 'equatorial' });
+      expect(view.coordSphere).toBe('equatorial');
+      expect(view.orb).toBeUndefined();
+      expect(view.orbLock).toBeUndefined();
     });
   });
 
@@ -1762,61 +1968,6 @@ describe('url-state', () => {
     });
   });
 
-  describe('startUrlSync per-frame change-detector threshold', () => {
-    // The per-component trigger threshold is min(EPS, mag * EPS_REL),
-    // floored at EPS_FLOOR. This pins the regime boundaries so a
-    // future tweak that flips a constant doesn't silently re-introduce
-    // the "1e-3 pc absolute everywhere" bug — at solar-system scales
-    // (cam at AU magnitudes) that threshold equals ~206 AU and a zoom-
-    // out from the first-load 5 AU park doesn't trip any axis until
-    // the camera has moved hundreds of AU.
-
-    it('caps at EPS = 1e-3 pc for scene-scale magnitudes', () => {
-      // 0.1 pc (where mag * 0.01 = 1e-3 = EPS) is the boundary.
-      expect(frameTriggerEps(0.1)).toBe(1e-3);
-      expect(frameTriggerEps(30)).toBe(1e-3);     // navigate-default cam
-      expect(frameTriggerEps(8500)).toBe(1e-3);   // ~Sol-to-GC distance
-      expect(frameTriggerEps(1e6)).toBe(1e-3);    // ~Andromeda
-    });
-
-    it('scales to 1% of magnitude at solar-system scales', () => {
-      // At the first-load 5 AU park, a zoom of ~0.05 AU per frame
-      // crosses the per-axis threshold for the dominant component —
-      // far below the prior 206-AU absolute threshold.
-      const fiveAU = 5 * AU_PC;
-      expect(frameTriggerEps(fiveAU)).toBeCloseTo(fiveAU * 0.01, 12);
-      const oneAU = 1 * AU_PC;
-      expect(frameTriggerEps(oneAU)).toBeCloseTo(oneAU * 0.01, 12);
-    });
-
-    it('floors at 1e-9 pc to avoid noise-triggering at the origin', () => {
-      // observe-mode cam pins to [0, 0, 0]. A magnitude of zero with
-      // no floor would let any float-noise tick trigger a URL write.
-      expect(frameTriggerEps(0)).toBe(1e-9);
-      // Magnitudes below the EPS_REL crossover (1e-9 / 0.01 = 1e-7 pc
-      // ≈ 0.02 AU) clamp to the floor.
-      expect(frameTriggerEps(1e-8)).toBe(1e-9);
-      expect(frameTriggerEps(1e-7)).toBeCloseTo(1e-9, 12);
-    });
-
-    it('demonstrates the zoom-out fix at first-load 5 AU magnitude', () => {
-      // First-load parks the camera at 5 AU on a ~(-0.063, 0.799,
-      // 0.600) unit vector. The dominant component is y at ~0.8 of
-      // magnitude. Threshold for y to trip = eps / |y_unit|.
-      // Pre-fix: eps = 1e-3 pc absolute → trip distance = 1e-3 /
-      //   0.799 ≈ 1.25e-3 pc ≈ 258 AU.
-      // Post-fix: eps = mag * 0.01 = 5 AU * 0.01 = 0.05 AU per axis,
-      //   so the y-component trips after a zoom of 0.05 / 0.8 ≈ 0.06
-      //   AU — orders of magnitude finer.
-      const fiveAU = 5 * AU_PC;
-      const eps = frameTriggerEps(fiveAU);
-      const yUnit = 0.799;
-      const tripDistanceAU = eps / yUnit / AU_PC;
-      // At least 1000× tighter than the prior 258 AU — exact value
-      // here is ~0.0626 AU.
-      expect(tripDistanceAU).toBeLessThan(0.1);
-    });
-  });
 });
 
 // Wiring around the pure path helpers (share-path-pure.test.ts covers the
@@ -1832,7 +1983,13 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
   const liveT = () => Date.now() / 1000;
   const scrubbedT = () => Date.now() / 1000 - 100_000;
 
-  function makeSyncStellata() {
+  function makeSyncStellata(opts: {
+    /** ORB / lock as the instrument holds them. Neither is a pose and
+     *  neither is FilterState, so a bare 'state' emit is the only thing
+     *  that can put them on the wire. */
+    orbit?: { armed: boolean; locked: boolean };
+  } = {}) {
+    const orbit = opts.orbit ?? { armed: false, locked: false };
     const state = {
       fov: DEFAULT_FOV,
       t: liveT(),
@@ -1861,6 +2018,8 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       getWorldOffset: () => mockVec3() as any,
       setWorldOffset: () => {},
+      focusables: mockFocusables(),
+      getOrbitFramePort: () => mockOrbitPort(orbit),
       focus: partialOf<Stellata['focus']>({
         getFocusedStar: () => state.focusedStar,
         getFocusedTarget: () =>
@@ -1894,8 +2053,9 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     }) as unknown as Stellata['on'];
     return {
       stellata: stub as Stellata,
-      state, cam, controls, roll,
+      state, cam, controls, roll, orbit,
       frame: () => handlers.frame.forEach((h) => h(undefined)),
+      emitState: () => handlers.state.forEach((h) => h(undefined)),
     };
   }
 
@@ -2049,6 +2209,41 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       vi.advanceTimersByTime(1000);
       expect(loc.pathname.startsWith('/v/')).toBe(true);
       expect(loc.hash).toBe('#renderer=webgpu');
+    });
+  });
+
+  // ORB and the lock are the only URL fields that are neither a pose nor
+  // FilterState, so the detector cannot see them and no fine-grained event
+  // announces them: the instrument owes a bare 'state' emit
+  // (`Stellata.notifyOrbitFrameChanged`). Without it the bits reached the
+  // address bar only when some unrelated change happened to write it
+  // afterwards — which is why an arm survived a refresh and the lock, being
+  // the last thing a user touches, did not.
+  describe('startUrlSync — instrument state needs its own write trigger', () => {
+    it('writes ORB and the lock on a bare state emit, camera still', () => {
+      const { loc } = installUrl('/');
+      const { stellata, emitState } = makeSyncStellata({
+        orbit: { armed: true, locked: true },
+      });
+      startUrlSync(stellata, syncIdMaps());
+      emitState();
+      vi.advanceTimersByTime(1000);
+      expect(loc.pathname.startsWith('/v/')).toBe(true);
+      const { view } = decodeBlob(loc.pathname.split('/')[2]);
+      expect(view).toMatchObject({ orb: true, orbLock: true });
+    });
+
+    it('never reaches the URL from a still camera without one', () => {
+      const { replaceState } = installUrl('/');
+      const { stellata, frame } = makeSyncStellata({
+        orbit: { armed: true, locked: true },
+      });
+      startUrlSync(stellata, syncIdMaps());
+      // Every rendered frame, and the pose never moves — engaging the lock
+      // below the visible-turn threshold moves nothing either.
+      frame(); frame(); frame();
+      vi.advanceTimersByTime(1000);
+      expect(replaceState).not.toHaveBeenCalled();
     });
   });
 });
