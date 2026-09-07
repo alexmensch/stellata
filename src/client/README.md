@@ -190,9 +190,13 @@ mutation without enumerating the fine-grained names. `'planetSystem'`
 (derived from a focus change that already paired with `'state'`),
 `'frame'`, `'focusLerp'`, `'noopClick'` (transient feedback, not a
 state mutation), and the warp-end edge emit alone. The pairing also runs
-the other way once: a discrete clock jump has no fine-grained event of
-its own and emits bare `'state'` from
-`Stellata.notifyClockJumped()`.
+the other way, for the two mutations that are URL state with no
+fine-grained event of their own — each emits bare `'state'`: a discrete
+clock jump, from `Stellata.notifyClockJumped()`, and ORB / the orbit lock,
+from `Stellata.notifyOrbitFrameChanged()`. **A mutation the URL carries but
+no event announces reaches the address bar only by luck** — the URL writer
+otherwise wakes on `'state'` or on a detected pose change, and engaging the
+orbit lock moves neither.
 
 ## Click-state machine (`camera/controls/input/input-controller.ts`)
 

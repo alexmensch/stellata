@@ -2382,6 +2382,17 @@ export class Stellata implements FrameAnchor {
     return this.orbitFramePort;
   }
 
+  /** Owed by every gesture that arms, disarms, or locks ORB. Both are URL
+   *  state held on the instrument rather than in `FilterState`, so no
+   *  fine-grained event covers them and the URL writer would otherwise see a
+   *  lock engaged on a still camera as nothing at all — the second case of the
+   *  bare-'state' pairing `README.md` § Event bus documents, after
+   *  `notifyClockJumped`. Not owed by a URL restore, which is applying the
+   *  blob it would ask to rewrite. */
+  notifyOrbitFrameChanged(): void {
+    this.bus.emit('state');
+  }
+
   /** The smallest camera turn two rendered frames could show apart, at the
    *  current viewport and FOV. A per-frame camera writer below the gate
    *  reads this and declines anything smaller, which is what keeps it from

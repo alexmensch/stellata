@@ -224,6 +224,18 @@ They reach the instrument through `OrbitFramePort`
 (`../../attitude/attitude-pure.ts`), installed by the instrument onto the
 shell — the codec talks to `Stellata`, and this is state no controller owns.
 
+**Being on the wire is not enough: a write has to be triggered too.** The
+writer wakes on a `'state'` event or on a detected pose change, and these two
+are the only URL fields that are neither `FilterState` (whose every mutation
+emits `'state'`) nor a pose — arming ORB writes an instrument-local variable,
+and engaging the lock moves nothing a still camera would show. So the
+instrument announces them itself, through
+`Stellata.notifyOrbitFrameChanged()`, on any change to either
+(`../../attitude/orbit-frame/README.md` § The lock). Without that the bits
+reached the address bar only when some unrelated change happened to write it
+afterwards, which is why the arm survived a refresh and the lock — the last
+thing a user touches — did not.
+
 **A restore lands LAST in `applyDecodedView`, and that is the field's whole
 difficulty.** Three of the steps before it disarm ORB on their way past: the
 instrument drops it on a focus change, on a `coordSphere` change, and with
@@ -289,9 +301,15 @@ moving-focal ride carries camera and target along with the object: raw local
 values drift out of any frame the receiver reconstructs, and they carry
 motion the viewer cannot see, which under a scale-relative trigger is
 unbounded URL churn against a *trailing* debounce — that is, no URL write at
-all. Subtracting the anchor removes both. Nothing focused has no anchor to
-subtract, and raw local values are already what `worldOffset` is read
-against.
+all. Subtracting the anchor removes both.
+
+**Where no anchor is subtracted, `worldOffset` carries the frame instead**, and
+the encoder gates that field on the exact complement of this test rather than
+on a second rule of its own. Three cases leave the pose un-anchored: nothing
+focused, a source that will not resolve, and a **soft-kind focus** — only a
+hard kind recentres the origin (`../../camera/focus/focus-target.ts`
+`KIND_TRAITS`), so a cloud, an LG object or a shell can be focused with the
+frame still sitting on whatever was focused before it.
 
 Two bounds fix the constant: below ~1e-3 the round-trip error is sub-pixel
 on any display, and it has to stay well clear of the float32 wire's own

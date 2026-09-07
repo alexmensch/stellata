@@ -290,6 +290,17 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // beneath it, so the camera swings round with the object. ORB only — it is
   // the one frame whose datum moves, and there is nothing to ride otherwise.
   let orbitLocked = false;
+  // What the URL last reflected. Both are URL state the instrument holds
+  // itself, so no fine-grained event announces them and a lock engaged on a
+  // still camera would reach the address bar as nothing at all. Published from
+  // `refresh`, which every writer funnels through — including the ones that
+  // CLEAR the lock without touching it, a datum armed over the top being the
+  // case a per-gesture emit misses.
+  let publishedArmed = false;
+  let publishedLocked = false;
+  // Set across a URL restore: applying a blob must not schedule a write of the
+  // blob it is applying.
+  let restoring = false;
   const orbitFrame = emptyReferenceFrame();
   // ORB as it stood when the lock last rode it — the whole basis, not just the
   // datum: the plane precesses under a moon and the ride has to carry that
@@ -438,6 +449,13 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     if (!refreshOrbitFrame()) {
       orbitActive = false;
       riding = false;
+      // Through `refresh`, not just the two fields: the flag would otherwise
+      // keep reading ORB over a ball that has fallen back to the sky frame,
+      // and the lock chip would stay on a frame there is nothing to ride. One
+      // shot — the next tick returns above. A URL restore arms optimistically
+      // (a source can still be attaching), so this is the path that has to
+      // make an arm with no orbit behind it visible.
+      refresh();
       return;
     }
     frame = orbitFrame;
@@ -505,6 +523,12 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     refBtn.classList.toggle('on', stop !== 'off');
     refBtn.setAttribute('aria-pressed', stop !== 'off' ? 'true' : 'false');
     frameBtn.textContent = flagLabel;
+    if (!restoring
+      && (orbitActive !== publishedArmed || orbitLocked !== publishedLocked)) {
+      publishedArmed = orbitActive;
+      publishedLocked = orbitLocked;
+      stellata.notifyOrbitFrameChanged();
+    }
     const next = resolveFrame();
     if (next === frame) return;
     frame = next;
@@ -672,7 +696,13 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
       orbitActive = armed;
       orbitLocked = armed && locked;
       riding = false;
+      restoring = true;
       refresh();
+      restoring = false;
+      // The wire now reflects whatever `refresh` settled on, which is not
+      // always what was asked for — a lock this focus cannot carry is refused.
+      publishedArmed = orbitActive;
+      publishedLocked = orbitLocked;
     },
   });
 
