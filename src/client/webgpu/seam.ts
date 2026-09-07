@@ -68,7 +68,7 @@ export interface WebGpuSeam {
    *  then refuses the query set. Every GPU-timing consumer must ask here,
    *  and the render loop's resolve is gated on it: with tracking off three
    *  allocates no query pool, so resolving anyway only warns
-   *  (README.md § Timestamps). */
+   *  (timestamps/README.md § Why the resolve is not gated on the HUD). */
   readonly timestampsAvailable: boolean;
   /** The HDR chain on this boot — target, resolve, reduction. The shell
    *  drives it in place of constructing the WebGL HdrPipeline. */

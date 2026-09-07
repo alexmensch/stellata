@@ -33,10 +33,10 @@ src/client/webgpu/
   reversed-depth-sort.ts (+ test)   Render-list comparators countering
                                     r185's reversed-depth list reversal;
                                     retire with the three bump.
-  timestamp-probe.ts (+ test)       Boot-time check that timestamp
-                                    queries validate; clears
-                                    trackTimestamp where they do not
-                                    (§ Timestamps).
+  timestamps/                       The boot probe that settles whether
+                                    this backend's GPU clock can be
+                                    trusted, and the resolve cadence —
+                                    its own README.
   star-attribute-roster.ts          Which star attributes pack, split by
     (+ test)                        upload cadence. The test derives the
                                     partition from the live WebGL
@@ -404,42 +404,8 @@ a buffer it owns outright. Requirement recorded in that bead's design field.
 
 ## Timestamps
 
-The renderer boots with `trackTimestamp: true`, and `animate()` resolves on
-**every rendered frame the probe left timestamps live on** — not only while
-the HUD is open, and gated on `timestampsAvailable` alone. The resolve is
-what recycles the query pool: tracking allocates a query pair per render pass
-regardless of whether anyone reads the result, so a resolve gated on the HUD
-instead overruns the 2048-query pool after ~1024 frames and three logs
-`Maximum number of queries exceeded`, then stops sampling until something
-resolves. Why the probe's verdict is the one admissible gate, plus two
-properties the seam carries, all in `debug/gpu-timing/README.md`.
-
-**The flag is a request, and a grant is not
-proof:** three ANDs it with `hasFeature('timestamp-query')` and clears it
-where the adapter withholds the feature — but Safari 26 grants it and then
-reports the query set's type as an unknown enum, which fails the render
-pass descriptor, invalidates the command encoder and discards the entire
-submit. Every layer stops drawing and WebKit logs nothing, since it does
-not fire `onuncapturederror`. `timestamp-probe.ts` settles it at boot by
-driving one throwaway timestamped pass inside a validation scope and
-clearing `trackTimestamp` when refused, so `timestampsAvailable` is the
-probe's answer, never `hasFeature`'s. **The probe must run before the
-first frame:** three caches the render pass descriptor per render target
-and never clears a `timestampWrites` it already attached, so a descriptor
-built while the flag was true stays poisoned for the backend's lifetime.
-**One resolve in flight:** a concurrent resolve returns the same promise and
-the same number, so `resolveAndPublishGpuFrame` publishes once per
-completion rather than once per frame the readback spanned. **And a grant is
-not a working clock:** Chrome grants the feature and then resolves whole
-frames as a large negative number, so the channel drops any duration that is
-not finite and positive and degrades exactly as the withheld case does.
-
-The resolved figure is the summed real duration of every render pass in
-one frame, so it lands as `gpu.frame` — the same row the WebGL2 timer
-query fills, and the perf HUD's headline reads `gpu` rather than `submit`
-on either backend. Subscribers (the HUD, a `debug.priceFrame()` sweep)
-come and go through `debug/gpu-timing/gpu-frame-samples.ts` while the
-resolve itself is gated on nothing but the probe's verdict. Per-pass `gpu.*` rows have no WebGPU
-counterpart on purpose: three keys per-pass timestamps by an internal
-uid, and the pricing differential answers the same question without
-pinning three's internals. Detail in `debug/gpu-timing/README.md`.
+The renderer boots with `trackTimestamp: true`, and a grant is not proof
+the clock works: Safari 26 grants the feature and then discards every
+submit, Chrome grants it and resolves negative durations. `timestamps/`
+owns the boot probe that settles it and the resolve cadence that keeps
+the query pool from overrunning — `timestamps/README.md`.

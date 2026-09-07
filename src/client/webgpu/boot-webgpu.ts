@@ -30,7 +30,7 @@ import { makeTslLgEmissionMaterials } from './local-group/tsl-lg-materials';
 import { makeTslBandMaterials } from './milkyway/tsl-band-materials';
 import type { BandMaterials } from '../milkyway/band-materials';
 import { StarLayer } from './star/star-layer';
-import { settleTimestampSupport, type TimestampBackend } from './timestamp-probe';
+import { settleTimestampSupport, type TimestampBackend } from './timestamps/timestamp-probe';
 
 /** Null when the device came back and then refused the renderer. The
  *  caller shows the requires-WebGPU page rather than a broken canvas —

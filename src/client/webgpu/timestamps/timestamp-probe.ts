@@ -1,6 +1,6 @@
 // Whether this backend's timestamp queries survive validation. Safari 26
 // advertises 'timestamp-query' and then reports the query set's type as an
-// unknown enum (README.md § Timestamps).
+// unknown enum (README.md § The flag is a request, and a grant is not proof).
 
 // GPUTextureUsage.RENDER_ATTACHMENT — read as a literal because the
 // global is browser-only, and reaching for it here would make the probe
