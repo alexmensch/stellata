@@ -17,24 +17,24 @@
     }
   },
   "git": {
-    "commit": "194f817dc79384d33ced5093b8752ccc29cf62c2",
+    "commit": "00b6a4dae9092f882378cb146e628ac46ada9774",
     "dirty": false
   },
-  "version": "3.44.4",
-  "takenAt": "2026-09-05T21:54:47.012Z",
-  "sourceRun": ".perf-runs/2026-09-05/pin-1-all-both-dwell-cold.json",
+  "version": "4.0.0",
+  "takenAt": "2026-09-07T21:37:56.566Z",
+  "sourceRun": ".perf-runs/2026-09-07/0it13-cutover-pin-all-both-dwell-cold.json",
   "rows": [
     {
       "key": "sol|webgl2",
       "name": "sol",
       "backend": "webgl2",
       "bufferMpx": 4.096,
-      "idleRafMs": 16.700000000000728,
+      "idleRafMs": 16.69999999999891,
       "method": "raf-delta",
       "wall": {
         "p50": 16.700000000000728,
-        "p90": 66.60000000000218,
-        "iqrMs": 16.799999999997453,
+        "p90": 66.59999999999854,
+        "iqrMs": 17.499999999996362,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
@@ -46,10 +46,10 @@
       "name": "sol",
       "backend": "webgpu",
       "bufferMpx": 4.096,
-      "idleRafMs": 16.700000000000728,
+      "idleRafMs": 16.69999999999891,
       "method": "raf-delta",
       "wall": {
-        "p50": 17.5,
+        "p50": 33.099999999998545,
         "p90": 33.400000000001455,
         "iqrMs": 16.600000000002183,
         "samples": 240,
@@ -57,9 +57,9 @@
         "vsyncClamped": false
       },
       "gpu": {
-        "p50": 21.79846,
-        "p90": 22.241410000000002,
-        "iqrMs": 0.3562450000000048,
+        "p50": 22.444408,
+        "p90": 23.084398999999998,
+        "iqrMs": 0.3754540000000013,
         "samples": 58,
         "stateGuard": "steady"
       }
@@ -73,8 +73,8 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.700000000000728,
-        "p90": 34,
-        "iqrMs": 15.999999999998181,
+        "p90": 49.899999999999636,
+        "iqrMs": 15.899999999999636,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
@@ -90,17 +90,17 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.700000000000728,
-        "p90": 33,
-        "iqrMs": 0.1999999999989086,
+        "p90": 33.30000000000109,
+        "iqrMs": 0.3999999999996362,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": true
       },
       "gpu": {
-        "p50": 16.920659999999998,
-        "p90": 18.309805,
-        "iqrMs": 0.3879939999999955,
-        "samples": 55,
+        "p50": 17.516315,
+        "p90": 17.953268,
+        "iqrMs": 0.1075000000000017,
+        "samples": 57,
         "stateGuard": "steady"
       }
     },
@@ -114,10 +114,10 @@
       "wall": {
         "p50": 16.700000000000728,
         "p90": 50,
-        "iqrMs": 1.000000000001819,
+        "iqrMs": 15.899999999999636,
         "samples": 240,
         "stateGuard": "steady",
-        "vsyncClamped": true
+        "vsyncClamped": false
       },
       "gpu": null
     },
@@ -129,17 +129,17 @@
       "idleRafMs": 16.69999999999891,
       "method": "raf-delta",
       "wall": {
-        "p50": 16.799999999999272,
-        "p90": 33.400000000001455,
+        "p50": 17,
+        "p90": 33.399999999999636,
         "iqrMs": 16.600000000002183,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
       },
       "gpu": {
-        "p50": 31.450853000000002,
-        "p90": 31.525977,
-        "iqrMs": 0.043707999999995195,
+        "p50": 32.121011,
+        "p90": 32.744916,
+        "iqrMs": 0.5680309999999977,
         "samples": 56,
         "stateGuard": "steady"
       }
@@ -153,8 +153,8 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 31.5,
-        "iqrMs": 0.2999999999992724,
+        "p90": 33.19999999999891,
+        "iqrMs": 0.1999999999989086,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": true
@@ -170,17 +170,17 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 17.30000000000109,
+        "p90": 17.100000000000364,
         "iqrMs": 0.1000000000003638,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": true
       },
       "gpu": {
-        "p50": 20.968389000000002,
-        "p90": 20.985888,
-        "iqrMs": 0.016501000000001653,
-        "samples": 59,
+        "p50": 21.422673,
+        "p90": 21.778876,
+        "iqrMs": 0.05116600000000204,
+        "samples": 58,
         "stateGuard": "steady"
       }
     },
@@ -193,8 +193,8 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 17.899999999999636,
-        "iqrMs": 0.6000000000003638,
+        "p90": 17.19999999999891,
+        "iqrMs": 0.2000000000007276,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": true
@@ -210,20 +210,33 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 18.100000000000364,
-        "iqrMs": 1.2000000000007276,
+        "p90": 17.299999999999272,
+        "iqrMs": 0.8000000000010914,
         "samples": 240,
         "stateGuard": "steady",
-        "vsyncClamped": false
+        "vsyncClamped": true
       },
       "gpu": {
-        "p50": 11.891152,
-        "p90": 12.245688000000001,
-        "iqrMs": 0.2687020000000011,
-        "samples": 150,
+        "p50": 13.135466000000001,
+        "p90": 13.307131,
+        "iqrMs": 0.20016499999999837,
+        "samples": 120,
         "stateGuard": "steady"
       }
     }
   ],
-  "accepted": {}
+  "accepted": {
+    "sol|webgpu": {
+      "bead": "stellata-0it.13"
+    },
+    "earth|webgpu": {
+      "bead": "stellata-0it.13"
+    },
+    "mw50|webgpu": {
+      "bead": "stellata-0it.13"
+    },
+    "mw120|webgpu": {
+      "bead": "stellata-0it.13"
+    }
+  }
 }
