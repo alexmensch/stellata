@@ -69,7 +69,7 @@ describe('the catalogue states its own size', () => {
     expect(`${Math.round(count / 10_000) * 10}k`).toBe(PROSE_ROUNDED);
   });
 
-  // "Over 380,000" stayed literally true of 388,070 while landing a whole
+  // "Over 380,000" stayed literally true of 388,068 while landing a whole
   // 10k bucket below the rounding above, so nothing caught it: the rounding
   // assertion never greps, and the 313k scan looks for one retired figure.
   // This reads every size figure on the surfaces and holds them to one answer.

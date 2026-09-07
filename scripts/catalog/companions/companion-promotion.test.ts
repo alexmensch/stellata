@@ -345,7 +345,7 @@ describe('imputeCompanionAbsmag wds_mag tier', () => {
 });
 
 describe('a pair whose two ends resolve to one record', () => {
-  // p Eri's `01398-5612`: the A row carries B's HD, HIP and Gaia cells, so the
+  // p Eri's `01398-5612`: the A row carries B's HIP and Gaia cells, so the
   // cursor anchors on the B record and the B row's ids then strip as inherited.
   // That is the Sirius-B shape by identifiers alone, and the only thing that
   // separates them is the authority's component attribution — it already
@@ -353,14 +353,14 @@ describe('a pair whose two ends resolve to one record', () => {
   const selfPairRows = () => [
     multiplesRow({
       systemId: '01398-5612-AB', comp: 'A', hip: 7751,
-      gaiaSourceId: '4911306239828325760', hd: 10361,
+      gaiaSourceId: '4911306239828325760',
       x_pc: 8, y_pc: 0, z_pc: 0, distPc: 8, absmag: 6.232, spect: 'K1',
       source: 'athyg', photometryVia: 'athyg_own', orbitRole: 'primary',
       sepArcsec: 11.3, paDeg: 185.0, dmag: 0.12,
     }),
     multiplesRow({
       systemId: '01398-5612-AB', comp: 'B', hip: 7751,
-      gaiaSourceId: '4911306239828325760', hd: 10361,
+      gaiaSourceId: '4911306239828325760',
       x_pc: 8, y_pc: 0, z_pc: 0, distPc: 8, absmag: 6.232, spect: 'K1',
       photometryVia: 'athyg_system_inherited', orbitRole: 'secondary',
       sepArcsec: 11.3, paDeg: 185.0, dmag: 0.12,

@@ -149,7 +149,7 @@ export const LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2 = {
 /**
  * Surface brightness of the stars **Stellata already draws** — the
  * catalogue summed as Σ10^(−0.4·V) inside a 10° cap and divided by the
- * cap's solid angle, from `public/catalog.bin.*` at build v9 (PENDING_COUNT
+ * cap's solid angle, from `public/catalog.bin.*` at build v9 (388,068
  * records, `recordCount` in scripts/catalog/build-catalog-expected.json).
  * The caps centre on the ICRS J2000 galactic poles — (266.404988,
  * −28.936178) and (192.859508, +27.128336) — and 10° is 9.5456e−2 sr.
@@ -157,10 +157,13 @@ export const LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2 = {
  * Measured rather than computed at runtime: the client has no reason to
  * carry a whole-sky photometric reduction, and the catalogue is frozen
  * per release. A catalogue rebuild that moves membership or photometry
- * moves these — re-derive, don't loosen. Re-derived 2026-09-06 over the
- * widened SIMBAD value cohort, which places ~4k rows that used to park:
- * 113 of them fall in the Galactic-centre cap and brighten it 0.006 mag,
- * while the pole gains one star and holds at three decimals.
+ * moves these — re-derive, don't loosen. **A record has to land INSIDE a
+ * cap to move one**, so the count moving is not the trigger; a record
+ * arriving within 10° of a centre is. Re-derived 2026-09-07 over the
+ * widened SIMBAD value cohort: of the ~4k rows it places that used to
+ * park, 113 fall in the Galactic-centre cap — 11,662 stars to 11,775 —
+ * and brighten it 0.006 mag, while the pole gains a single star and
+ * holds at three decimals.
  *
  * `V = absmag + 5·log10(d/10)`, so these are **de-extincted**. That is
  * why only the NGP row is differenced below.

@@ -165,11 +165,14 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // 1485 → 1465: the parked-record promotion refusal. 55 fewer pairs are
 // emitted at all, because a component whose primary reaches no owned
 // parallax no longer mints a record for the pair to resolve against.
-// 1465 → 1464: the branch-first WDS root anchor (#488).
-// PENDING-REBUILD: the manifest-scoped SIMBAD value cohort removes another,
-// on the same terms as the 55 above — a primary reaching a parallax whose
-// inversion the S/N floor refuses.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1464;
+// 1465 → 1464: the branch-first WDS root anchor, which re-homes a pair onto
+// the branch its authority letters rather than the root's first member.
+// 1464 → 1463: the manifest-scoped SIMBAD value cohort, on the same terms as
+// the 55 above — one more primary reaches a parallax whose inversion the S/N
+// floor refuses, so its pair stops being emitted at all. The two steps are
+// independent and neither subsumes the other, which is why the count is 1463
+// and not the 1464 either change reaches alone.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1463;
 
 // ---- Corpus row types ----------------------------------------------------
 
