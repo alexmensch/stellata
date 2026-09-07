@@ -121,7 +121,8 @@ took the tier from 5 to 8. The 29 remaining had no sibling carrying an id of
 their own at all — Stage 2/3 bind the primary's blended source to every
 component. **The live size is `distPairMemberParallax`**
 (`../../build-catalog-expected.json`), and the parked set this breakdown
-counts grows with every membership change, so re-derive rather than quote it.
+counts grows with every membership change, so re-derive rather than quote it —
+stellata-3bsf.48 instruments the build to state these with their count keys.
 
 **A sibling's parallax is read on the sibling's OWN `gaia_source_id`**, and the
 index drops a repeated one per root. Stage 2/3 bind a single blended source to
@@ -280,7 +281,11 @@ which is the general rule at the head of § The skip rules. Measured across all
 44 parked rows multiples.tsv carries a row for: `astrometry_via` is
 `system_inherited` 65 and `hip2_long_baseline` 61, and `gaia_5p` **zero** — not
 one of them has an independent per-component fit behind it, so there is no case
-where promotion supplies an owned distance. The refusal is counted as
+where promotion supplies an owned distance. That `gaia_5p` zero is what makes
+the refusal safe rather than merely convenient, and it is measured on a parked
+set this README does not pin a method for; stellata-3bsf.48 re-derives it
+instrumented, because a hand join over the committed files does not reproduce
+it. The refusal is counted as
 `companionDroppedParkedRecord`.
 
 **The other two park reasons do not reach it, and widening the refusal to every
