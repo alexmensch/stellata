@@ -1,4 +1,4 @@
-// Bundle boundary for the WebGPU dual boot: three/webgpu duplicates
+// Bundle boundary for the WebGPU renderer: three/webgpu duplicates
 // three's core (~1 MB) and nothing tree-shakes an eagerly-imported
 // renderer, so its value imports may exist only inside the async chunk
 // behind main.ts's import('./webgpu/boot-webgpu') — see
@@ -28,14 +28,21 @@ const isClientSource = (p: string) => p.endsWith('.ts') && !p.endsWith('.test.ts
 const isThreeWebGpuEntry = (spec: string) =>
   spec === 'three/webgpu' || spec === 'three/tsl' || spec.startsWith('three/src/')
   || (spec.startsWith('three/') && spec.includes('/webgpu/'));
-// renderer-flag and gate/ are the two exemptions: both must run on a
-// browser with no WebGPU at all, so they live in the entry bundle. The
-// gate's own guard below is what stops that exemption becoming a hole.
-const isWebGpuFolderRef = (spec: string) =>
-  /(?:^|\/)webgpu\/(?!renderer-flag$|gate\/)[^'"]+$/.test(spec);
+// The exemptions: each must run on a browser with no WebGPU at all, so
+// they live in the entry bundle. Their own guard below is what stops the
+// exemption becoming a hole. One roster — the sweep's regex, the crossing
+// note and that guard all read it, so a fourth member is one edit.
+const ENTRY_BUNDLE_MEMBERS = ['renderer-flag.ts', 'boot-route.ts'];
+const EXEMPT_MODULES = ENTRY_BUNDLE_MEMBERS.map((f) => f.replace(/\.ts$/, ''));
+// A module matches whole, a folder by prefix — every file under it is
+// exempt, which is why only the modules take the `$`.
+const EXEMPT_DIRS = ['gate/'];
+const isWebGpuFolderRef = (spec: string) => new RegExp(
+  `(?:^|/)webgpu/(?!${[...EXEMPT_MODULES.map((m) => `${m}$`), ...EXEMPT_DIRS].join('|')})[^'"]+$`,
+).test(spec);
 
-const CROSSING_NOTE =
-  '(only renderer-flag, gate/ and type-only imports cross the boundary)';
+const CROSSING_NOTE = `(only ${[...EXEMPT_MODULES, ...EXEMPT_DIRS].join(', ')} `
+  + 'and type-only imports cross the boundary)';
 
 function violationsInSource(src: string, inWebGpuDir: boolean): string[] {
   if (inWebGpuDir) return [];
@@ -71,14 +78,18 @@ describe('webgpu import boundary', () => {
     expect(/import\s+\{[^}]*\}\s+from\s+'three\/webgpu'/.test(src)).toBe(true);
   });
 
-  // main.ts imports gate/ statically, so the folder is IN the entry bundle.
-  // One three/webgpu value import anywhere under it would therefore drag the
+  // main.ts imports these statically, so they are IN the entry bundle. One
+  // three/webgpu value import anywhere under them would therefore drag the
   // whole ~1 MB duplicate core in with it — silently, since the sweep above
   // exempts everything inside webgpu/. This is the check that makes the
   // exemption safe rather than a hole in it.
-  it('the gate is exempt only because it carries no three/webgpu import', () => {
+  it('the entry-bundle members are exempt only because they import no three/webgpu', () => {
     const offenders: string[] = [];
-    for (const p of walkFiles(join(WEBGPU_DIR, 'gate'), { include: isClientSource })) {
+    const paths = [
+      ...walkFiles(join(WEBGPU_DIR, 'gate'), { include: isClientSource }),
+      ...ENTRY_BUNDLE_MEMBERS.map((f) => join(WEBGPU_DIR, f)),
+    ];
+    for (const p of paths) {
       for (const v of violationsInSource(readFileSync(p, 'utf8'), false)) {
         offenders.push(`${relative(ROOT, p)}: ${v}`);
       }
@@ -107,6 +118,7 @@ describe('the detector itself', () => {
     expect(outside("import type { WebGPURenderer } from 'three/webgpu';")).toEqual([]);
     expect(outside("import type { WebGpuSeam } from './webgpu/seam';")).toEqual([]);
     expect(outside("import { parseRendererFlag } from './webgpu/renderer-flag';")).toEqual([]);
+    expect(outside("import { resolveBootRoute } from './webgpu/boot-route';")).toEqual([]);
     // The gate must render where WebGPU does not exist, so it is in the
     // entry bundle by design (guarded above against pulling three in).
     expect(outside("import { showWebGpuGate } from './webgpu/gate/gate-page';")).toEqual([]);

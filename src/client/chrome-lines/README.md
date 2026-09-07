@@ -33,16 +33,16 @@ src/client/chrome-lines/
 The WebGPU twin is `../webgpu/chrome-lines/tsl-chrome-lines.ts`, behind
 that folder's dynamic-import boundary.
 
-## Why a seam at all — the local depth pass has no immunity
+## Why a seam at all — no graph has immunity
 
-A main-pass mesh that never ported is merely inert on a WebGPU boot: it
-sits in the shell's scene, which that boot does not render. **A group
-handed to the local depth pass has no such immunity** — that pass renders
-on both backends, so a built-in `LineBasicMaterial` there reaches the HDR
+**Both graphs the app draws are drawn by the WebGPU renderer on that
+boot** — the one scene the shell builds (`../webgpu/README.md` § One
+scene per boot) and the local depth pass, which renders on either
+backend. So a built-in `LineBasicMaterial` in either reaches the HDR
 target's three colour attachments with a one-output fragment, fails WGSL
-pipeline creation, and **one invalid pipeline discards the whole pass
+pipeline creation, and **one invalid pipeline discards the whole
 submit**: every planet mesh, ring annulus, atmosphere shell and star
-mirror with it. Three of the five consumers draw in that pass (orbit
+mirror with it. Three of the five consumers draw in the local pass (orbit
 rings, binary orbit paths, the probe trail's mirror), which is why they
 took their groups out of it until this seam existed.
 

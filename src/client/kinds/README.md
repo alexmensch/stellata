@@ -50,21 +50,22 @@ its catalog load blocks first paint and may reject) — and are only
   `RosterCoversEveryKind` collapses `KindModules` to `never` when a
   kind is missing from the list. Order and no-duplicates stay pinned
   by `kind-modules.test.ts`.
-- **`KindContext.webgpu` is null on the shipped boot. Ignoring it is
-  safe for MAIN-pass meshes only.** A WebGPU boot never renders
-  `KindContext.scene`, so an unported kind's main-pass meshes are inert
-  there rather than wrong; a kind whose layers HAVE ported reads its TSL
-  surfaces — and the scene those meshes belong in — off the seam
-  (`../webgpu/README.md`). Both solar-system kinds do today.
-- **A group handed to the LOCAL DEPTH PASS has no such immunity.** That
-  pass renders on both boots (`../local-depth/README.md`), so a GLSL
-  material parked in it on a WebGPU boot fails WGSL pipeline creation —
-  and one invalid pipeline poisons the whole pass submit, taking every
-  planet surface, ring and star mirror with it. A kind contributing a
-  local-pass group must port its material; overlay lines take theirs from
-  `KindContext.chromeLines` (`../chrome-lines/README.md`), which resolves
-  to the backend for them. The probe trail is the live example — it was
-  parked out of the pass scene until that seam existed.
+- **`KindContext.webgpu` is non-null on the shipped boot, and a kind
+  reads its TSL surfaces from it.** The seam owns no scene, so every
+  group a kind builds goes into `KindContext.scene` on either backend
+  (`../webgpu/README.md` § One scene per boot). Both solar-system kinds
+  do today.
+- **NOTHING a kind contributes is immune to an unported material.** Both
+  graphs a kind can reach are drawn on a WebGPU boot —
+  `KindContext.scene` and the local depth pass
+  (`../local-depth/README.md`) — so a GLSL material in either fails WGSL
+  pipeline creation, and one invalid pipeline poisons the whole submit,
+  taking every planet surface, ring and star mirror with it. A kind
+  contributing any group must take its material off the seam; overlay
+  lines take theirs from `KindContext.chromeLines`
+  (`../chrome-lines/README.md`), which resolves to the backend for them.
+  The probe trail is the live example — it was parked out of the pass
+  scene until that seam existed.
 - **No self-registration.** `attach` *returns* its scene layer; the
   shell registers it at the kind's roster position. Update order is
   draw-dependency-load-bearing: module layers register in `KIND_ROSTER`

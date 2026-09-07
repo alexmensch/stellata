@@ -200,13 +200,13 @@ device pixel ratio, with `localStorage['stellata.info-dismissed']` and
 `sessionStorage['stellata.mobile-advisory-dismissed']` seeded to `'1'` so
 neither modal ever shows:
 
-1. **Boot** `<url>/v/<blob>/`, plus `#renderer=webgpu` for a WebGPU boot —
-   the fragment is the only boot flag the URL carries
-   (`src/client/webgpu/README.md` § The flag). Wait for `window.debug`,
+1. **Boot** `<url>/v/<blob>/`, plus `#renderer=webgl2` for the escape
+   hatch — WebGPU is the default (`src/client/webgpu/README.md`
+   § The renderer is WebGPU). Wait for `window.debug`,
    `window.stellata` and `#loading` gone; a `#loading-status` starting
    `Error:` is a `BootError`. Then check `stellata.webgpu` against the
-   request: **a WebGPU request that booted WebGL2 fails the scenario.** A
-   silent fallback is never mislabelled as a measurement.
+   request: **a boot on the other backend fails the scenario** rather
+   than yielding a mislabelled measurement.
 2. **Adapter probe.** WebGL renderer/vendor via `WEBGL_debug_renderer_info`
    and `EXT_disjoint_timer_query_webgl2` presence (the live context on a
    WebGL2 boot, a throwaway one otherwise — dropped via `WEBGL_lose_context`

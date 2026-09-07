@@ -1,8 +1,8 @@
-// Async half of the dual-boot seam: construct + init the WebGPURenderer
-// and the seam handle. Loaded via import() from main.ts — the module (and
+// Async half of the boot: construct + init the WebGPURenderer and the
+// seam handle. Loaded via import() from main.ts — the module (and
 // three/webgpu with it) never reaches the WebGL2 bundle.
 
-import { LinearSRGBColorSpace, Scene, WebGPURenderer } from 'three/webgpu';
+import { LinearSRGBColorSpace, WebGPURenderer } from 'three/webgpu';
 import type * as THREE from 'three';
 import type { SharedUniforms } from '../frame/shared-uniforms';
 import type {
@@ -30,10 +30,11 @@ import { makeTslLgEmissionMaterials } from './local-group/tsl-lg-materials';
 import { makeTslBandMaterials } from './milkyway/tsl-band-materials';
 import type { BandMaterials } from '../milkyway/band-materials';
 import { StarLayer } from './star/star-layer';
-import { settleTimestampSupport, type TimestampBackend } from './timestamp-probe';
+import { settleTimestampSupport, type TimestampBackend } from './timestamps/timestamp-probe';
 
-/** Null when WebGPU is unavailable or init fails — the caller falls back
- *  to the shipped WebGL2 boot rather than showing a broken canvas. */
+/** Null when the device came back and then refused the renderer. The
+ *  caller shows the requires-WebGPU page rather than a broken canvas —
+ *  there is no WebGL2 fallback (README.md § The renderer is WebGPU). */
 export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam | null> {
   if (!('gpu' in navigator)) return null;
   const renderer = new WebGPURenderer({
@@ -47,7 +48,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   try {
     await renderer.init();
   } catch (err) {
-    // The reason only; the caller owns the fallback decision and says so.
+    // The reason only; the caller owns what the user sees and says so.
     console.warn('WebGPURenderer.init() rejected:', err);
     renderer.dispose();
     return null;
@@ -57,7 +58,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // wrong by ~262 AU at Neptune's ring (local-depth/bracket/README.md
   // § Precision analysis), so a boot that lost the flag must not proceed.
   if (renderer.reversedDepthBuffer !== true) {
-    console.warn('WebGPURenderer dropped reversedDepthBuffer; falling back');
+    console.warn('WebGPURenderer dropped reversedDepthBuffer; refusing the boot');
     renderer.dispose();
     return null;
   }
@@ -78,7 +79,6 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // into every frame (README.md § Output colour space).
   renderer.outputColorSpace = LinearSRGBColorSpace;
   let registry: SharedUniformNodeRegistry | null = null;
-  const scene = new Scene();
   const hdr = new WebGpuHdrPipeline(renderer);
   // One pair of texture slots for the whole boot: the star vertex stage's
   // fallback march and the prepass march sample the SAME dust node, so
@@ -97,7 +97,6 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   let bandMaterialsCache: BandMaterials | null = null;
   return {
     renderer,
-    scene,
     hdr,
     timestampsAvailable: timestampsLive,
     get uniformNodes() { return registry?.nodes ?? null; },
@@ -149,7 +148,11 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
       });
       return bandMaterialsCache;
     },
-    attachPlanetGlare(sources: PlanetGlareSources, mirrorParent: THREE.Object3D) {
+    attachPlanetGlare(
+      scene: THREE.Scene,
+      sources: PlanetGlareSources,
+      mirrorParent: THREE.Object3D,
+    ) {
       const layer = new PlanetGlareLayer(
         scene, nodesOrThrow('attachPlanetGlare'), sources, hdr.gates, mirrorParent);
       const unregister = hdr.registerMrtLayer(layer);
@@ -162,7 +165,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
         },
       };
     },
-    attachStarLayer(sources: StarGeometrySources) {
+    attachStarLayer(scene: THREE.Scene, sources: StarGeometrySources) {
       const layer = new StarLayer(
         scene, nodesOrThrow('attachStarLayer'), sources, hdr.gates, extinctionTextures);
       // Registration is what keeps the layer's output count in lockstep

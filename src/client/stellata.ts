@@ -151,6 +151,7 @@ import { exposureForMagLimit } from './hdr/exposure/exposure-epoch';
 import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
 import { LuminanceReduction } from './hdr/exposure/reduction/reduction-pass';
 import { SceneLayerRegistry, updateWarpGatedRefLayer, type FrameCtx } from './scene/scene-layer';
+import { findGlslResidents } from './scene/glsl-residents-pure';
 import {
   type SceneElementBinds,
   type SceneElementId,
@@ -197,8 +198,8 @@ export interface StellataOptions {
 
 export type CameraMode = 'navigate' | 'observe';
 
-/** One of the scenes a boot draws, named so a debug read can say which
- *  one a resource came from (`sceneGraphs`). */
+/** A scene a boot draws, named so a debug read can say which one a
+ *  resource came from (`sceneGraphs`). */
 export interface NamedScene {
   readonly name: string;
   readonly scene: THREE.Scene;
@@ -407,6 +408,7 @@ export class Stellata implements FrameAnchor {
   readonly renderGate = new RenderGate();
   private readonly trackballSettle: TrackballSettle;
   private lastInvalidatedDm = Number.NaN;
+  private glslResidentsChecked = false;
   // Clock-cadence state (render-gate/README.md § The clock cadence).
   // The budget seeds 0 so the first tick under a running clock is due;
   // the NaN sim stamp makes clockFrameDue's first read due too and marks
@@ -558,10 +560,6 @@ export class Stellata implements FrameAnchor {
     // uniform nodes on read and throws while the registry is unbound.
     this.chromeLines =
       this.webgpu?.chromeLineMaterials ?? builtinChromeLineMaterials();
-    // The scene this boot actually draws. A ported layer built into the
-    // shell's own scene renders on WebGL and silently nowhere on WebGPU —
-    // `webgpu/README.md` § What the flag boots today.
-    const renderScene = this.webgpu?.scene ?? this.scene;
     // Constructed before every consumer of the magnitude bounds: it
     // rewrites all five slots from its own constructor, so the seeds in
     // buildSharedUniforms never reach a shader.
@@ -620,7 +618,7 @@ export class Stellata implements FrameAnchor {
     this._suppressPulsation = buildPulsationSuppressMask(catalog.varType);
 
     this.starPipeline = new StarPipeline({
-      scene: this.scene,
+      scene: this.webgpu === null ? this.scene : null,
       catalog,
       logRadii: this.starFrame.logRadii,
       lumClassF32: this.starFrame.lumClassF32,
@@ -636,11 +634,10 @@ export class Stellata implements FrameAnchor {
       boundingSphereRadiusPc: CATALOG_BOUNDING_RADIUS_PC,
     });
 
-    // The TSL star layer renders in place of the GLSL pipeline above on a
-    // WebGPU boot (the shell's scene is never rendered there). The GLSL
-    // pipeline still constructs either way: its attributes are the live
-    // source buffers this layer watches, and the writers keep writing them.
-    this.webgpuStarLayer = this.webgpu?.attachStarLayer({
+    // Renders in place of the GLSL pipeline above, which still constructs
+    // either way: its attributes are the live source buffers this layer
+    // watches, and the writers keep writing them.
+    this.webgpuStarLayer = this.webgpu?.attachStarLayer(this.scene, {
       catalog,
       logRadii: this.starFrame.logRadii,
       lumClassF32: this.starFrame.lumClassF32,
@@ -657,9 +654,9 @@ export class Stellata implements FrameAnchor {
     // Shared uniforms passed by reference so floating-origin recenters,
     // resize updates, and dust loads propagate to the particle pass
     // automatically. On a WebGPU boot the sprite takes its slots off the
-    // uniform-node mirror instead and lands in the scene that renders.
+    // uniform-node mirror instead.
     this.dustParticles = new DustParticleLayer(
-      renderScene,
+      this.scene,
       sharedUniforms,
       this.webgpu?.dustParticleMaterials,
     );
@@ -669,7 +666,7 @@ export class Stellata implements FrameAnchor {
     // existing #overlay so it shares the distance vector's stroke + halo
     // styling and inherits the `body.warping` hide rule for free.
     this.galacticDisc = new GalacticDisc(this.chromeLines);
-    renderScene.add(this.galacticDisc.group);
+    this.scene.add(this.galacticDisc.group);
     this.orbitRingsLayer = new OrbitRingsLayer(this.chromeLines);
     this.binaryOrbitPathLayer = new BinaryOrbitPathLayer(this.chromeLines);
     // One mirror per boot: the pass scene renders on whichever backend
@@ -698,10 +695,10 @@ export class Stellata implements FrameAnchor {
     );
     this.localDepthPass.register(this.starLocalCluster);
     this.constellationFigureLayer = new ConstellationFigureLayer(this.chromeLines);
-    renderScene.add(this.constellationFigureLayer.group);
+    this.scene.add(this.constellationFigureLayer.group);
     this.constellationBoundaryLayer =
       new ConstellationBoundaryLayer(sharedUniforms, this.chromeLines);
-    renderScene.add(this.constellationBoundaryLayer.group);
+    this.scene.add(this.constellationBoundaryLayer.group);
     // Measured against the instrument's OWN exposure, never the live
     // scalar the cut then writes — that would be a feedback loop.
     this.adaptation = new SceneAdaptation({
@@ -921,7 +918,7 @@ export class Stellata implements FrameAnchor {
         [frame, new CoordSphere(COORD_SPHERE_SPECS[frame], this.chromeLines)]),
     ) as Record<DrawnCoordSphereFrame, CoordSphere>;
     for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
-      renderScene.add(this.coordSpheres[frame].group);
+      this.scene.add(this.coordSpheres[frame].group);
     }
     const hudRing = document.getElementById('hud-ring') as unknown as SVGCircleElement;
     const solPath = document.getElementById('sol-arrow') as unknown as SVGPathElement;
@@ -948,9 +945,7 @@ export class Stellata implements FrameAnchor {
       uLimitMag: sharedUniforms.uLimitMag,
       hdr: this.hdr.emitterUniforms,
     }, this.webgpu?.bandMaterials);
-    // The band has ported, so on a WebGPU boot it belongs in the scene
-    // that renders.
-    renderScene.add(this.milkyway.group);
+    this.scene.add(this.milkyway.group);
 
     this.filters = new FilterController({
       camera: this.camera,
@@ -2001,17 +1996,11 @@ export class Stellata implements FrameAnchor {
   /** Every scene graph this boot draws, for debug-scoped READS — the
    *  memory inventory walks them (`debug/memory/README.md`).
    *
-   *  Plural because a dual boot renders the SEAM's scene and not the
-   *  shell's, so an inventory of either alone prices a scene that is not
-   *  on screen. Adding or removing objects through these handles bypasses
-   *  the scene-layer registry, so every update / monochrome / recenter /
+   *  Adding or removing objects through these handles bypasses the
+   *  scene-layer registry, so every update / monochrome / recenter /
    *  dispose fan-out misses them. */
   get sceneGraphs(): readonly NamedScene[] {
-    if (this.webgpu === null) return [{ name: 'shell', scene: this.scene }];
-    return [
-      { name: 'shell', scene: this.scene },
-      { name: 'webgpu', scene: this.webgpu.scene },
-    ];
+    return [{ name: 'shell', scene: this.scene }];
   }
 
   // Read-only view of the pulsation-suppress mask. Overlays (focus ring,
@@ -2596,15 +2585,23 @@ export class Stellata implements FrameAnchor {
     perfMark('submit.main');
     perfGpuBegin('main');
     this.hdr.bind();
-    if (this.webgpu !== null) {
-      // Dual boot renders the seam's own scene — the shell's scene holds
-      // GLSL materials that would fail WebGPU pipeline creation
-      // (webgpu/README.md § What the flag boots today).
-      this.webgpu.syncUniformNodes();
-      this.renderer.render(this.webgpu.scene, this.camera);
-    } else {
-      this.renderer.render(this.scene, this.camera);
+    this.webgpu?.syncUniformNodes();
+    // One walk on the first rendered frame: every layer is parented by
+    // then (the roster attach loop and registerSceneLayers both run in
+    // this constructor, ahead of animate), and a GLSL material here
+    // discards the whole submit rather than dropping one layer
+    // (webgpu/README.md § One scene per boot).
+    if (this.webgpu !== null && !this.glslResidentsChecked) {
+      this.glslResidentsChecked = true;
+      const residents = findGlslResidents(this.scene);
+      if (residents.length > 0) {
+        console.error(
+          'GLSL materials in the rendered scene on a WebGPU boot — the submit '
+          + `will draw nothing: ${residents.join(', ')}`,
+        );
+      }
     }
+    this.renderer.render(this.scene, this.camera);
     perfGpuEnd('main');
     perfMeasure('submit.main');
     perfMark('submit.localDepth');

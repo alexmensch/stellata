@@ -33,8 +33,10 @@ import { bindBrandModals } from './modals/brand-modal';
 import { bindKeyboardShortcuts } from './ui/keyboard-shortcuts';
 import { bindControlsHideToggle } from './ui/controls-hidden';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
-import { parseGateOverride, parseRendererFlag } from './webgpu/renderer-flag';
+import { resolveBootRoute } from './webgpu/boot-route';
+import type { WebGpuSeam } from './webgpu/seam';
 import { showWebGpuGate } from './webgpu/gate/gate-page';
+import { detectWebGpuSupport } from './webgpu/gate/webgpu-support';
 import { SidResolver, arrayDomain } from './util/sid-resolver';
 import { applyFirstLoadView } from './solar-system/first-load';
 import { setupDebug } from './debug/debug';
@@ -61,19 +63,30 @@ async function main() {
       `${(bytes / 1024 / 1024).toFixed(1)} / ${(total / 1024 / 1024).toFixed(1)} MB`;
   };
 
-  // The requires-WebGPU gate, dark until the cutover: WebGL2 is still the
-  // default, so nothing reaches this but the dev switch. The cutover is
-  // what puts it on a real capability verdict rather than this override
-  // (webgpu/gate/README.md § Lands dark). Ahead of the catalog fetch so a
-  // gated browser downloads nothing it cannot use.
-  const forcedGate = parseGateOverride(location.hash);
-  if (forcedGate !== null) {
-    showWebGpuGate(forcedGate);
+  // Ahead of the catalog fetch so a gated browser downloads nothing it
+  // cannot use (webgpu/boot-route.ts).
+  const route = await resolveBootRoute(location.hash, detectWebGpuSupport);
+  if (route.kind === 'gate') {
+    showWebGpuGate(route.verdict);
     return;
   }
 
   try {
     const kinds = buildKindModules();
+    // Started here and awaited past the fetch: the async chunk and the
+    // adapter init are latency the catalog download already pays for.
+    // The dynamic import is the bundle boundary (webgpu/README.md
+    // § Import boundary). The catch is not optional — nothing awaits
+    // this for the length of the fetch, so a rejected chunk load would
+    // surface as an unhandled rejection instead of a refused renderer.
+    const webgpuBoot: Promise<WebGpuSeam | null> = route.renderer === 'webgpu'
+      ? import('./webgpu/boot-webgpu')
+        .then(({ bootWebGpu }) => bootWebGpu(canvas))
+        .catch((err) => {
+          console.warn('WebGPU boot rejected:', err);
+          return null;
+        })
+      : Promise.resolve(null);
     const [binaries, boundaries] = await Promise.all([
       // Binary / multiple-star orbital elements. ~64 KB; null when the
       // artifact is missing (fresh checkout without
@@ -101,15 +114,12 @@ async function main() {
     // derivation no kind module consumes.
     const bayerMap = buildBayerMap(searchIndex);
 
-    // The dynamic import is the bundle boundary: webgpu/README.md
-    // § Import boundary.
-    let webgpu = null;
-    if (parseRendererFlag(location.hash) === 'webgpu') {
-      const { bootWebGpu } = await import('./webgpu/boot-webgpu');
-      webgpu = await bootWebGpu(canvas);
-      if (webgpu === null) {
-        console.warn('WebGPU unavailable — booting the WebGL2 renderer instead');
-      }
+    const webgpu = await webgpuBoot;
+    // The probe said supported, so a null here is a device that came back
+    // and then refused the renderer — same page, same advice.
+    if (route.renderer === 'webgpu' && webgpu === null) {
+      showWebGpuGate('no-adapter');
+      return;
     }
 
     const stellata = new Stellata({ canvas, catalog, kinds, webgpu });

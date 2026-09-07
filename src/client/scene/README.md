@@ -35,6 +35,9 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
 - `scene-elements.ts` — the declutter-cycle floor table + derivation
   (§ Detail-level declutter cycle).
 - `scene-elements.test.ts` — exhaustiveness + cumulative-set pinning.
+- `glsl-residents-pure.ts` (+ test) — `findGlslResidents`, the walk
+  behind the shell's first-frame check that no raw-GLSL material reached
+  the rendered scene (§ No GLSL material may reach a WebGPU boot).
 
 ## The material seam
 
@@ -55,6 +58,23 @@ surfaces through it — the solar-system family
 with the layer that owns it; only the surface handle is shared. The
 `IUniform` face over a TSL node record is `uniformSlotsOf`
 (`../webgpu/tsl/README.md` § Uniform slots).
+
+## No GLSL material may reach a WebGPU boot
+
+The shipped renderer draws the one scene every layer builds into
+(`../webgpu/README.md` § One scene per boot), and a raw `ShaderMaterial`
+in it fails WGSL pipeline creation — which discards the entire submit,
+so the symptom is a black frame naming nothing, not one absent layer.
+`findGlslResidents` walks the graph and returns a description per
+offending material; the shell runs it once, on the first rendered frame,
+and logs what it finds. Every layer is parented by then, since the roster
+attach loop and `registerSceneLayers` both run in the constructor ahead
+of `animate()`.
+
+It keys on `isShaderMaterial` rather than on `isNodeMaterial`: three's
+node materials never set the former, and built-ins the renderer converts
+itself never set the latter, so the positive test is the one that admits
+`LineBasicMaterial` while still catching hand-written GLSL.
 
 ## Detail-level declutter cycle
 

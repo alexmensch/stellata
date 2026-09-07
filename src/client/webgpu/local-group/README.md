@@ -2,9 +2,10 @@
 
 The TSL half of the Local Group's volumetric glow: two instanced
 raymarches — Sérsic spheroids and exponential discs — writing the diffuse
-attachment the resolve convolves. The WebGL2 shaders
-(`../../local-group/emission/`) stay the shipped renderer and the semantic
-reference; the luminosity model is not re-decided here.
+attachment the resolve convolves. **These are the shipped passes.** The
+WebGL2 shaders (`../../local-group/emission/`) stay the semantic
+reference until `0it.14` deletes them; the luminosity model is not
+re-decided here.
 
 **It ports as a material swap.** The layer keeps its instance packing,
 per-frame rebase, chart and enable gates, and both geometries — six or

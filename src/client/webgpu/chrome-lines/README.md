@@ -1,10 +1,10 @@
 # Chrome lines on WebGPU
 
 The TSL half of the chrome line seam (`../../chrome-lines/README.md` owns
-the contract, the colour authoring, and why the seam exists at all). The
-WebGL2 built-ins stay the shipped renderer and the semantic reference;
-parity is the A/B smoke, same `/v/<blob>/` with and without the
-`#renderer=webgpu` fragment.
+the contract, the colour authoring, and why the seam exists at all).
+**These are the shipped strokes.** The WebGL2 built-ins stay the
+semantic reference until `0it.14` deletes them; parity is the A/B smoke,
+same `/v/<blob>/` with and without the `#renderer=webgl2` fragment.
 
 ## Files in this area
 

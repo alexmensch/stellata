@@ -1,6 +1,6 @@
 // The star layer on a WebGPU boot: packed geometry + the three TSL star
-// meshes (core mask, disc, glow), added to the seam's scene. Constructed
-// through WebGpuSeam.attachStarLayer.
+// meshes (core mask, disc, glow), added to the scene the shell passes in.
+// Constructed through WebGpuSeam.attachStarLayer.
 
 import * as THREE from 'three';
 import { makeColorLutTexture } from '../../star-pipeline/blackbody-lut';
@@ -43,7 +43,7 @@ export class StarLayer {
   readonly glowMesh: THREE.Mesh;
   /** Owned by this layer alone — the WebGL pipeline builds its own. */
   readonly colorLut: THREE.DataTexture;
-  /** The local-depth-pass mirror. NOT in the seam's scene: the shell hands
+  /** The local-depth-pass mirror. NOT in the scene above: the shell hands
    *  it to StarLocalCluster, which parents it into the pass scene and owns
    *  its dispose — the same split as the GLSL mirror. */
   readonly localMirror: StarLocalMirrorTsl;

@@ -10,7 +10,7 @@ moment anything leaves the happy path (§ Deviations).
 
 Editing this file: cross-reference sections by **name**, never by number, and
 **every check must be able to fail** — state what output means *no* before
-adding one. Both rules are here because their absence shipped bugs.
+adding one.
 
 ## What this skill authorises — and only this
 

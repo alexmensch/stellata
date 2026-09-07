@@ -6,7 +6,9 @@ import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import { CATALOG_BOUNDING_RADIUS_PC } from './shards/star-shards-pure';
 import type { StarPipelineOptions } from './star-pipeline';
 
-export function makeStarPipelineOptions(count = 4): StarPipelineOptions {
+export function makeStarPipelineOptions(
+  count = 4,
+): StarPipelineOptions & { scene: THREE.Scene } {
   const catalog = makeEmptyCatalog(count);
   return {
     scene: new THREE.Scene(),

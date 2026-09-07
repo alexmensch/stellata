@@ -98,9 +98,7 @@ export function createCloudKindModule(): CloudKindModule {
         uViewport: kindCtx.sharedUniforms.uViewport,
       }, kindCtx.webgpu?.cloudMaterials);
       layer.setMonochrome(kindCtx.getMonochrome());
-      // Both cloud components have ported, so on a WebGPU boot they belong
-      // in the scene that renders.
-      (kindCtx.webgpu?.scene ?? kindCtx.scene).add(layer.group);
+      kindCtx.scene.add(layer.group);
       return {
         // Clouds sit at fixed positions; nothing here rides either clock.
         timeBehaviour: { kind: 'static' },

@@ -11,7 +11,7 @@ what is specific to stellata.
 
 Browser-based interactive 3D star catalog viewer. Loads the ~390k-star
 catalog derived from AT-HYG v3.3 + GCVS variables, rendered on
-the GPU as instanced quads with three-pass shading (depth-mask /
+**WebGPU (required)** as instanced quads with three-pass shading (depth-mask /
 opaque disc for close stars / additive point-glow for distant).
 Variables pulsate; binaries with Kepler elements orbit live. Ships
 as a Cloudflare Workers static-assets site. Details — shader passes,
@@ -98,11 +98,11 @@ unrelated.
 
 ### Split, don't shave
 
-**Over the cap the default is a folder split, not a rewording pass.** The
-observed failure is rounds of re-tightening already-tight prose to claw
-back single lines: a session burnt, a denser and worse README. Reword only
-genuinely redundant prose — a claim stated twice, superseded history
-another doc carries; never delete invariants to fit.
+**Over the cap the default is a folder split, not a rewording pass.** Do
+not re-tighten already-tight prose to claw back single lines: that costs
+a session and yields a denser, worse README. Reword only genuinely
+redundant prose — a claim stated twice, superseded history another doc
+carries; never delete invariants to fit.
 
 Seam: the README's largest self-contained topic plus the leaf module
 owning it. Right when the moved code imports nothing from the parent and a
@@ -219,7 +219,7 @@ src/      Worker entry (worker.ts) + client. src/client/ has one
           galactic/, molecular-clouds/, chart-mode/, star-pipeline/, hover/,
           focus-card/, format/, overlays/, camera/, filters/, scene/, poi/,
           ui/, typeahead/, modals/, debug/, util/, loaders/, dust/, binaries/,
-          chrome-lines/, render-gate/) — each with its own README.
+          chrome-lines/, render-gate/, webgpu/) — each with its own README.
 docs/     Genuinely cross-cutting docs that don't belong to one
           folder: authoring-patterns.md, render-rules.md, ux-tweaks.md,
           extragalactic-roadmap.md. New docs default to "find the

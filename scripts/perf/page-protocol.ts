@@ -54,7 +54,7 @@ export async function bootScenario(page: Page, url: string, { backend, timeoutMs
   if (actual !== backend) {
     throw new BootError(
       `requested the ${backend} boot but the page booted ${actual}` +
-      (backend === 'webgpu' ? ' — a silent fallback is a failed scenario, never a mislabelled one' : ''),
+      ' — a mislabelled measurement is worse than none',
     );
   }
 }

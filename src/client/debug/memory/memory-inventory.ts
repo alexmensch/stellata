@@ -112,8 +112,7 @@ function eachTexture(
 }
 
 /** One pass over every scene the shell draws. Dedupe spans the scenes:
- *  a texture shared between the shell's scene and the seam's is one
- *  allocation and gets one row. */
+ *  a texture two of them share is one allocation and gets one row. */
 function walkScenes(
   scenes: readonly NamedScene[],
 ): { rows: ResidencyRow[]; counts: ResourceCounts } {

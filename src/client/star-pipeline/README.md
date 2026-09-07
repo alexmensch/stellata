@@ -1,8 +1,11 @@
 # Star pipeline
 
-The WebGL star renderer — instanced quads, three passes, physical-size
-scaling, the super-Gaussian intensity profile, and luminosity-class
-softness. Pulsation and dust extinction live in the subfolders.
+The star renderer's CPU half — instanced quads, three passes,
+physical-size scaling, the super-Gaussian intensity profile, and
+luminosity-class softness. Pulsation and dust extinction live in the
+subfolders. The GLSL materials here draw only on the `#renderer=webgl2`
+escape hatch; the shipped pipelines are `../webgpu/star/`, over the same
+geometry and attribute writers.
 
 ## Subfolders
 
@@ -307,9 +310,15 @@ the super-Gaussian profile with flat hard-edged discs sized linearly
 by magnitude. It is non-photometric and bypasses the HDR seam
 entirely, so it emits no luminance (`../hdr/README.md` § Chart mode).
 
-## Depth encoding
+## Depth encoding — the escape hatch's
 
-The renderer is constructed with
+The shipped encoding is **reversed-z over float32**, and no shipped
+pipeline writes fragment depth at all: `../webgpu/star/README.md`
+§ The disc draw writes no depth carries it, `../webgpu/README.md`
+§ Early-z carries why. What follows governs the `#renderer=webgl2` path
+alone, and `0it.14` deletes it with those materials.
+
+That renderer is constructed with
 `WebGLRenderer({ logarithmicDepthBuffer: true })`, but that flag only
 injects `USE_LOGARITHMIC_DEPTH_BUFFER` into NON-raw materials (planet
 billboards, meshes, lines, volumes) — that is what enables
@@ -364,8 +373,8 @@ any disc-pass star mirrors into the bracketed pass
 pair separations natively and whose repaint over the finished frame
 occludes main-pass glow by construction.
 
-That write costs all three passes their early-z; the redesign recovering
-it is `../webgpu/README.md` § Early-z.
+That write costs all three passes their early-z — the cost the shipped
+redesign exists to recover (`../webgpu/README.md` § Early-z).
 
 ## Sizing and profile — `perceptual-disc/`
 

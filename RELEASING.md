@@ -118,8 +118,8 @@ middle-half spread of a whole interval, and its median turns on whether
 50.1 % or 49.9 % of the frames made the deadline: wall is recorded, never
 marked. A row carrying no GPU stream is recorded and not gated — every
 WebGL2 row, since the backend supplies no such clock, and any WebGPU row
-whose adapter resolves no believable durations. The cutover
-(stellata-0it.13) leaves only gated rows behind. A vantage that does not
+whose adapter resolves no believable durations. Deleting the WebGL2 path
+(stellata-0it.14) leaves only gated rows behind. A vantage that does not
 reproduce cold-to-cold is recorded and not gated on the same footing —
 today that is lg alone, and the paragraph on the floor below says why.
 It keeps its GPU reading, so unlike a row with no such clock it still
@@ -137,8 +137,8 @@ adapter slug, buffer, method and state.
 `--baseline` band *and* past `max(0.25 ms, 1 %)` of the pinned value, or
 when it crosses the ceiling — 33.4 ms of GPU-stream p50 at any canon
 vantage, two 60 Hz intervals of hardware time — whatever the band says
-and whether or not the vantage is gated. mw50 at 31.451 is the nearest
-row today, 1.9 ms under. `✓` is cheaper, `~` is not resolved — not "no
+and whether or not the vantage is gated. mw50 at 32.121 is the nearest
+row today, 1.28 ms under. `✓` is cheaper, `~` is not resolved — not "no
 change".
 
 **The floor is measured, and lg is the reason it is not one number.** Two

@@ -29,6 +29,17 @@ describe('StarPipeline', () => {
     expect(pipe.coreMaskMesh.frustumCulled).toBe(false);
   });
 
+  it('parents no mesh, and still builds the geometry, on a null scene', () => {
+    const opts = { ...makeOpts(), scene: null };
+    const pipe = new StarPipeline(opts);
+
+    expect(pipe.discMesh.parent).toBeNull();
+    expect(pipe.glowMesh.parent).toBeNull();
+    expect(pipe.coreMaskMesh.parent).toBeNull();
+    expect(pipe.iPositionAttr.count).toBeGreaterThan(0);
+    expect(() => pipe.dispose()).not.toThrow();
+  });
+
   it('shares one geometry across all three meshes', () => {
     const pipe = new StarPipeline(makeOpts());
     expect(pipe.coreMaskMesh.geometry).toBe(pipe.geometry);

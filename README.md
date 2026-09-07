@@ -236,8 +236,12 @@ wireframes for confirmed-galaxy members out to 2 Mpc.
 
 ## Browser support
 
-- **WebGL2** required (any browser from 2018 onward — Safari 15+,
-  Chrome 56+, Firefox 51+).
+- **WebGPU** required. Chrome / Edge 113+, Safari 26+ (macOS Tahoe,
+  iOS / iPadOS 26), Firefox 141+ on Windows and Apple-silicon macOS.
+  Chrome for Android 121+ on Android 12+. A browser without it gets a
+  page saying so rather than a blank canvas; the support facts behind
+  that page are dated, and `src/client/webgpu/gate/README.md` says
+  where they come from.
 - Loads and renders on any device, but the user interface for mobile
   devices / small viewports is currently pending a future update.
 

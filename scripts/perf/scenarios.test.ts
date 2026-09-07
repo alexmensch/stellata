@@ -6,15 +6,15 @@ describe('scenarios', () => {
     expect(SCENARIO_NAMES).toEqual(['sol', 'earth', 'mw50', 'mw120', 'lg']);
   });
 
-  it('builds the canonical /v/<blob>/ path with no fragment on a WebGL2 boot', () => {
-    expect(scenarioUrl('http://localhost:5173', SCENARIOS.sol.blob, 'webgl2')).toBe(
+  it('builds the canonical /v/<blob>/ path with no fragment on the default boot', () => {
+    expect(scenarioUrl('http://localhost:5173', SCENARIOS.sol.blob, 'webgpu')).toBe(
       'http://localhost:5173/v/BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB/',
     );
   });
 
-  it('appends only the renderer fragment for a WebGPU boot and tolerates a trailing slash', () => {
-    expect(scenarioUrl('http://localhost:5174/', 'BLOB', 'webgpu')).toBe(
-      'http://localhost:5174/v/BLOB/#renderer=webgpu',
+  it('appends the escape-hatch fragment for a WebGL2 boot and tolerates a trailing slash', () => {
+    expect(scenarioUrl('http://localhost:5174/', 'BLOB', 'webgl2')).toBe(
+      'http://localhost:5174/v/BLOB/#renderer=webgl2',
     );
   });
 });

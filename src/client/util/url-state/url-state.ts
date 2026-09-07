@@ -1438,7 +1438,7 @@ function restoreOrbitFrame(stellata: Stellata, view: DecodedView): void {
   stellata.getOrbitFramePort()?.restore(view.orb === true, view.orbLock === true);
 }
 
-// The fragment is not URL state — boot flags (`#renderer=webgpu`,
+// The fragment is not URL state — boot flags (`#renderer=webgl2`,
 // src/client/webgpu/README.md) ride it, and a bare-path replaceState
 // resolves to a URL without one, silently dropping the flag.
 function replacePathKeepHash(path: string): void {

@@ -1,4 +1,4 @@
-// Parse the dual-boot renderer flag and the gate override from the URL
+// Parse the renderer escape hatch and the gate override from the URL
 // fragment — the one URL slot the address-bar writers preserve verbatim
 // (see README.md).
 
@@ -15,7 +15,7 @@ export function parseRendererFlag(hash: string): RendererKind | null {
  * `#webgpu-gate=<verdict>` — the dev switch that shows the requires-WebGPU
  * page on a browser that supports WebGPU perfectly well. The value picks
  * WHICH page: the two verdicts give different advice, and a supporting
- * browser fails neither probe (`gate/README.md` § Lands dark). `force`
+ * browser fails neither probe (`gate/README.md` § The dev switch). `force`
  * stays as the spelling for the commoner of the two.
  */
 export function parseGateOverride(hash: string): GateVerdict | null {
