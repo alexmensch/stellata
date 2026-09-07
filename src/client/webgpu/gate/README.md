@@ -92,18 +92,27 @@ epic body, which is **dated** — the page says so in as many words, so a
 stale row reads as a dated observation rather than a guarantee. Update
 `SUPPORT_AUDIT_LABEL` alongside the table.
 
-## Lands dark
+## Two callers, one page
 
-Nothing reaches this page in the shipped app. WebGL2 is still the default,
-so no real user fails a WebGPU probe on the boot path, and the flag's own
-failure route deliberately still falls back to WebGL2 with a console
-warning — that is a working dev affordance and this bead did not take it
-away.
+`resolveBootRoute` (`../boot-route.ts`) runs `detectWebGpuSupport` before
+the catalogue is fetched and routes a failing verdict straight here, so a
+gated browser downloads nothing it cannot use. The second caller is
+`main.ts` after `bootWebGpu` returns null on a browser whose probe
+PASSED — `init()` rejected, or `reversedDepthBuffer` came back off. That
+one arrives with the loading screen already drawn, which is why
+`showWebGpuGate` hides the boot's elements (`GATE_HIDES`) rather than
+assuming an empty page, and why it is idempotent.
 
-The one way in is `#webgpu-gate=<verdict>`, checked in `main.ts` **before**
-the catalog fetch so a gated browser downloads nothing it cannot use. The
-switch takes a spelled-out value rather than a bare `#webgpu-gate`, so a
-stray or mistyped fragment cannot blank the app.
+There is no WebGL2 fallback on either route. `#renderer=webgl2` reaches
+that renderer and is undocumented (`../README.md` § The renderer is
+WebGPU).
+
+## The dev switch
+
+`#webgpu-gate=<verdict>` shows a page on a browser that supports WebGPU
+perfectly well. The switch takes a spelled-out value rather than a bare
+`#webgpu-gate`, so a stray or mistyped fragment cannot blank the app, and
+it is checked ahead of the capability probe.
 
 `no-api` (spelled `force` too) and `no-adapter` each show their own page.
 Both spellings exist because a developer's browser fails *neither* probe,
@@ -111,14 +120,11 @@ so without naming the verdict the `no-adapter` copy could not be read on a
 real browser at all — which is how its advice came to contradict its own
 lead sentence for a release.
 
-**`0it.13` is what makes this live**: at cutover the boot runs
-`detectWebGpuSupport` for real and shows the page on a failing verdict.
-Until then the override is the only caller, which is why the page's own
-tests carry the copy contract rather than any boot test.
-
 ## Smoke
 
 `#webgpu-gate=force` and `#webgpu-gate=no-adapter` on Chrome and on
 Safari 26: each page renders, the copy matches the browser you are on,
 the `no-adapter` page names no version to install, no console noise, and
-the app boots normally with the fragment removed.
+the app boots normally with the fragment removed. Firefox on Intel macOS
+(no WebGPU) is the one browser that reaches the page on capability
+alone.

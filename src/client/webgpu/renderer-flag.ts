@@ -15,7 +15,7 @@ export function parseRendererFlag(hash: string): RendererKind | null {
  * `#webgpu-gate=<verdict>` — the dev switch that shows the requires-WebGPU
  * page on a browser that supports WebGPU perfectly well. The value picks
  * WHICH page: the two verdicts give different advice, and a supporting
- * browser fails neither probe (`gate/README.md` § Lands dark). `force`
+ * browser fails neither probe (`gate/README.md` § The dev switch). `force`
  * stays as the spelling for the commoner of the two.
  */
 export function parseGateOverride(hash: string): GateVerdict | null {
