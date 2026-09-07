@@ -403,6 +403,12 @@ single-baseline sweep when the instrument is known to be settled.
   DREW**, and `savedMs` is the price of a different scene, not of the
   pass. A toggle that resets or freezes the exposure statistic is the way
   this happens.
+- **A saving that vanishes while the frame time holds was never a cost.**
+  The limit-mag gate misses a draw the backend dropped — same star
+  population in both states, only one drawing it. Compare `disabledMs`
+  across backends: a WebGPU `mrtAttachments` read 61 % at Sol on a
+  `disabledMs` of 35 against an honest 78 (`../../webgpu/hdr/README.md`
+  § The gate becomes the output struct).
 - Across runs, `debug.priceFrameRepeat(n)`'s per-pass range is the final
   word; it prints one line per pass.
 
