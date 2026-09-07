@@ -28,15 +28,21 @@ const isClientSource = (p: string) => p.endsWith('.ts') && !p.endsWith('.test.ts
 const isThreeWebGpuEntry = (spec: string) =>
   spec === 'three/webgpu' || spec === 'three/tsl' || spec.startsWith('three/src/')
   || (spec.startsWith('three/') && spec.includes('/webgpu/'));
-// renderer-flag, boot-route and gate/ are the exemptions: each must run
-// on a browser with no WebGPU at all, so they live in the entry bundle.
-// Their own guard below is what stops the exemption becoming a hole.
+// The exemptions: each must run on a browser with no WebGPU at all, so
+// they live in the entry bundle. Their own guard below is what stops the
+// exemption becoming a hole. One roster — the sweep's regex, the crossing
+// note and that guard all read it, so a fourth member is one edit.
 const ENTRY_BUNDLE_MEMBERS = ['renderer-flag.ts', 'boot-route.ts'];
-const isWebGpuFolderRef = (spec: string) =>
-  /(?:^|\/)webgpu\/(?!renderer-flag$|boot-route$|gate\/)[^'"]+$/.test(spec);
+const EXEMPT_MODULES = ENTRY_BUNDLE_MEMBERS.map((f) => f.replace(/\.ts$/, ''));
+// A module matches whole, a folder by prefix — every file under it is
+// exempt, which is why only the modules take the `$`.
+const EXEMPT_DIRS = ['gate/'];
+const isWebGpuFolderRef = (spec: string) => new RegExp(
+  `(?:^|/)webgpu/(?!${[...EXEMPT_MODULES.map((m) => `${m}$`), ...EXEMPT_DIRS].join('|')})[^'"]+$`,
+).test(spec);
 
-const CROSSING_NOTE =
-  '(only renderer-flag, boot-route, gate/ and type-only imports cross the boundary)';
+const CROSSING_NOTE = `(only ${[...EXEMPT_MODULES, ...EXEMPT_DIRS].join(', ')} `
+  + 'and type-only imports cross the boundary)';
 
 function violationsInSource(src: string, inWebGpuDir: boolean): string[] {
   if (inWebGpuDir) return [];
