@@ -117,11 +117,13 @@ be pulled.
 inherits.** `scripts/catalog/tycho2-parse.ts` indexes on the full
 `TYC1-TYC2-TYC3` and the direction cascade looks the record's own TYC up in
 it, so a `TYC3=2` component draws nothing from Tycho-2 whichever verdict this
-gate reaches. What places the 18 is the tier below: every one carries SIMBAD
-astrometry in `data/simbad/simbad_values.tsv` and routes to the cascade's
-`simbad` tier. **This gate measures the pull's reach, never a record's
-placement** — an unreached TYC does not imply an unplaced record, and reading
-it that way is what the pre-manifest wording got wrong.
+gate reaches. What covers the 18 is the cascade either side of Tycho-2, never
+Tycho-2 itself: all 18 carry SIMBAD astrometry in
+`data/simbad/simbad_values.tsv`, the tier below — 16 have no Gaia binding at
+all and depend on it, and 2 carry a `crosswalk_gated` `gaia_source_id` the 5p
+tier above reaches first. **This gate measures the pull's reach, never a
+record's placement** — an unreached TYC does not imply an unplaced record, and
+reading it that way is what the pre-manifest wording got wrong.
 
 One limit to know: `reached` is the filtered pull, so a pair entry is visible
 to the gate only when the request set names it too. 619 of the 969 requested
