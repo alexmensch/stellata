@@ -381,6 +381,7 @@ async function main() {
     companionDroppedNoAbsmag: 0,
     companionDroppedCompoundComp: 0,
     companionDroppedCollocatedPrimary: 0,
+    companionAnchorIsComponent: 0,
     companionDroppedParkedRecord: 0,
     companionAbsmagSpectralDerived: 0,
     companionSpectMsFromOwnAbsmag: 0,
@@ -761,7 +762,8 @@ async function main() {
         `no-absmag=${ps.droppedNoAbsmag}, ` +
         `no-primary=${ps.droppedNoPrimary}, ` +
         `compound-comp=${ps.droppedCompoundComp}, ` +
-        `collocated-primary=${ps.droppedCollocatedPrimary}); ` +
+        `collocated-primary=${ps.droppedCollocatedPrimary}, ` +
+        `anchor-is-component=${ps.anchorIsComponent}); ` +
         `absmag spectral-derived=${ps.absmagSpectralDerived}, ` +
         `spect ms-from-own-absmag=${ps.spectMsFromOwnAbsmag}, ` +
         `wds-mag-derived=${ps.absmagWdsMagDerived}, ` +
@@ -786,6 +788,7 @@ async function main() {
     counts.companionDroppedNoAbsmag = ps.droppedNoAbsmag;
     counts.companionDroppedCompoundComp = ps.droppedCompoundComp;
     counts.companionDroppedCollocatedPrimary = ps.droppedCollocatedPrimary;
+    counts.companionAnchorIsComponent = ps.anchorIsComponent;
     counts.companionDroppedParkedRecord = ps.droppedParkedRecord;
     counts.companionAbsmagSpectralDerived = ps.absmagSpectralDerived;
     counts.companionSpectMsFromOwnAbsmag = ps.spectMsFromOwnAbsmag;

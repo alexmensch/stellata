@@ -165,7 +165,7 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // 1485 → 1465: the parked-record promotion refusal. 55 fewer pairs are
 // emitted at all, because a component whose primary reaches no owned
 // parallax no longer mints a record for the pair to resolve against.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1465;
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1464;
 
 // ---- Corpus row types ----------------------------------------------------
 

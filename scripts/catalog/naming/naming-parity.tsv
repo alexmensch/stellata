@@ -2172,7 +2172,7 @@ synth:synth-01332+6041-D	HIP 7232 D	NSV 00542 D	no
 synth:synth-01350-2955-B	HIP 7372 B	BB Scl B	no
 synth:synth-01361-2954-B	Tau Scl B	τ Scl B	yes
 synth:synth-01376-0924-B	HIP 7580 B	170 G. Cet B	no
-synth:synth-01398-5612-B	p Eridani B	p Eri B	no
+synth:synth-01398-5612-B	p Eridani B		no
 synth:synth-01406+0846-B	HIP 7819 B	124 G. Psc B	no
 synth:synth-01414-7909-Ab	Tau-1 Hyi Ab	τ¹ Hyi Ab	no
 synth:synth-01414-7909-B	Tau-1 Hyi B	τ¹ Hyi B	no
@@ -2621,7 +2621,7 @@ synth:synth-07366-1429-Fb	HD 60998 Fb		no
 synth:synth-07366-1429-O	HD 60998 O		no
 synth:synth-07366-1429-Q	HD 60998 Q		no
 synth:synth-07366-1429-S	HD 60998 S		no
-synth:synth-07374-3458-C	HIP 37096 C	f Pup C	no
+synth:synth-07374-3458-C	HIP 37096 C		no
 synth:synth-07380-3208-B	HIP 37145 B	NSV 03669 B	no
 synth:synth-07400-0336-C	HIP 37349 C	V869 Mon C	no
 synth:synth-07400-0336-Ib	HIP 36985 Ib	V869 Mon Ib	no

@@ -86,6 +86,7 @@ function baseCounts(): BuildCounts {
     companionDroppedNoAbsmag: 900,
     companionDroppedCompoundComp: 40,
     companionDroppedCollocatedPrimary: 6,
+    companionAnchorIsComponent: 1,
     companionDroppedParkedRecord: 0,
     companionAbsmagSpectralDerived: 30,
     companionSpectMsFromOwnAbsmag: 3000,

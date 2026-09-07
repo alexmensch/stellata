@@ -90,6 +90,24 @@ Per-row gates and resolution:
   strips it rather than colliding with the primary in every
   gaia-keyed lookup, and build-runtime-binaries retries the
   synth key when its id-first resolve degenerates.
+- **Anchor-is-the-component refusal.** A pair whose two ends resolve to ONE
+  record has no second star to mint. `01398-5612`'s A row carries the B
+  record's HD, HIP and Gaia cells, so the cursor anchors on B and the B row's
+  ids strip as inherited — the Sirius-B shape by identifiers alone, except the
+  companion is already a record. Minting baked a twin 93 AU off its own
+  original and `binaries.bin` drew the pair's 468-yr orbit between the two
+  copies. The naming authority's component attribution is the independent
+  witness: where it already letters the ANCHOR as the row's own component, that
+  record IS the component. Counted `companionAnchorIsComponent` (3: p Eri B,
+  `f Pup C`, `α Psc` B — the first two were enumerated duplicate labels until
+  this gate landed), a ratchet-down metric, since each is a mis-keyed
+  multiples.tsv row upstream. The letters themselves are contested — WDS, the
+  authority and Gliese disagree per system — so the gate refuses the duplicate
+  without adjudicating the letter. It **reaches only roots the authority
+  attributes a Bayer designation in**; one with no Bayer letter offers no
+  witness, which is why the `Gl 277A` duplicate needs a membership fix instead.
+  `applyStarNames` running before promotion is what puts `bayerComponent` on
+  the record in time.
 - **Refused-parallax refusal.** A row carrying the identifier of a record
   parked on `refused_no_defensible_parallax` never promotes — its stated
   distance inverts the parallax a tier above refused. Mostly that primary's
@@ -288,12 +306,22 @@ Per-row gates and resolution:
     separation for is EXCLUDED — no measurement is no evidence of blending
     (AU Mic AB). Structural members skip the bound in BOTH tiers — ids inherited
     from the anchor are evidence about THIS pair and outrank a population
-    threshold — which is not the same as bypassing the fit, and 349 Gaia-tier
-    candidates turn on the difference. **Inherited means inherited, not
+    threshold — which is not the same as bypassing the fit, and a large share of
+    the Gaia-tier candidates turn on the difference (`blendDimGaiaResolved` and
+    `blendDimBeyondSeparation` are the pinned counts; no snapshot isolates the
+    structural share, so don't quote one). **Inherited means inherited, not
     inherited-then-stripped**: an id the row kept of its own says nothing
     about what the anchor's catalogue entry contained, and reading it as
     evidence let a printed-tier member escape the dim while shipping the
-    entry's whole light.
+    entry's whole light. **A member already in the catalog is never structural,
+    and that asymmetry is load-bearing, not an oversight**: the bypass is for a
+    member with no other evidence — ids inherited-then-stripped AND a separation
+    WDS never published (VV Crv B). An existing record has its own measured
+    magnitude and a published separation, so the fit and the 10″ bound can both
+    judge it and should. ζ UMa B shares the anchor's HIP and HD but sits at
+    14.4″ where the printed cell is A alone (V 2.23): letting the shared id
+    outrank that measurement subtracts light the entry never held and dims
+    Mizar Aa 0.274 mag off `../validate/known-stars.tsv`.
 
   Apply, once per anchor with exact conservation: `own` / `wds_mag` members
   subtract their actual flux, guarded against a member as bright as the blend
@@ -378,12 +406,11 @@ primary when the local anchor never made it into the catalog (δ Vel CD
 class). Both inherited fields below resolve that same anchor, so a
 companion never gets one without the other.
 
-Which cursor primary is the ROOT's is `isMoreCanonicalAnchor`: the
-top-level letter first, then depth, then alphabetical order. Ranking whole
-comps by length instead puts "Aa" below every single-letter branch, so a
-root whose only A-branch cursor is Aa,Ab inherits position and velocity
-from an unrelated branch — 15 Mon's `06410+0954` anchored on its E
-component. `record-index/`'s naming anchor imports the same predicate.
+Which cursor primary is the ROOT's is `isMoreCanonicalAnchor`: top-level
+letter first, then depth, then alphabetical order — so a root whose only
+A-branch cursor is Aa,Ab still takes its position and velocity from the A
+branch. `record-index/README.md` § Component-letter search designations
+carries the worked case and imports the same predicate for naming.
 
 | Field(s) | Origin | Source |
 | --- | --- | --- |

@@ -400,6 +400,12 @@ export interface PromotionStats {
    *  offset. Collocating on the anchor would render a false coincident
    *  star (Alsephina C). */
   droppedCollocatedPrimary: number;
+  /** Rows whose ids resolved onto the anchor record while the naming authority
+   *  already letters that record as THIS component — the pair's two ends are
+   *  one star, so there is no second star to mint (p Eri's `01398-5612`, whose
+   *  A row carries B's HD / HIP / Gaia cells). A ratchet-down metric: each one
+   *  is a mis-keyed multiples.tsv row upstream. */
+  anchorIsComponent: number;
   /** Sub-resolution inner-pair secondaries re-collocated onto their true
    *  parent component in the post-pass. Their cursor primary's blended
    *  identifier baked them on a sibling (Castor Bb on A); this moves them
@@ -535,6 +541,7 @@ export function emptyPromotionStats(): PromotionStats {
     repositionedCollocatedDouble: 0,
     droppedCompoundComp: 0,
     droppedCollocatedPrimary: 0,
+    anchorIsComponent: 0,
     repositionedInnerToParent: 0,
     blendSplitRecords: 0,
     blendDimmedAnchors: 0,
@@ -1323,10 +1330,12 @@ interface AnchorDimCandidate {
    *  subtraction). */
   source: 'wds_mag' | 'dmag_imputed' | 'own';
   dmag: number | null;
-  /** ids inherited-then-stripped from the anchor — the cross-match could not
-   *  separate them. Skips the subset fit only where the anchor's magnitude is a
-   *  system blend by construction; against a Gaia-derived V the shared
-   *  identifier carries no photometric claim and the member is fitted. */
+  /** ids inherited from the anchor — the cross-match could not separate them.
+   *  Inherited is enough; an id the row also kept of its own says nothing about
+   *  what the anchor's catalogue entry contained. Skips the subset fit only
+   *  where the anchor's magnitude is a system blend by construction; against a
+   *  Gaia-derived V the shared identifier carries no photometric claim and the
+   *  member is fitted. */
   structural: boolean;
   /** Member's own observed-frame WDS magnitude (mag_sec; mag_pri for a
    *  pair-row primary escape). */
@@ -1382,6 +1391,15 @@ function registerExistingMemberForAnchorDim(
     memberSpectral: recordSpectralInfo(member),
     source: 'own',
     dmag: row.dmag,
+    // Never structural, and not for want of symmetry with the mint path: the
+    // identity bypass exists for a member with no other evidence — ids
+    // inherited-then-stripped and a separation WDS never published (VV Crv B).
+    // A member that is already a record has its own measured magnitude AND a
+    // published separation, so the fit and the 10″ bound can both judge it and
+    // should. ζ UMa B shares the anchor's HIP and HD but sits at 14.4″, and the
+    // printed cell is A alone (V 2.23) — letting the shared id outrank that
+    // measurement subtracted light the entry never held, dimming Mizar Aa
+    // 0.274 mag off its `validate/known-stars.tsv` value.
     structural: false,
     ...anchorDimGeometry(row, anchorPrimaryRow.comp),
     av: dustGrid ? avSolToStar(dustGrid, member.x, member.y, member.z) : 0,
@@ -1436,6 +1454,27 @@ function promoteRow(
     && (anchorPrimaryRow.gaiaSourceId === row.gaiaSourceId
       || (anchorStar !== null && anchorStar.gaiaSourceId === row.gaiaSourceId));
   const companionGaia = inheritedGaia ? null : row.gaiaSourceId;
+  // HIP inheritance gate. The multiples.tsv carries the primary's
+  // HIP on both component rows when AT-HYG had a single entry for
+  // the system (Sirius A and B both list HIP 32349). Letting the
+  // companion adopt that HIP collides with the primary in every
+  // HIP-keyed lookup: url-state's refFromIndex encodes by HIP and
+  // decodes first-wins, so a shared link or page reload collapses
+  // both records onto the primary. Strip when the row's HIP equals
+  // the anchor row's HIP — or the anchor catalog STAR's: SIMBAD's
+  // cross-IDs can bind the system HIP to the secondary letter while
+  // the primary row's hip cell is empty, yet the blended AT-HYG
+  // record already owns that HIP in every byHip lookup.
+  const inheritedHip = row.hip !== null && row.hip > 0
+    && (anchorPrimaryRow.hip === row.hip
+      || (anchorStar !== null && anchorStar.hip === row.hip));
+  // Membership in the anchor's catalogue entry, for the flux-conservation
+  // post-pass and the escape row's photometry. An id of the row's OWN does not
+  // buy the anchor's cell back: AT-HYG keys photometry on the record it merged,
+  // so a row sharing the anchor's HD/HIP reads the SYSTEM's magnitude however
+  // Gaia later resolved the component. Which tier can hold a member at all is
+  // README.md § Anchor flux conservation.
+  const idsInheritedFromAnchor = inheritedGaia || inheritedHip;
   // Dedup against existing catalog + previously-promoted records.
   // The inherited-HIP/Gaia escapes let a secondary match the ANCHOR's
   // record without being classified as alreadyInCatalog (Sirius A+B
@@ -1456,6 +1495,19 @@ function promoteRow(
         state.existingStars[existingIdx], anchorStar ?? systemAnchorStar, stats,
       );
       registerExistingMemberForAnchorDim(ctx, state, existingIdx, dustGrid);
+      return null;
+    }
+    // A pair whose two ends resolve to ONE record has no second star to mint.
+    // p Eri's `01398-5612` A row carries B's HD, HIP and Gaia cells, so the
+    // cursor anchors on the B record and the B row's ids then strip as
+    // inherited — the Sirius-B shape, but the companion is already a record.
+    // Minting bakes a twin of the anchor and the pair's orbit animates a star
+    // against its own copy. The authority's component attribution is the
+    // independent witness: where it already letters the anchor record as THIS
+    // component, that record IS the component.
+    if (inheritedIdCollision && anchorStar !== null
+        && anchorStar.bayerComponent === canonicalComp) {
+      stats.anchorIsComponent++;
       return null;
     }
     // A row whose own gaia missed the index can still BE an existing
@@ -1497,20 +1549,6 @@ function promoteRow(
     return null;
   }
 
-  // HIP inheritance gate. The multiples.tsv carries the primary's
-  // HIP on both component rows when AT-HYG had a single entry for
-  // the system (Sirius A and B both list HIP 32349). Letting the
-  // companion adopt that HIP collides with the primary in every
-  // HIP-keyed lookup: url-state's refFromIndex encodes by HIP and
-  // decodes first-wins, so a shared link or page reload collapses
-  // both records onto the primary. Strip when the row's HIP equals
-  // the anchor row's HIP — or the anchor catalog STAR's: SIMBAD's
-  // cross-IDs can bind the system HIP to the secondary letter while
-  // the primary row's hip cell is empty, yet the blended AT-HYG
-  // record already owns that HIP in every byHip lookup.
-  const inheritedHip = row.hip !== null && row.hip > 0
-    && (anchorPrimaryRow.hip === row.hip
-      || (anchorStar !== null && anchorStar.hip === row.hip));
   const companionHip = inheritedHip ? null : row.hip;
   const usesSynth = companionGaia === null && companionHip === null;
   if (usesSynth) {
@@ -1528,14 +1566,6 @@ function promoteRow(
     return null;
   }
   let spectral = resolveCompanionSpectral(row);
-  // An inherited id is evidence about the catalogue entry, and a surviving
-  // id of the row's OWN says nothing about it: AT-HYG keys photometry on the
-  // record it merged, so a row whose HD/HIP is the anchor's carries the
-  // SYSTEM's magnitude however Gaia later resolved the component. VV Crv B
-  // keeps its own DR3 source and still read HIP 61910's blended V 5.17 as its
-  // own light, twice over. Which tier can hold a member is the anchor's V
-  // tier's question, resolved in the dim post-pass and not here.
-  const idsInheritedFromAnchor = inheritedGaia || inheritedHip;
   const imputed = imputeCompanionAbsmag(
     row, anchorPrimaryRow, spectral.info, !isPairRowPrimary,
     isPairRowPrimary && idsInheritedFromAnchor,
@@ -2119,8 +2149,8 @@ export function promoteCompanions(
   // Anchor-dimming post-pass (flux conservation) — a per-anchor joint
   // subset solve. Each candidate member's light MAY be embedded in its
   // anchor's athyg_own blend magnitude; total system flux must stay what
-  // AT-HYG measured. Membership: structural members (ids inherited-then-
-  // stripped from the anchor) are always in; every other member is judged
+  // AT-HYG measured. Membership: structural members (ids inherited from the
+  // anchor, stripped or not) are always in; every other member is judged
   // by the best-fit subset — the hypothesis m(S) = −2.5·log₁₀(F_anchor +
   // Σ_{i∈S} F_i) over observed-frame WDS magnitudes that lands closest to
   // the anchor's observed apparent magnitude, decisive only when it beats

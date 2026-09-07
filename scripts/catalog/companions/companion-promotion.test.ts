@@ -404,6 +404,65 @@ describe('imputeCompanionAbsmag wds_mag tier', () => {
   });
 });
 
+describe('a pair whose two ends resolve to one record', () => {
+  // p Eri's `01398-5612`: the A row carries B's HD, HIP and Gaia cells, so the
+  // cursor anchors on the B record and the B row's ids then strip as inherited.
+  // That is the Sirius-B shape by identifiers alone, and the only thing that
+  // separates them is the authority's component attribution — it already
+  // letters the anchor record B, so there is no second star to mint.
+  const selfPairRows = () => [
+    multiplesRow({
+      systemId: '01398-5612-AB', comp: 'A', hip: 7751,
+      gaiaSourceId: '4911306239828325760', hd: 10361,
+      x_pc: 8, y_pc: 0, z_pc: 0, distPc: 8, absmag: 6.232, spect: 'K1',
+      source: 'athyg', photometryVia: 'athyg_own', orbitRole: 'primary',
+      sepArcsec: 11.3, paDeg: 185.0, dmag: 0.12,
+    }),
+    multiplesRow({
+      systemId: '01398-5612-AB', comp: 'B', hip: 7751,
+      gaiaSourceId: '4911306239828325760', hd: 10361,
+      x_pc: 8, y_pc: 0, z_pc: 0, distPc: 8, absmag: 6.232, spect: 'K1',
+      photometryVia: 'athyg_system_inherited', orbitRole: 'secondary',
+      sepArcsec: 11.3, paDeg: 185.0, dmag: 0.12,
+    }),
+  ];
+
+  const pEriB = (overrides: Partial<Star> = {}) => makeStar({
+    hip: 7751, gaiaSourceId: '4911306239828325760', hd: 10361, hr: 487,
+    bayer: 'p', bayerComponent: 'B', absmag: 6.308, x: 8, y: 0, z: 0,
+    ...overrides,
+  });
+
+  it('mints nothing when the authority letters the anchor as this component', () => {
+    const anchor = pEriB();
+    const { newStars, stats } = promoteCompanions(
+      selfPairRows(), [anchor], CON_ASSIGNMENT,
+    );
+    expect(stats.anchorIsComponent).toBe(1);
+    expect(newStars).toHaveLength(0);
+  });
+
+  it('still mints the Sirius-B shape, where the anchor is a different component', () => {
+    // Same identifiers on both rows — what makes Sirius B a real star is that
+    // the authority attributes the anchor's designation to A, not to B.
+    const anchor = pEriB({ bayerComponent: 'A' });
+    const { newStars, stats } = promoteCompanions(
+      selfPairRows(), [anchor], CON_ASSIGNMENT,
+    );
+    expect(stats.anchorIsComponent).toBe(0);
+    expect(newStars).toHaveLength(1);
+  });
+
+  it('still mints where the authority attributes no component at all', () => {
+    const anchor = pEriB({ bayerComponent: null });
+    const { newStars, stats } = promoteCompanions(
+      selfPairRows(), [anchor], CON_ASSIGNMENT,
+    );
+    expect(stats.anchorIsComponent).toBe(0);
+    expect(newStars).toHaveLength(1);
+  });
+});
+
 describe('anchor flux dimming', () => {
   // A structural member only bypasses the subset fit when the anchor's V is the
   // system blend, so every fixture below that exercises the bypass pins the
