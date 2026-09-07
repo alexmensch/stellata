@@ -16,5 +16,5 @@ export const SCENARIO_NAMES = Object.keys(SCENARIOS) as readonly ScenarioName[];
 
 export function scenarioUrl(base: string, blob: string, backend: Backend): string {
   const root = base.replace(/\/+$/, '');
-  return `${root}/v/${blob}/${backend === 'webgpu' ? '#renderer=webgpu' : ''}`;
+  return `${root}/v/${blob}/${backend === 'webgl2' ? '#renderer=webgl2' : ''}`;
 }
