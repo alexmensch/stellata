@@ -2224,11 +2224,32 @@ export class Stellata implements FrameAnchor {
    * gates the controller doesn't see.
    */
   aimAt(pointLocal: THREE.Vector3) {
-    if (this.warp.isActive() || this.aim.isActive()) return;
+    if (!this.aimGatesClear()) return;
+    this.aim.aimAt(pointLocal);
+  }
+
+  /**
+   * Smoothly rotate the camera to look along `dirLocal` — the aim for a
+   * caller that holds a direction rather than an object, where standing a
+   * point up at some radius and aiming at that would land the boresight
+   * elsewhere in navigate (`camera/controls/README.md` § Aim controller).
+   *
+   * Shares `aimAt`'s composition-layer busy gates.
+   */
+  aimAlong(dirLocal: THREE.Vector3) {
+    if (!this.aimGatesClear()) return;
+    this.aim.aimAlong(dirLocal);
+  }
+
+  /** The composition-layer busy gates every aim shares: false while warp,
+   *  another aim, or an observe transition owns the camera. Cancels the
+   *  focus lerps on the way through, so a cleared gate hands the camera
+   *  over with nothing else still driving it. */
+  private aimGatesClear(): boolean {
+    if (this.warp.isActive() || this.aim.isActive()) return false;
     this.focus.cancelUnfocusLerp();
     this.focus.cancelFocusLerp();
-    if (this.observe.isActive()) return;
-    this.aim.aimAt(pointLocal);
+    return !this.observe.isActive();
   }
 
   /**
@@ -2241,10 +2262,7 @@ export class Stellata implements FrameAnchor {
    * `AimController`.
    */
   invertView() {
-    if (this.warp.isActive() || this.aim.isActive()) return;
-    this.focus.cancelUnfocusLerp();
-    this.focus.cancelFocusLerp();
-    if (this.observe.isActive()) return;
+    if (!this.aimGatesClear()) return;
     this.aim.invert();
   }
 

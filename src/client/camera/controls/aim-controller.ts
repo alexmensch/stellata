@@ -56,6 +56,7 @@ export class AimController {
   private readonly tickDir = new THREE.Vector3();
   private readonly tickObserveQ = new THREE.Quaternion();
   private readonly invertUp = new THREE.Vector3();
+  private readonly alongDir = new THREE.Vector3();
 
   constructor(deps: AimControllerDeps) {
     this.deps = deps;
@@ -80,6 +81,32 @@ export class AimController {
     } else {
       if (this.navigate !== null) return;
       this.startNavigateAim(pointLocal);
+    }
+  }
+
+  /** Smoothly rotate the camera to look **along** `dirLocal` — a direction,
+   *  at no distance.
+   *
+   *  A caller holding only a direction must not stand a point up at some
+   *  large radius and aim at that: navigate crosses the camera to the far
+   *  side of the pivot before it looks, so the boresight lands along
+   *  `pivot → point` rather than along the direction the point was built to
+   *  express. That is exact only while the orbit radius is small against the
+   *  radius chosen, and inverts entirely past it. Aiming along the direction
+   *  is exact at every orbit radius.
+   *
+   *  Same busy-gate contract as `aimAt`. */
+  aimAlong(dirLocal: THREE.Vector3): void {
+    const dir = this.alongDir.copy(dirLocal);
+    const len = dir.length();
+    if (len < AIM_DEGENERATE_DIST_PC) return;
+    dir.divideScalar(len);
+    if (this.deps.getCameraMode() === 'observe') {
+      if (this.observe !== null) return;
+      this.startObserveAim(dir.add(this.deps.camera.position));
+    } else {
+      if (this.navigate !== null) return;
+      this.beginNavigateAim(dir.negate());
     }
   }
 
@@ -153,26 +180,25 @@ export class AimController {
   }
 
   private startNavigateAim(pointLocal: THREE.Vector3): void {
-    const camera = this.deps.camera;
     const pivot = this.deps.controls.target;
-    const offsetX = camera.position.x - pivot.x;
-    const offsetY = camera.position.y - pivot.y;
-    const offsetZ = camera.position.z - pivot.z;
-    const r = Math.sqrt(offsetX * offsetX + offsetY * offsetY + offsetZ * offsetZ);
-    if (r < AIM_DEGENERATE_DIST_PC) return; // camera coincident with pivot — no orbit to rotate
-
-    const aimX = pointLocal.x - pivot.x;
-    const aimY = pointLocal.y - pivot.y;
-    const aimZ = pointLocal.z - pivot.z;
-    const aimLen = Math.sqrt(aimX * aimX + aimY * aimY + aimZ * aimZ);
+    const aim = new THREE.Vector3().subVectors(pointLocal, pivot);
+    const aimLen = aim.length();
     if (aimLen < AIM_DEGENERATE_DIST_PC) return; // target coincides with pivot
 
-    // Start radial direction = camera - pivot, normalised.
-    const dir0 = new THREE.Vector3(offsetX / r, offsetY / r, offsetZ / r);
-    // End radial direction = -(point - pivot) normalised. Putting the
-    // camera on the opposite side of pivot from the target makes the
-    // forward vector (pivot - camera) point toward the target.
-    const dir1 = new THREE.Vector3(-aimX / aimLen, -aimY / aimLen, -aimZ / aimLen);
+    // Camera, pivot and point come out collinear, so the point lands at view
+    // centre whatever the orbit radius.
+    this.beginNavigateAim(aim.divideScalar(-aimLen));
+  }
+
+  /** Slerp the orbit pose so the camera ends on `dir1` — the unit radial
+   *  direction from the pivot. The camera looks at the pivot, so the
+   *  boresight comes out as `-dir1`. */
+  private beginNavigateAim(dir1: THREE.Vector3): void {
+    const pivot = this.deps.controls.target;
+    const dir0 = new THREE.Vector3().subVectors(this.deps.camera.position, pivot);
+    const r = dir0.length();
+    if (r < AIM_DEGENERATE_DIST_PC) return; // camera coincident with pivot — no orbit to rotate
+    dir0.divideScalar(r);
 
     const dot = Math.max(-1, Math.min(1, dir0.dot(dir1)));
     if (dot > 0.99999) return; // already aimed

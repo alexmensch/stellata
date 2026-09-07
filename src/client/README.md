@@ -131,8 +131,9 @@ the one split pair (read on `focus`, write on `observe`).
 **A method on the shell itself is composition, not forwarding** — it
 does something no single controller can. Keep that property when adding
 one: `setCameraFov` (syncs the pixel solid angle to the HDR seam),
-`aimAt` / `aimAtConstellation` (cross-controller busy gates),
-`invertView` (the same gates, for the reciprocal pose),
+`aimAt` / `aimAlong` / `aimAtConstellation` (cross-controller busy gates,
+shared as `aimGatesClear`), `invertView` (the same gates, for the
+reciprocal pose),
 `isCameraTransitionActive` (warp ∪ observe), `getT` / `setT`
 (clockJumped fan-out), the `FrameAnchor` recentre trio, `setMonochrome`,
 the `attach*` family, and the star-frame reads (`localPositions`,

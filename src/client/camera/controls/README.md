@@ -84,7 +84,8 @@ in both navigate and observe modes.
   PSF-dominated regime and under the star-size exaggeration multiplier,
   where `sizeMax` clears the floor.
 - `aim-controller.ts` — mode-aware aim slerps (navigate orbit-pivot
-  + observe quaternion-in-place), shared `aimDurationMs` ramp.
+  + observe quaternion-in-place), the point (`aimAt`) and direction
+  (`aimAlong`) entry points, shared `aimDurationMs` ramp.
 - `star-geometry.ts` — pure star angular-geometry formulae
   (θ = 2·atan(R/d), `parkDistForStar` derivations).
 - `star-physics.ts` — per-star camera/screen geometry: `fovMinorRad`,
@@ -269,6 +270,20 @@ camera-changing action can't race the in-flight lerp.
   origin; only the camera quaternion changes, slerping the live pose
   toward a `lookAt(point)` target. Disables `ObserveControls` so a stray
   drag doesn't fight the slerp.
+
+**A caller holding a direction rather than an object calls `aimAlong`**, and
+must not stand a point up at some large radius instead. Navigate crosses the
+camera to the far side of the pivot *before* it looks, so a point aim lands the
+boresight along `pivot → point` — for a point built off the camera to express
+a direction `u`, that comes out as `unit(c + R·u)` where `c` is the camera's
+offset from the pivot and `R` the radius chosen. Exact only while `|c| ≪ R`
+(error up to `asin(|c|/R)`), and past `|c| = R` the correct pose stops being a
+fixed point of the gesture: repeating it flips between the direction and its
+reciprocal. `aimAlong` sets the end radial direction to `−u` outright, so it is
+exact at every orbit radius; in observe it looks along `u` from the camera,
+which was already exact. `aimAt` stays exact for a real point at any radius —
+camera, pivot and point come out collinear — so the two share
+`beginNavigateAim` and differ only in where the end direction comes from.
 
 Both branches share `aimDurationMs`: a linear ramp from `AIM_T_MIN_MS`
 (floor for trivial nudges) to `AIM_T_MAX_MS` (cap for a half-circle

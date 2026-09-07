@@ -155,6 +155,108 @@ describe('AimController — navigate slerp lifecycle', () => {
   });
 });
 
+describe('AimController — aimAlong (direction, no distance)', () => {
+  // 50 kpc: the coordinate sphere's radius, which is what a caller holding a
+  // direction used to stand a point up at. An orbit radius anywhere near it
+  // is what broke the aim — at twice it, the point sits behind the camera and
+  // the aim inverted, oscillating 0/0 ↔ 180/0 on repeated presses.
+  const SPHERE_R = 50_000;
+
+  function boresightAfterAlong(
+    h: ReturnType<typeof makeHarness>,
+    dir: THREE.Vector3,
+  ): THREE.Vector3 {
+    const startMs = performance.now();
+    h.aim.aimAlong(dir);
+    h.aim.tick(startMs + AIM_T_MAX_MS + 1);
+    return new THREE.Vector3().subVectors(h.controls.target, h.camera.position).normalize();
+  }
+
+  it('lands the boresight on the requested direction at every orbit radius', () => {
+    const dir = new THREE.Vector3(0.6, -0.48, 0.64).normalize();
+    for (const r of [5e-9, 1, 300, SPHERE_R, 2 * SPHERE_R, 1e7]) {
+      const h = makeHarness('navigate');
+      h.controls.target.set(0, 0, 0);
+      h.camera.position.set(r, 0, 0);
+      const boresight = boresightAfterAlong(h, dir);
+      expect(boresight.x).toBeCloseTo(dir.x, 12);
+      expect(boresight.y).toBeCloseTo(dir.y, 12);
+      expect(boresight.z).toBeCloseTo(dir.z, 12);
+      expect(h.camera.position.length()).toBeCloseTo(r, 5);
+    }
+  });
+
+  it('holds a camera already aimed along the direction — no 0/0 ↔ 180/0 two-cycle', () => {
+    const h = makeHarness('navigate');
+    const dir = new THREE.Vector3(1, 0, 0);
+    h.controls.target.set(0, 0, 0);
+    h.camera.position.set(-2 * SPHERE_R, 0, 0); // already reading 0/0
+    boresightAfterAlong(h, dir);
+    const settled = h.camera.position.clone();
+    h.aim.aimAlong(dir);
+    expect(h.aim.isActive()).toBe(false);
+    expect(h.camera.position.distanceTo(settled)).toBe(0);
+  });
+
+  it('is scale-invariant — a direction is normalised, never taken as a distance', () => {
+    const h = makeHarness('navigate');
+    h.controls.target.set(0, 0, 0);
+    h.camera.position.set(1e6, 0, 0);
+    const boresight = boresightAfterAlong(h, new THREE.Vector3(0, 1e-4, 0));
+    expect(boresight.y).toBeCloseTo(1, 12);
+  });
+
+  it('turns in place in observe, landing on lookAt along the direction', () => {
+    const h = makeHarness('observe');
+    h.camera.position.set(0, 0, 0);
+    h.camera.lookAt(0, 0, -1);
+    h.camera.updateMatrixWorld();
+    const startMs = performance.now();
+    h.aim.aimAlong(new THREE.Vector3(1, 0, 0));
+    h.aim.tickObserve(startMs + AIM_T_MAX_MS + 1);
+    const expected = new THREE.Quaternion().setFromRotationMatrix(
+      new THREE.Matrix4().lookAt(
+        h.camera.position,
+        new THREE.Vector3(1, 0, 0),
+        new THREE.Vector3(0, 1, 0),
+      ),
+    );
+    expect(Math.abs(h.camera.quaternion.dot(expected))).toBeCloseTo(1, 5);
+  });
+
+  it('is what a direction needs — the same aim as a point at 50 kpc inverts', () => {
+    // Why aimAlong exists rather than a point stood up at some radius. aimAt
+    // is exact for a real point (camera, pivot and point end up collinear),
+    // but a point built off the CAMERA to express a direction is read from
+    // the pivot instead: the boresight comes out along unit(c + R·dir), for
+    // an offset c from the pivot. Past |c| = R that flips — from the pose
+    // that already reads 0/0, the press lands on 180/0, and the next press
+    // comes back.
+    const h = makeHarness('navigate');
+    const dir = new THREE.Vector3(1, 0, 0);
+    h.controls.target.set(0, 0, 0);
+    h.camera.position.set(-2 * SPHERE_R, 0, 0); // boresight already on dir
+    const startMs = performance.now();
+    h.aim.aimAt(dir.clone().multiplyScalar(SPHERE_R).add(h.camera.position));
+    h.aim.tick(startMs + AIM_T_MAX_MS + 1);
+    const boresight = new THREE.Vector3()
+      .subVectors(h.controls.target, h.camera.position).normalize();
+    expect(boresight.x).toBeCloseTo(-1, 12);
+  });
+
+  it('no-ops on a degenerate direction in both modes', () => {
+    for (const mode of ['navigate', 'observe'] as const) {
+      const h = makeHarness(mode);
+      h.camera.position.set(10, 0, 0);
+      h.controls.target.set(0, 0, 0);
+      h.aim.aimAlong(new THREE.Vector3(AIM_DEGENERATE_DIST_PC / 2, 0, 0));
+      expect(h.aim.isActive()).toBe(false);
+      expect(h.aim.isObserveAimActive()).toBe(false);
+      expect(h.controls.enabled).toBe(true);
+    }
+  });
+});
+
 describe('AimController — observe slerp lifecycle', () => {
   let h: ReturnType<typeof makeHarness>;
   beforeEach(() => { h = makeHarness('observe'); });

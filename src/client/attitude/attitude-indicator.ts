@@ -34,7 +34,6 @@ import {
 } from './attitude-pure';
 import { focusFrameInputs } from './focus-frame';
 import { coordSphereNorthPole } from '../galactic/coord-spheres/coord-sphere-frames';
-import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import {
   focusedOrbitFrom,
   resolveFocusedOrbit,
@@ -568,11 +567,12 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     level();
   }
 
-  const aimPoint = new THREE.Vector3();
+  const aimDir = new THREE.Vector3();
 
-  /** Aim at where the showing frame reads 0/0 — or, opposite, at where it
-   *  reads 180/0. The point is put on the coordinate sphere's own radius, so
-   *  in observe it is literally the grid intersection you are looking at.
+  /** Aim along where the showing frame reads 0/0 — or, opposite, along where
+   *  it reads 180/0. A frame origin is a direction and nothing else, so it
+   *  goes to `aimAlong` rather than onto a point at some radius, which in
+   *  navigate misses by the camera's parallax from the orbit pivot.
    *
    *  Observe reads the drawn grid rather than the instrument, which is not on
    *  screen there: with no grid up there is no origin to aim at, and a datum
@@ -584,10 +584,9 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
       if (selected === 'none') return;
       origin = frames[selected].zeroLon;
     }
-    aimPoint.copy(origin)
-      .multiplyScalar(opposite ? -SPHERE_RADIUS_PC : SPHERE_RADIUS_PC)
-      .add(stellata.camera.position);
-    stellata.aimAt(aimPoint);
+    aimDir.copy(origin);
+    if (opposite) aimDir.negate();
+    stellata.aimAlong(aimDir);
   }
 
   const clicks = new PendingClickDispatcher(
