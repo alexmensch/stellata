@@ -90,6 +90,61 @@ describe('designationAtTier', () => {
     expect(designationAtTier(set, 'flamsteed')).toBe('53 UMa');
     expect(designationAtTier(set, 'bayer')).toBeNull();
   });
+
+  it('routes a Greek letter to the bayer tier and nothing else', () => {
+    const set: DesignationSet = { bayer: 'α', dc: 'UMa' };
+    expect(designationAtTier(set, 'bayer')).toBe('α UMa');
+    expect(designationAtTier(set, 'bayer_latin')).toBeNull();
+  });
+
+  it('routes a Latin overflow letter to the bayer_latin tier and nothing else', () => {
+    const set: DesignationSet = { bayer: 'f', dc: 'UMa' };
+    expect(designationAtTier(set, 'bayer_latin')).toBe('f UMa');
+    expect(designationAtTier(set, 'bayer')).toBeNull();
+  });
+
+  it('routes the uppercase overflow letters as Latin too', () => {
+    // A Latin `A` collides with the component-letter namespace the composer
+    // appends in, which is what makes these the sharpest half of the split.
+    const set: DesignationSet = { bayer: 'A', bayerSup: 2, dc: 'Aqr' };
+    expect(designationAtTier(set, 'bayer_latin')).toBe('A² Aqr');
+    expect(designationAtTier(set, 'bayer')).toBeNull();
+  });
+});
+
+describe('the Bayer tier split', () => {
+  it('outranks Flamsteed with a Greek letter', () => {
+    expect(ownDesignation({ bayer: 'α', flamsteed: 50, dc: 'UMa' }))
+      .toEqual({ base: 'α UMa', tier: 'bayer' });
+  });
+
+  it('loses to Flamsteed with a Latin overflow letter', () => {
+    // Atlases and observing lists print `15 UMa`, never `f UMa`.
+    expect(ownDesignation({ bayer: 'f', flamsteed: 15, dc: 'UMa' }))
+      .toEqual({ base: '15 UMa', tier: 'flamsteed' });
+  });
+
+  it('keeps the Latin letter where no Flamsteed number exists to lose to', () => {
+    // Flamsteed catalogued only what Greenwich could see, so the far-southern
+    // series has nothing above it — `namingTierBayerLatin`.
+    expect(ownDesignation({ bayer: 'p', dc: 'Eri' }))
+      .toEqual({ base: 'p Eri', tier: 'bayer_latin' });
+  });
+
+  it('still outranks Gould and the catalogue tiers', () => {
+    expect(ownDesignation({ bayer: 'f', gould: 268, hip: 1, dc: 'Pup' }))
+      .toEqual({ base: 'f Pup', tier: 'bayer_latin' });
+  });
+
+  it('sites both halves in the sky, so a component prefers its system', () => {
+    // A sky designation is one a reader can site; both Bayer series are.
+    expect(isApprovedName('bayer_latin')).toBe(false);
+    const inputs: DisplayNameInput<string>[] = [
+      { key: 'a', set: { bayer: 'p', dc: 'Eri' }, component: 'A', anchorKey: 'a' },
+      { key: 'b', set: { hip: 7751 }, component: 'B', anchorKey: 'a' },
+    ];
+    expect(label(inputs, 'b')).toBe('p Eri B');
+  });
 });
 
 describe('component letters', () => {

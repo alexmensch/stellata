@@ -139,11 +139,13 @@ Display resolution order, first hit wins:
    Bayer ran out of Greek and carried on into lowercase Latin and then
    uppercase, and the two halves are read differently: nobody writes `50 UMa`
    for α UMa, while atlases and observing lists print `15 UMa` rather than
-   `f UMa`. Splitting the tier reverts 312 records to their Flamsteed number
-   and leaves the 20 Greek ones, which were always right. Below Flamsteed
-   rather than out of the ladder, so a star with no Flamsteed number keeps its
-   letter — Flamsteed catalogued only what Greenwich could see, so the far
-   southern `p Eri` / `f Pup` series has nothing to lose to. Both forms stay
+   `f UMa`. Splitting the tier moves the 550 Latin-letter records off tier 3:
+   **313** take a Flamsteed number back and **237** keep their letter, having
+   none to lose to (`namingTierBayerLatin`; the 1,719 Greek records are
+   untouched, and `build-catalog-expected.json` is authoritative for all
+   three). Below Flamsteed rather than out of the ladder, because Flamsteed
+   catalogued only what Greenwich could see — which is what leaves the far
+   southern `p Eri` / `f Pup` series with nothing above it. Both forms stay
    typeable either way; only the card, chart label and hover line move.
    The 48 UPPERCASE cases are the sharpest: a Latin `A` collides with the
    component-letter namespace this ladder appends in, and `2 Sco B` composed
