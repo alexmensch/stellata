@@ -16,7 +16,7 @@ additions-ledger.tsv     ~3.6 MB, LFS. The § 6.1 ledger for everything the
                          closed reason enum (admitted:hd_link_gap ·
                          admitted:hd_omitted · admitted:hip_omitted ·
                          admitted:cns5_census · component:<anchor>).
-parked-ledger.tsv        ~441 KB, regular git. The § 6.1 ledger for manifest
+parked-ledger.tsv        ~282 KB, regular git. The § 6.1 ledger for manifest
                          rows that build no record: no owned parallax, no V, or
                          no position. Same five identifier cells as
                          additions-ledger.tsv, under the closed reason enum
