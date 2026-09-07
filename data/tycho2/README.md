@@ -190,17 +190,19 @@ republish; a re-pull is warranted only when the request set moves.
 ## Consumed by
 
 - `scripts/catalog/tycho2-parse.ts` → the direction, PM and V cascades'
-  `tycho2` tier, on **41** direction rows (38 of them with a PM) and
-  **111** V rows. That is the whole no-Gaia astrometry cohort minus the
-  Gliese-numbered remainder, which has no TYC and routes CNS5 / SIMBAD /
-  Gliese instead (`docs/catalog-driver.md` § 5).
+  `tycho2` tier, on **3,688** direction rows (1,172 placed from the observed
+  J1991.25 cell, 28 on a photocentre) and **3,794** V rows. It is the bulk of
+  the no-Gaia astrometry cohort, not all of it: **4** rows route CNS5 on a GJ
+  number and **222** route SIMBAD, the latter including the `TYC3>1`
+  components Tycho-2 merged into their pair, which carry a TYC that reaches no
+  row of its own (§ The request set, `docs/catalog-driver.md` § 5).
 - The same parse feeds the **PM rescue cascade**
-  (`scripts/catalog/distance/pm-rescue/README.md`) on a further **5** rows.
+  (`scripts/catalog/distance/pm-rescue/README.md`) on a further **64** rows.
   These carry a Gaia position but a 2p solution Gaia fitted no proper motion
   to, and Tycho-2 is the tier admitted without a bibcode check, because a
-  1997 publication cannot be Gaia's own reduction returning. **2** are
-  `pflag='P'` (ξ UMa A and B), where the light centre's motion is the
-  quantity wanted and the flag's warning is about the position.
+  1997 publication cannot be Gaia's own reduction returning. A `pflag='P'` row
+  is admitted here deliberately: the light centre's motion is the quantity
+  wanted, and the flag's warning is about the position.
 
 Every count above is pinned in `scripts/catalog/build-catalog-expected.json`
 (`directionTycho2`, `vTycho2`, `pmRescueTycho2`) and moves with membership —
