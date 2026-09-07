@@ -91,33 +91,50 @@ supplement only where the main table has no row.
 ## The request set — manifest ∪ IV/25
 
 `refresh-tycho2.py` derives the mentioned-TYC set from the membership
-manifest's `tyc` column (372,153) unioned with IV/25's own TYCs (466 more
+manifest's `tyc` column (372,148) unioned with IV/25's own TYCs (471 more
 than the manifest already names), for 372,619 requested. The union is
 unchanged in size from the spine-era `spine ∪ IV/25`: the manifest admits
 the IV/25 TYCs that the union was widened to cover in the first place.
 
-Coverage, re-measured 2026-09-06 against the committed tables:
+Coverage, re-measured 2026-09-07 against the committed tables:
 
 | Cohort | Requested | Reached |
 |---|---|---|
-| Manifest TYCs | 372,153 | 372,135 |
-| IV/25-only TYCs | 466 | 464 |
+| Manifest TYCs | 372,148 | 372,130 |
+| IV/25-only TYCs | 471 | 469 |
 | Union | 372,619 | 372,599 |
 
-The refresh hard-fails on an unreached MANIFEST TYC — the cascade has no
-tier below this one for a TYC-keyed row, so § 6 should adjudicate it as a
-membership event rather than let it land quietly. **18 rows now trip that
-assert, and none of them is the event it is looking for.** All 18 are in
-the `TYC3=2` residual below, all reach a position another way — 17 park on
-an unrelated refused parallax, and `5619-1257-2` carries a
-`gaia_source_id` and is placed by the 5p tier — so none is a record left
-with no owned direction. The assert reads "unreached ⇒ unplaced", which
-was true while the cohort was the spine's and stopped being true when the
-primaries admitted IV/25's secondary components. Deciding what it should
-test instead is `stellata-3bsf.8`'s, not this pull's.
+The refresh hard-fails on a manifest TYC that reaches neither table **and**
+whose pair entry is unreached too. All 371,417 manifest TYCs with `TYC3=1`
+reach Tycho-2, so a primary that misses is a membership event for § 6 to
+adjudicate, or an upstream regression — not a refresh landing short. The whole
+residual sits in the 731-row component cohort (`TYC3>1`), 713 of which reach,
+and Tycho-2 carries the pair's `TYC3=1` entry for all 18 that do not: it lists
+as one star a pair IV/25 resolves, so the component's own row never existed to
+be pulled.
 
-The 20-row residual is entirely `TYC3=2` — secondary
-components IV/25 names that Tycho-2 does not carry as separate entries:
+**That pair entry is evidence of the merge, not a solution the component
+inherits.** `scripts/catalog/tycho2-parse.ts` indexes on the full
+`TYC1-TYC2-TYC3` and the direction cascade looks the record's own TYC up in
+it, so a `TYC3=2` component draws nothing from Tycho-2 whichever verdict this
+gate reaches. What covers the 18 is the cascade either side of Tycho-2, never
+Tycho-2 itself: all 18 carry SIMBAD astrometry in
+`data/simbad/simbad_values.tsv`, the tier below — 16 have no Gaia binding at
+all and depend on it, and 2 carry a `crosswalk_gated` `gaia_source_id` the 5p
+tier above reaches first. **This gate measures the pull's reach, never a
+record's placement** — an unreached TYC does not imply an unplaced record, and
+reading it that way is what the pre-manifest wording got wrong.
+
+One limit to know: `reached` is the filtered pull, so a pair entry is visible
+to the gate only when the request set names it too. 619 of the 969 requested
+`TYC3>1` components have no pair primary in the request set, and an unreached
+one among those would fail the gate even where Tycho-2 carries the pair. None
+is unreached today; widening the request set to cover every component's pair
+primary is the fix if one ever is.
+
+The 20-row residual across the whole request set is entirely `TYC3=2` —
+secondary components IV/25 names that Tycho-2 does not carry as separate
+entries:
 `103-2864-2`, `724-2738-2`, `1065-3144-2`, `1454-1134-2`, `1623-800-2`,
 `1655-484-2`, `2013-959-2`, `2133-2964-2`, `2156-1015-2`, `2859-2231-2`,
 `3224-2276-2`, `4005-261-2`, `4476-387-2`, `4480-1545-2`, `4522-1564-2`,
@@ -142,7 +159,7 @@ of disk to save two minutes. The filter is what makes the output small;
 the thing worth caching is the part we throw away.
 
 Nothing is written until every gate has passed — each table's fraction
-band and pinned rows, then the cross-table spine cover. A gate failure
+band and pinned rows, then the cross-table manifest cover. A gate failure
 must leave the committed TSVs untouched, because the skip check is a
 file-modification-time comparison: a half-committed failing pull would
 look up to date to the next run and skip itself silently.
@@ -175,17 +192,19 @@ republish; a re-pull is warranted only when the request set moves.
 ## Consumed by
 
 - `scripts/catalog/tycho2-parse.ts` → the direction, PM and V cascades'
-  `tycho2` tier, on **41** direction rows (38 of them with a PM) and
-  **111** V rows. That is the whole no-Gaia astrometry cohort minus the
-  Gliese-numbered remainder, which has no TYC and routes CNS5 / SIMBAD /
-  Gliese instead (`docs/catalog-driver.md` § 5).
+  `tycho2` tier, on **3,688** direction rows (1,172 placed from the observed
+  J1991.25 cell, 28 on a photocentre) and **3,794** V rows. It is the bulk of
+  the no-Gaia astrometry cohort, not all of it: **4** rows route CNS5 on a GJ
+  number and **222** route SIMBAD, the latter including the `TYC3>1`
+  components Tycho-2 merged into their pair, which carry a TYC that reaches no
+  row of its own (§ The request set, `docs/catalog-driver.md` § 5).
 - The same parse feeds the **PM rescue cascade**
-  (`scripts/catalog/distance/pm-rescue/README.md`) on a further **5** rows.
+  (`scripts/catalog/distance/pm-rescue/README.md`) on a further **64** rows.
   These carry a Gaia position but a 2p solution Gaia fitted no proper motion
   to, and Tycho-2 is the tier admitted without a bibcode check, because a
-  1997 publication cannot be Gaia's own reduction returning. **2** are
-  `pflag='P'` (ξ UMa A and B), where the light centre's motion is the
-  quantity wanted and the flag's warning is about the position.
+  1997 publication cannot be Gaia's own reduction returning. A `pflag='P'` row
+  is admitted here deliberately: the light centre's motion is the quantity
+  wanted, and the flag's warning is about the position.
 
 Every count above is pinned in `scripts/catalog/build-catalog-expected.json`
 (`directionTycho2`, `vTycho2`, `pmRescueTycho2`) and moves with membership —

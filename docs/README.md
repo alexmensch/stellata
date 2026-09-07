@@ -50,15 +50,14 @@ extragalactic-roadmap.md  Design gate for the extragalactic deep-field
                         future src/client/extragalactic/.
 catalog-driver.md       DURABLE CONTRACT for how membership,
                         identifiers, and per-field values are sourced
-                        once AT-HYG is retired as the driver — read it
+                        now AT-HYG is retired as the driver — read it
                         before designing anything in that space:
-                        Gaia-native membership (inherited spine +
-                        magnitude floor), frozen-CDS classic-ID label
-                        overlay, HD→Gaia join route, bright / no-Gaia
-                        rescue tiers, record-parity contract, SID
-                        migration policy. Spans scripts/catalog/,
-                        scripts/refresh/, data/, url-state, and the
-                        SID ledger.
+                        primaries-derived membership manifest, frozen-CDS
+                        classic-ID label overlay, HD→Gaia join route,
+                        bright / no-Gaia rescue tiers, record-parity
+                        contract, SID migration policy. Spans
+                        scripts/catalog/, scripts/refresh/, data/,
+                        url-state, and the SID ledger.
 star-naming.md          Design gate for the naming-authority epic:
                         the IAU WGSN authority ladder, canonical
                         designation forms + their normalisers, the

@@ -86,31 +86,27 @@ and reflect actual scope.
 
 ## Bug-sweep handoff
 
-**Trigger:** the end of any bug-fix session with bugs still queued.
-Produce the handoff unasked; skip it only when the queue is exhausted.
+**Write the state into the beads first.** `bd prime` plus `bd ready` runs
+every session, so a bead is what the next session actually opens. Root
+cause and the evidence behind it, candidate fixes, acceptance, `bd dep`
+links — and the one most often left out, that a decision is still OPEN,
+since a later session reads a provisional field as settled unless a note
+says otherwise.
 
-The point is to `/clear` between bugs and paste a self-contained prompt
-that bootstraps the next session. Output it as a code block so it
-copy-pastes cleanly, and re-quote bead descriptions verbatim rather than
-paraphrasing them.
+**Trigger:** the end of a bug-fix session leaving state that has no bead
+to live in. A queue whose beads are complete needs no prompt, and one
+that restates them is a second copy to go stale.
 
-Format:
+Three things qualify, and they are all a prompt carries:
 
-1. Opener: "Continuing the bug-fix sweep on stellata."
-2. Open PRs awaiting manual smoke — PR numbers plus bead IDs.
-3. Remaining bugs, numbered in priority order: bead ID, one-line
-   problem, suggested files, suggested fix sketch — pulled from the bead
-   description, not invented.
-4. The skipping list, with reasons (deferred / blocked).
-5. Per-bug workflow reminder: `EnterWorktree` first, `bd update
-   --claim`, `bd close` only after the PR merges, `package.json` patch
-   bump, PR body needs the `## Release notes` block per `RELEASING.md`,
-   sequential rather than subagents (manual smoke).
-6. Closer: "Start with `<next bead>`. Read its bead first (`bd show
-   <id>`)."
+1. An in-flight PR's review state, with its branch and worktree.
+2. The skipping list — what not to re-litigate, where the reason sits in
+   a closed bead's close reason or an epic note rather than anywhere
+   `bd ready` surfaces.
+3. A session-local ordering across several beads.
 
-Update the version, PR list, and remaining bugs against current bd and
-git state each time.
+Code block so it copy-pastes. Name bead IDs and let the next session read
+them; never paraphrase a description into it.
 
 ## Tagging — labels, metadata, external-ref
 

@@ -9,7 +9,7 @@ exactly the gap AT-HYG (system-level spectra) and Gaia DR3
 (saturation-prone bright primaries) leave open.
 
 ```
-simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 10k stars.
+simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 50k stars.
 simbad_sptype.tsv          ~29 MB, LFS. 395,543 rows. Per-source sp_type /
                            sp_qual / sp_bibcode / otype + HIP / Gaia DR3 /
                            TYC / GJ cross-IDs; the resolver keys all four.
