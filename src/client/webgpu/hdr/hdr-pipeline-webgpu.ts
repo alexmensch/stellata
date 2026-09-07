@@ -3,8 +3,9 @@
 // Depth32Float reversed-z depth attachment. See README.md.
 
 import {
-  DataTexture, DepthTexture, FloatType, HalfFloatType, NearestFilter,
-  NoBlending, NodeMaterial, QuadMesh, RGBAFormat, RenderTarget, Vector2,
+  DataTexture, DepthTexture, FloatType, HalfFloatType, LinearFilter,
+  NearestFilter, NoBlending, NodeMaterial, QuadMesh, RGBAFormat, RenderTarget,
+  Vector2,
   type Texture, type WebGPURenderer,
 } from 'three/webgpu';
 import { Fn, ivec2, screenCoordinate, select, texture, uniform, vec4 } from 'three/tsl';
@@ -307,6 +308,11 @@ export class WebGpuHdrPipeline implements HdrSeam {
   private ensureBlackTexture(): DataTexture {
     if (this.blackTexture !== null) return this.blackTexture;
     this.blackTexture = new DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1);
+    // Matches attachment 2, whose linear filters the resolve's off-centre
+    // taps need — a stand-in's filters are what the WGSL bakes
+    // (../solar-system/README.md § A stand-in's filters).
+    this.blackTexture.minFilter = LinearFilter;
+    this.blackTexture.magFilter = LinearFilter;
     this.blackTexture.needsUpdate = true;
     return this.blackTexture;
   }

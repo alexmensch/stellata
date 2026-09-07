@@ -34,6 +34,16 @@ export function makeMockCatalog(clouds: Cloud[]): CloudCatalog {
   return { count: clouds.length, clouds };
 }
 
+/** Carries the real brick's linear pair — on the Data3DTexture default this
+ *  fixture would build a graph production never builds
+ *  (`../webgpu/solar-system/README.md` § A stand-in's filters). */
+function mockBrick(): THREE.Data3DTexture {
+  const tex = new THREE.Data3DTexture(new Uint8Array(8), 2, 2, 2);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  return tex;
+}
+
 /** One cloud's absorption inputs, on either tier — `field` present is what
  *  selects the traced march on both backends. */
 export function makeMockAbsorptionSpec(withField: boolean): CloudAbsorptionSpec {
@@ -47,7 +57,7 @@ export function makeMockAbsorptionSpec(withField: boolean): CloudAbsorptionSpec 
     steps: 14,
     field: withField
       ? {
-        brick: new THREE.Data3DTexture(new Uint8Array(8), 2, 2, 2),
+        brick: mockBrick(),
         densityMax: 7,
         centerFromAabb: new THREE.Vector3(1, 2, 3),
         rotMat: new THREE.Matrix3(),

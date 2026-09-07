@@ -140,6 +140,17 @@ tsl-loop-control.test.ts A TSL authoring trap, not a policy: a concise
                          hands the jump back as the branch's output and it
                          emits twice — unreachable WGSL, warned on every
                          boot. Brace the body.
+tsl-standin-filters.test.ts
+                         The other TSL authoring trap: DataTexture and
+                         Data3DTexture default BOTH filters to nearest, and
+                         the WGSL builder reads the pair at shader-BUILD
+                         time — so a stand-in on the default bakes an
+                         unfiltered textureLoad that the real map swapped
+                         onto the node afterwards cannot undo. Every
+                         construction under src/ must state its pair
+                         (src/client/webgpu/solar-system/README.md § A
+                         stand-in's filters); § TSL stand-in filters below
+                         carries the scan's one limit.
 webgpu-import-boundary.test.ts
                          No value import of three/webgpu or three/tsl
                          outside src/client/webgpu/, so the ~1 MB second
@@ -155,7 +166,13 @@ walk-files.ts            Not a test — the recursive file walk the
                          bundle-content, shader-frag-depth, both TSL
                          rosters), taking `include` / `skipDir`
                          predicates. Follows symlinked directories, which
-                         public/ carries.
+                         public/ carries. Also `isProductionTs`, the
+                         include predicate the three TSL scanners share:
+                         a .ts that is neither a test nor an ambient
+                         declaration. webgpu-import-boundary.test.ts keeps
+                         its own broader `isClientSource` — a declaration
+                         file can carry an import, so that corpus wants
+                         globals.d.ts in scope.
 ```
 
 Per-subsystem tests live next to their code (`*.test.ts` / `*.test.py`
@@ -223,6 +240,30 @@ resolve to `## Timescales`. But:
   not fail the guard. 104 pointers match more than one candidate this
   way. Narrowing it would cost the leader support above, which more
   pointers depend on than are exposed by this.
+
+## TSL stand-in filters
+
+The scan resolves each construction's assignment target — a local, a
+`this.` field, or `<unassigned>` for an inline one nothing can reach — and
+demands a `minFilter` and a `magFilter` write to that target somewhere in
+the same file. Which filter is correct is the site's call, matching the
+texture it stands in for; the guard only refuses the constructor default.
+
+**The one limit: the pair is matched per target NAME, not per block.** Two
+constructions in one file sharing a target name (`const tex` twice, the
+common spelling) pass together as soon as either sets its filters. Every
+current site is one construction per file, so widening it would be
+speculative — but a second `tex` in a file that already has one is outside
+what this catches.
+
+**A shared `applyLinearFilters(tex)` helper does not satisfy this scan, by
+design.** Both writes must be literal and in the construction's own file,
+so the obvious de-duplication of the two-line assignment turns every call
+site into an offender. That is the intended trade: the pair is a per-site
+decision about the texture being stood in for, and a helper spells one
+answer across sites that do not share the question — the A_V placeholder
+is nearest for a reason the dust volume's is not. Duplication of two
+literal lines is the smaller cost.
 
 ## The three upgrade audit
 

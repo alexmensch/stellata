@@ -7,6 +7,9 @@ export interface WalkOptions {
   skipDir?: (name: string) => boolean;
 }
 
+export const isProductionTs = (p: string) =>
+  p.endsWith('.ts') && !p.endsWith('.test.ts') && !p.endsWith('.d.ts');
+
 function isDir(path: string): boolean {
   try {
     return statSync(path).isDirectory();

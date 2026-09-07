@@ -47,6 +47,41 @@ src/client/webgpu/solar-system/
   tsl-drift.test.ts           § Constant drift runs in both directions.
 ```
 
+## A stand-in's filters
+
+Every mesh and annulus slot binds over a per-slot stand-in cloned from
+`PlanetMeshLayer.placeholder` and takes its real map by a `.value` swap
+(`../../solar-system/materials/README.md` § Texture-slot rosters). **That
+stand-in's `minFilter` / `magFilter` pair decides what the WGSL fetches
+with, for the material's whole life** — it is load-bearing, not cosmetic
+on a 1×1 white texel.
+
+`WGSLNodeBuilder.isUnfilterable()` answers true when both filters are
+`NearestFilter`, and `generateTexture()` then emits `textureLoad()` — an
+unfiltered texel fetch — in place of `textureSample()`. That runs at
+shader-**build** time, when every slot still holds the stand-in, and a
+`DataTexture` defaults **both** filters to nearest. So a stand-in on the
+default bakes a point fetch into the shader and the linear-filtered map
+swapped on afterwards cannot change it; the sampler binding tracks the
+swap correctly and is simply never read, which is why it looks innocent.
+
+**Only a magnified slot shows it, which is what makes it hard to see.**
+Point-sampling is invisible on a minified map, so the 8192 colour map
+hides it and a body carrying nothing else — Jupiter, Venus, Callisto —
+looks right on both backends. It surfaces on the relief bodies at the
+orbit floor, in slot-width order: the horizon pair at 2048 (~2.25 device
+px per texel) gives hard axis-aligned staircase edges on the cast-shadow
+outlines, and the 4096 normal map reads as over-sharp lit terrain. So the
+first suspect for a WebGPU-only staircase on Moon or Mercury terrain is
+this pair, not the horizon map's width or its 8-bit encoding.
+
+The rule generalises past this folder: **a stand-in carries the filter
+pair of the texture it stands in for.** The A_V prepass placeholder is
+nearest because its r32float target must be (`../extinction/README.md`
+§ The prepass draw); the dust volume's and the cloud brick's are linear
+because those volumes are. `tests/tsl-standin-filters.test.ts` pins that
+every construction states the pair rather than inheriting the default.
+
 ## Constant drift runs in both directions
 
 A constant both backends read is authored once in a `*-pure.ts` module.
