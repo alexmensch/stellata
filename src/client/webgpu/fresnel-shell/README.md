@@ -3,8 +3,8 @@
 The TSL half of the Fresnel-rim shell primitive: one surface, shared by
 the heliopause and the Local Bubble. **This is the shipped surface.**
 The WebGL2 shaders (`../../fresnel-shell/`) stay the semantic reference
-until `0it.14` deletes them; parity is the A/B smoke, same `/v/<blob>/` with and without the
-`#renderer=webgl2` fragment.
+until `0it.14` deletes them; parity is the A/B smoke, same `/v/<blob>/`
+with and without the `#renderer=webgl2` fragment.
 
 **It ports as a material swap, not a layer.** The shells keep every line
 of their CPU logic — geometry, group, declutter and chart gating,

@@ -2,16 +2,16 @@
 
 **The shipped star pipeline**, constructed through
 `WebGpuSeam.attachStarLayer` over the shell's scene (never imported from
-`stellata.ts` — the import boundary in `../README.md`). It carries the three depth-honest
-pipelines of `../README.md` § Early-z: D2 glow (no depth output), D3
-core mask (depth-only, member stamp in the vertex stage), and D4 disc
-(colour only, no depth output either — § The disc draw writes no
-depth) — plus their local-depth-pass mirror variants (§ The local
-mirror). No pipeline here writes fragment depth, and the draw count
-matches the WebGL2 stack one for one, mirror draws included. That stack
-(`../../star-pipeline/`) stays the semantic reference until `0it.14`
-deletes it; parity is verified by the A/B smoke, same `/v/<blob>/` with
-and without the `#renderer=webgl2` fragment.
+`stellata.ts` — the import boundary in `../README.md`). It carries the
+three depth-honest pipelines of `../README.md` § Early-z: D2 glow (no
+depth output), D3 core mask (depth-only, member stamp in the vertex
+stage), and D4 disc (colour only, no depth output either — § The disc
+draw writes no depth) — plus their local-depth-pass mirror variants
+(§ The local mirror). No pipeline here writes fragment depth, and the
+draw count matches the WebGL2 stack one for one, mirror draws included.
+That stack (`../../star-pipeline/`) stays the semantic reference until
+`0it.14` deletes it; parity is verified by the A/B smoke, same
+`/v/<blob>/` with and without the `#renderer=webgl2` fragment.
 
 ## Files in this area
 
