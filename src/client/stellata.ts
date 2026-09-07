@@ -2327,6 +2327,7 @@ export class Stellata implements FrameAnchor {
       unfocus: () => this.focus.unfocus(),
       togglePoi: (target) => this.pois.toggle(target),
       aimAt: (p) => this.aimAt(p),
+      aimAlong: (d) => this.aimAlong(d),
     });
   }
 

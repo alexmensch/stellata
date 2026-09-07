@@ -45,6 +45,7 @@ export interface InputControllerDeps {
   unfocus: () => void;
   togglePoi: (target: Target) => boolean;
   aimAt: (pointLocal: THREE.Vector3) => void;
+  aimAlong: (dirLocal: THREE.Vector3) => void;
 }
 
 export class InputController {
@@ -81,7 +82,6 @@ export class InputController {
 
   // Scratch — one writer per gesture/click event, never retained.
   private readonly dblClickRay = new THREE.Vector3();
-  private readonly dblClickAimPoint = new THREE.Vector3();
 
   constructor(deps: InputControllerDeps) {
     this.deps = deps;
@@ -353,19 +353,21 @@ export class InputController {
   }
 
   private observeDoubleClick(x: number, y: number) {
-    // Convert (clientX, clientY) → NDC → unproject → world ray direction.
-    // Build a far point along the ray and feed it to aimAt — that path
-    // already handles the quaternion slerp, the duration ramp, and
-    // disabling observeControls for the duration.
+    // Convert (clientX, clientY) → NDC → unproject → world ray direction, and
+    // hand that direction straight to aimAlong — that path handles the
+    // quaternion slerp, the duration ramp, and disabling observeControls for
+    // the duration.
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.dblClickRay.set((x / w) * 2 - 1, -(y / h) * 2 + 1, 0.5);
     this.dblClickRay.unproject(this.deps.camera);
-    this.dblClickRay.sub(this.deps.camera.position).normalize();
-    this.dblClickAimPoint
-      .copy(this.deps.camera.position)
-      .addScaledVector(this.dblClickRay, 1e6);
-    this.deps.aimAt(this.dblClickAimPoint);
+    this.dblClickRay.sub(this.deps.camera.position);
+    // Not redundant with aimAlong's own normalise: an NDC 0.5 unprojection
+    // lands ~4·camera.near out (4.2e-12 pc), a factor of 4 above
+    // AIM_DEGENERATE_DIST_PC, so the raw ray would sink under that guard on
+    // any tightening of the near plane and the gesture would go dead.
+    this.dblClickRay.normalize();
+    this.deps.aimAlong(this.dblClickRay);
   }
 
   private onTouchStart = (e: TouchEvent) => {

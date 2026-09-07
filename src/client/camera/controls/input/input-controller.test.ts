@@ -9,6 +9,7 @@ import { PoiStore } from '../../../poi/poi-store';
 import type { CameraMode, StellataEventMap } from '../../../stellata';
 import type { EventBus } from '../../../util/event-bus';
 import { RollController } from './roll-controller';
+import { AIM_DEGENERATE_DIST_PC } from '../aim-controller';
 import { PINCH_NOTCH_GAIN, WHEEL_NOTCH_DELTA_PX } from './pinch-zoom-pure';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../../galactic/galactic-coords';
 
@@ -27,6 +28,7 @@ interface Harness {
     setVector: ReturnType<typeof vi.fn>;
     setOrbitTarget: ReturnType<typeof vi.fn>;
     aimAt: ReturnType<typeof vi.fn>;
+    aimAlong: ReturnType<typeof vi.fn>;
   };
   state: {
     cameraMode: CameraMode;
@@ -112,6 +114,7 @@ function makeHarness(): Harness {
     setVector: vi.fn(),
     setOrbitTarget: vi.fn(),
     aimAt: vi.fn(),
+    aimAlong: vi.fn(),
   };
   const input = new InputController({
     canvas,
@@ -178,6 +181,7 @@ function makeHarness(): Harness {
     unfocus: deps.unfocus,
     togglePoi: deps.togglePoi,
     aimAt: deps.aimAt,
+    aimAlong: deps.aimAlong,
   } satisfies InputControllerDeps);
   return { input, deps, state, emitted, cancelled, camera, controls, roll, canvas: canvasMock };
 }
@@ -368,6 +372,44 @@ describe('InputController.applyObjectClick — observe mode', () => {
     state.filter.showHud = false;
     expect(input.applyObjectClick(star(3))).toBe(false);
     expect(deps.togglePoi).not.toHaveBeenCalled();
+  });
+});
+
+describe('InputController observe double-click — aims along the ray', () => {
+  it('hands aimAlong a unit direction, never a point stood up at a radius', () => {
+    const { input, deps, state, camera } = makeHarness();
+    state.cameraMode = 'observe';
+    camera.position.set(4000, -250, 900);
+    camera.lookAt(4000, -250, 899);
+    camera.updateMatrixWorld();
+
+    (input as unknown as WithPrivates).dispatchDoubleClick(200, 150);
+
+    expect(deps.aimAt).not.toHaveBeenCalled();
+    expect(deps.aimAlong).toHaveBeenCalledTimes(1);
+    const dir = deps.aimAlong.mock.calls[0][0] as THREE.Vector3;
+    expect(dir.length()).toBeCloseTo(1, 12);
+
+    // The direction is the click's own ray: unprojecting the same NDC and
+    // differencing against the camera reproduces it.
+    const expected = new THREE.Vector3((200 / 800) * 2 - 1, -(150 / 600) * 2 + 1, 0.5)
+      .unproject(camera)
+      .sub(camera.position)
+      .normalize();
+    expect(dir.dot(expected)).toBeCloseTo(1, 10);
+  });
+
+  // The raw unprojection at NDC 0.5 lands ~4·camera.near out, so the
+  // normalise ahead of aimAlong is load-bearing rather than redundant with
+  // aimAlong's own: without it the ray sits a factor of 4 above the
+  // degeneracy guard and the gesture is one near-plane change from dead.
+  it('clears the aim degeneracy guard by a wide margin', () => {
+    const { input, deps, state, camera } = makeHarness();
+    state.cameraMode = 'observe';
+    camera.updateMatrixWorld();
+    (input as unknown as WithPrivates).dispatchDoubleClick(200, 150);
+    const dir = deps.aimAlong.mock.calls[0][0] as THREE.Vector3;
+    expect(dir.length()).toBeGreaterThan(AIM_DEGENERATE_DIST_PC * 1e9);
   });
 });
 
