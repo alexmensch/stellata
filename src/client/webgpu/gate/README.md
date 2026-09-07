@@ -103,6 +103,13 @@ one arrives with the loading screen already drawn, which is why
 `showWebGpuGate` hides the boot's elements (`GATE_HIDES`) rather than
 assuming an empty page, and why it is idempotent.
 
+**That second route cannot move ahead of the download.** Only a built
+renderer can refuse itself, so the catalogue is already in flight by
+then — `main.ts` starts the boot beside the fetch rather than after it,
+so the async chunk and the adapter init cost the loading screen nothing,
+but the verdict still lands last. The probe is what spares a browser the
+download; this path was never going to.
+
 There is no WebGL2 fallback on either route. `#renderer=webgl2` reaches
 that renderer and is undocumented (`../README.md` § The renderer is
 WebGPU).
