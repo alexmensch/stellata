@@ -256,6 +256,15 @@ current site is one construction per file, so widening it would be
 speculative — but a second `tex` in a file that already has one is outside
 what this catches.
 
+**A shared `applyLinearFilters(tex)` helper does not satisfy this scan, by
+design.** Both writes must be literal and in the construction's own file,
+so the obvious de-duplication of the two-line assignment turns every call
+site into an offender. That is the intended trade: the pair is a per-site
+decision about the texture being stood in for, and a helper spells one
+answer across sites that do not share the question — the A_V placeholder
+is nearest for a reason the dust volume's is not. Duplication of two
+literal lines is the smaller cost.
+
 ## The three upgrade audit
 
 `three` is the one dependency whose breakages are mostly **invisible to

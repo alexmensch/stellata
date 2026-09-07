@@ -15,7 +15,11 @@ const GUIDANCE =
   + 'decision every site owes explicitly, matching whatever texture the '
   + 'object stands in for — '
   + "src/client/webgpu/solar-system/README.md § A stand-in's filters. "
-  + 'Assign the construction to a named target if it has none.';
+  + 'Both writes must be literal and in this file: a named target reported '
+  + 'here is one whose pair is set nowhere or through a helper, and '
+  + '<unassigned> is a construction no assignment can reach — give it a '
+  + 'local. A shared helper is deliberately not enough: '
+  + 'README.md § TSL stand-in filters.';
 
 const SITE = /(?:(?:const|let|var)\s+(\w+)|(this\.\w+))?\s*=?\s*new\s+(?:THREE\.)?Data(?:3D)?Texture\s*\(/g;
 
