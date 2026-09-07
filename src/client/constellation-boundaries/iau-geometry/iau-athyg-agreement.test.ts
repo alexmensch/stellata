@@ -11,10 +11,11 @@ import { REPO_ROOT, lfsContentReadable } from '../../../../scripts/util/paths';
 import { RA_HOURS_TO_DEG } from '../../util/astronomy-constants';
 import { createIauConstellationLookup } from './iau-boundaries-pure';
 
-/** The upstream AT-HYG catalogue. Not a build input — the record build walks
- *  `data/membership/membership-manifest.tsv`. This suite is its last reader on
- *  this side, which is why the path is spelt here rather than shared
- *  (`data/athyg/README.md` § Consumed by). */
+/** The upstream AT-HYG catalogue. Not an input to the record build, which
+ *  walks `data/membership/membership-manifest.tsv`; `build:binaries` Stage 1
+ *  still parses it. This suite is the last TypeScript reader, which is why the
+ *  path is spelt here rather than shared (`data/athyg/README.md`
+ *  § Consumed by). */
 const ATHYG_CSV = resolve(REPO_ROOT, 'data/athyg/athyg_33_classic_ids.csv');
 
 /** AT-HYG rows carrying a `con` cell. Sol is the one row that does not. */
