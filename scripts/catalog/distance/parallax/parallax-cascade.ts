@@ -133,7 +133,7 @@ export function belowParallaxSnFloor(plx: number, err: number | null): boolean {
  *  **The S/N floor gates every tier below Gaia**, not HIP2 alone. It used to
  *  gate HIP2 and the sibling index because no other index HELD a sub-floor row
  *  a record could reach — true while the SIMBAD value cohort was spine-scoped
- *  and its tier served 93 records. Rebased onto the membership manifest that
+ *  and its tier served 116 records. Rebased onto the membership manifest that
  *  tier serves thousands, and 8 of SIMBAD's sub-floor rows became reachable:
  *  parallaxes of S/N 0.01–0.33, each one indistinguishable from zero, inverting
  *  to 54,000–714,000 pc. Those rows left `readStars` through the MAX_DIST_PC

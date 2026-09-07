@@ -45,7 +45,7 @@ unless an override layer replaces it. Counts pin as `dist*`.
 | `gliese_plx` | its own GJ in V/70A | |
 | `simbad_plx` | bibcoded, neither skip rule firing | |
 | `pair_member_parallax` | a bound sibling's clean DR3 fit | |
-| `gliese_photometric_plx` | V/70A's colour/spectral estimate — not astrometry | 14 |
+| `gliese_photometric_plx` | V/70A's colour/spectral estimate — not astrometry | 15 |
 | `curated` | Sol alone | 1 |
 | `none` | — | § 6 ledger drop |
 
@@ -58,7 +58,7 @@ unconditionally put an estimate above every bibcoded measurement of the star
 itself, which is what Gl 92.1 / HD 14039 measured — 41.0 mas under `n_plx=r`
 inverted to **24.390 pc**, against SIMBAD's bibcoded 29.9357 ± 0.1389 (S/N 216)
 at **33.405 pc**, ~27% further out. 21 records moved onto a real parallax that
-way. `distGliesePhotometricPlx` ratchets DOWN: each of its 14 is a record
+way. `distGliesePhotometricPlx` ratchets DOWN: each of its 15 is a record
 waiting for someone to measure its parallax.
 
 The estimate sits below even the bound-sibling tier, which is the only place the
@@ -109,16 +109,19 @@ to 404.1 ± 10.2 pc. Schaefer et al. 2016's dynamical parallax, 387.5 ± 1.3 pc,
 agrees at 1.62 σ. Both say the 328.9 pc the floor refused is ~20% wrong.
 
 **The tier's reach is bounded by measurement quality, not by our request.**
-Of the 44 parked rows `multiples.tsv` carries a row for, **15** have a sibling
-carrying its own `source_id` rather than the blended primary's: **8 rescue**,
-and the other 7 have a sibling the anchor gate refuses — 4 on RUWE alone, 2 on
-RUWE and a blended image, 1 on the blend, and 3 whose sibling publishes no
-parallax either. Every one of those 15 siblings now has a row in the frozen
-table; the request the table is pulled against was widened to cover them
+Measured when the tier landed, at 8 records: of the 44 parked rows
+`multiples.tsv` carried a row for, **15** had a sibling carrying its own
+`source_id` rather than the blended primary's — **8 rescue**, and the other 7 a
+sibling the anchor gate refuses (4 on RUWE alone, 2 on RUWE and a blended
+image, 1 on the blend, and 3 whose sibling publishes no parallax either). Every
+one of those 15 siblings has a row in the frozen table; the request it is pulled
+against was widened to cover them
 (`../../astrometry-request/README.md` § The request is a union), which is what
-took the tier from 5 to 8. The 29 remaining parked rows with a `multiples.tsv`
-row have no sibling carrying an id of its own at all — Stage 2/3 bound the
-primary's blended source to every component.
+took the tier from 5 to 8. The 29 remaining had no sibling carrying an id of
+their own at all — Stage 2/3 bind the primary's blended source to every
+component. **The live size is `distPairMemberParallax`**
+(`../../build-catalog-expected.json`), and the parked set this breakdown
+counts grows with every membership change, so re-derive rather than quote it.
 
 **A sibling's parallax is read on the sibling's OWN `gaia_source_id`**, and the
 index drops a repeated one per root. Stage 2/3 bind a single blended source to
@@ -160,7 +163,7 @@ The LMC snap replaces the distance outright, likewise. Every other tier is in.
 index alone, on a measurement rather than a scope decision: no row of any other
 index this cascade reads stated a parallax below S/N 1 that a record could
 reach — CNS5 0 of 5,908, Gliese 0 of the 1,904 trigonometric rows it admits,
-and SIMBAD's 53 sub-floor rows barely reachable on a tier only 93 records took.
+and SIMBAD's 53 sub-floor rows barely reachable on a tier only 116 records took.
 **Rebasing the value cohort onto the membership manifest made that tier serve
 4,067 records, and 8 of those 53 became reachable**: parallaxes of S/N
 0.01–0.33, each indistinguishable from zero, inverting to 54,000–714,000 pc.
@@ -201,7 +204,7 @@ no earlier cascade had a SIMBAD tier under a validator that checks the same
 quantity. Both validators honour it: `distance-regression-check` reads
 `distVia` in-process, and `validate-simbad-sample` reads
 `data/athyg/simbad_sourced_distances.tsv`, because it runs off `catalog.bin`,
-which carries no tier. Without it 93 records would report a residual of zero
+which carries no tier. Without it 4,067 records would report a residual of zero
 against the parallax they were derived from and bias the metric toward
 agreement that was never measured.
 
