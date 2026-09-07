@@ -40,8 +40,9 @@ constellation + Bayer designation. Every constellation-relative *designation* �
 Flamsteed, GCVS, the component aliases below — resolves through
 `designationConIndex(entry.dc, entry.c)`, never `entry.c` alone: byte 34
 is where the star *is*, `dc` is what its name is *named for*, and the two
-diverge on 68 entries (`scripts/catalog/README.md` § Search index, which
-pins the count as `designationConMismatch`). The
+diverge on a small minority of entries — `scripts/catalog/README.md`
+§ Search index owns that count (`designationConMismatch`), and restating it
+here only drifts, since every added record can move it. The
 dropdown's context line is the reverse — positional `c`, so a row reads
 the constellation the star sits in. Selecting an entry dispatches through `flyTo` /
 `focusStar` for navigate or `warpTo` when picking a location in

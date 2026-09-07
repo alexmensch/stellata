@@ -392,7 +392,7 @@ designations. Coverage is bounded by what decomposes in `multiples.tsv`
 dropdown's context line; `dc` is the constellation a designation is *named*
 for, and is the one every alias and display label is built against. `dc`
 ships only where the two diverge AND the entry carries a
-constellation-relative designation (`b`/`f`/`gd`/`g`/`cl`) — **68** entries,
+constellation-relative designation (`b`/`f`/`gd`/`g`/`cl`) — **69** entries,
 `designationConMismatch` — so the reader's `designationConIndex(dc, c)`
 fallback carries the rest at no wire cost. The cascade behind the field:
 `naming/README.md` § The designation constellation.
