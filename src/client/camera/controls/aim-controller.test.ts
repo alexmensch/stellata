@@ -182,7 +182,10 @@ describe('AimController — aimAlong (direction, no distance)', () => {
       expect(boresight.x).toBeCloseTo(dir.x, 12);
       expect(boresight.y).toBeCloseTo(dir.y, 12);
       expect(boresight.z).toBeCloseTo(dir.z, 12);
-      expect(h.camera.position.length()).toBeCloseTo(r, 5);
+      // Relative: the claim is that the orbit radius is held, and an absolute
+      // tolerance across 16 decades of r is vacuous at one end and luck at
+      // the other.
+      expect(h.camera.position.length() / r).toBeCloseTo(1, 12);
     }
   });
 

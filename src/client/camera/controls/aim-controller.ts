@@ -33,6 +33,12 @@ interface NavigateAimState {
   radius: number;             // |camera - pivot| at start; held constant
 }
 
+interface NavigateStartPose {
+  dir0: THREE.Vector3;        // unit radial direction, pivot → camera
+  r: number;                  // orbit radius, held for the whole sweep
+  q0: THREE.Quaternion;       // rotates WARP_BASE_DIR to dir0
+}
+
 interface ObserveAimState {
   startTimeMs: number;
   durationMs: number;
@@ -190,31 +196,49 @@ export class AimController {
     this.beginNavigateAim(aim.divideScalar(-aimLen));
   }
 
-  /** Slerp the orbit pose so the camera ends on `dir1` — the unit radial
-   *  direction from the pivot. The camera looks at the pivot, so the
-   *  boresight comes out as `-dir1`. */
-  private beginNavigateAim(dir1: THREE.Vector3): void {
-    const pivot = this.deps.controls.target;
-    const dir0 = new THREE.Vector3().subVectors(this.deps.camera.position, pivot);
+  /** The orbit pose the sweep starts from, or null when the camera sits on
+   *  the pivot and there is no orbit to rotate. */
+  private navigateStartPose(): NavigateStartPose | null {
+    const dir0 = new THREE.Vector3()
+      .subVectors(this.deps.camera.position, this.deps.controls.target);
     const r = dir0.length();
-    if (r < AIM_DEGENERATE_DIST_PC) return; // camera coincident with pivot — no orbit to rotate
+    if (r < AIM_DEGENERATE_DIST_PC) return null;
     dir0.divideScalar(r);
+    return { dir0, r, q0: new THREE.Quaternion().setFromUnitVectors(WARP_BASE_DIR, dir0) };
+  }
 
-    const dot = Math.max(-1, Math.min(1, dir0.dot(dir1)));
-    if (dot > 0.99999) return; // already aimed
-
-    const angle = Math.acos(dot);
-    const q0 = new THREE.Quaternion().setFromUnitVectors(WARP_BASE_DIR, dir0);
-    const q1 = new THREE.Quaternion().setFromUnitVectors(WARP_BASE_DIR, dir1);
-
+  /** Hand the orbit slot a sweep from `start` to `q1` over `angle`, and take
+   *  TrackballControls out of the loop until the tick completes it. */
+  private startNavigateSweep(
+    start: NavigateStartPose,
+    q1: THREE.Quaternion,
+    angle: number,
+  ): void {
     this.deps.controls.enabled = false;
     this.navigate = {
       startTimeMs: performance.now(),
       durationMs: aimDurationMs(angle),
-      q0,
+      q0: start.q0,
       q1,
-      radius: r,
+      radius: start.r,
     };
+  }
+
+  /** Slerp the orbit pose so the camera ends on `dir1` — the unit radial
+   *  direction from the pivot. The camera looks at the pivot, so the
+   *  boresight comes out as `-dir1`. */
+  private beginNavigateAim(dir1: THREE.Vector3): void {
+    const start = this.navigateStartPose();
+    if (start === null) return;
+
+    const dot = Math.max(-1, Math.min(1, start.dir0.dot(dir1)));
+    if (dot > 0.99999) return; // already aimed
+
+    this.startNavigateSweep(
+      start,
+      new THREE.Quaternion().setFromUnitVectors(WARP_BASE_DIR, dir1),
+      Math.acos(dot),
+    );
   }
 
   /** A half turn about the camera's local up, which both invert branches
@@ -225,23 +249,9 @@ export class AimController {
   }
 
   private startNavigateInvert(): void {
-    const pivot = this.deps.controls.target;
-    const dir0 = new THREE.Vector3().subVectors(this.deps.camera.position, pivot);
-    const r = dir0.length();
-    if (r < AIM_DEGENERATE_DIST_PC) return; // camera coincident with pivot
-    dir0.divideScalar(r);
-
-    const q0 = new THREE.Quaternion().setFromUnitVectors(WARP_BASE_DIR, dir0);
-    const q1 = this.halfTurnAboutUp().multiply(q0);
-
-    this.deps.controls.enabled = false;
-    this.navigate = {
-      startTimeMs: performance.now(),
-      durationMs: aimDurationMs(Math.PI),
-      q0,
-      q1,
-      radius: r,
-    };
+    const start = this.navigateStartPose();
+    if (start === null) return;
+    this.startNavigateSweep(start, this.halfTurnAboutUp().multiply(start.q0), Math.PI);
   }
 
   private startObserveInvert(): void {

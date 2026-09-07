@@ -284,6 +284,10 @@ exact at every orbit radius; in observe it looks along `u` from the camera,
 which was already exact. `aimAt` stays exact for a real point at any radius —
 camera, pivot and point come out collinear — so the two share
 `beginNavigateAim` and differ only in where the end direction comes from.
+All three navigate motions, `invert` included, derive their start pose from
+`navigateStartPose` and hand the slot its sweep through `startNavigateSweep`,
+so the orbit radius is captured and the degenerate camera-on-pivot case
+answered in exactly one place.
 
 Both branches share `aimDurationMs`: a linear ramp from `AIM_T_MIN_MS`
 (floor for trivial nudges) to `AIM_T_MAX_MS` (cap for a half-circle
