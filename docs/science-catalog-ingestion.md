@@ -484,7 +484,7 @@ J2016.0 snapshot and track the scene's time base `t`, the way
 planets and binary orbits already do? The time readout claims the
 scene renders "the moment being rendered"; today that claim holds
 for the solar system and binary orbital motion but not for the
-~384k catalog star positions, which sit frozen ~10 years stale. The
+~390k catalog star positions, which sit frozen ~10 years stale. The
 error is concentrated exactly in the stars users recognise and
 focus on — the high-PM nearby neighbours (drift table:
 `data/README.md` § Reference epoch and proper motion; worst case
@@ -569,7 +569,7 @@ compose with the planned time scrubber (`stellata-nmu`). Instead:
   regression corpus remain valid.
 - At startup, immediately after catalog load, one pure pass
   advances `catalog.positions` to `getT()` (float64 math, float32
-  write-back; ~384k rows, milliseconds). Every consumer downstream
+  write-back; ~390k rows, milliseconds). Every consumer downstream
   — the `iPosition` instance buffer, hover picking, focus/warp
   targets, constellation lines, binaries baselines, eclipse
   photometry — inherits current-epoch positions *coherently by

@@ -111,6 +111,21 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
                          ledger.tsv is an LFS pointer stub (the bare CI
                          test job); runs for real in the sid-ledger-guard
                          job and locally.
+star-count-consistency.test.ts
+                         The catalogue's own size, stated once. Rounds the
+                         BUILT header to `PROSE_ROUNDED` (artifact-backed,
+                         so it self-skips unbuilt), scans the corpus for
+                         the superseded figure `MYTHOS` names — digit
+                         separators included, which is how an
+                         underscore-separated literal in a dust-cost
+                         script outlived two count changes — and holds
+                         every size figure on the four user-facing prose
+                         surfaces to that one rounding, `public/llms.txt`
+                         among them since `public/` is gitignored and no
+                         directory root reaches it. The AT-HYG spine's own
+                         row count is a different quantity and stays.
+                         **This entry may not quote either figure: the
+                         scan reads it.**
 three-version-audit.test.ts
                          Tripwire pinning the three version the runtime
                          audit below was last run against. Fails on any
