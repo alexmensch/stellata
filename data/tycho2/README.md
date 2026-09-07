@@ -91,33 +91,33 @@ supplement only where the main table has no row.
 ## The request set — manifest ∪ IV/25
 
 `refresh-tycho2.py` derives the mentioned-TYC set from the membership
-manifest's `tyc` column (372,153) unioned with IV/25's own TYCs (466 more
+manifest's `tyc` column (372,148) unioned with IV/25's own TYCs (471 more
 than the manifest already names), for 372,619 requested. The union is
 unchanged in size from the spine-era `spine ∪ IV/25`: the manifest admits
 the IV/25 TYCs that the union was widened to cover in the first place.
 
-Coverage, re-measured 2026-09-06 against the committed tables:
+Coverage, re-measured 2026-09-07 against the committed tables:
 
 | Cohort | Requested | Reached |
 |---|---|---|
-| Manifest TYCs | 372,153 | 372,135 |
-| IV/25-only TYCs | 466 | 464 |
+| Manifest TYCs | 372,148 | 372,130 |
+| IV/25-only TYCs | 471 | 469 |
 | Union | 372,619 | 372,599 |
 
-The refresh hard-fails on an unreached MANIFEST TYC — the cascade has no
-tier below this one for a TYC-keyed row, so § 6 should adjudicate it as a
-membership event rather than let it land quietly. **18 rows now trip that
-assert, and none of them is the event it is looking for.** All 18 are in
-the `TYC3=2` residual below, all reach a position another way — 17 park on
-an unrelated refused parallax, and `5619-1257-2` carries a
-`gaia_source_id` and is placed by the 5p tier — so none is a record left
-with no owned direction. The assert reads "unreached ⇒ unplaced", which
-was true while the cohort was the spine's and stopped being true when the
-primaries admitted IV/25's secondary components. Deciding what it should
-test instead is `stellata-3bsf.8`'s, not this pull's.
+The refresh hard-fails on a manifest TYC that reaches neither table **and**
+has no pair entry carrying it — the cascade has no tier below this one for a
+TYC-keyed row, so § 6 should adjudicate it as a membership event rather than
+let it land quietly. All 371,417 manifest TYCs with `TYC3=1` reach Tycho-2, so
+the whole residual sits in the 731-row component cohort (`TYC3>1`), 713 of
+which reach. What admits the remaining 18 is that Tycho-2 carries the pair's
+`TYC3=1` entry in every case: it lists a pair IV/25 resolves as a single star,
+so the component's own row never existed to be pulled. A component whose pair
+entry is also unreached fails the gate — nothing in Tycho-2 covers that star
+at all.
 
-The 20-row residual is entirely `TYC3=2` — secondary
-components IV/25 names that Tycho-2 does not carry as separate entries:
+The 20-row residual across the whole request set is entirely `TYC3=2` —
+secondary components IV/25 names that Tycho-2 does not carry as separate
+entries:
 `103-2864-2`, `724-2738-2`, `1065-3144-2`, `1454-1134-2`, `1623-800-2`,
 `1655-484-2`, `2013-959-2`, `2133-2964-2`, `2156-1015-2`, `2859-2231-2`,
 `3224-2276-2`, `4005-261-2`, `4476-387-2`, `4480-1545-2`, `4522-1564-2`,
@@ -142,7 +142,7 @@ of disk to save two minutes. The filter is what makes the output small;
 the thing worth caching is the part we throw away.
 
 Nothing is written until every gate has passed — each table's fraction
-band and pinned rows, then the cross-table spine cover. A gate failure
+band and pinned rows, then the cross-table manifest cover. A gate failure
 must leave the committed TSVs untouched, because the skip check is a
 file-modification-time comparison: a half-committed failing pull would
 look up to date to the next run and skip itself silently.

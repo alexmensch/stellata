@@ -253,13 +253,26 @@ class MembershipCoverage(unittest.TestCase):
             {(1, 2, 1)}, {(1, 2, 1), (5, 5, 1)}, log=lambda _: None
         )
 
-    def test_an_unreached_manifest_tyc_is_a_membership_event_not_a_short_pull(self):
+    def test_an_unreached_primary_is_a_membership_event_not_a_short_pull(self):
         with self.assertRaises(SystemExit) as caught:
             t2.assert_membership_covered(
                 {(1, 2, 1), (3, 4, 1)}, {(1, 2, 1)}, log=lambda _: None
             )
         self.assertIn("3-4-1", str(caught.exception))
         self.assertIn("membership event", str(caught.exception))
+
+    def test_a_component_of_a_pair_tycho2_carries_as_one_star_passes(self):
+        t2.assert_membership_covered(
+            {(1, 2, 1), (1, 2, 2)}, {(1, 2, 1)}, log=lambda _: None
+        )
+
+    def test_a_component_whose_pair_entry_is_also_unreached_fails(self):
+        with self.assertRaises(SystemExit) as caught:
+            t2.assert_membership_covered({(3, 4, 2)}, {(1, 2, 1)}, log=lambda _: None)
+        self.assertIn("3-4-2", str(caught.exception))
+
+    def test_a_primary_is_never_admitted_by_its_own_reached_entry(self):
+        self.assertFalse(t2.pair_carried_as_one_star((1, 2, 1), {(1, 2, 1)}))
 
 
 if __name__ == "__main__":

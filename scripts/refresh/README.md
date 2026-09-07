@@ -88,7 +88,7 @@ write the worktree's `data/`.
 | `refresh:iau-wgsn` | `refresh-iau-wgsn.py` | `data/iau-wgsn/{NEC,wgsnFaints}.csv` | The IAU WGSN naked-eye catalogue + faint approved names (plain HTTP, not TAP; schema / row-band / spot-row gates). Follow with `pnpm run build:wgsn`. |
 | `refresh:tycho2` | `refresh-tycho2.py` | `data/tycho2/{tycho2_main,tycho2_suppl1}.tsv` | Tycho-2 (`I/259` `tyc2` + `suppl_1`) mean positions with per-star mean epochs, PM, BT/VT — filtered to the TYCs the manifest and IV/25 mention. Range-batched over TYC1 and filtered locally; VizieR can express no server-side filter on the full identifier (`data/tycho2/README.md` § Why the pull is range-batched). |
 | `refresh:gliese` | `refresh-gliese.py` | `data/gliese/gliese_v70a.tsv` | Gliese & Jahreiss third catalogue of nearby stars (`V/70A`, whole table) — printed Johnson V + B−V, spectral type, parallax and rv, plus the B1950 position, proper motion and cross-names the binding review measures against. The V cascade's tier under Tycho-2, and the first-order source behind every `mag_src=GJ` cell (`data/gliese/README.md`). |
-| `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 10k SIMBAD sample (validation corpus). |
+| `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 50k SIMBAD sample (validation corpus). |
 | `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the `docs/catalog-driver.md` § 5 value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: `data/simbad/README.md` § The values pull. |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
@@ -188,7 +188,8 @@ nothing is written until the cross-table membership cover has also passed
 Its non-network test (`refresh-tycho2.test.py`) covers the request-set
 union, the TYC1 range cover and scan-span assertion, the local filter,
 the fraction / spot-row gates against an in-memory TAP backend, and the
-zero-unreached-TYC gate.
+manifest-cover gate's three verdicts (`data/tycho2/README.md` § The request
+set).
 
 The in-memory TAP backend both suites use (`FakeTable`, `fake_tap_client`)
 lives in `scripts/test_helpers.py`.
@@ -277,9 +278,10 @@ because the source_id space changes; partial refreshes leave the
 catalogue inconsistent. Order matters:
 
 1. **Swap AT-HYG.** Drop the new `athyg_3X_classic_ids.csv` into
-   `data/athyg/`. Re-run `pnpm run build:catalog` to confirm parse + drift
-   against the expected snapshot. (The build will fail loudly because
-   the side-files are still keyed to DR3.)
+   `data/athyg/`. Its one build consumer is `build:binaries` Stage 1's parse
+   (`data/athyg/README.md` § Consumed by), which step 4 re-runs. Membership is
+   the primaries-derived manifest and `build:catalog` reads neither this file
+   nor the frozen spine, so the swap moves no record.
 2. **Refresh the Gaia DR4-keyed side-files** in any order — they're
    independent pulls keyed on the deduped source_id list:
    `refresh-gaia-hip-xmatch.py`, `refresh-gaia-tyc-xmatch.py`,
@@ -307,5 +309,6 @@ catalogue inconsistent. Order matters:
    per-row source_id updates if Gaia DR4's source_ids changed for the
    tracked stars (Gaia publishes a DR3↔DR4 cross-walk during the
    transition window). Tier C's `simbad_sample.tsv` should be
-   refreshed via `refresh-simbad-sample.py` to re-stratify against the
-   new AT-HYG.
+   refreshed via `refresh-simbad-sample.py`, which re-stratifies over
+   SIMBAD's own V-magnitude populations and so tracks SIMBAD growth rather
+   than the DR transition.

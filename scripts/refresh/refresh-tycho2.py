@@ -295,20 +295,36 @@ def write_table(
     return written
 
 
+def pair_carried_as_one_star(tyc: Tyc, reached: set[Tyc]) -> bool:
+    """A component identifier IV/25 resolves that Tycho-2 lists as a single
+    star: no row of its own ever existed to pull, and the pair's ``TYC3=1``
+    entry carries it. False when that entry is unreached too — then nothing in
+    Tycho-2 covers the star (``data/tycho2/README.md`` § The request set)."""
+    tyc1, tyc2, tyc3 = tyc
+    return tyc3 > 1 and (tyc1, tyc2, 1) in reached
+
+
 def assert_membership_covered(
     membership_tycs: set[Tyc], reached: set[Tyc], *, log: Callable[[str], None] = print
 ) -> None:
-    """Every TYC-bearing manifest row must reach a Tycho-2 solution — the
-    cascade has no tier below this one, so an unreached manifest TYC is a § 6
-    membership adjudication rather than a refresh landing short.
+    """Every TYC-bearing manifest row must reach a Tycho-2 solution of its own
+    or a pair entry that carries it — the cascade has no tier below this one,
+    so anything else is a § 6 membership adjudication rather than a refresh
+    landing short.
     """
-    missing = sorted(membership_tycs - reached)
-    log(f"manifest TYCs reached: {len(membership_tycs) - len(missing)}/{len(membership_tycs)}")
-    if missing:
-        shown = ", ".join(format_tyc(t) for t in missing[:10])
+    missing = membership_tycs - reached
+    merged = {t for t in missing if pair_carried_as_one_star(t, reached)}
+    log(
+        f"manifest TYCs reached: {len(membership_tycs) - len(missing)}/"
+        f"{len(membership_tycs)}, plus {len(merged)} carried by a pair entry"
+    )
+    unresolved = sorted(missing - merged)
+    if unresolved:
+        shown = ", ".join(format_tyc(t) for t in unresolved[:10])
         raise SystemExit(
-            f"refresh-tycho2: {len(missing)} manifest TYC(s) reach neither "
-            f"I/259 table ({shown}{' …' if len(missing) > 10 else ''}) — "
+            f"refresh-tycho2: {len(unresolved)} manifest TYC(s) reach neither "
+            f"I/259 table and no pair entry carries them "
+            f"({shown}{' …' if len(unresolved) > 10 else ''}) — "
             "adjudicate as a membership event before committing this pull."
         )
 
