@@ -12,8 +12,8 @@ import { RA_HOURS_TO_DEG } from '../../util/astronomy-constants';
 import { createIauConstellationLookup } from './iau-boundaries-pure';
 
 /** The upstream AT-HYG catalogue. Not a build input — the record build walks
- *  `data/athyg/inherited-spine.tsv`. This suite is its last reader on this
- *  side, which is why the path is spelt here rather than shared
+ *  `data/membership/membership-manifest.tsv`. This suite is its last reader on
+ *  this side, which is why the path is spelt here rather than shared
  *  (`data/athyg/README.md` § Consumed by). */
 const ATHYG_CSV = resolve(REPO_ROOT, 'data/athyg/athyg_33_classic_ids.csv');
 

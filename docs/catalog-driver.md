@@ -186,7 +186,7 @@ CNS5 + 1,153 in V/70A · Bayer 1,522 via IV/27A · Flamsteed 2,596 via IV/27A +
 8 via WGSN ·
 proper 445 WGSN + Sol. No record exists on AT-HYG's authority alone, so the
 retirement is a re-keying, not a rescue. That also settles the Gliese
-question `stellata-3bsf.8` flagged as open: **no** `gl` cell is unsourced,
+question the retirement raised: **no** `gl` cell is unsourced,
 CNS5 and V/70A between them carrying all 3,147, including the 1,396 in the
 `GJ 3xxx` / `4xxx` / `9xxx` supplement bands.
 
@@ -446,11 +446,11 @@ value may be attributed to it: every value traces to a first-order
 catalogue pulled first-hand into `data/`. A value we cannot re-pull
 ourselves cannot be defended or refreshed — traceability beats a
 marginally better but unattributable number (decision 2026-08-15,
-`stellata-3bsf.21`). The spine's printed columns are therefore a
-**transition state, not a tier**: each cascade below names its
-first-order replacement, the epic's value-half children retire the
-printed consumption field by field, and `stellata-3bsf.8` removes it
-entirely.
+`stellata-3bsf.21`). The spine's printed columns are therefore **not a
+tier**: every cascade below is sourced first-hand end to end, and
+`SPINE_PRINTED_COLUMNS` has no build consumer — the spine is read for its
+identifier and binding cells alone (`scripts/catalog/membership/README.md`
+§ The spine side).
 
 The bright and no-Gaia rescue tiers are **condition-driven, not
 magnitude-bound**. Membership-wise both are spine rows; the tiers
