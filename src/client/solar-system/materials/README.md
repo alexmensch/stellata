@@ -72,7 +72,9 @@ constants rather than one list:
   giving it a release path would be a visual change, not a bug fix.
 
 Both rosters still mint a stand-in **per slot** on the WebGPU side, for the
-binding-merge reason `texture-slots.ts` carries.
+binding-merge reason `texture-slots.ts` carries — cloned from the layer's
+one placeholder, whose **filter pair is what every slot's WGSL fetches
+with** (`../../webgpu/solar-system/README.md` § A stand-in's filters).
 
 Two guards, because the roster **moves** the omission rather than deleting
 it — the release sites are still written out one per slot, since each pairs

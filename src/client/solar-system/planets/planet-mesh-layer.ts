@@ -302,6 +302,11 @@ export class PlanetMeshLayer {
       new Uint8Array([255, 255, 255, 255]), 1, 1,
     );
     this.placeholder.needsUpdate = true;
+    // Load-bearing, not cosmetic: a DataTexture's nearest/nearest default
+    // bakes an unfiltered fetch into the WGSL for the slot's whole life —
+    // see ../../webgpu/solar-system/README.md § A stand-in's filters.
+    this.placeholder.minFilter = THREE.LinearFilter;
+    this.placeholder.magFilter = THREE.LinearFilter;
     // Same unique-version rule as the loaded maps below: an eviction can
     // swap a slot BACK to the placeholder, and that swap has to rebuild
     // the bind group too.

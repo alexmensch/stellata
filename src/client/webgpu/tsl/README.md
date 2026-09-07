@@ -56,6 +56,10 @@ WebGL map and never learns about the port. The contract:
   boot, since two consumers of the same volume must not be able to
   diverge (`../extinction/README.md` § Two nodes, one owner). `uAvPrepassTex`
   in the shared map therefore stays null for a WebGPU boot's whole life.
+  **A placeholder's filter pair is what its node's WGSL fetches with**, for
+  the graph's whole life and whatever is swapped in later — so the
+  placeholder carries the real texture's pair
+  (`../solar-system/README.md` § A stand-in's filters).
 
 The mirror is a **transcription, not a loop** — `uniform()`'s node type
 comes from its overloads resolving against a concrete value, so a derived
@@ -227,13 +231,16 @@ generated code:
    writes depth") becomes a `walkFiles` scan over `src/**/*.ts` for the
    TSL equivalents (`depthNode` / `fragDepth` writes), same shape as
    `tests/shader-frag-depth.test.ts`. The family so far:
-   `tests/webgpu-import-boundary.test.ts`, `tests/tsl-frag-depth.test.ts`
-   and `tests/tsl-loop-control.test.ts` — the last pins an authoring trap
-   rather than a policy: a concise arrow returns its expression, so
+   `tests/webgpu-import-boundary.test.ts`, `tests/tsl-frag-depth.test.ts`,
+   `tests/tsl-loop-control.test.ts` and
+   `tests/tsl-standin-filters.test.ts` — the last two pin authoring traps
+   rather than policies. A concise arrow returns its expression, so
    `() => Break()` hands the jump back as the branch's output and the
    generator emits it twice, which the browser reports as unreachable
-   WGSL on every boot. Brace the body, or express the exit as an `If()`
-   around the body and emit no jump at all.
+   WGSL on every boot; brace the body, or express the exit as an `If()`
+   around the body and emit no jump at all. And a data texture's
+   nearest/nearest default bakes an unfiltered fetch into the WGSL
+   (§ Shared uniform nodes), so every construction states its filter pair.
 3. **Behavioural math lives in pure helpers; renders are A/B smoke.**
    The canonical scalar form of any shader rule belongs in a `*-pure.ts`
    TS function (most already exist as CPU mirrors — tonemap-pure,
