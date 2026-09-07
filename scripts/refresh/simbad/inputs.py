@@ -137,10 +137,12 @@ PRINTED_TIER_ID_COLUMNS = ("tyc", "hip")
 
 
 # The 5p columns whose absence drops a cascade to a tier below Gaia: the
-# parallax the distance cascade inverts, the proper motion the direction and
-# PM-rescue cascades propagate on, and the radial velocity. All three are
-# `docs/catalog-driver.md` § 5 fields a SIMBAD tier serves.
-GAIA_VALUE_COLUMNS = ("parallax", "pmra", "radial_velocity")
+# parallax the distance cascade inverts, BOTH components of the proper motion
+# the direction and PM-rescue cascades propagate on, and the radial velocity.
+# All are `docs/catalog-driver.md` § 5 fields a SIMBAD tier serves. A motion is
+# only stated when both components are, so reading `pmra` alone would call a
+# row complete that the PM cascade still has to leave Gaia for.
+GAIA_VALUE_COLUMNS = ("parallax", "pmra", "pmdec", "radial_velocity")
 
 
 def gaia_complete_source_ids(astrometry_catalog_path: Path) -> set[str]:

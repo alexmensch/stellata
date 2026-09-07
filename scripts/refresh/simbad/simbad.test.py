@@ -616,11 +616,14 @@ class ValueCohortTests(unittest.TestCase):
     def test_gaia_complete_needs_every_value_column(self):
         d = self.enterContext(tempfile.TemporaryDirectory())
         path = Path(d) / "gaia.tsv"
+        # Row 40 is the asymmetry: a proper motion is stated only when BOTH
+        # components are, so half of one leaves the PM cascade below Gaia.
         path.write_text(
-            "source_id\tparallax\tpmra\tradial_velocity\n"
-            "10\t1.0\t2.0\t3.0\n"
-            "20\t1.0\t2.0\t\n"
-            "30\t\t2.0\t3.0\n"
+            "source_id\tparallax\tpmra\tpmdec\tradial_velocity\n"
+            "10\t1.0\t2.0\t2.5\t3.0\n"
+            "20\t1.0\t2.0\t2.5\t\n"
+            "30\t\t2.0\t2.5\t3.0\n"
+            "40\t1.0\t2.0\t\t3.0\n"
         )
         self.assertEqual(inputs.gaia_complete_source_ids(path), {"10"})
 
@@ -1131,8 +1134,8 @@ class ValuesCollectOidRequestsTests(unittest.TestCase):
         """A 5p table stating every value for each id, so the cohort turns on
         the identity half alone unless a test withholds an id."""
         path = Path(directory) / "gaia_dr3_astrometry_catalog.tsv"
-        lines = ["source_id\tparallax\tpmra\tradial_velocity"]
-        lines += [f"{sid}\t1.0\t2.0\t3.0" for sid in source_ids]
+        lines = ["source_id\tparallax\tpmra\tpmdec\tradial_velocity"]
+        lines += [f"{sid}\t1.0\t2.0\t2.5\t3.0" for sid in source_ids]
         path.write_text("\n".join(lines) + "\n")
         return path
 
