@@ -160,18 +160,27 @@ WebGL pipeline implements (`../hdr/hdr-seam.ts`).
 
 ### One scene per boot
 
-The shell builds THE scene and hands it to `attachStarLayer` /
-`attachPlanetGlare`; the seam owns none. So `scene.add(group)` is the
-whole story at every call site, on either backend, and a new layer
-cannot land in a graph nothing renders.
+The shell builds THE scene; the seam owns none, so a new layer cannot
+land in a graph nothing renders. `scene.add(group)` is the call site on
+either backend, bar the star layer and the planet glare, which take the
+scene as an argument (`attachStarLayer` / `attachPlanetGlare`) and parent
+their own meshes.
 
-Two GLSL twins stay **unparented** here instead — the star pipeline's
+**Nothing reachable from that scene may carry a GLSL material.** The
+graph every layer builds into is now the graph the renderer draws, so a
+`ShaderMaterial` there fails WGSL pipeline creation and one invalid
+pipeline discards the whole submit — a black app, not a missing layer
+(`../chrome-lines/README.md` § Why a seam at all).
+`scene/glsl-residents-pure.ts` walks the scene once on the first rendered
+frame and names any offender on the console; it is the only thing between
+a mis-parented material and a silent black frame.
+
+Two GLSL twins stay **unparented** for that reason — the star pipeline's
 three meshes (`StarPipeline` takes `scene: null`) and the planet body
 field's group. Both still construct: their attributes are the live
 source buffers the TSL layers watch, and the writers keep writing them.
-Unparented rather than parked in a second scene, because a `Mesh` in no
-graph is the same zero draws with nothing to add a layer to by mistake.
-`0it.14` deletes them with the rest of the GLSL path.
+A `Mesh` in no graph is zero draws with nothing to add a layer to by
+mistake. `0it.14` deletes them with the rest of the GLSL path.
 
 The dust voxel volume streams and uploads on both backends
 (`loaders/README.md` § Dust voxel upload); the star vertex stage's

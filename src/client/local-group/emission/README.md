@@ -84,8 +84,9 @@ rebase or the enable / chart gates. Both geometries cross unchanged — six
 buffers for the disc family, seven for the Sérsic one, inside WebGPU's
 eight. The WebGPU twin is `../../webgpu/local-group/README.md`;
 `lg-module.ts` passes `kindCtx.webgpu?.lgEmissionMaterials` and adds the
-emission group to `(webgpu?.scene ?? scene)` — the wireframes are Line2
-chrome and stay in the shell's scene, which that boot never draws.
+emission group to `kindCtx.scene` — the wireframes are Line2 chrome and
+join it there, on the seam's stroke, since that scene is drawn on either
+backend (`../../webgpu/README.md` § One scene per boot).
 
 **Every uniform these shaders read is shared**, so the TSL side exposes no
 slot record at all: the six HDR emitter slots and `uWorldOffset` are in
