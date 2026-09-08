@@ -138,8 +138,8 @@ site-claims.test.ts      The public homepage's numeric claims, re-derived
                          corpus has to clear — bounded above too, so a
                          conservative claim cannot quietly become a
                          wrong-by-an-order-of-magnitude one.
-                         `src/site/home/README.md` § Where every number
-                         on the page comes from.
+                         `src/site/README.md` § The homepage's
+                         claims.
 skill-guard.test.ts      Behavioural pins for scripts/hooks/skill-guard.sh,
                          one describe per skill gate (cube-css, code-craft);
                          /scripts/hooks/README.md#how-skill-guard-works.

@@ -281,7 +281,10 @@ device pixel ratio, with `localStorage['stellata.info-dismissed']` and
 `sessionStorage['stellata.mobile-advisory-dismissed']` seeded to `'1'` so
 neither modal ever shows:
 
-1. **Boot** `<url>/v/<blob>/` ([The renderer is WebGPU](/src/client/webgpu/README.md#the-renderer-is-webgpu)).
+1. **Boot** `<url>/app/v/<blob>/` (the canonical share path, built by
+   `scenarioUrl` from `share-path-pure.ts` rather than spelled here —
+   [Request routing](/src/README.md#request-routing);
+   [The renderer is WebGPU](/src/client/webgpu/README.md#the-renderer-is-webgpu)).
    Wait for `window.debug`,
    `window.stellata` and `#loading` gone; a `#loading-status` starting
    `Error:` is a `BootError`. The requires-WebGPU gate is read *before*
