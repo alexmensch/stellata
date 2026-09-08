@@ -294,7 +294,7 @@ anchor** — a CPU answer, because no depth verdict reaches a `<text>`
 element. Without it a moon behind its planet keeps its label and a
 150 pc cloud name draws over a body 5 AU away. Inside each layer the ordering is local:
 the canvas orders by `THREE.Object3D.renderOrder`, SVG by source order in
-`src/client/index.html` (later child = on top). The constellation
+`src/client/app/index.html` (later child = on top). The constellation
 figure is depth-tested line geometry (`renderOrder −0.75`), so
 close star and planet discs occlude it through the depth buffer — no
 SVG mask (`../constellation-figure/README.md`).

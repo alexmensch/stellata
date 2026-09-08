@@ -1,6 +1,8 @@
 // The canon vantages the runner measures at, the order a run visits them
 // in, and the URL a scenario boots. README.md#what-a-run-does.
 
+import { buildSharePath } from '../../src/client/util/url-state/share-path-pure';
+
 /** One member, and kept as a list rather than collapsed away: it is the
  *  `backend` half of every row key and of the on-disk record, so dropping
  *  it would bump `PERF_SCHEMA` and abandon every archived baseline
@@ -27,10 +29,13 @@ export const SCENARIO_NAMES = Object.keys(SCENARIOS) as readonly ScenarioName[];
 export const TIER1_SCENARIOS = ['mw120', 'sol'] as const satisfies readonly ScenarioName[];
 
 /**
- * `<base>/v/<blob>/` plus `--hash`'s own switches, which `parseRunArgs` has
- * already stripped of any leading `#`.
+ * `<base>/app/v/<blob>/` plus `--hash`'s own switches, which `parseRunArgs`
+ * has already stripped of any leading `#`.
  */
 export function scenarioUrl(base: string, blob: string, hash = ''): string {
   const root = base.replace(/\/+$/, '');
-  return `${root}/v/${blob}/${hash === '' ? '' : `#${hash}`}`;
+  // buildSharePath rather than a second spelling of the path form — it owns
+  // the app's own prefix, and a runner pointed at the wrong one measures the
+  // default view while reporting the scenario's name.
+  return `${root}${buildSharePath(blob)}${hash === '' ? '' : `#${hash}`}`;
 }

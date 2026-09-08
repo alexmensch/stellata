@@ -15,15 +15,15 @@ describe('scenarios', () => {
     expect(BACKENDS).toEqual(['webgpu']);
   });
 
-  it('builds the canonical /v/<blob>/ path with no fragment on the default boot', () => {
+  it('builds the canonical /app/v/<blob>/ path with no fragment on the default boot', () => {
     expect(scenarioUrl('http://localhost:5173', SCENARIOS.sol.blob)).toBe(
-      'http://localhost:5173/v/BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB/',
+      'http://localhost:5173/app/v/BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB/',
     );
   });
 
   it('tolerates a trailing slash on the base', () => {
     expect(scenarioUrl('http://localhost:5174/', 'BLOB')).toBe(
-      'http://localhost:5174/v/BLOB/',
+      'http://localhost:5174/app/v/BLOB/',
     );
   });
 
