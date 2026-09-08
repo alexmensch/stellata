@@ -153,8 +153,9 @@ describe('loadBoundaries', () => {
     expect(await loadBoundaries(URL)).toBeNull();
   });
 
-  // Why absence lands here and not on !ok: README.md#validated-at-load-but-never-fatal.
-  it('resolves null when the SPA fallback serves index.html at 200', async () => {
+  // A truncated write or an interposed proxy page, now that absence itself
+  // lands on !ok: README.md#validated-at-load-but-never-fatal.
+  it('resolves null when a 200 carries something other than the artifact', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: async () => { throw new SyntaxError('Unexpected token \'<\''); },
