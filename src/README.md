@@ -1,6 +1,6 @@
 # src/
 
-Cloudflare Worker entry + browser client.
+Cloudflare Worker entry, browser client, and the public content site.
 
 - `worker.ts` — thin Worker entry. Hands every request to
   `env.ASSETS.fetch(request)` and does no routing. The Worker exists so
@@ -13,9 +13,13 @@ Cloudflare Worker entry + browser client.
   `wrangler.toml` (repo root) drives the deploy; CI workflow lives in
   `.github/workflows/` (see its README).
 - `client/` — browser app, served at `/`. Built by `vite.config.ts`.
+- `site/` — the public content pages (`/home` today), authored HTML with
+  no JavaScript. Built by `vite.site.config.ts` into the same `dist/`
+  **after** the app build, which is the pass that empties it. Its README
+  owns the seam.
 - `design-tokens.css` — the palette and typeface every surface paints
-  from. `client/styles.css` `@import`s it and adds only what is the
-  app's own; it does not restate a colour.
+  from. `client/styles.css` and `site/site.css` each `@import` it and add
+  only what is theirs; neither restates a colour.
 
 ## `@cloudflare/workers-types` leaks globally
 
