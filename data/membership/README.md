@@ -26,7 +26,7 @@ parked-ledger.tsv        ~282 KB, regular git. The § 6.1 ledger for manifest
                          record walk. The parity gate subtracts exactly these
                          rows and no more, so a park that is not on this list
                          fails the build rather than vanishing.
-binding-review.tsv       ~12 KB, regular git. The 55 spine rows whose derived
+binding-review.tsv       ~12 KB, regular git. The 54 spine rows whose derived
                          Gaia binding the generator cannot settle against the
                          frozen spine cell — differs · unreached · contested ·
                          collision — with every source's candidate, the gate
@@ -40,8 +40,8 @@ binding-review-dispositions.tsv
                          listed runner-up, or empty), a basis from the closed
                          enum (tycho2_position · v70a_astrometry ·
                          simbad_dr2_object · gaia_photometry · pair_component
-                         · shared_source) and the measured evidence. 55 rows:
-                         46 frozen, 7 derived, 1 runner-up, 1 none; a kept
+                         · shared_source) and the measured evidence. 54 rows:
+                         46 frozen, 6 derived, 1 runner-up, 1 none; a kept
                          value rides the manifest as binding=reviewed.
 label-drops.tsv          ~7 KB, regular git. The § 6.2 label ledger: every
                          spine Flamsteed / HD cell no primary attests, keyed

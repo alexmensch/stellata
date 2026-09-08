@@ -299,6 +299,27 @@ describe('buildMembership — the spine side', () => {
     expect(settled.counts.bindingDispositions).toEqual({ derived: 0, frozen: 0, other: 1, none: 0 });
   });
 
+  // The counterpart to the test above, and the reason the derivation weighs
+  // the candidates behind its winner: a rival the magnitude gate refuses is
+  // not a disagreement, so the row is an ordinary fill and no human is asked
+  // to adjudicate it. Gl 864 shipped as a `contested` review row on exactly
+  // this shape — its rival was 3.9 mag below the star.
+  it('fills rather than queues where the gate refuses the runner-up', () => {
+    const settled = buildMembership({
+      ...input,
+      tables: {
+        ...tables,
+        hipToSource: new Map([...tables.hipToSource, [70, '7070']]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['7071', { hip: 70, tyc: null, gj: null }]]),
+      },
+      evidence: bindingEvidence(new Map([['7070', 5.0], ['7071', 12.0]]), new Map([[70, 5.0]]), null),
+    });
+    expect(settled.rows.find((r) => r.hip === '70'))
+      .toMatchObject({ gaia_source_id: '7070', binding: 'crosswalk_gated' });
+    expect(settled.counts.derivedVsFrozen).toMatchObject({ fill: 1, contested: 0 });
+    expect(settled.bindingReview.map((r) => r.verdict)).toEqual(['unreached']);
+  });
+
   // A source two rows derive keys neither record. The row whose frozen cell
   // already held it keeps it; the other is withheld and queued.
   it('withholds a derived source another row already holds', () => {

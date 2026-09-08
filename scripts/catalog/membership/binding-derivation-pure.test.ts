@@ -161,6 +161,18 @@ describe('deriveBinding', () => {
       .toMatchObject({ sourceId: 'nullg', weighedNoGMag: 0, weighedNullGMag: 1 });
   });
 
+  // Gl 864 is the shape: the winner's rival was the TYC walk's neighbour at
+  // G 13.90 against V 9.98, which the magnitude gate settles by itself. Weigh
+  // the losers as well as the candidates ahead of the winner, or the rival
+  // reads as a passing runner-up and the row queues a `contested` verdict on a
+  // verdict never taken.
+  it('weighs the candidates behind the winner too, so a rival it refuses is not a runner-up', () => {
+    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, () => null);
+    const d = deriveBinding(candidates({ hip: 'b', simbad: 'a' }), gate);
+    expect(d.sourceId).toBe('b');
+    expect(d.rejected).toEqual([{ sourceId: 'a', via: ['simbad'], reason: 'mag' }]);
+  });
+
   it('cannot weigh a row with no printed V, and says so', () => {
     const gate = rowGateEvidence({ tyc: '1-1-1', hip: '', gl: '' }, evidence, () => null);
     expect(gate).toMatchObject({ vMag: null, vVia: null });

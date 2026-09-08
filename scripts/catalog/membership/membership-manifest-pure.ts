@@ -211,7 +211,7 @@ export interface MembershipCounts extends LabelMergeCounts {
    *  so the disagreement is counted, not queued. A fill with one is
    *  `contested` and queued. */
   derivedContestedMatch: number;
-  /** Candidates a gate refused before the derivation settled. */
+  /** Candidates a gate refused, the winner's losing rivals included. */
   derivedRejected: Record<'mag' | 'sibling', number>;
   /** Spine rows with a candidate and no printed V to weigh it against. */
   derivedUngateable: number;
@@ -530,7 +530,9 @@ interface SpineBinding {
 }
 
 /** Candidates the gates passed that did not win — a disagreement between
- *  sources the precedence order settled rather than the evidence. */
+ *  sources the precedence order settled rather than the evidence. Sound only
+ *  because `deriveBinding` weighs every ranked candidate: a candidate it left
+ *  unweighed would read as passing here on a verdict never taken. */
 export function passingRunnersUp(d: DerivedBinding): RankedCandidate[] {
   return d.ranked.filter((c) => c.sourceId !== d.sourceId
     && !d.rejected.some((r) => r.sourceId === c.sourceId));

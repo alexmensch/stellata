@@ -94,7 +94,8 @@ async function main(): Promise<void> {
   console.log(
     `derived against the frozen column: ${tally(c.derivedVsFrozen)}; ` +
       `via ${tally(c.derivedVia)}, consensus ${c.derivedConsensus}; ` +
-      `gate refused ${tally(c.derivedRejected)}; ${c.derivedUngateable} rows carry no printed V; ` +
+      `gate refused ${tally(c.derivedRejected)}; ` +
+      `${c.derivedUngateable} rows have a candidate and no printed V; ` +
       `${c.derivedWeighedNoGMag} candidates weighed with no pulled row (must be 0), ` +
       `${c.derivedWeighedNullGMag} on a row with no published G`,
   );

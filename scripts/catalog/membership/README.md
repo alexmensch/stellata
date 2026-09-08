@@ -104,11 +104,11 @@ where the derived value and the frozen cell part company is a review item in
 | Comparison | Rows | What it is |
 |---|---|---|
 | `match` | 311,835 | the sources bind what AT-HYG bound |
-| `fill` | 792 | a source binds where the frozen cell was empty; the record takes it |
-| `refused` | 574 | no source binds and the cell was empty — a derived refusal, not an absence |
+| `fill` | 791 | a source binds where the frozen cell was empty; the record takes it |
+| `refused` | 576 | no source binds and the cell was empty — a derived refusal, not an absence |
 | `differs` | 8 | the sources bind a different id; reviewed |
 | `unreached` | 43 | the frozen cell has a value no source binds; reviewed |
-| `contested` | 3 | a fill whose winner has a passing runner-up; ships nothing until reviewed |
+| `contested` | 2 | a fill whose winner has a passing runner-up; ships nothing until reviewed |
 | `collision` | 1 | another spine row already holds the derived source; withheld and reviewed |
 | `sol` | 1 | |
 
@@ -125,10 +125,10 @@ holds the frozen id in the DR2 namespace and the derived one as its DR3
 renumbering), `gaia_photometry` (G against the record's printed V on each
 candidate), `pair_component` (a resolved pair's components bound crosswise,
 the HIP and SIMBAD's letters deciding), `shared_source` (one source two records
-reach). Today: 46 keep the frozen value, 7 take the derived one, 1 takes a
-runner-up, 1 refuses both. The seven derived are the four DR2 ids of
+reach). Today: 46 keep the frozen value, 6 take the derived one, 1 takes a
+runner-up, 1 refuses both. The six derived are the four DR2 ids of
 `data/athyg/stale_gaia_source_ids.tsv` that SIMBAD carries a DR3 successor for,
-HD 2094 (the HIP record follows its canonical key onto the primary), Gl 864 and
+HD 2094 (the HIP record follows its canonical key onto the primary) and
 Gl 225.2 A. A kept value ships as `reviewed`.
 
 ## The binding is derived
@@ -156,19 +156,29 @@ committed sources, in precedence order:
    components answering for each other.
 
 A value two sources agree on outranks a lone leader; ties fall in the order
-above. Every candidate then goes through **both binding gates by calling
+above. **Every** candidate then goes through **both binding gates by calling
 `resolveGaiaSourceId`** — the one call `applyBindingGate` makes on the label
-side, so the two cannot drift on what counts as a bad binding — falling
-through to the next candidate on a rejection. The magnitude gate weighs G
+side, so the two cannot drift on what counts as a bad binding — and the first
+that passes wins. The magnitude gate weighs G
 against the record's **printed V in the V cascade's own tier order**:
 Hipparcos on its HIP, else Tycho-2's `VT − 0.090(BT − VT)` on its TYC
 (`../photometry/README.md` § The V cascade). The Tycho-2 arm is what reaches
 the HD-only rows: a best-neighbour walk landing on a faint neighbour of a
 Tycho star has no HIP to be caught by, and 32 fills sat more than a magnitude
-below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. Only
-953 spine rows carry no printed V at all (`derivedUngateable`). The gates
-refuse 198 candidates on G − V and 89 on sibling-letter attribution
+below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. The
+gates refuse 317 candidates on G − V and 119 on sibling-letter attribution
 (`derivedRejected`); falling off the end is a derived refusal.
+`derivedUngateable` (7) is the rows that reached a candidate with no printed V
+under any tier, so nothing could be weighed against it.
+
+**The losers are weighed too, not only the candidates ahead of the winner.**
+`passingRunnersUp` reads the rejections to decide whether a row's sources
+genuinely disagree, so a candidate left unweighed would read as passing on a
+verdict never taken and queue a `contested` review the gate settles by itself.
+Gl 864 shipped exactly that way before the derivation weighed its losers: the
+runner-up was the TYC walk's neighbour at G 13.90 against the star's printed
+V 9.98, and a human had to write the disposition restating what the magnitude
+gate already knew.
 
 Two things the derivation cannot settle alone are queued rather than decided.
 A **contested** fill is one whose winner has a runner-up the gates also passed:
@@ -178,14 +188,14 @@ AT-HYG's swapped component letter and SIMBAD follows the HIP. A **collision**
 is a derived source another spine row already holds: a Gaia source on two
 records keys neither (`docs/sid.md` § 4.1), so the row whose frozen cell held
 it keeps it and the other is withheld. Matches with a passing runner-up are
-counted (`derivedContestedMatch`, 372), not queued: the frozen cell sides
+counted (`derivedContestedMatch`, 227), not queued: the frozen cell sides
 with the winner and nothing moves.
 
 **The candidates have to be in the astrometry pull.** A missing G is a pass at
 the gate, so `derivationCandidateSourceIds` feeds every source any row could be
 bound to into `../astrometry-request/` and `derivedWeighedNoGMag` is pinned at
 **0** — a candidate weighed with no pulled row is the request under-covering
-the derivation. `derivedWeighedNullGMag` (39) is Gaia publishing no G for a
+the derivation. `derivedWeighedNullGMag` (77) is Gaia publishing no G for a
 source it has a row for, which no request can supply.
 
 **A Gaia id for a bright star is an identity statement, not a data source.**
@@ -245,7 +255,7 @@ The consequences, measured 2026-09-06:
 | `admitted:hip_omitted` | 444 | I/239 HIP with no IV/25 star |
 | `admitted:cns5_census` | 3,356 | CNS5 `GJ 1xxxx` row |
 | `component:<anchor>` | 471 | every designation it arrived with is another record's. 466 are the second Tycho-2 entry of a resolved pair whose HD (and, through Tycho-2's `hip`, HIP) a spine record carries; 5 are the second of a pair neither component of which is on the spine. Not a row; ledgered onto the record it resolves to |
-| source left empty, on a spine record | 105 | Gaia fitted one source where Tycho-2 resolved two stars |
+| source left empty, on a spine record | 109 | Gaia fitted one source where Tycho-2 resolved two stars |
 | source left empty, gate refused | 13 | the raw binding is in `rejected_bindings.tsv` |
 
 The audit's headline cohort sizes (60,344 / 566 / 3,362) are pre-grouping and

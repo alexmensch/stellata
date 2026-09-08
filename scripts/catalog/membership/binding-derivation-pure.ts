@@ -61,12 +61,14 @@ export function indexSimbadSources(
   return out;
 }
 
-function firstHit<K>(index: ReadonlyMap<K, string | null>, keys: readonly K[]): string | null {
+/** First key the index holds. A key held as `null` — two claimants — is still
+ *  held, so it stops the walk rather than falling through to the next. */
+function firstHeld<K, V>(index: ReadonlyMap<K, V>, keys: readonly K[]): V | undefined {
   for (const key of keys) {
-    const hit = index.get(key);
-    if (hit !== undefined) return hit;
+    const held = index.get(key);
+    if (held !== undefined) return held;
   }
-  return null;
+  return undefined;
 }
 
 /** SIMBAD's proposal for a row: hip → tyc → gj, the GJ exact (with its bridged
@@ -81,7 +83,7 @@ export function simbadCandidate(
   const glKey = normaliseGjKey(row.gl === '' ? null : row.gl);
   if (glKey === null) return null;
   const { exact, bare } = glKeyVariants(glKey, glAliases);
-  return firstHit(simbad.byGj, [...exact, ...bare]);
+  return firstHeld(simbad.byGj, [...exact, ...bare]) ?? null;
 }
 
 /** `cns5ByOwnKey` is the component-stopping index (`Cns5Index`), so a bare
@@ -96,7 +98,7 @@ export function bindingCandidates(
   const glKey = normaliseGjKey(row.gl === '' ? null : row.gl);
   const cns5Row = glKey === null
     ? undefined
-    : glKeyForms(glKey, tables.glAliases).map((k) => cns5ByOwnKey.get(k)).find((r) => r !== undefined);
+    : firstHeld(cns5ByOwnKey, glKeyForms(glKey, tables.glAliases));
   return {
     tyc: row.tyc === '' ? null : tables.tycToSource.get(row.tyc) ?? null,
     hip: hip === null ? null : tables.hipToSource.get(hip) ?? null,
@@ -188,10 +190,16 @@ export function bindingClassOf(via: readonly BindingSource[]): DerivedBindingCla
   return via.some((s) => s !== 'simbad') ? 'crosswalk_gated' : 'simbad_corroborated';
 }
 
-/** Weigh the ranked candidates through `resolveGaiaSourceId` one at a time —
- *  the same call `applyBindingGate` makes, so the label side and the record
- *  side cannot drift on what counts as a bad binding — falling through to the
- *  next on a rejection. Falling off the end is a derived refusal. */
+/** Weigh **every** ranked candidate through `resolveGaiaSourceId` — the same
+ *  call `applyBindingGate` makes, so the label side and the record side cannot
+ *  drift on what counts as a bad binding — and take the first that passes.
+ *  Nothing passing is a derived refusal.
+ *
+ *  The losers are weighed too, not just the candidates ahead of the winner:
+ *  `passingRunnersUp` reads `rejected` to decide whether a row's sources
+ *  genuinely disagree, so a candidate left unweighed would count as passing on
+ *  evidence never taken and queue a `contested` verdict the gate settles by
+ *  itself. */
 export function deriveBinding(
   candidates: BindingCandidates,
   gate: RowGateEvidence,
@@ -201,6 +209,7 @@ export function deriveBinding(
   const gateable = gate.vMag !== null;
   let weighedNoGMag = 0;
   let weighedNullGMag = 0;
+  let winner: RankedCandidate | null = null;
   const { evidence } = gate;
   for (const candidate of ranked) {
     if (gateable && evidence.gMagOf(candidate.sourceId) === null) {
@@ -210,18 +219,16 @@ export function deriveBinding(
     const verdict = resolveGaiaSourceId(
       candidate.sourceId, gate.hip, null, gate.vMag, evidence.gMagOf, evidence.wdsXids,
     );
-    if (verdict.gaiaSourceId !== null) {
-      return {
-        sourceId: candidate.sourceId,
-        via: candidate.via,
-        binding: bindingClassOf(candidate.via),
-        ranked, rejected, gateable, weighedNoGMag, weighedNullGMag,
-      };
+    if (verdict.gaiaSourceId === null) {
+      rejected.push({ ...candidate, reason: verdict.magRejected ? 'mag' : 'sibling' });
+    } else if (winner === null) {
+      winner = candidate;
     }
-    rejected.push({ ...candidate, reason: verdict.magRejected ? 'mag' : 'sibling' });
   }
   return {
-    sourceId: null, via: [], binding: 'none',
+    sourceId: winner?.sourceId ?? null,
+    via: winner?.via ?? [],
+    binding: bindingClassOf(winner?.via ?? []),
     ranked, rejected, gateable, weighedNoGMag, weighedNullGMag,
   };
 }

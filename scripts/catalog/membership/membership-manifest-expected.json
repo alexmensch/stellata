@@ -74,31 +74,31 @@
   },
   "componentRows": 471,
   "bindingByClass": {
-    "crosswalk_gated": 358559,
+    "crosswalk_gated": 358560,
     "simbad_corroborated": 12485,
-    "reviewed": 54,
+    "reviewed": 53,
     "none": 5831
   },
-  "bindingReviewRows": 55,
+  "bindingReviewRows": 54,
   "bindingReviewByVerdict": {
     "differs": 8,
     "unreached": 43,
-    "contested": 3,
+    "contested": 2,
     "collision": 1
   },
   "bindingDispositions": {
-    "derived": 7,
+    "derived": 6,
     "frozen": 46,
     "other": 1,
     "none": 1
   },
   "derivedVsFrozen": {
     "match": 311835,
-    "fill": 790,
+    "fill": 791,
     "refused": 576,
     "differs": 8,
     "unreached": 43,
-    "contested": 3,
+    "contested": 2,
     "collision": 1,
     "sol": 1
   },
@@ -109,14 +109,14 @@
     "simbad": 12489
   },
   "derivedConsensus": 295200,
-  "derivedContestedMatch": 373,
+  "derivedContestedMatch": 227,
   "derivedRejected": {
-    "mag": 200,
-    "sibling": 89
+    "mag": 317,
+    "sibling": 119
   },
   "derivedUngateable": 7,
   "derivedWeighedNoGMag": 0,
-  "derivedWeighedNullGMag": 39,
+  "derivedWeighedNullGMag": 77,
   "labelDropsByReason": {
     "flamsteed_unattested": 119,
     "hd_unattested": 1
