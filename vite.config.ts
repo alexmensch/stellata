@@ -1,11 +1,18 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
 import { publishBuildEnv } from './vite.env.ts';
+import { documentRoutingInDev } from './vite.site-dev.ts';
 
 publishBuildEnv(import.meta.dirname);
 
 export default defineConfig(() => ({
   base: '/',
+  // One dev server answers the deploy's whole URL space: the app at /app,
+  // the homepage at /, the 404 page for anything else. 'custom' hands
+  // document routing to the plugin — Vite's own SPA fallback rewrites an
+  // unmatched path to /index.html before any plugin middleware sees it.
+  appType: 'custom' as const,
+  plugins: [documentRoutingInDev(import.meta.dirname)],
   root: resolve(import.meta.dirname, 'src/client'),
   publicDir: resolve(import.meta.dirname, 'public'),
   build: {

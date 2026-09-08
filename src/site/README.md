@@ -7,6 +7,10 @@ far, and it is the site root — the application lives at `/app`
 
 ```
 index.html   The homepage, served at /. Documented below.
+404.html     Served for every unmatched path — by Cloudflare's
+             not_found_handling = "404-page" (wrangler.toml) in production,
+             and by the dev server's document routing locally. Carries
+             noindex and is not in the sitemap.
 site.css     Every page's stylesheet. Imports src/design-tokens.css and
              adds only the site's own layout, type scale and components.
 ```
@@ -51,16 +55,23 @@ the legacy share-link redirects and the app's unmatched-path fallback.
 
 ## Reading it in dev
 
-`pnpm run dev:site` serves this folder on port 5174, and the homepage
-answers at `http://localhost:5174/` — the app's own dev server on 5173 is a
-different Vite root and knows nothing about these pages.
+**`pnpm run dev` serves the whole URL space on one port**, matching the
+deploy: the homepage at `http://localhost:5173/`, the app at
+`http://localhost:5173/app`, and this folder's 404 page for anything else.
+That is `vite.site-dev.ts`, a dev-only plugin on the *app's* config — the
+two build passes have different roots, so nothing else would have put both
+documents on one server.
 
-**A page in a subfolder needs its trailing slash in dev**, unlike in
-production: `localhost:5174/science` 404s where `localhost:5174/science/`
-resolves, because Vite's dev server wants the directory index and this root
-has no SPA fallback to catch the miss. Cloudflare's `auto-trailing-slash`
-handling serves both in production. The homepage is unaffected — it *is*
-the root.
+It needs `appType: 'custom'` there, and that is not a detail to undo:
+Vite's own SPA fallback rewrites an unmatched path to `/index.html` before
+any plugin middleware runs, which made every wrong URL — and `/app` itself
+— serve the homepage.
+
+`pnpm run dev:site` still serves this folder alone on port 5174, rooted
+here, for iterating on a page without the app's build chain in front of it.
+Two things differ from production there, which is why it is the secondary
+route: a page in a subfolder needs its trailing slash (`/science/`, not
+`/science`), and a miss gets nothing rather than the 404 page.
 
 ## No JavaScript, by rule
 

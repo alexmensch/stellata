@@ -114,4 +114,19 @@ describe('everything else is served, or really missing', () => {
       expect(body).not.toBe(APP_DOC);
     },
   );
+
+  // `not_found_handling = "404-page"` answers a miss with dist/404.html at a
+  // 404 status. Outside /app the Worker must hand that straight back — the
+  // designed page is the point, so swallowing the body would leave the
+  // status with nothing to render.
+  it('passes the 404 page through for a miss outside /app', async () => {
+    const notFoundPage = 'the 404 page';
+    const fetchMock = vi.fn(
+      async () => new Response(notFoundPage, { status: 404 }),
+    );
+    const response = await worker.fetch(get('/nonsense'), { ASSETS: { fetch: fetchMock } });
+    expect(response.status).toBe(404);
+    expect(await response.text()).toBe(notFoundPage);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
