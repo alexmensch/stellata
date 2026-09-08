@@ -49,29 +49,49 @@ export interface SimbadXids {
   gj: string | null;
 }
 
-export interface PrimaryTables {
-  iv25: readonly Tyc2HdRow[];
-  v50: readonly Bsc5Row[];
-  iv27a: readonly CrossIndexRow[];
+/** The tables a Gaia binding is derived from — the four sources
+ *  `../membership/binding-derivation-pure.ts` walks, plus the GJ bridges that
+ *  let CNS5's renumbered row answer for the record's cell. */
+export interface BindingTables {
   cns5: readonly Cns5Row[];
-  gliese: GlieseIndex;
-  /** HIP numbers I/239 publishes a row for. */
-  hipI239: ReadonlySet<number>;
-  /** HD numbers I/239's own `HD` column publishes. */
-  hdI239: ReadonlySet<number>;
   /** Normalised GJ key → the other GJ keys a stored same-as bridge declares the
    *  same star (`data/sid/sameas-overrides.tsv`, `gl:` ↔ `gl:` rows). */
   glAliases: ReadonlyMap<string, readonly string[]>;
-  /** HIP numbers carrying a van Leeuwen HIP2 re-reduction solution. */
-  hip2: ReadonlySet<number>;
-  wgsn: WgsnKeys;
-  tycho2: ReadonlyMap<string, Tycho2Row>;
   tycToSource: ReadonlyMap<string, string>;
   hipToSource: ReadonlyMap<number, string>;
   simbadBySourceId: ReadonlyMap<string, SimbadXids>;
 }
 
-export interface PrimaryIndex {
+export interface PrimaryTables extends BindingTables {
+  iv25: readonly Tyc2HdRow[];
+  v50: readonly Bsc5Row[];
+  iv27a: readonly CrossIndexRow[];
+  gliese: GlieseIndex;
+  /** HIP numbers I/239 publishes a row for. */
+  hipI239: ReadonlySet<number>;
+  /** HD numbers I/239's own `HD` column publishes. */
+  hdI239: ReadonlySet<number>;
+  /** HIP numbers carrying a van Leeuwen HIP2 re-reduction solution. */
+  hip2: ReadonlySet<number>;
+  wgsn: WgsnKeys;
+  tycho2: ReadonlyMap<string, Tycho2Row>;
+}
+
+/** Exact `number+comp` keys, per-letter aliases and bare numbers, all through
+ *  `normaliseGjKey` — the attestation question is "does CNS5 number this
+ *  star", so the bare fold is admissible here where the value tiers refuse it. */
+export interface Cns5Index {
+  cns5Keys: Set<string>;
+  cns5ByKey: Map<string, Cns5Row>;
+  /** The same keys without the bare fold from a component row: a bare number
+   *  answers only where CNS5 lists it without letters. What a binding takes off
+   *  the row is one component's Gaia source, so folding would hand a primary
+   *  whichever sibling the file lists first (`../classic-ids/README.md` § The
+   *  GJ fold stops at the component). */
+  cns5ByOwnKey: Map<string, Cns5Row>;
+}
+
+export interface PrimaryIndex extends Cns5Index {
   hdToTycs: Map<number, string[]>;
   tycToHds: Map<string, Tyc2HdRow[]>;
   hrSet: Set<number>;
@@ -80,11 +100,6 @@ export interface PrimaryIndex {
   iv27aHip: Set<number>;
   iv27aFlamByHd: Map<number, Set<number>>;
   iv27aFlamByHip: Map<number, Set<number>>;
-  /** Exact `number+comp` keys, per-letter aliases and bare numbers, all through
-   *  `normaliseGjKey` — the attestation question is "does CNS5 number this
-   *  star", so the bare fold is admissible here where the value tiers refuse it. */
-  cns5Keys: Set<string>;
-  cns5ByKey: Map<string, Cns5Row>;
 }
 
 /** Insert into a map of key → set, creating the set on first write. */
@@ -118,26 +133,30 @@ export function indexPrimaries(t: PrimaryTables): PrimaryIndex {
     addKeyed(iv27aFlamByHd, r.hd, r.flamsteed);
     if (r.hip !== null) addKeyed(iv27aFlamByHip, r.hip, r.flamsteed);
   }
+  return {
+    hdToTycs, tycToHds, hrSet, v50Hd, iv27aHd, iv27aHip,
+    iv27aFlamByHd, iv27aFlamByHip, ...indexCns5(t.cns5),
+  };
+}
+
+export function indexCns5(rows: readonly Cns5Row[]): Cns5Index {
   const cns5Keys = new Set<string>();
   const cns5ByKey = new Map<string, Cns5Row>();
-  for (const r of t.cns5) {
+  const cns5ByOwnKey = new Map<string, Cns5Row>();
+  const set = (key: string, r: Cns5Row, own: boolean): void => {
+    cns5Keys.add(key);
+    if (!cns5ByKey.has(key)) cns5ByKey.set(key, r);
+    if (own && !cns5ByOwnKey.has(key)) cns5ByOwnKey.set(key, r);
+  };
+  for (const r of rows) {
     const bare = normaliseGjKey(r.gj);
     if (bare === null) continue;
     const comp = (r.gjComp ?? '').trim().toUpperCase();
-    const exact = `${bare}${comp}`;
-    cns5Keys.add(exact);
-    cns5Keys.add(bare);
-    if (!cns5ByKey.has(exact)) cns5ByKey.set(exact, r);
-    if (!cns5ByKey.has(bare)) cns5ByKey.set(bare, r);
-    for (const letter of comp) {
-      cns5Keys.add(`${bare}${letter}`);
-      if (!cns5ByKey.has(`${bare}${letter}`)) cns5ByKey.set(`${bare}${letter}`, r);
-    }
+    set(`${bare}${comp}`, r, true);
+    set(bare, r, comp === '');
+    for (const letter of comp) set(`${bare}${letter}`, r, true);
   }
-  return {
-    hdToTycs, tycToHds, hrSet, v50Hd, iv27aHd, iv27aHip,
-    iv27aFlamByHd, iv27aFlamByHip, cns5Keys, cns5ByKey,
-  };
+  return { cns5Keys, cns5ByKey, cns5ByOwnKey };
 }
 
 export type HdAttestation = 'iv25' | 'v50' | 'i239' | null;
@@ -170,10 +189,19 @@ export function glAliasesFromEdges(
   return out;
 }
 
-/** A record's normalised GJ key with every bridged spelling, each also bare. */
-function glKeyForms(key: string, aliases: ReadonlyMap<string, readonly string[]>): string[] {
-  const forms = [key, ...(aliases.get(key) ?? []), ...(aliases.get(bareGjKey(key)) ?? [])];
-  return [...new Set(forms.flatMap((k) => [k, bareGjKey(k)]))];
+/** A record's normalised GJ key with every bridged spelling — the exact forms,
+ *  and each of them bare. */
+export function glKeyVariants(
+  key: string, aliases: ReadonlyMap<string, readonly string[]>,
+): { exact: string[]; bare: string[] } {
+  const exact = [...new Set([key, ...(aliases.get(key) ?? []), ...(aliases.get(bareGjKey(key)) ?? [])])];
+  return { exact, bare: [...new Set(exact.map(bareGjKey))] };
+}
+
+/** Every form of `glKeyVariants`, exact and bare interleaved per spelling. */
+export function glKeyForms(key: string, aliases: ReadonlyMap<string, readonly string[]>): string[] {
+  const { exact } = glKeyVariants(key, aliases);
+  return [...new Set(exact.flatMap((k) => [k, bareGjKey(k)]))];
 }
 export type GlAttestation = 'cns5' | 'v70a' | null;
 
