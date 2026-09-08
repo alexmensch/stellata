@@ -261,8 +261,8 @@ outcome here moves a canonical key. The remaining 1,370 rows carry no
 **233** where one would and **1,137** no walk reaches. With Sol that accounts
 for all 313,257. **233 is the walk-only figure**: the manifest no longer copies
 the column but derives it, and the derivation's fourth source — SIMBAD's
-frozen cross-IDs — takes the fills to 940 ungated and 792 through both gates,
-leaving 574 derived refusals that ship designation-keyed on the § 5 tiers. The
+frozen cross-IDs — takes the fills to 940 ungated and 791 through both gates,
+leaving 576 derived refusals that ship designation-keyed on the § 5 tiers. The
 binding's authority is the manifest's own `derivedVsFrozen` count
 (`scripts/catalog/membership/README.md` § The spine side), not this audit's
 identity bullet, which measures the frozen column.
@@ -344,11 +344,11 @@ parallax, so most of the ~4.5k with neither a DR3 neighbour nor a HIP park,
 as do CNS5's 514 without a DR3 id, which no V tier reaches. Identity rides
 on the manifest's `binding` column, four classes: `crosswalk_gated`
 358,560 (a TYC, HIP or CNS5 candidate through the gates) ·
-`simbad_corroborated` 12,486 (SIMBAD's source for the record's own
-designation, through the gates) · `reviewed` 54 (a disposition row's value) ·
-`none` 5,829 (the 574 derived refusals, the withheld collision, Sol; additions
+`simbad_corroborated` 12,485 (SIMBAD's source for the record's own
+designation, through the gates) · `reviewed` 53 (a disposition row's value) ·
+`none` 5,831 (the 576 derived refusals, the withheld collision, Sol; additions
 no gated walk binds). The review queue is `data/membership/binding-review.tsv`
-with its dispositions beside it, 55 rows. The swap itself was 63,672 mints,
+with its dispositions beside it, 54 rows. The swap itself was 63,672 mints,
 zero retirements, zero reinstatements; deriving the binding then retired
 **8** Gaia-keyed ledger rows with a successor each — AT-HYG had carried the
 Gaia source as a row of its own beside the HIP record it belongs to, and the

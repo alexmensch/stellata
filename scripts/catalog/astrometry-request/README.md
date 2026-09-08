@@ -38,7 +38,7 @@ comparator — and it is what matches the ordering
 
 ## Request and record build name the same set by construction
 
-**371,100 source_ids** over 376,929 manifest rows; the 5,829 rows carrying
+**371,098 source_ids** over 376,929 manifest rows; the 5,831 rows carrying
 none are the no-Gaia tier.
 
 Reading the column is what makes the two agree — `readStars` reads the same
@@ -54,9 +54,9 @@ different sets, so the request is the union of all four:
 
 | Contribution | Ids | Consumer |
 |---|---|---|
-| the manifest's `gaia_source_id` column | 371,100 | the record build: direction / rv / V / ci cascades |
+| the manifest's `gaia_source_id` column | 371,098 | the record build: direction / rv / V / ci cascades |
 | `../classic-ids/`' binding-gate candidates | 99,799, +493 beyond the manifest | the gate's `phot_g_mean_mag` evidence |
-| `../membership/`' binding-derivation candidates | 313,290, +229 beyond the two above | the derivation's `phot_g_mean_mag` evidence — every source any spine row could be bound to |
+| `../membership/`' binding-derivation candidates | 313,290, +231 beyond the two above | the derivation's `phot_g_mean_mag` evidence — every source any spine row could be bound to |
 | `multiples.tsv`' kept-physical pair members | 16,108, +7,018 beyond the three above | the parallax cascade's `pair_member_parallax` tier |
 
 **The derivation's contribution is the second one's shape again, on the record
@@ -64,7 +64,7 @@ side**: the manifest generator weighs candidates before it writes a binding,
 so the candidates cannot be read off the manifest column — the column is the
 outcome. Requesting them all, whatever a row ends up bound to, is what lets
 the generator's `derivedWeighedNoGMag` pin at zero the same way the overlay's
-`gateSkippedNoGMag` does; the 32 reviewed bindings a disposition keeps
+`gateSkippedNoGMag` does; the reviewed bindings a disposition keeps
 against every source are in the manifest column and so requested by the first
 contribution.
 
@@ -121,7 +121,7 @@ request (378,838 of 378,840), but both are reviewed bindings rather than
 candidates: the two DR2 ids of `data/athyg/stale_gaia_source_ids.tsv` SIMBAD
 holds no DR3 successor for (`../spine/README.md` § Six source_ids DR3 does not
 publish). What no request can fix is `gateSkippedNullGMag` (63) and
-`derivedWeighedNullGMag` (39): sources Gaia has a row for and publishes no
+`derivedWeighedNullGMag` (77): sources Gaia has a row for and publishes no
 `phot_g_mean_mag` for, which stay unvettable at any request size.
 
 ## What the pulled set feeds

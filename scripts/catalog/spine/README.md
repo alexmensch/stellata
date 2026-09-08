@@ -29,12 +29,14 @@ behind it, are `docs/catalog-driver.md` § 3.1 and § The primaries audit below.
 scripts/catalog/spine/
   inherited-spine-pure.ts         Column layout, row assembly, TSV codec,
     (+ test)                      per-column counts, and the designation
-                                  recovery (spineDesignations). Pure, and on
-                                  the build:membership path, not
-                                  build:catalog — ../membership/ streams the
-                                  rows through iterSpineTsv; parseSpineTsv is
-                                  the materialising form the guard and the
-                                  manifest gate need.
+                                  recovery (spineDesignations). Pure, and off
+                                  the build:catalog path entirely.
+                                  iterSpineTsv streams for a single pass
+                                  (build:classic-ids' label merge);
+                                  parseSpineTsv materialises for the callers
+                                  that index rows or walk them twice —
+                                  build:membership, the audit, the guard, the
+                                  manifest gate and ../astrometry-request/.
   inherited-spine-guard.test.ts   Assertions over the COMMITTED artifact —
                                   byte identity, counts, keyless rows, Sol,
                                   duplicate source_ids (§ Why a guard, not a
@@ -100,7 +102,7 @@ What that answer decides differently is measured rather than feared:
 reaches or agrees with, and 233 empty cells a raw walk would fill. **233 is the
 walk-only figure.** The derivation adds SIMBAD's cross-IDs as a fourth source,
 which settles 11,687 of the 11,721 the walks cannot reach and takes the fills
-to 940 ungated, 792 after both gates — a reader scoping off 233 under-budgets
+to 940 ungated, 791 after both gates — a reader scoping off 233 under-budgets
 by four. The manifest's `derivedVsFrozen` count carries the full comparison.
 
 **Four rows carry identifiers the frozen build resolved *after* its walk**:
@@ -346,5 +348,5 @@ Pins: `derivedVsFrozen` and the review counts in
   blended source whose BP/RP feed the V transform (HIP 35261, `ipd` 84,
   |ΔV| 1.34). Neither cascade gates its Gaia tier on fit quality; that is
   `stellata-3bsf.49`'s question, with these rows as its corpus.
-- **The review queue is disposed** — 55 rows, § The spine side of
+- **The review queue is disposed** — 54 rows, § The spine side of
   `../membership/README.md` — and `sid:check` is clean.
