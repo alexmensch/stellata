@@ -317,6 +317,10 @@ The § 6 instantiation for the manifest deriving its `gaia_source_id` instead
 of copying this file's column (`../membership/README.md` § The binding is
 derived), measured 2026-09-08 by diffing the built catalogue against the one
 built from the copied column, records matched on their canonical designation.
+That baseline also predates the four manifest-derived re-pulls
+(`../../refresh/README.md` § The staleness gate), so a move below carries both
+the new binding and the table row it can now reach; two records whose binding
+never changed move for the second reason alone.
 Pins: `derivedVsFrozen` and the review counts in
 `../membership/membership-manifest-expected.json`; per-tier routing in
 `../build-catalog-expected.json`.
@@ -336,17 +340,25 @@ Pins: `derivedVsFrozen` and the review counts in
   (HD 98278's collocated B and C pair rows promote as one record under B,
   bridged in `data/sid/sameas-overrides.tsv`) and one promoted companion mints
   (HD 126862 Ab). Zero keys move: every one of the 794 keys on a HIP, HD or GJ.
-- **Field parity, over the 794.** |ΔV| p50 **0.051** · p99 0.875 · max
-  1.639; |Δabsmag| p50 **0.075** · p99 1.634 · max 3.923; |Δci| p50 **0.041**
-  · p99 0.304 · max 1.226. 188 distances move (|Δd|/d p99 0.72, max 3.67),
+- **Field parity, over the 794.** |ΔV| p50 **0.050** · p99 0.932 · max
+  1.639; |Δabsmag| p50 **0.079** · p99 1.661 · max 5.526; |Δci| p50 **0.041**
+  · p99 0.331 · max 1.120. 212 distances move (|Δd|/d p99 0.62, max 8.76),
   428 positions (p99 0.83″, max 11.6″ — HIP 26500, whose Tycho-2 position was
-  a blend's), 38 spectral strings. The median V move is the Riello transform
-  replacing a printed cell, inside the transform's σ; the tail is not the
-  binding but the tiers behind it — a converged-looking G on an unconverged
-  astrometric fit (HIP 23617: RUWE 19.7, `ipd_frac_multi_peak` 70, Gaia's
-  1.25 ± 0.83 mas inverting to 800 pc against HIP2's 5.84 ± 0.45), or a
-  blended source whose BP/RP feed the V transform (HIP 35261, `ipd` 84,
-  |ΔV| 1.34). Neither cascade gates its Gaia tier on fit quality; that is
-  `stellata-3bsf.49`'s question, with these rows as its corpus.
+  a blend's), 50 spectral strings. Multiplicity carries a share of it:
+  `multiplicityUnresolved` +81, `multiplicityResolved` +39, `ccdmFlagged` +68,
+  `componentDesignations` +35, `binaryPairs` +14, `renderableCompanionWinged`
+  +1, all of them record fields — byte 96 drives the chart-mode wings, so a
+  gained binding reaches the multiplicity term and not only photometry.
+  The median V move is the Riello transform replacing a printed cell, inside
+  the transform's σ; the tail is not the binding but the tiers behind it — a
+  converged-looking G on an unconverged astrometric fit (HIP 23617: RUWE 19.7,
+  `ipd_frac_multi_peak` 70, a 1.25 ± 0.83 mas parallax at S/N 1.5 against
+  HIP2's 5.84 ± 0.45, and a Bailer-Jones posterior of 1671 pc on it — where
+  the parallax measures nothing the prior answers instead, so the layer that
+  exists to absorb low S/N widens the error rather than absorbing it, and this
+  row is the ledger's largest |Δabsmag|), or a blended source whose BP/RP feed
+  the V transform (HIP 35261, `ipd` 84, |ΔV| 1.34). Neither cascade gates its
+  Gaia tier on fit quality; that is `stellata-3bsf.49`'s question, with these
+  rows as its corpus.
 - **The review queue is disposed** — 54 rows, § The spine side of
   `../membership/README.md` — and `sid:check` is clean.
