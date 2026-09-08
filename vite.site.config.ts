@@ -21,6 +21,9 @@ export default defineConfig(() => ({
       // homepage at dist/index.html and so serves it at /.
       input: {
         home: resolve(import.meta.dirname, 'src/site/index.html'),
+        // Emitted at dist/404.html, which is the filename Cloudflare's
+        // not_found_handling = "404-page" looks for.
+        notFound: resolve(import.meta.dirname, 'src/site/404.html'),
       },
     },
   },

@@ -27,17 +27,24 @@ served, and would put `robots.txt` at a path no crawler reads. So the
 document alone lives under `/app`; its assets and every artifact stay at
 the root.
 
-## In dev, the app answers at `/app/` too
+## In dev, this document answers at `/app`
 
-`pnpm run dev` serves this document at **`http://localhost:5173/app/`**,
-not at `/`, because Vite's dev server resolves the same root-relative path
-the build emits. `localhost:5173/` has no document to serve and 404s: the
-homepage is a different Vite root on port 5174 (`src/site/README.md`
-§ Reading it in dev).
+`pnpm run dev` serves it at **`http://localhost:5173/app`** — and serves
+the public homepage at `/` and the 404 page for anything else, so one
+server answers the deploy's whole URL space. `vite.site-dev.ts` is the
+dev-only plugin doing that; `src/site/README.md` § Reading it in dev is the
+reference.
 
-Artifacts are unaffected — `publicDir` still serves `public/` at the dev
-root, so `BASE_URL`-relative fetches resolve exactly as they do in
-production.
+Artifacts are unaffected: `publicDir` still serves `public/` at the dev
+root, so `BASE_URL`-relative fetches resolve exactly as in production.
+
+**One dev-only rewrite worth knowing about.** This document's
+`../main.ts` and `../styles.css` are made root-absolute before being
+served. The build does that itself, hashing them into `/assets/`; dev
+serves the file as authored, so the browser would resolve them against
+whatever URL it is on — and on a share link (`/app/v/<blob>/`) that is
+three levels deep, where `../main.ts` is nothing. A third relative
+reference added here needs the same treatment.
 
 ## What the `<head>` owns
 

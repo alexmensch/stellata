@@ -175,6 +175,27 @@ img { max-width: 100%; height: auto; display: block; }
 .actions-aside a { color: var(--fg-dim); }
 .actions-aside a:hover { color: var(--accent); }
 
+/* ---- Not found ---- */
+/* Short page, so it centres in the viewport rather than sitting under the
+   masthead with a screen of nothing below it. */
+.notfound {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: min(62vh, 560px);
+  padding: clamp(40px, 8vw, 88px) 0;
+}
+.notfound .label { display: block; margin-bottom: clamp(18px, 3vw, 28px); }
+.notfound h1 {
+  max-width: 26ch;
+  margin: 0 0 clamp(18px, 2.4vw, 26px);
+  font-size: var(--type-hero);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+}
+
 /* ---- Readout strip ---- */
 /* Hairlines come from a 1px grid gap showing the border colour through, so
    dividers stay exact however the cells wrap. */
