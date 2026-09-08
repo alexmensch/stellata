@@ -89,28 +89,26 @@ AT-HYG did not follow. `stale_gaia_source_ids.tsv` enumerates all six with
 that status, and `scripts/catalog/spine/inherited-spine-guard.test.ts`
 holds the enumeration to what the committed spine and 5p pull actually say.
 
-**The cells are not repaired, and that is a decision rather than an
-omission.** § 3 makes the spine frozen and states that ids are DR3-namespace
-designations that never get rewritten; substituting the successor id would
-change four records' designation sets, which is a `docs/sid.md` § 6
-DR-reconciliation event and not a data fix. A DR2 id is a real Gaia
-designation, so the records stay addressable either way. What the rows
-needed was to stop being *unreachable*: the SIMBAD widening ladder now
-falls through to their own TYC / GJ and corroborates the binding across
-releases, so all six carry bibcoded coordinates, PM and parallax
-(`../simbad/README.md` § The widening ladder, and its corroboration rule).
-The membership manifest carries all six unchanged, each on a review
-disposition whose basis is that SIMBAD corroboration
-(`../membership/binding-review-dispositions.tsv`, `simbad_dr2_object`); a
-DR-reconciliation run is where the ids themselves would change, if they
-change at all.
+**The spine's cells stay as they are** — § 3 makes the spine frozen — and the
+manifest derives its own. For the four with a DR3 successor, SIMBAD's object
+carries the record's TYC or GJ under the DR3 id, so the derivation proposes
+the successor and a disposition on `simbad_dr2_object` accepts it
+(`../membership/binding-review-dispositions.tsv`); those four records now
+reach Gaia's own row. The two with no successor (GJ 3775, GJ 3981) keep the
+DR2 id on a disposition of the same basis. Every record keys on a HIP, HD or
+GJ, so no canonical key moves either way (`docs/sid.md` § 4.2). All six also
+reach the SIMBAD values pull: the widening ladder falls through to their own
+TYC / GJ and corroborates the binding across releases, so each carries
+bibcoded coordinates, PM and parallax (`../simbad/README.md` § The widening
+ladder, and its corroboration rule).
 
 ## Consumed by
 
 `inherited-spine.tsv` → **`pnpm run build:membership`**, which reads it as the
-frozen record of AT-HYG's merge decisions and bindings — which designations
-name one star, and which Gaia source it bound — that the primaries-derived
-manifest re-keys (`scripts/catalog/membership/README.md` § The spine side).
+frozen record of AT-HYG's merge decisions — which designations name one
+star — that the primaries-derived manifest re-keys, and reads its
+`gaia_source_id` column only as the diff surface for the binding it derives
+itself (`scripts/catalog/membership/README.md` § The binding is derived).
 `pnpm run build:classic-ids` reads it as the label merge's spine side, and the
 manifest's parity gate reads it as the baseline every manifest row must
 account for. `scripts/catalog/spine/inherited-spine-guard.test.ts` pins its

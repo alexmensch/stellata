@@ -257,12 +257,15 @@ parallaxes do not; 6 on SIMBAD holding the id as `Gaia DR2` with the
 record's own TYC / GJ on that object. Zero drops. Every one of the 11,731
 carries a HIP, HD, HR or GJ, so none is SID-keyed on its Gaia id and no
 outcome here moves a canonical key. The remaining 1,370 rows carry no
-`gaia_source_id` at all, and split on
-whether a raw walk would supply one: **233** where one would — the bindings
-the freeze-time gates scrubbed or AT-HYG never made, which stay empty because
-admitting them is the re-derivation § 3 forbids — and **1,137** no walk
-reaches, the no-Gaia cohort that ships designation-keyed on the § 5 tiers.
-With Sol that accounts for all 313,257.
+`gaia_source_id` at all, and split on whether a raw walk would supply one:
+**233** where one would and **1,137** no walk reaches. With Sol that accounts
+for all 313,257. **233 is the walk-only figure**: the manifest no longer copies
+the column but derives it, and the derivation's fourth source — SIMBAD's
+frozen cross-IDs — takes the fills to 940 ungated and 792 through both gates,
+leaving 574 derived refusals that ship designation-keyed on the § 5 tiers. The
+binding's authority is the manifest's own `derivedVsFrozen` count
+(`scripts/catalog/membership/README.md` § The spine side), not this audit's
+identity bullet, which measures the frozen column.
 
 **Additions: the primaries admit ~64k records the spine lacks, and 55,008 of
 them are one upstream defect.** Every figure in this paragraph is counted per
@@ -303,9 +306,11 @@ not a membership one. Bright stars genuinely absent are few: β Phe
 **The rule.** Membership is the set of stars a frozen primary names by a
 classical designation — HD (IV/25, V/50, I/239's HD column), HR (V/50),
 Bayer / Flamsteed (WGSN, IV/27A), HIP (I/239), GJ (CNS5, V/70A), IAU proper
-name (WGSN) — keyed on that designation, with a `gaia_source_id` where a
-cross-walk binds one and the § 4 gate passes, or where the spine's frozen
-binding is SIMBAD-corroborated as above or kept by a review disposition. That
+name (WGSN) — keyed on that designation, with a `gaia_source_id` **derived**
+from the TYC and HIP cross-walks, CNS5 and SIMBAD's frozen cross-IDs through
+the § 4 gates, or settled by a committed review disposition where the sources
+disagree with each other or with the frozen column
+(`scripts/catalog/membership/README.md` § The binding is derived). That
 is AT-HYG's *stated* selection rule reproduced from the primaries. AT-HYG's
 *realised* membership is that rule minus its link defect and merge drops, and
 reproducing the realised set
@@ -338,14 +343,17 @@ parks on the existing ledger under the existing codes — Tycho-2 publishes no
 parallax, so most of the ~4.5k with neither a DR3 neighbour nor a HIP park,
 as do CNS5's 514 without a DR3 id, which no V tier reaches. Identity rides
 on the manifest's `binding` column, four classes: `crosswalk_gated`
-358,576 (a gated walk binds the source, or reproduces the spine's) ·
-`simbad_corroborated` 11,697 (the spine's binding, corroborated as above) ·
-`reviewed` 34 (the spine's binding, kept by its disposition row) · `none`
-6,622 (the 1,371 spine rows with no id, Sol among them; additions no gated
-walk binds). The review queue is `data/membership/binding-review.tsv` with
-its dispositions beside it — a SID event only where the canonical key was
-the Gaia id — zero rows. Scale for the swap: 63,672 mints, zero
-retirements, zero reinstatements.
+358,560 (a TYC, HIP or CNS5 candidate through the gates) ·
+`simbad_corroborated` 12,486 (SIMBAD's source for the record's own
+designation, through the gates) · `reviewed` 54 (a disposition row's value) ·
+`none` 5,829 (the 574 derived refusals, the withheld collision, Sol; additions
+no gated walk binds). The review queue is `data/membership/binding-review.tsv`
+with its dispositions beside it, 55 rows. The swap itself was 63,672 mints,
+zero retirements, zero reinstatements; deriving the binding then retired
+**8** Gaia-keyed ledger rows with a successor each — AT-HYG had carried the
+Gaia source as a row of its own beside the HIP record it belongs to, and the
+derived binding joins the two classes, which is a merge under § 7
+(`data/sid/retirements.tsv`).
 
 **The replacement parity gate.** The spine could not be regenerated (§ 3)
 because it snapshots a build that no longer exists; the primaries-derived
@@ -366,10 +374,11 @@ sits on a second manifest row, which is what says every mint keys `hd:` /
 `hip:` / `gl:` rather than falling through to a Gaia id. The frozen spine stays
 committed as the baseline (i)
 and (ii) read **and as the generator's input**: it is the one record of
-AT-HYG's merge decisions — which designations name one star, and which Gaia
-source it bound — that no primary supplies, so `build:membership` reads it
-for those and re-keys every row on the designations the primaries publish.
-Nothing else reads it. The record build's own label merge retires with the
+AT-HYG's merge decisions — which designations name one star — that no primary
+supplies, so `build:membership` reads it for those and re-keys every row on
+the designations the primaries publish; its `gaia_source_id` column is read
+only to diff the derived binding against. `build:classic-ids` reads it as the
+label merge's spine side. The record build's own label merge retires with the
 swap: labels and membership come from one join, and `readStars` reads the
 manifest's cells as final, so there is no second designation set to flip
 against. `label_flips.tsv` stays as the generator's assertion baseline and the
@@ -400,9 +409,11 @@ background source beside α Cen B agreed on both routes while carrying
 HD 128621 · HR 5460 · HIP 71681 · `alf Cen`. The assembled overlay is
 therefore gated through the record build's own `resolveGaiaSourceId` checks
 (G − V ≥ 1.0, sibling-letter attribution) before any count is taken, and
-187 rows are dropped to `data/classic-ids/rejected_bindings.tsv`. **A
+268 rows are dropped to `data/classic-ids/rejected_bindings.tsv`. **A
 consumer keying labels off the overlay inherits this gate for free; one that
-re-derives bindings from the raw cross-walks must re-apply it** —
+derives bindings from the raw cross-walks must apply it** — the membership
+generator does, through the same call
+(`scripts/catalog/membership/README.md` § The binding is derived);
 `data/classic-ids/README.md` § The binding gate carries the reach bound.
 
 **Ambiguity policy** (IV/25 `n_HD`/`n_TYC` > 1, and any designation
