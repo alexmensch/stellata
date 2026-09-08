@@ -1,6 +1,8 @@
 // The canon vantages the runner measures at, the order a run visits them
 // in, and the URL a scenario boots. README.md § What a run does.
 
+import { buildSharePath } from '../../src/client/util/url-state/share-path-pure';
+
 /** Context order for `--backend both`: the gated backend first, so the
  *  Tier 1 vantages open a pin run at the same positions a Tier 1 run
  *  visits them (`pins/README.md` § Run position). */
@@ -26,7 +28,7 @@ export const SCENARIO_NAMES = Object.keys(SCENARIOS) as readonly ScenarioName[];
 export const TIER1_SCENARIOS = ['mw120', 'sol'] as const satisfies readonly ScenarioName[];
 
 /**
- * `<base>/v/<blob>/` plus the fragment: the WebGL2 escape hatch where that
+ * `<base>/app/v/<blob>/` plus the fragment: the WebGL2 escape hatch where that
  * backend was asked for, and `--hash`'s own switches after it, which
  * `parseRunArgs` has already stripped of any leading `#`. The app reads
  * every switch off one hash, `&`-joined, so the two compose.
@@ -34,5 +36,8 @@ export const TIER1_SCENARIOS = ['mw120', 'sol'] as const satisfies readonly Scen
 export function scenarioUrl(base: string, blob: string, backend: Backend, hash = ''): string {
   const root = base.replace(/\/+$/, '');
   const parts = [backend === 'webgl2' ? 'renderer=webgl2' : '', hash].filter((p) => p !== '');
-  return `${root}/v/${blob}/${parts.length > 0 ? `#${parts.join('&')}` : ''}`;
+  // buildSharePath rather than a second spelling of the path form — it owns
+  // the app's own prefix, and a runner pointed at the wrong one measures the
+  // default view while reporting the scenario's name.
+  return `${root}${buildSharePath(blob)}${parts.length > 0 ? `#${parts.join('&')}` : ''}`;
 }

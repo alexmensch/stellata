@@ -17,10 +17,10 @@ export default defineConfig(() => ({
     target: 'es2020',
     rollupOptions: {
       // One key per page. The key is cosmetic; the emitted path is the
-      // input's own path relative to `root`, which is what puts the page
-      // at dist/home/index.html and so serves it at /home.
+      // input's own path relative to `root`, which is what puts the
+      // homepage at dist/index.html and so serves it at /.
       input: {
-        home: resolve(import.meta.dirname, 'src/site/home/index.html'),
+        home: resolve(import.meta.dirname, 'src/site/index.html'),
       },
     },
   },
