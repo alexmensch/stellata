@@ -9,7 +9,7 @@ fails.
 
 ```
 bailer-jones-dr3.tsv   ~26 MB, LFS. Keyed by Gaia DR3 source_id.
-                       365,762 rows.
+                       365,986 rows.
 ```
 
 ## Provenance
@@ -36,8 +36,13 @@ covers it. A record placed by Hipparcos, CNS5, Gliese, SIMBAD or a bound
 sibling is excluded deliberately: regressing a non-Gaia parallax onto B-J's
 Galactic-density prior discards a measurement for one computed from a
 different, worse one. Coverage pins as `bjOverridden / bjEligible` in
-`scripts/catalog/build-catalog-expected.json`. See
-`scripts/catalog/distance/README.md` § Multi-layer distance refinement.
+`scripts/catalog/build-catalog-expected.json`, and the **shortfall between
+them pins at zero** (`bjEligibleNotPulled`): an eligible record has its own
+DR3 parallax, so this publication covers it, and an absence means this pull's
+request set — the membership manifest's `gaia_source_id` column, § Refresh
+below — has moved since the table was pulled. See
+`scripts/catalog/distance/README.md` § Multi-layer distance refinement and
+§ Manifest-derived pulls.
 
 ## Refresh
 

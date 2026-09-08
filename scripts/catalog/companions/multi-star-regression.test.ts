@@ -101,7 +101,7 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // R(epoch) and as pairs stop being emitted, and RISES when pairs enter the
 // sweep for the first time — new coverage, not a placement regression. Say
 // which of the two moved it before changing the number.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1463;
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1464;
 
 // ---- Corpus row types ----------------------------------------------------
 
