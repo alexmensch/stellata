@@ -5,9 +5,9 @@
     "sha256": "b699f318754d0584ded903ca969bb7dfd5f62140ea1ec81b5e9819324e060b4a"
   },
   "retirements": {
-    "rows": 285,
+    "rows": 286,
     "max_sid": 368276,
-    "sha256": "0d5075b19e91f1bd54d692195f75c71cbb7496ecbd0c9f4c8730d825c2f5fcb9"
+    "sha256": "2ec275b4c005a9d485e267e67d65ed9dba2074e00288efd6adfe24a2df1c8727"
   },
   "reinstatements": {
     "rows": 12,

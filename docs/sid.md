@@ -219,6 +219,14 @@ HD 2094 as a row of its own beside the HIP record it names, and the
 label merge moving onto the derived binding put the designation back
 on that record.
 
+A merge under § 4.3 reaches the build two ways: the derived binding
+moving a Gaia source onto the classically-keyed record it belongs to,
+or a `fold` row in `data/membership/spine-corrections.tsv` saying AT-HYG
+carried one star twice. Both retire the same way; the fold is for the
+duplicate the derivation cannot dissolve on its own, because the twin
+holds the very source the survivor would otherwise derive (VV Lyn,
+SID 324680 → 324702).
+
 `data/sid/reinstatements.tsv` (append-only, same guard) is the
 reverse operation for a retired object that reappears — a pipeline
 refinement restores an honestly-derived record for a component an
