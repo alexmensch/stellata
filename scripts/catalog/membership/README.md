@@ -257,5 +257,5 @@ The spine stays committed as the baseline gate (i) reads and as the generator's
 own merge-decision input — the one record of AT-HYG's merge decisions and
 bindings that no primary supplies. Unsupplied is not unverified: the audited
 residual carried on AT-HYG's authority alone is zero
-(`../spine/README.md` § The primaries audit). Nothing else reads it. After the swap release the baseline becomes the
-previous manifest.
+(`../spine/README.md` § The primaries audit). Nothing else reads it. After the
+swap release the baseline becomes the previous manifest.
