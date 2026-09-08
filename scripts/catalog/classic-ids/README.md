@@ -310,10 +310,10 @@ to vacate.
 `data/classic-ids/classic_id_overrides.tsv` pins one record's one identifier —
 an explicit value, or empty for "keep the spine's". It is for the case
 `docs/catalog-driver.md` § 4 names: review finding the CDS join wrong. It holds
-**one row** — Propus, whose evidence the file's own header states: Gaia fits
-one source across a resolved Tycho-2 pair and its cross-match keys it to the
-sibling, so § 4 precedence would take η Gem's own HD off the star in favour of
-the sibling's. Two further shapes deliberately stay out of it:
+**three rows**, whose evidence the file's own header states: Propus, where a
+Gaia source keyed to the wrong component of a resolved Tycho-2 pair would take
+η Gem's own HD off the star, and the Gl 563.2 pair, where the overlay is right
+and the comparison below cannot hear it. Two further shapes stay out of it:
 
 - an addition that would make another record's designation ambiguous is
   withheld mechanically by the guard above;
@@ -395,9 +395,9 @@ match is not reachable).
 § 4 precedence never fires and the spine's letter stands — Gl 563.2 A/B, where
 AT-HYG letters HIP 72509/72511 opposite to CNS5, SIMBAD and the HIP alike.
 Comparing letters strictly is not the fix: `gj_comp` states a system's letters
-COMBINED (`ABCD`), so a component cell would then read as a disagreement the
-overlay wins with the system's spelling. A rule here has to say the overlay
-wins only where its candidate is at least as specific.
+COMBINED (`ABCD`), so a component cell would read as a disagreement the overlay
+wins with the system's spelling. A rule has to say the overlay wins only where
+its candidate is at least as specific; the two records take overrides today.
 
 **That `.0` is a join hazard beyond the merge, and `normaliseGjKey`
 (`../catalog-pure.ts`) is where it is handled once.** `cns5AstrometryByGj`

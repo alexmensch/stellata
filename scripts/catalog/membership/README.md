@@ -105,7 +105,9 @@ Tegmine; `Gl 596.1A` to `GJ 9527` on ψ Ser under CNS5's renumbering; and one
 curated refusal (`../classic-ids/README.md` § Curated overrides): Propus, where
 Gaia fits one source across a resolved Tycho-2 pair and its cross-match keys
 that source to the sibling, so the overlay would hand η Gem the sibling's
-HD 253820 in place of its own HD 42995.
+HD 253820 in place of its own HD 42995. Two further overrides sit beside it,
+unrelated to the re-key: Gl 563.2 A/B, whose letters AT-HYG swapped and whose
+correction the merge's own comparison cannot express.
 
 The binding is **derived**, not copied: § The binding is derived walks four
 committed sources through both gates and writes what survives. The spine's

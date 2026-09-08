@@ -429,12 +429,12 @@ after the join 137 sources carry >1 HD and 7 HDs land on >1 source).
 disagreement — surfacing AT-HYG's cross-ID errors is the accuracy
 point of the swap; Izar is the case that settles it (AT-HYG says HR 5505,
 IV/27A and V/50 say 5506, and ε Boo IS HR 5506). Every flip is enumerated in
-the parity ledger (`data/classic-ids/label_flips.tsv`, 724 rows: 134 flips,
-422 additions, 37 suppressions, 130 extras, 1 curated override) with a curated
+the parity ledger (`data/classic-ids/label_flips.tsv`, 726 rows: 134 flips,
+422 additions, 37 suppressions, 130 extras, 3 curated overrides) with a curated
 override file for cases where review finds the CDS join wrong (same pattern as
-`wds_xids_overrides.tsv`; one row, Propus — Gaia fits one source across a
-resolved Tycho-2 pair and its cross-match keys that source to the sibling, so
-the overlay would take η Gem's own HD off it).
+`wds_xids_overrides.tsv`; three rows — Propus, where Gaia fits one source
+across a resolved Tycho-2 pair and its cross-match keys it to the sibling, and
+the Gl 563.2 pair, whose component letters AT-HYG swapped).
 
 **One mechanical exception, and it is an identity rule rather than a label
 one: the merge may not turn an unambiguous spine designation into an ambiguous

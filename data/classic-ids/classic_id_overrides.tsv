@@ -21,9 +21,22 @@ gaia_source_id	field	value
 # sibling extra, just § 4 precedence handing a star its neighbour's number and
 # folding the neighbour's own record away as a component.
 #
+# Gl 563.2 A/B is the second shape, and the opposite failure: the overlay is
+# RIGHT and the merge cannot hear it. CNS5 rows 3664/3665, SIMBAD and the HIP
+# agree that 6228695236338166528 (HIP 72509, the fainter, CD-25 10553B) is
+# component B and 6228695270698475392 (HIP 72511, CD-25 10553A) is A; AT-HYG
+# letters them the opposite way round. The merge compares `gl` on the bare GJ
+# number with the component letter stripped, so a SWAPPED letter reads as
+# agreement and section 4 precedence never fires. Both records key hip:, so no
+# sid rides on either cell. What a class-level rule would have to say instead:
+# scripts/catalog/classic-ids/README.md section Counts and the parity
+# measurement.
+#
 # Two shapes DO NOT belong here, because a label exception is the wrong tool:
 #   - an addition that would make another record's designation ambiguous is
 #     withheld mechanically by the collision guard (p Eridani, Gl 277A);
 #   - a Gliese renumbering (Gl 157.1 -> GJ 9140) is an identity bridge in
 #     data/sid/sameas-overrides.tsv, since both designations name the star.
 3377072212924335488	hd	
+6228695236338166528	gl	Gl 563.2B
+6228695270698475392	gl	Gl 563.2A
