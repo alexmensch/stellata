@@ -36,6 +36,7 @@ const ROOT_FILES = [
  *  `public/` is otherwise gitignored, so no directory root reaches it. */
 const PROSE_SURFACES = [
   'README.md', 'CITATION.cff', 'public/llms.txt', 'src/client/index.html',
+  'src/site/home/index.html',
 ];
 
 /** Any three-hundred-thousand-odd star figure: `380,000`, `~384k`, `390k`. */
