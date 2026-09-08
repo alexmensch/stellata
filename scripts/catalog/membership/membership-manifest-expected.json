@@ -74,12 +74,49 @@
   },
   "componentRows": 471,
   "bindingByClass": {
-    "crosswalk_gated": 358576,
-    "simbad_corroborated": 11697,
-    "reviewed": 34,
-    "none": 6622
+    "crosswalk_gated": 358559,
+    "simbad_corroborated": 12485,
+    "reviewed": 54,
+    "none": 5831
   },
-  "bindingReviewRows": 34,
+  "bindingReviewRows": 55,
+  "bindingReviewByVerdict": {
+    "differs": 8,
+    "unreached": 43,
+    "contested": 3,
+    "collision": 1
+  },
+  "bindingDispositions": {
+    "derived": 7,
+    "frozen": 46,
+    "other": 1,
+    "none": 1
+  },
+  "derivedVsFrozen": {
+    "match": 311835,
+    "fill": 790,
+    "refused": 576,
+    "differs": 8,
+    "unreached": 43,
+    "contested": 3,
+    "collision": 1,
+    "sol": 1
+  },
+  "derivedVia": {
+    "tyc": 298439,
+    "hip": 867,
+    "cns5": 837,
+    "simbad": 12489
+  },
+  "derivedConsensus": 295200,
+  "derivedContestedMatch": 373,
+  "derivedRejected": {
+    "mag": 200,
+    "sibling": 89
+  },
+  "derivedUngateable": 7,
+  "derivedWeighedNoGMag": 0,
+  "derivedWeighedNullGMag": 39,
   "labelDropsByReason": {
     "flamsteed_unattested": 119,
     "hd_unattested": 1
@@ -93,7 +130,7 @@
     "flam": 0,
     "proper": 46
   },
-  "additionSourceOnSpine": 105,
+  "additionSourceOnSpine": 109,
   "additionSourceGateRefused": 13,
   "additionSourceShared": 0,
   "additionGaiaKeyedOnly": 0,
