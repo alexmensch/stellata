@@ -42,15 +42,19 @@ does:
   Worker imports it — a second spelling of `/app` here would break every
   share link silently.
 
-**`not_found_handling` is deliberately `"none"`.** As
-`"single-page-application"` it answered every unmatched path with the
-*root* `index.html`, which is now the homepage: a share link would have
-served marketing, and every typo a 200. One consequence is worth knowing
-before touching a loader — **a missing artifact now arrives as a real
-404** rather than as HTML that fails to parse. Every optional loader
-already answers `!res.ok` with null, so absence is handled on the direct
-path; the parse-error branch still covers a present-but-truncated
-artifact.
+**`not_found_handling` is deliberately `"404-page"`, not
+`"single-page-application"`.** As the latter it answered every unmatched
+path with the *root* `index.html`, which is now the homepage: a share link
+would have served marketing, and every typo a 200. It now serves
+`dist/404.html` (built from `src/site/404.html`) with a real 404 status.
+
+One consequence is worth knowing before touching a loader — **a missing
+artifact now arrives as a real 404** rather than as HTML that fails to
+parse. Every optional loader already answers `!res.ok` with null, so
+absence is handled on the direct path; the parse-error branch still covers
+a present-but-truncated artifact. Note the 404 page *is* an HTML body, so
+a loader that ignored status and only guarded the parse would still be
+wrong — for a different reason than before.
 
 ## `@cloudflare/workers-types` leaks globally
 
