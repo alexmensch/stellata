@@ -7,25 +7,26 @@ and § 5 (the designation-constellation cascade); measured coverage, and why the
 inherited spine is load-bearing beside it, `data/classic-ids/README.md`
 § Coverage.
 
-Two entry points, both on the shipping path:
+Two entry points, and they split cleanly: **this build joins the overlay,
+`build:membership` applies it.**
 
-- `pnpm run build:classic-ids` regenerates the committed overlay and the label
-  merge's review queue, both asserted byte-identical in CI so artifact and code
-  land together.
-- `build:membership` calls `mergeClassicIdLabels` as it assembles each manifest
-  row — this folder is where the shipped LABELS come from. The record build
-  reads them off the manifest and applies only
-  `applyDesignationConstellations` (§ The designation constellation).
+- `pnpm run build:classic-ids` regenerates the committed overlay and its two
+  gate queues, asserted byte-identical in CI. It reads no spine, merges nothing.
+- `build:membership` runs `mergeClassicIdLabels` as it assembles each manifest
+  row, keyed on the binding it derived, and writes
+  `data/classic-ids/label_flips.tsv`. The record build reads the merged cells
+  off the manifest and applies only `applyDesignationConstellations`
+  (§ The designation constellation).
 
 ## Files in this area
 
 ```
 scripts/catalog/classic-ids/
   build-classic-id-overlay.ts     I/O orchestrator: reads the frozen tables,
-                                  both Gaia cross-walks, the gate's three
-                                  evidence tables and the spine, writes the
-                                  overlay and its three review queues, and
-                                  asserts the count snapshot.
+                                  both Gaia cross-walks and the gate's three
+                                  evidence tables, writes the overlay and its
+                                  two gate queues, and asserts the count
+                                  snapshot.
   binding-candidates.ts (+ test)  The cross-walk loaders, and the source_ids
                                   the gate can weigh. Shared with
                                   ../astrometry-request/, which has to pull a
@@ -55,22 +56,21 @@ scripts/catalog/classic-ids/
                                   no bare-number fold beneath it (§ The GJ fold
                                   stops at the component). This folder parses
                                   that file, ../distance/ routes on it. Its
-                                  motion is a
-                                  `CitedProperMotion` (../cited-proper-motion.ts)
-                                  because 87% of CNS5's are Gaia's own
-                                  republished and the rescue's skip rule needs
-                                  the citation to see that; an uncited one is
-                                  dropped whole, position intact. Its parallax
-                                  is a `CitedParallax` (../cited-parallax.ts)
-                                  for the same reason and on the same terms,
-                                  carrying CNS5's own `e_plx_mas` so the
-                                  cascade's precision floor has an error bar to
-                                  read on this tier as on every other.
+                                  motion and parallax arrive as a
+                                  `CitedProperMotion` / `CitedParallax`
+                                  (../cited-proper-motion.ts,
+                                  ../cited-parallax.ts) because most of CNS5's
+                                  are Gaia's own republished and the skip rules
+                                  read the citation to see that
+                                  (data/classic-ids/README.md § The astrometry
+                                  re-slice); the parallax carries CNS5's own
+                                  `e_plx_mas` so the cascade's precision floor
+                                  has an error bar on this tier as on every
+                                  other.
   cns5-fixture.ts                 Test-only Cns5Row / Cns5Astrometry builders.
-                                  A module, not an export from a test file:
-                                  four suites across two folders build these,
-                                  so a column added to either interface lands
-                                  in one place.
+                                  A module, not a test-file export: four suites
+                                  across two folders build these, so a new
+                                  column lands in one place.
   classic-id-overlay-pure.ts      The join, the binding gate, its counts, and
     (+ test)                      the overlay TSV codec (both directions).
                                   Pure.
@@ -119,12 +119,10 @@ hip       gaia_dr3_hip_xmatch, plus CNS5's own hip column
 gj        CNS5's EDR3 source_id, else its hip → hip walk
 ```
 
-**HD routes entirely through TYC.** Every HD-bearing AT-HYG row also
-carries a TYC (audit 2026-07-27), so the HIP route is a cross-check, not
-a second authority: where both resolve and disagree, the HD route keeps
-the label and the row is appended to
-`data/classic-ids/hd_hip_route_disagreements.tsv` for the parity
-ledger's review queue rather than resolved mechanically.
+**HD routes entirely through TYC.** Every HD-bearing AT-HYG row also carries a
+TYC (audit 2026-07-27), so the HIP route is a cross-check, not a second
+authority: where both resolve and disagree the HD route keeps the label and the
+row goes to a review queue (`data/classic-ids/README.md`).
 
 **Every route above is an unvetted best-neighbour walk, so the assembled
 overlay is then gated** — `applyBindingGate` re-runs the record build's own
@@ -189,12 +187,16 @@ as one string peaks near a gigabyte alongside the join's own maps.
 
 ## The label merge
 
-`mergeClassicIdLabels` (`label-merge-pure.ts`) runs over the overlay from two
-places — `build:classic-ids` over the spine rows, and `build:membership` over
-the same rows as it assembles the manifest — through one pure function, and the
-generator asserts the resulting review queue is byte-identical to the committed
-one. That equality is the guarantee that `data/classic-ids/label_flips.tsv`
-describes the labels actually shipped.
+`mergeClassicIdLabels` (`label-merge-pure.ts`) runs in **one place**, and one
+producer is what makes `label_flips.tsv` describe the labels actually shipped:
+it used to take a byte-identity assertion between two runs, and that assertion
+is what pinned the merge to the spine's frozen `gaia_source_id` cell.
+
+**The key is the DERIVED binding** (`../membership/README.md` § The binding is
+derived). Keyed on the frozen cell a label names a source the record is no
+longer bound to, and 1,371 rows reach no overlay entry where the derivation
+leaves 578 — mostly the bright end, whose saturated 2-parameter sources are an
+identity statement rather than a measurement.
 
 **`build:catalog` runs no merge**: `readStars` reads the manifest's cells,
 `hd_alt` / `hr_alt` included, as FINAL. A second pass would re-apply an overlay
@@ -265,9 +267,7 @@ this asks about. Promotion can still decline to render a member row, so the set
 is a **superset** of what ships (35 withheld — 34 hd + the 1 hr — across the 34
 records whose system names a sibling, of which 33 render one today), and
 that direction is deliberate: withholding one alias too many is a reviewable
-queue row, leaving one on the wrong record is a wrong answer. It must be derived
-from the committed table by BOTH merge callers, or the two review queues stop
-being byte-identical.
+queue row, leaving one on the wrong record is a wrong answer.
 
 An alias also clears the collision guard's rule, which the guard itself cannot
 apply: aliases are not display cells, so its tally never sees them, and an alias
@@ -275,9 +275,8 @@ equal to a value another record DISPLAYS would go ambiguous under
 `docs/sid.md` § 4.1 and cost both records the key. Those are withheld to
 `extra-dropped`. 0 fire today — measured, and now also guarded.
 
-The **69** ambiguous designations `sid:allocate` still drops (57 `hd:`, 11
-`hr:`, 1 `gl:`) are spine-side component pairs, unrelated to this list;
-`../../sid/README.md` § Ambiguous designations carries the regenerating command.
+The **69** ambiguous designations `sid:allocate` drops are spine-side component
+pairs, unrelated to this list (`../../sid/README.md` § Ambiguous designations).
 No carried alias is among them, and none keys a ledger row, so the additions
 cannot fuse two same-as classes or move a canonical key.
 
@@ -310,8 +309,11 @@ to vacate.
 
 `data/classic-ids/classic_id_overrides.tsv` pins one record's one identifier —
 an explicit value, or empty for "keep the spine's". It is for the case
-`docs/catalog-driver.md` § 4 names: review finding the CDS join wrong. It is
-**empty today**, and two shapes deliberately stay out of it:
+`docs/catalog-driver.md` § 4 names: review finding the CDS join wrong. It holds
+**one row** — Propus, whose evidence the file's own header states: Gaia fits
+one source across a resolved Tycho-2 pair and its cross-match keys it to the
+sibling, so § 4 precedence would take η Gem's own HD off the star in favour of
+the sibling's. Two further shapes deliberately stay out of it:
 
 - an addition that would make another record's designation ambiguous is
   withheld mechanically by the guard above;
@@ -343,9 +345,9 @@ Keyed on the DESIGNATION, deliberately, where the label overlay is keyed on
 - A designation → designation cross index carries **no astrometric claim** — it
   says the star named HD 216956 is also named α PsA, never which Gaia source
   holds that star's photons — so it needs no binding gate.
-- That is also the only way to reach the bright tier. Gaia saturates near
-  G ≈ 3, so 117 records at V ≤ 3 have no overlay row at all, Fomalhaut among
-  them, and their promoted companions compose names off them.
+- That is also the only way to reach the bright tier: Gaia saturates near
+  G ≈ 3, so most records at V ≤ 3 have no overlay row at all, Fomalhaut among
+  them (`data/classic-ids/README.md` § Coverage).
 - Measured over the 3,303 spine rows carrying a Bayer or Flamsteed cell, the
   HD/HIP route covers 3,180 against the source_id route's 2,474, with zero
   disagreements and nothing the overlay reaches that it does not. One tier
@@ -367,7 +369,7 @@ constellation out of the designation string and loses only its expanded alias
 `classic-id-overlay-expected.json` pins the counts through the same
 `compareBuildCounts` / `UPDATE_BUILD_COUNTS` machinery
 `build-catalog.ts` uses (`assertOrUpdateSnapshot` in
-`../../util/snapshot-assert.ts`). Four groups:
+`../../util/snapshot-assert.ts`). Three groups:
 
 - **Input + route sizes** — upstream row counts, how many Tycho ids
   resolve, the HIP-route agree / disagree / HIP-only split. Pre-gate.
@@ -375,17 +377,12 @@ constellation out of the designation string and loses only its expanded alias
   each designation, plus the multi-valued cardinalities. Post-gate.
 - **`gate*`** — rows dropped per gate, and `gateSkippedNoHipVMag`, the
   population carrying no printed V under any HIP and so unvettable. That
-  last one is the count to watch alongside
-  `athygBrightRowsWithoutOverlayEntry`: it is where the known-unfixed
+  last one is the count to watch alongside `../membership/`'s
+  `spineBrightRowsWithoutOverlayEntry`: it is where the known-unfixed
   mis-bindings live.
-- **`label*`** — the merge's own per-identifier routing, which IS the label
-  parity measurement: `labelAgree + labelFlipped + labelSpineOnly` is every
-  record the spine labels and `labelAgree` is the subset the overlay
-  reproduces, so coverage is a ratio of counts the build itself produced
-  rather than a second walk that could disagree with the shipped labels. The
-  same set is pinned in `../build-catalog-expected.json` from the record side.
-- **`spine*`** — rows, no-source_id rows, rows with no overlay entry, and the
-  bright-tier split of that last one.
+
+The merge's `label*` routing and the spine-side coverage counts are pinned in
+`../membership/membership-manifest-expected.json`, the build that runs it.
 
 Values compare on the merge's own normalisation: `gl` on its bare GJ number
 (the `Gl`/`GJ` prefix and component suffix are display forms, and CNS5's
@@ -393,6 +390,14 @@ trailing `.0` on whole numbers is a formatting artifact — not collapsing it
 scored 14 same-star pairs as disagreements), `flam` on the number alone (the
 row is already keyed on one source_id, so a same-number-different-constellation
 match is not reachable).
+
+**Collapsing the suffix means a SWAPPED `gl` letter reads as agreement**, so
+§ 4 precedence never fires and the spine's letter stands — Gl 563.2 A/B, where
+AT-HYG letters HIP 72509/72511 opposite to CNS5, SIMBAD and the HIP alike.
+Comparing letters strictly is not the fix: `gj_comp` states a system's letters
+COMBINED (`ABCD`), so a component cell would then read as a disagreement the
+overlay wins with the system's spelling. A rule here has to say the overlay
+wins only where its candidate is at least as specific.
 
 **That `.0` is a join hazard beyond the merge, and `normaliseGjKey`
 (`../catalog-pure.ts`) is where it is handled once.** `cns5AstrometryByGj`
@@ -442,7 +447,3 @@ read off a system entry is a blend that advertises itself as one
 (`vTierIsSystemBlend`), and a parallax off it is a distance the components
 share. Neither is true of a position.
 
-`spineBrightRowsWithoutOverlayEntry` is the count to watch: Gaia saturates near
-G ≈ 3, so a source_id-keyed table structurally cannot carry the brightest
-stars, and a future session reading a high `overlayHd` could otherwise conclude
-the overlay replaces the spine's label columns outright.

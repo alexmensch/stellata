@@ -34,7 +34,9 @@ scripts/catalog/membership/
                                   spine, the primaries, the overlay, the
                                   binding gates' evidence, multiples.tsv and
                                   the review dispositions, writes
-                                  data/membership/, and pins
+                                  data/membership/ plus the label merge's
+                                  queue (data/classic-ids/label_flips.tsv),
+                                  and pins
                                   membership-manifest-expected.json.
   membership-manifest-gate.test.ts
                                   The replacement parity gate, (i)–(iii) below,
@@ -85,14 +87,25 @@ and never by walk order. Sol is first, keyed `sol:sun` alone.
 Each spine row becomes one manifest row. The generator reads the spine as the
 frozen record of AT-HYG's **merge decisions** — which designations name one
 star — which is the one thing AT-HYG supplies that no primary does
-(`docs/catalog-driver.md` § 3.1). The spine's identifier cells pass through the
-same `mergeClassicIdLabels` call `build:classic-ids` runs, keyed on the spine's
-own `gaia_source_id` as that build keys it, and the generator asserts the
-resulting review queue is byte-identical to the committed `label_flips.tsv`.
-**That merge happens once, here.** The record build reads the manifest's cells
-as final and runs no merge of its own, so the equality is what says the flips
-queue still enumerates every departure from the spine's cells — the property
-replayed by `../spine/README.md` § Parity is the manifest's gate now.
+(`docs/catalog-driver.md` § 3.1). The spine's identifier cells then pass
+through `mergeClassicIdLabels`, **keyed on the binding derived below and never
+on the frozen cell**, and this build writes the resulting
+`data/classic-ids/label_flips.tsv`. **The merge happens once, here**, and one
+producer is what says that queue enumerates every departure from the spine's
+cells — the property replayed by `../spine/README.md` § Parity is the
+manifest's gate now. The record build reads the manifest's cells as final and
+runs no merge of its own.
+
+Keying on the derivation is what lets a filled binding carry labels: 578 spine
+rows reach no source against the frozen column's 1,371, and the difference is
+where the overlay can now speak. It moves five cells today — HD 2094 onto
+HIP 1997, whose own addition row folds away as a component (a § 7 merge,
+retiring `hd:2094` in favour of `hip:1997`); GJ 9013 onto Ankaa; GJ 9257AB onto
+Tegmine; `Gl 596.1A` to `GJ 9527` on ψ Ser under CNS5's renumbering; and one
+curated refusal (`../classic-ids/README.md` § Curated overrides): Propus, where
+Gaia fits one source across a resolved Tycho-2 pair and its cross-match keys
+that source to the sibling, so the overlay would hand η Gem the sibling's
+HD 253820 in place of its own HD 42995.
 
 The binding is **derived**, not copied: § The binding is derived walks four
 committed sources through both gates and writes what survives. The spine's
@@ -356,8 +369,10 @@ the generator, so the record build applies no label pass to them
 
 The spine stays committed as the baseline gate (i) reads, as the record of
 AT-HYG's merge decisions — which designations name one star — that the
-generator re-keys, as the label merge's spine side in `build:classic-ids`, and
-as the frozen `gaia_source_id` column the derivation is diffed against
+generator re-keys, as the inherited label cells the merge above starts from,
+and as the frozen `gaia_source_id` column the derivation is diffed against
 (§ The spine side). Its binding cell is not an input to the manifest's: no row
-takes a value from it except through a committed disposition row that says so.
-After the swap release the baseline becomes the previous manifest.
+takes a value from it except through a committed disposition row that says so,
+and since the label merge moved onto the derived binding `build:classic-ids`
+does not read this file at all. After the swap release the baseline becomes the
+previous manifest.

@@ -4,7 +4,11 @@
 
 import { SOL_PROPER_NAME, normaliseGjKey } from '../catalog-pure';
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';
-import type { BindingEvidence, ClassicIdOverlay } from '../classic-ids/classic-id-overlay-pure';
+import {
+  BRIGHT_TIER_MAG_CEILING,
+  type BindingEvidence,
+  type ClassicIdOverlay,
+} from '../classic-ids/classic-id-overlay-pure';
 import {
   BINDING_SOURCES,
   bindingCandidates,
@@ -28,7 +32,7 @@ import {
   type LabelOverrides,
 } from '../classic-ids/label-merge-pure';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
-import { parseIntOrNull } from '../parse/corpus-tsv';
+import { parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
 import { tycho2VMagnitude } from '../photometry/v-magnitude-pure';
 import type { SpineRow } from '../spine/inherited-spine-pure';
 import {
@@ -254,6 +258,16 @@ export interface MembershipCounts extends LabelMergeCounts {
   additionsWithBlockedDesignation: number;
   rowsWithHdAlt: number;
   rowsWithHrAlt: number;
+  /** Spine rows whose derived binding is empty, so no overlay entry can reach
+   *  them and their labels are the spine's whole story. */
+  spineRowsWithoutSourceId: number;
+  /** Spine rows at V <= `BRIGHT_TIER_MAG_CEILING`, and how many of those the
+   *  overlay has no row for. Gaia saturates around G = 3, so a source_id-keyed
+   *  table structurally cannot carry the brightest stars — the pair pins that
+   *  population's size, against reading a high `overlayHd` as the overlay
+   *  having replaced the spine's label columns outright. */
+  spineBrightRows: number;
+  spineBrightRowsWithoutOverlayEntry: number;
 }
 
 export interface MembershipResult {
@@ -261,8 +275,8 @@ export interface MembershipResult {
   ledger: AdditionLedgerRow[];
   bindingReview: BindingReviewRow[];
   labelDrops: LabelDropRow[];
-  /** The spine-side label merge's review queue — must equal the committed
-   *  `label_flips.tsv` while the record build still merges for itself. */
+  /** The spine-side label merge's review queue, written to `label_flips.tsv`:
+   *  every departure from the spine's own label cells. */
   flips: LabelFlip[];
   counts: MembershipCounts;
 }
@@ -976,16 +990,6 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   const { spine, tables, overlay, overrides, siblingRenderedSourceIds, evidence, dispositions } = input;
   const idx = indexPrimaries(tables);
 
-  const spineSides = spine.map(spineLabelMergeRecord);
-  const records = spineSides.map((s) => s.record);
-  const merge = mergeClassicIdLabels({
-    records,
-    labels: spineSides.map((s) => s.label),
-    overlay,
-    overrides,
-    siblingRenderedSourceIds,
-  });
-
   const bindingByClass: Record<BindingClass, number> = {
     crosswalk_gated: 0, simbad_corroborated: 0, reviewed: 0, none: 0,
   };
@@ -1023,7 +1027,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   let derivedWeighedNullGMag = 0;
   const applied = new Set<string>();
 
-  deriveSpineBindings(spine, tables, idx, evidence).forEach((b, i) => {
+  const settled = deriveSpineBindings(spine, tables, idx, evidence).map((b, i) => {
     const spineRow = spine[i];
     derivedVsFrozen[b.comparison]++;
     let value: string | null = null;
@@ -1055,10 +1059,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
         if (b.comparison === 'match' && passingRunnersUp(d).length > 0) derivedContestedMatch++;
       }
     }
-    const record = records[i];
-    record.gaiaSourceId = value;
-    const row = manifestRowFromRecord(spineRow, record, binding);
-    attest(row, dropUnattestedLabels(row, tables, idx, labelDrops));
+    return { value, binding };
   });
   for (const key of dispositions.keys()) {
     if (!applied.has(key)) {
@@ -1066,13 +1067,39 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     }
   }
   const held = new Map<string, number>();
-  for (const r of records) {
-    if (r.gaiaSourceId !== null) held.set(r.gaiaSourceId, (held.get(r.gaiaSourceId) ?? 0) + 1);
+  for (const s of settled) {
+    if (s.value !== null) held.set(s.value, (held.get(s.value) ?? 0) + 1);
   }
   const duplicated = [...held].filter(([, n]) => n > 1).map(([id]) => id);
   if (duplicated.length > 0) {
     throw new Error(`two spine rows bind one Gaia source: ${duplicated.join(', ')}`);
   }
+
+  // The merge keys on the DERIVED binding, so the labels a record takes are the
+  // ones the overlay hangs on the source it is actually bound to.
+  const spineSides = spine.map((row, i) => spineLabelMergeRecord(row, settled[i].value));
+  const records = spineSides.map((s) => s.record);
+  const merge = mergeClassicIdLabels({
+    records,
+    labels: spineSides.map((s) => s.label),
+    overlay,
+    overrides,
+    siblingRenderedSourceIds,
+  });
+  let spineRowsWithoutSourceId = 0;
+  let spineBrightRows = 0;
+  let spineBrightRowsWithoutOverlayEntry = 0;
+  records.forEach((record, i) => {
+    const noEntry = record.gaiaSourceId === null || !overlay.has(record.gaiaSourceId);
+    if (record.gaiaSourceId === null) spineRowsWithoutSourceId++;
+    const mag = parseFloatOrNull(spine[i].mag);
+    if (mag !== null && mag <= BRIGHT_TIER_MAG_CEILING) {
+      spineBrightRows++;
+      if (noEntry) spineBrightRowsWithoutOverlayEntry++;
+    }
+    const row = manifestRowFromRecord(spine[i], record, settled[i].binding);
+    attest(row, dropUnattestedLabels(row, tables, idx, labelDrops));
+  });
 
   const claims = spineClaims(records);
   const additions = findAdditions(tables, spineKeys(spine), idx);
@@ -1165,6 +1192,9 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     sharedDesignations: [...owners.values()].filter((n) => n > 1).length,
     rowsWithHdAlt: sorted.filter((r) => r.hd_alt !== '').length,
     rowsWithHrAlt: sorted.filter((r) => r.hr_alt !== '').length,
+    spineRowsWithoutSourceId,
+    spineBrightRows,
+    spineBrightRowsWithoutOverlayEntry,
   };
   return { rows: sorted, ledger, bindingReview, labelDrops, flips: merge.flips, counts };
 }

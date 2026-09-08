@@ -1,31 +1,31 @@
 {
-  "labelNoOverlayEntry": 15017,
+  "labelNoOverlayEntry": 14976,
   "labelAgree": {
-    "hip": 99029,
-    "hd": 280528,
-    "hr": 7282,
-    "gl": 1820,
+    "hip": 99058,
+    "hd": 280531,
+    "hr": 7283,
+    "gl": 1853,
     "flam": 2028
   },
   "labelAdded": {
     "hip": 0,
-    "hd": 148,
+    "hd": 149,
     "hr": 4,
-    "gl": 198,
+    "gl": 200,
     "flam": 69
   },
   "labelFlipped": {
     "hip": 0,
     "hd": 43,
     "hr": 23,
-    "gl": 65,
+    "gl": 66,
     "flam": 2
   },
   "labelSpineOnly": {
-    "hip": 18623,
-    "hd": 12755,
-    "hr": 1707,
-    "gl": 1262,
+    "hip": 18594,
+    "hd": 12751,
+    "hr": 1706,
+    "gl": 1228,
     "flam": 694
   },
   "labelSuppressed": {
@@ -58,26 +58,26 @@
   },
   "labelOverridden": {
     "hip": 0,
-    "hd": 0,
+    "hd": 1,
     "hr": 0,
     "gl": 0,
     "flam": 0
   },
-  "rows": 376929,
+  "rows": 376928,
   "spineRows": 313257,
-  "additionRows": 63672,
+  "additionRows": 63671,
   "additionsByReason": {
-    "admitted:hd_link_gap": 54812,
+    "admitted:hd_link_gap": 54811,
     "admitted:hd_omitted": 5060,
     "admitted:hip_omitted": 444,
     "admitted:cns5_census": 3356
   },
-  "componentRows": 471,
+  "componentRows": 472,
   "bindingByClass": {
     "crosswalk_gated": 358560,
     "simbad_corroborated": 12485,
     "reviewed": 53,
-    "none": 5831
+    "none": 5830
   },
   "bindingReviewRows": 54,
   "bindingReviewByVerdict": {
@@ -138,5 +138,8 @@
   "additionsWithBlockedDesignation": 2,
   "sharedDesignations": 69,
   "rowsWithHdAlt": 102,
-  "rowsWithHrAlt": 0
+  "rowsWithHrAlt": 0,
+  "spineRowsWithoutSourceId": 578,
+  "spineBrightRows": 178,
+  "spineBrightRowsWithoutOverlayEntry": 114
 }

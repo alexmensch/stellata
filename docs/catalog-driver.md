@@ -377,14 +377,15 @@ and (ii) read **and as the generator's input**: it is the one record of
 AT-HYG's merge decisions — which designations name one star — that no primary
 supplies, so `build:membership` reads it for those and re-keys every row on
 the designations the primaries publish; its `gaia_source_id` column is read
-only to diff the derived binding against. `build:classic-ids` reads it as the
-label merge's spine side. The record build's own label merge retires with the
-swap: labels and membership come from one join, and `readStars` reads the
-manifest's cells as final, so there is no second designation set to flip
-against. `label_flips.tsv` stays as the generator's assertion baseline and the
-label-parity ledger of § 6. After the swap release the
-baseline becomes the previous manifest, and the gate is the ordinary
-regenerate-and-diff every other derived artifact already has.
+only to diff the derived binding against, and `build:classic-ids` does not read
+it at all. The record build's own label merge retires with the swap: labels and
+membership come from one join, and `readStars` reads the manifest's cells as
+final, so there is no second designation set to flip against. The merge itself
+runs in `build:membership`, keyed on the DERIVED binding rather than the frozen
+cell, and writes `label_flips.tsv` — one producer, and the label-parity ledger
+of § 6. After the swap release the baseline becomes the previous manifest, and
+the gate is the ordinary regenerate-and-diff every other derived artifact
+already has.
 
 ## 4. How HD reaches Gaia
 
@@ -428,10 +429,12 @@ after the join 137 sources carry >1 HD and 7 HDs land on >1 source).
 disagreement — surfacing AT-HYG's cross-ID errors is the accuracy
 point of the swap; Izar is the case that settles it (AT-HYG says HR 5505,
 IV/27A and V/50 say 5506, and ε Boo IS HR 5506). Every flip is enumerated in
-the parity ledger (`data/classic-ids/label_flips.tsv`, 719 rows: 133 flips,
-419 additions, 37 suppressions, 130 dropped extras) with a curated override
-file for cases where review finds the CDS join wrong (same pattern as
-`wds_xids_overrides.tsv`; empty today).
+the parity ledger (`data/classic-ids/label_flips.tsv`, 724 rows: 134 flips,
+422 additions, 37 suppressions, 130 extras, 1 curated override) with a curated
+override file for cases where review finds the CDS join wrong (same pattern as
+`wds_xids_overrides.tsv`; one row, Propus — Gaia fits one source across a
+resolved Tycho-2 pair and its cross-match keys that source to the sibling, so
+the overlay would take η Gem's own HD off it).
 
 **One mechanical exception, and it is an identity rule rather than a label
 one: the merge may not turn an unambiguous spine designation into an ambiguous

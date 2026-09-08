@@ -360,6 +360,30 @@ describe('buildMembership — the spine side', () => {
     expect(gated.counts.derivedWeighedNoGMag).toBe(0);
   });
 
+  // The merge keys on the binding the derivation settled, so a fill takes the
+  // labels the overlay hangs on the source the record is NOW bound to. Keyed on
+  // the frozen cell this row would reach no overlay entry at all.
+  it('labels a fill from the source it derived, not the empty frozen cell', () => {
+    const filled = buildMembership({
+      ...input,
+      spine: [...spine, spineRow({ tyc: '4-4-1', hd: '400' })],
+      tables: {
+        ...tables,
+        iv25: [...tables.iv25, { tyc: '4-4-1', hd: 400, nHd: 1, nTyc: 1 }],
+        hipI239: new Set([...tables.hipI239, 44]),
+        tycho2: new Map([...tables.tycho2, ['4-4-1', tycho2(11)]]),
+        tycToSource: new Map([...tables.tycToSource, ['4-4-1', '1616']]),
+      },
+      overlay: new Map([...overlay, ['1616', entry({ hd: [400], hip: [44] })]]),
+    });
+    expect(filled.rows.find((r) => r.tyc === '4-4-1'))
+      .toMatchObject({ gaia_source_id: '1616', hd: '400', hip: '44', binding: 'crosswalk_gated' });
+    expect(filled.counts.derivedVsFrozen.fill).toBe(1);
+    expect(filled.flips).toContainEqual(expect.objectContaining({
+      sourceId: '1616', field: 'hip', spine: '', applied: '44', disposition: 'added',
+    }));
+  });
+
   // The display cell is not privileged: when it is the cell no primary
   // attests, the first alias that survives takes its place rather than the
   // record shipping HD-less beside an HD a primary does publish.
@@ -367,7 +391,11 @@ describe('buildMembership — the spine side', () => {
     const promoted = buildMembership({
       ...input,
       spine: [...spine, spineRow({ tyc: '5-5-1', hd: '70002', gaia_source_id: '1515' })],
-      tables: { ...tables, hdI239: new Set([70003]) },
+      tables: {
+        ...tables,
+        hdI239: new Set([70003]),
+        tycToSource: new Map([...tables.tycToSource, ['5-5-1', '1515']]),
+      },
       overlay: new Map([...overlay, ['1515', entry({ hd: [70002, 70003] })]]),
     });
     expect(promoted.rows.find((r) => r.tyc === '5-5-1')).toMatchObject({ hd: '70003' });

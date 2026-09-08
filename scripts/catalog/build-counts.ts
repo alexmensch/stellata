@@ -644,7 +644,7 @@ export type CountDiff =
  *  Pure — no I/O. The caller decides whether mismatches are fatal.
  *
  *  Generic over the count record so any build script's snapshot can use it
- *  (`BuildCounts` here, `ClassicIdOverlayCounts` in `classic-ids/`); the
+ *  (`BuildCounts` here, `OverlayJoinCounts` in `classic-ids/`); the
  *  walk only needs each value to be a number or a flat number partition. */
 export function compareBuildCounts<T extends object>(
   expected: T,

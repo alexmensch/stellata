@@ -109,9 +109,8 @@ frozen record of AT-HYG's merge decisions — which designations name one
 star — that the primaries-derived manifest re-keys, and reads its
 `gaia_source_id` column only as the diff surface for the binding it derives
 itself (`scripts/catalog/membership/README.md` § The binding is derived).
-`pnpm run build:classic-ids` reads it as the label merge's spine side, and the
-manifest's parity gate reads it as the baseline every manifest row must
-account for. `scripts/catalog/spine/inherited-spine-guard.test.ts` pins its
+The manifest's parity gate reads it as the baseline every manifest row must
+account for; `build:classic-ids` does not read it at all. `scripts/catalog/spine/inherited-spine-guard.test.ts` pins its
 bytes, committed counts and the queue above.
 
 **`build:catalog` does not read it.** `readStars` walks

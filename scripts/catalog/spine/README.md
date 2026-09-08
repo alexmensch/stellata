@@ -32,8 +32,8 @@ scripts/catalog/spine/
                                   recovery (spineDesignations). Pure, and off
                                   the build:catalog path entirely.
                                   iterSpineTsv streams for a single pass
-                                  (build:classic-ids' label merge);
-                                  parseSpineTsv materialises for the callers
+                                  (the parity ledger's replay); parseSpineTsv
+                                  materialises for the callers
                                   that index rows or walk them twice —
                                   build:membership, the audit, the guard, the
                                   manifest gate and ../astrometry-request/.
@@ -270,8 +270,8 @@ unless another home is named; the committed gates are
   ledger has carried and the reason the parity gate subtracts it.
 - **Label parity — strict gain.** No previously-labeled record lost a
   label: per identifier the shipped coverage is the spine's keyed count
-  plus the overlay's additions (hd +148, hr +4, gl +198, flam +69,
-  hip +0). Every departure from the spine's cells is one of the 719
+  plus the overlay's additions (hd +149, hr +4, gl +200, flam +69,
+  hip +0). Every departure from the spine's cells is one of the 724
   disposed rows of `data/classic-ids/label_flips.tsv`, replayed exactly
   by the designation-multiset gate above.
 - **Field parity.** The swap PR moved no field values beyond the

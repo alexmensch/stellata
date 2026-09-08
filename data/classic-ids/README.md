@@ -30,13 +30,16 @@ hd_hip_route_disagreements_review.tsv
 rejected_bindings.tsv              268 rows. Pipeline-derived review queue —
                                    the bindings the gate dropped
                                    (§ The binding gate).
-label_flips.tsv                    719 rows. Pipeline-derived. EVERY departure
-                                   of the shipped labels from the spine's, with
-                                   a disposition each — the parity ledger
+label_flips.tsv                    724 rows. Pipeline-derived, and by
+                                   `build:membership` rather than by this
+                                   folder's build — that is where the merge
+                                   runs. EVERY departure of the shipped labels
+                                   from the spine's, with a disposition each —
+                                   the parity ledger
                                    `docs/catalog-driver.md` § 6 requires, and
                                    the delta the spine's designation-multiset
                                    gate replays.
-classic_id_overrides.tsv           Hand-curated. Empty by design; the escape
+classic_id_overrides.tsv           Hand-curated. One row (Propus); the escape
                                    hatch for a CDS join review finds wrong
                                    (scripts/catalog/classic-ids/README.md
                                    § Curated overrides).
@@ -210,13 +213,18 @@ asserting nothing:
 
 | Identifier | Spine rows keyed | Overlay reproduces | | Flips |
 |---|---|---|---|---|
-| hd | 293,326 | 280,528 | 95.6% | 43 |
-| hip | 117,652 | 99,029 | 84.2% | 0 |
-| hr | 9,012 | 7,282 | 80.8% | 23 |
-| gl | 3,147 | 1,820 | 57.8% | 65 |
+| hd | 293,325 | 280,531 | 95.6% | 43 |
+| hip | 117,652 | 99,058 | 84.2% | 0 |
+| hr | 9,012 | 7,283 | 80.8% | 23 |
+| gl | 3,147 | 1,853 | 58.9% | 66 |
 | flam | 2,724 | 2,028 | 74.4% | 2 |
 
-Additions the spine had no value for: hd 148, hr 4, gl 198, flam 69.
+Additions the spine had no value for: hd 149, hr 4, gl 200, flam 69.
+
+Measured after the merge moved onto the DERIVED binding
+(`scripts/catalog/membership/README.md` § The binding is derived). Keyed on the
+spine's frozen `gaia_source_id` cell the same walk read 41 rows fewer as having
+an overlay entry at all, and the `gl` line 33 reproductions lower.
 
 The earlier figures in this section were measured against the AT-HYG CSV's
 317,175 rows and read a few points higher on `hd`/`hip`/`hr` (a larger
@@ -225,11 +233,11 @@ disagreement). `bayer` is no longer scored: the two catalogues' spellings
 (`alf` vs `Alp`) are the naming ladder's gate, so the merge never touches that
 cell.
 
-**15,017 spine rows get no overlay entry at all** — 1,371 carry no source_id,
-and the rest resolve to one that neither best-neighbour walk carries. That
-population is concentrated at the bright end exactly as
-`docs/catalog-driver.md` § 5's bright tier predicts: **115 of the 178 rows at
-V ≤ 3 have no overlay row**, Vega, Sirius, Procyon and Betelgeuse among them.
+**14,976 spine rows get no overlay entry at all** — 578 bind no source, and the
+rest bind one that neither best-neighbour walk carries. That population is
+concentrated at the bright end exactly as `docs/catalog-driver.md` § 5's bright
+tier predicts: **114 of the 178 rows at V ≤ 3 have no overlay row**, Vega,
+Sirius, Procyon and Betelgeuse among them.
 Gaia saturates near G ≈ 3, so the most famous stars in the catalogue are absent
 from a source_id-keyed table by construction, not by a join defect.
 
@@ -264,29 +272,27 @@ alone, and why the parity gate (`stellata-cns.7`) checks the union.
 
 ## Consumed by
 
-`scripts/catalog/classic-ids/build-classic-id-overlay.ts` reads the four
-frozen tables plus `data/gaia/gaia_dr3_{tyc,hip}_xmatch.tsv`, the gate's
-evidence (`data/gaia/gaia_dr3_astrometry_catalog.tsv` for G,
+`scripts/catalog/classic-ids/build-classic-id-overlay.ts` reads the four frozen
+tables plus `data/gaia/gaia_dr3_{tyc,hip}_xmatch.tsv` and the gate's evidence
+(`data/gaia/gaia_dr3_astrometry_catalog.tsv` for G,
 `data/hipparcos/hip_main_vmag.tsv` for printed V,
-`data/simbad/simbad_wds_xids.tsv` for component attribution), and
-`data/athyg/inherited-spine.tsv` (the last for the label merge's spine side).
-The three evidence files are **required, not optional** — without them the join
-would key labels on sources the record build refuses, so a missing one
-hard-fails rather than degrading.
+`data/simbad/simbad_wds_xids.tsv` for component attribution). The three
+evidence files are **required, not optional** — without them the join would key
+labels on sources the record build refuses, so a missing one hard-fails rather
+than degrading.
 
-`classic_id_overlay.tsv` + `cross_index.tsv` + `classic_id_overrides.tsv` are
-then read by `build-catalog.ts` itself
-(`mergeClassicIdLabels`, run by `build:membership`): the overlay is the
-record build's label layer, and IV/27A's `cst` is the only source for the
-constellation a Bayer / Flamsteed designation is NAMED for.
+`classic_id_overlay.tsv` + `classic_id_overrides.tsv` are then read by
+`build:membership`, which runs `mergeClassicIdLabels` and writes
+`label_flips.tsv`: the overlay is the manifest's label layer. `cross_index.tsv`
+is read by `build-catalog.ts` itself, for IV/27A's `cst` — the only source for
+the constellation a Bayer / Flamsteed designation is NAMED for.
 
 ## Refresh
 
 `pnpm run refresh:classic-ids` re-pulls all four tables;
 `--only <stem>` limits it to one, `--force` overrides the mtime skip.
-Then `pnpm run build:classic-ids` regenerates the overlay and `label_flips.tsv`
-— CI asserts both are byte-identical to what the committed code produces, and
-`build:catalog` re-derives the queue from its own records and hard-fails on any
-difference, so artifact and code always land in the same commit. The classic-side
-joins are Gaia-DR-independent and never re-pull for a data release
+Then `pnpm run build:classic-ids` regenerates the overlay and
+`pnpm run build:membership` regenerates `label_flips.tsv` — CI runs both and
+fails on any diff, so artifact and code always land in the same commit. The
+classic-side joins are Gaia-DR-independent and never re-pull for a data release
 (`docs/catalog-driver.md` § 8); only the TYC/HIP → source_id hops move.
