@@ -10,7 +10,8 @@ the spine is load-bearing rather than a rare fallback is
 the membership manifest (`../membership/README.md`), which this file is an
 input to and a baseline for. What the spine still supplies is the one thing no
 primary does: **which designations name one star, and which Gaia source AT-HYG
-bound to it**. `build:membership` reads it for those merge decisions, and the
+bound to it** — every one of those bindings independently corroborated or
+reviewed, § The primaries audit. `build:membership` reads it for those merge decisions, and the
 manifest's parity gate (i) reads it as the baseline every manifest row must
 account for. After the swap release that baseline becomes the previous
 manifest.
@@ -213,6 +214,15 @@ questions, one pass over the rows:
   defect § 3.1 explains), 566 I/239 HIPs, 3,362 CNS5 census rows, 90 IV/27A
   and 103 V/50 rows — the latter being 89 bright-double secondaries plus the
   14 non-stellar V/50 entries § 3.1 rules out by class.
+
+**The unverified residual is zero, not small.** Every one of the 11,731
+bindings no raw walk reproduces is carried by independent evidence: SIMBAD's
+cross-IDs corroborate 11,697 on the record's own TYC / HIP / GJ, and the other
+34 carry a committed review disposition with the measurement behind it
+(`../membership/README.md` § The spine side). On attestation the same holds by
+the 0 above. So no row of this file exists on AT-HYG's authority alone, on
+either question the pass asks — frozen here means examined and then held, not
+taken on trust.
 
 **`flam` is compared by value, `bayer` only by star.** A Flamsteed cell
 counts as sourced only where IV/27A or WGSN publishes *that number* for the
