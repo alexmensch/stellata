@@ -312,14 +312,17 @@ nearest row stating a genuinely different measurement sits 2.1e-2 away.
 `REFUSED_PARALLAX_MATCH_REL_TOL` = 1e-5 sits in that gap, ~100x above the worst
 true match and ~2000x below the closest false one.
 
-**Only `refused_no_defensible_parallax` rows are indexed at all.** A
-`no_parallax_published` row has no refused measurement for a pair row to be
-carrying; a `no_v_magnitude` row was placed by a tier that stood behind its
-value and only went unlit, and a `no_position` row lit and unplaced. The
-structural half of the argument still holds either way: where a parallax
-genuinely was refused the primary parks too, so the whole system leaves together
-— measured over the 35 pair rows the gate sees, all 9 refused-parallax systems
-have no primary record, against 6 of 13 on the other two reasons.
+**Only `refused_no_defensible_parallax` rows are indexed at all**, and having
+nothing to match against is the whole reason. A `no_parallax_published` row has
+no refused measurement for a pair row to be carrying; a `no_v_magnitude` row was
+placed by a tier that stood behind its value and only went unlit, and a
+`no_position` row lit and unplaced.
+
+**A refused parallax does not take its system with it**, so the filter may not
+be argued from the system leaving together. HD 156015 is refused-parked while
+Rasalgethi — the primary of its WDS root — ships, which is how a gate keyed on
+the shared id stranded three components beside a primary that was never in
+doubt.
 
 **Most rows it refuses are the parked primary's siblings, not the parked record
 arriving twice.** Stage 2/3 bind one blended source to every component row of a
