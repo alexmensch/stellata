@@ -210,6 +210,15 @@ is the case to read: eight Gaia-keyed rows AT-HYG carried beside
 their own HIP record merged onto it when the manifest began deriving
 its binding.
 
+Where BOTH keys are classical the § 4.2 ladder decides, because the
+merged record has exactly one canonical key and the surviving ledger
+row must be the one carrying it — otherwise the ledger holds a
+`canonical_key` no record keys on. SID 368276 (`hd:2094`) retiring in
+favour of 182562 (`hip:1997`) is that case: the primaries admitted
+HD 2094 as a row of its own beside the HIP record it names, and the
+label merge moving onto the derived binding put the designation back
+on that record.
+
 `data/sid/reinstatements.tsv` (append-only, same guard) is the
 reverse operation for a retired object that reappears — a pipeline
 refinement restores an honestly-derived record for a component an
