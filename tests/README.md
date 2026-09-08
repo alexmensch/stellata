@@ -130,6 +130,16 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-
                          ledger.tsv is an LFS pointer stub (the bare CI
                          test job); runs for real in the sid-ledger-guard
                          job and locally.
+site-claims.test.ts      The public homepage's numeric claims, re-derived
+                         from what they describe: the catalogue count is
+                         the application's own Credits rows (and the
+                         per-subsystem table must still sum to it), and
+                         the reference figure is a floor the science
+                         corpus has to clear — bounded above too, so a
+                         conservative claim cannot quietly become a
+                         wrong-by-an-order-of-magnitude one.
+                         `src/site/home/README.md` § Where every number
+                         on the page comes from.
 skill-guard.test.ts      Behavioural pins for scripts/hooks/skill-guard.sh,
                          one describe per skill gate (cube-css, code-craft);
                          /scripts/hooks/README.md#how-skill-guard-works.
@@ -141,7 +151,7 @@ star-count-consistency.test.ts
                          separators included, which is how an
                          underscore-separated literal in a dust-cost
                          script outlived two count changes — and holds
-                         every size figure on the four user-facing prose
+                         every size figure on the five user-facing prose
                          surfaces to that one rounding, `public/llms.txt`
                          among them since `public/` is gitignored and no
                          directory root reaches it. The AT-HYG spine's own
