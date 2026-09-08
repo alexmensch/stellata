@@ -148,9 +148,7 @@ device pixel ratio, with `localStorage['stellata.info-dismissed']` and
 `sessionStorage['stellata.mobile-advisory-dismissed']` seeded to `'1'` so
 neither modal ever shows:
 
-1. **Boot** `<url>/app/v/<blob>/` (the canonical share path, built by
-   `scenarioUrl` from `share-path-pure.ts` rather than spelled here —
-   `src/README.md` § Request routing), plus `#renderer=webgl2` for the escape
+1. **Boot** `<url>/app/v/<blob>/`, plus `#renderer=webgl2` for the escape
    hatch — WebGPU is the default (`src/client/webgpu/README.md`
    § The renderer is WebGPU). Wait for `window.debug`,
    `window.stellata` and `#loading` gone; a `#loading-status` starting
