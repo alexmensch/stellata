@@ -17,7 +17,11 @@ export default defineConfig(() => ({
     // split leaves both halves near 500 kB, so it silences nothing.
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
-      input: resolve(import.meta.dirname, 'src/client/index.html'),
+      // Emitted at its own path relative to `root`, which is the URL it
+      // serves at: dist/app/index.html -> /app. `src/client/app/README.md`
+      // is why the document sits in a folder of its own while `base`
+      // stays `/`.
+      input: resolve(import.meta.dirname, 'src/client/app/index.html'),
     },
   },
   server: {

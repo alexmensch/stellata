@@ -9,13 +9,13 @@ import { describe, expect, it } from 'vitest';
 import { walkFiles } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
-const HOME = join(ROOT, 'src/site/home/index.html');
-const APP = join(ROOT, 'src/client/index.html');
+const HOME = join(ROOT, 'src/site/index.html');
+const APP = join(ROOT, 'src/client/app/index.html');
 
 /** The modelling record the reference claim describes: the two root docs
  *  plus every markdown file under these roots — the science docs and the
  *  folder READMEs, which carry a subsystem's citations next to its code.
- *  `src/site/home/README.md` § Where every number on the page comes from. */
+ *  `src/site/README.md` § The homepage's claims. */
 const RECORD_DOCS = ['SCIENCE.md', 'README.md'];
 const RECORD_ROOTS = ['docs', 'src', 'scripts', 'data'];
 

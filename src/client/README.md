@@ -8,11 +8,11 @@ themselves.
 
 ## Folder layout
 
-- `main.ts`, `stellata.ts`, `index.html`, `styles.css`, `globals.d.ts`
-  — bootstrap + integration shell. `index.html`'s `<head>` also
-  carries the SEO / OpenGraph / Twitter meta, canonical, favicon links,
-  and Schema.org JSON-LD; the `<body>` opens with a `<noscript>`
-  crawler/GEO fallback describing the app. The referenced static assets
+- `main.ts`, `stellata.ts`, `styles.css`, `globals.d.ts` — bootstrap +
+  integration shell. **`app/` holds the HTML document**, and its path is
+  what makes the application answer at `/app` rather than `/`; that
+  README owns the `<head>`'s SEO surface and the `<noscript>` fallback.
+  The referenced static assets
   (`og-image.jpg`, icons, `robots.txt`, `llms.txt`, `sitemap.xml`,
   `manifest.webmanifest`) live in `public/`. **`styles.css` does not own
   the palette** — it `@import`s `src/design-tokens.css`, shared with the
@@ -24,10 +24,10 @@ themselves.
   `Promise.all`** — the star catalog, whose absence leaves nothing to
   render, and whose rejection the surrounding catch turns into the error
   screen. Every other loader that rejects blanks the whole app, so an
-  optional artifact must resolve null instead — including on a parse
-  error, since `not_found_handling = "single-page-application"`
-  (`wrangler.toml`) answers a missing asset with index.html at 200 rather
-  than a 404. `solar-system/probes/probe-loader.ts` is the pattern to copy;
+  optional artifact must resolve null instead — on a 404, which absence
+  now really is (`../README.md` § Request routing), and on a parse error,
+  which still catches a present-but-truncated one.
+  `solar-system/probes/probe-loader.ts` is the pattern to copy;
   warn-then-null on a present-but-invalid artifact
   (`local-group/local-group-loader.ts`) is the shape for shape errors. For
   kind modules the rule is enforced rather than trusted — `loadKindModules`
@@ -298,7 +298,7 @@ There is no z-ordering between WebGL and SVG. The WebGL canvas paints
 first; the SVG `#overlay` always sits above it (`z-index: 5`,
 `pointer-events: none`). Inside each layer the ordering is local:
 WebGL by `THREE.Object3D.renderOrder`, SVG by source order in
-`src/client/index.html` (later child = on top). The constellation
+`src/client/app/index.html` (later child = on top). The constellation
 figure is depth-tested WebGL line geometry (`renderOrder −0.75`), so
 close star and planet discs occlude it through the depth buffer — no
 SVG mask (`constellation-figure/README.md`).

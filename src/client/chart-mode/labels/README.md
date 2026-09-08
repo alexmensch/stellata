@@ -29,7 +29,7 @@ See `../../scene/README.md` § Chart-content wiring for the couplings.
   per visible variable, `<line class="chart-binary-wings">` per
   visible binary primary (catalog flag bit 4).
 
-**All three are declared in `index.html`, never minted on demand**, and
+**All three are declared in `app/index.html`, never minted on demand**, and
 sit *before* the HUD stack so the HUD paints over the chart. SVG has no
 z-index — paint order is document order — and the pool appends a `<text>`
 the frame its key is first seen, so DOM order within a group is the
@@ -44,7 +44,7 @@ reintroduce exactly the DOM churn the pool exists to avoid.
 The sequence is the fix, so it is pinned rather than trusted:
 `CHART_LAYER_IDS` (exported by `chart-labels.ts`) is the one authority
 for the ids **and their order**, `layerById` throws on a group the
-markup doesn't declare, and `chart-labels.test.ts` reads `index.html`
+markup doesn't declare, and `chart-labels.test.ts` reads `app/index.html`
 to assert both the inter-group order and that all three precede
 `#hud-ring`.
 

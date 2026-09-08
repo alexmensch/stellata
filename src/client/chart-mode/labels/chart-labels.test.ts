@@ -421,7 +421,7 @@ describe('chart-labels / starLabelOffsetPx', () => {
 // other test still green.
 describe('chart-labels / index.html paint order', () => {
   const markup = readFileSync(
-    fileURLToPath(new URL('../../index.html', import.meta.url)), 'utf8',
+    fileURLToPath(new URL('../../app/index.html', import.meta.url)), 'utf8',
   );
   const positionOf = (id: string): number => {
     const at = markup.indexOf(`id="${id}"`);

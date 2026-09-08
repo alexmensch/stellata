@@ -2090,49 +2090,58 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
   afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
   describe('applyFromUrl junk reset', () => {
-    it('strips a bogus non-share path back to bare /', () => {
-      const { loc, replaceState } = installUrl('/garbage');
+    it("strips a bogus non-share path back to the app's bare path", () => {
+      const { loc, replaceState } = installUrl('/app/garbage');
       const { stellata } = makeSyncStellata();
       expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
-      expect(replaceState).toHaveBeenCalledWith(null, '', '/');
-      expect(loc.pathname).toBe('/');
+      expect(replaceState).toHaveBeenCalledWith(null, '', '/app');
+      expect(loc.pathname).toBe('/app');
     });
 
-    it('strips a /v/<blob>/ whose blob will not decode', () => {
+    // `/` is the public homepage. Resetting there would throw the user out
+    // of the application over a typo in a share link.
+    it('never resets to the site root', () => {
+      const { loc } = installUrl('/app/v/_w/');
+      const { stellata } = makeSyncStellata();
+      applyFromUrl(stellata, syncIdMaps());
+      expect(loc.pathname).not.toBe('/');
+    });
+
+    it('strips a share path whose blob will not decode', () => {
       // Single byte 0xFF → version 255, an unknown schema decodeBlob rejects.
-      const { loc } = installUrl('/v/_w/');
+      const { loc } = installUrl('/app/v/_w/');
       const { stellata } = makeSyncStellata();
       expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
-      expect(loc.pathname).toBe('/');
+      expect(loc.pathname).toBe('/app');
       expect(loc.search).toBe('');
     });
 
     it('strips a stray/undecodable ?v= query', () => {
-      const { loc } = installUrl('/?v=_w');
+      const { loc } = installUrl('/app/?v=_w');
       const { stellata } = makeSyncStellata();
       expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
-      expect(loc.pathname).toBe('/');
+      expect(loc.pathname).toBe('/app');
       expect(loc.search).toBe('');
     });
 
-    it('leaves a clean / untouched (no history write)', () => {
-      const { replaceState } = installUrl('/');
+    it('leaves a clean /app untouched (no history write)', () => {
+      const { replaceState } = installUrl('/app');
       const { stellata } = makeSyncStellata();
       expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
       expect(replaceState).not.toHaveBeenCalled();
     });
 
     it('preserves the fragment while stripping junk (the renderer flag rides it)', () => {
-      const { loc } = installUrl('/garbage?v=_w#renderer=webgpu');
+      const { loc } = installUrl('/app/garbage?v=_w#renderer=webgpu');
       const { stellata } = makeSyncStellata();
       expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
-      expect(loc.pathname).toBe('/');
+      expect(loc.pathname).toBe('/app');
       expect(loc.search).toBe('');
       expect(loc.hash).toBe('#renderer=webgpu');
     });
   });
 
-  describe('legacy ?v= → canonical /v/<blob>/ rewrite', () => {
+  describe('legacy transports → canonical /app/v/<blob>/ rewrite', () => {
     it('rewrites a current-schema query link to the path form after the debounce', () => {
       const blob = encodeBlob({ fov: 90 }); // non-default (DEFAULT_FOV = 50)
       const { loc, replaceState } = installUrl(`/?v=${blob}`);
@@ -2142,9 +2151,23 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       // Address-bar rewrite is deferred to the shared debounce window.
       expect(replaceState).not.toHaveBeenCalled();
       vi.advanceTimersByTime(1000);
-      expect(loc.pathname.startsWith('/v/')).toBe(true);
+      expect(loc.pathname.startsWith('/app/v/')).toBe(true);
       expect(loc.search).toBe('');
-      expect(decodeBlob(loc.pathname.slice(3, -1)).view.fov).toBe(90);
+      expect(decodeBlob(loc.pathname.slice('/app/v/'.length, -1)).view.fov).toBe(90);
+    });
+
+    // The root-relative path form predates the app's move to /app. The
+    // Worker 301s it, and this is the client half for one that arrives
+    // some other way.
+    it('rewrites a root-relative /v/<blob>/ link to the app path', () => {
+      const blob = encodeBlob({ fov: 90 });
+      const { loc, replaceState } = installUrl(`/v/${blob}/`);
+      const { stellata, state } = makeSyncStellata();
+      expect(applyFromUrl(stellata, syncIdMaps())).toBe(true);
+      expect(state.fov).toBe(90);
+      expect(replaceState).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1000);
+      expect(loc.pathname).toBe(`/app/v/${blob}/`);
     });
 
     it('carries the fragment through the query→path rewrite', () => {
@@ -2153,24 +2176,24 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       const { stellata } = makeSyncStellata();
       expect(applyFromUrl(stellata, syncIdMaps())).toBe(true);
       vi.advanceTimersByTime(1000);
-      expect(loc.pathname.startsWith('/v/')).toBe(true);
+      expect(loc.pathname.startsWith('/app/v/')).toBe(true);
       expect(loc.hash).toBe('#renderer=webgpu');
     });
   });
 
   describe('startUrlSync pinned-t detector (4bq1)', () => {
-    it('writes a /v/<blob>/ when time is scrubbed on a still camera', () => {
-      const { loc } = installUrl('/');
+    it('writes an /app/v/<blob>/ when time is scrubbed on a still camera', () => {
+      const { loc } = installUrl('/app');
       const { stellata, state, frame } = makeSyncStellata();
       startUrlSync(stellata, syncIdMaps());
       state.t = scrubbedT();        // scrub without moving the camera
       frame();
       vi.advanceTimersByTime(1000);
-      expect(loc.pathname.startsWith('/v/')).toBe(true);
+      expect(loc.pathname.startsWith('/app/v/')).toBe(true);
     });
 
     it('does not write while the live clock advances (t stays live)', () => {
-      const { replaceState } = installUrl('/');
+      const { replaceState } = installUrl('/app');
       const { stellata, state, frame } = makeSyncStellata();
       startUrlSync(stellata, syncIdMaps());
       state.t = liveT();            // still within the 1 s live tolerance
@@ -2180,7 +2203,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     });
 
     it('does not write scrubbed time while a camera transition is active', () => {
-      const { replaceState } = installUrl('/');
+      const { replaceState } = installUrl('/app');
       const { stellata, state, frame } = makeSyncStellata();
       startUrlSync(stellata, syncIdMaps());
       state.transition = true;
@@ -2191,23 +2214,23 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     });
 
     it('still writes on a camera move (detector refactor intact)', () => {
-      const { loc } = installUrl('/');
+      const { loc } = installUrl('/app');
       const { stellata, cam, frame } = makeSyncStellata();
       startUrlSync(stellata, syncIdMaps());
       cam.position.set(0, 0, 0);    // off the [0,0,30] navigate default
       frame();
       vi.advanceTimersByTime(1000);
-      expect(loc.pathname.startsWith('/v/')).toBe(true);
+      expect(loc.pathname.startsWith('/app/v/')).toBe(true);
     });
 
     it('a routine state write keeps the fragment in the address bar', () => {
-      const { loc } = installUrl('/#renderer=webgpu');
+      const { loc } = installUrl('/app#renderer=webgpu');
       const { stellata, cam, frame } = makeSyncStellata();
       startUrlSync(stellata, syncIdMaps());
       cam.position.set(0, 0, 0);
       frame();
       vi.advanceTimersByTime(1000);
-      expect(loc.pathname.startsWith('/v/')).toBe(true);
+      expect(loc.pathname.startsWith('/app/v/')).toBe(true);
       expect(loc.hash).toBe('#renderer=webgpu');
     });
   });
@@ -2221,20 +2244,20 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
   // the last thing a user touches, did not.
   describe('startUrlSync — instrument state needs its own write trigger', () => {
     it('writes ORB and the lock on a bare state emit, camera still', () => {
-      const { loc } = installUrl('/');
+      const { loc } = installUrl('/app');
       const { stellata, emitState } = makeSyncStellata({
         orbit: { armed: true, locked: true },
       });
       startUrlSync(stellata, syncIdMaps());
       emitState();
       vi.advanceTimersByTime(1000);
-      expect(loc.pathname.startsWith('/v/')).toBe(true);
-      const { view } = decodeBlob(loc.pathname.split('/')[2]);
+      expect(loc.pathname.startsWith('/app/v/')).toBe(true);
+      const { view } = decodeBlob(loc.pathname.split('/')[3]);
       expect(view).toMatchObject({ orb: true, orbLock: true });
     });
 
     it('never reaches the URL from a still camera without one', () => {
-      const { replaceState } = installUrl('/');
+      const { replaceState } = installUrl('/app');
       const { stellata, frame } = makeSyncStellata({
         orbit: { armed: true, locked: true },
       });

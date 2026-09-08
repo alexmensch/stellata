@@ -129,7 +129,7 @@ describe('perf-section-check', () => {
   });
 
   it('leaves the page shell and the stylesheet alone', () => {
-    expect(check('## Summary\n\nx\n', ['src/client/index.html', 'src/client/styles.css']).code).toBe(0);
+    expect(check('## Summary\n\nx\n', ['src/client/app/index.html', 'src/client/styles.css']).code).toBe(0);
   });
 
   it('does not count template scaffolding as content', () => {

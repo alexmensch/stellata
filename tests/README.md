@@ -119,8 +119,8 @@ site-claims.test.ts      The public homepage's numeric claims, re-derived
                          corpus has to clear — bounded above too, so a
                          conservative claim cannot quietly become a
                          wrong-by-an-order-of-magnitude one.
-                         `src/site/home/README.md` § Where every number
-                         on the page comes from.
+                         `src/site/README.md` § The homepage's
+                         claims.
 star-count-consistency.test.ts
                          The catalogue's own size, stated once. Rounds the
                          BUILT header to `PROSE_ROUNDED` (artifact-backed,

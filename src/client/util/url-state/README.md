@@ -11,24 +11,37 @@ for the format and the `FIELDS_V4` table.
 
 ## Transport — canonical path vs. legacy query
 
-The blob rides a **`/v/<blob>/` path segment** (canonical). base64url's
-alphabet (`A-Za-z0-9-_`) has no `/`, so it drops into one segment with
-no escaping; the trailing slash is optional on parse. A fully-default
-state has no segment at all — the URL is bare `/`.
+The blob rides a **`/app/v/<blob>/` path segment** (canonical).
+base64url's alphabet (`A-Za-z0-9-_`) has no `/`, so it drops into one
+segment with no escaping; the trailing slash is optional on parse. A
+fully-default state has no segment at all — the URL is bare `/app`.
 
-The **legacy `?v=<blob>` query form** is decoded forever: old shared
-links are baked into YouTube comments and can never break. On load,
-`applyFromUrl` rewrites both a legacy query-form link and a superseded
-schema version to the canonical path (address-bar only, via the same
-post-apply debounce as routine writes). The query form was retired
-because platforms auto-filter comments carrying a `?…=` link.
+**`/app` is not decoration on the path, and `share-path-pure.ts` owns
+it.** `/` is the public marketing homepage (`src/site/README.md`), so
+every part of this module builds and parses under the application's own
+prefix. `src/worker.ts` and the perf runner's `scenarios.ts` both import
+`APP_PATH` from here rather than restating it: a second spelling breaks
+share links with no error anywhere.
 
-Production serves `/v/<blob>/` via `wrangler.toml`'s `[assets]
-not_found_handling = "single-page-application"` (any unmatched path →
-`index.html`, 200); see `src/README.md`. Because that serves `index.html`
-for *any* path, `applyFromUrl` strips the address bar back to bare `/`
-when the URL carries nothing decodable — a bogus path, a stray query, or
-a `/v/<blob>/` whose blob won't decode — so the bar never lingers on junk.
+**Two legacy transports are decoded forever**, because links carrying
+them are baked into YouTube comments and can never break. `/v/<blob>/` is
+the path form shared while the application was the site root.
+`?v=<blob>` is the query form that preceded it, retired because platforms
+auto-filter comments carrying a `?…=` link. `pickShareBlob` reports
+either as `legacyTransport`, and on load `applyFromUrl` rewrites both —
+and a superseded schema version — to the canonical path, address-bar only,
+via the same post-apply debounce as routine writes. In production they
+rarely reach the client at all: the Worker 301s each onto the canonical
+form first (`src/README.md` § Request routing).
+
+Production serves `/app/v/<blob>/` through the Worker, which falls back to
+the application document for any unmatched path under `/app`. So a path
+that got there is one the app was asked to interpret, and `applyFromUrl`
+strips the address bar back to bare **`/app`** when it carries nothing
+decodable — a bogus sub-path, a stray query, or a blob that won't decode —
+so the bar never lingers on junk. **The reset target is `/app`, never
+`/`**: resetting to the site root would throw the user out of the
+application and onto the homepage over a typo.
 
 The **fragment is never URL state**: both writers (`writeUrl`, the junk
 reset) re-append `location.hash` verbatim to whatever they write, because

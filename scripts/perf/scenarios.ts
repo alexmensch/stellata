@@ -1,5 +1,7 @@
 // The canon vantages the runner measures at, and the URL a scenario boots.
 
+import { buildSharePath } from '../../src/client/util/url-state/share-path-pure';
+
 export const BACKENDS = ['webgl2', 'webgpu'] as const;
 export type Backend = (typeof BACKENDS)[number];
 
@@ -16,5 +18,8 @@ export const SCENARIO_NAMES = Object.keys(SCENARIOS) as readonly ScenarioName[];
 
 export function scenarioUrl(base: string, blob: string, backend: Backend): string {
   const root = base.replace(/\/+$/, '');
-  return `${root}/v/${blob}/${backend === 'webgl2' ? '#renderer=webgl2' : ''}`;
+  // buildSharePath rather than a second spelling of the path form — it owns
+  // the app's own prefix, and a runner pointed at the wrong one measures the
+  // default view while reporting the scenario's name.
+  return `${root}${buildSharePath(blob)}${backend === 'webgl2' ? '#renderer=webgl2' : ''}`;
 }
