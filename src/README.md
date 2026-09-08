@@ -12,7 +12,10 @@ Cloudflare Worker entry + browser client.
   (200) for any unmatched path, and `env.ASSETS.fetch` honors it.
   `wrangler.toml` (repo root) drives the deploy; CI workflow lives in
   `.github/workflows/` (see its README).
-- `client/` — browser app.
+- `client/` — browser app, served at `/`. Built by `vite.config.ts`.
+- `design-tokens.css` — the palette and typeface every surface paints
+  from. `client/styles.css` `@import`s it and adds only what is the
+  app's own; it does not restate a colour.
 
 ## `@cloudflare/workers-types` leaks globally
 
