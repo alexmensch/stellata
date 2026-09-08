@@ -1,0 +1,443 @@
+/* Every page of the public content site. The app's chrome is the reference;
+   this scales it up to reading sizes and adds nothing it does not have. */
+
+@import '../design-tokens.css';
+
+:root {
+  --measure: 64ch;
+  --gutter: clamp(20px, 5vw, 56px);
+  --column: 1100px;
+  --rule: 1px solid var(--border);
+
+  --type-hero: clamp(29px, 5.1vw, 50px);
+  --type-title: clamp(19px, 2.1vw, 25px);
+  --type-lead: clamp(15px, 1.5vw, 18px);
+  --type-body: clamp(14.5px, 1.1vw, 16px);
+  --type-small: clamp(12.5px, 0.9vw, 13.5px);
+  --type-label: 10.5px;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: var(--type-body);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(125, 211, 252, 0.22);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+a:hover { text-decoration: none; }
+
+code {
+  font-family: inherit;
+  font-size: 0.95em;
+  color: var(--accent);
+  word-break: break-word;
+}
+
+.after-block { margin-top: clamp(24px, 3vw, 32px); }
+
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 3px;
+}
+
+img { max-width: 100%; height: auto; display: block; }
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+}
+.skip-link:focus {
+  left: var(--gutter);
+  top: 10px;
+  z-index: 2;
+  padding: 8px 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-strong);
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.page {
+  max-width: var(--column);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+/* ---- Labels ---- */
+/* The app writes every category, section and unit label this way: small,
+   uppercase, widely tracked, dim. It is the single most recognisable thing
+   about its chrome, so the site says everything structural in it. */
+.label {
+  font-size: var(--type-label);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+/* ---- Masthead ---- */
+
+.masthead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px 24px;
+  flex-wrap: wrap;
+  padding: 22px 0 18px;
+  border-bottom: var(--rule);
+}
+.wordmark {
+  font-size: 13px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--fg);
+  text-decoration: none;
+}
+.wordmark:hover { color: var(--accent); }
+.masthead-links {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  font-size: var(--type-small);
+}
+.masthead-links a { color: var(--fg-dim); }
+.masthead-links a:hover { color: var(--accent); }
+
+/* ---- Hero ---- */
+
+.hero {
+  padding: clamp(48px, 9vw, 104px) 0 clamp(36px, 5vw, 56px);
+}
+.hero .label { display: block; margin-bottom: clamp(20px, 3vw, 32px); }
+.hero h1 {
+  max-width: 30ch;
+  margin: 0 0 clamp(20px, 2.6vw, 30px);
+  font-size: var(--type-hero);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+}
+.lead {
+  max-width: var(--measure);
+  margin: 0 0 18px;
+  font-size: var(--type-lead);
+  line-height: 1.62;
+}
+.lead:last-of-type { margin-bottom: clamp(28px, 4vw, 40px); }
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+/* The app's warp pill, at reading size — the one rounded thing in a square
+   interface, which is what makes it read as the action rather than a panel. */
+.pill {
+  padding: 11px 26px;
+  font-size: var(--type-small);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg);
+  background: rgba(7, 9, 18, 0.85);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  text-decoration: none;
+}
+.pill:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.actions-aside {
+  font-size: var(--type-small);
+  color: var(--fg-dim);
+}
+.actions-aside a { color: var(--fg-dim); }
+.actions-aside a:hover { color: var(--accent); }
+
+/* ---- Readout strip ---- */
+/* Hairlines come from a 1px grid gap showing the border colour through, so
+   dividers stay exact however the cells wrap. */
+.readout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  margin: clamp(36px, 5vw, 56px) 0 0;
+  background: var(--border);
+  border: var(--rule);
+}
+.readout-cell {
+  padding: 14px 16px 15px;
+  background: var(--bg);
+}
+.readout-cell .label { display: block; margin-bottom: 5px; }
+.readout-value {
+  font-size: clamp(15px, 1.5vw, 18px);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  letter-spacing: 0.01em;
+}
+.readout-note {
+  font-size: var(--type-small);
+  color: var(--fg-dim);
+}
+
+/* ---- Sections ---- */
+
+.section {
+  padding: clamp(44px, 6vw, 76px) 0;
+  border-top: var(--rule);
+}
+.section-index {
+  display: block;
+  margin-bottom: 14px;
+  font-size: var(--type-label);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.section h2 {
+  max-width: 34ch;
+  margin: 0 0 clamp(18px, 2.4vw, 26px);
+  font-size: var(--type-title);
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+.section > p {
+  max-width: var(--measure);
+  margin: 0 0 16px;
+}
+.section > p:last-child { margin-bottom: 0; }
+
+@media (min-width: 900px) {
+  /* The index hangs in the left margin, the way a specification numbers its
+     clauses. Below this width it sits above the heading instead. */
+  .section {
+    display: grid;
+    grid-template-columns: 8rem 1fr;
+    column-gap: 3rem;
+  }
+  .section-index { grid-column: 1; grid-row: 1; margin: 0; }
+  .section > :not(.section-index) { grid-column: 2; }
+}
+
+/* ---- The three claims ---- */
+
+.claim {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr;
+  column-gap: 1.5rem;
+  padding: clamp(22px, 3vw, 30px) 0;
+  border-top: var(--rule);
+}
+.claim:first-of-type { border-top: none; padding-top: 0; }
+.claim-index {
+  font-size: var(--type-small);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+}
+.claim h3 {
+  max-width: 40ch;
+  margin: 0 0 12px;
+  font-size: clamp(16px, 1.5vw, 19px);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--fg);
+}
+.claim p {
+  max-width: var(--measure);
+  margin: 0 0 12px;
+}
+.claim p:last-child { margin-bottom: 0; }
+.claim-body { grid-column: 2; }
+
+@media (max-width: 560px) {
+  .claim { grid-template-columns: 1fr; row-gap: 8px; }
+  .claim-body { grid-column: 1; }
+}
+
+/* ---- Plates ---- */
+/* Figures are numbered plates, captioned like an atlas: what the view is,
+   and the share URL that reproduces it. */
+.plate {
+  margin: clamp(28px, 4vw, 40px) 0 0;
+}
+.plate img {
+  width: 100%;
+  border: var(--rule);
+}
+.plate-caption {
+  display: flex;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  font-size: var(--type-small);
+  color: var(--fg-dim);
+  line-height: 1.55;
+}
+.plate-caption > span { flex: 1 1 22ch; }
+.plate-caption .label { flex: 0 0 auto; }
+
+/* The stand-in a real capture replaces. Deliberately unlovely: a dashed
+   hairline says "not final" where a styled empty box would ship unnoticed.
+   src/site/home/README.md § Plates carries the swap. */
+.plate-holder {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+  padding: clamp(20px, 4vw, 44px);
+  border: 1px dashed var(--border-strong);
+  background: #000;
+}
+.plate-spec {
+  max-width: 56ch;
+  font-size: var(--type-small);
+  line-height: 1.6;
+  color: var(--fg-dim);
+}
+.plate-spec .label { display: block; margin-bottom: 10px; }
+.plate-spec b {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: var(--fg);
+}
+.plate-spec code {
+  font-family: inherit;
+  color: var(--accent);
+  word-break: break-all;
+}
+
+/* ---- Source table ---- */
+
+.table-scroll {
+  overflow-x: auto;
+  border: var(--rule);
+}
+.sources {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--type-small);
+  text-align: left;
+}
+.sources th {
+  padding: 10px 16px;
+  font-size: var(--type-label);
+  font-weight: normal;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+  border-bottom: var(--rule);
+  white-space: nowrap;
+}
+.sources td {
+  padding: 12px 16px;
+  border-bottom: var(--rule);
+  vertical-align: top;
+  line-height: 1.6;
+}
+.sources tr:last-child td { border-bottom: none; }
+.sources td:first-child {
+  color: var(--fg);
+  min-width: 15ch;
+}
+.sources td:nth-child(2) {
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.sources td:last-child { color: var(--fg-dim); }
+
+/* ---- Observing list ---- */
+/* Two columns of terse entries, flowing like a printed observing list
+   rather than tiling as cards. */
+.tries {
+  margin: 0;
+  padding: 0;
+}
+@media (min-width: 760px) {
+  .tries { columns: 2; column-gap: 3rem; }
+}
+.try {
+  break-inside: avoid;
+  padding: 16px 0;
+  border-top: var(--rule);
+}
+.try:first-child { border-top: none; padding-top: 0; }
+.try dt {
+  margin: 0 0 4px;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+.try dd {
+  margin: 0;
+  font-size: var(--type-small);
+  color: var(--fg-dim);
+  line-height: 1.62;
+}
+
+/* ---- Plain hairline list ---- */
+
+.spec-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-width: var(--measure);
+}
+.spec-list li {
+  padding: 13px 0;
+  border-top: var(--rule);
+  font-size: var(--type-small);
+  line-height: 1.62;
+  color: var(--fg-dim);
+}
+.spec-list li:first-child { border-top: none; padding-top: 0; }
+.spec-list b {
+  font-weight: 500;
+  color: var(--fg);
+}
+
+/* ---- Footer ---- */
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px 32px;
+  flex-wrap: wrap;
+  padding: 26px 0 40px;
+  border-top: var(--rule);
+  font-size: var(--type-small);
+  color: var(--fg-dim);
+}
+.footer a { color: var(--fg-dim); }
+.footer a:hover { color: var(--accent); }
+.footer-links {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.footer-version { font-variant-numeric: tabular-nums; }
