@@ -34,7 +34,7 @@ gaia_source_id	field	value
 #
 # Two shapes DO NOT belong here, because a label exception is the wrong tool:
 #   - an addition that would make another record's designation ambiguous is
-#     withheld mechanically by the collision guard (p Eridani, Gl 277A);
+#     withheld mechanically by the collision guard (p Eridani);
 #   - a Gliese renumbering (Gl 157.1 -> GJ 9140) is an identity bridge in
 #     data/sid/sameas-overrides.tsv, since both designations name the star.
 3377072212924335488	hd	

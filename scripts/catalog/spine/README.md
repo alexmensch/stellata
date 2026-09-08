@@ -17,7 +17,12 @@ manifest's parity gate (i) reads it as the baseline every manifest row must
 account for. After the swap release that baseline becomes the previous
 manifest.
 
-**The file is frozen and nothing regenerates it.** The one-shot generator
+**The file is frozen, so a merge decision review finds wrong is corrected in
+`data/membership/spine-corrections.tsv`** — a committed, evidenced row the
+manifest applies — never by an edit here (`../membership/README.md`
+§ Correcting a merge decision).
+
+**Nothing regenerates it.** The one-shot generator
 retired with the driver swap: it ran `readStars` over the AT-HYG CSV, and that
 walk no longer exists. The manifest that supersedes it is a new artifact, not
 a regeneration of this one; the rule it re-sources under, and the measurement

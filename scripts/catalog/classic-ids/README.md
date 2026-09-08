@@ -296,9 +296,9 @@ granularity, so `docs/sid.md` § 4.1 drops it from the same-as graph entirely �
 it keys no ledger row. Attaching an identifier a DIFFERENT record already holds
 off the spine therefore deletes a working SID key from BOTH records and buys
 nothing: the star stays findable under that identifier through the record that
-holds it. p Eridani (the overlay attaches HIP 7751 to the HD 10361 component)
-and Gl 277A (HIP 36626, which would go fully keyless and hard-fail allocation)
-are the two cases the guard exists for; it fires on 37 cells in total.
+holds it. p Eridani is the case — the overlay attaches HIP 7751 to the HD 10361
+component — and the guard fires on 36 cells; a record whose only claim is a
+duplicate's is corrected as a merge decision (`../membership/README.md`).
 
 Scored against the POST-merge assignment, so the four HD mutual swaps stay
 legal — neither value gains an owner. That needs a fixpoint rather than one

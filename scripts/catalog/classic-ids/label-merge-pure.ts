@@ -553,8 +553,7 @@ const tally = (values: Iterable<string>): Map<string, number> => {
  *  ledger row. Attaching an identifier a DIFFERENT record already holds off the
  *  spine therefore deletes a working SID key from both records and buys
  *  nothing: the star stays findable under that identifier through the record
- *  that holds it. p Eridani (HIP 7751) and Gl 277A (HIP 36626) are today's two
- *  cases, and the second would go fully keyless and hard-fail allocation.
+ *  that holds it. p Eridani (HIP 7751) is today's case.
  *
  *  Withholding moves the assignment back toward the spine's, which is
  *  collision-free by construction, so the fixpoint converges — but one

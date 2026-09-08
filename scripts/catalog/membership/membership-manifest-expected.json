@@ -1,7 +1,7 @@
 {
-  "labelNoOverlayEntry": 14976,
+  "labelNoOverlayEntry": 14975,
   "labelAgree": {
-    "hip": 99058,
+    "hip": 99059,
     "hd": 280531,
     "hr": 7283,
     "gl": 1851,
@@ -22,14 +22,14 @@
     "flam": 2
   },
   "labelSpineOnly": {
-    "hip": 18594,
+    "hip": 18593,
     "hd": 12751,
     "hr": 1706,
-    "gl": 1228,
+    "gl": 1227,
     "flam": 694
   },
   "labelSuppressed": {
-    "hip": 2,
+    "hip": 1,
     "hd": 24,
     "hr": 1,
     "gl": 8,
@@ -63,8 +63,12 @@
     "gl": 2,
     "flam": 0
   },
-  "rows": 376928,
+  "rows": 376927,
   "spineRows": 313257,
+  "spineRowsFolded": 1,
+  "spineCellsCorrected": {
+    "tyc": 1
+  },
   "additionRows": 63671,
   "additionsByReason": {
     "admitted:hd_link_gap": 54811,
@@ -72,39 +76,39 @@
     "admitted:hip_omitted": 444,
     "admitted:cns5_census": 3356
   },
-  "componentRows": 472,
+  "componentRows": 471,
   "bindingByClass": {
     "crosswalk_gated": 358560,
     "simbad_corroborated": 12485,
     "reviewed": 53,
-    "none": 5830
+    "none": 5829
   },
-  "bindingReviewRows": 54,
+  "bindingReviewRows": 53,
   "bindingReviewByVerdict": {
     "differs": 8,
     "unreached": 43,
     "contested": 2,
-    "collision": 1
+    "collision": 0
   },
   "bindingDispositions": {
     "derived": 6,
     "frozen": 46,
     "other": 1,
-    "none": 1
+    "none": 0
   },
   "derivedVsFrozen": {
-    "match": 311835,
-    "fill": 791,
+    "match": 311834,
+    "fill": 792,
     "refused": 576,
     "differs": 8,
     "unreached": 43,
     "contested": 2,
-    "collision": 1,
+    "collision": 0,
     "sol": 1
   },
   "derivedVia": {
-    "tyc": 298439,
-    "hip": 867,
+    "tyc": 298440,
+    "hip": 866,
     "cns5": 837,
     "simbad": 12489
   },
@@ -130,16 +134,16 @@
     "flam": 0,
     "proper": 46
   },
-  "additionSourceOnSpine": 109,
+  "additionSourceOnSpine": 108,
   "additionSourceGateRefused": 13,
   "additionSourceShared": 0,
   "additionGaiaKeyedOnly": 0,
   "additionRouteSourceDisagree": 3,
   "additionsWithBlockedDesignation": 2,
-  "sharedDesignations": 69,
+  "sharedDesignations": 68,
   "rowsWithHdAlt": 102,
   "rowsWithHrAlt": 0,
-  "spineRowsWithoutSourceId": 578,
+  "spineRowsWithoutSourceId": 577,
   "spineBrightRows": 178,
   "spineBrightRowsWithoutOverlayEntry": 114
 }

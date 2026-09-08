@@ -375,7 +375,9 @@ sits on a second manifest row, which is what says every mint keys `hd:` /
 committed as the baseline (i)
 and (ii) read **and as the generator's input**: it is the one record of
 AT-HYG's merge decisions — which designations name one star — that no primary
-supplies, so `build:membership` reads it for those and re-keys every row on
+supplies, so `build:membership` reads it for those, applies the corrections
+review found (`data/membership/spine-corrections.tsv`, the only curated file
+that can reach a merge decision) and re-keys every row on
 the designations the primaries publish; its `gaia_source_id` column is read
 only to diff the derived binding against, and `build:classic-ids` does not read
 it at all. The record build's own label merge retires with the swap: labels and
@@ -441,8 +443,7 @@ one: the merge may not turn an unambiguous spine designation into an ambiguous
 one.** By the ambiguity policy above such a designation keys no ledger row, so
 attaching an identifier a DIFFERENT record already holds deletes a working SID
 key from both records and buys nothing — the star stays findable through the
-record that holds it. Withheld and counted, 37 cells (p Eridani's HIP 7751,
-Gl 277A's HIP 36626 which would otherwise go keyless).
+record that holds it. Withheld and counted, 36 cells (p Eridani's HIP 7751).
 Where a flip RENAMES a record's canonical key rather than colliding — CNS5
 renumbering `Gl 157.1` to `GJ 9140` — the label flips and identity rides a
 `data/sid/sameas-overrides.tsv` bridge, per § 7.

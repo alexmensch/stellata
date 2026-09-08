@@ -34,8 +34,10 @@ import {
   LABEL_DROPS_FILE,
   MEMBERSHIP_EXPECTED_FILE,
   MEMBERSHIP_MANIFEST_FILE,
+  SPINE_CORRECTIONS_FILE,
   buildMembership,
   parseBindingDispositionsTsv,
+  parseSpineCorrectionsTsv,
   serializeBindingReview,
   serializeLabelDrops,
   serializeLedger,
@@ -46,6 +48,7 @@ import {
 const SRC_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
 const OVERLAY_HINT = 'run `pnpm run build:classic-ids`.';
 const DISPOSITIONS_HINT = 'dispose every row of binding-review.tsv there (README.md § The spine side).';
+const CORRECTIONS_HINT = 'it is committed and hand-curated (README.md § Correcting a merge decision).';
 
 function writeArtifact(repoRelative: string, text: string): void {
   const path = resolve(ROOT, repoRelative);
@@ -97,6 +100,9 @@ async function main(): Promise<void> {
     dispositions: parseBindingDispositionsTsv(
       readRequired(resolve(ROOT, BINDING_DISPOSITIONS_FILE), DISPOSITIONS_HINT),
     ),
+    corrections: parseSpineCorrectionsTsv(
+      readRequired(resolve(ROOT, SPINE_CORRECTIONS_FILE), CORRECTIONS_HINT),
+    ),
   });
 
   writeArtifact(LABEL_FLIPS_FILE, labelFlipsTsv(result.flips));
@@ -130,6 +136,10 @@ async function main(): Promise<void> {
       `${c.additionSourceOnSpine}, gate-refused ${c.additionSourceGateRefused}, ` +
       `shared ${c.additionSourceShared}, TYC/HIP route disagreement ${c.additionRouteSourceDisagree}; ` +
       `${c.additionGaiaKeyedOnly} admitted rows keyed on the Gaia id alone`,
+  );
+  console.log(
+    `spine corrections: ${c.spineRowsFolded} rows folded, ` +
+      `${Object.entries(c.spineCellsCorrected).map(([k, v]) => `${k} ${v}`).join(', ')} cells set`,
   );
   console.log(
     `unattested cells: ${Object.entries(c.unattestedByCell).map(([k, v]) => `${k} ${v}`).join(', ')}; ` +

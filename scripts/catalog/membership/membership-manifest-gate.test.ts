@@ -36,6 +36,8 @@ import {
   LABEL_DROPS_FILE,
   MEMBERSHIP_EXPECTED_FILE,
   MEMBERSHIP_MANIFEST_FILE,
+  SPINE_CORRECTIONS_FILE,
+  applySpineCorrections,
   bindingReviewKey,
   manifestDesignations,
   manifestKey,
@@ -43,9 +45,11 @@ import {
   parseBindingDispositionsTsv,
   parseBindingReviewTsv,
   parseLabelDropsTsv,
+  parseSpineCorrectionsTsv,
   parseLedgerTsv,
   parseManifestTsv,
   type ManifestRow,
+  type SpineFold,
   type MembershipCounts,
   type SpineMatch,
 } from './membership-manifest-pure';
@@ -53,6 +57,7 @@ import {
 const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE_FILE);
 const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 const LEDGER_PATH = resolve(REPO_ROOT, ADDITIONS_LEDGER_FILE);
+const CORRECTIONS_PATH = resolve(REPO_ROOT, SPINE_CORRECTIONS_FILE);
 
 const queue = parseBindingReviewTsv(readFileSync(resolve(REPO_ROOT, BINDING_REVIEW_FILE), 'utf-8'));
 const dispositions = parseBindingDispositionsTsv(
@@ -104,11 +109,19 @@ describe('binding review dispositions', () => {
 // this self-skips; it runs smudged in tier-a-corpus, which names this file.
 describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () => {
   let spine: SpineRow[];
+  /** Every spine row with its corrected cells, in file order — the keys a
+   *  disposition joins on once a correction has moved one. */
+  let corrected: SpineRow[];
+  let folds: SpineFold[];
   let manifest: ManifestRow[];
   let match: SpineMatch;
 
   beforeAll(() => {
     spine = parseSpineTsv(readFileSync(SPINE_PATH, 'utf-8'));
+    ({ corrected, folds } = applySpineCorrections(
+      spine,
+      parseSpineCorrectionsTsv(readFileSync(CORRECTIONS_PATH, 'utf-8')),
+    ));
     manifest = parseManifestTsv(readFileSync(MANIFEST_PATH, 'utf-8'));
     match = matchSpineToManifest(
       spine.map(spineDesignations),
@@ -126,11 +139,22 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // manifest row — the same SID by construction. The retirement drops no
   // record (docs/catalog-driver.md § 3.1: the residual is zero), so there is
   // no drop list for a spine row to land on instead.
+  //
+  // A FOLD is the one way two spine rows may share a manifest row, and
+  // spine-corrections.tsv says exactly which pairs: the count is pinned and
+  // each pair is checked, so a fold cannot arrive by any other route and a
+  // second row landing on someone else's record still fails here.
   it('(i) maps every spine row to exactly one manifest row', () => {
     expect(match.unmatched.slice(0, 20).map((i) => spine[i])).toEqual([]);
     expect(match.multiple.slice(0, 20).map((i) => spine[i])).toEqual([]);
     const targets = match.manifestIndex.filter((i): i is number => i !== null);
-    expect(new Set(targets).size).toBe(targets.length);
+    expect(targets.length - new Set(targets).size).toBe(expected.spineRowsFolded);
+    expect(folds).toHaveLength(expected.spineRowsFolded);
+    for (const { foldedRow, survivorRow } of folds) {
+      expect(match.manifestIndex[foldedRow], bindingReviewKey(spine[foldedRow]))
+        .toBe(match.manifestIndex[survivorRow]);
+      expect(match.manifestIndex[foldedRow]).not.toBeNull();
+    }
   });
 
   // (ii) Every manifest row no spine row reaches is on the additions ledger
@@ -195,8 +219,10 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // Every disposed row ships the value its disposition settled on, under
   // `reviewed`, or none — and no `reviewed` binding exists without one.
   it('carries every disposed binding as reviewed, and no other', () => {
+    // Keyed on the CORRECTED cells: a disposition adjudicates the row the
+    // generator derived from, and a `set` correction moves that key.
     const bySpineKey = new Map<string, ManifestRow>();
-    spine.forEach((row, i) => {
+    corrected.forEach((row, i) => {
       const target = match.manifestIndex[i];
       if (target !== null) bySpineKey.set(bindingReviewKey(row), manifest[target]);
     });

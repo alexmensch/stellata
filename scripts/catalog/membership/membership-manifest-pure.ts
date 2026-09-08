@@ -24,6 +24,7 @@ import {
 } from './binding-derivation-pure';
 import { lookupGliese } from '../gliese-parse';
 import {
+  CLASSIC_ID_OVERRIDES_FILE,
   mergeClassicIdLabels,
   spineLabelMergeRecord,
   type LabelFlip,
@@ -32,9 +33,9 @@ import {
   type LabelOverrides,
 } from '../classic-ids/label-merge-pure';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
-import { parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
+import { dataRows, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
 import { tycho2VMagnitude } from '../photometry/v-magnitude-pure';
-import type { SpineRow } from '../spine/inherited-spine-pure';
+import { spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import {
   ATHYG_HD_LINK_FLOOR,
   CLASSICAL_CELLS,
@@ -166,6 +167,131 @@ export const COMPONENT_REASON_PREFIX = 'component:';
 export const LEDGER_COLUMNS = ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'] as const;
 export type AdditionLedgerRow = Record<(typeof LEDGER_COLUMNS)[number], string>;
 
+export const SPINE_CORRECTIONS_FILE = 'data/membership/spine-corrections.tsv';
+/** The spine row a correction names, on the same four cells
+ *  `bindingReviewKey` uses. Unique across all 313,257 rows, so a key matching
+ *  none or more than one is a hard error rather than a silent no-op. */
+export const SPINE_CORRECTION_COLUMNS = [
+  ...BINDING_REVIEW_KEY_COLUMNS, 'op', 'cell', 'value', 'evidence',
+] as const;
+/** `set` replaces one cell; `fold` says the row is another spine row's
+ *  duplicate and `value` is that row's key. */
+export const SPINE_CORRECTION_OPS = ['set', 'fold'] as const;
+export type SpineCorrectionOp = (typeof SPINE_CORRECTION_OPS)[number];
+/** The cells `set` may write. `tyc` alone: every other identifier the spine
+ *  states is the label merge's, and a curated exception to a LABEL belongs in
+ *  `classic_id_overrides.tsv` where the merge can see it. */
+export const SPINE_CORRECTION_CELLS = ['tyc'] as const;
+export type SpineCorrectionCell = (typeof SPINE_CORRECTION_CELLS)[number];
+export type SpineCorrectionRow = Record<
+  (typeof SPINE_CORRECTION_COLUMNS)[number], string
+> & { op: SpineCorrectionOp };
+
+export function parseSpineCorrectionsTsv(text: string): SpineCorrectionRow[] {
+  const out: SpineCorrectionRow[] = [];
+  // `dataRows`, not this module's `tsvRows`: a hand-curated file carries `#`
+  // comment lines, which have no cell count to check.
+  for (const { cells, idx } of dataRows(
+    text, SPINE_CORRECTION_COLUMNS, SPINE_CORRECTIONS_FILE,
+    'It is committed and hand-curated; do not regenerate it.',
+  )) {
+    if (cells[0].startsWith('#')) continue;
+    const row = Object.fromEntries(
+      SPINE_CORRECTION_COLUMNS.map((c) => [c, cells[idx[c]] ?? '']),
+    ) as SpineCorrectionRow;
+    if (!(SPINE_CORRECTION_OPS as readonly string[]).includes(row.op)) {
+      throw new Error(
+        `${SPINE_CORRECTIONS_FILE}: op "${row.op}" is not one of `
+          + SPINE_CORRECTION_OPS.join(', '),
+      );
+    }
+    if (row.op === 'set' && !(SPINE_CORRECTION_CELLS as readonly string[]).includes(row.cell)) {
+      throw new Error(
+        `${SPINE_CORRECTIONS_FILE}: set may write ${SPINE_CORRECTION_CELLS.join(', ')}, `
+          + `not "${row.cell}" — a label exception belongs in ${CLASSIC_ID_OVERRIDES_FILE}`,
+      );
+    }
+    if (row.evidence.trim() === '') {
+      throw new Error(`${SPINE_CORRECTIONS_FILE}: row ${bindingReviewKey(row)} states no evidence`);
+    }
+    out.push(row);
+  }
+  return out;
+}
+
+/** One fold, in both index spaces: the two rows' positions in the committed
+ *  spine, and the survivor's position among the rows that stay. The gate reads
+ *  the first pair (it walks the file), the generator the third. */
+export interface SpineFold {
+  foldedRow: number;
+  survivorRow: number;
+  survivorKept: number;
+}
+
+/** The spine as the manifest reads it: AT-HYG's merge decisions with the ones
+ *  review found wrong corrected, and the rows it carried twice folded onto
+ *  their survivor. The spine file itself is frozen (`../spine/README.md`), so a
+ *  correction is a committed, evidenced row here rather than an edit there.
+ *
+ *  `corrected` is every spine row with its cells fixed, in file order — the
+ *  keys a disposition now joins on. `kept` drops the folded ones.
+ *  `buildMembership` holds every folded row's designations against the
+ *  surviving manifest row afterwards, so a fold that loses a designation fails
+ *  rather than quietly shrinking the catalogue. */
+export function applySpineCorrections(
+  spine: readonly SpineRow[], corrections: readonly SpineCorrectionRow[],
+): { corrected: SpineRow[]; kept: SpineRow[]; folds: SpineFold[] } {
+  const byKey = new Map<string, number>();
+  spine.forEach((row, i) => byKey.set(bindingReviewKey(row), i));
+  const resolve = (key: string, what: string): number => {
+    const i = byKey.get(key);
+    if (i === undefined) {
+      throw new Error(`${SPINE_CORRECTIONS_FILE}: ${what} "${key}" matches no spine row`);
+    }
+    return i;
+  };
+
+  const rows = spine.map((row) => ({ ...row }));
+  const foldedTo = new Map<number, number>();
+  for (const c of corrections) {
+    const i = resolve(bindingReviewKey(c), 'row');
+    if (c.op === 'set') {
+      if (rows[i][c.cell as SpineCorrectionCell] === c.value) {
+        throw new Error(
+          `${SPINE_CORRECTIONS_FILE}: row ${bindingReviewKey(c)} sets ${c.cell} to the value `
+            + 'the spine already states; remove it',
+        );
+      }
+      rows[i][c.cell as SpineCorrectionCell] = c.value;
+      continue;
+    }
+    const survivor = resolve(c.value, 'fold target');
+    if (survivor === i) {
+      throw new Error(`${SPINE_CORRECTIONS_FILE}: row ${bindingReviewKey(c)} folds onto itself`);
+    }
+    foldedTo.set(i, survivor);
+  }
+  for (const survivor of foldedTo.values()) {
+    if (foldedTo.has(survivor)) {
+      throw new Error(
+        `${SPINE_CORRECTIONS_FILE}: a fold target is itself folded — fold both onto the survivor`,
+      );
+    }
+  }
+
+  const kept: SpineRow[] = [];
+  const keptIndex = new Map<number, number>();
+  rows.forEach((row, i) => {
+    if (foldedTo.has(i)) return;
+    keptIndex.set(i, kept.length);
+    kept.push(row);
+  });
+  const folds = [...foldedTo].map(([foldedRow, survivorRow]) => ({
+    foldedRow, survivorRow, survivorKept: keptIndex.get(survivorRow)!,
+  }));
+  return { corrected: rows, kept, folds };
+}
+
 /** One queue row: the frozen cell against the derived value, with everything
  *  the derivation weighed — every source's candidate, the gate rejections, the
  *  printed V and both candidates' G, and SIMBAD's cross-IDs for each. */
@@ -190,6 +316,9 @@ export interface MembershipInput {
   /** The committed dispositions of the binding review queue, by
    *  `bindingReviewKey`. */
   dispositions: ReadonlyMap<string, BindingDispositionRow>;
+  /** The committed corrections to AT-HYG's merge decisions
+   *  (§ Correcting a merge decision). */
+  corrections: readonly SpineCorrectionRow[];
 }
 
 export interface MembershipCounts extends LabelMergeCounts {
@@ -258,6 +387,11 @@ export interface MembershipCounts extends LabelMergeCounts {
   additionsWithBlockedDesignation: number;
   rowsWithHdAlt: number;
   rowsWithHrAlt: number;
+  /** Spine rows a correction folds onto another, so they become no manifest
+   *  row of their own. `spineRows` stays the file's length. */
+  spineRowsFolded: number;
+  /** Spine cells a correction rewrites, per cell. */
+  spineCellsCorrected: Record<SpineCorrectionCell, number>;
   /** Spine rows whose derived binding is empty, so no overlay entry can reach
    *  them and their labels are the spine's whole story. */
   spineRowsWithoutSourceId: number;
@@ -987,8 +1121,17 @@ function admitGroup(
 // ---- the build -----------------------------------------------------------------
 
 export function buildMembership(input: MembershipInput): MembershipResult {
-  const { spine, tables, overlay, overrides, siblingRenderedSourceIds, evidence, dispositions } = input;
+  const {
+    spine, tables, overlay, overrides, siblingRenderedSourceIds, evidence, dispositions,
+    corrections,
+  } = input;
   const idx = indexPrimaries(tables);
+  const { kept, folds } = applySpineCorrections(spine, corrections);
+  const spineCellsCorrected = Object.fromEntries(
+    SPINE_CORRECTION_CELLS.map((c) => [c, corrections.filter(
+      (r) => r.op === 'set' && r.cell === c,
+    ).length]),
+  ) as Record<SpineCorrectionCell, number>;
 
   const bindingByClass: Record<BindingClass, number> = {
     crosswalk_gated: 0, simbad_corroborated: 0, reviewed: 0, none: 0,
@@ -1027,8 +1170,8 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   let derivedWeighedNullGMag = 0;
   const applied = new Set<string>();
 
-  const settled = deriveSpineBindings(spine, tables, idx, evidence).map((b, i) => {
-    const spineRow = spine[i];
+  const settled = deriveSpineBindings(kept, tables, idx, evidence).map((b, i) => {
+    const spineRow = kept[i];
     derivedVsFrozen[b.comparison]++;
     let value: string | null = null;
     let binding: BindingClass = 'none';
@@ -1077,7 +1220,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
 
   // The merge keys on the DERIVED binding, so the labels a record takes are the
   // ones the overlay hangs on the source it is actually bound to.
-  const spineSides = spine.map((row, i) => spineLabelMergeRecord(row, settled[i].value));
+  const spineSides = kept.map((row, i) => spineLabelMergeRecord(row, settled[i].value));
   const records = spineSides.map((s) => s.record);
   const merge = mergeClassicIdLabels({
     records,
@@ -1089,20 +1232,35 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   let spineRowsWithoutSourceId = 0;
   let spineBrightRows = 0;
   let spineBrightRowsWithoutOverlayEntry = 0;
+  const spineManifestRows: ManifestRow[] = [];
   records.forEach((record, i) => {
     const noEntry = record.gaiaSourceId === null || !overlay.has(record.gaiaSourceId);
     if (record.gaiaSourceId === null) spineRowsWithoutSourceId++;
-    const mag = parseFloatOrNull(spine[i].mag);
+    const mag = parseFloatOrNull(kept[i].mag);
     if (mag !== null && mag <= BRIGHT_TIER_MAG_CEILING) {
       spineBrightRows++;
       if (noEntry) spineBrightRowsWithoutOverlayEntry++;
     }
-    const row = manifestRowFromRecord(spine[i], record, settled[i].binding);
+    const row = manifestRowFromRecord(kept[i], record, settled[i].binding);
+    spineManifestRows.push(row);
     attest(row, dropUnattestedLabels(row, tables, idx, labelDrops));
   });
+  // A fold claims two spine rows are one star, so the survivor has to end up
+  // answering to everything the folded row did — otherwise the fold is a
+  // silent record drop rather than a merge.
+  for (const { foldedRow, survivorKept } of folds) {
+    const held = new Set(manifestDesignations(spineManifestRows[survivorKept]));
+    const lost = spineDesignations(spine[foldedRow]).filter((d) => !held.has(d));
+    if (lost.length > 0) {
+      throw new Error(
+        `${SPINE_CORRECTIONS_FILE}: folding ${bindingReviewKey(spine[foldedRow])} loses `
+          + `${lost.join(', ')} — the survivor does not answer to it`,
+      );
+    }
+  }
 
   const claims = spineClaims(records);
-  const additions = findAdditions(tables, spineKeys(spine), idx);
+  const additions = findAdditions(tables, spineKeys(kept), idx);
   const items: AdditionItem[] = [
     ...additions.hd.map((hd) => ({
       key: `tyc:${hd.tyc}`, hd, hip: null, cns5: null,
@@ -1164,7 +1322,9 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     ...merge.counts,
     rows: sorted.length,
     spineRows: spine.length,
-    additionRows: sorted.length - spine.length,
+    spineRowsFolded: spine.length - kept.length,
+    spineCellsCorrected,
+    additionRows: sorted.length - kept.length,
     additionsByReason,
     componentRows,
     bindingByClass,

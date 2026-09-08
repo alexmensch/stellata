@@ -8,7 +8,7 @@ diffed in CI, never hand-edited. Contract: `docs/catalog-driver.md` § 3.1.
 membership-manifest.tsv  ~30 MB, LFS. One row per admitted record: final
                          labels (hd/hd_alt/hr/hr_alt/hip/gl/flam, the spine's
                          bayer/proper), gaia_source_id with its binding class,
-                         and the primary attesting each cell. 376,929 rows.
+                         and the primary attesting each cell. 376,927 rows.
 additions-ledger.tsv     ~3.6 MB, LFS. The § 6.1 ledger for everything the
                          primaries admit that the spine lacked: one row per
                          group, keyed on the same five identifier cells as
@@ -26,7 +26,7 @@ parked-ledger.tsv        ~282 KB, regular git. The § 6.1 ledger for manifest
                          record walk. The parity gate subtracts exactly these
                          rows and no more, so a park that is not on this list
                          fails the build rather than vanishing.
-binding-review.tsv       ~12 KB, regular git. The 54 spine rows whose derived
+binding-review.tsv       ~12 KB, regular git. The 53 spine rows whose derived
                          Gaia binding the generator cannot settle against the
                          frozen spine cell — differs · unreached · contested ·
                          collision — with every source's candidate, the gate
@@ -40,17 +40,27 @@ binding-review-dispositions.tsv
                          listed runner-up, or empty), a basis from the closed
                          enum (tycho2_position · v70a_astrometry ·
                          simbad_dr2_object · gaia_photometry · pair_component
-                         · shared_source) and the measured evidence. 54 rows:
-                         46 frozen, 6 derived, 1 runner-up, 1 none; a kept
-                         value rides the manifest as binding=reviewed.
+                         · shared_source) and the measured evidence. 53 rows:
+                         46 frozen, 6 derived, 1 runner-up; a kept value rides
+                         the manifest as binding=reviewed.
+spine-corrections.tsv    ~4 KB, regular git. Hand-curated: where review found
+                         AT-HYG's MERGE DECISION wrong, which no other curated
+                         file covers. Keyed on tyc/hip/hd/gl, one row per
+                         correction, under `set` (rewrite one cell — `tyc`
+                         only, since every other identifier is the label
+                         merge's) or `fold` (this row is another's duplicate;
+                         `value` names it). 2 rows. Every field is checked and
+                         a fold's survivor must answer to everything the folded
+                         row did (scripts/catalog/membership/README.md
+                         § Correcting a merge decision).
 label-drops.tsv          ~7 KB, regular git. The § 6.2 label ledger: every
                          spine Flamsteed / HD cell no primary attests, keyed
                          on the manifest row it left, under
                          flamsteed_unattested (119) · hd_unattested (1).
 ```
 
-`data/membership/*.tsv` is a blanket LFS rule, so the three small files carry
-their own `!filter` lines in `.gitattributes` — a review queue on LFS shows a
+`data/membership/*.tsv` is a blanket LFS rule, so the small files carry their
+own `!filter` lines in `.gitattributes` — a review queue on LFS shows a
 reviewer an oid instead of the rows. Any further small file here needs one too.
 
 ## Inputs
@@ -67,8 +77,9 @@ surface for the derived binding), the primaries the audit reads
 `../simbad/simbad_wds_xids.tsv` for component attribution), the post-gate
 overlay `../classic-ids/classic_id_overlay.tsv`,
 `../classic-ids/classic_id_overrides.tsv`, `../binaries/multiples.tsv`, and
-this folder's own `binding-review-dispositions.tsv`. Licence follows the
-inputs: CC-BY-SA-4.0 through the spine.
+this folder's own `binding-review-dispositions.tsv` and
+`spine-corrections.tsv`. Licence follows the inputs: CC-BY-SA-4.0 through the
+spine.
 
 ## Consumed by
 

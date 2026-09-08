@@ -31,9 +31,10 @@ scripts/catalog/membership/
                                   the label drops, the TSV codecs, and the
                                   spine ↔ manifest matcher the gate runs. Pure.
   build-membership-manifest.ts    `pnpm run build:membership` — loads the
-                                  spine, the primaries, the overlay, the
-                                  binding gates' evidence, multiples.tsv and
-                                  the review dispositions, writes
+                                  spine and its corrections, the primaries, the
+                                  overlay, the binding gates' evidence,
+                                  multiples.tsv and the review dispositions,
+                                  writes
                                   data/membership/ plus the label merge's
                                   queue (data/classic-ids/label_flips.tsv),
                                   and pins
@@ -243,6 +244,41 @@ the row after the drop must already outrank the cell it lost. Dropping the
 display HD promotes the first surviving alias into it, so the cell a record
 publishes stays the one a primary attests.
 
+## Correcting a merge decision
+
+The spine states which designations name one star, and that is the one thing no
+primary supplies — so it is also the one thing no other curated file can
+correct. `data/membership/spine-corrections.tsv` is where review says AT-HYG
+merged wrong, keyed on `tyc`/`hip`/`hd`/`gl`, which is unique across all
+313,257 spine rows. Two operations:
+
+- **`set`** rewrites one cell. It accepts **`tyc` alone**: every other
+  identifier the spine states is the label merge's, and a curated exception to
+  a LABEL belongs in `classic_id_overrides.tsv` where the merge can see it.
+- **`fold`** says the row is another spine row's duplicate, `value` naming that
+  row's key. The folded row becomes no manifest row of its own.
+
+A key matching no spine row, a `set` writing the value the spine already
+states, a fold onto a folded row, and a row stating no evidence are all hard
+errors — a curated file that silently does nothing is worse than none.
+
+**A fold has to be a merge, not a drop.** After the rows are built the
+generator holds every folded row's `spineDesignations` against the surviving
+manifest row's, and fails on any the survivor does not answer to. It is an
+identity event too: the folded row's SID retires with the survivor's as
+successor (`docs/sid.md` § 4.3). Both today:
+
+| Row | Op | What review found |
+|---|---|---|
+| TYC 2265-1793-1 / HIP 1997 | `set tyc` | the row is HD 2094 A on its HIP, its bound source and its HD, and carried B's TYC — 5.1″ away, and what the direction, V and PM cascades key on |
+| the Gaia-keyed `Gl 277A` | `fold` | AT-HYG carried VV Lyn twice, 0.65″ apart at the same magnitude; `multiples.tsv`, CNS5 and SIMBAD each pair HIP 36626 with that source |
+
+Both corrections **retire** a curated row rather than adding one: HD 2094's
+queue verdict stays `differs` but its TYC route now agrees with the HIP and
+SIMBAD ones, and the fold clears the `collision` the twin caused, so its
+disposition goes. The survivor also gains the Gaia 5p solution the twin held —
+83.3788 ± 0.0487 mas against Hipparcos-2's blended 84.26 ± 3.45.
+
 ## The additions
 
 `findAdditions` (the audit) yields three cohorts the spine lacks: IV/25 Tycho-2
@@ -323,7 +359,11 @@ source and follow the HD-route authority of § 4.
 replacement for `../spine/inherited-spine-parity.test.ts`'s spine-less-ledger
 arithmetic and label-flips replay:
 
-- **(i)** every spine row resolves to exactly one manifest row.
+- **(i)** every spine row resolves to exactly one manifest row — with the
+  folds of § Correcting a merge decision as the only exception, whose count is
+  pinned and whose every pair is checked, so a second row landing on someone
+  else's record still fails.
+  `matchSpineToManifest` resolves it the way `sid:allocate` resolves a record:
   `matchSpineToManifest` resolves it the way `sid:allocate` resolves a record:
   the same-as graph over the manifest's designations plus
   `data/sid/sameas-overrides.tsv`, ambiguous designations dropped, the row
@@ -371,7 +411,8 @@ the generator, so the record build applies no label pass to them
 
 The spine stays committed as the baseline gate (i) reads, as the record of
 AT-HYG's merge decisions — which designations name one star — that the
-generator re-keys, as the inherited label cells the merge above starts from,
+generator re-keys (with the corrections of § Correcting a merge decision
+applied), as the inherited label cells the merge above starts from,
 and as the frozen `gaia_source_id` column the derivation is diffed against
 (§ The spine side). Its binding cell is not an input to the manifest's: no row
 takes a value from it except through a committed disposition row that says so,

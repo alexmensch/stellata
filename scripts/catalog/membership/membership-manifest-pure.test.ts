@@ -23,12 +23,15 @@ import {
   parseLedgerTsv,
   parseManifestTsv,
   parseBindingReviewTsv,
+  parseSpineCorrectionsTsv,
+  SPINE_CORRECTION_COLUMNS,
   serializeBindingReview,
   serializeLabelDrops,
   serializeLedger,
   serializeManifest,
   type BindingDispositionRow,
   type ManifestRow,
+  type SpineCorrectionRow,
 } from './membership-manifest-pure';
 
 function spineRow(cells: Partial<SpineRow>): SpineRow {
@@ -172,6 +175,7 @@ const input = {
   spine, tables, overlay, overrides: new Map(), siblingRenderedSourceIds: new Set<string>(),
   evidence: bindingEvidence(new Map(), new Map(), null),
   dispositions: new Map<string, BindingDispositionRow>(),
+  corrections: [] as SpineCorrectionRow[],
 };
 const result = buildMembership(input);
 const byTyc = new Map(result.rows.map((r) => [r.tyc, r]));
@@ -440,6 +444,86 @@ describe('buildMembership — the spine side', () => {
   it('puts Sol first, on its proper name alone', () => {
     expect(result.rows[0]).toMatchObject({ proper: 'Sol', binding: 'none', routes: 'proper:sol' });
     expect(manifestDesignations(result.rows[0])).toEqual(['sol:sun']);
+  });
+});
+
+function correction(cells: Partial<SpineCorrectionRow>): SpineCorrectionRow {
+  return {
+    tyc: '', hip: '', hd: '', gl: '', op: 'set', cell: 'tyc', value: '',
+    evidence: 'measured', ...cells,
+  } as SpineCorrectionRow;
+}
+
+// The spine is frozen, so a merge decision review finds wrong is corrected by a
+// committed row here — the one class of defect no other curated file covers.
+describe('spine corrections', () => {
+  it('derives and attests a set cell from the corrected value, not the frozen one', () => {
+    const fixed = buildMembership({
+      ...input,
+      tables: { ...tables, tycToSource: new Map([...tables.tycToSource, ['1-9-1', '999']]) },
+      corrections: [correction({ tyc: '1-2-1', hd: '5', cell: 'tyc', value: '1-9-1' })],
+    });
+    const row = fixed.rows.find((r) => r.hd === '5')!;
+    expect(row).toMatchObject({ tyc: '1-9-1', gaia_source_id: '999' });
+    expect(fixed.counts.spineCellsCorrected).toEqual({ tyc: 1 });
+    expect(fixed.counts.spineRowsFolded).toBe(0);
+  });
+
+  it('folds a duplicate row onto its survivor and leaves the survivor keying it', () => {
+    const twin = spineRow({ gl: 'Gl 165A', gaia_source_id: '333' });
+    const folded = buildMembership({
+      ...input,
+      spine: [...spine, twin],
+      corrections: [correction({
+        gl: 'Gl 165A', op: 'fold', cell: '',
+        value: bindingReviewKey({ tyc: '7-7-1', hip: '20', hd: '', gl: 'Gl 165A' }),
+      })],
+    });
+    expect(folded.counts.spineRowsFolded).toBe(1);
+    expect(folded.rows.filter((r) => r.gl === 'Gl 165A')).toHaveLength(1);
+    expect(folded.rows.find((r) => r.gl === 'Gl 165A'))
+      .toMatchObject({ hip: '20', gaia_source_id: '333' });
+    expect(folded.counts.rows).toBe(result.counts.rows);
+  });
+
+  // The fold asserts a merge, so the survivor has to answer to everything the
+  // folded row did — otherwise it is a silent record drop.
+  it('refuses a fold whose survivor does not answer to the folded designations', () => {
+    const twin = spineRow({ hd: '4242', gl: 'Gl 165A' });
+    expect(() => buildMembership({
+      ...input,
+      spine: [...spine, twin],
+      tables: { ...tables, hdI239: new Set([4242]) },
+      corrections: [correction({
+        hd: '4242', gl: 'Gl 165A', op: 'fold', cell: '',
+        value: bindingReviewKey({ tyc: '7-7-1', hip: '20', hd: '', gl: 'Gl 165A' }),
+      })],
+    })).toThrow(/loses hd:4242/);
+  });
+
+  it('refuses a key no spine row carries, rather than silently doing nothing', () => {
+    expect(() => buildMembership({
+      ...input,
+      corrections: [correction({ tyc: '404-404-1', cell: 'tyc', value: '1-9-1' })],
+    })).toThrow(/matches no spine row/);
+  });
+
+  // A label the CDS join got wrong belongs in classic_id_overrides.tsv, where
+  // the merge can see it; this file may not reach around the merge.
+  it('parses only tyc as a set cell', () => {
+    const tsv = [
+      SPINE_CORRECTION_COLUMNS.join('\t'),
+      ['1-2-1', '', '5', '', 'set', 'hd', '6', 'because'].join('\t'),
+    ].join('\n') + '\n';
+    expect(() => parseSpineCorrectionsTsv(tsv)).toThrow(/set may write tyc/);
+  });
+
+  it('refuses a correction that states no evidence', () => {
+    const tsv = [
+      SPINE_CORRECTION_COLUMNS.join('\t'),
+      ['1-2-1', '', '5', '', 'set', 'tyc', '1-9-1', ''].join('\t'),
+    ].join('\n') + '\n';
+    expect(() => parseSpineCorrectionsTsv(tsv)).toThrow(/states no evidence/);
   });
 });
 

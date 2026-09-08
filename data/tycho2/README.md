@@ -91,8 +91,8 @@ supplement only where the main table has no row.
 ## The request set — manifest ∪ IV/25
 
 `refresh-tycho2.py` derives the mentioned-TYC set from the membership
-manifest's `tyc` column (372,148) unioned with IV/25's own TYCs (471 more
-than the manifest already names), for 372,619 requested. The union is
+manifest's `tyc` column (372,147) unioned with IV/25's own TYCs (471 more
+than the manifest already names), for 372,618 requested. The union is
 unchanged in size from the spine-era `spine ∪ IV/25`: the manifest admits
 the IV/25 TYCs that the union was widened to cover in the first place.
 
@@ -100,12 +100,12 @@ Coverage, re-measured 2026-09-07 against the committed tables:
 
 | Cohort | Requested | Reached |
 |---|---|---|
-| Manifest TYCs | 372,148 | 372,130 |
+| Manifest TYCs | 372,147 | 372,129 |
 | IV/25-only TYCs | 471 | 469 |
-| Union | 372,619 | 372,599 |
+| Union | 372,618 | 372,598 |
 
 The refresh hard-fails on a manifest TYC that reaches neither table **and**
-whose pair entry is unreached too. All 371,417 manifest TYCs with `TYC3=1`
+whose pair entry is unreached too. All 371,416 manifest TYCs with `TYC3=1`
 reach Tycho-2, so a primary that misses is a membership event for § 6 to
 adjudicate, or an upstream regression — not a refresh landing short. The whole
 residual sits in the 731-row component cohort (`TYC3>1`), 713 of which reach,
