@@ -522,7 +522,12 @@ export function parkedRefusals(
  *  between 2e-11 and 8.2e-8 relative (the loose end being the four-decimal
  *  cell), while the nearest row stating a genuinely different measurement is
  *  2.1e-2 away. Anywhere in that gap separates them; this sits ~100x above the
- *  worst true match and ~2000x below the closest false one. */
+ *  worst true match and ~2000x below the closest false one.
+ *
+ *  Relative bound, absolute rounding: headroom scales as 1/d. The nearest row
+ *  the gate sees is 54.98 pc, where a four-decimal cell sits 9.1e-7 away — 11x
+ *  inside this — and below ~5 pc it would fall outside and let a re-served
+ *  refusal promote. Re-measure if a refused row's pair ever lands there. */
 export const REFUSED_PARALLAX_MATCH_REL_TOL = 1e-5;
 
 /** Whether promoting this pair row would re-serve a parallax a tier above

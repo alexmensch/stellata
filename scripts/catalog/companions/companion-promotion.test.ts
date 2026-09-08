@@ -2869,6 +2869,60 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
     expect(stats.droppedParkedRecord).toBe(1);
   });
 
+  // The cascade pushes one value per tier it refuses, so a record reaches the
+  // gate with a LIST and the row has to match any of it. 01425+5000's own
+  // refusals are 0.97 and 5.1696 mas; HIP 90996's are 5.45 and 6.8354.
+  const SECOND_REFUSAL_MAS = 5.1696;
+  const statesSecondRefusal = blendedRows.map(
+    (r) => ({ ...r, distPc: 1000 / SECOND_REFUSAL_MAS }),
+  );
+
+  it('matches the row against every parallax refused on the record, not only '
+    + 'the first', () => {
+    const { stats } = promoteCompanions(
+      statesSecondRefusal, [blendedPrimary], CON_ASSIGNMENT, null,
+      parkedRefusals([{
+        gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP,
+        reason: 'refused_no_defensible_parallax',
+        refusedPlxMas: [0.97, SECOND_REFUSAL_MAS],
+      }]),
+    );
+    expect(stats.droppedParkedRecord).toBe(1);
+  });
+
+  it('promotes where the row states none of them — a second refusal does not '
+    + 'widen the refusal back out to the id', () => {
+    const { newStars, stats } = promoteCompanions(
+      blendedRows, [blendedPrimary], CON_ASSIGNMENT, null,
+      parkedRefusals([{
+        gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP,
+        reason: 'refused_no_defensible_parallax',
+        refusedPlxMas: [SECOND_REFUSAL_MAS, 6.8354],
+      }]),
+    );
+    expect(stats.droppedParkedRecord).toBe(0);
+    expect(newStars).toHaveLength(1);
+  });
+
+  it('reaches a refusal indexed under the row\'s HIP where its Gaia source '
+    + 'carries a different one — the two indexes are read as one list', () => {
+    const { stats } = promoteCompanions(
+      statesSecondRefusal, [blendedPrimary], CON_ASSIGNMENT, null,
+      parkedRefusals([
+        {
+          gaiaSourceId: BLEND_SOURCE, hip: null,
+          reason: 'refused_no_defensible_parallax', refusedPlxMas: [0.97],
+        },
+        {
+          gaiaSourceId: null, hip: BLEND_HIP,
+          reason: 'refused_no_defensible_parallax',
+          refusedPlxMas: [SECOND_REFUSAL_MAS],
+        },
+      ]),
+    );
+    expect(stats.droppedParkedRecord).toBe(1);
+  });
+
   // A row parked on a reason that refused nothing: there is no measurement for
   // a pair row to be laundering, so the id is not indexed at all.
   it.each([
