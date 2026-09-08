@@ -324,8 +324,19 @@ export function readStars(
   stats: {
     total: number;
     dropped: ReadStarsDrops;
-    bjEligible: number;            // rows with a Gaia DR3 source_id
+    /** Rows carrying a source_id whose parallax cascade resolved
+     *  `gaia_dr3_inversion` — the tier B-J publishes a posterior over. */
+    bjEligible: number;
     bjOverridden: number;          // bjEligible rows that hit a B-J entry
+    /** Eligible rows the committed B-J table holds no row for. **Pinned at
+     *  zero**: an eligible row has its own DR3 parallax, so B-J publishes a
+     *  posterior for it and an absence is this pull's request set having
+     *  drifted from the manifest's binding column — never the publication.
+     *  Such a row silently keeps the naive 1/π inversion, which is exactly
+     *  what the posterior exists to moderate. `bjOverridden` cannot catch it:
+     *  when the column gains sources the pull was never asked for, that
+     *  numerator stops growing, and "stopped growing" reads as no change. */
+    bjEligibleNotPulled: number;
     /** The § 6.1 dropped list — enumerated, because these rows leave the
      *  catalogue and nothing else records that they existed. */
     parked: ParkedRecord[];
@@ -383,6 +394,7 @@ export function readStars(
   let bjEligible = 0;
   let distLowPrecisionParallax = 0;
   let bjOverridden = 0;
+  let bjEligibleNotPulled = 0;
   let lmcCandidates = 0;
   let lmcOverridden = 0;
   const lmcOverriddenByDistVia = emptyTallyPartition(DIST_VIA_VALUES);
@@ -572,6 +584,8 @@ export function readStars(
         dist = ovr;
         distVia = 'bailer_jones';
         bjOverridden++;
+      } else {
+        bjEligibleNotPulled++;
       }
     }
 
@@ -786,6 +800,7 @@ export function readStars(
       dropped,
       bjEligible,
       bjOverridden,
+      bjEligibleNotPulled,
       parked,
       parkedVia,
       distLowPrecisionParallax,

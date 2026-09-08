@@ -328,25 +328,23 @@ al. 2021 (CDS I/352). The pipeline:
 
 1. Load `data/bailer-jones/bailer-jones-dr3.tsv` via
    `parseBailerJonesTsv` into a `Map<source_id, distance_pc>` keyed
-   by Gaia DR3 `source_id`. The key is kept as a **string** — Gaia
-   source_ids regularly exceed `Number.MAX_SAFE_INTEGER`, so any
-   numeric parse would silently corrupt the join. Photogeometric
+   by Gaia DR3 `source_id`, kept as a **string** for the reason
+   `data/bailer-jones/README.md` gives. Photogeometric
    `r_med_photogeo` is preferred; `r_med_geo` is the fallback when
    photogeo is absent.
 2. During `readStars`, every row with a non-empty `gaia` source_id
    whose parallax cascade resolved `gaia_dr3_inversion` is looked up
-   in the map. The eligibility predicate `isBailerJonesEligible` is
-   the single gate, and it reads the **resolved tier** — a record
-   whose distance rests on Hipparcos, CNS5, Gliese, SIMBAD or a bound
-   sibling is excluded deliberately, since B-J publishes a posterior
-   over a *Gaia* parallax and applying it elsewhere discards a
-   measurement for one computed from a different, worse one (the
-   Galactic prior tail, ~10–40 kpc).
+   in the map. `isBailerJonesEligible` is the single gate and it reads
+   the **resolved tier**, so a record placed by Hipparcos, CNS5,
+   Gliese, SIMBAD or a bound sibling is excluded — why, and what the
+   prior's ~10–40 kpc tail would cost it: `data/bailer-jones/README.md`
+   § Consumed by.
 3. On a hit, `applyBailerJonesOverride` returns
    `{ dist, absmag }` with `absmag = mag − 5·log₁₀(dist / 10)`.
 4. Coverage is `bjOverridden / bjEligible`, printed per build and pinned
-   in `../build-catalog-expected.json`. The residual are source_ids absent
-   from the Bailer-Jones publication, which keep the cascade's inversion.
+   in `../build-catalog-expected.json`, and the **shortfall between the two
+   is pinned at zero** as `bjEligibleNotPulled` — § Manifest-derived pulls
+   below.
 5. The override also rescues stars the Layer 3 cap would otherwise drop:
    catastrophic-parallax-inversion supergiants whose Bayesian
    distance falls below it.
@@ -354,6 +352,22 @@ al. 2021 (CDS I/352). The pipeline:
 If `data/bailer-jones/bailer-jones-dr3.tsv` is absent (fresh clone
 without LFS pulled), the build logs and continues — every star keeps
 the cascade's naive inversion. Data refresh: `pnpm run refresh:bailer-jones`.
+
+### Manifest-derived pulls — why the zero pin is here
+
+**An eligible row cannot legitimately lack a posterior.** Eligibility is
+`gaia_dr3_inversion`, so the row has its own DR3 parallax and the publication
+covers every DR3 source that has one. An absence is this pull's request set —
+the manifest's `gaia_source_id` column — having moved, not a gap upstream.
+
+It slips in the worst direction: the row keeps a naive `1/π`, and rows that
+newly gain a binding are disproportionately saturated bright stars with poor
+fits — the population the prior exists to moderate. HIP 23617 is the shape,
+parallax 1.25 ± 0.83 mas and `RUWE` (Gaia's goodness-of-fit ratio, ~1 being
+a clean single-star fit) 19.7, inverting to 800 pc against Hipparcos-2's 171.
+
+The rule, the other gated pulls, and why a forced rebuild cannot substitute:
+`scripts/refresh/README.md` § The staleness gate.
 
 ### Layer 2 — LMC kinematic override
 

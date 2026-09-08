@@ -13,7 +13,7 @@ simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 50k stars.
 simbad_sptype.tsv          ~29 MB, LFS. 395,543 rows. Per-source sp_type /
                            sp_qual / sp_bibcode / otype + HIP / Gaia DR3 /
                            TYC / GJ cross-IDs; the resolver keys all four.
-simbad_values.tsv          ~2.7 MB, LFS. 11,044 rows. Bibcoded rv,
+simbad_values.tsv          ~18 MB, LFS. 74,446 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
                            the § 5 value cohort — see § The values pull.
 simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
@@ -48,7 +48,7 @@ costs is visible in the pull's own report, which prints values reached
 before it prints values shipped.
 
 **The request set is an enumerated cohort, not the catalogue.** It is the
-**membership manifest** rows a § 5 value tier can reach — 75,035 of 376,929
+**membership manifest** rows a § 5 value tier can reach — 75,037 of 376,929
 (19.9%), keyed `gaia_source_id` → HIP → TYC → GJ. Four rows in five are
 absent by construction, so a consumer cannot quietly reach for SIMBAD where a
 first-hand catalogue already serves. **Widening the cohort is a re-pull**, not
@@ -59,22 +59,22 @@ table states every § 5 value for it AND its identity is first-hand too (a
 and what an identity-only predicate loses — is
 `scripts/refresh/simbad/README.md` § The cohort is two questions.
 
-Coverage over the cohort, measured at the 2026-09-06 pull (74,442 oids, up
+Coverage over the cohort, measured at the 2026-09-08 pull (74,446 oids, up
 from 11,045 rows on the spine-scoped one it replaced). Every count below is
 what **ships**, i.e. post-policy — the file holds no unbibcoded value, so each
 field's value count equals its bibcode count.
 
 | Field | Reaches a shipped value |
 |---|---|
-| coordinates | 74,442 (100.0%) |
-| proper motion | 74,263 (99.8%) |
-| parallax | 69,907 (93.9%) |
-| flux B | 62,469 (83.9%) |
-| flux V | 62,416 (83.8%) |
-| radial velocity | 34,571 (46.4%) |
+| coordinates | 74,446 (100.0%) |
+| proper motion | 74,267 (99.8%) |
+| parallax | 69,904 (93.9%) |
+| flux B | 62,542 (84.0%) |
+| flux V | 62,488 (83.9%) |
+| radial velocity | 34,520 (46.4%) |
 
 **The two fluxes are the sparsest fields after rv, and the bibcode policy is
-why.** They sit at 83.9% and 83.8% against parallax's 93.9% and PM's 99.8%,
+why.** They sit at 84.0% and 83.9% against parallax's 93.9% and PM's 99.8%,
 because `allfluxes` — the view whose B/V coverage is wider — carries no bibcode
 at all, so the long-format `flux` table is the only consumable source and an
 unattributable value is dropped whole. How many the cohort reached *before* the
@@ -82,9 +82,9 @@ policy is not recoverable from the committed file, which holds no unbibcoded
 value by construction, so the pull's own report is the only place that number
 is ever read.
 
-**rv Gaia-bibcode skip rule** (§ 5): of the 34,571 rv values in the pull,
-**14,692 carry a Gaia catalogue bibcode** — 13,360 `2018yCat.1345....0G`
-(DR2) and 1,332 `2022yCat.1355....0G` (DR3). Those are the values the rv
+**rv Gaia-bibcode skip rule** (§ 5): of the 34,520 rv values in the pull,
+**14,725 carry a Gaia catalogue bibcode** — 13,381 `2018yCat.1345....0G`
+(DR2) and 1,344 `2022yCat.1355....0G` (DR3). Those are the values the rv
 cascade must skip on rows whose own 5p gate withheld Gaia rv, so the pull
 cannot launder a withheld value back in. The rest are literature, led by
 `2020AJ....160..120J` (4,007), `2006AstL...32..759G` (3,764) and

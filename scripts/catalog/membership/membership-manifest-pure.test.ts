@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ClassicIdOverlay, OverlayEntry } from '../classic-ids/classic-id-overlay-pure';
+import {
+  bindingEvidence,
+  type ClassicIdOverlay,
+  type OverlayEntry,
+} from '../classic-ids/classic-id-overlay-pure';
 import { parseGlieseTsv } from '../gliese-parse';
 import { SPINE_COLUMNS, spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import type { PrimaryTables } from '../spine/primaries-audit-pure';
@@ -9,6 +13,7 @@ import {
   ADDITION_REASONS,
   COMPONENT_REASON_PREFIX,
   MANIFEST_COLUMNS,
+  bindingReviewKey,
   buildMembership,
   manifestDesignations,
   manifestKey,
@@ -17,6 +22,8 @@ import {
   parseLabelDropsTsv,
   parseLedgerTsv,
   parseManifestTsv,
+  parseBindingReviewTsv,
+  serializeBindingReview,
   serializeLabelDrops,
   serializeLedger,
   serializeManifest,
@@ -52,10 +59,11 @@ const GLIESE_TSV = [
   'Gl 165\tAB\t9.0\t\t\t\t\t',
 ].join('\n') + '\n';
 
-/** Spine: Sol; HD 100001 / HIP 10 bound and reproduced by the TYC walk; HD 5
- *  bound by AT-HYG alone with SIMBAD corroborating; HD 40 bound by AT-HYG alone
- *  and contradicted; Gl 165A with a HIP the HIP walk binds; HIP 70 carrying an
- *  HD and a Flamsteed number no primary publishes. */
+/** Spine: Sol; HD 100001 / HIP 10 bound and reproduced by both walks; HD 5
+ *  bound by AT-HYG alone, SIMBAD's object for that id carrying its TYC; HD 40
+ *  bound by AT-HYG alone with no source reaching it; Gl 165A with a HIP the HIP
+ *  walk binds; HIP 70 carrying an HD and a Flamsteed number no primary
+ *  publishes. */
 const spine: SpineRow[] = [
   spineRow({ proper: 'Sol' }),
   spineRow({ tyc: '1-1-1', hip: '10', hd: '100001', gaia_source_id: '111' }),
@@ -64,6 +72,15 @@ const spine: SpineRow[] = [
   spineRow({ tyc: '7-7-1', hip: '20', gl: 'Gl 165A', gaia_source_id: '333' }),
   spineRow({ hip: '70', hd: '70000', flam: '5' }),
 ];
+
+const HD40_KEY = bindingReviewKey({ tyc: '9-8-1', hip: '', hd: '40', gl: '' });
+
+function disposition(cells: Partial<BindingDispositionRow>): BindingDispositionRow {
+  return {
+    tyc: '9-8-1', hip: '', hd: '40', gl: '', frozen_source_id: '888', derived_source_id: '',
+    keep_source_id: '888', basis: 'tycho2_position', evidence: '0.1"', ...cells,
+  };
+}
 
 /** Primaries admitting, beyond the spine: TYC 2-1-1 (HD 60, below the link
  *  floor, with HIP 30 through Tycho-2's own column); TYC 2-2-1 (HD 200500);
@@ -153,46 +170,194 @@ const overlay: ClassicIdOverlay = new Map([
 
 const input = {
   spine, tables, overlay, overrides: new Map(), siblingRenderedSourceIds: new Set<string>(),
+  evidence: bindingEvidence(new Map(), new Map(), null),
   dispositions: new Map<string, BindingDispositionRow>(),
 };
 const result = buildMembership(input);
 const byTyc = new Map(result.rows.map((r) => [r.tyc, r]));
 
 describe('buildMembership — the spine side', () => {
-  it('keeps every spine row and classifies its binding', () => {
+  it('derives every spine binding and holds it against the frozen cell', () => {
     expect(result.counts.spineRows).toBe(6);
     expect(byTyc.get('1-1-1')?.binding).toBe('crosswalk_gated');
     expect(byTyc.get('1-2-1')?.binding).toBe('simbad_corroborated');
     expect(byTyc.get('1-2-1')?.gaia_source_id).toBe('222');
+    expect(result.counts.derivedVsFrozen).toEqual({
+      match: 3, fill: 0, refused: 1, differs: 0, unreached: 1, contested: 0, collision: 0, sol: 1,
+    });
+    expect(result.counts.derivedVia).toEqual({ tyc: 1, hip: 1, cns5: 0, simbad: 1 });
+    expect(result.counts.derivedConsensus).toBe(1);
   });
 
-  it('keeps a reviewed binding on a committed keep disposition, queue row intact', () => {
+  it('keeps the frozen value on a committed disposition, queue row intact', () => {
     const disposed = buildMembership({
-      ...input,
-      dispositions: new Map([['888', {
-        gaia_source_id: '888', disposition: 'keep', basis: 'tycho2_position', evidence: '0.1"',
-      }]]),
+      ...input, dispositions: new Map([[HD40_KEY, disposition({})]]),
     });
     const row = disposed.rows.find((r) => r.tyc === '9-8-1')!;
     expect(row).toMatchObject({ gaia_source_id: '888', binding: 'reviewed' });
     expect(disposed.bindingReview).toHaveLength(1);
     expect(disposed.counts.bindingByClass.reviewed).toBe(1);
+    expect(disposed.counts.bindingDispositions).toEqual({ derived: 0, frozen: 1, other: 0, none: 0 });
   });
 
-  // The committed file is all `keep` today, so nothing else exercises the other
-  // half of the enum — and gate (iii) re-adds exactly the bindings a drop takes
-  // out of the manifest.
-  it('strips a binding its disposition drops', () => {
+  it('leaves the cell empty where the disposition settles on neither value', () => {
     const disposed = buildMembership({
-      ...input,
-      dispositions: new Map([['888', {
-        gaia_source_id: '888', disposition: 'drop', basis: 'tycho2_position', evidence: '4.1"',
-      }]]),
+      ...input, dispositions: new Map([[HD40_KEY, disposition({ keep_source_id: '' })]]),
     });
     expect(disposed.rows.find((r) => r.tyc === '9-8-1'))
       .toMatchObject({ gaia_source_id: '', binding: 'none' });
-    expect(disposed.bindingReview).toHaveLength(1);
     expect(disposed.counts.bindingByClass.reviewed).toBe(0);
+  });
+
+  // A disposition names the two values it adjudicated between, so a re-pull
+  // that moves either one re-opens the review rather than carrying a verdict
+  // about a different pair forward.
+  it('refuses a disposition whose ids no longer match the queue row', () => {
+    expect(() => buildMembership({
+      ...input, dispositions: new Map([[HD40_KEY, disposition({ derived_source_id: '1' })]]),
+    })).toThrow(/re-review/);
+    expect(() => buildMembership({
+      ...input,
+      dispositions: new Map([['x|||', disposition({ tyc: 'x', hd: '' })]]),
+    })).toThrow(/disposes no queue row/);
+    expect(() => buildMembership({
+      ...input, dispositions: new Map([[HD40_KEY, disposition({ keep_source_id: '999' })]]),
+    })).toThrow(/neither the frozen cell nor any source/);
+  });
+
+  // Route (c): where the sources bind a value the frozen cell disagrees with,
+  // the derived value ships and the row is queued — a disposition may then
+  // confirm it, revert to the frozen one, or refuse both.
+  it('ships the derived value on a differing row and queues the disagreement', () => {
+    const differingInput = {
+      ...input,
+      spine: [...spine, spineRow({ tyc: '6-6-1', hip: '60', hd: '600', gaia_source_id: '6060' })],
+      tables: {
+        ...tables,
+        hipI239: new Set([...tables.hipI239, 60]),
+        tycToSource: new Map([...tables.tycToSource, ['6-6-1', '6061']]),
+        hipToSource: new Map([...tables.hipToSource, [60, '6061']]),
+      },
+    };
+    const differing = buildMembership(differingInput);
+    expect(differing.rows.find((r) => r.tyc === '6-6-1'))
+      .toMatchObject({ gaia_source_id: '6061', binding: 'crosswalk_gated' });
+    expect(differing.bindingReview).toContainEqual(expect.objectContaining({
+      tyc: '6-6-1', verdict: 'differs', frozen_source_id: '6060', derived_source_id: '6061',
+      derived_via: 'tyc+hip', candidates: 'tyc:6061|hip:6061',
+    }));
+    expect(differing.counts.derivedVsFrozen.differs).toBe(1);
+    const key = bindingReviewKey({ tyc: '6-6-1', hip: '60', hd: '600', gl: '' });
+    const reverted = buildMembership({
+      ...differingInput,
+      dispositions: new Map([[key, disposition({
+        tyc: '6-6-1', hip: '60', hd: '600', frozen_source_id: '6060', derived_source_id: '6061',
+        keep_source_id: '6060', basis: 'pair_component',
+      })]]),
+    });
+    expect(reverted.rows.find((r) => r.tyc === '6-6-1'))
+      .toMatchObject({ gaia_source_id: '6060', binding: 'reviewed' });
+  });
+
+  it('fills a frozen empty cell the sources bind', () => {
+    const filled = buildMembership({
+      ...input,
+      tables: { ...tables, hipToSource: new Map([...tables.hipToSource, [70, '7070']]) },
+    });
+    expect(filled.rows.find((r) => r.hip === '70'))
+      .toMatchObject({ gaia_source_id: '7070', binding: 'crosswalk_gated' });
+    expect(filled.counts.derivedVsFrozen.fill).toBe(1);
+    expect(filled.bindingReview).toHaveLength(1);
+  });
+
+  // A fill whose winner has a passing runner-up is a disagreement precedence
+  // settled, not evidence: it ships nothing until a disposition names a value —
+  // which may be the runner-up.
+  it('queues a contested fill and ships the candidate its disposition names', () => {
+    const contestedInput = {
+      ...input,
+      tables: {
+        ...tables,
+        hipToSource: new Map([...tables.hipToSource, [70, '7070']]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['7071', { hip: 70, tyc: null, gj: null }]]),
+      },
+    };
+    const contested = buildMembership(contestedInput);
+    expect(contested.rows.find((r) => r.hip === '70')).toMatchObject({ gaia_source_id: '', binding: 'none' });
+    expect(contested.bindingReview).toContainEqual(expect.objectContaining({
+      hip: '70', verdict: 'contested', derived_source_id: '7070', candidates: 'hip:7070|simbad:7071',
+    }));
+    const key = bindingReviewKey({ tyc: '', hip: '70', hd: '70000', gl: '' });
+    const settled = buildMembership({
+      ...contestedInput,
+      dispositions: new Map([[key, disposition({
+        tyc: '', hip: '70', hd: '70000', frozen_source_id: '', derived_source_id: '7070',
+        keep_source_id: '7071', basis: 'gaia_photometry',
+      })]]),
+    });
+    expect(settled.rows.find((r) => r.hip === '70')).toMatchObject({ gaia_source_id: '7071', binding: 'reviewed' });
+    expect(settled.counts.bindingDispositions).toEqual({ derived: 0, frozen: 0, other: 1, none: 0 });
+  });
+
+  // The counterpart to the test above, and the reason the derivation weighs
+  // the candidates behind its winner: a rival the magnitude gate refuses is
+  // not a disagreement, so the row is an ordinary fill and no human is asked
+  // to adjudicate it. Gl 864 shipped as a `contested` review row on exactly
+  // this shape — its rival was 3.9 mag below the star.
+  it('fills rather than queues where the gate refuses the runner-up', () => {
+    const settled = buildMembership({
+      ...input,
+      tables: {
+        ...tables,
+        hipToSource: new Map([...tables.hipToSource, [70, '7070']]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['7071', { hip: 70, tyc: null, gj: null }]]),
+      },
+      evidence: bindingEvidence(new Map([['7070', 5.0], ['7071', 12.0]]), new Map([[70, 5.0]]), null),
+    });
+    expect(settled.rows.find((r) => r.hip === '70'))
+      .toMatchObject({ gaia_source_id: '7070', binding: 'crosswalk_gated' });
+    expect(settled.counts.derivedVsFrozen).toMatchObject({ fill: 1, contested: 0 });
+    expect(settled.bindingReview.map((r) => r.verdict)).toEqual(['unreached']);
+  });
+
+  // A source two rows derive keys neither record. The row whose frozen cell
+  // already held it keeps it; the other is withheld and queued.
+  it('withholds a derived source another row already holds', () => {
+    const colliding = buildMembership({
+      ...input,
+      tables: { ...tables, hipToSource: new Map([...tables.hipToSource, [70, '111']]) },
+    });
+    expect(colliding.rows.find((r) => r.hip === '70'))
+      .toMatchObject({ gaia_source_id: '', binding: 'none' });
+    expect(colliding.rows.find((r) => r.tyc === '1-1-1')?.gaia_source_id).toBe('111');
+    expect(colliding.bindingReview).toContainEqual(expect.objectContaining({
+      hip: '70', verdict: 'collision', frozen_source_id: '', derived_source_id: '111',
+    }));
+    expect(colliding.counts.derivedVsFrozen.collision).toBe(1);
+  });
+
+  // Both gates run through the one `resolveGaiaSourceId` the overlay gate calls:
+  // a candidate whose G sits more than a magnitude below the printed V is not
+  // the star, and the derivation falls through to the next source.
+  it('refuses a candidate the magnitude gate rejects and falls through', () => {
+    const gated = buildMembership({
+      ...input,
+      spine: [...spine, spineRow({ tyc: '6-6-1', hip: '60', hd: '600' })],
+      tables: {
+        ...tables,
+        hipI239: new Set([...tables.hipI239, 60]),
+        tycToSource: new Map([...tables.tycToSource, ['6-6-1', '6061']]),
+        hipToSource: new Map([...tables.hipToSource, [60, '6062']]),
+      },
+      evidence: bindingEvidence(
+        new Map([['6061', 12.0], ['6062', 5.1], ['333', 8.5]]), new Map([[60, 5.0]]), null,
+      ),
+    });
+    expect(gated.rows.find((r) => r.tyc === '6-6-1'))
+      .toMatchObject({ gaia_source_id: '6062', binding: 'crosswalk_gated' });
+    expect(gated.counts.derivedRejected).toEqual({ mag: 1, sibling: 0 });
+    expect(gated.counts.derivedVia.hip).toBe(2);
+    expect(gated.counts.derivedWeighedNoGMag).toBe(0);
   });
 
   // The display cell is not privileged: when it is the cell no primary
@@ -223,15 +388,16 @@ describe('buildMembership — the spine side', () => {
     expect(result.counts.unattestedByCell.flam).toBe(0);
   });
 
-  it('drops an uncorroborated binding into the review queue with the SIMBAD witness', () => {
+  it('queues a frozen binding no source reaches, with SIMBAD as the witness', () => {
     const row = byTyc.get('9-8-1')!;
     expect(row.gaia_source_id).toBe('');
     expect(row.binding).toBe('none');
     expect(result.bindingReview).toEqual([expect.objectContaining({
-      tyc: '9-8-1', hd: '40', gaia_source_id: '888', verdict: 'unreachable',
-      simbad: 'contradicts', simbad_tyc: '9-9-9',
+      tyc: '9-8-1', hd: '40', verdict: 'unreached', frozen_source_id: '888',
+      derived_source_id: '', candidates: '', frozen_simbad: 'tyc:9-9-9',
     })]);
     expect(result.counts.bindingReviewRows).toBe(1);
+    expect(result.counts.bindingReviewByVerdict).toEqual({ differs: 0, unreached: 1, contested: 0, collision: 0 });
   });
 
   it('carries the label merge onto the row and attests the merged cells', () => {
@@ -384,8 +550,10 @@ describe('a group holding two items of one cohort', () => {
 });
 
 describe('codecs', () => {
-  it('round-trips the manifest, the ledger and the label drops', () => {
+  it('round-trips the manifest, the ledger, the review queue and the label drops', () => {
     expect(parseManifestTsv(serializeManifest(result.rows))).toEqual(result.rows);
+    expect(parseBindingReviewTsv(serializeBindingReview(result.bindingReview)))
+      .toEqual(result.bindingReview);
     const ledger = parseLedgerTsv(serializeLedger(result.ledger));
     expect(ledger).toHaveLength(result.ledger.length);
     expect(new Set(ledger.map(manifestKey))).toEqual(new Set(result.ledger.map(manifestKey)));
@@ -409,16 +577,16 @@ describe('codecs', () => {
   });
 
   it('parses dispositions under the closed enums, refusing an unstated basis or evidence', () => {
-    const header = 'gaia_source_id\tdisposition\tbasis\tevidence\n';
-    const parsed = parseBindingDispositionsTsv(`${header}888\tkeep\ttycho2_position\tsep 0.1"\n`);
-    expect(parsed.get('888')).toEqual({
-      gaia_source_id: '888', disposition: 'keep', basis: 'tycho2_position', evidence: 'sep 0.1"',
-    });
-    expect(() => parseBindingDispositionsTsv(`${header}888\tkeep\tguesswork\tx\n`)).toThrow(/basis/);
-    expect(() => parseBindingDispositionsTsv(`${header}888\tmaybe\ttycho2_position\tx\n`)).toThrow(/disposition/);
-    expect(() => parseBindingDispositionsTsv(`${header}888\tkeep\ttycho2_position\t\n`)).toThrow(/evidence/);
-    expect(() => parseBindingDispositionsTsv(`${header}888\tkeep\ttycho2_position\tx\n888\tdrop\ttycho2_position\ty\n`))
-      .toThrow(/duplicate/);
+    const header = 'tyc\thip\thd\tgl\tfrozen_source_id\tderived_source_id\tkeep_source_id\tbasis\tevidence\n';
+    const row = (rest: string): string => `${header}9-8-1\t\t40\t\t888\t\t${rest}\n`;
+    const parsed = parseBindingDispositionsTsv(row('888\ttycho2_position\tsep 0.1"'));
+    expect(parsed.get(HD40_KEY)).toEqual(disposition({ evidence: 'sep 0.1"' }));
+    expect(() => parseBindingDispositionsTsv(row('888\tguesswork\tx'))).toThrow(/basis/);
+    expect(() => parseBindingDispositionsTsv(row('keep\ttycho2_position\tx'))).toThrow(/not an integer/);
+    expect(() => parseBindingDispositionsTsv(row('888\ttycho2_position\t'))).toThrow(/evidence/);
+    expect(() => parseBindingDispositionsTsv(
+      `${row('888\ttycho2_position\tx')}9-8-1\t\t40\t\t888\t\t\ttycho2_position\ty\n`,
+    )).toThrow(/duplicate/);
   });
 
   it('is deterministic across a re-run', () => {

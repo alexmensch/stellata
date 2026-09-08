@@ -7,6 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
 import { compareBuildCounts, formatCountDiff } from '../build-counts';
+import { loadBindingEvidence } from '../classic-ids/binding-evidence';
 import { parseOverlayTsv } from '../classic-ids/classic-id-overlay-pure';
 import {
   CLASSIC_ID_OVERRIDES_FILE,
@@ -60,6 +61,7 @@ async function main(): Promise<void> {
       ? parseLabelOverridesTsv(readFileSync(overridesPath, 'utf8'))
       : new Map(),
     siblingRenderedSourceIds: sourceIdsWithSiblingComponent(readMultiplesTsv(MULTIPLES_TSV)),
+    evidence: loadBindingEvidence().evidence,
     dispositions: parseBindingDispositionsTsv(
       readRequired(resolve(ROOT, BINDING_DISPOSITIONS_FILE), DISPOSITIONS_HINT),
     ),
@@ -87,11 +89,22 @@ async function main(): Promise<void> {
       `(${Object.entries(c.additionsByReason).map(([k, v]) => `${k} ${v}`).join(', ')}); ` +
       `${c.componentRows} groups resolve onto an existing record`,
   );
+  const tally = (counts: Record<string, number>): string =>
+    Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(', ');
+  console.log(
+    `derived against the frozen column: ${tally(c.derivedVsFrozen)}; ` +
+      `via ${tally(c.derivedVia)}, consensus ${c.derivedConsensus}; ` +
+      `gate refused ${tally(c.derivedRejected)}; ` +
+      `${c.derivedUngateable} rows have a candidate and no printed V; ` +
+      `${c.derivedWeighedNoGMag} candidates weighed with no pulled row (must be 0), ` +
+      `${c.derivedWeighedNullGMag} on a row with no published G`,
+  );
   console.log(
     `bindings: crosswalk_gated ${c.bindingByClass.crosswalk_gated}, ` +
       `simbad_corroborated ${c.bindingByClass.simbad_corroborated}, ` +
       `reviewed ${c.bindingByClass.reviewed}, none ${c.bindingByClass.none}; ` +
-      `${c.bindingReviewRows} spine bindings in review; additions with a source on the spine ` +
+      `review queue ${tally(c.bindingReviewByVerdict)}, disposed ${tally(c.bindingDispositions)}; ` +
+      'additions with a source on the spine ' +
       `${c.additionSourceOnSpine}, gate-refused ${c.additionSourceGateRefused}, ` +
       `shared ${c.additionSourceShared}, TYC/HIP route disagreement ${c.additionRouteSourceDisagree}; ` +
       `${c.additionGaiaKeyedOnly} admitted rows keyed on the Gaia id alone`,

@@ -76,8 +76,8 @@ write the worktree's `data/`.
 | `refresh:gaia-tyc` | `refresh-gaia-tyc-xmatch.py` | `data/gaia/gaia_dr3_tyc_xmatch.tsv` | Tycho-2 → Gaia DR3 cross-walk from `tyco2tdsc_merge_best_neighbour`. |
 | `refresh:gaia-nss` | `refresh-gaia-nss.py` | `data/gaia/gaia_dr3_nss_two_body.tsv` | Gaia DR3 `nss_two_body_orbit` (binary orbits Gaia detected astrometrically). |
 | `refresh:gaia-astrometry` | `refresh-gaia-astrometry.py` | `data/gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 5-parameter astrometry for exactly the source_ids `build-binaries.py` Stage 2 resolved (reads `data/gaia/gaia_astrometry_source_id_request.tsv` as input). Run AFTER `refresh:gaia-hip` + `refresh:gaia-tyc` + a fresh `pnpm run build:binaries`. |
-| `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — the manifest's `gaia_source_id` column (the same binding the record build reads) UNION the classic-ID binding gate's candidate sources UNION `multiples.tsv`'s kept-physical pair members. Not a network pull. Reads the manifest plus both Gaia cross-walks, so it still runs AFTER `refresh:gaia-hip` / `refresh:gaia-tyc`. |
-| `refresh:gaia-astrometry-catalog` | `refresh-gaia-astrometry-catalog.py` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5p astrometry + `radial_velocity` for every catalog source_id (378,111) — tier 1 of the direction, rv, V and ci cascades. Same schema/query as `refresh:gaia-astrometry`; reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
+| `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — the manifest's `gaia_source_id` column (the same binding the record build reads) UNION the classic-ID binding gate's candidate sources UNION the membership derivation's candidate sources UNION `multiples.tsv`'s kept-physical pair members. Not a network pull. Reads the manifest, the spine and both Gaia cross-walks, so it still runs AFTER `refresh:gaia-hip` / `refresh:gaia-tyc`. |
+| `refresh:gaia-astrometry-catalog` | `refresh-gaia-astrometry-catalog.py` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5p astrometry + `radial_velocity` for every catalog source_id (378,840) — tier 1 of the direction, rv, V and ci cascades. Same schema/query as `refresh:gaia-astrometry`; reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
 | `refresh:gaia-apsis` | `refresh-gaia-apsis.py` | `data/gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) — Teff / log g / [M/H] / A0 + GSP-Spec `spectraltype_esphs` enum. |
 | `refresh:gaia-gspc` | `refresh-gaia-gspc.py` | `data/gaia/gaia_dr3_gspc.tsv` | Gaia DR3 `synthetic_photometry_gspc` — Johnson-Kron-Cousins B/V synthesised per source from its BP/RP spectrum, with fluxes and the per-band validated-range flag. Reads `gaia_catalog_source_id_request.tsv`, so it runs AFTER `build:astrometry-request`. Flag polarity and the S/N > 30 cut this table already applies — `data/gaia/README.md` § The GSPC validated-range flag. |
 | `refresh:gaia-dr2-neighbourhood` | `refresh-gaia-dr2-neighbourhood.py` | `data/gaia/gaia_dr2_neighbourhood.tsv` | DR2 ↔ DR3 cross-match candidates (`gaiadr3.dr2_neighbourhood`) for the Gaia-only catalog stars (reads `data/gaia/gaia_dr2_neighbourhood_request.tsv`). Input to the SID DR-reconciliation dry run — `docs/sid.md` § DR2→DR3 dry run, incl. the request-file derivation recipe. |
@@ -132,6 +132,50 @@ what the *next* run asks for; the committed TSV keeps whatever the previous
 run pulled until that run happens — the same terms as `radial_velocity`
 above. Editing `refresh_lib.py` or a `simbad/*.py` module invalidates
 `is_up_to_date`, so the next invocation re-pulls rather than skips.
+
+### The staleness gate — pin the shortfall, never the numerator
+
+That last paragraph is the hazard, and it has bitten more than once: the
+binding column moves, the pull is not re-run, and the build reads a table
+that no longer covers the manifest. Nothing fails. The affected records
+quietly fall to a lower cascade tier.
+
+**A rebuild cannot catch it and must not be relied on to.** `build:catalog`
+reads committed tables, so rebuilding from the same stale TSV reproduces the
+same gap exactly — the missing rows are not computable, they need a network
+fetch. `isUpToDate` already invalidates the artifact on any build-script
+edit and it is no help here: nothing is stale in the *build*, the *data* is.
+
+**What does catch it is gating the shortfall.** A coverage numerator —
+`bjOverridden`, `apsisMatched` — cannot serve as the gate, because when the
+column gains sources the pull was never asked for, the numerator simply
+stops growing. "Stopped growing" is the most invisible diff a snapshot can
+carry: it reads as no change, and `UPDATE_BUILD_COUNTS` writes it back
+without comment. The shortfall is the number that moves loudly, so the
+shortfall is what is pinned:
+
+| Count | Pin | What a move means |
+|---|---|---|
+| `bjEligibleNotPulled` | **0** | an eligible row has its own DR3 parallax, so Bailer-Jones publishes a posterior for it; an absence is only ever this request set drifting |
+| `apsisSourcesUnpulled` | reviewed residual | Gaia genuinely lacks parameters for part of the catalogue, so the residual is non-zero and what is gated is it MOVING |
+| `gspcSourcesUnpulled` | reviewed residual | same terms |
+| `gateSkippedNoGMag` · `derivedWeighedNoGMag` | **0** | the original instance of this rule, on the two binding gates (`scripts/catalog/astrometry-request/README.md` § The request is a union) |
+
+Adding a per-source consumer therefore means adding its shortfall count in
+the same change. The cost is one hash lookup per record, so it scales with
+the catalogue rather than with the pull.
+
+**`simbad_sptype.tsv` is a cycle, not a line, and cannot be gated this
+way.** Its request keys come off the manifest's binding column
+(`membership_request_keys` keys a row on its `gaia_source_id` where it has
+one), and its cross-IDs are the derivation's fourth binding source — so
+re-pulling it can change the very column that decided what to request.
+Re-running it is a fixpoint iteration with no convergence guarantee, and it
+re-opens every row of `data/membership/binding-review-dispositions.tsv` by
+construction, since a disposition names the two ids it adjudicated between
+and the generator hard-fails when either moves. Re-pull it deliberately, as
+its own change, expecting to re-review the queue — never as a step folded
+into unrelated work.
 
 `read_source_id_request` lives in `refresh_lib` rather than beside any
 one pull, because three scopes now read the same one-column TSV contract:
@@ -290,8 +334,8 @@ catalogue inconsistent. Order matters:
    Each commits its TSV under `data/gaia/` or `data/bailer-jones/`.
    Then regenerate the full-catalog astrometry (two stages, in this
    order): `pnpm run build:astrometry-request` (the manifest's
-   `gaia_source_id` column plus the classic-ID gate's candidates, so it
-   runs after both cross-walk refreshes), then
+   `gaia_source_id` column plus both binding gates' candidates and the
+   bound-pair siblings, so it runs after both cross-walk refreshes), then
    `pnpm run refresh:gaia-astrometry-catalog`. Under a DR transition the
    manifest's `gaia_dr3:` ids bridge through `docs/sid.md` § 6 first —
    requesting DR3 ids against a DR4 table returns nothing.

@@ -78,6 +78,16 @@ export interface BuildCounts {
   /** bjEligible rows whose source_id was also in the B-J catalogue —
    *  the count actually overridden. Coverage = bjOverridden / bjEligible. */
   bjOverridden: number;
+  /** The shortfall between those two, **pinned at zero** — the pull-staleness
+   *  gate. § Manifest-derived pulls in `distance/README.md` owns the rule and
+   *  why the numerator above cannot serve as one. */
+  bjEligibleNotPulled: number;
+  /** Records carrying a source_id the committed Apsis / GSPC pull holds no row
+   *  for. Pinned on the same terms as `bjEligibleNotPulled`, at the reviewed
+   *  residual rather than zero: Gaia genuinely publishes no parameters for
+   *  part of the catalogue, so what is gated is the shortfall MOVING. */
+  apsisSourcesUnpulled: number;
+  gspcSourcesUnpulled: number;
   /** Rows whose resolved direction falls inside the LMC sky cone — the
    *  population the LMC kinematic PM gate is evaluated against. */
   lmcCandidates: number;

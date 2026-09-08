@@ -31,13 +31,17 @@ scripts/catalog/classic-ids/
                                   ../astrometry-request/, which has to pull a
                                   G magnitude for every one of them
                                   (§ The gate's evidence has to be pulled).
-                                  Two loaders, because the candidate set needs
-                                  only the HIP cross-walk and CNS5 — the
-                                  request never reads the 2.5 M-row TYC table.
+                                  Two loaders, because this candidate set needs
+                                  only the HIP cross-walk and CNS5.
                                   The test derives its expectation from a built
                                   overlay, so drift in either producer of
                                   `entry.hip` fails rather than silently
                                   shrinking the request.
+  binding-evidence.ts             Loads the gate's three evidence tables — G
+                                  per source, printed HIP V, SIMBAD's WDS
+                                  component cross-IDs — for this build and for
+                                  ../membership/, whose derivation weighs its
+                                  candidates through the same gates.
   classic-ids-parse.ts (+ test)   The four frozen-TSV parsers. The gate's
                                   HIP → printed-V slice is
                                   ../photometry/hip-photometry-parse.ts, shared
@@ -163,10 +167,13 @@ is a pass either way and only one of the causes is fixable:
 | `gateSkippedNoGMag` | **0** | gateable rows the pull returned no row for — the request under-covering its candidates. Pinned at zero; this is the fault the union exists to prevent. |
 | `gateSkippedNullGMag` | 63 | rows Gaia has, with `phot_g_mean_mag` null. Silently accepted too, and no request can supply it — the residual the gate's reach does not cover. |
 
-The set stays small (768 ids beyond the spine) because `applyBindingGate`
+The set stays small (493 ids beyond the manifest) because `applyBindingGate`
 skips what it cannot weigh — an entry with no HIP, and a HIP with no printed V
 (`gateSkippedNoHipVMag`) — and `bindingCandidateSourceIds` applies both
-narrowings so the request and the gate agree by construction.
+narrowings so the request and the gate agree by construction. The membership
+derivation runs the same two checks on the record side through the same
+`resolveGaiaSourceId` call, with its own candidate contribution to the request
+and its own zero-pin (`../membership/README.md` § The binding is derived).
 
 **An ambiguous designation attaches to every matching record** (§ 4) —
 `buildClassicIdOverlay` never picks a winner, so overlay cells are

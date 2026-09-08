@@ -317,6 +317,9 @@ async function main() {
     bjEntries: 0,
     bjEligible: 0,
     bjOverridden: 0,
+    bjEligibleNotPulled: 0,
+    apsisSourcesUnpulled: 0,
+    gspcSourcesUnpulled: 0,
     lmcCandidates: 0,
     lmcOverridden: 0,
     lmcOverriddenByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
@@ -471,6 +474,13 @@ async function main() {
       `  Bailer-Jones override: ${stats.bjOverridden} / ${stats.bjEligible} ` +
         `Gaia-inverse-distance stars (${pct}%)`,
     );
+    if (stats.bjEligibleNotPulled > 0) {
+      console.log(
+        `  WARNING: ${stats.bjEligibleNotPulled} eligible stars have no Bailer-Jones row — `
+          + 're-run `pnpm run refresh:bailer-jones`; its request set is the manifest '
+          + 'binding column and has drifted from it',
+      );
+    }
   }
   if (stats.lmcCandidates > 0) {
     const pct = ((stats.lmcOverridden / stats.lmcCandidates) * 100).toFixed(1);
@@ -565,6 +575,7 @@ async function main() {
   counts.droppedTooFar = stats.dropped.tooFar;
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
+  counts.bjEligibleNotPulled = stats.bjEligibleNotPulled;
   counts.distLowPrecisionParallax = stats.distLowPrecisionParallax;
   for (const r of PARKED_REASONS) counts[PARKED_COUNT_KEY[r]] = stats.parkedVia[r];
   for (const v of DIST_VIA_VALUES) counts[DIST_VIA_COUNT_KEY[v]] = stats.distVia[v];
@@ -1042,6 +1053,8 @@ async function main() {
   let gaiaSourceIdResolved = 0;
   let apsisMatched = 0;
   let apsisTeffEither = 0;
+  let apsisSourcesUnpulled = 0;
+  let gspcSourcesUnpulled = 0;
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
     // Variability: amplitude clamps at 12.75 mag (extreme Miras), period at
@@ -1065,6 +1078,10 @@ async function main() {
     if (apsisRow) apsisMatched++;
     if (apsisRow && (apsisRow.teffGspphot !== null || apsisRow.teffGspspec !== null)) {
       apsisTeffEither++;
+    }
+    if (s.gaiaSourceId) {
+      if (!apsisRow) apsisSourcesUnpulled++;
+      if (!inputs.gspcMap.has(s.gaiaSourceId)) gspcSourcesUnpulled++;
     }
 
     writeStarRecord(view, off, {
@@ -1220,6 +1237,8 @@ async function main() {
   counts.gaiaSourceIdResolved = gaiaSourceIdResolved;
   counts.apsisMatched = apsisMatched;
   counts.apsisTeffEither = apsisTeffEither;
+  counts.apsisSourcesUnpulled = apsisSourcesUnpulled;
+  counts.gspcSourcesUnpulled = gspcSourcesUnpulled;
 
   if (apsisMap.size > 0) {
     const matchedPct = ((apsisMatched / stars.length) * 100).toFixed(1);

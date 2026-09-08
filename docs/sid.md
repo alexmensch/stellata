@@ -190,10 +190,25 @@ are recorded, never deleted from the ledger, never reused.
 sid	retired	reason	successor_sid
 ```
 
-`successor_sid` is set for merges (§ 6.1) so a retired SID arriving
+`successor_sid` is set for merges so a retired SID arriving
 on the wire can still resolve; empty for objects that genuinely left
 the model (a parked SID resolves to nothing and wire consumers skip
 it gracefully).
+
+**Two kinds of merge, and they pick different survivors.** A merge
+under § 6.1 reconciles Gaia ids across a data release, and its
+survivor is the lowest (oldest) SID — the ids being reconciled are
+interchangeable, so the oldest is the stable choice. A merge under
+§ 4.3 joins two same-as classes the pipeline itself found to name one
+star, and there the survivor is the one whose canonical key is a
+**classical designation** — HD, HIP, HR, GJ — regardless of which
+integer is lower. A classical key is stable across Gaia releases
+where a `gaia_dr3:` key is not, so retiring the classical side would
+hand the object's identity to the id most likely to move next. SID
+310477 retiring in favour of the higher 310625 (HD 2880 / HIP 2533)
+is the case to read: eight Gaia-keyed rows AT-HYG carried beside
+their own HIP record merged onto it when the manifest began deriving
+its binding.
 
 `data/sid/reinstatements.tsv` (append-only, same guard) is the
 reverse operation for a retired object that reappears — a pipeline
@@ -356,7 +371,7 @@ running them is a refresh-time task alongside
 | **carried 1:1** | exactly one candidate within `ACCEPT_MAS = 400` | append bridge edge `gaia_dr3:X = gaia_dr4:Y` to `bridges/` |
 | **contested** | ≥2 candidates within 400 mas | manual review queue; resolve to bridge / split |
 | **split** | one old id accepted by ≥2 new ids | SID survives on the photometrically dominant component (smallest \|Δmag\|; tie → smallest angular distance); siblings mint new SIDs |
-| **merge** | ≥2 old ledger-bearing ids map to one new id | survivor = lowest (oldest) SID; others retired with `successor_sid` = survivor |
+| **merge** | ≥2 old ledger-bearing ids map to one new id | survivor = lowest (oldest) SID; others retired with `successor_sid` = survivor. Scoped to the Gaia ids this procedure reconciles — a pipeline-found merge between a Gaia-keyed and a classically-keyed class keeps the classical one instead (§ 4.3) |
 | **dropped** | no candidate within 400 mas | review (PM-propagation flag, Δmag, sky region); unrecoverable → **parked**: ledger row kept, no bridge, resolves to nothing until a future designation re-links it |
 
 4. Additionally flag accepted matches with `|Δmag| > 1` for review

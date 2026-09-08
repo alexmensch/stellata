@@ -163,12 +163,17 @@ is not the star. `applyBindingGate`
 `scripts/catalog/parse/stars-parse.ts`, so the two cannot drift on what
 counts as a bad binding:
 
-- **G − V ≥ 1.0 mag** (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`) — 102 rows. The
+- **G − V ≥ 1.0 mag** (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`) — 218 rows. The
   canonical case is the G = 20.95 background source beside α Cen B, which
   carried HD 128621 · HR 5460 · HIP 71681 · `alf Cen`.
-- **Sibling-letter attribution** (SIMBAD WDS cross-IDs) — 85 rows. Catches
+- **Sibling-letter attribution** (SIMBAD WDS cross-IDs) — 50 rows. Catches
   the similar-brightness sibling that slips the magnitude gate: HD 70492 B's
   source carried HD 70492 · HIP 41098.
+
+The two counts trade rows as G coverage changes — `reason` is the first gate
+that fired — so their sum, **268**, is the queue's size
+(`scripts/catalog/classic-ids/README.md` § The gate's evidence has to be
+pulled).
 
 A firing gate drops the **whole row**, not just its `hip` cell: if the source
 is not the star then every designation keyed on it is misattributed, and the

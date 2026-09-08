@@ -20,8 +20,8 @@ lives in the subfolders.
 ## Subfolders
 
 - `astrometry-request/` — the Gaia 5p pull's source_id list: the manifest's
-  `gaia_source_id` column plus the classic-ID gate's candidates and the
-  bound-pair siblings. Input preparation, not on the `build:catalog` path.
+  `gaia_source_id` column, both binding gates' candidates (overlay and
+  derivation), and the bound-pair siblings. Input prep, off `build:catalog`.
 - `parse/` — the per-row pipeline (`readStars`), reference-catalogue
   parsers, space-motion velocity, and Stellarium stick figures. Its
   `gcvs/` subfolder owns the variable-star parsing and the variability

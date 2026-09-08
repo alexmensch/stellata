@@ -9,12 +9,13 @@ the spine is load-bearing rather than a rare fallback is
 **Two readers, and the record build is not one of them.** `readStars` walks
 the membership manifest (`../membership/README.md`), which this file is an
 input to and a baseline for. What the spine still supplies is the one thing no
-primary does: **which designations name one star, and which Gaia source AT-HYG
-bound to it** — every one of those bindings independently corroborated or
-reviewed, § The primaries audit. `build:membership` reads it for those merge
-decisions, and the manifest's parity gate (i) reads it as the baseline every
-manifest row must account for. After the swap release that baseline becomes the
-previous manifest.
+primary does: **which designations name one star**. `build:membership` reads
+it for those merge decisions, derives each row's Gaia binding from committed
+evidence and holds the result against the frozen `gaia_source_id` column as a
+diff surface (`../membership/README.md` § The binding is derived), and the
+manifest's parity gate (i) reads it as the baseline every manifest row must
+account for. After the swap release that baseline becomes the previous
+manifest.
 
 **The file is frozen and nothing regenerates it.** The one-shot generator
 retired with the driver swap: it ran `readStars` over the AT-HYG CSV, and that
@@ -28,12 +29,14 @@ behind it, are `docs/catalog-driver.md` § 3.1 and § The primaries audit below.
 scripts/catalog/spine/
   inherited-spine-pure.ts         Column layout, row assembly, TSV codec,
     (+ test)                      per-column counts, and the designation
-                                  recovery (spineDesignations). Pure, and on
-                                  the build:membership path, not
-                                  build:catalog — ../membership/ streams the
-                                  rows through iterSpineTsv; parseSpineTsv is
-                                  the materialising form the guard and the
-                                  manifest gate need.
+                                  recovery (spineDesignations). Pure, and off
+                                  the build:catalog path entirely.
+                                  iterSpineTsv streams for a single pass
+                                  (build:classic-ids' label merge);
+                                  parseSpineTsv materialises for the callers
+                                  that index rows or walk them twice —
+                                  build:membership, the audit, the guard, the
+                                  manifest gate and ../astrometry-request/.
   inherited-spine-guard.test.ts   Assertions over the COMMITTED artifact —
                                   byte identity, counts, keyless rows, Sol,
                                   duplicate source_ids (§ Why a guard, not a
@@ -84,21 +87,23 @@ reads them.
 
 ## The identifier columns are read, never re-derived
 
-`gaia_source_id` comes off the column, and the manifest carries it forward
-rather than re-deciding it (`../membership/README.md` § The identifier columns
-are read, never re-derived, which is where the rule now binds the build). The
-native → HIP-cross-walk precedence and both binding gates (G−V magnitude,
-sibling-letter attribution) ran when the spine was generated, so re-running
-them would re-decide a frozen binding against reference tables that have moved
-since — and a scrubbed source_id changes the record's designation set, hence
-its SID.
+The classical cells come off the column and the manifest re-keys them; the
+`gaia_source_id` cell is the one column the manifest **does not** copy. The
+generator derives each binding from the TYC and HIP cross-walks, CNS5 and
+SIMBAD's cross-IDs through both binding gates, and reads the frozen cell only
+to diff against (`../membership/README.md` § The binding is derived). The
+native → HIP-cross-walk precedence that produced the frozen column took
+AT-HYG's own `gaia` cell as its first input, which is not in the repo, so no
+walk order reproduces it; the derivation is a fresh answer held against it,
+not a replay of it.
 
-What re-deriving would decide differently is measured rather than feared:
-§ The primaries audit puts it at 11,731 bindings no raw walk reaches or agrees
-with, 11,697 of them corroborated by SIMBAD's cross-IDs for the same id and
-the other 34 by a committed review disposition, and 233 empty cells a raw walk
-would fill. The manifest carries every binding forward and leaves the 233
-empty (`docs/catalog-driver.md` § 3.1).
+What that answer decides differently is measured rather than feared:
+§ The primaries audit puts the frozen column at 11,731 bindings no **raw walk**
+reaches or agrees with, and 233 empty cells a raw walk would fill. **233 is the
+walk-only figure.** The derivation adds SIMBAD's cross-IDs as a fourth source,
+which settles 11,687 of the 11,721 the walks cannot reach and takes the fills
+to 940 ungated, 791 after both gates — a reader scoping off 233 under-budgets
+by four. The manifest's `derivedVsFrozen` count carries the full comparison.
 
 **Four rows carry identifiers the frozen build resolved *after* its walk**:
 the three `multiples.tsv` HD-only primaries it stamped from their
@@ -135,8 +140,8 @@ of them reaches the SIMBAD values pull, and no successor id it names is
 itself a spine cell — which would put two records on one SIMBAD row and
 trip the values parser's duplicate-key throw.
 
-Why the cells stay as they are, and what the widening does instead:
-`data/athyg/README.md` § Six DR2 ids in the DR3 column.
+Why the cells stay as they are, and what the manifest carries for each of the
+six: `data/athyg/README.md` § Six DR2 ids in the DR3 column.
 
 ## Why a guard, not a rebuild
 
@@ -305,3 +310,55 @@ unless another home is named; the committed gates are
   that is not the star, so each leaves its record on the spine's label
   — no departure for the label term to carry, and no identity event to
   dispose (`data/classic-ids/README.md` § The binding gate).
+
+### The derived-binding ledger
+
+The § 6 instantiation for the manifest deriving its `gaia_source_id` instead
+of copying this file's column (`../membership/README.md` § The binding is
+derived), measured 2026-09-08 by diffing the built catalogue against the one
+built from the copied column, records matched on their canonical designation.
+That baseline also predates the four manifest-derived re-pulls
+(`../../refresh/README.md` § The staleness gate), so a move below carries both
+the new binding and the table row it can now reach; two records whose binding
+never changed move for the second reason alone.
+Pins: `derivedVsFrozen` and the review counts in
+`../membership/membership-manifest-expected.json`; per-tier routing in
+`../build-catalog-expected.json`.
+
+- **Record parity.** 794 records changed binding: 789 gained a source, 4
+  swapped one (the DR3 successors of three DR2 ids and HD 2094 following its
+  HIP onto the primary), 1 lost one (HD 253820, an IV/25 addition whose walk
+  source a spine row now derives). Two records park that shipped before —
+  HD 225284 and HIP 46653 gained a 2-parameter source, so their SIMBAD
+  parallax now falls to the Gaia-bibcode skip rule
+  (`refused_no_defensible_parallax`) — and HIP 114929 un-parks. Both are
+  presence events; the SIDs hold. **Eight identity events**: AT-HYG carried
+  eight Gaia sources as rows of their own beside the HIP record each belongs
+  to, and the derived binding joins the classes — the Gaia-keyed twin retires
+  with the HIP SID as successor (`data/sid/retirements.tsv`, the same shape as
+  the three sibling-letter merges before it). One `synth:` key re-letters
+  (HD 98278's collocated B and C pair rows promote as one record under B,
+  bridged in `data/sid/sameas-overrides.tsv`) and one promoted companion mints
+  (HD 126862 Ab). Zero keys move: every one of the 794 keys on a HIP, HD or GJ.
+- **Field parity, over the 794.** |ΔV| p50 **0.050** · p99 0.932 · max
+  1.639; |Δabsmag| p50 **0.079** · p99 1.661 · max 5.526; |Δci| p50 **0.041**
+  · p99 0.331 · max 1.120. 212 distances move (|Δd|/d p99 0.62, max 8.76),
+  428 positions (p99 0.83″, max 11.6″ — HIP 26500, whose Tycho-2 position was
+  a blend's), 50 spectral strings. Multiplicity carries a share of it:
+  `multiplicityUnresolved` +81, `multiplicityResolved` +39, `ccdmFlagged` +68,
+  `componentDesignations` +35, `binaryPairs` +14, `renderableCompanionWinged`
+  +1, all of them record fields — byte 96 drives the chart-mode wings, so a
+  gained binding reaches the multiplicity term and not only photometry.
+  The median V move is the Riello transform replacing a printed cell, inside
+  the transform's σ; the tail is not the binding but the tiers behind it — a
+  converged-looking G on an unconverged astrometric fit (HIP 23617: RUWE 19.7,
+  `ipd_frac_multi_peak` 70, a 1.25 ± 0.83 mas parallax at S/N 1.5 against
+  HIP2's 5.84 ± 0.45, and a Bailer-Jones posterior of 1671 pc on it — where
+  the parallax measures nothing the prior answers instead, so the layer that
+  exists to absorb low S/N widens the error rather than absorbing it, and this
+  row is the ledger's largest |Δabsmag|), or a blended source whose BP/RP feed
+  the V transform (HIP 35261, `ipd` 84, |ΔV| 1.34). Neither cascade gates its
+  Gaia tier on fit quality; that is `stellata-3bsf.49`'s question, with these
+  rows as its corpus.
+- **The review queue is disposed** — 54 rows, § The spine side of
+  `../membership/README.md` — and `sid:check` is clean.

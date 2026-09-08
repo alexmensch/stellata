@@ -16,7 +16,8 @@ import { parseGlieseTsv } from '../gliese-parse';
 import { parseTycho2Tsvs } from '../tycho2-parse';
 import { loadStoredEdges } from '../../sid/registry-io';
 import {
-  addKeyed, glAliasesFromEdges, type PrimaryTables, type SimbadXids, type WgsnKeys,
+  addKeyed, glAliasesFromEdges,
+  type BindingTables, type PrimaryTables, type SimbadXids, type WgsnKeys,
 } from './primaries-audit-pure';
 
 export const SRC_BSC5 = resolve(ROOT, 'data/classic-ids/bsc5.tsv');
@@ -107,6 +108,18 @@ function readSimbadXids(): Map<string, SimbadXids> {
   return out;
 }
 
+/** The binding derivation's inputs alone. `keepTycs` narrows the 2.5 M-row TYC
+ *  cross-walk to the Tycho ids the caller will look up. */
+export async function loadBindingTables(keepTycs: ReadonlySet<string>): Promise<BindingTables> {
+  return {
+    cns5: parseCns5Tsv(readRequired(SRC_CNS5, LFS_HINT)),
+    glAliases: glAliasesFromEdges(loadStoredEdges()),
+    tycToSource: await readGaiaTycXmatch(SRC_TYC_XMATCH, keepTycs),
+    hipToSource: readGaiaHipXmatch(SRC_HIP_XMATCH),
+    simbadBySourceId: readSimbadXids(),
+  };
+}
+
 /** `keepTycs` narrows the 2.5 M-row TYC cross-walk to the Tycho ids the caller
  *  will look up — IV/25's plus the spine's. */
 export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<PrimaryTables> {
@@ -115,21 +128,17 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
   for (const tyc of keepTycs) keep.add(tyc);
   const i239 = readIntColumns(SRC_HIP_MAIN, HIP_VMAG_HINT, 'hip_main_vmag.tsv', ['hip', 'hd']);
   return {
+    ...await loadBindingTables(keep),
     iv25,
     v50: parseBsc5Tsv(readRequired(SRC_BSC5, LFS_HINT)),
     iv27a: parseCrossIndexTsv(readRequired(SRC_CROSS_INDEX, LFS_HINT)),
-    cns5: parseCns5Tsv(readRequired(SRC_CNS5, LFS_HINT)),
     gliese: parseGlieseTsv(readRequired(SRC_GLIESE, LFS_HINT)),
     hipI239: i239.hip,
     hdI239: i239.hd,
-    glAliases: glAliasesFromEdges(loadStoredEdges()),
     hip2: readIntColumns(SRC_HIP2, LFS_HINT, 'hip2_van_leeuwen.tsv', ['hip']).hip,
     wgsn: readWgsn(),
     tycho2: parseTycho2Tsvs(
       readRequired(SRC_TYCHO2_MAIN, LFS_HINT), readRequired(SRC_TYCHO2_SUPPL1, LFS_HINT),
     ),
-    tycToSource: await readGaiaTycXmatch(SRC_TYC_XMATCH, keep),
-    hipToSource: readGaiaHipXmatch(SRC_HIP_XMATCH),
-    simbadBySourceId: readSimbadXids(),
   };
 }

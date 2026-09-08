@@ -201,7 +201,7 @@ into `resolveGaiaSourceId` — the `gaiaSourceIdBackfilled` build count)
 posterior. Coverage next improves with Gaia DR4 and a B-J-successor
 republication, not with more cross-walk work.
 
-Data file: `data/bailer-jones/bailer-jones-dr3.tsv` (365,762 rows,
+Data file: `data/bailer-jones/bailer-jones-dr3.tsv` (365,986 rows,
 refreshed by `scripts/refresh/refresh-bailer-jones.py`).
 
 **Distance-override validation against Vaidman et al. 2025.** Vaidman,

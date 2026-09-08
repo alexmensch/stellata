@@ -26,16 +26,23 @@ parked-ledger.tsv        ~282 KB, regular git. The § 6.1 ledger for manifest
                          record walk. The parity gate subtracts exactly these
                          rows and no more, so a park that is not on this list
                          fails the build rather than vanishing.
-binding-review.tsv       ~3 KB, regular git. The 34 spine bindings only AT-HYG
-                         asserts and SIMBAD does not corroborate, with the
-                         SIMBAD witness columns. Pipeline-derived.
+binding-review.tsv       ~12 KB, regular git. The 54 spine rows whose derived
+                         Gaia binding the generator cannot settle against the
+                         frozen spine cell — differs · unreached · contested ·
+                         collision — with every source's candidate, the gate
+                         rejections, the printed V and both candidates' G and
+                         SIMBAD cross-IDs. Pipeline-derived.
 binding-review-dispositions.tsv
-                         ~8 KB, regular git. Hand-curated: one row per
-                         binding-review.tsv row — keep | drop, a basis from
-                         the closed enum (tycho2_position · v70a_astrometry
-                         · simbad_dr2_object), the measured evidence. 34
-                         rows, all keep; a kept binding rides the manifest
-                         as binding=reviewed.
+                         ~16 KB, regular git. Hand-curated: one row per
+                         binding-review.tsv row on the record's tyc/hip/hd/gl
+                         cells, restating the frozen and derived ids, the id
+                         the row ships (keep_source_id: frozen, derived, a
+                         listed runner-up, or empty), a basis from the closed
+                         enum (tycho2_position · v70a_astrometry ·
+                         simbad_dr2_object · gaia_photometry · pair_component
+                         · shared_source) and the measured evidence. 54 rows:
+                         46 frozen, 6 derived, 1 runner-up, 1 none; a kept
+                         value rides the manifest as binding=reviewed.
 label-drops.tsv          ~7 KB, regular git. The § 6.2 label ledger: every
                          spine Flamsteed / HD cell no primary attests, keyed
                          on the manifest row it left, under
@@ -49,15 +56,19 @@ reviewer an oid instead of the rows. Any further small file here needs one too.
 ## Inputs
 
 The frozen inherited spine (`../athyg/inherited-spine.tsv`, as the record of
-AT-HYG's merge decisions and bindings), the primaries the audit reads
+AT-HYG's merge decisions, its `gaia_source_id` column read only as the diff
+surface for the derived binding), the primaries the audit reads
 (`../classic-ids/`, `../gliese/`, `../hipparcos/` with I/239's `hd` column,
 `../tycho2/`, `../iau-wgsn/`, the two `../gaia/` cross-walks,
 `../simbad/simbad_sptype.tsv`), the `gl:` bridges of
-`../sid/sameas-overrides.tsv`, the post-gate overlay
-`../classic-ids/classic_id_overlay.tsv`, `../classic-ids/classic_id_overrides.tsv`,
-`../binaries/multiples.tsv`, and this folder's own
-`binding-review-dispositions.tsv`. Licence follows the inputs: CC-BY-SA-4.0
-through the spine.
+`../sid/sameas-overrides.tsv`, the binding gates' evidence
+(`../gaia/gaia_dr3_astrometry_catalog.tsv` for G,
+`../hipparcos/hip_main_vmag.tsv` for printed V,
+`../simbad/simbad_wds_xids.tsv` for component attribution), the post-gate
+overlay `../classic-ids/classic_id_overlay.tsv`,
+`../classic-ids/classic_id_overrides.tsv`, `../binaries/multiples.tsv`, and
+this folder's own `binding-review-dispositions.tsv`. Licence follows the
+inputs: CC-BY-SA-4.0 through the spine.
 
 ## Consumed by
 

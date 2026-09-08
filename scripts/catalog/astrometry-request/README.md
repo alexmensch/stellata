@@ -2,7 +2,7 @@
 
 The source_id list the Gaia 5p pull is made against. `pnpm run
 build:astrometry-request` emits `data/gaia/gaia_catalog_source_id_request.tsv`
-— **378,111** ids, the union of three contributions the table's three
+— **378,840** ids, the union of four contributions the table's four
 consumers need (§ The request is a union). Not a network pull and not on the
 `build:catalog` path: this is **input preparation** for `scripts/refresh/`,
 which is why it sits beside the record build rather than inside it
@@ -14,7 +14,7 @@ which is why it sits beside the record build rather than inside it
 scripts/catalog/astrometry-request/
   export-astrometry-request.ts    The generator. Streams the membership
                                   manifest through iterManifestTsv for the
-                                  membership half, adds the gate candidates
+                                  membership half, adds both gates' candidates
                                   and the bound-pair siblings, sorts, writes.
   export-astrometry-request-pure.ts
     (+ test)                      sortSourceIdsNumeric — the BigInt sort.
@@ -27,8 +27,9 @@ scripts/catalog/astrometry-request/
 Each non-membership contribution lives with the consumer that defines it, not
 here
 — this folder decides what to *request*, not what a route may propose:
-`bindingCandidateSourceIds` in `../classic-ids/binding-candidates.ts`, and
-`pairMemberSourceIds` in `../distance/parallax/pair-member-parallax.ts`.
+`bindingCandidateSourceIds` in `../classic-ids/binding-candidates.ts`,
+`derivationCandidateSourceIds` in `../membership/binding-derivation-pure.ts`,
+and `pairMemberSourceIds` in `../distance/parallax/pair-member-parallax.ts`.
 
 **source_ids exceed 2^53.** A lexicographic sort misorders unequal-length
 ids and a `Number` sort collides them, so `BigInt` is the only correct
@@ -37,28 +38,37 @@ comparator — and it is what matches the ordering
 
 ## Request and record build name the same set by construction
 
-**370,307 source_ids** over 376,929 manifest rows; the 6,622 rows carrying
+**371,098 source_ids** over 376,929 manifest rows; the 5,831 rows carrying
 none are the no-Gaia tier.
 
 Reading the column is what makes the two agree — `readStars` reads the same
-cell. Re-running `resolveGaiaSourceId` here instead would re-decide a binding
-the manifest justified, against reference tables that have moved since, and
-without the G−V / sibling-letter gates
-(`../membership/README.md` § The identifier columns are read, never
-re-derived).
+cell, and the binding it carries was derived once, in the generator, through
+the G−V / sibling-letter gates (`../membership/README.md` § The binding is
+derived). The derivation's own candidates are the third contribution below,
+so the pull carries a G for every source it might bind before it binds one.
 
 ## The request is a union, and why that is not a compromise
 
-`data/gaia/gaia_dr3_astrometry_catalog.tsv` has **three** consumers wanting
-different sets, so the request is the union of all three:
+`data/gaia/gaia_dr3_astrometry_catalog.tsv` has **four** consumers wanting
+different sets, so the request is the union of all four:
 
 | Contribution | Ids | Consumer |
 |---|---|---|
-| the manifest's `gaia_source_id` column | 370,307 | the record build: direction / rv / V / ci cascades |
-| `../classic-ids/`' binding-gate candidates | 99,799, +521 beyond the manifest | the gate's `phot_g_mean_mag` evidence |
-| `multiples.tsv`' kept-physical pair members | 16,108, +7,279 beyond the two above | the parallax cascade's `pair_member_parallax` tier |
+| the manifest's `gaia_source_id` column | 371,098 | the record build: direction / rv / V / ci cascades |
+| `../classic-ids/`' binding-gate candidates | 99,799, +493 beyond the manifest | the gate's `phot_g_mean_mag` evidence |
+| `../membership/`' binding-derivation candidates | 313,290, +231 beyond the two above | the derivation's `phot_g_mean_mag` evidence — every source any spine row could be bound to |
+| `multiples.tsv`' kept-physical pair members | 16,108, +7,018 beyond the three above | the parallax cascade's `pair_member_parallax` tier |
 
-**The third one is the same shape as the second**, and arrived the same way —
+**The derivation's contribution is the second one's shape again, on the record
+side**: the manifest generator weighs candidates before it writes a binding,
+so the candidates cannot be read off the manifest column — the column is the
+outcome. Requesting them all, whatever a row ends up bound to, is what lets
+the generator's `derivedWeighedNoGMag` pin at zero the same way the overlay's
+`gateSkippedNoGMag` does; the reviewed bindings a disposition keeps
+against every source are in the manifest column and so requested by the first
+contribution.
+
+**The pair-member one is the same shape as the second**, and arrived the same way —
 by a consumer being added without the request following. A bound pair's member
 is routinely not a manifest row (a component Gaia resolved that no primary
 indexes), and the tier lends that member's parallax to the sibling Gaia fitted
@@ -94,30 +104,31 @@ every route could propose, because `applyBindingGate` skips what it cannot
 weigh: an entry with no HIP (the TYC→HD route never attaches one) and a HIP
 with no printed V are both skipped, so a `G` for either decides nothing.
 
-That first narrowing is also why this script loads only two of the four
-cross-walk inputs (`loadBindingCandidateInputs`): a `hip` reaches an overlay
-entry from the HIP cross-walk or a CNS5 row and nowhere else, so the 2.5 M-row
-TYC table decides no candidate and the overlay build is the only caller that
-streams it.
+That narrowing is why the gate's contribution loads only two of the cross-walk
+inputs (`loadBindingCandidateInputs`): a `hip` reaches an overlay entry from
+the HIP cross-walk or a CNS5 row and nowhere else. The derivation's
+contribution is what streams the 2.5 M-row TYC table here, narrowed to the
+spine's own Tycho ids (`loadBindingTables`), because the TYC walk on the
+record's own TYC is one of its four sources.
 
 **Requesting a candidate is not the same as pulling one.** A requested id the
 archive returns no row for lands the gate right back in pass-by-default, which
-is why `gateSkippedNoGMag` is pinned at **0**: it counts candidates that reached
-the gate with no row in the pull, so a request that quietly stops covering them
-fails the overlay snapshot instead of silently accepting bindings. It reads 0
-today — the pull does return 6 fewer rows than the request (378,105 of 378,111),
-but all 6 are membership rows rather than candidates: they are the DR2 ids of
-`data/athyg/stale_gaia_source_ids.tsv`, which DR3 does not publish
-(`../spine/README.md` § Six source_ids DR3 does not publish). What it cannot
-fix is
-`gateSkippedNullGMag` (63): sources Gaia has a row for and publishes no
+is why `gateSkippedNoGMag` and `derivedWeighedNoGMag` are pinned at **0**: each
+counts candidates that reached its gate with no row in the pull, so a request
+that quietly stops covering them fails a snapshot instead of silently accepting
+bindings. Both read 0 today — the pull does return 2 fewer rows than the
+request (378,838 of 378,840), but both are reviewed bindings rather than
+candidates: the two DR2 ids of `data/athyg/stale_gaia_source_ids.tsv` SIMBAD
+holds no DR3 successor for (`../spine/README.md` § Six source_ids DR3 does not
+publish). What no request can fix is `gateSkippedNullGMag` (63) and
+`derivedWeighedNullGMag` (77): sources Gaia has a row for and publishes no
 `phot_g_mean_mag` for, which stay unvettable at any request size.
 
 ## What the pulled set feeds
 
 The request drives `scripts/refresh/refresh-gaia-astrometry-catalog.py` →
 the astrometry catalog, which is tier 1 of the direction cascade and the rv
-cascade, the source of the BP/RP the V and ci cascades transform, and the
-gate's evidence above. `pnpm run build:classic-ids` — CI asserts the
-overlay byte-identical — is what proves a change to this request did not
-move the gate.
+cascade, the source of the BP/RP the V and ci cascades transform, and both
+gates' evidence above. `pnpm run build:classic-ids` and `pnpm run
+build:membership` — CI asserts both artifacts byte-identical — are what prove a
+change to this request did not move either gate.

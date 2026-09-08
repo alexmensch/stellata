@@ -17,7 +17,6 @@ import {
   loadCatalog,
 } from '../catalog-lookup';
 import { FLAG_BINARY_COMPANION_ONLY, type SearchEntry } from '../catalog-pure';
-import { dataRows } from '../parse/corpus-tsv';
 import {
   PARKED_LEDGER_FILE,
   parseParkedRecordsTsv,
@@ -37,10 +36,12 @@ import {
   LABEL_DROPS_FILE,
   MEMBERSHIP_EXPECTED_FILE,
   MEMBERSHIP_MANIFEST_FILE,
+  bindingReviewKey,
   manifestDesignations,
   manifestKey,
   matchSpineToManifest,
   parseBindingDispositionsTsv,
+  parseBindingReviewTsv,
   parseLabelDropsTsv,
   parseLedgerTsv,
   parseManifestTsv,
@@ -53,17 +54,7 @@ const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE_FILE);
 const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 const LEDGER_PATH = resolve(REPO_ROOT, ADDITIONS_LEDGER_FILE);
 
-const REVIEW_KEY_COLUMNS = ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id'] as const;
-
-function reviewRows(): Array<Record<(typeof REVIEW_KEY_COLUMNS)[number], string>> {
-  return [...dataRows(
-    readFileSync(resolve(REPO_ROOT, BINDING_REVIEW_FILE), 'utf-8'),
-    REVIEW_KEY_COLUMNS, BINDING_REVIEW_FILE, 'Re-run `pnpm run build:membership`.',
-  )].map(({ cells, idx }) => Object.fromEntries(
-    REVIEW_KEY_COLUMNS.map((c) => [c, cells[idx[c]]]),
-  ) as Record<(typeof REVIEW_KEY_COLUMNS)[number], string>);
-}
-
+const queue = parseBindingReviewTsv(readFileSync(resolve(REPO_ROOT, BINDING_REVIEW_FILE), 'utf-8'));
 const dispositions = parseBindingDispositionsTsv(
   readFileSync(resolve(REPO_ROOT, BINDING_DISPOSITIONS_FILE), 'utf-8'),
 );
@@ -93,10 +84,19 @@ function differences(a: Map<string, number>, b: Map<string, number>): string[] {
 
 // Both files are regular git, so this runs in every job.
 describe('binding review dispositions', () => {
-  it('disposes every review-queue row, and nothing else', () => {
-    const queue = reviewRows().map((r) => r.gaia_source_id).sort();
-    expect([...dispositions.keys()].sort()).toEqual(queue);
+  it('disposes every review-queue row, and nothing else, on the ids the row states', () => {
+    expect([...dispositions.keys()].sort()).toEqual(queue.map(bindingReviewKey).sort());
     expect(queue).toHaveLength(expected.bindingReviewRows);
+    for (const row of queue) {
+      const d = dispositions.get(bindingReviewKey(row))!;
+      expect([d.frozen_source_id, d.derived_source_id], bindingReviewKey(row))
+        .toEqual([row.frozen_source_id, row.derived_source_id]);
+    }
+    const byVerdict = new Map<string, number>();
+    for (const row of queue) byVerdict.set(row.verdict, (byVerdict.get(row.verdict) ?? 0) + 1);
+    expect(Object.fromEntries(byVerdict)).toEqual(
+      Object.fromEntries(Object.entries(expected.bindingReviewByVerdict).filter(([, n]) => n > 0)),
+    );
   });
 });
 
@@ -192,11 +192,23 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     expect(shared).toHaveLength(expected.sharedDesignations);
   });
 
-  it('carries every kept review binding, and none the disposition dropped', () => {
-    const byId = new Map(manifest.map((r) => [r.gaia_source_id, r]));
-    for (const [id, d] of dispositions) {
-      expect(byId.get(id)?.binding, id).toBe(d.disposition === 'keep' ? 'reviewed' : undefined);
+  // Every disposed row ships the value its disposition settled on, under
+  // `reviewed`, or none — and no `reviewed` binding exists without one.
+  it('carries every disposed binding as reviewed, and no other', () => {
+    const bySpineKey = new Map<string, ManifestRow>();
+    spine.forEach((row, i) => {
+      const target = match.manifestIndex[i];
+      if (target !== null) bySpineKey.set(bindingReviewKey(row), manifest[target]);
+    });
+    for (const [key, d] of dispositions) {
+      const row = bySpineKey.get(key)!;
+      const value = d.keep_source_id;
+      expect([row.gaia_source_id, row.binding], key)
+        .toEqual([value, value === '' ? 'none' : 'reviewed']);
     }
+    expect(manifest.filter((r) => r.binding === 'reviewed')).toHaveLength(
+      [...dispositions.values()].filter((d) => d.keep_source_id !== '').length,
+    );
   });
 
   // § 6.2: every spine label the manifest leaves out is on the label ledger,
