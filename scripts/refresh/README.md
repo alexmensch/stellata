@@ -133,6 +133,50 @@ run pulled until that run happens — the same terms as `radial_velocity`
 above. Editing `refresh_lib.py` or a `simbad/*.py` module invalidates
 `is_up_to_date`, so the next invocation re-pulls rather than skips.
 
+### The staleness gate — pin the shortfall, never the numerator
+
+That last paragraph is the hazard, and it has bitten more than once: the
+binding column moves, the pull is not re-run, and the build reads a table
+that no longer covers the manifest. Nothing fails. The affected records
+quietly fall to a lower cascade tier.
+
+**A rebuild cannot catch it and must not be relied on to.** `build:catalog`
+reads committed tables, so rebuilding from the same stale TSV reproduces the
+same gap exactly — the missing rows are not computable, they need a network
+fetch. `isUpToDate` already invalidates the artifact on any build-script
+edit and it is no help here: nothing is stale in the *build*, the *data* is.
+
+**What does catch it is gating the shortfall.** A coverage numerator —
+`bjOverridden`, `apsisMatched` — cannot serve as the gate, because when the
+column gains sources the pull was never asked for, the numerator simply
+stops growing. "Stopped growing" is the most invisible diff a snapshot can
+carry: it reads as no change, and `UPDATE_BUILD_COUNTS` writes it back
+without comment. The shortfall is the number that moves loudly, so the
+shortfall is what is pinned:
+
+| Count | Pin | What a move means |
+|---|---|---|
+| `bjEligibleNotPulled` | **0** | an eligible row has its own DR3 parallax, so Bailer-Jones publishes a posterior for it; an absence is only ever this request set drifting |
+| `apsisSourcesUnpulled` | reviewed residual | Gaia genuinely lacks parameters for part of the catalogue, so the residual is non-zero and what is gated is it MOVING |
+| `gspcSourcesUnpulled` | reviewed residual | same terms |
+| `gateSkippedNoGMag` · `derivedWeighedNoGMag` | **0** | the original instance of this rule, on the two binding gates (`scripts/catalog/astrometry-request/README.md` § The request is a union) |
+
+Adding a per-source consumer therefore means adding its shortfall count in
+the same change. The cost is one hash lookup per record, so it scales with
+the catalogue rather than with the pull.
+
+**`simbad_sptype.tsv` is a cycle, not a line, and cannot be gated this
+way.** Its request keys come off the manifest's binding column
+(`membership_request_keys` keys a row on its `gaia_source_id` where it has
+one), and its cross-IDs are the derivation's fourth binding source — so
+re-pulling it can change the very column that decided what to request.
+Re-running it is a fixpoint iteration with no convergence guarantee, and it
+re-opens every row of `data/membership/binding-review-dispositions.tsv` by
+construction, since a disposition names the two ids it adjudicated between
+and the generator hard-fails when either moves. Re-pull it deliberately, as
+its own change, expecting to re-review the queue — never as a step folded
+into unrelated work.
+
 `read_source_id_request` lives in `refresh_lib` rather than beside any
 one pull, because three scopes now read the same one-column TSV contract:
 the binaries astrometry list, the full-catalog list, and the DR2
@@ -290,8 +334,8 @@ catalogue inconsistent. Order matters:
    Each commits its TSV under `data/gaia/` or `data/bailer-jones/`.
    Then regenerate the full-catalog astrometry (two stages, in this
    order): `pnpm run build:astrometry-request` (the manifest's
-   `gaia_source_id` column plus the classic-ID gate's candidates, so it
-   runs after both cross-walk refreshes), then
+   `gaia_source_id` column plus both binding gates' candidates and the
+   bound-pair siblings, so it runs after both cross-walk refreshes), then
    `pnpm run refresh:gaia-astrometry-catalog`. Under a DR transition the
    manifest's `gaia_dr3:` ids bridge through `docs/sid.md` § 6 first —
    requesting DR3 ids against a DR4 table returns nothing.
