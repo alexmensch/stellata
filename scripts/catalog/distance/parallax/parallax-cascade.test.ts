@@ -95,7 +95,7 @@ describe('parallax-cascade / the precision floor', () => {
     // V 5.89 naked-eye star, which is the catastrophe the floor exists for.
     const res = resolveParallax({ ...NONE, hip2: hip2(0.04, 0.36) }, false, false);
     expect(res.via).toBe('none');
-    expect(res.refused).toBe(true);
+    expect(res.refusedPlxMas).toEqual([0.04]);
   });
 
   it('admits a parallax fractionally above the floor — HIP 37 at S/N 1.03 '
@@ -136,19 +136,20 @@ describe('parallax-cascade / the precision floor', () => {
   // § 6.1 park — so those rows neither shipped nor parked.
   it('refuses a sub-floor parallax on every tier below Gaia, and parks each '
     + 'as a refusal rather than as nothing published', () => {
-    const subFloor: Array<[Partial<ParallaxSources>, string]> = [
-      [{ cns5: cited(0.05, LITERATURE, 0.5) }, 'cns5'],
-      [{ gliese: gliese(0.5) }, 'gliese trigonometric'],
-      [{ simbad: cited(0.05, LITERATURE, 0.5) }, 'simbad'],
-      [{ gliese: gliese(0.5, false) }, 'gliese photometric'],
+    const subFloor: Array<[Partial<ParallaxSources>, string, number]> = [
+      [{ cns5: cited(0.05, LITERATURE, 0.5) }, 'cns5', 0.05],
+      [{ gliese: gliese(0.5) }, 'gliese trigonometric', 0.5],
+      [{ simbad: cited(0.05, LITERATURE, 0.5) }, 'simbad', 0.05],
+      [{ gliese: gliese(0.5, false) }, 'gliese photometric', 0.5],
     ];
-    for (const [src, tier] of subFloor) {
+    for (const [src, tier, mas] of subFloor) {
       const res = resolveParallax({ ...NONE, ...src }, false, false);
       expect(res.via, tier).toBe('none');
       expect(res.plxMas, tier).toBeNull();
-      // `refused` is what picks refused_no_defensible_parallax over
-      // no_parallax_published on the § 6.1 ledger the parity gate subtracts.
-      expect(res.refused, tier).toBe(true);
+      // A non-empty list is what picks refused_no_defensible_parallax over
+      // no_parallax_published on the § 6.1 ledger the parity gate subtracts,
+      // and the values are what companion promotion matches a pair row against.
+      expect(res.refusedPlxMas, tier).toEqual([mas]);
     }
   });
 
@@ -159,7 +160,7 @@ describe('parallax-cascade / the precision floor', () => {
       gaia: gaiaAstrometryRow({ parallaxMas: 0.04, parallaxErrorMas: 0.36 }),
     }, false, false);
     expect(res.via).toBe('gaia_dr3_inversion');
-    expect(res.refused).toBe(false);
+    expect(res.refusedPlxMas).toEqual([]);
   });
 
   it('falls THROUGH a sub-floor tier to the next one that clears the floor', () => {
@@ -170,7 +171,7 @@ describe('parallax-cascade / the precision floor', () => {
     }, false, false);
     expect(res.via).toBe('gliese_plx');
     expect(res.plxMas).toBe(30);
-    expect(res.refused).toBe(false);
+    expect(res.refusedPlxMas).toEqual([]);
   });
 
   it('admits a sub-floor-looking Gliese parallax whose error is unpublished, '
@@ -181,7 +182,7 @@ describe('parallax-cascade / the precision floor', () => {
     };
     const res = resolveParallax({ ...NONE, gliese: noError }, false, false);
     expect(res.via).toBe('gliese_plx');
-    expect(res.refused).toBe(false);
+    expect(res.refusedPlxMas).toEqual([]);
   });
 });
 
@@ -195,7 +196,7 @@ describe('parallax-cascade / the Gaia-bibcode skip rule', () => {
       simbad: simbad(114.5, GAIA_DR2),
     }, true, false);
     expect(res.via).toBe('none');
-    expect(res.refused).toBe(true);
+    expect(res.refusedPlxMas).toEqual([114.49, 114.5]);
   });
 
   it('catches the release paper as well as the VizieR table — CNS5 cites one '
@@ -314,7 +315,7 @@ describe('parallax-cascade / the van Leeuwen laundering rule', () => {
       simbad: simbad(0.04, VAN_LEEUWEN),
     }, false, false);
     expect(res.via).toBe('none');
-    expect(res.refused).toBe(true);
+    expect(res.refusedPlxMas).toEqual([0.04, 0.04]);
   });
 
   it('keeps a van Leeuwen citation where the floor never fired — the rule is '
@@ -343,7 +344,7 @@ describe('parallax-cascade / the bound-sibling tier', () => {
     );
     expect(res.via).toBe('pair_member_parallax');
     expect(1000 / (res.plxMas as number)).toBeCloseTo(404.14, 2);
-    expect(res.refused).toBe(false);
+    expect(res.refusedPlxMas).toEqual([]);
   });
 
   it('lends a neighbour\'s measurement only after every tier stating the '
@@ -363,17 +364,17 @@ describe('parallax-cascade / the bound-sibling tier', () => {
       pairMember: sibling(2.4744),
     }, true, false);
     expect(res.via).toBe('pair_member_parallax');
-    expect(res.refused).toBe(false);
+    expect(res.refusedPlxMas).toEqual([]);
   });
 });
 
 describe('parallax-cascade / the residual', () => {
   it('separates a row nothing measured from one whose value was refused', () => {
     expect(resolveParallax(NONE, false, false)).toMatchObject({
-      via: 'none', refused: false,
+      via: 'none', refusedPlxMas: [],
     });
     expect(resolveParallax({ ...NONE, hip2: hip2(1, 5) }, false, false)).toMatchObject({
-      via: 'none', refused: true,
+      via: 'none', refusedPlxMas: [1],
     });
   });
 

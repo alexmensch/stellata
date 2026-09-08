@@ -14,7 +14,7 @@ import {
   parentComponentToken,
   parseMultiplesTsv,
   projectFromSepPa,
-  parkedIdentifiers,
+  parkedRefusals,
   promoteCompanions,
   type MultiplesTsvRow,
 } from './companion-promotion';
@@ -2756,10 +2756,12 @@ describe('parentComponentToken', () => {
 });
 
 describe('promoteCompanions / a parked record does not arrive by promotion', () => {
-  // σ Ori's shape at the promotion seam: HIP 26549's spine row parks (Gaia
-  // fitted no parallax; HIP2's 3.04 ± 8.92 mas is under the S/N floor) and the
-  // pair row states the very distance that refused value inverts to, carried
-  // as `hip2_long_baseline`. Promoting would re-serve it.
+  // σ Ori's shape at the promotion seam, from the build in which HIP 26549 was
+  // still parked: Gaia fitted no parallax, HIP2's 3.04 ± 8.92 mas fell under the
+  // S/N floor, and the pair row states the very distance that refused value
+  // inverts to, carried as `hip2_long_baseline`. Promoting would re-serve it.
+  // The bound-sibling tier now places the record off HIP 26551 D's clean fit, so
+  // this is the shape the gate refuses rather than a row it refuses today.
   const PARKED_HIP = 26549;
   const PARKED_SOURCE = '3216486443742786048';
   const anchor = makeStar({
@@ -2792,9 +2794,9 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   it('refuses it once the ledger names the record, and counts the refusal', () => {
     const { newStars, stats } = promoteCompanions(
       rows, [anchor], CON_ASSIGNMENT, null,
-      parkedIdentifiers([{
+      parkedRefusals([{
         gaiaSourceId: PARKED_SOURCE, hip: PARKED_HIP,
-        reason: 'refused_no_defensible_parallax',
+        reason: 'refused_no_defensible_parallax', refusedPlxMas: [3.04],
       }]),
     );
     expect(newStars).toHaveLength(0);
@@ -2805,9 +2807,9 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   it('names a parked record by its HIP alone — the no-Gaia half of the cohort', () => {
     const { stats } = promoteCompanions(
       rows, [anchor], CON_ASSIGNMENT, null,
-      parkedIdentifiers([{
+      parkedRefusals([{
         gaiaSourceId: null, hip: PARKED_HIP,
-        reason: 'refused_no_defensible_parallax',
+        reason: 'refused_no_defensible_parallax', refusedPlxMas: [3.04],
       }]),
     );
     expect(stats.droppedParkedRecord).toBe(1);
@@ -2858,20 +2860,17 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
     + 'the inheritance gates can turn it into a synth record', () => {
     const { newStars, stats } = promoteCompanions(
       blendedRows, [blendedPrimary], CON_ASSIGNMENT, null,
-      parkedIdentifiers([{
+      parkedRefusals([{
         gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP,
-        reason: 'refused_no_defensible_parallax',
+        reason: 'refused_no_defensible_parallax', refusedPlxMas: [0.97],
       }]),
     );
     expect(newStars).toHaveLength(0);
     expect(stats.droppedParkedRecord).toBe(1);
   });
 
-  // alpha Her's shape: the primaries admit HD 156015, no parallax is published
-  // for the blend, and it parks. The pair row's distance is Rasalgethi's own
-  // HIP2 value, so there is no refused measurement here to launder — refusing
-  // the row would strand B and Bb beside a primary that is still in the
-  // catalogue.
+  // A row parked on a reason that refused nothing: there is no measurement for
+  // a pair row to be laundering, so the id is not indexed at all.
   it.each([
     ['no_parallax_published'],
     ['no_v_magnitude'],
@@ -2882,8 +2881,9 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
     (reason) => {
       const { newStars, stats } = promoteCompanions(
         blendedRows, [blendedPrimary], CON_ASSIGNMENT, null,
-        parkedIdentifiers([{
+        parkedRefusals([{
           gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP, reason,
+          refusedPlxMas: [],
         }]),
       );
       expect(newStars).toHaveLength(1);
@@ -2891,4 +2891,63 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
       expect(stats.droppedParkedRecord).toBe(0);
     },
   );
+
+  // α Her, the case the measurement match exists for. The primaries admit
+  // HD 156015 — the blend Gaia fitted one 2p source to — and SIMBAD publishes a
+  // Gaia-release parallax for it, 9.9114 ± 0.4882 mas, which the 2p skip rule
+  // refuses, so the blend parks as a refusal. All three of Rasalgethi's
+  // component rows carry that source_id while stating 110.253583 pc, which is
+  // Rasalgethi's own HIP2 distance and 8.5% off the refused 100.894 pc. Keying
+  // on the id alone cost the system its B, Ba and Bb beside a primary that
+  // ships.
+  const ALF_HER_BLEND_SOURCE = '4541877995116193408';
+  const ALF_HER_REFUSED_MAS = 9.9114;
+  const rasalgethi = makeStar({
+    hip: 84345, gaiaSourceId: null, proper: 'Rasalgethi',
+    x: -20.995612, y: -104.710117, z: 27.401246,
+  });
+  const alfHerRows: MultiplesTsvRow[] = [
+    multiplesRow({
+      systemId: '17146+1423-AB', comp: 'A', hip: 84345, orbitRole: 'primary',
+      astrometryVia: 'hip2_long_baseline', distPc: 110.253583,
+      x_pc: -20.995612, y_pc: -104.710117, z_pc: 27.401246,
+    }),
+    multiplesRow({
+      systemId: '17146+1423-AB', comp: 'B', hip: 84345,
+      gaiaSourceId: ALF_HER_BLEND_SOURCE, orbitRole: 'secondary',
+      astrometryVia: 'hip2_long_baseline', distPc: 110.253583,
+      x_pc: -20.995612, y_pc: -104.710117, z_pc: 27.401246,
+      sepArcsec: 4.9, paDeg: 101.0, dmag: 1.92, magPri: 3.48, magSec: 5.4,
+    }),
+  ];
+
+  it('promotes a component carrying the parked blend\'s source_id where the '
+    + 'distance it states is the anchor\'s own, not the refused value', () => {
+    const { newStars, stats } = promoteCompanions(
+      alfHerRows, [rasalgethi], CON_ASSIGNMENT, null,
+      parkedRefusals([{
+        gaiaSourceId: ALF_HER_BLEND_SOURCE, hip: null,
+        reason: 'refused_no_defensible_parallax',
+        refusedPlxMas: [ALF_HER_REFUSED_MAS],
+      }]),
+    );
+    expect(stats.droppedParkedRecord).toBe(0);
+    expect(newStars).toHaveLength(1);
+  });
+
+  it('refuses the same row once the refused parallax IS what it states, at '
+    + 'either precision a dist_pc cell is printed to', () => {
+    for (const distPc of [110.253583, 110.2536]) {
+      const { stats } = promoteCompanions(
+        alfHerRows.map((r) => ({ ...r, distPc })), [rasalgethi],
+        CON_ASSIGNMENT, null,
+        parkedRefusals([{
+          gaiaSourceId: ALF_HER_BLEND_SOURCE, hip: null,
+          reason: 'refused_no_defensible_parallax',
+          refusedPlxMas: [1000 / 110.253583],
+        }]),
+      );
+      expect(stats.droppedParkedRecord, String(distPc)).toBe(1);
+    }
+  });
 });

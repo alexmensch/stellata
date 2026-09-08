@@ -74,7 +74,7 @@ import {
   promoteCompanions,
   readMultiplesTsv,
   MULTIPLES_TSV,
-  parkedIdentifiers,
+  parkedRefusals,
 } from './companions/companion-promotion';
 import {
   buildCatalogRowIndexMap,
@@ -707,7 +707,7 @@ async function main() {
     const tProm = Date.now();
     const { newStars, stats: ps } = promoteCompanions(
       multiplesRows, stars, conAssignment, dustGrid,
-      parkedIdentifiers(stats.parked),
+      parkedRefusals(stats.parked),
     );
     for (const ns of newStars) stars.push(ns);
     console.log(

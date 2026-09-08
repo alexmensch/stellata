@@ -43,6 +43,12 @@ export interface ParkedRecord {
   gl: string | null;
   gaiaSourceId: string | null;
   reason: ParkedReason;
+  /** Build-time only — no ledger column carries it. Every parallax a skip rule
+   *  refused on this row, mas, which is what companion promotion needs to tell a
+   *  pair row re-serving the refusal from one merely sharing the blend's id
+   *  (`../../companions/README.md` § Refused-parallax refusal). Empty on the
+   *  three reasons that refused nothing. */
+  refusedPlxMas: readonly number[];
 }
 
 const COLUMNS = ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'] as const;

@@ -271,36 +271,55 @@ instead, one `parked*` key per reason (`PARKED_COUNT_KEY`), enumerated in
 `../../membership/membership-manifest-gate.test.ts`, which subtracts the ledger
 from the manifest by key before comparing designation multisets.
 
-**Companion promotion may not walk a REFUSED record back in.** multiples.tsv
-states a distance for every component, and for a row parked on
-`refused_no_defensible_parallax` that distance is the refused measurement
-itself — σ Ori Aa's pair row reads `astrometry_via=hip2_long_baseline` at
-328.947368 pc, which is 3.0400000 mas, the refused HIP2 value to eight
-significant figures. Promoting it would re-serve a refusal through a courier,
-which is the general rule at the head of § The skip rules. Measured across all
-44 parked rows multiples.tsv carries a row for: `astrometry_via` is
-`system_inherited` 65 and `hip2_long_baseline` 61, and `gaia_5p` **zero** — not
-one of them has an independent per-component fit behind it, so there is no case
-where promotion supplies an owned distance. That `gaia_5p` zero is what makes
-the refusal safe rather than merely convenient, and it is measured on a parked
-set this README does not pin a method for; stellata-3bsf.48 re-derives it
-instrumented, because a hand join over the committed files does not reproduce
-it. The refusal is counted as
-`companionDroppedParkedRecord`.
+**Companion promotion may not walk a REFUSED MEASUREMENT back in.**
+multiples.tsv states a distance for every component, and for a row carrying the
+refusal that distance IS the refused parallax inverted — σ Ori Aa's pair row
+reads `astrometry_via=hip2_long_baseline` at 328.947368 pc, which is 3.0400000
+mas, the HIP2 value the floor refused to eight significant figures. That is the
+shape the gate refuses; the bound-sibling tier now places HIP 26549 itself off
+HIP 26551 D's clean fit, so it is no longer a row the gate sees. Promoting such
+a row re-serves a refusal through a courier, the general rule at the head of
+§ The skip rules. Measured across all 44 parked rows multiples.tsv carries a row
+for: `astrometry_via` is `system_inherited` 65 and `hip2_long_baseline` 61, and
+`gaia_5p` **zero** — not one of them has an independent per-component fit behind
+it, so there is no case where promotion supplies an owned distance. That
+`gaia_5p` zero is what makes the refusal safe rather than merely convenient, and
+it is measured on a parked set this README does not pin a method for;
+stellata-3bsf.48 re-derives it instrumented, because a hand join over the
+committed files does not reproduce it. The refusal is counted as
+`companionDroppedParkedRecord`, and it matches on the measurement:
+`statesRefusedParallax` compares the row's stated distance against every
+parallax a skip rule refused on that record, indexed by the id the pair row
+names it with.
 
-**The other two park reasons do not reach it, and widening the refusal to every
-park is a bug.** There is nothing to launder on a row parked because *nothing
-was ever published*: the pair row's distance is then the anchor's own, not a
-refused value — α Her's components read 110.25 pc, which is Rasalgethi's HIP2
-distance, while the blend it shares an id with (HD 156015) has no parallax at
-all. `no_v_magnitude` is further still: that row was placed, only unlit. The
-discriminator that makes this safe is structural — where a parallax genuinely
-*was* refused the primary parks too, so the whole system leaves together and no
-component is stranded, whereas the other reasons routinely park a companion
-whose primary is still in the catalogue. Measured over the 35 pair rows the
-gate sees: all 9 refused-parallax systems have no primary record, against 6 of
-13 on the other two reasons. Widening it is what cost Rasalgethi its B and Bb
-when the primaries began admitting HD 156015.
+**Keying it on the identifier instead is a bug, because a blended id is shared
+far more widely than the value is.** Stage 2/3 bind one source to every
+component of a sub-arcsec pair, so a parked primary's id sits on siblings whose
+stated distance is the ANCHOR's rather than the refusal. α Her is the case: its
+B, Ba and Bb rows all carry HD 156015's source_id — the blend SIMBAD publishes a
+Gaia-release parallax for, 9.9114 ± 0.4882 mas, which the 2p skip rule refuses —
+while stating 110.253583 pc, Rasalgethi's own HIP2 distance and 8.5% off the
+refused 100.894 pc. Refusing on the shared id stranded three components of a
+system whose primary ships, and cost 04475+4324 B and τ Oph B the same way. Each
+reinstates its SID on the measurement match landing.
+
+**The two populations are five orders of magnitude apart**, which is what makes
+a numeric tolerance a measurement rather than a judgement. Over every row the
+gate sees, one re-serving a refusal agrees with the inversion to between 2e-11
+and 8.2e-8 relative — the loose end being a `dist` cell that came through
+AT-HYG's four decimals rather than a full-precision inversion — while the
+nearest row stating a genuinely different measurement sits 2.1e-2 away.
+`REFUSED_PARALLAX_MATCH_REL_TOL` = 1e-5 sits in that gap, ~100x above the worst
+true match and ~2000x below the closest false one.
+
+**Only `refused_no_defensible_parallax` rows are indexed at all.** A
+`no_parallax_published` row has no refused measurement for a pair row to be
+carrying; a `no_v_magnitude` row was placed by a tier that stood behind its
+value and only went unlit, and a `no_position` row lit and unplaced. The
+structural half of the argument still holds either way: where a parallax
+genuinely was refused the primary parks too, so the whole system leaves together
+— measured over the 35 pair rows the gate sees, all 9 refused-parallax systems
+have no primary record, against 6 of 13 on the other two reasons.
 
 **Most rows it refuses are the parked primary's siblings, not the parked record
 arriving twice.** Stage 2/3 bind one blended source to every component row of a

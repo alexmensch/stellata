@@ -453,68 +453,106 @@ export interface PromotionStats {
    *  took the anchor's designation constellation because they carried none of
    *  their own. See {@link inheritAnchorDesignationCon}. */
   existingDesigConFromAnchor: number;
-  /** Pair rows refused because an identifier on them belongs to a record
-   *  parked on a REFUSED parallax — mostly that primary's siblings, which
-   *  inherit its blended source_id or HIP, rather than the parked record
-   *  itself. See {@link ParkedIdentifiers}, which owns why the other park
-   *  reasons do not reach here. Without this the parked list names rows that
-   *  ship anyway. */
+  /** Pair rows refused because the distance they state IS a parallax a tier
+   *  above refused — mostly the parked primary's siblings, which inherit its
+   *  blended source_id or HIP along with its distance, rather than the parked
+   *  record itself. See {@link statesRefusedParallax}, which owns what the
+   *  match is on and why sharing the id is not enough. Without this the parked
+   *  list names rows that ship anyway. */
   droppedParkedRecord: number;
 }
 
-/** The identifiers of records parked because a tier REFUSED their parallax. A
- *  pair row carrying one of them may not be promoted: multiples.tsv states a
- *  distance for every component, and for such a row that distance is the
- *  refused measurement itself — sigma Ori Aa's `hip2_long_baseline` 328.947 pc
- *  inverts to the 3.04 mas the S/N floor threw out. Promoting would re-serve it
- *  through the courier the skip rules exist to close.
+/** The parallaxes a tier REFUSED, indexed by the two identifiers a pair row
+ *  names the parked record by. Takes the structural minimum rather than
+ *  `ParkedRecord`, so the promotion pass does not import the walk that produced
+ *  it.
  *
- *  **A sibling counts as carrying it.** Stage 2/3 bind one blended source to
- *  every component row of a sub-arcsec pair, so the parked primary's id sits on
- *  its siblings' rows too, and those rows state the same refused distance. The
- *  SID ledger records each as a presence event naming DR4 as the reinstating
- *  event, never a dissolution — the pair is unchanged. */
-export interface ParkedIdentifiers {
-  gaia: ReadonlySet<string>;
-  hip: ReadonlySet<number>;
+ *  **A sibling is indexed too, and that is the point of keying on ids at all.**
+ *  Stage 2/3 bind one blended source to every component row of a sub-arcsec
+ *  pair, so the parked primary's id sits on its siblings' rows as well — and
+ *  those rows state the same refused distance, which is what
+ *  {@link statesRefusedParallax} then checks. The SID ledger records every row
+ *  this refuses as a presence event naming DR4 as the reinstating event, never
+ *  a dissolution: the pair is unchanged.
+ *
+ *  **Only `refused_no_defensible_parallax` rows are indexed.** A
+ *  `no_parallax_published` row has no refused measurement for a pair row to be
+ *  carrying; a `no_v_magnitude` row was placed and not lit, a `no_position` row
+ *  lit and not placed, and neither had a parallax refused either. */
+export interface ParkedRefusals {
+  gaia: ReadonlyMap<string, readonly number[]>;
+  hip: ReadonlyMap<number, readonly number[]>;
 }
 
-export function emptyParkedIdentifiers(): ParkedIdentifiers {
-  return { gaia: new Set(), hip: new Set() };
+export function emptyParkedRefusals(): ParkedRefusals {
+  return { gaia: new Map(), hip: new Map() };
 }
 
-/** The § 6.1 ledger rows keyed the way a pair row names them. Takes the
- *  structural minimum rather than `ParkedRecord`, so the promotion pass does
- *  not import the walk that produced it.
- *
- *  **Only `refused_no_defensible_parallax` rows are kept, and widening this to
- *  every park is a bug.** The gate launders nothing on a row parked because
- *  NOTHING was ever published: there is no refused measurement for the pair row
- *  to be carrying, and the distance it does state is the anchor's own — alpha
- *  Her's components read 110.25 pc, which is Rasalgethi's HIP2 distance, not
- *  the blend's. The other two reasons are further still from the rule, each
- *  failing a different half of it: a `no_v_magnitude` row was placed and not
- *  lit, a `no_position` row lit and not placed, and neither had a parallax
- *  refused. Including any of them strands a component whose primary is still in
- *  the catalogue, which is how Rasalgethi lost its B and Bb when the primaries
- *  began admitting HD 156015. Where a parallax genuinely was refused the
- *  primary parks too, so the whole system leaves together and the components
- *  have nothing to hang off. */
-export function parkedIdentifiers(
+export function parkedRefusals(
   parked: readonly {
     gaiaSourceId: string | null;
     hip: number | null;
     reason: ParkedReason;
+    refusedPlxMas: readonly number[];
   }[],
-): ParkedIdentifiers {
-  const gaia = new Set<string>();
-  const hip = new Set<number>();
+): ParkedRefusals {
+  const gaia = new Map<string, number[]>();
+  const hip = new Map<number, number[]>();
+  const add = <K>(index: Map<K, number[]>, key: K, mas: readonly number[]) => {
+    const held = index.get(key);
+    if (held === undefined) index.set(key, [...mas]);
+    else held.push(...mas);
+  };
   for (const p of parked) {
     if (p.reason !== 'refused_no_defensible_parallax') continue;
-    if (p.gaiaSourceId !== null) gaia.add(p.gaiaSourceId);
-    if (p.hip !== null && p.hip > 0) hip.add(p.hip);
+    if (p.gaiaSourceId !== null) add(gaia, p.gaiaSourceId, p.refusedPlxMas);
+    if (p.hip !== null && p.hip > 0) add(hip, p.hip, p.refusedPlxMas);
   }
   return { gaia, hip };
+}
+
+/** How near a pair row's stated distance must sit to a refused parallax's
+ *  inversion to BE that value rather than to agree with it. The two are the same
+ *  number printed twice, not two measurements, so this absorbs rounding alone:
+ *  `dist_pc` prints at six decimals, and where the cell arrived through AT-HYG's
+ *  own distance column it carries only that catalogue's four.
+ *
+ *  Calibrated on the whole population the gate sees, and the two clusters are
+ *  five orders of magnitude apart: every row re-serving a refusal agrees to
+ *  between 2e-11 and 8.2e-8 relative (the loose end being the four-decimal
+ *  cell), while the nearest row stating a genuinely different measurement is
+ *  2.1e-2 away. Anywhere in that gap separates them; this sits ~100x above the
+ *  worst true match and ~2000x below the closest false one. */
+export const REFUSED_PARALLAX_MATCH_REL_TOL = 1e-5;
+
+/** Whether promoting this pair row would re-serve a parallax a tier above
+ *  refused — the courier the § 5 skip rules exist to close.
+ *
+ *  **The match is on the measurement, never on the identifier alone.**
+ *  multiples.tsv states a distance for every component, and for a row carrying
+ *  the refusal that distance IS the refused value: sigma Ori Aa's
+ *  `hip2_long_baseline` 328.947368 pc inverts to the 3.0400000 mas the S/N floor
+ *  threw out, to eight significant figures. But a blended id is shared far more
+ *  widely than the value is. alpha Her's B, Ba and Bb rows all carry HD
+ *  156015's source_id — the blend SIMBAD publishes a Gaia-release parallax for
+ *  that the 2p skip rule refuses — while stating 110.253583 pc, which is
+ *  Rasalgethi's own HIP2 distance and 9% off the refused 100.89 pc. Refusing
+ *  them on the shared id stranded three components of a system whose primary
+ *  ships, which is what this predicate exists to stop. */
+export function statesRefusedParallax(
+  refusals: ParkedRefusals,
+  row: {
+    gaiaSourceId: string | null; hip: number | null; distPc: number | null;
+  },
+): boolean {
+  if (row.distPc === null || row.distPc <= 0) return false;
+  const refused = [
+    ...(row.gaiaSourceId !== null
+      ? refusals.gaia.get(row.gaiaSourceId) ?? [] : []),
+    ...(row.hip !== null && row.hip > 0 ? refusals.hip.get(row.hip) ?? [] : []),
+  ];
+  return refused.some((mas) => Math.abs(1000 / mas - row.distPc!)
+    <= REFUSED_PARALLAX_MATCH_REL_TOL * row.distPc!);
 }
 
 export function emptyPromotionStats(): PromotionStats {
@@ -1294,7 +1332,7 @@ interface PromoteRowContext {
 
 interface PromotionState {
   existing: ExistingIndexes;
-  parked: ParkedIdentifiers;
+  parked: ParkedRefusals;
   existingStars: Star[];
   existingStarsLength: number;
   newStars: Star[];
@@ -1534,12 +1572,10 @@ function promoteRow(
   // Runs BEFORE the inheritance gates below, which is what gives it reach:
   // Stage 2/3 bind one blended source to every component of a sub-arcsec pair,
   // so most rows caught here are the parked primary's SIBLINGS carrying its id,
-  // not the parked record arriving twice. Either way the row's stated distance
-  // is the primary's — the measurement a tier above refused — so promoting it
-  // launders that refusal. Strip the ids first and the sibling would mint a
-  // synth record at the refused distance instead.
-  if ((row.gaiaSourceId !== null && state.parked.gaia.has(row.gaiaSourceId))
-      || (rowHasOwnHip && state.parked.hip.has(row.hip as number))) {
+  // not the parked record arriving twice. Strip the ids first and such a sibling
+  // would mint a synth record at the refused distance instead, with no id left
+  // to recognise it by.
+  if (statesRefusedParallax(state.parked, row)) {
     stats.droppedParkedRecord++;
     return null;
   }
@@ -1761,7 +1797,7 @@ export function promoteCompanions(
   existingStars: Star[],
   conAssignment: ConstellationAssignment,
   dustGrid: DustGrid | null = null,
-  parked: ParkedIdentifiers = emptyParkedIdentifiers(),
+  parked: ParkedRefusals = emptyParkedRefusals(),
 ): { newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor> } {
   const stats = emptyPromotionStats();
   const existing = buildExistingIndexes(existingStars);
