@@ -101,8 +101,8 @@ to `_` (`gl:Gl_804`) to satisfy the § 3 no-whitespace grammar.
 
 ## Ambiguous designations are dropped, not assigned
 
-A designation carried by more than one record — **69 in the 2026-09-01
-build: 57 `hd:`, 11 `hr:`, 1 `gl:`**, always a component pair sharing one
+A designation carried by more than one record — **68 in the 2026-09-08
+build: 57 `hd:`, 11 `hr:`**, always a component pair sharing one
 catalogue number — names a
 catalogue granularity, not one physical object. Assigning it to either
 record would freeze an arbitrary claim into the append-only ledger;

@@ -334,8 +334,8 @@ HD 90034, TYC 1567-2517-2 on HD 166479 without HR 6803, both held by a spine
 record. The record ships; only the label is withheld.
 
 No admitted row keys on a Gaia id alone (`additionGaiaKeyedOnly`), and no
-designation one carries sits on a second row (`sharedDesignations`, 69, every
-one a spine-side pair), so `sid:allocate` mints every addition under `hd:` /
+designation one carries sits on a second row (`sharedDesignations`, 68, every
+one a spine-side `hd:` or `hr:` pair), so `sid:allocate` mints every addition under `hd:` /
 `hip:` / `gl:`. The two counts answer only together: the first says the row has
 a classical designation, the second that the designation is its own.
 

@@ -275,7 +275,7 @@ equal to a value another record DISPLAYS would go ambiguous under
 `docs/sid.md` § 4.1 and cost both records the key. Those are withheld to
 `extra-dropped`. 0 fire today — measured, and now also guarded.
 
-The **69** ambiguous designations `sid:allocate` drops are spine-side component
+The **68** ambiguous designations `sid:allocate` drops are spine-side component
 pairs, unrelated to this list (`../../sid/README.md` § Ambiguous designations).
 No carried alias is among them, and none keys a ledger row, so the additions
 cannot fuse two same-as classes or move a canonical key.
