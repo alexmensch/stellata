@@ -68,7 +68,10 @@ residual; there is no separate keep-list file.
 It exists so catalogue membership and labels survive AT-HYG's retirement as
 the build driver, which has happened. It has since handed the membership term
 to the primaries-derived manifest, and what it still uniquely supplies is the
-merge decisions behind it. Contract:
+merge decisions behind it — audited against the primaries, with a residual
+carried on AT-HYG's authority alone of zero
+([`scripts/catalog/spine/README.md`](../../scripts/catalog/spine/README.md)
+§ The primaries audit). Contract:
 [`docs/catalog-driver.md`](../../docs/catalog-driver.md) § 3 and § 3.1.
 Generator,
 column origins, and why nothing regenerates it in CI:

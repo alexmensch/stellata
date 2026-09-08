@@ -255,6 +255,7 @@ the generator, so the record build applies no label pass to them
 
 The spine stays committed as the baseline gate (i) reads and as the generator's
 own merge-decision input — the one record of AT-HYG's merge decisions and
-bindings that no primary supplies. Nothing else reads it
-(`../spine/README.md`). After the swap release the baseline becomes the
-previous manifest.
+bindings that no primary supplies. Unsupplied is not unverified: the audited
+residual carried on AT-HYG's authority alone is zero
+(`../spine/README.md` § The primaries audit). Nothing else reads it. After the
+swap release the baseline becomes the previous manifest.
