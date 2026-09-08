@@ -1,16 +1,10 @@
+@import '../design-tokens.css';
+
 :root {
-  --bg: #070912;
-  --bg-2: #0b1020;
-  --fg: #e6edf7;
-  --fg-dim: #8a94a8;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.18);
-  --accent: #7dd3fc;
   /* Rejected-input flag, set for the dark panel. The chart palette must
      override it — on the light page this red falls under the contrast floor
      for text. */
   --danger: #f2777a;
-  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", "Fira Code", Menlo, Consolas, monospace;
 
   /* Page margins every fixed chrome container sits at. The hover engine
      reads these to clamp the tooltip to the same inset, so a change here

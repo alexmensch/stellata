@@ -14,7 +14,12 @@ themselves.
   and Schema.org JSON-LD; the `<body>` opens with a `<noscript>`
   crawler/GEO fallback describing the app. The referenced static assets
   (`og-image.jpg`, icons, `robots.txt`, `llms.txt`, `sitemap.xml`,
-  `manifest.webmanifest`) live in `public/`.
+  `manifest.webmanifest`) live in `public/`. **`styles.css` does not own
+  the palette** — it `@import`s `src/design-tokens.css`, shared with the
+  public site (`src/site/README.md`), and keeps only the app-specific
+  tokens (`--danger`, the page margins the hover engine reads,
+  `--panel-width`). A colour changed in one surface's own stylesheet
+  drifts the two apart; change the token file.
   **Only the critical kind module may reject out of `main.ts`'s boot
   `Promise.all`** — the star catalog, whose absence leaves nothing to
   render, and whose rejection the surrounding catch turns into the error
