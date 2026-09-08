@@ -172,7 +172,11 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // floor refuses, so its pair stops being emitted at all. The two steps are
 // independent and neither subsumes the other, which is why the count is 1463
 // and not the 1464 either change reaches alone.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1463;
+// 1463 → 1464: that last step reversed. The refusal now matches on the
+// measurement rather than on the blended id, so alpha Her's AB pair is emitted
+// again — its 4.9" WDS placement against the ORB6 elements is the same
+// data disagreement it always was.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1464;
 
 // ---- Corpus row types ----------------------------------------------------
 
