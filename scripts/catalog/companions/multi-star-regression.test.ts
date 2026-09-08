@@ -84,19 +84,10 @@ const MULT_PA_TOL_DEG = 0.01;        // multiples.tsv pa vs curated
 const EPOCH_TOL_DAYS = 0.5;          // sep_pa_epoch_jd vs curated (f32 offset)
 const PERIOD_REL_TOLERANCE = 1e-3;   // stored P vs curated ORB6 P
 
-// Ratchet for the promoted-companion HIP round-trip sweep. A handful of
-// promoted records carry a HIP that first-seen hipToIndex resolves to a
-// DIFFERENT record, so a shared URL focused on them restores onto the
-// wrong star. Pinned exactly so new violations fail immediately; the
-// companion-promotion identifier fix drops this to 0. Dropped 4 → 3 when
-// the separation-sanity gate retired a leaked NSS orbit, letting Stage 5
-// reclassify one colliding companion's wide pair as an optical double.
-// The 3 → 2 step is Stage-2 binding-integrity enforcement: a contested
-// source geometry proved was bound to the wrong sibling letter is unbound,
-// so its HIP no longer round-trips onto a colliding record.
-// The 2 → 0 step is the own-gaia-miss HIP dedup in companion promotion:
-// a row whose gaia misses the existing index but whose HIP names a
-// non-anchor record IS that record, so no colliding twin is minted.
+// Ratchet for the promoted-companion HIP round-trip sweep. A promoted record
+// carrying a HIP that first-seen hipToIndex resolves to a DIFFERENT record
+// makes a shared URL focused on it restore onto the wrong star. Pinned at 0:
+// any violation is a colliding twin, and fails immediately.
 const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 
 // Corpus-wide count of non-collocated Tier-1 pairs whose baked catalog
@@ -105,74 +96,12 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // placement now, so this is a data-curation signal, not a render defect:
 // the tangent-only WDS bake can't carry R(epoch)'s radial term, so most
 // inclined pairs land here (plus quadrant-ambiguity cases like Algol).
-// Pinned so a NEW disagreement fails; the count ratchets DOWN as baked
-// placements are curated toward R(epoch). The 541 → 702 step is the
-// gaia_nss population that gained a Kepler-estimated semi-major axis
-// (a_via=kepler_mass_estimate) and started animating: blended tight
-// pairs whose NSS ω is the photocentre's (π off the relative orbit's
-// when the primary dominates the flux), so R(epoch) routinely lands
-// opposite the measured WDS quadrant. The 702 → 705 step is orbit-
-// bearing inner pairs that re-anchored onto their correct system star
-// once the Stage 2 ORB6-HIP coordinate gate rejected typo'd HIPs — the
-// same sub-resolution tangent-bake-vs-R(epoch) class, now placed right.
-// The 705 → 566 step is the Stage 4 separation-sanity gate: NSS orbits
-// that had leaked onto wide visual pairs of a blended primary lose their
-// elements, so those pairs no longer render an R(epoch) that disagrees
-// with the baked WDS placement.
-// The 566 → 568 step is the J2016.0 scene-epoch shift: primary positions
-// moved to J2016 (single stars) as did HIP2-fit secondaries (24.75 yr),
-// rotating a few tangent-projection anchors / repositioning baked
-// offsets enough for two borderline pairs to cross the half-a threshold.
-// The 568 → 559 step is the Stage 5 physical-boundness optical gate +
-// Sirius B astrometry exclusion: line-of-sight optical doubles drop out
-// (no longer baked), and Sirius B's blended DR3 solution no longer bakes
-// a disagreeing placement.
-// The 559 → 555 step is Stage-2 binding-integrity enforcement: unbinding
-// geometry-refuted sibling bindings re-homes a handful of pairs off the
-// wrong anchor, so their baked placement no longer disagrees with R(epoch).
-// The 564 → 563 step is the ORB6 slice widening + HIP-xwalk magnitude
-// gate: a corrected period/binding brings one pair's R(epoch) back into
-// agreement with its baked placement.
-// The 563 → 566 step is three HD-only primaries (ξ UMa, ξ Sco, HD 75632)
-// becoming addressable on the HIP and Gaia ids their pair rows resolved, so
-// their long-period ORB6 visual pairs render for the first time and enter the
-// sweep with athyg-print baked placements — new coverage, not placement
-// regressions. The manifest states those ids at walk time now.
-// The 566 → 1498 step is the blank-components rescue tier: ~1.7k
-// previously-dropped WDS pairs (Antares and other studied binaries with
-// an ORB6 orbit or SIMBAD xid) now decompose, and their WDS static
-// placement disagrees with the orbit-derived R(epoch) by >0.5·a — new
-// coverage entering the sweep, not a regression on existing pairs.
-// Curating these baked placements toward R(epoch) is follow-up work.
-// The 1498 → 1499 step is 36 Oph AB: the binding-integrity identity
-// refutation gives B its own Gaia astrometry, so the pair's baked
-// relative placement is now two independent 5p positions instead of a
-// WDS-projected synth offset — new own-astrometry coverage whose ORB6
-// orbit disagrees at >0.5·a, the same curation class as above.
-// 1499 → 1482: the 2026-07 SIMBAD/Gaia re-pulls (astrometry backlog
-// fill + live xids/sp_type drift) moved a net 17 pairs out of the
-// disagreeing set.
-// 1482 → 1489: net of the MSC ingest + intra-system radial coherence.
-// 12 in — MSC per-component spectral types let Stage 6's mass-table q
-// backfill fire on ORB6 visual pairs whose q was blank, so they newly
-// satisfy the has_orbit contract and enter the sweep (new coverage,
-// the same tangent-bake-vs-R(epoch) class as the rescue tier). 5 out —
-// the radial coherence snap removes sub-3σ baked radial gaps on wide
-// long-period pairs, bringing them back under 0.5·a.
-// 1489 → 1485: the Stage-2 sibling-identity claims gate — pairs whose
-// members had been placed off a stolen sibling identity leave the
-// sweep (their pairs re-anchor honestly or drop with the identity).
-// 1485 → 1465: the parked-record promotion refusal. 55 fewer pairs are
-// emitted at all, because a component whose primary reaches no owned
-// parallax no longer mints a record for the pair to resolve against.
-// 1465 → 1464: the branch-first WDS root anchor, which re-homes a pair onto
-// the branch its authority letters rather than the root's first member.
-// 1464 → 1463: the manifest-scoped SIMBAD value cohort, on the same terms as
-// the 55 above — one more primary reaches a parallax whose inversion the S/N
-// floor refuses, so its pair stops being emitted at all. The two steps are
-// independent and neither subsumes the other, which is why the count is 1463
-// and not the 1464 either change reaches alone.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1463;
+// Pinned so a NEW disagreement fails. Not a one-way ratchet, and re-pinning it
+// reflexively defeats the test: it FALLS as baked placements are curated toward
+// R(epoch) and as pairs stop being emitted, and RISES when pairs enter the
+// sweep for the first time — new coverage, not a placement regression. Say
+// which of the two moved it before changing the number.
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1464;
 
 // ---- Corpus row types ----------------------------------------------------
 

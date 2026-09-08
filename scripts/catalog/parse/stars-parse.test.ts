@@ -203,7 +203,7 @@ describe('readStars manifest labels', () => {
     expect(stars).toHaveLength(0);
     expect(stats.parked).toEqual([{
       tyc: ORIGIN_TYC, hip: null, hd: 55, gl: ORIGIN_GL, gaiaSourceId: null,
-      reason: 'no_v_magnitude',
+      reason: 'no_v_magnitude', refusedPlxMas: [],
     }]);
     expect(stats.parkedVia.no_v_magnitude).toBe(1);
     expect(stats.distVia.gliese_plx).toBe(0);
@@ -224,7 +224,7 @@ describe('readStars manifest labels', () => {
     expect(stars).toHaveLength(0);
     expect(stats.parked).toEqual([{
       tyc: null, hip: 4242, hd: null, gl: ORIGIN_GL, gaiaSourceId: null,
-      reason: 'no_position',
+      reason: 'no_position', refusedPlxMas: [],
     }]);
     expect(stats.parkedVia.no_position).toBe(1);
   });

@@ -81,10 +81,13 @@ export interface ParallaxResolution {
   /** The tier's parallax is real but its fractional error exceeds
    *  `PARALLAX_LOW_PRECISION_SN`, so the inverted distance is biased. */
   lowPrecision: boolean;
-  /** A tier held a parallax and the skip rule refused it. Distinguishes a row
-   *  nothing measured from one whose only measurement this build will not
-   *  stand behind — § 5's residual policy requires the two be counted apart. */
-  refused: boolean;
+  /** Every parallax a skip rule or the S/N floor refused, mas. Non-empty
+   *  distinguishes a row nothing measured from one whose only measurement this
+   *  build will not stand behind — § 5's residual policy requires the two be
+   *  counted apart. The values themselves are what companion promotion matches
+   *  a pair row's stated distance against
+   *  (`../../companions/README.md` § Refused-parallax refusal). */
+  refusedPlxMas: readonly number[];
 }
 
 function usable(plx: number | null): plx is number {
@@ -160,10 +163,10 @@ export function resolveParallax(
     plxMas,
     via,
     lowPrecision: sn !== null && sn < PARALLAX_LOW_PRECISION_SN,
-    refused: false,
+    refusedPlxMas: [],
   });
 
-  let refused = false;
+  const refusedPlxMas: number[] = [];
   let hip2Refused = false;
 
   /** V/70A's two tiers differ only in which kind of parallax they take, so one
@@ -176,7 +179,7 @@ export function resolveParallax(
       return null;
     }
     if (belowParallaxSnFloor(p.mas, p.errMas)) {
-      refused = true;
+      refusedPlxMas.push(p.mas);
       return null;
     }
     return hit(p.mas, via, parallaxSignalToNoise(p.mas, p.errMas));
@@ -193,7 +196,7 @@ export function resolveParallax(
         parallaxSignalToNoise(hip2.plxMas, hip2.plxErrorMas));
     }
     hip2Refused = true;
-    refused = true;
+    refusedPlxMas.push(hip2.plxMas);
   }
 
   if (cns5 !== null && usable(cns5.mas)) {
@@ -202,7 +205,7 @@ export function resolveParallax(
       return hit(cns5.mas, 'cns5_plx',
         parallaxSignalToNoise(cns5.mas, cns5.errMas));
     }
-    refused = true;
+    refusedPlxMas.push(cns5.mas);
   }
 
   const trigonometric = glieseHit(true, 'gliese_plx');
@@ -215,7 +218,7 @@ export function resolveParallax(
       return hit(simbad.mas, 'simbad_plx',
         parallaxSignalToNoise(simbad.mas, simbad.errMas));
     }
-    refused = true;
+    refusedPlxMas.push(simbad.mas);
   }
 
   // A bound pair's components share a distance to a part in a million, so a
@@ -242,7 +245,11 @@ export function resolveParallax(
 
   // Sol carries no identifier any tier keys on, and its distance is zero rather
   // than a parallax — the same curated exit the direction and V cascades take.
-  if (isSol) return { plxMas: null, via: 'curated', lowPrecision: false, refused: false };
+  if (isSol) {
+    return {
+      plxMas: null, via: 'curated', lowPrecision: false, refusedPlxMas: [],
+    };
+  }
 
-  return { plxMas: null, via: 'none', lowPrecision: false, refused };
+  return { plxMas: null, via: 'none', lowPrecision: false, refusedPlxMas };
 }

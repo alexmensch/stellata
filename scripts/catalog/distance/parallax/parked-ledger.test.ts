@@ -12,19 +12,20 @@ const SIGMA_ORI: ParkedRecord = {
   tyc: '4771-1188-1', hip: 26549, hd: 37468, gl: null,
   gaiaSourceId: '3216486443742786048',
   reason: 'refused_no_defensible_parallax',
+  refusedPlxMas: [3.04],
 };
 const NO_IDS: ParkedRecord = {
   tyc: null, hip: null, hd: null, gl: null, gaiaSourceId: null,
-  reason: 'no_parallax_published',
+  reason: 'no_parallax_published', refusedPlxMas: [],
 };
 const UNLIT: ParkedRecord = {
   tyc: '1234-567-1', hip: null, hd: 999999, gl: null,
   gaiaSourceId: '4576147844112599424',
-  reason: 'no_v_magnitude',
+  reason: 'no_v_magnitude', refusedPlxMas: [],
 };
 const PLACELESS: ParkedRecord = {
   tyc: null, hip: 10270, hd: null, gl: null, gaiaSourceId: null,
-  reason: 'no_position',
+  reason: 'no_position', refusedPlxMas: [],
 };
 
 describe('parked-ledger', () => {

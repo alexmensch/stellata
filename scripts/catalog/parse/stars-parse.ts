@@ -459,7 +459,9 @@ export function readStars(
       ? directions.tycho2.get(simbadKeys.tyc) ?? null
       : null;
     const glieseRow = lookupGliese(gliese, simbadKeys.gl);
-    const park = (reason: ParkedReason): void => {
+    const park = (
+      reason: ParkedReason, refusedPlxMas: readonly number[] = [],
+    ): void => {
       parked.push({
         tyc: simbadKeys.tyc,
         hip,
@@ -467,6 +469,7 @@ export function readStars(
         gl: simbadKeys.gl,
         gaiaSourceId,
         reason,
+        refusedPlxMas,
       });
       parkedVia[reason]++;
     };
@@ -489,9 +492,9 @@ export function readStars(
     );
     // Not a `dropped` gate: a park is a deliberate § 6.1 ledger entry.
     if (plxRes.via === 'none') {
-      park(plxRes.refused
+      park(plxRes.refusedPlxMas.length > 0
         ? 'refused_no_defensible_parallax'
-        : 'no_parallax_published');
+        : 'no_parallax_published', plxRes.refusedPlxMas);
       continue;
     }
 

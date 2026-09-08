@@ -10,8 +10,8 @@
     "sha256": "720a1eea4d2097bf7d1e5b2cb8bb0883b546ec1e5403bd15c6593c6a8326d163"
   },
   "reinstatements": {
-    "rows": 10,
-    "max_sid": 326792,
-    "sha256": "84e3d69774fa1cc1d78fc86af30672bf16c97bad09faa773472e8849d9214fc3"
+    "rows": 12,
+    "max_sid": 329605,
+    "sha256": "7d9fe44bd9947bde0b2e79ffefeea8d17ad607bcea9c093877ca05062fd6bb3e"
   }
 }

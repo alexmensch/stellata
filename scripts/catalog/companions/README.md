@@ -106,15 +106,16 @@ Per-row gates and resolution:
   witness, which is why the `Gl 277A` duplicate needs a membership fix instead.
   `applyStarNames` running before promotion is what puts `bayerComponent` on
   the record in time.
-- **Refused-parallax refusal.** A row carrying the identifier of a record
-  parked on `refused_no_defensible_parallax` never promotes — its stated
-  distance inverts the parallax a tier above refused. Mostly that primary's
-  SIBLINGS, which inherit its blended id, so this runs **before** the
-  inheritance gates below: those would strip the borrowed id and mint a synth
-  record at that same refused distance. The other two park reasons deliberately
-  do NOT block promotion; `parkedIdentifiers` filters them out at construction
-  and says why. Counted `companionDroppedParkedRecord`; argument and worked
-  case in `../distance/parallax/README.md` § Companion promotion.
+- **Refused-parallax refusal.** A row never promotes when the distance it STATES
+  is a parallax a tier above refused — `statesRefusedParallax` matches the cell
+  against every refused value indexed under the row's ids. Sharing the id is not
+  enough: Stage 2/3 bind one blended source to every component of a sub-arcsec
+  pair, so a parked primary's id reaches siblings stating the ANCHOR's distance
+  (α Her's B, Ba, Bb) as well as siblings re-serving the refusal (WDS
+  01425+5000 comp B). Runs **before** the inheritance gates, which would strip
+  the borrowed id and leave a synth record at whatever the row states. Counted
+  `companionDroppedParkedRecord`; tolerance and the park reasons that index
+  nothing are in `../distance/parallax/README.md` § Companion promotion.
 - **Cursor-primary anchor.** findExistingPrimary walks gaia →
   hip → proper name (position-guarded, for GJ-only AT-HYG rows
   carrying neither id — ξ UMa A). An unresolvable primary would
