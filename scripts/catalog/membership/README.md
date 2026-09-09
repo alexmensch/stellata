@@ -2,8 +2,9 @@
 
 `data/membership/membership-manifest.tsv` is one row per record the frozen
 primaries admit: the spine's 313,257 rows re-keyed on the designations the
-primaries publish for them, plus the 63,672 records the primaries name that
-AT-HYG's subset never carried — 376,929 rows. **`readStars` walks it, and
+primaries publish for them, less the one a correction folds
+(§ Correcting a merge decision), plus the 63,671 records the primaries name
+that AT-HYG's subset never carried — 376,927 rows. **`readStars` walks it, and
 membership is exactly these rows less the § 6.1 parks**
 (`../parse/README.md` § Per-row pipeline). It is the artifact that retires
 `data/athyg/inherited-spine.tsv` as the build's input; the contract is
@@ -97,7 +98,7 @@ cells — the property replayed by `../spine/README.md` § Parity is the
 manifest's gate now. The record build reads the manifest's cells as final and
 runs no merge of its own.
 
-Keying on the derivation is what lets a filled binding carry labels: 578 spine
+Keying on the derivation is what lets a filled binding carry labels: 577 spine
 rows reach no source against the frozen column's 1,371, and the difference is
 where the overlay can now speak. It moves five cells today — HD 2094 onto
 HIP 1997, whose own addition row folds away as a component (a § 7 merge,
@@ -119,13 +120,13 @@ where the derived value and the frozen cell part company is a review item in
 
 | Comparison | Rows | What it is |
 |---|---|---|
-| `match` | 311,835 | the sources bind what AT-HYG bound |
-| `fill` | 791 | a source binds where the frozen cell was empty; the record takes it |
+| `match` | 311,834 | the sources bind what AT-HYG bound |
+| `fill` | 792 | a source binds where the frozen cell was empty; the record takes it |
 | `refused` | 576 | no source binds and the cell was empty — a derived refusal, not an absence |
 | `differs` | 8 | the sources bind a different id; reviewed |
 | `unreached` | 43 | the frozen cell has a value no source binds; reviewed |
 | `contested` | 2 | a fill whose winner has a passing runner-up; ships nothing until reviewed |
-| `collision` | 1 | another spine row already holds the derived source; withheld and reviewed |
+| `collision` | 0 | another spine row already holds the derived source; withheld and reviewed |
 | `sol` | 1 | |
 
 Every reviewed row has one row in `binding-review-dispositions.tsv`, keyed on
@@ -142,7 +143,7 @@ renumbering), `gaia_photometry` (G against the record's printed V on each
 candidate), `pair_component` (a resolved pair's components bound crosswise,
 the HIP and SIMBAD's letters deciding), `shared_source` (one source two records
 reach). Today: 46 keep the frozen value, 6 take the derived one, 1 takes a
-runner-up, 1 refuses both. The six derived are the four DR2 ids of
+runner-up. The six derived are the four DR2 ids of
 `data/athyg/stale_gaia_source_ids.tsv` that SIMBAD carries a DR3 successor for,
 HD 2094 (the HIP record follows its canonical key onto the primary) and
 Gl 225.2 A. A kept value ships as `reviewed`.
@@ -301,12 +302,12 @@ The consequences, measured 2026-09-06:
 
 | Outcome | Groups | What it is |
 |---|---|---|
-| `admitted:hd_link_gap` | 54,812 | IV/25 star, lowest admitted HD < 100,000 — AT-HYG's link defect |
+| `admitted:hd_link_gap` | 54,811 | IV/25 star, lowest admitted HD < 100,000 — AT-HYG's link defect |
 | `admitted:hd_omitted` | 5,060 | IV/25 star, HD ≥ 100,000 |
 | `admitted:hip_omitted` | 444 | I/239 HIP with no IV/25 star |
 | `admitted:cns5_census` | 3,356 | CNS5 `GJ 1xxxx` row |
 | `component:<anchor>` | 471 | every designation it arrived with is another record's. 466 are the second Tycho-2 entry of a resolved pair whose HD (and, through Tycho-2's `hip`, HIP) a spine record carries; 5 are the second of a pair neither component of which is on the spine. Not a row; ledgered onto the record it resolves to |
-| source left empty, on a spine record | 109 | Gaia fitted one source where Tycho-2 resolved two stars |
+| source left empty, on a spine record | 108 | Gaia fitted one source where Tycho-2 resolved two stars |
 | source left empty, gate refused | 13 | the raw binding is in `rejected_bindings.tsv` |
 
 The audit's headline cohort sizes (60,344 / 566 / 3,362) are pre-grouping and
@@ -364,7 +365,6 @@ arithmetic and label-flips replay:
   pinned and whose every pair is checked, so a second row landing on someone
   else's record still fails.
   `matchSpineToManifest` resolves it the way `sid:allocate` resolves a record:
-  `matchSpineToManifest` resolves it the way `sid:allocate` resolves a record:
   the same-as graph over the manifest's designations plus
   `data/sid/sameas-overrides.tsv`, ambiguous designations dropped, the row
   keyed on its first ladder-ranked designation the graph knows. A lower-ranked
@@ -376,8 +376,8 @@ arithmetic and label-flips replay:
   `component:` row names a manifest designation and is itself no manifest row.
 - **No addition shares a designation with another record**, which is what says
   each mints on a classical key rather than falling through to its Gaia id.
-  The 69 designations two rows do share are the spine's own — pinned, so a
-  label change that makes a seventieth fails here.
+  The 68 designations two rows do share are the spine's own — pinned, so a
+  label change that makes a sixty-ninth fails here.
 - **(iii)** the built catalogue's designation multiset equals the manifest's
   over the records the build produces — **every manifest row less the § 6.1
   parks**, with no exclusions. The three the gate used to carry (spine-origin
