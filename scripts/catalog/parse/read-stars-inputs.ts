@@ -98,6 +98,10 @@ export type ReadStarsInputSizes = Pick<
   | 'cns5AstrometryEntries'
   | 'glieseEntries'
   | 'pairMemberParallaxEntries'
+  | 'pairMemberSiblingNoAstrometryRow'
+  | 'pairMemberSiblingNoParallax'
+  | 'pairMemberSiblingNotAnchorGrade'
+  | 'pairMemberSiblingBelowSnFloor'
 >;
 
 /** The loaded form of `ReadStarsOptions`: every table present, none optional,
@@ -127,6 +131,10 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     cns5AstrometryEntries: 0,
     glieseEntries: 0,
     pairMemberParallaxEntries: 0,
+    pairMemberSiblingNoAstrometryRow: 0,
+    pairMemberSiblingNoParallax: 0,
+    pairMemberSiblingNotAnchorGrade: 0,
+    pairMemberSiblingBelowSnFloor: 0,
   };
 
   // Bailer-Jones DR3 distance posteriors. Optional in CI / fresh-clone
@@ -351,8 +359,19 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     pairMemberParallax = buildPairMemberParallaxIndex(
       readMultiplesTsv(MULTIPLES_TSV), directions.gaiaAstrometry,
     );
-    console.log(`  ${pairMemberParallax.entryCount} anchor-grade siblings in ${Date.now() - t}ms`);
+    const refused = pairMemberParallax.refused;
+    console.log(
+      `  ${pairMemberParallax.entryCount} anchor-grade siblings; refused `
+      + `no-astrometry-row ${refused.noAstrometryRow}, `
+      + `no-parallax ${refused.noParallax}, `
+      + `not-anchor-grade ${refused.notAnchorGrade}, `
+      + `below-sn-floor ${refused.belowSnFloor} in ${Date.now() - t}ms`,
+    );
     sizes.pairMemberParallaxEntries = pairMemberParallax.entryCount;
+    sizes.pairMemberSiblingNoAstrometryRow = refused.noAstrometryRow;
+    sizes.pairMemberSiblingNoParallax = refused.noParallax;
+    sizes.pairMemberSiblingNotAnchorGrade = refused.notAnchorGrade;
+    sizes.pairMemberSiblingBelowSnFloor = refused.belowSnFloor;
   } else {
     console.warn(
       `WARNING: ${MULTIPLES_TSV} not found — the parallax cascade's sibling\n` +

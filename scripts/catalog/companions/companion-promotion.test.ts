@@ -2867,6 +2867,29 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
     );
     expect(newStars).toHaveLength(0);
     expect(stats.droppedParkedRecord).toBe(1);
+    // The borrowed HIP is the primary's, so the row carries no per-component
+    // fit and refusing it withholds no measurement of B's own. That zero is
+    // the refusal's warrant, not a note — ../distance/parallax/README.md
+    // § Companion promotion may not walk a REFUSED MEASUREMENT back in.
+    expect(stats.droppedParkedRecordOwnedFit).toBe(0);
+    expect(stats.droppedParkedRecordViaGaia5p).toBe(0);
+  });
+
+  it('reports a refused row that DID carry a per-component fit, which is what '
+    + 'the zero-pin is watching for', () => {
+    const ownFit = blendedRows.map((r) => (r.comp === 'B'
+      ? { ...r, hip: 7980, astrometryVia: 'gaia_5p', gaiaSourceId: '405578335904111745' }
+      : r));
+    const { stats } = promoteCompanions(
+      ownFit, [blendedPrimary], CON_ASSIGNMENT, null,
+      parkedRefusals([{
+        gaiaSourceId: '405578335904111745', hip: 7980,
+        reason: 'refused_no_defensible_parallax', refusedPlxMas: [0.97],
+      }]),
+    );
+    expect(stats.droppedParkedRecord).toBe(1);
+    expect(stats.droppedParkedRecordViaGaia5p).toBe(1);
+    expect(stats.droppedParkedRecordOwnedFit).toBe(1);
   });
 
   // The cascade pushes one value per tier it refuses, so a record reaches the

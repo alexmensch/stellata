@@ -72,10 +72,12 @@ contribution.
 by a consumer being added without the request following. A bound pair's member
 is routinely not a manifest row (a component Gaia resolved that no primary
 indexes), and the tier lends that member's parallax to the sibling Gaia fitted
-none for. Measured before the widening: of the 44 parked rows `multiples.tsv`
-covers, 15 had a sibling carrying its own source_id and **8 of those siblings
-had no row in the table**, so the tier's reach was a property of the request
-rather than of the sky.
+none for. Its coverage now has a zero-pin of its own,
+`pairMemberSiblingNoAstrometryRow` — the sibling sources this pull holds no row
+for, which is the only reason the tier misses one that a re-pull can fix
+(`../distance/parallax/README.md` § The tier's reach is bounded by measurement
+quality). Every other refusal there is a measurement: 6,683 of 16,126 candidate
+siblings fail the anchor gate on fit quality alone.
 
 It asks for every kept-physical pair member rather than only the roots holding
 a parked row. Which rows park is an *output* of the build this request feeds,

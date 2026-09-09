@@ -373,6 +373,8 @@ async function main() {
     companionDroppedCollocatedPrimary: 0,
     companionAnchorIsComponent: 0,
     companionDroppedParkedRecord: 0,
+    companionDroppedParkedViaGaia5p: 0,
+    companionDroppedParkedOwnedFit: 0,
     companionAbsmagSpectralDerived: 0,
     companionSpectMsFromOwnAbsmag: 0,
     companionAbsmagWdsMagDerived: 0,
@@ -398,6 +400,10 @@ async function main() {
     cns5AstrometryEntries: 0,
     glieseEntries: 0,
     pairMemberParallaxEntries: 0,
+    pairMemberSiblingNoAstrometryRow: 0,
+    pairMemberSiblingNoParallax: 0,
+    pairMemberSiblingNotAnchorGrade: 0,
+    pairMemberSiblingBelowSnFloor: 0,
     distBailerJones: 0,
     distLmcKinematic: 0,
     distGaiaDr3Inversion: 0,
@@ -744,7 +750,10 @@ async function main() {
         `beyond-separation ${ps.blendDimMembersBeyondSeparation}, ` +
         `misfit ${ps.blendDimMembersMisfit}), ` +
         `repositioned-collocated-double=${ps.repositionedCollocatedDouble}, ` +
-        `constellation-split-from-anchor=${ps.constellationSplitFromAnchor} ` +
+        `constellation-split-from-anchor=${ps.constellationSplitFromAnchor}, ` +
+        `refused-parked=${ps.droppedParkedRecord} ` +
+        `(via gaia_5p ${ps.droppedParkedRecordViaGaia5p}, ` +
+        `owned fit ${ps.droppedParkedRecordOwnedFit}) ` +
         `in ${Date.now() - tProm}ms`,
     );
     counts.companionRowsScanned = ps.pairRowsScanned;
@@ -759,6 +768,8 @@ async function main() {
     counts.companionDroppedCollocatedPrimary = ps.droppedCollocatedPrimary;
     counts.companionAnchorIsComponent = ps.anchorIsComponent;
     counts.companionDroppedParkedRecord = ps.droppedParkedRecord;
+    counts.companionDroppedParkedViaGaia5p = ps.droppedParkedRecordViaGaia5p;
+    counts.companionDroppedParkedOwnedFit = ps.droppedParkedRecordOwnedFit;
     counts.companionAbsmagSpectralDerived = ps.absmagSpectralDerived;
     counts.companionSpectMsFromOwnAbsmag = ps.spectMsFromOwnAbsmag;
     counts.companionAbsmagWdsMagDerived = ps.absmagWdsMagDerived;

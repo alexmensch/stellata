@@ -15,6 +15,24 @@ export interface SiblingParallax {
   errMas: number | null;
 }
 
+/** Why a pair-row source the dedup admitted is not a candidate. Partition:
+ *  these four plus `entryCount` are every deduped source, so the tier's reach
+ *  is stated where it is decided rather than counted over the parked set,
+ *  which moves with every membership change. */
+export interface PairMemberSiblingRefusals {
+  /** The astrometry pull carries no row for the source at all — the request
+   *  under-covering the pair-row half of its union. */
+  noAstrometryRow: number;
+  /** Gaia has the source and published no parallax for it. */
+  noParallax: number;
+  /** A parallax the coherence anchor gate refuses: RUWE, a blended image, or a
+   *  saturated G (`isCoherenceAnchorGrade`). */
+  notAnchorGrade: number;
+  /** Anchor-grade, and below the cascade's own S/N floor, where the inversion
+   *  is undefined rather than imprecise. */
+  belowSnFloor: number;
+}
+
 export interface PairMemberParallaxIndex {
   /** Every identifier a spine row can ask with → the WDS root holding it. */
   rootByGaia: Map<string, string>;
@@ -23,6 +41,7 @@ export interface PairMemberParallaxIndex {
   candidatesByRoot: Map<string, SiblingParallax[]>;
   /** Anchor-grade siblings indexed, for the build-count pin. */
   entryCount: number;
+  refused: PairMemberSiblingRefusals;
 }
 
 export function emptyPairMemberParallaxIndex(): PairMemberParallaxIndex {
@@ -31,6 +50,9 @@ export function emptyPairMemberParallaxIndex(): PairMemberParallaxIndex {
     rootByHip: new Map(),
     candidatesByRoot: new Map(),
     entryCount: 0,
+    refused: {
+      noAstrometryRow: 0, noParallax: 0, notAnchorGrade: 0, belowSnFloor: 0,
+    },
   };
 }
 
@@ -95,10 +117,20 @@ export function buildPairMemberParallaxIndex(
     if (seen.has(row.gaiaSourceId)) continue;
     seen.add(row.gaiaSourceId);
     const g = gaiaAstrometry.get(row.gaiaSourceId);
+    if (g === undefined) {
+      index.refused.noAstrometryRow++;
+      continue;
+    }
     // `isCoherenceAnchorGrade` requires a positive parallax, so the null check
     // is redundant to it — stated anyway, because a cast here would be the one
-    // place this module trusts another module's predicate to narrow a type.
-    if (g === undefined || g.parallaxMas === null || !isCoherenceAnchorGrade(g)) {
+    // place this module trusts another module's predicate to narrow a type,
+    // and because the two refusals count separately.
+    if (g.parallaxMas === null) {
+      index.refused.noParallax++;
+      continue;
+    }
+    if (!isCoherenceAnchorGrade(g)) {
+      index.refused.notAnchorGrade++;
       continue;
     }
     const candidate: SiblingParallax = {
@@ -109,7 +141,10 @@ export function buildPairMemberParallaxIndex(
     // Below the floor the inversion is undefined, so such a sibling anchors
     // nothing — the same bar, from the same predicate, the HIP2 tier applies to
     // a record's own parallax.
-    if (belowParallaxSnFloor(candidate.mas, candidate.errMas)) continue;
+    if (belowParallaxSnFloor(candidate.mas, candidate.errMas)) {
+      index.refused.belowSnFloor++;
+      continue;
+    }
     let candidates = index.candidatesByRoot.get(root);
     if (candidates === undefined) {
       candidates = [];

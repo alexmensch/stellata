@@ -460,6 +460,18 @@ export interface PromotionStats {
    *  match is on and why sharing the id is not enough. Without this the parked
    *  list names rows that ship anyway. */
   droppedParkedRecord: number;
+  /** Of those, the rows whose `astrometry_via` is `gaia_5p`. A route alone is
+   *  not an owned fit — the count below is what says so — but it is the figure
+   *  `../distance/parallax/README.md` § Companion promotion may not walk a
+   *  REFUSED MEASUREMENT back in argues from. */
+  droppedParkedRecordViaGaia5p: number;
+  /** Of those, the rows carrying an INDEPENDENT per-component fit
+   *  ({@link resolveIndependentAstrometry}: an owned identifier on a
+   *  per-component route, not the primary's re-anchored). **Pinned at zero,
+   *  and that pin is the refusal's whole warrant** — a non-zero entry means
+   *  the gate withholds a measurement of the component's own rather than
+   *  declining to launder a refused one, and the argument for it inverts. */
+  droppedParkedRecordOwnedFit: number;
 }
 
 /** The parallaxes a tier REFUSED, indexed by the two identifiers a pair row
@@ -592,6 +604,8 @@ export function emptyPromotionStats(): PromotionStats {
     constellationSplitFromAnchor: 0,
     existingDesigConFromAnchor: 0,
     droppedParkedRecord: 0,
+    droppedParkedRecordViaGaia5p: 0,
+    droppedParkedRecordOwnedFit: 0,
   };
 }
 
@@ -1582,6 +1596,12 @@ function promoteRow(
   // to recognise it by.
   if (statesRefusedParallax(state.parked, row)) {
     stats.droppedParkedRecord++;
+    if (row.astrometryVia === 'gaia_5p') stats.droppedParkedRecordViaGaia5p++;
+    if (resolveIndependentAstrometry(
+      row, anchorPrimaryRow.gaiaSourceId, anchorPrimaryRow.hip,
+    ) !== null) {
+      stats.droppedParkedRecordOwnedFit++;
+    }
     return null;
   }
 

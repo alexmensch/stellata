@@ -97,15 +97,14 @@ Per-row gates and resolution:
   copies. The naming authority's component attribution is the independent
   witness: where it already letters the ANCHOR as the row's own component, that
   record IS the component. Counted `companionAnchorIsComponent` (3: p Eri B,
-  `f Pup C`, `α Psc` B — the first two were enumerated duplicate labels until
-  this gate landed), a ratchet-down metric, since each is a mis-keyed
+  `f Pup C`, `α Psc` B), a ratchet-down metric, since each is a mis-keyed
   multiples.tsv row upstream. The letters themselves are contested — WDS, the
   authority and Gliese disagree per system — so the gate refuses the duplicate
   without adjudicating the letter. It **reaches only roots the authority
   attributes a Bayer designation in**; one with no Bayer letter offers no
   witness, which is why the `Gl 277A` duplicate needs a membership fix instead.
-  `applyStarNames` running before promotion is what puts `bayerComponent` on
-  the record in time.
+  `applyStarNames` runs before promotion, which is what puts `bayerComponent`
+  on the record in time.
 - **Refused-parallax refusal.** A row never promotes when the distance it STATES
   is a parallax a tier above refused — `statesRefusedParallax` matches the cell
   against every refused value indexed under the row's ids. Sharing the id is not
@@ -114,8 +113,10 @@ Per-row gates and resolution:
   (α Her's B, Ba, Bb) as well as siblings re-serving the refusal (WDS
   01425+5000 comp B). Runs **before** the inheritance gates, which would strip
   the borrowed id and leave a synth record at whatever the row states. Counted
-  `companionDroppedParkedRecord`; tolerance and the park reasons that index
-  nothing are in `../distance/parallax/README.md` § Companion promotion.
+  `companionDroppedParkedRecord` (9); `companionDroppedParkedOwnedFit` is
+  **pinned at 0**, so no refused row carries an owned id on a per-component
+  route and nothing of the component's own is withheld — tolerance and the
+  wider-join caveat in `../distance/parallax/README.md` § Companion promotion.
 - **Cursor-primary anchor.** findExistingPrimary walks gaia →
   hip → proper name (position-guarded, for GJ-only AT-HYG rows
   carrying neither id — ξ UMa A). An unresolvable primary would
