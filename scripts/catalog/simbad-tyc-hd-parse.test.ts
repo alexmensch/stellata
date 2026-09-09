@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { describe, it, expect } from 'vitest';
+import { beforeAll, describe, it, expect } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../util/paths';
 import { parseTyc2HdTsv } from './classic-ids/classic-ids-parse';
@@ -9,7 +9,11 @@ import {
   MEMBERSHIP_MANIFEST_FILE,
   parseManifestTsv,
 } from './membership/membership-manifest-pure';
-import { hdNumbers, parseSimbadTycHdTsv } from './simbad-tyc-hd-parse';
+import {
+  hdNumbers,
+  parseSimbadTycHdTsv,
+  type SimbadTycHdRow,
+} from './simbad-tyc-hd-parse';
 
 const HEADER = ['tyc', 'simbad_oid', 'simbad_main_id', 'hd'].join('\t');
 
@@ -98,43 +102,51 @@ const ADJUDICATION_INPUTS = [SIMBAD_TYC_HD_FILE, TYC2_HD_FILE, MEMBERSHIP_MANIFE
 describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
   'adjudication over the committed tables',
   () => {
-    // IV/25 gives an `n_hd=2` entry ONE ROW PER HD, so the authority for a TYC
-    // is the SET of its rows. Keying single-valued drops one and reads
-    // SIMBAD's agreement with the other as a dissent — 7 phantom rows.
-    const iv = new Map<string, { hd: Set<number>; consistent: boolean }>();
-    for (const row of parseTyc2HdTsv(readFileSync(ADJUDICATION_INPUTS[1], 'utf-8'))) {
-      const entry = iv.get(row.tyc) ?? { hd: new Set<number>(), consistent: true };
-      entry.hd.add(row.hd);
-      entry.consistent = entry.consistent && row.nHd === 1 && row.nTyc === 1;
-      iv.set(row.tyc, entry);
-    }
-    const simbad = parseSimbadTycHdTsv(readFileSync(ADJUDICATION_INPUTS[0], 'utf-8'));
+    // Read in beforeAll, never at collection: a skipped suite still evaluates
+    // its body, so a pointer stub on a checkout without `git lfs pull` would
+    // throw here rather than skip.
+    let simbad: Map<string, SimbadTycHdRow>;
+    let counts: Record<string, number>;
 
-    const counts = {
-      bothCells: 0, answered: 0, silent: 0,
-      dissent: 0, dissentInconsistent: 0, faithful: 0, vindicating: 0,
-      bothAgainst: 0,
-    };
-    for (const row of parseManifestTsv(readFileSync(ADJUDICATION_INPUTS[2], 'utf-8'))) {
-      const tyc = row.tyc.trim();
-      const shipped = Number.parseInt(row.hd.trim(), 10);
-      if (tyc === '' || !Number.isFinite(shipped)) continue;
-      counts.bothCells += 1;
-      const answer = simbad.get(tyc);
-      if (answer === undefined) { counts.silent += 1; continue; }
-      counts.answered += 1;
-      const printed = iv.get(tyc);
-      if (printed === undefined) continue;
-      const stated = hdNumbers(answer);
-      if (!stated.some((hd) => printed.hd.has(hd))) {
-        counts.dissent += 1;
-        if (!printed.consistent) counts.dissentInconsistent += 1;
-        else if (stated.includes(shipped)) counts.vindicating += 1;
-        else if (printed.hd.has(shipped)) counts.faithful += 1;
-      } else if (!stated.includes(shipped) && !printed.hd.has(shipped)) {
-        counts.bothAgainst += 1;
+    beforeAll(() => {
+      // IV/25 gives an `n_hd=2` entry ONE ROW PER HD, so the authority for a
+      // TYC is the SET of its rows. Keying single-valued drops one and reads
+      // SIMBAD's agreement with the other as a dissent — 7 phantom rows.
+      const iv = new Map<string, { hd: Set<number>; consistent: boolean }>();
+      for (const row of parseTyc2HdTsv(readFileSync(ADJUDICATION_INPUTS[1], 'utf-8'))) {
+        const entry = iv.get(row.tyc) ?? { hd: new Set<number>(), consistent: true };
+        entry.hd.add(row.hd);
+        entry.consistent = entry.consistent && row.nHd === 1 && row.nTyc === 1;
+        iv.set(row.tyc, entry);
       }
-    }
+      simbad = parseSimbadTycHdTsv(readFileSync(ADJUDICATION_INPUTS[0], 'utf-8'));
+
+      counts = {
+        bothCells: 0, answered: 0, silent: 0,
+        dissent: 0, dissentInconsistent: 0, faithful: 0, vindicating: 0,
+        bothAgainst: 0,
+      };
+      for (const row of parseManifestTsv(readFileSync(ADJUDICATION_INPUTS[2], 'utf-8'))) {
+        const tyc = row.tyc.trim();
+        const shipped = Number.parseInt(row.hd.trim(), 10);
+        if (tyc === '' || !Number.isFinite(shipped)) continue;
+        counts.bothCells += 1;
+        const answer = simbad.get(tyc);
+        if (answer === undefined) { counts.silent += 1; continue; }
+        counts.answered += 1;
+        const printed = iv.get(tyc);
+        if (printed === undefined) continue;
+        const stated = hdNumbers(answer);
+        if (!stated.some((hd) => printed.hd.has(hd))) {
+          counts.dissent += 1;
+          if (!printed.consistent) counts.dissentInconsistent += 1;
+          else if (stated.includes(shipped)) counts.vindicating += 1;
+          else if (printed.hd.has(shipped)) counts.faithful += 1;
+        } else if (!stated.includes(shipped) && !printed.hd.has(shipped)) {
+          counts.bothAgainst += 1;
+        }
+      }
+    });
 
     it('answers for the stated share of the rows carrying both cells', () => {
       expect(counts.bothCells).toBe(353347);
