@@ -26,7 +26,8 @@ function entry(over: Partial<OverlayEntry> = {}): OverlayEntry {
 
 function record(over: Partial<LabelMergeRecord> = {}): LabelMergeRecord {
   return {
-    gaiaSourceId: SRC_A, hip: null, hd: null, hr: null, gl: null, flam: null,
+    gaiaSourceId: SRC_A, tyc: null,
+    hip: null, hd: null, hr: null, gl: null, flam: null,
     hdAlt: [], hrAlt: [],
     ...over,
   };
@@ -37,6 +38,7 @@ function merge(
   overlay: ClassicIdOverlay,
   overrides = new Map<string, string | null>(),
   siblingRenderedSourceIds: ReadonlySet<string> = new Set<string>(),
+  hdByOwnTyc: ReadonlyMap<string, ReadonlySet<number>> = new Map(),
 ) {
   return mergeClassicIdLabels({
     records,
@@ -44,6 +46,7 @@ function merge(
     overlay,
     overrides,
     siblingRenderedSourceIds,
+    hdByOwnTyc,
   });
 }
 
@@ -115,6 +118,63 @@ describe('mergeClassicIdLabels', () => {
       sourceId: SRC_A, label: 'record 0', field: 'hr',
       spine: '5505', overlay: '5506', applied: '5506', disposition: 'overlay-wins',
     }]);
+  });
+
+  // Propus: Gaia fits one source across the resolved Tycho-2 pair, its TYC
+  // cross-match keys that source to the SECONDARY, and the overlay's only HD
+  // is therefore the secondary's — a number naming the neighbour, not η Gem.
+  it('withholds an overlay HD the record\'s own TYC contradicts', () => {
+    const records = [record({ tyc: '1877-1716-1', hd: 42995 })];
+    const { counts, flips } = merge(
+      records, new Map([[SRC_A, entry({ hd: [253820] })]]),
+      undefined, undefined, new Map([['1877-1716-1', new Set([42995])]]),
+    );
+    expect(records[0].hd).toBe(42995);
+    expect(counts.labelSuppressedForeignHd.hd).toBe(1);
+    expect(counts.labelFlipped.hd).toBe(0);
+    expect(flips.map((f) => [f.applied, f.disposition]))
+      .toEqual([['42995', 'suppressed-foreign-hd']]);
+  });
+
+  // Withholding is not "the spine wins": with no HD of its own the record ends
+  // up with none rather than the neighbour's.
+  it('withholds it from a record the spine gives no HD at all', () => {
+    const records = [record({ tyc: '1877-1716-1' })];
+    const { counts } = merge(
+      records, new Map([[SRC_A, entry({ hd: [253820] })]]),
+      undefined, undefined, new Map([['1877-1716-1', new Set([42995])]]),
+    );
+    expect(records[0].hd).toBeNull();
+    expect(counts.labelSuppressedForeignHd.hd).toBe(1);
+    expect(counts.labelAdded.hd).toBe(0);
+  });
+
+  // The 14 Lyn shape: IV/25 flags the one Tycho entry n_hd=2, so both numbers
+  // name a component of the record's own blend and neither is foreign.
+  it('lets an overlay HD stand where the record\'s TYC publishes several', () => {
+    const records = [record({ tyc: '3778-1982-1', hd: 49618 })];
+    const { counts } = merge(
+      records, new Map([[SRC_A, entry({ hd: [49619] })]]),
+      undefined, undefined, new Map([['3778-1982-1', new Set([49618, 49619])]]),
+    );
+    expect(records[0].hd).toBe(49619);
+    expect(counts.labelFlipped.hd).toBe(1);
+    expect(counts.labelSuppressedForeignHd.hd).toBe(0);
+  });
+
+  // No TYC, or a TYC IV/25 publishes no HD for, is no evidence either way —
+  // refusing there would revert every legitimate cross-ID correction.
+  it('lets an overlay HD stand where the record has no TYC evidence', () => {
+    const records = [record({ hd: 5505 }), record({
+      gaiaSourceId: SRC_B, tyc: '9999-1-1', hd: 4082,
+    })];
+    const { counts } = merge(records, new Map([
+      [SRC_A, entry({ hd: [5506] })],
+      [SRC_B, entry({ hd: [4083] })],
+    ]), undefined, undefined, new Map([['1877-1716-1', new Set([42995])]]));
+    expect([records[0].hd, records[1].hd]).toEqual([5506, 4083]);
+    expect(counts.labelFlipped.hd).toBe(2);
+    expect(counts.labelSuppressedForeignHd.hd).toBe(0);
   });
 
   it('keeps the spine value where the overlay asserts none', () => {

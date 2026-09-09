@@ -504,6 +504,21 @@ export function glieseNumber(designation: string): string | null {
   return m[1].endsWith('.0') ? m[1].slice(0, -2) : m[1];
 }
 
+/** IV/25's HD numbers per Tycho id. A record's own TYC is the authority on
+ *  which HD names it, and `label-merge-pure.ts` weighs an overlay HD against
+ *  this index for exactly that (§ The overlay may not displace the record's
+ *  own TYC's HD). Several per TYC is the 14 Lyn shape (`n_hd` > 1), where each
+ *  names a component of the one blend. */
+export function hdByTyc(rows: readonly Tyc2HdRow[]): Map<string, Set<number>> {
+  const out = new Map<string, Set<number>>();
+  for (const row of rows) {
+    const held = out.get(row.tyc);
+    if (held === undefined) out.set(row.tyc, new Set([row.hd]));
+    else held.add(row.hd);
+  }
+  return out;
+}
+
 /** The ONE component a Gliese designation names, or null where it names the
  *  system rather than a star. CNS5's `gj_comp` states a multi-component
  *  system's letters combined — `Gl 423ABCD` is one entry for four stars — so a

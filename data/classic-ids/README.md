@@ -39,7 +39,7 @@ label_flips.tsv                    736 rows. Pipeline-derived, and by
                                    `docs/catalog-driver.md` § 6 requires, and
                                    the delta the spine's designation-multiset
                                    gate replays.
-classic_id_overrides.tsv           Hand-curated. One row; the escape
+classic_id_overrides.tsv           Hand-curated. No rows; the escape
                                    hatch for a CDS join review finds wrong
                                    (scripts/catalog/classic-ids/README.md
                                    § Curated overrides).
@@ -232,13 +232,18 @@ asserting nothing:
 
 | Identifier | Spine rows keyed | Overlay reproduces | | Flips |
 |---|---|---|---|---|
-| hd | 293,325 | 280,531 | 95.6% | 43 |
+| hd | 293,318 | 280,531 | 95.6% | 36 |
 | hip | 117,652 | 99,059 | 84.2% | 0 |
 | hr | 9,012 | 7,283 | 80.8% | 23 |
 | gl | 3,146 | 1,840 | 58.5% | 79 |
 | flam | 2,724 | 2,028 | 74.4% | 2 |
 
 Additions the spine had no value for: hd 149, hr 4, gl 200, flam 69.
+
+The `hd` denominator counts 7 fewer rows than carry an HD cell: their overlay
+proposal is withheld as a neighbour's number, which counts as suppressed rather
+than keyed (`scripts/catalog/classic-ids/README.md` § The overlay may not
+displace the record's own TYC's HD).
 
 Measured after the merge moved onto the DERIVED binding
 (`scripts/catalog/membership/README.md` § The binding is derived). Keyed on the

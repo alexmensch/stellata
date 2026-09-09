@@ -3,8 +3,8 @@
 `data/membership/membership-manifest.tsv` is one row per record the frozen
 primaries admit: the spine's 313,257 rows re-keyed on the designations the
 primaries publish for them, less the one a correction folds
-(§ Correcting a merge decision), plus the 63,671 records the primaries name
-that AT-HYG's subset never carried — 376,927 rows. **`readStars` walks it, and
+(§ Correcting a merge decision), plus the 63,678 records the primaries name
+that AT-HYG's subset never carried — 376,934 rows. **`readStars` walks it, and
 membership is exactly these rows less the § 6.1 parks**
 (`../parse/README.md` § Per-row pipeline). It is the artifact that retires
 `data/athyg/inherited-spine.tsv` as the build's input; the contract is
@@ -103,14 +103,15 @@ rows reach no source against the frozen column's 1,371, and the difference is
 where the overlay can now speak. It moves five cells today — HD 2094 onto
 HIP 1997, whose own addition row folds away as a component (a § 7 merge,
 retiring `hd:2094` in favour of `hip:1997`); GJ 9013 onto Ankaa; GJ 9257AB onto
-Tegmine; `Gl 596.1A` to `GJ 9527` on ψ Ser under CNS5's renumbering; and one
-curated refusal (`../classic-ids/README.md` § Curated overrides): Propus, where
-Gaia fits one source across a resolved Tycho-2 pair and its cross-match keys
-that source to the sibling, so the overlay would hand η Gem the sibling's
-HD 253820 in place of its own HD 42995. It is the only curated row: Gl 563.2
-A/B, whose letters AT-HYG swapped, is reached mechanically now the merge scores
-`gl` on the component the two sides name (`../classic-ids/README.md` § The gl
-comparison is specificity-aware).
+Tegmine; and `Gl 596.1A` to `GJ 9527` on ψ Ser under CNS5's renumbering.
+
+**No cell is decided by a curated override** (`../classic-ids/README.md`
+§ Curated overrides). The two shapes that used to take one are rules now:
+Gl 563.2 A/B, whose letters AT-HYG swapped, because the merge scores `gl` on
+the component each side names; and Propus, where Gaia fits one source across a
+resolved Tycho-2 pair and the cross-match keys it to the sibling, because an
+overlay HD the record's own TYC contradicts in IV/25 is withheld — 8 rows, and
+each withheld number then reaches the additions ledger as a row of its own.
 
 The binding is **derived**, not copied: § The binding is derived walks four
 committed sources through both gates and writes what survives. The spine's

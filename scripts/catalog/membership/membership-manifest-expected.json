@@ -16,7 +16,7 @@
   },
   "labelFlipped": {
     "hip": 0,
-    "hd": 43,
+    "hd": 36,
     "hr": 23,
     "gl": 79,
     "flam": 2
@@ -34,6 +34,13 @@
     "hr": 1,
     "gl": 8,
     "flam": 2
+  },
+  "labelSuppressedForeignHd": {
+    "hip": 0,
+    "hd": 8,
+    "hr": 0,
+    "gl": 0,
+    "flam": 0
   },
   "labelExtraAlias": {
     "hip": 0,
@@ -58,30 +65,30 @@
   },
   "labelOverridden": {
     "hip": 0,
-    "hd": 1,
+    "hd": 0,
     "hr": 0,
     "gl": 0,
     "flam": 0
   },
-  "rows": 376927,
+  "rows": 376934,
   "spineRows": 313257,
   "spineRowsFolded": 1,
   "spineCellsCorrected": {
     "tyc": 1
   },
-  "additionRows": 63671,
+  "additionRows": 63678,
   "additionsByReason": {
-    "admitted:hd_link_gap": 54811,
-    "admitted:hd_omitted": 5060,
+    "admitted:hd_link_gap": 54813,
+    "admitted:hd_omitted": 5065,
     "admitted:hip_omitted": 444,
     "admitted:cns5_census": 3356
   },
-  "componentRows": 471,
+  "componentRows": 464,
   "bindingByClass": {
-    "crosswalk_gated": 358560,
-    "simbad_corroborated": 12485,
+    "crosswalk_gated": 358562,
+    "simbad_corroborated": 12483,
     "reviewed": 53,
-    "none": 5829
+    "none": 5836
   },
   "bindingReviewRows": 53,
   "bindingReviewByVerdict": {
@@ -109,10 +116,10 @@
   "derivedVia": {
     "tyc": 298440,
     "hip": 866,
-    "cns5": 837,
-    "simbad": 12489
+    "cns5": 839,
+    "simbad": 12487
   },
-  "derivedConsensus": 295200,
+  "derivedConsensus": 295202,
   "derivedContestedMatch": 227,
   "derivedRejected": {
     "mag": 317,
@@ -139,7 +146,7 @@
   "additionSourceShared": 0,
   "additionGaiaKeyedOnly": 0,
   "additionRouteSourceDisagree": 3,
-  "additionsWithBlockedDesignation": 2,
+  "additionsWithBlockedDesignation": 8,
   "sharedDesignations": 68,
   "rowsWithHdAlt": 102,
   "rowsWithHrAlt": 0,
