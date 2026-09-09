@@ -466,11 +466,13 @@ export interface PromotionStats {
    *  REFUSED MEASUREMENT back in argues from. */
   droppedParkedRecordViaGaia5p: number;
   /** Of those, the rows carrying an INDEPENDENT per-component fit
-   *  ({@link resolveIndependentAstrometry}: an owned identifier on a
-   *  per-component route, not the primary's re-anchored). **Pinned at zero,
-   *  and that pin is the refusal's whole warrant** — a non-zero entry means
-   *  the gate withholds a measurement of the component's own rather than
-   *  declining to launder a refused one, and the argument for it inverts. */
+   *  ({@link hasIndependentFitRoute}: an owned identifier on a per-component
+   *  route, not the primary's re-anchored). The route rather than the
+   *  placement, because the measurement is what refusing withholds and a row
+   *  can carry one with no xyz of its own. **Pinned at zero, and that pin is
+   *  the refusal's whole warrant** — a non-zero entry means the gate withholds
+   *  a measurement of the component's own rather than declining to launder a
+   *  refused one, and the argument for it inverts. */
   droppedParkedRecordOwnedFit: number;
 }
 
@@ -902,9 +904,8 @@ export interface ProjectionAnchor {
   z: number;
 }
 
-// A component's xyz is "independent" only when Stage 3 re-anchored it
-// per-component. gaia_5p with its own gaia_source_id, or
-// hip2_long_baseline with its own HIP, count. Every other route —
+// Stage 3 re-anchored this component per-component: gaia_5p with its own
+// gaia_source_id, or hip2_long_baseline with its own HIP. Every other route —
 // athyg_position, gaia_nss_systemic, system_inherited (and the
 // shared-identifier shape inside the routes above) — reproduces the
 // SYSTEM anchor under a different float path. Strict xyz equality
@@ -913,25 +914,31 @@ export interface ProjectionAnchor {
 // tag itself is the reliable signal. `primaryGaia` / `primaryHip` are
 // the anchor primary's identifiers — a component sharing them isn't a
 // per-component fit.
-function resolveIndependentAstrometry(
+function hasIndependentFitRoute(
   row: MultiplesTsvRow,
   primaryGaia: string | null,
   primaryHip: number | null,
-): CompanionPlacement | null {
-  const ownAstrometry =
-    row.astrometryVia !== 'system_inherited'
-    && row.x_pc !== null && row.y_pc !== null && row.z_pc !== null
-    && row.distPc !== null;
-  const independent =
-    ownAstrometry
-    && INDEPENDENT_FIT_ROUTES.has(row.astrometryVia)
+): boolean {
+  return INDEPENDENT_FIT_ROUTES.has(row.astrometryVia)
     && ((row.astrometryVia === 'gaia_5p'
          && row.gaiaSourceId !== null
          && row.gaiaSourceId !== primaryGaia)
       || (row.astrometryVia === 'hip2_long_baseline'
           && row.hip !== null && row.hip > 0
           && row.hip !== primaryHip));
-  if (!independent) return null;
+}
+
+// The placement that route supplies. A row on an independent route with no xyz
+// of its own places nothing, which is why the two are separate: the refusal
+// gate asks about the route, this asks where the component sits.
+function resolveIndependentAstrometry(
+  row: MultiplesTsvRow,
+  primaryGaia: string | null,
+  primaryHip: number | null,
+): CompanionPlacement | null {
+  const placed = row.x_pc !== null && row.y_pc !== null && row.z_pc !== null
+    && row.distPc !== null;
+  if (!placed || !hasIndependentFitRoute(row, primaryGaia, primaryHip)) return null;
   return {
     x: row.x_pc as number, y: row.y_pc as number, z: row.z_pc as number,
     distPc: row.distPc as number,
@@ -1322,7 +1329,10 @@ interface PromoteRowContext {
   row: MultiplesTsvRow;
   /** Multiples row of the anchor primary — drives the inherited-HIP gate.
    *  For the secondary loop this is cursor.primary; for the pair-row-primary
-   *  escape this is the WDS-root system anchor's primary row. */
+   *  escape this is the WDS-root system anchor's primary row. Must be the SAME
+   *  row the caller resolved `position` against: `droppedParkedRecordOwnedFit`
+   *  asks {@link hasIndependentFitRoute} what an id shared with it means, and a
+   *  different row there makes the pin answer about a different pairing. */
   anchorPrimaryRow: MultiplesTsvRow;
   /** Catalog Star of the anchor primary — the inherited-HIP gate and the
    *  field-inheritance source. */
@@ -1597,9 +1607,9 @@ function promoteRow(
   if (statesRefusedParallax(state.parked, row)) {
     stats.droppedParkedRecord++;
     if (row.astrometryVia === 'gaia_5p') stats.droppedParkedRecordViaGaia5p++;
-    if (resolveIndependentAstrometry(
+    if (hasIndependentFitRoute(
       row, anchorPrimaryRow.gaiaSourceId, anchorPrimaryRow.hip,
-    ) !== null) {
+    )) {
       stats.droppedParkedRecordOwnedFit++;
     }
     return null;

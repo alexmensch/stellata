@@ -2875,22 +2875,35 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
     expect(stats.droppedParkedRecordViaGaia5p).toBe(0);
   });
 
-  it('reports a refused row that DID carry a per-component fit, which is what '
-    + 'the zero-pin is watching for', () => {
-    const ownFit = blendedRows.map((r) => (r.comp === 'B'
-      ? { ...r, hip: 7980, astrometryVia: 'gaia_5p', gaiaSourceId: '405578335904111745' }
-      : r));
-    const { stats } = promoteCompanions(
-      ownFit, [blendedPrimary], CON_ASSIGNMENT, null,
-      parkedRefusals([{
-        gaiaSourceId: '405578335904111745', hip: 7980,
-        reason: 'refused_no_defensible_parallax', refusedPlxMas: [0.97],
-      }]),
-    );
-    expect(stats.droppedParkedRecord).toBe(1);
-    expect(stats.droppedParkedRecordViaGaia5p).toBe(1);
-    expect(stats.droppedParkedRecordOwnedFit).toBe(1);
-  });
+  // The pin asks about the ROUTE, not the placement built on it: refusing
+  // withholds the component's own MEASUREMENT, which a row states whether or
+  // not Stage 3 baked it an xyz. Both shapes have to reach the count, and the
+  // second is the one a placement test would miss.
+  const withPlacement: Partial<MultiplesTsvRow>[] = [
+    {}, { x_pc: null, y_pc: null, z_pc: null },
+  ];
+  for (const placement of withPlacement) {
+    const label = placement.x_pc === null ? 'no xyz of its own' : 'a placement too';
+    it(`reports a refused row that DID carry a per-component fit, with ${label}`
+      + ' — which is what the zero-pin is watching for', () => {
+      const ownFit = blendedRows.map((r) => (r.comp === 'B'
+        ? {
+          ...r, hip: 7980, astrometryVia: 'gaia_5p',
+          gaiaSourceId: '405578335904111745', ...placement,
+        }
+        : r));
+      const { stats } = promoteCompanions(
+        ownFit, [blendedPrimary], CON_ASSIGNMENT, null,
+        parkedRefusals([{
+          gaiaSourceId: '405578335904111745', hip: 7980,
+          reason: 'refused_no_defensible_parallax', refusedPlxMas: [0.97],
+        }]),
+      );
+      expect(stats.droppedParkedRecord).toBe(1);
+      expect(stats.droppedParkedRecordViaGaia5p).toBe(1);
+      expect(stats.droppedParkedRecordOwnedFit).toBe(1);
+    });
+  }
 
   // The cascade pushes one value per tier it refuses, so a record reaches the
   // gate with a LIST and the row has to match any of it. 01425+5000's own
