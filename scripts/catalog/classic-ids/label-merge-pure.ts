@@ -5,6 +5,7 @@ import { starDesignations } from '../../sid/sid-pure';
 import { dataRows, nonEmpty, parseIntOrNull } from '../parse/corpus-tsv';
 import type { SpineRow } from '../spine/inherited-spine-pure';
 import {
+  glieseCellKey,
   glieseComponent,
   glieseNumber,
   OVERLAY_VALUE_SEPARATOR,
@@ -129,6 +130,7 @@ export function formatGlieseDisplay(cell: string): string {
 }
 
 const glieseKey = (value: string): string => glieseNumber(value) ?? value;
+const glieseIdentity = (value: string): string => glieseCellKey(value) ?? value;
 
 function flamsteedNumber(cell: string): number | null {
   const m = /^(\d+)/.exec(cell.trim());
@@ -146,6 +148,13 @@ interface FieldSpec {
   candidates: (e: OverlayEntry) => string[];
   /** Comparison key — the two conventions normalised onto one form. */
   same: (value: string) => string;
+  /** Ownership key, where `same` is deliberately coarser than the designation
+   *  a value would key. `gl` states it because two components of one system
+   *  share a number: the collision guard has to weigh `GJ 9490B` against its
+   *  sibling's `GJ 9490A`, or a flipped component letter landing on the
+   *  sibling's own spelling reads as an ambiguity the spine already had and
+   *  the guard waves it through. */
+  identity?: (value: string) => string;
   /** Whether an overlay candidate CONFIRMS the record's own value, where key
    *  equality is too coarse to say. `gl` states it because the key drops the
    *  component letter: two spellings of one component agree, two different
@@ -197,6 +206,7 @@ export const LABEL_FIELD_SPECS: readonly FieldSpec[] = [
     writeAlt: null,
     candidates: (e) => [...e.gj].sort().map(formatGlieseDisplay),
     same: glieseKey,
+    identity: glieseIdentity,
     confirms: (candidate, spine) => {
       if (glieseKey(candidate) !== glieseKey(spine)) return false;
       const proposed = glieseComponent(candidate);
@@ -553,7 +563,7 @@ export function mergeClassicIdLabels<R extends LabelMergeRecord>(
 }
 
 const cellKey = (spec: FieldSpec, value: string): string =>
-  `${spec.field}:${spec.same(value)}`;
+  `${spec.field}:${(spec.identity ?? spec.same)(value)}`;
 
 const confirmsValue = (spec: FieldSpec, candidate: string, spine: string): boolean =>
   spec.confirms === undefined

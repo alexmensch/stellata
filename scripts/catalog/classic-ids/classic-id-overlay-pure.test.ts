@@ -4,6 +4,8 @@ import {
   applyBindingGate,
   bindingEvidence,
   buildClassicIdOverlay,
+  glieseCellKey,
+  glieseComponent,
   glieseNumber,
   parseOverlayTsv,
   serializeOverlay,
@@ -291,6 +293,28 @@ describe('glieseNumber', () => {
     expect(glieseNumber('914.0')).toBe('914');
     expect(glieseNumber('17.1')).toBe('17.1');
     expect(glieseNumber('NN 3001')).toBeNull();
+  });
+});
+
+describe('glieseComponent', () => {
+  it('answers only where the designation names ONE component', () => {
+    expect(glieseComponent('Gl 563.2A')).toBe('A');
+    expect(glieseComponent('GJ 866 c')).toBe('C');
+    expect(glieseComponent('Gl 563.2')).toBeNull();
+    expect(glieseComponent('GJ 423ABCD')).toBeNull();
+    expect(glieseComponent('NN 3001A')).toBeNull();
+  });
+});
+
+describe('glieseCellKey', () => {
+  it('keeps the component the ownership question turns on', () => {
+    expect(glieseCellKey('Gl 9490A')).toBe('9490A');
+    expect(glieseCellKey('GJ 9490B')).toBe('9490B');
+    expect(glieseCellKey('GJ 2060AB')).toBe('2060AB');
+    // The two normalisations `glieseNumber` already makes still apply.
+    expect(glieseCellKey('914.0')).toBe('914');
+    expect(glieseCellKey('Gl 563.2a')).toBe(glieseCellKey('GJ 563.2A'));
+    expect(glieseCellKey('NN 3001')).toBeNull();
   });
 });
 

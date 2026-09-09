@@ -238,7 +238,7 @@ asserting nothing:
 | gl | 3,146 | 1,840 | 58.5% | 79 |
 | flam | 2,724 | 2,028 | 74.4% | 2 |
 
-Additions the spine had no value for: hd 149, hr 4, gl 200, flam 69.
+Additions the spine had no value for: hd 149, hr 4, gl 205, flam 69.
 
 Measured after the merge moved onto the DERIVED binding
 (`scripts/catalog/membership/README.md` § The binding is derived). Keyed on the

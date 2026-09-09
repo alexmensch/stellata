@@ -280,15 +280,15 @@ IV/27A's own columns disambiguate — 49618 carries HR 2520 and HIP 33048 where
 **The merge may not turn an unambiguous spine designation into an ambiguous
 one** — the rule, and why attaching a designation another record holds costs
 both records their SID key rather than buying one, is
-`docs/catalog-driver.md` § 4. It fires on 36 cells; p Eridani is the case, the
+`docs/catalog-driver.md` § 4. It fires on 31 cells; p Eridani is the case, the
 overlay attaching HIP 7751 to the HD 10361 component. A record whose only
 claim is a duplicate's is corrected as a merge decision
 (`../membership/README.md`).
 
-Scored against the POST-merge assignment, so the four HD mutual swaps stay
-legal — neither value gains an owner. That needs a fixpoint rather than one
-pass: withholding one proposal can re-expose a value its partner had proposed
-to vacate.
+Scored against the POST-merge assignment, on the designation a value would key
+— `gl` keeps its component letter — so the four HD mutual swaps stay legal,
+neither value gaining an owner. A fixpoint, not one pass: withholding one
+proposal can re-expose a value its partner had proposed to vacate.
 
 ### Curated overrides, and what does NOT belong in them
 
@@ -378,8 +378,8 @@ same-number-different-constellation match is not reachable).
 ### The gl comparison is specificity-aware
 
 The number decides the STAR; the component letter takes a PAIRWISE rule beside
-it (`FieldSpec.confirms`), because neither strict nor collapsed comparison is
-right. Two different components of one system disagree and § 4 precedence
+it (`FieldSpec.confirms`) and its own ownership key (`FieldSpec.identity`),
+because neither strict nor collapsed comparison is right. Two different components of one system disagree and § 4 precedence
 decides them — collapsed, Gl 563.2's swap read as agreement, though CNS5 rows
 3664/3665, SIMBAD and the HIP all letter HIP 72509 B and HIP 72511 A against
 AT-HYG. But a SYSTEM-level claim contradicts nothing on EITHER side: `gj_comp`

@@ -504,13 +504,27 @@ export function glieseNumber(designation: string): string | null {
   return m[1].endsWith('.0') ? m[1].slice(0, -2) : m[1];
 }
 
+const glieseSuffix = (designation: string): string =>
+  (/([A-Za-z]*)$/.exec(designation.trim())?.[1] ?? '').toUpperCase();
+
 /** The ONE component a Gliese designation names, or null where it names the
  *  system rather than a star. CNS5's `gj_comp` states a multi-component
  *  system's letters combined — `Gl 423ABCD` is one entry for four stars — so a
  *  combined suffix and a bare number are both system-level claims and neither
  *  can contradict a record's own component letter. */
 export function glieseComponent(designation: string): string | null {
-  const m = /^(?:Gl|GJ)?\s*[\d.]+\s*([A-Za-z])$/.exec(designation.trim());
-  return m === null ? null : m[1].toUpperCase();
+  if (glieseNumber(designation) === null) return null;
+  const suffix = glieseSuffix(designation);
+  return suffix.length === 1 ? suffix : null;
+}
+
+/** A Gliese designation as the key a SID would take: the bare number plus
+ *  whatever component it names, so `Gl 563.2a` and `GJ 563.2A` are one
+ *  designation while `GJ 2060AB` and `GJ 2060C` are two. Anything asking who
+ *  OWNS a designation needs this and not `glieseNumber`, which two components
+ *  of one system share. */
+export function glieseCellKey(designation: string): string | null {
+  const number = glieseNumber(designation);
+  return number === null ? null : `${number}${glieseSuffix(designation)}`;
 }
 
