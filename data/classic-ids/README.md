@@ -30,7 +30,7 @@ hd_hip_route_disagreements_review.tsv
 rejected_bindings.tsv              268 rows. Pipeline-derived review queue —
                                    the bindings the gate dropped
                                    (§ The binding gate).
-label_flips.tsv                    725 rows. Pipeline-derived, and by
+label_flips.tsv                    736 rows. Pipeline-derived, and by
                                    `build:membership` rather than by this
                                    folder's build — that is where the merge
                                    runs. EVERY departure of the shipped labels
@@ -39,7 +39,7 @@ label_flips.tsv                    725 rows. Pipeline-derived, and by
                                    `docs/catalog-driver.md` § 6 requires, and
                                    the delta the spine's designation-multiset
                                    gate replays.
-classic_id_overrides.tsv           Hand-curated. Three rows; the escape
+classic_id_overrides.tsv           Hand-curated. One row; the escape
                                    hatch for a CDS join review finds wrong
                                    (scripts/catalog/classic-ids/README.md
                                    § Curated overrides).
@@ -235,7 +235,7 @@ asserting nothing:
 | hd | 293,325 | 280,531 | 95.6% | 43 |
 | hip | 117,652 | 99,059 | 84.2% | 0 |
 | hr | 9,012 | 7,283 | 80.8% | 23 |
-| gl | 3,144 | 1,851 | 58.9% | 66 |
+| gl | 3,146 | 1,840 | 58.5% | 79 |
 | flam | 2,724 | 2,028 | 74.4% | 2 |
 
 Additions the spine had no value for: hd 149, hr 4, gl 200, flam 69.
@@ -280,9 +280,13 @@ Three structural bounds behind the shortfalls:
    These four figures are derived, not pinned — recompute them from
    `classic_id_overlay.tsv` + the spine's `dist` column rather than trusting
    the prose, and correct it here if it has drifted. The pinned
-   `labelAgree.gl` / `labelSpineOnly.gl` pair is the only gated number, and the
-   `gl` row above is two short of the other identifiers' denominator because
-   the Gl 563.2 pair is counted as overridden rather than keyed.
+   `labelAgree.gl` / `labelSpineOnly.gl` pair is the only gated number.
+
+`gl`'s flips run high for its size because the comparison scores the COMPONENT
+the two sides name, not the bare number: 13 of the 79 are a swapped component
+letter CNS5 states on its own Gaia-keyed row
+(`scripts/catalog/classic-ids/README.md` § The gl comparison is
+specificity-aware).
 
 None of this loses a record or a label: `docs/catalog-driver.md` § 1
 defines labels as *overlay + spine backstop*, and the inherited spine

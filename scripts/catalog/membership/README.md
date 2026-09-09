@@ -107,9 +107,10 @@ Tegmine; `Gl 596.1A` to `GJ 9527` on ψ Ser under CNS5's renumbering; and one
 curated refusal (`../classic-ids/README.md` § Curated overrides): Propus, where
 Gaia fits one source across a resolved Tycho-2 pair and its cross-match keys
 that source to the sibling, so the overlay would hand η Gem the sibling's
-HD 253820 in place of its own HD 42995. Two further overrides sit beside it,
-unrelated to the re-key: Gl 563.2 A/B, whose letters AT-HYG swapped and whose
-correction the merge's own comparison cannot express.
+HD 253820 in place of its own HD 42995. It is the only curated row: Gl 563.2
+A/B, whose letters AT-HYG swapped, is reached mechanically now the merge scores
+`gl` on the component the two sides name (`../classic-ids/README.md` § The gl
+comparison is specificity-aware).
 
 The binding is **derived**, not copied: § The binding is derived walks four
 committed sources through both gates and writes what survives. The spine's
@@ -200,8 +201,10 @@ gate already knew.
 Two things the derivation cannot settle alone are queued rather than decided.
 A **contested** fill is one whose winner has a runner-up the gates also passed:
 the precedence order chose, not the evidence, so the row ships nothing until a
-disposition names a value — Gl 563.2 A is the shape, where CNS5 follows
-AT-HYG's swapped component letter and SIMBAD follows the HIP. A **collision**
+disposition names a value — Gl 563.2 A is the shape: the CNS5 route reads the
+spine's own `gl` cell, so AT-HYG's swapped letter sends it to CNS5's A row,
+which is the OTHER component's source, while SIMBAD binds the star the HIP
+names. CNS5 itself letters the two the way SIMBAD and the HIP do. A **collision**
 is a derived source another spine row already holds: a Gaia source on two
 records keys neither (`docs/sid.md` § 4.1), so the row whose frozen cell held
 it keeps it and the other is withheld. Matches with a passing runner-up are

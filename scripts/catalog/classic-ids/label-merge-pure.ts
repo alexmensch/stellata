@@ -5,6 +5,7 @@ import { starDesignations } from '../../sid/sid-pure';
 import { dataRows, nonEmpty, parseIntOrNull } from '../parse/corpus-tsv';
 import type { SpineRow } from '../spine/inherited-spine-pure';
 import {
+  glieseComponent,
   glieseNumber,
   OVERLAY_VALUE_SEPARATOR,
   type ClassicIdOverlay,
@@ -127,6 +128,8 @@ export function formatGlieseDisplay(cell: string): string {
   return `GJ ${cell}`;
 }
 
+const glieseKey = (value: string): string => glieseNumber(value) ?? value;
+
 function flamsteedNumber(cell: string): number | null {
   const m = /^(\d+)/.exec(cell.trim());
   return m ? Number(m[1]) : null;
@@ -143,6 +146,13 @@ interface FieldSpec {
   candidates: (e: OverlayEntry) => string[];
   /** Comparison key — the two conventions normalised onto one form. */
   same: (value: string) => string;
+  /** Whether an overlay candidate CONFIRMS the record's own value, where key
+   *  equality is too coarse to say. `gl` states it because the key drops the
+   *  component letter: two spellings of one component agree, two different
+   *  components of one system disagree, and a system-level candidate against a
+   *  component cell is neither — it makes no claim the cell can contradict, so
+   *  § 4 precedence must not fire on it. */
+  confirms?: (candidate: string, spine: string) => boolean;
   /** Where the values the single-valued field cannot hold go, or null where
    *  the field has nowhere to put them. Null is what separates the two extra
    *  dispositions: a carried value stays searchable and keys the same-as
@@ -186,7 +196,13 @@ export const LABEL_FIELD_SPECS: readonly FieldSpec[] = [
     },
     writeAlt: null,
     candidates: (e) => [...e.gj].sort().map(formatGlieseDisplay),
-    same: (value) => glieseNumber(value) ?? value,
+    same: glieseKey,
+    confirms: (candidate, spine) => {
+      if (glieseKey(candidate) !== glieseKey(spine)) return false;
+      const proposed = glieseComponent(candidate);
+      const held = glieseComponent(spine);
+      return proposed === null || held === null || proposed === held;
+    },
   },
   {
     field: 'flam',
@@ -465,7 +481,7 @@ export function mergeClassicIdLabels<R extends LabelMergeRecord>(
         continue;
       }
       const agrees = spine !== null
-        && candidates.some((c) => spec.same(c) === spec.same(spine));
+        && candidates.some((c) => confirmsValue(spec, c, spine));
       proposals.push({
         recordIdx,
         spec,
@@ -538,6 +554,11 @@ export function mergeClassicIdLabels<R extends LabelMergeRecord>(
 
 const cellKey = (spec: FieldSpec, value: string): string =>
   `${spec.field}:${spec.same(value)}`;
+
+const confirmsValue = (spec: FieldSpec, candidate: string, spine: string): boolean =>
+  spec.confirms === undefined
+    ? spec.same(candidate) === spec.same(spine)
+    : spec.confirms(candidate, spine);
 
 const tally = (values: Iterable<string>): Map<string, number> => {
   const out = new Map<string, number>();

@@ -4,14 +4,14 @@ gaia_source_id	field	value
 # an empty `value` keeps the spine's. `#` in the first column comments a line —
 # the header stays the first line, as every committed TSV's does.
 #
-# THREE ROWS. Nearly every one of today's 137 disagreements is either a real AT-HYG
+# ONE ROW. Nearly every one of today's 137 disagreements is either a real AT-HYG
 # cross-ID error the overlay corrects (Izar: AT-HYG's HR 5505 against IV/27A +
 # V/50's HR 5506, and ε Boo IS HR 5506) or a resolved close pair whose two
 # components the two catalogues letter oppositely — neither is the CDS join being
 # wrong, which is the only thing this file is for. The full enumeration with
 # dispositions is data/classic-ids/label_flips.tsv.
 #
-# Propus (η Gem, HIP 29655) is the first exception, and the shape to recognise: Gaia
+# Propus (η Gem, HIP 29655) is the one exception, and the shape to recognise: Gaia
 # fits ONE source where Tycho-2 resolves two entries, and its TYC cross-match
 # keys that source to the SECONDARY. IV/25 gives the record's own
 # TYC 1877-1716-1 HD 42995 and the sibling TYC 1877-1716-2 HD 253820; SIMBAD
@@ -21,22 +21,12 @@ gaia_source_id	field	value
 # sibling extra, just § 4 precedence handing a star its neighbour's number and
 # folding the neighbour's own record away as a component.
 #
-# Gl 563.2 A/B is the second shape, and the opposite failure: the overlay is
-# RIGHT and the merge cannot hear it. CNS5 rows 3664/3665, SIMBAD and the HIP
-# agree that 6228695236338166528 (HIP 72509, the fainter, CD-25 10553B) is
-# component B and 6228695270698475392 (HIP 72511, CD-25 10553A) is A; AT-HYG
-# letters them the opposite way round. The merge compares `gl` on the bare GJ
-# number with the component letter stripped, so a SWAPPED letter reads as
-# agreement and section 4 precedence never fires. Both records key hip:, so no
-# sid rides on either cell. What a class-level rule would have to say instead:
-# scripts/catalog/classic-ids/README.md section Counts and the parity
-# measurement.
-#
-# Two shapes DO NOT belong here, because a label exception is the wrong tool:
+# Three shapes DO NOT belong here, because a label exception is the wrong tool:
 #   - an addition that would make another record's designation ambiguous is
 #     withheld mechanically by the collision guard (p Eridani);
 #   - a Gliese renumbering (Gl 157.1 -> GJ 9140) is an identity bridge in
-#     data/sid/sameas-overrides.tsv, since both designations name the star.
+#     data/sid/sameas-overrides.tsv, since both designations name the star;
+#   - a swapped GJ component letter (Gl 563.2 A/B) is the specificity rule in
+#     scripts/catalog/classic-ids/README.md section The gl comparison is
+#     specificity-aware — the overlay wins the letter on its own evidence.
 3377072212924335488	hd	
-6228695236338166528	gl	Gl 563.2B
-6228695270698475392	gl	Gl 563.2A

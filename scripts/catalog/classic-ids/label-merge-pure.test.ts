@@ -73,6 +73,37 @@ describe('mergeClassicIdLabels', () => {
     expect(counts.labelAgree.gl).toBe(1);
   });
 
+  // Gl 563.2 A/B: CNS5, SIMBAD and the HIP letter HIP 72509 as B where AT-HYG
+  // letters it A. Both sides name exactly one component, so the letters are a
+  // real disagreement and § 4 precedence has to reach it.
+  it('reads a swapped GJ component letter as a disagreement', () => {
+    const records = [record({ gl: 'Gl 563.2A' })];
+    const { counts } = merge(records, new Map([[SRC_A, entry({ gj: ['563.2B'] })]]));
+    expect(records[0].gl).toBe('GJ 563.2B');
+    expect(counts.labelFlipped.gl).toBe(1);
+  });
+
+  // CNS5's gj_comp states a system's letters COMBINED — Gl 423 is one entry
+  // reading ABCD — so it makes no claim about which component the record is,
+  // and a strict letter comparison would replace the component cell with the
+  // system's spelling.
+  it('reads a combined-letter candidate as no claim on the component', () => {
+    const records = [record({ gl: 'Gl 423A' })];
+    const { counts, flips } = merge(
+      records, new Map([[SRC_A, entry({ gj: ['423ABCD'] })]]),
+    );
+    expect(records[0].gl).toBe('Gl 423A');
+    expect(counts.labelAgree.gl).toBe(1);
+    expect(flips).toEqual([]);
+  });
+
+  it('reads a bare-number candidate as no claim on the component', () => {
+    const records = [record({ gl: 'Gl 354A' })];
+    const { counts } = merge(records, new Map([[SRC_A, entry({ gj: ['354'] })]]));
+    expect(records[0].gl).toBe('Gl 354A');
+    expect(counts.labelAgree.gl).toBe(1);
+  });
+
   it('lets the overlay win on disagreement and enumerates the flip', () => {
     const records = [record({ hr: 5505 })];
     const { counts, flips } = merge(

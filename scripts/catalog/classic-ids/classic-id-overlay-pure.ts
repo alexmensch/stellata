@@ -504,3 +504,13 @@ export function glieseNumber(designation: string): string | null {
   return m[1].endsWith('.0') ? m[1].slice(0, -2) : m[1];
 }
 
+/** The ONE component a Gliese designation names, or null where it names the
+ *  system rather than a star. CNS5's `gj_comp` states a multi-component
+ *  system's letters combined — `Gl 423ABCD` is one entry for four stars — so a
+ *  combined suffix and a bare number are both system-level claims and neither
+ *  can contradict a record's own component letter. */
+export function glieseComponent(designation: string): string | null {
+  const m = /^(?:Gl|GJ)?\s*[\d.]+\s*([A-Za-z])$/.exec(designation.trim());
+  return m === null ? null : m[1].toUpperCase();
+}
+

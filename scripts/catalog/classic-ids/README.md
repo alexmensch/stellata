@@ -28,13 +28,12 @@ scripts/catalog/classic-ids/
                                   two gate queues, and asserts the count
                                   snapshot.
   binding-candidates.ts (+ test)  The cross-walk loaders, and the source_ids
-                                  the gate can weigh. Shared with
-                                  ../astrometry-request/, which has to pull a
-                                  G magnitude for every one of them
-                                  (§ The gate's evidence has to be pulled).
-                                  Two loaders, because this candidate set needs
-                                  only the HIP cross-walk and CNS5.
-                                  The test derives its expectation from a built
+                                  the gate can weigh — shared with
+                                  ../astrometry-request/, which pulls a G for
+                                  every one (§ The gate's evidence has to be
+                                  pulled). Two loaders: this candidate set
+                                  needs only the HIP cross-walk and CNS5. The
+                                  test derives its expectation from a built
                                   overlay, so drift in either producer of
                                   `entry.hip` fails rather than silently
                                   shrinking the request.
@@ -55,18 +54,15 @@ scripts/catalog/classic-ids/
                                   parallax cascade's `cns5_plx` tier alike, and
                                   no bare-number fold beneath it (§ The GJ fold
                                   stops at the component). This folder parses
-                                  that file, ../distance/ routes on it. Its
-                                  motion and parallax arrive as a
+                                  that file, ../distance/ routes on it. Motion
+                                  and parallax arrive as a
                                   `CitedProperMotion` / `CitedParallax`
                                   (../cited-proper-motion.ts,
-                                  ../cited-parallax.ts) because most of CNS5's
-                                  are Gaia's own republished and the skip rules
-                                  read the citation to see that
-                                  (data/classic-ids/README.md § The astrometry
-                                  re-slice); the parallax carries CNS5's own
-                                  `e_plx_mas` so the cascade's precision floor
-                                  has an error bar on this tier as on every
-                                  other.
+                                  ../cited-parallax.ts) so the skip rules can
+                                  read the citation, and the parallax carries
+                                  CNS5's own `e_plx_mas` — why each matters,
+                                  data/classic-ids/README.md § The astrometry
+                                  re-slice.
   cns5-fixture.ts                 Test-only Cns5Row / Cns5Astrometry builders.
                                   A module, not a test-file export: four suites
                                   across two folders build these, so a new
@@ -120,9 +116,8 @@ gj        CNS5's EDR3 source_id, else its hip → hip walk
 ```
 
 **HD routes entirely through TYC.** Every HD-bearing AT-HYG row also carries a
-TYC (audit 2026-07-27), so the HIP route is a cross-check, not a second
-authority: where both resolve and disagree the HD route keeps the label and the
-row goes to a review queue (`data/classic-ids/README.md`).
+TYC (audit 2026-07-27), so the HIP route is a cross-check: on a disagreement
+the HD route keeps the label and the row queues (`data/classic-ids/README.md`).
 
 **Every route above is an unvetted best-neighbour walk, so the assembled
 overlay is then gated** — `applyBindingGate` re-runs the record build's own
@@ -147,15 +142,12 @@ is often not the star, so the request has to carry them explicitly:
 `../astrometry-request/README.md` § The request is a union.
 
 `gateRejectedMag` measures the difference directly, and it is the count to
-watch if this request ever changes again. Today the union pulls the evidence
-for every candidate and the queue reads `gateRejectedMag` **218** ·
-`gateRejectedSibling` 50 · **268** rows; a membership-column-only request drops
-`gateRejectedMag` to **0**, every candidate unvettable and silently accepted.
-
-**Read the two reason counts as one queue, not as two independent gates**:
-`reason` is the FIRST gate that fired (`verdict.magRejected ? 'mag' :
-'sibling'`), so a candidate whose `G` arrives moves from the sibling-letter
-count to the magnitude count without any binding changing verdict.
+watch if this request ever changes again. Today the union pulls evidence for
+every candidate and the queue reads **268** rows
+(`data/classic-ids/README.md` § The binding gate); a membership-column-only
+request drops `gateRejectedMag` to **0**, every candidate unvettable and
+silently accepted. `reason` is the first gate that fired, so the two reason
+counts trade rows without any binding changing verdict.
 
 **Two counts say whether the evidence actually arrived**, because a missing `G`
 is a pass either way and only one of the causes is fixable:
@@ -255,25 +247,20 @@ Where the pair is unresolved the single record **is** the granularity the
 catalogue has, and answering to both numbers is accurate rather than sloppy:
 **93 of the 95 have no `multiples.tsv` row at all**, so no separation, position
 angle or component magnitude exists to split them with, and the two HD numbers
-are the entire trace of duplicity. Where it IS resolved, 14 Lyn B holds its own
-record and letting the primary claim 49619 would point the number at a star we
-draw separately.
+are the entire trace of duplicity.
 
 The predicate is `sourceIdsWithSiblingComponent`
 (`../companions/companion-promotion.ts`), keyed on the `multiples.tsv` SYSTEM
 rather than the source_id — a secondary routinely carries its own source_id or
 none, so grouping by source_id misses the sibling on exactly the resolved pairs
 this asks about. Promotion can still decline to render a member row, so the set
-is a **superset** of what ships (35 withheld — 34 hd + the 1 hr — across the 34
-records whose system names a sibling, of which 33 render one today), and
-that direction is deliberate: withholding one alias too many is a reviewable
-queue row, leaving one on the wrong record is a wrong answer.
+is a deliberate **superset** of what ships — 35 withheld (34 hd + the 1 hr)
+across the 34 records whose system names a sibling, of which 33 render one
+today.
 
-An alias also clears the collision guard's rule, which the guard itself cannot
-apply: aliases are not display cells, so its tally never sees them, and an alias
-equal to a value another record DISPLAYS would go ambiguous under
-`docs/sid.md` § 4.1 and cost both records the key. Those are withheld to
-`extra-dropped`. 0 fire today — measured, and now also guarded.
+An alias also clears § The collision guard's rule, which the guard itself
+cannot apply — aliases are not display cells, so its tally never sees them.
+Those are withheld to `extra-dropped`; 0 fire today, measured and guarded.
 
 The **68** ambiguous designations `sid:allocate` drops are spine-side component
 pairs, unrelated to this list (`../../sid/README.md` § Ambiguous designations).
@@ -291,14 +278,12 @@ IV/27A's own columns disambiguate — 49618 carries HR 2520 and HIP 33048 where
 ### The collision guard
 
 **The merge may not turn an unambiguous spine designation into an ambiguous
-one.** A designation covering more than one record names a catalogue
-granularity, so `docs/sid.md` § 4.1 drops it from the same-as graph entirely —
-it keys no ledger row. Attaching an identifier a DIFFERENT record already holds
-off the spine therefore deletes a working SID key from BOTH records and buys
-nothing: the star stays findable under that identifier through the record that
-holds it. p Eridani is the case — the overlay attaches HIP 7751 to the HD 10361
-component — and the guard fires on 36 cells; a record whose only claim is a
-duplicate's is corrected as a merge decision (`../membership/README.md`).
+one** — the rule, and why attaching a designation another record holds costs
+both records their SID key rather than buying one, is
+`docs/catalog-driver.md` § 4. It fires on 36 cells; p Eridani is the case, the
+overlay attaching HIP 7751 to the HD 10361 component. A record whose only
+claim is a duplicate's is corrected as a merge decision
+(`../membership/README.md`).
 
 Scored against the POST-merge assignment, so the four HD mutual swaps stay
 legal — neither value gains an owner. That needs a fixpoint rather than one
@@ -310,17 +295,17 @@ to vacate.
 `data/classic-ids/classic_id_overrides.tsv` pins one record's one identifier —
 an explicit value, or empty for "keep the spine's". It is for the case
 `docs/catalog-driver.md` § 4 names: review finding the CDS join wrong. It holds
-**three rows**, whose evidence the file's own header states: Propus, where a
-Gaia source keyed to the wrong component of a resolved Tycho-2 pair would take
-η Gem's own HD off the star, and the Gl 563.2 pair, where the overlay is right
-and the comparison below cannot hear it. Two further shapes stay out of it:
+**one row**, whose evidence the file's own header states: Propus, where a Gaia
+source keyed to the wrong component of a resolved Tycho-2 pair would take
+η Gem's own HD off the star.
 
-- an addition that would make another record's designation ambiguous is
-  withheld mechanically by the guard above;
-- a Gliese renumbering (`Gl 157.1` → CNS5's `GJ 9140`) is an IDENTITY bridge in
-  `data/sid/sameas-overrides.tsv`, not a label exception — both designations
-  name the star, and `gl:` is the canonical key of all five affected records,
-  so the bridge is what keeps their sids through the rename.
+Three shapes that LOOK like exceptions are reached mechanically instead, and
+the file's header names them: a proposal that would make another record's
+designation ambiguous (§ The collision guard); a Gliese renumbering
+(`Gl 157.1` → CNS5's `GJ 9140`), an IDENTITY bridge in
+`data/sid/sameas-overrides.tsv` since both designations name the star and `gl:`
+is the canonical key of all five affected records; and a swapped GJ component
+letter (§ The gl comparison is specificity-aware).
 
 ## The designation constellation
 
@@ -385,19 +370,34 @@ The merge's `label*` routing and the spine-side coverage counts are pinned in
 `../membership/membership-manifest-expected.json`, the build that runs it.
 
 Values compare on the merge's own normalisation: `gl` on its bare GJ number
-(the `Gl`/`GJ` prefix and component suffix are display forms, and CNS5's
-trailing `.0` on whole numbers is a formatting artifact — not collapsing it
-scored 14 same-star pairs as disagreements), `flam` on the number alone (the
-row is already keyed on one source_id, so a same-number-different-constellation
-match is not reachable).
+(the `Gl`/`GJ` prefix is a display form and CNS5's trailing `.0` a formatting
+artifact — not collapsing it scored 14 same-star pairs as disagreements),
+`flam` on the number alone (its row is already keyed on one source_id, so a
+same-number-different-constellation match is not reachable).
 
-**Collapsing the suffix means a SWAPPED `gl` letter reads as agreement**, so
-§ 4 precedence never fires and the spine's letter stands — Gl 563.2 A/B, where
-AT-HYG letters HIP 72509/72511 opposite to CNS5, SIMBAD and the HIP alike.
-Comparing letters strictly is not the fix: `gj_comp` states a system's letters
-COMBINED (`ABCD`), so a component cell would read as a disagreement the overlay
-wins with the system's spelling. A rule has to say the overlay wins only where
-its candidate is at least as specific; the two records take overrides today.
+### The gl comparison is specificity-aware
+
+The number decides the STAR; the component letter takes a PAIRWISE rule beside
+it (`FieldSpec.confirms`), because neither strict nor collapsed comparison is
+right. Two different components of one system disagree and § 4 precedence
+decides them — collapsed, Gl 563.2's swap read as agreement, though CNS5 rows
+3664/3665, SIMBAD and the HIP all letter HIP 72509 B and HIP 72511 A against
+AT-HYG. But a SYSTEM-level claim contradicts nothing on EITHER side: `gj_comp`
+states a multi-component entry's letters COMBINED (Gl 423 is one entry reading
+`ABCD`) and a bare number names the system too, so strict comparison would read
+a hundred-odd such pairs as disagreements and swap a component for a system
+spelling.
+
+`labelFlipped.gl` reaches **13 records**, 8 as four mutual A↔B swaps (Gl 66,
+Gl 150.1, Gl 421, Gl 563.2), each on CNS5's own Gaia-keyed row rather than a
+walk. Two key `gl:` and nothing else, so the relabel renames the canonical key
+and identity rides a `data/sid/sameas-overrides.tsv` bridge as the Gliese
+renumberings do: `GJ 3196A`→`B`, `GJ 4378A`→`B`, each a star whose pair sibling
+holds its own GJ number (`GJ 3197`, `GJ 4379`), so no second record can claim
+the retired spelling — `parity-ledger.test.ts` pins that bridged set. On
+GJ 4378 the letter is contested (SIMBAD and `multiples.tsv` both root the star
+as WDS J23573-1259**A**); precedence takes CNS5's B, and `stellata-3bsf.47`
+adjudicates.
 
 **That `.0` is a join hazard beyond the merge, and `normaliseGjKey`
 (`../catalog-pure.ts`) is where it is handled once.** `cns5AstrometryByGj`
@@ -407,8 +407,9 @@ lookup misses — indistinguishably from an absent row. 17 rows carry the
 artifact. It cost nothing when the tier shipped (all 17 route to the Tycho-2
 tier above CNS5 on their own TYC), which is exactly why it needed collapsing
 before something reached it. Only a ZERO fraction collapses; `Gl 17.1` keeps
-its own. `glieseNumber` states the same rule for the label side, where it also
-has to strip the component letter.
+its own. `glieseNumber` states the same rule for the label side, where the
+component letter it strips is compared separately (§ The gl comparison is
+specificity-aware).
 
 ### The GJ fold stops at the component
 
@@ -446,4 +447,3 @@ V/70A's index *does* fold to the bare number
 read off a system entry is a blend that advertises itself as one
 (`vTierIsSystemBlend`), and a parallax off it is a distance the components
 share. Neither is true of a position.
-
