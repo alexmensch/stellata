@@ -163,8 +163,8 @@ export function createSearchRunner(
       const idx = sidLookup(Number(sidMatch[1]));
       return idx !== undefined ? [directResult(idx, `SID #${sidMatch[1]}`)] : [];
     }
-    // Gliese: "Gl 559A", "GJ 581", "Gliese 411"
-    const glMatch = trimmed.match(/^(?:gliese|gj|gl)\s*(\d+\s*[a-z]?)$/i);
+    // Gliese: "Gl 559A", "GJ 581", "Gliese 411", "Gl 563.2A", "GJ 2060AB"
+    const glMatch = trimmed.match(/^(?:gliese|gj|gl)\s*(\d+(?:\.\d+)?\s*[a-z]*)$/i);
     if (glMatch) {
       const idx = glMap.get(normalizeGlKey(glMatch[1]));
       return idx !== undefined ? [directResult(idx, `Gl ${glMatch[1].toUpperCase()}`)] : [];

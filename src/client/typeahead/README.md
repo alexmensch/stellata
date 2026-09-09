@@ -188,6 +188,11 @@ differently. Which numbers become aliases at all is the write side's rule
 where the pair is unresolved, so the record carries both components' light.
 The direction the dropdown reads — record to label — stays single-valued.
 
+`glMap` is the one string-keyed map of the four, because a Gliese designation
+is not a number: it carries an optional decimal series and a run of component
+letters (`Gl 563.2A`, `GJ 2060AB`, `GJ 10314ABC`). The query pattern
+dispatching to it has to admit both, where its three siblings take bare digits.
+
 The Flamsteed map keys `<num> <con>` to
 **an array** of every component sharing that designation, so an exact
 "61 Cyg" returns each of 61 Cyg A/B/… with its own display name —

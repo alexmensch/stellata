@@ -763,3 +763,35 @@ describe('search / Gaia + SID direct dispatch', () => {
     expect(run('SID 999')).toEqual([]);
   });
 });
+
+describe('search / Gliese direct dispatch', () => {
+  const raw: SearchEntry[] = [
+    { i: 0, gl: 'Gl 559A' },
+    { i: 1, gl: 'Gl 563.2A' },
+    { i: 2, gl: 'GJ 452.1' },
+    { i: 3, gl: 'GJ 2060AB' },
+  ];
+  const run = createSearchRunner(makeEmptyCatalog(4), raw);
+
+  // 485 published designations carry a decimal and 10 a multi-letter
+  // component, and both shapes reached the map only through their key — the
+  // query pattern accepted neither, so the box answered them empty.
+  it.each([
+    ['Gl 559A', 0], ['gliese 559 a', 0],
+    ['Gl 563.2A', 1], ['GJ 563.2 a', 1],
+    ['GJ 452.1', 2], ['gl 452.1', 2],
+    ['GJ 2060AB', 3], ['gj 2060 ab', 3],
+  ] as Array<[string, number]>)('resolves %s to its record', (q, index) => {
+    const res = run(q);
+    expect(res).toHaveLength(1);
+    expect(res[0].index).toBe(index);
+  });
+
+  it('echoes the typed designation as the row label', () => {
+    expect(run('gl 563.2a')[0].label).toBe('Gl 563.2A');
+  });
+
+  it('a designation no record carries returns no results', () => {
+    expect(run('Gl 563.9Z')).toEqual([]);
+  });
+});
