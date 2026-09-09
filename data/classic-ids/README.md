@@ -190,16 +190,28 @@ The HD/HIP route cross-check above cannot substitute for this. Both walks
 routinely land on the *same* wrong source, so α Cen B counted among the 2,637
 route agreements, not the 21 disagreements.
 
-**The gate's reach is bounded by where a printed V exists.** The V comes from
-`data/hipparcos/hip_main_vmag.tsv` keyed on a HIP the overlay row itself
-carries — deliberately not from AT-HYG, which the overlay has to outlive. A
-row with no HIP, or whose HIPs carry no printed V, cannot be vetted:
-`gateSkippedNoHipVMag` pins that population at 257,926 rows, overwhelmingly
-Tycho-only HD rows. 126 known mis-bindings sit inside it, reachable by no
-committed table — only 9 have an HD in V/50, so a `Vmag` column on the BSC5
-slice would not close the gap; the rest are faint-on-faint mismatches where
-no magnitude signal separates the two sources. Resolving those is the spine's
-own identity work (`stellata-3bsf.4`), not a photometric gate's.
+**The gate's reach is bounded by which printed V it READS, not by which one
+exists.** The V comes from `data/hipparcos/hip_main_vmag.tsv` keyed on a HIP
+the overlay row itself carries — deliberately not from AT-HYG, which the
+overlay has to outlive. A row with no HIP, or whose HIPs carry no printed V,
+is therefore skipped unweighed: `gateSkippedNoHipVMag` pins that population at
+**257,926** rows, overwhelmingly Tycho-only HD rows.
+
+**Almost all of them are reachable, and by a committed table.** The V cascade's
+printed tiers continue past Hipparcos into Tycho-2 and Gliese, and the record
+side's gate already weighs them (`scripts/catalog/membership/README.md` § The
+binding is derived). Measured over the committed overlay, IV/25 and the TYC
+cross-walk, 2026-09-09: of the 257,926, **254,135 have a Tycho-2
+`VT − 0.090(BT − VT)` on a TYC that IV/25 routes to that very source** and 240
+more a Gliese `Vmag` on the entry's own GJ, leaving **3,551** with no printed V
+under any of the three tiers. So the unvettable population is ~1.4% of what
+this count reports, and the 126 known mis-bindings inside it are a magnitude
+comparison away rather than out of reach. Giving the label gate the record
+side's evidence order is `stellata-3bsf.8.13`, which carries the figures and
+the one obstacle: 296 overlay sources are absent from the astrometry pull, so
+the widened gate needs the request widened and re-pulled to keep
+`gateSkippedNoGMag` at zero. Adjudicating the mis-bindings the widened gate
+then finds is still the spine's own identity work (`stellata-3bsf.4`).
 
 ## Coverage — the overlay is a union term, not the label authority
 
