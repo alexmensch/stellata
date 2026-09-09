@@ -108,21 +108,33 @@ own clean 5p solution — 2.4744 ± 0.0622 mas, RUWE 1.0689, `ipd` 0 — inverti
 to 404.1 ± 10.2 pc. Schaefer et al. 2016's dynamical parallax, 387.5 ± 1.3 pc,
 agrees at 1.62 σ. Both say the 328.9 pc the floor refused is ~20% wrong.
 
-**The tier's reach is bounded by measurement quality, not by our request.**
-Measured when the tier landed, at 8 records: of the 44 parked rows
-`multiples.tsv` carried a row for, **15** had a sibling carrying its own
-`source_id` rather than the blended primary's — **8 rescue**, and the other 7 a
-sibling the anchor gate refuses (4 on RUWE alone, 2 on RUWE and a blended
-image, 1 on the blend, and 3 whose sibling publishes no parallax either). Every
-one of those 15 siblings has a row in the frozen table; the request it is pulled
-against was widened to cover them
-(`../../astrometry-request/README.md` § The request is a union), which is what
-took the tier from 5 to 8. The 29 remaining had no sibling carrying an id of
-their own at all — Stage 2/3 bind the primary's blended source to every
-component. **The live size is `distPairMemberParallax`**
-(`../../build-catalog-expected.json`), and the parked set this breakdown
-counts grows with every membership change, so re-derive rather than quote it —
-stellata-3bsf.48 instruments the build to state these with their count keys.
+**The tier's reach is bounded by measurement quality, not by our request**, and
+the index counts that where it decides it rather than over the parked set —
+which moves with every membership change and so cannot be quoted. Over the
+16,126 pair-row sources the per-root dedup admits:
+
+| Count | Today | Why it is not a candidate |
+|---|---|---|
+| `pairMemberParallaxEntries` | **8,268** | kept: anchor-grade, above the floor |
+| `pairMemberSiblingNotAnchorGrade` | 6,683 | RUWE, a blended image, or a saturated G — `isCoherenceAnchorGrade` |
+| `pairMemberSiblingNoParallax` | 1,174 | Gaia has the source and published none |
+| `pairMemberSiblingBelowSnFloor` | 1 | anchor-grade, inversion undefined |
+| `pairMemberSiblingNoAstrometryRow` | **0** | the pull carries no row for the source at all |
+
+The five are a partition, so the table sums to the dedup's input and a new
+refusal path has to be classified before it can hide in prose. That input
+exceeds the request's own id count (`../../astrometry-request/README.md`
+§ The request is a union) because the dedup is per ROOT: a source under two WDS
+roots is a candidate for each, and counted once for each. **The zero is the
+gated one**: it is the astrometry request under-covering the pair-row half of
+its union, the one cause a re-pull can fix, and the reason the tier reaches what
+it does. `notAnchorGrade` dominating is the finding — four in five of the 7,858
+refusals are on fit quality, not on coverage.
+
+**The live tier size is `distPairMemberParallax`**
+(`../../build-catalog-expected.json`), and it is smaller than the index by
+orders of magnitude: a candidate only serves a record whose own cascade reached
+nothing, and most roots holding one hold no such record.
 
 **A sibling's parallax is read on the sibling's OWN `gaia_source_id`**, and the
 index drops a repeated one per root. Stage 2/3 bind a single blended source to
@@ -279,18 +291,32 @@ mas, the HIP2 value the floor refused to eight significant figures. That is the
 shape the gate refuses; the bound-sibling tier now places HIP 26549 itself off
 HIP 26551 D's clean fit, so it is no longer a row the gate sees. Promoting such
 a row re-serves a refusal through a courier, the general rule at the head of
-§ The skip rules. Measured across all 44 parked rows multiples.tsv carries a row
-for: `astrometry_via` is `system_inherited` 65 and `hip2_long_baseline` 61, and
-`gaia_5p` **zero** — not one of them has an independent per-component fit behind
-it, so there is no case where promotion supplies an owned distance. That
-`gaia_5p` zero is what makes the refusal safe rather than merely convenient, and
-it is measured on a parked set this README does not pin a method for;
-stellata-3bsf.48 re-derives it instrumented, because a hand join over the
-committed files does not reproduce it. The refusal is counted as
-`companionDroppedParkedRecord`, and it matches on the measurement:
-`statesRefusedParallax` compares the row's stated distance against every
-parallax a skip rule refused on that record, indexed by the id the pair row
-names it with.
+§ The skip rules. The refusal is counted as `companionDroppedParkedRecord`
+(**9**), and it matches on the measurement: `statesRefusedParallax` compares the
+row's stated distance against every parallax a skip rule refused on that record,
+indexed by the id the pair row names it with.
+
+**Refusing withholds no measurement of the component's own**, and the build
+states that rather than arguing it. Two counts partition the 9:
+`companionDroppedParkedViaGaia5p` is **0** — every refused row routes
+`hip2_long_baseline` (7) or `system_inherited` (2) — and
+`companionDroppedParkedOwnedFit` is **0**, which is the stronger claim and the
+pinned one: not one refused row satisfies `hasIndependentFitRoute`, so none
+carries an owned identifier on a per-component route. It asks about the ROUTE,
+not the placement `resolveIndependentAstrometry` builds on it — a measurement
+is what refusing withholds, and a row can state one with no xyz of its own. The 7
+`hip2_long_baseline` rows all carry the parked primary's HIP, inherited, which
+is exactly why their stated distance IS the refusal. **A non-zero
+`companionDroppedParkedOwnedFit` inverts the argument** — the gate would then
+be withholding a component's own fit — so it is a gate, not a note.
+
+**Count these over the rows the gate SEES, not over the parked set.** Joining
+the parked ledger to `multiples.tsv` on `hip`/`gaia_source_id` reaches 94 parked
+rows and 21 `gaia_5p` pair rows, which contradicts nothing above: those are pair
+rows of records parked for either parallax reason, most of which the gate never
+evaluates, because only `refused_no_defensible_parallax` rows are indexed at all
+and the match is on the value rather than on the shared id. A per-via figure
+over that wider join is not a statement about the refusal.
 
 **Keying it on the identifier instead is a bug, because a blended id is shared
 far more widely than the value is.** Stage 2/3 bind one source to every

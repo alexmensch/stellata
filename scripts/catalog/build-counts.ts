@@ -273,6 +273,8 @@ export interface BuildCounts {
    *  parallax — promoting would re-serve the measurement the cascade
    *  refused. */
   companionDroppedParkedRecord: number;
+  companionDroppedParkedViaGaia5p: number;
+  companionDroppedParkedOwnedFit: number;
   /** Promoted secondaries whose absmag came from the class→M_V
    *  spectral calibration (inherited/missing photometry, no WDS Δmag,
    *  per-component spect_via=curated/simbad). */
@@ -434,6 +436,16 @@ export interface BuildCounts {
   /** Anchor-grade sibling parallaxes indexed off the kept-physical pair rows
    *  of multiples.tsv — the `pair_member_parallax` tier's reach. */
   pairMemberParallaxEntries: number;
+  /** Why the rest of those pair-row sources are not candidates. These four
+   *  plus `pairMemberParallaxEntries` are every source the index's per-root
+   *  dedup admits, so the tier's reach is a partition rather than prose
+   *  (`distance/parallax/README.md` § The tier's reach is bounded by
+   *  measurement quality). `pairMemberSiblingNoAstrometryRow` is the one that
+   *  says the astrometry request under-covers its pair-row half. */
+  pairMemberSiblingNoAstrometryRow: number;
+  pairMemberSiblingNoParallax: number;
+  pairMemberSiblingNotAnchorGrade: number;
+  pairMemberSiblingBelowSnFloor: number;
   /** Distance cascade: the parallax tier each record's distance inverts,
    *  before the two override layers. `distNone` is the § 6 ledger drop —
    *  records no owned parallax reaches, which do not ship. */
