@@ -20,7 +20,7 @@ from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
 MEMBERSHIP = rl.MEMBERSHIP_MANIFEST
-TYC2_HD = ROOT / "data" / "classic-ids" / "tyc2_hd.tsv"
+TYC2_HD = rl.TYC2_HD_CROSS_INDEX
 OUT_DIR = ROOT / "data" / "tycho2"
 OUT_MAIN = OUT_DIR / "tycho2_main.tsv"
 OUT_SUPPL1 = OUT_DIR / "tycho2_suppl1.tsv"
@@ -29,19 +29,11 @@ TYC1_MIN = 1
 TYC1_MAX = 9537
 TYC1_PER_QUERY = 400
 
-Tyc = tuple[int, int, int]
-
-
-def parse_tyc(text: str) -> Tyc | None:
-    """``"3694-2544-1"`` → ``(3694, 2544, 1)``; None for anything else."""
-    parts = text.strip().split("-")
-    if len(parts) != 3 or not all(p.isdigit() for p in parts):
-        return None
-    return int(parts[0]), int(parts[1]), int(parts[2])
-
-
-def format_tyc(tyc: Tyc) -> str:
-    return "-".join(str(part) for part in tyc)
+Tyc = rl.Tyc
+parse_tyc = rl.parse_tyc
+format_tyc = rl.format_tyc
+read_membership_tycs = rl.read_membership_tycs
+read_mentioned_tycs = rl.read_mentioned_tycs
 
 
 def _display_path(path: Path) -> Path:
@@ -49,23 +41,6 @@ def _display_path(path: Path) -> Path:
         return path.relative_to(ROOT)
     except ValueError:
         return path
-
-
-def read_membership_tycs(manifest: Path) -> set[Tyc]:
-    tycs: set[Tyc] = set()
-    for row in rl.iter_membership_rows(manifest):
-        if tyc := parse_tyc(row.get("tyc") or ""):
-            tycs.add(tyc)
-    return tycs
-
-
-def read_mentioned_tycs(manifest: Path, tyc2_hd: Path) -> set[Tyc]:
-    """The request set — see data/tycho2/README.md § The request set."""
-    tycs = read_membership_tycs(manifest)
-    with tyc2_hd.open(encoding="utf-8") as f:
-        for row in csv.DictReader(f, delimiter="\t"):
-            tycs.add((int(row["tyc1"]), int(row["tyc2"]), int(row["tyc3"])))
-    return tycs
 
 
 @dataclass(frozen=True)
@@ -335,7 +310,7 @@ def assert_membership_covered(
 
 def main() -> None:
     force = "--force" in sys.argv
-    sources = [Path(__file__), MEMBERSHIP, TYC2_HD]
+    sources = [Path(__file__), Path(rl.__file__), MEMBERSHIP, TYC2_HD]
     outputs = [t.output for t in TABLES]
     if not force and all(rl.is_up_to_date(out, sources) for out in outputs):
         print(

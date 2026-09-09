@@ -90,7 +90,7 @@ write the worktree's `data/`.
 | `refresh:gliese` | `refresh-gliese.py` | `data/gliese/gliese_v70a.tsv` | Gliese & Jahreiss third catalogue of nearby stars (`V/70A`, whole table) — printed Johnson V + B−V, spectral type, parallax and rv, plus the B1950 position, proper motion and cross-names the binding review measures against. The V cascade's tier under Tycho-2, and the first-order source behind every `mag_src=GJ` cell (`data/gliese/README.md`). |
 | `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 50k SIMBAD sample (validation corpus). |
 | `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the `docs/catalog-driver.md` § 5 value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: `data/simbad/README.md` § The values pull. |
-| `refresh:simbad-tyc-hd` | `refresh-simbad-tyc-hd.py` | `data/simbad/simbad_tyc_hd.tsv` | SIMBAD's own HD identification per Tycho-2 entry, keyed on TYC — the witness independent of IV/25 that a close pair's crossed HD cells need (`data/simbad/README.md` § The TYC → HD pull). Request set is IV/25's Tycho ids union the manifest's, the same set `refresh:tycho2` covers. Composes the `simbad/` plumbing and states no ADQL of its own. |
+| `refresh:simbad-tyc-hd` | `refresh-simbad-tyc-hd.py` | `data/simbad/simbad_tyc_hd.tsv` | SIMBAD's own HD identification per Tycho-2 entry, keyed on TYC — the witness independent of IV/25 that a close pair's crossed HD cells need (`data/simbad/README.md` § The TYC → HD pull). Request set is `refresh_lib.read_mentioned_tycs` — IV/25's Tycho ids union the manifest's — shared with `refresh:tycho2` rather than restated, so both cover the same entries by construction. Composes the `simbad/` plumbing and states no ADQL of its own. |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
 `refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py`, and
@@ -116,7 +116,10 @@ traces to `data/membership/membership-manifest.tsv` — the membership term
 `export-astrometry-request.ts` exported off the same manifest column
 (astrometry-catalog, GSPC — see `read_source_id_request` below).
 `refresh_lib.MEMBERSHIP_MANIFEST` is the one statement of where that table
-lives; a script naming the path itself has drifted from it.
+lives, and `refresh_lib.TYC2_HD_CROSS_INDEX` the same for IV/25; a script
+naming either path itself has drifted from it. The two pulls scoped to Tycho
+entries share the whole request set, not just the paths —
+`refresh_lib.read_mentioned_tycs`, `data/tycho2/README.md` § The request set.
 `data/simbad/README.md` § Request sets come off the membership term carries
 the measured drop/gain of the SIMBAD rebase.
 

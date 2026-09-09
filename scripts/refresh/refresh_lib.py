@@ -123,6 +123,51 @@ def read_membership_source_ids(path: Path) -> list[int]:
     ]
 
 
+# ─── The Tycho request set ────────────────────────────────────────────
+
+TYC2_HD_CROSS_INDEX = REPO_ROOT / "data" / "classic-ids" / "tyc2_hd.tsv"
+
+Tyc = tuple[int, int, int]
+
+
+def parse_tyc(text: str) -> Tyc | None:
+    """``"3694-2544-1"`` → ``(3694, 2544, 1)``; None for anything else."""
+    parts = text.strip().split("-")
+    if len(parts) != 3 or not all(p.isdigit() for p in parts):
+        return None
+    return int(parts[0]), int(parts[1]), int(parts[2])
+
+
+def format_tyc(tyc: Tyc) -> str:
+    return "-".join(str(part) for part in tyc)
+
+
+def read_membership_tycs(path: Path = MEMBERSHIP_MANIFEST) -> set[Tyc]:
+    tycs: set[Tyc] = set()
+    for row in iter_membership_rows(path):
+        if tyc := parse_tyc(row.get("tyc") or ""):
+            tycs.add(tyc)
+    return tycs
+
+
+def read_mentioned_tycs(
+    path: Path = MEMBERSHIP_MANIFEST, tyc2_hd: Path = TYC2_HD_CROSS_INDEX
+) -> set[Tyc]:
+    """Every Tycho entry the manifest or IV/25 names — see
+    ``data/tycho2/README.md`` § The request set.
+
+    Both pulls scoped to Tycho entries share it, so they cover the same
+    entries by construction rather than by coincidence. Parsing both sides
+    into integer triples is what makes that hold: a manifest cell and an
+    IV/25 row naming one entry in different spellings collapse to one key.
+    """
+    tycs = read_membership_tycs(path)
+    with tyc2_hd.open(encoding="utf-8") as f:
+        for row in csv.DictReader(f, delimiter="\t"):
+            tycs.add((int(row["tyc1"]), int(row["tyc2"]), int(row["tyc3"])))
+    return tycs
+
+
 # ─── source_id request files ──────────────────────────────────────────
 
 SOURCE_ID_REQUEST_HEADER = "gaia_source_id"

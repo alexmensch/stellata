@@ -29,33 +29,12 @@ def write_tsv(tmp: Path, name: str, header: list[str], rows: list[list[str]]) ->
 
 
 class ReadRequestSet(unittest.TestCase):
-    def test_iv25_key_is_composed_from_three_integer_columns(self) -> None:
-        with tempfile.TemporaryDirectory() as d:
-            p = write_tsv(
-                Path(d), "tyc2_hd.tsv",
-                ["tyc1", "tyc2", "tyc3", "hd", "n_hd", "n_tyc"],
-                [["7570", "1585", "1", "24072", "1", "1"],
-                 ["40", "1338", "1", "12447", "1", "1"]],
-            )
-            self.assertEqual(
-                mod.read_iv25_tycs(p), {"7570-1585-1", "40-1338-1"}
-            )
+    """The union itself is `rl.read_mentioned_tycs`, pinned in
+    refresh-tycho2.test.py where it lives. What is this shell's own is
+    formatting that set as the sorted `1-381-1` keys the TAP request asks
+    under."""
 
-    def test_manifest_blank_tyc_cells_are_skipped(self) -> None:
-        with tempfile.TemporaryDirectory() as d:
-            p = write_tsv(
-                Path(d), "manifest.tsv",
-                ["tyc", "hip", "hd"],
-                [["5675-662-1", "88404", "164764"],
-                 ["", "", "1"],
-                 ["  ", "", "2"]],
-            )
-            self.assertEqual(mod.read_manifest_tycs(p), {"5675-662-1"})
-
-    def test_request_is_the_sorted_deduplicated_union(self) -> None:
-        """The manifest contributes Tycho ids IV/25 never mentions, and a
-        record whose own TYC the table cannot answer for is the row a
-        consumer needs — so the request unions rather than taking IV/25."""
+    def test_request_is_the_shared_union_as_sorted_string_keys(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             tmp = Path(d)
             iv = write_tsv(
@@ -67,8 +46,12 @@ class ReadRequestSet(unittest.TestCase):
                 [["40-1338-1", "12446"], ["9999-1-1", "1"]],
             )
             self.assertEqual(
-                mod.read_tyc_request(iv, man),
+                mod.read_tyc_request(man, iv),
                 ["40-1338-1", "7570-1585-1", "9999-1-1"],
+            )
+            self.assertEqual(
+                {rl.format_tyc(t) for t in rl.read_mentioned_tycs(man, iv)},
+                set(mod.read_tyc_request(man, iv)),
             )
 
 

@@ -4,7 +4,6 @@ Tycho-2 entry, keyed on TYC, as a witness independent of IV/25."""
 
 from __future__ import annotations
 
-import csv
 import sys
 import time
 from pathlib import Path
@@ -19,7 +18,6 @@ from simbad import query, source_files  # noqa: E402
 from simbad.specs import HD, MAIN_ID, OID, TYC  # noqa: E402
 
 ROOT = REPO_ROOT
-SRC_IV25 = ROOT / "data" / "classic-ids" / "tyc2_hd.tsv"
 OUT = ROOT / "data" / "simbad" / "simbad_tyc_hd.tsv"
 
 TSV_COLUMNS = ["tyc", "simbad_oid", "simbad_main_id", "hd"]
@@ -49,36 +47,18 @@ SPOT_ROWS = (
 )
 
 
-def read_iv25_tycs(path: Path = SRC_IV25) -> set[str]:
-    """IV/25's Tycho ids, composed from the three upstream integer columns
-    into the `1-381-1` key the Gaia cross-walks and the manifest both use."""
-    out: set[str] = set()
-    with path.open(newline="", encoding="utf-8") as f:
-        for row in csv.DictReader(f, delimiter="\t"):
-            out.add(f"{int(row['tyc1'])}-{int(row['tyc2'])}-{int(row['tyc3'])}")
-    return out
-
-
-def read_manifest_tycs(path: Path | None = None) -> set[str]:
-    return {
-        tyc
-        for row in rl.iter_membership_rows(path or rl.MEMBERSHIP_MANIFEST)
-        if (tyc := row["tyc"].strip())
-    }
-
-
 def read_tyc_request(
-    iv25: Path = SRC_IV25, manifest: Path | None = None
+    manifest: Path = rl.MEMBERSHIP_MANIFEST, iv25: Path = rl.TYC2_HD_CROSS_INDEX
 ) -> list[str]:
-    """The union of IV/25's Tycho ids and the manifest's, sorted.
+    """Every Tycho entry the manifest or IV/25 names, as `1-381-1` keys.
 
     IV/25 alone is what the bead scoped, and it is not enough: 19,288 manifest
     TYCs are absent from it, and a record whose own TYC the table cannot
-    answer for is exactly the row a consumer needs adjudicated. The union is
-    also `refresh-tycho2.py`'s request set, so the two pulls cover the same
-    Tycho entries.
+    answer for is exactly the row a consumer needs adjudicated. Shared with
+    `refresh-tycho2.py` rather than restated, so the two pulls cover the same
+    entries by construction.
     """
-    return sorted(read_iv25_tycs(iv25) | read_manifest_tycs(manifest))
+    return sorted(rl.format_tyc(t) for t in rl.read_mentioned_tycs(manifest, iv25))
 
 
 def compose_rows(
@@ -119,7 +99,13 @@ def compose_rows(
 
 def main() -> None:
     force = "--force" in sys.argv
-    sources = [Path(__file__), SRC_IV25, rl.MEMBERSHIP_MANIFEST, *source_files()]
+    sources = [
+        Path(__file__),
+        Path(rl.__file__),
+        rl.TYC2_HD_CROSS_INDEX,
+        rl.MEMBERSHIP_MANIFEST,
+        *source_files(),
+    ]
     if not force and rl.is_up_to_date(OUT, sources):
         print(
             f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)"
