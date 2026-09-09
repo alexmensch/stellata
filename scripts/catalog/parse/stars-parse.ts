@@ -83,7 +83,7 @@ import {
   emptySimbadValueIndex,
   lookupSimbadValues,
   type SimbadValueIndex,
-} from '../simbad-values-parse';
+} from '../simbad/simbad-values-parse';
 import {
   resolveVMagnitude,
   tycho2VMagnitude,

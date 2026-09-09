@@ -15,7 +15,7 @@ import {
 import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import { TYCHO2_ICRS_EPOCH } from '../tycho2-parse';
-import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad-values-parse';
+import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad/simbad-values-parse';
 import { unitVectorFromRaDec, type UnitVector } from '../../../src/client/util/equatorial-basis';
 import type { GlieseIndex } from '../gliese-parse';
 import {

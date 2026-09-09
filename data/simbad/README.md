@@ -157,10 +157,18 @@ answers for — the two classes, and only the first is reachable without it:
   the shape — IV/25 gives TYC 2642-2929-1 both 174638 and 174639, SIMBAD says
   174638, the manifest ships 174638, and nothing disagrees with anything.
 - **SIMBAD and IV/25 agree and the manifest ships a different HD — 23 rows.**
-  Both witnesses against the shipped cell, so these are manifest errors with
-  no remaining doubt: α Psc A, f Eri A, 32 Eri B, β Mon B, k¹ Pup, ζ¹ Cnc A,
-  ζ Boo B, ε Boo B, δ Ser A, ρ Her A, κ¹/κ² CrA (a mutual swap), ε¹ Lyr B,
-  12 Aqr A, ζ² Aqr, and 8 plain-HD stars.
+  Both TYC witnesses against the shipped cell: α Psc A, f Eri A, 32 Eri B,
+  β Mon B, k¹ Pup, ζ¹ Cnc A, ζ Boo B, ε Boo B, δ Ser A, ρ Her A, κ¹/κ² CrA (a
+  mutual swap), ε¹ Lyr B, 12 Aqr A, ζ² Aqr, and 8 plain-HD stars.
+
+  **Two witnesses agreeing about a TYC is not two witnesses agreeing about the
+  RECORD**, and this section read the 23 as manifest errors "with no remaining
+  doubt" before that was measured. It is true of 9. On 12 the record's own
+  Gaia source is SIMBAD's object for the OTHER component, so the crossed cell
+  is the TYC and the shipped HD stands — ε Boo is the case, where a TYC-keyed
+  rule would hand Izar its companion's number. 2 have no object for their
+  source at all. Which witness decides, and the enumerated partition:
+  `scripts/catalog/simbad/README.md` § Which witness decides a close pair's HD.
 
 So 232 shipped HD cells are contradicted and 10 are vindicated against the
 printed index. Both of the two dissents `stellata-3bsf.50` measured live
@@ -169,7 +177,7 @@ reproduce exactly — π Aql (IV/25 187259, SIMBAD 187260) and TYC 2772-917-1
 measurement that motivated it, and both are in the vindicating 10.
 
 Every count in this section is pinned against the committed tables by
-`scripts/catalog/simbad-tyc-hd-parse.test.ts` § adjudication over the
+`scripts/catalog/simbad/simbad-tyc-hd-parse.test.ts` § adjudication over the
 committed tables, so a re-pull that moves one fails the suite rather than
 ageing this prose.
 
@@ -178,8 +186,10 @@ SIMBAD holds no object for the TYC, or its object carries no HD ident. So a
 consumer has three verdicts to handle, not two — agrees, dissents, and silent.
 `f Pup` (TYC 7113-3280-1) is in the silent set.
 
-**No consumer reads it yet.** It is the evidence a rule needs, not a rule; the
-attribution work is `stellata-3bsf.50` / `.52` / `.47`.
+**No consumer reads it on the build path yet.** It is the evidence a rule
+needs, and the rule it settles is
+`scripts/catalog/simbad/README.md` § Which witness decides a close pair's HD;
+asserting what that rule licenses is `stellata-hooj.14`.
 
 ## Provenance
 
@@ -389,7 +399,7 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   already gated, so the gate runs where bindings are still being decided
   (`scripts/catalog/membership/README.md` § The identifier columns are read,
   never re-derived).
-- `simbad_values.tsv` → `scripts/catalog/simbad-values-parse.ts`, indexed by
+- `simbad_values.tsv` → `scripts/catalog/simbad/simbad-values-parse.ts`, indexed by
   every namespace the pull keyed on and joined per record source_id → HIP →
   **GJ → TYC** — the join deliberately no longer mirrors the request order,
   because a GJ names the component where a TYC names the system

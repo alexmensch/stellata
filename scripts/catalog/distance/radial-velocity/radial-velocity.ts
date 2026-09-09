@@ -10,7 +10,7 @@ import {
   gaiaRowIs2p,
   isGaiaCatalogueBibcode,
 } from '../gaia-distrust';
-import type { SimbadRadialVelocity } from '../../simbad-values-parse';
+import type { SimbadRadialVelocity } from '../../simbad/simbad-values-parse';
 
 // Which source supplied the radial term of the space-motion velocity. Pinned
 // per-tier in build-counts alongside `velocityVia`, which covers the

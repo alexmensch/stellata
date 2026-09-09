@@ -14,7 +14,7 @@ import {
   lookupCns5Astrometry,
   type Cns5Astrometry,
 } from '../classic-ids/classic-ids-parse';
-import type { SimbadAstrometry } from '../simbad-values-parse';
+import type { SimbadAstrometry } from '../simbad/simbad-values-parse';
 
 export const GAIA_DR3_REF_EPOCH = 2016.0;
 export const HIP2_REF_EPOCH = 1991.25;

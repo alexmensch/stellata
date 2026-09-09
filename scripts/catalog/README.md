@@ -55,6 +55,9 @@ lives in the subfolders.
   (`pnpm run build:classic-ids` → `data/classic-ids/`) and the per-identifier
   label merge `build:membership` runs and writes the queue for. The record
   build takes only the designation-constellation cascade, over `readStars`.
+- `simbad/` — the readers for the two per-source SIMBAD pulls the build joins
+  on, and the identifier rule the TYC → HD witness settles: which of a close
+  pair's two components a record's cells name.
 - `membership/` — the membership term: the primaries-derived manifest
   (`pnpm run build:membership` → `data/membership/`), its parity gate and the
   § 6.1 ledgers. `parse/` streams it through `iterManifestTsv`.
@@ -85,16 +88,11 @@ scripts/catalog/
   cited-parallax.ts               with their only constructors: a value is
                                   admitted only with the bibcode that sourced
                                   it, so an uncited one is unrepresentable.
-  simbad-values-parse.ts (+ test) data/simbad/simbad_values.tsv indexed by
-                                  every namespace the pull keyed on. Bottom
-                                  tier of the rv, direction/PM and distance
-                                  cascades alike.
   tycho2-parse.ts (+ test)        data/tycho2/ indexed on the full TYC, with
                                   the position-to-propagate-from choice and
                                   the main-table-wins rule resolved at parse
                                   time (data/tycho2/README.md). Feeds the
                                   direction, PM-rescue and V cascades.
-  simbad-tyc-hd-parse.ts (+test)  data/simbad/simbad_tyc_hd.tsv on the full TYC.
   gliese-parse.ts (+ test)        data/gliese/ keyed on the bare Gliese
                                   number + component, so the catalogue's four
                                   name prefixes and a record's `gl` cell meet

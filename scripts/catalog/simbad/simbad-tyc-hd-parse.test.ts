@@ -3,12 +3,12 @@ import { resolve } from 'node:path';
 
 import { beforeAll, describe, it, expect } from 'vitest';
 
-import { REPO_ROOT, lfsContentReadable } from '../util/paths';
-import { parseTyc2HdTsv } from './classic-ids/classic-ids-parse';
+import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
+import { parseTyc2HdTsv } from '../classic-ids/classic-ids-parse';
 import {
   MEMBERSHIP_MANIFEST_FILE,
   parseManifestTsv,
-} from './membership/membership-manifest-pure';
+} from '../membership/membership-manifest-pure';
 import {
   hdNumbers,
   parseSimbadTycHdTsv,
@@ -175,3 +175,85 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
     });
   },
 );
+
+const SIMBAD_SPTYPE_FILE = 'data/simbad/simbad_sptype.tsv';
+const SPLIT_INPUTS = [...ADJUDICATION_INPUTS, resolve(REPO_ROOT, SIMBAD_SPTYPE_FILE)];
+
+/** The move set of README.md § Which witness decides a close pair's HD: the
+ *  rows all four witnesses agree the record's own component is not the one its
+ *  HD cell names. Enumerated rather than counted, because the assertion those
+ *  rows license moves canonical SID keys and each has to be inspected. */
+const FOUR_WITNESS_MOVE = [
+  '1381-1638-1', '40-1338-1', '5204-1584-1', '5226-1605-1', '7570-1585-1',
+  '7902-891-1', '7902-1905-1', '8314-802-1', '933-1238-1',
+].sort();
+
+/** No SIMBAD object for the record's own source, so the fourth witness is
+ *  silent and the rule leaves the row alone. */
+const FOUR_WITNESS_SILENT = ['2604-1777-1', '8568-3121-1'].sort();
+
+describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split', () => {
+  let move: string[];
+  let refuse: string[];
+  let silent: string[];
+
+  beforeAll(() => {
+    const iv = new Map<string, Set<number>>();
+    for (const row of parseTyc2HdTsv(readFileSync(SPLIT_INPUTS[1], 'utf-8'))) {
+      const at = iv.get(row.tyc);
+      if (at === undefined) iv.set(row.tyc, new Set([row.hd]));
+      else at.add(row.hd);
+    }
+    const simbad = parseSimbadTycHdTsv(readFileSync(SPLIT_INPUTS[0], 'utf-8'));
+
+    // The rows both TYC witnesses contradict — § What it adjudicates' 23.
+    // Keyed on the TYC, not the source: a mutual swap is two rows.
+    const contested = new Map<string, string>();
+    for (const row of parseManifestTsv(readFileSync(SPLIT_INPUTS[2], 'utf-8'))) {
+      const tyc = row.tyc.trim();
+      const shipped = Number.parseInt(row.hd.trim(), 10);
+      const answer = simbad.get(tyc);
+      const printed = iv.get(tyc);
+      if (tyc === '' || !Number.isFinite(shipped) || answer === undefined) continue;
+      if (printed === undefined) continue;
+      const stated = hdNumbers(answer);
+      if (!stated.some((hd) => printed.has(hd))) continue;
+      if (stated.includes(shipped) || printed.has(shipped)) continue;
+      contested.set(tyc, row.gaia_source_id);
+    }
+
+    // The fourth witness: SIMBAD's object for the record's own Gaia source.
+    const sources = new Set([...contested.values()].filter((s) => s !== ''));
+    const objectOfSource = new Map<string, string>();
+    for (const line of readFileSync(SPLIT_INPUTS[3], 'utf-8').split('\n').slice(1)) {
+      if (line === '') continue;
+      const cells = line.split('\t');
+      if (sources.has(cells[7])) objectOfSource.set(cells[7], cells[1]);
+    }
+
+    move = [];
+    refuse = [];
+    silent = [];
+    for (const [tyc, sourceId] of contested) {
+      const ofSource = sourceId === '' ? undefined : objectOfSource.get(sourceId);
+      if (ofSource === undefined) silent.push(tyc);
+      else if (ofSource === simbad.get(tyc)!.mainId) move.push(tyc);
+      else refuse.push(tyc);
+    }
+    for (const list of [move, refuse, silent]) list.sort();
+  });
+
+  it('splits the 23 contested rows nine / twelve / two', () => {
+    expect(move.length + refuse.length + silent.length).toBe(23);
+    expect(move).toEqual(FOUR_WITNESS_MOVE);
+    expect(silent).toEqual(FOUR_WITNESS_SILENT);
+    expect(refuse).toHaveLength(12);
+  });
+
+  // ε Boo is why the rule is not "prefer the own-TYC HD": IV/25, SIMBAD and
+  // I/239 all call TYC 2019-1250-1 HD 129988 (ε Boo B), and the record's own
+  // source is Izar. A TYC-keyed rule ships Izar under its companion's number.
+  it('refuses ε Bootis, whose TYC cell is the crossed one', () => {
+    expect(refuse).toContain('2019-1250-1');
+  });
+});

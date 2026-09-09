@@ -146,7 +146,7 @@ validators that do check distance, and both skip its records
 ## `rvz_type` decides whether the value is a velocity at all
 
 SIMBAD's `rvz_radvel` is a radial velocity only where `rvz_type` reads `v`;
-a `z` row carries a redshift-derived quantity. `../../simbad-values-parse.ts`
+a `z` row carries a redshift-derived quantity. `../../simbad/simbad-values-parse.ts`
 drops those two rows, both white dwarfs, and the reason is not pedantry —
 EGGR 252's reads **243,879 km/s**.
 
