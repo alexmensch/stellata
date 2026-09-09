@@ -175,6 +175,10 @@ HIP = IdentLookup(prefix="HIP ", tsv_name="hip")
 GAIA_DR3 = IdentLookup(prefix="Gaia DR3 ", tsv_name="source_id")
 TYC = IdentLookup(prefix="TYC ", tsv_name="tyc", numeric=False)
 GJ = IdentLookup(prefix="GJ ", tsv_name="gj", numeric=False)
+# Non-numeric because a component letter is part of the answer: SIMBAD writes
+# both `HD 24071` and `HD 24071B`, and which one it hangs on an object is the
+# attribution evidence a consumer is asking for.
+HD = IdentLookup(prefix="HD ", tsv_name="hd", numeric=False)
 
 # Earlier Gaia releases, read only by the widening's corroboration check —
 # never shipped as a column. A release's ids are their own number space, so

@@ -90,6 +90,7 @@ write the worktree's `data/`.
 | `refresh:gliese` | `refresh-gliese.py` | `data/gliese/gliese_v70a.tsv` | Gliese & Jahreiss third catalogue of nearby stars (`V/70A`, whole table) — printed Johnson V + B−V, spectral type, parallax and rv, plus the B1950 position, proper motion and cross-names the binding review measures against. The V cascade's tier under Tycho-2, and the first-order source behind every `mag_src=GJ` cell (`data/gliese/README.md`). |
 | `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 50k SIMBAD sample (validation corpus). |
 | `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the `docs/catalog-driver.md` § 5 value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: `data/simbad/README.md` § The values pull. |
+| `refresh:simbad-tyc-hd` | `refresh-simbad-tyc-hd.py` | `data/simbad/simbad_tyc_hd.tsv` | SIMBAD's own HD identification per Tycho-2 entry, keyed on TYC — the witness independent of IV/25 that a close pair's crossed HD cells need (`data/simbad/README.md` § The TYC → HD pull). Request set is IV/25's Tycho ids union the manifest's, the same set `refresh:tycho2` covers. Composes the `simbad/` plumbing and states no ADQL of its own. |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
 `refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py`, and
@@ -181,6 +182,11 @@ into unrelated work.
 one pull, because three scopes now read the same one-column TSV contract:
 the binaries astrometry list, the full-catalog list, and the DR2
 neighbourhood risk set.
+
+Non-network dependency: `refresh-simbad-tyc-hd.test.py` covers that pull's
+request-set union, the space-padded ident join, its compose gates and the
+row-count / spot-row bands against an in-memory TAP backend. Run it with
+`python3 scripts/refresh/refresh-simbad-tyc-hd.test.py`.
 
 Non-network dependency: `refresh-gaia-gspc.test.py` covers that pull's
 write widths, the per-band-null shape a both-bands-or-nothing writer
