@@ -76,8 +76,9 @@ none for. Its coverage now has a zero-pin of its own,
 `pairMemberSiblingNoAstrometryRow` — the sibling sources this pull holds no row
 for, which is the only reason the tier misses one that a re-pull can fix
 (`../distance/parallax/README.md` § The tier's reach is bounded by measurement
-quality). Every other refusal there is a measurement: 6,683 of 16,126 candidate
-siblings fail the anchor gate on fit quality alone.
+quality). Every other refusal there is a measurement, and
+`pairMemberSiblingNotAnchorGrade` — the anchor gate on fit quality alone —
+dominates them.
 
 It asks for every kept-physical pair member rather than only the roots holding
 a parked row. Which rows park is an *output* of the build this request feeds,

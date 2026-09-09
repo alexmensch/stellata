@@ -122,12 +122,14 @@ which moves with every membership change and so cannot be quoted. Over the
 | `pairMemberSiblingNoAstrometryRow` | **0** | the pull carries no row for the source at all |
 
 The five are a partition, so the table sums to the dedup's input and a new
-refusal path has to be classified before it can hide in prose. **The zero is
-the gated one**: it is the astrometry request under-covering the pair-row half
-of its union (`../../astrometry-request/README.md` § The request is a union),
-the one cause a re-pull can fix, and the reason the tier reaches what it does.
-`notAnchorGrade` dominating is the finding — four in five candidate siblings
-are refused on fit quality, not on coverage.
+refusal path has to be classified before it can hide in prose. That input
+exceeds the request's own id count (`../../astrometry-request/README.md`
+§ The request is a union) because the dedup is per ROOT: a source under two WDS
+roots is a candidate for each, and counted once for each. **The zero is the
+gated one**: it is the astrometry request under-covering the pair-row half of
+its union, the one cause a re-pull can fix, and the reason the tier reaches what
+it does. `notAnchorGrade` dominating is the finding — four in five of the 7,858
+refusals are on fit quality, not on coverage.
 
 **The live tier size is `distPairMemberParallax`**
 (`../../build-catalog-expected.json`), and it is smaller than the index by
@@ -299,8 +301,10 @@ states that rather than arguing it. Two counts partition the 9:
 `companionDroppedParkedViaGaia5p` is **0** — every refused row routes
 `hip2_long_baseline` (7) or `system_inherited` (2) — and
 `companionDroppedParkedOwnedFit` is **0**, which is the stronger claim and the
-pinned one: not one refused row satisfies `resolveIndependentAstrometry`, so
-none carries an owned identifier on a per-component route. The 7
+pinned one: not one refused row satisfies `hasIndependentFitRoute`, so none
+carries an owned identifier on a per-component route. It asks about the ROUTE,
+not the placement `resolveIndependentAstrometry` builds on it — a measurement
+is what refusing withholds, and a row can state one with no xyz of its own. The 7
 `hip2_long_baseline` rows all carry the parked primary's HIP, inherited, which
 is exactly why their stated distance IS the refusal. **A non-zero
 `companionDroppedParkedOwnedFit` inverts the argument** — the gate would then
