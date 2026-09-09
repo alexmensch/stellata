@@ -78,8 +78,8 @@
   },
   "componentRows": 471,
   "bindingByClass": {
-    "crosswalk_gated": 358560,
-    "simbad_corroborated": 12485,
+    "crosswalk_gated": 358562,
+    "simbad_corroborated": 12483,
     "reviewed": 53,
     "none": 5829
   },
@@ -109,10 +109,10 @@
   "derivedVia": {
     "tyc": 298440,
     "hip": 866,
-    "cns5": 837,
-    "simbad": 12489
+    "cns5": 839,
+    "simbad": 12487
   },
-  "derivedConsensus": 295200,
+  "derivedConsensus": 295202,
   "derivedContestedMatch": 227,
   "derivedRejected": {
     "mag": 317,
