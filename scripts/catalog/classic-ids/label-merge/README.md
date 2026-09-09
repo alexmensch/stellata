@@ -108,9 +108,38 @@ the additions cannot fuse two same-as classes or move a canonical key.
 A promoted companion inherits neither list. The overlay names no component, so
 handing the anchor's alternative HD to the companion would invent the very
 attribution the table declines to make (`../../companions/README.md`
-§ Promoted-companion field inheritance). Attributing each number to its
-component where IV/27A's own columns disambiguate — 49618 carries HR 2520 and
-HIP 33048 where 49619 carries neither — is `stellata-3bsf.39`.
+§ Promoted-companion field inheritance).
+
+### A withheld number attaches to no record, and that is the answer
+
+**Where the component has a Tycho entry of its own the manifest already admits
+it as a row, and that row is where the number belongs; where it does not, no
+witness attributes it.** So the merge withholds and stops, and nothing in this
+folder attributes a withheld number to a promoted companion. Measured over the
+34, 2026-09-09, and each figure refutes a cheaper rule that looks available:
+
+- **IV/27A disambiguates 6.** Its `hr` / `hip` columns are not evidence of
+  componenthood: on 3 of those 6 — 14 Lyn, 113 Her, ο Leo — SIMBAD holds ONE
+  object for both numbers, so a rule reading "the number carrying neither is
+  the secondary" splits a star the authority does not split.
+- **SIMBAD splits 9 and folds 25** (live `ident` join, both numbers per pair).
+  A fold is not silence: it is the authority declining to attribute, which is
+  the same statement `extra-alias` already makes for the unresolved pairs.
+- **Of the 9, five have a second Tycho entry both IV/25 and SIMBAD give the
+  number to** — TYC 2013-959-2, 103-2864-2, 1065-3144-2, 4522-1564-2 and
+  8707-1990-2. Every one of those five, plus TYC 1655-484-2, is **already a
+  manifest row carrying the withheld HD as its display cell**
+  (`../../membership/README.md` § The additions). Handing the number to a
+  promoted companion as well would put two claimants on a designation an
+  existing row keys, which is what admission's collision guard and
+  `docs/sid.md` § 4.1 refuse.
+- **The four left have no committed route at all**: HD 19135, 91173, 171397 and
+  174639 are distinct SIMBAD objects that no second Tycho entry names.
+
+None of the 34 is searchable today, and the six with a row of their own are why
+that is a distance problem rather than a label one: all six park
+`no_parallax_published`, so the row that names the number builds no record
+(`stellata-hooj.13`).
 
 ## The collision guard
 

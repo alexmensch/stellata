@@ -137,6 +137,59 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
   });
 });
 
+const MANIFEST_PATH = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
+const PARKED_PATH = resolve(REPO_ROOT, 'data/membership/parked-ledger.tsv');
+
+describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('withheld sibling HD numbers', () => {
+  // label-merge/README.md § A withheld number attaches to no record. Six of
+  // the withheld numbers are the display cell of an admitted manifest row of
+  // their own, and every one of those rows parks — which is what says the
+  // numbers are unreachable for want of a distance rather than a label rule.
+  // One of them shipping is the signal to revisit that section, so it fails
+  // here rather than ageing the prose.
+  const WITHHELD_ON_THEIR_OWN_ROW = [25008, 33884, 124588, 136416, 186204, 198811];
+
+  let withheld: Set<number>;
+  let carriedBy: Map<number, string>;
+
+  beforeAll(() => {
+    withheld = new Set(
+      parseLabelFlipsTsv(readFileSync(resolve(REPO_ROOT, LABEL_FLIPS_FILE), 'utf-8'))
+        .filter((f) => f.disposition === 'extra-sibling-rendered' && f.field === 'hd')
+        .map((f) => Number(f.applied)),
+    );
+    carriedBy = new Map();
+    for (const { cells, idx } of dataRows(
+      readFileSync(MANIFEST_PATH, 'utf-8'),
+      ['tyc', 'hd'],
+      'membership-manifest.tsv',
+      'Re-run `pnpm run build:membership`.',
+    )) {
+      const hd = Number(cells[idx.hd]);
+      if (withheld.has(hd)) carriedBy.set(hd, cells[idx.tyc]);
+    }
+  });
+
+  it('withholds 34 HD numbers, six of which a manifest row of its own carries', () => {
+    expect(withheld.size).toBe(34);
+    expect([...carriedBy.keys()].sort((a, b) => a - b)).toEqual(WITHHELD_ON_THEIR_OWN_ROW);
+  });
+
+  it('parks every one of those six for want of a published parallax', () => {
+    const parked = new Map(
+      [...dataRows(
+        readFileSync(PARKED_PATH, 'utf-8'),
+        ['tyc', 'reason'],
+        'parked-ledger.tsv',
+        'Re-run `pnpm run build:catalog`.',
+      )].map(({ cells, idx }) => [cells[idx.tyc], cells[idx.reason]]),
+    );
+    expect([...carriedBy.values()].map((tyc) => parked.get(tyc))).toEqual(
+      WITHHELD_ON_THEIR_OWN_ROW.map(() => 'no_parallax_published'),
+    );
+  });
+});
+
 describe.skipIf(!bsc5Readable)('V/50 HD-less entries', () => {
   it('pins the out-of-scope set', () => {
     const hdless = parseBsc5Tsv(readFileSync(BSC5_PATH, 'utf-8'))
