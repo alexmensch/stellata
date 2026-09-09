@@ -3,7 +3,7 @@
 
 import {
   FLAG_BINARY_PRIMARY,
-} from '../../catalog-pure';
+} from '../../record/catalog-pure';
 import type { Star } from '../../parse/stars-parse';
 import {
   canonicalCompLetter,

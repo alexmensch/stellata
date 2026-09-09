@@ -2,7 +2,7 @@
 // two-source consensus first, each candidate through both binding gates.
 // See README.md § The binding is derived.
 
-import { normaliseGjKey, resolveGaiaSourceId } from '../catalog-pure';
+import { normaliseGjKey, resolveGaiaSourceId } from '../record/catalog-pure';
 import type { GateVVia, PrintedV } from '../photometry/v-magnitude-pure';
 import type { BindingEvidence } from '../classic-ids/classic-id-overlay-pure';
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';

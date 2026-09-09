@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import {
   CATALOG_MANIFEST_FILENAME,
   type SearchEntry,
-} from '../../../scripts/catalog/catalog-pure';
+} from '../../../scripts/catalog/record/catalog-pure';
 import type { BinariesData } from '../binaries/binaries-loader';
 import * as starPhysics from '../camera/controls/star-physics';
 import type { FocusableProvider } from '../camera/focus/focus-target';

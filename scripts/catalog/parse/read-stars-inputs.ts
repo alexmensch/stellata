@@ -8,7 +8,7 @@ import {
   parseBailerJonesTsv,
   parseGaiaApsisTsv,
   type ApsisRow,
-} from '../catalog-pure';
+} from '../record/catalog-pure';
 import {
   type SimbadSpectralIndex,
   emptySimbadSpectralIndex,

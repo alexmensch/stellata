@@ -4,7 +4,7 @@
 
 import { resolve } from 'node:path';
 
-import { parseSimbadWdsXidsTsv } from '../catalog-pure';
+import { parseSimbadWdsXidsTsv } from '../record/catalog-pure';
 import {
   parseGaiaAstrometryCatalogTsv,
   type GaiaAstrometryCatalogRow,

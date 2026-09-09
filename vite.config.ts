@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
-import { catalogChunkFilename, readCatalogHeader } from './scripts/catalog/catalog-pure.ts';
+import { catalogChunkFilename, readCatalogHeader } from './scripts/catalog/record/catalog-pure.ts';
 
 // Expose package.json version as `import.meta.env.VITE_APP_VERSION`. The
 // VITE_ prefix is the supported way to inject build-time values that work

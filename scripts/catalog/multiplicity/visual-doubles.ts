@@ -8,7 +8,7 @@ import {
   isOpticalDoublePrimary,
   OPTICAL_DOUBLE_MIN_SEP_PC,
   type OpticalDoubleContext,
-} from '../catalog-pure';
+} from '../record/catalog-pure';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
 import type { Star } from '../parse/stars-parse';
 

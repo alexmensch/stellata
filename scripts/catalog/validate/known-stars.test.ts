@@ -22,7 +22,7 @@ import {
   VAR_TYPE_CEPHEID,
   VAR_TYPE_RR_LYRAE,
   VAR_TYPE_DSCT,
-} from '../catalog-pure';
+} from '../record/catalog-pure';
 import {
   SPECTRAL_UNKNOWN,
   type SpectralInfo,

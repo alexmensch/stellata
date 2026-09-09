@@ -138,6 +138,6 @@ no primary row — there is no side to anchor the pair on, and taking the first
 row instead would attribute a glyph off a pairing the data never states.
 
 Emitted as the search index's `cl` / `cp` fields —
-`../../README.md` § Search index, `src/client/typeahead/README.md`
+`../../record/README.md` § Search index, `src/client/typeahead/README.md`
 § Star search, and `../../naming/README.md` § Two callers, one composer.
 `componentDesignations` pins the total.

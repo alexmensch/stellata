@@ -6,7 +6,7 @@ import {
   designationConIndex,
   NO_CONSTELLATION_INDEX,
   type SearchEntry,
-} from '../catalog-pure';
+} from '../record/catalog-pure';
 import { GREEK_GLYPHS } from './greek-forms';
 
 // The ladder stops at the catalogue tier. Its Gaia tail and the `SID #<n>`

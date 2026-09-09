@@ -13,7 +13,7 @@ import {
   absoluteToApparentMagnitude,
   apparentToAbsoluteMagnitude,
   parseGaiaSourceIdStr,
-} from '../catalog-pure';
+} from '../record/catalog-pure';
 import {
   SPECTRAL_UNKNOWN,
   type SpectralInfo,

@@ -1,7 +1,7 @@
 // Parsers for the frozen CDS classic-designation tables under
 // data/classic-ids/. See data/classic-ids/README.md § Provenance.
 import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
-import { normaliseGjKey } from '../catalog-pure';
+import { normaliseGjKey } from '../record/catalog-pure';
 import { citedParallax, type CitedParallax } from '../cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
 

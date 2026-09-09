@@ -6,7 +6,7 @@ import {
   designationConIndex,
   NO_CONSTELLATION_INDEX,
   type SearchEntry,
-} from '../../../scripts/catalog/catalog-pure';
+} from '../../../scripts/catalog/record/catalog-pure';
 import { ASCII_GREEK } from '../../../scripts/catalog/naming/greek-forms';
 import {
   bayerDesignation,

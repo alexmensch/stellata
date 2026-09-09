@@ -40,7 +40,7 @@ constellation + Bayer designation. Every constellation-relative *designation* �
 Flamsteed, GCVS, the component aliases below — resolves through
 `designationConIndex(entry.dc, entry.c)`, never `entry.c` alone: byte 34
 is where the star *is*, `dc` is what its name is *named for*, and the two
-diverge on a small minority of entries — `scripts/catalog/README.md`
+diverge on a small minority of entries — `scripts/catalog/record/README.md`
 § Search index owns that count (`designationConMismatch`), and restating it
 here only drifts, since every added record can move it. The
 dropdown's context line is the reverse — positional `c`, so a row reads
@@ -169,7 +169,7 @@ The numeric-ID maps echo the matched identifier in the dropdown
 *against*, so its row reads as the bare identifier the user typed.
 
 All four identifier maps — `hipMap`, `hdMap`, `hrMap`, `glMap` — are built by
-`buildAliasedIdIndex` (`scripts/catalog/catalog-pure.ts`) rather than inline.
+`buildAliasedIdIndex` (`scripts/catalog/record/catalog-pure.ts`) rather than inline.
 `hdMap` / `hrMap` are many-keys-to-one-record rather than 1:1:
 numbers records DISPLAY are laid down first, then the `hda` / `hra` aliases,
 first write winning. That one rule settles two collisions — 57 HD and 11 HR

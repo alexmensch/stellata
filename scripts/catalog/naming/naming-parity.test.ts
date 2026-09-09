@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../../util/paths';
-import type { SearchEntry } from '../catalog-pure';
+import type { SearchEntry } from '../record/catalog-pure';
 import { buildSearchIndex, normalizeGlKey } from '../../../src/client/typeahead/search-corpus';
 import { displayNamesFromSearchIndex } from './star-naming-pure';
 import { foldNameKey } from './wgsn-normalise-pure';

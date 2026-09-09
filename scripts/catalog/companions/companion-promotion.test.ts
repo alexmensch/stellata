@@ -23,7 +23,7 @@ import {
   FLAG_BINARY_COMPANION_SYNTHETIC,
   NO_CONSTELLATION_INDEX,
   SOLAR_BV_FALLBACK,
-} from '../catalog-pure';
+} from '../record/catalog-pure';
 import {
   SPECTRAL_UNKNOWN,
   classifyFromSimbad,

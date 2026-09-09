@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import {
   CATALOG_MANIFEST_FILENAME,
   type SearchEntry,
-} from '../../../scripts/catalog/catalog-pure';
+} from '../../../scripts/catalog/record/catalog-pure';
 import type { BinariesData } from '../binaries/binaries-loader';
 import { NO_PARENT } from '../binaries/binaries-loader';
 import { makeKindContext } from '../kinds/kind-context-mock';

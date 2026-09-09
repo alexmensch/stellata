@@ -9,7 +9,7 @@ import { Typeahead, TypeaheadGroup } from './typeahead';
 import {
   NO_CONSTELLATION_INDEX,
   type SearchEntry,
-} from '../../../scripts/catalog/catalog-pure';
+} from '../../../scripts/catalog/record/catalog-pure';
 import { buildSearchIndex, GL_QUERY_RE, normalizeGlKey } from './search-corpus';
 
 export type { SearchEntry };

@@ -15,7 +15,7 @@ spectral-format.ts        formatSpectral(raw, spectClass, lumClass) →
                           from the shipped numeric class bytes, with
                           white-dwarf / Wolf-Rayet / carbon overrides.
                           This is a runtime mini-formatter — the full
-                          parser in scripts/catalog/catalog-pure.ts is
+                          parser in scripts/catalog/record/catalog-pure.ts is
                           BUILD-only.
 physical-format.ts        Radii (stars "X R☉" — catalog physicalRadius
                           is already solar radii; planets "X R⊕ (km)"),

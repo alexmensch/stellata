@@ -2,7 +2,7 @@
 // correction by class, and the absolute-magnitude inverse. See README.md.
 
 import { ballesterosBvFromTeff } from '../../colour/blackbody-lut-pure';
-import { SOLAR_BV_FALLBACK, type ApsisRow } from '../catalog-pure';
+import { SOLAR_BV_FALLBACK, type ApsisRow } from '../record/catalog-pure';
 import {
   SPECTRAL_UNKNOWN,
   UNKNOWN_CLASS_IDX,

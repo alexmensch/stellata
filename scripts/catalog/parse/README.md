@@ -4,7 +4,8 @@ The membership-manifest row walk (`readStars` in `stars-parse.ts`) and
 everything it resolves per star: space-motion velocity, the GCVS variability
 cross-match, and Stellarium stick figures. Spectral class and physical radius
 are resolved here but owned by `../spectral/`. The binary record layout these
-fields land in is `../README.md` § Binary catalog format; the membership term
+fields land in is `../record/README.md` § Binary catalog format; the
+membership term
 it walks is `../membership/README.md`.
 
 ## Files in this area
@@ -67,7 +68,7 @@ scripts/catalog/parse/
 the single header walk for every committed table the build reads:
 `parseGaiaAstrometryCatalogTsv` / `parseHip2Tsv` / `parseNssSourceIdSet`
 (`../distance/direction-cascade.ts`), `parseBailerJonesTsv` and
-`parseSimbadWdsXidsTsv` (`../catalog-pure.ts`), `parseSimbadSampleRows`
+`parseSimbadWdsXidsTsv` (`../record/catalog-pure.ts`), `parseSimbadSampleRows`
 (`../validate/simbad-sample-parse.ts`), and the classic-ID parsers
 (`../classic-ids/classic-ids-parse.ts`).
 
@@ -330,7 +331,7 @@ designation the naming ladder resolves states its own constellation and wins
 label pass fills it from IV/27A keyed on the record's own HD/HIP, else a GCVS
 designation's trailing abbreviation. Cascade, coverage and the GCVS precedence:
 `../classic-ids/README.md` § The designation constellation.
-`designationConIndex(dc, c)` in `../catalog-pure.ts` is still the single
+`designationConIndex(dc, c)` in `../record/catalog-pure.ts` is still the single
 statement of which field a Bayer / Flamsteed / GCVS designation reads, and the
 positional `conIndex` is still the last fallback (123 faint Flamsteed-only
 records IV/27A's TAP subset omits).
@@ -358,7 +359,8 @@ ways —
 
 Those two plus CM Ind (named for Indus, positionally in Pavo) are the GCVS
 share of the entries `designationConMismatch` pins; the rest come from IV/27A.
-The count itself lives in `../README.md` § Search index — it moves with the
+The count itself lives in `../record/README.md` § Search index — it moves
+with the
 record set, so restating it here only goes stale (this line read 65 against a
 pinned 68).
 

@@ -2,7 +2,7 @@
 // label, spectral designation, Bayer parts. Leaf module — the star kind
 // module builds these at load without a cycle through search.ts.
 
-import { type SearchEntry } from '../../../scripts/catalog/catalog-pure';
+import { type SearchEntry } from '../../../scripts/catalog/record/catalog-pure';
 import {
   displayNamesFromSearchIndex,
   superscript,

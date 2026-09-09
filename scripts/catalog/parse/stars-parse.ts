@@ -20,7 +20,7 @@ import {
   type ApsisRow,
   type SimbadNamespace,
   type SimbadRecordKeys,
-} from '../catalog-pure';
+} from '../record/catalog-pure';
 import { classifyFromSimbad } from '../spectral/spectral-classify';
 import {
   type SimbadSpectralIndex,

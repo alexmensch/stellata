@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SOLAR_BV_FALLBACK, type ApsisRow } from '../catalog-pure';
+import { SOLAR_BV_FALLBACK, type ApsisRow } from '../record/catalog-pure';
 import {
   SPECTRAL_UNKNOWN,
   classifyFromSimbad,

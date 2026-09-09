@@ -10,7 +10,7 @@ import {
   type SimbadNamespace,
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
-} from '../catalog-pure';
+} from '../record/catalog-pure';
 import {
   classifyFromGspspec,
   classifyFromSimbad,

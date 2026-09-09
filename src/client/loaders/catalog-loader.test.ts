@@ -18,7 +18,7 @@ import {
   planCatalogChunks,
   assembleCatalogChunks,
   type CatalogManifest,
-} from '../../../scripts/catalog/catalog-pure';
+} from '../../../scripts/catalog/record/catalog-pure';
 
 // Test-side view of one record: WireStarRecord with the wide/rarely-set
 // fields defaulted so fixtures stay terse. Encoded through the REAL

@@ -12,7 +12,7 @@ import {
   gspcBMinusV,
   resolveColourIndex,
 } from './colour-index-pure';
-import { SOLAR_BV_FALLBACK } from '../catalog-pure';
+import { SOLAR_BV_FALLBACK } from '../record/catalog-pure';
 import { RIELLO_BP_RP_MIN, rielloGMinusV } from './v-magnitude-pure';
 import { GAIA_PHOTOMETRY_SATURATION_G } from './gaia-photometry-pure';
 import { atColour, photometry } from './photometry-fixture';

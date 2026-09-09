@@ -2,7 +2,7 @@
 // to its display name, with the NAME tiers written into `proper`.
 // See README.md § Two callers, one composer.
 
-import { FLAG_HAS_NAME, NO_CONSTELLATION_INDEX } from '../catalog-pure';
+import { FLAG_HAS_NAME, NO_CONSTELLATION_INDEX } from '../record/catalog-pure';
 import type { ComponentDesignation } from '../companions/record-index/record-index';
 import {
   isApprovedName,

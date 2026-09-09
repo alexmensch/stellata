@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { FLAG_BINARY_PRIMARY } from '../../catalog-pure';
+import { FLAG_BINARY_PRIMARY } from '../../record/catalog-pure';
 import { makeStar as makeStarWithDefaults } from '../../parse/star-fixture';
 import type { Star } from '../../parse/stars-parse';
 import type { MultiplesTsvRow } from '../companion-promotion';

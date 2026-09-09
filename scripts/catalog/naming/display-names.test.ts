@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { FLAG_HAS_NAME, NO_CONSTELLATION_INDEX } from '../catalog-pure';
+import { FLAG_HAS_NAME, NO_CONSTELLATION_INDEX } from '../record/catalog-pure';
 import type { ComponentDesignation } from '../companions/record-index/record-index';
 import { assignDisplayNames, type DisplayNameSource } from './display-names';
 

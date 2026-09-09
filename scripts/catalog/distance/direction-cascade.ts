@@ -8,7 +8,7 @@ import {
 } from '../../../src/client/util/equatorial-basis';
 import { headerIndex } from '../parse/corpus-tsv';
 import { gaiaHas5pSolution } from './gaia-distrust';
-import type { SimbadRecordKeys } from '../catalog-pure';
+import type { SimbadRecordKeys } from '../record/catalog-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import {
   lookupCns5Astrometry,

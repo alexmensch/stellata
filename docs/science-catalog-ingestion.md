@@ -265,7 +265,7 @@ spectral-type enum (`O`, `B`, `A`, `F`, `G`, `K`, `M`, `CSTAR`,
 Stellata pulls all seven Apsis floats plus the gspspec spectral-type
 enum per Gaia DR3 source_id into `data/gaia/gaia_dr3_apsis.tsv` and
 writes them per record into the binary at offsets 52–79 (see
-`scripts/catalog/README.md` § Binary catalog format). Coverage: ~99.6% of
+`scripts/catalog/record/README.md` § Binary catalog format). Coverage: ~99.6% of
 AT-HYG rows that resolve to a Gaia DR3 source_id match an Apsis row;
 ~85% have a non-null T_eff in at least one of gspphot or gspspec. That
 last number is the population the renderer's colour LUT path can re-

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { describe, it, expect } from 'vitest';
 
-import { NO_CONSTELLATION_INDEX, SOLAR_BV_FALLBACK } from '../catalog-pure';
+import { NO_CONSTELLATION_INDEX, SOLAR_BV_FALLBACK } from '../record/catalog-pure';
 import { avSolToStar, R_V, type DustGrid } from '../distance/dust-deextinction-pure';
 import {
   CATALOG_SCENE_EPOCH,

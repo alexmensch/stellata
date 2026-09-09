@@ -10,7 +10,7 @@ import {
   DEFAULT_SEARCH_INDEX,
   loadCatalog,
 } from '../catalog/catalog-lookup';
-import { FLAG_IS_SOL, type SearchEntry } from '../catalog/catalog-pure';
+import { FLAG_IS_SOL, type SearchEntry } from '../catalog/record/catalog-pure';
 import { catalogRecordDesignations } from './catalog-designations';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import {

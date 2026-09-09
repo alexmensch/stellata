@@ -3,7 +3,7 @@
 
 import {
   FLAG_BINARY_COMPANION_SYNTHETIC,
-} from '../../../scripts/catalog/catalog-pure';
+} from '../../../scripts/catalog/record/catalog-pure';
 import {
   UNKNOWN_CLASS_IDX,
   classifyFromSimbad,

@@ -1,7 +1,7 @@
 // The constellation a record's Bayer / Flamsteed designation is NAMED for,
 // resolved from IV/27A by designation. See README.md § The designation
 // constellation.
-import { NO_CONSTELLATION_INDEX } from '../catalog-pure';
+import { NO_CONSTELLATION_INDEX } from '../record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations';
 import type { CrossIndexRow } from './classic-ids-parse';
 

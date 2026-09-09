@@ -8,7 +8,7 @@ import {
   walkSimbadNamespaces,
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
-} from '../catalog-pure';
+} from '../record/catalog-pure';
 import { citedParallax, type CitedParallax } from '../cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
 

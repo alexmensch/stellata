@@ -3,7 +3,7 @@
 // See README.md § The designation constellation.
 import { existsSync } from 'node:fs';
 
-import { NO_CONSTELLATION_INDEX } from '../catalog-pure';
+import { NO_CONSTELLATION_INDEX } from '../record/catalog-pure';
 import type { Star } from '../parse/stars-parse';
 import {
   CROSS_INDEX_INPUT_PATHS,

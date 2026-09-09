@@ -2,7 +2,7 @@
 // the primaries' additions, the two ledgers, the TSV codecs, and the
 // spine ↔ manifest matcher the parity gate runs. Contract: docs/catalog-driver.md § 3.1.
 
-import { SOL_PROPER_NAME, normaliseGjKey } from '../catalog-pure';
+import { SOL_PROPER_NAME, normaliseGjKey } from '../record/catalog-pure';
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';
 import {
   BRIGHT_TIER_MAG_CEILING,

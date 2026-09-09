@@ -51,7 +51,7 @@ looks up the period+amp. Two independent gates:
 Most catalog stars aren't variable, but the ones that are tend to be the
 astronomically interesting ones (Betelgeuse, Mira, Algol, Cepheids, etc.).
 
-Each row's `varType` comes from `classifyGcvsVarType` (`../../catalog-pure.ts`):
+Each row's `varType` comes from `classifyGcvsVarType` (`../../record/catalog-pure.ts`):
 GCVS EA/EB/EW/ELL/E → `VAR_TYPE_ECLIPSING`, the pulsator families →
 `VAR_TYPE_PULSATING`, everything else → `VAR_TYPE_OTHER`. A bare
 transiting-planet host (GCVS EP with no superimposed intrinsic
