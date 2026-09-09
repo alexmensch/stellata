@@ -2,7 +2,7 @@
 
 The source_id list the Gaia 5p pull is made against. `pnpm run
 build:astrometry-request` emits `data/gaia/gaia_catalog_source_id_request.tsv`
-— **378,840** ids, the union of four contributions the table's four
+— **379,135** ids, the union of four contributions the table's four
 consumers need (§ The request is a union). Not a network pull and not on the
 `build:catalog` path: this is **input preparation** for `scripts/refresh/`,
 which is why it sits beside the record build rather than inside it
@@ -55,9 +55,9 @@ different sets, so the request is the union of all four:
 | Contribution | Ids | Consumer |
 |---|---|---|
 | the manifest's `gaia_source_id` column | 371,098 | the record build: direction / rv / V / ci cascades |
-| `../classic-ids/`' binding-gate candidates | 99,799, +493 beyond the manifest | the gate's `phot_g_mean_mag` evidence |
-| `../membership/`' binding-derivation candidates | 313,290, +231 beyond the two above | the derivation's `phot_g_mean_mag` evidence — every source any spine row could be bound to |
-| `multiples.tsv`' kept-physical pair members | 16,108, +7,018 beyond the three above | the parallax cascade's `pair_member_parallax` tier |
+| `../classic-ids/`' binding-gate candidates | 354,987, +1,024 beyond the manifest | the gate's `phot_g_mean_mag` evidence |
+| `../membership/`' binding-derivation candidates | 313,290, +128 beyond the two above | the derivation's `phot_g_mean_mag` evidence — every source any spine row could be bound to |
+| `multiples.tsv`' kept-physical pair members | 16,108, +6,885 beyond the three above | the parallax cascade's `pair_member_parallax` tier |
 
 **The derivation's contribution is the second one's shape again, on the record
 side**: the manifest generator weighs candidates before it writes a binding,
@@ -102,17 +102,18 @@ is one whose binding was never vetted.
 `bindingCandidateSourceIds` (`../classic-ids/binding-candidates.ts`) is
 shared with the overlay build so the two cannot drift, and
 `binding-candidates.test.ts` pins the correspondence against a built overlay
-rather than leaving it to inspection. It is far short of the ~59k
-every route could propose, because `applyBindingGate` skips what it cannot
-weigh: an entry with no HIP (the TYC→HD route never attaches one) and a HIP
-with no printed V are both skipped, so a `G` for either decides nothing.
+rather than leaving it to inspection. It is the gate's own reach restated on
+the request side, so it widened with the gate: a source is a candidate where
+any of the V cascade's three printed tiers answers for it, which is nearly the
+whole overlay — only the 2,738 rows no tier reaches are skipped, because
+without a printed V a `G` decides nothing.
 
-That narrowing is why the gate's contribution loads only two of the cross-walk
-inputs (`loadBindingCandidateInputs`): a `hip` reaches an overlay entry from
-the HIP cross-walk or a CNS5 row and nowhere else. The derivation's
-contribution is what streams the 2.5 M-row TYC table here, narrowed to the
-spine's own Tycho ids (`loadBindingTables`), because the TYC walk on the
-record's own TYC is one of its four sources.
+The gate's contribution therefore reads the same tables the derivation's does,
+and this script loads them once: the 2.5 M-row TYC cross-walk narrowed to
+IV/25's Tycho ids UNION the spine's (the gate walks IV/25's, the derivation
+the spine's), plus Tycho-2 and Gliese for the two lower V tiers. The widening
+cost 295 ids on the request and is what lets the gate see a mis-binding on a
+row with no Hipparcos V at all.
 
 **Requesting a candidate is not the same as pulling one.** A requested id the
 archive returns no row for lands the gate right back in pass-by-default, which
@@ -120,7 +121,7 @@ is why `gateSkippedNoGMag` and `derivedWeighedNoGMag` are pinned at **0**: each
 counts candidates that reached its gate with no row in the pull, so a request
 that quietly stops covering them fails a snapshot instead of silently accepting
 bindings. Both read 0 today — the pull does return 2 fewer rows than the
-request (378,838 of 378,840), but both are reviewed bindings rather than
+request (379,133 of 379,135), but both are reviewed bindings rather than
 candidates: the two DR2 ids of `data/athyg/stale_gaia_source_ids.tsv` SIMBAD
 holds no DR3 successor for (`../spine/README.md` § Six source_ids DR3 does not
 publish). What no request can fix is `gateSkippedNullGMag` (63) and

@@ -60,9 +60,9 @@ gaia_source_id  binding  routes
 ```
 
 - The identifier cells carry the record's **final** labels: for a spine row
-  the classic-ID label merge has already run (`../classic-ids/README.md`
-  label-merge/README.md), so `hd_alt` / `hr_alt` hold the alias lists and there
-  no second designation set to flip against. `bayer` and `proper` are the
+  the classic-ID label merge has already run
+  (`../classic-ids/label-merge/README.md`), so `hd_alt` / `hr_alt` hold the
+  alias lists and there is no second designation set to flip against. `bayer` and `proper` are the
   spine's printed cells on spine rows and empty on additions — the naming
   ladder resolves both from HD / HIP at build time and reads the cell only as
   a counter (`../naming/README.md`).
@@ -104,7 +104,8 @@ where the overlay can now speak. It moves five cells today — HD 2094 onto
 HIP 1997, whose own addition row folds away as a component (a § 7 merge,
 retiring `hd:2094` in favour of `hip:1997`); GJ 9013 onto Ankaa; GJ 9257AB onto
 Tegmine; `Gl 596.1A` to `GJ 9527` on ψ Ser under CNS5's renumbering; and one
-curated refusal (`../classic-ids/label-merge/README.md` § Curated overrides): Propus, where
+curated refusal (`../classic-ids/label-merge/README.md` § Curated overrides):
+Propus, where
 Gaia fits one source across a resolved Tycho-2 pair and its cross-match keys
 that source to the sibling, so the overlay would hand η Gem the sibling's
 HD 253820 in place of its own HD 42995. It is the only curated row: Gl 563.2
@@ -315,7 +316,7 @@ The consequences, measured 2026-09-06:
 | `admitted:cns5_census` | 3,356 | CNS5 `GJ 1xxxx` row |
 | `component:<anchor>` | 471 | every designation it arrived with is another record's. 466 are the second Tycho-2 entry of a resolved pair whose HD (and, through Tycho-2's `hip`, HIP) a spine record carries; 5 are the second of a pair neither component of which is on the spine. Not a row; ledgered onto the record it resolves to |
 | source left empty, on a spine record | 108 | Gaia fitted one source where Tycho-2 resolved two stars |
-| source left empty, gate refused | 13 | the raw binding is in `rejected_bindings.tsv` |
+| source left empty, gate refused | 121 | the raw binding is in `rejected_bindings.tsv` |
 
 The audit's headline cohort sizes (60,344 / 566 / 3,362) are pre-grouping and
 pre-admission; the table above is what the manifest carries.

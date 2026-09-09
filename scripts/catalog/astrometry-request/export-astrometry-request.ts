@@ -6,10 +6,14 @@ import { resolve } from 'node:path';
 
 import { sortSourceIdsNumeric } from './export-astrometry-request-pure';
 import {
+  SRC_TYC2_HD,
   bindingCandidateSourceIds,
   loadBindingCandidateInputs,
 } from '../classic-ids/binding-candidates';
-import { HIP_VMAG_HINT, SRC_HIP_VMAG } from '../classic-ids/binding-evidence';
+import { parseTyc2HdTsv } from '../classic-ids/classic-ids-parse';
+import {
+  HIP_VMAG_HINT, SRC_GLIESE, SRC_HIP_VMAG, SRC_TYCHO2_MAIN, SRC_TYCHO2_SUPPL1,
+} from '../classic-ids/binding-evidence';
 import { MULTIPLES_TSV, readMultiplesTsv } from '../companions/companion-promotion';
 import { pairMemberSourceIds } from '../distance/parallax/pair-member-parallax';
 import {
@@ -20,7 +24,10 @@ import {
   MEMBERSHIP_MANIFEST_FILE,
   iterManifestTsv,
 } from '../membership/membership-manifest-pure';
+import { lookupGliese, parseGlieseTsv } from '../gliese-parse';
 import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
+import { tycho2VMagnitude } from '../photometry/v-magnitude-pure';
+import { parseTycho2Tsvs } from '../tycho2-parse';
 import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pure';
 import { indexCns5 } from '../spine/primaries-audit-pure';
 import { LFS_HINT, loadBindingTables } from '../spine/primaries-tables';
@@ -43,12 +50,33 @@ async function main(): Promise<void> {
   const membership = ids.size;
 
   const { vmag: hipVMag } = parseHipPhotometryTsv(readRequired(SRC_HIP_VMAG, HIP_VMAG_HINT));
-  const candidates = bindingCandidateSourceIds(loadBindingCandidateInputs(), hipVMag);
+
+  // One table load for both contributions: the gate's Tycho-2 / Gliese arms
+  // read the same tables the derivation's do, and the TYC cross-walk has to
+  // cover IV/25's Tycho ids as well as the spine's for the gate's arm.
+  const spine = parseSpineTsv(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
+  const iv25 = parseTyc2HdTsv(readRequired(SRC_TYC2_HD, LFS_HINT));
+  const keepTycs = new Set(iv25.map((r) => r.tyc));
+  for (const row of spine) if (row.tyc !== '') keepTycs.add(row.tyc);
+  const tables = await loadBindingTables(keepTycs);
+  const tycho2 = parseTycho2Tsvs(
+    readRequired(SRC_TYCHO2_MAIN, LFS_HINT), readRequired(SRC_TYCHO2_SUPPL1, LFS_HINT),
+  );
+  const gliese = parseGlieseTsv(readRequired(SRC_GLIESE, LFS_HINT));
+  const printedV = {
+    tycho2VOfTyc: (tyc: string): number | null => {
+      const row = tycho2.get(tyc);
+      return row === undefined ? null : tycho2VMagnitude(row.btMag, row.vtMag).v;
+    },
+    glieseVOfGj: (gj: string): number | null => lookupGliese(gliese, gj)?.vMag ?? null,
+  };
+
+  const candidates = bindingCandidateSourceIds(
+    loadBindingCandidateInputs(), hipVMag, printedV, tables.tycToSource, iv25,
+  );
   for (const id of candidates) ids.add(id);
   const afterGate = ids.size;
 
-  const spine = parseSpineTsv(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
-  const tables = await loadBindingTables(new Set(spine.map((r) => r.tyc).filter((t) => t !== '')));
   const derivation = derivationCandidateSourceIds(
     spine, tables, indexCns5(tables.cns5).cns5ByOwnKey, indexSimbadSources(tables.simbadBySourceId),
   );

@@ -53,13 +53,14 @@ function writeDisagreements(rows: readonly HdHipRouteDisagreement[]): void {
 function writeRejectedBindings(rows: readonly RejectedBinding[]): void {
   writeTsv(
     OUT_REJECTED,
-    'gaia_source_id\thip\tv_mag\tg_mag\treason\tdesignations',
+    'gaia_source_id\thip\tv_mag\tv_via\tg_mag\treason\tdesignations',
     [...rows]
-      .sort((a, b) => a.hip - b.hip)
+      .sort((a, b) => a.hip - b.hip || (a.sourceId < b.sourceId ? -1 : 1))
       .map((r) => [
         r.sourceId,
-        r.hip,
+        r.hip === 0 ? '' : r.hip,
         r.vMag.toFixed(3),
+        r.vVia,
         r.gMag === null ? '' : r.gMag.toFixed(3),
         r.reason,
         r.designations,
@@ -82,8 +83,9 @@ function logOverlay(overlay: ClassicIdOverlay, counts: OverlayJoinCounts): void 
   console.log(
     `binding gate: dropped ${counts.gateRejectedMag} rows on G−V, ` +
       `${counts.gateRejectedSibling} on sibling-letter attribution; ` +
-      `${counts.gateSkippedNoHipVMag} rows carry no printed V under any HIP and ` +
-      `cannot be vetted; ${counts.gateSkippedNoGMag} gateable rows are absent ` +
+      `${counts.gateSkippedNoPrintedV} rows carry no printed V under any tier ` +
+      `and cannot be vetted (gateable via hip ${counts.gateableVia.hip}, ` +
+      `tycho2 ${counts.gateableVia.tycho2}, gliese ${counts.gateableVia.gliese}); ${counts.gateSkippedNoGMag} gateable rows are absent ` +
       `from the astrometry pull (must be 0 — the request under-covers the ` +
       `candidates), ${counts.gateSkippedNullGMag} have a row but no published G`,
   );

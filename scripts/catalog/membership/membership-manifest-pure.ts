@@ -18,7 +18,6 @@ import {
   type BindingCells,
   type BindingSource,
   type DerivedBinding,
-  type PrintedV,
   type RankedCandidate,
   type RowGateEvidence,
 } from './binding-derivation-pure';
@@ -34,7 +33,7 @@ import {
 } from '../classic-ids/label-merge/label-merge-pure';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { dataRows, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
-import { tycho2VMagnitude } from '../photometry/v-magnitude-pure';
+import { printedVBelowHip, tycho2VMagnitude, type PrintedV } from '../photometry/v-magnitude-pure';
 import { spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import {
   ATHYG_HD_LINK_FLOOR,
@@ -711,19 +710,21 @@ function deriveSpineBindings(
   spine: readonly SpineRow[], tables: PrimaryTables, idx: PrimaryIndex, evidence: BindingEvidence,
 ): SpineBinding[] {
   const simbad = indexSimbadSources(tables.simbadBySourceId);
-  const printedVBelowHip = (row: BindingCells): PrintedV | null => {
-    const t = row.tyc === '' ? undefined : tables.tycho2.get(row.tyc);
-    const tycV = t === undefined ? null : tycho2VMagnitude(t.btMag, t.vtMag).v;
-    if (tycV !== null) return { vMag: tycV, vVia: 'tycho2' };
-    const glV = row.gl === '' ? null : lookupGliese(tables.gliese, row.gl)?.vMag ?? null;
-    return glV === null ? null : { vMag: glV, vVia: 'gliese' };
+  const tycho2VOf = (tyc: string): number | null => {
+    const t = tables.tycho2.get(tyc);
+    return t === undefined ? null : tycho2VMagnitude(t.btMag, t.vtMag).v;
   };
+  const glieseVOf = (gl: string): number | null =>
+    lookupGliese(tables.gliese, gl)?.vMag ?? null;
+  const belowHip = (row: BindingCells): PrintedV | null => printedVBelowHip(
+    row.tyc === '' ? [] : [row.tyc], row.gl === '' ? [] : [row.gl], tycho2VOf, glieseVOf,
+  );
   const bindings: SpineBinding[] = spine.map((row) => {
     const frozen = row.gaia_source_id === '' ? null : row.gaia_source_id;
     if (row.proper === SOL_PROPER_NAME) {
       return { frozen, derived: null, gate: null, comparison: 'sol' };
     }
-    const gate = rowGateEvidence(row, evidence, printedVBelowHip);
+    const gate = rowGateEvidence(row, evidence, belowHip);
     const derived = deriveBinding(bindingCandidates(row, tables, idx.cns5ByOwnKey, simbad), gate);
     return { frozen, derived, gate, comparison: compareBinding(frozen, derived, false) };
   });

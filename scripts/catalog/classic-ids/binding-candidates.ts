@@ -52,6 +52,15 @@ export async function loadClassicIdCrossWalks(): Promise<ClassicIdCrossWalks> {
   return { ...loadBindingCandidateInputs(), tyc2Hd, tycToSource };
 }
 
+/** The V cascade's printed tiers, as the candidate set reads them: a Tycho
+ *  entry's reduced `VT` and a GJ cell's Gliese `Vmag`. Supplied by the caller
+ *  because loading the two tables is I/O this pure walk should not do, and
+ *  because the astrometry request already holds both. */
+export interface PrintedVLookups {
+  tycho2VOfTyc: (tyc: string) => number | null;
+  glieseVOfGj: (gj: string) => number | null;
+}
+
 /** The source_ids the binding gate can actually weigh, and therefore the ones
  *  the astrometry pull has to carry a `phot_g_mean_mag` for.
  *
@@ -62,14 +71,12 @@ export async function loadClassicIdCrossWalks(): Promise<ClassicIdCrossWalks> {
  *  the gate with nothing to weigh, where it passes by default instead of
  *  rejecting.
  *
- *  Two narrowings make it a few hundred ids rather than tens of thousands, and
- *  both are properties of `applyBindingGate` rather than economies:
- *
- *  - **A candidate with no HIP is skipped outright.** An overlay entry takes
- *    its `hip` only from the HIP cross-walk or a CNS5 row's own hip, so a
- *    source reached solely through the TYC→HD route never carries one.
- *  - **A HIP with no printed V is skipped too** (`gateSkippedNoHipVMag`) —
- *    the gate compares G against that V, so without it a G decides nothing.
+ *  **The set is the gate's own reach, restated on the request side**, so it
+ *  widens exactly when the gate does: a source is a candidate where any of the
+ *  V cascade's three printed tiers answers for it — a HIP the cross-walk or a
+ *  CNS5 row gives it, a Tycho entry IV/25 routes to it, or a CNS5 GJ cell. Only
+ *  a source no tier reaches is skipped (`gateSkippedNoPrintedV`), because
+ *  without a printed V a `G` decides nothing.
  *
  *  Drifting from either producer re-opens the silent-acceptance fault, so the
  *  correspondence is pinned two ways: `binding-candidates.test.ts` walks a
@@ -79,14 +86,28 @@ export async function loadClassicIdCrossWalks(): Promise<ClassicIdCrossWalks> {
 export function bindingCandidateSourceIds(
   inputs: BindingCandidateInputs,
   hipVMag: ReadonlyMap<number, number>,
+  printedV: PrintedVLookups | null = null,
+  tycToSource: ReadonlyMap<string, string> | null = null,
+  tyc2Hd: readonly { tyc: string }[] = [],
 ): Set<string> {
   const ids = new Set<string>();
   for (const [hip, sourceId] of inputs.hipToSource) {
     if (hipVMag.has(hip)) ids.add(sourceId);
   }
   for (const row of inputs.cns5) {
-    if (row.gaiaSourceId !== null && row.hip !== null && hipVMag.has(row.hip)) {
+    if (row.gaiaSourceId === null) continue;
+    if (row.hip !== null && hipVMag.has(row.hip)) ids.add(row.gaiaSourceId);
+    else if (printedV !== null
+      && printedV.glieseVOfGj(`${row.gj}${row.gjComp ?? ''}`) !== null) {
       ids.add(row.gaiaSourceId);
+    }
+  }
+  if (printedV !== null && tycToSource !== null) {
+    for (const row of tyc2Hd) {
+      const sourceId = tycToSource.get(row.tyc);
+      if (sourceId !== undefined && printedV.tycho2VOfTyc(row.tyc) !== null) {
+        ids.add(sourceId);
+      }
     }
   }
   return ids;

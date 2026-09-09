@@ -135,7 +135,7 @@ the HD route keeps the label and the row queues (`data/classic-ids/README.md`).
 **Every route above is an unvetted best-neighbour walk, so the assembled
 overlay is then gated** — `applyBindingGate` re-runs the record build's own
 `resolveGaiaSourceId` checks and drops any row whose source_id is not the
-star its designations name (268 rows today). It runs BEFORE the counts, so
+star its designations name (460 rows today). It runs BEFORE the counts, so
 every `overlay*` count and `hdOnMultipleSources` describe the artifact while
 the route counters above stay pre-gate and keep describing upstream
 reachability. Rationale, the two canonical cases, and the bound on the
@@ -143,11 +143,20 @@ gate's reach: `data/classic-ids/README.md` § The binding gate.
 
 ### The gate's evidence has to be pulled
 
-The magnitude check compares a candidate's `phot_g_mean_mag` against the
-printed V of its brightest HIP. That G comes from
-`data/gaia/gaia_dr3_astrometry_catalog.tsv`, and **`gMagOf` returning null
-is not a rejection — it is a pass.** So a candidate the astrometry pull does
-not cover is not merely unvetted, it is silently accepted.
+The magnitude check compares a candidate's `phot_g_mean_mag` against the row's
+printed V, taken in **the V cascade's own tier order** — Hipparcos on the
+brightest of the row's HIPs, else Tycho-2's `VT − 0.090(BT − VT)` on the Tycho
+entries IV/25 routes to this source, else Gliese on its GJ cells
+(`../photometry/README.md` § The V cascade). One helper, `printedVBelowHip`,
+serves both binding gates, because `docs/catalog-driver.md` § 4 says the label
+side and the record side must not drift on what counts as a bad binding — and
+until the lower two tiers landed here they drifted on evidence *reach*, with
+the label gate weighing 99,799 rows against the derivation's whole spine.
+
+The `G` comes from `data/gaia/gaia_dr3_astrometry_catalog.tsv`, and **`gMagOf`
+returning null is not a rejection — it is a pass.** So a candidate the
+astrometry pull does not cover is not merely unvetted, it is silently
+accepted.
 
 Candidates are not spine rows. A route resolves a designation to whatever
 source a cross-walk names, and the gate exists precisely because that source
@@ -156,11 +165,18 @@ is often not the star, so the request has to carry them explicitly:
 
 `gateRejectedMag` measures the difference directly, and it is the count to
 watch if this request ever changes again. Today the union pulls evidence for
-every candidate and the queue reads **268** rows
+every candidate and the queue reads **460** rows
 (`data/classic-ids/README.md` § The binding gate); a membership-column-only
 request drops `gateRejectedMag` to **0**, every candidate unvettable and
 silently accepted. `reason` is the first gate that fired, so the two reason
 counts trade rows without any binding changing verdict.
+
+**The sibling-letter arm keys on a HIP and the magnitude arm does not**, so
+widening the V evidence widened only the second: `gateRejectedSibling` holds
+at 50 across the change while `gateRejectedMag` went 218 → 410. A row with no
+HIP passes `null` to `resolveGaiaSourceId`, exactly as the record side passes
+its own empty cell — passing `0` instead applies a gate here that the
+derivation does not apply there, and read 692 rejections rather than 50.
 
 **Two counts say whether the evidence actually arrived**, because a missing `G`
 is a pass either way and only one of the causes is fixable:
@@ -168,15 +184,17 @@ is a pass either way and only one of the causes is fixable:
 | Count | Today | Meaning |
 |---|---|---|
 | `gateSkippedNoGMag` | **0** | gateable rows the pull returned no row for — the request under-covering its candidates. Pinned at zero; this is the fault the union exists to prevent. |
-| `gateSkippedNullGMag` | 63 | rows Gaia has, with `phot_g_mean_mag` null. Silently accepted too, and no request can supply it — the residual the gate's reach does not cover. |
+| `gateSkippedNullGMag` | 112 | rows Gaia has, with `phot_g_mean_mag` null. Silently accepted too, and no request can supply it — the residual the gate's reach does not cover. |
 
-The set stays small (493 ids beyond the manifest) because `applyBindingGate`
-skips what it cannot weigh — an entry with no HIP, and a HIP with no printed V
-(`gateSkippedNoHipVMag`) — and `bindingCandidateSourceIds` applies both
-narrowings so the request and the gate agree by construction. The membership
-derivation runs the same two checks on the record side through the same
-`resolveGaiaSourceId` call, with its own candidate contribution to the request
-and its own zero-pin (`../membership/README.md` § The binding is derived).
+`gateableVia` partitions the rows the gate could weigh by which tier supplied
+their V — **hip 99,799 · tycho2 254,135 · gliese 1,053** — and
+`gateSkippedNoPrintedV` is what is left: **2,738** rows no printed tier reaches
+at all. `bindingCandidateSourceIds` applies the same reach, so the request and
+the gate agree by construction and `gateSkippedNoGMag` stays pinnable at zero.
+The membership derivation runs the same checks on the record side through the
+same `resolveGaiaSourceId` call, with its own candidate contribution to the
+request and its own zero-pin (`../membership/README.md` § The binding is
+derived).
 
 **An ambiguous designation attaches to every matching record** (§ 4) —
 `buildClassicIdOverlay` never picks a winner, so overlay cells are
@@ -282,9 +300,9 @@ constellation out of the designation string and loses only its expanded alias
   resolve, the HIP-route agree / disagree / HIP-only split. Pre-gate.
 - **Overlay sizes** — rows, and per-identifier how many sources carry
   each designation, plus the multi-valued cardinalities. Post-gate.
-- **`gate*`** — rows dropped per gate, and `gateSkippedNoHipVMag`, the
-  population carrying no printed V under any HIP and so unvettable. That
-  last one is the count to watch alongside `../membership/`'s
+- **`gate*`** — rows dropped per gate, `gateableVia` per printed tier, and
+  `gateSkippedNoPrintedV`, the population no tier reaches and so unvettable.
+  That last one is the count to watch alongside `../membership/`'s
   `spineBrightRowsWithoutOverlayEntry`: it is where the known-unfixed
   mis-bindings live.
 

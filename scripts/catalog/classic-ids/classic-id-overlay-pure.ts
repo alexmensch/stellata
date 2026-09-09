@@ -3,6 +3,7 @@
 import type { Bsc5Row, Cns5Row, CrossIndexRow, Tyc2HdRow } from './classic-ids-parse';
 import { sortSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
 import { resolveGaiaSourceId, type SimbadWdsXidIndex } from '../catalog-pure';
+import { printedVBelowHip, type GateVVia } from '../photometry/v-magnitude-pure';
 // Type-only: the merge imports this module's values, so the runtime graph
 // stays one-way.
 
@@ -61,6 +62,11 @@ export interface BindingEvidence {
    *  publishes no G for and no request can supply. */
   hasPulledRow: (sourceId: string) => boolean;
   vMagOfHip: (hip: number) => number | null;
+  /** The V cascade's tiers below Hipparcos, so both gates weigh a row with no
+   *  Hipparcos V on the same evidence the record side reaches
+   *  (`../photometry/README.md` § The V cascade). */
+  tycho2VOfTyc: (tyc: string) => number | null;
+  glieseVOfGj: (gj: string) => number | null;
   wdsXids: SimbadWdsXidIndex | null;
 }
 
@@ -69,11 +75,15 @@ export function bindingEvidence(
   hipVMag: ReadonlyMap<number, number>,
   wdsXids: SimbadWdsXidIndex | null,
   pulledSourceIds: ReadonlySet<string> | ReadonlyMap<string, unknown> | null = null,
+  lowerTiers: Pick<BindingEvidence, 'tycho2VOfTyc' | 'glieseVOfGj'> = {
+    tycho2VOfTyc: () => null, glieseVOfGj: () => null,
+  },
 ): BindingEvidence {
   return {
     gMagOf: (sourceId) => sourceGMag.get(sourceId) ?? null,
     hasPulledRow: (sourceId) => (pulledSourceIds ?? sourceGMag).has(sourceId),
     vMagOfHip: (hip) => hipVMag.get(hip) ?? null,
+    ...lowerTiers,
     wdsXids,
   };
 }
@@ -83,8 +93,13 @@ export function bindingEvidence(
  *  the parity ledger can review what the gate removed. */
 export interface RejectedBinding {
   sourceId: string;
+  /** 0 where the row carries no HIP at all — the population the Tycho-2 and
+   *  Gliese V tiers made gateable, which the HIP-only gate skipped. */
   hip: number;
   vMag: number;
+  /** Which printed tier supplied `vMag`, so a reviewer can see whether the
+   *  rejection rests on Hipparcos or on one of the tiers below it. */
+  vVia: GateVVia;
   gMag: number | null;
   reason: 'mag' | 'sibling';
   designations: string;
@@ -104,14 +119,16 @@ function designationSummary(entry: OverlayEntry): string {
  *  bind, running the SAME `resolveGaiaSourceId` gates `stars-parse.ts` applies
  *  rather than a second implementation of them.
  *
- *  The row's own HIP supplies the printed V the magnitude gate compares
- *  against Gaia's G, so only HIP-bearing rows with a printed V are gateable —
- *  `skippedNoHipVMag` counts the rest (see `data/classic-ids/README.md`
- *  § Coverage for the residual that bound leaves). Dropping the WHOLE row
- *  rather than just its `hip` cell is the point: both walks routinely land on
- *  the same wrong source, so if the source is not the star then every
- *  designation keyed on it is misattributed. The labels then ride the
- *  inherited spine, exactly as they do for the record build's rejected rows.
+ *  The printed V the magnitude gate compares against Gaia's G comes from the
+ *  row's own designations in the V cascade's own tier order — Hipparcos on its
+ *  HIPs, else Tycho-2 on the Tycho entries IV/25 routes to this source, else
+ *  Gliese on its GJ cells (`../photometry/README.md` § The V cascade). Only a
+ *  row carrying none of the three is ungateable, and `skippedNoPrintedV`
+ *  counts it. Dropping the WHOLE row rather than just its `hip` cell is the
+ *  point: both walks routinely land on the same wrong source, so if the source
+ *  is not the star then every designation keyed on it is misattributed. The
+ *  labels then ride the inherited spine, exactly as they do for the record
+ *  build's rejected rows.
  *
  *  A gateable row with no `G` is NOT a rejection — `resolveGaiaSourceId` passes a
  *  candidate it cannot weigh — so both no-G counts are the gate's own coverage
@@ -123,20 +140,24 @@ function designationSummary(entry: OverlayEntry): string {
 export function applyBindingGate(
   overlay: ClassicIdOverlay,
   evidence: BindingEvidence,
+  tycsBySource: ReadonlyMap<string, readonly string[]>,
 ): {
   rejected: RejectedBinding[];
-  skippedNoHipVMag: number;
+  skippedNoPrintedV: number;
   skippedNoGMag: number;
   skippedNullGMag: number;
+  gateableVia: Record<GateVVia, number>;
 } {
   const rejected: RejectedBinding[] = [];
-  let skippedNoHipVMag = 0;
+  let skippedNoPrintedV = 0;
   let skippedNoGMag = 0;
   let skippedNullGMag = 0;
+  const gateableVia: Record<GateVVia, number> = { hip: 0, tycho2: 0, gliese: 0 };
   for (const [sourceId, entry] of overlay) {
     // A row carrying several HIPs is a blend; saturation is a property of the
     // brightest of them, so that is the V the gate has to answer for.
     let vMag: number | null = null;
+    let vVia: GateVVia = 'hip';
     let hip = 0;
     for (const candidate of entry.hip) {
       const v = evidence.vMagOfHip(candidate);
@@ -146,28 +167,47 @@ export function applyBindingGate(
       }
     }
     if (vMag === null) {
-      skippedNoHipVMag++;
-      continue;
+      // No printed V under any HIP, but the entry may still carry one, and the
+      // sibling gate keys on a HIP rather than on the V.
+      hip = entry.hip[0] ?? 0;
+      const below = printedVBelowHip(
+        tycsBySource.get(sourceId) ?? [], entry.gj,
+        evidence.tycho2VOfTyc, evidence.glieseVOfGj,
+      );
+      if (below === null) {
+        skippedNoPrintedV++;
+        continue;
+      }
+      vMag = below.vMag;
+      vVia = below.vVia;
+      gateableVia[below.vVia]++;
+    } else {
+      gateableVia.hip++;
     }
     if (evidence.gMagOf(sourceId) === null) {
       if (evidence.hasPulledRow(sourceId)) skippedNullGMag++;
       else skippedNoGMag++;
     }
+    // `null`, not 0, where the entry carries no HIP: the record side passes
+    // its own null cell and `isSiblingLetterAttribution` short-circuits on it,
+    // so a 0 here would apply a gate to the label side that the record side
+    // does not (docs/catalog-driver.md § 4 — the two must not drift).
     const verdict = resolveGaiaSourceId(
-      sourceId, hip, null, vMag, evidence.gMagOf, evidence.wdsXids,
+      sourceId, hip === 0 ? null : hip, null, vMag, evidence.gMagOf, evidence.wdsXids,
     );
     if (verdict.gaiaSourceId !== null) continue;
     rejected.push({
       sourceId,
       hip,
       vMag,
+      vVia,
       gMag: evidence.gMagOf(sourceId),
       reason: verdict.magRejected ? 'mag' : 'sibling',
       designations: designationSummary(entry),
     });
   }
   for (const r of rejected) overlay.delete(r.sourceId);
-  return { rejected, skippedNoHipVMag, skippedNoGMag, skippedNullGMag };
+  return { rejected, skippedNoPrintedV, skippedNoGMag, skippedNullGMag, gateableVia };
 }
 
 /** An IV/27A row whose HD→TYC→source_id route and HIP→source_id route
@@ -215,7 +255,8 @@ export interface OverlayJoinCounts {
    *  queue size (README.md § The gate's evidence has to be pulled). */
   gateRejectedMag: number;
   gateRejectedSibling: number;
-  gateSkippedNoHipVMag: number;
+  gateSkippedNoPrintedV: number;
+  gateableVia: Record<GateVVia, number>;
   /** Gateable rows the astrometry pull returned no row for — silently accepted,
    *  not refused. Pinned at zero: the request is a union precisely so that this
    *  stays empty, and a non-zero value is the pull under-covering the
@@ -269,6 +310,9 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
   // HD → TYC → source_id is the primary route: every HD-bearing AT-HYG row
   // also carries a TYC, so no HD needs the HIP route as an authority.
   const hdToSources = new Map<number, string[]>();
+  // The Tycho entries IV/25 routes to each source, for the gate's Tycho-2 V
+  // tier: the walk holds both ends here and the overlay carries no TYC cell.
+  const tycsBySource = new Map<string, string[]>();
   const distinctTyc = new Set<string>();
   const resolvedTyc = new Set<string>();
   let ambiguousRows = 0;
@@ -278,6 +322,9 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
     const sourceId = tycToSource.get(row.tyc);
     if (sourceId === undefined) continue;
     resolvedTyc.add(row.tyc);
+    const tycs = tycsBySource.get(sourceId);
+    if (tycs === undefined) tycsBySource.set(sourceId, [row.tyc]);
+    else addValue(tycs, row.tyc);
     addValue(entryFor(overlay, sourceId).hd, row.hd);
     const sources = hdToSources.get(row.hd);
     if (sources === undefined) hdToSources.set(row.hd, [sourceId]);
@@ -364,7 +411,7 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
   // Gate before counting, so every overlay* count describes the artifact
   // rather than the pre-vetting routing. The route counters above keep
   // describing upstream reachability and are deliberately left pre-gate.
-  const gate = applyBindingGate(overlay, evidence);
+  const gate = applyBindingGate(overlay, evidence, tycsBySource);
   for (const [hd, sources] of hdToSources) {
     const kept = sources.filter((s) => overlay.has(s));
     if (kept.length === sources.length) continue;
@@ -415,7 +462,8 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
 
       gateRejectedMag: gate.rejected.filter((r) => r.reason === 'mag').length,
       gateRejectedSibling: gate.rejected.filter((r) => r.reason === 'sibling').length,
-      gateSkippedNoHipVMag: gate.skippedNoHipVMag,
+      gateSkippedNoPrintedV: gate.skippedNoPrintedV,
+      gateableVia: gate.gateableVia,
       gateSkippedNoGMag: gate.skippedNoGMag,
       gateSkippedNullGMag: gate.skippedNullGMag,
 

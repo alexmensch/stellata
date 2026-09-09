@@ -24,7 +24,7 @@ cns5.tsv                           ~953 KB, LFS. GJ ↔ Gaia EDR3 ↔ HIP,
                                    (5,909 rows).
 classic_id_overlay.tsv             ~11 MB, LFS. Pipeline-derived: every
                                    designation above keyed on Gaia DR3
-                                   source_id (357,538 rows, post-gate).
+                                   source_id (357,265 rows, post-gate).
 hd_hip_route_disagreements.tsv     21 rows. Pipeline-derived review queue
                                    (§ HD-route cross-check below).
 hd_hip_route_disagreements_review.tsv
@@ -33,7 +33,7 @@ hd_hip_route_disagreements_review.tsv
                                    scripts/catalog/classic-ids/
                                    parity-ledger.test.ts — a re-pull that
                                    grows the queue fails until reviewed.
-rejected_bindings.tsv              268 rows. Pipeline-derived review queue —
+rejected_bindings.tsv              460 rows. Pipeline-derived review queue —
                                    the bindings the gate dropped
                                    (§ The binding gate).
 label_flips.tsv                    736 rows. Pipeline-derived, and by
@@ -175,15 +175,16 @@ is not the star. `applyBindingGate`
 `scripts/catalog/parse/stars-parse.ts`, so the two cannot drift on what
 counts as a bad binding:
 
-- **G − V ≥ 1.0 mag** (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`) — 218 rows. The
+- **G − V ≥ 1.0 mag** (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`) — 410 rows. The
   canonical case is the G = 20.95 background source beside α Cen B, which
   carried HD 128621 · HR 5460 · HIP 71681 · `alf Cen`.
 - **Sibling-letter attribution** (SIMBAD WDS cross-IDs) — 50 rows. Catches
   the similar-brightness sibling that slips the magnitude gate: HD 70492 B's
-  source carried HD 70492 · HIP 41098.
+  source carried HD 70492 · HIP 41098. It keys on a HIP, so it reaches only
+  HIP-bearing rows however far the magnitude arm's evidence widens.
 
 The two counts trade rows as G coverage changes — `reason` is the first gate
-that fired — so their sum, **268**, is the queue's size
+that fired — so their sum, **460**, is the queue's size
 (`scripts/catalog/classic-ids/README.md` § The gate's evidence has to be
 pulled).
 
@@ -191,43 +192,42 @@ A firing gate drops the **whole row**, not just its `hip` cell: if the source
 is not the star then every designation keyed on it is misattributed, and the
 labels ride the inherited spine exactly as they do for a record the build
 scrubs. The dropped bindings are enumerated in `rejected_bindings.tsv`
-(`gaia_source_id`, `hip`, `v_mag`, `g_mag`, `reason`, `designations`; a blank
-`designations` means the HIP was the row's only label, and a blank `g_mag`
-means the sibling gate fired without needing one).
+(`gaia_source_id`, `hip`, `v_mag`, `v_via`, `g_mag`, `reason`, `designations`;
+a blank `hip` is a row no HIP reaches at all, a blank `designations` means the
+HIP was the row's only label, and a blank `g_mag` means the sibling gate fired
+without needing one). `v_via` says which printed tier the rejection rests on —
+218 hip · 165 tycho2 · 27 gliese on the magnitude arm.
 
 The HD/HIP route cross-check above cannot substitute for this. Both walks
 routinely land on the *same* wrong source, so α Cen B counted among the 2,637
 route agreements, not the 21 disagreements.
 
-**The gate's reach is bounded by which printed V it READS, not by which one
-exists.** The V comes from `data/hipparcos/hip_main_vmag.tsv` keyed on a HIP
-the overlay row itself carries — deliberately not from AT-HYG, which the
-overlay has to outlive. A row with no HIP, or whose HIPs carry no printed V,
-is therefore skipped unweighed: `gateSkippedNoHipVMag` pins that population at
-**257,926** rows, overwhelmingly Tycho-only HD rows.
+**The gate reads the V cascade's three printed tiers**, keyed on designations
+the overlay row itself carries — deliberately not on AT-HYG, which the overlay
+has to outlive. `gateableVia` partitions what it reaches: **hip 99,799**
+(`data/hipparcos/hip_main_vmag.tsv`), **tycho2 254,135** (`VT − 0.090(BT − VT)`
+on a TYC that IV/25 routes to that very source), **gliese 1,053**. Only
+`gateSkippedNoPrintedV` — **2,738** rows — is skipped unweighed.
 
-**Almost all of them are reachable, and by a committed table.** The V cascade's
-printed tiers continue past Hipparcos into Tycho-2 and Gliese, and the record
-side's gate already weighs them (`scripts/catalog/membership/README.md` § The
-binding is derived). Measured over the committed overlay, IV/25 and the TYC
-cross-walk, 2026-09-09: of the 257,926, **254,135 have a Tycho-2
-`VT − 0.090(BT − VT)` on a TYC that IV/25 routes to that very source** and
-**1,053** more a Gliese V, leaving **2,738** with no printed V under any of the
-three tiers. So the unvettable population is ~1% of what this count reports,
-and the mis-bindings inside it are a magnitude comparison away rather than out
-of reach.
+**The two lower tiers are the whole difference between the gates.** Reading
+Hipparcos alone left 257,926 rows unvettable and the label side accepting
+bindings the record side refused; 254,135 of them turned out to be one
+magnitude comparison away, and taking that comparison caught **192 more
+mis-bindings** (`gateRejectedMag` 218 → 410). One helper serves both sides so
+they cannot drift again (`scripts/catalog/classic-ids/README.md` § The gate's
+evidence has to be pulled), and widening the gate meant widening the astrometry
+request by 295 ids and re-pulling, to hold `gateSkippedNoGMag` at zero.
 
 **Ask the Gliese arm through `lookupGliese`**
 (`scripts/catalog/gliese-parse.ts`), not by the printed name: V/70A numbers the
 GJ 3xxx/4xxx supplement `NN nnnn` and letters a blend row's components
 together, so a prefix match on `Gl`/`GJ` alone misses the population that tier
 exists for — it reads the arm at 240 and reports 813 rows unreachable that are
-not. Giving the label gate the record
-side's evidence order is `stellata-3bsf.8.13`, which carries the figures and
-the one obstacle: 296 overlay sources are absent from the astrometry pull, so
-the widened gate needs the request widened and re-pulled to keep
-`gateSkippedNoGMag` at zero. Adjudicating the mis-bindings the widened gate
-then finds is still the spine's own identity work (`stellata-3bsf.4`).
+not. Adjudicating the mis-bindings the widened gate finds is still the spine's
+own identity work (`stellata-3bsf.4`); what it already bought is seven records
+that were parked `refused_no_defensible_parallax` because a mis-binding made
+their SIMBAD parallax read as a laundered Gaia value, and now ship on their own
+evidence.
 
 ## Coverage — the overlay is a union term, not the label authority
 

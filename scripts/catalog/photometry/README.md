@@ -16,8 +16,12 @@ scripts/catalog/photometry/
                                  evaluator. Pure.
   v-magnitude-pure.ts (+ test)   Riello+ 2021 G−V relation, the gated
                                  transform over it, the three-tier V
-                                 cascade, and which tiers yield a system
-                                 blend. Pure.
+                                 cascade, which tiers yield a system blend,
+                                 and `printedVBelowHip` — the cascade's two
+                                 printed tiers under Hipparcos, which BOTH
+                                 binding gates weigh a candidate against so
+                                 the record side and the label side cannot
+                                 drift on reachable evidence. Pure.
   colour-index-pure.ts (+ test)  Table 5.9 G−B relation, B−V as the
                                  difference of the two relations, the
                                  synthetic tier's measured colour bound, and

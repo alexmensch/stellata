@@ -157,6 +157,7 @@ describe('applyBindingGate', () => {
       sourceId: TOLIMAN_BAD_SRC,
       hip: TOLIMAN_HIP,
       vMag: 1.33,
+      vVia: 'hip',
       gMag: 20.95,
       reason: 'mag',
       designations: 'HD 128621 · HR 5460 · alf Cen',
@@ -205,7 +206,7 @@ describe('applyBindingGate', () => {
       null,
     ));
     expect(counts.gateRejectedMag).toBe(0);
-    expect(counts.gateSkippedNoHipVMag).toBe(1);
+    expect(counts.gateSkippedNoPrintedV).toBe(1);
     expect(counts.gateSkippedNoGMag).toBe(0);
   });
 
@@ -221,7 +222,7 @@ describe('applyBindingGate', () => {
     ));
     expect(overlay.has(TOLIMAN_BAD_SRC)).toBe(true);
     expect(counts.gateRejectedMag).toBe(0);
-    expect(counts.gateSkippedNoHipVMag).toBe(0);
+    expect(counts.gateSkippedNoPrintedV).toBe(0);
     expect(counts.gateSkippedNoGMag).toBe(1);
     expect(counts.gateSkippedNullGMag).toBe(0);
   });
@@ -256,7 +257,7 @@ describe('applyBindingGate', () => {
         byHip: new Map([[hip, [{ wdsId: '08236-2439', component: 'A' }]]]),
         primarySourceLetterByWds: new Map([['08236-2439', 'B']]),
       },
-    ));
+    ), new Map());
     expect(rejected).toHaveLength(1);
     expect(rejected[0].reason).toBe('sibling');
     expect(overlay.has(src)).toBe(false);

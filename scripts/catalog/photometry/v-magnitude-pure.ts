@@ -130,6 +130,47 @@ export function resolveVMagnitude(
   return { v: null, via: 'none' };
 }
 
+/** Where the printed V a binding gate weighs against came from — the same
+ *  printed tiers, in the same order, as the cascade above. */
+export type GateVVia = 'hip' | 'tycho2' | 'gliese';
+
+export interface PrintedV {
+  vMag: number;
+  vVia: GateVVia;
+}
+
+/** The cascade's printed tiers BELOW Hipparcos, for a row a Hipparcos V does
+ *  not reach: Tycho-2 on the row's Tycho entries, then Gliese on its GJ cells.
+ *  Both binding gates weigh their candidates against this, so the record side
+ *  and the label side cannot drift on what evidence is reachable
+ *  (`docs/catalog-driver.md` § 4).
+ *
+ *  **Lists, not cells.** A spine row states one TYC and one GJ, but an overlay
+ *  entry is keyed on a Gaia source IV/25 may route several Tycho entries to,
+ *  and the brightest of them is the one saturation is a property of — the same
+ *  rule `applyBindingGate` applies across a row's HIPs. */
+export function printedVBelowHip(
+  tycs: Iterable<string>,
+  gjs: Iterable<string>,
+  tycho2VOf: (tyc: string) => number | null,
+  glieseVOf: (gj: string) => number | null,
+): PrintedV | null {
+  for (const [keys, lookup, vVia] of [
+    [tycs, tycho2VOf, 'tycho2'],
+    [gjs, glieseVOf, 'gliese'],
+  ] as const) {
+    let brightest: number | null = null;
+    for (const key of keys) {
+      const v = lookup(key);
+      if (v !== null && Number.isFinite(v) && (brightest === null || v < brightest)) {
+        brightest = v;
+      }
+    }
+    if (brightest !== null) return { vMag: brightest, vVia };
+  }
+  return null;
+}
+
 /** Whether a V from this tier is the whole SYSTEM's blended magnitude — every
  *  component the source catalogue failed to resolve, summed into one value.
  *  True for the three printed tiers; `null` is a record no cascade ran on (a
