@@ -132,7 +132,12 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
     // `canonical.has` filtered them out. They reach one now and mint. The
     // collision-guard half is the assertion below and the `orphaned` set
     // above, and neither moves.
-    expect(reOwned.length).toBe(25);
+    //
+    // 25 → 26 with the curated HD corrections: hd:138917 leaves δ Ser A's
+    // record — its own Gaia source is SIMBAD's δ Ser A, which is HD 138918 —
+    // and the primaries admit 138917 as δ Ser B's own row on its own source.
+    // That is the paragraph above happening again, deliberately.
+    expect(reOwned.length).toBe(26);
     expect(reOwned.filter((d) => bridgeEndpoints.has(d))).toEqual([]);
   });
 });

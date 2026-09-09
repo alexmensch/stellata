@@ -23,15 +23,15 @@
   },
   "labelSpineOnly": {
     "hip": 18593,
-    "hd": 12758,
-    "hr": 1706,
+    "hd": 12751,
+    "hr": 1700,
     "gl": 1227,
     "flam": 694
   },
   "labelSuppressed": {
     "hip": 1,
-    "hd": 24,
-    "hr": 1,
+    "hd": 23,
+    "hr": 0,
     "gl": 3,
     "flam": 2
   },
@@ -58,30 +58,30 @@
   },
   "labelOverridden": {
     "hip": 0,
-    "hd": 1,
-    "hr": 0,
+    "hd": 9,
+    "hr": 7,
     "gl": 0,
     "flam": 0
   },
-  "rows": 376927,
+  "rows": 376932,
   "spineRows": 313257,
   "spineRowsFolded": 1,
   "spineCellsCorrected": {
     "tyc": 1
   },
-  "additionRows": 63671,
+  "additionRows": 63676,
   "additionsByReason": {
-    "admitted:hd_link_gap": 54811,
-    "admitted:hd_omitted": 5060,
+    "admitted:hd_link_gap": 54813,
+    "admitted:hd_omitted": 5063,
     "admitted:hip_omitted": 444,
     "admitted:cns5_census": 3356
   },
-  "componentRows": 471,
+  "componentRows": 466,
   "bindingByClass": {
-    "crosswalk_gated": 358455,
+    "crosswalk_gated": 358458,
     "simbad_corroborated": 12483,
     "reviewed": 53,
-    "none": 5936
+    "none": 5938
   },
   "bindingReviewRows": 53,
   "bindingReviewByVerdict": {

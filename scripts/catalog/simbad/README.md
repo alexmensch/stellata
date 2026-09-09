@@ -140,6 +140,18 @@ absence as agreement.
 
 The partition is pinned in `simbad-tyc-hd-parse.test.ts` § the four-witness
 split, over the committed tables, so a re-pull that moves a row fails the suite
-rather than ageing this section. Asserting the move set — both fields, the SID
-keys that follow and the sibling admissions that follow those — is
-`stellata-hooj.14`.
+rather than ageing this section.
+
+**Eight of the nine are asserted**, in
+`data/classic-ids/classic_id_overrides.tsv` (`../classic-ids/label-merge/README.md`
+§ Curated overrides), and the move set the test pins is what is left. What the
+assertion cost: `labelOverridden` hd 1 → 9 / hr 0 → 7, five freed HD numbers
+admitted as manifest rows of their own, one `hd:` SID minted (δ Ser B, on its
+own Gaia source), `namingDuplicateLabels` 48 → **47**. Each record's spectral
+type — keyed on its Gaia source, so independent of every witness above — now
+matches the component whose HD it carries.
+
+**α Psc is the ninth and is held back.** Correcting it letters the anchor A
+where the authority letters HD 12446 B, and promotion's twin guard keys on
+exactly that letter, so the 02020+0246-AB row would mint a copy of its own
+anchor again — the defect `sid:193218` was retired for. `stellata-hooj.16`.

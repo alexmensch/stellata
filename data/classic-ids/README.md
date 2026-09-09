@@ -45,10 +45,14 @@ label_flips.tsv                    736 rows. Pipeline-derived, and by
                                    `docs/catalog-driver.md` § 6 requires, and
                                    the delta the spine's designation-multiset
                                    gate replays.
-classic_id_overrides.tsv           Hand-curated. One row; the escape
+classic_id_overrides.tsv           Hand-curated. 17 rows; the escape
                                    hatch for a CDS join review finds wrong
                                    (scripts/catalog/classic-ids/label-merge/README.md
-                                   § Curated overrides).
+                                   § Curated overrides). Sixteen are the eight
+                                   close-pair records whose hd and hr the
+                                   four-witness rule moves together
+                                   (scripts/catalog/simbad/README.md § Which
+                                   witness decides a close pair's HD).
 ```
 
 ## Provenance

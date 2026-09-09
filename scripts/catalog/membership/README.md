@@ -3,8 +3,8 @@
 `data/membership/membership-manifest.tsv` is one row per record the frozen
 primaries admit: the spine's 313,257 rows re-keyed on the designations the
 primaries publish for them, less the one a correction folds
-(§ Correcting a merge decision), plus the 63,671 records the primaries name
-that AT-HYG's subset never carried — 376,927 rows. **`readStars` walks it, and
+(§ Correcting a merge decision), plus the 63,676 records the primaries name
+that AT-HYG's subset never carried — 376,932 rows. **`readStars` walks it, and
 membership is exactly these rows less the § 6.1 parks**
 (`../parse/README.md` § Per-row pipeline). It is the artifact that retires
 `data/athyg/inherited-spine.tsv` as the build's input; the contract is
@@ -312,11 +312,11 @@ The consequences, measured 2026-09-06:
 
 | Outcome | Groups | What it is |
 |---|---|---|
-| `admitted:hd_link_gap` | 54,811 | IV/25 star, lowest admitted HD < 100,000 — AT-HYG's link defect |
-| `admitted:hd_omitted` | 5,060 | IV/25 star, HD ≥ 100,000 |
+| `admitted:hd_link_gap` | 54,813 | IV/25 star, lowest admitted HD < 100,000 — AT-HYG's link defect |
+| `admitted:hd_omitted` | 5,063 | IV/25 star, HD ≥ 100,000 |
 | `admitted:hip_omitted` | 444 | I/239 HIP with no IV/25 star |
 | `admitted:cns5_census` | 3,356 | CNS5 `GJ 1xxxx` row |
-| `component:<anchor>` | 471 | every designation it arrived with is another record's. 466 are the second Tycho-2 entry of a resolved pair whose HD (and, through Tycho-2's `hip`, HIP) a spine record carries; 5 are the second of a pair neither component of which is on the spine. Not a row; ledgered onto the record it resolves to |
+| `component:<anchor>` | 466 | every designation it arrived with is another record's. 461 are the second Tycho-2 entry of a resolved pair whose HD (and, through Tycho-2's `hip`, HIP) a spine record carries; 5 are the second of a pair neither component of which is on the spine. Not a row; ledgered onto the record it resolves to. Five left the class when the curated HD corrections freed the number their anchor was wrongly displaying (`../classic-ids/label-merge/README.md` § Curated overrides) |
 | source left empty, on a spine record | 108 | Gaia fitted one source where Tycho-2 resolved two stars |
 | source left empty, gate refused | 121 | the raw binding is in `rejected_bindings.tsv` |
 

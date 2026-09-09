@@ -153,24 +153,28 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
     });
 
     it('answers for the stated share of the rows carrying both cells', () => {
-      expect(counts.bothCells).toBe(353347);
-      expect(counts.answered).toBe(331734);
+      expect(counts.bothCells).toBe(353352);
+      expect(counts.answered).toBe(331739);
       expect(counts.silent).toBe(21613);
     });
 
-    it('finds 219 dissents, every one on an internally consistent IV/25 entry', () => {
-      expect(counts.dissent).toBe(219);
+    it('finds 220 dissents, every one on an internally consistent IV/25 entry', () => {
+      expect(counts.dissent).toBe(220);
       expect(counts.dissentInconsistent).toBe(0);
     });
 
-    it('splits them 209 manifest-faithful / 10 vindicating the manifest', () => {
-      expect(counts.faithful).toBe(209);
+    it('splits them 210 manifest-faithful / 10 vindicating the manifest', () => {
+      expect(counts.faithful).toBe(210);
       expect(counts.vindicating).toBe(10);
       expect(counts.faithful + counts.vindicating).toBe(counts.dissent);
     });
 
-    it('finds 23 rows both witnesses contradict', () => {
-      expect(counts.bothAgainst).toBe(23);
+    // 23 before the eight rows the four-witness rule licensed were asserted
+    // (README.md § Which witness decides a close pair's HD). What is left is
+    // the twelve the rule refuses, the two it cannot answer for, and α Psc,
+    // whose correction is held back — see the move set's own comment.
+    it('finds 15 rows both witnesses contradict', () => {
+      expect(counts.bothAgainst).toBe(15);
     });
 
     it('reproduces the two dissents measured by hand against live SIMBAD', () => {
@@ -186,11 +190,15 @@ const SPLIT_INPUTS = [...ADJUDICATION_INPUTS, SRC_SIMBAD_SPTYPE];
 /** The move set of README.md § Which witness decides a close pair's HD: the
  *  rows all four witnesses agree the record's own component is not the one its
  *  HD cell names. Enumerated rather than counted, because the assertion those
- *  rows license moves canonical SID keys and each has to be inspected. */
-const FOUR_WITNESS_MOVE = [
-  '1381-1638-1', '40-1338-1', '5204-1584-1', '5226-1605-1', '7570-1585-1',
-  '7902-891-1', '7902-1905-1', '8314-802-1', '933-1238-1',
-].sort();
+ *  rows license moves canonical SID keys and each has to be inspected.
+ *
+ *  **Eight of the nine are asserted and so no longer contested.** α Psc is the
+ *  one left, and it stays until promotion's twin guard stops keying on the
+ *  anchor's Bayer letter: correcting the record to HD 12447 letters the anchor
+ *  A, the guard stops firing on the 02020+0246-AB row, and the row mints a copy
+ *  of its own anchor. An empty set here means that landed and the rule has no
+ *  remaining reach. */
+const FOUR_WITNESS_MOVE = ['40-1338-1'];
 
 /** No SIMBAD object for the record's own source, so the fourth witness is
  *  silent and the rule leaves the row alone. */
@@ -253,8 +261,8 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     for (const list of [move, refuse, silent]) list.sort();
   });
 
-  it('splits the 23 contested rows nine / twelve / two', () => {
-    expect(move.length + refuse.length + silent.length).toBe(23);
+  it('splits the remaining contested rows one / twelve / two', () => {
+    expect(move.length + refuse.length + silent.length).toBe(15);
     expect(move).toEqual(FOUR_WITNESS_MOVE);
     expect(silent).toEqual(FOUR_WITNESS_SILENT);
     expect(refuse).toHaveLength(12);

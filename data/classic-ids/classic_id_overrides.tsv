@@ -4,14 +4,14 @@ gaia_source_id	field	value
 # an empty `value` keeps the spine's. `#` in the first column comments a line —
 # the header stays the first line, as every committed TSV's does.
 #
-# ONE ROW. Nearly every one of today's 137 disagreements is either a real AT-HYG
+# Nearly every one of today's 137 disagreements is either a real AT-HYG
 # cross-ID error the overlay corrects (Izar: AT-HYG's HR 5505 against IV/27A +
 # V/50's HR 5506, and ε Boo IS HR 5506) or a resolved close pair whose two
 # components the two catalogues letter oppositely — neither is the CDS join being
 # wrong, which is the only thing this file is for. The full enumeration with
 # dispositions is data/classic-ids/label_flips.tsv.
 #
-# Propus (η Gem, HIP 29655) is the one exception, and the shape to recognise: Gaia
+# Propus (η Gem, HIP 29655) is the shape to recognise: Gaia
 # fits ONE source where Tycho-2 resolves two entries, and its TYC cross-match
 # keys that source to the SECONDARY. IV/25 gives the record's own
 # TYC 1877-1716-1 HD 42995 and the sibling TYC 1877-1716-2 HD 253820; SIMBAD
@@ -20,13 +20,58 @@ gaia_source_id	field	value
 # TYC alone, so it proposes 253820 as the record's only HD — no alias list, no
 # sibling extra, just § 4 precedence handing a star its neighbour's number and
 # folding the neighbour's own record away as a component.
-#
-# Three shapes DO NOT belong here, because a label exception is the wrong tool:
-#   - an addition that would make another record's designation ambiguous is
-#     withheld mechanically by the collision guard (p Eridani);
-#   - a Gliese renumbering (Gl 157.1 -> GJ 9140) is an identity bridge in
-#     data/sid/sameas-overrides.tsv, since both designations name the star;
-#   - a swapped GJ component letter (Gl 563.2 A/B) is the specificity rule in
-#     scripts/catalog/classic-ids/README.md section The gl comparison is
-#     specificity-aware — the overlay wins the letter on its own evidence.
 3377072212924335488	hd	
+#
+# THE NINE BELOW ARE THE SAME SHAPE READ THE OTHER WAY, and they are a RULE's
+# output rather than nine separate judgements: the record ships its neighbour's
+# HD, and all four witnesses agree which component the record is
+# (scripts/catalog/simbad/README.md § Which witness decides a close pair's HD).
+# IV/25 and SIMBAD both give the record's own Tycho entry the HD below, SIMBAD's
+# object for the record's own Gaia source is the component that entry names, and
+# V/50 pairs the HR with it. HD and HR move together because V/50 publishes them
+# as a pair; moving one alone composes a pair no catalogue prints.
+#
+# Twelve further rows the two TYC witnesses also contradict are NOT here, and
+# that is the rule working: on those the record's own source is SIMBAD's object
+# for the OTHER component, so the TYC cell is the crossed one and the shipped HD
+# stands. ε Boo is the case — its record is Izar and its TYC is ε Boo B's.
+#
+# Each row below was checked against SIMBAD's own ident table (live, 2026-09-10)
+# on both fields; the component the comment names is SIMBAD's main_id for the
+# record's Gaia source.
+# α Psc A (source 2517584007848935808, ships 12446 / HR 595 = α Psc B) is the
+# tenth row of the rule's move set and is DELIBERATELY NOT HERE. Correcting it
+# re-opens stellata-3bsf.42: promotion's twin guard fires on
+# `anchorStar.bayerComponent === canonicalComp`, and the authority letters
+# HD 12446 B where it letters HD 12447 A — so the moment the anchor holds A,
+# the guard stops firing and the 02020+0246-AB row mints a copy of the anchor
+# again (its two ends carry identical ids, position and absmag). sid 193218 was
+# retired for exactly that on 2026-09-07, "reinstate only if WDS re-keys the row
+# onto a genuinely separate component", and WDS has not. stellata-hooj.16.
+4856719713756945664	hd	24072
+4856719713756945664	hr	1190
+# ^ f Eri A. Ships 24071 / HR 1189 = f Eri B. This is stellata-3bsf.52's case.
+657244586015485440	hd	68257
+657244586015485440	hr	3208
+# ^ ζ¹ Cnc A. Ships 68255 = ζ¹ Cnc B, and HR 3210, which SIMBAD calls ζ² Cnc —
+#   a different system. V/50 pairs 68255 with 3210, so the shipped pair is
+#   internally consistent and still names two different stars.
+1165987658411302272	hd	138918
+1165987658411302272	hr	5789
+# ^ δ Ser A. Ships 138917 / HR 5788 = δ Ser B.
+6726876327040344576	hd	170868
+6726876327040344576	hr	6952
+# ^ κ¹ CrA. Ships 170867 / HR 6953 = κ² CrA.
+6726876327040339712	hd	170867
+6726876327040339712	hr	6953
+# ^ κ² CrA. Ships 170868 / HR 6952 = κ¹ CrA. A MUTUAL swap with the pair above:
+#   both rows move or each takes the other's surviving cell.
+6910418142353215104	hd	200497
+6910418142353215104	hr	8059
+# ^ 12 Aqr A. Ships 200496 / HR 8058 = 12 Aqr B.
+2678143182592080768	hd	213052
+2678143182592080768	hr	8559
+# ^ ζ² Aqr. Ships 213051 / HR 8558 = ζ¹ Aqr.
+5984491573534116224	hd	330123
+# ^ HD 330123. Ships 330122. Neither number is in V/50, so there is no HR to
+#   move with it — the one row of the nine that carries a single field.

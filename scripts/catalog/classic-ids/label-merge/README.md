@@ -161,9 +161,26 @@ proposal can re-expose a value its partner had proposed to vacate.
 `data/classic-ids/classic_id_overrides.tsv` pins one record's one identifier —
 an explicit value, or empty for "keep the spine's". It is for the case
 `docs/catalog-driver.md` § 4 names: review finding the CDS join wrong. It holds
-**one row**, whose evidence the file's own header states: Propus, where a Gaia
-source keyed to the wrong component of a resolved Tycho-2 pair would take
-η Gem's own HD off the star.
+**17 rows**, and they are two shapes rather than 17 judgements.
+
+**One is a refusal.** Propus, where a Gaia source keyed to the wrong component
+of a resolved Tycho-2 pair would take η Gem's own HD off the star; the file's
+own header states the evidence.
+
+**Sixteen are a RULE's output**, eight records' `hd` and `hr` moved together
+because the record ships its neighbour's number and all four witnesses agree
+which component the record is (`../../simbad/README.md` § Which witness decides
+a close pair's HD). They sit here rather than in a mechanism of their own
+because the rule's reach is nine rows and one of those is held back: a curated
+file whose rows are a stated rule's output, each carrying the component the
+witnesses named, is the honest shape for a set that small. **HD and HR move
+together or not at all** — V/50 publishes them as a pair, so moving one alone
+composes a pair no catalogue prints, and the one record of the eight carrying no
+HR moves a single field.
+
+An override is applied before the collision guard and before the extras
+partition, so a curated value neither suppresses nor aliases: it is what the
+record ships.
 
 Four shapes that LOOK like exceptions are reached mechanically instead, and
 the file's header names the first three: a proposal that would make another
