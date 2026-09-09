@@ -10,7 +10,7 @@ import {
   NO_CONSTELLATION_INDEX,
   type SearchEntry,
 } from '../../../scripts/catalog/catalog-pure';
-import { buildSearchIndex, normalizeGlKey } from './search-corpus';
+import { buildSearchIndex, GL_QUERY_RE, normalizeGlKey } from './search-corpus';
 
 export type { SearchEntry };
 export type { FuzzyEntry, SearchIndex } from './search-corpus';
@@ -109,6 +109,18 @@ export function createSearchRunner(
     return sidMap.get(sidVal);
   };
 
+  // The Gliese row echoes the record's own published cell, not the typed
+  // text: "gj 2060 ab" and "GJ 2060AB" key the same star, and only the
+  // catalogue's spelling is one somebody published.
+  let glCells: Map<number, string> | null = null;
+  const glCellOf = (idx: number): string | undefined => {
+    if (!glCells) {
+      glCells = new Map();
+      for (const e of raw) if (e.gl !== undefined) glCells.set(e.i, e.gl);
+    }
+    return glCells.get(idx);
+  };
+
   const directResult = (idx: number, label: string): FuzzyEntry => {
     const conIdx = catalog.constellation[idx];
     const con = conIdx !== NO_CONSTELLATION_INDEX ? catalog.constellations[conIdx] : null;
@@ -163,11 +175,18 @@ export function createSearchRunner(
       const idx = sidLookup(Number(sidMatch[1]));
       return idx !== undefined ? [directResult(idx, `SID #${sidMatch[1]}`)] : [];
     }
-    // Gliese: "Gl 559A", "GJ 581", "Gliese 411"
-    const glMatch = trimmed.match(/^(?:gliese|gj|gl)\s*(\d+\s*[a-z]?)$/i);
+    // Gliese: "Gl 559A", "GJ 581", "Gliese 411", "Gl 563.2A", "GJ 2060AB"
+    const glMatch = trimmed.match(GL_QUERY_RE);
     if (glMatch) {
       const idx = glMap.get(normalizeGlKey(glMatch[1]));
-      return idx !== undefined ? [directResult(idx, `Gl ${glMatch[1].toUpperCase()}`)] : [];
+      if (idx !== undefined) {
+        const cell = glCellOf(idx);
+        if (cell !== undefined) return [directResult(idx, cell)];
+      }
+      // Unlike its three siblings above, a miss does NOT answer empty: a
+      // component with no designation of its own borrows its anchor's Gliese
+      // base and adds its letter ("GJ 3915 Ab", "Gl 791.2 B"), and that label
+      // is the composer's — fuzzy-indexed, never a key `glMap` holds.
     }
     // Flamsteed: "58 Ori". Returns every component sharing the number, each
     // with its own display name — not the raw query echoed back.

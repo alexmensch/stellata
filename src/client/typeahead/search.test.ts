@@ -763,3 +763,59 @@ describe('search / Gaia + SID direct dispatch', () => {
     expect(run('SID 999')).toEqual([]);
   });
 });
+
+describe('search / Gliese direct dispatch', () => {
+  const raw: SearchEntry[] = [
+    { i: 0, gl: 'Gl 559A' },
+    { i: 1, gl: 'Gl 563.2A' },
+    { i: 2, gl: 'GJ 452.1' },
+    { i: 3, gl: 'GJ 2060AB' },
+  ];
+  const run = createSearchRunner(makeEmptyCatalog(4), raw);
+
+  it.each([
+    ['Gl 559A', 0], ['gliese 559 a', 0],
+    ['Gl 563.2A', 1], ['GJ 563.2 a', 1],
+    ['GJ 452.1', 2], ['gl 452.1', 2],
+    ['GJ 2060AB', 3], ['gj 2060 ab', 3],
+  ] as Array<[string, number]>)('resolves %s to its record', (q, index) => {
+    const res = run(q);
+    expect(res).toHaveLength(1);
+    expect(res[0].index).toBe(index);
+  });
+
+  it('labels the row with the published cell, not the typed spelling', () => {
+    expect(run('gl 563.2a')[0].label).toBe('Gl 563.2A');
+    expect(run('gj 2060 ab')[0].label).toBe('GJ 2060AB');
+    expect(run('gliese 559 a')[0].label).toBe('Gl 559A');
+  });
+
+  it('a designation no record carries returns no results', () => {
+    expect(run('Gl 563.9Z')).toEqual([]);
+  });
+});
+
+describe('search / Gliese-based component composites', () => {
+  // Neither component holds a designation of its own, so each borrows its
+  // anchor's Gliese base and adds its letter. The composed label is what the
+  // corpus indexes; `glMap` is keyed off published cells and never holds it.
+  const raw: SearchEntry[] = [
+    { i: 0, gl: 'GJ 3915', c: 0, cl: 'A', cp: 0 },
+    { i: 1, c: 0, cl: 'Ab', cp: 0 },
+    { i: 2, gl: 'Gl 791.2', c: 0, cl: 'A', cp: 2 },
+    { i: 3, c: 0, cl: 'B', cp: 2 },
+  ];
+  const run = createSearchRunner(makeEmptyCatalog(4), raw);
+
+  it.each([
+    ['GJ 3915 Ab', 1],
+    ['Gl 791.2 B', 3],
+  ] as Array<[string, number]>)('reaches %s through fuzzy after the map misses', (q, index) => {
+    expect(run(q)[0]?.index).toBe(index);
+  });
+
+  it('still resolves the anchors through the map', () => {
+    expect(run('GJ 3915')[0].index).toBe(0);
+    expect(run('Gl 791.2')[0].index).toBe(2);
+  });
+});

@@ -33,13 +33,24 @@ export interface FuzzyEntry {
   conExpansion?: boolean;
 }
 
-// Canonical Gliese lookup key: strip a leading Gl/GJ/Gliese prefix and all
-// whitespace, lowercase. "Gliese" precedes "Gl" in the alternation so it
-// isn't clipped to a stray "iese". Shared by the index builder (keys the
-// map from the stored `gl` field) and the query dispatcher (keys the typed
-// query) so "Gl 551" / "GJ 551" / "Gliese 551" all resolve one star.
+// "Gliese" precedes "Gl" in the alternation so it isn't clipped to a stray
+// "iese". One source for both readers below: the dispatcher decides whether a
+// query is Gliese at all and the normaliser strips the same prefix off the
+// stored cell, so a spelling added to only one of them half-works in silence.
+const GL_PREFIX = '(?:Gliese|GJ|Gl)';
+
+// The query form the runner dispatches on. A Gliese designation is not a
+// number — it carries an optional decimal series and a run of component
+// letters ("Gl 563.2A", "GJ 2060AB", "GJ 10314ABC").
+export const GL_QUERY_RE = new RegExp(`^${GL_PREFIX}\\s*(\\d+(?:\\.\\d+)?\\s*[a-z]*)$`, 'i');
+
+// Canonical Gliese lookup key: strip the prefix and all whitespace, lowercase.
+// Shared by the index builder (keys the map from the stored `gl` field) and
+// the query dispatcher (keys the typed query) so "Gl 551" / "GJ 551" /
+// "Gliese 551" all resolve one star.
+const GL_PREFIX_RE = new RegExp(`^\\s*${GL_PREFIX}\\s*`, 'i');
 export function normalizeGlKey(raw: string): string {
-  return raw.replace(/^\s*(?:Gliese|GJ|Gl)\s*/i, '').replace(/\s+/g, '').toLowerCase();
+  return raw.replace(GL_PREFIX_RE, '').replace(/\s+/g, '').toLowerCase();
 }
 
 // Each Bayer'd star gets several fuzzy-index entries so the user can type any
