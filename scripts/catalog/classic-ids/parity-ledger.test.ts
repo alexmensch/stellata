@@ -15,7 +15,7 @@ import {
   LABEL_FLIPS_FILE,
   parseLabelFlipsTsv,
   spineDesignationsRemovedBy,
-} from './label-merge-pure';
+} from './label-merge/label-merge-pure';
 
 const ADDITIONS_PATH = resolve(REPO_ROOT, 'data/membership/additions-ledger.tsv');
 const QUEUE_PATH = resolve(REPO_ROOT, 'data/classic-ids/hd_hip_route_disagreements.tsv');

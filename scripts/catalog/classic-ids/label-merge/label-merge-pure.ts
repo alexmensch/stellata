@@ -1,9 +1,9 @@
 // The classic-ID overlay's label merge: overlay ∪ spine per identifier, with
 // the collision guard and the curated overrides. See README.md § The label
 // merge and docs/catalog-driver.md § 4.
-import { starDesignations } from '../../sid/sid-pure';
-import { dataRows, nonEmpty, parseIntOrNull } from '../parse/corpus-tsv';
-import type { SpineRow } from '../spine/inherited-spine-pure';
+import { starDesignations } from '../../../sid/sid-pure';
+import { dataRows, nonEmpty, parseIntOrNull } from '../../parse/corpus-tsv';
+import type { SpineRow } from '../../spine/inherited-spine-pure';
 import {
   glieseCellKey,
   glieseComponent,
@@ -11,7 +11,7 @@ import {
   OVERLAY_VALUE_SEPARATOR,
   type ClassicIdOverlay,
   type OverlayEntry,
-} from './classic-id-overlay-pure';
+} from '../classic-id-overlay-pure';
 
 export const LABEL_FIELDS = ['hip', 'hd', 'hr', 'gl', 'flam'] as const;
 export type LabelField = (typeof LABEL_FIELDS)[number];
@@ -270,7 +270,7 @@ export function parseLabelOverridesTsv(text: string): LabelOverrides {
  *  the caller derived for it. The binding is a parameter rather than the row's
  *  own `gaia_source_id` cell because the two part company on 800-odd rows: the
  *  manifest derives the binding and reads the frozen cell only as a diff
- *  surface (`../membership/README.md` § The binding is derived), and labels
+ *  surface (`../../membership/README.md` § The binding is derived), and labels
  *  keyed on the retired cell would name a source the record is no longer
  *  bound to. */
 export function spineLabelMergeRecord(
@@ -391,7 +391,7 @@ export function labelFlipDesignationDelta(
  *  delta above cancels one against an addition that lands the same designation
  *  on another record, which is exactly what a same-as class cares about and
  *  exactly what a ledger canonical key does not — its row resolves through the
- *  record it was keyed on (`../spine/README.md` § The swap parity ledger). */
+ *  record it was keyed on (`../../spine/README.md` § The swap parity ledger). */
 export function spineDesignationsRemovedBy(flips: readonly LabelFlip[]): string[] {
   const removed: string[] = [];
   for (const flip of flips) {

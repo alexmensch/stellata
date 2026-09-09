@@ -866,7 +866,7 @@ export interface SearchEntry {
   // Further HD / HR numbers the record answers to but does not display. HD
   // numbered both components of many close pairs and HR routes through HD, so
   // these two are the identifiers an overlay cell can be ambiguous on
-  // (classic-ids/README.md § The label merge). Search resolves them; the
+  // (classic-ids/label-merge/README.md). Search resolves them; the
   // dropdown label stays the record's own designation.
   hda?: number[];
   hra?: number[];
@@ -932,8 +932,8 @@ export function designationConIndex(
  *  and 11 HR numbers are displayed by two records each, always a component pair
  *  sharing one catalogue number, and `Gl 277A` likewise. And an alias never
  *  displaces a record that displays that number outright, whichever way the
- *  absmag sort happened to order the two. `classic-ids/README.md` § An alias
- *  stops at the blend is the same rule on the write side;
+ *  absmag sort happened to order the two. `classic-ids/label-merge/README.md`
+ *  § An alias stops at the blend is the same rule on the write side;
  *  `cns5AstrometryByGj` is the same two-pass reduction over CNS5's component
  *  letters.
  *

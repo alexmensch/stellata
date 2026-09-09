@@ -442,8 +442,8 @@ on the bare number: two spellings of one component agree, two different
 components of one system disagree, and a candidate naming the SYSTEM — CNS5's
 `gj_comp` states a multi-component entry's letters combined, `ABCD` — makes no
 claim a component cell can contradict, so precedence must not fire on it
-(`scripts/catalog/classic-ids/README.md` § The gl comparison is
-specificity-aware).
+(`scripts/catalog/classic-ids/label-merge/README.md` § The gl comparison
+is specificity-aware).
 
 **One mechanical exception, and it is an identity rule rather than a label
 one: the merge may not turn an unambiguous spine designation into an ambiguous

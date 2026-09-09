@@ -61,7 +61,7 @@ gaia_source_id  binding  routes
 
 - The identifier cells carry the record's **final** labels: for a spine row
   the classic-ID label merge has already run (`../classic-ids/README.md`
-  § The label merge), so `hd_alt` / `hr_alt` hold the alias lists and there is
+  label-merge/README.md), so `hd_alt` / `hr_alt` hold the alias lists and there
   no second designation set to flip against. `bayer` and `proper` are the
   spine's printed cells on spine rows and empty on additions — the naming
   ladder resolves both from HD / HIP at build time and reads the cell only as
@@ -104,13 +104,13 @@ where the overlay can now speak. It moves five cells today — HD 2094 onto
 HIP 1997, whose own addition row folds away as a component (a § 7 merge,
 retiring `hd:2094` in favour of `hip:1997`); GJ 9013 onto Ankaa; GJ 9257AB onto
 Tegmine; `Gl 596.1A` to `GJ 9527` on ψ Ser under CNS5's renumbering; and one
-curated refusal (`../classic-ids/README.md` § Curated overrides): Propus, where
+curated refusal (`../classic-ids/label-merge/README.md` § Curated overrides): Propus, where
 Gaia fits one source across a resolved Tycho-2 pair and its cross-match keys
 that source to the sibling, so the overlay would hand η Gem the sibling's
 HD 253820 in place of its own HD 42995. It is the only curated row: Gl 563.2
 A/B, whose letters AT-HYG swapped, is reached mechanically now the merge scores
-`gl` on the component the two sides name (`../classic-ids/README.md` § The gl
-comparison is specificity-aware).
+`gl` on the component the two sides name (`../classic-ids/label-merge/README.md`
+§ The gl comparison is specificity-aware).
 
 The binding is **derived**, not copied: § The binding is derived walks four
 committed sources through both gates and writes what survives. The spine's
@@ -411,7 +411,7 @@ overlay's gate.
 
 The same holds for the classical cells: they are FINAL, the merge having run in
 the generator, so the record build applies no label pass to them
-(`../classic-ids/README.md` § The label merge).
+(`../classic-ids/label-merge/README.md`).
 
 ## What the spine is still for
 

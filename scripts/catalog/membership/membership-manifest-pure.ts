@@ -31,7 +31,7 @@ import {
   type LabelMergeCounts,
   type LabelMergeRecord,
   type LabelOverrides,
-} from '../classic-ids/label-merge-pure';
+} from '../classic-ids/label-merge/label-merge-pure';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { dataRows, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
 import { tycho2VMagnitude } from '../photometry/v-magnitude-pure';

@@ -85,7 +85,7 @@ scripts/catalog/naming/
 
 WGSN is the primary designation source; IV/27A supplies only the Bayer
 tail — a cross-index Bayer row is added only when no WGSN Bayer
-designation already reaches its star by HD or HIP (1,605 covered, 446
+designation already reaches its star by HD or HIP (1,605 covered, 444
 added). IV/27A Flamsteed numbers are **not** unioned: the record build
 already carries `f` via the label merge and `dc` via the
 designation-constellation cascade, and the cross index adds no glyph
@@ -132,7 +132,7 @@ belongs to the sibling record (ξ UMa B / HD 98230, and HD 79096's Pi-1
 cell): both drop their own Bayer (`namingBayerDropped`) and take their
 system's designation with their component letter instead, which is what
 the authority's coverage actually asserts. Over the whole record set the
-table reaches **2,005** records, 485 of which the manifest carries no Bayer
+table reaches **2,033** records, 513 of which the manifest carries no Bayer
 cell for at all.
 
 Three designation rows carry no key at all (`designationsKeyless`):
@@ -167,7 +167,7 @@ asserting the same string is evidence rather than invention.
 **An ambiguous number is not a key.** The join reads a record's
 single-valued `hd` / `hr` only, never its `hdAlt` / `hrAlt`: an ambiguous
 designation names a catalogue granularity (`../classic-ids/README.md`
-§ The label merge), and joining through one attached another component's
+label-merge/README.md), and joining through one attached another component's
 Bayer letter to the wrong star.
 
 **Three pickers settle the ties the tables leave.** For a NAME, the bare
@@ -261,7 +261,7 @@ for exactly that reason.
   runtime binaries loader resolves records through), `old`, `new`, and
   `resolves`. The `old` column is FROZEN: it is the string a user could
   have typed, and `resolves` records whether it still reaches that record.
-  4,006 changes, 92 of them records that now display the runtime's
+  3,694 changes, 78 of them records that now display the runtime's
   identifier fallback.
 - **`naming-duplicates.tsv`** — every display label two or more records
   compose, with its claimants. A RATCHET: each row is a curation finding
@@ -271,7 +271,7 @@ for exactly that reason.
 The gate is stated over strings with EXTERNAL provenance — every name the
 authority approves and every name the manifest carries must reach a record.
 A string the build composed itself has no external existence, so § 5 lets
-it disappear with the composition that made it; 1,994 do, and the ledger's
+it disappear with the composition that made it; 1,986 do, and the ledger's
 `resolves` column is where each one is reviewable.
 
 `pnpm run build:naming-parity` refreshes `new`, `resolves` and the

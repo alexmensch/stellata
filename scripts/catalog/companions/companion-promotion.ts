@@ -149,7 +149,7 @@ function parseIntOrNull(s: string | undefined): number | null {
  *  misses the sibling on exactly the resolved pairs this is asked about.
  *  Promotion can still decline to render a member row, so this is a superset of
  *  what ships; the label merge wants that direction
- *  (`../classic-ids/README.md` § An alias stops at the blend). */
+ *  (`../classic-ids/label-merge/README.md` § An alias stops at the blend). */
 export function sourceIdsWithSiblingComponent(
   rows: readonly MultiplesTsvRow[],
 ): Set<string> {

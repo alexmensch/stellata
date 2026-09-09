@@ -106,7 +106,7 @@ Each manifest row walks through, inside `readStars`. The row arrives with its
 `gaia_source_id` already resolved and justified — `../membership/README.md`
 § The identifier columns are read, never re-derived — and with its classic-ID
 labels already FINAL, so no label merge runs here (`../classic-ids/README.md`
-§ The label merge).
+label-merge/README.md).
 
 **Two rows leave without a record, and the difference is what the count means.**
 A **park** (steps 0, 1 and 2) is a membership decision: the row reaches no

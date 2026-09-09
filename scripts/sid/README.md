@@ -87,7 +87,7 @@ different sets from the same artifacts.
 Per catalog record: `hip:` + `gaia_dr3:` from the record fields,
 `hd:`/`hr:`/`gl:` from its `search-index.json` entry — plus a second `hd:` or
 `hr:` per `hda`/`hra` alias, since both numbers name the star
-(`scripts/catalog/classic-ids/README.md` § The label merge) — `synth:` from
+(`scripts/catalog/classic-ids/label-merge/README.md`) — `synth:` from
 `catalog-row-index-map.json` `bySynth` (runtime `synth-` prefix
 stripped), `sol:sun` from `FLAG_IS_SOL`. Clouds and Local Group carry
 their artifact `id` slugs; planets, moons, and probes all come from

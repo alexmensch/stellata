@@ -9,7 +9,13 @@ sources, § 4 the HD→Gaia route and the ambiguity / precedence policy.
 ```
 tyc2_hd.tsv                        ~7.4 MB, LFS. HD ↔ Tycho-2 (353,527 rows).
 cross_index.tsv                    ~94 KB, LFS. Bayer / Flamsteed ↔ HD/HR/HIP
-                                   (3,690 rows).
+                                   (3,690 rows; 3,688 after the corrections
+                                   below, which every consumer reads through
+                                   readCrossIndexTable).
+cross_index_corrections.tsv        Hand-curated. Two rows; IV/27A rows whose
+                                   designation names a star the row is not
+                                   (scripts/catalog/classic-ids/README.md
+                                   § One designation, two HD numbers).
 bsc5.tsv                           ~136 KB, LFS. HR ↔ HD (9,110 rows).
 cns5.tsv                           ~953 KB, LFS. GJ ↔ Gaia EDR3 ↔ HIP,
                                    plus the astrometry re-slice —
@@ -41,7 +47,7 @@ label_flips.tsv                    736 rows. Pipeline-derived, and by
                                    gate replays.
 classic_id_overrides.tsv           Hand-curated. One row; the escape
                                    hatch for a CDS join review finds wrong
-                                   (scripts/catalog/classic-ids/README.md
+                                   (scripts/catalog/classic-ids/label-merge/README.md
                                    § Curated overrides).
 ```
 
@@ -65,8 +71,11 @@ all four; cite the paper per table.
   a cross index for those designations, with no larger slice behind it;
   HR routes via `bsc5.tsv`, HD via `tyc2_hd.tsv`. 2,185 rows carry a Bayer
   letter, 2,757 a Flamsteed number — 119 Flamsteed numbers the spine
-  carries are not among them (`data/membership/README.md`). `bayer` is IV/27A's own lowercase three-letter form (`alf`,
-  `kap`), **not** AT-HYG's (`Alp`) — and neither is canonical:
+  carries are not among them (`data/membership/README.md`). Two of those
+  rows leave the table as curated corrections (§ the roster above), so
+  consumers see 2,183 Bayer and 2,755 Flamsteed cells.
+  `bayer` is IV/27A's own lowercase three-letter form
+  (`alf`, `kap`), **not** AT-HYG's (`Alp`) — and neither is canonical:
   `docs/star-naming.md` § 4 stores the Unicode glyph, sourced from the
   IAU WGSN naked-eye catalogue, and demotes this table to the V > 6.5
   tail; both ASCII conventions are normaliser inputs there. 111 of
@@ -238,7 +247,7 @@ asserting nothing:
 | gl | 3,146 | 1,840 | 58.5% | 79 |
 | flam | 2,724 | 2,028 | 74.4% | 2 |
 
-Additions the spine had no value for: hd 149, hr 4, gl 205, flam 69.
+Additions the spine had no value for: hd 149, hr 4, gl 205, flam 67.
 
 Measured after the merge moved onto the DERIVED binding
 (`scripts/catalog/membership/README.md` § The binding is derived). Keyed on the
@@ -285,8 +294,8 @@ Three structural bounds behind the shortfalls:
 `gl`'s flips run high for its size because the comparison scores the COMPONENT
 the two sides name, not the bare number: 13 of the 79 are a swapped component
 letter CNS5 states on its own Gaia-keyed row
-(`scripts/catalog/classic-ids/README.md` § The gl comparison is
-specificity-aware).
+(`scripts/catalog/classic-ids/label-merge/README.md` § The gl comparison
+is specificity-aware).
 
 None of this loses a record or a label: `docs/catalog-driver.md` § 1
 defines labels as *overlay + spine backstop*, and the inherited spine

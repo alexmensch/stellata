@@ -367,7 +367,7 @@ wire is a composed string and nothing parses one; `naming/README.md`
 
 `hda`/`hra` carry the further HD / HR numbers a record answers to but does
 not display — the manifest's `hd_alt` / `hr_alt` cells
-(`classic-ids/README.md` § An alias stops at the blend). The `s` field carries
+(`classic-ids/label-merge/README.md` § An alias stops at the blend). The `s` field carries
 the raw spectral designation the spectral resolver settled on ("G2 V",
 "M1.5Iab-b", "K0III+K7V", …) for the hover tooltip display. The `g` field carries the GCVS variable-star
 designation (`R CrB`, `VY CMa`, `V0645 Cen`) the cross-match attaches

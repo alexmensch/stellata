@@ -184,7 +184,8 @@ the fainter one. HIP carries no duplicate key today and is built the same way
 so it cannot acquire one silently. `catalog-lookup.ts`'s `byHd` uses the same
 builder, so a frozen corpus row and the search box cannot resolve one number
 differently. Which numbers become aliases at all is the write side's rule
-(`scripts/catalog/classic-ids/README.md` § An alias stops at the blend): only
+(`scripts/catalog/classic-ids/label-merge/README.md` § An alias stops at
+the blend): only
 where the pair is unresolved, so the record carries both components' light.
 The direction the dropdown reads — record to label — stays single-valued.
 
