@@ -190,8 +190,20 @@ The direction the dropdown reads — record to label — stays single-valued.
 
 `glMap` is the one string-keyed map of the four, because a Gliese designation
 is not a number: it carries an optional decimal series and a run of component
-letters (`Gl 563.2A`, `GJ 2060AB`, `GJ 10314ABC`). The query pattern
+letters (`Gl 563.2A`, `GJ 2060AB`, `GJ 3193ABC`). The query pattern
 dispatching to it has to admit both, where its three siblings take bare digits.
+`GL_QUERY_RE` and `normalizeGlKey` build off one `GL_PREFIX`, so the spellings
+the dispatcher accepts and the one the key strips cannot drift apart.
+
+**Gliese is the one identifier form whose miss falls through to fuzzy**, and
+the three above it are right to answer empty. A component holding no
+designation of its own borrows its anchor's Gliese base and appends its letter
+— `GJ 3915 Ab`, `Gl 791.2 B` — so that string is a label the composer emitted,
+fuzzy-indexed, and never a key `glMap` can hold. Returning empty on the map
+miss strands every one of them. No bare HIP/HD/HR number composes a label that
+way, so nothing is behind those branches to fall through to. The row echoes
+the record's own published cell rather than the typed text, so `gj 2060 ab`
+reads `GJ 2060AB` — the spelling the catalogue prints, not the one typed.
 
 The Flamsteed map keys `<num> <con>` to
 **an array** of every component sharing that designation, so an exact
