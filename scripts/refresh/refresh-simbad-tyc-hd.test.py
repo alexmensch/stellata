@@ -107,6 +107,23 @@ class ComposeRows(unittest.TestCase):
         )
         self.assertEqual(rows[0]["hd"], "12447|12448")
 
+    def test_two_hds_of_unequal_width_order_by_number_not_by_text(self) -> None:
+        """A lexical sort puts `287782` before `35068`, which reads as a
+        ranking of a field that ranks nothing. 28 shipped rows are this
+        shape."""
+        rows = mod.compose_rows(
+            ["1-1-1"], {"1-1-1": 1},
+            {1: {HD.tsv_name: {"287782", "35068"}}}, {},
+        )
+        self.assertEqual(rows[0]["hd"], "35068|287782")
+
+    def test_a_bare_number_precedes_its_component_lettered_form(self) -> None:
+        rows = mod.compose_rows(
+            ["1-1-1"], {"1-1-1": 1},
+            {1: {HD.tsv_name: {"24071B", "24071"}}}, {},
+        )
+        self.assertEqual(rows[0]["hd"], "24071|24071B")
+
     def test_component_letter_survives_the_suffix_parse(self) -> None:
         rows = mod.compose_rows(
             ["1-1-1"], {"1-1-1": 1}, {1: {HD.tsv_name: {"24071B"}}}, {},

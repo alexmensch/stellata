@@ -108,7 +108,9 @@ Columns: `tyc`, `simbad_oid`, `simbad_main_id`, `hd`.
 included (`24071`, `24071B`). **Nothing picks a winner between two HDs on one
 object** — an unresolved pair's entry carries both components' numbers, and
 that ambiguity is what a consumer is asking about. 2,882 rows carry more
-than one.
+than one. They are ordered by HD number, then by the suffix itself, so a bare
+number precedes its lettered forms and the 28 rows whose two numbers differ in
+digit width still read low-to-high; the order ranks nothing.
 
 A Tycho entry SIMBAD holds no HD for is **absent from the file**, so
 `has(tyc) === false` reads as "SIMBAD attributes no HD here" and never as "not

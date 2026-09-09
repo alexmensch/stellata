@@ -61,6 +61,18 @@ def read_tyc_request(
     return sorted(rl.format_tyc(t) for t in rl.read_mentioned_tycs(manifest, iv25))
 
 
+def hd_sort_key(ident: str) -> tuple[int, str]:
+    """Order an HD ident by its number, then by the whole suffix so a bare
+    number precedes its component-lettered forms. A suffix with no leading
+    integer sorts first and keeps its relative order."""
+    lead = ""
+    for ch in ident:
+        if not ch.isdigit():
+            break
+        lead += ch
+    return (int(lead) if lead else -1, ident)
+
+
 def compose_rows(
     tycs: list[str],
     oid_by_tyc: dict[str | int, int],
@@ -75,10 +87,13 @@ def compose_rows(
     coverage a consumer needs is `absent from this table`, which is cheaper to
     state than to store.
 
-    `hd` is `|`-separated and sorted, because an object holding two HD idents
-    is the signal rather than the exception here — an unresolved pair's entry
-    carries both components' numbers, and picking one would destroy the very
-    ambiguity a consumer is asking about.
+    `hd` is `|`-separated, because an object holding two HD idents is the
+    signal rather than the exception here — an unresolved pair's entry carries
+    both components' numbers, and picking one would destroy the very ambiguity
+    a consumer is asking about. Ordered by HD NUMBER, then by the ident's own
+    suffix, so a pair's two numbers read adjacently whatever their digit
+    widths: a lexical sort puts `287782` before `35068`, which reads as a
+    ranking the file does not mean.
     """
     rows: list[dict[str, object]] = []
     for tyc in tycs:
@@ -92,7 +107,7 @@ def compose_rows(
             "tyc": tyc,
             "simbad_oid": oid,
             "simbad_main_id": basic_by_oid.get(oid, {}).get(MAIN_ID.alias) or "",
-            "hd": "|".join(sorted(str(s) for s in suffixes)),
+            "hd": "|".join(sorted((str(s) for s in suffixes), key=hd_sort_key)),
         })
     return rows
 
