@@ -1,4 +1,4 @@
-# SIMBAD — sample, sp_type, values, WDS↔Gaia cross-IDs
+# SIMBAD — sample, sp_type, values, WDS↔Gaia and TYC↔HD cross-IDs
 
 Per-source SIMBAD pulls. Used as: a Tier-C validation corpus, the
 top-priority spectral classifier, the bibcoded bottom tier of the
@@ -18,6 +18,9 @@ simbad_values.tsv          ~18 MB, LFS. 74,446 rows. Bibcoded rv,
                            the § 5 value cohort — see § The values pull.
 simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
                            HIP) curated cross-IDs.
+simbad_tyc_hd.tsv          ~11 MB, LFS. 332,320 rows. SIMBAD's own HD
+                           attribution per Tycho-2 entry, keyed on TYC —
+                           see § The TYC → HD pull.
 wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated WDS-J
                            coalesce overrides for Sirius B-shaped cases.
 ```
@@ -89,6 +92,94 @@ cascade must skip on rows whose own 5p gate withheld Gaia rv, so the pull
 cannot launder a withheld value back in. The rest are literature, led by
 `2020AJ....160..120J` (4,007), `2006AstL...32..759G` (3,764) and
 `2020AJ....160...83S` (1,618).
+
+## The TYC → HD pull
+
+Which HD number names a given Tycho-2 entry, from SIMBAD rather than from
+IV/25. It exists because **one printed cross index is not a witness for an
+identifier attribution**, and on a close pair whose two Tycho entries carry
+adjacent HD numbers there was previously no second opinion in the tree:
+`simbad_sptype.tsv` keys by `source_id`, which on exactly those rows is the
+one blended source both components share and so cannot split them.
+
+Columns: `tyc`, `simbad_oid`, `simbad_main_id`, `hd`.
+
+`hd` is `|`-separated and carries SIMBAD's own ident suffix, component letter
+included (`24071`, `24071B`). **Nothing picks a winner between two HDs on one
+object** — an unresolved pair's entry carries both components' numbers, and
+that ambiguity is what a consumer is asking about. 2,882 rows carry more
+than one. They are ordered by HD number, then by the suffix itself, so a bare
+number precedes its lettered forms and the 28 rows whose two numbers differ in
+digit width still read low-to-high; the order ranks nothing.
+
+A Tycho entry SIMBAD holds no HD for is **absent from the file**, so
+`has(tyc) === false` reads as "SIMBAD attributes no HD here" and never as "not
+asked": the request covers every TYC IV/25 or the manifest mentions.
+
+Measured at the 2026-09-09 pull (8.6 min):
+
+| Stage | Count |
+|---|---|
+| requested — IV/25's 353,330 ∪ the manifest's 372,147 | 372,618 |
+| resolved to a SIMBAD oid | 372,604 (99.996%) |
+| …whose object carries an HD ident | 332,318 (89.2%) |
+| rows written | 332,320 |
+
+Rows exceed resolved-with-an-HD by 2 because the key is the TYC, not the
+object: two Tycho entries SIMBAD folds onto one oid each ship their own row.
+
+### What it adjudicates
+
+Held against the manifest's shipped `hd` and IV/25's HD for the row's own TYC,
+over the 331,734 manifest rows carrying both a TYC and an HD that this file
+answers for — the two classes, and only the first is reachable without it:
+
+- **SIMBAD shares no HD with IV/25 on the row's own TYC — 219 rows.** IV/25 is
+  internally consistent on every one (`n_hd=1 n_tyc=1`, and its HD→TYC
+  direction agrees with its TYC→HD one), so **no committed table could detect
+  this class**. It splits two ways, and the split is the load-bearing part:
+  - **209** where the manifest faithfully carries IV/25's HD and SIMBAD
+    rejects both. Many are mutual swaps between a pair's two entries, and the
+    set is full of named stars: τ Oph, ξ Sco and ε² Lyr (both entries of
+    each), 20 Lyn, 8 Lac, 65 Psc, 55 Eri, ε Ari, μ¹ Cyg.
+  - **10 where SIMBAD backs the manifest's shipped HD against IV/25** —
+    γ¹ Ari, π Aql B, λ Oct B, TYC 2772-917-1, HD 17479A, HD 18281 and
+    HD 18282 (a mutual swap), HD 48766, HD 213973B, HD 224646B. A rule keyed
+    on the row's own TYC in IV/25 would corrupt every one, which is why the
+    second witness is a prerequisite rather than a refinement.
+
+  **Compare against IV/25's HD SET for the TYC, never one row of it.** An
+  entry IV/25 marks `n_hd=2` occupies **two rows**, one per HD — 197 TYCs do —
+  so a single-valued lookup keeps one and reads SIMBAD's agreement with the
+  other as a disagreement. That is the difference between 219 and the 226 this
+  section first reported: all 7 of the surplus were rows where SIMBAD names an
+  HD IV/25 does publish for the entry, on the row the lookup dropped. β Lyr is
+  the shape — IV/25 gives TYC 2642-2929-1 both 174638 and 174639, SIMBAD says
+  174638, the manifest ships 174638, and nothing disagrees with anything.
+- **SIMBAD and IV/25 agree and the manifest ships a different HD — 23 rows.**
+  Both witnesses against the shipped cell, so these are manifest errors with
+  no remaining doubt: α Psc A, f Eri A, 32 Eri B, β Mon B, k¹ Pup, ζ¹ Cnc A,
+  ζ Boo B, ε Boo B, δ Ser A, ρ Her A, κ¹/κ² CrA (a mutual swap), ε¹ Lyr B,
+  12 Aqr A, ζ² Aqr, and 8 plain-HD stars.
+
+So 232 shipped HD cells are contradicted and 10 are vindicated against the
+printed index. Both of the two dissents `stellata-3bsf.50` measured live
+reproduce exactly — π Aql (IV/25 187259, SIMBAD 187260) and TYC 2772-917-1
+(224635 / 224636) — which is what says the file agrees with the hand
+measurement that motivated it, and both are in the vindicating 10.
+
+Every count in this section is pinned against the committed tables by
+`scripts/catalog/simbad-tyc-hd-parse.test.ts` § adjudication over the
+committed tables, so a re-pull that moves one fails the suite rather than
+ageing this prose.
+
+**21,613 manifest rows carrying both a TYC and an HD get no answer here**:
+SIMBAD holds no object for the TYC, or its object carries no HD ident. So a
+consumer has three verdicts to handle, not two — agrees, dissents, and silent.
+`f Pup` (TYC 7113-3280-1) is in the silent set.
+
+**No consumer reads it yet.** It is the evidence a rule needs, not a rule; the
+attribution work is `stellata-3bsf.50` / `.52` / `.47`.
 
 ## Provenance
 
@@ -340,6 +431,8 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   [`scripts/refresh/refresh-simbad-sample.py`](../../scripts/refresh/README.md).
 - `pnpm run refresh:simbad-values` →
   [`scripts/refresh/refresh-simbad-values.py`](../../scripts/refresh/README.md).
+- `pnpm run refresh:simbad-tyc-hd` →
+  [`scripts/refresh/refresh-simbad-tyc-hd.py`](../../scripts/refresh/README.md).
 - `refresh-simbad-sptype.py` and `refresh-simbad-wds-xids.py` have
   no pnpm targets; invoke directly. All share the
   `scripts/refresh/simbad/` plumbing.

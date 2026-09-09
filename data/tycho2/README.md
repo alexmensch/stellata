@@ -90,11 +90,17 @@ supplement only where the main table has no row.
 
 ## The request set — manifest ∪ IV/25
 
-`refresh-tycho2.py` derives the mentioned-TYC set from the membership
-manifest's `tyc` column (372,147) unioned with IV/25's own TYCs (471 more
-than the manifest already names), for 372,618 requested. The union is
-unchanged in size from the spine-era `spine ∪ IV/25`: the manifest admits
+`refresh_lib.read_mentioned_tycs` derives the mentioned-TYC set from the
+membership manifest's `tyc` column (372,147) unioned with IV/25's own TYCs
+(471 more than the manifest already names), for 372,618 requested. The union
+is unchanged in size from the spine-era `spine ∪ IV/25`: the manifest admits
 the IV/25 TYCs that the union was widened to cover in the first place.
+
+It lives in `refresh_lib` rather than in `refresh-tycho2.py` because
+`refresh-simbad-tyc-hd.py` asks the same question of the same two tables —
+the terms `read_source_id_request` is shared on. Both parse each side into
+integer triples, so the two pulls cover the same entries by construction and
+a differently-spelled cell cannot drift them apart.
 
 Coverage, re-measured 2026-09-07 against the committed tables:
 

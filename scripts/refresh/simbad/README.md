@@ -264,6 +264,13 @@ job and is finished; only the second is the union's.
 - [`refresh-simbad-wds-xids.py`](../README.md) — per-WDS-component
   (Gaia DR3, HIP) cross-IDs via a two-phase WDS-id → SIMBAD-oid →
   cross-IDs walk.
+- [`refresh-simbad-tyc-hd.py`](../README.md) — SIMBAD's HD attribution per
+  Tycho-2 entry, keyed on TYC. Pure composition of `resolve_oids_by_prefix`
+  → `fetch_ident_sets` → `fetch_basic_columns`, so the padding rule above is
+  the plumbing's rather than the shell's. It asks `fetch_ident_sets` rather
+  than `fetch_ident_lookups` deliberately: an object holding two HD idents is
+  the ambiguity a consumer is asking about, and the single-valued fetcher
+  would pick a winner and hide it.
 
 `refresh-simbad-sample.py` predates this folder and drives its TAP
 queries directly via the shared

@@ -86,8 +86,7 @@ scripts/catalog/
                                   admitted only with the bibcode that sourced
                                   it, so an uncited one is unrepresentable.
   simbad-values-parse.ts (+ test) data/simbad/simbad_values.tsv indexed by
-                                  every namespace the pull keyed on, over the
-                                  shared ladder in catalog-pure.ts. Bottom
+                                  every namespace the pull keyed on. Bottom
                                   tier of the rv, direction/PM and distance
                                   cascades alike.
   tycho2-parse.ts (+ test)        data/tycho2/ indexed on the full TYC, with
@@ -95,6 +94,7 @@ scripts/catalog/
                                   the main-table-wins rule resolved at parse
                                   time (data/tycho2/README.md). Feeds the
                                   direction, PM-rescue and V cascades.
+  simbad-tyc-hd-parse.ts (+test)  data/simbad/simbad_tyc_hd.tsv on the full TYC.
   gliese-parse.ts (+ test)        data/gliese/ keyed on the bare Gliese
                                   number + component, so the catalogue's four
                                   name prefixes and a record's `gl` cell meet
