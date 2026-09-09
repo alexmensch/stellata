@@ -525,6 +525,48 @@ describe('spine corrections', () => {
     ].join('\n') + '\n';
     expect(() => parseSpineCorrectionsTsv(tsv)).toThrow(/states no evidence/);
   });
+
+  it('refuses a set writing the value the spine already states', () => {
+    expect(() => buildMembership({
+      ...input,
+      corrections: [correction({ tyc: '1-2-1', hd: '5', cell: 'tyc', value: '1-2-1' })],
+    })).toThrow(/the value the spine already states/);
+  });
+
+  it('refuses a fold onto a row that is itself folded', () => {
+    expect(() => buildMembership({
+      ...input,
+      spine: [
+        ...spine,
+        spineRow({ gl: 'Gl 165B', gaia_source_id: '444' }),
+        spineRow({ gl: 'Gl 165C', gaia_source_id: '555' }),
+      ],
+      corrections: [
+        correction({
+          gl: 'Gl 165C', op: 'fold', cell: '',
+          value: bindingReviewKey({ tyc: '', hip: '', hd: '', gl: 'Gl 165B' }),
+        }),
+        correction({
+          gl: 'Gl 165B', op: 'fold', cell: '',
+          value: bindingReviewKey({ tyc: '7-7-1', hip: '20', hd: '', gl: 'Gl 165A' }),
+        }),
+      ],
+    })).toThrow(/a fold target is itself folded/);
+  });
+
+  // Sol is the one spine row whose four key cells are all empty, so a blank key
+  // RESOLVES — to the Sun — rather than failing to match. Do not read this
+  // guard as redundant with 'matches no spine row'.
+  it('refuses a correction naming no key cell, which would resolve to Sol', () => {
+    const tsv = [
+      SPINE_CORRECTION_COLUMNS.join('\t'),
+      ['', '', '', '', 'set', 'tyc', '1-9-1', 'because'].join('\t'),
+    ].join('\n') + '\n';
+    expect(() => parseSpineCorrectionsTsv(tsv)).toThrow(/every key cell is empty/);
+    expect(bindingReviewKey(spine[0])).toBe(bindingReviewKey({
+      tyc: '', hip: '', hd: '', gl: '',
+    }));
+  });
 });
 
 describe('buildMembership — the additions', () => {

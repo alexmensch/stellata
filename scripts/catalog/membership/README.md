@@ -261,7 +261,10 @@ merged wrong, keyed on `tyc`/`hip`/`hd`/`gl`, which is unique across all
 
 A key matching no spine row, a `set` writing the value the spine already
 states, a fold onto a folded row, and a row stating no evidence are all hard
-errors — a curated file that silently does nothing is worse than none.
+errors — a curated file that silently does nothing is worse than none. So is a
+row naming **no** key cell, which is the one blank that would resolve rather
+than miss: Sol is the single spine row whose four key cells are all empty, so
+an unkeyed correction lands on the Sun.
 
 **A fold has to be a merge, not a drop.** After the rows are built the
 generator holds every folded row's `spineDesignations` against the surviving

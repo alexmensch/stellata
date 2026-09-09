@@ -169,8 +169,9 @@ export type AdditionLedgerRow = Record<(typeof LEDGER_COLUMNS)[number], string>;
 
 export const SPINE_CORRECTIONS_FILE = 'data/membership/spine-corrections.tsv';
 /** The spine row a correction names, on the same four cells
- *  `bindingReviewKey` uses. Unique across all 313,257 rows, so a key matching
- *  none or more than one is a hard error rather than a silent no-op. */
+ *  `bindingReviewKey` uses. Unique across all 313,257 rows of the frozen
+ *  spine, so a key matching none is a hard error rather than a silent
+ *  no-op. */
 export const SPINE_CORRECTION_COLUMNS = [
   ...BINDING_REVIEW_KEY_COLUMNS, 'op', 'cell', 'value', 'evidence',
 ] as const;
@@ -209,6 +210,12 @@ export function parseSpineCorrectionsTsv(text: string): SpineCorrectionRow[] {
       throw new Error(
         `${SPINE_CORRECTIONS_FILE}: set may write ${SPINE_CORRECTION_CELLS.join(', ')}, `
           + `not "${row.cell}" — a label exception belongs in ${CLASSIC_ID_OVERRIDES_FILE}`,
+      );
+    }
+    if (BINDING_REVIEW_KEY_COLUMNS.every((c) => row[c].trim() === '')) {
+      throw new Error(
+        `${SPINE_CORRECTIONS_FILE}: row names no spine row — every key cell is empty, and the `
+          + "empty key is Sol's own, so a blank one corrects the Sun",
       );
     }
     if (row.evidence.trim() === '') {
