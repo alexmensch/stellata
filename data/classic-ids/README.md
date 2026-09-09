@@ -30,7 +30,7 @@ hd_hip_route_disagreements_review.tsv
 rejected_bindings.tsv              268 rows. Pipeline-derived review queue —
                                    the bindings the gate dropped
                                    (§ The binding gate).
-label_flips.tsv                    726 rows. Pipeline-derived, and by
+label_flips.tsv                    725 rows. Pipeline-derived, and by
                                    `build:membership` rather than by this
                                    folder's build — that is where the merge
                                    runs. EVERY departure of the shipped labels
@@ -214,9 +214,9 @@ asserting nothing:
 | Identifier | Spine rows keyed | Overlay reproduces | | Flips |
 |---|---|---|---|---|
 | hd | 293,325 | 280,531 | 95.6% | 43 |
-| hip | 117,652 | 99,058 | 84.2% | 0 |
+| hip | 117,652 | 99,059 | 84.2% | 0 |
 | hr | 9,012 | 7,283 | 80.8% | 23 |
-| gl | 3,145 | 1,851 | 58.9% | 66 |
+| gl | 3,144 | 1,851 | 58.9% | 66 |
 | flam | 2,724 | 2,028 | 74.4% | 2 |
 
 Additions the spine had no value for: hd 149, hr 4, gl 200, flam 69.
@@ -224,7 +224,7 @@ Additions the spine had no value for: hd 149, hr 4, gl 200, flam 69.
 Measured after the merge moved onto the DERIVED binding
 (`scripts/catalog/membership/README.md` § The binding is derived). Keyed on the
 spine's frozen `gaia_source_id` cell the same walk read 41 rows fewer as having
-an overlay entry at all, and the `gl` line 33 reproductions lower.
+an overlay entry at all, and the `gl` line 31 reproductions lower.
 
 The earlier figures in this section were measured against the AT-HYG CSV's
 317,175 rows and read a few points higher on `hd`/`hip`/`hr` (a larger
@@ -233,7 +233,7 @@ disagreement). `bayer` is no longer scored: the two catalogues' spellings
 (`alf` vs `Alp`) are the naming ladder's gate, so the merge never touches that
 cell.
 
-**14,976 spine rows get no overlay entry at all** — 578 bind no source, and the
+**14,975 spine rows get no overlay entry at all** — 577 bind no source, and the
 rest bind one that neither best-neighbour walk carries. That population is
 concentrated at the bright end exactly as `docs/catalog-driver.md` § 5's bright
 tier predicts: **114 of the 178 rows at V ≤ 3 have no overlay row**, Vega,
