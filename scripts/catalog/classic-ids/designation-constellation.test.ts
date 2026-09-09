@@ -56,6 +56,20 @@ describe.skipIf(!built)('designation constellation on the wire', () => {
     expect(entry?.dc).toBe(con('psa'));
   });
 
+  // README.md § One designation, two HD numbers. IV/27A gives both members of
+  // each pair the designation, and neither pair carries a component letter to
+  // tell them apart, so without the correction both records composed it.
+  it('leaves 23 Ori and 104 Aqr on one HD each', () => {
+    expect(byHd.get(35148)?.f).toBeUndefined();
+    expect(byHd.get(35149)?.f).toBe(23);
+    expect(byHd.get(222561)?.f).toBeUndefined();
+    expect(byHd.get(222574)?.f).toBe(104);
+    // The Latin-letter Bayer rides the naming ladder's own IV/27A union, so it
+    // has to leave with the Flamsteed number or the wrong star keeps `m Ori`.
+    expect(byHd.get(35148)?.b).toBeUndefined();
+    expect(byHd.get(222561)?.b).toBeUndefined();
+  });
+
   it('emits dc on exactly the pinned population', () => {
     const expected = JSON.parse(
       readFileSync(resolve(REPO_ROOT, BUILD_COUNTS_EXPECTED_FILE), 'utf-8'),

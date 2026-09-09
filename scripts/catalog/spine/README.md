@@ -275,7 +275,7 @@ unless another home is named; the committed gates are
   ledger has carried and the reason the parity gate subtracts it.
 - **Label parity — strict gain.** No previously-labeled record lost a
   label: per identifier the shipped coverage is the spine's keyed count
-  plus the overlay's additions (hd +149, hr +4, gl +200, flam +69,
+  plus the overlay's additions (hd +149, hr +4, gl +200, flam +67,
   hip +0). Every departure from the spine's cells is one of the 725
   disposed rows of `data/classic-ids/label_flips.tsv`, replayed exactly
   by the designation-multiset gate above.

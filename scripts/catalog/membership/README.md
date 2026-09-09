@@ -235,7 +235,8 @@ the manifest row as it stands afterwards, under `hd_unattested` or
 `flamsteed_unattested`. Today that is 1 HD — HD 336196 on HIP 90265, where
 I/239 prints HD 336187 — and 119 Flamsteed numbers. Those 119 are real
 designations with no frozen primary behind them: IV/27A is the whole
-3,690-row table and publishes 2,757 Flamsteed numbers, and SIMBAD lists every
+3,690-row table (3,688 after its curated corrections) and publishes 2,755
+Flamsteed numbers, and SIMBAD lists every
 one of the 119 as `* NN Con` (measured 2026-09-06). Attesting them from a
 frozen SIMBAD identifier pull is the open option; until one exists the
 manifest ships without them and the ledger says which.

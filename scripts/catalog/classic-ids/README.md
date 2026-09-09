@@ -49,7 +49,9 @@ scripts/catalog/classic-ids/
                                   component cross-IDs — for this build and for
                                   ../membership/, whose derivation weighs its
                                   candidates through the same gates.
-  classic-ids-parse.ts (+ test)   The four frozen-TSV parsers. The gate's
+  classic-ids-parse.ts (+ test)   The four frozen-TSV parsers, plus the
+                                  curated IV/27A corrections and their
+                                  application. The gate's
                                   HIP → printed-V slice is
                                   ../photometry/hip-photometry-parse.ts, shared
                                   with the V cascade's bright tier. CNS5's row
@@ -77,6 +79,14 @@ scripts/catalog/classic-ids/
   classic-id-overlay-pure.ts      The join, the binding gate, its counts, and
     (+ test)                      the overlay TSV codec (both directions).
                                   Pure.
+  cross-index.ts                  IV/27A as every consumer reads it: the
+                                  frozen table with
+                                  cross_index_corrections.tsv applied
+                                  (§ One designation, two HD numbers). Four
+                                  call sites take it — this build, the
+                                  designation-constellation pass, ../naming/'s
+                                  Bayer union and ../spine/primaries-tables.ts
+                                  — so no reader can miss a correction.
   designation-constellation-pure.ts
                                   IV/27A's `cst` keyed by HD/HIP — the
                                   constellation a Bayer / Flamsteed
@@ -177,6 +187,45 @@ The TYC cross-walk is 2.5 M rows for a ~350 k-row join, so
 `readGaiaTycXmatch` (`../parse/gaia-xmatch.ts`) streams it line-by-line
 and takes a keep-set of the Tycho ids IV/25 actually mentions. Reading it
 as one string peaks near a gigabyte alongside the join's own maps.
+
+## One designation, two HD numbers
+
+IV/27A gives one Bayer or Flamsteed designation to several HD numbers on **75
+Bayer and 110 Flamsteed** designation groups, and nearly all of them are a
+close pair whose components the survey photographed separately. That is not a
+defect: the naming ladder appends the component letter, so 40 Eri B, χ Aql B
+and β Lyr B compose distinct labels from their primaries'
+(`../naming/README.md` § Two callers, one composer).
+
+The defect is the pair IV/27A joins that is **not one system**, where no
+component letter exists to tell the two apart and both records compose the
+identical label. `data/classic-ids/cross_index_corrections.tsv` is where
+review says so, keyed on the HD whose row leaves the table and naming the HD
+the designation belongs to; `readCrossIndexTable` applies it, so the join, the
+designation-constellation pass, the naming ladder's Bayer union and the
+primaries audit all read the corrected table. Two rows today (23 Ori and
+104 Aqr), each backed by V/50 membership, SIMBAD's own identification and the
+two stars' distances, and each removing one row of
+`../naming/naming-duplicates.tsv`.
+
+`applyCrossIndexCorrections` hard-fails on a correction that would do nothing
+(the `hd` states no designation) or would orphan one (`belongs_to` does not
+state the identical cells), because a curated file that silently does nothing
+is worse than none — the same discipline `../membership/README.md`
+§ Correcting a merge decision states for spine corrections.
+
+**A mechanical discriminator was measured and NOT adopted.** Of the 185 groups,
+41 have exactly one member V/50 carries an HR for, and on every one of those 41
+SIMBAD agrees that member is the star the designation names (checked live,
+2026-09-09 — the HR-bearing HD resolves to the bare designation or to its A
+component, the others to a lettered component or to a different object). But
+stripping the designation from the other members would take it off 11 genuine
+lettered components that display it correctly today, so the rule buys nothing
+the composer does not already do and costs real labels. `stellata-3bsf.43`'s
+own proposal — *exactly one member carries a HIP* — is **refuted** rather than
+merely narrow: on ε Boo it fires and picks the wrong star, because IV/27A gives
+HIP 72105 to HD 129988 (ε Boo B) while SIMBAD, V/50 and the record's own
+`proper` cell all put the designation on HD 129989 (Izar).
 
 ## The designation constellation
 

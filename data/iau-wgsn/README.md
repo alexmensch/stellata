@@ -83,7 +83,8 @@ the per-class counts, `wgsn-expected.json` pins them:
 
 `scripts/catalog/naming/build-wgsn-tables.ts` (`pnpm run build:wgsn`)
 reads the two frozen files plus `data/classic-ids/cross_index.tsv` (the
-IV/27A Bayer tail) and `data/athyg/inherited-spine.tsv` (the § 2 residual
+IV/27A Bayer tail, through `readCrossIndexTable` so its curated corrections
+apply) and `data/membership/membership-manifest.tsv` (the § 2 residual
 verification), and writes the two derived tables. CI re-runs the build
 and fails on any diff, so artifact and code land together.
 

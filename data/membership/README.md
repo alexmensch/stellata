@@ -76,7 +76,10 @@ surface for the derived binding), the primaries the audit reads
 `../hipparcos/hip_main_vmag.tsv` for printed V,
 `../simbad/simbad_wds_xids.tsv` for component attribution), the post-gate
 overlay `../classic-ids/classic_id_overlay.tsv`,
-`../classic-ids/classic_id_overrides.tsv`, `../binaries/multiples.tsv`, and
+`../classic-ids/classic_id_overrides.tsv`,
+`../classic-ids/cross_index_corrections.tsv` (which IV/27A arrives through, so
+an addition's Flamsteed number carries the correction too),
+`../binaries/multiples.tsv`, and
 this folder's own `binding-review-dispositions.tsv` and
 `spine-corrections.tsv`. Licence follows the inputs: CC-BY-SA-4.0 through the
 spine.

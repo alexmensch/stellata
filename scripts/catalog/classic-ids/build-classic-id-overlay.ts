@@ -6,10 +6,8 @@ import { resolve } from 'node:path';
 import { compareBuildCounts, formatCountDiff } from '../build-counts';
 import { loadClassicIdCrossWalks } from './binding-candidates';
 import { loadBindingEvidence } from './binding-evidence';
-import {
-  parseBsc5Tsv,
-  parseCrossIndexTsv,
-} from './classic-ids-parse';
+import { parseBsc5Tsv } from './classic-ids-parse';
+import { readCrossIndexTable } from './cross-index';
 import {
   OVERLAY_VALUE_SEPARATOR,
   buildClassicIdOverlay,
@@ -22,7 +20,6 @@ import {
 import { readRequired, REPO_ROOT as ROOT } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
 
-const SRC_CROSS_INDEX = resolve(ROOT, 'data/classic-ids/cross_index.tsv');
 const SRC_BSC5 = resolve(ROOT, 'data/classic-ids/bsc5.tsv');
 
 const CDS_HINT = 'refresh the CDS inputs with `pnpm run refresh:classic-ids`.';
@@ -93,7 +90,7 @@ function logOverlay(overlay: ClassicIdOverlay, counts: OverlayJoinCounts): void 
 }
 
 async function main(): Promise<void> {
-  const crossIndex = parseCrossIndexTsv(readRequired(SRC_CROSS_INDEX, CDS_HINT));
+  const crossIndex = readCrossIndexTable();
   const bsc5 = parseBsc5Tsv(readRequired(SRC_BSC5, CDS_HINT));
 
   const { evidence } = loadBindingEvidence();

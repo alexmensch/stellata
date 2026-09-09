@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  applyCrossIndexCorrections,
   cns5AstrometryByGj,
   parseBsc5Tsv,
   parseCns5Tsv,
+  parseCrossIndexCorrectionsTsv,
   parseCrossIndexTsv,
   parseTyc2HdTsv,
 } from './classic-ids-parse';
@@ -76,6 +78,40 @@ describe('classic-ids-parse / parseCrossIndexTsv', () => {
     });
     expect(rows[1].bayer).toBeNull();
     expect(rows[1].flamsteed).toBe(33);
+  });
+});
+
+describe('classic-ids-parse / cross-index corrections', () => {
+  const PAIR = [
+    'hd\thr\thip\tbayer\tflamsteed\tcst',
+    '35148\t\t25145\tm\t23\tOri',
+    '35149\t1770\t25142\tm\t23\tOri',
+    '172167\t7001\t91262\talf\t3\tLyr',
+  ].join('\n');
+  const corrections = (body: string): ReturnType<typeof parseCrossIndexCorrectionsTsv> =>
+    parseCrossIndexCorrectionsTsv(`hd\tbelongs_to\n${body}`);
+
+  it('skips the comment lines the curated file carries', () => {
+    expect(corrections('# a note\n35148\t35149\n')).toEqual([{ hd: 35148, belongsTo: 35149 }]);
+  });
+
+  it('drops the corrected row and leaves every other', () => {
+    const kept = applyCrossIndexCorrections(
+      parseCrossIndexTsv(PAIR), corrections('35148\t35149\n'),
+    );
+    expect(kept.map((r) => r.hd)).toEqual([35149, 172167]);
+  });
+
+  it('throws when the correction would do nothing', () => {
+    expect(() => applyCrossIndexCorrections(
+      parseCrossIndexTsv(PAIR), corrections('99999\t35149\n'),
+    )).toThrow(/states no IV\/27A designation/);
+  });
+
+  it('throws when the correction would orphan the designation', () => {
+    expect(() => applyCrossIndexCorrections(
+      parseCrossIndexTsv(PAIR), corrections('35148\t172167\n'),
+    )).toThrow(/orphan the designation/);
   });
 });
 
