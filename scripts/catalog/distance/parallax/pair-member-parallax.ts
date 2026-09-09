@@ -15,10 +15,9 @@ export interface SiblingParallax {
   errMas: number | null;
 }
 
-/** Why a pair-row source the dedup admitted is not a candidate. Partition:
- *  these four plus `entryCount` are every deduped source, so the tier's reach
- *  is stated where it is decided rather than counted over the parked set,
- *  which moves with every membership change. */
+/** Why a pair-row source the dedup admitted is not a candidate. These four
+ *  plus `entryCount` are a partition of every deduped source: a refusal path
+ *  added without a bucket breaks it silently. */
 export interface PairMemberSiblingRefusals {
   /** The astrometry pull carries no row for the source at all — the request
    *  under-covering the pair-row half of its union. */
