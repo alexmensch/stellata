@@ -431,19 +431,11 @@ after the join 137 sources carry >1 HD and 7 HDs land on >1 source).
 disagreement — surfacing AT-HYG's cross-ID errors is the accuracy
 point of the swap; Izar is the case that settles it (AT-HYG says HR 5505,
 IV/27A and V/50 say 5506, and ε Boo IS HR 5506). Every flip is enumerated in
-the parity ledger (`data/classic-ids/label_flips.tsv`, 736 rows: 140 flips,
-422 additions, 44 withheld proposals — 36 collision, 8 foreign-HD — and 130
-extras). The curated override file for cases where review finds the CDS join
-wrong (same pattern as `wds_xids_overrides.tsv`) holds no rows: every shape
-that looked like an exception now has a rule, and its header enumerates the
-four.
-
-**Precedence does not reach an HD the record's own TYC contradicts.** IV/25
-publishes an HD per Tycho id, so where the overlay reached the record's source
-through a DIFFERENT star's Tycho entry the number it proposes names that other
-star — withheld, and the primaries then admit it as a row of its own. Propus is
-the shape (`scripts/catalog/classic-ids/README.md` § The overlay may not
-displace the record's own TYC's HD).
+the parity ledger (`data/classic-ids/label_flips.tsv`, 736 rows: 147 flips,
+422 additions, 36 suppressions, 130 extras, 1 curated override) with a curated
+override file for cases where review finds the CDS join wrong (same pattern as
+`wds_xids_overrides.tsv`; one row — Propus, where Gaia fits one source across a
+resolved Tycho-2 pair and its cross-match keys it to the sibling).
 
 A `gl` disagreement is scored on the component the two sides name rather than
 on the bare number: two spellings of one component agree, two different

@@ -136,12 +136,18 @@ printed V of its brightest HIP. That G comes from
 is not a rejection — it is a pass.** So a candidate the astrometry pull does
 not cover is not merely unvetted, it is silently accepted.
 
-Candidates are not spine rows, so the request has to carry them explicitly:
-`../astrometry-request/README.md` § The request is a union. Today the union
-pulls evidence for every candidate and the queue reads **268** rows
+Candidates are not spine rows. A route resolves a designation to whatever
+source a cross-walk names, and the gate exists precisely because that source
+is often not the star, so the request has to carry them explicitly:
+`../astrometry-request/README.md` § The request is a union.
+
+`gateRejectedMag` measures the difference directly, and it is the count to
+watch if this request ever changes again. Today the union pulls evidence for
+every candidate and the queue reads **268** rows
 (`data/classic-ids/README.md` § The binding gate); a membership-column-only
 request drops `gateRejectedMag` to **0**, every candidate unvettable and
-silently accepted — that is the count to watch if the request changes again.
+silently accepted. `reason` is the first gate that fired, so the two reason
+counts trade rows without any binding changing verdict.
 
 **Two counts say whether the evidence actually arrived**, because a missing `G`
 is a pass either way and only one of the causes is fixable:
@@ -225,10 +231,11 @@ record will not answer to.
 
 **A second HD number names the pair's other COMPONENT, not a second name for
 one star**, so whether the record may answer to it turns on whether that
-component is a record of its own. 14 Lyncis is the shape: HD numbered two
-spectra of a 0.3″ pair 49618 / 49619, Tycho-2 carries it as the one entry
-TYC 3778-1982-1 (IV/25 `n_hd=2`), and the overlay hangs both on the one source
-without saying which is which. Three outcomes:
+component is a record of its own. 14 Lyncis is the shape: the Henry Draper
+survey photographed two spectra of a 0.3″ pair and numbered them 49618 and
+49619, Tycho-2 carries the pair as the single entry TYC 3778-1982-1 (IV/25
+flags it `n_hd=2`), and the overlay hangs both numbers on the one Gaia source
+without saying which component is which. Three outcomes:
 
 | Disposition | Values | When |
 |---|---|---|
@@ -238,8 +245,9 @@ without saying which is which. Three outcomes:
 
 Where the pair is unresolved the single record **is** the granularity the
 catalogue has, and answering to both numbers is accurate rather than sloppy:
-**93 of the 95 have no `multiples.tsv` row at all**, so no separation, angle or
-component magnitude exists to split them with.
+**93 of the 95 have no `multiples.tsv` row at all**, so no separation, position
+angle or component magnitude exists to split them with, and the two HD numbers
+are the entire trace of duplicity.
 
 The predicate is `sourceIdsWithSiblingComponent`
 (`../companions/companion-promotion.ts`), keyed on the `multiples.tsv` SYSTEM
@@ -248,19 +256,24 @@ none, so grouping by source_id misses the sibling on exactly the resolved pairs
 this asks about. Promotion can still decline to render a member row, so the set
 is a deliberate **superset** of what ships — 35 withheld (34 hd + the 1 hr)
 across the 34 records whose system names a sibling, of which 33 render one
-today. An alias also clears § The collision guard's rule, which the guard
-itself cannot apply — aliases are not display cells, so its tally never sees
-them; those are withheld to `extra-dropped`, 0 today. None of the **68**
-ambiguous designations `sid:allocate` drops is a carried alias, and none keys a
-ledger row, so the additions cannot fuse two same-as classes or move a
-canonical key (`../../sid/README.md` § Ambiguous designations).
+today.
 
-A promoted companion inherits neither list: the overlay names no component, so
+An alias also clears § The collision guard's rule, which the guard itself
+cannot apply — aliases are not display cells, so its tally never sees them.
+Those are withheld to `extra-dropped`; 0 fire today, measured and guarded.
+
+The **68** ambiguous designations `sid:allocate` drops are spine-side component
+pairs, unrelated to this list (`../../sid/README.md` § Ambiguous designations).
+No carried alias is among them, and none keys a ledger row, so the additions
+cannot fuse two same-as classes or move a canonical key.
+
+A promoted companion inherits neither list. The overlay names no component, so
 handing the anchor's alternative HD to the companion would invent the very
-attribution the table declines to make (`../companions/README.md`
-§ Promoted-companion field inheritance). Attributing each number to its
-component where IV/27A's own columns disambiguate — 49618 carries HR 2520 and
-HIP 33048 where 49619 carries neither — is `stellata-3bsf.39`.
+attribution the table declines to make (`../companions/README.md` §
+Promoted-companion
+field inheritance). Attributing each number to its component where
+IV/27A's own columns disambiguate — 49618 carries HR 2520 and HIP 33048 where
+49619 carries neither — is `stellata-3bsf.39`.
 
 ### The collision guard
 
@@ -280,32 +293,19 @@ to vacate.
 ### Curated overrides, and what does NOT belong in them
 
 `data/classic-ids/classic_id_overrides.tsv` pins one record's one identifier —
-an explicit value, or empty for "keep the spine's" — for the case
+an explicit value, or empty for "keep the spine's". It is for the case
 `docs/catalog-driver.md` § 4 names: review finding the CDS join wrong. It holds
-**no rows**: every shape that looks like an exception has a rule instead, and
-the file's own header enumerates the four and says where each is decided.
+**one row**, whose evidence the file's own header states: Propus, where a Gaia
+source keyed to the wrong component of a resolved Tycho-2 pair would take
+η Gem's own HD off the star.
 
-### The overlay may not displace the record's own TYC's HD
-
-§ 4 precedence is right where the overlay corrects an AT-HYG cross-ID error and
-wrong where it reached the record's source through a DIFFERENT star's Tycho
-entry, because the HD it proposes then names that other star. **The record's
-own TYC is the authority on which HD names it**: where the record carries a TYC
-and IV/25 publishes an HD for that exact TYC, an overlay HD that is none of
-them is withheld (`refuseForeignHd`, `suppressed-foreign-hd`,
-`labelSuppressedForeignHd.hd` **8**). Several HDs on the one TYC (`n_hd` > 1)
-is the 14 Lyn shape above, not a displacement — each names a component of the
-record's own blend, so a proposal among them stands.
-
-All 8 are one shape: Gaia fits one source across a pair Tycho-2 resolves into
-two entries, the TYC cross-match keys that source to the neighbour, and the
-overlay carries only the neighbour's number with no alias list to fall back on
-— Propus (own TYC 1877-1716-1 = HD 42995, proposed the sibling's HD 253820) is
-the case the curated override held. **Withholding hands the number back, and
-the primaries then admit it** as a row of its own on its Tycho-2 position: 3 of
-the 8 ship, 5 park for want of a published parallax. Two of the three compose a
-duplicate display label, IV/27A giving both components' HD numbers the one
-Bayer / Flamsteed designation — `stellata-3bsf.43`'s class, through a new door.
+Three shapes that LOOK like exceptions are reached mechanically instead, and
+the file's header names them: a proposal that would make another record's
+designation ambiguous (§ The collision guard); a Gliese renumbering
+(`Gl 157.1` → CNS5's `GJ 9140`), an IDENTITY bridge in
+`data/sid/sameas-overrides.tsv` since both designations name the star and `gl:`
+is the canonical key of all five affected records; and a swapped GJ component
+letter (§ The gl comparison is specificity-aware).
 
 ## The designation constellation
 

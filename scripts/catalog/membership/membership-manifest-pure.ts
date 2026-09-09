@@ -6,7 +6,6 @@ import { SOL_PROPER_NAME, normaliseGjKey } from '../catalog-pure';
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';
 import {
   BRIGHT_TIER_MAG_CEILING,
-  hdByTyc,
   type BindingEvidence,
   type ClassicIdOverlay,
 } from '../classic-ids/classic-id-overlay-pure';
@@ -1111,7 +1110,6 @@ function admitGroup(
     : hip !== null ? 'admitted:hip_omitted' : 'admitted:cns5_census';
   const record: LabelMergeRecord = {
     gaiaSourceId: source,
-    tyc: tyc || null,
     hip, hd: hds[0] ?? null, hr: hrs[0] ?? null, gl, flam,
     hdAlt: hds.slice(1), hrAlt: hrs.slice(1),
   };
@@ -1238,7 +1236,6 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     overlay,
     overrides,
     siblingRenderedSourceIds,
-    hdByOwnTyc: hdByTyc(tables.iv25),
   });
   let spineRowsWithoutSourceId = 0;
   let spineBrightRows = 0;

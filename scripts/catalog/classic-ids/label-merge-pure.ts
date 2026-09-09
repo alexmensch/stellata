@@ -33,11 +33,6 @@ export function emptyLabelPartition(): LabelPartition {
  *  naming ladder's gate (docs/star-naming.md), not this join's. */
 export interface LabelMergeRecord {
   gaiaSourceId: string | null;
-  /** The record's own Tycho id. Read as EVIDENCE and never written: IV/25
-   *  publishes an HD per TYC, so it is what says whether an overlay HD names
-   *  this star or the neighbour whose Tycho entry the cross-walk routed
-   *  through (§ The overlay may not displace the record's own TYC's HD). */
-  tyc: string | null;
   hip: number | null;
   hd: number | null;
   hr: number | null;
@@ -55,7 +50,6 @@ export type LabelDisposition =
   | 'override-spine'
   | 'override-value'
   | 'suppressed-collision'
-  | 'suppressed-foreign-hd'
   | 'extra-alias'
   | 'extra-sibling-rendered'
   | 'extra-dropped';
@@ -98,9 +92,6 @@ export interface LabelMergeCounts {
   labelSpineOnly: LabelPartition;
   /** Proposals withheld by the collision guard. */
   labelSuppressed: LabelPartition;
-  /** Overlay HDs withheld because the record's own TYC publishes another —
-   *  the proposal names the neighbour the cross-walk routed through. */
-  labelSuppressedForeignHd: LabelPartition;
   /** Overlay values the field could not display but the record still answers
    *  to — a search key and a same-as designation. */
   labelExtraAlias: LabelPartition;
@@ -122,7 +113,6 @@ export function emptyLabelMergeCounts(): LabelMergeCounts {
     labelFlipped: emptyLabelPartition(),
     labelSpineOnly: emptyLabelPartition(),
     labelSuppressed: emptyLabelPartition(),
-    labelSuppressedForeignHd: emptyLabelPartition(),
     labelExtraAlias: emptyLabelPartition(),
     labelExtraSiblingRendered: emptyLabelPartition(),
     labelExtraDropped: emptyLabelPartition(),
@@ -279,7 +269,6 @@ export function spineLabelMergeRecord(
   return {
     record: {
       gaiaSourceId,
-      tyc: nonEmpty(row.tyc),
       hip: parseIntOrNull(row.hip),
       hd: parseIntOrNull(row.hd),
       hr: parseIntOrNull(row.hr),
@@ -363,7 +352,6 @@ const DISPOSITION_EFFECT: Record<
   'override-value': { adds: true, removesSpine: true },
   'override-spine': { adds: false, removesSpine: false },
   'suppressed-collision': { adds: false, removesSpine: false },
-  'suppressed-foreign-hd': { adds: false, removesSpine: false },
   'extra-alias': { adds: true, removesSpine: false },
   'extra-sibling-rendered': { adds: false, removesSpine: false },
   'extra-dropped': { adds: false, removesSpine: false },
@@ -438,19 +426,12 @@ export interface LabelMergeInput<R extends LabelMergeRecord> {
    *  rendered set by design — withholding one alias too many is reviewable,
    *  leaving one on the wrong record is not. */
   siblingRenderedSourceIds: ReadonlySet<string>;
-  /** IV/25's HDs per Tycho id (`hdByTyc`), against which an overlay HD is
-   *  weighed for the record's OWN TYC (§ The overlay may not displace the
-   *  record's own TYC's HD). A record with no TYC, or a TYC IV/25 publishes no
-   *  HD for, has no evidence either way and the proposal stands. */
-  hdByOwnTyc: ReadonlyMap<string, ReadonlySet<number>>;
 }
 
 export interface LabelMergeResult {
   counts: LabelMergeCounts;
   flips: LabelFlip[];
 }
-
-type SuppressionReason = 'suppressed-collision' | 'suppressed-foreign-hd';
 
 interface Proposal {
   recordIdx: number;
@@ -461,10 +442,7 @@ interface Proposal {
    *  value stands (it agreed, or the guard withheld the proposal). */
   value: string | null;
   override: string | null | undefined;
-  /** Which guard withheld this proposal, or null where none did. The queue row
-   *  reads as the reason, and `partitionExtras` skips a withheld proposal
-   *  whichever guard withheld it. */
-  suppressed: SuppressionReason | null;
+  suppressed: boolean;
   /** Set by `partitionExtras`: the candidates the field cannot display, split
    *  by what becomes of each. Disjoint, and together they are every extra. */
   aliasExtras: string[];
@@ -479,15 +457,12 @@ interface Proposal {
  *  for 115 of the 178 records at V ≤ 3, so the spine is the backstop for a
  *  double-digit fraction of every label, not a rare fallback.
  *
- *  Proposals are built first because the collision guard can only be scored
- *  against the post-merge assignment, and the foreign-HD refusal has to run
- *  ahead of it so a withdrawn proposal is not scored as an owner. */
+ *  Two passes: the collision guard can only be scored against the post-merge
+ *  assignment. */
 export function mergeClassicIdLabels<R extends LabelMergeRecord>(
   input: LabelMergeInput<R>,
 ): LabelMergeResult {
-  const {
-    records, labels, overlay, overrides, siblingRenderedSourceIds, hdByOwnTyc,
-  } = input;
+  const { records, labels, overlay, overrides, siblingRenderedSourceIds } = input;
   const counts = emptyLabelMergeCounts();
   const flips: LabelFlip[] = [];
   const proposals: Proposal[] = [];
@@ -514,13 +489,12 @@ export function mergeClassicIdLabels<R extends LabelMergeRecord>(
         candidates,
         value: override !== undefined ? override : agrees ? null : candidates[0],
         override,
-        suppressed: null,
+        suppressed: false,
         aliasExtras: [], siblingExtras: [], droppedExtras: [],
       });
     }
   });
 
-  refuseForeignHd(records, proposals, hdByOwnTyc);
   applyCollisionGuard(records, proposals);
   partitionExtras(records, proposals, siblingRenderedSourceIds);
 
@@ -547,12 +521,9 @@ export function mergeClassicIdLabels<R extends LabelMergeRecord>(
     if (p.override !== undefined) {
       counts.labelOverridden[field]++;
       pushFlip(p.value ?? spine ?? '', p.value === null ? 'override-spine' : 'override-value');
-    } else if (p.suppressed !== null) {
-      const withheld = p.suppressed === 'suppressed-collision'
-        ? counts.labelSuppressed
-        : counts.labelSuppressedForeignHd;
-      withheld[field]++;
-      pushFlip(spine ?? '', p.suppressed);
+    } else if (p.suppressed) {
+      counts.labelSuppressed[field]++;
+      pushFlip(spine ?? '', 'suppressed-collision');
     } else if (p.value === null) {
       counts.labelAgree[field]++;
     } else if (spine === null) {
@@ -594,36 +565,6 @@ const tally = (values: Iterable<string>): Map<string, number> => {
   for (const v of values) out.set(v, (out.get(v) ?? 0) + 1);
   return out;
 };
-
-/** Withhold an overlay HD that contradicts the one IV/25 publishes for the
- *  record's OWN Tycho id.
- *
- *  § 4 precedence is right where the overlay corrects an AT-HYG cross-ID error
- *  and wrong where the overlay reached the record's source through a DIFFERENT
- *  star's Tycho entry, because the HD it then proposes names that other star.
- *  Propus is the shape: Gaia fits one source across the resolved pair
- *  TYC 1877-1716-1 / -2, its TYC cross-match keys that source to the
- *  secondary, and the overlay's only HD is the secondary's 253820 against
- *  η Gem's own 42995 — no alias list to fall back on, so precedence would hand
- *  the star its neighbour's number outright.
- *
- *  IV/25 publishing SEVERAL HDs for the record's own TYC (`n_hd` > 1) is the
- *  14 Lyn shape and not a displacement: each names a component of the one
- *  blend, so a proposal among them stands. */
-function refuseForeignHd<R extends LabelMergeRecord>(
-  records: readonly R[],
-  proposals: readonly Proposal[],
-  hdByOwnTyc: ReadonlyMap<string, ReadonlySet<number>>,
-): void {
-  for (const p of proposals) {
-    if (p.spec.field !== 'hd' || p.value === null || p.override !== undefined) continue;
-    const tyc = records[p.recordIdx].tyc;
-    const attested = tyc === null ? undefined : hdByOwnTyc.get(tyc);
-    if (attested === undefined || attested.has(Number(p.value))) continue;
-    p.value = null;
-    p.suppressed = 'suppressed-foreign-hd';
-  }
-}
 
 /** Withhold any proposal that would turn an unambiguous spine designation into
  *  an ambiguous one.
@@ -678,7 +619,7 @@ function applyCollisionGuard<R extends LabelMergeRecord>(
       // not already lost, and the ambiguity policy owns the outcome.
       if ((spineOwners.get(target) ?? 0) > 1) continue;
       p.value = null;
-      p.suppressed = 'suppressed-collision';
+      p.suppressed = true;
       changed = true;
     }
     if (!changed) return;
@@ -736,9 +677,7 @@ function partitionExtras<R extends LabelMergeRecord>(
     return out;
   };
 
-  const active = proposals.filter(
-    (p) => p.suppressed === null && p.override === undefined,
-  );
+  const active = proposals.filter((p) => !p.suppressed && p.override === undefined);
   const byCell = new Map<string, Proposal>();
   for (const p of proposals) byCell.set(`${p.recordIdx}\t${p.spec.field}`, p);
   const spineOwners = tally(cellsOf(records, (r, spec) => spec.read(r)));

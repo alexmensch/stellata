@@ -195,7 +195,7 @@ The 25.01 is *not* published; `diffuse-reference.ts` builds it:
 | | mag/arcsec² |
 | --- | --- |
 | Leinert et al. 1998 Table 24, NGP — **total** starlight | 23.83 |
-| The 388,066 catalogue stars Stellata already draws | 24.275 |
+| The 388,068 catalogue stars Stellata already draws | 24.275 |
 | Residual left for the diffuse band | **25.01** |
 
 **The catalogue row is re-derived per build, and the residual moves with
