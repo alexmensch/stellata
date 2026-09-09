@@ -202,11 +202,18 @@ printed tiers continue past Hipparcos into Tycho-2 and Gliese, and the record
 side's gate already weighs them (`scripts/catalog/membership/README.md` § The
 binding is derived). Measured over the committed overlay, IV/25 and the TYC
 cross-walk, 2026-09-09: of the 257,926, **254,135 have a Tycho-2
-`VT − 0.090(BT − VT)` on a TYC that IV/25 routes to that very source** and 240
-more a Gliese `Vmag` on the entry's own GJ, leaving **3,551** with no printed V
-under any of the three tiers. So the unvettable population is ~1.4% of what
-this count reports, and the 126 known mis-bindings inside it are a magnitude
-comparison away rather than out of reach. Giving the label gate the record
+`VT − 0.090(BT − VT)` on a TYC that IV/25 routes to that very source** and
+**1,053** more a Gliese V, leaving **2,738** with no printed V under any of the
+three tiers. So the unvettable population is ~1% of what this count reports,
+and the mis-bindings inside it are a magnitude comparison away rather than out
+of reach.
+
+**Ask the Gliese arm through `lookupGliese`**
+(`scripts/catalog/gliese-parse.ts`), not by the printed name: V/70A numbers the
+GJ 3xxx/4xxx supplement `NN nnnn` and letters a blend row's components
+together, so a prefix match on `Gl`/`GJ` alone misses the population that tier
+exists for — it reads the arm at 240 and reports 813 rows unreachable that are
+not. Giving the label gate the record
 side's evidence order is `stellata-3bsf.8.13`, which carries the figures and
 the one obstacle: 296 overlay sources are absent from the astrometry pull, so
 the widened gate needs the request widened and re-pulled to keep
