@@ -114,6 +114,8 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
 
     expect(orphaned.filter((d) => !bridgeEndpoints.has(d))).toEqual([]);
     expect(orphaned.sort()).toEqual([
+      'gl:GJ_3196A',
+      'gl:GJ_4378A',
       'gl:Gl_157.1',
       'gl:Gl_181.1',
       'gl:Gl_223.2',

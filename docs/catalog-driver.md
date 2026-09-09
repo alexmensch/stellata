@@ -431,21 +431,33 @@ after the join 137 sources carry >1 HD and 7 HDs land on >1 source).
 disagreement — surfacing AT-HYG's cross-ID errors is the accuracy
 point of the swap; Izar is the case that settles it (AT-HYG says HR 5505,
 IV/27A and V/50 say 5506, and ε Boo IS HR 5506). Every flip is enumerated in
-the parity ledger (`data/classic-ids/label_flips.tsv`, 725 rows: 134 flips,
-422 additions, 36 suppressions, 130 extras, 3 curated overrides) with a curated
+the parity ledger (`data/classic-ids/label_flips.tsv`, 736 rows: 147 flips,
+427 additions, 31 suppressions, 130 extras, 1 curated override) with a curated
 override file for cases where review finds the CDS join wrong (same pattern as
-`wds_xids_overrides.tsv`; three rows — Propus, where Gaia fits one source
-across a resolved Tycho-2 pair and its cross-match keys it to the sibling, and
-the Gl 563.2 pair, whose component letters AT-HYG swapped).
+`wds_xids_overrides.tsv`; one row — Propus, where Gaia fits one source across a
+resolved Tycho-2 pair and its cross-match keys it to the sibling).
+
+A `gl` disagreement is scored on the component the two sides name rather than
+on the bare number: two spellings of one component agree, two different
+components of one system disagree, and a candidate naming the SYSTEM — CNS5's
+`gj_comp` states a multi-component entry's letters combined, `ABCD` — makes no
+claim a component cell can contradict, so precedence must not fire on it
+(`scripts/catalog/classic-ids/README.md` § The gl comparison is
+specificity-aware).
 
 **One mechanical exception, and it is an identity rule rather than a label
 one: the merge may not turn an unambiguous spine designation into an ambiguous
 one.** By the ambiguity policy above such a designation keys no ledger row, so
 attaching an identifier a DIFFERENT record already holds deletes a working SID
 key from both records and buys nothing — the star stays findable through the
-record that holds it. Withheld and counted, 36 cells (p Eridani's HIP 7751).
+record that holds it. Withheld and counted, 31 cells (p Eridani's HIP 7751). Ownership is weighed on
+the designation itself, component letter included: two components of one
+Gliese system share a number but not a designation, so scoring `gl` on the
+bare number both withheld five labels that collided with nothing and would
+have passed a letter flip landing on a sibling's own spelling.
 Where a flip RENAMES a record's canonical key rather than colliding — CNS5
-renumbering `Gl 157.1` to `GJ 9140` — the label flips and identity rides a
+renumbering `Gl 157.1` to `GJ 9140`, or lettering `GJ 3196` as its pair's
+component B where AT-HYG letters it A — the label flips and identity rides a
 `data/sid/sameas-overrides.tsv` bridge, per § 7.
 
 Record fields are single-valued and overlay cells are not, so the extra values
