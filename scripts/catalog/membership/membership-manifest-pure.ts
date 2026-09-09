@@ -228,7 +228,7 @@ export function parseSpineCorrectionsTsv(text: string): SpineCorrectionRow[] {
 
 /** One fold, in both index spaces: the two rows' positions in the committed
  *  spine, and the survivor's position among the rows that stay. The gate reads
- *  the first pair (it walks the file), the generator the third. */
+ *  the first pair (it walks the file), the generator the first and third. */
 export interface SpineFold {
   foldedRow: number;
   survivorRow: number;
@@ -258,18 +258,19 @@ export function applySpineCorrections(
     return i;
   };
 
-  const rows = spine.map((row) => ({ ...row }));
+  const rows = spine.slice();
   const foldedTo = new Map<number, number>();
   for (const c of corrections) {
     const i = resolve(bindingReviewKey(c), 'row');
     if (c.op === 'set') {
-      if (rows[i][c.cell as SpineCorrectionCell] === c.value) {
+      const cell = c.cell as SpineCorrectionCell;
+      if (rows[i][cell] === c.value) {
         throw new Error(
           `${SPINE_CORRECTIONS_FILE}: row ${bindingReviewKey(c)} sets ${c.cell} to the value `
             + 'the spine already states; remove it',
         );
       }
-      rows[i][c.cell as SpineCorrectionCell] = c.value;
+      rows[i] = { ...rows[i], [cell]: c.value };
       continue;
     }
     const survivor = resolve(c.value, 'fold target');
@@ -1133,7 +1134,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     corrections,
   } = input;
   const idx = indexPrimaries(tables);
-  const { kept, folds } = applySpineCorrections(spine, corrections);
+  const { corrected, kept, folds } = applySpineCorrections(spine, corrections);
   const spineCellsCorrected = Object.fromEntries(
     SPINE_CORRECTION_CELLS.map((c) => [c, corrections.filter(
       (r) => r.op === 'set' && r.cell === c,
@@ -1256,11 +1257,11 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   // answering to everything the folded row did — otherwise the fold is a
   // silent record drop rather than a merge.
   for (const { foldedRow, survivorKept } of folds) {
-    const held = new Set(manifestDesignations(spineManifestRows[survivorKept]));
-    const lost = spineDesignations(spine[foldedRow]).filter((d) => !held.has(d));
+    const survivorHolds = new Set(manifestDesignations(spineManifestRows[survivorKept]));
+    const lost = spineDesignations(corrected[foldedRow]).filter((d) => !survivorHolds.has(d));
     if (lost.length > 0) {
       throw new Error(
-        `${SPINE_CORRECTIONS_FILE}: folding ${bindingReviewKey(spine[foldedRow])} loses `
+        `${SPINE_CORRECTIONS_FILE}: folding ${bindingReviewKey(corrected[foldedRow])} loses `
           + `${lost.join(', ')} — the survivor does not answer to it`,
       );
     }
