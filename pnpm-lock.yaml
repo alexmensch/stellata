@@ -31,8 +31,8 @@ importers:
         specifier: ^4.1.5
         version: 4.1.9(vitest@4.1.9)
       csv-parse:
-        specifier: ^5.5.0
-        version: 5.6.0
+        specifier: ^7.0.2
+        version: 7.0.2
       playwright:
         specifier: 1.62.1
         version: 1.62.1
@@ -666,8 +666,8 @@ packages:
     resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
     engines: {node: '>=18'}
 
-  csv-parse@5.6.0:
-    resolution: {integrity: sha512-l3nz3euub2QMg5ouu5U09Ew9Wf6/wQ8I++ch1loQ0ljmzhmfZYrH9fflS22i/PQEvsPvxCwxgz5q7UB8K1JO4Q==}
+  csv-parse@7.0.2:
+    resolution: {integrity: sha512-uKZghv9UmPkMVLYy//KZ9HFAIJsl7wkhoEdIL0+rhuSY9pZQlhaeGEDPIe+/w7eh81MOql8Q/9+inAGWG6ZHYA==}
 
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
@@ -1485,7 +1485,7 @@ snapshots:
 
   cookie@1.1.1: {}
 
-  csv-parse@5.6.0: {}
+  csv-parse@7.0.2: {}
 
   detect-libc@2.1.2: {}
 
