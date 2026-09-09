@@ -111,8 +111,10 @@ jobs:
       # The membership manifest is a pure function of committed inputs, so it
       # takes the regenerate-and-diff gate the frozen spine could not.
       - run: pnpm run build:membership
+      # label_flips.tsv sits under data/classic-ids/ but is this build's
+      # artifact, so the step above cannot pin it — it runs before this one.
       - run: |
-          git diff --exit-code -- data/membership/ || {
+          git diff --exit-code -- data/membership/ data/classic-ids/label_flips.tsv || {
             echo "::error::committed membership manifest is stale — run" \
               "'pnpm run build:membership' and commit the regenerated files";
             exit 1;

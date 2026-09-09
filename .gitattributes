@@ -34,3 +34,4 @@ data/membership/binding-review.tsv !filter !diff !merge text=auto
 data/membership/binding-review-dispositions.tsv !filter !diff !merge text=auto
 data/membership/label-drops.tsv !filter !diff !merge text=auto
 data/membership/parked-ledger.tsv !filter !diff !merge text=auto
+data/membership/spine-corrections.tsv !filter !diff !merge text=auto

@@ -23,12 +23,15 @@ import {
   parseLedgerTsv,
   parseManifestTsv,
   parseBindingReviewTsv,
+  parseSpineCorrectionsTsv,
+  SPINE_CORRECTION_COLUMNS,
   serializeBindingReview,
   serializeLabelDrops,
   serializeLedger,
   serializeManifest,
   type BindingDispositionRow,
   type ManifestRow,
+  type SpineCorrectionRow,
 } from './membership-manifest-pure';
 
 function spineRow(cells: Partial<SpineRow>): SpineRow {
@@ -172,6 +175,7 @@ const input = {
   spine, tables, overlay, overrides: new Map(), siblingRenderedSourceIds: new Set<string>(),
   evidence: bindingEvidence(new Map(), new Map(), null),
   dispositions: new Map<string, BindingDispositionRow>(),
+  corrections: [] as SpineCorrectionRow[],
 };
 const result = buildMembership(input);
 const byTyc = new Map(result.rows.map((r) => [r.tyc, r]));
@@ -360,6 +364,30 @@ describe('buildMembership — the spine side', () => {
     expect(gated.counts.derivedWeighedNoGMag).toBe(0);
   });
 
+  // The merge keys on the binding the derivation settled, so a fill takes the
+  // labels the overlay hangs on the source the record is NOW bound to. Keyed on
+  // the frozen cell this row would reach no overlay entry at all.
+  it('labels a fill from the source it derived, not the empty frozen cell', () => {
+    const filled = buildMembership({
+      ...input,
+      spine: [...spine, spineRow({ tyc: '4-4-1', hd: '400' })],
+      tables: {
+        ...tables,
+        iv25: [...tables.iv25, { tyc: '4-4-1', hd: 400, nHd: 1, nTyc: 1 }],
+        hipI239: new Set([...tables.hipI239, 44]),
+        tycho2: new Map([...tables.tycho2, ['4-4-1', tycho2(11)]]),
+        tycToSource: new Map([...tables.tycToSource, ['4-4-1', '1616']]),
+      },
+      overlay: new Map([...overlay, ['1616', entry({ hd: [400], hip: [44] })]]),
+    });
+    expect(filled.rows.find((r) => r.tyc === '4-4-1'))
+      .toMatchObject({ gaia_source_id: '1616', hd: '400', hip: '44', binding: 'crosswalk_gated' });
+    expect(filled.counts.derivedVsFrozen.fill).toBe(1);
+    expect(filled.flips).toContainEqual(expect.objectContaining({
+      sourceId: '1616', field: 'hip', spine: '', applied: '44', disposition: 'added',
+    }));
+  });
+
   // The display cell is not privileged: when it is the cell no primary
   // attests, the first alias that survives takes its place rather than the
   // record shipping HD-less beside an HD a primary does publish.
@@ -367,7 +395,11 @@ describe('buildMembership — the spine side', () => {
     const promoted = buildMembership({
       ...input,
       spine: [...spine, spineRow({ tyc: '5-5-1', hd: '70002', gaia_source_id: '1515' })],
-      tables: { ...tables, hdI239: new Set([70003]) },
+      tables: {
+        ...tables,
+        hdI239: new Set([70003]),
+        tycToSource: new Map([...tables.tycToSource, ['5-5-1', '1515']]),
+      },
       overlay: new Map([...overlay, ['1515', entry({ hd: [70002, 70003] })]]),
     });
     expect(promoted.rows.find((r) => r.tyc === '5-5-1')).toMatchObject({ hd: '70003' });
@@ -412,6 +444,128 @@ describe('buildMembership — the spine side', () => {
   it('puts Sol first, on its proper name alone', () => {
     expect(result.rows[0]).toMatchObject({ proper: 'Sol', binding: 'none', routes: 'proper:sol' });
     expect(manifestDesignations(result.rows[0])).toEqual(['sol:sun']);
+  });
+});
+
+function correction(cells: Partial<SpineCorrectionRow>): SpineCorrectionRow {
+  return {
+    tyc: '', hip: '', hd: '', gl: '', op: 'set', cell: 'tyc', value: '',
+    evidence: 'measured', ...cells,
+  } as SpineCorrectionRow;
+}
+
+// The spine is frozen, so a merge decision review finds wrong is corrected by a
+// committed row here — the one class of defect no other curated file covers.
+describe('spine corrections', () => {
+  it('derives and attests a set cell from the corrected value, not the frozen one', () => {
+    const fixed = buildMembership({
+      ...input,
+      tables: { ...tables, tycToSource: new Map([...tables.tycToSource, ['1-9-1', '999']]) },
+      corrections: [correction({ tyc: '1-2-1', hd: '5', cell: 'tyc', value: '1-9-1' })],
+    });
+    const row = fixed.rows.find((r) => r.hd === '5')!;
+    expect(row).toMatchObject({ tyc: '1-9-1', gaia_source_id: '999' });
+    expect(fixed.counts.spineCellsCorrected).toEqual({ tyc: 1 });
+    expect(fixed.counts.spineRowsFolded).toBe(0);
+  });
+
+  it('folds a duplicate row onto its survivor and leaves the survivor keying it', () => {
+    const twin = spineRow({ gl: 'Gl 165A', gaia_source_id: '333' });
+    const folded = buildMembership({
+      ...input,
+      spine: [...spine, twin],
+      corrections: [correction({
+        gl: 'Gl 165A', op: 'fold', cell: '',
+        value: bindingReviewKey({ tyc: '7-7-1', hip: '20', hd: '', gl: 'Gl 165A' }),
+      })],
+    });
+    expect(folded.counts.spineRowsFolded).toBe(1);
+    expect(folded.rows.filter((r) => r.gl === 'Gl 165A')).toHaveLength(1);
+    expect(folded.rows.find((r) => r.gl === 'Gl 165A'))
+      .toMatchObject({ hip: '20', gaia_source_id: '333' });
+    expect(folded.counts.rows).toBe(result.counts.rows);
+  });
+
+  // The fold asserts a merge, so the survivor has to answer to everything the
+  // folded row did — otherwise it is a silent record drop.
+  it('refuses a fold whose survivor does not answer to the folded designations', () => {
+    const twin = spineRow({ hd: '4242', gl: 'Gl 165A' });
+    expect(() => buildMembership({
+      ...input,
+      spine: [...spine, twin],
+      tables: { ...tables, hdI239: new Set([4242]) },
+      corrections: [correction({
+        hd: '4242', gl: 'Gl 165A', op: 'fold', cell: '',
+        value: bindingReviewKey({ tyc: '7-7-1', hip: '20', hd: '', gl: 'Gl 165A' }),
+      })],
+    })).toThrow(/loses hd:4242/);
+  });
+
+  it('refuses a key no spine row carries, rather than silently doing nothing', () => {
+    expect(() => buildMembership({
+      ...input,
+      corrections: [correction({ tyc: '404-404-1', cell: 'tyc', value: '1-9-1' })],
+    })).toThrow(/matches no spine row/);
+  });
+
+  // A label the CDS join got wrong belongs in classic_id_overrides.tsv, where
+  // the merge can see it; this file may not reach around the merge.
+  it('parses only tyc as a set cell', () => {
+    const tsv = [
+      SPINE_CORRECTION_COLUMNS.join('\t'),
+      ['1-2-1', '', '5', '', 'set', 'hd', '6', 'because'].join('\t'),
+    ].join('\n') + '\n';
+    expect(() => parseSpineCorrectionsTsv(tsv)).toThrow(/set may write tyc/);
+  });
+
+  it('refuses a correction that states no evidence', () => {
+    const tsv = [
+      SPINE_CORRECTION_COLUMNS.join('\t'),
+      ['1-2-1', '', '5', '', 'set', 'tyc', '1-9-1', ''].join('\t'),
+    ].join('\n') + '\n';
+    expect(() => parseSpineCorrectionsTsv(tsv)).toThrow(/states no evidence/);
+  });
+
+  it('refuses a set writing the value the spine already states', () => {
+    expect(() => buildMembership({
+      ...input,
+      corrections: [correction({ tyc: '1-2-1', hd: '5', cell: 'tyc', value: '1-2-1' })],
+    })).toThrow(/the value the spine already states/);
+  });
+
+  it('refuses a fold onto a row that is itself folded', () => {
+    expect(() => buildMembership({
+      ...input,
+      spine: [
+        ...spine,
+        spineRow({ gl: 'Gl 165B', gaia_source_id: '444' }),
+        spineRow({ gl: 'Gl 165C', gaia_source_id: '555' }),
+      ],
+      corrections: [
+        correction({
+          gl: 'Gl 165C', op: 'fold', cell: '',
+          value: bindingReviewKey({ tyc: '', hip: '', hd: '', gl: 'Gl 165B' }),
+        }),
+        correction({
+          gl: 'Gl 165B', op: 'fold', cell: '',
+          value: bindingReviewKey({ tyc: '7-7-1', hip: '20', hd: '', gl: 'Gl 165A' }),
+        }),
+      ],
+    })).toThrow(/a fold target is itself folded/);
+  });
+
+  // Sol is the one spine row whose four key cells are all empty, so a blank key
+  // RESOLVES — to the Sun — rather than failing to match. Do not read this
+  // guard as redundant with 'matches no spine row'.
+  it('refuses a correction naming no key cell, which would resolve to Sol', () => {
+    const tsv = [
+      SPINE_CORRECTION_COLUMNS.join('\t'),
+      ['', '', '', '', 'set', 'tyc', '1-9-1', 'because'].join('\t'),
+    ].join('\n') + '\n';
+    expect(() => parseSpineCorrectionsTsv(tsv)).toThrow(/every key cell is empty/);
+    expect(bindingReviewKey(spine[0])).toBe(bindingReviewKey({
+      tyc: '', hip: '', hd: '', gl: '',
+    }));
   });
 });
 

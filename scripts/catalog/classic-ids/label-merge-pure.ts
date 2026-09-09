@@ -55,11 +55,9 @@ export type LabelDisposition =
 
 /** One row of the committed review queue — every place the merge's output
  *  departs from the spine's labels, plus the values a single-valued field could
- *  not carry. The queue is therefore the COMPLETE delta, and the membership
- *  manifest build asserts its own merge reproduces it byte for byte
- *  (`../membership/README.md` § The spine side). Sort by `disposition` to read
- *  it as a review list — `overlay-wins` and the two `override-*` rows are the
- *  adjudications, `added` rows are monotone coverage gains. */
+ *  not carry. The queue is therefore the COMPLETE delta. Sort by `disposition`
+ *  to read it as a review list — `overlay-wins` and the two `override-*` rows
+ *  are the adjudications, `added` rows are monotone coverage gains. */
 export interface LabelFlip {
   sourceId: string;
   label: string;
@@ -242,17 +240,19 @@ export function parseLabelOverridesTsv(text: string): LabelOverrides {
   return out;
 }
 
-/** A spine row as the merge's record + its review-queue label. The emitter
- *  merges over the spine because that is the membership term — the record build
- *  merges the same overlay over its own `Star` records, and the two count
- *  snapshots agreeing is what proves the committed queue describes the shipped
- *  labels. */
+/** A spine row's inherited labels as the merge's record, keyed on the binding
+ *  the caller derived for it. The binding is a parameter rather than the row's
+ *  own `gaia_source_id` cell because the two part company on 800-odd rows: the
+ *  manifest derives the binding and reads the frozen cell only as a diff
+ *  surface (`../membership/README.md` § The binding is derived), and labels
+ *  keyed on the retired cell would name a source the record is no longer
+ *  bound to. */
 export function spineLabelMergeRecord(
-  row: SpineRow,
+  row: SpineRow, gaiaSourceId: string | null,
 ): { record: LabelMergeRecord; label: string } {
   return {
     record: {
-      gaiaSourceId: nonEmpty(row.gaia_source_id),
+      gaiaSourceId,
       hip: parseIntOrNull(row.hip),
       hd: parseIntOrNull(row.hd),
       hr: parseIntOrNull(row.hr),
@@ -265,15 +265,14 @@ export function spineLabelMergeRecord(
       proper: nonEmpty(row.proper),
       hip: parseIntOrNull(row.hip),
       hd: parseIntOrNull(row.hd),
-      gaiaSourceId: nonEmpty(row.gaia_source_id),
+      gaiaSourceId,
     }),
   };
 }
 
-/** How a record names itself in the review queue. Shared by the emitter and
- *  the record build, and read off the PRE-merge identifiers in both, so the two
- *  runs produce a byte-identical queue — which is what the record build's
- *  equality check against the committed file is asserting. */
+/** How a record names itself in the review queue, read off its PRE-merge
+ *  identifiers so a row reads as the star the reviewer is being asked about
+ *  rather than as whatever the merge made of it. */
 export function labelForReview(fields: {
   proper: string | null;
   hip: number | null;
@@ -383,7 +382,7 @@ export function parseLabelFlipsTsv(text: string): LabelFlip[] {
   const out: LabelFlip[] = [];
   for (const { cells, idx } of dataRows(
     text, LABEL_FLIPS_COLUMNS, 'label_flips.tsv',
-    'Re-run `pnpm run build:classic-ids`.',
+    'Re-run `pnpm run build:membership`.',
   )) {
     out.push({
       sourceId: cells[idx.gaia_source_id],
@@ -409,8 +408,7 @@ export interface LabelMergeInput<R extends LabelMergeRecord> {
    *  belong to (§ An alias stops at the blend). Promotion only ever renders a
    *  secondary that exists as a member row, so this over-approximates the
    *  rendered set by design — withholding one alias too many is reviewable,
-   *  leaving one on the wrong record is not. Both callers derive it from the
-   *  committed table, which is what keeps the two review queues identical. */
+   *  leaving one on the wrong record is not. */
   siblingRenderedSourceIds: ReadonlySet<string>;
 }
 
@@ -555,8 +553,7 @@ const tally = (values: Iterable<string>): Map<string, number> => {
  *  ledger row. Attaching an identifier a DIFFERENT record already holds off the
  *  spine therefore deletes a working SID key from both records and buys
  *  nothing: the star stays findable under that identifier through the record
- *  that holds it. p Eridani (HIP 7751) and Gl 277A (HIP 36626) are today's two
- *  cases, and the second would go fully keyless and hard-fail allocation.
+ *  that holds it. p Eridani (HIP 7751) is today's case.
  *
  *  Withholding moves the assignment back toward the spine's, which is
  *  collision-free by construction, so the fixpoint converges — but one

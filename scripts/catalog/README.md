@@ -53,8 +53,8 @@ lives in the subfolders.
   cascades over them: Johnson V, and the B−V colour index.
 - `classic-ids/` — the frozen-CDS overlay build
   (`pnpm run build:classic-ids` → `data/classic-ids/`) and the per-identifier
-  label merge `build:membership` applies with it. The record build takes only
-  the designation-constellation cascade, as a post-pass over `readStars`.
+  label merge `build:membership` runs and writes the queue for. The record
+  build takes only the designation-constellation cascade, over `readStars`.
 - `membership/` — the membership term: the primaries-derived manifest
   (`pnpm run build:membership` → `data/membership/`), its parity gate and the
   § 6.1 ledgers. `parse/` streams it through `iterManifestTsv`.

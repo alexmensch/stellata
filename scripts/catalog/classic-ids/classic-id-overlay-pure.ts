@@ -5,7 +5,6 @@ import { sortSourceIdsNumeric } from '../astrometry-request/export-astrometry-re
 import { resolveGaiaSourceId, type SimbadWdsXidIndex } from '../catalog-pure';
 // Type-only: the merge imports this module's values, so the runtime graph
 // stays one-way.
-import type { LabelMergeCounts } from './label-merge-pure';
 
 /** Multi-value separator inside an overlay cell. A designation that names a
  *  catalogue granularity rather than one object attaches to every matching
@@ -505,17 +504,3 @@ export function glieseNumber(designation: string): string | null {
   return m[1].endsWith('.0') ? m[1].slice(0, -2) : m[1];
 }
 
-/** The join's own counts plus the label merge measured over the membership
- *  term. Per-identifier coverage is `labelAgree / (labelAgree + labelFlipped +
- *  labelSpineOnly)` from the merge counts — the same walk that decides what the
- *  record build writes, so the published figure cannot drift from the shipped
- *  labels the way a second measurement over a retired input could. */
-export interface ClassicIdOverlayCounts extends OverlayJoinCounts, LabelMergeCounts {
-  spineRows: number;
-  /** Spine rows carrying no source_id at all — the no-Gaia residual, whose
-   *  labels can only ride the spine. */
-  spineRowsWithoutSourceId: number;
-  spineRowsWithoutOverlayEntry: number;
-  spineBrightRows: number;
-  spineBrightRowsWithoutOverlayEntry: number;
-}

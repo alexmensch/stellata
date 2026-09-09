@@ -17,7 +17,12 @@ manifest's parity gate (i) reads it as the baseline every manifest row must
 account for. After the swap release that baseline becomes the previous
 manifest.
 
-**The file is frozen and nothing regenerates it.** The one-shot generator
+**The file is frozen, so a merge decision review finds wrong is corrected in
+`data/membership/spine-corrections.tsv`** — a committed, evidenced row the
+manifest applies — never by an edit here (`../membership/README.md`
+§ Correcting a merge decision).
+
+**Nothing regenerates it.** The one-shot generator
 retired with the driver swap: it ran `readStars` over the AT-HYG CSV, and that
 walk no longer exists. The manifest that supersedes it is a new artifact, not
 a regeneration of this one; the rule it re-sources under, and the measurement
@@ -32,8 +37,8 @@ scripts/catalog/spine/
                                   recovery (spineDesignations). Pure, and off
                                   the build:catalog path entirely.
                                   iterSpineTsv streams for a single pass
-                                  (build:classic-ids' label merge);
-                                  parseSpineTsv materialises for the callers
+                                  (the parity ledger's replay); parseSpineTsv
+                                  materialises for the callers
                                   that index rows or walk them twice —
                                   build:membership, the audit, the guard, the
                                   manifest gate and ../astrometry-request/.
@@ -270,8 +275,8 @@ unless another home is named; the committed gates are
   ledger has carried and the reason the parity gate subtracts it.
 - **Label parity — strict gain.** No previously-labeled record lost a
   label: per identifier the shipped coverage is the spine's keyed count
-  plus the overlay's additions (hd +148, hr +4, gl +198, flam +69,
-  hip +0). Every departure from the spine's cells is one of the 719
+  plus the overlay's additions (hd +149, hr +4, gl +200, flam +69,
+  hip +0). Every departure from the spine's cells is one of the 725
   disposed rows of `data/classic-ids/label_flips.tsv`, replayed exactly
   by the designation-multiset gate above.
 - **Field parity.** The swap PR moved no field values beyond the

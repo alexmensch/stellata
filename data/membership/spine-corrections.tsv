@@ -1,0 +1,20 @@
+tyc	hip	hd	gl	op	cell	value	evidence
+# Corrections to AT-HYG's MERGE DECISIONS — the one thing the frozen spine
+# supplies that no primary does, and so the one thing no other curated file
+# covers. `set` rewrites one cell of a spine row; `fold` says the row is another
+# spine row's duplicate and `value` names that row. Both key on tyc|hip|hd|gl,
+# unique across all 313,257 spine rows.
+#
+# WHAT DOES NOT BELONG HERE, because a merge-decision correction is the wrong
+# tool: a label the CDS join got wrong is classic_id_overrides.tsv, where the
+# merge can see it; a binding two sources disagree about is
+# binding-review-dispositions.tsv; a designation renamed rather than an object
+# changed is a bridge in ../sid/sameas-overrides.tsv. `set` therefore accepts
+# `tyc` alone — every other identifier cell is the label merge's.
+#
+# A fold is an identity event: the folded row's sid retires with the survivor's
+# as successor (docs/sid.md section 4.3). The generator holds every folded row's
+# designations against the surviving manifest row afterwards, so a fold that
+# would lose one fails the build rather than shrinking the catalogue quietly.
+2265-1793-1	1997			set	tyc	2265-1861-1	IV/25 gives TYC 2265-1861-1 HD 2094 and lists no row for 2265-1793-1. SIMBAD names 2265-1861-1 HD 2094A, carrying HIP 1997 and Gaia 2862908793015820928, and 2265-1793-1 HD 2094B on Gaia 2862908788720038400. This row keys hip:1997, binds A's source since the binding review, and now carries HD 2094 — component A on every cell but this one, which is B's, 5.1 arcsec away in Tycho-2. Left uncorrected it names B in the direction, V and PM cascades and in refresh-tycho2's request set
+			Gl 277A	fold		2465-984-1|36626||Gl 277A	AT-HYG carries this star twice: this Gaia-keyed row and TYC 2465-984-1 / HIP 36626, both cell-for-cell Gl 277A at mag 10.52, 0.65 arcsec apart. multiples.tsv pairs HIP 36626 with 898506093171335424 on two independent WDS rows (07319+3613-Aa,Ab comp Aa, and 07319+3613-AB comp A); CNS5 row 1866 puts GJ 277 A on that source under HIP 36626; SIMBAD's V* VV Lyn A carries it, while the bare V* VV Lyn (otype **) carries the HIP with no Gaia source and is the system entry, which is not a granularity this catalogue ships. Same shape as the eight gaia-keyed twins the derived binding merged onto their own HIP records (data/sid/retirements.tsv, 2026-09-08); this one escaped that pass only because the twin held the source the derivation would have put on the HIP row
