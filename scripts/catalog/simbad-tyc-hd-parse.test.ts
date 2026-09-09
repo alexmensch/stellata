@@ -1,5 +1,14 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, it, expect } from 'vitest';
 
+import { REPO_ROOT, lfsContentReadable } from '../util/paths';
+import { parseTyc2HdTsv } from './classic-ids/classic-ids-parse';
+import {
+  MEMBERSHIP_MANIFEST_FILE,
+  parseManifestTsv,
+} from './membership/membership-manifest-pure';
 import { hdNumbers, parseSimbadTycHdTsv } from './simbad-tyc-hd-parse';
 
 const HEADER = ['tyc', 'simbad_oid', 'simbad_main_id', 'hd'].join('\t');
@@ -77,3 +86,80 @@ describe('hdNumbers', () => {
       .toEqual([]);
   });
 });
+
+const SIMBAD_TYC_HD_FILE = 'data/simbad/simbad_tyc_hd.tsv';
+const TYC2_HD_FILE = 'data/classic-ids/tyc2_hd.tsv';
+const ADJUDICATION_INPUTS = [SIMBAD_TYC_HD_FILE, TYC2_HD_FILE, MEMBERSHIP_MANIFEST_FILE]
+  .map((f) => resolve(REPO_ROOT, f));
+
+// Pins data/simbad/README.md § What it adjudicates. The figures are the
+// pull's whole justification, so they are asserted rather than narrated: a
+// re-pull that moves one fails here instead of ageing that prose.
+describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
+  'adjudication over the committed tables',
+  () => {
+    // IV/25 gives an `n_hd=2` entry ONE ROW PER HD, so the authority for a TYC
+    // is the SET of its rows. Keying single-valued drops one and reads
+    // SIMBAD's agreement with the other as a dissent — 7 phantom rows.
+    const iv = new Map<string, { hd: Set<number>; consistent: boolean }>();
+    for (const row of parseTyc2HdTsv(readFileSync(ADJUDICATION_INPUTS[1], 'utf-8'))) {
+      const entry = iv.get(row.tyc) ?? { hd: new Set<number>(), consistent: true };
+      entry.hd.add(row.hd);
+      entry.consistent = entry.consistent && row.nHd === 1 && row.nTyc === 1;
+      iv.set(row.tyc, entry);
+    }
+    const simbad = parseSimbadTycHdTsv(readFileSync(ADJUDICATION_INPUTS[0], 'utf-8'));
+
+    const counts = {
+      bothCells: 0, answered: 0, silent: 0,
+      dissent: 0, dissentInconsistent: 0, faithful: 0, vindicating: 0,
+      bothAgainst: 0,
+    };
+    for (const row of parseManifestTsv(readFileSync(ADJUDICATION_INPUTS[2], 'utf-8'))) {
+      const tyc = row.tyc.trim();
+      const shipped = Number.parseInt(row.hd.trim(), 10);
+      if (tyc === '' || !Number.isFinite(shipped)) continue;
+      counts.bothCells += 1;
+      const answer = simbad.get(tyc);
+      if (answer === undefined) { counts.silent += 1; continue; }
+      counts.answered += 1;
+      const printed = iv.get(tyc);
+      if (printed === undefined) continue;
+      const stated = hdNumbers(answer);
+      if (!stated.some((hd) => printed.hd.has(hd))) {
+        counts.dissent += 1;
+        if (!printed.consistent) counts.dissentInconsistent += 1;
+        else if (stated.includes(shipped)) counts.vindicating += 1;
+        else if (printed.hd.has(shipped)) counts.faithful += 1;
+      } else if (!stated.includes(shipped) && !printed.hd.has(shipped)) {
+        counts.bothAgainst += 1;
+      }
+    }
+
+    it('answers for the stated share of the rows carrying both cells', () => {
+      expect(counts.bothCells).toBe(353347);
+      expect(counts.answered).toBe(331734);
+      expect(counts.silent).toBe(21613);
+    });
+
+    it('finds 219 dissents, every one on an internally consistent IV/25 entry', () => {
+      expect(counts.dissent).toBe(219);
+      expect(counts.dissentInconsistent).toBe(0);
+    });
+
+    it('splits them 209 manifest-faithful / 10 vindicating the manifest', () => {
+      expect(counts.faithful).toBe(209);
+      expect(counts.vindicating).toBe(10);
+      expect(counts.faithful + counts.vindicating).toBe(counts.dissent);
+    });
+
+    it('finds 23 rows both witnesses contradict', () => {
+      expect(counts.bothAgainst).toBe(23);
+    });
+
+    it('reproduces the two dissents measured by hand against live SIMBAD', () => {
+      expect(hdNumbers(simbad.get('1066-3553-1')!)).toEqual([187260]);
+      expect(hdNumbers(simbad.get('2772-917-1')!)).toEqual([224636]);
+    });
+  },
+);

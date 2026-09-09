@@ -132,30 +132,44 @@ Held against the manifest's shipped `hd` and IV/25's HD for the row's own TYC,
 over the 331,734 manifest rows carrying both a TYC and an HD that this file
 answers for — the two classes, and only the first is reachable without it:
 
-- **SIMBAD dissents from IV/25 on the row's own TYC — 226 rows.** IV/25 is
-  internally consistent here (`n_hd=1 n_tyc=1`, and its HD→TYC direction
-  agrees with its TYC→HD one), so **no committed table could detect this
-  class**. It splits two ways, and the split is the load-bearing part:
-  - **210** where the manifest faithfully carries IV/25's HD and SIMBAD
+- **SIMBAD shares no HD with IV/25 on the row's own TYC — 219 rows.** IV/25 is
+  internally consistent on every one (`n_hd=1 n_tyc=1`, and its HD→TYC
+  direction agrees with its TYC→HD one), so **no committed table could detect
+  this class**. It splits two ways, and the split is the load-bearing part:
+  - **209** where the manifest faithfully carries IV/25's HD and SIMBAD
     rejects both. Many are mutual swaps between a pair's two entries, and the
     set is full of named stars: τ Oph, ξ Sco and ε² Lyr (both entries of
     each), 20 Lyn, 8 Lac, 65 Psc, 55 Eri, ε Ari, μ¹ Cyg.
-  - **16 where SIMBAD backs the manifest's shipped HD against IV/25** —
-    β Lyr, γ¹ Ari, λ Oct B, π Aql B, TYC 2772-917-1 and eleven more. A rule
-    keyed on the row's own TYC in IV/25 would corrupt every one of them,
-    which is why the second witness is a prerequisite rather than a
-    refinement.
+  - **10 where SIMBAD backs the manifest's shipped HD against IV/25** —
+    γ¹ Ari, π Aql B, λ Oct B, TYC 2772-917-1, HD 17479A, HD 18281 and
+    HD 18282 (a mutual swap), HD 48766, HD 213973B, HD 224646B. A rule keyed
+    on the row's own TYC in IV/25 would corrupt every one, which is why the
+    second witness is a prerequisite rather than a refinement.
+
+  **Compare against IV/25's HD SET for the TYC, never one row of it.** An
+  entry IV/25 marks `n_hd=2` occupies **two rows**, one per HD — 197 TYCs do —
+  so a single-valued lookup keeps one and reads SIMBAD's agreement with the
+  other as a disagreement. That is the difference between 219 and the 226 this
+  section first reported: all 7 of the surplus were rows where SIMBAD names an
+  HD IV/25 does publish for the entry, on the row the lookup dropped. β Lyr is
+  the shape — IV/25 gives TYC 2642-2929-1 both 174638 and 174639, SIMBAD says
+  174638, the manifest ships 174638, and nothing disagrees with anything.
 - **SIMBAD and IV/25 agree and the manifest ships a different HD — 23 rows.**
   Both witnesses against the shipped cell, so these are manifest errors with
   no remaining doubt: α Psc A, f Eri A, 32 Eri B, β Mon B, k¹ Pup, ζ¹ Cnc A,
   ζ Boo B, ε Boo B, δ Ser A, ρ Her A, κ¹/κ² CrA (a mutual swap), ε¹ Lyr B,
   12 Aqr A, ζ² Aqr, and 8 plain-HD stars.
 
-So 233 shipped HD cells are contradicted and 16 are vindicated against the
+So 232 shipped HD cells are contradicted and 10 are vindicated against the
 printed index. Both of the two dissents `stellata-3bsf.50` measured live
 reproduce exactly — π Aql (IV/25 187259, SIMBAD 187260) and TYC 2772-917-1
 (224635 / 224636) — which is what says the file agrees with the hand
-measurement that motivated it.
+measurement that motivated it, and both are in the vindicating 10.
+
+Every count in this section is pinned against the committed tables by
+`scripts/catalog/simbad-tyc-hd-parse.test.ts` § adjudication over the
+committed tables, so a re-pull that moves one fails the suite rather than
+ageing this prose.
 
 **21,613 manifest rows carrying both a TYC and an HD get no answer here**:
 SIMBAD holds no object for the TYC, or its object carries no HD ident. So a
