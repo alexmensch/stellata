@@ -1,7 +1,7 @@
 // Johnson B−V resolution from Gaia DR3 photometry, the catalogue's printed
 // cell, and the intrinsic spectral-class tiers. See README.md § The ci cascade.
 
-import { SOLAR_BV_FALLBACK } from '../catalog-pure';
+import { SOLAR_BV_FALLBACK } from '../record/catalog-pure';
 import {
   calibratedPhotometry,
   polynomial,

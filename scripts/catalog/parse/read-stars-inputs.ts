@@ -8,7 +8,7 @@ import {
   parseBailerJonesTsv,
   parseGaiaApsisTsv,
   type ApsisRow,
-} from '../catalog-pure';
+} from '../record/catalog-pure';
 import {
   type SimbadSpectralIndex,
   emptySimbadSpectralIndex,
@@ -33,7 +33,7 @@ import {
   emptySimbadValueIndex,
   parseSimbadValuesTsv,
   type SimbadValueIndex,
-} from '../simbad-values-parse';
+} from '../simbad/simbad-values-parse';
 import { parseTycho2Tsvs } from '../tycho2-parse';
 import { cns5AstrometryByGj, parseCns5Tsv } from '../classic-ids/classic-ids-parse';
 import {

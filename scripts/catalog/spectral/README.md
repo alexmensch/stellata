@@ -2,7 +2,7 @@
 
 Morgan-Keenan spectral parsing, the seven-tier resolver over SIMBAD's
 `sp_type`, and the Stefan-Boltzmann chain that turns a class plus an absolute
-magnitude into a rendered radius. Extracted from `../catalog-pure.ts`, which
+magnitude into a rendered radius. Extracted from `../record/catalog-pure.ts`, which
 keeps the SIMBAD namespace ladder this folder joins through.
 
 ## Files in this area
@@ -15,7 +15,7 @@ scripts/catalog/spectral/
                                   string. No catalogue joins — pure parsing.
   spectral-resolve.ts (+ test)    The seven-tier resolver and the SIMBAD
                                   sp_type index it walks. The one file here
-                                  that reaches back to `../catalog-pure.ts`,
+                                  that reaches back to `../record/catalog-pure.ts`,
                                   for the namespace ladder
                                   (`walkSimbadNamespaces`, `indexSimbadRow`,
                                   `simbadHipKey`) both SIMBAD pulls share.
@@ -26,14 +26,14 @@ scripts/catalog/spectral/
                                   companion's class.
 ```
 
-**Why this is not in `../catalog-pure.ts`.** It was, and the folder README
+**Why this is not in `../record/catalog-pure.ts`.** It was, and the folder README
 documenting it was `../parse/README.md` — neither the code's home nor its
 caller's. The topic is self-contained (nine files import it, one of them a
 runtime module), it is the largest single subject in a 2.4k-line module, and a
 session asking "why is this star that size" is better served landing here.
 
 **The one direction of the dependency that matters:** this folder imports from
-`../catalog-pure.ts`, never the reverse. `catalog-pure.ts` no longer references
+`../record/catalog-pure.ts`, never the reverse. `catalog-pure.ts` no longer references
 a spectral symbol at all, so the seam is one-way and a cycle cannot form.
 
 ## The resolver and the radius chain
@@ -75,7 +75,7 @@ priority chain:
    key). The walk passes over the typeless one on its own: `accept` returns
    null and the ladder keeps going.
 3. **SIMBAD `sp_type` by GJ**, folded through `normaliseGjKey`
-   (`../catalog-pure.ts`) so `Gl 165A` / `GJ 165A` / `165 A` meet as one
+   (`../record/catalog-pure.ts`) so `Gl 165A` / `GJ 165A` / `165 A` meet as one
    key. Above TYC per § The ladder is ordered by what an identifier names.
 4. **SIMBAD `sp_type` by TYC** — the only namespace that reaches an object
    SIMBAD holds no Gaia id and no HIP for, which is exactly the population

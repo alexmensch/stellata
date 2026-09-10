@@ -83,7 +83,7 @@ SCRIPT_NAME = "refresh-bailer-jones"
 # regression-detection goal is preserved.
 MAX_MISSING_PINS = 1
 
-# Five fixtures cross-listed with scripts/catalog/catalog-pure.test.ts —
+# Five fixtures cross-listed with scripts/catalog/record/catalog-pure.test.ts —
 # the four catastrophic-parallax-inversion supergiants (HIP 22365, 25733,
 # 38430, 46144) and the well-measured F-dwarf HIP 23785 control. r_med_*
 # values agree to the per-row resolution published in the paper; pinning

@@ -7,10 +7,10 @@
 // so everything reachable from the config needs them. Only typecheck and
 // vitest cover the rest of scripts/, and neither fails without them: dropping
 // these breaks `vite build` and `pnpm run dev` alone.
-import { headerIndex } from './parse/corpus-tsv.ts';
+import { headerIndex } from '../parse/corpus-tsv.ts';
 // Type-only: distance/parallax/ reaches back here through its parsers, so a
 // value import would close a cycle. Erased at compile.
-import type { DistVia } from './distance/parallax/parallax-cascade.ts';
+import type { DistVia } from '../distance/parallax/parallax-cascade.ts';
 
 /** Solar-type B-V used as a fallback when no chromaticity input is
  *  available. ~0.65 yields a yellow disc rather than a hot blue or
@@ -30,7 +30,7 @@ export const SOLAR_BV_FALLBACK = 0.65;
  *  names the Tycho-2 entry, which for a close pair is the system. Where both
  *  reach a row the component-naming one wins, so a system blend never displaces
  *  a component value. This deliberately no longer mirrors the request order
- *  `spine_request_keys` composes with — see `spectral/README.md` § The ladder is
+ *  `spine_request_keys` composes with — see `../spectral/README.md` § The ladder is
  *  ordered by what an identifier names for why the pull's order is the
  *  load-bearing one. */
 export const SIMBAD_NAMESPACE_VALUES = ['source_id', 'hip', 'gj', 'tyc'] as const;
@@ -422,7 +422,7 @@ export const NO_GAIA_SOURCE_ID = 0n;
 export const NO_APSIS = NaN;
 
 // On-disk transport chunking — the single reassembly contract shared by the
-// writer, client loader, and Node reader. See scripts/catalog/README.md
+// writer, client loader, and Node reader. See scripts/catalog/record/README.md
 // § On-disk transport chunking.
 
 export const CATALOG_MANIFEST_FILENAME = 'catalog-manifest.json';
@@ -866,7 +866,7 @@ export interface SearchEntry {
   // Further HD / HR numbers the record answers to but does not display. HD
   // numbered both components of many close pairs and HR routes through HD, so
   // these two are the identifiers an overlay cell can be ambiguous on
-  // (classic-ids/README.md § The label merge). Search resolves them; the
+  // (../classic-ids/label-merge/README.md). Search resolves them; the
   // dropdown label stays the record's own designation.
   hda?: number[];
   hra?: number[];
@@ -932,8 +932,9 @@ export function designationConIndex(
  *  and 11 HR numbers are displayed by two records each, always a component pair
  *  sharing one catalogue number, and `Gl 277A` likewise. And an alias never
  *  displaces a record that displays that number outright, whichever way the
- *  absmag sort happened to order the two. `classic-ids/README.md` § An alias
- *  stops at the blend is the same rule on the write side;
+ *  absmag sort happened to order the two.
+ *  `../classic-ids/label-merge/README.md`
+ *  § An alias stops at the blend is the same rule on the write side;
  *  `cns5AstrometryByGj` is the same two-pass reduction over CNS5's component
  *  letters.
  *
@@ -1017,7 +1018,7 @@ export function buildSearchEntry(
 // ---- Catalog flag bits --------------------------------------------------
 
 // Per-star bitfield stored at RECORD_LAYOUT.flags. Single source of truth
-// for both writers (scripts/catalog/build-catalog, scripts/catalog/catalog-pure
+// for both writers (scripts/catalog/build-catalog, scripts/catalog/record/catalog-pure
 // inferBinaries) and readers (catalog-loader, chart-labels,
 // verify-catalog). Adding a bit means adding a name to the FLAGS
 // registry, not sprinkling another magic number — the regression tests
@@ -1032,7 +1033,7 @@ export const FLAGS = {
   binaryCompanionOnly: 0x08,
   binaryPrimary: 0x10,
   /** Companion addressable only via the row-index map's `bySynth`
-   *  table. See companions/README.md § Companion promotion from
+   *  table. See ../companions/README.md § Companion promotion from
    *  `data/binaries/multiples.tsv`. */
   binaryCompanionSynthetic: 0x20,
 } as const;
@@ -1767,7 +1768,7 @@ export function absoluteToApparentMagnitude(absmag: number, distPc: number): num
  *  Every distance-override layer (Bailer-Jones, LMC kinematic, and future SMC
  *  kinematic / structural-disc / OGLE Cepheid layers) returns a bare distance:
  *  absmag is derived once from the V cascade and the distance the whole stack
- *  settled on (`photometry/README.md` § The V cascade), so a layer cannot
+ *  settled on (`../photometry/README.md` § The V cascade), so a layer cannot
  *  place a star at a new distance while lighting it for the old one. xyz is
  *  likewise not a layer's business — position is direction × distance, with
  *  the direction resolved independently by the direction cascade. */

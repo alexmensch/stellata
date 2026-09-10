@@ -6,6 +6,8 @@ import {
   polynomial,
   type GaiaPhotometry,
 } from './gaia-photometry-pure';
+import { lookupGliese, type GlieseIndex } from '../gliese-parse';
+import type { Tycho2Row } from '../tycho2-parse';
 
 /** Riello et al. 2021, A&A 649, A3 — Gaia EDR3 photometric relationships with
  *  other photometric systems, `G − V` as a cubic in `BP − RP`. Ascending
@@ -128,6 +130,68 @@ export function resolveVMagnitude(
     return { v: curatedV, via: 'curated' };
   }
   return { v: null, via: 'none' };
+}
+
+/** Where the printed V a binding gate weighs against came from — the same
+ *  printed tiers, in the same order, as the cascade above. */
+export type GateVVia = 'hip' | 'tycho2' | 'gliese';
+
+export interface PrintedV {
+  vMag: number;
+  vVia: GateVVia;
+}
+
+/** The two lower printed tiers bound to their parsed tables. One bundle rather
+ *  than a loose callback pair, because four call sites weigh the same two tiers
+ *  and a site supplying only one of them silently narrows a binding gate to
+ *  evidence the other side can still see (`docs/catalog-driver.md` § 4). */
+export interface PrintedVLookups {
+  tycho2VOfTyc: (tyc: string) => number | null;
+  glieseVOfGj: (gj: string) => number | null;
+}
+
+export function printedVLookups(
+  tycho2: ReadonlyMap<string, Pick<Tycho2Row, 'btMag' | 'vtMag'>>,
+  gliese: GlieseIndex,
+): PrintedVLookups {
+  return {
+    tycho2VOfTyc: (tyc) => {
+      const row = tycho2.get(tyc);
+      return row === undefined ? null : tycho2VMagnitude(row.btMag, row.vtMag).v;
+    },
+    glieseVOfGj: (gj) => lookupGliese(gliese, gj)?.vMag ?? null,
+  };
+}
+
+/** The cascade's printed tiers BELOW Hipparcos, for a row a Hipparcos V does
+ *  not reach: Tycho-2 on the row's Tycho entries, then Gliese on its GJ cells.
+ *  Both binding gates weigh their candidates against this, so the record side
+ *  and the label side cannot drift on what evidence is reachable
+ *  (`docs/catalog-driver.md` § 4).
+ *
+ *  **Lists, not cells.** A spine row states one TYC and one GJ, but an overlay
+ *  entry is keyed on a Gaia source IV/25 may route several Tycho entries to,
+ *  and the brightest of them is the one saturation is a property of — the same
+ *  rule `applyBindingGate` applies across a row's HIPs. */
+export function printedVBelowHip(
+  tycs: Iterable<string>,
+  gjs: Iterable<string>,
+  lookups: PrintedVLookups,
+): PrintedV | null {
+  for (const [keys, lookup, vVia] of [
+    [tycs, lookups.tycho2VOfTyc, 'tycho2'],
+    [gjs, lookups.glieseVOfGj, 'gliese'],
+  ] as const) {
+    let brightest: number | null = null;
+    for (const key of keys) {
+      const v = lookup(key);
+      if (v !== null && Number.isFinite(v) && (brightest === null || v < brightest)) {
+        brightest = v;
+      }
+    }
+    if (brightest !== null) return { vMag: brightest, vVia };
+  }
+  return null;
 }
 
 /** Whether a V from this tier is the whole SYSTEM's blended magnitude — every

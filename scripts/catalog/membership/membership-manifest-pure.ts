@@ -2,7 +2,7 @@
 // the primaries' additions, the two ledgers, the TSV codecs, and the
 // spine ↔ manifest matcher the parity gate runs. Contract: docs/catalog-driver.md § 3.1.
 
-import { SOL_PROPER_NAME, normaliseGjKey } from '../catalog-pure';
+import { SOL_PROPER_NAME, normaliseGjKey } from '../record/catalog-pure';
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';
 import {
   BRIGHT_TIER_MAG_CEILING,
@@ -18,11 +18,9 @@ import {
   type BindingCells,
   type BindingSource,
   type DerivedBinding,
-  type PrintedV,
   type RankedCandidate,
   type RowGateEvidence,
 } from './binding-derivation-pure';
-import { lookupGliese } from '../gliese-parse';
 import {
   CLASSIC_ID_OVERRIDES_FILE,
   mergeClassicIdLabels,
@@ -31,10 +29,14 @@ import {
   type LabelMergeCounts,
   type LabelMergeRecord,
   type LabelOverrides,
-} from '../classic-ids/label-merge-pure';
+} from '../classic-ids/label-merge/label-merge-pure';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { dataRows, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
-import { tycho2VMagnitude } from '../photometry/v-magnitude-pure';
+import {
+  printedVBelowHip,
+  printedVLookups,
+  type PrintedV,
+} from '../photometry/v-magnitude-pure';
 import { spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import {
   ATHYG_HD_LINK_FLOOR,
@@ -711,19 +713,16 @@ function deriveSpineBindings(
   spine: readonly SpineRow[], tables: PrimaryTables, idx: PrimaryIndex, evidence: BindingEvidence,
 ): SpineBinding[] {
   const simbad = indexSimbadSources(tables.simbadBySourceId);
-  const printedVBelowHip = (row: BindingCells): PrintedV | null => {
-    const t = row.tyc === '' ? undefined : tables.tycho2.get(row.tyc);
-    const tycV = t === undefined ? null : tycho2VMagnitude(t.btMag, t.vtMag).v;
-    if (tycV !== null) return { vMag: tycV, vVia: 'tycho2' };
-    const glV = row.gl === '' ? null : lookupGliese(tables.gliese, row.gl)?.vMag ?? null;
-    return glV === null ? null : { vMag: glV, vVia: 'gliese' };
-  };
+  const printedV = printedVLookups(tables.tycho2, tables.gliese);
+  const belowHip = (row: BindingCells): PrintedV | null => printedVBelowHip(
+    row.tyc === '' ? [] : [row.tyc], row.gl === '' ? [] : [row.gl], printedV,
+  );
   const bindings: SpineBinding[] = spine.map((row) => {
     const frozen = row.gaia_source_id === '' ? null : row.gaia_source_id;
     if (row.proper === SOL_PROPER_NAME) {
       return { frozen, derived: null, gate: null, comparison: 'sol' };
     }
-    const gate = rowGateEvidence(row, evidence, printedVBelowHip);
+    const gate = rowGateEvidence(row, evidence, belowHip);
     const derived = deriveBinding(bindingCandidates(row, tables, idx.cns5ByOwnKey, simbad), gate);
     return { frozen, derived, gate, comparison: compareBinding(frozen, derived, false) };
   });

@@ -89,7 +89,6 @@ bayer	ψ			Aql			97139	7511	186547	nec
 bayer	ω	1		Aql			94834	7315	180868	nec
 bayer	ω	2		Aql			95002	7332	181383	nec
 bayer	A	1		Aqr			116889		222547	iv27a
-bayer	A	2		Aqr			116904		222561	iv27a
 bayer	A	2		Aqr			116901		222574	iv27a
 bayer	b	1		Aqr			115438		220321	iv27a
 bayer	b	2		Aqr			115669		220704	iv27a
@@ -1418,7 +1417,6 @@ bayer	h			Ori			23983		33254	iv27a
 bayer	i			Ori		A	23879	1664	33054	nec
 bayer	k			Ori			29800		43386	iv27a
 bayer	l			Ori			29850		43525	iv27a
-bayer	m			Ori			25145		35148	iv27a
 bayer	m			Ori			25142		35149	iv27a
 bayer	n	1		Ori		A	25861	1842	36351	nec
 bayer	n	2		Ori			26126		36777	iv27a

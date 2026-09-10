@@ -16,7 +16,7 @@ gaia_dr3_astrometry_catalog.tsv        ~58 MB, LFS. 5p astrometry +
                                        radial_velocity{,_error} for every
                                        catalog source_id, both binding gates'
                                        candidates and the bound-pair
-                                       siblings (378,838 rows) — tier 1 of
+                                       siblings (379,133 rows) — tier 1 of
                                        the direction, rv, V and ci cascades,
                                        the G evidence the overlay gate and the
                                        membership derivation weigh, and the
@@ -40,7 +40,7 @@ gaia_catalog_source_id_request.tsv     ~7.2 MB, LFS. Full-catalog deduped
                                        the classic-ID binding gate's candidates
                                        UNION the membership derivation's
                                        candidates UNION the kept-physical
-                                       multiples.tsv pair members, 378,840 ids
+                                       multiples.tsv pair members, 379,135 ids
                                        (scripts/catalog/astrometry-request/).
 gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        Gaia-only catalog stars (no HIP/HD/HR/GJ)

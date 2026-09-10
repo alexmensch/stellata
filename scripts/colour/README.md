@@ -30,7 +30,7 @@ well — the smallest component anywhere in the table is 0.189 (red end),
 so uint8 costs at most 0.91%.
 
 Three consumers reach past the table into the pure module:
-`scripts/catalog/catalog-pure.ts` for the Ballesteros inverse at build
+`scripts/catalog/record/catalog-pure.ts` for the Ballesteros inverse at build
 time, and both volumetric layers for their population tints
 (`src/client/milkyway/calibration/README.md` § Population colours) —
 which is why the chain lives there and not beside the CLI. A layer's

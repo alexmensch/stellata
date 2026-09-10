@@ -48,7 +48,8 @@ export interface StarDesignationFields {
   /** Further HD / HR numbers this record answers to, beyond the one the
    *  single-valued field carries. Carried only where the pair is unresolved, so
    *  the record renders both components' light and both numbers reach it
-   *  (`scripts/catalog/classic-ids/README.md` § An alias stops at the blend) —
+   *  (`scripts/catalog/classic-ids/label-merge/README.md` § An alias stops
+   *  at the blend) —
    *  which is why both key the same-as class. Required, not optional: this
    *  extractor has to derive one designation set for `sid:allocate` and the
    *  spine parity gate alike, and an omitted field is exactly the silent

@@ -19,7 +19,7 @@ import {
   LABEL_FLIPS_FILE,
   labelFlipsTsv,
   parseLabelOverridesTsv,
-} from '../classic-ids/label-merge-pure';
+} from '../classic-ids/label-merge/label-merge-pure';
 import {
   MULTIPLES_TSV,
   readMultiplesTsv,

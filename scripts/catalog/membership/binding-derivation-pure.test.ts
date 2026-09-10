@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseSimbadWdsXidsTsv } from '../catalog-pure';
+import { parseSimbadWdsXidsTsv } from '../record/catalog-pure';
 import { bindingEvidence } from '../classic-ids/classic-id-overlay-pure';
 import { cns5Row } from '../classic-ids/cns5-fixture';
 import { indexCns5, type BindingTables, type SimbadXids } from '../spine/primaries-audit-pure';
@@ -15,6 +15,7 @@ import {
   simbadCandidate,
   type BindingCandidates,
 } from './binding-derivation-pure';
+import { NO_PRINTED_V_BELOW_HIP } from '../photometry/photometry-fixture';
 
 const simbadBySourceId = new Map<string, SimbadXids>([
   ['100', { hip: 10, tyc: '1-1-1', gj: null }],
@@ -126,7 +127,10 @@ const WDS_XIDS = parseSimbadWdsXidsTsv([
 
 describe('deriveBinding', () => {
   const gMag = new Map([['a', 12.0], ['b', 5.05], ['c', 5.1]]);
-  const evidence = bindingEvidence(gMag, new Map([[50, 5.0]]), WDS_XIDS, new Set([...gMag.keys(), 'nullg']));
+  const evidence = bindingEvidence(
+    gMag, new Map([[50, 5.0]]), WDS_XIDS, NO_PRINTED_V_BELOW_HIP,
+    new Set([...gMag.keys(), 'nullg']),
+  );
 
   it('weighs candidates in rank order and falls through on a magnitude rejection', () => {
     const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, () => null);

@@ -11,11 +11,13 @@ import {
   rielloVMagnitude,
   resolveVMagnitude,
   rielloGMinusV,
+  printedVBelowHip,
+  printedVLookups,
   tycho2VMagnitude,
   vTierIsSystemBlend,
 } from './v-magnitude-pure';
 import { GAIA_PHOTOMETRY_SATURATION_G } from './gaia-photometry-pure';
-import { photometry } from './photometry-fixture';
+import { photometry, printedVOf } from './photometry-fixture';
 
 describe('Riello+ 2021 G−V relation', () => {
   // The literals ARE the assertion: these are the published Table 5.7 values
@@ -171,5 +173,71 @@ describe('vTierIsSystemBlend', () => {
     expect(vTierIsSystemBlend('gaia_riello')).toBe(false);
     expect(vTierIsSystemBlend('none')).toBe(false);
     expect(vTierIsSystemBlend(null)).toBe(false);
+  });
+});
+
+describe('printedVBelowHip', () => {
+  const LOOKUPS = printedVOf({ 'a-1-1': 7.0, 'a-1-2': 5.5 }, { 914: 9.0 });
+
+  it('answers from Tycho-2 first, as the cascade orders the two tiers', () => {
+    expect(printedVBelowHip(['a-1-1'], ['914'], LOOKUPS))
+      .toEqual({ vMag: 7.0, vVia: 'tycho2' });
+  });
+
+  it('falls to Gliese only where no Tycho entry answers', () => {
+    expect(printedVBelowHip(['nope-1-1'], ['914'], LOOKUPS))
+      .toEqual({ vMag: 9.0, vVia: 'gliese' });
+    expect(printedVBelowHip([], ['914'], LOOKUPS))
+      .toEqual({ vMag: 9.0, vVia: 'gliese' });
+  });
+
+  // An overlay entry is keyed on a Gaia source IV/25 may route several Tycho
+  // entries to, and saturation is a property of the brightest of them — so a
+  // fainter sibling must not raise the V a binding gate answers for.
+  it('takes the brightest of several keys within a tier', () => {
+    expect(printedVBelowHip(['a-1-1', 'a-1-2'], [], LOOKUPS))
+      .toEqual({ vMag: 5.5, vVia: 'tycho2' });
+    expect(printedVBelowHip(['a-1-2', 'a-1-1'], [], LOOKUPS))
+      .toEqual({ vMag: 5.5, vVia: 'tycho2' });
+  });
+
+  it('is null where neither tier answers, which is a pass and not a rejection', () => {
+    expect(printedVBelowHip([], [], LOOKUPS)).toBeNull();
+    expect(printedVBelowHip(['nope-1-1'], ['0'], LOOKUPS)).toBeNull();
+  });
+
+  it('treats a non-finite tier value as no answer', () => {
+    const nan = printedVOf({ 'a-1-1': Number.NaN }, { 914: 9.0 });
+    expect(printedVBelowHip(['a-1-1'], ['914'], nan))
+      .toEqual({ vMag: 9.0, vVia: 'gliese' });
+  });
+});
+
+describe('printedVLookups', () => {
+  // Both binding gates and the astrometry request weigh candidates through
+  // this one bundle; a site spelling its own pair is how the three drift on
+  // reachable evidence (docs/catalog-driver.md § 4).
+  it('reduces a Tycho-2 row through the published VT relation', () => {
+    const lookups = printedVLookups(
+      new Map([['a-1-1', { btMag: 9.5, vtMag: 8.9 }]]),
+      { byKey: new Map(), rowCount: 0 },
+    );
+    expect(lookups.tycho2VOfTyc('a-1-1')).toBeCloseTo(tycho2VMagnitude(9.5, 8.9).v!, 12);
+    expect(lookups.tycho2VOfTyc('missing')).toBeNull();
+  });
+
+  it('reads the Gliese arm through lookupGliese, not by the printed name', () => {
+    // V/70A numbers the supplement `NN nnnn` and letters a blend's components
+    // together, so a prefix match on Gl/GJ misses the population the tier
+    // exists for (data/gliese/README.md § The join key).
+    const lookups = printedVLookups(new Map(), {
+      byKey: new Map([['914', {
+        vMag: 9.0, bv: null, parallax: null, spectralType: null,
+      } as never]]),
+      rowCount: 1,
+    });
+    expect(lookups.glieseVOfGj('Gl 914')).toBe(9.0);
+    expect(lookups.glieseVOfGj('GJ 914B')).toBe(9.0);
+    expect(lookups.glieseVOfGj('Gl 915')).toBeNull();
   });
 });

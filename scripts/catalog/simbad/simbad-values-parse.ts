@@ -1,16 +1,16 @@
 // Parser and per-record lookup for data/simbad/simbad_values.tsv — the
 // bibcoded bottom tier of the value cascades in docs/catalog-driver.md § 5.
 
-import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from './parse/corpus-tsv';
+import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
 import {
   emptySimbadNamespaceIndex,
   indexSimbadRow,
   walkSimbadNamespaces,
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
-} from './catalog-pure';
-import { citedParallax, type CitedParallax } from './cited-parallax';
-import { citedProperMotion, type CitedProperMotion } from './cited-proper-motion';
+} from '../record/catalog-pure';
+import { citedParallax, type CitedParallax } from '../cited-parallax';
+import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
 
 const FILE_LABEL = 'data/simbad/simbad_values.tsv';
 const REFRESH_HINT = 'Re-run `pnpm run refresh:simbad-values`.';

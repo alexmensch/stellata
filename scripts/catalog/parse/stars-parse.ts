@@ -20,7 +20,7 @@ import {
   type ApsisRow,
   type SimbadNamespace,
   type SimbadRecordKeys,
-} from '../catalog-pure';
+} from '../record/catalog-pure';
 import { classifyFromSimbad } from '../spectral/spectral-classify';
 import {
   type SimbadSpectralIndex,
@@ -83,7 +83,7 @@ import {
   emptySimbadValueIndex,
   lookupSimbadValues,
   type SimbadValueIndex,
-} from '../simbad-values-parse';
+} from '../simbad/simbad-values-parse';
 import {
   resolveVMagnitude,
   tycho2VMagnitude,
@@ -178,7 +178,7 @@ export interface Star {
   /** Further HD / HR numbers naming this star — the manifest's `hd_alt` /
    *  `hr_alt` cells, which the classic-ID label merge filled where an overlay
    *  cell asserted more than the field could hold
-   *  (`../classic-ids/README.md` § The label merge). Never written to the
+   *  (`../classic-ids/label-merge/README.md`). Never written to the
    *  binary: they reach the runtime through the search index and the SID
    *  ledger through `starDesignations`. */
   hdAlt: number[];

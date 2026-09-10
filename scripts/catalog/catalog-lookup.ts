@@ -25,7 +25,7 @@ import {
   type CatalogHeaderFields,
   type CatalogManifest,
   type SearchEntry,
-} from './catalog-pure';
+} from './record/catalog-pure';
 import { displayNamesFromSearchIndex } from './naming/star-naming-pure';
 import { REPO_ROOT } from '../util/paths';
 import type { RecordRef } from './parse/corpus-tsv';

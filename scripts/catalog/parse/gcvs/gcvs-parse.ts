@@ -10,7 +10,7 @@ import {
   parseGcvsNumber,
   splitPipeDelimited,
   VAR_TYPE_UNKNOWN,
-} from '../../catalog-pure';
+} from '../../record/catalog-pure';
 import { CON_INDEX } from '../constellations';
 import type { Star } from '../stars-parse';
 

@@ -6,7 +6,7 @@ import {
   designationConIndex,
   NO_CONSTELLATION_INDEX,
   type SearchEntry,
-} from '../../../scripts/catalog/catalog-pure';
+} from '../../../scripts/catalog/record/catalog-pure';
 import { ASCII_GREEK } from '../../../scripts/catalog/naming/greek-forms';
 import {
   bayerDesignation,
@@ -50,7 +50,7 @@ export function starDesignations(
   // An alias rides the record only where the pair is unresolved, so this ONE
   // record is what both catalogue numbers reach — listing both is what makes
   // that legible, rather than a card denying a number the search box just
-  // accepted (scripts/catalog/classic-ids/README.md § An alias stops at the
+  // accepted (scripts/catalog/classic-ids/label-merge/README.md § An alias stops at the
   // blend). Sorted, so the line does not depend on overlay cell order.
   if (entry.hr !== undefined) {
     for (const hr of [entry.hr, ...(entry.hra ?? [])].sort((a, b) => a - b)) {

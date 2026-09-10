@@ -10,8 +10,9 @@ import {
   SRC_CNS5, SRC_HIP_XMATCH, SRC_TYC2_HD, SRC_TYC_XMATCH,
 } from '../classic-ids/binding-candidates';
 import {
-  parseBsc5Tsv, parseCns5Tsv, parseCrossIndexTsv, parseTyc2HdTsv,
+  parseBsc5Tsv, parseCns5Tsv, parseTyc2HdTsv,
 } from '../classic-ids/classic-ids-parse';
+import { readCrossIndexTable } from '../classic-ids/cross-index';
 import { parseGlieseTsv } from '../gliese-parse';
 import { parseTycho2Tsvs } from '../tycho2-parse';
 import { loadStoredEdges } from '../../sid/registry-io';
@@ -21,7 +22,6 @@ import {
 } from './primaries-audit-pure';
 
 export const SRC_BSC5 = resolve(ROOT, 'data/classic-ids/bsc5.tsv');
-export const SRC_CROSS_INDEX = resolve(ROOT, 'data/classic-ids/cross_index.tsv');
 export const SRC_GLIESE = resolve(ROOT, 'data/gliese/gliese_v70a.tsv');
 export const SRC_HIP_MAIN = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
 export const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
@@ -131,7 +131,7 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
     ...await loadBindingTables(keep),
     iv25,
     v50: parseBsc5Tsv(readRequired(SRC_BSC5, LFS_HINT)),
-    iv27a: parseCrossIndexTsv(readRequired(SRC_CROSS_INDEX, LFS_HINT)),
+    iv27a: readCrossIndexTable(),
     gliese: parseGlieseTsv(readRequired(SRC_GLIESE, LFS_HINT)),
     hipI239: i239.hip,
     hdI239: i239.hd,

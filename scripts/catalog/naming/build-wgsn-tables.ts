@@ -5,7 +5,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { parseCrossIndexTsv } from '../classic-ids/classic-ids-parse';
+import { readCrossIndexTable } from '../classic-ids/cross-index';
 import { parseIntOrNull } from '../parse/stars-parse';
 import { REPO_ROOT } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
@@ -33,7 +33,6 @@ const FAINTS_CSV = resolve(DATA, 'wgsnFaints.csv');
 const DISPOSITIONS = resolve(DATA, 'athyg_proper_dispositions.tsv');
 const OUT_NAMES = resolve(DATA, 'wgsn_names.tsv');
 const OUT_DESIGNATIONS = resolve(DATA, 'wgsn_designations.tsv');
-const CROSS_INDEX = resolve(REPO_ROOT, 'data/classic-ids/cross_index.tsv');
 const MANIFEST = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
 const SNAPSHOT = resolve(REPO_ROOT, 'scripts/catalog/naming/wgsn-expected.json');
 
@@ -151,10 +150,7 @@ async function main(): Promise<void> {
     }
   }
 
-  const iv27a = unionIv27aBayer(
-    designations,
-    parseCrossIndexTsv(readFileSync(CROSS_INDEX, 'utf8')),
-  );
+  const iv27a = unionIv27aBayer(designations, readCrossIndexTable());
   designations.push(...iv27a.added);
 
   const membership = readManifest();

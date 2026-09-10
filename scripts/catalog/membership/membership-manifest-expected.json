@@ -1,8 +1,8 @@
 {
-  "labelNoOverlayEntry": 14975,
+  "labelNoOverlayEntry": 14982,
   "labelAgree": {
     "hip": 99059,
-    "hd": 280531,
+    "hd": 280524,
     "hr": 7283,
     "gl": 1840,
     "flam": 2028
@@ -12,7 +12,7 @@
     "hd": 149,
     "hr": 4,
     "gl": 205,
-    "flam": 69
+    "flam": 67
   },
   "labelFlipped": {
     "hip": 0,
@@ -23,7 +23,7 @@
   },
   "labelSpineOnly": {
     "hip": 18593,
-    "hd": 12751,
+    "hd": 12758,
     "hr": 1706,
     "gl": 1227,
     "flam": 694
@@ -78,10 +78,10 @@
   },
   "componentRows": 471,
   "bindingByClass": {
-    "crosswalk_gated": 358562,
+    "crosswalk_gated": 358455,
     "simbad_corroborated": 12483,
     "reviewed": 53,
-    "none": 5829
+    "none": 5936
   },
   "bindingReviewRows": 53,
   "bindingReviewByVerdict": {
@@ -135,7 +135,7 @@
     "proper": 46
   },
   "additionSourceOnSpine": 108,
-  "additionSourceGateRefused": 13,
+  "additionSourceGateRefused": 121,
   "additionSourceShared": 0,
   "additionGaiaKeyedOnly": 0,
   "additionRouteSourceDisagree": 3,

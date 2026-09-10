@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { describe, it, expect } from 'vitest';
 
-import { NO_CONSTELLATION_INDEX, SOLAR_BV_FALLBACK } from '../catalog-pure';
+import { NO_CONSTELLATION_INDEX, SOLAR_BV_FALLBACK } from '../record/catalog-pure';
 import { avSolToStar, R_V, type DustGrid } from '../distance/dust-deextinction-pure';
 import {
   CATALOG_SCENE_EPOCH,
@@ -15,7 +15,7 @@ import {
 import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import { TYCHO2_ICRS_EPOCH } from '../tycho2-parse';
-import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad-values-parse';
+import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad/simbad-values-parse';
 import { unitVectorFromRaDec, type UnitVector } from '../../../src/client/util/equatorial-basis';
 import type { GlieseIndex } from '../gliese-parse';
 import {

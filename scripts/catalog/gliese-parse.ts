@@ -3,7 +3,7 @@
 // docs/catalog-driver.md § 5.
 
 import { dataRows, nonEmpty, parseFloatOrNull } from './parse/corpus-tsv';
-import { normaliseGjKey } from './catalog-pure';
+import { normaliseGjKey } from './record/catalog-pure';
 
 const FILE_LABEL = 'data/gliese/gliese_v70a.tsv';
 const REFRESH_HINT = 'Re-run `pnpm run refresh:gliese`.';

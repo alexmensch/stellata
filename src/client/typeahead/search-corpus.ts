@@ -7,7 +7,7 @@ import {
   designationConIndex,
   NO_CONSTELLATION_INDEX,
   type SearchEntry,
-} from '../../../scripts/catalog/catalog-pure';
+} from '../../../scripts/catalog/record/catalog-pure';
 import { GREEK_SPELLINGS } from '../../../scripts/catalog/naming/greek-forms';
 import {
   bayerDesignation,
@@ -140,7 +140,7 @@ export function buildComponentLabels(
 
 /** The constellation a designation on this entry is NAMED for, which is
  *  what every derived label is built against — byte 34 is only where the
- *  star sits (`scripts/catalog/README.md` § Search index). Resolved per
+ *  star sits (`scripts/catalog/record/README.md` § Search index). Resolved per
  *  entry, so a component's aliases are built against its ANCHOR's, the
  *  same source the display-name composer takes the base from. */
 function designationCon(

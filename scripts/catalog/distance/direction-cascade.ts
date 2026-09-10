@@ -8,13 +8,13 @@ import {
 } from '../../../src/client/util/equatorial-basis';
 import { headerIndex } from '../parse/corpus-tsv';
 import { gaiaHas5pSolution } from './gaia-distrust';
-import type { SimbadRecordKeys } from '../catalog-pure';
+import type { SimbadRecordKeys } from '../record/catalog-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import {
   lookupCns5Astrometry,
   type Cns5Astrometry,
 } from '../classic-ids/classic-ids-parse';
-import type { SimbadAstrometry } from '../simbad-values-parse';
+import type { SimbadAstrometry } from '../simbad/simbad-values-parse';
 
 export const GAIA_DR3_REF_EPOCH = 2016.0;
 export const HIP2_REF_EPOCH = 1991.25;

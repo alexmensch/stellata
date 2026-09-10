@@ -2,7 +2,8 @@
 // two-source consensus first, each candidate through both binding gates.
 // See README.md § The binding is derived.
 
-import { normaliseGjKey, resolveGaiaSourceId } from '../catalog-pure';
+import { normaliseGjKey, resolveGaiaSourceId } from '../record/catalog-pure';
+import type { GateVVia, PrintedV } from '../photometry/v-magnitude-pure';
 import type { BindingEvidence } from '../classic-ids/classic-id-overlay-pure';
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';
 import { parseIntOrNull } from '../parse/corpus-tsv';
@@ -150,16 +151,6 @@ export interface DerivedBinding {
   weighedNoGMag: number;
   /** Candidates weighed on a pulled row publishing no `phot_g_mean_mag`. */
   weighedNullGMag: number;
-}
-
-/** Where the printed V the magnitude gate weighs against came from — the same
- *  printed tiers, in the same order, as the V cascade
- *  (`../photometry/README.md` § The V cascade). */
-export type GateVVia = 'hip' | 'tycho2' | 'gliese';
-
-export interface PrintedV {
-  vMag: number;
-  vVia: GateVVia;
 }
 
 /** The evidence a row's candidates are weighed against: the row's own HIP, its

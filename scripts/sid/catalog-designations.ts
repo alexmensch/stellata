@@ -2,7 +2,7 @@
 // public/. See README.md § Designation extraction.
 
 import type { Catalog } from '../catalog/catalog-lookup';
-import { FLAG_IS_SOL, type SearchEntry } from '../catalog/catalog-pure';
+import { FLAG_IS_SOL, type SearchEntry } from '../catalog/record/catalog-pure';
 import { starDesignations } from './sid-pure';
 
 export interface CatalogRecordDesignations {

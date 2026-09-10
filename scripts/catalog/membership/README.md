@@ -60,9 +60,9 @@ gaia_source_id  binding  routes
 ```
 
 - The identifier cells carry the record's **final** labels: for a spine row
-  the classic-ID label merge has already run (`../classic-ids/README.md`
-  § The label merge), so `hd_alt` / `hr_alt` hold the alias lists and there is
-  no second designation set to flip against. `bayer` and `proper` are the
+  the classic-ID label merge has already run
+  (`../classic-ids/label-merge/README.md`), so `hd_alt` / `hr_alt` hold the
+  alias lists and there is no second designation set to flip against. `bayer` and `proper` are the
   spine's printed cells on spine rows and empty on additions — the naming
   ladder resolves both from HD / HIP at build time and reads the cell only as
   a counter (`../naming/README.md`).
@@ -104,13 +104,14 @@ where the overlay can now speak. It moves five cells today — HD 2094 onto
 HIP 1997, whose own addition row folds away as a component (a § 7 merge,
 retiring `hd:2094` in favour of `hip:1997`); GJ 9013 onto Ankaa; GJ 9257AB onto
 Tegmine; `Gl 596.1A` to `GJ 9527` on ψ Ser under CNS5's renumbering; and one
-curated refusal (`../classic-ids/README.md` § Curated overrides): Propus, where
+curated refusal (`../classic-ids/label-merge/README.md` § Curated overrides):
+Propus, where
 Gaia fits one source across a resolved Tycho-2 pair and its cross-match keys
 that source to the sibling, so the overlay would hand η Gem the sibling's
 HD 253820 in place of its own HD 42995. It is the only curated row: Gl 563.2
 A/B, whose letters AT-HYG swapped, is reached mechanically now the merge scores
-`gl` on the component the two sides name (`../classic-ids/README.md` § The gl
-comparison is specificity-aware).
+`gl` on the component the two sides name (`../classic-ids/label-merge/README.md`
+§ The gl comparison is specificity-aware).
 
 The binding is **derived**, not copied: § The binding is derived walks four
 committed sources through both gates and writes what survives. The spine's
@@ -179,8 +180,10 @@ above. **Every** candidate then goes through **both binding gates by calling
 side, so the two cannot drift on what counts as a bad binding — and the first
 that passes wins. The magnitude gate weighs G
 against the record's **printed V in the V cascade's own tier order**:
-Hipparcos on its HIP, else Tycho-2's `VT − 0.090(BT − VT)` on its TYC
-(`../photometry/README.md` § The V cascade). The Tycho-2 arm is what reaches
+Hipparcos on its HIP, else Tycho-2's `VT − 0.090(BT − VT)` on its TYC, else
+Gliese's `Vmag` on its GJ cell — the last two through `printedVLookups`, the
+one bundle both gates read them by (`../photometry/README.md` § The V
+cascade). The Tycho-2 arm is what reaches
 the HD-only rows: a best-neighbour walk landing on a faint neighbour of a
 Tycho star has no HIP to be caught by, and 32 fills sat more than a magnitude
 below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. The
@@ -235,7 +238,8 @@ the manifest row as it stands afterwards, under `hd_unattested` or
 `flamsteed_unattested`. Today that is 1 HD — HD 336196 on HIP 90265, where
 I/239 prints HD 336187 — and 119 Flamsteed numbers. Those 119 are real
 designations with no frozen primary behind them: IV/27A is the whole
-3,690-row table and publishes 2,757 Flamsteed numbers, and SIMBAD lists every
+3,690-row table (3,688 after its curated corrections) and publishes 2,755
+Flamsteed numbers, and SIMBAD lists every
 one of the 119 as `* NN Con` (measured 2026-09-06). Attesting them from a
 frozen SIMBAD identifier pull is the open option; until one exists the
 manifest ships without them and the ledger says which.
@@ -314,7 +318,7 @@ The consequences, measured 2026-09-06:
 | `admitted:cns5_census` | 3,356 | CNS5 `GJ 1xxxx` row |
 | `component:<anchor>` | 471 | every designation it arrived with is another record's. 466 are the second Tycho-2 entry of a resolved pair whose HD (and, through Tycho-2's `hip`, HIP) a spine record carries; 5 are the second of a pair neither component of which is on the spine. Not a row; ledgered onto the record it resolves to |
 | source left empty, on a spine record | 108 | Gaia fitted one source where Tycho-2 resolved two stars |
-| source left empty, gate refused | 13 | the raw binding is in `rejected_bindings.tsv` |
+| source left empty, gate refused | 121 | the raw binding is in `rejected_bindings.tsv` |
 
 The audit's headline cohort sizes (60,344 / 566 / 3,362) are pre-grouping and
 pre-admission; the table above is what the manifest carries.
@@ -411,7 +415,7 @@ overlay's gate.
 
 The same holds for the classical cells: they are FINAL, the merge having run in
 the generator, so the record build applies no label pass to them
-(`../classic-ids/README.md` § The label merge).
+(`../classic-ids/label-merge/README.md`).
 
 ## What the spine is still for
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { ApsisRow, SimbadRecordKeys } from '../catalog-pure';
+import type { ApsisRow, SimbadRecordKeys } from '../record/catalog-pure';
 import {
   SPECTRAL_UNKNOWN,
 } from './spectral-classify';

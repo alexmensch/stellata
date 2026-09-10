@@ -1,6 +1,6 @@
 // Default-valued Star factory for catalog-pipeline tests.
 
-import { NO_CONSTELLATION_INDEX } from '../catalog-pure';
+import { NO_CONSTELLATION_INDEX } from '../record/catalog-pure';
 import type { Star } from './stars-parse';
 
 export function makeStar(overrides: Partial<Star> = {}): Star {

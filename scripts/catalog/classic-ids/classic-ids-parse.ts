@@ -1,7 +1,7 @@
 // Parsers for the frozen CDS classic-designation tables under
 // data/classic-ids/. See data/classic-ids/README.md § Provenance.
 import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
-import { normaliseGjKey } from '../catalog-pure';
+import { normaliseGjKey } from '../record/catalog-pure';
 import { citedParallax, type CitedParallax } from '../cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
 
@@ -73,6 +73,83 @@ export function parseCrossIndexTsv(text: string): CrossIndexRow[] {
     });
   }
   return out;
+}
+
+/** One curated IV/27A correction: `hd`'s Bayer / Flamsteed cells name the star
+ *  `belongsTo` instead, so the row leaves the table. See
+ *  README.md § One designation, two HD numbers. */
+export interface CrossIndexCorrection {
+  hd: number;
+  belongsTo: number;
+}
+
+export const CROSS_INDEX_CORRECTIONS_FILE = 'data/classic-ids/cross_index_corrections.tsv';
+
+const CROSS_INDEX_CORRECTION_COLUMNS = ['hd', 'belongs_to'] as const;
+
+export function parseCrossIndexCorrectionsTsv(text: string): CrossIndexCorrection[] {
+  const out: CrossIndexCorrection[] = [];
+  for (const { cells, idx } of dataRows(
+    text, CROSS_INDEX_CORRECTION_COLUMNS, 'cross_index_corrections.tsv',
+    'Restore it from git — it is hand-curated, not generated.',
+  )) {
+    if (cells[idx.hd].startsWith('#')) continue;
+    const hd = parseIntOrNull(cells[idx.hd]);
+    const belongsTo = parseIntOrNull(cells[idx.belongs_to]);
+    if (hd === null || belongsTo === null) {
+      throw new Error(
+        `${CROSS_INDEX_CORRECTIONS_FILE} row "${cells.join('\t')}" states no ` +
+          'hd / belongs_to pair. Comment the line with `#` or complete it — a ' +
+          'curated row skipped in silence is the fault this file guards against.',
+      );
+    }
+    out.push({ hd, belongsTo });
+  }
+  return out;
+}
+
+function designationCells(row: CrossIndexRow): string {
+  return `${row.bayer ?? ''}|${row.flamsteed ?? ''}|${row.cst ?? ''}`;
+}
+
+/** Drop the corrected rows, hard-failing on any correction that would do
+ *  nothing or would leave a designation with no row at all: the `hd` must have
+ *  an IV/27A row stating a designation, and `belongsTo` must have one stating
+ *  the identical cells. */
+export function applyCrossIndexCorrections(
+  rows: readonly CrossIndexRow[],
+  corrections: readonly CrossIndexCorrection[],
+): CrossIndexRow[] {
+  const byHd = new Map<number, CrossIndexRow[]>();
+  for (const row of rows) {
+    const at = byHd.get(row.hd);
+    if (at === undefined) byHd.set(row.hd, [row]);
+    else at.push(row);
+  }
+  const dropped = new Set<CrossIndexRow>();
+  for (const { hd, belongsTo } of corrections) {
+    const withheld = (byHd.get(hd) ?? []).filter(
+      (r) => r.bayer !== null || r.flamsteed !== null,
+    );
+    if (withheld.length === 0) {
+      throw new Error(
+        `${CROSS_INDEX_CORRECTIONS_FILE} corrects HD ${hd}, which states no ` +
+          'IV/27A designation to withhold.',
+      );
+    }
+    const kept = new Set((byHd.get(belongsTo) ?? []).map(designationCells));
+    for (const row of withheld) {
+      if (!kept.has(designationCells(row))) {
+        throw new Error(
+          `${CROSS_INDEX_CORRECTIONS_FILE} gives HD ${hd}'s ` +
+            `"${designationCells(row)}" to HD ${belongsTo}, which IV/27A does ` +
+            'not state it for — the correction would orphan the designation.',
+        );
+      }
+      dropped.add(row);
+    }
+  }
+  return rows.filter((r) => !dropped.has(r));
 }
 
 /** One V/50 Bright Star Catalogue row. `name` is the BSC's own designation

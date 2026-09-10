@@ -38,7 +38,7 @@ import {
   buildSearchEntry,
   type SearchEntry,
   type CatalogManifest,
-} from './catalog-pure';
+} from './record/catalog-pure';
 import {
   BUILD_COUNTS_EXPECTED_FILE,
   compareBuildCounts,

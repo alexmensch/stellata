@@ -2,7 +2,7 @@
 // HD-attribution witness independent of IV/25.
 // See data/simbad/README.md § The TYC → HD pull.
 
-import { dataRows, nonEmpty, parseIntOrNull } from './parse/corpus-tsv';
+import { dataRows, nonEmpty, parseIntOrNull } from '../parse/corpus-tsv';
 
 const LABEL = 'data/simbad/simbad_tyc_hd.tsv';
 const REFRESH_HINT =

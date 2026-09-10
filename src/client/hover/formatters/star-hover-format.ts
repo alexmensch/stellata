@@ -2,7 +2,7 @@
 // camera-frame distance, cleaned spectral class, variability, and
 // binary-companion lines. See ./README.md.
 
-import { FLAG_BINARY_COMPANION_SYNTHETIC } from '../../../../scripts/catalog/catalog-pure';
+import { FLAG_BINARY_COMPANION_SYNTHETIC } from '../../../../scripts/catalog/record/catalog-pure';
 import { fmtDistAuto } from '../../ui/distance-util';
 import { formatSpectral, spectralLine } from '../../format/spectral-format';
 import { formatVariability } from '../../format/physical-format';

@@ -271,8 +271,8 @@ the new distance but lights it at the old one, breaking the disc/glow
 size chain in the renderer. Position is assembled afterwards as
 `direction × dist` (§ Direction resolution), so the overrides carry
 no xyz. Both override helpers (`applyBailerJonesOverride`,
-`applyLmcKinematicOverride`) live in `catalog-pure.ts` so the algebra
-is testable in isolation (`catalog-pure.test.ts`).
+`applyLmcKinematicOverride`) live in `../record/catalog-pure.ts` so the algebra
+is testable in isolation (`../record/catalog-pure.test.ts`).
 
 **Every `apply*Override` evaluates its own full eligibility.** B-J
 self-gates on its map lookup; the LMC layer checks its own sky cone as
@@ -378,7 +378,7 @@ intermediate (5–20 kpc) after Layer 1 instead of the LMC's true
 motion and snaps their distance to the eclipsing-binary anchor in
 Pietrzyński et al. 2019 (49.594 kpc).
 
-Constants in `catalog-pure.ts`:
+Constants in `../record/catalog-pure.ts`:
 
 | Constant | Value | Meaning |
 |---|---|---|
@@ -403,7 +403,7 @@ carry Gaia source_ids that B-J's map covers, so Layer 1 fires on
 them first with a mis-anchored intermediate distance. If Layer 2 ran
 first, Layer 1 would clobber its snap back to that intermediate
 value. The codepath in `readStars` enforces this by sequencing the
-calls; the regression test `catalog-pure.test.ts` pins the LMC
+calls; the regression test `../record/catalog-pure.test.ts` pins the LMC
 constants and the override math.
 
 ### Layer 3 — MAX_DIST_PC bounded-scope cutoff
@@ -419,8 +419,8 @@ supergiant layers would extend it). See `docs/science-catalog-ingestion.md`
 
 Every kinematic-override target distance must satisfy
 `dist < MAX_DIST_PC` or its entire population is silently dropped at
-this cut; `catalog-pure.test.ts` pins `LMC_DISTANCE_PC < MAX_DIST_PC`
-(406 pc of margin today). A future SMC layer (~62 kpc) must raise the
+this cut; `../record/catalog-pure.test.ts` pins `LMC_DISTANCE_PC <
+MAX_DIST_PC` (406 pc of margin today). A future SMC layer (~62 kpc) must raise the
 cutoff in the same change.
 
 ### Post-build distance-regression check

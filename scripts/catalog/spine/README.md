@@ -275,7 +275,7 @@ unless another home is named; the committed gates are
   ledger has carried and the reason the parity gate subtracts it.
 - **Label parity — strict gain.** No previously-labeled record lost a
   label: per identifier the shipped coverage is the spine's keyed count
-  plus the overlay's additions (hd +149, hr +4, gl +200, flam +69,
+  plus the overlay's additions (hd +149, hr +4, gl +200, flam +67,
   hip +0). Every departure from the spine's cells is one of the 725
   disposed rows of `data/classic-ids/label_flips.tsv`, replayed exactly
   by the designation-multiset gate above.
@@ -310,7 +310,7 @@ unless another home is named; the committed gates are
   are backed against the spine rather than asserted — the join and the
   HR set would each stay green over a stale verdict otherwise.
 
-  `rejected_bindings.tsv` is deliberately not on that list: its 268
+  `rejected_bindings.tsv` is deliberately not on that list: its 460
   rows are the binding gate refusing to key a designation on a source
   that is not the star, so each leaves its record on the spine's label
   — no departure for the label term to carry, and no identity event to

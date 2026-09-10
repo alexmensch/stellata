@@ -1,4 +1,4 @@
-import { DIST_VIA_VALUES } from './distance/parallax/parallax-cascade';
+import { DIST_VIA_VALUES } from '../distance/parallax/parallax-cascade';
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -107,7 +107,7 @@ import {
   LMC_PM_DEC_CENTRE,
   LMC_PM_TOLERANCE,
 } from './catalog-pure';
-import { MAX_DIST_PC } from './parse/stars-parse';
+import { MAX_DIST_PC } from '../parse/stars-parse';
 
 describe('catalog-pure / normaliseGjKey', () => {
   // The spine spells the catalogue word both ways and SIMBAD stores its own
@@ -1687,7 +1687,7 @@ describe('catalog-pure / resolveGaiaSourceId magnitude gate', () => {
   });
 
   it('matches the binaries pipeline threshold (scripts/binaries/indices.py)', () => {
-    const py = readFileSync(resolve(__dirname, '../binaries/indices.py'), 'utf8');
+    const py = readFileSync(resolve(__dirname, '../../binaries/indices.py'), 'utf8');
     const m = py.match(/^GAIA_BINDING_G_MINUS_V_REJECT_MAG\s*=\s*([\d.]+)/m);
     expect(m).not.toBeNull();
     expect(parseFloat(m![1])).toBe(GAIA_BINDING_G_MINUS_V_REJECT_MAG);

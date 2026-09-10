@@ -14,7 +14,7 @@ import {
   PERIOD_DAYS_PER_UNIT,
   type DecodeRecordColumnOptions,
   type CatalogManifest,
-} from '../../../scripts/catalog/catalog-pure';
+} from '../../../scripts/catalog/record/catalog-pure';
 import { buildPulsationParams } from '../star-pipeline/pulsation/pulsation-params-pure';
 
 export interface Constellation {

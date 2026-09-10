@@ -1,23 +1,23 @@
 // The record build's one remaining classic-ID pass: IV/27A's constellation
 // for each Bayer / Flamsteed designation, keyed on the record's HD / HIP.
 // See README.md § The designation constellation.
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
 
-import { NO_CONSTELLATION_INDEX } from '../catalog-pure';
+import { NO_CONSTELLATION_INDEX } from '../record/catalog-pure';
 import type { Star } from '../parse/stars-parse';
-import { parseCrossIndexTsv } from './classic-ids-parse';
+import {
+  CROSS_INDEX_INPUT_PATHS,
+  SRC_CROSS_INDEX,
+  readCrossIndexTable,
+} from './cross-index';
 import {
   buildDesignationConIndex,
   resolveDesignationConIndex,
   type DesignationConIndex,
 } from './designation-constellation-pure';
-import { REPO_ROOT as ROOT } from '../../util/paths';
-
-const SRC_CROSS_INDEX = resolve(ROOT, 'data/classic-ids/cross_index.tsv');
 
 /** The pass's inputs, for the artifact's mtime invalidation. */
-export const DESIGNATION_CONSTELLATION_INPUT_PATHS: readonly string[] = [SRC_CROSS_INDEX];
+export const DESIGNATION_CONSTELLATION_INPUT_PATHS = CROSS_INDEX_INPUT_PATHS;
 
 export interface DesignationConstellationInputs {
   desigCon: DesignationConIndex;
@@ -35,9 +35,7 @@ export function loadDesignationConstellationInputs(): DesignationConstellationIn
         `re-run \`pnpm run refresh:classic-ids\`.`,
     );
   }
-  const { index: desigCon, counts } = buildDesignationConIndex(
-    parseCrossIndexTsv(readFileSync(SRC_CROSS_INDEX, 'utf8')),
-  );
+  const { index: desigCon, counts } = buildDesignationConIndex(readCrossIndexTable());
   return { desigCon, crossIndexUnknownCst: counts.crossIndexUnknownCst };
 }
 

@@ -5,6 +5,7 @@
 import { resolve } from 'node:path';
 
 import { readGaiaHipXmatch, readGaiaTycXmatch } from '../parse/gaia-xmatch';
+import type { PrintedVLookups } from '../photometry/v-magnitude-pure';
 import { parseCns5Tsv, parseTyc2HdTsv, type Cns5Row } from './classic-ids-parse';
 import { readRequired, requireExists, REPO_ROOT as ROOT } from '../../util/paths';
 
@@ -16,17 +17,15 @@ export const SRC_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv')
 const CDS_HINT = 'refresh the CDS inputs with `pnpm run refresh:classic-ids`.';
 const XMATCH_HINT = 'refresh the cross-walk with `pnpm run refresh:gaia-hip` / `refresh:gaia-tyc`.';
 
-/** The two cross-walk products the candidate set derives from — between them the
- *  only ways an overlay entry acquires a `hip`, which is what the gate weighs.
- *  Loading just these is why `build:astrometry-request` does not touch the 2.5 M-row
- *  TYC table (§ The request is a union in ../astrometry-request/README.md). */
+/** The two cross-walk products that give an overlay entry a `hip` — the gate's
+ *  top printed tier. The Tycho and Gliese tiers beneath it are the caller's to
+ *  supply (§ The gate's evidence has to be pulled). */
 export interface BindingCandidateInputs {
   cns5: Cns5Row[];
   hipToSource: Map<number, string>;
 }
 
-/** Everything the overlay join reads. The TYC half serves the HD→TYC→source_id
- *  route, which attaches no `hip` and so reaches no candidate. */
+/** Everything the overlay join reads. */
 export interface ClassicIdCrossWalks extends BindingCandidateInputs {
   tyc2Hd: ReturnType<typeof parseTyc2HdTsv>;
   /** TYC → source_id, already narrowed to the Tycho ids IV/25 mentions. The
@@ -52,6 +51,18 @@ export async function loadClassicIdCrossWalks(): Promise<ClassicIdCrossWalks> {
   return { ...loadBindingCandidateInputs(), tyc2Hd, tycToSource };
 }
 
+/** Every table the candidate walk reads. All fields required: a partial bundle
+ *  narrows the set to the HIP tier while the gate keeps weighing three, which is
+ *  the silent-acceptance fault below with the pull no longer covering it. */
+export interface BindingCandidateEvidence {
+  inputs: BindingCandidateInputs;
+  hipVMag: ReadonlyMap<number, number>;
+  printedV: PrintedVLookups;
+  /** Narrowed to the Tycho ids IV/25 mentions, as the overlay join's is. */
+  tycToSource: ReadonlyMap<string, string>;
+  tyc2Hd: readonly { tyc: string }[];
+}
+
 /** The source_ids the binding gate can actually weigh, and therefore the ones
  *  the astrometry pull has to carry a `phot_g_mean_mag` for.
  *
@@ -62,14 +73,12 @@ export async function loadClassicIdCrossWalks(): Promise<ClassicIdCrossWalks> {
  *  the gate with nothing to weigh, where it passes by default instead of
  *  rejecting.
  *
- *  Two narrowings make it a few hundred ids rather than tens of thousands, and
- *  both are properties of `applyBindingGate` rather than economies:
- *
- *  - **A candidate with no HIP is skipped outright.** An overlay entry takes
- *    its `hip` only from the HIP cross-walk or a CNS5 row's own hip, so a
- *    source reached solely through the TYC→HD route never carries one.
- *  - **A HIP with no printed V is skipped too** (`gateSkippedNoHipVMag`) —
- *    the gate compares G against that V, so without it a G decides nothing.
+ *  **The set is the gate's own reach, restated on the request side**, so it
+ *  widens exactly when the gate does: a source is a candidate where any of the
+ *  V cascade's three printed tiers answers for it — a HIP the cross-walk or a
+ *  CNS5 row gives it, a Tycho entry IV/25 routes to it, or a CNS5 GJ cell. Only
+ *  a source no tier reaches is skipped (`gateSkippedNoPrintedV`), because
+ *  without a printed V a `G` decides nothing.
  *
  *  Drifting from either producer re-opens the silent-acceptance fault, so the
  *  correspondence is pinned two ways: `binding-candidates.test.ts` walks a
@@ -77,16 +86,23 @@ export async function loadClassicIdCrossWalks(): Promise<ClassicIdCrossWalks> {
  *  `gateSkippedNoGMag` pins at zero on the real build.
  */
 export function bindingCandidateSourceIds(
-  inputs: BindingCandidateInputs,
-  hipVMag: ReadonlyMap<number, number>,
+  { inputs, hipVMag, printedV, tycToSource, tyc2Hd }: BindingCandidateEvidence,
 ): Set<string> {
   const ids = new Set<string>();
   for (const [hip, sourceId] of inputs.hipToSource) {
     if (hipVMag.has(hip)) ids.add(sourceId);
   }
   for (const row of inputs.cns5) {
-    if (row.gaiaSourceId !== null && row.hip !== null && hipVMag.has(row.hip)) {
+    if (row.gaiaSourceId === null) continue;
+    if (row.hip !== null && hipVMag.has(row.hip)) ids.add(row.gaiaSourceId);
+    else if (printedV.glieseVOfGj(`${row.gj}${row.gjComp ?? ''}`) !== null) {
       ids.add(row.gaiaSourceId);
+    }
+  }
+  for (const row of tyc2Hd) {
+    const sourceId = tycToSource.get(row.tyc);
+    if (sourceId !== undefined && printedV.tycho2VOfTyc(row.tyc) !== null) {
+      ids.add(sourceId);
     }
   }
   return ids;
