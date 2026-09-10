@@ -407,8 +407,22 @@ export function pinPathFor(slug: string): string {
  *  under another hash. `unknown` is an unreadable object or no `origin/main`. */
 export type PinCommitState = 'landed' | 'unlanded' | 'unknown';
 
+/**
+ * `git merge-base --is-ancestor` answers in exit codes, and only **1** means
+ * "asked and answered no". Every other non-zero status is the question having
+ * failed — an unknown object, no `origin/main`, a broken repository — and
+ * reading those as `unlanded` would print a confident "pre-squash branch tip"
+ * line about a commit git never resolved.
+ */
+export function commitStateFromExitStatus(status: number | undefined): PinCommitState {
+  if (status === 0) return 'landed';
+  return status === 1 ? 'unlanded' : 'unknown';
+}
+
 /** `git diff --shortstat <pin main base> <run main base> -- src/client`:
- *  main's own render-path movement between the two trees. */
+ *  main's own render-path movement between the two trees. Read A-to-B, in
+ *  that order — a branch cut before the pin was taken has the older base,
+ *  and calling the counts "since the pin" would then have them backwards. */
 export interface RenderPathDrift {
   readonly files: number;
   readonly insertions: number;
@@ -451,6 +465,7 @@ export function pinProvenanceLines(
   pin: PinFile,
   state: PinCommitState,
   drift: RenderPathDrift | null,
+  runMainCommit: string | null,
 ): readonly string[] {
   const short = pin.git.commit.slice(0, 8);
   const lines: string[] = [];
@@ -467,10 +482,15 @@ export function pinProvenanceLines(
   } else if (drift === null) {
     lines.push(`pin main base ${pin.git.mainCommit.slice(0, 8)}; render-path drift could not be read`);
   } else if (drift.files > 0) {
+    // Both bases named, and the counts read in that direction: whichever is
+    // the older tree, `git diff A B -- src/client` is the command that
+    // reproduces the line, and "moved since the pin" would not be.
+    const from = pin.git.mainCommit.slice(0, 8);
+    const to = runMainCommit === null ? 'unrecorded base' : runMainCommit.slice(0, 8);
     lines.push(
-      `main moved under src/client since the pin's base ${pin.git.mainCommit.slice(0, 8)}: ` +
+      `main's src/client differs from the pin's base ${from} to this run's ${to}: ` +
       `${drift.files} file${drift.files === 1 ? '' : 's'}, +${drift.insertions}/-${drift.deletions} — ` +
-      'a mark below may be that drift rather than this diff',
+      'a mark below may be that difference rather than this diff',
     );
   }
   return lines;

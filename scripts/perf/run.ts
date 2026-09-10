@@ -18,8 +18,8 @@ import type { DwellSummary } from './dwell-pure';
 import { applyRoundTrip, measureDwell, measureSweep, type Measured } from './measure';
 import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './arming/perf-go-lib';
 import {
-  PIN_SCHEMA, PinError, assertPinFile, citeRunPath, compareToPin, pinDiffFails, pinFromRun,
-  parseRenderPathDrift, pinProvenanceLines, unacceptedMarks,
+  PIN_SCHEMA, PinError, assertPinFile, citeRunPath, commitStateFromExitStatus, compareToPin,
+  pinDiffFails, pinFromRun, parseRenderPathDrift, pinProvenanceLines, unacceptedMarks,
   type PinCommitState, type PinDiff, type PinFile, type RenderPathDrift,
 } from './pin-pure';
 import {
@@ -155,9 +155,9 @@ function gitMeta(): GitProvenance {
 function commitState(commit: string): PinCommitState {
   try {
     execFileSync('git', ['merge-base', '--is-ancestor', commit, MAIN_REF], { cwd: REPO_ROOT, stdio: 'ignore' });
-    return 'landed';
+    return commitStateFromExitStatus(0);
   } catch (e) {
-    return (e as { status?: number }).status === 1 ? 'unlanded' : 'unknown';
+    return commitStateFromExitStatus((e as { status?: number }).status);
   }
 }
 
@@ -455,6 +455,7 @@ function printAgainstPin(path: string, pin: PinFile, current: PerfFile): PinDiff
     pin,
     commitState(pin.git.commit),
     renderPathDrift(pin.git.mainCommit, current.run.git.mainCommit),
+    current.run.git.mainCommit,
   )) {
     console.log(`perf: ${line}`);
   }

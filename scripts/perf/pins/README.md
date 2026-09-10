@@ -42,6 +42,12 @@ at an unlanded tip and charged four consecutive PRs — one with no per-frame
 code at all — for ~1,600 insertions of main's own render-path work
 (stellata-8cg.49.24).
 
+The line **names both bases and reads the counts in that direction** rather
+than saying main moved since the pin. A branch cut before the pin was taken
+holds the older of the two, and the insertions and deletions are then the
+other way up; naming both ends also makes the line a `git diff` command a
+reader can re-run.
+
 ## State guard
 
 Every dwell summary is read in four consecutive quarters
