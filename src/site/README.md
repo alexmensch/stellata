@@ -257,11 +257,20 @@ of the viewport. Three mechanisms replace them.
   Each cell then **subgrids the band's two rows** (`grid-row: span 2` +
   `grid-template-rows: subgrid`), so a label wrapping to two lines raises
   every value in that band instead of dropping its own — the figures read as
-  a row however the labels wrap, at any width. The consequence to know: a
-  subgridded axis takes its gutter from the **parent**, which here is the
-  1px hairline, so the label/value separation is the value's
-  `padding-block-start` and not a `gap` on the cell. Restoring that `gap`
-  looks tidier and silently closes the space.
+  a row however the labels wrap, at any width. Labels take `align-self:
+  start` and figures `align-self: center`, so a label hugs the top of its
+  row and a figure sits centred in a row another cell's wrapped figure made
+  taller. The consequence to know: a subgridded axis takes its gutter from
+  the **parent**, which here is the 1px hairline, so the label carries the
+  separation below itself as `padding-block-end` and not a `gap` on the
+  cell. Restoring that `gap` looks tidier and silently closes the space.
+
+  **`dd` is in the global reset for this strip's sake.** The UA stylesheet
+  indents a `dd` by 40px, which on an 11rem cell puts a short figure near
+  the middle and reads as centred text rather than as an indent — the bug
+  that hid here until the figures were meant to line up. Adding the element
+  to the global reset is the fix, per § Responsiveness's rule that a block
+  needing a reset never writes the margin itself.
 
 `.sight`'s alternating sides ride the switcher: `flex-direction:
 row-reverse` on even rows puts the media right when there is room, and a
