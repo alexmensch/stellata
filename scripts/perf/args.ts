@@ -52,6 +52,9 @@ export interface RunArgs {
   readonly dpr: number;
   readonly quietMs: number;
   readonly chromeArgs: readonly string[];
+  /** URL-fragment switches appended to every scenario's boot URL, after the
+   *  backend's own; the leading `#` is optional. */
+  readonly hash: string;
   /** dwell and sweep: frames whose deltas count, per dwell. */
   readonly frames: number;
   /** dwell: a priceFrame pass key, or `idle`, applied between two dwells. */
@@ -105,6 +108,7 @@ const OPTIONS = {
   dpr: { type: 'string', default: String(ARG_DEFAULTS.dpr) },
   'quiet-ms': { type: 'string', default: String(ARG_DEFAULTS.quietMs) },
   'chrome-arg': { type: 'string', multiple: true, default: [] },
+  hash: { type: 'string', default: '' },
   frames: { type: 'string', default: String(ARG_DEFAULTS.frames) },
   roundtrip: { type: 'string' },
   scales: { type: 'string', default: ARG_DEFAULTS.scales },
@@ -133,6 +137,7 @@ export function usage(): string {
     `  --quiet-ms <n>           render-gate idle required before measuring (default ${ARG_DEFAULTS.quietMs})`,
     `  --url <base>             a RUNNING dev server                       (default ${ARG_DEFAULTS.url})`,
     '  --chrome-arg=<switch>    extra Chromium switch, repeatable (the = form, since the value starts with a dash)',
+    '  --hash <fragment>        URL-fragment switches for every boot, e.g. webgpu-gate=force; composes with #renderer=webgl2',
     `  --frames <n>             dwell and sweep: frames per dwell         (default ${ARG_DEFAULTS.frames})`,
     `  --roundtrip <pass|${ROUNDTRIP_IDLE}>  dwell: dwell, hold the pass off for --frames then restore it, dwell again`,
     `  --scales <list>          sweep: viewport scales                    (default ${ARG_DEFAULTS.scales})`,
@@ -309,6 +314,7 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     dpr: num('dpr'),
     quietMs: num('quiet-ms'),
     chromeArgs: values['chrome-arg'] as string[],
+    hash: (str('hash') ?? '').replace(/^#/, ''),
     frames: num('frames'),
     roundtrip,
     scales: numberList('scales'),

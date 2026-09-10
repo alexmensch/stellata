@@ -27,6 +27,7 @@ describe('parseRunArgs', () => {
       dpr: ARG_DEFAULTS.dpr,
       quietMs: ARG_DEFAULTS.quietMs,
       chromeArgs: [],
+      hash: '',
       frames: ARG_DEFAULTS.frames,
       roundtrip: undefined,
       scales: [...DEFAULT_SWEEP_SCALES],
@@ -68,6 +69,11 @@ describe('parseRunArgs', () => {
   it('refuses the pin flags outside dwell mode', () => {
     expect(() => parseRunArgs(['--json', 'r.json', '--pin', 'p.json'])).toThrow(/--mode dwell only/);
     expect(() => parseRunArgs(['--against-pin', 'p.json'])).toThrow(/--mode dwell only/);
+  });
+
+  it('takes --hash with or without the leading #, in every mode', () => {
+    expect(parseRunArgs(['--hash', 'webgpu-gate=force']).hash).toBe('webgpu-gate=force');
+    expect(parseRunArgs(['--mode', 'probe', '--hash', '#webgpu-gate=force']).hash).toBe('webgpu-gate=force');
   });
 
   it('takes a pass key or the idle control as --roundtrip, in dwell mode', () => {
@@ -185,8 +191,8 @@ describe('parseRunArgs', () => {
       '--scenario', '--backend', '--mode', '--passes', '--method', '--budget-ms',
       '--dwell-frames', '--warmup-frames', '--settle-frames', '--empty-passes',
       '--no-interleave',
-      '--headed', '--width', '--height', '--dpr', '--quiet-ms', '--url', '--chrome-arg',
-      '--frames', '--roundtrip', '--scales', '--json', '--baseline',
+      '--headed', '--width', '--height', '--dpr', '--quiet-ms', '--url', '--chrome-arg', '--hash',
+      '--frames', '--roundtrip', '--scales', '--json', '--baseline', '--pin', '--against-pin', '--accept', '--cooldown-ms',
     ]) {
       expect(text).toContain(flag);
     }

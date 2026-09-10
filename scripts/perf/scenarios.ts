@@ -14,7 +14,13 @@ export const SCENARIOS = {
 export type ScenarioName = keyof typeof SCENARIOS;
 export const SCENARIO_NAMES = Object.keys(SCENARIOS) as readonly ScenarioName[];
 
-export function scenarioUrl(base: string, blob: string, backend: Backend): string {
+/**
+ * `<base>/v/<blob>/` plus the fragment: the WebGL2 escape hatch where that
+ * backend was asked for, and `--hash`'s own switches after it. The app reads
+ * every switch off one hash, `&`-joined, so the two compose.
+ */
+export function scenarioUrl(base: string, blob: string, backend: Backend, hash = ''): string {
   const root = base.replace(/\/+$/, '');
-  return `${root}/v/${blob}/${backend === 'webgl2' ? '#renderer=webgl2' : ''}`;
+  const parts = [backend === 'webgl2' ? 'renderer=webgl2' : '', hash.replace(/^#/, '')].filter((p) => p !== '');
+  return `${root}/v/${blob}/${parts.length > 0 ? `#${parts.join('&')}` : ''}`;
 }

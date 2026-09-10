@@ -17,4 +17,12 @@ describe('scenarios', () => {
       'http://localhost:5174/v/BLOB/#renderer=webgl2',
     );
   });
+
+  it('composes --hash with the backend fragment: both present, either alone, neither', () => {
+    expect(scenarioUrl('http://h', 'B', 'webgl2', 'webgpu-gate=force')).toBe('http://h/v/B/#renderer=webgl2&webgpu-gate=force');
+    expect(scenarioUrl('http://h', 'B', 'webgpu', 'webgpu-gate=force')).toBe('http://h/v/B/#webgpu-gate=force');
+    expect(scenarioUrl('http://h', 'B', 'webgpu', '#webgpu-gate=force')).toBe('http://h/v/B/#webgpu-gate=force');
+    expect(scenarioUrl('http://h', 'B', 'webgl2', '')).toBe('http://h/v/B/#renderer=webgl2');
+    expect(scenarioUrl('http://h', 'B', 'webgpu', '')).toBe('http://h/v/B/');
+  });
 });

@@ -66,7 +66,7 @@ pnpm run perf -- [--scenario sol,earth,mw50,mw120,lg | all] [--backend webgl2|we
                  [--headed] [--width 1280] [--height 800] [--dpr 2] [--quiet-ms 5000]
                  [--json <path>] [--baseline <path>] [--cooldown-ms 0]
                  [--pin <path> [--accept <scenario>|<backend>:<bead>]...] [--against-pin <path>]
-                 [--url http://localhost:5173] [--chrome-arg=<switch>]...
+                 [--url http://localhost:5173] [--chrome-arg=<switch>]... [--hash <fragment>]
 ```
 
 Defaults: Sol, WebGL2, differential, every present pass, the backend's best
@@ -87,6 +87,14 @@ are what a driver would coalesce (`src/client/debug/frame-cost/README.md`
 viewport set. `--warmup-frames` is shared: it is priceFrame's own warmup in
 differential mode and the dwell's in the other two, defaulting to the same
 `WARMUP_FRAMES` either way, since it exists to absorb the same clock ramp.
+
+`--hash <fragment>` appends the app's own URL-fragment switches to every
+boot — `--hash webgpu-gate=force` shows the requires-WebGPU page on a
+browser that supports it, the one way to exercise the gate's `BootError`
+end to end. It composes with the `#renderer=webgl2` a WebGL2 boot already
+carries (`&`-joined; the app reads every switch off one hash). `--url`
+cannot carry it: the base is prefixed with `/v/<blob>/`, so a fragment
+there lands mid-path.
 
 **`--backend both` runs each scenario twice, in separate contexts, and pins
 `--method raf-delta`.** The two backends' best clocks are different
