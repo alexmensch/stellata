@@ -178,7 +178,7 @@ export class Picker {
     return pickFromCandidatesResolved(
       candidates,
       pixelThreshold,
-      (c) => pickScore(c.pxDist, c.appMag),
+      (c) => pickScore(c.pxDist, c.appMag, c.hitRadius),
       (c) => this.deps.resolveStarPick(c.idx),
     );
   }
