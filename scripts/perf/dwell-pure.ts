@@ -61,6 +61,17 @@ export interface DwellSummary {
   readonly stateGuard: StateGuard;
 }
 
+/** Which of a dwell's two clocks a row was judged on, named in every table
+ *  because the two are different instruments and a reader cannot otherwise
+ *  tell which one a delta came off. `gatingClock` returns it alongside the
+ *  clock itself, so no caller re-derives the choice. */
+export type DwellMetric = 'gpu-p50' | 'wall-p50';
+
+export interface GatingClock {
+  readonly clock: DwellSummary;
+  readonly metric: DwellMetric;
+}
+
 /**
  * Which of a dwell's two clocks a gate is entitled to act on: the GPU stream
  * where the row has one, wall only where it does not (every WebGL2 row).
@@ -77,11 +88,15 @@ export interface DwellSummary {
  * a guard down on the clock a row is judged by is what it exists to prevent.
  * The whole dwell rather than its two summaries, which are the same type in
  * either order: transposing them type-checks and inverts the rule silently.
+ * The metric rides along for the same reason: a caller that names the clock
+ * separately from choosing it can disagree with itself and still compile.
  */
 export function gatingClock(
   dwell: { readonly stats: DwellSummary; readonly gpuStats: DwellSummary | null },
-): DwellSummary {
-  return dwell.gpuStats ?? dwell.stats;
+): GatingClock {
+  return dwell.gpuStats === null
+    ? { clock: dwell.stats, metric: 'wall-p50' }
+    : { clock: dwell.gpuStats, metric: 'gpu-p50' };
 }
 
 /**

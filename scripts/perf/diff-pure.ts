@@ -3,7 +3,7 @@
 // README.md § Comparing against a baseline.
 
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { gatingClock } from './dwell-pure';
+import { gatingClock, type DwellMetric } from './dwell-pure';
 import type { PerfFile, ScenarioRecord } from './schema';
 
 /** How far the two buffers may differ and still be compared. Both dominant
@@ -28,13 +28,26 @@ export const RECORD_COUNT_TOLERANCE = 0.01;
  *  band calls roughly a third of unchanged rows a regression. */
 export const BAND_SIGMAS = 2;
 
-export type Verdict = 'cheaper' | 'dearer' | 'same';
+/** The floor under every whole-frame band, in both gates. Two sigma of the
+ *  medians' own scatter describes sampling alone, and a dwell's run
+ *  conditions move it further than that: the same vantage read 21.950 and
+ *  21.464 ms across two runs of identical code, differing only in where the
+ *  context sat in its run (stellata-8cg.49.27). Both forms were derived from
+ *  the cold-to-cold spread of two pins on identical code —
+ *  `pins/README.md` § Reading `--against-pin`.
+ *
+ *  Here rather than in `pin-pure.ts` because `--baseline` and
+ *  `--against-pin` must floor the same row the same way: the tighter of two
+ *  gates decides, so a Tier 1 band under the Tier 2 one it feeds marks a
+ *  change Tier 2 would call unresolved (`RELEASING.md` § Perf pin). */
+export const DWELL_FLOOR_MS = 0.25;
+export const DWELL_FLOOR_FRACTION = 0.01;
 
-/** Which of a dwell's two clocks a whole-frame row was judged on, named in
- *  the table because the two are different instruments and a reader cannot
- *  otherwise tell which one a delta came off. `gatingClock` picks it; the
- *  pin's rows carry the same two values for the same reason. */
-export type DwellMetric = 'gpu-p50' | 'wall-p50';
+export function dwellFloorMs(baselineMs: number): number {
+  return Math.max(DWELL_FLOOR_MS, DWELL_FLOOR_FRACTION * baselineMs);
+}
+
+export type Verdict = 'cheaper' | 'dearer' | 'same';
 
 export const VERDICT_MARK: Record<Verdict, string> = {
   cheaper: '✓',
@@ -191,7 +204,16 @@ function differentialRows(key: string, a: ScenarioRecord, b: ScenarioRecord): {
  * both the clamp test and the state guard fire on a machine that never
  * moved. Read off the GPU stream those two tests are about the hardware
  * instead — which is what lets a vantage over one interval be compared at
- * all. Wall stays recorded and unmarked, exactly as the pin records it.
+ * all.
+ *
+ * Where NEITHER side resolved a stream this row still marks, on wall, and
+ * that is where it parts company with the pin: `compareToPin` prints such a
+ * pair `ungated` and never marks it. The pin can afford to, having five
+ * vantages on two backends to fall back on; refusing here would leave
+ * `--baseline --mode dwell --backend webgl2` with no row at all, WebGL2
+ * supplying no stream anywhere. The quantisation is why such a row is worth
+ * little: it is the one case in this function where a whole-interval delta
+ * can be an artefact of the clock rather than the frame.
  */
 function dwellRow(key: string, a: ScenarioRecord, b: ScenarioRecord): DiffRow | DiffRefusal {
   const [da, db] = [a.dwell, b.dwell];
@@ -206,7 +228,8 @@ function dwellRow(key: string, a: ScenarioRecord, b: ScenarioRecord): DiffRow | 
         'median against a wall median is two instruments, the same refusal a differing method gets',
     };
   }
-  const [ca, cb] = [gatingClock(da), gatingClock(db)];
+  const [ga, gb] = [gatingClock(da), gatingClock(db)];
+  const [ca, cb] = [ga.clock, gb.clock];
   if (ca.vsyncClamped || cb.vsyncClamped) {
     return {
       key: `${key}|dwell`,
@@ -220,10 +243,10 @@ function dwellRow(key: string, a: ScenarioRecord, b: ScenarioRecord): DiffRow | 
     };
   }
   const deltaMs = cb.p50 - ca.p50;
-  const bandMs = band(medianStandardErrorMs(ca), medianStandardErrorMs(cb), 0);
+  const bandMs = band(medianStandardErrorMs(ca), medianStandardErrorMs(cb), dwellFloorMs(ca.p50));
   return {
     key: `${key}|dwell`,
-    metric: da.gpuStats === null ? 'wall-p50' : 'gpu-p50',
+    metric: ga.metric,
     baselineMs: ca.p50,
     currentMs: cb.p50,
     deltaMs,

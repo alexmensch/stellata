@@ -331,7 +331,15 @@ A row counts as moved only past **two sigma of the pair's own uncertainty**.
 Differential rows combine the two `noiseMs` floors, then take the larger of
 that and the two `bracketMs` values — the bracket is instrument drift, which
 no amount of sampling reduces. Dwell rows use the median's standard error,
-`1.2533·(iqr/1.349)/√n`, on both sides.
+`1.2533·(iqr/1.349)/√n`, on both sides, floored at the same
+`max(0.25 ms, 1 %)` the pin uses (`pins/README.md` § Reading
+`--against-pin`). **The floor is shared deliberately.** Two sigma of the
+medians' own scatter describes sampling and nothing else, and a dwell's run
+conditions move it further: at 240 frames on a steady vantage that band
+draws around 0.02 ms, while moving a context's position within its run
+moved one by 0.49 (stellata-8cg.49.27). An unfloored band would also leave
+Tier 1 gating tighter than the Tier 2 it feeds, and the tighter of two
+gates is the one that decides.
 
 **`savedMs` is the trap.** It names what disabling the pass saved, i.e. the
 pass's own price — so a row whose `savedMs` went UP got *dearer*, not better.
@@ -347,8 +355,18 @@ whose frame exceeds one the medians alternate between one and two however
 idle the machine is — which read the row's own clamp and state guard as a
 verdict on the machine and refused mw120 and sol outright. Off the GPU
 stream both tests are about the hardware: a resolved timestamp is a span no
-compositor can pad. Wall stays recorded and unmarked, as `pins/README.md`
-§ State guard records it.
+compositor can pad. Where the GPU stream gates, the wall numbers stay in the
+JSON and out of the table, as `pins/README.md` § State guard records them.
+
+**Where NEITHER run resolved a stream the row still marks, on wall — and
+that is where this table parts company with the pin**, which prints such a
+pair `ungated` and never marks it. Every WebGL2 row is one, WebGL2 supplying
+no stream anywhere, so refusing here would leave `--baseline --mode dwell
+--backend webgl2` with nothing to print at all; the pin can decline the row
+because it has ten of them across two backends. Read such a row knowing
+what it is: the one case in the table where a whole-interval delta may be
+the clock rather than the frame. In practice most are refused before they
+print, a WebGL2 frame inside one interval tripping the clamp first.
 
 **A GPU stream on one side and none on the other refuses the row**, the
 same refusal a differing `method` gets and for the same reason — a

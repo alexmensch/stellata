@@ -95,11 +95,14 @@ the whole pin, it blocked the pin for *every* render-path PR at random. Wall
   change has no row that prices it short of the ceiling — the gap
   stellata-8cg.49.18 closes.
 - **Band.** The pair's two-sigma standard error, floored at
-  `max(PIN_FLOOR_MS 0.25 ms, PIN_FLOOR_FRACTION 1 % × pinned)` — about 8×
-  the largest cold-to-cold move those four rows showed. A `✗` is past
+  `max(DWELL_FLOOR_MS 0.25 ms, DWELL_FLOOR_FRACTION 1 % × pinned)` — about
+  8× the largest cold-to-cold move those four rows showed. A `✗` is past
   both; `~` is not resolved, never "no change". The millisecond term is
   the larger of the two at every canon row but mw50, so it is what sets
-  sensitivity in practice.
+  sensitivity in practice. The floor lives in `../diff-pure.ts` beside
+  `band` because `--baseline` applies the same one: the tighter of two
+  gates is the one that decides, so a Tier 1 band under this one would
+  mark a move Tier 2 calls unresolved (`RELEASING.md` § Perf pin).
 - **Ceiling.** A GPU-stream p50 over `PIN_CEILING_MS` (33.4 ms, two 60 Hz
   intervals of hardware time) is `✗` whatever the band says — and on an
   ungated vantage too, which is where it earns its keep: those rows have

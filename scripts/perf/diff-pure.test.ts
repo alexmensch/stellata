@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, diffRuns, type RunDiff } from './diff-pure';
+import {
+  BUFFER_MPX_TOLERANCE, DWELL_FLOOR_FRACTION, DWELL_FLOOR_MS, RECORD_COUNT_TOLERANCE,
+  diffRuns, dwellFloorMs, type RunDiff,
+} from './diff-pure';
 import type { DwellSummary } from './dwell-pure';
 import { PERF_SCHEMA, type PerfFile, type ScenarioRecord } from './schema';
 
@@ -181,6 +184,49 @@ describe('diffRuns — the noise band', () => {
     expect(row.metric).toBe('wall-p50');
     expect(row.bandMs).toBeCloseTo(0.35449, 5);
     expect(row.verdict).toBe('same');
+  });
+});
+
+describe('the whole-frame floor — one number, both gates', () => {
+  it('is 0.25 ms or 1 % of the baseline, whichever is larger', () => {
+    expect(DWELL_FLOOR_MS).toBe(0.25);
+    expect(DWELL_FLOOR_FRACTION).toBe(0.01);
+    expect(dwellFloorMs(10)).toBe(0.25);
+    expect(dwellFloorMs(40)).toBe(0.4);
+  });
+
+  it('binds on the millisecond term at every canon row but mw50, where 1 % is larger', () => {
+    expect(dwellFloorMs(21.8)).toBe(DWELL_FLOOR_MS);
+    expect(dwellFloorMs(16.9)).toBe(DWELL_FLOOR_MS);
+    expect(dwellFloorMs(31.451)).toBe(0.31451);
+  });
+
+  // The measured case. 240 frames at a tight iqr put two sigma of the pair's
+  // scatter at ~0.02 ms, so an unfloored band marks a 0.15 ms move — and a
+  // move that size is what changing a context's POSITION in its run produces
+  // on unchanged code: mw120 read 21.950 against 21.464 between two runs,
+  // 7th of 10 behind cool-downs against 1st of 2 cold (stellata-8cg.49.27).
+  // The floor is the pin's, so the tier that feeds the pin cannot gate
+  // tighter than the pin does.
+  it('floors a dwell band that sampling alone would draw far tighter', () => {
+    const steady = { iqrMs: 0.135, samples: 240 };
+    const row = only(diffRuns(
+      withDwell(dwellStats(16.7), {}, dwellStats(21.95, steady)),
+      withDwell(dwellStats(16.7), {}, dwellStats(22.10, steady)),
+    ));
+    expect(row.metric).toBe('gpu-p50');
+    expect(row.bandMs).toBe(dwellFloorMs(21.95));
+    expect(row.bandMs).toBe(0.25);
+    expect(row.verdict).toBe('same');
+  });
+
+  it('still marks a move past the floor', () => {
+    const steady = { iqrMs: 0.135, samples: 240 };
+    const row = only(diffRuns(
+      withDwell(dwellStats(16.7), {}, dwellStats(21.95, steady)),
+      withDwell(dwellStats(16.7), {}, dwellStats(22.35, steady)),
+    ));
+    expect(row.verdict).toBe('dearer');
   });
 });
 

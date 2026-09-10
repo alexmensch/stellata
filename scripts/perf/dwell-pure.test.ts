@@ -114,13 +114,21 @@ describe('gatingClock — which clock a gate may act on', () => {
   const gpu = summarizeFrameDwell(VSYNC, null)!;
 
   it('is the GPU stream wherever the row has one', () => {
-    expect(gatingClock({ stats: wall, gpuStats: gpu })).toBe(gpu);
-    expect(gatingClock({ stats: wall, gpuStats: gpu }).stateGuard).toBe('steady');
+    expect(gatingClock({ stats: wall, gpuStats: gpu }).clock).toBe(gpu);
+    expect(gatingClock({ stats: wall, gpuStats: gpu }).clock.stateGuard).toBe('steady');
   });
 
   it('falls back to wall only where there is no GPU stream', () => {
-    expect(gatingClock({ stats: wall, gpuStats: null })).toBe(wall);
-    expect(gatingClock({ stats: wall, gpuStats: null }).stateGuard).toBe('trending');
+    expect(gatingClock({ stats: wall, gpuStats: null }).clock).toBe(wall);
+    expect(gatingClock({ stats: wall, gpuStats: null }).clock.stateGuard).toBe('trending');
+  });
+
+  // The metric comes back with the clock so that no caller can name one and
+  // read the other: both gates print it, and a table saying gpu-p50 over a
+  // wall median is the one error neither of them could detect.
+  it('names the clock it returned', () => {
+    expect(gatingClock({ stats: wall, gpuStats: gpu }).metric).toBe('gpu-p50');
+    expect(gatingClock({ stats: wall, gpuStats: null }).metric).toBe('wall-p50');
   });
 });
 
