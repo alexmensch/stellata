@@ -7,6 +7,7 @@ Stellata simulates what it would actually look like to move through the universe
 ## About
 
 - [Stellata](https://stellata.xyz/): what the project is, where its data comes from, and what it deliberately excludes. Readable without WebGPU.
+- [Stellata as markdown](https://stellata.xyz/index.md): the same page as markdown, derived from it at build time. `https://stellata.xyz/` serves this rendition to any client whose `Accept` header names `text/markdown`.
 - [The model](https://stellata.xyz/app): the live WebGPU application itself.
 - [Source on GitHub](https://github.com/alexmensch/stellata): full source, released under AGPL-3.0-only.
 - [SCIENCE.md](https://github.com/alexmensch/stellata/blob/main/SCIENCE.md): data sources, modelling notes, and project scope.
