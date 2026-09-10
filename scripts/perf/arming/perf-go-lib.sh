@@ -1,6 +1,6 @@
 # Shared by scripts/hooks/perf-guard.sh and await-go.sh: the arm marker's
 # name, where it lives and how fresh it must be. Sourced, never executed.
-# scripts/perf/perf-go-lib.ts parses these two values for the runner.
+# perf-go-lib.ts parses these two values for the runner.
 
 PERF_GO_MARKER_NAME=.perf-go
 PERF_GO_MAX_AGE_S=3600

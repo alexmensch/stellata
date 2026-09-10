@@ -34,7 +34,7 @@ table. Reference: `scripts/perf/README.md`. Interpretation authority:
 ## Protocol — announce → arm → run, one run per arm
 
 1. Say what you want to measure and why, with the exact command you will run.
-2. Start `bash scripts/perf/await-go.sh` in the background (Bash
+2. Start `bash scripts/perf/arming/await-go.sh` in the background (Bash
    `run_in_background`). It polls every 15 s for up to an hour and prints one
    line when a fresh marker exists. The poll and the runner both resolve the
    marker at the top level of the checkout they are launched from — from a

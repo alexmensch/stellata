@@ -3,6 +3,7 @@
 // README.md § Comparing against a baseline.
 
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import { gatingClock } from './dwell-pure';
 import type { PerfFile, ScenarioRecord } from './schema';
 
 /** How far the two buffers may differ and still be compared. Both dominant
@@ -88,6 +89,25 @@ function comparabilityRefusal(a: ScenarioRecord, b: ScenarioRecord): string | nu
   if (drift > BUFFER_MPX_TOLERANCE) {
     return `buffer ${ma} vs ${mb} Mpx (${(drift * 100).toFixed(1)} % apart) — the frame is fill-bound`;
   }
+  return recordCountRefusal(a.recordCount, b.recordCount);
+}
+
+/**
+ * A record-set change moves how many instanced quads every star pass draws,
+ * which is the most direct frame-cost change the repo can make — and it
+ * lands in `scripts/` and `public/`, where no render-path trigger sees it.
+ * So the count is checked here rather than trusted to a diff trigger: a row
+ * priced against a different scene is not a comparison, and refusing beats
+ * marking. Exact equality, because there is no tolerance at which a
+ * different catalogue becomes the same scene.
+ */
+export function recordCountRefusal(a: number | null, b: number | null): string | null {
+  if (a === null || b === null) {
+    return `record count ${a ?? 'unknown'} vs ${b ?? 'unknown'} — a run that did not record one cannot be placed on a scene`;
+  }
+  if (a !== b) {
+    return `catalogue ${a} vs ${b} records — every star pass draws a different scene`;
+  }
   return null;
 }
 
@@ -150,7 +170,11 @@ function dwellRow(key: string, a: ScenarioRecord, b: ScenarioRecord): DiffRow | 
       reason: 'a dwell was vsync-clamped — it measured the panel, not the frame',
     };
   }
-  if (da.stats.stateGuard === 'trending' || db.stats.stateGuard === 'trending') {
+  const trending = [
+    gatingClock(da.stats, da.gpuStats),
+    gatingClock(db.stats, db.gpuStats),
+  ].some((clock) => clock.stateGuard === 'trending');
+  if (trending) {
     return {
       key: `${key}|dwell`,
       reason: 'a dwell trended across its quarters — it straddled a load-state transition',

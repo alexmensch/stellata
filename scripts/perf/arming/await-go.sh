@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # await-go: poll for a fresh operator-created .perf-go marker at the repo
 # root. One stdout line and exit 0 when armed; exit 1 on timeout.
-# Protocol: README.md § Human-armed.
+# Protocol: README.md § The protocol.
 
 set -euo pipefail
 . "$(dirname "$0")/perf-go-lib.sh"

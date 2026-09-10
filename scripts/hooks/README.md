@@ -43,9 +43,9 @@ scripts/hooks/
                            § How perf-guard fails closed. The deny reason
                            carries the arm protocol. Marker name and
                            freshness come from
-                           scripts/perf/perf-go-lib.sh, shared with the
+                           scripts/perf/arming/perf-go-lib.sh, shared with the
                            poller and (parsed) the runner;
-                           scripts/perf/README.md § Human-armed owns the
+                           scripts/perf/arming/README.md owns the
                            design. Behaviour pinned by
                            tests/perf-guard.test.ts.
   comment-rules.json       The forbidden comment patterns, once. Read
@@ -215,7 +215,7 @@ git commit` flow Claude uses is covered correctly.
 
 ## The trailing-slash exemption
 
-`stellata-perf/1` (the perf runner's schema string) and
+`stellata-perf/2` (the perf runner's schema string) and
 `.claude/skills/stellata-perf/` are not bead IDs, and nothing about their
 *shape* says so: the epic-slug window is 3–5 characters with no digit
 required, which `perf` fits exactly as `cns`, `dch`, `uadc` and `hhaw` do.
@@ -250,7 +250,7 @@ denies rather than assuming it is fresh; a missing `jq` prints the reason to
 stderr and exits **2**, the harness's other blocking spelling, instead of
 dying mid-pipe. The `stat` portability trap that first exposed this — the
 hook erroring, and therefore permitting, on every Linux checkout while the
-macOS suite stayed green — is `scripts/perf/README.md` § Traps.
+macOS suite stayed green — is `scripts/perf/arming/README.md` § Traps.
 
 ## Disabling
 

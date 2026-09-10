@@ -45,15 +45,11 @@ scripts/perf/
                             rules. pins/<slug>.json is the committed pin.
   table-pure.ts (+ test)    Every text table. formatTable is the shared
                             width/alignment pass.
-  await-go.sh (+ test)      The arm poller the agent runs in the background.
   perf-section-check.sh     perf-section-guard's check: a render-path diff
     (+ test)                needs a `## Perf` section, every ✗ accepted.
-  perf-go-lib.sh (+ test)   Marker name, path and freshness — the single
-                            source, sourced by await-go.sh and
-                            scripts/hooks/perf-guard.sh.
-  perf-go-lib.ts            The same two scalars parsed out of the .sh for
-                            run.ts and the tests, so no second copy of the
-                            marker name or the hour can drift from the hook.
+  arming/                   The consent gate: marker name and freshness, the
+                            arm poller, the protocol. Own README.
+  pins/                     The committed per-GPU pin. Own README.
 ```
 
 ## Invocation
@@ -132,62 +128,12 @@ shell.
 
 ## Human-armed
 
-A marker file `.perf-go` at the repo root (gitignored) authorises exactly one
-launch. **Only Alex creates it.** `scripts/hooks/perf-guard.sh`, a PreToolUse
-hook on Bash / Write / Edit / NotebookEdit, enforces that as **two
-independent gates**:
-
-1. **The marker gate.** Any tool call that so much as names `.perf-go` is
-   denied — a Bash command containing the string, or a Write/Edit whose
-   target is the marker. Unconditional, and deliberately blunt: it does not
-   ask whether the same call also launches.
-2. **The launch gate.** A recognised launch — `pnpm|npm|yarn|bun [run] perf`
-   with flags anywhere, `tsx|node|npx|bun|deno … scripts/perf/run[.ts]`,
-   `./scripts/perf/run.ts`, `pnpm exec|dlx` forms — is denied while the
-   marker is absent or older than an hour.
-
-**Independence is the point.** As one condition — deny a command that both
-arms and launches — the whole gate rested on recognising the launch, and a
-spelling it missed (`npm run perf`, or a launch on its own line in a
-multi-line command) took the self-arm through with it. Split, a missed launch
-spelling degrades to the runner's own exit 3, because there is no route to a
-marker for it to pair with. `cd scripts/perf && tsx run.ts` is the known
-residual: matching a bare `run.ts` would deny unrelated commands, and
-over-denying a launch is worse than deferring to exit 3.
-
-Newlines are flattened to `;`, not to spaces, so a line boundary stays a
-command boundary. The cost is a false positive: a multi-line commit message
-quoting a launch spelling at the start of a line reads as a launch. Take the
-same route the marker gate names for that — `git commit -F <file>`.
-
-**Legitimately naming the marker** — a commit message, a PR body, a search —
-goes around the Bash gate rather than through it: `git commit -F <file>` and
-`gh pr create --body-file <file>` (the route a worktree session already
-needs, since the worktree guard rejects `$( )` and heredoc bodies), and the
-Grep tool for searching. The deny reason carries both.
-
-**The hook fails closed.** An unhandled error would exit non-zero, which the
-harness reads as a broken hook and lets the call through — so an `ERR` trap
-denies, an unreadable marker age denies, and a missing `jq` falls back to a
-bare exit 2 (the harness's other blocking spelling) rather than to silence.
-That is the opposite posture from `prime-guard`, which fails open on purpose:
-a missing memory is survivable, an unasked-for GPU run is not.
-
-Reading `run.ts`, running the pure tests, `await-go.sh`, and
-`perf-go-lib.sh` all pass through.
-
-The agent's protocol, which the deny reason carries verbatim:
-
-1. Announce what is to be measured and why, with the exact command.
-2. Start `bash scripts/perf/await-go.sh` in the background. It polls every
-   `PERF_GO_POLL_S` (15) s for up to `PERF_GO_TIMEOUT_S` (3600) s, prints
-   one line when a fresh marker exists (exit 0), or exits 1 on timeout.
-3. Proceed only when it reports the marker.
-4. Never create the marker.
-
-`run.ts` consumes the marker before the browser launches: absent → exit 3;
-stale → deleted, exit 3; fresh → deleted, then launch. One arm is one launch
-attempt, whatever happens after.
+The runner never launches on the agent's own initiative: a marker file
+`.perf-go` at the repo root authorises exactly one launch, and only Alex
+creates it. `run.ts` consumes it before the browser starts — absent → exit 3;
+stale → deleted, exit 3; fresh → deleted, then launch — so one arm is one
+launch attempt whatever happens after. The gate, the poller, the arm protocol
+and the marker's single source: `arming/README.md`.
 
 The runner never starts a dev server either. Alex always has one running;
 `--url` targets it, and a worktree's server sits on another port. An
@@ -350,12 +296,12 @@ target rebuild the resize forces, since the clock ramp was already paid.
 
 ## JSON output
 
-`--json <path>` writes the whole run as schema `stellata-perf/1`:
-`run` (timestamps, url, argv, git commit and dirty flag, browser and its
+`--json <path>` writes the whole run as schema `stellata-perf/2`:
+`run` (timestamps, url, argv, the commit pair and dirty flag, browser and its
 switches, the adapter probe, host) plus one record per scenario × backend
-(backend requested and actual, viewport, buffer and Mpx, mode, method,
-params, settle time, the mode's own block, forwarded console, page errors,
-`tainted` and `failed`).
+(backend requested and actual, viewport, buffer and Mpx, catalogue record
+count, mode, method, params, settle time, the mode's own block, forwarded
+console, page errors, `tainted` and `failed`).
 
 **Raw samples are always retained** — every rAF delta and every GPU sample,
 not just the summary. A re-analysis with a different estimator has to be
@@ -364,9 +310,8 @@ possible from the file alone, and a summary cannot be un-summarised.
 `assertPerfFile` checks the schema string by equality before reading
 anything else, and it is the only place the suffix is judged — a `--baseline`
 carrying another one is refused in the preflight, so the diff never sees a
-file it would have to reason about. Removing a field or changing what one MEANS bumps the suffix;
-adding one does not. A bump abandons every recorded baseline, because
-`--baseline` refuses across two suffixes rather than mapping between them.
+file it would have to reason about. What bumps the suffix, and why a bump
+abandons every recorded baseline: `schema.ts`, on `PERF_SCHEMA`.
 
 ## Comparing against a baseline
 
@@ -389,9 +334,10 @@ buffers or adapters produce a table that looks like a comparison and is not,
 so an incomparable pair is named and skipped rather than dropped silently:
 a differing adapter string refuses the whole run (a differing schema never
 reaches the diff — see § JSON output); a differing method or mode, a buffer
-more than 1 % apart, a failed or tainted scenario, a vsync-clamped dwell, a
-`cadenceBound` row (either side), or a row missing from one side refuses that
-key. The key carries the backend, so a vantage the other run measured on the
+more than 1 % apart, a differing or absent **record count** (a row priced
+against a different catalogue is not a comparison), a failed or tainted
+scenario, a vsync-clamped dwell, a `cadenceBound` row (either side), or a
+row missing from one side refuses that key. The key carries the backend, so a vantage the other run measured on the
 *other* backend says exactly that rather than reporting itself absent.
 Sweeps are never diffed — a slope is not a cost.
 
@@ -420,17 +366,6 @@ When a PR must run it and what a mark means: `RELEASING.md` § Perf pin.
   that does not exist once Playwright serialises the body into the page.
   The symptom is `ReferenceError: __name is not defined` from inside the
   page.
-- **`stat` cannot be probed by failure.** `perf_go_age_s` asks GNU first
-  (`stat -c %Y`) because that spelling *fails* on BSD, while BSD's `stat -f`
-  is GNU's `--file-system` and **succeeds** on Linux — printing a filesystem
-  block where a mtime was expected. Ordered the other way, the marker's age
-  came back as prose, the arithmetic tripped `set -u`, the hook exited
-  non-zero, and a PreToolUse hook that errors lets the call through: the
-  consent gate was absent on every Linux checkout while the macOS suite
-  stayed green. Each spelling also assigns separately — one shared
-  `$( a || b )` capture concatenates both outputs. Pinned by
-  `perf-go-lib.test.ts`, which asserts bare seconds rather than a
-  non-zero exit.
 - **A larger buffer comes from `--width`/`--height`, never `--dpr` above 2.**
   The app caps its pixel ratio at 2 (`stellata.ts`, `setPixelRatio`): a higher
   `--dpr` draws at 2 while the header claims more, so the runner aborts (exit

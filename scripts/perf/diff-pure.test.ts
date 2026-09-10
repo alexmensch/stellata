@@ -25,6 +25,8 @@ function priceRow(overrides: Partial<PriceFrameRow> & { pass: string }): PriceFr
   };
 }
 
+const RECORDS = 388063;
+
 /** iqr 1.349 over 100 samples puts the median's standard error at exactly
  *  0.12533 ms, so a two-sigma band comes out at 0.354. */
 function dwellStats(p50: number, overrides: Partial<DwellSummary> = {}): DwellSummary {
@@ -50,6 +52,7 @@ function scenario(overrides: Partial<ScenarioRecord> = {}): ScenarioRecord {
     viewport: { width: 1280, height: 800, dpr: 2 },
     buffer: { width: 2560, height: 1600 },
     bufferMpx: 4.096,
+    recordCount: RECORDS,
     mode: 'differential',
     method: 'raf-delta',
     params: {},
@@ -77,7 +80,7 @@ function file(scenarios: readonly ScenarioRecord[], adapter = 'Apple M3 Max'): P
       finishedAt: '2026-09-04T10:05:00.000Z',
       url: 'http://localhost:5173',
       argv: [],
-      git: { commit: 'abc1234', dirty: false },
+      git: { commit: 'abc1234', dirty: false, mainCommit: 'abc1234', mainReachable: true },
       browser: { name: 'chromium', version: '1', channel: 'chromium', headless: true, args: [] },
       gpu: {
         webgl: { renderer: adapter, vendor: 'Apple', timerQuery: true },
@@ -93,16 +96,20 @@ function withDifferential(rows: readonly PriceFrameRow[], overrides: Partial<Sce
   return file([scenario({ differential: rows, ...overrides })]);
 }
 
-function withDwell(stats: DwellSummary, overrides: Partial<ScenarioRecord> = {}): PerfFile {
+function withDwell(
+  stats: DwellSummary,
+  overrides: Partial<ScenarioRecord> = {},
+  gpuStats: DwellSummary | null = null,
+): PerfFile {
   return file([scenario({
     mode: 'dwell',
     differential: null,
     dwell: {
       deltasMs: [],
-      gpuMs: null,
-      gpuNote: 'not requested',
+      gpuMs: gpuStats === null ? null : [],
+      gpuNote: gpuStats === null ? 'not requested' : 'sound',
       stats,
-      gpuStats: null,
+      gpuStats,
       limitMag: 1.5,
       dm: -6.29,
       readbackPerFrame: 0.25,
@@ -291,6 +298,35 @@ describe('diffRuns — refusals', () => {
     );
     expect(diff.rows).toEqual([]);
     expect(diff.refusals[0].reason).toContain('load-state transition');
+  });
+
+  it('does not refuse a wall clock that alternated while the GPU stream held still', () => {
+    const alternating = dwellStats(33.4, { quarterMedians: [16.7, 33.4, 16.7, 33.4], stateGuard: 'trending' });
+    const diff = diffRuns(
+      withDwell(alternating, {}, dwellStats(31.84)),
+      withDwell(alternating, {}, dwellStats(31.85)),
+    );
+    expect(diff.refusals).toEqual([]);
+    expect(diff.rows).toHaveLength(1);
+  });
+
+  it('refuses a comparison across two record sets', () => {
+    const diff = diffRuns(
+      withDwell(dwellStats(30)),
+      withDwell(dwellStats(30), { recordCount: RECORDS + 54458 }),
+    );
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain(`${RECORDS} vs ${RECORDS + 54458} records`);
+  });
+
+  it('refuses a comparison where either side recorded no record count', () => {
+    const counted = withDwell(dwellStats(30));
+    const uncounted = withDwell(dwellStats(30), { recordCount: null });
+    for (const [a, b] of [[counted, uncounted], [uncounted, counted], [uncounted, uncounted]]) {
+      const diff = diffRuns(a, b);
+      expect(diff.rows).toEqual([]);
+      expect(diff.refusals[0].reason).toContain('cannot be placed on a scene');
+    }
   });
 
   it('names a scenario the current run did not measure', () => {

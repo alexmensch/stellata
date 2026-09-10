@@ -15,12 +15,32 @@ its path relative to that checkout, since this file ships in a public repo.
 
 Per `scenario|backend` the pin holds wall p50 / p90 / iqr / n /
 vsyncClamped and the GPU-stream p50 where it was sound, plus the
-state-guard verdict, buffer, cadence, adapter probe, commit, package version
-and the run file. **Any refused row refuses the whole pin** — failed,
-tainted, not dwell, not `raf-delta`, trending, a round trip, a headed run —
-because a pin missing a row narrows the gate silently.
-`--accept <scenario>|<backend>:<bead>` records an accepted mark as
-provenance for the value now pinned; it never filters a verdict.
+state-guard verdict, buffer, catalogue record count, cadence, adapter probe,
+commit pair, package version and the run file. **Any refused row refuses the
+whole pin** — failed, tainted, not dwell, not `raf-delta`, trending, a round
+trip, a headed run, no record count — because a pin missing a row narrows the
+gate silently. `--accept <scenario>|<backend>:<bead>` records an accepted
+mark as provenance for the value now pinned; it never filters a verdict.
+
+## What the commit fields hold
+
+`git.commit` is HEAD at take time and `git.mainCommit` is its merge base
+with `origin/main`. Both, because a pin is always taken on a branch and a
+squash merge lands that tree under a hash the branch tip never had — so the
+tip alone cannot answer "how far has main moved since?". The merge base can,
+and survives the squash. `git.mainReachable` records whether the tip was on
+main when taken, which for most runs is simply `false`.
+
+`--against-pin` re-asks the ancestry at comparison time rather than trusting
+`mainReachable`, since a tip unlanded when the pin was taken may have landed
+since. A tip that never lands is **reported, not refused** — taking a pin on
+a branch is the normal case, and refusing would leave no usable pin at the
+moment one is most wanted. The header then prints main's own
+`git diff --shortstat` under `src/client` between the two bases, because a
+mark is only the PR's if nothing else moved the frame in between: one pin sat
+at an unlanded tip and charged four consecutive PRs — one with no per-frame
+code at all — for ~1,600 insertions of main's own render-path work
+(stellata-8cg.49.24).
 
 ## State guard
 
@@ -36,6 +56,17 @@ strictly-rising test reads as steady. Frames either side of the
 transition never compare, so a trending row refuses the pin and refuses a
 comparison. `--cooldown-ms` idles between contexts so each one starts
 cold; tune it until every context in a pin run reads `steady`.
+
+**The verdict is read off the clock the band gates** — the GPU stream where
+the row has one, wall only where it does not (`gatingClock`, every WebGL2
+row). Wall deltas are quantised to the refresh interval, so at a vantage
+whose frame exceeds one interval they alternate between one and two and the
+quarter medians swing by a whole interval however idle the machine is: mw50
+split 240 deltas 120/120 and 117/123 on two cold runs whose GPU quarters
+spanned 0.017 ms. Read off wall, that verdict is a coin flip decided per
+quarter by which side of 50 % it landed — and since any refused row refuses
+the whole pin, it blocked the pin for *every* render-path PR at random. Wall
+`stateGuard` is still recorded, unmarked, exactly as wall p50 is.
 
 ## Reading `--against-pin`
 
@@ -69,9 +100,19 @@ cold; tune it until every context in a pin run reads `steady`.
   nothing else watching them.
 - **Refusals.** Another adapter slug or a headed run refuses the whole
   comparison; a missing, failed, tainted, resized (> 1 % buffer) or
-  trending row refuses that row. A refused comparison is not a pass:
-  either kind exits 1, since a run whose rows were all refused prints a
-  table with no `✗` in it.
+  trending row refuses that row, and so does a different **record count**.
+  A refused comparison is not a pass: either kind exits 1, since a run
+  whose rows were all refused prints a table with no `✗` in it.
+- **Record count.** `recordCount` is the star records the page loaded, off
+  the catalogue binary's header. A membership change lives in `scripts/`
+  and `public/`, where no render-path trigger sees it, yet it moves how
+  many instanced quads every star pass draws — the most direct frame-cost
+  change the repo can make. So the count is checked here rather than
+  trusted to a diff trigger, and exactly: there is no tolerance at which a
+  different catalogue becomes the same scene. A pin taken at 329,657
+  records went on being compared against after membership reached 384,115,
+  and the next render-path PR read the whole step as its own regression
+  (stellata-8cg.53). `--baseline` refuses on it too.
 - **Writing while comparing.** `--pin` alongside `--against-pin` refuses
   to write while any `✗` lacks an `--accept <row>:<bead>`, so an
   unexamined regression cannot quietly become the pinned value.

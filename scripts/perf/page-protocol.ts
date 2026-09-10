@@ -151,6 +151,16 @@ export function readDrawingBuffer(page: Page): Promise<{ width: number; height: 
   });
 }
 
+/** Star records the page loaded, off the catalogue binary's own header —
+ *  the scene every star pass draws. Null where the field is not a number,
+ *  which a comparison refuses rather than treating as any particular scene. */
+export function readRecordCount(page: Page): Promise<number | null> {
+  return page.evaluate(() => {
+    const count = (window as unknown as PerfWindow).stellata.catalog.count;
+    return typeof count === 'number' && Number.isFinite(count) ? count : null;
+  });
+}
+
 export function runDifferential(page: Page, options: PriceFrameOptions): Promise<PriceFrameRow[]> {
   return page.evaluate((o) => (window as unknown as PerfWindow).debug.priceFrame(o), options);
 }

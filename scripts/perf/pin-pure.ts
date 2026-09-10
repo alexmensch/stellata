@@ -4,15 +4,18 @@
 
 import { basename, relative, resolve } from 'node:path';
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { BUFFER_MPX_TOLERANCE, VERDICT_MARK, band, type DiffRefusal, type Verdict } from './diff-pure';
-import type { StateGuard } from './dwell-pure';
+import {
+  BUFFER_MPX_TOLERANCE, VERDICT_MARK, band, recordCountRefusal,
+  type DiffRefusal, type Verdict,
+} from './diff-pure';
+import { gatingClock, type StateGuard } from './dwell-pure';
 import { DWELL_METHOD } from './run-pure';
-import type { AdapterProbe, DwellRecord, PerfFile, ScenarioRecord } from './schema';
+import type { AdapterProbe, DwellRecord, GitProvenance, PerfFile, ScenarioRecord } from './schema';
 import type { Backend, ScenarioName } from './scenarios';
 
 /** Removing a field or changing what one MEANS bumps the suffix; adding one
  *  does not — the same contract as `PERF_SCHEMA`. */
-export const PIN_SCHEMA = 'stellata-perf/pin-1';
+export const PIN_SCHEMA = 'stellata-perf/pin-2';
 
 /** A row moves only past the pair's two-sigma band AND past this floor,
  *  whichever of the two forms is larger. Both derived from the cold-to-cold
@@ -54,6 +57,8 @@ export interface PinRow {
   readonly name: ScenarioName;
   readonly backend: Backend;
   readonly bufferMpx: number;
+  /** The scene the row priced: star records the page had loaded. */
+  readonly recordCount: number;
   readonly idleRafMs: number | null;
   readonly method: string;
   readonly wall: PinClock & { readonly vsyncClamped: boolean };
@@ -69,7 +74,7 @@ export interface PinFile {
   readonly schema: typeof PIN_SCHEMA;
   readonly adapterSlug: string;
   readonly adapter: AdapterProbe;
-  readonly git: PerfFile['run']['git'];
+  readonly git: GitProvenance;
   readonly version: string;
   readonly takenAt: string;
   /** The run file the rows were summarised from, under `.perf-runs/`. */
@@ -159,9 +164,11 @@ function rowRefusal(record: ScenarioRecord): string | null {
   if (record.method !== DWELL_METHOD) return `method ${record.method ?? 'none'} — a pin is ${DWELL_METHOD}`;
   if (record.bufferMpx === null) return 'no drawing buffer recorded';
   if (record.backend.actual === null) return 'the backend never booted';
-  const trending = record.dwell.stats.stateGuard === 'trending'
-    || record.dwell.gpuStats?.stateGuard === 'trending';
-  if (trending) return 'the dwell trended across its quarters — it straddled a load-state transition';
+  if (record.recordCount === null) return 'no catalogue record count recorded — the rows cannot be placed on a scene';
+  const clock = gatingClock(record.dwell.stats, record.dwell.gpuStats);
+  if (clock.stateGuard === 'trending') {
+    return 'the dwell trended across its quarters — it straddled a load-state transition';
+  }
   return null;
 }
 
@@ -196,6 +203,7 @@ export function pinFromRun(file: PerfFile, source: PinSource): { pin: PinFile | 
       name: record.name,
       backend: record.backend.actual!,
       bufferMpx: record.bufferMpx!,
+      recordCount: record.recordCount!,
       idleRafMs: record.idleRafMs,
       method: record.method!,
       wall: { ...clockOf(dwell.stats), vsyncClamped: dwell.stats.vsyncClamped },
@@ -335,6 +343,11 @@ export function compareToPin(pin: PinFile, current: PerfFile): PinDiff {
       });
       continue;
     }
+    const scene = recordCountRefusal(pinned.recordCount, record.recordCount);
+    if (scene !== null) {
+      refusals.push({ key: pinned.key, reason: scene });
+      continue;
+    }
     rows.push(compareRow(pinned, record));
   }
   return { refusedWholeRun: null, rows, refusals };
@@ -387,4 +400,79 @@ export function assertPinFile(value: unknown, source: string): PinFile {
 /** `scripts/perf/pins/<slug>.json`, relative to the repo root. */
 export function pinPathFor(slug: string): string {
   return `scripts/perf/pins/${slug}.json`;
+}
+
+/** Whether the pin's recorded `commit` resolves on main as git answers it
+ *  *now* — not as it answered when the pin was taken. A branch tip that has
+ *  since squash-merged reads `unlanded` forever: the measured tree landed,
+ *  under another hash. `unknown` is an unreadable object or no `origin/main`. */
+export type PinCommitState = 'landed' | 'unlanded' | 'unknown';
+
+/** `git diff --shortstat <pin main base> <run main base> -- src/client`:
+ *  main's own render-path movement between the two trees. */
+export interface RenderPathDrift {
+  readonly files: number;
+  readonly insertions: number;
+  readonly deletions: number;
+}
+
+const SHORTSTAT = /(\d+) files? changed(?:, (\d+) insertions?\(\+\))?(?:, (\d+) deletions?\(-\))?/;
+
+/**
+ * Read a `--shortstat` line. An empty line is git saying the two trees are
+ * identical under the pathspec, which is a drift of zero and not a failure
+ * to measure one — the difference decides whether the header stays silent or
+ * says the drift could not be read. Either count is absent when it is zero,
+ * so a deletion-only diff prints no insertions clause at all.
+ */
+export function parseRenderPathDrift(shortstat: string): RenderPathDrift | null {
+  if (shortstat.trim() === '') return { files: 0, insertions: 0, deletions: 0 };
+  const m = SHORTSTAT.exec(shortstat);
+  if (m === null) return null;
+  return { files: Number(m[1]), insertions: Number(m[2] ?? 0), deletions: Number(m[3] ?? 0) };
+}
+
+/**
+ * What the `--against-pin` header must say about the tree the pin measured,
+ * before any row is read.
+ *
+ * A mark is only the PR's if nothing else moved the frame in between, and a
+ * pin cites a branch tip: squash-merge means that hash carries no landed
+ * tree, so the drift it hides is attributed to whoever runs next. One pin
+ * sat at an unlanded tip for two days and charged four consecutive PRs —
+ * one of them with no per-frame code at all — for ~1,600 insertions of
+ * main's own render-path work.
+ *
+ * Reported rather than refused: taking a pin on a branch is the normal case,
+ * and a refusal would leave no usable pin at the moment one is most wanted.
+ * The row-level refusals stay for what is measurable — adapter, buffer,
+ * record count, state guard — and this names what a reader must weigh.
+ */
+export function pinProvenanceLines(
+  pin: PinFile,
+  state: PinCommitState,
+  drift: RenderPathDrift | null,
+): readonly string[] {
+  const short = pin.git.commit.slice(0, 8);
+  const lines: string[] = [];
+  if (state === 'unlanded') {
+    lines.push(
+      `pin commit ${short} is not an ancestor of origin/main — a pre-squash branch tip, ` +
+      'so no hash on main carries the tree it measured',
+    );
+  } else if (state === 'unknown') {
+    lines.push(`pin commit ${short} could not be placed against origin/main — drift is unbounded`);
+  }
+  if (pin.git.mainCommit === null) {
+    lines.push('the pin records no main base, so its drift from main cannot be measured at all');
+  } else if (drift === null) {
+    lines.push(`pin main base ${pin.git.mainCommit.slice(0, 8)}; render-path drift could not be read`);
+  } else if (drift.files > 0) {
+    lines.push(
+      `main moved under src/client since the pin's base ${pin.git.mainCommit.slice(0, 8)}: ` +
+      `${drift.files} file${drift.files === 1 ? '' : 's'}, +${drift.insertions}/-${drift.deletions} — ` +
+      'a mark below may be that drift rather than this diff',
+    );
+  }
+  return lines;
 }

@@ -1,5 +1,5 @@
 // The arm marker's name and freshness, parsed out of perf-go-lib.sh so the
-// runner cannot drift from the hook that enforces them. README.md § Human-armed.
+// runner cannot drift from the hook that enforces them. README.md § Traps.
 
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
