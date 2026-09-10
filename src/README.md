@@ -40,7 +40,16 @@ does:
   can never be edited, so both are answered forever.
   `client/util/url-state/share-path-pure.ts` owns the grammar and the
   Worker imports it — a second spelling of `/app` here would break every
-  share link silently.
+  share link silently. Neither rule inspects the blob: it is redirected
+  whatever schema version it carries and whether or not it decodes, which
+  is what makes the transport's reach and the decoder's reach the same
+  thing (v1 onward, `client/util/url-state/README.md`).
+
+**`vite.site-dev.ts` answers this same table**, in this same order, off
+the same import — `devRoute` is its whole routing decision and
+`tests/site-dev-routing.test.ts` pins it beside `worker.test.ts`. The
+dev server restating the rules is how it came to 404 a share link the
+deploy redirects, which nobody sees until someone pastes a real URL.
 
 **`not_found_handling` is deliberately `"404-page"`, not
 `"single-page-application"`.** As the latter it answered every unmatched
