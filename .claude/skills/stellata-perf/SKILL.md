@@ -40,12 +40,22 @@ table. Reference: `scripts/perf/README.md`. Interpretation authority:
    marker at the top level of the checkout they are launched from — from a
    worktree, the worktree root, not the main checkout — so the announcement
    names which root to arm.
-3. When it reports ARMED, run the command. The runner deletes the marker
-   before launching the browser — one arm authorises one launch, success or
-   not. A second run means a second announce.
-4. Say in the announcement that the machine has to stay idle for the run
+3. When it reports ARMED, **launch the runner as a background process too —
+   Bash `run_in_background`, always, whatever the mode.** A foreground Bash
+   call is capped at 10 minutes and the harness kills it there; every mode
+   worth arming for outlives that (a pin run is 15–25 min, a `--scenario all`
+   sweep 18–21), so a foreground launch dies partway through. It costs the
+   arm, not just the run: the runner deletes the marker *before* the browser
+   starts, so the launch is spent whatever happens after. Poll the output
+   file for progress and read it when the process exits.
+4. The runner deletes the marker before launching the browser — one arm
+   authorises one launch, success or not. A second run means a second
+   announce. Never re-run on a killed or failed launch without re-arming.
+5. Say in the announcement that the machine has to stay idle for the run
    (~2 min at the defaults). Foreground work on the same GPU widens `iqrMs`
-   tenfold and walks the baseline; such a run is discarded, not read.
+   tenfold and walks the baseline; such a run is discarded, not read. Ask
+   whether anything heavy is running — a background data pull counts — rather
+   than assuming idle.
 
 ## Flags
 

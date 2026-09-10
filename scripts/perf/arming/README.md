@@ -83,6 +83,25 @@ The deny reason carries these four steps verbatim:
 stale → deleted, exit 3; fresh → deleted, then launch. One arm is one launch
 attempt, whatever happens after.
 
+## Launch the runner detached, always
+
+**Both the poller and the runner go in the background** — under Claude Code,
+Bash `run_in_background`. The poller because it waits up to an hour; the
+runner because a foreground call is capped at **10 minutes** and killed
+there, while every mode worth arming for runs longer: a pin run is 15–25 min
+across its ten contexts at a 120 s cool-down, a `--scenario all` differential
+18–21.
+
+The cost of getting this wrong is the arm, not merely the run. The marker is
+consumed *before* the browser starts, so a launch killed at the cap has
+already spent it — there is no retry that does not need a fresh arm, and
+asking for one is asking the operator to hold the machine idle again. A
+partial run also leaves no JSON: the file is written once, at the end, so a
+run that dies on context 3 of 10 leaves only its console log.
+
+Read progress from the background process's output file while it runs; treat
+the exit code as the verdict, since a tainted run still prints its tables.
+
 ## Traps
 
 - **`stat` cannot be probed by failure.** `perf_go_age_s` asks GNU first
