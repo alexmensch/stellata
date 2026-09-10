@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DWELL_METHOD, bufferShortfall, describeProbe, markerVerdict, methodFor, softwareRenderer,
+  DWELL_METHOD, GATE_BOOT_PREFIX, bootFailure, bufferShortfall, describeProbe, markerVerdict,
+  methodFor, softwareRenderer,
 } from './run-pure';
 import type { AdapterProbe } from './schema';
 
@@ -124,5 +125,27 @@ describe('markerVerdict — one arm is one launch attempt', () => {
 
   it('refuses when there is no marker at all', () => {
     expect(markerVerdict(false, 0, HOUR_MS)).toBe('absent');
+  });
+});
+
+describe('bootFailure — a boot that produced no page says which kind', () => {
+  it('passes a booted page', () => {
+    expect(bootFailure('ok')).toBeNull();
+  });
+
+  it('names the gate and its verdict, where the wait used to time out', () => {
+    const why = bootFailure(`${GATE_BOOT_PREFIX}no-api`);
+    expect(why).toContain('requires-WebGPU gate');
+    expect(why).toContain("'no-api'");
+  });
+
+  it('carries a verdict it does not recognise through rather than dropping it', () => {
+    expect(bootFailure(`${GATE_BOOT_PREFIX}unknown`)).toContain("'unknown'");
+  });
+
+  // The gate's prefix is what separates the two, so a loading-status that
+  // reads like a verdict is still reported as the page's own error.
+  it('reports a loading-status error as itself', () => {
+    expect(bootFailure('Error: catalogue fetch failed')).toBe('Error: catalogue fetch failed');
   });
 });

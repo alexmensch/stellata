@@ -22,9 +22,10 @@ scripts/perf/
                             typed.
   run-pure.ts (+ test)      The decisions around a launch: which clock a
                             backend request gets, which adapters disqualify a
-                            run, how the probe reads, whether a marker arms.
-                            Here rather than in run.ts so a test can import
-                            them without launching a browser.
+                            run, how the probe reads, whether a marker arms,
+                            why a boot produced no page. Here rather than in
+                            run.ts so a test can import them without
+                            launching a browser.
   scenarios.ts (+ test)     The five canon vantages as share blobs, and
                             scenarioUrl().
   page-protocol.ts          Every page.evaluate: boot, gate snapshot, adapter
@@ -151,9 +152,15 @@ neither modal ever shows:
    hatch — WebGPU is the default (`src/client/webgpu/README.md`
    § The renderer is WebGPU). Wait for `window.debug`,
    `window.stellata` and `#loading` gone; a `#loading-status` starting
-   `Error:` is a `BootError`. Then check `stellata.webgpu` against the
-   request: **a boot on the other backend fails the scenario** rather
-   than yielding a mislabelled measurement.
+   `Error:` is a `BootError`. The requires-WebGPU gate is read *before*
+   those, because it hides the boot's elements rather than removing them
+   (`src/client/webgpu/gate/README.md`): `#loading` survives with
+   `display:none` and `window.stellata` is never set, so every predicate
+   stays false and the wait would spend its whole timeout to say nothing.
+   A mounted gate is a `BootError` naming its `data-verdict` instead.
+   Then check `stellata.webgpu` against the request: **a boot on the
+   other backend fails the scenario** rather than yielding a mislabelled
+   measurement.
 2. **Adapter probe.** WebGL renderer/vendor via `WEBGL_debug_renderer_info`
    and `EXT_disjoint_timer_query_webgl2` presence (the live context on a
    WebGL2 boot, a throwaway one otherwise — dropped via `WEBGL_lose_context`
