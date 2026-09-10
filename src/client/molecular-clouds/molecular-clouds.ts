@@ -10,8 +10,7 @@ import {
   type CloudPickCandidate,
 } from './cloud-pick-pure';
 import type { HoverHit } from '../hover/hover-types';
-// Registers the stellata_fresnel_rim chunk the rim shader includes —
-// removing this import breaks the shader compile at first render.
+import { applyRimParams, type RimParams } from '../fresnel-shell/fresnel-shell';
 import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
 import { markAbsorber } from '../hdr/attachments/attachment-gate';
 import type { EmitterMaterial } from '../scene/emitter-material';
@@ -327,12 +326,11 @@ export class MolecularClouds {
     const steps = Math.max(4, Math.min(24, Math.round(n)));
     for (const s of this.absorptionSurfaces) s.uniforms.uSteps.value = steps;
   }
-  /** Rim-glow shape levers, shared vocabulary with the fresnel shells. */
-  setRimParams(p: { alphaLimb?: number; faceOnFloor?: number; fresnelPower?: number }) {
-    const u = this.rimSurface.uniforms;
-    if (p.alphaLimb !== undefined) u.uAlphaLimb.value = p.alphaLimb;
-    if (p.faceOnFloor !== undefined) u.uFaceOnFloor.value = p.faceOnFloor;
-    if (p.fresnelPower !== undefined) u.uFresnelPower.value = p.fresnelPower;
+  /** Rim shape + camera-distance levers, one call shared with the fresnel
+   *  shells. The depth-dim pair is on one absolute scale across both, so
+   *  sweeping it means the same call on `kinds.shell` too. */
+  setRimParams(p: RimParams) {
+    applyRimParams(this.rimSurface.uniforms, p);
   }
   /** Force-boost the rim glow — handy for "is the layer rendering at
    *  all?" debugging. Pass null to restore the configured gain. */

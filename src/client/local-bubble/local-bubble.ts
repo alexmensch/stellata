@@ -13,6 +13,7 @@ import {
   createShellSilhouetteLabel,
   isShellLabelResolvable,
 } from '../fresnel-shell/fresnel-shell';
+import { nearFadePcForExtent } from '../fresnel-shell/shell-distance-pure';
 import {
   SHELL_KEYS,
   type ShellCardInfo,
@@ -56,6 +57,9 @@ export class LocalBubbleShell extends FresnelShell {
         colourHex: SHELL_RIM_BLUE,
         alphaLimb: SHELL_RIM_ALPHA_LIMB,
         blending: THREE.AdditiveBlending,
+        // The wall's extent is measured off the parsed mesh, so `attach`
+        // owns this write — and `shellReady` is false until it lands.
+        nearFadePc: 0,
       }),
       -1,
     );
@@ -82,6 +86,7 @@ export class LocalBubbleShell extends FresnelShell {
       samples.push(data.positions[k * 3], data.positions[k * 3 + 1], data.positions[k * 3 + 2]);
     }
     this.sampleAbs = new Float32Array(samples);
+    this.setRimParams({ nearFadePc: nearFadePcForExtent(data.extentPc) });
     this.refreshVisibility();
   }
 

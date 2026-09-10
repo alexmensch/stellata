@@ -56,7 +56,8 @@ module's `sids()` leg, attached by main.ts's roster loop (see
   `AV_SATURATED`, `ENVELOPE_TAPER_FRAC`, `MARCH_MIN_STEPS`,
   `MARCH_MIN_CHORD_T`). Vitest-pinned.
 - `cloud-rim-pure.ts` — the rim shell's authored constants (stipple grid,
-  contour width, alpha floor, `MIN_FWIDTH`), for the same reason.
+  contour width, alpha floor, `MIN_FWIDTH`), for the same reason, plus
+  `CLOUD_RIM_EXTENT_PC` / `CLOUD_RIM_NEAR_FADE_PC` (§ Rim shell render).
 - `cloud-glsl-drift.test.ts` — pins the GLSL's copies of both sets against
   those modules, since GLSL cannot import. The output dither's seed offset
   and 8-bit divisor are pinned here too, against `../hdr/tonemap/tonemap-pure.ts`,
@@ -198,6 +199,17 @@ absorption keeps working from inside.
 - **Chart:** the material swaps to `NormalBlending` ink and the shader
   emits a stippled silhouette contour — an fwidth-scaled band where
   n·v → 0, masked by a screen-space dot grid.
+
+The realistic arm also carries the shared camera-distance attenuation
+(`../fresnel-shell/README.md` § Camera-distance attenuation), so a rim
+fades out as the camera closes on it and a distant cloud reads dimmer than
+a near one on the same absolute pc scale as the Local Bubble wall. The
+chart arm returns before the shared chunk, which is what keeps the stipple
+outline free of it — a distance-varying ink density would break the flat
+printed-atlas convention. `CLOUD_RIM_NEAR_FADE_PC` is the near-fade reach
+for every cloud: one material serves all ~96, so the reach is the shared
+proportion of one representative radius (`CLOUD_RIM_EXTENT_PC`, 20 pc)
+rather than per-cloud.
 
 ## Labels
 
@@ -390,8 +402,12 @@ is no per-layer toggle; visibility is the declutter floor.
 Under `stellata.kinds.cloud.layer.*`:
 - `setOpacity(x)` — master rim-glow gain (dark mode)
 - `setColor(0xRRGGBB)` — override the shared rim blue
-- `setRimParams({alphaLimb, faceOnFloor, fresnelPower})` — rim shape,
-  shared vocabulary with the fresnel shells
+- `setRimParams({alphaLimb, faceOnFloor, fresnelPower, nearFadePc,
+  depthDimRefPc, depthPower})` — rim shape plus camera-distance
+  attenuation. Literally the same call as `stellata.kinds.shell`'s, over
+  one record; the depth pair is one absolute scale spanning both kinds, so
+  sweep it on both or the comparison it exists for says nothing
+  (`../fresnel-shell/README.md` § Camera-distance attenuation)
 - `setSteps(n)` — absorption raymarch step count
 - `setAbsorptionEnabled(on)` — absorption-pass kill switch for
   frame-cost differentials (`../debug/frame-cost/README.md`);

@@ -12,6 +12,7 @@ import {
   createShellSilhouetteLabel,
   isShellLabelResolvable,
 } from '../../fresnel-shell/fresnel-shell';
+import { nearFadePcForExtent } from '../../fresnel-shell/shell-distance-pure';
 import {
   SHELL_KEYS,
   type ShellCardInfo,
@@ -135,7 +136,12 @@ export class Heliopause extends FresnelShell {
     // renderOrder = 1: shares the slot with star glow (both are dim
     // chrome). src/client/README.md carries the full cross-layer ladder.
     super(
-      materials.fresnelShell({ colourHex: COLOUR_HEX, alphaLimb: ALPHA_LIMB }), 1);
+      materials.fresnelShell({
+        colourHex: COLOUR_HEX,
+        alphaLimb: ALPHA_LIMB,
+        nearFadePc: nearFadePcForExtent(HELIOPAUSE_EXTENT_PC),
+      }),
+      1);
     // Rotate the entire group so its local +Z aligns with the antiapex
     // direction in ICRS. The mesh inside scales + translates within
     // that rotated frame.

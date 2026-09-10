@@ -15,13 +15,14 @@ through `../../fresnel-shell/README.md` § The material seam.
 
 ```
 src/client/webgpu/fresnel-shell/
-  fresnel-rim-tsl.ts        TSL mirror of the stellata_fresnel_rim chunk.
-                            Shared with the cloud rim shells exactly as
-                            the GLSL chunk is.
-  fresnel-shell-tsl.ts      The shell surface: rim alpha over an authored
-                            chrome colour.
+  fresnel-rim-tsl.ts        TSL mirror of the stellata_fresnel_rim chunk —
+                            both its functions, the rim shape and the
+                            camera-distance attenuation. Shared with the
+                            cloud rim shells exactly as the GLSL chunk is.
+  fresnel-shell-tsl.ts      The shell surface: attenuated rim alpha over an
+                            authored chrome colour.
   shell-uniform-nodes.ts    TSL uniform-node twins of the GLSL factory's
-                            four slots, transcribed key-for-key.
+                            seven slots, transcribed key-for-key.
   tsl-shell-materials.ts    The factory implementing ShellMaterials.
 ```
 
@@ -35,6 +36,13 @@ alone, the same reasoning as three of the five solar-system surfaces
 
 `normalView` normalises after interpolation where the GLSL normalises at
 use; the drawn value is the same.
+
+`positionView` is the same built-in the camera-distance attenuation reads
+(`../../fresnel-shell/README.md` § Camera-distance attenuation), so that
+term costs no varying here either. Its math lives in
+`shell-distance-pure.ts` with the graph as thin composition over it, per
+`../tsl/README.md` § TSL test pattern leg 3 — what the graph renders is
+the A/B parity smoke, not a unit test.
 
 ## `FrontSide` is load-bearing, not a default
 

@@ -24,6 +24,7 @@ import {
   HELIOPAUSE_EXTENT_PC,
   HELIOPAUSE_LABEL,
 } from '../solar-system/heliopause/heliopause';
+import type { RimParams } from './fresnel-shell';
 import { SHELL_OBJECT_SIDS } from './shell-object-sids';
 import { pickShellSilhouette } from './shell-pick';
 import { SHELL_KEYS, ShellRegistry } from './shell-registry';
@@ -32,6 +33,10 @@ export interface ShellKindModule extends ObjectKindModule<'shell'> {
   /** The per-instance registry — the kind's internal runtime, exposed
    *  for tests and cross-shell reads. Populated by `attach`. */
   readonly registry: ShellRegistry;
+  /** Dev-console rim levers, applied to both shells (§ Dev-console
+   *  levers). The depth-dim pair has to be swept here and on
+   *  `kinds.cloud.layer` together — one absolute scale spans both. */
+  setRimParams(p: RimParams): void;
 }
 
 export function createShellKindModule(): ShellKindModule {
@@ -76,6 +81,11 @@ export function createShellKindModule(): ShellKindModule {
 
     get registry(): ShellRegistry {
       return registry;
+    },
+
+    setRimParams(p: RimParams): void {
+      heliopause?.setRimParams(p);
+      localBubble?.setRimParams(p);
     },
 
     async load(baseUrl: string): Promise<void> {
