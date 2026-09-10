@@ -10,7 +10,8 @@ browser reading it.
 src/client/webgpu/gate/
   webgpu-support.ts (+ test)     detectWebGpuSupport — capability probe.
   gate-advice-pure.ts (+ test)   adviceFor — the fix copy, per platform
-                                 AND per verdict.
+                                 AND per verdict. Also GATE_ELEMENT_ID,
+                                 the mounted takeover's id.
   gate-page.ts (+ test)          showWebGpuGate — builds and mounts the
                                  takeover. Styles: ../../styles.css
                                  `.webgpu-gate*`.
@@ -28,6 +29,15 @@ in the entry bundle and `main.ts` imports it statically — the same
 exemption `renderer-flag.ts` has (`../README.md` § Import boundary).
 `detectWebGpuSupport` therefore declares the slice of `navigator.gpu` it
 touches structurally rather than importing the typings.
+
+`gate-advice-pure.ts` carries a second constraint of the same shape: **it
+must stay loadable under Node**, because the headless perf runner imports
+`GATE_ELEMENT_ID` from it to tell a gated boot from a hung one
+(`scripts/perf/README.md` § What a run does). It touches no browser global
+today and must not start; the id lives here rather than beside the element
+it names for exactly that reason. Nothing in the vitest suite covers the
+runner's import graph — the runner is human-armed and never part of
+`pnpm test`.
 
 ## Two ways to fail, one page
 

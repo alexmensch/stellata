@@ -32,9 +32,9 @@ export const BAND_SIGMAS = 2;
  *  medians' own scatter describes sampling alone, and a dwell's run
  *  conditions move it further than that: the same vantage read 21.950 and
  *  21.464 ms across two runs of identical code, differing only in where the
- *  context sat in its run (stellata-8cg.49.27). Both forms were derived from
- *  the cold-to-cold spread of two pins on identical code —
- *  `pins/README.md` § Reading `--against-pin`.
+ *  context sat in its run. Both forms were derived from the cold-to-cold
+ *  spread of two pins on identical code — `pins/README.md` § Reading
+ *  `--against-pin`.
  *
  *  Here rather than in `pin-pure.ts` because `--baseline` and
  *  `--against-pin` must floor the same row the same way: the tighter of two

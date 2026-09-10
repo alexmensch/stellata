@@ -2,9 +2,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  GATE_ELEMENT_ID, GATE_HIDES, SUPPORT_AUDIT_LABEL, showWebGpuGate, starCountPhrase,
+  GATE_HIDES, SUPPORT_AUDIT_LABEL, showWebGpuGate, starCountPhrase,
 } from './gate-page';
-import type { UaHints } from './gate-advice-pure';
+import { GATE_ELEMENT_ID, type UaHints } from './gate-advice-pure';
 
 /** Element-shaped stub — the suite runs in vitest's 'node' environment,
  *  the same reason `typeahead.test.ts` builds its own. */

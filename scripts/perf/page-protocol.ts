@@ -7,7 +7,7 @@ import type {
   PassToggle, PriceFrameOptions, PriceFrameRow,
 } from '../../src/client/debug/frame-cost/frame-cost';
 import type { Stellata } from '../../src/client/stellata';
-import { GATE_ELEMENT_ID } from '../../src/client/webgpu/gate/gate-page';
+import { GATE_ELEMENT_ID } from '../../src/client/webgpu/gate/gate-advice-pure';
 import type { PassCounter } from './dwell-pure';
 import { GATE_BOOT_PREFIX, bootFailure } from './run-pure';
 import type { AdapterProbe, WebGlProbe, WebGpuProbe } from './schema';

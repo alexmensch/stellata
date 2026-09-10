@@ -205,9 +205,8 @@ describe('the whole-frame floor — one number, both gates', () => {
   // scatter at ~0.02 ms, so an unfloored band marks a 0.15 ms move — and a
   // move that size is what changing a context's POSITION in its run produces
   // on unchanged code: mw120 read 21.950 against 21.464 between two runs,
-  // 7th of 10 behind cool-downs against 1st of 2 cold (stellata-8cg.49.27).
-  // The floor is the pin's, so the tier that feeds the pin cannot gate
-  // tighter than the pin does.
+  // 7th of 10 behind cool-downs against 1st of 2 cold. The floor is the
+  // pin's, so the tier that feeds the pin cannot gate tighter than it does.
   it('floors a dwell band that sampling alone would draw far tighter', () => {
     const steady = { iqrMs: 0.135, samples: 240 };
     const row = only(diffRuns(
