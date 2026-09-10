@@ -121,6 +121,32 @@ describe('authoring scaffolding is dropped', () => {
   });
 });
 
+describe('a clip renders as the frame standing in for it', () => {
+  const clip =
+    '<video src="/site/hero.mp4" poster="/site/hero.jpg" aria-label="Sol behind Io" autoplay muted playsinline></video>';
+
+  it('becomes its poster, named by its label', () => {
+    expect(markdownRendition(page(clip), FIGURES)).toContain(
+      '![Sol behind Io](https://stellata.xyz/site/hero.jpg)',
+    );
+  });
+
+  // The anchor reads as empty while its only child is a <video>, so the
+  // order of the two passes decides whether a sight keeps its link.
+  it('keeps the media anchor a sight wraps it in', () => {
+    expect(markdownRendition(page(`<a href="/app/v/AQAA/">${clip}</a>`), FIGURES)).toContain(
+      '[![Sol behind Io](https://stellata.xyz/site/hero.jpg)](https://stellata.xyz/app/v/AQAA/)',
+    );
+  });
+
+  it.each([
+    ['poster', ' poster="/site/hero.jpg"', 'no poster'],
+    ['aria-label', ' aria-label="Sol behind Io"', 'no aria-label'],
+  ])('refuses a clip carrying no %s', (_, attribute, complaint) => {
+    expect(() => markdownRendition(page(clip.replace(attribute, '')), FIGURES)).toThrow(complaint);
+  });
+});
+
 describe('an element the derivation has no rule for stops the build', () => {
   it('names the tag rather than dropping its content', () => {
     expect(() => markdownRendition(page('<details><summary>Hi</summary></details>'), FIGURES)).toThrow(
