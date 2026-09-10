@@ -463,15 +463,13 @@ a.sight-media:hover {
 /* Figures are numbered plates, captioned like an atlas rather than a
    screenshot with a caption. */
 
-.plate {
-  margin: 0;
-}
 .plate img {
   border: var(--rule);
 }
 .plate-caption {
+  --flow-space: var(--space-2xs);
+
   max-inline-size: var(--measure);
-  margin-block-start: var(--space-2xs);
   font-size: var(--step--2);
   line-height: var(--leading-snug);
   color: var(--fg-dim);
@@ -636,7 +634,6 @@ a.sight-media:hover {
 /* ── Block: spec list ──────────────────────────────────────────────── */
 
 .spec-list {
-  margin: 0;
   padding: 0;
   list-style: none;
 }
