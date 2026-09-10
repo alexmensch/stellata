@@ -125,6 +125,7 @@ h3,
 p,
 ul,
 dl,
+dd,
 figure {
   margin: 0;
 }
@@ -365,9 +366,9 @@ video {
   border: var(--rule);
 }
 /* A cell subgrids the band's two rows, so a label that wraps to two lines
-   raises every value in that band rather than dropping its own. The label /
-   value separation is the value's padding, because a subgridded axis takes
-   its gutter from the parent — here the hairline. */
+   raises every value in that band rather than dropping its own. The label
+   carries the separation below itself, because a subgridded axis takes its
+   gutter from the parent — here the hairline. */
 .readout-cell {
   display: grid;
   grid-row: span 2;
@@ -376,8 +377,12 @@ video {
   padding-inline: var(--space-s);
   background: var(--bg);
 }
+.readout-cell dt {
+  align-self: start;
+  padding-block-end: var(--space-3xs);
+}
 .readout-value {
-  padding-block-start: var(--space-3xs);
+  align-self: center;
   font-size: var(--step-1);
   font-variant-numeric: tabular-nums;
   color: var(--fg);
