@@ -126,12 +126,31 @@ information.
   --baseline <a recent run>`. Two contexts, ~4 min, one arm. Direction
   against a band is what this tier claims, and two vantages claim it
   twice: mw120|webgpu carries a sound GPU stream, and sol|webgpu is the
-  second witness. Paste the `--baseline` table and say which run it was
-  read against.
+  second witness — the vantage that reproduces best, 22.421201 against
+  22.421199 ms on two independent cold runs, and the one a first load
+  actually shows. Not the dearest gated row: that is mw50|webgpu at
+  31.936, which cannot be pinned at all on `apple-m4-metal-3`
+  (stellata-8cg.54) and refused two cold runs on `trending`. A witness
+  that refuses is not a witness. Paste the `--baseline` table and say
+  which run it was read against. **`--baseline` prints; it does not set
+  the exit code** — a Tier 1 run exits 0 with a `✗` in its table, so the
+  verdict is read, never inferred from the status. Only `--against-pin`
+  fails a run.
 - **Tier 2 — passes, buffers, draw counts, the catalogue, or the
   instrument itself.** The full cold sweep, and it re-takes the pin:
   `--mode dwell --scenario all --backend both --cooldown-ms 120000
   --pin`, ~15–25 min. Everything from § What is pinned down is this tier.
+
+**"The instrument" in Tier 2 means what it records or how it samples**, not
+every file under `scripts/perf/`. A change to `pinFromRun`, `compareToPin`,
+the recorded schema, the sampling knobs or the clock a row is taken on
+re-takes the pin, because the committed rows stop describing the same
+measurement. A change to how a comparison is *judged or presented* —
+a band floor, a refusal, a metric column, a table's layout — leaves every
+recorded number where it was, so the pin stays comparable and no run is
+owed. Say which of the two a diff is when it touches the runner, and the
+tier follows. First applied by stellata-8cg.49.21 itself, which rewrote
+`--baseline`'s verdict and claimed Tier 0 on exactly this ground.
 
 **Tier 1 needs no run index and no filename convention.** "A recent run on
 this record set" is enforced by refusal rather than bookkeeping:
@@ -147,6 +166,16 @@ two vantages are exactly the ones a wall-clock row cannot resolve — sol's
 wall p50 sits at two refresh intervals and mw120's at one — so a row
 marked on wall would compare two quantised medians and refuse or fabricate
 by turns (`scripts/perf/README.md` § Comparing against a baseline).
+
+**And the same floor: `max(0.25 ms, 1 % of the baseline)`**, one constant
+in `scripts/perf/diff-pure.ts` that both gates apply. Tier 1 may not gate
+tighter than the Tier 2 it feeds, or it marks moves Tier 2 calls
+unresolved — which is what an unfloored band did, two sigma of the
+medians' own scatter being about 0.02 ms at 240 frames on a steady
+vantage. A run-condition difference clears that easily: the same vantage
+read 0.486 ms apart between a context sitting 7th of 10 behind cool-downs
+and 1st of 2 cold (stellata-8cg.49.27, still open on whether Tier 1's run
+shape should be pinned as well).
 
 **What is pinned.** `--mode dwell` at the five canon vantages (sol, earth,
 mw50, mw120, lg), 1280×800 at dpr 2 (4.096 Mpx), 240 frames, `raf-delta`,
