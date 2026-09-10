@@ -132,7 +132,12 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
     // `canonical.has` filtered them out. They reach one now and mint. The
     // collision-guard half is the assertion below and the `orphaned` set
     // above, and neither moves.
-    expect(reOwned.length).toBe(25);
+    //
+    // 25 → 26 with the curated HD corrections: hd:138917 leaves δ Ser A's
+    // record — its own Gaia source is SIMBAD's δ Ser A, which is HD 138918 —
+    // and the primaries admit 138917 as δ Ser B's own row on its own source.
+    // That is the paragraph above happening again, deliberately.
+    expect(reOwned.length).toBe(26);
     expect(reOwned.filter((d) => bridgeEndpoints.has(d))).toEqual([]);
   });
 });
@@ -187,6 +192,92 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('withheld sibling HD numbers
     expect([...carriedBy.values()].map((tyc) => parked.get(tyc))).toEqual(
       WITHHELD_ON_THEIR_OWN_ROW.map(() => 'no_parallax_published'),
     );
+  });
+});
+
+describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('override-freed HD numbers', () => {
+  // label-merge/README.md § What a freed number costs. A curated correction
+  // hands the neighbour's number back, and where the row that takes it does
+  // not build, the number resolves NOWHERE — worse reach than before the
+  // correction, which is the price the section states. The suite above keys on
+  // `extra-sibling-rendered` and so cannot see these; the two shapes end in
+  // the same place and one fix has to cover both.
+  const FREED = ['24071', '68255', '138917', '200496', '213051', '330122'];
+  const SHIPS: Record<string, string> = {
+    '24071': '7570-1586-1',    // f Eri B, on its own source
+    '138917': '933-1239-1',    // δ Ser B, on its own source
+    '200496': '5204-1584-2',   // 12 Aqr B, on its own source
+  };
+  const PARKS: Record<string, string> = {
+    '68255': '1381-1641-1',    // ζ¹ Cnc B, no bound source
+    '213051': '5226-1605-2',   // ζ¹ Aqr, no bound source
+  };
+  // No second Tycho entry names it, so no primary admits it.
+  const NO_ROW = ['330122'];
+
+  let freed: string[];
+  let rowsByHd: Map<string, { tyc: string; sourceId: string }>;
+  let parkedReason: Map<string, string>;
+
+  beforeAll(() => {
+    const flips = parseLabelFlipsTsv(
+      readFileSync(resolve(REPO_ROOT, LABEL_FLIPS_FILE), 'utf-8'),
+    ).filter((f) => f.disposition === 'override-value' && f.field === 'hd');
+    // A mutual swap frees nothing: the partner's override takes the value the
+    // other vacates, so only a spine value no override applies is freed.
+    const taken = new Set(flips.map((f) => f.applied));
+    freed = flips
+      .map((f) => f.spine)
+      .filter((v): v is string => v !== null && v !== '' && !taken.has(v))
+      .sort((a, b) => Number(a) - Number(b));
+
+    rowsByHd = new Map();
+    for (const { cells, idx } of dataRows(
+      readFileSync(MANIFEST_PATH, 'utf-8'),
+      ['tyc', 'hd', 'gaia_source_id'],
+      'membership-manifest.tsv',
+      'Re-run `pnpm run build:membership`.',
+    )) {
+      const hd = cells[idx.hd];
+      if (freed.includes(hd)) {
+        rowsByHd.set(hd, { tyc: cells[idx.tyc], sourceId: cells[idx.gaia_source_id] });
+      }
+    }
+
+    parkedReason = new Map(
+      [...dataRows(
+        readFileSync(PARKED_PATH, 'utf-8'),
+        ['tyc', 'reason'],
+        'parked-ledger.tsv',
+        'Re-run `pnpm run build:catalog`.',
+      )].map(({ cells, idx }) => [cells[idx.tyc], cells[idx.reason]]),
+    );
+  });
+
+  it('frees six numbers, the four mutual-swap cells freeing none', () => {
+    expect(freed).toEqual(FREED);
+  });
+
+  it('gives three of them a row that builds a record', () => {
+    for (const [hd, tyc] of Object.entries(SHIPS)) {
+      expect(rowsByHd.get(hd)?.tyc, `HD ${hd}`).toBe(tyc);
+      expect(rowsByHd.get(hd)?.sourceId, `HD ${hd} binds a source`).not.toBe('');
+      expect(parkedReason.get(tyc), `HD ${hd} ships`).toBeUndefined();
+    }
+  });
+
+  // The ratchet: each of these is a designation that resolved before the
+  // correction and resolves nowhere after it. One more is a finding, not
+  // drift — say why here and move the number, or give the row a distance.
+  it('leaves three resolving nowhere — two parked, one on no row at all', () => {
+    for (const [hd, tyc] of Object.entries(PARKS)) {
+      expect(rowsByHd.get(hd)?.tyc, `HD ${hd}`).toBe(tyc);
+      expect(rowsByHd.get(hd)?.sourceId, `HD ${hd} binds no source`).toBe('');
+      expect(parkedReason.get(tyc), `HD ${hd}`).toBe('no_parallax_published');
+    }
+    for (const hd of NO_ROW) expect(rowsByHd.has(hd), `HD ${hd}`).toBe(false);
+    expect(Object.keys(SHIPS).length + Object.keys(PARKS).length + NO_ROW.length)
+      .toBe(FREED.length);
   });
 });
 

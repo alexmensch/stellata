@@ -130,9 +130,9 @@ object: two Tycho entries SIMBAD folds onto one oid each ship their own row.
 
 ### What it adjudicates
 
-The two classes it answers in, the 219 rows no committed table could detect,
-the 10 it vindicates against IV/25, and the four-witness split of the 23 it
-contradicts: `scripts/catalog/simbad/README.md` § What the TYC → HD pull
+The two classes it answers in, the 220 rows no committed table could detect,
+the 10 it vindicates against IV/25, and the four-witness split of the 15 it
+still contradicts: `scripts/catalog/simbad/README.md` § What the TYC → HD pull
 adjudicates and § Which witness decides a close pair's HD. That folder owns
 what a consumer may conclude from these tables; this one owns what they are.
 

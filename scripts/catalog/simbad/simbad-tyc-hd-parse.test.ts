@@ -5,7 +5,11 @@ import { beforeAll, describe, it, expect } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { dataRows } from '../parse/corpus-tsv';
-import { parseTyc2HdTsv } from '../classic-ids/classic-ids-parse';
+import { parseBsc5Tsv, parseTyc2HdTsv } from '../classic-ids/classic-ids-parse';
+import {
+  CLASSIC_ID_OVERRIDES_FILE,
+  parseLabelOverridesTsv,
+} from '../classic-ids/label-merge/label-merge-pure';
 import {
   MEMBERSHIP_MANIFEST_FILE,
   parseManifestTsv,
@@ -100,7 +104,7 @@ const SRC_TYC2_HD = AT(TYC2_HD_FILE);
 const SRC_MANIFEST = AT(MEMBERSHIP_MANIFEST_FILE);
 const ADJUDICATION_INPUTS = [SRC_SIMBAD_TYC_HD, SRC_TYC2_HD, SRC_MANIFEST];
 
-// Pins data/simbad/README.md § What it adjudicates. The figures are the
+// Pins README.md § What the TYC → HD pull adjudicates. The figures are the
 // pull's whole justification, so they are asserted rather than narrated: a
 // re-pull that moves one fails here instead of ageing that prose.
 describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
@@ -153,24 +157,28 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
     });
 
     it('answers for the stated share of the rows carrying both cells', () => {
-      expect(counts.bothCells).toBe(353347);
-      expect(counts.answered).toBe(331734);
+      expect(counts.bothCells).toBe(353352);
+      expect(counts.answered).toBe(331739);
       expect(counts.silent).toBe(21613);
     });
 
-    it('finds 219 dissents, every one on an internally consistent IV/25 entry', () => {
-      expect(counts.dissent).toBe(219);
+    it('finds 220 dissents, every one on an internally consistent IV/25 entry', () => {
+      expect(counts.dissent).toBe(220);
       expect(counts.dissentInconsistent).toBe(0);
     });
 
-    it('splits them 209 manifest-faithful / 10 vindicating the manifest', () => {
-      expect(counts.faithful).toBe(209);
+    it('splits them 210 manifest-faithful / 10 vindicating the manifest', () => {
+      expect(counts.faithful).toBe(210);
       expect(counts.vindicating).toBe(10);
       expect(counts.faithful + counts.vindicating).toBe(counts.dissent);
     });
 
-    it('finds 23 rows both witnesses contradict', () => {
-      expect(counts.bothAgainst).toBe(23);
+    // 23 before the eight rows the four-witness rule licensed were asserted
+    // (README.md § Which witness decides a close pair's HD). What is left is
+    // the twelve the rule refuses, the two it cannot answer for, and α Psc,
+    // whose correction is held back — see the move set's own comment.
+    it('finds 15 rows both witnesses contradict', () => {
+      expect(counts.bothAgainst).toBe(15);
     });
 
     it('reproduces the two dissents measured by hand against live SIMBAD', () => {
@@ -186,11 +194,15 @@ const SPLIT_INPUTS = [...ADJUDICATION_INPUTS, SRC_SIMBAD_SPTYPE];
 /** The move set of README.md § Which witness decides a close pair's HD: the
  *  rows all four witnesses agree the record's own component is not the one its
  *  HD cell names. Enumerated rather than counted, because the assertion those
- *  rows license moves canonical SID keys and each has to be inspected. */
-const FOUR_WITNESS_MOVE = [
-  '1381-1638-1', '40-1338-1', '5204-1584-1', '5226-1605-1', '7570-1585-1',
-  '7902-891-1', '7902-1905-1', '8314-802-1', '933-1238-1',
-].sort();
+ *  rows license moves canonical SID keys and each has to be inspected.
+ *
+ *  **Eight of the nine are asserted and so no longer contested.** α Psc is the
+ *  one left, and it stays until promotion's twin guard stops keying on the
+ *  anchor's Bayer letter: correcting the record to HD 12447 letters the anchor
+ *  A, the guard stops firing on the 02020+0246-AB row, and the row mints a copy
+ *  of its own anchor. An empty set here means that landed and the rule has no
+ *  remaining reach. */
+const FOUR_WITNESS_MOVE = ['40-1338-1'];
 
 /** No SIMBAD object for the record's own source, so the fourth witness is
  *  silent and the rule leaves the row alone. */
@@ -210,7 +222,8 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     }
     const simbad = parseSimbadTycHdTsv(readFileSync(SPLIT_INPUTS[0], 'utf-8'));
 
-    // The rows both TYC witnesses contradict — § What it adjudicates' 23.
+    // The rows both TYC witnesses contradict — the 15 of README.md § What the
+    // TYC → HD pull adjudicates, the eight asserted having left the class.
     // Keyed on the TYC, not the source: a mutual swap is two rows.
     const contested = new Map<string, string>();
     for (const row of parseManifestTsv(readFileSync(SPLIT_INPUTS[2], 'utf-8'))) {
@@ -253,8 +266,8 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     for (const list of [move, refuse, silent]) list.sort();
   });
 
-  it('splits the 23 contested rows nine / twelve / two', () => {
-    expect(move.length + refuse.length + silent.length).toBe(23);
+  it('splits the remaining contested rows one / twelve / two', () => {
+    expect(move.length + refuse.length + silent.length).toBe(15);
     expect(move).toEqual(FOUR_WITNESS_MOVE);
     expect(silent).toEqual(FOUR_WITNESS_SILENT);
     expect(refuse).toHaveLength(12);
@@ -267,3 +280,111 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     expect(refuse).toContain('2019-1250-1');
   });
 });
+
+const BSC5_FILE = 'data/classic-ids/bsc5.tsv';
+const OVERRIDES_FILE = CLASSIC_ID_OVERRIDES_FILE;
+const SRC_BSC5 = AT(BSC5_FILE);
+const SRC_OVERRIDES = AT(OVERRIDES_FILE);
+const ASSERTED_INPUTS = [...SPLIT_INPUTS, SRC_BSC5, SRC_OVERRIDES];
+
+/** The one override that keeps the spine's value instead of asserting one:
+ *  Propus, whose evidence is the override file's own header. It is a refusal,
+ *  so the witnesses below do not apply to it. */
+const REFUSAL_SOURCE_ID = '3377072212924335488';
+
+/** Applying an override takes its row out of the four-witness split above:
+ *  `contested` is keyed on the manifest's SHIPPED hd, and an asserted value is
+ *  one both TYC witnesses already name, so the row stops being contested the
+ *  moment it lands. The decisive witness — SIMBAD's object for the record's own
+ *  Gaia source — would then never be weighed on it again. This suite re-derives
+ *  all four on the value the file ASSERTS rather than on the cell shipped, so a
+ *  re-pull that re-attributes one of the eight fails here. */
+describe.skipIf(!ASSERTED_INPUTS.every(lfsContentReadable))(
+  'the asserted move set, against its own witnesses',
+  () => {
+    let asserted: { sourceId: string; tyc: string; hd: number; hr: number | null }[];
+    let refusals: string[];
+    let ivHd: Map<string, Set<number>>;
+    let simbad: Map<string, SimbadTycHdRow>;
+    let objectOfSource: Map<string, string>;
+    let hdOfHr: Map<number, number | null>;
+
+    beforeAll(() => {
+      ivHd = new Map();
+      for (const row of parseTyc2HdTsv(readFileSync(SRC_TYC2_HD, 'utf-8'))) {
+        const at = ivHd.get(row.tyc);
+        if (at === undefined) ivHd.set(row.tyc, new Set([row.hd]));
+        else at.add(row.hd);
+      }
+      simbad = parseSimbadTycHdTsv(readFileSync(SRC_SIMBAD_TYC_HD, 'utf-8'));
+      hdOfHr = new Map(
+        parseBsc5Tsv(readFileSync(SRC_BSC5, 'utf-8')).map((r) => [r.hr, r.hd]),
+      );
+
+      const overrides = parseLabelOverridesTsv(readFileSync(SRC_OVERRIDES, 'utf-8'));
+      const hdBySource = new Map<string, number>();
+      const hrBySource = new Map<string, number>();
+      refusals = [];
+      for (const [key, value] of overrides) {
+        const [sourceId, field] = key.split('\t');
+        if (value === null) { refusals.push(sourceId); continue; }
+        if (field === 'hd') hdBySource.set(sourceId, Number(value));
+        if (field === 'hr') hrBySource.set(sourceId, Number(value));
+      }
+
+      const tycOfSource = new Map<string, string>();
+      for (const row of parseManifestTsv(readFileSync(SRC_MANIFEST, 'utf-8'))) {
+        if (hdBySource.has(row.gaia_source_id)) {
+          tycOfSource.set(row.gaia_source_id, row.tyc.trim());
+        }
+      }
+      asserted = [...hdBySource].map(([sourceId, hd]) => ({
+        sourceId,
+        tyc: tycOfSource.get(sourceId) ?? '',
+        hd,
+        hr: hrBySource.get(sourceId) ?? null,
+      }));
+
+      objectOfSource = new Map();
+      for (const line of readFileSync(SRC_SIMBAD_SPTYPE, 'utf-8').split('\n').slice(1)) {
+        if (line === '') continue;
+        const cells = line.split('\t');
+        if (hdBySource.has(cells[7])) objectOfSource.set(cells[7], cells[1]);
+      }
+    });
+
+    it('asserts eight records and refuses one', () => {
+      expect(asserted).toHaveLength(8);
+      expect(refusals).toEqual([REFUSAL_SOURCE_ID]);
+      expect(asserted.filter((a) => a.tyc === '')).toEqual([]);
+    });
+
+    it('has both TYC witnesses naming the asserted HD for the record\'s own entry', () => {
+      for (const { tyc, hd } of asserted) {
+        expect(ivHd.get(tyc), `IV/25 for ${tyc}`).toContain(hd);
+        expect(hdNumbers(simbad.get(tyc)!), `SIMBAD for ${tyc}`).toContain(hd);
+      }
+    });
+
+    it('has the record\'s own source resolving to the component that entry names', () => {
+      for (const { sourceId, tyc } of asserted) {
+        expect(objectOfSource.get(sourceId), `source ${sourceId}`)
+          .toBe(simbad.get(tyc)!.mainId);
+      }
+    });
+
+    // The pair V/50 publishes, not two cells chosen separately: an HR moved
+    // without its HD (or onto an HD V/50 pairs with a third number) composes a
+    // pair no catalogue prints. HD 330123 is the record carrying no HR, and
+    // V/50 carries neither of its numbers — so `hr` absent is only legal where
+    // the asserted HD is absent from V/50 too.
+    it('pairs every asserted HR with its asserted HD in V/50', () => {
+      const hrOfHd = new Map<number, number>();
+      for (const [hr, hd] of hdOfHr) if (hd !== null) hrOfHd.set(hd, hr);
+      for (const { hd, hr } of asserted) {
+        if (hr === null) expect(hrOfHd.has(hd), `V/50 has an HR for HD ${hd}`).toBe(false);
+        else expect(hdOfHr.get(hr), `V/50 pairs HR ${hr}`).toBe(hd);
+      }
+    });
+  },
+);

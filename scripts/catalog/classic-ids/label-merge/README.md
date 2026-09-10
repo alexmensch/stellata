@@ -146,7 +146,7 @@ that is a distance problem rather than a label one: all six park
 **The merge may not turn an unambiguous spine designation into an ambiguous
 one** — the rule, and why attaching a designation another record holds costs
 both records their SID key rather than buying one, is
-`docs/catalog-driver.md` § 4. It fires on 31 cells; p Eridani is the case, the
+`docs/catalog-driver.md` § 4. It fires on 29 cells; p Eridani is the case, the
 overlay attaching HIP 7751 to the HD 10361 component. A record whose only
 claim is a duplicate's is corrected as a merge decision
 (`../../membership/README.md`).
@@ -161,9 +161,28 @@ proposal can re-expose a value its partner had proposed to vacate.
 `data/classic-ids/classic_id_overrides.tsv` pins one record's one identifier —
 an explicit value, or empty for "keep the spine's". It is for the case
 `docs/catalog-driver.md` § 4 names: review finding the CDS join wrong. It holds
-**one row**, whose evidence the file's own header states: Propus, where a Gaia
-source keyed to the wrong component of a resolved Tycho-2 pair would take
-η Gem's own HD off the star.
+**16 rows**, and they are two shapes rather than 16 judgements. The count is
+`labelOverridden` summed across the identifiers in
+`../../membership/membership-manifest-expected.json`.
+
+**One is a refusal.** Propus, where a Gaia source keyed to the wrong component
+of a resolved Tycho-2 pair would take η Gem's own HD off the star; the file's
+own header states the evidence.
+
+**Fifteen are a RULE's output**, eight records' `hd` and `hr` moved together
+because the record ships its neighbour's number and all four witnesses agree
+which component the record is (`../../simbad/README.md` § Which witness decides
+a close pair's HD). They sit here rather than in a mechanism of their own
+because the rule's reach is nine records and one of those is held back: a curated
+file whose rows are a stated rule's output, each carrying the component the
+witnesses named, is the honest shape for a set that small. **HD and HR move
+together or not at all** — V/50 publishes them as a pair, so moving one alone
+composes a pair no catalogue prints, and the one record of the eight carrying no
+HR moves a single field.
+
+An override is applied before the collision guard and before the extras
+partition, so a curated value neither suppresses nor aliases: it is what the
+record ships.
 
 Four shapes that LOOK like exceptions are reached mechanically instead, and
 the file's header names the first three: a proposal that would make another
@@ -175,6 +194,48 @@ letter (§ The gl comparison is specificity-aware). The fourth is upstream of
 this file entirely — IV/27A stating a Bayer or Flamsteed designation for a
 star that is not the one it names, which leaves the cross index before any
 consumer reads it (`../README.md` § One designation, two HD numbers).
+
+### What a freed number costs
+
+**Correcting a crossed cell frees the neighbour's number, and the freed number
+is not guaranteed a record.** It reaches whatever the primaries admit for it,
+and admission is not a promise of a record
+(`../../membership/README.md` § Admission is not a promise of a record). Five
+of the eight freed an HD the primaries then admitted as a row of its own; three
+of those five build a record and two park `no_parallax_published`. So the
+number ships nowhere, where before the correction it shipped on the WRONG star:
+
+| Freed | Lands on | Ships |
+|---|---|---|
+| HD 24071 · HR 1189 | `7570-1586-1`, f Eri B | a record |
+| HD 138917 · HR 5788 | `933-1239-1`, δ Ser B | a record |
+| HD 200496 · HR 8058 | `5204-1584-2`, 12 Aqr B | a record |
+| HD 68255 · HR 3210 | `1381-1641-1`, no bound source | parked |
+| HD 213051 · HR 8558 | `5226-1605-2`, no bound source | parked |
+| HD 330122 | no manifest row — no Tycho entry names it | nothing |
+
+**Five designations therefore leave the search index** — HD 68255, HD 213051,
+HD 330122, HR 3210 and HR 8558. A parked row builds no record, so its `hd` /
+`hr` become no key on `hdMap` / `hrMap`
+(`src/client/typeahead/README.md` § Star search); checked against the built
+artifact rather than reasoned about, and re-checkable there:
+
+```
+jq '[.[] | .hd] | index(68255)' public/search-index.json     # null
+```
+ That is the correction's real
+price and it is paid knowingly: a number resolving to the wrong star is worse
+than one resolving to nothing, and the two parked rows are `stellata-hooj.13`'s
+class — the number is unreachable for want of a distance, not for want of a
+label rule. HD 330122 is the other shape, the freed number no second Tycho
+entry names — the case § A withheld number attaches to no record already
+describes for the withheld set.
+
+The split is a ratchet, not a note: `../parity-ledger.test.ts` § override-freed
+HD numbers pins which three ship and which three do not, so a seventh freed
+number, or one of these three changing side, fails rather than ageing this
+table. It keys on the `override-value` disposition where the withheld ratchet
+keys on `extra-sibling-rendered`, which is why they are two suites and not one.
 
 ## What the merge compares values on
 

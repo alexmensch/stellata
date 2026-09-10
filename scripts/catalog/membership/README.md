@@ -3,8 +3,8 @@
 `data/membership/membership-manifest.tsv` is one row per record the frozen
 primaries admit: the spine's 313,257 rows re-keyed on the designations the
 primaries publish for them, less the one a correction folds
-(§ Correcting a merge decision), plus the 63,671 records the primaries name
-that AT-HYG's subset never carried — 376,927 rows. **`readStars` walks it, and
+(§ Correcting a merge decision), plus the 63,676 records the primaries name
+that AT-HYG's subset never carried — 376,932 rows. **`readStars` walks it, and
 membership is exactly these rows less the § 6.1 parks**
 (`../parse/README.md` § Per-row pipeline). It is the artifact that retires
 `data/athyg/inherited-spine.tsv` as the build's input; the contract is
@@ -312,11 +312,11 @@ The consequences, measured 2026-09-06:
 
 | Outcome | Groups | What it is |
 |---|---|---|
-| `admitted:hd_link_gap` | 54,811 | IV/25 star, lowest admitted HD < 100,000 — AT-HYG's link defect |
-| `admitted:hd_omitted` | 5,060 | IV/25 star, HD ≥ 100,000 |
+| `admitted:hd_link_gap` | 54,813 | IV/25 star, lowest admitted HD < 100,000 — AT-HYG's link defect |
+| `admitted:hd_omitted` | 5,063 | IV/25 star, HD ≥ 100,000 |
 | `admitted:hip_omitted` | 444 | I/239 HIP with no IV/25 star |
 | `admitted:cns5_census` | 3,356 | CNS5 `GJ 1xxxx` row |
-| `component:<anchor>` | 471 | every designation it arrived with is another record's. 466 are the second Tycho-2 entry of a resolved pair whose HD (and, through Tycho-2's `hip`, HIP) a spine record carries; 5 are the second of a pair neither component of which is on the spine. Not a row; ledgered onto the record it resolves to |
+| `component:<anchor>` | 466 | every designation it arrived with is another record's. 461 are the second Tycho-2 entry of a resolved pair whose HD (and, through Tycho-2's `hip`, HIP) a spine record carries; 5 are the second of a pair neither component of which is on the spine. Not a row; ledgered onto the record it resolves to. Five left the class when the curated HD corrections freed the number their anchor was wrongly displaying (`../classic-ids/label-merge/README.md` § Curated overrides) |
 | source left empty, on a spine record | 108 | Gaia fitted one source where Tycho-2 resolved two stars |
 | source left empty, gate refused | 121 | the raw binding is in `rejected_bindings.tsv` |
 
@@ -378,9 +378,20 @@ arithmetic and label-flips replay:
   the same-as graph over the manifest's designations plus
   `data/sid/sameas-overrides.tsv`, ambiguous designations dropped, the row
   keyed on its first ladder-ranked designation the graph knows. A lower-ranked
-  designation the merge moved to a sibling (the 36 mutual HD/HR swaps) does not
-  split the match, because the SID never rode on it — which
-  `../classic-ids/parity-ledger.test.ts` pins from the other side.
+  designation the merge moved to a sibling does not split the match, because
+  the SID never rode on it — which `../classic-ids/parity-ledger.test.ts` pins
+  from the other side. **10** `hd` / `hr` cells move that way today; the figure
+  is derived rather than pinned, so recompute it rather than trusting this
+  line:
+
+  ```
+  awk -F'\t' 'NR>1 && ($3=="hd"||$3=="hr") {
+    if ($4!="") spine[$3 FS $4]=$1
+    if ($6!="") rows[NR]=$1 FS $3 FS $6 }
+    END { for (r in rows) { split(rows[r], f, FS)
+            k=f[2] FS f[3]; if (k in spine && spine[k]!=f[1]) n++ }
+          print n+0 }' data/classic-ids/label_flips.tsv
+  ```
 - **(ii)** the manifest rows no spine row reaches are exactly the
   `admitted:*` rows of `additions-ledger.tsv`, per-reason counts pinned; every
   `component:` row names a manifest designation and is itself no manifest row.

@@ -23,14 +23,14 @@ scripts/catalog/simbad/
 ## What the TYC → HD pull adjudicates
 
 Held against the manifest's shipped `hd` and IV/25's HD for the row's own TYC,
-over the 331,734 manifest rows carrying both a TYC and an HD that this file
+over the 331,739 manifest rows carrying both a TYC and an HD that this file
 answers for — the two classes, and only the first is reachable without it:
 
-- **SIMBAD shares no HD with IV/25 on the row's own TYC — 219 rows.** IV/25 is
+- **SIMBAD shares no HD with IV/25 on the row's own TYC — 220 rows.** IV/25 is
   internally consistent on every one (`n_hd=1 n_tyc=1`, and its HD→TYC
   direction agrees with its TYC→HD one), so **no committed table could detect
   this class**. It splits two ways, and the split is the load-bearing part:
-  - **209** where the manifest faithfully carries IV/25's HD and SIMBAD
+  - **210** where the manifest faithfully carries IV/25's HD and SIMBAD
     rejects both. Many are mutual swaps between a pair's two entries, and the
     set is full of named stars: τ Oph, ξ Sco and ε² Lyr (both entries of
     each), 20 Lyn, 8 Lac, 65 Psc, 55 Eri, ε Ari, μ¹ Cyg.
@@ -43,23 +43,27 @@ answers for — the two classes, and only the first is reachable without it:
   **Compare against IV/25's HD SET for the TYC, never one row of it.** An
   entry IV/25 marks `n_hd=2` occupies **two rows**, one per HD — 197 TYCs do —
   so a single-valued lookup keeps one and reads SIMBAD's agreement with the
-  other as a disagreement. That is the difference between 219 and the 226 this
-  section first reported: all 7 of the surplus were rows where SIMBAD names an
-  HD IV/25 does publish for the entry, on the row the lookup dropped. β Lyr is
-  the shape — IV/25 gives TYC 2642-2929-1 both 174638 and 174639, SIMBAD says
-  174638, the manifest ships 174638, and nothing disagrees with anything.
-- **SIMBAD and IV/25 agree and the manifest ships a different HD — 23 rows.**
-  Both TYC witnesses against the shipped cell: α Psc A, f Eri A, 32 Eri B,
-  β Mon B, k¹ Pup, ζ¹ Cnc A, ζ Boo B, ε Boo B, δ Ser A, ρ Her A, κ¹/κ² CrA (a
-  mutual swap), ε¹ Lyr B, 12 Aqr A, ζ² Aqr, and 8 plain-HD stars.
+  other as a disagreement. That is the difference between 220 and the 227 a
+  single-valued lookup reads: all 7 of the surplus are rows where SIMBAD names
+  an HD IV/25 does publish for the entry, on the row the lookup dropped. β Lyr
+  is the shape — IV/25 gives TYC 2642-2929-1 both 174638 and 174639, SIMBAD
+  says 174638, the manifest ships 174638, and nothing disagrees with anything.
+- **SIMBAD and IV/25 agree and the manifest ships a different HD — 15 rows.**
+  Both TYC witnesses against the shipped cell: α Psc A, 32 Eri B, β Mon B,
+  k¹ Pup, ζ Boo B, ε Boo B, ρ Her A, ε¹ Lyr B, CD-29 12513B, 6 plain-HD stars.
 
   **Two witnesses agreeing about a TYC is not two witnesses agreeing about the
-  RECORD**, and this section read the 23 as manifest errors "with no remaining
-  doubt" before that was measured. A fourth witness splits them, and it does
-  not back the shipped cell on all 23: § Which witness decides a close pair's
-  HD partitions them and carries the enumerated move set.
+  RECORD**, and this section read this class as manifest errors "with no
+  remaining doubt" before that was measured. A fourth witness splits them and
+  backs the shipped cell on most: § Which witness decides a close pair's HD
+  partitions them and carries what is left of the move set.
 
-So 232 shipped HD cells are contradicted and 10 are vindicated against the
+  **The class was 23 until the eight `stellata-hooj.14` asserted left it** —
+  an asserted row ships the HD both TYC witnesses name, so it stops being
+  contradicted. Why that means nothing here can re-flag one: § Which witness
+  decides a close pair's HD.
+
+So 225 shipped HD cells are contradicted and 10 are vindicated against the
 printed index. Both of the two dissents `stellata-3bsf.50` measured live
 reproduce exactly — π Aql (IV/25 187259, SIMBAD 187260) and TYC 2772-917-1
 (224635 / 224636) — which is what says the file agrees with the hand
@@ -73,9 +77,12 @@ A consumer therefore has three verdicts to handle, not two — agrees, dissents,
 and silent, the last being the rows the pull answers for at all (§ Which
 witness decides a close pair's HD, Silence is silence).
 
-**No consumer reads it on the build path yet.** It is the evidence a rule
-needs, the rule it settles is the next section, and asserting what that rule
-licenses is `stellata-hooj.14`.
+**No consumer reads it on the build path**, and the rule it settles — the next
+section — reaches the build through curation rather than a join: eight of the
+nine records it licenses are asserted as rows of
+`data/classic-ids/classic_id_overrides.tsv` (`stellata-hooj.14`), each carrying
+the component the witnesses named. α Psc is the ninth, held back on
+`stellata-hooj.16`.
 
 ## Which witness decides a close pair's HD
 
@@ -140,6 +147,33 @@ absence as agreement.
 
 The partition is pinned in `simbad-tyc-hd-parse.test.ts` § the four-witness
 split, over the committed tables, so a re-pull that moves a row fails the suite
-rather than ageing this section. Asserting the move set — both fields, the SID
-keys that follow and the sibling admissions that follow those — is
-`stellata-hooj.14`.
+rather than ageing this section.
+
+**An assertion takes its row out of that partition, so a second suite is what
+guards it.** The contested set is keyed on the manifest's SHIPPED HD, and an
+asserted row ships the HD both TYC witnesses name — so the row stops being
+contested the moment the override lands, and the fourth witness would never be
+weighed on it again. `simbad-tyc-hd-parse.test.ts` § the asserted move set
+re-derives all four on the value ASSERTED instead, and pins V/50's HD↔HR
+pairing, which the move-together rule turns on and nothing else checks. That is
+also why § What the TYC → HD pull adjudicates counts 15 rather than 23: the
+eight left the class by being fixed, not by being re-measured.
+
+**Eight of the nine are asserted**, in
+`data/classic-ids/classic_id_overrides.tsv` (`../classic-ids/label-merge/README.md`
+§ Curated overrides), and the move set the test pins is what is left. What the
+assertion cost: `labelOverridden` hd 1 → 9 / hr 0 → 7, five freed HD numbers
+admitted as manifest rows of their own — three building a record (f Eri B,
+δ Ser B, 12 Aqr B) and two parking — one `hd:` SID minted (δ Ser B; the other
+two already keyed their designations as promoted companions, so
+`companionPromoted` falls by the 2 that `companionAlreadyInCatalog` gains and
+`recordCount` nets +1), `namingDuplicateLabels` 48 → **47**. Five designations
+leave the search index in the trade
+(`../classic-ids/label-merge/README.md` § What a freed number costs). Each
+record's spectral type — keyed on its Gaia source, so independent of every
+witness above — now matches the component whose HD it carries.
+
+**α Psc is the ninth and is held back.** Correcting it letters the anchor A
+where the authority letters HD 12446 B, and promotion's twin guard keys on
+exactly that letter, so the 02020+0246-AB row would mint a copy of its own
+anchor again — the defect `sid:193218` was retired for. `stellata-hooj.16`.
