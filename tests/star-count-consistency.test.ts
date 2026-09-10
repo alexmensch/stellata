@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { catalogChunkFilename, readCatalogHeader } from '../scripts/catalog/record/catalog-pure';
-import { gitFiles } from './walk-files';
+import { gitFiles } from '../scripts/util/walk-files';
 
 const ROOT = resolve(__dirname, '..');
 const CHUNK = join(ROOT, 'public', catalogChunkFilename(0));

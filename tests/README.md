@@ -130,16 +130,31 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-
                          ledger.tsv is an LFS pointer stub (the bare CI
                          test job); runs for real in the sid-ledger-guard
                          job and locally.
-site-claims.test.ts      The public homepage's numeric claims, re-derived
-                         from what they describe: the catalogue count is
-                         the application's own Credits rows (and the
-                         per-subsystem table must still sum to it), and
-                         the reference figure is a floor the science
-                         corpus has to clear — bounded above too, so a
-                         conservative claim cannot quietly become a
-                         wrong-by-an-order-of-magnitude one.
-                         `src/site/README.md` § The homepage's
-                         claims.
+site-claims.test.ts      No figure on a public page is a literal: each
+                         readout cell must still carry its %VITE_*%
+                         substitution rather than a number. Then the
+                         derivations behind them
+                         (scripts/site/site-metrics.ts) — the credited
+                         source count pinned, the per-subsystem table
+                         still summing to it, and the reference scan
+                         bounded both ways, since a pattern that matches
+                         nothing and one that matches ordinary prose fail
+                         in opposite directions. `src/site/README.md`
+                         § Numbers in copy.
+site-css-rules.test.ts   The public stylesheet answers to its container and
+                         to the reader's font size, never to a viewport
+                         measurement: no width/height media query, no pixel
+                         type size, every font-size a Utopia scale step. A
+                         bespoke clamp() is the drift this catches — it
+                         breaks the property that a heading and the space
+                         above it move together. `src/site/README.md`
+                         § Responsiveness has no breakpoints.
+site-dev-routing.test.ts The dev server's routing table held against the
+                         deploy's: both legacy share transports 301,
+                         /app/** gets the application document, the root
+                         gets the homepage, everything else 404s. Pairs
+                         with src/worker.test.ts, which pins the same
+                         table on the production side.
 skill-guard.test.ts      Behavioural pins for scripts/hooks/skill-guard.sh,
                          one describe per skill gate (cube-css, code-craft);
                          /scripts/hooks/README.md#how-skill-guard-works.
@@ -201,21 +216,20 @@ webgpu-import-boundary.test.ts
                          bundle (/src/client/webgpu/README.md#import-boundary--nothing-webgpu-in-the-entry-bundle).
 doc-pointer-pure.ts      Not a test — extraction, anchor collection and
                          path resolution for doc-pointer-resolution.test.ts.
-walk-files.ts            Not a test — file enumeration the scanners above
-                         share. `walkFiles` is a recursive walk taking
-                         `include` / `skipDir` predicates, and follows
-                         symlinked directories, which public/ carries.
-                         `gitFiles` is git's list (tracked, optionally
-                         untracked-but-not-ignored), for a scan whose
-                         scope is the repo rather than a folder list.
-                         Also `isProductionTs`, the include predicate the
-                         TSL scanners share: a .ts that is neither a test
-                         nor an ambient declaration.
-                         webgpu-import-boundary.test.ts keeps
-                         its own broader `isClientSource` — a declaration
-                         file can carry an import, so that corpus wants
-                         globals.d.ts in scope.
 ```
+
+The recursive file walk the scanners above share lives in
+`scripts/util/walk-files.ts` — `scripts/site/site-metrics.ts` reads the
+same corpus at build time, so it is repo plumbing rather than a test
+helper. `walkFiles` is a recursive walk taking `include` / `skipDir`
+predicates, and follows symlinked directories, which public/ carries.
+`gitFiles` is git's list (tracked, optionally untracked-but-not-ignored),
+for a scan whose scope is the repo rather than a folder list. It carries
+`isProductionTs` too, the include predicate the three
+TSL scanners share: a `.ts` that is neither a test nor an ambient
+declaration. `webgpu-import-boundary.test.ts` keeps its own broader
+`isClientSource` — a declaration file can carry an import, so that corpus
+wants `globals.d.ts` in scope.
 
 Per-subsystem tests live next to their code (`*.test.ts` / `*.test.py`
 co-located with the module under test); only repo-wide invariants
