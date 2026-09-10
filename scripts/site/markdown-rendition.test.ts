@@ -20,6 +20,12 @@ const FIGURES = {
 
 const home = (): string => markdownRendition(HOME, FIGURES);
 
+/** The preamble is derived from these two, so the suite reads them rather
+    than restating copy the page is free to rewrite. */
+const titleOf = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1];
+const descriptionOf = (html: string): string =>
+  /<meta[^>]*\sname="description"[^>]*\scontent="([^"]*)"/.exec(html)![1];
+
 /** A whole page, so a rule can be checked without the homepage's bulk. */
 function page(body: string, head = ''): string {
   return `<!doctype html><html lang="en"><head><title>A page</title>
@@ -30,16 +36,12 @@ function page(body: string, head = ''): string {
 
 describe('the rendition opens the way an agent client expects', () => {
   it('leads with the page title as its one top-level heading', () => {
-    expect(home().split('\n')[0]).toBe(
-      '# Stellata — 3D star catalogue and model of the measured universe',
-    );
+    expect(home().split('\n')[0]).toBe(`# ${titleOf(HOME)}`);
     expect(home().match(/^# /gm)).toHaveLength(1);
   });
 
   it('follows it with the meta description as a summary blockquote', () => {
-    expect(home()).toContain(
-      '> A 3D model of the universe you fly through, built only from published',
-    );
+    expect(home()).toContain(`> ${descriptionOf(HOME)}`);
   });
 
   it('points back at the HTML it was derived from', () => {
