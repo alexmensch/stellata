@@ -84,3 +84,29 @@ export function markerVerdict(exists: boolean, ageMs: number, maxAgeMs: number):
   if (!exists) return 'absent';
   return ageMs > maxAgeMs ? 'stale' : 'armed';
 }
+
+/** Prefixes the verdict the boot wait read off a mounted gate. A prefix
+ *  rather than the bare verdict, so a `loading-status` that happens to
+ *  read like one cannot be mistaken for a gate. */
+export const GATE_BOOT_PREFIX = 'gate:';
+
+/**
+ * Why a boot produced no measurable page, or null when it did.
+ *
+ * The requires-WebGPU gate is the case worth naming. `showWebGpuGate` hides
+ * the boot's elements rather than removing them and never sets
+ * `window.stellata`, so every predicate the wait polls stays false and the
+ * scenario used to die on the Playwright timeout with nothing said about
+ * why. Not reachable on the machine the pin is taken on, where both
+ * backends work — this is about a legible failure anywhere else.
+ */
+export function bootFailure(text: string): string | null {
+  if (text === 'ok') return null;
+  if (text.startsWith(GATE_BOOT_PREFIX)) {
+    return (
+      `the requires-WebGPU gate took the page over, verdict '${text.slice(GATE_BOOT_PREFIX.length)}'` +
+      ' — this browser cannot run the renderer, so there is no frame to price'
+    );
+  }
+  return text;
+}

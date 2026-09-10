@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE } from './diff-pure';
+import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, dwellFloorMs } from './diff-pure';
 import type { DwellSummary } from './dwell-pure';
 import {
   PIN_CEILING_MS,
-  PIN_FLOOR_FRACTION,
-  PIN_FLOOR_MS,
   PIN_SCHEMA,
   PIN_UNGATED_SCENARIOS,
   PinError,
@@ -14,7 +12,6 @@ import {
   commitStateFromExitStatus,
   compareToPin,
   pinDiffFails,
-  pinFloorMs,
   pinFromRun,
   pinPathFor,
   parseRenderPathDrift,
@@ -189,19 +186,6 @@ describe('pinFromRun', () => {
 });
 
 describe('compareToPin', () => {
-  it('pins the floor at 0.25 ms or 1 %, whichever is larger', () => {
-    expect(PIN_FLOOR_MS).toBe(0.25);
-    expect(PIN_FLOOR_FRACTION).toBe(0.01);
-    expect(pinFloorMs(10)).toBe(0.25);
-    expect(pinFloorMs(40)).toBe(0.4);
-  });
-
-  it('binds on the millisecond term at every canon row but mw50, where 1 % is larger', () => {
-    expect(pinFloorMs(21.8)).toBe(PIN_FLOOR_MS);
-    expect(pinFloorMs(16.9)).toBe(PIN_FLOOR_MS);
-    expect(pinFloorMs(31.451)).toBe(0.31451);
-  });
-
   it('calls a run against its own pin unchanged, on the GPU stream where the pin has one', () => {
     const diff = compareToPin(pinOf(), file([SOL_GPU, MW120_GPU, SOL_GL]));
     expect(diff.refusedWholeRun).toBeNull();
@@ -211,7 +195,7 @@ describe('compareToPin', () => {
       ['mw120|webgpu', 'gpu-p50', 'same'],
       ['sol|webgl2', 'wall-p50', 'ungated'],
     ]);
-    expect(diff.rows[0].bandMs).toBe(pinFloorMs(21.8));
+    expect(diff.rows[0].bandMs).toBe(dwellFloorMs(21.8));
     expect(pinDiffFails(diff)).toBe(false);
   });
 

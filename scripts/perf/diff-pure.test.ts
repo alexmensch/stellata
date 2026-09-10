@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, diffRuns, type RunDiff } from './diff-pure';
+import {
+  BUFFER_MPX_TOLERANCE, DWELL_FLOOR_FRACTION, DWELL_FLOOR_MS, RECORD_COUNT_TOLERANCE,
+  diffRuns, dwellFloorMs, type RunDiff,
+} from './diff-pure';
 import type { DwellSummary } from './dwell-pure';
 import { PERF_SCHEMA, type PerfFile, type ScenarioRecord } from './schema';
 
@@ -178,9 +181,51 @@ describe('diffRuns — the noise band', () => {
 
   it('bands a dwell on the median standard error, not the bracket', () => {
     const row = only(diffRuns(withDwell(dwellStats(30)), withDwell(dwellStats(30.2))));
-    expect(row.metric).toBe('p50');
+    expect(row.metric).toBe('wall-p50');
     expect(row.bandMs).toBeCloseTo(0.35449, 5);
     expect(row.verdict).toBe('same');
+  });
+});
+
+describe('the whole-frame floor — one number, both gates', () => {
+  it('is 0.25 ms or 1 % of the baseline, whichever is larger', () => {
+    expect(DWELL_FLOOR_MS).toBe(0.25);
+    expect(DWELL_FLOOR_FRACTION).toBe(0.01);
+    expect(dwellFloorMs(10)).toBe(0.25);
+    expect(dwellFloorMs(40)).toBe(0.4);
+  });
+
+  it('binds on the millisecond term at every canon row but mw50, where 1 % is larger', () => {
+    expect(dwellFloorMs(21.8)).toBe(DWELL_FLOOR_MS);
+    expect(dwellFloorMs(16.9)).toBe(DWELL_FLOOR_MS);
+    expect(dwellFloorMs(31.451)).toBe(0.31451);
+  });
+
+  // The measured case. 240 frames at a tight iqr put two sigma of the pair's
+  // scatter at ~0.02 ms, so an unfloored band marks a 0.15 ms move — and a
+  // move that size is what changing a context's POSITION in its run produces
+  // on unchanged code: mw120 read 21.950 against 21.464 between two runs,
+  // 7th of 10 behind cool-downs against 1st of 2 cold. The floor is the
+  // pin's, so the tier that feeds the pin cannot gate tighter than it does.
+  it('floors a dwell band that sampling alone would draw far tighter', () => {
+    const steady = { iqrMs: 0.135, samples: 240 };
+    const row = only(diffRuns(
+      withDwell(dwellStats(16.7), {}, dwellStats(21.95, steady)),
+      withDwell(dwellStats(16.7), {}, dwellStats(22.10, steady)),
+    ));
+    expect(row.metric).toBe('gpu-p50');
+    expect(row.bandMs).toBe(dwellFloorMs(21.95));
+    expect(row.bandMs).toBe(0.25);
+    expect(row.verdict).toBe('same');
+  });
+
+  it('still marks a move past the floor', () => {
+    const steady = { iqrMs: 0.135, samples: 240 };
+    const row = only(diffRuns(
+      withDwell(dwellStats(16.7), {}, dwellStats(21.95, steady)),
+      withDwell(dwellStats(16.7), {}, dwellStats(22.35, steady)),
+    ));
+    expect(row.verdict).toBe('dearer');
   });
 });
 
@@ -300,19 +345,41 @@ describe('diffRuns — refusals', () => {
     expect(diff.refusals[0].reason).toContain('load-state transition');
   });
 
-  // The pin stands its guard down on the wall clock because it marks on the
-  // GPU stream. This row marks on wall p50, so it may not: comparing two
-  // alternating wall medians manufactures a whole-interval delta out of two
-  // runs of the same code. Narrowing the guard here waits on this row's
-  // metric moving to gpu-p50.
-  it('still refuses a wall clock that alternated, because it is the clock this row marks', () => {
+  // Where the GPU stream is sound the wall clock is neither marked nor read,
+  // so its alternation between one and two refresh intervals is no longer a
+  // refusal — the case that made a vantage over one interval uncomparable
+  // and cost Tier 1 its two witnesses.
+  it('compares a vantage whose wall clock alternated, on the GPU stream that did not', () => {
     const alternating = dwellStats(16.7, { quarterMedians: [16.7, 33.4, 16.7, 33.4], stateGuard: 'trending' });
-    const diff = diffRuns(
+    const row = only(diffRuns(
       withDwell(alternating, {}, dwellStats(31.84)),
       withDwell(dwellStats(33.4, { quarterMedians: [33.4, 16.7, 33.4, 16.7], stateGuard: 'trending' }), {}, dwellStats(31.85)),
+    ));
+    expect(row.metric).toBe('gpu-p50');
+    expect([row.baselineMs, row.currentMs]).toEqual([31.84, 31.85]);
+    expect(row.verdict).toBe('same');
+  });
+
+  // Same rule one test over: the clamp is a statement about the wall clock,
+  // and a resolved timestamp is a span the hardware reports that no
+  // compositor can pad. mw120|webgpu is the vantage this frees.
+  it('compares a wall-clamped dwell whose GPU stream is sound', () => {
+    const row = only(diffRuns(
+      withDwell(dwellStats(16.7, { vsyncClamped: true }), {}, dwellStats(11.2)),
+      withDwell(dwellStats(16.7, { vsyncClamped: true }), {}, dwellStats(13.9)),
+    ));
+    expect(row.metric).toBe('gpu-p50');
+    expect(row.deltaMs).toBeCloseTo(2.7, 5);
+    expect(row.verdict).toBe('dearer');
+  });
+
+  it('refuses a GPU stream on one side against a wall median on the other', () => {
+    const diff = diffRuns(
+      withDwell(dwellStats(30), {}, dwellStats(21.8)),
+      withDwell(dwellStats(30)),
     );
     expect(diff.rows).toEqual([]);
-    expect(diff.refusals[0].reason).toContain('load-state transition');
+    expect(diff.refusals[0].reason).toContain('two instruments');
   });
 
   it('refuses a GPU stream that trended under a wall clock that read steady', () => {

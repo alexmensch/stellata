@@ -107,13 +107,22 @@ hypothesis and must be called one.
 
 **A render-path diff without a `## Perf` section is a blocking finding.** A
 render path is any `.ts`, `.glsl` or `.wgsl` under `src/client/` outside the
-folders `RELEASING.md` § Perf pin exempts; the section carries the runner's
+folders `RELEASING.md` § Perf pin exempts. Refuse the review until the
+section is there. A `✗` row without an `accepted: <row> <reason>
+(<bead-id>)` line is P1, and the bead must exist. Only the GPU-stream p50 is
+marked — a `·` row is recorded and not gated, and reading a wall-clock
+median as a verdict is the mistake the pin exists to prevent.
+
+**Review the tier the section claims, because the guard cannot.** Tier 2 —
+passes, buffers, draw counts, the catalogue or the instrument — carries the
 `--against-pin` table, the pin commit, the adapter slug and the state-guard
-line per context. Refuse the review until it is there. A `✗` row without an
-`accepted: <row> <reason> (<bead-id>)` line is P1, and the bead must exist.
-Only the GPU-stream p50 is marked — a `·` row is recorded and not gated, and
-reading a wall-clock median as a verdict is the mistake the pin exists to
-prevent.
+line per context, and re-takes the pin in the same PR. Tier 1 — per-frame
+code touched, structure unchanged — carries a `--baseline` table over
+mw120|webgpu and sol|webgpu, and names the run it read against. Tier 0
+carries a reachability argument in prose and no table. The claim worth
+auditing is the tier itself: a diff that reaches a pass or a draw count is
+Tier 2 however small it looks, and under-claiming the tier is the way this
+gate gets quietly avoided.
 
 **A perf or VRAM regression is a finding to fix in this PR, not a follow-up
 bead.**

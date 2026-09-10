@@ -1,9 +1,7 @@
 // The "requires WebGPU" takeover, for a browser that cannot run the
 // renderer. See README.md.
 
-import { adviceFor, type GateVerdict, type UaHints } from './gate-advice-pure';
-
-export const GATE_ELEMENT_ID = 'webgpu-gate';
+import { GATE_ELEMENT_ID, adviceFor, type GateVerdict, type UaHints } from './gate-advice-pure';
 
 /** The audit date the advice copy is good as of — the epic's support
  *  survey. Shown on the page, so a stale claim reads as dated rather than

@@ -154,8 +154,10 @@ describe('perf-section-check', () => {
   // § as equal to ✗ — so a real table demanded an accepted: line for every
   // unmarked row and for the § in a doc pointer, failing a body CI passes.
   // Both halves are asserted because mawk on the runner is bytewise anyway
-  // and would pass the behavioural case either way.
-  it('reads the marker bytewise, so a · row and a § pointer are not marks', () => {
+  // and would pass the behavioural case either way. The 📌 line is a first
+  // field of a different byte width again: ✗ is three bytes and · two, so a
+  // four-byte glyph is the case neither of those would catch.
+  it('reads the marker bytewise, so a · row, a § pointer and a 📌 footer are not marks', () => {
     const table = [
       '## Perf',
       '',
@@ -164,12 +166,35 @@ describe('perf-section-check', () => {
       '✗  mw50|webgpu  gpu-p50   31.451  33.2    1.7  0.315',
       'accepted: mw50|webgpu the new band pass draws at mw50 (bead-7)',
       '',
+      '📌 taken on the branch tip, not on main',
+      '',
       '## Release notes',
       '',
       '- x',
     ].join('\n');
     const r = check(table, ['src/client/milkyway/band.ts']);
     expect(r.code, r.stdout).toBe(0);
+  });
+
+  // RELEASING.md § Perf pin promises Tier 0 a prose reachability argument
+  // in place of a table. Nothing in the script had to change for that — a
+  // body with no table has no ✗ — but the promise is now written down, so
+  // it gets a test rather than resting on the guard happening to allow it.
+  it('accepts a Tier 0 body that argues reachability instead of tabling it', () => {
+    const body = [
+      '## Perf',
+      '',
+      'Tier 0. aimAlong and beginNavigateAim run on a keypress; tick() is',
+      'untouched, and no pass, draw count or per-frame buffer write is',
+      'reachable from the diff.',
+      '',
+      '## Release notes',
+      '',
+      '- x',
+    ].join('\n');
+    const r = check(body, ['src/client/camera/aim.ts']);
+    expect(r.code, r.stdout).toBe(0);
+    expect(r.stdout).toContain('every ✗ accepted');
   });
 
   it('declares that locale itself, so the caller-s awk cannot decide it', () => {

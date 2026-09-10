@@ -99,9 +99,83 @@ touches scripts / data files unused by the deployed bundle → skip.
 The cost of a render change is a merge-time fact, not an audit finding.
 The pin is a committed summary of the headless perf runner's whole-frame
 readings — `scripts/perf/pins/<adapter-slug>.json`, one file per GPU, the
-current pin only — and every PR that touches a render path diffs against
-it and re-takes it. Design record: stellata-8cg.49.11; tooling:
-stellata-8cg.49.12.
+current pin only. Every PR that touches a render path answers for its cost
+in a `## Perf` section; what that answer has to be worth is the tier below.
+Design record: stellata-8cg.49.11; tooling: stellata-8cg.49.12.
+
+**Three tiers, chosen by what the diff can reach** (approved 2026-09-10,
+stellata-8cg.49.21). Two different questions were being answered by one
+instrument. *What does the frame cost now?* is the pin, and only a cold
+sweep answers it. *Did this diff move the frame?* is a direction, and
+answering it with the sweep is what made a camera-gesture fix cost half an
+hour: three independent cold runs in one week re-read the same known
+catalogue step, accepted the same three rows against the same bead, and
+left the pin unchanged — 25 minutes and one human arm each, for no
+information.
+
+- **Tier 0 — the diff reaches no per-frame code.** No run. The section
+  carries the reachability argument in prose instead of a table: which
+  functions the diff touches, and that none is reachable from `animate()`,
+  a pass, or a per-frame buffer write. A camera-gesture change whose
+  handlers run on a keypress is the canonical instance. The guard already
+  accepts this — it requires a non-empty section and an `accepted:` line
+  per `✗`, and a body with no table has no `✗` — so a table is not what
+  the gate asks for, an answer is.
+- **Tier 1 — per-frame code touched, no change to draw counts or pass
+  structure.** `--mode dwell --scenario mw120,sol --backend webgpu
+  --baseline <a recent run>`. Two contexts, ~4 min, one arm. Direction
+  against a band is what this tier claims, and two vantages claim it
+  twice: mw120|webgpu carries a sound GPU stream, and sol|webgpu is the
+  second witness — the vantage that reproduces best, 22.421201 against
+  22.421199 ms on two independent cold runs, and the one a first load
+  actually shows. Not the dearest gated row: that is mw50|webgpu at
+  31.936, which cannot be pinned at all on `apple-m4-metal-3`
+  (stellata-8cg.54) and refused two cold runs on `trending`. A witness
+  that refuses is not a witness. Paste the `--baseline` table and say
+  which run it was read against. **`--baseline` prints; it does not set
+  the exit code** — a Tier 1 run exits 0 with a `✗` in its table, so the
+  verdict is read, never inferred from the status. Only `--against-pin`
+  fails a run.
+- **Tier 2 — passes, buffers, draw counts, the catalogue, or the
+  instrument itself.** The full cold sweep, and it re-takes the pin:
+  `--mode dwell --scenario all --backend both --cooldown-ms 120000
+  --pin`, ~15–25 min. Everything from § What is pinned down is this tier.
+
+**"The instrument" in Tier 2 means what it records or how it samples**, not
+every file under `scripts/perf/`. A change to `pinFromRun`, `compareToPin`,
+the recorded schema, the sampling knobs or the clock a row is taken on
+re-takes the pin, because the committed rows stop describing the same
+measurement. A change to how a comparison is *judged or presented* —
+a band floor, a refusal, a metric column, a table's layout — leaves every
+recorded number where it was, so the pin stays comparable and no run is
+owed. Say which of the two a diff is when it touches the runner, and the
+tier follows. First applied by stellata-8cg.49.21 itself, which rewrote
+`--baseline`'s verdict and claimed Tier 0 on exactly this ground.
+
+**Tier 1 needs no run index and no filename convention.** "A recent run on
+this record set" is enforced by refusal rather than bookkeeping:
+`--baseline` refuses a run whose record count is more than 1 % away, and
+equally a differing adapter, buffer, method or mode. So any recent run can
+be passed and the runner rejects the wrong one. A committed index and a
+`.perf-runs/` naming convention were both declined — the index for being a
+second thing to keep current, the convention for being unverifiable, since
+`.perf-runs/` is gitignored and lives in the main checkout only.
+
+**Tier 1 reads the GPU-stream p50, the same metric the pin gates on.** Its
+two vantages are exactly the ones a wall-clock row cannot resolve — sol's
+wall p50 sits at two refresh intervals and mw120's at one — so a row
+marked on wall would compare two quantised medians and refuse or fabricate
+by turns (`scripts/perf/README.md` § Comparing against a baseline).
+
+**And the same floor: `max(0.25 ms, 1 % of the baseline)`**, one constant
+in `scripts/perf/diff-pure.ts` that both gates apply. Tier 1 may not gate
+tighter than the Tier 2 it feeds, or it marks moves Tier 2 calls
+unresolved — which is what an unfloored band did, two sigma of the
+medians' own scatter being about 0.02 ms at 240 frames on a steady
+vantage. A run-condition difference clears that easily: the same vantage
+read 0.486 ms apart between a context sitting 7th of 10 behind cool-downs
+and 1st of 2 cold (stellata-8cg.49.27, still open on whether Tier 1's run
+shape should be pinned as well).
 
 **What is pinned.** `--mode dwell` at the five canon vantages (sol, earth,
 mw50, mw120, lg), 1280×800 at dpr 2 (4.096 Mpx), 240 frames, `raf-delta`,
@@ -239,29 +313,36 @@ smallest delta a row can be marked for. That bound is
 agree: a change under the trigger ships with no fresh pin, so a stricter
 refusal would leave that pin refusing every row of the next render-path PR.
 
-The section carries the `--against-pin` table, the pin commit it
-was read against, the adapter slug, the state-guard line per context, and
-one `accepted: <row> <reason> (<bead-id>)` line per `✗`. The
-`perf-section-guard` workflow fails the PR when the section is missing,
-empty, or has a `✗` without an `accepted:` line — CI has no GPU, so it
-checks the section the way `release-notes-guard` does — and the
-`pr-review` skill refuses a render-path diff without it. There is no
-skip label: a change that costs nothing shows a table of `~`.
+**What the section carries is the tier's answer**, and the section names
+which tier it is claiming. Tier 2: the `--against-pin` table, the pin
+commit it was read against, the adapter slug, the state-guard line per
+context, and one `accepted: <row> <reason> (<bead-id>)` line per `✗`.
+Tier 1: the `--baseline` table and the run it was read against. Tier 0:
+the reachability argument, no table.
 
-**How the pin advances.** The re-taken pin is committed in the same PR, so
-the pin always describes what the version bump deploys. A `✗` is fixed in
-the PR or accepted with a bead; an accepted `✗` becomes the new pinned
-value, and the ceiling is the only thing stopping accepted marks from
-ratcheting the frame upward one PR at a time. Two render-path PRs in
+The `perf-section-guard` workflow fails the PR when the section is
+missing, empty, or has a `✗` without an `accepted:` line — CI has no GPU,
+so it checks the section the way `release-notes-guard` does — and the
+`pr-review` skill refuses a render-path diff without it. Naming the tier
+is for the reviewer, who is the one who can dispute it; the guard cannot
+read a reachability argument and does not try. There is no skip label: a
+change that costs nothing says why, or shows a table of `~`.
+
+**How the pin advances.** A Tier 2 PR commits its re-taken pin in the same
+PR, so the pin always describes what the version bump deploys. A `✗` is
+fixed in the PR or accepted with a bead; an accepted `✗` becomes the new
+pinned value, and the ceiling is the only thing stopping accepted marks
+from ratcheting the frame upward one PR at a time. Two Tier 2 PRs in
 flight re-take one file: whichever merges second rebases and re-takes,
 the same way `version-guard` (§ Version policy) makes the second bump
-rebase — and here that is another armed run, so check for an open
-render-path PR before arming. A three bump or the cutover re-pins every
-row under its own bead.
+rebase — and here that is another armed run, so check for an open Tier 2
+PR before arming. A three bump or the cutover re-pins every row under its
+own bead. Tiers 0 and 1 leave the pin where they found it, which is the
+point of them: the pin advances when the answer would change.
 
-**Who runs it.** The agent, human-armed: one arm per pin run, the machine
-idle throughout — about 15–25 min for the ten dwell contexts at a 120 s
-cool-down, less as the cool-down is tuned down.
+**Who runs it.** The agent, human-armed: one arm per run, the machine idle
+throughout — about 15–25 min for a Tier 2 pin's ten dwell contexts at a
+120 s cool-down, ~4 min for Tier 1's two.
 
 ## Citation and archiving
 

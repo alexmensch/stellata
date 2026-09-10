@@ -5,10 +5,10 @@
 import { basename, relative, resolve } from 'node:path';
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import {
-  BUFFER_MPX_TOLERANCE, VERDICT_MARK, band, recordCountRefusal,
+  BUFFER_MPX_TOLERANCE, VERDICT_MARK, band, dwellFloorMs, recordCountRefusal,
   type DiffRefusal, type Verdict,
 } from './diff-pure';
-import { gatingClock, type StateGuard } from './dwell-pure';
+import { gatingClock, type DwellMetric, type StateGuard } from './dwell-pure';
 import { DWELL_METHOD } from './run-pure';
 import type { AdapterProbe, DwellRecord, GitProvenance, PerfFile, ScenarioRecord } from './schema';
 import type { Backend, ScenarioName } from './scenarios';
@@ -16,13 +16,6 @@ import type { Backend, ScenarioName } from './scenarios';
 /** Removing a field or changing what one MEANS bumps the suffix; adding one
  *  does not — the same contract as `PERF_SCHEMA`. */
 export const PIN_SCHEMA = 'stellata-perf/pin-2';
-
-/** A row moves only past the pair's two-sigma band AND past this floor,
- *  whichever of the two forms is larger. Both derived from the cold-to-cold
- *  spread of two pins on identical code: pins/README.md § Reading
- *  `--against-pin`. */
-export const PIN_FLOOR_MS = 0.25;
-export const PIN_FLOOR_FRACTION = 0.01;
 
 /** Vantages the band never marks, mapped to the reason, which the row's note
  *  carries. lg shifts level BETWEEN runs while staying flat inside each, which
@@ -85,11 +78,6 @@ export interface PinFile {
   readonly accepted: Readonly<Record<string, PinAcceptance>>;
 }
 
-/** Which clock the row's numbers came from. `wall-p50` appears only on an
- *  ungated row, where it is context rather than a reading the gate acts on;
- *  an ungated row may equally carry `gpu-p50` as context. */
-export type PinMetric = 'gpu-p50' | 'wall-p50';
-
 /** `ungated` is a row the band never marks, on either of two grounds: it
  *  carries no GPU-stream median on one side or the other, and wall time is
  *  quantised to the display's refresh interval; or its vantage is in
@@ -101,7 +89,10 @@ export const PIN_VERDICT_MARK: Record<PinVerdict, string> = { ...VERDICT_MARK, u
 
 export interface PinVerdictRow {
   readonly key: string;
-  readonly metric: PinMetric;
+  /** `wall-p50` appears only on an ungated row, where it is context rather
+   *  than a reading the gate acts on; an ungated row may equally carry
+   *  `gpu-p50` as context. */
+  readonly metric: DwellMetric;
   readonly pinnedMs: number;
   readonly currentMs: number;
   readonly deltaMs: number;
@@ -165,7 +156,7 @@ function rowRefusal(record: ScenarioRecord): string | null {
   if (record.bufferMpx === null) return 'no drawing buffer recorded';
   if (record.backend.actual === null) return 'the backend never booted';
   if (record.recordCount === null) return 'no catalogue record count recorded — the rows cannot be placed on a scene';
-  if (gatingClock(record.dwell).stateGuard === 'trending') {
+  if (gatingClock(record.dwell).clock.stateGuard === 'trending') {
     return 'the dwell trended across its quarters — it straddled a load-state transition';
   }
   return null;
@@ -238,10 +229,6 @@ export function citeRunPath(jsonPath: string, mainCheckout: string): string {
   return rel === '' || rel.startsWith('..') ? basename(jsonPath) : rel;
 }
 
-export function pinFloorMs(pinnedMs: number): number {
-  return Math.max(PIN_FLOOR_MS, PIN_FLOOR_FRACTION * pinnedMs);
-}
-
 function verdictFor(deltaMs: number, bandMs: number): Verdict {
   if (Math.abs(deltaMs) <= bandMs) return 'same';
   return deltaMs < 0 ? 'cheaper' : 'dearer';
@@ -262,7 +249,7 @@ function ungatedNote(pinned: PinRow, current: PinClock | null): string {
 }
 
 function ungatedRow(
-  key: string, metric: PinMetric, pinnedMs: number, currentMs: number, note: string,
+  key: string, metric: DwellMetric, pinnedMs: number, currentMs: number, note: string,
 ): PinVerdictRow {
   return { key, metric, pinnedMs, currentMs, deltaMs: currentMs - pinnedMs, bandMs: 0, verdict: 'ungated', note };
 }
@@ -294,7 +281,7 @@ function compareRow(pinned: PinRow, record: ScenarioRecord): PinVerdictRow {
 
   const deltaMs = dwell.gpuStats.p50 - pinned.gpu.p50;
   const bandMs = band(
-    medianStandardErrorMs(pinned.gpu), medianStandardErrorMs(dwell.gpuStats), pinFloorMs(pinned.gpu.p50),
+    medianStandardErrorMs(pinned.gpu), medianStandardErrorMs(dwell.gpuStats), dwellFloorMs(pinned.gpu.p50),
   );
   return underCeiling({
     key: pinned.key, metric: 'gpu-p50', pinnedMs: pinned.gpu.p50, currentMs: dwell.gpuStats.p50,

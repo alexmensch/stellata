@@ -7,7 +7,9 @@ import type {
   PassToggle, PriceFrameOptions, PriceFrameRow,
 } from '../../src/client/debug/frame-cost/frame-cost';
 import type { Stellata } from '../../src/client/stellata';
+import { GATE_ELEMENT_ID } from '../../src/client/webgpu/gate/gate-advice-pure';
 import type { PassCounter } from './dwell-pure';
+import { GATE_BOOT_PREFIX, bootFailure } from './run-pure';
 import type { AdapterProbe, WebGlProbe, WebGpuProbe } from './schema';
 import type { Backend } from './scenarios';
 import { settleVerdict, type GateSnapshot } from './settle-pure';
@@ -39,15 +41,20 @@ export interface BootOptions {
 
 export async function bootScenario(page: Page, url: string, { backend, timeoutMs }: BootOptions): Promise<void> {
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
-  const outcome = await page.waitForFunction(() => {
+  // The gate is read FIRST because it hides the boot's elements rather than
+  // removing them: #loading survives with display:none, so every predicate
+  // below stays false and the wait would run out its timeout instead.
+  const outcome = await page.waitForFunction((gate) => {
+    const mounted = document.getElementById(gate.id);
+    if (mounted !== null) return `${gate.prefix}${mounted.dataset.verdict ?? 'unknown'}`;
     const status = document.getElementById('loading-status')?.textContent ?? '';
     if (status.startsWith('Error:')) return status;
     const w = window as unknown as Partial<PerfWindow>;
     const booted = document.getElementById('loading') === null && w.debug !== undefined && w.stellata !== undefined;
     return booted ? 'ok' : null;
-  }, undefined, { timeout: timeoutMs, polling: 250 });
-  const text = (await outcome.jsonValue()) as string;
-  if (text !== 'ok') throw new BootError(text);
+  }, { id: GATE_ELEMENT_ID, prefix: GATE_BOOT_PREFIX }, { timeout: timeoutMs, polling: 250 });
+  const failure = bootFailure((await outcome.jsonValue()) as string);
+  if (failure !== null) throw new BootError(failure);
 
   const actual = await page.evaluate(() =>
     ((window as unknown as PerfWindow).stellata.webgpu === null ? 'webgl2' : 'webgpu'));

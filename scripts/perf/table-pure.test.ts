@@ -155,7 +155,7 @@ describe('formatDiffTable', () => {
       rows: [
         { key: 'sol|webgl2|a', metric: 'savedMs', baselineMs: 10, currentMs: 10, deltaMs: 0, bandMs: 2, verdict: 'same' },
         { key: 'sol|webgl2|b', metric: 'savedMs', baselineMs: 10, currentMs: 4, deltaMs: -6, bandMs: 2, verdict: 'cheaper' },
-        { key: 'sol|webgl2|dwell', metric: 'p50', baselineMs: 30, currentMs: 38, deltaMs: 8, bandMs: 2, verdict: 'dearer' },
+        { key: 'sol|webgl2|dwell', metric: 'wall-p50', baselineMs: 30, currentMs: 38, deltaMs: 8, bandMs: 2, verdict: 'dearer' },
       ],
     };
     const lines = formatDiffTable(diff).split('\n');
