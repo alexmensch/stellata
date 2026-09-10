@@ -5,7 +5,11 @@ import { beforeAll, describe, it, expect } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { dataRows } from '../parse/corpus-tsv';
-import { parseTyc2HdTsv } from '../classic-ids/classic-ids-parse';
+import { parseBsc5Tsv, parseTyc2HdTsv } from '../classic-ids/classic-ids-parse';
+import {
+  CLASSIC_ID_OVERRIDES_FILE,
+  parseLabelOverridesTsv,
+} from '../classic-ids/label-merge/label-merge-pure';
 import {
   MEMBERSHIP_MANIFEST_FILE,
   parseManifestTsv,
@@ -275,3 +279,111 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     expect(refuse).toContain('2019-1250-1');
   });
 });
+
+const BSC5_FILE = 'data/classic-ids/bsc5.tsv';
+const OVERRIDES_FILE = CLASSIC_ID_OVERRIDES_FILE;
+const SRC_BSC5 = AT(BSC5_FILE);
+const SRC_OVERRIDES = AT(OVERRIDES_FILE);
+const ASSERTED_INPUTS = [...SPLIT_INPUTS, SRC_BSC5, SRC_OVERRIDES];
+
+/** The one override that keeps the spine's value instead of asserting one:
+ *  Propus, whose evidence is the override file's own header. It is a refusal,
+ *  so the witnesses below do not apply to it. */
+const REFUSAL_SOURCE_ID = '3377072212924335488';
+
+/** Applying an override takes its row out of the four-witness split above:
+ *  `contested` is keyed on the manifest's SHIPPED hd, and an asserted value is
+ *  one both TYC witnesses already name, so the row stops being contested the
+ *  moment it lands. The decisive witness — SIMBAD's object for the record's own
+ *  Gaia source — would then never be weighed on it again. This suite re-derives
+ *  all four on the value the file ASSERTS rather than on the cell shipped, so a
+ *  re-pull that re-attributes one of the eight fails here. */
+describe.skipIf(!ASSERTED_INPUTS.every(lfsContentReadable))(
+  'the asserted move set, against its own witnesses',
+  () => {
+    let asserted: { sourceId: string; tyc: string; hd: number; hr: number | null }[];
+    let refusals: string[];
+    let ivHd: Map<string, Set<number>>;
+    let simbad: Map<string, SimbadTycHdRow>;
+    let objectOfSource: Map<string, string>;
+    let hdOfHr: Map<number, number | null>;
+
+    beforeAll(() => {
+      ivHd = new Map();
+      for (const row of parseTyc2HdTsv(readFileSync(SRC_TYC2_HD, 'utf-8'))) {
+        const at = ivHd.get(row.tyc);
+        if (at === undefined) ivHd.set(row.tyc, new Set([row.hd]));
+        else at.add(row.hd);
+      }
+      simbad = parseSimbadTycHdTsv(readFileSync(SRC_SIMBAD_TYC_HD, 'utf-8'));
+      hdOfHr = new Map(
+        parseBsc5Tsv(readFileSync(SRC_BSC5, 'utf-8')).map((r) => [r.hr, r.hd]),
+      );
+
+      const overrides = parseLabelOverridesTsv(readFileSync(SRC_OVERRIDES, 'utf-8'));
+      const hdBySource = new Map<string, number>();
+      const hrBySource = new Map<string, number>();
+      refusals = [];
+      for (const [key, value] of overrides) {
+        const [sourceId, field] = key.split('\t');
+        if (value === null) { refusals.push(sourceId); continue; }
+        if (field === 'hd') hdBySource.set(sourceId, Number(value));
+        if (field === 'hr') hrBySource.set(sourceId, Number(value));
+      }
+
+      const tycOfSource = new Map<string, string>();
+      for (const row of parseManifestTsv(readFileSync(SRC_MANIFEST, 'utf-8'))) {
+        if (hdBySource.has(row.gaia_source_id)) {
+          tycOfSource.set(row.gaia_source_id, row.tyc.trim());
+        }
+      }
+      asserted = [...hdBySource].map(([sourceId, hd]) => ({
+        sourceId,
+        tyc: tycOfSource.get(sourceId) ?? '',
+        hd,
+        hr: hrBySource.get(sourceId) ?? null,
+      }));
+
+      objectOfSource = new Map();
+      for (const line of readFileSync(SRC_SIMBAD_SPTYPE, 'utf-8').split('\n').slice(1)) {
+        if (line === '') continue;
+        const cells = line.split('\t');
+        if (hdBySource.has(cells[7])) objectOfSource.set(cells[7], cells[1]);
+      }
+    });
+
+    it('asserts eight records and refuses one', () => {
+      expect(asserted).toHaveLength(8);
+      expect(refusals).toEqual([REFUSAL_SOURCE_ID]);
+      expect(asserted.filter((a) => a.tyc === '')).toEqual([]);
+    });
+
+    it('has both TYC witnesses naming the asserted HD for the record\'s own entry', () => {
+      for (const { tyc, hd } of asserted) {
+        expect(ivHd.get(tyc), `IV/25 for ${tyc}`).toContain(hd);
+        expect(hdNumbers(simbad.get(tyc)!), `SIMBAD for ${tyc}`).toContain(hd);
+      }
+    });
+
+    it('has the record\'s own source resolving to the component that entry names', () => {
+      for (const { sourceId, tyc } of asserted) {
+        expect(objectOfSource.get(sourceId), `source ${sourceId}`)
+          .toBe(simbad.get(tyc)!.mainId);
+      }
+    });
+
+    // The pair V/50 publishes, not two cells chosen separately: an HR moved
+    // without its HD (or onto an HD V/50 pairs with a third number) composes a
+    // pair no catalogue prints. HD 330123 is the record carrying no HR, and
+    // V/50 carries neither of its numbers — so `hr` absent is only legal where
+    // the asserted HD is absent from V/50 too.
+    it('pairs every asserted HR with its asserted HD in V/50', () => {
+      const hrOfHd = new Map<number, number>();
+      for (const [hr, hd] of hdOfHr) if (hd !== null) hrOfHd.set(hd, hr);
+      for (const { hd, hr } of asserted) {
+        if (hr === null) expect(hrOfHd.has(hd), `V/50 has an HR for HD ${hd}`).toBe(false);
+        else expect(hdOfHr.get(hr), `V/50 pairs HR ${hr}`).toBe(hd);
+      }
+    });
+  },
+);
