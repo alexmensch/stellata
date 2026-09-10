@@ -12,7 +12,7 @@ index.html   The homepage, served at /. Documented below.
              and by the dev server's document routing locally. Carries
              noindex and is not in the sitemap.
 site.css     Every page's stylesheet. Imports src/design-tokens.css and
-             adds only the site's own layout, type scale and components.
+             adds only the site's own scales, compositions and blocks.
 ```
 
 ## The build seam
@@ -57,10 +57,10 @@ the legacy share-link redirects and the app's unmatched-path fallback.
 
 **`pnpm run dev` serves the whole URL space on one port**, matching the
 deploy: the homepage at `http://localhost:5173/`, the app at
-`http://localhost:5173/app`, and this folder's 404 page for anything else.
-That is `vite.site-dev.ts`, a dev-only plugin on the *app's* config — the
-two build passes have different roots, so nothing else would have put both
-documents on one server.
+`http://localhost:5173/app`, this folder's 404 page for anything else, and
+a 301 off either legacy share transport. That is `vite.site-dev.ts`, a
+dev-only plugin on the *app's* config — the two build passes have different
+roots, so nothing else would have put both documents on one server.
 
 It needs `appType: 'custom'` there, and that is not a detail to undo:
 Vite's own SPA fallback rewrites an unmatched path to `/index.html` before
@@ -69,9 +69,10 @@ any plugin middleware runs, which made every wrong URL — and `/app` itself
 
 `pnpm run dev:site` still serves this folder alone on port 5174, rooted
 here, for iterating on a page without the app's build chain in front of it.
-Two things differ from production there, which is why it is the secondary
+Three things differ from production there, which is why it is the secondary
 route: a page in a subfolder needs its trailing slash (`/science/`, not
-`/science`), and a miss gets nothing rather than the 404 page.
+`/science`), a miss gets nothing rather than the 404 page, and a share link
+is not redirected.
 
 ## No JavaScript, by rule
 
@@ -81,63 +82,109 @@ turns away — someone whose browser has no WebGPU still gets the whole case
 for the project. A page that needs interaction is a signal to ask whether
 it wants to be part of the app instead.
 
-## The palette is not ours to set
+## The stylesheet
 
-`site.css` imports `src/design-tokens.css` and must not restate a colour or
-the typeface. The app's chrome is the reference: near-black ground,
-monospace throughout, 1px hairline borders, square corners, small uppercase
-wide-tracked labels, one cyan accent. The site scales that up to reading
-sizes — it does not add a second visual language. A colour belonging to
-both surfaces goes in the token file; one belonging only here goes in
-`site.css`'s own `:root` block, as the type scale and measures do.
+`site.css` is organised **CUBE-style**, in this order, and the order is the
+cascade: tokens, global element defaults, **C**ompositions, **U**tilities,
+**B**locks, with exceptions carried as `data-` attributes on a block rather
+than as modifier classes. A rule that belongs one layer up is the drift to
+watch for — a block reinventing a gap that `.flow` already owns is the
+common one.
+
+**The palette is not ours to set.** `site.css` imports
+`src/design-tokens.css` and must not restate a colour or the typeface. The
+app's chrome is the reference: near-black ground, monospace throughout, 1px
+hairline borders, square corners, small uppercase wide-tracked labels, one
+cyan accent. The site scales that up to reading sizes — it does not add a
+second visual language. A colour belonging to both surfaces goes in the
+token file; one belonging only here goes in this file's own `:root` block,
+as the scales and measures do.
+
+### The scales
+
+Type and space are **fluid Utopia scales** (utopia.fyi), interpolating
+between a 320px and a 1440px viewport. Every `--step-*` and `--space-*`
+value is a generated `clamp()`; **do not hand-edit one**, and do not
+introduce a size outside the scale — the whole point is that a heading and
+the space above it move together, which a one-off `clamp()` breaks.
+
+Parameters, to regenerate: viewport 320 → 1440px · type base 16 → 20px,
+ratio 1.2 → 1.25, steps −2 … 6 · space base 16 → 20px at multipliers
+0.25 / 0.5 / 0.75 / 1 / 1.5 / 2 / 3 / 4 / 6, plus the one-up pairs the
+page uses. Paste those into utopia.fyi's calculators, or compute
+`clamp(min, (min − slope·320)/16 rem + slope·100 vw, max)` with
+`slope = (max − min)/1120`.
+
+### Responsiveness has no breakpoints
+
+There is not one `@media (min-width: …)` rule in the file, deliberately:
+this app is looked at on every shape of screen, and a page whose layout
+switches on the *viewport* is wrong for every element that isn't the width
+of the viewport. Three mechanisms replace them.
+
+- **`.flow`** owns all vertical rhythm through one owl selector. An element
+  changes the gap *above itself* by setting `--flow-space`; nothing sets a
+  bespoke margin. This is what a section's table-to-list gap comes from, so
+  a missing space is a missing `.flow`, never a missing margin.
+- **`.switcher`** is Every Layout's two-up: side by side above
+  `--switcher-threshold`, stacked below it, decided by the **container's**
+  width. `flex-basis: calc((threshold − 100%) * 999)` is the whole
+  mechanism — the multiplier drives the basis past 100% the instant the
+  container is narrower than the threshold. It is not a magic number to
+  tidy; a smaller one stops the flip working.
+- **Intrinsic grids** (`repeat(auto-fit, minmax(…, 1fr))`) for the readout
+  strip, which reflows cell by cell.
+
+`.sight`'s alternating sides ride the switcher: `flex-direction:
+row-reverse` on even rows puts the media right when there is room, and a
+reversed row that wraps still stacks in DOM order — so the media never
+lands *under* its own caption on a phone. That property is why the
+alternation needs no query.
+
+## The homepage's shape
+
+In order down the page, and the order is the argument:
+
+1. **Hero** — the imagery, full-bleed, with the `h1` over it and the
+   masthead riding on top of the same image. Stellata is a visual
+   instrument; the page leads with what it looks like, not with prose.
+2. **Readout strip** — five figures, three of them substitutions.
+3. **What it is** — three claims, one each: a serious instrument for people
+   who already know the sky · every object from a published catalogue, and
+   the page says which · what the eye would see from any point in the
+   model, no false colour anywhere. Rewriting the copy is expected;
+   dropping one of the three is not.
+4. **Where to go first** — the sights, § below. The section the page is
+   for.
+5. **The record** — the citation table and the four provenance claims.
+   Late on purpose: it is the proof, and proof follows the case.
+6. **Before you click** — WebGPU and desktop, two columns, short.
+
+**No section is numbered.** A landing page that numbers its sections reads
+as a specification; the eyebrow label above each `h2` carries the same
+structure without it.
 
 ## Numbers in copy
 
-Prose here is subject to the same rule as everywhere else: **the star count
-is never a literal a human types from memory.** Rounded prose is fine and
-is held true by `tests/star-count-consistency.test.ts`, which reads this
-folder's pages among its prose surfaces. `%VITE_APP_VERSION%` and
-`%VITE_STAR_COUNT%` are available as Vite HTML substitutions
-(`vite.env.ts` publishes both) — but `VITE_STAR_COUNT` is empty on a
-checkout with no built catalogue, so any wording using it has to survive
-the number being absent. `docs/authoring-patterns.md` § The star count is
+**No figure on these pages is a literal.** `scripts/site/site-metrics.ts`
+counts each off the thing it describes and `vite.env.ts` publishes it, so
+the page carries `%VITE_STAR_COUNT%`, `%VITE_SOURCE_COUNT%`,
+`%VITE_REFERENCE_COUNT%` and `%VITE_APP_VERSION%` and the build fills them
+in. That module's README is the authority on where each count comes from
+and why the reference count is a floor.
+
+`tests/site-claims.test.ts` holds the pages to it: each readout cell must
+still carry its substitution rather than a number, the subsystem table must
+still sum to the credited total, and the derivations must not have
+collapsed. Two cells are prose because nothing in the repo can count them —
+**6.5 million light years** and **3000 BC – 3000 AD**, the model's measured
+radius and its clock clamp, both stated in `../../README.md`.
+
+Rounded prose is a different case and is still fine — the hero's "around
+390,000 real objects" is held true by
+`tests/star-count-consistency.test.ts`, which reads this folder's pages
+among its prose surfaces. `docs/authoring-patterns.md` § The star count is
 never a literal.
-
-## The homepage's claims
-
-Three things the page has to make a reader take away, in this order,
-because the order is the argument:
-
-1. A serious instrument, built for people who already know the sky.
-2. Every object came from a published catalogue, and the page says which.
-3. It shows what the eye would see from any point in the model — no false
-   colour anywhere, perceptual modelling throughout.
-
-§ 01's three numbered claims are those three, one each. Rewriting the copy
-is expected; dropping one of the three is not.
-
-**Every number is derived, not typed**, and `tests/site-claims.test.ts`
-fails when the page and its sources disagree:
-
-- **34 catalogues cited**, and the per-subsystem counts in the § 02 table,
-  are the credit rows in the application's own Credits tab
-  (`src/client/app/index.html`, `.modal-credits`). The test counts them.
-  Adding a source to the app means updating this page in the same PR.
-- **100+ published references** is a floor on the distinct author-year
-  citations across the modelling record — the two root docs plus every
-  markdown file under `docs/`, `src/`, `scripts/` and `data/`. The test
-  counts only the multi-author forms (`Høg et al. 2000`,
-  `Bland-Hawthorn & Gerhard 2016`), so single-author citations are real
-  references it cannot see and the true total is higher. It holds the
-  page's claim below the derived figure and within one bucket of it, so the
-  claim stays true as the record grows and fails once it is stale enough to
-  be misleadingly modest.
-- **390,000 objects** is rounded prose — § Numbers in copy above.
-- **6.5 million light years** and **3000 BC – 3000 AD** are the model's
-  measured radius and clock clamp, both stated in `../../README.md`.
-- Distances, periods and physical claims in § 03 are the ones
-  `../../README.md` § Things to try already carries; that section is this
-  section's source.
 
 **The JSON-LD graph shares nodes with the application.** `Person` and
 `WebApplication` carry the same `@id`s and the same `description` string
@@ -146,37 +193,43 @@ application described twice rather than two applications. Edit either node
 and edit both. The `WebApplication.url` is `/app`; its `@id` keeps the
 bare-root form, because an `@id` is an identifier rather than an address.
 
-## Plates
+## Sights — the media, and the link it carries
 
-Three figures, each a numbered plate captioned like an atlas rather than a
-screenshot with a caption. **All three currently hold placeholders** — a
-dashed hairline box carrying the intended subject, why that view is the one
-that proves the claim beside it, and the target filename. The dashed border
-is deliberate: an empty styled box would ship unnoticed.
+Each sight in § Where to go first is one `.sight`: a picture (or a short
+silent loop) beside its copy, **where the picture is itself the link into
+the model at that view.** Both halves come out of one act at the machine —
+take the capture, then copy the address bar — which is what makes the
+image and the URL incapable of disagreeing. Deriving a share URL separately
+from the shot is the failure this shape exists to prevent.
+
+Every media slot currently holds a **`.holder`**: a dashed hairline box
+naming what to capture and the filename to save it as. The dashed border is
+deliberate — an empty styled box would ship unnoticed. `stellata-2h0e.8`
+tracks filling them.
 
 To land a real capture:
 
 1. Take the shot from the running app at 2400 px wide or more.
-2. Save it as the filename the placeholder names, under `public/site/`.
+2. Save it under `public/site/` as the filename the holder names.
    `public/` is the app pass's `publicDir`, so the file is served at
    `/site/<name>` with no build step. Commit it — the SEO assets in
    `public/` (`og-image.jpg`, the icons) are committed the same way.
-3. Replace the `<div class="plate-holder">…</div>` with
-   `<img src="/site/<name>" alt="…" width="…" height="…" />`, leaving the
-   `<figcaption>` alone. `.plate img` already carries the hairline border.
-   Real `width`/`height` attributes matter — they reserve the space and
-   keep the page's layout shift at zero.
+3. Replace the `<div class="holder">…</div>` with
+   `<img src="/site/<name>" alt="…" width="…" height="…" />`. Real
+   `width`/`height` attributes matter — they reserve the space and keep
+   the page's layout shift at zero. `.sight-media` already carries the
+   hairline border, and `.sight-media > img` the full-width rule.
+4. Put the address bar's URL on **both** anchors in that row — the media
+   and the "Fly there" line.
 
-The two views with an existing share URL carry it in the placeholder, so
-the capture is reproducible rather than a one-off: plate 01 is the README
-hero's composition, plate 03 the README chart-mode shot. Plate 02 (dust
-extinction from a few kiloparsecs out) has no saved view; the recipe is in
-`../../README.md` § Watch the dust shape the sky.
-
-The placeholders quote each view in the canonical `/app/v/<blob>/` form
-rather than the `/?v=<blob>` one the README screenshots used to carry. The
-Worker still redirects the old form, but a quoted URL that depends on a
-redirect is one nobody notices has gone stale.
+**The links in the file today are starting points, not captures.** Each is
+a focus-only share blob — one field, the object's SID — so it lands on that
+object at its park pose, which is where the shot should be taken from. Two
+rows differ: the solar system links to bare `/app` (Sol is the canonical
+default focus, so a default state has no blob at all), and chart mode
+carries a real saved view. The galactic-disc row has no link at all,
+because that view is a camera pose rather than a focused object and there
+is nothing honest to derive.
 
 Deriving smaller responsive variants and a `srcset` is worth doing once the
 real images are in — a 2400 px JPEG is the largest thing on the page by an

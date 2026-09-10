@@ -16,16 +16,18 @@
     <link rel="stylesheet" href="./site.css" />
   </head>
   <body>
-    <div class="page">
-      <header class="masthead">
+    <header class="masthead">
+      <div class="wrapper repel">
         <a class="wordmark" href="/">Stellata</a>
-        <nav class="masthead-links" aria-label="Elsewhere">
-          <a href="https://github.com/alexmensch/stellata">Source</a>
+        <nav aria-label="Elsewhere">
+          <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">Science</a>
           <a href="/app">Open the model&nbsp;→</a>
         </nav>
-      </header>
+      </div>
+    </header>
 
-      <main class="notfound">
+    <main class="notfound region">
+      <div class="wrapper flow">
         <span class="label">Error 404 · non-detection</span>
         <h1>We haven't discovered this part of the universe yet.</h1>
         <p class="lead">
@@ -33,27 +35,29 @@
           never have been there — the model only contains what has actually
           been observed, and it turns out the website works the same way.
         </p>
-        <div class="actions">
+        <div class="cluster">
           <a class="pill" href="/">Back to the start</a>
-          <span class="actions-aside">
+          <span class="aside">
             Looking for the model itself? It lives at
             <a href="/app">stellata.xyz/app</a>.
           </span>
         </div>
-      </main>
+      </div>
+    </main>
 
-      <footer class="footer">
+    <footer class="footer">
+      <div class="wrapper repel">
         <span>
           Stellata <span class="footer-version">v%VITE_APP_VERSION%</span> ·
           AGPL-3.0 · built by
           <a href="https://alxm.me" rel="author">Alex Marshall</a>
         </span>
-        <span class="footer-links">
+        <span class="cluster">
           <a href="https://github.com/alexmensch/stellata">GitHub</a>
           <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">SCIENCE.md</a>
           <a href="/app">The model</a>
         </span>
-      </footer>
-    </div>
+      </div>
+    </footer>
   </body>
 </html>
