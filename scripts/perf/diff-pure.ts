@@ -3,7 +3,6 @@
 // README.md § Comparing against a baseline.
 
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { gatingClock } from './dwell-pure';
 import type { PerfFile, ScenarioRecord } from './schema';
 
 /** How far the two buffers may differ and still be compared. Both dominant
@@ -170,10 +169,12 @@ function dwellRow(key: string, a: ScenarioRecord, b: ScenarioRecord): DiffRow | 
       reason: 'a dwell was vsync-clamped — it measured the panel, not the frame',
     };
   }
-  const trending = [
-    gatingClock(da.stats, da.gpuStats),
-    gatingClock(db.stats, db.gpuStats),
-  ].some((clock) => clock.stateGuard === 'trending');
+  // Both clocks, where the pin refuses on one: a guard may only stand down on
+  // the clock its row does NOT mark, and this row marks on wall p50 (below).
+  // README.md § Comparing against a baseline.
+  const trending = [da, db].some(
+    (d) => d.stats.stateGuard === 'trending' || d.gpuStats?.stateGuard === 'trending',
+  );
   if (trending) {
     return {
       key: `${key}|dwell`,

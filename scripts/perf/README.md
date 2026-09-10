@@ -336,8 +336,19 @@ a differing adapter string refuses the whole run (a differing schema never
 reaches the diff — see § JSON output); a differing method or mode, a buffer
 more than 1 % apart, a differing or absent **record count** (a row priced
 against a different catalogue is not a comparison), a failed or tainted
-scenario, a vsync-clamped dwell, a `cadenceBound` row (either side), or a
-row missing from one side refuses that key. The key carries the backend, so a vantage the other run measured on the
+scenario, a vsync-clamped dwell, a
+`cadenceBound` row (either side), a dwell whose state guard trended on
+**either** clock, or a row missing from one side refuses that key.
+
+**A dwell row here refuses on both clocks, where the pin refuses on one.**
+That is the same rule, not a stricter one: a guard may only stand down on a
+clock its row does not mark, and this row's metric is wall `p50`. The pin
+marks on the GPU stream, so wall's verdict is context there and
+`gatingClock` ignores it (`pins/README.md` § State guard). Read off wall
+here it is load-bearing — two runs of the same code at a vantage whose frame
+exceeds one refresh interval have alternating wall medians, and comparing
+them manufactures a whole-interval delta the band cannot absorb. The guard
+narrows to the gating clock when this row's metric moves to `gpu-p50`. The key carries the backend, so a vantage the other run measured on the
 *other* backend says exactly that rather than reporting itself absent.
 Sweeps are never diffed — a slope is not a cost.
 

@@ -300,14 +300,28 @@ describe('diffRuns — refusals', () => {
     expect(diff.refusals[0].reason).toContain('load-state transition');
   });
 
-  it('does not refuse a wall clock that alternated while the GPU stream held still', () => {
-    const alternating = dwellStats(33.4, { quarterMedians: [16.7, 33.4, 16.7, 33.4], stateGuard: 'trending' });
+  // The pin stands its guard down on the wall clock because it marks on the
+  // GPU stream. This row marks on wall p50, so it may not: comparing two
+  // alternating wall medians manufactures a whole-interval delta out of two
+  // runs of the same code. Narrowing the guard here waits on this row's
+  // metric moving to gpu-p50.
+  it('still refuses a wall clock that alternated, because it is the clock this row marks', () => {
+    const alternating = dwellStats(16.7, { quarterMedians: [16.7, 33.4, 16.7, 33.4], stateGuard: 'trending' });
     const diff = diffRuns(
       withDwell(alternating, {}, dwellStats(31.84)),
-      withDwell(alternating, {}, dwellStats(31.85)),
+      withDwell(dwellStats(33.4, { quarterMedians: [33.4, 16.7, 33.4, 16.7], stateGuard: 'trending' }), {}, dwellStats(31.85)),
     );
-    expect(diff.refusals).toEqual([]);
-    expect(diff.rows).toHaveLength(1);
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('load-state transition');
+  });
+
+  it('refuses a GPU stream that trended under a wall clock that read steady', () => {
+    const diff = diffRuns(
+      withDwell(dwellStats(30), {}, dwellStats(21.8)),
+      withDwell(dwellStats(30), {}, dwellStats(21.8, { quarterMedians: [20.3, 21.3, 22.3, 23.3], stateGuard: 'trending' })),
+    );
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('load-state transition');
   });
 
   it('refuses a comparison across two record sets', () => {
