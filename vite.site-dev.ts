@@ -1,17 +1,35 @@
 /**
  * Dev-only document routing, so one `pnpm run dev` answers the same paths the
- * deploy does: the app at /app, the homepage at /, the 404 page for the rest.
+ * deploy does: the app at /app, the homepage at /, the 404 page for the rest,
+ * and a 301 off either legacy share transport.
  */
 
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Plugin } from 'vite';
 
-/** Mirrors `src/worker.ts`'s own rule for what the application owns. */
-const APP_PATH = '/app';
+import { APP_PATH, legacyShareRedirect } from './src/client/util/url-state/share-path-pure.ts';
 
 function ownedByApp(pathname: string): boolean {
   return pathname === APP_PATH || pathname.startsWith(`${APP_PATH}/`);
+}
+
+export type DevRoute =
+  | { kind: 'redirect'; to: string }
+  | { kind: 'document'; doc: 'app' | 'home' | 'notFound' };
+
+/**
+ * The four rules `src/worker.ts` answers in production, in its order. Both
+ * read `legacyShareRedirect` rather than restating the share grammar: a dev
+ * server that 404s a link the deploy redirects is a bug nobody sees until
+ * someone pastes a real share URL.
+ */
+export function devRoute(pathname: string, search: string): DevRoute {
+  const legacy = legacyShareRedirect(pathname, search);
+  if (legacy !== null) return { kind: 'redirect', to: legacy };
+  if (ownedByApp(pathname)) return { kind: 'document', doc: 'app' };
+  if (pathname === '/') return { kind: 'document', doc: 'home' };
+  return { kind: 'document', doc: 'notFound' };
 }
 
 /**
@@ -38,6 +56,15 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
   // `server.fs.allow` already covers the repo.
   const stylesheet = `/@fs${resolve(siteDir, 'site.css')}`;
 
+  // `base` is the root-relative URL Vite resolves a document's own relative
+  // imports against, so the app document's `../main.ts` lands on
+  // `src/client/main.ts`.
+  const documents = {
+    app: { file: appDoc, base: '/app/index.html', status: 200 },
+    home: { file: resolve(siteDir, 'index.html'), base: '/index.html', status: 200 },
+    notFound: { file: resolve(siteDir, '404.html'), base: '/404.html', status: 404 },
+  } as const;
+
   return {
     name: 'stellata:document-routing-in-dev',
     apply: 'serve',
@@ -47,22 +74,28 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
       // are served first and only documents reach this.
       return () => {
         server.middlewares.use(async (req, res, next) => {
-          const url = (req.url ?? '/').split('?')[0];
-          const wantsDocument = (req.headers.accept ?? '').includes('text/html');
-          if (req.method !== 'GET' || !wantsDocument) {
+          if (req.method !== 'GET' && req.method !== 'HEAD') {
+            next();
+            return;
+          }
+          const [pathname, query] = (req.url ?? '/').split('?');
+          const route = devRoute(pathname, query === undefined ? '' : `?${query}`);
+
+          // A share link is answered whatever the client asked for, matching
+          // the Worker; only the document fallback is HTML-gated, so an
+          // unmatched asset fetch still 404s as an asset.
+          if (route.kind === 'redirect') {
+            res.statusCode = 301;
+            res.setHeader('Location', route.to);
+            res.end();
+            return;
+          }
+          if (!(req.headers.accept ?? '').includes('text/html')) {
             next();
             return;
           }
 
-          // `file` is read from disk; `base` is the root-relative URL Vite
-          // resolves the document's own relative imports against, so the app
-          // document's `../main.ts` lands on `src/client/main.ts`.
-          const [file, base, status] = ownedByApp(url)
-            ? [appDoc, '/app/index.html', 200]
-            : url === '/'
-              ? [resolve(siteDir, 'index.html'), '/index.html', 200]
-              : [resolve(siteDir, '404.html'), '/404.html', 404];
-
+          const { file, base, status } = documents[route.doc];
           try {
             const raw = await readFile(file, 'utf8');
             const html = await server.transformIndexHtml(
