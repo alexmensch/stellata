@@ -141,6 +141,25 @@ changes is a block — which is why `.label`, `.lead`, `.aside` and
 `.skip-link` sit in the block layer despite looking like text utilities, and
 only `.wrapper`, `.measure` and `.dim` are utilities.
 
+**The call to action is an exception, not a block.** `.pill[data-primary]`
+fills the pill with the accent and inverts its text to the page ground; plain
+`.pill` stays outlined. Opt-in deliberately — a page where every pill is
+filled has no primary action — and an exception rather than a second block
+because the shape, padding and typography are all the pill's, and only the
+fill differs.
+
+**Hover swaps the pair.** The outlined pill fills; the filled one empties
+into exactly the outlined pill's hover treatment. So the two are inverses and
+hover reads as a state change rather than a shade of one.
+
+That rule restates all three properties, and has to. `.pill[data-primary]`
+and `.pill:hover` carry equal specificity, so with no rule of its own the
+filled state simply keeps winning and the button never reacts; with a rule
+that sets only `color` and `border-color`, the accent fill stays and the text
+turns accent on accent. `tests/site-css-rules.test.ts` fails the build on
+either. Focus needs nothing special: the global `:focus-visible` ring carries
+an `outline-offset`, so it lands on the page ground outside the fill.
+
 **The palette is not ours to set.** `site.css` imports
 `src/design-tokens.css` and must not restate a colour or the typeface. The
 app's chrome is the reference: near-black ground, monospace throughout, 1px
