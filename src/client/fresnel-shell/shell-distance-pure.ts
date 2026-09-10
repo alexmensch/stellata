@@ -27,9 +27,9 @@ export function nearFadePcForExtent(extentPc: number): number {
 /**
  * The factor the rim alpha is multiplied by for a fragment `dViewPc` from
  * the camera. CPU mirror of the `stellata_fresnel_rim` chunk's
- * `shellDistanceAttenuation` and of its TSL twin: a zero `dViewPc` divides
- * to infinity and clamps to 1 on all three, so none of them guards with an
- * epsilon.
+ * `shellDistanceAttenuation` and of its TSL twin. The near plane keeps
+ * `dViewPc` strictly positive in any real draw, so none of the three
+ * guards the divide with an epsilon that all three would then have to pin.
  */
 export function shellDistanceAttenuation(
   dViewPc: number,

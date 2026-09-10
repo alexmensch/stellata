@@ -6,7 +6,7 @@ import { normalView, positionView, vec4 } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';
 import type { FresnelShellMaterialOptions } from '../../fresnel-shell/fresnel-shell';
 import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material';
-import { fresnelRimAlphaTsl } from './fresnel-rim-tsl';
+import { fresnelRimAlphaTsl, shellDistanceAttenuationTsl } from './fresnel-rim-tsl';
 import type { FresnelShellNodes } from './shell-uniform-nodes';
 
 export function buildFresnelShellMaterial(
@@ -31,7 +31,9 @@ export function buildFresnelShellMaterial(
       normalView.normalize(),
       positionView.negate().normalize(),
       s.uAlphaLimb, s.uFaceOnFloor, s.uFresnelPower,
-    );
+    ).mul(shellDistanceAttenuationTsl(
+      positionView, s.uNearFadePc, s.uDepthDimRefPc, s.uDepthPower,
+    ));
     // Chrome: an authored colour inverse-mapped through the operator, with
     // no claim on the light already in the target. Both extra attachments
     // take the blend's identity element (`../hdr/README.md` § The gate
