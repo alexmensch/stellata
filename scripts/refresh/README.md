@@ -161,13 +161,29 @@ shortfall is what is pinned:
 | Count | Pin | What a move means |
 |---|---|---|
 | `bjEligibleNotPulled` | **0** | an eligible row has its own DR3 parallax, so Bailer-Jones publishes a posterior for it; an absence is only ever this request set drifting |
-| `apsisSourcesUnpulled` | reviewed residual | Gaia genuinely lacks parameters for part of the catalogue, so the residual is non-zero and what is gated is it MOVING |
-| `gspcSourcesUnpulled` | reviewed residual | same terms |
+| `apsisSourcesUnpulled` | reviewed residual | **not** what this row used to claim — measured 2026-09-10, only **50** of the 5,126 are sources the pull asked for and Gaia had nothing for. The other **5,076** are promoted companions, which are RECORDS but not manifest rows, so a manifest-keyed request never asks. See below |
+| `gspcSourcesUnpulled` | reviewed residual | Gaia genuinely lacks parameters for part of the catalogue; its request is the exported union, which does cover pair members |
 | `gateSkippedNoGMag` · `derivedWeighedNoGMag` | **0** | the original instance of this rule, on the two binding gates (`scripts/catalog/astrometry-request/README.md` § The request is a union) |
 
 Adding a per-source consumer therefore means adding its shortfall count in
 the same change. The cost is one hash lookup per record, so it scales with
 the catalogue rather than with the pull.
+
+**A shortfall pinned at a residual hides what a zero pin would have shown.**
+Apsis is REQUESTED per manifest row and CONSUMED per record, and the record
+set is wider — promoted companions carry a Gaia id and are never in the
+manifest's column. So its residual was read as upstream absence for as long as
+it stayed put, when 99% of it is the request set not asking. `refresh:gaia-gspc`
+already avoids this by reading the exported union
+(`build:astrometry-request`), which explicitly includes `multiples.tsv`'s
+kept-physical pair members; Apsis reading the manifest directly is the
+asymmetry. Whether to widen it is `stellata-hooj.19` — it would hand ~5k
+promoted companions a Teff they do not have today, which moves rendered radii
+and colours and so is its own change.
+
+The general rule: when a consumer runs over RECORDS, a request derived from
+manifest rows under-covers it by exactly the promoted companions, and only a
+zero pin makes that visible.
 
 **`simbad_sptype.tsv` is a cycle, not a line, and cannot be gated this
 way.** Its request keys come off the manifest's binding column
