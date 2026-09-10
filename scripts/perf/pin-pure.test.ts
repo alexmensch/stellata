@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BUFFER_MPX_TOLERANCE } from './diff-pure';
+import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE } from './diff-pure';
 import type { DwellSummary } from './dwell-pure';
 import {
   PIN_CEILING_MS,
@@ -11,11 +11,14 @@ import {
   adapterSlug,
   assertPinFile,
   citeRunPath,
+  commitStateFromExitStatus,
   compareToPin,
   pinDiffFails,
   pinFloorMs,
   pinFromRun,
   pinPathFor,
+  parseRenderPathDrift,
+  pinProvenanceLines,
   unacceptedMarks,
   type PinFile,
 } from './pin-pure';
@@ -34,6 +37,8 @@ const M4: AdapterProbe = {
   },
 };
 
+const RECORDS = 388063;
+
 /** iqr 1.349 over 240 samples: the median's standard error is 0.0809 ms, so
  *  a two-sigma band on a pair is 0.229 — always under the pin floor. */
 function stats(p50: number, overrides: Partial<DwellSummary> = {}): DwellSummary {
@@ -42,6 +47,23 @@ function stats(p50: number, overrides: Partial<DwellSummary> = {}): DwellSummary
     vsyncClamped: false, quarterMedians: [p50, p50, p50, p50], stateGuard: 'steady',
     ...overrides,
   };
+}
+
+/** A clock that genuinely changed state under the dwell: quarter medians
+ *  spanning 3 ms, well past `STATE_GUARD_TREND_MS`. */
+function trending(p50: number): DwellSummary {
+  return stats(p50, {
+    quarterMedians: [p50 - 1.5, p50 - 0.5, p50 + 0.5, p50 + 1.5],
+    stateGuard: 'trending',
+  });
+}
+
+/** The wall clock at a vantage whose frame exceeds one refresh interval: the
+ *  deltas alternate one/two intervals, so the quarter medians swing by a
+ *  whole interval and the verdict is a coin flip. mw50 measured exactly this
+ *  on two cold runs whose GPU quarters spanned 0.017 ms. */
+function alternatingWall(): DwellSummary {
+  return stats(33.4, { quarterMedians: [16.7, 33.4, 16.7, 33.4], stateGuard: 'trending' });
 }
 
 function dwell(wall: DwellSummary, gpu: DwellSummary | null): DwellRecord {
@@ -58,7 +80,7 @@ function scenario(
     name, blob: 'blob',
     backend: { requested: backend, actual: backend },
     viewport: { width: 1280, height: 800, dpr: 2 },
-    buffer: { width: 2560, height: 1600 }, bufferMpx: 4.096,
+    buffer: { width: 2560, height: 1600 }, bufferMpx: 4.096, recordCount: RECORDS,
     mode: 'dwell', method: 'raf-delta', params: {}, settleMs: 5000, idleRafMs: 16.7,
     differential: null, dwell: record, dwellAfter: null, roundtrip: null, sweep: null,
     console: [], pageErrors: [], tainted: false, failed: false, failure: null,
@@ -71,7 +93,8 @@ function file(scenarios: readonly ScenarioRecord[], overrides: { gpu?: AdapterPr
     schema: PERF_SCHEMA,
     run: {
       startedAt: '2026-09-05T20:00:00.000Z', finishedAt: '2026-09-05T20:03:00.000Z',
-      url: 'http://localhost:5173', argv: [], git: { commit: 'abc1234', dirty: false },
+      url: 'http://localhost:5173', argv: [],
+      git: { commit: 'abc1234', dirty: false, mainCommit: 'abc1234', mainReachable: true },
       browser: { name: 'chromium', version: '151', channel: 'chromium', headless: overrides.headless ?? true, args: [] },
       gpu: overrides.gpu === undefined ? M4 : overrides.gpu,
       host: { platform: 'darwin', arch: 'arm64' },
@@ -137,10 +160,25 @@ describe('pinFromRun', () => {
       .toContain('dwell-mode');
     expect(refused(scenario('earth', 'webgpu', dwell(stats(18.7), stats(16.9)), { method: 'timestamp' })).refusals[0])
       .toContain('raf-delta');
-    expect(refused(scenario('earth', 'webgpu', dwell(stats(18.7, { quarterMedians: [17.4, 18.2, 19.6, 21], stateGuard: 'trending' }), stats(16.9)))).refusals[0])
+    expect(refused(scenario('earth', 'webgpu', dwell(stats(18.7), trending(16.9)))).refusals[0])
       .toContain('load-state transition');
+    expect(refused(scenario('earth', 'webgpu', dwell(stats(18.7), stats(16.9)), { recordCount: null })).refusals[0])
+      .toContain('record count');
     expect(refused(scenario('earth', 'webgpu', dwell(stats(18.7), stats(16.9)), { dwellAfter: dwell(stats(18.7), stats(16.9)) })).refusals[0])
       .toContain('round-trip');
+  });
+
+  it('pins a row whose wall clock alternates while its GPU stream holds still', () => {
+    const mw50 = scenario('mw50', 'webgpu', dwell(alternatingWall(), stats(31.84)));
+    const { pin, refusals } = pinFromRun(file([mw50]), SOURCE);
+    expect(refusals).toEqual([]);
+    expect(pin!.rows[0].gpu!.p50).toBe(31.84);
+    expect(pin!.rows[0].wall.stateGuard).toBe('trending');
+  });
+
+  it('still judges a WebGL2 row on the wall clock, its only clock', () => {
+    const gl = scenario('sol', 'webgl2', dwell(trending(16.4), null));
+    expect(pinFromRun(file([gl]), SOURCE).refusals[0]).toContain('load-state transition');
   });
 
   it('refuses a headed run, a run without a probe, and an empty run', () => {
@@ -251,7 +289,7 @@ describe('compareToPin', () => {
   });
 
   it('refuses a row that is missing, trended, or was measured at another buffer', () => {
-    const trended = scenario('sol', 'webgpu', dwell(stats(25.2, { quarterMedians: [24, 25, 26, 27], stateGuard: 'trending' }), stats(21.8)));
+    const trended = scenario('sol', 'webgpu', dwell(stats(25.2), trending(21.8)));
     const resized = scenario('sol', 'webgpu', dwell(stats(25.2), stats(21.8)), { bufferMpx: 4.096 * (1 + 2 * BUFFER_MPX_TOLERANCE) });
     const diff = compareToPin(pinOf(), file([trended]));
     expect(diff.rows).toEqual([]);
@@ -259,6 +297,123 @@ describe('compareToPin', () => {
     expect(diff.refusals[0].reason).toContain('load-state transition');
     expect(diff.refusals[1].reason).toBe('not measured in this run');
     expect(compareToPin(pinOf([SOL_GPU]), file([resized])).refusals[0].reason).toContain('Mpx');
+  });
+
+  it('compares a row whose wall clock alternates but whose GPU stream is steady', () => {
+    const mw50 = (gpuP50: number) => scenario('mw50', 'webgpu', dwell(alternatingWall(), stats(gpuP50)));
+    const diff = compareToPin(pinOf([mw50(31.84)]), file([mw50(31.85)]));
+    expect(diff.refusals).toEqual([]);
+    expect(diff.rows[0].metric).toBe('gpu-p50');
+    expect(diff.rows[0].verdict).toBe('same');
+  });
+
+  it('refuses a row priced against a different catalogue', () => {
+    const grown = scenario('sol', 'webgpu', dwell(stats(25.2), stats(21.8)), { recordCount: RECORDS + 54458 });
+    const diff = compareToPin(pinOf([SOL_GPU]), file([grown]));
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain(`${RECORDS} vs ${RECORDS + 54458} records`);
+    expect(pinDiffFails(diff)).toBe(true);
+  });
+
+  // The bound perf-section-check.sh requires a re-take past. Below it a
+  // membership change ships with no `## Perf` section, so the pin it leaves
+  // behind has to stay usable or every later render-path PR is blocked.
+  it('still compares a row whose catalogue moved less than the tolerance', () => {
+    const nudged = scenario('sol', 'webgpu', dwell(stats(25.2), stats(21.8)), {
+      recordCount: RECORDS + Math.floor(RECORDS * RECORD_COUNT_TOLERANCE) - 1,
+    });
+    const diff = compareToPin(pinOf([SOL_GPU]), file([nudged]));
+    expect(diff.refusals).toEqual([]);
+    expect(diff.rows[0].metric).toBe('gpu-p50');
+    expect(pinDiffFails(diff)).toBe(false);
+  });
+});
+
+describe('parseRenderPathDrift', () => {
+  it('reads a full shortstat line', () => {
+    expect(parseRenderPathDrift(' 42 files changed, 1600 insertions(+), 30 deletions(-)'))
+      .toEqual({ files: 42, insertions: 1600, deletions: 30 });
+  });
+
+  it('reads a clause git omits when its count is zero', () => {
+    expect(parseRenderPathDrift(' 3 files changed, 12 insertions(+)'))
+      .toEqual({ files: 3, insertions: 12, deletions: 0 });
+    expect(parseRenderPathDrift(' 2 files changed, 7 deletions(-)'))
+      .toEqual({ files: 2, insertions: 0, deletions: 7 });
+    expect(parseRenderPathDrift(' 1 file changed, 1 insertion(+), 1 deletion(-)'))
+      .toEqual({ files: 1, insertions: 1, deletions: 1 });
+  });
+
+  it('reads an empty line as a measured zero, not as a failure to measure', () => {
+    expect(parseRenderPathDrift('')).toEqual({ files: 0, insertions: 0, deletions: 0 });
+    expect(parseRenderPathDrift('\n')).toEqual({ files: 0, insertions: 0, deletions: 0 });
+  });
+
+  it('returns null on anything it cannot read', () => {
+    expect(parseRenderPathDrift('fatal: bad revision')).toBeNull();
+  });
+});
+
+describe('commitStateFromExitStatus — only exit 1 is an answer', () => {
+  it('reads a clean exit as landed and exit 1 as unlanded', () => {
+    expect(commitStateFromExitStatus(0)).toBe('landed');
+    expect(commitStateFromExitStatus(1)).toBe('unlanded');
+  });
+
+  it('reads every other status as unknown, never as unlanded', () => {
+    // 128 is git's "bad object / no such ref" — the question failed rather
+    // than being answered no, and a confident "pre-squash tip" line about a
+    // commit git never resolved is the thing this separation prevents.
+    for (const status of [128, 129, 2, -1, undefined]) {
+      expect(commitStateFromExitStatus(status), `status ${status}`).toBe('unknown');
+    }
+  });
+});
+
+describe('pinProvenanceLines — what the pin measured, before any row is read', () => {
+  const pin = pinOf([SOL_GPU]);
+  const onMain = { ...pin, git: { ...pin.git, commit: 'landed7', mainCommit: 'base1234' } };
+  const RUN_BASE = 'runbase9';
+  const NO_DRIFT = { files: 0, insertions: 0, deletions: 0 };
+
+  it('says nothing when the commit landed and main has not moved under src/client', () => {
+    expect(pinProvenanceLines(onMain, 'landed', NO_DRIFT, RUN_BASE)).toEqual([]);
+  });
+
+  it('names a pre-squash tip that no hash on main carries', () => {
+    const lines = pinProvenanceLines(onMain, 'unlanded', NO_DRIFT, RUN_BASE);
+    expect(lines[0]).toContain('not an ancestor of origin/main');
+    expect(lines[0]).toContain('pre-squash branch tip');
+  });
+
+  it('quotes the render-path difference a mark might really be', () => {
+    const lines = pinProvenanceLines(onMain, 'unlanded', { files: 42, insertions: 1600, deletions: 30 }, RUN_BASE);
+    expect(lines[1]).toContain('42 files, +1600/-30');
+    expect(lines[1]).toContain('may be that difference rather than this diff');
+  });
+
+  // The counts are `git diff <pin base> <run base>`, so they read in that
+  // direction whichever tree is older. Naming both ends is what keeps the
+  // line true for a branch cut BEFORE the pin was taken, where "main moved
+  // since the pin" would have the insertions and deletions the wrong way up.
+  it('names both bases and the direction, rather than claiming main moved forward', () => {
+    const lines = pinProvenanceLines(onMain, 'landed', { files: 3, insertions: 9, deletions: 1 }, RUN_BASE);
+    expect(lines[0]).toContain("from the pin's base base1234 to this run's runbase9");
+    expect(lines[0]).not.toContain('moved');
+  });
+
+  it('still reads without a run base to name', () => {
+    const lines = pinProvenanceLines(onMain, 'landed', { files: 3, insertions: 9, deletions: 1 }, null);
+    expect(lines[0]).toContain("to this run's unrecorded base");
+  });
+
+  it('says so when the pin records no main base at all', () => {
+    const based = { ...pin, git: { ...pin.git, mainCommit: null } };
+    expect(pinProvenanceLines(based, 'unlanded', null, RUN_BASE).at(-1)).toContain('cannot be measured at all');
+  });
+
+  it('separates an unreadable ancestry from a known-unlanded one', () => {
+    expect(pinProvenanceLines(onMain, 'unknown', null, RUN_BASE)[0]).toContain('drift is unbounded');
   });
 });
 
@@ -270,7 +425,7 @@ describe('pinDiffFails — a refused comparison is not a pass', () => {
 
     // Every row refused prints a table with no ✗ in it, which would read as
     // a clean run if only the marks were counted.
-    const trended = scenario('sol', 'webgpu', dwell(stats(25.2, { quarterMedians: [24, 25, 26, 27], stateGuard: 'trending' }), stats(21.8)));
+    const trended = scenario('sol', 'webgpu', dwell(stats(25.2), trending(21.8)));
     const allRefused = compareToPin(pinOf([SOL_GPU]), file([trended]));
     expect(allRefused.rows).toEqual([]);
     expect(pinDiffFails(allRefused)).toBe(true);

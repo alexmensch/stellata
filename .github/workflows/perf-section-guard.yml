@@ -9,11 +9,12 @@ on:
 permissions:
   contents: read
 
-# Asserts that a PR whose diff touches a render path carries a non-empty
-# `## Perf` section with an `accepted:` line for every ✗ row. CI has no GPU,
-# so this checks the section, not the numbers — the runner produces those
-# on the developer's machine. Rules: RELEASING.md § Perf pin; the check
-# itself is scripts/perf/perf-section-check.sh so it can be tested.
+# Asserts that a PR whose diff touches a render path, or moves catalogue
+# membership by more than 1 %, carries a non-empty `## Perf` section with an
+# `accepted:` line for every ✗ row. CI has no GPU, so this checks the section,
+# not the numbers — the runner produces those on the developer's machine.
+# Rules: RELEASING.md § Perf pin; the check itself is
+# scripts/perf/perf-section-check.sh so it can be tested.
 
 jobs:
   perf-section-guard:
@@ -24,10 +25,26 @@ jobs:
           fetch-depth: 0
       - name: List the files this PR changes
         run: git diff --name-only "origin/${{ github.base_ref }}...HEAD" > "$RUNNER_TEMP/changed.txt"
+      # The membership term's own committed record: it cannot move without a
+      # deliberate UPDATE_BUILD_COUNTS refresh (scripts/catalog/README.md).
+      # Unreadable on either side prints nothing, and the check stays silent.
+      - name: Read the catalogue record count either side
+        id: records
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -uo pipefail
+          counts=scripts/catalog/build-catalog-expected.json
+          base="$(git show "origin/${BASE_REF}:${counts}" 2>/dev/null | jq -r '.recordCount // empty')" || base=''
+          head="$(jq -r '.recordCount // empty' "$counts" 2>/dev/null)" || head=''
+          printf 'base=%s\nhead=%s\n' "$base" "$head" >> "$GITHUB_OUTPUT"
       - name: Check the `## Perf` section
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_RECORDS: ${{ steps.records.outputs.base }}
+          HEAD_RECORDS: ${{ steps.records.outputs.head }}
         run: |
           set -euo pipefail
           printf '%s\n' "${PR_BODY:-}" > "$RUNNER_TEMP/body.md"
-          bash scripts/perf/perf-section-check.sh "$RUNNER_TEMP/body.md" "$RUNNER_TEMP/changed.txt"
+          bash scripts/perf/perf-section-check.sh "$RUNNER_TEMP/body.md" "$RUNNER_TEMP/changed.txt" \
+            "${BASE_RECORDS:-}" "${HEAD_RECORDS:-}"

@@ -136,7 +136,7 @@ export function usage(): string {
     `  --frames <n>             dwell and sweep: frames per dwell         (default ${ARG_DEFAULTS.frames})`,
     `  --roundtrip <pass|${ROUNDTRIP_IDLE}>  dwell: dwell, hold the pass off for --frames then restore it, dwell again`,
     `  --scales <list>          sweep: viewport scales                    (default ${ARG_DEFAULTS.scales})`,
-    '  --json <path>            write the whole run as stellata-perf/1',
+    '  --json <path>            write the whole run as stellata-perf/2',
     '  --baseline <path>        diff this run against a saved one and print the verdicts',
     '  --pin <path>             dwell: write this run as the perf pin (with --json; RELEASING.md § Perf pin)',
     '  --against-pin <path>     dwell: verdicts against a pin; a ✗ or a refused row exits 1',

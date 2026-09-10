@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { BUFFER_MPX_TOLERANCE, diffRuns, type RunDiff } from './diff-pure';
+import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, diffRuns, type RunDiff } from './diff-pure';
 import type { DwellSummary } from './dwell-pure';
 import { PERF_SCHEMA, type PerfFile, type ScenarioRecord } from './schema';
 
@@ -24,6 +24,8 @@ function priceRow(overrides: Partial<PriceFrameRow> & { pass: string }): PriceFr
     ...overrides,
   };
 }
+
+const RECORDS = 388063;
 
 /** iqr 1.349 over 100 samples puts the median's standard error at exactly
  *  0.12533 ms, so a two-sigma band comes out at 0.354. */
@@ -50,6 +52,7 @@ function scenario(overrides: Partial<ScenarioRecord> = {}): ScenarioRecord {
     viewport: { width: 1280, height: 800, dpr: 2 },
     buffer: { width: 2560, height: 1600 },
     bufferMpx: 4.096,
+    recordCount: RECORDS,
     mode: 'differential',
     method: 'raf-delta',
     params: {},
@@ -77,7 +80,7 @@ function file(scenarios: readonly ScenarioRecord[], adapter = 'Apple M3 Max'): P
       finishedAt: '2026-09-04T10:05:00.000Z',
       url: 'http://localhost:5173',
       argv: [],
-      git: { commit: 'abc1234', dirty: false },
+      git: { commit: 'abc1234', dirty: false, mainCommit: 'abc1234', mainReachable: true },
       browser: { name: 'chromium', version: '1', channel: 'chromium', headless: true, args: [] },
       gpu: {
         webgl: { renderer: adapter, vendor: 'Apple', timerQuery: true },
@@ -93,16 +96,20 @@ function withDifferential(rows: readonly PriceFrameRow[], overrides: Partial<Sce
   return file([scenario({ differential: rows, ...overrides })]);
 }
 
-function withDwell(stats: DwellSummary, overrides: Partial<ScenarioRecord> = {}): PerfFile {
+function withDwell(
+  stats: DwellSummary,
+  overrides: Partial<ScenarioRecord> = {},
+  gpuStats: DwellSummary | null = null,
+): PerfFile {
   return file([scenario({
     mode: 'dwell',
     differential: null,
     dwell: {
       deltasMs: [],
-      gpuMs: null,
-      gpuNote: 'not requested',
+      gpuMs: gpuStats === null ? null : [],
+      gpuNote: gpuStats === null ? 'not requested' : 'sound',
       stats,
-      gpuStats: null,
+      gpuStats,
       limitMag: 1.5,
       dm: -6.29,
       readbackPerFrame: 0.25,
@@ -291,6 +298,69 @@ describe('diffRuns — refusals', () => {
     );
     expect(diff.rows).toEqual([]);
     expect(diff.refusals[0].reason).toContain('load-state transition');
+  });
+
+  // The pin stands its guard down on the wall clock because it marks on the
+  // GPU stream. This row marks on wall p50, so it may not: comparing two
+  // alternating wall medians manufactures a whole-interval delta out of two
+  // runs of the same code. Narrowing the guard here waits on this row's
+  // metric moving to gpu-p50.
+  it('still refuses a wall clock that alternated, because it is the clock this row marks', () => {
+    const alternating = dwellStats(16.7, { quarterMedians: [16.7, 33.4, 16.7, 33.4], stateGuard: 'trending' });
+    const diff = diffRuns(
+      withDwell(alternating, {}, dwellStats(31.84)),
+      withDwell(dwellStats(33.4, { quarterMedians: [33.4, 16.7, 33.4, 16.7], stateGuard: 'trending' }), {}, dwellStats(31.85)),
+    );
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('load-state transition');
+  });
+
+  it('refuses a GPU stream that trended under a wall clock that read steady', () => {
+    const diff = diffRuns(
+      withDwell(dwellStats(30), {}, dwellStats(21.8)),
+      withDwell(dwellStats(30), {}, dwellStats(21.8, { quarterMedians: [20.3, 21.3, 22.3, 23.3], stateGuard: 'trending' })),
+    );
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('load-state transition');
+  });
+
+  it('refuses a comparison across two record sets', () => {
+    const diff = diffRuns(
+      withDwell(dwellStats(30)),
+      withDwell(dwellStats(30), { recordCount: RECORDS + 54458 }),
+    );
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain(`${RECORDS} vs ${RECORDS + 54458} records`);
+    expect(diff.refusals[0].reason).toContain('14.0 % apart');
+  });
+
+  // A membership change under the tolerance owes no `## Perf` section, so it
+  // ships without re-taking the pin — and would deadlock every later
+  // comparison if the refusal here were exact. The two bounds are one bound.
+  it('compares across a record set inside the tolerance, and refuses just past it', () => {
+    const inside = Math.floor(RECORDS * (1 + RECORD_COUNT_TOLERANCE));
+    const outside = Math.ceil(RECORDS * (1 + RECORD_COUNT_TOLERANCE)) + 1;
+    expect(diffRuns(withDwell(dwellStats(30)), withDwell(dwellStats(30), { recordCount: inside })).rows)
+      .toHaveLength(1);
+    expect(diffRuns(withDwell(dwellStats(30)), withDwell(dwellStats(30), { recordCount: outside })).rows)
+      .toEqual([]);
+  });
+
+  it('reads the tolerance in both directions, so a shrunken catalogue is judged the same', () => {
+    const shrunk = Math.ceil(RECORDS * (1 - RECORD_COUNT_TOLERANCE)) - 1;
+    const diff = diffRuns(withDwell(dwellStats(30)), withDwell(dwellStats(30), { recordCount: shrunk }));
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('% apart');
+  });
+
+  it('refuses a comparison where either side recorded no record count', () => {
+    const counted = withDwell(dwellStats(30));
+    const uncounted = withDwell(dwellStats(30), { recordCount: null });
+    for (const [a, b] of [[counted, uncounted], [uncounted, counted], [uncounted, uncounted]]) {
+      const diff = diffRuns(a, b);
+      expect(diff.rows).toEqual([]);
+      expect(diff.refusals[0].reason).toContain('cannot be placed on a scene');
+    }
   });
 
   it('names a scenario the current run did not measure', () => {

@@ -169,7 +169,7 @@ describe('forbidden-pattern shapes', () => {
       // A slash makes it a path or a namespaced identifier. No bead ID is
       // ever followed by one, and the 3-5 char slug window cannot tell
       // 'perf' from a real epic slug like 'cns' or 'dch' any other way.
-      "const PERF_SCHEMA = 'stellata-perf/1';",
+      "const PERF_SCHEMA = 'stellata-perf/2';",
       '// the arm protocol lives in .claude/skills/stellata-perf/SKILL.md',
       '// writes public/catalog.bin.0 and .bin.1',
       '// Table 24.3 gives the integrated starlight',

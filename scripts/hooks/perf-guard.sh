@@ -2,7 +2,7 @@
 # perf-guard: PreToolUse hook on Bash / Write / Edit / NotebookEdit. Two
 # independent gates — nothing the agent does may create the arm marker, and
 # the runner may not launch without a fresh one.
-# Protocol: scripts/perf/README.md § Human-armed.
+# Protocol: scripts/perf/arming/README.md.
 
 set -euo pipefail
 
@@ -23,20 +23,20 @@ deny() {
 # route out of this script other than an explicit pass is a denial.
 trap 'deny "Refusing: perf-guard.sh failed unexpectedly near line ${LINENO}. Fix the hook rather than working around it."' ERR
 
-. "$(dirname "$0")/../perf/perf-go-lib.sh"
+. "$(dirname "$0")/../perf/arming/perf-go-lib.sh"
 
 input="$(cat)"
 tool="$(printf '%s' "$input" | jq -r '.tool_name // ""')"
 
 marker="$(perf_go_marker)" || deny "Refusing: not inside a git checkout, so there is no repo root to look for the ${PERF_GO_MARKER_NAME} marker in."
 
-marker_rule="Only Alex creates ${marker}, and it authorises exactly one launch — scripts/perf/README.md § Human-armed. This gate is unconditional: it does not check whether the command also launches the runner.
+marker_rule="Only Alex creates ${marker}, and it authorises exactly one launch — scripts/perf/arming/README.md. This gate is unconditional: it does not check whether the command also launches the runner.
 
 Naming the marker for another reason? A commit message or PR body goes through 'git commit -F <file>' / 'gh pr create --body-file <file>' (the route a worktree session already uses); searching the tree goes through the Grep tool."
 
-protocol="The perf runner is human-armed — scripts/perf/README.md § Human-armed. The protocol, verbatim:
+protocol="The perf runner is human-armed — scripts/perf/arming/README.md. The protocol, verbatim:
   1. Announce what you want to measure and why, with the exact command.
-  2. Start the poller in the background: bash scripts/perf/await-go.sh  (Bash run_in_background).
+  2. Start the poller in the background: bash scripts/perf/arming/await-go.sh  (Bash run_in_background).
   3. Proceed only when it reports the marker.
   4. Never create the marker. Alex arms a run with: touch ${marker}
      One arm authorises exactly one launch; the runner deletes the marker before the browser starts."

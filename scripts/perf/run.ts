@@ -16,11 +16,11 @@ import { ArgError, parseRunArgs, usage, type BackendRequest, type RunArgs } from
 import { diffRuns } from './diff-pure';
 import type { DwellSummary } from './dwell-pure';
 import { applyRoundTrip, measureDwell, measureSweep, type Measured } from './measure';
-import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './perf-go-lib';
+import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './arming/perf-go-lib';
 import {
-  PIN_SCHEMA, PinError, assertPinFile, citeRunPath, compareToPin, pinDiffFails, pinFromRun,
-  unacceptedMarks,
-  type PinDiff, type PinFile,
+  PIN_SCHEMA, PinError, assertPinFile, citeRunPath, commitStateFromExitStatus, compareToPin,
+  pinDiffFails, pinFromRun, parseRenderPathDrift, pinProvenanceLines, unacceptedMarks,
+  type PinCommitState, type PinDiff, type PinFile, type RenderPathDrift,
 } from './pin-pure';
 import {
   DWELL_METHOD,
@@ -38,6 +38,7 @@ import {
   probeAdapters,
   probeRafDeltas,
   readDrawingBuffer,
+  readRecordCount,
   runDifferential,
   seedDismissals,
 } from './page-protocol';
@@ -47,6 +48,7 @@ import {
   SchemaError,
   type AdapterProbe,
   type DwellRecord,
+  type GitProvenance,
   type PerfFile,
   type ScenarioRecord,
 } from './schema';
@@ -123,13 +125,52 @@ function mainCheckout(): string {
   }
 }
 
-function gitMeta(): { commit: string; dirty: boolean } {
-  const git = (...argv: string[]): string =>
-    execFileSync('git', argv, { cwd: REPO_ROOT, encoding: 'utf-8' }).trim();
+const MAIN_REF = 'origin/main';
+
+const git = (...argv: string[]): string =>
+  execFileSync('git', argv, { cwd: REPO_ROOT, encoding: 'utf-8' }).trim();
+
+/** pins/README.md § What the commit fields hold. */
+function gitMeta(): GitProvenance {
+  let commit = 'unavailable';
+  let dirty = true;
   try {
-    return { commit: git('rev-parse', 'HEAD'), dirty: git('status', '--porcelain').length > 0 };
+    commit = git('rev-parse', 'HEAD');
+    dirty = git('status', '--porcelain').length > 0;
   } catch (e) {
-    return { commit: `unavailable (${(e as Error).message})`, dirty: true };
+    return { commit: `unavailable (${(e as Error).message})`, dirty: true, mainCommit: null, mainReachable: false };
+  }
+  let mainCommit: string | null = null;
+  try {
+    mainCommit = git('merge-base', commit, MAIN_REF);
+  } catch {
+    mainCommit = null;
+  }
+  return { commit, dirty, mainCommit, mainReachable: commitState(commit) === 'landed' };
+}
+
+/** Asked at comparison time, never read off the pin's own `mainReachable`: a
+ *  tip unlanded when the pin was taken may have landed since, and one that
+ *  squash-merged never will. */
+function commitState(commit: string): PinCommitState {
+  try {
+    execFileSync('git', ['merge-base', '--is-ancestor', commit, MAIN_REF], { cwd: REPO_ROOT, stdio: 'ignore' });
+    return commitStateFromExitStatus(0);
+  } catch (e) {
+    return commitStateFromExitStatus((e as { status?: number }).status);
+  }
+}
+
+/** Main's own render-path movement between the pin's base and this run's, so
+ *  a reader sees what else is in the delta before reading a mark. Restricted
+ *  to `src/client`: that is what a frame time is a property of. */
+function renderPathDrift(from: string | null, to: string | null): RenderPathDrift | null {
+  if (from === null || to === null) return null;
+  if (from === to) return { files: 0, insertions: 0, deletions: 0 };
+  try {
+    return parseRenderPathDrift(git('diff', '--shortstat', from, to, '--', 'src/client'));
+  } catch {
+    return null;
   }
 }
 
@@ -206,6 +247,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
     viewport: { width: args.width, height: args.height, dpr: args.dpr },
     buffer: null as { width: number; height: number } | null,
     bufferMpx: null as number | null,
+    recordCount: null as number | null,
     mode: args.mode,
     method: null as GpuFrameMethod | null,
     params: {} as Record<string, unknown>,
@@ -243,6 +285,8 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
     );
     const shortfall = bufferShortfall(record.viewport, buffer);
     if (shortfall !== null) throw new BufferShortfall(shortfall);
+    record.recordCount = await readRecordCount(page);
+    console.log(`catalogue ${record.recordCount ?? 'unknown'} records`);
 
     measuring = true;
     if (args.mode === 'differential') {
@@ -407,6 +451,14 @@ function preflightPaths(args: RunArgs): Preflight {
  *  same run can refuse to pin over a mark nobody accepted. */
 function printAgainstPin(path: string, pin: PinFile, current: PerfFile): PinDiff {
   console.log(`\nperf: against pin ${path} (${pin.git.commit.slice(0, 8)}, v${pin.version}, ${pin.adapterSlug})`);
+  for (const line of pinProvenanceLines(
+    pin,
+    commitState(pin.git.commit),
+    renderPathDrift(pin.git.mainCommit, current.run.git.mainCommit),
+    current.run.git.mainCommit,
+  )) {
+    console.log(`perf: ${line}`);
+  }
   const diff = compareToPin(pin, current);
   console.log(formatPinTable(diff));
   return diff;
@@ -466,7 +518,7 @@ async function main(): Promise<number> {
   const marker = consumeMarker();
   if (marker !== 'armed') {
     console.error(marker === 'absent'
-      ? `perf: not armed — no ${MARKER}. Announce the measurement and wait for scripts/perf/await-go.sh to report the marker.`
+      ? `perf: not armed — no ${MARKER}. Announce the measurement and wait for scripts/perf/arming/await-go.sh to report the marker.`
       : `perf: ${MARKER} was older than an hour — a stale arm, now deleted. Ask for a fresh one.`);
     return EXIT.unarmed;
   }

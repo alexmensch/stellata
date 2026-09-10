@@ -7,7 +7,7 @@ import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, utimesSync, wr
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { PERF_GO_MAX_AGE_S } from '../scripts/perf/perf-go-lib';
+import { PERF_GO_MAX_AGE_S } from '../scripts/perf/arming/perf-go-lib';
 
 const HOOK = resolve(__dirname, '../scripts/hooks/perf-guard.sh');
 
@@ -88,8 +88,8 @@ const NOT_A_RUN = [
   'cat scripts/perf/run.ts',
   'grep -n launch scripts/perf/run.ts',
   'pnpm vitest run scripts/perf/settle-pure.test.ts',
-  'bash scripts/perf/await-go.sh',
-  'bash scripts/perf/perf-go-lib.sh',
+  'bash scripts/perf/arming/await-go.sh',
+  'bash scripts/perf/arming/perf-go-lib.sh',
   'pnpm test',
   'git status -sb',
   'ls scripts/perf',

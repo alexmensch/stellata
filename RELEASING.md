@@ -105,8 +105,9 @@ stellata-8cg.49.12.
 
 **What is pinned.** `--mode dwell` at the five canon vantages (sol, earth,
 mw50, mw120, lg), 1280×800 at dpr 2 (4.096 Mpx), 240 frames, `raf-delta`,
-exposure pinned. Every row records the wall p50 / p90 and, on WebGPU, the
-GPU-stream p50. The per-pass differential is attribution, run when a row
+exposure pinned. Every row records the wall p50 / p90, the catalogue record
+count it priced, and, on WebGPU, the GPU-stream p50. The commit pair is on
+the run, not the row. The per-pass differential is attribution, run when a row
 moves or when the PR touches a pass directly; it explains a mark and never
 fails one.
 
@@ -129,16 +130,60 @@ meets the ceiling.
 state after roughly 2–2.5 min of continuous frames, and rows either side
 of that transition never compare (stellata-0it.38). A pin run is one
 launch with an idle cool-down between contexts, and every context carries
-a state-guard verdict — a dwell whose quarter medians trend one way by
-more than 1 ms is refused by name. Two runs compare only on the same
-adapter slug, buffer, method and state.
+a state-guard verdict — a dwell whose quarter medians *span* more than
+1 ms is refused by name. The span, not a rise through them: the power step
+is a step, so it lands flat and then flat higher.
+
+**The state guard reads the clock the band gates**, which is the GPU
+stream wherever the row has one and wall only where it does not. Wall is
+recorded and never marked here for the same reason it is not marked as a
+p50: at a vantage whose frame exceeds one refresh interval the deltas
+alternate between one and two, so the quarter medians swing by a whole
+interval however idle the machine is. mw50 split 240 deltas 120/120 and
+117/123 on two cold runs whose GPU quarters spanned 0.017 ms — a coin
+flip, and since any refused row refuses the whole pin, that one vantage
+blocked the pin for *every* render-path PR at random until
+stellata-8cg.49.20 moved the verdict onto the gating clock.
+
+Two runs compare only on the same adapter slug, buffer, record count,
+method and state.
+
+**The pin records two identities and refuses across both.** A frame time
+is a property of the GPU that drew it, the buffer it drew into *and the
+scene it drew*, and it is only attributable to a diff if nothing else
+moved in between:
+
+- **The catalogue record count**, off the binary's own header. A
+  membership change lives in `scripts/` and `public/`, so no *path* rule
+  reaches it, yet it moves how many instanced quads every star pass draws
+  — the most direct frame-cost change the repo can make. A pin taken at
+  329,657 records went on being compared against after membership reached
+  384,115, and the next render-path PR read the whole +0.4–0.6 ms step as
+  its own regression (stellata-3bsf.8.7, stellata-8cg.53). So a
+  comparison more than 1 % apart is refused, not marked, and **a
+  membership change re-takes the pin in the PR that ships it** exactly as
+  a render-path change does — enforced, not merely asked for:
+  `perf-section-guard` reads the count either side of the diff and
+  requires the section on the same 1 % (§ The `## Perf` section). The
+  refusal is the backstop under it, not the mechanism: catching a
+  membership change on the *next* PR means charging a pin re-take to
+  whoever did not cause it.
+- **A main-reachable commit.** The pin records HEAD *and* its merge base
+  with `origin/main`, because a pin is taken on a branch and squash-merge
+  lands that tree under a hash the tip never had. `--against-pin` re-asks
+  the ancestry and prints main's own `src/client` drift since the pin's
+  base above the table. It reports rather than refuses — taking a pin on
+  a branch is normal — but read that line before reading a mark: one pin
+  sat at an unlanded tip and charged four consecutive PRs, one with no
+  per-frame code at all, for ~1,600 insertions of main's own render-path
+  work (stellata-8cg.49.24).
 
 **What a mark means.** A row is `✗` when its GPU-stream p50 moves past the
 `--baseline` band *and* past `max(0.25 ms, 1 %)` of the pinned value, or
 when it crosses the ceiling — 33.4 ms of GPU-stream p50 at any canon
 vantage, two 60 Hz intervals of hardware time — whatever the band says
-and whether or not the vantage is gated. mw50 at 32.121 is the nearest
-row today, 1.28 ms under. `✓` is cheaper, `~` is not resolved — not "no
+and whether or not the vantage is gated. mw50 at 31.936 is the nearest
+row today, 1.46 ms under. `✓` is cheaper, `~` is not resolved — not "no
 change".
 
 **The floor is measured, and lg is the reason it is not one number.** Two
@@ -178,7 +223,23 @@ than what is covered is the invariant**: a list of render folders exempts
 by omission, so a layer folder added later escapes the gate until somebody
 notices. `overlays/` is exempt because its per-frame work is SVG on the
 CPU, which the gating clock does not see; `debug/` because the instrument
-is not the frame. It carries the `--against-pin` table, the pin commit it
+is not the frame.
+
+Required equally when the diff **moves catalogue membership by more than
+1 %**, whatever it touches — `recordCount` in
+`scripts/catalog/build-catalog-expected.json`, base against head, which is
+the membership term's own committed record and cannot move without a
+deliberate `UPDATE_BUILD_COUNTS` refresh. A membership change lands in
+`scripts/` and `public/`, so no path rule above reaches it, yet it moves
+how many instanced quads every star pass draws. Under 1 % the trigger
+stands down, because 1 % is ~3,900 records against a measured 0.39–0.59 ms
+for 54,458 — pro rata ~0.03–0.04 ms, an order of magnitude under the
+smallest delta a row can be marked for. That bound is
+`RECORD_COUNT_TOLERANCE`, shared with the refusal, and the two have to
+agree: a change under the trigger ships with no fresh pin, so a stricter
+refusal would leave that pin refusing every row of the next render-path PR.
+
+The section carries the `--against-pin` table, the pin commit it
 was read against, the adapter slug, the state-guard line per context, and
 one `accepted: <row> <reason> (<bead-id>)` line per `✗`. The
 `perf-section-guard` workflow fails the PR when the section is missing,

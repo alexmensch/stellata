@@ -4,6 +4,7 @@ import {
   PASS_COUNTERS,
   STATE_GUARD_QUARTERS,
   STATE_GUARD_TREND_MS,
+  gatingClock,
   quarterMedians,
   stateGuardVerdict,
   summarizeFrameDwell,
@@ -105,6 +106,21 @@ describe('state guard — a dwell that straddled the load transition', () => {
     expect(summarizeFrameDwell(RAMP, HZ_60)!.quarterMedians).toEqual([3, 8, 13, 18]);
     expect(summarizeFrameDwell(VSYNC, HZ_60)!.stateGuard).toBe('steady');
     expect(summarizeFrameDwell(OVER_BUDGET, HZ_60)!.stateGuard).toBe('steady');
+  });
+});
+
+describe('gatingClock — which clock a gate may act on', () => {
+  const wall = summarizeFrameDwell(RAMP, HZ_60)!;
+  const gpu = summarizeFrameDwell(VSYNC, null)!;
+
+  it('is the GPU stream wherever the row has one', () => {
+    expect(gatingClock({ stats: wall, gpuStats: gpu })).toBe(gpu);
+    expect(gatingClock({ stats: wall, gpuStats: gpu }).stateGuard).toBe('steady');
+  });
+
+  it('falls back to wall only where there is no GPU stream', () => {
+    expect(gatingClock({ stats: wall, gpuStats: null })).toBe(wall);
+    expect(gatingClock({ stats: wall, gpuStats: null }).stateGuard).toBe('trending');
   });
 });
 

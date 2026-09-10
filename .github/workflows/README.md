@@ -36,13 +36,26 @@ labelled `skip-version-bump`. See `RELEASING.md` for the block format.
 
 ## `perf-section-guard.yml`
 
-CI check on every PR. When the diff touches a render path — any `.ts`,
-`.glsl` or `.wgsl` under `src/client/` outside the folders `RELEASING.md`
-§ Perf pin exempts — fails the PR unless the body carries a non-empty
-`## Perf` section with an `accepted:` line for every `✗` row. The check is
-`scripts/perf/perf-section-check.sh`, tested in vitest; CI has no GPU, so it
-checks the section, never the numbers. The exempt list is stated once, in
-`RELEASING.md`, and a test fails when the script drifts from it.
+CI check on every PR. Fails the PR unless the body carries a non-empty
+`## Perf` section with an `accepted:` line for every `✗` row, whenever the
+diff does either of:
+
+- **touches a render path** — any `.ts`, `.glsl` or `.wgsl` under
+  `src/client/` outside the folders `RELEASING.md` § Perf pin exempts;
+- **moves catalogue membership by more than 1 %** — read as
+  `recordCount` in `scripts/catalog/build-catalog-expected.json`, base
+  against head. A membership change lands in `scripts/` and `public/`, so
+  no path rule sees it, yet it moves how many instanced quads every star
+  pass draws. The 1 % is `RECORD_COUNT_TOLERANCE`, the same bound
+  `--against-pin` refuses a comparison past, and a test fails when the two
+  drift apart — they have to agree, or a change under the trigger would
+  ship a pin that refuses every row.
+
+The check is `scripts/perf/perf-section-check.sh`, tested in vitest; CI has
+no GPU, so it checks the section, never the numbers. The exempt list is
+stated once, in `RELEASING.md`, and a test fails when the script drifts from
+it. Counts unreadable on either side leave that half of the trigger silent —
+the comparison-time refusal is the backstop.
 
 ## `version-guard.yml`
 

@@ -1,4 +1,4 @@
-// The on-disk shape of a perf run — schema stellata-perf/1. Owns the
+// The on-disk shape of a perf run — schema stellata-perf/2. Owns the
 // adapter, scenario and per-mode records, so the runner, the tables and
 // the baseline diff all read one set of types. README.md § JSON output.
 
@@ -9,11 +9,15 @@ import type { SweepFit, SweepPoint } from './sweep-pure';
 
 /**
  * Removing a field or changing what one MEANS bumps the suffix; adding one
- * does not. `--baseline` refuses to compare across two suffixes rather
- * than mapping between them, so a bump is a decision to abandon every
- * recorded baseline — say so in the bead that makes it.
+ * does not — unless a reader must ACT on the field's absence, which an
+ * older file cannot distinguish from a value it never had. `recordCount`
+ * is such a field: a comparison across two record sets is not a comparison,
+ * so an unknown count has to refuse, and every file written before it
+ * carried one would refuse anyway. `--baseline` refuses to compare across
+ * two suffixes rather than mapping between them, so a bump is a decision to
+ * abandon every recorded baseline — say so in the bead that makes it.
  */
-export const PERF_SCHEMA = 'stellata-perf/1';
+export const PERF_SCHEMA = 'stellata-perf/2';
 
 export class SchemaError extends Error {}
 
@@ -87,6 +91,12 @@ export interface ScenarioRecord {
   readonly buffer: { readonly width: number; readonly height: number } | null;
   readonly bufferMpx: number | null;
   readonly mode: string;
+  /** Star records the page loaded (`stellata.catalog.count`, off the binary
+   *  header). The scene every star pass draws, so a row priced against a
+   *  different count prices a different scene: absent, or more than
+   *  `RECORD_COUNT_TOLERANCE` apart, refuses the comparison exactly as a
+   *  resized buffer does. */
+  readonly recordCount: number | null;
   /** The clock the numbers came off. Never compare two of them. */
   readonly method: GpuFrameMethod | null;
   readonly params: Readonly<Record<string, unknown>>;
@@ -107,12 +117,33 @@ export interface ScenarioRecord {
   readonly failure: string | null;
 }
 
+/**
+ * What tree was measured, and what a later reader can bound it against.
+ * A pin is always taken on a branch, and a squash merge lands that tree
+ * under a hash the branch tip never had — so the tip alone cannot answer
+ * "how far has main moved since?", which is the question every
+ * `--against-pin` header asks.
+ */
+export interface GitProvenance {
+  readonly commit: string;
+  readonly dirty: boolean;
+  /** Merge base of `commit` with `origin/main` — the newest commit the
+   *  measured tree shares with main, and so the one hash a later session can
+   *  still diff against once the branch has squashed away. Null where
+   *  `origin/main` or the merge base could not be read. */
+  readonly mainCommit: string | null;
+  /** Whether `commit` was itself an ancestor of `origin/main` when the run
+   *  was taken. False for every run taken on an unlanded branch, which is
+   *  most of them: it is not a fault, it is why `mainCommit` exists. */
+  readonly mainReachable: boolean;
+}
+
 export interface PerfRunMeta {
   readonly startedAt: string;
   readonly finishedAt: string;
   readonly url: string;
   readonly argv: readonly string[];
-  readonly git: { readonly commit: string; readonly dirty: boolean };
+  readonly git: GitProvenance;
   readonly browser: {
     readonly name: string;
     readonly version: string;
@@ -132,9 +163,9 @@ export interface PerfFile {
 
 /**
  * Parse a file as a perf run, or throw. The schema string is checked
- * first and by equality: a file written by a future suffix carries fields
- * that mean something else, and reading it as v1 would produce a diff
- * table whose rows are quietly wrong.
+ * first and by equality: a file written under another suffix carries fields
+ * that mean something else, and reading it under this one would produce a
+ * diff table whose rows are quietly wrong.
  */
 export function assertPerfFile(value: unknown, source: string): PerfFile {
   if (typeof value !== 'object' || value === null) {
@@ -144,7 +175,7 @@ export function assertPerfFile(value: unknown, source: string): PerfFile {
   if (schema !== PERF_SCHEMA) {
     throw new SchemaError(
       `${source} carries schema ${JSON.stringify(schema)}, not '${PERF_SCHEMA}' — ` +
-      'refusing to read it as v1 rather than mapping fields whose meaning may have changed',
+      'refusing to read it under that suffix rather than mapping fields whose meaning may have changed',
     );
   }
   const file = value as Partial<PerfFile>;

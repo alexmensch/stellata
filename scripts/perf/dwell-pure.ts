@@ -62,6 +62,29 @@ export interface DwellSummary {
 }
 
 /**
+ * Which of a dwell's two clocks a gate is entitled to act on: the GPU stream
+ * where the row has one, wall only where it does not (every WebGL2 row).
+ *
+ * Wall deltas are quantised to the display's refresh interval, so at a
+ * vantage whose frame exceeds one interval they alternate between one and
+ * two and the quarter medians swing by a whole interval however idle the
+ * machine is — mw50 split 240 deltas 120/120 and 117/123 across two cold
+ * runs whose GPU quarters spanned 0.017 ms. A state verdict read off that
+ * clock is a coin flip. RELEASING.md § Perf pin already records wall p50 and
+ * never marks it, for that reason; this is the same rule one field over.
+ *
+ * Only a gate whose row MARKS on the returned clock may use this — standing
+ * a guard down on the clock a row is judged by is what it exists to prevent.
+ * The whole dwell rather than its two summaries, which are the same type in
+ * either order: transposing them type-checks and inverts the rule silently.
+ */
+export function gatingClock(
+  dwell: { readonly stats: DwellSummary; readonly gpuStats: DwellSummary | null },
+): DwellSummary {
+  return dwell.gpuStats ?? dwell.stats;
+}
+
+/**
  * Percentiles are nearest-rank, so every value reported is a frame that
  * actually happened — including p50, which therefore does not interpolate
  * between the two middle frames of an even-length dwell.
