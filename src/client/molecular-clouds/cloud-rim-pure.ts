@@ -2,6 +2,17 @@
 // backends read them from. GLSL cannot import, so its copies are pinned
 // against these by cloud-glsl-drift.test.ts.
 
+import { nearFadePcForExtent } from '../fresnel-shell/shell-distance-pure';
+
+/** One representative cloud radius (pc) standing in for the per-cloud
+ *  extent: a single rim material serves all ~96 clouds, so the near-fade
+ *  reach cannot vary per cloud. The named SF clouds run ~1–50 pc. */
+export const CLOUD_RIM_EXTENT_PC = 20;
+
+/** The cloud rim's near-fade reach — the shared shell proportion of the
+ *  representative extent above, so it is not a third authored distance. */
+export const CLOUD_RIM_NEAR_FADE_PC = nearFadePcForExtent(CLOUD_RIM_EXTENT_PC);
+
 /** Chart-mode stipple period, in CSS pixels. */
 export const STIPPLE_PERIOD_PX = 6.0;
 

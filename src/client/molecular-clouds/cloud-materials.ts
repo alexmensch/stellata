@@ -7,6 +7,8 @@ import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
 import {
   DEFAULT_FACE_ON_FLOOR, DEFAULT_FRESNEL_POWER, SHELL_RIM_ALPHA_LIMB, SHELL_RIM_BLUE,
 } from '../fresnel-shell/fresnel-shell';
+import { DEPTH_DIM_POWER, DEPTH_DIM_REF_PC } from '../fresnel-shell/shell-distance-pure';
+import { CLOUD_RIM_NEAR_FADE_PC } from './cloud-rim-pure';
 import absorptionVert from './cloud-absorption.vert.glsl?raw';
 import absorptionFrag from './cloud-absorption.frag.glsl?raw';
 import rimVert from '../fresnel-shell/fresnel-shell.vert.glsl?raw';
@@ -134,6 +136,9 @@ export function makeGlslCloudMaterials(shared: CloudSharedUniforms): CloudMateri
           uAlphaLimb: { value: SHELL_RIM_ALPHA_LIMB },
           uFaceOnFloor: { value: DEFAULT_FACE_ON_FLOOR },
           uFresnelPower: { value: DEFAULT_FRESNEL_POWER },
+          uNearFadePc: { value: CLOUD_RIM_NEAR_FADE_PC },
+          uDepthDimRefPc: { value: DEPTH_DIM_REF_PC },
+          uDepthPower: { value: DEPTH_DIM_POWER },
           uOpacity: { value: spec.opacity },
           uChart: { value: 0 },
           uInk: { value: new THREE.Color(spec.inkHex) },

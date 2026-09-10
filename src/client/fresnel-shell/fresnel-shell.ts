@@ -9,6 +9,7 @@ import { angularToPx } from '../camera/controls/star-geometry';
 import { isFeatureLegible } from '../util/orbit-line';
 import type { ShellRegistry } from './shell-registry';
 import type { EmitterMaterial } from '../scene/emitter-material';
+import { DEPTH_DIM_POWER, DEPTH_DIM_REF_PC } from './shell-distance-pure';
 import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
 import fresnelShellVert from './fresnel-shell.vert.glsl?raw';
 import fresnelShellFrag from './fresnel-shell.frag.glsl?raw';
@@ -36,6 +37,11 @@ export interface FresnelShellMaterialOptions {
   colourHex: number;
   /** Alpha at the silhouette (limb); face-on alpha is this × faceOnFloor. */
   alphaLimb: number;
+  /** Camera distance over which the rim ramps in, so a wall the camera is
+   *  crossing fades out instead of popping. Per-material — consumers are
+   *  five orders of magnitude apart — and derived from each one's own
+   *  extent via `nearFadePcForExtent`. */
+  nearFadePc: number;
   /** Defaults to `NormalBlending`; pass `AdditiveBlending` for a glow. */
   blending?: THREE.Blending;
   faceOnFloor?: number;
@@ -87,6 +93,9 @@ function createFresnelShellMaterial(
       uAlphaLimb: { value: opts.alphaLimb },
       uFaceOnFloor: { value: opts.faceOnFloor ?? DEFAULT_FACE_ON_FLOOR },
       uFresnelPower: { value: opts.fresnelPower ?? DEFAULT_FRESNEL_POWER },
+      uNearFadePc: { value: opts.nearFadePc },
+      uDepthDimRefPc: { value: DEPTH_DIM_REF_PC },
+      uDepthPower: { value: DEPTH_DIM_POWER },
     },
   });
 }
@@ -120,6 +129,18 @@ export abstract class FresnelShell {
   setPermitted(on: boolean): void {
     this.permitted = on;
     this.refreshVisibility();
+  }
+
+  /** The camera-distance attenuation's three slots, shared vocabulary with
+   *  the cloud rim's `setRimDistanceParams`. `nearFadePc` is also how a
+   *  shell whose extent arrives with its mesh states its fade reach. */
+  setRimDistanceParams(
+    p: { nearFadePc?: number; depthDimRefPc?: number; depthPower?: number },
+  ): void {
+    const u = this.surface.uniforms;
+    if (p.nearFadePc !== undefined) u.uNearFadePc.value = p.nearFadePc;
+    if (p.depthDimRefPc !== undefined) u.uDepthDimRefPc.value = p.depthDimRefPc;
+    if (p.depthPower !== undefined) u.uDepthPower.value = p.depthPower;
   }
 
   /** Chart (mono / paper) mode hides the shell. */

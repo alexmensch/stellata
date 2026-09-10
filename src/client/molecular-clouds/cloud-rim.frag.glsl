@@ -17,6 +17,9 @@ uniform vec3 uColour;
 uniform float uAlphaLimb;
 uniform float uFaceOnFloor;
 uniform float uFresnelPower;
+uniform float uNearFadePc;
+uniform float uDepthDimRefPc;
+uniform float uDepthPower;
 uniform float uOpacity;
 uniform float uChart;
 uniform vec3 uInk;
@@ -50,7 +53,8 @@ void main() {
     return;
   }
 
-  float alpha = uOpacity * fresnelRimAlpha(n, viewDir, uAlphaLimb, uFaceOnFloor, uFresnelPower);
+  float alpha = uOpacity * fresnelRimAlpha(n, viewDir, uAlphaLimb, uFaceOnFloor, uFresnelPower)
+    * shellDistanceAttenuation(vPositionView, uNearFadePc, uDepthDimRefPc, uDepthPower);
   // ±0.5-LSB output dither — the whisper-level rim spans only a handful
   // of 8-bit levels, so quantisation bands even on a smooth mesh.
   float dith = (stellataIgn(gl_FragCoord.xy + 113.7) - 0.5) / 255.0;
