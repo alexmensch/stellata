@@ -1,14 +1,22 @@
 /**
  * Dev-only document routing, so one `pnpm run dev` answers the same paths the
- * deploy does: the app at /app, the homepage at /, the 404 page for the rest,
- * and a 301 off either legacy share transport.
+ * deploy does: the app at /app, the homepage at /, its markdown rendition to
+ * a client that asks for one, the 404 page for the rest, and a 301 off either
+ * legacy share transport.
  */
 
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Plugin } from 'vite';
 
+import { markdownRendition as renderMarkdown } from './scripts/site/markdown-rendition.ts';
 import { APP_PATH, legacyShareRedirect } from './src/client/util/url-state/share-path-pure.ts';
+import {
+  MARKDOWN_TYPE,
+  markdownRendition,
+  prefersMarkdown,
+  wantsDocument,
+} from './src/negotiation-pure.ts';
 
 function ownedByApp(pathname: string): boolean {
   return pathname === APP_PATH || pathname.startsWith(`${APP_PATH}/`);
@@ -82,22 +90,37 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
           const route = devRoute(pathname, query === undefined ? '' : `?${query}`);
 
           // A share link is answered whatever the client asked for, matching
-          // the Worker; only the document fallback is HTML-gated, so an
-          // unmatched asset fetch still 404s as an asset.
+          // the Worker.
           if (route.kind === 'redirect') {
             res.statusCode = 301;
             res.setHeader('Location', route.to);
             res.end();
             return;
           }
-          if (!(req.headers.accept ?? '').includes('text/html')) {
+          const accept = req.headers.accept ?? null;
+          if (!wantsDocument(accept)) {
             next();
             return;
           }
 
           const { file, base, status } = documents[route.doc];
+          const rendition = markdownRendition(pathname);
+
           try {
             const raw = await readFile(file, 'utf8');
+
+            // The deploy serves the rendition out of `dist/index.md`, which
+            // the build emits from this same module. Deriving it per request
+            // keeps an edit to the page visible without a build, as the HTML
+            // is.
+            if (rendition !== null && prefersMarkdown(accept)) {
+              res.statusCode = status;
+              res.setHeader('Content-Type', MARKDOWN_TYPE);
+              res.setHeader('Vary', 'Accept');
+              res.end(renderMarkdown(raw));
+              return;
+            }
+
             const html = await server.transformIndexHtml(
               base,
               raw.replaceAll('./site.css', stylesheet).replace(SIBLING_OF_ROOT, '$1="/'),
@@ -105,6 +128,10 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
             );
             res.statusCode = status;
             res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            if (rendition !== null) {
+              res.setHeader('Link', `<${rendition}>; rel="alternate"; type="text/markdown"`);
+              res.setHeader('Vary', 'Accept');
+            }
             res.end(html);
           } catch (err) {
             next(err);
