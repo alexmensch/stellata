@@ -106,19 +106,29 @@ the whole pin, it blocked the pin for *every* render-path PR at random. Wall
   nothing else watching them.
 - **Refusals.** Another adapter slug or a headed run refuses the whole
   comparison; a missing, failed, tainted, resized (> 1 % buffer) or
-  trending row refuses that row, and so does a different **record count**.
+  trending row refuses that row, and so does a **record count** more than
+  1 % apart or absent.
   A refused comparison is not a pass: either kind exits 1, since a run
   whose rows were all refused prints a table with no `✗` in it.
 - **Record count.** `recordCount` is the star records the page loaded, off
-  the catalogue binary's header. A membership change lives in `scripts/`
-  and `public/`, where no render-path trigger sees it, yet it moves how
-  many instanced quads every star pass draws — the most direct frame-cost
-  change the repo can make. So the count is checked here rather than
-  trusted to a diff trigger, and exactly: there is no tolerance at which a
-  different catalogue becomes the same scene. A pin taken at 329,657
-  records went on being compared against after membership reached 384,115,
-  and the next render-path PR read the whole step as its own regression
-  (stellata-8cg.53). `--baseline` refuses on it too.
+  the catalogue binary's header. It moves how many instanced quads every
+  star pass draws — the most direct frame-cost change the repo can make. A
+  pin taken at 329,657 records went on being compared against after
+  membership reached 384,115, and the next render-path PR read the whole
+  step as its own regression (stellata-8cg.53). `--baseline` refuses on it
+  too.
+
+  **The bound is 1 %** (`RECORD_COUNT_TOLERANCE`), the same the buffer
+  gets: past it the row is refused, under it it compares. 1 % of the
+  present catalogue is ~3,900 records, and the measured step for 54,458 was
+  0.39–0.59 ms of GPU frame, so pro rata ~0.03–0.04 ms against a floor of
+  `max(0.25 ms, 1 %)` — an order of magnitude under the smallest delta a
+  row can be marked for. It is also the bound `perf-section-check.sh`
+  requires a re-take past, and it has to be the same number: a membership
+  change that owes no `## Perf` section ships without re-taking the pin, so
+  a stricter refusal here would leave that pin refusing every row for the
+  next render-path PR. An **absent** count still refuses whatever its size
+  would have been — nothing places the row on a scene at all.
 - **Writing while comparing.** `--pin` alongside `--against-pin` refuses
   to write while any `✗` lacks an `--accept <row>:<bead>`, so an
   unexamined regression cannot quietly become the pinned value.

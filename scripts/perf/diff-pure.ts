@@ -10,6 +10,18 @@ import type { PerfFile, ScenarioRecord } from './schema';
  *  wearing the same row label. */
 export const BUFFER_MPX_TOLERANCE = 0.01;
 
+/** How far the two catalogues may differ and still price the same scene.
+ *  The same 1 % the buffer gets, and for the same kind of reason: the star
+ *  passes' cost scales with the record count, so the question is whether the
+ *  difference can reach the band. 1 % of the present catalogue is ~3,900
+ *  records, and the measured step for 54,458 was 0.39–0.59 ms of GPU frame
+ *  (`RELEASING.md` § Perf pin), so pro rata ~0.03–0.04 ms against a pin
+ *  floor of `max(0.25 ms, 1 %)` — an order of magnitude under the smallest
+ *  delta a row can be marked for. Also the bound
+ *  `perf-section-check.sh` requires a re-take past, so a membership change
+ *  that owes no `## Perf` section cannot leave a pin that refuses. */
+export const RECORD_COUNT_TOLERANCE = 0.01;
+
 /** A row has to move further than this multiple of the pair's combined
  *  standard error to count. Two sigma either side, not one: a one-sigma
  *  band calls roughly a third of unchanged rows a regression. */
@@ -93,19 +105,21 @@ function comparabilityRefusal(a: ScenarioRecord, b: ScenarioRecord): string | nu
 
 /**
  * A record-set change moves how many instanced quads every star pass draws,
- * which is the most direct frame-cost change the repo can make — and it
- * lands in `scripts/` and `public/`, where no render-path trigger sees it.
- * So the count is checked here rather than trusted to a diff trigger: a row
- * priced against a different scene is not a comparison, and refusing beats
- * marking. Exact equality, because there is no tolerance at which a
- * different catalogue becomes the same scene.
+ * which is the most direct frame-cost change the repo can make. So the count
+ * is checked here rather than trusted to a diff trigger: a row priced
+ * against a different scene is not a comparison, and refusing beats marking.
+ *
+ * An ABSENT count refuses whatever its size would have been — nothing places
+ * the row on a scene at all, and a run written before the field existed is
+ * indistinguishable from one that failed to read it.
  */
 export function recordCountRefusal(a: number | null, b: number | null): string | null {
   if (a === null || b === null) {
     return `record count ${a ?? 'unknown'} vs ${b ?? 'unknown'} — a run that did not record one cannot be placed on a scene`;
   }
-  if (a !== b) {
-    return `catalogue ${a} vs ${b} records — every star pass draws a different scene`;
+  const drift = a === b ? 0 : Math.abs(b - a) / a;
+  if (drift > RECORD_COUNT_TOLERANCE) {
+    return `catalogue ${a} vs ${b} records (${(drift * 100).toFixed(1)} % apart) — every star pass draws a different scene`;
   }
   return null;
 }

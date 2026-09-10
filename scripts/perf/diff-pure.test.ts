@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { BUFFER_MPX_TOLERANCE, diffRuns, type RunDiff } from './diff-pure';
+import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, diffRuns, type RunDiff } from './diff-pure';
 import type { DwellSummary } from './dwell-pure';
 import { PERF_SCHEMA, type PerfFile, type ScenarioRecord } from './schema';
 
@@ -331,6 +331,26 @@ describe('diffRuns — refusals', () => {
     );
     expect(diff.rows).toEqual([]);
     expect(diff.refusals[0].reason).toContain(`${RECORDS} vs ${RECORDS + 54458} records`);
+    expect(diff.refusals[0].reason).toContain('14.0 % apart');
+  });
+
+  // A membership change under the tolerance owes no `## Perf` section, so it
+  // ships without re-taking the pin — and would deadlock every later
+  // comparison if the refusal here were exact. The two bounds are one bound.
+  it('compares across a record set inside the tolerance, and refuses just past it', () => {
+    const inside = Math.floor(RECORDS * (1 + RECORD_COUNT_TOLERANCE));
+    const outside = Math.ceil(RECORDS * (1 + RECORD_COUNT_TOLERANCE)) + 1;
+    expect(diffRuns(withDwell(dwellStats(30)), withDwell(dwellStats(30), { recordCount: inside })).rows)
+      .toHaveLength(1);
+    expect(diffRuns(withDwell(dwellStats(30)), withDwell(dwellStats(30), { recordCount: outside })).rows)
+      .toEqual([]);
+  });
+
+  it('reads the tolerance in both directions, so a shrunken catalogue is judged the same', () => {
+    const shrunk = Math.ceil(RECORDS * (1 - RECORD_COUNT_TOLERANCE)) - 1;
+    const diff = diffRuns(withDwell(dwellStats(30)), withDwell(dwellStats(30), { recordCount: shrunk }));
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('% apart');
   });
 
   it('refuses a comparison where either side recorded no record count', () => {

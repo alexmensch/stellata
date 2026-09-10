@@ -93,8 +93,9 @@ export interface ScenarioRecord {
   readonly mode: string;
   /** Star records the page loaded (`stellata.catalog.count`, off the binary
    *  header). The scene every star pass draws, so a row priced against a
-   *  different count prices a different scene: null or unequal refuses the
-   *  comparison the way a resized buffer does. */
+   *  different count prices a different scene: absent, or more than
+   *  `RECORD_COUNT_TOLERANCE` apart, refuses the comparison exactly as a
+   *  resized buffer does. */
   readonly recordCount: number | null;
   /** The clock the numbers came off. Never compare two of them. */
   readonly method: GpuFrameMethod | null;

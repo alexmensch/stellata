@@ -334,9 +334,9 @@ buffers or adapters produce a table that looks like a comparison and is not,
 so an incomparable pair is named and skipped rather than dropped silently:
 a differing adapter string refuses the whole run (a differing schema never
 reaches the diff — see § JSON output); a differing method or mode, a buffer
-more than 1 % apart, a differing or absent **record count** (a row priced
-against a different catalogue is not a comparison), a failed or tainted
-scenario, a vsync-clamped dwell, a
+more than 1 % apart, a **record count** more than 1 % apart or absent on
+either side (a row priced against a different catalogue is not a
+comparison), a failed or tainted scenario, a vsync-clamped dwell, a
 `cadenceBound` row (either side), a dwell whose state guard trended on
 **either** clock, or a row missing from one side refuses that key.
 

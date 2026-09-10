@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BUFFER_MPX_TOLERANCE } from './diff-pure';
+import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE } from './diff-pure';
 import type { DwellSummary } from './dwell-pure';
 import {
   PIN_CEILING_MS,
@@ -313,6 +313,19 @@ describe('compareToPin', () => {
     expect(diff.rows).toEqual([]);
     expect(diff.refusals[0].reason).toContain(`${RECORDS} vs ${RECORDS + 54458} records`);
     expect(pinDiffFails(diff)).toBe(true);
+  });
+
+  // The bound perf-section-check.sh requires a re-take past. Below it a
+  // membership change ships with no `## Perf` section, so the pin it leaves
+  // behind has to stay usable or every later render-path PR is blocked.
+  it('still compares a row whose catalogue moved less than the tolerance', () => {
+    const nudged = scenario('sol', 'webgpu', dwell(stats(25.2), stats(21.8)), {
+      recordCount: RECORDS + Math.floor(RECORDS * RECORD_COUNT_TOLERANCE) - 1,
+    });
+    const diff = compareToPin(pinOf([SOL_GPU]), file([nudged]));
+    expect(diff.refusals).toEqual([]);
+    expect(diff.rows[0].metric).toBe('gpu-p50');
+    expect(pinDiffFails(diff)).toBe(false);
   });
 });
 
