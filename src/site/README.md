@@ -125,6 +125,12 @@ it wants to be part of the app instead.
 
 ## The stylesheet
 
+**Load the `cube-css` skill before editing it.** What this section records is
+the house style — which layer a rule landed in here, and why. The system
+underneath it (the layout primitives, the no-width-query mandate, the review
+gates) is the skill's, and a README describing the one reads convincingly
+like coverage of the other.
+
 `site.css` is organised **CUBE-style**, in this order, and the order is the
 cascade: tokens, global element defaults, **C**ompositions, **B**locks,
 **U**tilities, with exceptions carried as `data-` attributes on a block
@@ -247,6 +253,15 @@ of the viewport. Three mechanisms replace them.
   font size while the viewport does not, it fits a 320px screen at a 16px
   root and overflows it at the 32px root that WCAG 1.4.4's 200% text
   resize implies. `min(x, 100%)` collapses the track instead.
+
+  Each cell then **subgrids the band's two rows** (`grid-row: span 2` +
+  `grid-template-rows: subgrid`), so a label wrapping to two lines raises
+  every value in that band instead of dropping its own — the figures read as
+  a row however the labels wrap, at any width. The consequence to know: a
+  subgridded axis takes its gutter from the **parent**, which here is the
+  1px hairline, so the label/value separation is the value's
+  `padding-block-start` and not a `gap` on the cell. Restoring that `gap`
+  looks tidier and silently closes the space.
 
 `.sight`'s alternating sides ride the switcher: `flex-direction:
 row-reverse` on even rows puts the media right when there is room, and a
