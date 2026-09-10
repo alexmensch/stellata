@@ -114,13 +114,13 @@ describe('gatingClock — which clock a gate may act on', () => {
   const gpu = summarizeFrameDwell(VSYNC, null)!;
 
   it('is the GPU stream wherever the row has one', () => {
-    expect(gatingClock(wall, gpu)).toBe(gpu);
-    expect(gatingClock(wall, gpu).stateGuard).toBe('steady');
+    expect(gatingClock({ stats: wall, gpuStats: gpu })).toBe(gpu);
+    expect(gatingClock({ stats: wall, gpuStats: gpu }).stateGuard).toBe('steady');
   });
 
   it('falls back to wall only where there is no GPU stream', () => {
-    expect(gatingClock(wall, null)).toBe(wall);
-    expect(gatingClock(wall, null).stateGuard).toBe('trending');
+    expect(gatingClock({ stats: wall, gpuStats: null })).toBe(wall);
+    expect(gatingClock({ stats: wall, gpuStats: null }).stateGuard).toBe('trending');
   });
 });
 

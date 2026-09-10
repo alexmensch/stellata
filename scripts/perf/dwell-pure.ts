@@ -72,12 +72,16 @@ export interface DwellSummary {
  * runs whose GPU quarters spanned 0.017 ms. A state verdict read off that
  * clock is a coin flip. RELEASING.md § Perf pin already records wall p50 and
  * never marks it, for that reason; this is the same rule one field over.
+ *
+ * Only a gate whose row MARKS on the returned clock may use this — standing
+ * a guard down on the clock a row is judged by is what it exists to prevent.
+ * The whole dwell rather than its two summaries, which are the same type in
+ * either order: transposing them type-checks and inverts the rule silently.
  */
 export function gatingClock(
-  stats: DwellSummary,
-  gpuStats: DwellSummary | null,
+  dwell: { readonly stats: DwellSummary; readonly gpuStats: DwellSummary | null },
 ): DwellSummary {
-  return gpuStats ?? stats;
+  return dwell.gpuStats ?? dwell.stats;
 }
 
 /**

@@ -165,8 +165,7 @@ function rowRefusal(record: ScenarioRecord): string | null {
   if (record.bufferMpx === null) return 'no drawing buffer recorded';
   if (record.backend.actual === null) return 'the backend never booted';
   if (record.recordCount === null) return 'no catalogue record count recorded — the rows cannot be placed on a scene';
-  const clock = gatingClock(record.dwell.stats, record.dwell.gpuStats);
-  if (clock.stateGuard === 'trending') {
+  if (gatingClock(record.dwell).stateGuard === 'trending') {
     return 'the dwell trended across its quarters — it straddled a load-state transition';
   }
   return null;
