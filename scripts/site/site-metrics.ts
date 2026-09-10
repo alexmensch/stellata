@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { catalogChunkFilename, readCatalogHeader } from '../catalog/catalog-pure.ts';
+import { catalogChunkFilename, readCatalogHeader } from '../catalog/record/catalog-pure.ts';
 import { walkFiles } from '../util/walk-files.ts';
 
 /** The modelling record the reference count describes: the two root docs
