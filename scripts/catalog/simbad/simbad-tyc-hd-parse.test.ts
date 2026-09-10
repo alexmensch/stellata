@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, it, expect } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
+import { dataRows } from '../parse/corpus-tsv';
 import { parseTyc2HdTsv } from '../classic-ids/classic-ids-parse';
 import {
   MEMBERSHIP_MANIFEST_FILE,
@@ -93,8 +94,11 @@ describe('hdNumbers', () => {
 
 const SIMBAD_TYC_HD_FILE = 'data/simbad/simbad_tyc_hd.tsv';
 const TYC2_HD_FILE = 'data/classic-ids/tyc2_hd.tsv';
-const ADJUDICATION_INPUTS = [SIMBAD_TYC_HD_FILE, TYC2_HD_FILE, MEMBERSHIP_MANIFEST_FILE]
-  .map((f) => resolve(REPO_ROOT, f));
+const AT = (f: string): string => resolve(REPO_ROOT, f);
+const SRC_SIMBAD_TYC_HD = AT(SIMBAD_TYC_HD_FILE);
+const SRC_TYC2_HD = AT(TYC2_HD_FILE);
+const SRC_MANIFEST = AT(MEMBERSHIP_MANIFEST_FILE);
+const ADJUDICATION_INPUTS = [SRC_SIMBAD_TYC_HD, SRC_TYC2_HD, SRC_MANIFEST];
 
 // Pins data/simbad/README.md § What it adjudicates. The figures are the
 // pull's whole justification, so they are asserted rather than narrated: a
@@ -113,20 +117,20 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
       // TYC is the SET of its rows. Keying single-valued drops one and reads
       // SIMBAD's agreement with the other as a dissent — 7 phantom rows.
       const iv = new Map<string, { hd: Set<number>; consistent: boolean }>();
-      for (const row of parseTyc2HdTsv(readFileSync(ADJUDICATION_INPUTS[1], 'utf-8'))) {
+      for (const row of parseTyc2HdTsv(readFileSync(SRC_TYC2_HD, 'utf-8'))) {
         const entry = iv.get(row.tyc) ?? { hd: new Set<number>(), consistent: true };
         entry.hd.add(row.hd);
         entry.consistent = entry.consistent && row.nHd === 1 && row.nTyc === 1;
         iv.set(row.tyc, entry);
       }
-      simbad = parseSimbadTycHdTsv(readFileSync(ADJUDICATION_INPUTS[0], 'utf-8'));
+      simbad = parseSimbadTycHdTsv(readFileSync(SRC_SIMBAD_TYC_HD, 'utf-8'));
 
       counts = {
         bothCells: 0, answered: 0, silent: 0,
         dissent: 0, dissentInconsistent: 0, faithful: 0, vindicating: 0,
         bothAgainst: 0,
       };
-      for (const row of parseManifestTsv(readFileSync(ADJUDICATION_INPUTS[2], 'utf-8'))) {
+      for (const row of parseManifestTsv(readFileSync(SRC_MANIFEST, 'utf-8'))) {
         const tyc = row.tyc.trim();
         const shipped = Number.parseInt(row.hd.trim(), 10);
         if (tyc === '' || !Number.isFinite(shipped)) continue;
@@ -176,8 +180,8 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
   },
 );
 
-const SIMBAD_SPTYPE_FILE = 'data/simbad/simbad_sptype.tsv';
-const SPLIT_INPUTS = [...ADJUDICATION_INPUTS, resolve(REPO_ROOT, SIMBAD_SPTYPE_FILE)];
+const SRC_SIMBAD_SPTYPE = AT('data/simbad/simbad_sptype.tsv');
+const SPLIT_INPUTS = [...ADJUDICATION_INPUTS, SRC_SIMBAD_SPTYPE];
 
 /** The move set of README.md § Which witness decides a close pair's HD: the
  *  rows all four witnesses agree the record's own component is not the one its
@@ -223,12 +227,18 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     }
 
     // The fourth witness: SIMBAD's object for the record's own Gaia source.
+    // Header-keyed, like every other reader of this table — a positional
+    // column index reads a neighbouring cell after a re-pull reorders it.
     const sources = new Set([...contested.values()].filter((s) => s !== ''));
     const objectOfSource = new Map<string, string>();
-    for (const line of readFileSync(SPLIT_INPUTS[3], 'utf-8').split('\n').slice(1)) {
-      if (line === '') continue;
-      const cells = line.split('\t');
-      if (sources.has(cells[7])) objectOfSource.set(cells[7], cells[1]);
+    for (const { cells, idx } of dataRows(
+      readFileSync(SRC_SIMBAD_SPTYPE, 'utf-8'),
+      ['source_id', 'simbad_main_id'],
+      'simbad_sptype.tsv',
+      'Re-run `pnpm run refresh:simbad-sptype`.',
+    )) {
+      const sourceId = cells[idx.source_id];
+      if (sources.has(sourceId)) objectOfSource.set(sourceId, cells[idx.simbad_main_id]);
     }
 
     move = [];
