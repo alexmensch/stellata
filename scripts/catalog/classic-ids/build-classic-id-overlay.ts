@@ -3,6 +3,7 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { compareSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
 import { compareBuildCounts, formatCountDiff } from '../build-counts';
 import { loadClassicIdCrossWalks } from './binding-candidates';
 import { loadBindingEvidence } from './binding-evidence';
@@ -55,7 +56,7 @@ function writeRejectedBindings(rows: readonly RejectedBinding[]): void {
     OUT_REJECTED,
     'gaia_source_id\thip\tv_mag\tv_via\tg_mag\treason\tdesignations',
     [...rows]
-      .sort((a, b) => a.hip - b.hip || (a.sourceId < b.sourceId ? -1 : 1))
+      .sort((a, b) => a.hip - b.hip || compareSourceIdsNumeric(a.sourceId, b.sourceId))
       .map((r) => [
         r.sourceId,
         r.hip === 0 ? '' : r.hip,
@@ -85,7 +86,8 @@ function logOverlay(overlay: ClassicIdOverlay, counts: OverlayJoinCounts): void 
       `${counts.gateRejectedSibling} on sibling-letter attribution; ` +
       `${counts.gateSkippedNoPrintedV} rows carry no printed V under any tier ` +
       `and cannot be vetted (gateable via hip ${counts.gateableVia.hip}, ` +
-      `tycho2 ${counts.gateableVia.tycho2}, gliese ${counts.gateableVia.gliese}); ${counts.gateSkippedNoGMag} gateable rows are absent ` +
+      `tycho2 ${counts.gateableVia.tycho2}, gliese ${counts.gateableVia.gliese}); ` +
+      `${counts.gateSkippedNoGMag} gateable rows are absent ` +
       `from the astrometry pull (must be 0 — the request under-covers the ` +
       `candidates), ${counts.gateSkippedNullGMag} have a row but no published G`,
   );
