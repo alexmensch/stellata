@@ -1,109 +1,113 @@
-// The homepage's numeric claims, re-derived from what they describe. A
-// marketing page states the citation record's size, and prose cannot read
-// anything — so the sources are counted here instead.
+// The public pages state figures about the model, the application and the
+// citation record. `scripts/site/site-metrics.ts` counts each off the thing
+// itself and `vite.env.ts` substitutes it in, so what this suite holds is
+// that the pages keep *asking* rather than quoting — plus the two claims a
+// substitution cannot carry.
 
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { walkFiles } from './walk-files';
+import { parseSharePath } from '../src/client/util/url-state/share-path-pure';
+import { decodeBlob } from '../src/client/util/url-state/url-state';
+import {
+  catalogueRecordCount,
+  citedReferences,
+  creditedSourceCount,
+} from '../scripts/site/site-metrics';
 
 const ROOT = resolve(__dirname, '..');
 const HOME = join(ROOT, 'src/site/index.html');
-const APP = join(ROOT, 'src/client/app/index.html');
+const NOT_FOUND = join(ROOT, 'src/site/404.html');
 
-/** The modelling record the reference claim describes: the two root docs
- *  plus every markdown file under these roots — the science docs and the
- *  folder READMEs, which carry a subsystem's citations next to its code.
- *  `src/site/README.md` § The homepage's claims. */
-const RECORD_DOCS = ['SCIENCE.md', 'README.md'];
-const RECORD_ROOTS = ['docs', 'src', 'scripts', 'data'];
-
-/**
- * How far the derived reference count may run ahead of the figure the page
- * quotes before the claim reads as stale rather than conservative. The page
- * quotes a floor ("100+"), so it can only ever be true — this is what makes
- * it also stay *informative*: cross the bucket and CI asks for the next one.
- */
-const CLAIM_BUCKET = 30;
-
-/** Every credited source in the application's Credits tab is one `<div>`
- *  child of a `.credit-entry` that is not the entry's own label. */
-function appCreditRows(): number {
-  const app = readFileSync(APP, 'utf8');
-  const block = app.slice(app.indexOf('class="modal-credits"'));
-  const credits = block.slice(0, block.indexOf('</div>\n          </div>'));
-  return [...credits.matchAll(/^\s*<div>(?!<div)/gm)].length;
-}
-
-function recordFiles(): string[] {
-  const walked = RECORD_ROOTS.flatMap((root) => [
-    ...walkFiles(join(ROOT, root), {
-      include: (path) => path.endsWith('.md'),
-      skipDir: (name) => name === 'node_modules' || name === 'public',
-    }),
-  ]);
-  return [...RECORD_DOCS.map((f) => join(ROOT, f)), ...walked];
-}
-
-/**
- * Distinct author-year citations, counting only the multi-author forms
- * (`Høg et al. 2000`, `Bland-Hawthorn & Gerhard 2016`). Single-author
- * citations are real references this cannot see, so the count is a floor on
- * the record and never a measure of it — which is the direction the page's
- * claim needs.
- */
-function citedReferences(): Set<string> {
-  const pattern =
-    /\b([A-Z][A-Za-zÀ-ÿ'-]+)(?:,? (?:et al\.|(?:&(?:amp;)?|and) [A-Z][A-Za-zÀ-ÿ'-]+)) \(?((?:1[89]|20)\d{2})[ab]?\)?/g;
-  const refs = new Set<string>();
-  for (const file of recordFiles()) {
-    for (const [, author, year] of readFileSync(file, 'utf8').matchAll(pattern)) {
-      refs.add(`${author} ${year}`);
-    }
-  }
-  return refs;
-}
-
-/** The homepage's readout strip, as a label → value map. */
+/** Each readout cell's label → the raw value the page carries for it. */
 function readoutValues(): Map<string, string> {
   const html = readFileSync(HOME, 'utf8');
   const cells = html.matchAll(
-    /<span class="label">([^<]+)<\/span>\s*<span class="readout-value">([^<]+)<\/span>/g,
+    /<dt class="label">([^<]+)<\/dt>\s*<dd class="readout-value">([^<]+)<\/dd>/g,
   );
   return new Map([...cells].map(([, label, value]) => [label.trim(), value.trim()]));
 }
 
-describe('the homepage counts its own sources', () => {
-  it('quotes the number of catalogues the application credits', () => {
-    const credited = appCreditRows();
-    expect(credited).toBe(34);
-    expect(readoutValues().get('Catalogues cited')).toBe(String(credited));
+describe('the pages ask for their figures rather than quoting them', () => {
+  it.each([
+    ['Catalogued objects', '%VITE_STAR_COUNT%'],
+    ['Catalogues cited', '%VITE_SOURCE_COUNT%'],
+    ['Published references', '%VITE_REFERENCE_COUNT%'],
+  ])('reads %s off the repo', (label, token) => {
+    expect(readoutValues().get(label)).toBe(token);
   });
 
-  // The § 02 table splits the same total by subsystem, so a source added to
-  // the app has to land in a row rather than only bumping the headline.
-  it('splits that total across the subsystem table without losing any', () => {
+  // The two the repo cannot count: both are stated in ../README.md, so they
+  // are prose here on purpose rather than by omission.
+  it.each(['Modelled radius', 'Clock range'])('states %s directly', (label) => {
+    expect(readoutValues().get(label)).toMatch(/\d/);
+  });
+
+  it('repeats the same two counts in the citation section', () => {
     const html = readFileSync(HOME, 'utf8');
-    const table = html.slice(
-      html.indexOf('<table class="sources">'),
-      html.indexOf('</table>'),
-    );
+    expect(html).toContain('%VITE_SOURCE_COUNT% catalogues and datasets');
+    expect(html).toContain('%VITE_REFERENCE_COUNT% published papers');
+  });
+
+  it.each([HOME, NOT_FOUND])('reads its own version off package.json', (page) => {
+    expect(readFileSync(page, 'utf8')).toContain('v%VITE_APP_VERSION%');
+  });
+});
+
+// A sight's picture IS its link into the model, so a blob that lost a
+// character sends the reader to the app with the bar silently stripped —
+// no error anywhere, and nothing else on the page to notice it.
+describe('every view the homepage links to', () => {
+  const links = [
+    ...new Set(
+      [...readFileSync(HOME, 'utf8').matchAll(/href="(\/app\/v\/[^"]+)"/g)].map(([, h]) => h),
+    ),
+  ];
+
+  it('links to at least one saved view', () => {
+    expect(links.length).toBeGreaterThan(0);
+  });
+
+  it.each(links)('%s decodes', (href) => {
+    const blob = parseSharePath(href);
+    expect(blob).not.toBeNull();
+    expect(() => decodeBlob(blob!)).not.toThrow();
+  });
+});
+
+describe('the derivations behind those figures', () => {
+  it('counts the sources the application credits', () => {
+    expect(creditedSourceCount(ROOT)).toBe(34);
+  });
+
+  // The subsystem table splits that same total, so a source added to the app
+  // has to land in a row rather than only moving the headline.
+  it('splits the credited total across the subsystem table without losing any', () => {
+    const html = readFileSync(HOME, 'utf8');
+    const table = html.slice(html.indexOf('<table class="sources">'), html.indexOf('</table>'));
     const perRow = [...table.matchAll(/<td>(\d+)<\/td>/g)].map(([, n]) => Number(n));
     expect(perRow.length).toBe(7);
-    expect(perRow.reduce((a, b) => a + b, 0)).toBe(appCreditRows());
+    expect(perRow.reduce((a, b) => a + b, 0)).toBe(creditedSourceCount(ROOT));
   });
 
-  it('quotes a reference floor the record still clears', () => {
-    const quoted = readoutValues().get('Published references');
-    expect(quoted).toMatch(/^\d+\+$/);
-    const floor = Number(quoted!.replace('+', ''));
-    const derived = citedReferences().size;
+  // Bounds, not a pin: the page reads this number rather than quoting one,
+  // so drift cannot make the page wrong — a `toBe(N)` would only fail on
+  // every PR that adds a citation to any README, which is the churn the
+  // substitution removed. What can still make the page wrong is the pattern
+  // itself: matching nothing collapses the count, and matching ordinary
+  // prose ("Table 3 shows 2021") inflates it past anything the record holds.
+  it('finds a reference record neither collapsed nor inflated', () => {
+    const derived = citedReferences(ROOT).size;
+    expect(derived).toBeGreaterThan(80);
+    expect(derived).toBeLessThan(400);
+  });
 
-    // True: the record carries at least what the page claims.
-    expect(derived).toBeGreaterThanOrEqual(floor);
-    // Still informative: raise the page's figure to the next bucket when
-    // this fails, then move it here — the page and its README are the sweep.
-    expect(derived).toBeLessThan(floor + CLAIM_BUCKET);
+  it('reads the catalogue size with no built artifact to read', () => {
+    const snapshot = JSON.parse(
+      readFileSync(join(ROOT, 'scripts/catalog/build-catalog-expected.json'), 'utf8'),
+    );
+    expect(catalogueRecordCount('/nonexistent-root')).toBe(snapshot.recordCount);
+    expect(catalogueRecordCount(ROOT)).toBe(snapshot.recordCount);
   });
 });

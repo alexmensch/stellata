@@ -7,7 +7,7 @@ import { basename, join, resolve } from 'node:path';
 
 import { describe, it, expect } from 'vitest';
 
-import { walkFiles } from './walk-files';
+import { walkFiles } from '../scripts/util/walk-files';
 
 import { isDustPublicAsset } from '../scripts/dust/sync-dust-pure';
 import { isPlanetElementPublicAsset } from '../scripts/ephemerides/sync-ephemerides-pure';
