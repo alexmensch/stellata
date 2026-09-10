@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
-import { walkFiles } from './walk-files';
+import { walkFiles } from '../scripts/util/walk-files';
 import {
   citesSection,
   extractPointers,

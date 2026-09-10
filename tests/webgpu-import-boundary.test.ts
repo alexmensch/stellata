@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import { walkFiles } from './walk-files';
+import { walkFiles } from '../scripts/util/walk-files';
 
 const ROOT = resolve(__dirname, '..');
 const CLIENT = join(ROOT, 'src', 'client');
