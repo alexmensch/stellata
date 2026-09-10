@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stellata — 3D star catalogue and model of the measured universe</title>
+
+    <meta
+      name="description"
+      content="A 3D model of the universe you fly through, built only from published astronomical measurement. True colour, real apparent brightness, every object cited."
+    />
+    <link rel="canonical" href="https://stellata.xyz/" />
+    <link rel="alternate" type="text/markdown" href="/index.md" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta name="author" content="Alex Marshall" />
+    <meta name="theme-color" content="#070912" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Stellata" />
+    <meta property="og:title" content="Stellata — a 3D model of the measured universe" />
+    <meta
+      property="og:description"
+      content="A 3D model of the universe you fly through, built only from published astronomical measurement. True colour, real apparent brightness, every object cited."
+    />
+    <meta property="og:url" content="https://stellata.xyz/" />
+    <meta property="og:image" content="https://stellata.xyz/og-image.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Stellata — a 3D model of the real universe, shown in true colour." />
+    <meta property="og:locale" content="en_US" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Stellata — a 3D model of the measured universe" />
+    <meta
+      name="twitter:description"
+      content="A 3D model of the universe you fly through, built only from published astronomical measurement. True colour, real apparent brightness, every object cited."
+    />
+    <meta name="twitter:image" content="https://stellata.xyz/og-image.jpg" />
+    <meta name="twitter:image:alt" content="Stellata — a 3D model of the real universe, shown in true colour." />
+
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Person",
+            "@id": "https://alxm.me/#person",
+            "name": "Alex Marshall",
+            "url": "https://alxm.me",
+            "sameAs": [
+              "https://github.com/alexmensch",
+              "https://www.linkedin.com/in/awmars"
+            ]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://stellata.xyz/#website",
+            "name": "Stellata",
+            "url": "https://stellata.xyz/",
+            "inLanguage": "en",
+            "publisher": { "@id": "https://alxm.me/#person" }
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://stellata.xyz/#webapp",
+            "name": "Stellata",
+            "alternateName": "Stellata Star Catalog",
+            "url": "https://stellata.xyz/app",
+            "image": "https://stellata.xyz/og-image.jpg",
+            "description": "A 3D model of the real universe in your browser: planets, stars, dust and galaxies in true colour, exactly as your eyes would see them. Nothing invented.",
+            "applicationCategory": "EducationalApplication",
+            "operatingSystem": "Any (WebGPU-capable browser)",
+            "browserRequirements": "Requires WebGPU",
+            "inLanguage": "en",
+            "isAccessibleForFree": true,
+            "author": { "@id": "https://alxm.me/#person" },
+            "creator": { "@id": "https://alxm.me/#person" },
+            "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://stellata.xyz/#webpage",
+            "url": "https://stellata.xyz/",
+            "name": "Stellata — 3D star catalogue and model of the measured universe",
+            "description": "A 3D model of the universe you fly through, built only from published astronomical measurement. True colour, real apparent brightness, every object cited.",
+            "inLanguage": "en",
+            "isPartOf": { "@id": "https://stellata.xyz/#website" },
+            "about": { "@id": "https://stellata.xyz/#webapp" },
+            "mainEntity": { "@id": "https://stellata.xyz/#webapp" },
+            "primaryImageOfPage": "https://stellata.xyz/og-image.jpg",
+            "citation": [
+              {
+                "@type": "Dataset",
+                "name": "Gaia Data Release 3",
+                "creditText": "ESA / Gaia / DPAC",
+                "url": "https://gea.esac.esa.int/archive/"
+              },
+              {
+                "@type": "ScholarlyArticle",
+                "name": "Estimating Distances from Parallaxes. V. Geometric and Photogeometric Distances to 1.47 Billion Stars in Gaia Early Data Release 3",
+                "author": "Bailer-Jones et al.",
+                "datePublished": "2021",
+                "identifier": "https://doi.org/10.3847/1538-3881/abd806"
+              },
+              {
+                "@type": "Dataset",
+                "name": "A parsec-scale Galactic 3D dust map out to 1.25 kpc from the Sun",
+                "author": "Edenhofer et al.",
+                "datePublished": "2024",
+                "identifier": "https://doi.org/10.5281/zenodo.8187943"
+              },
+              {
+                "@type": "ScholarlyArticle",
+                "name": "Star formation near the Sun is driven by expansion of the Local Bubble",
+                "author": "Zucker et al.",
+                "datePublished": "2022",
+                "identifier": "https://doi.org/10.1038/s41586-021-04286-5"
+              },
+              {
+                "@type": "Dataset",
+                "name": "The Local Volume Database",
+                "author": "Pace",
+                "datePublished": "2024",
+                "identifier": "https://doi.org/10.33232/001c.144859"
+              },
+              {
+                "@type": "ScholarlyArticle",
+                "name": "The Updated Multiple Star Catalog",
+                "author": "Tokovinin",
+                "datePublished": "2018",
+                "identifier": "https://doi.org/10.3847/1538-4365/aaa7d9"
+              },
+              {
+                "@type": "ScholarlyArticle",
+                "name": "Gaia Early Data Release 3: Photometric content and validation",
+                "author": "Riello et al.",
+                "datePublished": "2021",
+                "identifier": "https://doi.org/10.1051/0004-6361/202039587"
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <div class="banner">
+      <header class="masthead" data-overlay>
+        <div class="[ cluster ] [ wrapper ]" data-state="repel">
+          <a class="wordmark" href="/">Stellata</a>
+          <nav class="cluster" aria-label="Elsewhere">
+            <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">Science</a>
+            <a href="https://doi.org/10.5281/zenodo.22392528">Cite</a>
+            <a href="/app">Open the model&nbsp;→</a>
+          </nav>
+        </div>
+      </header>
+
+      <section class="hero" aria-labelledby="hero-heading">
+        <div class="hero-media">
+          <div class="holder">
+            <span class="label">Above the fold — placeholder</span>
+            <b>Wide view of the local stellar neighbourhood.</b>
+            2400 px or wider → <code>public/site/hero.jpg</code>. Start from
+            <code>/app/v/BIWEIgeSiYo3GAWyOXD4hDkH7eeAPeZqWj7Qlnk_TPbKDwGH1xI/</code>
+          </div>
+        </div>
+        <div class="hero-copy">
+          <div class="[ flow ] [ wrapper ]">
+            <span class="label">Observational 3D model of the local universe</span>
+            <h1 id="hero-heading">A 3D model of the universe with nothing invented in it.</h1>
+            <p class="lead">
+              Around 390,000 real objects — stars, planets, moons, the dust
+              between them, the Milky Way, the nearest galaxies — at the
+              positions astronomers have measured, drawn at the colour and
+              brightness your eye would see from wherever you are standing.
+            </p>
+            <div class="cluster">
+              <a class="pill" data-primary href="/app">Open the model</a>
+              <span class="aside">
+                Free, no account, no install.
+                <a href="#requirements">Needs WebGPU and a desktop</a>.
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="[ readout-band ] [ region ] [ wrapper ]">
+      <dl class="readout">
+        <div class="readout-cell">
+          <dt class="label">Catalogued objects</dt>
+          <dd class="readout-value">%VITE_STAR_COUNT%</dd>
+        </div>
+        <div class="readout-cell">
+          <dt class="label">Catalogues cited</dt>
+          <dd class="readout-value">%VITE_SOURCE_COUNT%</dd>
+        </div>
+        <div class="readout-cell">
+          <dt class="label">Published references</dt>
+          <dd class="readout-value">%VITE_REFERENCE_COUNT%</dd>
+        </div>
+        <div class="readout-cell">
+          <dt class="label">Modelled radius</dt>
+          <dd class="readout-value">6.5 Mly</dd>
+        </div>
+        <div class="readout-cell">
+          <dt class="label">Clock range</dt>
+          <dd class="readout-value">3000 BC – 3000 AD</dd>
+        </div>
+      </dl>
+    </div>
+
+    <main id="main">
+      <section class="[ section ] [ region ]" id="instrument">
+        <div class="[ flow ] [ wrapper ]">
+          <div class="[ section-head ] [ flow ]">
+            <span class="label" data-accent>What it is</span>
+            <h2>Three things this is.</h2>
+          </div>
+
+          <div class="[ claims ] [ flow ]">
+            <article class="[ claim ] [ flow ]">
+              <h3>An instrument, built for people who already know the sky.</h3>
+              <p>
+                The controls are the ones an observer expects. Limiting
+                magnitude derived from an aperture rather than a taste
+                slider. Exposure in stops, so a change of one halves or
+                doubles the light. Star sizes set by plate scale. An
+                attitude indicator reading the camera against the ecliptic,
+                equatorial or galactic frame, or against the focused
+                object's own orbital plane. Coordinate spheres in all three
+                frames with edge-labelled gridlines. The IAU constellation
+                boundaries as Delporte drew them in 1930. A chart mode in
+                the manner of <i>Sky Atlas 2000.0</i>, with Bayer and
+                Flamsteed designations, double-star wings and variable-star
+                rings.
+              </p>
+              <p>
+                Every view — camera pose, clock, filters, exposure, mode —
+                packs into the address bar, so a view you found is a link
+                you can put in a paper, an email or a lecture and know it
+                comes back identically.
+              </p>
+            </article>
+
+            <article class="[ claim ] [ flow ]">
+              <h3>Every object came out of a published catalogue, and says which.</h3>
+              <p>
+                Positions, distances, proper motions, colours, temperatures,
+                radii, pulsation periods, orbital elements, dust densities:
+                each is read from published data, and the source is named in
+                the application and in the repository. Star radii are
+                computed from catalogued absolute magnitude and spectral
+                class through Stefan–Boltzmann rather than assigned by eye.
+                Variable stars pulse on their catalogued periods. Close
+                binaries orbit on their measured elements. Every star is
+                propagated from the epoch its position was measured at to
+                the date on the clock, along its measured motion through
+                space.
+              </p>
+              <p>
+                Theoretical predictions and conjectured structures are
+                excluded on purpose. There is no procedural filler and no
+                painted backdrop, which is also why the model has an edge:
+                it currently reaches 6.5 million light years, and stops
+                where the measurements do.
+              </p>
+            </article>
+
+            <article class="[ claim ] [ flow ]">
+              <h3>What your eye would see, from any point in the model.</h3>
+              <p>
+                There is no false colour anywhere in Stellata — no infrared,
+                no radio, no narrowband palette, none of the composites that
+                make published astronomy imagery beautiful and misleading
+                about what is actually visible. Colour comes from measured
+                temperature and photometry through the human visual
+                response.
+              </p>
+              <p>
+                Brightness is handled the same way. Apparent magnitude is
+                recomputed for the camera's real position every frame, so
+                moving changes what you can see, and the light is
+                attenuated and reddened by raymarching the actual
+                three-dimensional dust map between camera and star. One
+                global tone-map turns that into pixels, calibrated so a
+                star at the naked-eye threshold sits at the threshold of
+                your display. There is a calibration screen in the
+                application for setting your monitor's black point, because
+                on an uncalibrated screen in a lit room none of it means
+                anything.
+              </p>
+            </article>
+          </div>
+
+          <figure class="[ plate ] [ flow ]">
+            <div class="holder">
+              <span class="label">Plate 02 — placeholder</span>
+              <b>Extinction structure, from a few kiloparsecs out.</b>
+              The strongest single demonstration that the dust is a real
+              volume rather than a texture. Show all stars, pull the camera
+              to roughly 3 kpc from Sol and orbit until the filaments and
+              clear windows of the local interstellar medium paint
+              themselves across the stellar density. Save as
+              <code>public/site/dust.jpg</code>.
+            </div>
+            <figcaption class="plate-caption">
+              Stars behind dense lanes dim and redden; stars in clear
+              windows shine through. The pattern is the local interstellar
+              medium, traced from a published 3D dust map, not a stylistic
+              overlay.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="[ section ] [ region ]" id="sights">
+        <div class="[ flow ] [ wrapper ]">
+          <div class="[ section-head ] [ flow ]">
+            <span class="label" data-accent>Where to go first</span>
+            <h2>Things worth going to look at.</h2>
+          </div>
+          <p class="[ measure dim ]">
+            Each of these exercises something the renderer does that a
+            still image cannot show. Every picture below is a link into the
+            model at that view.
+          </p>
+
+          <div class="[ sights ] [ flow ]">
+            <article class="[ sight ] [ switcher ]">
+              <a class="sight-media" href="/app/v/BICAAaMD/">
+                <div class="holder">
+                  <span class="label">Capture</span>
+                  <b>Betelgeuse and Rigel, discs resolved.</b>
+                  Approach until both show as discs rather than points.
+                  <code>public/site/supergiants.jpg</code>
+                </div>
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>Two supergiants, two different sizes</h3>
+                <p>
+                  Both in Orion, both supergiants. Rigel is intrinsically
+                  brighter but hotter, so Stefan–Boltzmann gives it the
+                  smaller radius — the <i>L</i> = <i>R</i>²<i>T</i>⁴
+                  trade-off, visible as two discs of different size.
+                  Approach slowly; they fill more of the view than you
+                  expect.
+                </p>
+                <p class="sight-go"><a href="/app/v/BICAAaMD/">Fly there →</a></p>
+              </div>
+            </article>
+
+            <article class="[ sight ] [ switcher ]">
+              <a class="sight-media" href="/app/v/BICAAcdG/">
+                <div class="holder">
+                  <span class="label">Capture</span>
+                  <b>Albireo, seen from off the Earth–Albireo line.</b>
+                  Move until the two stars separate in depth.
+                  <code>public/site/albireo.jpg</code>
+                </div>
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>A famous double that isn't one</h3>
+                <p>
+                  Albireo is the gold-and-blue colour pair everyone points a
+                  telescope at. In three dimensions it separates: 111 pc and
+                  122 pc, about 35 light years apart along the line of
+                  sight, far too distant to be bound. The colour contrast is
+                  real, the pairing is a chance alignment — the modern
+                  post-Gaia consensus, and impossible to see from Earth.
+                </p>
+                <p class="sight-go"><a href="/app/v/BICAAcdG/">Fly there →</a></p>
+              </div>
+            </article>
+
+            <article class="[ sight ] [ switcher ]">
+              <a class="sight-media" href="/app/v/BICAAYIX/">
+                <div class="holder">
+                  <span class="label">Capture — short silent loop</span>
+                  <b>δ Cephei pulsating, clock accelerated.</b>
+                  A few seconds of the disc swelling and reddening on its
+                  catalogued period.
+                  <code>public/site/variables.mp4</code>
+                </div>
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>Stars that pulse on their own measured periods</h3>
+                <p>
+                  δ Cephei, Mira, η Aquilae. Open the time scrubber and
+                  accelerate the clock: each swings in brightness, disc
+                  radius and colour together, on the period the variable-star
+                  catalogue records for it.
+                </p>
+                <p class="sight-go"><a href="/app/v/BICAAYIX/">Fly there →</a></p>
+              </div>
+            </article>
+
+            <article class="[ sight ] [ switcher ]">
+              <a class="sight-media" href="/app/v/BICAAWo/">
+                <div class="holder">
+                  <span class="label">Capture</span>
+                  <b>Orion's figure, deformed.</b>
+                  Land on Rigel, then fly a few tens of parsecs off the
+                  Earth line with the constellation figure drawn.
+                  <code>public/site/orion.jpg</code>
+                </div>
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>Orion, from thirty parsecs off</h3>
+                <p>
+                  The constellation lines are drawn from Earth's viewpoint.
+                  Move a few tens of parsecs and the figure deforms
+                  asymmetrically, because its stars were never at the same
+                  distance. This is the moment it stops being a planetarium.
+                </p>
+                <p class="sight-go"><a href="/app/v/BICAAWo/">Fly there →</a></p>
+              </div>
+            </article>
+
+            <article class="[ sight ] [ switcher ]">
+              <a class="sight-media" href="/app/v/BICAAaKUFA/">
+                <div class="holder">
+                  <span class="label">Capture</span>
+                  <b>The heliopause from beyond the upwind apex.</b>
+                  Cross at about 122 AU and look back along the heliotail.
+                  <code>public/site/heliopause.jpg</code>
+                </div>
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>The edge of the Sun's influence, from outside</h3>
+                <p>
+                  Cross the upwind apex at about 122 AU and look back. The
+                  asymmetry Voyager and IBEX measured — roughly 115 AU at
+                  the flanks, 200 AU down the heliotail — only reads from
+                  out there.
+                </p>
+                <p class="sight-go"><a href="/app/v/BICAAaKUFA/">Fly there →</a></p>
+              </div>
+            </article>
+
+            <article class="[ sight ] [ switcher ]">
+              <a class="sight-media" href="/app">
+                <div class="holder">
+                  <span class="label">Capture</span>
+                  <b>The solar system at today's date.</b>
+                  Planets at their real heliocentric positions, with major
+                  moons and axial tilt.
+                  <code>public/site/solar-system.jpg</code>
+                </div>
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>Sol's system, at the current instant</h3>
+                <p>
+                  The eight planets and Pluto sit at their real heliocentric
+                  positions for right now, with their major moons,
+                  atmospheres, axial tilt and rotation. The clock in the
+                  corner tells you which instant you are looking at, and it
+                  scrubs five thousand years either way.
+                </p>
+                <p class="sight-go"><a href="/app">Fly there →</a></p>
+              </div>
+            </article>
+
+            <article class="[ sight ] [ switcher ]">
+              <div class="sight-media">
+                <div class="holder">
+                  <span class="label">Capture — needs a camera pose</span>
+                  <b>The galactic disc from eight kiloparsecs above it.</b>
+                  Disc and bulge below, mid-plane dust lane holding. No
+                  starting-point link for this one: the view is a camera
+                  pose rather than a focused object, so the URL has to come
+                  off the address bar once you have framed it.
+                  <code>public/site/galaxy.jpg</code>
+                </div>
+              </div>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>Eight kiloparsecs above the galactic centre</h3>
+                <p>
+                  The Milky Way is a bounded raymarch through galactic-scale
+                  density, not a skybox. Look down on the disc and bulge,
+                  then fly past: it reorients with proper parallax, and the
+                  mid-plane dust lane stays where it should.
+                </p>
+              </div>
+            </article>
+
+            <article class="[ sight ] [ switcher ]">
+              <a class="sight-media" href="/app/v/BICAAcD_Ew/">
+                <div class="holder">
+                  <span class="label">Capture</span>
+                  <b>The Large Magellanic Cloud at its measured inclination.</b>
+                  Frame it against the Milky Way, then pull out to M31.
+                  <code>public/site/local-group.jpg</code>
+                </div>
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>Out to two megaparsecs</h3>
+                <p>
+                  Sagittarius shows the elongated axis of a dwarf currently
+                  being torn apart; the Large Magellanic Cloud carries its
+                  measured 32° disc inclination rather than a generic
+                  ellipsoid. Andromeda is a further ten times out.
+                </p>
+                <p class="sight-go"><a href="/app/v/BICAAcD_Ew/">Fly there →</a></p>
+              </div>
+            </article>
+
+            <article class="[ sight ] [ switcher ]">
+              <a
+                class="sight-media"
+                href="/app/v/BJbEoAQHthJ4Pautez9BzDA-B6R7ob4MQ6w9Q_pxP1o7YQGH1xIB/"
+              >
+                <div class="holder">
+                  <span class="label">Capture</span>
+                  <b>Chart mode from a focused star.</b>
+                  Hard-edged discs sized by apparent magnitude, Bayer and
+                  Flamsteed labels, double-star wings, variable-star rings.
+                  This link is a real saved view.
+                  <code>public/site/chart.jpg</code>
+                </div>
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>The same catalogue, drawn as a printed chart</h3>
+                <p>
+                  Chart mode renders the sky as it would be set in a paper
+                  atlas — in the manner of <i>Sky Atlas 2000.0</i> — from
+                  the star you are standing on rather than from Earth.
+                  Constellation names set large and pale, designations on
+                  every star that has one.
+                </p>
+                <p class="sight-go">
+                  <a href="/app/v/BJbEoAQHthJ4Pautez9BzDA-B6R7ob4MQ6w9Q_pxP1o7YQGH1xIB/"
+                    >Fly there →</a
+                  >
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="[ section ] [ region ]" id="sources">
+        <div class="[ flow ] [ wrapper ]">
+          <div class="[ section-head ] [ flow ]">
+            <span class="label" data-accent>The record</span>
+            <h2>The citation record is the product.</h2>
+          </div>
+          <p class="measure">
+            %VITE_SOURCE_COUNT% catalogues and datasets are credited inside
+            the application, grouped by what they place. Behind them, the
+            modelling record cites %VITE_REFERENCE_COUNT% published papers
+            with their DOIs — every formula, calibration and deliberate
+            simplification written down and attributed, including the ones
+            that make the model less pretty.
+          </p>
+
+          <div class="table-scroll">
+            <table class="sources">
+              <thead>
+                <tr>
+                  <th scope="col">Subsystem</th>
+                  <th scope="col">Sources</th>
+                  <th scope="col">Principal authorities</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Stars</td>
+                  <td>12</td>
+                  <td>
+                    Gaia DR3 · Tycho-2 · Hipparcos · CNS5 · Bright Star
+                    Catalogue · Bailer-Jones 2021 geometric distances ·
+                    GCVS 5.1 · the IAU Working Group on Star Names
+                  </td>
+                </tr>
+                <tr>
+                  <td>Double &amp; multiple stars</td>
+                  <td>4</td>
+                  <td>
+                    Washington Double Star Catalog · Sixth Orbit Catalog ·
+                    Tokovinin's Multiple Star Catalog · the Hipparcos CCDM
+                    component register
+                  </td>
+                </tr>
+                <tr>
+                  <td>Milky Way band</td>
+                  <td>6</td>
+                  <td>
+                    Bland-Hawthorn &amp; Gerhard 2016 · Leinert 1998
+                    diffuse night-sky brightness · Drimmel &amp; Spergel
+                    2001 · Cardelli, Clayton &amp; Mathis 1989 extinction
+                    law
+                  </td>
+                </tr>
+                <tr>
+                  <td>Interstellar medium</td>
+                  <td>3</td>
+                  <td>
+                    Edenhofer 2024 3D dust map · Zucker 2020 &amp; 2021
+                    molecular clouds · Zucker 2022 Local Bubble surface
+                  </td>
+                </tr>
+                <tr>
+                  <td>Planets &amp; moons</td>
+                  <td>5</td>
+                  <td>
+                    JPL Solar System Dynamics elements · NASA planetary
+                    fact sheets · IAU WGCCRE rotation and pole ·
+                    Mallama 2018 albedos and phase curves
+                  </td>
+                </tr>
+                <tr>
+                  <td>Heliopause</td>
+                  <td>2</td>
+                  <td>
+                    Voyager 1 &amp; 2 boundary crossings, IBEX and Cassini
+                    heliotail estimates · Frisch &amp; Slavin 2013 solar
+                    apex
+                  </td>
+                </tr>
+                <tr>
+                  <td>Nearby galaxies</td>
+                  <td>2</td>
+                  <td>
+                    McConnachie 2012 · Pace 2024 Local Volume Database,
+                    with structural detail for the Magellanic Clouds, M31,
+                    M33 and Sagittarius from the primary literature
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <ul class="[ spec-list ] [ measure ]">
+            <li>
+              <b>The limitations are published too.</b> Roughly 4,300 stars
+              pulse, because those are the ones that cross-match to a
+              catalogued period; the rest render steady. Emission and
+              reflection nebulae are not modelled. The list is maintained in
+              the repository next to the feature list, not buried.
+            </li>
+            <li>
+              <b>It is citable.</b> Every release is archived on Zenodo with
+              its own DOI, and the repository carries a
+              <code>CITATION.cff</code> so a reference manager can read it.
+              The concept DOI
+              <a href="https://doi.org/10.5281/zenodo.22392528">10.5281/zenodo.22392528</a>
+              always resolves to the current release.
+            </li>
+            <li>
+              <b>It is inspectable.</b> The whole thing is AGPL-3.0 source.
+              If you doubt a number, the pipeline that produced it is
+              readable, and so is the reasoning:
+              <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">SCIENCE.md</a>
+              carries the sources, the formulas and the modelling
+              decisions.
+            </li>
+            <li>
+              <b>It is one person's spare time.</b> Bug reports and
+              suggestions are welcome in the issue tracker; outside pull
+              requests are not being taken. Sponsorship, if the thing is
+              useful to you, is
+              <a href="https://github.com/sponsors/alexmensch">warmly welcomed</a>.
+            </li>
+          </ul>
+
+          <div class="cluster">
+            <a class="pill" data-primary href="/app">Open the model</a>
+            <span class="aside">
+              or read
+              <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">the science notes</a>
+              first.
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section class="[ section ] [ region ]" id="requirements" data-tight>
+        <div class="[ flow ] [ wrapper ]">
+          <span class="label" data-accent>Before you click</span>
+          <div class="[ requirements ] [ switcher ]">
+            <div class="[ requirement ] [ flow ]">
+              <h3>WebGPU is required</h3>
+              <p>
+                Chrome and Edge 113+, Safari 26+ (macOS Tahoe, iOS and
+                iPadOS 26), Firefox 141+ on Windows and Apple-silicon
+                macOS, Chrome for Android 121+ on Android 12+. A browser
+                without it gets a page saying so rather than a blank
+                canvas.
+              </p>
+            </div>
+            <div class="[ requirement ] [ flow ]">
+              <h3>Desktop, for now</h3>
+              <p>
+                It loads and renders on a phone, but the interface is built
+                around a keyboard and a pointer, and the small-screen
+                layout is still to come. Two-finger rotate works on touch
+                and on Safari's trackpad gesture.
+              </p>
+            </div>
+          </div>
+          <p class="aside">
+            Around 390,000 records arrive before the first frame, so the
+            initial load is measured in seconds rather than instantly.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="[ cluster ] [ wrapper ]" data-state="repel">
+        <span>
+          Stellata <span class="footer-version">v%VITE_APP_VERSION%</span> ·
+          AGPL-3.0 · built by
+          <a href="https://alxm.me" rel="author">Alex Marshall</a>
+        </span>
+        <span class="cluster">
+          <a href="https://github.com/alexmensch/stellata">GitHub</a>
+          <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">SCIENCE.md</a>
+          <a href="https://doi.org/10.5281/zenodo.22392528">Zenodo DOI</a>
+          <a href="/app">The model</a>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>

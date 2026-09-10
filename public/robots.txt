@@ -2,6 +2,7 @@
 # Full crawl access for classic search engines and AI/LLM crawlers.
 
 User-agent: *
+Content-Signal: search=yes,ai-input=yes
 Allow: /
 
 # Classic search
@@ -21,7 +22,10 @@ Allow: /
 User-agent: ClaudeBot
 Allow: /
 
-User-agent: Claude-Web
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
 Allow: /
 
 User-agent: GPTBot

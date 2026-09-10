@@ -19,10 +19,15 @@ routes = [
 [assets]
 directory = "./dist"
 binding = "ASSETS"
-# /v/<blob>/ share URLs aren't real asset files — serve index.html (200)
-# for any unmatched path so the client decodes the blob. Without this the
-# static-assets layer 404s every share link. Honored by env.ASSETS.fetch().
-not_found_handling = "single-page-application"
+# Explicitly NOT "single-page-application". That setting answers every
+# unmatched path with the ROOT index.html, which is now the public
+# homepage — so a share link would have served marketing instead of the
+# app. src/worker.ts owns the fallback instead, scoped to /app.
+# "404-page" serves dist/404.html (built from src/site/404.html) with a
+# real 404 status, so an unmatched path anywhere else says so instead of
+# returning a bodiless status or the wrong page.
+# src/README.md § Request routing.
+not_found_handling = "404-page"
 
 # [observability] top-level: `head_sampling_rate` MUST stay defined
 # even with enabled = false, otherwise the nested sub-sections below

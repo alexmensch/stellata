@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
-import { walkFiles } from './walk-files';
+import { walkFiles } from '../scripts/util/walk-files';
 import {
   citesSection,
   extractPointers,
@@ -20,7 +20,7 @@ const SKIP_DIRS = new Set(['node_modules', 'public', 'dist', '.git', '.claude'])
 
 // Bump deliberately, having read the diff: a drop means the extractor stopped
 // seeing pointers, which passes the resolution check by finding nothing.
-const POINTER_COUNT = 2023;
+const POINTER_COUNT = 2040;
 
 // Fixtures interpolate their § from here, so the `<path>.md §` a pointer
 // needs never appears literally and this file stays out of its own scan.

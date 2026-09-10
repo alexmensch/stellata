@@ -176,10 +176,12 @@ copy is stale from the next build.
 
 - **A surface a user reads** takes it live: `catalog.count` once the
   catalogue is loaded (the About modal), or `import.meta.env`
-  `.VITE_STAR_COUNT` before it is (the requires-WebGPU gate,
-  `index.html`). `vite.config.ts` reads that off the built catalogue's
-  own header, and it is empty on a checkout with no artifacts — so
-  every consumer needs a wording that survives having no number.
+  `.VITE_STAR_COUNT` before it is (the requires-WebGPU gate, both
+  documents, the homepage readout). `scripts/site/site-metrics.ts` reads
+  that off the built catalogue's own header, falling back to the build's
+  committed count snapshot where no artifact exists — so it is always a
+  number, and a surface may state it exactly. The same module publishes
+  the credited-source and cited-reference counts the public pages quote.
 - **Prose cannot read anything**, so it rounds, and
   `tests/star-count-consistency.test.ts` re-derives the rounding from
   the header and fails when a refresh moves it.

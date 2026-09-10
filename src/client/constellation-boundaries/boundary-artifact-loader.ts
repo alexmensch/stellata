@@ -120,11 +120,9 @@ export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
  *
  * **Nothing here may reject.** `main.ts` loads this inside a `Promise.all`
  * alongside the catalog, so a rejection takes the whole app's boot with it,
- * which is never the proportionate answer for an optional layer. Absence
- * can't be detected by status alone either: `not_found_handling =
- * "single-page-application"` (`wrangler.toml`) answers a missing asset with
- * index.html at 200, so a deployed build that never ran `build:catalog`
- * arrives here as a JSON parse error rather than a 404.
+ * which is never the proportionate answer for an optional layer. Absence is
+ * a real 404 (`src/README.md` § Request routing); the parse guard below it
+ * covers a present-but-truncated artifact.
  */
 export async function loadBoundaries(url: string): Promise<BoundaryArtifact | null> {
   let raw: unknown;

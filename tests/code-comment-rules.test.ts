@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import { walkFiles } from './walk-files';
+import { walkFiles } from '../scripts/util/walk-files';
 import { loadCommentRules } from '../scripts/hooks/comment-rules';
 
 const ROOT = resolve(__dirname, '..');

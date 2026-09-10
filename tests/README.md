@@ -111,6 +111,44 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
                          ledger.tsv is an LFS pointer stub (the bare CI
                          test job); runs for real in the sid-ledger-guard
                          job and locally.
+site-claims.test.ts      No figure on a public page is a literal: each
+                         readout cell must still carry its %VITE_*%
+                         substitution rather than a number. Then the
+                         derivations behind them
+                         (scripts/site/site-metrics.ts) — the credited
+                         source count pinned, the per-subsystem table
+                         still summing to it, and the reference scan
+                         bounded both ways, since a pattern that matches
+                         nothing and one that matches ordinary prose fail
+                         in opposite directions. `src/site/README.md`
+                         § Numbers in copy.
+site-css-rules.test.ts   The public stylesheet answers to its container and
+                         to the reader's font size, never to a viewport
+                         measurement, and paints nothing it has not
+                         tokenised. Eleven assertions in four groups: no
+                         width/height media query, no pixel type size, every
+                         font-size a Utopia scale step, every grid minimum
+                         guarded by min() · no colour literal outside :root,
+                         every space a scale step, every leading/tracking/
+                         weight/radius a token · the CUBE cascade order
+                         (compositions → blocks → utilities) with every
+                         utility declaration !important · no physical box
+                         property and no text-align: left/right. A bespoke
+                         clamp() is the drift the scale-step rules catch —
+                         it breaks the property that a heading and the space
+                         above it move together; an unguarded minmax() is
+                         the one that overflows at the 32px root WCAG
+                         1.4.4's 200% text resize implies. Scans the file
+                         with comments stripped, so prose naming a property
+                         cannot register as CSS. `src/site/README.md`
+                         § The stylesheet, § Responsiveness has no
+                         breakpoints.
+site-dev-routing.test.ts The dev server's routing table held against the
+                         deploy's: both legacy share transports 301,
+                         /app/** gets the application document, the root
+                         gets the homepage, everything else 404s. Pairs
+                         with src/worker.test.ts, which pins the same
+                         table on the production side.
 star-count-consistency.test.ts
                          The catalogue's own size, stated once. Rounds the
                          BUILT header to `PROSE_ROUNDED` (artifact-backed,
@@ -119,7 +157,7 @@ star-count-consistency.test.ts
                          separators included, which is how an
                          underscore-separated literal in a dust-cost
                          script outlived two count changes — and holds
-                         every size figure on the four user-facing prose
+                         every size figure on the five user-facing prose
                          surfaces to that one rounding, `public/llms.txt`
                          among them since `public/` is gitignored and no
                          directory root reaches it. The AT-HYG spine's own
@@ -161,19 +199,16 @@ doc-pointer-pure.ts      Not a test — extraction, resolution and heading
                          matching for doc-pointer-resolution.test.ts.
                          Behaviour is documented in § Doc-pointer
                          resolution below, not in the module.
-walk-files.ts            Not a test — the recursive file walk the
-                         scanners above share (code-comment-rules,
-                         bundle-content, shader-frag-depth, both TSL
-                         rosters), taking `include` / `skipDir`
-                         predicates. Follows symlinked directories, which
-                         public/ carries. Also `isProductionTs`, the
-                         include predicate the three TSL scanners share:
-                         a .ts that is neither a test nor an ambient
-                         declaration. webgpu-import-boundary.test.ts keeps
-                         its own broader `isClientSource` — a declaration
-                         file can carry an import, so that corpus wants
-                         globals.d.ts in scope.
 ```
+
+The recursive file walk the scanners above share lives in
+`scripts/util/walk-files.ts` — `scripts/site/site-metrics.ts` reads the
+same corpus at build time, so it is repo plumbing rather than a test
+helper. It carries `isProductionTs` too, the include predicate the three
+TSL scanners share: a `.ts` that is neither a test nor an ambient
+declaration. `webgpu-import-boundary.test.ts` keeps its own broader
+`isClientSource` — a declaration file can carry an import, so that corpus
+wants `globals.d.ts` in scope.
 
 Per-subsystem tests live next to their code (`*.test.ts` / `*.test.py`
 co-located with the module under test); only repo-wide invariants
