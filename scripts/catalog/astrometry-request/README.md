@@ -124,7 +124,7 @@ bindings. Both read 0 today — the pull does return 2 fewer rows than the
 request (379,133 of 379,135), but both are reviewed bindings rather than
 candidates: the two DR2 ids of `data/athyg/stale_gaia_source_ids.tsv` SIMBAD
 holds no DR3 successor for (`../spine/README.md` § Six source_ids DR3 does not
-publish). What no request can fix is `gateSkippedNullGMag` (63) and
+publish). What no request can fix is `gateSkippedNullGMag` (112) and
 `derivedWeighedNullGMag` (77): sources Gaia has a row for and publishes no
 `phot_g_mean_mag` for, which stay unvettable at any request size.
 

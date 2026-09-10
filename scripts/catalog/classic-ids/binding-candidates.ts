@@ -5,6 +5,7 @@
 import { resolve } from 'node:path';
 
 import { readGaiaHipXmatch, readGaiaTycXmatch } from '../parse/gaia-xmatch';
+import type { PrintedVLookups } from '../photometry/v-magnitude-pure';
 import { parseCns5Tsv, parseTyc2HdTsv, type Cns5Row } from './classic-ids-parse';
 import { readRequired, requireExists, REPO_ROOT as ROOT } from '../../util/paths';
 
@@ -16,17 +17,15 @@ export const SRC_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv')
 const CDS_HINT = 'refresh the CDS inputs with `pnpm run refresh:classic-ids`.';
 const XMATCH_HINT = 'refresh the cross-walk with `pnpm run refresh:gaia-hip` / `refresh:gaia-tyc`.';
 
-/** The two cross-walk products the candidate set derives from — between them the
- *  only ways an overlay entry acquires a `hip`, which is what the gate weighs.
- *  Loading just these is why `build:astrometry-request` does not touch the 2.5 M-row
- *  TYC table (§ The request is a union in ../astrometry-request/README.md). */
+/** The two cross-walk products that give an overlay entry a `hip` — the gate's
+ *  top printed tier. The Tycho and Gliese tiers beneath it are the caller's to
+ *  supply (§ The gate's evidence has to be pulled). */
 export interface BindingCandidateInputs {
   cns5: Cns5Row[];
   hipToSource: Map<number, string>;
 }
 
-/** Everything the overlay join reads. The TYC half serves the HD→TYC→source_id
- *  route, which attaches no `hip` and so reaches no candidate. */
+/** Everything the overlay join reads. */
 export interface ClassicIdCrossWalks extends BindingCandidateInputs {
   tyc2Hd: ReturnType<typeof parseTyc2HdTsv>;
   /** TYC → source_id, already narrowed to the Tycho ids IV/25 mentions. The
@@ -52,13 +51,16 @@ export async function loadClassicIdCrossWalks(): Promise<ClassicIdCrossWalks> {
   return { ...loadBindingCandidateInputs(), tyc2Hd, tycToSource };
 }
 
-/** The V cascade's printed tiers, as the candidate set reads them: a Tycho
- *  entry's reduced `VT` and a GJ cell's Gliese `Vmag`. Supplied by the caller
- *  because loading the two tables is I/O this pure walk should not do, and
- *  because the astrometry request already holds both. */
-export interface PrintedVLookups {
-  tycho2VOfTyc: (tyc: string) => number | null;
-  glieseVOfGj: (gj: string) => number | null;
+/** Every table the candidate walk reads. All fields required: a partial bundle
+ *  narrows the set to the HIP tier while the gate keeps weighing three, which is
+ *  the silent-acceptance fault below with the pull no longer covering it. */
+export interface BindingCandidateEvidence {
+  inputs: BindingCandidateInputs;
+  hipVMag: ReadonlyMap<number, number>;
+  printedV: PrintedVLookups;
+  /** Narrowed to the Tycho ids IV/25 mentions, as the overlay join's is. */
+  tycToSource: ReadonlyMap<string, string>;
+  tyc2Hd: readonly { tyc: string }[];
 }
 
 /** The source_ids the binding gate can actually weigh, and therefore the ones
@@ -84,11 +86,7 @@ export interface PrintedVLookups {
  *  `gateSkippedNoGMag` pins at zero on the real build.
  */
 export function bindingCandidateSourceIds(
-  inputs: BindingCandidateInputs,
-  hipVMag: ReadonlyMap<number, number>,
-  printedV: PrintedVLookups | null = null,
-  tycToSource: ReadonlyMap<string, string> | null = null,
-  tyc2Hd: readonly { tyc: string }[] = [],
+  { inputs, hipVMag, printedV, tycToSource, tyc2Hd }: BindingCandidateEvidence,
 ): Set<string> {
   const ids = new Set<string>();
   for (const [hip, sourceId] of inputs.hipToSource) {
@@ -97,17 +95,14 @@ export function bindingCandidateSourceIds(
   for (const row of inputs.cns5) {
     if (row.gaiaSourceId === null) continue;
     if (row.hip !== null && hipVMag.has(row.hip)) ids.add(row.gaiaSourceId);
-    else if (printedV !== null
-      && printedV.glieseVOfGj(`${row.gj}${row.gjComp ?? ''}`) !== null) {
+    else if (printedV.glieseVOfGj(`${row.gj}${row.gjComp ?? ''}`) !== null) {
       ids.add(row.gaiaSourceId);
     }
   }
-  if (printedV !== null && tycToSource !== null) {
-    for (const row of tyc2Hd) {
-      const sourceId = tycToSource.get(row.tyc);
-      if (sourceId !== undefined && printedV.tycho2VOfTyc(row.tyc) !== null) {
-        ids.add(sourceId);
-      }
+  for (const row of tyc2Hd) {
+    const sourceId = tycToSource.get(row.tyc);
+    if (sourceId !== undefined && printedV.tycho2VOfTyc(row.tyc) !== null) {
+      ids.add(sourceId);
     }
   }
   return ids;

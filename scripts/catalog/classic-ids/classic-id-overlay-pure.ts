@@ -3,7 +3,11 @@
 import type { Bsc5Row, Cns5Row, CrossIndexRow, Tyc2HdRow } from './classic-ids-parse';
 import { sortSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
 import { resolveGaiaSourceId, type SimbadWdsXidIndex } from '../record/catalog-pure';
-import { printedVBelowHip, type GateVVia } from '../photometry/v-magnitude-pure';
+import {
+  printedVBelowHip,
+  type GateVVia,
+  type PrintedVLookups,
+} from '../photometry/v-magnitude-pure';
 // Type-only: the merge imports this module's values, so the runtime graph
 // stays one-way.
 
@@ -65,8 +69,7 @@ export interface BindingEvidence {
   /** The V cascade's tiers below Hipparcos, so both gates weigh a row with no
    *  Hipparcos V on the same evidence the record side reaches
    *  (`../photometry/README.md` § The V cascade). */
-  tycho2VOfTyc: (tyc: string) => number | null;
-  glieseVOfGj: (gj: string) => number | null;
+  printedV: PrintedVLookups;
   wdsXids: SimbadWdsXidIndex | null;
 }
 
@@ -74,16 +77,14 @@ export function bindingEvidence(
   sourceGMag: ReadonlyMap<string, number>,
   hipVMag: ReadonlyMap<number, number>,
   wdsXids: SimbadWdsXidIndex | null,
+  printedV: PrintedVLookups,
   pulledSourceIds: ReadonlySet<string> | ReadonlyMap<string, unknown> | null = null,
-  lowerTiers: Pick<BindingEvidence, 'tycho2VOfTyc' | 'glieseVOfGj'> = {
-    tycho2VOfTyc: () => null, glieseVOfGj: () => null,
-  },
 ): BindingEvidence {
   return {
     gMagOf: (sourceId) => sourceGMag.get(sourceId) ?? null,
     hasPulledRow: (sourceId) => (pulledSourceIds ?? sourceGMag).has(sourceId),
     vMagOfHip: (hip) => hipVMag.get(hip) ?? null,
-    ...lowerTiers,
+    printedV,
     wdsXids,
   };
 }
@@ -171,8 +172,7 @@ export function applyBindingGate(
       // sibling gate keys on a HIP rather than on the V.
       hip = entry.hip[0] ?? 0;
       const below = printedVBelowHip(
-        tycsBySource.get(sourceId) ?? [], entry.gj,
-        evidence.tycho2VOfTyc, evidence.glieseVOfGj,
+        tycsBySource.get(sourceId) ?? [], entry.gj, evidence.printedV,
       );
       if (below === null) {
         skippedNoPrintedV++;

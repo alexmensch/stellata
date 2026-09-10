@@ -9,9 +9,14 @@ import {
   glieseNumber,
   parseOverlayTsv,
   serializeOverlay,
+  type ClassicIdOverlay,
   type OverlayInput,
 } from './classic-id-overlay-pure';
 import { cns5Row } from './cns5-fixture';
+import {
+  NO_PRINTED_V_BELOW_HIP,
+  printedVOf,
+} from '../photometry/photometry-fixture';
 
 const VEGA_SRC = '2101372160809792';
 const SIRIUS_SRC = '2947050466531873024';
@@ -19,7 +24,7 @@ const SIRIUS_SRC = '2947050466531873024';
 /** No printed V and no G, so every row is unvettable and the gate is inert —
  *  the baseline for the join assertions below. Gate behaviour gets its own
  *  block with real photometry. */
-const NO_EVIDENCE = bindingEvidence(new Map(), new Map(), null);
+const NO_EVIDENCE = bindingEvidence(new Map(), new Map(), null, NO_PRINTED_V_BELOW_HIP);
 
 function input(overrides: Partial<OverlayInput> = {}): OverlayInput {
   return {
@@ -143,6 +148,7 @@ describe('applyBindingGate', () => {
         new Map([[TOLIMAN_BAD_SRC, 20.95]]),
         new Map([[TOLIMAN_HIP, 1.33]]),
         null,
+        NO_PRINTED_V_BELOW_HIP,
       ),
     }));
   }
@@ -169,6 +175,7 @@ describe('applyBindingGate', () => {
       new Map([[TOLIMAN_BAD_SRC, 1.7]]),
       new Map([[TOLIMAN_HIP, 1.33]]),
       null,
+      NO_PRINTED_V_BELOW_HIP,
     ));
     expect(overlay.has(TOLIMAN_BAD_SRC)).toBe(true);
     expect(counts.gateRejectedMag).toBe(0);
@@ -192,6 +199,7 @@ describe('applyBindingGate', () => {
         new Map([[good, 5.1], [bad, 19.0]]),
         new Map([[7, 5.0], [8, 5.0]]),
         null,
+        NO_PRINTED_V_BELOW_HIP,
       ),
     }));
     expect(counts.gateRejectedMag).toBe(1);
@@ -204,6 +212,7 @@ describe('applyBindingGate', () => {
       new Map([[TOLIMAN_BAD_SRC, 20.95]]),
       new Map(),
       null,
+      NO_PRINTED_V_BELOW_HIP,
     ));
     expect(counts.gateRejectedMag).toBe(0);
     expect(counts.gateSkippedNoPrintedV).toBe(1);
@@ -219,6 +228,7 @@ describe('applyBindingGate', () => {
       new Map(),
       new Map([[TOLIMAN_HIP, 1.33]]),
       null,
+      NO_PRINTED_V_BELOW_HIP,
     ));
     expect(overlay.has(TOLIMAN_BAD_SRC)).toBe(true);
     expect(counts.gateRejectedMag).toBe(0);
@@ -235,6 +245,7 @@ describe('applyBindingGate', () => {
       new Map(),
       new Map([[TOLIMAN_HIP, 1.33]]),
       null,
+      NO_PRINTED_V_BELOW_HIP,
       new Set([TOLIMAN_BAD_SRC]),
     ));
     expect(counts.gateSkippedNoGMag).toBe(0);
@@ -257,10 +268,144 @@ describe('applyBindingGate', () => {
         byHip: new Map([[hip, [{ wdsId: '08236-2439', component: 'A' }]]]),
         primarySourceLetterByWds: new Map([['08236-2439', 'B']]),
       },
+      NO_PRINTED_V_BELOW_HIP,
     ), new Map());
     expect(rejected).toHaveLength(1);
     expect(rejected[0].reason).toBe('sibling');
     expect(overlay.has(src)).toBe(false);
+  });
+});
+
+// The two printed tiers under Hipparcos, which the HIP-only gate could not
+// reach: a source the TYC→HD route names carries no `hip` at all, so before
+// these arms every one of them passed unweighed.
+// See README.md § The gate's evidence has to be pulled.
+describe('applyBindingGate — the tiers below Hipparcos', () => {
+  const BAD_SRC = '5877748442128924544';
+  const TYC = '9007-5849-1';
+
+  function hdOnlyOverlay(): ClassicIdOverlay {
+    return new Map([[BAD_SRC, {
+      hd: [128621], hr: [], hip: [], gj: ['9848'], bayer: [], flamsteed: [],
+    }]]);
+  }
+
+  it('rejects on a Tycho-2 V where the row carries no HIP', () => {
+    const overlay = hdOnlyOverlay();
+    const { rejected, gateableVia } = applyBindingGate(
+      overlay,
+      bindingEvidence(new Map([[BAD_SRC, 20.95]]), new Map(), null, printedVOf({ [TYC]: 1.33 })),
+      new Map([[BAD_SRC, [TYC]]]),
+    );
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0]).toMatchObject({ hip: 0, vMag: 1.33, vVia: 'tycho2', reason: 'mag' });
+    expect(gateableVia).toEqual({ hip: 0, tycho2: 1, gliese: 0 });
+    expect(overlay.has(BAD_SRC)).toBe(false);
+  });
+
+  it('falls to Gliese only where no Tycho entry answers', () => {
+    const { rejected, gateableVia } = applyBindingGate(
+      hdOnlyOverlay(),
+      bindingEvidence(new Map([[BAD_SRC, 20.95]]), new Map(), null, printedVOf({}, { 9848: 1.33 })),
+      new Map([[BAD_SRC, [TYC]]]),
+    );
+    expect(rejected[0]).toMatchObject({ vVia: 'gliese', reason: 'mag' });
+    expect(gateableVia).toEqual({ hip: 0, tycho2: 0, gliese: 1 });
+  });
+
+  it('prefers Tycho-2 over Gliese, as the V cascade orders them', () => {
+    const { rejected } = applyBindingGate(
+      hdOnlyOverlay(),
+      bindingEvidence(
+        new Map([[BAD_SRC, 20.95]]), new Map(), null,
+        printedVOf({ [TYC]: 1.33 }, { 9848: 9.9 }),
+      ),
+      new Map([[BAD_SRC, [TYC]]]),
+    );
+    expect(rejected[0]).toMatchObject({ vMag: 1.33, vVia: 'tycho2' });
+  });
+
+  it('takes the brightest of the Tycho entries IV/25 routes to one source', () => {
+    // Saturation is a property of the brightest component of a blend, so a
+    // second entry must not raise the V the gate answers for.
+    const { rejected } = applyBindingGate(
+      hdOnlyOverlay(),
+      bindingEvidence(
+        new Map([[BAD_SRC, 20.95]]), new Map(), null,
+        printedVOf({ [TYC]: 8.4, '9007-5849-2': 1.33 }),
+      ),
+      new Map([[BAD_SRC, [TYC, '9007-5849-2']]]),
+    );
+    expect(rejected[0]).toMatchObject({ vMag: 1.33, vVia: 'tycho2' });
+  });
+
+  it('keeps a no-HIP row whose Tycho-2 V agrees with its G', () => {
+    const overlay = hdOnlyOverlay();
+    const { rejected, gateableVia } = applyBindingGate(
+      overlay,
+      bindingEvidence(new Map([[BAD_SRC, 1.7]]), new Map(), null, printedVOf({ [TYC]: 1.33 })),
+      new Map([[BAD_SRC, [TYC]]]),
+    );
+    expect(rejected).toHaveLength(0);
+    expect(gateableVia.tycho2).toBe(1);
+    expect(overlay.has(BAD_SRC)).toBe(true);
+  });
+
+  it('leaves a row no tier reaches unvettable rather than passing it silently', () => {
+    const { rejected, skippedNoPrintedV, gateableVia } = applyBindingGate(
+      hdOnlyOverlay(),
+      bindingEvidence(new Map([[BAD_SRC, 20.95]]), new Map(), null, NO_PRINTED_V_BELOW_HIP),
+      new Map([[BAD_SRC, [TYC]]]),
+    );
+    expect(rejected).toHaveLength(0);
+    expect(skippedNoPrintedV).toBe(1);
+    expect(gateableVia).toEqual({ hip: 0, tycho2: 0, gliese: 0 });
+  });
+
+  // The sibling arm keys on a HIP, so a row with none must reach
+  // `resolveGaiaSourceId` as null and short-circuit it. Passing 0 instead
+  // applies a gate here that the record side does not
+  // (docs/catalog-driver.md § 4).
+  it('passes a missing HIP through as null, so the sibling arm cannot fire on it', () => {
+    const overlay = hdOnlyOverlay();
+    const { rejected } = applyBindingGate(
+      overlay,
+      bindingEvidence(
+        new Map([[BAD_SRC, 1.7]]), new Map(), {
+          bySource: new Map([[BAD_SRC, [{ wdsId: '08236-2439', component: 'B' }]]]),
+          byHip: new Map([[0, [{ wdsId: '08236-2439', component: 'A' }]]]),
+          primarySourceLetterByWds: new Map([['08236-2439', 'B']]),
+        },
+        printedVOf({ [TYC]: 1.33 }),
+      ),
+      new Map([[BAD_SRC, [TYC]]]),
+    );
+    expect(rejected).toHaveLength(0);
+    expect(overlay.has(BAD_SRC)).toBe(true);
+  });
+
+  it('partitions gateableVia by the tier that supplied each row', () => {
+    const viaHip = '111111111111111111';
+    const viaTycho2 = '222222222222222222';
+    const viaGliese = '333333333333333333';
+    const entry = (hip: number[], gj: string[]) => ({
+      hd: [1], hr: [], hip, gj, bayer: [], flamsteed: [],
+    });
+    const { gateableVia, skippedNoPrintedV } = applyBindingGate(
+      new Map([
+        [viaHip, entry([7], [])],
+        [viaTycho2, entry([], [])],
+        [viaGliese, entry([], ['9848'])],
+        ['444444444444444444', entry([], [])],
+      ]),
+      bindingEvidence(
+        new Map(), new Map([[7, 5.0]]), null,
+        printedVOf({ 'a-1-1': 5.0 }, { 9848: 5.0 }),
+      ),
+      new Map([[viaTycho2, ['a-1-1']]]),
+    );
+    expect(gateableVia).toEqual({ hip: 1, tycho2: 1, gliese: 1 });
+    expect(skippedNoPrintedV).toBe(1);
   });
 });
 

@@ -180,8 +180,10 @@ above. **Every** candidate then goes through **both binding gates by calling
 side, so the two cannot drift on what counts as a bad binding — and the first
 that passes wins. The magnitude gate weighs G
 against the record's **printed V in the V cascade's own tier order**:
-Hipparcos on its HIP, else Tycho-2's `VT − 0.090(BT − VT)` on its TYC
-(`../photometry/README.md` § The V cascade). The Tycho-2 arm is what reaches
+Hipparcos on its HIP, else Tycho-2's `VT − 0.090(BT − VT)` on its TYC, else
+Gliese's `Vmag` on its GJ cell — the last two through `printedVLookups`, the
+one bundle both gates read them by (`../photometry/README.md` § The V
+cascade). The Tycho-2 arm is what reaches
 the HD-only rows: a best-neighbour walk landing on a faint neighbour of a
 Tycho star has no HIP to be caught by, and 32 fills sat more than a magnitude
 below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. The

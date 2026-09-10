@@ -6,6 +6,8 @@ import {
   polynomial,
   type GaiaPhotometry,
 } from './gaia-photometry-pure';
+import { lookupGliese, type GlieseIndex } from '../gliese-parse';
+import type { Tycho2Row } from '../tycho2-parse';
 
 /** Riello et al. 2021, A&A 649, A3 — Gaia EDR3 photometric relationships with
  *  other photometric systems, `G − V` as a cubic in `BP − RP`. Ascending
@@ -139,6 +141,28 @@ export interface PrintedV {
   vVia: GateVVia;
 }
 
+/** The two lower printed tiers bound to their parsed tables. One bundle rather
+ *  than a loose callback pair, because four call sites weigh the same two tiers
+ *  and a site supplying only one of them silently narrows a binding gate to
+ *  evidence the other side can still see (`docs/catalog-driver.md` § 4). */
+export interface PrintedVLookups {
+  tycho2VOfTyc: (tyc: string) => number | null;
+  glieseVOfGj: (gj: string) => number | null;
+}
+
+export function printedVLookups(
+  tycho2: ReadonlyMap<string, Pick<Tycho2Row, 'btMag' | 'vtMag'>>,
+  gliese: GlieseIndex,
+): PrintedVLookups {
+  return {
+    tycho2VOfTyc: (tyc) => {
+      const row = tycho2.get(tyc);
+      return row === undefined ? null : tycho2VMagnitude(row.btMag, row.vtMag).v;
+    },
+    glieseVOfGj: (gj) => lookupGliese(gliese, gj)?.vMag ?? null,
+  };
+}
+
 /** The cascade's printed tiers BELOW Hipparcos, for a row a Hipparcos V does
  *  not reach: Tycho-2 on the row's Tycho entries, then Gliese on its GJ cells.
  *  Both binding gates weigh their candidates against this, so the record side
@@ -152,12 +176,11 @@ export interface PrintedV {
 export function printedVBelowHip(
   tycs: Iterable<string>,
   gjs: Iterable<string>,
-  tycho2VOf: (tyc: string) => number | null,
-  glieseVOf: (gj: string) => number | null,
+  lookups: PrintedVLookups,
 ): PrintedV | null {
   for (const [keys, lookup, vVia] of [
-    [tycs, tycho2VOf, 'tycho2'],
-    [gjs, glieseVOf, 'gliese'],
+    [tycs, lookups.tycho2VOfTyc, 'tycho2'],
+    [gjs, lookups.glieseVOfGj, 'gliese'],
   ] as const) {
     let brightest: number | null = null;
     for (const key of keys) {

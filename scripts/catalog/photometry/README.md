@@ -21,7 +21,12 @@ scripts/catalog/photometry/
                                  printed tiers under Hipparcos, which BOTH
                                  binding gates weigh a candidate against so
                                  the record side and the label side cannot
-                                 drift on reachable evidence. Pure.
+                                 drift on reachable evidence. Those two
+                                 arrive as one `printedVLookups` bundle,
+                                 built here from the parsed Tycho-2 and
+                                 Gliese tables: four call sites weigh the
+                                 same pair, and a loose callback per site is
+                                 how they drift. Pure.
   colour-index-pure.ts (+ test)  Table 5.9 G−B relation, B−V as the
                                  difference of the two relations, the
                                  synthetic tier's measured colour bound, and
@@ -39,11 +44,16 @@ scripts/catalog/photometry/
                                  binding gate and ../astrometry-request/ (which
                                  narrows the gate's candidates by it) all take
                                  V; the ci cascade takes B−V.
-  photometry-fixture.ts          Test-only GaiaPhotometry builders. A module,
-                                 not an export from a test file: all three
-                                 suites here build these rows, and both
-                                 relations are functions of BP−RP alone, so
-                                 `atColour` belongs with them.
+  photometry-fixture.ts          Test-only GaiaPhotometry builders, plus
+                                 `printedVOf` / `NO_PRINTED_V_BELOW_HIP` —
+                                 a `printedVLookups` over literal maps. A
+                                 module, not an export from a test file: all
+                                 three suites here build these rows, both
+                                 relations are functions of BP−RP alone so
+                                 `atColour` belongs with them, and four
+                                 suites across ../classic-ids/ and
+                                 ../membership/ weigh a binding candidate
+                                 against the printed pair.
 ```
 
 ## The published relations

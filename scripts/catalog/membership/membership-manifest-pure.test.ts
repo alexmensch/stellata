@@ -33,6 +33,7 @@ import {
   type ManifestRow,
   type SpineCorrectionRow,
 } from './membership-manifest-pure';
+import { NO_PRINTED_V_BELOW_HIP } from '../photometry/photometry-fixture';
 
 function spineRow(cells: Partial<SpineRow>): SpineRow {
   const out = {} as SpineRow;
@@ -173,7 +174,7 @@ const overlay: ClassicIdOverlay = new Map([
 
 const input = {
   spine, tables, overlay, overrides: new Map(), siblingRenderedSourceIds: new Set<string>(),
-  evidence: bindingEvidence(new Map(), new Map(), null),
+  evidence: bindingEvidence(new Map(), new Map(), null, NO_PRINTED_V_BELOW_HIP),
   dispositions: new Map<string, BindingDispositionRow>(),
   corrections: [] as SpineCorrectionRow[],
 };
@@ -316,7 +317,10 @@ describe('buildMembership — the spine side', () => {
         hipToSource: new Map([...tables.hipToSource, [70, '7070']]),
         simbadBySourceId: new Map([...tables.simbadBySourceId, ['7071', { hip: 70, tyc: null, gj: null }]]),
       },
-      evidence: bindingEvidence(new Map([['7070', 5.0], ['7071', 12.0]]), new Map([[70, 5.0]]), null),
+      evidence: bindingEvidence(
+        new Map([['7070', 5.0], ['7071', 12.0]]), new Map([[70, 5.0]]), null,
+        NO_PRINTED_V_BELOW_HIP,
+      ),
     });
     expect(settled.rows.find((r) => r.hip === '70'))
       .toMatchObject({ gaia_source_id: '7070', binding: 'crosswalk_gated' });
@@ -355,6 +359,7 @@ describe('buildMembership — the spine side', () => {
       },
       evidence: bindingEvidence(
         new Map([['6061', 12.0], ['6062', 5.1], ['333', 8.5]]), new Map([[60, 5.0]]), null,
+        NO_PRINTED_V_BELOW_HIP,
       ),
     });
     expect(gated.rows.find((r) => r.tyc === '6-6-1'))

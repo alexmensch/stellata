@@ -9,9 +9,9 @@ import {
   parseGaiaAstrometryCatalogTsv,
   type GaiaAstrometryCatalogRow,
 } from '../distance/direction-cascade';
-import { parseGlieseTsv, lookupGliese } from '../gliese-parse';
+import { parseGlieseTsv } from '../gliese-parse';
 import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
-import { tycho2VMagnitude } from '../photometry/v-magnitude-pure';
+import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { parseTycho2Tsvs } from '../tycho2-parse';
 import { readRequired, REPO_ROOT as ROOT } from '../../util/paths';
 import { bindingEvidence, type BindingEvidence } from './classic-id-overlay-pure';
@@ -52,13 +52,9 @@ export function loadBindingEvidence(): LoadedBindingEvidence {
     if (row.gMag !== null) sourceGMag.set(sourceId, row.gMag);
   }
   return {
-    evidence: bindingEvidence(sourceGMag, hipVMag, wdsXids, gaiaAstrometry, {
-      tycho2VOfTyc: (tyc) => {
-        const row = tycho2.get(tyc);
-        return row === undefined ? null : tycho2VMagnitude(row.btMag, row.vtMag).v;
-      },
-      glieseVOfGj: (gj) => lookupGliese(gliese, gj)?.vMag ?? null,
-    }),
+    evidence: bindingEvidence(
+      sourceGMag, hipVMag, wdsXids, printedVLookups(tycho2, gliese), gaiaAstrometry,
+    ),
     gaiaAstrometry,
     hipVMag,
   };

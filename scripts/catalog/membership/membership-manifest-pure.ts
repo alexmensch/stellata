@@ -21,7 +21,6 @@ import {
   type RankedCandidate,
   type RowGateEvidence,
 } from './binding-derivation-pure';
-import { lookupGliese } from '../gliese-parse';
 import {
   CLASSIC_ID_OVERRIDES_FILE,
   mergeClassicIdLabels,
@@ -33,7 +32,11 @@ import {
 } from '../classic-ids/label-merge/label-merge-pure';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { dataRows, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
-import { printedVBelowHip, tycho2VMagnitude, type PrintedV } from '../photometry/v-magnitude-pure';
+import {
+  printedVBelowHip,
+  printedVLookups,
+  type PrintedV,
+} from '../photometry/v-magnitude-pure';
 import { spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import {
   ATHYG_HD_LINK_FLOOR,
@@ -710,14 +713,9 @@ function deriveSpineBindings(
   spine: readonly SpineRow[], tables: PrimaryTables, idx: PrimaryIndex, evidence: BindingEvidence,
 ): SpineBinding[] {
   const simbad = indexSimbadSources(tables.simbadBySourceId);
-  const tycho2VOf = (tyc: string): number | null => {
-    const t = tables.tycho2.get(tyc);
-    return t === undefined ? null : tycho2VMagnitude(t.btMag, t.vtMag).v;
-  };
-  const glieseVOf = (gl: string): number | null =>
-    lookupGliese(tables.gliese, gl)?.vMag ?? null;
+  const printedV = printedVLookups(tables.tycho2, tables.gliese);
   const belowHip = (row: BindingCells): PrintedV | null => printedVBelowHip(
-    row.tyc === '' ? [] : [row.tyc], row.gl === '' ? [] : [row.gl], tycho2VOf, glieseVOf,
+    row.tyc === '' ? [] : [row.tyc], row.gl === '' ? [] : [row.gl], printedV,
   );
   const bindings: SpineBinding[] = spine.map((row) => {
     const frozen = row.gaia_source_id === '' ? null : row.gaia_source_id;

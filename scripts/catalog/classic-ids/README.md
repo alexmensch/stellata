@@ -38,14 +38,18 @@ scripts/catalog/classic-ids/
                                   the gate can weigh — shared with
                                   ../astrometry-request/, which pulls a G for
                                   every one (§ The gate's evidence has to be
-                                  pulled). Two loaders: this candidate set
-                                  needs only the HIP cross-walk and CNS5. The
-                                  test derives its expectation from a built
-                                  overlay, so drift in either producer of
-                                  `entry.hip` fails rather than silently
+                                  pulled). `BindingCandidateEvidence` states
+                                  every table the walk reads and defaults
+                                  none: a partial bundle would narrow the set
+                                  to the HIP tier while the gate kept weighing
+                                  three. The test derives its expectation from
+                                  the source_ids a built overlay's gate ASKED
+                                  a G for, so a change to what makes a row
+                                  gateable fails rather than silently
                                   shrinking the request.
-  binding-evidence.ts             Loads the gate's three evidence tables — G
-                                  per source, printed HIP V, SIMBAD's WDS
+  binding-evidence.ts             Loads the gate's evidence tables — G per
+                                  source, the V cascade's three printed tiers
+                                  (Hipparcos, Tycho-2, Gliese), SIMBAD's WDS
                                   component cross-IDs — for this build and for
                                   ../membership/, whose derivation weighs its
                                   candidates through the same gates.
@@ -148,7 +152,9 @@ printed V, taken in **the V cascade's own tier order** — Hipparcos on the
 brightest of the row's HIPs, else Tycho-2's `VT − 0.090(BT − VT)` on the Tycho
 entries IV/25 routes to this source, else Gliese on its GJ cells
 (`../photometry/README.md` § The V cascade). One helper, `printedVBelowHip`,
-serves both binding gates, because `docs/catalog-driver.md` § 4 says the label
+serves both binding gates over one `printedVLookups` bundle — a loose callback
+pair is how a call site supplies half the evidence — because
+`docs/catalog-driver.md` § 4 says the label
 side and the record side must not drift on what counts as a bad binding — and
 until the lower two tiers landed here they drifted on evidence *reach*, with
 the label gate weighing 99,799 rows against the derivation's whole spine.

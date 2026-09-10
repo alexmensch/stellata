@@ -24,9 +24,9 @@ import {
   MEMBERSHIP_MANIFEST_FILE,
   iterManifestTsv,
 } from '../membership/membership-manifest-pure';
-import { lookupGliese, parseGlieseTsv } from '../gliese-parse';
+import { parseGlieseTsv } from '../gliese-parse';
 import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
-import { tycho2VMagnitude } from '../photometry/v-magnitude-pure';
+import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { parseTycho2Tsvs } from '../tycho2-parse';
 import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pure';
 import { indexCns5 } from '../spine/primaries-audit-pure';
@@ -63,17 +63,14 @@ async function main(): Promise<void> {
     readRequired(SRC_TYCHO2_MAIN, LFS_HINT), readRequired(SRC_TYCHO2_SUPPL1, LFS_HINT),
   );
   const gliese = parseGlieseTsv(readRequired(SRC_GLIESE, LFS_HINT));
-  const printedV = {
-    tycho2VOfTyc: (tyc: string): number | null => {
-      const row = tycho2.get(tyc);
-      return row === undefined ? null : tycho2VMagnitude(row.btMag, row.vtMag).v;
-    },
-    glieseVOfGj: (gj: string): number | null => lookupGliese(gliese, gj)?.vMag ?? null,
-  };
 
-  const candidates = bindingCandidateSourceIds(
-    loadBindingCandidateInputs(), hipVMag, printedV, tables.tycToSource, iv25,
-  );
+  const candidates = bindingCandidateSourceIds({
+    inputs: loadBindingCandidateInputs(),
+    hipVMag,
+    printedV: printedVLookups(tycho2, gliese),
+    tycToSource: tables.tycToSource,
+    tyc2Hd: iv25,
+  });
   for (const id of candidates) ids.add(id);
   const afterGate = ids.size;
 
