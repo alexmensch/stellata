@@ -43,10 +43,9 @@ export interface ShellPickSurface {
   /** Whether the shell is currently drawn — picks fire only when it is,
    *  so a decluttered / chart-hidden shell isn't hoverable. */
   visible(): boolean;
-  sampleCount(): number;
-  /** Silhouette sample `i` in the renderer's local frame (absolute −
-   *  worldOffset), written into `out`. */
-  sampleLocalInto(i: number, worldOffset: THREE.Vector3, out: THREE.Vector3): void;
+  /** The drawn mesh, raycast for the silhouette hit test. Null before a
+   *  layer has one — the Local Bubble until its artifact attaches. */
+  mesh(): THREE.Object3D | null;
 }
 
 /** Everything the kind-agnostic shell dispatch needs for one instance,

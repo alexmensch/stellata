@@ -42,7 +42,6 @@ export function createShellKindModule(): ShellKindModule {
   let localBubble: LocalBubbleShell | null = null;
   const disposeLabels: (() => void)[] = [];
   const tmpSolAbs = new THREE.Vector3();
-  const tmpPick = new THREE.Vector3();
 
   const shellPark = (idx: number): number => registry.focusParkDistancePc(idx);
 
@@ -60,11 +59,9 @@ export function createShellKindModule(): ShellKindModule {
         rect,
         clientX,
         clientY,
-        worldOffset,
         surface: shell.pick,
         cameraDistancePc: registry.cameraDistancePc(idx, worldOffset, cameraPos),
         idx,
-        scratch: tmpPick,
       });
       if (hit && (best === null || hit.cameraDistancePc < best.cameraDistancePc)) best = hit;
     }

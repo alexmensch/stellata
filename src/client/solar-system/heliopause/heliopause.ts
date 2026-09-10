@@ -165,17 +165,13 @@ export class Heliopause extends FresnelShell {
     return true;
   }
 
-  /** The registry pick surface: the 62-point ellipsoid silhouette (in
-   *  step with the apex label) + the label bbox, gated on the shell's
-   *  live rendered visibility. */
+  /** The registry pick surface: the drawn ellipsoid mesh + the label
+   *  bbox, gated on the shell's live rendered visibility. */
   shellPickSurface(): ShellPickSurface {
     return {
       labelElementId: HELIOPAUSE_LABEL_ELEMENT_ID,
       visible: () => this.isVisible(),
-      sampleCount: () => HELIOPAUSE_SAMPLE_POINTS_SOL.length,
-      sampleLocalInto: (i, worldOffset, out) => {
-        out.copy(HELIOPAUSE_SAMPLE_POINTS_SOL[i]).sub(worldOffset);
-      },
+      mesh: () => this.mesh,
     };
   }
 
@@ -199,17 +195,14 @@ export class Heliopause extends FresnelShell {
  *  161) AU ellipsoid the AABB corners sit at √(a² + a² + c²) ≈ 229 AU
  *  from centre, ~40% beyond the actual silhouette extent.
  *
- *  Exported so the hover picker can hit-test the projected silhouette
- *  bbox against the cursor — same 62 points, same near-plane guard,
- *  so the hover surface stays in lockstep with the label engine. */
+ *  Exported for the label engine; the pick raycasts the mesh instead. */
 export const HELIOPAUSE_SAMPLE_POINTS_SOL: readonly THREE.Vector3[] = (() => {
   const arr: THREE.Vector3[] = [];
   const cz = CENTRE_OFFSET_AU * AU_PC;
   const a = SEMI_EQUATORIAL_AU * AU_PC;
   const c = SEMI_MAJOR_AU * AU_PC;
   // 12 longitudes × 5 mid-latitudes + 2 poles = 62 points. Plenty
-  // dense for a tight silhouette bbox; cost is 62 vec3 transforms
-  // per frame.
+  // dense for a tight label bbox; cost is 62 vec3 transforms per frame.
   const N_LONGS = 12;
   const N_LATS = 5;
   for (let i = 0; i < N_LATS; i++) {

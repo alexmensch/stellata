@@ -13,7 +13,7 @@ const SHELL: ShellInstance = {
   },
   centerAbsInto: () => true,
   extentPc: () => 150,
-  pick: { labelElementId: 'x', visible: () => true, sampleCount: () => 0, sampleLocalInto: () => {} },
+  pick: { labelElementId: 'x', visible: () => true, mesh: () => null },
 };
 
 describe('formatShellHover', () => {

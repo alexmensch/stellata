@@ -243,11 +243,13 @@ existing one rather than rolling a new pickbox:
   silhouette. The raycast is only the hit-vs-miss gate: overlapping
   clouds are tiebroken by proportional centrality, never by ray
   distance (`../molecular-clouds/README.md` § Picking + hover).
-- **Projected sample-point AABB** (boundary shells, via the shared
-  `pickShellSilhouette` helper — each shell exposes a `ShellPickSurface`
-  of the same silhouette samples its label engine projects, so the hover
-  surface can't drift from the label; the heliopause feeds
-  `HELIOPAUSE_SAMPLE_POINTS_SOL`, the Local Bubble its wall samples).
+- **Three.js raycast against the rendered mesh** (boundary shells too,
+  via the shared `pickShellSilhouette` helper — each shell's
+  `ShellPickSurface` hands over the mesh it draws). A projected
+  sample-point AABB stood here until uadc.48: the box corners of a
+  rounded shell are large regions of empty sky that selected the shell,
+  and a `FrontSide` raycast additionally makes the hide-when-inside cull
+  its own miss, where the box needed an explicit near-plane bail.
 - **Per-object angular-size disc** (Local Group wireframes — already
   small enough that the disc reads as "the whole object").
 
@@ -264,11 +266,11 @@ the centroid + small-radius pickbox pattern. The "extended object"
 trigger is "the user sees it as a shape", not "the layer has > N
 rows".
 
-This projected-sample-AABB + label-rect logic is lifted to
+This raycast + label-rect logic is lifted to
 `fresnel-shell/shell-pick.ts` (`pickShellSilhouette`), parameterised on a
-`ShellPickSurface` (sample iterator + label id + visibility) — shared by
-both boundary shells per the DRY-at-second-usage rule. A third extended
-object with the same shape reuses it.
+`ShellPickSurface` (mesh + label id + visibility) — shared by both
+boundary shells per the DRY-at-second-usage rule. A third extended object
+with the same shape reuses it.
 
 ### Rule 4 — HTML hover-card typography stays monospace, even in chart mode
 
