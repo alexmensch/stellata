@@ -49,9 +49,12 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
   top-level registry on `Stellata`.
 - `shell-object-sids.ts` — `SHELL_OBJECT_SIDS`, the hand-written
   key → frozen-SID pin (§ SID pins).
-- `shell-pick.ts` — `pickShellSilhouette`, the shared silhouette-bbox +
-  label-bbox hit test (fallback tier) both shells' click / hover picks
-  use, keyed on a `ShellPickSurface`.
+- `shell-pick.ts` — `pickShellSilhouette`, the shared mesh-raycast +
+  label-bbox hit test (`extended` tier) both shells' click / hover picks
+  use, keyed on a `ShellPickSurface`. The raycast is the cloud layer's
+  mechanism, and the hit surface is the drawn silhouette exactly; the
+  `FrontSide` material means a ray from inside misses on its own, so the
+  hide-when-inside contract needs no separate guard here.
 
 ## The material seam
 

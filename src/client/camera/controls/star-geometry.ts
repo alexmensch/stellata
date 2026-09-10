@@ -72,14 +72,19 @@ export function discHitRadiusPx(drawnDiameterPx: number): number {
   return Math.max(drawnDiameterPx * 0.5, MIN_DISC_HIT_RADIUS_PX);
 }
 
-// Pick score: pxDist + sub-pixel appMag bias. The bias only matters
-// for near-coincident candidates (catalogue rows sharing x/y/z, e.g.
-// Alula Australis A/B). Camera distance is deliberately NOT a
-// tiebreaker: the Double Double (ε¹/ε² Lyr) has overlapping hitboxes
-// at typical zoom, and "closest to camera" leaves one component
-// permanently un-clickable.
-export function pickScore(pxDist: number, appMag: number): number {
-  return pxDist + appMag * PICK_MAG_BIAS_PX_PER_MAG;
+// Pick score: (pxDist + sub-pixel appMag bias) over the candidate's own
+// hit radius — how deep inside its own target the cursor sits, so a
+// candidate the cursor is halfway into beats one it is barely clipping
+// however many pixels each is from its centre. The WHOLE numerator is
+// normalised, which is what leaves the tuned behaviour among same-size
+// candidates untouched: an equal divisor cancels out of the comparison.
+// The bias itself only matters for near-coincident candidates (catalogue
+// rows sharing x/y/z, e.g. Alula Australis A/B). Camera distance is
+// deliberately NOT a tiebreaker: the Double Double (ε¹/ε² Lyr) has
+// overlapping hitboxes at typical zoom, and "closest to camera" leaves
+// one component permanently un-clickable.
+export function pickScore(pxDist: number, appMag: number, hitRadius: number): number {
+  return (pxDist + appMag * PICK_MAG_BIAS_PX_PER_MAG) / hitRadius;
 }
 
 // One projected pick candidate, after the prime/fallback filter has
@@ -129,9 +134,14 @@ export type PickResult<T extends PickCandidate> = {
 // fallback hits — a prime candidate just inside its hit radius beats
 // a fallback candidate one pixel from the cursor, regardless of score.
 //
-// `scoreFn` defaults to "closest to cursor wins" (`c.pxDist`) — the
-// natural choice for layers without a brightness bias. The star caller
-// passes `pickScore` to retain the sub-pixel mag tiebreaker.
+// `scoreFn` defaults to "deepest inside its own target wins"
+// (`c.pxDist / c.hitRadius`) — scale-invariant, so a compact object and a
+// large one are both reachable rather than the large one taking every
+// pixel it covers. The star caller passes `pickScore` for the same shape
+// plus the sub-pixel mag tiebreaker. Every caller's radius comes from
+// `discHitRadiusPx`, so the divisor is floored well above zero; a layer
+// whose enclosure test IS the raycast passes `Infinity` and its own
+// scorer (`../../molecular-clouds/cloud-pick-pure.ts`).
 //
 // Single source of truth across all layered pickers in the hover layer:
 // star (StarPickCandidate, pickScore), Local Group (PickCandidate +
@@ -141,7 +151,7 @@ export type PickResult<T extends PickCandidate> = {
 export function pickFromCandidates<T extends PickCandidate>(
   candidates: Iterable<T>,
   pixelThreshold: number,
-  scoreFn: (c: T) => number = (c) => c.pxDist,
+  scoreFn: (c: T) => number = (c) => c.pxDist / c.hitRadius,
 ): PickResult<T> | null {
   let prime: T | null = null;
   let primeBest = Infinity;
@@ -190,6 +200,11 @@ export type ResolvedCandidate = {
  * one, so the initial partition can never miss a prime candidate. A
  * candidate whose resolved radius no longer reaches the cursor demotes
  * into the fallback pool rather than being dropped.
+ *
+ * The score therefore normalises against that upper bound, not against
+ * the resolved radius: scoring on the resolved one would mean resolving
+ * every candidate to sort them, which is the readback per candidate the
+ * laziness exists to avoid.
  */
 export function pickFromCandidatesResolved<T extends PickCandidate>(
   candidates: Iterable<T>,

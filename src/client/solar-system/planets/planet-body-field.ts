@@ -1441,8 +1441,8 @@ export class PlanetBodyField {
 
     // Walk every host × planet and collect candidates that qualify for
     // either tier. Cross-host reduction is delegated to the shared
-    // `pickFromCandidates` (closest-cursor wins within tier, prime
-    // beats fallback) — same reducer the star and Local Group pickers
+    // `pickFromCandidates` (deepest inside its own disc wins within
+    // tier, prime beats fallback) — same reducer the star and LG pickers
     // use, so the cross-layer disambiguator above sees consistent tier
     // semantics from every layer. The candidate carries its
     // `hostStarIdx` + `cameraDistancePc` straight through to the

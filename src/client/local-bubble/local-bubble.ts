@@ -109,16 +109,13 @@ export class LocalBubbleShell extends FresnelShell {
     return this.mesh !== null;
   }
 
-  /** The registry pick surface: the ~96 wall samples the label projects
-   *  + the label bbox, gated on the shell's live rendered visibility. */
+  /** The registry pick surface: the drawn wall mesh + the label bbox,
+   *  gated on the shell's live rendered visibility. */
   shellPickSurface(): ShellPickSurface {
     return {
       labelElementId: LOCAL_BUBBLE_LABEL_ELEMENT_ID,
       visible: () => this.isVisible(),
-      sampleCount: () => this.labelSampleCount(),
-      sampleLocalInto: (i, worldOffset, out) => {
-        this.labelSampleInto(i, worldOffset, out);
-      },
+      mesh: () => this.mesh,
     };
   }
 

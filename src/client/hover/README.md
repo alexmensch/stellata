@@ -60,9 +60,12 @@ lives entirely under `src/client/hover/`:
   resolver detour would hardcode Sol and lose the multi-host readiness
   the exoplanet epic needs.
 - **`hover-pick-disambiguator.ts`** — when multiple providers return a
-  hit for the same cursor position, pick the closest to the camera, with
-  the prime/fallback tier as the higher-priority key. Prime always beats
-  fallback regardless of camera distance.
+  hit for the same cursor position, the tier decides
+  (prime > fallback > extended) and camera distance decides only within
+  one. Camera distance cannot be the cross-tier key, and the failure is
+  not hypothetical: viewed from outside, a boundary shell's near wall is
+  nearer than every star it encloses, so "closest wins" gave a click on a
+  star to "Local Bubble" (Rule 3).
 - **`*-hover-provider.ts`** / the kind modules' `hover()` legs — one
   per layer. Owns the pick path, typically mirroring the renderer's
   draw predicate (see Rule 2 below).
@@ -218,9 +221,19 @@ For extended objects whose silhouette occupies meaningful screen real
 estate (heliopause shell, molecular clouds, future nebulae, Radcliffe
 Wave segments, large DSOs), hover hit-tests the WHOLE projected
 silhouette plus the SVG label's bounding rect (when present), not a
-centroid + small radius. Tier is fallback so stars and planets visible
-"through" the object still win their own prime hover via the
-cross-layer disambiguator.
+centroid + small radius.
+
+**Tier is `extended`, and that is the whole rule** — a whole-silhouette
+surface covers large regions of sky, so it never outranks a compact
+object under the same cursor, at any camera distance. It used to report
+`fallback` and rely on being farther from the camera than the stars in
+front of it, which is false for anything the camera is *inside* or *level
+with*: from outside the Local Bubble its near wall is nearer than every
+star it encloses, so a click ~14 px off a star's centre — fallback, not
+prime — went to "Local Bubble". Stating the distinction in the tier
+replaces that prose convention with something the type carries, and every
+extended surface must report it: a new one that reports `fallback`
+reintroduces the bug silently.
 
 Different layers have different natural pick mechanisms — reuse the
 existing one rather than rolling a new pickbox:
@@ -230,11 +243,13 @@ existing one rather than rolling a new pickbox:
   silhouette. The raycast is only the hit-vs-miss gate: overlapping
   clouds are tiebroken by proportional centrality, never by ray
   distance (`../molecular-clouds/README.md` § Picking + hover).
-- **Projected sample-point AABB** (boundary shells, via the shared
-  `pickShellSilhouette` helper — each shell exposes a `ShellPickSurface`
-  of the same silhouette samples its label engine projects, so the hover
-  surface can't drift from the label; the heliopause feeds
-  `HELIOPAUSE_SAMPLE_POINTS_SOL`, the Local Bubble its wall samples).
+- **Three.js raycast against the rendered mesh** (boundary shells too,
+  via the shared `pickShellSilhouette` helper — each shell's
+  `ShellPickSurface` hands over the mesh it draws). A projected
+  sample-point AABB stood here until uadc.48: the box corners of a
+  rounded shell are large regions of empty sky that selected the shell,
+  and a `FrontSide` raycast additionally makes the hide-when-inside cull
+  its own miss, where the box needed an explicit near-plane bail.
 - **Per-object angular-size disc** (Local Group wireframes — already
   small enough that the disc reads as "the whole object").
 
@@ -251,11 +266,11 @@ the centroid + small-radius pickbox pattern. The "extended object"
 trigger is "the user sees it as a shape", not "the layer has > N
 rows".
 
-This projected-sample-AABB + label-rect logic is lifted to
+This raycast + label-rect logic is lifted to
 `fresnel-shell/shell-pick.ts` (`pickShellSilhouette`), parameterised on a
-`ShellPickSurface` (sample iterator + label id + visibility) — shared by
-both boundary shells per the DRY-at-second-usage rule. A third extended
-object with the same shape reuses it.
+`ShellPickSurface` (mesh + label id + visibility) — shared by both
+boundary shells per the DRY-at-second-usage rule. A third extended object
+with the same shape reuses it.
 
 ### Rule 4 — HTML hover-card typography stays monospace, even in chart mode
 

@@ -379,12 +379,12 @@ describe('MolecularClouds / picking geometry', () => {
     });
   });
 
-  it('reports the effective-centre camera distance at the fallback hover tier', () => {
+  it('reports the effective-centre camera distance at the extended hover tier', () => {
     const c = liveClouds(catalog);
     const cam = cameraAt(new THREE.Vector3(0, 0, 30), ORIGIN);
     const hit = c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad);
     expect(hit?.idx).toBe(0);
-    expect(hit?.tier).toBe('fallback');
+    expect(hit?.tier).toBe('extended');
     expect(hit?.cameraDistancePc).toBeCloseTo(30, 6);
   });
 

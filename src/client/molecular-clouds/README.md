@@ -279,8 +279,10 @@ the same function, so the two can never disagree on which of two
 overlapping clouds the cursor is on. A tiebreak living in the click
 handler instead would drift the moment either surface changes. (The
 old click-side warp gate is subsumed by the FSM's `blocksClick()`.)
-Hover tier is always `fallback`: stars, planets, LG objects and shells
-win any overlap with a cloud body.
+Hover tier is always `extended`, which is what makes stars, planets, LG
+objects and probes win any overlap with a cloud body — the type states it
+now rather than this sentence (`../hover/README.md` Rule 3). Shells report
+`extended` too, so a shell and a cloud separate on camera distance.
 
 **The permit that gates the rim gates the pick.** `pick` returns null
 whenever `rimGroup.visible` is false, so below the `representational`

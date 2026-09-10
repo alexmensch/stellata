@@ -87,7 +87,8 @@ in both navigate and observe modes.
   + observe quaternion-in-place), the point (`aimAt`) and direction
   (`aimAlong`) entry points, shared `aimDurationMs` ramp.
 - `star-geometry.ts` — pure star angular-geometry formulae
-  (θ = 2·atan(R/d), `parkDistForStar` derivations).
+  (θ = 2·atan(R/d), `parkDistForStar` derivations) plus the shared pick
+  reducers and their scorers (§ Ranking a pick).
 - `star-physics.ts` — per-star camera/screen geometry: `fovMinorRad`,
   `peakAmplitudeFactor`, `minOrbitDistForStar`, `parkDistForStar`,
   `renderedSizePx` (+ its `renderedSizeComponents` split — the star
@@ -112,6 +113,32 @@ in both navigate and observe modes.
 - `star-geometry.ts` — pure formulae (no catalog, no uniforms).
 - `star-physics.ts` — catalog-indexed wrappers around those formulae.
 - `stellata.ts` — wires per-frame uniforms and dispatches.
+
+## Ranking a pick
+
+Within a tier the winner is the candidate the cursor sits **proportionally
+deepest inside**: `pxDist / hitRadius`, 0 dead centre and 1 at the edge.
+Raw pixel distance is wrong here because the objects sharing this reducer
+span a wide on-screen size range — a body drawn 80 px across takes every
+pixel it covers if distance to its centre decides, and a 4 px star two
+pixels off its own centre is only halfway into itself. Scale-invariance
+is what keeps both reachable, and it is the same rule the cloud layer
+already used for overlapping clouds
+(`../../molecular-clouds/README.md` § Picking + hover).
+
+The star scorer normalises its **whole** numerator —
+`(pxDist + appMag · PICK_MAG_BIAS_PX_PER_MAG) / hitRadius`. Among
+same-size candidates an equal divisor cancels, which is exactly why the
+tuned behaviour survives: the Double Double ranks as it did, and Alula
+Australis A/B still separate on brightness.
+
+**This ranking never has to defend a star from a shell.** An extended
+object — a boundary shell, a cloud — reports the `extended` tier and is
+outranked by any prime or fallback hit before scoring is consulted
+(`../../hover/README.md` Rule 3). Proportional depth would otherwise hand
+the pick to the enclosing object, which is proportionally very deep
+indeed. Stars, planet bodies, Local Group objects and probes are the
+compact set this reducer arbitrates.
 
 ## Camera near plane vs controls minDistance
 

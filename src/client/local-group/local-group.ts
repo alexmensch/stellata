@@ -161,9 +161,9 @@ export class LocalGroupLayer {
    *  sub-pixel angular size remain hoverable); fallback if within
    *  `pixelThreshold` of the centroid.
    *
-   *  Within-tier scoring is closest-cursor-wins via the default
-   *  `pickFromCandidates` scorer (no brightness bias — LG wireframes
-   *  have no apparent-magnitude axis). Each candidate carries its
+   *  Within-tier scoring is deepest-inside-its-own-envelope via the
+   *  default `pickFromCandidates` scorer (no brightness bias — LG
+   *  wireframes have no apparent-magnitude axis). Each candidate carries its
    *  `cameraDistancePc` so the winning candidate hands `tier` +
    *  distance straight to the returned `HoverHit` — no re-projection.
    */

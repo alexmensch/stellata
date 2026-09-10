@@ -1,4 +1,4 @@
-// Shared silhouette-bbox + label-bbox hit test for boundary shells
+// Shared mesh-raycast + label-bbox hit test for boundary shells
 // (heliopause, Local Bubble). See ./README.md § Boundary shells as focus
 // targets.
 
@@ -11,49 +11,52 @@ export interface ShellPickParams {
   rect: DOMRect;
   clientX: number;
   clientY: number;
-  worldOffset: Readonly<THREE.Vector3>;
   surface: ShellPickSurface;
   /** Camera→center distance for the returned hit. */
   cameraDistancePc: number;
   /** Shell Target idx (SHELL_KEYS index). */
   idx: number;
-  scratch: THREE.Vector3;
 }
 
-/** Fallback-tier hit: the projected silhouette bbox OR the label rect.
- *  Any sample behind the near plane bails the silhouette (the shell is
- *  hidden-when-inside, matching the label engine), leaving the label rect
- *  — which is `display:none` when hidden, so its zero bounds harmlessly
- *  fail. Mirrors the original inline heliopause pick. */
-export function pickShellSilhouette(p: ShellPickParams): HoverHit | null {
-  const { camera, rect, clientX, clientY, surface, scratch } = p;
-  const cursorX = clientX - rect.left;
-  const cursorY = clientY - rect.top;
+// Pick-path scratch — valid only inside one `pickShellSilhouette` call.
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
 
-  let allInFront = true;
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  const nearNeg = -camera.near;
-  const n = surface.sampleCount();
-  for (let i = 0; i < n; i++) {
-    surface.sampleLocalInto(i, p.worldOffset, scratch);
-    scratch.applyMatrix4(camera.matrixWorldInverse);
-    if (scratch.z >= nearNeg) {
-      allInFront = false;
-      break;
-    }
-    scratch.applyMatrix4(camera.projectionMatrix);
-    const sx = (scratch.x + 1) * 0.5 * rect.width;
-    const sy = (1 - scratch.y) * 0.5 * rect.height;
-    if (sx < minX) minX = sx;
-    if (sx > maxX) maxX = sx;
-    if (sy < minY) minY = sy;
-    if (sy > maxY) maxY = sy;
+/**
+ * Extended-tier hit: the drawn mesh under the cursor, OR the label rect.
+ *
+ * The raycast is the mechanism the cloud layer already uses, and two
+ * properties fall out of it rather than being coded:
+ *
+ * - The hit surface is the drawn silhouette exactly. The projected
+ *   sample-point bounding box this replaces called the corners of the box
+ *   a hit, which for a rounded shell is large regions of empty sky.
+ * - A ray from inside the shell misses. The material is `FrontSide`
+ *   (README.md § Invariants), so `Mesh.raycast` culls the far wall's back
+ *   faces and nothing is left to hit — the hide-when-inside contract
+ *   holding itself up, where the bbox path needed an explicit
+ *   near-plane bail.
+ *
+ * The floating-origin offset arrives through the mesh's `matrixWorld`
+ * rather than a live `worldOffset` read, so the pick answers against the
+ * frame the user actually clicked on rather than the one about to render.
+ *
+ * The label rect is `display:none` when hidden, so its zero bounds
+ * harmlessly fail and the label half needs no visibility plumbing.
+ */
+export function pickShellSilhouette(p: ShellPickParams): HoverHit | null {
+  const { camera, rect, clientX, clientY, surface } = p;
+
+  let insideSilhouette = false;
+  const mesh = surface.mesh();
+  if (mesh !== null) {
+    ndc.set(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -(((clientY - rect.top) / rect.height) * 2 - 1),
+    );
+    raycaster.setFromCamera(ndc, camera);
+    insideSilhouette = raycaster.intersectObject(mesh, false).length > 0;
   }
-  const insideSilhouette =
-    allInFront && cursorX >= minX && cursorX <= maxX && cursorY >= minY && cursorY <= maxY;
 
   let insideLabel = false;
   const labelEl = document.getElementById(surface.labelElementId);
@@ -66,5 +69,5 @@ export function pickShellSilhouette(p: ShellPickParams): HoverHit | null {
   }
 
   if (!insideSilhouette && !insideLabel) return null;
-  return { idx: p.idx, cameraDistancePc: p.cameraDistancePc, tier: 'fallback' };
+  return { idx: p.idx, cameraDistancePc: p.cameraDistancePc, tier: 'extended' };
 }

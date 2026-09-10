@@ -73,7 +73,7 @@ The heliopause is a full boundary-shell focus target (`shell`
 one of the shell kind module's two instances, registered into its
 internal `ShellRegistry` on attach (center = Sol, extent = the 200 AU
 downwind apex, SID = `SHELL_OBJECT_SIDS.heliopause`, card +
-`HELIOPAUSE_SAMPLE_POINTS_SOL` pick surface). Search / focus card /
+the drawn mesh as its pick surface). Search / focus card /
 hover / click-pick all route through the module's legs
 (`../../fresnel-shell/README.md` § Boundary shells as focus targets) —
 there is no heliopause-specific hover or picker anymore.

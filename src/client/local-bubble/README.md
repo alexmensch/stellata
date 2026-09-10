@@ -9,8 +9,8 @@ It is also a full **boundary-shell focus target** (`shell` `TargetKind`):
 searchable, focusable, warpable, and pinnable. The shell kind module's
 `attach` registers it into its internal `ShellRegistry` when the mesh
 artifact loaded (center = mesh centroid, extent = max wall distance,
-SID = `SHELL_OBJECT_SIDS.local_bubble`, card + silhouette pick
-surface) — see `../fresnel-shell/README.md` § Boundary shells as focus
+SID = `SHELL_OBJECT_SIDS.local_bubble`, card + the drawn wall mesh as
+its pick surface) — see `../fresnel-shell/README.md` § Boundary shells as focus
 targets.
 
 ## Files

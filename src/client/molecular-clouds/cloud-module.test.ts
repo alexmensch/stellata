@@ -139,7 +139,7 @@ describe('cloud kind module', () => {
     const { pick } = m.hover!();
     const centre = pick(400, 300, 14);
     expect(centre?.idx).toBe(0);
-    expect(centre?.tier).toBe('fallback');
+    expect(centre?.tier).toBe('extended');
     expect(centre?.cameraDistancePc).toBeCloseTo(30, 5);
     expect(pick(799, 599, 14)).toBeNull();
 
