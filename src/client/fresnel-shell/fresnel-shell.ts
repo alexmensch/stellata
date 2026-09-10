@@ -48,6 +48,34 @@ export interface FresnelShellMaterialOptions {
   fresnelPower?: number;
 }
 
+/** The live rim levers, in one vocabulary across every rim consumer —
+ *  the boundary shells and the ~96 cloud rims (§ Dev-console levers).
+ *  `nearFadePc` is also how a shell whose extent arrives with its mesh
+ *  states its fade reach. */
+export interface RimParams {
+  alphaLimb?: number;
+  faceOnFloor?: number;
+  fresnelPower?: number;
+  nearFadePc?: number;
+  depthDimRefPc?: number;
+  depthPower?: number;
+}
+
+/** Write whichever rim slots the caller named. One writer for every rim
+ *  consumer, so a lever cannot reach one surface's uniform block and miss
+ *  the identically-keyed slot on another's. */
+export function applyRimParams(
+  uniforms: Record<string, THREE.IUniform>,
+  p: RimParams,
+): void {
+  if (p.alphaLimb !== undefined) uniforms.uAlphaLimb.value = p.alphaLimb;
+  if (p.faceOnFloor !== undefined) uniforms.uFaceOnFloor.value = p.faceOnFloor;
+  if (p.fresnelPower !== undefined) uniforms.uFresnelPower.value = p.fresnelPower;
+  if (p.nearFadePc !== undefined) uniforms.uNearFadePc.value = p.nearFadePc;
+  if (p.depthDimRefPc !== undefined) uniforms.uDepthDimRefPc.value = p.depthDimRefPc;
+  if (p.depthPower !== undefined) uniforms.uDepthPower.value = p.depthPower;
+}
+
 /**
  * The renderer-neutral contract a boundary shell's surface is built
  * through (README.md § The material seam). Each consumer builds its own —
@@ -131,16 +159,9 @@ export abstract class FresnelShell {
     this.refreshVisibility();
   }
 
-  /** The camera-distance attenuation's three slots, shared vocabulary with
-   *  the cloud rim's `setRimDistanceParams`. `nearFadePc` is also how a
-   *  shell whose extent arrives with its mesh states its fade reach. */
-  setRimDistanceParams(
-    p: { nearFadePc?: number; depthDimRefPc?: number; depthPower?: number },
-  ): void {
-    const u = this.surface.uniforms;
-    if (p.nearFadePc !== undefined) u.uNearFadePc.value = p.nearFadePc;
-    if (p.depthDimRefPc !== undefined) u.uDepthDimRefPc.value = p.depthDimRefPc;
-    if (p.depthPower !== undefined) u.uDepthPower.value = p.depthPower;
+  /** Live rim levers — the same call the cloud layer takes. */
+  setRimParams(p: RimParams): void {
+    applyRimParams(this.surface.uniforms, p);
   }
 
   /** Chart (mono / paper) mode hides the shell. */
