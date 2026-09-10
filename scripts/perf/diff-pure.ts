@@ -201,7 +201,7 @@ function dwellRow(key: string, a: ScenarioRecord, b: ScenarioRecord): DiffRow | 
  * every incomparable pair is named rather than dropped.
  *
  * Both files reach here through `assertPerfFile`, which refuses a foreign
- * schema suffix before anything is read as v1 — so the schema is settled by
+ * schema suffix before any field is read — so the schema is settled by
  * the time a diff is asked for, and this function does not re-litigate it.
  */
 export function diffRuns(baseline: PerfFile, current: PerfFile): RunDiff {

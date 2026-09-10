@@ -1,6 +1,6 @@
 # Perf pins — one committed summary per GPU
 
-`<adapter-slug>.json` (schema `stellata-perf/pin-1`) is the whole frame at
+`<adapter-slug>.json` (schema `stellata-perf/pin-2`) is the whole frame at
 the canon vantages on one GPU, taken cold: what every render-path PR diffs
 against and re-takes. Operator rules — when a PR must run it, what a mark
 means, how the pin advances — are `RELEASING.md` § Perf pin; the code is
