@@ -139,12 +139,17 @@ describe('star-geometry / peakAmplitudeFactor', () => {
 });
 
 describe('star-geometry / pickScore', () => {
+  // The three regressions below are all same-size comparisons, where the
+  // shared divisor cancels: normalising the whole numerator is what keeps
+  // them reading exactly as they did before the divisor existed.
+  const R = 5;
+
   it('is dominated by pxDist: a 50px-away brighter star loses to a 0px-away fainter one', () => {
     // Double Double regression: cursor on ε² Lyr (mag 4.59), with ε¹ Lyr
     // (mag 4.67) ~50px away on screen but with a hitbox that reaches the
     // cursor. The cursor is on ε²'s centre; ε² must win.
-    const eps2 = pickScore(0, 4.59);
-    const eps1 = pickScore(50, 4.67);
+    const eps2 = pickScore(0, 4.59, R);
+    const eps1 = pickScore(50, 4.67, R);
     expect(eps2).toBeLessThan(eps1);
   });
 
@@ -152,8 +157,8 @@ describe('star-geometry / pickScore', () => {
     // Alula Australis regression: A (mag 4.33) and B (mag 4.80) share
     // identical x/y/z in AT-HYG, so both project to the same screen pixel
     // and pxDist is identical. The brighter component (A) must win.
-    const a = pickScore(0, 4.33);
-    const b = pickScore(0, 4.80);
+    const a = pickScore(0, 4.33, R);
+    const b = pickScore(0, 4.80, R);
     expect(a).toBeLessThan(b);
   });
 
@@ -162,9 +167,22 @@ describe('star-geometry / pickScore', () => {
     // pxDist gap dominates. A star 1px farther but 1 mag brighter still
     // loses to the centre-aligned fainter one — picking by visible
     // proximity, not brightness, is the contract.
-    const closeFaint = pickScore(0, 6);
-    const farBright = pickScore(1, 5);
+    const closeFaint = pickScore(0, 6, R);
+    const farBright = pickScore(1, 5, R);
     expect(closeFaint).toBeLessThan(farBright);
+  });
+
+  it('ranks by proportional depth, so a big disc beats a pinprick the cursor is clipping', () => {
+    // 20 px into a 40 px radius is halfway in; 3 px into a 4 px radius is
+    // three quarters of the way out. The cursor is deeper inside the big
+    // disc, so that is what the user meant.
+    expect(pickScore(20, 0, 40)).toBeLessThan(pickScore(3, 0, 4));
+  });
+
+  it('still gives the pinprick the pick when it is clicked squarely', () => {
+    // Scale-invariance cuts both ways: the small target keeps the region
+    // where the cursor is proportionally deeper inside it.
+    expect(pickScore(0.5, 0, 4)).toBeLessThan(pickScore(20, 0, 40));
   });
 });
 
@@ -182,7 +200,8 @@ describe('star-geometry / pickFromCandidates', () => {
 
   // Star scorer is passed explicitly now that pickFromCandidates is
   // generic; non-star providers default to closest-to-cursor.
-  const starScore = (cand: StarPickCandidate) => pickScore(cand.pxDist, cand.appMag);
+  const starScore = (cand: StarPickCandidate) =>
+    pickScore(cand.pxDist, cand.appMag, cand.hitRadius);
 
   it('returns null when no candidates exist', () => {
     expect(pickFromCandidates([], 16, starScore)).toBeNull();
@@ -260,10 +279,11 @@ describe('star-geometry / pickFromCandidates', () => {
     expect(pickFromCandidates(cands, 16, starScore)).toBeNull();
   });
 
-  it('default scorer (pxDist) — closest-to-cursor wins when no scorer is passed', () => {
-    // Non-star providers (planets, Local Group, heliopause apex) rely on
-    // the default scoreFn = c.pxDist. No magnitude axis, no sub-pixel
-    // bias — purely closest centroid wins.
+  it('default scorer — deepest inside its own target wins when no scorer is passed', () => {
+    // Non-star providers (planets, Local Group, probes) rely on the
+    // default scoreFn = c.pxDist / c.hitRadius. No magnitude axis, no
+    // sub-pixel bias; among equal-radius candidates that is still simply
+    // the closest centroid, which is what these three are.
     const cands: StarPickCandidate[] = [
       { idx: 70, pxDist: 8, hitRadius: 2, appMag: 0, cameraDistancePc: 1 },
       { idx: 71, pxDist: 4, hitRadius: 2, appMag: 0, cameraDistancePc: 1 }, // winner
@@ -272,6 +292,28 @@ describe('star-geometry / pickFromCandidates', () => {
     const r = pickFromCandidates(cands, 16);
     expect(r?.candidate.idx).toBe(71);
     expect(r?.tier).toBe('fallback');
+  });
+
+  // Scale-invariance across a 10x size range, both directions. This
+  // ranking is only ever asked to choose between COMPACT objects: an
+  // enclosing shell or cloud reports the `extended` tier and so never
+  // enters the comparison (`../../hover/hover-pick-disambiguator.ts`).
+  it('prime tier: the big disc wins where the cursor sits deeper inside it', () => {
+    const cands = [
+      { idx: 90, pxDist: 20, hitRadius: 40, cameraDistancePc: 1 }, // 0.50 ← winner
+      { idx: 91, pxDist: 3, hitRadius: 4, cameraDistancePc: 9 }, // 0.75
+    ];
+    const r = pickFromCandidates(cands, 16);
+    expect(r?.candidate.idx).toBe(90);
+    expect(r?.tier).toBe('prime');
+  });
+
+  it('prime tier: the pinprick takes it back when clicked squarely', () => {
+    const cands = [
+      { idx: 90, pxDist: 20, hitRadius: 40, cameraDistancePc: 1 }, // 0.500
+      { idx: 91, pxDist: 0.5, hitRadius: 4, cameraDistancePc: 9 }, // 0.125 ← winner
+    ];
+    expect(pickFromCandidates(cands, 16)?.candidate.idx).toBe(91);
   });
 
   it('returns the original candidate object — extension fields ride through', () => {
@@ -309,7 +351,8 @@ describe('star-geometry / pickFromCandidatesResolved', () => {
     hitRadius: number,
     appMag: number,
   ): StarPickCandidate => ({ idx, pxDist, hitRadius, appMag, cameraDistancePc: 1 });
-  const starScore = (cand: StarPickCandidate) => pickScore(cand.pxDist, cand.appMag);
+  const starScore = (cand: StarPickCandidate) =>
+    pickScore(cand.pxDist, cand.appMag, cand.hitRadius);
   const lit = (hitRadius: number) => () => ({ visible: true, hitRadius });
 
   it('skips the best-scoring candidate when the frame draws nothing for it', () => {
