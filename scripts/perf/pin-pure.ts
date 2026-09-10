@@ -6,7 +6,7 @@ import { basename, relative, resolve } from 'node:path';
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import {
   BUFFER_MPX_TOLERANCE, VERDICT_MARK, band, recordCountRefusal,
-  type DiffRefusal, type Verdict,
+  type DiffRefusal, type DwellMetric, type Verdict,
 } from './diff-pure';
 import { gatingClock, type StateGuard } from './dwell-pure';
 import { DWELL_METHOD } from './run-pure';
@@ -85,11 +85,6 @@ export interface PinFile {
   readonly accepted: Readonly<Record<string, PinAcceptance>>;
 }
 
-/** Which clock the row's numbers came from. `wall-p50` appears only on an
- *  ungated row, where it is context rather than a reading the gate acts on;
- *  an ungated row may equally carry `gpu-p50` as context. */
-export type PinMetric = 'gpu-p50' | 'wall-p50';
-
 /** `ungated` is a row the band never marks, on either of two grounds: it
  *  carries no GPU-stream median on one side or the other, and wall time is
  *  quantised to the display's refresh interval; or its vantage is in
@@ -101,7 +96,10 @@ export const PIN_VERDICT_MARK: Record<PinVerdict, string> = { ...VERDICT_MARK, u
 
 export interface PinVerdictRow {
   readonly key: string;
-  readonly metric: PinMetric;
+  /** `wall-p50` appears only on an ungated row, where it is context rather
+   *  than a reading the gate acts on; an ungated row may equally carry
+   *  `gpu-p50` as context. */
+  readonly metric: DwellMetric;
   readonly pinnedMs: number;
   readonly currentMs: number;
   readonly deltaMs: number;
@@ -262,7 +260,7 @@ function ungatedNote(pinned: PinRow, current: PinClock | null): string {
 }
 
 function ungatedRow(
-  key: string, metric: PinMetric, pinnedMs: number, currentMs: number, note: string,
+  key: string, metric: DwellMetric, pinnedMs: number, currentMs: number, note: string,
 ): PinVerdictRow {
   return { key, metric, pinnedMs, currentMs, deltaMs: currentMs - pinnedMs, bandMs: 0, verdict: 'ungated', note };
 }

@@ -3,6 +3,7 @@
 // README.md § Comparing against a baseline.
 
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import { gatingClock } from './dwell-pure';
 import type { PerfFile, ScenarioRecord } from './schema';
 
 /** How far the two buffers may differ and still be compared. Both dominant
@@ -29,6 +30,12 @@ export const BAND_SIGMAS = 2;
 
 export type Verdict = 'cheaper' | 'dearer' | 'same';
 
+/** Which of a dwell's two clocks a whole-frame row was judged on, named in
+ *  the table because the two are different instruments and a reader cannot
+ *  otherwise tell which one a delta came off. `gatingClock` picks it; the
+ *  pin's rows carry the same two values for the same reason. */
+export type DwellMetric = 'gpu-p50' | 'wall-p50';
+
 export const VERDICT_MARK: Record<Verdict, string> = {
   cheaper: '✓',
   dearer: '✗',
@@ -37,11 +44,11 @@ export const VERDICT_MARK: Record<Verdict, string> = {
 
 export interface DiffRow {
   readonly key: string;
-  /** `savedMs` for a differential row, `p50` for a dwell. Both read
-   *  upward-is-dearer, which is the trap in `savedMs`: the field names
-   *  what disabling the pass saved, i.e. the pass's own price, so a bigger
-   *  number is a costlier pass and not a bigger win. */
-  readonly metric: 'savedMs' | 'p50';
+  /** `savedMs` for a differential row, one of the two clocks' p50 for a
+   *  dwell. All read upward-is-dearer, which is the trap in `savedMs`: the
+   *  field names what disabling the pass saved, i.e. the pass's own price,
+   *  so a bigger number is a costlier pass and not a bigger win. */
+  readonly metric: 'savedMs' | DwellMetric;
   readonly baselineMs: number;
   readonly currentMs: number;
   readonly deltaMs: number;
@@ -172,36 +179,53 @@ function differentialRows(key: string, a: ScenarioRecord, b: ScenarioRecord): {
   return { rows, refusals };
 }
 
+/**
+ * The whole-frame row, judged on the clock `gatingClock` names — the GPU
+ * stream where both sides resolved one, wall only where neither did. Every
+ * test below reads that same clock, which is the rule `gatingClock`'s own
+ * docstring states: a gate may stand down on a clock only where the band
+ * does not mark it.
+ *
+ * The wall clock is quantised to the refresh interval, so at a vantage whose
+ * frame exceeds one interval its median alternates between one and two and
+ * both the clamp test and the state guard fire on a machine that never
+ * moved. Read off the GPU stream those two tests are about the hardware
+ * instead — which is what lets a vantage over one interval be compared at
+ * all. Wall stays recorded and unmarked, exactly as the pin records it.
+ */
 function dwellRow(key: string, a: ScenarioRecord, b: ScenarioRecord): DiffRow | DiffRefusal {
   const [da, db] = [a.dwell, b.dwell];
   if (da === null || db === null) {
     return { key: `${key}|dwell`, reason: 'one run has no dwell record' };
   }
-  if (da.stats.vsyncClamped || db.stats.vsyncClamped) {
+  if ((da.gpuStats === null) !== (db.gpuStats === null)) {
+    return {
+      key: `${key}|dwell`,
+      reason:
+        'one run resolved a GPU stream for this row and the other did not — a GPU-stream ' +
+        'median against a wall median is two instruments, the same refusal a differing method gets',
+    };
+  }
+  const [ca, cb] = [gatingClock(da), gatingClock(db)];
+  if (ca.vsyncClamped || cb.vsyncClamped) {
     return {
       key: `${key}|dwell`,
       reason: 'a dwell was vsync-clamped — it measured the panel, not the frame',
     };
   }
-  // Both clocks, where the pin refuses on one: a guard may only stand down on
-  // the clock its row does NOT mark, and this row marks on wall p50 (below).
-  // README.md § Comparing against a baseline.
-  const trending = [da, db].some(
-    (d) => d.stats.stateGuard === 'trending' || d.gpuStats?.stateGuard === 'trending',
-  );
-  if (trending) {
+  if ([ca, cb].some((c) => c.stateGuard === 'trending')) {
     return {
       key: `${key}|dwell`,
       reason: 'a dwell trended across its quarters — it straddled a load-state transition',
     };
   }
-  const deltaMs = db.stats.p50 - da.stats.p50;
-  const bandMs = band(medianStandardErrorMs(da.stats), medianStandardErrorMs(db.stats), 0);
+  const deltaMs = cb.p50 - ca.p50;
+  const bandMs = band(medianStandardErrorMs(ca), medianStandardErrorMs(cb), 0);
   return {
     key: `${key}|dwell`,
-    metric: 'p50',
-    baselineMs: da.stats.p50,
-    currentMs: db.stats.p50,
+    metric: da.gpuStats === null ? 'wall-p50' : 'gpu-p50',
+    baselineMs: ca.p50,
+    currentMs: cb.p50,
     deltaMs,
     bandMs,
     verdict: verdictFor(deltaMs, bandMs),

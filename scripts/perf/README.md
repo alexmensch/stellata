@@ -328,7 +328,26 @@ no amount of sampling reduces. Dwell rows use the median's standard error,
 
 **`savedMs` is the trap.** It names what disabling the pass saved, i.e. the
 pass's own price — so a row whose `savedMs` went UP got *dearer*, not better.
-Dwell `p50` reads the same direction for the obvious reason. Both print `✗`.
+A dwell `p50` reads the same direction for the obvious reason. Both print `✗`.
+
+**A dwell row is judged on the clock `gatingClock` names** — the GPU stream
+where both runs resolved one, wall only where neither did — and the metric
+column says which, `gpu-p50` or `wall-p50`, exactly as the pin's does. Every
+test on the row reads that same clock: the clamp, the state guard and the
+band. That is the whole of the rule, and the half worth stating is what it
+frees. Wall deltas are quantised to the refresh interval, so at a vantage
+whose frame exceeds one the medians alternate between one and two however
+idle the machine is — which read the row's own clamp and state guard as a
+verdict on the machine and refused mw120 and sol outright. Off the GPU
+stream both tests are about the hardware: a resolved timestamp is a span no
+compositor can pad. Wall stays recorded and unmarked, as `pins/README.md`
+§ State guard records it.
+
+**A GPU stream on one side and none on the other refuses the row**, the
+same refusal a differing `method` gets and for the same reason — a
+timestamp median against a wall median is two instruments. The pin prints
+that pair as an ungated row instead, because a committed table shows every
+vantage; here there is a refusal list to say it in.
 
 **The refusals matter as much as the rows.** Two runs on different clocks,
 buffers or adapters produce a table that looks like a comparison and is not,
@@ -337,19 +356,11 @@ a differing adapter string refuses the whole run (a differing schema never
 reaches the diff — see § JSON output); a differing method or mode, a buffer
 more than 1 % apart, a **record count** more than 1 % apart or absent on
 either side (a row priced against a different catalogue is not a
-comparison), a failed or tainted scenario, a vsync-clamped dwell, a
-`cadenceBound` row (either side), a dwell whose state guard trended on
-**either** clock, or a row missing from one side refuses that key.
+comparison), a failed or tainted scenario, a dwell clamped or trending on
+its gating clock, a mismatched GPU stream, a `cadenceBound` row (either
+side), or a row missing from one side refuses that key.
 
-**A dwell row here refuses on both clocks, where the pin refuses on one.**
-That is the same rule, not a stricter one: a guard may only stand down on a
-clock its row does not mark, and this row's metric is wall `p50`. The pin
-marks on the GPU stream, so wall's verdict is context there and
-`gatingClock` ignores it (`pins/README.md` § State guard). Read off wall
-here it is load-bearing — two runs of the same code at a vantage whose frame
-exceeds one refresh interval have alternating wall medians, and comparing
-them manufactures a whole-interval delta the band cannot absorb. The guard
-narrows to the gating clock when this row's metric moves to `gpu-p50`. The key carries the backend, so a vantage the other run measured on the
+The key carries the backend, so a vantage the other run measured on the
 *other* backend says exactly that rather than reporting itself absent.
 Sweeps are never diffed — a slope is not a cost.
 
