@@ -85,11 +85,20 @@ it wants to be part of the app instead.
 ## The stylesheet
 
 `site.css` is organised **CUBE-style**, in this order, and the order is the
-cascade: tokens, global element defaults, **C**ompositions, **U**tilities,
-**B**locks, with exceptions carried as `data-` attributes on a block rather
-than as modifier classes. A rule that belongs one layer up is the drift to
-watch for — a block reinventing a gap that `.flow` already owns is the
-common one.
+cascade: tokens, global element defaults, **C**ompositions, **B**locks,
+**U**tilities, with exceptions carried as `data-` attributes on a block
+rather than as modifier classes. A rule that belongs one layer up is the
+drift to watch for — a block reinventing a gap that `.flow` already owns is
+the common one, and a second `flex-wrap` rule is a duplicate `.cluster`
+rather than a new composition.
+
+**Utilities come last and carry `!important`**, because a utility is a final
+adjustment nothing before it may override. The corollary decides what is a
+utility at all: anything a block must be able to override is **not** one. A
+rule with a state, a descendant selector, or a value a block legitimately
+changes is a block — which is why `.label`, `.lead`, `.aside` and
+`.skip-link` sit in the block layer despite looking like text utilities, and
+only `.wrapper`, `.measure` and `.dim` are utilities.
 
 **The palette is not ours to set.** `site.css` imports
 `src/design-tokens.css` and must not restate a colour or the typeface. The
@@ -97,8 +106,32 @@ app's chrome is the reference: near-black ground, monospace throughout, 1px
 hairline borders, square corners, small uppercase wide-tracked labels, one
 cyan accent. The site scales that up to reading sizes — it does not add a
 second visual language. A colour belonging to both surfaces goes in the
-token file; one belonging only here goes in this file's own `:root` block,
-as the scales and measures do.
+token file; one belonging only here (`--bg-sunken`) goes in this file's own
+`:root` block, as the scales and measures do.
+
+**Alpha variants are mixed, not restated.** Every scrim and wash is a
+`color-mix(in srgb, var(--token) N%, transparent)`, so the hex for the
+ground and the accent exists in exactly one place. Writing
+`rgba(7, 9, 18, 0.72)` would fork the palette silently the next time a token
+changed.
+
+**No rule carries a bare value.** Measures are a named scale
+(`--measure-micro` … `--measure`) and spacing comes from the Utopia steps;
+so do leading (`--leading-flat` … `--leading-body`), tracking
+(`--tracking-caps`, `--tracking-display`), weight and the pill radius. The
+one-off lengths a composition needs — the column minimum before a switcher
+stacks, the readout's minimum cell, the sources table's name column — are
+named in `:root` too. Logical properties throughout:
+`max-inline-size`, `border-block-end`, `inset-inline-start`,
+`text-align: start`.
+
+One tracking value serves every uppercase label (`--tracking-caps`), where
+three near-identical figures used to sit; the visual language is one
+decision, not one per block.
+
+`tests/site-css-rules.test.ts` asserts all of it — the cascade order, the
+`!important`, the absence of colour literals and physical properties, and
+that every space is a scale step.
 
 ### The scales
 
@@ -131,9 +164,17 @@ of the viewport. Three mechanisms replace them.
   width. `flex-basis: calc((threshold − 100%) * 999)` is the whole
   mechanism — the multiplier drives the basis past 100% the instant the
   container is narrower than the threshold. It is not a magic number to
-  tidy; a smaller one stops the flip working.
-- **Intrinsic grids** (`repeat(auto-fit, minmax(…, 1fr))`) for the readout
-  strip, which reflows cell by cell.
+  tidy; a smaller one stops the flip working. The threshold itself is
+  **derived**, not chosen: `items × --switcher-item + gaps`, so a block
+  says how wide one column wants to be (`--switcher-item-sight`) and the
+  switch point follows. Changing the column minimum moves it correctly.
+- **Intrinsic grids** (`repeat(auto-fit, minmax(min(x, 100%), 1fr))`) for
+  the readout strip, which reflows cell by cell. **The `min()` is not
+  optional.** A bare `minmax(11rem, 1fr)` forces a track wider than a
+  narrow container, and because a `rem` minimum grows with the reader's
+  font size while the viewport does not, it fits a 320px screen at a 16px
+  root and overflows it at the 32px root that WCAG 1.4.4's 200% text
+  resize implies. `min(x, 100%)` collapses the track instead.
 
 `.sight`'s alternating sides ride the switcher: `flex-direction:
 row-reverse` on even rows puts the media right when there is room, and a

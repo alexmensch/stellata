@@ -32,10 +32,67 @@
   --space-l-xl: clamp(2rem, 1.5rem + 2.5vw, 3.75rem);
   --space-xl-2xl: clamp(3rem, 2.4286rem + 2.8571vw, 5rem);
 
+  /* Measures are a scale, not one value: every prose element takes a named
+     line length from here rather than carrying its own ch figure. */
   --measure: 62ch;
+  --measure-micro: 26ch;
+  --measure-compact: 34ch;
+  --measure-short: 40ch;
+  --measure-medium: 46ch;
+  --measure-lead: 54ch;
+
   --gutter: var(--space-s-m);
   --column: 72rem;
-  --rule: 1px solid var(--border);
+  --hairline: 1px;
+  --rule: var(--hairline) solid var(--border);
+  --underline-offset: 3px;
+  --focus-offset: 3px;
+
+  /* Scrims and washes are the palette at partial alpha, mixed from the
+     tokens rather than restated, so design-tokens.css stays the only place
+     a colour of both surfaces is written. */
+  --scrim-top: color-mix(in srgb, var(--bg) 72%, transparent);
+  --scrim-strong: color-mix(in srgb, var(--bg) 92%, transparent);
+  --scrim-mid: color-mix(in srgb, var(--bg) 55%, transparent);
+  --wash-accent: color-mix(in srgb, var(--accent) 9%, transparent);
+  --wash-accent-faint: color-mix(in srgb, var(--accent) 5%, transparent);
+  --selection-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+  --pill-bg: color-mix(in srgb, var(--bg) 85%, transparent);
+  /* Belongs to this surface only, so it is defined here. */
+  --bg-sunken: #04060d;
+
+  /* What one column wants before a composition stacks. Configuration, not
+     scale steps — named here so no rule carries a bare length. */
+  --switcher-item: 16rem;
+  --switcher-item-sight: 20rem;
+  --switcher-item-requirement: 15rem;
+  --readout-item: 11rem;
+
+  --hero-min: clamp(30rem, 82svh, 48rem);
+  --notfound-min: min(62svh, 35rem);
+  --holder-min: clamp(11rem, 24vw, 17rem);
+  --holder-dim: 0.7;
+
+  --layer-masthead: 2;
+  --layer-skip-link: 3;
+
+  /* Leading, tracking and weight are named sets like the sizes are, so the
+     visual language changes in one place rather than per rule. */
+  --leading-body: 1.6;
+  --leading-flat: 1.12;
+  --leading-tight: 1.25;
+  --leading-snug: 1.5;
+  --tracking-display: -0.02em;
+  --tracking-heading: -0.015em;
+  --tracking-subhead: -0.01em;
+  --tracking-cta: 0.06em;
+  --tracking-caps: 0.22em;
+  --tracking-wordmark: 0.34em;
+  --weight-medium: 500;
+  --radius-pill: 999px;
+  /* The mono face reads larger than the body at the same size. */
+  --code-size: 0.95em;
+  --sources-name-min: 15ch;
 }
 
 /* ── Global ─────────────────────────────────────────────────────────── */
@@ -46,6 +103,7 @@
 
 html {
   background: var(--bg);
+  text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -55,7 +113,7 @@ body {
   color: var(--fg);
   font-family: var(--font-mono);
   font-size: var(--step-0);
-  line-height: 1.6;
+  line-height: var(--leading-body);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -74,9 +132,9 @@ figure {
 h1,
 h2,
 h3 {
-  font-weight: 500;
-  line-height: 1.12;
-  letter-spacing: -0.02em;
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-flat);
+  letter-spacing: var(--tracking-display);
   color: var(--fg);
   text-wrap: balance;
 }
@@ -86,12 +144,12 @@ h1 {
 }
 h2 {
   font-size: var(--step-3);
-  letter-spacing: -0.015em;
+  letter-spacing: var(--tracking-heading);
 }
 h3 {
   font-size: var(--step-1);
-  line-height: 1.25;
-  letter-spacing: -0.01em;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-subhead);
 }
 
 p {
@@ -101,8 +159,8 @@ p {
 a {
   color: var(--accent);
   text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-thickness: 1px;
+  text-underline-offset: var(--underline-offset);
+  text-decoration-thickness: var(--hairline);
 }
 a:hover {
   text-decoration: none;
@@ -110,25 +168,25 @@ a:hover {
 
 code {
   font-family: inherit;
-  font-size: 0.95em;
+  font-size: var(--code-size);
   color: var(--accent);
   overflow-wrap: anywhere;
 }
 
 ::selection {
-  background: rgba(125, 211, 252, 0.22);
+  background: var(--selection-bg);
 }
 
 :focus-visible {
-  outline: 1px solid var(--accent);
-  outline-offset: 3px;
+  outline: var(--hairline) solid var(--accent);
+  outline-offset: var(--focus-offset);
 }
 
 img,
 video {
   display: block;
-  max-width: 100%;
-  height: auto;
+  max-inline-size: 100%;
+  block-size: auto;
 }
 
 /* ── Composition ────────────────────────────────────────────────────── */
@@ -156,18 +214,21 @@ video {
   --flow-space: var(--space-s);
 }
 
+/* Alignment and spacing are channels so a block configures this cluster
+   instead of declaring a flex-wrap rule of its own: a second flex-wrap in
+   this file is a duplicate cluster, not a new composition. The states
+   declare directly rather than through the channels, so they cannot
+   inherit into a nested cluster. */
 .cluster {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  justify-content: var(--cluster-justify, flex-start);
+  align-items: var(--cluster-align, center);
   gap: var(--cluster-space, var(--space-s) var(--space-m));
 }
-
-.repel {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+.cluster[data-state='repel'] {
   justify-content: space-between;
+  align-items: baseline;
   gap: var(--space-2xs) var(--space-m);
 }
 
@@ -175,78 +236,34 @@ video {
    below it, decided by the CONTAINER's width rather than the viewport's.
    The multiplier forces the calc negative — and so the basis to 100% —
    the moment the container is narrower than the threshold. Not a magic
-   number to tidy: any smaller value stops the flip working. */
+   number to tidy: any smaller value stops the flip working.
+   The threshold is derived from what one column needs, so changing the
+   column minimum or the item count moves the switch point with it. */
 .switcher {
+  --switcher-items: 2;
+  --switcher-threshold: calc(
+    var(--switcher-items) * var(--switcher-item) +
+      (var(--switcher-items) - 1) * var(--switcher-space, var(--space-l))
+  );
+
   display: flex;
   flex-wrap: wrap;
   gap: var(--switcher-space, var(--space-l));
 }
 .switcher > * {
   flex-grow: 1;
-  flex-basis: calc((var(--switcher-threshold, 34rem) - 100%) * 999);
-}
-
-/* ── Utilities ──────────────────────────────────────────────────────── */
-
-.wrapper {
-  max-inline-size: var(--column);
-  margin-inline: auto;
-  padding-inline: var(--gutter);
-}
-
-/* The app writes every category, section and unit label this way: small,
-   uppercase, widely tracked, dim. It is the single most recognisable thing
-   about its chrome, so the site says everything structural in it. */
-.label {
-  display: block;
-  font-size: var(--step--2);
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--fg-dim);
-}
-.label[data-accent] {
-  color: var(--accent);
-}
-
-.measure {
-  max-width: var(--measure);
-}
-
-.lead {
-  max-width: 54ch;
-  font-size: var(--step-1);
-  line-height: 1.5;
-  color: var(--fg);
-}
-
-.dim {
-  color: var(--fg-dim);
-}
-
-.skip-link {
-  position: absolute;
-  left: -9999px;
-}
-.skip-link:focus {
-  left: var(--gutter);
-  top: var(--space-2xs);
-  z-index: 3;
-  padding: var(--space-2xs) var(--space-s);
-  background: var(--bg-2);
-  border: 1px solid var(--border-strong);
-  color: var(--fg);
-  text-decoration: none;
+  flex-basis: calc((var(--switcher-threshold) - 100%) * 999);
 }
 
 /* ── Block: masthead ───────────────────────────────────────────────── */
 
 .masthead {
   padding-block: var(--space-s);
-  border-bottom: var(--rule);
+  border-block-end: var(--rule);
 }
 .wordmark {
   font-size: var(--step--1);
-  letter-spacing: 0.34em;
+  letter-spacing: var(--tracking-wordmark);
   text-transform: uppercase;
   color: var(--fg);
   text-decoration: none;
@@ -255,10 +272,9 @@ video {
   color: var(--accent);
 }
 .masthead nav {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2xs) var(--space-m);
+  --cluster-align: baseline;
+  --cluster-space: var(--space-2xs) var(--space-m);
+
   font-size: var(--step--1);
 }
 .masthead nav a {
@@ -279,16 +295,16 @@ video {
 .masthead[data-overlay] {
   position: absolute;
   inset: 0 0 auto;
-  z-index: 2;
-  border-bottom: none;
-  background: linear-gradient(to bottom, rgba(7, 9, 18, 0.72), transparent);
+  z-index: var(--layer-masthead);
+  border-block-end: none;
+  background: linear-gradient(to bottom, var(--scrim-top), transparent);
 }
 
 /* ── Block: hero ───────────────────────────────────────────────────── */
 
 .hero {
   display: grid;
-  min-height: clamp(30rem, 82svh, 48rem);
+  min-block-size: var(--hero-min);
 }
 .hero > * {
   grid-area: 1 / 1;
@@ -298,55 +314,61 @@ video {
   align-content: start;
   overflow: hidden;
   background:
-    radial-gradient(120% 90% at 70% 15%, rgba(125, 211, 252, 0.09), transparent 60%),
-    radial-gradient(90% 70% at 20% 80%, rgba(125, 211, 252, 0.05), transparent 55%),
+    radial-gradient(120% 90% at 70% 15%, var(--wash-accent), transparent 60%),
+    radial-gradient(90% 70% at 20% 80%, var(--wash-accent-faint), transparent 55%),
     var(--bg);
 }
 .hero-media > img,
 .hero-media > video {
-  width: 100%;
-  height: 100%;
+  inline-size: 100%;
+  block-size: 100%;
   object-fit: cover;
 }
 /* The scrim spans the whole image; the wrapper inside it holds the text to
-   the column. One element cannot do both — a max-width on the scrim leaves
-   the image un-dimmed either side of it on a wide screen. */
+   the column. One element cannot do both — a max-inline-size on the scrim
+   leaves the image un-dimmed either side of it on a wide screen. */
 .hero-copy {
   align-self: end;
-  width: 100%;
+  inline-size: 100%;
   padding-block: var(--space-xl) var(--space-l-xl);
   background: linear-gradient(
     to top,
-    rgba(7, 9, 18, 0.92) 15%,
-    rgba(7, 9, 18, 0.55) 60%,
+    var(--scrim-strong) 15%,
+    var(--scrim-mid) 60%,
     transparent
   );
 }
 .hero-copy h1 {
-  max-width: 26ch;
+  max-inline-size: var(--measure-micro);
 }
 .hero-copy .lead {
   color: var(--fg);
 }
 
 /* ── Block: readout ────────────────────────────────────────────────── */
-/* Hairlines come from a 1px grid gap showing the border colour through, so
-   dividers stay exact however the cells wrap. */
+/* Hairlines come from a one-pixel grid gap showing the border colour
+   through, so dividers stay exact however the cells wrap. */
 
 .readout-band {
   --region-space: var(--space-l);
 }
 .readout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  gap: 1px;
+  /* min() so a track collapses instead of overflowing: a rem minimum grows
+     with the reader's font size while the viewport does not. */
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(var(--readout-item), 100%), 1fr)
+  );
+  gap: var(--hairline);
   background: var(--border);
   border: var(--rule);
 }
 .readout-cell {
   display: grid;
   gap: var(--space-3xs);
-  padding: var(--space-xs) var(--space-s) var(--space-s);
+  padding-block: var(--space-xs) var(--space-s);
+  padding-inline: var(--space-s);
   background: var(--bg);
 }
 .readout-value {
@@ -358,14 +380,15 @@ video {
 /* ── Block: section ────────────────────────────────────────────────── */
 
 .section {
-  border-top: var(--rule);
+  border-block-start: var(--rule);
 }
 .section[data-tight] {
   --region-space: var(--space-l-xl);
 }
 .section-head {
   --flow-space: var(--space-2xs);
-  max-width: 38ch;
+
+  max-inline-size: var(--measure-short);
 }
 
 /* ── Block: claim ──────────────────────────────────────────────────── */
@@ -375,17 +398,17 @@ video {
 }
 .claim {
   padding-block-start: var(--space-m);
-  border-top: var(--rule);
+  border-block-start: var(--rule);
 }
 .claim:first-child {
   padding-block-start: 0;
-  border-top: none;
+  border-block-start: none;
 }
 .claim h3 {
-  max-width: 34ch;
+  max-inline-size: var(--measure-compact);
 }
 .claim p {
-  max-width: var(--measure);
+  max-inline-size: var(--measure);
   font-size: var(--step--1);
   color: var(--fg-dim);
 }
@@ -401,8 +424,8 @@ video {
   --flow-space: var(--space-xl);
 }
 .sight {
-  --switcher-threshold: 42rem;
-  --switcher-space: var(--space-l);
+  --switcher-item: var(--switcher-item-sight);
+
   align-items: center;
 }
 .sight:nth-child(even) {
@@ -410,7 +433,8 @@ video {
 }
 .sight-copy {
   --flow-space: var(--space-s);
-  max-width: 46ch;
+
+  max-inline-size: var(--measure-medium);
 }
 .sight-copy p {
   font-size: var(--step--1);
@@ -426,12 +450,13 @@ a.sight-media:hover {
 }
 .sight-media > img,
 .sight-media > video {
-  width: 100%;
+  inline-size: 100%;
 }
 .sight-go {
   --flow-space: var(--space-xs);
+
   font-size: var(--step--1);
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-cta);
 }
 
 /* ── Block: plate ──────────────────────────────────────────────────── */
@@ -445,33 +470,33 @@ a.sight-media:hover {
   border: var(--rule);
 }
 .plate-caption {
-  max-width: var(--measure);
+  max-inline-size: var(--measure);
   margin-block-start: var(--space-2xs);
   font-size: var(--step--2);
-  line-height: 1.5;
+  line-height: var(--leading-snug);
   color: var(--fg-dim);
 }
 
 /* The stand-in a real capture replaces. Deliberately unlovely: a dashed
    hairline says "not final" where a styled empty box would ship unnoticed.
    README § Sights carries the swap. */
-/* Sized by min-height rather than aspect-ratio: a ratio box clips its own
-   instructions at narrow widths, and a real <img width height> brings its
-   own ratio when it lands. */
+/* Sized by min-block-size rather than aspect-ratio: a ratio box clips its
+   own instructions at narrow widths, and a real <img width height> brings
+   its own ratio when it lands. */
 .holder {
   display: grid;
   align-content: center;
   gap: var(--space-2xs);
-  min-height: clamp(11rem, 24vw, 17rem);
+  min-block-size: var(--holder-min);
   padding: var(--space-s);
-  border: 1px dashed var(--border-strong);
-  background: #04060d;
+  border: var(--hairline) dashed var(--border-strong);
+  background: var(--bg-sunken);
   font-size: var(--step--2);
-  line-height: 1.5;
+  line-height: var(--leading-snug);
   color: var(--fg-dim);
 }
 .holder b {
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   color: var(--fg);
 }
 .holder code {
@@ -480,7 +505,7 @@ a.sight-media:hover {
 .hero-media > .holder {
   border: none;
   background: none;
-  opacity: 0.7;
+  opacity: var(--holder-dim);
 }
 
 /* ── Block: pill ───────────────────────────────────────────────────── */
@@ -488,14 +513,15 @@ a.sight-media:hover {
    interface, which is what makes it read as the action rather than a panel. */
 
 .pill {
-  padding: var(--space-2xs) var(--space-m);
+  padding-block: var(--space-2xs);
+  padding-inline: var(--space-m);
   font-size: var(--step--1);
-  letter-spacing: 0.22em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--fg);
-  background: rgba(7, 9, 18, 0.85);
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  background: var(--pill-bg);
+  border: var(--hairline) solid var(--border-strong);
+  border-radius: var(--radius-pill);
   text-decoration: none;
   white-space: nowrap;
 }
@@ -503,7 +529,33 @@ a.sight-media:hover {
   color: var(--accent);
   border-color: var(--accent);
 }
+
+/* ── Block: prose ──────────────────────────────────────────────────── */
+/* The named text treatments. Blocks rather than utilities because each
+   carries a state or a descendant rule, and a utility is a final
+   adjustment nothing may override. */
+
+.label {
+  display: block;
+  font-size: var(--step--2);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+.label[data-accent] {
+  color: var(--accent);
+}
+
+.lead {
+  max-inline-size: var(--measure-lead);
+  font-size: var(--step-1);
+  line-height: var(--leading-snug);
+  color: var(--fg);
+}
+
+/* Carries its own measure, so no use site has to remember one. */
 .aside {
+  max-inline-size: var(--measure);
   font-size: var(--step--1);
   color: var(--fg-dim);
 }
@@ -514,6 +566,29 @@ a.sight-media:hover {
   color: var(--accent);
 }
 
+/* ── Block: skip link ──────────────────────────────────────────────── */
+/* Clipped rather than pushed off-screen, so there is no magic offset. */
+
+.skip-link {
+  position: absolute;
+  inset-block-start: var(--space-2xs);
+  inset-inline-start: var(--gutter);
+  z-index: var(--layer-skip-link);
+  padding-block: var(--space-2xs);
+  padding-inline: var(--space-s);
+  background: var(--bg-2);
+  border: var(--hairline) solid var(--border-strong);
+  color: var(--fg);
+  text-decoration: none;
+}
+.skip-link:not(:focus) {
+  clip-path: inset(50%);
+  block-size: var(--hairline);
+  inline-size: var(--hairline);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
 /* ── Block: sources table ──────────────────────────────────────────── */
 
 .table-scroll {
@@ -521,38 +596,40 @@ a.sight-media:hover {
   border: var(--rule);
 }
 .sources {
-  width: 100%;
+  inline-size: 100%;
   border-collapse: collapse;
   font-size: var(--step--1);
-  text-align: left;
+  text-align: start;
 }
 .sources th {
-  padding: var(--space-2xs) var(--space-s);
+  padding-block: var(--space-2xs);
+  padding-inline: var(--space-s);
   font-size: var(--step--2);
   font-weight: normal;
-  letter-spacing: 0.2em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--fg-dim);
-  border-bottom: var(--rule);
+  border-block-end: var(--rule);
   white-space: nowrap;
 }
 .sources td {
-  padding: var(--space-xs) var(--space-s);
-  border-bottom: var(--rule);
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-s);
+  border-block-end: var(--rule);
   vertical-align: top;
-  line-height: 1.55;
+  line-height: var(--leading-snug);
   color: var(--fg-dim);
 }
 .sources tr:last-child td {
-  border-bottom: none;
+  border-block-end: none;
 }
 .sources td:first-child {
   color: var(--fg);
-  min-width: 15ch;
+  min-inline-size: var(--sources-name-min);
 }
 .sources td:nth-child(2) {
   font-variant-numeric: tabular-nums;
-  text-align: right;
+  text-align: end;
   white-space: nowrap;
 }
 
@@ -565,33 +642,33 @@ a.sight-media:hover {
 }
 .spec-list li {
   padding-block: var(--space-xs);
-  border-top: var(--rule);
+  border-block-start: var(--rule);
   font-size: var(--step--1);
-  line-height: 1.55;
+  line-height: var(--leading-snug);
   color: var(--fg-dim);
 }
 .spec-list li:first-child {
-  border-top: none;
+  border-block-start: none;
   padding-block-start: 0;
 }
 .spec-list b {
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   color: var(--fg);
 }
 
 /* ── Block: requirement ────────────────────────────────────────────── */
 
 .requirements {
-  --switcher-threshold: 32rem;
-  --switcher-space: var(--space-l);
+  --switcher-item: var(--switcher-item-requirement);
 }
 .requirement {
   --flow-space: var(--space-2xs);
+
   padding-block-start: var(--space-xs);
-  border-top: 1px solid var(--border-strong);
+  border-block-start: var(--hairline) solid var(--border-strong);
 }
 .requirement p {
-  max-width: 40ch;
+  max-inline-size: var(--measure-short);
   font-size: var(--step--1);
   color: var(--fg-dim);
 }
@@ -600,7 +677,7 @@ a.sight-media:hover {
 
 .footer {
   padding-block: var(--space-m) var(--space-l);
-  border-top: var(--rule);
+  border-block-start: var(--rule);
   font-size: var(--step--1);
   color: var(--fg-dim);
 }
@@ -622,5 +699,25 @@ a.sight-media:hover {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: min(62svh, 35rem);
+  min-block-size: var(--notfound-min);
+}
+
+/* ── Utilities ──────────────────────────────────────────────────────── */
+/* The last layer, and !important by design: a utility is a final
+   adjustment nothing before it may override. Anything a block must be able
+   to override belongs in the block layer instead — which is why the named
+   text treatments above are blocks. */
+
+.wrapper {
+  max-inline-size: var(--column) !important;
+  margin-inline: auto !important;
+  padding-inline: var(--gutter) !important;
+}
+
+.measure {
+  max-inline-size: var(--measure) !important;
+}
+
+.dim {
+  color: var(--fg-dim) !important;
 }
