@@ -2,8 +2,13 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { makeTslShellMaterials } from '../webgpu/fresnel-shell/tsl-shell-materials';
 import { makeGlslShellMaterials, SHELL_RIM_ALPHA_LIMB, SHELL_RIM_BLUE } from './fresnel-shell';
+import { nearFadePcForExtent } from './shell-distance-pure';
 
-const OPTS = { colourHex: SHELL_RIM_BLUE, alphaLimb: SHELL_RIM_ALPHA_LIMB };
+const OPTS = {
+  colourHex: SHELL_RIM_BLUE,
+  alphaLimb: SHELL_RIM_ALPHA_LIMB,
+  nearFadePc: nearFadePcForExtent(300),
+};
 
 // The two factories are transcriptions of one uniform block, so the guard
 // is the same one the solar-system seam carries: a slot added on one side

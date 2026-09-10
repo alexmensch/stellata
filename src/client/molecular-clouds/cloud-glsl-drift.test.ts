@@ -106,3 +106,15 @@ describe('cloud rim GLSL constants match cloud-rim-pure', () => {
     expect(Number(m![1])).toBe(MIN_FWIDTH);
   });
 });
+
+// Ink density varying with distance would break the flat printed-atlas
+// convention, so the camera-distance attenuation is excluded from chart
+// mode — by the chart arm returning before it, not by a condition that
+// would look load-bearing and is not.
+describe('the chart-mode stipple takes no camera-distance attenuation', () => {
+  it('reaches the shared term only after the chart branch returns', () => {
+    const chartArm = rim.slice(0, rim.indexOf('return;'));
+    expect(chartArm).not.toContain('shellDistanceAttenuation');
+    expect(rim).toContain('shellDistanceAttenuation(vPositionView');
+  });
+});

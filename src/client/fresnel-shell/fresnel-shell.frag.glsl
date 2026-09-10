@@ -11,6 +11,9 @@ uniform vec3 uColour;
 uniform float uAlphaLimb;
 uniform float uFaceOnFloor;
 uniform float uFresnelPower;
+uniform float uNearFadePc;
+uniform float uDepthDimRefPc;
+uniform float uDepthPower;
 
 out vec4 outColor;
 
@@ -19,7 +22,8 @@ void main() {
 
   vec3 n = normalize(vNormalView);
   vec3 viewDir = normalize(-vPositionView);
-  float alpha = fresnelRimAlpha(n, viewDir, uAlphaLimb, uFaceOnFloor, uFresnelPower);
+  float alpha = fresnelRimAlpha(n, viewDir, uAlphaLimb, uFaceOnFloor, uFresnelPower)
+    * shellDistanceAttenuation(vPositionView, uNearFadePc, uDepthDimRefPc, uDepthPower);
 
   outColor = vec4(uColour, alpha);
 }
