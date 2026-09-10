@@ -75,6 +75,37 @@ function prune(body: Element, selector: string): void {
 }
 
 /**
+ * A video is its poster still. mdast has no video node, so the rendition
+ * carries the frame an agent can actually read, at the place in the document
+ * the clip occupies — which is why `video` is absent from VOCABULARY rather
+ * than listed in it: none survives to be converted.
+ *
+ * Both attributes are required because both are load-bearing off the page
+ * too. The poster is the page's largest contentful paint and what a browser
+ * refusing to autoplay shows instead; the label is the clip's accessible
+ * name. Throwing beats rendering a clip nobody can see or name.
+ *
+ * Runs BEFORE pruneEmptyLinks: a sight's media anchor wrapping only a
+ * `<video>` reads as empty until the video has become an `<img>`, and would
+ * be dropped with the link the sight is for.
+ */
+function stillVideos(body: Element): void {
+  for (const video of selectAll('video', body)) {
+    const poster = video.properties?.poster;
+    const label = video.properties?.['ariaLabel'];
+    if (typeof poster !== 'string' || poster === '') {
+      throw new Error('markdown rendition: <video> carries no poster to stand in for it');
+    }
+    if (typeof label !== 'string' || label === '') {
+      throw new Error('markdown rendition: <video> carries no aria-label to name it');
+    }
+    video.tagName = 'img';
+    video.properties = { src: poster, alt: label };
+    video.children = [];
+  }
+}
+
+/**
  * Anchors left with nothing in them once the scaffolding went. A sight's
  * picture *is* its link, so until the captures land the media anchor wraps a
  * `.holder` and nothing else — and `[](url)` is noise in a rendition whose
@@ -200,6 +231,7 @@ export function markdownRendition(source: string, env: NodeJS.ProcessEnv = proce
   if (body == null) throw new Error('markdown rendition: the page has no <body>');
 
   prune(body, DROPPED);
+  stillVideos(body);
   pruneEmptyLinks(body);
   assertVocabulary(body);
   bulletDefinitions(body);
