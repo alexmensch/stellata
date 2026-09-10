@@ -6,6 +6,7 @@ import worker from './worker';
 
 const APP_DOC = 'the application document';
 const HOMEPAGE = 'the homepage';
+const RENDITION = '# the homepage, as markdown';
 
 /**
  * An assets binding that answers only the paths a real build emits.
@@ -23,9 +24,15 @@ function stubAssets(served: Record<string, string>) {
 
 const BUILT = {
   '/': HOMEPAGE,
+  '/index.md': RENDITION,
   '/app': APP_DOC,
   '/assets/index-abc.js': 'console.log(1)',
   '/catalog.bin.0': 'binary',
+};
+
+const MARKDOWN = { headers: { accept: 'text/markdown' } };
+const BROWSER = {
+  headers: { accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
 };
 
 function get(path: string, init?: RequestInit) {
@@ -128,5 +135,58 @@ describe('everything else is served, or really missing', () => {
     expect(response.status).toBe(404);
     expect(await response.text()).toBe(notFoundPage);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The rendition is what an agent client reads instead of re-summarising the
+// HTML. `negotiation-pure.test.ts` pins which Accept headers ask for it; this
+// pins that asking gets it, and that the caches in between are told.
+describe('a client that asks for markdown gets the page’s rendition', () => {
+  it('serves the rendition at the root', async () => {
+    const { response } = await route('/', MARKDOWN);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(RENDITION);
+    expect(response.headers.get('content-type')).toBe('text/markdown; charset=utf-8');
+  });
+
+  it('tells every cache in between that Accept decided it', async () => {
+    const { response } = await route('/', MARKDOWN);
+    expect(response.headers.get('vary')).toMatch(/\bAccept\b/);
+  });
+
+  it('still serves HTML to a browser, and says the rendition exists', async () => {
+    const { response } = await route('/', BROWSER);
+    expect(await response.text()).toBe(HOMEPAGE);
+    expect(response.headers.get('link')).toBe(
+      '</index.md>; rel="alternate"; type="text/markdown"',
+    );
+    expect(response.headers.get('vary')).toMatch(/\bAccept\b/);
+  });
+
+  it('types the rendition as markdown when fetched by its own path', async () => {
+    const { response } = await route('/index.md');
+    expect(await response.text()).toBe(RENDITION);
+    expect(response.headers.get('content-type')).toBe('text/markdown; charset=utf-8');
+  });
+
+  // The application is a script that renders a canvas; there is no rendition
+  // of it to serve, and answering with the homepage's would be a lie.
+  it.each(['/app', '/app/v/AQAA/'])('has none to offer for %s', async (path) => {
+    const { response } = await route(path, MARKDOWN);
+    expect(await response.text()).toBe(APP_DOC);
+  });
+
+  // A build that emitted the page but not its rendition must still serve the
+  // page. The rendition is an optimisation, never a precondition.
+  it('falls back to the HTML when the rendition is missing', async () => {
+    const fetchMock = stubAssets({ '/': HOMEPAGE });
+    const response = await worker.fetch(get('/', MARKDOWN), { ASSETS: { fetch: fetchMock } });
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(HOMEPAGE);
+  });
+
+  it('leaves a legacy share link redirecting, whatever it asked for', async () => {
+    const { response } = await route('/v/AQAA/', MARKDOWN);
+    expect(response.status).toBe(301);
   });
 });
