@@ -21,10 +21,21 @@ detail lives below.
 <!--
 Required when the diff touches a render path: any .ts, .glsl or .wgsl under
 src/client/, outside *.test.ts and the folders RELEASING.md § Perf pin
-exempts. Paste the runner's --against-pin table with the pin commit, the
-adapter slug and the state-guard line per context; one
-`accepted: <row> <reason> (<bead-id>)` line per ✗. perf-section-guard checks
-this section. RELEASING.md § Perf pin. Other PRs leave it empty.
+exempts. Say which tier, then answer it — RELEASING.md § Perf pin owns the
+table:
+
+  Tier 0  no per-frame code reachable. Prose: which functions the diff
+          touches, and that none is reachable from animate(), a pass, or a
+          per-frame buffer write. No table.
+  Tier 1  per-frame code touched, draw counts and pass structure unchanged.
+          The --baseline table over mw120|webgpu and sol|webgpu, and the run
+          it was read against.
+  Tier 2  passes, buffers, draw counts, the catalogue or the instrument.
+          The --against-pin table with the pin commit, the adapter slug and
+          the state-guard line per context, and the re-taken pin in this PR.
+
+One `accepted: <row> <reason> (<bead-id>)` line per ✗, whichever tier.
+perf-section-guard checks this section. Other PRs leave it empty.
 -->
 
 ## Release notes
