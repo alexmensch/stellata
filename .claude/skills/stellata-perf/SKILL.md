@@ -17,6 +17,16 @@ table. Reference: `scripts/perf/README.md`. Interpretation authority:
 - Any perf claim in a PR body. An unmeasured perf claim is a hypothesis and
   has to be called one.
 
+**Which run a PR owes is its tier** (`RELEASING.md` § Perf pin owns the
+table). Tier 0 — the diff reaches no per-frame code — runs nothing and
+argues reachability in prose; do not arm for it. Tier 1 — per-frame code
+touched, draw counts and pass structure unchanged — is `--mode dwell
+--scenario mw120,sol --backend webgpu --baseline <a recent run>`, two
+contexts and ~4 min. Tier 2 — passes, buffers, draw counts, the catalogue
+or the instrument — is the full cold pin below. Arming for a sweep the
+diff cannot justify is the cost this tiering exists to stop: it spends
+Alex's arm and 25 minutes to re-read a number the pin already holds.
+
 ## Never
 
 - **Appearance, layout, UX.** The runner reads clocks only — GPU timestamps

@@ -326,10 +326,13 @@ instrument is `src/client/debug/frame-cost/README.md` § Priced passes.
 **Rule.** Wall clock is the total; GPU slots are attribution. Only a
 differential prices a pass. Every renderer-touching PR states its
 measured frame cost — the cost of a feature is known before it merges,
-not discovered in an audit. The statement is the runner's `--against-pin`
-table in the PR's `## Perf` section (`RELEASING.md` § Perf pin), and a
-`debug.priceFrame()` differential at the canonical vantages is what
-explains a row that moved.
+not discovered in an audit. The statement goes in the PR's `## Perf`
+section, and what it has to be worth is the tier the diff earns
+(`RELEASING.md` § Perf pin): a reachability argument where no per-frame
+code is reachable, a two-vantage `--baseline` table where per-frame code
+moved, the full `--against-pin` table where passes, buffers, draw counts,
+the catalogue or the instrument did. A `debug.priceFrame()` differential
+at the canonical vantages is what explains a row that moved.
 
 **Why and how, as a list — each line has been paid for:**
 

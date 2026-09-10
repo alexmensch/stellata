@@ -176,6 +176,27 @@ describe('perf-section-check', () => {
     expect(r.code, r.stdout).toBe(0);
   });
 
+  // RELEASING.md § Perf pin promises Tier 0 a prose reachability argument
+  // in place of a table. Nothing in the script had to change for that — a
+  // body with no table has no ✗ — but the promise is now written down, so
+  // it gets a test rather than resting on the guard happening to allow it.
+  it('accepts a Tier 0 body that argues reachability instead of tabling it', () => {
+    const body = [
+      '## Perf',
+      '',
+      'Tier 0. aimAlong and beginNavigateAim run on a keypress; tick() is',
+      'untouched, and no pass, draw count or per-frame buffer write is',
+      'reachable from the diff.',
+      '',
+      '## Release notes',
+      '',
+      '- x',
+    ].join('\n');
+    const r = check(body, ['src/client/camera/aim.ts']);
+    expect(r.code, r.stdout).toBe(0);
+    expect(r.stdout).toContain('every ✗ accepted');
+  });
+
   it('declares that locale itself, so the caller-s awk cannot decide it', () => {
     expect(readFileSync(SCRIPT, 'utf-8')).toMatch(/^export LC_ALL=C$/m);
   });
