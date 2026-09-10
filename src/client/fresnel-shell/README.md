@@ -12,11 +12,17 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
 
 ## Files
 
-- `fresnel-rim.glsl` — the rim-alpha formula
-  (`fresnel = pow(1 − n·v, uFresnelPower)`,
-  `alpha = uAlphaLimb · mix(uFaceOnFloor, 1, fresnel)`), registered by
-  `fresnel-shell.ts` as the `stellata_fresnel_rim` ShaderChunk. Shared
-  with `molecular-clouds/cloud-rim.frag.glsl`.
+- `fresnel-rim.glsl` — two functions, registered by `fresnel-shell.ts` as
+  the `stellata_fresnel_rim` ShaderChunk and shared with
+  `molecular-clouds/cloud-rim.frag.glsl`: `fresnelRimAlpha`, the rim-alpha
+  formula (`fresnel = pow(1 − n·v, uFresnelPower)`,
+  `alpha = uAlphaLimb · mix(uFaceOnFloor, 1, fresnel)`), and
+  `shellDistanceAttenuation`, the camera-distance factor on it
+  (§ Camera-distance attenuation).
+- `shell-distance-pure.ts` (+ test) — the attenuation's CPU mirror and the
+  authored constants every backend and consumer reads
+  (`NEAR_FADE_EXTENT_FRAC`, `DEPTH_DIM_REF_PC`, `DEPTH_DIM_POWER`,
+  `nearFadePcForExtent`). Vitest-pinned.
 - `fresnel-shell.{vert,frag}.glsl` — the shader pair. The vert carries
   view-space normal + position; the frag applies the rim chunk.
 - `fresnel-shell.ts`
@@ -25,7 +31,12 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
     `ShaderMaterial` builder behind it is module-private, so a consumer
     cannot take a surface that skips the seam.
   - `FresnelShell` — abstract base owning the group, material, and the
-    chart-mode + detail-cycle + floating-origin plumbing.
+    chart-mode + detail-cycle + floating-origin plumbing, plus
+    `setRimParams` (§ Camera-distance attenuation).
+  - `RimParams` + `applyRimParams(uniforms, p)` — the six live rim slots
+    and the one writer behind every consumer's `setRimParams`, so a lever
+    cannot reach one surface's block and miss the identically-keyed slot
+    on another's.
   - `createShellSilhouetteLabel(stellata, opts)` — a `distance-gated-label`
     with the shared shell config (bottom-right anchor, standard offset,
     0.25 chase lerp).
@@ -85,7 +96,11 @@ MRT-mode registration and a bare `material.dispose()` would not.
   `uAlphaLimb` (limb alpha, the peak),
   `uFaceOnFloor` (face-on multiplier — 0 = pure rim, 1 = flat shell;
   default 0.04), `uFresnelPower` (rim tightness — ~2 soft halo, ~5 thin
-  edge; default 2.5). Pass `blending: AdditiveBlending` for a glow that
+  edge; default 2.5). Then the three attenuation slots —
+  `uNearFadePc` off the required `nearFadePc` option, `uDepthDimRefPc` and
+  `uDepthPower` seeded from the shared constants and deliberately not
+  options (§ Camera-distance attenuation). Pass
+  `blending: AdditiveBlending` for a glow that
   composites over the layers behind it; the default is `NormalBlending`.
 - **Visibility.** `group.visible = permitted && !mono && shellReady()`.
   `shellReady()` is the consumer's own gate — both shells are now
@@ -108,6 +123,55 @@ MRT-mode registration and a bare `material.dispose()` would not.
   on every fresh load while its label (a per-frame reader) showed.
 - **Recenter.** Sol-anchored geometry (Sol = catalog origin), so the
   group parks at −worldOffset — non-zero under planet focus.
+
+## Camera-distance attenuation
+
+Two factors multiply the rim alpha, both off the fragment's own distance
+from the camera. View space puts the camera at the origin, so that
+distance is `length(positionView)` — free on both backends, no extra
+varying and no per-frame CPU work.
+
+    nearFade = clamp(d / uNearFadePc, 0, 1)
+    depthDim = pow(clamp(uDepthDimRefPc / d, 0, 1), uDepthPower)
+
+**`uNearFadePc` is per-material; the depth pair deliberately is not.**
+The near-fade exists so a wall the camera is crossing ramps out instead of
+popping — the shells are `FrontSide`, so without it the wall vanishes the
+instant the camera passes inside. That reach has to scale with the
+consumer, which spans five orders of magnitude, so all three derive it
+from one shared *proportion* of their own extent
+(`nearFadePcForExtent`) rather than three authored distances: the
+heliopause off `HELIOPAUSE_EXTENT_PC` (120 AU), the Local Bubble off its
+loader's measured `extentPc`, the cloud rim off one representative radius
+because a single material serves all ~96 clouds.
+
+The depth dimming is the opposite case. Its whole job is making relative
+brightness read as relative distance — a cloud beyond the Local Bubble
+wall must come out dimmer than the wall — and that is only expressible on
+one absolute pc scale. A per-shell or normalised falloff cannot state it,
+so `DEPTH_DIM_REF_PC` is shared and no material takes it as an option.
+It is inverse-linear by default: clouds span ~50–2000 pc, so the
+inverse-square exponent is a 1600× range that blacks out everything past
+the nearest handful.
+
+The heliopause takes the depth term too and it is a no-op there — at AU
+scale `uDepthDimRefPc / d` clamps to 1 from every distance the shell is
+visible from — which beats a per-material opt-out flag.
+
+**Chart mode is excluded by structure, not by a condition.** Ink density
+varying with distance would break the flat printed-atlas convention. Both
+boundary shells hide outright in chart mode, and the cloud rim's chart arm
+returns before it reaches the shared chunk, so there is nothing to gate;
+`molecular-clouds/cloud-glsl-drift.test.ts` pins that the attenuation is
+unreachable from the chart arm. Do not add a branch that would look
+load-bearing and is not.
+
+**Sweeping the constants.** `setRimParams` takes the same six-field record
+on both `stellata.kinds.shell` (fanned out to both shells) and
+`stellata.kinds.cloud.layer`. The depth pair spans both kinds, so settling
+it by eye means the same call on each — a sweep on one alone leaves the
+other on the old scale and the comparison the term exists for is
+meaningless.
 
 ## Boundary shells as focus targets
 
