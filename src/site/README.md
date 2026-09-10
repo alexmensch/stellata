@@ -356,6 +356,29 @@ To land a real capture:
    `width`/`height` attributes matter — they reserve the space and keep
    the page's layout shift at zero. `.sight-media` already carries the
    hairline border, and `.sight-media > img` the full-width rule.
+
+   **A clip goes in the same slot**, and `.hero-media > video` /
+   `.sight-media > video` already size it:
+
+   ```html
+   <video src="/site/<name>.mp4" poster="/site/<name>.jpg"
+          aria-label="…" width="…" height="…"
+          autoplay muted playsinline></video>
+   ```
+
+   Four of those are load-bearing. `muted` and `playsinline` are what any
+   browser requires before it will start a clip unasked, and iOS needs the
+   second even so. `poster` is the frame that carries the page's largest
+   contentful paint and the one a browser refusing to autoplay shows
+   instead — so it is a real still, saved beside the clip. `aria-label` is
+   the clip's accessible name. The rendition **stops the build** on a clip
+   missing the poster or the label (`scripts/site/README.md`).
+
+   **No `loop`, and keep it under five seconds.** These pages ship no
+   script, so nothing on them can offer a pause control — and WCAG 2.2.2
+   requires one for motion that starts on its own and runs longer than
+   that. A clip that plays once and holds its last frame needs no control
+   to comply. A looping hero would need one and has nowhere to put it.
 4. Put the address bar's URL on **both** anchors in that row — the media
    and the "Fly there" line.
 
