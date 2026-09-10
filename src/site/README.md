@@ -6,7 +6,9 @@ far, and it is the site root — the application lives at `/app`
 (`src/client/app/README.md`).
 
 ```
-index.html   The homepage, served at /. Documented below.
+index.html   The homepage, served at /. Documented below. Its markdown
+             rendition is derived from it at build time (§ below), not
+             authored — there is no `index.md` here to edit.
 404.html     Served for every unmatched path — by Cloudflare's
              not_found_handling = "404-page" (wrangler.toml) in production,
              and by the dev server's document routing locally. Carries
@@ -73,6 +75,45 @@ Three things differ from production there, which is why it is the secondary
 route: a page in a subfolder needs its trailing slash (`/science/`, not
 `/science`), a miss gets nothing rather than the 404 page, and a share link
 is not redirected.
+
+## The markdown rendition — how an agent reads these pages
+
+Every page here is also served **as markdown**, at its own `.md` path and
+at its canonical URL to any client whose `Accept` header names
+`text/markdown`. The homepage's is `dist/index.md`, served at `/index.md`.
+
+Why it is worth having, stated precisely: an agent can already read this
+page either way — the HTML is semantic and script-free, so a fetcher
+converts it to markdown itself. What it loses doing that is **the
+wording**. The converter's own summariser paraphrases, where a rendition
+is read close to verbatim, at roughly a third of the bytes. It is not the
+lever for being *recommended* by an answer engine — crawlability, the
+JSON-LD graph, `public/llms.txt` and inbound links are that — it is the
+lever for being **quoted correctly** once one has the URL.
+
+**The rendition is derived from the page, never authored beside it.**
+`scripts/site/markdown-rendition.ts` is the authority on how, and on what
+it drops; `src/negotiation-pure.ts` owns the `Accept` rule, shared by the
+Worker and the dev server so they cannot answer differently.
+
+Three things follow for anyone editing a page here:
+
+- **A new element can fail the build.** The derivation carries a closed
+  element vocabulary and throws on a tag it has no rule for, rather than
+  dropping the section. Reaching for `<details>` means deciding what it
+  means in markdown first.
+- **A new page needs two lines**, not one: an `input` entry in
+  `vite.site.config.ts` *and* a rendition in the same config's map, plus a
+  path in `markdownRendition()`. A page without a rendition simply serves
+  HTML to everyone, which is a working state rather than a broken one.
+- **`Accept` now changes what `/` answers**, so both renditions carry
+  `Vary: Accept`. A cache that did not know would serve one to the other.
+
+**Markdown is opt-in by naming the type.** A wildcard `Accept` — curl's
+default, and most agent fetchers' — still gets HTML, because that is what
+the deploy has always answered and what a browser needs. Only a client
+that names `text/markdown`, and does not rank `text/html` above it, gets
+the rendition.
 
 ## No JavaScript, by rule
 

@@ -10,6 +10,10 @@ Cloudflare Worker entry, browser client, and the public content site.
   `.github/workflows/` (see its README).
 - `worker.test.ts` — the routing table against a stubbed assets binding,
   so the rules below are checked without a `wrangler dev`.
+- `negotiation-pure.ts` — which rendition of a page an `Accept` header
+  asks for, and where a page's markdown sibling sits. Imported by
+  `worker.ts` and by `../vite.site-dev.ts`, so the deploy and the dev
+  server cannot answer differently.
 - `client/` — browser app, served at `/app`. Built by `vite.config.ts`;
   `client/app/README.md` is why that path and not `/`.
 - `site/` — the public content pages, the homepage at `/` among them.
@@ -44,6 +48,16 @@ does:
   whatever schema version it carries and whether or not it decodes, which
   is what makes the transport's reach and the decoder's reach the same
   thing (v1 onward, `client/util/url-state/README.md`).
+
+- **A client that names `text/markdown` gets the page's markdown
+  rendition.** `/` answers with `dist/index.md` — cheaper to read, and
+  read verbatim where an HTML fetch is re-summarised by whatever converted
+  it. `negotiation-pure.ts` owns the rule and `site/README.md` § The
+  markdown rendition owns the why. Three consequences worth knowing:
+  a wildcard `Accept` still gets HTML, so no browser or existing crawler
+  changes behaviour; both renditions carry `Vary: Accept`, without which a
+  cache would serve one to the other; and a rendition that is somehow
+  absent falls through to the HTML rather than 404ing the page.
 
 **`vite.site-dev.ts` answers this same table**, in this same order, off
 the same import — `devRoute` is its whole routing decision and
