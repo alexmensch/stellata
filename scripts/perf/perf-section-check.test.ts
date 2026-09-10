@@ -154,8 +154,10 @@ describe('perf-section-check', () => {
   // § as equal to ✗ — so a real table demanded an accepted: line for every
   // unmarked row and for the § in a doc pointer, failing a body CI passes.
   // Both halves are asserted because mawk on the runner is bytewise anyway
-  // and would pass the behavioural case either way.
-  it('reads the marker bytewise, so a · row and a § pointer are not marks', () => {
+  // and would pass the behavioural case either way. The 📌 line is a first
+  // field of a different byte width again: ✗ is three bytes and · two, so a
+  // four-byte glyph is the case neither of those would catch.
+  it('reads the marker bytewise, so a · row, a § pointer and a 📌 footer are not marks', () => {
     const table = [
       '## Perf',
       '',
@@ -163,6 +165,8 @@ describe('perf-section-check', () => {
       '·  sol|webgl2   wall-p50  16.7    16.7    0    0',
       '✗  mw50|webgpu  gpu-p50   31.451  33.2    1.7  0.315',
       'accepted: mw50|webgpu the new band pass draws at mw50 (bead-7)',
+      '',
+      '📌 taken on the branch tip, not on main',
       '',
       '## Release notes',
       '',
