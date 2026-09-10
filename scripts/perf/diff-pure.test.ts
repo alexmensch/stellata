@@ -4,7 +4,7 @@ import {
   BUFFER_MPX_TOLERANCE, DWELL_FLOOR_FRACTION, DWELL_FLOOR_MS, RECORD_COUNT_TOLERANCE,
   diffRuns, dwellFloorMs, type RunDiff,
 } from './diff-pure';
-import type { DwellSummary } from './dwell-pure';
+import type { DwellSummary } from './dwell/dwell-pure';
 import { PERF_SCHEMA, type PerfFile, type ScenarioRecord } from './schema';
 
 function priceRow(overrides: Partial<PriceFrameRow> & { pass: string }): PriceFrameRow {

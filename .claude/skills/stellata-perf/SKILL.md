@@ -121,8 +121,8 @@ and `disabledLimitMag` must agree or the row priced a different scene; never
 compare across `method`, `bufferMpx`, headed/headless, browsers, or a dev
 server against a production build; never sum the column.
 
-Per mode (`scripts/perf/README.md` § Dwell mode, § Sweep mode, § Comparing
-against a baseline):
+Per mode (`scripts/perf/dwell/README.md`, `scripts/perf/README.md` § Sweep
+mode, § Comparing against a baseline):
 
 - **`vsyncClamped` true throws the dwell away.** A p50 sitting on any whole
   number of the display period the run measured, inside a spread tighter than

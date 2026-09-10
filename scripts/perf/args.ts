@@ -7,7 +7,7 @@ import {
   type GpuFrameMethod,
   type PricedPassKey,
 } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { DEFAULT_DWELL_FRAMES } from './dwell-pure';
+import { DEFAULT_DWELL_FRAMES } from './dwell/dwell-pure';
 import { DEFAULT_SWEEP_SCALES } from './sweep-pure';
 import { DEFAULT_QUIET_MS } from './settle-pure';
 import { BACKENDS, SCENARIO_NAMES, type ScenarioName } from './scenarios';

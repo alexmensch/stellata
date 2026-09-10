@@ -14,7 +14,7 @@ import {
 } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { ArgError, parseRunArgs, usage, type BackendRequest, type RunArgs } from './args';
 import { diffRuns } from './diff-pure';
-import type { DwellSummary } from './dwell-pure';
+import type { DwellSummary } from './dwell/dwell-pure';
 import { applyRoundTrip, measureDwell, measureSweep, type Measured } from './measure';
 import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './arming/perf-go-lib';
 import {

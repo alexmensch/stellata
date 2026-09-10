@@ -3,7 +3,7 @@
 // README.md § Comparing against a baseline.
 
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { gatingClock, type DwellMetric } from './dwell-pure';
+import { gatingClock, type DwellMetric } from './dwell/dwell-pure';
 import type { PerfFile, ScenarioRecord } from './schema';
 
 /** How far the two buffers may differ and still be compared. Both dominant

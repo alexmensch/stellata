@@ -10,7 +10,7 @@ import {
   summarizeFrameDwell,
   summarizePassCounts,
 } from './dwell-pure';
-import { vsyncClampToleranceMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import { vsyncClampToleranceMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 
 /** 1..20 ms, so every percentile lands on a value that is easy to name. */
 const RAMP = Array.from({ length: 20 }, (_, i) => i + 1);

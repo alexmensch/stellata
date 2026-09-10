@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, dwellFloorMs } from './diff-pure';
-import type { DwellSummary } from './dwell-pure';
+import type { DwellSummary } from './dwell/dwell-pure';
 import {
   PIN_CEILING_MS,
   PIN_SCHEMA,

@@ -8,7 +8,7 @@ import type {
 } from '../../src/client/debug/frame-cost/frame-cost';
 import type { Stellata } from '../../src/client/stellata';
 import { GATE_ELEMENT_ID } from '../../src/client/webgpu/gate/gate-advice-pure';
-import type { PassCounter } from './dwell-pure';
+import type { PassCounter } from './dwell/dwell-pure';
 import { GATE_BOOT_PREFIX, bootFailure } from './run-pure';
 import type { AdapterProbe, WebGlProbe, WebGpuProbe } from './schema';
 import type { Backend } from './scenarios';

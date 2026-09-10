@@ -8,7 +8,7 @@ import {
   BUFFER_MPX_TOLERANCE, VERDICT_MARK, band, dwellFloorMs, recordCountRefusal,
   type DiffRefusal, type Verdict,
 } from './diff-pure';
-import { gatingClock, type DwellMetric, type StateGuard } from './dwell-pure';
+import { gatingClock, type DwellMetric, type StateGuard } from './dwell/dwell-pure';
 import { DWELL_METHOD } from './run-pure';
 import type { AdapterProbe, DwellRecord, GitProvenance, PerfFile, ScenarioRecord } from './schema';
 import type { Backend, ScenarioName } from './scenarios';
