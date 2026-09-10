@@ -198,8 +198,20 @@ of the viewport. Three mechanisms replace them.
 
 - **`.flow`** owns all vertical rhythm through one owl selector. An element
   changes the gap *above itself* by setting `--flow-space`; nothing sets a
-  bespoke margin. This is what a section's table-to-list gap comes from, so
-  a missing space is a missing `.flow`, never a missing margin.
+  bespoke margin.
+
+  **A missing gap has two causes, and the second is the likely one.** Either
+  the container lacks `.flow` — visible, and the fix is obvious — or a block
+  **cancelled** the gap `.flow` gave it, by declaring a vertical `margin` in
+  the block layer, which cascades after compositions and therefore wins. That
+  second one is silent: the composition is present and correct, and the
+  element still sits flush. It happened twice here, `.spec-list` and `.plate`
+  each restating the global `margin: 0` reset one layer too late.
+
+  So: a block needing a reset means adding its element to the **global**
+  reset, where `.flow` still wins; a block needing a different gap sets
+  `--flow-space`. Neither ever writes a vertical margin, and
+  `tests/site-css-rules.test.ts` fails the build on one that does.
 - **`.switcher`** is Every Layout's two-up: side by side above
   `--switcher-threshold`, stacked below it, decided by the **container's**
   width. `flex-basis: calc((threshold − 100%) * 999)` is the whole
