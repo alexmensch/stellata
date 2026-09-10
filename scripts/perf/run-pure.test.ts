@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   DWELL_METHOD, GATE_BOOT_PREFIX, bootFailure, bufferShortfall, describeProbe, markerVerdict,
-  methodFor, softwareRenderer,
+  methodFor, planContexts, softwareRenderer,
 } from './run-pure';
+import { SCENARIO_NAMES, TIER1_SCENARIOS } from './scenarios';
 import type { AdapterProbe } from './schema';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -47,6 +48,29 @@ describe('methodFor', () => {
   it('honours an explicit pin over the both-backend default, silently', () => {
     expect(methodFor({ backend: 'both', method: 'timestamp' }))
       .toEqual({ method: 'timestamp', why: null });
+  });
+});
+
+describe('planContexts — the order a run visits its contexts in', () => {
+  it('runs one backend in the order the scenarios were given', () => {
+    expect(planContexts(['sol', 'lg'], 'webgpu')).toEqual([
+      { name: 'sol', backend: 'webgpu' }, { name: 'lg', backend: 'webgpu' },
+    ]);
+  });
+
+  it('runs both backends backend-major, the gated one first', () => {
+    expect(planContexts(['sol', 'lg'], 'both').map((c) => `${c.name}|${c.backend}`))
+      .toEqual(['sol|webgpu', 'lg|webgpu', 'sol|webgl2', 'lg|webgl2']);
+  });
+
+  // The pin run and the Tier 1 run share their first two contexts, which is
+  // what lets Tier 1 compare against the pin: rows compare at equal position.
+  it('opens a pin run with exactly the contexts a Tier 1 run visits', () => {
+    const pin = planContexts(SCENARIO_NAMES, 'both');
+    const tier1 = planContexts(TIER1_SCENARIOS, 'webgpu');
+    expect(pin).toHaveLength(10);
+    expect(pin.slice(0, tier1.length)).toEqual(tier1);
+    expect(tier1.map((c) => `${c.name}|${c.backend}`)).toEqual(['mw120|webgpu', 'sol|webgpu']);
   });
 });
 

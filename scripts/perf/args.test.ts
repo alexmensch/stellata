@@ -40,9 +40,11 @@ describe('parseRunArgs', () => {
     });
   });
 
+  const PIN_RUN = ['--mode', 'dwell', '--scenario', 'all', '--backend', 'both', '--json', 'run.json', '--pin', 'scripts/perf/pins/x.json'];
+
   it('takes the pin flags in dwell mode, --accept as key:bead pairs, and a zero cool-down', () => {
     const a = parseRunArgs([
-      '--mode', 'dwell', '--json', 'run.json', '--pin', 'scripts/perf/pins/x.json',
+      ...PIN_RUN,
       '--accept', 'sol|webgpu:bead-1', '--accept', 'mw50|webgl2: bead-2',
       '--against-pin', 'scripts/perf/pins/y.json', '--cooldown-ms', '120000',
     ]);
@@ -59,21 +61,37 @@ describe('parseRunArgs', () => {
   it('refuses --pin without --json, --accept without --pin, a malformed --accept, and a negative cool-down', () => {
     expect(() => parseRunArgs(['--mode', 'dwell', '--pin', 'p.json'])).toThrow(/needs --json/);
     expect(() => parseRunArgs(['--mode', 'dwell', '--accept', 'sol|webgpu:bead-1'])).toThrow(/needs --pin/);
-    expect(() => parseRunArgs(['--mode', 'dwell', '--json', 'r.json', '--pin', 'p.json', '--accept', 'sol:bead-1']))
+    expect(() => parseRunArgs([...PIN_RUN, '--accept', 'sol:bead-1']))
       .toThrow(/<scenario>\|<backend>:<bead-id>/);
-    expect(() => parseRunArgs(['--mode', 'dwell', '--json', 'r.json', '--pin', 'p.json', '--accept', 'sol|webgpu']))
+    expect(() => parseRunArgs([...PIN_RUN, '--accept', 'sol|webgpu']))
       .toThrow(ArgError);
     expect(() => parseRunArgs(['--cooldown-ms=-1'])).toThrow(/zero or a positive/);
   });
 
-  it('refuses the pin flags outside dwell mode', () => {
-    expect(() => parseRunArgs(['--json', 'r.json', '--pin', 'p.json'])).toThrow(/--mode dwell only/);
-    expect(() => parseRunArgs(['--against-pin', 'p.json'])).toThrow(/--mode dwell only/);
+  // A pin summarises whatever the run measured, so a two-context run would
+  // write a two-row pin and every later comparison would silently lose the
+  // other eight. The five vantages spelled out are the same canon as all.
+  it('refuses --pin unless the run covers every canon vantage on both backends', () => {
+    expect(() => parseRunArgs(['--mode', 'dwell', '--json', 'r.json', '--pin', 'p.json']))
+      .toThrow(/--pin needs --scenario all --backend both/);
+    expect(() => parseRunArgs(['--mode', 'dwell', '--scenario', 'all', '--backend', 'webgpu', '--json', 'r.json', '--pin', 'p.json']))
+      .toThrow(/--pin needs --scenario all --backend both/);
+    expect(() => parseRunArgs(['--mode', 'dwell', '--scenario', 'mw120,sol', '--backend', 'both', '--json', 'r.json', '--pin', 'p.json']))
+      .toThrow(/--pin needs --scenario all --backend both/);
+    const spelled = ['--mode', 'dwell', '--scenario', 'lg,mw50,earth,sol,mw120', '--backend', 'both', '--json', 'r.json', '--pin', 'p.json'];
+    expect(parseRunArgs(spelled).pin).toBe('p.json');
+    expect(parseRunArgs(['--mode', 'dwell', '--scenario', 'mw120,sol', '--backend', 'webgpu', '--against-pin', 'p.json']).againstPin)
+      .toBe('p.json');
   });
 
   it('takes --hash with or without the leading #, in every mode', () => {
     expect(parseRunArgs(['--hash', 'webgpu-gate=force']).hash).toBe('webgpu-gate=force');
     expect(parseRunArgs(['--mode', 'probe', '--hash', '#webgpu-gate=force']).hash).toBe('webgpu-gate=force');
+  });
+
+  it('refuses the pin flags outside dwell mode', () => {
+    expect(() => parseRunArgs(['--json', 'r.json', '--pin', 'p.json'])).toThrow(/--mode dwell only/);
+    expect(() => parseRunArgs(['--against-pin', 'p.json'])).toThrow(/--mode dwell only/);
   });
 
   it('takes a pass key or the idle control as --roundtrip, in dwell mode', () => {

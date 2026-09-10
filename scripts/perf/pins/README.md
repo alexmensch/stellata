@@ -15,12 +15,36 @@ its path relative to that checkout, since this file ships in a public repo.
 
 Per `scenario|backend` the pin holds wall p50 / p90 / iqr / n /
 vsyncClamped and the GPU-stream p50 where it was sound, plus the
-state-guard verdict, buffer, catalogue record count, cadence, adapter probe,
-commit pair, package version and the run file. **Any refused row refuses the
-whole pin** — failed, tainted, not dwell, not `raf-delta`, trending, a round
-trip, a headed run, no record count — because a pin missing a row narrows the
-gate silently. `--accept <scenario>|<backend>:<bead>` records an accepted
-mark as provenance for the value now pinned; it never filters a verdict.
+state-guard verdict, buffer, catalogue record count, the context's
+position in the run, cadence, adapter probe, commit pair, package version
+and the run file. **Any refused row refuses the whole pin** — failed,
+tainted, not dwell, not `raf-delta`, trending, a round trip, a headed run,
+no record count, no position — because a pin missing a row narrows the
+gate silently, and for the same reason `--pin` refuses a command line short
+of `--scenario all --backend both`. `--accept <scenario>|<backend>:<bead>`
+records an accepted mark as provenance for the value now pinned; it never
+filters a verdict.
+
+## Run position
+
+The run visits its ten contexts backend-major in the canon order —
+mw120|webgpu, sol|webgpu, earth|webgpu, mw50|webgpu, lg|webgpu, then the
+five WebGL2 contexts — and every row records where it sat. **A row
+compares only against one taken at the same position**, in `--against-pin`
+and `--baseline` alike: the GPU's load history before a context moves its
+frame time on unchanged code, and the state guard cannot see it because
+each run's own quarters stay flat. mw120|webgpu read 21.950 ms as 8th of
+10 behind 120 s cool-downs and 21.464 as 1st of 2 cold — 0.486 ms, twice
+the floor — while two runs of the same shape agreed to 0.019. A cool-down
+does not reset it: sol at 2nd of 10 behind 120 s idle matched sol at 2nd
+of 2 with none to 2e-6 ms (stellata-8cg.49.27).
+
+The order is chosen so the pin run's first two contexts are exactly the
+Tier 1 run's — `--scenario mw120,sol --backend webgpu` — in the same
+order, which is what lets Tier 1 read `--against-pin` directly instead of
+hunting for a recent run of its own shape (`RELEASING.md` § Perf pin).
+`TIER1_SCENARIOS` in `../scenarios.ts` is the prefix and a test holds the
+canon to it; reordering either constant re-takes the pin.
 
 ## What the commit fields hold
 
@@ -108,11 +132,15 @@ the whole pin, it blocked the pin for *every* render-path PR at random. Wall
   ungated vantage too, which is where it earns its keep: those rows have
   nothing else watching them.
 - **Refusals.** Another adapter slug or a headed run refuses the whole
-  comparison; a missing, failed, tainted, resized (> 1 % buffer) or
-  trending row refuses that row, and so does a **record count** more than
-  1 % apart or absent.
-  A refused comparison is not a pass: either kind exits 1, since a run
-  whose rows were all refused prints a table with no `✗` in it.
+  comparison; a failed, tainted, resized (> 1 % buffer) or trending row
+  refuses that row, and so does a **record count** more than 1 % apart or
+  absent, a **run position** that differs or is absent (§ Run position),
+  or a row the run measured that the pin does not hold. A refused
+  comparison is not a pass: either kind exits 1, since a run whose rows
+  were all refused prints a table with no `✗` in it. **Pin rows the run
+  did not visit are listed, not refused** — the table walks the run's
+  rows, so a Tier 1 run answers for its two and prints the other eight
+  as `not measured in this run`.
 - **Record count.** `recordCount` is the star records the page loaded, off
   the catalogue binary's header. It moves how many instanced quads every
   star pass draws — the most direct frame-cost change the repo can make. A

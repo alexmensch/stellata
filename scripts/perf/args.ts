@@ -147,6 +147,7 @@ export function usage(): string {
     '  --against-pin <path>     dwell: verdicts against a pin; a ✗ or a refused row exits 1',
     '  --accept <scenario>|<backend>:<bead>  dwell, with --pin: accept a ✗ and pin its value, repeatable',
     `  --cooldown-ms <n>        idle between contexts so each starts cold    (default ${ARG_DEFAULTS.cooldownMs})`,
+    'Contexts run backend-major (webgpu, then webgl2), scenarios in the order given; all = the canon order.',
     'Exit codes: 0 ok · 1 scenario failed / refused / software adapter · 2 bad flags or unreachable url · 3 not armed',
   ].join('\n');
 }
@@ -176,6 +177,11 @@ const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
 };
 
 const ACCEPT_KEY = new RegExp(`^(${SCENARIO_NAMES.join('|')})\\|(${BACKENDS.join('|')})$`);
+
+/** Every canon vantage, in any order — `all` or the five spelled out. */
+function isWholeCanon(scenarios: readonly ScenarioName[]): boolean {
+  return SCENARIO_NAMES.every((name) => scenarios.includes(name));
+}
 
 function parseAccept(raw: string): AcceptedMark {
   const at = raw.indexOf(':');
@@ -290,6 +296,10 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
   if (str('pin') !== undefined && str('json') === undefined) {
     throw new ArgError('--pin needs --json: the pin cites the run file its rows were summarised from');
   }
+  const backend = oneOf('backend', BACKEND_REQUESTS);
+  if (str('pin') !== undefined && (backend !== 'both' || !isWholeCanon(scenarios))) {
+    throw new ArgError('--pin needs --scenario all --backend both: a pin missing a row narrows the gate silently');
+  }
   if (accept.length > 0 && str('pin') === undefined) {
     throw new ArgError('--accept records a mark into the pin being written; it needs --pin');
   }
@@ -298,7 +308,7 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     help: values.help as boolean,
     url: str('url')!,
     scenarios,
-    backend: oneOf('backend', BACKEND_REQUESTS),
+    backend,
     mode,
     passes,
     method: optionalOneOf('method', GPU_FRAME_METHODS),

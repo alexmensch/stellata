@@ -135,6 +135,9 @@ export function formatPinTable(diff: PinDiff): string {
   for (const refusal of diff.refusals) {
     parts.push(`  not compared: ${refusal.key} — ${refusal.reason}`);
   }
+  if (diff.unmeasured.length > 0) {
+    parts.push(`  not measured in this run: ${diff.unmeasured.join(', ')}`);
+  }
   return parts.length > 0 ? parts.join('\n') : 'pin: nothing comparable';
 }
 

@@ -5,7 +5,7 @@
 import { basename, relative, resolve } from 'node:path';
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import {
-  BUFFER_MPX_TOLERANCE, VERDICT_MARK, band, dwellFloorMs, recordCountRefusal,
+  BUFFER_MPX_TOLERANCE, VERDICT_MARK, band, dwellFloorMs, positionRefusal, recordCountRefusal,
   type DiffRefusal, type Verdict,
 } from './diff-pure';
 import { gatingClock, type DwellMetric, type StateGuard } from './dwell/dwell-pure';
@@ -52,6 +52,9 @@ export interface PinRow {
   readonly bufferMpx: number;
   /** The scene the row priced: star records the page had loaded. */
   readonly recordCount: number;
+  /** Where the context sat in the pin run, 1-based; a row compares only
+   *  against one taken at the same position (`../diff-pure.ts`). */
+  readonly position: number;
   readonly idleRafMs: number | null;
   readonly method: string;
   readonly wall: PinClock & { readonly vsyncClamped: boolean };
@@ -105,6 +108,9 @@ export interface PinDiff {
   readonly refusedWholeRun: string | null;
   readonly rows: readonly PinVerdictRow[];
   readonly refusals: readonly DiffRefusal[];
+  /** Pin rows this run did not visit. Listed, never a refusal: a Tier 1 run
+   *  measures two of the pin's ten and answers for those two. */
+  readonly unmeasured: readonly string[];
 }
 
 const ANGLE_METAL_MODEL = /ANGLE \([^,]+, ANGLE Metal Renderer: ([^,]+),/;
@@ -156,6 +162,7 @@ function rowRefusal(record: ScenarioRecord): string | null {
   if (record.bufferMpx === null) return 'no drawing buffer recorded';
   if (record.backend.actual === null) return 'the backend never booted';
   if (record.recordCount === null) return 'no catalogue record count recorded — the rows cannot be placed on a scene';
+  if (record.position == null) return 'no run position recorded — the row cannot be placed in a load history';
   if (gatingClock(record.dwell).clock.stateGuard === 'trending') {
     return 'the dwell trended across its quarters — it straddled a load-state transition';
   }
@@ -194,6 +201,7 @@ export function pinFromRun(file: PerfFile, source: PinSource): { pin: PinFile | 
       backend: record.backend.actual!,
       bufferMpx: record.bufferMpx!,
       recordCount: record.recordCount!,
+      position: record.position!,
       idleRafMs: record.idleRafMs,
       method: record.method!,
       wall: { ...clockOf(dwell.stats), vsyncClamped: dwell.stats.vsyncClamped },
@@ -291,58 +299,62 @@ function compareRow(pinned: PinRow, record: ScenarioRecord): PinVerdictRow {
 
 /**
  * A run against the pin. The refusals are the point as much as the rows:
- * a different GPU, a headed run, a resized buffer or a context that
- * straddled the load transition produce a table that looks like a
- * comparison and is not.
+ * a different GPU, a headed run, a resized buffer, a context that
+ * straddled the load transition or one taken at another position in its
+ * run produce a table that looks like a comparison and is not.
+ *
+ * Walks the RUN's rows, not the pin's: a Tier 1 run visits two of the
+ * pin's ten contexts and answers for those two, so a pin row it never
+ * measured is listed as such rather than refused. A row the run measured
+ * and the pin lacks is refused — the pin is the whole canon, so that row
+ * has nothing to be judged against.
  */
 export function compareToPin(pin: PinFile, current: PerfFile): PinDiff {
   const slug = adapterSlug(current.run.gpu);
+  const refused = (why: string): PinDiff => ({ refusedWholeRun: why, rows: [], refusals: [], unmeasured: [] });
   if (slug !== pin.adapterSlug) {
-    return {
-      refusedWholeRun: `adapter '${slug ?? 'none'}' vs pin '${pin.adapterSlug}' — a frame time is a property of the GPU that drew it`,
-      rows: [],
-      refusals: [],
-    };
+    return refused(`adapter '${slug ?? 'none'}' vs pin '${pin.adapterSlug}' — a frame time is a property of the GPU that drew it`);
   }
   if (!current.run.browser.headless) {
-    return { refusedWholeRun: 'a headed run — the pin is headless, and the two never compare', rows: [], refusals: [] };
+    return refused('a headed run — the pin is headless, and the two never compare');
   }
   const rows: PinVerdictRow[] = [];
   const refusals: DiffRefusal[] = [];
-  const byKey = new Map(current.scenarios.map((s) => [pinKey(s), s]));
-  for (const pinned of pin.rows) {
-    const record = byKey.get(pinned.key);
-    if (record === undefined) {
-      refusals.push({ key: pinned.key, reason: 'not measured in this run' });
+  const pinnedByKey = new Map(pin.rows.map((row) => [row.key, row]));
+  const visited = new Set<string>();
+  for (const record of current.scenarios) {
+    const key = pinKey(record);
+    visited.add(key);
+    const pinned = pinnedByKey.get(key);
+    if (pinned === undefined) {
+      refusals.push({ key, reason: 'not in the pin — nothing to judge it against' });
       continue;
     }
-    const why = rowRefusal(record);
+    const why = rowRefusal(record)
+      ?? bufferRefusal(pinned.bufferMpx, record.bufferMpx!)
+      ?? recordCountRefusal(pinned.recordCount, record.recordCount)
+      ?? positionRefusal(pinned.position, record.position);
     if (why !== null) {
-      refusals.push({ key: pinned.key, reason: why });
-      continue;
-    }
-    const drift = Math.abs(record.bufferMpx! - pinned.bufferMpx) / pinned.bufferMpx;
-    if (drift > BUFFER_MPX_TOLERANCE) {
-      refusals.push({
-        key: pinned.key,
-        reason: `buffer ${pinned.bufferMpx} vs ${record.bufferMpx} Mpx (${(drift * 100).toFixed(1)} % apart)`,
-      });
-      continue;
-    }
-    const scene = recordCountRefusal(pinned.recordCount, record.recordCount);
-    if (scene !== null) {
-      refusals.push({ key: pinned.key, reason: scene });
+      refusals.push({ key, reason: why });
       continue;
     }
     rows.push(compareRow(pinned, record));
   }
-  return { refusedWholeRun: null, rows, refusals };
+  const unmeasured = pin.rows.map((row) => row.key).filter((key) => !visited.has(key));
+  return { refusedWholeRun: null, rows, refusals, unmeasured };
+}
+
+function bufferRefusal(pinnedMpx: number, currentMpx: number): string | null {
+  const drift = Math.abs(currentMpx - pinnedMpx) / pinnedMpx;
+  if (drift <= BUFFER_MPX_TOLERANCE) return null;
+  return `buffer ${pinnedMpx} vs ${currentMpx} Mpx (${(drift * 100).toFixed(1)} % apart)`;
 }
 
 /**
  * Whether a comparison fails the run. A per-row refusal counts: a run whose
  * rows were every one refused — all trending, all resized — would otherwise
- * print a table with no `✗` in it and exit 0, which reads as a pass.
+ * print a table with no `✗` in it and exit 0, which reads as a pass. An
+ * unmeasured pin row does not: the run answers for the rows it visited.
  */
 export function pinDiffFails(diff: PinDiff): boolean {
   return diff.refusedWholeRun !== null

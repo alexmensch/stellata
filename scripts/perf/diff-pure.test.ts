@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import {
   BUFFER_MPX_TOLERANCE, DWELL_FLOOR_FRACTION, DWELL_FLOOR_MS, RECORD_COUNT_TOLERANCE,
-  diffRuns, dwellFloorMs, type RunDiff,
+  diffRuns, dwellFloorMs, positionRefusal, type RunDiff,
 } from './diff-pure';
 import type { DwellSummary } from './dwell/dwell-pure';
 import { PERF_SCHEMA, type PerfFile, type ScenarioRecord } from './schema';
@@ -56,6 +56,7 @@ function scenario(overrides: Partial<ScenarioRecord> = {}): ScenarioRecord {
     buffer: { width: 2560, height: 1600 },
     bufferMpx: 4.096,
     recordCount: RECORDS,
+    position: 1,
     mode: 'differential',
     method: 'raf-delta',
     params: {},
@@ -418,6 +419,28 @@ describe('diffRuns — refusals', () => {
     const diff = diffRuns(withDwell(dwellStats(30)), withDwell(dwellStats(30), { recordCount: shrunk }));
     expect(diff.rows).toEqual([]);
     expect(diff.refusals[0].reason).toContain('% apart');
+  });
+
+  // The measured case: mw120|webgpu read 21.950 ms as 8th of 10 behind
+  // cool-downs and 21.464 as 1st of 2 cold, on identical render code, while
+  // two runs of the same shape agreed to 0.019. Position is the variable.
+  it('refuses a row taken at another position in its run', () => {
+    const diff = diffRuns(
+      withDwell(dwellStats(16.7), { position: 8 }, dwellStats(21.95)),
+      withDwell(dwellStats(16.7), { position: 1 }, dwellStats(21.464)),
+    );
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('run position 8 vs 1');
+    expect(positionRefusal(2, 2)).toBeNull();
+  });
+
+  it('refuses a row whose run did not record its position, on either side', () => {
+    const placed = withDwell(dwellStats(30));
+    const unplaced = withDwell(dwellStats(30), { position: null });
+    for (const [a, b] of [[placed, unplaced], [unplaced, placed]]) {
+      expect(diffRuns(a, b).refusals[0].reason).toContain('cannot be placed in a load history');
+    }
+    expect(positionRefusal(undefined, 1)).toContain('unknown vs 1');
   });
 
   it('refuses a comparison where either side recorded no record count', () => {

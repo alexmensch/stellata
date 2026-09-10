@@ -5,6 +5,7 @@
 import type { GpuFrameMethod } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import type { AdapterProbe } from './schema';
 import type { BackendRequest } from './args';
+import { BACKENDS, type Backend, type ScenarioName } from './scenarios';
 
 /** Names a renderer that is not the GPU. Nothing measured on one counts, so
  *  a match aborts the whole run rather than failing one scenario. */
@@ -35,6 +36,23 @@ export function methodFor(args: { backend: BackendRequest; method?: GpuFrameMeth
       'share, and a table mixing timer-query with timestamp compares two instruments. ' +
       'Pass --method explicitly to override.',
   };
+}
+
+export interface ContextPlan {
+  readonly name: ScenarioName;
+  readonly backend: Backend;
+}
+
+/**
+ * The contexts a run visits, in order: backend-major, `BACKENDS` order, the
+ * scenarios as given within each. Backend-major so that `--scenario all
+ * --backend both` opens with the Tier 1 vantages on the gated backend — the
+ * positions a Tier 1 run visits them at, which is what lets its rows compare
+ * against the pin's (`pins/README.md` § Run position).
+ */
+export function planContexts(scenarios: readonly ScenarioName[], request: BackendRequest): readonly ContextPlan[] {
+  const backends: readonly Backend[] = request === 'both' ? BACKENDS : [request];
+  return backends.flatMap((backend) => scenarios.map((name) => ({ name, backend })));
 }
 
 /** The offending renderer string, or null. A fallback adapter counts even

@@ -117,8 +117,9 @@ median as a verdict is the mistake the pin exists to prevent.
 passes, buffers, draw counts, the catalogue or the instrument — carries the
 `--against-pin` table, the pin commit, the adapter slug and the state-guard
 line per context, and re-takes the pin in the same PR. Tier 1 — per-frame
-code touched, structure unchanged — carries a `--baseline` table over
-mw120|webgpu and sol|webgpu, and names the run it read against. Tier 0
+code touched, structure unchanged — carries the `--against-pin` table over
+mw120|webgpu and sol|webgpu alone, the other eight rows listed as not
+measured, and names the pin commit it read against. Tier 0
 carries a reachability argument in prose and no table. The claim worth
 auditing is the tier itself: a diff that reaches a pass or a draw count is
 Tier 2 however small it looks, and under-claiming the tier is the way this

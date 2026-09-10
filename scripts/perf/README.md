@@ -58,7 +58,7 @@ scripts/perf/
 ## Invocation
 
 ```
-pnpm run perf -- [--scenario sol,earth,mw50,mw120,lg | all] [--backend webgl2|webgpu|both]
+pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgl2|webgpu|both]
                  [--mode differential|probe|dwell|sweep] [--passes a,b]
                  [--method timer-query|timestamp|raf-delta]
                  [--budget-ms N] [--dwell-frames N] [--warmup-frames N] [--settle-frames N] [--no-interleave]
@@ -96,6 +96,13 @@ end to end. It composes with the `#renderer=webgl2` a WebGL2 boot already
 carries (`&`-joined; the app reads every switch off one hash). `--url`
 cannot carry it: the base is prefixed with `/v/<blob>/`, so a fragment
 there lands mid-path.
+
+**Contexts run backend-major — every WebGPU context, then every WebGL2
+one — with the scenarios in the order given; `all` is the canon order
+mw120, sol, earth, mw50, lg.** So `--scenario all --backend both` opens
+with mw120|webgpu then sol|webgpu, the two contexts a Tier 1 run visits,
+in the same order. That is what lets Tier 1 compare against the pin:
+§ Comparing against a baseline, run position.
 
 **`--backend both` runs each scenario twice, in separate contexts, and pins
 `--method raf-delta`.** The two backends' best clocks are different
@@ -234,8 +241,9 @@ target rebuild the resize forces, since the clock ramp was already paid.
 `run` (timestamps, url, argv, the commit pair and dirty flag, browser and its
 switches, the adapter probe, host) plus one record per scenario × backend
 (backend requested and actual, viewport, buffer and Mpx, catalogue record
-count, mode, method, params, settle time, the mode's own block, forwarded
-console, page errors, `tainted` and `failed`).
+count, the context's 1-based position in the run, mode, method, params,
+settle time, the mode's own block, forwarded console, page errors,
+`tainted` and `failed`).
 
 **Raw samples are always retained** — every rAF delta and every GPU sample,
 not just the summary. A re-analysis with a different estimator has to be
@@ -307,9 +315,24 @@ a differing adapter string refuses the whole run (a differing schema never
 reaches the diff — see § JSON output); a differing method or mode, a buffer
 more than 1 % apart, a **record count** more than 1 % apart or absent on
 either side (a row priced against a different catalogue is not a
-comparison), a failed or tainted scenario, a dwell clamped or trending on
+comparison), a **run position** that differs or is absent on either side
+(below), a failed or tainted scenario, a dwell clamped or trending on
 its gating clock, a mismatched GPU stream, a `cadenceBound` row (either
 side), or a row missing from one side refuses that key.
+
+**Run position: two rows compare only when their contexts sat at the same
+place in their runs.** The GPU's load history before a context moves its
+frame time on unchanged code, and each run's own state guard cannot see
+it — the guard compares quarters within one dwell, and both runs read
+steady. Measured: mw120|webgpu at 21.950 ms as 8th of 10 behind 120 s
+cool-downs against 21.464 as 1st of 2 cold, 0.486 ms and twice the floor,
+while two runs of the same shape agreed to 0.019 ms. A cool-down does not
+reset it: sol at 2nd of 10 behind 120 s idle matched sol at 2nd of 2 with
+none to 2e-6 ms, so position is the variable and idle time is not. Every
+record carries `position`, and a file written before the field existed
+refuses as an absent record count does. The same refusal applies against
+the pin (`pins/README.md` § Run position), which is why the canon order
+opens with the Tier 1 vantages (§ Invocation).
 
 The key carries the backend, so a vantage the other run measured on the
 *other* backend says exactly that rather than reporting itself absent.
@@ -317,10 +340,14 @@ Sweeps are never diffed — a slope is not a cost.
 
 ## Pinning
 
-`--mode dwell --json <run> --pin pins/<slug>.json` summarises a run as the
-committed perf pin; `--against-pin <path>` prints the verdicts and exits 1 on
-a `✗` or a refused row. Metric, floor, ceiling, refusals: `pins/README.md`.
-When a PR must run it and what a mark means: `RELEASING.md` § Perf pin.
+`--mode dwell --scenario all --backend both --json <run> --pin
+pins/<slug>.json` summarises a run as the committed perf pin — `--pin`
+refuses anything short of the whole canon on both backends, since a pin
+missing a row narrows the gate silently. `--against-pin <path>` prints the
+verdicts for the rows this run measured, lists the pin rows it did not,
+and exits 1 on a `✗` or a refused row; a Tier 1 run measures two of the
+ten. Metric, floor, ceiling, refusals: `pins/README.md`. When a PR must run
+it and what a mark means: `RELEASING.md` § Perf pin.
 
 ## Traps
 

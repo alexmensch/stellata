@@ -123,19 +123,21 @@ information.
   the gate asks for, an answer is.
 - **Tier 1 — per-frame code touched, no change to draw counts or pass
   structure.** `--mode dwell --scenario mw120,sol --backend webgpu
-  --baseline <a recent run>`. Two contexts, ~4 min, one arm. Direction
-  against a band is what this tier claims, and two vantages claim it
-  twice: mw120|webgpu carries a sound GPU stream, and sol|webgpu is the
-  second witness — the vantage that reproduces best, 22.421201 against
-  22.421199 ms on two independent cold runs, and the one a first load
-  actually shows. Not the dearest gated row: that is mw50|webgpu at
-  31.936, which cannot be pinned at all on `apple-m4-metal-3`
-  (stellata-8cg.54) and refused two cold runs on `trending`. A witness
-  that refuses is not a witness. Paste the `--baseline` table and say
-  which run it was read against. **`--baseline` prints; it does not set
-  the exit code** — a Tier 1 run exits 0 with a `✗` in its table, so the
-  verdict is read, never inferred from the status. Only `--against-pin`
-  fails a run.
+  --against-pin scripts/perf/pins/<slug>.json`. Two contexts, ~4 min, one
+  arm, read against the committed pin: the pin run opens with exactly
+  those two contexts in that order (§ Run position), so its rows for them
+  were taken at the positions Tier 1 takes them at. Direction against a
+  band is what this tier claims, and two vantages claim it twice:
+  mw120|webgpu carries a sound GPU stream, and sol|webgpu is the second
+  witness — the vantage that reproduces best, 22.421201 against 22.421199
+  ms on two independent cold runs, and the one a first load actually
+  shows. Not the dearest gated row: that is mw50|webgpu at 31.936, which
+  cannot be pinned at all on `apple-m4-metal-3` (stellata-8cg.54) and
+  refused two cold runs on `trending`. A witness that refuses is not a
+  witness. Paste the table; the eight pin rows the run did not visit print
+  as `not measured` and fail nothing. A `✗` exits 1 and owes an
+  `accepted:` line exactly as it does at Tier 2, and the pin is left where
+  it was.
 - **Tier 2 — passes, buffers, draw counts, the catalogue, or the
   instrument itself.** The full cold sweep, and it re-takes the pin:
   `--mode dwell --scenario all --backend both --cooldown-ms 120000
@@ -152,14 +154,28 @@ owed. Say which of the two a diff is when it touches the runner, and the
 tier follows. First applied by stellata-8cg.49.21 itself, which rewrote
 `--baseline`'s verdict and claimed Tier 0 on exactly this ground.
 
-**Tier 1 needs no run index and no filename convention.** "A recent run on
-this record set" is enforced by refusal rather than bookkeeping:
-`--baseline` refuses a run whose record count is more than 1 % away, and
-equally a differing adapter, buffer, method or mode. So any recent run can
-be passed and the runner rejects the wrong one. A committed index and a
-`.perf-runs/` naming convention were both declined — the index for being a
-second thing to keep current, the convention for being unverifiable, since
-`.perf-runs/` is gitignored and lives in the main checkout only.
+**Tier 1 needs no run index and no filename convention.** Its baseline is
+the committed pin — on landed code by construction, and the same file
+every Tier 2 PR re-takes — so there is no "recent run" to find. A run that
+cannot be compared is refused rather than trusted: a differing adapter,
+buffer, method, mode or record count, and a row taken at another position
+in its run (below). A committed index and a `.perf-runs/` naming convention
+were both declined — the index for being a second thing to keep current,
+the convention for being unverifiable, since `.perf-runs/` is gitignored
+and lives in the main checkout only.
+
+**Run position.** Where a context sits in its run moves its frame time on
+unchanged code: mw120|webgpu read 21.950 ms as 8th of 10 behind 120 s
+cool-downs and 21.464 as 1st of 2 cold — 0.486 ms, twice the floor — while
+two runs of the same shape agreed to 0.019 ms, and each run's own state
+guard read steady throughout. A cool-down does not reset it: sol at 2nd of
+10 behind 120 s idle matched sol at 2nd of 2 with none to 2e-6 ms. So
+every row records its position, both gates refuse a row whose position
+differs, and the canon order puts the Tier 1 vantages first on the gated
+backend — `--backend both` runs WebGPU contexts before WebGL2, and `all`
+expands mw120, sol, earth, mw50, lg — so the pin run and the Tier 1 run
+share their first two contexts. Reordering either constant re-takes the
+pin (stellata-8cg.49.27).
 
 **Tier 1 reads the GPU-stream p50, the same metric the pin gates on.** Its
 two vantages are exactly the ones a wall-clock row cannot resolve — sol's
@@ -172,10 +188,8 @@ in `scripts/perf/diff-pure.ts` that both gates apply. Tier 1 may not gate
 tighter than the Tier 2 it feeds, or it marks moves Tier 2 calls
 unresolved — which is what an unfloored band did, two sigma of the
 medians' own scatter being about 0.02 ms at 240 frames on a steady
-vantage. A run-condition difference clears that easily: the same vantage
-read 0.486 ms apart between a context sitting 7th of 10 behind cool-downs
-and 1st of 2 cold (stellata-8cg.49.27, still open on whether Tier 1's run
-shape should be pinned as well).
+vantage. The floor covers sampling; the position refusal above covers
+the run-condition difference that exceeds it.
 
 **What is pinned.** `--mode dwell` at the five canon vantages (sol, earth,
 mw50, mw120, lg), 1280×800 at dpr 2 (4.096 Mpx), 240 frames, `raf-delta`,
@@ -253,7 +267,7 @@ moved in between:
   work (stellata-8cg.49.24).
 
 **What a mark means.** A row is `✗` when its GPU-stream p50 moves past the
-`--baseline` band *and* past `max(0.25 ms, 1 %)` of the pinned value, or
+pair's two-sigma band *and* past `max(0.25 ms, 1 %)` of the pinned value, or
 when it crosses the ceiling — 33.4 ms of GPU-stream p50 at any canon
 vantage, two 60 Hz intervals of hardware time — whatever the band says
 and whether or not the vantage is gated. mw50 at 31.936 is the nearest
@@ -317,8 +331,8 @@ refusal would leave that pin refusing every row of the next render-path PR.
 which tier it is claiming. Tier 2: the `--against-pin` table, the pin
 commit it was read against, the adapter slug, the state-guard line per
 context, and one `accepted: <row> <reason> (<bead-id>)` line per `✗`.
-Tier 1: the `--baseline` table and the run it was read against. Tier 0:
-the reachability argument, no table.
+Tier 1: the `--against-pin` table over its two rows and the pin commit it
+was read against. Tier 0: the reachability argument, no table.
 
 The `perf-section-guard` workflow fails the PR when the section is
 missing, empty, or has a `✗` without an `accepted:` line — CI has no GPU,
