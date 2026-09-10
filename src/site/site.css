@@ -1,23 +1,48 @@
 /* Every page of the public content site. The app's chrome is the reference;
-   this scales it up to reading sizes and adds nothing it does not have. */
+   this scales it up to reading sizes and adds nothing it does not have.
+   Organised CUBE-style — see src/site/README.md § The stylesheet. */
 
 @import '../design-tokens.css';
 
-:root {
-  --measure: 64ch;
-  --gutter: clamp(20px, 5vw, 56px);
-  --column: 1100px;
-  --rule: 1px solid var(--border);
+/* ── Tokens ─────────────────────────────────────────────────────────── */
+/* Fluid Utopia scales, 320px → 1440px. Generated, not tuned by hand:
+   README § The scales carries the parameters and how to regenerate. */
 
-  --type-hero: clamp(29px, 5.1vw, 50px);
-  --type-title: clamp(19px, 2.1vw, 25px);
-  --type-lead: clamp(15px, 1.5vw, 18px);
-  --type-body: clamp(14.5px, 1.1vw, 16px);
-  --type-small: clamp(12.5px, 0.9vw, 13.5px);
-  --type-label: 10.5px;
+:root {
+  --step--2: clamp(0.6944rem, 0.6643rem + 0.1508vw, 0.8rem);
+  --step--1: clamp(0.8333rem, 0.7857rem + 0.2381vw, 1rem);
+  --step-0: clamp(1rem, 0.9286rem + 0.3571vw, 1.25rem);
+  --step-1: clamp(1.2rem, 1.0964rem + 0.5179vw, 1.5625rem);
+  --step-2: clamp(1.44rem, 1.2934rem + 0.733vw, 1.9531rem);
+  --step-3: clamp(1.728rem, 1.5242rem + 1.0192vw, 2.4414rem);
+  --step-4: clamp(2.0736rem, 1.7941rem + 1.3974vw, 3.0518rem);
+  --step-5: clamp(2.4883rem, 2.1094rem + 1.8948vw, 3.8147rem);
+  --step-6: clamp(2.986rem, 2.4767rem + 2.5463vw, 4.7684rem);
+
+  --space-3xs: clamp(0.25rem, 0.2321rem + 0.0893vw, 0.3125rem);
+  --space-2xs: clamp(0.5rem, 0.4643rem + 0.1786vw, 0.625rem);
+  --space-xs: clamp(0.75rem, 0.6964rem + 0.2679vw, 0.9375rem);
+  --space-s: clamp(1rem, 0.9286rem + 0.3571vw, 1.25rem);
+  --space-m: clamp(1.5rem, 1.3929rem + 0.5357vw, 1.875rem);
+  --space-l: clamp(2rem, 1.8571rem + 0.7143vw, 2.5rem);
+  --space-xl: clamp(3rem, 2.7857rem + 1.0714vw, 3.75rem);
+  --space-2xl: clamp(4rem, 3.7143rem + 1.4286vw, 5rem);
+  --space-3xl: clamp(6rem, 5.5714rem + 2.1429vw, 7.5rem);
+  --space-s-m: clamp(1rem, 0.75rem + 1.25vw, 1.875rem);
+  --space-l-xl: clamp(2rem, 1.5rem + 2.5vw, 3.75rem);
+  --space-xl-2xl: clamp(3rem, 2.4286rem + 2.8571vw, 5rem);
+
+  --measure: 62ch;
+  --gutter: var(--space-s-m);
+  --column: 72rem;
+  --rule: 1px solid var(--border);
 }
 
-* { box-sizing: border-box; }
+/* ── Global ─────────────────────────────────────────────────────────── */
+
+* {
+  box-sizing: border-box;
+}
 
 html {
   background: var(--bg);
@@ -29,13 +54,48 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-mono);
-  font-size: var(--type-body);
-  line-height: 1.65;
+  font-size: var(--step-0);
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
-::selection {
-  background: rgba(125, 211, 252, 0.22);
+/* Every vertical gap on these pages comes from .flow, so no element brings
+   a margin of its own to argue with it. */
+h1,
+h2,
+h3,
+p,
+ul,
+dl,
+figure {
+  margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--step-5);
+}
+h2 {
+  font-size: var(--step-3);
+  letter-spacing: -0.015em;
+}
+h3 {
+  font-size: var(--step-1);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 a {
@@ -44,23 +104,124 @@ a {
   text-underline-offset: 3px;
   text-decoration-thickness: 1px;
 }
-a:hover { text-decoration: none; }
+a:hover {
+  text-decoration: none;
+}
 
 code {
   font-family: inherit;
   font-size: 0.95em;
   color: var(--accent);
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
-.after-block { margin-top: clamp(24px, 3vw, 32px); }
+::selection {
+  background: rgba(125, 211, 252, 0.22);
+}
 
 :focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: 3px;
 }
 
-img { max-width: 100%; height: auto; display: block; }
+img,
+video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── Composition ────────────────────────────────────────────────────── */
+
+.region {
+  padding-block: var(--region-space, var(--space-xl-2xl));
+}
+
+/* Vertical rhythm belongs to one rule, so no block ever needs a bespoke
+   margin: an element sets --flow-space to change the gap above itself. */
+.flow > * + * {
+  margin-block-start: var(--flow-space, var(--space-m));
+}
+.flow > h2 {
+  --flow-space: var(--space-l);
+}
+.flow > h3,
+.flow > .label {
+  --flow-space: var(--space-m);
+}
+.flow > .label + * {
+  --flow-space: var(--space-2xs);
+}
+.flow > p + p {
+  --flow-space: var(--space-s);
+}
+
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cluster-space, var(--space-s) var(--space-m));
+}
+
+.repel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2xs) var(--space-m);
+}
+
+/* Every Layout's switcher: two-up above --switcher-threshold and stacked
+   below it, decided by the CONTAINER's width rather than the viewport's.
+   The multiplier forces the calc negative — and so the basis to 100% —
+   the moment the container is narrower than the threshold. Not a magic
+   number to tidy: any smaller value stops the flip working. */
+.switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--switcher-space, var(--space-l));
+}
+.switcher > * {
+  flex-grow: 1;
+  flex-basis: calc((var(--switcher-threshold, 34rem) - 100%) * 999);
+}
+
+/* ── Utilities ──────────────────────────────────────────────────────── */
+
+.wrapper {
+  max-inline-size: var(--column);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* The app writes every category, section and unit label this way: small,
+   uppercase, widely tracked, dim. It is the single most recognisable thing
+   about its chrome, so the site says everything structural in it. */
+.label {
+  display: block;
+  font-size: var(--step--2);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+.label[data-accent] {
+  color: var(--accent);
+}
+
+.measure {
+  max-width: var(--measure);
+}
+
+.lead {
+  max-width: 54ch;
+  font-size: var(--step-1);
+  line-height: 1.5;
+  color: var(--fg);
+}
+
+.dim {
+  color: var(--fg-dim);
+}
 
 .skip-link {
   position: absolute;
@@ -68,94 +229,267 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .skip-link:focus {
   left: var(--gutter);
-  top: 10px;
-  z-index: 2;
-  padding: 8px 14px;
+  top: var(--space-2xs);
+  z-index: 3;
+  padding: var(--space-2xs) var(--space-s);
   background: var(--bg-2);
   border: 1px solid var(--border-strong);
   color: var(--fg);
   text-decoration: none;
 }
 
-.page {
-  max-width: var(--column);
-  margin: 0 auto;
-  padding: 0 var(--gutter);
-}
-
-/* ---- Labels ---- */
-/* The app writes every category, section and unit label this way: small,
-   uppercase, widely tracked, dim. It is the single most recognisable thing
-   about its chrome, so the site says everything structural in it. */
-.label {
-  font-size: var(--type-label);
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--fg-dim);
-}
-
-/* ---- Masthead ---- */
+/* ── Block: masthead ───────────────────────────────────────────────── */
 
 .masthead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px 24px;
-  flex-wrap: wrap;
-  padding: 22px 0 18px;
+  padding-block: var(--space-s);
   border-bottom: var(--rule);
 }
 .wordmark {
-  font-size: 13px;
+  font-size: var(--step--1);
   letter-spacing: 0.34em;
   text-transform: uppercase;
   color: var(--fg);
   text-decoration: none;
 }
-.wordmark:hover { color: var(--accent); }
-.masthead-links {
-  display: flex;
-  align-items: baseline;
-  gap: 18px;
-  font-size: var(--type-small);
+.wordmark:hover {
+  color: var(--accent);
 }
-.masthead-links a { color: var(--fg-dim); }
-.masthead-links a:hover { color: var(--accent); }
+.masthead nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2xs) var(--space-m);
+  font-size: var(--step--1);
+}
+.masthead nav a {
+  color: var(--fg-dim);
+}
+.masthead nav a:hover {
+  color: var(--accent);
+}
 
-/* ---- Hero ---- */
+/* ── Block: banner ─────────────────────────────────────────────────── */
+/* The masthead rides over the hero image so the imagery is the first thing
+   on the page. Its own scrim, not the hero's — the hero's gradient is
+   anchored to the bottom where the heading sits. */
+
+.banner {
+  position: relative;
+}
+.masthead[data-overlay] {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  border-bottom: none;
+  background: linear-gradient(to bottom, rgba(7, 9, 18, 0.72), transparent);
+}
+
+/* ── Block: hero ───────────────────────────────────────────────────── */
 
 .hero {
-  padding: clamp(48px, 9vw, 104px) 0 clamp(36px, 5vw, 56px);
+  display: grid;
+  min-height: clamp(30rem, 82svh, 48rem);
 }
-.hero .label { display: block; margin-bottom: clamp(20px, 3vw, 32px); }
-.hero h1 {
-  max-width: 30ch;
-  margin: 0 0 clamp(20px, 2.6vw, 30px);
-  font-size: var(--type-hero);
-  font-weight: 500;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+.hero > * {
+  grid-area: 1 / 1;
+}
+.hero-media {
+  display: grid;
+  align-content: start;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 70% 15%, rgba(125, 211, 252, 0.09), transparent 60%),
+    radial-gradient(90% 70% at 20% 80%, rgba(125, 211, 252, 0.05), transparent 55%),
+    var(--bg);
+}
+.hero-media > img,
+.hero-media > video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* The scrim spans the whole image; the wrapper inside it holds the text to
+   the column. One element cannot do both — a max-width on the scrim leaves
+   the image un-dimmed either side of it on a wide screen. */
+.hero-copy {
+  align-self: end;
+  width: 100%;
+  padding-block: var(--space-xl) var(--space-l-xl);
+  background: linear-gradient(
+    to top,
+    rgba(7, 9, 18, 0.92) 15%,
+    rgba(7, 9, 18, 0.55) 60%,
+    transparent
+  );
+}
+.hero-copy h1 {
+  max-width: 26ch;
+}
+.hero-copy .lead {
   color: var(--fg);
 }
-.lead {
-  max-width: var(--measure);
-  margin: 0 0 18px;
-  font-size: var(--type-lead);
-  line-height: 1.62;
-}
-.lead:last-of-type { margin-bottom: clamp(28px, 4vw, 40px); }
 
-.actions {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
+/* ── Block: readout ────────────────────────────────────────────────── */
+/* Hairlines come from a 1px grid gap showing the border colour through, so
+   dividers stay exact however the cells wrap. */
+
+.readout-band {
+  --region-space: var(--space-l);
 }
+.readout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: var(--rule);
+}
+.readout-cell {
+  display: grid;
+  gap: var(--space-3xs);
+  padding: var(--space-xs) var(--space-s) var(--space-s);
+  background: var(--bg);
+}
+.readout-value {
+  font-size: var(--step-1);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+
+/* ── Block: section ────────────────────────────────────────────────── */
+
+.section {
+  border-top: var(--rule);
+}
+.section[data-tight] {
+  --region-space: var(--space-l-xl);
+}
+.section-head {
+  --flow-space: var(--space-2xs);
+  max-width: 38ch;
+}
+
+/* ── Block: claim ──────────────────────────────────────────────────── */
+
+.claims {
+  --flow-space: var(--space-l);
+}
+.claim {
+  padding-block-start: var(--space-m);
+  border-top: var(--rule);
+}
+.claim:first-child {
+  padding-block-start: 0;
+  border-top: none;
+}
+.claim h3 {
+  max-width: 34ch;
+}
+.claim p {
+  max-width: var(--measure);
+  font-size: var(--step--1);
+  color: var(--fg-dim);
+}
+
+/* ── Block: sight ──────────────────────────────────────────────────── */
+/* The observing list, media-led: the image IS the link into the model at
+   that view, so the whole plate is the anchor. Alternate sides by
+   reversing the flex direction — the switcher wraps to one line per item
+   below its threshold, where a reversed row still stacks in DOM order, so
+   the media never lands under its own caption. */
+
+.sights {
+  --flow-space: var(--space-xl);
+}
+.sight {
+  --switcher-threshold: 42rem;
+  --switcher-space: var(--space-l);
+  align-items: center;
+}
+.sight:nth-child(even) {
+  flex-direction: row-reverse;
+}
+.sight-copy {
+  --flow-space: var(--space-s);
+  max-width: 46ch;
+}
+.sight-copy p {
+  font-size: var(--step--1);
+  color: var(--fg-dim);
+}
+.sight-media {
+  display: block;
+  text-decoration: none;
+  border: var(--rule);
+}
+a.sight-media:hover {
+  border-color: var(--accent);
+}
+.sight-media > img,
+.sight-media > video {
+  width: 100%;
+}
+.sight-go {
+  --flow-space: var(--space-xs);
+  font-size: var(--step--1);
+  letter-spacing: 0.06em;
+}
+
+/* ── Block: plate ──────────────────────────────────────────────────── */
+/* Figures are numbered plates, captioned like an atlas rather than a
+   screenshot with a caption. */
+
+.plate {
+  margin: 0;
+}
+.plate img {
+  border: var(--rule);
+}
+.plate-caption {
+  max-width: var(--measure);
+  margin-block-start: var(--space-2xs);
+  font-size: var(--step--2);
+  line-height: 1.5;
+  color: var(--fg-dim);
+}
+
+/* The stand-in a real capture replaces. Deliberately unlovely: a dashed
+   hairline says "not final" where a styled empty box would ship unnoticed.
+   README § Sights carries the swap. */
+/* Sized by min-height rather than aspect-ratio: a ratio box clips its own
+   instructions at narrow widths, and a real <img width height> brings its
+   own ratio when it lands. */
+.holder {
+  display: grid;
+  align-content: center;
+  gap: var(--space-2xs);
+  min-height: clamp(11rem, 24vw, 17rem);
+  padding: var(--space-s);
+  border: 1px dashed var(--border-strong);
+  background: #04060d;
+  font-size: var(--step--2);
+  line-height: 1.5;
+  color: var(--fg-dim);
+}
+.holder b {
+  font-weight: 500;
+  color: var(--fg);
+}
+.holder code {
+  overflow-wrap: anywhere;
+}
+.hero-media > .holder {
+  border: none;
+  background: none;
+  opacity: 0.7;
+}
+
+/* ── Block: pill ───────────────────────────────────────────────────── */
 /* The app's warp pill, at reading size — the one rounded thing in a square
    interface, which is what makes it read as the action rather than a panel. */
+
 .pill {
-  padding: 11px 26px;
-  font-size: var(--type-small);
+  padding: var(--space-2xs) var(--space-m);
+  font-size: var(--step--1);
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--fg);
@@ -163,196 +497,24 @@ img { max-width: 100%; height: auto; display: block; }
   border: 1px solid var(--border-strong);
   border-radius: 999px;
   text-decoration: none;
+  white-space: nowrap;
 }
 .pill:hover {
   color: var(--accent);
   border-color: var(--accent);
 }
-.actions-aside {
-  font-size: var(--type-small);
+.aside {
+  font-size: var(--step--1);
   color: var(--fg-dim);
 }
-.actions-aside a { color: var(--fg-dim); }
-.actions-aside a:hover { color: var(--accent); }
-
-/* ---- Not found ---- */
-/* Short page, so it centres in the viewport rather than sitting under the
-   masthead with a screen of nothing below it. */
-.notfound {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: min(62vh, 560px);
-  padding: clamp(40px, 8vw, 88px) 0;
-}
-.notfound .label { display: block; margin-bottom: clamp(18px, 3vw, 28px); }
-.notfound h1 {
-  max-width: 26ch;
-  margin: 0 0 clamp(18px, 2.4vw, 26px);
-  font-size: var(--type-hero);
-  font-weight: 500;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  color: var(--fg);
-}
-
-/* ---- Readout strip ---- */
-/* Hairlines come from a 1px grid gap showing the border colour through, so
-   dividers stay exact however the cells wrap. */
-.readout {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1px;
-  margin: clamp(36px, 5vw, 56px) 0 0;
-  background: var(--border);
-  border: var(--rule);
-}
-.readout-cell {
-  padding: 14px 16px 15px;
-  background: var(--bg);
-}
-.readout-cell .label { display: block; margin-bottom: 5px; }
-.readout-value {
-  font-size: clamp(15px, 1.5vw, 18px);
-  font-variant-numeric: tabular-nums;
-  color: var(--fg);
-  letter-spacing: 0.01em;
-}
-.readout-note {
-  font-size: var(--type-small);
+.aside a {
   color: var(--fg-dim);
 }
-
-/* ---- Sections ---- */
-
-.section {
-  padding: clamp(44px, 6vw, 76px) 0;
-  border-top: var(--rule);
-}
-.section-index {
-  display: block;
-  margin-bottom: 14px;
-  font-size: var(--type-label);
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
+.aside a:hover {
   color: var(--accent);
 }
-.section h2 {
-  max-width: 34ch;
-  margin: 0 0 clamp(18px, 2.4vw, 26px);
-  font-size: var(--type-title);
-  font-weight: 500;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
-  color: var(--fg);
-}
-.section > p {
-  max-width: var(--measure);
-  margin: 0 0 16px;
-}
-.section > p:last-child { margin-bottom: 0; }
 
-@media (min-width: 900px) {
-  /* The index hangs in the left margin, the way a specification numbers its
-     clauses. Below this width it sits above the heading instead. */
-  .section {
-    display: grid;
-    grid-template-columns: 8rem 1fr;
-    column-gap: 3rem;
-  }
-  .section-index { grid-column: 1; grid-row: 1; margin: 0; }
-  .section > :not(.section-index) { grid-column: 2; }
-}
-
-/* ---- The three claims ---- */
-
-.claim {
-  display: grid;
-  grid-template-columns: 3.5rem 1fr;
-  column-gap: 1.5rem;
-  padding: clamp(22px, 3vw, 30px) 0;
-  border-top: var(--rule);
-}
-.claim:first-of-type { border-top: none; padding-top: 0; }
-.claim-index {
-  font-size: var(--type-small);
-  font-variant-numeric: tabular-nums;
-  color: var(--accent);
-  letter-spacing: 0.1em;
-}
-.claim h3 {
-  max-width: 40ch;
-  margin: 0 0 12px;
-  font-size: clamp(16px, 1.5vw, 19px);
-  font-weight: 500;
-  line-height: 1.35;
-  color: var(--fg);
-}
-.claim p {
-  max-width: var(--measure);
-  margin: 0 0 12px;
-}
-.claim p:last-child { margin-bottom: 0; }
-.claim-body { grid-column: 2; }
-
-@media (max-width: 560px) {
-  .claim { grid-template-columns: 1fr; row-gap: 8px; }
-  .claim-body { grid-column: 1; }
-}
-
-/* ---- Plates ---- */
-/* Figures are numbered plates, captioned like an atlas: what the view is,
-   and the share URL that reproduces it. */
-.plate {
-  margin: clamp(28px, 4vw, 40px) 0 0;
-}
-.plate img {
-  width: 100%;
-  border: var(--rule);
-}
-.plate-caption {
-  display: flex;
-  gap: 8px 16px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-  font-size: var(--type-small);
-  color: var(--fg-dim);
-  line-height: 1.55;
-}
-.plate-caption > span { flex: 1 1 22ch; }
-.plate-caption .label { flex: 0 0 auto; }
-
-/* The stand-in a real capture replaces. Deliberately unlovely: a dashed
-   hairline says "not final" where a styled empty box would ship unnoticed.
-   src/site/home/README.md § Plates carries the swap. */
-.plate-holder {
-  display: grid;
-  place-items: center;
-  aspect-ratio: 16 / 9;
-  padding: clamp(20px, 4vw, 44px);
-  border: 1px dashed var(--border-strong);
-  background: #000;
-}
-.plate-spec {
-  max-width: 56ch;
-  font-size: var(--type-small);
-  line-height: 1.6;
-  color: var(--fg-dim);
-}
-.plate-spec .label { display: block; margin-bottom: 10px; }
-.plate-spec b {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 500;
-  color: var(--fg);
-}
-.plate-spec code {
-  font-family: inherit;
-  color: var(--accent);
-  word-break: break-all;
-}
-
-/* ---- Source table ---- */
+/* ── Block: sources table ──────────────────────────────────────────── */
 
 .table-scroll {
   overflow-x: auto;
@@ -361,12 +523,12 @@ img { max-width: 100%; height: auto; display: block; }
 .sources {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--type-small);
+  font-size: var(--step--1);
   text-align: left;
 }
 .sources th {
-  padding: 10px 16px;
-  font-size: var(--type-label);
+  padding: var(--space-2xs) var(--space-s);
+  font-size: var(--step--2);
   font-weight: normal;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -375,90 +537,90 @@ img { max-width: 100%; height: auto; display: block; }
   white-space: nowrap;
 }
 .sources td {
-  padding: 12px 16px;
+  padding: var(--space-xs) var(--space-s);
   border-bottom: var(--rule);
   vertical-align: top;
-  line-height: 1.6;
+  line-height: 1.55;
+  color: var(--fg-dim);
 }
-.sources tr:last-child td { border-bottom: none; }
+.sources tr:last-child td {
+  border-bottom: none;
+}
 .sources td:first-child {
   color: var(--fg);
   min-width: 15ch;
 }
 .sources td:nth-child(2) {
-  color: var(--fg-dim);
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
 }
-.sources td:last-child { color: var(--fg-dim); }
 
-/* ---- Observing list ---- */
-/* Two columns of terse entries, flowing like a printed observing list
-   rather than tiling as cards. */
-.tries {
-  margin: 0;
-  padding: 0;
-}
-@media (min-width: 760px) {
-  .tries { columns: 2; column-gap: 3rem; }
-}
-.try {
-  break-inside: avoid;
-  padding: 16px 0;
-  border-top: var(--rule);
-}
-.try:first-child { border-top: none; padding-top: 0; }
-.try dt {
-  margin: 0 0 4px;
-  color: var(--accent);
-  letter-spacing: 0.02em;
-}
-.try dd {
-  margin: 0;
-  font-size: var(--type-small);
-  color: var(--fg-dim);
-  line-height: 1.62;
-}
-
-/* ---- Plain hairline list ---- */
+/* ── Block: spec list ──────────────────────────────────────────────── */
 
 .spec-list {
   margin: 0;
   padding: 0;
   list-style: none;
-  max-width: var(--measure);
 }
 .spec-list li {
-  padding: 13px 0;
+  padding-block: var(--space-xs);
   border-top: var(--rule);
-  font-size: var(--type-small);
-  line-height: 1.62;
+  font-size: var(--step--1);
+  line-height: 1.55;
   color: var(--fg-dim);
 }
-.spec-list li:first-child { border-top: none; padding-top: 0; }
+.spec-list li:first-child {
+  border-top: none;
+  padding-block-start: 0;
+}
 .spec-list b {
   font-weight: 500;
   color: var(--fg);
 }
 
-/* ---- Footer ---- */
+/* ── Block: requirement ────────────────────────────────────────────── */
 
-.footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px 32px;
-  flex-wrap: wrap;
-  padding: 26px 0 40px;
-  border-top: var(--rule);
-  font-size: var(--type-small);
+.requirements {
+  --switcher-threshold: 32rem;
+  --switcher-space: var(--space-l);
+}
+.requirement {
+  --flow-space: var(--space-2xs);
+  padding-block-start: var(--space-xs);
+  border-top: 1px solid var(--border-strong);
+}
+.requirement p {
+  max-width: 40ch;
+  font-size: var(--step--1);
   color: var(--fg-dim);
 }
-.footer a { color: var(--fg-dim); }
-.footer a:hover { color: var(--accent); }
-.footer-links {
-  display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
+
+/* ── Block: footer ─────────────────────────────────────────────────── */
+
+.footer {
+  padding-block: var(--space-m) var(--space-l);
+  border-top: var(--rule);
+  font-size: var(--step--1);
+  color: var(--fg-dim);
 }
-.footer-version { font-variant-numeric: tabular-nums; }
+.footer a {
+  color: var(--fg-dim);
+}
+.footer a:hover {
+  color: var(--accent);
+}
+.footer-version {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Block: not found ──────────────────────────────────────────────── */
+/* Short page, so it centres in the viewport rather than sitting under the
+   masthead with a screen of nothing below it. */
+
+.notfound {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: min(62svh, 35rem);
+}
