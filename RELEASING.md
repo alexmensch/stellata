@@ -177,8 +177,8 @@ moved in between:
 `--baseline` band *and* past `max(0.25 ms, 1 %)` of the pinned value, or
 when it crosses the ceiling — 33.4 ms of GPU-stream p50 at any canon
 vantage, two 60 Hz intervals of hardware time — whatever the band says
-and whether or not the vantage is gated. mw50 at 32.121 is the nearest
-row today, 1.28 ms under. `✓` is cheaper, `~` is not resolved — not "no
+and whether or not the vantage is gated. mw50 at 31.936 is the nearest
+row today, 1.46 ms under. `✓` is cheaper, `~` is not resolved — not "no
 change".
 
 **The floor is measured, and lg is the reason it is not one number.** Two
