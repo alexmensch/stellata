@@ -96,7 +96,13 @@ export function parseCrossIndexCorrectionsTsv(text: string): CrossIndexCorrectio
     if (cells[idx.hd].startsWith('#')) continue;
     const hd = parseIntOrNull(cells[idx.hd]);
     const belongsTo = parseIntOrNull(cells[idx.belongs_to]);
-    if (hd === null || belongsTo === null) continue;
+    if (hd === null || belongsTo === null) {
+      throw new Error(
+        `${CROSS_INDEX_CORRECTIONS_FILE} row "${cells.join('\t')}" states no ` +
+          'hd / belongs_to pair. Comment the line with `#` or complete it — a ' +
+          'curated row skipped in silence is the fault this file guards against.',
+      );
+    }
     out.push({ hd, belongsTo });
   }
   return out;

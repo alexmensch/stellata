@@ -95,6 +95,14 @@ describe('classic-ids-parse / cross-index corrections', () => {
     expect(corrections('# a note\n35148\t35149\n')).toEqual([{ hd: 35148, belongsTo: 35149 }]);
   });
 
+  // A curated row this parser skipped in silence is the fault the two throws
+  // below exist for, one stage earlier: the correction would be absent rather
+  // than wrong, and no count moves to say so.
+  it('throws on a row that states no hd / belongs_to pair', () => {
+    expect(() => corrections('35148\t\n')).toThrow(/states no hd \/ belongs_to pair/);
+    expect(() => corrections('notanumber\t35149\n')).toThrow(/states no hd \/ belongs_to pair/);
+  });
+
   it('drops the corrected row and leaves every other', () => {
     const kept = applyCrossIndexCorrections(
       parseCrossIndexTsv(PAIR), corrections('35148\t35149\n'),
