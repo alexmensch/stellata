@@ -450,7 +450,7 @@ one: the merge may not turn an unambiguous spine designation into an ambiguous
 one.** By the ambiguity policy above such a designation keys no ledger row, so
 attaching an identifier a DIFFERENT record already holds deletes a working SID
 key from both records and buys nothing — the star stays findable through the
-record that holds it. Withheld and counted, 31 cells (p Eridani's HIP 7751). Ownership is weighed on
+record that holds it. Withheld and counted, 29 cells (p Eridani's HIP 7751). Ownership is weighed on
 the designation itself, component letter included: two components of one
 Gliese system share a number but not a designation, so scoring `gl` on the
 bare number both withheld five labels that collided with nothing and would

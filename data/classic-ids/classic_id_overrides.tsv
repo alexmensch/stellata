@@ -22,9 +22,10 @@ gaia_source_id	field	value
 # folding the neighbour's own record away as a component.
 3377072212924335488	hd	
 #
-# THE NINE BELOW ARE THE SAME SHAPE READ THE OTHER WAY, and they are a RULE's
-# output rather than nine separate judgements: the record ships its neighbour's
-# HD, and all four witnesses agree which component the record is
+# THE EIGHT RECORDS BELOW ARE THE SAME SHAPE READ THE OTHER WAY, fifteen rows
+# that are a RULE's output rather than fifteen separate judgements: the record
+# ships its neighbour's HD, and all four witnesses agree which component the
+# record is
 # (scripts/catalog/simbad/README.md § Which witness decides a close pair's HD).
 # IV/25 and SIMBAD both give the record's own Tycho entry the HD below, SIMBAD's
 # object for the record's own Gaia source is the component that entry names, and
@@ -40,7 +41,7 @@ gaia_source_id	field	value
 # on both fields; the component the comment names is SIMBAD's main_id for the
 # record's Gaia source.
 # α Psc A (source 2517584007848935808, ships 12446 / HR 595 = α Psc B) is the
-# tenth row of the rule's move set and is DELIBERATELY NOT HERE. Correcting it
+# ninth record of the rule's move set and is DELIBERATELY NOT HERE. Correcting it
 # re-opens stellata-3bsf.42: promotion's twin guard fires on
 # `anchorStar.bayerComponent === canonicalComp`, and the authority letters
 # HD 12446 B where it letters HD 12447 A — so the moment the anchor holds A,
@@ -74,4 +75,7 @@ gaia_source_id	field	value
 # ^ ζ² Aqr. Ships 213051 / HR 8558 = ζ¹ Aqr.
 5984491573534116224	hd	330123
 # ^ HD 330123. Ships 330122. Neither number is in V/50, so there is no HR to
-#   move with it — the one row of the nine that carries a single field.
+#   move with it — the one record of the nine that carries a single field. No
+#   Tycho entry names the freed 330122, so it reaches no manifest row and stops
+#   resolving anywhere (scripts/catalog/classic-ids/label-merge/README.md
+#   § What a freed number costs).

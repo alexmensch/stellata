@@ -112,9 +112,12 @@ scripts/catalog/classic-ids/
                                   against the SID ledger + bridges, and the
                                   V/50 HD-less out-of-scope pin
                                   (../spine/README.md § The swap parity
-                                  ledger). Also the withheld-sibling-HD ratchet
+                                  ledger). Also two ratchets on numbers that
+                                  reach no record: the withheld-sibling-HD one
                                   (label-merge/README.md § A withheld number
-                                  attaches to no record).
+                                  attaches to no record) and the override-freed
+                                  one (label-merge/README.md § What a freed
+                                  number costs).
   classic-id-overlay-expected.json
                                   Pinned count snapshot. Refresh with
                                   UPDATE_BUILD_COUNTS=1 (same env var

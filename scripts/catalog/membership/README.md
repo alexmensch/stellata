@@ -378,9 +378,20 @@ arithmetic and label-flips replay:
   the same-as graph over the manifest's designations plus
   `data/sid/sameas-overrides.tsv`, ambiguous designations dropped, the row
   keyed on its first ladder-ranked designation the graph knows. A lower-ranked
-  designation the merge moved to a sibling (the 36 mutual HD/HR swaps) does not
-  split the match, because the SID never rode on it — which
-  `../classic-ids/parity-ledger.test.ts` pins from the other side.
+  designation the merge moved to a sibling does not split the match, because
+  the SID never rode on it — which `../classic-ids/parity-ledger.test.ts` pins
+  from the other side. **10** `hd` / `hr` cells move that way today; the figure
+  is derived rather than pinned, so recompute it rather than trusting this
+  line:
+
+  ```
+  awk -F'\t' 'NR>1 && ($3=="hd"||$3=="hr") {
+    if ($4!="") spine[$3 FS $4]=$1
+    if ($6!="") rows[NR]=$1 FS $3 FS $6 }
+    END { for (r in rows) { split(rows[r], f, FS)
+            k=f[2] FS f[3]; if (k in spine && spine[k]!=f[1]) n++ }
+          print n+0 }' data/classic-ids/label_flips.tsv
+  ```
 - **(ii)** the manifest rows no spine row reaches are exactly the
   `admitted:*` rows of `additions-ledger.tsv`, per-reason counts pinned; every
   `component:` row names a manifest designation and is itself no manifest row.

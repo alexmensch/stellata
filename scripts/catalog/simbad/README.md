@@ -142,14 +142,29 @@ The partition is pinned in `simbad-tyc-hd-parse.test.ts` § the four-witness
 split, over the committed tables, so a re-pull that moves a row fails the suite
 rather than ageing this section.
 
+**An assertion takes its row out of that partition, so a second suite is what
+guards it.** The contested set is keyed on the manifest's SHIPPED HD, and an
+asserted row ships the HD both TYC witnesses name — so the row stops being
+contested the moment the override lands, and the fourth witness would never be
+weighed on it again. `simbad-tyc-hd-parse.test.ts` § the asserted move set
+re-derives all four on the value ASSERTED instead, and pins V/50's HD↔HR
+pairing, which the move-together rule turns on and nothing else checks. That is
+also why `data/simbad/README.md` § What it adjudicates counts 15 rather than
+23: the eight left the class by being fixed, not by being re-measured.
+
 **Eight of the nine are asserted**, in
 `data/classic-ids/classic_id_overrides.tsv` (`../classic-ids/label-merge/README.md`
 § Curated overrides), and the move set the test pins is what is left. What the
 assertion cost: `labelOverridden` hd 1 → 9 / hr 0 → 7, five freed HD numbers
-admitted as manifest rows of their own, one `hd:` SID minted (δ Ser B, on its
-own Gaia source), `namingDuplicateLabels` 48 → **47**. Each record's spectral
-type — keyed on its Gaia source, so independent of every witness above — now
-matches the component whose HD it carries.
+admitted as manifest rows of their own — three building a record (f Eri B,
+δ Ser B, 12 Aqr B) and two parking — one `hd:` SID minted (δ Ser B; the other
+two already keyed their designations as promoted companions, so
+`companionPromoted` falls by the 2 that `companionAlreadyInCatalog` gains and
+`recordCount` nets +1), `namingDuplicateLabels` 48 → **47**. Five designations
+leave the search index in the trade
+(`../classic-ids/label-merge/README.md` § What a freed number costs). Each
+record's spectral type — keyed on its Gaia source, so independent of every
+witness above — now matches the component whose HD it carries.
 
 **α Psc is the ninth and is held back.** Correcting it letters the anchor A
 where the authority letters HD 12446 B, and promotion's twin guard keys on
