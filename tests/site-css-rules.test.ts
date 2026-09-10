@@ -173,6 +173,32 @@ describe('the public stylesheet keeps the CUBE cascade order', () => {
   });
 });
 
+// The two pill states are inverses: the outlined one fills on hover, the
+// filled one empties. Asserted because the failure is invisible in the file
+// — `.pill[data-primary]` and `.pill:hover` carry equal specificity, so
+// dropping the hover rule leaves a filled pill that never reacts, and
+// dropping only its `background` paints accent text on an accent fill.
+describe('the filled call to action inverts the outlined one', () => {
+  const ruleAfter = (selector: string): string => {
+    const at = CODE.indexOf(selector);
+    expect(at, `no ${selector} rule`).toBeGreaterThan(-1);
+    return CODE.slice(at, CODE.indexOf('}', at));
+  };
+
+  it('fills with the accent and drops its text to the page ground', () => {
+    const rule = ruleAfter('.pill[data-primary] {');
+    expect(rule).toMatch(/background:\s*var\(--accent\)/);
+    expect(rule).toMatch(/color:\s*var\(--bg\)/);
+  });
+
+  it('empties on hover, into the outlined pill’s own treatment', () => {
+    const rule = ruleAfter('.pill[data-primary]:hover {');
+    expect(rule).toMatch(/background:\s*var\(--pill-bg\)/);
+    expect(rule).toMatch(/color:\s*var\(--accent\)/);
+    expect(rule).toMatch(/border-color:\s*var\(--accent\)/);
+  });
+});
+
 describe('the public stylesheet uses logical properties', () => {
   // The physical property is wrong the moment the writing mode or direction
   // changes, and there is a logical equivalent for every one of these.
