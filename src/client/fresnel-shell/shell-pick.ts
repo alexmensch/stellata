@@ -20,7 +20,7 @@ export interface ShellPickParams {
   scratch: THREE.Vector3;
 }
 
-/** Fallback-tier hit: the projected silhouette bbox OR the label rect.
+/** Extended-tier hit: the projected silhouette bbox OR the label rect.
  *  Any sample behind the near plane bails the silhouette (the shell is
  *  hidden-when-inside, matching the label engine), leaving the label rect
  *  — which is `display:none` when hidden, so its zero bounds harmlessly
@@ -66,5 +66,5 @@ export function pickShellSilhouette(p: ShellPickParams): HoverHit | null {
   }
 
   if (!insideSilhouette && !insideLabel) return null;
-  return { idx: p.idx, cameraDistancePc: p.cameraDistancePc, tier: 'fallback' };
+  return { idx: p.idx, cameraDistancePc: p.cameraDistancePc, tier: 'extended' };
 }

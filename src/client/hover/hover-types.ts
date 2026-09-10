@@ -1,12 +1,22 @@
 // Shared types for the hover-label engine — `HoverProvider`,
 // `HoverHit`, `HoverPayload`. See ./README.md.
 
-// One pick result from a single layer's pick path. `tier` mirrors the
-// star picker's two-tier shape (prime = cursor inside the rendered
-// disc / wireframe envelope; fallback = cursor near the centroid).
-// `cameraDistancePc` breaks ties across providers — closer to camera
-// wins, matching what a human user expects when one object visually
-// sits in front of another.
+// One pick result from a single layer's pick path.
+//
+// `tier` says how the cursor found the object, and it is what carries
+// "compact objects outrank the things enclosing them" in the type rather
+// than in a per-layer convention:
+//   prime    — cursor inside the object's own rendered disc / envelope.
+//   fallback — cursor near a compact object's centre but outside its
+//              drawn extent (within the engine's pixel threshold).
+//   extended — cursor anywhere inside an extended object's silhouette:
+//              a boundary shell, a molecular cloud. A whole-silhouette
+//              surface covers large regions of sky, so it must not
+//              outrank a star the user was clicking near; it ranks below
+//              both compact tiers whatever the camera distances say.
+// `cameraDistancePc` breaks ties WITHIN a tier — closer to camera wins,
+// matching what a human user expects when one object visually sits in
+// front of another.
 //
 // `hostStarIdx` is an optional sub-layer identity slot used by providers
 // whose `idx` alone doesn't pin a unique object — currently the planet
@@ -15,10 +25,12 @@
 // already a unique catalog row (stars, Local Group, clouds, the lone
 // heliopause apex) leave it `undefined`; the engine doesn't read it,
 // only the originating provider's `format` does.
+export type HoverTier = 'prime' | 'fallback' | 'extended';
+
 export type HoverHit = {
   idx: number;
   cameraDistancePc: number;
-  tier: 'prime' | 'fallback';
+  tier: HoverTier;
   hostStarIdx?: number;
 };
 

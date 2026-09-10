@@ -148,7 +148,7 @@ describe('shell kind module', () => {
     binds.heliopauseShell!(true);
     const hit = pick(400, 300, 14);
     expect(hit?.idx).toBe(0);
-    expect(hit?.tier).toBe('fallback');
+    expect(hit?.tier).toBe('extended');
     expect(hit?.cameraDistancePc).toBeCloseTo(300, 5);
     expect(pick(790, 590, 14)).toBeNull();
     // Un-permitting hides the wall and its pick together.
