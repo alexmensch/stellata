@@ -86,7 +86,7 @@ export class LocalBubbleShell extends FresnelShell {
       samples.push(data.positions[k * 3], data.positions[k * 3 + 1], data.positions[k * 3 + 2]);
     }
     this.sampleAbs = new Float32Array(samples);
-    this.setRimDistanceParams({ nearFadePc: nearFadePcForExtent(data.extentPc) });
+    this.setRimParams({ nearFadePc: nearFadePcForExtent(data.extentPc) });
     this.refreshVisibility();
   }
 

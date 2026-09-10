@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { Heliopause, HELIOPAUSE_APEX_SOL_PC, createHeliopauseLabel } from './heliopause';
+import {
+  Heliopause, HELIOPAUSE_APEX_SOL_PC, HELIOPAUSE_EXTENT_PC, createHeliopauseLabel,
+} from './heliopause';
+import { nearFadePcForExtent } from '../../fresnel-shell/shell-distance-pure';
 import { AU_PC } from '../../util/astronomy-constants';
 import { ShellRegistry } from '../../fresnel-shell/shell-registry';
 
@@ -158,5 +161,14 @@ describe('Heliopause', () => {
     expect(apexLocalAu.y).toBeCloseTo(apex.y, 12);
     expect(apexLocalAu.z).toBeCloseTo(apex.z, 12);
     h.dispose();
+  });
+});
+
+// The shell's own extent is the 200 AU downwind apex, so the shared
+// proportion lands the near-fade at 120 AU — just inside the 122 AU
+// upwind boundary, and far inside any distance the shell is framed from.
+describe('the heliopause near-fade reach', () => {
+  it('lands at 120 AU, the shared fraction of the 200 AU tail', () => {
+    expect(nearFadePcForExtent(HELIOPAUSE_EXTENT_PC) / AU_PC).toBeCloseTo(120, 9);
   });
 });
