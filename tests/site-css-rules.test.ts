@@ -49,6 +49,16 @@ function stripTokens(value: string): string {
   return out.replace(/\b(0|auto)\b/g, '').trim();
 }
 
+/**
+ * The stylesheet with comments removed *except* its `── Section` banners,
+ * each kept as a bare marker line. Slicing a layer needs the banners, and
+ * scanning declarations needs the prose gone; this is both.
+ */
+const LAYERED = CSS.replace(/\/\*([\s\S]*?)\*\//g, (whole, body: string) => {
+  const banner = body.match(/── [A-Za-z]+/);
+  return banner === null ? '' : `\n/*${banner[0]}*/\n`;
+});
+
 describe('the public stylesheet carries no breakpoints', () => {
   // A width breakpoint asserts that one pixel either side of it is a
   // different design, which is never true of a model looked at on every
@@ -134,6 +144,24 @@ describe('the public stylesheet keeps the CUBE cascade order', () => {
     expect(lastBlock, 'no Block sections').toBeGreaterThan(-1);
     expect(composition).toBeLessThan(lastBlock);
     expect(lastBlock).toBeLessThan(utilities);
+  });
+
+  // The defect this catches, twice over: `.spec-list { margin: 0 }` and
+  // `.plate { margin: 0 }` restated the global reset in the block layer,
+  // which cascades AFTER compositions — so each cancelled the gap `.flow`
+  // had given it and the element sat flush against the one above. A block
+  // needing a reset means adding the element to the global reset, and a
+  // block needing a different gap sets `--flow-space`.
+  it('declares no vertical margin after the composition layer', () => {
+    const blocks = LAYERED.slice(LAYERED.indexOf('── Block'));
+    expect(blocks, 'no Block section').not.toBe('');
+    const offenders = [
+      ...blocks.matchAll(/\n\s+(margin(?:-block(?:-start|-end)?|-top|-bottom)?\s*:[^;]+);/g),
+    ].map(([, decl]) => decl.trim());
+    expect(
+      offenders,
+      `vertical margins outside .flow: ${offenders.join(' · ')}`,
+    ).toEqual([]);
   });
 
   it('marks every utility declaration !important', () => {
