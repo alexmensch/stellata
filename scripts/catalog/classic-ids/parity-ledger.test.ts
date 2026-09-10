@@ -201,7 +201,7 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('override-freed HD numbers',
   // not build, the number resolves NOWHERE — worse reach than before the
   // correction, which is the price the section states. The suite above keys on
   // `extra-sibling-rendered` and so cannot see these; the two shapes end in
-  // the same place and both are stellata-hooj.13.
+  // the same place and one fix has to cover both.
   const FREED = ['24071', '68255', '138917', '200496', '213051', '330122'];
   const SHIPS: Record<string, string> = {
     '24071': '7570-1586-1',    // f Eri B, on its own source
@@ -268,8 +268,7 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('override-freed HD numbers',
 
   // The ratchet: each of these is a designation that resolved before the
   // correction and resolves nowhere after it. One more is a finding, not
-  // drift — say why here and move the number, or fix the distance
-  // (stellata-hooj.13).
+  // drift — say why here and move the number, or give the row a distance.
   it('leaves three resolving nowhere — two parked, one on no row at all', () => {
     for (const [hd, tyc] of Object.entries(PARKS)) {
       expect(rowsByHd.get(hd)?.tyc, `HD ${hd}`).toBe(tyc);
