@@ -87,6 +87,13 @@ cannot know:
 - **Definition lists become labelled bullets.** mdast has no definition
   list, so the readout strip would otherwise flatten into one run of text
   with nothing saying which figure belongs to which label.
+- **A clip becomes its poster still**, named by its `aria-label` — mdast has
+  no video node either, and a frame an agent can read beats a link to bytes
+  it cannot. Both attributes are therefore required and a clip missing
+  either stops the build, which is also what guarantees the page has a
+  largest-contentful-paint image and the clip an accessible name. This is
+  why `video` is **absent** from `VOCABULARY` rather than listed in it: the
+  pass runs first, so none survives to be converted.
 
 **`VOCABULARY` is a closed set, and that is the point.** An element the
 module has no rule for throws and names itself rather than being converted
