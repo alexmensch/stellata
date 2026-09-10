@@ -528,6 +528,27 @@ a.sight-media:hover {
   border-color: var(--accent);
 }
 
+/* Filled rather than outlined, so the primary move reads as one. An
+   exception rather than a second block: the shape, padding and typography
+   are the pill's, and only the fill differs. Opt-in, so a pill that is not
+   the primary move stays outlined.
+
+   Hover swaps the pair — the outlined pill fills, this one empties — so the
+   two are inverses and hover is a state change rather than a shade of one.
+   It must restate all three properties: `.pill[data-primary]` and
+   `.pill:hover` have equal specificity, so without this rule the later
+   filled state would simply keep winning. */
+.pill[data-primary] {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.pill[data-primary]:hover {
+  color: var(--accent);
+  background: var(--pill-bg);
+  border-color: var(--accent);
+}
+
 /* ── Block: prose ──────────────────────────────────────────────────── */
 /* The named text treatments. Blocks rather than utilities because each
    carries a state or a descendant rule, and a utility is a final
