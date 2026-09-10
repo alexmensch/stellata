@@ -104,7 +104,7 @@ const SRC_TYC2_HD = AT(TYC2_HD_FILE);
 const SRC_MANIFEST = AT(MEMBERSHIP_MANIFEST_FILE);
 const ADJUDICATION_INPUTS = [SRC_SIMBAD_TYC_HD, SRC_TYC2_HD, SRC_MANIFEST];
 
-// Pins data/simbad/README.md § What it adjudicates. The figures are the
+// Pins README.md § What the TYC → HD pull adjudicates. The figures are the
 // pull's whole justification, so they are asserted rather than narrated: a
 // re-pull that moves one fails here instead of ageing that prose.
 describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
@@ -222,7 +222,8 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     }
     const simbad = parseSimbadTycHdTsv(readFileSync(SPLIT_INPUTS[0], 'utf-8'));
 
-    // The rows both TYC witnesses contradict — § What it adjudicates' 23.
+    // The rows both TYC witnesses contradict — the 15 of README.md § What the
+    // TYC → HD pull adjudicates, the eight asserted having left the class.
     // Keyed on the TYC, not the source: a mutual swap is two rows.
     const contested = new Map<string, string>();
     for (const row of parseManifestTsv(readFileSync(SPLIT_INPUTS[2], 'utf-8'))) {
