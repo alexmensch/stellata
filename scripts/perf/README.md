@@ -45,8 +45,9 @@ scripts/perf/
                             rules. pins/<slug>.json is the committed pin.
   table-pure.ts (+ test)    Every text table. formatTable is the shared
                             width/alignment pass.
-  perf-section-check.sh     perf-section-guard's check: a render-path diff
-    (+ test)                needs a `## Perf` section, every ✗ accepted.
+  perf-section-check.sh     perf-section-guard's check: a render-path diff,
+    (+ test)                or a catalogue-membership move over 1 %, needs a
+                            `## Perf` section, every ✗ accepted.
   arming/                   The consent gate: marker name and freshness, the
                             arm poller, the protocol. Own README.
   pins/                     The committed per-GPU pin. Own README.

@@ -154,15 +154,20 @@ scene it drew*, and it is only attributable to a diff if nothing else
 moved in between:
 
 - **The catalogue record count**, off the binary's own header. A
-  membership change lives in `scripts/` and `public/`, so it trips no
-  `## Perf` trigger, yet it moves how many instanced quads every star
-  pass draws — the most direct frame-cost change the repo can make. A pin
-  taken at 329,657 records went on being compared against after
-  membership reached 384,115, and the next render-path PR read the whole
-  +0.4–0.6 ms step as its own regression (stellata-3bsf.8.7,
-  stellata-8cg.53). So a comparison across two counts is refused, not
-  marked, and **a membership change re-takes the pin in the PR that ships
-  it** exactly as a render-path change does.
+  membership change lives in `scripts/` and `public/`, so no *path* rule
+  reaches it, yet it moves how many instanced quads every star pass draws
+  — the most direct frame-cost change the repo can make. A pin taken at
+  329,657 records went on being compared against after membership reached
+  384,115, and the next render-path PR read the whole +0.4–0.6 ms step as
+  its own regression (stellata-3bsf.8.7, stellata-8cg.53). So a
+  comparison more than 1 % apart is refused, not marked, and **a
+  membership change re-takes the pin in the PR that ships it** exactly as
+  a render-path change does — enforced, not merely asked for:
+  `perf-section-guard` reads the count either side of the diff and
+  requires the section on the same 1 % (§ The `## Perf` section). The
+  refusal is the backstop under it, not the mechanism: catching a
+  membership change on the *next* PR means charging a pin re-take to
+  whoever did not cause it.
 - **A main-reachable commit.** The pin records HEAD *and* its merge base
   with `origin/main`, because a pin is taken on a branch and squash-merge
   lands that tree under a hash the tip never had. `--against-pin` re-asks
@@ -218,7 +223,23 @@ than what is covered is the invariant**: a list of render folders exempts
 by omission, so a layer folder added later escapes the gate until somebody
 notices. `overlays/` is exempt because its per-frame work is SVG on the
 CPU, which the gating clock does not see; `debug/` because the instrument
-is not the frame. It carries the `--against-pin` table, the pin commit it
+is not the frame.
+
+Required equally when the diff **moves catalogue membership by more than
+1 %**, whatever it touches — `recordCount` in
+`scripts/catalog/build-catalog-expected.json`, base against head, which is
+the membership term's own committed record and cannot move without a
+deliberate `UPDATE_BUILD_COUNTS` refresh. A membership change lands in
+`scripts/` and `public/`, so no path rule above reaches it, yet it moves
+how many instanced quads every star pass draws. Under 1 % the trigger
+stands down, because 1 % is ~3,900 records against a measured 0.39–0.59 ms
+for 54,458 — pro rata ~0.03–0.04 ms, an order of magnitude under the
+smallest delta a row can be marked for. That bound is
+`RECORD_COUNT_TOLERANCE`, shared with the refusal, and the two have to
+agree: a change under the trigger ships with no fresh pin, so a stricter
+refusal would leave that pin refusing every row of the next render-path PR.
+
+The section carries the `--against-pin` table, the pin commit it
 was read against, the adapter slug, the state-guard line per context, and
 one `accepted: <row> <reason> (<bead-id>)` line per `✗`. The
 `perf-section-guard` workflow fails the PR when the section is missing,

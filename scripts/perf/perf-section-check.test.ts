@@ -1,11 +1,13 @@
-// Behavioural guard for perf-section-check.sh: which files count as a render
-// path, and what the `## Perf` section must carry when one is touched.
+// Behavioural guard for perf-section-check.sh: what counts as a render-path
+// change — files, and a catalogue-membership move — and what the `## Perf`
+// section must carry when one fires.
 
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { RECORD_COUNT_TOLERANCE } from './diff-pure';
 
 const SCRIPT = resolve(__dirname, 'perf-section-check.sh');
 const RELEASING = resolve(__dirname, '../../RELEASING.md');
@@ -33,12 +35,23 @@ let repo: string;
 
 interface Exit { code: number | null; stdout: string; stderr: string }
 
-function check(body: string, files: readonly string[]): Exit {
+function check(body: string, files: readonly string[], records?: readonly [string, string]): Exit {
   writeFileSync(join(repo, 'body.md'), body);
   writeFileSync(join(repo, 'changed.txt'), `${files.join('\n')}\n`);
-  const r = spawnSync('bash', [SCRIPT, 'body.md', 'changed.txt'], { cwd: repo, encoding: 'utf-8' });
+  const argv = [SCRIPT, 'body.md', 'changed.txt', ...(records ?? [])];
+  const r = spawnSync('bash', argv, { cwd: repo, encoding: 'utf-8' });
   return { code: r.status, stdout: r.stdout, stderr: r.stderr };
 }
+
+/** The tolerance as the script spells it: `record_tolerance_percent=N`. */
+function scriptRecordTolerance(): number {
+  const line = /^record_tolerance_percent=(\d+)$/m.exec(readFileSync(SCRIPT, 'utf-8'));
+  expect(line, 'perf-section-check.sh no longer declares record_tolerance_percent=').not.toBeNull();
+  return Number(line![1]) / 100;
+}
+
+const RECORDS = 388_063;
+const pair = (base: number, head: number): [string, string] => [String(base), String(head)];
 
 const PERF_SECTION = `## Summary
 
@@ -161,5 +174,53 @@ describe('perf-section-check', () => {
 
   it('declares that locale itself, so the caller-s awk cannot decide it', () => {
     expect(readFileSync(SCRIPT, 'utf-8')).toMatch(/^export LC_ALL=C$/m);
+  });
+});
+
+describe('catalogue membership is a render-path trigger of its own', () => {
+  it('shares its bound with the refusal, so neither can deadlock the other', () => {
+    expect(scriptRecordTolerance()).toBe(RECORD_COUNT_TOLERANCE);
+  });
+
+  it('gates a membership change past the bound, with no render-path file at all', () => {
+    const r = check('## Summary\n\nx\n', ['scripts/catalog/build-catalog-expected.json'], pair(RECORDS, 420_000));
+    expect(r.code).toBe(1);
+    expect(r.stdout).toContain('catalogue membership 388063 -> 420000');
+    expect(r.stdout).toContain("no non-empty '## Perf' section");
+  });
+
+  it('passes a membership change inside the bound', () => {
+    const inside = RECORDS + Math.floor(RECORDS * RECORD_COUNT_TOLERANCE) - 1;
+    const r = check('## Summary\n\nx\n', ['scripts/catalog/build-catalog-expected.json'], pair(RECORDS, inside));
+    expect(r.code, r.stdout).toBe(0);
+    expect(r.stdout).toContain('membership within 1 %');
+  });
+
+  it('reads the bound in both directions, so a shrunken catalogue gates too', () => {
+    const shrunk = RECORDS - Math.ceil(RECORDS * RECORD_COUNT_TOLERANCE) - 1;
+    expect(check('## Summary\n\nx\n', [], pair(RECORDS, shrunk)).code).toBe(1);
+    expect(check('## Summary\n\nx\n', [], pair(RECORDS, RECORDS - 100)).code).toBe(0);
+  });
+
+  it('accepts the same section a render-path diff would', () => {
+    expect(check(PERF_SECTION, [], pair(RECORDS, 420_000)).code).toBe(0);
+  });
+
+  it('names both triggers when a diff fires both', () => {
+    const r = check('## Summary\n\nx\n', ['src/client/milkyway/band.ts'], pair(RECORDS, 420_000));
+    expect(r.code).toBe(1);
+    expect(r.stdout).toContain('render path touched');
+    expect(r.stdout).toContain('catalogue membership');
+  });
+
+  // Unreadable counts leave the check silent rather than failing every PR
+  // that does not pass them: the comparison-time refusal is the backstop, and
+  // a guard that cannot be run without two extra arguments would be dropped.
+  it('stays silent on absent, empty or non-numeric counts', () => {
+    expect(check('## Summary\n\nx\n', []).code).toBe(0);
+    for (const bad of [['', ''], [String(RECORDS), ''], ['null', String(RECORDS)], ['0', '420000']]) {
+      const r = check('## Summary\n\nx\n', [], bad as [string, string]);
+      expect(r.code, bad.join('/')).toBe(0);
+    }
   });
 });
