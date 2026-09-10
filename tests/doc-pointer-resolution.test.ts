@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { docAnchors, extractPointers, extractRetiredPointers, resolveDocPath } from './doc-pointer-pure';
-import { gitFiles } from './walk-files';
+import { gitFiles } from '../scripts/util/walk-files';
 
 const ROOT = resolve(__dirname, '..');
 const SCANNED_EXTS = ['.ts', '.md', '.py', '.sh'];
