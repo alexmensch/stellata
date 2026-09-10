@@ -1119,7 +1119,7 @@ describe('FocusController — planet focus (kind "planet")', () => {
       card: { typeLine: 't', size: 's', knownFrom: 'k' },
       centerAbsInto: (out) => { out.set(0, 0, 0); return true; },
       extentPc: () => 200 * AU_PC,
-      pick: { labelElementId: 'x', visible: () => true, sampleCount: () => 0, sampleLocalInto: () => {} },
+      pick: { labelElementId: 'x', visible: () => true, mesh: () => null },
     };
     h.shells.register('heliopause', auShell); // SHELL_KEYS idx 1
     const park = h.shells.focusParkDistancePc(1);
