@@ -85,11 +85,11 @@ function pick(camera: THREE.PerspectiveCamera, x: number, y: number) {
 }
 
 describe('pickShellSilhouette', () => {
-  it('outside-shell: cursor inside the projected silhouette bbox → fallback hit', () => {
+  it('outside-shell: cursor inside the projected silhouette bbox → extended hit', () => {
     withDocumentStub(() => null, () => {
       const hit = pick(outsideShellCamera(), VIEWPORT_W / 2, VIEWPORT_H / 2);
       expect(hit).not.toBeNull();
-      expect(hit!.tier).toBe('fallback');
+      expect(hit!.tier).toBe('extended');
       expect(hit!.idx).toBe(1);
       expect(hit!.cameraDistancePc).toBe(42);
     });
@@ -107,7 +107,7 @@ describe('pickShellSilhouette', () => {
     });
   });
 
-  it('inside-shell: label bbox overlap still fallback-hits though the silhouette bailed', () => {
+  it('inside-shell: label bbox overlap still extended-hits though the silhouette bailed', () => {
     const labelRect = {
       left: 100, top: 100, right: 140, bottom: 120, width: 40, height: 20,
     } as DOMRect;
@@ -118,7 +118,7 @@ describe('pickShellSilhouette', () => {
       () => {
         const hit = pick(insideShellCamera(), 120, 110);
         expect(hit).not.toBeNull();
-        expect(hit!.tier).toBe('fallback');
+        expect(hit!.tier).toBe('extended');
       },
     );
   });

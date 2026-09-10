@@ -60,9 +60,12 @@ lives entirely under `src/client/hover/`:
   resolver detour would hardcode Sol and lose the multi-host readiness
   the exoplanet epic needs.
 - **`hover-pick-disambiguator.ts`** — when multiple providers return a
-  hit for the same cursor position, pick the closest to the camera, with
-  the prime/fallback tier as the higher-priority key. Prime always beats
-  fallback regardless of camera distance.
+  hit for the same cursor position, the tier decides
+  (prime > fallback > extended) and camera distance decides only within
+  one. Camera distance cannot be the cross-tier key, and the failure is
+  not hypothetical: viewed from outside, a boundary shell's near wall is
+  nearer than every star it encloses, so "closest wins" gave a click on a
+  star to "Local Bubble" (Rule 3).
 - **`*-hover-provider.ts`** / the kind modules' `hover()` legs — one
   per layer. Owns the pick path, typically mirroring the renderer's
   draw predicate (see Rule 2 below).
@@ -218,9 +221,19 @@ For extended objects whose silhouette occupies meaningful screen real
 estate (heliopause shell, molecular clouds, future nebulae, Radcliffe
 Wave segments, large DSOs), hover hit-tests the WHOLE projected
 silhouette plus the SVG label's bounding rect (when present), not a
-centroid + small radius. Tier is fallback so stars and planets visible
-"through" the object still win their own prime hover via the
-cross-layer disambiguator.
+centroid + small radius.
+
+**Tier is `extended`, and that is the whole rule** — a whole-silhouette
+surface covers large regions of sky, so it never outranks a compact
+object under the same cursor, at any camera distance. It used to report
+`fallback` and rely on being farther from the camera than the stars in
+front of it, which is false for anything the camera is *inside* or *level
+with*: from outside the Local Bubble its near wall is nearer than every
+star it encloses, so a click ~14 px off a star's centre — fallback, not
+prime — went to "Local Bubble". Stating the distinction in the tier
+replaces that prose convention with something the type carries, and every
+extended surface must report it: a new one that reports `fallback`
+reintroduces the bug silently.
 
 Different layers have different natural pick mechanisms — reuse the
 existing one rather than rolling a new pickbox:

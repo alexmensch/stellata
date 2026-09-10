@@ -3,7 +3,7 @@ import {
   disambiguateHits,
   type HoverProviderHit,
 } from './hover-pick-disambiguator';
-import type { HoverHit, HoverProvider, HoverKind } from './hover-types';
+import type { HoverHit, HoverProvider, HoverKind, HoverTier } from './hover-types';
 
 // Stub provider whose `format` is never called by the disambiguator —
 // the comparator only reads `hit`, not the provider. The fake exists so
@@ -17,12 +17,14 @@ const stubProvider = (kind: HoverKind): HoverProvider => ({
 const hit = (
   idx: number,
   cameraDistancePc: number,
-  tier: 'prime' | 'fallback',
+  tier: HoverTier,
 ): HoverHit => ({ idx, cameraDistancePc, tier });
 
 const star = stubProvider('star');
 const planet = stubProvider('planet');
 const lg = stubProvider('local-group');
+const shell = stubProvider('shell');
+const cloud = stubProvider('cloud');
 
 describe('hover-pick-disambiguator / disambiguateHits', () => {
   it('returns null for empty input', () => {
@@ -66,6 +68,36 @@ describe('hover-pick-disambiguator / disambiguateHits', () => {
     const primeLg: HoverProviderHit = { provider: lg, hit: hit(2, 800_000, 'prime') };
     const fbPlanet: HoverProviderHit = { provider: planet, hit: hit(3, 1e-4, 'fallback') };
     expect(disambiguateHits([primeLg, primeStar, fbPlanet])).toBe(primeStar);
+  });
+
+  // The reported bug: viewed from outside, the Local Bubble wall is
+  // NEARER than every star it encloses, so camera distance handed a click
+  // on a star to "Local Bubble". The tier is what refuses it now.
+  it('a star just off centre beats the shell wall in front of it', () => {
+    const fbStar: HoverProviderHit = { provider: star, hit: hit(1, 240, 'fallback') };
+    const nearWall: HoverProviderHit = { provider: shell, hit: hit(0, 90, 'extended') };
+    expect(disambiguateHits([nearWall, fbStar])).toBe(fbStar);
+  });
+
+  it('extended loses to prime and to fallback alike, at any distance', () => {
+    const ext: HoverProviderHit = { provider: shell, hit: hit(0, 1e-6, 'extended') };
+    const prime: HoverProviderHit = { provider: star, hit: hit(1, 1e6, 'prime') };
+    const fb: HoverProviderHit = { provider: planet, hit: hit(2, 1e6, 'fallback') };
+    expect(disambiguateHits([ext, prime])).toBe(prime);
+    expect(disambiguateHits([ext, fb])).toBe(fb);
+  });
+
+  it('within the extended tier, the nearer silhouette wins', () => {
+    // A cloud and a shell are peers here — nothing else separates two
+    // whole-silhouette surfaces the cursor is inside.
+    const farShell: HoverProviderHit = { provider: shell, hit: hit(0, 300, 'extended') };
+    const nearCloud: HoverProviderHit = { provider: cloud, hit: hit(4, 140, 'extended') };
+    expect(disambiguateHits([farShell, nearCloud])).toBe(nearCloud);
+  });
+
+  it('an extended hit still wins when it is the only thing under the cursor', () => {
+    const only: HoverProviderHit = { provider: cloud, hit: hit(9, 140, 'extended') };
+    expect(disambiguateHits([only])).toBe(only);
   });
 
   it('two prime hits at identical camera distance — first encountered wins (registration order)', () => {

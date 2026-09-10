@@ -346,8 +346,9 @@ export class MolecularClouds {
    * FSM and the hover engine share, so the two can never disagree.
    * Rim-mesh raycast gates hit-vs-miss; `resolveCloudPick` picks the
    * cloud the cursor sits proportionally deepest inside (README
-   * § Picking + hover). Tier is always `fallback` — stars, planets, LG
-   * objects and shells win any overlap with a cloud body.
+   * § Picking + hover). Tier is always `extended` — a whole-silhouette
+   * surface never outranks a compact object, whatever the camera
+   * distances say (`../hover/README.md` Rule 3).
    *
    * Only cloud geometry is tested: foreground stars don't block a cloud
    * pick here, the caller picks those first and falls back to a cloud.
@@ -405,7 +406,7 @@ export class MolecularClouds {
     return {
       idx: winner.candidate.idx,
       cameraDistancePc: winner.candidate.cameraDistancePc,
-      tier: 'fallback',
+      tier: 'extended',
     };
   }
 

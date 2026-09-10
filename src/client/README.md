@@ -206,11 +206,12 @@ and double clicks disambiguate; the deferred handlers re-check the
 warp / aim / transition guards at fire time.
 
 Navigate clicks pick ladder-eligible objects first — stars, planet
-bodies, Local Group objects, AND boundary shells (fallback tier),
-tiebroken by the hover engine's rule
-(`bestHitBy`: prime beats fallback, then closer camera) so click and
-hover can't disagree on which object wins an overlap — then fall back
-to clouds.
+bodies, Local Group objects, AND boundary shells (`extended` tier),
+tiebroken by the hover engine's rule (`bestHitBy`: better tier wins
+outright, then closer camera within a tier) so click and hover can't
+disagree on which object wins an overlap — then fall back to clouds. A
+shell therefore never takes a click aimed at a star it encloses
+(`hover/README.md` Rule 3).
 
 Navigate single-click on a ladder-eligible object — ONE table for
 stars, planets, LG objects, and boundary shells alike
