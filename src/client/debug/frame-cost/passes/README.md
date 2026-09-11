@@ -101,7 +101,13 @@ draws and the statistic writes wherever the cut is not the measurement's,
 and the exposure pin freezes it there (collapsing a mid-probe park to
 parked, so every dwell prices the same state). At those vantages the
 `reduction` and `statisticWrites` rows price an already-parked frame and
-should read ~0 — the park working, not the instrument failing.
+should read ~0 — the park working, not the instrument failing. To price
+the writes themselves there, hold the park off for the sweep —
+`stellata.adaptation.setParkEnabled(false)` in the console, `--no-park` on
+the runner (`../../../hdr/exposure/park/README.md` § The lever) — and
+remember the row lumps every emitter's statistic write together: the
+runner's `--pre-disable mwBand,lgEmission` leaves the star field's own
+share, and the plain row minus that one is the band's and the glow's.
 
 **Which vantages those are widened, so a stale table will disagree.** The
 park used to engage only inside the slew's settle band, i.e. at a cut of

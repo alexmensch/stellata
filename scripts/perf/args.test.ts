@@ -15,6 +15,8 @@ describe('parseRunArgs', () => {
       backend: ARG_DEFAULTS.backend,
       mode: ARG_DEFAULTS.mode,
       passes: undefined,
+      preDisable: undefined,
+      noPark: false,
       method: undefined,
       budgetMs: ARG_DEFAULTS.budgetMs,
       dwellFrames: undefined,
@@ -119,6 +121,20 @@ describe('parseRunArgs', () => {
     expect(a.chromeArgs).toEqual(['--use-angle=metal', '--foo']);
   });
 
+  it('takes --pre-disable as pass keys and --no-park, in differential mode', () => {
+    const a = parseRunArgs([
+      '--passes', 'statisticWrites', '--pre-disable', 'mwBand, lgEmission', '--no-park',
+    ]);
+    expect(a.passes).toEqual(['statisticWrites']);
+    expect(a.preDisable).toEqual(['mwBand', 'lgEmission']);
+    expect(a.noPark).toBe(true);
+  });
+
+  it('refuses a pass that is both held off and priced', () => {
+    expect(() => parseRunArgs(['--passes', 'mwBand,statisticWrites', '--pre-disable', 'mwBand']))
+      .toThrow(/also in --passes/);
+  });
+
   it('drops the -- that pnpm run forwards ahead of the flags', () => {
     expect(parseRunArgs(['--', '--scenario', 'lg']).scenarios).toEqual(['lg']);
   });
@@ -198,6 +214,9 @@ describe('parseRunArgs', () => {
     [['--empty-passes', 'four'], /--empty-passes/],
     [['--passes', 'localDepht'], /no such pass/],
     [['--passes', 'localDepth,mwBnad'], /no such pass/],
+    [['--pre-disable', 'mwBnad'], /--pre-disable names no such pass/],
+    [['--mode', 'dwell', '--pre-disable', 'mwBand'], /--mode dwell, which would ignore it/],
+    [['--mode', 'dwell', '--no-park'], /--mode dwell, which would ignore it/],
     [['--mode', 'dwell', '--roundtrip', 'localDepht'], /--roundtrip names no such pass/],
     [['--mode', 'differential', '--roundtrip', 'localDepth'], /--mode differential, which would ignore it/],
     [['--mode', 'sweep', '--roundtrip', 'idle'], /--mode sweep, which would ignore it/],
@@ -214,7 +233,7 @@ describe('parseRunArgs', () => {
   it('prints every flag in the usage text', () => {
     const text = usage();
     for (const flag of [
-      '--scenario', '--backend', '--mode', '--passes', '--method', '--budget-ms',
+      '--scenario', '--backend', '--mode', '--passes', '--pre-disable', '--no-park', '--method', '--budget-ms',
       '--dwell-frames', '--warmup-frames', '--settle-frames', '--empty-passes',
       '--no-interleave',
       '--headed', '--width', '--height', '--dpr', '--quiet-ms', '--url', '--chrome-arg', '--hash',

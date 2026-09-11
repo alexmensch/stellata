@@ -60,6 +60,7 @@ scripts/perf/
 ```
 pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu|webgl2|both]
                  [--mode differential|probe|dwell|sweep] [--passes a,b]
+                 [--pre-disable a,b] [--no-park]
                  [--method timer-query|timestamp|raf-delta]
                  [--budget-ms N] [--dwell-frames N] [--warmup-frames N] [--settle-frames N] [--no-interleave]
                  [--empty-passes N]
@@ -84,6 +85,23 @@ assumes the clears add, and consecutive clears with nothing drawn between them
 are what a driver would coalesce
 (`src/client/debug/frame-cost/passes/README.md` § The roster,
 `docs/render-rules.md` § 8).
+
+**`--pre-disable <keys>` and `--no-park` set up the frame a differential
+prices, and are read by that mode alone.** The named roster passes are
+switched off before the sweep — through their own `buildPassToggles`
+toggles, so there is no second spelling of any pass — and restored in the
+same `finally` as the sweep's own restores; a pass not active at the vantage
+throws rather than pricing a frame it was never in. `--no-park` holds the
+adaptation measurement unparked
+(`src/client/hdr/exposure/park/README.md` § The lever). Both land in the
+record's `params`. The case they exist for is the `statisticWrites` row at
+the Sol default view: the floor regime parks there and a sweep's hold
+collapses a probe to parked, so the row prices an already-parked frame
+unless the park is off; and the row lumps every emitter's statistic write
+together, so the star field's own share is the row with `--pre-disable
+mwBand,lgEmission` and the band's and glow's share is the difference
+against the plain row (`src/client/debug/frame-cost/passes/README.md`
+§ The roster).
 
 `--frames` sizes a dwell (dwell and sweep modes); `--scales` is the sweep's
 viewport set. `--warmup-frames` is shared: it is priceFrame's own warmup in
@@ -114,10 +132,10 @@ be compared. rAF wall time is the one clock both supply. An explicit
 
 **A flag the chosen mode does not read is an error, not a no-op.**
 `--mode dwell --method timer-query` is refused rather than quietly stamping
-the table `raf-delta`, and the same goes for `--passes`, `--budget-ms`,
-`--dwell-frames`, `--settle-frames` and `--no-interleave` outside
-`differential`, `--frames` outside dwell and sweep, `--roundtrip` outside
-dwell, and `--scales` outside sweep. Only flags actually typed are checked,
+the table `raf-delta`, and the same goes for `--passes`, `--pre-disable`,
+`--no-park`, `--budget-ms`, `--dwell-frames`, `--settle-frames` and
+`--no-interleave` outside `differential`, `--frames` outside dwell and
+sweep, `--roundtrip` outside dwell, and `--scales` outside sweep. Only flags actually typed are checked,
 so a default never trips it, and `--warmup-frames` is exempt because every
 mode absorbs the same ramp. The in-app instrument takes the same posture on a
 pin it cannot honour (`src/client/debug/frame-cost/README.md`

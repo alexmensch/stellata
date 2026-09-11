@@ -169,8 +169,55 @@ export function readRecordCount(page: Page): Promise<number | null> {
   });
 }
 
-export function runDifferential(page: Page, options: PriceFrameOptions): Promise<PriceFrameRow[]> {
-  return page.evaluate((o) => (window as unknown as PerfWindow).debug.priceFrame(o), options);
+export interface DifferentialSetup {
+  /** Roster passes switched off before the sweep, restored in the same
+   *  `finally` as the sweep's own restores. */
+  readonly preDisable: readonly string[];
+  /** Hold the adaptation measurement unparked for the sweep
+   *  (`src/client/hdr/exposure/park/README.md` § The lever). */
+  readonly noPark: boolean;
+  /** Where the dev server serves the pass roster from. */
+  readonly toggleModuleUrl: string;
+}
+
+/**
+ * The priceFrame sweep, under any pre-conditions the run asked for. A
+ * pre-disabled pass that is not active at this vantage throws rather than
+ * silently pricing the frame it was meant to remove from — the same rule the
+ * round trip applies.
+ */
+export function runDifferential(
+  page: Page,
+  options: PriceFrameOptions,
+  setup: DifferentialSetup,
+): Promise<PriceFrameRow[]> {
+  return page.evaluate(async ({ o, setup: p }) => {
+    const w = window as unknown as PerfWindow;
+    const restores: (() => void)[] = [];
+    try {
+      if (p.preDisable.length > 0) {
+        const mod = await import(p.toggleModuleUrl) as {
+          buildPassToggles(stellata: Stellata): PassToggle[];
+        };
+        const toggles = mod.buildPassToggles(w.stellata);
+        for (const key of p.preDisable) {
+          const toggle = toggles.find((t) => t.key === key);
+          if (toggle === undefined) throw new Error(`no pass '${key}' in the priceFrame roster`);
+          if (!toggle.present()) {
+            throw new Error(`'${key}' is not active at this vantage — nothing to pre-disable`);
+          }
+          restores.push(toggle.disable());
+        }
+      }
+      if (p.noPark) {
+        w.stellata.adaptation.setParkEnabled(false);
+        restores.push(() => w.stellata.adaptation.setParkEnabled(true));
+      }
+      return await w.debug.priceFrame(o);
+    } finally {
+      for (const restore of restores.reverse()) restore();
+    }
+  }, { o: options, setup });
 }
 
 export interface DwellParams {

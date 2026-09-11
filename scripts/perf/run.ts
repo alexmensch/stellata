@@ -15,7 +15,9 @@ import {
 import { ArgError, parseRunArgs, usage, type RunArgs } from './args';
 import { diffRuns } from './diff-pure';
 import type { DwellSummary } from './dwell/dwell-pure';
-import { applyRoundTrip, measureDwell, measureSweep, type Measured } from './measure';
+import {
+  PASS_TOGGLES_MODULE_URL, applyRoundTrip, measureDwell, measureSweep, type Measured,
+} from './measure';
 import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './arming/perf-go-lib';
 import {
   PIN_SCHEMA, PinError, assertPinFile, citeRunPath, commitStateFromExitStatus, compareToPin,
@@ -293,8 +295,19 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
     measuring = true;
     if (args.mode === 'differential') {
       const priceOptions = { ...priceFrameOptions(args, plan.method), cadenceMs: record.idleRafMs };
-      record.params = { ...priceOptions };
-      const rows = await runDifferential(page, priceOptions);
+      const setup = {
+        preDisable: args.preDisable ?? [],
+        noPark: args.noPark,
+        toggleModuleUrl: PASS_TOGGLES_MODULE_URL,
+      };
+      record.params = { ...priceOptions, preDisable: setup.preDisable, noPark: setup.noPark };
+      if (setup.preDisable.length > 0 || setup.noPark) {
+        console.log(
+          `sweep preconditions: ${setup.preDisable.length > 0 ? `${setup.preDisable.join(', ')} held off` : 'every pass live'}` +
+          `${setup.noPark ? ' · adaptation park off' : ''}`,
+        );
+      }
+      const rows = await runDifferential(page, priceOptions, setup);
       if (rows.length === 0) {
         record.failed = true;
         record.failure =
