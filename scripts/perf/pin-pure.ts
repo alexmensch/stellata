@@ -24,7 +24,7 @@ export const PIN_SCHEMA = 'stellata-perf/pin-2';
  *  that wanders 1.5 ms is no licence for a frame that doubled.
  *  pins/README.md § Reading `--against-pin`. */
 export const PIN_UNGATED_SCENARIOS: Readonly<Partial<Record<ScenarioName, string>>> = {
-  lg: 'does not reproduce cold-to-cold',
+  lg: 'wanders as much inside one dwell as between runs',
 };
 
 /** Two 60 Hz intervals of hardware time. A canon vantage whose GPU-stream

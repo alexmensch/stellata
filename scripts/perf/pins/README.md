@@ -110,18 +110,25 @@ the whole pin, it blocked the pin for *every* render-path PR at random. Wall
   display's refresh interval, so it is recorded and never marked: a row
   with no GPU stream on either side, every WebGL2 row among them, reads
   `·` ungated with its wall p50 shown as context.
-- **Ungated vantages.** `PIN_UNGATED_SCENARIOS` maps a vantage the band
-  never marks to the reason, which the row's note prints. `lg` is there
-  because it does not reproduce cold-to-cold — 11.891 → 13.360 ms between
-  those two pins, a level shift *between* runs while each run's own
-  quarters stay flat, so the state guard cannot see it and no cool-down
-  suppresses it (stellata-8cg.49.18). Only the *band* stands down: the
-  ceiling below still marks the row, and the refusals below still refuse
-  it, since a trending or resized lg indicts the run's state rather than
-  lg's own reproducibility. **`lg` is the only canon vantage that sees the
-  Local Group**, so while it is ungated a `src/client/local-group/` render
-  change has no row that prices it short of the ceiling — the gap
-  stellata-8cg.49.18 closes.
+- **Ungated vantages, and `lg` is permanently one.** `PIN_UNGATED_SCENARIOS`
+  maps a vantage the band never marks to the reason, which the row's note
+  prints. `lg`'s GPU duration **wanders as much inside a single dwell as it
+  does between runs**, so its median is not a stable estimator there and
+  there is no level to hold it to. Measured over every dwell ever taken at
+  the pin buffer: lg's within-dwell quarter span runs 0.090–1.775 ms, median
+  0.626, against 0.005–0.501 ms and a median near 0.02 at the other four
+  vantages — and its spread across runs, 1.608 ms, is the same size as that
+  within-dwell wander rather than 30× it as the others' is. 4 of 14 lg
+  dwells trip the state guard; 0 of 56 elsewhere do. Reproduced at 9.216 Mpx
+  (where the frame clears the refresh interval), at run positions 1, 5 and
+  10, cold and warm, across a dozen commits — so it is a property of the
+  vantage and **not** waiting on a fix. Only the *band* stands down: the
+  ceiling below still marks the row, and the refusals below still refuse it,
+  since a trending or resized lg indicts the run's state rather than lg's
+  own reproducibility. **`lg` is the only canon vantage that sees the Local
+  Group**, so a `src/client/local-group/` render change has no pin row that
+  prices it short of the ceiling: price one with a per-pass differential at
+  lg instead, never with its pin row.
 - **Band.** The pair's two-sigma standard error, floored at
   `max(DWELL_FLOOR_MS 0.25 ms, DWELL_FLOOR_FRACTION 1 % × pinned)` — about
   8× the largest cold-to-cold move those four rows showed. A `✗` is past

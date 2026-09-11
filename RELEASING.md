@@ -284,24 +284,25 @@ inside 0.18 % of each other, the largest absolute move being 0.030 ms. The
 floor sits about 8× that.
 
 lg does not reproduce: 11.891 → 13.360 ms, 12.35 %, across the same pair.
-It is a level shift *between* runs rather than jitter inside one — each
-run's four quarter medians are near-flat, and the two runs sit ~1.4 ms
-apart — which is precisely what the state guard cannot see, since it only
-compares quarters within a single dwell. No cool-down and no longer dwell
-suppresses it. So lg is recorded and never marked by the band, until
-stellata-8cg.49.18 explains the shift. A single floor wide enough to cover
-lg would have to be ~12 %, which would hide a 3.9 ms regression at mw50 —
-the gate would be a formality.
+It is not a shift between two levels — lg's GPU duration wanders as much
+*inside* one dwell as it does between runs (within-dwell quarter span
+median 0.626 ms and up to 1.775, against ~0.02 at the other four; spread
+across runs 1.608 ms, the same size), so a 120-sample median there lands
+anywhere in that band and no cool-down or longer dwell narrows it. So lg is
+recorded and **permanently** never marked by the band —
+`scripts/perf/pins/README.md` § Ungated vantages carries the evidence and
+stellata-8cg.49.18 closed on it. A single floor wide enough to cover lg would have to be ~12 %, which
+would hide a 3.9 ms regression at mw50 — the gate would be a formality.
 
 **What ungating lg costs, and what still watches it.** lg is the only
-canon vantage that sees the Local Group, so until 49.18 lands a render
-change under `src/client/local-group/` is priced by no row of its own: it
-reads five `~` and a `·`, and `perf-section-guard` demands an `accepted:`
-line only for a `✗`. The ceiling is what remains — it applies to lg like
-any other row carrying a GPU reading, so a frame that doubles there is
-still `✗`. That is a backstop, not a gate: it catches a collapse and
-nothing smaller. Weigh a `local-group/` diff accordingly, and prefer a
-per-pass differential at lg to a pin table for it.
+canon vantage that sees the Local Group, so a render change under
+`src/client/local-group/` is priced by no pin row of its own: it reads five
+`~` and a `·`, and `perf-section-guard` demands an `accepted:` line only
+for a `✗`. The ceiling is what remains — it applies to lg like any other
+row carrying a GPU reading, so a frame that doubles there is still `✗`.
+That is a backstop, not a gate: it catches a collapse and nothing smaller.
+So price a `local-group/` diff with a per-pass differential at lg, never
+with its pin row. This is the standing arrangement, not an interim one.
 
 **The `## Perf` section.** Required in the PR body when the diff touches
 anything under `src/client/` — `.ts`, `.glsl` and `.wgsl` alike — outside
