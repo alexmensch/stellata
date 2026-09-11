@@ -21,17 +21,24 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
 ## Files
 
 - `scene-layer.ts` — `FrameCtx`, `CadenceCtx`, `LayerTimeBehaviour`,
-  `SceneLayer`, `SceneLayerRegistry`.
+  `LayerContribution` + `ContributionSkip`, `SceneLayer`,
+  `SceneLayerRegistry`.
+- `frame-frustum.ts` (+ test) — `FrameFrustum`, the view planes a gated
+  layer's frustum test reads off `FrameCtx`, with the validity sentinel
+  that throws on a read above the frame's last camera write
+  (§ Declaring what a layer can put on screen).
 - `emitter-material.ts` — `EmitterMaterial` (§ The material seam).
   Type-only.
-- `scene-layer.test.ts` — fan-out order, optional-hook semantics, and the
-  cadence reduction (§ Declaring how time moves a layer).
+- `scene-layer.test.ts` — fan-out order, optional-hook semantics, the
+  contribution skip path, and the cadence reduction (§ Declaring how time
+  moves a layer).
 - `frame-ctx-mock.ts` — `makeFrameCtx`, the neutral per-frame fixture
-  (camera at Sol, clock zero, no warp) every layer / kind-module suite
-  builds its `update` call from, overriding the one field under test;
-  plus `makeCadenceCtx` and `ACCEPTANCE_PX_PER_RADIAN`, the still-camera
-  one-second-step fixture and the plate scale every pinned cadence number
-  is quoted against.
+  (camera at Sol, clock zero, no warp, the acceptance plate scale, a
+  frustum already refreshed from the camera) every layer / kind-module
+  suite builds its `update` or `skip` call from, overriding the one field
+  under test; plus `makeCadenceCtx` and `ACCEPTANCE_PX_PER_RADIAN`, the
+  still-camera one-second-step fixture and the plate scale every pinned
+  cadence number is quoted against.
 - `scene-elements.ts` — the declutter-cycle floor table + derivation
   (§ Detail-level declutter cycle).
 - `scene-elements.test.ts` — exhaustiveness + cumulative-set pinning.
@@ -176,7 +183,8 @@ closure over the shell's layer field, so a lazily-attached layer
 attach, the live instance after, with no re-registration.
 
 `FrameCtx` (camera, worldOffset, float64 `distFromSol`, model-clock
-`t`, `warpActive`) is computed once per frame and shared. Warp
+`t`, `warpActive`, `pxPerRadian`, and the `frustum` — § Declaring what a
+layer can put on screen) is computed once per frame and shared. Warp
 gating lives inside each entry, not in a branched caller: reference
 layers (galactic disc / grid, Local Group wireframe, HUD) hide
 themselves while `ctx.warpActive`; light-emitting and physical layers
@@ -186,9 +194,10 @@ per-entry decision. This mirrors the hover subsystem's one-engine /
 many-providers pattern (`../hover/README.md`).
 
 Adding a layer = constructing it + one `register(...)` call. Hooks
-are optional except `dispose` and `timeBehaviour`; a layer that doesn't
-participate in a fan-out simply omits the hook (e.g. the heliopause has
-no per-frame update — its visibility is event-driven, and `chart-labels`
+are optional except `dispose`, `timeBehaviour` and `contribution`; a
+layer that doesn't participate in a fan-out simply omits the hook (e.g.
+the heliopause has no per-frame update — its visibility is event-driven,
+and `chart-labels`
 registers `dispose` alone because its per-frame work rides the `'frame'`
 event under `chart-mode.ts`'s start/stop gate).
 
@@ -264,6 +273,128 @@ belongs in this registry, never on a bus event. `'frame'` fires after the
 render, so a write there is a frame late; and the ordering that makes a
 write correct is a claim about *other layers*, which only registration order
 can state.
+
+## Declaring what a layer can put on screen
+
+`contribution` is the second **required** declaration, and a
+discriminated union for the same reason as `timeBehaviour`: an omitted
+hook would read as "always draws", which is the silent answer every
+layer gave before the contract existed, and the failure it prevents is
+paying a draw and a per-frame update for something that cannot reach a
+single display pixel from this vantage (`docs/render-rules.md` § 2 is
+the rule; this is its mechanism).
+
+Two kinds:
+
+- **`'always'`** — every frame. Sequencing-only entries, the camera
+  writers, anything that writes uniforms or membership other layers
+  read (the solar and star clusters), and every layer not yet adopted.
+- **`'gated'`** — `skip(ctx)` returns a `ContributionSkip` reason or
+  `null`, and `setContributing(on)` hides or shows the layer's own
+  groups. Three reasons are admissible, all geometric:
+  `'frustum'` (bounding volume outside `ctx.frustum`), `'legibility'`
+  (projected extent under `isFeatureLegible` /
+  `FEATURE_LEGIBILITY_MIN_PX`, via `ctx.pxPerRadian`), `'opacity'`
+  (the layer's own authored, distance-faded opacity is zero).
+
+**The registry owns the skip; the layer owns its groups.** `updateAll`
+runs `skip` before `update` and, on a skip, calls neither `update` nor
+the draw — three skips a hidden group for free. `setContributing` fires
+on the **transition only**, so a layer that stays skipped pays one
+predicate call per frame. `recenter`, `setMonochrome` and `dispose` still
+reach a skipped layer; `update`, the draw and both per-frame
+`timeBehaviour` polls are elided (§ A skipped layer reports nothing).
+Detail-permit and warp gating stay inside `update` — contribution is a
+layer above them,
+and a skipped layer never evaluates its permit. Per-layer state seeds
+`contributing = true`, so a layer that draws from its first frame keeps
+its constructed visibility and is never told anything.
+
+**A layer that skips must reset every dirty-track sentinel on the way
+out** (`docs/authoring-patterns.md` § Sentinel-init) inside
+`setContributing(false)` — a "same as last frame" short-circuit computed
+before the skip is exactly what refuses to repaint on re-entry.
+`FresnelShell.permitted` starting `false` to agree with its constructed
+`group.visible` is the worked example (`../fresnel-shell/README.md`
+§ Invariants).
+
+**The frustum is valid only below the orbit lock.** The focal rides and
+the lock move the camera *inside* the fan-out, and the lock is a
+rotation — so `FrameCtx.frustum` is invalidated every tick in
+`refreshFrameCtx` and refreshed by the orbit-lock entry after its write
+(§ Camera writes, then camera reads). A `'frustum'` test on an entry
+registered above the lock throws on its first frame rather than culling
+against a pose the frame does not render.
+
+**Eight entries are above the lock, and which ones is not obvious from
+reading `registerSceneLayers` alone.** All five kind-module layers —
+molecular clouds, Local Group, the boundary shells, planets, probes —
+register in the constructor's roster loop, which runs *before*
+`registerSceneLayers` (§ How the shell uses it); the moving-focal ride,
+the orbit rings and the binary orbits are the three inline entries ahead
+of the lock. So clouds, the Local Group and the shells may gate on
+legibility and opacity but **not** on frustum, and moving them below the
+lock is not free: a module layer writes the positions the focal ride
+reads, and the ride must precede the lock. Splitting one into a
+position-write half and a draw-gate half is the only route, and it is
+adoption's problem, not the contract's. `realtimeFramesNeeded` never
+sees a valid frustum from any position — it runs above the gate, ahead
+of every camera write in the frame.
+
+`pxPerRadian` has no such constraint: it is a function of viewport and
+FOV alone, hoisted above the gate, and `CadenceCtx.pxPerRadian` is a
+copy of it.
+
+### A skipped layer reports nothing
+
+The two per-frame polls that read `timeBehaviour` — `cadenceReport` and
+`realtimeFramesNeeded` — skip a non-contributing layer, so the fan-outs
+a skipped layer still receives are `recenter`, `setMonochrome` and
+`dispose` alone. Both have the same two reasons. Its `update` did not
+run, so a rate it reported would be computed from the state of whichever
+frame it last drew; and a layer that cannot put a pixel on screen cannot
+move one, so it has no claim on the frame's redraw budget. Asking it
+anyway would leave the layer scheduling frames for content it is not
+drawing — the draw and the update saved, the frames not.
+
+**This holds only while every admissible skip reason is a function of
+camera pose.** Frustum, legibility and opacity all are, and camera
+motion wakes the gate on its own, so a skipped layer is re-tested the
+moment anything could change its verdict. A reason that is *not* a
+function of pose — the deferred brightness test, whose input is the live
+exposure — could fall skipped with the camera still and never be asked
+again, because no `updateAll` would run to re-evaluate it. Admitting one
+means giving it a wake path of its own; the design gate that admits it
+owns that (stellata-8cg.50.4).
+
+`cadenceReport` runs after `updateAll`, so it reads this frame's
+verdicts. `realtimeFramesNeeded` runs above the gate and reads the last
+rendered frame's — a layer stays presumed-skipped until a frame proves
+otherwise, which is the conservative direction.
+
+**The contract is per layer.** Per-instance culling inside a layer —
+one cloud of ninety-six behind the camera — is `docs/render-rules.md`
+§ 1's territory and lives in the layer's own `update`; the layer-level
+verdict fires only when the whole population fails one test.
+
+**No hysteresis, deliberately.** The three tests are geometric, so their
+boundary is crossed only by camera motion, which already renders every
+frame; a one-pixel pop at the six-pixel legibility floor is a
+level-of-detail step, not a scheduling oscillation. The **brightness**
+test — peak surface brightness under the display floor at the live
+exposure — is *not* admissible under this contract: skipping an emitter
+removes its share from the exposure statistic, which eases the cut,
+which brings the emitter back, which deepens the cut. Its admission,
+with the bound that closes that loop, is its own design gate
+(stellata-8cg.50.4), and `FrameCtx` gains no exposure term until it
+lands.
+
+**Enforced two ways.** `tsc` refuses a layer without the declaration;
+`../../../tests/cadence-layer-declarations.test.ts` scans the shipped
+source for the always / gated census and pins that every registration
+carries both declarations. `SceneLayerRegistry.contributionCensus()` is
+the live audit surface — which layers are skipping right now and why —
+printed by `debug.renderWatch()` (`../debug/render-watch/README.md`).
 
 ## Camera writes, then camera reads
 

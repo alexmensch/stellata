@@ -36,6 +36,12 @@ step with whatever is actually on screen.
   coincide). It is the largest step that nothing drawn can turn into a
   visible change, where "visible" means a quarter of a device pixel of
   on-screen motion or 1 % of a body's own flux.
+- **`contribute`** — the contribution census
+  (`../../scene/README.md` § Declaring what a layer can put on screen):
+  how many layers declare `always` versus `gated`, and how many gated
+  layers are skipping their draw this frame, by reason. A skipped layer
+  costs one predicate call and no draw — which is why a perf row for it
+  reads as *gone*, not as zero.
 - **`set by`** — which of the four sources is binding: **on-screen
   motion** (the fastest thing actually drawn), **a brightness ramp** (an
   eclipse dip in progress), **the pulsation bound** (the catalogue's

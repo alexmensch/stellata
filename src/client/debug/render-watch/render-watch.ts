@@ -169,12 +169,15 @@ export function mountRenderWatch(stellata: Stellata, opts: RenderWatchOpts = {})
       : 'nothing this tick';
     const wake = gate.lastWake;
     const r = cadence.report;
+    const c = cadence.contribution;
 
     setReadoutText(body, [
       `clock rate   ${cadence.clockRate}x    holds ${gate.holds}`
         + `    realtime ${cadence.realtimeNeeded ? 'YES' : 'no'}`,
       `layers       ${cadence.census.static} static · ${cadence.census.clock} clock`
         + ` · ${cadence.census.realtime} realtime`,
+      `contribute   ${c.always} always · ${c.gated} gated · skipping `
+        + Object.entries(c.skipped).map(([why, n]) => `${n} ${why}`).join(' · '),
       '',
       `stamped by   ${stampedBy}`,
       `last wake    ${wake === null ? 'none' : `${wake.reason}`

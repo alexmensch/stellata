@@ -119,6 +119,7 @@ export function createProbeKindModule(): ProbeKindModule {
           kind: 'clock',
           rate: (cc) => field!.cadenceReport(cc),
         },
+        contribution: { kind: 'always' },
         update: (fc) => {
           field!.update(fc.t, fc.camera);
           // After the field wrote this frame's samples: each trail's last

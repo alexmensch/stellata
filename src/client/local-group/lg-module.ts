@@ -106,6 +106,7 @@ export function createLgKindModule(): LgKindModule {
       return {
         // Fixed extragalactic positions — no proper motion is modelled.
         timeBehaviour: { kind: 'static' },
+        contribution: { kind: 'always' },
         update: (fc) => {
           updateWarpGatedRefLayer(layer, fc, kindCtx.detailPermits('lgWireframes'));
           emission!.update(fc.worldOffset);
