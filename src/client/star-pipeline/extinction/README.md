@@ -123,7 +123,7 @@ frame — is `../../webgpu/extinction/README.md` § Cold reads.
 The pick paths are the only caller: a star's extinction decides whether
 the renderer puts a pixel on screen for it at all, and a pick gated on
 the intrinsic magnitude selects stars the frame drew black
-(`../../hdr/exposure/README.md` § What "visible" means to a pick path).
+(`../../hdr/exposure/visibility/README.md` § What "visible" means to a pick path).
 
 **Reading the texel is the point** — the alternative, a CPU march, needs
 the ~128 MiB voxel grid that `../../loaders/dust-loader.ts` uploads and

@@ -5,15 +5,15 @@
 import {
   pointSourcePeakLuminance,
   surfaceBrightnessLuminance,
-} from '../emission/emission-pure';
-import { displayLevel } from '../tonemap/tonemap-pure';
-import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
-import { CADENCE_JND_MAG } from '../../render-gate/cadence/clock-cadence-pure';
+} from '../../emission/emission-pure';
+import { displayLevel } from '../../tonemap/tonemap-pure';
+import { SOFT_TAPER_MARGIN_MAG } from '../../../solar-system/perceptual-magnitude';
+import { CADENCE_JND_MAG } from '../../../render-gate/cadence/clock-cadence-pure';
 import {
   adaptationBranches,
   type AdaptationTuning,
   type FrameStatistic,
-} from './scene-adaptation-pure';
+} from '../scene-adaptation-pure';
 
 /** Half an 8-bit output step: an encoded level under this rounds to
  *  0/255, i.e. the emitter is indistinguishable from the background. */
@@ -67,8 +67,8 @@ export function emitterPutsInkOnScreen(a: EmitterInkArgs): boolean {
 
 /** Everything the frame's exposure state offers a per-frame reader —
  *  stateless, storing nothing keyed on adaptation, which is the class
- *  README.md § One writer, five slots exempts. Null in chart, where the
- *  seam is off. */
+ *  `../README.md` § One writer, five slots exempts. Null in chart, where
+ *  the seam is off. */
 export interface FrameExposure {
   /** Live `uExposure`: the adaptation cut and the EV trim are both in it. */
   readonly exposure: number;

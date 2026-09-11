@@ -241,6 +241,15 @@ on camera position only — never on exposure — and holds the radius of the
 position it took the bound at, since that is the travel the allowance
 covers. `dispose` resets it.
 
+`MilkyWay.contributionSkip` is what the band's registry entry declares
+`contribution: { kind: 'gated' }` on (`../scene/README.md` § The
+brightness reason): the ceiling first, and the fan **only** where the
+ceiling cannot decide, which is what keeps a 2–6 ms march off the deep
+cuts that need no help. `setContributing` is a term of the group's
+visibility alongside the user's `mw=0` toggle, never a bare
+`group.visible` write — the band holds no dirty-track state, so that is
+the whole reset.
+
 ## Coordinate handling
 
 The mesh-local unit sphere has +X/+Y in the disc plane and +Z toward NGP;

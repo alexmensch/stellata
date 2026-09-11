@@ -153,7 +153,7 @@ import {
 import { FilterController } from './filters/filter-controller';
 import { ExposureController } from './hdr/exposure/exposure-controller';
 import { exposureForMagLimit } from './hdr/exposure/exposure-epoch';
-import type { FrameExposure } from './hdr/exposure/emitter-visibility-pure';
+import type { FrameExposure } from './hdr/exposure/visibility/emitter-visibility-pure';
 import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
 import { LuminanceReduction } from './hdr/exposure/reduction/reduction-pass';
 import {

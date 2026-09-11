@@ -32,10 +32,9 @@ src/client/hdr/exposure/
                              readout plus the five sliders.
   exposure-tuning-pure.ts    Readout text — the branch labels and the
     (+ test)                 no-measurement case.
-  emitter-visibility-pure.ts Whether an emitter puts a non-zero pixel on
-    (+ test)                 screen — the taper, the peak, the toe and
-                             the operator, resolved to one boolean
-                             (§ What "visible" means to a pick path).
+  visibility/                Whether an emitter puts a pixel on screen,
+                             and whether a diffuse one may skip its draw
+                             because it cannot. Its own README.
   park/                      When the measurement's GPU work may stop and
                              how it wakes. Its own README.
   reduction/                 The GPU reduction of the HDR target's
@@ -77,7 +76,7 @@ function of filter state alone.
 | uniform | value | who reads it |
 | --- | --- | --- |
 | `uLimitMag` | the instrument's `m_lim` | exposure anchor, `perceptualDmEff`'s footprint window, chart disc sizing, and the MW chart isobar — which has never drawn (`../../milkyway/README.md` § Chart mode + warp), so it is not a live reader |
-| `uThresholdMag` | `m_lim + MAG_PER_STOP·ev` | the fragment taper, and every CPU "is it drawn?" prefilter via `drawCutoffMag` — a bound, never a visibility test (§ What "visible" means to a pick path) |
+| `uThresholdMag` | `m_lim + MAG_PER_STOP·ev` | the fragment taper, and every CPU "is it drawn?" prefilter via `drawCutoffMag` — a bound, never a visibility test (`visibility/README.md` § What "visible" means to a pick path) |
 | `uCullMag` | `m_lim + 3·MAG_PER_STOP + 0.5` = 10.56 | the vertex cull, nothing else |
 | `uOmegaSummationArcsec2` | `10^(0.4·(S_lim − m_lim))` = 4.7863e5 arcsec² | both volumetric emitters' display gain (and the never-drawn MW chart isobar) |
 
@@ -116,53 +115,26 @@ would thrash — an on-demand consumer that recomputes from scratch and
 stores nothing may read adaptation, and the pick paths do, through the
 live `uExposure` rather than through this readout.
 
+**`FrameCtx.exposure` is the exempt class, named.** The scene registry
+builds a `FrameExposure` record every tick and hands it to each gated
+layer's `skip` (`../../scene/README.md` § The brightness reason). It is
+per frame, stateless, and stores nothing keyed on adaptation — the record
+is rebuilt rather than kept, and the `contributing` flag the predicate
+reads is the registry's transition state, recomputed every frame, not an
+exposure cache. Both peak providers behind it are keyed on camera pose
+and `Ω_px` and **never** on exposure, which is the property that keeps
+them out of this prohibition too. A future reader that wanted to *hold*
+anything derived from the cut would be the case the rule forbids.
+
 `setAdaptation` is the one setter that does **not** fire `onChange`: it
 runs every frame, and the URL sync and panel listen to that event.
 
-## What "visible" means to a pick path
+## What "visible" means, and when an emitter may be skipped
 
-`uThresholdMag + SOFT_TAPER_MARGIN_MAG` is where the shaders stop
-emitting. It is **not** where the user stops seeing, and the gap is
-large enough to have shipped as a bug: clicks landed on stars in
-apparently empty sky. Three terms sit between the two.
-
-- **The taper's own endpoint.** `tap` is `1 − smoothstep(m_t, m_t + 0.5,
-  m)`, so at the bound it is exactly 0. The last magnitude the cutoff
-  admits emits nothing.
-- **The faint-end toe.** It compresses sub-threshold light to black over
-  `TOE_BLACK_MAG`, so the peak pixel crosses under half an 8-bit step at
-  **0.3066 mag** past threshold, not 0.5.
-- **Adaptation.** It is absent from all three magnitude bounds and rides
-  `uExposure` instead, so a cut moves the visible edge and leaves every
-  bound where it was. Past ~1.5 mag of cut the whole faint end is black
-  while the bounds have not moved at all.
-
-A fourth is not an exposure term but reaches the same conclusion:
-`catalog.absmag` is stored **de-extincted**, so any CPU magnitude is
-`A_V` brighter than what renders (`../../star-pipeline/extinction/README.md`).
-
-`emitterPutsInkOnScreen` answers the question the bounds cannot, by
-running the chain instead of approximating it: point-source peak → taper
-→ toe → extended Reinhard → sRGB, true iff the brightest pixel survives
-8-bit quantisation. It takes the **live** `uExposure`, which is how
-adaptation reaches it without any bound having to move.
-
-It reads the emitter's peak from the star's **true** angular radius, the
-one `star.vert.glsl` divides by before the viewport-fraction up-clamp
-(`renderedSizeComponents`' `physSizePxUncapped`) — the clamped value
-over-brightens a star at the zoom floor. Its half-step test is also one
-side of the encode only: the pipeline dithers *after* the operator, so a
-source a hair under half a step still lights a pixel on some frames. The
-predicate is that much stricter than the frame at the very edge, which
-errs toward "not pickable" on a star the user can barely see.
-
-**Every term above only ever dims**, and that is what keeps the cheap
-bounds useful: an intrinsic magnitude inside `drawCutoffMag` is a
-conservative superset of what renders, so it stays the right *prefilter*
-for a catalog-wide scan. Prefilter with the bound, decide with the
-predicate — the star pick path (`../../camera/controls/picker.ts`) is
-the worked example, and it resolves candidates lazily because the
-extinction term costs a GPU readback.
+Both questions — whether a source puts ink on screen at all, and
+whether a diffuse emitter may skip its draw because it cannot — live in
+`visibility/`, with the predicates that answer them. Its README
+replaces this file for reads in there.
 
 ## Adaptation — the frame measures itself
 
@@ -381,15 +353,6 @@ than the measurement — no cut at all, or the display floor governing, which
 is the app's own default view. `park/README.md` is the contract: the
 parkable predicate, why the floor case is exact, the probe cadence, and
 what the park does not save.
-
-### Skipping an emitter the display cannot show
-
-A diffuse emitter whose brightest pixel encodes under half an 8-bit step
-at the live exposure may skip its draw — statistic write included — under
-two rules that keep the cut from moving with it:
-`docs/science-hdr-pipeline.md` § 3.5. A per-frame, stateless reader of the
-live `uExposure`, which § One writer, five slots exempts. Ships with
-stellata-8cg.50.4.2.
 
 ## Debug panel
 

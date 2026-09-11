@@ -39,9 +39,13 @@ step with whatever is actually on screen.
 - **`contribute`** — the contribution census
   (`../../scene/README.md` § Declaring what a layer can put on screen):
   how many layers declare `always` versus `gated`, and how many gated
-  layers are skipping their draw this frame, by reason. A skipped layer
-  costs one predicate call and no draw — which is why a perf row for it
-  reads as *gone*, not as zero.
+  layers are skipping their draw this frame, by reason — `frustum`,
+  `legibility`, `opacity`, `brightness`. A skipped layer costs one
+  predicate call and no draw, which is why a perf row for it reads as
+  *gone*, not as zero. At the app default view both diffuse emitters sit
+  in the `brightness` column: the band and the Local Group pair are under
+  the display floor at the −6.29 mag cut, and the two whole-frame
+  statistic writes go with them.
 - **`set by`** — which of the four sources is binding: **on-screen
   motion** (the fastest thing actually drawn), **a brightness ramp** (an
   eclipse dip in progress), **the pulsation bound** (the catalogue's

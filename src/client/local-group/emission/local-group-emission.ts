@@ -19,7 +19,7 @@ import { LgPeakCache } from './lg-peak-pure';
 import {
   brightnessSkip,
   type FrameExposure,
-} from '../../hdr/exposure/emitter-visibility-pure';
+} from '../../hdr/exposure/visibility/emitter-visibility-pure';
 import type { ContributionSkip } from '../../scene/scene-layer';
 
 const SPHERE_WIDTH_SEGMENTS = 48;

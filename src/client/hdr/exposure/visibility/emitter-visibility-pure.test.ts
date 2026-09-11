@@ -14,21 +14,21 @@ import {
   sceneExposure,
   summationSolidAngleFor,
   thresholdMagFor,
-} from './exposure-epoch';
+} from '../exposure-epoch';
 import {
   adaptationBranches,
   adaptationDm,
   type FrameStatistic,
-} from './scene-adaptation-pure';
+} from '../scene-adaptation-pure';
 import {
   extendedThresholdSbFromSolidAngle,
   pixelSolidAngleArcsec2,
-} from '../emission/emission-pure';
-import { makeFrameExposure } from '../../scene/frame-ctx-mock';
-import { MW_PEAK_SB_DUST_FREE } from '../../milkyway/band-peak-pure';
-import { DR_MAG, TOE_BLACK_MAG, tonemapWhitePoint } from '../tonemap/tonemap-pure';
-import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
-import { DEFAULT_INSTRUMENT, instrumentLimitMag } from '../../filters/filter-state';
+} from '../../emission/emission-pure';
+import { makeFrameExposure } from '../../../scene/frame-ctx-mock';
+import { MW_PEAK_SB_DUST_FREE } from '../../../milkyway/band-peak-pure';
+import { DR_MAG, TOE_BLACK_MAG, tonemapWhitePoint } from '../../tonemap/tonemap-pure';
+import { SOFT_TAPER_MARGIN_MAG } from '../../../solar-system/perceptual-magnitude';
+import { DEFAULT_INSTRUMENT, instrumentLimitMag } from '../../../filters/filter-state';
 
 const LIMIT = instrumentLimitMag(DEFAULT_INSTRUMENT);
 const WHITE = tonemapWhitePoint(DR_MAG);

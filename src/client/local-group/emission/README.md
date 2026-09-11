@@ -281,9 +281,19 @@ brightness skip's own warp refusal (`stellata-8cg.50.4.2`) has to be
 evaluated *before* the provider, not after.
 
 From Sol at the acceptance plate scale M31 bounds at 17.42 — 0.2 mag under
-the default view's 17.21 threshold, so the glow can skip there.
+the default view's 17.21 threshold, so the glow skips there.
 `LgPeakCache` is keyed on camera position (`LG_PEAK_RECOMPUTE_PC`, 500 pc)
 and `Ω_px`, never on exposure; `dispose` resets it.
+
+`LocalGroupEmission.contributionSkip` runs it through the two-rule
+predicate (`../../scene/README.md` § The brightness reason). **The
+verdict is not this layer's alone**: the lg module returns ONE scene
+layer for the wireframe and the glow together, so its `skip` is the
+conjunction — the wireframe's distance fade has to have reached zero as
+well — and the reason it reports is this one, since the glow is the half
+that costs a whole-frame raymarch and two whole-frame writes.
+`setContributing` is a term of the group's visibility beside the user
+toggle and the chart gate, never a bare `group.visible` write.
 
 ## What a viewer actually reads
 

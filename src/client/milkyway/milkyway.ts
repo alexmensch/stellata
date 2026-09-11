@@ -16,7 +16,7 @@ import {
 import {
   brightnessSkip,
   type FrameExposure,
-} from '../hdr/exposure/emitter-visibility-pure';
+} from '../hdr/exposure/visibility/emitter-visibility-pure';
 import type { ContributionSkip } from '../scene/scene-layer';
 import {
   BULGE_AXIS_RATIO,

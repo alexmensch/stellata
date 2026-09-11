@@ -50,17 +50,23 @@ two ways — `L̄` falling under `Lw`, or coverage rising far enough that the
 pin starts to weigh — and § Wake below is what bounds how long either takes
 to be seen.
 
-**The park never reads a partial measurement**, which is what keeps that
-argument this short. A parked frame runs no reduction and lands nothing,
-and a probe opens the writes for its own frame *before* the chain runs, so
-every landing the machine ever sees is a full-frame one. The lower-bound
-argument — glow additive-blended, disc per-channel max, both monotone
-non-decreasing in what is drawn, so a partial `L̄` already at or above `Lw`
-proves the full one is too — belongs to `stellata-8cg.34`, which keeps
-measuring *while* it closes the 390k field draw. It is not load-bearing
-here, and reading it as this park's justification gets the implication
-backwards: lowering `L̄` is the direction that would take the frame *out*
-of the regime.
+**Every measurement the park reads omits a share that moves the cut by
+under the JND.** A parked frame runs no reduction and lands nothing, and a
+probe opens the writes for its own frame *before* the chain runs, so no
+landing is partial for the park's own reasons. What can be missing is a
+diffuse emitter the brightness skip took out of the frame
+(`docs/science-hdr-pipeline.md` § 3.5) — and that skip is admissible only
+where the share it removes shifts `dm` by less than `CADENCE_JND_MAG`,
+which is what keeps this argument short. A partial `L̄` still at or above
+`Lw` proves the floor governs exactly as a full one does; a partial `L̄` a
+hair under `Lw` flips to the eye branch by ≤ JND and unparks, which costs
+a repaint and a measurement rather than a wrong picture.
+
+The lower-bound argument that makes that safe — glow additive-blended,
+disc per-channel max, both monotone non-decreasing in what is drawn, so
+removing light can only lower `L̄` — belongs to `stellata-8cg.34`. Read it
+as a bound, not as this park's justification: lowering `L̄` is the
+direction that takes the frame *out* of the floor regime.
 
 **The pin has no exemption from that, and once did.** The argument used to
 be that nothing drawing a kernel or a diffuse column writes a mask, so a

@@ -52,7 +52,7 @@ import {
   perceptualDmEff,
 } from '../../star-pipeline/perceptual-disc/perceptual-disc-pure';
 import { drawCutoffMag } from '../../hdr/exposure/exposure-epoch';
-import { emitterPutsInkOnScreen } from '../../hdr/exposure/emitter-visibility-pure';
+import { emitterPutsInkOnScreen } from '../../hdr/exposure/visibility/emitter-visibility-pure';
 import { pixelsPerRadianFromUniforms } from '../../util/orbit-line';
 import {
   discHitRadiusPx,

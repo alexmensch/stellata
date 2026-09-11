@@ -10,7 +10,7 @@ import {
   type CadenceReport,
 } from '../render-gate/cadence/clock-cadence-pure';
 import type { FrameFrustum } from './frame-frustum';
-import type { FrameExposure } from '../hdr/exposure/emitter-visibility-pure';
+import type { FrameExposure } from '../hdr/exposure/visibility/emitter-visibility-pure';
 
 /** Per-frame inputs shared by every layer, computed ONCE per frame by
  *  the integration shell. Layers keep their own visibility gates

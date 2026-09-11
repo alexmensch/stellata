@@ -1403,6 +1403,13 @@ correct — the emitter's light is a material part of the mean exactly
 there — and a short viewport pushes it further, `Ω_px` overtaking `Ω_sum`
 outright at 120° under 625 px of height.
 
+**Measured.** The implementation pins the refusal band at **0.0003 mag at
+10°, 0.0074 at the acceptance 50° field and 1.5904 at 120°**
+(`hdr/exposure/emitter-visibility-pure.test.ts`). The 50° width sits under
+`CADENCE_JND_MAG`, reaching the paragraph above's conclusion from the other
+direction; 120° is where the emitter's own light becomes a material part of
+the mean, and the band widens accordingly.
+
 **The peak, per emitter — a bound on the rendered peak, not a model
 constant.** Probed 2026-09-11 with the band's CPU mirror
 (`milkyway-column-pure.ts`, no footprint), on a fan **centred on the
@@ -1453,6 +1460,13 @@ For the Local Group glow it is the footprint-softened central
 column per object at the live plate scale; the sub-pixel expansion (`k`,
 `k⁻³`) only lowers surface brightness so the unexpanded value bounds it,
 and M31's unsoftened nucleus is 3.95 mag too loose to use.
+
+**Shipped** in stellata-8cg.50.4.2: `FrameCtx.exposure`,
+`extendedEmitterPeakDisplayLevel` + `brightnessSkip`
+(`hdr/exposure/emitter-visibility-pure.ts`), and `'brightness'` on both
+emitters. The band short-circuits on the ceiling before marching the fan;
+the Local Group registration draws wireframe and glow together, so its
+verdict is the conjunction of the wireframe's distance fade and this test.
 
 **The wake path is the render gate's, and needs nothing new.** Every input
 to the verdict changes only on a rendered frame: `uExposure` through the
