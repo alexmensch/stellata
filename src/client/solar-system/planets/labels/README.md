@@ -17,7 +17,8 @@ moons) above the canvas. The label engine is independent of the
 chart-mode label engine (`chart-labels.ts`); labels show when a planet
 system is attached and the detail cycle permits `planetLabels` (floor
 `all`), and are hidden in chart mode so the chart-mode glyph contract
-isn't doubled up (`../../../scene/declutter/README.md`).
+isn't doubled up (`../../../scene/declutter/README.md` § Detail-level
+declutter cycle).
 
 Per-body resolvability gate: every label tracks its orbit ring
 (`isOrbitRingVisible` — a ring the pixel-gap heuristic dropped means the

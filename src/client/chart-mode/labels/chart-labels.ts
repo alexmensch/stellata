@@ -544,7 +544,7 @@ export class ChartLabels {
 
     // Chart-content detail gates (recomputed on chart entry + V). Planet
     // name labels ride the star-name tier; rings + wings share one element.
-    // See scene/declutter/README.md.
+    // See scene/declutter/README.md § Detail-level declutter cycle.
     const showStarNames = stellata.detailPermits('chartStarNameLabels');
     const showBayer = stellata.detailPermits('chartBayerGlyphs');
     const showConNames = stellata.detailPermits('chartConstellationNames');

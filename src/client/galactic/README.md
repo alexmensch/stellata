@@ -48,8 +48,8 @@ constants directly — keep the module minimal and stable.
 detail level ≥ representational, hidden in chart mode*. The declutter
 cycle gates it as `galacticDiscWireframe` (floor `representational`); the
 per-frame warp/fade update is skipped when the detail cycle doesn't
-permit it (`../scene/declutter/README.md`). A 15 kpc
-midplane ring, two thickness rings at
+permit it (`../scene/declutter/README.md` § Detail-level declutter
+cycle). A 15 kpc midplane ring, two thickness rings at
 ±1800 pc, and a 5 kpc × 3 kpc bulge wireframe (three orthogonal ring
 loops in the galactic frame), all centred on the galactic centre — Sol
 sits ~8 kpc *inside* the disc, not at its middle.

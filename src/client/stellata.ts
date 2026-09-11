@@ -350,7 +350,7 @@ export class Stellata implements FrameAnchor {
   readonly reduction: ReductionSeam;
   private readonly drawingBufferSize = new THREE.Vector2();
 
-  // Declutter cycle (scene/declutter/README.md).
+  // Declutter cycle (scene/declutter/README.md § Detail-level declutter cycle).
   // Init all-true so the default detailLevel='all' is behaviour-neutral —
   // the seam changes nothing until V is pressed.
   private readonly detailPermitted: Record<SceneElementId, boolean> =
