@@ -147,7 +147,7 @@ export function usage(): string {
     '  --against-pin <path>     dwell: verdicts against a pin; a ✗ or a refused row exits 1',
     '  --accept <scenario>|<backend>:<bead>  dwell, with --pin: accept a ✗ and pin its value, repeatable',
     `  --cooldown-ms <n>        idle between contexts so each starts cold    (default ${ARG_DEFAULTS.cooldownMs})`,
-    'Contexts run backend-major (webgpu, then webgl2), scenarios in the order given; all = the canon order.',
+    `Contexts run backend-major (${BACKENDS.join(', then ')}), scenarios in the order given; all = the canon order.`,
     'Exit codes: 0 ok · 1 scenario failed / refused / software adapter · 2 bad flags or unreachable url · 3 not armed',
   ].join('\n');
 }
@@ -178,9 +178,13 @@ const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
 
 const ACCEPT_KEY = new RegExp(`^(${SCENARIO_NAMES.join('|')})\\|(${BACKENDS.join('|')})$`);
 
-/** Every canon vantage, in any order — `all` or the five spelled out. */
-function isWholeCanon(scenarios: readonly ScenarioName[]): boolean {
-  return SCENARIO_NAMES.every((name) => scenarios.includes(name));
+/** The whole canon in canon order. Order, not membership: a pin's rows are
+ *  only ever compared against a row taken at the same position, so a
+ *  permutation pins ten rows no later run reaches
+ *  (`pins/README.md` § Run position). */
+function isCanonOrder(scenarios: readonly ScenarioName[]): boolean {
+  return scenarios.length === SCENARIO_NAMES.length
+    && scenarios.every((name, i) => name === SCENARIO_NAMES[i]);
 }
 
 function parseAccept(raw: string): AcceptedMark {
@@ -297,8 +301,11 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     throw new ArgError('--pin needs --json: the pin cites the run file its rows were summarised from');
   }
   const backend = oneOf('backend', BACKEND_REQUESTS);
-  if (str('pin') !== undefined && (backend !== 'both' || !isWholeCanon(scenarios))) {
-    throw new ArgError('--pin needs --scenario all --backend both: a pin missing a row narrows the gate silently');
+  if (str('pin') !== undefined && (backend !== 'both' || !isCanonOrder(scenarios))) {
+    throw new ArgError(
+      '--pin needs --scenario all --backend both, in canon order: a pin missing a row narrows the gate '
+      + 'silently, and a reordered one pins every row at a position no later run visits it at',
+    );
   }
   if (accept.length > 0 && str('pin') === undefined) {
     throw new ArgError('--accept records a mark into the pin being written; it needs --pin');

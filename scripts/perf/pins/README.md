@@ -21,7 +21,8 @@ and the run file. **Any refused row refuses the whole pin** — failed,
 tainted, not dwell, not `raf-delta`, trending, a round trip, a headed run,
 no record count, no position — because a pin missing a row narrows the
 gate silently, and for the same reason `--pin` refuses a command line short
-of `--scenario all --backend both`. `--accept <scenario>|<backend>:<bead>`
+of `--scenario all --backend both`, or one naming the whole canon in
+another order (§ Run position). `--accept <scenario>|<backend>:<bead>`
 records an accepted mark as provenance for the value now pinned; it never
 filters a verdict.
 
@@ -44,7 +45,10 @@ Tier 1 run's — `--scenario mw120,sol --backend webgpu` — in the same
 order, which is what lets Tier 1 read `--against-pin` directly instead of
 hunting for a recent run of its own shape (`RELEASING.md` § Perf pin).
 `TIER1_SCENARIOS` in `../scenarios.ts` is the prefix and a test holds the
-canon to it; reordering either constant re-takes the pin.
+canon to it; reordering either constant re-takes the pin. `--pin` enforces
+the order rather than the membership for the same reason — a permuted run
+covers all ten contexts and pins every one of them where nothing later
+looks.
 
 ## What the commit fields hold
 

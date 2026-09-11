@@ -58,7 +58,7 @@ scripts/perf/
 ## Invocation
 
 ```
-pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgl2|webgpu|both]
+pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu|webgl2|both]
                  [--mode differential|probe|dwell|sweep] [--passes a,b]
                  [--method timer-query|timestamp|raf-delta]
                  [--budget-ms N] [--dwell-frames N] [--warmup-frames N] [--settle-frames N] [--no-interleave]
@@ -343,7 +343,10 @@ Sweeps are never diffed — a slope is not a cost.
 `--mode dwell --scenario all --backend both --json <run> --pin
 pins/<slug>.json` summarises a run as the committed perf pin — `--pin`
 refuses anything short of the whole canon on both backends, since a pin
-missing a row narrows the gate silently. `--against-pin <path>` prints the
+missing a row narrows the gate silently, and refuses a **permutation** of
+it too: the rows would sit at positions no later run visits them at, so
+the pin it wrote would refuse every row of the next comparison.
+`--against-pin <path>` prints the
 verdicts for the rows this run measured, lists the pin rows it did not,
 and exits 1 on a `✗` or a refused row; a Tier 1 run measures two of the
 ten. Metric, floor, ceiling, refusals: `pins/README.md`. When a PR must run

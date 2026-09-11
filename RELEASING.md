@@ -191,8 +191,10 @@ medians' own scatter being about 0.02 ms at 240 frames on a steady
 vantage. The floor covers sampling; the position refusal above covers
 the run-condition difference that exceeds it.
 
-**What is pinned.** `--mode dwell` at the five canon vantages (sol, earth,
-mw50, mw120, lg), 1280×800 at dpr 2 (4.096 Mpx), 240 frames, `raf-delta`,
+**What is pinned.** `--mode dwell` at the five canon vantages in canon
+order (mw120, sol, earth, mw50, lg — § Run position: a permutation pins
+rows no later run reaches, and `--pin` refuses one), 1280×800 at dpr 2
+(4.096 Mpx), 240 frames, `raf-delta`,
 exposure pinned. Every row records the wall p50 / p90, the catalogue record
 count it priced, and, on WebGPU, the GPU-stream p50. The commit pair is on
 the run, not the row. The per-pass differential is attribution, run when a row

@@ -70,15 +70,23 @@ describe('parseRunArgs', () => {
 
   // A pin summarises whatever the run measured, so a two-context run would
   // write a two-row pin and every later comparison would silently lose the
-  // other eight. The five vantages spelled out are the same canon as all.
-  it('refuses --pin unless the run covers every canon vantage on both backends', () => {
-    expect(() => parseRunArgs(['--mode', 'dwell', '--json', 'r.json', '--pin', 'p.json']))
-      .toThrow(/--pin needs --scenario all --backend both/);
-    expect(() => parseRunArgs(['--mode', 'dwell', '--scenario', 'all', '--backend', 'webgpu', '--json', 'r.json', '--pin', 'p.json']))
-      .toThrow(/--pin needs --scenario all --backend both/);
-    expect(() => parseRunArgs(['--mode', 'dwell', '--scenario', 'mw120,sol', '--backend', 'both', '--json', 'r.json', '--pin', 'p.json']))
-      .toThrow(/--pin needs --scenario all --backend both/);
-    const spelled = ['--mode', 'dwell', '--scenario', 'lg,mw50,earth,sol,mw120', '--backend', 'both', '--json', 'r.json', '--pin', 'p.json'];
+  // other eight. A PERMUTED run covers the canon and is refused all the same:
+  // its rows sit at positions no later run visits them at, so the pin it
+  // writes refuses every row of the next comparison instead.
+  it('refuses --pin unless the run is the whole canon, in canon order, on both backends', () => {
+    const pinned = (...flags: string[]): string[] =>
+      ['--mode', 'dwell', ...flags, '--json', 'r.json', '--pin', 'p.json'];
+    for (const flags of [
+      [],
+      ['--scenario', 'all', '--backend', 'webgpu'],
+      ['--scenario', 'mw120,sol', '--backend', 'both'],
+      ['--scenario', 'lg,mw50,earth,sol,mw120', '--backend', 'both'],
+      ['--scenario', 'mw120,sol,earth,mw50,lg,lg', '--backend', 'both'],
+    ]) {
+      expect(() => parseRunArgs(pinned(...flags))).toThrow(/--pin needs --scenario all --backend both/);
+    }
+    expect(parseRunArgs(pinned('--scenario', 'all', '--backend', 'both')).pin).toBe('p.json');
+    const spelled = pinned('--scenario', 'mw120,sol,earth,mw50,lg', '--backend', 'both');
     expect(parseRunArgs(spelled).pin).toBe('p.json');
     expect(parseRunArgs(['--mode', 'dwell', '--scenario', 'mw120,sol', '--backend', 'webgpu', '--against-pin', 'p.json']).againstPin)
       .toBe('p.json');
