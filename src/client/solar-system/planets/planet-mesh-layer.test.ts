@@ -152,6 +152,8 @@ function harness(bodyNames: string[], maxTextureSize = 8192) {
     group: new THREE.Group(),
     monochrome: false,
     liveInstanceCount: planets.length,
+    // The observe anchor — settable, because hiding the body the camera is
+    // parked at is the one hide that leaves an opaque body on screen.
     hiddenInstanceIdx: -1,
     planetAt: (i: number) => planets[i] ?? null,
     planetLocalPositionInto: (i: number, out: THREE.Vector3) => {
@@ -178,6 +180,10 @@ function harness(bodyNames: string[], maxTextureSize = 8192) {
       physPx.clear();
       sizes.forEach((px, i) => physPx.set(i, px));
       layer.update(camera, 0);
+    },
+    /** Park the camera at a body, as observe mode does. */
+    hide(i: number): void {
+      (field as { hiddenInstanceIdx: number }).hiddenInstanceIdx = i;
     },
     pendingFor(key: string): boolean {
       return loads.some((l) => l.url.includes(key));
@@ -375,6 +381,21 @@ describe('the depth pre-stamp', () => {
     h.frame([3000]);
     expect(h.layer.depthStampGroup.visible).toBe(true);
     expect(h.layer.anyDepthStampDrawn()).toBe(true);
+    h.layer.dispose();
+  });
+
+  // The observe anchor is the hide that matters most here: the body stays
+  // opaque and close while it goes, so a stamp left behind would cull the
+  // background with no mesh drawn over it — a black silhouette at exactly
+  // the body the camera is parked at.
+  it('drops the stamp of the body the camera parks at', () => {
+    const h = harness(['Europa', 'Ganymede']);
+    h.frame([3000, 3000]);
+    expect(stampsOf(h).map((s) => s.visible)).toEqual([true, true]);
+    h.hide(0);
+    h.frame([3000, 3000]);
+    expect(stampsOf(h).map((s) => s.visible)).toEqual([false, true]);
+    expect(meshesOf(h)[0].visible).toBe(false);
     h.layer.dispose();
   });
 
