@@ -86,17 +86,6 @@ bug where constellations with no single dominant intrinsic-brightest star
 under a 0.5 pc camera-translation threshold + filter version, since
 apparent magnitude barely moves under a small camera nudge.
 
-**Cloud names gate on apparent size, not magnitude.** Every other
-candidate here earns its label by clearing `limitMag` — stars and
-planets on their own apparent magnitude, a constellation on its
-brightest member. A molecular cloud has no magnitude to test, so it
-clears the same silhouette floor its realistic-mode label reads:
-`LABEL_MIN_SILHOUETTE_PX`, imported from
-`../../molecular-clouds/cloud-labels.ts` rather than restated, off the
-cloud focusable's `renderedSizePx` leg. Ungated, a 150 pc complex
-subtending a few pixels printed its name over whatever the camera was
-actually looking at.
-
 **Variable rings** are **intrinsic-only** — the ring set gates on
 `periodDays > 0 && amplitudeMag > 0 && varType !== VAR_TYPE_ECLIPSING`.
 Eclipsing binaries are extrinsically variable (line-of-sight

@@ -214,12 +214,8 @@ a stride subsample of the traced mesh's vertices, or a fibonacci sweep
 of the `u = uEnv` envelope for fallback clouds. A `labels`-tier
 declutter element (`molecularCloudLabels`, floor `all`, realistic only —
 chart names ride `chart-labels.ts`), additionally gated on the cloud's
-projected silhouette reaching ~40 px (`LABEL_MIN_SILHOUETTE_PX`, off the
-module's `renderedSizePx` leg, passed in) so distant complexes don't
-stack a label per member. **That constant is exported and chart mode's
-cloud names import it** — chart has no magnitude to gate a cloud on, so
-the two modes share one floor rather than restating it
-(`../chart-mode/labels/README.md`). The
+projected silhouette reaching ~40 px (the module's `renderedSizePx` leg,
+passed in) so distant complexes don't stack a label per member. The
 module keeps the mount's teardown and runs it from its scene layer's
 `dispose`.
 
