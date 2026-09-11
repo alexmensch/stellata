@@ -36,8 +36,14 @@ src/client/star-pipeline/extinction/
                                   writing raw physical A_V into R32F. Rides
                                   the shared fullscreen vertex stage +
                                   geometry in ../../util/fullscreen-pass.
-  extinction-prepass-pure.ts      Texture geometry, position packing, and the
-    (+ test)                      ε-displacement predicate. Vitest-pinned.
+  extinction-prepass-pure.ts      Texture geometry, position packing (the
+    (+ test)                      vec4 loop both backends fill from), and
+                                  the ε-displacement predicate. Vitest-pinned.
+  av-parity-pure.ts (+ test)      Bit-level compare of two per-star A_V
+                                  arrays + its console line — the WebGPU
+                                  kernel's parity check reads through it
+                                  (../../webgpu/extinction/README.md § The
+                                  prepass kernel).
   dust-raymarch.glsl              Shared camera→star Edenhofer raymarch chunk
                                   (stellata_dust_raymarch), included by the
                                   prepass and by ../star.vert.glsl's fallback
@@ -109,10 +115,10 @@ strength changes never invalidate the cache.
 `readAvMag(idx)` returns one star's raw A_V out of the cache texel
 `star.vert.glsl` fetches — **synchronously, on WebGL2 only**. WebGPU has
 no synchronous readback, so its implementation answers a cold index null
-and warms the memo in the background; the caveats below are unchanged
-either way, and the divergence — including how long a cold answer stands,
-which is a pointer event rather than a frame — is
-`../../webgpu/extinction/README.md` § Cold reads.
+and warms the memo in the background off a 4-byte buffer copy; the
+caveats below are unchanged either way, and the divergence — including
+how long a cold answer stands, which is a pointer event rather than a
+frame — is `../../webgpu/extinction/README.md` § Cold reads.
 
 The pick paths are the only caller: a star's extinction decides whether
 the renderer puts a pixel on screen for it at all, and a pick gated on

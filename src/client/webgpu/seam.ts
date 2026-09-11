@@ -95,13 +95,13 @@ export interface WebGpuSeam {
    *  this is a call rather than a map write. */
   setDustTexture(texture: THREE.Data3DTexture | null): void;
   /** Build the per-star A_V cache on this backend. It points the star
-   *  layer's A_V texture slot at its own target, so the shell wires
+   *  layer's A_V buffer slot at its own storage buffer, so the shell wires
    *  nothing beyond holding the handle. */
   attachExtinctionPrepass(
     options: WebGpuExtinctionPrepassSources,
   ): ExtinctionPrepassSeam;
   /** Release the boot-scoped GPU resources the seam owns and the shell has
-   *  no handle to — today the shared extinction texture slots and their
+   *  no handle to — today the shared extinction slots and their
    *  placeholders. NOT the renderer or the HDR pipeline: the shell holds
    *  both as its own fields (`renderer`, `hdr`) and disposes them on
    *  either backend, so disposing them here would double-release.

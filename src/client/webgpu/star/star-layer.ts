@@ -10,7 +10,7 @@ import {
 } from '../tsl/attribute-packing-pure';
 import { STAR_DYNAMIC_SCALARS } from '../star-attribute-roster';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
-import type { ExtinctionTextureNodes } from '../extinction/extinction-texture-nodes';
+import type { ExtinctionNodes } from '../extinction/extinction-nodes';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import {
   buildStarGeometry,
@@ -72,7 +72,7 @@ export class StarLayer {
     nodes: SharedUniformNodes,
     sources: StarGeometrySources,
     gates: EmitterGateNodes,
-    textures: ExtinctionTextureNodes,
+    extinction: ExtinctionNodes,
   ) {
     this.scene = scene;
     this.build = buildStarGeometry(sources);
@@ -89,8 +89,8 @@ export class StarLayer {
       staticPlan: this.build.staticPlan,
       dynamicPlan: this.build.dynamicPlan,
       lut: this.colorLut,
-      dust: textures.dust,
-      avPrepass: textures.avPrepass,
+      dust: extinction.dust,
+      av: extinction.av,
     };
 
     const mesh = (material: THREE.Material, name: string, renderOrder: number) => {

@@ -1,59 +1,65 @@
-import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
-import type { RenderTarget, WebGPURenderer } from 'three/webgpu';
+import { describe, expect, it, vi } from 'vitest';
+import type { BufferAttribute } from 'three';
+import type { ComputeNode, StorageBufferAttribute, WebGPURenderer } from 'three/webgpu';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { createVoxelTexture } from '../../loaders/dust-voxel-upload';
-import {
-  AV_TEX_WIDTH, RECOMPUTE_EPSILON_PC, avTexHeight,
-} from '../../star-pipeline/extinction/extinction-prepass-pure';
+import { RECOMPUTE_EPSILON_PC } from '../../star-pipeline/extinction/extinction-prepass-pure';
 import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { WebGpuExtinctionPrepass } from './extinction-prepass-webgpu';
-import { ExtinctionTextureNodes } from './extinction-texture-nodes';
+import { ExtinctionNodes } from './extinction-nodes';
 
 /** A renderer whose readbacks resolve only when the test says so — the
  *  frame-decoupled semantics a cold read has to live with. */
 function fakeRenderer() {
-  const rendersInto: (RenderTarget | null)[] = [];
-  const reads: { x: number; y: number; land: (px: Float32Array) => void }[] = [];
-  let current: RenderTarget | null = null;
+  const computes: ComputeNode[] = [];
+  const reads: {
+    attr: BufferAttribute; offset: number; count: number; land: (bytes: ArrayBuffer) => void;
+  }[] = [];
+  const released: BufferAttribute[] = [];
+  const setRenderTarget = vi.fn();
   const renderer = {
-    setRenderTarget: (t: RenderTarget | null) => { current = t; },
-    render: () => rendersInto.push(current),
-    readRenderTargetPixelsAsync: (_t: RenderTarget, x: number, y: number) =>
-      new Promise<Float32Array>((resolve) => { reads.push({ x, y, land: resolve }); }),
+    compute: (node: ComputeNode) => computes.push(node),
+    setRenderTarget,
+    getArrayBufferAsync: (attr: BufferAttribute, _t: null, offset: number, count: number) =>
+      new Promise<ArrayBuffer>((resolve) => { reads.push({ attr, offset, count, land: resolve }); }),
+    _attributes: { delete: (a: BufferAttribute) => released.push(a) },
   };
   return {
     renderer: renderer as unknown as WebGPURenderer,
-    rendersInto,
+    computes,
     reads,
-    boundTarget: () => current,
+    released,
+    setRenderTarget,
   };
 }
 
 const COUNT = 2048;
 const flush = () => new Promise<void>((r) => { setTimeout(r, 0); });
+const bytesOf = (v: number) => new Float32Array([v]).buffer;
 
 function makePrepass(count = COUNT) {
   const shared = buildSharedUniforms({
     pixelRatio: 2, fovYRad: 0.75, viewportW: 1600, viewportH: 900,
     hdr: makeHdrEmitterUniforms(),
   });
-  const textures = new ExtinctionTextureNodes();
+  const slots = new ExtinctionNodes();
   const fake = fakeRenderer();
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count * 3; i++) positions[i] = i;
   const prepass = new WebGpuExtinctionPrepass({
     renderer: fake.renderer,
-    positions: new Float32Array(count * 3),
+    positions,
     count,
     nodes: buildSharedUniformNodes(shared).nodes,
-    textures,
+    slots,
     uniforms: shared,
   });
   const attachDust = () => {
     shared.uDustTexture.value = createVoxelTexture(4, new Uint8Array(64));
-    textures.setDustTexture(shared.uDustTexture.value);
+    slots.setDustTexture(shared.uDustTexture.value);
   };
-  return { ...fake, prepass, shared, textures, attachDust };
+  return { ...fake, prepass, shared, slots, attachDust };
 }
 
 describe('construction', () => {
@@ -61,76 +67,73 @@ describe('construction', () => {
     expect(makePrepass().prepass.supported).toBe(true);
   });
 
-  it('points the consumer texture slot at its own target immediately', () => {
-    const { prepass, textures } = makePrepass();
+  it('points the consumer slot at a one-float-per-star buffer immediately', () => {
+    const { prepass, slots } = makePrepass();
     // uAvPrepassEnabled is the gate, not the binding, so an uncomputed
-    // target is bound and simply never fetched.
+    // buffer is bound and simply never indexed.
     expect(prepass.isActive()).toBe(false);
-    expect(textures.avPrepass.value).not.toBeNull();
+    const av = slots.av.value as StorageBufferAttribute;
+    expect(av.isStorageBufferAttribute).toBe(true);
+    expect(av.count).toBe(COUNT);
+    expect(av.itemSize).toBe(1);
     prepass.dispose();
   });
 
-  it('keeps the star-indexed layout the consumer indexes through', () => {
-    const { prepass, textures, shared, attachDust } = makePrepass();
+  it('dispatches one thread per star', () => {
+    const { prepass, computes, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
-    const target = textures.avPrepass.value as unknown as THREE.Texture & {
-      image: { width: number; height: number };
-    };
-    expect(target.image.width).toBe(AV_TEX_WIDTH);
-    expect(target.image.height).toBe(avTexHeight(COUNT));
-    expect(shared.uAvPrepassEnabled.value).toBe(1);
+    expect(computes[0].count).toBe(COUNT);
   });
 });
 
 describe('the displacement gate', () => {
   it('costs nothing without dust, then computes once on the first frame', () => {
-    const { prepass, rendersInto, attachDust } = makePrepass();
+    const { prepass, computes, attachDust } = makePrepass();
     prepass.update(0, 0, 0);
-    expect(rendersInto).toHaveLength(0);
+    expect(computes).toHaveLength(0);
     attachDust();
     prepass.update(0, 0, 0);
-    expect(rendersInto).toHaveLength(1);
+    expect(computes).toHaveLength(1);
   });
 
   it('an idle camera is free; a move past epsilon recomputes', () => {
-    const { prepass, rendersInto, attachDust } = makePrepass();
+    const { prepass, computes, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
     prepass.update(RECOMPUTE_EPSILON_PC * 0.5, 0, 0);
-    expect(rendersInto).toHaveLength(1);
+    expect(computes).toHaveLength(1);
     prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
-    expect(rendersInto).toHaveLength(2);
+    expect(computes).toHaveLength(2);
   });
 
-  // The same contract ../hdr/reduction-webgpu.ts keeps and pins: a pass
-  // ends at the canvas rather than restoring what was bound on entry, so
-  // none may run inside another's binding. The WebGL2 twin save/restores,
-  // which is why this needs pinning on both sides.
-  it('leaves the render target at the canvas — the contract every pass keeps', () => {
-    const { prepass, boundTarget, attachDust } = makePrepass();
+  // A compute pass binds no render target, so the ends-at-the-canvas
+  // contract the fragment twin kept (../hdr/reduction-webgpu.ts) has
+  // nothing here to hold — pin that nothing is bound at all.
+  it('never touches the render-target binding', () => {
+    const { prepass, setRenderTarget, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
-    expect(boundTarget()).toBeNull();
+    expect(setRenderTarget).not.toHaveBeenCalled();
   });
 
   it('markDirty recomputes without any camera motion — a voxel chunk landed', () => {
-    const { prepass, rendersInto, attachDust } = makePrepass();
+    const { prepass, computes, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
     prepass.markDirty();
     prepass.update(0, 0, 0);
-    expect(rendersInto).toHaveLength(2);
+    expect(computes).toHaveLength(2);
   });
 
   it('the A/B switch pauses maintenance, so the fallback side pays no fill', () => {
-    const { prepass, rendersInto, shared, attachDust } = makePrepass();
+    const { prepass, computes, shared, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
     prepass.setEnabled(false);
     expect(shared.uAvPrepassEnabled.value).toBe(0);
     prepass.update(1e6, 0, 0);
-    expect(rendersInto).toHaveLength(1);
+    expect(computes).toHaveLength(1);
     prepass.setEnabled(true);
     expect(shared.uAvPrepassEnabled.value).toBe(1);
   });
@@ -143,14 +146,17 @@ describe('cold reads', () => {
     expect(reads).toHaveLength(0);
   });
 
-  it('warms the memo off the star index arithmetic, then answers exactly', async () => {
-    const { prepass, reads, attachDust } = makePrepass();
+  it('warms the memo off one 4-byte copy at the star offset, then answers exactly', async () => {
+    const { prepass, reads, slots, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
-    const idx = AV_TEX_WIDTH + 5;
+    const idx = 1029;
     expect(prepass.readAvMag(idx)).toBeNull();
-    expect(reads).toEqual([{ x: 5, y: 1, land: expect.any(Function) }]);
-    reads[0].land(new Float32Array([0.375, 0, 0, 1]));
+    expect(reads).toHaveLength(1);
+    expect(reads[0].attr).toBe(slots.av.value);
+    expect(reads[0].offset).toBe(idx * 4);
+    expect(reads[0].count).toBe(4);
+    reads[0].land(bytesOf(0.375));
     await flush();
     expect(prepass.readAvMag(idx)).toBe(0.375);
     expect(reads).toHaveLength(1);
@@ -165,15 +171,15 @@ describe('cold reads', () => {
   });
 
   // The WebGL twin clears its memo inside the recompute; here the read can
-  // outlive the target's contents, so the generation counter is that same
+  // outlive the buffer's contents, so the generation counter is that same
   // invalidation rule expressed for a promise (README.md § Cold reads).
-  it('drops a read that resolves against a superseded target', async () => {
+  it('drops a read that resolves against a superseded buffer', async () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
     expect(prepass.readAvMag(3)).toBeNull();
     prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
-    reads[0].land(new Float32Array([9, 0, 0, 1]));
+    reads[0].land(bytesOf(9));
     await flush();
     expect(prepass.readAvMag(3)).toBeNull();
     expect(reads).toHaveLength(2);
@@ -184,7 +190,7 @@ describe('cold reads', () => {
     attachDust();
     prepass.update(0, 0, 0);
     prepass.readAvMag(3);
-    reads[0].land(new Float32Array([0.5, 0, 0, 1]));
+    reads[0].land(bytesOf(0.5));
     await flush();
     expect(prepass.readAvMag(3)).toBe(0.5);
     prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
@@ -195,14 +201,31 @@ describe('cold reads', () => {
 
 describe('dispose', () => {
   it('releases the consumer slot and the gate', () => {
-    const { prepass, textures, shared, attachDust } = makePrepass();
+    const { prepass, slots, shared, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
-    const target = textures.avPrepass.value;
+    const av = slots.av.value;
     prepass.dispose();
     expect(shared.uAvPrepassEnabled.value).toBe(0);
-    expect(textures.avPrepass.value).not.toBe(target);
+    expect(slots.av.value).not.toBe(av);
     expect(prepass.isActive()).toBe(false);
+  });
+
+  // Neither buffer sits in a geometry, so nothing but this call frees
+  // them (../tsl/README.md § Storage attributes).
+  it('frees both storage buffers through the renderer registry', () => {
+    const { prepass, slots, released, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    const av = slots.av.value as StorageBufferAttribute;
+    prepass.dispose();
+    expect(released).toContain(av);
+    expect(released).toHaveLength(2);
+    const positions = released.find((a) => a !== av)!;
+    expect(positions.itemSize).toBe(4);
+    expect(positions.count).toBe(COUNT);
+    // The vec4 packing, w left at zero: star 1's xyz sits at slot 1.
+    expect(Array.from(positions.array.slice(4, 8))).toEqual([3, 4, 5, 0]);
   });
 
   it('a read in flight at dispose cannot land on a released cache', async () => {
@@ -211,7 +234,7 @@ describe('dispose', () => {
     prepass.update(0, 0, 0);
     prepass.readAvMag(3);
     prepass.dispose();
-    reads[0].land(new Float32Array([1, 0, 0, 1]));
+    reads[0].land(bytesOf(1));
     await flush();
     expect(prepass.readAvMag(3)).toBeNull();
   });

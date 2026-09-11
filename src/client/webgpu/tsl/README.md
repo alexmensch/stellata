@@ -25,6 +25,9 @@ src/client/webgpu/tsl/
   jitter-tsl.ts                     Interleaved gradient noise over the
                                     fragment position, and the ±0.5-LSB
                                     output dither over that.
+  storage-attribute.ts (+ test)     Release of a storage buffer attribute
+                                    no geometry owns, and the vertex-stage
+                                    device limit (§ Storage attributes).
 ```
 
 Which star attributes actually pack, and how they split by upload
@@ -51,11 +54,13 @@ WebGL map and never learns about the port. The contract:
 - **Texture slots** (`FRAME_TEXTURE_SLOTS`) are not mirrored: textures bind as
   per-layer `texture()`/`texture3D()` nodes where the texture lives. A
   uniform node cannot carry a **nullable** texture, so a slot the shell
-  fills later (`uDustTexture`, `uAvPrepassTex`) binds over a placeholder
-  whose `.value` is swapped on attach — one node per slot for the whole
-  boot, since two consumers of the same volume must not be able to
-  diverge (`../extinction/README.md` § Two nodes, one owner). `uAvPrepassTex`
-  in the shared map therefore stays null for a WebGPU boot's whole life.
+  fills later (`uDustTexture`) binds over a placeholder whose `.value` is
+  swapped on attach — one node per slot for the whole boot, since two
+  consumers of the same volume must not be able to diverge
+  (`../extinction/README.md` § Two nodes, one owner). The A_V cache is a
+  storage buffer on this backend, bound the same way (§ Storage
+  attributes), so `uAvPrepassTex` in the shared map stays null for a
+  WebGPU boot's whole life.
   **A placeholder's filter pair is what its node's WGSL fetches with**, for
   the graph's whole life and whatever is swapped in later — so the
   placeholder carries the real texture's pair
@@ -90,6 +95,50 @@ It lives here rather than beside any one subsystem because three of them
 now build slot records through it — the solar-system surfaces, the
 boundary shells, the dust sprite. The per-subsystem `*-uniform-nodes.ts`
 modules stay with their layers; only the face is shared.
+
+## Storage attributes
+
+A buffer bound through `storage()` — a compute kernel's output, a table
+the vertex stage indexes by instance — is a `StorageBufferAttribute` that
+belongs to no geometry, and three r185 frees a GPU buffer only through
+the geometry that owns its attribute. `BufferAttribute.dispose()`
+dispatches an event nothing on this backend listens to, so a storage
+attribute released that way leaks its buffer for the renderer's life.
+`disposeStorageAttribute(renderer, attribute)` walks the same private
+registry `Geometries` uses to drop its own attributes; it is the one
+reach into a renderer private in this folder, and a three bump has to
+re-verify the field name. Whoever allocates the attribute owns that
+call, in its dispose, in the same diff (`../../../../docs/authoring-patterns.md`
+§ Lifecycle pairing).
+
+Three properties of a storage node worth knowing before binding one:
+
+- **Access is per stage, not per node.** The WGSL builder declares a
+  storage buffer `read` in any non-compute stage whatever the node's own
+  access, and the bind-group layout types it read-only there — so ONE
+  `StorageBufferNode` object can be the kernel's write target and a
+  vertex stage's read source at once. Sharing it by identity is what
+  makes a `.value` swap reach every consumer (the extinction A_V slot,
+  `../extinction/README.md` § Two nodes, one owner).
+- **The WGSL array is runtime-sized.** `bufferCount` reaches the shader
+  only for uniform buffers, so a node built over a 1-element placeholder
+  and later pointed at the real attribute needs no rebuild — the binding
+  layer rebinds when it sees a different attribute behind the node.
+- **Reading one from a VERTEX stage is a device limit, not a core
+  guarantee** — `maxStorageBuffersInVertexStage`, which WebGPU's
+  compatibility feature level reports as **zero**. three requests that
+  level unconditionally (`WebGPUBackend.init`) and works around several of
+  its limits but not this one, so a device holding no vertex-stage storage
+  buffer boots and then fails every pipeline that binds one. The dust A_V
+  cache is the one that does, across all three star pipelines, and one
+  invalid pipeline discards the whole submit (`../README.md` § One scene
+  per boot). `supportsVertexStageStorageBuffers` is therefore a boot
+  refusal in `../boot-webgpu.ts`, beside the `reversedDepthBuffer` one: the
+  requires-WebGPU page, not a black canvas. A device reporting no limit at
+  all predates the compatibility level, so core limits apply and it
+  passes. **Any new vertex- or fragment-stage storage binding inherits this
+  floor** — the check is already paid, but the gate page is the ceiling on
+  what this backend can ask of a device.
 
 ## One program per material instance
 

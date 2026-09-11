@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { makeEmitterGateNodes } from '../hdr/emitter-gates';
-import { ExtinctionTextureNodes } from '../extinction/extinction-texture-nodes';
+import { ExtinctionNodes } from '../extinction/extinction-nodes';
 import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { StarLayer } from './star-layer';
 import { DEPTH_MASK_RENDER_ORDER } from '../../scene/render-order';
@@ -19,7 +19,7 @@ function makeLayer(count = 4) {
   const { sources } = makeStarGeometrySources(count);
   return {
     scene, sources,
-    layer: new StarLayer(scene, nodes, sources, makeEmitterGateNodes(), new ExtinctionTextureNodes()),
+    layer: new StarLayer(scene, nodes, sources, makeEmitterGateNodes(), new ExtinctionNodes()),
   };
 }
 

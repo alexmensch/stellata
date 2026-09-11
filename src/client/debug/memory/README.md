@@ -67,8 +67,9 @@ opposite things:
 - **Uploaded but outside the walk.** Render targets nothing samples, and
   the pass scenes the walk does not visit — the extinction prepass
   (`../../star-pipeline/extinction/extinction-prepass.ts` holds its own
-  `THREE.Scene`; its WebGPU twin holds no scene at all, drawing through a
-  `QuadMesh`, so it is outside the walk for a second reason), the HDR
+  `THREE.Scene`; its WebGPU twin draws nothing at all, dispatching a
+  compute kernel over two storage buffers, so it is outside the walk for a
+  second reason and its bytes reach no scene graph), the HDR
   tone-map quad, the summation and reduction passes. Also program/uniform storage and the canvas backbuffer, which
   no three counter exposes at all. If this grows without a target being
   added, something is holding textures the walk should have reached.
@@ -101,13 +102,13 @@ size.
 | HDR MRT | drawing buffer | 8 (RGBA16F) + 4 (RG16F) + 8 (RGBA16F) + 4 (depth24) = **24 B** | `../../hdr/README.md` § Three attachments |
 | Rod summation | half on each axis (¼ the texels) | 8 B (RGBA16F) | `../../hdr/summation/README.md` |
 | Reduction chain | quartering levels from the statistic attachment, stopping at the ~1024-texel tile level | 8 B/level, 16 B at the RGBA32F tile level | `../../hdr/exposure/reduction/README.md` § The chain |
-| Extinction positions | `AV_TEX_WIDTH` × ⌈stars ÷ `AV_TEX_WIDTH`⌉ | 16 B (RGBA32F), plus the same array retained on the heap | `../../star-pipeline/extinction/README.md` |
+| Extinction positions | WebGL2: `AV_TEX_WIDTH` × ⌈stars ÷ `AV_TEX_WIDTH`⌉ texels; WebGPU: one vec4 per star in a storage buffer | 16 B (RGBA32F / vec4<f32>), plus the same array retained on the heap | `../../star-pipeline/extinction/README.md`, `../../webgpu/extinction/README.md` |
 
 The A_V target itself is **measured** on a WebGL2 boot, not hand-priced —
 the star pipeline samples it through a uniform, so it is in the GPU
-table. **On a WebGPU boot it is neither**: the TSL vertex stage binds it
-through a node, so the walk cannot reach it and it joins this table
-instead, alongside the position texture.
+table. **On a WebGPU boot it is neither**: the A_V cache is a storage
+buffer the TSL vertex stage binds through a node, so the walk cannot
+reach it and it joins this table instead, alongside the position buffer.
 `../../webgpu/extinction/README.md` § What it costs, and what it holds
 carries both rows with their arithmetic for exactly that reason.
 
@@ -121,8 +122,9 @@ Worked example — a 1920×1080 window at `devicePixelRatio` 2, so a
 - Rod summation — 2.07 Mpx × 8 B ≈ **16 MiB**.
 - Reduction chain — the quartering sum converges to ⅓ of the source, so
   ≈ 8.29 Mpx × 8 B ÷ 3 ≈ **22 MiB**.
-- Extinction positions — 1024 × 322 texels × 16 B ≈ **5.0 MiB** GPU, and
-  the same array again on the heap.
+- Extinction positions — 1024 × 322 texels × 16 B ≈ **5.0 MiB** GPU on
+  WebGL2, the catalogue count × 16 B on WebGPU (the same figure minus the
+  padding row), and the same array again on the heap.
 
 So the viewport-scaled targets alone are ~240 MiB at dpr 2 before a
 single star, cloud brick or dust chunk is counted.

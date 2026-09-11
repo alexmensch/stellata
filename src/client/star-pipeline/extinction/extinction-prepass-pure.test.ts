@@ -4,6 +4,7 @@ import {
   RECOMPUTE_EPSILON_PC,
   avTexHeight,
   packPositionsRgba,
+  packPositionsVec4Into,
   movedBeyondEpsilon,
 } from './extinction-prepass-pure';
 
@@ -28,6 +29,15 @@ describe('packPositionsRgba', () => {
     expect([out[4], out[5], out[6], out[7]]).toEqual([4, 5, 6, 0]);
     expect(out[8]).toBe(0);
     expect(out[out.length - 4]).toBe(0);
+  });
+});
+
+describe('packPositionsVec4Into', () => {
+  it('fills a count × 4 storage array in place, star i at slot i, w untouched', () => {
+    const positions = new Float32Array([1, 2, 3, 4, 5, 6]);
+    const out = new Float32Array(8).fill(9);
+    expect(packPositionsVec4Into(out, positions, 2)).toBe(out);
+    expect(Array.from(out)).toEqual([1, 2, 3, 9, 4, 5, 6, 9]);
   });
 });
 
