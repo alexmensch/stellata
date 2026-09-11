@@ -67,8 +67,9 @@ opposite things:
 - **Uploaded but outside the walk.** Render targets nothing samples, and
   the pass scenes the walk does not visit — the extinction prepass
   (`../../star-pipeline/extinction/extinction-prepass.ts` holds its own
-  `THREE.Scene`; its WebGPU twin holds no scene at all, drawing through a
-  `QuadMesh`, so it is outside the walk for a second reason), the HDR
+  `THREE.Scene`; its WebGPU twin draws nothing at all, dispatching a
+  compute kernel over two storage buffers, so it is outside the walk for a
+  second reason and its bytes reach no scene graph), the HDR
   tone-map quad, the summation and reduction passes. Also program/uniform storage and the canvas backbuffer, which
   no three counter exposes at all. If this grows without a target being
   added, something is holding textures the walk should have reached.
