@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Catalog } from '../loaders/catalog-loader';
 import { markStatisticEmitter } from '../hdr/attachments/attachment-gate';
+import { DEPTH_MASK_RENDER_ORDER } from '../scene/render-order';
 import { interleavePulsParams } from './pulsation/pulsation-params-pure';
 import { STAR_PASS_CORE_MASK, STAR_PASS_DISC, STAR_PASS_GLOW } from './star-pass';
 
@@ -279,7 +280,7 @@ export class StarPipeline {
     // renderOrder: core mask (-4) → background layers → discs (0) → glows (1).
     this.coreMaskMesh = new THREE.Mesh(this.geometry, this.coreMaskMaterial);
     this.coreMaskMesh.frustumCulled = false;
-    this.coreMaskMesh.renderOrder = -4;
+    this.coreMaskMesh.renderOrder = DEPTH_MASK_RENDER_ORDER;
     this.coreMaskMesh.visible = false;
     scene?.add(this.coreMaskMesh);
 

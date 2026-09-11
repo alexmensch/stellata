@@ -2,16 +2,11 @@
 // silhouette the proxy sits, and when a body is opaque enough to stamp.
 // See README.md.
 
-/** Radial shrink of the stamp against the body mesh. Perspective x/y are
- *  independent of near/far, so the main-pass stamp and the local-pass mesh
- *  project the same geometry to the same pixels; this margin covers float
- *  differences between the two draws and nothing else. */
+/** Radial shrink of the stamp against the body mesh. The stamp must land
+ *  strictly INSIDE the mesh's silhouette: anything it covers that the mesh
+ *  does not paint is background culled and never repainted
+ *  (README.md § What stamps, and how far inside). */
 export const DEPTH_STAMP_SHRINK = 1e-3;
-
-/** Draw order shared with the star core mask: first in the frame, so every
- *  background layer after it depth-fails inside the silhouette
- *  (`../../../README.md` § Full render stack — front to back). */
-export const DEPTH_STAMP_RENDER_ORDER = -4;
 
 export function depthStampRadius(radiusPc: number): number {
   return radiusPc * (1 - DEPTH_STAMP_SHRINK);

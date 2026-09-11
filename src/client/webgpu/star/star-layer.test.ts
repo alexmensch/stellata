@@ -6,6 +6,7 @@ import { makeEmitterGateNodes } from '../hdr/emitter-gates';
 import { ExtinctionTextureNodes } from '../extinction/extinction-texture-nodes';
 import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { StarLayer } from './star-layer';
+import { DEPTH_MASK_RENDER_ORDER } from '../../scene/render-order';
 import { makeStarGeometrySources } from './star-sources-mock';
 
 function makeLayer(count = 4) {
@@ -72,7 +73,7 @@ describe('StarLayer', () => {
   it('adds the core mask first, depth-only, gated invisible until the shell opens it', () => {
     const { scene, layer } = makeLayer();
     expect(scene.children).toContain(layer.coreMaskMesh);
-    expect(layer.coreMaskMesh.renderOrder).toBe(-4);
+    expect(layer.coreMaskMesh.renderOrder).toBe(DEPTH_MASK_RENDER_ORDER);
     expect(layer.coreMaskMesh.visible).toBe(false);
     const m = layer.coreMaskMesh.material as THREE.Material;
     expect(m.colorWrite).toBe(false);

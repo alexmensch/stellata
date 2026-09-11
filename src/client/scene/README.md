@@ -45,6 +45,9 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
 - `glsl-residents-pure.ts` (+ test) — `findGlslResidents`, the walk
   behind the shell's first-frame check that no raw-GLSL material reached
   the rendered scene (§ No GLSL material may reach a WebGPU boot).
+- `render-order.ts` (+ test) — `DEPTH_MASK_RENDER_ORDER`, the one
+  draw-order slot two subsystems both write into (§ Slots more than one
+  subsystem holds).
 
 ## The material seam
 
@@ -65,6 +68,16 @@ surfaces through it — the solar-system family
 with the layer that owns it; only the surface handle is shared. The
 `IUniform` face over a TSL node record is `uniformSlotsOf`
 (`../webgpu/tsl/README.md` § Uniform slots).
+
+## Slots more than one subsystem holds
+
+`src/client/README.md` § Full render stack is the ladder's authority, and
+almost every `renderOrder` in it belongs to exactly one layer, which spells
+it where it sets it. `render-order.ts` carries the exception: the depth-only
+slot at −4 is written by the star core mask AND the planet depth pre-stamp,
+and the two live in different subsystems. Whoever moves that slot has to
+move both writers together or the stack's front-to-back table stops being
+true, so the number is named once and imported rather than spelled twice.
 
 ## No GLSL material may reach a WebGPU boot
 

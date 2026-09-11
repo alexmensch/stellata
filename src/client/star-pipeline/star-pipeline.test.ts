@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { StarPipeline } from './star-pipeline';
+import { DEPTH_MASK_RENDER_ORDER } from '../scene/render-order';
 import { MIRROR_CAPACITY } from './local-pass/star-mirror-slots';
 import { STAR_PASS_CORE_MASK, STAR_PASS_DISC, STAR_PASS_GLOW } from './star-pass';
 import { makeStarPipelineOptions as makeOpts } from './star-pipeline-mock';
@@ -20,7 +21,7 @@ describe('StarPipeline', () => {
     expect(meshes).toContain(pipe.coreMaskMesh);
     expect(meshes).toContain(pipe.discMesh);
     expect(meshes).toContain(pipe.glowMesh);
-    expect(pipe.coreMaskMesh.renderOrder).toBe(-4);
+    expect(pipe.coreMaskMesh.renderOrder).toBe(DEPTH_MASK_RENDER_ORDER);
     expect(pipe.discMesh.renderOrder).toBe(0);
     expect(pipe.glowMesh.renderOrder).toBe(1);
     expect(pipe.coreMaskMesh.visible).toBe(false);

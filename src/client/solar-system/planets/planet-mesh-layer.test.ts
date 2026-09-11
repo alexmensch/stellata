@@ -14,7 +14,8 @@ import { PlanetMeshLayer, TEXTURE_DECODE_OPTIONS } from './planet-mesh-layer';
 import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import { phaseAngleFromLegs } from '../phase-function';
 import { ringPhaseFactor } from './rings/ring-photometry-pure';
-import { DEPTH_STAMP_RENDER_ORDER, depthStampRadius } from './depth-stamp/depth-stamp-pure';
+import { depthStampRadius } from './depth-stamp/depth-stamp-pure';
+import { DEPTH_MASK_RENDER_ORDER } from '../../scene/render-order';
 
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
@@ -345,7 +346,7 @@ describe('the depth pre-stamp', () => {
     const h = harness(['Europa']);
     h.frame([3000]);
     const [stamp] = stampsOf(h);
-    expect(stamp.renderOrder).toBe(DEPTH_STAMP_RENDER_ORDER);
+    expect(stamp.renderOrder).toBe(DEPTH_MASK_RENDER_ORDER);
     expect((stamp.material as THREE.Material).colorWrite).toBe(false);
     expect((stamp.material as THREE.Material).depthWrite).toBe(true);
     expect(stamp.frustumCulled).toBe(false);
@@ -374,6 +375,18 @@ describe('the depth pre-stamp', () => {
     h.frame([3000]);
     expect(h.layer.depthStampGroup.visible).toBe(true);
     expect(h.layer.anyDepthStampDrawn()).toBe(true);
+    h.layer.dispose();
+  });
+
+  // No uniforms and no per-body state, so one material serves every body —
+  // a copy each would be one more MRT-swap registration per body and
+  // nothing else (../materials/README.md).
+  it('draws every body\'s stamp from one shared material', () => {
+    const h = harness(['Europa', 'Ganymede', 'Saturn']);
+    h.frame([3000, 3000, 3000]);
+    const materials = new Set(stampsOf(h).map((s) => s.material));
+    expect(stampsOf(h)).toHaveLength(3);
+    expect(materials.size).toBe(1);
     h.layer.dispose();
   });
 

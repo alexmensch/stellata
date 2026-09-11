@@ -4,6 +4,7 @@
 
 import * as THREE from 'three';
 import { makeColorLutTexture } from '../../star-pipeline/blackbody-lut';
+import { DEPTH_MASK_RENDER_ORDER } from '../../scene/render-order';
 import {
   packedUploadRange, repackScalarInPlace, repackScalarRange,
 } from '../tsl/attribute-packing-pure';
@@ -112,7 +113,8 @@ export class StarLayer {
     this.targetMaterials = [mask, disc, glow];
     this.discMaterial = disc.material;
     this.glowMaterial = glow.material;
-    this.coreMaskMesh = mesh(mask.material, 'star-core-mask-webgpu', -4);
+    this.coreMaskMesh = mesh(
+      mask.material, 'star-core-mask-webgpu', DEPTH_MASK_RENDER_ORDER);
     this.coreMaskMesh.visible = false;
     this.discMesh = mesh(disc.material, 'star-disc-webgpu', 0);
     this.glowMesh = mesh(glow.material, 'star-glow-webgpu', 1);

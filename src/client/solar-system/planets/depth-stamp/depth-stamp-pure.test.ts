@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEPTH_STAMP_RENDER_ORDER,
   DEPTH_STAMP_SHRINK,
   depthStampDrawn,
   depthStampRadius,
@@ -13,10 +12,6 @@ describe('the planet depth pre-stamp', () => {
     const r = 4.3e-10;
     expect(depthStampRadius(r)).toBeLessThan(r);
     expect(depthStampRadius(r)).toBeCloseTo(r * 0.999, 20);
-  });
-
-  it('draws first in the frame, where the star core mask draws', () => {
-    expect(DEPTH_STAMP_RENDER_ORDER).toBe(-4);
   });
 
   it('stamps only a fully opaque mesh — never inside the crossfade band', () => {
