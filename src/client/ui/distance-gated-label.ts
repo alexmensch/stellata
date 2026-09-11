@@ -9,12 +9,13 @@ import type { Stellata } from '../stellata';
 /** What the engine reads per frame — satisfied by `KindContext` directly
  *  (module label overlays) and by `labelHostOf(stellata)` for overlays
  *  wired outside a kind module. */
-export type LabelFrameHost = Pick<KindContext, 'camera' | 'onFrame'>;
+export type LabelFrameHost = Pick<KindContext, 'camera' | 'onFrame' | 'occluders'>;
 
 export function labelHostOf(stellata: Stellata): LabelFrameHost {
   return {
     camera: stellata.camera,
     onFrame: (handler) => stellata.on('frame', handler),
+    occluders: stellata.occluders,
   };
 }
 
@@ -96,7 +97,7 @@ export function createDistanceGatedLabel(
     // √2·r from centre while the curve is at r, so the gap balloons by
     // ~41% relative to a true tangent offset.)
     let bestProj = -Infinity;
-    let bestX = 0, bestY = 0;
+    let bestX = 0, bestY = 0, bestIdx = 0;
     for (let i = 0; i < opts.sampleCount; i++) {
       opts.getWorldSample(i, tmp);
       tmp.applyMatrix4(camera.matrixWorldInverse);
@@ -115,8 +116,20 @@ export function createDistanceGatedLabel(
         bestProj = proj;
         bestX = sx;
         bestY = sy;
+        bestIdx = i;
       }
     }
+
+    // The support point, not the centroid, is what the occluder set is
+    // asked about: it is where the text sits, so the question is whether
+    // a nearer body is drawn under the words. A silhouette whose middle
+    // is hidden but whose support point is clear keeps its label.
+    opts.getWorldSample(bestIdx, tmp);
+    if (host.occluders.hides(tmp, camera.position)) {
+      setVisible(false);
+      return;
+    }
+
     const targetX = bestX + opts.offsetPx * opts.labelDir.x;
     const targetY = bestY + opts.offsetPx * opts.labelDir.y;
     if (smoothedX === null || smoothedY === null) {

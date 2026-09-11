@@ -29,3 +29,12 @@ its label) rather than stacking on the parent.
 A totally eclipsed body's label hides with the body, except where the
 caster has an atmosphere and the umbral glow keeps it visible
 (`../eclipses/README.md` § True-eclipse dim).
+
+**Shadow and occlusion are different gates and both apply.** The
+eclipse dim above asks whether the HOST still lights the body; the
+occluder gate inside `placeAnchoredLabel`
+(`../../../occlusion/README.md`) asks whether a nearer body hides it
+from the CAMERA. A Moon behind Earth is fully lit and keeps its dim of
+1, which is why it kept its label until the second gate existed; a
+Moon in Earth's umbra is hidden from the Sun but may sit in open sky
+from where the camera is.

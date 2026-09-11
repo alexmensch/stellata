@@ -4,6 +4,23 @@ The right-side settings panel, layout containers, keyboard shortcuts,
 exposure / FOV / exaggeration / theme controls, scale bar, and CSS
 gotchas.
 
+## Silhouette label engine
+
+`distance-gated-label.ts` (+ test, + `label-dom-mock.ts`) —
+`createDistanceGatedLabel`, the per-frame engine behind every
+silhouette-anchored SVG label: the molecular clouds, the heliopause,
+the Local Bubble, the Milky Way and the Local Group objects, the last
+three through `../fresnel-shell/`'s `createShellSilhouetteLabel`
+wrapper. Each caller supplies a visibility predicate, a sample
+generator and an anchor direction; the engine picks the support point
+in that direction, chases it with a lerp, and hides on three gates —
+the caller's predicate, a sample at or behind the near plane, and a
+nearer body hiding the support point (`../occlusion/README.md`).
+
+`LabelFrameHost` is the slice of `KindContext` it reads, so a kind
+module passes its `ctx` directly and anything wired outside one goes
+through `labelHostOf(stellata)`.
+
 ## Keyboard shortcuts
 
 `keyboard-shortcuts.ts` owns a single `keydown` listener and dispatches

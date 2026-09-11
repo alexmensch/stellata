@@ -147,6 +147,12 @@ label code earlier in this layer's PR). Each label binds to:
 - The same screen-space anchor convention as the heliopause:
   bottom-right at a constant 10 px gap.
 
+The ranking below decides which labels compete for the screen; the
+engine's own occlusion gate (`../occlusion/README.md`) then hides any
+whose support point sits behind a near body. The two are independent —
+apparent size says a label is worth showing, occlusion says the pixels
+under it belong to something nearer.
+
 ### Ranking policy — `computeVisibleLabelsInto`
 
 One universal rule: each frame, rank every candidate (MW + every LG

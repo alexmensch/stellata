@@ -269,7 +269,10 @@ and `probe-path-layer.test.ts` can pin it without a focus controller.
 defer to its orbit ring's pixel-gap heuristic, whereas a probe glyph is
 fixed-size and carries no name of its own, so a marker without a label is
 an unidentifiable dot. Labels show whenever the marker is drawn and the
-`probeLabels` declutter floor permits.
+`probeLabels` declutter floor permits — and whenever no nearer body
+hides the marker, the one gate `placeAnchoredLabel` applies for every
+family it serves (`../../occlusion/README.md`). A probe passing behind
+a planet during a flythrough is the case that reaches this.
 
 `createProbeLabels` returns its teardown (frame unsubscribe + entry
 removal); the module holds it and runs it from the scene layer's

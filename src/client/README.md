@@ -295,7 +295,11 @@ chrome row is gated out of it.
 
 There is no z-ordering between WebGL and SVG. The WebGL canvas paints
 first; the SVG `#overlay` always sits above it (`z-index: 5`,
-`pointer-events: none`). Inside each layer the ordering is local:
+`pointer-events: none`). **Every label surface therefore asks
+[occlusion/](occlusion/README.md) whether a nearer body hides its
+anchor** — a CPU answer, because no depth verdict reaches a `<text>`
+element. Without it a moon behind its planet keeps its label and a
+150 pc cloud name draws over a body 5 AU away. Inside each layer the ordering is local:
 WebGL by `THREE.Object3D.renderOrder`, SVG by source order in
 `src/client/index.html` (later child = on top). The constellation
 figure is depth-tested WebGL line geometry (`renderOrder −0.75`), so

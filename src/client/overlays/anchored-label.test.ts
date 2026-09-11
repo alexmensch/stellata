@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { OccluderSet } from '../occlusion/occluder-set';
 import { placeAnchoredLabel, type LabelSurface } from './anchored-label';
+
+const CLEAR = new OccluderSet();
 
 function makeCamera(): THREE.PerspectiveCamera {
   const cam = new THREE.PerspectiveCamera(50, 4 / 3, 1e-12, 1e5);
@@ -23,7 +26,7 @@ describe('placeAnchoredLabel', () => {
     const el = makeLabel();
     // Straight down -Z is view centre, so the anchor projects to the middle
     // of the viewport and the offset is the whole displacement.
-    expect(placeAnchoredLabel(el, new THREE.Vector3(0, 0, -1), makeCamera(), 800, 600, 10))
+    expect(placeAnchoredLabel(el, new THREE.Vector3(0, 0, -1), makeCamera(), 800, 600, 10, CLEAR))
       .toBe(true);
     expect(el.attrs.get('x')).toBe('410.0');
     expect(el.attrs.get('y')).toBe('310.0');
@@ -34,7 +37,7 @@ describe('placeAnchoredLabel', () => {
     // Past the near plane the perspective divide flips sign, which would
     // smear the label onto the opposite viewport edge.
     const el = makeLabel();
-    expect(placeAnchoredLabel(el, new THREE.Vector3(0, 0, 1), makeCamera(), 800, 600, 10))
+    expect(placeAnchoredLabel(el, new THREE.Vector3(0, 0, 1), makeCamera(), 800, 600, 10, CLEAR))
       .toBe(false);
     expect(el.style.display).toBe('none');
   });
@@ -42,8 +45,27 @@ describe('placeAnchoredLabel', () => {
   it('leaves the previous coordinates untouched when it hides', () => {
     const el = makeLabel();
     const cam = makeCamera();
-    placeAnchoredLabel(el, new THREE.Vector3(0, 0, -1), cam, 800, 600, 10);
-    placeAnchoredLabel(el, new THREE.Vector3(0, 0, 1), cam, 800, 600, 10);
+    placeAnchoredLabel(el, new THREE.Vector3(0, 0, -1), cam, 800, 600, 10, CLEAR);
+    placeAnchoredLabel(el, new THREE.Vector3(0, 0, 1), cam, 800, 600, 10, CLEAR);
     expect(el.attrs.get('x')).toBe('410.0');
+  });
+
+  it('hides a label a nearer body sits in front of', () => {
+    const el = makeLabel();
+    const occluders = new OccluderSet();
+    occluders.add(0, 0, -1, 0.1);
+    expect(placeAnchoredLabel(
+      el, new THREE.Vector3(0, 0, -2), makeCamera(), 800, 600, 10, occluders))
+      .toBe(false);
+    expect(el.style.display).toBe('none');
+  });
+
+  it('keeps the occluding body its own label', () => {
+    const el = makeLabel();
+    const occluders = new OccluderSet();
+    occluders.add(0, 0, -1, 0.1);
+    expect(placeAnchoredLabel(
+      el, new THREE.Vector3(0, 0, -1), makeCamera(), 800, 600, 10, occluders))
+      .toBe(true);
   });
 });

@@ -502,7 +502,8 @@ export function computeVisibleLabelsInto(
  *  module (the Milky Way is not an lg catalog object). */
 export type LgLabelHost = Pick<
   KindContext,
-  'camera' | 'onFrame' | 'getWorldOffset' | 'getMonochrome' | 'detailPermits'
+  'camera' | 'onFrame' | 'occluders' | 'getWorldOffset' | 'getMonochrome'
+  | 'detailPermits'
 >;
 
 function lgLabelHostOf(stellata: Stellata): LgLabelHost {

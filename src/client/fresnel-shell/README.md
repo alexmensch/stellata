@@ -28,7 +28,9 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
     chart-mode + detail-cycle + floating-origin plumbing.
   - `createShellSilhouetteLabel(stellata, opts)` — a `distance-gated-label`
     with the shared shell config (bottom-right anchor, standard offset,
-    0.25 chase lerp).
+    0.25 chase lerp). The engine's occlusion gate
+    (`../occlusion/README.md`) rides along, so a shell label behind a
+    planet or a resolved star disc hides without either shell asking.
   - `isShellLabelResolvable(shells, idx, worldOffset, cameraPos,
     viewportHeightPx, fovYRad)` — the label legibility gate both shells'
     visibility predicates share (§ Invariants below).

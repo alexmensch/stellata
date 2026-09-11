@@ -40,7 +40,12 @@ src/client/overlays/
   anchored-label.ts (+ test)      placeAnchoredLabel — position an SVG
                                   label at its anchor's projected point
                                   plus an offset, or hide it when the
-                                  anchor is at/behind the near plane.
+                                  anchor is at/behind the near plane or
+                                  a nearer body hides it
+                                  (../occlusion/README.md). The occluder
+                                  set is a required argument, not an
+                                  optional one, so a new label family
+                                  cannot ship without the gate.
                                   The per-entry half of the object-label
                                   families (planets, probes); the
                                   offset is a parameter, since each
