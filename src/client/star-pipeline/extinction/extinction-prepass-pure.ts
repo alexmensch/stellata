@@ -18,19 +18,30 @@ export function avTexHeight(count: number): number {
   return Math.ceil(count / AV_TEX_WIDTH);
 }
 
-/** Pack xyz star positions into RGBA float texels (alpha unused);
- *  padding texels beyond `count` stay zero. */
-export function packPositionsRgba(
+/** Pack xyz star positions into vec4 slots (w untouched): star i at
+ *  `out[4i..4i+2]`. `out` is the caller's — a `count × 4` storage array,
+ *  or the padded texture below. */
+export function packPositionsVec4Into<T extends Float32Array>(
+  out: T,
   positions: Float32Array,
   count: number,
-): Float32Array<ArrayBuffer> {
-  const out = new Float32Array(AV_TEX_WIDTH * avTexHeight(count) * 4);
+): T {
   for (let i = 0; i < count; i++) {
     out[i * 4] = positions[i * 3];
     out[i * 4 + 1] = positions[i * 3 + 1];
     out[i * 4 + 2] = positions[i * 3 + 2];
   }
   return out;
+}
+
+/** Pack xyz star positions into RGBA float texels (alpha unused);
+ *  padding texels beyond `count` stay zero. */
+export function packPositionsRgba(
+  positions: Float32Array,
+  count: number,
+): Float32Array<ArrayBuffer> {
+  return packPositionsVec4Into(
+    new Float32Array(AV_TEX_WIDTH * avTexHeight(count) * 4), positions, count);
 }
 
 /** True when the camera has moved beyond epsilon from the last-computed
