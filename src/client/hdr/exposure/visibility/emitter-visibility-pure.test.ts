@@ -23,6 +23,7 @@ import {
 import {
   extendedThresholdSbFromSolidAngle,
   pixelSolidAngleArcsec2,
+  surfaceBrightnessLuminance,
 } from '../../emission/emission-pure';
 import { makeFrameExposure } from '../../../scene/frame-ctx-mock';
 import { MW_PEAK_SB_DUST_FREE } from '../../../milkyway/band-peak-pure';
@@ -292,5 +293,69 @@ describe('the brightness skip — § 3.5 rules 1 and 2', () => {
         peakSb: justPast, contributing: false, warpActive: false, exposure: wide,
       })).toBe('brightness');
     });
+  });
+});
+
+describe('the loop the design gate exists to close', () => {
+  // § 3.5's hazard in full: a skipped emitter's light genuinely leaves the
+  // next landed statistic, and a drawn one puts it back. Iterating the
+  // verdict against a statistic that FOLLOWS it is the only test that can
+  // see a 2-cycle; every other test here holds the statistic fixed.
+  const FULL_MEAN_L = 68.6;
+
+  /** The verdict sequence over `steps` landings, each reflecting whether
+   *  the emitter drew on the one before. */
+  function iterate(peakSb: number, shareOfMean: number, steps = 12): string[] {
+    let contributing = true;
+    const out: string[] = [];
+    for (let i = 0; i < steps; i++) {
+      const stat: FrameStatistic = {
+        meanL: contributing ? FULL_MEAN_L : FULL_MEAN_L - shareOfMean,
+        coverage: 0,
+        discL: 0,
+      };
+      const exposure = {
+        ...makeFrameExposure({ statistic: stat }),
+        exposure: sceneExposure(LIMIT, adaptationDm(stat), 0),
+      };
+      const verdict = brightnessSkip({
+        peakSb, contributing, warpActive: false, exposure,
+      });
+      out.push(verdict === null ? 'draw' : 'skip');
+      contributing = verdict === null;
+    }
+    return out;
+  }
+
+  it('settles on M31 at every share the bound admits', () => {
+    // 0.0081 is § 3.5's own bound on the band's share from Sol. The rest
+    // are absurd on purpose: the loop has to settle across orders of
+    // magnitude, not just at the figure the design gate quotes.
+    for (const share of [0.0081, 0.1, 1, 5, 20, 40]) {
+      expect(new Set(iterate(17.42, share))).toEqual(new Set(['skip']));
+    }
+  });
+
+  it('settles on the band, whose peak clears the threshold by 3.5 mag', () => {
+    for (const share of [0.0081, 1, 20, 40]) {
+      expect(new Set(iterate(20.69, share))).toEqual(new Set(['skip']));
+    }
+  });
+
+  it('2-cycles ONLY where the true share exceeds the bound — which it cannot', () => {
+    // The failure mode stated exactly: rule 2 protects to the extent that
+    // the share bound really bounds. At 60 of a 68.6 mean the emitter is
+    // 87 % of the frame, removing it lifts `L̄` clear out of the floor
+    // regime, the cut eases 0.92 mag and the emitter is visible again —
+    // while the bound still predicts 1.3e-4 and lets the skip through.
+    expect(iterate(17.42, 60).slice(0, 4)).toEqual(['skip', 'draw', 'skip', 'draw']);
+    // It is unreachable because the bound takes the emitter's PEAK over the
+    // whole frame: a true share above it would need a mean brighter than
+    // the emitter's own brightest pixel. This test is the statement of
+    // what the bound has to keep being, not a known defect.
+    const peakShareBound = surfaceBrightnessLuminance(
+      makeFrameExposure().baseExposure, 17.42, makeFrameExposure().omegaPxArcsec2);
+    expect(peakShareBound).toBeLessThan(1);
+    expect(peakShareBound).toBeCloseTo(0.1135, 4);
   });
 });
