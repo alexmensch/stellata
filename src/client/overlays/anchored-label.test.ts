@@ -53,7 +53,7 @@ describe('placeAnchoredLabel', () => {
   it('hides a label a nearer body sits in front of', () => {
     const el = makeLabel();
     const occluders = new OccluderSet();
-    occluders.add(0, 0, -1, 0.1);
+    occluders.addSphere(0, 0, -1, 0.1);
     expect(placeAnchoredLabel(
       el, new THREE.Vector3(0, 0, -2), makeCamera(), 800, 600, 10, occluders))
       .toBe(false);
@@ -63,7 +63,7 @@ describe('placeAnchoredLabel', () => {
   it('keeps the occluding body its own label', () => {
     const el = makeLabel();
     const occluders = new OccluderSet();
-    occluders.add(0, 0, -1, 0.1);
+    occluders.addSphere(0, 0, -1, 0.1);
     expect(placeAnchoredLabel(
       el, new THREE.Vector3(0, 0, -1), makeCamera(), 800, 600, 10, occluders))
       .toBe(true);

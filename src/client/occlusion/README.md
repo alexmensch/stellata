@@ -11,8 +11,9 @@ hides a label's anchor.
 
 ```
 src/client/occlusion/
-  occlusion-pure.ts (+ test)   sphereHidesPoint — the angular test,
-                               pure and vitest-pinned.
+  occlusion-pure.ts (+ test)   sphereHidesPoint — the angular test — and
+                               spheroidHidesPoint over it, both pure and
+                               vitest-pinned.
   occluder-set.ts (+ test)     OccluderSet — the per-frame publish /
                                query surface; OccluderQuery is the read
                                half a label surface takes.
@@ -67,17 +68,56 @@ A camera at or inside an occluder's surface returns no verdict at all:
 the resolved surface fills the viewport there, and the label is the
 smaller problem.
 
-## What a sphere cannot answer
+## A publisher states the shape it draws
 
-The test is a sphere against a point, and both halves are
-approximations with a stated cost:
+**`add` does not exist; there is no way to publish a body without saying
+what shape it is.** `addSpheroid` takes the body's equatorial radius, its
+polar radius as a fraction of that, and its pole; `addSphere` is that at
+ratio 1, and its docstring says so as a claim — *this body is round at
+every camera angle* — because that is what a caller is asserting.
 
-- **The occluder is a sphere.** Saturn's rings, an oblate limb and an
-  irregular cloud silhouette are not, so a label within a body radius
-  of the true silhouette can resolve either way. The error is bounded
-  by the body's own oblateness (Saturn, 0.098, is the worst case in the
-  model) and shows as a label appearing a little early or late at the
-  limb.
+The hole this closes: a bare `add(x, y, z, radius)` cannot express a
+squashed body, so a planet publisher had no choice but to supply a
+stand-in, and nothing at the call site showed it. Both publishers then
+reached for a radius already in hand for the depth bracket — which wants
+a deliberately generous bound, the opposite of a drawn silhouette. A
+bracket bound and a drawn radius are both `number`, which is why the
+substitution was invisible; the shape argument is what separates them.
+
+So a publisher's radius **must come from the code that draws the body**,
+never from whatever is nearby:
+
+- **Planets and moons** take `polarRadiusRatio`
+  (`../solar-system/planets/spheroid-pure.ts`) — the one source of
+  `1 − f`, shared with the mesh's own `scale.y / scale.x`, the ring
+  shader and the atmosphere march. Below the mesh crossfade band only the
+  round glare billboard draws, so `SolarSystemCluster` publishes a sphere
+  there and a spheroid above it, off `PlanetMeshLayer.drawnPoleInto`.
+  Pinned in `../solar-system/local-cluster.test.ts` against
+  `polarRadiusRatio` itself, so the test moves with the drawing code
+  rather than freezing a number beside it.
+- **Stars** take the live pulsation radius
+  (`../camera/controls/star-physics.ts:livePulsationRadiusFactor`), not
+  `peakAmplitudeFactor`. That one holds a variable at its largest across
+  the whole cycle — right for a bracket or a fade envelope, and at
+  maximum light a Mira's peak is ρ = 1.4× the disc on screen.
+
+`spheroidHidesPoint` is **exact for a squashed body**, not a closer
+approximation to one: scaling the pole component of camera and anchor by
+`1 / polarRatio` (`../util/polar-scale.ts`) carries the spheroid onto its
+equatorial sphere and every sight line onto a sight line, so the verdict
+survives the map and `sphereHidesPoint` answers it outright. A round body
+short-circuits to that test untouched.
+
+## What the set still cannot answer
+
+- **Saturn's rings are not in it.** They reach well past the body, so a
+  ring-extent sphere would blank every label inside the orbit. Leaving
+  them out is a claim about what they DRAW rather than a shape
+  approximation: the annulus writes no depth and dims what is behind it
+  instead of hiding it (`../solar-system/planets/rings/README.md`), so a
+  label seen through the rings is still legible and "does a nearer body
+  hide this anchor" is honestly answered no.
 - **The anchor is a point.** For the silhouette-anchored families
   (`../overlays/distance-gated-label.ts`) that point is the support sample the
   label hangs off, not the object's centre — so the verdict is "is the
