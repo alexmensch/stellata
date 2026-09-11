@@ -1405,7 +1405,8 @@ outright at 120° under 625 px of height.
 
 **The peak, per emitter — a bound on the rendered peak, not a model
 constant.** Probed 2026-09-11 with the band's CPU mirror
-(`milkyway-column-pure.ts`, 2°×1° direction fan, no footprint):
+(`milkyway-column-pure.ts`, no footprint), on a fan **centred on the
+Galactic-centre direction** and run dense (400 rings × 720 azimuths):
 
 | vantage (galactocentric pc) | dusty peak S | dust-free peak S |
 | --- | --- | --- |
@@ -1413,9 +1414,19 @@ constant.** Probed 2026-09-11 with the band's CPU mirror
 | Sol, 3 kpc above the plane | 19.56 | 18.48 |
 | 1 kpc from the GC, in plane | 20.81 | 17.56 |
 | 20 kpc above the GC | 20.06 (straight down) | 19.24 |
-| 30 kpc out, in plane | 19.58 | 17.11 |
-| 100 kpc out, 30° up | 19.92 | 18.73 |
-| 1 Mpc out | 22.07 | 17.11 |
+| 30 kpc out, in plane | 19.49 | 17.11 |
+| 100 kpc out, 30° up | 19.78 | 18.73 |
+| 1 Mpc out | 19.20 | 17.11 |
+
+**The fan has to be centred on the Galaxy, not laid out in absolute (l, b).**
+A grid of fixed angular cells holds its resolution while the Galaxy's angular
+size falls with distance, so past ~30 kpc it begins stepping over the peak,
+and at 1 Mpc — where the disc proxy spans 1.7° against a 2°×1° cell — it
+misses it by 2.9 mag. Dust is what makes this bite: it pushes the brightest
+sightline a fraction of a degree off the centre, so the dust-free column,
+which sits at the centre, survives a coarse grid at every distance while the
+dusty one does not. The error runs **faint**, which is the direction that
+would authorise a skip the emitter has not earned.
 
 The dust-free full central chord, 17.11, is the vantage-free ceiling, and
 the table samples vantages rather than establishing it: dust only dims, a
@@ -1434,7 +1445,10 @@ the field varies over ~100 pc (the dust scale height is 125 pc), so a
 pose-keyed cache with a movement threshold is legitimate where an
 exposure-keyed one is not — with a margin pinned against a dense sweep:
 from Sol a 10°×5° fan lands 0.06 mag from a 0.5°×0.25° one and a 5°×2° fan
-0.004 mag, which brackets the table's own 2°×1°.
+0.004 mag. Angular resolution is the cheap half of the problem, though, and
+the margin has to be pinned over a grid of vantages rather than at Sol: what
+a coarse fan costs at Sol it costs many times over from outside the Galaxy,
+where the whole structure fits inside one cell.
 For the Local Group glow it is the footprint-softened central
 column per object at the live plate scale; the sub-pixel expansion (`k`,
 `k⁻³`) only lowers surface brightness so the unexpanded value bounds it,
