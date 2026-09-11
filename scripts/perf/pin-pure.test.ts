@@ -108,6 +108,7 @@ const SOL_GL = scenario('sol', 'webgl2', dwell(stats(16.0, { iqrMs: 21 }), null)
  *  quantised to the refresh interval whatever the GPU stream does. */
 const lgAt = (gpuP50: number) => scenario('lg', 'webgpu', dwell(stats(16.7), stats(gpuP50)));
 const LG_GPU = lgAt(11.891);
+const LG_TRENDED = scenario('lg', 'webgpu', dwell(stats(16.7), trending(12.5)));
 const SOURCE = { sourceRun: '.perf-runs/2026-09-05/pin.json', version: '3.44.3', accepted: {} };
 
 function pinOf(scenarios: readonly ScenarioRecord[] = [SOL_GPU, MW120_GPU, SOL_GL]): PinFile {
@@ -176,6 +177,25 @@ describe('pinFromRun', () => {
     expect(pin!.rows[0].wall.stateGuard).toBe('trending');
   });
 
+  it('pins a trending ungated vantage, and still refuses the pin for a trending gated one', () => {
+    const { pin, refusals } = pinFromRun(file([SOL_GPU, LG_TRENDED]), SOURCE);
+    expect(refusals).toEqual([]);
+    expect(pin!.rows.map((r) => r.key)).toEqual(['sol|webgpu', 'lg|webgpu']);
+    expect(pin!.rows[1].gpu!.stateGuard).toBe('trending');
+
+    const sol = scenario('sol', 'webgpu', dwell(stats(25.2), trending(21.8)));
+    expect(pinFromRun(file([sol, LG_TRENDED]), SOURCE).refusals)
+      .toEqual(['sol|webgpu: the dwell trended across its quarters — it straddled a load-state transition']);
+  });
+
+  it('stands the guard down at an ungated vantage on WebGL2, where wall is the gating clock', () => {
+    const lgGl = scenario('lg', 'webgl2', dwell(trending(16.7), null));
+    expect(pinFromRun(file([lgGl]), SOURCE).refusals).toEqual([]);
+
+    const solGl = scenario('sol', 'webgl2', dwell(trending(16.7), null));
+    expect(pinFromRun(file([solGl]), SOURCE).refusals[0]).toContain('load-state transition');
+  });
+
   it('still judges a WebGL2 row on the wall clock, its only clock', () => {
     const gl = scenario('sol', 'webgl2', dwell(trending(16.4), null));
     expect(pinFromRun(file([gl]), SOURCE).refusals[0]).toContain('load-state transition');
@@ -224,6 +244,16 @@ describe('compareToPin', () => {
     expect(row.bandMs).toBe(0);
     expect(row.note).toContain(PIN_UNGATED_SCENARIOS.lg);
     expect(pinDiffFails(diff)).toBe(false);
+  });
+
+  it('records a trending lg rather than refusing it, and the ceiling still reaches that row', () => {
+    const diff = compareToPin(pinOf([LG_GPU]), file([LG_TRENDED]));
+    expect(diff.refusals).toEqual([]);
+    expect([diff.rows[0].verdict, diff.rows[0].currentMs]).toEqual(['ungated', 12.5]);
+    expect(pinDiffFails(diff)).toBe(false);
+
+    const hot = scenario('lg', 'webgpu', dwell(stats(16.7), trending(33.5)));
+    expect(compareToPin(pinOf([LG_GPU]), file([hot])).rows[0].verdict).toBe('dearer');
   });
 
   it('marks lg over the ceiling: ungated by the band is not ungated by the bound', () => {

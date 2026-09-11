@@ -18,13 +18,13 @@ vsyncClamped and the GPU-stream p50 where it was sound, plus the
 state-guard verdict, buffer, catalogue record count, the context's
 position in the run, cadence, adapter probe, commit pair, package version
 and the run file. **Any refused row refuses the whole pin** — failed,
-tainted, not dwell, not `raf-delta`, trending, a round trip, a headed run,
-no record count, no position — because a pin missing a row narrows the
-gate silently, and for the same reason `--pin` refuses a command line short
-of `--scenario all --backend both`, or one naming the whole canon in
-another order (§ Run position). `--accept <scenario>|<backend>:<bead>`
-records an accepted mark as provenance for the value now pinned; it never
-filters a verdict.
+tainted, not dwell, not `raf-delta`, trending at a *gated* vantage, a round
+trip, a headed run, no record count, no position — because a pin missing a
+row narrows the gate silently, and for the same reason `--pin` refuses a
+command line short of `--scenario all --backend both`, or one naming the
+whole canon in another order (§ Run position).
+`--accept <scenario>|<backend>:<bead>` records an accepted mark as
+provenance for the value now pinned; it never filters a verdict.
 
 ## Run position
 
@@ -87,9 +87,15 @@ inside one row when warm. **The test is the spread, not a rise through
 the quarters**: that power step is a step, so it lands as
 `[16.9, 16.9, 21.8, 21.8]`, flat and then flat higher, which a
 strictly-rising test reads as steady. Frames either side of the
-transition never compare, so a trending row refuses the pin and refuses a
-comparison. `--cooldown-ms` idles between contexts so each one starts
-cold; tune it until every context in a pin run reads `steady`.
+transition never compare, so a trending row at a gated vantage refuses the
+pin and refuses a comparison — at an ungated one it does neither
+(§ Reading `--against-pin`). **`--baseline` goes on refusing it either way,
+and that divergence is the rule rather than an oversight**: the two gates
+share one implementation of every refusal that is a fact about the run, but
+this one is a fact about the vantage, and `--baseline` bands lg like any
+other row it holds. A gate stands down only where it does not mark.
+`--cooldown-ms` idles between contexts so each one starts cold; tune it
+until every gated context in a pin run reads `steady`.
 
 **The verdict is read off the clock the band gates** — the GPU stream where
 the row has one, wall only where it does not (`gatingClock`, every WebGL2
@@ -122,13 +128,25 @@ the whole pin, it blocked the pin for *every* render-path PR at random. Wall
   dwells trip the state guard; 0 of 56 elsewhere do. Reproduced at 9.216 Mpx
   (where the frame clears the refresh interval), at run positions 1, 5 and
   10, cold and warm, across a dozen commits — so it is a property of the
-  vantage and **not** waiting on a fix. Only the *band* stands down: the
-  ceiling below still marks the row, and the refusals below still refuse it,
-  since a trending or resized lg indicts the run's state rather than lg's
-  own reproducibility. **`lg` is the only canon vantage that sees the Local
-  Group**, so a `src/client/local-group/` render change has no pin row that
-  prices it short of the ceiling: price one with a per-pass differential at
-  lg instead, never with its pin row.
+  vantage and **not** waiting on a fix. The band stands down, and so does the
+  **state guard**: a trending lg is that same wander read across the quarters,
+  not a verdict on the run, and since any refused row refuses the whole pin,
+  leaving the refusal in force killed roughly one pin re-take in three on the
+  one row the gate never acts on — ~25 min of held-idle machine each.
+  **The stand-down is keyed on the vantage, so it takes `lg|webgl2` with
+  it**, where the gating clock is the wall clock and not the GPU stream every
+  figure above is measured on. That row earns the exemption on the other
+  ground: its wall median sits on the refresh interval, so its quarters swing
+  by a whole interval however idle the machine is, exactly as mw50's do
+  (§ State guard) — and refusing there spends a re-take to protect a verdict
+  nothing reads, a WebGL2 row carrying no band and no ceiling either.
+  Everything else still reaches the row: the ceiling below still marks a
+  WebGPU lg, and a failed, tainted, resized or mis-positioned lg still
+  refuses, those being facts about the run rather than about lg. **`lg` is
+  the only canon vantage that sees the Local Group**, so a
+  `src/client/local-group/` render change has no pin row that prices it short
+  of the ceiling: price one with a per-pass differential at lg instead, never
+  with its pin row.
 - **Band.** The pair's two-sigma standard error, floored at
   `max(DWELL_FLOOR_MS 0.25 ms, DWELL_FLOOR_FRACTION 1 % × pinned)` — about
   8× the largest cold-to-cold move those four rows showed. A `✗` is past
@@ -143,15 +161,15 @@ the whole pin, it blocked the pin for *every* render-path PR at random. Wall
   ungated vantage too, which is where it earns its keep: those rows have
   nothing else watching them.
 - **Refusals.** Another adapter slug or a headed run refuses the whole
-  comparison; a failed, tainted, resized (> 1 % buffer) or trending row
-  refuses that row, and so does a **record count** more than 1 % apart or
-  absent, a **run position** that differs or is absent (§ Run position),
-  or a row the run measured that the pin does not hold. A refused
-  comparison is not a pass: either kind exits 1, since a run whose rows
-  were all refused prints a table with no `✗` in it. **Pin rows the run
-  did not visit are listed, not refused** — the table walks the run's
-  rows, so a Tier 1 run answers for its two and prints the other eight
-  as `not measured in this run`.
+  comparison; a failed, tainted or resized (> 1 % buffer) row refuses that
+  row, a trending one does where the vantage is gated, and so does a
+  **record count** more than 1 % apart or absent, a **run position** that
+  differs or is absent (§ Run position), or a row the run measured that the
+  pin does not hold. A refused comparison is not a pass: either kind exits 1,
+  since a run whose rows were all refused prints a table with no `✗` in
+  it. **Pin rows the run did not visit are listed, not refused** — the table
+  walks the run's rows, so a Tier 1 run answers for its two and prints the
+  other eight as `not measured in this run`.
 - **Record count.** `recordCount` is the star records the page loaded, off
   the catalogue binary's header. It moves how many instanced quads every
   star pass draws — the most direct frame-cost change the repo can make. A

@@ -58,8 +58,8 @@ row is never clamped**: a resolved timestamp is a span the hardware reports,
 and no compositor can pad it.
 
 **Every summary carries a state guard** (`quarterMedians`, `stateGuard`):
-a dwell that trended is refused by `--baseline` and `--against-pin` —
-`../pins/README.md` § State guard.
+a dwell that trended is refused by `--baseline`, and by `--against-pin`
+where the vantage is one the band gates — `../pins/README.md` § State guard.
 
 **A WebGPU dwell also counts what the frame submits.** For the timed frames
 it wraps `GPUQueue.submit` and `GPUCommandEncoder.beginRenderPass` /

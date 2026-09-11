@@ -18,11 +18,12 @@ import type { Backend, ScenarioName } from './scenarios';
 export const PIN_SCHEMA = 'stellata-perf/pin-2';
 
 /** Vantages the band never marks, mapped to the reason, which the row's note
- *  carries. lg shifts level BETWEEN runs while staying flat inside each, which
- *  is exactly what the state guard cannot catch — so a steady verdict on an lg
- *  row is not evidence it is comparable. The ceiling still applies: a vantage
- *  that wanders 1.5 ms is no licence for a frame that doubled.
- *  pins/README.md § Reading `--against-pin`. */
+ *  carries. lg wanders as much across one dwell's quarters as it does between
+ *  runs, so neither a steady nor a trending state guard says anything about
+ *  whether the row is comparable — and a trending one must therefore not
+ *  refuse it, since any refused row refuses the whole pin. The ceiling still
+ *  applies: a vantage that wanders 1.5 ms is no licence for a frame that
+ *  doubled. pins/README.md § Reading `--against-pin`. */
 export const PIN_UNGATED_SCENARIOS: Readonly<Partial<Record<ScenarioName, string>>> = {
   lg: 'wanders as much inside one dwell as between runs',
 };
@@ -163,7 +164,8 @@ function rowRefusal(record: ScenarioRecord): string | null {
   if (record.backend.actual === null) return 'the backend never booted';
   if (record.recordCount === null) return 'no catalogue record count recorded — the rows cannot be placed on a scene';
   if (record.position == null) return 'no run position recorded — the row cannot be placed in a load history';
-  if (gatingClock(record.dwell).clock.stateGuard === 'trending') {
+  if (PIN_UNGATED_SCENARIOS[record.name] === undefined
+    && gatingClock(record.dwell).clock.stateGuard === 'trending') {
     return 'the dwell trended across its quarters — it straddled a load-state transition';
   }
   return null;
