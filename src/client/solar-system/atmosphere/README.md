@@ -413,6 +413,12 @@ The shell MESH stays a real-space sphere: it equals the deflattened shell at the
 equator and over-covers toward the poles, so nothing is uncovered and the excess
 discards on shell entry.
 
+The arithmetic of that scaling — and the guarantee that it makes a
+sphere-shaped test *exact* rather than merely closer — is
+`../../util/polar-scale.ts`; `scalePolarComponent` here stays the named CPU
+mirror of `stellata_scalePolar` and delegates to it. The label occluder runs
+the same map for the same reason (`../../occlusion/README.md`).
+
 **`1 − f` has exactly one source: `../planets/spheroid-pure.ts:polarRadiusRatio`.**
 The mesh's `scale.y / scale.x`, the ring shader's `uPolarRadiusPc` and
 `uPolarRadiusR` here must be the same number — the shell discards ray-strikes

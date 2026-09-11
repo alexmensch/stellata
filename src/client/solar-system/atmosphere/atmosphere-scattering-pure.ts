@@ -3,6 +3,7 @@
 // centred at origin. Model + calibration: README.md § The model.
 
 import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
+import { scalePolarInto } from '../../util/polar-scale';
 import type { PlanetAtmosphere } from '../planet-system';
 
 export const ATMO_N_VIEW = 16;
@@ -51,21 +52,21 @@ function farRoot(ox: number, oy: number, oz: number, dx: number, dy: number, dz:
 }
 
 /**
- * Scale a vector's component along `pole` by `s`, leaving the equatorial part
- * untouched. Mirrors stellata_scalePolar in the GLSL.
+ * Scale a vector's component along `pole` by `s`. Mirrors
+ * stellata_scalePolar in the GLSL; the arithmetic and what the map
+ * guarantees live in `../../util/polar-scale.ts`.
  *
  * This is the seam between an oblate body and a march that assumes a unit
- * sphere. `s = 1/polarR` maps a spheroid of polar radius `polarR` (equatorial
- * radii) onto the unit sphere; `s = polarR` is the inverse. The map is linear
- * about the body centre, so a ray maps to a ray with its parameter unchanged —
- * callers renormalise directions and are otherwise unaffected. A surface
- * *normal* scales by the inverse transpose, which for this diagonal map is the
- * inverse: squashing an ellipsoid normal by `polarR` and renormalising gives
- * the unit-sphere point the fragment corresponds to.
+ * sphere: `s = 1/polarR` carries the body onto it. Callers renormalise
+ * directions and are otherwise unaffected. A surface *normal* scales by the
+ * inverse transpose, which for this diagonal map is the inverse: squashing
+ * an ellipsoid normal by `polarR` and renormalising gives the unit-sphere
+ * point the fragment corresponds to.
  */
 export function scalePolarComponent(v: Vec3, pole: Vec3, s: number): Vec3 {
-  const along = (v[0] * pole[0] + v[1] * pole[1] + v[2] * pole[2]) * (s - 1);
-  return [v[0] + pole[0] * along, v[1] + pole[1] * along, v[2] + pole[2] * along];
+  const out: [number, number, number] = [0, 0, 0];
+  scalePolarInto(v[0], v[1], v[2], pole[0], pole[1], pole[2], s, out);
+  return out;
 }
 
 const FAR = 1e20;
