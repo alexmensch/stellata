@@ -19,6 +19,8 @@ const SHELL = 'src/client/stellata.ts';
 
 /** `timeBehaviour: { kind: 'x'`, with or without a comment line between. */
 const DECLARATION = /timeBehaviour\s*:\s*\{\s*(?:\/\/[^\n]*\n\s*)?kind\s*:\s*'(\w+)'/g;
+/** `contribution: { kind: 'x'`, same allowance for a comment line. */
+const CONTRIBUTION = /contribution\s*:\s*\{\s*(?:\/\/[^\n]*\n\s*)?kind\s*:\s*'(\w+)'/g;
 /** An inline `register({ … })` call — the shell's own registrations. */
 const INLINE_REGISTRATION = /\.register\(\s*\{/g;
 
@@ -27,8 +29,13 @@ interface Found {
   kind: string;
 }
 
-function scan(): { declarations: Found[]; inlineRegistrations: Map<string, number> } {
+function scan(): {
+  declarations: Found[];
+  contributions: Found[];
+  inlineRegistrations: Map<string, number>;
+} {
   const declarations: Found[] = [];
+  const contributions: Found[] = [];
   const inlineRegistrations = new Map<string, number>();
   const files = walkFiles(SCAN_DIR, {
     // Test files and fixtures build their own registries on purpose; the
@@ -41,14 +48,16 @@ function scan(): { declarations: Found[]; inlineRegistrations: Map<string, numbe
     const src = readFileSync(file, 'utf8');
     const rel = relative(ROOT, file);
     for (const m of src.matchAll(DECLARATION)) declarations.push({ file: rel, kind: m[1] });
+    for (const m of src.matchAll(CONTRIBUTION)) contributions.push({ file: rel, kind: m[1] });
     const n = [...src.matchAll(INLINE_REGISTRATION)].length;
     if (n > 0) inlineRegistrations.set(rel, n);
   }
-  return { declarations, inlineRegistrations };
+  return { declarations, contributions, inlineRegistrations };
 }
 
+const { declarations, contributions, inlineRegistrations } = scan();
+
 describe('shipped scene-layer time declarations', () => {
-  const { declarations, inlineRegistrations } = scan();
 
   it('finds the roster at all — a scan that matches nothing proves nothing', () => {
     expect(declarations.length).toBeGreaterThan(10);
@@ -101,6 +110,40 @@ describe('shipped scene-layer time declarations', () => {
     // that attach a layer (star returns null — its render layers are
     // shell-wired engine machinery, ../src/client/kinds/README.md).
     const moduleDecls = declarations.filter((d) => d.file.endsWith('-module.ts'));
+    expect(moduleDecls.length).toBe(5);
+  });
+});
+
+describe('shipped scene-layer contribution declarations', () => {
+  // Same shape as the time census above, for the same reason: the type
+  // refuses a layer without the declaration, and this pins what the
+  // shipped roster actually declares (src/client/scene/README.md
+  // § Declaring what a layer can put on screen).
+
+  it('every declaration is one of the two kinds', () => {
+    const unknown = contributions.filter((d) => !['always', 'gated'].includes(d.kind));
+    expect(unknown).toEqual([]);
+  });
+
+  it('every layer that declares a time behaviour declares a contribution too', () => {
+    expect(contributions.length).toBe(declarations.length);
+  });
+
+  it('the always / gated split is pinned, so a silent flip fails here', () => {
+    // Nothing is gated yet: the contract landed with every layer declaring
+    // 'always', and adoption re-pins this count one layer at a time.
+    const census: Record<string, number> = { always: 0, gated: 0 };
+    for (const d of contributions) census[d.kind]++;
+    expect(census).toEqual({ always: 20, gated: 0 });
+  });
+
+  it('every inline register({...}) in the shell carries one', () => {
+    const inShell = contributions.filter((d) => d.file === SHELL);
+    expect(inShell.length).toBe(inlineRegistrations.get(SHELL));
+  });
+
+  it('every kind module that returns a layer declares one too', () => {
+    const moduleDecls = contributions.filter((d) => d.file.endsWith('-module.ts'));
     expect(moduleDecls.length).toBe(5);
   });
 });
