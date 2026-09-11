@@ -342,12 +342,32 @@ reaches the diff — see § JSON output); a differing method or mode, a buffer
 more than 1 % apart, a **record count** more than 1 % apart or absent on
 either side (a row priced against a different catalogue is not a
 comparison), a **run position** that differs or is absent on either side
-(below), a failed or tainted scenario, a dwell clamped or trending on
+(below), a **sweep precondition** that differs (below), a failed or tainted
+scenario, a dwell clamped or trending on
 its gating clock, a mismatched GPU stream, a `cadenceBound` row (either
 side), or a row missing from one side refuses that key. The buffer, record
-count and position refusals are one implementation each in `diff-pure.ts`,
-applied by `--against-pin` too: the two gates must refuse the same pair for
-the same reason, or the looser one certifies what the tighter one rejects.
+count, position and precondition refusals are one implementation each in
+`diff-pure.ts`, applied by `--against-pin` too: the two gates must refuse the
+same pair for the same reason, or the looser one certifies what the tighter
+one rejects.
+
+**Sweep preconditions: the state a differential was SET UP in refuses the
+pair.** `--pre-disable` and `--no-park` change what the frame contained
+before the roster was touched at all, and `--no-interleave` changes how every
+row is differenced; all three are recorded in `params` and compared there.
+Pre-disabled keys compare as sets, so the order they were typed in is not a
+difference. `--empty-passes` refuses at the **row** level instead — it reaches
+the `emptyPass` row alone, and refusing a whole scenario for it would drop
+twelve sound rows to protect one. This is what stops the subtraction those
+flags exist for (`src/client/debug/frame-cost/passes/README.md` § The roster)
+being read off a row-against-row verdict: it is a bound taken across two runs
+by hand, and the two runs are not comparable in the sense this table means.
+
+**An absent precondition reads as the flag's own default, not as unknown** —
+the opposite of the record count's rule, and worth stating because of it. A
+run written before these flags existed pre-disabled nothing, since there was
+no way to ask; a run carrying no record count may have priced any scene at
+all. So an old baseline still compares.
 
 **Run position: two rows compare only when their contexts sat at the same
 place in their runs.** The GPU's load history before a context moves its

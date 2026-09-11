@@ -14,9 +14,11 @@ src/client/debug/frame-cost/passes/
                        every pass's present() and disable(), and the
                        restore each disable returns.
   passes-pure.ts       PRICED_PASS_KEYS, the roster in table order, and
-                       the emptyPass row's default count. Dependency-free
-                       so a caller can validate a requested key without
-                       pulling the renderer in.
+                       the emptyPass row's key and default count.
+                       Dependency-free so a caller can validate a requested
+                       key without pulling the renderer in — the perf
+                       runner's diff reads both to refuse two runs that
+                       added different numbers of empty passes.
 ```
 
 ## The roster

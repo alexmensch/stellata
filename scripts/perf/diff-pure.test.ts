@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import { EMPTY_PASS_KEY } from '../../src/client/debug/frame-cost/passes/passes-pure';
 import {
   BUFFER_MPX_TOLERANCE, DWELL_FLOOR_FRACTION, DWELL_FLOOR_MS, RECORD_COUNT_TOLERANCE,
-  diffRuns, dwellFloorMs, positionRefusal, type RunDiff,
+  diffRuns, dwellFloorMs, positionRefusal, preconditionRefusal, type RunDiff,
 } from './diff-pure';
 import type { DwellSummary } from './dwell/dwell-pure';
 import { PERF_SCHEMA, type PerfFile, type ScenarioRecord } from './schema';
@@ -451,6 +452,56 @@ describe('diffRuns — refusals', () => {
       expect(diff.rows).toEqual([]);
       expect(diff.refusals[0].reason).toContain('cannot be placed on a scene');
     }
+  });
+
+  it('refuses a sweep that held passes off against one that did not', () => {
+    const plain = withDifferential([priceRow({ pass: 'statisticWrites' })]);
+    const held = withDifferential([priceRow({ pass: 'statisticWrites' })], {
+      params: { preDisable: ['mwBand', 'lgEmission'] },
+    });
+    const diff = diffRuns(plain, held);
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('passes held off none vs lgEmission,mwBand');
+  });
+
+  it('compares two sweeps that held the SAME passes off, whatever the order given', () => {
+    const one = withDifferential([priceRow({ pass: 'statisticWrites' })], {
+      params: { preDisable: ['mwBand', 'lgEmission'] },
+    });
+    const other = withDifferential([priceRow({ pass: 'statisticWrites', savedMs: 10 })], {
+      params: { preDisable: ['lgEmission', 'mwBand'] },
+    });
+    expect(only(diffRuns(one, other)).verdict).toBe('same');
+  });
+
+  it('refuses an unparked sweep against a parked one', () => {
+    const diff = diffRuns(
+      withDifferential([priceRow({ pass: 'statisticWrites' })]),
+      withDifferential([priceRow({ pass: 'statisticWrites' })], { params: { noPark: true } }),
+    );
+    expect(diff.refusals[0].reason).toContain('adaptation park live vs off');
+  });
+
+  it('refuses a bracketed sweep against a single-baseline one', () => {
+    const diff = diffRuns(
+      withDifferential([priceRow({ pass: 'localDepth' })]),
+      withDifferential([priceRow({ pass: 'localDepth' })], { params: { interleave: false } }),
+    );
+    expect(diff.refusals[0].reason).toContain('two estimators');
+  });
+
+  it('reads an absent precondition as the flag default, so a pre-flag run still compares', () => {
+    expect(preconditionRefusal({}, { preDisable: [], noPark: false, interleave: true })).toBeNull();
+  });
+
+  it('refuses the emptyPass row across two counts, and keeps every other row', () => {
+    const rows = [priceRow({ pass: 'localDepth' }), priceRow({ pass: EMPTY_PASS_KEY })];
+    const diff = diffRuns(
+      withDifferential(rows, { params: { emptyPasses: 1 } }),
+      withDifferential(rows, { params: { emptyPasses: 4 } }),
+    );
+    expect(diff.rows.map((r) => r.key)).toEqual(['sol|webgl2|localDepth']);
+    expect(diff.refusals[0].reason).toContain('1 vs 4 empty passes added');
   });
 
   it('names a scenario the current run did not measure', () => {

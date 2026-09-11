@@ -3,6 +3,9 @@
 // README.md § Comparing against a baseline.
 
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import {
+  EMPTY_PASSES_DEFAULT, EMPTY_PASS_KEY,
+} from '../../src/client/debug/frame-cost/passes/passes-pure';
 import { gatingClock, type DwellMetric } from './dwell/dwell-pure';
 import type { PerfFile, ScenarioRecord } from './schema';
 
@@ -118,7 +121,55 @@ function comparabilityRefusal(a: ScenarioRecord, b: ScenarioRecord): string | nu
   if (ma === null || mb === null) return 'one run recorded no drawing buffer';
   return bufferRefusal(ma, mb)
     ?? recordCountRefusal(a.recordCount, b.recordCount)
-    ?? positionRefusal(a.position, b.position);
+    ?? positionRefusal(a.position, b.position)
+    ?? preconditionRefusal(a.params, b.params);
+}
+
+/**
+ * The state a differential sweep was set up in, which the run records in
+ * `params`. A pass held off with `--pre-disable`, or the adaptation
+ * measurement kept live with `--no-park`, changes what the frame contains
+ * before the roster is touched at all — so the rows describe a scene the
+ * other run never drew. The arithmetic those flags exist for
+ * (`src/client/debug/frame-cost/passes/README.md` § The roster) is a
+ * subtraction across two such runs done by hand, and reading it off a
+ * row-against-row verdict instead would take two bounds for one share.
+ *
+ * `interleave` is refused for a different reason: a non-interleaved sweep
+ * differences every row against the leading baseline alone rather than
+ * against the pair either side of it, so the two sides estimate the same
+ * cost with different estimators
+ * (`src/client/debug/frame-cost/README.md` § Reading a row).
+ *
+ * **Absent reads as the flag's own default, not as unknown** — the opposite
+ * of the record count, and the difference is what a missing field proves. A
+ * run written before these flags existed pre-disabled nothing because there
+ * was no way to ask; a run that recorded no record count may have priced any
+ * scene at all.
+ */
+export function preconditionRefusal(
+  a: Readonly<Record<string, unknown>>,
+  b: Readonly<Record<string, unknown>>,
+): string | null {
+  const heldOff = (p: Readonly<Record<string, unknown>>): string => {
+    const keys = (p.preDisable as readonly string[] | undefined) ?? [];
+    return keys.length === 0 ? 'none' : [...keys].sort().join(',');
+  };
+  const [ha, hb] = [heldOff(a), heldOff(b)];
+  if (ha !== hb) {
+    return `passes held off ${ha} vs ${hb} — a pre-disabled sweep prices a frame the other run did not draw`;
+  }
+  const park = (p: Readonly<Record<string, unknown>>): string =>
+    (p.noPark === true ? 'off' : 'live');
+  const [pa, pb] = [park(a), park(b)];
+  if (pa !== pb) {
+    return `adaptation park ${pa} vs ${pb} — one run priced the statistic writes and the other priced them parked`;
+  }
+  const interleaved = (p: Readonly<Record<string, unknown>>): boolean => p.interleave !== false;
+  if (interleaved(a) !== interleaved(b)) {
+    return 'one sweep bracketed each row and the other differenced against the leading baseline — two estimators';
+  }
+  return null;
 }
 
 /** A resized window is a different measurement wearing the same row label:
@@ -199,6 +250,20 @@ function differentialRows(key: string, a: ScenarioRecord, b: ScenarioRecord): {
         reason: 'a raf-delta row the display cadence set — the wall clock cannot show a sub-interval delta',
       });
       continue;
+    }
+    // Row-level rather than in `preconditionRefusal`: the count reaches this
+    // one row and refusing the scenario for it would drop twelve sound ones.
+    if (baseline.pass === EMPTY_PASS_KEY) {
+      const count = (p: Readonly<Record<string, unknown>>): number =>
+        (p.emptyPasses as number | undefined) ?? EMPTY_PASSES_DEFAULT;
+      const [ea, eb] = [count(a.params), count(b.params)];
+      if (ea !== eb) {
+        refusals.push({
+          key: `${key}|${baseline.pass}`,
+          reason: `${ea} vs ${eb} empty passes added — the row is a bound on that many boundaries together, not a per-pass cost`,
+        });
+        continue;
+      }
     }
     const deltaMs = row.savedMs - baseline.savedMs;
     // The bracket floor overrides the standard error whenever it is
