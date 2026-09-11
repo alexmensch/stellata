@@ -391,6 +391,31 @@ describe('SceneAdaptation — the measurement park', () => {
     expect(adaptation.getParkPhase()).toBe('active');
   });
 
+  it('setParkEnabled(false) keeps the measurement live through the floor regime and a hold', () => {
+    // The frame-cost lever: at the app default view the floor regime parks,
+    // and a sweep's hold collapses a probe to parked, so the statistic-write
+    // rows there price an already-parked frame unless the park is off.
+    const adaptation = makeAdaptation();
+    adaptation.setParkEnabled(false);
+    expect(adaptation.isParkEnabled()).toBe(false);
+    settleAtFloor(adaptation);
+    landFloorFrames(adaptation, 4 * ADAPT_PARK_SETTLED_LANDINGS);
+    expect(adaptation.isMeasurementParked()).toBe(false);
+    expect(adaptation.getParkPhase()).toBe('active');
+    adaptation.setHeld(true);
+    idle(adaptation, 4 * ADAPT_PARK_PROBE_INTERVAL_FRAMES);
+    expect(adaptation.isMeasurementParked()).toBe(false);
+    adaptation.setHeld(false);
+
+    // Re-enabled, the machine starts its streak from scratch and parks again.
+    adaptation.setParkEnabled(true);
+    landFloorFrames(adaptation, ADAPT_PARK_SETTLED_LANDINGS);
+    expect(adaptation.isMeasurementParked()).toBe(true);
+    // Disabling a PARKED machine unparks it on the same call, not a frame later.
+    adaptation.setParkEnabled(false);
+    expect(adaptation.isMeasurementParked()).toBe(false);
+  });
+
   it('clears the park on chart entry', () => {
     const adaptation = makeAdaptation();
     parkIt(adaptation);
