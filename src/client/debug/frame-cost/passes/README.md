@@ -32,6 +32,18 @@ opaque — `../../../solar-system/planets/depth-stamp/README.md`), and the
 extinction prepass A/B. A pass inactive at the
 current view/state is skipped, not measured as zero.
 
+**`localDepth` carries a confound at Earth that the other vantages do not.**
+The pre-stamp draws from the MAIN scene, so disabling the local depth pass
+leaves it stamping: the background inside a body's silhouette is still
+culled, and the mesh that used to repaint it is gone. Attachment 1 then
+reads a hole of exact zero where the planet is, where before the row existed
+it read the background's own writes — so `baselineLimitMag` and
+`disabledLimitMag` can part company at a vantage with a screen-filling body,
+and the differential prices an exposure change on top of the pass. Read the
+two limit mags before believing that row at Earth close approach; the four
+vantages with no opaque body are unaffected. Disabling `planetDepthStamp`
+first removes the confound.
+
 Four rows are not what they look like:
 
 - **`hdrChain`** disables via `hdr.setChartMode(true)` — the whole-target

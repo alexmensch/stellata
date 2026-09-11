@@ -228,6 +228,17 @@ that answers "one program per pass" with a second draw over the same
 390k instances has made the frame cost more than the renderer it
 replaced.
 
+**The one addition the rule does not refuse: a depth-only draw that BUYS
+early-z.** The clause above forbids answering a depth *ordering*
+requirement with another draw; a stamp that pays one depth-only draw to
+stop a later pass shading at all is the opposite trade, and it is
+admissible **only priced** — it moves the draw count, so it owes Tier 2
+(`RELEASING.md` § Perf pin) and the win has to resolve against the band
+at the vantage it is claimed for. Two hold the `renderOrder −4` slot on
+that argument: the star core mask, and the planet depth pre-stamp
+(`src/client/solar-system/planets/depth-stamp/README.md`). A third owes
+the same measurement, not the same precedent.
+
 **How to apply.** `src/client/webgpu/README.md` § Early-z is the
 authority for the star layer's depth-honest design and stays so. Two
 vitest scanners hold the line: `tests/shader-frag-depth.test.ts` allows

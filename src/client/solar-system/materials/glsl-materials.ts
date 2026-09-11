@@ -206,8 +206,9 @@ export function makeGlslSolarSystemMaterials(
       depthTest: true,
     })),
 
-    // Non-raw, so the main pass's log-depth chunks apply themselves;
-    // unmarked, so the attachment gate keeps slots 1 and 2 shut.
+    // Built-in and non-raw on purpose: a raw material here would write a
+    // depth in an encoding nothing after it compares against
+    // (../planets/depth-stamp/README.md § Both backends).
     planetDepthStamp: () => {
       const material = new THREE.MeshBasicMaterial({
         colorWrite: false,

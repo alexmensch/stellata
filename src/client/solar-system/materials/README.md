@@ -29,10 +29,10 @@ src/client/solar-system/materials/
     (+ test)                surfaces, their uniform blocks, and the
                             blend/depth state each one's contract rests
                             on; the depth pre-stamp as a built-in
-                            MeshBasicMaterial, non-raw so the main pass's
-                            log-depth chunks apply to it. Also the
-                            atmosphere chunk splice and the sample-count
-                            defines.
+                            MeshBasicMaterial, for the reason
+                            `../planets/depth-stamp/README.md` § Both
+                            backends gives. Also the atmosphere chunk
+                            splice and the sample-count defines.
 ```
 
 The WebGPU twin is `../../webgpu/solar-system/tsl-materials.ts`, behind

@@ -165,8 +165,7 @@ interface MeshEntry {
   material: EmitterMaterial;
   /** The main-pass depth pre-stamp: the body spheroid shrunk by
    *  DEPTH_STAMP_SHRINK, depth-only, in `depthStampGroup` rather than the
-   *  pass scene (depth-stamp/README.md). Over the layer's one shared
-   *  stamp material — it carries no per-body state. */
+   *  pass scene (depth-stamp/README.md). */
   stamp: THREE.Mesh;
   /** Body radius, extended to the ring outer edge / atmosphere shell
    *  when present — the local-depth-pass bounding sphere. */

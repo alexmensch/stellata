@@ -131,7 +131,8 @@ all three attachment outputs and swaps to a single output when the target
 is not bound (`../hdr/README.md` § The gate becomes the output struct,
 `../hdr/mrt-material.ts`). The depth pre-stamp included: its colour writes
 are off, so the swap is irrelevant to validity and mandatory for three's
-pipeline cache — the same argument the star core mask carries. A slot the WebGL gate would have masked off
+pipeline cache — the same argument the star core mask carries. A slot the
+WebGL gate would have masked off
 writes `vec4(0)`: alpha 0 is the identity under both blends used here —
 additive leaves the destination because the source is zero, and
 alpha-composited leaves it because the alpha went to zero with the rest.

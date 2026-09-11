@@ -369,7 +369,12 @@ The two cross-layer pinning rules `stellata.ts` is responsible for:
   star core mask, and the planet depth pre-stamp — a depth-only, shrunk
   copy of each opaque body mesh, since the mesh itself writes its depth
   in the local pass where the main pass cannot test against it
-  (`solar-system/planets/depth-stamp/README.md`).
+  (`solar-system/planets/depth-stamp/README.md`). Two writers in two
+  subsystems is why this is the one `renderOrder` in the table with a
+  name of its own — `DEPTH_MASK_RENDER_ORDER` (`scene/render-order.ts`);
+  every other slot belongs to a single layer and is spelled where it is
+  set. Moving it means moving both writers together, or this table stops
+  being true.
 - **The local depth pass owns the active system — and every resolved
   star disc.** While a system is locally active (host in cull range,
   or its orbit rings drawing), every one of its bodies — the host

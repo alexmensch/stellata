@@ -7,7 +7,9 @@ never shaded. The star core mask's mechanism over a spheroid.
 ## Files
 
 - `depth-stamp-pure.ts` (+ test) — `DEPTH_STAMP_SHRINK`,
-  `DEPTH_STAMP_RENDER_ORDER`, `depthStampRadius`, `depthStampDrawn`.
+  `depthStampRadius`, `depthStampDrawn`. The `renderOrder −4` slot is not
+  this folder's to name: the star core mask writes it too, so it is
+  `DEPTH_MASK_RENDER_ORDER` in `../../../scene/render-order.ts`.
 
 The meshes themselves live on `PlanetMeshLayer` (`../planet-mesh-layer.ts`,
 one `stamp` per `MeshEntry`, in `depthStampGroup`), the material on both
@@ -40,6 +42,17 @@ never shade (`../../../README.md` § Full render stack — front to back).
   between the two draws and nothing else. The stamp sits inside the
   **mesh**, not the atmosphere shell — the shell lies outside the mesh and
   is additive over the background there.
+- **The two passes' CLIP volumes differ, and that is a separate argument**
+  — projection is only half of "the same pixels". The main pass runs
+  `near = CAMERA_NEAR_PC` (1e-12 pc) while the local pass runs a bracket,
+  so a bracket near plane *inside* the body would slice away mesh the
+  stamp had already culled the background behind. What forbids it is
+  `computeBracket`'s `near = NEAR_FRACTION (0.5) × nearest member surface`
+  (`../../../local-depth/bracket/slice-pure.ts`): the bracket's near plane
+  is always closer than the nearest body's near surface, and every member
+  sphere bounds its own mesh. Raising `NEAR_FRACTION` to 1, or admitting a
+  member whose sphere under-bounds what it draws, punches holes here and
+  nowhere else.
 - **True depth in the main pass's own encoding**, not a near pin. Nothing
   renderable in the main pass sits between the camera and a local body,
   so the two are equivalent today; true depth stays honest if that ever
