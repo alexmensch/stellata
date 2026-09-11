@@ -25,6 +25,9 @@ src/client/webgpu/tsl/
   jitter-tsl.ts                     Interleaved gradient noise over the
                                     fragment position, and the ±0.5-LSB
                                     output dither over that.
+  storage-attribute.ts (+ test)     Release of a storage buffer attribute
+                                    no geometry owns (§ Storage
+                                    attributes).
 ```
 
 Which star attributes actually pack, and how they split by upload
@@ -90,6 +93,35 @@ It lives here rather than beside any one subsystem because three of them
 now build slot records through it — the solar-system surfaces, the
 boundary shells, the dust sprite. The per-subsystem `*-uniform-nodes.ts`
 modules stay with their layers; only the face is shared.
+
+## Storage attributes
+
+A buffer bound through `storage()` — a compute kernel's output, a table
+the vertex stage indexes by instance — is a `StorageBufferAttribute` that
+belongs to no geometry, and three r185 frees a GPU buffer only through
+the geometry that owns its attribute. `BufferAttribute.dispose()`
+dispatches an event nothing on this backend listens to, so a storage
+attribute released that way leaks its buffer for the renderer's life.
+`disposeStorageAttribute(renderer, attribute)` walks the same private
+registry `Geometries` uses to drop its own attributes; it is the one
+reach into a renderer private in this folder, and a three bump has to
+re-verify the field name. Whoever allocates the attribute owns that
+call, in its dispose, in the same diff (`../../../../docs/authoring-patterns.md`
+§ Lifecycle pairing).
+
+Two properties of a storage node worth knowing before sharing one:
+
+- **Access is per stage, not per node.** The WGSL builder declares a
+  storage buffer `read` in any non-compute stage whatever the node's own
+  access, and the bind-group layout types it read-only there — so ONE
+  `StorageBufferNode` object can be the kernel's write target and a
+  vertex stage's read source at once. Sharing it by identity is what
+  makes a `.value` swap reach every consumer (the extinction A_V slot,
+  `../extinction/README.md` § Two nodes, one owner).
+- **The WGSL array is runtime-sized.** `bufferCount` reaches the shader
+  only for uniform buffers, so a node built over a 1-element placeholder
+  and later pointed at the real attribute needs no rebuild — the binding
+  layer rebinds when it sees a different attribute behind the node.
 
 ## One program per material instance
 
