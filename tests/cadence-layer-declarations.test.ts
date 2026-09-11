@@ -85,15 +85,15 @@ describe('shipped scene-layer time declarations', () => {
   it('the static / clock split is pinned, so a silent flip fails here', () => {
     const census: Record<string, number> = { static: 0, clock: 0, realtime: 0 };
     for (const d of declarations) census[d.kind]++;
-    // Nine views of moving content: the planet bodies (their own module
+    // Ten views of moving content: the planet bodies (their own module
     // layer, plus the focal-ride / mesh / rings / local-cluster entries
     // anchored to them) and the binary walk (its module-less orbit entry,
-    // plus the paths, star cluster and constellation figures riding the
-    // slots it writes), with the probe field's marker layer alongside.
-    // Everything else is fixed geometry, pure projection, or the orbit
-    // lock's sequencing-only entry — which draws nothing, so it must never
-    // ask the cadence for a frame of its own.
-    expect(census).toEqual({ static: 11, clock: 9, realtime: 0 });
+    // plus the paths, star cluster, constellation figures and the star
+    // core mask riding the slots it writes), with the probe field's marker
+    // layer alongside. Everything else is fixed geometry, pure projection,
+    // or the orbit lock's sequencing-only entry — which draws nothing, so
+    // it must never ask the cadence for a frame of its own.
+    expect(census).toEqual({ static: 11, clock: 10, realtime: 0 });
   });
 
   it('every inline register({...}) in the shell carries a declaration', () => {
@@ -130,11 +130,14 @@ describe('shipped scene-layer contribution declarations', () => {
   });
 
   it('the always / gated split is pinned, so a silent flip fails here', () => {
-    // Nothing is gated yet: the contract landed with every layer declaring
-    // 'always', and adoption re-pins this count one layer at a time.
+    // Five gated: molecular clouds, the probe fleet, the galactic disc, the
+    // planet mesh LOD and the star core mask. The refusals are deliberate
+    // and argued in src/client/scene/README.md § Declaring what a layer can
+    // put on screen — a coordinate sphere is camera-tracked at 50 kpc, so
+    // no geometric test can ever fire on it.
     const census: Record<string, number> = { always: 0, gated: 0 };
     for (const d of contributions) census[d.kind]++;
-    expect(census).toEqual({ always: 20, gated: 0 });
+    expect(census).toEqual({ always: 16, gated: 5 });
   });
 
   it('every inline register({...}) in the shell carries one', () => {

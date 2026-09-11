@@ -375,6 +375,34 @@ export class PlanetMeshLayer {
     return false;
   }
 
+  /** Whether any body is still inside the crossfade band — the layer-level
+   *  contribution test. The floor is the crossfade's own rather than
+   *  `FEATURE_LEGIBILITY_MIN_PX`: the shared floor would reject bodies
+   *  between 1 and 6 px that this layer does draw, and a contribution test
+   *  may only ever dim (`docs/render-rules.md` § 2). */
+  anyMeshInFade(cameraPos: Readonly<THREE.Vector3>): boolean {
+    for (let idx = 0; idx < this.field.liveInstanceCount; idx++) {
+      if (idx === this.field.hiddenInstanceIdx) continue;
+      if (this.field.planetAt(idx) === null) continue;
+      if (meshFadeFromPhysPx(this.field.physicalPlanetSizePx(idx, cameraPos)) > 0) return true;
+    }
+    return false;
+  }
+
+  /** Contribution gate. Every entry's mesh and depth stamp is hidden, not
+   *  just the parent group: `anyDepthStampDrawn` walks the entries
+   *  themselves to size the depth bracket, and the `update` that clears
+   *  them does not run while skipped. */
+  setContributing(on: boolean): void {
+    if (on) return;
+    this.group.visible = false;
+    this.depthStampGroup.visible = false;
+    for (const entry of this.entries.values()) {
+      entry.mesh.visible = false;
+      entry.stamp.visible = false;
+    }
+  }
+
   /** Per-frame: show/scale/light every body inside the crossfade band.
    *  Reads the body field's live buffers, so recentres and scrubber
    *  motion need no extra hooks. `t` is the model clock (getT()) —

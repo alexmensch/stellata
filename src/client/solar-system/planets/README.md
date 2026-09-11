@@ -287,6 +287,15 @@ crossfade.
 - **Mesh presence** rides the body's TRUE projected diameter in CSS
   px — full at ≥ `MESH_FADE_FULL_PX` (2 px), gone at ≤ `MESH_FADE_MIN_PX`
   (1 px) (`meshFadeFromPhysPx` on `PlanetBodyField.physicalPlanetSizePx`).
+  The same band is the layer's **contribution declaration**: its registry
+  entry is `{ kind: 'gated' }` on `anyMeshInFade`
+  (`../../scene/README.md` § Declaring what a layer can put on screen), so
+  a frame where no body is inside the band pays neither the update nor the
+  draw. The floor stays the crossfade's own rather than the shared
+  `FEATURE_LEGIBILITY_MIN_PX`, which would reject the 1–6 px bodies this
+  layer does draw — a contribution test may only ever dim.
+  `setContributing(false)` hides each entry's mesh and stamp, not just the
+  groups, because `anyDepthStampDrawn` walks the entries themselves.
   The eye tracks a resolved body — and its crescent phase, the thing a
   billboard can't show — down to ~1 px, so the mesh persists to that
   limit instead of handing off at the (much larger) perceptual-disc scale.

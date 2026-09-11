@@ -37,6 +37,19 @@ const DARK_BASE_OPACITY = 0.55;
 
 const DISC_RENDER_ORDER = -1;
 
+/** Stroke opacity at a camera distance from Sol — zero inside the fade's
+ *  inner edge, which is what the layer's `'opacity'` contribution test
+ *  reads (`../scene/README.md` § Declaring what a layer can put on
+ *  screen). */
+export function galacticDiscOpacity(distFromSolPc: number): number {
+  return DARK_BASE_OPACITY * smoothstep(FADE_INNER_PC, FADE_OUTER_PC, distFromSolPc);
+}
+
+/** Radius of the bounding sphere the frustum test culls against, centred
+ *  on the galactic centre. The thickness rings are the outermost vertices
+ *  — the midplane radius offset along galactic z — not the midplane ring. */
+export const GALACTIC_DISC_BOUND_PC = Math.hypot(DISC_RADIUS_PC, THICKNESS_HALF_PC);
+
 /**
  * Always-on Milky Way disc reference. Three concentric line components live
  * in absolute equatorial space centred on the galactic centre:
@@ -118,15 +131,7 @@ export class GalacticDisc {
     //                          = absoluteVertex - worldOffset.
     this.group.position.copy(worldOffset).negate();
 
-    const opacity = DARK_BASE_OPACITY * smoothstep(
-      FADE_INNER_PC,
-      FADE_OUTER_PC,
-      distFromSolPc,
-    );
-    if (opacity <= 0) {
-      this.group.visible = false;
-      return;
-    }
+    const opacity = galacticDiscOpacity(distFromSolPc);
     this.group.visible = true;
     this.stroke.material.opacity = opacity;
   }

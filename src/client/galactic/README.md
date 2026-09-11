@@ -65,6 +65,17 @@ vertically and 1.67× radially. Changing a mesh envelope now moves the
 ring with it — the thickness rings tripled when the disc gained its thick
 component (`../milkyway/README.md` § Density profiles).
 
+**The disc is the one layer gating on the frustum**, and its registry
+entry declares both admissible tests in order: `'opacity'` when
+`galacticDiscOpacity(distFromSol)` reaches zero — inside `FADE_INNER_PC`,
+which is the app's own default view — then `'frustum'` against a
+GC-centred sphere of `GALACTIC_DISC_BOUND_PC`
+(`../scene/README.md` § Declaring what a layer can put on screen). Opacity
+runs first because it is the one that fires where the camera sits *inside*
+the ring and no frustum test could; the frustum half reaches only vantages
+outside the disc, which are also the only ones that can turn away from it.
+Being registered below the orbit lock is what makes that test legal at all.
+
 Each ring takes the chrome line seam's solid stroke
 (`../chrome-lines/README.md`) over `../util/orbit-line.ts`'s
 `makeOrbitLineLoop`, and its vertices are pre-baked once into absolute ICRS

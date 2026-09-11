@@ -22,6 +22,18 @@ decoupled components per cloud:
 Both stay visible during warp by design (flying past Taurus is a
 feature, not noise).
 
+The module declares `contribution: { kind: 'gated' }` on
+`anyCloudLegible` (`../scene/README.md` § Declaring what a layer can put
+on screen): the whole layer skips once **no** cloud's silhouette clears
+`FEATURE_LEGIBILITY_MIN_PX`, which from a few hundred parsecs out takes
+the absorption raymarch and the rim pass with it. One cloud of ninety-six
+behind the camera is per-instance culling instead, inside the draw
+(`docs/render-rules.md` § 1). Being above the orbit lock, the layer may
+not gate on the frustum at all — `../scene/README.md` § Declaring what a
+layer can put on screen carries why. `setContributing(false)` clears
+`rimGroup.visible` as well as the parent group, because the pick gate
+reads that flag directly (§ The permit that gates the rim gates the pick).
+
 The cloud kind module (`cloud-module.ts`) owns the runtime lifecycle:
 its `load` fetches `public/clouds.json` via `cloud-loader.ts`
 (version gate: v3; the client reads the geometry + density-model fields

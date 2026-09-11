@@ -119,9 +119,17 @@ export function createProbeKindModule(): ProbeKindModule {
           kind: 'clock',
           rate: (cc) => field!.cadenceReport(cc),
         },
-        contribution: { kind: 'always' },
+        contribution: {
+          kind: 'gated',
+          skip: (fc) =>
+            field!.fleetLegible(fc.camera.position, fc.pxPerRadian) ? null : 'legibility',
+          setContributing: (on) => {
+            field!.setContributing(on);
+            paths!.setContributing(on);
+          },
+        },
         update: (fc) => {
-          field!.update(fc.t, fc.camera);
+          field!.update(fc.t);
           // After the field wrote this frame's samples: each trail's last
           // vertex IS the marker position it just resolved. Only the
           // focused probe's trail draws.

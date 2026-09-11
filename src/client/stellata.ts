@@ -26,7 +26,11 @@ import { DustParticleLayer } from './dust/dust-particle-layer';
   perceptualDiscChunk;
 (THREE.ShaderChunk as Record<string, string>)['stellata_dust_raymarch'] =
   dustRaymarchChunk;
-import { GalacticDisc } from './galactic/galactic-disc';
+import {
+  GalacticDisc,
+  GALACTIC_DISC_BOUND_PC,
+  galacticDiscOpacity,
+} from './galactic/galactic-disc';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
 import { CoordSphere, type DrawnCoordSphereFrame } from './galactic/coord-spheres/coord-sphere';
 import {
@@ -1180,7 +1184,12 @@ export class Stellata implements FrameAnchor {
         kind: 'clock',
         rate: (cc) => this.planetBodyField.cadenceReport(cc),
       },
-      contribution: { kind: 'always' },
+      contribution: {
+        kind: 'gated',
+        skip: (ctx) => this.kinds.planet.meshLayer.anyMeshInFade(ctx.camera.position)
+          ? null : 'legibility',
+        setContributing: (on) => this.kinds.planet.meshLayer.setContributing(on),
+      },
       // Below every camera write in the frame — both focal rides and the
       // orbit lock — because it caches `camera.matrixWorld` for its
       // view-space sun, pole and caster uniforms, and sizes the mesh off
@@ -1252,7 +1261,21 @@ export class Stellata implements FrameAnchor {
     this.layers.register({
       // Fixed galactic reference geometry, camera-anchored.
       timeBehaviour: { kind: 'static' },
-      contribution: { kind: 'always' },
+      contribution: {
+        kind: 'gated',
+        // Opacity first: it is a scalar on `distFromSol` and it is what
+        // fires at the app default view, where the camera sits inside the
+        // ring and no frustum test could. The frustum half only reaches
+        // vantages outside the disc, which are also the only ones that can
+        // turn away from it.
+        skip: (ctx) => {
+          if (galacticDiscOpacity(ctx.distFromSol) <= 0) return 'opacity';
+          this.tmpBound.center.copy(GALACTIC_CENTRE_PC).sub(this.worldOffset);
+          this.tmpBound.radius = GALACTIC_DISC_BOUND_PC;
+          return ctx.frustum.intersectsSphere(this.tmpBound) ? null : 'frustum';
+        },
+        setContributing: (on) => { this.galacticDisc.group.visible = on; },
+      },
       update: (ctx) => updateWarpGatedRefLayer(
         this.galacticDisc, ctx, this.detailPermits('galacticDiscWireframe')),
       setMonochrome: (on) => this.galacticDisc.setMonochrome(on),
@@ -1300,6 +1323,40 @@ export class Stellata implements FrameAnchor {
       // absolute-camera uniform for the raymarch. Visible during warp.
       update: (ctx) => this.milkyway.update(ctx.camera, ctx.worldOffset),
       dispose: () => this.milkyway.dispose(),
+    });
+    this.layers.register({
+      timeBehaviour: {
+        kind: 'clock',
+        // Anchored content: the mask stamps the cores of the same stars the
+        // local cluster mirrors, so it declares that subsystem's rate rather
+        // than a global minimum (scene/README.md § Anchored content).
+        rate: (cc) => maxCadenceReport(
+          this.binaryOrbitField?.cadenceReport(cc) ?? CADENCE_REPORT_STILL,
+          this.eclipsePhotometryField?.cadenceReport(cc.simDtS) ?? CADENCE_REPORT_STILL,
+        ),
+      },
+      contribution: {
+        kind: 'gated',
+        // The star pipeline's own pass, registered here and nowhere else in
+        // the registry, because this is the one part of it with a per-frame
+        // visibility verdict. Its floor is `RESOLVED_DISC_MIN_PX` rather
+        // than the shared one: below that the bleed-through it stamps
+        // against is too small to see, and a wider floor would reject
+        // frames the mask does change.
+        skip: () => {
+          perfMark('coreMask');
+          const on = this.starLocalCluster.hasMembers()
+            || this.starFrame.shouldEnableCoreMask();
+          perfMeasure('coreMask');
+          return on ? null : 'legibility';
+        },
+        setContributing: (on) => { if (!on) this.setCoreMaskVisible(false); },
+      },
+      // After the star local cluster's entry: a member's stamp must render
+      // even when the physSize-only window misses an appSize-driven member
+      // disc, so membership has to be this frame's.
+      update: () => this.setCoreMaskVisible(this.coreMaskEnabled),
+      dispose: () => {},
     });
     this.layers.register({
       // Teardown leg only — the layer is shelved and draws nothing.
@@ -1996,6 +2053,15 @@ export class Stellata implements FrameAnchor {
   private tmpVec3b = new THREE.Vector3();
   private tmpHostLocal = new THREE.Vector3();
   private tmpConstellationAbs = new THREE.Vector3();
+  private tmpBound = new THREE.Sphere();
+
+  /** The core depth-mask's one visibility write, reaching both backends.
+   *  Whether it should be on is the layer's contribution verdict; this is
+   *  only the apply. */
+  private setCoreMaskVisible(on: boolean): void {
+    this.starPipeline.coreMaskMesh.visible = on;
+    this.webgpuStarLayer?.setCoreMaskVisible(on);
+  }
 
   /** Build the dust-particle mesh from loaded data. The layer is shelved
    *  — see src/client/dust/README.md before re-enabling. */
@@ -2610,16 +2676,7 @@ export class Stellata implements FrameAnchor {
     this.occluders.beginFrame();
     this.layers.updateAll(this.frameCtx);
     this.refreshCadence();
-    // After the layer fan-out so the star cluster's membership is
-    // current-frame: a member's core-mask stamp must render even when
-    // the physSize-only window misses an appSize-driven member disc.
-    perfMark('coreMask');
-    const coreMaskOn = this.coreMaskEnabled &&
-      (this.starLocalCluster.hasMembers() || this.starFrame.shouldEnableCoreMask());
-    this.starPipeline.coreMaskMesh.visible = coreMaskOn;
-    this.webgpuStarLayer?.setCoreMaskVisible(coreMaskOn);
-    perfMeasure('coreMask');
-    // Also after the fan-out: the statistic reads this frame's ephemeris
+    // After the fan-out: the statistic reads this frame's ephemeris
     // positions, and the cut it writes has to land before the first draw
     // so measurement and frame can never be one frame apart.
     const appliedDm = this.adaptation.measure(

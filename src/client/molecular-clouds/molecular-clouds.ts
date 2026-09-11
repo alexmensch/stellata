@@ -3,6 +3,7 @@ import type { Cloud, CloudCatalog } from './cloud-loader';
 import type { CloudSurface } from './cloud-surfaces-loader';
 import { viewingDistanceForExtent } from '../camera/focus/focus-transition';
 import { angularDiameterPx } from '../camera/controls/star-geometry';
+import { isFeatureLegible } from '../util/orbit-line';
 import { projectToScreenInto } from '../overlays/overlay-project';
 import {
   cloudPickCandidate,
@@ -122,6 +123,9 @@ export class MolecularClouds {
   private readonly pickCentreLocal = new THREE.Vector3();
   private readonly pickViewDir = new THREE.Vector3();
   private readonly pickScreen: [number, number] = [0, 0];
+
+  // Contribution-test scratch — valid only inside one `anyCloudLegible()`.
+  private readonly tmpLegible = new THREE.Vector3();
 
   // User-tunable from the dev console via `stellata.kinds.cloud.layer.set*()`.
   private rimGain = RIM_GAIN_DEFAULT;
@@ -259,6 +263,32 @@ export class MolecularClouds {
   ): THREE.Vector3 {
     const s = this.labelSampleAbs[cloudIdx];
     return out.set(s[i * 3], s[i * 3 + 1], s[i * 3 + 2]).sub(worldOffset);
+  }
+
+  /** Whether any cloud's silhouette still clears the shared legibility
+   *  floor — the layer-level contribution test (`docs/render-rules.md`
+   *  § 2), so the whole population has to fail it. One cloud of ninety-six
+   *  behind the camera is rule 1's per-instance territory instead. */
+  anyCloudLegible(
+    worldOffset: Readonly<THREE.Vector3>,
+    cameraPos: Readonly<THREE.Vector3>,
+    pxPerRadian: number,
+  ): boolean {
+    for (let i = 0; i < this.clouds.length; i++) {
+      if (!this.cloudLocalPositionInto(i, worldOffset, this.tmpLegible)) continue;
+      const dCam = this.tmpLegible.distanceTo(cameraPos);
+      if (isFeatureLegible(this.focusExtentPc(i), dCam, pxPerRadian)) return true;
+    }
+    return false;
+  }
+
+  /** Contribution gate. `rimGroup` is cleared as well as the parent
+   *  because the pick gate reads it directly (README.md § The permit that
+   *  gates the rim gates the pick) and a hidden ancestor does not reach it;
+   *  the `update` that would clear it does not run while skipped. */
+  setContributing(on: boolean): void {
+    this.group.visible = on;
+    if (!on) this.rimGroup.visible = false;
   }
 
   /** Per-frame: rebase to the floating origin and gate the rim shells on
