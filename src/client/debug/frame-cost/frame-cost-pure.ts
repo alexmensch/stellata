@@ -7,18 +7,6 @@ export const GPU_FRAME_METHODS = ['timer-query', 'timestamp', 'raf-delta'] as co
 
 export type GpuFrameMethod = (typeof GPU_FRAME_METHODS)[number];
 
-/** Every row `buildPassToggles` can produce, in table order. Lives here
- *  rather than with the toggles so a caller can check a requested key
- *  without pulling the renderer in: an unrecognised key would otherwise
- *  filter the roster to empty and read as the sweep being refused. */
-export const PRICED_PASS_KEYS = [
-  'localDepth', 'mwBand', 'lgEmission', 'cloudAbsorption', 'hdrChain',
-  'tonemapOp', 'statisticWrites', 'summation', 'summationTaps', 'mrtAttachments',
-  'reduction', 'coreMask', 'extinctionPrepass', 'emptyPass',
-] as const;
-
-export type PricedPassKey = (typeof PRICED_PASS_KEYS)[number];
-
 /** Frames discarded before the first dwell of a measurement. Long because
  *  an Apple-silicon GPU ramps its clocks under sustained load, so a
  *  measurement started cold walks its frame time down for tens of

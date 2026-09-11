@@ -81,8 +81,9 @@ passes it adds while "disabled". One pass often falls under `bracketMs` and
 the row does not resolve; raising the count tightens the bound on that many
 boundaries together. Quote the total, not `savedMs` over the count — dividing
 assumes the clears add, and consecutive clears with nothing drawn between them
-are what a driver would coalesce (`src/client/debug/frame-cost/README.md`
-§ Priced passes, `docs/render-rules.md` § 8).
+are what a driver would coalesce
+(`src/client/debug/frame-cost/passes/README.md` § Priced passes,
+`docs/render-rules.md` § 8).
 
 `--frames` sizes a dwell (dwell and sweep modes); `--scales` is the sweep's
 viewport set. `--warmup-frames` is shared: it is priceFrame's own warmup in
@@ -377,7 +378,8 @@ it and what a mark means: `RELEASING.md` § Perf pin.
   The app caps its pixel ratio at 2 (`stellata.ts`, `setPixelRatio`): a higher
   `--dpr` draws at 2 while the header claims more, so the runner aborts (exit
   1) when the buffer comes back under viewport × dpr, naming the effective
-  ratio. The frame-cost README's hand-run tables (6.774 Mpx) never compare.
+  ratio. The hand-run tables in
+  `src/client/debug/frame-cost/passes/README.md` (6.774 Mpx) never compare.
 
 ## Recording
 

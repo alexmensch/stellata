@@ -163,8 +163,8 @@ one-frame flash on arrival rather than a sustained over-bright scene.
 The floor-regime park stops the whole measurement periodically and must
 keep probing to notice the scene changing, so its steady-state saving is
 roughly 60 % of the parked-frame figure rather than all of it
-(`../../../debug/frame-cost/README.md` § These rows price the fully parked
-frame). Taking the remainder needs the measurement to stay *live* for the
+(`../../../debug/frame-cost/passes/README.md` § These rows price the fully
+parked frame). Taking the remainder needs the measurement to stay *live* for the
 few emitters that supply the frame mean while the 390k-instance field draw
 stops writing at all — `stellata-8cg.34`, which is a different mechanism
 and not a tuning of this one.

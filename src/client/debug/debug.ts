@@ -12,12 +12,12 @@ import { buildExposureSection } from '../hdr/exposure/exposure-tuning';
 import { mountRenderWatch } from './render-watch/render-watch';
 import { buildRenderWatchSection } from './render-watch/render-watch-section';
 import {
-  buildPassToggles,
   runPriceFrame,
   runPriceFrameRepeat,
   type PriceFrameOptions,
   type PriceFrameRow,
 } from './frame-cost/frame-cost';
+import { buildPassToggles } from './frame-cost/passes/passes';
 import {
   collectMemoryInventory,
   printMemoryInventory,

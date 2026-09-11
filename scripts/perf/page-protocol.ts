@@ -4,8 +4,9 @@
 import type { BrowserContext, Page } from 'playwright';
 import type { DebugTools } from '../../src/client/debug/debug';
 import type {
-  PassToggle, PriceFrameOptions, PriceFrameRow,
+  PriceFrameOptions, PriceFrameRow,
 } from '../../src/client/debug/frame-cost/frame-cost';
+import type { PassToggle } from '../../src/client/debug/frame-cost/passes/passes';
 import type { Stellata } from '../../src/client/stellata';
 import { GATE_ELEMENT_ID } from '../../src/client/webgpu/gate/gate-advice-pure';
 import type { PassCounter } from './dwell/dwell-pure';
@@ -369,8 +370,8 @@ export interface RoundTripParams {
   readonly idleKey: string;
   readonly offFrames: number;
   readonly settleFrames: number;
-  /** Where the dev server serves the frame-cost module from: the pass
-   *  roster is `buildPassToggles`, reached through the module graph. */
+  /** Where the dev server serves the pass roster from: `buildPassToggles`,
+   *  reached through the module graph. */
   readonly toggleModuleUrl: string;
 }
 

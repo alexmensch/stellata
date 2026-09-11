@@ -24,9 +24,9 @@ import { fitLogLog, sweepBracketMs, sweepOrder, type SweepPoint } from './sweep-
  *  and the import fails, not 404s. */
 export const GPU_SAMPLES_MODULE_URL = '/debug/gpu-timing/gpu-frame-samples.ts';
 
-/** The frame-cost module, same route: `--roundtrip` applies a pass's own
+/** The priced-pass roster, same route: `--roundtrip` applies a pass's own
  *  priceFrame toggle rather than a second spelling of it. */
-export const FRAME_COST_MODULE_URL = '/debug/frame-cost/frame-cost.ts';
+export const PASS_TOGGLES_MODULE_URL = '/debug/frame-cost/passes/passes.ts';
 
 
 /**
@@ -145,7 +145,7 @@ export async function applyRoundTrip(
   await runRoundTrip(page, {
     ...record,
     idleKey: ROUNDTRIP_IDLE,
-    toggleModuleUrl: FRAME_COST_MODULE_URL,
+    toggleModuleUrl: PASS_TOGGLES_MODULE_URL,
   });
   return record;
 }

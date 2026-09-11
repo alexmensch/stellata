@@ -4,8 +4,8 @@ Invisible is not free: a star whose fragments write nothing still
 rasterises a full-size quad and pays read-modify-write blend bandwidth on
 every attachment its pass opens. At a deep adaptation cut that is most of
 the star field — the statistic-attachment write row measured ~50 % of the
-default Sol-view frame (`../../debug/frame-cost/README.md` § Decomposing
-the HDR chain). Two vertex-stage mechanisms in `../star.vert.glsl` (TSL
+default Sol-view frame (`../../debug/frame-cost/passes/README.md`
+§ Decomposing the HDR chain). Two vertex-stage mechanisms in `../star.vert.glsl` (TSL
 twin: `../../webgpu/star/star-vertex-tsl.ts`) bound that cost. Neither
 touches the cull bounds themselves — `uCullMag` stays adaptation-free
 (`../../hdr/exposure/README.md` § One writer, five slots).
@@ -15,7 +15,8 @@ touches the cull bounds themselves — `uCullMag` stays adaptation-free
 57–68 % lower. Its **share held at 50.6 %** — both attachments' traffic scales
 with quad area, so shrinking the quad cuts the display and statistic writes
 together and the ~50 % above still describes the frame. Numbers, gates and
-instrument: `../../debug/frame-cost/README.md` § Decomposing the HDR chain.
+instrument: `../../debug/frame-cost/passes/README.md` § Decomposing the
+HDR chain.
 
 ```
 src/client/star-pipeline/collapse/
