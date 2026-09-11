@@ -72,8 +72,9 @@ close enough to subtend `RESOLVED_DISC_MIN_PX`; the planet mesh hides at
 `visible = false` when its distance-faded opacity reaches zero; probe
 markers gate on `isFeatureLegible` over the fleet extent.
 
-**How to apply.** Three admissible tests, all physical — never a distance
-band keyed on where Sol is:
+**How to apply.** Four tests, all physical — never a distance band keyed
+on where Sol is. Three are shipped; the fourth is decided and lands with
+stellata-8cg.50.4.2:
 
 1. **Frustum.** The layer's bounding volume, in the renderer-local
    frame, lies wholly outside the view frustum.
@@ -87,10 +88,13 @@ band keyed on where Sol is:
 4. **Brightness — decided, not yet shipped.** The layer's brightest
    pixel at the live exposure encodes under half an 8-bit step — the
    extended-source form of `emitterPutsInkOnScreen`, i.e. its peak
-   surface brightness is more than `TOE_BLACK_MAG` past the live
-   extended threshold (`stellataExtendedThresholdSb`, 22.0 mag/arcsec²
-   at the shipped instrument, `hdr/emission/README.md` § Extended
-   sources). Skipping an emitter on this test removes its share from
+   surface brightness is more than `TOE_BLACK_MAG` past the extended
+   threshold the cut has moved, `stellataExtendedThresholdSb + dm`. The
+   helper itself is not live: it recovers the untrimmed 22.0 mag/arcsec²
+   at the shipped instrument, and adaptation is deliberately absent from
+   both uniforms it reads (`hdr/emission/README.md` § Extended sources,
+   `hdr/exposure/README.md` § One writer, five slots). Skipping an
+   emitter on this test removes its share from
    the exposure statistic, which eases the cut, which brings the
    emitter back — so the skip is admissible only under two rules: the
    emitter must be invisible at the exposure that will obtain *without*
