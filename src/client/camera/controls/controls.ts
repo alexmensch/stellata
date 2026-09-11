@@ -9,7 +9,7 @@ import {
 import { COORD_SPHERE_FRAMES } from '../../galactic/coord-spheres/coord-sphere-frames';
 import type { DrawnCoordSphereFrame } from '../../galactic/coord-spheres/coord-sphere';
 import { EV_MAX_STOPS, EV_STEP_STOPS, steppedEv } from '../../hdr/exposure/exposure-epoch';
-import { DETAIL_LEVELS } from '../../scene/scene-elements';
+import { DETAIL_LEVELS } from '../../scene/declutter/scene-elements';
 import { fmtDist, onUnitChange, getUnit } from '../../ui/distance-util';
 import { bindStopControl, syncStopControl } from '../../ui/stop-control';
 import { bindConstellationTypeahead } from '../../typeahead/constellation-typeahead';

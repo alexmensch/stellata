@@ -19,7 +19,7 @@ parent folder's loader, relation cache, Kepler math and focal chain
 `BinaryOrbitPathLayer` (`binary-orbit-path-layer.ts`) traces the actual
 orbital path each member of the **focused** multi-star system sweeps — a
 `representational`-tier declutter element (`binaryOrbitRings`,
-`../../scene/README.md`), realistic-only. Focus-gated by design:
+`../../scene/declutter/README.md`), realistic-only. Focus-gated by design:
 representational annotations hide on unfocus, so only the focused star's
 system draws, never every catalog pair.
 

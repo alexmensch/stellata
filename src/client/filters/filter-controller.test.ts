@@ -21,7 +21,7 @@ import {
   type SceneElementId,
   SCENE_ELEMENT_IDS,
   visibleSet,
-} from '../scene/scene-elements';
+} from '../scene/declutter/scene-elements';
 
 function makeSceneBinds(): { binds: SceneElementBinds; permitted: Record<SceneElementId, boolean> } {
   const permitted = Object.fromEntries(

@@ -21,9 +21,10 @@ star-disc render knobs, and the controller that owns every mutation.
   `setStarKMultiplier`, `setStarRenderParams`,
   and the declutter cycle — `applyDetailPreset` /
   `setSceneElementVisible` drive the exhaustive scene-element binds
-  (`../scene/README.md` § Detail-level declutter cycle). `FilterState`
-  carries `detailLevel` (default `all`); the effective permitted set is a
-  runtime cache on `Stellata`, not part of `FilterState`.
+  (`../scene/declutter/README.md` § Detail-level declutter cycle).
+  `FilterState` carries `detailLevel` (default `all`); the effective
+  permitted set is a runtime cache on `Stellata`, not part of
+  `FilterState`.
   `getStarExaggerationK` / `getArcsecPerPx` read the *derived* K and the
   plate scale it keys on at the live FOV and viewport —
   `getStarKMultiplier` is only that product's middle term, which is why

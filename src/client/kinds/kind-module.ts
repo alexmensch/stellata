@@ -9,7 +9,7 @@ import type { ConstellationOfKind } from '../focus-card/constellation-row';
 import type { FocusCardProvider } from '../focus-card/focus-card-types';
 import type { HoverProvider } from '../hover/hover-types';
 import type { OccluderQuery } from '../occlusion/occluder-set';
-import type { SceneElementId } from '../scene/scene-elements';
+import type { SceneElementId } from '../scene/declutter/scene-elements';
 import type { SceneLayer } from '../scene/scene-layer';
 import type { SharedUniforms } from '../frame/shared-uniforms';
 import type { SystemMembershipProvider } from '../system-membership/system-membership';

@@ -403,7 +403,7 @@ Orbit rings + the heliopause shell are also declutter-cycle elements
 (floor `representational`) — `OrbitRingsLayer.setPermitted` /
 `Heliopause.setPermitted` AND into `group.visible` alongside the existing
 warp / chart / focus gates, so both hide at detail level `physical`
-(`../../scene/README.md`).
+(`../../scene/declutter/README.md`).
 
 ## Orbital plane convention
 

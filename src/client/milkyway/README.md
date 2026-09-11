@@ -332,7 +332,7 @@ The chart-mode treatment and un-hiding the meshes are still open work.
 The band↔isobar swap is driven by the `milkyWayIsobar` detail bind (chart
 floor), not chart-mode.ts directly — the group stays enabled in chart
 because `applyMilkywayEnabled` permits either the band or the isobar
-(`../scene/README.md` § Chart-content wiring).
+(`../scene/declutter/README.md` § Chart-content wiring).
 
 Warp keeps the layer visible in dark mode — the band reorienting as the
 camera flies past the GC is the realism payoff.

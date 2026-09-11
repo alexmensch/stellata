@@ -74,9 +74,9 @@ straight out with no encode on either backend, and the star disc emits
    § Rim shell render); the milky-way band↔isobar swap instead rides
    `applyDetailPreset` (step 3) through the `milkyWayIsobar` detail bind.
 3. `applyDetailPreset(getDetailLevel())` — re-derives the permitted set
-   from the chart floor column (see `../scene/README.md` § Detail-level
-   declutter cycle). Drives the MW isobar swap, hides realistic-only
-   structure, and gates the label tiers in step 4.
+   from the chart floor column (see `../scene/declutter/README.md`
+   § Detail-level declutter cycle). Drives the MW isobar swap, hides
+   realistic-only structure, and gates the label tiers in step 4.
 4. `stellata.chartLabels.start(ctx)` — spins up the per-frame label engine
    (`chart-labels.ts`), whose tiers are gated by the detail cycle.
 5. Constellation figure flips to "always draw every constellation"

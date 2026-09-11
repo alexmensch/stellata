@@ -235,7 +235,7 @@ aim at a non-existent target.
 gating the whole constellation overlay, with a double-tap `C` flipping it.
 Both are retired: the declutter cycle already owns whether constellation
 chrome draws, via the `constellationFigures` / `constellationBoundaries`
-floors (`../scene/README.md`), so a second switch was a redundant answer to
+floors (`../scene/declutter/README.md`), so a second switch was a redundant answer to
 the same question. The picker is therefore always enabled, and `C` is a
 plain single press with no deferral window.
 
