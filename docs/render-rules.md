@@ -84,16 +84,19 @@ band keyed on where Sol is:
    projection. Do not write a second projected-size helper.
 3. **Opacity.** The layer's own authored, distance-faded opacity has
    reached zero (the galactic disc's early-out).
-4. **Brightness — not yet admissible.** The layer's peak surface
-   brightness at the live exposure is below the display floor — the
-   extended-source threshold `stellataExtendedThresholdSb`
-   (22.0 mag/arcsec² at the shipped instrument, `hdr/emission/README.md`
-   § Extended sources). Skipping an emitter on this test removes its
-   share from the exposure statistic, which eases the cut, which brings
-   the emitter back: an oscillator unless the emitter's statistic share
-   is bounded against its own visibility threshold. That bound is the
-   design gate stellata-8cg.50.4; until it lands no layer may skip on
-   brightness.
+4. **Brightness — decided, not yet shipped.** The layer's brightest
+   pixel at the live exposure encodes under half an 8-bit step — the
+   extended-source form of `emitterPutsInkOnScreen`, i.e. its peak
+   surface brightness is more than `TOE_BLACK_MAG` past the live
+   extended threshold (`stellataExtendedThresholdSb`, 22.0 mag/arcsec²
+   at the shipped instrument, `hdr/emission/README.md` § Extended
+   sources). Skipping an emitter on this test removes its share from
+   the exposure statistic, which eases the cut, which brings the
+   emitter back — so the skip is admissible only under two rules: the
+   emitter must be invisible at the exposure that will obtain *without*
+   it, and that exposure shift must be under `CADENCE_JND_MAG`.
+   `docs/science-hdr-pipeline.md` § 3.5 is the derivation; until
+   stellata-8cg.50.4.2 lands no layer skips on brightness.
 
 "Prefilter with the bound, decide with the predicate"
 (`hdr/exposure/README.md` § What "visible" means to a pick path) holds

@@ -281,11 +281,12 @@ drawing — the draw and the update saved, the frames not.
 camera pose.** Frustum, legibility and opacity all are, and camera
 motion wakes the gate on its own, so a skipped layer is re-tested the
 moment anything could change its verdict. A reason that is *not* a
-function of pose — the deferred brightness test, whose input is the live
+function of pose — the brightness test, whose input is the live
 exposure — could fall skipped with the camera still and never be asked
-again, because no `updateAll` would run to re-evaluate it. Admitting one
-means giving it a wake path of its own; the design gate that admits it
-owns that (stellata-8cg.50.4).
+again, because no `updateAll` would run to re-evaluate it. Its design
+gate discharges that by construction rather than by a scheduler: every
+input to its verdict changes only on a rendered frame
+(`docs/science-hdr-pipeline.md` § 3.5).
 
 `cadenceReport` runs after `updateAll`, so it reads this frame's
 verdicts. `realtimeFramesNeeded` runs above the gate and reads the last
@@ -302,12 +303,13 @@ boundary is crossed only by camera motion, which already renders every
 frame; a one-pixel pop at the six-pixel legibility floor is a
 level-of-detail step, not a scheduling oscillation. The **brightness**
 test — peak surface brightness under the display floor at the live
-exposure — is *not* admissible under this contract: skipping an emitter
-removes its share from the exposure statistic, which eases the cut,
-which brings the emitter back, which deepens the cut. Its admission,
-with the bound that closes that loop, is its own design gate
-(stellata-8cg.50.4), and `FrameCtx` gains no exposure term until it
-lands.
+exposure — is *not yet* in this contract: skipping an emitter removes
+its share from the exposure statistic, which eases the cut, which
+brings the emitter back, which deepens the cut. The bound that closes
+that loop is decided (`docs/science-hdr-pipeline.md` § 3.5 — two rules:
+test at the exposure that will obtain without the emitter, and only
+where that shift is under the JND); it ships with stellata-8cg.50.4.2,
+and `FrameCtx` gains no exposure term until then.
 
 **Enforced two ways.** `tsc` refuses a layer without the declaration;
 `../../../tests/cadence-layer-declarations.test.ts` scans the shipped
