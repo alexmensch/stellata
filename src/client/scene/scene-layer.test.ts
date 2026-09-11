@@ -3,26 +3,22 @@ import * as THREE from 'three';
 import {
   SceneLayerRegistry,
   type CadenceCtx,
+  type ContributionSkip,
   type FrameCtx,
   type SceneLayer,
 } from './scene-layer';
-import { makeCadenceCtx } from './frame-ctx-mock';
+import { makeCadenceCtx, makeFrameCtx } from './frame-ctx-mock';
 import {
   CADENCE_REPORT_STILL,
   type CadenceReport,
 } from '../render-gate/cadence/clock-cadence-pure';
 
 function makeCtx(warpActive = false): FrameCtx {
-  return {
-    camera: new THREE.PerspectiveCamera(),
-    worldOffset: new THREE.Vector3(),
-    distFromSol: 0,
-    t: 0,
-    warpActive,
-  };
+  return makeFrameCtx(new THREE.PerspectiveCamera(), { warpActive });
 }
 
 const STATIC = { kind: 'static' } as const;
+const ALWAYS = { kind: 'always' } as const;
 
 function reporting(report: Partial<CadenceReport>): SceneLayer {
   return {
@@ -30,8 +26,29 @@ function reporting(report: Partial<CadenceReport>): SceneLayer {
       kind: 'clock',
       rate: () => ({ ...CADENCE_REPORT_STILL, ...report }),
     },
+    contribution: ALWAYS,
     dispose: () => {},
   };
+}
+
+/** A gated layer whose verdict the test scripts per call, recording every
+ *  `update` and `setContributing` it receives. */
+function gated(verdicts: (ContributionSkip | null)[]) {
+  const calls: string[] = [];
+  let n = 0;
+  const layer: SceneLayer = {
+    timeBehaviour: STATIC,
+    contribution: {
+      kind: 'gated',
+      skip: () => verdicts[Math.min(n++, verdicts.length - 1)],
+      setContributing: (on) => { calls.push(`contributing:${on}`); },
+    },
+    update: () => { calls.push('update'); },
+    setMonochrome: (on) => { calls.push(`mono:${on}`); },
+    recenter: (o) => { calls.push(`recenter:${o.x}`); },
+    dispose: () => { calls.push('dispose'); },
+  };
+  return { layer, calls };
 }
 
 describe('SceneLayerRegistry', () => {
@@ -40,6 +57,7 @@ describe('SceneLayerRegistry', () => {
     const order: string[] = [];
     const layer = (name: string): SceneLayer => ({
       timeBehaviour: STATIC,
+      contribution: ALWAYS,
       update: () => { order.push(name); },
       dispose: () => {},
     });
@@ -55,10 +73,12 @@ describe('SceneLayerRegistry', () => {
     const calls: string[] = [];
     reg.register({
       timeBehaviour: STATIC,
+      contribution: ALWAYS,
       dispose: () => { calls.push('disposeOnly'); },
     });
     reg.register({
       timeBehaviour: STATIC,
+      contribution: ALWAYS,
       update: () => { calls.push('update'); },
       setMonochrome: (on) => { calls.push(`mono:${on}`); },
       recenter: (o) => { calls.push(`recenter:${o.x}`); },
@@ -75,7 +95,9 @@ describe('SceneLayerRegistry', () => {
     const reg = new SceneLayerRegistry();
     const disposed = new Set<number>();
     for (let i = 0; i < 5; i++) {
-      reg.register({ timeBehaviour: STATIC, dispose: () => { disposed.add(i); } });
+      reg.register({
+        timeBehaviour: STATIC, contribution: ALWAYS, dispose: () => { disposed.add(i); },
+      });
     }
     reg.disposeAll();
     expect(disposed.size).toBe(5);
@@ -85,10 +107,12 @@ describe('SceneLayerRegistry', () => {
     const reg = new SceneLayerRegistry();
     const seen: FrameCtx[] = [];
     reg.register({
-      timeBehaviour: STATIC, update: (ctx) => { seen.push(ctx); }, dispose: () => {},
+      timeBehaviour: STATIC, contribution: ALWAYS,
+      update: (ctx) => { seen.push(ctx); }, dispose: () => {},
     });
     reg.register({
-      timeBehaviour: STATIC, update: (ctx) => { seen.push(ctx); }, dispose: () => {},
+      timeBehaviour: STATIC, contribution: ALWAYS,
+      update: (ctx) => { seen.push(ctx); }, dispose: () => {},
     });
     const ctx = makeCtx(true);
     reg.updateAll(ctx);
@@ -98,12 +122,125 @@ describe('SceneLayerRegistry', () => {
   });
 });
 
+describe('SceneLayerRegistry — contribution gating', () => {
+  it('a skipping layer gets no update; its always-on neighbours still do', () => {
+    const reg = new SceneLayerRegistry();
+    const order: string[] = [];
+    reg.register({
+      timeBehaviour: STATIC, contribution: ALWAYS,
+      update: () => { order.push('a'); }, dispose: () => {},
+    });
+    const g = gated(['legibility']);
+    reg.register(g.layer);
+    reg.register({
+      timeBehaviour: STATIC, contribution: ALWAYS,
+      update: () => { order.push('c'); }, dispose: () => {},
+    });
+    reg.updateAll(makeCtx());
+    expect(order).toEqual(['a', 'c']);
+    expect(g.calls).toEqual(['contributing:false']);
+  });
+
+  it('setContributing fires on transitions only — a layer that stays skipped pays the predicate alone', () => {
+    const reg = new SceneLayerRegistry();
+    const g = gated(['frustum', 'frustum', null, null, 'opacity']);
+    reg.register(g.layer);
+    const ctx = makeCtx();
+    for (let i = 0; i < 5; i++) reg.updateAll(ctx);
+    expect(g.calls).toEqual([
+      'contributing:false',
+      'contributing:true', 'update',
+      'update',
+      'contributing:false',
+    ]);
+  });
+
+  it('a layer that draws from its first frame is never told so — its constructed visibility stands', () => {
+    const reg = new SceneLayerRegistry();
+    const g = gated([null]);
+    reg.register(g.layer);
+    reg.updateAll(makeCtx());
+    reg.updateAll(makeCtx());
+    expect(g.calls).toEqual(['update', 'update']);
+  });
+
+  it('a skipped layer still receives monochrome, recentre and dispose', () => {
+    const reg = new SceneLayerRegistry();
+    const g = gated(['frustum']);
+    reg.register(g.layer);
+    reg.updateAll(makeCtx());
+    reg.setMonochromeAll(true);
+    reg.recenterAll(new THREE.Vector3(3, 0, 0));
+    reg.disposeAll();
+    expect(g.calls).toEqual(['contributing:false', 'mono:true', 'recenter:3', 'dispose']);
+  });
+
+  it('the skip predicate sees the shared FrameCtx', () => {
+    const reg = new SceneLayerRegistry();
+    let seen: FrameCtx | null = null;
+    reg.register({
+      timeBehaviour: STATIC,
+      contribution: {
+        kind: 'gated',
+        skip: (ctx) => { seen = ctx; return null; },
+        setContributing: () => {},
+      },
+      dispose: () => {},
+    });
+    const ctx = makeCtx();
+    reg.updateAll(ctx);
+    expect(seen).toBe(ctx);
+  });
+
+  it('census counts each kind and every live skip by reason', () => {
+    const reg = new SceneLayerRegistry();
+    reg.register({ timeBehaviour: STATIC, contribution: ALWAYS, dispose: () => {} });
+    reg.register(gated(['frustum']).layer);
+    reg.register(gated(['frustum']).layer);
+    reg.register(gated(['legibility']).layer);
+    reg.register(gated([null]).layer);
+    reg.updateAll(makeCtx());
+    expect(reg.contributionCensus()).toEqual({
+      always: 1,
+      gated: 4,
+      skipped: { frustum: 2, legibility: 1, opacity: 0 },
+    });
+  });
+
+  it('a throwing skip predicate is collected like a throwing update, and its siblings still run', () => {
+    const reg = new SceneLayerRegistry();
+    const order: string[] = [];
+    reg.register({
+      timeBehaviour: STATIC,
+      contribution: { kind: 'gated', skip: () => { throw new Error('boom'); }, setContributing: () => {} },
+      update: () => { order.push('broken'); },
+      dispose: () => {},
+    });
+    reg.register({
+      timeBehaviour: STATIC, contribution: ALWAYS,
+      update: () => { order.push('b'); }, dispose: () => {},
+    });
+    expect(() => reg.updateAll(makeCtx())).toThrow(AggregateError);
+    expect(order).toEqual(['b']);
+  });
+
+  it('disposeAll resets the skip state, so a census after teardown reads clean', () => {
+    const reg = new SceneLayerRegistry();
+    const g = gated(['opacity']);
+    reg.register(g.layer);
+    reg.updateAll(makeCtx());
+    expect(reg.contributionCensus().skipped.opacity).toBe(1);
+    reg.disposeAll();
+    expect(reg.contributionCensus().skipped.opacity).toBe(0);
+  });
+});
+
 describe('SceneLayerRegistry — the cadence reduction', () => {
   const cc = makeCadenceCtx(new THREE.PerspectiveCamera());
 
   it('a registry of static layers reports nothing moving', () => {
     const reg = new SceneLayerRegistry();
-    reg.register({ timeBehaviour: STATIC, dispose: () => {} });
+    reg.register({ timeBehaviour: STATIC, contribution: ALWAYS, dispose: () => {} });
     expect(reg.cadenceReport(cc)).toEqual(CADENCE_REPORT_STILL);
   });
 
@@ -150,6 +287,7 @@ describe('SceneLayerRegistry — the cadence reduction', () => {
           kind: 'clock',
           rate: (ctx) => { seen.push(ctx); return CADENCE_REPORT_STILL; },
         },
+        contribution: ALWAYS,
         dispose: () => {},
       });
     }
@@ -159,10 +297,11 @@ describe('SceneLayerRegistry — the cadence reduction', () => {
 
   it('census counts each declared behaviour', () => {
     const reg = new SceneLayerRegistry();
-    reg.register({ timeBehaviour: STATIC, dispose: () => {} });
+    reg.register({ timeBehaviour: STATIC, contribution: ALWAYS, dispose: () => {} });
     reg.register(reporting({}));
     reg.register({
       timeBehaviour: { kind: 'realtime', needsFrames: () => false },
+      contribution: ALWAYS,
       dispose: () => {},
     });
     expect(reg.behaviourCensus()).toEqual({ static: 1, clock: 1, realtime: 1 });
@@ -173,11 +312,13 @@ describe('SceneLayerRegistry — the cadence reduction', () => {
     const fc = makeCtx();
     reg.register({
       timeBehaviour: { kind: 'realtime', needsFrames: () => false },
+      contribution: ALWAYS,
       dispose: () => {},
     });
     expect(reg.realtimeFramesNeeded(fc)).toBe(false);
     reg.register({
       timeBehaviour: { kind: 'realtime', needsFrames: () => true },
+      contribution: ALWAYS,
       dispose: () => {},
     });
     expect(reg.realtimeFramesNeeded(fc)).toBe(true);

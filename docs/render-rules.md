@@ -82,10 +82,18 @@ band keyed on where Sol is:
    against `FEATURE_LEGIBILITY_MIN_PX` (`util/orbit-line.ts`), with
    `angularDiameterPx` (`camera/controls/star-geometry.ts`) as the
    projection. Do not write a second projected-size helper.
-3. **Brightness.** The layer's peak surface brightness at the live
-   exposure is below the display floor — the extended-source threshold
-   `stellataExtendedThresholdSb` (22.0 mag/arcsec² at the shipped
-   instrument, `hdr/emission/README.md` § Extended sources).
+3. **Opacity.** The layer's own authored, distance-faded opacity has
+   reached zero (the galactic disc's early-out).
+4. **Brightness — not yet admissible.** The layer's peak surface
+   brightness at the live exposure is below the display floor — the
+   extended-source threshold `stellataExtendedThresholdSb`
+   (22.0 mag/arcsec² at the shipped instrument, `hdr/emission/README.md`
+   § Extended sources). Skipping an emitter on this test removes its
+   share from the exposure statistic, which eases the cut, which brings
+   the emitter back: an oscillator unless the emitter's statistic share
+   is bounded against its own visibility threshold. That bound is the
+   design gate stellata-8cg.50.4; until it lands no layer may skip on
+   brightness.
 
 "Prefilter with the bound, decide with the predicate"
 (`hdr/exposure/README.md` § What "visible" means to a pick path) holds
@@ -100,12 +108,13 @@ starting `permitted = false` so it agrees with its constructor's
 `group.visible = false` is the worked example
 (`fresnel-shell/fresnel-shell.ts`).
 
-**Where.** The contract lives on `SceneLayer` beside `timeBehaviour`
-(`scene/README.md` § Declaring how time moves a layer is the model: a
+**Where.** `SceneLayer.contribution`, beside `timeBehaviour`
+(`scene/README.md` § Declaring what a layer can put on screen — a
 required discriminated union, because an omitted hook reads as an answer
-and the failure it prevents is silence). The design gate and the
-per-layer adoption are the liveness epic stellata-8cg.50;
-stellata-9mm.231 (sub-pixel shells) is its first child.
+and the failure it prevents is silence). The registry runs the test and
+skips the update; the layer hides its groups. Per-layer adoption is the
+liveness epic stellata-8cg.50; stellata-9mm.231 (sub-pixel shells) is its
+first child. `tests/cadence-layer-declarations.test.ts` pins the census.
 
 ## 3. Reduced-resolution additive sums for band-limited emitters
 

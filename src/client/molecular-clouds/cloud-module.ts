@@ -102,6 +102,7 @@ export function createCloudKindModule(): CloudKindModule {
       return {
         // Clouds sit at fixed positions; nothing here rides either clock.
         timeBehaviour: { kind: 'static' },
+        contribution: { kind: 'always' },
         update: (fc) =>
           layer!.update(fc.worldOffset, kindCtx.detailPermits('molecularCloudEllipsoids')),
         setMonochrome: (on) => layer!.setMonochrome(on),

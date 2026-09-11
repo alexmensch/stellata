@@ -1,6 +1,6 @@
-// SceneLayer contract + registry: one registration per render layer
-// replaces the shell's hand-maintained per-layer update / monochrome /
-// recenter / dispose enumerations. See README.md.
+// SceneLayer contract + registry: one registration per render layer drives
+// the update / monochrome / recenter / dispose fan-outs, with each update
+// gated on the layer's declared contribution. See README.md.
 
 import type * as THREE from 'three';
 import { fanOut } from '../util/fan-out';
@@ -9,6 +9,7 @@ import {
   maxCadenceReport,
   type CadenceReport,
 } from '../render-gate/cadence/clock-cadence-pure';
+import type { FrameFrustum } from './frame-frustum';
 
 /** Per-frame inputs shared by every layer, computed ONCE per frame by
  *  the integration shell. Layers keep their own visibility gates
@@ -21,6 +22,13 @@ export interface FrameCtx {
   /** Model clock (Unix seconds) — Stellata.getT() snapshot. */
   readonly t: number;
   readonly warpActive: boolean;
+  /** CSS pixels per radian at the live viewport / FOV — the plate scale
+   *  every projected-size test divides through. */
+  readonly pxPerRadian: number;
+  /** The view planes in the renderer-local frame. Valid only after the
+   *  frame's last camera write (the orbit lock); a read before that
+   *  throws, so a frustum test belongs on layers registered below it. */
+  readonly frustum: FrameFrustum;
 }
 
 /** Inputs a `'clock'` layer's rate report reads. Built AFTER the per-frame
@@ -101,14 +109,51 @@ export type LayerTimeBehaviour =
    *  pins that at zero. */
   | { readonly kind: 'realtime'; needsFrames(ctx: FrameCtx): boolean };
 
+/** Why a gated layer cannot put a display-visible pixel on screen this
+ *  frame (docs/render-rules.md § 2): its bounding volume is outside the
+ *  view, its projected extent is under the legibility floor, or its own
+ *  authored opacity has faded to zero. */
+export type ContributionSkip = 'frustum' | 'legibility' | 'opacity';
+
+/** Whether what a layer draws can reach the display from this vantage.
+ *
+ *  REQUIRED, and a discriminated union for the same reason as
+ *  `LayerTimeBehaviour`: an omitted hook would read as "always draws",
+ *  which is the silent answer every layer gave before the contract.
+ *
+ *  A `'gated'` layer's `skip` runs BEFORE its `update`, and on a skip the
+ *  registry calls neither `update` nor lets the draw happen — the layer
+ *  hides its own groups in `setContributing(false)`, which the registry
+ *  calls on the transition only. That hook MUST also reset every
+ *  dirty-track sentinel the layer holds (`docs/authoring-patterns.md`
+ *  § Sentinel-init), or the layer refuses to repaint when it returns. */
+export type LayerContribution =
+  | { readonly kind: 'always' }
+  | {
+    readonly kind: 'gated';
+    skip(ctx: FrameCtx): ContributionSkip | null;
+    setContributing(on: boolean): void;
+  };
+
+/** Count of layers per contribution kind plus, for the gated ones, how
+ *  many are skipping right now and why — the audit surface beside
+ *  `behaviourCensus`. */
+export interface ContributionCensus {
+  always: number;
+  gated: number;
+  skipped: Record<ContributionSkip, number>;
+}
+
 /** One scene layer's per-frame + lifecycle hooks. Every hook except
- *  `dispose` and `timeBehaviour` is optional — a layer registers only the
- *  fan-outs it participates in, and registration guarantees inclusion in
- *  each. */
+ *  `dispose`, `timeBehaviour` and `contribution` is optional — a layer
+ *  registers only the fan-outs it participates in, and registration
+ *  guarantees inclusion in each. */
 export interface SceneLayer {
   /** Required. See `LayerTimeBehaviour` — omitting it is the bug the
    *  union exists to make impossible. */
   readonly timeBehaviour: LayerTimeBehaviour;
+  /** Required. See `LayerContribution`. */
+  readonly contribution: LayerContribution;
   update?(ctx: FrameCtx): void;
   setMonochrome?(on: boolean): void;
   /** Floating-origin recentre — layers holding local-frame positions
@@ -143,13 +188,49 @@ export function updateWarpGatedRefLayer(
  *  first, SVG projectors after the camera-matrix refresh they need). */
 export class SceneLayerRegistry {
   private readonly layers: SceneLayer[] = [];
+  /** Per-layer contribution state, parallel to `layers`. Seeded `true`
+   *  so a layer's constructed visibility stands until its first skip. */
+  private readonly contributing: boolean[] = [];
+  private readonly skips: (ContributionSkip | null)[] = [];
 
   register(layer: SceneLayer): void {
     this.layers.push(layer);
+    this.contributing.push(true);
+    this.skips.push(null);
   }
 
+  /** Each layer's `skip` test, then its `update` only if it draws this
+   *  frame. `setContributing` fires on transitions alone, so a layer that
+   *  stays skipped pays one predicate call per frame and nothing else. */
   updateAll(ctx: FrameCtx): void {
-    fanOut('updateAll', this.layers, (layer) => layer.update?.(ctx));
+    fanOut('updateAll', this.layers.keys(), (i) => {
+      const layer = this.layers[i];
+      if (this.contributes(i, layer.contribution, ctx)) layer.update?.(ctx);
+    });
+  }
+
+  private contributes(i: number, c: LayerContribution, ctx: FrameCtx): boolean {
+    if (c.kind === 'always') return true;
+    const skip = c.skip(ctx);
+    this.skips[i] = skip;
+    const on = skip === null;
+    if (on !== this.contributing[i]) {
+      this.contributing[i] = on;
+      c.setContributing(on);
+    }
+    return on;
+  }
+
+  contributionCensus(): ContributionCensus {
+    const out: ContributionCensus = {
+      always: 0, gated: 0, skipped: { frustum: 0, legibility: 0, opacity: 0 },
+    };
+    for (let i = 0; i < this.layers.length; i++) {
+      out[this.layers[i].contribution.kind]++;
+      const skip = this.skips[i];
+      if (skip !== null) out.skipped[skip]++;
+    }
+    return out;
   }
 
   /** Channel-wise fastest report over every `'clock'` layer — the frame's
@@ -200,5 +281,7 @@ export class SceneLayerRegistry {
 
   disposeAll(): void {
     fanOut('disposeAll', this.layers, (layer) => layer.dispose());
+    this.contributing.fill(true);
+    this.skips.fill(null);
   }
 }

@@ -2,25 +2,8 @@
 // and per-layer cadence suites.
 
 import * as THREE from 'three';
+import { FrameFrustum } from './frame-frustum';
 import type { CadenceCtx, FrameCtx } from './scene-layer';
-
-/** A camera parked at Sol on the model clock's zero, no warp — the
- *  neutral frame a layer's `update` sees. Override the field the test is
- *  actually about (`distFromSol` for a fade gate, `warpActive` for a
- *  warp gate). */
-export function makeFrameCtx(
-  camera: THREE.PerspectiveCamera,
-  overrides: Partial<FrameCtx> = {},
-): FrameCtx {
-  return {
-    camera,
-    worldOffset: new THREE.Vector3(),
-    distFromSol: 0,
-    t: 0,
-    warpActive: false,
-    ...overrides,
-  };
-}
 
 /** The pinned acceptance plate scale: a 900 CSS-px-tall viewport at the
  *  default 50° vertical FOV, which is what
@@ -28,6 +11,29 @@ export function makeFrameCtx(
  *  against.
  *  `angularToPx` is viewport height over FOV in radians. */
 export const ACCEPTANCE_PX_PER_RADIAN = 900 / ((50 * Math.PI) / 180);
+
+/** A camera parked at Sol on the model clock's zero, no warp, the
+ *  acceptance plate scale and a frustum already refreshed from `camera`
+ *  — the neutral frame a layer's `update` or `skip` sees. Override the
+ *  field the test is actually about (`distFromSol` for a fade gate,
+ *  `warpActive` for a warp gate). */
+export function makeFrameCtx(
+  camera: THREE.PerspectiveCamera,
+  overrides: Partial<FrameCtx> = {},
+): FrameCtx {
+  const frustum = new FrameFrustum();
+  frustum.refresh(camera);
+  return {
+    camera,
+    worldOffset: new THREE.Vector3(),
+    distFromSol: 0,
+    t: 0,
+    warpActive: false,
+    pxPerRadian: ACCEPTANCE_PX_PER_RADIAN,
+    frustum,
+    ...overrides,
+  };
+}
 
 /** A still camera on a one-second sim step, nothing riding — the neutral
  *  frame a layer's cadence report sees. Override `cameraVelPcPerSimS` for
