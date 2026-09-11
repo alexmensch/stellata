@@ -697,6 +697,9 @@ export class Stellata implements FrameAnchor {
         scanWindowPc: () =>
           this.starFrame.discWindowPcFor(RESOLVED_DISC_MIN_PX * PHYS_RATIO_THRESHOLD),
         occluders: this.occluders,
+        livePulsationRadiusFactor: (idx) => starPhysics.livePulsationRadiusFactor(
+          catalog, idx, this._suppressPulsation, this.sharedUniforms),
+        hiddenStarIdx: () => sharedUniforms.uHideFocusIdx.value,
       },
     );
     this.localDepthPass.register(this.starLocalCluster);

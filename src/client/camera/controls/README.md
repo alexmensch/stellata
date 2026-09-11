@@ -107,6 +107,19 @@ in both navigate and observe modes.
   `../../solar-system/probes/probe-focus-geometry.ts`, with
   `../depth-range.test.ts` pinning the near-plane margin).
 
+  **The live-versus-peak pair, and which one a caller owes.**
+  `pulsationPhaseInto` reports where a star sits in its cycle this frame;
+  `pulsationRadiusFactor` / `livePulsationRadiusFactor` turn that into the
+  radius DRAWN, swinging over `[ρ^−½, ρ^+½]` with the MINIMUM at maximum
+  light. `peakAmplitudeFactor` is the other thing entirely — largest over
+  the whole cycle, phase-independent. Anything tracking what is on screen
+  takes the live one: the rendered disc, and the label occluder
+  (`../../occlusion/README.md`). The peak is for bounds that must not move
+  as a star breathes — park distances, the local-depth bracket, the
+  arrow-fade envelope (`renderedDiscPxAtPeak`). They are both a bare
+  `number` and read alike at a call site, which is how the occluder set
+  came to mask a Mira 40 % wide of its own disc.
+
 ### star-geometry vs star-physics vs stellata.ts
 
 - `star-geometry.ts` — pure formulae (no catalog, no uniforms).

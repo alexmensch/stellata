@@ -7,6 +7,7 @@ import type { BinaryOrbitPathLayer } from '../../binaries/orbit-paths/binary-orb
 import type { RenderedSizeComponents } from '../../camera/controls/star-physics';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import { OccluderSet } from '../../occlusion/occluder-set';
+import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
 import { StarLocalMirror } from './star-local-mirror';
 import { MIRROR_CAPACITY } from './star-mirror-slots';
 import { StarLocalCluster } from './star-local-cluster';
@@ -57,6 +58,9 @@ interface Fixture {
   nearStars: number[];
   /** Per-star rendered size components the deps report. */
   sizes: Map<number, RenderedSizeComponents>;
+  /** Per-star live pulsation radius factor the deps report. */
+  radiusFactors: Map<number, number>;
+  hiddenStarIdx: { value: number };
   pathsVisible: { value: boolean };
   pathSpheres: MemberSphere[];
   frame: {
@@ -81,6 +85,8 @@ function makeFixture(): Fixture {
     },
   } as unknown as BinaryOrbitPathLayer;
   const occluders = new OccluderSet();
+  const radiusFactors = new Map<number, number>();
+  const hiddenStarIdx = { value: -1 };
   const cluster = new StarLocalCluster(mirror, pathLayer, uniform, {
     catalog: makeEmptyCatalog(STAR_COUNT),
     localPositions: () => new Float32Array(STAR_COUNT * 3),
@@ -96,6 +102,8 @@ function makeFixture(): Fixture {
     },
     scanWindowPc: () => 1,
     occluders,
+    livePulsationRadiusFactor: (idx) => radiusFactors.get(idx) ?? 1,
+    hiddenStarIdx: () => hiddenStarIdx.value,
   });
   return {
     cluster,
@@ -105,10 +113,19 @@ function makeFixture(): Fixture {
     camera: new THREE.PerspectiveCamera(),
     nearStars,
     sizes,
+    radiusFactors,
+    hiddenStarIdx,
     pathsVisible,
     pathSpheres,
     frame: { monochrome: false, focalIdx: null, thresholdMag: 6.5 },
   };
+}
+
+/** The radius every fixture star publishes at factor 1, by the same
+ *  expression the cluster uses — the mock's radius against the floor. */
+function starRadiusPc(): number {
+  const { physicalRadius } = makeEmptyCatalog(1);
+  return Math.max(physicalRadius[0], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC;
 }
 
 function members(fx: Fixture): number[] {
@@ -261,5 +278,36 @@ describe('StarLocalCluster occluder publish', () => {
     fx.pathSpheres.push({ distPc: 2, radiusPc: 1 });
     fx.cluster.update(fx.camera, fx.frame);
     expect(fx.occluders.count).toBe(1);
+  });
+
+  it('skips the observe-anchor star, which is drawn nowhere', () => {
+    fx.cluster.setHostMember(7);
+    resolvedDisc(fx, 2);
+    fx.nearStars.push(2);
+    fx.hiddenStarIdx.value = 7;
+    fx.cluster.update(fx.camera, fx.frame);
+    // Still a pass member — it is the mirror's hide that removes it, not
+    // membership — but it takes no label off screen.
+    expect(members(fx)).toEqual([7, 2]);
+    expect(fx.occluders.count).toBe(1);
+  });
+
+  it('masks at the disc drawn this frame, not the pulsation peak', () => {
+    // Every fixture star sits at the origin, the camera 1000 radii out on
+    // +x, the anchor as far again beyond it. The cone has doubled in width
+    // by then, so a 3-radius offset clears the catalogue-size disc and is
+    // masked once the star swells 2×.
+    const R = starRadiusPc();
+    const camPos = new THREE.Vector3(1000 * R, 0, 0);
+    const anchor = new THREE.Vector3(-1000 * R, 3 * R, 0);
+
+    fx.cluster.setHostMember(7);
+    fx.cluster.update(fx.camera, fx.frame);
+    expect(fx.occluders.hides(anchor, camPos)).toBe(false);
+
+    fx.occluders.beginFrame();
+    fx.radiusFactors.set(7, 2);
+    fx.cluster.update(fx.camera, fx.frame);
+    expect(fx.occluders.hides(anchor, camPos)).toBe(true);
   });
 });
