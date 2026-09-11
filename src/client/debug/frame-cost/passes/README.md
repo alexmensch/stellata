@@ -106,10 +106,35 @@ parked, so every dwell prices the same state). At those vantages the
 should read ~0 — the park working, not the instrument failing. To price
 the writes themselves there, hold the park off for the sweep —
 `stellata.adaptation.setParkEnabled(false)` in the console, `--no-park` on
-the runner (`../../../hdr/exposure/park/README.md` § The lever) — and
-remember the row lumps every emitter's statistic write together: the
-runner's `--pre-disable mwBand,lgEmission` leaves the star field's own
-share, and the plain row minus that one is the band's and the glow's.
+the runner (`../../../hdr/exposure/park/README.md` § The lever).
+
+**The row lumps every emitter's statistic write together, and splitting it
+gives a BOUND rather than a share.** `--pre-disable mwBand,lgEmission`
+leaves the star field's own writes in the row, and the plain row is every
+emitter's. Differencing the two is the same arithmetic § Decomposing the HDR
+chain forbids within one table and for the same reason — the writes share
+bandwidth, and the two runs price frames 2.6x apart, so neither row is the
+other's complement. Read each as an upper bound on its own side. The runner
+refuses to diff such a pair outright (`../../../../../scripts/perf/README.md`
+§ Sweep preconditions); the subtraction is done by hand, knowing this.
+
+**Measured 2026-09-11**, WebGL2 `timer-query` (the only path where the row
+resolves), default Sol view, park off, exposure pinned at dm −6.289 with
+`limitMag` 1.511 in every state, 4.096 Mpx, headless Chromium 151:
+
+| preconditions | baseline | `savedMs` | `savedPct` | `noiseMs` | `bracketMs` | readback |
+| --- | --- | --- | --- | --- | --- | --- |
+| every pass live | 48.769 | 22.485 | 46.1 | 1.795 | 0.809 | 0.25 / 0.25 |
+| `mwBand,lgEmission` held off | 18.957 | 5.136 | 27.1 | 0.555 | 0.098 | 0.333 / 0.667 |
+
+So the whole statistic write is 22.5 ms and the star field's own share is at
+most 5.1 ms of it — and that row's readback rates diverge, so part of it is a
+submission-barrier change riding on the pass (§ The readback cadence, and
+`../README.md` § Reading a row). The band and the LG glow carry the larger
+part, and holding both off took 29.8 ms off the whole frame. The two are
+also what the brightness gate (`stellata-8cg.50.4`) removes near a bright
+body, so the same milliseconds are claimed by more than one piece of
+planned work.
 
 **Which vantages those are widened, so a stale table will disagree.** The
 park used to engage only inside the slew's settle band, i.e. at a cut of

@@ -110,10 +110,9 @@ export class SceneAdaptation {
 
   /**
    * Keep the measurement live whatever the regime — a frame-cost lever, never
-   * a shipped state (`park/README.md` § The lever). At the app default view
-   * the floor regime parks, and a sweep's hold collapses a probe to parked,
-   * so the statistic-write rows there price an already-parked frame. Off, the
-   * machine sits at its initial state every frame and nothing parks.
+   * a shipped state (`park/README.md` § The lever). Disabling unparks on the
+   * same call rather than a frame later, so a sweep set up after the machine
+   * has already parked still prices live writes.
    */
   setParkEnabled(on: boolean): void {
     this.parkEnabled = on;
