@@ -9,6 +9,7 @@ describe('ExtinctionNodes', () => {
     const nodes = new ExtinctionNodes();
     expect(nodes.dust.value).not.toBeNull();
     expect(nodes.av.value).not.toBeNull();
+    nodes.dispose();
   });
 
   // The volume slot is BOUND every frame — the uDustEnabled gate is a
@@ -73,9 +74,6 @@ describe('ExtinctionNodes', () => {
     nodes.dispose();
   });
 
-  // The prepass kernel and the star vertex fallback sample the SAME node.
-  // Two nodes would make the A/B toggle change the picture: one branch
-  // reading dust, the other an empty placeholder (README.md § Two nodes).
   it('releases both slots on dispose so nothing holds the volume or the buffer', () => {
     const nodes = new ExtinctionNodes();
     const volume = createVoxelTexture(4, new Uint8Array(64));
