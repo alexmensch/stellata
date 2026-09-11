@@ -1411,7 +1411,12 @@ constant.** Probed 2026-09-11 with the band's CPU mirror
 | 100 kpc out, 30° up | 19.92 | 18.73 |
 | 1 Mpc out | 22.07 | 17.11 |
 
-The dust-free full central chord, 17.11, is the vantage-free ceiling. At
+The dust-free full central chord, 17.11, is the vantage-free ceiling, and
+the table samples vantages rather than establishing it: dust only dims, a
+chord through the centre is the longest and densest path the density model
+offers, and a camera outside the disc proxy sees all of it. Inside the
+proxy the camera sees part of that chord while the fan opens to the whole
+sphere, so the same chord still bounds it. At
 the default view's floor cut (−6.29) the threshold is 17.21, so the ceiling
 fails to prove invisibility by 0.10 mag while the dusty peak proves it by
 3.5; at planet-approach cuts (−10 and deeper) the ceiling alone suffices.
@@ -1422,8 +1427,9 @@ dusty column maximised over a direction fan, keyed on camera position —
 the field varies over ~100 pc (the dust scale height is 125 pc), so a
 pose-keyed cache with a movement threshold is legitimate where an
 exposure-keyed one is not — with a margin pinned against a dense sweep:
-from Sol a 10°×5° fan lands 0.06 mag from a 0.5°×0.25° one, a 5°×2° fan
-0.004 mag. For the Local Group glow it is the footprint-softened central
+from Sol a 10°×5° fan lands 0.06 mag from a 0.5°×0.25° one and a 5°×2° fan
+0.004 mag, which brackets the table's own 2°×1°.
+For the Local Group glow it is the footprint-softened central
 column per object at the live plate scale; the sub-pixel expansion (`k`,
 `k⁻³`) only lowers surface brightness so the unexpanded value bounds it,
 and M31's unsoftened nucleus is 3.95 mag too loose to use.
