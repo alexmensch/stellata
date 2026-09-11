@@ -15,6 +15,7 @@ import {
   BAND_PEAK_RECOMPUTE_PC,
   BAND_PEAK_STALENESS_MAG,
   BandPeakCache,
+  bandPeakRecomputeRadiusPc,
   MW_PEAK_SB_DUST_FREE,
   bandPeakFan,
   bandPeakSurfaceBrightnessBound,
@@ -36,6 +37,10 @@ const VANTAGES: Record<string, Vec3> = {
   out100kpcUp30deg: [-86_600, 0, 50_000],
   out2Mpc: [-2e6, 0, 0],
 };
+
+const AXES = [
+  [0, 0, 1], [0, 0, -1], [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0],
+] as const;
 
 const DENSE_FACTOR = 8;
 
@@ -121,6 +126,41 @@ describe('the margin', () => {
     );
     expect(rate).toBeCloseTo(0.006, 3);
     expect(rate).toBeLessThanOrEqual(BAND_PEAK_DRIFT_MAG_PER_PC);
+  });
+
+  // The allowance is one constant while the radius is not, so what has to
+  // hold is the PRODUCT, at every vantage — and Sol has to stay the vantage
+  // that pays the most, or the constant is sized against the wrong one.
+  it('the scaled radius buys no more staleness than Sol does', () => {
+    const staleness = (cam: Vec3): number => {
+      const radius = bandPeakRecomputeRadiusPc(cam);
+      const base = bandPeakFan(cam).sb;
+      return Math.max(
+        ...AXES.map((axis) => {
+          const moved: Vec3 = [
+            cam[0] + axis[0] * radius, cam[1] + axis[1] * radius, cam[2] + axis[2] * radius,
+          ];
+          return Math.abs(bandPeakFan(moved).sb - base);
+        }),
+      );
+    };
+    const byVantage = Object.fromEntries(
+      Object.entries(VANTAGES).map(([name, cam]) => [name, staleness(cam)]),
+    );
+    for (const [name, mag] of Object.entries(byVantage)) {
+      expect(`${name}: ${mag <= BAND_PEAK_STALENESS_MAG}`).toBe(`${name}: true`);
+    }
+    expect(Math.max(...Object.values(byVantage))).toBeCloseTo(byVantage.sol, 6);
+    expect(byVantage.sol).toBeCloseTo(0.060, 3);
+  });
+
+  // The whole point of scaling it: at the camera's 2 Mpc limit the bound
+  // survives 246× further travel than at Sol, which is also where the camera
+  // crosses ground fastest.
+  it('widens the radius where distance-invariance makes it free', () => {
+    expect(bandPeakRecomputeRadiusPc(SOL)).toBeCloseTo(BAND_PEAK_RECOMPUTE_PC, 6);
+    expect(bandPeakRecomputeRadiusPc([300, 0, 200])).toBe(BAND_PEAK_RECOMPUTE_PC);
+    expect(bandPeakRecomputeRadiusPc([-2e6, 0, 0])).toBeCloseTo(2462, 0);
   });
 });
 

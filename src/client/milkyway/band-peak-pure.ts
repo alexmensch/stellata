@@ -1,7 +1,7 @@
 // The band's brightest rendered sightline from a camera position — the
 // bound the brightness skip reads (docs/science-hdr-pipeline.md § 3.5).
 
-import { GALACTIC_CENTRE_PC, ICRS_TO_GAL_M3 } from '../galactic/galactic-coords';
+import { GALACTIC_CENTRE_PC, ICRS_TO_GAL_M3, R0_PC } from '../galactic/galactic-coords';
 import { SB_ZERO_POINT } from '../hdr/emission/emission-pure';
 import {
   DISC_RADIUS_PC,
@@ -31,11 +31,33 @@ export const BAND_PEAK_REFINE_PASSES = 3;
  *  against a dense sweep over the vantage grid. */
 export const BAND_PEAK_MARGIN_MAG = 0.05;
 
-/** Camera travel the cached bound stays valid over, and the fastest the
- *  peak moves per parsec of that travel (vertical, near the plane — the
- *  dust scale height is 125 pc); pinned together with the margin. */
+/** Camera travel the cached bound stays valid over at Sol's galactocentric
+ *  distance, and the fastest the peak moves per parsec of that travel
+ *  (vertical, near the plane — the dust scale height is 125 pc); pinned
+ *  together with the margin. */
 export const BAND_PEAK_RECOMPUTE_PC = 10;
 export const BAND_PEAK_DRIFT_MAG_PER_PC = 0.007;
+
+/**
+ * How far the camera may travel before the cached bound is recomputed:
+ * `BAND_PEAK_RECOMPUTE_PC` inside R₀, growing in proportion beyond it.
+ *
+ * Two different things move the peak and they do not share a scale. Inside
+ * the dust the camera's own travel changes the foreground column — that is
+ * the 0.007 mag/pc the floor is sized against, and it does not care how far
+ * the Galactic centre is. Outside, surface brightness is distance-invariant
+ * and all that is left is the Galaxy's shrinking angular size, so the same
+ * travel buys proportionally less change: 2.4 kpc of it at the 2 Mpc camera
+ * limit costs 0.007 mag where 10 pc at Sol costs 0.060.
+ *
+ * Which is why the threshold is NOT the drift rate in disguise — the rate at
+ * 3 kpc above Sol is 65× the rate at Sol for the same galactocentric
+ * distance. It is a conservative envelope, and `band-peak-pure.test.ts`
+ * pins the staleness it actually buys over a vantage grid.
+ */
+export function bandPeakRecomputeRadiusPc(cameraGalPc: Vec3): number {
+  return BAND_PEAK_RECOMPUTE_PC * Math.max(1, norm(cameraGalPc) / R0_PC);
+}
 
 export interface BandPeak {
   /** mag/arcsec² of the brightest sampled sightline; +Infinity if every
@@ -151,7 +173,10 @@ export function bandPeakSurfaceBrightnessBound(cameraGalPc: Vec3): number {
   return bandPeakFan(cameraGalPc).sb - BAND_PEAK_MARGIN_MAG;
 }
 
-/** What a bound computed up to `BAND_PEAK_RECOMPUTE_PC` away still owes. */
+/** What a cached bound still owes at the end of its recompute radius. Sized
+ *  on the vantage that pays the most — Sol, where the radius is the floor and
+ *  the camera sits in the dust — and pinned over the grid, since a wider
+ *  radius further out buys strictly less drift than this. */
 export const BAND_PEAK_STALENESS_MAG = BAND_PEAK_DRIFT_MAG_PER_PC * BAND_PEAK_RECOMPUTE_PC;
 
 /** Position-keyed memo of the bound, brighter again by the staleness
@@ -159,6 +184,7 @@ export const BAND_PEAK_STALENESS_MAG = BAND_PEAK_DRIFT_MAG_PER_PC * BAND_PEAK_RE
  *  (hdr/exposure/README.md § One writer, five slots). */
 export class BandPeakCache {
   private at: Vec3 | null = null;
+  private radiusPc = 0;
   private bound = Number.NaN;
 
   boundAt(cameraGalPc: Vec3): number {
@@ -166,9 +192,12 @@ export class BandPeakCache {
       const dx = cameraGalPc[0] - this.at[0];
       const dy = cameraGalPc[1] - this.at[1];
       const dz = cameraGalPc[2] - this.at[2];
-      if (Math.hypot(dx, dy, dz) <= BAND_PEAK_RECOMPUTE_PC) return this.bound;
+      // The radius of the position the bound was TAKEN at, not of the one
+      // being asked about: that is the travel the staleness allowance covers.
+      if (Math.hypot(dx, dy, dz) <= this.radiusPc) return this.bound;
     }
     this.at = [cameraGalPc[0], cameraGalPc[1], cameraGalPc[2]];
+    this.radiusPc = bandPeakRecomputeRadiusPc(cameraGalPc);
     this.bound = bandPeakSurfaceBrightnessBound(cameraGalPc) - BAND_PEAK_STALENESS_MAG;
     return this.bound;
   }
@@ -176,6 +205,7 @@ export class BandPeakCache {
   /** Dispose must call this: the null sentinel is what fails the first read. */
   reset(): void {
     this.at = null;
+    this.radiusPc = 0;
     this.bound = Number.NaN;
   }
 }
