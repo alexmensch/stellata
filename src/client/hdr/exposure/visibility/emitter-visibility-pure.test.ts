@@ -200,7 +200,7 @@ describe('the brightness skip — § 3.5 rules 1 and 2', () => {
   }
 
   const drawn = (peakSb: number, exposure: FrameExposure) =>
-    brightnessSkip({ peakSb, contributing: true, warpActive: false, exposure });
+    brightnessSkip({ peakSb: () => peakSb, contributing: true, warpActive: false, exposure });
 
   it('reproduces § 3.5 default view: a −6.29 cut against a 17.21 threshold', () => {
     expect(adaptationDm(SOL_STAT)).toBeCloseTo(-6.29, 2);
@@ -234,9 +234,33 @@ describe('the brightness skip — § 3.5 rules 1 and 2', () => {
   it('refuses a skip while warping, and before any statistic has landed', () => {
     const exposure = exposureAt(SOL_STAT);
     expect(brightnessSkip({
-      peakSb: 20.69, contributing: true, warpActive: true, exposure,
+      peakSb: () => 20.69, contributing: true, warpActive: true, exposure,
     })).toBeNull();
     expect(drawn(20.69, exposureAt(SOL_STAT, { statistic: null }))).toBeNull();
+  });
+
+  // Producing the bound is the expensive half of the verdict — the band
+  // marches 976 sightlines, the glow 123 objects' central rays — and a
+  // warping camera refuses unconditionally on exactly the frames it moves
+  // fastest. So the refusals that do not need the number have to come
+  // first, and an eager argument would look identical without this.
+  it('never asks for the peak on a refusal that does not need it', () => {
+    let asked = 0;
+    const peakSb = () => { asked += 1; return 20.69; };
+    const refusals = [
+      { warpActive: true, exposure: exposureAt(SOL_STAT) },
+      { warpActive: false, exposure: exposureAt(SOL_STAT, { statistic: null }) },
+    ];
+    for (const r of refusals) {
+      expect(brightnessSkip({ peakSb, contributing: true, ...r })).toBeNull();
+    }
+    expect(asked).toBe(0);
+
+    // …and does ask once when the verdict genuinely turns on it.
+    expect(brightnessSkip({
+      peakSb, contributing: true, warpActive: false, exposure: exposureAt(SOL_STAT),
+    })).not.toBeUndefined();
+    expect(asked).toBe(1);
   });
 
   describe('rule 2 refuses within a band of the edge, and the band is the plate scale\'s', () => {
@@ -290,7 +314,7 @@ describe('the brightness skip — § 3.5 rules 1 and 2', () => {
       const justPast = EDGE_SB + 1.0;
       expect(drawn(justPast, wide)).toBeNull();
       expect(brightnessSkip({
-        peakSb: justPast, contributing: false, warpActive: false, exposure: wide,
+        peakSb: () => justPast, contributing: false, warpActive: false, exposure: wide,
       })).toBe('brightness');
     });
   });
@@ -319,7 +343,7 @@ describe('the loop the design gate exists to close', () => {
         exposure: sceneExposure(LIMIT, adaptationDm(stat), 0),
       };
       const verdict = brightnessSkip({
-        peakSb, contributing, warpActive: false, exposure,
+        peakSb: () => peakSb, contributing, warpActive: false, exposure,
       });
       out.push(verdict === null ? 'draw' : 'skip');
       contributing = verdict === null;

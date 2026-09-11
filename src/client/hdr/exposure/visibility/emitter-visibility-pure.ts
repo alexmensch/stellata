@@ -120,8 +120,16 @@ export function extendedEmitterPutsInkOnScreen(
 export interface BrightnessSkipArgs {
   /** Upper bound on the emitter's brightest rendered pixel, mag/arcsec².
    *  A bound, so it may only ever be BRIGHTER (numerically smaller) than
-   *  the frame — which is what keeps a skip conservative. */
-  peakSb: number;
+   *  the frame — which is what keeps a skip conservative.
+   *
+   *  Deferred, because producing it is the expensive half of the verdict:
+   *  the band marches 976 sightlines for it and the Local Group glow the
+   *  central ray of 123 objects, milliseconds of frame-thread CPU either
+   *  way (`milkyway/README.md` § The brightest rendered sightline). Every
+   *  refusal below that does not need the number runs first, so a warping
+   *  camera — which refuses unconditionally, on exactly the frames it is
+   *  crossing ground fastest — never pays for one. */
+  peakSb: () => number;
   /** Whether this emitter's light is in the last landed statistic. Its
    *  share is subtracted while drawn and never while skipped: a skipped
    *  emitter is already out of `L̄`, and subtracting again double-eases
@@ -147,6 +155,8 @@ export function brightnessSkip(a: BrightnessSkipArgs): 'brightness' | null {
   const { statistic, tuning } = a.exposure;
   if (a.warpActive || statistic === null) return null;
 
+  const peakSb = a.peakSb();
+
   // ΔL_E ≤ f_E · uExposure_base · 10^(−0.4·S_peak) · Ω_px, at f_E = 1 —
   // the emitter over the whole frame, the worst case the frame fraction
   // can take. The peak over the whole footprint grossly overstates the
@@ -154,7 +164,7 @@ export function brightnessSkip(a: BrightnessSkipArgs): 'brightness' | null {
   // display takes Ω_sum.
   const share = a.contributing
     ? surfaceBrightnessLuminance(
-      a.exposure.baseExposure, a.peakSb, a.exposure.omegaPxArcsec2)
+      a.exposure.baseExposure, peakSb, a.exposure.omegaPxArcsec2)
     : 0;
   const withE = adaptationBranches(statistic, tuning).dm;
   const withoutE = adaptationBranches(
@@ -165,7 +175,7 @@ export function brightnessSkip(a: BrightnessSkipArgs): 'brightness' | null {
 
   const easedExposure = a.exposure.exposure * 10 ** (0.4 * easing);
   return extendedEmitterPutsInkOnScreen(
-    a.peakSb, easedExposure, a.exposure.omegaSummationArcsec2, a.exposure.whitePoint)
+    peakSb, easedExposure, a.exposure.omegaSummationArcsec2, a.exposure.whitePoint)
     ? null
     : 'brightness';
 }

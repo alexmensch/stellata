@@ -209,7 +209,10 @@ the brightness skip compares against the live extended threshold
   the disc proxy (24 rings × 36 azimuths, then three 7×7 refinements at a
   third of the spacing each) — 976 marched sightlines, **3.8–6.0 ms** per
   recompute on a 2024 M-series laptop under node, and CPU work on the frame
-  thread. Centring on the centre is what keeps
+  thread, which is why the brightness skip takes it as a thunk and calls it
+  only past the refusals that do not need it
+  (`../hdr/exposure/visibility/README.md` § Skipping an emitter the display
+  cannot show). Centring on the centre is what keeps
   it scale-free — from a megaparsec the Galaxy spans two degrees and an
   absolute (l, b) grid would miss it, which is the sampling error
   `docs/science-hdr-pipeline.md` § 3.5's probe table carried at 1 Mpc.

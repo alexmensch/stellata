@@ -340,16 +340,17 @@ export class MilkyWay {
    *  (`docs/science-hdr-pipeline.md` § 3.5). Two tiers: the dust-free
    *  ceiling is brighter than any vantage can render, so a skip it already
    *  proves costs nothing; only where it cannot decide does the live dusty
-   *  peak get marched, at 2–6 ms per cache miss. */
+   *  peak get marched, at 3.8–6.0 ms per cache miss. Both arrive as
+   *  thunks so the predicate's own refusals — warp above all — come first. */
   contributionSkip(
     exposure: FrameExposure,
     cameraAbsPc: THREE.Vector3,
     warpActive: boolean,
   ): ContributionSkip | null {
     const common = { contributing: this.contributing, warpActive, exposure };
-    return brightnessSkip({ ...common, peakSb: MW_PEAK_SB_DUST_FREE })
+    return brightnessSkip({ ...common, peakSb: () => MW_PEAK_SB_DUST_FREE })
       ?? brightnessSkip({
-        ...common, peakSb: this.peakSurfaceBrightnessBound(cameraAbsPc),
+        ...common, peakSb: () => this.peakSurfaceBrightnessBound(cameraAbsPc),
       });
   }
 

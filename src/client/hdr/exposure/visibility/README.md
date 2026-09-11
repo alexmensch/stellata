@@ -80,3 +80,16 @@ band is the plate scale's** — it widens as the camera zooms out, because
 the share bound carries `Ω_px` where the display carries `Ω_sum`. The
 measured widths are § 3.5's, pinned in `emitter-visibility-pure.test.ts`.
 
+**`peakSb` arrives as a thunk, and the order it is called in is the
+contract.** Producing the bound is the expensive half of a verdict — the
+band marches 976 sightlines for it (3.8–6.0 ms) and the Local Group glow
+123 objects' central rays (6.7–9.7 ms), frame-thread CPU both
+(`../../../milkyway/README.md` § The brightest rendered sightline). Every
+refusal that does not need the number therefore runs above the call, and a
+warping camera, which refuses unconditionally, never pays for one — on
+exactly the frames it is crossing ground fastest. A new refusal belongs
+above that call unless it reads the peak. Nothing about a call site shows
+this, since an eager argument and a lazy one read the same there, so the
+suite asserts the thunk goes uninvoked on both refusals and exactly once
+otherwise.
+

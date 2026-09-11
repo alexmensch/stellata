@@ -139,7 +139,9 @@ export class LocalGroupEmission {
   /** The glow's brightness contribution verdict
    *  (`docs/science-hdr-pipeline.md` § 3.5). One tier: the bound is the
    *  brightest object's own central ray at the live plate scale, already
-   *  cache-backed on camera pose and `Ω_px`. */
+   *  cache-backed on camera pose and `Ω_px`, and 6.7–9.7 ms on a miss —
+   *  so it arrives as a thunk the predicate calls after its own refusals
+   *  (README.md § The brightest rendered pixel). */
   contributionSkip(
     exposure: FrameExposure,
     cameraAbsPc: THREE.Vector3,
@@ -149,7 +151,7 @@ export class LocalGroupEmission {
       contributing: this.contributing,
       warpActive,
       exposure,
-      peakSb: this.peakSurfaceBrightness(cameraAbsPc, exposure.omegaPxArcsec2),
+      peakSb: () => this.peakSurfaceBrightness(cameraAbsPc, exposure.omegaPxArcsec2),
     });
   }
 

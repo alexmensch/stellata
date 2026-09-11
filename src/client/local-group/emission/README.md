@@ -274,11 +274,12 @@ pinned 0.46 mag shows to be insufficient.
 
 **Cost: one march per component per phase, so 17 per component.** Over the
 shipped 123-object catalogue that is **6.7–9.7 ms** per recompute (a 2024
-M-series laptop, node; a low-end integrated GPU's CPU is the budget that
+M-series laptop, node; a low-end integrated part's CPU is the budget that
 matters and will be slower). It is CPU work on the frame thread, so the
-consumer must not call it behind a check it could have failed first — the
-brightness skip's own warp refusal (`stellata-8cg.50.4.2`) has to be
-evaluated *before* the provider, not after.
+brightness skip takes it as a thunk and calls it only after the refusals
+that do not need it — the warp refusal above all
+(`../../hdr/exposure/visibility/README.md` § Skipping an emitter the
+display cannot show).
 
 From Sol at the acceptance plate scale M31 bounds at 17.42 — 0.2 mag under
 the default view's 17.21 threshold, so the glow skips there.
