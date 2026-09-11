@@ -8,6 +8,8 @@ import type { ProbeField } from './probes/probe-field';
 import type { ProbePathLayer } from './probes/probe-path-layer';
 import { OccluderSet } from '../occlusion/occluder-set';
 import { AU_PC, KM_PC } from '../util/astronomy-constants';
+import { SOL_PLANETS } from './planet-system';
+import { polarRadiusRatio } from './planets/spheroid-pure';
 import { SolarSystemCluster } from './local-cluster';
 
 const HOST_START = 3;
@@ -29,8 +31,16 @@ interface Fixture {
 interface FixtureOpts {
   monochrome?: boolean;
   /** Bodies the field reports, as (flat offset from HOST_START, radius
-   *  km, local position). An empty list keeps the field body-less. */
-  bodies?: { offset: number; radiusKm: number; pos: THREE.Vector3 }[];
+   *  km, local position). An empty list keeps the field body-less.
+   *  `meshUp` stands for the body being inside the crossfade band, where
+   *  the flattened mesh is what draws. */
+  bodies?: {
+    offset: number;
+    radiusKm: number;
+    pos: THREE.Vector3;
+    flattening?: number;
+    meshUp?: boolean;
+  }[];
   hiddenInstanceIdx?: number;
 }
 
@@ -82,7 +92,15 @@ function makeFixture(opts: FixtureOpts = {}): Fixture {
 
   const cluster = new SolarSystemCluster(
     field,
-    { group: new THREE.Group(), collectSpheres: () => {} } as unknown as PlanetMeshLayer,
+    {
+      group: new THREE.Group(),
+      collectSpheres: () => {},
+      drawnPoleInto: (flat: number, out: THREE.Vector3) => {
+        if (!byFlat.get(flat)?.meshUp) return false;
+        out.set(0, 1, 0);
+        return true;
+      },
+    } as unknown as PlanetMeshLayer,
     { group: new THREE.Group(), anyOrbitRingVisible: () => false } as unknown as OrbitRingsLayer,
     probeField,
     {
@@ -162,6 +180,64 @@ describe('SolarSystemCluster occluder publish', () => {
     const f = makeFixture({ monochrome: true, bodies: [EARTH, MOON] });
     f.cluster.update(f.camera);
     expect(f.occluders.count).toBe(0);
+  });
+
+  // Saturn as the table actually ships it, so a change to either the row
+  // or to polarRadiusRatio moves this test rather than passing regardless.
+  // The camera sits at the origin at the planet-focus zoom floor (~2.4
+  // equatorial radii); the fixture's mesh stub reports the pole as +Y.
+  const SATURN_ROW = SOL_PLANETS.find((p) => p.name === 'Saturn')!;
+  const SAT_R_PC = SATURN_ROW.radiusKm * KM_PC;
+  const SAT_D_PC = 2.4 * SAT_R_PC;
+  const saturn = (meshUp: boolean) => ({
+    offset: 0,
+    radiusKm: SATURN_ROW.radiusKm,
+    flattening: SATURN_ROW.flattening,
+    pos: new THREE.Vector3(0, 0, -SAT_D_PC),
+    meshUp,
+  });
+
+  /** The angle off the body-centre direction at which the DRAWN limb sits,
+   *  toward the pole and across it. What a mask covers is an angle, not a
+   *  distance at the body's own depth — the cone widens with range. */
+  const limbRad = (ratio: number): number =>
+    Math.atan(Math.tan(Math.asin(SAT_R_PC / SAT_D_PC)) * ratio);
+  /** An anchor well beyond Saturn, `theta` radians off its centre
+   *  direction, toward the pole. */
+  const overSaturnPole = (theta: number) => new THREE.Vector3(
+    0, 100 * SAT_R_PC * Math.sin(theta), -100 * SAT_R_PC * Math.cos(theta),
+  );
+
+  it('masks a flattened body at the limb its mesh draws', () => {
+    // Between the polar limb and the equatorial one is open sky. At this
+    // framing the gap is ~2°, tens of pixels deep.
+    const f = makeFixture({ bodies: [saturn(true)] });
+    f.cluster.update(f.camera);
+    const mid = 0.5 * (limbRad(polarRadiusRatio(SATURN_ROW)) + limbRad(1));
+    expect(f.occluders.hides(overSaturnPole(mid), f.camera.position)).toBe(false);
+    expect(f.occluders.hides(overSaturnPole(0), f.camera.position)).toBe(true);
+  });
+
+  it('takes its polar ratio from the source the mesh scales by', () => {
+    // The contract, not a number: the verdict flips either side of the
+    // limb polarRadiusRatio defines, so a publish that re-derived
+    // 1 - flattening, or dropped the flattening, fails here.
+    const f = makeFixture({ bodies: [saturn(true)] });
+    f.cluster.update(f.camera);
+    const drawn = limbRad(polarRadiusRatio(SATURN_ROW));
+    expect(f.occluders.hides(overSaturnPole(drawn * 0.98), f.camera.position))
+      .toBe(true);
+    expect(f.occluders.hides(overSaturnPole(drawn * 1.02), f.camera.position))
+      .toBe(false);
+  });
+
+  it('publishes a round body below the crossfade band', () => {
+    // No mesh there — only the round additive glare billboard draws, so a
+    // round mask IS what is on screen.
+    const f = makeFixture({ bodies: [saturn(false)] });
+    f.cluster.update(f.camera);
+    const mid = 0.5 * (limbRad(polarRadiusRatio(SATURN_ROW)) + limbRad(1));
+    expect(f.occluders.hides(overSaturnPole(mid), f.camera.position)).toBe(true);
   });
 
   it('keeps the ring-extent spheres out of the occluder set', () => {

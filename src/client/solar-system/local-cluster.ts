@@ -12,8 +12,10 @@ import {
   ringExtentRadiusPc,
 } from './local-cluster-pure';
 import type { OrbitRingsLayer } from './ephemerides/orbit-rings-layer';
+import type { Planet } from './planet-system';
 import type { PlanetBodyField } from './planets/planet-body-field';
 import type { PlanetMeshLayer } from './planets/planet-mesh-layer';
+import { polarRadiusRatio } from './planets/spheroid-pure';
 import type { ProbeField } from './probes/probe-field';
 import type { ProbePathLayer } from './probes/probe-path-layer';
 
@@ -44,6 +46,7 @@ export class SolarSystemCluster implements LocalCluster {
   private readonly occluders: OccluderSet;
   private readonly spheres: MemberSphere[] = [];
   private readonly tmpBody = new THREE.Vector3();
+  private readonly tmpPole = new THREE.Vector3();
   private readonly tmpSol = new THREE.Vector3();
 
   constructor(
@@ -106,9 +109,7 @@ export class SolarSystemCluster implements LocalCluster {
           });
           // The observe-anchor body is shader-hidden, and a body that
           // draws nothing must not take a label off screen.
-          if (flat !== hiddenFlat) {
-            this.occluders.add(this.tmpBody.x, this.tmpBody.y, this.tmpBody.z, radiusPc);
-          }
+          if (flat !== hiddenFlat) this.publishOccluder(flat, planet, radiusPc);
         }
         if (ringsUp) {
           this.spheres.push({
@@ -132,6 +133,25 @@ export class SolarSystemCluster implements LocalCluster {
     this.starCluster.setHostMember(hostMember);
     this.meshLayer.collectSpheres(camera, this.spheres);
     this.collectProbes(camera, hostMember !== null);
+  }
+
+  /**
+   * Publish one body's silhouette as the renderer draws it: the flattened
+   * spheroid while its mesh is up, the round glare billboard below the
+   * crossfade band. A mask that stayed round through the mesh regime
+   * over-reaches the drawn limb by the body's whole flattening toward the
+   * poles — at Saturn's 0.098 that is a band several tens of pixels deep at
+   * the planet-focus zoom floor, blanking labels that sit in open sky.
+   */
+  private publishOccluder(flat: number, planet: Planet, radiusPc: number): void {
+    if (this.meshLayer.drawnPoleInto(flat, this.tmpPole)) {
+      this.occluders.addSpheroid(
+        this.tmpBody.x, this.tmpBody.y, this.tmpBody.z,
+        radiusPc, polarRadiusRatio(planet), this.tmpPole,
+      );
+    } else {
+      this.occluders.addSphere(this.tmpBody.x, this.tmpBody.y, this.tmpBody.z, radiusPc);
+    }
   }
 
   /**

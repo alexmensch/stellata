@@ -329,6 +329,18 @@ export class PlanetMeshLayer {
     }
   }
 
+  /** The body's north pole in renderer-local coords, or false when it draws
+   *  no mesh this frame — below the crossfade band only the round glare
+   *  billboard draws, so the body's silhouette IS a circle there. The
+   *  mesh's local +Y is the axis `mesh.scale` flattens, so the pole is that
+   *  axis through the orientation the body is drawn with. */
+  drawnPoleInto(idx: number, out: THREE.Vector3): boolean {
+    const entry = this.entries.get(idx);
+    if (!this.group.visible || entry === undefined || !entry.mesh.visible) return false;
+    out.set(0, 1, 0).applyQuaternion(entry.mesh.quaternion);
+    return true;
+  }
+
   /** Per-frame: show/scale/light every body inside the crossfade band.
    *  Reads the body field's live buffers, so recentres and scrubber
    *  motion need no extra hooks. `t` is the model clock (getT()) —
