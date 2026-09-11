@@ -43,7 +43,7 @@ describe('formatPriceTable', () => {
       'pass', 'method', 'baselineMs', 'disabledMs', 'savedMs', 'savedPct', 'samples',
       'iqrMs', 'noiseMs', 'bracketMs', 'baselineLag1', 'disabledLag1',
       'baselineReadback', 'disabledReadback', 'baselineLimitMag', 'disabledLimitMag', 'bufferMpx',
-      'cadenceBound',
+      'cadenceBound', 'baselineRising',
     ]);
   });
 

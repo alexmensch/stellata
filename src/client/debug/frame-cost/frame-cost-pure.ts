@@ -8,10 +8,12 @@ export const GPU_FRAME_METHODS = ['timer-query', 'timestamp', 'raf-delta'] as co
 export type GpuFrameMethod = (typeof GPU_FRAME_METHODS)[number];
 
 /** Frames discarded before the first dwell of a measurement. Long because
- *  an Apple-silicon GPU ramps its clocks under sustained load, so a
- *  measurement started cold walks its frame time down for tens of
- *  seconds. Shared with the headless runner's dwell mode, which needs the
- *  same ramp absorbed for the same reason. */
+ *  an Apple-silicon GPU ramps its clocks up over the first seconds of
+ *  sustained load, so a measurement started cold walks its frame time
+ *  down. It absorbs that ramp and NOT the slow rise over the minutes after
+ *  it — README.md § The instrument drifts names both directions, and
+ *  `baselineTrend` is what reports the second. Shared with the headless
+ *  runner's dwell mode, which needs the same ramp absorbed. */
 export const WARMUP_FRAMES = 180;
 
 /** Frames after a pass is restored before the next dwell, so the trailing
@@ -142,6 +144,11 @@ export interface PriceFrameRow {
    *  run metadata, not a dwell statistic. Both dominant passes scale with
    *  it, so a table without it cannot be compared to another table. */
   readonly bufferMpx?: number;
+  /** Whether the SWEEP's baseline walked upward past what its own brackets
+   *  can put down to scatter (`baselineTrend`) — one verdict about the run,
+   *  stamped on every row of it. Absent on a non-interleaved sweep, which
+   *  has one baseline and so no walk to judge. */
+  readonly baselineRising?: boolean;
 }
 
 export interface DwellFit {
@@ -401,6 +408,53 @@ function assembleRow(
     baselineLimitMag: round3(stats.baselineLimitMag),
     disabledLimitMag: round3(stats.disabledLimitMag),
     ...(stats.cadenceBound === undefined ? {} : { cadenceBound: stats.cadenceBound }),
+  };
+}
+
+/** A rise under this share of the sweep's first baseline earns no verdict
+ *  however tidy the walk. A very settled instrument's brackets are near
+ *  zero, so its own micro drift clears the band at a rise of ~1 % —
+ *  README.md § The instrument drifts records the separation this sits in. */
+export const RISING_BASELINE_MIN_FRACTION = 0.1;
+
+export interface BaselineTrend {
+  /** How far the sweep's baseline walked: last row's against the first's. */
+  readonly riseMs: number;
+  readonly risePct: number;
+  /** What that walk would come to if the drift the brackets measure were a
+   *  random walk rather than a trend — median bracket × √rows. A monotone
+   *  rise accumulates rows × bracket instead, so the two separate by √rows
+   *  by construction rather than by a tuned number. */
+  readonly bandMs: number;
+  readonly rising: boolean;
+}
+
+/**
+ * Whether a sweep's baseline climbed over the sweep, past what its own
+ * brackets put down to scatter. An interleaved row is already defended
+ * against this — it is differenced against the mean of the baselines either
+ * side of it, and `bracketMs` reports the local slope the gates then have to
+ * clear — so the verdict is the run's own health, not a row's.
+ *
+ * `null` where there is nothing to judge: a non-interleaved sweep shares one
+ * baseline across every row, so it carries no walk and no brackets.
+ */
+export function baselineTrend(
+  rows: readonly Pick<PriceFrameRow, 'baselineMs' | 'bracketMs'>[],
+): BaselineTrend | null {
+  const brackets = rows
+    .map((row) => row.bracketMs)
+    .filter((bracket): bracket is number => bracket !== undefined);
+  if (rows.length < 3 || brackets.length === 0) return null;
+  const first = rows[0].baselineMs;
+  const riseMs = rows[rows.length - 1].baselineMs - first;
+  const bandMs = median(brackets) * Math.sqrt(rows.length);
+  const risePct = first === 0 ? 0 : (riseMs / first) * 100;
+  return {
+    riseMs: round3(riseMs),
+    risePct: round3(risePct),
+    bandMs: round3(bandMs),
+    rising: riseMs > bandMs && risePct > RISING_BASELINE_MIN_FRACTION * 100,
   };
 }
 

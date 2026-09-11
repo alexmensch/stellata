@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import type { Stellata } from '../../stellata';
 import { acquireGpuFrameSource } from './gpu-frame-source';
 import {
+  baselineTrend,
   buildInterleavedRow,
   buildPriceRow,
   fitDwellFrames,
@@ -328,7 +329,22 @@ export async function runPriceFrame(
 
   const buffer = stellata.renderer.getDrawingBufferSize(new THREE.Vector2());
   const bufferMpx = Number(((buffer.x * buffer.y) / 1e6).toFixed(3));
-  const stamped = rows.map((row) => ({ ...row, bufferMpx }));
+  const trend = baselineTrend(rows);
+  const stamped = rows.map((row) => ({
+    ...row,
+    bufferMpx,
+    ...(trend === null ? {} : { baselineRising: trend.rising }),
+  }));
+  if (trend !== null && trend.rising) {
+    console.warn(
+      `priceFrame: the baseline ROSE ${trend.riseMs} ms (${trend.risePct} %) over ` +
+      `the sweep, against a ${trend.bandMs} ms band from its own brackets — the ` +
+      'instrument got dearer while it measured, which no warmup length absorbs. ' +
+      'Every row is bracketed against its own neighbours, so read each bracketMs ' +
+      'as the local slope a savedMs has to clear; a whole-run comparison against ' +
+      'a settled run is the part to distrust.',
+    );
+  }
   console.info(
     `priceFrame: drawing buffer ${buffer.x}x${buffer.y} ` +
     `(${bufferMpx} Mpx) — both dominant passes scale with it, so only compare ` +

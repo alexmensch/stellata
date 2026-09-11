@@ -197,7 +197,12 @@ neither modal ever shows:
 5. **Drawing buffer** from the canvas backing store, printed as Mpx.
 6. **Differential**: `debug.priceFrame(options)`. An empty result is a
    refusal (panel open, no clock, pinned method unavailable) and is recorded
-   with the last console line as the reason.
+   with the last console line as the reason. Every row carries
+   `baselineRising`, one verdict about the whole sweep: the instrument got
+   dearer while it measured. It does not invalidate the rows — each is
+   bracketed against its own neighbours — but it does say not to hold the
+   run against a settled one (`src/client/debug/frame-cost/README.md`
+   § Reading a row).
 
 Page console is forwarded as `[page:<type>]` except `table` (the rows come
 back as data). A `pageerror` during boot fails the scenario; during the sweep

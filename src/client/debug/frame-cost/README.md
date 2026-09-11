@@ -113,6 +113,15 @@ src/client/debug/frame-cost/
   outright rather than silently switching clocks, and so does a name that is
   not one of the three — the console is untyped, so a typo would otherwise
   read as an honoured pin.
+- **A settled instrument — and this is the one precondition you cannot
+  satisfy.** The GPU's own clock state moves over a sweep in both
+  directions, and neither a longer warmup nor a quieter settle reaches the
+  slow one (§ The instrument drifts). So it is met by *reporting* rather
+  than by waiting: the bracketing cancels what is linear across a row's
+  pair, `bracketMs` is the residual each `savedMs` has to clear, and
+  `baselineRising` says whether the run as a whole walked (§ Reading a
+  row). A sweep run while something else uses the GPU is a different and
+  worse case, and that one is on you.
 
 ## The readback cadence — measured, and NOT the confound
 
@@ -139,10 +148,24 @@ rows that moved.
 
 ## The instrument drifts, so the baseline is bracketed
 
-An Apple-silicon GPU ramps its clocks under sustained load: a sweep
-started cold walks its whole-frame time down for tens of seconds. At an
-LG viewpoint the baseline fell 57 → 47 → 42 ms across three
-back-to-back runs.
+**It drifts in both directions, and they are different mechanisms on
+different timescales.** An Apple-silicon GPU ramps its clocks up over the
+first seconds of sustained load, so a sweep started cold walks its
+whole-frame time DOWN: at an LG viewpoint the baseline fell 57 → 47 →
+42 ms across three back-to-back runs. Over the minutes after that it walks
+back UP. Measured on two settled headless runs (Chrome, WebGPU,
+`raf-delta`, 4.096 Mpx, machine idle, 5.6–7.2 s of render-gate quiet
+before the sweep), first row's baseline to last row's across 13 rows:
+Sol 25.7 → 31.1, Earth 19.1 → 23.6, MW50 26.9 → 30.9, MW120 19.6 → 23.1 —
+every WebGPU vantage, both runs, 15–24 %.
+
+**`warmupFrames` absorbs the first and cannot absorb the second.** 180
+frames is 3–9 s against a sweep of 2–5 minutes, so no warmup length
+reaches it; a settle *condition* would not either, since these runs had
+already been quiet for over 5 s. What the rise is has not been pinned down
+— sustained-load clock decay is the candidate — but its direction is
+enough to read a table by, and the rows carry their own defence
+(§ Reading a row, `baselineRising`).
 
 A single leading baseline charges all of that to whichever passes
 happened to be measured late. **The tell is a run where several
@@ -211,6 +234,24 @@ single-baseline sweep when the instrument is known to be settled.
   across backends: a WebGPU `mrtAttachments` read 61 % at Sol on a
   `disabledMs` of 35 against an honest 78 (`../../webgpu/hdr/README.md`
   § The gate becomes the output struct).
+- **`baselineRising`** — one verdict about the whole SWEEP, stamped on
+  every row of it: the baseline walked upward past what the run's own
+  brackets put down to scatter, so the instrument got dearer while it
+  measured (§ The instrument drifts). The test is `rise > median(bracketMs)
+  · √rows` AND `rise > 10 %` of the first baseline — a random-walk bound
+  on the drift the brackets already measure, since a monotone rise
+  accumulates `rows · bracket` where a walk reaches only `√rows · bracket`.
+  Over the 45 recorded sweeps the 16 rising ones read 1.4–5.0× that band
+  at 15–26 %, and no other sweep clears 1.2× or 9 %; the fraction floor is
+  what stops a very settled instrument, whose brackets are near zero,
+  stamping a 1.2 % walk. **It does not invalidate the rows.** Each is
+  differenced against the mean of the baselines either side of it, so a
+  drift linear across that pair cancels and `bracketMs` reports the local
+  slope the gates above then have to clear. What it invalidates is
+  comparing the run as a whole against a settled one. Absent on a
+  `{ interleave: false }` sweep, which has one baseline and so no walk to
+  judge — and that is the mode where a rise is *not* cancelled, so prefer
+  the bracketed default whenever the instrument's state is unknown.
 - Across runs, `debug.priceFrameRepeat(n)`'s per-pass range is the final
   word; it prints one line per pass.
 

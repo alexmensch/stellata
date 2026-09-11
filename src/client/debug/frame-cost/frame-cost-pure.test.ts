@@ -15,6 +15,8 @@ import {
   isVsyncClamped,
   vsyncClampToleranceMs,
   WARMUP_FRAMES,
+  baselineTrend,
+  RISING_BASELINE_MIN_FRACTION,
 } from './frame-cost-pure';
 
 const HZ_60 = 1000 / 60;
@@ -355,5 +357,83 @@ describe('isVsyncClamped — the cadence is measured, not assumed', () => {
   it('reads nothing as clamped when no cadence was measured', () => {
     expect(isVsyncClamped(1, 0, null)).toBe(false);
     expect(isVsyncClamped(1, 0, 0)).toBe(false);
+  });
+});
+
+// Real sweeps out of .perf-runs/ — baselineMs and bracketMs per row, in
+// sweep order. Chrome, WebGPU, 4.096 Mpx, machine idle, each taken after a
+// 5.6-7.2 s render-gate settle.
+const EARTH_ROSE = [
+  [18.575, 0.15], [17.625, 2.05], [16.65, 0.1], [16.7, 0], [16.7, 0],
+  [18.6, 3.8], [20.55, 0.1], [20.8, 0.4], [21.1, 0.2], [20.2, 2],
+  [20.35, 2.3], [21.55, 0.1], [22.175, 1.15],
+] as const;
+
+const SOL_HELD = [
+  [24.85, 0.1], [24.85, 0.1], [24.9, 0], [24.875, 0.05], [25.175, 0.65],
+  [25.6, 0.2], [25.75, 0.1], [25.7, 0.2], [25.95, 0.7], [26, 0.6],
+  [25.35, 0.7], [24.925, 0.15], [25.275, 0.85],
+] as const;
+
+// The near miss: its rise clears the band, because a settled instrument's
+// brackets are near zero. 0.2 ms on a 16.65 ms frame is not a transient,
+// and this sweep is what the fraction floor is for.
+const MW120_SETTLED = [
+  [16.65, 0.1], [16.675, 0.05], [16.625, 0.05], [16.65, 0.1], [16.65, 0.1],
+  [16.625, 0.05], [16.675, 0.05], [16.7, 0], [16.7, 0], [16.65, 0.1],
+  [16.65, 0.1], [16.7, 0], [16.85, 0.3],
+] as const;
+
+const asRows = (
+  xs: readonly (readonly [number, number])[],
+): { baselineMs: number; bracketMs: number }[] =>
+  xs.map(([baselineMs, bracketMs]) => ({ baselineMs, bracketMs }));
+
+describe('baselineTrend', () => {
+  it('marks a sweep whose baseline climbed past its own brackets', () => {
+    const trend = baselineTrend(asRows(EARTH_ROSE));
+    expect(trend).not.toBeNull();
+    expect(trend?.riseMs).toBe(3.6);
+    expect(trend?.risePct).toBe(19.381);
+    expect(trend?.bandMs).toBe(0.721);
+    expect(trend?.rising).toBe(true);
+  });
+
+  it('leaves a sweep that wandered and came back alone', () => {
+    const trend = baselineTrend(asRows(SOL_HELD));
+    expect(trend?.riseMs).toBe(0.425);
+    expect(trend?.bandMs).toBe(0.721);
+    expect(trend?.rising).toBe(false);
+  });
+
+  it('needs the rise to be a share of the frame, not only past the band', () => {
+    const trend = baselineTrend(asRows(MW120_SETTLED));
+    expect(trend?.riseMs).toBeGreaterThan(trend?.bandMs ?? 0);
+    expect(trend?.risePct).toBe(1.201);
+    expect(trend?.rising).toBe(false);
+  });
+
+  it('judges nothing without brackets: one baseline carries no walk', () => {
+    const noBrackets = asRows(EARTH_ROSE).map(({ baselineMs }) => ({ baselineMs }));
+    expect(baselineTrend(noBrackets)).toBeNull();
+  });
+
+  it('judges nothing under three rows', () => {
+    expect(baselineTrend(asRows(EARTH_ROSE).slice(0, 2))).toBeNull();
+  });
+
+  it('reads a fall as no rise', () => {
+    expect(baselineTrend(asRows(EARTH_ROSE).slice().reverse())?.rising).toBe(false);
+  });
+
+  it('takes its floor from the named fraction', () => {
+    const held = [
+      { baselineMs: 100, bracketMs: 0 },
+      { baselineMs: 100, bracketMs: 0 },
+    ];
+    const endingAt = (last: number): boolean | undefined =>
+      baselineTrend([...held, { baselineMs: last, bracketMs: 0 }])?.rising;
+    expect(endingAt(100 * (1 + RISING_BASELINE_MIN_FRACTION) - 0.001)).toBe(false);
+    expect(endingAt(100 * (1 + RISING_BASELINE_MIN_FRACTION) + 0.001)).toBe(true);
   });
 });
