@@ -18,7 +18,7 @@ import type { LgCatalog, LgObject } from './local-group-loader';
 import { FADE_INNER_PC, FADE_OUTER_PC } from '../galactic/galactic-fade';
 import { GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { MIN_DISC_HIT_RADIUS_PX } from '../camera/controls/star-geometry';
-import { makeLabelDom } from '../ui/label-dom-mock';
+import { makeLabelDom } from '../overlays/label-dom-mock';
 import { OccluderSet } from '../occlusion/occluder-set';
 import { builtinChromeLineMaterials } from '../chrome-lines/builtin-chrome-lines';
 

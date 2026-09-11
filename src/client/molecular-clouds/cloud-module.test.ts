@@ -8,7 +8,7 @@ import { GLOBAL_MIN_DIST_PC } from '../camera/focus/focus-controller';
 import type { KindContext } from '../kinds/kind-module';
 import { makeKindContext } from '../kinds/kind-context-mock';
 import { makeFrameCtx } from '../scene/frame-ctx-mock';
-import { makeLabelDom } from '../ui/label-dom-mock';
+import { makeLabelDom } from '../overlays/label-dom-mock';
 import { CLOUD_LABELS_GROUP_ID } from './cloud-labels';
 import { createCloudKindModule } from './cloud-module';
 

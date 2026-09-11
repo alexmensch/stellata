@@ -132,8 +132,8 @@ per-object override on the family tints.
 ## Label engine
 
 `createMilkyWayLabel` and `createLocalGroupLabels` both use the shared
-`distance-gated-label.ts` helper (extracted from the heliopause's
-label code earlier in this layer's PR). Each label binds to:
+silhouette label engine (`../overlays/README.md` § The two label
+halves). Each label binds to:
 
 - A per-frame visibility predicate (`visibleLabelIds.has(id)` — a
   shared Set written by the global ranking pass, see below).

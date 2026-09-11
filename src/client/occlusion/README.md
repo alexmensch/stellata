@@ -79,7 +79,7 @@ approximations with a stated cost:
   model) and shows as a label appearing a little early or late at the
   limb.
 - **The anchor is a point.** For the silhouette-anchored families
-  (`../ui/distance-gated-label.ts`) that point is the support sample the
+  (`../overlays/distance-gated-label.ts`) that point is the support sample the
   label hangs off, not the object's centre — so the verdict is "is the
   text drawn over a nearer body", which is the question the label
   actually poses. A cloud whose centroid is hidden but whose support
