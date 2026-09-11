@@ -352,6 +352,7 @@ SVG mask (`constellation-figure/README.md`).
 | Molecular cloud absorption                       | WebGL   | `renderOrder: -2`                                  | back  | [molecular-clouds/](molecular-clouds/README.md) |
 | Milky Way volume + Local Group emission          | WebGL   | `renderOrder: -3`                                  |       | [milkyway/](milkyway/README.md), [local-group/](local-group/README.md) |
 | Star core depth-mask (depth-only)                | WebGL   | `renderOrder: -4`, `colorWrite: false`             | back  | [star-pipeline/](star-pipeline/README.md) |
+| Planet depth pre-stamp (depth-only)              | WebGL   | `renderOrder: -4`, `colorWrite: false`             | back  | [solar-system/planets/depth-stamp/](solar-system/planets/depth-stamp/README.md) |
 
 ### Per-layer visibility gates and tuning
 
@@ -361,11 +362,14 @@ shader tuning in its README. Look there when investigating a
 
 The two cross-layer pinning rules `stellata.ts` is responsible for:
 
-- **The `-4` core depth mask** runs first so background layers (MW,
+- **The `-4` depth stamps** run first so background layers (MW,
   clouds, galactic grid — all with `depthTest: true`) depth-fail
-  behind close-range bright star cores instead of bleeding through.
-  Stars alone hold the slot: a planet body is a spheroid mesh plus one
-  additive glare, and the mesh writes its depth in the local pass.
+  behind close-range bright star cores and opaque planet meshes instead
+  of being shaded and then repainted. Two writers hold the slot: the
+  star core mask, and the planet depth pre-stamp — a depth-only, shrunk
+  copy of each opaque body mesh, since the mesh itself writes its depth
+  in the local pass where the main pass cannot test against it
+  (`solar-system/planets/depth-stamp/README.md`).
 - **The local depth pass owns the active system — and every resolved
   star disc.** While a system is locally active (host in cull range,
   or its orbit rings drawing), every one of its bodies — the host

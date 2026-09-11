@@ -86,6 +86,12 @@ the moon's billboard depth-tests against the parent mesh and wins.
 The same argument gives close binary pairs native disc ordering,
 retiring `iDepthBias`.
 
+The planet **depth pre-stamp** is not that rejected proxy: it stamps an
+opaque mesh's silhouette into the *main* pass so the background behind
+it is never shaded, and the mesh still draws whole in this pass with its
+colour (`../solar-system/planets/depth-stamp/README.md`). Ordering stays
+here; the stamp only elides work.
+
 Billboards use **mirror draws**, sharing the main pipeline's uniform
 objects with cloned materials that set `LOCAL_DEPTH_PASS`:
 

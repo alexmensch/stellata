@@ -178,6 +178,20 @@ describe('planet kind module', () => {
     expect(m.focusable().planetSystemHost(MARS)).toBe(DECOY_HOST);
   });
 
+  it('parents the depth pre-stamps into the main scene, and removes them on dispose', async () => {
+    // The mesh group goes to the local depth pass via the solar-system
+    // cluster; the stamps must not follow it, since that pass clears depth
+    // before it repaints (depth-stamp/README.md).
+    const m = createPlanetKindModule();
+    await m.load('/');
+    const ctx = makeCtx();
+    const layer = m.attach(ctx);
+    expect(ctx.scene.children).toContain(m.meshLayer.depthStampGroup);
+    expect(m.meshLayer.group.children).not.toContain(m.meshLayer.depthStampGroup);
+    layer!.dispose();
+    expect(ctx.scene.children).not.toContain(m.meshLayer.depthStampGroup);
+  });
+
   it('setFocalHidden drives the field hide slot; -1 unhides', async () => {
     const m = createPlanetKindModule();
     await m.load('/');

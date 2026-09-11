@@ -136,6 +136,9 @@ export function createPlanetKindModule(): PlanetKindModule {
       // below draws in place of — so on a WebGPU boot it stays unparented,
       // while its local-pass mirror still joins the field's localGroup.
       if (webgpu === null) kindCtx.scene.add(field.group);
+      // The mesh group itself is parented into the local depth pass by the
+      // solar-system cluster; the stamps have to sit in the MAIN scene.
+      kindCtx.scene.add(meshLayer.depthStampGroup);
       glare = webgpu?.attachPlanetGlare(
         kindCtx.scene, field.glareSources(), field.localGroup) ?? null;
 
@@ -194,6 +197,7 @@ export function createPlanetKindModule(): PlanetKindModule {
           glare?.dispose();
           glare = null;
           field!.dispose();
+          kindCtx.scene.remove(meshLayer!.depthStampGroup);
           meshLayer!.dispose();
         },
       };

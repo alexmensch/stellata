@@ -11,9 +11,10 @@ import { PLANET_MESH_TEXTURE_SLOTS } from '../materials/texture-slots';
 import { TEXTURE_VRAM_BUDGET_BYTES } from './textures/texture-budget-pure';
 import type { PlanetBodyField } from './planet-body-field';
 import { PlanetMeshLayer, TEXTURE_DECODE_OPTIONS } from './planet-mesh-layer';
-import { AU_PC, R_SUN_PC } from '../../util/astronomy-constants';
+import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import { phaseAngleFromLegs } from '../phase-function';
 import { ringPhaseFactor } from './rings/ring-photometry-pure';
+import { DEPTH_STAMP_RENDER_ORDER, depthStampRadius } from './depth-stamp/depth-stamp-pure';
 
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
@@ -128,79 +129,81 @@ describe('planet maps decode with an explicit orientation', () => {
   });
 });
 
+interface FakeBitmap {
+  width: number;
+  height: number;
+  close: ReturnType<typeof vi.fn>;
+}
+
+/** The real layer over a stub field and a stub loader; each frame places
+ *  every body at a given projected diameter. No host: an unlit body skips
+ *  the sun, caster and atmosphere legs. */
+function harness(bodyNames: string[], maxTextureSize = 8192) {
+  const planets = bodyNames.map((n) => SOL_BODIES.find((b) => b.name === n)!);
+  const physPx = new Map<number, number>();
+  const loads: { url: string; onLoad: (bitmap: unknown) => void }[] = [];
+  vi.spyOn(THREE.ImageBitmapLoader.prototype, 'load').mockImplementation(
+    ((url: string, onLoad: (bitmap: unknown) => void) => {
+      loads.push({ url, onLoad });
+    }) as never,
+  );
+  const field = {
+    group: new THREE.Group(),
+    monochrome: false,
+    liveInstanceCount: planets.length,
+    hiddenInstanceIdx: -1,
+    planetAt: (i: number) => planets[i] ?? null,
+    planetLocalPositionInto: (i: number, out: THREE.Vector3) => {
+      out.set(i + 1, 0, 0);
+      return true;
+    },
+    physicalPlanetSizePx: (i: number) => physPx.get(i) ?? 0,
+    hostPlanetOf: () => null,
+  } as unknown as PlanetBodyField;
+  const layer = new PlanetMeshLayer(
+    field,
+    '/',
+    { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } },
+    () => {},
+    maxTextureSize,
+  );
+  const camera = new THREE.PerspectiveCamera();
+  return {
+    layer,
+    field,
+    loads,
+    /** One frame, with each body at the given projected diameter. */
+    frame(sizes: number[]): void {
+      physPx.clear();
+      sizes.forEach((px, i) => physPx.set(i, px));
+      layer.update(camera, 0);
+    },
+    pendingFor(key: string): boolean {
+      return loads.some((l) => l.url.includes(key));
+    },
+    /** Land a pending fetch, as a bitmap of the given dimensions. */
+    resolve(key: string, width: number, height = width / 2): FakeBitmap {
+      const i = loads.findIndex((l) => l.url.includes(key));
+      expect(i, `no fetch pending for ${key}`).toBeGreaterThanOrEqual(0);
+      const [pending] = loads.splice(i, 1);
+      const bitmap: FakeBitmap = { width, height, close: vi.fn() };
+      pending.onLoad(bitmap);
+      return bitmap;
+    },
+  };
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 // The release path is what makes the texture ladder affordable: an 8192 map is
 // 179 MB resident and before it existed nothing was ever freed. These drive the
-// real layer — a stub field and a stub loader — because the mechanism lives in
-// the ordering between a fetch landing, a rung being promoted, and the budget
-// pass, and none of that is visible in the pure helpers it calls.
+// real layer because the mechanism lives in the ordering between a fetch
+// landing, a rung being promoted, and the budget pass, and none of that is
+// visible in the pure helpers it calls.
 describe('the layer releases what it stops drawing', () => {
   const BYTES_8192_SQ = Math.round((8192 * 8192 * 4 * 4) / 3);
-
-  interface FakeBitmap {
-    width: number;
-    height: number;
-    close: ReturnType<typeof vi.fn>;
-  }
-
-  function harness(bodyNames: string[], maxTextureSize = 8192) {
-    const planets = bodyNames.map((n) => SOL_BODIES.find((b) => b.name === n)!);
-    const physPx = new Map<number, number>();
-    const loads: { url: string; onLoad: (bitmap: unknown) => void }[] = [];
-    vi.spyOn(THREE.ImageBitmapLoader.prototype, 'load').mockImplementation(
-      ((url: string, onLoad: (bitmap: unknown) => void) => {
-        loads.push({ url, onLoad });
-      }) as never,
-    );
-    const field = {
-      group: new THREE.Group(),
-      monochrome: false,
-      liveInstanceCount: planets.length,
-      hiddenInstanceIdx: -1,
-      planetAt: (i: number) => planets[i] ?? null,
-      planetLocalPositionInto: (i: number, out: THREE.Vector3) => {
-        out.set(i + 1, 0, 0);
-        return true;
-      },
-      physicalPlanetSizePx: (i: number) => physPx.get(i) ?? 0,
-      // No host: an unlit body skips the sun, caster and atmosphere legs, none
-      // of which this is about.
-      hostPlanetOf: () => null,
-    } as unknown as PlanetBodyField;
-    const layer = new PlanetMeshLayer(
-      field,
-      '/',
-      { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } },
-      () => {},
-      maxTextureSize,
-    );
-    const camera = new THREE.PerspectiveCamera();
-    return {
-      layer,
-      loads,
-      /** One frame, with each body at the given projected diameter. */
-      frame(sizes: number[]): void {
-        physPx.clear();
-        sizes.forEach((px, i) => physPx.set(i, px));
-        layer.update(camera, 0);
-      },
-      pendingFor(key: string): boolean {
-        return loads.some((l) => l.url.includes(key));
-      },
-      /** Land a pending fetch, as a bitmap of the given dimensions. */
-      resolve(key: string, width: number, height = width / 2): FakeBitmap {
-        const i = loads.findIndex((l) => l.url.includes(key));
-        expect(i, `no fetch pending for ${key}`).toBeGreaterThanOrEqual(0);
-        const [pending] = loads.splice(i, 1);
-        const bitmap: FakeBitmap = { width, height, close: vi.fn() };
-        pending.onLoad(bitmap);
-        return bitmap;
-      },
-    };
-  }
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
 
   it('frees the narrower rung once a wider one is drawn', () => {
     const h = harness(['Europa']);
@@ -300,6 +303,88 @@ describe('the layer releases what it stops drawing', () => {
 
     h.layer.dispose();
     expect(map.close).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The main-pass depth pre-stamp (depth-stamp/README.md): a depth-only copy
+// of an opaque body's spheroid, drawn first in the frame so the background
+// layers depth-fail inside its silhouette.
+describe('the depth pre-stamp', () => {
+  const stampsOf = (h: ReturnType<typeof harness>) =>
+    h.layer.depthStampGroup.children as THREE.Mesh[];
+  const meshesOf = (h: ReturnType<typeof harness>) =>
+    h.layer.group.children.filter((o) => o.name === 'planet-mesh') as THREE.Mesh[];
+
+  it('stamps a fully opaque body, never one inside the crossfade band', () => {
+    const h = harness(['Europa', 'Ganymede']);
+    h.frame([3000, 1.5]);
+    const [opaque, banded] = stampsOf(h);
+    const [, bandedMesh] = meshesOf(h);
+    expect(opaque.visible).toBe(true);
+    expect(banded.visible).toBe(false);
+    expect(bandedMesh.visible).toBe(true);
+    h.layer.dispose();
+  });
+
+  it('copies the mesh pose and shrinks it, on both axes of an oblate body', () => {
+    const h = harness(['Saturn']);
+    h.frame([3000]);
+    const [stamp] = stampsOf(h);
+    const [mesh] = meshesOf(h);
+    const saturn = SOL_BODIES.find((b) => b.name === 'Saturn')!;
+    const r = saturn.radiusKm * KM_PC;
+    expect(stamp.position.equals(mesh.position)).toBe(true);
+    expect(stamp.quaternion.equals(mesh.quaternion)).toBe(true);
+    expect(stamp.scale.x).toBeCloseTo(depthStampRadius(r), 20);
+    expect(stamp.scale.x).toBeLessThan(mesh.scale.x);
+    expect(stamp.scale.y / stamp.scale.x).toBeCloseTo(mesh.scale.y / mesh.scale.x, 12);
+    h.layer.dispose();
+  });
+
+  it('draws first in the frame, depth only, from its own group outside the pass scene', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    const [stamp] = stampsOf(h);
+    expect(stamp.renderOrder).toBe(DEPTH_STAMP_RENDER_ORDER);
+    expect((stamp.material as THREE.Material).colorWrite).toBe(false);
+    expect((stamp.material as THREE.Material).depthWrite).toBe(true);
+    expect(stamp.frustumCulled).toBe(false);
+    expect(stamp.parent).toBe(h.layer.depthStampGroup);
+    expect(h.layer.group.children).not.toContain(h.layer.depthStampGroup);
+    h.layer.dispose();
+  });
+
+  it('drops the stamp with the mesh when a body leaves the band', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    expect(h.layer.anyDepthStampDrawn()).toBe(true);
+    h.frame([0]);
+    expect(stampsOf(h)[0].visible).toBe(false);
+    expect(h.layer.anyDepthStampDrawn()).toBe(false);
+    h.layer.dispose();
+  });
+
+  it('the frame-cost lever hides every stamp and reports none drawn', () => {
+    const h = harness(['Europa']);
+    h.layer.setDepthStampEnabled(false);
+    h.frame([3000]);
+    expect(h.layer.depthStampGroup.visible).toBe(false);
+    expect(h.layer.anyDepthStampDrawn()).toBe(false);
+    h.layer.setDepthStampEnabled(true);
+    h.frame([3000]);
+    expect(h.layer.depthStampGroup.visible).toBe(true);
+    expect(h.layer.anyDepthStampDrawn()).toBe(true);
+    h.layer.dispose();
+  });
+
+  it('hides with the meshes in chart mode', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    (h.field as { monochrome: boolean }).monochrome = true;
+    h.frame([3000]);
+    expect(h.layer.group.visible).toBe(false);
+    expect(h.layer.depthStampGroup.visible).toBe(false);
+    h.layer.dispose();
   });
 });
 
