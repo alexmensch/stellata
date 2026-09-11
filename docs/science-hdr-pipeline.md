@@ -1384,14 +1384,18 @@ test and can readmit an emitter whose own return re-skips it.
 instrument's exposure at `dm = 0, ev = 0` (the reduction rescales `L̄` to
 it). The peak over the whole footprint grossly overstates the mean and is
 still tiny, because the statistic takes `Ω_px` where the display takes
-`Ω_sum` (`Ω_px/Ω_sum` = 1/8 at 50°, 900 px) and the toe adds 1.5 mag. From
-Sol, `S_peak` = 20.69 gives `ΔL ≤ 0.0081·f_E` against `L̄` = 68.6 — 1.2e−4
-of the mean, 1.3e−4 mag. In the eye regime the ratio is independent of
-`dm`: at the visibility edge it is `0.25 · (L_THRESH/L_ADAPT) ·
-(Ω_px/Ω_sum) · f_E` = 1.0 % at 50°, so rule 2 refuses a skip only within
-~0.1 mag of the edge there and within ~2.5 mag at 120°, where `Ω_px`
-exceeds `Ω_sum`. Both refusals are correct: the emitter's light is a
-material part of the mean exactly there.
+`Ω_sum` — 1/17.2 of it on § 3.1's 1920×1080 reference at the default 50°
+FOV, where every figure here is quoted — and the toe adds 1.5 mag. From
+Sol, `S_peak` = 20.69 gives `ΔL ≤ 0.0039·f_E` against `L̄` = 68.6 — 5.7e−5
+of the mean, 6.1e−5 mag. In the eye regime the ratio is independent of
+`dm`: at the visibility edge it is `10^(−0.4·TOE_BLACK_MAG) ·
+(L_THRESH/L_ADAPT) · (Ω_px/Ω_sum) · f_E` = 0.48 %, an easing of 0.005 mag
+— already under the JND, so **rule 2 never refuses a skip at the default
+FOV**. It bites only as `Ω_px` grows: at the 120° maximum the edge ratio
+is 2.75 % and rule 2 refuses within 1.2 mag of the edge. That refusal is
+correct — the emitter's light is a material part of the mean exactly
+there — and a short viewport pushes it further, `Ω_px` overtaking `Ω_sum`
+outright at 120° under 625 px of height.
 
 **The peak, per emitter — a bound on the rendered peak, not a model
 constant.** Probed 2026-09-11 with the band's CPU mirror
