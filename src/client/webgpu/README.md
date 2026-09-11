@@ -77,9 +77,10 @@ src/client/webgpu/
                                     emitter shares: column → gain → all
                                     three attachments, and the inline
                                     operator off-target.
-  extinction/                       The camera→star dust raymarch and the
-                                    per-star A_V cache that feeds the star
-                                    vertex stage — its own README.
+  extinction/                       The camera→star dust raymarch as a
+                                    compute kernel, and the per-star A_V
+                                    buffer that feeds the star vertex
+                                    stage — its own README.
   star/                             The star layer: packed geometry + the
                                     three depth-honest pipelines (D2 glow,
                                     D3 core mask, D4 disc) and the MRT
@@ -202,7 +203,7 @@ Three tiers, and a new allocation has to pick one:
   whose `dispose()` also severs the MRT registration — a dead layer that
   keeps taking output-mode swaps is the failure that shape prevents.
 - **Boot-scoped.** Resources `bootWebGpu` builds once and hands to
-  several layers: today the extinction texture slots
+  several layers: today the extinction slots
   (`extinction/README.md` § Two nodes, one owner). `WebGpuSeam.dispose()`
   is the *only* path that frees these, and the shell calls it after every
   layer and the prepass, since those hand their slots back to the
@@ -382,25 +383,39 @@ N−1 draw wrong with nothing reporting it. The rule and its remedies —
 per-draw buffers, 256-byte dynamic-offset slots, a per-view ring — are
 `docs/render-rules.md` § 7.
 
-**Nothing here writes a GPU buffer directly**, which is what keeps the rule
+**Nothing here calls `writeBuffer` directly**, which is what keeps the rule
 cheap today: no `writeBuffer` / `createBuffer` / `copyBufferToBuffer` call
-exists outside three. Every upload is staged as `BufferAttribute` update
-ranges, and the backend turns those into one `writeBuffer` per range
+exists outside three. Every CPU upload is staged as `BufferAttribute`
+update ranges, and the backend turns those into one `writeBuffer` per range
 against a *single* `array` reference read at upload time
 (`WebGPUAttributeUtils.updateAttribute`) — so the plural writes deposit one
 consistent state, and overlapping ranges, which `util/attribute-upload.ts`
 accumulates across frames when no render consumed them, carry identical
 bytes rather than racing.
 
-**A storage attribute breaks that silently.** WGSL has no packed `vec3` in
-a storage buffer, so for `itemSize === 3` the backend pads to 4 — and for a
-storage attribute alone it *reassigns* `bufferAttribute.itemSize` and
-`.array` to the padded copy. Anything holding the originals then diffs a
-stride and an array the GPU will never see. `DirtyItemUploader` caches both
-at construction and `iPosition` is itemSize 3; it is correct only because
-that attribute is a vertex attribute. Moving one to storage — which is what
-the compute prepass (`0it.15`) does — has to re-read them per flush or bind
-a buffer it owns outright. Requirement recorded in that bead's design field.
+**The one buffer stellata's own GPU code writes is the extinction A_V
+buffer**, and it needs no per-draw slot: one compute dispatch per recompute
+writes it, in its own submit ahead of the frame's render, and every star
+draw in that render — three main passes and their mirrors — wants the
+*same* bytes from it (`extinction/README.md` § The prepass kernel). The
+per-draw slotting of `docs/render-rules.md` § 7 starts owing the moment a
+buffer carries a value that differs between draws sharing a submit — the
+compacted instance lists and indirect args the next stage of `0it.15`
+adds.
+
+**A storage attribute breaks the upload contract silently.** WGSL has no
+packed `vec3` in a storage buffer, so for `itemSize === 3` the backend pads
+to 4 — and for a storage attribute alone it *reassigns*
+`bufferAttribute.itemSize` and `.array` to the padded copy. Anything
+holding the originals then diffs a stride and an array the GPU will never
+see. `DirtyItemUploader` caches both at construction and `iPosition` is
+itemSize 3; it is correct only because that attribute is a vertex
+attribute. The compute prepass sidesteps this by owning its two buffers
+outright — a vec4 position table and a float A_V table, neither routed
+through any uploader — and leaves `iPosition` a vertex attribute. Moving
+*that* one to storage (compaction, `0it.15`) has to re-read stride and
+array per flush or stop routing through `BufferAttribute`; the requirement
+stands in that bead's design field.
 
 ## Timestamps
 

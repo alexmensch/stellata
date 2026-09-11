@@ -4,7 +4,7 @@
 
 import {
   Fn, If, atan, clamp, cos, distance, dot, float, fract, instanceIndex, int,
-  ivec2, log, max, min, mix, pow, select, smoothstep, sqrt, texture, uint,
+  log, max, min, mix, pow, select, smoothstep, sqrt, texture, uint,
   varyingProperty, vec2, vec4, cameraProjectionMatrix, modelViewMatrix,
 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
@@ -22,11 +22,11 @@ import {
 } from '../../star-pipeline/star-pass';
 import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 import { R_V } from '../../star-pipeline/extinction/dust-raymarch-pure';
-import { AV_TEX_WIDTH } from '../../star-pipeline/extinction/extinction-prepass-pure';
 import { packedScalar } from '../tsl/attribute-packing';
 import type { Vec4PackPlan } from '../tsl/attribute-packing-pure';
 import { kernelFluxPeakTsl, pointSourcePeakTsl } from '../emission-tsl';
 import { dustRaymarchAvTsl, type DustTextureNode } from '../extinction/dust-raymarch-tsl';
+import type { AvStorageNode } from '../extinction/extinction-nodes';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { lumaWeightsTsl } from '../tonemap-tsl';
 import { attrFloat, attrVec2, attrVec3 } from '../tsl/tsl-shim';
@@ -60,11 +60,11 @@ export interface StarTslDeps {
    *  the shared uniform-node mirror (../shared-uniform-nodes.ts). */
   lut: THREE.DataTexture;
   /** The dust volume the raymarch fallback samples, and the star-indexed
-   *  A_V cache the prepass path fetches. Both nullable on the WebGL side,
-   *  hence nodes over placeholders whose `.value` the layer swaps — a
-   *  uniform node cannot carry a nullable texture. */
+   *  A_V buffer the prepass path indexes. Both nullable on the WebGL side,
+   *  hence nodes over placeholders whose `.value` the prepass swaps — a
+   *  node cannot carry a nullable texture or buffer. */
   dust: DustTextureNode;
-  avPrepass: ReturnType<typeof texture>;
+  av: AvStorageNode;
 }
 
 /** One set per material: the same varying node objects must be written by
@@ -102,7 +102,7 @@ export function buildStarVertexNode(
   v: StarVaryings,
   localMirror = false,
 ): Node {
-  const { u, staticPlan, dynamicPlan, lut, dust, avPrepass } = deps;
+  const { u, staticPlan, dynamicPlan, lut, dust, av } = deps;
   const stat = (name: string) => packedScalar(staticPlan, name);
   const dyn = (name: string) => packedScalar(dynamicPlan, name);
 
@@ -209,18 +209,15 @@ export function buildStarVertexNode(
       // texelFetch, or the full 48-tap march on the fallback — off the
       // culled population.
       If(spectOk.and(distOk).and(magOk()).and(taperAlive()), () => {
-        // Survivors only. The prepass cache is one fetch of the star's own
-        // texel; the fallback marches camera→star in ABSOLUTE space, since
+        // Survivors only. The prepass cache is one read of the star's own
+        // float; the fallback marches camera→star in ABSOLUTE space, since
         // the dust grid is anchored to Sol rather than to the renderer's
         // floating local origin.
         const dustEffective = u.uDustEnabled.mul(u.uExtinctionStrength).toVar();
         const absorbAV = float(0.0).toVar();
         If(dustEffective.greaterThan(0.0), () => {
           If(u.uAvPrepassEnabled.greaterThan(0.5), () => {
-            const w = int(AV_TEX_WIDTH);
-            absorbAV.assign(avPrepass
-              .load(ivec2(self.mod(w), self.div(w))).r
-              .mul(dustEffective));
+            absorbAV.assign(av.element(self).mul(dustEffective));
           }).Else(() => {
             absorbAV.assign(dustRaymarchAvTsl(
               u, dust,

@@ -9,7 +9,7 @@ import type {
   PlanetGlareSources,
 } from '../solar-system/planets/planet-body-field';
 import { WebGpuExtinctionPrepass } from './extinction/extinction-prepass-webgpu';
-import { ExtinctionTextureNodes } from './extinction/extinction-texture-nodes';
+import { ExtinctionNodes } from './extinction/extinction-nodes';
 import { WebGpuHdrPipeline } from './hdr/hdr-pipeline-webgpu';
 import {
   reversedDepthOpaqueSort, reversedDepthTransparentSort,
@@ -83,7 +83,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // One pair of texture slots for the whole boot: the star vertex stage's
   // fallback march and the prepass march sample the SAME dust node, so
   // `setDustTexture` cannot reach one and miss the other.
-  const extinctionTextures = new ExtinctionTextureNodes();
+  const extinctionSlots = new ExtinctionNodes();
   const nodesOrThrow = (caller: string) => {
     if (registry === null) throw new Error(`${caller} before bindSharedUniforms`);
     return registry.nodes;
@@ -167,7 +167,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     },
     attachStarLayer(scene: THREE.Scene, sources: StarGeometrySources) {
       const layer = new StarLayer(
-        scene, nodesOrThrow('attachStarLayer'), sources, hdr.gates, extinctionTextures);
+        scene, nodesOrThrow('attachStarLayer'), sources, hdr.gates, extinctionSlots);
       // Registration is what keeps the layer's output count in lockstep
       // with the pipeline's target mode; dispose must sever it or a dead
       // layer keeps taking mode swaps.
@@ -183,18 +183,18 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
       };
     },
     setDustTexture(texture: THREE.Data3DTexture | null) {
-      extinctionTextures.setDustTexture(texture);
+      extinctionSlots.setDustTexture(texture);
     },
     attachExtinctionPrepass(options: WebGpuExtinctionPrepassSources) {
       return new WebGpuExtinctionPrepass({
         renderer,
         nodes: nodesOrThrow('attachExtinctionPrepass'),
-        textures: extinctionTextures,
+        slots: extinctionSlots,
         ...options,
       });
     },
     dispose() {
-      extinctionTextures.dispose();
+      extinctionSlots.dispose();
       // The node registry holds no GPU resource — it mirrors the shell's
       // uniform value-objects, which the shell owns. Dropping it is what
       // makes a post-dispose attach throw rather than build against a

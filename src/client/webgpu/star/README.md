@@ -64,9 +64,9 @@ glare already takes all three, exactly as it takes the GLSL chunks.
 ## Dust extinction — two tiers, one gate
 
 The vertex stage reddens and dims every survivor of the prefilter, on the
-same two-tier shape the GLSL has: the per-star A_V cache is one
-`textureLoad` of the star's own texel when `uAvPrepassEnabled` is set,
-and the full 48-tap camera→star march otherwise. Both come from
+same two-tier shape the GLSL has: the per-star A_V cache is one read of
+the star's own element of a storage buffer when `uAvPrepassEnabled` is
+set, and the full 48-tap camera→star march otherwise. Both come from
 `../extinction/`, which owns the march, the cache and the one behaviour
 that is *not* parity (a cold CPU read of the cache). Three properties
 belong here rather than there:
@@ -74,7 +74,7 @@ belong here rather than there:
 - **The read sits behind the prefilter, and that is exact.** A_V ≥ 0, so
   both the cull bound and the taper bound are monotonic in dust: a star
   already fainter than `uCullMag` unextincted cannot become visible
-  after extinction. Testing them first is what keeps a `textureLoad` —
+  after extinction. Testing them first is what keeps a buffer read —
   or, on the fallback, the whole march — off the culled population.
   Both bounds are then re-tested on the extincted magnitude, which is
   why each is built as a fresh node rather than reused: a TSL comparison

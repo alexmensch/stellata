@@ -54,11 +54,13 @@ WebGL map and never learns about the port. The contract:
 - **Texture slots** (`FRAME_TEXTURE_SLOTS`) are not mirrored: textures bind as
   per-layer `texture()`/`texture3D()` nodes where the texture lives. A
   uniform node cannot carry a **nullable** texture, so a slot the shell
-  fills later (`uDustTexture`, `uAvPrepassTex`) binds over a placeholder
-  whose `.value` is swapped on attach — one node per slot for the whole
-  boot, since two consumers of the same volume must not be able to
-  diverge (`../extinction/README.md` § Two nodes, one owner). `uAvPrepassTex`
-  in the shared map therefore stays null for a WebGPU boot's whole life.
+  fills later (`uDustTexture`) binds over a placeholder whose `.value` is
+  swapped on attach — one node per slot for the whole boot, since two
+  consumers of the same volume must not be able to diverge
+  (`../extinction/README.md` § Two nodes, one owner). The A_V cache is a
+  storage buffer on this backend, bound the same way (§ Storage
+  attributes), so `uAvPrepassTex` in the shared map stays null for a
+  WebGPU boot's whole life.
   **A placeholder's filter pair is what its node's WGSL fetches with**, for
   the graph's whole life and whatever is swapped in later — so the
   placeholder carries the real texture's pair

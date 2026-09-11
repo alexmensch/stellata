@@ -170,6 +170,7 @@ import { StarFrame } from './star-pipeline/star-frame/star-frame';
 import { buildSharedUniforms, type SharedUniforms } from './frame/shared-uniforms';
 import { FloatingOrigin } from './frame/floating-origin';
 import { ExtinctionPrepass } from './star-pipeline/extinction/extinction-prepass';
+import { formatAvParity, type AvParityReport } from './star-pipeline/extinction/av-parity-pure';
 import type {
   ExtinctionPrepassSeam,
 } from './star-pipeline/extinction/extinction-seam';
@@ -1592,6 +1593,20 @@ export class Stellata implements FrameAnchor {
     });
     for (const line of formatVerifyReports(reports)) console.log(line);
     return reports;
+  }
+
+  /** Numeric check that the compute A_V kernel and a fragment march of the
+   *  same integral agree bit for bit over the whole catalogue — the parity
+   *  a WebGPU boot has no pixel to show. Null on WebGL2 or with no dust.
+   *  `webgpu/extinction/README.md` § The prepass kernel. */
+  async verifyExtinction(): Promise<AvParityReport | null> {
+    const report = await this.extinctionPrepass?.verifyParity?.() ?? null;
+    if (report === null) {
+      console.warn('verifyExtinction: no compute prepass active');
+      return null;
+    }
+    console.log(formatAvParity(report));
+    return report;
   }
 
   /** The attached binaries.bin runtime table, or null before it lands. */

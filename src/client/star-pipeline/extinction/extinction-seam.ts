@@ -2,6 +2,7 @@
 // once per backend (extinction-prepass.ts, ../../webgpu/extinction/).
 
 import type * as THREE from 'three';
+import type { AvParityReport } from './av-parity-pure';
 
 /** Uniform value-objects shared by reference with the star pipeline's
  *  sharedUniforms map: the dust-field inputs the prepass march reads,
@@ -41,5 +42,9 @@ export interface ExtinctionPrepassSeam {
    *  lands a frame or two later (`../../webgpu/extinction/README.md`
    *  § Cold reads). Event-rate only: never sweep it over the catalog. */
   readAvMag(idx: number): number | null;
+  /** WebGPU only: march every star once more as a fragment pass and
+   *  bit-compare against the compute kernel's buffer. Null while the cache
+   *  is inert. Dev-console only — it reads the whole buffer back. */
+  verifyParity?(): Promise<AvParityReport | null>;
   dispose(): void;
 }
