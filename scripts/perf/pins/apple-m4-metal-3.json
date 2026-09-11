@@ -17,14 +17,14 @@
     }
   },
   "git": {
-    "commit": "eb235e7ccd5ab751101e68712a62507e2646746c",
+    "commit": "45b15c44a61b91416ab540e8217014b9b489f3df",
     "dirty": false,
-    "mainCommit": "6f760528dfb28c51b0fc85cdc1afe6c40ea36a5b",
+    "mainCommit": "ef9d2f2372dd158cccce909db48d760d364f1eec",
     "mainReachable": false
   },
-  "version": "4.1.9",
-  "takenAt": "2026-09-11T11:09:24.546Z",
-  "sourceRun": ".perf-runs/2026-09-11/0it-16-tier2.json",
+  "version": "4.1.14",
+  "takenAt": "2026-09-11T19:18:53.115Z",
+  "sourceRun": ".perf-runs/2026-09-11/0it-15-s1-pin.json",
   "rows": [
     {
       "key": "mw120|webgpu",
@@ -33,21 +33,21 @@
       "bufferMpx": 4.096,
       "recordCount": 388071,
       "position": 1,
-      "idleRafMs": 16.69999999999891,
+      "idleRafMs": 16.699999999999818,
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 17.30000000000109,
+        "p90": 17.600000000000364,
         "iqrMs": 0.1000000000003638,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": true
       },
       "gpu": {
-        "p50": 21.42634,
-        "p90": 21.679586,
-        "iqrMs": 0.04521000000000086,
-        "samples": 56,
+        "p50": 21.388258,
+        "p90": 21.445380999999998,
+        "iqrMs": 0.0275420000000004,
+        "samples": 55,
         "stateGuard": "steady"
       }
     },
@@ -61,17 +61,17 @@
       "idleRafMs": 16.69999999999891,
       "method": "raf-delta",
       "wall": {
-        "p50": 33.19999999999709,
-        "p90": 33.400000000001455,
-        "iqrMs": 16.600000000002183,
+        "p50": 33.29999999999927,
+        "p90": 33.60000000000218,
+        "iqrMs": 16.399999999999636,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
       },
       "gpu": {
-        "p50": 22.419284,
-        "p90": 22.811693,
-        "iqrMs": 0.25349600000000194,
+        "p50": 22.402825,
+        "p90": 22.429742,
+        "iqrMs": 0.020249999999997215,
         "samples": 60,
         "stateGuard": "steady"
       }
@@ -88,16 +88,16 @@
       "wall": {
         "p50": 16.700000000000728,
         "p90": 33.30000000000109,
-        "iqrMs": 1.3999999999996362,
+        "iqrMs": 0.500000000001819,
         "samples": 240,
         "stateGuard": "steady",
-        "vsyncClamped": false
+        "vsyncClamped": true
       },
       "gpu": {
-        "p50": 17.159238,
-        "p90": 17.425359999999998,
-        "iqrMs": 0.12566699999999997,
-        "samples": 58,
+        "p50": 17.162241,
+        "p90": 17.316028,
+        "iqrMs": 0.08483400000000074,
+        "samples": 59,
         "stateGuard": "steady"
       }
     },
@@ -108,21 +108,21 @@
       "bufferMpx": 4.096,
       "recordCount": 388071,
       "position": 4,
-      "idleRafMs": 16.69999999999891,
+      "idleRafMs": 16.699999999999818,
       "method": "raf-delta",
       "wall": {
-        "p50": 18.399999999997817,
-        "p90": 33.5,
-        "iqrMs": 16.599999999998545,
+        "p50": 32.600000000000364,
+        "p90": 33.70000000000073,
+        "iqrMs": 16.600000000000364,
         "samples": 240,
         "stateGuard": "trending",
         "vsyncClamped": false
       },
       "gpu": {
-        "p50": 31.867598,
-        "p90": 31.941429,
-        "iqrMs": 0.03733300000000028,
-        "samples": 55,
+        "p50": 31.867223,
+        "p90": 31.933221,
+        "iqrMs": 0.04245700000000241,
+        "samples": 54,
         "stateGuard": "steady"
       }
     },
@@ -137,17 +137,17 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 17.899999999999636,
-        "iqrMs": 1.2000000000007276,
+        "p90": 17.100000000000364,
+        "iqrMs": 0.1000000000003638,
         "samples": 240,
         "stateGuard": "steady",
-        "vsyncClamped": false
+        "vsyncClamped": true
       },
       "gpu": {
-        "p50": 12.499766000000001,
-        "p90": 13.569751,
-        "iqrMs": 0.9083190000000023,
-        "samples": 139,
+        "p50": 13.205798,
+        "p90": 13.567335,
+        "iqrMs": 0.20724699999999885,
+        "samples": 121,
         "stateGuard": "steady"
       }
     },
@@ -162,8 +162,8 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 32.399999999999636,
-        "iqrMs": 0.1999999999989086,
+        "p90": 32.80000000000109,
+        "iqrMs": 0.6000000000003638,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": true
@@ -181,8 +181,8 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.700000000000728,
-        "p90": 66.60000000000036,
-        "iqrMs": 16.80000000000291,
+        "p90": 66.70000000000073,
+        "iqrMs": 18.00000000000182,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
@@ -200,8 +200,8 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.700000000000728,
-        "p90": 50,
-        "iqrMs": 15.799999999999272,
+        "p90": 49.899999999999636,
+        "iqrMs": 14.699999999998909,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
@@ -218,9 +218,9 @@
       "idleRafMs": 16.699999999999818,
       "method": "raf-delta",
       "wall": {
-        "p50": 17.100000000000364,
-        "p90": 50,
-        "iqrMs": 17.400000000001455,
+        "p50": 16.700000000000728,
+        "p90": 50.10000000000218,
+        "iqrMs": 2.100000000002183,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
@@ -238,8 +238,8 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 17.19999999999891,
-        "iqrMs": 0.1000000000003638,
+        "p90": 17.900000000001455,
+        "iqrMs": 0.9000000000014552,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": true
