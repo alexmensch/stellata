@@ -90,9 +90,13 @@ the quarters**: that power step is a step, so it lands as
 strictly-rising test reads as steady. Frames either side of the
 transition never compare, so a trending row at a gated vantage refuses the
 pin and refuses a comparison — at an ungated one it does neither
-(§ Reading `--against-pin`). `--cooldown-ms` idles between contexts so each
-one starts cold; tune it until every gated context in a pin run reads
-`steady`.
+(§ Reading `--against-pin`). **`--baseline` goes on refusing it either way,
+and that divergence is the rule rather than an oversight**: the two gates
+share one implementation of every refusal that is a fact about the run, but
+this one is a fact about the vantage, and `--baseline` bands lg like any
+other row it holds. A gate stands down only where it does not mark.
+`--cooldown-ms` idles between contexts so each one starts cold; tune it
+until every gated context in a pin run reads `steady`.
 
 **The verdict is read off the clock the band gates** — the GPU stream where
 the row has one, wall only where it does not (`gatingClock`, every WebGL2
