@@ -302,7 +302,7 @@ exposure pin, the 6 reduction-chain passes on 6 more submits.
 
 **How to apply.** Read every add-a-pass or fold-a-pass proposal against
 the `emptyPass` row (`src/client/debug/frame-cost/passes/README.md`
-§ Priced passes) at the vantage in question and against the frame it
+§ The roster) at the vantage in question and against the frame it
 lands in.
 At ≤ 0.5 ms a boundary, folding the local pass's depth clear into the
 repaint saves under 2 % of a Sol frame, and stellata-8cg.48 (4×4
@@ -320,8 +320,8 @@ resolves near 0.4 ms; coalescing stays pinned near 0.1).
 
 **Where.** The counts and the floor are stellata-0it.37's notes, which
 name the `.perf-runs` file each arm wrote in the main checkout. The
-instrument is `src/client/debug/frame-cost/passes/README.md` § Priced
-passes.
+instrument is `src/client/debug/frame-cost/passes/README.md` § The
+roster.
 
 ## 9. Measurement canon
 
