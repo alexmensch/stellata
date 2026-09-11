@@ -17,14 +17,14 @@
     }
   },
   "git": {
-    "commit": "45b15c44a61b91416ab540e8217014b9b489f3df",
+    "commit": "571a7d5350663479d2775c5890c3307c39fc976a",
     "dirty": false,
-    "mainCommit": "ef9d2f2372dd158cccce909db48d760d364f1eec",
-    "mainReachable": false
+    "mainCommit": "571a7d5350663479d2775c5890c3307c39fc976a",
+    "mainReachable": true
   },
   "version": "4.1.14",
-  "takenAt": "2026-09-11T19:18:53.115Z",
-  "sourceRun": ".perf-runs/2026-09-11/0it-15-s1-pin.json",
+  "takenAt": "2026-09-11T22:52:48.456Z",
+  "sourceRun": ".perf-runs/2026-09-11/pin-retake-571a7d53.json",
   "rows": [
     {
       "key": "mw120|webgpu",
@@ -33,20 +33,20 @@
       "bufferMpx": 4.096,
       "recordCount": 388071,
       "position": 1,
-      "idleRafMs": 16.699999999999818,
+      "idleRafMs": 16.69999999999891,
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 17.600000000000364,
+        "p90": 17.19999999999891,
         "iqrMs": 0.1000000000003638,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": true
       },
       "gpu": {
-        "p50": 21.388258,
-        "p90": 21.445380999999998,
-        "iqrMs": 0.0275420000000004,
+        "p50": 21.394091,
+        "p90": 21.513046000000003,
+        "iqrMs": 0.025707999999994513,
         "samples": 55,
         "stateGuard": "steady"
       }
@@ -61,17 +61,17 @@
       "idleRafMs": 16.69999999999891,
       "method": "raf-delta",
       "wall": {
-        "p50": 33.29999999999927,
-        "p90": 33.60000000000218,
-        "iqrMs": 16.399999999999636,
+        "p50": 33.20000000000073,
+        "p90": 33.70000000000073,
+        "iqrMs": 16.599999999998545,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
       },
       "gpu": {
-        "p50": 22.402825,
-        "p90": 22.429742,
-        "iqrMs": 0.020249999999997215,
+        "p50": 22.405617,
+        "p90": 22.435031,
+        "iqrMs": 0.01574799999999854,
         "samples": 60,
         "stateGuard": "steady"
       }
@@ -87,16 +87,16 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.700000000000728,
-        "p90": 33.30000000000109,
-        "iqrMs": 0.500000000001819,
+        "p90": 33.29999999999927,
+        "iqrMs": 1.2999999999992724,
         "samples": 240,
         "stateGuard": "steady",
-        "vsyncClamped": true
+        "vsyncClamped": false
       },
       "gpu": {
-        "p50": 17.162241,
-        "p90": 17.316028,
-        "iqrMs": 0.08483400000000074,
+        "p50": 17.156821,
+        "p90": 17.334237,
+        "iqrMs": 0.09904099999999971,
         "samples": 59,
         "stateGuard": "steady"
       }
@@ -108,21 +108,21 @@
       "bufferMpx": 4.096,
       "recordCount": 388071,
       "position": 4,
-      "idleRafMs": 16.699999999999818,
+      "idleRafMs": 16.69999999999891,
       "method": "raf-delta",
       "wall": {
-        "p50": 32.600000000000364,
-        "p90": 33.70000000000073,
-        "iqrMs": 16.600000000000364,
+        "p50": 31.799999999999272,
+        "p90": 33.899999999999636,
+        "iqrMs": 16.5,
         "samples": 240,
-        "stateGuard": "trending",
+        "stateGuard": "steady",
         "vsyncClamped": false
       },
       "gpu": {
-        "p50": 31.867223,
-        "p90": 31.933221,
-        "iqrMs": 0.04245700000000241,
-        "samples": 54,
+        "p50": 31.873181,
+        "p90": 31.917264,
+        "iqrMs": 0.02945900000000279,
+        "samples": 56,
         "stateGuard": "steady"
       }
     },
@@ -137,18 +137,18 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 17.100000000000364,
-        "iqrMs": 0.1000000000003638,
+        "p90": 18.100000000000364,
+        "iqrMs": 1.2999999999992724,
         "samples": 240,
         "stateGuard": "steady",
-        "vsyncClamped": true
+        "vsyncClamped": false
       },
       "gpu": {
-        "p50": 13.205798,
-        "p90": 13.567335,
-        "iqrMs": 0.20724699999999885,
-        "samples": 121,
-        "stateGuard": "steady"
+        "p50": 13.332004999999999,
+        "p90": 13.863538,
+        "iqrMs": 0.8357360000000007,
+        "samples": 123,
+        "stateGuard": "trending"
       }
     },
     {
@@ -161,9 +161,9 @@
       "idleRafMs": 16.699999999999818,
       "method": "raf-delta",
       "wall": {
-        "p50": 16.69999999999891,
-        "p90": 32.80000000000109,
-        "iqrMs": 0.6000000000003638,
+        "p50": 16.700000000000728,
+        "p90": 32.79999999999927,
+        "iqrMs": 0.8000000000010914,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": true
@@ -177,12 +177,12 @@
       "bufferMpx": 4.096,
       "recordCount": 388071,
       "position": 7,
-      "idleRafMs": 16.69999999999891,
+      "idleRafMs": 16.699999999999818,
       "method": "raf-delta",
       "wall": {
         "p50": 16.700000000000728,
-        "p90": 66.70000000000073,
-        "iqrMs": 18.00000000000182,
+        "p90": 66.60000000000218,
+        "iqrMs": 15.700000000000728,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
@@ -201,7 +201,7 @@
       "wall": {
         "p50": 16.700000000000728,
         "p90": 49.899999999999636,
-        "iqrMs": 14.699999999998909,
+        "iqrMs": 14.899999999999636,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
@@ -219,7 +219,7 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.700000000000728,
-        "p90": 50.10000000000218,
+        "p90": 50,
         "iqrMs": 2.100000000002183,
         "samples": 240,
         "stateGuard": "steady",
@@ -238,11 +238,11 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 17.900000000001455,
-        "iqrMs": 0.9000000000014552,
+        "p90": 18.100000000000364,
+        "iqrMs": 1.5999999999985448,
         "samples": 240,
         "stateGuard": "steady",
-        "vsyncClamped": true
+        "vsyncClamped": false
       },
       "gpu": null
     }
