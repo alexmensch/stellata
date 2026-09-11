@@ -170,8 +170,8 @@ export function readRecordCount(page: Page): Promise<number | null> {
 }
 
 export interface DifferentialSetup {
-  /** Roster passes switched off before the sweep, restored in the same
-   *  `finally` as the sweep's own restores. */
+  /** Roster passes switched off before the sweep and restored after it, in a
+   *  `finally` outside priceFrame's own. */
   readonly preDisable: readonly string[];
   /** Hold the adaptation measurement unparked for the sweep
    *  (`src/client/hdr/exposure/park/README.md` § The lever). */
@@ -210,8 +210,9 @@ export function runDifferential(
         }
       }
       if (p.noPark) {
+        const parkWas = w.stellata.adaptation.isParkEnabled();
         w.stellata.adaptation.setParkEnabled(false);
-        restores.push(() => w.stellata.adaptation.setParkEnabled(true));
+        restores.push(() => w.stellata.adaptation.setParkEnabled(parkWas));
       }
       return await w.debug.priceFrame(o);
     } finally {

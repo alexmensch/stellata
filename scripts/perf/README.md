@@ -89,19 +89,29 @@ are what a driver would coalesce
 **`--pre-disable <keys>` and `--no-park` set up the frame a differential
 prices, and are read by that mode alone.** The named roster passes are
 switched off before the sweep — through their own `buildPassToggles`
-toggles, so there is no second spelling of any pass — and restored in the
-same `finally` as the sweep's own restores; a pass not active at the vantage
+toggles, so there is no second spelling of any pass — and restored in a
+`finally` outside priceFrame's own; a pass not active at the vantage
 throws rather than pricing a frame it was never in. `--no-park` holds the
-adaptation measurement unparked
-(`src/client/hdr/exposure/park/README.md` § The lever). Both land in the
-record's `params`. The case they exist for is the `statisticWrites` row at
-the Sol default view: the floor regime parks there and a sweep's hold
-collapses a probe to parked, so the row prices an already-parked frame
-unless the park is off; and the row lumps every emitter's statistic write
-together, so the star field's own share is the row with `--pre-disable
-mwBand,lgEmission` and the band's and glow's share is the difference
-against the plain row (`src/client/debug/frame-cost/passes/README.md`
-§ The roster).
+adaptation measurement unparked; why that is needed at all, and why it is a
+lever rather than a state, is `src/client/hdr/exposure/park/README.md`
+§ The lever. Both land in the record's `params`, and a run differing in
+either refuses to compare (§ Sweep preconditions). The case they exist for
+is the `statisticWrites` row at the Sol default view
+(`src/client/debug/frame-cost/passes/README.md` § The roster).
+
+**`--pre-disable` is only sound where the applied cut does not depend on the
+frame, and Sol's floor regime is that case.** The flag acts *before*
+priceFrame, which pins the exposure only after its own warmup
+(`src/client/debug/frame-cost/README.md` § Preconditions) — so the warmup
+converges on the reduced scene and the sweep then pins a cut the plain run
+never had. Where the eye branch or the resolved-surface pin governs, that is
+a different star population in the two runs and the rows are not each
+other's complement; § The compression probe on the passes page is the same
+trap caught the hard way. At the Sol default view the display floor governs
+and the cut reads `Lw` and the anchor and nothing from the frame, so holding
+the band and the glow off cannot move it. **The `limitMag` columns are the
+tell either way** — equal across both runs, or the subtraction is between
+two different scenes.
 
 `--frames` sizes a dwell (dwell and sweep modes); `--scales` is the sweep's
 viewport set. `--warmup-frames` is shared: it is priceFrame's own warmup in
