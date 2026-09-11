@@ -5,6 +5,7 @@ import * as THREE from 'three';
 
 import { parkDistance, viewingDistanceForExtent } from '../camera/focus/focus-transition';
 import { angularDiameterPx } from '../camera/controls/star-geometry';
+import { isFeatureLegible } from '../util/orbit-line';
 
 /** Canonical shell order. A shell's `Target.idx`, its SID-domain local
  *  index, and its `SHELL_OBJECT_SIDS` pin all key off this array — the
@@ -135,6 +136,34 @@ export class ShellRegistry {
     if (!shell) return 0;
     const extent = shell.extentPc();
     return parkDistance({ R_pc: extent, dMinFloor: viewingDistanceForExtent(extent, 0) });
+  }
+
+  /** Whether shell `idx`'s projected silhouette clears the shared
+   *  legibility floor. The TRUE camera distance, never `renderedSizePx`'s
+   *  — that 1 pc clamp puts an AU-scale shell under the floor from
+   *  everywhere. False for an absent shell. */
+  isLegible(
+    idx: number,
+    worldOffset: Readonly<THREE.Vector3>,
+    cameraPos: Readonly<THREE.Vector3>,
+    pxPerRadian: number,
+  ): boolean {
+    const distPc = this.cameraDistancePc(idx, worldOffset, cameraPos);
+    if (distPc <= 0) return false;
+    return isFeatureLegible(this.extentPc(idx), distPc, pxPerRadian);
+  }
+
+  /** Whether ANY registered shell does — the layer-level contribution
+   *  verdict, since one registration draws both shells. */
+  anyLegible(
+    worldOffset: Readonly<THREE.Vector3>,
+    cameraPos: Readonly<THREE.Vector3>,
+    pxPerRadian: number,
+  ): boolean {
+    for (let i = 0; i < this.count; i++) {
+      if (this.isLegible(i, worldOffset, cameraPos, pxPerRadian)) return true;
+    }
+    return false;
   }
 
   /** Projected shell diameter in px from its extent radius — chevron /

@@ -135,7 +135,15 @@ export function createShellKindModule(): ShellKindModule {
       return {
         // Fixed boundary geometry; visibility is event-driven, not timed.
         timeBehaviour: { kind: 'static' },
-        contribution: { kind: 'always' },
+        contribution: {
+          kind: 'gated',
+          skip: (fc) => registry.anyLegible(
+            fc.worldOffset, fc.camera.position, fc.pxPerRadian) ? null : 'legibility',
+          setContributing: (on) => {
+            heliopause!.setContributing(on);
+            localBubble!.setContributing(on);
+          },
+        },
         setMonochrome: (on) => {
           heliopause!.setMonochrome(on);
           localBubble!.setMonochrome(on);
