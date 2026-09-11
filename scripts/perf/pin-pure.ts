@@ -5,7 +5,7 @@
 import { basename, relative, resolve } from 'node:path';
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import {
-  BUFFER_MPX_TOLERANCE, VERDICT_MARK, band, dwellFloorMs, positionRefusal, recordCountRefusal,
+  VERDICT_MARK, band, bufferRefusal, dwellFloorMs, positionRefusal, recordCountRefusal,
   type DiffRefusal, type Verdict,
 } from './diff-pure';
 import { gatingClock, type DwellMetric, type StateGuard } from './dwell/dwell-pure';
@@ -325,29 +325,30 @@ export function compareToPin(pin: PinFile, current: PerfFile): PinDiff {
   for (const record of current.scenarios) {
     const key = pinKey(record);
     visited.add(key);
+    // Before the lookup: a scenario that never booted keys as `<name>|unbooted`,
+    // which the pin cannot hold, so the lookup would answer "not in the pin"
+    // about a row whose real trouble is that it failed.
+    const why = rowRefusal(record);
+    if (why !== null) {
+      refusals.push({ key, reason: why });
+      continue;
+    }
     const pinned = pinnedByKey.get(key);
     if (pinned === undefined) {
       refusals.push({ key, reason: 'not in the pin — nothing to judge it against' });
       continue;
     }
-    const why = rowRefusal(record)
-      ?? bufferRefusal(pinned.bufferMpx, record.bufferMpx!)
+    const incomparable = bufferRefusal(pinned.bufferMpx, record.bufferMpx!)
       ?? recordCountRefusal(pinned.recordCount, record.recordCount)
       ?? positionRefusal(pinned.position, record.position);
-    if (why !== null) {
-      refusals.push({ key, reason: why });
+    if (incomparable !== null) {
+      refusals.push({ key, reason: incomparable });
       continue;
     }
     rows.push(compareRow(pinned, record));
   }
   const unmeasured = pin.rows.map((row) => row.key).filter((key) => !visited.has(key));
   return { refusedWholeRun: null, rows, refusals, unmeasured };
-}
-
-function bufferRefusal(pinnedMpx: number, currentMpx: number): string | null {
-  const drift = Math.abs(currentMpx - pinnedMpx) / pinnedMpx;
-  if (drift <= BUFFER_MPX_TOLERANCE) return null;
-  return `buffer ${pinnedMpx} vs ${currentMpx} Mpx (${(drift * 100).toFixed(1)} % apart)`;
 }
 
 /**

@@ -116,12 +116,18 @@ function comparabilityRefusal(a: ScenarioRecord, b: ScenarioRecord): string | nu
   if (a.mode !== b.mode) return `mode ${a.mode} vs ${b.mode}`;
   const [ma, mb] = [a.bufferMpx, b.bufferMpx];
   if (ma === null || mb === null) return 'one run recorded no drawing buffer';
-  const drift = Math.abs(mb - ma) / ma;
-  if (drift > BUFFER_MPX_TOLERANCE) {
-    return `buffer ${ma} vs ${mb} Mpx (${(drift * 100).toFixed(1)} % apart) — the frame is fill-bound`;
-  }
-  return recordCountRefusal(a.recordCount, b.recordCount)
+  return bufferRefusal(ma, mb)
+    ?? recordCountRefusal(a.recordCount, b.recordCount)
     ?? positionRefusal(a.position, b.position);
+}
+
+/** A resized window is a different measurement wearing the same row label:
+ *  both dominant passes scale with area. Shared with `--against-pin`, as
+ *  the record-count and position refusals below it are. */
+export function bufferRefusal(a: number, b: number): string | null {
+  const drift = Math.abs(b - a) / a;
+  if (drift <= BUFFER_MPX_TOLERANCE) return null;
+  return `buffer ${a} vs ${b} Mpx (${(drift * 100).toFixed(1)} % apart) — the frame is fill-bound`;
 }
 
 /**

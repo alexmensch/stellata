@@ -295,6 +295,18 @@ describe('compareToPin', () => {
     expect(pinDiffFails(diff)).toBe(false);
   });
 
+  // A scenario that never booted keys as `<name>|unbooted`, which no pin can
+  // hold — so the key lookup would answer "not in the pin" about a row whose
+  // trouble is that it failed. The failure is the reason worth printing.
+  it('names the failure, not the absent key, for a scenario that never booted', () => {
+    const unbooted = scenario('sol', 'webgpu', dwell(stats(25.2), stats(21.8)), {
+      backend: { requested: 'webgpu', actual: null }, failed: true,
+    });
+    const diff = compareToPin(pinOf(), file([unbooted]));
+    expect(diff.refusals).toEqual([{ key: 'sol|unbooted', reason: 'the scenario failed or was tainted' }]);
+    expect(pinDiffFails(diff)).toBe(true);
+  });
+
   it('refuses a row the run measured and the pin does not hold', () => {
     const diff = compareToPin(pinOf([SOL_GPU]), file([SOL_GPU, MW120_GPU]));
     expect(diff.rows.map((r) => r.key)).toEqual(['sol|webgpu']);

@@ -318,7 +318,10 @@ either side (a row priced against a different catalogue is not a
 comparison), a **run position** that differs or is absent on either side
 (below), a failed or tainted scenario, a dwell clamped or trending on
 its gating clock, a mismatched GPU stream, a `cadenceBound` row (either
-side), or a row missing from one side refuses that key.
+side), or a row missing from one side refuses that key. The buffer, record
+count and position refusals are one implementation each in `diff-pure.ts`,
+applied by `--against-pin` too: the two gates must refuse the same pair for
+the same reason, or the looser one certifies what the tighter one rejects.
 
 **Run position: two rows compare only when their contexts sat at the same
 place in their runs.** The GPU's load history before a context moves its
