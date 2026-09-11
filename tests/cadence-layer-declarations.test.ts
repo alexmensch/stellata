@@ -130,14 +130,16 @@ describe('shipped scene-layer contribution declarations', () => {
   });
 
   it('the always / gated split is pinned, so a silent flip fails here', () => {
-    // Six gated: molecular clouds, the probe fleet, the boundary shells,
-    // the galactic disc, the planet mesh LOD and the star core mask. The
-    // refusals are deliberate and argued in src/client/scene/README.md
-    // § Declaring what a layer can put on screen — a coordinate sphere is
-    // camera-tracked at 50 kpc, so no geometric test can ever fire on it.
+    // Eight gated: molecular clouds, the probe fleet, the boundary shells,
+    // the galactic disc, the planet mesh LOD, the star core mask, and the
+    // two diffuse emitters on the brightness test — the Milky Way band and
+    // the Local Group pair. The refusals are deliberate and argued in
+    // src/client/scene/README.md § Declaring what a layer can put on
+    // screen: a coordinate sphere is camera-tracked at 50 kpc, so no
+    // admissible test can ever fire on it.
     const census: Record<string, number> = { always: 0, gated: 0 };
     for (const d of contributions) census[d.kind]++;
-    expect(census).toEqual({ always: 15, gated: 6 });
+    expect(census).toEqual({ always: 13, gated: 8 });
   });
 
   it('every inline register({...}) in the shell carries one', () => {

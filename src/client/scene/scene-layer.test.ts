@@ -202,12 +202,13 @@ describe('SceneLayerRegistry — contribution gating', () => {
     reg.register(gated(['frustum']).layer);
     reg.register(gated(['frustum']).layer);
     reg.register(gated(['legibility']).layer);
+    reg.register(gated(['brightness']).layer);
     reg.register(gated([null]).layer);
     reg.updateAll(makeCtx());
     expect(reg.contributionCensus()).toEqual({
       always: 1,
-      gated: 4,
-      skipped: { frustum: 2, legibility: 1, opacity: 0 },
+      gated: 5,
+      skipped: { frustum: 2, legibility: 1, opacity: 0, brightness: 1 },
     });
   });
 

@@ -16,6 +16,11 @@ import {
   type SersicInstanceData,
 } from './local-group-emission-pure';
 import { LgPeakCache } from './lg-peak-pure';
+import {
+  brightnessSkip,
+  type FrameExposure,
+} from '../../hdr/exposure/emitter-visibility-pure';
+import type { ContributionSkip } from '../../scene/scene-layer';
 
 const SPHERE_WIDTH_SEGMENTS = 48;
 const SPHERE_HEIGHT_SEGMENTS = 24;
@@ -47,6 +52,7 @@ export class LocalGroupEmission {
   private readonly peakCache = new LgPeakCache();
 
   private enabled = true;
+  private contributing = true;
   private chartHidden = false;
 
   constructor(
@@ -115,9 +121,36 @@ export class LocalGroupEmission {
   }
 
   private groupVisible(): boolean {
-    const visible = this.enabled && !this.chartHidden;
+    const visible = this.enabled && this.contributing && !this.chartHidden;
     this.group.visible = visible;
     return visible;
+  }
+
+  /** Contribution gate. A term of the conjunction rather than a bare
+   *  `group.visible` write, which would resurrect a glow the user or
+   *  chart mode had switched off. The layer's only per-frame state is the
+   *  floating-origin uniform, rewritten unconditionally on the first
+   *  drawn frame back, so this is the whole reset. */
+  setContributing(on: boolean): void {
+    this.contributing = on;
+    this.groupVisible();
+  }
+
+  /** The glow's brightness contribution verdict
+   *  (`docs/science-hdr-pipeline.md` § 3.5). One tier: the bound is the
+   *  brightest object's own central ray at the live plate scale, already
+   *  cache-backed on camera pose and `Ω_px`. */
+  contributionSkip(
+    exposure: FrameExposure,
+    cameraAbsPc: THREE.Vector3,
+    warpActive: boolean,
+  ): ContributionSkip | null {
+    return brightnessSkip({
+      contributing: this.contributing,
+      warpActive,
+      exposure,
+      peakSb: this.peakSurfaceBrightness(cameraAbsPc, exposure.omegaPxArcsec2),
+    });
   }
 
   setEnabled(on: boolean): void {

@@ -153,9 +153,11 @@ import {
 import { FilterController } from './filters/filter-controller';
 import { ExposureController } from './hdr/exposure/exposure-controller';
 import { exposureForMagLimit } from './hdr/exposure/exposure-epoch';
+import type { FrameExposure } from './hdr/exposure/emitter-visibility-pure';
 import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
 import { LuminanceReduction } from './hdr/exposure/reduction/reduction-pass';
 import {
+  cameraAbsInto,
   SceneLayerRegistry,
   updateWarpGatedRefLayer,
   type ContributionCensus,
@@ -1040,6 +1042,7 @@ export class Stellata implements FrameAnchor {
       warpActive: false,
       pxPerRadian: 0,
       frustum: new FrameFrustum(),
+      exposure: null,
     };
     // Catalog-wide constant: the fastest pulsating variable bounds how
     // long any frame may idle before some star's brightness moves a JND.
@@ -1318,7 +1321,12 @@ export class Stellata implements FrameAnchor {
       // Skybox re-anchored to camera.position; the raymarch reads the
       // absolute camera. No `t` dependence.
       timeBehaviour: { kind: 'static' },
-      contribution: { kind: 'always' },
+      contribution: {
+        kind: 'gated',
+        skip: (ctx) => ctx.exposure === null ? null : this.milkyway.contributionSkip(
+          ctx.exposure, cameraAbsInto(ctx, this.tmpVec3b), ctx.warpActive),
+        setContributing: (on) => this.milkyway.setContributing(on),
+      },
       // Re-anchors the skybox mesh to camera.position and refreshes the
       // absolute-camera uniform for the raymarch. Visible during warp.
       update: (ctx) => this.milkyway.update(ctx.camera, ctx.worldOffset),
@@ -2770,9 +2778,29 @@ export class Stellata implements FrameAnchor {
     this.frameCtx.t = this.getT();
     this.frameCtx.warpActive = this.warp.isActive();
     this.frameCtx.pxPerRadian = this.angularToPx();
+    this.frameCtx.exposure = this.frameExposure();
     // Stale until the orbit-lock entry re-reads the camera after the
     // frame's last write (scene/README.md § Camera writes, then reads).
     this.frameCtx.frustum.invalidate();
+  }
+
+  /** The frame's exposure state for the `'brightness'` contribution test.
+   *  Null in chart, where the seam is bypassed and nothing may skip on it.
+   *  Rebuilt each tick rather than cached: this is the stateless per-frame
+   *  reader `hdr/exposure/README.md` § One writer, five slots exempts, and
+   *  a record kept across frames would be the cache it forbids. */
+  private frameExposure(): FrameExposure | null {
+    if (this.filter.chart) return null;
+    const u = this.hdr.emitterUniforms;
+    return {
+      exposure: u.uExposure.value,
+      baseExposure: exposureForMagLimit(this.exposure.getLimitMag()),
+      omegaSummationArcsec2: u.uOmegaSummationArcsec2.value,
+      omegaPxArcsec2: u.uOmegaPxArcsec2.value,
+      whitePoint: u.uWhitePoint.value,
+      statistic: this.adaptation.getLandedStatistic(),
+      tuning: this.adaptation.getTuning(),
+    };
   }
 
   /** Collect this frame's rate report, audit what actually moved against

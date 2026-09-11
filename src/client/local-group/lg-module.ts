@@ -1,6 +1,7 @@
 // The Local Group ObjectKindModule — load/attach for the wireframe +
 // emission layer pair plus every capability leg. See ./README.md.
 
+import * as THREE from 'three';
 import { softOrbitFloor } from '../camera/focus/focus-controller';
 import type { FocusableProvider } from '../camera/focus/focus-target';
 import { parkDistance } from '../camera/focus/focus-transition';
@@ -15,8 +16,16 @@ import type {
   KindSearchEntry,
   ObjectKindModule,
 } from '../kinds/kind-module';
-import { updateWarpGatedRefLayer, type SceneLayer } from '../scene/scene-layer';
-import { createLocalGroupLabels, LocalGroupLayer } from './local-group';
+import {
+  cameraAbsInto,
+  updateWarpGatedRefLayer,
+  type SceneLayer,
+} from '../scene/scene-layer';
+import {
+  createLocalGroupLabels,
+  lgWireframeOpacity,
+  LocalGroupLayer,
+} from './local-group';
 import { LocalGroupEmission } from './emission/local-group-emission';
 import {
   lgViewingDistancePc,
@@ -44,6 +53,9 @@ export interface LgKindModule extends ObjectKindModule<'lg'> {
    *  pushes the result here on either change. */
   setEmissionEnabled(on: boolean): void;
 }
+
+// Contribution-test scratch — valid only inside one `skip()` call.
+const tmpCameraAbs = /*@__PURE__*/ new THREE.Vector3();
 
 export function createLgKindModule(): LgKindModule {
   let catalog: LgCatalog | null = null;
@@ -106,7 +118,27 @@ export function createLgKindModule(): LgKindModule {
       return {
         // Fixed extragalactic positions — no proper motion is modelled.
         timeBehaviour: { kind: 'static' },
-        contribution: { kind: 'always' },
+        // One registration draws both halves, so the verdict is the
+        // conjunction: the wireframe's distance fade has to have reached
+        // zero AND the glow's peak has to be under the display floor. The
+        // reason reported is the glow's, which is the half that costs a
+        // whole-frame raymarch and two whole-frame writes.
+        contribution: {
+          kind: 'gated',
+          skip: (fc) => {
+            if (fc.exposure === null) return null;
+            if (lgWireframeOpacity(fc.distFromSol) > 0) return null;
+            return emission!.contributionSkip(
+              fc.exposure, cameraAbsInto(fc, tmpCameraAbs), fc.warpActive);
+          },
+          setContributing: (on) => {
+            // The wireframe's own `update` rewrites `group.visible` on
+            // every drawn frame, so hiding on the way out is the whole
+            // reset — and it closes the pick, which reads that flag.
+            if (!on) layer!.group.visible = false;
+            emission!.setContributing(on);
+          },
+        },
         update: (fc) => {
           updateWarpGatedRefLayer(layer, fc, kindCtx.detailPermits('lgWireframes'));
           emission!.update(fc.worldOffset);

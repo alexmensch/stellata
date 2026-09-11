@@ -1,13 +1,32 @@
 import { describe, expect, it } from 'vitest';
 import {
+  brightnessSkip,
   EIGHT_BIT_HALF_STEP,
   emitterPeakDisplayLevel,
   emitterPutsInkOnScreen,
+  extendedEmitterPeakDisplayLevel,
+  extendedEmitterPutsInkOnScreen,
   taperFactor,
   type EmitterInkArgs,
+  type FrameExposure,
 } from './emitter-visibility-pure';
-import { sceneExposure, thresholdMagFor } from './exposure-epoch';
-import { DR_MAG, tonemapWhitePoint } from '../tonemap/tonemap-pure';
+import {
+  sceneExposure,
+  summationSolidAngleFor,
+  thresholdMagFor,
+} from './exposure-epoch';
+import {
+  adaptationBranches,
+  adaptationDm,
+  type FrameStatistic,
+} from './scene-adaptation-pure';
+import {
+  extendedThresholdSbFromSolidAngle,
+  pixelSolidAngleArcsec2,
+} from '../emission/emission-pure';
+import { makeFrameExposure } from '../../scene/frame-ctx-mock';
+import { MW_PEAK_SB_DUST_FREE } from '../../milkyway/band-peak-pure';
+import { DR_MAG, TOE_BLACK_MAG, tonemapWhitePoint } from '../tonemap/tonemap-pure';
 import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 import { DEFAULT_INSTRUMENT, instrumentLimitMag } from '../../filters/filter-state';
 
@@ -124,5 +143,154 @@ describe('emitterPutsInkOnScreen — the pick gate the shipped cutoff misses', (
     const edge = inkEdgeMagPastThreshold(s);
     const justLit = emitterPeakDisplayLevel({ ...s, appMag: s.thresholdMag + edge - 1e-3 });
     expect(justLit).toBeGreaterThanOrEqual(EIGHT_BIT_HALF_STEP);
+  });
+});
+
+describe('the extended-source sibling', () => {
+  // docs/science-hdr-pipeline.md § 3.5. No taper — that is a point-source
+  // term — and the peak is a surface brightness over the rod summation
+  // area rather than a flux over a display kernel.
+  const OMEGA_SUM = summationSolidAngleFor(DEFAULT_INSTRUMENT);
+
+  /** Smallest S_peak at which the emitter stops putting ink on screen at
+   *  `dm` magnitudes of cut, to 1e-4 mag. */
+  function extendedInkEdgeSb(dm: number): number {
+    const exposure = sceneExposure(LIMIT, dm, 0);
+    let lo = 0;
+    let hi = 80;
+    for (let i = 0; i < 300; i++) {
+      const mid = (lo + hi) / 2;
+      if (extendedEmitterPutsInkOnScreen(mid, exposure, OMEGA_SUM, WHITE)) lo = mid;
+      else hi = mid;
+    }
+    return hi;
+  }
+
+  it('puts the visibility edge at S_lim + dm + TOE_BLACK_MAG', () => {
+    const sLim = extendedThresholdSbFromSolidAngle(OMEGA_SUM, LIMIT);
+    expect(sLim).toBeCloseTo(22.0, 6);
+    expect(extendedInkEdgeSb(0)).toBeCloseTo(sLim + TOE_BLACK_MAG, 4);
+    // Adaptation rides uExposure, so it moves the edge one for one while
+    // every magnitude bound stays where it was.
+    expect(extendedInkEdgeSb(-6.29)).toBeCloseTo(sLim + TOE_BLACK_MAG - 6.29, 4);
+  });
+
+  it('is exactly the half-step comparison, with no hidden margin', () => {
+    const edge = extendedInkEdgeSb(0);
+    const exposure = sceneExposure(LIMIT, 0, 0);
+    expect(extendedEmitterPeakDisplayLevel(edge - 1e-3, exposure, OMEGA_SUM, WHITE))
+      .toBeGreaterThanOrEqual(EIGHT_BIT_HALF_STEP);
+    expect(extendedEmitterPeakDisplayLevel(edge + 1e-3, exposure, OMEGA_SUM, WHITE))
+      .toBeLessThan(EIGHT_BIT_HALF_STEP);
+  });
+});
+
+describe('the brightness skip — § 3.5 rules 1 and 2', () => {
+  /** The app default view: `L̄` = 68.6 at the base exposure and no lit
+   *  resolved surface, which the display floor turns into a −6.29 cut. */
+  const SOL_STAT: FrameStatistic = { meanL: 68.6, coverage: 0, discL: 0 };
+
+  function exposureAt(
+    stat: FrameStatistic,
+    overrides: Partial<FrameExposure> = {},
+  ): FrameExposure {
+    const base = makeFrameExposure({ statistic: stat, ...overrides });
+    return { ...base, exposure: sceneExposure(LIMIT, adaptationDm(stat), 0) };
+  }
+
+  const drawn = (peakSb: number, exposure: FrameExposure) =>
+    brightnessSkip({ peakSb, contributing: true, warpActive: false, exposure });
+
+  it('reproduces § 3.5 default view: a −6.29 cut against a 17.21 threshold', () => {
+    expect(adaptationDm(SOL_STAT)).toBeCloseTo(-6.29, 2);
+    expect(adaptationBranches(SOL_STAT).regime).toBe('floor');
+    const sLim = extendedThresholdSbFromSolidAngle(
+      summationSolidAngleFor(DEFAULT_INSTRUMENT), LIMIT);
+    expect(sLim + adaptationDm(SOL_STAT) + TOE_BLACK_MAG).toBeCloseTo(17.21, 2);
+  });
+
+  it('skips the band at Sol on its dusty peak, never on the dust-free ceiling', () => {
+    // The ceiling misses the 17.21 threshold by 0.10 mag and the dusty
+    // peak clears it by 3.5 — which is the whole reason the band needs a
+    // second tier rather than the constant alone.
+    const exposure = exposureAt(SOL_STAT);
+    expect(drawn(20.69, exposure)).toBe('brightness');
+    expect(drawn(MW_PEAK_SB_DUST_FREE, exposure)).toBeNull();
+  });
+
+  it('skips the LG glow at Sol — M31 bounds 0.2 mag under the threshold', () => {
+    expect(drawn(17.42, exposureAt(SOL_STAT))).toBe('brightness');
+  });
+
+  it('refuses every skip at no cut', () => {
+    const exposure = makeFrameExposure();
+    expect(adaptationDm(exposure.statistic!)).toBe(0);
+    for (const peakSb of [20.69, 17.42, MW_PEAK_SB_DUST_FREE]) {
+      expect(drawn(peakSb, exposure)).toBeNull();
+    }
+  });
+
+  it('refuses a skip while warping, and before any statistic has landed', () => {
+    const exposure = exposureAt(SOL_STAT);
+    expect(brightnessSkip({
+      peakSb: 20.69, contributing: true, warpActive: true, exposure,
+    })).toBeNull();
+    expect(drawn(20.69, exposureAt(SOL_STAT, { statistic: null }))).toBeNull();
+  });
+
+  describe('rule 2 refuses within a band of the edge, and the band is the plate scale\'s', () => {
+    // The share bound carries Ω_px where the display carries Ω_sum, so the
+    // fraction of `L̄` a skip removes — and therefore how far past the edge
+    // rule 2 keeps refusing — grows quadratically as the field widens.
+    // MEASURED, not § 3.5's algebra: the design gate estimates ~0.1 mag at
+    // 50° and ~2.5 at 120° and is loose in both directions.
+    const EYE_STAT: FrameStatistic = { meanL: 5, coverage: 0, discL: 0 };
+    const EDGE_SB = 23.5 + adaptationDm(EYE_STAT);
+
+    /** Widest S_peak past the edge that rule 2 still refuses, to 1e-4. */
+    function refusalBandMag(fovDeg: number): number {
+      const exposure = exposureAt(EYE_STAT, {
+        omegaPxArcsec2: pixelSolidAngleArcsec2(900 / ((fovDeg * Math.PI) / 180)),
+      });
+      let lo = 0;
+      let hi = 12;
+      for (let i = 0; i < 200; i++) {
+        const mid = (lo + hi) / 2;
+        if (drawn(EDGE_SB + mid, exposure) === null) lo = mid; else hi = mid;
+      }
+      return hi;
+    }
+
+    it('is an eye-regime frame, which is the only one rule 2 can bind on', () => {
+      expect(adaptationBranches(EYE_STAT).regime).toBe('eye');
+    });
+
+    it('is 0.0074 mag at the acceptance 50° field', () => {
+      expect(refusalBandMag(50)).toBeCloseTo(0.0074, 4);
+    });
+
+    it('is 1.5904 mag at 120°, where Ω_px approaches Ω_sum', () => {
+      expect(refusalBandMag(120)).toBeCloseTo(1.5904, 4);
+    });
+
+    it('collapses to 0.0003 mag at 10°, where the pixel is tiny', () => {
+      expect(refusalBandMag(10)).toBeCloseTo(0.0003, 4);
+    });
+
+    it('subtracts the share only while the emitter is drawn', () => {
+      // Inside the 120° refusal band the flag decides the verdict outright,
+      // which is what makes it load-bearing rather than an optimisation: a
+      // DRAWN emitter there stays drawn (its own share is what would move
+      // the cut), and a SKIPPED one stays skipped (its share is already out
+      // of `L̄`, so subtracting again would double-ease the test).
+      const wide = exposureAt(EYE_STAT, {
+        omegaPxArcsec2: pixelSolidAngleArcsec2(900 / ((120 * Math.PI) / 180)),
+      });
+      const justPast = EDGE_SB + 1.0;
+      expect(drawn(justPast, wide)).toBeNull();
+      expect(brightnessSkip({
+        peakSb: justPast, contributing: false, warpActive: false, exposure: wide,
+      })).toBe('brightness');
+    });
   });
 });

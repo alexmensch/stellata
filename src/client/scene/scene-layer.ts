@@ -10,6 +10,7 @@ import {
   type CadenceReport,
 } from '../render-gate/cadence/clock-cadence-pure';
 import type { FrameFrustum } from './frame-frustum';
+import type { FrameExposure } from '../hdr/exposure/emitter-visibility-pure';
 
 /** Per-frame inputs shared by every layer, computed ONCE per frame by
  *  the integration shell. Layers keep their own visibility gates
@@ -29,6 +30,12 @@ export interface FrameCtx {
    *  frame's last camera write (the orbit lock); a read before that
    *  throws, so a frustum test belongs on layers registered below it. */
   readonly frustum: FrameFrustum;
+  /** The frame's exposure state, for the `'brightness'` test — null in
+   *  chart, where the seam is off. Carries the cut the LAST rendered
+   *  frame was drawn with, because the fan-out runs before `measure()`
+   *  folds this frame's; § 3.5's lateness argument covers it, and a slew
+   *  in flight invalidates every frame anyway. */
+  readonly exposure: FrameExposure | null;
 }
 
 /** Inputs a `'clock'` layer's rate report reads. Built AFTER the per-frame
@@ -111,9 +118,10 @@ export type LayerTimeBehaviour =
 
 /** Why a gated layer cannot put a display-visible pixel on screen this
  *  frame (docs/render-rules.md § 2): its bounding volume is outside the
- *  view, its projected extent is under the legibility floor, or its own
- *  authored opacity has faded to zero. */
-export type ContributionSkip = 'frustum' | 'legibility' | 'opacity';
+ *  view, its projected extent is under the legibility floor, its own
+ *  authored opacity has faded to zero, or its brightest pixel encodes
+ *  under half an 8-bit step at the live exposure. */
+export type ContributionSkip = 'frustum' | 'legibility' | 'opacity' | 'brightness';
 
 /** Whether what a layer draws can reach the display from this vantage.
  *
@@ -160,6 +168,16 @@ export interface SceneLayer {
    *  re-derive them against the new origin. */
   recenter?(newOrigin: Readonly<THREE.Vector3>): void;
   dispose(): void;
+}
+
+/** The camera's absolute ICRS position this frame, into `out` — what the
+ *  two diffuse emitters' peak providers are keyed on. Both terms are
+ *  float32, which the providers' own margins already dominate. */
+export function cameraAbsInto(
+  ctx: FrameCtx,
+  out: THREE.Vector3,
+): THREE.Vector3 {
+  return out.copy(ctx.camera.position).add(ctx.worldOffset);
 }
 
 /** Per-frame update body shared by the warp-gated reference layers
@@ -223,7 +241,9 @@ export class SceneLayerRegistry {
 
   contributionCensus(): ContributionCensus {
     const out: ContributionCensus = {
-      always: 0, gated: 0, skipped: { frustum: 0, legibility: 0, opacity: 0 },
+      always: 0,
+      gated: 0,
+      skipped: { frustum: 0, legibility: 0, opacity: 0, brightness: 0 },
     };
     for (let i = 0; i < this.layers.length; i++) {
       out[this.layers[i].contribution.kind]++;

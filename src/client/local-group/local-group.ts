@@ -44,6 +44,14 @@ const DARK_BASE_OPACITY = 0.45;
 
 const WIREFRAME_RENDER_ORDER = -1;
 
+/** Stroke opacity at a camera distance from Sol — zero inside the fade's
+ *  inner edge, which is the wireframe half of the layer's contribution
+ *  test (`../scene/README.md` § Declaring what a layer can put on
+ *  screen). The glow half is the brightness verdict. */
+export function lgWireframeOpacity(distFromSolPc: number): number {
+  return DARK_BASE_OPACITY * smoothstep(FADE_INNER_PC, FADE_OUTER_PC, distFromSolPc);
+}
+
 /**
  * Renderable Local Group wireframe layer. Constructed once from the
  * catalog; per-frame update only writes the group's floating-origin
@@ -90,11 +98,7 @@ export class LocalGroupLayer {
       return;
     }
     this.group.position.copy(worldOffset).negate();
-    const opacity = DARK_BASE_OPACITY * smoothstep(
-      FADE_INNER_PC,
-      FADE_OUTER_PC,
-      distFromSolPc,
-    );
+    const opacity = lgWireframeOpacity(distFromSolPc);
     if (opacity <= 0) {
       this.group.visible = false;
       return;
