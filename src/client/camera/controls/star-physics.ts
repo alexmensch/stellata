@@ -206,6 +206,67 @@ export interface RenderedSizeComponents {
   physSizePxUncapped: number;
 }
 
+export interface PulsationPhase {
+  /** Active V-band amplitude — 0 on a non-pulsator or a suppressed one. */
+  amp: number;
+  /** `cos 2πφ`, and 0 wherever `amp` is, so both swings vanish together. */
+  cos: number;
+}
+
+const phaseScratch: PulsationPhase = { amp: 0, cos: 0 };
+
+/** Where a star sits in its pulsation cycle THIS frame. Mirrors
+ *  star.vert.glsl: model-clock phase (days since J2000) with the
+ *  uMinPeriodSec anti-strobe floor, φ = 0 at maximum light. */
+export function pulsationPhaseInto(
+  catalog: Pick<Catalog, 'periodDays' | 'amplitudeMag'>,
+  idx: number,
+  suppressPulsation: Float32Array | null | undefined,
+  u: Pick<StarPhysicsUniforms, 'uModelDays' | 'uModelDaysPerRealSec' | 'uMinPeriodSec'>,
+  out: PulsationPhase,
+): PulsationPhase {
+  out.amp = activePulsationAmp(catalog, idx, suppressPulsation);
+  if (out.amp <= 0) {
+    out.cos = 0;
+    return out;
+  }
+  const periodDaysEff = Math.max(
+    catalog.periodDays[idx],
+    u.uModelDaysPerRealSec.value * u.uMinPeriodSec.value,
+  );
+  const phaseRaw = u.uModelDays.value / periodDaysEff;
+  const phase = phaseRaw - Math.floor(phaseRaw); // fract, mirroring the shader
+  out.cos = Math.cos(2 * Math.PI * phase);
+  return out;
+}
+
+/**
+ * The star's radius this frame in catalogue radii — its disc as DRAWN,
+ * swinging over [ρ^−½, ρ^+½] with the minimum at maximum light (hence the
+ * negative exponent).
+ *
+ * Not `peakAmplitudeFactor`, which holds the star at its largest across the
+ * whole cycle. That one bounds an envelope (park distances, the arrow-fade
+ * gate); anything tracking what is on screen right now takes this.
+ */
+export function pulsationRadiusFactor(pulsRho: number, phase: PulsationPhase): number {
+  return Math.pow(pulsRho, -0.5 * phase.cos);
+}
+
+/** `pulsationRadiusFactor` over a catalog index, for callers holding no
+ *  phase of their own. */
+export function livePulsationRadiusFactor(
+  catalog: Pick<Catalog, 'periodDays' | 'amplitudeMag' | 'pulsRho'>,
+  idx: number,
+  suppressPulsation: Float32Array | null | undefined,
+  u: Pick<StarPhysicsUniforms, 'uModelDays' | 'uModelDaysPerRealSec' | 'uMinPeriodSec'>,
+): number {
+  return pulsationRadiusFactor(
+    catalog.pulsRho[idx],
+    pulsationPhaseInto(catalog, idx, suppressPulsation, u, phaseScratch),
+  );
+}
+
 // The two size terms behind the GPU-rendered quad size — the CPU mirror
 // of star.vert.glsl's `max(appSize, physSize)` sizing. Consumers that
 // need the disc/glow pass split (physSize vs appSize dominance) read the
@@ -230,25 +291,11 @@ export function renderedSizeComponents(
   const R = Math.max(physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC;
   const maxPhysSize = ZOOM_FLOOR_FRACTION * Math.min(viewport.x, viewport.y);
 
-  let radiusFactor = 1;
-  const amp = activePulsationAmp(catalog, idx, args.suppressPulsation);
-  if (amp > 0) {
-    // Mirror star.vert.glsl: model-clock phase (days since J2000) with the
-    // uMinPeriodSec anti-strobe floor, φ = 0 = maximum light (cos).
-    // magMod carries the full V-band amplitude; radiusFactor swings the
-    // ρ-bounded disc with its minimum at maximum light (negative exponent).
-    const periodDaysEff = Math.max(
-      catalog.periodDays[idx],
-      u.uModelDaysPerRealSec.value * u.uMinPeriodSec.value,
-    );
-    const phaseRaw = u.uModelDays.value / periodDaysEff;
-    const phase = phaseRaw - Math.floor(phaseRaw); // fract, mirroring the shader
-    const c = Math.cos(2 * Math.PI * phase);
-
-    const magMod = -0.5 * amp * c;
-    appMag += magMod;
-    radiusFactor = Math.pow(catalog.pulsRho[idx], -0.5 * c);
-  }
+  const phase = pulsationPhaseInto(catalog, idx, args.suppressPulsation, u, phaseScratch);
+  // magMod carries the full V-band amplitude; radiusFactor swings the
+  // ρ-bounded disc. Both vanish on a non-pulsator, where amp and cos are 0.
+  appMag += -0.5 * phase.amp * phase.cos;
+  const radiusFactor = pulsationRadiusFactor(catalog.pulsRho[idx], phase);
 
   // Same perceptualDmEff soft-knee + √Δm curve as star.vert.glsl — the
   // shared CPU mirrors in solar-system/perceptual-magnitude.ts. A local

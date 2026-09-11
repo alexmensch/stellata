@@ -13,6 +13,7 @@ import {
 import type { LocalCluster } from '../../local-depth/local-depth-pass';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import type { Catalog } from '../../loaders/catalog-loader';
+import type { OccluderSet } from '../../occlusion/occluder-set';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
 import { MIRROR_CAPACITY, type StarMirror } from './star-mirror-slots';
 import { isResolvedDiscStar } from './star-local-cluster-pure';
@@ -30,6 +31,18 @@ export interface StarLocalClusterDeps {
   /** Camera-distance bound past which no star can render a member-
    *  eligible disc — the scan window. */
   scanWindowPc: () => number;
+  /** The frame's near-solid-body set. A member star's disc is opaque,
+   *  so it hides any label anchored behind it
+   *  (`../../occlusion/README.md`). */
+  occluders: OccluderSet;
+  /** The star's radius THIS frame in catalogue radii (star-physics
+   *  `livePulsationRadiusFactor`) — what the disc is drawn at, not the
+   *  cycle's peak. The shell owns the clock / suppress references. */
+  livePulsationRadiusFactor: (idx: number) => number;
+  /** The observe-anchor star (`uHideFocusIdx`), or -1. Drawn nowhere, so
+   *  it must not take a label off screen — the planet cluster skips its
+   *  own anchor body for the same reason. */
+  hiddenStarIdx: () => number;
 }
 
 export interface StarLocalClusterFrame {
@@ -146,15 +159,25 @@ export class StarLocalCluster implements LocalCluster {
 
     const local = this.deps.localPositions();
     const { physicalRadius } = this.deps.catalog;
+    const hiddenIdx = this.deps.hiddenStarIdx();
     for (const idx of this.members) {
       const dx = local[idx * 3] - camera.position.x;
       const dy = local[idx * 3 + 1] - camera.position.y;
       const dz = local[idx * 3 + 2] - camera.position.z;
       const R = Math.max(physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC;
+      // The bracket must cover the star at any phase of its cycle, so it
+      // takes the peak radius. The occluder must match the disc on screen
+      // right now, so it takes the live one — at maximum light a Mira's
+      // peak is ρ = 1.4× the disc actually drawn.
       this.spheres.push({
         distPc: Math.sqrt(dx * dx + dy * dy + dz * dz),
         radiusPc: R * peakAmplitudeFactor(this.deps.catalog, idx),
       });
+      if (idx === hiddenIdx) continue;
+      this.deps.occluders.addSphere(
+        local[idx * 3], local[idx * 3 + 1], local[idx * 3 + 2],
+        R * this.deps.livePulsationRadiusFactor(idx),
+      );
     }
     this.pathLayer.collectSpheres(camera, this.spheres);
   }

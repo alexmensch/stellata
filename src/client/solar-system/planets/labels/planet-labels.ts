@@ -127,7 +127,7 @@ export function createPlanetLabels(stellata: Stellata): void {
         continue;
       }
       tmp.set(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-      placeAnchoredLabel(e.el, tmp, camera, w, h, LABEL_OFFSET_PX);
+      placeAnchoredLabel(e.el, tmp, camera, w, h, LABEL_OFFSET_PX, stellata.occluders);
     }
   });
 }

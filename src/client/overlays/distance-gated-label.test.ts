@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as THREE from 'three';
+import { OccluderSet } from '../occlusion/occluder-set';
 import { createDistanceGatedLabel, type LabelFrameHost } from './distance-gated-label';
 
 interface FakeText {
@@ -43,6 +44,7 @@ interface FakeHost extends LabelFrameHost {
   fireFrame: () => void;
   framed: { cb?: () => void };
   unsubscribed: number;
+  occluders: OccluderSet;
 }
 
 function makeHost(camera: THREE.PerspectiveCamera): FakeHost {
@@ -51,6 +53,7 @@ function makeHost(camera: THREE.PerspectiveCamera): FakeHost {
     camera,
     framed,
     unsubscribed: 0,
+    occluders: new OccluderSet(),
     fireFrame: () => framed.cb?.(),
     onFrame: (cb) => {
       framed.cb = cb;

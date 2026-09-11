@@ -76,6 +76,24 @@ disc-pass split × `RESOLVED_DISC_MIN_PX`, evaluated on the
 core-mask gate's sorted-distance walk
 (`StarFrame.forEachStarNearCamera` — `../frame/README.md`).
 
+Every member's disc is also published as a label occluder
+(`../../occlusion/README.md`): a member resolves as a disc by
+definition, and an opaque disc hides any label anchored behind it. The
+orbit-path extent spheres stay out of that set — they are line
+geometry spanning a whole orbit, and so does the observe-anchor star
+(`uHideFocusIdx`), which is drawn nowhere and must not take a label off
+screen — the same rule the planet cluster applies to its own anchor body.
+
+**The occluder radius is not the bracket radius.** The bracket sphere
+takes `peakAmplitudeFactor`, holding a variable at its largest over the
+whole cycle, because it must cover the star at any phase. The occluder
+takes `livePulsationRadiusFactor` — the radius this frame — because it
+must match the disc on screen: at maximum light a variable is at its
+SMALLEST, so the peak over-reaches the drawn disc by the full ρ (1.4 for
+a Mira, 1.15 for a Cepheid), and the mask would breathe against a body
+that never moved. The same split already exists in pixels, as
+`renderedDiscPxAtPeak` against `renderedSizePx`.
+
 Membership parks only in chart mode (flat ink discs, depth disabled —
 suppression and mirrors must stay out of the way). The pass renders on
 both boots; on WebGPU the cluster drives the TSL mirror

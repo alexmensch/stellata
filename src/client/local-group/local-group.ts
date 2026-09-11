@@ -7,7 +7,7 @@ import { maxSemiAxisPc } from './local-group-loader';
 import { FADE_INNER_PC, FADE_OUTER_PC, smoothstep } from '../galactic/galactic-fade';
 import type { KindContext } from '../kinds/kind-module';
 import type { Stellata } from '../stellata';
-import { createDistanceGatedLabel, labelHostOf } from '../ui/distance-gated-label';
+import { createDistanceGatedLabel, labelHostOf } from '../overlays/distance-gated-label';
 import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { MIDPLANE_RADIUS_PC } from '../galactic/galactic-disc';
 import type {
@@ -502,7 +502,8 @@ export function computeVisibleLabelsInto(
  *  module (the Milky Way is not an lg catalog object). */
 export type LgLabelHost = Pick<
   KindContext,
-  'camera' | 'onFrame' | 'getWorldOffset' | 'getMonochrome' | 'detailPermits'
+  'camera' | 'onFrame' | 'occluders' | 'getWorldOffset' | 'getMonochrome'
+  | 'detailPermits'
 >;
 
 function lgLabelHostOf(stellata: Stellata): LgLabelHost {

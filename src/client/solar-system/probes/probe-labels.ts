@@ -66,7 +66,7 @@ export function createProbeLabels(ctx: KindContext, field: ProbeField): () => vo
       tmp.copy(sample.localPc);
       const label = probeLabelText(traj, ctx.getT());
       if (el.textContent !== label) el.textContent = label;
-      placeAnchoredLabel(el, tmp, camera, w, h, LABEL_OFFSET_PX);
+      placeAnchoredLabel(el, tmp, camera, w, h, LABEL_OFFSET_PX, ctx.occluders);
     }
   });
 

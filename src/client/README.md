@@ -64,6 +64,10 @@ themselves.
   z-buffer occlusion the main pass's log depth cannot. The planet
   mesh LOD renders through it; the design doc for the remaining
   migration steps lives in its README.
+- `occlusion/` — the frame's near-solid-body set and the angular test
+  over it. SVG composites above the resolved frame with no depth
+  relationship to it, so a label surface asks here whether a nearer
+  body hides its anchor. Published by the two local-depth clusters.
 - `camera/` — camera controllers split across `controls/`, `focus/`,
   `warp/`, `observe/`, `arrival/`.
 - `star-pipeline/`, `solar-system/`, `local-group/`, `milkyway/`,
@@ -291,7 +295,11 @@ chrome row is gated out of it.
 
 There is no z-ordering between WebGL and SVG. The WebGL canvas paints
 first; the SVG `#overlay` always sits above it (`z-index: 5`,
-`pointer-events: none`). Inside each layer the ordering is local:
+`pointer-events: none`). **Every label surface therefore asks
+[occlusion/](occlusion/README.md) whether a nearer body hides its
+anchor** — a CPU answer, because no depth verdict reaches a `<text>`
+element. Without it a moon behind its planet keeps its label and a
+150 pc cloud name draws over a body 5 AU away. Inside each layer the ordering is local:
 WebGL by `THREE.Object3D.renderOrder`, SVG by source order in
 `src/client/index.html` (later child = on top). The constellation
 figure is depth-tested WebGL line geometry (`renderOrder −0.75`), so

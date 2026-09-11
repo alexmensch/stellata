@@ -167,6 +167,21 @@ build scripts, tests, and shader uniforms.
   Vondrák carries its own obliquity constant (84381.406″, IAU 2006) for
   the same reason: it is part of the published series, not a duplicate of
   `J2000_OBLIQUITY_RAD`.
+- `polar-scale.ts` (+ test) — `scalePolarInto`, scaling a vector's
+  component along a body's pole. `s = 1/polarRatio` carries an oblate
+  spheroid onto the sphere of its equatorial radius; the map is linear
+  about the body centre, so lines map to lines with their parameter
+  unchanged, which is what makes a sphere test **exact** for a spheroid
+  once both endpoints go through it rather than merely closer. Two
+  consumers ask opposite questions of the same arithmetic: the atmosphere
+  march runs in the frame where the body IS a unit sphere
+  (`../solar-system/atmosphere/atmosphere-scattering-pure.ts:scalePolarComponent`,
+  which stays the named CPU mirror of `stellata_scalePolar` and delegates
+  here), and the label occluder asks whether a flattened body hides a
+  point (`../occlusion/README.md`). The **value** of `1 − f` is not this
+  file's to hold — that is
+  `../solar-system/planets/spheroid-pure.ts:polarRadiusRatio`, and
+  deriving it inline anywhere is the drift that README warns about.
 - `pending-click.ts` — single/double-click disambiguator (hold a
   click for the double window, fire single on expiry), plus the
   `DBL_CLICK_MS` / `DBL_CLICK_DIST_PX_SQ` window every surface shares.

@@ -66,6 +66,13 @@ src/client/solar-system/planets/
                                   surfaces through ../materials/, which
                                   owns the shared atmosphere uniform
                                   block. Its test pins the diffuse gate.
+                                  drawnPoleInto is the seam anything
+                                  needing the body's DRAWN shape asks
+                                  through: the pole the mesh is oriented
+                                  by, and false while its mesh is down
+                                  (only the round glare draws there).
+                                  The label occluder reads it —
+                                  ../../occlusion/README.md.
   mesh-crossfade.ts (+ test)      Disc ↔ mesh crossfade band math, pure
                                   (shared shader/CPU contract).
   spheroid-pure.ts (+ test)       polarRadiusRatio — the one source of 1 − f.

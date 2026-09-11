@@ -40,12 +40,25 @@ src/client/overlays/
   anchored-label.ts (+ test)      placeAnchoredLabel — position an SVG
                                   label at its anchor's projected point
                                   plus an offset, or hide it when the
-                                  anchor is at/behind the near plane.
+                                  anchor is at/behind the near plane or
+                                  a nearer body hides it
+                                  (../occlusion/README.md). The occluder
+                                  set is a required argument, not an
+                                  optional one, so a new label family
+                                  cannot ship without the gate.
                                   The per-entry half of the object-label
                                   families (planets, probes); the
                                   offset is a parameter, since each
                                   family owns its own gap from its
                                   referent.
+  distance-gated-label.ts         createDistanceGatedLabel — the
+    (+ test)                      silhouette half of the same families.
+                                  See § The two label halves.
+  label-dom-mock.ts               Minimal SVG-label DOM fake (named
+                                  containers + mint-and-lookup of <text>
+                                  by id) shared by the engine's own suite
+                                  and the label-family suites that stub
+                                  `document` wholesale.
   arrow-fade.ts (+ test)          Shared shaft-fade curve for Sol/GC
                                   arrows + future arrow consumers.
   arrow-path.ts (+ test)          Shared arrow geometry (shaft + head)
@@ -62,6 +75,37 @@ src/client/overlays/
                                   POI labels and the distance-vector
                                   destination label.
 ```
+
+## The two label halves
+
+Every object label in the app is placed by one of two engines here, and
+which one a family takes is decided by **what the label points at**:
+
+- **`anchored-label.ts` — a point.** The referent has a position and
+  the label hangs off its projection at a fixed diagonal offset.
+  Planets, moons, probes. Called per entry, per frame, by a family that
+  owns its own loop.
+- **`distance-gated-label.ts` — a surface.** The referent is a volume
+  with no meaningful centre to label, so the caller supplies silhouette
+  samples and the engine anchors to the **support point**: the sample
+  whose projection sits furthest along a chosen screen direction, so
+  the gap from the curve stays constant as the camera orbits (a
+  bbox-corner anchor varies, since the silhouette falls inside the
+  corner). Molecular clouds, the heliopause, the Local Bubble, the
+  Milky Way, the Local Group objects — the last three through
+  `../fresnel-shell/`'s `createShellSilhouetteLabel`, which fixes the
+  shared shell config. It owns a subscription rather than a call:
+  `createDistanceGatedLabel` registers its own frame handler and
+  returns the teardown.
+
+Both hide on the same three questions — the caller's own predicate,
+geometry at or behind the near plane, and a nearer body hiding the
+anchor (`../occlusion/README.md`). Keep that symmetry: a gate added to
+one half belongs in the other unless the asymmetry is argued here.
+
+`LabelFrameHost` is the slice of `KindContext` the silhouette engine
+reads, so a kind module hands it `ctx` directly and anything wired
+outside a module goes through `labelHostOf(stellata)`.
 
 ## Vector clipping at the near plane
 

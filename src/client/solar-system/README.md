@@ -263,6 +263,23 @@ The hand-off parks only in chart mode (flat main-pass ink discs — a
 collapsed slot whose mirror never repaints is a body that draws nowhere
 at all); the pass itself renders on both boots.
 
+While active the cluster also publishes each body as a label occluder
+(`../occlusion/README.md`) — the same walk, one extra push, skipping
+the observe-anchor body, which is shader-hidden and so hides nothing.
+The host star is NOT pushed here: it mirrors through the star cluster,
+which publishes every member disc it owns.
+
+**It publishes the shape the body is DRAWN at, not a stand-in for it.**
+Above the mesh crossfade band that is the flattened spheroid — the polar
+ratio from `planets/spheroid-pure.ts:polarRadiusRatio` and the pole from
+`PlanetMeshLayer.drawnPoleInto`, which reports the orientation the mesh
+is actually drawn with and refuses for a body whose mesh is down. Below
+the band only the round glare billboard draws, so a sphere is published
+and that is correct rather than a fallback. A mask that stayed round
+through the mesh regime over-reaches the drawn limb by the body's whole
+flattening toward the poles; at Saturn's 0.098 that is a band tens of
+pixels deep at the planet-focus zoom floor, blanking labels in open sky.
+
 The activation predicate and the orbit-ring extent radius are pure and
 vitest-pinned in `local-cluster-pure.ts`; `RING_EXTENT_MARGIN` is also
 read by `../binaries/orbit-paths/binary-orbit-path-layer.ts`.

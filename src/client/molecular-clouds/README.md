@@ -205,7 +205,10 @@ absorption keeps working from inside.
 and wires each through the shared shell-label engine
 (`createShellSilhouetteLabel` — identical placement to the Local Bubble
 and heliopause labels: silhouette support point + bottom-right offset +
-chase lerp, near-plane bail hides the label with the camera inside).
+chase lerp, near-plane bail hides the label with the camera inside, and
+the engine's occlusion gate hides one whose support point sits behind a
+planet, moon or resolved star disc — `../occlusion/README.md`, the fix
+for a 150 pc cloud name drawn over a body 5 AU away).
 Samples come from `labelSampleCount` / `labelSampleInto` on the layer —
 a stride subsample of the traced mesh's vertices, or a fibonacci sweep
 of the `u = uEnv` envelope for fallback clouds. A `labels`-tier

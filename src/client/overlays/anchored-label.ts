@@ -1,6 +1,7 @@
 // Place-or-hide for an SVG label anchored to a renderer-local position.
 
 import type * as THREE from 'three';
+import type { OccluderQuery } from '../occlusion/occluder-set';
 import { projectToScreenInto } from './overlay-project';
 
 const scratchXy: [number, number] = [0, 0];
@@ -17,11 +18,14 @@ export interface LabelSurface {
  * Position `el` at its anchor's projected screen point, offset by `offsetPx`
  * on both axes, or hide it when the anchor has no meaningful projection —
  * `projectToScreenInto` rejects at-or-behind-near-plane points, where the
- * perspective divide would smear the label across the viewport edge.
+ * perspective divide would smear the label across the viewport edge — or
+ * when a nearer body hides the anchor (`../occlusion/README.md`).
  *
  * Returns whether the label was shown, so a caller with further gates can
  * chain on it. The offset is a parameter rather than a constant here because
- * each label family owns its own gap from its referent.
+ * each label family owns its own gap from its referent. `occluders` is
+ * required rather than optional so a new label family cannot quietly ship
+ * without the gate.
  */
 export function placeAnchoredLabel(
   el: LabelSurface,
@@ -30,8 +34,10 @@ export function placeAnchoredLabel(
   viewportW: number,
   viewportH: number,
   offsetPx: number,
+  occluders: OccluderQuery,
 ): boolean {
-  if (!projectToScreenInto(localPos, camera, viewportW, viewportH, scratchXy)) {
+  if (!projectToScreenInto(localPos, camera, viewportW, viewportH, scratchXy)
+    || occluders.hides(localPos, camera.position)) {
     el.style.display = 'none';
     return false;
   }

@@ -132,8 +132,8 @@ per-object override on the family tints.
 ## Label engine
 
 `createMilkyWayLabel` and `createLocalGroupLabels` both use the shared
-`distance-gated-label.ts` helper (extracted from the heliopause's
-label code earlier in this layer's PR). Each label binds to:
+silhouette label engine (`../overlays/README.md` § The two label
+halves). Each label binds to:
 
 - A per-frame visibility predicate (`visibleLabelIds.has(id)` — a
   shared Set written by the global ranking pass, see below).
@@ -146,6 +146,12 @@ label code earlier in this layer's PR). Each label binds to:
   12 × 5 + 2 = 62 sample grid as the heliopause.
 - The same screen-space anchor convention as the heliopause:
   bottom-right at a constant 10 px gap.
+
+The ranking below decides which labels compete for the screen; the
+engine's own occlusion gate (`../occlusion/README.md`) then hides any
+whose support point sits behind a near body. The two are independent —
+apparent size says a label is worth showing, occlusion says the pixels
+under it belong to something nearer.
 
 ### Ranking policy — `computeVisibleLabelsInto`
 

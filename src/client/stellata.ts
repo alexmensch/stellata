@@ -112,6 +112,7 @@ import type { PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import type { PlanetBodyField } from './solar-system/planets/planet-body-field';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
+import { OccluderSet } from './occlusion/occluder-set';
 import { SolarSystemCluster } from './solar-system/local-cluster';
 import { StarLocalMirror } from './star-pipeline/local-pass/star-local-mirror';
 import { StarLocalCluster } from './star-pipeline/local-pass/star-local-cluster';
@@ -438,6 +439,10 @@ export class Stellata implements FrameAnchor {
   private coreMaskEnabled = true;
   private starLocalCluster: StarLocalCluster;
   private solarCluster: SolarSystemCluster;
+  /** The frame's near-solid-body set, published by the two local-depth
+   *  clusters and read by every SVG label surface
+   *  (`occlusion/README.md`). */
+  readonly occluders = new OccluderSet();
   private coordSpheres: Record<DrawnCoordSphereFrame, CoordSphere>;
   readonly hud: HudOverlay;
   /** Chart-mode label + glyph engine. `chart-mode.ts` starts / stops it on
@@ -691,6 +696,10 @@ export class Stellata implements FrameAnchor {
         // where the largest star's disc crosses the product.
         scanWindowPc: () =>
           this.starFrame.discWindowPcFor(RESOLVED_DISC_MIN_PX * PHYS_RATIO_THRESHOLD),
+        occluders: this.occluders,
+        livePulsationRadiusFactor: (idx) => starPhysics.livePulsationRadiusFactor(
+          catalog, idx, this._suppressPulsation, this.sharedUniforms),
+        hiddenStarIdx: () => sharedUniforms.uHideFocusIdx.value,
       },
     );
     this.localDepthPass.register(this.starLocalCluster);
@@ -742,6 +751,7 @@ export class Stellata implements FrameAnchor {
       detailPermits: (id) => this.detailPermits(id),
       constellationOf: (kind, idx) => this.constellationOf(kind, idx),
       onFrame: (handler) => this.bus.on('frame', handler),
+      occluders: this.occluders,
       requestRender: (reason) => this.renderGate.invalidate(`kind:${reason}`),
       webgpu: this.webgpu,
       chromeLines: this.chromeLines,
@@ -757,6 +767,7 @@ export class Stellata implements FrameAnchor {
       this.kinds.probe.field,
       this.kinds.probe.pathLayer,
       this.starLocalCluster,
+      this.occluders,
     );
     this.localDepthPass.register(this.solarCluster);
     // System-membership registry: binaries FIRST so a collapsed pair's
@@ -2550,6 +2561,10 @@ export class Stellata implements FrameAnchor {
     // move the camera, which is why the accumulator is cleared here and
     // read straight after.
     this._rideAccum.set(0, 0, 0);
+    // Cleared here rather than by either publisher: both local-depth
+    // clusters push into it during the fan-out below, and whichever ran
+    // first would otherwise drop the other's entries.
+    this.occluders.beginFrame();
     this.layers.updateAll(this.frameCtx);
     this.refreshCadence();
     // After the layer fan-out so the star cluster's membership is
