@@ -5,6 +5,7 @@ import {
   type CadenceCtx,
   type ContributionSkip,
   type FrameCtx,
+  type LayerTimeBehaviour,
   type SceneLayer,
 } from './scene-layer';
 import { makeCadenceCtx, makeFrameCtx } from './frame-ctx-mock';
@@ -33,11 +34,14 @@ function reporting(report: Partial<CadenceReport>): SceneLayer {
 
 /** A gated layer whose verdict the test scripts per call, recording every
  *  `update` and `setContributing` it receives. */
-function gated(verdicts: (ContributionSkip | null)[]) {
+function gated(
+  verdicts: (ContributionSkip | null)[],
+  timeBehaviour: LayerTimeBehaviour = STATIC,
+) {
   const calls: string[] = [];
   let n = 0;
   const layer: SceneLayer = {
-    timeBehaviour: STATIC,
+    timeBehaviour,
     contribution: {
       kind: 'gated',
       skip: () => verdicts[Math.min(n++, verdicts.length - 1)],
@@ -222,6 +226,38 @@ describe('SceneLayerRegistry — contribution gating', () => {
     });
     expect(() => reg.updateAll(makeCtx())).toThrow(AggregateError);
     expect(order).toEqual(['b']);
+  });
+
+  it('a skipped clock layer is left out of the frame rate — its update never ran', () => {
+    const reg = new SceneLayerRegistry();
+    const moving: CadenceReport = { ...CADENCE_REPORT_STILL, screenPxPerSimS: 100 };
+    const g = gated(['frustum'], { kind: 'clock', rate: () => moving });
+    reg.register(g.layer);
+    reg.updateAll(makeCtx());
+    expect(reg.cadenceReport(makeCadenceCtx(new THREE.PerspectiveCamera())))
+      .toEqual(CADENCE_REPORT_STILL);
+  });
+
+  it('the same layer binds the budget again on the frame it returns', () => {
+    const reg = new SceneLayerRegistry();
+    const moving: CadenceReport = { ...CADENCE_REPORT_STILL, screenPxPerSimS: 100 };
+    const g = gated(['frustum', null], { kind: 'clock', rate: () => moving });
+    reg.register(g.layer);
+    const cc = makeCadenceCtx(new THREE.PerspectiveCamera());
+    reg.updateAll(makeCtx());
+    expect(reg.cadenceReport(cc).screenPxPerSimS).toBe(0);
+    reg.updateAll(makeCtx());
+    expect(reg.cadenceReport(cc).screenPxPerSimS).toBe(100);
+  });
+
+  it('a skipped realtime layer stops defeating idling', () => {
+    const reg = new SceneLayerRegistry();
+    const g = gated(['opacity'], { kind: 'realtime', needsFrames: () => true });
+    reg.register(g.layer);
+    const fc = makeCtx();
+    expect(reg.realtimeFramesNeeded(fc)).toBe(true);
+    reg.updateAll(fc);
+    expect(reg.realtimeFramesNeeded(fc)).toBe(false);
   });
 
   it('disposeAll resets the skip state, so a census after teardown reads clean', () => {

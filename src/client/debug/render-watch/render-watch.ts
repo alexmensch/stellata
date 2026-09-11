@@ -176,9 +176,8 @@ export function mountRenderWatch(stellata: Stellata, opts: RenderWatchOpts = {})
         + `    realtime ${cadence.realtimeNeeded ? 'YES' : 'no'}`,
       `layers       ${cadence.census.static} static · ${cadence.census.clock} clock`
         + ` · ${cadence.census.realtime} realtime`,
-      `contribute   ${c.always} always · ${c.gated} gated`
-        + ` · skipping ${c.skipped.frustum} frustum`
-        + ` · ${c.skipped.legibility} legibility · ${c.skipped.opacity} opacity`,
+      `contribute   ${c.always} always · ${c.gated} gated · skipping `
+        + Object.entries(c.skipped).map(([why, n]) => `${n} ${why}`).join(' · '),
       '',
       `stamped by   ${stampedBy}`,
       `last wake    ${wake === null ? 'none' : `${wake.reason}`

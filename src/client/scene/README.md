@@ -195,9 +195,9 @@ many-providers pattern (`../hover/README.md`).
 
 Adding a layer = constructing it + one `register(...)` call. Hooks
 are optional except `dispose`, `timeBehaviour` and `contribution`; a
-layer that doesn't
-participate in a fan-out simply omits the hook (e.g. the heliopause has
-no per-frame update — its visibility is event-driven, and `chart-labels`
+layer that doesn't participate in a fan-out simply omits the hook (e.g.
+the heliopause has no per-frame update — its visibility is event-driven,
+and `chart-labels`
 registers `dispose` alone because its per-frame work rides the `'frame'`
 event under `chart-mode.ts`'s start/stop gate).
 
@@ -302,8 +302,10 @@ runs `skip` before `update` and, on a skip, calls neither `update` nor
 the draw — three skips a hidden group for free. `setContributing` fires
 on the **transition only**, so a layer that stays skipped pays one
 predicate call per frame. `recenter`, `setMonochrome` and `dispose` still
-reach a skipped layer; only `update` and the draw are elided. Detail-permit
-and warp gating stay inside `update` — contribution is a layer above them,
+reach a skipped layer; `update`, the draw and both per-frame
+`timeBehaviour` polls are elided (§ A skipped layer reports nothing).
+Detail-permit and warp gating stay inside `update` — contribution is a
+layer above them,
 and a skipped layer never evaluates its permit. Per-layer state seeds
 `contributing = true`, so a layer that draws from its first frame keeps
 its constructed visibility and is never told anything.
@@ -322,9 +324,53 @@ rotation — so `FrameCtx.frustum` is invalidated every tick in
 `refreshFrameCtx` and refreshed by the orbit-lock entry after its write
 (§ Camera writes, then camera reads). A `'frustum'` test on an entry
 registered above the lock throws on its first frame rather than culling
-against a pose the frame does not render. `pxPerRadian` has no such
-constraint: it is a function of viewport and FOV alone, hoisted above the
-gate, and `CadenceCtx.pxPerRadian` is a copy of it.
+against a pose the frame does not render.
+
+**Eight entries are above the lock, and which ones is not obvious from
+reading `registerSceneLayers` alone.** All five kind-module layers —
+molecular clouds, Local Group, the boundary shells, planets, probes —
+register in the constructor's roster loop, which runs *before*
+`registerSceneLayers` (§ How the shell uses it); the moving-focal ride,
+the orbit rings and the binary orbits are the three inline entries ahead
+of the lock. So clouds, the Local Group and the shells may gate on
+legibility and opacity but **not** on frustum, and moving them below the
+lock is not free: a module layer writes the positions the focal ride
+reads, and the ride must precede the lock. Splitting one into a
+position-write half and a draw-gate half is the only route, and it is
+adoption's problem, not the contract's. `realtimeFramesNeeded` never
+sees a valid frustum from any position — it runs above the gate, ahead
+of every camera write in the frame.
+
+`pxPerRadian` has no such constraint: it is a function of viewport and
+FOV alone, hoisted above the gate, and `CadenceCtx.pxPerRadian` is a
+copy of it.
+
+### A skipped layer reports nothing
+
+The two per-frame polls that read `timeBehaviour` — `cadenceReport` and
+`realtimeFramesNeeded` — skip a non-contributing layer, so the fan-outs
+a skipped layer still receives are `recenter`, `setMonochrome` and
+`dispose` alone. Both have the same two reasons. Its `update` did not
+run, so a rate it reported would be computed from the state of whichever
+frame it last drew; and a layer that cannot put a pixel on screen cannot
+move one, so it has no claim on the frame's redraw budget. Asking it
+anyway would leave the layer scheduling frames for content it is not
+drawing — the draw and the update saved, the frames not.
+
+**This holds only while every admissible skip reason is a function of
+camera pose.** Frustum, legibility and opacity all are, and camera
+motion wakes the gate on its own, so a skipped layer is re-tested the
+moment anything could change its verdict. A reason that is *not* a
+function of pose — the deferred brightness test, whose input is the live
+exposure — could fall skipped with the camera still and never be asked
+again, because no `updateAll` would run to re-evaluate it. Admitting one
+means giving it a wake path of its own; the design gate that admits it
+owns that (stellata-8cg.50.4).
+
+`cadenceReport` runs after `updateAll`, so it reads this frame's
+verdicts. `realtimeFramesNeeded` runs above the gate and reads the last
+rendered frame's — a layer stays presumed-skipped until a frame proves
+otherwise, which is the conservative direction.
 
 **The contract is per layer.** Per-instance culling inside a layer —
 one cloud of ninety-six behind the camera — is `docs/render-rules.md`

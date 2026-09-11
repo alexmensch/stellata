@@ -233,32 +233,46 @@ export class SceneLayerRegistry {
     return out;
   }
 
-  /** Channel-wise fastest report over every `'clock'` layer — the frame's
-   *  single rate, which the gate turns into one budget. Run AFTER
-   *  `updateAll`, so each report reads the state its own update just
-   *  wrote, and after the focal ride, so `ctx.cameraVelPcPerSimS` is this
-   *  frame's.
+  /** Channel-wise fastest report over every CONTRIBUTING `'clock'` layer —
+   *  the frame's single rate, which the gate turns into one budget. Run
+   *  AFTER `updateAll`, so each report reads the state its own update just
+   *  wrote and this frame's skip verdicts are already in, and after the
+   *  focal ride, so `ctx.cameraVelPcPerSimS` is this frame's.
+   *
+   *  A skipped layer is excluded rather than asked: its `update` did not
+   *  run, so its rate would read the state of whichever frame it last
+   *  drew — and content that cannot reach a pixel cannot move one
+   *  (README.md § A skipped layer reports nothing).
    *
    *  A NaN rate cannot win: `maxCadenceReport` compares rather than
    *  calling `Math.max`, so a layer returning garbage cannot freeze the
    *  clock for every other layer. */
   cadenceReport(ctx: CadenceCtx): CadenceReport {
     let out = CADENCE_REPORT_STILL;
-    for (const layer of this.layers) {
-      if (layer.timeBehaviour.kind !== 'clock') continue;
-      out = maxCadenceReport(out, layer.timeBehaviour.rate(ctx));
+    for (let i = 0; i < this.layers.length; i++) {
+      if (!this.contributing[i]) continue;
+      const { timeBehaviour } = this.layers[i];
+      if (timeBehaviour.kind !== 'clock') continue;
+      out = maxCadenceReport(out, timeBehaviour.rate(ctx));
     }
     return out;
   }
 
-  /** Whether any `'realtime'` layer needs wall-clock frames right now.
-   *  True defeats idling entirely, which is why the kind is a last resort
-   *  and this is worth reading in the render watcher. Evaluated above the
-   *  gate — see `LayerTimeBehaviour`. */
+  /** Whether any contributing `'realtime'` layer needs wall-clock frames
+   *  right now. True defeats idling entirely, which is why the kind is a
+   *  last resort and this is worth reading in the render watcher.
+   *
+   *  Evaluated ABOVE the gate — see `LayerTimeBehaviour` — so unlike
+   *  `cadenceReport` it reads the skip verdicts of the last rendered
+   *  frame, not this tick's. A skipped layer is excluded on the same
+   *  ground, which is only safe while every admissible skip reason is a
+   *  function of camera pose (README.md § A skipped layer reports
+   *  nothing). */
   realtimeFramesNeeded(ctx: FrameCtx): boolean {
-    for (const layer of this.layers) {
-      if (layer.timeBehaviour.kind === 'realtime'
-        && layer.timeBehaviour.needsFrames(ctx)) return true;
+    for (let i = 0; i < this.layers.length; i++) {
+      if (!this.contributing[i]) continue;
+      const { timeBehaviour } = this.layers[i];
+      if (timeBehaviour.kind === 'realtime' && timeBehaviour.needsFrames(ctx)) return true;
     }
     return false;
   }
