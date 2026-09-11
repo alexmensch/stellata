@@ -27,11 +27,12 @@ export const TIER1_SCENARIOS = ['mw120', 'sol'] as const satisfies readonly Scen
 
 /**
  * `<base>/v/<blob>/` plus the fragment: the WebGL2 escape hatch where that
- * backend was asked for, and `--hash`'s own switches after it. The app reads
+ * backend was asked for, and `--hash`'s own switches after it, which
+ * `parseRunArgs` has already stripped of any leading `#`. The app reads
  * every switch off one hash, `&`-joined, so the two compose.
  */
 export function scenarioUrl(base: string, blob: string, backend: Backend, hash = ''): string {
   const root = base.replace(/\/+$/, '');
-  const parts = [backend === 'webgl2' ? 'renderer=webgl2' : '', hash.replace(/^#/, '')].filter((p) => p !== '');
+  const parts = [backend === 'webgl2' ? 'renderer=webgl2' : '', hash].filter((p) => p !== '');
   return `${root}/v/${blob}/${parts.length > 0 ? `#${parts.join('&')}` : ''}`;
 }
