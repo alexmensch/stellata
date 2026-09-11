@@ -24,6 +24,8 @@ disables. Hidden in chart mode.
   receives as uniforms, plus a CPU mirror of its raymarch. Owns the ρ₀ solve
   (`calibration/README.md`); the shader's step counts are pinned against the
   mirror.
+- `band-peak-pure.ts` (+ test) — the brightest sightline the band renders
+  from a camera position, as a bound (§ The brightest rendered sightline).
 - `calibration/` — the published photometry the solve runs on (M_V, B/T,
   the two components' B−V), the light ratio and the disc colour derived
   from it, and the two sightline checks it is graded against. Its own
@@ -191,6 +193,33 @@ stars together, by construction.
 B/T is derived from a published mass ratio, how the two population colours
 are derived from a published integrated one, the two Leinert checks the
 result is graded by, and the sightline table those produce.
+
+## The brightest rendered sightline
+
+`MilkyWay.peakSurfaceBrightnessBound(cameraAbsPc)` answers, in mag/arcsec²,
+"how bright can the band's brightest pixel be from here" — an upper bound
+the brightness skip compares against the live extended threshold
+(`docs/science-hdr-pipeline.md` § 3.5). Two tiers, both off the CPU mirror:
+
+- `MW_PEAK_SB_DUST_FREE` (17.11) — the dust-free full central chord,
+  marched dense. Brighter than any vantage can render, so it settles the
+  deep cuts (planet approaches) with no per-frame work.
+- `bandPeakFan(cameraGalPc)` — the dusty peak from the live camera: a polar
+  fan around the Galactic-centre direction out to the cone that still meets
+  the disc proxy (24 rings × 36 azimuths, then three 7×7 refinements at a
+  third of the spacing each), ~2–6 ms. Centring on the centre is what keeps
+  it scale-free — from a megaparsec the Galaxy spans two degrees and an
+  absolute (l, b) grid would miss it. `BAND_PEAK_MARGIN_MAG` (0.05) covers
+  the fan's worst shortfall against a dense sweep over an eight-vantage grid
+  (0.038, pinned); `BAND_PEAK_STALENESS_MAG` (0.07) covers the peak's drift
+  over the cache's `BAND_PEAK_RECOMPUTE_PC` (10 pc) of travel — vertical
+  travel near the plane moves it 0.006 mag/pc, the brightest sightline
+  skimming the 125 pc dust layer.
+
+From Sol the dusty peak is 20.69 at |b| = 6.4° toward the centre (the two
+signs tie; the model is z-symmetric), 3.5 mag under the default view's
+threshold where the ceiling alone misses by 0.10. `BandPeakCache` is keyed
+on camera position only — never on exposure — and `dispose` resets it.
 
 ## Coordinate handling
 

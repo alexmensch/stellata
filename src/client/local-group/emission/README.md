@@ -28,6 +28,10 @@ are no Deep-field emission knobs (§ Zero free parameters).
   mirror, the tint derivation.
 - `local-group-emission-calibration.test.ts` — the epic's acceptance
   test (§ Zero free parameters).
+- `lg-peak-pure.ts` (+ test) — the brightest pixel the glow renders from a
+  camera position, as a bound (§ The brightest rendered pixel).
+- `lg-test-catalog.ts` — the shipped catalogue assembled from `data/` for
+  the suites above, since a worktree carries no `public/` artifact.
 
 ## The two passes
 
@@ -228,6 +232,34 @@ through the same raymarch rather than restating the algebra
 (`expandComponent` is the vertex stage's CPU twin — keep them in
 lockstep). Worst measured deviation across 5 objects × k ∈ {1.5, 4, 20}:
 8e-6 mag.
+
+## The brightest rendered pixel
+
+`LocalGroupEmission.peakSurfaceBrightness(cameraAbsPc, Ω_px)` answers, in
+mag/arcsec², "how bright can the glow's brightest pixel be from here" — an
+upper bound the brightness skip compares against the live extended
+threshold (`docs/science-hdr-pipeline.md` § 3.5). Per object it is the
+shader's own central ray — the CPU mirror from the actual camera through
+the component's centre, footprint at each sample's true distance —
+**maximised over the jitter phase** (`LG_PEAK_JITTER_PHASES`, 64), summed
+over the object's components; the layer takes the brightest object.
+
+The phase maximum is what makes it a bound rather than a typical value:
+the shader shifts every pixel's samples by a hash in [0, 1) of a step, and
+on a Sérsic cusp the nucleus pixel is whichever sample lands nearest the
+centre — 0.82 mag over the midpoint phase for M31's bulge from eight mesh
+radii at a 10° field (pinned). An exact softened integral is *not* a bound
+on that pixel; a first cut built on one was beaten by 1.3 mag. The same
+overshoot, pixel to pixel, is a nucleus-sparkle candidate the mirror's
+deterministic midpoints cannot show. Rays through neighbouring pixels see
+the profile pointwise dimmer, so the centre ray's maximum covers them
+(checked one pixel out in eight directions). The sub-pixel expansion is
+left out because it only lowers surface brightness.
+
+From Sol at the acceptance plate scale M31 bounds at 17.42 — 0.2 mag under
+the default view's 17.21 threshold, so the glow can skip there.
+`LgPeakCache` is keyed on camera position (`LG_PEAK_RECOMPUTE_PC`, 500 pc)
+and `Ω_px`, never on exposure; `dispose` resets it.
 
 ## What a viewer actually reads
 
