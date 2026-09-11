@@ -281,12 +281,12 @@ drawing — the draw and the update saved, the frames not.
 camera pose.** Frustum, legibility and opacity all are, and camera
 motion wakes the gate on its own, so a skipped layer is re-tested the
 moment anything could change its verdict. A reason that is *not* a
-function of pose — the brightness test, whose input is the live
-exposure — could fall skipped with the camera still and never be asked
-again, because no `updateAll` would run to re-evaluate it. Its design
-gate discharges that by construction rather than by a scheduler: every
-input to its verdict changes only on a rendered frame
-(`docs/science-hdr-pipeline.md` § 3.5).
+function of pose — the brightness test, which ships with
+stellata-8cg.50.4.2 and whose input is the live exposure — could fall
+skipped with the camera still and never be asked again, because no
+`updateAll` would run to re-evaluate it. Its design gate discharges that
+by construction rather than by a scheduler: every input to its verdict
+changes only on a rendered frame (`docs/science-hdr-pipeline.md` § 3.5).
 
 `cadenceReport` runs after `updateAll`, so it reads this frame's
 verdicts. `realtimeFramesNeeded` runs above the gate and reads the last
