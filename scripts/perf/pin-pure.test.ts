@@ -108,8 +108,6 @@ const SOL_GL = scenario('sol', 'webgl2', dwell(stats(16.0, { iqrMs: 21 }), null)
  *  quantised to the refresh interval whatever the GPU stream does. */
 const lgAt = (gpuP50: number) => scenario('lg', 'webgpu', dwell(stats(16.7), stats(gpuP50)));
 const LG_GPU = lgAt(11.891);
-/** lg trending is lg being itself: 4 of 14 of its dwells do, against 0 of 56
- *  at the other four vantages (pins/README.md § Reading `--against-pin`). */
 const LG_TRENDED = scenario('lg', 'webgpu', dwell(stats(16.7), trending(12.5)));
 const SOURCE = { sourceRun: '.perf-runs/2026-09-05/pin.json', version: '3.44.3', accepted: {} };
 
