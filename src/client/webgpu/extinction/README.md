@@ -175,7 +175,17 @@ the A_V target rather than taking this table's word.
 So ~7.4 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
 `Float32Array` the position attribute keeps on the JS heap after upload
 (three does not release it, and the WebGL2 twin's `DataTexture` holds the
-same).
+same). Both survive on an integrated or mobile GPU without argument.
+
+**What does not survive everywhere is the vertex stage's right to read the
+buffer at all.** The WebGL2 layout's floor was `maxTextureDimension2D`,
+which 1024 clears on every device; a storage buffer read from a vertex
+stage answers to `maxStorageBuffersInVertexStage` instead, and that is
+**zero** at WebGPU's compatibility feature level. So the floor this cache
+sets is no longer free, and it is no longer this folder's to keep: the
+boot refuses such a device outright (`../tsl/README.md` § Storage
+attributes), which is what makes `supported` constant true here honest
+rather than merely untested.
 
 **A recompute is ~18.6M volume samples**: one thread per star × 48
 taps, 388,071 × 48. That is the whole per-recompute cost and it is paid

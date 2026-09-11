@@ -108,7 +108,8 @@ stale row reads as a dated observation rather than a guarantee. Update
 the catalogue is fetched and routes a failing verdict straight here, so a
 gated browser downloads nothing it cannot use. The second caller is
 `main.ts` after `bootWebGpu` returns null on a browser whose probe
-PASSED — `init()` rejected, or `reversedDepthBuffer` came back off. That
+PASSED — `init()` rejected, `reversedDepthBuffer` came back off, or the
+device allows no vertex-stage storage buffer. That
 one arrives with the loading screen already drawn, which is why
 `showWebGpuGate` hides the boot's elements (`GATE_HIDES`) rather than
 assuming an empty page, and why it is idempotent.

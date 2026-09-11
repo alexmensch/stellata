@@ -26,8 +26,8 @@ src/client/webgpu/tsl/
                                     fragment position, and the ±0.5-LSB
                                     output dither over that.
   storage-attribute.ts (+ test)     Release of a storage buffer attribute
-                                    no geometry owns (§ Storage
-                                    attributes).
+                                    no geometry owns, and the vertex-stage
+                                    device limit (§ Storage attributes).
 ```
 
 Which star attributes actually pack, and how they split by upload
@@ -111,7 +111,7 @@ re-verify the field name. Whoever allocates the attribute owns that
 call, in its dispose, in the same diff (`../../../../docs/authoring-patterns.md`
 § Lifecycle pairing).
 
-Two properties of a storage node worth knowing before sharing one:
+Three properties of a storage node worth knowing before binding one:
 
 - **Access is per stage, not per node.** The WGSL builder declares a
   storage buffer `read` in any non-compute stage whatever the node's own
@@ -124,6 +124,21 @@ Two properties of a storage node worth knowing before sharing one:
   only for uniform buffers, so a node built over a 1-element placeholder
   and later pointed at the real attribute needs no rebuild — the binding
   layer rebinds when it sees a different attribute behind the node.
+- **Reading one from a VERTEX stage is a device limit, not a core
+  guarantee** — `maxStorageBuffersInVertexStage`, which WebGPU's
+  compatibility feature level reports as **zero**. three requests that
+  level unconditionally (`WebGPUBackend.init`) and works around several of
+  its limits but not this one, so a device holding no vertex-stage storage
+  buffer boots and then fails every pipeline that binds one. The dust A_V
+  cache is the one that does, across all three star pipelines, and one
+  invalid pipeline discards the whole submit (`../README.md` § One scene
+  per boot). `supportsVertexStageStorageBuffers` is therefore a boot
+  refusal in `../boot-webgpu.ts`, beside the `reversedDepthBuffer` one: the
+  requires-WebGPU page, not a black canvas. A device reporting no limit at
+  all predates the compatibility level, so core limits apply and it
+  passes. **Any new vertex- or fragment-stage storage binding inherits this
+  floor** — the check is already paid, but the gate page is the ceiling on
+  what this backend can ask of a device.
 
 ## One program per material instance
 

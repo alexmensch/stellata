@@ -101,8 +101,11 @@ src/client/webgpu/
 no fragment boots WebGPU, and a browser failing `detectWebGpuSupport`
 gets the gate page instead of a dead canvas (`gate/README.md`). A
 `bootWebGpu` that returns null after a *passing* probe — `init()`
-rejected, or the renderer dropped `reversedDepthBuffer` — lands on the
-same page with the `no-adapter` advice. **There is no automatic WebGL2
+rejected, the renderer dropped `reversedDepthBuffer`, or the device
+allows no vertex-stage storage buffer (`tsl/README.md` § Storage
+attributes) — lands on the same page with the `no-adapter` advice. Each
+of the three is a capability the probe's `requestAdapter` cannot see, so
+refusing the boot is the only thing between them and a black canvas. **There is no automatic WebGL2
 fallback**; the only route to that renderer is naming it.
 
 `#renderer=webgl2` is the escape hatch, and it is undocumented on

@@ -15,6 +15,7 @@ import {
   reversedDepthOpaqueSort, reversedDepthTransparentSort,
 } from './reversed-depth-sort';
 import { buildSharedUniformNodes, type SharedUniformNodeRegistry } from './tsl/shared-uniform-nodes';
+import { supportsVertexStageStorageBuffers } from './tsl/storage-attribute';
 import type {
   StarGeometrySources, WebGpuExtinctionPrepassSources, WebGpuSeam,
 } from './seam';
@@ -59,6 +60,15 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // § Precision analysis), so a boot that lost the flag must not proceed.
   if (renderer.reversedDepthBuffer !== true) {
     console.warn('WebGPURenderer dropped reversedDepthBuffer; refusing the boot');
+    renderer.dispose();
+    return null;
+  }
+  // The star vertex stage indexes the A_V cache out of a storage buffer, so
+  // a device allowing none in that stage fails all three star pipelines —
+  // and one invalid pipeline discards the whole submit (README.md § One
+  // scene per boot). Refusing here lands the requires-WebGPU page instead.
+  if (!supportsVertexStageStorageBuffers(renderer)) {
+    console.warn('WebGPU device allows no vertex-stage storage buffer; refusing the boot');
     renderer.dispose();
     return null;
   }
