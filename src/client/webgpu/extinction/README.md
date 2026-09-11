@@ -161,7 +161,7 @@ Of the four requirements the single-writer audit put on this design
 
 Both figures below are the WebGL2 pass's unchanged in size — the port
 moved the work to a compute stage and allocated nothing new. **Re-derive
-rather than trust them**: they are `recordCount` (388,070 —
+rather than trust them**: they are `recordCount` (388,071 —
 `../../../../scripts/catalog/build-catalog-expected.json`) × the element
 size, and both move with the catalog. `debug.memory()` prices the live
 app (`../../debug/memory/README.md`), and on a WebGL2 boot it *measures*
@@ -169,8 +169,8 @@ the A_V target rather than taking this table's word.
 
 | Resident | Size |
 | --- | --- |
-| A_V buffer (one float32 per star) | 388,070 × 4 B ≈ 1.48 MiB |
-| Position buffer (one vec4 float32 per star) | 388,070 × 16 B ≈ 5.92 MiB |
+| A_V buffer (one float32 per star) | 388,071 × 4 B ≈ 1.48 MiB |
+| Position buffer (one vec4 float32 per star) | 388,071 × 16 B ≈ 5.92 MiB |
 
 So ~7.4 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
 `Float32Array` the position attribute keeps on the JS heap after upload
@@ -178,7 +178,7 @@ So ~7.4 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
 same).
 
 **A recompute is ~18.6M volume samples**: one thread per star × 48
-taps, 388,070 × 48. That is the whole per-recompute cost and it is paid
+taps, 388,071 × 48. That is the whole per-recompute cost and it is paid
 *per frame* while the camera keeps moving more than
 `RECOMPUTE_EPSILON_PC` between frames — a warp pays it every frame, which
 is the case to measure, not the idle one. An idle camera costs zero, and
