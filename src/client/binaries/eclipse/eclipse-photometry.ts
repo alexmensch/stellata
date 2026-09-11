@@ -269,11 +269,14 @@ export class EclipsePhotometryField {
     return rows;
   }
 
+  /** Teardown, not a reset: the shell discards the instance and refills
+   *  `eclipseDimBuffer` to 1.0 on the next attach. Decaying `active`
+   *  slots are that fill's to clear — dropping them here would strand
+   *  their sub-1.0 values with nothing left to decay them. Buffer and
+   *  attribute carrier are owned by that shell. */
   dispose(): void {
-    // Buffer + attribute carrier are owned by the integration shell. The
-    // class holds only the relation cache, which the GC reclaims when
-    // the instance drops out of scope. The dim-target pair is cadence
-    // state and has to be reset like every other sentinel.
+    // The dim-target pair is cadence state: a stale slope would survive
+    // into the next attach and misreport the first frame's dip.
     this.targets.clear();
     this.prevTargets.clear();
     this.lastNowMs = null;
