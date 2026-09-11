@@ -144,10 +144,12 @@ export interface PriceFrameRow {
    *  run metadata, not a dwell statistic. Both dominant passes scale with
    *  it, so a table without it cannot be compared to another table. */
   readonly bufferMpx?: number;
-  /** Whether the SWEEP's baseline walked upward past what its own brackets
-   *  can put down to scatter (`baselineTrend`) — one verdict about the run,
-   *  stamped on every row of it. Absent on a non-interleaved sweep, which
-   *  has one baseline and so no walk to judge. */
+  /** Whether the SWEEP's baseline walked upward past what its own scatter
+   *  accounts for — one verdict about the run, stamped on every row of it.
+   *  The two modes measure the walk over the same span and differ only in
+   *  the band: `baselineTrend` off the brackets, `singleBaselineTrend` off
+   *  the two medians' sampling error. Absent under three rows, where
+   *  neither band has enough of a sweep to describe. */
   readonly baselineRising?: boolean;
 }
 
@@ -418,26 +420,46 @@ function assembleRow(
 export const RISING_BASELINE_MIN_FRACTION = 0.1;
 
 export interface BaselineTrend {
-  /** How far the sweep's baseline walked: last row's against the first's. */
+  /** How far the sweep's baseline walked, first reading to last. */
   readonly riseMs: number;
   readonly risePct: number;
-  /** What that walk would come to if the drift the brackets measure were a
-   *  random walk rather than a trend — median bracket × √rows. A monotone
-   *  rise accumulates rows × bracket instead, so the two separate by √rows
-   *  by construction rather than by a tuned number. */
+  /** What that walk would come to if the instrument's own scatter were a
+   *  random walk rather than a trend. Derived per mode — § The instrument
+   *  drifts names both — and compared against the same rise either way. */
   readonly bandMs: number;
   readonly rising: boolean;
 }
 
+/** Under three rows neither band describes a sweep: the bracketed one has
+ *  too few brackets to take a median of, and the single-baseline one spans
+ *  so little of a run that a step inside it reads as a trend. */
+const MIN_TREND_ROWS = 3;
+
+function trendFrom(firstMs: number, lastMs: number, bandMs: number): BaselineTrend {
+  const riseMs = lastMs - firstMs;
+  const risePct = firstMs === 0 ? 0 : (riseMs / firstMs) * 100;
+  return {
+    riseMs: round3(riseMs),
+    risePct: round3(risePct),
+    bandMs: round3(bandMs),
+    rising: riseMs > bandMs && risePct > RISING_BASELINE_MIN_FRACTION * 100,
+  };
+}
+
 /**
- * Whether a sweep's baseline climbed over the sweep, past what its own
- * brackets put down to scatter. An interleaved row is already defended
+ * Whether a bracketed sweep's baseline climbed over the sweep, past what its
+ * own brackets put down to scatter. An interleaved row is already defended
  * against this — it is differenced against the mean of the baselines either
  * side of it, and `bracketMs` reports the local slope the gates then have to
  * clear — so the verdict is the run's own health, not a row's.
  *
- * `null` where there is nothing to judge: a non-interleaved sweep shares one
- * baseline across every row, so it carries no walk and no brackets.
+ * The band is `median(bracketMs) · √rows`: what the drift the brackets
+ * measure would accumulate to as a random walk, against the `rows · bracket`
+ * a monotone rise reaches. The two separate by √rows by construction rather
+ * than by a tuned number.
+ *
+ * `null` for a sweep carrying no brackets — a non-interleaved one, which
+ * `singleBaselineTrend` judges instead off a band of its own.
  */
 export function baselineTrend(
   rows: readonly Pick<PriceFrameRow, 'baselineMs' | 'bracketMs'>[],
@@ -445,17 +467,37 @@ export function baselineTrend(
   const brackets = rows
     .map((row) => row.bracketMs)
     .filter((bracket): bracket is number => bracket !== undefined);
-  if (rows.length < 3 || brackets.length === 0) return null;
-  const first = rows[0].baselineMs;
-  const riseMs = rows[rows.length - 1].baselineMs - first;
-  const bandMs = median(brackets) * Math.sqrt(rows.length);
-  const risePct = first === 0 ? 0 : (riseMs / first) * 100;
-  return {
-    riseMs: round3(riseMs),
-    risePct: round3(risePct),
-    bandMs: round3(bandMs),
-    rising: riseMs > bandMs && risePct > RISING_BASELINE_MIN_FRACTION * 100,
-  };
+  if (rows.length < MIN_TREND_ROWS || brackets.length === 0) return null;
+  return trendFrom(
+    rows[0].baselineMs,
+    rows[rows.length - 1].baselineMs,
+    median(brackets) * Math.sqrt(rows.length),
+  );
+}
+
+/**
+ * The same verdict for a non-interleaved sweep, which measures its walk over
+ * one leading baseline and one trailing re-measure. That mode is where a
+ * rising baseline actually corrupts rows — every row is differenced against
+ * the leading dwell alone, so the whole rise lands on whichever passes sit
+ * late in the roster — which is exactly why it gets a verdict rather than
+ * being passed over for want of brackets.
+ *
+ * One interval measures no local drift, so there is no walk bound to build;
+ * the band is two sigma of the two medians' own sampling error, the rule
+ * `--baseline` applies to every row it marks. It is therefore much the
+ * tighter of the two bands, and `RISING_BASELINE_MIN_FRACTION` is what
+ * carries the verdict here in practice. **Uncalibrated**: the separation
+ * behind the bracketed band was measured over 45 recorded sweeps and no
+ * non-interleaved sweep has ever been recorded.
+ */
+export function singleBaselineTrend(
+  first: DwellStats,
+  last: DwellStats,
+  rows: number,
+): BaselineTrend | null {
+  if (rows < MIN_TREND_ROWS) return null;
+  return trendFrom(first.medianMs, last.medianMs, 2 * differentialNoiseMs(first, last));
 }
 
 /** Three decimals, the precision every printed millisecond in this codebase

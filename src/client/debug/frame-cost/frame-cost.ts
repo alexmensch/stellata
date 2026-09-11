@@ -11,10 +11,12 @@ import {
   buildPriceRow,
   fitDwellFrames,
   median,
+  singleBaselineTrend,
   summarizeDwell,
   RAF_PROBE_FRAMES,
   SETTLE_FRAMES,
   WARMUP_FRAMES,
+  type BaselineTrend,
   type DwellStats,
   type GpuFrameMethod,
   type PriceFrameRow,
@@ -230,6 +232,7 @@ export async function runPriceFrame(
   });
 
   const rows: PriceFrameRow[] = [];
+  let trend: BaselineTrend | null = null;
   let restore: (() => void) | null = null;
   const releaseRenderHold = stellata.renderGate.hold();
   try {
@@ -299,6 +302,9 @@ export async function runPriceFrame(
 
     const recheck = interleave ? baseline : await dwell();
     if (recheck !== null) {
+      trend = interleave
+        ? baselineTrend(rows)
+        : singleBaselineTrend(firstBaseline, recheck, rows.length);
       const driftMs = recheck.medianMs - firstBaseline.medianMs;
       console.info(
         `priceFrame: baseline ${firstBaseline.medianMs.toFixed(3)} ms, ` +
@@ -329,7 +335,6 @@ export async function runPriceFrame(
 
   const buffer = stellata.renderer.getDrawingBufferSize(new THREE.Vector2());
   const bufferMpx = Number(((buffer.x * buffer.y) / 1e6).toFixed(3));
-  const trend = baselineTrend(rows);
   const stamped = rows.map((row) => ({
     ...row,
     bufferMpx,
@@ -338,11 +343,17 @@ export async function runPriceFrame(
   if (trend !== null && trend.rising) {
     console.warn(
       `priceFrame: the baseline ROSE ${trend.riseMs} ms (${trend.risePct} %) over ` +
-      `the sweep, against a ${trend.bandMs} ms band from its own brackets — the ` +
-      'instrument got dearer while it measured, which no warmup length absorbs. ' +
-      'Every row is bracketed against its own neighbours, so read each bracketMs ' +
-      'as the local slope a savedMs has to clear; a whole-run comparison against ' +
-      'a settled run is the part to distrust.',
+      `the sweep, against a ${trend.bandMs} ms band ` +
+      (interleave ? 'from its own brackets' : 'from the two baselines\' sampling error') +
+      ' — the instrument got dearer while it measured, which no warmup length ' +
+      'absorbs. ' +
+      (interleave
+        ? 'Every row is bracketed against its own neighbours, so read each ' +
+          'bracketMs as the local slope a savedMs has to clear; a whole-run ' +
+          'comparison against a settled run is the part to distrust.'
+        : 'THESE ROWS ARE NOT DEFENDED: { interleave: false } differences every ' +
+          'one against the leading baseline alone, so the rise lands on whichever ' +
+          'passes sit late in the roster. Re-run bracketed.'),
     );
   }
   console.info(

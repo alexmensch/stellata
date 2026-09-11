@@ -82,7 +82,7 @@ the row does not resolve; raising the count tightens the bound on that many
 boundaries together. Quote the total, not `savedMs` over the count — dividing
 assumes the clears add, and consecutive clears with nothing drawn between them
 are what a driver would coalesce
-(`src/client/debug/frame-cost/passes/README.md` § Priced passes,
+(`src/client/debug/frame-cost/passes/README.md` § The roster,
 `docs/render-rules.md` § 8).
 
 `--frames` sizes a dwell (dwell and sweep modes); `--scales` is the sweep's
@@ -199,9 +199,11 @@ neither modal ever shows:
    refusal (panel open, no clock, pinned method unavailable) and is recorded
    with the last console line as the reason. Every row carries
    `baselineRising`, one verdict about the whole sweep: the instrument got
-   dearer while it measured. It does not invalidate the rows — each is
-   bracketed against its own neighbours — but it does say not to hold the
-   run against a settled one (`src/client/debug/frame-cost/README.md`
+   dearer while it measured. On the bracketed default it does not invalidate
+   the rows — each is bracketed against its own neighbours — it says not to
+   read the run's levels against a settled one's. Under `--no-interleave` it
+   does invalidate them, every row there being differenced against the
+   leading baseline alone (`src/client/debug/frame-cost/README.md`
    § Reading a row).
 
 Page console is forwarded as `[page:<type>]` except `table` (the rows come

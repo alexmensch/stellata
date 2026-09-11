@@ -28,8 +28,10 @@ src/client/debug/frame-cost/
                               differential rows. Owns GpuFrameMethod,
                               WARMUP_FRAMES, RAF_PROBE_FRAMES, the median
                               standard error, the interquartile spread,
-                              round3 and the cadence rules
-                              (CADENCE_TOLERANCE,
+                              round3, the two rising-baseline verdicts
+                              (baselineTrend, singleBaselineTrend,
+                              RISING_BASELINE_MIN_FRACTION) and the cadence
+                              rules (CADENCE_TOLERANCE,
                               isVsyncClamped, isCadenceBound), which the
                               headless runner imports rather than
                               re-deriving — its dwell clamp and this
@@ -241,17 +243,32 @@ single-baseline sweep when the instrument is known to be settled.
   · √rows` AND `rise > 10 %` of the first baseline — a random-walk bound
   on the drift the brackets already measure, since a monotone rise
   accumulates `rows · bracket` where a walk reaches only `√rows · bracket`.
-  Over the 45 recorded sweeps the 16 rising ones read 1.4–5.0× that band
-  at 15–26 %, and no other sweep clears 1.2× or 9 %; the fraction floor is
-  what stops a very settled instrument, whose brackets are near zero,
-  stamping a 1.2 % walk. **It does not invalidate the rows.** Each is
+  Over the 45 recorded 13- and 14-row sweeps the 16 rising ones read
+  1.4–5.0× that band at 15–26 %, and no other sweep clears 1.2× or 9 %; the
+  fraction floor is what stops a very settled instrument, whose brackets are
+  near zero, stamping a 1.2 % walk. (The four shorter sweeps on disk sit
+  well under both, so the separation is not an artefact of the population —
+  re-derive either with `baselineTrend` over `.perf-runs/`.)
+  **It does not invalidate the bracketed rows.** Each is
   differenced against the mean of the baselines either side of it, so a
   drift linear across that pair cancels and `bracketMs` reports the local
-  slope the gates above then have to clear. What it invalidates is
-  comparing the run as a whole against a settled one. Absent on a
-  `{ interleave: false }` sweep, which has one baseline and so no walk to
-  judge — and that is the mode where a rise is *not* cancelled, so prefer
-  the bracketed default whenever the instrument's state is unknown.
+  slope the gates above then have to clear — and `--baseline` bands each row
+  by the larger of the two brackets for that reason, so it neither refuses a
+  rising run nor needs to. What a rise invalidates is reading the table's
+  own levels against a settled run's by eye.
+- **`baselineRising` on a `{ interleave: false }` sweep** is the same verdict
+  over a different band, and the one case where it *does* indict the rows:
+  that mode differences every row against the leading baseline alone, so the
+  rise lands on whichever passes sit late in the roster. There are no
+  brackets to build a walk bound from, so the band is two sigma of the
+  leading and trailing baselines' own sampling error — much the tighter of
+  the two, leaving the 10 % floor to carry the verdict in practice.
+  **Uncalibrated**, unlike the bracketed band: no non-interleaved sweep has
+  ever been recorded. Prefer the bracketed default whenever the instrument's
+  state is unknown.
+- **Absent under three rows** in either mode, a split roster
+  (`{ passes: [...] }`, § Budget) included: too few brackets to take a
+  median of, and too little of a run for one interval to describe.
 - Across runs, `debug.priceFrameRepeat(n)`'s per-pass range is the final
   word; it prints one line per pass.
 

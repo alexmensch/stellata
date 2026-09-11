@@ -16,6 +16,8 @@ import {
   vsyncClampToleranceMs,
   WARMUP_FRAMES,
   baselineTrend,
+  singleBaselineTrend,
+  round3,
   RISING_BASELINE_MIN_FRACTION,
 } from './frame-cost-pure';
 
@@ -413,7 +415,7 @@ describe('baselineTrend', () => {
     expect(trend?.rising).toBe(false);
   });
 
-  it('judges nothing without brackets: one baseline carries no walk', () => {
+  it('declines a bracketless sweep, which singleBaselineTrend judges instead', () => {
     const noBrackets = asRows(EARTH_ROSE).map(({ baselineMs }) => ({ baselineMs }));
     expect(baselineTrend(noBrackets)).toBeNull();
   });
@@ -435,5 +437,42 @@ describe('baselineTrend', () => {
       baselineTrend([...held, { baselineMs: last, bracketMs: 0 }])?.rising;
     expect(endingAt(100 * (1 + RISING_BASELINE_MIN_FRACTION) - 0.001)).toBe(false);
     expect(endingAt(100 * (1 + RISING_BASELINE_MIN_FRACTION) + 0.001)).toBe(true);
+  });
+});
+
+describe('singleBaselineTrend — the mode a rise actually corrupts', () => {
+  // Earth, WebGPU, Safari frame rates: the first run of a repeat walking
+  // 41 -> 95 ms across its seven baselines, which is the symptom that
+  // motivated the verdict.
+  const COLD = dwell(120, 41, 3);
+  const LATE = dwell(120, 95, 8);
+
+  it('marks a run whose single baseline walked over the sweep', () => {
+    const trend = singleBaselineTrend(COLD, LATE, 13);
+    expect(trend?.riseMs).toBe(54);
+    expect(trend?.risePct).toBe(131.707);
+    expect(trend?.rising).toBe(true);
+  });
+
+  it('bands the rise at two sigma of the two medians, having no brackets', () => {
+    const trend = singleBaselineTrend(COLD, LATE, 13);
+    expect(trend?.bandMs).toBe(round3(2 * differentialNoiseMs(COLD, LATE)));
+  });
+
+  it('leaves a walk the fraction floor covers, though it clears that band', () => {
+    const settled = dwell(120, 25, 2);
+    const later = dwell(120, 26, 2);
+    const trend = singleBaselineTrend(settled, later, 13);
+    expect(trend?.riseMs).toBeGreaterThan(trend?.bandMs ?? 0);
+    expect(trend?.risePct).toBe(4);
+    expect(trend?.rising).toBe(false);
+  });
+
+  it('reads a fall as no rise', () => {
+    expect(singleBaselineTrend(LATE, COLD, 13)?.rising).toBe(false);
+  });
+
+  it('judges nothing under three rows, as the bracketed verdict does not', () => {
+    expect(singleBaselineTrend(COLD, LATE, 2)).toBeNull();
   });
 });
