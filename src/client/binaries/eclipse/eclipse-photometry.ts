@@ -13,8 +13,10 @@ import {
 import {
   buildOrbitRelationCaches,
   evaluateOrbitRelationDeltaPc,
+  orbitMemberSlots,
   type OrbitRelationCache,
 } from '../orbit-relation-cache';
+import { DirtyItemUploader } from '../../util/attribute-upload';
 import { AU_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import { tToJdUt } from '../../solar-system/time/time';
 import {
@@ -49,7 +51,8 @@ export interface EclipsePhotometryFieldOptions {
    *  Length = catalog.count. Initialised to 1.0 by the integration shell
    *  at allocation and on every re-attach. */
   eclipseDimBuffer: Float32Array;
-  /** Three.js attribute carrier, flushed only on frames that write. */
+  /** Three.js attribute carrier, flushed only on frames that write, and
+   *  then over the touched slots alone (README § Partial re-upload). */
   iEclipseDimAttr: THREE.InstancedBufferAttribute;
 }
 
@@ -114,10 +117,20 @@ export class EclipsePhotometryField {
    *  its own, and the same mechanism the planet field's dims use. */
   private prevTargets = new Map<number, number>();
   private lastNowMs: number | null = null;
+  private dimUploader: DirtyItemUploader;
+  /** The integration shell fills the WHOLE dim buffer with 1.0 on every
+   *  re-attach, reaching stars outside the tracked member set, so the
+   *  first WRITING flush after construction or dispose has to upload in
+   *  full: three.js honours a non-empty range list over the full array,
+   *  so ranges appended before a render consumed the shell's own full
+   *  upload would strand every untracked star at the previous attach's
+   *  values. */
+  private pendingFull = true;
 
   constructor(opts: EclipsePhotometryFieldOptions) {
     this.opts = opts;
-    this.buildCache();
+    this.dimUploader = new DirtyItemUploader(
+      opts.iEclipseDimAttr, this.buildCache());
   }
 
   /** Read-only access to the cached relation list — exposed for tests
@@ -171,7 +184,8 @@ export class EclipsePhotometryField {
     }
 
     if (blendDimBuffer(dimBuf, targets, this.active, blend)) {
-      this.opts.iEclipseDimAttr.needsUpdate = true;
+      this.dimUploader.flush(this.pendingFull);
+      this.pendingFull = false;
     }
   }
 
@@ -263,6 +277,8 @@ export class EclipsePhotometryField {
     this.targets.clear();
     this.prevTargets.clear();
     this.lastNowMs = null;
+    this.dimUploader.reset();
+    this.pendingFull = true;
   }
 
   private evaluateRelation(
@@ -318,7 +334,9 @@ export class EclipsePhotometryField {
     return { gate: 'clear', dCamPc, planeDot, relX, relY, relZ, result };
   }
 
-  private buildCache(): void {
+  /** Returns the ascending slot set the dim walk can write — every member
+   *  of a cached relation, which is what the partial re-upload tracks. */
+  private buildCache(): Int32Array {
     const abs = this.opts.absolutePositions;
     const radSolar = this.opts.physicalRadiusSolar;
     const orbitCaches = buildOrbitRelationCaches(
@@ -356,5 +374,6 @@ export class EclipsePhotometryField {
         sinLimit,
       });
     }
+    return orbitMemberSlots(orbitCaches, this.opts.binaries);
   }
 }

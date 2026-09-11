@@ -169,16 +169,22 @@ Two paths, picked by whether the writer reported three.js update ranges:
   on a WebGPU boot the WebGL geometry never renders, so no renderer
   consumes them and they would otherwise accumulate to
   `MAX_PARTIAL_RANGES` and collapse into a full upload.
-- **Whole-buffer** — a bare `needsUpdate`, which is what
-  `EclipsePhotometryField` and the shell's re-attach inits set. Costs a
-  390k-iteration re-pack on the CPU plus a **6.2 MB** `writeBuffer`
-  (390k × vec4 × 4 B), against 1.6 MB for the WebGL scalar it replaces.
-  During an active eclipse that is **every frame**: ~320 MB/s of upload
-  traffic at 60 Hz, which on a low-end integrated or mobile GPU sharing
-  system memory with the display is the kind of figure that shows up in
-  the frame time. Ranges would remove it — `EclipsePhotometryField`
-  already knows which slots it touched — and that is `stellata-apkh`,
-  which improves the WebGL path in the same move.
+- **Whole-buffer** — a bare `needsUpdate`, which is what the shell's
+  re-attach inits set (through `uploadFull`, so a pending range list
+  cannot outrank the full array). Costs a 390k-iteration re-pack on the
+  CPU plus a **6.2 MB** `writeBuffer` (390k × vec4 × 4 B), against
+  1.6 MB for the WebGL scalar it replaces. Both per-frame writers are
+  ranged, so nothing reaches this path at frame cadence: an active
+  eclipse would otherwise pay the 6.2 MB **every frame**, ~320 MB/s at
+  60 Hz, which on a low-end integrated or mobile GPU sharing system
+  memory with the display is the kind of figure that shows up in the
+  frame time.
+
+`EclipsePhotometryField` forces its own first writing flush full,
+because the shell's re-attach fill reaches stars outside the member
+slots it tracks (`../../binaries/eclipse/README.md` § Partial
+re-upload) — a range list appended before a render consumed that fill
+would strand every untracked star at the previous attach's value.
 
 Neither figure is measured; both are byte counts, not `gpu.frame`
 differentials. Pricing the eclipse frame belongs to the perf program

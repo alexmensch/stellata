@@ -1625,11 +1625,11 @@ export class Stellata implements FrameAnchor {
     });
     this.binaryOrbitField.recenter(this.worldOffset);
     // Re-attach scrubs the prior attach's residual per-instance state.
-    // EclipsePhotometryField only tracks its own active slots, so
-    // values written under the previous binaries set would otherwise
-    // persist on stars the new set doesn't touch.
+    // EclipsePhotometryField tracks only the new binaries set's member
+    // slots, so values written under the previous set would otherwise
+    // persist on stars the new one doesn't touch.
     this._eclipseDim.fill(1);
-    this.starPipeline.iEclipseDimAttr.needsUpdate = true;
+    uploadFull(this.starPipeline.iEclipseDimAttr);
     this.eclipsePhotometryField = new EclipsePhotometryField({
       binaries,
       absolutePositions: this.catalog.positions,

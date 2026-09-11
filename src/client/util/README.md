@@ -51,8 +51,10 @@ build scripts, tests, and shader uniforms.
   Its shadow is NaN-seeded at construction and
   by `reset()` — NaN compares unequal to everything, so the first flush
   after either reports every tracked item, which is the truth in both
-  cases (no GPU buffer yet / a stale one). Consumer + the invariants it
-  rides on: `../binaries/README.md` § Partial re-upload.
+  cases (no GPU buffer yet / a stale one). Consumers + the invariants
+  they ride on: `../binaries/README.md` § Partial re-upload (iPosition,
+  iCompositeSuppress) and `../binaries/eclipse/README.md` § Partial
+  re-upload (iEclipseDim).
 - `ecliptic-frame.ts` (+ test) — `icrsToEcliptic` / `eclipticToIcrs`, the
   fixed `Rx(±ε)` pair about the J2000 obliquity, on plain `{x, y, z}`
   and safe to alias `out` with `v` (the moon resolver does). This is the

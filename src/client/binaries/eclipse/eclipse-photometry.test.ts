@@ -232,6 +232,56 @@ describe('EclipsePhotometryField.update — attribute upload gating', () => {
     field.update(tForJd(J2000_JD + 2.5), CAM, 6, 0);
     expect(fx.iEclipseDimAttr.version).toBeGreaterThan(version);
   });
+
+  it('the first writing flush uploads in full — the shell\'s re-attach fill reaches untracked stars', () => {
+    const fx = edgeOnFixture();
+    const field = new EclipsePhotometryField(fx);
+    const version = fx.iEclipseDimAttr.version;
+    field.update(tForJd(J2000_JD + 2.5), CAM, 6, 0);
+    expect(fx.iEclipseDimAttr.updateRanges).toHaveLength(0);
+    // Strictly greater, not merely empty: an empty range list is also what
+    // no upload at all looks like.
+    expect(fx.iEclipseDimAttr.version).toBe(version + 1);
+  });
+
+  it('re-uploads a dimmed slot as a bounded range, never the whole buffer', () => {
+    const fx = edgeOnFixture();
+    const field = new EclipsePhotometryField(fx);
+    field.update(tForJd(J2000_JD + 2.5), CAM, 6, 0);
+    // Stand in for the renderer's upload, which consumes the range list.
+    fx.iEclipseDimAttr.clearUpdateRanges();
+    field.update(tForJd(J2000_JD), CAM, 6, 16);
+    // Slot 1 is the back component; slot 0 is never dimmed and the control
+    // star at slot 2 is untracked, so no range can reach it.
+    expect(fx.iEclipseDimAttr.updateRanges).toEqual([{ start: 1, count: 1 }]);
+  });
+
+  it('keeps uploading the decay tail after the overlap ends', () => {
+    const fx = edgeOnFixture();
+    const field = new EclipsePhotometryField(fx);
+    field.update(tForJd(J2000_JD + 2.5), CAM, 6, 0);
+    // Geometric overlap is over from here; the slot blends back toward 1
+    // for several frames, and each of them has to reach the GPU or the
+    // star freezes mid-decay.
+    for (let n = 1; n <= 3; n++) {
+      fx.iEclipseDimAttr.clearUpdateRanges();
+      field.update(tForJd(J2000_JD), CAM, 6, n * 16);
+      expect(fx.iEclipseDimAttr.updateRanges).toEqual([{ start: 1, count: 1 }]);
+      expect(fx.eclipseDimBuffer[1]).toBeLessThan(1);
+    }
+  });
+
+  it('dispose re-arms the full upload', () => {
+    const fx = edgeOnFixture();
+    const field = new EclipsePhotometryField(fx);
+    field.update(tForJd(J2000_JD + 2.5), CAM, 6, 0);
+    fx.iEclipseDimAttr.clearUpdateRanges();
+    field.dispose();
+    const version = fx.iEclipseDimAttr.version;
+    field.update(tForJd(J2000_JD + 2.5), CAM, 6, 0);
+    expect(fx.iEclipseDimAttr.updateRanges).toHaveLength(0);
+    expect(fx.iEclipseDimAttr.version).toBe(version + 1);
+  });
 });
 
 describe('EclipsePhotometryField.debugRows', () => {
