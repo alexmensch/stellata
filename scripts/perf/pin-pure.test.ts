@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, dwellFloorMs } from './diff-pure';
-import type { DwellSummary } from './dwell-pure';
+import type { DwellSummary } from './dwell/dwell-pure';
 import {
   PIN_CEILING_MS,
   PIN_SCHEMA,
@@ -77,7 +77,7 @@ function scenario(
     name, blob: 'blob',
     backend: { requested: backend, actual: backend },
     viewport: { width: 1280, height: 800, dpr: 2 },
-    buffer: { width: 2560, height: 1600 }, bufferMpx: 4.096, recordCount: RECORDS,
+    buffer: { width: 2560, height: 1600 }, bufferMpx: 4.096, recordCount: RECORDS, position: 1,
     mode: 'dwell', method: 'raf-delta', params: {}, settleMs: 5000, idleRafMs: 16.7,
     differential: null, dwell: record, dwellAfter: null, roundtrip: null, sweep: null,
     console: [], pageErrors: [], tainted: false, failed: false, failure: null,
@@ -145,6 +145,7 @@ describe('pinFromRun', () => {
     expect(pin!.accepted['sol|webgpu'].bead).toBe('bead-1');
     expect(pin!.rows.map((r) => r.key)).toEqual(['sol|webgpu', 'mw120|webgpu', 'sol|webgl2']);
     expect(pin!.rows[0].gpu!.p50).toBe(21.8);
+    expect(pin!.rows[0].position).toBe(1);
     expect(pin!.rows[1].wall.vsyncClamped).toBe(true);
     expect(pin!.rows[2].gpu).toBeNull();
     expect(pin!.rows[2].method).toBe('raf-delta');
@@ -161,6 +162,8 @@ describe('pinFromRun', () => {
       .toContain('load-state transition');
     expect(refused(scenario('earth', 'webgpu', dwell(stats(18.7), stats(16.9)), { recordCount: null })).refusals[0])
       .toContain('record count');
+    expect(refused(scenario('earth', 'webgpu', dwell(stats(18.7), stats(16.9)), { position: null })).refusals[0])
+      .toContain('run position');
     expect(refused(scenario('earth', 'webgpu', dwell(stats(18.7), stats(16.9)), { dwellAfter: dwell(stats(18.7), stats(16.9)) })).refusals[0])
       .toContain('round-trip');
   });
@@ -272,15 +275,60 @@ describe('compareToPin', () => {
     expect(compareToPin(pinOf(), file([SOL_GPU], { headless: false })).refusedWholeRun).toContain('headed');
   });
 
-  it('refuses a row that is missing, trended, or was measured at another buffer', () => {
+  it('refuses a row that trended or was measured at another buffer, and lists the pin rows the run never visited', () => {
     const trended = scenario('sol', 'webgpu', dwell(stats(25.2), trending(21.8)));
     const resized = scenario('sol', 'webgpu', dwell(stats(25.2), stats(21.8)), { bufferMpx: 4.096 * (1 + 2 * BUFFER_MPX_TOLERANCE) });
     const diff = compareToPin(pinOf(), file([trended]));
     expect(diff.rows).toEqual([]);
-    expect(diff.refusals.map((r) => r.key)).toEqual(['sol|webgpu', 'mw120|webgpu', 'sol|webgl2']);
+    expect(diff.refusals.map((r) => r.key)).toEqual(['sol|webgpu']);
     expect(diff.refusals[0].reason).toContain('load-state transition');
-    expect(diff.refusals[1].reason).toBe('not measured in this run');
+    expect(diff.unmeasured).toEqual(['mw120|webgpu', 'sol|webgl2']);
     expect(compareToPin(pinOf([SOL_GPU]), file([resized])).refusals[0].reason).toContain('Mpx');
+  });
+
+  // Tier 1 visits two of the pin's ten contexts and answers for those two.
+  it('does not fail a run for the pin rows it did not measure', () => {
+    const diff = compareToPin(pinOf(), file([SOL_GPU]));
+    expect(diff.rows.map((r) => r.key)).toEqual(['sol|webgpu']);
+    expect(diff.refusals).toEqual([]);
+    expect(diff.unmeasured).toEqual(['mw120|webgpu', 'sol|webgl2']);
+    expect(pinDiffFails(diff)).toBe(false);
+  });
+
+  // A scenario that never booted keys as `<name>|unbooted`, which no pin can
+  // hold — so the key lookup would answer "not in the pin" about a row whose
+  // trouble is that it failed. The failure is the reason worth printing.
+  it('names the failure, not the absent key, for a scenario that never booted', () => {
+    const unbooted = scenario('sol', 'webgpu', dwell(stats(25.2), stats(21.8)), {
+      backend: { requested: 'webgpu', actual: null }, failed: true,
+    });
+    const diff = compareToPin(pinOf(), file([unbooted]));
+    expect(diff.refusals).toEqual([{ key: 'sol|unbooted', reason: 'the scenario failed or was tainted' }]);
+    expect(pinDiffFails(diff)).toBe(true);
+  });
+
+  it('refuses a row the run measured and the pin does not hold', () => {
+    const diff = compareToPin(pinOf([SOL_GPU]), file([SOL_GPU, MW120_GPU]));
+    expect(diff.rows.map((r) => r.key)).toEqual(['sol|webgpu']);
+    expect(diff.refusals).toEqual([{ key: 'mw120|webgpu', reason: 'not in the pin — nothing to judge it against' }]);
+    expect(pinDiffFails(diff)).toBe(true);
+  });
+
+  // The pin run visits mw120|webgpu first and sol|webgpu second, which is
+  // the Tier 1 run's own shape — so those two rows compare and a row taken
+  // deeper into a run does not.
+  it('compares a row only against one taken at the same position in its run', () => {
+    const at = (s: ScenarioRecord, position: number) => ({ ...s, position });
+    const pin = pinOf([at(MW120_GPU, 1), at(SOL_GPU, 2), at(SOL_GL, 3)]);
+    const tier1 = compareToPin(pin, file([at(MW120_GPU, 1), at(SOL_GPU, 2)]));
+    expect(tier1.refusals).toEqual([]);
+    expect(tier1.rows.map((r) => [r.key, r.verdict])).toEqual([['mw120|webgpu', 'same'], ['sol|webgpu', 'same']]);
+    expect(tier1.unmeasured).toEqual(['sol|webgl2']);
+
+    const deeper = compareToPin(pin, file([at(SOL_GPU, 8)]));
+    expect(deeper.rows).toEqual([]);
+    expect(deeper.refusals[0].reason).toContain('run position 2 vs 8');
+    expect(pinDiffFails(deeper)).toBe(true);
   });
 
   it('compares a row whose wall clock alternates but whose GPU stream is steady', () => {

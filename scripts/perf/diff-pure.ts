@@ -3,7 +3,7 @@
 // README.md § Comparing against a baseline.
 
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { gatingClock, type DwellMetric } from './dwell-pure';
+import { gatingClock, type DwellMetric } from './dwell/dwell-pure';
 import type { PerfFile, ScenarioRecord } from './schema';
 
 /** How far the two buffers may differ and still be compared. Both dominant
@@ -116,11 +116,38 @@ function comparabilityRefusal(a: ScenarioRecord, b: ScenarioRecord): string | nu
   if (a.mode !== b.mode) return `mode ${a.mode} vs ${b.mode}`;
   const [ma, mb] = [a.bufferMpx, b.bufferMpx];
   if (ma === null || mb === null) return 'one run recorded no drawing buffer';
-  const drift = Math.abs(mb - ma) / ma;
-  if (drift > BUFFER_MPX_TOLERANCE) {
-    return `buffer ${ma} vs ${mb} Mpx (${(drift * 100).toFixed(1)} % apart) — the frame is fill-bound`;
+  return bufferRefusal(ma, mb)
+    ?? recordCountRefusal(a.recordCount, b.recordCount)
+    ?? positionRefusal(a.position, b.position);
+}
+
+/** A resized window is a different measurement wearing the same row label:
+ *  both dominant passes scale with area. Shared with `--against-pin`, as
+ *  the record-count and position refusals below it are. */
+export function bufferRefusal(a: number, b: number): string | null {
+  const drift = Math.abs(b - a) / a;
+  if (drift <= BUFFER_MPX_TOLERANCE) return null;
+  return `buffer ${a} vs ${b} Mpx (${(drift * 100).toFixed(1)} % apart) — the frame is fill-bound`;
+}
+
+/**
+ * Two rows compare only at the same position in their runs. The GPU's load
+ * history before a context moves its frame on unchanged code — the same
+ * vantage read 0.486 ms apart between 8th of 10 behind cool-downs and 1st
+ * of 2 cold, while two runs of the same shape agreed to 0.019 — and each
+ * run's own state guard reads steady throughout, so nothing else catches
+ * it. A cool-down does not reset it: sol at 2nd of 10 behind 120 s idle
+ * matched sol at 2nd of 2 with none to 2e-6 ms. Position, not idle time, is
+ * the variable, and absent on either side refuses as an absent count does.
+ */
+export function positionRefusal(a: number | null | undefined, b: number | null | undefined): string | null {
+  if (a == null || b == null) {
+    return `run position ${a ?? 'unknown'} vs ${b ?? 'unknown'} — a run that did not record where each context sat cannot be placed in a load history`;
   }
-  return recordCountRefusal(a.recordCount, b.recordCount);
+  if (a !== b) {
+    return `run position ${a} vs ${b} — the GPU's load history before a context moves its frame on unchanged code`;
+  }
+  return null;
 }
 
 /**

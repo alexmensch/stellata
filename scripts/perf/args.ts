@@ -7,7 +7,7 @@ import {
   type GpuFrameMethod,
   type PricedPassKey,
 } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { DEFAULT_DWELL_FRAMES } from './dwell-pure';
+import { DEFAULT_DWELL_FRAMES } from './dwell/dwell-pure';
 import { DEFAULT_SWEEP_SCALES } from './sweep-pure';
 import { DEFAULT_QUIET_MS } from './settle-pure';
 import { BACKENDS, SCENARIO_NAMES, type ScenarioName } from './scenarios';
@@ -52,6 +52,9 @@ export interface RunArgs {
   readonly dpr: number;
   readonly quietMs: number;
   readonly chromeArgs: readonly string[];
+  /** URL-fragment switches appended to every scenario's boot URL, after the
+   *  backend's own; the leading `#` is optional. */
+  readonly hash: string;
   /** dwell and sweep: frames whose deltas count, per dwell. */
   readonly frames: number;
   /** dwell: a priceFrame pass key, or `idle`, applied between two dwells. */
@@ -105,6 +108,7 @@ const OPTIONS = {
   dpr: { type: 'string', default: String(ARG_DEFAULTS.dpr) },
   'quiet-ms': { type: 'string', default: String(ARG_DEFAULTS.quietMs) },
   'chrome-arg': { type: 'string', multiple: true, default: [] },
+  hash: { type: 'string', default: '' },
   frames: { type: 'string', default: String(ARG_DEFAULTS.frames) },
   roundtrip: { type: 'string' },
   scales: { type: 'string', default: ARG_DEFAULTS.scales },
@@ -133,6 +137,7 @@ export function usage(): string {
     `  --quiet-ms <n>           render-gate idle required before measuring (default ${ARG_DEFAULTS.quietMs})`,
     `  --url <base>             a RUNNING dev server                       (default ${ARG_DEFAULTS.url})`,
     '  --chrome-arg=<switch>    extra Chromium switch, repeatable (the = form, since the value starts with a dash)',
+    '  --hash <fragment>        URL-fragment switches for every boot, e.g. webgpu-gate=force; composes with #renderer=webgl2',
     `  --frames <n>             dwell and sweep: frames per dwell         (default ${ARG_DEFAULTS.frames})`,
     `  --roundtrip <pass|${ROUNDTRIP_IDLE}>  dwell: dwell, hold the pass off for --frames then restore it, dwell again`,
     `  --scales <list>          sweep: viewport scales                    (default ${ARG_DEFAULTS.scales})`,
@@ -142,6 +147,7 @@ export function usage(): string {
     '  --against-pin <path>     dwell: verdicts against a pin; a ✗ or a refused row exits 1',
     '  --accept <scenario>|<backend>:<bead>  dwell, with --pin: accept a ✗ and pin its value, repeatable',
     `  --cooldown-ms <n>        idle between contexts so each starts cold    (default ${ARG_DEFAULTS.cooldownMs})`,
+    `Contexts run backend-major (${BACKENDS.join(', then ')}), scenarios in the order given; all = the canon order.`,
     'Exit codes: 0 ok · 1 scenario failed / refused / software adapter · 2 bad flags or unreachable url · 3 not armed',
   ].join('\n');
 }
@@ -171,6 +177,15 @@ const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
 };
 
 const ACCEPT_KEY = new RegExp(`^(${SCENARIO_NAMES.join('|')})\\|(${BACKENDS.join('|')})$`);
+
+/** The whole canon in canon order. Order, not membership: a pin's rows are
+ *  only ever compared against a row taken at the same position, so a
+ *  permutation pins ten rows no later run reaches
+ *  (`pins/README.md` § Run position). */
+function isCanonOrder(scenarios: readonly ScenarioName[]): boolean {
+  return scenarios.length === SCENARIO_NAMES.length
+    && scenarios.every((name, i) => name === SCENARIO_NAMES[i]);
+}
 
 function parseAccept(raw: string): AcceptedMark {
   const at = raw.indexOf(':');
@@ -285,6 +300,13 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
   if (str('pin') !== undefined && str('json') === undefined) {
     throw new ArgError('--pin needs --json: the pin cites the run file its rows were summarised from');
   }
+  const backend = oneOf('backend', BACKEND_REQUESTS);
+  if (str('pin') !== undefined && (backend !== 'both' || !isCanonOrder(scenarios))) {
+    throw new ArgError(
+      '--pin needs --scenario all --backend both, in canon order: a pin missing a row narrows the gate '
+      + 'silently, and a reordered one pins every row at a position no later run visits it at',
+    );
+  }
   if (accept.length > 0 && str('pin') === undefined) {
     throw new ArgError('--accept records a mark into the pin being written; it needs --pin');
   }
@@ -293,7 +315,7 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     help: values.help as boolean,
     url: str('url')!,
     scenarios,
-    backend: oneOf('backend', BACKEND_REQUESTS),
+    backend,
     mode,
     passes,
     method: optionalOneOf('method', GPU_FRAME_METHODS),
@@ -309,6 +331,7 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     dpr: num('dpr'),
     quietMs: num('quiet-ms'),
     chromeArgs: values['chrome-arg'] as string[],
+    hash: (str('hash') ?? '').replace(/^#/, ''),
     frames: num('frames'),
     roundtrip,
     scales: numberList('scales'),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import type { DwellSummary } from './dwell-pure';
+import type { DwellSummary } from './dwell/dwell-pure';
 import type { RunDiff } from './diff-pure';
 import type { SweepPoint } from './sweep-pure';
 import type { DwellRecord } from './schema';
@@ -195,18 +195,22 @@ describe('formatPinTable', () => {
         key: 'mw120|webgl2', metric: 'wall-p50', pinnedMs: 16.7, currentMs: 16.7, deltaMs: 0,
         bandMs: 0, verdict: 'ungated', note: 'no GPU stream — WebGL2 supplies none',
       }],
-      refusals: [{ key: 'lg|webgpu', reason: 'not measured in this run' }],
+      refusals: [{ key: 'lg|webgpu', reason: 'run position 10 vs 1' }],
+      unmeasured: ['earth|webgpu', 'mw50|webgpu'],
     });
     const lines = text.split('\n');
     expect(lines[0]).toContain('pinned');
+    expect(text).toContain('not compared: lg|webgpu — run position 10 vs 1');
+    expect(text).toContain('not measured in this run: earth|webgpu, mw50|webgpu');
     expect(lines[1]).toMatch(/^\s*✗\s+sol\|webgpu\s+gpu-p50\s+21\.8\s+22\.6\s+0\.8\s+0\.25/);
     expect(lines[2]).toMatch(/^\s*·\s+mw120\|webgl2\s+wall-p50/);
     expect(lines[2]).toContain('no GPU stream — WebGL2 supplies none');
-    expect(lines[3]).toBe('  not compared: lg|webgpu — not measured in this run');
+    expect(lines[3]).toBe('  not compared: lg|webgpu — run position 10 vs 1');
+    expect(lines[4]).toBe('  not measured in this run: earth|webgpu, mw50|webgpu');
   });
 
   it('prints a whole-run refusal as one line', () => {
-    expect(formatPinTable({ refusedWholeRun: 'a headed run', rows: [], refusals: [] })).toBe('pin: REFUSED — a headed run');
+    expect(formatPinTable({ refusedWholeRun: 'a headed run', rows: [], refusals: [], unmeasured: [] })).toBe('pin: REFUSED — a headed run');
   });
 });
 

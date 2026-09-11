@@ -28,8 +28,8 @@ table:
           touches, and that none is reachable from animate(), a pass, or a
           per-frame buffer write. No table.
   Tier 1  per-frame code touched, draw counts and pass structure unchanged.
-          The --baseline table over mw120|webgpu and sol|webgpu, and the run
-          it was read against.
+          The --against-pin table over mw120|webgpu and sol|webgpu, and the
+          pin commit it was read against.
   Tier 2  passes, buffers, draw counts, the catalogue or the instrument.
           The --against-pin table with the pin commit, the adapter slug and
           the state-guard line per context, and the re-taken pin in this PR.

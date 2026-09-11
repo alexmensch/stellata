@@ -27,6 +27,7 @@ describe('parseRunArgs', () => {
       dpr: ARG_DEFAULTS.dpr,
       quietMs: ARG_DEFAULTS.quietMs,
       chromeArgs: [],
+      hash: '',
       frames: ARG_DEFAULTS.frames,
       roundtrip: undefined,
       scales: [...DEFAULT_SWEEP_SCALES],
@@ -39,9 +40,11 @@ describe('parseRunArgs', () => {
     });
   });
 
+  const PIN_RUN = ['--mode', 'dwell', '--scenario', 'all', '--backend', 'both', '--json', 'run.json', '--pin', 'scripts/perf/pins/x.json'];
+
   it('takes the pin flags in dwell mode, --accept as key:bead pairs, and a zero cool-down', () => {
     const a = parseRunArgs([
-      '--mode', 'dwell', '--json', 'run.json', '--pin', 'scripts/perf/pins/x.json',
+      ...PIN_RUN,
       '--accept', 'sol|webgpu:bead-1', '--accept', 'mw50|webgl2: bead-2',
       '--against-pin', 'scripts/perf/pins/y.json', '--cooldown-ms', '120000',
     ]);
@@ -58,11 +61,40 @@ describe('parseRunArgs', () => {
   it('refuses --pin without --json, --accept without --pin, a malformed --accept, and a negative cool-down', () => {
     expect(() => parseRunArgs(['--mode', 'dwell', '--pin', 'p.json'])).toThrow(/needs --json/);
     expect(() => parseRunArgs(['--mode', 'dwell', '--accept', 'sol|webgpu:bead-1'])).toThrow(/needs --pin/);
-    expect(() => parseRunArgs(['--mode', 'dwell', '--json', 'r.json', '--pin', 'p.json', '--accept', 'sol:bead-1']))
+    expect(() => parseRunArgs([...PIN_RUN, '--accept', 'sol:bead-1']))
       .toThrow(/<scenario>\|<backend>:<bead-id>/);
-    expect(() => parseRunArgs(['--mode', 'dwell', '--json', 'r.json', '--pin', 'p.json', '--accept', 'sol|webgpu']))
+    expect(() => parseRunArgs([...PIN_RUN, '--accept', 'sol|webgpu']))
       .toThrow(ArgError);
     expect(() => parseRunArgs(['--cooldown-ms=-1'])).toThrow(/zero or a positive/);
+  });
+
+  // A pin summarises whatever the run measured, so a two-context run would
+  // write a two-row pin and every later comparison would silently lose the
+  // other eight. A PERMUTED run covers the canon and is refused all the same:
+  // its rows sit at positions no later run visits them at, so the pin it
+  // writes refuses every row of the next comparison instead.
+  it('refuses --pin unless the run is the whole canon, in canon order, on both backends', () => {
+    const pinned = (...flags: string[]): string[] =>
+      ['--mode', 'dwell', ...flags, '--json', 'r.json', '--pin', 'p.json'];
+    for (const flags of [
+      [],
+      ['--scenario', 'all', '--backend', 'webgpu'],
+      ['--scenario', 'mw120,sol', '--backend', 'both'],
+      ['--scenario', 'lg,mw50,earth,sol,mw120', '--backend', 'both'],
+      ['--scenario', 'mw120,sol,earth,mw50,lg,lg', '--backend', 'both'],
+    ]) {
+      expect(() => parseRunArgs(pinned(...flags))).toThrow(/--pin needs --scenario all --backend both/);
+    }
+    expect(parseRunArgs(pinned('--scenario', 'all', '--backend', 'both')).pin).toBe('p.json');
+    const spelled = pinned('--scenario', 'mw120,sol,earth,mw50,lg', '--backend', 'both');
+    expect(parseRunArgs(spelled).pin).toBe('p.json');
+    expect(parseRunArgs(['--mode', 'dwell', '--scenario', 'mw120,sol', '--backend', 'webgpu', '--against-pin', 'p.json']).againstPin)
+      .toBe('p.json');
+  });
+
+  it('takes --hash with or without the leading #, in every mode', () => {
+    expect(parseRunArgs(['--hash', 'webgpu-gate=force']).hash).toBe('webgpu-gate=force');
+    expect(parseRunArgs(['--mode', 'probe', '--hash', '#webgpu-gate=force']).hash).toBe('webgpu-gate=force');
   });
 
   it('refuses the pin flags outside dwell mode', () => {
@@ -185,8 +217,8 @@ describe('parseRunArgs', () => {
       '--scenario', '--backend', '--mode', '--passes', '--method', '--budget-ms',
       '--dwell-frames', '--warmup-frames', '--settle-frames', '--empty-passes',
       '--no-interleave',
-      '--headed', '--width', '--height', '--dpr', '--quiet-ms', '--url', '--chrome-arg',
-      '--frames', '--roundtrip', '--scales', '--json', '--baseline',
+      '--headed', '--width', '--height', '--dpr', '--quiet-ms', '--url', '--chrome-arg', '--hash',
+      '--frames', '--roundtrip', '--scales', '--json', '--baseline', '--pin', '--against-pin', '--accept', '--cooldown-ms',
     ]) {
       expect(text).toContain(flag);
     }

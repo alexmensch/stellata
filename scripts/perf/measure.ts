@@ -5,7 +5,7 @@
 import type { Page } from 'playwright';
 import { SETTLE_FRAMES } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { ROUNDTRIP_IDLE } from './args';
-import { summarizeFrameDwell, summarizePassCounts } from './dwell-pure';
+import { summarizeFrameDwell, summarizePassCounts } from './dwell/dwell-pure';
 import {
   awaitSettle,
   readDrawingBuffer,

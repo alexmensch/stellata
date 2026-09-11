@@ -12,9 +12,9 @@ import {
   WARMUP_FRAMES,
   type GpuFrameMethod,
 } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { ArgError, parseRunArgs, usage, type BackendRequest, type RunArgs } from './args';
+import { ArgError, parseRunArgs, usage, type RunArgs } from './args';
 import { diffRuns } from './diff-pure';
-import type { DwellSummary } from './dwell-pure';
+import type { DwellSummary } from './dwell/dwell-pure';
 import { applyRoundTrip, measureDwell, measureSweep, type Measured } from './measure';
 import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './arming/perf-go-lib';
 import {
@@ -28,7 +28,9 @@ import {
   describeProbe,
   markerVerdict,
   methodFor,
+  planContexts,
   softwareRenderer,
+  type ContextPlan,
   type MarkerVerdict,
 } from './run-pure';
 import {
@@ -52,7 +54,7 @@ import {
   type PerfFile,
   type ScenarioRecord,
 } from './schema';
-import { BACKENDS, SCENARIOS, scenarioUrl, type Backend, type ScenarioName } from './scenarios';
+import { SCENARIOS, scenarioUrl, type Backend } from './scenarios';
 import {
   formatDiffTable, formatDwellTable, formatPassCountTable, formatPinTable, formatPriceTable,
   formatRoundTripLine, formatSweepTable,
@@ -99,10 +101,6 @@ function priceFrameOptions(a: RunArgs, method: GpuFrameMethod | undefined): Pric
     settleFrames: a.settleFrames,
     interleave: a.interleave,
   };
-}
-
-function backendsFor(request: BackendRequest): readonly Backend[] {
-  return request === 'both' ? BACKENDS : [request];
 }
 
 function packageVersion(): string {
@@ -174,10 +172,10 @@ function renderPathDrift(from: string | null, to: string | null): RenderPathDrif
   }
 }
 
-interface ScenarioPlan {
-  readonly name: ScenarioName;
-  readonly backend: Backend;
+interface ScenarioPlan extends ContextPlan {
   readonly method: GpuFrameMethod | undefined;
+  /** 1-based place in the run, recorded on the row. */
+  readonly position: number;
 }
 
 /** One dwell's tables and gate line, the same for the first dwell and a
@@ -213,7 +211,7 @@ interface ScenarioOutcome {
 async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan): Promise<ScenarioOutcome> {
   const { name, backend } = plan;
   const scenario = SCENARIOS[name];
-  const url = scenarioUrl(args.url, scenario.blob, backend);
+  const url = scenarioUrl(args.url, scenario.blob, backend, args.hash);
   const context = await browser.newContext({
     viewport: { width: args.width, height: args.height },
     deviceScaleFactor: args.dpr,
@@ -238,7 +236,10 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
   });
   page.on('crash', () => { crashed = true; });
 
-  console.log(`\n== ${name} — ${scenario.label} · ${backend} · ${args.headed ? 'headed' : 'headless'} · ${url}`);
+  console.log(
+    `\n== ${name} — ${scenario.label} · ${backend} · context ${plan.position} · ` +
+    `${args.headed ? 'headed' : 'headless'} · ${url}`,
+  );
 
   const record = {
     name,
@@ -248,6 +249,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
     buffer: null as { width: number; height: number } | null,
     bufferMpx: null as number | null,
     recordCount: null as number | null,
+    position: plan.position,
     mode: args.mode,
     method: null as GpuFrameMethod | null,
     params: {} as Record<string, unknown>,
@@ -539,8 +541,8 @@ async function main(): Promise<number> {
 
   const records: ScenarioRecord[] = [];
   const probes: AdapterProbe[] = [];
-  const plans: ScenarioPlan[] = args.scenarios.flatMap((name) =>
-    backendsFor(args.backend).map((backend) => ({ name, backend, method })));
+  const plans: ScenarioPlan[] = planContexts(args.scenarios, args.backend)
+    .map((context, i) => ({ ...context, method, position: i + 1 }));
   try {
     for (const [i, plan] of plans.entries()) {
       if (i > 0 && args.cooldownMs > 0) {

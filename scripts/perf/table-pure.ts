@@ -4,7 +4,7 @@
 
 import { round3, type PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { VERDICT_MARK, type RunDiff } from './diff-pure';
-import { PASS_COUNTERS, type DwellSummary, type PassCountsSummary } from './dwell-pure';
+import { PASS_COUNTERS, type DwellSummary, type PassCountsSummary } from './dwell/dwell-pure';
 import { PIN_VERDICT_MARK, type PinDiff } from './pin-pure';
 import type { DwellRecord } from './schema';
 import type { SweepFit, SweepPoint } from './sweep-pure';
@@ -134,6 +134,9 @@ export function formatPinTable(diff: PinDiff): string {
   }
   for (const refusal of diff.refusals) {
     parts.push(`  not compared: ${refusal.key} — ${refusal.reason}`);
+  }
+  if (diff.unmeasured.length > 0) {
+    parts.push(`  not measured in this run: ${diff.unmeasured.join(', ')}`);
   }
   return parts.length > 0 ? parts.join('\n') : 'pin: nothing comparable';
 }

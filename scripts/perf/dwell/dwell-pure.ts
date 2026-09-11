@@ -1,6 +1,6 @@
 // Statistics for one dwell of frame times: the percentiles, and whether
 // the numbers are the compositor's cadence rather than frame cost.
-// README.md § Dwell mode.
+// README.md.
 
 import {
   interquartileRange,
@@ -8,14 +8,14 @@ import {
   lag1Autocorrelation,
   median,
   percentile,
-} from '../../src/client/debug/frame-cost/frame-cost-pure';
+} from '../../../src/client/debug/frame-cost/frame-cost-pure';
 
 export const DEFAULT_DWELL_FRAMES = 240;
 
 /** A dwell is read in this many consecutive slices; their medians spanning
  *  more than `STATE_GUARD_TREND_MS` is the machine changing state under the
  *  dwell (the sustained-load GPU power step), and such a row compares with
- *  nothing — README.md § Dwell mode. */
+ *  nothing — README.md. */
 export const STATE_GUARD_QUARTERS = 4;
 export const STATE_GUARD_TREND_MS = 1;
 
@@ -130,7 +130,7 @@ export function summarizeFrameDwell(
 
 /** What a WebGPU dwell counts per frame on the API surface: queue submits,
  *  the command buffers those carried, and the render / compute passes
- *  encoded. README.md § Dwell mode. */
+ *  encoded. README.md. */
 export const PASS_COUNTERS = ['submits', 'commandBuffers', 'renderPasses', 'computePasses'] as const;
 export type PassCounter = (typeof PASS_COUNTERS)[number];
 export type PassCountsPerFrame = Readonly<Record<PassCounter, readonly number[]>>;
