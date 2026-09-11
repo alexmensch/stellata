@@ -16,7 +16,11 @@ that. The port child that added this folder is `../../webgpu/README.md`'s.
 src/client/solar-system/materials/
   solar-system-materials.ts SolarSystemMaterials, ProbeMaterials and
                             ViewportUniforms: which surfaces this family
-                            builds, over the shared EmitterMaterial.
+                            builds, over the shared EmitterMaterial —
+                            the lit mesh, the ring annulus, the
+                            atmosphere shell, and the depth-only
+                            pre-stamp (`../planets/depth-stamp/README.md`),
+                            which carries no uniforms.
                             Type-only.
   texture-slots.ts          Which texture slots the mesh and the annulus
                             carry, and what each roster's slots owe
@@ -24,8 +28,11 @@ src/client/solar-system/materials/
   glsl-materials.ts         The WebGL2 implementation — the four RawGLSL
     (+ test)                surfaces, their uniform blocks, and the
                             blend/depth state each one's contract rests
-                            on. Also the atmosphere chunk splice and the
-                            sample-count defines.
+                            on; the depth pre-stamp as a built-in
+                            MeshBasicMaterial, non-raw so the main pass's
+                            log-depth chunks apply to it. Also the
+                            atmosphere chunk splice and the sample-count
+                            defines.
 ```
 
 The WebGPU twin is `../../webgpu/solar-system/tsl-materials.ts`, behind

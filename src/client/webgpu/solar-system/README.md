@@ -28,6 +28,9 @@ src/client/webgpu/solar-system/
                               disc airlight.
   planet-rings-tsl.ts         The ring annulus over its radial strip.
   planet-atmosphere-tsl.ts    The limb-halo shell, premultiplied-over.
+  planet-depth-stamp-tsl.ts   The depth-only pre-stamp over the body
+                              spheroid, colour writes off
+                              (`../../solar-system/planets/depth-stamp/README.md`).
   probe-tsl.ts                The fixed-pixel diamond glyph.
   planet-glare-tsl.ts         The reflected-glare billboard's vertex and
                               fragment graphs, main pass and mirror.
@@ -104,14 +107,17 @@ phase normalisation `3/(16π)`, which is not `ATMO_N_VIEW`. An exemption
 also stops the real constant being caught in that file, so the list is
 meant to stay short.
 
-## Vertex stages: three of five need none
+## Vertex stages: four of six need none
 
 `NodeMaterial`'s own model-view-projection is exactly what
 `planet-mesh.vert.glsl`, `planet-atmosphere.vert.glsl` and
 `planet-rings.vert.glsl` do, and each of their varyings is a TSL built-in
 — `positionView`, `normalView`, `uv()`, and `varying(positionGeometry.xy)`
-for the annulus. So those three set `fragmentNode` alone. The glare and
-the glyph project their own screen-space quads and carry a `vertexNode`.
+for the annulus. So those three set `fragmentNode` alone, and the depth
+pre-stamp — the same spheroid, no varyings at all — sets a fragment that
+writes nothing but still swaps (§ Every fragment writes the whole output
+struct). The glare and the glyph project their own screen-space quads and
+carry a `vertexNode`.
 
 `normalView` normalises after interpolation where the GLSL normalises at
 use; the drawn value is the same, and the oblate mesh scale is handled
@@ -123,7 +129,9 @@ transpose, exactly what GLSL's `normalMatrix` was).
 Every surface here reaches the HDR target, so every one of them declares
 all three attachment outputs and swaps to a single output when the target
 is not bound (`../hdr/README.md` § The gate becomes the output struct,
-`../hdr/mrt-material.ts`). A slot the WebGL gate would have masked off
+`../hdr/mrt-material.ts`). The depth pre-stamp included: its colour writes
+are off, so the swap is irrelevant to validity and mandatory for three's
+pipeline cache — the same argument the star core mask carries. A slot the WebGL gate would have masked off
 writes `vec4(0)`: alpha 0 is the identity under both blends used here —
 additive leaves the destination because the source is zero, and
 alpha-composited leaves it because the alpha went to zero with the rest.

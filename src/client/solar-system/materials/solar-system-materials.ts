@@ -21,6 +21,10 @@ export interface SolarSystemMaterials {
   planetRings(): EmitterMaterial;
   /** The limb-halo shell, premultiplied-over. */
   planetAtmosphere(): EmitterMaterial;
+  /** Depth-only, colour writes off: the main-pass pre-stamp of a body's
+   *  silhouette, so background layers depth-fail inside it
+   *  (`../planets/depth-stamp/README.md`). No uniforms. */
+  planetDepthStamp(): EmitterMaterial;
 }
 
 /** The frame-shared pair the glyph sizes its quad against — the only

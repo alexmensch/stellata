@@ -186,6 +186,49 @@ describe('the solar-system material seam', () => {
     expect(glsl.planetRings().material.depthWrite).toBe(false);
   });
 
+  describe('the depth pre-stamp', () => {
+    // Depth-only on both backends: it exists to make background layers
+    // depth-fail inside a body's silhouette, and a colour write from it
+    // would paint over the local pass's mesh.
+    it('writes depth and nothing else, and carries no uniforms', () => {
+      for (const built of [glsl.planetDepthStamp(), tsl.planetDepthStamp()]) {
+        expect(built.material.colorWrite).toBe(false);
+        expect(built.material.depthWrite).toBe(true);
+        expect(built.material.depthTest).toBe(true);
+        expect(Object.keys(built.uniforms)).toEqual([]);
+      }
+    });
+
+    // The main pass encodes depth logarithmically for non-raw materials;
+    // a raw material would write a depth nothing after it compares against.
+    it('takes the main pass depth encoding on WebGL2', () => {
+      const material = glsl.planetDepthStamp().material;
+      expect((material as THREE.RawShaderMaterial).isRawShaderMaterial).toBeUndefined();
+      expect(material.type).toBe('MeshBasicMaterial');
+    });
+
+    // Colour writes off makes the swap irrelevant to validity and still
+    // mandatory for three's pipeline cache (../../webgpu/hdr/README.md § The
+    // gate becomes the output struct).
+    it('takes the MRT output swap on WebGPU and severs it on dispose', () => {
+      let registered = 0;
+      const layers: { setMrtOutputs(on: boolean): void }[] = [];
+      const factory = makeTsl((l) => {
+        registered++;
+        layers.push(l);
+        return () => { registered--; };
+      });
+      const built = factory.planetDepthStamp();
+      type Frag = THREE.Material & { fragmentNode: { isOutputStructNode?: boolean } | null };
+      expect(registered).toBe(1);
+      expect((built.material as Frag).fragmentNode?.isOutputStructNode).toBeUndefined();
+      layers.forEach((l) => l.setMrtOutputs(true));
+      expect((built.material as Frag).fragmentNode?.isOutputStructNode).toBe(true);
+      built.dispose();
+      expect(registered).toBe(0);
+    });
+  });
+
   it('keeps an output struct at the top of a control-flow fragment', () => {
     // three tests `fragmentNode.isOutputStructNode` on the top-level node
     // and silently converts anything else to one vec4 — so a fragment with
