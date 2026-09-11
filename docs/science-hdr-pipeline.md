@@ -1447,9 +1447,13 @@ measurement, not a wrong picture. `park/README.md` changes with the
 implementation.
 
 **Decided.** Statistic and display skip together — keeping the statistic
-write would keep the dominant cost (the band and LG statistic writes are
-~17 of the 22.5 ms, `debug/frame-cost/passes/README.md` § The roster) and
-rule 2 already keeps `L̄` honest. No hysteresis in exposure space: the
+write would keep the dominant cost: holding the band and the LG glow off
+took 29.8 ms off the whole frame, against at most 5.1 ms for the star
+field's own share of a 22.5 ms whole-frame write. Those are two bounds and
+not each other's complement — the runs price frames 2.6× apart and the
+writes share bandwidth, so the pair's own share is not the difference
+(`debug/frame-cost/passes/README.md` § The roster). Rule 2 already keeps
+`L̄` honest. No hysteresis in exposure space: the
 applied cut holds bit-identical inside the slew's settle band, so a verdict
 that is a function of it cannot chatter on quantiser noise, and a real slew
 moves it in whole magnitudes. No skip while `warpActive` — the band is the
