@@ -243,13 +243,13 @@ upper bound the brightness skip compares against the live extended
 threshold (`docs/science-hdr-pipeline.md` § 3.5). Per object it is the
 shader's own central ray — the CPU mirror from the actual camera through
 the component's centre, footprint at each sample's true distance —
-**maximised over the jitter phase** (`LG_PEAK_JITTER_PHASES`, 64), summed
-over the object's components; the layer takes the brightest object.
+**maximised over the jitter phase**, summed over the object's components;
+the layer takes the brightest object.
 
 The phase maximum is what makes it a bound rather than a typical value:
 the shader shifts every pixel's samples by a hash in [0, 1) of a step, and
 on a Sérsic cusp the nucleus pixel is whichever sample lands nearest the
-centre — 0.82 mag over the midpoint phase for M31's bulge from eight mesh
+centre — 0.83 mag over the midpoint phase for M31's bulge from eight mesh
 radii at a 10° field (pinned). An exact softened integral is *not* a bound
 on that pixel; a first cut built on one was beaten by 1.3 mag. The same
 overshoot, pixel to pixel, is a nucleus-sparkle candidate the mirror's
@@ -257,6 +257,28 @@ deterministic midpoints cannot show. Rays through neighbouring pixels see
 the profile pointwise dimmer, so the centre ray's maximum covers them
 (checked one pixel out in eight directions). The sub-pixel expansion is
 left out because it only lowers surface brightness.
+
+**The maximising phase is computed, not searched for.** A cusp is narrower
+than any affordable phase spacing, so a scan steps over it exactly where it
+matters most — sharpest for a near camera at a narrow field, which is also
+where the nucleus fills the most pixels. A 64-sample scan understates M31's
+bulge by **0.46 mag** from 2.8 mesh radii at 10°, and it understates, which
+is the direction that would authorise a skip the layer has not earned.
+`centralRayCuspPhase` instead solves for the phase that lands a sample
+exactly on the ray's closest approach to the centre — one closed-form
+expression, since the sample positions are log-uniform in the step index.
+That phase plus a `LG_PEAK_JITTER_PHASES` (16) scan for everything away from
+the centre sits within **1e-4 mag** of a 4096-sample sweep across five
+objects × three cameras × three plate scales, and the scan alone is what the
+pinned 0.46 mag shows to be insufficient.
+
+**Cost: one march per component per phase, so 17 per component.** Over the
+shipped 123-object catalogue that is **6.7–9.7 ms** per recompute (a 2024
+M-series laptop, node; a low-end integrated GPU's CPU is the budget that
+matters and will be slower). It is CPU work on the frame thread, so the
+consumer must not call it behind a check it could have failed first — the
+brightness skip's own warp refusal (`stellata-8cg.50.4.2`) has to be
+evaluated *before* the provider, not after.
 
 From Sol at the acceptance plate scale M31 bounds at 17.42 — 0.2 mag under
 the default view's 17.21 threshold, so the glow can skip there.
