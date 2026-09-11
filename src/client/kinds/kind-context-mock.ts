@@ -5,6 +5,7 @@ import { angularToPx } from '../camera/controls/star-geometry';
 import { builtinChromeLineMaterials } from '../chrome-lines/builtin-chrome-lines';
 import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import type { SharedUniforms } from '../frame/shared-uniforms';
+import { OccluderSet } from '../occlusion/occluder-set';
 import type { KindContext } from './kind-module';
 
 export const MOCK_VIEWPORT_W = 800;
@@ -68,6 +69,7 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
     detailPermits: () => true,
     constellationOf: () => null,
     onFrame: () => () => {},
+    occluders: new OccluderSet(),
     requestRender: (_reason: string) => {},
     ...overrides,
   };

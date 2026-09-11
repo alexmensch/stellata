@@ -130,6 +130,11 @@ localDepthPass.render(renderer, camera)        // after the main render
   cluster inactive (the pass no-ops, zero cost). Spheres cover every
   local-pass renderable: body meshes, billboard members, ring annuli,
   orbit-ring extents (host distance + aphelion).
+- Both live clusters ALSO publish their **solid** members into the
+  frame's occluder set (`../occlusion/README.md`), which is what the
+  SVG label layer reads in place of a depth buffer. That is a second
+  walk, not this list: the extent spheres above span whole orbits and
+  would blank every label inside one.
 - Multiple clusters compose: sphere lists merge into one slice
   partition. In practice at most one system is ever super-pixel-close;
   the API just doesn't care.

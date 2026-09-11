@@ -64,6 +64,10 @@ themselves.
   z-buffer occlusion the main pass's log depth cannot. The planet
   mesh LOD renders through it; the design doc for the remaining
   migration steps lives in its README.
+- `occlusion/` — the frame's near-solid-body set and the angular test
+  over it. SVG composites above the resolved frame with no depth
+  relationship to it, so a label surface asks here whether a nearer
+  body hides its anchor. Published by the two local-depth clusters.
 - `camera/` — camera controllers split across `controls/`, `focus/`,
   `warp/`, `observe/`, `arrival/`.
 - `star-pipeline/`, `solar-system/`, `local-group/`, `milkyway/`,

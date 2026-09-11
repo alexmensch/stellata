@@ -263,6 +263,12 @@ The hand-off parks only in chart mode (flat main-pass ink discs — a
 collapsed slot whose mirror never repaints is a body that draws nowhere
 at all); the pass itself renders on both boots.
 
+While active the cluster also publishes each body as a label occluder
+(`../occlusion/README.md`) — the same walk, one extra push, skipping
+the observe-anchor body, which is shader-hidden and so hides nothing.
+The host star is NOT pushed here: it mirrors through the star cluster,
+which publishes every member disc it owns.
+
 The activation predicate and the orbit-ring extent radius are pure and
 vitest-pinned in `local-cluster-pure.ts`; `RING_EXTENT_MARGIN` is also
 read by `../binaries/orbit-paths/binary-orbit-path-layer.ts`.

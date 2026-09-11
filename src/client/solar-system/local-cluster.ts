@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import type { LocalCluster } from '../local-depth/local-depth-pass';
 import type { MemberSphere } from '../local-depth/bracket/slice-pure';
+import type { OccluderSet } from '../occlusion/occluder-set';
 import { KM_PC } from '../util/astronomy-constants';
 import {
   isHostLocallyActive,
@@ -40,6 +41,7 @@ export class SolarSystemCluster implements LocalCluster {
   private readonly probeField: ProbeField;
   private readonly probeTrails: ProbePathLayer;
   private readonly starCluster: HostStarMemberSink;
+  private readonly occluders: OccluderSet;
   private readonly spheres: MemberSphere[] = [];
   private readonly tmpBody = new THREE.Vector3();
   private readonly tmpSol = new THREE.Vector3();
@@ -51,6 +53,7 @@ export class SolarSystemCluster implements LocalCluster {
     probeField: ProbeField,
     probeTrails: ProbePathLayer,
     starCluster: HostStarMemberSink,
+    occluders: OccluderSet,
   ) {
     this.field = field;
     this.meshLayer = meshLayer;
@@ -58,6 +61,7 @@ export class SolarSystemCluster implements LocalCluster {
     this.probeField = probeField;
     this.probeTrails = probeTrails;
     this.starCluster = starCluster;
+    this.occluders = occluders;
     this.group = new THREE.Group();
     this.group.name = 'solar-system-cluster';
     this.group.add(meshLayer.group);
@@ -90,14 +94,21 @@ export class SolarSystemCluster implements LocalCluster {
         this.field.setLocalPassRange(host.startInstance, host.count);
         hostMember = host.hostStarIdx;
 
+        const hiddenFlat = this.field.hiddenInstanceIdx;
         for (let i = 0; i < host.count; i++) {
           const flat = host.startInstance + i;
           const planet = this.field.planetAt(flat);
           if (!planet || !this.field.planetLocalPositionInto(flat, this.tmpBody)) continue;
+          const radiusPc = planet.radiusKm * KM_PC;
           this.spheres.push({
             distPc: this.tmpBody.distanceTo(camera.position),
-            radiusPc: planet.radiusKm * KM_PC,
+            radiusPc,
           });
+          // The observe-anchor body is shader-hidden, and a body that
+          // draws nothing must not take a label off screen.
+          if (flat !== hiddenFlat) {
+            this.occluders.add(this.tmpBody.x, this.tmpBody.y, this.tmpBody.z, radiusPc);
+          }
         }
         if (ringsUp) {
           this.spheres.push({

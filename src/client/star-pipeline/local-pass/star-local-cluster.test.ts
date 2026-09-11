@@ -6,6 +6,7 @@ import { makeRelation } from '../../binaries/binary-relation-fixture';
 import type { BinaryOrbitPathLayer } from '../../binaries/orbit-paths/binary-orbit-path-layer';
 import type { RenderedSizeComponents } from '../../camera/controls/star-physics';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
+import { OccluderSet } from '../../occlusion/occluder-set';
 import { StarLocalMirror } from './star-local-mirror';
 import { MIRROR_CAPACITY } from './star-mirror-slots';
 import { StarLocalCluster } from './star-local-cluster';
@@ -50,6 +51,7 @@ interface Fixture {
   cluster: StarLocalCluster;
   mirror: StarLocalMirror;
   uniform: { value: Int32Array };
+  occluders: OccluderSet;
   camera: THREE.PerspectiveCamera;
   /** Stars the scan window walk yields, in order. */
   nearStars: number[];
@@ -78,6 +80,7 @@ function makeFixture(): Fixture {
       for (const s of pathSpheres) out.push(s);
     },
   } as unknown as BinaryOrbitPathLayer;
+  const occluders = new OccluderSet();
   const cluster = new StarLocalCluster(mirror, pathLayer, uniform, {
     catalog: makeEmptyCatalog(STAR_COUNT),
     localPositions: () => new Float32Array(STAR_COUNT * 3),
@@ -92,11 +95,13 @@ function makeFixture(): Fixture {
       for (const idx of nearStars) if (cb(idx)) return;
     },
     scanWindowPc: () => 1,
+    occluders,
   });
   return {
     cluster,
     mirror,
     uniform,
+    occluders,
     camera: new THREE.PerspectiveCamera(),
     nearStars,
     sizes,
@@ -226,5 +231,35 @@ describe('StarLocalCluster membership', () => {
     fx.cluster.collectSpheres(fx.camera, spheres);
     expect(spheres).toHaveLength(2);
     expect(spheres[1]).toEqual({ distPc: 2, radiusPc: 1 });
+  });
+});
+
+describe('StarLocalCluster occluder publish', () => {
+  let fx: Fixture;
+  beforeEach(() => { fx = makeFixture(); });
+
+  it('publishes one occluder per member disc', () => {
+    fx.cluster.setHostMember(7);
+    resolvedDisc(fx, 2);
+    fx.nearStars.push(2);
+    fx.cluster.update(fx.camera, fx.frame);
+    expect(members(fx)).toEqual([7, 2]);
+    expect(fx.occluders.count).toBe(2);
+  });
+
+  it('publishes nothing in chart mode', () => {
+    fx.cluster.setHostMember(7);
+    fx.frame.monochrome = true;
+    fx.cluster.update(fx.camera, fx.frame);
+    expect(fx.occluders.count).toBe(0);
+  });
+
+  it('keeps the orbit-path extent spheres out of the occluder set', () => {
+    // A path ellipse spans a whole orbit; as an occluder it would blank
+    // every label inside that radius.
+    fx.cluster.setHostMember(7);
+    fx.pathSpheres.push({ distPc: 2, radiusPc: 1 });
+    fx.cluster.update(fx.camera, fx.frame);
+    expect(fx.occluders.count).toBe(1);
   });
 });

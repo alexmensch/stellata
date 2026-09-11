@@ -76,6 +76,12 @@ disc-pass split × `RESOLVED_DISC_MIN_PX`, evaluated on the
 core-mask gate's sorted-distance walk
 (`StarFrame.forEachStarNearCamera` — `../frame/README.md`).
 
+Every member's disc is also published as a label occluder
+(`../../occlusion/README.md`): a member resolves as a disc by
+definition, and an opaque disc hides any label anchored behind it. The
+orbit-path extent spheres stay out of that set — they are line
+geometry spanning a whole orbit.
+
 Membership parks only in chart mode (flat ink discs, depth disabled —
 suppression and mirrors must stay out of the way). The pass renders on
 both boots; on WebGPU the cluster drives the TSL mirror

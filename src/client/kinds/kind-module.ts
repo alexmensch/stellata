@@ -8,6 +8,7 @@ import type { FocusableProvider, Target, TargetKind } from '../camera/focus/focu
 import type { ConstellationOfKind } from '../focus-card/constellation-row';
 import type { FocusCardProvider } from '../focus-card/focus-card-types';
 import type { HoverProvider } from '../hover/hover-types';
+import type { OccluderQuery } from '../occlusion/occluder-set';
 import type { SceneElementId } from '../scene/scene-elements';
 import type { SceneLayer } from '../scene/scene-layer';
 import type { SharedUniforms } from '../frame/shared-uniforms';
@@ -59,6 +60,11 @@ export interface KindContext {
   /** Subscribe to the per-frame tick (fires after the scene-layer update
    *  fan-out). Returns an unsubscribe. */
   onFrame(handler: () => void): () => void;
+  /** The frame's near-solid-body set — whether a nearer body hides a
+   *  point from the camera. SVG composites above the resolved frame with
+   *  no depth relationship to it, so a label surface asks here
+   *  (`../occlusion/README.md`). */
+  readonly occluders: OccluderQuery;
   /** Ask for a frame. Frames are on demand
    *  (`../render-gate/README.md`), and the gate sees only the camera,
    *  the clock, and the bus — so anything landing between ticks that

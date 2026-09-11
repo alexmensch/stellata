@@ -13,6 +13,7 @@ import {
 import type { LocalCluster } from '../../local-depth/local-depth-pass';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import type { Catalog } from '../../loaders/catalog-loader';
+import type { OccluderSet } from '../../occlusion/occluder-set';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
 import { MIRROR_CAPACITY, type StarMirror } from './star-mirror-slots';
 import { isResolvedDiscStar } from './star-local-cluster-pure';
@@ -30,6 +31,10 @@ export interface StarLocalClusterDeps {
   /** Camera-distance bound past which no star can render a member-
    *  eligible disc — the scan window. */
   scanWindowPc: () => number;
+  /** The frame's near-solid-body set. A member star's disc is opaque,
+   *  so it hides any label anchored behind it
+   *  (`../../occlusion/README.md`). */
+  occluders: OccluderSet;
 }
 
 export interface StarLocalClusterFrame {
@@ -151,10 +156,13 @@ export class StarLocalCluster implements LocalCluster {
       const dy = local[idx * 3 + 1] - camera.position.y;
       const dz = local[idx * 3 + 2] - camera.position.z;
       const R = Math.max(physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC;
+      const radiusPc = R * peakAmplitudeFactor(this.deps.catalog, idx);
       this.spheres.push({
         distPc: Math.sqrt(dx * dx + dy * dy + dz * dz),
-        radiusPc: R * peakAmplitudeFactor(this.deps.catalog, idx),
+        radiusPc,
       });
+      this.deps.occluders.add(
+        local[idx * 3], local[idx * 3 + 1], local[idx * 3 + 2], radiusPc);
     }
     this.pathLayer.collectSpheres(camera, this.spheres);
   }

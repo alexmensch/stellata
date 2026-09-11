@@ -3,7 +3,7 @@ import { sphereHidesPoint } from './occlusion-pure';
 import { AU_PC, KM_PC, R_SUN_PC } from '../util/astronomy-constants';
 
 const EARTH_R = 6371 * KM_PC;
-const MOON_R = 1737.4 * KM_PC;
+
 const MOON_A = 384400 * KM_PC;
 
 /** Camera on −x at `dAu`, Earth at the origin, the Moon offset along
