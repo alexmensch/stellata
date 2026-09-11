@@ -26,8 +26,11 @@ band (`milkyway.setEnabled`), LG volumetric emission, molecular-cloud
 absorption (`setAbsorptionEnabled`), the HDR chain and its four
 decomposition rows (§ Decomposing the HDR chain), the luminance
 reduction (`reduction.enabled`), the star core depth-mask
-(`setCoreMaskEnabled`), and the extinction prepass A/B. A pass inactive
-at the current view/state is skipped, not measured as zero.
+(`setCoreMaskEnabled`), the planet depth pre-stamp
+(`meshLayer.setDepthStampEnabled`, present only while some body's mesh is
+opaque — `../../../solar-system/planets/depth-stamp/README.md`), and the
+extinction prepass A/B. A pass inactive at the
+current view/state is skipped, not measured as zero.
 
 Four rows are not what they look like:
 
