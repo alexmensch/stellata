@@ -45,6 +45,9 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
 - `glsl-residents-pure.ts` (+ test) — `findGlslResidents`, the walk
   behind the shell's first-frame check that no raw-GLSL material reached
   the rendered scene (§ No GLSL material may reach a WebGPU boot).
+- `render-order.ts` (+ test) — `DEPTH_MASK_RENDER_ORDER`, the one
+  draw-order slot two subsystems both write into. The ladder it belongs
+  to is `../README.md` § Full render stack.
 
 ## The material seam
 

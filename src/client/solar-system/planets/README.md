@@ -62,8 +62,9 @@ src/client/solar-system/planets/
                                   answer to the render gate (§ What the
                                   render cadence reads).
   planet-mesh-layer.ts (+ test)   Close-range spheroid mesh LOD — see
-                                  § Planet mesh LOD. Builds its three
-                                  surfaces through ../materials/, which
+                                  § Planet mesh LOD. Builds its four
+                                  surfaces (mesh, annulus, shell, depth
+                                  pre-stamp) through ../materials/, which
                                   owns the shared atmosphere uniform
                                   block. Its test pins the diffuse gate.
                                   drawnPoleInto is the seam anything
@@ -75,6 +76,11 @@ src/client/solar-system/planets/
                                   ../../occlusion/README.md.
   mesh-crossfade.ts (+ test)      Disc ↔ mesh crossfade band math, pure
                                   (shared shader/CPU contract).
+  depth-stamp/                    The main-pass depth pre-stamp: a
+                                  depth-only copy of each opaque body
+                                  mesh at renderOrder −4, so the
+                                  background behind a close planet is
+                                  never shaded. Its own README.
   spheroid-pure.ts (+ test)       polarRadiusRatio — the one source of 1 − f.
   surface-relief/                 DEM relief on the mesh (Moon, Mercury, Mars,
                                   Earth): the tangent frame,
@@ -367,6 +373,9 @@ crossfade.
 - **Visibility**: the layer's group mirrors `PlanetBodyField.group`
   (chart-mono + hidden ride along for free) and skips the field's
   `hiddenInstanceIdx` (observe anchor).
+- **Depth pre-stamp**: every fully opaque body also draws a depth-only
+  copy of its spheroid first in the MAIN pass, so the background behind
+  it is never shaded — `depth-stamp/README.md`.
 
 ### Texture tier selection
 

@@ -17,14 +17,14 @@
     }
   },
   "git": {
-    "commit": "117aefe5cdc3ba2b69cfdfbd6694fcb89b8050da",
+    "commit": "eb235e7ccd5ab751101e68712a62507e2646746c",
     "dirty": false,
-    "mainCommit": "9f56f2fbd7af26d050873134ef7aa9098c2baed8",
+    "mainCommit": "6f760528dfb28c51b0fc85cdc1afe6c40ea36a5b",
     "mainReachable": false
   },
-  "version": "4.1.8",
-  "takenAt": "2026-09-10T22:10:02.968Z",
-  "sourceRun": ".perf-runs/2026-09-10/pin-retake-49-27-b.json",
+  "version": "4.1.9",
+  "takenAt": "2026-09-11T11:09:24.546Z",
+  "sourceRun": ".perf-runs/2026-09-11/0it-16-tier2.json",
   "rows": [
     {
       "key": "mw120|webgpu",
@@ -33,21 +33,21 @@
       "bufferMpx": 4.096,
       "recordCount": 388071,
       "position": 1,
-      "idleRafMs": 16.699999999999818,
+      "idleRafMs": 16.69999999999891,
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 17.599999999998545,
+        "p90": 17.30000000000109,
         "iqrMs": 0.1000000000003638,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": true
       },
       "gpu": {
-        "p50": 21.441506,
-        "p90": 21.487757000000002,
-        "iqrMs": 0.03387499999999832,
-        "samples": 55,
+        "p50": 21.42634,
+        "p90": 21.679586,
+        "iqrMs": 0.04521000000000086,
+        "samples": 56,
         "stateGuard": "steady"
       }
     },
@@ -61,18 +61,18 @@
       "idleRafMs": 16.69999999999891,
       "method": "raf-delta",
       "wall": {
-        "p50": 33.20000000000073,
-        "p90": 33.5,
-        "iqrMs": 16.69999999999709,
+        "p50": 33.19999999999709,
+        "p90": 33.400000000001455,
+        "iqrMs": 16.600000000002183,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
       },
       "gpu": {
-        "p50": 22.400907999999998,
-        "p90": 22.432701,
-        "iqrMs": 0.0227500000000056,
-        "samples": 59,
+        "p50": 22.419284,
+        "p90": 22.811693,
+        "iqrMs": 0.25349600000000194,
+        "samples": 60,
         "stateGuard": "steady"
       }
     },
@@ -83,20 +83,20 @@
       "bufferMpx": 4.096,
       "recordCount": 388071,
       "position": 3,
-      "idleRafMs": 16.649999999999636,
+      "idleRafMs": 16.69999999999891,
       "method": "raf-delta",
       "wall": {
         "p50": 16.700000000000728,
-        "p90": 33.29999999999927,
-        "iqrMs": 1.6999999999989086,
+        "p90": 33.30000000000109,
+        "iqrMs": 1.3999999999996362,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
       },
       "gpu": {
-        "p50": 17.490648,
-        "p90": 17.620275,
-        "iqrMs": 0.08645699999999934,
+        "p50": 17.159238,
+        "p90": 17.425359999999998,
+        "iqrMs": 0.12566699999999997,
         "samples": 58,
         "stateGuard": "steady"
       }
@@ -111,17 +111,17 @@
       "idleRafMs": 16.69999999999891,
       "method": "raf-delta",
       "wall": {
-        "p50": 18.600000000000364,
-        "p90": 33.899999999999636,
-        "iqrMs": 16.600000000002183,
+        "p50": 18.399999999997817,
+        "p90": 33.5,
+        "iqrMs": 16.599999999998545,
         "samples": 240,
         "stateGuard": "trending",
         "vsyncClamped": false
       },
       "gpu": {
-        "p50": 31.873013,
-        "p90": 31.914805,
-        "iqrMs": 0.033580999999998085,
+        "p50": 31.867598,
+        "p90": 31.941429,
+        "iqrMs": 0.03733300000000028,
         "samples": 55,
         "stateGuard": "steady"
       }
@@ -137,17 +137,17 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 18.19999999999891,
-        "iqrMs": 1.5,
+        "p90": 17.899999999999636,
+        "iqrMs": 1.2000000000007276,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
       },
       "gpu": {
-        "p50": 13.38842,
-        "p90": 13.778374,
-        "iqrMs": 0.4447850000000013,
-        "samples": 124,
+        "p50": 12.499766000000001,
+        "p90": 13.569751,
+        "iqrMs": 0.9083190000000023,
+        "samples": 139,
         "stateGuard": "steady"
       }
     },
@@ -158,12 +158,12 @@
       "bufferMpx": 4.096,
       "recordCount": 388071,
       "position": 6,
-      "idleRafMs": 16.649999999999636,
+      "idleRafMs": 16.699999999999818,
       "method": "raf-delta",
       "wall": {
-        "p50": 16.700000000000728,
-        "p90": 33.29999999999927,
-        "iqrMs": 0.6999999999989086,
+        "p50": 16.69999999999891,
+        "p90": 32.399999999999636,
+        "iqrMs": 0.1999999999989086,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": true
@@ -181,8 +181,8 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.700000000000728,
-        "p90": 66.59999999999854,
-        "iqrMs": 16.700000000000728,
+        "p90": 66.60000000000036,
+        "iqrMs": 16.80000000000291,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
@@ -200,8 +200,8 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.700000000000728,
-        "p90": 49.89999999999782,
-        "iqrMs": 2,
+        "p90": 50,
+        "iqrMs": 15.799999999999272,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
@@ -218,9 +218,9 @@
       "idleRafMs": 16.699999999999818,
       "method": "raf-delta",
       "wall": {
-        "p50": 16.700000000000728,
-        "p90": 50.099999999998545,
-        "iqrMs": 16.799999999997453,
+        "p50": 17.100000000000364,
+        "p90": 50,
+        "iqrMs": 17.400000000001455,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": false
@@ -238,8 +238,8 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 17.80000000000109,
-        "iqrMs": 0.8000000000010914,
+        "p90": 17.19999999999891,
+        "iqrMs": 0.1000000000003638,
         "samples": 240,
         "stateGuard": "steady",
         "vsyncClamped": true

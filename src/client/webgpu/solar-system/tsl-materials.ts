@@ -12,6 +12,7 @@ import type { MrtEmitterMaterial } from '../hdr/mrt-material';
 import type { MrtOutputLayer } from '../hdr/hdr-pipeline-webgpu';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { buildPlanetAtmosphereMaterial } from './planet-atmosphere-tsl';
+import { buildPlanetDepthStampMaterial } from './planet-depth-stamp-tsl';
 import { buildPlanetMeshMaterial } from './planet-mesh-tsl';
 import { buildPlanetRingsMaterial } from './planet-rings-tsl';
 import { buildProbeMarkerMaterial } from './probe-tsl';
@@ -111,6 +112,9 @@ export function makeTslSolarSystemMaterials(
     planetAtmosphere() {
       const nodes = planetAtmosphereUniformNodes();
       return wrap(buildPlanetAtmosphereMaterial(cfg.nodes, nodes, cfg.gates), nodes);
+    },
+    planetDepthStamp() {
+      return wrap(buildPlanetDepthStampMaterial(), {});
     },
   };
 }

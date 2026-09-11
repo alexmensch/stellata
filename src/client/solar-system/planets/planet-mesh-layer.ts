@@ -49,6 +49,8 @@ import {
   type PlanetRings,
 } from '../planet-system';
 import { meshFadeFromPhysPx, TEXTURE_PREFETCH_PX } from './mesh-crossfade';
+import { depthStampDrawn, depthStampRadius } from './depth-stamp/depth-stamp-pure';
+import { DEPTH_MASK_RENDER_ORDER } from '../../scene/render-order';
 import {
   poleRaDecDegInto,
   type PoleRaDec,
@@ -161,6 +163,10 @@ type SlotFallbacks = Record<PlanetMeshTextureSlot, THREE.Texture>;
 interface MeshEntry {
   mesh: THREE.Mesh;
   material: EmitterMaterial;
+  /** The main-pass depth pre-stamp: the body spheroid shrunk by
+   *  DEPTH_STAMP_SHRINK, depth-only, in `depthStampGroup` rather than the
+   *  pass scene (depth-stamp/README.md). */
+  stamp: THREE.Mesh;
   /** Body radius, extended to the ring outer edge / atmosphere shell
    *  when present — the local-depth-pass bounding sphere. */
   boundRadiusPc: number;
@@ -226,6 +232,16 @@ type TextureState =
 
 export class PlanetMeshLayer {
   readonly group: THREE.Group;
+  /** The depth pre-stamps, parented into the MAIN scene by the planet
+   *  module — never into the local depth pass, whose depth is cleared
+   *  before it repaints (depth-stamp/README.md). */
+  readonly depthStampGroup: THREE.Group;
+  /** One material for every body's stamp: it carries no uniforms and no
+   *  per-body state, so a copy per body would be a second registration
+   *  for the MRT swap to walk and nothing else (../materials/README.md).
+   *  The probe glyph shares for the same reason. */
+  private readonly stampMaterial: EmitterMaterial;
+  private depthStampEnabled = true;
 
   private readonly field: PlanetBodyField;
   private readonly textureBaseUrl: string;
@@ -297,6 +313,8 @@ export class PlanetMeshLayer {
     this.uPixelRatio = hdr.uPixelRatio;
     this.group = new THREE.Group();
     this.group.name = 'planet-meshes';
+    this.depthStampGroup = new THREE.Group();
+    this.depthStampGroup.name = 'planet-depth-stamps';
     this.geometry = new THREE.SphereGeometry(1, 128, 64);
     this.placeholder = new THREE.DataTexture(
       new Uint8Array([255, 255, 255, 255]), 1, 1,
@@ -313,6 +331,7 @@ export class PlanetMeshLayer {
     this.placeholder.version = this.placeholder.id + 1;
     this.materials = materials?.(this.placeholder)
       ?? makeGlslSolarSystemMaterials({ hdr: this.hdr, placeholder: this.placeholder });
+    this.stampMaterial = this.materials.planetDepthStamp();
   }
 
   /** Append camera-relative bounding spheres for every mesh-visible
@@ -341,6 +360,21 @@ export class PlanetMeshLayer {
     return true;
   }
 
+  /** Frame-cost lever (`../../debug/frame-cost/passes/README.md`); never a
+   *  shipped state. */
+  setDepthStampEnabled(on: boolean): void {
+    this.depthStampEnabled = on;
+  }
+
+  /** Whether any body stamps this frame — the lever's `present()`. */
+  anyDepthStampDrawn(): boolean {
+    if (!this.depthStampGroup.visible) return false;
+    for (const entry of this.entries.values()) {
+      if (entry.stamp.visible) return true;
+    }
+    return false;
+  }
+
   /** Per-frame: show/scale/light every body inside the crossfade band.
    *  Reads the body field's live buffers, so recentres and scrubber
    *  motion need no extra hooks. `t` is the model clock (getT()) —
@@ -349,6 +383,7 @@ export class PlanetMeshLayer {
     // Chart mode inks the bodies as flat discs (chart-mode/README.md);
     // a lit photographic sphere has no place on paper.
     this.group.visible = this.field.group.visible && !this.field.monochrome;
+    this.depthStampGroup.visible = this.group.visible && this.depthStampEnabled;
     if (!this.group.visible) return;
     perfMark('solar.mesh');
     this.frame++;
@@ -414,6 +449,13 @@ export class PlanetMeshLayer {
         if (orientation) {
           mesh.quaternion.copy(orientation).multiply(POLE_TILT);
         }
+      }
+      entry.stamp.visible = depthStampDrawn(fade);
+      if (entry.stamp.visible) {
+        entry.stamp.position.copy(mesh.position);
+        entry.stamp.quaternion.copy(mesh.quaternion);
+        const stampR = depthStampRadius(radiusPc);
+        entry.stamp.scale.set(stampR, stampR * polarRadiusRatio(planet), stampR);
       }
 
       // Host-star direction: world frame (the ring + phase lighting frame),
@@ -551,6 +593,7 @@ export class PlanetMeshLayer {
     for (const [idx, entry] of this.entries) {
       if (!shown.has(idx)) {
         entry.mesh.visible = false;
+        entry.stamp.visible = false;
         if (entry.ring) entry.ring.mesh.visible = false;
         if (entry.atmosphere) entry.atmosphere.mesh.visible = false;
       }
@@ -901,6 +944,12 @@ export class PlanetMeshLayer {
     mesh.renderOrder = 2.8;
     markOccludingEmitter(mesh);
     this.group.add(mesh);
+    const stamp = new THREE.Mesh(this.geometry, this.stampMaterial.material);
+    stamp.name = 'planet-depth-stamp';
+    stamp.frustumCulled = false;
+    stamp.renderOrder = DEPTH_MASK_RENDER_ORDER;
+    stamp.visible = false;
+    this.depthStampGroup.add(stamp);
     const radiusPc = planet.radiusKm * KM_PC;
     const boundRadiusPc = Math.max(
       planet.rings ? planet.rings.outerRadiusKm : 0,
@@ -910,7 +959,9 @@ export class PlanetMeshLayer {
       PLANET_MESH_TEXTURE_SLOTS,
       (slot) => material.uniforms[slot].value as THREE.Texture,
     );
-    const entry: MeshEntry = { mesh, material, boundRadiusPc, radiusPc, slotFallbacks };
+    const entry: MeshEntry = {
+      mesh, material, stamp, boundRadiusPc, radiusPc, slotFallbacks,
+    };
     if (planet.rings) entry.ring = this.createRing(planet, planet.rings);
     if (planet.atmosphere) {
       entry.atmoBase = computeAtmoBase(
@@ -1052,9 +1103,10 @@ export class PlanetMeshLayer {
   }
 
   dispose(): void {
-    for (const { mesh, material, ring, atmosphere } of this.entries.values()) {
+    for (const { mesh, material, stamp, ring, atmosphere } of this.entries.values()) {
       this.group.remove(mesh);
       material.dispose();
+      this.depthStampGroup.remove(stamp);
       if (ring) {
         this.group.remove(ring.mesh);
         ring.material.dispose();
@@ -1078,6 +1130,7 @@ export class PlanetMeshLayer {
     this.shownRung.clear();
     this.requestedRung.clear();
     this.rungOf.clear();
+    this.stampMaterial.dispose();
     this.geometry.dispose();
     this.placeholder.dispose();
   }

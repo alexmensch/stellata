@@ -8,7 +8,7 @@
 export const PRICED_PASS_KEYS = [
   'localDepth', 'mwBand', 'lgEmission', 'cloudAbsorption', 'hdrChain',
   'tonemapOp', 'statisticWrites', 'summation', 'summationTaps', 'mrtAttachments',
-  'reduction', 'coreMask', 'extinctionPrepass', 'emptyPass',
+  'reduction', 'coreMask', 'planetDepthStamp', 'extinctionPrepass', 'emptyPass',
 ] as const;
 
 export type PricedPassKey = (typeof PRICED_PASS_KEYS)[number];

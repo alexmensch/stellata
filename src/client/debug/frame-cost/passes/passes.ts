@@ -126,6 +126,11 @@ export function buildPassToggles(
       disable: () => flag((on) => stellata.setCoreMaskEnabled(on)),
     },
     {
+      key: 'planetDepthStamp',
+      present: () => stellata.kinds.planet.meshLayer.anyDepthStampDrawn(),
+      disable: () => flag((on) => stellata.kinds.planet.meshLayer.setDepthStampEnabled(on)),
+    },
+    {
       key: 'extinctionPrepass',
       present: () => stellata.isExtinctionPrepassActive(),
       disable: () => flag((on) => stellata.setExtinctionPrepassEnabled(on)),
