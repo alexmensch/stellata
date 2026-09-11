@@ -133,7 +133,7 @@ export function usage(): string {
     `  --method <clock>         ${GPU_FRAME_METHODS.join('|')}       (default: the backend\'s best)`,
     `  --budget-ms <n>          whole-sweep wall-clock ceiling            (default ${ARG_DEFAULTS.budgetMs})`,
     '  --dwell-frames <n>  --warmup-frames <n>  --settle-frames <n>       (default: priceFrame\'s own)',
-    `  --empty-passes <n>       emptyPass row: empty passes added, floor = savedMs/n (default ${EMPTY_PASSES_DEFAULT})`,
+    `  --empty-passes <n>       emptyPass row: empty passes added; savedMs bounds all n, never n× one (default ${EMPTY_PASSES_DEFAULT})`,
     '  --no-interleave          single-baseline sweep (drift-exposed)',
     '  --headed                 headed Chrome; headed and headless never compare',
     `  --width <px> --height <px> --dpr <n>                               (default ${ARG_DEFAULTS.width}x${ARG_DEFAULTS.height} @ ${ARG_DEFAULTS.dpr})`,

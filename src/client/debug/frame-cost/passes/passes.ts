@@ -18,10 +18,11 @@ export interface PassToggle {
 
 export interface PassToggleOptions {
   /** How many empty render passes the `emptyPass` row adds while
-   *  "disabled". Its `savedMs` is minus the total, so the per-pass floor
-   *  is that over this count — the passes are independent boundaries, so
-   *  the total is linear in it. Raise it wherever one pass falls under
-   *  `bracketMs` and the row will not resolve. */
+   *  "disabled". Its `savedMs` is minus the total for that many boundaries
+   *  together, which is what the row bounds — never that over this count,
+   *  since consecutive clears with nothing drawn between them are what a
+   *  driver would coalesce (README.md § The roster). Raise it wherever one
+   *  pass falls under `bracketMs` and the row will not resolve. */
   emptyPasses?: number;
 }
 
