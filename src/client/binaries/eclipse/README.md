@@ -85,6 +85,33 @@ so sub-frame events read as a soft shimmer while real-time dips
 exactly 1.0 after occlusion ends and leave the field's active set;
 frames that write nothing skip the attribute re-upload entirely.
 
+#### Partial re-upload
+
+`iEclipseDim` flushes through a `DirtyItemUploader`
+(`../../util/README.md` § attribute-upload) over `orbitMemberSlots` —
+every member of a cached relation, the only slots the dim walk can
+write. The uploader diffs those slots and uploads ranges over the ones
+whose float32 bits moved, so an eclipse frame costs tens of bytes
+rather than the whole per-instance buffer — which on WebGPU also
+re-packs every instance on the CPU, the scalar being interleaved into
+the packed `iDyn0` vec4. Both whole-buffer figures, and which writer
+reaches that path, are `../../webgpu/star/README.md` § Dynamic
+attributes.
+
+The **decay tail** needs no bookkeeping of its own: a slot blending
+back toward 1.0 keeps differing from the uploader's shadow for as many
+frames as it keeps moving, so it earns a range until it snaps to
+exactly 1.0. Tracking this frame's occluding pairs instead would drop a
+slot while it was still moving and freeze it mid-decay.
+
+**The first WRITING flush after construction or dispose uploads in
+full.** The integration shell fills the whole buffer with 1.0 on every
+re-attach, reaching stars outside the tracked member set, and three.js
+honours a non-empty range list *over* the full array — so ranges
+appended before a render consumed that fill would strand every
+untracked star at the previous attach's value. The shell's own init
+goes through `uploadFull` for the same reason.
+
 #### What the render cadence reads
 
 `cadenceReport(simDtS)` is this field's declaration to the render gate
