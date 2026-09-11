@@ -7,7 +7,7 @@ import {
   MAX_DISTANCE_PC,
   roundN,
 } from '../../../../scripts/local-group/build-local-group-pure';
-import { ALL_OBJECTS, type BuildLgObject, buildObject } from './lg-test-catalog';
+import { ALL_OBJECTS, type BuildLgObject, buildObject } from './lg-catalog-fixture';
 import {
   columnSurfaceBrightness,
   cpuDensityAt,

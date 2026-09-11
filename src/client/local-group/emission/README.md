@@ -30,8 +30,10 @@ are no Deep-field emission knobs (§ Zero free parameters).
   test (§ Zero free parameters).
 - `lg-peak-pure.ts` (+ test) — the brightest pixel the glow renders from a
   camera position, as a bound (§ The brightest rendered pixel).
-- `lg-test-catalog.ts` — the shipped catalogue assembled from `data/` for
-  the suites above, since a worktree carries no `public/` artifact.
+- `lg-catalog-fixture.ts` — the shipped catalogue assembled from `data/` for
+  the suites above, since a worktree carries no `public/` artifact. It reads
+  `node:fs` and `scripts/`, so it is the one module here no browser code may
+  import; the `-fixture` suffix is what marks that.
 
 ## The two passes
 

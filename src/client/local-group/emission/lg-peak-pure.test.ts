@@ -18,7 +18,7 @@ import {
   lgPeakSurfaceBrightness,
   objectPeakSurfaceBrightness,
 } from './lg-peak-pure';
-import { ALL_OBJECTS, type BuildLgObject, buildObject } from './lg-test-catalog';
+import { ALL_OBJECTS, type BuildLgObject, buildObject } from './lg-catalog-fixture';
 
 type Vec3 = readonly [number, number, number];
 
