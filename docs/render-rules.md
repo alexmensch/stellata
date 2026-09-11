@@ -95,6 +95,10 @@ band keyed on where Sol is:
    emitter back — so the skip is admissible only under two rules: the
    emitter must be invisible at the exposure that will obtain *without*
    it, and that exposure shift must be under `CADENCE_JND_MAG`.
+   **Admissible only to an emitter that claims no coverage** — a layer
+   writing the lit-surface mask moves the resolved-surface pin and the
+   coverage ramp as well as the eye term, and the closure argument
+   covers neither.
    `docs/science-hdr-pipeline.md` § 3.5 is the derivation; until
    stellata-8cg.50.4.2 lands no layer skips on brightness.
 

@@ -1345,6 +1345,12 @@ and `L̄` is monotone non-decreasing in the set of drawn emitters (additive
 blending, non-negative light). Removing an emitter can therefore only
 *ease* the cut, only through the eye term, weighted by `1 − w`:
 
+**Claiming no coverage is a precondition, not an observation about the two
+layers that hold it today.** A layer that writes the lit-surface mask moves
+`f`, `w` and `D` as well, so none of the three bullets below holds for it
+and the closure argument has to be made again. Reason 4 is admissible only
+to an emitter whose G is zero.
+
 - **Floor** (`L̄ ≥ Lw` — the app default view): if `L̄ − ΔL_E ≥ Lw` the cut
   is exactly unchanged. This is 8cg.34's lower-bound argument.
 - **Pin** (`w = 1`): exactly unchanged.
