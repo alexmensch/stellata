@@ -158,6 +158,19 @@ covers the whole band in one jump and whose landing SNAPS the slew rather
 than ramping it (`../README.md` § Adaptation), so a late probe there is a
 one-frame flash on arrival rather than a sustained over-bright scene.
 
+## The lever
+
+`SceneAdaptation.setParkEnabled(false)` holds the machine at its initial
+state every frame, so nothing parks and every frame's statistic writes and
+reduction stay live — a **frame-cost lever, never a shipped state**. It
+exists because the two states above conspire against one measurement: the
+app default view is the floor regime, which parks, and a sweep's exposure
+hold collapses a probe to parked, so `debug.priceFrame`'s
+`statisticWrites` row at Sol prices an already-parked frame however the
+sweep is called. The headless runner reaches it as `--no-park`
+(`../../../../../scripts/perf/README.md` § Invocation); `setHeld` keeps its
+own semantics on top, since a disabled machine has no probe to collapse.
+
 ## What the park does NOT save
 
 The floor-regime park stops the whole measurement periodically and must

@@ -64,6 +64,7 @@ export class SceneAdaptation {
   private lTarget = L_TARGET;
   private slewTauS = ADAPT_SLEW_TAU_S;
   private held = false;
+  private parkEnabled = true;
 
   constructor(deps: SceneAdaptationDeps) {
     this.deps = deps;
@@ -102,10 +103,23 @@ export class SceneAdaptation {
     this.landing.appliedDm = this.dm;
     this.landing.regime = regime;
     this.landing.probeReady = this.deps.measurementReady();
-    this.park = parkTick(this.park, this.landing);
+    this.park = this.parkEnabled ? parkTick(this.park, this.landing) : INITIAL_PARK_STATE;
     perfMeasure('adaptation');
     return this.dm;
   }
+
+  /**
+   * Keep the measurement live whatever the regime — a frame-cost lever, never
+   * a shipped state (`park/README.md` § The lever). Disabling unparks on the
+   * same call rather than a frame later, so a sweep set up after the machine
+   * has already parked still prices live writes.
+   */
+  setParkEnabled(on: boolean): void {
+    this.parkEnabled = on;
+    if (!on) this.park = INITIAL_PARK_STATE;
+  }
+
+  isParkEnabled(): boolean { return this.parkEnabled; }
 
   /**
    * True while the measurement is parked: the reduction's draws and the

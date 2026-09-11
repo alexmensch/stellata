@@ -42,6 +42,12 @@ export interface RunArgs {
   readonly backend: BackendRequest;
   readonly mode: Mode;
   readonly passes: readonly string[] | undefined;
+  /** differential: roster passes switched OFF before the sweep and restored
+   *  after it, so the priced rows describe a frame without them. */
+  readonly preDisable: readonly PricedPassKey[] | undefined;
+  /** differential: keep the adaptation measurement unparked for the sweep
+   *  (`src/client/hdr/exposure/park/README.md` § The lever). */
+  readonly noPark: boolean;
   readonly method: GpuFrameMethod | undefined;
   readonly budgetMs: number;
   readonly dwellFrames: number | undefined;
@@ -98,6 +104,8 @@ const OPTIONS = {
   backend: { type: 'string', default: ARG_DEFAULTS.backend },
   mode: { type: 'string', default: ARG_DEFAULTS.mode },
   passes: { type: 'string' },
+  'pre-disable': { type: 'string' },
+  'no-park': { type: 'boolean', default: false },
   method: { type: 'string' },
   'budget-ms': { type: 'string', default: String(ARG_DEFAULTS.budgetMs) },
   'dwell-frames': { type: 'string' },
@@ -130,6 +138,8 @@ export function usage(): string {
     `  --backend <name>         ${BACKEND_REQUESTS.join('|')}                         (default ${ARG_DEFAULTS.backend})`,
     `  --mode <name>            ${MODES.join('|')}   (default ${ARG_DEFAULTS.mode})`,
     '  --passes <keys>          comma list of priceFrame pass keys        (default: every present pass)',
+    '  --pre-disable <keys>     differential: switch these passes OFF for the whole sweep (restored after)',
+    '  --no-park                differential: keep the adaptation measurement unparked for the sweep',
     `  --method <clock>         ${GPU_FRAME_METHODS.join('|')}       (default: the backend\'s best)`,
     `  --budget-ms <n>          whole-sweep wall-clock ceiling            (default ${ARG_DEFAULTS.budgetMs})`,
     '  --dwell-frames <n>  --warmup-frames <n>  --settle-frames <n>       (default: priceFrame\'s own)',
@@ -165,6 +175,8 @@ export function usage(): string {
  */
 const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
   passes: ['differential'],
+  'pre-disable': ['differential'],
+  'no-park': ['differential'],
   method: ['differential'],
   'budget-ms': ['differential'],
   'dwell-frames': ['differential'],
@@ -264,10 +276,20 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
   const isPassKey = (key: string): key is PricedPassKey =>
     PRICED_PASS_KEYS.includes(key as PricedPassKey);
 
-  const passes = list('passes');
-  for (const key of passes ?? []) {
-    if (!isPassKey(key)) {
-      throw new ArgError(`--passes names no such pass: '${key}'. Known: ${PRICED_PASS_KEYS.join(', ')}`);
+  const passKeys = (flag: string): PricedPassKey[] | undefined => {
+    const keys = list(flag);
+    for (const key of keys ?? []) {
+      if (!isPassKey(key)) {
+        throw new ArgError(`--${flag} names no such pass: '${key}'. Known: ${PRICED_PASS_KEYS.join(', ')}`);
+      }
+    }
+    return keys as PricedPassKey[] | undefined;
+  };
+  const passes = passKeys('passes');
+  const preDisable = passKeys('pre-disable');
+  for (const key of preDisable ?? []) {
+    if (passes?.includes(key)) {
+      throw new ArgError(`--pre-disable '${key}' is also in --passes: a pass held off cannot be priced`);
     }
   }
 
@@ -321,6 +343,8 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     backend,
     mode,
     passes,
+    preDisable,
+    noPark: values['no-park'] as boolean,
     method: optionalOneOf('method', GPU_FRAME_METHODS),
     budgetMs: num('budget-ms'),
     dwellFrames: optionalNum('dwell-frames'),

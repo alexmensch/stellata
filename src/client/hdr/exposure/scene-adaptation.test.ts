@@ -391,6 +391,26 @@ describe('SceneAdaptation — the measurement park', () => {
     expect(adaptation.getParkPhase()).toBe('active');
   });
 
+  it('setParkEnabled(false) keeps the measurement live through the floor regime and a hold', () => {
+    const adaptation = makeAdaptation();
+    adaptation.setParkEnabled(false);
+    expect(adaptation.isParkEnabled()).toBe(false);
+    settleAtFloor(adaptation);
+    landFloorFrames(adaptation, 4 * ADAPT_PARK_SETTLED_LANDINGS);
+    expect(adaptation.isMeasurementParked()).toBe(false);
+    expect(adaptation.getParkPhase()).toBe('active');
+    adaptation.setHeld(true);
+    idle(adaptation, 4 * ADAPT_PARK_PROBE_INTERVAL_FRAMES);
+    expect(adaptation.isMeasurementParked()).toBe(false);
+    adaptation.setHeld(false);
+
+    adaptation.setParkEnabled(true);
+    landFloorFrames(adaptation, ADAPT_PARK_SETTLED_LANDINGS);
+    expect(adaptation.isMeasurementParked()).toBe(true);
+    adaptation.setParkEnabled(false);
+    expect(adaptation.isMeasurementParked()).toBe(false);
+  });
+
   it('clears the park on chart entry', () => {
     const adaptation = makeAdaptation();
     parkIt(adaptation);

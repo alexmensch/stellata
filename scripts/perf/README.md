@@ -60,6 +60,7 @@ scripts/perf/
 ```
 pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu|webgl2|both]
                  [--mode differential|probe|dwell|sweep] [--passes a,b]
+                 [--pre-disable a,b] [--no-park]
                  [--method timer-query|timestamp|raf-delta]
                  [--budget-ms N] [--dwell-frames N] [--warmup-frames N] [--settle-frames N] [--no-interleave]
                  [--empty-passes N]
@@ -84,6 +85,33 @@ assumes the clears add, and consecutive clears with nothing drawn between them
 are what a driver would coalesce
 (`src/client/debug/frame-cost/passes/README.md` § The roster,
 `docs/render-rules.md` § 8).
+
+**`--pre-disable <keys>` and `--no-park` set up the frame a differential
+prices, and are read by that mode alone.** The named roster passes are
+switched off before the sweep — through their own `buildPassToggles`
+toggles, so there is no second spelling of any pass — and restored in a
+`finally` outside priceFrame's own; a pass not active at the vantage
+throws rather than pricing a frame it was never in. `--no-park` holds the
+adaptation measurement unparked; why that is needed at all, and why it is a
+lever rather than a state, is `src/client/hdr/exposure/park/README.md`
+§ The lever. Both land in the record's `params`, and a run differing in
+either refuses to compare (§ Sweep preconditions). The case they exist for
+is the `statisticWrites` row at the Sol default view
+(`src/client/debug/frame-cost/passes/README.md` § The roster).
+
+**`--pre-disable` is only sound where the applied cut does not depend on the
+frame, and Sol's floor regime is that case.** The flag acts *before*
+priceFrame, which pins the exposure only after its own warmup
+(`src/client/debug/frame-cost/README.md` § Preconditions) — so the warmup
+converges on the reduced scene and the sweep then pins a cut the plain run
+never had. Where the eye branch or the resolved-surface pin governs, that is
+a different star population in the two runs and the rows are not each
+other's complement; § The compression probe on the passes page is the same
+trap caught the hard way. At the Sol default view the display floor governs
+and the cut reads `Lw` and the anchor and nothing from the frame, so holding
+the band and the glow off cannot move it. **The `limitMag` columns are the
+tell either way** — equal across both runs, or the subtraction is between
+two different scenes.
 
 `--frames` sizes a dwell (dwell and sweep modes); `--scales` is the sweep's
 viewport set. `--warmup-frames` is shared: it is priceFrame's own warmup in
@@ -114,10 +142,10 @@ be compared. rAF wall time is the one clock both supply. An explicit
 
 **A flag the chosen mode does not read is an error, not a no-op.**
 `--mode dwell --method timer-query` is refused rather than quietly stamping
-the table `raf-delta`, and the same goes for `--passes`, `--budget-ms`,
-`--dwell-frames`, `--settle-frames` and `--no-interleave` outside
-`differential`, `--frames` outside dwell and sweep, `--roundtrip` outside
-dwell, and `--scales` outside sweep. Only flags actually typed are checked,
+the table `raf-delta`, and the same goes for `--passes`, `--pre-disable`,
+`--no-park`, `--budget-ms`, `--dwell-frames`, `--settle-frames` and
+`--no-interleave` outside `differential`, `--frames` outside dwell and
+sweep, `--roundtrip` outside dwell, and `--scales` outside sweep. Only flags actually typed are checked,
 so a default never trips it, and `--warmup-frames` is exempt because every
 mode absorbs the same ramp. The in-app instrument takes the same posture on a
 pin it cannot honour (`src/client/debug/frame-cost/README.md`
@@ -324,12 +352,32 @@ reaches the diff — see § JSON output); a differing method or mode, a buffer
 more than 1 % apart, a **record count** more than 1 % apart or absent on
 either side (a row priced against a different catalogue is not a
 comparison), a **run position** that differs or is absent on either side
-(below), a failed or tainted scenario, a dwell clamped or trending on
+(below), a **sweep precondition** that differs (below), a failed or tainted
+scenario, a dwell clamped or trending on
 its gating clock, a mismatched GPU stream, a `cadenceBound` row (either
 side), or a row missing from one side refuses that key. The buffer, record
-count and position refusals are one implementation each in `diff-pure.ts`,
-applied by `--against-pin` too: the two gates must refuse the same pair for
-the same reason, or the looser one certifies what the tighter one rejects.
+count, position and precondition refusals are one implementation each in
+`diff-pure.ts`, applied by `--against-pin` too: the two gates must refuse the
+same pair for the same reason, or the looser one certifies what the tighter
+one rejects.
+
+**Sweep preconditions: the state a differential was SET UP in refuses the
+pair.** `--pre-disable` and `--no-park` change what the frame contained
+before the roster was touched at all, and `--no-interleave` changes how every
+row is differenced; all three are recorded in `params` and compared there.
+Pre-disabled keys compare as sets, so the order they were typed in is not a
+difference. `--empty-passes` refuses at the **row** level instead — it reaches
+the `emptyPass` row alone, and refusing a whole scenario for it would drop
+twelve sound rows to protect one. This is what stops the subtraction those
+flags exist for (`src/client/debug/frame-cost/passes/README.md` § The roster)
+being read off a row-against-row verdict: it is a bound taken across two runs
+by hand, and the two runs are not comparable in the sense this table means.
+
+**An absent precondition reads as the flag's own default, not as unknown** —
+the opposite of the record count's rule, and worth stating because of it. A
+run written before these flags existed pre-disabled nothing, since there was
+no way to ask; a run carrying no record count may have priced any scene at
+all. So an old baseline still compares.
 
 **Run position: two rows compare only when their contexts sat at the same
 place in their runs.** The GPU's load history before a context moves its
