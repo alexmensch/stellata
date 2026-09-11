@@ -126,17 +126,24 @@ the whole pin, it blocked the pin for *every* render-path PR at random. Wall
   (where the frame clears the refresh interval), at run positions 1, 5 and
   10, cold and warm, across a dozen commits — so it is a property of the
   vantage and **not** waiting on a fix. The band stands down, and so does the
-  **state guard**: a trending lg is that same wander read across the
-  quarters, not a verdict on the run, and since any refused row refuses the
-  whole pin, leaving the refusal in force killed roughly one pin re-take in
-  three on the one row the gate never acts on — ~25 min of held-idle machine
-  each. Everything else still reaches the row: the ceiling below still marks
-  it, and a failed, tainted, resized or mis-positioned lg still refuses,
-  those being facts about the run rather than about lg.
-  **`lg` is the only canon vantage that sees the Local
-  Group**, so a `src/client/local-group/` render change has no pin row that
-  prices it short of the ceiling: price one with a per-pass differential at
-  lg instead, never with its pin row.
+  **state guard**: a trending lg is that same wander read across the quarters,
+  not a verdict on the run, and since any refused row refuses the whole pin,
+  leaving the refusal in force killed roughly one pin re-take in three on the
+  one row the gate never acts on — ~25 min of held-idle machine each.
+  **The stand-down is keyed on the vantage, so it takes `lg|webgl2` with
+  it**, where the gating clock is the wall clock and not the GPU stream every
+  figure above is measured on. That row earns the exemption on the other
+  ground: its wall median sits on the refresh interval, so its quarters swing
+  by a whole interval however idle the machine is, exactly as mw50's do
+  (§ State guard) — and refusing there spends a re-take to protect a verdict
+  nothing reads, a WebGL2 row carrying no band and no ceiling either.
+  Everything else still reaches the row: the ceiling below still marks a
+  WebGPU lg, and a failed, tainted, resized or mis-positioned lg still
+  refuses, those being facts about the run rather than about lg. **`lg` is
+  the only canon vantage that sees the Local Group**, so a
+  `src/client/local-group/` render change has no pin row that prices it short
+  of the ceiling: price one with a per-pass differential at lg instead, never
+  with its pin row.
 - **Band.** The pair's two-sigma standard error, floored at
   `max(DWELL_FLOOR_MS 0.25 ms, DWELL_FLOOR_FRACTION 1 % × pinned)` — about
   8× the largest cold-to-cold move those four rows showed. A `✗` is past

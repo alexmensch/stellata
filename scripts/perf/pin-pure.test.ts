@@ -190,6 +190,14 @@ describe('pinFromRun', () => {
       .toEqual(['sol|webgpu: the dwell trended across its quarters — it straddled a load-state transition']);
   });
 
+  it('stands the guard down at an ungated vantage on WebGL2, where wall is the gating clock', () => {
+    const lgGl = scenario('lg', 'webgl2', dwell(trending(16.7), null));
+    expect(pinFromRun(file([lgGl]), SOURCE).refusals).toEqual([]);
+
+    const solGl = scenario('sol', 'webgl2', dwell(trending(16.7), null));
+    expect(pinFromRun(file([solGl]), SOURCE).refusals[0]).toContain('load-state transition');
+  });
+
   it('still judges a WebGL2 row on the wall clock, its only clock', () => {
     const gl = scenario('sol', 'webgl2', dwell(trending(16.4), null));
     expect(pinFromRun(file([gl]), SOURCE).refusals[0]).toContain('load-state transition');
