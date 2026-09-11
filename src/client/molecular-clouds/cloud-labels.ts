@@ -12,8 +12,9 @@ export const CLOUD_LABELS_GROUP_ID = 'cloud-labels';
 // screen to be the thing the user is looking at — the cloud-family
 // analogue of the heliopause label's orbit-ring heuristic and the LG
 // labels' distance thresholds (every 'all'-tier label carries its own
-// relevance gate on top of the declutter floor).
-const LABEL_MIN_SILHOUETTE_PX = 40;
+// relevance gate on top of the declutter floor). Chart mode's cloud
+// names read the same threshold off this export.
+export const LABEL_MIN_SILHOUETTE_PX = 40;
 
 /** Mount one silhouette-hugging label per cloud. Called from the cloud
  *  module's `labels()` leg after attach; the returned teardown removes

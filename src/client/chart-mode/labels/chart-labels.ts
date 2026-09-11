@@ -9,6 +9,7 @@ import { getChartDiscParams } from '../../camera/controls/star-physics';
 import { chartDiscPxForAppMag } from '../chart-disc-pure';
 import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
 import { limitMagOf } from '../../filters/filter-state';
+import { LABEL_MIN_SILHOUETTE_PX } from '../../molecular-clouds/cloud-labels';
 
 // Chart-mode label engine. Per-frame, projects every candidate
 // label (proper-named star, Bayer-letter star, constellation Latin name,
@@ -667,6 +668,11 @@ export class ChartLabels {
     const clouds = stellata.getCloudCatalog();
     if (clouds && showCloudNames) {
       for (let i = 0; i < clouds.clouds.length; i++) {
+        // Every other chart candidate earns its label by clearing the
+        // magnitude limit. A cloud carries no magnitude, so it clears
+        // the same apparent-size floor its realistic-mode label reads —
+        // one threshold, imported, never a second literal.
+        if (stellata.focusables.cloud.renderedSizePx(i) < LABEL_MIN_SILHOUETTE_PX) continue;
         if (!stellata.focusables.cloud.localPositionInto(i, this.tmpCloudLocal)) continue;
         if (!projectVecInto(this.tmpCloudLocal, camera, w, h, xy)) continue;
         this.addCandidate(

@@ -15,6 +15,7 @@ import {
 } from './chart-labels';
 import type { Stellata } from '../../stellata';
 import type { ChartModeContext } from '../chart-mode';
+import { LABEL_MIN_SILHOUETTE_PX } from '../../molecular-clouds/cloud-labels';
 
 describe('chart-labels / computeAppMag', () => {
   it('equals absmag at exactly 10 pc (distance modulus = 0)', () => {
@@ -486,6 +487,9 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     constellations?: { code: string; name: string }[];
     anchors?: { code: string; name: string; conIndex: number; position: THREE.Vector3 }[];
     detailPermits?: (id: string) => boolean;
+    /** One cloud per entry, at screen centre, with the silhouette size
+     *  its focusable leg reports. */
+    clouds?: { name: string; sizePx: number }[];
   }
 
   function makeHarness(patch: HarnessPatch = {}): Harness {
@@ -537,7 +541,16 @@ describe('chart-labels / ChartLabels lifecycle', () => {
         }),
       },
       detailPermits: patch.detailPermits ?? (() => true),
-      getCloudCatalog: () => null,
+      getCloudCatalog: () => (patch.clouds ? { clouds: patch.clouds } : null),
+      focusables: {
+        cloud: {
+          localPositionInto: (_i: number, out: THREE.Vector3) => {
+            out.set(0, 0, -100);
+            return true;
+          },
+          renderedSizePx: (i: number) => patch.clouds?.[i].sizePx ?? 0,
+        },
+      },
       kinds: { planet: { field: { liveInstanceCount: 0 } } },
       on: (name: string, fn: () => void) => {
         let set = handlers.get(name);
@@ -602,6 +615,36 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     expect(h.handlerCount()).toBe(0);
     labels.stop();
     expect(h.handlerCount()).toBe(0);
+  });
+
+  describe('cloud names carry an apparent-size gate', () => {
+    // Every other chart candidate earns its label by clearing the
+    // magnitude limit. A cloud has no magnitude, so it clears the same
+    // silhouette floor its realistic-mode label reads. Without this a
+    // 150 pc complex subtending a few pixels printed its name over
+    // whatever the camera was actually looking at.
+    function cloudLabelCount(sizePx: number): number {
+      const groups = installDomStubs();
+      const h = makeHarness({ clouds: [{ name: 'Taurus', sizePx }] });
+      const labels = new ChartLabels(h.stellata);
+      labels.start(h.ctx);
+      h.emit('frame');
+      const count = groups.get('chart-labels')!.children.length;
+      labels.stop();
+      return count;
+    }
+
+    it('drops a cloud under the floor', () => {
+      expect(cloudLabelCount(LABEL_MIN_SILHOUETTE_PX - 1)).toBe(0);
+    });
+
+    it('keeps a cloud at the floor', () => {
+      expect(cloudLabelCount(LABEL_MIN_SILHOUETTE_PX)).toBe(1);
+    });
+
+    it('reads the realistic-mode threshold rather than a second literal', () => {
+      expect(LABEL_MIN_SILHOUETTE_PX).toBe(40);
+    });
   });
 
   it('ticks on frame while running and not after stop', () => {
