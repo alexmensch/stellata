@@ -81,7 +81,7 @@ per-frame refill below is a fixed cost independent of the camera.
 Four inputs, all pushed (no per-frame recompute):
 
 - `setPermitted(on)` — the `constellationFigures` declutter floor
-  (`representational`; `../scene/README.md`), pushed from the detail bind.
+  (`representational`; `../scene/declutter/README.md`), pushed from the detail bind.
 - `setFigures(..., [])` — nothing highlighted outside chart mode.
 - `setFigures(..., excludeStarIdx)` — the observe vantage point (§ The observe
   anchor). Every segment touching that star drops out of the geometry.

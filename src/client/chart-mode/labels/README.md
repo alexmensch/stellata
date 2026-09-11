@@ -19,7 +19,7 @@ gated by the detail cycle — `tick()` reads `detailPermits(id)` per group
 rings + wings → `chartVariableRings`, constellation names →
 `chartConstellationNames`, cloud names → `chartCloudNames`) and skips the
 group's build loop when the current level doesn't reach its chart floor.
-See `../../scene/README.md` § Chart-content wiring for the couplings.
+See `../../scene/declutter/README.md` § Chart-content wiring for the couplings.
 
 - `<g id="chart-con-labels">` — `<text>` per constellation Latin name.
 - `<g id="chart-labels">` — `<text>` elements for proper-named stars,

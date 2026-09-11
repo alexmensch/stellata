@@ -12,7 +12,7 @@ in both navigate and observe modes.
   star-size and "Dynamic range" sliders it used to bind are retired
   (`../../filters/README.md` § The multiplier is the ONLY footprint
   control), as are the galactic-glow and "Show constellations" checkboxes —
-  both are the declutter floor's call now (`../../scene/README.md`).
+  both are the declutter floor's call now (`../../scene/declutter/README.md`).
   The two segmented stop
   controls (detail level, coordinate sphere) are bound
   and synced through `../../ui/stop-control.ts` (`../../ui/README.md`

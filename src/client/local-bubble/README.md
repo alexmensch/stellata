@@ -3,7 +3,7 @@
 Runtime for the Local Bubble shell: a translucent Fresnel-rim mesh of the
 cavity's inner (dust-traced) wall, giving immediate context that the Sun
 sits *inside* a bubble. A `representational`-tier declutter element
-(`localBubbleShell`, `scene/README.md`).
+(`localBubbleShell`, `scene/declutter/README.md`).
 
 It is also a full **boundary-shell focus target** (`shell` `TargetKind`):
 searchable, focusable, warpable, and pinnable. The shell kind module's

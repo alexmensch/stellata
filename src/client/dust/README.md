@@ -25,7 +25,7 @@ The declutter cycle reserves a floor slot (`dustParticles`, floor
 `representational`) whose per-frame `detailPermits(...)` pull is unwired
 while shelved. It is a reserved row for a layer that is going away, so
 the removal retires the row with the layer rather than wiring it
-(`../scene/README.md` — the floor table is exhaustive over a closed
+(`../scene/declutter/README.md` — the floor table is exhaustive over a closed
 union, so dropping a renderable means dropping its row).
 
 `dust-particle-layer.ts` instantiates an `InstancedMesh` keyed to

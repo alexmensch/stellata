@@ -20,7 +20,7 @@ as the camera pulls away from Sol. `FADE_INNER_PC` (500 pc) and
 hoisted there at the second usage, not the third.
 
 The layer has no *dedicated* checkbox, but it IS part of the declutter
-cycle (`../scene/README.md`): the wireframes are `lgWireframes` (floor
+cycle (`../scene/declutter/README.md`): the wireframes are `lgWireframes` (floor
 `representational`) and the per-object + Milky Way labels are
 `lgObjectLabels` / `mwLabel` (floor `all`). Below those detail levels the
 respective element is hidden — the wireframe via the warp-gated update's

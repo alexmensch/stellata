@@ -5,7 +5,7 @@ import type { Target, TargetKind } from '../camera/focus/focus-target';
 import { createShellKindModule } from '../fresnel-shell/shell-module';
 import { createLgKindModule } from '../local-group/lg-module';
 import { createCloudKindModule } from '../molecular-clouds/cloud-module';
-import type { SceneElementId } from '../scene/scene-elements';
+import type { SceneElementId } from '../scene/declutter/scene-elements';
 import { createPlanetKindModule } from '../solar-system/planets/planet-module';
 import {
   createProbeKindModule,

@@ -280,7 +280,7 @@ removal); the module holds it and runs it from the scene layer's
 
 ## Declutter and chart mode
 
-Three elements in `../../scene/scene-elements.ts`: `probeMarkers` and
+Three elements in `../../scene/declutter/scene-elements.ts`: `probeMarkers` and
 `probeTrails` both `representational`, `probeLabels` `all`.
 
 **Markers are not in the `physical` tier, unlike planet bodies.** That

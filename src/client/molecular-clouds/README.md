@@ -14,7 +14,7 @@ decoupled components per cloud:
   fall back to their ellipsoid envelope), in the shared
   `SHELL_RIM_BLUE`. An orientation annotation, gated at the
   `representational` declutter floor (`molecularCloudEllipsoids`,
-  `../scene/README.md`) — decluttering to `physical` leaves pure
+  `../scene/declutter/README.md`) — decluttering to `physical` leaves pure
   per-star extinction physics plus the absorption above. In chart mode
   it renders as a stippled silhouette outline (the SkyAtlas 2000 nebula
   convention) instead of a glow.

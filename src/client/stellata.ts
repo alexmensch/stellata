@@ -163,7 +163,7 @@ import {
   type SceneElementBinds,
   type SceneElementId,
   SCENE_ELEMENT_IDS,
-} from './scene/scene-elements';
+} from './scene/declutter/scene-elements';
 import { StarPipeline } from './star-pipeline/star-pipeline';
 import { CATALOG_BOUNDING_RADIUS_PC } from './star-pipeline/shards/star-shards-pure';
 import { StarFrame } from './star-pipeline/star-frame/star-frame';
@@ -350,7 +350,7 @@ export class Stellata implements FrameAnchor {
   readonly reduction: ReductionSeam;
   private readonly drawingBufferSize = new THREE.Vector2();
 
-  // Declutter cycle (scene/README.md § Detail-level declutter cycle).
+  // Declutter cycle (scene/declutter/README.md).
   // Init all-true so the default detailLevel='all' is behaviour-neutral —
   // the seam changes nothing until V is pressed.
   private readonly detailPermitted: Record<SceneElementId, boolean> =

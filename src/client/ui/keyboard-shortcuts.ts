@@ -2,7 +2,7 @@ import type { Stellata } from '../stellata';
 import { isHardTarget } from '../camera/focus/focus-target';
 import { DEFAULT_FOV } from '../filters/filter-state';
 import { nextCoordSphereFrame } from '../galactic/coord-spheres/coord-sphere-frames';
-import { DETAIL_LEVELS } from '../scene/scene-elements';
+import { DETAIL_LEVELS } from '../scene/declutter/scene-elements';
 import type { TimeScrubberWidget } from '../solar-system/time/time-scrubber-widget';
 import { bindHelpModal } from '../modals/help-modal';
 import { bindCalibrationOverlay } from '../calibration/calibration-overlay';

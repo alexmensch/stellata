@@ -87,7 +87,7 @@ byte is one byte whatever bits are set, so no offset can shift and
 `packFlags` / `unpackFlags` just drop the leg, leaving the bit reserved by
 comment: bit 2 (molecular clouds), bit 3 (`showMilkyway`), bit 7
 (`showConstellation`), all three now gated by the declutter floor alone
-(`../../scene/README.md`). SIDs are frozen forever in
+(`../../scene/declutter/README.md`). SIDs are frozen forever in
 `data/sid/ledger.tsv`, so a v4 link survives any catalogue rebuild —
 the failure mode v1–v3's row-index fallback couldn't avoid. **v3**
 introduced the LEB128 presence mask and per-component vec3 sub-masks

@@ -10,7 +10,7 @@ import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
 /** The retired v1–v3 magnitude presets. Frozen decoders still emit these
  *  names; nothing downstream acts on them. */
 type LegacyPresetName = 'naked-eye' | 'binoculars' | 'all';
-import { type DetailLevel, DETAIL_LEVELS, DETAIL_RANK } from '../../scene/scene-elements';
+import { type DetailLevel, DETAIL_LEVELS, DETAIL_RANK } from '../../scene/declutter/scene-elements';
 import { POI_MAX_COUNT } from '../../poi/poi-store';
 import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/controls';
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';

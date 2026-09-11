@@ -48,7 +48,7 @@ constants directly — keep the module minimal and stable.
 detail level ≥ representational, hidden in chart mode*. The declutter
 cycle gates it as `galacticDiscWireframe` (floor `representational`); the
 per-frame warp/fade update is skipped when the detail cycle doesn't
-permit it (`../scene/README.md` § Detail-level declutter cycle). A 15 kpc
+permit it (`../scene/declutter/README.md`). A 15 kpc
 midplane ring, two thickness rings at
 ±1800 pc, and a 5 kpc × 3 kpc bulge wireframe (three orthogonal ring
 loops in the galactic frame), all centred on the galactic centre — Sol
@@ -308,7 +308,7 @@ the Sol/GC label affordance (warp stays on the `W` key).
 
 No sphere is in the declutter cycle — all three are user-owned chrome
 (`galacticCoordSphere` / `eclipticCoordSphere` / `equatorialCoordSphere` in
-`USER_OWNED_IDS`, `../scene/README.md`), too many lines to sweep with a
+`USER_OWNED_IDS`, `../scene/declutter/README.md`), too many lines to sweep with a
 detail level.
 
 The disc has no *dedicated* checkbox by design — it's the orientation

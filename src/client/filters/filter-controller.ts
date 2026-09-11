@@ -25,7 +25,7 @@ import {
   SCENE_ELEMENT_FLOORS,
   SCENE_ELEMENT_IDS,
   floorPermits,
-} from '../scene/scene-elements';
+} from '../scene/declutter/scene-elements';
 
 /** The star-pipeline sharedUniforms subset this controller writes. All
  *  three star passes share the value objects, so a single write here

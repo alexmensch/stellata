@@ -2,7 +2,7 @@
 // size derivation. See src/client/filters/README.md.
 
 import type { CoordSphereFrame } from '../galactic/coord-spheres/coord-sphere';
-import type { DetailLevel } from '../scene/scene-elements';
+import type { DetailLevel } from '../scene/declutter/scene-elements';
 
 export type InstrumentName = 'unaided-eye';
 
@@ -96,7 +96,7 @@ export interface FilterState {
   spectMask: number;
   // Which constellation figure is picked; -1 = none. Consumed by the
   // overlay, not the shader. WHETHER constellation chrome draws at all is
-  // the declutter floor's call (`../scene/scene-elements.ts`), not this.
+  // the declutter floor's call (`../scene/declutter/scene-elements.ts`), not this.
   highlightCon: number;
   // CSS pixels, both DERIVED — the instrument's angular sizes projected
   // through the live plate scale by `starPxSizes`. Cached here because
@@ -126,7 +126,7 @@ export interface FilterState {
   chart: boolean;
   // Declutter cycle: how much of the scene is drawn within the current
   // render style. Cumulative physical<representational<all; the floor
-  // table + derivation live in scene/scene-elements.ts. Default 'all' so
+  // table + derivation live in scene/declutter/scene-elements.ts. Default 'all' so
   // a fresh scene draws everything (fully cluttered).
   detailLevel: DetailLevel;
 }

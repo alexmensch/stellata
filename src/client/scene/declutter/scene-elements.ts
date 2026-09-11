@@ -1,5 +1,5 @@
 // Detail-level declutter cycle: the exhaustive scene-element floor table
-// and the pure floor→visibility derivation. See scene/README.md.
+// and the pure floor→visibility derivation. See scene/declutter/README.md.
 
 export type DetailLevel = 'physical' | 'representational' | 'all';
 export type RenderStyle = 'realistic' | 'chart';
