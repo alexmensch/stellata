@@ -134,11 +134,10 @@ information.
   shows. Not the dearest gated row: that is mw50|webgpu, pinned at 31.868
   and sitting 4th in the canon order, so a two-context run would measure it
   at a position the pin does not hold for it and the row would refuse
-  (§ Run position). A witness that refuses is not a
-  witness. Paste the table; the eight pin rows the run did not visit print
-  as `not measured` and fail nothing. A `✗` exits 1 and owes an
-  `accepted:` line exactly as it does at Tier 2, and the pin is left where
-  it was.
+  (§ Run position). A witness that refuses is not a witness. Paste the
+  table; the eight pin rows the run did not visit print as `not measured`
+  and fail nothing. A `✗` exits 1 and owes an `accepted:` line exactly as it
+  does at Tier 2, and the pin is left where it was.
 - **Tier 2 — passes, buffers, draw counts, the catalogue, or the
   instrument itself.** The full cold sweep, and it re-takes the pin:
   `--mode dwell --scenario all --backend both --cooldown-ms 120000

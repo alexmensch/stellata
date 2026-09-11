@@ -20,12 +20,11 @@ position in the run, cadence, adapter probe, commit pair, package version
 and the run file. **Any refused row refuses the whole pin** — failed,
 tainted, not dwell, not `raf-delta`, trending at a *gated* vantage, a round
 trip, a headed run, no record count, no position — because a pin missing a
-row narrows the
-gate silently, and for the same reason `--pin` refuses a command line short
-of `--scenario all --backend both`, or one naming the whole canon in
-another order (§ Run position). `--accept <scenario>|<backend>:<bead>`
-records an accepted mark as provenance for the value now pinned; it never
-filters a verdict.
+row narrows the gate silently, and for the same reason `--pin` refuses a
+command line short of `--scenario all --backend both`, or one naming the
+whole canon in another order (§ Run position).
+`--accept <scenario>|<backend>:<bead>` records an accepted mark as
+provenance for the value now pinned; it never filters a verdict.
 
 ## Run position
 
@@ -164,14 +163,13 @@ the whole pin, it blocked the pin for *every* render-path PR at random. Wall
 - **Refusals.** Another adapter slug or a headed run refuses the whole
   comparison; a failed, tainted or resized (> 1 % buffer) row refuses that
   row, a trending one does where the vantage is gated, and so does a
-  **record count** more than 1 % apart or
-  absent, a **run position** that differs or is absent (§ Run position),
-  or a row the run measured that the pin does not hold. A refused
-  comparison is not a pass: either kind exits 1, since a run whose rows
-  were all refused prints a table with no `✗` in it. **Pin rows the run
-  did not visit are listed, not refused** — the table walks the run's
-  rows, so a Tier 1 run answers for its two and prints the other eight
-  as `not measured in this run`.
+  **record count** more than 1 % apart or absent, a **run position** that
+  differs or is absent (§ Run position), or a row the run measured that the
+  pin does not hold. A refused comparison is not a pass: either kind exits 1,
+  since a run whose rows were all refused prints a table with no `✗` in
+  it. **Pin rows the run did not visit are listed, not refused** — the table
+  walks the run's rows, so a Tier 1 run answers for its two and prints the
+  other eight as `not measured in this run`.
 - **Record count.** `recordCount` is the star records the page loaded, off
   the catalogue binary's header. It moves how many instanced quads every
   star pass draws — the most direct frame-cost change the repo can make. A
