@@ -190,11 +190,13 @@ attribution, same buffer and same clock or no comparison — is
 
 The automated form of "disable it and difference `gpu.frame`": dwell,
 re-dwell with one pass disabled, difference the medians. Lives in its
-own folder — `frame-cost/README.md` owns the priced-pass roster, the
+own folder — `frame-cost/README.md` owns the sweep: the
 preconditions (camera still, clock paused, and a CLOSED panel — enforced on
 WebGL2, and wanted on either backend under any `raf-delta` sweep, which
 measures wall time and so counts the panel's own per-tick work),
 the drift bracketing, and how to read `noiseMs` / `bracketMs` / `iqrMs`.
+`frame-cost/passes/README.md` owns the priced-pass roster — what each row
+disables and what its number is therefore worth.
 
 Adding a WebGL2 GPU scope: wrap the draw in `gpuBegin('name')` / `gpuEnd('name')`.
 The label lands as `gpu.name`; pair it with a `submit.name` CPU measure so

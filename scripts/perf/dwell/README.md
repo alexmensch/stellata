@@ -91,8 +91,8 @@ both priced the same population. `--roundtrip idle` renders the same frames
 with nothing toggled — the time-matched control, because the GPU's
 sustained-load ramp also moves the frame between two dwells and only the
 control separates the toggle from the clock. The toggle is reached through
-the frame-cost module over the dev server (`FRAME_COST_MODULE_URL`), never a
-second spelling of it; a pass not active at the vantage fails the scenario
+the pass-roster module over the dev server (`PASS_TOGGLES_MODULE_URL`), never
+a second spelling of it; a pass not active at the vantage fails the scenario
 rather than round-tripping nothing under the pass's name.
 
 **Four checks, each able to fail.** A hold already live when the dwell starts

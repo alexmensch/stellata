@@ -27,7 +27,7 @@ export const PRICE_ROW_COLUMNS = [
   'pass', 'method', 'baselineMs', 'disabledMs', 'savedMs', 'savedPct', 'samples',
   'iqrMs', 'noiseMs', 'bracketMs', 'baselineLag1', 'disabledLag1',
   'baselineReadback', 'disabledReadback', 'baselineLimitMag', 'disabledLimitMag', 'bufferMpx',
-  'cadenceBound',
+  'cadenceBound', 'baselineRising',
 ] as const satisfies readonly (keyof PriceFrameRow)[];
 
 /** A column no row carries is dropped rather than printed empty: on a GPU

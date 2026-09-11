@@ -212,7 +212,8 @@ describe('compareToPin', () => {
   });
 
   it('names lg alone as ungated, carrying the reason the row note prints', () => {
-    expect(PIN_UNGATED_SCENARIOS).toEqual({ lg: 'does not reproduce cold-to-cold' });
+    expect(PIN_UNGATED_SCENARIOS)
+      .toEqual({ lg: 'wanders as much inside one dwell as between runs' });
   });
 
   it('records lg and never marks it below the ceiling, at the full 1.47 ms it moved', () => {
@@ -221,7 +222,7 @@ describe('compareToPin', () => {
     expect([row.metric, row.verdict]).toEqual(['gpu-p50', 'ungated']);
     expect(row.currentMs).toBe(13.36);
     expect(row.bandMs).toBe(0);
-    expect(row.note).toContain('does not reproduce cold-to-cold');
+    expect(row.note).toContain(PIN_UNGATED_SCENARIOS.lg);
     expect(pinDiffFails(diff)).toBe(false);
   });
 

@@ -17,7 +17,7 @@ zoom affordance: do not add detail the user can never get close enough
 to see.
 
 Two measured facts frame everything below (`src/client/debug/frame-cost/
-README.md`, five vantages, 6.774 Mpx, Chrome): the frame is fill-bound —
+passes/README.md`, five vantages, 6.774 Mpx, Chrome): the frame is fill-bound —
 linear in pixels — and the largest costs are passes that touch every
 pixel whether or not anything visible is in them. Doing less work per
 pixel and skipping work that cannot reach a pixel is the whole programme.
@@ -301,8 +301,9 @@ both, so the counts alone cannot tell them apart. A readback frame adds
 exposure pin, the 6 reduction-chain passes on 6 more submits.
 
 **How to apply.** Read every add-a-pass or fold-a-pass proposal against
-the `emptyPass` row (`src/client/debug/frame-cost/README.md` § Priced
-passes) at the vantage in question and against the frame it lands in.
+the `emptyPass` row (`src/client/debug/frame-cost/passes/README.md`
+§ The roster) at the vantage in question and against the frame it
+lands in.
 At ≤ 0.5 ms a boundary, folding the local pass's depth clear into the
 repaint saves under 2 % of a Sol frame, and stellata-8cg.48 (4×4
 reduction) removes under one pass per frame amortised — its case is
@@ -319,7 +320,8 @@ resolves near 0.4 ms; coalescing stays pinned near 0.1).
 
 **Where.** The counts and the floor are stellata-0it.37's notes, which
 name the `.perf-runs` file each arm wrote in the main checkout. The
-instrument is `src/client/debug/frame-cost/README.md` § Priced passes.
+instrument is `src/client/debug/frame-cost/passes/README.md` § The
+roster.
 
 ## 9. Measurement canon
 
@@ -342,8 +344,9 @@ at the canonical vantages is what explains a row that moved.
   scope reports the shared interval and a sum bills it once per pass —
   per-pass numbers are ordinal at best, never additive, never converted
   to a frame rate. `debug.priceFrame()` automates the differential
-  (`debug/frame-cost/README.md` owns the roster, the gates `noiseMs` /
-  `bracketMs`, and how to read a row).
+  (`debug/frame-cost/README.md` owns the gates `noiseMs` / `bracketMs`
+  and how to read a row; `debug/frame-cost/passes/README.md` owns the
+  roster).
 - **The whole-frame comparison reads the GPU-stream median, not wall.**
   Wall time at a canon vantage is quantised to the display's refresh
   interval: the median sits on a multiple of it whatever the frame costs,

@@ -3,10 +3,13 @@
 import { parseArgs, type ParseArgsConfig } from 'node:util';
 import {
   GPU_FRAME_METHODS,
-  PRICED_PASS_KEYS,
   type GpuFrameMethod,
-  type PricedPassKey,
 } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import {
+  EMPTY_PASSES_DEFAULT,
+  PRICED_PASS_KEYS,
+  type PricedPassKey,
+} from '../../src/client/debug/frame-cost/passes/passes-pure';
 import { DEFAULT_DWELL_FRAMES } from './dwell/dwell-pure';
 import { DEFAULT_SWEEP_SCALES } from './sweep-pure';
 import { DEFAULT_QUIET_MS } from './settle-pure';
@@ -130,7 +133,7 @@ export function usage(): string {
     `  --method <clock>         ${GPU_FRAME_METHODS.join('|')}       (default: the backend\'s best)`,
     `  --budget-ms <n>          whole-sweep wall-clock ceiling            (default ${ARG_DEFAULTS.budgetMs})`,
     '  --dwell-frames <n>  --warmup-frames <n>  --settle-frames <n>       (default: priceFrame\'s own)',
-    '  --empty-passes <n>       emptyPass row: empty passes added, floor = savedMs/n (default 1)',
+    `  --empty-passes <n>       emptyPass row: empty passes added; savedMs bounds all n, never n× one (default ${EMPTY_PASSES_DEFAULT})`,
     '  --no-interleave          single-baseline sweep (drift-exposed)',
     '  --headed                 headed Chrome; headed and headless never compare',
     `  --width <px> --height <px> --dpr <n>                               (default ${ARG_DEFAULTS.width}x${ARG_DEFAULTS.height} @ ${ARG_DEFAULTS.dpr})`,

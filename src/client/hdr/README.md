@@ -308,8 +308,9 @@ shape knobs, plus what pass-through does and does not reproduce — are
 - `stellata.hdr.setStatisticWritesEnabled(false)` — masks attachment 1 out of
   every emitter draw while the clear keeps writing it, so the statistic reads
   zero rather than stale and the reduction keeps running over an empty
-  attachment. A frame-cost lever (`../debug/frame-cost/README.md` § Priced
-  passes); live, with the cut not held, it fades the adaptation to zero.
+  attachment. A frame-cost lever
+  (`../debug/frame-cost/passes/README.md` § The roster); live, with the
+  cut not held, it fades the adaptation to zero.
 - `stellata.hdr.setSummationEnabled(false)` — skips the rod-summation
   downsample and collapses the resolve's kernel to one centre tap. The band
   keeps its level (the uniform-field identity); M31 sharpens. Frame-cost
