@@ -1352,6 +1352,11 @@ export class Stellata implements FrameAnchor {
         // against is too small to see, and a wider floor would reject
         // frames the mask does change.
         skip: () => {
+          // The `coreMask` lever's A/B prices this walk, and the walk is
+          // now inside the predicate — so a disabled lever has to refuse
+          // above it or both sides of the A/B pay it and the row prices
+          // nothing (debug/frame-cost/passes/README.md).
+          if (!this.coreMaskEnabled) return null;
           perfMark('coreMask');
           const on = this.starLocalCluster.hasMembers()
             || this.starFrame.shouldEnableCoreMask();

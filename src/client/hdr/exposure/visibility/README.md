@@ -93,3 +93,15 @@ this, since an eager argument and a lazy one read the same there, so the
 suite asserts the thunk goes uninvoked on both refusals and exactly once
 otherwise.
 
+**A layer already switched off refuses before reaching the predicate at
+all**, and that is the caller's job rather than a third rule here. `mw=0`,
+`showLgEmission` off, or a detail level whose floor drops either emitter
+leaves the layer drawing nothing and out of `L̄` — so no verdict could
+change the frame, and a bound produced to reach one is milliseconds spent
+on a layer that is not there. It is also what makes `contributing`
+truthful: the flag is documented as "is this emitter's light in the last
+landed statistic", and the registry's transition state alone is not that.
+Each emitter's own suite pins that its provider goes unasked while it is
+off, since the frame-cost levers that hold the same flag
+(`../../../debug/frame-cost/passes/README.md`) price nothing without it.
+

@@ -147,6 +147,13 @@ export class LocalGroupEmission {
     cameraAbsPc: THREE.Vector3,
     warpActive: boolean,
   ): ContributionSkip | null {
+    // A glow `showLgEmission` or the declutter floor has already switched
+    // off draws nothing and is out of `L̄`, so no verdict can change the
+    // frame — and producing a bound for it would march 123 central rays for
+    // a layer that is not there. It is also what leaves `contributing`
+    // below equal to `group.visible`, which is what `brightnessSkip`
+    // documents itself as taking.
+    if (!this.enabled || this.chartHidden) return null;
     return brightnessSkip({
       contributing: this.contributing,
       warpActive,

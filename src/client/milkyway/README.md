@@ -253,6 +253,17 @@ visibility alongside the user's `mw=0` toggle, never a bare
 `group.visible` write — the band holds no dirty-track state, so that is
 the whole reset.
 
+**A band already switched off refuses above both tiers.** `mw=0` — and any
+detail level whose floor drops the band — leaves the layer drawing nothing
+and out of `L̄`, so no verdict it could reach would change the frame, while
+a fan marched for it is milliseconds spent on a layer that is not there.
+That refusal is also what keeps the `contributing` flag handed to
+`brightnessSkip` equal to `group.visible`: the predicate documents it as
+"is this emitter's light in the last landed statistic", and the registry's
+own transition flag alone is not that. The `mwBand` frame-cost lever
+(`../debug/frame-cost/passes/README.md`) depends on it too — without the
+refusal its A/B pays the march on both sides and prices nothing.
+
 ## Coordinate handling
 
 The mesh-local unit sphere has +X/+Y in the disc plane and +Z toward NGP;

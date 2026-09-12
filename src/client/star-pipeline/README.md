@@ -201,6 +201,14 @@ Rendering is **three passes over the same instanced geometry**:
   walk's rate as anchored content (`../scene/README.md` § Anchored
   content). Everything else in this folder keeps explicit lifecycle calls
   in `stellata.ts`.
+
+  **The predicate refuses above the walk while the `coreMask` lever is
+  off.** That walk is what the lever's own A/B prices
+  (`../debug/frame-cost/passes/README.md`), and it now runs inside the
+  contribution test rather than beside it — so without the refusal both
+  sides of the A/B would pay it and the `coreMask` row would price
+  nothing. Refusing means the layer contributes while drawing nothing,
+  which is the direction the contract allows.
 - **Disc pass** (`renderOrder = 0`). Stars where `vPhysRatio ≥ 0.5` —
   i.e. the physical-size term dominates the final
   `max(appSize, physSize)`. Per-channel `MaxEquation` blend

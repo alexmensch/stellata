@@ -133,7 +133,13 @@ export interface BrightnessSkipArgs {
   /** Whether this emitter's light is in the last landed statistic. Its
    *  share is subtracted while drawn and never while skipped: a skipped
    *  emitter is already out of `L̄`, and subtracting again double-eases
-   *  the test and can readmit an emitter whose own return re-skips it. */
+   *  the test and can readmit an emitter whose own return re-skips it.
+   *
+   *  **Not the registry's transition flag on its own.** A layer the user
+   *  or the declutter floor has switched off is out of `L̄` too, and both
+   *  callers refuse above this call rather than passing `false` — a
+   *  verdict cannot change a frame the layer is absent from, and the
+   *  bound would cost milliseconds to reach it. */
   contributing: boolean;
   /** No skip mid-warp: the band is the warp's realism payoff, and a warp
    *  snaps the measurement rather than slewing it. */

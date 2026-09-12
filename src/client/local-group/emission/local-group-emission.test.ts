@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
+import { makeFrameExposure } from '../../scene/frame-ctx-mock';
 import type { LgEmission, LgObject } from '../local-group-loader';
 import {
   buildEmissionInstanceData,
@@ -611,5 +612,35 @@ describe('LocalGroupEmission controller', () => {
     bindAttachmentGate(null, null);
     expect(opened).toBe(layer.group.children.length);
     layer.dispose();
+  });
+
+  // The bound is 123 objects' central rays on the frame thread, so a glow
+  // `showLgEmission` or the declutter floor has already dropped must refuse
+  // above it: the layer draws nothing, its light is out of `L̄`, and no
+  // verdict it could reach would change the frame. The `lgEmission`
+  // frame-cost lever is the other consumer — it drives exactly this flag,
+  // and an A/B that pays the bound on both sides prices nothing.
+  describe('the brightness verdict refuses above the bound while the glow is off', () => {
+    function asksFor(mutate: (layer: LocalGroupEmission) => void): number {
+      const layer = new LocalGroupEmission(objects, makeDeps());
+      let asked = 0;
+      layer.peakSurfaceBrightness = () => { asked += 1; return 17.42; };
+      mutate(layer);
+      layer.contributionSkip(makeFrameExposure(), new THREE.Vector3(), false);
+      layer.dispose();
+      return asked;
+    }
+
+    it('never asks for the bound with the glow switched off', () => {
+      expect(asksFor((l) => l.setEnabled(false))).toBe(0);
+    });
+
+    it('never asks for it in chart mode either', () => {
+      expect(asksFor((l) => l.setChartHidden(true))).toBe(0);
+    });
+
+    it('still asks while the glow draws, so the refusal is what saves it', () => {
+      expect(asksFor(() => {})).toBe(1);
+    });
   });
 });

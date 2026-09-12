@@ -152,3 +152,25 @@ describe('shipped scene-layer contribution declarations', () => {
     expect(moduleDecls.length).toBe(5);
   });
 });
+
+// The core mask's `shouldEnableCoreMask` walk moved INSIDE its contribution
+// predicate, and that walk is what the `coreMask` frame-cost lever's own A/B
+// prices (src/client/debug/frame-cost/passes/README.md). A predicate running
+// it before consulting the lever pays it on both sides of the A/B, so the row
+// prices nothing — and nothing else can see that, since both orderings
+// compile and both draw the same frame.
+describe('the core-mask predicate refuses above the walk its lever prices', () => {
+  const shell = readFileSync(resolve(ROOT, SHELL), 'utf8');
+
+  it('consults coreMaskEnabled before marking the walk', () => {
+    const guard = shell.indexOf('if (!this.coreMaskEnabled) return null;');
+    const mark = shell.indexOf("perfMark('coreMask')");
+    expect(guard).toBeGreaterThanOrEqual(0);
+    expect(mark).toBeGreaterThanOrEqual(0);
+    expect(guard).toBeLessThan(mark);
+  });
+
+  it('marks the walk exactly once, so the row is one predicate call', () => {
+    expect(shell.match(/perfMark\('coreMask'\)/g)).toHaveLength(1);
+  });
+});

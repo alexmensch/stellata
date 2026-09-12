@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
+import { makeFrameExposure } from '../scene/frame-ctx-mock';
 import {
   GC_SIGHTLINE_COLUMN,
   GC_SIGHTLINE_MAG_ARCSEC2,
@@ -766,5 +767,33 @@ describe('raymarch parameters the mirror duplicates from GLSL', () => {
       /stellataExtendedThresholdSb\(uOmegaSummationArcsec2, uLimitMag\)/,
     );
     expect(frag).not.toMatch(/abs\(magPx - uLimitMag\)/);
+  });
+});
+
+// The fan is 976 marched sightlines on the frame thread, so a band the
+// declutter floor has already dropped must refuse above it: the layer draws
+// nothing, its light is out of `L̄`, and no verdict it could reach would
+// change the frame. The `mwBand` frame-cost lever is the other consumer —
+// it drives exactly this flag, and an A/B that pays the march on both sides
+// prices nothing.
+describe('the brightness verdict refuses above the fan while the band is off', () => {
+  function asksFor(enabled: boolean): number {
+    const { layer } = build();
+    let asked = 0;
+    layer.peakSurfaceBrightnessBound = () => { asked += 1; return 20.69; };
+    layer.setEnabled(enabled);
+    const verdict = layer.contributionSkip(
+      makeFrameExposure(), new THREE.Vector3(), false);
+    if (!enabled) expect(verdict).toBeNull();
+    layer.dispose();
+    return asked;
+  }
+
+  it('never asks for the bound with the band switched off', () => {
+    expect(asksFor(false)).toBe(0);
+  });
+
+  it('still asks for it when the band is on, so the refusal is what saves it', () => {
+    expect(asksFor(true)).toBe(1);
   });
 });

@@ -296,6 +296,18 @@ that costs a whole-frame raymarch and two whole-frame writes.
 `setContributing` is a term of the group's visibility beside the user
 toggle and the chart gate, never a bare `group.visible` write.
 
+**A glow already switched off refuses above the bound.** `showLgEmission`
+off, or a detail level whose floor drops the glow, leaves the layer drawing
+nothing and out of `L̄`, so no verdict it could reach would change the
+frame, while a bound produced for it is 123 objects' central rays spent on
+a layer that is not there. That refusal is also what keeps the
+`contributing` flag handed to `brightnessSkip` equal to `group.visible`:
+the predicate documents it as "is this emitter's light in the last landed
+statistic", and the registry's transition flag alone is not that. The
+`lgEmission` frame-cost lever (`../../debug/frame-cost/passes/README.md`)
+depends on it too — without the refusal its A/B pays the bound on both
+sides and prices nothing.
+
 ## What a viewer actually reads
 
 **The intra-object range.** Bulge centre to disc envelope spans ~8.7 mag

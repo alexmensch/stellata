@@ -327,12 +327,22 @@ anyway, so the stale window is a settled cut that has not moved.
 **The reason cannot be evaluated layer-locally.** Skipping an emitter
 removes its share from the exposure statistic, which eases the cut,
 which can bring the emitter back — so the predicate lives in
-`../hdr/exposure/emitter-visibility-pure.ts` (`brightnessSkip`) and
-takes the layer's own `contributing` flag: its share is subtracted from
-`L̄` while it draws and never while it is skipped. Two rules close the
-loop — test at the exposure that will obtain *without* the emitter, and
-only where that shift is under `CADENCE_JND_MAG`. § 3.5 is the
+`../hdr/exposure/visibility/emitter-visibility-pure.ts` (`brightnessSkip`)
+and takes the layer's own `contributing` flag: its share is subtracted
+from `L̄` while it draws and never while it is skipped. Two rules close
+the loop — test at the exposure that will obtain *without* the emitter,
+and only where that shift is under `CADENCE_JND_MAG`. § 3.5 is the
 derivation and the authority.
+
+**That flag is not this registry's transition state alone.** A layer the
+user or the declutter floor has switched off is out of `L̄` as surely as a
+skipped one, so both emitters refuse *above* the predicate rather than
+passing it `false` — the verdict cannot change a frame they are absent
+from, and each would spend milliseconds on a peak bound to reach it
+(`../hdr/exposure/visibility/README.md` § Skipping an emitter the display
+cannot show). A gated layer whose own predicate is expensive owes the same
+refusal; the star core mask's is the third
+(`../star-pipeline/README.md`).
 
 ### A skipped layer reports nothing
 
