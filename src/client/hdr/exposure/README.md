@@ -115,13 +115,16 @@ would thrash — an on-demand consumer that recomputes from scratch and
 stores nothing may read adaptation, and the pick paths do, through the
 live `uExposure` rather than through this readout.
 
-**`FrameCtx.exposure` is the exempt class, named.** The scene registry
-builds a `FrameExposure` record every tick and hands it to each gated
-layer's `skip` (`../../scene/README.md` § The brightness reason). It is
-per frame, stateless, and stores nothing keyed on adaptation — the record
-is rebuilt rather than kept, and the `contributing` flag the predicate
-reads is the registry's transition state, recomputed every frame, not an
-exposure cache. Both peak providers behind it are keyed on camera pose
+**`FrameCtx.exposure` is the exempt class, named.** The shell fills a
+`FrameExposure` record every tick and hands it to each gated layer's
+`skip` (`../../scene/README.md` § The brightness reason). It is per frame,
+stateless, and stores nothing keyed on adaptation. **What the prohibition
+turns on is HOLDING something derived from the cut, never object
+identity** — so the record is one preallocated slot rewritten in place,
+like every other `FrameCtx` field, rather than a fresh allocation on the
+frame thread; every slot is overwritten before any layer reads it. The
+`contributing` flag the predicate reads is likewise the registry's
+transition state, recomputed every frame, not an exposure cache. Both peak providers behind it are keyed on camera pose
 and `Ω_px` and **never** on exposure, which is the property that keeps
 them out of this prohibition too. A future reader that wanted to *hold*
 anything derived from the cut would be the case the rule forbids.

@@ -154,6 +154,11 @@ import { FilterController } from './filters/filter-controller';
 import { ExposureController } from './hdr/exposure/exposure-controller';
 import { exposureForMagLimit } from './hdr/exposure/exposure-epoch';
 import type { FrameExposure } from './hdr/exposure/visibility/emitter-visibility-pure';
+import {
+  DEFAULT_ADAPTATION_TUNING,
+  type AdaptationTuning,
+  type FrameStatistic,
+} from './hdr/exposure/scene-adaptation-pure';
 import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
 import { LuminanceReduction } from './hdr/exposure/reduction/reduction-pass';
 import {
@@ -2789,23 +2794,36 @@ export class Stellata implements FrameAnchor {
     this.frameCtx.frustum.invalidate();
   }
 
+  /** Backing store for `FrameCtx.exposure` — one record, rewritten in
+   *  place, never read before `frameExposure()` fills it. */
+  private readonly frameExposureRecord = {
+    exposure: 0,
+    baseExposure: 0,
+    omegaSummationArcsec2: 0,
+    omegaPxArcsec2: 0,
+    whitePoint: 0,
+    statistic: null as FrameStatistic | null,
+    tuning: DEFAULT_ADAPTATION_TUNING as AdaptationTuning,
+  } satisfies FrameExposure;
+
   /** The frame's exposure state for the `'brightness'` contribution test.
    *  Null in chart, where the seam is bypassed and nothing may skip on it.
-   *  Rebuilt each tick rather than cached: this is the stateless per-frame
-   *  reader `hdr/exposure/README.md` § One writer, five slots exempts, and
-   *  a record kept across frames would be the cache it forbids. */
+   *  Rewritten in place each tick, like every other `FrameCtx` field: what
+   *  `hdr/exposure/README.md` § One writer, five slots forbids is HOLDING
+   *  something derived from the cut, and every slot here is overwritten
+   *  before any layer reads it. */
   private frameExposure(): FrameExposure | null {
     if (this.filter.chart) return null;
     const u = this.hdr.emitterUniforms;
-    return {
-      exposure: u.uExposure.value,
-      baseExposure: exposureForMagLimit(this.exposure.getLimitMag()),
-      omegaSummationArcsec2: u.uOmegaSummationArcsec2.value,
-      omegaPxArcsec2: u.uOmegaPxArcsec2.value,
-      whitePoint: u.uWhitePoint.value,
-      statistic: this.adaptation.getLandedStatistic(),
-      tuning: this.adaptation.getTuning(),
-    };
+    const e = this.frameExposureRecord;
+    e.exposure = u.uExposure.value;
+    e.baseExposure = exposureForMagLimit(this.exposure.getLimitMag());
+    e.omegaSummationArcsec2 = u.uOmegaSummationArcsec2.value;
+    e.omegaPxArcsec2 = u.uOmegaPxArcsec2.value;
+    e.whitePoint = u.uWhitePoint.value;
+    e.statistic = this.adaptation.getLandedStatistic();
+    e.tuning = this.adaptation.getTuning();
+    return e;
   }
 
   /** Collect this frame's rate report, audit what actually moved against

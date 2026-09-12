@@ -256,10 +256,13 @@ describe('the brightness skip — § 3.5 rules 1 and 2', () => {
     }
     expect(asked).toBe(0);
 
-    // …and does ask once when the verdict genuinely turns on it.
+    // …and does ask once when the verdict genuinely turns on it. The
+    // verdict is asserted rather than the call alone: a predicate that
+    // reached the thunk and then threw the answer away would satisfy the
+    // count and pin nothing.
     expect(brightnessSkip({
       peakSb, contributing: true, warpActive: false, exposure: exposureAt(SOL_STAT),
-    })).not.toBeUndefined();
+    })).toBe('brightness');
     expect(asked).toBe(1);
   });
 

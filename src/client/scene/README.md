@@ -312,10 +312,12 @@ copy of it.
 `FrameCtx.exposure` is the fourth reason's input: live `uExposure`, the
 base exposure, `Ω_sum`, `Ω_px`, the white point, the last **landed**
 frame statistic and the adaptation tuning — **null in chart**, where the
-seam is bypassed, so nothing may skip on it there. It is rebuilt every
-tick rather than cached, which is exactly the stateless per-frame reader
+seam is bypassed, so nothing may skip on it there. It is rewritten in
+place every tick — one preallocated slot on the shell, like every other
+`FrameCtx` field — which is exactly the stateless per-frame reader
 `../hdr/exposure/README.md` § One writer, five slots exempts from the
-prohibition on consumers keyed on adaptation.
+prohibition on consumers keyed on adaptation: what that forbids is
+*holding* something derived from the cut, not the record's identity.
 
 **It carries the cut the LAST rendered frame was drawn with.** The
 fan-out runs before `measure()` folds this frame's landing, so a verdict
