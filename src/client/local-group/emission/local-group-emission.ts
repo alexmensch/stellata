@@ -15,6 +15,7 @@ import {
   type DiscInstanceData,
   type SersicInstanceData,
 } from './local-group-emission-pure';
+import { LgPeakCache } from './lg-peak-pure';
 
 const SPHERE_WIDTH_SEGMENTS = 48;
 const SPHERE_HEIGHT_SEGMENTS = 24;
@@ -42,6 +43,8 @@ export class LocalGroupEmission {
   private readonly passes: FamilyPass[] = [];
   private readonly uWorldOffset = { value: new THREE.Vector3() };
   private readonly materials: LgEmissionMaterials;
+  private readonly objects: readonly LgObject[];
+  private readonly peakCache = new LgPeakCache();
 
   private enabled = true;
   private chartHidden = false;
@@ -51,6 +54,7 @@ export class LocalGroupEmission {
     deps: LgEmissionDeps,
     materials?: LgEmissionMaterials,
   ) {
+    this.objects = objects;
     this.materials = materials ?? makeGlslLgEmissionMaterials({
       uWorldOffset: this.uWorldOffset, hdr: deps.hdr,
     });
@@ -132,6 +136,17 @@ export class LocalGroupEmission {
     this.groupVisible();
   }
 
+  /** Upper bound on the glow's brightest rendered pixel from this camera at
+   *  this pixel solid angle, mag/arcsec² (README.md § The brightest
+   *  rendered pixel). */
+  peakSurfaceBrightness(cameraAbsPc: THREE.Vector3, omegaPxArcsec2: number): number {
+    return this.peakCache.peakAt(
+      this.objects,
+      [cameraAbsPc.x, cameraAbsPc.y, cameraAbsPc.z],
+      omegaPxArcsec2,
+    );
+  }
+
   dispose(): void {
     for (const pass of this.passes) {
       pass.geometry.dispose();
@@ -140,5 +155,6 @@ export class LocalGroupEmission {
     this.passes.length = 0;
     this.baseGeometry.dispose();
     this.group.clear();
+    this.peakCache.reset();
   }
 }

@@ -24,6 +24,8 @@ disables. Hidden in chart mode.
   receives as uniforms, plus a CPU mirror of its raymarch. Owns the ρ₀ solve
   (`calibration/README.md`); the shader's step counts are pinned against the
   mirror.
+- `band-peak-pure.ts` (+ test) — the brightest sightline the band renders
+  from a camera position, as a bound (§ The brightest rendered sightline).
 - `calibration/` — the published photometry the solve runs on (M_V, B/T,
   the two components' B−V), the light ratio and the disc colour derived
   from it, and the two sightline checks it is graded against. Its own
@@ -191,6 +193,53 @@ stars together, by construction.
 B/T is derived from a published mass ratio, how the two population colours
 are derived from a published integrated one, the two Leinert checks the
 result is graded by, and the sightline table those produce.
+
+## The brightest rendered sightline
+
+`MilkyWay.peakSurfaceBrightnessBound(cameraAbsPc)` answers, in mag/arcsec²,
+"how bright can the band's brightest pixel be from here" — an upper bound
+the brightness skip compares against the live extended threshold
+(`docs/science-hdr-pipeline.md` § 3.5). Two tiers, both off the CPU mirror:
+
+- `MW_PEAK_SB_DUST_FREE` (17.11) — the dust-free full central chord,
+  marched dense. Brighter than any vantage can render, so it settles the
+  deep cuts (planet approaches) with no per-frame work.
+- `bandPeakFan(cameraGalPc)` — the dusty peak from the live camera: a polar
+  fan around the Galactic-centre direction out to the cone that still meets
+  the disc proxy (24 rings × 36 azimuths, then three 7×7 refinements at a
+  third of the spacing each) — 976 marched sightlines, **3.8–6.0 ms** per
+  recompute on a 2024 M-series laptop under node, and CPU work on the frame
+  thread. Centring on the centre is what keeps
+  it scale-free — from a megaparsec the Galaxy spans two degrees and an
+  absolute (l, b) grid would miss it, which is the sampling error
+  `docs/science-hdr-pipeline.md` § 3.5's probe table carried at 1 Mpc.
+  `BAND_PEAK_MARGIN_MAG` (0.05) covers
+  the fan's worst shortfall against a dense sweep over an eight-vantage grid
+  (0.038, pinned); `BAND_PEAK_STALENESS_MAG` (0.07) covers the peak's drift
+  over the cache's recompute radius — vertical
+  travel near the plane moves it 0.006 mag/pc, the brightest sightline
+  skimming the 125 pc dust layer.
+
+**The recompute radius is not one distance.** `bandPeakRecomputeRadiusPc` is
+`BAND_PEAK_RECOMPUTE_PC` (10 pc) inside R₀ and grows in proportion outside,
+reaching 2.5 kpc at the camera's 2 Mpc limit — 246× the travel for the same
+staleness, and that is exactly where the camera crosses ground fastest. Two
+unrelated things move the peak: inside the dust, the camera's own travel
+changes the foreground column, which is the 0.006 mag/pc above and has
+nothing to do with how far the centre is; outside it, surface brightness is
+distance-invariant and only the Galaxy's shrinking angular size is left.
+Galactocentric distance is therefore a conservative *envelope*, never a
+drift model — the rate 3 kpc above Sol is **65× lower** than at Sol for the
+same galactocentric distance. What the suite pins is the product: the
+staleness each vantage's own radius actually buys, with Sol the worst at
+0.060 mag.
+
+From Sol the dusty peak is 20.69 at |b| = 6.4° toward the centre (the two
+signs tie; the model is z-symmetric), 3.5 mag under the default view's
+threshold where the ceiling alone misses by 0.10. `BandPeakCache` is keyed
+on camera position only — never on exposure — and holds the radius of the
+position it took the bound at, since that is the travel the allowance
+covers. `dispose` resets it.
 
 ## Coordinate handling
 

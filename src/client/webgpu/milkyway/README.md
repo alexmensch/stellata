@@ -23,10 +23,30 @@ chart handoff, and takes its materials through `../../milkyway/README.md`
 ```
 src/client/webgpu/milkyway/
   milkyway-band-tsl.ts      The march, in both components.
+  milkyway-band-tsl-drift.test.ts
+                            Constant-drift guard against the CPU mirror:
+                            the march's step counts and τ conversion are
+                            imported from milkyway-column-pure, never
+                            restated. § The bound is taken off the mirror.
   band-uniform-nodes.ts     TSL twins of the seam's two uniform blocks —
                             the shared group and the per-component one.
   tsl-band-materials.ts     The factory implementing BandMaterials.
 ```
+
+## The bound is taken off the mirror, so this march has to match it
+
+`MilkyWay.peakSurfaceBrightnessBound` is computed from
+`../../milkyway/milkyway-column-pure.ts` and decides whether the band draws
+at all (`../../milkyway/README.md` § The brightest rendered sightline). This
+is the shipped backend, so a march here that has drifted from that mirror
+yields a bound on a picture nobody is looking at — and the failure is silent,
+because the bound stays internally consistent while being about the wrong
+shader. `milkyway-band-tsl-drift.test.ts` holds the march's own shape
+(`STEPS`, `FOREGROUND_DUST_STEPS`, `S_MIN_PC`, `UNIT_BALL_SLACK`,
+`MAG_PER_TAU`) to the mirror's constants by import. The profile and dust
+parameters need no entry there: they arrive as uniform nodes that
+`seedBandSharedSlots` alone writes (§ Seeding, because a node starts on its
+declared default).
 
 The write tail it ends on is `../extended-emitter-tsl.ts`, shared with
 the Local Group emission exactly as the GLSL chunk is.

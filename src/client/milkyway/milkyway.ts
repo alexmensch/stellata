@@ -8,6 +8,7 @@ import {
   makeGlslBandMaterials, type BandMaterials, type BandSharedSlots,
 } from './band-materials';
 import type { DustField } from '../loaders/dust-loader';
+import { BandPeakCache, galactocentricPc } from './band-peak-pure';
 import {
   BULGE_AXIS_RATIO,
   BULGE_COLOR_RGB,
@@ -114,6 +115,7 @@ export class MilkyWay {
 
   private enabled = true;
   private isobar = false;
+  private readonly peakCache = new BandPeakCache();
 
   constructor(deps: MilkywayDeps, materials?: BandMaterials) {
     this.materials = materials ?? makeGlslBandMaterials({
@@ -310,10 +312,19 @@ export class MilkyWay {
     (this.shared.uWorldOffset.value as THREE.Vector3).copy(worldOffset);
   }
 
+  /** Upper bound on the band's brightest rendered pixel from this camera,
+   *  mag/arcsec² (README.md § The brightest rendered sightline). */
+  peakSurfaceBrightnessBound(cameraAbsPc: THREE.Vector3): number {
+    return this.peakCache.boundAt(
+      galactocentricPc([cameraAbsPc.x, cameraAbsPc.y, cameraAbsPc.z]),
+    );
+  }
+
   dispose() {
     this.discMesh.geometry.dispose();
     this.bulgeMesh.geometry.dispose();
     this.disc.surface.dispose();
     this.bulge.surface.dispose();
+    this.peakCache.reset();
   }
 }

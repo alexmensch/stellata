@@ -2,19 +2,12 @@
 // through the shader's exact raymarch scheme (CPU mirror), matches the
 // physical prediction from any camera position to ±0.1 mag. See README.
 
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { parseLvdb, parseOverrides } from '../../../../scripts/local-group/build-local-group';
 import {
-  buildStandaloneOverride,
-  filterForRendering,
   MAX_DISTANCE_PC,
-  mergeRowAndOverride,
   roundN,
-  type LgObject as BuildLgObject,
 } from '../../../../scripts/local-group/build-local-group-pure';
+import { ALL_OBJECTS, type BuildLgObject, buildObject } from './lg-catalog-fixture';
 import {
   columnSurfaceBrightness,
   cpuDensityAt,
@@ -61,19 +54,6 @@ const REFERENCE_STEPS = 256;
 
 type Vec3 = [number, number, number];
 
-const here = dirname(fileURLToPath(import.meta.url));
-const dataDir = join(here, '..', '..', '..', '..', 'data', 'local-group');
-const lvdb = parseLvdb(readFileSync(join(dataDir, 'lvdb-snapshot.csv'), 'utf8'));
-const overrides = parseOverrides(readFileSync(join(dataDir, 'overrides.tsv'), 'utf8'));
-const overrideByName = new Map(overrides.map((o) => [o.name, o]));
-const renderable = filterForRendering(lvdb);
-
-function buildObject(name: string): BuildLgObject {
-  const row = renderable.find((r) => r.name === name);
-  if (row) return mergeRowAndOverride(row, overrideByName.get(name))!;
-  return buildStandaloneOverride(overrideByName.get(name)!)!;
-}
-
 const OBJECTS = {
   lmc: buildObject('LMC'),
   smc: buildObject('SMC'),
@@ -81,26 +61,6 @@ const OBJECTS = {
   m33: buildObject('M33'),
   fornax: buildObject('Fornax'),
 };
-
-/** The whole shipped catalogue, assembled as `build-local-group.ts` does:
- *  every renderable LVDB row, then the standalone override rows LVDB does
- *  not carry (M31, M33). */
-const ALL_OBJECTS: BuildLgObject[] = (() => {
-  const out: BuildLgObject[] = [];
-  const matched = new Set<string>();
-  for (const row of renderable) {
-    const merged = mergeRowAndOverride(row, overrideByName.get(row.name));
-    if (!merged) continue;
-    if (merged.source === 'OVERRIDE') matched.add(row.name);
-    out.push(merged);
-  }
-  for (const ov of overrides) {
-    if (matched.has(ov.name)) continue;
-    const built = buildStandaloneOverride(ov);
-    if (built) out.push(built);
-  }
-  return out;
-})();
 
 function sub(a: Vec3, b: Vec3): Vec3 {
   return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];

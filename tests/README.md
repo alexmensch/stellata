@@ -75,6 +75,15 @@ folder-readme-coverage.test.ts
                          The "every folder under src/, scripts/, data/,
                          docs/ has a README.md" invariant (AGENTS.md
                          § Folder READMEs).
+node-import-boundary.test.ts
+                         src/client/ ships to a browser, so no module
+                         there may import a `node:` builtin or a
+                         `*-fixture.ts`. Test-only support that reads
+                         data/ off disk takes the `-fixture` suffix and
+                         is exempt by it; a type-only import of one still
+                         crosses, since it erases before the bundler
+                         runs. § Node import boundary below carries the
+                         one limit it cannot see.
 perf-guard.test.ts       Behavioural pins for scripts/hooks/perf-guard.sh's
                          two gates: every launch spelling denied unarmed and
                          allowed under a fresh marker (including the
@@ -331,3 +340,13 @@ was measured at **47.7 s** in one full-suite run, a 13× amplification, and
 it was the 30 s global rather than any real hang that failed it. Anything
 over ~1 s solo wants its own timeout before it becomes a load-dependent
 flake that trains readers to re-run.
+
+## Node import boundary
+
+`node-import-boundary.test.ts` scans **direct** import specifiers only, which
+is the one thing it cannot see: a browser module importing a `scripts/` module
+that itself reaches for `node:fs` crosses the boundary transitively and the
+scan reads both as clean. Sharing a `*-pure` module with the build tree is the
+established pattern here — `star-naming-pure`, `catalog-pure`,
+`blackbody-lut-pure` — and stays legal precisely because such a module holds no
+builtin of its own. Keep it that way: the suffix is the contract.
