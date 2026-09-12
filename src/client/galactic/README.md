@@ -94,9 +94,14 @@ orientation.
 
 `galactic-fade.ts` owns both directions, so no layer writes its own curve:
 
-- **Far-field reveal** — `smoothstep(FADE_INNER_PC = 500,
-  FADE_OUTER_PC = 5000, distFromSol)`. Shared by the galactic disc and the
-  Local Group wireframe so both reveal in lockstep.
+- **Far-field reveal** — `farFieldFadeOpacity(baseOpacity, distFromSol)`,
+  a `smoothstep(FADE_INNER_PC = 500, FADE_OUTER_PC = 5000, …)` scaled by the
+  caller's base. The galactic disc (0.55) and the Local Group wireframe
+  (0.45) differ only in that base, so it is the argument rather than a
+  second copy of the curve, and the two reveal in lockstep by construction.
+  Each reads it **twice** — once for the stroke its `update` writes, once as
+  the `'opacity'` contribution test deciding whether the layer draws at all
+  — which is what a layer-local copy would let drift apart.
 - **Sol-frame self-hide** — `solFrameFadeFactor(distFromSol, window)`, the
   inverse, for layers that only describe the sky *from Sol* and so must
   vanish as the camera leaves. The IAU boundary arcs are its consumer.

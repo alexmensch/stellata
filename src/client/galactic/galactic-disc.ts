@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from './galactic-coords';
-import { FADE_INNER_PC, FADE_OUTER_PC, smoothstep } from './galactic-fade';
+import { farFieldFadeOpacity } from './galactic-fade';
 import type {
   ChromeLineMaterial, ChromeLineMaterials,
 } from '../chrome-lines/chrome-line-materials';
@@ -42,7 +42,7 @@ const DISC_RENDER_ORDER = -1;
  *  reads (`../scene/README.md` § Declaring what a layer can put on
  *  screen). */
 export function galacticDiscOpacity(distFromSolPc: number): number {
-  return DARK_BASE_OPACITY * smoothstep(FADE_INNER_PC, FADE_OUTER_PC, distFromSolPc);
+  return farFieldFadeOpacity(DARK_BASE_OPACITY, distFromSolPc);
 }
 
 /** Radius of the bounding sphere the frustum test culls against, centred

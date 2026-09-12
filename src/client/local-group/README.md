@@ -15,9 +15,12 @@ here).
 
 Inherits the MW disc's model: on in dark mode, hidden in chart mode,
 opacity tracks the same fade curve so the two layers reveal in lockstep
-as the camera pulls away from Sol. `FADE_INNER_PC` (500 pc) and
-`FADE_OUTER_PC` (5 kpc) live in the shared `galactic-fade.ts` module —
-hoisted there at the second usage, not the third.
+as the camera pulls away from Sol. The curve itself is
+`farFieldFadeOpacity` and the band constants `FADE_INNER_PC` (500 pc) /
+`FADE_OUTER_PC` (5 kpc) live with it in the shared `galactic-fade.ts`
+module — hoisted there at the second usage, not the third, and the base
+opacity is its argument so neither layer carries a copy
+(`../galactic/README.md` § Distance fades).
 
 The layer has no *dedicated* checkbox, but it IS part of the declutter
 cycle (`../scene/declutter/README.md`): the wireframes are `lgWireframes` (floor

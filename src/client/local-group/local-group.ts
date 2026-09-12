@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import type { LgCatalog, LgObject } from './local-group-loader';
 import { maxSemiAxisPc } from './local-group-loader';
-import { FADE_INNER_PC, FADE_OUTER_PC, smoothstep } from '../galactic/galactic-fade';
+import { farFieldFadeOpacity } from '../galactic/galactic-fade';
 import type { KindContext } from '../kinds/kind-module';
 import type { Stellata } from '../stellata';
 import { createDistanceGatedLabel, labelHostOf } from '../overlays/distance-gated-label';
@@ -49,7 +49,7 @@ const WIREFRAME_RENDER_ORDER = -1;
  *  test (`../scene/README.md` § Declaring what a layer can put on
  *  screen). The glow half is the brightness verdict. */
 export function lgWireframeOpacity(distFromSolPc: number): number {
-  return DARK_BASE_OPACITY * smoothstep(FADE_INNER_PC, FADE_OUTER_PC, distFromSolPc);
+  return farFieldFadeOpacity(DARK_BASE_OPACITY, distFromSolPc);
 }
 
 /**
