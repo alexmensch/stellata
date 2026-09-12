@@ -375,16 +375,20 @@ export class PlanetMeshLayer {
     return false;
   }
 
-  /** Whether any body is still inside the crossfade band — the layer-level
-   *  contribution test. The floor is the crossfade's own rather than
-   *  `FEATURE_LEGIBILITY_MIN_PX`: the shared floor would reject bodies
-   *  between 1 and 6 px that this layer does draw, and a contribution test
-   *  may only ever dim (`docs/render-rules.md` § 2). */
-  anyMeshInFade(cameraPos: Readonly<THREE.Vector3>): boolean {
+  /** Whether any body has reached `TEXTURE_PREFETCH_PX` — the layer-level
+   *  contribution test. The floor is the PREFETCH one, not the crossfade's:
+   *  `update` starts each body's texture fetch half a pixel before the band
+   *  so the mesh has something to draw when it arrives, and gating on the
+   *  band instead would elide exactly the frames that fetch runs on. The
+   *  shared `FEATURE_LEGIBILITY_MIN_PX` is wrong for the same reason one
+   *  rung up — a contribution test may only ever dim
+   *  (`docs/render-rules.md` § 2), and admitting a frame that draws nothing
+   *  is the conservative direction. */
+  anyMeshWorkPending(cameraPos: Readonly<THREE.Vector3>): boolean {
     for (let idx = 0; idx < this.field.liveInstanceCount; idx++) {
       if (idx === this.field.hiddenInstanceIdx) continue;
       if (this.field.planetAt(idx) === null) continue;
-      if (meshFadeFromPhysPx(this.field.physicalPlanetSizePx(idx, cameraPos)) > 0) return true;
+      if (this.field.physicalPlanetSizePx(idx, cameraPos) >= TEXTURE_PREFETCH_PX) return true;
     }
     return false;
   }

@@ -84,10 +84,13 @@ band keyed on where Sol is:
    against `FEATURE_LEGIBILITY_MIN_PX` (`util/orbit-line.ts`), with
    `angularDiameterPx` (`camera/controls/star-geometry.ts`) as the
    projection. Do not write a second projected-size helper — but a layer
-   whose own draw threshold is *stricter* than the shared floor must use
-   that instead, or the test rejects frames the layer does draw (the
-   planet mesh crossfades out at 1 px, the core mask stamps down to
-   `RESOLVED_DISC_MIN_PX`). One helper, not one constant.
+   whose own threshold is *stricter* than the shared floor must use that
+   instead, or the test rejects frames the layer still has work on (the
+   core mask stamps down to `RESOLVED_DISC_MIN_PX`; the planet mesh gates
+   at `TEXTURE_PREFETCH_PX`, below even its own 1 px crossfade floor,
+   because its update is where that texture fetch starts). One helper, not
+   one constant — and gating looser than the layer draws is always
+   admissible, since the test may only ever dim.
 3. **Opacity.** The layer's own authored, distance-faded opacity has
    reached zero (the galactic disc's early-out).
 4. **Brightness.** The layer's brightest pixel at the live exposure

@@ -1189,7 +1189,7 @@ export class Stellata implements FrameAnchor {
       },
       contribution: {
         kind: 'gated',
-        skip: (ctx) => this.kinds.planet.meshLayer.anyMeshInFade(ctx.camera.position)
+        skip: (ctx) => this.kinds.planet.meshLayer.anyMeshWorkPending(ctx.camera.position)
           ? null : 'legibility',
         setContributing: (on) => this.kinds.planet.meshLayer.setContributing(on),
       },

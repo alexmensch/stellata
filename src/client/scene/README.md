@@ -227,18 +227,22 @@ Two kinds:
 `'legibility'` names `FEATURE_LEGIBILITY_MIN_PX` because one floor across
 labelled features is what keeps a label and its geometry vanishing
 together — but a contribution test may only ever *dim*, so a layer whose
-own draw threshold is stricter must use that instead. The planet mesh
-crossfades out at 1 px and the star core mask stamps down to
-`RESOLVED_DISC_MIN_PX`; the shared 6 px floor would reject frames both
-layers do draw. What is forbidden is a second projected-size *helper*
-(`docs/render-rules.md` § 2), not a second threshold.
+own threshold is stricter must use that instead. The star core mask stamps
+down to `RESOLVED_DISC_MIN_PX`; the planet mesh gates at
+`TEXTURE_PREFETCH_PX`, half a pixel *below* its own 1 px crossfade floor,
+because its `update` is where the texture fetch that feeds the band starts
+(`../solar-system/planets/README.md` § Planet mesh LOD). The shared 6 px
+floor would reject frames both layers do work on. What is forbidden is a
+second projected-size *helper* (`docs/render-rules.md` § 2), not a second
+threshold — and a layer may gate looser than it draws, since admitting a
+frame that draws nothing is the direction the contract allows.
 
 ### Which layers are gated, and which refused
 
 Eight are gated: molecular clouds, the probe fleet and the boundary
 shells on `'legibility'`; the galactic disc on `'opacity'` then
-`'frustum'`; the planet mesh LOD and the star core mask on their own
-draw floors; the Milky Way band and the Local Group pair on
+`'frustum'`; the planet mesh LOD and the star core mask on floors of
+their own; the Milky Way band and the Local Group pair on
 `'brightness'`. The refusals are the part worth writing down, because
 each looks like an omission:
 
