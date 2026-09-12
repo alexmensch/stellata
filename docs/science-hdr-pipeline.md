@@ -1315,6 +1315,195 @@ which is the visual-instrument fact that magnification and aperture
 cannot raise surface brightness past the naked eye's. Pinned in
 `emission-pure.test.ts`.
 
+### 3.5 Skipping a diffuse emitter the display cannot show — the share bound
+
+Design gate for stellata-8cg.50.4. The contribution contract
+(`docs/render-rules.md` § 2, `src/client/scene/README.md`) admits three
+geometric skip reasons; the fourth, brightness, was held out because
+skipping an emitter changes the exposure that decides whether it is
+skipped. This section is the argument that admits it and what the
+implementation (stellata-8cg.50.4.1, .50.4.2) must hold.
+
+**The test.** An emitter is display-invisible when its brightest pixel,
+carried through the display path — `L_disp = uExposure · 10^(−0.4·S_peak)
+· Ω_sum`, the toe, the operator, the sRGB encode — lands under half an
+8-bit step: `EIGHT_BIT_HALF_STEP`, the one definition of "visible" the pick
+path and the cadence already run (`emitterPutsInkOnScreen`), in its
+extended-source form. The ±0.5 LSB output dither can still light a fraction
+of a sub-half-step emitter's pixels at 1/255; that stipple is noise, not
+content, and the codebase keeps one definition (decided 2026-09-11). In
+magnitudes, at the shipped instrument and zero trim: invisible iff
+`S_peak > S_lim + dm + TOE_BLACK_MAG = 23.5 + dm`.
+
+**Where the feedback is, and where it is not.** Take the branches of § 3.1:
+`eye` from `L̄`, `pin` from `D`, `floor` a constant, `dm = mix(max(eye,
+floor), pin, w(f))`. The two diffuse emitters write attachment 1's R over
+the whole frame and claim no coverage (G = 0), so `pin`, `w` and `floor`
+are independent of them — a planet's opaque surface overwrites the texels
+under it — and only `eye` moves. `eye` is monotone non-increasing in `L̄`,
+and `L̄` is monotone non-decreasing in the set of drawn emitters (additive
+blending, non-negative light). Removing an emitter can therefore only
+*ease* the cut, only through the eye term, weighted by `1 − w`:
+
+**Claiming no coverage is a precondition, not an observation about the two
+layers that hold it today.** A layer that writes the lit-surface mask moves
+`f`, `w` and `D` as well, so none of the three bullets below holds for it
+and the closure argument has to be made again. Reason 4 is admissible only
+to an emitter whose G is zero.
+
+- **Floor** (`L̄ ≥ Lw` — the app default view): if `L̄ − ΔL_E ≥ Lw` the cut
+  is exactly unchanged. This is 8cg.34's lower-bound argument.
+- **Pin** (`w = 1`): exactly unchanged.
+- **Eye / handover**: eases by `Δdm = (1 − w) · 2.5·log10(L̄ / (L̄ − ΔL_E))`.
+
+**The oscillator, and the two rules that close it.** A *skipped* emitter is
+tested at the exposure that obtains without it; drawing it can only deepen
+the cut, so an "invisible" verdict on a skipped emitter cannot be reversed
+by its own return. The hazard is the other transition: E drawn and
+invisible at `dm_full`, skipped, the cut eases to `dm_partial`, E visible
+there, redrawn, the cut deepens — an oscillator iff `S_peak` sits in
+`(S_eff(dm_full), S_eff(dm_partial)]`. Two rules:
+
+1. A drawn emitter skips only if it is invisible at the exposure that will
+   obtain **without** it: the live `uExposure` eased by the `Δdm` a bound
+   on its own share predicts. The verdict after the skip is then the one
+   already taken.
+2. And only if that `Δdm ≤ CADENCE_JND_MAG` (0.01 mag, 1 % of flux) — the
+   threshold the render gate wakes on and the cadence schedules against —
+   so the skip is imperceptible on everything else in frame. Rule 1 alone
+   would let a skip brighten every star by 0.1 mag in one frame. With N
+   gated emitters the worst coincident step is N·JND; N = 2 and 0.02 mag
+   sits under the classical 3 % JND, so the budget is not split.
+
+Whether the share is *in* the last measurement is the layer's own
+`contributing` flag: subtract the bound while drawn, never while skipped.
+The measurement's lateness — two or three frames, or a park probe interval
+— errs conservative on both transitions: a just-readmitted emitter has its
+share subtracted from a landing that lacks it (stricter, stays drawn); a
+just-skipped emitter is tested at the un-eased cut it was already invisible
+at, and the eased landing that follows moves the cut by ≤ JND by rule 2.
+Subtracting for a skipped emitter would be the bug: it double-eases the
+test and can readmit an emitter whose own return re-skips it.
+
+**The share bound.** `ΔL_E ≤ f_E · uExposure_base · 10^(−0.4·S_peak,E) ·
+Ω_px`, with `f_E ≤ 1` the frame fraction and `uExposure_base` the
+instrument's exposure at `dm = 0, ev = 0` (the reduction rescales `L̄` to
+it). The peak over the whole footprint grossly overstates the mean and is
+still tiny, because the statistic takes `Ω_px` where the display takes
+`Ω_sum` — 1/17.2 of it on § 3.1's 1920×1080 reference at the default 50°
+FOV, where every figure here is quoted — and the toe adds 1.5 mag. From
+Sol, `S_peak` = 20.69 gives `ΔL ≤ 0.0039·f_E` against `L̄` = 68.6 — 5.7e−5
+of the mean, 6.1e−5 mag. In the eye regime the ratio is independent of
+`dm`: at the visibility edge it is `10^(−0.4·TOE_BLACK_MAG) ·
+(L_THRESH/L_ADAPT) · (Ω_px/Ω_sum) · f_E` = 0.48 %, an easing of 0.005 mag
+— already under the JND, so **rule 2 never refuses a skip at the default
+FOV**. It bites only as `Ω_px` grows: at the 120° maximum the edge ratio
+is 2.75 % and rule 2 refuses within 1.2 mag of the edge. That refusal is
+correct — the emitter's light is a material part of the mean exactly
+there — and a short viewport pushes it further, `Ω_px` overtaking `Ω_sum`
+outright at 120° under 625 px of height.
+
+**The peak, per emitter — a bound on the rendered peak, not a model
+constant.** Probed 2026-09-11 with the band's CPU mirror
+(`milkyway-column-pure.ts`, no footprint), on a fan **centred on the
+Galactic-centre direction** and run dense (400 rings × 720 azimuths):
+
+| vantage (galactocentric pc) | dusty peak S | dust-free peak S |
+| --- | --- | --- |
+| Sol | 20.69 (l 0°, b −6°) | 17.13 |
+| Sol, 3 kpc above the plane | 19.56 | 18.48 |
+| 1 kpc from the GC, in plane | 20.81 | 17.56 |
+| 20 kpc above the GC | 20.06 (straight down) | 19.24 |
+| 30 kpc out, in plane | 19.49 | 17.11 |
+| 100 kpc out, 30° up | 19.78 | 18.73 |
+| 1 Mpc out | 19.20 | 17.11 |
+
+**The fan has to be centred on the Galaxy, not laid out in absolute (l, b).**
+A grid of fixed angular cells holds its resolution while the Galaxy's angular
+size falls with distance, so past ~30 kpc it begins stepping over the peak,
+and at 1 Mpc — where the disc proxy spans 1.7° against a 2°×1° cell — it
+misses it by 2.9 mag. Dust is what makes this bite: it pushes the brightest
+sightline a fraction of a degree off the centre, so the dust-free column,
+which sits at the centre, survives a coarse grid at every distance while the
+dusty one does not. The error runs **faint**, which is the direction that
+would authorise a skip the emitter has not earned.
+
+The dust-free full central chord, 17.11, is the vantage-free ceiling, and
+the table samples vantages rather than establishing it: dust only dims, a
+chord through the centre is the longest and densest path the density model
+offers, and a camera outside the disc proxy sees all of it. Inside the
+proxy the camera sees part of that chord while the fan opens to the whole
+sphere, so the same chord still bounds it. At
+the default view's floor cut (−6.29) the threshold is 17.21, so the ceiling
+fails to prove invisibility by 0.10 mag while the dusty peak proves it by
+3.5; at planet-approach cuts (−10 and deeper) the ceiling alone suffices.
+Hence a **two-tier provider** per emitter: a constant dust-free ceiling,
+pinned, decides the deep cases for free; where it cannot, the rendered
+peak from the **live camera position** decides. For the band that is the
+dusty column maximised over a direction fan, keyed on camera position —
+the field varies over ~100 pc (the dust scale height is 125 pc), so a
+pose-keyed cache with a movement threshold is legitimate where an
+exposure-keyed one is not — with a margin pinned against a dense sweep:
+from Sol a 10°×5° fan lands 0.06 mag from a 0.5°×0.25° one and a 5°×2° fan
+0.004 mag. Angular resolution is the cheap half of the problem, though, and
+the margin has to be pinned over a grid of vantages rather than at Sol: what
+a coarse fan costs at Sol it costs many times over from outside the Galaxy,
+where the whole structure fits inside one cell.
+For the Local Group glow it is the footprint-softened central
+column per object at the live plate scale; the sub-pixel expansion (`k`,
+`k⁻³`) only lowers surface brightness so the unexpanded value bounds it,
+and M31's unsoftened nucleus is 3.95 mag too loose to use.
+
+**The wake path is the render gate's, and needs nothing new.** Every input
+to the verdict changes only on a rendered frame: `uExposure` through the
+instrument or the trim (`onChange` → invalidate) or the applied cut
+(`animate()` invalidates when it moved past `CADENCE_JND_MAG`); `Ω_px`
+through resize or FOV; the statistic lands only off a rendered frame's
+reduction; camera pose renders. A sub-JND drift of the applied cut renders
+nothing and can leave the verdict stale by under 0.01 mag of exposure —
+invisible by the same definition. The obligation `scene/README.md` § A
+skipped layer reports nothing states is discharged by construction, not by
+a scheduler.
+
+**What the park inherits.** Its "never reads a partial measurement" claim
+becomes "reads one whose omitted share moves the cut by under the JND". A
+partial `L̄ ≥ Lw` still proves the floor governs; a partial `L̄` a hair
+under `Lw` flips to the eye branch by ≤ JND and unparks — a repaint and a
+measurement, not a wrong picture. `park/README.md` changes with the
+implementation.
+
+**Decided.** Statistic and display skip together — keeping the statistic
+write would keep the dominant cost: holding the band and the LG glow off
+took 29.8 ms off the whole frame, against at most 5.1 ms for the star
+field's own share of a 22.5 ms whole-frame write. Those are two bounds and
+not each other's complement — the runs price frames 2.6× apart and the
+writes share bandwidth, so the pair's own share is not the difference
+(`debug/frame-cost/passes/README.md` § The roster). Rule 2 already keeps
+`L̄` honest. No hysteresis in exposure space: the
+applied cut holds bit-identical inside the slew's settle band, so a verdict
+that is a function of it cannot chatter on quantiser noise, and a real slew
+moves it in whole magnitudes. No skip while `warpActive` — the band is the
+warp's realism payoff and a warp snaps the measurement. No skip without a
+landed statistic (rule 2 needs `L̄`) and none in chart (the seam is off).
+
+**`FrameCtx` gains `exposure`, nullable**: live `uExposure`, the base
+exposure, the white point, `Ω_sum`, the last landed statistic at the base
+exposure, and the tuning; `Ω_px` derives from `pxPerRadian`. The one-writer
+rule (`hdr/exposure/README.md` § One writer, five slots) forbids cached and
+per-frame consumers keyed on adaptation; this reader is the class the rule
+exempts — per frame, stateless, storing nothing keyed on exposure — the
+same class as the cadence's `bodyInkVisible`. The `contributing` flag is
+the registry's transition state, recomputed every frame, not an exposure
+cache.
+
+**Rejected.** A GPU-measured peak of attachment 2 as the skip trigger:
+exact, but a skipped emitter writes nothing, so readmission needs the CPU
+bound anyway, and readmitting on every camera move to re-measure draws the
+emitter through exactly the frames the skip is for. A per-fragment
+early-out in the raymarch (discard once the remaining dust-free chord
+cannot reach threshold): a real saving, but § 1's per-instance culling
+inside the layer, not a layer verdict — its own bead.
+
 ## 4. Per-layer mapping — every current squash and its replacement
 
 Physical layers (emit `L`, exposure-multiplied, pre-tone-map):

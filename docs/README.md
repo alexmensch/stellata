@@ -89,7 +89,8 @@ science-hdr-pipeline.md Design gate for the HDR epic: the
                         model, the global-operator rule (spatial variation
                         upstream of the operator only — local tone mapping
                         decided out), per-layer squash replacements,
-                        chart-mode bypass, float-RT fallback.
+                        chart-mode bypass, float-RT fallback, and the
+                        brightness-skip share bound (§ 3.5).
                         Drives xypg H2–H8;
                         spans star-pipeline, milkyway, solar-system,
                         local-group, chart-mode and the future

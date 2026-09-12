@@ -382,6 +382,15 @@ is the app's own default view. `park/README.md` is the contract: the
 parkable predicate, why the floor case is exact, the probe cadence, and
 what the park does not save.
 
+### Skipping an emitter the display cannot show
+
+A diffuse emitter whose brightest pixel encodes under half an 8-bit step
+at the live exposure may skip its draw — statistic write included — under
+two rules that keep the cut from moving with it:
+`docs/science-hdr-pipeline.md` § 3.5. A per-frame, stateless reader of the
+live `uExposure`, which § One writer, five slots exempts. Ships with
+stellata-8cg.50.4.2.
+
 ## Debug panel
 
 The panel's **Exposure** section (`exposure-tuning.ts`, first section in
