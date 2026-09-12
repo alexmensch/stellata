@@ -285,9 +285,12 @@ export class SceneLayerRegistry {
    *  Evaluated ABOVE the gate — see `LayerTimeBehaviour` — so unlike
    *  `cadenceReport` it reads the skip verdicts of the last rendered
    *  frame, not this tick's. A skipped layer is excluded on the same
-   *  ground, which is only safe while every admissible skip reason is a
-   *  function of camera pose (README.md § A skipped layer reports
-   *  nothing). */
+   *  ground, which is safe only while every admissible reason answers for
+   *  its own wake: the geometric three are functions of camera pose, which
+   *  renders by itself, and `'brightness'` is not — every input to it
+   *  changes only on a rendered frame instead. A fifth reason owes that
+   *  argument before it may be declared (README.md § A skipped layer
+   *  reports nothing). */
   realtimeFramesNeeded(ctx: FrameCtx): boolean {
     for (let i = 0; i < this.layers.length; i++) {
       if (!this.contributing[i]) continue;

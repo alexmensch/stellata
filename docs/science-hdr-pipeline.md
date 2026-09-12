@@ -1405,7 +1405,7 @@ outright at 120° under 625 px of height.
 
 **Measured.** The implementation pins the refusal band at **0.0003 mag at
 10°, 0.0074 at the acceptance 50° field and 1.5904 at 120°**
-(`hdr/exposure/emitter-visibility-pure.test.ts`). The 50° width sits under
+(`hdr/exposure/visibility/emitter-visibility-pure.test.ts`). The 50° width sits under
 `CADENCE_JND_MAG`, reaching the paragraph above's conclusion from the other
 direction; 120° is where the emitter's own light becomes a material part of
 the mean, and the band widens accordingly.
@@ -1463,8 +1463,8 @@ and M31's unsoftened nucleus is 3.95 mag too loose to use.
 
 **Shipped** in stellata-8cg.50.4.2: `FrameCtx.exposure`,
 `extendedEmitterPeakDisplayLevel` + `brightnessSkip`
-(`hdr/exposure/emitter-visibility-pure.ts`), and `'brightness'` on both
-emitters. The band short-circuits on the ceiling before marching the fan;
+(`hdr/exposure/visibility/emitter-visibility-pure.ts`), and `'brightness'`
+on both emitters. The band short-circuits on the ceiling before marching the fan;
 the Local Group registration draws wireframe and glow together, so its
 verdict is the conjunction of the wireframe's distance fade and this test.
 

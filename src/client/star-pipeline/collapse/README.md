@@ -130,8 +130,8 @@ collapsed star — local-pass membership needs `vPhysRatio ≥ 0.5`, the pick
 path excludes them below — or is a debug readout.
 
 The CPU pick/hover mirrors need no change: `emitterPutsInkOnScreen`
-(`../../hdr/exposure/emitter-visibility-pure.ts`) excludes every collapsed
-star, so none is pickable — swept and pinned in
+(`../../hdr/exposure/visibility/emitter-visibility-pure.ts`) excludes every
+collapsed star, so none is pickable — swept and pinned in
 `glow-collapse-pure.test.ts`.
 
 **It does not follow from the floors alone, because the two predicates
