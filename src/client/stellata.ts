@@ -1955,8 +1955,9 @@ export class Stellata implements FrameAnchor {
 
   /** Whether the renderer puts a pixel on screen for this star, and the
    *  disc radius it actually draws — the pick gate proper, as against
-   *  `drawCutoffMag`'s intrinsic-magnitude prefilter. Costs a GPU
-   *  readback, so it runs per pick candidate and never per frame
+   *  `drawCutoffMag`'s intrinsic-magnitude prefilter. On the WebGL2
+   *  escape hatch it stalls on a synchronous readback, so it runs per
+   *  pick candidate and never per frame
    *  (`camera/controls/star-geometry.ts` `pickFromCandidatesResolved`). */
   private resolveStarPick(idx: number): ResolvedCandidate {
     const c = starPhysics.renderedSizeComponents({
@@ -2009,6 +2010,13 @@ export class Stellata implements FrameAnchor {
    *  harness's presence probe. */
   isExtinctionPrepassActive(): boolean {
     return this.extinctionPrepass?.isActive() ?? false;
+  }
+
+  /** A pointer event says a pick is coming: stage the per-star A_V table
+   *  the star pick gates on, so `extinctionAvMagFor` is exact by the time
+   *  the dwell fires (`webgpu/extinction/README.md` § Cold reads). */
+  notifyPickImminent(): void {
+    this.extinctionPrepass?.warmAvReadback?.();
   }
 
   /** Debug kill switch for the star core depth-mask draw AND the

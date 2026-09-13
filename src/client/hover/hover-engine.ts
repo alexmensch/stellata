@@ -26,6 +26,11 @@ export type HoverEngineConfig = {
   pxThreshold?: number;
   delayMs?: number;
   initialProviders?: HoverProvider[];
+  /** A pick is coming — one dwell away on a move, sooner on a press. The
+   *  star pick gates on per-star dust extinction, which on WebGPU has to
+   *  be staged off the GPU before it can be read
+   *  (`../webgpu/extinction/README.md` § Cold reads). */
+  onPickImminent?: () => void;
 };
 
 export type HoverEngine = {
@@ -41,6 +46,7 @@ export function createHoverEngine(config: HoverEngineConfig): HoverEngine {
     pxThreshold = DEFAULT_PX_THRESHOLD,
     delayMs = DEFAULT_DELAY_MS,
     initialProviders = [],
+    onPickImminent,
   } = config;
 
   const providers: HoverProvider[] = [...initialProviders];
@@ -86,6 +92,9 @@ export function createHoverEngine(config: HoverEngineConfig): HoverEngine {
   const onPointerDown = () => {
     dragging = true;
     hide();
+    // A press with no move ahead of it is still a click pick — a touch tap
+    // reaches the click FSM without ever firing pointermove.
+    onPickImminent?.();
   };
   const onPointerUp = () => {
     dragging = false;
@@ -96,6 +105,7 @@ export function createHoverEngine(config: HoverEngineConfig): HoverEngine {
     const x = e.clientX;
     const y = e.clientY;
     hide();
+    onPickImminent?.();
     timer = window.setTimeout(() => {
       hits.length = 0;
       for (const provider of providers) {
