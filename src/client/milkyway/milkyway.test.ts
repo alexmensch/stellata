@@ -799,27 +799,41 @@ describe('the brightness verdict refuses above the fan while the band is off', (
 });
 
 describe('isDrawn is the whole conjunction, not the user toggle', () => {
-  const drawnWith = (enabled: boolean, contributing: boolean) => {
+  const drawnWith = (
+    terms: { enabled?: boolean; contributing?: boolean; isobar?: boolean },
+    check?: (layer: MilkyWay) => void,
+  ) => {
     const { layer } = build();
-    layer.setEnabled(enabled);
-    layer.setContributing(contributing);
+    layer.setEnabled(terms.enabled ?? true);
+    layer.setContributing(terms.contributing ?? true);
+    layer.setIsobar(terms.isobar ?? false);
     const drawn = layer.isDrawn();
-    expect(layer.group.visible, 'group.visible tracks isDrawn').toBe(drawn);
+    check?.(layer);
     layer.dispose();
     return drawn;
   };
 
-  it('draws only with both terms', () => {
-    expect(drawnWith(true, true)).toBe(true);
+  it('draws with every term set', () => {
+    expect(drawnWith({})).toBe(true);
   });
 
-  // The brightness skip leaves the band enabled and not drawing, which is
-  // exactly the state the `mwBand` lever used to price as a zero row.
+  // The brightness skip leaves the band enabled and not drawing — the state
+  // the `mwBand` lever must find absent rather than price as a zero row.
   it('does not draw while the contribution gate has skipped it', () => {
-    expect(drawnWith(true, false)).toBe(false);
+    expect(drawnWith({ contributing: false })).toBe(false);
   });
 
   it('does not draw while the band is switched off', () => {
-    expect(drawnWith(false, true)).toBe(false);
+    expect(drawnWith({ enabled: false })).toBe(false);
+  });
+
+  // Chart mode hides the two meshes and leaves the group enabled, so that the
+  // isobar treatment has somewhere to draw (README.md § Chart mode + warp).
+  // The band is the one layer of the three whose chart gate is therefore NOT
+  // behind `group.visible`, and reading the group alone would price it.
+  it('does not draw in chart mode, where the group stays visible', () => {
+    expect(drawnWith({ isobar: true }, (layer) => {
+      expect(layer.group.visible, 'the group carries the isobar treatment').toBe(true);
+    })).toBe(false);
   });
 });

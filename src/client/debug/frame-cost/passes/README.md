@@ -37,16 +37,23 @@ current view/state is skipped, not measured as zero.
 **Where the layer carries a contribution gate, `present()` asks whether it
 DRAWS — never whether the user left it on.** `mwBand`
 (`MilkyWay.isDrawn`), `lgEmission` (`LocalGroupEmission.isDrawn`) and
-`cloudAbsorption` (`MolecularClouds.isAbsorptionDrawn`) each return the whole
-conjunction behind `group.visible`: user toggle, contribution verdict, and
-chart mode where the layer has one. The brightness skip
-(`../../../scene/README.md` § The brightness reason) leaves both emitters
-enabled and not drawing at the app default view and at a planet approach, so a
-toggle-only test admits the row and its A/B disables a pass that is already
-gone. `planetDepthStamp` is the model — it walks the entries and reads
-`stamp.visible`. **`coreMask` is deliberately outside the set**: its row
-prices the `shouldEnableCoreMask` walk, which runs whenever the lever is on
-whether or not the mask ends up drawing.
+`cloudAbsorption` (`MolecularClouds.isAbsorptionDrawn`) each answer the whole
+condition behind the draw: user toggle, contribution verdict and chart gate.
+The brightness skip (`../../../scene/README.md` § The brightness reason) leaves
+both emitters enabled and not drawing at the app default view and at a planet
+approach, so a toggle-only test admits the row and its A/B disables a pass that
+is already gone. `planetDepthStamp` is the model — it walks the entries and
+reads `stamp.visible`.
+
+**`group.visible` is not that condition for two of the three.** The clouds hide
+the absorption group beneath the parent, so the accessor reads both; the band
+hides its two MESHES and leaves the group visible, since that group also
+carries the chart isobar treatment (`../../../milkyway/README.md` § Chart mode
++ warp). Only the LG glow's group tracks every term on its own.
+
+**`coreMask` is deliberately outside the set**: its row prices the
+`shouldEnableCoreMask` walk, which runs whenever the lever is on whether or not
+the mask ends up drawing.
 
 **`localDepth` carries a confound at Earth that the other vantages do not.**
 The pre-stamp draws from the MAIN scene, so disabling the local depth pass
