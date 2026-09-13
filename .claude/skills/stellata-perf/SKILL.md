@@ -190,13 +190,22 @@ setup the pin was taken in.
 
 **A large GPU-stream move — cross-check on `--method raf-delta`.** The two
 clocks can disagree in *sign*, and the wall clock is the one that cannot
-straddle frames. Where the reduction chain draws under the exposure pin, the
-frame is bimodal and the GPU stream only ever samples the readback frames — in
-every archived `earth|webgpu` dwell the GPU-stream sample count *equals* the
-readback count. Raise the duty cycle and the sampled spans overlap: the median
-inflates with no extra work done. A wall-clock differential near one refresh
-interval is blind to a 2 ms move but cannot miss a 30 ms one; get the positive
-control from the same run rather than arguing for it.
+straddle frames. Where the reduction chain draws under the exposure pin the
+frame has two classes, and the GPU stream samples only the readback frames, so
+its median follows the readback duty cycle rather than the work: `earth`
+measured 17.157 ms at 0.25 readbacks per frame against 52.854 at 0.579, wall
+p50 flat at 16.70 throughout.
+
+`--baseline` and `--against-pin` now **refuse** a pair whose readback rates
+moved on a split frame, so this mostly arrives as a refusal rather than as a
+number you have to disbelieve — `scripts/perf/dwell/README.md` § Dwell mode
+carries the bound and why it is gated on the frame being split. Two gaps the
+guard leaves: a pin carries no counters of its own, and a rate approaching 1
+erases its own evidence as every frame becomes a readback frame. So a large
+GPU-stream move still earns the wall-clock cross-check. A wall-clock
+differential near one refresh interval is blind to a 2 ms move but cannot miss
+a 30 ms one; get the positive control from the same run rather than arguing
+for it.
 
 `stateGuard` cuts neither way: `steady` is not evidence a run is sound (it does
 not catch a within-dwell ramp), and `trending` is not evidence of a defect.
