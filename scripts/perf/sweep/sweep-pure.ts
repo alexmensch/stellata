@@ -1,6 +1,6 @@
 // Viewport-scaling sweep: the measurement order, the log-log fit, and what
 // its slope says about what the frame is bound by.
-// README.md § Sweep mode.
+// README.md.
 
 export const DEFAULT_SWEEP_SCALES = [0.5, 1, 1.5, 2] as const;
 

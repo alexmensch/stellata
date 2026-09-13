@@ -10,8 +10,9 @@ flags and the other modes: `../README.md`.
 scripts/perf/dwell/
   dwell-pure.ts (+ test)    One dwell's percentiles, the vsync-clamp flag,
                             the state guard (quarter medians), the gating
-                            clock a row is judged on, and the per-frame
-                            WebGPU pass-count summary.
+                            clock a row is judged on, the per-frame WebGPU
+                            pass-count summary, and the pinned readback
+                            cadence with the bound that says it held.
 ```
 
 The dwell loop itself is a page function in `../page-protocol.ts`
@@ -27,6 +28,33 @@ three preconditions
 for the same reasons — a running clock re-arms the binary orbit upload inside
 the timed scope, and an unpinned exposure lets the dwell drift onto a
 different star population.
+
+**A dwell pins a fourth input the differential leaves alone: the readback
+duty cycle.** `--readback-every` (default `DWELL_READBACK_EVERY_FRAMES`, 4)
+holds the statistic readback at one request per that many rendered frames
+from before the warmup until the restore, through
+`reduction.readbackCadence` (`src/client/hdr/exposure/reduction/README.md`
+§ Latency). Emergent, the rate is whatever the readback's round trip leaves
+it at — 0.25 to 0.975 across the archive — and § Where the frame has two
+classes below is what that costs a median. Four is the rate every clean
+`earth` dwell ran at and the app's own at the Sol default view, so the pin
+holds the frame the archive measured rather than inventing one. It is a cap,
+never a floor: a vantage whose round trip outruns the cadence requests less
+often, which is sound and recorded. A rate ABOVE the cap cannot happen if
+the lever took, so one is read as the lever not having taken and fails the
+scenario (§ Five checks below).
+
+**Several cadences make the run a PROBE, not a comparison.**
+`--readback-every 4,1,2` visits the scenario once per value, and since every
+one of those contexts is the same `scenario|backend` they share a diff key
+and none is another's comparison — so `--pin`, `--against-pin` and
+`--baseline` all refuse a list. The first cadence is repeated LAST, the same
+bracket `../sweep/README.md` puts around a set of scales and for the same
+reason: the GPU's sustained-load ramp moves frame time across a run whatever
+the cool-down (`../pins/README.md` § Run position), so a span rising across
+ascending cadences is a trend and that drift wearing the same shape. The two
+readings at the first cadence bound the second. What the probe is for is
+`stellata-8cg.67.2`.
 
 **rAF wall-clock deltas are the metric.** On a WebGPU boot the frame-sample
 stream is subscribed alongside where `gpuFrameSamplesAreSound()` says the
@@ -74,23 +102,55 @@ floor is still a differential (`docs/render-rules.md` § 8). A WebGL2 dwell
 has no queue to count on and records null.
 
 **Where the frame has two classes, the GPU-stream median follows the
-readback duty cycle, and a pair whose rates differ is refused.** The stream
-samples only readback frames: across the 148 archived dwells that resolved
-one, its sample count never exceeds `readbackPerFrame × frames` and runs
-88–100 % of it (median 97 %, the shortfall being the readbacks still in
-flight when the dwell ends). That costs nothing while every frame is the same
-shape, and decides what the median measures once they are not. Only
-the `earth` vantage draws two shapes: the exposure measurement resolves under
-the dwell's pinned cut there, so `renderPasses` reads 4 or 10 in one dwell
+readback duty cycle, and a pair whose rates differ is refused.** Only the
+`earth` vantage draws two shapes: the exposure measurement resolves under the
+dwell's pinned cut there, so `renderPasses` reads 4 or 10 in one dwell
 (bimodal in all 23 archived WebGPU dwells carrying counters, against none of
-the other 109). Measured: 17.157 ms at 0.25 readbacks per frame against
-52.854 at 0.579, a 3.17× span whose wall p50 never left 16.70 ms and whose
-pass-count extremes never moved off 4/10 — only the median did, as the duty
-cycle crossed 50 %. `READBACK_TOLERANCE` (25 %) bounds it, clear of the 7 %
-spread `earth` holds across 25 cold runs. **The guard is gated on the frame
-being split**, because the same drift elsewhere is sound: `sol` moved 0.25 to
-0.59 across the runs that measured its 9.33 ms saving and `mw120` to 0.51
-with its median flat, and refusing those would discard real readings.
+the other 109). The stream samples a little over half the rendered frames, so
+the sampled mix is the frame population's mix and the median lands in
+whichever class holds the majority.
+
+**It samples the two shapes evenly at one-in-two and sparser, and lopsidedly
+at one-in-one.** Over the seven contexts below, the fraction of readback
+frames sampled against the fraction of plain ones runs 0.55/0.58, 0.57/0.55,
+0.60/0.56, 0.56/0.57 and — at the two one-in-four contexts, which bracket the
+run — 0.67/0.47 and 0.49/0.60. At one-in-one it is **0.89 against 0.12**, so
+the share reads 0.894 at a rate of 0.539 rather than tracking it. Why the
+sampler skews where readbacks go out on every frame it can is not established;
+what the guard needs is that the share rises with the rate, which holds
+throughout. Do not read share and rate as the same number near one.
+
+**The two classes cost what they cost; only their SHARE moves.** Measured
+directly by pinning the cadence from one-in-one to one-in-eight over seven
+cold contexts of 1200 frames (`.perf-runs/2026-09-13/`, 4.096 Mpx headless):
+the low class reads 11.9–14.1 ms and the high 51.1–58.6 at every duty cycle,
+while the share of samples in the high one runs 0.118 at 0.125 readbacks per
+frame to 0.894 at 0.539 — rising with the rate, though not equal to it at the
+top end. The median crosses when that
+share crosses a half, 13.20 ms against 56.19, a **4.3× step from a frame
+whose wall p50 never leaves 16.70 ms**. The 3.17× first seen between two
+archived runs was the same crossing, caught part-way.
+
+**The high class is not a duration, and the arithmetic says so.** At 0.539 the
+median implies 67.4 s of GPU work inside a 20.0 s dwell (3.37×); every other
+cadence reads 0.79–0.93×. three allocates a timestamp pair per render pass and
+sums them, so a 10-pass readback frame counts overlapping spans twice over
+where a 4-pass frame has little to overlap. Read the GPU row at a two-class
+vantage as summed pass occupancy, never as frame time.
+
+`READBACK_TOLERANCE` (25 %) bounds the rate drift, clear of the 7 % spread
+`earth` holds across 25 cold runs. **The guard is gated on the frame being
+split**, because the same drift elsewhere is sound: `sol` moved 0.25 to 0.59
+across the runs that measured its 9.33 ms saving and `mw120` to 0.51 with its
+median flat, and refusing those would discard real readings.
+
+**The sample count tracks `readbackPerFrame × frames` only while the cadence
+is EMERGENT.** Across the 148 archived dwells it never exceeded that product
+and ran 88–100 % of it, which read as "the stream samples only readback
+frames" — but those runs all let the two readbacks contend. Pin the statistic
+readback and the timestamp resolve runs at its own rate: 627–696 samples per
+1200 frames in all seven contexts above, against a product as low as 150. The
+bound describes the coupling, not the sampler.
 
 **The split is read from both sides, because the duty cycle erases its own
 evidence.** As the rate approaches 1 every frame becomes a readback frame and
@@ -100,8 +160,15 @@ largest move it exists to catch. `--baseline` has both runs' counters; the pin
 has none of its own, so it records the verdict per row (`splitFrame`) and the
 comparison ors the two. A dwell written before the counters existed carries no
 field at all, which reads as one class, as an unrecorded rate declines the
-guard. What sets the multiple is not established — `../diff-pure.ts` carries
-the rule, and the mechanism is `stellata-8cg.67.2`.
+guard. `../diff-pure.ts` carries the rule.
+
+**The pinned cadence removes the drift; the guard stays because the pin is
+not the only pair it judges.** Two dwells taken at the same
+`--readback-every` cannot differ here at all, which is the point of pinning
+it. What can still differ is a run from the archive, taken before the lever
+existed, or one deliberately taken at another cadence — and the rate a row
+records is the evidence either way, which is why the guard turns on the
+measured rate rather than on the knob that was typed.
 
 **The counters sit inside the timed frames, and only on WebGPU.** Each
 wrapped call adds one JavaScript frame: at the counts a canon vantage
@@ -125,16 +192,18 @@ the pass-roster module over the dev server (`PASS_TOGGLES_MODULE_URL`), never
 a second spelling of it; a pass not active at the vantage fails the scenario
 rather than round-tripping nothing under the pass's name.
 
-**Four checks, each able to fail.** A hold already live when the dwell starts
+**Five checks, each able to fail.** A hold already live when the dwell starts
 fails it — settle requires an unheld gate, and the debug panel takes one,
 whose per-tick DOM writes would sit inside a wall-clock dwell. A clock that
 was not still stopped at the end of the timed frames fails it: the frames
-priced a moving scene. Then the rate and the hold count are read back
+priced a moving scene. A readback rate over the cap the cadence
+pins fails it: the lever did not take, so the duty cycle is an input again.
+Then the clock rate and the hold count are read back
 **from outside the page function that restored them** — a value re-read
 inside the same block that just wrote it could only ever fail if `setRate`
 itself refused, which is not the question worth asking. The hold check is
 differential against the count seen before the dwell, so a hold the page
-already owned is named as such instead of read as a leak. Any of the four
+already owned is named as such instead of read as a leak. Any of the five
 fails the scenario, because each would leave every later scenario in the run
-measuring a different machine.
+measuring a different machine or a different frame.
 

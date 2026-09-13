@@ -5,7 +5,7 @@
 import type { GpuFrameMethod, PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import type { Backend, ScenarioName } from './scenarios';
 import type { DwellSummary, PassCountsPerFrame, PassCountsSummary } from './dwell/dwell-pure';
-import type { SweepFit, SweepPoint } from './sweep-pure';
+import type { SweepFit, SweepPoint } from './sweep/sweep-pure';
 
 /**
  * Removing a field or changing what one MEANS bumps the suffix; adding one

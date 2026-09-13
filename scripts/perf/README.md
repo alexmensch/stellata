@@ -36,8 +36,6 @@ scripts/perf/
                             assertPerfFile. Owns the adapter/scenario/mode
                             shapes the runner, the tables and the diff share.
   settle-pure.ts (+ test)   settleVerdict over one render-gate snapshot.
-  sweep-pure.ts (+ test)    Measurement order, the log-log fit, fill/vertex
-                            classification, the sweep bracket.
   diff-pure.ts (+ test)     Two runs differenced: bands, verdicts, and the
                             refusals that stop an invalid comparison.
   pin-pure.ts (+ test)      The perf pin: adapter slug, pinFromRun,
@@ -52,6 +50,8 @@ scripts/perf/
                             arm poller, the protocol. Own README.
   dwell/                    Dwell mode: the whole-frame statistics, the
                             state guard, the gating clock. Own README.
+  sweep/                    Sweep mode: measurement order, the log-log fit,
+                            the bracket. Own README.
   pins/                     The committed per-GPU pin. Own README.
 ```
 
@@ -64,7 +64,7 @@ pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu|we
                  [--method timer-query|timestamp|raf-delta]
                  [--budget-ms N] [--dwell-frames N] [--warmup-frames N] [--settle-frames N] [--no-interleave]
                  [--empty-passes N]
-                 [--frames 240] [--roundtrip <pass>|idle] [--scales 0.5,1,1.5,2]
+                 [--frames 240] [--readback-every 4|4,1,2] [--roundtrip <pass>|idle] [--scales 0.5,1,1.5,2]
                  [--headed] [--width 1280] [--height 800] [--dpr 2] [--quiet-ms 5000]
                  [--json <path>] [--baseline <path>] [--cooldown-ms 0]
                  [--pin <path> [--accept <scenario>|<backend>:<bead>]...] [--against-pin <path>]
@@ -114,7 +114,15 @@ tell either way** — equal across both runs, or the subtraction is between
 two different scenes.
 
 `--frames` sizes a dwell (dwell and sweep modes); `--scales` is the sweep's
-viewport set. `--warmup-frames` is shared: it is priceFrame's own warmup in
+viewport set.
+
+**`--readback-every` pins the dwell's readback duty cycle** — one statistic
+readback per that many rendered frames, held from before the warmup to the
+restore. The rate is otherwise emergent, and it decides what the GPU-stream
+median measures where the frame has two classes, so a dwell holds it as it
+already holds the gate, the clock and the exposure. Several values visit the
+scenario once per cadence — a probe, refused by `--pin`, `--against-pin` and
+`--baseline` (`dwell/README.md` § What a dwell measures). `--warmup-frames` is shared: it is priceFrame's own warmup in
 differential mode and the dwell's in the other two, defaulting to the same
 `WARMUP_FRAMES` either way, since it exists to absorb the same clock ramp.
 
@@ -144,7 +152,7 @@ be compared. rAF wall time is the one clock both supply. An explicit
 `--mode dwell --method timer-query` is refused rather than quietly stamping
 the table `raf-delta`, and the same goes for `--passes`, `--pre-disable`,
 `--no-park`, `--budget-ms`, `--dwell-frames`, `--settle-frames` and
-`--no-interleave` outside `differential`, `--frames` outside dwell and
+`--no-interleave` outside `differential`, `--frames` and `--readback-every` outside dwell and
 sweep, `--roundtrip` outside dwell, and `--scales` outside sweep. Only flags actually typed are checked,
 so a default never trips it, and `--warmup-frames` is exempt because every
 mode absorbs the same ramp. The in-app instrument takes the same posture on a
@@ -243,33 +251,15 @@ Any failure exits 1.
 
 `--mode dwell` measures the whole frame at a vantage instead of pricing its
 passes, and is what the pin and both gates read. Its metric, the GPU-stream
-row beside it, the vsync clamp, the state guard, the pass counters and
-`--roundtrip`: `dwell/README.md`.
+row beside it, the vsync clamp, the state guard, the pass counters, the
+pinned readback duty cycle and `--roundtrip`: `dwell/README.md`.
 
 ## Sweep mode
 
-`--mode sweep` answers what the frame is bound by, rather than what a pass
-costs: dwell at each viewport scale, fit log(frame time) against log(backing
--store pixels), and report the exponent.
-
-Scale 1 is measured **first and last**, with the requested scales ascending
-in between (`--scales 0.5,1,1.5,2` → `1, 0.5, 1.5, 2, 1`). The spread of
-those two scale-1 medians is `bracketMs`, and it is the floor any slope claim
-sits on for the same reason the differential brackets each row: an instrument
-that ramped its clocks across the sweep produces a dependence on elapsed time
-that fits as a dependence on area.
-
-The viewport moves; **dpr does not**. Scaling both would confound area with
-the per-pixel work dpr also multiplies.
-
-Reading the slope: `≥ 0.8` fill-bound, `≤ 0.3` vertex- or CPU-bound, between
-them mixed. In the JSON the fit is its own block — `sweep.fit.slope`, `.r2`,
-`.bound`, and `.fitted`, the number of points the line was drawn through, so
-named because `sweep.points` one level up is the points themselves. **Any vsync-clamped point makes the whole fit inconclusive**, not
-merely noisier — that point measured the panel, so it flattens the line and a
-fill-bound frame reads as vertex-bound. The first point pays a full warmup;
-later scales pay `SWEEP_RESIZE_WARMUP_FRAMES` (60), enough to absorb the HDR
-target rebuild the resize forces, since the clock ramp was already paid.
+`--mode sweep` dwells at each viewport scale and fits the exponent relating
+frame time to backing-store pixels, which says what the frame is bound by
+rather than what a pass costs. The order, the bracket, the dpr rule and how
+to read a slope: `sweep/README.md`.
 
 ## JSON output
 

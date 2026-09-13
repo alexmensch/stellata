@@ -11,6 +11,7 @@ import {
   Fn, If, float, int, ivec2, screenCoordinate, select, texture, vec3, vec4,
 } from 'three/tsl';
 import type { ReducedStatistic, ReductionSeam } from '../../hdr/hdr-seam';
+import { ReadbackCadence } from '../../hdr/exposure/reduction/readback-cadence';
 import {
   createTileScratch,
   reduceTileLevel,
@@ -71,6 +72,10 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
    *  request accounting relies on the cadence either way. */
   fenceWhileParked = false;
 
+  /** Frames between readbacks. Emergent here — the promise resolves when it
+   *  resolves — and pinned by a dwell (`scripts/perf/dwell/README.md`). */
+  readonly readbackCadence = new ReadbackCadence();
+
   private readonly renderer: WebGPURenderer;
   private levels: Level[] = [];
   private sourceWidth = 0;
@@ -111,7 +116,8 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
     parked: boolean,
   ): void {
     this.poll();
-    if (this.inFlight) return;
+    const due = this.readbackCadence.dueThisFrame();
+    if (this.inFlight || !due) return;
     this.ensureLevels(width, height);
     if (this.levels.length === 0) return;
 
@@ -132,6 +138,7 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
     const last = this.levels[this.levels.length - 1];
     this.inFlight = true;
     this.issued++;
+    this.readbackCadence.issued();
     this.pendingIsStale = !drawing;
     if (drawing) this.pendingExposure = renderExposure;
     const count = last.width * last.height;
@@ -168,6 +175,7 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
     this.sourceWidth = 0;
     this.sourceHeight = 0;
     this.inFlight = false;
+    this.readbackCadence.reset();
     this.landed = null;
     this.landedCount = 0;
     this.scratch = createTileScratch(0);

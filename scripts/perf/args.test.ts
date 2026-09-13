@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   ARG_DEFAULTS, ArgError, BACKEND_REQUESTS, MODES, ROUNDTRIP_IDLE, parseRunArgs, usage,
 } from './args';
-import { DEFAULT_SWEEP_SCALES } from './sweep-pure';
+import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
+import { DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
 import { SCENARIO_NAMES } from './scenarios';
 
 describe('parseRunArgs', () => {
@@ -31,6 +32,7 @@ describe('parseRunArgs', () => {
       chromeArgs: [],
       hash: '',
       frames: ARG_DEFAULTS.frames,
+      readbackEvery: [DWELL_READBACK_EVERY_FRAMES],
       roundtrip: undefined,
       scales: [...DEFAULT_SWEEP_SCALES],
       json: undefined,
@@ -107,6 +109,29 @@ describe('parseRunArgs', () => {
   it('takes a pass key or the idle control as --roundtrip, in dwell mode', () => {
     expect(parseRunArgs(['--mode', 'dwell', '--roundtrip', 'localDepth']).roundtrip).toBe('localDepth');
     expect(parseRunArgs(['--mode', 'dwell', '--roundtrip', ROUNDTRIP_IDLE]).roundtrip).toBe('idle');
+  });
+
+  it('takes --readback-every as whole frames, in dwell and sweep', () => {
+    expect(parseRunArgs(['--mode', 'dwell', '--readback-every', '1']).readbackEvery).toEqual([1]);
+    expect(parseRunArgs(['--mode', 'sweep', '--readback-every', '8']).readbackEvery).toEqual([8]);
+  });
+
+  it('takes a cadence list, which a probe run visits one context per value at', () => {
+    expect(parseRunArgs(['--mode', 'dwell', '--readback-every', '4,1,2, 8']).readbackEvery)
+      .toEqual([4, 1, 2, 8]);
+  });
+
+  // Each cadence revisits the same scenario|backend, so the rows share a
+  // diff key and none of them is another's comparison.
+  it('refuses a cadence list wherever the run is read against another table', () => {
+    for (const flags of [
+      [...PIN_RUN, '--readback-every', '1,4'],
+      ['--mode', 'dwell', '--against-pin', 'p.json', '--readback-every', '1,4'],
+      ['--mode', 'dwell', '--baseline', 'b.json', '--readback-every', '1,4'],
+    ]) {
+      expect(() => parseRunArgs(flags)).toThrow(/needs a single cadence/);
+    }
+    expect(parseRunArgs([...PIN_RUN, '--readback-every', '4']).readbackEvery).toEqual([4]);
   });
 
   it('parses comma lists and repeated flags', () => {
@@ -217,6 +242,9 @@ describe('parseRunArgs', () => {
     [['--pre-disable', 'mwBnad'], /--pre-disable names no such pass/],
     [['--mode', 'dwell', '--pre-disable', 'mwBand'], /--mode dwell, which would ignore it/],
     [['--mode', 'dwell', '--no-park'], /--mode dwell, which would ignore it/],
+    [['--mode', 'differential', '--readback-every', '4'], /--mode differential, which would ignore it/],
+    [['--mode', 'dwell', '--readback-every', '0'], /--readback-every/],
+    [['--mode', 'dwell', '--readback-every', '2.5'], /counts frames/],
     [['--mode', 'dwell', '--roundtrip', 'localDepht'], /--roundtrip names no such pass/],
     [['--mode', 'differential', '--roundtrip', 'localDepth'], /--mode differential, which would ignore it/],
     [['--mode', 'sweep', '--roundtrip', 'idle'], /--mode sweep, which would ignore it/],
@@ -235,7 +263,7 @@ describe('parseRunArgs', () => {
     for (const flag of [
       '--scenario', '--backend', '--mode', '--passes', '--pre-disable', '--no-park', '--method', '--budget-ms',
       '--dwell-frames', '--warmup-frames', '--settle-frames', '--empty-passes',
-      '--no-interleave',
+      '--no-interleave', '--readback-every',
       '--headed', '--width', '--height', '--dpr', '--quiet-ms', '--url', '--chrome-arg', '--hash',
       '--frames', '--roundtrip', '--scales', '--json', '--baseline', '--pin', '--against-pin', '--accept', '--cooldown-ms',
     ]) {

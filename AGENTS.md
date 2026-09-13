@@ -98,11 +98,13 @@ unrelated.
 
 ### Split, don't shave
 
-**Over the cap the default is a folder split, not a rewording pass.** Do
-not re-tighten already-tight prose to claw back single lines: that costs
-a session and yields a denser, worse README. Reword only genuinely
-redundant prose — a claim stated twice, superseded history another doc
-carries; never delete invariants to fit.
+**At the cap, split — in THAT PR, never a bead.** Deferring hands the next
+session the same tax plus the seam to rediscover. Two triggers: the guard
+failing, and you trimming or packing your own text to keep it green. The
+second gets missed — a passing guard is not evidence there was room, and
+content cut to fit is the cap already costing you. Never shave: retightening
+tight prose yields a denser, worse README. Reword only genuinely redundant
+prose; never delete invariants to fit.
 
 Seam: the README's largest self-contained topic plus the leaf module
 owning it. Right when the moved code imports nothing from the parent and a

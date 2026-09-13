@@ -10,8 +10,8 @@ import {
   PRICED_PASS_KEYS,
   type PricedPassKey,
 } from '../../src/client/debug/frame-cost/passes/passes-pure';
-import { DEFAULT_DWELL_FRAMES } from './dwell/dwell-pure';
-import { DEFAULT_SWEEP_SCALES } from './sweep-pure';
+import { DEFAULT_DWELL_FRAMES, DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
+import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
 import { DEFAULT_QUIET_MS } from './settle-pure';
 import { BACKENDS, SCENARIO_NAMES, type ScenarioName } from './scenarios';
 
@@ -66,6 +66,11 @@ export interface RunArgs {
   readonly hash: string;
   /** dwell and sweep: frames whose deltas count, per dwell. */
   readonly frames: number;
+  /** dwell and sweep: rendered frames between statistic readbacks, held
+   *  there for each dwell's duration. Several values run the scenario once
+   *  per cadence, which is a probe rather than a comparable run
+   *  (`dwell/README.md`). */
+  readonly readbackEvery: readonly number[];
   /** dwell: a priceFrame pass key, or `idle`, applied between two dwells. */
   readonly roundtrip: RoundTrip | undefined;
   readonly scales: readonly number[];
@@ -91,6 +96,7 @@ export const ARG_DEFAULTS = {
   dpr: 2,
   quietMs: DEFAULT_QUIET_MS,
   frames: DEFAULT_DWELL_FRAMES,
+  readbackEvery: String(DWELL_READBACK_EVERY_FRAMES),
   scales: DEFAULT_SWEEP_SCALES.join(','),
   cooldownMs: 0,
 } as const;
@@ -121,6 +127,7 @@ const OPTIONS = {
   'chrome-arg': { type: 'string', multiple: true, default: [] },
   hash: { type: 'string', default: '' },
   frames: { type: 'string', default: String(ARG_DEFAULTS.frames) },
+  'readback-every': { type: 'string', default: ARG_DEFAULTS.readbackEvery },
   roundtrip: { type: 'string' },
   scales: { type: 'string', default: ARG_DEFAULTS.scales },
   json: { type: 'string' },
@@ -152,6 +159,7 @@ export function usage(): string {
     '  --chrome-arg=<switch>    extra Chromium switch, repeatable (the = form, since the value starts with a dash)',
     '  --hash <fragment>        URL-fragment switches for every boot, e.g. webgpu-gate=force; composes with #renderer=webgl2',
     `  --frames <n>             dwell and sweep: frames per dwell         (default ${ARG_DEFAULTS.frames})`,
+    `  --readback-every <list>  dwell and sweep: frames between statistic readbacks, pinned per dwell; several = one context each (default ${ARG_DEFAULTS.readbackEvery})`,
     `  --roundtrip <pass|${ROUNDTRIP_IDLE}>  dwell: dwell, hold the pass off for --frames then restore it, dwell again`,
     `  --scales <list>          sweep: viewport scales                    (default ${ARG_DEFAULTS.scales})`,
     '  --json <path>            write the whole run as stellata-perf/2',
@@ -184,6 +192,7 @@ const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
   'settle-frames': ['differential'],
   'no-interleave': ['differential'],
   frames: ['dwell', 'sweep'],
+  'readback-every': ['dwell', 'sweep'],
   roundtrip: ['dwell'],
   scales: ['sweep'],
   pin: ['dwell'],
@@ -273,6 +282,14 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     return parsed;
   };
 
+  const wholeNumberList = (name: string): number[] => {
+    const parsed = numberList(name);
+    for (const n of parsed) {
+      if (!Number.isInteger(n)) throw new ArgError(`--${name} counts frames; got '${n}'`);
+    }
+    return parsed;
+  };
+
   const isPassKey = (key: string): key is PricedPassKey =>
     PRICED_PASS_KEYS.includes(key as PricedPassKey);
 
@@ -321,6 +338,20 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     }
   }
 
+  // A cadence list runs the same scenario|backend more than once, so its
+  // rows share a diff key and no two of them are each other's comparison.
+  // A probe, and refused wherever a run is read against another table.
+  const readbackEvery = wholeNumberList('readback-every');
+  if (readbackEvery.length > 1) {
+    for (const flag of ['pin', 'against-pin', 'baseline']) {
+      if (str(flag) !== undefined) {
+        throw new ArgError(
+          `--readback-every names ${readbackEvery.length} cadences, so a scenario is visited `
+          + `once per cadence and its rows share a diff key: --${flag} needs a single cadence`);
+      }
+    }
+  }
+
   const accept = (values.accept as string[]).map(parseAccept);
   if (str('pin') !== undefined && str('json') === undefined) {
     throw new ArgError('--pin needs --json: the pin cites the run file its rows were summarised from');
@@ -360,6 +391,7 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     chromeArgs: values['chrome-arg'] as string[],
     hash: (str('hash') ?? '').replace(/^#/, ''),
     frames: num('frames'),
+    readbackEvery,
     roundtrip,
     scales: numberList('scales'),
     json: str('json'),

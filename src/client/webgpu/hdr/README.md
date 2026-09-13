@@ -68,8 +68,9 @@ exactly the frame-decoupled contract the render gate and the adaptation
 park rely on. It reads the whole tile grid, and the CPU combine and the
 coverage-weighted median that turn it into three numbers are
 `reduction-pure`'s, shared with the WebGL2 half rather than re-expressed.
-The one-in-flight rule, the stale-drop on a parked/disabled frame, and
-the render-time-exposure pairing are all kept verbatim from
+The one-in-flight rule, the pinnable cadence, the stale-drop on a
+parked/disabled frame, and the render-time-exposure pairing are all kept
+verbatim from
 `../../hdr/exposure/reduction/README.md`; `fenceWhileParked` keeps its
 name and behaviour for the frame-cost harness even though the ANGLE
 submission-barrier rationale has no analogue here.

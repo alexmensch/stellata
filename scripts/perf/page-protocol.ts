@@ -234,6 +234,9 @@ export interface DwellParams {
   /** Count queue submits, command buffers and encoded passes per timed
    *  frame by wrapping the WebGPU prototypes for the dwell's duration. */
   readonly countPasses: boolean;
+  /** Rendered frames between statistic readbacks, held there from before
+   *  the warmup until the restore (`dwell/README.md`). */
+  readonly readbackEvery: number;
 }
 
 export interface DwellRaw {
@@ -256,9 +259,11 @@ export interface DwellRaw {
 
 /**
  * Dwell on the live frame under a render-gate hold, with the simulation
- * clock stopped and the exposure pinned where the warmup left it — the
- * same three preconditions the in-app differential establishes, for the
- * same reasons (`src/client/debug/frame-cost/README.md` § Preconditions).
+ * clock stopped, the exposure pinned where the warmup left it and the
+ * statistic readback held at one frame in `readbackEvery` — the
+ * differential's own three preconditions
+ * (`src/client/debug/frame-cost/README.md` § Preconditions) plus the one a
+ * whole-frame median at a two-class vantage needs (`dwell/README.md`).
  *
  * rAF deltas are the primary metric because they are the one clock every
  * backend supplies. The WebGPU timestamp stream rides alongside where it
@@ -311,6 +316,8 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     }
 
     const clock = s.timeClock;
+    const cadence = s.reduction.readbackCadence;
+    const readbackEveryBefore = cadence.every;
     const rateBefore = clock.getRate();
     const holdsBefore = s.renderGate.debugState.holds;
     const releaseHold = s.renderGate.hold();
@@ -353,6 +360,9 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
         }
       }
       if (rateBefore !== 0) clock.setRate(0);
+      // Before the warmup, so the frames being timed are drawn at a cadence
+      // the page has already been running.
+      cadence.every = p.readbackEvery;
       for (let f = 0; f < p.warmupFrames; f++) {
         await new Promise((r) => requestAnimationFrame(r));
       }
@@ -384,6 +394,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       effectiveLimitMag = s.exposure.getEffectiveLimitMag();
     } finally {
       rateDuring = clock.getRate();
+      cadence.every = readbackEveryBefore;
       stopGpu?.();
       if (origSubmit !== null && queueProto !== undefined && encoderProto !== undefined) {
         queueProto.submit = origSubmit;
