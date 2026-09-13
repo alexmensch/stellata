@@ -65,16 +65,17 @@ collapse (rule 4). Layers pay their draw and their CPU update from every
 vantage, and with frustum culling off (rule 1) a molecular cloud behind
 the camera, a shell subtending a fraction of a pixel, or an emitter whose
 peak is under the display floor all cost what they would cost if they
-were filling the screen. The precedents already in the tree are exactly
-this test done ad hoc: the star core mask draws only when some star is
-close enough to subtend `RESOLVED_DISC_MIN_PX`; the planet mesh hides at
-`meshFadeFromPhysPx(physPx) <= 0`; the galactic disc sets
-`visible = false` when its distance-faded opacity reaches zero; probe
-markers gate on `isFeatureLegible` over the fleet extent.
+were filling the screen. Each adopted gate started as exactly this test
+done ad hoc, inside the layer's own update where nothing could audit it:
+the star core mask drew only when some star subtended
+`RESOLVED_DISC_MIN_PX`, the planet mesh hid at
+`meshFadeFromPhysPx(physPx) <= 0`, the galactic disc set
+`visible = false` at zero faded opacity, probe markers gated on
+`isFeatureLegible` over the fleet extent. What the contract adds over
+each is the elided update, the cadence pass-over, and a census.
 
-**How to apply.** Four tests, all physical — never a distance band keyed
-on where Sol is. Three are shipped; the fourth is decided and lands with
-stellata-8cg.50.4.2:
+**How to apply.** Four admissible tests, all physical — never a distance
+band keyed on where Sol is:
 
 1. **Frustum.** The layer's bounding volume, in the renderer-local
    frame, lies wholly outside the view frustum.
@@ -82,32 +83,36 @@ stellata-8cg.50.4.2:
    legibility floor: `isFeatureLegible(sizePc, distancePc, pxPerRad)`
    against `FEATURE_LEGIBILITY_MIN_PX` (`util/orbit-line.ts`), with
    `angularDiameterPx` (`camera/controls/star-geometry.ts`) as the
-   projection. Do not write a second projected-size helper.
+   projection. Do not write a second projected-size helper — but a layer
+   whose own threshold is *stricter* than the shared floor must use that
+   instead, or the test rejects frames the layer still has work on (the
+   core mask stamps down to `RESOLVED_DISC_MIN_PX`; the planet mesh gates
+   at `TEXTURE_PREFETCH_PX`, below even its own 1 px crossfade floor,
+   because its update is where that texture fetch starts). One helper, not
+   one constant — and gating looser than the layer draws is always
+   admissible, since the test may only ever dim.
 3. **Opacity.** The layer's own authored, distance-faded opacity has
    reached zero (the galactic disc's early-out).
-4. **Brightness — decided, not yet shipped.** The layer's brightest
-   pixel at the live exposure encodes under half an 8-bit step — the
-   extended-source form of `emitterPutsInkOnScreen`, i.e. its peak
-   surface brightness is more than `TOE_BLACK_MAG` past the extended
-   threshold the cut has moved, `stellataExtendedThresholdSb + dm`. The
-   helper itself is not live: it recovers the untrimmed 22.0 mag/arcsec²
-   at the shipped instrument, and adaptation is deliberately absent from
-   both uniforms it reads (`hdr/emission/README.md` § Extended sources,
-   `hdr/exposure/README.md` § One writer, five slots). Skipping an
-   emitter on this test removes its share from
-   the exposure statistic, which eases the cut, which brings the
-   emitter back — so the skip is admissible only under two rules: the
-   emitter must be invisible at the exposure that will obtain *without*
-   it, and that exposure shift must be under `CADENCE_JND_MAG`.
-   **Admissible only to an emitter that claims no coverage** — a layer
-   writing the lit-surface mask moves the resolved-surface pin and the
-   coverage ramp as well as the eye term, and the closure argument
-   covers neither.
-   `docs/science-hdr-pipeline.md` § 3.5 is the derivation; until
-   stellata-8cg.50.4.2 lands no layer skips on brightness.
+4. **Brightness.** The layer's brightest pixel at the live exposure
+   encodes under half an 8-bit step — the extended-source form of
+   `emitterPutsInkOnScreen`, i.e. its peak surface brightness is more
+   than `TOE_BLACK_MAG` past the live extended threshold
+   (`stellataExtendedThresholdSb`, 22.0 mag/arcsec² at the shipped
+   instrument, `hdr/emission/README.md` § Extended sources). Skipping an
+   emitter on this test removes its share from the exposure statistic,
+   which eases the cut, which brings the emitter back — so the skip is
+   admissible only under two rules: the emitter must be invisible at the
+   exposure that will obtain *without* it, and that exposure shift must
+   be under `CADENCE_JND_MAG`. `docs/science-hdr-pipeline.md` § 3.5 is
+   the derivation; `hdr/exposure/visibility/emitter-visibility-pure.ts`
+   (`brightnessSkip`) is the one implementation, and the Milky Way band
+   and the Local Group pair are its two users. Unlike the geometric
+   three this reason is not a function of camera pose, so a layer taking
+   it owes the wake argument `scene/README.md` § A skipped layer reports
+   nothing enumerates.
 
 "Prefilter with the bound, decide with the predicate"
-(`hdr/exposure/README.md` § What "visible" means to a pick path) holds
+(`hdr/exposure/visibility/README.md` § What "visible" means to a pick path) holds
 here too: the layer test is the conservative bound side, and it must
 only ever *dim* — a layer the bound admits may still draw nothing, a
 layer it rejects must be one that could not have drawn.
@@ -123,9 +128,11 @@ starting `permitted = false` so it agrees with its constructor's
 (`scene/README.md` § Declaring what a layer can put on screen — a
 required discriminated union, because an omitted hook reads as an answer
 and the failure it prevents is silence). The registry runs the test and
-skips the update; the layer hides its groups. Per-layer adoption is the
-liveness epic stellata-8cg.50; stellata-9mm.231 (sub-pixel shells) is its
-first child. `tests/cadence-layer-declarations.test.ts` pins the census.
+skips the update; the layer hides its groups.
+`tests/cadence-layer-declarations.test.ts` pins the census, and
+`scene/README.md` § Which layers are gated, and which refused carries the
+roster — including the three layers that took a verdict of `'always'`
+with an argument rather than by omission.
 
 ## 3. Reduced-resolution additive sums for band-limited emitters
 

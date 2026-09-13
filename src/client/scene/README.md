@@ -22,7 +22,8 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
 
 - `scene-layer.ts` — `FrameCtx`, `CadenceCtx`, `LayerTimeBehaviour`,
   `LayerContribution` + `ContributionSkip`, `SceneLayer`,
-  `SceneLayerRegistry`.
+  `SceneLayerRegistry`, and `cameraAbsInto` — the frame's absolute ICRS
+  camera position, which both diffuse emitters' peak providers key on.
 - `frame-frustum.ts` (+ test) — `FrameFrustum`, the view planes a gated
   layer's frustum test reads off `FrameCtx`, with the validity sentinel
   that throws on a read above the frame's last camera write
@@ -36,9 +37,11 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
   (camera at Sol, clock zero, no warp, the acceptance plate scale, a
   frustum already refreshed from the camera) every layer / kind-module
   suite builds its `update` or `skip` call from, overriding the one field
-  under test; plus `makeCadenceCtx` and `ACCEPTANCE_PX_PER_RADIAN`, the
-  still-camera one-second-step fixture and the plate scale every pinned
-  cadence number is quoted against.
+  under test; plus `makeFrameExposure` (the shipped instrument at zero cut
+  with a statistic that measures it — override `statistic.meanL` for a
+  cut), `makeCadenceCtx` and `ACCEPTANCE_PX_PER_RADIAN`, the still-camera
+  one-second-step fixture and the plate scale every pinned cadence and
+  brightness number is quoted against.
 - `declutter/` — the detail-level declutter cycle: the exhaustive
   scene-element floor table, its derivation and tests. Own README.
 - `glsl-residents-pure.ts` (+ test) — `findGlslResidents`, the walk
@@ -211,11 +214,50 @@ Two kinds:
   read (the solar and star clusters), and every layer not yet adopted.
 - **`'gated'`** — `skip(ctx)` returns a `ContributionSkip` reason or
   `null`, and `setContributing(on)` hides or shows the layer's own
-  groups. Three reasons are admissible, all geometric:
+  groups. Four reasons are admissible. Three are geometric:
   `'frustum'` (bounding volume outside `ctx.frustum`), `'legibility'`
   (projected extent under `isFeatureLegible` /
   `FEATURE_LEGIBILITY_MIN_PX`, via `ctx.pxPerRadian`), `'opacity'`
-  (the layer's own authored, distance-faded opacity is zero).
+  (the layer's own authored, distance-faded opacity is zero). The
+  fourth, `'brightness'`, is photometric: the layer's brightest pixel
+  encodes under half an 8-bit step at the live exposure
+  (§ The brightness reason).
+
+**A layer may use a floor of its own where the shared one is too wide.**
+`'legibility'` names `FEATURE_LEGIBILITY_MIN_PX` because one floor across
+labelled features is what keeps a label and its geometry vanishing
+together — but a contribution test may only ever *dim*, so a layer whose
+own threshold is stricter must use that instead. The star core mask stamps
+down to `RESOLVED_DISC_MIN_PX`; the planet mesh gates at
+`TEXTURE_PREFETCH_PX`, half a pixel *below* its own 1 px crossfade floor,
+because its `update` is where the texture fetch that feeds the band starts
+(`../solar-system/planets/README.md` § Planet mesh LOD). The shared 6 px
+floor would reject frames both layers do work on. What is forbidden is a
+second projected-size *helper* (`docs/render-rules.md` § 2), not a second
+threshold — and a layer may gate looser than it draws, since admitting a
+frame that draws nothing is the direction the contract allows.
+
+### Which layers are gated, and which refused
+
+Eight are gated: molecular clouds, the probe fleet and the boundary
+shells on `'legibility'`; the galactic disc on `'opacity'` then
+`'frustum'`; the planet mesh LOD and the star core mask on floors of
+their own; the Milky Way band and the Local Group pair on
+`'brightness'`. The refusals are the part worth writing down, because
+each looks like an omission:
+
+- **Coordinate spheres** track the camera at 50 kpc, so no frustum,
+  legibility or opacity test can ever fire on one. Their gate is user
+  chrome — observe mode and the `coordSphere` four-state — which stays
+  inside `update` like every permit.
+- **The constellation figure**'s four gates are all pushed permits and
+  selection state, and a frustum test would have to read a bounding
+  volume its own `update` writes, which `skip` runs before.
+- **The solar and star clusters** write membership and uniforms other
+  layers read, so they draw every frame by definition.
+
+`../star-pipeline/README.md` carries why the core mask is the one part
+of the star pipeline in this registry at all.
 
 **The registry owns the skip; the layer owns its groups.** `updateAll`
 runs `skip` before `update` and, on a skip, calls neither `update` nor
@@ -265,6 +307,45 @@ of every camera write in the frame.
 FOV alone, hoisted above the gate, and `CadenceCtx.pxPerRadian` is a
 copy of it.
 
+### The brightness reason
+
+`FrameCtx.exposure` is the fourth reason's input: live `uExposure`, the
+base exposure, `Ω_sum`, `Ω_px`, the white point, the last **landed**
+frame statistic and the adaptation tuning — **null in chart**, where the
+seam is bypassed, so nothing may skip on it there. It is rewritten in
+place every tick — one preallocated slot on the shell, like every other
+`FrameCtx` field — which is exactly the stateless per-frame reader
+`../hdr/exposure/README.md` § One writer, five slots exempts from the
+prohibition on consumers keyed on adaptation: what that forbids is
+*holding* something derived from the cut, not the record's identity.
+
+**It carries the cut the LAST rendered frame was drawn with.** The
+fan-out runs before `measure()` folds this frame's landing, so a verdict
+is one frame behind the exposure it names. That is the same lateness
+`docs/science-hdr-pipeline.md` § 3.5 already argues is conservative on
+both transitions, and a cut still slewing invalidates every frame
+anyway, so the stale window is a settled cut that has not moved.
+
+**The reason cannot be evaluated layer-locally.** Skipping an emitter
+removes its share from the exposure statistic, which eases the cut,
+which can bring the emitter back — so the predicate lives in
+`../hdr/exposure/visibility/emitter-visibility-pure.ts` (`brightnessSkip`)
+and takes the layer's own `contributing` flag: its share is subtracted
+from `L̄` while it draws and never while it is skipped. Two rules close
+the loop — test at the exposure that will obtain *without* the emitter,
+and only where that shift is under `CADENCE_JND_MAG`. § 3.5 is the
+derivation and the authority.
+
+**That flag is not this registry's transition state alone.** A layer the
+user or the declutter floor has switched off is out of `L̄` as surely as a
+skipped one, so both emitters refuse *above* the predicate rather than
+passing it `false` — the verdict cannot change a frame they are absent
+from, and each would spend milliseconds on a peak bound to reach it
+(`../hdr/exposure/visibility/README.md` § Skipping an emitter the display
+cannot show). A gated layer whose own predicate is expensive owes the same
+refusal; the star core mask's is the third
+(`../star-pipeline/README.md`).
+
 ### A skipped layer reports nothing
 
 The two per-frame polls that read `timeBehaviour` — `cadenceReport` and
@@ -277,16 +358,22 @@ move one, so it has no claim on the frame's redraw budget. Asking it
 anyway would leave the layer scheduling frames for content it is not
 drawing — the draw and the update saved, the frames not.
 
-**This holds only while every admissible skip reason is a function of
-camera pose.** Frustum, legibility and opacity all are, and camera
-motion wakes the gate on its own, so a skipped layer is re-tested the
-moment anything could change its verdict. A reason that is *not* a
-function of pose — the brightness test, which ships with
-stellata-8cg.50.4.2 and whose input is the live exposure — could fall
-skipped with the camera still and never be asked again, because no
-`updateAll` would run to re-evaluate it. Its design gate discharges that
-by construction rather than by a scheduler: every input to its verdict
-changes only on a rendered frame (`docs/science-hdr-pipeline.md` § 3.5).
+**A skipped layer is only ever re-tested on a frame something else
+schedules**, so every reason has to answer for its own wake path.
+Frustum, legibility and opacity are functions of camera pose, and camera
+motion wakes the gate on its own — that answer is free.
+
+**Brightness is a function of the live exposure, not of pose**, and its
+wake is discharged by construction rather than by a scheduler: every
+input to the verdict changes only on a rendered frame. The instrument
+and the EV trim invalidate through `onChange`; the applied cut
+invalidates from `animate()` whenever it moves past `CADENCE_JND_MAG`;
+`Ω_px` moves only on a resize or an FOV change; a statistic lands only
+off a rendered frame's reduction; and camera pose renders. What is left
+is sub-JND drift of the applied cut, which renders nothing and can leave
+a verdict stale by under 0.01 mag of exposure — invisible by the same
+definition the verdict uses. `docs/science-hdr-pipeline.md` § 3.5 carries
+the enumeration; adding a fifth reason means redoing it.
 
 `cadenceReport` runs after `updateAll`, so it reads this frame's
 verdicts. `realtimeFramesNeeded` runs above the gate and reads the last
@@ -298,18 +385,16 @@ one cloud of ninety-six behind the camera — is `docs/render-rules.md`
 § 1's territory and lives in the layer's own `update`; the layer-level
 verdict fires only when the whole population fails one test.
 
-**No hysteresis, deliberately.** The three tests are geometric, so their
-boundary is crossed only by camera motion, which already renders every
-frame; a one-pixel pop at the six-pixel legibility floor is a
-level-of-detail step, not a scheduling oscillation. The **brightness**
-test — peak surface brightness under the display floor at the live
-exposure — is *not yet* in this contract: skipping an emitter removes
-its share from the exposure statistic, which eases the cut, which
-brings the emitter back, which deepens the cut. The bound that closes
-that loop is decided (`docs/science-hdr-pipeline.md` § 3.5 — two rules:
-test at the exposure that will obtain without the emitter, and only
-where that shift is under the JND); it ships with stellata-8cg.50.4.2,
-and `FrameCtx` gains no exposure term until then.
+**No hysteresis, in any of the four.** The geometric three cross their
+boundary only under camera motion, which already renders every frame; a
+one-pixel pop at the six-pixel legibility floor is a level-of-detail
+step, not a scheduling oscillation. Brightness is the one that *looks*
+like it needs hysteresis and does not: the slew parks the applied cut
+bit-identical inside its settle band, so a verdict that is a function of
+it cannot chatter on quantiser noise, and a real slew moves it in whole
+magnitudes. What stands in for hysteresis is rule 2 — a skip whose own
+exposure shift would exceed the JND is refused outright, so the
+oscillator has no step to take.
 
 **Enforced two ways.** `tsc` refuses a layer without the declaration;
 `../../../tests/cadence-layer-declarations.test.ts` scans the shipped

@@ -57,7 +57,7 @@ function makeHarness() {
   // heliosphere subtends the whole view — both markers stay drawn.
   camera.position.set(41 * AU_PC, 0, 0);
   const draw = (focusedIdx: number) => {
-    field.update(t, camera);
+    field.update(t);
     layer.update(field, t, camera, focusedIdx);
     return layer.group.children.map((c) => c.visible);
   };
@@ -104,8 +104,7 @@ describe('ProbeField visible vs sampled', () => {
   it('reports no position before the trajectory starts', () => {
     const h = makeHarness();
     h.draw(0);
-    const camera = new THREE.PerspectiveCamera(50, 4 / 3, 1e-12, 1e5);
-    h.field.update(ROSTER[0].sampleT[0] - 1, camera);
+    h.field.update(ROSTER[0].sampleT[0] - 1);
     expect(h.field.localPositionInto(0, new THREE.Vector3())).toBe(false);
   });
 });

@@ -209,7 +209,10 @@ the brightness skip compares against the live extended threshold
   the disc proxy (24 rings × 36 azimuths, then three 7×7 refinements at a
   third of the spacing each) — 976 marched sightlines, **3.8–6.0 ms** per
   recompute on a 2024 M-series laptop under node, and CPU work on the frame
-  thread. Centring on the centre is what keeps
+  thread, which is why the brightness skip takes it as a thunk and calls it
+  only past the refusals that do not need it
+  (`../hdr/exposure/visibility/README.md` § Skipping an emitter the display
+  cannot show). Centring on the centre is what keeps
   it scale-free — from a megaparsec the Galaxy spans two degrees and an
   absolute (l, b) grid would miss it, which is the sampling error
   `docs/science-hdr-pipeline.md` § 3.5's probe table carried at 1 Mpc.
@@ -240,6 +243,26 @@ threshold where the ceiling alone misses by 0.10. `BandPeakCache` is keyed
 on camera position only — never on exposure — and holds the radius of the
 position it took the bound at, since that is the travel the allowance
 covers. `dispose` resets it.
+
+`MilkyWay.contributionSkip` is what the band's registry entry declares
+`contribution: { kind: 'gated' }` on (`../scene/README.md` § The
+brightness reason): the ceiling first, and the fan **only** where the
+ceiling cannot decide, which is what keeps a 2–6 ms march off the deep
+cuts that need no help. `setContributing` is a term of the group's
+visibility alongside the user's `mw=0` toggle, never a bare
+`group.visible` write — the band holds no dirty-track state, so that is
+the whole reset.
+
+**A band already switched off refuses above both tiers.** `mw=0` — and any
+detail level whose floor drops the band — leaves the layer drawing nothing
+and out of `L̄`, so no verdict it could reach would change the frame, while
+a fan marched for it is milliseconds spent on a layer that is not there.
+That refusal is also what keeps the `contributing` flag handed to
+`brightnessSkip` equal to `group.visible`: the predicate documents it as
+"is this emitter's light in the last landed statistic", and the registry's
+own transition flag alone is not that. The `mwBand` frame-cost lever
+(`../debug/frame-cost/passes/README.md`) depends on it too — without the
+refusal its A/B pays the march on both sides and prices nothing.
 
 ## Coordinate handling
 

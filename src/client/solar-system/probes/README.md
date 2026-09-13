@@ -113,7 +113,11 @@ from here on purpose.
 - **Sol anchor.** Sol is the catalog origin, so its renderer-local position
   is `-worldOffset` — non-zero under any focus other than Sol. `recenter`
   is the only thing that moves it, same as the heliopause shell.
-- **One fleet-scale distance cull, not a per-probe one.** The markers hide
+- **One fleet-scale distance cull, not a per-probe one — and it is the
+  layer's contribution declaration.** The module registers
+  `contribution: { kind: 'gated' }` on `ProbeField.fleetLegible`
+  (`../../scene/README.md` § Declaring what a layer can put on screen), so
+  the markers, the trails, the sampler pass and the cadence report all drop
   together once `HELIOPAUSE_EXTENT_PC` (the 200 AU downwind apex) stops
   clearing the shared `FEATURE_LEGIBILITY_MIN_PX` floor at the camera's
   distance from Sol — i.e. exactly when the solar system stops reading as a
@@ -121,6 +125,16 @@ from here on purpose.
   test on the heliosphere rather than each probe's own distance is what
   keeps a *just-launched* probe inside 1 AU visible while the camera is in
   the inner system.
+
+  **A focused probe can never fail it**, which is what makes the skip safe
+  for the moving-focal ride: focus parks the camera on the probe, and the
+  floor's range from Sol is ~0.17 pc at the acceptance plate scale (0.07 pc
+  at a 120° field) against ~1000 AU for the farthest probe at the clock's
+  3000 AD limit — two orders of magnitude of margin. Without that the ride
+  would read positions from whichever frame this layer last drew.
+  `setContributing(false)` clears every sample's `visible` flag, since the
+  labels, the trails and the pick surface all read it and the `update` that
+  would clear it does not run while skipped.
 - **`ProbeFrameSample` is the single per-frame evaluation.** The field
   samples each trajectory once per frame and the trail layer, the label
   overlay, the picker, the hover card, and the focus card all read that

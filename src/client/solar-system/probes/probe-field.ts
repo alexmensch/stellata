@@ -6,7 +6,6 @@ import { HELIOPAUSE_EXTENT_PC } from '../heliopause/heliopause';
 import type { PerceptualDiscUniforms } from '../../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import {
   isFeatureLegible,
-  pixelsPerRadianFromUniforms,
   type ScreenMetricUniforms,
 } from '../../util/orbit-line';
 import {
@@ -62,9 +61,10 @@ export interface ProbeFrameSample {
   /** The trajectory covers this `t` — false before the first sample.
    *  `solRelPc` / `localPc` / `velPcPerSec` are meaningful only here. */
   sampled: boolean;
-  /** Marker drawn: sampled AND inside the fleet distance cull AND not the
-   *  observe-hidden instance AND permitted by the declutter cycle /
-   *  render style. */
+  /** Marker drawn: sampled AND not the observe-hidden instance AND
+   *  permitted by the declutter cycle / render style. The fleet-scale
+   *  distance cull sits above this, as the layer's contribution verdict,
+   *  and clears every flag on its way out. */
   visible: boolean;
   signalLost: boolean;
   /** Heliocentric ICRS offset from Sol, pc. */
@@ -109,7 +109,6 @@ export class ProbeField {
   private mesh: THREE.Mesh;
   private localMesh: THREE.Mesh;
   private state: ProbeState = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0 };
-  private shared: ProbeSharedUniforms;
 
   constructor(
     shared: ProbeSharedUniforms,
@@ -117,7 +116,6 @@ export class ProbeField {
      *  (`../materials/README.md`). */
     materials?: ProbeMaterials,
   ) {
-    this.shared = shared;
     this.group = new THREE.Group();
     this.group.visible = false;
     this.localGroup = new THREE.Group();
@@ -212,14 +210,29 @@ export class ProbeField {
   }
 
   /**
+   * Whether the fleet can put a marker on screen: the heliosphere itself
+   * still subtends the shared legibility floor from the camera. One
+   * fleet-scale verdict rather than a per-probe one — the markers collapse
+   * toward a point together, and anchoring on the heliosphere is what keeps
+   * a just-launched probe inside 1 AU drawn while the camera is in the inner
+   * system.
+   *
+   * A focused probe can never fail it: focus puts the camera on the probe,
+   * and the model's farthest epoch leaves every probe two orders of
+   * magnitude inside the floor's range — which is what lets the moving-focal
+   * ride read positions this layer's own `update` writes.
+   */
+  fleetLegible(cameraPos: Readonly<THREE.Vector3>, pxPerRadian: number): boolean {
+    return isFeatureLegible(
+      HELIOPAUSE_EXTENT_PC, cameraPos.distanceTo(this.solLocal), pxPerRadian);
+  }
+
+  /**
    * Resample every probe at `t` and rewrite the instance buffers. Probes
    * are physical objects — they update regardless of focus, like planet
-   * bodies. One fleet-scale distance cull rather than a per-probe one: the
-   * markers hide together once the heliosphere itself stops subtending the
-   * shared legibility floor, which is also the framing where a just-launched
-   * probe sitting inside 1 AU still reads.
+   * bodies.
    */
-  update(t: number, camera: THREE.PerspectiveCamera): void {
+  update(t: number): void {
     if (this.trajectories.length === 0) {
       this.setDrawn(false);
       return;
@@ -230,12 +243,9 @@ export class ProbeField {
     this.resampleAt(t);
     const drawn = this.permitted && !this.mono;
     this.setDrawn(drawn);
-    const pxPerRad = pixelsPerRadianFromUniforms(this.shared);
-    const fleetLegible = isFeatureLegible(
-      HELIOPAUSE_EXTENT_PC, camera.position.distanceTo(this.solLocal), pxPerRad);
     for (let i = 0; i < this.trajectories.length; i++) {
       const s = this.samples[i];
-      s.visible = s.sampled && fleetLegible && drawn && i !== this.hiddenIdx;
+      s.visible = s.sampled && drawn && i !== this.hiddenIdx;
       if (s.sampled) {
         const base = i * 3;
         this.localPos[base] = s.localPc.x;
@@ -365,6 +375,15 @@ export class ProbeField {
   setLocalPassActive(on: boolean): void {
     this.localPassActive = on;
     this.setDrawn(this.group.visible || this.localGroup.visible);
+  }
+
+  /** Contribution gate. Clearing `visible` matters as much as hiding the
+   *  groups: the labels, the trails and the pick surface all read it, and
+   *  the `update` that would clear it does not run while skipped. */
+  setContributing(on: boolean): void {
+    if (on) return;
+    this.setDrawn(false);
+    for (const s of this.samples) s.visible = false;
   }
 
   private setDrawn(drawn: boolean): void {

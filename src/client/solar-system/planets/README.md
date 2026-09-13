@@ -287,6 +287,19 @@ crossfade.
 - **Mesh presence** rides the body's TRUE projected diameter in CSS
   px — full at ≥ `MESH_FADE_FULL_PX` (2 px), gone at ≤ `MESH_FADE_MIN_PX`
   (1 px) (`meshFadeFromPhysPx` on `PlanetBodyField.physicalPlanetSizePx`).
+  The layer's **contribution declaration** is `{ kind: 'gated' }` on
+  `anyMeshWorkPending` (`../../scene/README.md` § Declaring what a layer
+  can put on screen), so a frame where no body has reached
+  `TEXTURE_PREFETCH_PX` pays neither the update nor the draw. **The gate's
+  floor is the prefetch one, not the band's**, and the half-pixel between
+  them is the whole reason: `update` is where each body's texture fetch
+  starts, deliberately before the band so the mesh has something to draw
+  when it arrives, and a gate on the band would elide exactly the frames
+  that fetch runs on. The shared `FEATURE_LEGIBILITY_MIN_PX` is wrong one
+  rung further out for the same reason — a contribution test may only ever
+  dim, and admitting a frame that draws nothing is the safe direction.
+  `setContributing(false)` hides each entry's mesh and stamp, not just the
+  groups, because `anyDepthStampDrawn` walks the entries themselves.
   The eye tracks a resolved body — and its crescent phase, the thing a
   billboard can't show — down to ~1 px, so the mesh persists to that
   limit instead of handing off at the (much larger) perceptual-disc scale.

@@ -85,15 +85,15 @@ describe('shipped scene-layer time declarations', () => {
   it('the static / clock split is pinned, so a silent flip fails here', () => {
     const census: Record<string, number> = { static: 0, clock: 0, realtime: 0 };
     for (const d of declarations) census[d.kind]++;
-    // Nine views of moving content: the planet bodies (their own module
+    // Ten views of moving content: the planet bodies (their own module
     // layer, plus the focal-ride / mesh / rings / local-cluster entries
     // anchored to them) and the binary walk (its module-less orbit entry,
-    // plus the paths, star cluster and constellation figures riding the
-    // slots it writes), with the probe field's marker layer alongside.
-    // Everything else is fixed geometry, pure projection, or the orbit
-    // lock's sequencing-only entry — which draws nothing, so it must never
-    // ask the cadence for a frame of its own.
-    expect(census).toEqual({ static: 11, clock: 9, realtime: 0 });
+    // plus the paths, star cluster, constellation figures and the star
+    // core mask riding the slots it writes), with the probe field's marker
+    // layer alongside. Everything else is fixed geometry, pure projection,
+    // or the orbit lock's sequencing-only entry — which draws nothing, so
+    // it must never ask the cadence for a frame of its own.
+    expect(census).toEqual({ static: 11, clock: 10, realtime: 0 });
   });
 
   it('every inline register({...}) in the shell carries a declaration', () => {
@@ -130,11 +130,16 @@ describe('shipped scene-layer contribution declarations', () => {
   });
 
   it('the always / gated split is pinned, so a silent flip fails here', () => {
-    // Nothing is gated yet: the contract landed with every layer declaring
-    // 'always', and adoption re-pins this count one layer at a time.
+    // Eight gated: molecular clouds, the probe fleet, the boundary shells,
+    // the galactic disc, the planet mesh LOD, the star core mask, and the
+    // two diffuse emitters on the brightness test — the Milky Way band and
+    // the Local Group pair. The refusals are deliberate and argued in
+    // src/client/scene/README.md § Declaring what a layer can put on
+    // screen: a coordinate sphere is camera-tracked at 50 kpc, so no
+    // admissible test can ever fire on it.
     const census: Record<string, number> = { always: 0, gated: 0 };
     for (const d of contributions) census[d.kind]++;
-    expect(census).toEqual({ always: 20, gated: 0 });
+    expect(census).toEqual({ always: 13, gated: 8 });
   });
 
   it('every inline register({...}) in the shell carries one', () => {
@@ -145,5 +150,27 @@ describe('shipped scene-layer contribution declarations', () => {
   it('every kind module that returns a layer declares one too', () => {
     const moduleDecls = contributions.filter((d) => d.file.endsWith('-module.ts'));
     expect(moduleDecls.length).toBe(5);
+  });
+});
+
+// The core mask's `shouldEnableCoreMask` walk moved INSIDE its contribution
+// predicate, and that walk is what the `coreMask` frame-cost lever's own A/B
+// prices (src/client/debug/frame-cost/passes/README.md). A predicate running
+// it before consulting the lever pays it on both sides of the A/B, so the row
+// prices nothing — and nothing else can see that, since both orderings
+// compile and both draw the same frame.
+describe('the core-mask predicate refuses above the walk its lever prices', () => {
+  const shell = readFileSync(resolve(ROOT, SHELL), 'utf8');
+
+  it('consults coreMaskEnabled before marking the walk', () => {
+    const guard = shell.indexOf('if (!this.coreMaskEnabled) return null;');
+    const mark = shell.indexOf("perfMark('coreMask')");
+    expect(guard).toBeGreaterThanOrEqual(0);
+    expect(mark).toBeGreaterThanOrEqual(0);
+    expect(guard).toBeLessThan(mark);
+  });
+
+  it('marks the walk exactly once, so the row is one predicate call', () => {
+    expect(shell.match(/perfMark\('coreMask'\)/g)).toHaveLength(1);
   });
 });

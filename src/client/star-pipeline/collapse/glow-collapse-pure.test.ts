@@ -11,7 +11,7 @@ import { pointSourcePeakLuminance } from '../../hdr/emission/emission-pure';
 import {
   EV_MAX_STOPS, sceneExposure, thresholdMagFor,
 } from '../../hdr/exposure/exposure-epoch';
-import { emitterPutsInkOnScreen, taperFactor } from '../../hdr/exposure/emitter-visibility-pure';
+import { emitterPutsInkOnScreen, taperFactor } from '../../hdr/exposure/visibility/emitter-visibility-pure';
 import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 
 const src = (name: string) =>

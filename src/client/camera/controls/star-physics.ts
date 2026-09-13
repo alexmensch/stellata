@@ -158,7 +158,7 @@ export interface RenderedSizeArgs {
    *  which track a star the user is already looking at and would pay a
    *  GPU readback per frame for a sub-pixel size change. The pick paths
    *  pass it: there the dust term decides whether the star is on screen
-   *  at all (`../../hdr/exposure/emitter-visibility-pure.ts`). */
+   *  at all (`../../hdr/exposure/visibility/emitter-visibility-pure.ts`). */
   extinctionAvMag?: number;
 }
 

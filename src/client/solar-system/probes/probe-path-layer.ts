@@ -185,6 +185,14 @@ export class ProbePathLayer {
     return this.trails[idx]?.line.visible ?? false;
   }
 
+  /** Contribution gate — the trails ride the fleet's verdict, since a
+   *  trail with no marker at its end reads as a bug. `builtIndex` needs no
+   *  reset: a `t` that moved while skipped leaves it stale, which is
+   *  exactly what makes the next drawn frame rebuild. */
+  setContributing(on: boolean): void {
+    if (!on) this.setDrawn(false);
+  }
+
   setPermitted(on: boolean): void {
     this.permitted = on;
     if (!on) this.setDrawn(false);

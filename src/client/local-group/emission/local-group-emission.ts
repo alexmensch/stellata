@@ -16,6 +16,11 @@ import {
   type SersicInstanceData,
 } from './local-group-emission-pure';
 import { LgPeakCache } from './lg-peak-pure';
+import {
+  brightnessSkip,
+  type FrameExposure,
+} from '../../hdr/exposure/visibility/emitter-visibility-pure';
+import type { ContributionSkip } from '../../scene/scene-layer';
 
 const SPHERE_WIDTH_SEGMENTS = 48;
 const SPHERE_HEIGHT_SEGMENTS = 24;
@@ -47,6 +52,7 @@ export class LocalGroupEmission {
   private readonly peakCache = new LgPeakCache();
 
   private enabled = true;
+  private contributing = true;
   private chartHidden = false;
 
   constructor(
@@ -115,9 +121,45 @@ export class LocalGroupEmission {
   }
 
   private groupVisible(): boolean {
-    const visible = this.enabled && !this.chartHidden;
+    const visible = this.enabled && this.contributing && !this.chartHidden;
     this.group.visible = visible;
     return visible;
+  }
+
+  /** Contribution gate. A term of the conjunction rather than a bare
+   *  `group.visible` write, which would resurrect a glow the user or
+   *  chart mode had switched off. The layer's only per-frame state is the
+   *  floating-origin uniform, rewritten unconditionally on the first
+   *  drawn frame back, so this is the whole reset. */
+  setContributing(on: boolean): void {
+    this.contributing = on;
+    this.groupVisible();
+  }
+
+  /** The glow's brightness contribution verdict
+   *  (`docs/science-hdr-pipeline.md` § 3.5). One tier: the bound is the
+   *  brightest object's own central ray at the live plate scale, already
+   *  cache-backed on camera pose and `Ω_px`, and 6.7–9.7 ms on a miss —
+   *  so it arrives as a thunk the predicate calls after its own refusals
+   *  (README.md § The brightest rendered pixel). */
+  contributionSkip(
+    exposure: FrameExposure,
+    cameraAbsPc: THREE.Vector3,
+    warpActive: boolean,
+  ): ContributionSkip | null {
+    // A glow `showLgEmission` or the declutter floor has already switched
+    // off draws nothing and is out of `L̄`, so no verdict can change the
+    // frame — and producing a bound for it would march 123 central rays for
+    // a layer that is not there. It is also what leaves `contributing`
+    // below equal to `group.visible`, which is what `brightnessSkip`
+    // documents itself as taking.
+    if (!this.enabled || this.chartHidden) return null;
+    return brightnessSkip({
+      contributing: this.contributing,
+      warpActive,
+      exposure,
+      peakSb: () => this.peakSurfaceBrightness(cameraAbsPc, exposure.omegaPxArcsec2),
+    });
   }
 
   setEnabled(on: boolean): void {

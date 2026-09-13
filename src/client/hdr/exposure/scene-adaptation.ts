@@ -210,6 +210,15 @@ export class SceneAdaptation {
     return this.stat;
   }
 
+  /** The same statistic, or **null** where none has landed — before the
+   *  first reduction, and after chart's reset. The brightness skip needs
+   *  that distinction where the readout does not: a genuinely dark frame
+   *  also measures `L̄` = 0, and rule 2 cannot be evaluated without a real
+   *  `L̄` (`docs/science-hdr-pipeline.md` § 3.5). */
+  getLandedStatistic(): FrameStatistic | null {
+    return this.lastLanded === null ? null : this.stat;
+  }
+
   /** Chart's bypass, and the slew's own first-frame state: dropping
    *  `lastNowMs` makes the frame that re-enters the scene snap rather than
    *  ramp up from chart's zero cut. */

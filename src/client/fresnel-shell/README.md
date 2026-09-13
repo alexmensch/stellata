@@ -89,13 +89,19 @@ MRT-mode registration and a bare `material.dispose()` would not.
   default 0.04), `uFresnelPower` (rim tightness — ~2 soft halo, ~5 thin
   edge; default 2.5). Pass `blending: AdditiveBlending` for a glow that
   composites over the layers behind it; the default is `NormalBlending`.
-- **Visibility.** `group.visible = permitted && !mono && shellReady()`.
-  `shellReady()` is the consumer's own gate — both shells are now
+- **Visibility.** `group.visible = contributing && permitted && !mono &&
+  shellReady()`. `shellReady()` is the consumer's own gate — both shells are
   declutter-governed (no focus coupling): the heliopause is always ready
   (mesh built in its ctor), the Local Bubble ready once its mesh attaches.
   `permitted` is the declutter floor (`heliopauseShell` / `localBubbleShell`,
-  both `representational`). Camera-inside is handled separately by the
-  back-face cull.
+  both `representational`). `contributing` is the shell module's
+  contribution verdict (§ Sub-pixel cull). Camera-inside is handled
+  separately by the back-face cull.
+- **`setContributing` is a term of that conjunction, not a
+  `group.visible` write.** Nothing repaints this layer per frame — its
+  registry entry has no `update` at all, and `refreshVisibility` runs only
+  on a pushed change — so a raw write would hide a shell permanently after
+  its first skip.
 - **`mono` and `permitted` both start false, agreeing with
   `group.visible`, so a shell renders nothing until the declutter cycle
   pushes a permission.** `Stellata`'s constructor seeds that push
@@ -137,27 +143,40 @@ dispatch + exhaustive-map entries, and each shell instance registers into
   generic park-radius path — no new camera code. This aligns with the
   hide-when-inside invariant above: the pulled-out "whole shell on screen"
   distance is exactly where the back-face-culled wall becomes visible.
-- **Neither shell is focus-coupled.** Visibility is purely the declutter
-  floor + chart mode (+ the automatic hide-when-inside cull) — the
-  heliopause was decoupled from its old Sol-focus gate once the declutter
-  cycle covered it. So both render whenever their tier is decluttered on,
-  independent of what's focused (a warp changes focus but not shell
-  visibility). A future ~1px LOD cull is tracked separately (a shell far
-  enough to be sub-pixel still draws today).
-- **Label legibility floor.** The shell mesh itself has no distance
-  cutoff (previous bullet), but its silhouette label is screen-space
-  fixed-size text, so without a floor it would keep reading long after
-  the shell has visually shrunk to nothing. Both labels' visibility
-  predicates gate on `isShellLabelResolvable`: the shell's projected
-  angular *radius* at the true camera distance must clear
-  `FEATURE_LEGIBILITY_MIN_PX` (`util/orbit-line.ts`). That's the same
-  screen-size floor the planet labels ride through the orbit-ring
-  visibility gate — one legibility rule shared across labelled features,
-  correct from AU-scale shells (heliopause) to hundred-pc ones (Local
-  Bubble). Do **not** reuse `ShellRegistry.renderedSizePx` here: that
-  carries a 1 pc distance clamp for chevron sizing, which floors an
-  AU-scale shell's projected size below the threshold so its label would
-  never show.
+- **Neither shell is focus-coupled.** Visibility is the declutter floor +
+  chart mode + the contribution verdict (+ the automatic hide-when-inside
+  cull) — the heliopause was decoupled from its old Sol-focus gate once the
+  declutter cycle covered it. So both render whenever their tier is
+  decluttered on and either still reads, independent of what's focused (a
+  warp changes focus but not shell visibility).
+
+## Sub-pixel cull — one floor for the mesh and its label
+
+The shell module declares `contribution: { kind: 'gated' }` on
+`ShellRegistry.anyLegible` (`../scene/README.md` § Declaring what a layer
+can put on screen): a shell's projected angular *radius* at the true camera
+distance must clear `FEATURE_LEGIBILITY_MIN_PX` (`util/orbit-line.ts`), and
+the layer skips once **neither** shell does, since one registration draws
+both. Being above the orbit lock, the module may not gate on the frustum.
+
+**The floor is 6 px of radius, not the ~1 px a sub-pixel speck needs**, and
+the extra five pixels are the point. Both shells are pure reference chrome —
+a faint rim outline annotating a boundary — so the question is where the rim
+stops reading as structure, not where it stops emitting. That is also the
+floor the labels already ride, which is what makes the pair coherent: the
+mesh and the name it carries appear and vanish on the same frame, where a
+1 px mesh floor would leave a labelled boundary drawing an outline nobody
+can resolve, or an unlabelled rim drawing with no way to tell what it is.
+
+**Label legibility floor.** Both labels' visibility predicates gate on
+`isShellLabelResolvable`, which is `ShellRegistry.isLegible` under a
+viewport / FOV pair rather than a plate scale — one rule, two callers, so
+neither can outlive the other. It is the same screen-size floor the planet
+labels ride through the orbit-ring visibility gate, correct from AU-scale
+shells (heliopause) to hundred-pc ones (Local Bubble). Do **not** reuse
+`ShellRegistry.renderedSizePx` for either: that carries a 1 pc distance
+clamp for chevron sizing, which floors an AU-scale shell's projected size
+below the threshold so it would never show at all.
 
 ## SID pins
 

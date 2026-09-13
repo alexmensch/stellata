@@ -274,16 +274,39 @@ pinned 0.46 mag shows to be insufficient.
 
 **Cost: one march per component per phase, so 17 per component.** Over the
 shipped 123-object catalogue that is **6.7–9.7 ms** per recompute (a 2024
-M-series laptop, node; a low-end integrated GPU's CPU is the budget that
+M-series laptop, node; a low-end integrated part's CPU is the budget that
 matters and will be slower). It is CPU work on the frame thread, so the
-consumer must not call it behind a check it could have failed first — the
-brightness skip's own warp refusal (`stellata-8cg.50.4.2`) has to be
-evaluated *before* the provider, not after.
+brightness skip takes it as a thunk and calls it only after the refusals
+that do not need it — the warp refusal above all
+(`../../hdr/exposure/visibility/README.md` § Skipping an emitter the
+display cannot show).
 
 From Sol at the acceptance plate scale M31 bounds at 17.42 — 0.2 mag under
-the default view's 17.21 threshold, so the glow can skip there.
+the default view's 17.21 threshold, so the glow skips there.
 `LgPeakCache` is keyed on camera position (`LG_PEAK_RECOMPUTE_PC`, 500 pc)
 and `Ω_px`, never on exposure; `dispose` resets it.
+
+`LocalGroupEmission.contributionSkip` runs it through the two-rule
+predicate (`../../scene/README.md` § The brightness reason). **The
+verdict is not this layer's alone**: the lg module returns ONE scene
+layer for the wireframe and the glow together, so its `skip` is the
+conjunction — the wireframe's distance fade has to have reached zero as
+well — and the reason it reports is this one, since the glow is the half
+that costs a whole-frame raymarch and two whole-frame writes.
+`setContributing` is a term of the group's visibility beside the user
+toggle and the chart gate, never a bare `group.visible` write.
+
+**A glow already switched off refuses above the bound.** `showLgEmission`
+off, or a detail level whose floor drops the glow, leaves the layer drawing
+nothing and out of `L̄`, so no verdict it could reach would change the
+frame, while a bound produced for it is 123 objects' central rays spent on
+a layer that is not there. That refusal is also what keeps the
+`contributing` flag handed to `brightnessSkip` equal to `group.visible`:
+the predicate documents it as "is this emitter's light in the last landed
+statistic", and the registry's transition flag alone is not that. The
+`lgEmission` frame-cost lever (`../../debug/frame-cost/passes/README.md`)
+depends on it too — without the refusal its A/B pays the bound on both
+sides and prices nothing.
 
 ## What a viewer actually reads
 

@@ -15,9 +15,12 @@ here).
 
 Inherits the MW disc's model: on in dark mode, hidden in chart mode,
 opacity tracks the same fade curve so the two layers reveal in lockstep
-as the camera pulls away from Sol. `FADE_INNER_PC` (500 pc) and
-`FADE_OUTER_PC` (5 kpc) live in the shared `galactic-fade.ts` module —
-hoisted there at the second usage, not the third.
+as the camera pulls away from Sol. The curve itself is
+`farFieldFadeOpacity` and the band constants `FADE_INNER_PC` (500 pc) /
+`FADE_OUTER_PC` (5 kpc) live with it in the shared `galactic-fade.ts`
+module — hoisted there at the second usage, not the third, and the base
+opacity is its argument so neither layer carries a copy
+(`../galactic/README.md` § Distance fades).
 
 The layer has no *dedicated* checkbox, but it IS part of the declutter
 cycle (`../scene/declutter/README.md`): the wireframes are `lgWireframes` (floor
@@ -30,6 +33,17 @@ predicate.
 Chart mode hides the layer entirely. Chart-mode's paper-aesthetic
 treatment for galactic structure is `stellata-m40`'s remit; this layer
 turns off cleanly until that lands.
+
+**One registration covers both halves, so the contribution verdict is a
+conjunction.** `lg-module.ts` declares
+`contribution: { kind: 'gated' }` and skips only when the wireframe's
+distance fade has reached zero (`lgWireframeOpacity`, inside
+`FADE_INNER_PC` — which is the app's own default view) **and** the glow's
+peak is under the display floor (`emission/README.md` § The brightest
+rendered pixel). The reason reported is the glow's `'brightness'`: the
+wireframe is one stroke, and the glow is a whole-frame raymarch plus two
+whole-frame attachment writes. Hiding the wireframe group on the way out
+also closes its pick, which reads that flag.
 
 ## Runtime layer
 

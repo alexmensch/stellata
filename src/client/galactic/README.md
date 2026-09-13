@@ -65,6 +65,17 @@ vertically and 1.67× radially. Changing a mesh envelope now moves the
 ring with it — the thickness rings tripled when the disc gained its thick
 component (`../milkyway/README.md` § Density profiles).
 
+**The disc is the one layer gating on the frustum**, and its registry
+entry declares both admissible tests in order: `'opacity'` when
+`galacticDiscOpacity(distFromSol)` reaches zero — inside `FADE_INNER_PC`,
+which is the app's own default view — then `'frustum'` against a
+GC-centred sphere of `GALACTIC_DISC_BOUND_PC`
+(`../scene/README.md` § Declaring what a layer can put on screen). Opacity
+runs first because it is the one that fires where the camera sits *inside*
+the ring and no frustum test could; the frustum half reaches only vantages
+outside the disc, which are also the only ones that can turn away from it.
+Being registered below the orbit lock is what makes that test legal at all.
+
 Each ring takes the chrome line seam's solid stroke
 (`../chrome-lines/README.md`) over `../util/orbit-line.ts`'s
 `makeOrbitLineLoop`, and its vertices are pre-baked once into absolute ICRS
@@ -83,9 +94,14 @@ orientation.
 
 `galactic-fade.ts` owns both directions, so no layer writes its own curve:
 
-- **Far-field reveal** — `smoothstep(FADE_INNER_PC = 500,
-  FADE_OUTER_PC = 5000, distFromSol)`. Shared by the galactic disc and the
-  Local Group wireframe so both reveal in lockstep.
+- **Far-field reveal** — `farFieldFadeOpacity(baseOpacity, distFromSol)`,
+  a `smoothstep(FADE_INNER_PC = 500, FADE_OUTER_PC = 5000, …)` scaled by the
+  caller's base. The galactic disc (0.55) and the Local Group wireframe
+  (0.45) differ only in that base, so it is the argument rather than a
+  second copy of the curve, and the two reveal in lockstep by construction.
+  Each reads it **twice** — once for the stroke its `update` writes, once as
+  the `'opacity'` contribution test deciding whether the layer draws at all
+  — which is what a layer-local copy would let drift apart.
 - **Sol-frame self-hide** — `solFrameFadeFactor(distFromSol, window)`, the
   inverse, for layers that only describe the sky *from Sol* and so must
   vanish as the camera leaves. The IAU boundary arcs are its consumer.

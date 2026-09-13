@@ -118,9 +118,9 @@ after exiting chart mode (otherwise the average would lag forever).
 | ----------------------- | -------------------------------- | ---------------- |
 | `frame.total`           | `stellata.ts` `animate()`       | Full frame body, the histogram source. |
 | `controls.update`       | `stellata.ts` `animate()`       | TrackballControls / observe-controls update branch. |
-| `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes **and the whole layer fan-out** (`layers.updateAll` — star frame, binaries, planets, Milky Way, galactic, clouds), plus the adaptation fold and core-mask gate. Normally the largest CPU section, and it *contains* the `extinction.prepass` / `coreMask` rows below rather than sitting beside them. |
+| `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes **and the whole layer fan-out** (`layers.updateAll` — star frame, binaries, planets, Milky Way, galactic, clouds), plus the adaptation fold. Normally the largest CPU section, and it *contains* the `extinction.prepass` / `coreMask` rows below rather than sitting beside them. |
 | `extinction.prepass`    | `stellata.ts` `animate()`       | Per-star A_V cache recompute submission (near-zero on skipped frames). |
-| `coreMask`              | `stellata.ts` `animate()`       | The binary-search `shouldEnableCoreMask()` (see below). |
+| `coreMask`              | core-mask layer's `skip`         | The binary-search `shouldEnableCoreMask()` (see below), run as that layer's contribution test. |
 | `adaptation`            | `scene-adaptation.ts` `measure()` | Folding the landed reduction into the applied cut — a handful of arithmetic, since the measurement itself is GPU work priced under `submit.reduction` / `gpu.reduction` (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
 | `submit.main`           | `stellata.ts` `animate()`       | CPU wall-time around `renderer.render()` — submission, not GPU work. |
 | `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's bracketed renders — one per slice on WebGL2, one for the whole bracket under reversed-z (K = 1). |

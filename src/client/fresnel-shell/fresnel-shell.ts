@@ -6,7 +6,6 @@ import * as THREE from 'three';
 import { createDistanceGatedLabel, type LabelFrameHost } from '../overlays/distance-gated-label';
 import { LABEL_OFFSET_PX } from '../solar-system/planets/labels/planet-labels';
 import { angularToPx } from '../camera/controls/star-geometry';
-import { isFeatureLegible } from '../util/orbit-line';
 import type { ShellRegistry } from './shell-registry';
 import type { EmitterMaterial } from '../scene/emitter-material';
 import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
@@ -107,6 +106,10 @@ export abstract class FresnelShell {
    *  heliopause) then rendered nothing until the user cycled the detail
    *  level. */
   private permitted = false;
+  /** Starts true, agreeing with the registry's own seeded contribution
+   *  state — unlike `permitted`, nothing has to push this one before the
+   *  shell may draw; the first skip is what turns it off. */
+  private contributing = true;
 
   protected constructor(surface: EmitterMaterial, renderOrder: number) {
     this.group = new THREE.Group();
@@ -125,6 +128,15 @@ export abstract class FresnelShell {
   /** Chart (mono / paper) mode hides the shell. */
   setMonochrome(on: boolean): void {
     this.mono = on;
+    this.refreshVisibility();
+  }
+
+  /** Contribution gate — a third term of the conjunction rather than a
+   *  bare `group.visible` write, because nothing repaints this layer per
+   *  frame: `refreshVisibility` runs only on a pushed change, so a raw
+   *  write would leave the shell hidden forever after one skip. */
+  setContributing(on: boolean): void {
+    this.contributing = on;
     this.refreshVisibility();
   }
 
@@ -148,7 +160,8 @@ export abstract class FresnelShell {
   protected abstract shellReady(): boolean;
 
   protected refreshVisibility(): void {
-    this.group.visible = this.permitted && !this.mono && this.shellReady();
+    this.group.visible =
+      this.contributing && this.permitted && !this.mono && this.shellReady();
   }
 }
 
@@ -156,11 +169,11 @@ export abstract class FresnelShell {
  *  feature-legibility floor this frame — the resolvability gate both
  *  boundary shells' label predicates share, so a silhouette label (fixed
  *  screen-space text) hides once the shell shrinks past legibility as the
- *  camera pulls out. Same rule the planet labels ride via the orbit-ring
- *  gate: `isFeatureLegible` on the true camera distance (no size clamp),
- *  so it reads correctly from AU-scale shells to hundred-pc ones. Takes
- *  primitives rather than a `Stellata` so it's unit-testable against a
- *  bare `ShellRegistry`. */
+ *  camera pulls out. It is `ShellRegistry.isLegible` under a viewport /
+ *  FOV pair rather than a plate scale, which is the same test the layer's
+ *  contribution verdict runs — so a label can never outlive the mesh it
+ *  names, or the mesh the label. Takes primitives rather than a
+ *  `Stellata` so it's unit-testable against a bare `ShellRegistry`. */
 export function isShellLabelResolvable(
   shells: ShellRegistry,
   shellIdx: number,
@@ -169,9 +182,8 @@ export function isShellLabelResolvable(
   viewportHeightPx: number,
   fovYRad: number,
 ): boolean {
-  const distPc = shells.cameraDistancePc(shellIdx, worldOffset, cameraPos);
-  if (distPc <= 0) return false;
-  return isFeatureLegible(shells.extentPc(shellIdx), distPc, angularToPx(viewportHeightPx, fovYRad));
+  return shells.isLegible(
+    shellIdx, worldOffset, cameraPos, angularToPx(viewportHeightPx, fovYRad));
 }
 
 export interface ShellSilhouetteLabelOptions {

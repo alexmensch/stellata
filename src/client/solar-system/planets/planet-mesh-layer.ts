@@ -375,6 +375,38 @@ export class PlanetMeshLayer {
     return false;
   }
 
+  /** Whether any body has reached `TEXTURE_PREFETCH_PX` — the layer-level
+   *  contribution test. The floor is the PREFETCH one, not the crossfade's:
+   *  `update` starts each body's texture fetch half a pixel before the band
+   *  so the mesh has something to draw when it arrives, and gating on the
+   *  band instead would elide exactly the frames that fetch runs on. The
+   *  shared `FEATURE_LEGIBILITY_MIN_PX` is wrong for the same reason one
+   *  rung up — a contribution test may only ever dim
+   *  (`docs/render-rules.md` § 2), and admitting a frame that draws nothing
+   *  is the conservative direction. */
+  anyMeshWorkPending(cameraPos: Readonly<THREE.Vector3>): boolean {
+    for (let idx = 0; idx < this.field.liveInstanceCount; idx++) {
+      if (idx === this.field.hiddenInstanceIdx) continue;
+      if (this.field.planetAt(idx) === null) continue;
+      if (this.field.physicalPlanetSizePx(idx, cameraPos) >= TEXTURE_PREFETCH_PX) return true;
+    }
+    return false;
+  }
+
+  /** Contribution gate. Every entry's mesh and depth stamp is hidden, not
+   *  just the parent group: `anyDepthStampDrawn` walks the entries
+   *  themselves to size the depth bracket, and the `update` that clears
+   *  them does not run while skipped. */
+  setContributing(on: boolean): void {
+    if (on) return;
+    this.group.visible = false;
+    this.depthStampGroup.visible = false;
+    for (const entry of this.entries.values()) {
+      entry.mesh.visible = false;
+      entry.stamp.visible = false;
+    }
+  }
+
   /** Per-frame: show/scale/light every body inside the crossfade band.
    *  Reads the body field's live buffers, so recentres and scrubber
    *  motion need no extra hooks. `t` is the model clock (getT()) —

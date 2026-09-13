@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import type { LgCatalog, LgObject } from './local-group-loader';
 import { maxSemiAxisPc } from './local-group-loader';
-import { FADE_INNER_PC, FADE_OUTER_PC, smoothstep } from '../galactic/galactic-fade';
+import { farFieldFadeOpacity } from '../galactic/galactic-fade';
 import type { KindContext } from '../kinds/kind-module';
 import type { Stellata } from '../stellata';
 import { createDistanceGatedLabel, labelHostOf } from '../overlays/distance-gated-label';
@@ -43,6 +43,14 @@ const DARK_COLOUR = 0x8090a8;
 const DARK_BASE_OPACITY = 0.45;
 
 const WIREFRAME_RENDER_ORDER = -1;
+
+/** Stroke opacity at a camera distance from Sol — zero inside the fade's
+ *  inner edge, which is the wireframe half of the layer's contribution
+ *  test (`../scene/README.md` § Declaring what a layer can put on
+ *  screen). The glow half is the brightness verdict. */
+export function lgWireframeOpacity(distFromSolPc: number): number {
+  return farFieldFadeOpacity(DARK_BASE_OPACITY, distFromSolPc);
+}
 
 /**
  * Renderable Local Group wireframe layer. Constructed once from the
@@ -90,11 +98,7 @@ export class LocalGroupLayer {
       return;
     }
     this.group.position.copy(worldOffset).negate();
-    const opacity = DARK_BASE_OPACITY * smoothstep(
-      FADE_INNER_PC,
-      FADE_OUTER_PC,
-      distFromSolPc,
-    );
+    const opacity = lgWireframeOpacity(distFromSolPc);
     if (opacity <= 0) {
       this.group.visible = false;
       return;

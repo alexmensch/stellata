@@ -8,7 +8,16 @@ import {
   makeGlslBandMaterials, type BandMaterials, type BandSharedSlots,
 } from './band-materials';
 import type { DustField } from '../loaders/dust-loader';
-import { BandPeakCache, galactocentricPc } from './band-peak-pure';
+import {
+  BandPeakCache,
+  galactocentricPc,
+  MW_PEAK_SB_DUST_FREE,
+} from './band-peak-pure';
+import {
+  brightnessSkip,
+  type FrameExposure,
+} from '../hdr/exposure/visibility/emitter-visibility-pure';
+import type { ContributionSkip } from '../scene/scene-layer';
 import {
   BULGE_AXIS_RATIO,
   BULGE_COLOR_RGB,
@@ -114,6 +123,7 @@ export class MilkyWay {
   private readonly materials: BandMaterials;
 
   private enabled = true;
+  private contributing = true;
   private isobar = false;
   private readonly peakCache = new BandPeakCache();
 
@@ -225,10 +235,24 @@ export class MilkyWay {
 
   setEnabled(on: boolean) {
     this.enabled = on;
-    this.group.visible = on;
+    this.refreshVisibility();
   }
 
   isEnabled(): boolean { return this.enabled; }
+
+  /** Contribution gate. A term of the group's visibility alongside the
+   *  user toggle rather than a bare `group.visible` write, which would
+   *  resurrect a band the user had switched off. The layer holds no
+   *  dirty-track state across frames — `update` rebases both meshes
+   *  unconditionally — so this is the whole reset. */
+  setContributing(on: boolean): void {
+    this.contributing = on;
+    this.refreshVisibility();
+  }
+
+  private refreshVisibility(): void {
+    this.group.visible = this.enabled && this.contributing;
+  }
 
   /**
    * Chart-mode hook. The original design rendered an isobar contour pass
@@ -310,6 +334,30 @@ export class MilkyWay {
     this.bulgeMesh.position.copy(galCenterLocal);
 
     (this.shared.uWorldOffset.value as THREE.Vector3).copy(worldOffset);
+  }
+
+  /** The band's brightness contribution verdict
+   *  (`docs/science-hdr-pipeline.md` § 3.5). Two tiers: the dust-free
+   *  ceiling is brighter than any vantage can render, so a skip it already
+   *  proves costs nothing; only where it cannot decide does the live dusty
+   *  peak get marched, at 3.8–6.0 ms per cache miss. Both arrive as
+   *  thunks so the predicate's own refusals — warp above all — come first. */
+  contributionSkip(
+    exposure: FrameExposure,
+    cameraAbsPc: THREE.Vector3,
+    warpActive: boolean,
+  ): ContributionSkip | null {
+    // A band the declutter floor has already switched off draws nothing and
+    // is out of `L̄`, so no verdict can change the frame — and producing a
+    // bound for it would march the fan for a layer that is not there. It is
+    // also what leaves `contributing` below equal to `group.visible`, which
+    // is what `brightnessSkip` documents itself as taking.
+    if (!this.enabled) return null;
+    const common = { contributing: this.contributing, warpActive, exposure };
+    return brightnessSkip({ ...common, peakSb: () => MW_PEAK_SB_DUST_FREE })
+      ?? brightnessSkip({
+        ...common, peakSb: () => this.peakSurfaceBrightnessBound(cameraAbsPc),
+      });
   }
 
   /** Upper bound on the band's brightest rendered pixel from this camera,

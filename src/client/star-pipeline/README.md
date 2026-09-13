@@ -181,13 +181,34 @@ Rendering is **three passes over the same instanced geometry**:
   depth buffer before any background layer renders. Causes the Milky
   Way, molecular clouds, galactic disc, and galactic grid (all
   `depthTest: true`) to depth-fail behind close-range disc cores
-  rather than bleeding through. Mesh `visible` is gated CPU-side each
-  frame by `starLocalCluster.hasMembers() || starFrame.shouldEnableCoreMask()`
+  rather than bleeding through.
+
+  **This pass is the one part of the star pipeline that registers as a
+  scene layer**, and it does so because it is the only part with a
+  per-frame visibility verdict of its own. Its entry declares
+  `contribution: { kind: 'gated' }` on
+  `starLocalCluster.hasMembers() || starFrame.shouldEnableCoreMask()`
   (members stamp regardless of the physSize window —
-  `local-pass/README.md`). The gate walks a bounded window of the
-  Sol-distance-sorted index and skips the whole draw call when no star
-  is close enough to subtend `RESOLVED_DISC_MIN_PX`; the window derivation
-  is `star-frame/README.md` § `forEachStarNearCamera`.
+  `local-pass/README.md`), reported as `'legibility'`: the gate walks a
+  bounded window of the Sol-distance-sorted index and skips the whole draw
+  call when no star is close enough to subtend `RESOLVED_DISC_MIN_PX`; the
+  window derivation is `star-frame/README.md` § `forEachStarNearCamera`.
+  The floor is that constant and not the shared
+  `FEATURE_LEGIBILITY_MIN_PX` — below it the bleed-through the mask stamps
+  against is too small to see, and a wider floor would reject frames the
+  mask does change. The entry is registered **after** the star local
+  cluster's, so membership is this frame's, and it declares the binary
+  walk's rate as anchored content (`../scene/README.md` § Anchored
+  content). Everything else in this folder keeps explicit lifecycle calls
+  in `stellata.ts`.
+
+  **The predicate refuses above the walk while the `coreMask` lever is
+  off.** That walk is what the lever's own A/B prices
+  (`../debug/frame-cost/passes/README.md`), and it now runs inside the
+  contribution test rather than beside it — so without the refusal both
+  sides of the A/B would pay it and the `coreMask` row would price
+  nothing. Refusing means the layer contributes while drawing nothing,
+  which is the direction the contract allows.
 - **Disc pass** (`renderOrder = 0`). Stars where `vPhysRatio ≥ 0.5` —
   i.e. the physical-size term dominates the final
   `max(appSize, physSize)`. Per-channel `MaxEquation` blend

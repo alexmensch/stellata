@@ -1,7 +1,7 @@
 // Whether the frame draws a star, and at what radius — the CPU mirror of
 // every star.vert.glsl gate a pick has to honour. See README.md § picker.ts.
 
-import { emitterPutsInkOnScreen } from '../../hdr/exposure/emitter-visibility-pure';
+import { emitterPutsInkOnScreen } from '../../hdr/exposure/visibility/emitter-visibility-pure';
 import { STAR_PASS_GLOW, colourPassFor } from '../../star-pipeline/star-pass';
 import { discHitRadiusPx, type ResolvedCandidate } from './star-geometry';
 import type { RenderedSizeComponents } from './star-physics';

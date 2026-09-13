@@ -11,6 +11,11 @@ import { PLANET_MESH_TEXTURE_SLOTS } from '../materials/texture-slots';
 import { TEXTURE_VRAM_BUDGET_BYTES } from './textures/texture-budget-pure';
 import type { PlanetBodyField } from './planet-body-field';
 import { PlanetMeshLayer, TEXTURE_DECODE_OPTIONS } from './planet-mesh-layer';
+import {
+  MESH_FADE_MIN_PX,
+  meshFadeFromPhysPx,
+  TEXTURE_PREFETCH_PX,
+} from './mesh-crossfade';
 import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import { phaseAngleFromLegs } from '../phase-function';
 import { ringPhaseFactor } from './rings/ring-photometry-pure';
@@ -181,6 +186,15 @@ function harness(bodyNames: string[], maxTextureSize = 8192) {
       sizes.forEach((px, i) => physPx.set(i, px));
       layer.update(camera, 0);
     },
+    /** One frame as the scene registry drives it: the contribution test
+     *  first, and `update` only where it passes. Returns whether it did. */
+    gatedFrame(sizes: number[]): boolean {
+      physPx.clear();
+      sizes.forEach((px, i) => physPx.set(i, px));
+      if (!layer.anyMeshWorkPending(camera.position)) return false;
+      layer.update(camera, 0);
+      return true;
+    },
     /** Park the camera at a body, as observe mode does. */
     hide(i: number): void {
       (field as { hiddenInstanceIdx: number }).hiddenInstanceIdx = i;
@@ -202,6 +216,29 @@ function harness(bodyNames: string[], maxTextureSize = 8192) {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+// The contribution test runs BEFORE update and elides it, so its floor has to
+// be the floor of the earliest work update does — and that is the texture
+// fetch, which fires half a pixel under the crossfade band on purpose so the
+// map is resident by the time the mesh wants it. A gate on the band instead
+// leaves the fetch starting on the same frame the mesh first draws, and the
+// body arrives on the placeholder. Nothing else can catch that: both floors
+// are real numbers in the layer and the wrong one still compiles.
+describe('the contribution gate admits the texture-prefetch band', () => {
+  it('runs the update where the fetch fires and the mesh still draws nothing', () => {
+    const h = harness(['Europa']);
+    const px = (TEXTURE_PREFETCH_PX + MESH_FADE_MIN_PX) / 2;
+    expect(meshFadeFromPhysPx(px)).toBe(0);
+    expect(h.gatedFrame([px])).toBe(true);
+    expect(h.pendingFor('europa-')).toBe(true);
+  });
+
+  it('skips under the prefetch floor, where there is no work of either kind', () => {
+    const h = harness(['Europa']);
+    expect(h.gatedFrame([TEXTURE_PREFETCH_PX - 1e-6])).toBe(false);
+    expect(h.pendingFor('europa-')).toBe(false);
+  });
 });
 
 // The release path is what makes the texture ladder affordable: an 8192 map is

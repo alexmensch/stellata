@@ -2,9 +2,37 @@ import { describe, expect, it } from 'vitest';
 import {
   FADE_INNER_PC,
   FADE_OUTER_PC,
+  farFieldFadeOpacity,
   smoothstep,
   solFrameFadeFactor,
 } from './galactic-fade';
+import { galacticDiscOpacity } from './galactic-disc';
+import { lgWireframeOpacity } from '../local-group/local-group';
+
+// Both reference layers gate their draw on their own opacity reaching zero
+// and then fade the stroke with the same curve, so a layer-local copy is two
+// places for the gate and the stroke to disagree. The base is the only thing
+// that differs, which makes it the argument.
+describe('farFieldFadeOpacity — one curve, the base as its argument', () => {
+  it('is zero at and inside the inner edge, so the gate fires there', () => {
+    expect(farFieldFadeOpacity(0.55, FADE_INNER_PC)).toBe(0);
+    expect(farFieldFadeOpacity(0.55, 0)).toBe(0);
+  });
+
+  it("reaches the caller's base at and beyond the outer edge", () => {
+    expect(farFieldFadeOpacity(0.55, FADE_OUTER_PC)).toBe(0.55);
+    expect(farFieldFadeOpacity(0.45, 10_000)).toBe(0.45);
+  });
+
+  it('is what both shipped layers read, at their own bases', () => {
+    const mid = (FADE_INNER_PC + FADE_OUTER_PC) / 2;
+    expect(galacticDiscOpacity(mid)).toBe(farFieldFadeOpacity(0.55, mid));
+    expect(lgWireframeOpacity(mid)).toBe(farFieldFadeOpacity(0.45, mid));
+    // Lockstep: the two vanish and arrive on the same frame whatever the base.
+    expect(galacticDiscOpacity(FADE_INNER_PC)).toBe(0);
+    expect(lgWireframeOpacity(FADE_INNER_PC)).toBe(0);
+  });
+});
 
 describe('galactic-fade', () => {
   it('fade band brackets the local-browsing-to-context-overlay transition', () => {

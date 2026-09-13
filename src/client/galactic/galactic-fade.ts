@@ -13,6 +13,20 @@ export function smoothstep(edge0: number, edge1: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
+/**
+ * Stroke opacity for a far-field reference layer at a camera distance from
+ * Sol — zero inside `FADE_INNER_PC`, `baseOpacity` beyond `FADE_OUTER_PC`.
+ *
+ * The galactic disc and the Local Group wireframe differ only in that base,
+ * and both read it twice: once for the stroke their `update` writes, once as
+ * the `'opacity'` contribution test that decides whether the layer draws at
+ * all (`../scene/README.md` § Declaring what a layer can put on screen). A
+ * layer-local copy of this curve would let its gate and its stroke disagree.
+ */
+export function farFieldFadeOpacity(baseOpacity: number, distFromSolPc: number): number {
+  return baseOpacity * smoothstep(FADE_INNER_PC, FADE_OUTER_PC, distFromSolPc);
+}
+
 export interface SolFrameFadeWindow {
   /** Camera distance from Sol, pc, at which opacity starts dropping. */
   innerPc: number;
