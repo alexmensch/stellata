@@ -192,9 +192,9 @@ setup the pin was taken in.
 clocks can disagree in *sign*, and the wall clock is the one that cannot
 straddle frames. Where the reduction chain draws under the exposure pin the
 frame has two classes, and the GPU stream samples only the readback frames, so
-its median follows the readback duty cycle rather than the work: `earth`
-measured 17.157 ms at 0.25 readbacks per frame against 52.854 at 0.579, wall
-p50 flat at 16.70 throughout.
+its median follows the readback duty cycle rather than the work: pinned across
+seven cadences at `earth`, the median steps 13.20 ms to 56.19 as the share of
+readback frames crosses a half, wall p50 flat at 16.70 throughout.
 
 `--baseline` and `--against-pin` now **refuse** a pair whose readback rates
 moved on a split frame, so this mostly arrives as a refusal rather than as a
@@ -213,7 +213,11 @@ Read the quarters.
 
 **Two habits that save an arm.** The archived `.perf-runs` JSON in the main
 checkout is first-hand data and answers most of this with no arm at all — read
-it first. And where the mechanism could be your own feedback loop oscillating,
+it first, and check which render path it measured before reading its absolute
+numbers as a level: the contribution gating landed 2026-09-13 and moved `sol`,
+`earth` and `lg` by 9.90, 3.37 and 0.41 ms, so archives either side of it are
+not each other's comparison. And where the mechanism could be your own
+feedback loop oscillating,
 rule that out in a **test**, offline, not in prose: closing the loop against a
 statistic that follows it proves a fixed point in seconds.
 
