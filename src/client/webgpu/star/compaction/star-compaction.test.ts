@@ -92,11 +92,19 @@ describe('StarCompaction dispatch', () => {
     expect(compaction.viewProjectionMatrix.elements).toEqual(expected.elements);
 
     c.position.set(-4, 0, 9);
-    const stale = compaction.viewProjectionMatrix.clone();
+    const stale = compaction.viewProjectionMatrix;
     compaction.dispatch(c);
     const moved = new THREE.Matrix4().multiplyMatrices(c.projectionMatrix, c.matrixWorldInverse);
     expect(compaction.viewProjectionMatrix.elements).toEqual(moved.elements);
     expect(compaction.viewProjectionMatrix.elements).not.toEqual(stale.elements);
+  });
+
+  it('hands back a copy, so a reader cannot retarget the cull', () => {
+    const { compaction } = make();
+    compaction.dispatch(camera());
+    const taken = compaction.viewProjectionMatrix;
+    taken.identity();
+    expect(compaction.viewProjectionMatrix.elements).not.toEqual(taken.elements);
   });
 });
 

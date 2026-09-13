@@ -96,9 +96,11 @@ export class StarCompaction {
     this.kernels = [reset, kernel];
   }
 
-  /** The view-projection the kernel tested against on the last dispatch. */
+  /** The view-projection the kernel tested against on the last dispatch, as a
+   *  copy — handing out the uniform's own matrix would let a reader silently
+   *  retarget the cull. */
   get viewProjectionMatrix(): Matrix4 {
-    return this.viewProjection.value;
+    return this.viewProjection.value.clone();
   }
 
   /** One compute pass, one submit: reset then compact. Must follow the
