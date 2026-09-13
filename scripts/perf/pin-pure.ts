@@ -63,6 +63,13 @@ export interface PinRow {
    *  Absent on a pin taken before the rate was summarised, which declines the
    *  guard rather than refusing the row. */
   readonly readbackPerFrame?: number;
+  /** Whether the pinned dwell drew two classes of frame. Carried because the
+   *  pin holds no pass counters of its own, and the guard above must turn on
+   *  where EITHER side is split: the duty cycle erases its own evidence as it
+   *  approaches 1, every frame becoming a readback frame and the counters
+   *  reading flat, so a run alone cannot answer it. Absent on a pin taken
+   *  before the field existed, which reads as the run's own verdict. */
+  readonly splitFrame?: boolean;
   readonly method: string;
   readonly wall: PinClock & { readonly vsyncClamped: boolean };
   /** The WebGPU frame-sample stream where it was sound; null on WebGL2. */
@@ -212,6 +219,7 @@ export function pinFromRun(file: PerfFile, source: PinSource): { pin: PinFile | 
       position: record.position!,
       idleRafMs: record.idleRafMs,
       readbackPerFrame: dwell.readbackPerFrame,
+      splitFrame: splitFrameClasses(dwell.passCounts),
       method: record.method!,
       wall: { ...clockOf(dwell.stats), vsyncClamped: dwell.stats.vsyncClamped },
       gpu: dwell.gpuStats === null ? null : clockOf(dwell.gpuStats),
@@ -279,9 +287,7 @@ function underCeiling(row: PinVerdictRow): PinVerdictRow {
   return { ...row, verdict: 'dearer', note: `GPU-stream p50 over the ${PIN_CEILING_MS} ms ceiling` };
 }
 
-function compareRow(pinned: PinRow, record: ScenarioRecord): PinVerdictRow {
-  const dwell = record.dwell!;
-
+function compareRow(pinned: PinRow, dwell: DwellRecord): PinVerdictRow {
   if (pinned.gpu === null || dwell.gpuStats === null) {
     return ungatedRow(
       pinned.key, 'wall-p50', pinned.wall.p50, dwell.stats.p50, ungatedNote(pinned, dwell.gpuStats),
@@ -355,13 +361,14 @@ export function compareToPin(pin: PinFile, current: PerfFile): PinDiff {
       // `compareRow` goes on to judge: a pair with none is printed ungated and
       // never marked, so narrowing it would refuse a row nothing reads.
       ?? (pinned.gpu === null || dwell.gpuStats === null ? null : readbackRefusal(
-        pinned.readbackPerFrame, dwell.readbackPerFrame, splitFrameClasses(dwell.passCounts),
+        pinned.readbackPerFrame, dwell.readbackPerFrame,
+        splitFrameClasses(dwell.passCounts) || pinned.splitFrame === true,
       ));
     if (incomparable !== null) {
       refusals.push({ key, reason: incomparable });
       continue;
     }
-    rows.push(compareRow(pinned, record));
+    rows.push(compareRow(pinned, dwell));
   }
   const unmeasured = pin.rows.map((row) => row.key).filter((key) => !visited.has(key));
   return { refusedWholeRun: null, rows, refusals, unmeasured };

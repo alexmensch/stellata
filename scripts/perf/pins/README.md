@@ -16,8 +16,10 @@ its path relative to that checkout, since this file ships in a public repo.
 Per `scenario|backend` the pin holds wall p50 / p90 / iqr / n /
 vsyncClamped and the GPU-stream p50 where it was sound, plus the
 state-guard verdict, buffer, catalogue record count, the context's
-position in the run, the exposure readback rate the row was taken at,
-cadence, adapter probe, commit pair, package version and the run file. **Any refused row refuses the whole pin** — failed,
+position in the run, the exposure readback rate the row was taken at and
+whether its frame drew two classes, cadence, adapter probe, commit pair,
+package version and the run file. **Any refused row refuses the whole
+pin** — failed,
 tainted, not dwell, not `raf-delta`, trending at a *gated* vantage, a round
 trip, a headed run, no record count, no position — because a pin missing a
 row narrows the gate silently, and for the same reason `--pin` refuses a
@@ -167,11 +169,16 @@ the whole pin, it blocked the pin for *every* render-path PR at random. Wall
   differs or is absent (§ Run position), a **readback duty cycle** over
   `READBACK_TOLERANCE` (25 %) from the pinned rate where the frame draws two
   pass classes (`../dwell/README.md` — `earth` is the one canon vantage that
-  does), or a row the run measured that the pin does not hold. The readback
+  does), or a row the run measured that the pin does not hold. **Two pass
+  classes on EITHER side turns that guard on**: the pin carries no counters,
+  so it records the row's own verdict as `splitFrame`, and the run's counters
+  alone cannot answer it — a duty cycle approaching 1 makes every frame a
+  readback frame and the counters read flat. The readback
   guard declines where either side holds no rate rather than refusing the
   row: it narrows an already-gated comparison, where the others answer what
   a row cannot be read without, and refusing every row until a cold re-take
-  is spent would cost an idle machine to protect what the rest already hold. A refused comparison is not a pass: either kind exits 1,
+  is spent would cost an idle machine to protect what the rest already hold.
+  A refused comparison is not a pass: either kind exits 1,
   since a run whose rows were all refused prints a table with no `✗` in
   it. **Pin rows the run did not visit are listed, not refused** — the table
   walks the run's rows, so a Tier 1 run answers for its two and prints the

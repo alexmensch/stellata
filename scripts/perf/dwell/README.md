@@ -88,9 +88,18 @@ cycle crossed 50 %. `READBACK_TOLERANCE` (25 %) bounds it, clear of the 7 %
 spread `earth` holds across 25 cold runs. **The guard is gated on the frame
 being split**, because the same drift elsewhere is sound: `sol` moved 0.25 to
 0.59 across the runs that measured its 9.33 ms saving and `mw120` to 0.51
-with its median flat, and refusing those would discard real readings. What
-sets the multiple is not established — `../diff-pure.ts` carries the rule,
-and the mechanism is its own open question.
+with its median flat, and refusing those would discard real readings.
+
+**The split is read from both sides, because the duty cycle erases its own
+evidence.** As the rate approaches 1 every frame becomes a readback frame and
+the counters read flat — the archive already holds rates up to 0.975 — so a
+gate turning on the current run's counters alone would stand down on the
+largest move it exists to catch. `--baseline` has both runs' counters; the pin
+has none of its own, so it records the verdict per row (`splitFrame`) and the
+comparison ors the two. A dwell written before the counters existed carries no
+field at all, which reads as one class, as an unrecorded rate declines the
+guard. What sets the multiple is not established — `../diff-pure.ts` carries
+the rule, and the mechanism is `stellata-8cg.67.2`.
 
 **The counters sit inside the timed frames, and only on WebGPU.** Each
 wrapped call adds one JavaScript frame: at the counts a canon vantage

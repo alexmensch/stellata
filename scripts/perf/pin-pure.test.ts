@@ -538,12 +538,12 @@ describe('assertPinFile and the path', () => {
 });
 
 describe('the exposure readback duty cycle', () => {
-  const countsOf = (max: number): DwellRecord['passCounts'] => ({
+  const countsOf = (max: number, min = 4): DwellRecord['passCounts'] => ({
     perFrame: { submits: [], commandBuffers: [], renderPasses: [], computePasses: [] },
     summary: {
-      submits: { min: 4, p50: 4, max },
-      commandBuffers: { min: 4, p50: 4, max },
-      renderPasses: { min: 4, p50: 4, max },
+      submits: { min, p50: min, max },
+      commandBuffers: { min, p50: min, max },
+      renderPasses: { min, p50: min, max },
       computePasses: { min: 0, p50: 0, max: 0 },
     },
     note: 'counted',
@@ -569,6 +569,36 @@ describe('the exposure readback duty cycle', () => {
   it('records the rate the row was taken at', () => {
     const pin = pinOf([at('earth', 17.157, 0.25, SPLIT)]);
     expect(pin.rows[0].readbackPerFrame).toBe(0.25);
+  });
+
+  it('records whether the pinned dwell drew two classes of frame', () => {
+    expect(pinOf([at('earth', 17.157, 0.25, SPLIT)]).rows[0].splitFrame).toBe(true);
+    expect(pinOf([at('sol', 22.406, 0.25, FLAT)]).rows[0].splitFrame).toBe(false);
+  });
+
+  // The duty cycle erases its own evidence as it approaches 1: every frame
+  // becomes a readback frame, the counters read flat, and a guard reading the
+  // run alone would stand down on the largest move it exists to catch. The
+  // archive already holds rates up to 0.975. `--baseline` ors both sides; this
+  // is what lets the pin do the same.
+  it('refuses on the pin’s own split where the run’s counters read flat', () => {
+    const diff = compareToPin(
+      pinOf([at('earth', 17.157, 0.25, SPLIT)]),
+      file([at('earth', 52.854, 0.975, countsOf(10, 10))]),
+    );
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('samples only the readback frames');
+    expect(pinDiffFails(diff)).toBe(true);
+  });
+
+  // A pin taken before the field existed reads as the run's own verdict, which
+  // is what the gate did before this row was carried at all.
+  it('falls back to the run’s counters where the pin holds no split', () => {
+    const pin = pinOf([at('earth', 17.157, 0.25, SPLIT)]);
+    const older: PinFile = { ...pin, rows: pin.rows.map(({ splitFrame, ...rest }) => rest) };
+    const diff = compareToPin(older, file([at('earth', 52.854, 0.5792, SPLIT)]));
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('samples only the readback frames');
   });
 
   it('refuses a two-class row whose rate left the pin', () => {
