@@ -3,13 +3,14 @@ name: stellata-beads
 description: >
   How beads works in stellata specifically — Dolt persistence and when a manual
   `bd dolt push` is required, the concurrent-session ownership rule, recovering
-  a field a bad write wiped, the P0–P4 prioritisation framework, and the
-  grooming protocol. Use when running `bd` in this repo: filing or closing
-  beads, setting a priority, triaging, picking up work, pruning memories, or
-  closing out a session — including a bead filed mid-task for a bug found in
-  review or smoke, or for follow-up work. Load the `beads` skill alongside
-  this one: it carries the never-orphan filing law and dependency argument
-  order, not just CLI syntax.
+  a field a bad write wiped, the P0–P4 prioritisation framework, and the three
+  things every `bd create` must carry (parent epic, priority, model-routing
+  label). Use when running `bd` in this repo: filing or closing beads, setting
+  a priority, picking up work, or closing out a session — including a bead
+  filed mid-task for a bug found in review or smoke, or for follow-up work.
+  Load the `beads` skill alongside this one: it carries the never-orphan filing
+  law and dependency argument order, not just CLI syntax. Pruning memories or
+  triaging the open graph is the `bd-grooming` skill instead.
 ---
 
 Stellata-specific beads operation. The `beads` skill carries CLI syntax; this
@@ -69,27 +70,64 @@ re-wraps lines.
 Every one of these is set **at creation**, and getting any of them wrong is
 silent — nothing prompts you, the bead just looks filed:
 
-- `--parent <epic-id>` — `beads` skill § Never create a bead outside an
-  epic. Includes the escalation path when no epic fits.
+- `--parent <epic-id>` — § Choosing the parent epic below, and `beads` skill
+  § Never create a bead outside an epic for the escalation path when none fits.
 - `--priority` — § Prioritisation below.
 - **one** of `needs-fable` / `opus5-ok` on any implementation bead —
-  `docs/bd-workflow.md` § Model-routing labels for which is which, and for
-  the epic rules (never on an epic; strip it when a task becomes one).
+  § Model-routing labels below.
 
 Audit: `bd list --status=open --no-parent --exclude-type=epic`.
 
-The stellata-specific judgement is which epic, and `docs/bd-workflow.md`
-§ Choosing the parent epic has it — the short version is that the parent is
-a claim about *when the work must happen*, so confirm which backend or
-vantage a report came from before picking one.
+### Model-routing labels
+
+- **`needs-fable`** — diagnosis, design gates, numerics under uncertainty.
+  The work is deciding *what* to do: mechanism-hunting a perf cost, deriving
+  a precision bound, weighing a tradeoff with no written recipe.
+- **`opus5-ok`** — well-specified implementation. The work is *doing* a known
+  thing carefully: porting a shader against an established pattern, wiring a
+  knob, a mechanical deletion, a UI surface, running a framed measurement.
+
+Split rather than hedge — a bead needing both is the decompose-along-a-seam
+signal from `beads` skill § Sizing a bead.
+
+**Never on an epic**, and **strip it the moment a task becomes one.** Children
+inherit parent labels at creation, so an epic-level label silently mislabels
+every child filed afterwards, and the roster then looks complete with nothing
+prompting a re-read.
+
+### Choosing the parent epic
+
+The parent is a claim about **when the work must happen**, not which folder the
+code sits in:
+
+- **A defect reachable by a user on the shipped path** → `stellata-uadc`.
+- **A defect that only reproduces on a path still being migrated** → the epic
+  doing that migration, with the cutover bead taking a `bd dep add` on it, so
+  the graph says "this blocks cutover" instead of leaving a loose bug.
+
+So establish which backend, renderer or vantage a report came from *before*
+picking — usually one question to the reporter.
+
+### Filing a defect bead — check it still reproduces
+
+Before implementing one, confirm the defect still reproduces on main. A bug
+filed mid-PR is often fixed by that same PR and the bead never hears about it.
+Reproduce in the smallest harness and read the target file first; a comment in
+the code naming the bug's own mechanism is the tell that someone got there
+already, and `git log -S` on the fix string dates it against the bead.
+
+What remains is then the **acceptance, not the mechanism** — the test that pins
+the fix so it cannot be removed. Prove it load-bearing by reverting the fix and
+watching it fail, then restore. Say in the close reason and the PR that the
+mechanism landed elsewhere, naming the PR; a close implying you built it
+misleads the next audit.
 
 ## Where the detail lives — read the doc, don't guess
 
-`docs/bd-workflow.md` is the reference for everything this skill only names:
-model-routing labels, choosing the parent epic, label / metadata naming,
-tagging conventions, the bug-sweep handoff format, grooming. When a bd
-question is not answered here, read it rather than reconstructing the answer
-from sibling beads.
+`docs/bd-workflow.md` carries the bug-sweep handoff format and the label /
+metadata / external-ref conventions. Grooming memories or the bead graph is the
+`bd-grooming` skill. When a bd question is not answered in either, read rather
+than reconstructing the answer from sibling beads.
 
 ## Prioritisation
 
@@ -127,26 +165,6 @@ epics are P3, not P2 · mobile always sits below desktop.
 When in doubt: **P2** if the work is being scoped in real time, **P3** if it is
 filed for later. Never sit a parent at P2 when it depends on something at P3 —
 let the dependency graph do the work.
-
-## Grooming — memories and beads
-
-**Trigger:** a request to prune memories, groom beads, or check what is worth
-retiring.
-
-Survey first, present a categorised plan, wait for approval, then execute
-mechanically in batches. Full procedure — the drop / trim / consolidate / move
-categories for memories, and the six bead categories — in
-`docs/bd-workflow.md` § Grooming.
-
-Decision rule governing both passes: **if it is not relevant to every session,
-it does not belong in memory.** Skills, beads and docs are the home for
-area-specific content. Dropping a memory without leaving a hook is safe only
-when retrieval is already covered by something that loads every session — a
-AGENTS.md rule, a skill description, the readme-guard hook, or a CI test that
-fails on violations.
-
-When a memory key is dropped or renamed, sweep the surviving memories, docs and
-skills for references to it.
 
 ## Authoring conventions
 
