@@ -6,6 +6,7 @@ import { fullscreenTriangleGeometry } from '../../../util/fullscreen-pass';
 import fullscreenVert from '../../../util/fullscreen-pass.vert.glsl?raw';
 import reduceFrag from './reduce.frag.glsl?raw';
 import type { ReducedStatistic, ReductionSeam } from '../../hdr-seam';
+import { ReadbackCadence } from './readback-cadence';
 import { ReductionReadback } from './reduction-readback';
 import {
   createTileScratch,
@@ -92,8 +93,11 @@ export class LuminanceReduction implements ReductionSeam {
    *  mode has no use for a readback it would pay for every frame. */
   fenceWhileParked = false;
 
-  /** Readbacks issued so far. Cadence is emergent, not pinned — README.md
-   *  § Latency. */
+  /** Frames between readbacks. Emergent here — README.md § Latency — and
+   *  pinned by a dwell (`scripts/perf/dwell/README.md`). */
+  readonly readbackCadence = new ReadbackCadence();
+
+  /** Readbacks issued so far. */
   get readbackRequests(): number {
     return this.readback?.requestsIssued ?? 0;
   }
@@ -123,9 +127,10 @@ export class LuminanceReduction implements ReductionSeam {
     // wrong exposure.
     this.floatRenderable ??= gl.getExtension('EXT_color_buffer_float') !== null;
     if (!this.floatRenderable) return;
+    const due = this.readbackCadence.dueThisFrame();
     // Before ensureLevels, which reallocates the targets the in-flight
     // readback is reading out of.
-    if (this.readback?.pending === true) return;
+    if (this.readback?.pending === true || !due) return;
     this.ensureLevels(gl, width, height);
     if (this.levels.length === 0 || this.readback === null) return;
 
@@ -152,6 +157,7 @@ export class LuminanceReduction implements ReductionSeam {
     // request goes out anyway to keep the fence in the frame, and poll()
     // drops what it lands so the statistic holds still.
     this.readback.request();
+    this.readbackCadence.issued();
     this.pendingIsStale = !drawing;
     if (drawing) this.pendingExposure = renderExposure;
     renderer.setRenderTarget(null);
@@ -178,6 +184,7 @@ export class LuminanceReduction implements ReductionSeam {
     this.sourceHeight = 0;
     this.readback?.dispose();
     this.readback = null;
+    this.readbackCadence.reset();
     this.scratch = createTileScratch(0);
     this.floatRenderable = null;
     this.latest = null;

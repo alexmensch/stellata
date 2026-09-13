@@ -24,6 +24,9 @@ src/client/hdr/exposure/reduction/
                               draws, and the readback. Needs a live GL
                               context, hence no test of its own.
   reduction-readback.ts       The pixel-pack buffer + fence (§ Latency).
+  readback-cadence.ts         How many rendered frames apart a readback may
+    (+ test)                  go out, for a caller that needs the duty cycle
+                              held (§ Latency).
 ```
 
 The WebGPU boot runs the same chain through
@@ -283,9 +286,21 @@ submission barrier: drop it and the driver batches deeper, so
 with the pass off. The disabled path therefore still binds the last
 level and re-requests it — same fence, only the draws removed.
 
-**The cadence is emergent, not pinned — and measurement says that does
-not matter.** `pending` is just `fence !== null`, cleared in `poll()`
-only once the fence has SIGNALED, so nothing pins the rate. The worry
+**The cadence is emergent in the app, and a caller may pin it.**
+`ReadbackCadence` counts rendered frames and admits a request every
+`every` of them, `null` being the emergent rate. It counts frames rather
+than the frames a request could have gone out on, so the period is
+`every` whatever the round trip costs; a frame whose predecessor is still
+in flight leaves the count standing and takes the next frame it can, so a
+pinned cadence **caps** the rate and can never raise it. The one caller is
+a perf dwell, where the duty cycle is an input that decides what the
+GPU-stream median measures at a vantage whose frame has two classes
+(`scripts/perf/dwell/README.md`). The app itself never sets it, and what
+follows is about the rate it runs at when nothing does.
+
+**An emergent cadence does not confound a frame-cost row — and
+measurement says so.** `pending` is just `fence !== null`, cleared in
+`poll()` only once the fence has SIGNALED, so nothing pins the rate. The worry
 that follows is that removing the draws lets the GPU drain sooner, the
 fence signal sooner, and the `gl.flush()` fire more often — pricing
 batching depth rather than the pass.

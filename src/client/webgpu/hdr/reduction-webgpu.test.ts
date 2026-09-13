@@ -126,3 +126,28 @@ describe('the disabled and parked paths', () => {
     expect(reduction.current()).toBeNull();
   });
 });
+
+describe('the pinned cadence', () => {
+  it('holds one readback per `every` rendered frames, landings or not', async () => {
+    const { renderer, readbacks } = fakeRenderer();
+    const reduction = new WebGpuLuminanceReduction(renderer);
+    reduction.readbackCadence.every = 4;
+    for (let f = 0; f < 12; f++) {
+      reduction.measure(statistic(), 8, 8, 1, false);
+      // Landing at once is the fastest round trip there is, and the rate has
+      // to be the cadence rather than one request per frame.
+      for (const pending of readbacks.splice(0)) pending.land(tileLevel(8, 8, [1, 1, 1, 1]));
+      await flush();
+    }
+    expect(reduction.readbackRequests).toBe(3);
+  });
+
+  it('skips the chain on a frame it holds off, as an in-flight frame does', () => {
+    const { renderer, rendersInto, readbacks } = fakeRenderer();
+    const reduction = new WebGpuLuminanceReduction(renderer);
+    reduction.readbackCadence.every = 3;
+    reduction.measure(statistic(), 8, 8, 1, false);
+    expect(rendersInto).toHaveLength(0);
+    expect(readbacks).toHaveLength(0);
+  });
+});

@@ -4,6 +4,7 @@
 
 import type * as THREE from 'three';
 import type { HdrEmitterUniforms } from './hdr-pipeline';
+import type { ReadbackCadence } from './exposure/reduction/readback-cadence';
 import type { TileReduction } from './exposure/reduction/reduction-pure';
 
 /** One frame's reduced statistic. The two luminance channels are still in
@@ -42,6 +43,9 @@ export interface HdrSeam {
 export interface ReductionSeam {
   enabled: boolean;
   fenceWhileParked: boolean;
+  /** The readback schedule: emergent in the app, pinned by a dwell that
+   *  needs the duty cycle held rather than drifting. */
+  readonly readbackCadence: ReadbackCadence;
   readonly readbackRequests: number;
   readonly readbackPending: boolean;
   measure(
