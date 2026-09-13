@@ -267,10 +267,15 @@ predicate call per frame. `recenter`, `setMonochrome` and `dispose` still
 reach a skipped layer; `update`, the draw and both per-frame
 `timeBehaviour` polls are elided (§ A skipped layer reports nothing).
 Detail-permit and warp gating stay inside `update` — contribution is a
-layer above them,
-and a skipped layer never evaluates its permit. Per-layer state seeds
-`contributing = true`, so a layer that draws from its first frame keeps
-its constructed visibility and is never told anything.
+layer above them, and a skipped layer never evaluates its permit. **A
+permit-disabled layer hides its groups on `update`'s first line and
+returns** (`updateWarpGatedRefLayer` is the shared spelling), so the
+registry needs no second axis: the residue past it measures ~3 µs of a
+22.5 ms frame. The probe resample and the planet ephemeris walk are the
+two a permit may never elide — focus and the moving-focal ride read
+positions only `update` refreshes. Per-layer state seeds `contributing
+= true`, so a layer that draws from its first frame keeps its
+constructed visibility and is never told anything.
 
 **A layer that skips must reset every dirty-track sentinel on the way
 out** (`docs/authoring-patterns.md` § Sentinel-init) inside
