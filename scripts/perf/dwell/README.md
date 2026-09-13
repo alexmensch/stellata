@@ -73,6 +73,36 @@ the two modes. It is an API-surface count, not a GPU cost — the per-pass
 floor is still a differential (`docs/render-rules.md` § 8). A WebGL2 dwell
 has no queue to count on and records null.
 
+**Where the frame has two classes, the GPU-stream median follows the
+readback duty cycle, and a pair whose rates differ is refused.** The stream
+samples only readback frames: across the 148 archived dwells that resolved
+one, its sample count never exceeds `readbackPerFrame × frames` and runs
+88–100 % of it (median 97 %, the shortfall being the readbacks still in
+flight when the dwell ends). That costs nothing while every frame is the same
+shape, and decides what the median measures once they are not. Only
+the `earth` vantage draws two shapes: the exposure measurement resolves under
+the dwell's pinned cut there, so `renderPasses` reads 4 or 10 in one dwell
+(bimodal in all 23 archived WebGPU dwells carrying counters, against none of
+the other 109). Measured: 17.157 ms at 0.25 readbacks per frame against
+52.854 at 0.579, a 3.17× span whose wall p50 never left 16.70 ms and whose
+pass-count extremes never moved off 4/10 — only the median did, as the duty
+cycle crossed 50 %. `READBACK_TOLERANCE` (25 %) bounds it, clear of the 7 %
+spread `earth` holds across 25 cold runs. **The guard is gated on the frame
+being split**, because the same drift elsewhere is sound: `sol` moved 0.25 to
+0.59 across the runs that measured its 9.33 ms saving and `mw120` to 0.51
+with its median flat, and refusing those would discard real readings.
+
+**The split is read from both sides, because the duty cycle erases its own
+evidence.** As the rate approaches 1 every frame becomes a readback frame and
+the counters read flat — the archive already holds rates up to 0.975 — so a
+gate turning on the current run's counters alone would stand down on the
+largest move it exists to catch. `--baseline` has both runs' counters; the pin
+has none of its own, so it records the verdict per row (`splitFrame`) and the
+comparison ors the two. A dwell written before the counters existed carries no
+field at all, which reads as one class, as an unrecorded rate declines the
+guard. What sets the multiple is not established — `../diff-pure.ts` carries
+the rule, and the mechanism is `stellata-8cg.67.2`.
+
 **The counters sit inside the timed frames, and only on WebGPU.** Each
 wrapped call adds one JavaScript frame: at the counts a canon vantage
 actually reads (2–4 submits and 2–4 render passes per frame, up to 12 on a

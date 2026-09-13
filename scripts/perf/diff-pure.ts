@@ -7,7 +7,7 @@ import {
   EMPTY_PASSES_DEFAULT, EMPTY_PASS_KEY,
 } from '../../src/client/debug/frame-cost/passes/passes-pure';
 import { gatingClock, type DwellMetric } from './dwell/dwell-pure';
-import type { PerfFile, ScenarioRecord } from './schema';
+import type { DwellRecord, PerfFile, ScenarioRecord } from './schema';
 
 /** How far the two buffers may differ and still be compared. Both dominant
  *  passes scale with area, so a resized window is a different measurement
@@ -25,6 +25,15 @@ export const BUFFER_MPX_TOLERANCE = 0.01;
  *  `perf-section-check.sh` requires a re-take past, so a membership change
  *  that owes no `## Perf` section cannot leave a pin that refuses. */
 export const RECORD_COUNT_TOLERANCE = 0.01;
+
+/** How far the exposure readback's duty cycle may move before a two-class
+ *  frame's GPU-stream median stops being comparable. Across 25 cold archived
+ *  earth dwells the rate holds 0.2375–0.2542, a 7 % spread, while the dwell
+ *  that read 52.8 ms against a 17.2 ms pin sat at 0.5792 — so the bound has
+ *  the same order of headroom over the sound spread that `DWELL_FLOOR_MS`
+ *  has over the cold-to-cold move it covers, and is still a quarter of the
+ *  distance to the artefact. */
+export const READBACK_TOLERANCE = 0.25;
 
 /** A row has to move further than this multiple of the pair's combined
  *  standard error to count. Two sigma either side, not one: a one-sigma
@@ -172,11 +181,18 @@ export function preconditionRefusal(
   return null;
 }
 
+/** How far `b` sits from `a`, as a fraction of `a`. Equal values short out
+ *  before the division so that two zeroes read as no drift rather than NaN,
+ *  which would slip past every `>` test below. */
+function relativeDrift(a: number, b: number): number {
+  return a === b ? 0 : Math.abs(b - a) / a;
+}
+
 /** A resized window is a different measurement wearing the same row label:
  *  both dominant passes scale with area. Shared with `--against-pin`, as
  *  the record-count and position refusals below it are. */
 export function bufferRefusal(a: number, b: number): string | null {
-  const drift = Math.abs(b - a) / a;
+  const drift = relativeDrift(a, b);
   if (drift <= BUFFER_MPX_TOLERANCE) return null;
   return `buffer ${a} vs ${b} Mpx (${(drift * 100).toFixed(1)} % apart) — the frame is fill-bound`;
 }
@@ -215,11 +231,78 @@ export function recordCountRefusal(a: number | null, b: number | null): string |
   if (a === null || b === null) {
     return `record count ${a ?? 'unknown'} vs ${b ?? 'unknown'} — a run that did not record one cannot be placed on a scene`;
   }
-  const drift = a === b ? 0 : Math.abs(b - a) / a;
+  const drift = relativeDrift(a, b);
   if (drift > RECORD_COUNT_TOLERANCE) {
     return `catalogue ${a} vs ${b} records (${(drift * 100).toFixed(1)} % apart) — every star pass draws a different scene`;
   }
   return null;
+}
+
+/**
+ * Whether the vantage draws two classes of frame, read off the per-frame
+ * render-pass counts the dwell already records. A readback frame carries the
+ * reduction chain's extra passes, so where the exposure measurement draws
+ * under the dwell's pinned cut the counter is bimodal and `min` differs from
+ * `max`; where every frame is the same shape the two agree.
+ *
+ * This is the condition the readback guard below turns on, and it is a
+ * property of the vantage rather than of the run: earth is bimodal in all 23
+ * archived WebGPU dwells that carry counters, and mw120, sol, mw50 and lg in
+ * none of their 109. A WebGL2 dwell has no queue to count on and records
+ * nothing, which reads here as a single class — correctly, since that backend
+ * supplies no GPU stream for the guard to protect.
+ *
+ * A run written before the counters existed carries no field at all rather
+ * than a null, and 31 of the 257 archived dwells are such runs — 16 of them
+ * with a resolved stream, so a `--baseline` against one reaches here. Absent
+ * reads as a single class for the same reason an unrecorded rate declines the
+ * guard: this one narrows an already-gated comparison rather than answering
+ * what a row cannot be read without.
+ */
+export function splitFrameClasses(counts: DwellRecord['passCounts'] | undefined): boolean {
+  if (counts == null) return false;
+  const { min, max } = counts.summary.renderPasses;
+  return min !== max;
+}
+
+/**
+ * Two dwells at different exposure-readback duty cycles, where the frame has
+ * two classes. The stream samples only readback frames, at every vantage: its
+ * count never exceeds `readbackPerFrame × frames` in any of the 148 archived
+ * dwells that resolved one, and runs 88–100 % of it (median 97 %, the
+ * shortfall being the readbacks still in flight when the dwell ends). That
+ * costs nothing while every frame is the same shape, and decides what the
+ * median measures once they are not. Measured: earth read 17.2 ms at 0.25
+ * readbacks per frame and 52.8 at 0.579, a 3.17x span on a frame whose wall
+ * p50 never left 16.70 ms and whose render-pass min/max never moved off 4/10.
+ * Whatever sets that multiple, a median taken at one duty cycle is not the
+ * same statistic as one taken at another.
+ *
+ * Gated on the frame being split, because the same drift elsewhere is sound
+ * and refusing it would throw away real readings: sol moved 0.25 to 0.59
+ * across the runs that measured its 9.33 ms saving, and mw120 to 0.51 with
+ * its median flat to a twentieth of a millisecond.
+ *
+ * An unrecorded rate declines the guard rather than refusing the row. The
+ * other identity refusals answer a question a row cannot be read without —
+ * which scene, which position — while this one narrows an already-gated
+ * comparison, and a comparison that refuses every row until a cold pin is
+ * re-taken costs an idle machine to protect readings the remaining guards
+ * already hold.
+ */
+export function readbackRefusal(
+  a: number | null | undefined,
+  b: number | null | undefined,
+  splitFrame: boolean,
+): string | null {
+  if (!splitFrame || a == null || b == null) return null;
+  const drift = relativeDrift(a, b);
+  if (drift <= READBACK_TOLERANCE) return null;
+  return (
+    `exposure readback ${a.toFixed(3)} vs ${b.toFixed(3)} per frame ` +
+    `(${(drift * 100).toFixed(1)} % apart) — this vantage draws a readback frame and a plain ` +
+    'one, and the GPU stream samples only the readback frames, so its median follows the duty cycle'
+  );
 }
 
 function verdictFor(deltaMs: number, bandMs: number): Verdict {
@@ -333,6 +416,14 @@ function dwellRow(key: string, a: ScenarioRecord, b: ScenarioRecord): DiffRow | 
       key: `${key}|dwell`,
       reason: 'a dwell trended across its quarters — it straddled a load-state transition',
     };
+  }
+  // Only where the GPU stream is the clock being judged: the duty cycle
+  // reaches the median by way of which frames that stream samples, and the
+  // wall row it would otherwise refuse sat on 16.70 ms throughout.
+  if (ga.metric === 'gpu-p50') {
+    const split = splitFrameClasses(da.passCounts) || splitFrameClasses(db.passCounts);
+    const drifted = readbackRefusal(da.readbackPerFrame, db.readbackPerFrame, split);
+    if (drifted !== null) return { key: `${key}|dwell`, reason: drifted };
   }
   const deltaMs = cb.p50 - ca.p50;
   const bandMs = band(medianStandardErrorMs(ca), medianStandardErrorMs(cb), dwellFloorMs(ca.p50));
