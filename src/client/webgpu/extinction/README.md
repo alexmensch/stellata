@@ -279,3 +279,12 @@ Why not the alternatives: reading the buffer on every recompute is
 exactly where nobody picks; marching on the CPU needs the ~128 MiB voxel
 grid the loader uploads and drops, and would be a second implementation
 of the integral free to drift from the shader's.
+
+The copy goes through `getArrayBufferAsync` with a **null target**, which
+creates its staging buffer per call and destroys it after the map. three
+also offers a `ReadbackBuffer` target that holds one across calls; it
+trades 1.48 MiB of VRAM for the renderer's whole life against a create
+and destroy per warm, and with the camera gate above a warm is a
+per-settle event rather than a per-frame one. On the integrated and
+mobile floor this folder is sized for, the resident megabyte is the
+dearer half of that trade.
