@@ -270,10 +270,6 @@ git pull --ff-only                                   # main checkout, main branc
 pnpm run typecheck                                   # sanity-check what actually landed
 ```
 
-**Tell Alex the worktree is gone.** He runs a dev server against each branch's
-worktree — one per PR — so removing it kills whatever that server was
-serving.
-
 Never remove a worktree the PR did not own.
 
 **`locked` does not mean "hands off".** `EnterWorktree` locks what it creates,
