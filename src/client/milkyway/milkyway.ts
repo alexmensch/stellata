@@ -238,7 +238,10 @@ export class MilkyWay {
     this.refreshVisibility();
   }
 
-  isEnabled(): boolean { return this.enabled; }
+  /** Whether the band draws this frame — the `mwBand` lever's `present()`. */
+  isDrawn(): boolean {
+    return this.enabled && this.contributing;
+  }
 
   /** Contribution gate. A term of the group's visibility alongside the
    *  user toggle rather than a bare `group.visible` write, which would
@@ -251,7 +254,7 @@ export class MilkyWay {
   }
 
   private refreshVisibility(): void {
-    this.group.visible = this.enabled && this.contributing;
+    this.group.visible = this.isDrawn();
   }
 
   /**

@@ -34,6 +34,12 @@ layer can put on screen carries why. `setContributing(false)` clears
 `rimGroup.visible` as well as the parent group, because the pick gate
 reads that flag directly (§ The permit that gates the rim gates the pick).
 
+`isAbsorptionDrawn` reads the parent group and the absorption group together
+— the `cloudAbsorption` frame-cost lever's `present()`
+(`../debug/frame-cost/passes/README.md` § The roster). Once the layer skips,
+the raymarch is gone and `update` no longer runs, so the lever's kill switch
+reaches nothing and its A/B would price zero.
+
 The cloud kind module (`cloud-module.ts`) owns the runtime lifecycle:
 its `load` fetches `public/clouds.json` via `cloud-loader.ts`
 (version gate: v3; the client reads the geometry + density-model fields

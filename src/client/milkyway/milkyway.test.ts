@@ -797,3 +797,29 @@ describe('the brightness verdict refuses above the fan while the band is off', (
     expect(asksFor(true)).toBe(1);
   });
 });
+
+describe('isDrawn is the whole conjunction, not the user toggle', () => {
+  const drawnWith = (enabled: boolean, contributing: boolean) => {
+    const { layer } = build();
+    layer.setEnabled(enabled);
+    layer.setContributing(contributing);
+    const drawn = layer.isDrawn();
+    expect(layer.group.visible, 'group.visible tracks isDrawn').toBe(drawn);
+    layer.dispose();
+    return drawn;
+  };
+
+  it('draws only with both terms', () => {
+    expect(drawnWith(true, true)).toBe(true);
+  });
+
+  // The brightness skip leaves the band enabled and not drawing, which is
+  // exactly the state the `mwBand` lever used to price as a zero row.
+  it('does not draw while the contribution gate has skipped it', () => {
+    expect(drawnWith(true, false)).toBe(false);
+  });
+
+  it('does not draw while the band is switched off', () => {
+    expect(drawnWith(false, true)).toBe(false);
+  });
+});

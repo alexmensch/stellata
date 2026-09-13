@@ -52,17 +52,17 @@ export function buildPassToggles(
     },
     {
       key: 'mwBand',
-      present: () => stellata.milkyway.isEnabled(),
+      present: () => stellata.milkyway.isDrawn(),
       disable: () => flag((on) => stellata.milkyway.setEnabled(on)),
     },
     {
       key: 'lgEmission',
-      present: () => stellata.kinds.lg.emission?.isEnabled() ?? false,
+      present: () => stellata.kinds.lg.emission?.isDrawn() ?? false,
       disable: () => flag((on) => stellata.kinds.lg.emission?.setEnabled(on)),
     },
     {
       key: 'cloudAbsorption',
-      present: () => stellata.kinds.cloud.layer !== null,
+      present: () => stellata.kinds.cloud.layer?.isAbsorptionDrawn() ?? false,
       disable: () => flag((on) => stellata.kinds.cloud.layer?.setAbsorptionEnabled(on)),
     },
     {

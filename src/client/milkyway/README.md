@@ -264,6 +264,11 @@ own transition flag alone is not that. The `mwBand` frame-cost lever
 (`../debug/frame-cost/passes/README.md`) depends on it too — without the
 refusal its A/B pays the march on both sides and prices nothing.
 
+`MilkyWay.isDrawn` is that same conjunction read back, and it is what the
+lever's `present()` asks: a band the brightness gate has skipped is enabled
+and not drawing, so the toggle alone would admit a row whose A/B disables a
+pass already gone.
+
 ## Coordinate handling
 
 The mesh-local unit sphere has +X/+Y in the disc plane and +Z toward NGP;
