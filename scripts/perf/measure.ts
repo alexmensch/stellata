@@ -5,7 +5,9 @@
 import type { Page } from 'playwright';
 import { SETTLE_FRAMES } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { ROUNDTRIP_IDLE } from './args';
-import { summarizeFrameDwell, summarizePassCounts } from './dwell/dwell-pure';
+import {
+  readbackCadenceHeld, summarizeFrameDwell, summarizePassCounts,
+} from './dwell/dwell-pure';
 import {
   awaitSettle,
   readDrawingBuffer,
@@ -50,6 +52,8 @@ export interface DwellPlan {
   /** The idle rAF period measured for this scenario — what the wall-clock
    *  row's `vsyncClamped` verdict is judged against. */
   readonly cadenceMs: number | null;
+  /** Rendered frames between statistic readbacks, pinned for the dwell. */
+  readonly readbackEvery: number;
 }
 
 // The GPU row passes no cadence: a resolved timestamp span is not wall time,
@@ -74,9 +78,9 @@ function toRecord(raw: DwellRaw, cadenceMs: number | null): DwellRecord | null {
 }
 
 /**
- * One dwell, plus the three checks that it measured what it meant to and put
- * the page back. A dwell holds the render gate and stops the simulation
- * clock; leaking either would make every later scenario in the run measure a
+ * One dwell, plus the checks that it measured what it meant to and put the
+ * page back. A dwell holds the render gate and stops the simulation clock;
+ * leaking either would make every later scenario in the run measure a
  * different machine, so a leak fails this scenario rather than being noted.
  * The restore is verified from outside the page function that performed it.
  */
@@ -87,6 +91,7 @@ export async function measureDwell(page: Page, plan: DwellPlan): Promise<Measure
     wantGpuStream: plan.backend === 'webgpu',
     samplesModuleUrl: GPU_SAMPLES_MODULE_URL,
     countPasses: plan.backend === 'webgpu',
+    readbackEvery: plan.readbackEvery,
   });
   const record = toRecord(raw, plan.cadenceMs);
   if (record === null) {
@@ -102,6 +107,15 @@ export async function measureDwell(page: Page, plan: DwellPlan): Promise<Measure
       failure:
         `${raw.holdsBefore} render-gate hold(s) were already live when the dwell started — ` +
         'an open debug panel is one, and its writes would sit inside a wall-clock dwell',
+    };
+  }
+  if (!readbackCadenceHeld(record.readbackPerFrame, plan.frames, plan.readbackEvery)) {
+    return {
+      value: record,
+      failure:
+        `the statistic read back ${record.readbackPerFrame.toFixed(3)} times per frame, over the ` +
+        `one in ${plan.readbackEvery} the dwell pinned — the cadence lever did not take, and the ` +
+        'duty cycle is an input to the GPU-stream median again',
     };
   }
   if (raw.rateDuring !== 0) {

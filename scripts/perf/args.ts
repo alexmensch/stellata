@@ -10,7 +10,7 @@ import {
   PRICED_PASS_KEYS,
   type PricedPassKey,
 } from '../../src/client/debug/frame-cost/passes/passes-pure';
-import { DEFAULT_DWELL_FRAMES } from './dwell/dwell-pure';
+import { DEFAULT_DWELL_FRAMES, DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
 import { DEFAULT_SWEEP_SCALES } from './sweep-pure';
 import { DEFAULT_QUIET_MS } from './settle-pure';
 import { BACKENDS, SCENARIO_NAMES, type ScenarioName } from './scenarios';
@@ -66,6 +66,9 @@ export interface RunArgs {
   readonly hash: string;
   /** dwell and sweep: frames whose deltas count, per dwell. */
   readonly frames: number;
+  /** dwell and sweep: rendered frames between statistic readbacks, held
+   *  there for the dwell's duration (`dwell/README.md`). */
+  readonly readbackEvery: number;
   /** dwell: a priceFrame pass key, or `idle`, applied between two dwells. */
   readonly roundtrip: RoundTrip | undefined;
   readonly scales: readonly number[];
@@ -91,6 +94,7 @@ export const ARG_DEFAULTS = {
   dpr: 2,
   quietMs: DEFAULT_QUIET_MS,
   frames: DEFAULT_DWELL_FRAMES,
+  readbackEvery: DWELL_READBACK_EVERY_FRAMES,
   scales: DEFAULT_SWEEP_SCALES.join(','),
   cooldownMs: 0,
 } as const;
@@ -121,6 +125,7 @@ const OPTIONS = {
   'chrome-arg': { type: 'string', multiple: true, default: [] },
   hash: { type: 'string', default: '' },
   frames: { type: 'string', default: String(ARG_DEFAULTS.frames) },
+  'readback-every': { type: 'string', default: String(ARG_DEFAULTS.readbackEvery) },
   roundtrip: { type: 'string' },
   scales: { type: 'string', default: ARG_DEFAULTS.scales },
   json: { type: 'string' },
@@ -152,6 +157,7 @@ export function usage(): string {
     '  --chrome-arg=<switch>    extra Chromium switch, repeatable (the = form, since the value starts with a dash)',
     '  --hash <fragment>        URL-fragment switches for every boot, e.g. webgpu-gate=force; composes with #renderer=webgl2',
     `  --frames <n>             dwell and sweep: frames per dwell         (default ${ARG_DEFAULTS.frames})`,
+    `  --readback-every <n>     dwell and sweep: frames between statistic readbacks, pinned for the dwell (default ${ARG_DEFAULTS.readbackEvery})`,
     `  --roundtrip <pass|${ROUNDTRIP_IDLE}>  dwell: dwell, hold the pass off for --frames then restore it, dwell again`,
     `  --scales <list>          sweep: viewport scales                    (default ${ARG_DEFAULTS.scales})`,
     '  --json <path>            write the whole run as stellata-perf/2',
@@ -184,6 +190,7 @@ const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
   'settle-frames': ['differential'],
   'no-interleave': ['differential'],
   frames: ['dwell', 'sweep'],
+  'readback-every': ['dwell', 'sweep'],
   roundtrip: ['dwell'],
   scales: ['sweep'],
   pin: ['dwell'],
@@ -245,6 +252,12 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     const raw = str(name)!;
     const n = Number(raw);
     if (!Number.isFinite(n) || n <= 0) throw new ArgError(`--${name} must be a positive number; got '${raw}'`);
+    return n;
+  };
+
+  const wholeNum = (name: string): number => {
+    const n = num(name);
+    if (!Number.isInteger(n)) throw new ArgError(`--${name} counts frames; got '${str(name)}'`);
     return n;
   };
 
@@ -360,6 +373,7 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     chromeArgs: values['chrome-arg'] as string[],
     hash: (str('hash') ?? '').replace(/^#/, ''),
     frames: num('frames'),
+    readbackEvery: wholeNum('readback-every'),
     roundtrip,
     scales: numberList('scales'),
     json: str('json'),

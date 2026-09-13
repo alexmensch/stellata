@@ -64,7 +64,7 @@ pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu|we
                  [--method timer-query|timestamp|raf-delta]
                  [--budget-ms N] [--dwell-frames N] [--warmup-frames N] [--settle-frames N] [--no-interleave]
                  [--empty-passes N]
-                 [--frames 240] [--roundtrip <pass>|idle] [--scales 0.5,1,1.5,2]
+                 [--frames 240] [--readback-every 4] [--roundtrip <pass>|idle] [--scales 0.5,1,1.5,2]
                  [--headed] [--width 1280] [--height 800] [--dpr 2] [--quiet-ms 5000]
                  [--json <path>] [--baseline <path>] [--cooldown-ms 0]
                  [--pin <path> [--accept <scenario>|<backend>:<bead>]...] [--against-pin <path>]
@@ -144,7 +144,7 @@ be compared. rAF wall time is the one clock both supply. An explicit
 `--mode dwell --method timer-query` is refused rather than quietly stamping
 the table `raf-delta`, and the same goes for `--passes`, `--pre-disable`,
 `--no-park`, `--budget-ms`, `--dwell-frames`, `--settle-frames` and
-`--no-interleave` outside `differential`, `--frames` outside dwell and
+`--no-interleave` outside `differential`, `--frames` and `--readback-every` outside dwell and
 sweep, `--roundtrip` outside dwell, and `--scales` outside sweep. Only flags actually typed are checked,
 so a default never trips it, and `--warmup-frames` is exempt because every
 mode absorbs the same ramp. The in-app instrument takes the same posture on a
@@ -243,8 +243,8 @@ Any failure exits 1.
 
 `--mode dwell` measures the whole frame at a vantage instead of pricing its
 passes, and is what the pin and both gates read. Its metric, the GPU-stream
-row beside it, the vsync clamp, the state guard, the pass counters and
-`--roundtrip`: `dwell/README.md`.
+row beside it, the vsync clamp, the state guard, the pass counters, the
+pinned readback duty cycle and `--roundtrip`: `dwell/README.md`.
 
 ## Sweep mode
 

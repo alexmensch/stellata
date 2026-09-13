@@ -186,6 +186,7 @@ function printDwell(
   label: string,
   dwelt: Measured<DwellRecord>,
   idleRafMs: number | null,
+  readbackEvery: number,
 ): void {
   const d = dwelt.value;
   if (d === null) return;
@@ -193,7 +194,8 @@ function printDwell(
   if (d.gpuStats !== null) clocks.push(['gpu-timestamp', d.gpuStats]);
   console.log(`${label}\n${formatDwellTable(clocks)}`);
   console.log(
-    `gpu stream: ${d.gpuNote} · readback ${d.readbackPerFrame.toFixed(3)}/frame · ` +
+    `gpu stream: ${d.gpuNote} · readback ${d.readbackPerFrame.toFixed(3)}/frame ` +
+    `(pinned at one in ${readbackEvery}) · ` +
     `limit ${d.limitMag.toFixed(3)} mag at dm ${d.dm.toFixed(3)} · ` +
     `clamp judged against the ${idleRafMs?.toFixed(2) ?? '?'} ms idle cadence`,
   );
@@ -325,13 +327,16 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
         warmupFrames: args.warmupFrames ?? WARMUP_FRAMES,
         backend,
         cadenceMs: record.idleRafMs,
+        readbackEvery: args.readbackEvery,
       };
       record.method = DWELL_METHOD;
       if (args.mode === 'dwell') {
         record.params = { ...dwellPlan, roundtrip: args.roundtrip ?? null };
         const dwelt = await measureDwell(page, dwellPlan);
         record.dwell = dwelt.value;
-        printDwell(args.roundtrip === undefined ? 'dwell' : 'dwell BEFORE the round trip', dwelt, record.idleRafMs);
+        printDwell(
+          args.roundtrip === undefined ? 'dwell' : 'dwell BEFORE the round trip',
+          dwelt, record.idleRafMs, args.readbackEvery);
         if (dwelt.failure !== null) {
           record.failed = true;
           record.failure = dwelt.failure;
@@ -344,7 +349,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
           );
           const again = await measureDwell(page, dwellPlan);
           record.dwellAfter = again.value;
-          printDwell('dwell AFTER the round trip', again, record.idleRafMs);
+          printDwell('dwell AFTER the round trip', again, record.idleRafMs, args.readbackEvery);
           if (again.failure !== null) {
             record.failed = true;
             record.failure = `after the round trip: ${again.failure}`;

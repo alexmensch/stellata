@@ -10,8 +10,9 @@ flags and the other modes: `../README.md`.
 scripts/perf/dwell/
   dwell-pure.ts (+ test)    One dwell's percentiles, the vsync-clamp flag,
                             the state guard (quarter medians), the gating
-                            clock a row is judged on, and the per-frame
-                            WebGPU pass-count summary.
+                            clock a row is judged on, the per-frame WebGPU
+                            pass-count summary, and the pinned readback
+                            cadence with the bound that says it held.
 ```
 
 The dwell loop itself is a page function in `../page-protocol.ts`
@@ -27,6 +28,21 @@ three preconditions
 for the same reasons — a running clock re-arms the binary orbit upload inside
 the timed scope, and an unpinned exposure lets the dwell drift onto a
 different star population.
+
+**A dwell pins a fourth input the differential leaves alone: the readback
+duty cycle.** `--readback-every` (default `DWELL_READBACK_EVERY_FRAMES`, 4)
+holds the statistic readback at one request per that many rendered frames
+from before the warmup until the restore, through
+`reduction.readbackCadence` (`src/client/hdr/exposure/reduction/README.md`
+§ Latency). Emergent, the rate is whatever the readback's round trip leaves
+it at — 0.25 to 0.975 across the archive — and § Where the frame has two
+classes below is what that costs a median. Four is the rate every clean
+`earth` dwell ran at and the app's own at the Sol default view, so the pin
+holds the frame the archive measured rather than inventing one. It is a cap,
+never a floor: a vantage whose round trip outruns the cadence requests less
+often, which is sound and recorded. A rate ABOVE the cap cannot happen if
+the lever took, so one is read as the lever not having taken and fails the
+scenario (§ Five checks below).
 
 **rAF wall-clock deltas are the metric.** On a WebGPU boot the frame-sample
 stream is subscribed alongside where `gpuFrameSamplesAreSound()` says the
@@ -103,6 +119,14 @@ field at all, which reads as one class, as an unrecorded rate declines the
 guard. What sets the multiple is not established — `../diff-pure.ts` carries
 the rule, and the mechanism is `stellata-8cg.67.2`.
 
+**The pinned cadence removes the drift; the guard stays because the pin is
+not the only pair it judges.** Two dwells taken at the same
+`--readback-every` cannot differ here at all, which is the point of pinning
+it. What can still differ is a run from the archive, taken before the lever
+existed, or one deliberately taken at another cadence — and the rate a row
+records is the evidence either way, which is why the guard turns on the
+measured rate rather than on the knob that was typed.
+
 **The counters sit inside the timed frames, and only on WebGPU.** Each
 wrapped call adds one JavaScript frame: at the counts a canon vantage
 actually reads (2–4 submits and 2–4 render passes per frame, up to 12 on a
@@ -125,16 +149,18 @@ the pass-roster module over the dev server (`PASS_TOGGLES_MODULE_URL`), never
 a second spelling of it; a pass not active at the vantage fails the scenario
 rather than round-tripping nothing under the pass's name.
 
-**Four checks, each able to fail.** A hold already live when the dwell starts
+**Five checks, each able to fail.** A hold already live when the dwell starts
 fails it — settle requires an unheld gate, and the debug panel takes one,
 whose per-tick DOM writes would sit inside a wall-clock dwell. A clock that
 was not still stopped at the end of the timed frames fails it: the frames
-priced a moving scene. Then the rate and the hold count are read back
+priced a moving scene. A readback rate over the cap the cadence
+pins fails it: the lever did not take, so the duty cycle is an input again.
+Then the clock rate and the hold count are read back
 **from outside the page function that restored them** — a value re-read
 inside the same block that just wrote it could only ever fail if `setRate`
 itself refused, which is not the question worth asking. The hold check is
 differential against the count seen before the dwell, so a hold the page
-already owned is named as such instead of read as a leak. Any of the four
+already owned is named as such instead of read as a leak. Any of the five
 fails the scenario, because each would leave every later scenario in the run
-measuring a different machine.
+measuring a different machine or a different frame.
 

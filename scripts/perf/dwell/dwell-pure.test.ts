@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_DWELL_FRAMES,
+  DWELL_READBACK_EVERY_FRAMES,
   PASS_COUNTERS,
   STATE_GUARD_QUARTERS,
   STATE_GUARD_TREND_MS,
   gatingClock,
   quarterMedians,
+  readbackCadenceHeld,
   stateGuardVerdict,
   summarizeFrameDwell,
   summarizePassCounts,
@@ -162,5 +164,34 @@ describe('defaults', () => {
   it('dwells long enough for a percentile at the 99th to mean anything', () => {
     expect(DEFAULT_DWELL_FRAMES).toBe(240);
     expect(DEFAULT_DWELL_FRAMES * 0.01).toBeGreaterThanOrEqual(2);
+  });
+
+  it('pins the readback at the rate every clean earth dwell in the archive ran at', () => {
+    expect(DWELL_READBACK_EVERY_FRAMES).toBe(4);
+    expect(1 / DWELL_READBACK_EVERY_FRAMES).toBe(0.25);
+  });
+});
+
+describe('the pinned readback cadence held', () => {
+  const frames = DEFAULT_DWELL_FRAMES;
+  const held = (readbacks: number, every = DWELL_READBACK_EVERY_FRAMES) =>
+    readbackCadenceHeld(readbacks / frames, frames, every);
+
+  it('admits the cap, and the one more the dwell\'s own count window straddles', () => {
+    expect(held(60)).toBe(true);
+    expect(held(61)).toBe(true);
+    expect(held(62)).toBe(false);
+  });
+
+  it('admits a rate UNDER the cap: a round trip past the cadence is sound', () => {
+    expect(held(40)).toBe(true);
+    expect(held(0)).toBe(true);
+  });
+
+  it('reads the emergent rate as the lever not having taken', () => {
+    // 0.579/frame — the duty cycle that put the earth GPU-stream median at
+    // 52.854 ms against 17.157 at 0.25 (README.md).
+    expect(held(139)).toBe(false);
+    expect(held(234, 1)).toBe(true);
   });
 });

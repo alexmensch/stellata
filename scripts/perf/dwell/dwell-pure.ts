@@ -12,6 +12,31 @@ import {
 
 export const DEFAULT_DWELL_FRAMES = 240;
 
+/**
+ * Rendered frames between statistic readbacks for the duration of a dwell,
+ * pinning a duty cycle that is otherwise emergent and decides what the
+ * GPU-stream median measures where the frame has two classes — README.md.
+ * Four is the rate every clean `earth` dwell in the archive ran at, and the
+ * app's own at the Sol default view
+ * (`src/client/hdr/exposure/reduction/README.md` § Latency).
+ */
+export const DWELL_READBACK_EVERY_FRAMES = 4;
+
+/**
+ * Whether the pinned cadence actually held. It CAPS the rate — at most one
+ * request per `every` rendered frames, plus the one the dwell's own count
+ * window can straddle — so a rate above that bound is the lever not having
+ * taken at all. One-sided on purpose: a vantage whose readback round trip
+ * outran the cadence requests LESS often, which is sound and recorded.
+ */
+export function readbackCadenceHeld(
+  readbackPerFrame: number,
+  frames: number,
+  every: number,
+): boolean {
+  return Math.round(readbackPerFrame * frames) <= Math.ceil(frames / every) + 1;
+}
+
 /** A dwell is read in this many consecutive slices; their medians spanning
  *  more than `STATE_GUARD_TREND_MS` is the machine changing state under the
  *  dwell (the sustained-load GPU power step), and such a row compares with
