@@ -622,6 +622,17 @@ describe('the exposure readback duty cycle', () => {
     expect(row.verdict).toBe('dearer');
   });
 
+  // A run written before the counters existed carries no `passCounts` key at
+  // all rather than a null, and 31 of the 257 archived dwells are such runs —
+  // 16 with a resolved stream, so `--baseline` against one reaches the guard.
+  // Reading the field off it must not throw the whole table away.
+  it('declines where a run predates the counters and recorded no field at all', () => {
+    const absent = undefined as unknown as DwellRecord['passCounts'];
+    expect(splitFrameClasses(absent)).toBe(false);
+    const row = only(diffRuns(dwellAt(17.157, 0.25, absent), dwellAt(52.854, 0.5792, absent)));
+    expect(row.verdict).toBe('dearer');
+  });
+
   // Wall is immune: every archived dwell at the two-class vantage reads 16.70
   // whatever the duty cycle does, so refusing there would spend the guard
   // where the artefact cannot reach.

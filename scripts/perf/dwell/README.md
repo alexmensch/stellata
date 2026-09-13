@@ -75,9 +75,11 @@ has no queue to count on and records null.
 
 **Where the frame has two classes, the GPU-stream median follows the
 readback duty cycle, and a pair whose rates differ is refused.** The stream
-samples only readback frames — across every archived dwell its sample count
-equals `readbackPerFrame × frames` — which costs nothing while every frame is
-the same shape, and decides what the median measures once they are not. Only
+samples only readback frames: across the 148 archived dwells that resolved
+one, its sample count never exceeds `readbackPerFrame × frames` and runs
+88–100 % of it (median 97 %, the shortfall being the readbacks still in
+flight when the dwell ends). That costs nothing while every frame is the same
+shape, and decides what the median measures once they are not. Only
 the `earth` vantage draws two shapes: the exposure measurement resolves under
 the dwell's pinned cut there, so `renderPasses` reads 4 or 10 in one dwell
 (bimodal in all 23 archived WebGPU dwells carrying counters, against none of

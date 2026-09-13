@@ -181,11 +181,18 @@ export function preconditionRefusal(
   return null;
 }
 
+/** How far `b` sits from `a`, as a fraction of `a`. Equal values short out
+ *  before the division so that two zeroes read as no drift rather than NaN,
+ *  which would slip past every `>` test below. */
+function relativeDrift(a: number, b: number): number {
+  return a === b ? 0 : Math.abs(b - a) / a;
+}
+
 /** A resized window is a different measurement wearing the same row label:
  *  both dominant passes scale with area. Shared with `--against-pin`, as
  *  the record-count and position refusals below it are. */
 export function bufferRefusal(a: number, b: number): string | null {
-  const drift = Math.abs(b - a) / a;
+  const drift = relativeDrift(a, b);
   if (drift <= BUFFER_MPX_TOLERANCE) return null;
   return `buffer ${a} vs ${b} Mpx (${(drift * 100).toFixed(1)} % apart) — the frame is fill-bound`;
 }
@@ -224,7 +231,7 @@ export function recordCountRefusal(a: number | null, b: number | null): string |
   if (a === null || b === null) {
     return `record count ${a ?? 'unknown'} vs ${b ?? 'unknown'} — a run that did not record one cannot be placed on a scene`;
   }
-  const drift = a === b ? 0 : Math.abs(b - a) / a;
+  const drift = relativeDrift(a, b);
   if (drift > RECORD_COUNT_TOLERANCE) {
     return `catalogue ${a} vs ${b} records (${(drift * 100).toFixed(1)} % apart) — every star pass draws a different scene`;
   }
@@ -244,23 +251,32 @@ export function recordCountRefusal(a: number | null, b: number | null): string |
  * none of their 109. A WebGL2 dwell has no queue to count on and records
  * nothing, which reads here as a single class — correctly, since that backend
  * supplies no GPU stream for the guard to protect.
+ *
+ * A run written before the counters existed carries no field at all rather
+ * than a null, and 31 of the 257 archived dwells are such runs — 16 of them
+ * with a resolved stream, so a `--baseline` against one reaches here. Absent
+ * reads as a single class for the same reason an unrecorded rate declines the
+ * guard: this one narrows an already-gated comparison rather than answering
+ * what a row cannot be read without.
  */
-export function splitFrameClasses(counts: DwellRecord['passCounts']): boolean {
-  if (counts === null) return false;
+export function splitFrameClasses(counts: DwellRecord['passCounts'] | undefined): boolean {
+  if (counts == null) return false;
   const { min, max } = counts.summary.renderPasses;
   return min !== max;
 }
 
 /**
  * Two dwells at different exposure-readback duty cycles, where the frame has
- * two classes. The GPU-stream sample count equals the readback count at every
- * vantage — the stream only ever samples readback frames — which costs
- * nothing while every frame is the same shape, and decides what the median
- * measures once they are not. Measured: earth read 17.2 ms at 0.25 readbacks
- * per frame and 52.8 at 0.579, a 3.17x span on a frame whose wall p50 never
- * left 16.70 ms and whose render-pass min/max never moved off 4/10. Whatever
- * sets that multiple, a median taken at one duty cycle is not the same
- * statistic as one taken at another.
+ * two classes. The stream samples only readback frames, at every vantage: its
+ * count never exceeds `readbackPerFrame × frames` in any of the 148 archived
+ * dwells that resolved one, and runs 88–100 % of it (median 97 %, the
+ * shortfall being the readbacks still in flight when the dwell ends). That
+ * costs nothing while every frame is the same shape, and decides what the
+ * median measures once they are not. Measured: earth read 17.2 ms at 0.25
+ * readbacks per frame and 52.8 at 0.579, a 3.17x span on a frame whose wall
+ * p50 never left 16.70 ms and whose render-pass min/max never moved off 4/10.
+ * Whatever sets that multiple, a median taken at one duty cycle is not the
+ * same statistic as one taken at another.
  *
  * Gated on the frame being split, because the same drift elsewhere is sound
  * and refusing it would throw away real readings: sol moved 0.25 to 0.59
@@ -280,11 +296,11 @@ export function readbackRefusal(
   splitFrame: boolean,
 ): string | null {
   if (!splitFrame || a == null || b == null) return null;
-  const drift = a === b ? 0 : Math.abs(b - a) / a;
+  const drift = relativeDrift(a, b);
   if (drift <= READBACK_TOLERANCE) return null;
   return (
     `exposure readback ${a.toFixed(3)} vs ${b.toFixed(3)} per frame ` +
-    `(${(drift * 100).toFixed(0)} % apart) — this vantage draws a readback frame and a plain ` +
+    `(${(drift * 100).toFixed(1)} % apart) — this vantage draws a readback frame and a plain ` +
     'one, and the GPU stream samples only the readback frames, so its median follows the duty cycle'
   );
 }
