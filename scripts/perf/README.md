@@ -353,10 +353,11 @@ more than 1 % apart, a **record count** more than 1 % apart or absent on
 either side (a row priced against a different catalogue is not a
 comparison), a **run position** that differs or is absent on either side
 (below), a **sweep precondition** that differs (below), a failed or tainted
-scenario, a dwell clamped or trending on
-its gating clock, a mismatched GPU stream, a `cadenceBound` row (either
+scenario, a dwell clamped or trending on its gating clock, a **readback duty
+cycle** over 25 % apart where the frame has two pass classes
+(`dwell/README.md`), a mismatched GPU stream, a `cadenceBound` row (either
 side), or a row missing from one side refuses that key. The buffer, record
-count, position and precondition refusals are one implementation each in
+count, position, readback and precondition refusals are one implementation in
 `diff-pure.ts`, applied by `--against-pin` too: the two gates must refuse the
 same pair for the same reason, or the looser one certifies what the tighter
 one rejects.

@@ -236,7 +236,9 @@ blocked the pin for *every* render-path PR at random until
 stellata-8cg.49.20 moved the verdict onto the gating clock.
 
 Two runs compare only on the same adapter slug, buffer, record count,
-method and state.
+method and state — and, where the vantage draws both a readback frame and a
+plain one, only at the same exposure readback duty cycle, which is what the
+GPU stream's median follows there (`scripts/perf/dwell/README.md`).
 
 **The pin records two identities and refuses across both.** A frame time
 is a property of the GPU that drew it, the buffer it drew into *and the

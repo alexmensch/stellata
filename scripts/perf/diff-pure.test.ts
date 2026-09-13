@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { EMPTY_PASS_KEY } from '../../src/client/debug/frame-cost/passes/passes-pure';
 import {
-  BUFFER_MPX_TOLERANCE, DWELL_FLOOR_FRACTION, DWELL_FLOOR_MS, RECORD_COUNT_TOLERANCE,
-  diffRuns, dwellFloorMs, positionRefusal, preconditionRefusal, type RunDiff,
+  BUFFER_MPX_TOLERANCE, DWELL_FLOOR_FRACTION, DWELL_FLOOR_MS, READBACK_TOLERANCE,
+  RECORD_COUNT_TOLERANCE, diffRuns, dwellFloorMs, positionRefusal, preconditionRefusal,
+  splitFrameClasses, type RunDiff,
 } from './diff-pure';
 import type { DwellSummary } from './dwell/dwell-pure';
-import { PERF_SCHEMA, type PerfFile, type ScenarioRecord } from './schema';
+import { PERF_SCHEMA, type DwellRecord, type PerfFile, type ScenarioRecord } from './schema';
 
 function priceRow(overrides: Partial<PriceFrameRow> & { pass: string }): PriceFrameRow {
   return {
@@ -551,5 +552,101 @@ describe('diffRuns — refusals', () => {
     const diff = diffRuns(swept, swept);
     expect(diff.rows).toEqual([]);
     expect(diff.refusals[0].key).toBe('sol|webgl2|sweep');
+  });
+});
+
+describe('the exposure readback duty cycle', () => {
+  const counts = (min: number, p50: number, max: number): DwellRecord['passCounts'] => ({
+    perFrame: { submits: [], commandBuffers: [], renderPasses: [], computePasses: [] },
+    summary: {
+      submits: { min, p50, max },
+      commandBuffers: { min, p50, max },
+      renderPasses: { min, p50, max },
+      computePasses: { min: 0, p50: 0, max: 0 },
+    },
+    note: 'counted',
+  });
+
+  const SPLIT = counts(4, 4, 10);
+  const FLAT = counts(4, 4, 4);
+
+  function dwellAt(
+    gpuP50: number, readbackPerFrame: number, passCounts: DwellRecord['passCounts'],
+  ): PerfFile {
+    return withDwell(dwellStats(16.7), {
+      dwell: {
+        deltasMs: [],
+        gpuMs: [],
+        gpuNote: 'sound',
+        stats: dwellStats(16.7),
+        gpuStats: dwellStats(gpuP50),
+        limitMag: 1.5,
+        dm: -11.852,
+        readbackPerFrame,
+        passCounts,
+      },
+    }, dwellStats(gpuP50));
+  }
+
+  it('pins the bound at a quarter, clear of the 7 % spread a two-class vantage holds cold', () => {
+    expect(READBACK_TOLERANCE).toBe(0.25);
+  });
+
+  // The archived pair this guard exists for: 17.157 ms at 0.25 readbacks per
+  // frame against 52.854 at 0.579, on a frame whose wall p50 never left 16.70
+  // and whose render-pass extremes never moved off 4/10.
+  it('refuses a two-class frame whose duty cycle moved', () => {
+    const diff = diffRuns(dwellAt(17.157, 0.25, SPLIT), dwellAt(52.854, 0.5792, SPLIT));
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('samples only the readback frames');
+    expect(diff.refusals[0].reason).toContain('0.250 vs 0.579');
+  });
+
+  // The row this guard must NOT take. The duty cycle at the default view moved
+  // as far as the two-class vantage's over the runs that measured its 9.33 ms
+  // saving, and its frame has one class, so the median is the frame's.
+  it('compares a one-class frame whose duty cycle moved just as far', () => {
+    const row = only(diffRuns(dwellAt(22.406, 0.25, FLAT), dwellAt(13.076, 0.5917, FLAT)));
+    expect(row.metric).toBe('gpu-p50');
+    expect(row.deltaMs).toBeCloseTo(-9.33, 5);
+    expect(row.verdict).toBe('cheaper');
+  });
+
+  it('admits the spread a two-class vantage holds across cold runs', () => {
+    const row = only(diffRuns(dwellAt(17.157, 0.2375, SPLIT), dwellAt(17.46, 0.2542, SPLIT)));
+    expect(row.verdict).toBe('same');
+  });
+
+  it('declines rather than refuses where the frame was never counted', () => {
+    const row = only(diffRuns(dwellAt(17.157, 0.25, null), dwellAt(52.854, 0.5792, null)));
+    expect(row.verdict).toBe('dearer');
+  });
+
+  // Wall is immune: every archived dwell at the two-class vantage reads 16.70
+  // whatever the duty cycle does, so refusing there would spend the guard
+  // where the artefact cannot reach.
+  it('leaves a row judged on wall alone', () => {
+    const wallOnly = (readbackPerFrame: number): PerfFile => withDwell(dwellStats(16.7), {
+      dwell: {
+        deltasMs: [],
+        gpuMs: null,
+        gpuNote: 'not requested',
+        stats: dwellStats(16.7),
+        gpuStats: null,
+        limitMag: 1.5,
+        dm: -11.852,
+        readbackPerFrame,
+        passCounts: SPLIT,
+      },
+    });
+    const row = only(diffRuns(wallOnly(0.25), wallOnly(0.5792)));
+    expect(row.metric).toBe('wall-p50');
+    expect(row.verdict).toBe('same');
+  });
+
+  it('reads one class where the counters agree and two where they do not', () => {
+    expect(splitFrameClasses(null)).toBe(false);
+    expect(splitFrameClasses(FLAT)).toBe(false);
+    expect(splitFrameClasses(SPLIT)).toBe(true);
   });
 });
