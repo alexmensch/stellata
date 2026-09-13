@@ -186,7 +186,7 @@ pin (stellata-8cg.49.27).
 two vantages are exactly the ones a wall-clock row cannot resolve — sol's
 wall p50 sits at two refresh intervals and mw120's at one — so a row
 marked on wall would compare two quantised medians and refuse or fabricate
-by turns (`scripts/perf/README.md` § Comparing against a baseline).
+by turns (`scripts/perf/diff/README.md` § Reading the table).
 
 **And the same floor: `max(0.25 ms, 1 % of the baseline)`**, one constant
 in `scripts/perf/diff-pure.ts` that both gates apply. Tier 1 may not gate

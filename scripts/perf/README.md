@@ -42,8 +42,6 @@ scripts/perf/
                             assertPerfFile. Owns the adapter/scenario/mode
                             shapes the runner, the tables and the diff share.
   settle-pure.ts (+ test)   settleVerdict over one render-gate snapshot.
-  diff-pure.ts (+ test)     Two runs differenced: bands, verdicts, and the
-                            refusals that stop an invalid comparison.
   pin-pure.ts (+ test)      The perf pin: adapter slug, pinFromRuns,
                             compareToPin and its floor, cadence and ceiling
                             rules. pins/<slug>.json is the committed pin.
@@ -54,8 +52,12 @@ scripts/perf/
                             `## Perf` section, every ✗ accepted.
   arming/                   The consent gate: marker name and freshness, the
                             arm poller, the protocol. Own README.
+  diff/                     Two runs differenced: the band and its floor, the
+                            verdicts, and the refusals both gates share.
+                            Own README.
   dwell/                    Dwell mode: the whole-frame statistics, the
-                            state guard, the gating clock. Own README.
+                            state guard, the gating clock, the frame floor
+                            both tables print. Own README.
   sweep/                    Sweep mode: measurement order, the log-log fit,
                             the bracket. Own README.
   pins/                     The committed per-GPU pin. Own README.
@@ -101,8 +103,8 @@ throws rather than pricing a frame it was never in. `--no-park` holds the
 adaptation measurement unparked; why that is needed at all, and why it is a
 lever rather than a state, is `src/client/hdr/exposure/park/README.md`
 § The lever. Both land in the record's `params`, and a run differing in
-either refuses to compare (§ Sweep preconditions). The case they exist for
-is the `statisticWrites` row at the Sol default view
+either refuses to compare (`diff/README.md` § The refusals). The case they
+exist for is the `statisticWrites` row at the Sol default view
 (`src/client/debug/frame-cost/passes/README.md` § The roster).
 
 **`--pre-disable` is only sound where the applied cut does not depend on the
@@ -145,7 +147,7 @@ one — with the scenarios in the order given; `all` is the canon order
 mw120, sol, earth, mw50, lg.** So `--scenario all --backend both` opens
 with mw120|webgpu then sol|webgpu, the two contexts a Tier 1 run visits,
 in the same order. That is what lets Tier 1 compare against the pin:
-§ Comparing against a baseline, run position.
+`diff/README.md` § The refusals, run position.
 
 **`--backend both` runs each scenario twice, in separate contexts, and pins
 `--method raf-delta`.** The two backends' best clocks are different
@@ -291,108 +293,10 @@ abandons every recorded baseline: `schema.ts`, on `PERF_SCHEMA`.
 
 `--baseline <path>` differences this run against a saved one and prints
 `✓` cheaper · `✗` dearer · `~` inside the band, keyed
-`scenario|backend|pass` (or `|dwell`).
-
-A row counts as moved only past **two sigma of the pair's own uncertainty**.
-Differential rows combine the two `noiseMs` floors, then take the larger of
-that and the two `bracketMs` values — the bracket is instrument drift, which
-no amount of sampling reduces. Dwell rows use the median's standard error,
-`1.2533·(iqr/1.349)/√n`, on both sides, floored at the same
-`max(0.25 ms, 1 %)` the pin uses (`pins/README.md` § Reading
-`--against-pin`). **The floor is shared deliberately.** Two sigma of the
-medians' own scatter describes sampling and nothing else, and a dwell's run
-conditions move it further: at 240 frames on a steady vantage that band
-draws around 0.02 ms, while moving a context's position within its run
-moved one by 0.49 (stellata-8cg.49.27). An unfloored band would also leave
-Tier 1 gating tighter than the Tier 2 it feeds, and the tighter of two
-gates is the one that decides.
-
-**`savedMs` is the trap.** It names what disabling the pass saved, i.e. the
-pass's own price — so a row whose `savedMs` went UP got *dearer*, not better.
-A dwell `p50` reads the same direction for the obvious reason. Both print `✗`.
-
-**A dwell row is judged on the clock `gatingClock` names** — the GPU stream
-where both runs resolved one, wall only where neither did — and the metric
-column says which, `gpu-p50` or `wall-p50`, exactly as the pin's does. Every
-test on the row reads that same clock: the clamp, the state guard and the
-band. That is the whole of the rule, and the half worth stating is what it
-frees. Wall deltas are quantised to the refresh interval, so at a vantage
-whose frame exceeds one the medians alternate between one and two however
-idle the machine is — which read the row's own clamp and state guard as a
-verdict on the machine and refused mw120 and sol outright. Off the GPU
-stream both tests are about the hardware: a resolved timestamp is a span no
-compositor can pad. Where the GPU stream gates, the wall numbers stay in the
-JSON and out of the table, as `pins/README.md` § State guard records them.
-
-**Where NEITHER run resolved a stream the row still marks, on wall — and
-that is where this table parts company with the pin**, which prints such a
-pair `ungated` and never marks it. Every WebGL2 row is one, WebGL2 supplying
-no stream anywhere, so refusing here would leave `--baseline --mode dwell
---backend webgl2` with nothing to print at all; the pin can decline the row
-because it has ten of them across two backends. Read such a row knowing
-what it is: the one case in the table where a whole-interval delta may be
-the clock rather than the frame. In practice most are refused before they
-print, a WebGL2 frame inside one interval tripping the clamp first.
-
-**A GPU stream on one side and none on the other refuses the row**, the
-same refusal a differing `method` gets and for the same reason — a
-timestamp median against a wall median is two instruments. The pin prints
-that pair as an ungated row instead, because a committed table shows every
-vantage; here there is a refusal list to say it in.
-
-**The refusals matter as much as the rows.** Two runs on different clocks,
-buffers or adapters produce a table that looks like a comparison and is not,
-so an incomparable pair is named and skipped rather than dropped silently:
-a differing adapter string refuses the whole run (a differing schema never
-reaches the diff — see § JSON output); a differing method or mode, a buffer
-more than 1 % apart, a **record count** more than 1 % apart or absent on
-either side (a row priced against a different catalogue is not a
-comparison), a **run position** that differs or is absent on either side
-(below), a **sweep precondition** that differs (below), a failed or tainted
-scenario, a dwell clamped or trending on its gating clock, a **readback duty
-cycle** over 25 % apart where the frame has two pass classes
-(`dwell/README.md`), a mismatched GPU stream, a `cadenceBound` row (either
-side), or a row missing from one side refuses that key. The buffer, record
-count, position, readback and precondition refusals are one implementation in
-`diff-pure.ts`, applied by `--against-pin` too: the two gates must refuse the
-same pair for the same reason, or the looser one certifies what the tighter
-one rejects.
-
-**Sweep preconditions: the state a differential was SET UP in refuses the
-pair.** `--pre-disable` and `--no-park` change what the frame contained
-before the roster was touched at all, and `--no-interleave` changes how every
-row is differenced; all three are recorded in `params` and compared there.
-Pre-disabled keys compare as sets, so the order they were typed in is not a
-difference. `--empty-passes` refuses at the **row** level instead — it reaches
-the `emptyPass` row alone, and refusing a whole scenario for it would drop
-twelve sound rows to protect one. This is what stops the subtraction those
-flags exist for (`src/client/debug/frame-cost/passes/README.md` § The roster)
-being read off a row-against-row verdict: it is a bound taken across two runs
-by hand, and the two runs are not comparable in the sense this table means.
-
-**An absent precondition reads as the flag's own default, not as unknown** —
-the opposite of the record count's rule, and worth stating because of it. A
-run written before these flags existed pre-disabled nothing, since there was
-no way to ask; a run carrying no record count may have priced any scene at
-all. So an old baseline still compares.
-
-**Run position: two rows compare only when their contexts sat at the same
-place in their runs.** The GPU's load history before a context moves its
-frame time on unchanged code, and each run's own state guard cannot see
-it — the guard compares quarters within one dwell, and both runs read
-steady. Measured: mw120|webgpu at 21.950 ms as 8th of 10 behind 120 s
-cool-downs against 21.464 as 1st of 2 cold, 0.486 ms and twice the floor,
-while two runs of the same shape agreed to 0.019 ms. A cool-down does not
-reset it: sol at 2nd of 10 behind 120 s idle matched sol at 2nd of 2 with
-none to 2e-6 ms, so position is the variable and idle time is not. Every
-record carries `position`, and a file written before the field existed
-refuses as an absent record count does. The same refusal applies against
-the pin (`pins/README.md` § Run position), which is why the canon order
-opens with the Tier 1 vantages (§ Invocation).
-
-The key carries the backend, so a vantage the other run measured on the
-*other* backend says exactly that rather than reporting itself absent.
-Sweeps are never diffed — a slope is not a cost.
+`scenario|backend|pass` (or `|dwell`). The band and its shared floor, the
+`floor` column, which clock a dwell row is judged on, and every refusal that
+stops an invalid comparison — most of them applied by `--against-pin`
+too: `diff/README.md`.
 
 ## Pinning
 

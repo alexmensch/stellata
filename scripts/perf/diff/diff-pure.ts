@@ -1,13 +1,13 @@
 // Two perf runs, differenced: which rows moved further than the pair's own
 // uncertainty, and which pairs are not comparable at all.
-// README.md § Comparing against a baseline.
+// README.md.
 
-import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 import {
   EMPTY_PASSES_DEFAULT, EMPTY_PASS_KEY,
-} from '../../src/client/debug/frame-cost/passes/passes-pure';
-import { gatingClock, type DwellMetric } from './dwell/dwell-pure';
-import type { DwellRecord, PerfFile, ScenarioRecord } from './schema';
+} from '../../../src/client/debug/frame-cost/passes/passes-pure';
+import { floorMove, frameFloor, gatingClock, type DwellMetric } from '../dwell/dwell-pure';
+import type { DwellRecord, PerfFile, ScenarioRecord } from '../schema';
 
 /** How far the two buffers may differ and still be compared. Both dominant
  *  passes scale with area, so a resized window is a different measurement
@@ -45,7 +45,7 @@ export const BAND_SIGMAS = 2;
  *  conditions move it further than that: the same vantage read 21.950 and
  *  21.464 ms across two runs of identical code, differing only in where the
  *  context sat in its run. Both forms were derived from the cold-to-cold
- *  spread of two pins on identical code — `pins/README.md` § Reading
+ *  spread of two pins on identical code — `../pins/README.md` § Reading
  *  `--against-pin`.
  *
  *  Here rather than in `pin-pure.ts` because `--baseline` and
@@ -77,6 +77,12 @@ export interface DiffRow {
   readonly baselineMs: number;
   readonly currentMs: number;
   readonly deltaMs: number;
+  /** How far the 10th-percentile frame moved, on a dwell row the GPU stream
+   *  gates; null on every other row. Context for `deltaMs`, never a verdict
+   *  input — the same column the pin prints, off the same statistic, because
+   *  a reader asking "cost or wander?" must not have to ask it differently
+   *  of the two tables. */
+  readonly floorDeltaMs: number | null;
   readonly bandMs: number;
   readonly verdict: Verdict;
 }
@@ -362,6 +368,7 @@ function differentialRows(key: string, a: ScenarioRecord, b: ScenarioRecord): {
       baselineMs: baseline.savedMs,
       currentMs: row.savedMs,
       deltaMs,
+      floorDeltaMs: null,
       bandMs,
       verdict: verdictFor(deltaMs, bandMs),
     });
@@ -429,12 +436,19 @@ function dwellRow(key: string, a: ScenarioRecord, b: ScenarioRecord): DiffRow | 
   }
   const deltaMs = cb.p50 - ca.p50;
   const bandMs = band(medianStandardErrorMs(ca), medianStandardErrorMs(cb), dwellFloorMs(ca.p50));
+  // Off the GPU stream alone. A wall floor is quantised to the refresh
+  // interval exactly as its median is, so its p10 is the same value the
+  // median already reports and the column would answer nothing.
+  const floorDeltaMs = ga.metric === 'gpu-p50'
+    ? floorMove(frameFloor(da.gpuMs), frameFloor(db.gpuMs))
+    : null;
   return {
     key: `${key}|dwell`,
     metric: ga.metric,
     baselineMs: ca.p50,
     currentMs: cb.p50,
     deltaMs,
+    floorDeltaMs,
     bandMs,
     verdict: verdictFor(deltaMs, bandMs),
   };

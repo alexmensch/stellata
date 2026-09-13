@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import type { PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { EMPTY_PASS_KEY } from '../../src/client/debug/frame-cost/passes/passes-pure';
+import type { PriceFrameRow } from '../../../src/client/debug/frame-cost/frame-cost-pure';
+import { EMPTY_PASS_KEY } from '../../../src/client/debug/frame-cost/passes/passes-pure';
 import {
   BUFFER_MPX_TOLERANCE, DWELL_FLOOR_FRACTION, DWELL_FLOOR_MS, READBACK_TOLERANCE,
   RECORD_COUNT_TOLERANCE, diffRuns, dwellFloorMs, positionRefusal, preconditionRefusal,
   splitFrameClasses, type RunDiff,
 } from './diff-pure';
-import type { DwellSummary } from './dwell/dwell-pure';
-import { PERF_SCHEMA, type DwellRecord, type PerfFile, type ScenarioRecord } from './schema';
+import type { DwellSummary } from '../dwell/dwell-pure';
+import { PERF_SCHEMA, type DwellRecord, type PerfFile, type ScenarioRecord } from '../schema';
 
 function priceRow(overrides: Partial<PriceFrameRow> & { pass: string }): PriceFrameRow {
   return {

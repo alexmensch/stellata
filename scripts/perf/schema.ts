@@ -101,7 +101,7 @@ export interface ScenarioRecord {
    *  before a context moves its frame time on unchanged code (0.49 ms
    *  between 8th of 10 and 1st of 2), so two rows compare only at equal
    *  position; absent — a file written before the field existed — refuses
-   *  like an absent record count. README.md § Comparing against a baseline. */
+   *  like an absent record count. diff/README.md § The refusals. */
   readonly position: number | null;
   /** The clock the numbers came off. Never compare two of them. */
   readonly method: GpuFrameMethod | null;

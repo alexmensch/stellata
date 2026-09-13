@@ -136,8 +136,8 @@ emitter's. Differencing the two is the same arithmetic § Decomposing the HDR
 chain forbids within one table and for the same reason — the writes share
 bandwidth, and the two runs price frames 2.6x apart, so neither row is the
 other's complement. Read each as an upper bound on its own side. The runner
-refuses to diff such a pair outright (`../../../../../scripts/perf/README.md`
-§ Sweep preconditions); the subtraction is done by hand, knowing this.
+refuses to diff such a pair outright (`../../../../../scripts/perf/diff/README.md`
+§ The refusals); the subtraction is done by hand, knowing this.
 
 **Measured 2026-09-11**, WebGL2 `timer-query` (the only path where the row
 resolves), default Sol view, park off, exposure pinned at dm −6.289 with
