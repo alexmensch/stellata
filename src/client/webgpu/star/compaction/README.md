@@ -97,6 +97,11 @@ Of the four the single-writer audit put on this design (bead
   the draw's instance count; no CPU readback sizes any draw.
   `geometry.instanceCount` stays a nominal count only because three skips
   a geometry whose nominal count is 0 before it reaches the indirect draw.
+  The bead spelled this requirement as binding the survivor buffer *at its
+  compacted length*; the buffer binds at its full `2 × count` instead,
+  since that length only exists on the GPU. Binding short was the means,
+  not the requirement — what it was there to buy is the absent readback,
+  and the indirect args buy that outright.
 - **The uploader trap (4)** — `../README.md` § Star tables: no
   itemSize-3 storage attribute exists anywhere in this layer.
 

@@ -149,10 +149,11 @@ Of the four requirements the single-writer audit put on this design
 - **The itemSize-3 uploader trap (4)** is avoided by construction: the
   position table is vec4 and the A_V table is float, both owned outright,
   and no itemSize-3 attribute moved.
-- **The prefix-sum router (2)** and **survivor-sized bind groups (3)** are
+- **The prefix-sum router (2)** and **the implicit draw count (3)** are
   the compaction's (`../star/compaction/README.md` § The buffer-writer
-  requirements, discharged), which also keeps `iPosition` off storage
-  the same way this pass does.
+  requirements, discharged), which keeps `iPosition` off an itemSize-3
+  storage attribute the way this pass does — it reads the same array
+  through an itemSize-1 table instead.
 
 **The A_V buffer stays catalogue-star-indexed.** The compaction resolves
 its survivor-list slot to the star before reading `av.element(self)`, so

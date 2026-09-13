@@ -3,8 +3,10 @@
 
 import { STAR_STATIC_FIELDS, type StarStaticField } from '../star-attribute-roster';
 
-/** Floats per star record — the roster rounded up to whole vec4s, so a
- *  record never straddles a 16-byte boundary. */
+/** Floats per star record — the roster rounded up to whole vec4s. Scalar
+ *  reads out of a float table need no alignment, so the spare slot is
+ *  headroom for the next static field rather than a layout requirement:
+ *  a twelfth field costs no bytes, a thirteenth costs four per star. */
 export const STAR_STATIC_STRIDE = Math.ceil(STAR_STATIC_FIELDS.length / 4) * 4;
 
 export function staticSlot(field: StarStaticField): number {

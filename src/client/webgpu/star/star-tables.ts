@@ -146,8 +146,12 @@ export class StarTables {
     }
   }
 
-  /** Call once the frame's dispatch has bound every table, so the next
-   *  frame's ranges are forwarded again. */
+  /** Re-arm ranged forwarding for the next frame. Safe to call before the
+   *  render that consumes a pending full upload — but ONLY because the
+   *  layer's `update()` runs past the render gate, between the frame's
+   *  uniform sync and its `render()`, so a frame that forwards always
+   *  renders. The kernel binds three of the four tables; the other two
+   *  reach the GPU in the render submit alone. */
   endFrame(): void {
     for (const name of STAR_FORWARDED_ATTRIBUTES) this.forwarded[name].fullPending = false;
   }
