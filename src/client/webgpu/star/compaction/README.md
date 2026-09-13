@@ -64,7 +64,10 @@ there), so the glow draw issues zero instances on paper.
 A survivor is listed only if its quad can touch the viewport. The kernel
 projects the star's local position through a view-projection uniform the
 dispatch composes from the camera each frame (`projectionMatrix ×
-matrixWorldInverse`, the star meshes sitting at the identity), and drops
+matrixWorldInverse`, the star meshes sitting at the identity — the vertex
+stage draws through `projectionMatrix × modelViewMatrix`, so a transform on
+any of the three would cull what still draws, and `star-layer.test.ts` pins
+them), and drops
 the star when it is behind the camera (clip w ≤ 0) or its centre lies
 outside the clip box by more than the quad's own half-extent —
 `pxSize / uViewport` in NDC, the vertex stage's corner offset at

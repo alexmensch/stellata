@@ -69,6 +69,18 @@ describe('StarLayer', () => {
       .toEqual([layer.coreMaskMesh, layer.discMesh, layer.glowMesh]);
   });
 
+  // compaction/README.md § The frustum test rests on this: the kernel culls
+  // against projection × view while the vertex stage draws through
+  // projection × modelView, so a transform here would cull what still draws.
+  it('leaves every star mesh at the identity, which is what makes the kernel view-projection valid', () => {
+    const { scene, layer } = makeLayer();
+    scene.updateMatrixWorld(true);
+    const identity = new THREE.Matrix4().elements;
+    for (const m of [layer.coreMaskMesh, layer.discMesh, layer.glowMesh]) {
+      expect(m.matrixWorld.elements).toEqual(identity);
+    }
+  });
+
   it('adds the core mask first, depth-only, gated invisible until the shell opens it', () => {
     const { scene, layer } = makeLayer();
     expect(scene.children).toContain(layer.coreMaskMesh);
