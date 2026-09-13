@@ -536,3 +536,66 @@ describe('assertPinFile and the path', () => {
     expect(pinPathFor('apple-m4-metal-3')).toBe('scripts/perf/pins/apple-m4-metal-3.json');
   });
 });
+
+describe('the exposure readback duty cycle', () => {
+  const countsOf = (max: number): DwellRecord['passCounts'] => ({
+    perFrame: { submits: [], commandBuffers: [], renderPasses: [], computePasses: [] },
+    summary: {
+      submits: { min: 4, p50: 4, max },
+      commandBuffers: { min: 4, p50: 4, max },
+      renderPasses: { min: 4, p50: 4, max },
+      computePasses: { min: 0, p50: 0, max: 0 },
+    },
+    note: 'counted',
+  });
+
+  const SPLIT = countsOf(10);
+  const FLAT = countsOf(4);
+
+  const at = (
+    name: ScenarioName, gpuP50: number, readbackPerFrame: number, passCounts: DwellRecord['passCounts'],
+  ): ScenarioRecord => scenario(name, 'webgpu', {
+    deltasMs: [],
+    gpuMs: [],
+    gpuNote: 'sound',
+    stats: stats(16.7),
+    gpuStats: stats(gpuP50),
+    limitMag: 1.511,
+    dm: -11.852,
+    readbackPerFrame,
+    passCounts,
+  });
+
+  it('records the rate the row was taken at', () => {
+    const pin = pinOf([at('earth', 17.157, 0.25, SPLIT)]);
+    expect(pin.rows[0].readbackPerFrame).toBe(0.25);
+  });
+
+  it('refuses a two-class row whose rate left the pin', () => {
+    const diff = compareToPin(pinOf([at('earth', 17.157, 0.25, SPLIT)]), file([at('earth', 52.854, 0.5792, SPLIT)]));
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('samples only the readback frames');
+    expect(pinDiffFails(diff)).toBe(true);
+  });
+
+  it('marks a one-class row whose rate moved just as far', () => {
+    const diff = compareToPin(pinOf([at('sol', 22.406, 0.25, FLAT)]), file([at('sol', 13.076, 0.5917, FLAT)]));
+    expect(diff.refusals).toEqual([]);
+    expect(diff.rows[0].verdict).toBe('cheaper');
+    expect(diff.rows[0].deltaMs).toBeCloseTo(-9.33, 5);
+  });
+
+  // A pin whose rows predate the field still gates every row it always did:
+  // the guard declines, rather than refusing the whole comparison until a
+  // cold re-take is spent on it.
+  it('declines where the pin holds no rate for the row', () => {
+    const pin = pinOf([at('earth', 17.157, 0.25, SPLIT)]);
+    const older: PinFile = {
+      ...pin,
+      rows: pin.rows.map(({ readbackPerFrame, ...rest }) => rest),
+    };
+    const diff = compareToPin(older, file([at('earth', 52.854, 0.5792, SPLIT)]));
+    expect(diff.refusals).toEqual([]);
+    expect(diff.rows[0].verdict).toBe('dearer');
+  });
+});

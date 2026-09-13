@@ -5,8 +5,8 @@
 import { basename, relative, resolve } from 'node:path';
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import {
-  VERDICT_MARK, band, bufferRefusal, dwellFloorMs, positionRefusal, recordCountRefusal,
-  type DiffRefusal, type Verdict,
+  VERDICT_MARK, band, bufferRefusal, dwellFloorMs, positionRefusal, readbackRefusal,
+  recordCountRefusal, splitFrameClasses, type DiffRefusal, type Verdict,
 } from './diff-pure';
 import { gatingClock, type DwellMetric, type StateGuard } from './dwell/dwell-pure';
 import { DWELL_METHOD } from './run-pure';
@@ -57,6 +57,12 @@ export interface PinRow {
    *  against one taken at the same position (`../diff-pure.ts`). */
   readonly position: number;
   readonly idleRafMs: number | null;
+  /** Exposure readbacks per frame over the dwell. Where the vantage draws a
+   *  readback frame and a plain one, the GPU-stream median follows this rate,
+   *  so a row taken at another one is not the same statistic (`../diff-pure.ts`).
+   *  Absent on a pin taken before the rate was summarised, which declines the
+   *  guard rather than refusing the row. */
+  readonly readbackPerFrame?: number;
   readonly method: string;
   readonly wall: PinClock & { readonly vsyncClamped: boolean };
   /** The WebGPU frame-sample stream where it was sound; null on WebGL2. */
@@ -205,6 +211,7 @@ export function pinFromRun(file: PerfFile, source: PinSource): { pin: PinFile | 
       recordCount: record.recordCount!,
       position: record.position!,
       idleRafMs: record.idleRafMs,
+      readbackPerFrame: dwell.readbackPerFrame,
       method: record.method!,
       wall: { ...clockOf(dwell.stats), vsyncClamped: dwell.stats.vsyncClamped },
       gpu: dwell.gpuStats === null ? null : clockOf(dwell.gpuStats),
@@ -340,9 +347,16 @@ export function compareToPin(pin: PinFile, current: PerfFile): PinDiff {
       refusals.push({ key, reason: 'not in the pin — nothing to judge it against' });
       continue;
     }
+    const dwell = record.dwell!;
     const incomparable = bufferRefusal(pinned.bufferMpx, record.bufferMpx!)
       ?? recordCountRefusal(pinned.recordCount, record.recordCount)
-      ?? positionRefusal(pinned.position, record.position);
+      ?? positionRefusal(pinned.position, record.position)
+      // Gated on the pin holding a GPU stream for the row, matching the clock
+      // `compareRow` goes on to judge: a pair with none is printed ungated and
+      // never marked, so narrowing it would refuse a row nothing reads.
+      ?? (pinned.gpu === null || dwell.gpuStats === null ? null : readbackRefusal(
+        pinned.readbackPerFrame, dwell.readbackPerFrame, splitFrameClasses(dwell.passCounts),
+      ));
     if (incomparable !== null) {
       refusals.push({ key, reason: incomparable });
       continue;
