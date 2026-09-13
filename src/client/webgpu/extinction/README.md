@@ -251,10 +251,25 @@ that *fails* consumes that one attempt rather than re-arming, so a device
 refusing the copy cannot turn a pointer sweep into a 1.48 MiB-per-event
 drip.
 
-A drag announces nothing: hover is suppressed for its duration anyway,
-and the camera motion under it would invalidate each copy before the next
-event. The residual hole is that shape and only that shape — a pick
-dispatched while the camera is still crossing more than
+**A camera under way warms nothing at all**, which is the other half of
+that bound and the one the generation counter alone does not give. A warp
+or a focus lerp crosses more than `RECOMPUTE_EPSILON_PC` every frame, so
+the generation advances every frame and a copy issued against one is
+superseded two frames later, before the 280 ms dwell that wanted it can
+read a byte — every such copy is spent and dropped, at 1.48 MiB a frame
+for as long as the motion lasts. `warmAvReadback` therefore returns early
+while the last `update()` saw the camera displace, and the pick reads
+`null` and errs pickable across that stretch either way. The gate is the
+**displacement**, not the recompute: a dust chunk landing on a parked
+camera recomputes too, and that frame is one a pick can still be staged
+for. `lastCam*` starts at the Infinity sentinel, so the first compute
+reads as a move from nowhere and is excluded from the gate rather than
+costing the boot its first warm.
+
+A drag announces nothing either: hover is suppressed for its duration
+anyway, and the camera motion under it would invalidate each copy before
+the next event. The residual hole is that shape and only that shape — a
+pick dispatched while the camera is still crossing more than
 `RECOMPUTE_EPSILON_PC` per frame reads `null` and errs pickable, as every
 pick did before. Hover cannot reach it (it needs a `pointermove` the
 drag latch swallows); a click during a focus lerp can.

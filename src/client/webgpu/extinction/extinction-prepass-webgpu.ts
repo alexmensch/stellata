@@ -62,6 +62,11 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   /** Bumped on every recompute: a read that resolves against an older
    *  buffer's contents lands in a generation nobody will consult. */
   private generation = 0;
+  // Whether the camera displaced past the epsilon on the last update. A
+  // warp or a focus lerp recomputes every frame, which supersedes a copy
+  // before it can land — so warming across one spends the whole table per
+  // frame on a generation nobody will ever read.
+  private movedOnLastUpdate = false;
 
   private dirty = true;
   private hasComputed = false;
@@ -125,6 +130,9 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
       absCamX, absCamY, absCamZ,
       RECOMPUTE_EPSILON_PC,
     );
+    // lastCam* starts at the Infinity sentinel, so the first compute reads
+    // as a move from nowhere rather than as a camera under way.
+    this.movedOnLastUpdate = moved && this.hasComputed;
     if (!this.dirty && !moved) return;
 
     this.absCameraPos.value.set(absCamX, absCamY, absCamZ);
@@ -154,9 +162,16 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
 
   /** Stage the whole table for the picks a pointer event is about to
    *  make. One `copyBufferToBuffer` + map of the buffer, issued at most
-   *  once per recompute, landing inside the hover dwell. */
+   *  once per recompute and never while the camera is under way, landing
+   *  inside the hover dwell. */
   warmAvReadback(): void {
     if (!this.isActive()) return;
+    // A camera still recomputing every frame drops this copy before the
+    // dwell that wanted it can read it, so issuing one buys the pick
+    // nothing and costs the whole table every frame. The pick reads null
+    // and errs pickable across that stretch either way (README.md
+    // § Cold reads).
+    if (this.movedOnLastUpdate) return;
     if (this.mirrorGeneration === this.generation) return;
     const generation = this.generation;
     this.mirrorGeneration = generation;
@@ -212,6 +227,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.positions = null;
     this.mirror = null;
     this.mirrorGeneration = -1;
+    this.movedOnLastUpdate = false;
     this.hasComputed = false;
     this.dirty = true;
     this.lastCamX = Infinity;

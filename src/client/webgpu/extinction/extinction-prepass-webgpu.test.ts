@@ -46,6 +46,14 @@ const flush = () => new Promise<void>((r) => { setTimeout(r, 0); });
  *  tell a value read at the right offset from one read at any other. */
 const tableOf = (count = COUNT) => Float32Array.from({ length: count }, (_, i) => i / 8).buffer;
 
+/** Fly the camera to `x` and let it stop: the displacing frame recomputes,
+ *  the next one holds still. Only the second is a frame a pick can be
+ *  staged for, which is the shape every warming test wants. */
+function moveAndSettle(prepass: { update(x: number, y: number, z: number): void }, x: number) {
+  prepass.update(x, 0, 0);
+  prepass.update(x, 0, 0);
+}
+
 function makePrepass(count = COUNT) {
   const shared = buildSharedUniforms({
     pixelRatio: 2, fovYRad: 0.75, viewportW: 1600, viewportH: 900,
@@ -208,7 +216,7 @@ describe('the pick mirror', () => {
     attachDust();
     prepass.update(0, 0, 0);
     prepass.warmAvReadback();
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    moveAndSettle(prepass, RECOMPUTE_EPSILON_PC * 2);
     reads[0].land(tableOf());
     await flush();
     expect(prepass.readAvMag(3)).toBeNull();
@@ -224,7 +232,7 @@ describe('the pick mirror', () => {
     reads[0].land(tableOf());
     await flush();
     expect(prepass.readAvMag(3)).toBe(0.375);
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    moveAndSettle(prepass, RECOMPUTE_EPSILON_PC * 2);
     expect(prepass.readAvMag(3)).toBeNull();
     prepass.warmAvReadback();
     expect(reads).toHaveLength(2);
@@ -241,9 +249,51 @@ describe('the pick mirror', () => {
     await flush();
     for (let i = 0; i < 5; i++) prepass.warmAvReadback();
     expect(reads).toHaveLength(1);
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    moveAndSettle(prepass, RECOMPUTE_EPSILON_PC * 2);
     prepass.warmAvReadback();
     expect(reads).toHaveLength(2);
+  });
+
+  // A warp or a focus lerp recomputes every frame, so a copy issued then is
+  // superseded before it lands — the pick reads null and errs pickable
+  // across that stretch whether or not the copy was spent.
+  it('spends nothing while the camera is still recomputing every frame', () => {
+    const { prepass, reads, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    for (let frame = 1; frame <= 5; frame++) {
+      prepass.update(RECOMPUTE_EPSILON_PC * 2 * frame, 0, 0);
+      prepass.warmAvReadback();
+      prepass.warmAvReadback();
+    }
+    expect(reads).toHaveLength(0);
+  });
+
+  it('warms on the first frame the camera holds still', () => {
+    const { prepass, reads, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.warmAvReadback();
+    expect(reads).toHaveLength(0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.warmAvReadback();
+    expect(reads).toHaveLength(1);
+  });
+
+  // A dust chunk landing on a parked camera recomputes too, and that frame
+  // is one a pick CAN be staged for — gating on the recompute rather than
+  // on the displacement would swallow it.
+  it('warms through a dirty recompute the camera did not cause', () => {
+    const { prepass, reads, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.warmAvReadback();
+    reads.length = 0;
+    prepass.markDirty();
+    prepass.update(0, 0, 0);
+    prepass.warmAvReadback();
+    expect(reads).toHaveLength(1);
   });
 });
 

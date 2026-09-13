@@ -45,10 +45,11 @@ export interface ExtinctionPrepassSeam {
   readAvMag(idx: number): number | null;
   /** WebGPU only: a pick is imminent, so stage the whole A_V table onto
    *  the CPU before anything asks for it. One mapped copy of the buffer,
-   *  at most one per recompute, and the pointer dwell covers its latency
-   *  — which is what lets `readAvMag` answer the first pick exactly
-   *  rather than a jiggle later. Reads are synchronous on WebGL2, so
-   *  there is nothing to warm. */
+   *  at most one per recompute and none while the camera is under way,
+   *  and the pointer dwell covers its latency — which is what lets
+   *  `readAvMag` answer the first pick exactly rather than a jiggle
+   *  later. Reads are synchronous on WebGL2, so there is nothing to
+   *  warm. */
   warmAvReadback?(): void;
   /** WebGPU only: march every star once more as a fragment pass and
    *  bit-compare against the compute kernel's buffer. Null while the cache
