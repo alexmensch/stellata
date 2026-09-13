@@ -65,3 +65,24 @@ are checked for existence only, since one build writes them all. If you change
 field mapping but not the script mtime (e.g. edit in a way that
 updates atime only), you may need to `touch
 scripts/catalog/build-catalog.ts` or delete the generated files.
+
+## Building in a worktree — never symlink `public/`
+
+A fresh worktree has no `public/` artifacts (they are gitignored), so
+artifact-backed suites self-skip. Symlinking them in from the main checkout
+makes those suites run — and then any build in the worktree writes *through*
+the symlinks into the main checkout's `public/`, leaving it with artifacts that
+disagree with each other. `tests/artifact-freshness.test.ts` exists to catch
+exactly that mismatch.
+
+Need artifacts in a worktree for a read-only test run? **Copy** them (`cp`), or
+symlink and then materialise (`rm link && cp target link`) before any build.
+Before running `build:catalog` or `build:binaries-runtime` in a worktree,
+confirm nothing is a symlink: `find public -maxdepth 1 -type l`.
+
+Repairing a clobbered main checkout: rebuild there, forcing past the mtime gate
+above — `rm -f public/catalog-manifest.json` first, or `UPDATE_BUILD_COUNTS=1`.
+
+One mtime side effect: a fresh worktree's LFS checkout of
+`data/binaries/multiples.tsv` is newer than a symlinked `binaries.bin`, which
+fails artifact-freshness until the mtimes are aligned (`touch -r`).

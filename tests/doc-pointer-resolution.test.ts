@@ -14,13 +14,23 @@ import {
 } from './doc-pointer-pure';
 
 const ROOT = resolve(__dirname, '..');
-const SCANNED_ROOTS = ['src', 'scripts', 'tests', 'docs', 'data', 'research'];
+const SCANNED_ROOTS = [
+  'src',
+  'scripts',
+  'tests',
+  'docs',
+  'data',
+  'research',
+  // Skills cite doc sections the same way and rot the same way; the rest of
+  // .claude stays skipped, worktrees above all.
+  join('.claude', 'skills'),
+];
 const SCANNED_EXT = /\.(ts|js|glsl|md|py)$/;
 const SKIP_DIRS = new Set(['node_modules', 'public', 'dist', '.git', '.claude']);
 
 // Bump deliberately, having read the diff: a drop means the extractor stopped
 // seeing pointers, which passes the resolution check by finding nothing.
-const POINTER_COUNT = 2164;
+const POINTER_COUNT = 2179;
 
 // Fixtures interpolate their § from here, so the `<path>.md §` a pointer
 // needs never appears literally and this file stays out of its own scan.

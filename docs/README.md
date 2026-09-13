@@ -34,14 +34,14 @@ render-rules.md         What every layer owes the frame: draw at visible
                         adding or touching a render layer, a pass, or a
                         per-frame buffer write.
 bd-workflow.md          Long-form bd procedures that fire on a trigger
-                        rather than in every session: memory + bead
-                        grooming passes, the bug-sweep handoff format,
-                        label/metadata/external-ref conventions, the
-                        model-routing labels, and how to choose a new
-                        bead's parent epic. Reached from the
-                        stellata-beads skill, which names the
-                        creation-time obligations and points here for
-                        which value applies.
+                        rather than in every session: the bug-sweep
+                        handoff format and the label / metadata /
+                        external-ref conventions. Creation-time
+                        obligations (model-routing labels, choosing the
+                        parent epic) sit in the stellata-beads skill
+                        instead, since they bind before you would think
+                        to open a doc; grooming is the bd-grooming
+                        skill.
 extragalactic-roadmap.md  Design gate for the extragalactic deep-field
                         epic: per-tier data inventory (Local Volume →
                         CMB), cosmology bake, manifest schema, naming

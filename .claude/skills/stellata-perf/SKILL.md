@@ -1,6 +1,6 @@
 ---
 name: stellata-perf
-description: Take a GPU frame-cost measurement with the human-armed headless perf runner (`pnpm run perf`) — the arm protocol, the flags, how to read a row, where results go. Use when asked to measure, price, baseline or compare render cost, and before stating any perf number in a PR body or a bead.
+description: Take a GPU frame-cost measurement with the human-armed headless perf runner (`pnpm run perf`) — the arm protocol, the flags, how to read a row, how to tell a real regression from a warm machine or a two-valued frame, where results go. Use when asked to measure, price, baseline or compare render cost, when reading an archived run or a pin verdict, when a perf number looks wrong or a row was refused, and before stating any perf number in a PR body or a bead.
 ---
 
 # Measuring frame cost with the perf runner
@@ -104,6 +104,10 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
   Rules: `RELEASING.md` § Perf pin; mechanics: `scripts/perf/pins/README.md`.
 - `--headed` for a headed control run. Headed and headless never compare.
 
+A branch predating PR 469 has no `scripts/perf` at all, so measuring it means
+rebasing onto main first. The fallback for such a branch, or for a Safari
+sweep, is the in-browser `debug.priceFrame()` with the debug panel **closed**.
+
 A flag the chosen mode does not read is **refused**, not ignored — `--method`,
 `--passes` and the priceFrame knobs belong to `--mode differential`, `--frames`
 to dwell and sweep, `--roundtrip` to dwell, `--scales` to sweep. Fix the
@@ -144,6 +148,77 @@ mode, § Comparing against a baseline):
   of the pair, so a real move smaller than the band reads the same as none.
 - Rows `--baseline` refuses are not passes; they are comparisons that would
   have been invalid. Report the refusal, don't work around it.
+
+## Three things that look exactly like a regression
+
+A mark in the verdict table, a refused row, and a tripled frame each have a
+benign cause that presents identically. Separate them from the run's **own
+samples** before accepting a number or fixing anything. Read `dwell.gpuMs` from
+the run JSON — min, p10, and the quarter medians — before writing a word about
+cause; `gpuStats.p50` alone cannot tell any of these apart.
+
+**The discriminators, in order of strength:**
+
+- **Throughput arithmetic, before any theorising.** 240 frames × 52.8 ms is
+  12.7 s of GPU work inside a 4.0 s dwell whose wall p50 was 16.6 with no
+  dropped frames — impossible, therefore not per-frame work. One
+  multiplication.
+- **The shape of the quarters.** Monotone settle = warm machine. Alternating =
+  a genuinely two-valued frame. Flat = trust the number.
+- **The floor.** Per-frame code costs every frame and lifts the whole
+  distribution, so a real regression moves `min` and `p10`. A warm run has an
+  unmoved floor with only the top raised. A bimodal frame has *two* floors — a
+  `min` with `p10` a thousandth above it is a population, not an outlier.
+- **`min`/`max`, never the p50, on a bimodal counter.** Across 25 archived
+  `earth` dwells `renderPasses` min/max is 4/10 and submits 4/12, identical;
+  only the median moved. "Six extra render passes" was a duty cycle crossing
+  50%.
+- **The `emptyPass` control row, read before any other row.** It is the noise
+  floor; a ±9 ms one makes every sub-10 ms row in that run meaningless.
+- **IQR against the pin's.** Both contexts noisy says instrument; one context
+  noisy plus a mechanism that predicts two costs says bimodal.
+
+**Warm machine.** Never run the test suite in the minutes before arming. Rule
+out the scene first, it is cheap: exposure limitMag, recordCount, pass counts
+and `bufferMpx` must all match the pin, which is what leaves instrument state
+as the only candidate. A cold re-arm settles it.
+
+**Bimodal frame.** Fix with **more frames**, not a re-arm at the same count —
+enough that several full adaptation-park cycles land in each quarter. `--no-park`
+is not the lever: it is refused outside `--mode differential` and changes the
+setup the pin was taken in.
+
+**A large GPU-stream move — cross-check on `--method raf-delta`.** The two
+clocks can disagree in *sign*, and the wall clock is the one that cannot
+straddle frames. Where the reduction chain draws under the exposure pin the
+frame has two classes, and the GPU stream samples only the readback frames, so
+its median follows the readback duty cycle rather than the work: `earth`
+measured 17.157 ms at 0.25 readbacks per frame against 52.854 at 0.579, wall
+p50 flat at 16.70 throughout.
+
+`--baseline` and `--against-pin` now **refuse** a pair whose readback rates
+moved on a split frame, so this mostly arrives as a refusal rather than as a
+number you have to disbelieve — `scripts/perf/dwell/README.md` § Dwell mode
+carries the bound and why it is gated on the frame being split. Two gaps the
+guard leaves: a pin carries no counters of its own, and a rate approaching 1
+erases its own evidence as every frame becomes a readback frame. So a large
+GPU-stream move still earns the wall-clock cross-check. A wall-clock
+differential near one refresh interval is blind to a 2 ms move but cannot miss
+a 30 ms one; get the positive control from the same run rather than arguing
+for it.
+
+`stateGuard` cuts neither way: `steady` is not evidence a run is sound (it does
+not catch a within-dwell ramp), and `trending` is not evidence of a defect.
+Read the quarters.
+
+**Two habits that save an arm.** The archived `.perf-runs` JSON in the main
+checkout is first-hand data and answers most of this with no arm at all — read
+it first. And where the mechanism could be your own feedback loop oscillating,
+rule that out in a **test**, offline, not in prose: closing the loop against a
+statistic that follows it proves a fixed point in seconds.
+
+Arming costs Alex an idle machine, so protect it: do nothing heavy first, and
+say in the announcement what has run recently.
 
 ## Recording
 

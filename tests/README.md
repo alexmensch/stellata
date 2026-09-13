@@ -65,8 +65,9 @@ commit-sweep-guard.test.ts
                          Pins the commit-time doc-sweep hook's contract.
 doc-pointer-resolution.test.ts
                          Every `<file>.md § <Heading>` pointer under src/,
-                         scripts/, tests/, docs/, data/, research/ plus the
-                         repo-root docs resolves to a heading that exists —
+                         scripts/, tests/, docs/, data/, research/,
+                         .claude/skills/ plus the repo-root docs
+                         resolves to a heading that exists —
                          the codebase's wiki links, checked. Scans .ts .js
                          .glsl .md .py, and pins the pointer total. Grammar,
                          resolution order and the two limits it cannot see:
@@ -207,6 +208,12 @@ is implied by context is not checked, so "every pointer resolves" means
 every pointer carrying a path. The pointer total is pinned by the suite:
 a matcher regression that stops *seeing* pointers would otherwise leave
 it green, which is the direction that reads as success.
+
+`.claude/skills` is scanned alongside the source roots — a skill cites doc
+sections in the same grammar and rots the same way when one is renamed or
+moved. The rest of `.claude` stays skipped, `worktrees/` above all: it holds
+whole checkouts, and scanning them would count every pointer again per
+worktree.
 
 **Where a path resolves.** Pointers are written root-relative and
 file-relative in the same folder, so both readings are tried: the
