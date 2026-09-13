@@ -170,8 +170,11 @@ at its `iSourceIdx`. Two kinds of table:
 - **The static record table** — the nine load-time scalars plus the two
   pulsation components, interleaved once at construction into one float
   table of `STAR_STATIC_STRIDE` (12) floats per star, roster order, pad
-  slot zero. Built from the catalogue and star-frame arrays; never
-  written again.
+  slot zero. The stride rounds the roster's eleven fields up to whole
+  vec4s for headroom, not for alignment — scalar reads out of a float
+  table need none — so a twelfth static field costs no bytes and a
+  thirteenth costs 1.5 MiB. Built from the catalogue and star-frame
+  arrays; never written again.
 - **The forwarded tables** — `iPosition`, `iCompositeSuppress`,
   `iEclipseDim`, `iSuppressPulsation`. The shell constructs the WebGL
   `StarPipeline` on every boot; on this one its meshes never render, but
@@ -279,8 +282,8 @@ Compile-time pass constants replace the `uRenderMode` branches
 `uPinFocusToCenter` substitutes the canonical projection exactly as the
 GLSL does. Every pass also carries the taper cull — off entirely in
 chart mode, which sizes and clips against `uLimitMag` and keeps its
-quads, and the colour passes
-the kernel collapse — the exactness and flux-preservation arguments are
+quads — and the colour passes carry the kernel collapse; the exactness
+and flux-preservation arguments are
 `../../star-pipeline/collapse/README.md`'s, one mechanism on both
 backends.
 
@@ -301,10 +304,12 @@ one the boot built, and never learns which. What the port changes:
   a field differently. Two vertex buffers, no indirect draw: the mirror
   draws `instanceCount = members`, its survivor set being the CPU member
   list.
-- **`sync()` forwards before it copies.** The cluster updates before the
-  frame's `StarLayer.update()`, so the mirror hands the layer's
-  attribute forwarding to `MirrorSlots.sync` as its pre-copy hook, and a
-  member slot and the table it indexes are the same frame's.
+- **`sync()` copies nothing but the member indices**, so it forwards
+  nothing either: the tables it reads are made current by
+  `StarLayer.update()`, which runs past the render gate between the
+  frame's uniform sync and its render, while the local depth pass draws
+  later in that same tick. A member slot and the table it indexes are
+  therefore the same frame's whatever order the cluster updates in.
 - **The vertex stage is the shared builder's `mirror` source variant**:
   star identity comes from `iSourceIdx` (hide/pin compares match the
   source instance), member collapse is off — the mirror draws exactly

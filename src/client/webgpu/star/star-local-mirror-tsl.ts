@@ -22,20 +22,15 @@ export class StarLocalMirrorTsl implements StarMirror, MrtOutputLayer {
   private readonly slots: MirrorSlots;
   /** Mask, disc, glow — every draw into the HDR target takes the swap. */
   private readonly targetMaterials: MrtEmitterMaterial[];
-  private readonly syncSources: () => void;
 
   /** `source` lends its corner + index buffers; it carries no per-instance
    *  attribute, so the slots hold `iSourceIdx` alone and every star field
-   *  is read out of the layer's tables by that index. `syncSources` is the
-   *  layer's attribute forwarding, run before each copy so a member slot
-   *  and the tables it indexes are the same frame's. */
+   *  is read out of the layer's tables by that index. */
   constructor(
     source: THREE.InstancedBufferGeometry,
     deps: StarTslDeps,
     gates: EmitterGateNodes,
-    syncSources: () => void,
   ) {
-    this.syncSources = syncSources;
     this.slots = new MirrorSlots(source);
 
     const mask = buildStarCoreMaskMaterial(deps, MIRROR_SOURCE);
@@ -58,7 +53,7 @@ export class StarLocalMirrorTsl implements StarMirror, MrtOutputLayer {
   }
 
   sync(): void {
-    this.group.visible = this.slots.sync(this.syncSources);
+    this.group.visible = this.slots.sync();
   }
 
   dispose(): void {

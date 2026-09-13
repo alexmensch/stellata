@@ -111,8 +111,7 @@ export class StarLayer {
     this.coreMaskMesh.visible = false;
     this.discMesh = mesh(this.geometries.disc, disc.material, 'star-disc-webgpu', 0);
     this.glowMesh = mesh(this.geometries.glow, glow.material, 'star-glow-webgpu', 1);
-    this.localMirror = new StarLocalMirrorTsl(
-      this.geometries.glow, deps, gates, () => this.tables.syncSources());
+    this.localMirror = new StarLocalMirrorTsl(this.geometries.glow, deps, gates);
   }
 
   /** Every mesh this layer owns, in draw order. */

@@ -113,16 +113,11 @@ export class MirrorSlots {
   /** Per-frame: re-copy every member's attribute slots from the live
    *  source arrays (positions move with the orbit walk / recentre;
    *  eclipse fields rewrite per frame). ~30 floats per member. Returns
-   *  whether any member draws — the mirror group's `visible`.
-   *
-   *  `beforeCopy` runs only when there IS something to copy, and before
-   *  the first read: the TSL mirror copies PACKED values, so the packed
-   *  buffers have to be current-frame first. */
-  sync(beforeCopy?: () => void): boolean {
+   *  whether any member draws — the mirror group's `visible`. */
+  sync(): boolean {
     const n = this.members.length;
     this.geometry.instanceCount = n;
     if (n === 0) return false;
-    beforeCopy?.();
     for (let m = 0; m < n; m++) {
       const idx = this.members[m];
       this.sourceIdx[m] = idx;

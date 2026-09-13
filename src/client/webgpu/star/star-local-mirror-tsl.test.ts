@@ -77,11 +77,11 @@ describe('StarLocalMirrorTsl construction', () => {
 });
 
 describe('StarLocalMirrorTsl sync', () => {
-  it('forwards the sources, then fills the member slots', () => {
+  // The slots carry iSourceIdx alone, so the mirror forwards nothing: the
+  // table its vertex stage reads at that index is the one StarLayer.update()
+  // made current earlier in the same tick.
+  it('fills the member slots and leaves the tables to the layer', () => {
     const { layer, sources } = makeLayer();
-    // Written to the raw WebGL source attribute before any frame hook ran:
-    // the forward inside sync is what puts it on the table the mirror's
-    // vertex stage reads.
     (sources.iPositionAttr.array as Float32Array).set([7, 8, 9], 2 * 3);
     sources.iPositionAttr.needsUpdate = true;
     const position = layer.tables.forwardedAttribute('iPosition');
@@ -92,6 +92,8 @@ describe('StarLocalMirrorTsl sync', () => {
     expect(geom.instanceCount).toBe(1);
     expect(layer.localMirror.group.visible).toBe(true);
     expect(geom.getAttribute('iSourceIdx').array[0]).toBe(2);
+    expect(position.version).toBe(before);
+    layer.update();
     expect(position.version).toBe(before + 1);
     expect((position.array as Float32Array).slice(6, 9)).toEqual(new Float32Array([7, 8, 9]));
   });

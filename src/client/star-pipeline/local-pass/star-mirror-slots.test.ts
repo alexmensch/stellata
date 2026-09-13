@@ -47,24 +47,18 @@ describe('the in-pass draw order', () => {
 });
 
 describe('MirrorSlots.sync', () => {
-  it('runs beforeCopy ahead of the first source read', () => {
-    // The TSL mirror copies PACKED values, so its re-pack has to land
-    // before the copy reads them — a hook that ran after would carry an
-    // eclipse dim to the mirror one frame late.
+  it('copies each member slot from the live source array', () => {
     const source = makeSource();
     const slots = new MirrorSlots(source);
+    (source.getAttribute('iPack0').array as Float32Array)[4] = 99;
     slots.setMembers([1]);
-    slots.sync(() => {
-      (source.getAttribute('iPack0').array as Float32Array)[4] = 99;
-    });
+    expect(slots.sync()).toBe(true);
     expect(slots.geometry.getAttribute('iPack0').array[0]).toBe(99);
   });
 
   it('skips the copy and reports invisible with no members', () => {
     const slots = new MirrorSlots(makeSource());
-    let hookRuns = 0;
-    expect(slots.sync(() => { hookRuns += 1; })).toBe(false);
-    expect(hookRuns).toBe(0);
+    expect(slots.sync()).toBe(false);
     expect(slots.geometry.instanceCount).toBe(0);
   });
 });
