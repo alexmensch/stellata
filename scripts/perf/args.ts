@@ -11,7 +11,7 @@ import {
   type PricedPassKey,
 } from '../../src/client/debug/frame-cost/passes/passes-pure';
 import { DEFAULT_DWELL_FRAMES, DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
-import { DEFAULT_SWEEP_SCALES } from './sweep-pure';
+import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
 import { DEFAULT_QUIET_MS } from './settle-pure';
 import { BACKENDS, SCENARIO_NAMES, type ScenarioName } from './scenarios';
 

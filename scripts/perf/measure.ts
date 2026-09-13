@@ -18,7 +18,7 @@ import {
 } from './page-protocol';
 import type { Backend } from './scenarios';
 import type { DwellRecord, RoundTripRecord, SweepRecord } from './schema';
-import { fitLogLog, sweepBracketMs, sweepOrder, type SweepPoint } from './sweep-pure';
+import { fitLogLog, sweepBracketMs, sweepOrder, type SweepPoint } from './sweep/sweep-pure';
 
 /** The dev server's own module URL for the WebGPU sample stream, relative to
  *  the Vite root (`src/client`). It has no window surface, so a dwell reaches

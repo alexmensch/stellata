@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ARG_DEFAULTS, ArgError, BACKEND_REQUESTS, MODES, ROUNDTRIP_IDLE, parseRunArgs, usage,
 } from './args';
-import { DEFAULT_SWEEP_SCALES } from './sweep-pure';
+import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
 import { SCENARIO_NAMES } from './scenarios';
 
 describe('parseRunArgs', () => {

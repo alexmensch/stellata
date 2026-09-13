@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import type { DwellSummary } from './dwell/dwell-pure';
 import type { RunDiff } from './diff-pure';
-import type { SweepPoint } from './sweep-pure';
+import type { SweepPoint } from './sweep/sweep-pure';
 import type { DwellRecord } from './schema';
 import {
   PRICE_ROW_COLUMNS,
