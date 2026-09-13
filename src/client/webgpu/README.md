@@ -37,11 +37,12 @@ src/client/webgpu/
                                     this backend's GPU clock can be
                                     trusted, and the resolve cadence —
                                     its own README.
-  star-attribute-roster.ts          Which star attributes pack, split by
-    (+ test)                        upload cadence. The test derives the
-                                    partition from the live WebGL
-                                    geometry, so a new attribute there
-                                    fails CI until this is updated.
+  star-attribute-roster.ts          Which WebGL star attribute feeds
+    (+ test)                        which storage table (static record,
+                                    forwarded, per-vertex). The test
+                                    derives the partition from the live
+                                    WebGL geometry, so a new attribute
+                                    there fails CI until it is placed.
   tonemap-tsl.ts                    TSL mirror of stellata_tonemap's
                                     undithered operator and the sRGB
                                     transfer pair, over tonemap-pure's
@@ -81,10 +82,12 @@ src/client/webgpu/
                                     compute kernel, and the per-star A_V
                                     buffer that feeds the star vertex
                                     stage — its own README.
-  star/                             The star layer: packed geometry + the
+  star/                             The star layer: star-indexed storage
+                                    tables, the compaction kernel, and the
                                     three depth-honest pipelines (D2 glow,
-                                    D3 core mask, D4 disc) and the MRT
-                                    write side — its own README.
+                                    D3 core mask, D4 disc) drawn indirect
+                                    at survivor count, plus the MRT write
+                                    side — its own README.
   solar-system/                     The planet mesh, ring annulus,
                                     atmosphere shell, reflected glare and
                                     probe glyph — its own README.
@@ -350,8 +353,8 @@ How app data reaches a TSL graph, and what a ported layer's tests look
 like, moved to `tsl/README.md`, which stays the authority: the
 uniform-node mirror's reference-vs-sync contract and the texture-slot
 exception (§ Shared uniform nodes), the @types/three gaps worth casting
-around (§ TSL typing shim), the 8-vertex-buffer limit and the
-static/dynamic cadence split (§ Attribute packing), and the three legs a
+around (§ TSL typing shim), the 8-vertex-buffer limit and the two ways
+a population answers it (§ Per-instance data), and the three legs a
 ported layer is covered by (§ TSL test pattern).
 
 ## Early-z — the star layer's depth-honest redesign
@@ -396,15 +399,17 @@ consistent state, and overlapping ranges, which `util/attribute-upload.ts`
 accumulates across frames when no render consumed them, carry identical
 bytes rather than racing.
 
-**The one buffer stellata's own GPU code writes is the extinction A_V
-buffer**, and it needs no per-draw slot: one compute dispatch per recompute
-writes it, in its own submit ahead of the frame's render, and every star
-draw in that render — three main passes and their mirrors — wants the
-*same* bytes from it (`extinction/README.md` § The prepass kernel). The
-per-draw slotting of `docs/render-rules.md` § 7 starts owing the moment a
-buffer carries a value that differs between draws sharing a submit — the
-compacted instance lists and indirect args the next stage of `0it.15`
-adds.
+**The buffers stellata's own GPU code writes are the extinction A_V
+buffer and the star compaction's survivor lists and indirect args**, and
+none needs a per-draw slot: each is written by one compute dispatch, in a
+compute submit ahead of the frame's render, and every draw in that render
+reading it wants the *same* bytes — the A_V cache is one value per star
+(`extinction/README.md` § The prepass kernel); the lists are one per tier,
+read by the draws of that tier and by nothing else
+(`star/compaction/README.md` § The buffer-writer requirements,
+discharged). The per-draw slotting of `docs/render-rules.md` § 7 starts
+owing the moment a buffer carries a value that differs between draws
+sharing a submit, and no buffer here does.
 
 **A storage attribute breaks the upload contract silently.** WGSL has no
 packed `vec3` in a storage buffer, so for `itemSize === 3` the backend pads
@@ -412,13 +417,18 @@ to 4 — and for a storage attribute alone it *reassigns*
 `bufferAttribute.itemSize` and `.array` to the padded copy. Anything
 holding the originals then diffs a stride and an array the GPU will never
 see. `DirtyItemUploader` caches both at construction and `iPosition` is
-itemSize 3; it is correct only because that attribute is a vertex
-attribute. The compute prepass sidesteps this by owning its two buffers
-outright — a vec4 position table and a float A_V table, neither routed
-through any uploader — and leaves `iPosition` a vertex attribute. Moving
-*that* one to storage (compaction, `0it.15`) has to re-read stride and
-array per flush or stop routing through `BufferAttribute`; the requirement
-stands in that bead's design field.
+itemSize 3; it is correct because that attribute stays a WebGL vertex
+attribute: the star layer reads positions out of an itemSize-1 storage
+table over the same array (`star/README.md` § Star tables), and the compute
+prepass owns a vec4 position table of its own. No itemSize-3 storage
+attribute exists in this tree.
+
+**`DynamicDrawUsage` is a per-render full upload on this backend.**
+`Attributes.update` re-runs the upload for an attribute carrying that usage
+on every render call whatever its version, and with no pending ranges that
+is the whole buffer. The star tables carry the default usage and upload on
+version alone; a per-frame-rewritten attribute elsewhere that keeps the
+hint pays its full byte count every rendered frame.
 
 ## Timestamps
 

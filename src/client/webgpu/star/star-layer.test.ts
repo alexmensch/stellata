@@ -1,33 +1,32 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import type { ComputeNode, WebGPURenderer } from 'three/webgpu';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { makeEmitterGateNodes } from '../hdr/emitter-gates';
 import { ExtinctionNodes } from '../extinction/extinction-nodes';
+import { STAR_FORWARDED_ATTRIBUTES } from '../star-attribute-roster';
 import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
-import { StarLayer } from './star-layer';
+import { STAR_VERTEX_STAGE_STORAGE_BUFFERS, StarLayer } from './star-layer';
 import { DEPTH_MASK_RENDER_ORDER } from '../../scene/render-order';
-import { makeStarGeometrySources } from './star-sources-mock';
+import { makeFakeStarRenderer, makeStarLayerSources } from './star-sources-mock';
 
-function makeLayer(count = 4) {
+export function makeLayer(count = 4) {
   const shared = buildSharedUniforms({
     pixelRatio: 2, fovYRad: 0.75, viewportW: 1600, viewportH: 900,
     hdr: makeHdrEmitterUniforms(),
   });
   const nodes = buildSharedUniformNodes(shared).nodes;
   const scene = new THREE.Scene();
-  const { sources } = makeStarGeometrySources(count);
+  const { sources } = makeStarLayerSources(count);
+  const fake = makeFakeStarRenderer();
   return {
-    scene, sources,
-    layer: new StarLayer(scene, nodes, sources, makeEmitterGateNodes(), new ExtinctionNodes()),
+    scene, sources, ...fake,
+    layer: new StarLayer(
+      fake.renderer as unknown as WebGPURenderer, scene, nodes, sources,
+      makeEmitterGateNodes(), new ExtinctionNodes()),
   };
 }
-
-const version = (layer: StarLayer) =>
-  (layer.glowMesh.geometry.getAttribute('iDyn0') as THREE.InstancedBufferAttribute).version;
-
-const sync = (layer: StarLayer) =>
-  (layer.glowMesh.onBeforeRender as () => void)();
 
 describe('StarLayer', () => {
   it('adds the glow mesh at the glow renderOrder, uncullable, additive, no depth write', () => {
@@ -64,7 +63,7 @@ describe('StarLayer', () => {
   // Draw-count parity with the WebGL2 stack is part of the port contract:
   // the migration may not cost more per frame than the renderer it
   // replaces (../README.md § Early-z).
-  it('is three draws over one geometry, no more', () => {
+  it('is three draws, no more', () => {
     const { scene, layer } = makeLayer();
     expect([...scene.children].sort((a, b) => a.renderOrder - b.renderOrder))
       .toEqual([layer.coreMaskMesh, layer.discMesh, layer.glowMesh]);
@@ -133,11 +132,23 @@ describe('StarLayer', () => {
       .toEqual(before);
   });
 
-  it('every mesh shares the one packed geometry by identity', () => {
+  // Mask and disc draw the disc-tier list, so they share its geometry and
+  // its args slot; glow has its own (compaction/README.md).
+  it('mask and disc share the disc-tier geometry; glow draws its own tier', () => {
     const { layer } = makeLayer();
-    for (const mesh of [layer.coreMaskMesh, layer.discMesh]) {
-      expect(mesh.geometry).toBe(layer.glowMesh.geometry);
-    }
+    expect(layer.coreMaskMesh.geometry).toBe(layer.discMesh.geometry);
+    expect(layer.glowMesh.geometry).not.toBe(layer.discMesh.geometry);
+    const disc = layer.discMesh.geometry as THREE.InstancedBufferGeometry;
+    const glow = layer.glowMesh.geometry as THREE.InstancedBufferGeometry;
+    expect(disc.indirect).toBe(layer.compaction.args);
+    expect(glow.indirect).toBe(layer.compaction.args);
+    expect(glow.indirectOffset).toBe(0);
+    expect(disc.indirectOffset).toBe(20);
+  });
+
+  it('binds seven storage buffers in the vertex stage — the boot floor', () => {
+    expect(STAR_VERTEX_STAGE_STORAGE_BUFFERS).toBe(7);
+    expect(STAR_VERTEX_STAGE_STORAGE_BUFFERS).toBe(3 + STAR_FORWARDED_ATTRIBUTES.length);
   });
 
   // The core mask is in the set although its writes are masked off: three's
@@ -174,85 +185,49 @@ describe('StarLayer', () => {
     target.forEach((m, i) => expect(m.version).toBe(settled[i]));
   });
 
-  it('first rendered frame re-packs unconditionally — the sentinel fails first write', () => {
-    const { layer } = makeLayer();
-    const before = version(layer);
-    sync(layer);
-    expect(version(layer)).toBe(before + 1);
-    sync(layer);
-    expect(version(layer)).toBe(before + 1);
+  // The frame hook: forward this frame's attribute writes, then dispatch —
+  // in that order, or the kernel lists survivors off last frame's
+  // positions while the draws read this frame's.
+  it('update() forwards the sources and dispatches the compaction once', () => {
+    const { layer, sources, dispatches } = makeLayer();
+    const position = layer.tables.forwardedAttribute('iPosition');
+    const before = position.version;
+    layer.update();
+    expect(position.version).toBe(before + 1);
+    expect(dispatches).toHaveLength(1);
+    sources.iPositionAttr.addUpdateRange(3, 3);
+    sources.iPositionAttr.needsUpdate = true;
+    layer.update();
+    expect(position.updateRanges).toEqual([{ start: 3, count: 3 }]);
+    expect(dispatches).toHaveLength(2);
   });
 
-  it('re-packs a dynamic scalar when its WebGL source attribute is flagged', () => {
-    const { layer, sources } = makeLayer();
-    sync(layer);
-    const dyn = layer.glowMesh.geometry.getAttribute('iDyn0') as THREE.InstancedBufferAttribute;
-    (sources.iEclipseDimAttr.array as Float32Array)[2] = 0.25;
-    sources.iEclipseDimAttr.needsUpdate = true;
-    sync(layer);
-    expect((dyn.array as Float32Array)[2 * 4 + 1]).toBe(0.25);
-  });
-
-  it('leaves the packed buffer alone on frames where nothing was flagged', () => {
-    const { layer, sources } = makeLayer();
-    sync(layer);
-    (sources.iEclipseDimAttr.array as Float32Array)[2] = 0.25;
-    // No needsUpdate — the WebGL path would not upload either.
-    sync(layer);
-    const dyn = layer.glowMesh.geometry.getAttribute('iDyn0') as THREE.InstancedBufferAttribute;
-    expect((dyn.array as Float32Array)[2 * 4 + 1]).toBe(1);
-  });
-
-  it('re-packs and uploads only the slots a ranged source reports', () => {
-    const { layer, sources } = makeLayer(8);
-    sync(layer);
-    const dyn = layer.glowMesh.geometry.getAttribute('iDyn0') as THREE.InstancedBufferAttribute;
-    dyn.clearUpdateRanges();
-    const src = sources.iEclipseDimAttr;
-    (src.array as Float32Array)[5] = 0.5;
-    src.addUpdateRange(5, 1);
-    src.needsUpdate = true;
-    sync(layer);
-    expect((dyn.array as Float32Array)[5 * 4 + 1]).toBe(0.5);
-    // iEclipseDim is iDyn0.y, so the range spans instance 5's whole vec4.
-    expect(dyn.updateRanges).toEqual([{ start: 20, count: 4 }]);
-    // Consumed, or they accumulate to the uploader's cap unnoticed.
-    expect(src.updateRanges).toHaveLength(0);
-  });
-
-  it('a full pass on the same buffer discards ranges — three honours ranges over the array', () => {
-    const { layer, sources } = makeLayer(8);
-    sync(layer);
-    const dyn = layer.glowMesh.geometry.getAttribute('iDyn0') as THREE.InstancedBufferAttribute;
-    dyn.clearUpdateRanges();
-    (sources.iEclipseDimAttr.array as Float32Array)[5] = 0.5;
-    sources.iEclipseDimAttr.addUpdateRange(5, 1);
-    sources.iEclipseDimAttr.needsUpdate = true;
-    (sources.iCompositeSuppressAttr.array as Float32Array)[7] = 1;
-    sources.iCompositeSuppressAttr.needsUpdate = true; // no ranges → full
-    sync(layer);
-    expect((dyn.array as Float32Array)[5 * 4 + 1]).toBe(0.5);
-    expect((dyn.array as Float32Array)[7 * 4 + 0]).toBe(1);
-    expect(dyn.updateRanges).toHaveLength(0);
-  });
-
-  it('dispose removes every mesh and releases geometry, all three materials, and the LUT', () => {
-    const { scene, layer } = makeLayer();
+  it('dispose removes every mesh and releases geometries, materials, LUT, kernels and every storage buffer', () => {
+    const { scene, layer, released, dispatches } = makeLayer();
+    layer.update();
     const disposed = new Set<string>();
     const watch = (
       o: { addEventListener(type: 'dispose', listener: () => void): void },
       tag: string,
     ) => o.addEventListener('dispose', () => { disposed.add(tag); });
     const meshes = [layer.coreMaskMesh, layer.discMesh, layer.glowMesh];
-    watch(layer.glowMesh.geometry, 'geometry');
+    watch(layer.glowMesh.geometry, 'geometry:glow');
+    watch(layer.discMesh.geometry, 'geometry:disc');
     for (const mesh of meshes) watch(mesh.material as THREE.Material, `material:${mesh.name}`);
     watch(layer.colorLut, 'lut');
+    for (const k of dispatches[0] as ComputeNode[]) watch(k, `compute:${k.name}`);
     layer.dispose();
     for (const mesh of meshes) expect(scene.children).not.toContain(mesh);
     expect([...disposed].sort()).toEqual([
-      'geometry', 'lut',
+      'compute:star-compaction', 'compute:star-compaction-reset',
+      'geometry:disc', 'geometry:glow', 'lut',
       'material:star-core-mask-webgpu', 'material:star-disc-webgpu',
       'material:star-glow-webgpu',
     ]);
+    // Statics + four forwarded + survivors + args: none sits in a geometry.
+    expect(released).toHaveLength(1 + STAR_FORWARDED_ATTRIBUTES.length + 2);
+    expect(released).toContain(layer.compaction.survivors);
+    expect(released).toContain(layer.compaction.args);
+    expect(released).toContain(layer.tables.statics);
   });
 });

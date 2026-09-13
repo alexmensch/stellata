@@ -1,38 +1,31 @@
-// The star layer on a WebGPU boot: packed geometry + the three TSL star
-// meshes (core mask, disc, glow), added to the scene the shell passes in.
-// Constructed through WebGpuSeam.attachStarLayer.
+// The star layer on a WebGPU boot: star-indexed storage tables, the
+// compaction kernel, and the three TSL star meshes (core mask, disc, glow)
+// drawn indirect at survivor count. Constructed through WebGpuSeam.attachStarLayer.
 
 import * as THREE from 'three';
+import type { WebGPURenderer } from 'three/webgpu';
 import { makeColorLutTexture } from '../../star-pipeline/blackbody-lut';
 import { DEPTH_MASK_RENDER_ORDER } from '../../scene/render-order';
-import {
-  packedUploadRange, repackScalarInPlace, repackScalarRange,
-} from '../tsl/attribute-packing-pure';
-import { STAR_DYNAMIC_SCALARS } from '../star-attribute-roster';
+import { STAR_FORWARDED_ATTRIBUTES } from '../star-attribute-roster';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import type { ExtinctionNodes } from '../extinction/extinction-nodes';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
-import {
-  buildStarGeometry,
-  dynamicScalarSourceAttrs,
-  type StarGeometryBuild,
-  type StarGeometrySources,
-} from './star-geometry';
+import { STAR_TIER_DISC, STAR_TIER_GLOW, tierListBase, type StarTier } from './compaction/compaction-pure';
+import { StarCompaction } from './compaction/star-compaction';
+import { STAR_QUAD_INDEX_COUNT, buildStarGeometries, type StarGeometries } from './star-geometry';
+import { StarTables, type StarLayerSources } from './star-tables';
 import { applyChartBlendSwap } from '../../star-pipeline/star-pipeline';
 import { buildStarCoreMaskMaterial } from './star-core-mask-tsl';
 import { applyStarDiscTslBlend, buildStarDiscMaterial } from './star-disc-tsl';
 import { buildStarGlowMaterial } from './star-glow-tsl';
 import { StarLocalMirrorTsl } from './star-local-mirror-tsl';
 import type { MrtEmitterMaterial } from '../hdr/mrt-material';
-import type { StarTslDeps } from './star-vertex-tsl';
+import type { StarTslDeps, StarVertexSource } from './star-vertex-tsl';
 
-interface DynamicWatcher {
-  name: (typeof STAR_DYNAMIC_SCALARS)[number];
-  src: THREE.InstancedBufferAttribute;
-  /** Sentinel -1: the first rendered frame always re-packs, so a write
-   *  landing between construction and first render cannot be missed. */
-  last: number;
-}
+/** Storage buffers a main-pass star vertex stage binds — the count the boot
+ *  holds the device to (../tsl/README.md § Storage attributes). */
+export const STAR_VERTEX_STAGE_STORAGE_BUFFERS =
+  ['survivors', 'av', 'statics', ...STAR_FORWARDED_ATTRIBUTES].length;
 
 export class StarLayer {
   /** Depth-only member/core stamp, first in the frame (renderOrder −4);
@@ -48,11 +41,12 @@ export class StarLayer {
    *  it to StarLocalCluster, which parents it into the pass scene and owns
    *  its dispose — the same split as the GLSL mirror. */
   readonly localMirror: StarLocalMirrorTsl;
+  readonly tables: StarTables;
+  readonly compaction: StarCompaction;
 
+  private readonly renderer: WebGPURenderer;
   private readonly scene: THREE.Scene;
-  private readonly build: StarGeometryBuild;
-  private readonly dynArrays: Float32Array[];
-  private readonly watchers: DynamicWatcher[];
+  private readonly geometries: StarGeometries;
   /** Every material that draws into the HDR target, mask included — the
    *  set `setMrtOutputs` swaps. */
   private readonly targetMaterials: MrtEmitterMaterial[];
@@ -62,64 +56,63 @@ export class StarLayer {
    *  `setMonochromeBlend` makes. */
   private readonly discMaterial: THREE.Material;
   private readonly glowMaterial: THREE.Material;
-  /** Per-frame scratch, one slot per packed dynamic buffer — reused so the
-   *  render loop allocates nothing. */
-  private readonly pendingFull: boolean[];
-  private readonly pendingRanges: { start: number; count: number }[][];
 
   constructor(
+    renderer: WebGPURenderer,
     scene: THREE.Scene,
     nodes: SharedUniformNodes,
-    sources: StarGeometrySources,
+    sources: StarLayerSources,
     gates: EmitterGateNodes,
     extinction: ExtinctionNodes,
   ) {
+    this.renderer = renderer;
     this.scene = scene;
-    this.build = buildStarGeometry(sources);
-    this.dynArrays = this.build.dynAttrs.map((a) => a.array as Float32Array);
-    const sourceAttrs = dynamicScalarSourceAttrs(sources);
-    this.watchers = STAR_DYNAMIC_SCALARS.map((name) => ({
-      name, src: sourceAttrs[name], last: -1,
-    }));
-    this.pendingFull = this.build.dynAttrs.map(() => false);
-    this.pendingRanges = this.build.dynAttrs.map(() => []);
+    this.tables = new StarTables(sources);
     this.colorLut = makeColorLutTexture();
     const deps: StarTslDeps = {
       u: nodes,
-      staticPlan: this.build.staticPlan,
-      dynamicPlan: this.build.dynamicPlan,
+      tables: this.tables,
       lut: this.colorLut,
       dust: extinction.dust,
       av: extinction.av,
     };
+    this.compaction = new StarCompaction(renderer, deps, STAR_QUAD_INDEX_COUNT);
+    this.geometries = buildStarGeometries(
+      this.tables.count, sources.boundingSphereRadiusPc, this.compaction.args);
+    const listSource = (tier: StarTier): StarVertexSource => ({
+      kind: 'compacted',
+      survivors: this.compaction.survivorsNode,
+      listBase: tierListBase(tier, this.tables.count),
+    });
 
-    const mesh = (material: THREE.Material, name: string, renderOrder: number) => {
-      const m = new THREE.Mesh(this.build.geometry, material);
+    const mesh = (
+      geometry: THREE.InstancedBufferGeometry,
+      material: THREE.Material,
+      name: string,
+      renderOrder: number,
+    ) => {
+      const m = new THREE.Mesh(geometry, material);
       m.name = name;
       m.frustumCulled = false;
       m.renderOrder = renderOrder;
-      // Every mesh carries the sync hook: whichever draws first this frame
-      // does the re-pack, and the version sentinels make the rest no-ops —
-      // the core mask may be gated invisible, so no single mesh can own it.
-      m.onBeforeRender = () => this.syncDynamicAttributes();
       scene.add(m);
       return m;
     };
     // renderOrder mirrors the WebGL stack exactly, three draws and no
     // more: core mask (−4) → background layers → disc (0) → glow (1).
-    const mask = buildStarCoreMaskMaterial(deps);
-    const disc = buildStarDiscMaterial(deps, gates);
-    const glow = buildStarGlowMaterial(deps, gates);
+    const mask = buildStarCoreMaskMaterial(deps, listSource(STAR_TIER_DISC));
+    const disc = buildStarDiscMaterial(deps, gates, listSource(STAR_TIER_DISC));
+    const glow = buildStarGlowMaterial(deps, gates, listSource(STAR_TIER_GLOW));
     this.targetMaterials = [mask, disc, glow];
     this.discMaterial = disc.material;
     this.glowMaterial = glow.material;
     this.coreMaskMesh = mesh(
-      mask.material, 'star-core-mask-webgpu', DEPTH_MASK_RENDER_ORDER);
+      this.geometries.disc, mask.material, 'star-core-mask-webgpu', DEPTH_MASK_RENDER_ORDER);
     this.coreMaskMesh.visible = false;
-    this.discMesh = mesh(disc.material, 'star-disc-webgpu', 0);
-    this.glowMesh = mesh(glow.material, 'star-glow-webgpu', 1);
+    this.discMesh = mesh(this.geometries.disc, disc.material, 'star-disc-webgpu', 0);
+    this.glowMesh = mesh(this.geometries.glow, glow.material, 'star-glow-webgpu', 1);
     this.localMirror = new StarLocalMirrorTsl(
-      this.build.geometry, deps, gates, () => this.syncDynamicAttributes());
+      this.geometries.glow, deps, gates, () => this.tables.syncSources());
   }
 
   /** Every mesh this layer owns, in draw order. */
@@ -158,52 +151,13 @@ export class StarLayer {
       this.discMaterial, this.glowMaterial, on, applyStarDiscTslBlend);
   }
 
-  /** Re-pack any per-frame scalar whose source attribute was flagged
-   *  since the last rendered frame (README.md § Dynamic attributes).
-   *
-   *  Load-bearing: ranges must lose to a full upload on the same buffer in
-   *  the same frame. three.js honours a non-empty range list INSTEAD of
-   *  the full array, so a range added beside a full pass would drop every
-   *  slot outside it. */
-  private syncDynamicAttributes(): void {
-    const fullPass = this.pendingFull;
-    const ranged = this.pendingRanges;
-    fullPass.fill(false);
-    for (const r of ranged) r.length = 0;
-
-    for (const w of this.watchers) {
-      if (w.src.version === w.last) continue;
-      w.last = w.src.version;
-      const srcRanges = w.src.updateRanges;
-      if (srcRanges.length === 0) {
-        fullPass[repackScalarInPlace(
-          this.build.dynamicPlan, this.dynArrays, w.name, w.src.array)] = true;
-        continue;
-      }
-      const itemSize = w.src.itemSize;
-      for (const r of srcRanges) {
-        const startItem = r.start / itemSize;
-        const itemCount = r.count / itemSize;
-        const buffer = repackScalarRange(
-          this.build.dynamicPlan, this.dynArrays, w.name, w.src.array, startItem, itemCount);
-        ranged[buffer].push(packedUploadRange(startItem, itemCount));
-      }
-      // Nothing else consumes these: on a WebGPU boot the WebGL geometry
-      // never renders, so no renderer clears them and they would
-      // accumulate to the uploader's range cap and force a full upload.
-      w.src.clearUpdateRanges();
-    }
-
-    for (let b = 0; b < this.build.dynAttrs.length; b++) {
-      const attr = this.build.dynAttrs[b];
-      if (fullPass[b]) {
-        attr.clearUpdateRanges();
-        attr.needsUpdate = true;
-      } else if (ranged[b].length > 0) {
-        for (const r of ranged[b]) attr.addUpdateRange(r.start, r.count);
-        attr.needsUpdate = true;
-      }
-    }
+  /** The frame's compaction: forward this frame's attribute writes onto the
+   *  tables, then dispatch the kernel that lists the survivors every draw
+   *  below reads. After the shell's uniform-node sync, before its render. */
+  update(): void {
+    this.tables.syncSources();
+    this.compaction.dispatch();
+    this.tables.endFrame();
   }
 
   dispose(): void {
@@ -211,8 +165,10 @@ export class StarLayer {
       this.scene.remove(m);
       (m.material as THREE.Material).dispose();
     }
-    this.build.geometry.dispose();
+    this.geometries.glow.dispose();
+    this.geometries.disc.dispose();
     this.colorLut.dispose();
-    for (const w of this.watchers) w.last = -1;
+    this.compaction.dispose();
+    this.tables.dispose(this.renderer);
   }
 }

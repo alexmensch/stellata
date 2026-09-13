@@ -1,12 +1,12 @@
-// StarGeometrySources over a zero-filled StarPipeline, for tests that
-// need the real WebGL-side attributes without a GL context.
+// StarLayerSources over a zero-filled StarPipeline, for tests that need
+// the real WebGL-side attributes without a GL context.
 
 import { StarPipeline } from '../../star-pipeline/star-pipeline';
 import { makeStarPipelineOptions } from '../../star-pipeline/star-pipeline-mock';
-import type { StarGeometrySources } from './star-geometry';
+import type { StarLayerSources } from './star-tables';
 
-export function makeStarGeometrySources(count = 4): {
-  sources: StarGeometrySources;
+export function makeStarLayerSources(count = 4): {
+  sources: StarLayerSources;
   opts: ReturnType<typeof makeStarPipelineOptions>;
   pipe: StarPipeline;
 } {
@@ -23,10 +23,24 @@ export function makeStarGeometrySources(count = 4): {
       teffApsis: opts.teffApsis,
       boundingSphereRadiusPc: opts.boundingSphereRadiusPc,
       iPositionAttr: pipe.iPositionAttr,
-      iPulsAttr: pipe.iPulsAttr,
       iCompositeSuppressAttr: pipe.iCompositeSuppressAttr,
       iEclipseDimAttr: pipe.iEclipseDimAttr,
       iSuppressPulsationAttr: pipe.iSuppressPulsationAttr,
+    },
+  };
+}
+
+/** A renderer that records compute dispatches and storage releases — what
+ *  the layer touches outside construction. */
+export function makeFakeStarRenderer() {
+  const dispatches: unknown[][] = [];
+  const released: unknown[] = [];
+  return {
+    dispatches,
+    released,
+    renderer: {
+      compute: (nodes: unknown) => dispatches.push(Array.isArray(nodes) ? nodes : [nodes]),
+      _attributes: { delete: (a: unknown) => released.push(a) },
     },
   };
 }

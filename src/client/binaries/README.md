@@ -403,6 +403,13 @@ range list *over* the full array:
   the list on upload), so a flush appends rather than replacing, and
   falls back to a full upload once the accumulation exceeds the budget.
 
+Both rules hold on the WebGPU boot unchanged, where nothing renders the
+attributes this uploader flags: the star layer wraps each attribute's
+array as an itemSize-1 storage table and forwards its version and update
+ranges verbatim, full-over-ranges included
+(`../webgpu/star/README.md` § Star tables). The uploader's stride and
+array are therefore always the GPU's, on either backend.
+
 Camera-epsilon and Kepler-chain-aware variants of the static-frame skip
 were considered and rejected: while genuinely navigating, the camera
 moves far more than any epsilon that would still keep the LOD gates

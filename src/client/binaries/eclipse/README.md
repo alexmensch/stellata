@@ -92,11 +92,10 @@ frames that write nothing skip the attribute re-upload entirely.
 every member of a cached relation, the only slots the dim walk can
 write. The uploader diffs those slots and uploads ranges over the ones
 whose float32 bits moved, so an eclipse frame costs tens of bytes
-rather than the whole per-instance buffer — which on WebGPU also
-re-packs every instance on the CPU, the scalar being interleaved into
-the packed `iDyn0` vec4. Both whole-buffer figures, and which writer
-reaches that path, are `../../webgpu/star/README.md` § Dynamic
-attributes.
+rather than the whole per-instance buffer. On WebGPU the ranges are
+forwarded onto the scalar's storage table as they are; the whole-buffer
+figure, and which writer reaches that path, are
+`../../webgpu/star/README.md` § Star tables.
 
 The **decay tail** needs no bookkeeping of its own: a slot blending
 back toward 1.0 keeps differing from the uploader's shadow for as many

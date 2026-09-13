@@ -13,7 +13,7 @@ import {
   discPassEntryGate, discPassKernel, finishStarColourMaterial,
 } from './star-emission-tsl';
 import {
-  buildStarVaryings, buildStarVertexNode, type StarTslDeps,
+  buildStarVaryings, buildStarVertexNode, type StarTslDeps, type StarVertexSource,
 } from './star-vertex-tsl';
 
 /** The disc draw's calibrated blend state — construction AND chart-mode
@@ -33,7 +33,7 @@ export function applyStarDiscTslBlend(m: THREE.Material) {
 export function buildStarDiscMaterial(
   deps: StarTslDeps,
   gates: EmitterGateNodes,
-  localMirror = false,
+  source: StarVertexSource,
 ): MrtEmitterMaterial {
   const v = buildStarVaryings();
 
@@ -53,8 +53,8 @@ export function buildStarDiscMaterial(
   const coreMask = (glow: Node<'float'>) => step(deps.u.uCoreThreshold, glow);
 
   const material = new NodeMaterial();
-  material.name = localMirror ? 'star-disc-local-tsl' : 'star-disc-tsl';
-  material.vertexNode = buildStarVertexNode(deps, STAR_PASS_DISC, v, localMirror);
+  material.name = source.kind === 'mirror' ? 'star-disc-local-tsl' : 'star-disc-tsl';
+  material.vertexNode = buildStarVertexNode(deps, STAR_PASS_DISC, v, source);
   applyStarDiscTslBlend(material);
   return finishStarColourMaterial(
     material, deps.u, v, gates, () => discPassEntryGate(v), kernel, coreMask);

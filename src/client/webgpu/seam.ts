@@ -23,11 +23,11 @@ import type {
 } from '../star-pipeline/extinction/extinction-seam';
 import type { StarMirror } from '../star-pipeline/local-pass/star-mirror-slots';
 import type { SharedUniformNodes } from './tsl/shared-uniform-nodes';
-import type { StarGeometrySources } from './star/star-geometry';
+import type { StarLayerSources } from './star/star-tables';
 
 export type StellataRenderer = THREE.WebGLRenderer | WebGPURenderer;
 
-export type { StarGeometrySources } from './star/star-geometry';
+export type { StarLayerSources } from './star/star-tables';
 
 /** What the shell supplies for the A_V cache; the renderer, the dust node
  *  and the uniform-node mirror are the seam's own. */
@@ -47,6 +47,11 @@ export interface WebGpuStarLayer {
    *  pipeline's `setMonochromeBlend`, taken from the same `setMonochrome`
    *  call site. */
   setMonochrome(on: boolean): void;
+  /** The frame's compaction dispatch — forwards the star attributes the
+   *  shell wrote this frame and lists the survivors the three draws read.
+   *  Call after `syncUniformNodes` (the kernel reads those scalars) and
+   *  before the render (star/compaction/README.md). */
+  update(): void;
   /** The local-depth-pass mirror this layer built. The shell hands it to
    *  StarLocalCluster in place of the GLSL StarLocalMirror; the cluster
    *  parents its group into the pass scene and owns its dispose. */
@@ -85,7 +90,7 @@ export interface WebGpuSeam {
    *  from the uniform-node mirror. */
   attachStarLayer(
     scene: THREE.Scene,
-    sources: StarGeometrySources,
+    sources: StarLayerSources,
   ): WebGpuStarLayer;
   /** Bind (or release) the dust volume for every TSL consumer that samples
    *  it. One node, shared by object identity between the star vertex

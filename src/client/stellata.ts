@@ -668,7 +668,6 @@ export class Stellata implements FrameAnchor {
       teffApsis: this.starFrame.teffApsis,
       boundingSphereRadiusPc: CATALOG_BOUNDING_RADIUS_PC,
       iPositionAttr: this.starPipeline.iPositionAttr,
-      iPulsAttr: this.starPipeline.iPulsAttr,
       iCompositeSuppressAttr: this.starPipeline.iCompositeSuppressAttr,
       iEclipseDimAttr: this.starPipeline.iEclipseDimAttr,
       iSuppressPulsationAttr: this.starPipeline.iSuppressPulsationAttr,
@@ -2719,6 +2718,12 @@ export class Stellata implements FrameAnchor {
     perfGpuBegin('main');
     this.hdr.bind();
     this.webgpu?.syncUniformNodes();
+    // Reads the scalars the sync above just copied, writes the lists every
+    // star draw below reads — its own submit, so it has to sit between
+    // the two (webgpu/star/compaction/README.md).
+    perfMark('star.compaction');
+    this.webgpuStarLayer?.update();
+    perfMeasure('star.compaction');
     // One walk on the first rendered frame: every layer is parented by
     // then (the roster attach loop and registerSceneLayers both run in
     // this constructor, ahead of animate), and a GLSL material here

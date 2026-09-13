@@ -40,6 +40,12 @@ describe('supportsVertexStageStorageBuffers', () => {
       rendererReporting({ maxStorageBuffersInVertexStage: 8 }))).toBe(true);
   });
 
+  it('holds the device to the count the star vertex stage binds', () => {
+    const six = rendererReporting({ maxStorageBuffersInVertexStage: 6 });
+    expect(supportsVertexStageStorageBuffers(six, 7)).toBe(false);
+    expect(supportsVertexStageStorageBuffers(six, 6)).toBe(true);
+  });
+
   // No limit means the device predates the compatibility feature level that
   // introduced it, so core limits apply and a vertex stage gets its eight.
   it('accepts a device that reports no such limit at all', () => {

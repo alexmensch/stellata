@@ -1,29 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
-import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import {
   MIRROR_CAPACITY, MIRROR_RENDER_ORDER,
 } from '../../star-pipeline/local-pass/star-mirror-slots';
-import { makeEmitterGateNodes } from '../hdr/emitter-gates';
-import { MAX_VERTEX_BUFFERS } from '../star-attribute-roster';
-import { ExtinctionNodes } from '../extinction/extinction-nodes';
-import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
-import { StarLayer } from './star-layer';
-import { makeStarGeometrySources } from './star-sources-mock';
-
-function makeLayer(count = 4) {
-  const shared = buildSharedUniforms({
-    pixelRatio: 2, fovYRad: 0.75, viewportW: 1600, viewportH: 900,
-    hdr: makeHdrEmitterUniforms(),
-  });
-  const nodes = buildSharedUniformNodes(shared).nodes;
-  const { sources } = makeStarGeometrySources(count);
-  return {
-    sources,
-    layer: new StarLayer(new THREE.Scene(), nodes, sources, makeEmitterGateNodes(), new ExtinctionNodes()),
-  };
-}
+import type { StarLayer } from './star-layer';
+import { makeLayer } from './star-layer.test';
 
 function meshes(layer: StarLayer): [THREE.Mesh, THREE.Mesh, THREE.Mesh] {
   return layer.localMirror.group.children as [THREE.Mesh, THREE.Mesh, THREE.Mesh];
@@ -34,24 +15,18 @@ function mirrorGeometry(layer: StarLayer): THREE.InstancedBufferGeometry {
 }
 
 describe('StarLocalMirrorTsl construction', () => {
-  it('mirrors every packed instanced attribute by name, at capacity, plus iSourceIdx', () => {
+  // Every star field is read out of the layer's tables by iSourceIdx, so
+  // the slots carry nothing else — the source geometry has no per-instance
+  // attribute left to mirror.
+  it('holds the corner and iSourceIdx alone, at capacity, drawing nothing', () => {
     const { layer } = makeLayer();
     const geom = mirrorGeometry(layer);
-    const source = layer.glowMesh.geometry;
-    for (const [name, attr] of Object.entries(source.attributes)) {
-      if (!(attr instanceof THREE.InstancedBufferAttribute)) continue;
-      const dst = geom.getAttribute(name);
-      expect(dst.itemSize).toBe(attr.itemSize);
-      expect(dst.array.length).toBe(MIRROR_CAPACITY * attr.itemSize);
-    }
-    expect(geom.getAttribute('iSourceIdx').itemSize).toBe(1);
+    expect(Object.keys(geom.attributes).sort()).toEqual(['aCorner', 'iSourceIdx']);
+    const idx = geom.getAttribute('iSourceIdx');
+    expect(idx.itemSize).toBe(1);
+    expect(idx.array.length).toBe(MIRROR_CAPACITY);
     expect(geom.instanceCount).toBe(0);
-  });
-
-  it('stays within the guaranteed vertex-buffer budget', () => {
-    const { layer } = makeLayer();
-    const geom = mirrorGeometry(layer);
-    expect(Object.keys(geom.attributes)).toHaveLength(MAX_VERTEX_BUFFERS);
+    expect(geom.indirect).toBeNull();
   });
 
   it('shares the non-instanced aCorner + index buffers with the source by reference', () => {
@@ -95,36 +70,30 @@ describe('StarLocalMirrorTsl construction', () => {
   });
 
   it('is not in the seam scene — the cluster parents it into the pass scene', () => {
-    const scene = new THREE.Scene();
-    const shared = buildSharedUniforms({
-      pixelRatio: 2, fovYRad: 0.75, viewportW: 1600, viewportH: 900,
-      hdr: makeHdrEmitterUniforms(),
-    });
-    const nodes = buildSharedUniformNodes(shared).nodes;
-    const { sources } = makeStarGeometrySources(4);
-    const layer = new StarLayer(scene, nodes, sources, makeEmitterGateNodes(), new ExtinctionNodes());
+    const { scene, layer } = makeLayer();
     expect(layer.localMirror.group.parent).toBeNull();
     expect(scene.children).not.toContain(layer.localMirror.group);
   });
 });
 
 describe('StarLocalMirrorTsl sync', () => {
-  it('re-packs the dynamic sources, then copies each member slot', () => {
+  it('forwards the sources, then fills the member slots', () => {
     const { layer, sources } = makeLayer();
-    // Written to the raw WebGL source attribute — the mirror must see it
-    // through the packed iDyn0 copy even though no main mesh rendered.
-    (sources.iEclipseDimAttr.array as Float32Array)[2] = 0.25;
-    sources.iEclipseDimAttr.needsUpdate = true;
+    // Written to the raw WebGL source attribute before any frame hook ran:
+    // the forward inside sync is what puts it on the table the mirror's
+    // vertex stage reads.
     (sources.iPositionAttr.array as Float32Array).set([7, 8, 9], 2 * 3);
+    sources.iPositionAttr.needsUpdate = true;
+    const position = layer.tables.forwardedAttribute('iPosition');
+    const before = position.version;
     layer.localMirror.setMembers([2]);
     layer.localMirror.sync();
     const geom = mirrorGeometry(layer);
     expect(geom.instanceCount).toBe(1);
     expect(layer.localMirror.group.visible).toBe(true);
     expect(geom.getAttribute('iSourceIdx').array[0]).toBe(2);
-    expect(Array.from(geom.getAttribute('iPosition').array.slice(0, 3))).toEqual([7, 8, 9]);
-    // iEclipseDim is iDyn0.y (roster order).
-    expect(geom.getAttribute('iDyn0').array[1]).toBe(0.25);
+    expect(position.version).toBe(before + 1);
+    expect((position.array as Float32Array).slice(6, 9)).toEqual(new Float32Array([7, 8, 9]));
   });
 
   it('hides the group and draws nothing with no members', () => {
