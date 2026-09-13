@@ -658,8 +658,8 @@ describe('LocalGroupEmission controller', () => {
       expect(drawnAfter(() => {})).toBe(true);
     });
 
-    // The brightness skip leaves the glow enabled and not drawing, which is
-    // exactly the state the `lgEmission` lever used to price as a zero row.
+    // The brightness skip leaves the glow enabled and not drawing — the state
+    // the `lgEmission` lever must find absent rather than price as a zero row.
     it('does not draw while the contribution gate has skipped it', () => {
       expect(drawnAfter((l) => l.setContributing(false))).toBe(false);
     });

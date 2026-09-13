@@ -602,4 +602,8 @@ describe('MolecularClouds / what the cloudAbsorption lever may price', () => {
       c.update(new THREE.Vector3(), false);
     })).toBe(false);
   });
+
+  it('does not draw in chart mode', () => {
+    expect(drawnAfter((c) => c.setMonochrome(true))).toBe(false);
+  });
 });

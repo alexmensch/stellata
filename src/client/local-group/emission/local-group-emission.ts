@@ -126,7 +126,6 @@ export class LocalGroupEmission {
     return visible;
   }
 
-  /** Whether the glow draws this frame — the `lgEmission` lever's `present()`. */
   isDrawn(): boolean {
     return this.enabled && this.contributing && !this.chartHidden;
   }

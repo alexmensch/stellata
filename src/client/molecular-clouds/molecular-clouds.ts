@@ -291,8 +291,6 @@ export class MolecularClouds {
     if (!on) this.rimGroup.visible = false;
   }
 
-  /** Whether the absorption raymarch draws this frame — the
-   *  `cloudAbsorption` lever's `present()`. */
   isAbsorptionDrawn(): boolean {
     return this.group.visible && this.absorptionGroup.visible;
   }
