@@ -2,7 +2,7 @@
 // that one enforces "every folder has a README", this one enforces "no
 // README is too long to be worth reading." See AGENTS.md § Folder READMEs.
 
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { readdirSync, statSync, existsSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
@@ -36,6 +36,19 @@ const ALLOWLIST: Record<string, string> = {
     'rewrite. Already trimmed of everything that had another home; the ' +
     'remainder is per-stage engineering contract.',
 };
+
+// A trailing newline terminates the last line rather than starting a new
+// one, so splitting on it alone counts one line too many and the advertised
+// cap enforces one below itself.
+function countLines(content: string): number {
+  const lines = content.split('\n');
+  if (lines[lines.length - 1] === '') lines.pop();
+  return lines.length;
+}
+
+function lineCount(path: string): number {
+  return countLines(readFileSync(path, 'utf8'));
+}
 
 function collectReadmes(dir: string, out: string[]): void {
   for (const entry of readdirSync(dir)) {
@@ -95,6 +108,14 @@ function failureMessage(
 }
 
 describe('folder README size guard', () => {
+  it('counts a newline-terminated file the way wc -l does', () => {
+    expect(countLines('a\nb\n')).toBe(2);
+    expect(countLines('a\nb')).toBe(2);
+    expect(countLines('a\n')).toBe(1);
+    expect(countLines('')).toBe(0);
+    expect(countLines('\n')).toBe(1);
+  });
+
   it(`every README under ${SCAN_DIRS.join(', ')} is at most ${MAX_LINES} lines`, () => {
     const readmes: string[] = [];
     for (const scan of SCAN_DIRS) {
@@ -106,7 +127,7 @@ describe('folder README size guard', () => {
     const offenders = readmes
       .map((p) => ({
         path: relative(ROOT, p),
-        lines: readFileSync(p, 'utf8').split('\n').length,
+        lines: lineCount(p),
       }))
       .filter((o) => o.lines > MAX_LINES && !(o.path in ALLOWLIST))
       .sort((a, b) => b.lines - a.lines);
@@ -124,7 +145,7 @@ describe('folder README size guard', () => {
         stale.push(`${rel} — listed but does not exist; drop the entry`);
         continue;
       }
-      const lines = readFileSync(full, 'utf8').split('\n').length;
+      const lines = lineCount(full);
       if (lines <= MAX_LINES) {
         stale.push(
           `${rel} — now ${lines} lines, under the ${MAX_LINES} cap; ` +
