@@ -47,17 +47,21 @@ bracket. Pass mechanics and the other member layers are
 A member star's main-pass instance collapses (`uLocalMemberIdx`, an
 int array of `MIRROR_CAPACITY` slots checked in all three passes) and
 the mirror re-renders it in the local depth pass: a small
-instanced geometry whose slots re-copy the member's attributes from
-the live source arrays each frame (`MirrorSlots`), drawn with
-local-pass variants of the three star materials. Star identity comes
-from the `iSourceIdx` attribute rather than the instance index, so
-star-indexed lookups — the extinction texelFetch, `uHideFocusIdx`,
+instanced geometry whose slots re-copy the member's instanced
+attributes from the live source arrays each frame (`MirrorSlots`),
+drawn with local-pass variants of the three star materials. Star
+identity comes from the `iSourceIdx` attribute rather than the instance
+index, so star-indexed lookups — the extinction read, `uHideFocusIdx`,
 `uPinFocusToCenter` — behave identically. **How each backend builds
 those variants differs**: GLSL compiles material clones under the
 `LOCAL_DEPTH_PASS` define (which is what swaps `gl_InstanceID` for
-`STAR_SELF_ID`), sharing the same uniform objects; the TSL twin builds
-separate materials from the same node builders with a `localMirror`
-flag, sharing uniform nodes and no define. The
+`STAR_SELF_ID`), sharing the same uniform objects, over slots that copy
+every per-instance attribute; the TSL twin builds separate materials
+from the same node builders with a `mirror` vertex source, sharing
+uniform nodes and no define, over slots that hold `iSourceIdx` alone —
+its geometry has no per-instance attribute to copy, every star field
+being a storage read at that index (`../../webgpu/star/README.md`
+§ The local mirror). The
 attribute-budget invariant: each compile variant must fit within 16
 attributes (the WebGL2 guaranteed minimum). Pinned per-variant in
 `../star-pipeline.test.ts`, along with the uniform-array-size ↔

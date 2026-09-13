@@ -10,7 +10,7 @@ import {
   chartDiscCoverage, discPassEntryGate, discPassKernel,
 } from './star-emission-tsl';
 import {
-  buildStarVaryings, buildStarVertexNode, type StarTslDeps,
+  buildStarVaryings, buildStarVertexNode, type StarTslDeps, type StarVertexSource,
 } from './star-vertex-tsl';
 
 /**
@@ -26,13 +26,13 @@ import {
  */
 export function buildStarCoreMaskMaterial(
   deps: StarTslDeps,
-  localMirror = false,
+  source: StarVertexSource,
 ): MrtEmitterMaterial {
   const v = buildStarVaryings();
 
   const material = new NodeMaterial();
-  material.name = localMirror ? 'star-core-mask-local-tsl' : 'star-core-mask-tsl';
-  material.vertexNode = buildStarVertexNode(deps, STAR_PASS_CORE_MASK, v, localMirror);
+  material.name = source.kind === 'mirror' ? 'star-core-mask-local-tsl' : 'star-core-mask-tsl';
+  material.vertexNode = buildStarVertexNode(deps, STAR_PASS_CORE_MASK, v, source);
   material.colorWrite = false;
   material.depthWrite = true;
   material.depthTest = true;

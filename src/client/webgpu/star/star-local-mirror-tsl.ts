@@ -12,7 +12,9 @@ import type { MrtEmitterMaterial } from '../hdr/mrt-material';
 import { buildStarCoreMaskMaterial } from './star-core-mask-tsl';
 import { buildStarDiscMaterial } from './star-disc-tsl';
 import { buildStarGlowMaterial } from './star-glow-tsl';
-import type { StarTslDeps } from './star-vertex-tsl';
+import type { StarTslDeps, StarVertexSource } from './star-vertex-tsl';
+
+const MIRROR_SOURCE: StarVertexSource = { kind: 'mirror' };
 
 export class StarLocalMirrorTsl implements StarMirror, MrtOutputLayer {
   readonly group: THREE.Group;
@@ -20,25 +22,20 @@ export class StarLocalMirrorTsl implements StarMirror, MrtOutputLayer {
   private readonly slots: MirrorSlots;
   /** Mask, disc, glow — every draw into the HDR target takes the swap. */
   private readonly targetMaterials: MrtEmitterMaterial[];
-  private readonly syncSources: () => void;
 
-  /** `source` is the layer's PACKED instanced geometry, mirrored slot for
-   *  slot by name so the packedScalar accessors resolve to the same
-   *  component on both geometries. `syncSources` is the layer's dynamic
-   *  re-pack: this mirror copies packed values, so the packed buffers must
-   *  be current-frame before each copy. */
+  /** `source` lends its corner + index buffers; it carries no per-instance
+   *  attribute, so the slots hold `iSourceIdx` alone and every star field
+   *  is read out of the layer's tables by that index. */
   constructor(
     source: THREE.InstancedBufferGeometry,
     deps: StarTslDeps,
     gates: EmitterGateNodes,
-    syncSources: () => void,
   ) {
-    this.syncSources = syncSources;
     this.slots = new MirrorSlots(source);
 
-    const mask = buildStarCoreMaskMaterial(deps, true);
-    const disc = buildStarDiscMaterial(deps, gates, true);
-    const glow = buildStarGlowMaterial(deps, gates, true);
+    const mask = buildStarCoreMaskMaterial(deps, MIRROR_SOURCE);
+    const disc = buildStarDiscMaterial(deps, gates, MIRROR_SOURCE);
+    const glow = buildStarGlowMaterial(deps, gates, MIRROR_SOURCE);
     this.targetMaterials = [mask, disc, glow];
 
     this.group = this.slots.buildGroup(
@@ -56,7 +53,7 @@ export class StarLocalMirrorTsl implements StarMirror, MrtOutputLayer {
   }
 
   sync(): void {
-    this.group.visible = this.slots.sync(this.syncSources);
+    this.group.visible = this.slots.sync();
   }
 
   dispose(): void {

@@ -28,16 +28,15 @@ pixel and skipping work that cannot reach a pixel is the whole programme.
 instances that can reach the display from this vantage — never the
 whole catalogue with the invisible members culled inside the shader.
 
-**Why.** A vertex that early-outs still ran. The star passes issue the
-full catalogue count in two to three passes every frame, and the mag
-prefilter's ~30-instruction exit still costs a measured ~9 ms
+**Why.** A vertex that early-outs still ran. The WebGL2 star passes
+issue the full catalogue count in two to three passes every frame, and
+the mag prefilter's ~30-instruction exit still costs a measured ~9 ms
 pixel-independent floor in the main pass at the default view (the
-dpr 2 → 0.5 scaling run recorded in stellata-8cg.1's notes). The
-extinction prepass is per-vertex too, so its share *grows* as resolution
-falls. Three.js frustum culling is off on every layer
-(`frustumCulled = false`) because floating-origin rebasing invalidates
-the bounding spheres three would test — so today nothing is culled at
-all, and a population out of view still pays its full vertex floor.
+dpr 2 → 0.5 scaling run recorded in stellata-8cg.1's notes). Three.js
+frustum culling is off on every layer (`frustumCulled = false`) because
+floating-origin rebasing invalidates the bounding spheres three would
+test — so a population out of view still pays its full vertex floor
+unless it compacts.
 
 **How to apply.** Any population past roughly ten thousand instances
 computes a visible index once per frame and draws that: on WebGL2 a
@@ -50,9 +49,13 @@ that changes instance identity must sweep every consumer of the old
 order (picker sorted arrays and binary relation indices are index-
 coupled; URL-state references are not).
 
-**Where.** The design gate for the WebGL2 half is stellata-8cg.5; the
-compute half is stellata-0it.15. Priced by `debug.priceFrame()` at the
-canonical vantages before and after.
+**Where.** The shipped star layer is the compute form:
+`src/client/webgpu/star/compaction/README.md` — a per-frame kernel over
+the catalogue lists each tier's survivors and the three star draws are
+`drawIndexedIndirect` at those counts, the vertex stage reading every
+per-star field out of storage tables at the resolved index. The design
+gate for the WebGL2 half is stellata-8cg.5. Priced by the Tier 2 pin
+before and after.
 
 ## 2. Contribution-gated liveness
 

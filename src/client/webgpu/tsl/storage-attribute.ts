@@ -32,14 +32,17 @@ export function disposeStorageAttribute(
 }
 
 /**
- * Whether a vertex stage on this device may read a storage buffer at all.
- * Zero is what WebGPU's compatibility feature level reports, and three
- * requests that level unconditionally, so a device can arrive holding none.
- * A device reporting no limit predates the compatibility level entirely —
- * core limits apply there and the answer is yes.
+ * Whether a vertex stage on this device may read `required` storage
+ * buffers. Zero is what WebGPU's compatibility feature level reports, and
+ * three requests that level unconditionally, so a device can arrive holding
+ * none. A device reporting no limit predates the compatibility level
+ * entirely — core limits apply there and the answer is yes.
  */
-export function supportsVertexStageStorageBuffers(renderer: WebGPURenderer): boolean {
+export function supportsVertexStageStorageBuffers(
+  renderer: WebGPURenderer,
+  required = 1,
+): boolean {
   const limit = (renderer.backend as unknown as LimitedBackend)
     .device?.limits?.maxStorageBuffersInVertexStage;
-  return limit === undefined || limit > 0;
+  return limit === undefined || limit >= required;
 }

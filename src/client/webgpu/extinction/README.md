@@ -137,7 +137,7 @@ Run it at Sol default and on a Galactic-centre sightline (the bead's
 smoke views); a nonzero count there is a finding about the two stages'
 compilation, not a tolerance to widen.
 
-### What this stage discharges of the buffer-writer requirements
+### What this pass discharges of the buffer-writer requirements
 
 Of the four requirements the single-writer audit put on this design
 (bead `stellata-0it.15`, design field):
@@ -145,17 +145,20 @@ Of the four requirements the single-writer audit put on this design
 - **Per-draw addressing (1)** is met without slots. The A_V buffer is
   written once per recompute by one dispatch, ahead of the frame's render
   submit, and every star draw in that submit — three main passes and
-  their local-mirror clones — wants the *same* bytes. The slotting rule
-  starts owing the moment a buffer carries a value that differs between
-  draws sharing a submit, which is the compacted instance lists and the
-  indirect args of the next stage, not this one.
+  their local-mirror clones — wants the *same* bytes.
 - **The itemSize-3 uploader trap (4)** is avoided by construction: the
   position table is vec4 and the A_V table is float, both owned outright,
-  and no itemSize-3 attribute moved. It bites again when `iPosition`
-  itself moves to storage; `../../binaries/README.md` § Partial re-upload
-  stays the current contract until then.
-- **The prefix-sum router (2)** and **survivor-sized bind groups (3)** are
-  compaction's, not this stage's.
+  and no itemSize-3 attribute moved.
+- **The prefix-sum router (2)** and **the implicit draw count (3)** are
+  the compaction's (`../star/compaction/README.md` § The buffer-writer
+  requirements, discharged), which keeps `iPosition` off an itemSize-3
+  storage attribute the way this pass does — it reads the same array
+  through an itemSize-1 table instead.
+
+**The A_V buffer stays catalogue-star-indexed.** The compaction resolves
+its survivor-list slot to the star before reading `av.element(self)`, so
+the cold-read path (§ Cold reads) and any readback design over it key on
+the catalogue index as before.
 
 ## What it costs, and what it holds
 

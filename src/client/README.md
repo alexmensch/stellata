@@ -105,7 +105,7 @@ themselves.
 - `loaders/` — runtime fetch/parse of `public/` artifacts.
 - `webgpu/` — **the renderer this app boots.** The capability route, the
   async renderer boot behind a dynamic-import boundary, the authoring
-  scaffolding (shared uniform nodes, TSL shim, attribute packing, the
+  scaffolding (shared uniform nodes, TSL shim, storage attributes, the
   TSL test pattern), and the TSL layers (`webgpu/star/`,
   `webgpu/solar-system/`, `webgpu/hdr/`, `webgpu/extinction/`,
   `webgpu/chrome-lines/`). Every CPU subsystem is backend-blind, and the

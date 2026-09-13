@@ -13,13 +13,13 @@ import {
   discardOutsideKernel, finishStarColourMaterial, starGlowNode,
 } from './star-emission-tsl';
 import {
-  buildStarVaryings, buildStarVertexNode, type StarTslDeps,
+  buildStarVaryings, buildStarVertexNode, type StarTslDeps, type StarVertexSource,
 } from './star-vertex-tsl';
 
 export function buildStarGlowMaterial(
   deps: StarTslDeps,
   gates: EmitterGateNodes,
-  localMirror = false,
+  source: StarVertexSource,
 ): MrtEmitterMaterial {
   const v = buildStarVaryings();
 
@@ -47,8 +47,8 @@ export function buildStarGlowMaterial(
   const coreMask = () => float(0.0);
 
   const material = new NodeMaterial();
-  material.name = localMirror ? 'star-glow-local-tsl' : 'star-glow-tsl';
-  material.vertexNode = buildStarVertexNode(deps, STAR_PASS_GLOW, v, localMirror);
+  material.name = source.kind === 'mirror' ? 'star-glow-local-tsl' : 'star-glow-tsl';
+  material.vertexNode = buildStarVertexNode(deps, STAR_PASS_GLOW, v, source);
   applyGlowBlendDefaults(material);
   return finishStarColourMaterial(material, deps.u, v, gates, entryGate, kernel, coreMask);
 }

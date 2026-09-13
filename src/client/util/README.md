@@ -45,8 +45,10 @@ build scripts, tests, and shader uniforms.
   attribute at construction and reads `itemSize` + the backing array off
   it, so the ranges it emits cannot address a different stride than the
   buffer they upload into — **while that attribute is a vertex
-  attribute**. Move one to a WebGPU storage buffer and the backend
-  reassigns both off a padded copy the uploader never sees, silently
+  attribute**. An itemSize-3 WebGPU storage attribute has both reassigned
+  off a padded copy the uploader never sees, silently, which is why the
+  WebGPU star layer reads the same array through an itemSize-1 table and
+  forwards these ranges onto it verbatim
   (`../webgpu/README.md` § One writer per buffer per submit).
   Its shadow is NaN-seeded at construction and
   by `reset()` — NaN compares unequal to everything, so the first flush

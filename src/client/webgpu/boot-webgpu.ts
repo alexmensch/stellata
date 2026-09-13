@@ -17,7 +17,7 @@ import {
 import { buildSharedUniformNodes, type SharedUniformNodeRegistry } from './tsl/shared-uniform-nodes';
 import { supportsVertexStageStorageBuffers } from './tsl/storage-attribute';
 import type {
-  StarGeometrySources, WebGpuExtinctionPrepassSources, WebGpuSeam,
+  StarLayerSources, WebGpuExtinctionPrepassSources, WebGpuSeam,
 } from './seam';
 import { PlanetGlareLayer } from './solar-system/planet-glare-layer';
 import {
@@ -30,7 +30,7 @@ import { makeTslCloudMaterials } from './molecular-clouds/tsl-cloud-materials';
 import { makeTslLgEmissionMaterials } from './local-group/tsl-lg-materials';
 import { makeTslBandMaterials } from './milkyway/tsl-band-materials';
 import type { BandMaterials } from '../milkyway/band-materials';
-import { StarLayer } from './star/star-layer';
+import { STAR_VERTEX_STAGE_STORAGE_BUFFERS, StarLayer } from './star/star-layer';
 import { settleTimestampSupport, type TimestampBackend } from './timestamps/timestamp-probe';
 
 /** Null when the device came back and then refused the renderer. The
@@ -63,12 +63,13 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     renderer.dispose();
     return null;
   }
-  // The star vertex stage indexes the A_V cache out of a storage buffer, so
-  // a device allowing none in that stage fails all three star pipelines —
-  // and one invalid pipeline discards the whole submit (README.md § One
-  // scene per boot). Refusing here lands the requires-WebGPU page instead.
-  if (!supportsVertexStageStorageBuffers(renderer)) {
-    console.warn('WebGPU device allows no vertex-stage storage buffer; refusing the boot');
+  // The star vertex stage reads every per-star table, the survivor list and
+  // the A_V cache out of storage buffers, so a device allowing fewer in
+  // that stage fails all three star pipelines — and one invalid pipeline
+  // discards the whole submit (README.md § One scene per boot). Refusing
+  // here lands the requires-WebGPU page instead.
+  if (!supportsVertexStageStorageBuffers(renderer, STAR_VERTEX_STAGE_STORAGE_BUFFERS)) {
+    console.warn('WebGPU device allows too few vertex-stage storage buffers; refusing the boot');
     renderer.dispose();
     return null;
   }
@@ -175,9 +176,9 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
         },
       };
     },
-    attachStarLayer(scene: THREE.Scene, sources: StarGeometrySources) {
+    attachStarLayer(scene: THREE.Scene, sources: StarLayerSources) {
       const layer = new StarLayer(
-        scene, nodesOrThrow('attachStarLayer'), sources, hdr.gates, extinctionSlots);
+        renderer, scene, nodesOrThrow('attachStarLayer'), sources, hdr.gates, extinctionSlots);
       // Registration is what keeps the layer's output count in lockstep
       // with the pipeline's target mode; dispose must sever it or a dead
       // layer keeps taking mode swaps.
@@ -185,6 +186,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
       return {
         setCoreMaskVisible: (on: boolean) => layer.setCoreMaskVisible(on),
         setMonochrome: (on: boolean) => layer.setMonochrome(on),
+        update: () => layer.update(),
         localMirror: layer.localMirror,
         dispose() {
           unregister();

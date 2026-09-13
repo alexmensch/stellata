@@ -9,6 +9,10 @@ stage), and D4 disc (colour only, no depth output either — § The disc
 draw writes no depth) — plus their local-depth-pass mirror variants
 (§ The local mirror). No pipeline here writes fragment depth, and the
 draw count matches the WebGL2 stack one for one, mirror draws included.
+Each main draw is indirect at its tier's survivor count
+(`compaction/README.md`), over storage tables indexed by star (§ Star
+tables) — the vertex stage runs over the stars that can draw, not the
+catalogue.
 That stack (`../../star-pipeline/`) stays the semantic reference until
 `0it.14` deletes it; parity is verified by the A/B smoke, same
 `/v/<blob>/` with and without the `#renderer=webgl2` fragment.
@@ -17,16 +21,25 @@ That stack (`../../star-pipeline/`) stays the semantic reference until
 
 ```
 src/client/webgpu/star/
-  star-geometry.ts (+ test)    Packed instanced geometry: aCorner,
-                               iPosition + iPuls (both shared by object
-                               identity), iPack0-2, iDyn0 — 7 of the 8
-                               vertex buffers (../tsl/README.md
-                               § Attribute packing).
-  star-vertex-tsl.ts           The shared vertex stage, compile-time
-                               specialized per pass (star-pass.ts):
-                               suppression set, eclipse fold, and the
-                               core mask's member near-pin are the only
-                               per-pass differences.
+  compaction/                  The per-frame compute pass that lists each
+                               tier's survivors and counts them into the
+                               indirect draw arguments — its own README.
+  star-tables-pure.ts (+ test) Layout of the static per-star record table
+                               (stride, slots, the interleave).
+  star-tables.ts (+ test)      StarTables — the star-indexed storage
+                               tables every star stage reads (§ Star
+                               tables), and the per-frame forwarding of
+                               the shell's attribute writes onto them.
+  star-geometry.ts (+ test)    The two quad geometries, corner + index
+                               only, each drawn indirect off its tier's
+                               args slot.
+  star-vertex-tsl.ts           `solveStarTsl`, the per-star solve the
+                               compaction kernel and all six vertex
+                               stages share, and the vertex stage over
+                               it, compile-time specialized per pass
+                               (star-pass.ts): suppression set, eclipse
+                               fold, and the core mask's member near-pin
+                               are the only per-pass differences.
   star-glow-tsl.ts             The D2 material: glow fragment (soft
                                taper, additive) over the shared stage.
   star-disc-tsl.ts             The D4 material: per-channel max blend,
@@ -43,18 +56,24 @@ src/client/webgpu/star/
                                ink disc, starEmission()'s inline-operator
                                select, the MRT output struct +
                                single↔struct mode swap (../hdr/README.md).
-  star-layer.ts (+ test)       StarLayer: geometry + the three meshes into
-                               the scene, the local mirror, the
-                               per-frame dynamic re-pack, the shell's
+  star-layer.ts (+ test)       StarLayer: tables + compaction + the three
+                               meshes into the scene, the local mirror,
+                               the per-frame `update()`, the shell's
                                core-mask gate, the chart blend swap,
                                dispose.
   star-local-mirror-tsl.ts     The local-depth-pass mirror: the three
     (+ test)                   pipelines' local variants over the shared
-                               MirrorSlots copy of the packed geometry
-                               (§ The local mirror).
-  star-sources-mock.ts         StarGeometrySources over the zero-filled
-                               StarPipeline mock, for tests.
+                               MirrorSlots geometry, reading the tables
+                               by `iSourceIdx` (§ The local mirror).
+  star-sources-mock.ts         StarLayerSources over the zero-filled
+                               StarPipeline mock, and the fake renderer
+                               the layer tests dispatch into.
 ```
+
+Which WebGL attribute lands where — the static-table fields, the
+forwarded four, the one per-vertex attribute — is
+`../star-attribute-roster.ts`, pinned against the live WebGL geometry by
+its test.
 
 The operator, emission-unit and perceptual-disc mirrors the fragment
 composes live one level up (`../tonemap-tsl.ts`, `../emission-tsl.ts`,
@@ -138,24 +157,36 @@ masked, but an unchanged fragment program is handed the stale
 three-target pipeline from three's cache when the target drops to one
 attachment (`../hdr/README.md` § The gate becomes the output struct).
 
-## Dynamic attributes — who uploads what
+## Star tables — every per-star field is a storage read
 
-The shell constructs the WebGL `StarPipeline` on every boot; on a WebGPU
-boot its meshes never render, but its **attributes are the live source
-buffers** every writer (BinaryOrbitField, EclipsePhotometryField,
-StarFrame's recentre, the shell's re-attach inits) keeps writing. This
-layer taps them without any writer learning about the port:
+The geometry carries the quad corner and nothing per instance: the
+instance index names a slot in a survivor list (`compaction/README.md`),
+not a star, so every per-star field is a storage-buffer read at the
+resolved star index — `tables.stat(self, field)` for the static record,
+`tables.position(self)` and `tables.scalar(name, self)` for the live
+ones, `av.element(self)` for extinction. The mirror reads the same tables
+at its `iSourceIdx`. Two kinds of table:
 
-- **iPosition and iPuls** join this geometry **by object identity** — the
-  same `InstancedBufferAttribute` objects, so neither pays a second copy
-  and iPosition's `needsUpdate` flip reaches whichever renderer draws it.
-  (iPuls is static; it shares for the memory, not the writes.)
-- **The three per-frame scalars** (`iCompositeSuppress`, `iEclipseDim`,
-  `iSuppressPulsation`) interleave into the packed `iDyn0` vec4, so they
-  cannot share the object. `StarLayer` version-watches each source
-  attribute from the glow mesh's `onBeforeRender` and re-packs the
-  changed component; watcher sentinels start at -1 so the first rendered
-  frame always packs.
+- **The static record table** — the nine load-time scalars plus the two
+  pulsation components, interleaved once at construction into one float
+  table of `STAR_STATIC_STRIDE` (12) floats per star, roster order, pad
+  slot zero. The stride rounds the roster's eleven fields up to whole
+  vec4s for headroom, not for alignment — scalar reads out of a float
+  table need none — so a twelfth static field costs no bytes and a
+  thirteenth costs 1.5 MiB. Built from the catalogue and star-frame
+  arrays; never written again.
+- **The forwarded tables** — `iPosition`, `iCompositeSuppress`,
+  `iEclipseDim`, `iSuppressPulsation`. The shell constructs the WebGL
+  `StarPipeline` on every boot; on this one its meshes never render, but
+  its **attributes are the live source buffers** every writer
+  (BinaryOrbitField, EclipsePhotometryField, StarFrame's recentre, the
+  shell's re-attach inits) keeps writing. Each forwarded table is a
+  `StorageBufferAttribute` **over that attribute's own `Float32Array`**,
+  itemSize 1 — no copy, so there is nothing to keep current — and
+  `StarTables.syncSources()` forwards the source's `version` and
+  `updateRanges` onto it **verbatim**: same array, same element units.
+  The position table is `count × 3` floats read as three scalars, never
+  an itemSize-3 storage attribute (§ below).
 
 ### What a dirty frame costs, and which writer decides
 
@@ -163,22 +194,25 @@ Two paths, picked by whether the writer reported three.js update ranges:
 
 - **Ranged** — the writer named the slots it touched
   (`BinaryOrbitField`'s `DirtyItemUploader`, `util/README.md`
-  § attribute-upload). The layer re-packs those items only and adds the
-  matching `iDyn0` element ranges, so a sub-pixel binary flip costs a
-  handful of floats. The layer also **clears the source's range list** —
-  on a WebGPU boot the WebGL geometry never renders, so no renderer
-  consumes them and they would otherwise accumulate to
+  § attribute-upload). The forwarded ranges upload those bytes and no
+  others, so a sub-pixel binary flip costs a handful of floats. The layer
+  also **clears the source's range list** — no renderer reads the WebGL
+  geometry on this boot, so they would otherwise accumulate to
   `MAX_PARTIAL_RANGES` and collapse into a full upload.
 - **Whole-buffer** — a bare `needsUpdate`, which is what the shell's
-  re-attach inits set (through `uploadFull`, so a pending range list
-  cannot outrank the full array). Costs a 390k-iteration re-pack on the
-  CPU plus a **6.2 MB** `writeBuffer` (390k × vec4 × 4 B), against
-  1.6 MB for the WebGL scalar it replaces. Both per-frame writers are
-  ranged, so nothing reaches this path at frame cadence: an active
-  eclipse would otherwise pay the 6.2 MB **every frame**, ~320 MB/s at
-  60 Hz, which on a low-end integrated or mobile GPU sharing system
-  memory with the display is the kind of figure that shows up in the
-  frame time.
+  re-attach inits and a recentre set (through `uploadFull`, so a pending
+  range list cannot outrank the full array). Costs the table's whole
+  `writeBuffer`: 4.4 MiB for positions, 1.5 MiB per scalar table. A range
+  forwarded behind an unconsumed full upload is dropped, since three
+  honours a non-empty range list INSTEAD of the full array; `endFrame()`
+  after the dispatch is what re-arms ranged forwarding.
+
+**None of the tables carries `DynamicDrawUsage`, on purpose.** three's
+WebGPU backend re-runs `updateAttribute` on every render call for any
+attribute with that usage, and with no pending ranges that is the whole
+buffer — the `iPosition` vertex attribute this layer used to share paid
+its 4.4 MiB every rendered frame that way, and the packed dynamic vec4 its
+5.9 MiB. A table upload happens when its version moves and not otherwise.
 
 `EclipsePhotometryField` forces its own first writing flush full,
 because the shell's re-attach fill reaches stars outside the member
@@ -186,10 +220,35 @@ slots it tracks (`../../binaries/eclipse/README.md` § Partial
 re-upload) — a range list appended before a render consumed that fill
 would strand every untracked star at the previous attach's value.
 
-Neither figure is measured; both are byte counts, not `gpu.frame`
-differentials. Pricing the eclipse frame belongs to the perf program
-(`stellata-8cg`). `instance_index`-indexed storage buffers supersede
-packing entirely after the compute prepass.
+### What the tables hold
+
+Byte counts, derived not measured — `recordCount`
+(`scripts/catalog/build-catalog-expected.json`) × element size, moving
+with the catalogue. `debug.memory()` cannot price them on this backend
+(they bind through TSL nodes, `../../debug/memory/README.md`), which is
+why the arithmetic is stated:
+
+| Resident | Size |
+| --- | --- |
+| Static record table (12 × f32 per star) | 388,071 × 48 B ≈ 17.8 MiB |
+| Position table (3 × f32 per star) | 388,071 × 12 B ≈ 4.4 MiB |
+| Three scalar tables (f32 per star each) | 3 × 1.5 MiB ≈ 4.4 MiB |
+
+The static table's `Float32Array` stays on the JS heap after upload
+(three does not release it); the forwarded tables add none — their
+arrays are the shell's.
+
+### Why no table is itemSize 3
+
+WGSL has no packed `vec3` in a storage buffer, so for an itemSize-3
+storage attribute three pads to 4 and **reassigns the attribute's
+`itemSize` and `array` to the padded copy** on first upload. Anything
+holding the originals — `DirtyItemUploader`, which caches both at
+construction — then diffs a stride and an array the GPU never sees, and
+emits ranges addressing the unpadded layout. Reading positions as three
+scalars out of an itemSize-1 table over the writer's own array is what
+keeps `../../binaries/README.md` § Partial re-upload's contract on the
+WebGL attribute intact without that attribute ever becoming storage.
 
 ## Suppression semantics carried by the pass specialization
 
@@ -223,8 +282,8 @@ Compile-time pass constants replace the `uRenderMode` branches
 `uPinFocusToCenter` substitutes the canonical projection exactly as the
 GLSL does. Every pass also carries the taper cull — off entirely in
 chart mode, which sizes and clips against `uLimitMag` and keeps its
-quads, and the colour passes
-the kernel collapse — the exactness and flux-preservation arguments are
+quads — and the colour passes carry the kernel collapse; the exactness
+and flux-preservation arguments are
 `../../star-pipeline/collapse/README.md`'s, one mechanism on both
 backends.
 
@@ -234,21 +293,24 @@ backends.
 the shared `StarMirror` interface: `StarLocalCluster` drives whichever
 one the boot built, and never learns which. What the port changes:
 
-- **The copy is of packed buffers.** The slot geometry, the copy and the
-  three draws are the shared `MirrorSlots`
-  (`../../star-pipeline/local-pass/star-mirror-slots.ts`) — every
-  instanced attribute of the layer's geometry (`iPosition`, `iPuls`, the
-  `iPack`/`iDyn` vec4s) mirrored by name into MIRROR_CAPACITY slots, so
-  the `packedScalar` accessors resolve to the same buffer component on
-  both geometries by construction — the mismatch that would otherwise
-  read as a silent brightness bug. With `iSourceIdx` that is exactly the
-  8-buffer budget.
-- **`sync()` re-packs before it copies.** The cluster updates before the
-  frame renders, i.e. before any main mesh's `onBeforeRender` re-pack —
-  so the mirror hands the layer's dynamic re-pack to `MirrorSlots.sync`
-  as its pre-copy hook, or an eclipse dim would reach the mirror one
-  frame late.
-- **The vertex stage is the shared builder's `localMirror` variant**:
+- **The slots carry `iSourceIdx` alone.** The slot geometry, the copy and
+  the three draws are the shared `MirrorSlots`
+  (`../../star-pipeline/local-pass/star-mirror-slots.ts`), which mirrors
+  every instanced attribute of the source geometry by name — and this
+  layer's geometry has none, so the copy degenerates to the member
+  indices. Every star field the mirror's vertex stage reads comes out of
+  the layer's tables at that index (§ Star tables), the same reads the
+  main passes make at a survivor-list index, so the two cannot resolve
+  a field differently. Two vertex buffers, no indirect draw: the mirror
+  draws `instanceCount = members`, its survivor set being the CPU member
+  list.
+- **`sync()` copies nothing but the member indices**, so it forwards
+  nothing either: the tables it reads are made current by
+  `StarLayer.update()`, which runs past the render gate between the
+  frame's uniform sync and its render, while the local depth pass draws
+  later in that same tick. A member slot and the table it indexes are
+  therefore the same frame's whatever order the cluster updates in.
+- **The vertex stage is the shared builder's `mirror` source variant**:
   star identity comes from `iSourceIdx` (hide/pin compares match the
   source instance), member collapse is off — the mirror draws exactly
   the members — and the core mask writes true bracket depth instead of

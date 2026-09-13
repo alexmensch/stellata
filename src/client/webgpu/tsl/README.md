@@ -13,10 +13,6 @@ src/client/webgpu/tsl/
                                     ../../frame/shared-uniforms.ts.
   tsl-shim.ts (+ test)              Typed patches over @types/three's TSL
                                     surface — verified gaps only.
-  attribute-packing-pure.ts         Plan + interleave N per-instance
-    (+ test)                        scalars into ceil(N/4) vec4 buffers.
-  attribute-packing.ts (+ test)     Geometry attributes + per-scalar
-                                    accessor node from a pack plan.
   uniform-slots.ts                  The IUniform face a ported layer
                                     writes, over a record of TSL nodes.
   literal-drift-pure.ts (+ test)    Which pinned constants a TSL source
@@ -30,10 +26,9 @@ src/client/webgpu/tsl/
                                     device limit (§ Storage attributes).
 ```
 
-Which star attributes actually pack, and how they split by upload
-cadence, is `../star-attribute-roster.ts` — it composes over
-`planVec4Packing` but is star-specific, so it stays with the layer that
-owns the roster.
+Which WebGL star attribute feeds which storage table is
+`../star-attribute-roster.ts` — star-specific, so it stays with the
+layer that owns the roster (§ Per-instance data).
 
 ## Shared uniform nodes
 
@@ -136,9 +131,14 @@ Three properties of a storage node worth knowing before binding one:
   refusal in `../boot-webgpu.ts`, beside the `reversedDepthBuffer` one: the
   requires-WebGPU page, not a black canvas. A device reporting no limit at
   all predates the compatibility level, so core limits apply and it
-  passes. **Any new vertex- or fragment-stage storage binding inherits this
-  floor** — the check is already paid, but the gate page is the ceiling on
-  what this backend can ask of a device.
+  passes. The refusal holds the device to
+  `STAR_VERTEX_STAGE_STORAGE_BUFFERS` (`../star/star-layer.ts`, 7): the
+  survivor list, the A_V cache, the static table and the four forwarded
+  tables a main-pass star vertex stage binds. Core guarantees 8 per
+  stage. **Any new vertex-stage storage binding on the star pipelines
+  raises that constant** — and the gate page is the ceiling on what this
+  backend can ask of a device (`../star/compaction/README.md` § Binding
+  budget).
 
 ## One program per material instance
 
@@ -227,39 +227,30 @@ vectors, getter swizzles are typed); what survives:
 Before adding an entry, compile-probe the gap against the installed
 @types — a cast that upstream already fixed is a shim that never dies.
 
-## Attribute packing
+## Per-instance data
 
 WebGPU's default `maxVertexBuffers` is 8 and three binds one GPU vertex
-buffer per `BufferAttribute`, so the star pipeline's **15** attributes
-cannot port as-is. What those 15 are, and why the split matters:
+buffer per `BufferAttribute`, so a population with more per-instance
+attributes than that cannot bind them as vertex attributes. Two layers
+answer it two ways, and the split is about whether the instance index
+still names the object:
 
-- `aCorner` (vec2), `iPosition` (vec3) and `iPuls` (vec2) are **not
-  packable** — the planner slots one component per name, so a
-  multi-component attribute stays as it is. Three buffers.
-- **9 static scalars** — `iAbsmag`, `iCi`, `iSpectClass`, `iLogRadius`,
-  `iPeriodDays`, `iAmplitudeMag`, `iLumClass`, `iDistSol`, `iTeffApsis`
-  — written once at catalog load. Three packed buffers.
-- **3 `DynamicDrawUsage` scalars** — `iCompositeSuppress`,
-  `iEclipseDim`, `iSuppressPulsation` — rewritten per frame by the
-  binary / eclipse fields. **Pack these separately.** A vec4 uploads as
-  one buffer, so mixing a per-frame scalar in with static neighbours
-  turns each dim update into a 4×-wide re-upload of data that never
-  changes. One packed buffer.
+- **The planet glare** (`../solar-system/planet-glare-geometry.ts`)
+  interleaves its 13 per-instance scalars into vec4 vertex attributes.
+  Its instance index IS the body, so a vertex attribute fetched by
+  instance still addresses the right record.
+- **The star layer** reads every per-star field out of storage tables
+  indexed by star (`../star/README.md` § Star tables), because its draws
+  are compacted: the instance index names a survivor-list slot, and a
+  vertex attribute cannot be fetched at an arbitrary index. The tables
+  bind under `maxStorageBuffersInVertexStage` instead (§ Storage
+  attributes), one binding per table.
 
-That is 7 of the 8 buffers — the limit is the binding constraint the
-port lives under, not a comfortable margin, which is why storage buffers
-indexed by `instance_index` supersede packing once the compute prepass
-lands. Packing is the port-time answer, not the endgame.
-
-`planVec4Packing(names, prefix)` assigns each name a (buffer, component)
-slot in declaration order and **fixes the attribute-name prefix on the
-plan** — the two cadence groups are two plans (`iPack<N>` / `iDyn<N>`),
-and a prefix passed at build time but forgotten at access time would
-read an attribute nothing ever set, silently. `buildPackedAttributes`
-interleaves the source arrays into the plan's vec4 attributes;
-`packedScalar(plan, name)` is the accessor node replacing
-`attribute('iScalarName')`, over `packedAccess`'s pure (buffer name,
-swizzle) resolution.
+A vec4 interleave uploads whole, so a per-frame scalar interleaved with
+static neighbours turns each of its updates into a 4×-wide re-upload of
+data that never changes — the glare keeps its per-frame scalars in their
+own buffer for that reason, and the star tables keep each live scalar in
+its own table.
 
 ## TSL test pattern — what a port child writes
 
