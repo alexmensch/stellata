@@ -41,18 +41,42 @@ export function methodFor(args: { backend: BackendRequest; method?: GpuFrameMeth
 export interface ContextPlan {
   readonly name: ScenarioName;
   readonly backend: Backend;
+  /** Rendered frames between statistic readbacks for this context's dwell. */
+  readonly readbackEvery: number;
+}
+
+/**
+ * The cadences one scenario is visited at, first one repeated LAST when
+ * there is more than one — the same bracket `sweepOrder` puts around a set
+ * of scales, for the same reason. The GPU's sustained-load ramp moves frame
+ * time across a run whatever the cool-down (`pins/README.md` § Run
+ * position), so a span rising across ascending cadences is a trend and the
+ * clock's drift wearing the same shape. The two readings at the first
+ * cadence bound the second, and without them a cadence probe cannot tell
+ * them apart.
+ */
+export function readbackOrder(cadences: readonly number[]): number[] {
+  return cadences.length > 1 ? [...cadences, cadences[0]] : [...cadences];
 }
 
 /**
  * The contexts a run visits, in order: backend-major, `BACKENDS` order, the
- * scenarios as given within each. Backend-major so that `--scenario all
+ * scenarios as given within each, and — where more than one cadence was
+ * asked for — that scenario once per cadence in `readbackOrder`.
+ * Backend-major so that `--scenario all
  * --backend both` opens with the Tier 1 vantages on the gated backend — the
  * positions a Tier 1 run visits them at, which is what lets its rows compare
  * against the pin's (`pins/README.md` § Run position).
  */
-export function planContexts(scenarios: readonly ScenarioName[], request: BackendRequest): readonly ContextPlan[] {
+export function planContexts(
+  scenarios: readonly ScenarioName[],
+  request: BackendRequest,
+  cadences: readonly number[],
+): readonly ContextPlan[] {
   const backends: readonly Backend[] = request === 'both' ? BACKENDS : [request];
-  return backends.flatMap((backend) => scenarios.map((name) => ({ name, backend })));
+  const order = readbackOrder(cadences);
+  return backends.flatMap((backend) =>
+    scenarios.flatMap((name) => order.map((readbackEvery) => ({ name, backend, readbackEvery }))));
 }
 
 /** The offending renderer string, or null. A fallback adapter counts even

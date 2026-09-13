@@ -44,6 +44,18 @@ often, which is sound and recorded. A rate ABOVE the cap cannot happen if
 the lever took, so one is read as the lever not having taken and fails the
 scenario (§ Five checks below).
 
+**Several cadences make the run a PROBE, not a comparison.**
+`--readback-every 4,1,2` visits the scenario once per value, and since every
+one of those contexts is the same `scenario|backend` they share a diff key
+and none is another's comparison — so `--pin`, `--against-pin` and
+`--baseline` all refuse a list. The first cadence is repeated LAST, the same
+bracket `../sweep/README.md` puts around a set of scales and for the same
+reason: the GPU's sustained-load ramp moves frame time across a run whatever
+the cool-down (`../pins/README.md` § Run position), so a span rising across
+ascending cadences is a trend and that drift wearing the same shape. The two
+readings at the first cadence bound the second. What the probe is for is
+`stellata-8cg.67.2`.
+
 **rAF wall-clock deltas are the metric.** On a WebGPU boot the frame-sample
 stream is subscribed alongside where `gpuFrameSamplesAreSound()` says the
 adapter resolves believable durations, and reported as a second row. The two

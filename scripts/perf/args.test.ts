@@ -3,6 +3,7 @@ import {
   ARG_DEFAULTS, ArgError, BACKEND_REQUESTS, MODES, ROUNDTRIP_IDLE, parseRunArgs, usage,
 } from './args';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
+import { DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
 import { SCENARIO_NAMES } from './scenarios';
 
 describe('parseRunArgs', () => {
@@ -31,7 +32,7 @@ describe('parseRunArgs', () => {
       chromeArgs: [],
       hash: '',
       frames: ARG_DEFAULTS.frames,
-      readbackEvery: ARG_DEFAULTS.readbackEvery,
+      readbackEvery: [DWELL_READBACK_EVERY_FRAMES],
       roundtrip: undefined,
       scales: [...DEFAULT_SWEEP_SCALES],
       json: undefined,
@@ -111,8 +112,26 @@ describe('parseRunArgs', () => {
   });
 
   it('takes --readback-every as whole frames, in dwell and sweep', () => {
-    expect(parseRunArgs(['--mode', 'dwell', '--readback-every', '1']).readbackEvery).toBe(1);
-    expect(parseRunArgs(['--mode', 'sweep', '--readback-every', '8']).readbackEvery).toBe(8);
+    expect(parseRunArgs(['--mode', 'dwell', '--readback-every', '1']).readbackEvery).toEqual([1]);
+    expect(parseRunArgs(['--mode', 'sweep', '--readback-every', '8']).readbackEvery).toEqual([8]);
+  });
+
+  it('takes a cadence list, which a probe run visits one context per value at', () => {
+    expect(parseRunArgs(['--mode', 'dwell', '--readback-every', '4,1,2, 8']).readbackEvery)
+      .toEqual([4, 1, 2, 8]);
+  });
+
+  // Each cadence revisits the same scenario|backend, so the rows share a
+  // diff key and none of them is another's comparison.
+  it('refuses a cadence list wherever the run is read against another table', () => {
+    for (const flags of [
+      [...PIN_RUN, '--readback-every', '1,4'],
+      ['--mode', 'dwell', '--against-pin', 'p.json', '--readback-every', '1,4'],
+      ['--mode', 'dwell', '--baseline', 'b.json', '--readback-every', '1,4'],
+    ]) {
+      expect(() => parseRunArgs(flags)).toThrow(/needs a single cadence/);
+    }
+    expect(parseRunArgs([...PIN_RUN, '--readback-every', '4']).readbackEvery).toEqual([4]);
   });
 
   it('parses comma lists and repeated flags', () => {

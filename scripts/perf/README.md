@@ -64,7 +64,7 @@ pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu|we
                  [--method timer-query|timestamp|raf-delta]
                  [--budget-ms N] [--dwell-frames N] [--warmup-frames N] [--settle-frames N] [--no-interleave]
                  [--empty-passes N]
-                 [--frames 240] [--readback-every 4] [--roundtrip <pass>|idle] [--scales 0.5,1,1.5,2]
+                 [--frames 240] [--readback-every 4|4,1,2] [--roundtrip <pass>|idle] [--scales 0.5,1,1.5,2]
                  [--headed] [--width 1280] [--height 800] [--dpr 2] [--quiet-ms 5000]
                  [--json <path>] [--baseline <path>] [--cooldown-ms 0]
                  [--pin <path> [--accept <scenario>|<backend>:<bead>]...] [--against-pin <path>]
@@ -120,8 +120,9 @@ viewport set.
 readback per that many rendered frames, held from before the warmup to the
 restore. The rate is otherwise emergent, and it decides what the GPU-stream
 median measures where the frame has two classes, so a dwell holds it as it
-already holds the gate, the clock and the exposure
-(`dwell/README.md` § What a dwell measures). `--warmup-frames` is shared: it is priceFrame's own warmup in
+already holds the gate, the clock and the exposure. Several values visit the
+scenario once per cadence — a probe, refused by `--pin`, `--against-pin` and
+`--baseline` (`dwell/README.md` § What a dwell measures). `--warmup-frames` is shared: it is priceFrame's own warmup in
 differential mode and the dwell's in the other two, defaulting to the same
 `WARMUP_FRAMES` either way, since it exists to absorb the same clock ramp.
 

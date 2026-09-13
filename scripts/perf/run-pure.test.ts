@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DWELL_METHOD, GATE_BOOT_PREFIX, bootFailure, bufferShortfall, describeProbe, markerVerdict,
-  methodFor, planContexts, softwareRenderer,
+  methodFor, planContexts, readbackOrder, softwareRenderer,
 } from './run-pure';
 import { SCENARIO_NAMES, TIER1_SCENARIOS } from './scenarios';
 import type { AdapterProbe } from './schema';
@@ -53,24 +53,37 @@ describe('methodFor', () => {
 
 describe('planContexts — the order a run visits its contexts in', () => {
   it('runs one backend in the order the scenarios were given', () => {
-    expect(planContexts(['sol', 'lg'], 'webgpu')).toEqual([
-      { name: 'sol', backend: 'webgpu' }, { name: 'lg', backend: 'webgpu' },
+    expect(planContexts(['sol', 'lg'], 'webgpu', [4])).toEqual([
+      { name: 'sol', backend: 'webgpu', readbackEvery: 4 },
+      { name: 'lg', backend: 'webgpu', readbackEvery: 4 },
     ]);
   });
 
   it('runs both backends backend-major, the gated one first', () => {
-    expect(planContexts(['sol', 'lg'], 'both').map((c) => `${c.name}|${c.backend}`))
+    expect(planContexts(['sol', 'lg'], 'both', [4]).map((c) => `${c.name}|${c.backend}`))
       .toEqual(['sol|webgpu', 'lg|webgpu', 'sol|webgl2', 'lg|webgl2']);
   });
 
   // The pin run and the Tier 1 run share their first two contexts, which is
   // what lets Tier 1 compare against the pin: rows compare at equal position.
   it('opens a pin run with exactly the contexts a Tier 1 run visits', () => {
-    const pin = planContexts(SCENARIO_NAMES, 'both');
-    const tier1 = planContexts(TIER1_SCENARIOS, 'webgpu');
+    const pin = planContexts(SCENARIO_NAMES, 'both', [4]);
+    const tier1 = planContexts(TIER1_SCENARIOS, 'webgpu', [4]);
     expect(pin).toHaveLength(10);
     expect(pin.slice(0, tier1.length)).toEqual(tier1);
     expect(tier1.map((c) => `${c.name}|${c.backend}`)).toEqual(['mw120|webgpu', 'sol|webgpu']);
+  });
+
+  // A cadence probe: one context per cadence, and the first cadence again at
+  // the end so the pair bounds the GPU's own drift across the run.
+  it('visits a scenario once per cadence, first cadence repeated last', () => {
+    expect(planContexts(['earth'], 'webgpu', [4, 1, 2]).map((c) => c.readbackEvery))
+      .toEqual([4, 1, 2, 4]);
+  });
+
+  it('adds no repeat for a single cadence, which is every ordinary run', () => {
+    expect(readbackOrder([4])).toEqual([4]);
+    expect(planContexts(SCENARIO_NAMES, 'both', [4])).toHaveLength(10);
   });
 });
 

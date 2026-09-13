@@ -327,7 +327,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
         warmupFrames: args.warmupFrames ?? WARMUP_FRAMES,
         backend,
         cadenceMs: record.idleRafMs,
-        readbackEvery: args.readbackEvery,
+        readbackEvery: plan.readbackEvery,
       };
       record.method = DWELL_METHOD;
       if (args.mode === 'dwell') {
@@ -336,7 +336,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
         record.dwell = dwelt.value;
         printDwell(
           args.roundtrip === undefined ? 'dwell' : 'dwell BEFORE the round trip',
-          dwelt, record.idleRafMs, args.readbackEvery);
+          dwelt, record.idleRafMs, plan.readbackEvery);
         if (dwelt.failure !== null) {
           record.failed = true;
           record.failure = dwelt.failure;
@@ -349,7 +349,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
           );
           const again = await measureDwell(page, dwellPlan);
           record.dwellAfter = again.value;
-          printDwell('dwell AFTER the round trip', again, record.idleRafMs, args.readbackEvery);
+          printDwell('dwell AFTER the round trip', again, record.idleRafMs, plan.readbackEvery);
           if (again.failure !== null) {
             record.failed = true;
             record.failure = `after the round trip: ${again.failure}`;
@@ -559,7 +559,7 @@ async function main(): Promise<number> {
 
   const records: ScenarioRecord[] = [];
   const probes: AdapterProbe[] = [];
-  const plans: ScenarioPlan[] = planContexts(args.scenarios, args.backend)
+  const plans: ScenarioPlan[] = planContexts(args.scenarios, args.backend, args.readbackEvery)
     .map((context, i) => ({ ...context, method, position: i + 1 }));
   try {
     for (const [i, plan] of plans.entries()) {
