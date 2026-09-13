@@ -3,6 +3,7 @@ import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, dwellFloorMs } from './di
 import type { DwellSummary } from './dwell/dwell-pure';
 import {
   CANON_POSITIONS,
+  FLOOR_FOLLOWS_FRACTION,
   PIN_CEILING_MS,
   PIN_SCHEMA,
   PIN_UNGATED_SCENARIOS,
@@ -12,6 +13,7 @@ import {
   citeRunPath,
   commitStateFromExitStatus,
   compareToPin,
+  frameFloor,
   missingCanonRows,
   pinDiffFails,
   pinFromRuns,
@@ -326,6 +328,51 @@ describe('pinFromRuns — several runs of one commit', () => {
     const diff = compareToPin(old, merged!);
     expect(diff.refusals).toEqual([]);
     expect(diff.rows.map((r) => [r.key, r.verdict])).toEqual([['sol|webgpu', 'dearer'], ['earth|webgpu', 'same']]);
+  });
+});
+
+describe('the floor beside the median', () => {
+  // Twenty frames 18.80..19.75 in 0.05 steps: min 18.80, nearest-rank p10 18.85.
+  const STEADY = Array.from({ length: 20 }, (_, i) => 18.8 + i * 0.05);
+  const withGpu = (p50: number, gpuMs: readonly number[]) =>
+    scenario('mw120', 'webgpu', { ...dwell(stats(16.7), stats(p50)), gpuMs });
+
+  it('reads min and the tenth-percentile frame off the raw samples, or nothing off none', () => {
+    expect(frameFloor(STEADY)).toEqual({ min: 18.8, p10: 18.85 });
+    expect(frameFloor([])).toBeNull();
+    expect(frameFloor(null)).toBeNull();
+  });
+
+  it('records the GPU floor on the pinned row, and none where the row has no samples', () => {
+    expect(pinOf([withGpu(18.99, STEADY)]).rows[0].gpuFloor).toEqual({ min: 18.8, p10: 18.85 });
+    expect(pinOf([MW120_GPU]).rows[0].gpuFloor).toBeNull();
+    expect(pinOf([SOL_GL]).rows[0].gpuFloor).toBeNull();
+  });
+
+  // The 2026-09-13 false mark: the median rose 0.43 past a 0.25 band while the
+  // fastest frames stayed put — only the slow half moved.
+  it('prints an unmoved floor on a ✗ and says the upper half alone rose, without changing the verdict', () => {
+    const wander = STEADY.map((x, i) => (i < 10 ? x : x + 0.9));
+    const row = compareToPin(pinOf([withGpu(18.99, STEADY)]), file([withGpu(19.42, wander)])).rows[0];
+    expect(row.verdict).toBe('dearer');
+    expect(row.deltaMs).toBeCloseTo(0.43, 6);
+    expect(row.floorDeltaMs).toBe(0);
+    expect(row.note).toBe('floor moved 0.000 of 0.430 — the upper half alone rose; read the quarters before accepting');
+  });
+
+  it('leaves the note empty when the floor followed the median, as a per-frame cost does', () => {
+    const dearer = STEADY.map((x) => x + 0.5);
+    const row = compareToPin(pinOf([withGpu(18.99, STEADY)]), file([withGpu(19.49, dearer)])).rows[0];
+    expect(row.verdict).toBe('dearer');
+    expect(row.floorDeltaMs).toBeCloseTo(0.5, 6);
+    expect(row.note).toBe('');
+    expect(FLOOR_FOLLOWS_FRACTION).toBe(0.25);
+  });
+
+  it('prints no floor where either side lacks samples, and never on a wall row', () => {
+    expect(compareToPin(pinOf([MW120_GPU]), file([withGpu(21.0, STEADY)])).rows[0].floorDeltaMs).toBeNull();
+    expect(compareToPin(pinOf([withGpu(21.0, STEADY)]), file([MW120_GPU])).rows[0].floorDeltaMs).toBeNull();
+    expect(compareToPin(pinOf([SOL_GL]), file([SOL_GL])).rows[0].floorDeltaMs).toBeNull();
   });
 });
 

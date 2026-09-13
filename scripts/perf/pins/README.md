@@ -195,6 +195,15 @@ the whole pin, it blocked the pin for *every* render-path PR at random. Wall
   `band` because `--baseline` applies the same one: the tighter of two
   gates is the one that decides, so a Tier 1 band under this one would
   mark a move Tier 2 calls unresolved (`RELEASING.md` § Perf pin).
+- **Floor.** Each GPU row also records its fastest frames — `min` and the
+  10th-percentile frame, off the raw samples — and the table prints how far
+  that p10 moved beside `delta`. A cost every frame pays lifts the floor as
+  far as the median (across 111 archived cross-commit moves, ×1.07); a
+  wander lifts the upper half alone and leaves it (the two 2026-09-13 false
+  marks: median +0.47 / +0.43, p10 −0.08 / +0.01). A `✗` whose floor moved
+  under `FLOOR_FOLLOWS_FRACTION` (a quarter) of the median's says so in its
+  note. Never marked: the floor's own repeat scatter is wider than the
+  median's at earth and sol, so it is the discriminator, not the gate.
 - **Ceiling.** A GPU-stream p50 over `PIN_CEILING_MS` (33.4 ms, two 60 Hz
   intervals of hardware time) is `✗` whatever the band says — and on an
   ungated vantage too, which is where it earns its keep: those rows have

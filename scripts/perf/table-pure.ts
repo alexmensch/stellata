@@ -116,7 +116,9 @@ export function formatDiffTable(diff: RunDiff): string {
   return parts.length > 0 ? parts.join('\n') : 'baseline: nothing comparable in either run';
 }
 
-export const PIN_DIFF_COLUMNS = ['', 'row', 'metric', 'pinned', 'current', 'delta', 'band', 'note'] as const;
+/** `floor` is the 10th-percentile frame's move beside the median's — the
+ *  wander-or-cost discriminator, printed and never marked. */
+export const PIN_DIFF_COLUMNS = ['', 'row', 'metric', 'pinned', 'current', 'delta', 'floor', 'band', 'note'] as const;
 
 export function formatPinTable(diff: PinDiff): string {
   if (diff.refusedWholeRun !== null) {
@@ -128,7 +130,8 @@ export function formatPinTable(diff: PinDiff): string {
       PIN_DIFF_COLUMNS,
       diff.rows.map((row) => [
         PIN_VERDICT_MARK[row.verdict], row.key, row.metric,
-        round3(row.pinnedMs), round3(row.currentMs), round3(row.deltaMs), round3(row.bandMs), row.note,
+        round3(row.pinnedMs), round3(row.currentMs), round3(row.deltaMs),
+        row.floorDeltaMs === null ? undefined : round3(row.floorDeltaMs), round3(row.bandMs), row.note,
       ]),
     ));
   }

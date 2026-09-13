@@ -3,7 +3,7 @@
 // RELEASING.md § Perf pin; mechanics: pins/README.md.
 
 import { basename, relative, resolve } from 'node:path';
-import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import { medianStandardErrorMs, percentile } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import {
   VERDICT_MARK, band, bufferRefusal, dwellFloorMs, positionRefusal, readbackRefusal,
   recordCountRefusal, splitFrameClasses, type DiffRefusal, type Verdict,
@@ -35,7 +35,25 @@ export const PIN_UNGATED_SCENARIOS: Readonly<Partial<Record<ScenarioName, string
  *  ratchet past. */
 export const PIN_CEILING_MS = 33.4;
 
+/** A ✗ whose floor rose by less than this share of the median's rise lifted
+ *  only its upper half — the wander shape, not a per-frame cost, which lifts
+ *  the whole distribution. The row's note says so; the verdict stands. */
+export const FLOOR_FOLLOWS_FRACTION = 0.25;
+
 export class PinError extends Error {}
+
+/** The fastest frames of a dwell: a per-frame cost moves them as far as the
+ *  median, a wander leaves them where they were. Printed beside the median
+ *  and never marked (pins/README.md § Reading `--against-pin`). */
+export interface FrameFloor {
+  readonly min: number;
+  readonly p10: number;
+}
+
+export function frameFloor(samples: readonly number[] | null): FrameFloor | null {
+  if (samples === null || samples.length === 0) return null;
+  return { min: Math.min(...samples), p10: percentile(samples, 0.1) };
+}
 
 export interface PinClock {
   readonly p50: number;
@@ -74,6 +92,7 @@ export interface PinRow {
   readonly wall: PinClock & { readonly vsyncClamped: boolean };
   /** The WebGPU frame-sample stream where it was sound; null on WebGL2. */
   readonly gpu: PinClock | null;
+  readonly gpuFloor: FrameFloor | null;
   /** The run file this row was summarised from, under `.perf-runs/`. Rows
    *  of one pin may cite different runs of the same commit (`pinFromRuns`). */
   readonly sourceRun: string;
@@ -117,6 +136,9 @@ export interface PinVerdictRow {
   readonly currentMs: number;
   readonly deltaMs: number;
   readonly bandMs: number;
+  /** How far the 10th-percentile frame moved, where both sides hold a GPU
+   *  floor; null otherwise. Context for `deltaMs`, never a verdict input. */
+  readonly floorDeltaMs: number | null;
   readonly verdict: PinVerdict;
   readonly note: string;
 }
@@ -281,6 +303,7 @@ function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
     method: record.method!,
     wall: { ...clockOf(dwell.stats), vsyncClamped: dwell.stats.vsyncClamped },
     gpu: dwell.gpuStats === null ? null : clockOf(dwell.gpuStats),
+    gpuFloor: dwell.gpuStats === null ? null : frameFloor(dwell.gpuMs),
     sourceRun,
   };
 }
@@ -395,7 +418,26 @@ function ungatedNote(pinned: PinRow, current: PinClock | null): string {
 function ungatedRow(
   key: string, metric: DwellMetric, pinnedMs: number, currentMs: number, note: string,
 ): PinVerdictRow {
-  return { key, metric, pinnedMs, currentMs, deltaMs: currentMs - pinnedMs, bandMs: 0, verdict: 'ungated', note };
+  return {
+    key, metric, pinnedMs, currentMs, deltaMs: currentMs - pinnedMs, bandMs: 0, floorDeltaMs: null, verdict: 'ungated', note,
+  };
+}
+
+function floorDelta(pinned: PinRow, dwell: DwellRecord): number | null {
+  const current = frameFloor(dwell.gpuMs);
+  if (pinned.gpuFloor == null || current === null) return null;
+  return current.p10 - pinned.gpuFloor.p10;
+}
+
+/** The reader's discriminator on a mark: a cost every frame pays lifts the
+ *  floor with the median; a wander lifts the upper half alone. */
+function floorNote(row: PinVerdictRow): PinVerdictRow {
+  if (row.verdict !== 'dearer' || row.floorDeltaMs === null || row.deltaMs <= 0) return row;
+  if (row.floorDeltaMs >= FLOOR_FOLLOWS_FRACTION * row.deltaMs) return row;
+  return {
+    ...row,
+    note: `floor moved ${row.floorDeltaMs.toFixed(3)} of ${row.deltaMs.toFixed(3)} — the upper half alone rose; read the quarters before accepting`,
+  };
 }
 
 /** Applied to every row carrying a GPU reading, ungated ones included: the
@@ -413,22 +455,26 @@ function compareRow(pinned: PinRow, dwell: DwellRecord): PinVerdictRow {
     );
   }
 
+  const floorDeltaMs = floorDelta(pinned, dwell);
   const ungatedBecause = PIN_UNGATED_SCENARIOS[pinned.name];
   if (ungatedBecause !== undefined) {
-    return underCeiling(ungatedRow(
-      pinned.key, 'gpu-p50', pinned.gpu.p50, dwell.gpuStats.p50,
-      `${pinned.name} ${ungatedBecause} — recorded, never marked below the ceiling`,
-    ));
+    return underCeiling({
+      ...ungatedRow(
+        pinned.key, 'gpu-p50', pinned.gpu.p50, dwell.gpuStats.p50,
+        `${pinned.name} ${ungatedBecause} — recorded, never marked below the ceiling`,
+      ),
+      floorDeltaMs,
+    });
   }
 
   const deltaMs = dwell.gpuStats.p50 - pinned.gpu.p50;
   const bandMs = band(
     medianStandardErrorMs(pinned.gpu), medianStandardErrorMs(dwell.gpuStats), dwellFloorMs(pinned.gpu.p50),
   );
-  return underCeiling({
+  return underCeiling(floorNote({
     key: pinned.key, metric: 'gpu-p50', pinnedMs: pinned.gpu.p50, currentMs: dwell.gpuStats.p50,
-    deltaMs, bandMs, verdict: verdictFor(deltaMs, bandMs), note: '',
-  });
+    deltaMs, bandMs, floorDeltaMs, verdict: verdictFor(deltaMs, bandMs), note: '',
+  }));
 }
 
 /**

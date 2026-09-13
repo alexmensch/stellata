@@ -54,6 +54,10 @@
         "samples": 186,
         "stateGuard": "steady"
       },
+      "gpuFloor": {
+        "min": 18.750756000000003,
+        "p10": 18.888919
+      },
       "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
@@ -81,6 +85,10 @@
         "iqrMs": 0.7376140000000007,
         "samples": 214,
         "stateGuard": "steady"
+      },
+      "gpuFloor": {
+        "min": 10.760128,
+        "p10": 10.981666
       },
       "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
@@ -110,6 +118,10 @@
         "samples": 196,
         "stateGuard": "steady"
       },
+      "gpuFloor": {
+        "min": 12.413269,
+        "p10": 13.098175000000001
+      },
       "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
@@ -137,6 +149,10 @@
         "iqrMs": 0.042543000000001996,
         "samples": 59,
         "stateGuard": "steady"
+      },
+      "gpuFloor": {
+        "min": 29.162806000000003,
+        "p10": 29.180556
       },
       "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
@@ -166,6 +182,10 @@
         "samples": 169,
         "stateGuard": "trending"
       },
+      "gpuFloor": {
+        "min": 10.349968,
+        "p10": 10.696669
+      },
       "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
@@ -188,6 +208,7 @@
         "vsyncClamped": true
       },
       "gpu": null,
+      "gpuFloor": null,
       "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
@@ -210,6 +231,7 @@
         "vsyncClamped": true
       },
       "gpu": null,
+      "gpuFloor": null,
       "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
@@ -232,6 +254,7 @@
         "vsyncClamped": true
       },
       "gpu": null,
+      "gpuFloor": null,
       "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
@@ -254,6 +277,7 @@
         "vsyncClamped": false
       },
       "gpu": null,
+      "gpuFloor": null,
       "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
@@ -276,6 +300,7 @@
         "vsyncClamped": true
       },
       "gpu": null,
+      "gpuFloor": null,
       "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     }
   ],
