@@ -953,3 +953,52 @@ membership; positional joins at any stage; live SIMBAD in the build; a
 keep-list file separate from the membership term; re-deriving a Gaia
 *binding* from a raw cross-walk without the § 4 gate — a frozen
 designation may admit a record (§ 3.1), it never binds one.
+
+## 9. Testing a proposed identifier rule before building it
+
+Measure a rule's **premise**, not just its acceptance afterwards. A stated rule
+in this space routinely rests on a claim a second witness refutes, and the
+measurement is cheaper than the implementation plus the revert.
+
+**Ask what the RECORD is, not what one of its designations names.** A record is
+its Gaia binding — the id the manifest justified and `readStars` builds from —
+so SIMBAD's object for that source outranks any printed cross-index keyed on a
+TYC, HIP or HD the row also carries. Worked example: IV/25, SIMBAD-by-TYC and
+I/239 all call eps Boo's own TYC HD 129988 (eps Boo B), so a rule keyed on any
+of them ships Izar under its companion's number, because the record's source is
+SIMBAD's eps Boo. Applying that test to 23 contested rows split them
+9 move / 12 refuse / 2 silent, where every TYC-keyed reading said 23.
+
+**Discriminators that look like evidence and are not.** A catalogue's presence
+or absence column is not a component attribution:
+
+- *"Of two HD numbers sharing a designation, the one carrying a HIP is the
+  star"* — picks eps Boo B over Izar.
+- *"The number carrying no HR and no HIP is the secondary"* — on half the rows
+  it fires, SIMBAD holds ONE object, so it splits a star.
+- I/239's HD for a HIP is the same trap: Hipparcos resolved a close pair as one
+  star, so its HD is whichever component the blended entry printed.
+
+**Query SIMBAD live** (`simbad.cds.unistra.fr/simbad/sim-tap/sync`, ADQL over
+`basic JOIN ident`) before acting on IV/25, IV/27A, I/239 or V/50 alone — one
+printed catalogue is not a witness for an identifier attribution. `ORDER BY`
+rejects a qualified column name there.
+
+**Measure the change's own side effects, not only its target**, and check past
+the field: HR rides HD through V/50, freeing a designation lets the primaries
+admit the sibling, and both mint records and SIDs. Hold any new count against
+the sibling count on the other side of the same rule — widening the classic-ID
+binding gate passed 0 where the record side passes null for a missing HIP,
+silently applying the sibling-letter gate on one side only, and read 692
+rejections against the derivation's 119. The count is what caught it.
+
+**Ask whether the fix needs building at all.** Of 34 numbers withheld by one
+proposal, 6 already had a manifest row of their own carrying the number, all
+parked for want of a parallax — so the label rule was never the blocker.
+
+**Prefer replacing a prose figure with a build count.** A figure measured over
+the parked set or the manifest goes stale with every membership change.
+
+**A refutation is a result, and it has to be recorded where the next session
+meets it** — in the bead's close reason and here — or the refuted rule gets
+re-proposed by whoever reads only the original reasoning.
