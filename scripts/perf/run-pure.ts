@@ -60,13 +60,22 @@ export function readbackOrder(cadences: readonly number[]): number[] {
 }
 
 /**
- * The contexts a run visits, in order: backend-major, `BACKENDS` order, the
- * scenarios as given within each, and — where more than one cadence was
- * asked for — that scenario once per cadence in `readbackOrder`.
- * Backend-major so that `--scenario all
- * --backend both` opens with the Tier 1 vantages on the gated backend — the
- * positions a Tier 1 run visits them at, which is what lets its rows compare
- * against the pin's (`pins/README.md` § Run position).
+ * Backend-major, the scenarios as given within each backend. So that
+ * `--scenario all --backend both` opens with the Tier 1 vantages on the gated
+ * backend — the positions a Tier 1 run visits them at, which is what lets its
+ * rows compare against the pin's (`pins/README.md` § Run position).
+ */
+export function contextOrder(
+  scenarios: readonly ScenarioName[],
+  backends: readonly Backend[],
+): readonly { readonly name: ScenarioName; readonly backend: Backend }[] {
+  return backends.flatMap((backend) => scenarios.map((name) => ({ name, backend })));
+}
+
+/**
+ * The contexts a run visits, in order: `contextOrder` over `BACKENDS`, and —
+ * where more than one cadence was asked for — each scenario once per cadence
+ * in `readbackOrder`.
  */
 export function planContexts(
   scenarios: readonly ScenarioName[],
@@ -75,8 +84,8 @@ export function planContexts(
 ): readonly ContextPlan[] {
   const backends: readonly Backend[] = request === 'both' ? BACKENDS : [request];
   const order = readbackOrder(cadences);
-  return backends.flatMap((backend) =>
-    scenarios.flatMap((name) => order.map((readbackEvery) => ({ name, backend, readbackEvery }))));
+  return contextOrder(scenarios, backends)
+    .flatMap(({ name, backend }) => order.map((readbackEvery) => ({ name, backend, readbackEvery })));
 }
 
 /** The offending renderer string, or null. A fallback adapter counts even

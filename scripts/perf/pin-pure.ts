@@ -9,13 +9,13 @@ import {
   recordCountRefusal, splitFrameClasses, type DiffRefusal, type Verdict,
 } from './diff-pure';
 import { gatingClock, type DwellMetric, type StateGuard } from './dwell/dwell-pure';
-import { DWELL_METHOD } from './run-pure';
-import type { AdapterProbe, DwellRecord, GitProvenance, PerfFile, ScenarioRecord } from './schema';
-import type { Backend, ScenarioName } from './scenarios';
+import { DWELL_METHOD, contextOrder } from './run-pure';
+import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type GitProvenance, type PerfFile, type ScenarioRecord } from './schema';
+import { BACKENDS, SCENARIO_NAMES, type Backend, type ScenarioName } from './scenarios';
 
 /** Removing a field or changing what one MEANS bumps the suffix; adding one
  *  does not — the same contract as `PERF_SCHEMA`. */
-export const PIN_SCHEMA = 'stellata-perf/pin-2';
+export const PIN_SCHEMA = 'stellata-perf/pin-3';
 
 /** Vantages the band never marks, mapped to the reason, which the row's note
  *  carries. lg wanders as much across one dwell's quarters as it does between
@@ -74,6 +74,9 @@ export interface PinRow {
   readonly wall: PinClock & { readonly vsyncClamped: boolean };
   /** The WebGPU frame-sample stream where it was sound; null on WebGL2. */
   readonly gpu: PinClock | null;
+  /** The run file this row was summarised from, under `.perf-runs/`. Rows
+   *  of one pin may cite different runs of the same commit (`pinFromRuns`). */
+  readonly sourceRun: string;
 }
 
 export interface PinAcceptance {
@@ -87,8 +90,8 @@ export interface PinFile {
   readonly git: GitProvenance;
   readonly version: string;
   readonly takenAt: string;
-  /** The run file the rows were summarised from, under `.perf-runs/`. */
-  readonly sourceRun: string;
+  /** Every run file the rows were drawn from, in the order given. */
+  readonly sourceRuns: readonly string[];
   readonly rows: readonly PinRow[];
   /** Rows whose mark was accepted when this pin was taken, keyed like the
    *  rows: provenance for the value now pinned, never a filter on marks. */
@@ -153,9 +156,18 @@ export function adapterSlug(probe: AdapterProbe | null): string | null {
   return parts.filter((p) => p.length > 0).join('-');
 }
 
+const keyOf = (name: string, backend: string): string => `${name}|${backend}`;
+
 export function pinKey(record: ScenarioRecord): string {
-  return `${record.name}|${record.backend.actual ?? 'unbooted'}`;
+  return keyOf(record.name, record.backend.actual ?? 'unbooted');
 }
+
+/** Every canon row and the position a pin run takes it at — backend-major in
+ *  canon order, so mw120|webgpu is 1 and lg|webgl2 is 10. A pin holds all of
+ *  them and each at its own position (pins/README.md § Run position). */
+export const CANON_POSITIONS: ReadonlyMap<string, number> = new Map(
+  contextOrder(SCENARIO_NAMES, BACKENDS).map(({ name, backend }, i) => [keyOf(name, backend), i + 1]),
+);
 
 function clockOf(stats: DwellRecord['stats']): PinClock {
   return {
@@ -184,62 +196,169 @@ function rowRefusal(record: ScenarioRecord): string | null {
   return null;
 }
 
-export interface PinSource {
+/** A row taken where the pin run never takes it compares with nothing later:
+ *  every comparison is at equal position (pins/README.md § Run position). */
+function canonPositionRefusal(record: ScenarioRecord): string | null {
+  const canon = CANON_POSITIONS.get(pinKey(record));
+  if (canon === undefined || record.position === canon) return null;
+  return `taken at position ${record.position}; the pin run takes ${pinKey(record)} at ${canon}`;
+}
+
+export interface RunSource {
+  readonly file: PerfFile;
+  /** How the pin cites this run (`citeRunPath`). */
   readonly sourceRun: string;
+}
+
+export interface PinSource {
   readonly version: string;
   readonly accepted: Readonly<Record<string, PinAcceptance>>;
 }
 
-/**
- * Summarise a dwell-mode run as a pin, or say why not. Any refused
- * scenario refuses the whole pin: a pin missing a row would narrow the
- * gate silently, and a run taken headed or on a software adapter is not
- * the machine the pin describes.
- */
-export function pinFromRun(file: PerfFile, source: PinSource): { pin: PinFile | null; refusals: readonly string[] } {
+/** Where a pinned row came from, and every run that could not supply it. */
+export interface RowProvenance {
+  readonly key: string;
+  readonly sourceRun: string | null;
+  readonly refusedIn: readonly { readonly sourceRun: string; readonly reason: string }[];
+}
+
+export interface PinSummary {
+  readonly pin: PinFile | null;
+  /** The chosen rows as one run, for `compareToPin` against the pin being
+   *  replaced; its run block is the last source's. */
+  readonly merged: PerfFile | null;
+  readonly refusals: readonly string[];
+  readonly provenance: readonly RowProvenance[];
+}
+
+/** Why these runs are not one machine measuring one tree. */
+function runIdentityRefusals(sources: readonly RunSource[]): string[] {
   const refusals: string[] = [];
-  const slug = adapterSlug(file.run.gpu);
-  if (slug === null) refusals.push('the run carried no adapter probe');
-  if (!file.run.browser.headless) refusals.push('a headed run — headed and headless never compare');
-  if (file.scenarios.length === 0) refusals.push('the run measured nothing');
-  const rows: PinRow[] = [];
-  for (const record of file.scenarios) {
-    const why = rowRefusal(record);
-    if (why !== null) {
-      refusals.push(`${pinKey(record)}: ${why}`);
-      continue;
-    }
-    const dwell = record.dwell!;
-    rows.push({
-      key: pinKey(record),
-      name: record.name,
-      backend: record.backend.actual!,
-      bufferMpx: record.bufferMpx!,
-      recordCount: record.recordCount!,
-      position: record.position!,
-      idleRafMs: record.idleRafMs,
-      readbackPerFrame: dwell.readbackPerFrame,
-      splitFrame: splitFrameClasses(dwell.passCounts),
-      method: record.method!,
-      wall: { ...clockOf(dwell.stats), vsyncClamped: dwell.stats.vsyncClamped },
-      gpu: dwell.gpuStats === null ? null : clockOf(dwell.gpuStats),
-    });
+  if (sources.length === 0) refusals.push('no run files');
+  for (const { file, sourceRun } of sources) {
+    if (adapterSlug(file.run.gpu) === null) refusals.push(`${sourceRun}: the run carried no adapter probe`);
+    if (!file.run.browser.headless) refusals.push(`${sourceRun}: a headed run — headed and headless never compare`);
+    if (file.scenarios.length === 0) refusals.push(`${sourceRun}: the run measured nothing`);
   }
-  if (refusals.length > 0 || slug === null || file.run.gpu === null) return { pin: null, refusals };
+  const slugs = new Set(sources.map((s) => adapterSlug(s.file.run.gpu)).filter((s) => s !== null));
+  if (slugs.size > 1) {
+    refusals.push(`the runs span adapters ${[...slugs].join(', ')} — a frame time is a property of the GPU that drew it`);
+  }
+  if (sources.length > 1) {
+    const commits = new Set(sources.map((s) => s.file.run.git.commit));
+    if (commits.size > 1) {
+      refusals.push(
+        `the runs span commits ${[...commits].map((c) => c.slice(0, 8)).join(', ')} — rows merge only across runs of one tree`,
+      );
+    }
+    const dirty = sources.filter((s) => s.file.run.git.dirty).map((s) => s.sourceRun);
+    if (dirty.length > 0) {
+      refusals.push(`${dirty.join(', ')}: a dirty tree — two runs at one hash with uncommitted changes need not be one tree`);
+    }
+  }
+  return refusals;
+}
+
+/** Union of the runs' keys, canon rows first in canon order. */
+function keysAcross(sources: readonly RunSource[]): string[] {
+  const keys = new Set(sources.flatMap((s) => s.file.scenarios.map(pinKey)));
+  const rank = (key: string): number => CANON_POSITIONS.get(key) ?? Number.POSITIVE_INFINITY;
+  return [...keys].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+}
+
+function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
+  const dwell = record.dwell!;
+  return {
+    key: pinKey(record),
+    name: record.name,
+    backend: record.backend.actual!,
+    bufferMpx: record.bufferMpx!,
+    recordCount: record.recordCount!,
+    position: record.position!,
+    idleRafMs: record.idleRafMs,
+    readbackPerFrame: dwell.readbackPerFrame,
+    splitFrame: splitFrameClasses(dwell.passCounts),
+    method: record.method!,
+    wall: { ...clockOf(dwell.stats), vsyncClamped: dwell.stats.vsyncClamped },
+    gpu: dwell.gpuStats === null ? null : clockOf(dwell.gpuStats),
+    sourceRun,
+  };
+}
+
+/**
+ * Summarise one or more dwell-mode runs of the same commit as a pin, or say
+ * why not. Each row is taken from the LAST run given in which it is sound;
+ * a row sound in no run refuses the whole pin, naming every run's reason,
+ * because a pin missing a row would narrow the gate silently. Two cold runs
+ * of identical code narrow nothing, so a row one run refused for straddling
+ * a load state is taken from the run that held it steady — which is what
+ * lets a pin come from saved runs without a second arm
+ * (pins/README.md § From saved runs).
+ */
+export function pinFromRuns(sources: readonly RunSource[], source: PinSource): PinSummary {
+  const refusals = runIdentityRefusals(sources);
+  const byKey = sources.map(({ file, sourceRun }) => {
+    const records = new Map<string, ScenarioRecord>();
+    for (const record of file.scenarios) {
+      const key = pinKey(record);
+      if (records.has(key)) refusals.push(`${sourceRun}: visits ${key} more than once — a cadence probe, not a pin run`);
+      records.set(key, record);
+    }
+    return { sourceRun, records };
+  });
+
+  const provenance: RowProvenance[] = [];
+  const chosen: { record: ScenarioRecord; sourceRun: string }[] = [];
+  for (const key of keysAcross(sources)) {
+    const refusedIn: { sourceRun: string; reason: string }[] = [];
+    let taken: { record: ScenarioRecord; sourceRun: string } | null = null;
+    for (const { sourceRun, records } of byKey) {
+      const record = records.get(key);
+      if (record === undefined) continue;
+      const why = rowRefusal(record) ?? canonPositionRefusal(record);
+      if (why === null) taken = { record, sourceRun };
+      else refusedIn.push({ sourceRun, reason: why });
+    }
+    provenance.push({ key, sourceRun: taken?.sourceRun ?? null, refusedIn });
+    if (taken === null) {
+      refusals.push(`${key}: ${refusedIn.map((r) => `${r.sourceRun}: ${r.reason}`).join('; ')}`);
+    } else {
+      chosen.push(taken);
+    }
+  }
+
+  const last = sources.at(-1);
+  const slug = last === undefined ? null : adapterSlug(last.file.run.gpu);
+  if (refusals.length > 0 || last === undefined || slug === null || last.file.run.gpu === null) {
+    return { pin: null, merged: null, refusals, provenance };
+  }
+  const takenAt = sources.map((s) => s.file.run.finishedAt).sort().at(-1)!;
   return {
     pin: {
       schema: PIN_SCHEMA,
       adapterSlug: slug,
-      adapter: file.run.gpu,
-      git: file.run.git,
+      adapter: last.file.run.gpu,
+      git: last.file.run.git,
       version: source.version,
-      takenAt: file.run.finishedAt,
-      sourceRun: source.sourceRun,
-      rows,
+      takenAt,
+      sourceRuns: sources.map((s) => s.sourceRun),
+      rows: chosen.map(({ record, sourceRun }) => rowFrom(record, sourceRun)),
       accepted: source.accepted,
     },
+    merged: {
+      schema: PERF_SCHEMA,
+      run: { ...last.file.run, finishedAt: takenAt },
+      scenarios: chosen.map(({ record }) => record),
+    },
     refusals,
+    provenance,
   };
+}
+
+/** Canon rows a pin does not hold. */
+export function missingCanonRows(pin: PinFile): readonly string[] {
+  const held = new Set(pin.rows.map((row) => row.key));
+  return [...CANON_POSITIONS.keys()].filter((key) => !held.has(key));
 }
 
 /**
@@ -399,6 +518,27 @@ export function unacceptedMarks(
   return diff.rows
     .filter((row) => row.verdict === 'dearer' && accepted[row.key] === undefined)
     .map((row) => row.key);
+}
+
+/**
+ * Why a summarised pin must not be written, or null. Both writers — the
+ * runner's `--pin` and the offline `perf:pin` — ask this and nothing else
+ * after `pinFromRuns`, so the two cannot come to refuse different pins.
+ * `against` is the comparison with the pin being replaced, where one exists.
+ */
+export function pinWriteRefusal(pin: PinFile, against: PinDiff | null): string | null {
+  const missing = missingCanonRows(pin);
+  if (missing.length > 0) {
+    return `the pin would lack ${missing.join(', ')} — a pin missing a row narrows the gate silently`;
+  }
+  if (against !== null) {
+    const unaccepted = unacceptedMarks(against, pin.accepted);
+    if (unaccepted.length > 0) {
+      return `${unaccepted.join(', ')} marked ✗ against the pin being replaced. ` +
+        'Fix the regression, or re-run with --accept <row>:<bead-id> to pin the accepted value.';
+    }
+  }
+  return null;
 }
 
 export function assertPinFile(value: unknown, source: string): PinFile {

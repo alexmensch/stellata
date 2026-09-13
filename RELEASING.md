@@ -142,9 +142,14 @@ information.
   instrument itself.** The full cold sweep, and it re-takes the pin:
   `--mode dwell --scenario all --backend both --cooldown-ms 120000
   --pin`, ~15–25 min. Everything from § What is pinned down is this tier.
+  A sweep refused for one row — a first-context settle, a dwell that
+  trended — is not re-armed: `pnpm run perf:pin` writes the pin offline
+  from the saved run files of one commit, taking each row from the run
+  that held it steady, with the same `--accept` gate
+  (`scripts/perf/pins/README.md` § From saved runs).
 
 **"The instrument" in Tier 2 means what it records or how it samples**, not
-every file under `scripts/perf/`. A change to `pinFromRun`, `compareToPin`,
+every file under `scripts/perf/`. A change to `pinFromRuns`, `compareToPin`,
 the recorded schema, the sampling knobs or the clock a row is taken on
 re-takes the pin, because the committed rows stop describing the same
 measurement. A change to how a comparison is *judged or presented* —

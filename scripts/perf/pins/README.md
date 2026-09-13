@@ -1,6 +1,6 @@
 # Perf pins — one committed summary per GPU
 
-`<adapter-slug>.json` (schema `stellata-perf/pin-2`) is the whole frame at
+`<adapter-slug>.json` (schema `stellata-perf/pin-3`) is the whole frame at
 the canon vantages on one GPU, taken cold: what every render-path PR diffs
 against and re-takes. Operator rules — when a PR must run it, what a mark
 means, how the pin advances — are `RELEASING.md` § Perf pin; the code is
@@ -18,8 +18,8 @@ vsyncClamped and the GPU-stream p50 where it was sound, plus the
 state-guard verdict, buffer, catalogue record count, the context's
 position in the run, the exposure readback rate the row was taken at and
 whether its frame drew two classes, cadence, adapter probe, commit pair,
-package version and the run file. **Any refused row refuses the whole
-pin** — failed,
+package version and the run file the row came from. **Any refused row
+refuses the whole pin** — failed,
 tainted, not dwell, not `raf-delta`, trending at a *gated* vantage, a round
 trip, a headed run, no record count, no position — because a pin missing a
 row narrows the gate silently, and for the same reason `--pin` refuses a
@@ -27,6 +27,43 @@ command line short of `--scenario all --backend both`, or one naming the
 whole canon in another order (§ Run position).
 `--accept <scenario>|<backend>:<bead>` records an accepted mark as
 provenance for the value now pinned; it never filters a verdict.
+
+## From saved runs
+
+A refused row does not cost a second arm. The run file is first-hand data
+already — the arm protected the machine's idleness, which is spent — so
+the pin is written from it offline:
+
+```
+pnpm run perf:pin -- <run.json>... [--pin scripts/perf/pins/<slug>.json]
+                     [--accept <scenario>|<backend>:<bead>]... [--dry-run]
+```
+
+**Rows merge across runs of ONE commit.** Every run named must carry the
+same `git.commit`, the same adapter slug and a headless browser, and — where
+more than one is named — a clean tree, since two dirty runs at one hash need
+not be one tree. Each canon row is taken from the **last** run given in
+which it is sound, so list runs oldest first and the freshest steady reading
+wins; a row sound in no run refuses the pin, naming every run's reason.
+Merging narrows nothing: the whole-pin refusal exists so a partial pin
+cannot silently drop a row, and two cold runs of identical code supply the
+same row. A Tier 1 `--against-pin` run of the same commit is a run file too,
+and fills its two rows. Every row records `sourceRun`, the pin lists
+`sourceRuns`, and a row taken at a position the pin run does not take it at
+is refused — a check run that visited `sol` first would otherwise pin
+`sol|webgpu` at position 1, where nothing later compares it. On 2026-09-13
+this would have written the compaction pin after its second run instead of
+its third, and the cull pin after its second run and a check instead of a
+fourth arm.
+
+**The accept gate is the same one `--pin` applies in a live run.** Where a
+pin already sits at the destination it is compared against, its provenance
+lines print, and a `✗` no `--accept` covers refuses the write. A file there
+that is not a readable pin — another schema, after a bump — is named and
+passed over: it can gate nothing, and replacing it is what the writer is
+for. `--dry-run` prints the rows, the run each came from, every run that
+refused one, and the verdicts, and writes nothing. Exit 1 is a refusal,
+2 a bad flag or an unreadable run.
 
 ## Run position
 

@@ -102,6 +102,15 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
   `✗` in it. Taking the pin in the same run as `--against-pin` needs
   `--accept <row>:<bead>` for each `✗`, or nothing is written.
   Rules: `RELEASING.md` § Perf pin; mechanics: `scripts/perf/pins/README.md`.
+- `pnpm run perf:pin -- <run.json>... [--pin <path>] [--accept <row>:<bead>]... [--dry-run]`
+  — the pin from saved run files, offline: no browser, no arm. **A pin run
+  refused for one row is never re-armed.** Name every saved run of the same
+  commit oldest first; each row comes from the last run that held it
+  steady, and only a row steady in no run refuses. A refused `--pin` run,
+  a Tier 1 `--against-pin` run of the same commit, or a mark you have
+  decided to accept all become a keystroke here. `--dry-run` first: it
+  prints the rows, their runs and the verdicts against the pin being
+  replaced. `scripts/perf/pins/README.md` § From saved runs.
 - `--headed` for a headed control run. Headed and headless never compare.
 
 A branch predating PR 469 has no `scripts/perf` at all, so measuring it means

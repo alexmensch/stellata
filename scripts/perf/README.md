@@ -17,9 +17,15 @@ scripts/perf/
                             marker consumed), launch, per-scenario loop,
                             exit codes. The only Playwright value import in
                             the tree; never imported by a test.
-  args.ts (+ test)          Flags → RunArgs (node:util parseArgs), plus the
-                            mode-compatibility check over the flags actually
-                            typed.
+  pin.ts                    `pnpm run perf:pin`: the pin from saved run
+                            files, offline — no browser, no arm.
+                            pins/README.md § From saved runs.
+  checkout.ts               What run.ts and pin.ts share about the checkout:
+                            root, main checkout, git provenance, the pin's
+                            read / compare / write.
+  args.ts (+ test)          Flags → RunArgs and PinArgs (node:util
+                            parseArgs), plus the mode-compatibility check
+                            over the flags actually typed.
   run-pure.ts (+ test)      The decisions around a launch: which clock a
                             backend request gets, which adapters disqualify a
                             run, how the probe reads, whether a marker arms,
@@ -38,7 +44,7 @@ scripts/perf/
   settle-pure.ts (+ test)   settleVerdict over one render-gate snapshot.
   diff-pure.ts (+ test)     Two runs differenced: bands, verdicts, and the
                             refusals that stop an invalid comparison.
-  pin-pure.ts (+ test)      The perf pin: adapter slug, pinFromRun,
+  pin-pure.ts (+ test)      The perf pin: adapter slug, pinFromRuns,
                             compareToPin and its floor, cadence and ceiling
                             rules. pins/<slug>.json is the committed pin.
   table-pure.ts (+ test)    Every text table. formatTable is the shared
@@ -390,17 +396,14 @@ Sweeps are never diffed — a slope is not a cost.
 
 ## Pinning
 
-`--mode dwell --scenario all --backend both --json <run> --pin
-pins/<slug>.json` summarises a run as the committed perf pin — `--pin`
-refuses anything short of the whole canon on both backends, since a pin
-missing a row narrows the gate silently, and refuses a **permutation** of
-it too: the rows would sit at positions no later run visits them at, so
-the pin it wrote would refuse every row of the next comparison.
-`--against-pin <path>` prints the
-verdicts for the rows this run measured, lists the pin rows it did not,
-and exits 1 on a `✗` or a refused row; a Tier 1 run measures two of the
-ten. Metric, floor, ceiling, refusals: `pins/README.md`. When a PR must run
-it and what a mark means: `RELEASING.md` § Perf pin.
+`--pin pins/<slug>.json` summarises a whole-canon, both-backend dwell run
+as the committed perf pin; `--against-pin <path>` prints the verdicts for
+the rows this run measured, lists the pin rows it did not, and exits 1 on
+a `✗` or a refused row. A run refused for one row is not re-armed:
+`pnpm run perf:pin` writes the pin from saved run files of one commit.
+What the pin holds, what refuses it, the merge rule, the metric, floor and
+ceiling: `pins/README.md`. When a PR must run it and what a mark means:
+`RELEASING.md` § Perf pin.
 
 ## Traps
 
