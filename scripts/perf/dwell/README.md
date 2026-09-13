@@ -102,23 +102,44 @@ floor is still a differential (`docs/render-rules.md` § 8). A WebGL2 dwell
 has no queue to count on and records null.
 
 **Where the frame has two classes, the GPU-stream median follows the
-readback duty cycle, and a pair whose rates differ is refused.** The stream
-samples only readback frames: across the 148 archived dwells that resolved
-one, its sample count never exceeds `readbackPerFrame × frames` and runs
-88–100 % of it (median 97 %, the shortfall being the readbacks still in
-flight when the dwell ends). That costs nothing while every frame is the same
-shape, and decides what the median measures once they are not. Only
-the `earth` vantage draws two shapes: the exposure measurement resolves under
-the dwell's pinned cut there, so `renderPasses` reads 4 or 10 in one dwell
+readback duty cycle, and a pair whose rates differ is refused.** Only the
+`earth` vantage draws two shapes: the exposure measurement resolves under the
+dwell's pinned cut there, so `renderPasses` reads 4 or 10 in one dwell
 (bimodal in all 23 archived WebGPU dwells carrying counters, against none of
-the other 109). Measured: 17.157 ms at 0.25 readbacks per frame against
-52.854 at 0.579, a 3.17× span whose wall p50 never left 16.70 ms and whose
-pass-count extremes never moved off 4/10 — only the median did, as the duty
-cycle crossed 50 %. `READBACK_TOLERANCE` (25 %) bounds it, clear of the 7 %
-spread `earth` holds across 25 cold runs. **The guard is gated on the frame
-being split**, because the same drift elsewhere is sound: `sol` moved 0.25 to
-0.59 across the runs that measured its 9.33 ms saving and `mw120` to 0.51
-with its median flat, and refusing those would discard real readings.
+the other 109). The stream samples a little over half the rendered frames and
+does not favour either shape, so the sampled mix is the frame population's
+mix and the median lands in whichever class holds the majority.
+
+**The two classes cost what they cost; only their SHARE moves.** Measured
+directly by pinning the cadence from one-in-one to one-in-eight over seven
+cold contexts of 1200 frames (`.perf-runs/2026-09-13/`, 4.096 Mpx headless):
+the low class reads 11.9–14.1 ms and the high 51.1–58.6 at every duty cycle,
+while the share of samples in the high one runs 0.118 at 0.125 readbacks per
+frame to 0.894 at 0.539 — tracking the rate. The median crosses when that
+share crosses a half, 13.20 ms against 56.19, a **4.3× step from a frame
+whose wall p50 never leaves 16.70 ms**. The 3.17× first seen between two
+archived runs was the same crossing, caught part-way.
+
+**The high class is not a duration, and the arithmetic says so.** At 0.539 the
+median implies 67.4 s of GPU work inside a 20.0 s dwell (3.37×); every other
+cadence reads 0.79–0.93×. three allocates a timestamp pair per render pass and
+sums them, so a 10-pass readback frame counts overlapping spans twice over
+where a 4-pass frame has little to overlap. Read the GPU row at a two-class
+vantage as summed pass occupancy, never as frame time.
+
+`READBACK_TOLERANCE` (25 %) bounds the rate drift, clear of the 7 % spread
+`earth` holds across 25 cold runs. **The guard is gated on the frame being
+split**, because the same drift elsewhere is sound: `sol` moved 0.25 to 0.59
+across the runs that measured its 9.33 ms saving and `mw120` to 0.51 with its
+median flat, and refusing those would discard real readings.
+
+**The sample count tracks `readbackPerFrame × frames` only while the cadence
+is EMERGENT.** Across the 148 archived dwells it never exceeded that product
+and ran 88–100 % of it, which read as "the stream samples only readback
+frames" — but those runs all let the two readbacks contend. Pin the statistic
+readback and the timestamp resolve runs at its own rate: 627–696 samples per
+1200 frames in all seven contexts above, against a product as low as 150. The
+bound describes the coupling, not the sampler.
 
 **The split is read from both sides, because the duty cycle erases its own
 evidence.** As the rate approaches 1 every frame becomes a readback frame and
@@ -128,8 +149,7 @@ largest move it exists to catch. `--baseline` has both runs' counters; the pin
 has none of its own, so it records the verdict per row (`splitFrame`) and the
 comparison ors the two. A dwell written before the counters existed carries no
 field at all, which reads as one class, as an unrecorded rate declines the
-guard. What sets the multiple is not established — `../diff-pure.ts` carries
-the rule, and the mechanism is `stellata-8cg.67.2`.
+guard. `../diff-pure.ts` carries the rule.
 
 **The pinned cadence removes the drift; the guard stays because the pin is
 not the only pair it judges.** Two dwells taken at the same
