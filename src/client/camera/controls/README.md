@@ -37,9 +37,13 @@ in both navigate and observe modes.
   never swings bright. Prefiltering on the intrinsic value is sound only
   because every omitted term dims (`../../hdr/exposure/README.md` § What
   "visible" means to a pick path); making it the *gate* is the bug that
-  had clicks landing on stars in empty sky. The confirm step costs a GPU
-  readback per candidate, so `pickFromCandidatesResolved` walks the score
-  order lazily and stops at the first candidate that renders. The
+  had clicks landing on stars in empty sky. On the WebGL2 escape hatch
+  the confirm step stalls on a readback per candidate, so
+  `pickFromCandidatesResolved` walks the score order lazily and stops at
+  the first candidate that renders; on the shipped renderer the same read
+  is a lookup into a CPU mirror the pointer event ahead of the pick
+  staged (`../../webgpu/extinction/README.md` § Cold reads), so the
+  laziness costs nothing there either way. The
   prefilter's radius must be an **upper bound** of the resolved one or
   the prime/fallback partition mis-tiers — in chart mode that means
   bounding the magnitude-mapped ink disc as well as the realistic
