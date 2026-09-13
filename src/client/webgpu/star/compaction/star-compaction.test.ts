@@ -62,12 +62,14 @@ describe('StarCompaction dispatch', () => {
     expect(kernel.name).toBe('star-compaction');
   });
 
-  it('dispatches once per call, every frame', () => {
+  // The kernels are built once: a frame re-dispatches the same array rather
+  // than rebuilding two ComputeNodes on the hot path.
+  it('dispatches once per call, every frame, over the same kernels', () => {
     const { compaction, dispatches } = make();
     compaction.dispatch();
     compaction.dispatch();
     expect(dispatches).toHaveLength(2);
-    expect(dispatches[1]).toBe(dispatches[1]);
+    expect(dispatches[1]).toBe(dispatches[0]);
   });
 });
 

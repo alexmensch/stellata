@@ -24,17 +24,15 @@ export function buildStarGeometries(
   args: IndirectStorageBufferAttribute,
 ): StarGeometries {
   const corner = new THREE.BufferAttribute(STAR_QUAD_CORNERS, 2);
+  const index = new THREE.Uint16BufferAttribute(STAR_QUAD_INDEX, 1);
   const build = (tier: StarTier) => {
     const geometry = new THREE.InstancedBufferGeometry();
     geometry.setAttribute('aCorner', corner);
-    geometry.setIndex(STAR_QUAD_INDEX);
+    geometry.setIndex(index);
     geometry.setIndirect(args, tierArgsOffsetBytes(tier));
     geometry.instanceCount = count;
     geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), boundingSphereRadiusPc);
     return geometry;
   };
-  const glow = build(STAR_TIER_GLOW);
-  const disc = build(STAR_TIER_DISC);
-  disc.setIndex(glow.getIndex());
-  return { glow, disc };
+  return { glow: build(STAR_TIER_GLOW), disc: build(STAR_TIER_DISC) };
 }
