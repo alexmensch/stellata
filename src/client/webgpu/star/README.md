@@ -306,7 +306,7 @@ one the boot built, and never learns which. What the port changes:
   list.
 - **`sync()` copies nothing but the member indices**, so it forwards
   nothing either: the tables it reads are made current by
-  `StarLayer.update()`, which runs past the render gate between the
+  `StarLayer.update(camera)`, which runs past the render gate between the
   frame's uniform sync and its render, while the local depth pass draws
   later in that same tick. A member slot and the table it indexes are
   therefore the same frame's whatever order the cluster updates in.

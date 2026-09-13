@@ -2722,7 +2722,7 @@ export class Stellata implements FrameAnchor {
     // star draw below reads — its own submit, so it has to sit between
     // the two (webgpu/star/compaction/README.md).
     perfMark('star.compaction');
-    this.webgpuStarLayer?.update();
+    this.webgpuStarLayer?.update(this.camera);
     perfMeasure('star.compaction');
     // One walk on the first rendered frame: every layer is parented by
     // then (the roster attach loop and registerSceneLayers both run in

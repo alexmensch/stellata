@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import type { ComputeNode, WebGPURenderer } from 'three/webgpu';
 import { makeHdrEmitterUniforms } from '../../../hdr/hdr-pipeline';
 import { buildSharedUniforms } from '../../../frame/shared-uniforms';
@@ -48,12 +49,19 @@ describe('StarCompaction buffers', () => {
   });
 });
 
+const camera = () => {
+  const c = new THREE.PerspectiveCamera(60, 1.6, 0.1, 100);
+  c.position.set(1, 2, 3);
+  c.lookAt(0, 0, 0);
+  return c;
+};
+
 describe('StarCompaction dispatch', () => {
   // One compute pass, one submit: the reset's stores are visible to the
   // kernel's atomics, and every draw of the render submit reads the result.
   it('runs the reset then the kernel in a single compute call', () => {
     const { compaction, dispatches } = make();
-    compaction.dispatch();
+    compaction.dispatch(camera());
     expect(dispatches).toHaveLength(1);
     const [reset, kernel] = dispatches[0] as ComputeNode[];
     expect(reset.count).toBe(1);
@@ -66,17 +74,36 @@ describe('StarCompaction dispatch', () => {
   // than rebuilding two ComputeNodes on the hot path.
   it('dispatches once per call, every frame, over the same kernels', () => {
     const { compaction, dispatches } = make();
-    compaction.dispatch();
-    compaction.dispatch();
+    const c = camera();
+    compaction.dispatch(c);
+    compaction.dispatch(c);
     expect(dispatches).toHaveLength(2);
     expect(dispatches[1]).toBe(dispatches[0]);
+  });
+
+  // The controls mutate position and quaternion without propagating them;
+  // the kernel must test against where the camera IS this frame, not where
+  // the last render left its matrices.
+  it('refreshes the camera matrices and hands the kernel projection × view', () => {
+    const { compaction } = make();
+    const c = camera();
+    compaction.dispatch(c);
+    const expected = new THREE.Matrix4().multiplyMatrices(c.projectionMatrix, c.matrixWorldInverse);
+    expect(compaction.viewProjectionMatrix.elements).toEqual(expected.elements);
+
+    c.position.set(-4, 0, 9);
+    const stale = compaction.viewProjectionMatrix.clone();
+    compaction.dispatch(c);
+    const moved = new THREE.Matrix4().multiplyMatrices(c.projectionMatrix, c.matrixWorldInverse);
+    expect(compaction.viewProjectionMatrix.elements).toEqual(moved.elements);
+    expect(compaction.viewProjectionMatrix.elements).not.toEqual(stale.elements);
   });
 });
 
 describe('StarCompaction dispose', () => {
   it('releases both buffers through the renderer registry and disposes both kernels', () => {
     const { compaction, released, dispatches } = make();
-    compaction.dispatch();
+    compaction.dispatch(camera());
     const disposed: string[] = [];
     for (const k of dispatches[0] as ComputeNode[]) {
       k.addEventListener('dispose', () => disposed.push(k.name));
@@ -84,7 +111,7 @@ describe('StarCompaction dispose', () => {
     compaction.dispose();
     expect(released).toEqual([compaction.survivors, compaction.args]);
     expect(disposed.sort()).toEqual(['star-compaction', 'star-compaction-reset']);
-    compaction.dispatch();
+    compaction.dispatch(camera());
     expect(dispatches).toHaveLength(1);
   });
 });

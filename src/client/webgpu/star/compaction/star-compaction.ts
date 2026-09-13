@@ -1,20 +1,22 @@
 // The compaction kernel: one thread per catalogue star appends every
-// survivor to its tier's list and counts it into that tier's indirect draw
-// arguments, once per rendered frame, ahead of the render submit. README.md.
+// survivor whose quad can touch the viewport to its tier's list and counts
+// it into that tier's indirect draw arguments, once per rendered frame. README.md.
 
+import type { Camera } from 'three';
+import { Matrix4 } from 'three';
 import {
   IndirectStorageBufferAttribute, StorageBufferAttribute,
   type ComputeNode, type WebGPURenderer,
 } from 'three/webgpu';
 import {
-  Fn, If, atomicAdd, atomicStore, compute, instanceIndex, int, storage, uint,
+  Fn, If, abs, atomicAdd, atomicStore, compute, instanceIndex, int, storage, uniform, uint, vec4,
 } from 'three/tsl';
 import { PHYS_RATIO_THRESHOLD } from '../../../star-pipeline/local-pass/star-local-cluster-pure';
 import { STAR_PASS_GLOW } from '../../../star-pipeline/star-pass';
 import { disposeStorageAttribute } from '../../tsl/storage-attribute';
 import { solveStarTsl, type StarTslDeps } from '../star-vertex-tsl';
 import {
-  STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
+  CULL_SLACK_NDC, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
   initialIndirectArgs, tierArgsInstanceCountElement, tierListBase, type StarTier,
 } from './compaction-pure';
 
@@ -33,6 +35,7 @@ export class StarCompaction {
   readonly survivorsNode: SurvivorsNode;
 
   private readonly renderer: WebGPURenderer;
+  private readonly viewProjection = uniform(new Matrix4());
   private kernels: ComputeNode[] | null;
 
   constructor(renderer: WebGPURenderer, deps: StarTslDeps, indexCount: number) {
@@ -43,6 +46,7 @@ export class StarCompaction {
     this.args = new IndirectStorageBufferAttribute(initialIndirectArgs(indexCount), 1);
     this.survivorsNode = storage(this.survivors, 'uint', this.survivors.count);
     const argsNode = storage(this.args, 'uint', this.args.count).toAtomic();
+    const { u } = deps;
 
     // Both instance counts start the frame at zero; the same compute pass
     // then runs the kernel, so its atomics see the reset.
@@ -65,13 +69,26 @@ export class StarCompaction {
     // exactly as before. Routing itself is exact — the shared solve.
     const kernel = compute(Fn(() => {
       const self = int(instanceIndex);
-      solveStarTsl(deps, self, deps.tables.position(self).toVar(), {
+      const localPos = deps.tables.position(self).toVar();
+      solveStarTsl(deps, self, localPos, {
         pass: STAR_PASS_GLOW, eclipseDim: null,
       }, (s) => {
-        If(s.physRatio.greaterThanEqual(PHYS_RATIO_THRESHOLD), () => {
-          append(STAR_TIER_DISC, self);
-        }).Else(() => {
-          append(STAR_TIER_GLOW, self);
+        // The frustum test, the CPU mirror being starQuadOffscreen. The
+        // pinned focal star projects through a substituted matrix in the
+        // vertex stage, so its true projection says nothing about where
+        // it draws — never culled.
+        const clip = this.viewProjection.mul(vec4(localPos, 1.0)).toVar();
+        const halfExtent = s.pxSize.div(u.uViewport);
+        const offscreen = clip.w.lessThanEqual(0.0)
+          .or(abs(clip.x).greaterThan(clip.w.mul(halfExtent.x.add(1.0 + CULL_SLACK_NDC))))
+          .or(abs(clip.y).greaterThan(clip.w.mul(halfExtent.y.add(1.0 + CULL_SLACK_NDC))));
+        const pinned = self.equal(u.uPinFocusToCenter);
+        If(pinned.or(offscreen.not()), () => {
+          If(s.physRatio.greaterThanEqual(PHYS_RATIO_THRESHOLD), () => {
+            append(STAR_TIER_DISC, self);
+          }).Else(() => {
+            append(STAR_TIER_GLOW, self);
+          });
         });
       });
     })(), this.count);
@@ -79,10 +96,20 @@ export class StarCompaction {
     this.kernels = [reset, kernel];
   }
 
+  /** The view-projection the kernel tested against on the last dispatch. */
+  get viewProjectionMatrix(): Matrix4 {
+    return this.viewProjection.value;
+  }
+
   /** One compute pass, one submit: reset then compact. Must follow the
-   *  frame's uniform sync and precede its render. */
-  dispatch(): void {
+   *  frame's uniform sync and precede its render. The camera's matrices are
+   *  refreshed here because the controls mutate position and quaternion
+   *  without propagating them, and the render that would is still ahead. */
+  dispatch(camera: Camera): void {
     if (this.kernels === null) return;
+    camera.updateMatrixWorld();
+    this.viewProjection.value.multiplyMatrices(
+      camera.projectionMatrix, camera.matrixWorldInverse);
     this.renderer.compute(this.kernels);
   }
 

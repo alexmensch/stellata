@@ -190,21 +190,22 @@ describe('StarLayer', () => {
   // positions while the draws read this frame's.
   it('update() forwards the sources and dispatches the compaction once', () => {
     const { layer, sources, dispatches } = makeLayer();
+    const camera = new THREE.PerspectiveCamera();
     const position = layer.tables.forwardedAttribute('iPosition');
     const before = position.version;
-    layer.update();
+    layer.update(camera);
     expect(position.version).toBe(before + 1);
     expect(dispatches).toHaveLength(1);
     sources.iPositionAttr.addUpdateRange(3, 3);
     sources.iPositionAttr.needsUpdate = true;
-    layer.update();
+    layer.update(camera);
     expect(position.updateRanges).toEqual([{ start: 3, count: 3 }]);
     expect(dispatches).toHaveLength(2);
   });
 
   it('dispose removes every mesh and releases geometries, materials, LUT, kernels and every storage buffer', () => {
     const { scene, layer, released, dispatches } = makeLayer();
-    layer.update();
+    layer.update(new THREE.PerspectiveCamera());
     const disposed = new Set<string>();
     const watch = (
       o: { addEventListener(type: 'dispose', listener: () => void): void },

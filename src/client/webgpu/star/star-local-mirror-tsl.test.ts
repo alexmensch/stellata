@@ -78,8 +78,8 @@ describe('StarLocalMirrorTsl construction', () => {
 
 describe('StarLocalMirrorTsl sync', () => {
   // The slots carry iSourceIdx alone, so the mirror forwards nothing: the
-  // table its vertex stage reads at that index is the one StarLayer.update()
-  // made current earlier in the same tick.
+  // table its vertex stage reads at that index is the one
+  // StarLayer.update(camera) made current earlier in the same tick.
   it('fills the member slots and leaves the tables to the layer', () => {
     const { layer, sources } = makeLayer();
     (sources.iPositionAttr.array as Float32Array).set([7, 8, 9], 2 * 3);
@@ -93,7 +93,7 @@ describe('StarLocalMirrorTsl sync', () => {
     expect(layer.localMirror.group.visible).toBe(true);
     expect(geom.getAttribute('iSourceIdx').array[0]).toBe(2);
     expect(position.version).toBe(before);
-    layer.update();
+    layer.update(new THREE.PerspectiveCamera());
     expect(position.version).toBe(before + 1);
     expect((position.array as Float32Array).slice(6, 9)).toEqual(new Float32Array([7, 8, 9]));
   });

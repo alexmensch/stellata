@@ -152,10 +152,11 @@ export class StarLayer {
 
   /** The frame's compaction: forward this frame's attribute writes onto the
    *  tables, then dispatch the kernel that lists the survivors every draw
-   *  below reads. After the shell's uniform-node sync, before its render. */
-  update(): void {
+   *  below reads, tested against this camera. After the shell's
+   *  uniform-node sync, before its render. */
+  update(camera: THREE.Camera): void {
     this.tables.syncSources();
-    this.compaction.dispatch();
+    this.compaction.dispatch(camera);
     this.tables.endFrame();
   }
 

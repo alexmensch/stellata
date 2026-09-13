@@ -59,16 +59,48 @@ tier does not move with the toggle.
 Chart mode routes every survivor to the disc list (`physRatio` stays 1
 there), so the glow draw issues zero instances on paper.
 
+## The frustum test
+
+A survivor is listed only if its quad can touch the viewport. The kernel
+projects the star's local position through a view-projection uniform the
+dispatch composes from the camera each frame (`projectionMatrix ×
+matrixWorldInverse`, the star meshes sitting at the identity), and drops
+the star when it is behind the camera (clip w ≤ 0) or its centre lies
+outside the clip box by more than the quad's own half-extent —
+`pxSize / uViewport` in NDC, the vertex stage's corner offset at
+corner ±0.5 — plus `CULL_SLACK_NDC`, a sub-pixel allowance for the two
+stages forming the clip position in a different float32 order.
+`starQuadOffscreen` (`compaction-pure.ts`) is the CPU mirror and carries
+the tests. Three.js frustum culling is off on every layer because
+floating-origin rebasing invalidates its bounding spheres
+(`docs/render-rules.md` § 1), so this is the star population's only
+frustum test, and it is exact: a quad off the screen covers no pixel
+whatever else is true of the star.
+
+One exemption. The pinned focal star (`uPinFocusToCenter`) projects
+through a substituted matrix in the vertex stage, so its true projection
+says nothing about where it draws — it is always listed. Local-pass
+members need none: a member's main-pass draws collapse anyway, and the
+core mask's stamp for an off-screen member covers no pixel.
+
+The list sizes now move with the camera's orientation and field of view,
+not only with the magnitude window; nothing reads a list's size on the
+CPU, so no consumer sees the difference.
+
 ## The frame order
 
-`StarLayer.update()` runs the compaction, and the shell calls it after
-`syncUniformNodes()` and before `renderer.render()`: the kernel reads the
-scalars that sync just copied (`uThresholdMag`, `uCullMag`, the filter
-band, the clock) and the render reads the lists it wrote. Inside
-`update()` the layer first forwards this frame's attribute writes onto
-the tables (`../README.md` § Star tables), so the kernel and the draws
-see the same positions — a kernel listing survivors off last frame's
-positions on a recentre frame would flicker the whole field.
+`StarLayer.update(camera)` runs the compaction, and the shell calls it
+after `syncUniformNodes()` and before `renderer.render()`: the kernel
+reads the scalars that sync just copied (`uThresholdMag`, `uCullMag`, the
+filter band, the clock) and the render reads the lists it wrote. The
+dispatch refreshes the camera's world matrices itself: the controls
+mutate position and quaternion without propagating them, and the render
+that would is still ahead, so a kernel reading them as left by the last
+render would cull against the previous frame's view. Inside `update()`
+the layer first forwards this frame's attribute writes onto the tables
+(`../README.md` § Star tables), so the kernel and the draws see the same
+positions — a kernel listing survivors off last frame's positions on a
+recentre frame would flicker the whole field.
 
 The reset kernel (one thread, both `instanceCount`s to zero) and the
 compaction kernel are one `renderer.compute([...])`: one compute pass,
@@ -128,9 +160,9 @@ Byte counts, derived not measured — `recordCount`
 
 Per rendered frame: one compute submit, 388,071 threads each running the
 solve to the routing point (magnitude, pulsation, prefilter, one A_V read
-or the fallback march, the size solve), and two atomics per survivor.
-What it removes is the vertex-stage floor: each of the three passes ran
-its stage over 4 corners × the whole catalogue with the invisible members
-exiting to the clip sentinel; now each runs over 4 corners × its own
-survivors. The frame-time delta is the Tier 2 pin's to state
-(`RELEASING.md` § Perf pin), not this file's.
+or the fallback march, the size solve), one projection, and two atomics
+per survivor. What it removes is the vertex-stage floor: each of the
+three passes ran its stage over 4 corners × the whole catalogue with the
+invisible members exiting to the clip sentinel; now each runs over
+4 corners × the survivors inside the view. The frame-time delta is the
+Tier 2 pin's to state (`RELEASING.md` § Perf pin), not this file's.
