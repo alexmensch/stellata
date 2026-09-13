@@ -1,6 +1,6 @@
 # Perf pins — one committed summary per GPU
 
-`<adapter-slug>.json` (schema `stellata-perf/pin-2`) is the whole frame at
+`<adapter-slug>.json` (schema `stellata-perf/pin-3`) is the whole frame at
 the canon vantages on one GPU, taken cold: what every render-path PR diffs
 against and re-takes. Operator rules — when a PR must run it, what a mark
 means, how the pin advances — are `RELEASING.md` § Perf pin; the code is
@@ -18,8 +18,8 @@ vsyncClamped and the GPU-stream p50 where it was sound, plus the
 state-guard verdict, buffer, catalogue record count, the context's
 position in the run, the exposure readback rate the row was taken at and
 whether its frame drew two classes, cadence, adapter probe, commit pair,
-package version and the run file. **Any refused row refuses the whole
-pin** — failed,
+package version and the run file the row came from. **Any refused row
+refuses the whole pin** — failed,
 tainted, not dwell, not `raf-delta`, trending at a *gated* vantage, a round
 trip, a headed run, no record count, no position — because a pin missing a
 row narrows the gate silently, and for the same reason `--pin` refuses a
@@ -27,6 +27,49 @@ command line short of `--scenario all --backend both`, or one naming the
 whole canon in another order (§ Run position).
 `--accept <scenario>|<backend>:<bead>` records an accepted mark as
 provenance for the value now pinned; it never filters a verdict.
+
+## From saved runs
+
+A refused row does not cost a second arm. The run file is first-hand data
+already — the arm protected the machine's idleness, which is spent — so
+the pin is written from it offline:
+
+```
+pnpm run perf:pin -- <run.json>... [--pin scripts/perf/pins/<slug>.json]
+                     [--accept <scenario>|<backend>:<bead>]... [--dry-run]
+```
+
+**Rows merge across runs of ONE commit.** Every run named must carry the
+same `git.commit`, the same adapter slug and a headless browser, and — where
+more than one is named — a clean tree, since two dirty runs at one hash need
+not be one tree. Each canon row is taken from the **newest** run in which it
+is sound — by the run's own `finishedAt`, so the order they are named in
+changes nothing; a row sound in no run refuses the pin, naming every run's
+reason. Reading freshness off the argument list instead made the rule a
+convention the caller could invert in silence: the same two runs named the
+other way round moved eight of ten rows to the older run while `takenAt`
+stayed the newer run's, so the file claimed a take time eight of its own
+rows predated.
+Merging narrows nothing: the whole-pin refusal exists so a partial pin
+cannot silently drop a row, and two cold runs of identical code supply the
+same row. A Tier 1 `--against-pin` run of the same commit is a run file too,
+and fills its two rows. Every row records `sourceRun`, the pin lists
+`sourceRuns`, and a row taken at a position the pin run does not take it at
+is refused — a check run that visited `sol` first would otherwise pin
+`sol|webgpu` at position 1, where nothing later compares it. `sourceRuns`
+lists the runs oldest first whatever order they were named in. On 2026-09-13
+this would have written the compaction pin after its second run instead of
+its third, and the cull pin after its second run and a check instead of a
+fourth arm.
+
+**The accept gate is the same one `--pin` applies in a live run.** Where a
+pin already sits at the destination it is compared against, its provenance
+lines print, and a `✗` no `--accept` covers refuses the write. A file there
+that is not a readable pin — another schema, after a bump — is named and
+passed over: it can gate nothing, and replacing it is what the writer is
+for. `--dry-run` prints the rows, the run each came from, every run that
+refused one, and the verdicts, and writes nothing. Exit 1 is a refusal,
+2 a bad flag or an unreadable run.
 
 ## Run position
 
@@ -154,10 +197,24 @@ the whole pin, it blocked the pin for *every* render-path PR at random. Wall
   8× the largest cold-to-cold move those four rows showed. A `✗` is past
   both; `~` is not resolved, never "no change". The millisecond term is
   the larger of the two at every canon row but mw50, so it is what sets
-  sensitivity in practice. The floor lives in `../diff-pure.ts` beside
+  sensitivity in practice. The floor lives in `../diff/diff-pure.ts` beside
   `band` because `--baseline` applies the same one: the tighter of two
   gates is the one that decides, so a Tier 1 band under this one would
   mark a move Tier 2 calls unresolved (`RELEASING.md` § Perf pin).
+- **Floor.** Each GPU row also records its 10th-percentile frame off the raw
+  samples, and the table prints how far that p10 moved beside `delta`. A cost
+  every frame pays lifts the floor as far as the median (across 111 archived
+  cross-commit moves, ×1.07); a wander lifts the upper half alone and leaves
+  it (the two 2026-09-13 false marks: median +0.47 / +0.43, p10 −0.08 /
+  +0.01). A `✗` whose floor moved under `FLOOR_FOLLOWS_FRACTION` (a quarter)
+  of the median's says so in its note. Never marked: the floor's own repeat
+  scatter is wider than the median's at earth and sol, so it is the
+  discriminator, not the gate. The p10 and not the single fastest frame,
+  which is noisier again — repeat-pair |Δ| tails of 1.473 ms against 1.353.
+  `frameFloor` lives in `../dwell/dwell-pure.ts` because `--baseline` prints
+  the same column off the same statistic (`../README.md` § Comparing against
+  a baseline), and a reader asking "cost or wander?" must not have to ask it
+  differently of the two tables.
 - **Ceiling.** A GPU-stream p50 over `PIN_CEILING_MS` (33.4 ms, two 60 Hz
   intervals of hardware time) is `✗` whatever the band says — and on an
   ungated vantage too, which is where it earns its keep: those rows have

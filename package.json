@@ -64,6 +64,7 @@
     "deploy": "pnpm run build && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "perf": "tsx scripts/perf/run.ts",
+    "perf:pin": "tsx scripts/perf/pin.ts",
     "test": "vitest run",
     "test:spotcheck": "python3 scripts/binaries/build-binaries-spotcheck.py",
     "test:watch": "vitest",

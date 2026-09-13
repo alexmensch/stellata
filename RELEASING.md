@@ -142,9 +142,14 @@ information.
   instrument itself.** The full cold sweep, and it re-takes the pin:
   `--mode dwell --scenario all --backend both --cooldown-ms 120000
   --pin`, ~15–25 min. Everything from § What is pinned down is this tier.
+  A sweep refused for one row — a first-context settle, a dwell that
+  trended — is not re-armed: `pnpm run perf:pin` writes the pin offline
+  from the saved run files of one commit, taking each row from the run
+  that held it steady, with the same `--accept` gate
+  (`scripts/perf/pins/README.md` § From saved runs).
 
 **"The instrument" in Tier 2 means what it records or how it samples**, not
-every file under `scripts/perf/`. A change to `pinFromRun`, `compareToPin`,
+every file under `scripts/perf/`. A change to `pinFromRuns`, `compareToPin`,
 the recorded schema, the sampling knobs or the clock a row is taken on
 re-takes the pin, because the committed rows stop describing the same
 measurement. A change to how a comparison is *judged or presented* —
@@ -181,7 +186,7 @@ pin (stellata-8cg.49.27).
 two vantages are exactly the ones a wall-clock row cannot resolve — sol's
 wall p50 sits at two refresh intervals and mw120's at one — so a row
 marked on wall would compare two quantised medians and refuse or fabricate
-by turns (`scripts/perf/README.md` § Comparing against a baseline).
+by turns (`scripts/perf/diff/README.md` § Reading the table).
 
 **And the same floor: `max(0.25 ms, 1 % of the baseline)`**, one constant
 in `scripts/perf/diff-pure.ts` that both gates apply. Tier 1 may not gate
@@ -276,7 +281,9 @@ when it crosses the ceiling — 33.4 ms of GPU-stream p50 at any canon
 vantage, two 60 Hz intervals of hardware time — whatever the band says
 and whether or not the vantage is gated. mw50 at 31.936 is the nearest
 row today, 1.46 ms under. `✓` is cheaper, `~` is not resolved — not "no
-change".
+change". The `floor` column beside `delta` — how far the 10th-percentile
+frame moved — never marks; it says whether a `✗` lifted every frame or
+only the slow half (`scripts/perf/pins/README.md` § Reading `--against-pin`).
 
 **The floor is measured, and lg is the reason it is not one number.** Two
 cold pins taken on identical code — 2026-09-05 and 2026-09-06, `--mode

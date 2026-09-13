@@ -100,6 +100,29 @@ export interface DwellSummary {
   readonly stateGuard: StateGuard;
 }
 
+/** The fast end of a dwell: a per-frame cost moves it as far as the median,
+ *  a wander lifts the upper half and leaves it. Printed beside the median in
+ *  both gates and never marked (`../pins/README.md` § Reading `--against-pin`).
+ *
+ *  The tenth-percentile frame and not the single fastest, which the archive
+ *  measures as the noisier of the two — repeat-pair |Δ| tails reach 1.473 ms
+ *  at the minimum against 1.353 at `p10`. */
+export interface FrameFloor {
+  readonly p10: number;
+}
+
+export function frameFloor(samples: readonly number[] | null | undefined): FrameFloor | null {
+  if (samples == null || samples.length === 0) return null;
+  return { p10: percentile(samples, 0.1) };
+}
+
+/** How far the fast end moved between two dwells, or null where either side
+ *  has no floor — a floor against nothing is not a move. Context for the
+ *  median's delta in both tables, never an input to a verdict. */
+export function floorMove(before: FrameFloor | null, after: FrameFloor | null): number | null {
+  return before === null || after === null ? null : after.p10 - before.p10;
+}
+
 /** Which of a dwell's two clocks a row was judged on, named in every table
  *  because the two are different instruments and a reader cannot otherwise
  *  tell which one a delta came off. `gatingClock` returns it alongside the

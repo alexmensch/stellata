@@ -1,5 +1,5 @@
 {
-  "schema": "stellata-perf/pin-2",
+  "schema": "stellata-perf/pin-3",
   "adapterSlug": "apple-m4-metal-3",
   "adapter": {
     "webgl": {
@@ -24,7 +24,9 @@
   },
   "version": "4.1.17",
   "takenAt": "2026-09-13T16:46:50.187Z",
-  "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json",
+  "sourceRuns": [
+    ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
+  ],
   "rows": [
     {
       "key": "mw120|webgpu",
@@ -51,7 +53,11 @@
         "iqrMs": 0.1182060000000007,
         "samples": 186,
         "stateGuard": "steady"
-      }
+      },
+      "gpuFloor": {
+        "p10": 18.888919
+      },
+      "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
       "key": "sol|webgpu",
@@ -78,7 +84,11 @@
         "iqrMs": 0.7376140000000007,
         "samples": 214,
         "stateGuard": "steady"
-      }
+      },
+      "gpuFloor": {
+        "p10": 10.981666
+      },
+      "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
       "key": "earth|webgpu",
@@ -105,7 +115,11 @@
         "iqrMs": 56.527137,
         "samples": 196,
         "stateGuard": "steady"
-      }
+      },
+      "gpuFloor": {
+        "p10": 13.098175000000001
+      },
+      "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
       "key": "mw50|webgpu",
@@ -132,7 +146,11 @@
         "iqrMs": 0.042543000000001996,
         "samples": 59,
         "stateGuard": "steady"
-      }
+      },
+      "gpuFloor": {
+        "p10": 29.180556
+      },
+      "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
       "key": "lg|webgpu",
@@ -159,7 +177,11 @@
         "iqrMs": 1.2204830000000015,
         "samples": 169,
         "stateGuard": "trending"
-      }
+      },
+      "gpuFloor": {
+        "p10": 10.696669
+      },
+      "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
       "key": "mw120|webgl2",
@@ -180,7 +202,9 @@
         "stateGuard": "steady",
         "vsyncClamped": true
       },
-      "gpu": null
+      "gpu": null,
+      "gpuFloor": null,
+      "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
       "key": "sol|webgl2",
@@ -201,7 +225,9 @@
         "stateGuard": "steady",
         "vsyncClamped": true
       },
-      "gpu": null
+      "gpu": null,
+      "gpuFloor": null,
+      "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
       "key": "earth|webgl2",
@@ -222,7 +248,9 @@
         "stateGuard": "steady",
         "vsyncClamped": true
       },
-      "gpu": null
+      "gpu": null,
+      "gpuFloor": null,
+      "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
       "key": "mw50|webgl2",
@@ -243,7 +271,9 @@
         "stateGuard": "steady",
         "vsyncClamped": false
       },
-      "gpu": null
+      "gpu": null,
+      "gpuFloor": null,
+      "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     },
     {
       "key": "lg|webgl2",
@@ -264,7 +294,9 @@
         "stateGuard": "steady",
         "vsyncClamped": true
       },
-      "gpu": null
+      "gpu": null,
+      "gpuFloor": null,
+      "sourceRun": ".perf-runs/2026-09-13/0it-15-s2-pin-3.json"
     }
   ],
   "accepted": {}

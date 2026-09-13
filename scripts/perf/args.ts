@@ -211,7 +211,7 @@ function isCanonOrder(scenarios: readonly ScenarioName[]): boolean {
     && scenarios.every((name, i) => name === SCENARIO_NAMES[i]);
 }
 
-function parseAccept(raw: string): AcceptedMark {
+export function parseAccept(raw: string): AcceptedMark {
   const at = raw.indexOf(':');
   const key = at < 0 ? raw : raw.slice(0, at);
   const bead = at < 0 ? '' : raw.slice(at + 1).trim();
@@ -400,5 +400,55 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     againstPin: str('against-pin'),
     accept,
     cooldownMs: nonNegativeNum('cooldown-ms'),
+  };
+}
+
+/** `pnpm run perf:pin` — the pin from saved run files, offline. */
+export interface PinArgs {
+  readonly help: boolean;
+  /** Run files; a row comes from the newest one holding it sound, whatever
+   *  order they were named in. */
+  readonly runs: readonly string[];
+  /** Destination; defaults to `pinPathFor(<adapter slug of the runs>)`. */
+  readonly pin: string | undefined;
+  readonly accept: readonly AcceptedMark[];
+  readonly dryRun: boolean;
+}
+
+const PIN_OPTIONS = {
+  help: { type: 'boolean', short: 'h', default: false },
+  pin: { type: 'string' },
+  accept: { type: 'string', multiple: true, default: [] },
+  'dry-run': { type: 'boolean', default: false },
+} satisfies ParseArgsConfig['options'];
+
+export function pinUsage(): string {
+  return [
+    'Usage: pnpm run perf:pin -- <run.json>... [flags]',
+    '  <run.json>...            saved --json runs of ONE commit, any order; a row comes from the newest holding it sound',
+    '  --pin <path>             the pin to write                          (default scripts/perf/pins/<adapter slug>.json)',
+    '  --accept <scenario>|<backend>:<bead>  accept a ✗ against the pin being replaced, repeatable',
+    '  --dry-run                print the rows, their runs and the verdicts; write nothing',
+    'Exit codes: 0 written (or a clean dry run) · 1 refused · 2 bad flags or an unreadable run file',
+  ].join('\n');
+}
+
+export function parsePinArgs(argv: readonly string[]): PinArgs {
+  const args = argv[0] === '--' ? argv.slice(1) : [...argv];
+  let values: Record<string, unknown>;
+  let runs: string[];
+  try {
+    ({ values, positionals: runs } = parseArgs({ args, options: PIN_OPTIONS, strict: true, allowPositionals: true }));
+  } catch (e) {
+    throw new ArgError((e as Error).message);
+  }
+  const help = values.help as boolean;
+  if (!help && runs.length === 0) throw new ArgError('name at least one saved run file');
+  return {
+    help,
+    runs,
+    pin: values.pin as string | undefined,
+    accept: (values.accept as string[]).map(parseAccept),
+    dryRun: values['dry-run'] as boolean,
   };
 }

@@ -46,4 +46,4 @@ The first point pays a full warmup; later scales pay
 the resize forces, since the clock ramp was already paid.
 
 **A sweep is never diffed** — a slope is not a cost
-(`../README.md` § Comparing against a baseline).
+(`../diff/README.md` § The refusals).

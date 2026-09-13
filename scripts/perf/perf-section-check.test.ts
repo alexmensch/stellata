@@ -7,7 +7,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { RECORD_COUNT_TOLERANCE } from './diff-pure';
+import { RECORD_COUNT_TOLERANCE } from './diff/diff-pure';
 
 const SCRIPT = resolve(__dirname, 'perf-section-check.sh');
 const RELEASING = resolve(__dirname, '../../RELEASING.md');

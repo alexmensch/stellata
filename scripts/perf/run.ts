@@ -1,8 +1,7 @@
 // The perf runner: human-armed, Chrome only, clocks only. Protocol, flags
 // and exit codes: README.md. The only Playwright value import in the tree.
 
-import { execFileSync } from 'node:child_process';
-import { accessSync, constants, existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { accessSync, constants, existsSync, mkdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { chromium, type Browser } from 'playwright';
 import type { PriceFrameOptions } from '../../src/client/debug/frame-cost/frame-cost';
@@ -13,16 +12,18 @@ import {
   type GpuFrameMethod,
 } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { ArgError, parseRunArgs, usage, type RunArgs } from './args';
-import { diffRuns } from './diff-pure';
+import {
+  REPO_ROOT, gitMeta, mainCheckout, packageVersion, printAgainstPin, readJsonFlag, writePinFile,
+} from './checkout';
+import { diffRuns } from './diff/diff-pure';
 import type { DwellSummary } from './dwell/dwell-pure';
 import {
   PASS_TOGGLES_MODULE_URL, applyRoundTrip, measureDwell, measureSweep, type Measured,
 } from './measure';
 import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './arming/perf-go-lib';
 import {
-  PIN_SCHEMA, PinError, assertPinFile, citeRunPath, commitStateFromExitStatus, compareToPin,
-  pinDiffFails, pinFromRun, parseRenderPathDrift, pinProvenanceLines, unacceptedMarks,
-  type PinCommitState, type PinDiff, type PinFile, type RenderPathDrift,
+  acceptedMarks, assertPinFile, citeRunPath, pinDiffFails, pinFromRuns, pinWriteRefusal,
+  type PinDiff, type PinFile,
 } from './pin-pure';
 import {
   DWELL_METHOD,
@@ -49,20 +50,17 @@ import {
 import {
   PERF_SCHEMA,
   assertPerfFile,
-  SchemaError,
   type AdapterProbe,
   type DwellRecord,
-  type GitProvenance,
   type PerfFile,
   type ScenarioRecord,
 } from './schema';
 import { SCENARIOS, scenarioUrl, type Backend } from './scenarios';
 import {
-  formatDiffTable, formatDwellTable, formatPassCountTable, formatPinTable, formatPriceTable,
+  formatDiffTable, formatDwellTable, formatPassCountTable, formatPriceTable,
   formatRoundTripLine, formatSweepTable,
 } from './table-pure';
 
-const REPO_ROOT = resolve(import.meta.dirname, '../..');
 const MARKER = resolve(REPO_ROOT, PERF_GO_MARKER_NAME);
 const MARKER_MAX_AGE_MS = PERF_GO_MAX_AGE_S * 1000;
 const REACHABILITY_TIMEOUT_MS = 5000;
@@ -105,74 +103,7 @@ function priceFrameOptions(a: RunArgs, method: GpuFrameMethod | undefined): Pric
   };
 }
 
-function packageVersion(): string {
-  return (JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf-8')) as { version: string }).version;
-}
-
 const sleep = (ms: number): Promise<void> => new Promise((done) => { setTimeout(done, ms); });
-
-/** Runs are filed in the main checkout, which is not this worktree's root:
- *  `--git-common-dir` prints `<main checkout>/.git` from either. */
-function mainCheckout(): string {
-  try {
-    const common = execFileSync(
-      'git', ['rev-parse', '--path-format=absolute', '--git-common-dir'],
-      { cwd: REPO_ROOT, encoding: 'utf-8' },
-    ).trim();
-    return dirname(common);
-  } catch {
-    return REPO_ROOT;
-  }
-}
-
-const MAIN_REF = 'origin/main';
-
-const git = (...argv: string[]): string =>
-  execFileSync('git', argv, { cwd: REPO_ROOT, encoding: 'utf-8' }).trim();
-
-/** pins/README.md § What the commit fields hold. */
-function gitMeta(): GitProvenance {
-  let commit = 'unavailable';
-  let dirty = true;
-  try {
-    commit = git('rev-parse', 'HEAD');
-    dirty = git('status', '--porcelain').length > 0;
-  } catch (e) {
-    return { commit: `unavailable (${(e as Error).message})`, dirty: true, mainCommit: null, mainReachable: false };
-  }
-  let mainCommit: string | null = null;
-  try {
-    mainCommit = git('merge-base', commit, MAIN_REF);
-  } catch {
-    mainCommit = null;
-  }
-  return { commit, dirty, mainCommit, mainReachable: commitState(commit) === 'landed' };
-}
-
-/** Asked at comparison time, never read off the pin's own `mainReachable`: a
- *  tip unlanded when the pin was taken may have landed since, and one that
- *  squash-merged never will. */
-function commitState(commit: string): PinCommitState {
-  try {
-    execFileSync('git', ['merge-base', '--is-ancestor', commit, MAIN_REF], { cwd: REPO_ROOT, stdio: 'ignore' });
-    return commitStateFromExitStatus(0);
-  } catch (e) {
-    return commitStateFromExitStatus((e as { status?: number }).status);
-  }
-}
-
-/** Main's own render-path movement between the pin's base and this run's, so
- *  a reader sees what else is in the delta before reading a mark. Restricted
- *  to `src/client`: that is what a frame time is a property of. */
-function renderPathDrift(from: string | null, to: string | null): RenderPathDrift | null {
-  if (from === null || to === null) return null;
-  if (from === to) return { files: 0, insertions: 0, deletions: 0 };
-  try {
-    return parseRenderPathDrift(git('diff', '--shortstat', from, to, '--', 'src/client'));
-  } catch {
-    return null;
-  }
-}
 
 interface ScenarioPlan extends ContextPlan {
   readonly method: GpuFrameMethod | undefined;
@@ -432,21 +363,6 @@ function writableDir(flag: string, path: string, create: boolean): string | null
   }
 }
 
-function readJsonFlag<T>(
-  flag: string,
-  path: string,
-  parse: (value: unknown, source: string) => T,
-): { value: T | null; error: string | null } {
-  try {
-    return { value: parse(JSON.parse(readFileSync(path, 'utf-8')), path), error: null };
-  } catch (e) {
-    const why = e instanceof SchemaError || e instanceof PinError || e instanceof SyntaxError
-      ? (e as Error).message
-      : `unreadable — ${(e as Error).message}`;
-    return { value: null, error: `${flag} ${why}` };
-  }
-}
-
 function preflightPaths(args: RunArgs): Preflight {
   const none: Preflight = { baseline: null, pin: null, error: null };
   const dirError = (args.json !== undefined ? writableDir('--json', args.json, false) : null)
@@ -467,45 +383,22 @@ function preflightPaths(args: RunArgs): Preflight {
   return { baseline, pin, error: null };
 }
 
-/** The verdicts against the pin. Returns the comparison so a `--pin` in the
- *  same run can refuse to pin over a mark nobody accepted. */
-function printAgainstPin(path: string, pin: PinFile, current: PerfFile): PinDiff {
-  console.log(`\nperf: against pin ${path} (${pin.git.commit.slice(0, 8)}, v${pin.version}, ${pin.adapterSlug})`);
-  for (const line of pinProvenanceLines(
-    pin,
-    commitState(pin.git.commit),
-    renderPathDrift(pin.git.mainCommit, current.run.git.mainCommit),
-    current.run.git.mainCommit,
-  )) {
-    console.log(`perf: ${line}`);
-  }
-  const diff = compareToPin(pin, current);
-  console.log(formatPinTable(diff));
-  return diff;
-}
-
 /** Write the run as the pin, or say why it cannot be one. Returns whether it failed. */
 function writePin(args: RunArgs, file: PerfFile, against: PinDiff | null): boolean {
-  const accepted = Object.fromEntries(args.accept.map((mark) => [mark.key, { bead: mark.bead }]));
-  if (against !== null) {
-    const unaccepted = unacceptedMarks(against, accepted);
-    if (unaccepted.length > 0) {
-      console.error(
-        `perf: no pin written — ${unaccepted.join(', ')} marked ✗ against the pin being replaced. ` +
-        'Fix the regression, or re-run with --accept <row>:<bead-id> to pin the accepted value.',
-      );
-      return true;
-    }
-  }
-  const { pin, refusals } = pinFromRun(file, {
-    sourceRun: citeRunPath(args.json!, mainCheckout()), version: packageVersion(), accepted,
-  });
+  const { pin, refusals } = pinFromRuns(
+    [{ file, sourceRun: citeRunPath(args.json!, mainCheckout()) }],
+    { version: packageVersion(), accepted: acceptedMarks(args.accept) },
+  );
   if (pin === null) {
     console.error(`perf: no pin written —\n  ${refusals.join('\n  ')}`);
     return true;
   }
-  writeFileSync(args.pin!, `${JSON.stringify(pin, null, 2)}\n`);
-  console.log(`perf: wrote pin ${args.pin} (${PIN_SCHEMA}, ${pin.rows.length} rows, ${pin.adapterSlug}, v${pin.version})`);
+  const why = pinWriteRefusal(pin, against);
+  if (why !== null) {
+    console.error(`perf: no pin written — ${why}`);
+    return true;
+  }
+  writePinFile(args.pin!, pin);
   return false;
 }
 

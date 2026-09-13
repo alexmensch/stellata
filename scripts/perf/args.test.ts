@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ARG_DEFAULTS, ArgError, BACKEND_REQUESTS, MODES, ROUNDTRIP_IDLE, parseRunArgs, usage,
+  ARG_DEFAULTS, ArgError, BACKEND_REQUESTS, MODES, ROUNDTRIP_IDLE, parsePinArgs, parseRunArgs, pinUsage, usage,
 } from './args';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
 import { DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
@@ -271,5 +271,33 @@ describe('parseRunArgs', () => {
     }
     for (const mode of MODES) expect(text).toContain(mode);
     for (const backend of BACKEND_REQUESTS) expect(text).toContain(backend);
+  });
+});
+
+describe('parsePinArgs — the pin from saved runs', () => {
+  it('takes the run files as positionals, in the order given, with the pin flags', () => {
+    const a = parsePinArgs([
+      '--', '.perf-runs/a.json', '.perf-runs/b.json', '--pin', 'scripts/perf/pins/x.json',
+      '--accept', 'mw120|webgpu:bead-1', '--dry-run',
+    ]);
+    expect(a).toEqual({
+      help: false,
+      runs: ['.perf-runs/a.json', '.perf-runs/b.json'],
+      pin: 'scripts/perf/pins/x.json',
+      accept: [{ key: 'mw120|webgpu', bead: 'bead-1' }],
+      dryRun: true,
+    });
+    expect(parsePinArgs(['a.json'])).toEqual({ help: false, runs: ['a.json'], pin: undefined, accept: [], dryRun: false });
+  });
+
+  it('needs a run file unless asked for help, and refuses a malformed --accept or an unknown flag', () => {
+    expect(() => parsePinArgs([])).toThrow(/at least one saved run file/);
+    expect(parsePinArgs(['--help']).help).toBe(true);
+    expect(() => parsePinArgs(['a.json', '--accept', 'sol:bead-1'])).toThrow(/<scenario>\|<backend>:<bead-id>/);
+    expect(() => parsePinArgs(['a.json', '--json', 'b.json'])).toThrow(ArgError);
+  });
+
+  it('prints every flag in the usage text', () => {
+    for (const flag of ['--pin', '--accept', '--dry-run']) expect(pinUsage()).toContain(flag);
   });
 });
