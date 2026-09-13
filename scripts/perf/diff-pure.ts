@@ -267,14 +267,18 @@ export function splitFrameClasses(counts: DwellRecord['passCounts'] | undefined)
 
 /**
  * Two dwells at different exposure-readback duty cycles, where the frame has
- * two classes. The stream samples over half the rendered frames and favours
- * neither class, so the sampled mix is the frame population's and the median
- * lands in whichever class holds the majority. Both classes cost the same at
- * every duty cycle — 11.9-14.1 ms and 51.1-58.6 at earth — and only their
- * share moves, so the median steps 4.3x as that share crosses a half while
- * the wall p50 holds at 16.70 ms. A median taken at one duty cycle is
- * therefore not the same statistic as one taken at another
- * (`dwell/README.md`).
+ * two classes. The stream samples over half the rendered frames, so the
+ * sampled mix is the frame population's and the median lands in whichever
+ * class holds the majority. Both classes cost the same at every duty cycle —
+ * 11.9-14.1 ms and 51.1-58.6 at earth — and only their share moves, so the
+ * median steps 4.3x as that share crosses a half while the wall p50 holds at
+ * 16.70 ms. A median taken at one duty cycle is therefore not the same
+ * statistic as one taken at another (`dwell/README.md`).
+ *
+ * The share rises with the rate rather than equalling it: the sampler takes
+ * the two classes evenly at one-in-two and sparser, and 0.89 of readback
+ * frames against 0.12 of plain ones at one-in-one. Rising is what this guard
+ * turns on, so the skew costs it nothing.
  *
  * Gated on the frame being split, because the same drift elsewhere is sound
  * and refusing it would throw away real readings: sol moved 0.25 to 0.59

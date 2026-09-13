@@ -106,16 +106,27 @@ readback duty cycle, and a pair whose rates differ is refused.** Only the
 `earth` vantage draws two shapes: the exposure measurement resolves under the
 dwell's pinned cut there, so `renderPasses` reads 4 or 10 in one dwell
 (bimodal in all 23 archived WebGPU dwells carrying counters, against none of
-the other 109). The stream samples a little over half the rendered frames and
-does not favour either shape, so the sampled mix is the frame population's
-mix and the median lands in whichever class holds the majority.
+the other 109). The stream samples a little over half the rendered frames, so
+the sampled mix is the frame population's mix and the median lands in
+whichever class holds the majority.
+
+**It samples the two shapes evenly at one-in-two and sparser, and lopsidedly
+at one-in-one.** Over the seven contexts below, the fraction of readback
+frames sampled against the fraction of plain ones runs 0.55/0.58, 0.57/0.55,
+0.60/0.56, 0.56/0.57 and — at the two one-in-four contexts, which bracket the
+run — 0.67/0.47 and 0.49/0.60. At one-in-one it is **0.89 against 0.12**, so
+the share reads 0.894 at a rate of 0.539 rather than tracking it. Why the
+sampler skews where readbacks go out on every frame it can is not established;
+what the guard needs is that the share rises with the rate, which holds
+throughout. Do not read share and rate as the same number near one.
 
 **The two classes cost what they cost; only their SHARE moves.** Measured
 directly by pinning the cadence from one-in-one to one-in-eight over seven
 cold contexts of 1200 frames (`.perf-runs/2026-09-13/`, 4.096 Mpx headless):
 the low class reads 11.9–14.1 ms and the high 51.1–58.6 at every duty cycle,
 while the share of samples in the high one runs 0.118 at 0.125 readbacks per
-frame to 0.894 at 0.539 — tracking the rate. The median crosses when that
+frame to 0.894 at 0.539 — rising with the rate, though not equal to it at the
+top end. The median crosses when that
 share crosses a half, 13.20 ms against 56.19, a **4.3× step from a frame
 whose wall p50 never leaves 16.70 ms**. The 3.17× first seen between two
 archived runs was the same crossing, caught part-way.
