@@ -57,7 +57,7 @@ is a leak. Per-frame CPU allocation in the render loop (arrays, objects, `Set`s,
 sorts) is a GC-jank finding in its own right.
 
 `bus.on(...)` without a matching unsub in dispose is the same defect class —
-AGENTS.md § Lifecycle pairing.
+docs/authoring-patterns.md § Lifecycle pairing.
 
 ### 2. Name what the cost scales with, and its bound
 
