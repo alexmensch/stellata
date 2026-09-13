@@ -105,7 +105,7 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
 - `pnpm run perf:pin -- <run.json>... [--pin <path>] [--accept <row>:<bead>]... [--dry-run]`
   — the pin from saved run files, offline: no browser, no arm. **A pin run
   refused for one row is never re-armed.** Name every saved run of the same
-  commit oldest first; each row comes from the last run that held it
+  commit, in any order; each row comes from the newest run that held it
   steady, and only a row steady in no run refuses. A refused `--pin` run,
   a Tier 1 `--against-pin` run of the same commit, or a mark you have
   decided to accept all become a keystroke here. `--dry-run` first: it
@@ -138,7 +138,7 @@ compare across `method`, `bufferMpx`, headed/headless, browsers, or a dev
 server against a production build; never sum the column.
 
 Per mode (`scripts/perf/dwell/README.md`, `scripts/perf/README.md` § Sweep
-mode, § Comparing against a baseline):
+mode, `scripts/perf/diff/README.md` § Reading the table):
 
 - **`vsyncClamped` true throws the dwell away.** A p50 sitting on any whole
   number of the display period the run measured, inside a spread tighter than

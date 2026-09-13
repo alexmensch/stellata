@@ -160,7 +160,7 @@ largest move it exists to catch. `--baseline` has both runs' counters; the pin
 has none of its own, so it records the verdict per row (`splitFrame`) and the
 comparison ors the two. A dwell written before the counters existed carries no
 field at all, which reads as one class, as an unrecorded rate declines the
-guard. `../diff-pure.ts` carries the rule.
+guard. `../diff/diff-pure.ts` carries the rule.
 
 **The pinned cadence removes the drift; the guard stays because the pin is
 not the only pair it judges.** Two dwells taken at the same

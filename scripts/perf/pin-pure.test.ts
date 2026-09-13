@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, dwellFloorMs } from './diff-pure';
-import type { DwellSummary } from './dwell/dwell-pure';
+import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, dwellFloorMs } from './diff/diff-pure';
+import { frameFloor, type DwellSummary } from './dwell/dwell-pure';
 import {
   CANON_POSITIONS,
   FLOOR_FOLLOWS_FRACTION,
@@ -13,7 +13,6 @@ import {
   citeRunPath,
   commitStateFromExitStatus,
   compareToPin,
-  frameFloor,
   missingCanonRows,
   pinDiffFails,
   pinFromRuns,
@@ -264,13 +263,16 @@ describe('pinFromRuns — several runs of one commit', () => {
   const FIRST = '.perf-runs/2026-09-13/pin.json';
   const SECOND = '.perf-runs/2026-09-13/pin-2.json';
 
+  const OLDER = '2026-09-13T15:20:26.967Z';
+  const NEWER = '2026-09-13T15:51:27.653Z';
+
   // The 2026-09-13 shape: run 1 refused mw120 for a first-context settle, run
   // 2 refused earth for a monotone one. Each row comes from the run that held
-  // it steady, and the later run wins where both did.
-  it('takes each row from the last run holding it sound, and cites that run on the row', () => {
+  // it steady, and the newer run wins where both did.
+  it('takes each row from the newest run holding it sound, and cites that run on the row', () => {
     const { pin, refusals, provenance } = pinFromRuns([
-      runOf(file([MW120_TRENDED, SOL_GPU, EARTH], { finishedAt: '2026-09-13T15:20:26.967Z' }), FIRST),
-      runOf(file([MW120_LATER, SOL_GPU, EARTH_TRENDED], { finishedAt: '2026-09-13T15:51:27.653Z' }), SECOND),
+      runOf(file([MW120_TRENDED, SOL_GPU, EARTH], { finishedAt: OLDER }), FIRST),
+      runOf(file([MW120_LATER, SOL_GPU, EARTH_TRENDED], { finishedAt: NEWER }), SECOND),
     ], SOURCE);
     expect(refusals).toEqual([]);
     expect(pin!.rows.map((r) => [r.key, r.gpu!.p50, r.sourceRun])).toEqual([
@@ -283,6 +285,21 @@ describe('pinFromRuns — several runs of one commit', () => {
       { key: 'sol|webgpu', sourceRun: SECOND, refusedIn: [] },
       { key: 'earth|webgpu', sourceRun: FIRST, refusedIn: [{ sourceRun: SECOND, reason: expect.stringContaining('load-state') }] },
     ]);
+  });
+
+  // Naming them the other way round used to move eight of ten rows to the
+  // older run while takenAt stayed the newer one's, so the pin claimed a take
+  // time most of its rows predated — silently, since only the per-row
+  // sourceRun showed it.
+  it('writes the same pin whatever order the runs are named in', () => {
+    const older = runOf(file([MW120_TRENDED, SOL_GPU, EARTH], { finishedAt: OLDER }), FIRST);
+    const newer = runOf(file([MW120_LATER, SOL_GPU, EARTH_TRENDED], { finishedAt: NEWER }), SECOND);
+    const forwards = pinFromRuns([older, newer], SOURCE);
+    const backwards = pinFromRuns([newer, older], SOURCE);
+    expect(backwards.pin).toEqual(forwards.pin);
+    expect(backwards.pin!.sourceRuns).toEqual([FIRST, SECOND]);
+    expect(backwards.pin!.takenAt).toBe(NEWER);
+    expect(backwards.pin!.rows.map((r) => r.sourceRun)).toEqual([SECOND, SECOND, FIRST]);
   });
 
   it('refuses a row sound in no run, naming every run that refused it', () => {
@@ -332,19 +349,19 @@ describe('pinFromRuns — several runs of one commit', () => {
 });
 
 describe('the floor beside the median', () => {
-  // Twenty frames 18.80..19.75 in 0.05 steps: min 18.80, nearest-rank p10 18.85.
+  // Twenty frames 18.80..19.75 in 0.05 steps: nearest-rank p10 is 18.85.
   const STEADY = Array.from({ length: 20 }, (_, i) => 18.8 + i * 0.05);
   const withGpu = (p50: number, gpuMs: readonly number[]) =>
     scenario('mw120', 'webgpu', { ...dwell(stats(16.7), stats(p50)), gpuMs });
 
-  it('reads min and the tenth-percentile frame off the raw samples, or nothing off none', () => {
-    expect(frameFloor(STEADY)).toEqual({ min: 18.8, p10: 18.85 });
+  it('reads the tenth-percentile frame off the raw samples, or nothing off none', () => {
+    expect(frameFloor(STEADY)).toEqual({ p10: 18.85 });
     expect(frameFloor([])).toBeNull();
     expect(frameFloor(null)).toBeNull();
   });
 
   it('records the GPU floor on the pinned row, and none where the row has no samples', () => {
-    expect(pinOf([withGpu(18.99, STEADY)]).rows[0].gpuFloor).toEqual({ min: 18.8, p10: 18.85 });
+    expect(pinOf([withGpu(18.99, STEADY)]).rows[0].gpuFloor).toEqual({ p10: 18.85 });
     expect(pinOf([MW120_GPU]).rows[0].gpuFloor).toBeNull();
     expect(pinOf([SOL_GL]).rows[0].gpuFloor).toBeNull();
   });

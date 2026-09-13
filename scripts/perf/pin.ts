@@ -8,7 +8,8 @@ import {
   REPO_ROOT, mainCheckout, packageVersion, printAgainstPin, readJsonFlag, writePinFile,
 } from './checkout';
 import {
-  assertPinFile, citeRunPath, pinFromRuns, pinPathFor, pinWriteRefusal, type PinDiff, type RunSource,
+  acceptedMarks, assertPinFile, citeRunPath, pinFromRuns, pinPathFor, pinWriteRefusal,
+  type PinDiff, type RunSource,
 } from './pin-pure';
 import { assertPerfFile } from './schema';
 
@@ -30,7 +31,9 @@ function readSources(paths: readonly string[]): { sources: RunSource[]; error: s
  *  over: it can gate nothing, and replacing it is what the writer is for. */
 function existingPin(path: string): { pin: ReturnType<typeof assertPinFile> | null; note: string | null } {
   if (!existsSync(path)) return { pin: null, note: null };
-  const read = readJsonFlag('--pin', path, assertPinFile);
+  // Named for the destination rather than for `--pin`, which the default
+  // path never went through.
+  const read = readJsonFlag('the pin at', path, assertPinFile);
   if (read.error !== null) {
     return { pin: null, note: `${read.error}; no marks can be judged against it` };
   }
@@ -57,8 +60,7 @@ function main(): number {
     return EXIT.usage;
   }
 
-  const accepted = Object.fromEntries(args.accept.map((mark) => [mark.key, { bead: mark.bead }]));
-  const summary = pinFromRuns(sources, { version: packageVersion(), accepted });
+  const summary = pinFromRuns(sources, { version: packageVersion(), accepted: acceptedMarks(args.accept) });
   for (const row of summary.provenance) {
     console.log(`  ${row.key.padEnd(13)} ${row.sourceRun === null ? 'sound in no run' : `← ${row.sourceRun}`}`);
     for (const refused of row.refusedIn) console.log(`      refused in ${refused.sourceRun}: ${refused.reason}`);
@@ -75,7 +77,10 @@ function main(): number {
   if (existing.pin !== null) {
     against = printAgainstPin(pinPath, existing.pin, summary.merged);
     if (against.refusedWholeRun !== null) {
-      console.error(`perf pin: no pin written — the pin at ${pinPath} is not this machine's; pass --pin for the one these runs describe`);
+      console.error(
+        `perf pin: no pin written — the pin at ${pinPath} cannot judge these runs: ` +
+        `${against.refusedWholeRun}. Pass --pin for the one they describe.`,
+      );
       return EXIT.refused;
     }
   }

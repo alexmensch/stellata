@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import type { DwellSummary } from './dwell/dwell-pure';
-import type { RunDiff } from './diff-pure';
+import type { RunDiff } from './diff/diff-pure';
 import type { SweepPoint } from './sweep/sweep-pure';
 import type { DwellRecord } from './schema';
 import {
@@ -153,15 +153,29 @@ describe('formatDiffTable', () => {
       refusedWholeRun: null,
       refusals: [],
       rows: [
-        { key: 'sol|webgl2|a', metric: 'savedMs', baselineMs: 10, currentMs: 10, deltaMs: 0, bandMs: 2, verdict: 'same' },
-        { key: 'sol|webgl2|b', metric: 'savedMs', baselineMs: 10, currentMs: 4, deltaMs: -6, bandMs: 2, verdict: 'cheaper' },
-        { key: 'sol|webgl2|dwell', metric: 'wall-p50', baselineMs: 30, currentMs: 38, deltaMs: 8, bandMs: 2, verdict: 'dearer' },
+        { key: 'sol|webgl2|a', metric: 'savedMs', baselineMs: 10, currentMs: 10, deltaMs: 0, floorDeltaMs: null, bandMs: 2, verdict: 'same' },
+        { key: 'sol|webgl2|b', metric: 'savedMs', baselineMs: 10, currentMs: 4, deltaMs: -6, floorDeltaMs: null, bandMs: 2, verdict: 'cheaper' },
+        { key: 'sol|webgl2|dwell', metric: 'wall-p50', baselineMs: 30, currentMs: 38, deltaMs: 8, floorDeltaMs: null, bandMs: 2, verdict: 'dearer' },
       ],
     };
     const lines = formatDiffTable(diff).split('\n');
     expect(lines[1]).toContain('~');
     expect(lines[2]).toContain('✓');
     expect(lines[3]).toContain('✗');
+  });
+
+  it('prints the floor beside the delta on a GPU dwell row, and leaves it blank elsewhere', () => {
+    const lines = formatDiffTable({
+      refusedWholeRun: null,
+      refusals: [],
+      rows: [
+        { key: 'mw120|webgpu|dwell', metric: 'gpu-p50', baselineMs: 18.99, currentMs: 19.42, deltaMs: 0.43, floorDeltaMs: 0, bandMs: 0.25, verdict: 'dearer' },
+        { key: 'sol|webgl2|dwell', metric: 'wall-p50', baselineMs: 16.7, currentMs: 16.7, deltaMs: 0, floorDeltaMs: null, bandMs: 0.25, verdict: 'same' },
+      ],
+    }).split('\n');
+    expect(lines[0]).toMatch(/delta\s+floor\s+band/);
+    expect(lines[1]).toMatch(/^\s*✗\s+mw120\|webgpu\|dwell\s+gpu-p50\s+18\.99\s+19\.42\s+0\.43\s+0\s+0\.25$/);
+    expect(lines[2]).toMatch(/^\s*~\s+sol\|webgl2\|dwell\s+wall-p50\s+16\.7\s+16\.7\s+0\s+0\.25$/);
   });
 
   it('says only that the run was refused, with no rows to read past it', () => {

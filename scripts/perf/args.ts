@@ -406,7 +406,8 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
 /** `pnpm run perf:pin` — the pin from saved run files, offline. */
 export interface PinArgs {
   readonly help: boolean;
-  /** Run files, in the order given; a row comes from the last one holding it sound. */
+  /** Run files; a row comes from the newest one holding it sound, whatever
+   *  order they were named in. */
   readonly runs: readonly string[];
   /** Destination; defaults to `pinPathFor(<adapter slug of the runs>)`. */
   readonly pin: string | undefined;
@@ -424,7 +425,7 @@ const PIN_OPTIONS = {
 export function pinUsage(): string {
   return [
     'Usage: pnpm run perf:pin -- <run.json>... [flags]',
-    '  <run.json>...            saved --json runs of ONE commit; a row comes from the last one holding it sound',
+    '  <run.json>...            saved --json runs of ONE commit, any order; a row comes from the newest holding it sound',
     '  --pin <path>             the pin to write                          (default scripts/perf/pins/<adapter slug>.json)',
     '  --accept <scenario>|<backend>:<bead>  accept a ✗ against the pin being replaced, repeatable',
     '  --dry-run                print the rows, their runs and the verdicts; write nothing',

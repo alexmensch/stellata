@@ -3,12 +3,15 @@
 // RELEASING.md § Perf pin; mechanics: pins/README.md.
 
 import { basename, relative, resolve } from 'node:path';
-import { medianStandardErrorMs, percentile } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import {
   VERDICT_MARK, band, bufferRefusal, dwellFloorMs, positionRefusal, readbackRefusal,
   recordCountRefusal, splitFrameClasses, type DiffRefusal, type Verdict,
-} from './diff-pure';
-import { gatingClock, type DwellMetric, type StateGuard } from './dwell/dwell-pure';
+} from './diff/diff-pure';
+import {
+  floorMove, frameFloor, gatingClock,
+  type DwellMetric, type FrameFloor, type StateGuard,
+} from './dwell/dwell-pure';
 import { DWELL_METHOD, contextOrder } from './run-pure';
 import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type GitProvenance, type PerfFile, type ScenarioRecord } from './schema';
 import { BACKENDS, SCENARIO_NAMES, type Backend, type ScenarioName } from './scenarios';
@@ -42,19 +45,6 @@ export const FLOOR_FOLLOWS_FRACTION = 0.25;
 
 export class PinError extends Error {}
 
-/** The fastest frames of a dwell: a per-frame cost moves them as far as the
- *  median, a wander leaves them where they were. Printed beside the median
- *  and never marked (pins/README.md § Reading `--against-pin`). */
-export interface FrameFloor {
-  readonly min: number;
-  readonly p10: number;
-}
-
-export function frameFloor(samples: readonly number[] | null): FrameFloor | null {
-  if (samples === null || samples.length === 0) return null;
-  return { min: Math.min(...samples), p10: percentile(samples, 0.1) };
-}
-
 export interface PinClock {
   readonly p50: number;
   readonly p90: number;
@@ -72,12 +62,12 @@ export interface PinRow {
   /** The scene the row priced: star records the page had loaded. */
   readonly recordCount: number;
   /** Where the context sat in the pin run, 1-based; a row compares only
-   *  against one taken at the same position (`../diff-pure.ts`). */
+   *  against one taken at the same position (`./diff/diff-pure.ts`). */
   readonly position: number;
   readonly idleRafMs: number | null;
   /** Exposure readbacks per frame over the dwell. Where the vantage draws a
    *  readback frame and a plain one, the GPU-stream median follows this rate,
-   *  so a row taken at another one is not the same statistic (`../diff-pure.ts`).
+   *  so a row taken at another one is not the same statistic (`./diff/diff-pure.ts`).
    *  Absent on a pin taken before the rate was summarised, which declines the
    *  guard rather than refusing the row. */
   readonly readbackPerFrame?: number;
@@ -102,6 +92,15 @@ export interface PinAcceptance {
   readonly bead: string;
 }
 
+/** Parsed `--accept` marks as the pin records them, keyed like the rows.
+ *  Both writers fill the field from their own flags, so the mapping lives
+ *  with the field rather than beside either caller. */
+export function acceptedMarks(
+  marks: readonly (PinAcceptance & { readonly key: string })[],
+): Record<string, PinAcceptance> {
+  return Object.fromEntries(marks.map(({ key, bead }) => [key, { bead }]));
+}
+
 export interface PinFile {
   readonly schema: typeof PIN_SCHEMA;
   readonly adapterSlug: string;
@@ -109,7 +108,7 @@ export interface PinFile {
   readonly git: GitProvenance;
   readonly version: string;
   readonly takenAt: string;
-  /** Every run file the rows were drawn from, in the order given. */
+  /** Every run file the rows were drawn from, oldest first. */
   readonly sourceRuns: readonly string[];
   readonly rows: readonly PinRow[];
   /** Rows whose mark was accepted when this pin was taken, keyed like the
@@ -247,10 +246,26 @@ export interface RowProvenance {
 export interface PinSummary {
   readonly pin: PinFile | null;
   /** The chosen rows as one run, for `compareToPin` against the pin being
-   *  replaced; its run block is the last source's. */
+   *  replaced; its run block is the newest source's. */
   readonly merged: PerfFile | null;
   readonly refusals: readonly string[];
   readonly provenance: readonly RowProvenance[];
+}
+
+/**
+ * Oldest first by `finishedAt`, whatever order the caller named them in. The
+ * freshest steady reading is the one a pin should hold, and reading that off
+ * the argument list made the rule a convention the caller could invert in
+ * silence: the same two runs named the other way round moved eight of ten
+ * rows to the older run while `takenAt` stayed the newer run's, so the file
+ * claimed a take time eight of its own rows predated. Sorting here also puts
+ * the adapter, git and version block the pin copies on the same run
+ * `takenAt` names, which picking by position did not.
+ *
+ * Stable, so runs finishing in the same millisecond keep the order given.
+ */
+function oldestFirst(sources: readonly RunSource[]): readonly RunSource[] {
+  return [...sources].sort((a, b) => a.file.run.finishedAt.localeCompare(b.file.run.finishedAt));
 }
 
 /** Why these runs are not one machine measuring one tree. */
@@ -310,7 +325,7 @@ function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
 
 /**
  * Summarise one or more dwell-mode runs of the same commit as a pin, or say
- * why not. Each row is taken from the LAST run given in which it is sound;
+ * why not. Each row is taken from the NEWEST run in which it is sound;
  * a row sound in no run refuses the whole pin, naming every run's reason,
  * because a pin missing a row would narrow the gate silently. Two cold runs
  * of identical code narrow nothing, so a row one run refused for straddling
@@ -318,7 +333,8 @@ function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
  * lets a pin come from saved runs without a second arm
  * (pins/README.md § From saved runs).
  */
-export function pinFromRuns(sources: readonly RunSource[], source: PinSource): PinSummary {
+export function pinFromRuns(given: readonly RunSource[], source: PinSource): PinSummary {
+  const sources = oldestFirst(given);
   const refusals = runIdentityRefusals(sources);
   const byKey = sources.map(({ file, sourceRun }) => {
     const records = new Map<string, ScenarioRecord>();
@@ -350,27 +366,26 @@ export function pinFromRuns(sources: readonly RunSource[], source: PinSource): P
     }
   }
 
-  const last = sources.at(-1);
-  const slug = last === undefined ? null : adapterSlug(last.file.run.gpu);
-  if (refusals.length > 0 || last === undefined || slug === null || last.file.run.gpu === null) {
+  const newest = sources.at(-1);
+  const slug = newest === undefined ? null : adapterSlug(newest.file.run.gpu);
+  if (refusals.length > 0 || newest === undefined || slug === null || newest.file.run.gpu === null) {
     return { pin: null, merged: null, refusals, provenance };
   }
-  const takenAt = sources.map((s) => s.file.run.finishedAt).sort().at(-1)!;
   return {
     pin: {
       schema: PIN_SCHEMA,
       adapterSlug: slug,
-      adapter: last.file.run.gpu,
-      git: last.file.run.git,
+      adapter: newest.file.run.gpu,
+      git: newest.file.run.git,
       version: source.version,
-      takenAt,
+      takenAt: newest.file.run.finishedAt,
       sourceRuns: sources.map((s) => s.sourceRun),
       rows: chosen.map(({ record, sourceRun }) => rowFrom(record, sourceRun)),
       accepted: source.accepted,
     },
     merged: {
       schema: PERF_SCHEMA,
-      run: { ...last.file.run, finishedAt: takenAt },
+      run: newest.file.run,
       scenarios: chosen.map(({ record }) => record),
     },
     refusals,
@@ -423,12 +438,6 @@ function ungatedRow(
   };
 }
 
-function floorDelta(pinned: PinRow, dwell: DwellRecord): number | null {
-  const current = frameFloor(dwell.gpuMs);
-  if (pinned.gpuFloor == null || current === null) return null;
-  return current.p10 - pinned.gpuFloor.p10;
-}
-
 /** The reader's discriminator on a mark: a cost every frame pays lifts the
  *  floor with the median; a wander lifts the upper half alone. */
 function floorNote(row: PinVerdictRow): PinVerdictRow {
@@ -455,7 +464,7 @@ function compareRow(pinned: PinRow, dwell: DwellRecord): PinVerdictRow {
     );
   }
 
-  const floorDeltaMs = floorDelta(pinned, dwell);
+  const floorDeltaMs = floorMove(pinned.gpuFloor ?? null, frameFloor(dwell.gpuMs));
   const ungatedBecause = PIN_UNGATED_SCENARIOS[pinned.name];
   if (ungatedBecause !== undefined) {
     return underCeiling({

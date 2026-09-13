@@ -3,7 +3,7 @@
 // points and the baseline diff.
 
 import { round3, type PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import { VERDICT_MARK, type RunDiff } from './diff-pure';
+import { VERDICT_MARK, type RunDiff } from './diff/diff-pure';
 import { PASS_COUNTERS, type DwellSummary, type PassCountsSummary } from './dwell/dwell-pure';
 import { PIN_VERDICT_MARK, type PinDiff } from './pin-pure';
 import type { DwellRecord } from './schema';
@@ -94,7 +94,7 @@ export function formatSweepTable(points: readonly SweepPoint[], fit: SweepFit, b
     `bound ${fit.bound} · sweep bracket ${bracketMs.toFixed(3)} ms`;
 }
 
-export const DIFF_COLUMNS = ['', 'row', 'metric', 'baseline', 'current', 'delta', 'band'] as const;
+export const DIFF_COLUMNS = ['', 'row', 'metric', 'baseline', 'current', 'delta', 'floor', 'band'] as const;
 
 export function formatDiffTable(diff: RunDiff): string {
   if (diff.refusedWholeRun !== null) {
@@ -106,7 +106,8 @@ export function formatDiffTable(diff: RunDiff): string {
       DIFF_COLUMNS,
       diff.rows.map((row) => [
         VERDICT_MARK[row.verdict], row.key, row.metric,
-        round3(row.baselineMs), round3(row.currentMs), round3(row.deltaMs), round3(row.bandMs),
+        round3(row.baselineMs), round3(row.currentMs), round3(row.deltaMs),
+        row.floorDeltaMs === null ? undefined : round3(row.floorDeltaMs), round3(row.bandMs),
       ]),
     ));
   }
@@ -116,8 +117,6 @@ export function formatDiffTable(diff: RunDiff): string {
   return parts.length > 0 ? parts.join('\n') : 'baseline: nothing comparable in either run';
 }
 
-/** `floor` is the 10th-percentile frame's move beside the median's — the
- *  wander-or-cost discriminator, printed and never marked. */
 export const PIN_DIFF_COLUMNS = ['', 'row', 'metric', 'pinned', 'current', 'delta', 'floor', 'band', 'note'] as const;
 
 export function formatPinTable(diff: PinDiff): string {

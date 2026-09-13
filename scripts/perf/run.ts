@@ -15,14 +15,15 @@ import { ArgError, parseRunArgs, usage, type RunArgs } from './args';
 import {
   REPO_ROOT, gitMeta, mainCheckout, packageVersion, printAgainstPin, readJsonFlag, writePinFile,
 } from './checkout';
-import { diffRuns } from './diff-pure';
+import { diffRuns } from './diff/diff-pure';
 import type { DwellSummary } from './dwell/dwell-pure';
 import {
   PASS_TOGGLES_MODULE_URL, applyRoundTrip, measureDwell, measureSweep, type Measured,
 } from './measure';
 import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './arming/perf-go-lib';
 import {
-  assertPinFile, citeRunPath, pinDiffFails, pinFromRuns, pinWriteRefusal, type PinDiff, type PinFile,
+  acceptedMarks, assertPinFile, citeRunPath, pinDiffFails, pinFromRuns, pinWriteRefusal,
+  type PinDiff, type PinFile,
 } from './pin-pure';
 import {
   DWELL_METHOD,
@@ -384,10 +385,9 @@ function preflightPaths(args: RunArgs): Preflight {
 
 /** Write the run as the pin, or say why it cannot be one. Returns whether it failed. */
 function writePin(args: RunArgs, file: PerfFile, against: PinDiff | null): boolean {
-  const accepted = Object.fromEntries(args.accept.map((mark) => [mark.key, { bead: mark.bead }]));
   const { pin, refusals } = pinFromRuns(
     [{ file, sourceRun: citeRunPath(args.json!, mainCheckout()) }],
-    { version: packageVersion(), accepted },
+    { version: packageVersion(), accepted: acceptedMarks(args.accept) },
   );
   if (pin === null) {
     console.error(`perf: no pin written —\n  ${refusals.join('\n  ')}`);
