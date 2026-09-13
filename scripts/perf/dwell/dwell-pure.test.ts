@@ -183,6 +183,24 @@ describe('the pinned readback cadence held', () => {
     expect(held(62)).toBe(false);
   });
 
+  // The window is frames + 2, so a cadence that DIVIDES the frame count keeps
+  // a frame of margin instead of sitting on the bound. Measured at one-in-two
+  // over 1200 frames: 601 requests issued, which the narrower window called
+  // the maximum exactly and one phase shift would have refused.
+  it('leaves a frame of margin where the cadence divides the frame count', () => {
+    expect(readbackCadenceHeld(601 / 1200, 1200, 2)).toBe(true);
+    expect(readbackCadenceHeld(602 / 1200, 1200, 2)).toBe(true);
+    expect(readbackCadenceHeld(603 / 1200, 1200, 2)).toBe(false);
+    expect(readbackCadenceHeld(300 / 1200, 1200, 4)).toBe(true);
+    expect(readbackCadenceHeld(302 / 1200, 1200, 4)).toBe(false);
+  });
+
+  // One-in-one admits every frame, so the window itself is the only cap.
+  it('admits the whole window at one-in-one, which caps nothing', () => {
+    expect(readbackCadenceHeld(1, 240, 1)).toBe(true);
+    expect(held(234, 1)).toBe(true);
+  });
+
   it('admits a rate UNDER the cap: a round trip past the cadence is sound', () => {
     expect(held(40)).toBe(true);
     expect(held(0)).toBe(true);

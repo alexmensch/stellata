@@ -23,18 +23,32 @@ export const DEFAULT_DWELL_FRAMES = 240;
 export const DWELL_READBACK_EVERY_FRAMES = 4;
 
 /**
+ * The dwell counts requests over a window wider than the frames it times: it
+ * reads the counter before an extra rAF and closes it inside the last one, so
+ * the legal maximum is one request per `every` frames over `frames + 2`, not
+ * over `frames`. Counting the window as `frames` puts the maximum exactly ON
+ * the bound wherever `every` divides it — measured, 1200 frames at one-in-two
+ * issued 601 against a bound of 601, so a one-frame phase shift would have
+ * failed a sound dwell and spent a fresh arm re-taking it.
+ */
+const CADENCE_WINDOW_STRADDLE_FRAMES = 2;
+
+/**
  * Whether the pinned cadence actually held. It CAPS the rate — at most one
- * request per `every` rendered frames, plus the one the dwell's own count
- * window can straddle — so a rate above that bound is the lever not having
- * taken at all. One-sided on purpose: a vantage whose readback round trip
- * outran the cadence requests LESS often, which is sound and recorded.
+ * request per `every` rendered frames over the window above — so a rate past
+ * that bound is the lever not having taken at all. One-sided on purpose: a
+ * vantage whose readback round trip outran the cadence requests LESS often,
+ * which is sound and recorded. The margin is a frame either way and the fault
+ * is an order of magnitude: an emergent rate against a one-in-four cap issues
+ * 139 requests where 61 are legal.
  */
 export function readbackCadenceHeld(
   readbackPerFrame: number,
   frames: number,
   every: number,
 ): boolean {
-  return Math.round(readbackPerFrame * frames) <= Math.ceil(frames / every) + 1;
+  const window = frames + CADENCE_WINDOW_STRADDLE_FRAMES;
+  return Math.round(readbackPerFrame * frames) <= Math.floor(window / every) + 1;
 }
 
 /** A dwell is read in this many consecutive slices; their medians spanning
