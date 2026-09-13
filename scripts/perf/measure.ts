@@ -109,6 +109,17 @@ export async function measureDwell(page: Page, plan: DwellPlan): Promise<Measure
         'an open debug panel is one, and its writes would sit inside a wall-clock dwell',
     };
   }
+  if (raw.rateDuring !== 0) {
+    return {
+      value: record,
+      failure:
+        `the clock ran at ${raw.rateDuring}x during the dwell, not stopped — ` +
+        'the frames priced a moving scene',
+    };
+  }
+  // After the clock, which is the more fundamental failure: a dwell that
+  // priced a moving scene should say so rather than report the duty cycle it
+  // also happened to miss.
   if (!readbackCadenceHeld(record.readbackPerFrame, plan.frames, plan.readbackEvery)) {
     return {
       value: record,
@@ -116,14 +127,6 @@ export async function measureDwell(page: Page, plan: DwellPlan): Promise<Measure
         `the statistic read back ${record.readbackPerFrame.toFixed(3)} times per frame, over the ` +
         `one in ${plan.readbackEvery} the dwell pinned — the cadence lever did not take, and the ` +
         'duty cycle is an input to the GPU-stream median again',
-    };
-  }
-  if (raw.rateDuring !== 0) {
-    return {
-      value: record,
-      failure:
-        `the clock ran at ${raw.rateDuring}x during the dwell, not stopped — ` +
-        'the frames priced a moving scene',
     };
   }
   const after = await readRestoreState(page);
