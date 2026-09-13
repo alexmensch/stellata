@@ -281,8 +281,15 @@ that do not need it — the warp refusal above all
 (`../../hdr/exposure/visibility/README.md` § Skipping an emitter the
 display cannot show).
 
-From Sol at the acceptance plate scale M31 bounds at 17.42 — 0.2 mag under
-the default view's 17.21 threshold, so the glow skips there.
+From Sol at the acceptance plate scale (50° over 900 CSS px) M31 bounds at
+17.42, 0.2 mag under the default view's 17.21 threshold, so the glow skips
+there — **but that margin is plate-scale thin, and skipping at Sol is not
+the common case.** The threshold is fixed in angle, since `S_lim` is the rod
+summation area; the bound is not, since it takes `Ω_px`, and finer pixels
+sample nearer the cusp and brighten it. The crossover is **~1046 CSS px** of
+viewport height at 50°, above which the glow draws at Sol — which is every
+normal full-screen window. The band clears the same threshold by 3.5 mag, so
+only this layer's margin is thin enough for a resize to flip it.
 `LgPeakCache` is keyed on camera position (`LG_PEAK_RECOMPUTE_PC`, 500 pc)
 and `Ω_px`, never on exposure; `dispose` resets it.
 
