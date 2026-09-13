@@ -308,6 +308,11 @@ statistic", and the registry's transition flag alone is not that. The
 depends on it too — without the refusal its A/B pays the bound on both
 sides and prices nothing.
 
+`LocalGroupEmission.isDrawn` is that conjunction read back — the toggle, the
+contribution verdict and the chart gate — and it is what the lever's
+`present()` asks: a glow the brightness gate has skipped is enabled and not
+drawing, so the toggle alone would admit a row with no cost to find.
+
 ## What a viewer actually reads
 
 **The intra-object range.** Bulge centre to disc envelope spans ~8.7 mag

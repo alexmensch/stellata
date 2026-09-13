@@ -121,9 +121,13 @@ export class LocalGroupEmission {
   }
 
   private groupVisible(): boolean {
-    const visible = this.enabled && this.contributing && !this.chartHidden;
+    const visible = this.isDrawn();
     this.group.visible = visible;
     return visible;
+  }
+
+  isDrawn(): boolean {
+    return this.enabled && this.contributing && !this.chartHidden;
   }
 
   /** Contribution gate. A term of the conjunction rather than a bare

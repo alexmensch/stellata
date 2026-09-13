@@ -291,6 +291,10 @@ export class MolecularClouds {
     if (!on) this.rimGroup.visible = false;
   }
 
+  isAbsorptionDrawn(): boolean {
+    return this.group.visible && this.absorptionGroup.visible;
+  }
+
   /** Per-frame: rebase to the floating origin and gate the rim shells on
    *  the declutter permit. Absorption is physics — it stays on in
    *  realistic mode regardless of `rimPermitted`. */

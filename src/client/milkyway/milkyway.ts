@@ -238,7 +238,9 @@ export class MilkyWay {
     this.refreshVisibility();
   }
 
-  isEnabled(): boolean { return this.enabled; }
+  isDrawn(): boolean {
+    return this.group.visible && !this.isobar;
+  }
 
   /** Contribution gate. A term of the group's visibility alongside the
    *  user toggle rather than a bare `group.visible` write, which would

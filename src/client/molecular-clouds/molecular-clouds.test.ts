@@ -574,3 +574,36 @@ describe('effective focus geometry', () => {
       renderedCloudSizePx(catalog.clouds[1], 100, angularToPx, endOn), 9);
   });
 });
+
+describe('MolecularClouds / what the cloudAbsorption lever may price', () => {
+  const drawnAfter = (mutate: (c: MolecularClouds) => void) => {
+    const c = new MolecularClouds(makeCatalog());
+    c.update(new THREE.Vector3(), false);
+    mutate(c);
+    return c.isAbsorptionDrawn();
+  };
+
+  it('draws from a contributing layer with absorption on', () => {
+    expect(drawnAfter(() => {})).toBe(true);
+  });
+
+  // The legibility skip hides the parent group and stops `update` running, so
+  // the raymarch is already gone — an A/B against it would disable a pass
+  // that is not there and read a meaningless zero.
+  it('does not draw while the contribution gate has skipped the layer', () => {
+    expect(drawnAfter((c) => c.setContributing(false))).toBe(false);
+  });
+
+  // The kill switch only sets a field; `update` is what carries it to the
+  // group, so the lever's own restore depends on a contributing frame.
+  it('does not draw once the kill switch has reached the group', () => {
+    expect(drawnAfter((c) => {
+      c.setAbsorptionEnabled(false);
+      c.update(new THREE.Vector3(), false);
+    })).toBe(false);
+  });
+
+  it('does not draw in chart mode', () => {
+    expect(drawnAfter((c) => c.setMonochrome(true))).toBe(false);
+  });
+});

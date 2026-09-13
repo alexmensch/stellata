@@ -643,4 +643,33 @@ describe('LocalGroupEmission controller', () => {
       expect(asksFor(() => {})).toBe(1);
     });
   });
+
+  describe('isDrawn is the whole conjunction, not the user toggle', () => {
+    const drawnAfter = (mutate: (layer: LocalGroupEmission) => void) => {
+      const layer = new LocalGroupEmission(objects, makeDeps());
+      mutate(layer);
+      const drawn = layer.isDrawn();
+      expect(layer.group.visible, 'group.visible tracks isDrawn').toBe(drawn);
+      layer.dispose();
+      return drawn;
+    };
+
+    it('draws with every term set', () => {
+      expect(drawnAfter(() => {})).toBe(true);
+    });
+
+    // The brightness skip leaves the glow enabled and not drawing — the state
+    // the `lgEmission` lever must find absent rather than price as a zero row.
+    it('does not draw while the contribution gate has skipped it', () => {
+      expect(drawnAfter((l) => l.setContributing(false))).toBe(false);
+    });
+
+    it('does not draw while the glow is switched off', () => {
+      expect(drawnAfter((l) => l.setEnabled(false))).toBe(false);
+    });
+
+    it('does not draw in chart mode', () => {
+      expect(drawnAfter((l) => l.setChartHidden(true))).toBe(false);
+    });
+  });
 });

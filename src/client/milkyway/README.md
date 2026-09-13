@@ -264,6 +264,16 @@ own transition flag alone is not that. The `mwBand` frame-cost lever
 (`../debug/frame-cost/passes/README.md`) depends on it too — without the
 refusal its A/B pays the march on both sides and prices nothing.
 
+`MilkyWay.isDrawn` is that same conjunction read back **plus the chart gate**,
+and it is what the lever's `present()` asks: a band the brightness gate has
+skipped is enabled and not drawing, so the toggle alone would admit a row whose
+A/B disables a pass already gone. Chart mode is the second such state, and it
+is the one that does NOT reach `group.visible` — `setIsobar` hides the two
+meshes and leaves the group visible to carry the isobar treatment (§ Chart mode
++ warp). So `isDrawn` reads the group and the isobar flag together, where the
+LG glow's own accessor can read its group alone
+(`../local-group/emission/README.md`).
+
 ## Coordinate handling
 
 The mesh-local unit sphere has +X/+Y in the disc plane and +Z toward NGP;
