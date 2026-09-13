@@ -48,10 +48,11 @@ export interface WebGpuStarLayer {
    *  call site. */
   setMonochrome(on: boolean): void;
   /** The frame's compaction dispatch — forwards the star attributes the
-   *  shell wrote this frame and lists the survivors the three draws read.
-   *  Call after `syncUniformNodes` (the kernel reads those scalars) and
-   *  before the render (star/compaction/README.md). */
-  update(): void;
+   *  shell wrote this frame and lists the survivors the three draws read,
+   *  frustum-tested against `camera` as it stands now. Call after
+   *  `syncUniformNodes` (the kernel reads those scalars) and before the
+   *  render (star/compaction/README.md). */
+  update(camera: THREE.Camera): void;
   /** The local-depth-pass mirror this layer built. The shell hands it to
    *  StarLocalCluster in place of the GLSL StarLocalMirror; the cluster
    *  parents its group into the pass scene and owns its dispose. */

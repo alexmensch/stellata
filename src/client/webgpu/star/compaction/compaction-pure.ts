@@ -28,6 +28,35 @@ export function tierArgsOffsetBytes(tier: StarTier): number {
   return tier * INDIRECT_ARGS_STRIDE * Uint32Array.BYTES_PER_ELEMENT;
 }
 
+/** Extra NDC the clip test allows before culling, past the quad's own
+ *  half-extent. The vertex stage forms its clip position as P·(V·p) in
+ *  float32 and the kernel as (P·V)·p, so a quad whose edge sits within a
+ *  few ulp of the screen edge could otherwise be listed by one and not
+ *  the other; the slack is far below a pixel at any viewport. */
+export const CULL_SLACK_NDC = 1e-4;
+
+/**
+ * CPU mirror of the kernel's frustum test: true when the star's quad cannot
+ * touch the viewport. `clip*` is the star centre through the camera's
+ * view-projection; the quad extends `pxSize / viewport` either side of it
+ * in NDC (the vertex stage's `corner · pxSize / uViewport · 2` at
+ * corner ±0.5), so the test is on `|clip| > w · (1 + half-extent)` with the
+ * divide folded away. Behind the camera (w ≤ 0) nothing can draw.
+ */
+export function starQuadOffscreen(
+  clipX: number,
+  clipY: number,
+  clipW: number,
+  pxSize: number,
+  viewportW: number,
+  viewportH: number,
+): boolean {
+  if (clipW <= 0) return true;
+  const boundX = clipW * (1 + pxSize / viewportW + CULL_SLACK_NDC);
+  const boundY = clipW * (1 + pxSize / viewportH + CULL_SLACK_NDC);
+  return Math.abs(clipX) > boundX || Math.abs(clipY) > boundY;
+}
+
 /** The args buffer as uploaded once: every slot draws the quad's
  *  `indexCount` indices over zero instances until the kernel counts. */
 export function initialIndirectArgs(indexCount: number): Uint32Array {

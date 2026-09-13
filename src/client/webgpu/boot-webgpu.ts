@@ -186,7 +186,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
       return {
         setCoreMaskVisible: (on: boolean) => layer.setCoreMaskVisible(on),
         setMonochrome: (on: boolean) => layer.setMonochrome(on),
-        update: () => layer.update(),
+        update: (camera: THREE.Camera) => layer.update(camera),
         localMirror: layer.localMirror,
         dispose() {
           unregister();
