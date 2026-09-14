@@ -17,6 +17,7 @@ import { makeOrbitLineLoop } from '../util/orbit-line';
 import {
   angularDiameterPx,
   discHitRadiusPx,
+  enclosureRadiusPx,
   pickFromCandidates,
   type PickCandidate,
 } from '../camera/controls/star-geometry';
@@ -215,7 +216,7 @@ export class LocalGroupLayer {
       const pxSize = 2 * Math.atan(maxSemiAxisPc(obj) / Math.max(cameraDistancePc, 1)) * pxPerRad;
       const hitRadius = discHitRadiusPx(pxSize);
 
-      if (pxDist > hitRadius && pxDist > pixelThreshold) continue;
+      if (pxDist > enclosureRadiusPx(hitRadius, pixelThreshold)) continue;
       candidates.push({ idx: i, pxDist, hitRadius, cameraDistancePc, lx, ly, lz });
     }
 

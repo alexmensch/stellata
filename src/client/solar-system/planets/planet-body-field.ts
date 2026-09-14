@@ -56,6 +56,7 @@ import { emitterPutsInkOnScreen } from '../../hdr/exposure/visibility/emitter-vi
 import { pixelsPerRadianFromUniforms } from '../../util/orbit-line';
 import {
   discHitRadiusPx,
+  enclosureRadiusPx,
   pickFromCandidates,
   physSizePx,
   type PickCandidate,
@@ -1467,7 +1468,7 @@ export class PlanetBodyField {
       const pxSize = this.discPixelSize(radiusPc, dVp, appMag);
       const hitRadius = discHitRadiusPx(pxSize);
 
-      if (pxDist > hitRadius && pxDist > pxThreshold) return;
+      if (pxDist > enclosureRadiusPx(hitRadius, pxThreshold)) return;
       candidates.push({
         idx: i,
         pxDist,

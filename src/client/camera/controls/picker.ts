@@ -12,6 +12,7 @@ import { projectToScreenInto } from '../../overlays/overlay-project';
 import {
   PICK_THRESHOLD_PX,
   discHitRadiusPx,
+  enclosureRadiusPx,
   pickFromCandidatesResolved,
   pickScore,
   sortedDistRange,
@@ -211,9 +212,7 @@ export class Picker {
       // Extinction-blind, so an upper bound of the resolved radius —
       // which is what pickFromCandidatesResolved requires of it.
       const hitRadius = discHitRadiusPx(pxSize);
-      // Prune to candidates that could win in either tier; the reducer
-      // re-checks tier eligibility, this is just to keep the array tiny.
-      if (pxDist > hitRadius && pxDist > pixelThreshold) continue;
+      if (pxDist > enclosureRadiusPx(hitRadius, pixelThreshold)) continue;
       candidates.push({
         idx: i, pxDist, hitRadius, appMag, cameraDistancePc: dCam,
         anchorLocal: new THREE.Vector3(x, y, z),

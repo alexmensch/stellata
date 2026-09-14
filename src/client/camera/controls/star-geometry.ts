@@ -255,12 +255,10 @@ export function pickFromCandidatesResolved<T extends PickCandidate>(
   for (const c of candidates) {
     if (c.pxDist <= enclosureRadiusPx(c.hitRadius, pixelThreshold)) eligible.push(c);
   }
-  const keyOf = (c: T): [number, number] =>
-    [enclosureRadiusPx(c.hitRadius, pixelThreshold), scoreFn(c)];
   eligible.sort((a, b) => {
-    const [ra, sa] = keyOf(a);
-    const [rb, sb] = keyOf(b);
-    return ra === rb ? sa - sb : ra - rb;
+    const ra = enclosureRadiusPx(a.hitRadius, pixelThreshold);
+    const rb = enclosureRadiusPx(b.hitRadius, pixelThreshold);
+    return ra === rb ? scoreFn(a) - scoreFn(b) : ra - rb;
   });
   for (const c of eligible) {
     const r = resolve(c);
