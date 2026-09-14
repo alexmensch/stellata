@@ -68,7 +68,7 @@ function localSharedUniforms(): CloudSharedUniforms {
  * Molecular-cloud layer — two decoupled components per cloud:
  *
  * - Absorption: per-cloud ellipsoid raymarch of the calibrated Plummer
- *   model (cloud-absorption.frag.glsl), an alpha-only over that dims the
+ *   model (absorption/cloud-absorption.frag.glsl), an alpha-only over that dims the
  *   diffuse background. Physics, so it is ALWAYS on in realistic mode —
  *   never declutter-gated — and hidden only in chart mode.
  * - Rim shell: the fresnel-rim orientation silhouette on the per-cloud

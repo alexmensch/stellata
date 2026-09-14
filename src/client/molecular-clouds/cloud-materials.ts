@@ -9,8 +9,8 @@ import {
 } from '../fresnel-shell/fresnel-shell';
 import { DEPTH_DIM_POWER } from '../fresnel-shell/shell-distance-pure';
 import { CLOUD_RIM_DISTANCES } from './cloud-rim-pure';
-import absorptionVert from './cloud-absorption.vert.glsl?raw';
-import absorptionFrag from './cloud-absorption.frag.glsl?raw';
+import absorptionVert from './absorption/cloud-absorption.vert.glsl?raw';
+import absorptionFrag from './absorption/cloud-absorption.frag.glsl?raw';
 import rimVert from '../fresnel-shell/fresnel-shell.vert.glsl?raw';
 import rimFrag from './cloud-rim.frag.glsl?raw';
 

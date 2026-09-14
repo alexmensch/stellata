@@ -7,7 +7,8 @@ decoupled components per cloud:
   density model (`docs/science-molecular-clouds.md` §§ 4, 9) that dims every
   diffuse layer drawn behind the cloud (the MW band, LG emission).
   Physics, so it is **always on in realistic mode — never
-  declutter-gated** — and hides only in chart mode.
+  declutter-gated** — and hides only in chart mode. It has its own folder:
+  `absorption/README.md`.
 - **Rim shell** — the Local-Bubble fresnel-rim treatment
   (`../fresnel-shell/`) on a per-cloud **isosurface mesh** traced from
   the Edenhofer dust field (`cloud-surfaces.bin`; clouds without one
@@ -68,25 +69,22 @@ module's `sids()` leg, attached by main.ts's roster loop (see
 - `cloud-materials.ts` (+ test) — the material seam: the neutral
   `CloudMaterials` contract, the per-cloud `CloudAbsorptionSpec` both
   factories consume, and the WebGL2 implementation (§ The material seam).
-- `cloud-presence-pure.ts` — CPU mirror of the absorption math (Plummer
-  density, absorption alpha) plus the constants both shader backends read
-  (`TAU_PER_AV`, `AV_RATE_PER_NH`, `AV_PER_DENSITY`, `ALPHA_CAP`,
-  `AV_SATURATED`, `ENVELOPE_TAPER_FRAC`, `MARCH_MIN_STEPS`,
-  `MARCH_MIN_CHORD_T`). Vitest-pinned.
+- `absorption/` — the raymarch: its shader pair, `cloud-presence-pure.ts`
+  and their own drift pin. `absorption/README.md`.
 - `cloud-rim-pure.ts` — the rim shell's authored constants (stipple grid,
-  contour width, alpha floor, `MIN_FWIDTH`), for the same reason, plus
-  `CLOUD_RIM_EXTENT_PC` / `CLOUD_RIM_DISTANCES` (§ Rim shell render).
-- `cloud-glsl-drift.test.ts` — pins the GLSL's copies of both sets against
-  those modules, since GLSL cannot import. The output dither's seed offset
-  and 8-bit divisor are pinned here too, against `../hdr/tonemap/tonemap-pure.ts`,
-  which owns them for every layer that dithers. The noise itself is not
-  copied at all — both shaders include the shared `stellata_ign` chunk
-  (`../hdr/tonemap/README.md` § One hash).
+  contour width, alpha floor, `MIN_FWIDTH`), plus `CLOUD_RIM_EXTENT_PC` /
+  `CLOUD_RIM_DISTANCES` (§ Rim shell render). GLSL cannot import, so its
+  copies are pinned against this module.
+- `cloud-glsl-drift.test.ts` — that rim pin, plus the output dither's seed
+  offset and 8-bit divisor against `../hdr/tonemap/tonemap-pure.ts`, which
+  owns them for every layer that dithers. The dither is asserted for **both**
+  cloud shaders here rather than per folder, because it is one shape across
+  the pair and the resolve. The noise itself is not copied at all — both
+  shaders include the shared `stellata_ign` chunk (`../hdr/tonemap/README.md`
+  § One hash). The absorption constants are pinned in `absorption/`.
 - `cloud-pick-pure.ts` — the overlapping-cloud pick score + winner
   resolution (§ Picking + hover).
 - `cloud-mock.ts` — `Cloud`/`CloudCatalog` test fixture builders.
-- `cloud-absorption.vert.glsl`, `cloud-absorption.frag.glsl` — the
-  absorption raymarch pair.
 - `cloud-rim.frag.glsl` — the rim/outline fragment stage; the vertex
   stage is the shared `../fresnel-shell/fresnel-shell.vert.glsl`.
 - `cloud-labels.ts` — per-cloud silhouette-hugging SVG name labels
@@ -116,87 +114,11 @@ unchanged from the WebGL layout.
 
 ## Absorption render
 
-Every cloud is one shared `SphereGeometry(1.03, 32, 16)` mesh scaled
-per-instance to its semi-axes and rotated by its quaternion (the 3%
-inflation covers tessellation sag; the shader clips to the analytic
-envelope sphere). The fragment shader raymarches the ellipsoid segment
-(4–14 jittered steps, screen-adaptive) and converts the A_V column to
-`α = 1 − exp(−0.921·A_V)`, capped at 0.95. **Traced clouds march the
-per-cloud Edenhofer density brick** (`USE_FIELD` define; a linear-u8
-`Data3DTexture` from `cloud-surfaces.bin`, `A_V = 2.742·∫E dl`, clip
-at the brick's u = 1.05 taper edge) — the same volume the rim
-isosurface was traced from, so the shadow matches the silhouette 1:1
-and the dimming matches per-star extinction physics. Fallback clouds
-march the calibrated Plummer profile, clipped at the mass-budget
-envelope `u = uEnv`. The draw is **alpha-only premultiplied over** (rgb = 0
-under `premultipliedAlpha: true` + `NormalBlending`), i.e. the blend is
-`background × (1 − absorption)` — nothing is added. The TSL twin reaches the
-same blend through explicit `CustomBlending` factors instead, because the
-flag itself breaks an MRT output struct
-(`../webgpu/molecular-clouds/README.md`); the two factories are meant to
-differ there. Per § 9.1 the ray
-start carries static IGN jitter (never reseeded per frame) and the
-output carries ±0.5-LSB dither.
-
-**Fragment budget.** The march is clipped to the envelope sphere
-`u = uEnv` (density is identically zero outside it; a
-mass-budget-tightened cloud like Orion λ at uEnv 0.22 discards ~95%
-of its projected disc in one dot product), the step count adapts to
-the chord's projected pixel extent (capped by the `uSteps` lever), and
-the march breaks once the column saturates the alpha cap.
-
-The material is `BackSide`: exactly one fragment per covered pixel
-from outside and inside (the raymarch segment is analytic either way);
-`FrontSide` would kill the inside-the-cloud absorption. The shaders
-avoid the `#version 300 es` directive and don't redeclare
-auto-injected attributes (`position`, `normal`, `modelMatrix`, etc.);
-doing either silently breaks the GLSL3 compile.
-
-**Render-order contract** (`docs/science-molecular-clouds.md` § 9.1 rule 5):
-the absorption alpha dims only layers drawn *before* the absorption
-meshes (`renderOrder −2`). Every diffuse background the clouds should
-extinct — the MW band and LG emission (−3), any future HiPS /
-sky-imagery layer — must render earlier; a layer added after the mesh
-silently escapes extinction. Point sources are exempt (the per-star
-raymarch owns their extinction; no double-count). The reference chrome
-at −1 (galactic disc/grid, Local Bubble shell, the cloud rim shells
-themselves) deliberately draws after the mesh — annotation shouldn't
-be extincted.
-
-**Order is necessary and no longer sufficient**, because the band and the
-LG glow write the HDR target's *third* attachment now, not the one the
-absorption draw would reach by default. The mesh is `markAbsorber`ed
-(`../hdr/attachments/README.md` § The gate) and the shader writes its
-alpha-only texel to `location = 2` as well as `location = 0`; one blend
-equation covers both, so the multiply is identical on each. Drop either
-half and the clouds keep drawing, keep sorting correctly, and extinct
-nothing — no error, no missing draw, just no dark rift. The
-`location = 2` write is what becomes **per-cloud conditional** once the band
-reads the measured grid itself (§ below); `location = 0` is unaffected.
-
-**Which clouds may dim the band is decided per cloud, not per layer**
-(`docs/science-galactic-structure.md` § The dust stack). The band's dust
-comes from the highest-resolution source covering each point, so a cloud
-either supplies its own volume — and is carved out of the band's read of the
-voxel grid — or is left to the grid, which already holds it. The test is
-whether the cloud's own model out-resolves the grid *and* the grid resolves
-the cloud across enough voxels to carry shape. Of 74 clouds inside grid
-coverage that splits 52 / 22: the 22 are the 21 fallback ellipsoids plus
-Cygnus X (brick 15.2 pc at 1163 pc, coarser than the grid it sits in), and
-they stop dimming the band, which then shows their measured shape instead of
-an authored ellipse. The 22 clouds beyond coverage always supply their own.
-Until the band reads the grid this is contract, not code: today every cloud
-dims the band and the overlap with the slab costs ~0.006 mag sky-mean.
-
-A cloud's tier changes only its **absorption** role. Rim shells, chart
-outlines, labels, picking and focus are annotation and never move.
-
-Treating the clouds as a pure foreground *screen* is sound toward the
-inner Galaxy — only 2.3 % of the GC column's emission originates inside
-500 pc, so they really are in front of the light. It is weakest toward
-the anticentre, where 65 % of that column is within 2.5 kpc and the
-clouds sit *inside* the emitting volume. Second-order, because the
-anticentre column is small.
+Its own folder now: `absorption/README.md` — the march and both tiers, the
+`BackSide` and GLSL3 invariants, the fragment budget, the render-order
+contract and the `location = 2` attachment write, and which clouds may dim
+the band. `cloud-materials.ts` here still builds the material and owns the
+brick texture's lifetime (§ The material seam).
 
 ## Rim shell render
 
