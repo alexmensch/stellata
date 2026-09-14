@@ -4,7 +4,7 @@ import { makeTslShellMaterials } from '../webgpu/fresnel-shell/tsl-shell-materia
 import {
   applyRimParams, makeGlslShellMaterials, SHELL_RIM_ALPHA_LIMB, SHELL_RIM_BLUE,
 } from './fresnel-shell';
-import { rimDistancesForExtent } from './shell-distance-pure';
+import { DEPTH_DIM_POWER, rimDistancesForExtent } from './shell-distance-pure';
 
 const OPTS = {
   colourHex: SHELL_RIM_BLUE,
@@ -24,6 +24,21 @@ describe('the boundary-shell material seam', () => {
       makeTslShellMaterials({ registerMrtLayer: () => () => {} })
         .fresnelShell(OPTS).uniforms);
     expect(tslKeys.sort()).toEqual(glslKeys.sort());
+  });
+
+  // This seam derives both reaches from `extentPc` on each side rather
+  // than reading a precomputed record, so the keys agreeing proves nothing
+  // about what they hold: a factory passing 0 for the extent would pass the
+  // key test and render one backend on a foreign scale.
+  it('derives the same reaches from the extent on both backends', () => {
+    const glslSlots = makeGlslShellMaterials().fresnelShell(OPTS).uniforms;
+    const tslSlots = makeTslShellMaterials({ registerMrtLayer: () => () => {} })
+      .fresnelShell(OPTS).uniforms;
+    for (const u of [glslSlots, tslSlots]) {
+      expect(u.uNearFadePc.value).toBe(REACH.nearFadePc);
+      expect(u.uDepthDimRefPc.value).toBe(REACH.depthDimRefPc);
+      expect(u.uDepthPower.value).toBe(DEPTH_DIM_POWER);
+    }
   });
 
   it('inverse-maps the authored colour on both backends', () => {

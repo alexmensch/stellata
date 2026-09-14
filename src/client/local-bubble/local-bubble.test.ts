@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { IUniform } from 'three';
 import { makeGlslShellMaterials, type ShellMaterials } from '../fresnel-shell/fresnel-shell';
-import { NEAR_FADE_EXTENT_FRAC } from '../fresnel-shell/shell-distance-pure';
+import {
+  DEPTH_DIM_CLEARANCE_PC, NEAR_FADE_EXTENT_FRAC,
+} from '../fresnel-shell/shell-distance-pure';
 import { LocalBubbleShell } from './local-bubble';
 import type { LocalBubbleMesh } from './local-bubble-loader';
 
@@ -30,23 +32,28 @@ function mesh(extentPc: number): LocalBubbleMesh {
 }
 
 // The wall distance is measured by the build, so the shell cannot author
-// its own fade reach: attach is the only place that knows it, and the
-// construction value stands only while shellReady() is false.
-describe('the Local Bubble near-fade reach', () => {
-  it('comes off the parsed mesh extent, written by attach', () => {
+// its own reaches: attach is the only place that knows them, and the
+// construction values stand only while shellReady() is false. Both slots
+// are asserted every time — the pair moving together is the invariant
+// rimDistancesForExtent exists to hold, so half of it is no assertion.
+describe('the Local Bubble camera-distance reaches', () => {
+  it('come off the parsed mesh extent, written by attach', () => {
     const { shell, slots } = shellWithSlots();
     expect(slots().uNearFadePc.value).toBe(0);
+    expect(slots().uDepthDimRefPc.value).toBe(DEPTH_DIM_CLEARANCE_PC);
     expect(shell.hasMesh()).toBe(false);
 
     shell.attach(mesh(300));
     expect(slots().uNearFadePc.value).toBeCloseTo(300 * NEAR_FADE_EXTENT_FRAC, 10);
+    expect(slots().uDepthDimRefPc.value).toBe(300 + DEPTH_DIM_CLEARANCE_PC);
     expect(shell.hasMesh()).toBe(true);
   });
 
-  it('follows a re-attach onto a differently-sized wall', () => {
+  it('follow a re-attach onto a differently-sized wall', () => {
     const { shell, slots } = shellWithSlots();
     shell.attach(mesh(300));
     shell.attach(mesh(120));
     expect(slots().uNearFadePc.value).toBeCloseTo(120 * NEAR_FADE_EXTENT_FRAC, 10);
+    expect(slots().uDepthDimRefPc.value).toBe(120 + DEPTH_DIM_CLEARANCE_PC);
   });
 });
