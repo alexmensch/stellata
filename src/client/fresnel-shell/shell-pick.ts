@@ -25,7 +25,14 @@ export interface ShellPickParams {
   pixelThreshold: number;
 }
 
-// Pick-path scratch — valid only inside one `pickShellSilhouette` call.
+// A raycast is hit-or-miss, with no notion of how deep inside the
+// silhouette the cursor sits. A shell therefore reports the middle of the
+// scale rather than 0: the score breaks ties against every other kind, so
+// claiming dead centre would win every one of them against a kind that
+// measured its own depth honestly, and claiming the rim would lose them all.
+const SILHOUETTE_DEPTH_SCORE = 0.5;
+
+// Pick-path scratch, rewritten on every call before it is read.
 const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 const anchor = new THREE.Vector3();
@@ -69,11 +76,22 @@ export function pickShellSilhouette(p: ShellPickParams): HoverHit | null {
     // nowhere near it.
     if (insideSilhouette) anchor.copy(wallHits[0].point);
   }
+  // A label-only hit anchors at the camera, where no body can hide it
+  // (`../occlusion/occlusion-pure.ts` answers a zero-distance anchor "not
+  // hidden"). The label engine already asked the occluder set about its
+  // own support point before drawing the text, and hides the element when
+  // the answer is yes (`../overlays/distance-gated-label.ts`), so a rect
+  // with bounds is a label that already passed. Anchoring on the wall
+  // behind the text instead would re-ask a different question — and
+  // leaving the raycast's anchor untouched would answer about whatever
+  // the previous call hit.
+  if (!insideSilhouette) anchor.copy(camera.position);
 
   // A label hit is its own surface, and a much tighter one than the shell
   // it names — reporting the shell's size for it would let anything the
   // label overlaps outrank a cursor sitting straight on the text.
   let labelRadiusPx = Infinity;
+  let labelDepth = 0;
   const labelEl = document.getElementById(surface.labelElementId);
   if (labelEl) {
     const lr = labelEl.getBoundingClientRect();
@@ -81,19 +99,22 @@ export function pickShellSilhouette(p: ShellPickParams): HoverHit | null {
       && clientX >= lr.left && clientX <= lr.right
       && clientY >= lr.top && clientY <= lr.bottom) {
       labelRadiusPx = Math.max(lr.width, lr.height) * 0.5;
+      labelDepth = Math.hypot(
+        clientX - (lr.left + lr.right) * 0.5,
+        clientY - (lr.top + lr.bottom) * 0.5,
+      ) / labelRadiusPx;
     }
   }
 
   const silhouetteRadiusPx = insideSilhouette ? p.renderedSizePx * 0.5 : Infinity;
-  const tightest = Math.min(silhouetteRadiusPx, labelRadiusPx);
+  const labelIsTighter = labelRadiusPx <= silhouetteRadiusPx;
+  const tightest = labelIsTighter ? labelRadiusPx : silhouetteRadiusPx;
   if (!Number.isFinite(tightest)) return null;
   return {
     idx: p.idx,
     cameraDistancePc: p.cameraDistancePc,
     enclosureRadiusPx: enclosureRadiusPx(tightest, p.pixelThreshold),
     anchorLocal: anchor.clone(),
-    // The raycast is a hit-or-miss test with no notion of depth inside
-    // the silhouette, and two shells never share an exact radius.
-    depthScore: 0,
+    depthScore: labelIsTighter ? labelDepth : SILHOUETTE_DEPTH_SCORE,
   };
 }

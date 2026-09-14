@@ -45,8 +45,10 @@ export interface ShellPickSurface {
    *  so a decluttered / chart-hidden shell isn't hoverable. */
   visible(): boolean;
   /** The drawn mesh, raycast for the silhouette hit test. Null before a
-   *  layer has one — the Local Bubble until its artifact attaches. */
-  mesh(): THREE.Object3D | null;
+   *  layer has one — the Local Bubble until its artifact attaches.
+   *  A `Mesh` rather than an `Object3D`: the pick raycasts it
+   *  non-recursively, so a group would compile and never hit. */
+  mesh(): THREE.Mesh | null;
 }
 
 /** Everything the kind-agnostic shell dispatch needs for one instance,

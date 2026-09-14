@@ -152,6 +152,33 @@ describe('pickShellSilhouette', () => {
     });
   });
 
+  // The anchor is what the one occlusion gate tests. A label-only hit
+  // leaves the raycast without a point, and reading the scratch anyway
+  // answered about whatever the PREVIOUS call hit — so this case runs
+  // after a silhouette hit has loaded that scratch with a wall point.
+  it('label-only: anchors at the camera, not the last call\'s wall point', () => {
+    const labelRect = {
+      left: 100, top: 100, right: 140, bottom: 120, width: 40, height: 20,
+    } as DOMRect;
+    const outside = outsideShellCamera();
+    withDocumentStub(() => null, () => {
+      const wall = pick(heliopauseSurface(), outside, VIEWPORT_W / 2, VIEWPORT_H / 2);
+      expect(wall).not.toBeNull();
+      expect(wall!.anchorLocal.equals(outside.position)).toBe(false);
+    });
+    withDocumentStub(
+      (id) => (id === HELIOPAUSE_LABEL_ELEMENT_ID
+        ? { getBoundingClientRect: () => labelRect }
+        : null),
+      () => {
+        // Cursor on the label but off the silhouette: the mesh misses.
+        const hit = pick(heliopauseSurface(), insideShellCamera(), 120, 110);
+        expect(hit).not.toBeNull();
+        expect(hit!.anchorLocal.equals(insideShellCamera().position)).toBe(true);
+      },
+    );
+  });
+
   it('inside-shell: the label alone hits, and reports the label\'s own size', () => {
     const labelRect = {
       left: 100, top: 100, right: 140, bottom: 120, width: 40, height: 20,
