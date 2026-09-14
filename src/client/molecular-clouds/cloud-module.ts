@@ -47,7 +47,11 @@ export function createCloudKindModule(): CloudKindModule {
     });
   };
 
-  const pick = (clientX: number, clientY: number): HoverHit | null => {
+  const pick = (
+    clientX: number,
+    clientY: number,
+    pxThreshold: number,
+  ): HoverHit | null => {
     if (!ctx || !layer) return null;
     return layer.pick(
       ctx.camera,
@@ -56,6 +60,7 @@ export function createCloudKindModule(): CloudKindModule {
       clientX,
       clientY,
       ctx.angularToPx(),
+      pxThreshold,
     );
   };
 

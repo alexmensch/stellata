@@ -1,22 +1,37 @@
 // Shared types for the hover-label engine — `HoverProvider`,
 // `HoverHit`, `HoverPayload`. See ./README.md.
 
+import type * as THREE from 'three';
+
 // One pick result from a single layer's pick path.
 //
-// `tier` says how the cursor found the object, and it is what carries
-// "compact objects outrank the things enclosing them" in the type rather
-// than in a per-layer convention:
-//   prime    — cursor inside the object's own rendered disc / envelope.
-//   fallback — cursor near a compact object's centre but outside its
-//              drawn extent (within the engine's pixel threshold).
-//   extended — cursor anywhere inside an extended object's silhouette:
-//              a boundary shell, a molecular cloud. A whole-silhouette
-//              surface covers large regions of sky, so it must not
-//              outrank a star the user was clicking near; it ranks below
-//              both compact tiers whatever the camera distances say.
-// `cameraDistancePc` breaks ties WITHIN a tier — closer to camera wins,
-// matching what a human user expects when one object visually sits in
-// front of another.
+// `enclosureRadiusPx` is the cross-layer ranking key: the on-screen
+// half-extent of the surface the cursor was found inside, floored at the
+// engine's pixel threshold so a sub-pixel disc still reports the radius a
+// user can actually aim at. Smallest wins — the tightest thing enclosing
+// the cursor is the one being pointed at. It carries no notion of which
+// kind produced it, which is the point: a new layer joins the ordering
+// correctly by reporting its own size, with nothing to add here.
+//
+// Camera distance is NOT a ranking key and must not become one. Viewed
+// from outside, an enclosing surface's near wall is nearer than every
+// object it contains, so "closest wins" hands a click on a star to the
+// Local Bubble, and a background cloud is unreachable wherever a
+// foreground one overlaps it (`./README.md` Rule 3). `cameraDistancePc`
+// rides along for card text only.
+//
+// `depthScore` breaks ties between equally-sized enclosures — how deep
+// inside its own surface the cursor sits, scale-invariant, so coincident
+// catalogue rows still separate.
+//
+// `anchorLocal` is the local-frame point the cursor actually found — the
+// raycast's hit point for a silhouette surface, the centre for a compact
+// one, never a whole object's centroid where the cursor met its edge. It
+// is what lets ONE occlusion gate answer for every kind
+// (`../occlusion/README.md`): a hit a nearer solid body hides is dropped
+// before ranking, wherever it came from. The field is required rather
+// than optional precisely so a kind added later cannot quietly opt out
+// of being occluded and reappear through a planet.
 //
 // `hostStarIdx` is an optional sub-layer identity slot used by providers
 // whose `idx` alone doesn't pin a unique object — currently the planet
@@ -25,12 +40,12 @@
 // already a unique catalog row (stars, Local Group, clouds, the lone
 // heliopause apex) leave it `undefined`; the engine doesn't read it,
 // only the originating provider's `format` does.
-export type HoverTier = 'prime' | 'fallback' | 'extended';
-
 export type HoverHit = {
   idx: number;
   cameraDistancePc: number;
-  tier: HoverTier;
+  enclosureRadiusPx: number;
+  depthScore: number;
+  anchorLocal: Readonly<THREE.Vector3>;
   hostStarIdx?: number;
 };
 

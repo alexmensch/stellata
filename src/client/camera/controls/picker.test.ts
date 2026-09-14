@@ -139,11 +139,13 @@ function makePicker(
     kindPicks?: PickerDeps['kindPicks'];
     resolveStarPick?: PickerDeps['resolveStarPick'];
     suppressPulsation?: Float32Array;
+    visibility?: PickerDeps['visibility'];
   } = {},
 ): { picker: Picker; camera: THREE.PerspectiveCamera; dom: HTMLElement } {
   const camera = opts.camera ?? makeCamera();
   const dom = makeDomElementStub();
   const deps: PickerDeps = {
+    visibility: opts.visibility,
     domElement: dom,
     camera,
     catalog: data.catalog,
@@ -254,21 +256,21 @@ describe('Picker / pickStar', () => {
         },
       });
       const screen = projectToScreen(new THREE.Vector3(0, 0, 0), camera);
-      expect(picker.pickStarHit(screen.x + 6, screen.y)?.tier).toBe('fallback');
+      expect(picker.pickStarHit(screen.x + 6, screen.y)?.idx).toBe(0);
       expect(seen).toEqual([0]);
     });
 
-    it('demotes a dimmed star to fallback rather than dropping it', () => {
+    it('keeps a dimmed star the grab threshold still reaches', () => {
       const data = makeCatalog([[0, 0, 0]]);
       const { picker, camera } = makePicker(data, defaultFilter(), {
         // Prefilter admits a 20 px disc; the resolved disc is 4 px.
         resolveStarPick: () => ({ visible: true, hitRadius: 2 }),
       });
       const screen = projectToScreen(new THREE.Vector3(0, 0, 0), camera);
-      expect(picker.pickStarHit(screen.x, screen.y)?.tier).toBe('prime');
+      expect(picker.pickStarHit(screen.x, screen.y)?.idx).toBe(0);
       const off = picker.pickStarHit(screen.x + 6, screen.y);
       expect(off?.idx).toBe(0);
-      expect(off?.tier).toBe('fallback');
+      expect(off?.enclosureRadiusPx).toBe(14);
     });
   });
 
@@ -425,11 +427,10 @@ describe('Picker / pickStar', () => {
 });
 
 describe('Picker / pickStarHit', () => {
-  // The hover-tier round-trip: same (x, y) the click path picks must
-  // produce a HoverHit with the same idx, tier, and a sensible
-  // cameraDistancePc. The cross-provider disambiguator orders by
-  // cameraDistancePc, so getting it wrong silently breaks "closer
-  // object wins" cross-layer.
+  // The round-trip: the same (x, y) the click path picks must produce a
+  // HoverHit with the same idx and the silhouette size the cross-provider
+  // comparator ranks on, so a star cannot win the click path and lose the
+  // hover one.
   it('returns the same idx as pickStar for an in-disc hit', () => {
     const data = makeCatalog([[0, 0, 0]]);
     const { picker, camera } = makePicker(data, defaultFilter());
@@ -438,7 +439,7 @@ describe('Picker / pickStarHit', () => {
     const hit = picker.pickStarHit(screen.x, screen.y);
     expect(hit).not.toBeNull();
     expect(hit!.idx).toBe(clickIdx);
-    expect(hit!.tier).toBe('prime');
+    expect(hit!.enclosureRadiusPx).toBeGreaterThan(0);
   });
 
   it('cameraDistancePc reflects the camera→star distance', () => {
@@ -479,7 +480,9 @@ describe('Picker / pickStarHit', () => {
     expect(picker.pickStarHit(VIEWPORT_W - 1, VIEWPORT_H - 1)).toBeNull();
   });
 
-  it('preserves tier classification for fallback hits', () => {
+  // Ranking on silhouette size means nothing stops a distant star from
+  // outranking the planet drawn in front of it — a planet's disc is
+  it('floors the reported enclosure at the grab threshold for a tiny disc', () => {
     const data = makeCatalog([[0, 0, 0]]);
     const { picker, camera } = makePicker(data, defaultFilter(), {
       renderedSizePxFn: () => 2,
@@ -487,12 +490,15 @@ describe('Picker / pickStarHit', () => {
     const screen = projectToScreen(new THREE.Vector3(0, 0, 0), camera);
     const hit = picker.pickStarHit(screen.x + 6, screen.y);
     expect(hit).not.toBeNull();
-    expect(hit!.tier).toBe('fallback');
+    expect(hit!.enclosureRadiusPx).toBe(14);
   });
 });
 
 describe('Picker / pickKindHit', () => {
-  const HIT: HoverHit = { idx: 3, cameraDistancePc: 1.5, tier: 'prime' };
+  const HIT: HoverHit = {
+    idx: 3, cameraDistancePc: 1.5, enclosureRadiusPx: 14, depthScore: 0,
+    anchorLocal: new THREE.Vector3(),
+  };
 
   it('dispatches to the registered kind and forwards the threshold', () => {
     const calls: Array<[number, number, number]> = [];

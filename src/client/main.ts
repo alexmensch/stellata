@@ -286,6 +286,7 @@ async function main() {
       tooltip,
       initialProviders: hoverProviders,
       onPickImminent: () => stellata.notifyPickImminent(),
+      visibility: () => stellata.pickVisibility(),
     });
 
     // Tier-2 card rolodex (focus card + per-POI cards). Every provider's

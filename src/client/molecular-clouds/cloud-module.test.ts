@@ -128,7 +128,7 @@ describe('cloud kind module', () => {
     expect(card.format(0).name).toBe('Eagle Nebula');
   });
 
-  it('picks through the shared hover surface, deepest-inside winning overlaps', async () => {
+  it('picks through the shared hover surface, the tighter silhouette winning overlaps', async () => {
     stubFetch(true);
     const m = createCloudKindModule();
     await m.load('/');
@@ -138,16 +138,19 @@ describe('cloud kind module', () => {
 
     const { pick } = m.hover!();
     const centre = pick(400, 300, 14);
-    expect(centre?.idx).toBe(0);
-    expect(centre?.tier).toBe('extended');
-    expect(centre?.cameraDistancePc).toBeCloseTo(30, 5);
+    // Both silhouettes contain the centre; the small one is the tighter
+    // answer there, and the big complex keeps everywhere it doesn't reach.
+    expect(centre?.idx).toBe(1);
+    expect(centre?.enclosureRadiusPx).toBeGreaterThan(0);
     expect(pick(799, 599, 14)).toBeNull();
 
-    // Sweep the overlap region: the winner flips from the big complex to
-    // the small foreground cloud somewhere along the sweep.
+    // Sweep out past the small cloud's silhouette: it takes every pixel
+    // it covers, and the big complex keeps everything beyond it. Both
+    // still win somewhere, which is the property that matters — a rule
+    // that leaves one of two overlapping clouds unreachable is the bug.
     const winners = new Set<number>();
     const v = new THREE.Vector3();
-    for (let x = 0; x <= 3.4; x += 0.2) {
+    for (let x = 0; x <= 12; x += 0.2) {
       v.set(x, 0, 12).project(ctx.camera);
       const hit = pick((v.x + 1) * 0.5 * 800, (1 - v.y) * 0.5 * 600, 14);
       if (hit) winners.add(hit.idx);
@@ -166,7 +169,7 @@ describe('cloud kind module', () => {
     const { pick } = m.hover!();
 
     layer.update!(makeFrameCtx(ctx.camera));
-    expect(pick(400, 300, 14)?.idx).toBe(0);
+    expect(pick(400, 300, 14)?.idx).toBe(1);
 
     permitted = false;
     layer.update!(makeFrameCtx(ctx.camera));

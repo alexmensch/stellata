@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { createHoverEngine } from './hover-engine';
+import * as THREE from 'three';
 import type { HoverHit, HoverKind, HoverPayload, HoverProvider } from './hover-types';
 
 const DELAY_MS = 280;
@@ -50,7 +51,10 @@ function makeTooltip(rect: (left: number) => { width: number; height: number } =
   return { tooltip, style };
 }
 
-const HIT: HoverHit = { idx: 7, cameraDistancePc: 1, tier: 'prime' };
+const HIT: HoverHit = {
+  idx: 7, cameraDistancePc: 1, enclosureRadiusPx: 14, depthScore: 0,
+  anchorLocal: new THREE.Vector3(),
+};
 
 function makeProvider(
   kind: HoverKind,

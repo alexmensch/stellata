@@ -3,6 +3,7 @@
 // targets.
 
 import * as THREE from 'three';
+import { enclosureRadiusPx } from '../camera/controls/star-geometry';
 import type { HoverHit } from '../hover/hover-types';
 import type { ShellPickSurface } from './shell-registry';
 
@@ -16,14 +17,21 @@ export interface ShellPickParams {
   cameraDistancePc: number;
   /** Shell Target idx (SHELL_KEYS index). */
   idx: number;
+  /** Projected silhouette diameter, the hit's size in the cross-layer
+   *  ordering (`../hover/hover-types.ts`). */
+  renderedSizePx: number;
+  /** The engine's grab radius, flooring the reported enclosure exactly as
+   *  it does for every other kind. */
+  pixelThreshold: number;
 }
 
 // Pick-path scratch — valid only inside one `pickShellSilhouette` call.
 const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
+const anchor = new THREE.Vector3();
 
 /**
- * Extended-tier hit: the drawn mesh under the cursor, OR the label rect.
+ * The drawn mesh under the cursor, OR the label rect.
  *
  * The raycast is the mechanism the cloud layer already uses, and two
  * properties fall out of it rather than being coded:
@@ -55,19 +63,37 @@ export function pickShellSilhouette(p: ShellPickParams): HoverHit | null {
       -(((clientY - rect.top) / rect.height) * 2 - 1),
     );
     raycaster.setFromCamera(ndc, camera);
-    insideSilhouette = raycaster.intersectObject(mesh, false).length > 0;
+    const wallHits = raycaster.intersectObject(mesh, false);
+    insideSilhouette = wallHits.length > 0;
+    // The wall point the cursor found, never the shell's centre, which is
+    // nowhere near it.
+    if (insideSilhouette) anchor.copy(wallHits[0].point);
   }
 
-  let insideLabel = false;
+  // A label hit is its own surface, and a much tighter one than the shell
+  // it names — reporting the shell's size for it would let anything the
+  // label overlaps outrank a cursor sitting straight on the text.
+  let labelRadiusPx = Infinity;
   const labelEl = document.getElementById(surface.labelElementId);
   if (labelEl) {
     const lr = labelEl.getBoundingClientRect();
-    if (lr.width > 0 && lr.height > 0) {
-      insideLabel =
-        clientX >= lr.left && clientX <= lr.right && clientY >= lr.top && clientY <= lr.bottom;
+    if (lr.width > 0 && lr.height > 0
+      && clientX >= lr.left && clientX <= lr.right
+      && clientY >= lr.top && clientY <= lr.bottom) {
+      labelRadiusPx = Math.max(lr.width, lr.height) * 0.5;
     }
   }
 
-  if (!insideSilhouette && !insideLabel) return null;
-  return { idx: p.idx, cameraDistancePc: p.cameraDistancePc, tier: 'extended' };
+  const silhouetteRadiusPx = insideSilhouette ? p.renderedSizePx * 0.5 : Infinity;
+  const tightest = Math.min(silhouetteRadiusPx, labelRadiusPx);
+  if (!Number.isFinite(tightest)) return null;
+  return {
+    idx: p.idx,
+    cameraDistancePc: p.cameraDistancePc,
+    enclosureRadiusPx: enclosureRadiusPx(tightest, p.pixelThreshold),
+    anchorLocal: anchor.clone(),
+    // The raycast is a hit-or-miss test with no notion of depth inside
+    // the silhouette, and two shells never share an exact radius.
+    depthScore: 0,
+  };
 }

@@ -209,13 +209,14 @@ shared `PendingClickDispatcher` (`util/pending-click.ts`) so single
 and double clicks disambiguate; the deferred handlers re-check the
 warp / aim / transition guards at fire time.
 
-Navigate clicks pick ladder-eligible objects first — stars, planet
-bodies, Local Group objects, AND boundary shells (`extended` tier),
-tiebroken by the hover engine's rule (`bestHitBy`: better tier wins
-outright, then closer camera within a tier) so click and hover can't
-disagree on which object wins an overlap — then fall back to clouds. A
-shell therefore never takes a click aimed at a star it encloses
-(`hover/README.md` Rule 3).
+Navigate clicks resolve the object under the cursor across EVERY
+registered kind at once (`Picker.pickAnyKindHit`, driven by the kind
+roster rather than a written-out list), tiebroken by the hover engine's
+own rule (`bestHitBy`: tightest enclosing surface wins, camera distance
+never) so click and hover can't disagree on which object wins an
+overlap. A shell therefore never takes a click aimed at a star or a
+cloud it encloses, and a new kind competes correctly the moment its
+module registers a pick (`hover/README.md` Rule 3).
 
 Navigate single-click on a ladder-eligible object — ONE table for
 stars, planets, LG objects, and boundary shells alike
@@ -242,8 +243,9 @@ same `applyObjectClick` semantics.
 
 Cloud clicks keep the pre-ladder vector-first semantics (orbit-target
 on first pick from no focus, vector destination on pick from a focus,
-click-destination-to-travel); folding clouds into the click ladder is
-tracked as its own bead.
+click-destination-to-travel). Only the ACTION differs — which object the
+click resolves to is settled by the same roster-wide comparison as every
+other kind; folding clouds onto the ladder's rungs is its own bead.
 
 In OBSERVE mode single-click is the pin/unpin toggle
 (`applyObjectClick`'s observe branch, gated on `showHud` — stars and

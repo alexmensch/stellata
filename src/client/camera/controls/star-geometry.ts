@@ -2,6 +2,8 @@
 // variability headroom). The vertex shader keeps its own copy of
 // `physSizePx`; the variability-headroom rule lives only here.
 
+import type * as THREE from 'three';
+
 // Pixel-per-radian conversion. Mirrors the shader's
 // `viewport.y / max(fovYRad, 1e-9)`. Floor on fovYRad keeps the divide
 // finite in the singular case where the camera FOV is briefly written
@@ -98,6 +100,13 @@ export type PickCandidate = {
   idx: number;
   pxDist: number;
   hitRadius: number;
+  /** Set by layers whose enclosure test is a mesh raycast rather than a
+   *  radius compare: the cursor is inside the drawn silhouette even
+   *  though `pxDist` can exceed `hitRadius` on a near-side lobe, whose
+   *  centre projects farther out than the extent sphere subtends. The
+   *  radius then reports size only, which is what the cross-layer
+   *  comparator needs it for. */
+  enclosed?: boolean;
 };
 
 // Star-specific candidate. Carries `appMag` so the sub-pixel
@@ -109,30 +118,57 @@ export type PickCandidate = {
 export type StarPickCandidate = PickCandidate & {
   appMag: number;
   cameraDistancePc: number;
+  anchorLocal: THREE.Vector3;
 };
 
-// Winning candidate from `pickFromCandidates`, with the prime/fallback
-// classification carried alongside. Returning the candidate (rather
-// than just its idx) lets hover-tier callers (`pickStarHit`,
+// The on-screen half-extent a cursor can be inside for this candidate:
+// its drawn radius, floored at the grab threshold so a sub-pixel disc
+// still reports the radius a user can aim at. This is the cross-layer
+// ranking key every `HoverHit` carries (`../../hover/hover-types.ts`) —
+// smallest wins — so it must be computed the same way for every kind,
+// which is why it lives here rather than in each provider.
+//
+// Rounded to whole pixels, and that rounding is load-bearing rather than
+// cosmetic: two objects the user sees as the same size can differ in the
+// float by a thousandth of a pixel, and ranking on that would let an
+// invisible difference decide the pick instead of where the cursor
+// actually is. Equal to the pixel means peers, and peers fall to the
+// depth tiebreak.
+export function enclosureRadiusPx(hitRadius: number, pixelThreshold: number): number {
+  return Math.round(Math.max(hitRadius, pixelThreshold));
+}
+
+// Winning candidate from `pickFromCandidates`. Returning the candidate
+// (rather than just its idx) lets callers (`pickStarHit`,
 // `LocalGroupLayer.pick`, `PlanetBodyField.pick`) read the winning
 // candidate's `pxDist`/`hitRadius`/extension fields without re-walking
-// the projection. `tier` mirrors the reducer's two-tier split so the
-// `HoverHit` tier field is keyed off the same comparison the reducer
-// already made — no separate caller-side classification.
+// the projection. `enclosureRadiusPx` and `depthScore` are the two
+// numbers the cross-layer comparator ranks on, keyed off the comparison
+// the reducer already made so no caller re-derives them.
 export type PickResult<T extends PickCandidate> = {
   candidate: T;
-  tier: 'prime' | 'fallback';
+  enclosureRadiusPx: number;
+  depthScore: number;
 };
 
-// Reduce a candidate list to the winning candidate (or null) under the
-// two-tier pick contract:
-//   prime  — `pxDist <= hitRadius` (cursor inside the rendered disc /
-//            wireframe envelope)
-//   fallback — `pxDist <= pixelThreshold` (cursor near the centre, no
-//              disc hit). Only consulted when no prime hit exists.
-// Within each tier, lowest `scoreFn(c)` wins. Prime hits ALWAYS beat
-// fallback hits — a prime candidate just inside its hit radius beats
-// a fallback candidate one pixel from the cursor, regardless of score.
+// Reduce a candidate list to the winning candidate (or null) under one
+// rule: among the surfaces enclosing the cursor, the TIGHTEST wins, and
+// `scoreFn` separates two of equal size. A candidate encloses the cursor
+// when `pxDist <= enclosureRadiusPx(...)`, or whenever it says so itself
+// via `enclosed`.
+//
+// Size is the primary key rather than depth because depth alone makes a
+// small object unreachable inside a large one: the cursor sits
+// proportionally deeper in a big complex near its centre than in a small
+// cloud near its rim, so the big one takes the pick everywhere. Ranking
+// on size is self-limiting instead — a small object can only take the
+// pick over the small area it actually covers.
+//
+// This is the same comparison the cross-layer disambiguator makes
+// (`../../hover/hover-pick-disambiguator.ts`), and deliberately so:
+// smallest-of-smallest is the same answer as one flat comparison, so a
+// layer resolving its own overlaps first cannot disagree with the
+// ordering across layers.
 //
 // `scoreFn` defaults to "deepest inside its own target wins"
 // (`c.pxDist / c.hitRadius`) — scale-invariant, so a compact object and a
@@ -140,7 +176,7 @@ export type PickResult<T extends PickCandidate> = {
 // pixel it covers. The star caller passes `pickScore` for the same shape
 // plus the sub-pixel mag tiebreaker. Every caller's radius comes from
 // `discHitRadiusPx`, so the divisor is floored well above zero; a layer
-// whose enclosure test IS the raycast passes `Infinity` and its own
+// whose enclosure test IS the raycast sets `enclosed` and passes its own
 // scorer (`../../molecular-clouds/cloud-pick-pure.ts`).
 //
 // Single source of truth across all layered pickers in the hover layer:
@@ -153,27 +189,21 @@ export function pickFromCandidates<T extends PickCandidate>(
   pixelThreshold: number,
   scoreFn: (c: T) => number = (c) => c.pxDist / c.hitRadius,
 ): PickResult<T> | null {
-  let prime: T | null = null;
-  let primeBest = Infinity;
-  let fb: T | null = null;
-  let fbBest = Infinity;
+  let best: T | null = null;
+  let bestRadius = Infinity;
+  let bestScore = Infinity;
   for (const c of candidates) {
+    const radius = enclosureRadiusPx(c.hitRadius, pixelThreshold);
+    if (c.enclosed !== true && c.pxDist > radius) continue;
     const score = scoreFn(c);
-    if (c.pxDist <= c.hitRadius) {
-      if (score < primeBest) {
-        primeBest = score;
-        prime = c;
-      }
-    } else if (c.pxDist <= pixelThreshold) {
-      if (score < fbBest) {
-        fbBest = score;
-        fb = c;
-      }
+    if (radius < bestRadius || (radius === bestRadius && score < bestScore)) {
+      best = c;
+      bestRadius = radius;
+      bestScore = score;
     }
   }
-  if (prime !== null) return { candidate: prime, tier: 'prime' };
-  if (fb !== null) return { candidate: fb, tier: 'fallback' };
-  return null;
+  if (best === null) return null;
+  return { candidate: best, enclosureRadiusPx: bestRadius, depthScore: bestScore };
 }
 
 /** What a `Resolve` reports about one candidate once the expensive
@@ -181,25 +211,27 @@ export function pickFromCandidates<T extends PickCandidate>(
 export type ResolvedCandidate = {
   /** False when the renderer puts no pixel on screen for it. */
   visible: boolean;
-  /** Prime-tier radius recomputed against those terms — a dimmer star
-   *  draws a smaller disc, so this only ever shrinks. */
+  /** Hit radius recomputed against those terms — a dimmer star draws a
+   *  smaller disc, so this only ever shrinks. */
   hitRadius: number;
 };
 
 /**
- * The same two-tier contract as `pickFromCandidates`, but each candidate
- * is confirmed through `resolve` before it can win, and only as far down
- * the score order as it takes to find a winner.
+ * The same tightest-enclosure contract as `pickFromCandidates`, but each
+ * candidate is confirmed through `resolve` before it can win, and only as
+ * far down the order as it takes to find a winner.
  *
  * Laziness is the point, not an optimisation: on the WebGL2 escape hatch
  * `resolve` reads per-star extinction back off the GPU, so evaluating
- * every candidate would cost one synchronous readback each. In score
- * order the first visible candidate is almost always the first one tried.
+ * every candidate would cost one synchronous readback each. In rank order
+ * the first visible candidate is almost always the first one tried.
  *
  * Callers must pass a `hitRadius` that is an upper bound of the resolved
- * one, so the initial partition can never miss a prime candidate. A
- * candidate whose resolved radius no longer reaches the cursor demotes
- * into the fallback pool rather than being dropped.
+ * one, so the walk can never skip a candidate that would have enclosed
+ * the cursor. Resolution only ever shrinks a radius, and the enclosure
+ * radius floors at `pixelThreshold`, so the pre-resolve key is an upper
+ * bound of the true one and a candidate whose disc no longer reaches the
+ * cursor simply stops qualifying rather than needing a second pool.
  *
  * The score therefore normalises against that upper bound, not against
  * the resolved radius: scoring on the resolved one would mean resolving
@@ -212,34 +244,23 @@ export function pickFromCandidatesResolved<T extends PickCandidate>(
   scoreFn: (c: T) => number,
   resolve: (c: T) => ResolvedCandidate,
 ): PickResult<T> | null {
-  const prime: T[] = [];
-  const fallback: T[] = [];
+  const eligible: T[] = [];
   for (const c of candidates) {
-    if (c.pxDist <= c.hitRadius) prime.push(c);
-    else if (c.pxDist <= pixelThreshold) fallback.push(c);
+    if (c.pxDist <= enclosureRadiusPx(c.hitRadius, pixelThreshold)) eligible.push(c);
   }
-  // A demoted prime candidate is re-examined in the fallback pass, so
-  // memoise: no candidate may cost two readbacks.
-  const memo = new Map<T, ResolvedCandidate>();
-  const resolveOnce = (c: T): ResolvedCandidate => {
-    let r = memo.get(c);
-    if (r === undefined) {
-      r = resolve(c);
-      memo.set(c, r);
-    }
-    return r;
-  };
-  const byScore = (a: T, b: T) => scoreFn(a) - scoreFn(b);
-  prime.sort(byScore);
-  for (const c of prime) {
-    const r = resolveOnce(c);
+  const keyOf = (c: T): [number, number] =>
+    [enclosureRadiusPx(c.hitRadius, pixelThreshold), scoreFn(c)];
+  eligible.sort((a, b) => {
+    const [ra, sa] = keyOf(a);
+    const [rb, sb] = keyOf(b);
+    return ra === rb ? sa - sb : ra - rb;
+  });
+  for (const c of eligible) {
+    const r = resolve(c);
     if (!r.visible) continue;
-    if (c.pxDist <= r.hitRadius) return { candidate: c, tier: 'prime' };
-    fallback.push(c);
-  }
-  fallback.sort(byScore);
-  for (const c of fallback) {
-    if (resolveOnce(c).visible) return { candidate: c, tier: 'fallback' };
+    const radius = enclosureRadiusPx(r.hitRadius, pixelThreshold);
+    if (c.pxDist > radius) continue;
+    return { candidate: c, enclosureRadiusPx: radius, depthScore: scoreFn(c) };
   }
   return null;
 }

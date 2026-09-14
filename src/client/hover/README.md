@@ -40,10 +40,10 @@ lives entirely under `src/client/hover/`:
   lines up with the panel and scale bar rather than sitting flush to the
   viewport edge.
 
-  Only `pick` receives the pixel threshold. Providers whose pick surface
-  is a whole silhouette (boundary shells, clouds) ignore it, and their
-  `Picker` methods don't accept it — the parameter belongs to
-  centroid-plus-radius pick surfaces only.
+  Every provider receives the pixel threshold, whole-silhouette surfaces
+  included: it is not only a grab radius but the floor on the enclosure
+  each hit reports, so a surface that skipped it would rank against the
+  others on a different scale (Rule 3).
 
   **`onPickImminent` fires a dwell ahead of the pick, and that gap is the
   point.** The star pick gates on per-star dust extinction, which on
@@ -71,12 +71,12 @@ lives entirely under `src/client/hover/`:
   resolver detour would hardcode Sol and lose the multi-host readiness
   the exoplanet epic needs.
 - **`hover-pick-disambiguator.ts`** — when multiple providers return a
-  hit for the same cursor position, the tier decides
-  (prime > fallback > extended) and camera distance decides only within
-  one. Camera distance cannot be the cross-tier key, and the failure is
-  not hypothetical: viewed from outside, a boundary shell's near wall is
+  hit for the same cursor position, the **tightest** one wins: smallest
+  `enclosureRadiusPx`, then `depthScore` between equals (Rule 3). Camera
+  distance is not a key and must not become one, and the failure is not
+  hypothetical: viewed from outside, a boundary shell's near wall is
   nearer than every star it encloses, so "closest wins" gave a click on a
-  star to "Local Bubble" (Rule 3).
+  star to "Local Bubble".
 - **`*-hover-provider.ts`** / the kind modules' `hover()` legs — one
   per layer. Owns the pick path, typically mirroring the renderer's
   draw predicate (see Rule 2 below).
@@ -226,38 +226,73 @@ checklist:
 - Is there ANY state about focus / selection / route / mode involved in
   the gating? If yes, that's wrong — strip it.
 
-### Rule 3 — Whole-object hit surface for extended visible objects
+### Rule 3 — The tightest surface enclosing the cursor wins
 
-For extended objects whose silhouette occupies meaningful screen real
-estate (heliopause shell, molecular clouds, future nebulae, Radcliffe
-Wave segments, large DSOs), hover hit-tests the WHOLE projected
+Every pick surface — a star's disc, a planet body, an LG wireframe, a
+molecular cloud, a boundary shell — reports the same two numbers on its
+`HoverHit`, and one comparator ranks them:
+
+- **`enclosureRadiusPx`** — the on-screen half-extent of the surface the
+  cursor was found inside, floored at the engine's pixel threshold and
+  rounded to whole pixels. **Smallest wins.**
+- **`depthScore`** — how deep inside that surface the cursor sits,
+  scale-invariant. Consulted only between equal enclosures.
+
+**Nothing in the ordering knows what kind produced a hit, and that is the
+rule's whole point.** A star inside a cloud inside the Local Bubble
+resolves to the star, the cloud, then the wall, because those are their
+sizes — not because the code ranks stars above clouds above shells. A
+kind added later takes its correct place by reporting its own silhouette
+size, with no ordering to extend and no existing pair to re-verify.
+
+**Camera distance is not a key and must not become one.** It is wrong in
+both directions: viewed from outside, a shell's near wall is nearer than
+every star it encloses, so a click ~14 px off a star's centre went to
+"Local Bubble"; and between two overlapping clouds, "closest wins" makes
+the background one unreachable wherever the foreground one covers it.
+
+**The cost, stated plainly:** a large object loses to any smaller one the
+cursor also reaches, however deep inside the large one the cursor sits.
+That is what makes a small cloud reachable inside a big complex, and it
+is self-limiting — a small surface can only take the pick over the small
+area it covers.
+
+**Which is why the occlusion gate is part of this rule, not an extra.**
+Dropping camera distance removed an accident that used to hide the
+problem: a planet at AU range beat everything behind it simply by being
+nearer, so nothing ever had to ask whether its disc covered them. Size
+does not ask that question either, so the pick must: a hit a nearer solid
+body hides is removed before ranking, and every kind's `HoverHit` carries
+the `anchorLocal` that test needs.
+
+**That gate lives in exactly one place** —
+`bestVisibleHitBy` / `disambiguateHits`, which both the hover engine and
+`Picker.pickAnyKindHit` route through. Do NOT add an occlusion check to a
+layer's own pick. One gate per layer is how a kind gets missed: with four
+layers gated and the probe layer not, Voyager 2 answered the cursor
+through Sol's disc while every other kind correctly refused. A kind added
+later is covered here without doing anything but reporting its anchor.
+
+Known limit: a layer resolves its own overlaps first, so if the tightest
+candidate WITHIN one layer is hidden, that layer yields nothing for the
+pick rather than falling through to its next candidate. It is the price
+of one gate over per-candidate gates in every layer.
+
+Extended objects — heliopause shell, molecular clouds, future nebulae,
+Radcliffe Wave segments, large DSOs — hit-test the WHOLE projected
 silhouette plus the SVG label's bounding rect (when present), not a
-centroid + small radius.
-
-**Tier is `extended`, and that is the whole rule** — a whole-silhouette
-surface covers large regions of sky, so it never outranks a compact
-object under the same cursor, at any camera distance. It used to report
-`fallback` and rely on being farther from the camera than the stars in
-front of it, which is false for anything the camera is *inside* or *level
-with*: from outside the Local Bubble its near wall is nearer than every
-star it encloses, so a click ~14 px off a star's centre — fallback, not
-prime — went to "Local Bubble". Stating the distinction in the tier
-replaces that prose convention with something the type carries, and every
-extended surface must report it: a new one that reports `fallback`
-reintroduces the bug silently.
-
-Different layers have different natural pick mechanisms — reuse the
-existing one rather than rolling a new pickbox:
+centroid + small radius. Different layers have different natural pick
+mechanisms; reuse the existing one rather than rolling a new pickbox:
 
 - **Three.js raycast against the rendered mesh** (clouds, via
   `MolecularClouds.pick`) — naturally hits the whole rim-shell
-  silhouette. The raycast is only the hit-vs-miss gate: overlapping
-  clouds are tiebroken by proportional centrality, never by ray
-  distance (`../molecular-clouds/README.md` § Picking + hover).
+  silhouette. The raycast is the enclosure test itself, so the candidate
+  sets `enclosed` and its radius reports size alone
+  (`../molecular-clouds/README.md` § Picking + hover).
 - **Three.js raycast against the rendered mesh** (boundary shells too,
   via the shared `pickShellSilhouette` helper — each shell's
   `ShellPickSurface` hands over the mesh it draws). A projected
-  sample-point AABB stood here until uadc.48: the box corners of a
+  sample-point AABB stood here before: the box corners of a
   rounded shell are large regions of empty sky that selected the shell,
   and a `FrontSide` raycast additionally makes the hide-when-inside cull
   its own miss, where the box needed an explicit near-plane bail.
@@ -273,9 +308,10 @@ harmlessly fails whenever the label engine has hidden the label — no
 extra visibility plumbing needed for the label gate.
 
 Compact objects (stars, planet bodies, individual catalog rows) keep
-the centroid + small-radius pickbox pattern. The "extended object"
-trigger is "the user sees it as a shape", not "the layer has > N
-rows".
+the centroid + small-radius pickbox pattern, and their radius floors at
+the threshold so a sub-pixel disc still reports something a user can aim
+at. The "whole-silhouette" trigger is "the user sees it as a shape", not
+"the layer has > N rows".
 
 This raycast + label-rect logic is lifted to
 `fresnel-shell/shell-pick.ts` (`pickShellSilhouette`), parameterised on a

@@ -45,18 +45,21 @@ in both navigate and observe modes.
   staged (`../../webgpu/extinction/README.md` § Cold reads), so the
   laziness costs nothing there either way. The
   prefilter's radius must be an **upper bound** of the resolved one or
-  the prime/fallback partition mis-tiers — in chart mode that means
+  the walk can skip a candidate that encloses the cursor — in chart mode that means
   bounding the magnitude-mapped ink disc as well as the realistic
   footprint, since either can be the larger
   (`Stellata.pickPrefilterSizePxFor`).
-  It owns the two-tier star pick
+  It owns the star pick
   (`pickStar` / `pickStarHit` — the star module's hover leg calls back
   into it, so the engine-owned scan stays here); every other kind picks
   through `pickKindHit`, which dispatches to the module's
   hover-provider pick — literally the same function the hover engine
   runs, so click and hover can't disagree (a cloud's
   overlapping-winner resolution stays in `MolecularClouds.pick`,
-  `../../molecular-clouds/README.md` § Picking + hover). Both star pick
+  `../../molecular-clouds/README.md` § Picking + hover).
+  `pickAnyKindHit` walks the whole roster and reduces with the hover
+  engine's comparator — the one entry point a click path should use, so
+  no caller enumerates kinds and none can omit one. Both star pick
   surfaces route the winner through `resolveCollapsedLead` (backed by
   the system-membership registry — `src/client/system-membership/`):
   a member of a collapsed cluster resolves to the cluster's primary, so
@@ -149,13 +152,14 @@ same-size candidates an equal divisor cancels, which is exactly why the
 tuned behaviour survives: the Double Double ranks as it did, and Alula
 Australis A/B still separate on brightness.
 
-**This ranking never has to defend a star from a shell.** An extended
-object — a boundary shell, a cloud — reports the `extended` tier and is
-outranked by any prime or fallback hit before scoring is consulted
-(`../../hover/README.md` Rule 3). Proportional depth would otherwise hand
-the pick to the enclosing object, which is proportionally very deep
-indeed. Stars, planet bodies, Local Group objects and probes are the
-compact set this reducer arbitrates.
+**This ranking never has to defend a star from a shell.** The reducer's
+primary key is the candidate's enclosure radius, so an enclosing surface
+— a boundary shell, a cloud — is outranked by anything smaller under the
+same cursor before its depth is consulted (`../../hover/README.md`
+Rule 3). Proportional depth alone would hand the pick to the enclosing
+object, which is proportionally very deep indeed; it survives as the
+tiebreak between surfaces of equal size, which is where the tuned
+behaviour among coincident catalogue rows lives.
 
 ## Camera near plane vs controls minDistance
 

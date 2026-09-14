@@ -26,6 +26,7 @@ import {
 } from '../solar-system/heliopause/heliopause';
 import type { RimParams } from './fresnel-shell';
 import { SHELL_OBJECT_SIDS } from './shell-object-sids';
+import { bestHitBy } from '../hover/hover-pick-disambiguator';
 import { pickShellSilhouette } from './shell-pick';
 import { SHELL_KEYS, ShellRegistry } from './shell-registry';
 
@@ -50,16 +51,21 @@ export function createShellKindModule(): ShellKindModule {
 
   const shellPark = (idx: number): number => registry.focusParkDistancePc(idx);
 
-  const pick = (clientX: number, clientY: number): HoverHit | null => {
+  const pick = (
+    clientX: number,
+    clientY: number,
+    pixelThreshold: number,
+  ): HoverHit | null => {
     if (!ctx) return null;
     const rect = ctx.canvas.getBoundingClientRect();
     const worldOffset = ctx.getWorldOffset();
     const cameraPos = ctx.camera.position;
-    let best: HoverHit | null = null;
+    const angularToPx = ctx.angularToPx();
+    const hits: (HoverHit | null)[] = [];
     for (let idx = 0; idx < registry.count; idx++) {
       const shell = registry.at(idx);
       if (!shell || !shell.pick.visible()) continue;
-      const hit = pickShellSilhouette({
+      hits.push(pickShellSilhouette({
         camera: ctx.camera,
         rect,
         clientX,
@@ -67,10 +73,11 @@ export function createShellKindModule(): ShellKindModule {
         surface: shell.pick,
         cameraDistancePc: registry.cameraDistancePc(idx, worldOffset, cameraPos),
         idx,
-      });
-      if (hit && (best === null || hit.cameraDistancePc < best.cameraDistancePc)) best = hit;
+        renderedSizePx: registry.renderedSizePx(idx, worldOffset, cameraPos, angularToPx),
+        pixelThreshold,
+      }));
     }
-    return best;
+    return bestHitBy(hits, (h) => h);
   };
 
   return {

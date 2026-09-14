@@ -64,8 +64,11 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
 - `shell-object-sids.ts` — `SHELL_OBJECT_SIDS`, the hand-written
   key → frozen-SID pin (§ SID pins).
 - `shell-pick.ts` — `pickShellSilhouette`, the shared mesh-raycast +
-  label-bbox hit test (`extended` tier) both shells' click / hover picks
-  use, keyed on a `ShellPickSurface`. The raycast is the cloud layer's
+  label-bbox hit test both shells' click / hover picks use, keyed on a
+  `ShellPickSurface`. It reports the silhouette's projected radius as the
+  hit's enclosure, and a label-only hit reports the LABEL's much tighter
+  radius instead — the shell's size there would let anything the label
+  overlaps outrank a cursor sitting on the text. The raycast is the cloud layer's
   mechanism, and the hit surface is the drawn silhouette exactly; the
   `FrontSide` material means a ray from inside misses on its own, so the
   hide-when-inside contract needs no separate guard here.

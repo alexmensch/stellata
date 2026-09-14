@@ -1,7 +1,9 @@
-// Cross-provider pick disambiguator for the hover engine — tier first,
-// then closer camera distance wins. See ./README.md.
+// Cross-provider pick disambiguator for the hover engine — the tightest
+// surface enclosing the cursor wins. See ./README.md.
 
-import type { HoverHit, HoverProvider, HoverTier } from './hover-types';
+import type * as THREE from 'three';
+import type { OccluderQuery } from '../occlusion/occluder-set';
+import type { HoverHit, HoverProvider } from './hover-types';
 
 // One provider's hit, paired with the provider that produced it.
 // The engine collects these by calling each registered provider's
@@ -13,39 +15,64 @@ export type HoverProviderHit = {
   hit: HoverHit;
 };
 
-/** Rank of each tier — lower wins outright, camera distance decides only
- *  within one. Camera distance cannot be the cross-tier key: viewed from
- *  outside, a boundary shell's near wall is nearer than every star it
- *  encloses, so "closest wins" hands a click on a star to the wall
- *  (`./README.md` Rule 3). */
-const TIER_RANK: Record<HoverTier, number> = { prime: 0, fallback: 1, extended: 2 };
-
-/** Generic tiebreak core — better tier wins, then closer camera.
- *  `disambiguateHits` wraps it for the engine's provider-paired hits; the
- *  click FSM runs it over bare per-layer picks (star vs planet vs shell)
- *  so click and hover can't disagree on which object wins. */
+/** Generic tiebreak core — smallest enclosure wins, then deepest inside
+ *  it. `disambiguateHits` wraps it for the engine's provider-paired hits;
+ *  the click FSM runs it over the roster's per-kind picks so click and
+ *  hover can't disagree on which object wins.
+ *
+ *  The comparison reads nothing but the two numbers every hit carries, so
+ *  a kind added later ranks correctly against every existing one without
+ *  touching this file. */
 export function bestHitBy<T>(
   items: readonly (T | null)[],
   hitOf: (item: T) => HoverHit,
 ): T | null {
   let best: T | null = null;
-  let bestRank = Infinity;
-  let bestDist = Infinity;
+  let bestRadius = Infinity;
+  let bestDepth = Infinity;
   for (const item of items) {
     if (item === null) continue;
     const h = hitOf(item);
-    const rank = TIER_RANK[h.tier];
-    if (rank < bestRank || (rank === bestRank && h.cameraDistancePc < bestDist)) {
+    if (h.enclosureRadiusPx < bestRadius
+      || (h.enclosureRadiusPx === bestRadius && h.depthScore < bestDepth)) {
       best = item;
-      bestRank = rank;
-      bestDist = h.cameraDistancePc;
+      bestRadius = h.enclosureRadiusPx;
+      bestDepth = h.depthScore;
     }
   }
   return best;
 }
 
+/** The frame's near solid bodies plus where the camera reads them from —
+ *  everything the one occlusion gate needs. */
+export type PickVisibility = {
+  occluders: OccluderQuery;
+  cameraPos: Readonly<THREE.Vector3>;
+};
+
+/** Every hit the cursor found, minus the ones a nearer solid body hides,
+ *  reduced to the tightest survivor.
+ *
+ *  This is the ONLY place occlusion is decided, and every kind's pick
+ *  reaches it — which is the point. A gate per layer is how a kind gets
+ *  missed: probes were, and Voyager 2 answered the cursor through Sol's
+ *  disc while four other kinds were correctly refusing to. A kind added
+ *  later is covered here without being asked to do anything but report
+ *  its `anchorLocal`. */
+export function bestVisibleHitBy<T>(
+  items: readonly (T | null)[],
+  hitOf: (item: T) => HoverHit,
+  vis: PickVisibility | null,
+): T | null {
+  const visible = vis === null
+    ? items
+    : items.filter((it) => it === null || !vis.occluders.hides(hitOf(it).anchorLocal, vis.cameraPos));
+  return bestHitBy(visible, hitOf);
+}
+
 export function disambiguateHits(
   hits: readonly HoverProviderHit[],
+  vis: PickVisibility | null = null,
 ): HoverProviderHit | null {
-  return bestHitBy(hits, (h) => h.hit);
+  return bestVisibleHitBy(hits, (h) => h.hit, vis);
 }

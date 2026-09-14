@@ -382,8 +382,9 @@ export class MolecularClouds {
    * surface never outranks a compact object, whatever the camera
    * distances say (`../hover/README.md` Rule 3).
    *
-   * Only cloud geometry is tested: foreground stars don't block a cloud
-   * pick here, the caller picks those first and falls back to a cloud.
+   * Only cloud geometry is tested: this resolves which CLOUD the cursor
+   * is in, and the cross-layer comparator ranks that answer against every
+   * other kind (`../hover/hover-pick-disambiguator.ts`).
    *
    * Returns null whenever the rim shells are not permitted — the rim is
    * the only mark the layer paints for itself (README § Picking + hover).
@@ -395,6 +396,7 @@ export class MolecularClouds {
     clientX: number,
     clientY: number,
     angularToPx: number,
+    pixelThreshold: number,
   ): HoverHit | null {
     if (!this.rimGroup.visible) return null;
     const cursorX = clientX - rect.left;
@@ -410,12 +412,17 @@ export class MolecularClouds {
     const centre = this.pickCentreLocal;
     const candidates: CloudPickCandidate[] = [];
     const seen = new Set<number>();
+    const anchorByIdx = new Map<number, THREE.Vector3>();
     for (const hit of hits) {
       const idx = hit.object.userData.cloudIdx;
       // A traced isosurface can present several front faces along one
       // ray; every hit on the same cloud scores identically.
       if (typeof idx !== 'number' || seen.has(idx)) continue;
       seen.add(idx);
+      // The anchor is the hit POINT, not the centroid: a complex whose
+      // centre a planet covers is still in open sky wherever the cursor
+      // found it.
+      anchorByIdx.set(idx, hit.point.clone());
       if (!this.cloudLocalPositionInto(idx, worldOffset, centre)) continue;
       const cameraDistancePc = centre.distanceTo(camera.position);
       const viewDir = this.pickViewDir
@@ -433,12 +440,14 @@ export class MolecularClouds {
         cloudPickCandidate(idx, pxDist, cameraDistancePc, silhouetteDiameterPx));
     }
 
-    const winner = resolveCloudPick(candidates);
+    const winner = resolveCloudPick(candidates, pixelThreshold);
     if (winner === null) return null;
     return {
       idx: winner.candidate.idx,
       cameraDistancePc: winner.candidate.cameraDistancePc,
-      tier: 'extended',
+      enclosureRadiusPx: winner.enclosureRadiusPx,
+      depthScore: winner.depthScore,
+      anchorLocal: anchorByIdx.get(winner.candidate.idx)!,
     };
   }
 

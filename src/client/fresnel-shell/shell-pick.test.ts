@@ -97,15 +97,22 @@ function pick(
     surface,
     cameraDistancePc: 42,
     idx: 1,
+    renderedSizePx: SILHOUETTE_PX,
+    pixelThreshold: 14,
   });
 }
 
+// Wide enough that the shell's own enclosure clears the grab threshold,
+// so the tests read the silhouette's size rather than the floor.
+const SILHOUETTE_PX = 600;
+const LABEL_PX = 40;
+
 describe('pickShellSilhouette', () => {
-  it('outside-shell: cursor on the drawn silhouette → extended hit', () => {
+  it('outside-shell: cursor on the drawn silhouette hits, sized by the silhouette', () => {
     withDocumentStub(() => null, () => {
       const hit = pick(heliopauseSurface(), outsideShellCamera(), VIEWPORT_W / 2, VIEWPORT_H / 2);
       expect(hit).not.toBeNull();
-      expect(hit!.tier).toBe('extended');
+      expect(hit!.enclosureRadiusPx).toBe(SILHOUETTE_PX / 2);
       expect(hit!.idx).toBe(1);
       expect(hit!.cameraDistancePc).toBe(42);
     });
@@ -145,7 +152,7 @@ describe('pickShellSilhouette', () => {
     });
   });
 
-  it('inside-shell: label bbox overlap still extended-hits though the mesh missed', () => {
+  it('inside-shell: the label alone hits, and reports the label\'s own size', () => {
     const labelRect = {
       left: 100, top: 100, right: 140, bottom: 120, width: 40, height: 20,
     } as DOMRect;
@@ -156,7 +163,10 @@ describe('pickShellSilhouette', () => {
       () => {
         const hit = pick(heliopauseSurface(), insideShellCamera(), 120, 110);
         expect(hit).not.toBeNull();
-        expect(hit!.tier).toBe('extended');
+        // The label is its own surface, far tighter than the shell it
+        // names — reporting the wall's size here would let anything the
+        // label overlaps outrank a cursor sitting on the text.
+        expect(hit!.enclosureRadiusPx).toBe(LABEL_PX / 2);
       },
     );
   });

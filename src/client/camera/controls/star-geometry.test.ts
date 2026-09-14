@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import * as THREE from 'three';
 import {
   angularToPx,
   physSizePx,
@@ -196,7 +197,10 @@ describe('star-geometry / pickFromCandidates', () => {
     pxDist: number,
     hitRadius: number,
     appMag: number,
-  ): StarPickCandidate => ({ idx, pxDist, hitRadius, appMag, cameraDistancePc: 1 });
+  ): StarPickCandidate => ({
+    idx, pxDist, hitRadius, appMag, cameraDistancePc: 1,
+    anchorLocal: new THREE.Vector3(),
+  });
 
   // Star scorer is passed explicitly now that pickFromCandidates is
   // generic; non-star providers default to closest-to-cursor.
@@ -207,9 +211,9 @@ describe('star-geometry / pickFromCandidates', () => {
     expect(pickFromCandidates([], 16, starScore)).toBeNull();
   });
 
-  it('prime-only: lowest pickScore wins among hits inside hitRadius', () => {
-    // Two prime hits — both inside hitRadius. The one with the lower
-    // pickScore (closer to centre, brighter on tie) wins.
+  it('equal enclosures: lowest pickScore wins', () => {
+    // Every candidate here draws smaller than the grab threshold, so all
+    // three report the same enclosure and the score alone separates them.
     const cands = [
       c(10, 3, 5, 4.0), // score = 3 + 0.20 = 3.20
       c(11, 1, 5, 4.5), // score = 1 + 0.225 = 1.225 ← winner
@@ -217,12 +221,13 @@ describe('star-geometry / pickFromCandidates', () => {
     ];
     const r = pickFromCandidates(cands, 16, starScore);
     expect(r?.candidate.idx).toBe(11);
-    expect(r?.tier).toBe('prime');
+    expect(r?.enclosureRadiusPx).toBe(16);
   });
 
-  it('fallback-only: nearest-to-cursor wins when no prime hits exist', () => {
-    // No candidate's pxDist is inside hitRadius; all fall through to
-    // the proximity tier, where lowest pickScore wins.
+  it('nearest-to-cursor wins when the cursor is inside no drawn disc', () => {
+    // No candidate's pxDist is inside its own hitRadius; each is reached
+    // only through the grab threshold, which is then their shared
+    // enclosure, so lowest pickScore wins.
     const cands = [
       c(20, 8, 2, 5.0), // pxDist > hitRadius → fallback; score = 8.25
       c(21, 6, 2, 5.5), // fallback; score = 6.275 ← winner
@@ -230,20 +235,19 @@ describe('star-geometry / pickFromCandidates', () => {
     ];
     const r = pickFromCandidates(cands, 16, starScore);
     expect(r?.candidate.idx).toBe(21);
-    expect(r?.tier).toBe('fallback');
   });
 
-  it('mixed prime + fallback: any prime hit beats the best fallback', () => {
-    // A prime candidate with a worse score (4.5 + ε) than the best
-    // fallback (1 + ε) still wins, because prime hits always beat
-    // fallback hits.
+  it('equal enclosures fall to the deeper hit, not the nearer one', () => {
+    // Both draw under the threshold, so they enclose equally and the
+    // score decides — and the score is proportional, so sitting at 0.9 of
+    // one disc's radius beats sitting at twice another's, even though the
+    // second centre is 3.5 px nearer in raw pixels.
     const cands = [
-      c(30, 4.5, 5, 4.0), // prime; score ≈ 4.7
-      c(31, 1.0, 0.5, 3.0), // fallback (pxDist > hitRadius); score ≈ 1.15
+      c(30, 4.5, 5, 4.0), // 0.9 of its own radius
+      c(31, 1.0, 0.5, 3.0), // twice its own radius
     ];
     const r = pickFromCandidates(cands, 16, starScore);
     expect(r?.candidate.idx).toBe(30);
-    expect(r?.tier).toBe('prime');
   });
 
   it('prime tier with tied score (Alula Australis): brighter component wins', () => {
@@ -256,22 +260,20 @@ describe('star-geometry / pickFromCandidates', () => {
     expect(pickFromCandidates(cands, 16, starScore)?.candidate.idx).toBe(40);
   });
 
-  it('prime hit inside hitRadius beats fallback hit just under pixelThreshold', () => {
-    // Edge case — prime candidate scrapes the inside of its hitRadius;
-    // fallback candidate scrapes the inside of pixelThreshold and is
-    // far brighter. Prime priority means the prime wins regardless.
+  it('a faint target scraping the threshold loses to one the cursor is on', () => {
+    // Equal enclosures again; the brighter candidate is 16 px out and the
+    // dimmer one is on its own disc, so the score carries it.
     const cands = [
-      c(50, 4.99, 5, 6.0), // prime (just inside); score ≈ 5.29
-      c(51, 15.99, 0.5, 0.0), // fallback (just inside); score ≈ 15.99
+      c(50, 4.99, 5, 6.0), // just inside its disc; score ≈ 5.29
+      c(51, 15.99, 0.5, 0.0), // scraping the threshold; score ≈ 15.99
     ];
     const r = pickFromCandidates(cands, 16, starScore);
     expect(r?.candidate.idx).toBe(50);
-    expect(r?.tier).toBe('prime');
   });
 
-  it('candidates outside both tiers (pxDist > pixelThreshold and > hitRadius) are ignored', () => {
-    // Reducer must skip candidates that don't qualify for either tier
-    // even if pickScore would otherwise rank them.
+  it('candidates the cursor is outside entirely are ignored', () => {
+    // Reducer must skip candidates whose enclosure the cursor is beyond,
+    // even where pickScore would otherwise rank them.
     const cands = [
       c(60, 100, 5, 0.0), // way out; ignored
       c(61, 50, 5, 1.0), // also out
@@ -285,30 +287,32 @@ describe('star-geometry / pickFromCandidates', () => {
     // sub-pixel bias; among equal-radius candidates that is still simply
     // the closest centroid, which is what these three are.
     const cands: StarPickCandidate[] = [
-      { idx: 70, pxDist: 8, hitRadius: 2, appMag: 0, cameraDistancePc: 1 },
-      { idx: 71, pxDist: 4, hitRadius: 2, appMag: 0, cameraDistancePc: 1 }, // winner
-      { idx: 72, pxDist: 6, hitRadius: 2, appMag: 0, cameraDistancePc: 1 },
+      { idx: 70, pxDist: 8, hitRadius: 2, appMag: 0, cameraDistancePc: 1, anchorLocal: new THREE.Vector3() },
+      { idx: 71, pxDist: 4, hitRadius: 2, appMag: 0, cameraDistancePc: 1, anchorLocal: new THREE.Vector3() }, // winner
+      { idx: 72, pxDist: 6, hitRadius: 2, appMag: 0, cameraDistancePc: 1, anchorLocal: new THREE.Vector3() },
     ];
     const r = pickFromCandidates(cands, 16);
     expect(r?.candidate.idx).toBe(71);
-    expect(r?.tier).toBe('fallback');
   });
 
-  // Scale-invariance across a 10x size range, both directions. This
-  // ranking is only ever asked to choose between COMPACT objects: an
-  // enclosing shell or cloud reports the `extended` tier and so never
-  // enters the comparison (`../../hover/hover-pick-disambiguator.ts`).
-  it('prime tier: the big disc wins where the cursor sits deeper inside it', () => {
+  // The accepted cost of ranking on size: a candidate drawn LARGER than
+  // the threshold is outranked by any smaller one the cursor also
+  // reaches, however much deeper into the big one the cursor sits. That
+  // is the same property that makes a cloud reachable inside the Local
+  // Bubble, applied to two compact objects, and it is why a foreground
+  // body needs an occlusion gate rather than a size exemption — a star
+  // the body hides must not be a candidate at all.
+  it('a small target beats a much larger one the cursor is deeper inside', () => {
     const cands = [
-      { idx: 90, pxDist: 20, hitRadius: 40, cameraDistancePc: 1 }, // 0.50 ← winner
-      { idx: 91, pxDist: 3, hitRadius: 4, cameraDistancePc: 9 }, // 0.75
+      { idx: 90, pxDist: 20, hitRadius: 40, cameraDistancePc: 1 }, // encloses at 40
+      { idx: 91, pxDist: 3, hitRadius: 4, cameraDistancePc: 9 }, // encloses at 16 ← winner
     ];
     const r = pickFromCandidates(cands, 16);
-    expect(r?.candidate.idx).toBe(90);
-    expect(r?.tier).toBe('prime');
+    expect(r?.candidate.idx).toBe(91);
+    expect(r?.enclosureRadiusPx).toBe(16);
   });
 
-  it('prime tier: the pinprick takes it back when clicked squarely', () => {
+  it('the pinprick keeps it when clicked squarely', () => {
     const cands = [
       { idx: 90, pxDist: 20, hitRadius: 40, cameraDistancePc: 1 }, // 0.500
       { idx: 91, pxDist: 0.5, hitRadius: 4, cameraDistancePc: 9 }, // 0.125 ← winner
@@ -328,7 +332,6 @@ describe('star-geometry / pickFromCandidates', () => {
     const r = pickFromCandidates(cands, 16);
     expect(r?.candidate.idx).toBe(81);
     expect(r?.candidate.cameraDistancePc).toBe(50_000);
-    expect(r?.tier).toBe('prime');
   });
 });
 
@@ -350,7 +353,10 @@ describe('star-geometry / pickFromCandidatesResolved', () => {
     pxDist: number,
     hitRadius: number,
     appMag: number,
-  ): StarPickCandidate => ({ idx, pxDist, hitRadius, appMag, cameraDistancePc: 1 });
+  ): StarPickCandidate => ({
+    idx, pxDist, hitRadius, appMag, cameraDistancePc: 1,
+    anchorLocal: new THREE.Vector3(),
+  });
   const starScore = (cand: StarPickCandidate) =>
     pickScore(cand.pxDist, cand.appMag, cand.hitRadius);
   const lit = (hitRadius: number) => () => ({ visible: true, hitRadius });
@@ -364,20 +370,19 @@ describe('star-geometry / pickFromCandidatesResolved', () => {
       hitRadius: 5,
     }));
     expect(r?.candidate.idx).toBe(11);
-    expect(r?.tier).toBe('prime');
   });
 
-  it('returns null when nothing in either tier renders', () => {
+  it('returns null when nothing the cursor reaches renders', () => {
     const cands = [c(10, 1, 5, 4.0), c(11, 12, 5, 4.0)];
     expect(
       pickFromCandidatesResolved(cands, 16, starScore, () => ({ visible: false, hitRadius: 5 })),
     ).toBeNull();
   });
 
-  it('resolves each candidate at most once, even across the demotion path', () => {
-    // A demoted prime candidate is reconsidered in the fallback pass;
-    // each resolve is a GPU readback, so the memo is a correctness-
-    // adjacent perf invariant, not an optimisation.
+  it('resolves each candidate at most once', () => {
+    // Each resolve is a GPU readback, so walking one ordered list rather
+    // than re-examining a demoted candidate is a correctness-adjacent
+    // perf invariant, not an optimisation.
     const cands = [c(10, 4, 5, 4.0), c(11, 6, 8, 4.0)];
     const seen: number[] = [];
     pickFromCandidatesResolved(cands, 16, starScore, (cand) => {
@@ -387,22 +392,23 @@ describe('star-geometry / pickFromCandidatesResolved', () => {
     expect(seen).toEqual([...new Set(seen)]);
   });
 
-  it('demotes a shrunken prime candidate rather than dropping it', () => {
-    // Prefilter admitted a 5 px radius; extinction shrinks the drawn
-    // disc under the cursor distance. Still pickable — as fallback.
+  it('keeps a shrunken candidate the threshold still reaches', () => {
+    // Prefilter admitted a 5 px radius; extinction shrinks the drawn disc
+    // under the cursor distance. Still pickable, because the grab
+    // threshold floors the enclosure it reports.
     const cands = [c(10, 4, 5, 4.0)];
     const r = pickFromCandidatesResolved(cands, 16, starScore, lit(1));
     expect(r?.candidate.idx).toBe(10);
-    expect(r?.tier).toBe('fallback');
+    expect(r?.enclosureRadiusPx).toBe(16);
   });
 
-  it('a surviving prime hit still beats a closer fallback candidate', () => {
-    // Tier dominance is the contract pickFromCandidates already keeps;
-    // laziness must not quietly reorder it.
+  it('laziness must not reorder the ranking', () => {
+    // Same answer the eager reducer gives on these inputs: equal
+    // enclosures, and the deeper-in candidate takes it.
     const cands = [c(10, 5, 6, 4.0), c(11, 1, 0.5, 4.0)];
     const r = pickFromCandidatesResolved(cands, 16, starScore, lit(6));
     expect(r?.candidate.idx).toBe(10);
-    expect(r?.tier).toBe('prime');
+    expect(pickFromCandidates(cands, 16, starScore)?.candidate.idx).toBe(10);
   });
 
   it('stops resolving once a winner is found — the laziness the readback pays for', () => {

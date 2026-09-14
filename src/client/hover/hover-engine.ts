@@ -5,6 +5,7 @@ import { escapeHtml } from '../ui/dom-util';
 import { readPageMargins } from '../ui/page-margins';
 import {
   disambiguateHits,
+  type PickVisibility,
   type HoverProviderHit,
 } from './hover-pick-disambiguator';
 import type { HoverProvider } from './hover-types';
@@ -31,6 +32,10 @@ export type HoverEngineConfig = {
    *  be staged off the GPU before it can be read
    *  (`../webgpu/extinction/README.md` § Cold reads). */
   onPickImminent?: () => void;
+  /** The frame's near solid bodies and where the camera reads them from.
+   *  The engine stays layer-agnostic: it does not know what occludes
+   *  what, only that one gate answers for every provider it walks. */
+  visibility?: () => PickVisibility | null;
 };
 
 export type HoverEngine = {
@@ -47,6 +52,7 @@ export function createHoverEngine(config: HoverEngineConfig): HoverEngine {
     delayMs = DEFAULT_DELAY_MS,
     initialProviders = [],
     onPickImminent,
+    visibility,
   } = config;
 
   const providers: HoverProvider[] = [...initialProviders];
@@ -112,7 +118,7 @@ export function createHoverEngine(config: HoverEngineConfig): HoverEngine {
         const hit = provider.pick(x, y, pxThreshold);
         if (hit !== null) hits.push({ provider, hit });
       }
-      const winner = disambiguateHits(hits);
+      const winner = disambiguateHits(hits, visibility?.() ?? null);
       if (winner === null) return;
       renderPayload(x, y, winner);
     }, delayMs);

@@ -9,7 +9,9 @@ gestures below toggle its `noRotate` / `noPan` flags.
 - `input-controller.ts` (+ test) — every canvas pointer / touch / gesture
   listener: the click FSM (single/double dispatch in both modes, the
   kind-generic click ladder, cloud click semantics), the roll gestures,
-  and the pinch normaliser.
+  and the pinch normaliser. Which object a click resolves to comes from
+  `Picker.pickAnyKindHit` — one roster-wide call, never a per-kind list
+  here, since a list is what let clouds drop out of the comparison.
 - `roll-controller.ts` (+ test) — `RollController`: the roll operations
   on `camera.up` and on the quaternion, one authority per camera mode.
   Holds no state of its own beyond scratch. § Roll authority.

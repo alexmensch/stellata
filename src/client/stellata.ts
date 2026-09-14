@@ -117,6 +117,7 @@ import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import type { PlanetBodyField } from './solar-system/planets/planet-body-field';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { OccluderSet } from './occlusion/occluder-set';
+import type { PickVisibility } from './hover/hover-pick-disambiguator';
 import { SolarSystemCluster } from './solar-system/local-cluster';
 import { StarLocalMirror } from './star-pipeline/local-pass/star-local-mirror';
 import { StarLocalCluster } from './star-pipeline/local-pass/star-local-cluster';
@@ -461,6 +462,13 @@ export class Stellata implements FrameAnchor {
    *  clusters and read by every SVG label surface
    *  (`occlusion/README.md`). */
   readonly occluders = new OccluderSet();
+
+  /** What every pick path gates on, in one place: the frame's solid
+   *  bodies and the camera reading them. Hover and click both take it,
+   *  so no kind can be visible to one and hidden from the other. */
+  pickVisibility(): PickVisibility {
+    return { occluders: this.occluders, cameraPos: this.camera.position };
+  }
   private coordSpheres: Record<DrawnCoordSphereFrame, CoordSphere>;
   readonly hud: HudOverlay;
   /** Chart-mode label + glyph engine. `chart-mode.ts` starts / stops it on
@@ -823,6 +831,7 @@ export class Stellata implements FrameAnchor {
       drawCutoffMagFn: (chart) => this.exposure.drawCutoffMag(chart),
       resolveStarPick: (idx) => this.resolveStarPick(idx),
       resolveCollapsedLead: (idx) => this.collapsedClusterLead(idx),
+      visibility: () => this.pickVisibility(),
     });
     // The warp / focus-lerp / observe-transition busy checks stay on
     // stellata's aimAt dispatcher because they gate behaviour the

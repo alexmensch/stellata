@@ -30,11 +30,10 @@ export type CloudPickCandidate = PickCandidate & {
 };
 
 /**
- * Build a candidate from one enclosing-silhouette hit. `hitRadius` is
- * Infinity because the rim-mesh raycast already IS the enclosure test:
- * a real projected radius would demote hits on a near-side lobe (whose
- * centre projects farther out than the extent sphere subtends) to the
- * fallback tier, where any prime hit takes them regardless of centrality.
+ * Build a candidate from one enclosing-silhouette hit. The rim-mesh
+ * raycast already IS the enclosure test, so the candidate is `enclosed`
+ * outright and `hitRadius` reports the cloud's projected size alone —
+ * what ranks it against everything else under the same cursor.
  */
 export function cloudPickCandidate(
   idx: number,
@@ -45,19 +44,22 @@ export function cloudPickCandidate(
   return {
     idx,
     pxDist: pxDistFromCentre,
-    hitRadius: Infinity,
+    hitRadius: Math.max(silhouetteDiameterPx * 0.5, SILHOUETTE_RADIUS_FLOOR_PX),
+    enclosed: true,
     cameraDistancePc,
     silhouetteDiameterPx,
   };
 }
 
-/** Lowest `cloudPickScore` wins; null for an empty candidate list. */
+/** Tightest silhouette wins, then proportional centrality within an
+ *  equally-sized pair; null for an empty candidate list. */
 export function resolveCloudPick(
   candidates: Iterable<CloudPickCandidate>,
+  pixelThreshold: number,
 ): PickResult<CloudPickCandidate> | null {
   return pickFromCandidates(
     candidates,
-    0,
+    pixelThreshold,
     (c) => cloudPickScore(c.pxDist, c.silhouetteDiameterPx),
   );
 }

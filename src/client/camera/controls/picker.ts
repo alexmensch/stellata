@@ -19,6 +19,10 @@ import {
   type StarPickCandidate,
 } from './star-geometry';
 import { activePulsationAmp } from './star-physics';
+import {
+  bestVisibleHitBy,
+  type PickVisibility,
+} from '../../hover/hover-pick-disambiguator';
 import type { HoverHit } from '../../hover/hover-types';
 
 export interface PickerDeps {
@@ -36,6 +40,11 @@ export interface PickerDeps {
   // migrated kind, absent for kinds whose pick path is still inline.
   // Hover providers call the same functions, so the two can't disagree.
   kindPicks: Readonly<Partial<Record<TargetKind, KindPick>>>;
+  // The frame's near solid bodies and the camera they are read from
+  // (`../../occlusion/README.md`), for the one gate that drops hits the
+  // user cannot see — applied across every kind at once in
+  // `pickAnyKindHit`, never per layer.
+  visibility?: () => PickVisibility | null;
   // Star disc pixel diameter for the prime-tier hit radius. Threaded
   // as a callback so Picker stays decoupled from material uniforms.
   renderedSizePxFn: (idx: number) => number;
@@ -89,7 +98,9 @@ export class Picker {
     return {
       idx: this.deps.resolveCollapsedLead(r.candidate.idx),
       cameraDistancePc: r.candidate.cameraDistancePc,
-      tier: r.tier,
+      enclosureRadiusPx: r.enclosureRadiusPx,
+      depthScore: r.depthScore,
+      anchorLocal: r.candidate.anchorLocal,
     };
   }
 
@@ -102,6 +113,27 @@ export class Picker {
     pixelThreshold = 14,
   ): HoverHit | null {
     return this.deps.kindPicks[kind]?.(clientX, clientY, pixelThreshold) ?? null;
+  }
+
+  /** The winning object across EVERY registered kind — the tightest
+   *  surface enclosing the cursor, by the comparator the hover engine
+   *  runs over the same picks (`../../hover/hover-pick-disambiguator.ts`).
+   *
+   *  Driven by the kind roster rather than a written-out list, so a kind
+   *  added later competes for clicks the moment its module registers a
+   *  pick, with nothing to edit here or at the call site. */
+  pickAnyKindHit(
+    clientX: number,
+    clientY: number,
+    pixelThreshold = 14,
+  ): { kind: TargetKind; hit: HoverHit } | null {
+    const hits: ({ kind: TargetKind; hit: HoverHit } | null)[] = [];
+    for (const entry of Object.entries(this.deps.kindPicks)) {
+      const [kind, pick] = entry as [TargetKind, KindPick];
+      const hit = pick(clientX, clientY, pixelThreshold);
+      hits.push(hit === null ? null : { kind, hit });
+    }
+    return bestVisibleHitBy(hits, (h) => h.hit, this.deps.visibility?.() ?? null);
   }
 
   // ─── Internal ─────────────────────────────────────────────────────
@@ -173,7 +205,10 @@ export class Picker {
       // Prune to candidates that could win in either tier; the reducer
       // re-checks tier eligibility, this is just to keep the array tiny.
       if (pxDist > hitRadius && pxDist > pixelThreshold) continue;
-      candidates.push({ idx: i, pxDist, hitRadius, appMag, cameraDistancePc: dCam });
+      candidates.push({
+        idx: i, pxDist, hitRadius, appMag, cameraDistancePc: dCam,
+        anchorLocal: new THREE.Vector3(x, y, z),
+      });
     }
     return pickFromCandidatesResolved(
       candidates,
