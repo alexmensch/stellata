@@ -2,6 +2,8 @@
 // variability headroom). The vertex shader keeps its own copy of
 // `physSizePx`; the variability-headroom rule lives only here.
 
+import type * as THREE from 'three';
+
 // Pixel-per-radian conversion. Mirrors the shader's
 // `viewport.y / max(fovYRad, 1e-9)`. Floor on fovYRad keeps the divide
 // finite in the singular case where the camera FOV is briefly written
@@ -56,8 +58,7 @@ export function peakAmplitudeFactor(
 // (Alula Australis A/B at the same x/y/z) still tiebreak by brightness.
 export const PICK_MAG_BIAS_PX_PER_MAG = 0.05;
 
-// Floor on the prime-disc hit radius for any layer that uses the two-tier
-// pick contract (stars, Sol planets, eventually clouds / LG wireframes).
+// Floor on the hit radius every layer derives from a drawn diameter.
 // Tiny chart-mode discs (down to 1–2 px) leave a sub-pixel target that
 // the cursor can easily miss even when visually right on top of the
 // object. Floor the disc-test radius to a value the cursor can
@@ -65,34 +66,39 @@ export const PICK_MAG_BIAS_PX_PER_MAG = 0.05;
 // star and planet pick paths share a single source.
 export const MIN_DISC_HIT_RADIUS_PX = 4;
 
-// Prime-tier hit radius for a drawn diameter. The floor applies to the
+// The grab radius. Hover and click MUST share it — it floors the
+// enclosure, so two values rank the same candidates differently
+// (`../../hover/README.md` § Architecture).
+export const PICK_THRESHOLD_PX = 7;
+
+// Hit radius for a drawn diameter. The floor applies to the
 // resolved radius as much as the prefilter's, so a star dimmed to a
 // sub-pixel disc stays as reachable as a chart-mode one.
 export function discHitRadiusPx(drawnDiameterPx: number): number {
   return Math.max(drawnDiameterPx * 0.5, MIN_DISC_HIT_RADIUS_PX);
 }
 
-// Pick score: pxDist + sub-pixel appMag bias. The bias only matters
-// for near-coincident candidates (catalogue rows sharing x/y/z, e.g.
-// Alula Australis A/B). Camera distance is deliberately NOT a
-// tiebreaker: the Double Double (ε¹/ε² Lyr) has overlapping hitboxes
-// at typical zoom, and "closest to camera" leaves one component
-// permanently un-clickable.
-export function pickScore(pxDist: number, appMag: number): number {
-  return pxDist + appMag * PICK_MAG_BIAS_PX_PER_MAG;
+// Pick score: (pxDist + sub-pixel appMag bias) over the candidate's own
+// hit radius. Normalising the WHOLE numerator is what leaves same-size
+// candidates ranking as they did: an equal divisor cancels. Why the
+// divisor, and why camera distance is not a tiebreaker: README.md
+// § Ranking a pick.
+export function pickScore(pxDist: number, appMag: number, hitRadius: number): number {
+  return (pxDist + appMag * PICK_MAG_BIAS_PX_PER_MAG) / hitRadius;
 }
 
-// One projected pick candidate, after the prime/fallback filter has
-// already accepted it. `hitRadius` is the prime-tier disc radius
-// (`max(pxSize/2, MIN_DISC_HIT_RADIUS_PX)`) — caller-computed because
-// it depends on rendered disc size. Pure-data shape so the reducer
-// below stays unit-testable without a Three.js scene. Non-star
-// providers (planets, Local Group, heliopause apex) extend this with
-// no extra fields and pass the default `pxDist` scorer.
+// One projected pick candidate the caller has already accepted.
+// `hitRadius` is caller-computed because it depends on rendered disc
+// size. Pure-data shape so the reducer below stays unit-testable without
+// a Three.js scene.
 export type PickCandidate = {
   idx: number;
   pxDist: number;
   hitRadius: number;
+  /** Set by a layer whose own hit test IS the enclosure test, where
+   *  `pxDist` can exceed `hitRadius` on a near-side lobe and the radius
+   *  reports size alone (`../../molecular-clouds/README.md`). */
+  enclosed?: boolean;
 };
 
 // Star-specific candidate. Carries `appMag` so the sub-pixel
@@ -104,66 +110,51 @@ export type PickCandidate = {
 export type StarPickCandidate = PickCandidate & {
   appMag: number;
   cameraDistancePc: number;
+  anchorLocal: THREE.Vector3;
 };
 
-// Winning candidate from `pickFromCandidates`, with the prime/fallback
-// classification carried alongside. Returning the candidate (rather
-// than just its idx) lets hover-tier callers (`pickStarHit`,
-// `LocalGroupLayer.pick`, `PlanetBodyField.pick`) read the winning
-// candidate's `pxDist`/`hitRadius`/extension fields without re-walking
-// the projection. `tier` mirrors the reducer's two-tier split so the
-// `HoverHit` tier field is keyed off the same comparison the reducer
-// already made — no separate caller-side classification.
+// The on-screen half-extent a cursor can be inside for this candidate
+// (`../../hover/README.md` Rule 3). The rounding is load-bearing: two
+// objects the user sees as the same size can differ by a thousandth of a
+// pixel, and ranking on that would let an invisible difference decide the
+// pick. Equal to the pixel means peers, and peers fall to the tiebreak.
+export function enclosureRadiusPx(hitRadius: number, pixelThreshold: number): number {
+  return Math.round(Math.max(hitRadius, pixelThreshold));
+}
+
+// Returns the candidate, not its idx, so callers read the winner's
+// extension fields without re-walking the projection.
 export type PickResult<T extends PickCandidate> = {
   candidate: T;
-  tier: 'prime' | 'fallback';
+  enclosureRadiusPx: number;
+  depthScore: number;
 };
 
-// Reduce a candidate list to the winning candidate (or null) under the
-// two-tier pick contract:
-//   prime  — `pxDist <= hitRadius` (cursor inside the rendered disc /
-//            wireframe envelope)
-//   fallback — `pxDist <= pixelThreshold` (cursor near the centre, no
-//              disc hit). Only consulted when no prime hit exists.
-// Within each tier, lowest `scoreFn(c)` wins. Prime hits ALWAYS beat
-// fallback hits — a prime candidate just inside its hit radius beats
-// a fallback candidate one pixel from the cursor, regardless of score.
-//
-// `scoreFn` defaults to "closest to cursor wins" (`c.pxDist`) — the
-// natural choice for layers without a brightness bias. The star caller
-// passes `pickScore` to retain the sub-pixel mag tiebreaker.
-//
-// Single source of truth across all layered pickers in the hover layer:
-// star (StarPickCandidate, pickScore), Local Group (PickCandidate +
-// cameraDistancePc, default scorer), planets (cross-host candidate with
-// hostStarIdx/planetIdx/cameraDistancePc, default scorer). Callers that
-// only need the winning idx unwrap with `result?.candidate.idx ?? -1`.
+// Reduce a candidate list to the winner, or null: tightest enclosure,
+// then `scoreFn` between equals (README.md § Ranking a pick). A candidate
+// encloses the cursor when `pxDist <= enclosureRadiusPx(...)` or when it
+// sets `enclosed`. Every caller's radius comes from `discHitRadiusPx`, so
+// the default scorer's divisor is floored well above zero.
 export function pickFromCandidates<T extends PickCandidate>(
   candidates: Iterable<T>,
   pixelThreshold: number,
-  scoreFn: (c: T) => number = (c) => c.pxDist,
+  scoreFn: (c: T) => number = (c) => c.pxDist / c.hitRadius,
 ): PickResult<T> | null {
-  let prime: T | null = null;
-  let primeBest = Infinity;
-  let fb: T | null = null;
-  let fbBest = Infinity;
+  let best: T | null = null;
+  let bestRadius = Infinity;
+  let bestScore = Infinity;
   for (const c of candidates) {
+    const radius = enclosureRadiusPx(c.hitRadius, pixelThreshold);
+    if (c.enclosed !== true && c.pxDist > radius) continue;
     const score = scoreFn(c);
-    if (c.pxDist <= c.hitRadius) {
-      if (score < primeBest) {
-        primeBest = score;
-        prime = c;
-      }
-    } else if (c.pxDist <= pixelThreshold) {
-      if (score < fbBest) {
-        fbBest = score;
-        fb = c;
-      }
+    if (radius < bestRadius || (radius === bestRadius && score < bestScore)) {
+      best = c;
+      bestRadius = radius;
+      bestScore = score;
     }
   }
-  if (prime !== null) return { candidate: prime, tier: 'prime' };
-  if (fb !== null) return { candidate: fb, tier: 'fallback' };
-  return null;
+  if (best === null) return null;
+  return { candidate: best, enclosureRadiusPx: bestRadius, depthScore: bestScore };
 }
 
 /** What a `Resolve` reports about one candidate once the expensive
@@ -171,25 +162,25 @@ export function pickFromCandidates<T extends PickCandidate>(
 export type ResolvedCandidate = {
   /** False when the renderer puts no pixel on screen for it. */
   visible: boolean;
-  /** Prime-tier radius recomputed against those terms — a dimmer star
-   *  draws a smaller disc, so this only ever shrinks. */
+  /** Hit radius recomputed against those terms — a dimmer star draws a
+   *  smaller disc, so this only ever shrinks. */
   hitRadius: number;
 };
 
 /**
- * The same two-tier contract as `pickFromCandidates`, but each candidate
- * is confirmed through `resolve` before it can win, and only as far down
- * the score order as it takes to find a winner.
+ * The same tightest-enclosure contract as `pickFromCandidates`, but each
+ * candidate is confirmed through `resolve` before it can win, and only as
+ * far down the order as it takes to find a winner.
  *
  * Laziness is the point, not an optimisation: on the WebGL2 escape hatch
- * `resolve` reads per-star extinction back off the GPU, so evaluating
- * every candidate would cost one synchronous readback each. In score
- * order the first visible candidate is almost always the first one tried.
+ * `resolve` costs one synchronous GPU readback per candidate
+ * (README.md § picker.ts).
  *
- * Callers must pass a `hitRadius` that is an upper bound of the resolved
- * one, so the initial partition can never miss a prime candidate. A
- * candidate whose resolved radius no longer reaches the cursor demotes
- * into the fallback pool rather than being dropped.
+ * Callers MUST pass a `hitRadius` that is an upper bound of the resolved
+ * one, or the walk skips a candidate that would have enclosed the cursor.
+ * The score normalises against that bound and never the resolved radius —
+ * scoring on the resolved one would resolve every candidate to sort them,
+ * which is the readback the laziness exists to avoid.
  */
 export function pickFromCandidatesResolved<T extends PickCandidate>(
   candidates: Iterable<T>,
@@ -197,34 +188,21 @@ export function pickFromCandidatesResolved<T extends PickCandidate>(
   scoreFn: (c: T) => number,
   resolve: (c: T) => ResolvedCandidate,
 ): PickResult<T> | null {
-  const prime: T[] = [];
-  const fallback: T[] = [];
+  const eligible: T[] = [];
   for (const c of candidates) {
-    if (c.pxDist <= c.hitRadius) prime.push(c);
-    else if (c.pxDist <= pixelThreshold) fallback.push(c);
+    if (c.pxDist <= enclosureRadiusPx(c.hitRadius, pixelThreshold)) eligible.push(c);
   }
-  // A demoted prime candidate is re-examined in the fallback pass, so
-  // memoise: no candidate may cost two readbacks.
-  const memo = new Map<T, ResolvedCandidate>();
-  const resolveOnce = (c: T): ResolvedCandidate => {
-    let r = memo.get(c);
-    if (r === undefined) {
-      r = resolve(c);
-      memo.set(c, r);
-    }
-    return r;
-  };
-  const byScore = (a: T, b: T) => scoreFn(a) - scoreFn(b);
-  prime.sort(byScore);
-  for (const c of prime) {
-    const r = resolveOnce(c);
+  eligible.sort((a, b) => {
+    const ra = enclosureRadiusPx(a.hitRadius, pixelThreshold);
+    const rb = enclosureRadiusPx(b.hitRadius, pixelThreshold);
+    return ra === rb ? scoreFn(a) - scoreFn(b) : ra - rb;
+  });
+  for (const c of eligible) {
+    const r = resolve(c);
     if (!r.visible) continue;
-    if (c.pxDist <= r.hitRadius) return { candidate: c, tier: 'prime' };
-    fallback.push(c);
-  }
-  fallback.sort(byScore);
-  for (const c of fallback) {
-    if (resolveOnce(c).visible) return { candidate: c, tier: 'fallback' };
+    const radius = enclosureRadiusPx(r.hitRadius, pixelThreshold);
+    if (c.pxDist > radius) continue;
+    return { candidate: c, enclosureRadiusPx: radius, depthScore: scoreFn(c) };
   }
   return null;
 }

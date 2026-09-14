@@ -65,8 +65,8 @@ here is the always-loaded hook pointing to which section to open.
   § Pattern coverage across peers.
 - **Numeric literals** → hoist at the second usage; tests import the
   constant and never redefine it. § Named constants and DRY.
-- **Mid-implementation doc-edit impulse** → defer to commit-time
-  sweep. § Defer doc updates.
+- **Mid-implementation doc-edit impulse** → a *description* defers to the
+  commit sweep; a *settled decision* goes in the README now. § Defer doc updates.
 - **Large PR (~10+ beads)** → distinguish High / Medium / Low test
   confidence in PR body; flag manual-smoke paths. § Large-PR honesty.
 - **Multi-concern diff** → split into topical commits, one concept

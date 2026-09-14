@@ -1,6 +1,8 @@
-// Cross-provider pick disambiguator for the hover engine — prime beats
-// fallback, then closer camera distance wins. See ./README.md.
+// Cross-provider pick disambiguator for the hover engine — the tightest
+// surface enclosing the cursor wins. See ./README.md.
 
+import type * as THREE from 'three';
+import type { OccluderQuery } from '../occlusion/occluder-set';
 import type { HoverHit, HoverProvider } from './hover-types';
 
 // One provider's hit, paired with the provider that produced it.
@@ -13,34 +15,54 @@ export type HoverProviderHit = {
   hit: HoverHit;
 };
 
-/** Generic tiebreak core — prime beats fallback, then closer camera
- *  wins. `disambiguateHits` wraps it for the engine's provider-paired
- *  hits; the click FSM runs it over bare per-layer picks (star vs
- *  planet) so click and hover can't disagree on which object wins. */
+/** Generic tiebreak core — smallest enclosure wins, then deepest inside
+ *  it (./README.md Rule 3). `disambiguateHits` wraps it for the engine's
+ *  provider-paired hits; the click FSM runs it over the roster's per-kind
+ *  picks, so the two cannot disagree. */
 export function bestHitBy<T>(
   items: readonly (T | null)[],
   hitOf: (item: T) => HoverHit,
 ): T | null {
-  let primeBest: T | null = null;
-  let fbBest: T | null = null;
+  let best: T | null = null;
+  let bestRadius = Infinity;
+  let bestDepth = Infinity;
   for (const item of items) {
     if (item === null) continue;
     const h = hitOf(item);
-    if (h.tier === 'prime') {
-      if (primeBest === null || h.cameraDistancePc < hitOf(primeBest).cameraDistancePc) {
-        primeBest = item;
-      }
-    } else {
-      if (fbBest === null || h.cameraDistancePc < hitOf(fbBest).cameraDistancePc) {
-        fbBest = item;
-      }
+    if (h.enclosureRadiusPx < bestRadius
+      || (h.enclosureRadiusPx === bestRadius && h.depthScore < bestDepth)) {
+      best = item;
+      bestRadius = h.enclosureRadiusPx;
+      bestDepth = h.depthScore;
     }
   }
-  return primeBest ?? fbBest;
+  return best;
+}
+
+/** The frame's near solid bodies plus where the camera reads them from —
+ *  everything the one occlusion gate needs. */
+export type PickVisibility = {
+  occluders: OccluderQuery;
+  cameraPos: Readonly<THREE.Vector3>;
+};
+
+/** Every hit the cursor found, minus the ones a nearer solid body hides,
+ *  reduced to the tightest survivor. The ONLY place occlusion is decided;
+ *  never add a second gate in a layer (./README.md Rule 3). */
+export function bestVisibleHitBy<T>(
+  items: readonly (T | null)[],
+  hitOf: (item: T) => HoverHit,
+  vis: PickVisibility | null,
+): T | null {
+  const visible = vis === null
+    ? items
+    : items.filter((it) => it === null || !vis.occluders.hides(hitOf(it).anchorLocal, vis.cameraPos));
+  return bestHitBy(visible, hitOf);
 }
 
 export function disambiguateHits(
   hits: readonly HoverProviderHit[],
+  vis: PickVisibility | null = null,
 ): HoverProviderHit | null {
-  return bestHitBy(hits, (h) => h.hit);
+  return bestVisibleHitBy(hits, (h) => h.hit, vis);
 }

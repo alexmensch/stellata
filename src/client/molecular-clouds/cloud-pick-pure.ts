@@ -13,28 +13,15 @@ import {
 // hit instead of producing NaN/Infinity comparisons.
 const SILHOUETTE_RADIUS_FLOOR_PX = 0.5;
 
-/**
- * Cursor distance from the cloud's projected centre as a fraction of
- * that cloud's own projected radius: 0 dead centre, 1 at the silhouette
- * edge. Scale-invariant by construction — a small cloud and a large
- * complex both stay reachable, each winning the region where the cursor
- * sits proportionally deeper inside it.
- */
-export function cloudPickScore(pxDistFromCentre: number, silhouetteDiameterPx: number): number {
-  return pxDistFromCentre / Math.max(silhouetteDiameterPx * 0.5, SILHOUETTE_RADIUS_FLOOR_PX);
-}
-
 export type CloudPickCandidate = PickCandidate & {
   cameraDistancePc: number;
-  silhouetteDiameterPx: number;
 };
 
 /**
- * Build a candidate from one enclosing-silhouette hit. `hitRadius` is
- * Infinity because the rim-mesh raycast already IS the enclosure test:
- * a real projected radius would demote hits on a near-side lobe (whose
- * centre projects farther out than the extent sphere subtends) to the
- * fallback tier, where any prime hit takes them regardless of centrality.
+ * Build a candidate from one enclosing-silhouette hit. The rim-mesh
+ * raycast already IS the enclosure test, so the candidate is `enclosed`
+ * outright and `hitRadius` reports the cloud's projected size alone —
+ * what ranks it against everything else under the same cursor.
  */
 export function cloudPickCandidate(
   idx: number,
@@ -45,19 +32,20 @@ export function cloudPickCandidate(
   return {
     idx,
     pxDist: pxDistFromCentre,
-    hitRadius: Infinity,
+    hitRadius: Math.max(silhouetteDiameterPx * 0.5, SILHOUETTE_RADIUS_FLOOR_PX),
+    enclosed: true,
     cameraDistancePc,
-    silhouetteDiameterPx,
   };
 }
 
-/** Lowest `cloudPickScore` wins; null for an empty candidate list. */
+/** Tightest silhouette wins, then proportional centrality within an
+ *  equally-sized pair; null for an empty candidate list. The reducer's
+ *  default scorer IS that centrality — `pxDist / hitRadius` over the
+ *  radius `cloudPickCandidate` just built — so there is no cloud-specific
+ *  scorer to pass. */
 export function resolveCloudPick(
   candidates: Iterable<CloudPickCandidate>,
+  pixelThreshold: number,
 ): PickResult<CloudPickCandidate> | null {
-  return pickFromCandidates(
-    candidates,
-    0,
-    (c) => cloudPickScore(c.pxDist, c.silhouetteDiameterPx),
-  );
+  return pickFromCandidates(candidates, pixelThreshold);
 }

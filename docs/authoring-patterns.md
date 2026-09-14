@@ -286,24 +286,45 @@ covers each.** One missed peer = the headline claim is false.
    same surface and would benefit / drift if not extended too. File
    a bead for sibling work even if out of scope.
 
-## Defer doc updates
+## Defer doc updates — descriptions, not decisions
 
-Don't edit `AGENTS.md`, `README.md`, `docs/`, or `SCIENCE.md` while
-implementing a feature — treat code as the only deliverable until
-commit time.
+Don't edit `AGENTS.md`, `README.md`, `docs/`, or `SCIENCE.md` to
+*describe* code you are still writing: file rosters, parameter values,
+data flow, knob names, anything that tracks the implementation. Code is
+the deliverable for that, and the sweep happens at commit time.
 
 Why: mid-session doc edits become churn. Direction shifts, features
 get dropped, parameters rename, knob values move; the paragraph
 written early ends up describing something that no longer exists.
 
+**The exception is the important half: a settled decision goes into the
+folder README the moment it is settled.** An invariant, a rejected
+alternative and the reason it lost, why a ranking key is what it is —
+none of that churns once decided, so the churn argument does not reach
+it. Deferring it has a cost the deferral was never weighing: until that
+README section exists, the only place the reasoning can go is a code
+comment. The comment rule forbids restating a doc, but at write time
+there is no doc yet to restate, so the comment passes its own gate
+honestly, the same reasoning gets written into the README an hour
+later, and nobody goes back. That is how a diff ends up half prose.
+
 How to apply:
 
-- During implementation, confine edits to code, shaders, tests.
-- If a code comment references a doc section about to be wrong,
-  leave it and surface at commit time.
+- Still moving? Code, shaders, tests only. Sweep the docs at commit.
+- Just settled something you would otherwise explain in a comment?
+  Write the README section **now**, and let the code carry a pointer
+  or nothing at all.
+- The tell is the audience. Prose a future session needs *before* it
+  touches the code belongs in the README. Prose that only means
+  anything beside the line it sits on is the rare comment that earns
+  its keep.
+- A decision that took an argument to reach is the highest-value README
+  content there is, and the strongest pull toward a code comment. The
+  PR body gets it too — that is where a reviewer meets it.
 - At commit time, grep the final diff for renames, removed knobs,
   new uniforms, behavioural shifts, anything user-visible. Open
-  every relevant doc and update only what's now stale.
+  every relevant doc and update only what's now stale — and delete the
+  comments that README now covers.
 
 ## Large-PR honesty
 

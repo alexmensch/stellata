@@ -56,6 +56,7 @@ import { emitterPutsInkOnScreen } from '../../hdr/exposure/visibility/emitter-vi
 import { pixelsPerRadianFromUniforms } from '../../util/orbit-line';
 import {
   discHitRadiusPx,
+  enclosureRadiusPx,
   pickFromCandidates,
   physSizePx,
   type PickCandidate,
@@ -252,13 +253,14 @@ interface AttachedHost {
 
 // Per-candidate row in the cross-host pick reducer. Extends the shared
 // `PickCandidate` shape so `pickFromCandidates` in star-geometry.ts
-// reduces it under the same prime/fallback contract every layered
+// reduces it under the same tightest-enclosure contract every layered
 // picker uses. `idx` is the planet-within-host index (decoded from the
 // winning candidate as `hostStarIdx + idx`); the host axis rides
 // through on `hostStarIdx`.
 type CrossHostCandidate = PickCandidate & {
   hostStarIdx: number;
   cameraDistancePc: number;
+  anchorLocal: THREE.Vector3;
 };
 
 export class PlanetBodyField {
@@ -1439,14 +1441,13 @@ export class PlanetBodyField {
     const viewportH = rect.height;
     const camPos = camera.position;
 
-    // Walk every host × planet and collect candidates that qualify for
-    // either tier. Cross-host reduction is delegated to the shared
-    // `pickFromCandidates` (closest-cursor wins within tier, prime
-    // beats fallback) — same reducer the star and Local Group pickers
-    // use, so the cross-layer disambiguator above sees consistent tier
-    // semantics from every layer. The candidate carries its
-    // `hostStarIdx` + `cameraDistancePc` straight through to the
-    // returned HoverHit; no post-reduce re-projection.
+    // Walk every host × planet and collect the candidates the cursor
+    // reaches. Cross-host reduction is delegated to the shared
+    // `pickFromCandidates` (tightest enclosure wins, then deepest inside
+    // it) — the same reducer the star and LG pickers use, so every layer
+    // hands the cross-layer comparator numbers on one scale. The
+    // candidate carries its `hostStarIdx` + `cameraDistancePc` straight
+    // through to the returned HoverHit; no post-reduce re-projection.
     const candidates: CrossHostCandidate[] = [];
     const v = new THREE.Vector3();
     const screen: [number, number] = [0, 0];
@@ -1467,13 +1468,14 @@ export class PlanetBodyField {
       const pxSize = this.discPixelSize(radiusPc, dVp, appMag);
       const hitRadius = discHitRadiusPx(pxSize);
 
-      if (pxDist > hitRadius && pxDist > pxThreshold) return;
+      if (pxDist > enclosureRadiusPx(hitRadius, pxThreshold)) return;
       candidates.push({
         idx: i,
         pxDist,
         hitRadius,
         hostStarIdx: host.hostStarIdx,
         cameraDistancePc: dVp,
+        anchorLocal: new THREE.Vector3(planetX, planetY, planetZ),
       });
     });
 
@@ -1483,7 +1485,9 @@ export class PlanetBodyField {
       idx: winner.candidate.idx,
       hostStarIdx: winner.candidate.hostStarIdx,
       cameraDistancePc: winner.candidate.cameraDistancePc,
-      tier: winner.tier,
+      enclosureRadiusPx: winner.enclosureRadiusPx,
+      depthScore: winner.depthScore,
+      anchorLocal: winner.candidate.anchorLocal,
     };
   }
 

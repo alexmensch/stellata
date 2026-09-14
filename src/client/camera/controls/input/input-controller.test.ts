@@ -5,6 +5,16 @@ import { InputController, type InputControllerDeps } from './input-controller';
 import { DEFAULT_FILTER, type FilterState } from '../../../filters/filter-state';
 import { targetsEqual, type Target } from '../../focus/focus-target';
 import type { Picker } from '../picker';
+import { bestHitBy } from '../../../hover/hover-pick-disambiguator';
+import type { HoverHit } from '../../../hover/hover-types';
+
+// Representative silhouette half-extents for the mock picks, smallest
+// first — the ordering between them is what each overlap test turns on.
+const STAR_PX = 14;
+const PROBE_PX = 14;
+const PLANET_PX = 30;
+const LG_PX = 60;
+const CLOUD_PX = 200;
 import { PoiStore } from '../../../poi/poi-store';
 import type { CameraMode, StellataEventMap } from '../../../stellata';
 import type { EventBus } from '../../../util/event-bus';
@@ -38,17 +48,17 @@ interface Harness {
     pinned: Target[];
     pickStarResult: number;
     pickStarDistancePc: number;
-    pickStarTier: 'prime' | 'fallback';
+    pickStarEnclosurePx: number;
     pickCloudResult: number | null;
     pickPlanetResult: number | null;
     pickPlanetDistancePc: number;
-    pickPlanetTier: 'prime' | 'fallback';
+    pickPlanetEnclosurePx: number;
     pickLgResult: number | null;
     pickLgDistancePc: number;
-    pickLgTier: 'prime' | 'fallback';
+    pickLgEnclosurePx: number;
     pickProbeResult: number | null;
     pickProbeDistancePc: number;
-    pickProbeTier: 'prime' | 'fallback';
+    pickProbeEnclosurePx: number;
     warpActive: boolean;
     aimActive: boolean;
     observeTransitionActive: boolean;
@@ -75,17 +85,17 @@ function makeHarness(): Harness {
     pinned: [] as Target[],
     pickStarResult: -1,
     pickStarDistancePc: 1,
-    pickStarTier: 'prime' as 'prime' | 'fallback',
+    pickStarEnclosurePx: STAR_PX,
     pickCloudResult: null as number | null,
     pickPlanetResult: null as number | null,
     pickPlanetDistancePc: 1,
-    pickPlanetTier: 'prime' as 'prime' | 'fallback',
+    pickPlanetEnclosurePx: PLANET_PX,
     pickLgResult: null as number | null,
     pickLgDistancePc: 1,
-    pickLgTier: 'prime' as 'prime' | 'fallback',
+    pickLgEnclosurePx: LG_PX,
     pickProbeResult: null as number | null,
     pickProbeDistancePc: 1,
-    pickProbeTier: 'prime' as 'prime' | 'fallback',
+    pickProbeEnclosurePx: PROBE_PX,
     warpActive: false,
     aimActive: false,
     observeTransitionActive: false,
@@ -116,46 +126,78 @@ function makeHarness(): Harness {
     aimAt: vi.fn(),
     aimAlong: vi.fn(),
   };
-  const input = new InputController({
-    canvas,
-    camera,
-    controls,
-    picker: {
-      pickStar: () => state.pickStarResult,
-      pickStarHit: () => (state.pickStarResult >= 0
+  const pickStarHit = (): HoverHit | null => (state.pickStarResult >= 0
         ? {
             idx: state.pickStarResult,
             cameraDistancePc: state.pickStarDistancePc,
-            tier: state.pickStarTier,
+            enclosureRadiusPx: state.pickStarEnclosurePx,
+            depthScore: 0,
+            anchorLocal: new THREE.Vector3(),
           }
-        : null),
-      pickKindHit: (kind: string) => {
+    : null);
+  const pickKindHit = (kind: string): HoverHit | null => {
         if (kind === 'planet' && state.pickPlanetResult !== null) {
           return {
             idx: state.pickPlanetResult,
             cameraDistancePc: state.pickPlanetDistancePc,
-            tier: state.pickPlanetTier,
+            enclosureRadiusPx: state.pickPlanetEnclosurePx,
+            depthScore: 0,
+            anchorLocal: new THREE.Vector3(),
           };
         }
         if (kind === 'probe' && state.pickProbeResult !== null) {
           return {
             idx: state.pickProbeResult,
             cameraDistancePc: state.pickProbeDistancePc,
-            tier: state.pickProbeTier,
+            enclosureRadiusPx: state.pickProbeEnclosurePx,
+            depthScore: 0,
+            anchorLocal: new THREE.Vector3(),
           };
         }
         if (kind === 'cloud' && state.pickCloudResult !== null) {
-          return { idx: state.pickCloudResult, cameraDistancePc: 1, tier: 'fallback' };
+          return {
+            idx: state.pickCloudResult,
+            cameraDistancePc: 1,
+            enclosureRadiusPx: CLOUD_PX,
+            depthScore: 0,
+            anchorLocal: new THREE.Vector3(),
+          };
         }
         if (kind === 'lg' && state.pickLgResult !== null) {
           return {
             idx: state.pickLgResult,
             cameraDistancePc: state.pickLgDistancePc,
-            tier: state.pickLgTier,
+            enclosureRadiusPx: state.pickLgEnclosurePx,
+            depthScore: 0,
+            anchorLocal: new THREE.Vector3(),
           };
         }
-        return null;
-      },
+    return null;
+  };
+  // Mirrors Picker.pickAnyKindHit: every kind's pick, reduced by the one
+  // comparator. Written out here only because the mock has no roster.
+  const pickAnyKindHit = (clientX: number, clientY: number, pxThreshold: number) => {
+    const kinds = ['planet', 'probe', 'lg', 'cloud'] as const;
+    const starHit = pickStarHit();
+    const hits: ({ kind: string; hit: HoverHit } | null)[] = [
+      starHit === null ? null : { kind: 'star', hit: starHit },
+      ...kinds.map((kind) => {
+        const hit = pickKindHit(kind);
+        return hit === null ? null : { kind, hit };
+      }),
+    ];
+    void clientX; void clientY; void pxThreshold;
+    return bestHitBy(hits, (h) => h.hit);
+  };
+  const input = new InputController({
+    canvas,
+    camera,
+    controls,
+    picker: {
+      pickStar: () => state.pickStarResult,
+      pickStarHit,
+      pickKindHit,
+      pickAnyKindHit,
     } as unknown as Picker,
     bus: {
       emit: (name: string) => { emitted.push(name); },
@@ -566,21 +608,26 @@ describe('InputController planet clicks — navigate mode', () => {
     expect(deps.unfocus).not.toHaveBeenCalled();
   });
 
-  it('star vs planet overlap: same tier, closer to camera wins', () => {
+  it('star vs planet overlap: the tighter silhouette wins, not the nearer', () => {
     const { input, state, deps } = makeHarness();
     state.pickStarResult = 5;
     state.pickStarDistancePc = 2;
     state.pickPlanetResult = 4;
-    state.pickPlanetDistancePc = 1e-5;
+    state.pickPlanetDistancePc = 1e-5; // orders of magnitude nearer
     (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
-    expect(deps.flyTo).toHaveBeenCalledWith(planet(4));
+    expect(deps.flyTo).toHaveBeenCalledWith(star(5));
   });
 
-  it('star vs planet overlap: prime beats fallback regardless of distance', () => {
+  it('star vs planet overlap: the body wins once it is the tighter of the two', () => {
+    // The mirror of the case above, and the one to keep in view: nothing
+    // here knows a planet from a star, so a body the cursor is deep
+    // inside loses to any smaller thing the cursor also reaches. What
+    // keeps that honest is the visibility gate — a star the body hides
+    // must not be a candidate at all.
     const { input, state, deps } = makeHarness();
     state.pickStarResult = 5;
-    state.pickStarDistancePc = 1e-6; // closer, but only a fallback hit
-    state.pickStarTier = 'fallback';
+    state.pickStarDistancePc = 1e-6;
+    state.pickStarEnclosurePx = 40;
     state.pickPlanetResult = 4;
     state.pickPlanetDistancePc = 1;
     (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
@@ -614,13 +661,12 @@ describe('InputController Local Group clicks — navigate mode', () => {
     expect(deps.flyTo).not.toHaveBeenCalled();
   });
 
-  it('star vs LG overlap: a prime star hit beats a fallback LG hit', () => {
+  it('star vs LG overlap: the star wins inside the LG wireframe', () => {
     const { input, state, deps } = makeHarness();
     state.pickStarResult = 5;
     state.pickStarDistancePc = 100;
     state.pickLgResult = 2;
-    state.pickLgDistancePc = 1; // closer, but only a fallback hit
-    state.pickLgTier = 'fallback';
+    state.pickLgDistancePc = 1; // nearer, but a far looser silhouette
     (input as unknown as WithPrivates).dispatchSingleClick(10, 20);
     expect(deps.flyTo).toHaveBeenCalledWith(star(5));
   });

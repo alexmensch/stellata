@@ -3,6 +3,7 @@ import {
   disambiguateHits,
   type HoverProviderHit,
 } from './hover-pick-disambiguator';
+import * as THREE from 'three';
 import type { HoverHit, HoverProvider, HoverKind } from './hover-types';
 
 // Stub provider whose `format` is never called by the disambiguator —
@@ -17,12 +18,27 @@ const stubProvider = (kind: HoverKind): HoverProvider => ({
 const hit = (
   idx: number,
   cameraDistancePc: number,
-  tier: 'prime' | 'fallback',
-): HoverHit => ({ idx, cameraDistancePc, tier });
+  enclosureRadiusPx: number,
+  depthScore = 0.5,
+): HoverHit => ({
+  idx, cameraDistancePc, enclosureRadiusPx, depthScore,
+  anchorLocal: new THREE.Vector3(idx, 0, 0),
+});
+
+// Representative on-screen half-extents, smallest first. The ordering
+// between them is the whole rule; the exact values only have to keep
+// that ordering.
+const STAR_PX = 14;
+const PLANET_PX = 30;
+const LG_PX = 60;
+const CLOUD_PX = 150;
+const LOCAL_BUBBLE_PX = 1200;
 
 const star = stubProvider('star');
 const planet = stubProvider('planet');
 const lg = stubProvider('local-group');
+const shell = stubProvider('shell');
+const cloud = stubProvider('cloud');
 
 describe('hover-pick-disambiguator / disambiguateHits', () => {
   it('returns null for empty input', () => {
@@ -30,51 +46,108 @@ describe('hover-pick-disambiguator / disambiguateHits', () => {
   });
 
   it('returns the sole hit when only one provider hits', () => {
-    const only: HoverProviderHit = { provider: star, hit: hit(7, 100, 'prime') };
+    const only: HoverProviderHit = { provider: star, hit: hit(7, 100, STAR_PX) };
     expect(disambiguateHits([only])).toBe(only);
   });
 
-  it('prime always beats fallback regardless of camera distance', () => {
-    // Fallback hit is much closer to camera (1 pc) but the prime hit is
-    // far (1000 pc). Prime still wins — cursor is literally inside the
-    // rendered shape.
-    const primeFar: HoverProviderHit = { provider: lg, hit: hit(1, 1000, 'prime') };
-    const fbNear: HoverProviderHit = { provider: planet, hit: hit(2, 1, 'fallback') };
-    expect(disambiguateHits([fbNear, primeFar])).toBe(primeFar);
+  // The four cases the rule exists for, walked from the inside out: a
+  // star inside a cloud inside the Local Bubble, and one cloud inside
+  // another. Camera distance is set to contradict the answer every time.
+  it('a star inside a cloud silhouette wins, though the cloud is nearer', () => {
+    const v519: HoverProviderHit = { provider: star, hit: hit(1, 2300, STAR_PX) };
+    const carina: HoverProviderHit = { provider: cloud, hit: hit(4, 700, CLOUD_PX) };
+    expect(disambiguateHits([carina, v519])).toBe(v519);
   });
 
-  it('within prime tier, smallest cameraDistancePc wins', () => {
-    // Planet at 30 AU (~1.5e-4 pc) sits in front of a star prime hit at
-    // 8 pc — planet wins because it's nearer to camera.
-    const starFar: HoverProviderHit = { provider: star, hit: hit(10, 8, 'prime') };
-    const planetNear: HoverProviderHit = {
-      provider: planet,
-      hit: hit(3, 1.5e-4, 'prime'),
+  it('a cloud inside the Local Bubble wins, though the wall is nearer', () => {
+    const carina: HoverProviderHit = { provider: cloud, hit: hit(4, 2300, CLOUD_PX) };
+    const wall: HoverProviderHit = { provider: shell, hit: hit(0, 90, LOCAL_BUBBLE_PX) };
+    expect(disambiguateHits([wall, carina])).toBe(carina);
+  });
+
+  it('the Local Bubble wins only when nothing tighter encloses the cursor', () => {
+    const wall: HoverProviderHit = { provider: shell, hit: hit(0, 90, LOCAL_BUBBLE_PX) };
+    expect(disambiguateHits([wall])).toBe(wall);
+  });
+
+  it('the enclosed cloud wins over the larger cloud enclosing it', () => {
+    // Pipe behind Polaris: Polaris is nearer AND the cursor can sit
+    // proportionally deeper inside it, so both of the keys this replaced
+    // pick the wrong one.
+    const pipe: HoverProviderHit = { provider: cloud, hit: hit(11, 145, 40, 0.95) };
+    const polaris: HoverProviderHit = { provider: cloud, hit: hit(12, 100, 260, 0.05) };
+    expect(disambiguateHits([polaris, pipe])).toBe(pipe);
+  });
+
+  it('a star inside an LG object wins, and that object beats the cloud around it', () => {
+    const starHit: HoverProviderHit = { provider: star, hit: hit(1, 8, STAR_PX) };
+    const lgHit: HoverProviderHit = { provider: lg, hit: hit(2, 800_000, LG_PX) };
+    const cloudHit: HoverProviderHit = { provider: cloud, hit: hit(4, 140, CLOUD_PX) };
+    expect(disambiguateHits([cloudHit, lgHit, starHit])).toBe(starHit);
+    expect(disambiguateHits([cloudHit, lgHit])).toBe(lgHit);
+  });
+
+  // Viewed from outside, the Local Bubble wall is NEARER than every star
+  // it encloses, which is how a click on a star used to reach the wall.
+  // Size refuses it without knowing what a shell is.
+  it('a star just off centre beats the shell wall in front of it', () => {
+    const offCentreStar: HoverProviderHit = {
+      provider: star,
+      hit: hit(1, 240, STAR_PX, 0.93),
     };
-    expect(disambiguateHits([starFar, planetNear])).toBe(planetNear);
+    const nearWall: HoverProviderHit = {
+      provider: shell,
+      hit: hit(0, 90, LOCAL_BUBBLE_PX, 0.01),
+    };
+    expect(disambiguateHits([nearWall, offCentreStar])).toBe(offCentreStar);
   });
 
-  it('within fallback tier, smallest cameraDistancePc wins', () => {
-    const a: HoverProviderHit = { provider: star, hit: hit(20, 50, 'fallback') };
-    const b: HoverProviderHit = { provider: lg, hit: hit(0, 25, 'fallback') };
-    const c: HoverProviderHit = { provider: planet, hit: hit(5, 0.01, 'fallback') };
-    expect(disambiguateHits([a, b, c])).toBe(c);
+  it('camera distance never ranks, at any magnitude', () => {
+    const touching: HoverProviderHit = { provider: shell, hit: hit(0, 1e-6, LOCAL_BUBBLE_PX) };
+    const remoteStar: HoverProviderHit = { provider: star, hit: hit(1, 1e6, STAR_PX) };
+    const remotePlanet: HoverProviderHit = { provider: planet, hit: hit(2, 1e6, PLANET_PX) };
+    expect(disambiguateHits([touching, remoteStar])).toBe(remoteStar);
+    expect(disambiguateHits([touching, remotePlanet])).toBe(remotePlanet);
+    expect(disambiguateHits([remotePlanet, remoteStar])).toBe(remoteStar);
   });
 
-  it('three-way mixed: prime LG behind prime star and fallback planet — star wins by distance', () => {
-    const primeStar: HoverProviderHit = { provider: star, hit: hit(1, 10, 'prime') };
-    const primeLg: HoverProviderHit = { provider: lg, hit: hit(2, 800_000, 'prime') };
-    const fbPlanet: HoverProviderHit = { provider: planet, hit: hit(3, 1e-4, 'fallback') };
-    expect(disambiguateHits([primeLg, primeStar, fbPlanet])).toBe(primeStar);
+  it('equal enclosures fall to the deeper hit', () => {
+    const shallow: HoverProviderHit = { provider: star, hit: hit(1, 5, STAR_PX, 0.9) };
+    const deep: HoverProviderHit = { provider: planet, hit: hit(2, 5000, STAR_PX, 0.1) };
+    expect(disambiguateHits([shallow, deep])).toBe(deep);
   });
 
-  it('two prime hits at identical camera distance — first encountered wins (registration order)', () => {
-    // Tie-break by registration order (stable: caller controls the
-    // input array order). The first provider whose hit lands at the
-    // best distance is kept; later hits at equal distance lose the
-    // strict-less-than comparison.
-    const a: HoverProviderHit = { provider: star, hit: hit(1, 5, 'prime') };
-    const b: HoverProviderHit = { provider: planet, hit: hit(2, 5, 'prime') };
+  // The gate lives here and nowhere else, so it answers for every kind at
+  // once. Gating per layer is how a kind gets missed: a probe answered
+  // the cursor through Sol's disc while four other kinds correctly
+  // refused to, because the probe's pick was the one nobody had reached.
+  describe('occlusion', () => {
+    const hidesAt = (x: number) => ({
+      occluders: { hides: (pos: THREE.Vector3) => pos.x === x },
+      cameraPos: new THREE.Vector3(),
+    });
+
+    it('drops a hit a nearer solid body hides, whatever produced it', () => {
+      for (const p of [star, planet, lg, cloud, shell]) {
+        const hidden: HoverProviderHit = { provider: p, hit: hit(3, 1, STAR_PX) };
+        expect(disambiguateHits([hidden], hidesAt(3))).toBeNull();
+        expect(disambiguateHits([hidden], null)).toBe(hidden);
+      }
+    });
+
+    it('lets the next surface answer once the hidden one is dropped', () => {
+      // The probe is in front on size and hidden behind a body; the wall
+      // the cursor also found is in open sky and takes the card.
+      const probe: HoverProviderHit = { provider: star, hit: hit(3, 1, STAR_PX) };
+      const wall: HoverProviderHit = { provider: shell, hit: hit(9, 90, LOCAL_BUBBLE_PX) };
+      expect(disambiguateHits([probe, wall], null)).toBe(probe);
+      expect(disambiguateHits([probe, wall], hidesAt(3))).toBe(wall);
+    });
+  });
+
+  it('hits identical on both keys — first encountered wins (registration order)', () => {
+    const a: HoverProviderHit = { provider: star, hit: hit(1, 5, STAR_PX, 0.4) };
+    const b: HoverProviderHit = { provider: planet, hit: hit(2, 5, STAR_PX, 0.4) };
     expect(disambiguateHits([a, b])).toBe(a);
     expect(disambiguateHits([b, a])).toBe(b);
   });

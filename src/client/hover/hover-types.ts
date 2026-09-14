@@ -1,24 +1,26 @@
 // Shared types for the hover-label engine — `HoverProvider`,
 // `HoverHit`, `HoverPayload`. See ./README.md.
 
-// One pick result from a single layer's pick path. `tier` mirrors the
-// star picker's two-tier shape (prime = cursor inside the rendered
-// disc / wireframe envelope; fallback = cursor near the centroid).
-// `cameraDistancePc` breaks ties across providers — closer to camera
-// wins, matching what a human user expects when one object visually
-// sits in front of another.
+import type * as THREE from 'three';
+
+// One pick result from a single layer's pick path. `enclosureRadiusPx`
+// and `depthScore` rank it across layers; `cameraDistancePc` never does
+// and is card text only (./README.md Rule 3).
 //
-// `hostStarIdx` is an optional sub-layer identity slot used by providers
-// whose `idx` alone doesn't pin a unique object — currently the planet
-// provider (a planet is identified by `(hostStarIdx, planetIdx)`,
-// future-ready for the exoplanet epic multi-host). Layers whose `idx` is
-// already a unique catalog row (stars, Local Group, clouds, the lone
-// heliopause apex) leave it `undefined`; the engine doesn't read it,
-// only the originating provider's `format` does.
+// `anchorLocal` is required rather than optional so a kind added later
+// cannot quietly opt out of the occlusion gate and reappear through a
+// planet. It is the point the cursor actually found — never a centroid
+// where the cursor met an edge (`../occlusion/README.md`).
+//
+// `hostStarIdx` is the optional sub-layer identity slot for a provider
+// whose `idx` alone doesn't pin an object; only that provider's `format`
+// reads it (./README.md § Architecture).
 export type HoverHit = {
   idx: number;
   cameraDistancePc: number;
-  tier: 'prime' | 'fallback';
+  enclosureRadiusPx: number;
+  depthScore: number;
+  anchorLocal: Readonly<THREE.Vector3>;
   hostStarIdx?: number;
 };
 

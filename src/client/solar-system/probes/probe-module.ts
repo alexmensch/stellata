@@ -1,6 +1,7 @@
 // The probe ObjectKindModule — load/attach plus every capability leg of
 // the deep-space-probe kind. See ./README.md.
 
+import type * as THREE from 'three';
 import type { FocusableProvider } from '../../camera/focus/focus-target';
 import {
   discHitRadiusPx,
@@ -53,9 +54,12 @@ export function createProbeKindModule(): ProbeKindModule {
     // Mirrors the marker draw predicate exactly (the field's own per-frame
     // `visible` verdict) with the glyph's fixed pixel size as the hit
     // radius — a probe is never focus-gated on the pick side, unlike its
-    // trail. Prime tier inside the glyph, fallback within the threshold.
+    // trail.
     const hitRadius = discHitRadiusPx(PROBE_MARKER_PX);
-    const candidates: Array<PickCandidate & { cameraDistancePc: number }> = [];
+    const candidates: Array<PickCandidate & {
+      cameraDistancePc: number;
+      anchorLocal: THREE.Vector3;
+    }> = [];
     const screen: [number, number] = [0, 0];
     for (let idx = 0; idx < field.probeCount(); idx++) {
       const sample = field.sampleFor(idx);
@@ -67,6 +71,7 @@ export function createProbeKindModule(): ProbeKindModule {
         pxDist: Math.hypot(cursorX - screen[0], cursorY - screen[1]),
         hitRadius,
         cameraDistancePc: camPos.distanceTo(sample.localPc),
+        anchorLocal: sample.localPc.clone(),
       });
     }
     const r = pickFromCandidates(candidates, pixelThreshold);
@@ -74,7 +79,9 @@ export function createProbeKindModule(): ProbeKindModule {
     return {
       idx: r.candidate.idx,
       cameraDistancePc: r.candidate.cameraDistancePc,
-      tier: r.tier,
+      enclosureRadiusPx: r.enclosureRadiusPx,
+      depthScore: r.depthScore,
+      anchorLocal: r.candidate.anchorLocal,
     };
   };
 

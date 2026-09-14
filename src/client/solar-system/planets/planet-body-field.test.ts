@@ -1125,7 +1125,7 @@ describe('PlanetBodyField.pick', () => {
     f.update(camera, 0, 0);
     const hit = f.pick(camera, rectFor(800, 600), 400, 300, 8);
     expect(hit).not.toBeNull();
-    expect(hit!.tier).toBe('prime');
+    expect(hit!.enclosureRadiusPx).toBeGreaterThan(0);
     expect(hit!.idx).toBe(0);
     expect(hit!.hostStarIdx).toBe(0);
     f.dispose();

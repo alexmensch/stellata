@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
+  Heliopause,
   HELIOPAUSE_APEX_SOL_PC,
   HELIOPAUSE_LABEL_ELEMENT_ID,
   HELIOPAUSE_SAMPLE_POINTS_SOL,
@@ -26,20 +27,17 @@ const rect = {
   },
 } as DOMRect;
 
-// Pick surface backed by the real heliopause silhouette samples.
-const surface: ShellPickSurface = {
-  labelElementId: HELIOPAUSE_LABEL_ELEMENT_ID,
-  visible: () => true,
-  sampleCount: () => HELIOPAUSE_SAMPLE_POINTS_SOL.length,
-  sampleLocalInto: (i, worldOffset, out) => {
-    out.copy(HELIOPAUSE_SAMPLE_POINTS_SOL[i]).sub(worldOffset);
-  },
-};
+// The real heliopause: the pick surface is the mesh the layer draws, its
+// FrontSide material and its group transform, not a stand-in.
+function heliopauseSurface(): ShellPickSurface {
+  const shell = new Heliopause();
+  shell.group.updateMatrixWorld(true);
+  return shell.shellPickSurface();
+}
 
 // Camera parked far outside the shell along the apex axis, looking back
-// at Sol — the apex sample lands on the view axis (screen centre) and the
-// whole shell subtends only a few degrees, so every sample projects in
-// front of the near plane.
+// at Sol — the apex lands on the view axis (screen centre) and the whole
+// shell subtends only a few degrees.
 function outsideShellCamera(): THREE.PerspectiveCamera {
   const camPos = HELIOPAUSE_APEX_SOL_PC.clone().normalize()
     .multiplyScalar(HELIOPAUSE_APEX_SOL_PC.length() * 20);
@@ -50,14 +48,29 @@ function outsideShellCamera(): THREE.PerspectiveCamera {
   return cam;
 }
 
-// Camera at Sol (shell interior) — samples on the far wall land behind the
-// camera, tripping the near-plane bail.
+// Camera at Sol — inside the shell, the common near view.
 function insideShellCamera(): THREE.PerspectiveCamera {
   const cam = new THREE.PerspectiveCamera(FOV_DEG, VIEWPORT_W / VIEWPORT_H, 1e-10, 1e6);
   cam.position.set(0, 0, 0);
   cam.lookAt(HELIOPAUSE_APEX_SOL_PC);
   cam.updateMatrixWorld();
   return cam;
+}
+
+/** The screen-space bounding box of the projected silhouette samples —
+ *  the surface this pick used to be. Its corners are what the acceptance
+ *  case below aims at. */
+function sampleBbox(camera: THREE.PerspectiveCamera) {
+  const v = new THREE.Vector3();
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const s of HELIOPAUSE_SAMPLE_POINTS_SOL) {
+    v.copy(s).project(camera);
+    const sx = (v.x + 1) * 0.5 * VIEWPORT_W;
+    const sy = (1 - v.y) * 0.5 * VIEWPORT_H;
+    minX = Math.min(minX, sx); maxX = Math.max(maxX, sx);
+    minY = Math.min(minY, sy); maxY = Math.max(maxY, sy);
+  }
+  return { minX, minY, maxX, maxY };
 }
 
 function withDocumentStub(getElementById: (id: string) => unknown, fn: () => void): void {
@@ -70,26 +83,36 @@ function withDocumentStub(getElementById: (id: string) => unknown, fn: () => voi
   }
 }
 
-function pick(camera: THREE.PerspectiveCamera, x: number, y: number) {
+function pick(
+  surface: ShellPickSurface,
+  camera: THREE.PerspectiveCamera,
+  x: number,
+  y: number,
+) {
   return pickShellSilhouette({
     camera,
     rect,
     clientX: x,
     clientY: y,
-    worldOffset: new THREE.Vector3(),
     surface,
     cameraDistancePc: 42,
     idx: 1,
-    scratch: new THREE.Vector3(),
+    renderedSizePx: SILHOUETTE_PX,
+    pixelThreshold: 14,
   });
 }
 
+// Wide enough that the shell's own enclosure clears the grab threshold,
+// so the tests read the silhouette's size rather than the floor.
+const SILHOUETTE_PX = 600;
+const LABEL_PX = 40;
+
 describe('pickShellSilhouette', () => {
-  it('outside-shell: cursor inside the projected silhouette bbox → fallback hit', () => {
+  it('outside-shell: cursor on the drawn silhouette hits, sized by the silhouette', () => {
     withDocumentStub(() => null, () => {
-      const hit = pick(outsideShellCamera(), VIEWPORT_W / 2, VIEWPORT_H / 2);
+      const hit = pick(heliopauseSurface(), outsideShellCamera(), VIEWPORT_W / 2, VIEWPORT_H / 2);
       expect(hit).not.toBeNull();
-      expect(hit!.tier).toBe('fallback');
+      expect(hit!.enclosureRadiusPx).toBe(SILHOUETTE_PX / 2);
       expect(hit!.idx).toBe(1);
       expect(hit!.cameraDistancePc).toBe(42);
     });
@@ -97,17 +120,66 @@ describe('pickShellSilhouette', () => {
 
   it('outside-shell: cursor far from the silhouette → miss', () => {
     withDocumentStub(() => null, () => {
-      expect(pick(outsideShellCamera(), 2, 2)).toBeNull();
+      expect(pick(heliopauseSurface(), outsideShellCamera(), 2, 2)).toBeNull();
     });
   });
 
-  it('inside-shell: a sample behind the near plane bails the silhouette test', () => {
+  // The acceptance case. The shell is rounded, so the corners of its
+  // projected bounding box are empty sky — and clicking empty sky used to
+  // select "Heliopause".
+  it('outside-shell: the bbox corner the old surface reached is empty sky now', () => {
     withDocumentStub(() => null, () => {
-      expect(pick(insideShellCamera(), VIEWPORT_W / 2, VIEWPORT_H / 2)).toBeNull();
+      const camera = outsideShellCamera();
+      const box = sampleBbox(camera);
+      const surface = heliopauseSurface();
+      // A pixel inside the box on both axes: the old test was
+      // cursor-in-rect, so this was a hit by construction.
+      expect(box.maxX - box.minX).toBeGreaterThan(20);
+      expect(pick(surface, camera, box.minX + 1, box.minY + 1)).toBeNull();
+      expect(pick(surface, camera, box.maxX - 1, box.minY + 1)).toBeNull();
+      expect(pick(surface, camera, box.minX + 1, box.maxY - 1)).toBeNull();
+      expect(pick(surface, camera, box.maxX - 1, box.maxY - 1)).toBeNull();
     });
   });
 
-  it('inside-shell: label bbox overlap still fallback-hits though the silhouette bailed', () => {
+  // No near-plane bail does this any more: the material is FrontSide, so
+  // the ray meets only the far wall's culled back faces.
+  it('inside-shell: the FrontSide cull leaves nothing to hit', () => {
+    withDocumentStub(() => null, () => {
+      expect(
+        pick(heliopauseSurface(), insideShellCamera(), VIEWPORT_W / 2, VIEWPORT_H / 2),
+      ).toBeNull();
+    });
+  });
+
+  // The anchor is what the one occlusion gate tests. A label-only hit
+  // leaves the raycast without a point, and reading the scratch anyway
+  // answered about whatever the PREVIOUS call hit — so this case runs
+  // after a silhouette hit has loaded that scratch with a wall point.
+  it('label-only: anchors at the camera, not the last call\'s wall point', () => {
+    const labelRect = {
+      left: 100, top: 100, right: 140, bottom: 120, width: 40, height: 20,
+    } as DOMRect;
+    const outside = outsideShellCamera();
+    withDocumentStub(() => null, () => {
+      const wall = pick(heliopauseSurface(), outside, VIEWPORT_W / 2, VIEWPORT_H / 2);
+      expect(wall).not.toBeNull();
+      expect(wall!.anchorLocal.equals(outside.position)).toBe(false);
+    });
+    withDocumentStub(
+      (id) => (id === HELIOPAUSE_LABEL_ELEMENT_ID
+        ? { getBoundingClientRect: () => labelRect }
+        : null),
+      () => {
+        // Cursor on the label but off the silhouette: the mesh misses.
+        const hit = pick(heliopauseSurface(), insideShellCamera(), 120, 110);
+        expect(hit).not.toBeNull();
+        expect(hit!.anchorLocal.equals(insideShellCamera().position)).toBe(true);
+      },
+    );
+  });
+
+  it('inside-shell: the label alone hits, and reports the label\'s own size', () => {
     const labelRect = {
       left: 100, top: 100, right: 140, bottom: 120, width: 40, height: 20,
     } as DOMRect;
@@ -116,10 +188,24 @@ describe('pickShellSilhouette', () => {
         ? { getBoundingClientRect: () => labelRect }
         : null),
       () => {
-        const hit = pick(insideShellCamera(), 120, 110);
+        const hit = pick(heliopauseSurface(), insideShellCamera(), 120, 110);
         expect(hit).not.toBeNull();
-        expect(hit!.tier).toBe('fallback');
+        // The label is its own surface, far tighter than the shell it
+        // names — reporting the wall's size here would let anything the
+        // label overlaps outrank a cursor sitting on the text.
+        expect(hit!.enclosureRadiusPx).toBe(LABEL_PX / 2);
       },
     );
+  });
+
+  it('a shell with no mesh yet answers on the label alone', () => {
+    const noMesh: ShellPickSurface = {
+      labelElementId: 'x',
+      visible: () => true,
+      mesh: () => null,
+    };
+    withDocumentStub(() => null, () => {
+      expect(pick(noMesh, outsideShellCamera(), VIEWPORT_W / 2, VIEWPORT_H / 2)).toBeNull();
+    });
   });
 });

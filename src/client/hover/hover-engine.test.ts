@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { createHoverEngine } from './hover-engine';
+import * as THREE from 'three';
 import type { HoverHit, HoverKind, HoverPayload, HoverProvider } from './hover-types';
 
 const DELAY_MS = 280;
@@ -50,7 +51,10 @@ function makeTooltip(rect: (left: number) => { width: number; height: number } =
   return { tooltip, style };
 }
 
-const HIT: HoverHit = { idx: 7, cameraDistancePc: 1, tier: 'prime' };
+const HIT: HoverHit = {
+  idx: 7, cameraDistancePc: 1, enclosureRadiusPx: 14, depthScore: 0,
+  anchorLocal: new THREE.Vector3(),
+};
 
 function makeProvider(
   kind: HoverKind,
@@ -105,7 +109,7 @@ describe('hover-engine', () => {
     expect(tooltip.hidden).toBe(true);
 
     vi.advanceTimersByTime(DELAY_MS);
-    expect(star.pick).toHaveBeenCalledWith(100, 100, 14);
+    expect(star.pick).toHaveBeenCalledWith(100, 100, 7);
     expect(tooltip.hidden).toBe(false);
     expect(tooltip.innerHTML).toBe(
       '<div class="tt-name">Vega</div><div class="tt-sub">7.7 pc</div>',

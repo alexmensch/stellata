@@ -1,8 +1,9 @@
-// Shared silhouette-bbox + label-bbox hit test for boundary shells
+// Shared mesh-raycast + label-bbox hit test for boundary shells
 // (heliopause, Local Bubble). See ./README.md § Boundary shells as focus
 // targets.
 
 import * as THREE from 'three';
+import { enclosureRadiusPx } from '../camera/controls/star-geometry';
 import type { HoverHit } from '../hover/hover-types';
 import type { ShellPickSurface } from './shell-registry';
 
@@ -11,60 +12,82 @@ export interface ShellPickParams {
   rect: DOMRect;
   clientX: number;
   clientY: number;
-  worldOffset: Readonly<THREE.Vector3>;
   surface: ShellPickSurface;
   /** Camera→center distance for the returned hit. */
   cameraDistancePc: number;
   /** Shell Target idx (SHELL_KEYS index). */
   idx: number;
-  scratch: THREE.Vector3;
+  /** Projected silhouette diameter, the hit's size in the cross-layer
+   *  ordering (`../hover/hover-types.ts`). */
+  renderedSizePx: number;
+  /** The engine's grab radius, flooring the reported enclosure exactly as
+   *  it does for every other kind. */
+  pixelThreshold: number;
 }
 
-/** Fallback-tier hit: the projected silhouette bbox OR the label rect.
- *  Any sample behind the near plane bails the silhouette (the shell is
- *  hidden-when-inside, matching the label engine), leaving the label rect
- *  — which is `display:none` when hidden, so its zero bounds harmlessly
- *  fail. Mirrors the original inline heliopause pick. */
+// Neither dead centre nor the rim: a raycast cannot say how deep inside
+// the silhouette the cursor sits, and this score breaks ties against
+// kinds that measure their depth honestly. README.md § shell-pick.ts.
+const SILHOUETTE_DEPTH_SCORE = 0.5;
+
+// Pick-path scratch, rewritten on every call before it is read.
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+const anchor = new THREE.Vector3();
+
+/**
+ * The drawn mesh under the cursor, OR the label rect. What each half
+ * reports for size, depth and anchor: README.md § shell-pick.ts.
+ *
+ * The floating-origin offset arrives through the mesh's `matrixWorld`
+ * rather than a live `worldOffset` read, so the pick answers against the
+ * frame the user actually clicked on rather than the one about to render.
+ */
 export function pickShellSilhouette(p: ShellPickParams): HoverHit | null {
-  const { camera, rect, clientX, clientY, surface, scratch } = p;
-  const cursorX = clientX - rect.left;
-  const cursorY = clientY - rect.top;
+  const { camera, rect, clientX, clientY, surface } = p;
 
-  let allInFront = true;
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  const nearNeg = -camera.near;
-  const n = surface.sampleCount();
-  for (let i = 0; i < n; i++) {
-    surface.sampleLocalInto(i, p.worldOffset, scratch);
-    scratch.applyMatrix4(camera.matrixWorldInverse);
-    if (scratch.z >= nearNeg) {
-      allInFront = false;
-      break;
-    }
-    scratch.applyMatrix4(camera.projectionMatrix);
-    const sx = (scratch.x + 1) * 0.5 * rect.width;
-    const sy = (1 - scratch.y) * 0.5 * rect.height;
-    if (sx < minX) minX = sx;
-    if (sx > maxX) maxX = sx;
-    if (sy < minY) minY = sy;
-    if (sy > maxY) maxY = sy;
+  let insideSilhouette = false;
+  const mesh = surface.mesh();
+  if (mesh !== null) {
+    ndc.set(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -(((clientY - rect.top) / rect.height) * 2 - 1),
+    );
+    raycaster.setFromCamera(ndc, camera);
+    const wallHits = raycaster.intersectObject(mesh, false);
+    insideSilhouette = wallHits.length > 0;
+    if (insideSilhouette) anchor.copy(wallHits[0].point);
   }
-  const insideSilhouette =
-    allInFront && cursorX >= minX && cursorX <= maxX && cursorY >= minY && cursorY <= maxY;
+  // Must be unconditional: reading the scratch unwritten answers the
+  // occlusion gate about whatever the previous call hit. Why the camera
+  // is the right anchor here: README.md § shell-pick.ts.
+  if (!insideSilhouette) anchor.copy(camera.position);
 
-  let insideLabel = false;
+  let labelRadiusPx = Infinity;
+  let labelDepth = 0;
   const labelEl = document.getElementById(surface.labelElementId);
   if (labelEl) {
     const lr = labelEl.getBoundingClientRect();
-    if (lr.width > 0 && lr.height > 0) {
-      insideLabel =
-        clientX >= lr.left && clientX <= lr.right && clientY >= lr.top && clientY <= lr.bottom;
+    if (lr.width > 0 && lr.height > 0
+      && clientX >= lr.left && clientX <= lr.right
+      && clientY >= lr.top && clientY <= lr.bottom) {
+      labelRadiusPx = Math.max(lr.width, lr.height) * 0.5;
+      labelDepth = Math.hypot(
+        clientX - (lr.left + lr.right) * 0.5,
+        clientY - (lr.top + lr.bottom) * 0.5,
+      ) / labelRadiusPx;
     }
   }
 
-  if (!insideSilhouette && !insideLabel) return null;
-  return { idx: p.idx, cameraDistancePc: p.cameraDistancePc, tier: 'fallback' };
+  const silhouetteRadiusPx = insideSilhouette ? p.renderedSizePx * 0.5 : Infinity;
+  const labelIsTighter = labelRadiusPx <= silhouetteRadiusPx;
+  const tightest = labelIsTighter ? labelRadiusPx : silhouetteRadiusPx;
+  if (!Number.isFinite(tightest)) return null;
+  return {
+    idx: p.idx,
+    cameraDistancePc: p.cameraDistancePc,
+    enclosureRadiusPx: enclosureRadiusPx(tightest, p.pixelThreshold),
+    anchorLocal: anchor.clone(),
+    depthScore: labelIsTighter ? labelDepth : SILHOUETTE_DEPTH_SCORE,
+  };
 }

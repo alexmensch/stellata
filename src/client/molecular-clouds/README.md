@@ -225,11 +225,10 @@ geometry behind the fresnel rim and the chart stipple outline — so the
 hitbox matches the silhouette in both modes rather than the far-larger
 absorption ellipsoid (its `SphereGeometry` is only the raymarch domain).
 Chart mode keeps picking: the stipple outline is that same mesh drawing
-a different material. The click handler in `onPointerUp` falls
-back to a cloud pick when no star is hit (stars take priority because
-they're the smaller, more precise target), and the hover engine runs
-the cloud module's provider, so hovering over a cloud's body shows its
-name + distance + axes in the existing tooltip element.
+a different material. Clicks and hovers run the same pick through the
+kind roster, so a cloud competes against every other kind on size rather
+than being reachable only when nothing else was hit; hovering a cloud's
+body shows its name + distance + axes in the existing tooltip element.
 
 **One winner resolver, in the layer.** `MolecularClouds.pick` is the
 single entry point behind the module's one pick surface — the click
@@ -238,8 +237,9 @@ the same function, so the two can never disagree on which of two
 overlapping clouds the cursor is on. A tiebreak living in the click
 handler instead would drift the moment either surface changes. (The
 old click-side warp gate is subsumed by the FSM's `blocksClick()`.)
-Hover tier is always `fallback`: stars, planets, LG objects and shells
-win any overlap with a cloud body.
+Resolving here first cannot disagree with the ordering across layers,
+because both run the same comparison and the smallest of the smallest is
+the smallest (`../hover/README.md` Rule 3).
 
 **The permit that gates the rim gates the pick.** `pick` returns null
 whenever `rimGroup.visible` is false, so below the `representational`
@@ -256,25 +256,32 @@ dark lane is other layers' light minus what the cloud took, and the
 cloud paints nothing there. The group starts hidden so the gate fails
 closed until the first `update` states the permit.
 
-**Proportionally-deepest-inside wins.** The raycast is *only* the
-hit-vs-miss gate (every hit means the cursor is genuinely inside that
-cloud's outline). Among the hits, the winner is the lowest
+**Tightest silhouette wins.** The raycast is *only* the hit-vs-miss gate
+(every hit means the cursor is genuinely inside that cloud's outline).
+Among the hits the winner is the one with the smallest projected radius,
+and only between two of equal size does the lowest
 
     score = pxDistFromProjectedCentre / (renderedSizePx / 2)
 
-— the cursor's offset from the cloud's projected centre as a fraction of
-that cloud's *own* projected radius (0 = dead centre, 1 = at the edge),
-via `cloud-pick-pure.ts`. Ray distance is deliberately not a tiebreak:
-"closest to camera wins" (Three.js `intersectObjects` order) makes the
-background cloud unreachable wherever a foreground one overlaps it — the
-same failure the star picker's `pickScore` rejected. Raw pixel distance
-to the nearest centre is equally wrong in the other direction: clouds
-span a ~10× on-screen size range, so a small cloud is within a few dozen
-px of its own centre almost everywhere inside itself and would take the
-whole overlap region. Scale-invariance is the property that keeps both
-reachable. Accepted trade: near the edge of a big complex, an
-overlapping small cloud takes the pick — that is what makes the small
-cloud reachable at all.
+decide — the cursor's offset from the cloud's projected centre as a
+fraction of that cloud's *own* projected radius (0 = dead centre, 1 = at
+the edge). That is the shared reducer's **default** scorer,
+`pxDist / hitRadius`, over the radius `cloudPickCandidate` builds; the
+layer passes no scorer of its own, because a cloud-specific one would be
+the same expression written twice.
+
+Both of the keys this replaced leave a cloud unreachable. Ray distance
+("closest to camera wins", Three.js `intersectObjects` order) makes the
+background cloud unreachable wherever a foreground one overlaps it.
+Centrality alone fails the other way round: the cursor sits
+proportionally deeper in a big complex near its centre than in a small
+cloud near its rim, so the big one takes the small one's whole outer
+half. Size is self-limiting instead — a small cloud takes exactly the
+pixels it covers and no more.
+
+This is the same comparison every other kind is ranked by, on the same
+field, so a cloud and a shell and a star all order by size with nothing
+kind-specific anywhere (`../hover/README.md` Rule 3).
 
 Projection is against the **effective centre** (§ Effective focus
 geometry), and the denominator is the layer's `renderedSizePx` — the
@@ -283,9 +290,10 @@ both at the depicted `u = uEnv` envelope, keyed off the canonical
 shader-side pixels-per-radian (`KindContext.angularToPx()`, which reads
 the shared view uniforms the star passes write) so the score matches the
 silhouette the user actually clicked inside.
-Every hit enters the shared `pickFromCandidates` reducer as a prime-tier
-candidate with `hitRadius: Infinity` — see `cloudPickCandidate` for why a
-real radius would misclassify near-lobe hits.
+Every hit enters the shared `pickFromCandidates` reducer with `enclosed`
+set, so the ray's verdict stands and `hitRadius` reports the silhouette's
+size alone — see `cloudPickCandidate` for why deriving enclosure from
+that radius instead would misclassify near-lobe hits.
 
 ## Search
 

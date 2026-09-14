@@ -202,7 +202,7 @@ describe('LocalGroupLayer.pick', () => {
     layer.dispose();
   });
 
-  it('prime tier: cursor inside the floored hit radius hits the object', () => {
+  it('cursor inside the floored hit radius hits the object', () => {
     const layer = makeVisibleLayer([
       makeObject({ centerAbs: new THREE.Vector3(0, 0, 0), axes: [100, 80, 80] }),
     ]);
@@ -211,14 +211,13 @@ describe('LocalGroupLayer.pick', () => {
     const hit = layer.pick(camera, new THREE.Vector3(), makePickRect(), screen.x, screen.y, 14);
     expect(hit).not.toBeNull();
     expect(hit!.idx).toBe(0);
-    expect(hit!.tier).toBe('prime');
     layer.dispose();
   });
 
-  it('fallback tier: cursor within pixelThreshold but outside a sub-floor hit radius', () => {
+  it('cursor within pixelThreshold but outside a sub-floor hit radius', () => {
     // Tiny axes → pxSize floors at MIN_DISC_HIT_RADIUS_PX (4 px). A
-    // cursor 6 px away misses the prime tier but lands inside the 14 px
-    // fallback threshold.
+    // cursor 6 px away is outside the drawn disc but inside the 14 px
+    // grab threshold the enclosure floors at.
     const layer = makeVisibleLayer([
       makeObject({ centerAbs: new THREE.Vector3(0, 0, 0), axes: [1e-6, 1e-6, 1e-6] }),
     ]);
@@ -229,11 +228,11 @@ describe('LocalGroupLayer.pick', () => {
     );
     expect(hit).not.toBeNull();
     expect(hit!.idx).toBe(0);
-    expect(hit!.tier).toBe('fallback');
+    expect(hit!.enclosureRadiusPx).toBe(14);
     layer.dispose();
   });
 
-  it('returns null once the cursor clears both tiers', () => {
+  it('returns null once the cursor clears the enclosure entirely', () => {
     const layer = makeVisibleLayer([
       makeObject({ centerAbs: new THREE.Vector3(0, 0, 0), axes: [1e-6, 1e-6, 1e-6] }),
     ]);
@@ -244,7 +243,7 @@ describe('LocalGroupLayer.pick', () => {
     layer.dispose();
   });
 
-  it('overlapping objects: within a tier, the candidate closer to the cursor wins (no brightness axis)', () => {
+  it('overlapping objects of equal size: the closer candidate wins (no brightness axis)', () => {
     // Two large, near-identical-distance objects with overlapping hit
     // radii, offset a few pixels apart on screen. Per the pick()
     // docstring, LG has no apparent-magnitude bias — the default
@@ -263,7 +262,6 @@ describe('LocalGroupLayer.pick', () => {
     const screen = projectToPickScreen(new THREE.Vector3(0, 0, 0), camera);
     const hit = layer.pick(camera, new THREE.Vector3(), makePickRect(), screen.x, screen.y, 14);
     expect(hit).not.toBeNull();
-    expect(hit!.tier).toBe('prime');
     expect(hit!.idx).toBe(1);
     layer.dispose();
   });

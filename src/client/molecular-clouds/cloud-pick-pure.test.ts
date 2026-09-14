@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { cloudPickCandidate, cloudPickScore, resolveCloudPick } from './cloud-pick-pure';
+import {
+  cloudPickCandidate,
+  resolveCloudPick,
+  type CloudPickCandidate,
+} from './cloud-pick-pure';
 
 // The two overlapping complexes the rule was designed against: Taurus as
 // a 300 px-wide silhouette with the much smaller California nebula
@@ -14,17 +18,22 @@ function california(pxFromCentre: number) {
   return cloudPickCandidate(1, pxFromCentre, 470, CALIFORNIA_PX);
 }
 
-describe('cloudPickScore', () => {
+// Centrality is the shared reducer's default scorer over the radius
+// `cloudPickCandidate` builds, so it is read back off the result rather
+// than from a cloud-specific function.
+describe('cloud centrality score', () => {
+  const depth = (c: CloudPickCandidate) => resolveCloudPick([c], 0)!.depthScore;
+
   it('is the cursor offset as a fraction of the cloud own projected radius', () => {
-    expect(cloudPickScore(0, TAURUS_PX)).toBe(0);
-    expect(cloudPickScore(150, TAURUS_PX)).toBe(1);
-    expect(cloudPickScore(75, TAURUS_PX)).toBe(0.5);
+    expect(depth(taurus(0))).toBe(0);
+    expect(depth(taurus(150))).toBe(1);
+    expect(depth(taurus(75))).toBe(0.5);
     // Scale-invariant: the same fraction of a 3.3× smaller silhouette.
-    expect(cloudPickScore(22.5, CALIFORNIA_PX)).toBe(0.5);
+    expect(depth(california(22.5))).toBe(0.5);
   });
 
   it('stays finite for a silhouette collapsed below the radius floor', () => {
-    const score = cloudPickScore(0.2, 0);
+    const score = depth(cloudPickCandidate(0, 0.2, 140, 0));
     expect(Number.isFinite(score)).toBe(true);
     expect(score).toBeGreaterThan(0);
   });
@@ -32,45 +41,47 @@ describe('cloudPickScore', () => {
 
 describe('resolveCloudPick', () => {
   it('returns null for no hits', () => {
-    expect(resolveCloudPick([])).toBeNull();
+    expect(resolveCloudPick([], 0)).toBeNull();
   });
 
   it('returns the only hit, however far off-centre the cursor sits', () => {
-    const winner = resolveCloudPick([taurus(149)]);
+    const winner = resolveCloudPick([taurus(149)], 0);
     expect(winner?.candidate.idx).toBe(0);
     expect(winner?.candidate.cameraDistancePc).toBe(140);
   });
 
-  it('every enclosing hit is prime tier — no pixel threshold can drop it', () => {
-    // 900 px from the centre of a cloud that fills the screen: a
-    // real-radius hitRadius would demote this to the fallback tier and
-    // the reducer threshold (0) would then discard it entirely.
-    const winner = resolveCloudPick([cloudPickCandidate(0, 900, 12, 4000)]);
+  it('the raycast carries enclosure, so no pixel threshold can drop a hit', () => {
+    // 900 px from the centre of a cloud that fills the screen. The ray
+    // already proved the cursor is inside the silhouette, so the radius
+    // reports size and never gates.
+    const winner = resolveCloudPick([cloudPickCandidate(0, 900, 12, 4000)], 14);
     expect(winner?.candidate.idx).toBe(0);
-    expect(winner?.tier).toBe('prime');
+    expect(winner?.enclosureRadiusPx).toBe(2000);
   });
 
-  it('picks the big complex when the cursor is proportionally deeper inside it', () => {
-    // 130/150 = 0.87 vs 40/45 = 0.89 — Taurus wins even though the
-    // cursor is 3× closer to California centre in raw pixels, which is
-    // what a nearest-projected-centre rule would have picked.
-    expect(resolveCloudPick([taurus(130), california(40)])?.candidate.idx).toBe(0);
+  // The nested case: California sits inside Taurus on screen, so it is
+  // the tighter answer everywhere the cursor is inside both — including
+  // the places a centrality rule handed to Taurus, which is what made a
+  // small cloud unreachable inside a large one.
+  it('the smaller silhouette wins wherever the cursor is inside both', () => {
+    expect(resolveCloudPick([taurus(130), california(40)], 0)?.candidate.idx).toBe(1);
+    expect(resolveCloudPick([taurus(140), california(20)], 0)?.candidate.idx).toBe(1);
+    expect(resolveCloudPick([taurus(30), california(44)], 0)?.candidate.idx).toBe(1);
   });
 
-  it('picks the small cloud when the cursor is central in it and at the big edge', () => {
-    // 140/150 = 0.93 vs 20/45 = 0.44.
-    expect(resolveCloudPick([taurus(140), california(20)])?.candidate.idx).toBe(1);
+  it('the big complex keeps everywhere the small cloud does not reach', () => {
+    expect(resolveCloudPick([taurus(30)], 0)?.candidate.idx).toBe(0);
   });
 
-  it('picks the big complex when the cursor is near the small cloud edge', () => {
-    // 30/150 = 0.20 vs 44/45 = 0.98.
-    expect(resolveCloudPick([taurus(30), california(44)])?.candidate.idx).toBe(0);
+  it('centrality still separates two silhouettes of the same size', () => {
+    const a = cloudPickCandidate(0, 60, 140, TAURUS_PX);
+    const b = cloudPickCandidate(1, 20, 470, TAURUS_PX);
+    expect(resolveCloudPick([a, b], 0)?.candidate.idx).toBe(1);
   });
 
-  it('is independent of camera distance — the foreground cloud does not win by depth', () => {
-    // California sits 330 pc nearer the camera in the fixture; ordering
-    // the candidates either way resolves to the same winner.
-    expect(resolveCloudPick([california(40), taurus(130)])?.candidate.idx).toBe(0);
-    expect(resolveCloudPick([taurus(130), california(40)])?.candidate.idx).toBe(0);
+  it('is independent of camera distance, in either candidate order', () => {
+    // California sits 330 pc nearer the camera in the fixture.
+    expect(resolveCloudPick([california(40), taurus(130)], 0)?.candidate.idx).toBe(1);
+    expect(resolveCloudPick([taurus(130), california(40)], 0)?.candidate.idx).toBe(1);
   });
 });

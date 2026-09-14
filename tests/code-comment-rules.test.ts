@@ -199,6 +199,96 @@ describe('forbidden code-comment patterns', () => {
   });
 });
 
+// Comment vs code lines in one file. Blank lines count as neither. `#`
+// is a comment only in Python — a TS line can open with a private field.
+function commentCodeLines(path: string): { comment: number; code: number } {
+  const content = readFileSync(path, 'utf8');
+  if (content.includes('AUTO-GENERATED')) return { comment: 0, code: 0 };
+  const py = path.endsWith('.py');
+  let comment = 0;
+  let code = 0;
+  let inBlock = false;
+  for (const raw of content.split('\n')) {
+    const s = raw.trim();
+    if (s === '') continue;
+    if (inBlock) {
+      comment++;
+      if (s.includes('*/')) inBlock = false;
+      continue;
+    }
+    if (s.startsWith('/*')) {
+      comment++;
+      if (!s.includes('*/')) inBlock = true;
+      continue;
+    }
+    if (s.startsWith('//') || (py && s.startsWith('#'))) { comment++; continue; }
+    code++;
+  }
+  return { comment, code };
+}
+
+// Reports, never fails. A hard threshold would be wrong in both
+// directions — a derivation-heavy pure helper is legitimately 60% prose
+// while a renderer at 40% is bloat — and the useful output is a list of
+// files to trim, which a pass/fail verdict cannot carry.
+describe('comment-to-code ratio', () => {
+  const TARGET_FILE_SHARE_PCT = 20;
+  const MIN_FILE_LINES = 80;
+  const REPORT_CAP = 10;
+
+  it(`reports source files over ${TARGET_FILE_SHARE_PCT}% comment lines`, () => {
+    let comment = 0;
+    let code = 0;
+    const files: Array<{ file: string; comment: number; code: number }> = [];
+    for (const root of SCAN_DIRS) {
+      const start = join(ROOT, root);
+      try { statSync(start); } catch { continue; }
+      for (const path of walk(start)) {
+        if (resolve(path) === SELF) continue;
+        // Suites carry explanatory prose by design and are half the tree
+        // by line count, so including them dilutes the signal to nothing.
+        if (/\.test\./.test(path)) continue;
+        const r = commentCodeLines(path);
+        comment += r.comment;
+        code += r.code;
+        if (r.comment + r.code >= MIN_FILE_LINES) {
+          files.push({ file: relative(ROOT, path), ...r });
+        }
+      }
+    }
+    const pct = (c: number, k: number) => (100 * c) / (c + k);
+    const over = files
+      .filter(f => pct(f.comment, f.code) > TARGET_FILE_SHARE_PCT)
+      .sort((a, b) => b.comment - a.comment);
+    if (over.length === 0) return;
+
+    const listed = over.slice(0, REPORT_CAP)
+      .map(f => `  ${pct(f.comment, f.code).toFixed(0).padStart(3)}%  `
+        + `${String(f.comment).padStart(4)} comment / ${String(f.code).padStart(4)} code  ${f.file}`)
+      .join('\n');
+    const rest = over.length > REPORT_CAP
+      ? `\n  … and ${over.length - REPORT_CAP} more over ${TARGET_FILE_SHARE_PCT}%.\n` : '\n';
+    process.stderr.write(
+      `\n── prose-heavy source files ──────────────────────────────────\n`
+      + `src/ and scripts/ are ${pct(comment, code).toFixed(1)}% comment lines overall. `
+      + `${over.length} files are over ${TARGET_FILE_SHARE_PCT}%, most prose first:\n\n`
+      + listed + rest
+      + `\nTrim the ones this change already touches — the list is a standing\n`
+      + `backlog, not a gate, and clearing it in one pass is not the point.\n`
+      + `For each block, in this order:\n`
+      + `  1. Does it need to exist at all? Identifiers, types and control flow\n`
+      + `     are the explanation. Deleting is the default, not the fallback.\n`
+      + `  2. Does it explain a decision, an invariant, a rejected alternative,\n`
+      + `     or anything a reader needs BEFORE they touch the code? That is the\n`
+      + `     folder README's job — move it there and leave a pointer at most.\n`
+      + `  3. Only prose whose absence would make a reader of THIS line act\n`
+      + `     wrongly stays in the code.\n`
+      + `AGENTS.md § Code comments; docs/authoring-patterns.md § Defer doc updates.\n`
+      + `──────────────────────────────────────────────────────────────\n`
+    );
+  });
+});
+
 describe('module docstring length', () => {
   const MAX_LINES = 3;
   const allowlist = loadDocstringAllowlist();

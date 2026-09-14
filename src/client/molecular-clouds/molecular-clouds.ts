@@ -377,12 +377,12 @@ export class MolecularClouds {
    * entry point behind the cloud module's pick surface, which the click
    * FSM and the hover engine share, so the two can never disagree.
    * Rim-mesh raycast gates hit-vs-miss; `resolveCloudPick` picks the
-   * cloud the cursor sits proportionally deepest inside (README
-   * § Picking + hover). Tier is always `fallback` — stars, planets, LG
-   * objects and shells win any overlap with a cloud body.
+   * cloud with the tightest silhouette, then the one the cursor sits
+   * proportionally deepest inside (README § Picking + hover).
    *
-   * Only cloud geometry is tested: foreground stars don't block a cloud
-   * pick here, the caller picks those first and falls back to a cloud.
+   * Only cloud geometry is tested: this resolves which CLOUD the cursor
+   * is in, and the cross-layer comparator ranks that answer against every
+   * other kind (`../hover/hover-pick-disambiguator.ts`).
    *
    * Returns null whenever the rim shells are not permitted — the rim is
    * the only mark the layer paints for itself (README § Picking + hover).
@@ -394,6 +394,7 @@ export class MolecularClouds {
     clientX: number,
     clientY: number,
     angularToPx: number,
+    pixelThreshold: number,
   ): HoverHit | null {
     if (!this.rimGroup.visible) return null;
     const cursorX = clientX - rect.left;
@@ -409,12 +410,17 @@ export class MolecularClouds {
     const centre = this.pickCentreLocal;
     const candidates: CloudPickCandidate[] = [];
     const seen = new Set<number>();
+    const anchorByIdx = new Map<number, THREE.Vector3>();
     for (const hit of hits) {
       const idx = hit.object.userData.cloudIdx;
       // A traced isosurface can present several front faces along one
       // ray; every hit on the same cloud scores identically.
       if (typeof idx !== 'number' || seen.has(idx)) continue;
       seen.add(idx);
+      // The anchor is the hit POINT, not the centroid: a complex whose
+      // centre a planet covers is still in open sky wherever the cursor
+      // found it.
+      anchorByIdx.set(idx, hit.point.clone());
       if (!this.cloudLocalPositionInto(idx, worldOffset, centre)) continue;
       const cameraDistancePc = centre.distanceTo(camera.position);
       const viewDir = this.pickViewDir
@@ -432,12 +438,14 @@ export class MolecularClouds {
         cloudPickCandidate(idx, pxDist, cameraDistancePc, silhouetteDiameterPx));
     }
 
-    const winner = resolveCloudPick(candidates);
+    const winner = resolveCloudPick(candidates, pixelThreshold);
     if (winner === null) return null;
     return {
       idx: winner.candidate.idx,
       cameraDistancePc: winner.candidate.cameraDistancePc,
-      tier: 'fallback',
+      enclosureRadiusPx: winner.enclosureRadiusPx,
+      depthScore: winner.depthScore,
+      anchorLocal: anchorByIdx.get(winner.candidate.idx)!,
     };
   }
 

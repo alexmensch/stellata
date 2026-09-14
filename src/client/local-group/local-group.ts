@@ -17,6 +17,7 @@ import { makeOrbitLineLoop } from '../util/orbit-line';
 import {
   angularDiameterPx,
   discHitRadiusPx,
+  enclosureRadiusPx,
   pickFromCandidates,
   type PickCandidate,
 } from '../camera/controls/star-geometry';
@@ -25,7 +26,10 @@ import type { HoverHit } from '../hover/hover-types';
 // LG-specific pick candidate. Carries `cameraDistancePc` so the
 // winning candidate rides distance through to the `HoverHit` without
 // the picker re-projecting after the reducer runs.
-type LgPickCandidate = PickCandidate & { cameraDistancePc: number };
+type LgPickCandidate = PickCandidate & {
+  cameraDistancePc: number;
+  lx: number; ly: number; lz: number;
+};
 
 const RING_SEGMENTS = 64;
 
@@ -158,18 +162,18 @@ export class LocalGroupLayer {
    *  estimate the projected silhouette radius as the angular size of the
    *  largest semi-axis (the orientation-independent upper bound — no
    *  direction perpendicular to the line of sight can extend farther
-   *  than `maxSemiAxisPc(obj)` from the centroid). Two-tier per the
-   *  shared pick contract (star + planet pickers): prime if the cursor
-   *  sits inside the floored hit radius (`MIN_DISC_HIT_RADIUS_PX`
-   *  floor matches stars + planets so distant LG objects with
-   *  sub-pixel angular size remain hoverable); fallback if within
-   *  `pixelThreshold` of the centroid.
+   *  than `maxSemiAxisPc(obj)` from the centroid). That radius is the
+   *  object's enclosure, floored at `MIN_DISC_HIT_RADIUS_PX` to match
+   *  stars and planets so distant LG objects with sub-pixel angular size
+   *  remain hoverable, and again at `pixelThreshold` by the shared
+   *  reducer.
    *
-   *  Within-tier scoring is closest-cursor-wins via the default
-   *  `pickFromCandidates` scorer (no brightness bias — LG wireframes
-   *  have no apparent-magnitude axis). Each candidate carries its
-   *  `cameraDistancePc` so the winning candidate hands `tier` +
-   *  distance straight to the returned `HoverHit` — no re-projection.
+   *  Ties between equal enclosures score deepest-inside-its-own-envelope
+   *  via the default `pickFromCandidates` scorer (no brightness bias — LG
+   *  wireframes have no apparent-magnitude axis). Each candidate carries
+   *  its `cameraDistancePc` so the winner hands the ranking numbers and
+   *  the distance straight to the returned `HoverHit` — no
+   *  re-projection.
    */
   pick(
     camera: THREE.PerspectiveCamera,
@@ -212,8 +216,8 @@ export class LocalGroupLayer {
       const pxSize = 2 * Math.atan(maxSemiAxisPc(obj) / Math.max(cameraDistancePc, 1)) * pxPerRad;
       const hitRadius = discHitRadiusPx(pxSize);
 
-      if (pxDist > hitRadius && pxDist > pixelThreshold) continue;
-      candidates.push({ idx: i, pxDist, hitRadius, cameraDistancePc });
+      if (pxDist > enclosureRadiusPx(hitRadius, pixelThreshold)) continue;
+      candidates.push({ idx: i, pxDist, hitRadius, cameraDistancePc, lx, ly, lz });
     }
 
     const winner = pickFromCandidates(candidates, pixelThreshold);
@@ -221,7 +225,9 @@ export class LocalGroupLayer {
     return {
       idx: winner.candidate.idx,
       cameraDistancePc: winner.candidate.cameraDistancePc,
-      tier: winner.tier,
+      enclosureRadiusPx: winner.enclosureRadiusPx,
+      depthScore: winner.depthScore,
+      anchorLocal: new THREE.Vector3(winner.candidate.lx, winner.candidate.ly, winner.candidate.lz),
     };
   }
 

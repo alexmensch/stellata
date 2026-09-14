@@ -10,7 +10,9 @@ import { DCAM_LOG_FLOOR_PC } from '../timing';
 import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
 import { projectToScreenInto } from '../../overlays/overlay-project';
 import {
+  PICK_THRESHOLD_PX,
   discHitRadiusPx,
+  enclosureRadiusPx,
   pickFromCandidatesResolved,
   pickScore,
   sortedDistRange,
@@ -19,6 +21,10 @@ import {
   type StarPickCandidate,
 } from './star-geometry';
 import { activePulsationAmp } from './star-physics';
+import {
+  bestVisibleHitBy,
+  type PickVisibility,
+} from '../../hover/hover-pick-disambiguator';
 import type { HoverHit } from '../../hover/hover-types';
 
 export interface PickerDeps {
@@ -36,7 +42,10 @@ export interface PickerDeps {
   // migrated kind, absent for kinds whose pick path is still inline.
   // Hover providers call the same functions, so the two can't disagree.
   kindPicks: Readonly<Partial<Record<TargetKind, KindPick>>>;
-  // Star disc pixel diameter for the prime-tier hit radius. Threaded
+  // Feeds the one occlusion gate, applied across every kind at once in
+  // `pickAnyKindHit` and never per layer (`../../hover/README.md` Rule 3).
+  visibility?: () => PickVisibility | null;
+  // Star disc pixel diameter for the hit radius. Threaded
   // as a callback so Picker stays decoupled from material uniforms.
   renderedSizePxFn: (idx: number) => number;
   // Live `iSuppressPulsation` mirror, read once per pick so the scan's
@@ -74,14 +83,22 @@ export class Picker {
 
   /** Pick a star under the cursor for the click FSM. Returns the
    *  winning catalog index or -1 if no star is hit. */
-  pickStar(clientX: number, clientY: number, pixelThreshold = 16): number {
+  pickStar(
+    clientX: number,
+    clientY: number,
+    pixelThreshold = PICK_THRESHOLD_PX,
+  ): number {
     const idx = this.pickStarResult(clientX, clientY, pixelThreshold)?.candidate.idx ?? -1;
     return idx >= 0 ? this.deps.resolveCollapsedLead(idx) : idx;
   }
 
   // ─── Hover picks ──────────────────────────────────────────────────
 
-  pickStarHit(clientX: number, clientY: number, pixelThreshold = 14): HoverHit | null {
+  pickStarHit(
+    clientX: number,
+    clientY: number,
+    pixelThreshold = PICK_THRESHOLD_PX,
+  ): HoverHit | null {
     const r = this.pickStarResult(clientX, clientY, pixelThreshold);
     if (r === null) return null;
     // Collapsed members sit sub-pixel from their lead, so the picked
@@ -89,7 +106,9 @@ export class Picker {
     return {
       idx: this.deps.resolveCollapsedLead(r.candidate.idx),
       cameraDistancePc: r.candidate.cameraDistancePc,
-      tier: r.tier,
+      enclosureRadiusPx: r.enclosureRadiusPx,
+      depthScore: r.depthScore,
+      anchorLocal: r.candidate.anchorLocal,
     };
   }
 
@@ -99,14 +118,31 @@ export class Picker {
     kind: TargetKind,
     clientX: number,
     clientY: number,
-    pixelThreshold = 14,
+    pixelThreshold = PICK_THRESHOLD_PX,
   ): HoverHit | null {
     return this.deps.kindPicks[kind]?.(clientX, clientY, pixelThreshold) ?? null;
   }
 
+  /** The winning object across every registered kind, by the comparator
+   *  the hover engine runs over the same picks. Roster-driven, never a
+   *  written-out kind list — README.md § picker.ts. */
+  pickAnyKindHit(
+    clientX: number,
+    clientY: number,
+    pixelThreshold = PICK_THRESHOLD_PX,
+  ): { kind: TargetKind; hit: HoverHit } | null {
+    const hits: ({ kind: TargetKind; hit: HoverHit } | null)[] = [];
+    for (const entry of Object.entries(this.deps.kindPicks)) {
+      const [kind, pick] = entry as [TargetKind, KindPick];
+      const hit = pick(clientX, clientY, pixelThreshold);
+      hits.push(hit === null ? null : { kind, hit });
+    }
+    return bestVisibleHitBy(hits, (h) => h.hit, this.deps.visibility?.() ?? null);
+  }
+
   // ─── Internal ─────────────────────────────────────────────────────
 
-  // Two-tier star pick (project + filter + collect; reducer in
+  // Star pick (project + filter + collect; reducer in
   // star-geometry.ts). Camera distance is deliberately ignored — see
   // pickScore for the rationale.
   private pickStarResult(
@@ -170,15 +206,16 @@ export class Picker {
       // Extinction-blind, so an upper bound of the resolved radius —
       // which is what pickFromCandidatesResolved requires of it.
       const hitRadius = discHitRadiusPx(pxSize);
-      // Prune to candidates that could win in either tier; the reducer
-      // re-checks tier eligibility, this is just to keep the array tiny.
-      if (pxDist > hitRadius && pxDist > pixelThreshold) continue;
-      candidates.push({ idx: i, pxDist, hitRadius, appMag, cameraDistancePc: dCam });
+      if (pxDist > enclosureRadiusPx(hitRadius, pixelThreshold)) continue;
+      candidates.push({
+        idx: i, pxDist, hitRadius, appMag, cameraDistancePc: dCam,
+        anchorLocal: new THREE.Vector3(x, y, z),
+      });
     }
     return pickFromCandidatesResolved(
       candidates,
       pixelThreshold,
-      (c) => pickScore(c.pxDist, c.appMag),
+      (c) => pickScore(c.pxDist, c.appMag, c.hitRadius),
       (c) => this.deps.resolveStarPick(c.idx),
     );
   }

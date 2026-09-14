@@ -166,7 +166,10 @@ describe('star kind module', () => {
     const { m } = await loadedModule();
     const ctx = makeKindContext();
     m.attach(ctx);
-    const hit = { idx: 2, cameraDistancePc: 4, tier: 'prime' as const };
+    const hit = {
+      idx: 2, cameraDistancePc: 4, enclosureRadiusPx: 14, depthScore: 0,
+      anchorLocal: new THREE.Vector3(),
+    };
     const pickStarHit = vi.fn(() => hit);
     m.setRuntime(makeRuntime({ pickStarHit }));
     const hover = m.hover!();

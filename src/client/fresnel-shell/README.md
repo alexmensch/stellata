@@ -63,9 +63,32 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
   top-level registry on `Stellata`.
 - `shell-object-sids.ts` — `SHELL_OBJECT_SIDS`, the hand-written
   key → frozen-SID pin (§ SID pins).
-- `shell-pick.ts` — `pickShellSilhouette`, the shared silhouette-bbox +
-  label-bbox hit test (fallback tier) both shells' click / hover picks
-  use, keyed on a `ShellPickSurface`.
+- `shell-pick.ts` — `pickShellSilhouette`, the shared mesh-raycast +
+  label-bbox hit test both shells' click / hover picks use, keyed on a
+  `ShellPickSurface`. It reports the silhouette's projected radius as the
+  hit's enclosure, and a label-only hit reports the LABEL's much tighter
+  radius instead — the shell's size there would let anything the label
+  overlaps outrank a cursor sitting on the text. The raycast is the cloud layer's
+  mechanism, and the hit surface is the drawn silhouette exactly; the
+  `FrontSide` material means a ray from inside misses on its own, so the
+  hide-when-inside contract needs no separate guard here.
+
+  **The two halves report different anchors, and that is the point.** A
+  silhouette hit anchors at the wall point the ray found. A label-only hit
+  has no ray point, so it anchors at the CAMERA — which the occlusion gate
+  reads as "nothing in front of this" (`../occlusion/README.md`). That is
+  the honest answer rather than a dodge: the label engine already asked the
+  occluder set about its own support point and hid the text if a body was
+  in the way (`../overlays/README.md` § The two label halves), so a rect
+  with bounds is a label that has already passed. Anchoring on the wall
+  behind the words would re-ask a different question, and reading the
+  raycast scratch unwritten answers about whatever the previous call hit.
+
+  Depth is the tiebreak between equal enclosures, so both halves owe one. A
+  label hit measures the cursor's offset from the rect's centre. A raycast
+  cannot — it is hit-or-miss — so a silhouette reports the middle of the
+  scale: dead centre would beat every kind that measured honestly, the rim
+  would lose to all of them.
 
 ## The material seam
 

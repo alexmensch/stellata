@@ -148,7 +148,10 @@ describe('shell kind module', () => {
     binds.heliopauseShell!(true);
     const hit = pick(400, 300, 14);
     expect(hit?.idx).toBe(0);
-    expect(hit?.tier).toBe('fallback');
+    // A whole wall encloses far more loosely than the grab threshold it
+    // floors at, which is exactly why anything else under the cursor
+    // outranks it.
+    expect(hit?.enclosureRadiusPx).toBeGreaterThan(14);
     expect(hit?.cameraDistancePc).toBeCloseTo(300, 5);
     expect(pick(790, 590, 14)).toBeNull();
     // Un-permitting hides the wall and its pick together.

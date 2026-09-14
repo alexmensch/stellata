@@ -14,7 +14,7 @@ function makeShell(extentPc: number): ShellInstance {
       return true;
     },
     extentPc: () => extentPc,
-    pick: { labelElementId: 'x', visible: () => true, sampleCount: () => 0, sampleLocalInto: () => {} },
+    pick: { labelElementId: 'x', visible: () => true, mesh: () => null },
   };
 }
 

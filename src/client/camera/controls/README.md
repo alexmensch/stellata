@@ -45,18 +45,21 @@ in both navigate and observe modes.
   staged (`../../webgpu/extinction/README.md` § Cold reads), so the
   laziness costs nothing there either way. The
   prefilter's radius must be an **upper bound** of the resolved one or
-  the prime/fallback partition mis-tiers — in chart mode that means
+  the walk can skip a candidate that encloses the cursor — in chart mode that means
   bounding the magnitude-mapped ink disc as well as the realistic
   footprint, since either can be the larger
   (`Stellata.pickPrefilterSizePxFor`).
-  It owns the two-tier star pick
+  It owns the star pick
   (`pickStar` / `pickStarHit` — the star module's hover leg calls back
   into it, so the engine-owned scan stays here); every other kind picks
   through `pickKindHit`, which dispatches to the module's
   hover-provider pick — literally the same function the hover engine
   runs, so click and hover can't disagree (a cloud's
   overlapping-winner resolution stays in `MolecularClouds.pick`,
-  `../../molecular-clouds/README.md` § Picking + hover). Both star pick
+  `../../molecular-clouds/README.md` § Picking + hover).
+  `pickAnyKindHit` walks the whole roster and reduces with the hover
+  engine's comparator — the one entry point a click path should use, so
+  no caller enumerates kinds and none can omit one. Both star pick
   surfaces route the winner through `resolveCollapsedLead` (backed by
   the system-membership registry — `src/client/system-membership/`):
   a member of a collapsed cluster resolves to the cluster's primary, so
@@ -91,7 +94,11 @@ in both navigate and observe modes.
   + observe quaternion-in-place), the point (`aimAt`) and direction
   (`aimAlong`) entry points, shared `aimDurationMs` ramp.
 - `star-geometry.ts` — pure star angular-geometry formulae
-  (θ = 2·atan(R/d), `parkDistForStar` derivations).
+  (θ = 2·atan(R/d), `parkDistForStar` derivations) plus the shared pick
+  reducers and their scorers (§ Ranking a pick). Owns `PICK_THRESHOLD_PX`,
+  the one grab radius hover and click both take: it floors every
+  candidate's enclosure, so two values would rank the same pair
+  differently (`../../hover/README.md` § Architecture).
 - `star-physics.ts` — per-star camera/screen geometry: `fovMinorRad`,
   `peakAmplitudeFactor`, `minOrbitDistForStar`, `parkDistForStar`,
   `renderedSizePx` (+ its `renderedSizeComponents` split — the star
@@ -129,6 +136,35 @@ in both navigate and observe modes.
 - `star-geometry.ts` — pure formulae (no catalog, no uniforms).
 - `star-physics.ts` — catalog-indexed wrappers around those formulae.
 - `stellata.ts` — wires per-frame uniforms and dispatches.
+
+## Ranking a pick
+
+The primary key is the candidate's enclosure radius — smallest wins
+(`../../hover/README.md` Rule 3). Between two of equal size the winner is
+the candidate the cursor sits **proportionally deepest inside**:
+`pxDist / hitRadius`, 0 dead centre and 1 at the edge.
+Raw pixel distance is wrong here because the objects sharing this reducer
+span a wide on-screen size range — a body drawn 80 px across takes every
+pixel it covers if distance to its centre decides, and a 4 px star two
+pixels off its own centre is only halfway into itself. Scale-invariance
+is what keeps both reachable, and it is the same rule the cloud layer
+already used for overlapping clouds
+(`../../molecular-clouds/README.md` § Picking + hover).
+
+The star scorer normalises its **whole** numerator —
+`(pxDist + appMag · PICK_MAG_BIAS_PX_PER_MAG) / hitRadius`. Among
+same-size candidates an equal divisor cancels, which is exactly why the
+tuned behaviour survives: the Double Double ranks as it did, and Alula
+Australis A/B still separate on brightness.
+
+**This ranking never has to defend a star from a shell.** The reducer's
+primary key is the candidate's enclosure radius, so an enclosing surface
+— a boundary shell, a cloud — is outranked by anything smaller under the
+same cursor before its depth is consulted (`../../hover/README.md`
+Rule 3). Proportional depth alone would hand the pick to the enclosing
+object, which is proportionally very deep indeed; it survives as the
+tiebreak between surfaces of equal size, which is where the tuned
+behaviour among coincident catalogue rows lives.
 
 ## Camera near plane vs controls minDistance
 

@@ -309,7 +309,7 @@ describe('MolecularClouds / picking geometry', () => {
     c.update(ORIGIN, rimPermitted);
     c.group.updateMatrixWorld(true);
     const cam = cameraAt(origin, origin.clone().add(dir));
-    const hit = c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad);
+    const hit = c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad, 0);
     return hit?.idx ?? null;
   }
 
@@ -366,25 +366,25 @@ describe('MolecularClouds / picking geometry', () => {
       const c = new MolecularClouds(catalog);
       c.group.updateMatrixWorld(true);
       const cam = cameraAt(inside, inside.clone().add(down));
-      expect(c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad)).toBeNull();
+      expect(c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad, 0)).toBeNull();
     });
 
     it('re-arms the sentinel on dispose, so a late tick never raycasts dead geometry', () => {
       const c = liveClouds(catalog);
       const cam = cameraAt(inside, inside.clone().add(down));
-      expect(c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad)?.idx).toBe(0);
+      expect(c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad, 0)?.idx).toBe(0);
       c.dispose();
       expect(rimGroup(c).visible).toBe(false);
-      expect(c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad)).toBeNull();
+      expect(c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad, 0)).toBeNull();
     });
   });
 
-  it('reports the effective-centre camera distance at the fallback hover tier', () => {
+  it('reports the effective-centre camera distance at the extended hover tier', () => {
     const c = liveClouds(catalog);
     const cam = cameraAt(new THREE.Vector3(0, 0, 30), ORIGIN);
-    const hit = c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad);
+    const hit = c.pick(cam, ORIGIN, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad, 0);
     expect(hit?.idx).toBe(0);
-    expect(hit?.tier).toBe('fallback');
+    expect(hit?.enclosureRadiusPx).toBeGreaterThan(0);
     expect(hit?.cameraDistancePc).toBeCloseTo(30, 6);
   });
 
@@ -394,16 +394,16 @@ describe('MolecularClouds / picking geometry', () => {
       makeMockCloud({ centerAbs: new THREE.Vector3(1000, 0, 0), axes: [10, 10, 10] }),
     ]), worldOffset);
     const cam = cameraAt(new THREE.Vector3(0, 0, 30), ORIGIN);
-    const hit = c.pick(cam, worldOffset, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad);
+    const hit = c.pick(cam, worldOffset, rect, VIEWPORT_W / 2, VIEWPORT_H / 2, pxPerRad, 0);
     expect(hit?.idx).toBe(0);
     expect(hit?.cameraDistancePc).toBeCloseTo(30, 6);
   });
 
   // Both clouds enclose the cursor in each case below: a small cloud
   // 200 pc from the camera, nested on screen inside a 10× bigger complex
-  // twice as far away. "Closest to camera wins" made the big complex
-  // unreachable through the small one's silhouette.
-  describe('overlapping clouds — proportionally deepest inside wins', () => {
+  // twice as far away. The tighter silhouette answers wherever the cursor
+  // is inside both, and the big complex keeps everything beyond it.
+  describe('overlapping clouds — the tighter silhouette wins', () => {
     const overlapping = makeMockCatalog([
       makeMockCloud({ name: 'big', id: 'big', sid: 1, axes: [100, 100, 100] }),
       makeMockCloud({
@@ -416,23 +416,29 @@ describe('MolecularClouds / picking geometry', () => {
       const c = liveClouds(catalog);
       const cam = cameraAt(new THREE.Vector3(0, 0, 400), ORIGIN);
       const [x, y] = screenOf(target, cam);
-      return c.pick(cam, ORIGIN, rect, x, y, pxPerRad)?.idx ?? null;
+      return c.pick(cam, ORIGIN, rect, x, y, pxPerRad, 0)?.idx ?? null;
     }
 
     it('the small foreground cloud wins at its own centre', () => {
       expect(pickThrough(new THREE.Vector3(9, 0, 200))).toBe(1);
     });
 
-    it('the big complex wins near the small cloud edge, despite being further away', () => {
-      // 85 % of the way to the small cloud edge (score ≈ 0.85) while
-      // still only ~35 % of the way out of the big complex.
+    it('the small cloud keeps the pick right out to its own rim', () => {
+      // 85 % of the way to the small cloud's edge while still only ~35 %
+      // of the way out of the big complex. Ranking on how deep the cursor
+      // sits handed this to the big one, which left the small cloud's
+      // whole outer half unreachable.
       const edgeOfSmall = new THREE.Vector3(17.5, 0, 200);
-      expect(pickThrough(edgeOfSmall)).toBe(0);
+      expect(pickThrough(edgeOfSmall)).toBe(1);
       // The small cloud really is under the cursor there — on its own it
-      // takes the pick, so the big complex won an overlap rather than a
+      // takes the pick, so this is an overlap it won rather than a
       // walkover.
       const smallOnly = makeMockCatalog([overlapping.clouds[1]]);
       expect(pickThrough(edgeOfSmall, smallOnly)).toBe(0);
+    });
+
+    it('the big complex keeps everywhere the small silhouette does not cover', () => {
+      expect(pickThrough(new THREE.Vector3(30, 0, 200))).toBe(0);
     });
   });
 });

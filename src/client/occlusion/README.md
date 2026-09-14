@@ -47,6 +47,11 @@ The shell clears the set immediately before the scene-layer fan-out and
 the overlays read it on `'frame'`, which fires after the render — so a
 label reads the current frame's bodies (`../README.md` § Event bus).
 
+**Picks read it too, through the same set.** Hover and click drop any hit
+a body in here hides, at one shared gate over every kind
+(`../hover/README.md` Rule 3). A pick fires between frames, so it reads
+the last rendered frame's bodies — the same thing a label does.
+
 In chart mode both clusters park, so the set is empty and no label is
 occlusion-gated. Chart is a flat schematic with depth disabled; its
 label gating is magnitude and collision

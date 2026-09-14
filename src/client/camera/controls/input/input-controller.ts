@@ -14,9 +14,8 @@ import {
   DBL_CLICK_MS,
   PendingClickDispatcher,
 } from '../../../util/pending-click';
-import { bestHitBy } from '../../../hover/hover-pick-disambiguator';
-import type { HoverHit } from '../../../hover/hover-types';
 import type { Picker } from '../picker';
+import { PICK_THRESHOLD_PX } from '../star-geometry';
 import type { RollController } from './roll-controller';
 import { WHEEL_NOTCH_DELTA_PX, pinchStep, scaleStepDeltaPx } from './pinch-zoom-pure';
 
@@ -217,54 +216,32 @@ export class InputController {
     // Navigate double-click = travel: the focus-park teleport that
     // click-the-vector-tip used to trigger, now on any star, planet,
     // or cloud.
-    const picked = this.pickLadderObject(x, y);
+    const picked = this.pickClickedObject(x, y);
     if (picked !== null) {
       this.deps.flyTo(picked);
-      return;
-    }
-    const cloud = this.deps.picker.pickKindHit('cloud', x, y);
-    if (cloud !== null) {
-      this.deps.flyTo({ kind: 'cloud', idx: cloud.idx });
       return;
     }
     this.deps.bus.emit('noopClick', { x, y });
   }
 
-  /** Ladder-eligible objects under the cursor — stars, planet bodies,
-   *  probes, Local Group objects, and boundary shells — run the same
-   *  tiebreak the hover engine uses (prime beats fallback, then closer
-   *  camera), so click and hover can't disagree on which object wins an
-   *  overlap. Shells are fallback-tier, so a star/planet/probe/LG in
-   *  front always wins. */
-  private pickLadderObject(x: number, y: number): Target | null {
-    const star = this.deps.picker.pickStarHit(x, y, 16);
-    const planet = this.deps.picker.pickKindHit('planet', x, y, 16);
-    const probe = this.deps.picker.pickKindHit('probe', x, y, 16);
-    const lg = this.deps.picker.pickKindHit('lg', x, y, 16);
-    const shell = this.deps.picker.pickKindHit('shell', x, y);
-    const picks: Array<{ kind: 'star' | 'planet' | 'probe' | 'lg' | 'shell'; hit: HoverHit } | null> = [
-      star ? { kind: 'star', hit: star } : null,
-      planet ? { kind: 'planet', hit: planet } : null,
-      probe ? { kind: 'probe', hit: probe } : null,
-      lg ? { kind: 'lg', hit: lg } : null,
-      shell ? { kind: 'shell', hit: shell } : null,
-    ];
-    const winner = bestHitBy(picks, (p) => p.hit);
+  /** One roster-wide call, never a per-kind list here — a list is what
+   *  let clouds fall out of the comparison (README.md). */
+  private pickClickedObject(x: number, y: number): Target | null {
+    const winner = this.deps.picker.pickAnyKindHit(x, y, PICK_THRESHOLD_PX);
     return winner === null ? null : { kind: winner.kind, idx: winner.hit.idx };
   }
 
   private navigateSingleClick(x: number, y: number): boolean {
-    // Point objects (stars, planet bodies) are the primary interaction
-    // targets. Fall back to clouds when neither is hit.
-    const picked = this.pickLadderObject(x, y);
-    if (picked !== null) {
-      return this.applyObjectClick(picked);
-    }
-    const cloudIdx = this.deps.picker.pickKindHit('cloud', x, y)?.idx ?? null;
-    if (cloudIdx === null) return false;
+    const picked = this.pickClickedObject(x, y);
+    if (picked === null) return false;
+    if (picked.kind === 'cloud') return this.navigateCloudClick(picked.idx);
+    return this.applyObjectClick(picked);
+  }
 
-    // Clouds keep the pre-ladder vector-first semantics — they are not on
-    // the kind-generic click ladder yet.
+  /** Clouds keep the pre-ladder vector-first semantics — they are not on
+   *  the kind-generic click ladder yet. Which cloud, and whether a cloud
+   *  wins at all, is settled before this runs. */
+  private navigateCloudClick(cloudIdx: number): boolean {
     const clicked: Target = { kind: 'cloud', idx: cloudIdx };
     const focused = this.deps.getFocusedTarget();
     if (focused === null) {
@@ -347,7 +324,7 @@ export class InputController {
   }
 
   private observeSingleClick(x: number, y: number): boolean {
-    const picked = this.pickLadderObject(x, y);
+    const picked = this.pickClickedObject(x, y);
     if (picked === null) return false;
     return this.applyObjectClick(picked);
   }
@@ -552,3 +529,4 @@ export class InputController {
 /** Radius around screen centre where the roll bearing is too unstable to
  *  sample — a twist gesture there would spin on sub-pixel jitter. */
 const ROLL_DEADZONE_PX = 40;
+
