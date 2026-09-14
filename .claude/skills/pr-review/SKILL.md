@@ -14,9 +14,10 @@ goal is findings the author will act on, not encouragement.
 2. **GPU and memory cost** — § below.
 3. **DRY** — duplicated logic, magic numbers, parallel implementations across
    files.
-4. **Architectural fit** — judge the design, not just the changed lines.
-5. **Tests** that need adding or updating.
-6. **Epic drift** — § below, whenever the PR closes a bead under an epic.
+4. **Diff efficiency** — § below. Always asked, always with numbers.
+5. **Architectural fit** — judge the design, not just the changed lines.
+6. **Tests** that need adding or updating.
+7. **Epic drift** — § below, whenever the PR closes a bead under an epic.
 
 (2) and (3) are the two that block a merge.
 
@@ -127,6 +128,52 @@ gate gets quietly avoided.
 
 **A perf or VRAM regression is a finding to fix in this PR, not a follow-up
 bead.**
+
+## Diff efficiency — ask it of every PR, and measure before judging
+
+**"Is this an efficient set of changes to the codebase?"** Not "does it work" —
+could the same outcome land in less, and does what it added earn its weight.
+Ask it every time. Eyeballing a diff answers it badly, and a total line count
+answers it worse: measure the shape first, then judge.
+
+Where the lines went:
+
+    git diff --numstat origin/main...HEAD | awk '
+      {b = ($3 ~ /\.test\./) ? "tests" : ($3 ~ /\.md$/) ? "docs" : "source";
+       A[b]+=$1; D[b]+=$2; N[b]++}
+      END {for (k in A) printf "%-7s %2d files  +%-5d -%-5d net %+d\n",
+                                k, N[k], A[k], D[k], A[k]-D[k]}'
+
+Then, within source, how much of it is prose rather than code:
+
+    git diff --unified=0 origin/main...HEAD -- ':(exclude)*.test.*' ':(exclude)*.md' \
+      | grep -E '^\+' | grep -vE '^\+\+\+' | sed 's/^+[[:space:]]*//' \
+      | awk 'NF{t++; if ($0 ~ /^(\/\/|\*|\/\*)/) c++}
+             END{if(t) printf "%d%% prose (%d comment / %d code)\n", 100*c/t, c, t-c}'
+
+Reading the numbers:
+
+- **Net near zero or negative on a behaviour change is a good sign.** The change
+  replaced a concept instead of layering one beside it. A behaviour change that
+  only ever adds is usually a concept that was never removed.
+- **Wide and shallow is usually fine, and counting files misreads it.** N files
+  at +2 each because a shared type gained a field is the cost of the seam, and
+  it is what makes the next consumer free. Say that rather than flagging the
+  file count.
+- **Narrow and deep is where the finding usually is.** One file at +150 is a
+  function that grew where it should have split.
+- **Prose over ~25% of added source lines is a finding**, on diffs adding 80+
+  source lines — below that a single justified block swings the ratio and the
+  number means nothing. Landed stellata commits run 20–68% on this measure, so
+  25% is a deliberate tightening, not the status quo. The rule it enforces is
+  § Code comments in the user-level `~/.claude/CLAUDE.md`; the usual offender is
+  a block restating what the folder README now says, which is forbidden outright.
+- **Scope the author added and nobody asked for** — an extra branch, a
+  refinement, a second code path. Name it and ask whether it earns its lines.
+
+Report the numbers in the review, not just the verdict. "Feels heavy" is not a
+finding; "+185 source, 49% of it comments, and the largest block restates
+hover/README.md Rule 3" is one.
 
 ## Epic drift check — mandatory when the PR sits under an epic
 
