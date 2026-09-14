@@ -377,10 +377,8 @@ export class MolecularClouds {
    * entry point behind the cloud module's pick surface, which the click
    * FSM and the hover engine share, so the two can never disagree.
    * Rim-mesh raycast gates hit-vs-miss; `resolveCloudPick` picks the
-   * cloud the cursor sits proportionally deepest inside (README
-   * § Picking + hover). Tier is always `extended` — a whole-silhouette
-   * surface never outranks a compact object, whatever the camera
-   * distances say (`../hover/README.md` Rule 3).
+   * cloud with the tightest silhouette, then the one the cursor sits
+   * proportionally deepest inside (README § Picking + hover).
    *
    * Only cloud geometry is tested: this resolves which CLOUD the cursor
    * is in, and the cross-layer comparator ranks that answer against every

@@ -265,7 +265,10 @@ and only between two of equal size does the lowest
 
 decide — the cursor's offset from the cloud's projected centre as a
 fraction of that cloud's *own* projected radius (0 = dead centre, 1 = at
-the edge), via `cloud-pick-pure.ts`.
+the edge). That is the shared reducer's **default** scorer,
+`pxDist / hitRadius`, over the radius `cloudPickCandidate` builds; the
+layer passes no scorer of its own, because a cloud-specific one would be
+the same expression written twice.
 
 Both of the keys this replaced leave a cloud unreachable. Ray distance
 ("closest to camera wins", Three.js `intersectObjects` order) makes the

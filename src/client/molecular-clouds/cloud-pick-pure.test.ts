@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { cloudPickCandidate, cloudPickScore, resolveCloudPick } from './cloud-pick-pure';
+import {
+  cloudPickCandidate,
+  resolveCloudPick,
+  type CloudPickCandidate,
+} from './cloud-pick-pure';
 
 // The two overlapping complexes the rule was designed against: Taurus as
 // a 300 px-wide silhouette with the much smaller California nebula
@@ -14,17 +18,22 @@ function california(pxFromCentre: number) {
   return cloudPickCandidate(1, pxFromCentre, 470, CALIFORNIA_PX);
 }
 
-describe('cloudPickScore', () => {
+// Centrality is the shared reducer's default scorer over the radius
+// `cloudPickCandidate` builds, so it is read back off the result rather
+// than from a cloud-specific function.
+describe('cloud centrality score', () => {
+  const depth = (c: CloudPickCandidate) => resolveCloudPick([c], 0)!.depthScore;
+
   it('is the cursor offset as a fraction of the cloud own projected radius', () => {
-    expect(cloudPickScore(0, TAURUS_PX)).toBe(0);
-    expect(cloudPickScore(150, TAURUS_PX)).toBe(1);
-    expect(cloudPickScore(75, TAURUS_PX)).toBe(0.5);
+    expect(depth(taurus(0))).toBe(0);
+    expect(depth(taurus(150))).toBe(1);
+    expect(depth(taurus(75))).toBe(0.5);
     // Scale-invariant: the same fraction of a 3.3× smaller silhouette.
-    expect(cloudPickScore(22.5, CALIFORNIA_PX)).toBe(0.5);
+    expect(depth(california(22.5))).toBe(0.5);
   });
 
   it('stays finite for a silhouette collapsed below the radius floor', () => {
-    const score = cloudPickScore(0.2, 0);
+    const score = depth(cloudPickCandidate(0, 0.2, 140, 0));
     expect(Number.isFinite(score)).toBe(true);
     expect(score).toBeGreaterThan(0);
   });
