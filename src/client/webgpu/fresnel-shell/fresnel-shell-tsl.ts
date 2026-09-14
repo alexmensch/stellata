@@ -2,7 +2,7 @@
 // boundary shell whose alpha peaks at the silhouette.
 
 import { FrontSide, NormalBlending } from 'three';
-import { normalView, positionView, vec4 } from 'three/tsl';
+import { length, normalView, positionView, vec4 } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';
 import type { FresnelShellMaterialOptions } from '../../fresnel-shell/fresnel-shell';
 import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material';
@@ -27,12 +27,13 @@ export function buildFresnelShellMaterial(
   // fresnel-shell.vert.glsl does, and both its varyings are built-ins
   // (`../solar-system/README.md` § Vertex stages).
   return finishMrtMaterial(material, () => {
+    const dView = length(positionView).toVar();
     const alpha = fresnelRimAlphaTsl(
       normalView.normalize(),
-      positionView.negate().normalize(),
+      positionView.negate().div(dView),
       s.uAlphaLimb, s.uFaceOnFloor, s.uFresnelPower,
     ).mul(shellDistanceAttenuationTsl(
-      positionView, s.uNearFadePc, s.uDepthDimRefPc, s.uDepthPower,
+      dView, s.uNearFadePc, s.uDepthDimRefPc, s.uDepthPower,
     ));
     // Chrome: an authored colour inverse-mapped through the operator, with
     // no claim on the light already in the target. Both extra attachments

@@ -16,15 +16,15 @@ float fresnelRimAlpha(
 
 // A second factor on the same alpha, deliberately not folded into the
 // shape above: view space puts the camera at the origin, so the fragment's
-// own camera distance is length(positionView) with no extra varying.
-// Mirrored by shell-distance-pure.ts and by the TSL twin.
+// own camera distance is length(positionView) with no extra varying. The
+// caller passes that length because it needs it anyway — viewDir is the
+// same vector over it. Mirrored by shell-distance-pure.ts and the TSL twin.
 float shellDistanceAttenuation(
-  vec3 positionView,
+  float dView,
   float nearFadePc,
   float depthDimRefPc,
   float depthPower
 ) {
-  float dView = length(positionView);
   float nearFade = clamp(dView / nearFadePc, 0.0, 1.0);
   float depthDim = pow(clamp(depthDimRefPc / dView, 0.0, 1.0), depthPower);
   return nearFade * depthDim;

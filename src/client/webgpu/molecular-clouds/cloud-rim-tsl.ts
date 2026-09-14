@@ -33,7 +33,8 @@ export function buildCloudRimMaterial(r: CloudRimNodes): MrtEmitterMaterial {
   // boundary shells carry none (`../fresnel-shell/README.md`).
   return finishMrtMaterial(material, () => {
     const n = normalView.normalize();
-    const viewDir = positionView.negate().normalize();
+    const dView = length(positionView).toVar();
+    const viewDir = positionView.negate().div(dView);
 
     const ink = vec3(0.0).toVar();
     const alpha = float(0.0).toVar();
@@ -61,7 +62,7 @@ export function buildCloudRimMaterial(r: CloudRimNodes): MrtEmitterMaterial {
         .mul(fresnelRimAlphaTsl(
           n, viewDir, r.uAlphaLimb, r.uFaceOnFloor, r.uFresnelPower))
         .mul(shellDistanceAttenuationTsl(
-          positionView, r.uNearFadePc, r.uDepthDimRefPc, r.uDepthPower))
+          dView, r.uNearFadePc, r.uDepthDimRefPc, r.uDepthPower))
         .toVar();
       Discard(rimAlpha.lessThanEqual(0.0));
       ink.assign(r.uColour);

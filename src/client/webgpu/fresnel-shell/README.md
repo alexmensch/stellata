@@ -39,7 +39,9 @@ use; the drawn value is the same.
 
 `positionView` is the same built-in the camera-distance attenuation reads
 (`../../fresnel-shell/README.md` § Camera-distance attenuation), so that
-term costs no varying here either. Its math lives in
+term costs no varying here either, and its `length` is the one the rim
+shape's `viewDir` divides by — `.toVar()`, so the graph emits a single
+root. Its math lives in
 `shell-distance-pure.ts` with the graph as thin composition over it, per
 `../tsl/README.md` § TSL test pattern leg 3 — what the graph renders is
 the A/B parity smoke, not a unit test.

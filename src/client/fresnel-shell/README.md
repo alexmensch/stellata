@@ -137,11 +137,18 @@ MRT-mode registration and a bare `material.dispose()` would not.
 
 Two factors multiply the rim alpha, both off the fragment's own distance
 from the camera. View space puts the camera at the origin, so that
-distance is `length(positionView)` — free on both backends, no extra
-varying and no per-frame CPU work.
+distance is `length(positionView)` — no extra varying and no per-frame CPU
+work.
 
     nearFade = clamp(d / uNearFadePc, 0, 1)
     depthDim = pow(clamp(uDepthDimRefPc / d, 0, 1), uDepthPower)
+
+**All three implementations take `d` as an argument, and every caller
+divides by it to get `viewDir`.** That is the one root per fragment: the
+rim shape needs `-positionView` normalised and the attenuation needs its
+length, so a call site spelling the first as `normalize()` pays an
+`inversesqrt` and a `sqrt` for one quantity. Keep the shape's `viewDir` as
+`-positionView / d`.
 
 **Both reaches are per-material, and both derive from one shared authored
 number plus the consumer's own extent** — `rimDistancesForExtent`, the only

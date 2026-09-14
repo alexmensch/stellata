@@ -115,6 +115,6 @@ describe('the chart-mode stipple takes no camera-distance attenuation', () => {
   it('reaches the shared term only after the chart branch returns', () => {
     const chartArm = rim.slice(0, rim.indexOf('return;'));
     expect(chartArm).not.toContain('shellDistanceAttenuation');
-    expect(rim).toContain('shellDistanceAttenuation(vPositionView');
+    expect(rim).toContain('shellDistanceAttenuation(dView');
   });
 });

@@ -21,9 +21,10 @@ void main() {
   #include <logdepthbuf_fragment>
 
   vec3 n = normalize(vNormalView);
-  vec3 viewDir = normalize(-vPositionView);
+  float dView = length(vPositionView);
+  vec3 viewDir = -vPositionView / dView;
   float alpha = fresnelRimAlpha(n, viewDir, uAlphaLimb, uFaceOnFloor, uFresnelPower)
-    * shellDistanceAttenuation(vPositionView, uNearFadePc, uDepthDimRefPc, uDepthPower);
+    * shellDistanceAttenuation(dView, uNearFadePc, uDepthDimRefPc, uDepthPower);
 
   outColor = vec4(uColour, alpha);
 }
