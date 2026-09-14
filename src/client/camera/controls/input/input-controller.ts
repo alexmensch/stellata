@@ -15,6 +15,7 @@ import {
   PendingClickDispatcher,
 } from '../../../util/pending-click';
 import type { Picker } from '../picker';
+import { PICK_THRESHOLD_PX } from '../star-geometry';
 import type { RollController } from './roll-controller';
 import { WHEEL_NOTCH_DELTA_PX, pinchStep, scaleStepDeltaPx } from './pinch-zoom-pure';
 
@@ -229,7 +230,7 @@ export class InputController {
    *  disagree. Enumerating kinds here is what let clouds fall out of the
    *  comparison entirely and be reachable only when nothing else hit. */
   private pickClickedObject(x: number, y: number): Target | null {
-    const winner = this.deps.picker.pickAnyKindHit(x, y, CLICK_PICK_THRESHOLD_PX);
+    const winner = this.deps.picker.pickAnyKindHit(x, y, PICK_THRESHOLD_PX);
     return winner === null ? null : { kind: winner.kind, idx: winner.hit.idx };
   }
 
@@ -532,8 +533,3 @@ export class InputController {
  *  sample — a twist gesture there would spin on sub-pixel jitter. */
 const ROLL_DEADZONE_PX = 40;
 
-/** Grab radius for a click pick — wider than the hover engine's, since a
- *  click is aimed once and a hover tracks continuously. It floors every
- *  candidate's enclosure radius, so it also sets how small a target can
- *  get before it stops out-ranking the things around it. */
-export const CLICK_PICK_THRESHOLD_PX = 16;

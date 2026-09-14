@@ -10,6 +10,7 @@ import { DCAM_LOG_FLOOR_PC } from '../timing';
 import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
 import { projectToScreenInto } from '../../overlays/overlay-project';
 import {
+  PICK_THRESHOLD_PX,
   discHitRadiusPx,
   pickFromCandidatesResolved,
   pickScore,
@@ -83,14 +84,22 @@ export class Picker {
 
   /** Pick a star under the cursor for the click FSM. Returns the
    *  winning catalog index or -1 if no star is hit. */
-  pickStar(clientX: number, clientY: number, pixelThreshold = 16): number {
+  pickStar(
+    clientX: number,
+    clientY: number,
+    pixelThreshold = PICK_THRESHOLD_PX,
+  ): number {
     const idx = this.pickStarResult(clientX, clientY, pixelThreshold)?.candidate.idx ?? -1;
     return idx >= 0 ? this.deps.resolveCollapsedLead(idx) : idx;
   }
 
   // ─── Hover picks ──────────────────────────────────────────────────
 
-  pickStarHit(clientX: number, clientY: number, pixelThreshold = 14): HoverHit | null {
+  pickStarHit(
+    clientX: number,
+    clientY: number,
+    pixelThreshold = PICK_THRESHOLD_PX,
+  ): HoverHit | null {
     const r = this.pickStarResult(clientX, clientY, pixelThreshold);
     if (r === null) return null;
     // Collapsed members sit sub-pixel from their lead, so the picked
@@ -110,7 +119,7 @@ export class Picker {
     kind: TargetKind,
     clientX: number,
     clientY: number,
-    pixelThreshold = 14,
+    pixelThreshold = PICK_THRESHOLD_PX,
   ): HoverHit | null {
     return this.deps.kindPicks[kind]?.(clientX, clientY, pixelThreshold) ?? null;
   }
@@ -125,7 +134,7 @@ export class Picker {
   pickAnyKindHit(
     clientX: number,
     clientY: number,
-    pixelThreshold = 14,
+    pixelThreshold = PICK_THRESHOLD_PX,
   ): { kind: TargetKind; hit: HoverHit } | null {
     const hits: ({ kind: TargetKind; hit: HoverHit } | null)[] = [];
     for (const entry of Object.entries(this.deps.kindPicks)) {

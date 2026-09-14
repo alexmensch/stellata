@@ -25,7 +25,7 @@ lives entirely under `src/client/hover/`:
 
 ## Architecture
 
-- **`hover-engine.ts`** — canvas pointer listener, 280 ms dwell, 14 px
+- **`hover-engine.ts`** — canvas pointer listener, 280 ms dwell, 7 px
   pick threshold, hide-on-drag / hide-on-leave / hide-on-pointermove
   gating, tooltip placement and on-screen clamping. Provider-agnostic;
   pulled out of the prior `bindHoverTooltip` so future layers wire in
@@ -44,6 +44,17 @@ lives entirely under `src/client/hover/`:
   included: it is not only a grab radius but the floor on the enclosure
   each hit reports, so a surface that skipped it would rank against the
   others on a different scale (Rule 3).
+
+  **Hover and click take the same `PICK_THRESHOLD_PX`**
+  (`../camera/controls/star-geometry.ts`), and the shared value is
+  load-bearing rather than tidiness. Because the threshold floors the
+  enclosure, it is an input to the ranking, not just to the reach: any
+  object drawn between two different thresholds ranks differently under
+  each, so hover and click would answer one cursor with different objects.
+  Hover once ran 14 px against the click path's 16 — the two were set
+  independently and never reconciled, which is what had a card naming one
+  object while travel went to another. Giving click a wider reach again
+  means separating the reach from the enclosure floor, not a second value.
 
   **`onPickImminent` fires a dwell ahead of the pick, and that gap is the
   point.** The star pick gates on per-star dust extinction, which on
@@ -75,8 +86,8 @@ lives entirely under `src/client/hover/`:
   `enclosureRadiusPx`, then `depthScore` between equals (Rule 3). Camera
   distance is not a key and must not become one, and the failure is not
   hypothetical: viewed from outside, a boundary shell's near wall is
-  nearer than every star it encloses, so "closest wins" gave a click on a
-  star to "Local Bubble".
+  nearer than every star it encloses, so "closest wins" gave a click just
+  off a star's centre to "Local Bubble".
 - **`*-hover-provider.ts`** / the kind modules' `hover()` legs — one
   per layer. Owns the pick path, typically mirroring the renderer's
   draw predicate (see Rule 2 below).
@@ -247,7 +258,7 @@ size, with no ordering to extend and no existing pair to re-verify.
 
 **Camera distance is not a key and must not become one.** It is wrong in
 both directions: viewed from outside, a shell's near wall is nearer than
-every star it encloses, so a click ~14 px off a star's centre went to
+every star it encloses, so a click just off a star's centre went to
 "Local Bubble"; and between two overlapping clouds, "closest wins" makes
 the background one unreachable wherever the foreground one covers it.
 

@@ -109,7 +109,7 @@ describe('hover-engine', () => {
     expect(tooltip.hidden).toBe(true);
 
     vi.advanceTimersByTime(DELAY_MS);
-    expect(star.pick).toHaveBeenCalledWith(100, 100, 14);
+    expect(star.pick).toHaveBeenCalledWith(100, 100, 7);
     expect(tooltip.hidden).toBe(false);
     expect(tooltip.innerHTML).toBe(
       '<div class="tt-name">Vega</div><div class="tt-sub">7.7 pc</div>',

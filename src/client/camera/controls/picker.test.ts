@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { drawCutoffMag } from '../../hdr/exposure/exposure-epoch';
 import { Picker, type PickerDeps } from './picker';
-import { discHitRadiusPx } from './star-geometry';
+import { PICK_THRESHOLD_PX, discHitRadiusPx } from './star-geometry';
 import type { HoverHit } from '../../hover/hover-types';
 import { ALL_SPECT_MASK, type FilterState } from '../../filters/filter-state';
 import type { Catalog } from '../../loaders/catalog-loader';
@@ -270,7 +270,7 @@ describe('Picker / pickStar', () => {
       expect(picker.pickStarHit(screen.x, screen.y)?.idx).toBe(0);
       const off = picker.pickStarHit(screen.x + 6, screen.y);
       expect(off?.idx).toBe(0);
-      expect(off?.enclosureRadiusPx).toBe(14);
+      expect(off?.enclosureRadiusPx).toBe(PICK_THRESHOLD_PX);
     });
   });
 
@@ -490,7 +490,7 @@ describe('Picker / pickStarHit', () => {
     const screen = projectToScreen(new THREE.Vector3(0, 0, 0), camera);
     const hit = picker.pickStarHit(screen.x + 6, screen.y);
     expect(hit).not.toBeNull();
-    expect(hit!.enclosureRadiusPx).toBe(14);
+    expect(hit!.enclosureRadiusPx).toBe(PICK_THRESHOLD_PX);
   });
 });
 
@@ -511,7 +511,7 @@ describe('Picker / pickKindHit', () => {
     expect(calls).toEqual([[40, 50, 16]]);
     // Same default threshold the other hover-side pick paths carry.
     picker.pickKindHit('probe', 40, 50);
-    expect(calls[1]).toEqual([40, 50, 14]);
+    expect(calls[1]).toEqual([40, 50, PICK_THRESHOLD_PX]);
   });
 
   it('returns null for a kind with no module pick registered', () => {

@@ -67,6 +67,13 @@ export const PICK_MAG_BIAS_PX_PER_MAG = 0.05;
 // star and planet pick paths share a single source.
 export const MIN_DISC_HIT_RADIUS_PX = 4;
 
+// The grab radius, shared by hover and click because it is not only a
+// reach: it floors every candidate's reported enclosure, which is the
+// primary ranking key. Two values would rank the same candidates
+// differently wherever a drawn half-extent falls between them, so the
+// pick under the cursor would depend on whether you hovered or clicked.
+export const PICK_THRESHOLD_PX = 7;
+
 // Prime-tier hit radius for a drawn diameter. The floor applies to the
 // resolved radius as much as the prefilter's, so a star dimmed to a
 // sub-pixel disc stays as reachable as a chart-mode one.

@@ -320,6 +320,23 @@ describe('star-geometry / pickFromCandidates', () => {
     expect(pickFromCandidates(cands, 16)?.candidate.idx).toBe(91);
   });
 
+  // Why hover and click share one PICK_THRESHOLD_PX. The threshold is not
+  // only a reach: it floors the enclosure, which is the primary key, so
+  // any object drawn between two thresholds ranks differently under each.
+  // Hover and click would then answer the same cursor with different
+  // objects — which is what a user sees as the card naming one thing and
+  // the travel taking them to another.
+  it('a one-pixel threshold difference flips the winner', () => {
+    const cands = [
+      { idx: 1, pxDist: 2, hitRadius: 3 }, // compact
+      { idx: 2, pxDist: 1, hitRadius: 7.5 }, // straddles the two thresholds
+    ];
+    // 7 → encloses at 7 vs 8: the compact target is tighter and wins.
+    expect(pickFromCandidates(cands, 7)?.candidate.idx).toBe(1);
+    // 8 → both floor to 8, the tie falls to depth, and the larger wins.
+    expect(pickFromCandidates(cands, 8)?.candidate.idx).toBe(2);
+  });
+
   it('returns the original candidate object — extension fields ride through', () => {
     // Caller-extended candidates (LG carries cameraDistancePc; planet
     // picker carries hostStarIdx + planetIdx) must come back intact so

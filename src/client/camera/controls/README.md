@@ -95,7 +95,10 @@ in both navigate and observe modes.
   (`aimAlong`) entry points, shared `aimDurationMs` ramp.
 - `star-geometry.ts` — pure star angular-geometry formulae
   (θ = 2·atan(R/d), `parkDistForStar` derivations) plus the shared pick
-  reducers and their scorers (§ Ranking a pick).
+  reducers and their scorers (§ Ranking a pick). Owns `PICK_THRESHOLD_PX`,
+  the one grab radius hover and click both take: it floors every
+  candidate's enclosure, so two values would rank the same pair
+  differently (`../../hover/README.md` § Architecture).
 - `star-physics.ts` — per-star camera/screen geometry: `fovMinorRad`,
   `peakAmplitudeFactor`, `minOrbitDistForStar`, `parkDistForStar`,
   `renderedSizePx` (+ its `renderedSizeComponents` split — the star
@@ -136,8 +139,10 @@ in both navigate and observe modes.
 
 ## Ranking a pick
 
-Within a tier the winner is the candidate the cursor sits **proportionally
-deepest inside**: `pxDist / hitRadius`, 0 dead centre and 1 at the edge.
+The primary key is the candidate's enclosure radius — smallest wins
+(`../../hover/README.md` Rule 3). Between two of equal size the winner is
+the candidate the cursor sits **proportionally deepest inside**:
+`pxDist / hitRadius`, 0 dead centre and 1 at the edge.
 Raw pixel distance is wrong here because the objects sharing this reducer
 span a wide on-screen size range — a body drawn 80 px across takes every
 pixel it covers if distance to its centre decides, and a 4 px star two

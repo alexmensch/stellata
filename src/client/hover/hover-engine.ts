@@ -1,6 +1,7 @@
 // Hover-label engine — canvas pointer listener, dwell timer, provider
 // registry, #tooltip render. See ./README.md.
 
+import { PICK_THRESHOLD_PX } from '../camera/controls/star-geometry';
 import { escapeHtml } from '../ui/dom-util';
 import { readPageMargins } from '../ui/page-margins';
 import {
@@ -10,11 +11,7 @@ import {
 } from './hover-pick-disambiguator';
 import type { HoverProvider } from './hover-types';
 
-// Hover trigger constants. Held here so the engine is self-contained
-// and so a future debug-panel toggle can flip the cadence without
-// crawling call sites.
 const DEFAULT_DELAY_MS = 280;
-const DEFAULT_PX_THRESHOLD = 14;
 
 // Near-cursor offset — far enough that the cursor doesn't sit on the
 // tooltip and trigger pointerleave on the canvas, close enough that
@@ -48,7 +45,7 @@ export function createHoverEngine(config: HoverEngineConfig): HoverEngine {
   const {
     canvas,
     tooltip,
-    pxThreshold = DEFAULT_PX_THRESHOLD,
+    pxThreshold = PICK_THRESHOLD_PX,
     delayMs = DEFAULT_DELAY_MS,
     initialProviders = [],
     onPickImminent,
