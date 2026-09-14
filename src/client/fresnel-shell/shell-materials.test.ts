@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { makeTslShellMaterials } from '../webgpu/fresnel-shell/tsl-shell-materials';
-import { makeGlslShellMaterials, SHELL_RIM_ALPHA_LIMB, SHELL_RIM_BLUE } from './fresnel-shell';
+import {
+  applyRimParams, makeGlslShellMaterials, SHELL_RIM_ALPHA_LIMB, SHELL_RIM_BLUE,
+} from './fresnel-shell';
+import { DEPTH_DIM_POWER, rimDistancesForExtent } from './shell-distance-pure';
 
-const OPTS = { colourHex: SHELL_RIM_BLUE, alphaLimb: SHELL_RIM_ALPHA_LIMB };
+const OPTS = {
+  colourHex: SHELL_RIM_BLUE,
+  alphaLimb: SHELL_RIM_ALPHA_LIMB,
+  extentPc: 300,
+};
+const REACH = rimDistancesForExtent(OPTS.extentPc);
 
 // The two factories are transcriptions of one uniform block, so the guard
 // is the same one the solar-system seam carries: a slot added on one side
@@ -18,6 +26,21 @@ describe('the boundary-shell material seam', () => {
     expect(tslKeys.sort()).toEqual(glslKeys.sort());
   });
 
+  // This seam derives both reaches from `extentPc` on each side rather
+  // than reading a precomputed record, so the keys agreeing proves nothing
+  // about what they hold: a factory passing 0 for the extent would pass the
+  // key test and render one backend on a foreign scale.
+  it('derives the same reaches from the extent on both backends', () => {
+    const glslSlots = makeGlslShellMaterials().fresnelShell(OPTS).uniforms;
+    const tslSlots = makeTslShellMaterials({ registerMrtLayer: () => () => {} })
+      .fresnelShell(OPTS).uniforms;
+    for (const u of [glslSlots, tslSlots]) {
+      expect(u.uNearFadePc.value).toBe(REACH.nearFadePc);
+      expect(u.uDepthDimRefPc.value).toBe(REACH.depthDimRefPc);
+      expect(u.uDepthPower.value).toBe(DEPTH_DIM_POWER);
+    }
+  });
+
   it('inverse-maps the authored colour on both backends', () => {
     const glslColour = makeGlslShellMaterials()
       .fresnelShell(OPTS).uniforms.uColour.value as THREE.Color;
@@ -26,6 +49,30 @@ describe('the boundary-shell material seam', () => {
     // Chrome is only correct paired with the operator it inverts, so the
     // mapped value — not the authored hex — is what has to agree.
     expect(tslColour.getHex()).toBe(glslColour.getHex());
+  });
+
+  // One writer serves the boundary shells and the cloud rims, so a lever
+  // that reaches a slot on one surface reaches the same key on the other.
+  it('drives every rim slot through the shared writer', () => {
+    const u = makeGlslShellMaterials().fresnelShell(OPTS).uniforms;
+    applyRimParams(u, {
+      alphaLimb: 0.9, faceOnFloor: 0.5, fresnelPower: 4,
+      nearFadePc: 42, depthDimRefPc: 250, depthPower: 2,
+    });
+    expect(u.uAlphaLimb.value).toBe(0.9);
+    expect(u.uFaceOnFloor.value).toBe(0.5);
+    expect(u.uFresnelPower.value).toBe(4);
+    expect(u.uNearFadePc.value).toBe(42);
+    expect(u.uDepthDimRefPc.value).toBe(250);
+    expect(u.uDepthPower.value).toBe(2);
+  });
+
+  it('leaves unnamed slots alone', () => {
+    const u = makeGlslShellMaterials().fresnelShell(OPTS).uniforms;
+    applyRimParams(u, { depthPower: 3 });
+    expect(u.uDepthPower.value).toBe(3);
+    expect(u.uNearFadePc.value).toBe(REACH.nearFadePc);
+    expect(u.uDepthDimRefPc.value).toBe(REACH.depthDimRefPc);
   });
 
   it('severs the MRT registration on dispose', () => {

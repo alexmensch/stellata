@@ -1,4 +1,4 @@
-// cloud-absorption.vert.glsl / .frag.glsl on the TSL path: the jittered
+// absorption/cloud-absorption.vert.glsl / .frag.glsl on the TSL path: the jittered
 // ellipsoid raymarch that dims every diffuse layer behind the cloud.
 
 import {
@@ -14,7 +14,7 @@ import { DITHER_SEED_OFFSET } from '../../hdr/tonemap/tonemap-pure';
 import {
   ALPHA_CAP, AV_PER_DENSITY, AV_RATE_PER_NH, AV_SATURATED, ENVELOPE_TAPER_FRAC,
   MARCH_MIN_CHORD_T, MARCH_MIN_STEPS, TAU_PER_AV,
-} from '../../molecular-clouds/cloud-presence-pure';
+} from '../../molecular-clouds/absorption/cloud-presence-pure';
 import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material';
 import { interleavedGradientNoiseTsl, lsbDitherTsl } from '../tsl/jitter-tsl';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';

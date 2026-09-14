@@ -8,6 +8,7 @@ import { LABEL_OFFSET_PX } from '../solar-system/planets/labels/planet-labels';
 import { angularToPx } from '../camera/controls/star-geometry';
 import type { ShellRegistry } from './shell-registry';
 import type { EmitterMaterial } from '../scene/emitter-material';
+import { DEPTH_DIM_POWER, rimDistancesForExtent } from './shell-distance-pure';
 import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
 import fresnelShellVert from './fresnel-shell.vert.glsl?raw';
 import fresnelShellFrag from './fresnel-shell.frag.glsl?raw';
@@ -35,10 +36,43 @@ export interface FresnelShellMaterialOptions {
   colourHex: number;
   /** Alpha at the silhouette (limb); face-on alpha is this × faceOnFloor. */
   alphaLimb: number;
+  /** The shell's representative radius (pc). Both camera-distance reaches
+   *  come off it via `rimDistancesForExtent` — consumers span five orders
+   *  of magnitude, so neither is authored per shell. A shell whose extent
+   *  arrives with its mesh passes 0 and writes both at attach. */
+  extentPc: number;
   /** Defaults to `NormalBlending`; pass `AdditiveBlending` for a glow. */
   blending?: THREE.Blending;
   faceOnFloor?: number;
   fresnelPower?: number;
+}
+
+/** The live rim levers, in one vocabulary across every rim consumer —
+ *  the boundary shells and the ~96 cloud rims (§ Dev-console levers).
+ *  The two distance reaches are also how a shell whose extent arrives with
+ *  its mesh states them, as one `rimDistancesForExtent` record. */
+export interface RimParams {
+  alphaLimb?: number;
+  faceOnFloor?: number;
+  fresnelPower?: number;
+  nearFadePc?: number;
+  depthDimRefPc?: number;
+  depthPower?: number;
+}
+
+/** Write whichever rim slots the caller named. One writer for every rim
+ *  consumer, so a lever cannot reach one surface's uniform block and miss
+ *  the identically-keyed slot on another's. */
+export function applyRimParams(
+  uniforms: Record<string, THREE.IUniform>,
+  p: RimParams,
+): void {
+  if (p.alphaLimb !== undefined) uniforms.uAlphaLimb.value = p.alphaLimb;
+  if (p.faceOnFloor !== undefined) uniforms.uFaceOnFloor.value = p.faceOnFloor;
+  if (p.fresnelPower !== undefined) uniforms.uFresnelPower.value = p.fresnelPower;
+  if (p.nearFadePc !== undefined) uniforms.uNearFadePc.value = p.nearFadePc;
+  if (p.depthDimRefPc !== undefined) uniforms.uDepthDimRefPc.value = p.depthDimRefPc;
+  if (p.depthPower !== undefined) uniforms.uDepthPower.value = p.depthPower;
 }
 
 /**
@@ -73,6 +107,7 @@ export function makeGlslShellMaterials(): ShellMaterials {
 function createFresnelShellMaterial(
   opts: FresnelShellMaterialOptions,
 ): THREE.ShaderMaterial {
+  const reach = rimDistancesForExtent(opts.extentPc);
   return new THREE.ShaderMaterial({
     glslVersion: THREE.GLSL3,
     vertexShader: fresnelShellVert,
@@ -86,6 +121,9 @@ function createFresnelShellMaterial(
       uAlphaLimb: { value: opts.alphaLimb },
       uFaceOnFloor: { value: opts.faceOnFloor ?? DEFAULT_FACE_ON_FLOOR },
       uFresnelPower: { value: opts.fresnelPower ?? DEFAULT_FRESNEL_POWER },
+      uNearFadePc: { value: reach.nearFadePc },
+      uDepthDimRefPc: { value: reach.depthDimRefPc },
+      uDepthPower: { value: DEPTH_DIM_POWER },
     },
   });
 }
@@ -123,6 +161,11 @@ export abstract class FresnelShell {
   setPermitted(on: boolean): void {
     this.permitted = on;
     this.refreshVisibility();
+  }
+
+  /** Live rim levers — the same call the cloud layer takes. */
+  setRimParams(p: RimParams): void {
+    applyRimParams(this.surface.uniforms, p);
   }
 
   /** Chart (mono / paper) mode hides the shell. */

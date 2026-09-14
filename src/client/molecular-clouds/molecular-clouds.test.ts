@@ -131,7 +131,7 @@ describe('MolecularClouds / absorption material contract', () => {
 
   it('writes the same texel to attachment 2 that it writes to attachment 0', () => {
     const frag = readFileSync(
-      fileURLToPath(new URL('./cloud-absorption.frag.glsl', import.meta.url)),
+      fileURLToPath(new URL('./absorption/cloud-absorption.frag.glsl', import.meta.url)),
       'utf8',
     );
     expect(frag).toContain('layout(location = 2) out vec4 outDiffuse;');

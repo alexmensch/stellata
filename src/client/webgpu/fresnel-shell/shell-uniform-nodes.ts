@@ -8,6 +8,9 @@ import type { FresnelShellMaterialOptions } from '../../fresnel-shell/fresnel-sh
 import {
   DEFAULT_FACE_ON_FLOOR, DEFAULT_FRESNEL_POWER,
 } from '../../fresnel-shell/fresnel-shell';
+import {
+  DEPTH_DIM_POWER, rimDistancesForExtent,
+} from '../../fresnel-shell/shell-distance-pure';
 import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
 
 /** `uColour` goes through the same raw-chrome mapping the GLSL factory
@@ -15,11 +18,15 @@ import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
  *  re-authors on `syncMode` exactly as a `ShaderMaterial` uniform's does
  *  (`../../hdr/chrome/README.md`). */
 export function fresnelShellUniformNodes(opts: FresnelShellMaterialOptions) {
+  const reach = rimDistancesForExtent(opts.extentPc);
   return {
     uColour: uniform(setRawChromeColour(new Color(), opts.colourHex)),
     uAlphaLimb: uniform(opts.alphaLimb),
     uFaceOnFloor: uniform(opts.faceOnFloor ?? DEFAULT_FACE_ON_FLOOR),
     uFresnelPower: uniform(opts.fresnelPower ?? DEFAULT_FRESNEL_POWER),
+    uNearFadePc: uniform(reach.nearFadePc),
+    uDepthDimRefPc: uniform(reach.depthDimRefPc),
+    uDepthPower: uniform(DEPTH_DIM_POWER),
   };
 }
 

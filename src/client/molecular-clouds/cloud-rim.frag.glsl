@@ -17,6 +17,9 @@ uniform vec3 uColour;
 uniform float uAlphaLimb;
 uniform float uFaceOnFloor;
 uniform float uFresnelPower;
+uniform float uNearFadePc;
+uniform float uDepthDimRefPc;
+uniform float uDepthPower;
 uniform float uOpacity;
 uniform float uChart;
 uniform vec3 uInk;
@@ -35,7 +38,8 @@ void main() {
   #include <logdepthbuf_fragment>
 
   vec3 n = normalize(vNormalView);
-  vec3 viewDir = normalize(-vPositionView);
+  float dView = length(vPositionView);
+  vec3 viewDir = -vPositionView / dView;
 
   if (uChart > 0.5) {
     float ndotv = max(dot(n, viewDir), 0.0);
@@ -50,7 +54,8 @@ void main() {
     return;
   }
 
-  float alpha = uOpacity * fresnelRimAlpha(n, viewDir, uAlphaLimb, uFaceOnFloor, uFresnelPower);
+  float alpha = uOpacity * fresnelRimAlpha(n, viewDir, uAlphaLimb, uFaceOnFloor, uFresnelPower)
+    * shellDistanceAttenuation(dView, uNearFadePc, uDepthDimRefPc, uDepthPower);
   // ±0.5-LSB output dither — the whisper-level rim spans only a handful
   // of 8-bit levels, so quantisation bands even on a smooth mesh.
   float dith = (stellataIgn(gl_FragCoord.xy + 113.7) - 0.5) / 255.0;

@@ -21,7 +21,7 @@ targets.
   is absent — the layer is optional. The parse also surfaces the header's
   volume `centroidAbs` (the focus-target center) and computes `extentPc`
   (max wall-vertex distance from the centroid — the framing extent).
-- `local-bubble.ts` — `LocalBubbleShell` (extends the shared
+- `local-bubble.ts` (+ test) — `LocalBubbleShell` (extends the shared
   `fresnel-shell/` base: builds a `BufferGeometry` from the parsed mesh,
   `computeVertexNormals` at runtime, folds the detail-cycle + chart gates
   into `group.visible`) plus `createLocalBubbleLabel` (the
@@ -42,7 +42,20 @@ The Fresnel shell material + shader pair + gating base live in
   and appears only when the camera flies out beyond the wall (~300 pc).
   Without this the near-wall rim glow washes the whole scene. The mesh is
   `frustumCulled = false` (bounding-sphere culling is unreliable with the
-  camera interior).
+  camera interior). Crossing the wall no longer pops it out: the shared
+  near-fade ramps the rim to nothing as the camera closes on it, and the
+  cull then takes over from inside (`../fresnel-shell/README.md`
+  § Camera-distance attenuation).
+- **Both distance reaches come off the mesh.** `uNearFadePc` and
+  `uDepthDimRefPc` are derived together from the loader's measured
+  `extentPc` (`rimDistancesForExtent`) — a number that exists only once the
+  artifact is parsed — so `attach` writes the pair beside the geometry and
+  the constructor passes `extentPc: 0`. Nothing draws in between:
+  `shellReady()` is false until that same `attach`. Don't replace the 0
+  with an authored wall distance; the build measures it. The measured
+  extent is the **max** wall radius (~299 pc against a ~233 pc median), so
+  the depth clearance covers the whole lumpy wall rather than its typical
+  lobe (`../fresnel-shell/README.md` § Camera-distance attenuation).
 - **renderOrder −1**, additive, `depthWrite:false`: a dim rim glow the
   local stars composite over. See `src/client/README.md` § Full render stack.
 - **Label** (`localBubbleLabel`, a `labels`-tier declutter element at

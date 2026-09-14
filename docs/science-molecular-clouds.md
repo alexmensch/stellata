@@ -462,7 +462,7 @@ mandatory:
    layer — must render earlier in the background group; a layer added
    after the mesh silently escapes extinction. Point sources are exempt
    (per-star raymarch owns them). Recorded in
-   `src/client/molecular-clouds/README.md` § Absorption render.
+   `src/client/molecular-clouds/absorption/README.md`.
 
 Step count is a dev-console lever; the structure above is not tunable
 away.

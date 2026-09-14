@@ -10,6 +10,8 @@ import {
   type CloudSharedUniforms,
 } from './cloud-materials';
 import { MOCK_RIM_SPEC as RIM_SPEC, makeMockAbsorptionSpec as spec } from './cloud-mock';
+import { DEPTH_DIM_POWER } from '../fresnel-shell/shell-distance-pure';
+import { CLOUD_RIM_DISTANCES } from './cloud-rim-pure';
 
 const hdr = makeHdrEmitterUniforms();
 
@@ -80,6 +82,21 @@ describe('the cloud material seam', () => {
   it('seeds uUEnv from the spec on both backends', () => {
     expect(glsl.absorption(spec(false)).uniforms.uUEnv.value).toBe(0.85);
     expect(tsl().absorption(spec(false)).uniforms.uUEnv.value).toBe(0.85);
+  });
+
+  // One rim material serves all ~96 clouds, so both reaches are one
+  // representative value rather than per-cloud.
+  it('seeds the rim distance slots identically on both backends', () => {
+    for (const u of [glsl.rim(RIM_SPEC).uniforms, tsl().rim(RIM_SPEC).uniforms]) {
+      expect(u.uNearFadePc.value).toBe(CLOUD_RIM_DISTANCES.nearFadePc);
+      expect(u.uDepthDimRefPc.value).toBe(CLOUD_RIM_DISTANCES.depthDimRefPc);
+      expect(u.uDepthPower.value).toBe(DEPTH_DIM_POWER);
+    }
+  });
+
+  it('pins the rim reaches at 12 pc near-fade and 170 pc depth reference', () => {
+    expect(CLOUD_RIM_DISTANCES.nearFadePc).toBe(12);
+    expect(CLOUD_RIM_DISTANCES.depthDimRefPc).toBe(170);
   });
 
   it('severs every MRT registration on dispose', () => {

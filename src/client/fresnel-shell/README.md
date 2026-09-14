@@ -12,11 +12,18 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
 
 ## Files
 
-- `fresnel-rim.glsl` — the rim-alpha formula
-  (`fresnel = pow(1 − n·v, uFresnelPower)`,
-  `alpha = uAlphaLimb · mix(uFaceOnFloor, 1, fresnel)`), registered by
-  `fresnel-shell.ts` as the `stellata_fresnel_rim` ShaderChunk. Shared
-  with `molecular-clouds/cloud-rim.frag.glsl`.
+- `fresnel-rim.glsl` — two functions, registered by `fresnel-shell.ts` as
+  the `stellata_fresnel_rim` ShaderChunk and shared with
+  `molecular-clouds/cloud-rim.frag.glsl`: `fresnelRimAlpha`, the rim-alpha
+  formula (`fresnel = pow(1 − n·v, uFresnelPower)`,
+  `alpha = uAlphaLimb · mix(uFaceOnFloor, 1, fresnel)`), and
+  `shellDistanceAttenuation`, the camera-distance factor on it
+  (§ Camera-distance attenuation).
+- `shell-distance-pure.ts` (+ test) — the attenuation's CPU mirror and the
+  authored constants every backend and consumer reads
+  (`NEAR_FADE_EXTENT_FRAC`, `DEPTH_DIM_CLEARANCE_PC`, `DEPTH_DIM_POWER`),
+  plus `rimDistancesForExtent`, which turns one extent into both reaches.
+  Vitest-pinned.
 - `fresnel-shell.{vert,frag}.glsl` — the shader pair. The vert carries
   view-space normal + position; the frag applies the rim chunk.
 - `fresnel-shell.ts`
@@ -25,7 +32,12 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
     `ShaderMaterial` builder behind it is module-private, so a consumer
     cannot take a surface that skips the seam.
   - `FresnelShell` — abstract base owning the group, material, and the
-    chart-mode + detail-cycle + floating-origin plumbing.
+    chart-mode + detail-cycle + floating-origin plumbing, plus
+    `setRimParams` (§ Camera-distance attenuation).
+  - `RimParams` + `applyRimParams(uniforms, p)` — the six live rim slots
+    and the one writer behind every consumer's `setRimParams`, so a lever
+    cannot reach one surface's block and miss the identically-keyed slot
+    on another's.
   - `createShellSilhouetteLabel(stellata, opts)` — a `distance-gated-label`
     with the shared shell config (bottom-right anchor, standard offset,
     0.25 chase lerp). The engine's occlusion gate
@@ -87,7 +99,11 @@ MRT-mode registration and a bare `material.dispose()` would not.
   `uAlphaLimb` (limb alpha, the peak),
   `uFaceOnFloor` (face-on multiplier — 0 = pure rim, 1 = flat shell;
   default 0.04), `uFresnelPower` (rim tightness — ~2 soft halo, ~5 thin
-  edge; default 2.5). Pass `blending: AdditiveBlending` for a glow that
+  edge; default 2.5). Then the three attenuation slots —
+  `uNearFadePc` off the required `nearFadePc` option, `uDepthDimRefPc` and
+  `uDepthPower` seeded from the shared constants and deliberately not
+  options (§ Camera-distance attenuation). Pass
+  `blending: AdditiveBlending` for a glow that
   composites over the layers behind it; the default is `NormalBlending`.
 - **Visibility.** `group.visible = contributing && permitted && !mono &&
   shellReady()`. `shellReady()` is the consumer's own gate — both shells are
@@ -116,6 +132,94 @@ MRT-mode registration and a bare `material.dispose()` would not.
   on every fresh load while its label (a per-frame reader) showed.
 - **Recenter.** Sol-anchored geometry (Sol = catalog origin), so the
   group parks at −worldOffset — non-zero under planet focus.
+
+## Camera-distance attenuation
+
+Two factors multiply the rim alpha, both off the fragment's own distance
+from the camera. View space puts the camera at the origin, so that
+distance is `length(positionView)` — no extra varying and no per-frame CPU
+work.
+
+    nearFade = clamp(d / uNearFadePc, 0, 1)
+    depthDim = pow(clamp(uDepthDimRefPc / d, 0, 1), uDepthPower)
+
+**All three implementations take `d` as an argument, and every caller
+divides by it to get `viewDir`.** That is the one root per fragment: the
+rim shape needs `-positionView` normalised and the attenuation needs its
+length, so a call site spelling the first as `normalize()` pays an
+`inversesqrt` and a `sqrt` for one quantity. Keep the shape's `viewDir` as
+`-positionView / d`.
+
+**Both reaches are per-material, and both derive from one shared authored
+number plus the consumer's own extent** — `rimDistancesForExtent`, the only
+place either is computed. A consumer states its size once and cannot set
+one reach and leave the other on a foreign scale. Consumers span five
+orders of magnitude: the heliopause off `HELIOPAUSE_EXTENT_PC` (200 AU),
+the Local Bubble off its loader's measured `extentPc`, the cloud rim off
+one representative 20 pc radius because a single material serves all ~96
+clouds.
+
+The near-fade exists so a wall the camera is crossing ramps out instead of
+popping — the shells are `FrontSide`, so without it the wall vanishes the
+instant the camera passes inside. Its reach is `NEAR_FADE_EXTENT_FRAC` of
+the extent.
+
+The depth dimming makes relative brightness read as relative distance: a
+cloud beyond the Local Bubble wall comes out dimmer than the wall. Its
+reference is the extent **plus** `DEPTH_DIM_CLEARANCE_PC` — full-brightness
+headroom measured from the shell's own surface, not from the camera.
+
+**The clearance is what makes the scale shared, and an absolute reference
+is what broke it.** A flat reference distance sits *inside* any shell
+bigger than itself: at 150 pc flat, the Local Bubble (max wall radius
+~300 pc) had no vantage at all where its whole wall was undimmed — at its
+own framing distance the near wall read ~0.53 and the far wall ~0.32, so
+the shell's size, not its distance, set its brightness. Measuring the same
+150 pc past each shell's surface removes that and leaves one rule for
+every consumer. Don't "fix" it back to a bare constant.
+
+The accepted trade: at equal distance a larger shell now reads brighter
+than a smaller one, so a small cloud can sit in front of the Local Bubble's
+far wall and read dimmer than it. Only three materials exist, and all ~96
+clouds share one, so this is reachable **only** between a cloud and a
+boundary shell — never between two clouds, where the ordering the term
+exists for is what the eye is actually comparing.
+
+The near-fade's trade is the same shared material seen from the other
+half: a fixed 12 pc reach cannot track a cloud's own size, so a cloud
+small enough is already inside the fade when the camera parks on it. Park
+is `max(2.4 r, 5)` pc (`../camera/focus/focus-transition.ts`) and the limb
+sits `sqrt(park² − r²)` away, which clears 12 pc only above r ≈ 5.5 pc —
+30 of the 96 clouds, none dimmer than 0.75 and the median untouched.
+Accepted rather than paying a per-cloud uniform write; re-derive it over
+`public/clouds.json` before treating the count as current.
+
+`DEPTH_DIM_POWER` is 0.6, below 1 so the ~50–2500 pc cloud span compresses
+into a readable range. At 1.0 the farthest clouds land near the dither
+floor (Carina peaked at 0.03 alpha), and the inverse-square exponent is a
+1600× range that blacks out everything past the nearest handful.
+
+The heliopause takes the depth term too and it is a no-op there — an
+AU-scale extent adds nothing to the clearance, and `uDepthDimRefPc / d`
+clamps to 1 from every distance the shell is visible from — which beats a
+per-material opt-out flag.
+
+**Chart mode is excluded by structure, not by a condition.** Ink density
+varying with distance would break the flat printed-atlas convention. Both
+boundary shells hide outright in chart mode, and the cloud rim's chart arm
+returns before it reaches the shared chunk, so there is nothing to gate;
+`molecular-clouds/cloud-glsl-drift.test.ts` pins that the attenuation is
+unreachable from the chart arm. Do not add a branch that would look
+load-bearing and is not.
+
+**Sweeping the constants.** `setRimParams` takes the same six-field record
+on both `stellata.kinds.shell` (fanned out to both shells) and
+`stellata.kinds.cloud.layer`, and every field is optional, so a partial
+record writes only the slots it names. `depthPower` spans both kinds, so
+settling it by eye means the same call on each — a sweep on one alone
+leaves the other on the old curve and the comparison the term exists for
+is meaningless. `depthDimRefPc` is the resolved per-material distance, so
+sweeping *that* means passing each consumer its own number.
 
 ## Boundary shells as focus targets
 

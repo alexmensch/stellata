@@ -3,7 +3,8 @@
 The TSL half of the cloud layer's two surfaces: the absorption raymarch
 that dims every diffuse layer behind a cloud, and the rim shell that
 annotates its silhouette. **These are the shipped surfaces.** The WebGL2
-shaders (`../../molecular-clouds/`) stay the semantic reference until
+shaders (`../../molecular-clouds/absorption/` for the raymarch,
+`../../molecular-clouds/` for the rim) stay the semantic reference until
 `0it.14` deletes them; the physics is not re-decided here.
 
 **Both port as a material swap, not a layer.** The cloud layer keeps every
@@ -16,7 +17,8 @@ through `../../molecular-clouds/README.md` § The material seam.
 ```
 src/client/webgpu/molecular-clouds/
   cloud-absorption-tsl.ts   The ellipsoid raymarch, in both tiers.
-  cloud-rim-tsl.ts          The fresnel rim and the chart stipple contour.
+  cloud-rim-tsl.ts          The attenuated fresnel rim and the chart
+                            stipple contour.
   cloud-uniform-nodes.ts    TSL uniform-node twins of the seam's three
                             uniform blocks, transcribed key-for-key.
   tsl-cloud-materials.ts    The factory implementing CloudMaterials.
@@ -139,6 +141,11 @@ a `length` it never reads (chart mode, the fresnel `pow` and the dither).
 coherent across the whole draw, and the one kind of branch WGSL still
 allows `dFdx` / `dFdy` inside. Each arm carries its own `Discard`, which is
 also what the GLSL's early `return` out of the chart branch expresses.
+
+The camera-distance attenuation rides the realistic arm only
+(`../../fresnel-shell/README.md` § Camera-distance attenuation) — that arm
+being the only path to the shared chunk is what excludes chart mode, on
+this backend as on the GLSL one.
 
 One deliberate difference from the GLSL: the realistic arm discards at
 `rimAlpha <= 0`, where the GLSL writes `max(alpha + dither, 0)`

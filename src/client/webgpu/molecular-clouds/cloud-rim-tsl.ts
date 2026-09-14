@@ -13,7 +13,9 @@ import {
   CONTOUR_WIDTH, MIN_FWIDTH, STIPPLE_ALPHA_FLOOR, STIPPLE_DOT_RADIUS,
   STIPPLE_DOT_SOFTNESS, STIPPLE_PERIOD_PX,
 } from '../../molecular-clouds/cloud-rim-pure';
-import { fresnelRimAlphaTsl } from '../fresnel-shell/fresnel-rim-tsl';
+import {
+  fresnelRimAlphaTsl, shellDistanceAttenuationTsl,
+} from '../fresnel-shell/fresnel-rim-tsl';
 import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material';
 import { lsbDitherTsl } from '../tsl/jitter-tsl';
 import type { CloudRimNodes } from './cloud-uniform-nodes';
@@ -31,7 +33,8 @@ export function buildCloudRimMaterial(r: CloudRimNodes): MrtEmitterMaterial {
   // boundary shells carry none (`../fresnel-shell/README.md`).
   return finishMrtMaterial(material, () => {
     const n = normalView.normalize();
-    const viewDir = positionView.negate().normalize();
+    const dView = length(positionView).toVar();
+    const viewDir = positionView.negate().div(dView);
 
     const ink = vec3(0.0).toVar();
     const alpha = float(0.0).toVar();
@@ -55,8 +58,12 @@ export function buildCloudRimMaterial(r: CloudRimNodes): MrtEmitterMaterial {
     }).Else(() => {
       // The whisper-level rim spans only a handful of 8-bit levels, so it
       // bands even on a smooth mesh.
-      const rimAlpha = r.uOpacity.mul(fresnelRimAlphaTsl(
-        n, viewDir, r.uAlphaLimb, r.uFaceOnFloor, r.uFresnelPower)).toVar();
+      const rimAlpha = r.uOpacity
+        .mul(fresnelRimAlphaTsl(
+          n, viewDir, r.uAlphaLimb, r.uFaceOnFloor, r.uFresnelPower))
+        .mul(shellDistanceAttenuationTsl(
+          dView, r.uNearFadePc, r.uDepthDimRefPc, r.uDepthPower))
+        .toVar();
       Discard(rimAlpha.lessThanEqual(0.0));
       ink.assign(r.uColour);
       alpha.assign(max(
