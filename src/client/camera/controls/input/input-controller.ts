@@ -224,11 +224,8 @@ export class InputController {
     this.deps.bus.emit('noopClick', { x, y });
   }
 
-  /** The object under the cursor, across every registered kind — the
-   *  tightest surface enclosing it wins, which is the same function the
-   *  hover engine runs over the same picks, so click and hover can't
-   *  disagree. Enumerating kinds here is what let clouds fall out of the
-   *  comparison entirely and be reachable only when nothing else hit. */
+  /** One roster-wide call, never a per-kind list here — a list is what
+   *  let clouds fall out of the comparison (README.md). */
   private pickClickedObject(x: number, y: number): Target | null {
     const winner = this.deps.picker.pickAnyKindHit(x, y, PICK_THRESHOLD_PX);
     return winner === null ? null : { kind: winner.kind, idx: winner.hit.idx };

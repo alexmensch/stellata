@@ -42,10 +42,8 @@ export interface PickerDeps {
   // migrated kind, absent for kinds whose pick path is still inline.
   // Hover providers call the same functions, so the two can't disagree.
   kindPicks: Readonly<Partial<Record<TargetKind, KindPick>>>;
-  // The frame's near solid bodies and the camera they are read from
-  // (`../../occlusion/README.md`), for the one gate that drops hits the
-  // user cannot see — applied across every kind at once in
-  // `pickAnyKindHit`, never per layer.
+  // Feeds the one occlusion gate, applied across every kind at once in
+  // `pickAnyKindHit` and never per layer (`../../hover/README.md` Rule 3).
   visibility?: () => PickVisibility | null;
   // Star disc pixel diameter for the hit radius. Threaded
   // as a callback so Picker stays decoupled from material uniforms.
@@ -125,13 +123,9 @@ export class Picker {
     return this.deps.kindPicks[kind]?.(clientX, clientY, pixelThreshold) ?? null;
   }
 
-  /** The winning object across EVERY registered kind — the tightest
-   *  surface enclosing the cursor, by the comparator the hover engine
-   *  runs over the same picks (`../../hover/hover-pick-disambiguator.ts`).
-   *
-   *  Driven by the kind roster rather than a written-out list, so a kind
-   *  added later competes for clicks the moment its module registers a
-   *  pick, with nothing to edit here or at the call site. */
+  /** The winning object across every registered kind, by the comparator
+   *  the hover engine runs over the same picks. Roster-driven, never a
+   *  written-out kind list — README.md § picker.ts. */
   pickAnyKindHit(
     clientX: number,
     clientY: number,

@@ -95,12 +95,9 @@ export type PickCandidate = {
   idx: number;
   pxDist: number;
   hitRadius: number;
-  /** Set by layers whose enclosure test is a mesh raycast rather than a
-   *  radius compare: the cursor is inside the drawn silhouette even
-   *  though `pxDist` can exceed `hitRadius` on a near-side lobe, whose
-   *  centre projects farther out than the extent sphere subtends. The
-   *  radius then reports size only, which is what the cross-layer
-   *  comparator needs it for. */
+  /** Set by a layer whose own hit test IS the enclosure test, where
+   *  `pxDist` can exceed `hitRadius` on a near-side lobe and the radius
+   *  reports size alone (`../../molecular-clouds/README.md`). */
   enclosed?: boolean;
 };
 
@@ -125,27 +122,19 @@ export function enclosureRadiusPx(hitRadius: number, pixelThreshold: number): nu
   return Math.round(Math.max(hitRadius, pixelThreshold));
 }
 
-// Returning the candidate rather than its idx lets callers read the
-// winner's extension fields without re-walking the projection, and the
-// two ranking numbers come from the comparison already made rather than
-// being re-derived per caller.
+// Returns the candidate, not its idx, so callers read the winner's
+// extension fields without re-walking the projection.
 export type PickResult<T extends PickCandidate> = {
   candidate: T;
   enclosureRadiusPx: number;
   depthScore: number;
 };
 
-// Reduce a candidate list to the winning candidate, or null. Among the
-// surfaces enclosing the cursor the tightest wins, and `scoreFn`
-// separates two of equal size. A candidate encloses the cursor when
-// `pxDist <= enclosureRadiusPx(...)`, or whenever it says so itself via
-// `enclosed` — set by a layer whose own hit test is the enclosure test.
-//
-// Why size is the primary key and camera distance is not a key at all:
-// README.md § Ranking a pick.
-//
-// `scoreFn` defaults to `c.pxDist / c.hitRadius`. Every caller's radius
-// comes from `discHitRadiusPx`, so the divisor is floored well above zero.
+// Reduce a candidate list to the winner, or null: tightest enclosure,
+// then `scoreFn` between equals (README.md § Ranking a pick). A candidate
+// encloses the cursor when `pxDist <= enclosureRadiusPx(...)` or when it
+// sets `enclosed`. Every caller's radius comes from `discHitRadiusPx`, so
+// the default scorer's divisor is floored well above zero.
 export function pickFromCandidates<T extends PickCandidate>(
   candidates: Iterable<T>,
   pixelThreshold: number,
