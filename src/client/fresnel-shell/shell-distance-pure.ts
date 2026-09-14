@@ -2,29 +2,23 @@
 // backend reads it from: a near-fade so a wall the camera is closing on
 // ramps out, and a depth dimming on one shared absolute pc scale.
 
-/** Near-fade reach as a fraction of a shell's own extent. One shared
- *  proportion rather than three authored distances, so consumers five
- *  orders of magnitude apart — heliopause ~200 AU, cloud rims 1–50 pc,
- *  Local Bubble 75–300 pc — fade over the same fraction of themselves. */
+/** Near-fade reach as a fraction of a shell's own extent — one shared
+ *  proportion, not three authored distances. See README.md
+ *  § Camera-distance attenuation for all three. */
 export const NEAR_FADE_EXTENT_FRAC = 0.6;
 
-/** Full-brightness headroom past a shell's own surface (pc). The shared
- *  scale is this clearance rather than an absolute camera distance,
- *  because a fixed reference sits *inside* any shell bigger than itself:
- *  at 150 pc flat the Local Bubble (max wall radius ~300 pc) had no
- *  vantage at all where its whole wall was undimmed. */
+/** Full-brightness headroom past a shell's own surface (pc) — a clearance,
+ *  not an absolute reference. Don't flatten it back to a bare distance;
+ *  README.md § Camera-distance attenuation carries what that broke. */
 export const DEPTH_DIM_CLEARANCE_PC = 150;
 
-/** Falloff exponent past that clearance. Below 1 so the ~50–2500 pc cloud
- *  span compresses into a readable range: at 1.0 the farthest clouds land
- *  near the dither floor, and inverse-square would be a 1600× range that
- *  blacks out everything past the nearest handful. */
+/** Falloff exponent past that clearance, below 1 to keep the cloud span
+ *  readable. */
 export const DEPTH_DIM_POWER = 0.6;
 
-/** The two camera-distance reaches a rim consumer needs, both off the one
- *  extent it already knows. Returned together because they are the writable
- *  slots `RimParams` names, so a consumer states its size once and cannot
- *  set one reach and leave the other on a foreign scale. */
+/** The two camera-distance reaches a rim consumer needs. Returned together,
+ *  and keyed as `RimParams` names them, so the pair is writable as one
+ *  record. */
 export interface RimDistances {
   nearFadePc: number;
   depthDimRefPc: number;

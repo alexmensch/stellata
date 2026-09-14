@@ -228,7 +228,10 @@ printed-atlas convention. `CLOUD_RIM_DISTANCES` carries both reaches for
 every cloud — 12 pc near-fade, 170 pc depth reference. One material serves
 all ~96, so both come off one representative radius
 (`CLOUD_RIM_EXTENT_PC`, 20 pc) rather than per-cloud, which also means no
-two clouds can disagree on the depth scale.
+two clouds can disagree on the depth scale. Both halves of that shared
+reach carry an accepted trade, and the near-fade's is the cloud-specific
+one — `../fresnel-shell/README.md` § Camera-distance attenuation states
+both.
 
 ## Labels
 

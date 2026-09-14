@@ -185,6 +185,15 @@ clouds share one, so this is reachable **only** between a cloud and a
 boundary shell — never between two clouds, where the ordering the term
 exists for is what the eye is actually comparing.
 
+The near-fade's trade is the same shared material seen from the other
+half: a fixed 12 pc reach cannot track a cloud's own size, so a cloud
+small enough is already inside the fade when the camera parks on it. Park
+is `max(2.4 r, 5)` pc (`../camera/focus/focus-transition.ts`) and the limb
+sits `sqrt(park² − r²)` away, which clears 12 pc only above r ≈ 5.5 pc —
+30 of the 96 clouds, none dimmer than 0.75 and the median untouched.
+Accepted rather than paying a per-cloud uniform write; re-derive it over
+`public/clouds.json` before treating the count as current.
+
 `DEPTH_DIM_POWER` is 0.6, below 1 so the ~50–2500 pc cloud span compresses
 into a readable range. At 1.0 the farthest clouds land near the dither
 floor (Carina peaked at 0.03 alpha), and the inverse-square exponent is a
