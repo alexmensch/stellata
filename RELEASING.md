@@ -129,9 +129,11 @@ information.
   were taken at the positions Tier 1 takes them at. Direction against a
   band is what this tier claims, and two vantages claim it twice:
   mw120|webgpu carries a sound GPU stream, and sol|webgpu is the second
-  witness — the vantage that reproduces best, 22.421201 against 22.421199
-  ms on two independent cold runs, and the one a first load actually
-  shows. Not the dearest gated row: that is mw50|webgpu, which sits 4th in
+  witness — the one a first load actually shows. Both currently repeat
+  worse than they are gated: two cold runs of one unchanged tree read
+  1.25 ms apart at sol and 0.66 at mw120 against a 0.25 ms band, so a mark
+  at either can sit inside the instrument's own scatter (stellata-8cg.74).
+  Not the dearest gated row: that is mw50|webgpu, which sits 4th in
   the canon order, so a two-context run would measure it at a position the
   pin does not hold for it and the row would refuse
   (§ Run position). A witness that refuses is not a witness. Paste the
@@ -160,8 +162,13 @@ tier follows. First applied by stellata-8cg.49.21 itself, which rewrote
 `--baseline`'s verdict and claimed Tier 0 on exactly this ground.
 
 **Tier 1 needs no run index and no filename convention.** Its baseline is
-the committed pin — on landed code by construction, and the same file
-every Tier 2 PR re-takes — so there is no "recent run" to find. A run that
+the committed pin — one file, the same one every Tier 2 PR re-takes — so
+there is no "recent run" to find. The pin is normally taken on a branch,
+so its tree is not main's by construction: `--against-pin` re-asks the
+ancestry at comparison time, and where the tip never landed it prints
+main's own `git diff --shortstat` between the two bases, because a mark is
+only the PR's if nothing else moved the frame in between
+(`scripts/perf/pins/README.md` § What the commit fields hold). A run that
 cannot be compared is refused rather than trusted: a differing adapter,
 buffer, method, mode or record count, and a row taken at another position
 in its run (below). A committed index and a `.perf-runs/` naming convention
@@ -199,8 +206,9 @@ the run-condition difference that exceeds it.
 **What is pinned.** `--mode dwell` at the five canon vantages in canon
 order (mw120, sol, earth, mw50, lg — § Run position: a permutation pins
 rows no later run reaches, and `--pin` refuses one), 1280×800 at dpr 2
-(4.096 Mpx), 240 frames, `raf-delta`,
-exposure pinned. Every row records the wall p50 / p90, the catalogue record
+(4.096 Mpx), 240 frames or more, `raf-delta`,
+exposure pinned — a vantage whose quarter medians straddle its two readback
+classes settles with a longer dwell rather than with another arm. Every row records the wall p50 / p90, the catalogue record
 count it priced, and, on WebGPU, the GPU-stream p50. The commit pair is on
 the run, not the row. The per-pass differential is attribution, run when a row
 moves or when the PR touches a pass directly; it explains a mark and never
