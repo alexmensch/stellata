@@ -65,6 +65,7 @@
     "typecheck": "tsc --noEmit",
     "perf": "tsx scripts/perf/run.ts",
     "perf:pin": "tsx scripts/perf/pin.ts",
+    "perf:synthetic": "tsx scripts/perf/synthetic-catalog/build-synthetic-catalog.ts",
     "test": "vitest run",
     "test:spotcheck": "python3 scripts/binaries/build-binaries-spotcheck.py",
     "test:watch": "vitest",

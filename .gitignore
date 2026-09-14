@@ -71,6 +71,10 @@ data/**/*.tsv.ckpt/
 scripts/**/__pycache__/
 
 
+# Synthetic catalog artifacts for the scale measurement
+# (scripts/perf/synthetic-catalog/) — hundreds of MB, never a build output.
+.synthetic/
+
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db
