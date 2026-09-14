@@ -40,7 +40,7 @@ export interface StarModuleRuntime {
   parkDistForStar(idx: number): number;
   /** Rendered disc diameter in CSS px — the shader-sizing CPU mirror. */
   renderedSizePx(idx: number): number;
-  /** The Picker's two-tier star pick, shared by hover and the click FSM. */
+  /** The Picker's star pick, shared by hover and the click FSM. */
   pickStarHit(clientX: number, clientY: number, pixelThreshold: number): HoverHit | null;
   /** Orbital elements for the companion lines; null with no artifact.
    *  Read per format call — the shell can re-attach binaries after the

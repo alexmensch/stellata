@@ -253,7 +253,7 @@ interface AttachedHost {
 
 // Per-candidate row in the cross-host pick reducer. Extends the shared
 // `PickCandidate` shape so `pickFromCandidates` in star-geometry.ts
-// reduces it under the same prime/fallback contract every layered
+// reduces it under the same tightest-enclosure contract every layered
 // picker uses. `idx` is the planet-within-host index (decoded from the
 // winning candidate as `hostStarIdx + idx`); the host axis rides
 // through on `hostStarIdx`.

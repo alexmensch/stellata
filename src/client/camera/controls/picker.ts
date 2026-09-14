@@ -47,7 +47,7 @@ export interface PickerDeps {
   // user cannot see — applied across every kind at once in
   // `pickAnyKindHit`, never per layer.
   visibility?: () => PickVisibility | null;
-  // Star disc pixel diameter for the prime-tier hit radius. Threaded
+  // Star disc pixel diameter for the hit radius. Threaded
   // as a callback so Picker stays decoupled from material uniforms.
   renderedSizePxFn: (idx: number) => number;
   // Live `iSuppressPulsation` mirror, read once per pick so the scan's
@@ -148,7 +148,7 @@ export class Picker {
 
   // ─── Internal ─────────────────────────────────────────────────────
 
-  // Two-tier star pick (project + filter + collect; reducer in
+  // Star pick (project + filter + collect; reducer in
   // star-geometry.ts). Camera distance is deliberately ignored — see
   // pickScore for the rationale.
   private pickStarResult(

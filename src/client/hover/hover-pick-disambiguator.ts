@@ -16,13 +16,9 @@ export type HoverProviderHit = {
 };
 
 /** Generic tiebreak core — smallest enclosure wins, then deepest inside
- *  it. `disambiguateHits` wraps it for the engine's provider-paired hits;
- *  the click FSM runs it over the roster's per-kind picks so click and
- *  hover can't disagree on which object wins.
- *
- *  The comparison reads nothing but the two numbers every hit carries, so
- *  a kind added later ranks correctly against every existing one without
- *  touching this file. */
+ *  it (./README.md Rule 3). `disambiguateHits` wraps it for the engine's
+ *  provider-paired hits; the click FSM runs it over the roster's per-kind
+ *  picks, so the two cannot disagree. */
 export function bestHitBy<T>(
   items: readonly (T | null)[],
   hitOf: (item: T) => HoverHit,
@@ -51,14 +47,8 @@ export type PickVisibility = {
 };
 
 /** Every hit the cursor found, minus the ones a nearer solid body hides,
- *  reduced to the tightest survivor.
- *
- *  This is the ONLY place occlusion is decided, and every kind's pick
- *  reaches it — which is the point. A gate per layer is how a kind gets
- *  missed: probes were, and Voyager 2 answered the cursor through Sol's
- *  disc while four other kinds were correctly refusing to. A kind added
- *  later is covered here without being asked to do anything but report
- *  its `anchorLocal`. */
+ *  reduced to the tightest survivor. The ONLY place occlusion is decided;
+ *  never add a second gate in a layer (./README.md Rule 3). */
 export function bestVisibleHitBy<T>(
   items: readonly (T | null)[],
   hitOf: (item: T) => HoverHit,

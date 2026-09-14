@@ -187,7 +187,7 @@ function projectToScreen(p: THREE.Vector3, camera: THREE.PerspectiveCamera): { x
 }
 
 describe('Picker / pickStar', () => {
-  describe('prime tier — cursor inside rendered disc', () => {
+  describe('cursor inside the rendered disc', () => {
     let data: ReturnType<typeof makeCatalog>;
     beforeEach(() => {
       // One star at the world origin, projecting to screen centre.
@@ -274,12 +274,12 @@ describe('Picker / pickStar', () => {
     });
   });
 
-  describe('fallback tier — cursor near disc centre, outside the disc', () => {
+  describe('cursor near the disc centre, outside the disc', () => {
     it('returns the idx when cursor is within pixelThreshold of the centre', () => {
       const data = makeCatalog([[0, 0, 0]]);
       // 2 px disc, well below MIN_DISC_HIT_RADIUS_PX (4 px) but well
-      // below the fallback threshold (16 px) — cursor 6 px away
-      // misses the prime tier but lands fallback.
+      // below the grab threshold — cursor 6 px away misses the drawn
+      // disc but is still inside the floored enclosure.
       const { picker, camera } = makePicker(data, defaultFilter(), {
         renderedSizePxFn: () => 2,
       });

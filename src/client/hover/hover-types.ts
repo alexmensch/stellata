@@ -3,43 +3,18 @@
 
 import type * as THREE from 'three';
 
-// One pick result from a single layer's pick path.
+// One pick result from a single layer's pick path. `enclosureRadiusPx`
+// and `depthScore` rank it across layers; `cameraDistancePc` never does
+// and is card text only (./README.md Rule 3).
 //
-// `enclosureRadiusPx` is the cross-layer ranking key: the on-screen
-// half-extent of the surface the cursor was found inside, floored at the
-// engine's pixel threshold so a sub-pixel disc still reports the radius a
-// user can actually aim at. Smallest wins — the tightest thing enclosing
-// the cursor is the one being pointed at. It carries no notion of which
-// kind produced it, which is the point: a new layer joins the ordering
-// correctly by reporting its own size, with nothing to add here.
+// `anchorLocal` is required rather than optional so a kind added later
+// cannot quietly opt out of the occlusion gate and reappear through a
+// planet. It is the point the cursor actually found — never a centroid
+// where the cursor met an edge (`../occlusion/README.md`).
 //
-// Camera distance is NOT a ranking key and must not become one. Viewed
-// from outside, an enclosing surface's near wall is nearer than every
-// object it contains, so "closest wins" hands a click on a star to the
-// Local Bubble, and a background cloud is unreachable wherever a
-// foreground one overlaps it (`./README.md` Rule 3). `cameraDistancePc`
-// rides along for card text only.
-//
-// `depthScore` breaks ties between equally-sized enclosures — how deep
-// inside its own surface the cursor sits, scale-invariant, so coincident
-// catalogue rows still separate.
-//
-// `anchorLocal` is the local-frame point the cursor actually found — the
-// raycast's hit point for a silhouette surface, the centre for a compact
-// one, never a whole object's centroid where the cursor met its edge. It
-// is what lets ONE occlusion gate answer for every kind
-// (`../occlusion/README.md`): a hit a nearer solid body hides is dropped
-// before ranking, wherever it came from. The field is required rather
-// than optional precisely so a kind added later cannot quietly opt out
-// of being occluded and reappear through a planet.
-//
-// `hostStarIdx` is an optional sub-layer identity slot used by providers
-// whose `idx` alone doesn't pin a unique object — currently the planet
-// provider (a planet is identified by `(hostStarIdx, planetIdx)`,
-// future-ready for the exoplanet epic multi-host). Layers whose `idx` is
-// already a unique catalog row (stars, Local Group, clouds, the lone
-// heliopause apex) leave it `undefined`; the engine doesn't read it,
-// only the originating provider's `format` does.
+// `hostStarIdx` is the optional sub-layer identity slot for a provider
+// whose `idx` alone doesn't pin an object; only that provider's `format`
+// reads it (./README.md § Architecture).
 export type HoverHit = {
   idx: number;
   cameraDistancePc: number;

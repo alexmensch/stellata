@@ -1937,7 +1937,7 @@ export class Stellata implements FrameAnchor {
   }
 
   /** Upper bound on the radius `resolveStarPick` will report — what
-   *  `pickFromCandidatesResolved`'s prime/fallback partition requires of
+   *  `pickFromCandidatesResolved`'s eligibility pass requires of
    *  the prefilter, and the reason the two can't just call the same
    *  function: chart inks a magnitude-mapped disc rather than the
    *  realistic footprint and either curve can be the larger, so the

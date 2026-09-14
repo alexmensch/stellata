@@ -250,7 +250,7 @@ describe('star-geometry / pickFromCandidates', () => {
     expect(r?.candidate.idx).toBe(30);
   });
 
-  it('prime tier with tied score (Alula Australis): brighter component wins', () => {
+  it('equal enclosures with tied depth (Alula Australis): brighter component wins', () => {
     // Two coincident catalog rows — same pxDist, same hitRadius. Only
     // the magnitude differs. Brighter (lower appMag) must win.
     const cands = [

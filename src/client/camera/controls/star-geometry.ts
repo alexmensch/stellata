@@ -58,8 +58,7 @@ export function peakAmplitudeFactor(
 // (Alula Australis A/B at the same x/y/z) still tiebreak by brightness.
 export const PICK_MAG_BIAS_PX_PER_MAG = 0.05;
 
-// Floor on the prime-disc hit radius for any layer that uses the two-tier
-// pick contract (stars, Sol planets, eventually clouds / LG wireframes).
+// Floor on the hit radius every layer derives from a drawn diameter.
 // Tiny chart-mode discs (down to 1–2 px) leave a sub-pixel target that
 // the cursor can easily miss even when visually right on top of the
 // object. Floor the disc-test radius to a value the cursor can
@@ -67,14 +66,12 @@ export const PICK_MAG_BIAS_PX_PER_MAG = 0.05;
 // star and planet pick paths share a single source.
 export const MIN_DISC_HIT_RADIUS_PX = 4;
 
-// The grab radius, shared by hover and click because it is not only a
-// reach: it floors every candidate's reported enclosure, which is the
-// primary ranking key. Two values would rank the same candidates
-// differently wherever a drawn half-extent falls between them, so the
-// pick under the cursor would depend on whether you hovered or clicked.
+// The grab radius. Hover and click MUST share it — it floors the
+// enclosure, so two values rank the same candidates differently
+// (`../../hover/README.md` § Architecture).
 export const PICK_THRESHOLD_PX = 7;
 
-// Prime-tier hit radius for a drawn diameter. The floor applies to the
+// Hit radius for a drawn diameter. The floor applies to the
 // resolved radius as much as the prefilter's, so a star dimmed to a
 // sub-pixel disc stays as reachable as a chart-mode one.
 export function discHitRadiusPx(drawnDiameterPx: number): number {
@@ -82,27 +79,18 @@ export function discHitRadiusPx(drawnDiameterPx: number): number {
 }
 
 // Pick score: (pxDist + sub-pixel appMag bias) over the candidate's own
-// hit radius — how deep inside its own target the cursor sits, so a
-// candidate the cursor is halfway into beats one it is barely clipping
-// however many pixels each is from its centre. The WHOLE numerator is
-// normalised, which is what leaves the tuned behaviour among same-size
-// candidates untouched: an equal divisor cancels out of the comparison.
-// The bias itself only matters for near-coincident candidates (catalogue
-// rows sharing x/y/z, e.g. Alula Australis A/B). Camera distance is
-// deliberately NOT a tiebreaker: the Double Double (ε¹/ε² Lyr) has
-// overlapping hitboxes at typical zoom, and "closest to camera" leaves
-// one component permanently un-clickable.
+// hit radius. Normalising the WHOLE numerator is what leaves same-size
+// candidates ranking as they did: an equal divisor cancels. Why the
+// divisor, and why camera distance is not a tiebreaker: README.md
+// § Ranking a pick.
 export function pickScore(pxDist: number, appMag: number, hitRadius: number): number {
   return (pxDist + appMag * PICK_MAG_BIAS_PX_PER_MAG) / hitRadius;
 }
 
-// One projected pick candidate, after the prime/fallback filter has
-// already accepted it. `hitRadius` is the prime-tier disc radius
-// (`max(pxSize/2, MIN_DISC_HIT_RADIUS_PX)`) — caller-computed because
-// it depends on rendered disc size. Pure-data shape so the reducer
-// below stays unit-testable without a Three.js scene. Non-star
-// providers (planets, Local Group, heliopause apex) extend this with
-// no extra fields and pass the default `pxDist` scorer.
+// One projected pick candidate the caller has already accepted.
+// `hitRadius` is caller-computed because it depends on rendered disc
+// size. Pure-data shape so the reducer below stays unit-testable without
+// a Three.js scene.
 export type PickCandidate = {
   idx: number;
   pxDist: number;
@@ -128,69 +116,36 @@ export type StarPickCandidate = PickCandidate & {
   anchorLocal: THREE.Vector3;
 };
 
-// The on-screen half-extent a cursor can be inside for this candidate:
-// its drawn radius, floored at the grab threshold so a sub-pixel disc
-// still reports the radius a user can aim at. This is the cross-layer
-// ranking key every `HoverHit` carries (`../../hover/hover-types.ts`) —
-// smallest wins — so it must be computed the same way for every kind,
-// which is why it lives here rather than in each provider.
-//
-// Rounded to whole pixels, and that rounding is load-bearing rather than
-// cosmetic: two objects the user sees as the same size can differ in the
-// float by a thousandth of a pixel, and ranking on that would let an
-// invisible difference decide the pick instead of where the cursor
-// actually is. Equal to the pixel means peers, and peers fall to the
-// depth tiebreak.
+// The on-screen half-extent a cursor can be inside for this candidate
+// (`../../hover/README.md` Rule 3). The rounding is load-bearing: two
+// objects the user sees as the same size can differ by a thousandth of a
+// pixel, and ranking on that would let an invisible difference decide the
+// pick. Equal to the pixel means peers, and peers fall to the tiebreak.
 export function enclosureRadiusPx(hitRadius: number, pixelThreshold: number): number {
   return Math.round(Math.max(hitRadius, pixelThreshold));
 }
 
-// Winning candidate from `pickFromCandidates`. Returning the candidate
-// (rather than just its idx) lets callers (`pickStarHit`,
-// `LocalGroupLayer.pick`, `PlanetBodyField.pick`) read the winning
-// candidate's `pxDist`/`hitRadius`/extension fields without re-walking
-// the projection. `enclosureRadiusPx` and `depthScore` are the two
-// numbers the cross-layer comparator ranks on, keyed off the comparison
-// the reducer already made so no caller re-derives them.
+// Returning the candidate rather than its idx lets callers read the
+// winner's extension fields without re-walking the projection, and the
+// two ranking numbers come from the comparison already made rather than
+// being re-derived per caller.
 export type PickResult<T extends PickCandidate> = {
   candidate: T;
   enclosureRadiusPx: number;
   depthScore: number;
 };
 
-// Reduce a candidate list to the winning candidate (or null) under one
-// rule: among the surfaces enclosing the cursor, the TIGHTEST wins, and
-// `scoreFn` separates two of equal size. A candidate encloses the cursor
-// when `pxDist <= enclosureRadiusPx(...)`, or whenever it says so itself
-// via `enclosed`.
+// Reduce a candidate list to the winning candidate, or null. Among the
+// surfaces enclosing the cursor the tightest wins, and `scoreFn`
+// separates two of equal size. A candidate encloses the cursor when
+// `pxDist <= enclosureRadiusPx(...)`, or whenever it says so itself via
+// `enclosed` — set by a layer whose own hit test is the enclosure test.
 //
-// Size is the primary key rather than depth because depth alone makes a
-// small object unreachable inside a large one: the cursor sits
-// proportionally deeper in a big complex near its centre than in a small
-// cloud near its rim, so the big one takes the pick everywhere. Ranking
-// on size is self-limiting instead — a small object can only take the
-// pick over the small area it actually covers.
+// Why size is the primary key and camera distance is not a key at all:
+// README.md § Ranking a pick.
 //
-// This is the same comparison the cross-layer disambiguator makes
-// (`../../hover/hover-pick-disambiguator.ts`), and deliberately so:
-// smallest-of-smallest is the same answer as one flat comparison, so a
-// layer resolving its own overlaps first cannot disagree with the
-// ordering across layers.
-//
-// `scoreFn` defaults to "deepest inside its own target wins"
-// (`c.pxDist / c.hitRadius`) — scale-invariant, so a compact object and a
-// large one are both reachable rather than the large one taking every
-// pixel it covers. The star caller passes `pickScore` for the same shape
-// plus the sub-pixel mag tiebreaker. Every caller's radius comes from
-// `discHitRadiusPx`, so the divisor is floored well above zero; a layer
-// whose enclosure test IS the raycast sets `enclosed` and passes its own
-// scorer (`../../molecular-clouds/cloud-pick-pure.ts`).
-//
-// Single source of truth across all layered pickers in the hover layer:
-// star (StarPickCandidate, pickScore), Local Group (PickCandidate +
-// cameraDistancePc, default scorer), planets (cross-host candidate with
-// hostStarIdx/planetIdx/cameraDistancePc, default scorer). Callers that
-// only need the winning idx unwrap with `result?.candidate.idx ?? -1`.
+// `scoreFn` defaults to `c.pxDist / c.hitRadius`. Every caller's radius
+// comes from `discHitRadiusPx`, so the divisor is floored well above zero.
 export function pickFromCandidates<T extends PickCandidate>(
   candidates: Iterable<T>,
   pixelThreshold: number,
@@ -229,21 +184,14 @@ export type ResolvedCandidate = {
  * far down the order as it takes to find a winner.
  *
  * Laziness is the point, not an optimisation: on the WebGL2 escape hatch
- * `resolve` reads per-star extinction back off the GPU, so evaluating
- * every candidate would cost one synchronous readback each. In rank order
- * the first visible candidate is almost always the first one tried.
+ * `resolve` costs one synchronous GPU readback per candidate
+ * (README.md § picker.ts).
  *
- * Callers must pass a `hitRadius` that is an upper bound of the resolved
- * one, so the walk can never skip a candidate that would have enclosed
- * the cursor. Resolution only ever shrinks a radius, and the enclosure
- * radius floors at `pixelThreshold`, so the pre-resolve key is an upper
- * bound of the true one and a candidate whose disc no longer reaches the
- * cursor simply stops qualifying rather than needing a second pool.
- *
- * The score therefore normalises against that upper bound, not against
- * the resolved radius: scoring on the resolved one would mean resolving
- * every candidate to sort them, which is the readback per candidate the
- * laziness exists to avoid.
+ * Callers MUST pass a `hitRadius` that is an upper bound of the resolved
+ * one, or the walk skips a candidate that would have enclosed the cursor.
+ * The score normalises against that bound and never the resolved radius —
+ * scoring on the resolved one would resolve every candidate to sort them,
+ * which is the readback the laziness exists to avoid.
  */
 export function pickFromCandidatesResolved<T extends PickCandidate>(
   candidates: Iterable<T>,
