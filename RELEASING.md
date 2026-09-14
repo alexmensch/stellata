@@ -129,10 +129,14 @@ information.
   were taken at the positions Tier 1 takes them at. Direction against a
   band is what this tier claims, and two vantages claim it twice:
   mw120|webgpu carries a sound GPU stream, and sol|webgpu is the second
-  witness — the one a first load actually shows. Both currently repeat
-  worse than they are gated: two cold runs of one unchanged tree read
-  1.25 ms apart at sol and 0.66 at mw120 against a 0.25 ms band, so a mark
-  at either can sit inside the instrument's own scatter (stellata-8cg.74).
+  witness — the one a first load actually shows. **Take both at the frame
+  count the pin's own rows were taken at**, today 960: two rows at
+  different dwell lengths do not compare, and at the default 240 the
+  mw120 median has not converged — eight archived rows span 0.725 ms
+  against a 0.25 ms band, where two at 960 frames, on different commits,
+  agree to 0.067. sol scatters 0.48–0.62 ms across cold runs of one tree
+  at 240 and is not yet measured enough at 960 to say, so a mark there
+  can still sit inside the instrument's own noise (stellata-8cg.74).
   Not the dearest gated row: that is mw50|webgpu, which sits 4th in
   the canon order, so a two-context run would measure it at a position the
   pin does not hold for it and the row would refuse
