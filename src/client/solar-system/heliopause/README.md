@@ -62,9 +62,10 @@ its halves land where the shell's own scale puts them. The near-fade reach
 is the shared proportion of `HELIOPAUSE_EXTENT_PC` — 120 AU, just inside
 the 122 AU upwind boundary — so the shell is untouched at any distance it
 is framed from and ramps out only as the camera flies through the wall.
-The depth dimming is a plain no-op at AU scale: `uDepthDimRefPc / d`
-clamps to 1 from everywhere the shell is visible. That is why the term is
-applied uniformly rather than behind a per-material opt-out.
+The depth dimming is a plain no-op at AU scale: the shell's own extent
+adds nothing to the shared clearance, so `uDepthDimRefPc / d` clamps to 1
+from everywhere the shell is visible. That is why the term is applied
+uniformly rather than behind a per-material opt-out.
 
 The "Heliopause" SVG label is anchored to the upwind apex's projected
 silhouette by `createHeliopauseLabel`, mounted by the shell module's

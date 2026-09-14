@@ -46,12 +46,16 @@ The Fresnel shell material + shader pair + gating base live in
   near-fade ramps the rim to nothing as the camera closes on it, and the
   cull then takes over from inside (`../fresnel-shell/README.md`
   § Camera-distance attenuation).
-- **Fade reach comes off the mesh.** `uNearFadePc` is the shared
-  proportion of the loader's measured `extentPc` — a number that exists
-  only once the artifact is parsed — so `attach` writes it beside the
-  geometry and the constructor passes 0. Nothing draws in between:
+- **Both distance reaches come off the mesh.** `uNearFadePc` and
+  `uDepthDimRefPc` are derived together from the loader's measured
+  `extentPc` (`rimDistancesForExtent`) — a number that exists only once the
+  artifact is parsed — so `attach` writes the pair beside the geometry and
+  the constructor passes `extentPc: 0`. Nothing draws in between:
   `shellReady()` is false until that same `attach`. Don't replace the 0
-  with an authored wall distance; the build measures it.
+  with an authored wall distance; the build measures it. The measured
+  extent is the **max** wall radius (~299 pc against a ~233 pc median), so
+  the depth clearance covers the whole lumpy wall rather than its typical
+  lobe (`../fresnel-shell/README.md` § Camera-distance attenuation).
 - **renderOrder −1**, additive, `depthWrite:false`: a dim rim glow the
   local stars composite over. See `src/client/README.md` § Full render stack.
 - **Label** (`localBubbleLabel`, a `labels`-tier declutter element at

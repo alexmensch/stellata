@@ -4,13 +4,14 @@ import { makeTslShellMaterials } from '../webgpu/fresnel-shell/tsl-shell-materia
 import {
   applyRimParams, makeGlslShellMaterials, SHELL_RIM_ALPHA_LIMB, SHELL_RIM_BLUE,
 } from './fresnel-shell';
-import { DEPTH_DIM_REF_PC, nearFadePcForExtent } from './shell-distance-pure';
+import { rimDistancesForExtent } from './shell-distance-pure';
 
 const OPTS = {
   colourHex: SHELL_RIM_BLUE,
   alphaLimb: SHELL_RIM_ALPHA_LIMB,
-  nearFadePc: nearFadePcForExtent(300),
+  extentPc: 300,
 };
+const REACH = rimDistancesForExtent(OPTS.extentPc);
 
 // The two factories are transcriptions of one uniform block, so the guard
 // is the same one the solar-system seam carries: a slot added on one side
@@ -55,8 +56,8 @@ describe('the boundary-shell material seam', () => {
     const u = makeGlslShellMaterials().fresnelShell(OPTS).uniforms;
     applyRimParams(u, { depthPower: 3 });
     expect(u.uDepthPower.value).toBe(3);
-    expect(u.uNearFadePc.value).toBe(OPTS.nearFadePc);
-    expect(u.uDepthDimRefPc.value).toBe(DEPTH_DIM_REF_PC);
+    expect(u.uNearFadePc.value).toBe(REACH.nearFadePc);
+    expect(u.uDepthDimRefPc.value).toBe(REACH.depthDimRefPc);
   });
 
   it('severs the MRT registration on dispose', () => {

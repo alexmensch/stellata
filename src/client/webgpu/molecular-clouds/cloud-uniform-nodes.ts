@@ -11,9 +11,9 @@ import {
   DEFAULT_FACE_ON_FLOOR, DEFAULT_FRESNEL_POWER, SHELL_RIM_ALPHA_LIMB, SHELL_RIM_BLUE,
 } from '../../fresnel-shell/fresnel-shell';
 import {
-  DEPTH_DIM_POWER, DEPTH_DIM_REF_PC,
+  DEPTH_DIM_POWER,
 } from '../../fresnel-shell/shell-distance-pure';
-import { CLOUD_RIM_NEAR_FADE_PC } from '../../molecular-clouds/cloud-rim-pure';
+import { CLOUD_RIM_DISTANCES } from '../../molecular-clouds/cloud-rim-pure';
 import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
 
 /**
@@ -71,8 +71,8 @@ export function cloudRimUniformNodes(inkHex: number, inkAlpha: number, opacity: 
     uAlphaLimb: uniform(SHELL_RIM_ALPHA_LIMB),
     uFaceOnFloor: uniform(DEFAULT_FACE_ON_FLOOR),
     uFresnelPower: uniform(DEFAULT_FRESNEL_POWER),
-    uNearFadePc: uniform(CLOUD_RIM_NEAR_FADE_PC),
-    uDepthDimRefPc: uniform(DEPTH_DIM_REF_PC),
+    uNearFadePc: uniform(CLOUD_RIM_DISTANCES.nearFadePc),
+    uDepthDimRefPc: uniform(CLOUD_RIM_DISTANCES.depthDimRefPc),
     uDepthPower: uniform(DEPTH_DIM_POWER),
     uOpacity: uniform(opacity),
     uChart: uniform(0),

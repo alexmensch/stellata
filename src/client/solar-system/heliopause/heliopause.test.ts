@@ -3,7 +3,9 @@ import * as THREE from 'three';
 import {
   Heliopause, HELIOPAUSE_APEX_SOL_PC, HELIOPAUSE_EXTENT_PC, createHeliopauseLabel,
 } from './heliopause';
-import { nearFadePcForExtent } from '../../fresnel-shell/shell-distance-pure';
+import {
+  DEPTH_DIM_CLEARANCE_PC, rimDistancesForExtent,
+} from '../../fresnel-shell/shell-distance-pure';
 import { AU_PC } from '../../util/astronomy-constants';
 import { ShellRegistry } from '../../fresnel-shell/shell-registry';
 
@@ -167,8 +169,16 @@ describe('Heliopause', () => {
 // The shell's own extent is the 200 AU downwind apex, so the shared
 // proportion lands the near-fade at 120 AU — just inside the 122 AU
 // upwind boundary, and far inside any distance the shell is framed from.
-describe('the heliopause near-fade reach', () => {
-  it('lands at 120 AU, the shared fraction of the 200 AU tail', () => {
-    expect(nearFadePcForExtent(HELIOPAUSE_EXTENT_PC) / AU_PC).toBeCloseTo(120, 9);
+describe('the heliopause camera-distance reaches', () => {
+  it('lands the near-fade at 120 AU, the shared fraction of the 200 AU tail', () => {
+    expect(rimDistancesForExtent(HELIOPAUSE_EXTENT_PC).nearFadePc / AU_PC)
+      .toBeCloseTo(120, 9);
+  });
+
+  // An AU-scale extent adds nothing to the shared clearance, which is what
+  // keeps the depth dimming a no-op here with no per-material opt-out.
+  it('leaves the depth reference at the bare shared clearance', () => {
+    const { depthDimRefPc } = rimDistancesForExtent(HELIOPAUSE_EXTENT_PC);
+    expect(depthDimRefPc / DEPTH_DIM_CLEARANCE_PC).toBeCloseTo(1, 4);
   });
 });

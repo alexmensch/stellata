@@ -75,7 +75,7 @@ module's `sids()` leg, attached by main.ts's roster loop (see
   `MARCH_MIN_CHORD_T`). Vitest-pinned.
 - `cloud-rim-pure.ts` — the rim shell's authored constants (stipple grid,
   contour width, alpha floor, `MIN_FWIDTH`), for the same reason, plus
-  `CLOUD_RIM_EXTENT_PC` / `CLOUD_RIM_NEAR_FADE_PC` (§ Rim shell render).
+  `CLOUD_RIM_EXTENT_PC` / `CLOUD_RIM_DISTANCES` (§ Rim shell render).
 - `cloud-glsl-drift.test.ts` — pins the GLSL's copies of both sets against
   those modules, since GLSL cannot import. The output dither's seed offset
   and 8-bit divisor are pinned here too, against `../hdr/tonemap/tonemap-pure.ts`,
@@ -221,13 +221,14 @@ absorption keeps working from inside.
 The realistic arm also carries the shared camera-distance attenuation
 (`../fresnel-shell/README.md` § Camera-distance attenuation), so a rim
 fades out as the camera closes on it and a distant cloud reads dimmer than
-a near one on the same absolute pc scale as the Local Bubble wall. The
-chart arm returns before the shared chunk, which is what keeps the stipple
-outline free of it — a distance-varying ink density would break the flat
-printed-atlas convention. `CLOUD_RIM_NEAR_FADE_PC` is the near-fade reach
-for every cloud: one material serves all ~96, so the reach is the shared
-proportion of one representative radius (`CLOUD_RIM_EXTENT_PC`, 20 pc)
-rather than per-cloud.
+a near one on the same scale as the Local Bubble wall. The chart arm
+returns before the shared chunk, which is what keeps the stipple outline
+free of it — a distance-varying ink density would break the flat
+printed-atlas convention. `CLOUD_RIM_DISTANCES` carries both reaches for
+every cloud — 12 pc near-fade, 170 pc depth reference. One material serves
+all ~96, so both come off one representative radius
+(`CLOUD_RIM_EXTENT_PC`, 20 pc) rather than per-cloud, which also means no
+two clouds can disagree on the depth scale.
 
 ## Labels
 

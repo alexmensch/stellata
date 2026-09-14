@@ -12,7 +12,6 @@ import {
   createShellSilhouetteLabel,
   isShellLabelResolvable,
 } from '../../fresnel-shell/fresnel-shell';
-import { nearFadePcForExtent } from '../../fresnel-shell/shell-distance-pure';
 import {
   SHELL_KEYS,
   type ShellCardInfo,
@@ -139,7 +138,7 @@ export class Heliopause extends FresnelShell {
       materials.fresnelShell({
         colourHex: COLOUR_HEX,
         alphaLimb: ALPHA_LIMB,
-        nearFadePc: nearFadePcForExtent(HELIOPAUSE_EXTENT_PC),
+        extentPc: HELIOPAUSE_EXTENT_PC,
       }),
       1);
     // Rotate the entire group so its local +Z aligns with the antiapex

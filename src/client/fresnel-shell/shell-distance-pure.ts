@@ -8,20 +8,34 @@
  *  Local Bubble 75–300 pc — fade over the same fraction of themselves. */
 export const NEAR_FADE_EXTENT_FRAC = 0.6;
 
-/** Distance out to which the depth dimming stays at full brightness (pc);
- *  beyond it the rim dims. Absolute and deliberately **not** per-material:
- *  relative brightness only reads as relative distance if the Local Bubble
- *  wall and a cloud beyond it are measured on the same scale. */
-export const DEPTH_DIM_REF_PC = 150;
+/** Full-brightness headroom past a shell's own surface (pc). The shared
+ *  scale is this clearance rather than an absolute camera distance,
+ *  because a fixed reference sits *inside* any shell bigger than itself:
+ *  at 150 pc flat the Local Bubble (max wall radius ~300 pc) had no
+ *  vantage at all where its whole wall was undimmed. */
+export const DEPTH_DIM_CLEARANCE_PC = 150;
 
-/** Inverse-linear. Clouds span ~50–2000 pc, so the inverse-square exponent
- *  would be a 1600× brightness range and everything past the nearest
- *  handful would go black. */
-export const DEPTH_DIM_POWER = 1.0;
+/** Falloff exponent past that clearance. Below 1 so the ~50–2500 pc cloud
+ *  span compresses into a readable range: at 1.0 the farthest clouds land
+ *  near the dither floor, and inverse-square would be a 1600× range that
+ *  blacks out everything past the nearest handful. */
+export const DEPTH_DIM_POWER = 0.6;
 
-/** A shell's near-fade distance, from its own representative radius. */
-export function nearFadePcForExtent(extentPc: number): number {
-  return extentPc * NEAR_FADE_EXTENT_FRAC;
+/** The two camera-distance reaches a rim consumer needs, both off the one
+ *  extent it already knows. Returned together because they are the writable
+ *  slots `RimParams` names, so a consumer states its size once and cannot
+ *  set one reach and leave the other on a foreign scale. */
+export interface RimDistances {
+  nearFadePc: number;
+  depthDimRefPc: number;
+}
+
+/** Both reaches from a shell's own representative radius. */
+export function rimDistancesForExtent(extentPc: number): RimDistances {
+  return {
+    nearFadePc: extentPc * NEAR_FADE_EXTENT_FRAC,
+    depthDimRefPc: extentPc + DEPTH_DIM_CLEARANCE_PC,
+  };
 }
 
 /**

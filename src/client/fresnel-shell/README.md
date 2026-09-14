@@ -21,8 +21,9 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
   (§ Camera-distance attenuation).
 - `shell-distance-pure.ts` (+ test) — the attenuation's CPU mirror and the
   authored constants every backend and consumer reads
-  (`NEAR_FADE_EXTENT_FRAC`, `DEPTH_DIM_REF_PC`, `DEPTH_DIM_POWER`,
-  `nearFadePcForExtent`). Vitest-pinned.
+  (`NEAR_FADE_EXTENT_FRAC`, `DEPTH_DIM_CLEARANCE_PC`, `DEPTH_DIM_POWER`),
+  plus `rimDistancesForExtent`, which turns one extent into both reaches.
+  Vitest-pinned.
 - `fresnel-shell.{vert,frag}.glsl` — the shader pair. The vert carries
   view-space normal + position; the frag applies the rim chunk.
 - `fresnel-shell.ts`
@@ -142,29 +143,50 @@ varying and no per-frame CPU work.
     nearFade = clamp(d / uNearFadePc, 0, 1)
     depthDim = pow(clamp(uDepthDimRefPc / d, 0, 1), uDepthPower)
 
-**`uNearFadePc` is per-material; the depth pair deliberately is not.**
+**Both reaches are per-material, and both derive from one shared authored
+number plus the consumer's own extent** — `rimDistancesForExtent`, the only
+place either is computed. A consumer states its size once and cannot set
+one reach and leave the other on a foreign scale. Consumers span five
+orders of magnitude: the heliopause off `HELIOPAUSE_EXTENT_PC` (200 AU),
+the Local Bubble off its loader's measured `extentPc`, the cloud rim off
+one representative 20 pc radius because a single material serves all ~96
+clouds.
+
 The near-fade exists so a wall the camera is crossing ramps out instead of
 popping — the shells are `FrontSide`, so without it the wall vanishes the
-instant the camera passes inside. That reach has to scale with the
-consumer, which spans five orders of magnitude, so all three derive it
-from one shared *proportion* of their own extent
-(`nearFadePcForExtent`) rather than three authored distances: the
-heliopause off `HELIOPAUSE_EXTENT_PC` (120 AU), the Local Bubble off its
-loader's measured `extentPc`, the cloud rim off one representative radius
-because a single material serves all ~96 clouds.
+instant the camera passes inside. Its reach is `NEAR_FADE_EXTENT_FRAC` of
+the extent.
 
-The depth dimming is the opposite case. Its whole job is making relative
-brightness read as relative distance — a cloud beyond the Local Bubble
-wall must come out dimmer than the wall — and that is only expressible on
-one absolute pc scale. A per-shell or normalised falloff cannot state it,
-so `DEPTH_DIM_REF_PC` is shared and no material takes it as an option.
-It is inverse-linear by default: clouds span ~50–2000 pc, so the
-inverse-square exponent is a 1600× range that blacks out everything past
-the nearest handful.
+The depth dimming makes relative brightness read as relative distance: a
+cloud beyond the Local Bubble wall comes out dimmer than the wall. Its
+reference is the extent **plus** `DEPTH_DIM_CLEARANCE_PC` — full-brightness
+headroom measured from the shell's own surface, not from the camera.
 
-The heliopause takes the depth term too and it is a no-op there — at AU
-scale `uDepthDimRefPc / d` clamps to 1 from every distance the shell is
-visible from — which beats a per-material opt-out flag.
+**The clearance is what makes the scale shared, and an absolute reference
+is what broke it.** A flat reference distance sits *inside* any shell
+bigger than itself: at 150 pc flat, the Local Bubble (max wall radius
+~300 pc) had no vantage at all where its whole wall was undimmed — at its
+own framing distance the near wall read ~0.53 and the far wall ~0.32, so
+the shell's size, not its distance, set its brightness. Measuring the same
+150 pc past each shell's surface removes that and leaves one rule for
+every consumer. Don't "fix" it back to a bare constant.
+
+The accepted trade: at equal distance a larger shell now reads brighter
+than a smaller one, so a small cloud can sit in front of the Local Bubble's
+far wall and read dimmer than it. Only three materials exist, and all ~96
+clouds share one, so this is reachable **only** between a cloud and a
+boundary shell — never between two clouds, where the ordering the term
+exists for is what the eye is actually comparing.
+
+`DEPTH_DIM_POWER` is 0.6, below 1 so the ~50–2500 pc cloud span compresses
+into a readable range. At 1.0 the farthest clouds land near the dither
+floor (Carina peaked at 0.03 alpha), and the inverse-square exponent is a
+1600× range that blacks out everything past the nearest handful.
+
+The heliopause takes the depth term too and it is a no-op there — an
+AU-scale extent adds nothing to the clearance, and `uDepthDimRefPc / d`
+clamps to 1 from every distance the shell is visible from — which beats a
+per-material opt-out flag.
 
 **Chart mode is excluded by structure, not by a condition.** Ink density
 varying with distance would break the flat printed-atlas convention. Both
@@ -176,10 +198,12 @@ load-bearing and is not.
 
 **Sweeping the constants.** `setRimParams` takes the same six-field record
 on both `stellata.kinds.shell` (fanned out to both shells) and
-`stellata.kinds.cloud.layer`. The depth pair spans both kinds, so settling
-it by eye means the same call on each — a sweep on one alone leaves the
-other on the old scale and the comparison the term exists for is
-meaningless.
+`stellata.kinds.cloud.layer`, and every field is optional, so a partial
+record writes only the slots it names. `depthPower` spans both kinds, so
+settling it by eye means the same call on each — a sweep on one alone
+leaves the other on the old curve and the comparison the term exists for
+is meaningless. `depthDimRefPc` is the resolved per-material distance, so
+sweeping *that* means passing each consumer its own number.
 
 ## Boundary shells as focus targets
 
