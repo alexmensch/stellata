@@ -1,6 +1,6 @@
 // The per-star A_V cache on WebGPU: one compute thread per star marching
 // camera→star into a storage buffer the star vertex stage indexes by
-// instance; a cold CPU read is one mapped copy of that star's float. README.md.
+// instance, mirrored to the CPU in one mapped copy for the pick. README.md.
 
 import {
   StorageBufferAttribute, Vector3, type ComputeNode, type WebGPURenderer,
@@ -34,8 +34,6 @@ export interface WebGpuExtinctionPrepassOptions {
   uniforms: ExtinctionPrepassUniforms;
 }
 
-const AV_BYTES = Float32Array.BYTES_PER_ELEMENT;
-
 export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   /** Storage buffers and compute are core WebGPU — there is no
    *  EXT_color_buffer_float to gate on and no fallback branch to port. */
@@ -52,17 +50,23 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   private readonly positionsNode: ReturnType<typeof storage<'vec4'>>;
   private readonly absCameraPos = uniform(new Vector3());
 
-  // Readback memo, keyed by star index. The buffer's contents are the only
-  // other input and update() is the only thing that writes them, so
-  // clearing it there is the whole invalidation rule.
-  private readonly avCache = new Map<number, number>();
-  // Reads in flight, so a pointermove sweep re-asking for the same star
-  // every frame issues one copy rather than one per frame. Keyed the same
-  // way and cleared on the same recompute.
-  private readonly avPending = new Set<number>();
+  // The whole A_V table on the CPU. `readAvMag` answers out of this and
+  // nothing else: a copy issued by the pick that wants the value cannot
+  // resolve before that pick's verdict (README.md § Cold reads).
+  private mirror: Float32Array | null = null;
+  // The generation the outstanding-or-landed mirror read belongs to.
+  // Holding it at `generation` is what makes a pointermove sweep cost one
+  // copy rather than one per event, and a failed read one attempt rather
+  // than one per event for as long as the buffer stands.
+  private mirrorGeneration = -1;
   /** Bumped on every recompute: a read that resolves against an older
    *  buffer's contents lands in a generation nobody will consult. */
   private generation = 0;
+  // Whether the camera displaced past the epsilon on the last update. A
+  // warp or a focus lerp recomputes every frame, which supersedes a copy
+  // before it can land — so warming across one spends the whole table per
+  // frame on a generation nobody will ever read.
+  private movedOnLastUpdate = false;
 
   private dirty = true;
   private hasComputed = false;
@@ -126,14 +130,16 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
       absCamX, absCamY, absCamZ,
       RECOMPUTE_EPSILON_PC,
     );
+    // lastCam* starts at the Infinity sentinel, so the first compute reads
+    // as a move from nowhere rather than as a camera under way.
+    this.movedOnLastUpdate = moved && this.hasComputed;
     if (!this.dirty && !moved) return;
 
     this.absCameraPos.value.set(absCamX, absCamY, absCamZ);
     this.renderer.compute(this.kernel);
 
     this.generation++;
-    this.avCache.clear();
-    this.avPending.clear();
+    this.mirror = null;
     this.lastCamX = absCamX;
     this.lastCamY = absCamY;
     this.lastCamZ = absCamZ;
@@ -144,33 +150,41 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
 
   /**
    * Raw physical A_V for one star, out of the very float the star vertex
-   * stage indexes. **A cold read returns null and warms the memo instead**
-   * — WebGPU offers no synchronous readback, so the value lands a frame or
-   * two later and the caller sees the no-cache answer until then
-   * (README.md § Cold reads). A warm read is free and exact.
-   *
-   * Event-rate only, exactly as the WebGL twin: never sweep it over the
-   * catalog. Each cold index costs one 4-byte `copyBufferToBuffer` + map.
+   * stage indexes — exact, free, and over the whole catalog once the
+   * mirror has landed. Null until then, which is the honest answer while
+   * the buffer's contents exist only on the GPU: WebGPU offers no
+   * synchronous readback (README.md § Cold reads).
    */
   readAvMag(idx: number): number | null {
-    if (!this.isActive()) return null;
-    const cached = this.avCache.get(idx);
-    if (cached !== undefined) return cached;
-    if (this.avPending.has(idx)) return null;
-    this.avPending.add(idx);
+    if (!this.isActive() || this.mirror === null) return null;
+    return this.mirror[idx] ?? null;
+  }
+
+  /** Stage the whole table for the picks a pointer event is about to
+   *  make. One `copyBufferToBuffer` + map of the buffer, issued at most
+   *  once per recompute and never while the camera is under way, landing
+   *  inside the hover dwell. */
+  warmAvReadback(): void {
+    if (!this.isActive()) return;
+    // A camera still recomputing every frame drops this copy before the
+    // dwell that wanted it can read it, so issuing one buys the pick
+    // nothing and costs the whole table every frame. The pick reads null
+    // and errs pickable across that stretch either way (README.md
+    // § Cold reads).
+    if (this.movedOnLastUpdate) return;
+    if (this.mirrorGeneration === this.generation) return;
     const generation = this.generation;
+    this.mirrorGeneration = generation;
     this.renderer
-      .getArrayBufferAsync(this.av!, null, idx * AV_BYTES, AV_BYTES)
+      .getArrayBufferAsync(this.av!)
       .then((bytes) => {
         if (this.disposed || generation !== this.generation) return;
-        this.avPending.delete(idx);
-        this.avCache.set(idx, new Float32Array(bytes)[0]);
+        this.mirror = new Float32Array(bytes);
       })
       .catch(() => {
-        if (this.disposed || generation !== this.generation) return;
-        this.avPending.delete(idx);
+        // Leave mirrorGeneration where it is: a device that refuses the
+        // map gets one attempt per recompute, not one per pointer event.
       });
-    return null;
   }
 
   /** The parity check of README.md § The prepass kernel: the same march as
@@ -211,8 +225,9 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.kernel = null;
     this.av = null;
     this.positions = null;
-    this.avCache.clear();
-    this.avPending.clear();
+    this.mirror = null;
+    this.mirrorGeneration = -1;
+    this.movedOnLastUpdate = false;
     this.hasComputed = false;
     this.dirty = true;
     this.lastCamX = Infinity;

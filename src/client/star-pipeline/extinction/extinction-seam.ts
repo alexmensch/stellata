@@ -37,11 +37,20 @@ export interface ExtinctionPrepassSeam {
    *  moved beyond RECOMPUTE_EPSILON_PC; otherwise free. */
   update(absCamX: number, absCamY: number, absCamZ: number): void;
   /** Raw physical A_V for one star, out of the very texel the star vertex
-   *  stage fetches. Null when the cache is inert, and on WebGPU also on a
-   *  cold read — that backend has no synchronous readback, so the value
-   *  lands a frame or two later (`../../webgpu/extinction/README.md`
-   *  § Cold reads). Event-rate only: never sweep it over the catalog. */
+   *  stage fetches. Null when the cache is inert, and on WebGPU also
+   *  until `warmAvReadback` has landed the table
+   *  (`../../webgpu/extinction/README.md` § Cold reads). On WebGL2 the
+   *  read is a synchronous `readPixels`, so it is event-rate only: never
+   *  sweep it over the catalog there. */
   readAvMag(idx: number): number | null;
+  /** WebGPU only: a pick is imminent, so stage the whole A_V table onto
+   *  the CPU before anything asks for it. One mapped copy of the buffer,
+   *  at most one per recompute and none while the camera is under way,
+   *  and the pointer dwell covers its latency — which is what lets
+   *  `readAvMag` answer the first pick exactly rather than a jiggle
+   *  later. Reads are synchronous on WebGL2, so there is nothing to
+   *  warm. */
+  warmAvReadback?(): void;
   /** WebGPU only: march every star once more as a fragment pass and
    *  bit-compare against the compute kernel's buffer. Null while the cache
    *  is inert. Dev-console only — it reads the whole buffer back. */

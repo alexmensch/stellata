@@ -180,6 +180,11 @@ So ~7.4 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
 (three does not release it, and the WebGL2 twin's `DataTexture` holds the
 same). Both survive on an integrated or mobile GPU without argument.
 
+The pick mirror (§ Cold reads) is a third heap allocation, the A_V row's
+1.48 MiB again — but only from the first pointer event that asks for it,
+and re-allocated per recompute the pick actually reaches, never per
+recompute.
+
 **What does not survive everywhere is the vertex stage's right to read the
 buffer at all.** The WebGL2 layout's floor was `maxTextureDimension2D`,
 which 1024 clears on every device; a storage buffer read from a vertex
@@ -212,46 +217,74 @@ the pick paths call it that way: a star's extinction decides whether the
 renderer put a pixel on screen for it, so a pick gated on the intrinsic
 magnitude selects stars the frame drew black.
 
-WebGPU has **no synchronous readback** — `getArrayBufferAsync` stages a
-4-byte `copyBufferToBuffer` at the star's offset and maps it, resolving
-frames later. So this implementation answers a **cold** index with `null`
-and warms the memo in the background; the next read is exact and free.
-`null` already means "no cache, not no dust" to every caller
-(`../../star-pipeline/extinction/README.md` § Reading A_V back), and
-those callers err toward *pickable*, so a star behind heavy dust can be
-picked where WebGL2 would have rejected it.
+WebGPU has **no synchronous readback**, and that is not a latency to
+shorten but a shape the design has to take. `getArrayBufferAsync` stages
+a `copyBufferToBuffer` and maps it, resolving frames later — so a copy
+issued *by* the pick lands after the verdict it was meant to decide, and
+the caller has already read `null` as "no cache, not no dust"
+(`../../star-pipeline/extinction/README.md` § Reading A_V back) and erred
+toward *pickable*. No per-star refinement of that read closes it. The
+value has to be on the CPU **before** the pick asks.
 
-**How long that lasts is set by the pick's cadence, not by the frame's.**
-Two things make it outlive the readback:
+**`warmAvReadback()` is the whole mechanism**: one mapped copy of the
+entire `count`-long buffer into a `Float32Array` mirror, which
+`readAvMag` then answers out of — exactly, for every star in the
+catalogue, at no further GPU cost until the next recompute. The pointer
+events that precede a pick are what drive it (`onPickImminent` on
+`../../hover/hover-engine.ts` → `Stellata.notifyPickImminent`), so the
+280 ms hover dwell and the click FSM's own hold each cover the map's
+latency and the **first** hover already rejects a star behind heavy dust.
 
-- Hover resolves on `pointermove` alone (`../../hover/hover-engine.ts`) —
-  nothing re-runs a pick per frame. The memo warms a frame or two later,
-  but the standing verdict is not revisited, so a **still cursor keeps
-  the wrong star** until the pointer moves again.
-- `pickFromCandidatesResolved` returns on the first candidate that reads
-  visible (`../../camera/controls/star-geometry.ts`), so one event warms
-  exactly one candidate. Down a sightline where several extincted stars
-  overlap, convergence takes one pointer event per candidate.
+**The whole table, not the candidates, because the event does not know
+them.** A candidate list is what the pick's own catalogue scan produces,
+one dwell later; the pointer event that has to start the copy knows only
+that *a* pick is coming. Warming what the event knows means warming
+everything — and 1.48 MiB copied once beats racing the scan.
 
-Neither is a frame-scale effect, and the honest statement of the
-degradation is that scale: an event, not a frame. It is accepted here
-because chart and colour picking both already err toward pickable and
-because the pick-path stage of `0it.15` replaces this read wholesale —
-the buffer is now one mapped copy away from a whole-catalogue memo, which
-is what makes that closure a readback design rather than a per-star
-patch.
+**The generation is what bounds the cost, not the event rate.** The
+mirror is dropped on every recompute and re-read at most once per
+recompute, so a `pointermove` sweep across a dusty field costs one copy
+and a still pointer costs none. The same counter drops a read that
+resolves against a superseded buffer — the WebGL twin's `avCache.clear()`
+expressed for a promise that can outlive the thing it was reading. A map
+that *fails* consumes that one attempt rather than re-arming, so a device
+refusing the copy cannot turn a pointer sweep into a 1.48 MiB-per-event
+drip.
 
-Why not the alternatives: reading the whole buffer on each recompute is
-1.5 MB per read and a warp recomputes every frame; marching on the CPU
-needs the ~128 MiB voxel grid the loader uploads and drops, and would be
-a second implementation of the integral free to drift from the shader's.
-The lazy per-star read keeps the existing contract — event-rate only,
-never swept over the catalog.
+**A camera under way warms nothing at all**, which is the other half of
+that bound and the one the generation counter alone does not give. A warp
+or a focus lerp crosses more than `RECOMPUTE_EPSILON_PC` every frame, so
+the generation advances every frame and a copy issued against one is
+superseded two frames later, before the 280 ms dwell that wanted it can
+read a byte — every such copy is spent and dropped, at 1.48 MiB a frame
+for as long as the motion lasts. `warmAvReadback` therefore returns early
+while the last `update()` saw the camera displace, and the pick reads
+`null` and errs pickable across that stretch either way. The gate is the
+**displacement**, not the recompute: a dust chunk landing on a parked
+camera recomputes too, and that frame is one a pick can still be staged
+for. `lastCam*` starts at the Infinity sentinel, so the first compute
+reads as a move from nowhere and is excluded from the gate rather than
+costing the boot its first warm.
 
-Two guards make the async path safe. An index already in flight is not
-re-requested, so a `pointermove` sweep re-asking every frame costs one
-copy rather than one per frame. And every recompute bumps a
-**generation** counter: a read that resolves against the previous
-buffer's contents is dropped rather than memoised, which is the same
-invalidation rule as the WebGL twin's `avCache.clear()`, expressed for a
-promise that can outlive the thing it was reading.
+A drag announces nothing either: hover is suppressed for its duration
+anyway, and the camera motion under it would invalidate each copy before
+the next event. The residual hole is that shape and only that shape — a
+pick dispatched while the camera is still crossing more than
+`RECOMPUTE_EPSILON_PC` per frame reads `null` and errs pickable, as every
+pick did before. Hover cannot reach it (it needs a `pointermove` the
+drag latch swallows); a click during a focus lerp can.
+
+Why not the alternatives: reading the buffer on every recompute is
+1.5 MB per read and a warp recomputes every frame, which spends it
+exactly where nobody picks; marching on the CPU needs the ~128 MiB voxel
+grid the loader uploads and drops, and would be a second implementation
+of the integral free to drift from the shader's.
+
+The copy goes through `getArrayBufferAsync` with a **null target**, which
+creates its staging buffer per call and destroys it after the map. three
+also offers a `ReadbackBuffer` target that holds one across calls; it
+trades 1.48 MiB of VRAM for the renderer's whole life against a create
+and destroy per warm, and with the camera gate above a warm is a
+per-settle event rather than a per-frame one. On the integrated and
+mobile floor this folder is sized for, the resident megabyte is the
+dearer half of that trade.

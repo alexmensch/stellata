@@ -114,11 +114,11 @@ strength changes never invalidate the cache.
 
 `readAvMag(idx)` returns one star's raw A_V out of the cache texel
 `star.vert.glsl` fetches — **synchronously, on WebGL2 only**. WebGPU has
-no synchronous readback, so its implementation answers a cold index null
-and warms the memo in the background off a 4-byte buffer copy; the
-caveats below are unchanged either way, and the divergence — including
-how long a cold answer stands, which is a pointer event rather than a
-frame — is `../../webgpu/extinction/README.md` § Cold reads.
+no synchronous readback, so its implementation answers out of a CPU
+mirror of the whole buffer that the pointer events preceding a pick stage
+for it (`warmAvReadback`), and null until one lands; the caveats below
+are unchanged either way, and the divergence is
+`../../webgpu/extinction/README.md` § Cold reads.
 
 The pick paths are the only caller: a star's extinction decides whether
 the renderer puts a pixel on screen for it at all, and a pick gated on
@@ -133,8 +133,8 @@ that reason.
 
 Two constraints on any new caller:
 
-- **Event rate only.** A cold read is a synchronous `readPixels`, so it
-  stalls the pipeline — the thing the reduction's fence exists to avoid
+- **Event rate only — on this backend.** A cold read here is a
+  synchronous `readPixels`, so it stalls the pipeline — the thing the reduction's fence exists to avoid
   (`../../hdr/exposure/reduction/README.md` § Latency). Reads are
   **memoised per star** and the memo is cleared exactly where the target
   is rewritten (`update()`'s recompute) — that one line is the whole
@@ -143,7 +143,9 @@ Two constraints on any new caller:
   outruns the frame rate on a fast pointer; without the memo a sweep
   across a dusty field pays a stall per candidate. The pick path also
   resolves candidates lazily in score order, so a cold pick normally
-  costs one read. Never sweep it over the catalog.
+  costs one read. Never sweep it over the catalog — the WebGPU twin does
+  sweep, in one asynchronous copy that stalls nothing, which is the
+  difference the two backends' contracts turn on.
 - **Null means no cache, not no dust.** On the fallback path (no
   `EXT_color_buffer_float`) the shader still dims the star through its
   in-vertex march while this returns null, so a consumer that treats

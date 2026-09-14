@@ -44,6 +44,17 @@ lives entirely under `src/client/hover/`:
   is a whole silhouette (boundary shells, clouds) ignore it, and their
   `Picker` methods don't accept it — the parameter belongs to
   centroid-plus-radius pick surfaces only.
+
+  **`onPickImminent` fires a dwell ahead of the pick, and that gap is the
+  point.** The star pick gates on per-star dust extinction, which on
+  WebGPU lives in a storage buffer no synchronous read reaches
+  (`../webgpu/extinction/README.md` § Cold reads) — so the engine
+  announces on `pointermove` and on `pointerdown` (a tap reaches the
+  click pick having fired no move at all), and the 280 ms delay pays for
+  the copy. A drag announces nothing: hover is latched off for its
+  duration, and the camera under it invalidates each copy anyway. The
+  engine itself stays layer-agnostic — it knows a pick is coming, not
+  what anyone stages for it.
 - **`hover-types.ts`** — the `HoverProvider` contract:
   `pick(event) → HoverHit | null` and
   `format(hit) → HoverPayload | null`. Both halves signal "nothing

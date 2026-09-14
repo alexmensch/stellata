@@ -14,15 +14,21 @@ import { ExtinctionNodes } from './extinction-nodes';
 function fakeRenderer() {
   const computes: ComputeNode[] = [];
   const reads: {
-    attr: BufferAttribute; offset: number; count: number; land: (bytes: ArrayBuffer) => void;
+    attr: BufferAttribute;
+    offset: number | undefined;
+    count: number | undefined;
+    land: (bytes: ArrayBuffer) => void;
+    fail: (e: Error) => void;
   }[] = [];
   const released: BufferAttribute[] = [];
   const setRenderTarget = vi.fn();
   const renderer = {
     compute: (node: ComputeNode) => computes.push(node),
     setRenderTarget,
-    getArrayBufferAsync: (attr: BufferAttribute, _t: null, offset: number, count: number) =>
-      new Promise<ArrayBuffer>((resolve) => { reads.push({ attr, offset, count, land: resolve }); }),
+    getArrayBufferAsync: (attr: BufferAttribute, _t?: null, offset?: number, count?: number) =>
+      new Promise<ArrayBuffer>((resolve, reject) => {
+        reads.push({ attr, offset, count, land: resolve, fail: reject });
+      }),
     _attributes: { delete: (a: BufferAttribute) => released.push(a) },
   };
   return {
@@ -36,7 +42,17 @@ function fakeRenderer() {
 
 const COUNT = 2048;
 const flush = () => new Promise<void>((r) => { setTimeout(r, 0); });
-const bytesOf = (v: number) => new Float32Array([v]).buffer;
+/** A whole-table readback whose star `i` carries `i / 8`, so a test can
+ *  tell a value read at the right offset from one read at any other. */
+const tableOf = (count = COUNT) => Float32Array.from({ length: count }, (_, i) => i / 8).buffer;
+
+/** Fly the camera to `x` and let it stop: the displacing frame recomputes,
+ *  the next one holds still. Only the second is a frame a pick can be
+ *  staged for, which is the shape every warming test wants. */
+function moveAndSettle(prepass: { update(x: number, y: number, z: number): void }, x: number) {
+  prepass.update(x, 0, 0);
+  prepass.update(x, 0, 0);
+}
 
 function makePrepass(count = COUNT) {
   const shared = buildSharedUniforms({
@@ -139,34 +155,56 @@ describe('the displacement gate', () => {
   });
 });
 
-describe('cold reads', () => {
+describe('the pick mirror', () => {
   it('answers null while inert — no cache, which is not no dust', () => {
     const { prepass, reads } = makePrepass();
     expect(prepass.readAvMag(7)).toBeNull();
+    prepass.warmAvReadback();
     expect(reads).toHaveLength(0);
   });
 
-  it('warms the memo off one 4-byte copy at the star offset, then answers exactly', async () => {
-    const { prepass, reads, slots, attachDust } = makePrepass();
-    attachDust();
-    prepass.update(0, 0, 0);
-    const idx = 1029;
-    expect(prepass.readAvMag(idx)).toBeNull();
-    expect(reads).toHaveLength(1);
-    expect(reads[0].attr).toBe(slots.av.value);
-    expect(reads[0].offset).toBe(idx * 4);
-    expect(reads[0].count).toBe(4);
-    reads[0].land(bytesOf(0.375));
-    await flush();
-    expect(prepass.readAvMag(idx)).toBe(0.375);
-    expect(reads).toHaveLength(1);
-  });
-
-  it('issues one copy per index in flight, not one per asking frame', () => {
+  // The read the pick itself would issue cannot resolve before the verdict
+  // it was meant to decide, which is the whole reason the warm exists.
+  it('a pick that never warmed reads null and issues no copy of its own', () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
-    for (let i = 0; i < 5; i++) expect(prepass.readAvMag(3)).toBeNull();
+    expect(prepass.readAvMag(1029)).toBeNull();
+    expect(reads).toHaveLength(0);
+  });
+
+  it('warms off one copy of the whole buffer, then answers every star exactly', async () => {
+    const { prepass, reads, slots, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.warmAvReadback();
+    expect(reads).toHaveLength(1);
+    expect(reads[0].attr).toBe(slots.av.value);
+    expect(reads[0].offset).toBeUndefined();
+    expect(reads[0].count).toBeUndefined();
+    reads[0].land(tableOf());
+    await flush();
+    expect(prepass.readAvMag(1029)).toBe(1029 / 8);
+    expect(prepass.readAvMag(0)).toBe(0);
+    expect(prepass.readAvMag(COUNT - 1)).toBe((COUNT - 1) / 8);
+    expect(reads).toHaveLength(1);
+  });
+
+  it('a star past the catalogue reads null rather than undefined', async () => {
+    const { prepass, reads, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.warmAvReadback();
+    reads[0].land(tableOf());
+    await flush();
+    expect(prepass.readAvMag(COUNT)).toBeNull();
+  });
+
+  it('costs one copy per pointer sweep, not one per event', () => {
+    const { prepass, reads, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    for (let i = 0; i < 5; i++) prepass.warmAvReadback();
     expect(reads).toHaveLength(1);
   });
 
@@ -177,25 +215,85 @@ describe('cold reads', () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
-    expect(prepass.readAvMag(3)).toBeNull();
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
-    reads[0].land(bytesOf(9));
+    prepass.warmAvReadback();
+    moveAndSettle(prepass, RECOMPUTE_EPSILON_PC * 2);
+    reads[0].land(tableOf());
     await flush();
     expect(prepass.readAvMag(3)).toBeNull();
+    prepass.warmAvReadback();
     expect(reads).toHaveLength(2);
   });
 
-  it('a recompute re-asks rather than serving the previous frame\'s value', async () => {
+  it('a recompute re-asks rather than serving the previous frame\'s table', async () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
-    prepass.readAvMag(3);
-    reads[0].land(bytesOf(0.5));
+    prepass.warmAvReadback();
+    reads[0].land(tableOf());
     await flush();
-    expect(prepass.readAvMag(3)).toBe(0.5);
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    expect(prepass.readAvMag(3)).toBe(0.375);
+    moveAndSettle(prepass, RECOMPUTE_EPSILON_PC * 2);
     expect(prepass.readAvMag(3)).toBeNull();
+    prepass.warmAvReadback();
     expect(reads).toHaveLength(2);
+  });
+
+  // Otherwise a device that refuses the map pays a 1.5 MiB copy per
+  // pointer event for as long as the buffer stands.
+  it('a refused map costs one attempt per recompute, not one per event', async () => {
+    const { prepass, reads, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.warmAvReadback();
+    reads[0].fail(new Error('map failed'));
+    await flush();
+    for (let i = 0; i < 5; i++) prepass.warmAvReadback();
+    expect(reads).toHaveLength(1);
+    moveAndSettle(prepass, RECOMPUTE_EPSILON_PC * 2);
+    prepass.warmAvReadback();
+    expect(reads).toHaveLength(2);
+  });
+
+  // A warp or a focus lerp recomputes every frame, so a copy issued then is
+  // superseded before it lands — the pick reads null and errs pickable
+  // across that stretch whether or not the copy was spent.
+  it('spends nothing while the camera is still recomputing every frame', () => {
+    const { prepass, reads, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    for (let frame = 1; frame <= 5; frame++) {
+      prepass.update(RECOMPUTE_EPSILON_PC * 2 * frame, 0, 0);
+      prepass.warmAvReadback();
+      prepass.warmAvReadback();
+    }
+    expect(reads).toHaveLength(0);
+  });
+
+  it('warms on the first frame the camera holds still', () => {
+    const { prepass, reads, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.warmAvReadback();
+    expect(reads).toHaveLength(0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.warmAvReadback();
+    expect(reads).toHaveLength(1);
+  });
+
+  // A dust chunk landing on a parked camera recomputes too, and that frame
+  // is one a pick CAN be staged for — gating on the recompute rather than
+  // on the displacement would swallow it.
+  it('warms through a dirty recompute the camera did not cause', () => {
+    const { prepass, reads, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.warmAvReadback();
+    reads.length = 0;
+    prepass.markDirty();
+    prepass.update(0, 0, 0);
+    prepass.warmAvReadback();
+    expect(reads).toHaveLength(1);
   });
 });
 
@@ -232,9 +330,9 @@ describe('dispose', () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
-    prepass.readAvMag(3);
+    prepass.warmAvReadback();
     prepass.dispose();
-    reads[0].land(bytesOf(1));
+    reads[0].land(tableOf());
     await flush();
     expect(prepass.readAvMag(3)).toBeNull();
   });

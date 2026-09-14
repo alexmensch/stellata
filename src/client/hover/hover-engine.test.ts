@@ -264,4 +264,49 @@ describe('hover-engine', () => {
     expect(style.left).toBe(`${1000 - 200 - MARGIN_X}px`);
     expect(style.top).toBe(`${800 - 60 - MARGIN_BOTTOM}px`);
   });
+
+  // The whole point of the hook is that it fires a dwell AHEAD of the
+  // pick, so a GPU readback the pick gates on can land inside the delay.
+  it('announces the coming pick on the move, not when the dwell fires', () => {
+    const { canvas, fire } = makeCanvas();
+    const { tooltip } = makeTooltip();
+    const onPickImminent = vi.fn();
+    createHoverEngine({
+      canvas, tooltip, initialProviders: [makeProvider('star')], onPickImminent,
+    });
+
+    fire('pointermove', { clientX: 100, clientY: 100 });
+    expect(onPickImminent).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(DELAY_MS);
+    expect(onPickImminent).toHaveBeenCalledTimes(1);
+  });
+
+  it('announces a press too — a tap reaches the click pick with no move', () => {
+    const { canvas, fire } = makeCanvas();
+    const { tooltip } = makeTooltip();
+    const onPickImminent = vi.fn();
+    createHoverEngine({ canvas, tooltip, onPickImminent });
+
+    fire('pointerdown');
+    expect(onPickImminent).toHaveBeenCalledTimes(1);
+  });
+
+  // A drag picks nothing and moves the camera, which invalidates whatever
+  // the announcement would stage — once per event, for the whole drag.
+  it('stays quiet through a drag', () => {
+    const { canvas, fire } = makeCanvas();
+    const { tooltip } = makeTooltip();
+    const onPickImminent = vi.fn();
+    createHoverEngine({ canvas, tooltip, onPickImminent });
+
+    fire('pointerdown');
+    onPickImminent.mockClear();
+    fire('pointermove', { clientX: 120, clientY: 120 });
+    fire('pointermove', { clientX: 140, clientY: 140 });
+    expect(onPickImminent).not.toHaveBeenCalled();
+
+    fire('pointerup');
+    fire('pointermove', { clientX: 160, clientY: 160 });
+    expect(onPickImminent).toHaveBeenCalledTimes(1);
+  });
 });

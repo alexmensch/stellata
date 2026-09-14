@@ -181,10 +181,10 @@ export type ResolvedCandidate = {
  * is confirmed through `resolve` before it can win, and only as far down
  * the score order as it takes to find a winner.
  *
- * Laziness is the point, not an optimisation: `resolve` reads per-star
- * extinction back off the GPU, so evaluating every candidate would cost
- * one synchronous readback each. In score order the first visible
- * candidate is almost always the first one tried.
+ * Laziness is the point, not an optimisation: on the WebGL2 escape hatch
+ * `resolve` reads per-star extinction back off the GPU, so evaluating
+ * every candidate would cost one synchronous readback each. In score
+ * order the first visible candidate is almost always the first one tried.
  *
  * Callers must pass a `hitRadius` that is an upper bound of the resolved
  * one, so the initial partition can never miss a prime candidate. A
