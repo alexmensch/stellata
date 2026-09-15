@@ -2,22 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   MORTON_BITS_PER_AXIS, mortonDispatchOrder, scatterByOrder,
 } from './dispatch-order-pure';
+import { scrambledLattice } from './dispatch-order-fixture';
 
-/** A 12³ lattice of 10 pc cells, listed in an order uncorrelated with
- *  position — the catalogue's shape as far as this sort is concerned. */
 const SIDE = 12;
 const COUNT = SIDE ** 3;
-
-function lattice(): Float32Array {
-  const positions = new Float32Array(COUNT * 3);
-  for (let i = 0; i < COUNT; i++) {
-    const cell = (i * 1129) % COUNT;
-    positions[i * 3] = (cell % SIDE) * 10;
-    positions[i * 3 + 1] = (Math.floor(cell / SIDE) % SIDE) * 10;
-    positions[i * 3 + 2] = Math.floor(cell / (SIDE * SIDE)) * 10;
-  }
-  return positions;
-}
+const lattice = () => scrambledLattice(SIDE, 1129);
 
 function meanConsecutiveGap(positions: Float32Array, order: Uint32Array): number {
   let total = 0;

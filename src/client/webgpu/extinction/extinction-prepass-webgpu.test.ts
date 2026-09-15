@@ -8,6 +8,7 @@ import { RECOMPUTE_EPSILON_PC } from '../../star-pipeline/extinction/extinction-
 import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { WebGpuExtinctionPrepass } from './extinction-prepass-webgpu';
 import { ExtinctionNodes } from './extinction-nodes';
+import { scrambledLattice } from './dispatch-order-fixture';
 
 /** A renderer whose readbacks resolve only when the test says so — the
  *  frame-decoupled semantics a cold read has to live with. */
@@ -110,6 +111,9 @@ describe('construction', () => {
 });
 
 describe('the dispatch order', () => {
+  const SIDE = 8;
+  const LATTICE_COUNT = SIDE ** 3;
+
   /** The two tables the kernel pairs, read back off the dispose registry —
    *  nothing else exposes a buffer no geometry owns. */
   function tables(count = COUNT, positions?: Float32Array) {
@@ -135,21 +139,11 @@ describe('the dispatch order', () => {
     }
   });
 
-  // A catalogue whose records arrive in no spatial order is the case the
-  // reorder exists for — 8³ cells walked by a stride coprime with the count.
   it('dispatches a spatially unordered catalogue out of catalogue order', () => {
-    const side = 8;
-    const count = side ** 3;
-    const positions = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      const cell = (i * 331) % count;
-      positions[i * 3] = (cell % side) * 10;
-      positions[i * 3 + 1] = (Math.floor(cell / side) % side) * 10;
-      positions[i * 3 + 2] = Math.floor(cell / (side * side)) * 10;
-    }
-    const { starOfSlot } = tables(count, positions);
-    expect(new Set(starOfSlot).size).toBe(count);
-    expect(Array.from(starOfSlot)).not.toEqual(Array.from({ length: count }, (_, i) => i));
+    const { starOfSlot } = tables(LATTICE_COUNT, scrambledLattice(SIDE, 331));
+    expect(new Set(starOfSlot).size).toBe(LATTICE_COUNT);
+    expect(Array.from(starOfSlot))
+      .not.toEqual(Array.from({ length: LATTICE_COUNT }, (_, i) => i));
   });
 });
 

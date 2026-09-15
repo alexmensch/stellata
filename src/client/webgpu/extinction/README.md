@@ -21,6 +21,9 @@ src/client/webgpu/extinction/
   dispatch-order-pure.ts      The Morton key, the slot → star permutation
     (+ test)                  it sorts into, and the scatter that undoes it
                               (§ Dispatch order).
+  dispatch-order-fixture.ts   The spatially unordered lattice both dispatch
+                              suites sort. Never in a bundle; the `-fixture`
+                              suffix is what marks that.
   extinction-nodes.ts         The two slots as nodes — the dust volume
     (+ test)                  (texture) and the A_V cache (storage
                               buffer) — with their placeholders and the
