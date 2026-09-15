@@ -3,11 +3,11 @@
 // scatter that undoes it. README.md § Dispatch order.
 
 /**
- * Bits of each axis quantised into the key, and the ceiling rather than a
- * preference: the spreader below takes 8 bits at a time and the key is
- * built from two halves, and three 16-bit axes interleave into 48 bits,
- * which is the most a float64 sort key holds exactly. Raising it drops the
- * high bits of every coordinate and silently collapses the order.
+ * Bits of each axis quantised into the key, and a ceiling rather than a
+ * preference: `part1By2` spreads 8 bits and the key is assembled from two
+ * halves, so a half wider than 8 loses its top bits and the order collapses
+ * without anything failing. The float64 mantissa is not the wall — 48 bits
+ * of key leaves 5 to spare, and 17 bits per axis would still fit it.
  */
 export const MORTON_BITS_PER_AXIS = 16;
 

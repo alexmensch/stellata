@@ -198,8 +198,12 @@ and 3 kpc off-Sol, where a Sol-relative direction order is arbitrary
 again (`AGENTS.md` § Camera-anywhere). Stars adjacent in 3D have rays
 that converge near the camera *and* near the star from every vantage, so
 `mortonDispatchOrder` interleaves 16 quantised bits per axis over the
-catalogue's own bounding box into a 48-bit Z-order key — a float64 holds
-that exactly, which is what fixes the bit budget. The sort is one CPU
+catalogue's own bounding box into a 48-bit Z-order key. **What fixes 16 is
+the spreader, not the mantissa**: `part1By2` takes 8 bits and the key is
+assembled from two halves, so a half wider than 8 drops its top bits and
+collapses the order with nothing failing. A float64 has room to spare at
+48 bits — 17 per axis would still fit it — which is why the pin is on the
+half-width and not on the budget. The sort is one CPU
 pass at attach, alongside the ~128 MiB volume upload that triggers it;
 nothing re-sorts per frame, and the order is a function of
 `catalog.positions` alone.
