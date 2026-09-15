@@ -454,22 +454,84 @@ overrode:
 #### What the fill measured, and what to turn if it is too slow
 
 The costs above are exact fetch and texel counts anchored to a shipped GPU
-workload. **They are not frame times.** stellata-ty4.7 spiked the fill alone
-and turned them into frame times, and the answer condemns the pin:
+workload. **They are not frame times.** Two spikes turned them into frame
+times, one per backend, and they do not agree:
 
-| | fetches/frame | measured |
-| --- | --- | --- |
-| **frustum, 50° — the default view** | 55M | **6–10 ms** |
-| frustum, 120° corner | 763M | **~85 ms** |
+| | fetches/frame | WebGL2 fragment (ty4.7) | WebGPU compute (ty4.9) |
+| --- | --- | --- | --- |
+| **frustum, 50° — the default view** | 55M | **6–10 ms** | **0.7–5.0 ms** |
+| frustum, 120° corner | 763M | **~85 ms** | **10–70 ms** |
+| all-sky, camera-anchored | 449M | — | **≥ 41 ms** |
 
-Apple M4 through ANGLE, Chrome, at **5.3–9.0 G fetches/s**. That throughput is
-the durable figure — it does not depend on the grid's size, so it survives the
-spike's mis-sized frustum where that run's own absolute cell counts do not.
-Against a 16.7 ms frame the fill alone spends over a third of the budget at the
-default view, every frame the camera moves — and it spends it at the two
-vantages where band dust is the point, whose *whole* frame already costs 19.0 ms
-(`mw120`) and 29.0 ms (`mw50`) on the WebGPU pin. Re-running the fill as a
-compute kernel moves that constant, not its order.
+**There is no single volume-fetch throughput, and ty4.7's figure was one.**
+That spike measured 5.3–9.0 G fetches/s on ANGLE and recorded it as the durable
+number because it does not depend on the grid's size. On the shipped backend the
+same work spans **3.3 to 78.9 G fetches/s, 24×**, and what moves it is the
+geometry of the rays rather than anything about the grid. Measured at a fixed
+100,663,296 fetches per row with only that geometry varying — Apple M4 /
+metal-3, Chrome headless, `raf-delta`, 4.096 Mpx,
+`.perf-runs/2026-09-15/ty4-9-volume-geometry.json`:
+
+| rays | taps along each ray | volume touched | rate |
+| --- | --- | --- | --- |
+| a golden angle apart | 25 pc | 62.3 MB, 1.6/voxel | 3.3 G/s |
+| 13.0′ apart | 25 pc | 62.3 MB, 1.6/voxel | 10.9 G/s |
+| 1.46′ apart | 25 pc | 1.9 MB, 54/voxel | 58.4 G/s |
+| 26.0′ apart | half a voxel | cache-resident | 57.5 G/s |
+| **13.0′ apart — the fill's own geometry** | **half a voxel** | cache-resident | **78.9 G/s** |
+
+**One pair factors cleanly.** The first two rows hold ray length, working set
+and fetches-per-voxel identical and move only the pattern the rays are laid out
+in: **3.3× for coherence alone**. The frustum grids are coherent by
+construction, neighbouring cells being neighbouring directions, so they read
+above that floor and the scattered rate prices only the per-star prepass.
+
+**Nothing else factors, because at a fixed fetch count the knobs are one knob.**
+Widening the angle between rays *is* how a row comes to touch more volume, so
+transverse pitch and working set cannot be held apart: the 58.4-against-10.9
+pair moves 1.46′ to 13.0′ and 1.9 MB to 62.3 MB together, and its 5.4× is the
+two compounded rather than working set's share of them. That pitch carries part
+of it by itself is measurable — at equal fetch count with both rows
+cache-resident, 26′ rays cost **1.37× more per fetch** than 13′ ones (1.750
+against 1.275 ms), a penalty with no working set behind it at all. The along-ray
+axis is confounded the same way: the one pair isolating tap spacing (13.0′ rays,
+half a voxel against 25 pc) is 7.2×, and all of that could be the working set
+the longer ray drags in.
+
+**So a row is bracketed by the rows sharing its ray geometry, never converted at
+a constant.** All three grids march 13.0′ apart — that is the pinned cell — and
+half a voxel along each ray, which is the last row's geometry exactly; what
+separates them from it is how much of the 134 MB volume each touches: 6.1 MB at
+50°, 31.4 MB at 120°, 70.4 MB all-sky, against a row that fits in cache. The two
+13.0′ rows therefore bracket every grid at **78.9 and 10.9 G fetches/s**, which
+is where the table's WebGPU column comes from. All-sky is a true bound rather
+than a bracket: at 70.4 MB it touches more than the 62.3 MB row did, so 10.9 G/s
+is a ceiling on its rate and 41 ms a floor on its time.
+
+The factorial's sixth row — 1.46′ rays at half-voxel taps — is left out of all
+of this. At 2.600 ms it is slower than the 13.0′ row on a smaller working set,
+the one reading that contradicts the picture above; its inter-quartile spread of
+2.4 ms against 0.8–1.2 for its neighbours, on a 1.8 ms bracket, is the
+restore-transient shape, so it is recorded and not used. Re-take it before
+anything leans on the cache-resident end.
+
+**What this overturns, and what it leaves standing.** At the default view the
+whole WebGPU bracket lies below the WebGL2 range — 5.0 ms at its slowest against
+6 ms at the spike's fastest — so the fill is between **1.2× and 14×** cheaper
+there, and the refutation does not depend on where inside the bracket it falls.
+"Over a third of a 16.7 ms budget" was a property of a backend the app no longer
+runs. At the corner the bracket is too wide to settle the question by itself,
+but 31.4 MB is half the measured large-working-set point and far past any cache,
+which puts that row near its slow end and so beside the WebGL2 ~85 ms — a
+judgement about which end, not a measurement. **stellata-ty4.8 argues a split
+rather than one verdict**, and the lever table below is what it turns at the
+corner.
+
+The same measurement prices the shipped per-star prepass in the same currency:
+18.6M fetches, scattered by construction, ≈**5.6 ms every frame the camera
+moves**. That is a cost `gpu.frame` cannot see at all today, because the WebGPU
+frame total resolves render passes only and the prepass is a compute dispatch —
+stellata-8cg.49.31.
 
 **The last row of the table below is unsound for this grid, and that is the
 larger finding.** Refilling a fraction of the cells per frame costs no accuracy
@@ -481,10 +543,20 @@ exactly what forecloses the rescue. **stellata-ty4.8 re-argues the mechanism on
 that basis** and blocks ty4.5, so the levers below are the fallbacks *within*
 the frustum choice and the floor the sky-fixed candidate is weighed against.
 
-The fill is linear in cell count and so quadratic in cell angle, and linear in
-the rate each ray marches at — which is what makes the fallbacks priced rather
-than guessed. Rows are the Rift strip at 32 slices and 50° FOV, so they read
-against the accuracy table above:
+The fill's **fetch count** is linear in cell count and so quadratic in cell
+angle, and linear in the rate each ray marches at — which is what makes the
+fallbacks priced rather than guessed. **Its cost in milliseconds is not**, and
+the fill column below must not be read as one: both levers also move the ray
+geometry the rate turns on, a coarser cell widening the transverse pitch and a
+slower march rate spreading the taps along each ray. Only the cell-angle lever
+has a measured coefficient — 26′ cells cost **1.37× more per fetch** than 13′
+ones at equal fetch count, so the 26′ row's 0.25× in fetches is nearer 0.34× in
+time. The fill-rate rows have none and stand as **uncorrected fetch ratios**,
+because the run's one along-ray pair cannot separate tap spacing from the
+working set it drags in. Both readings behind the 1.37× are cache-resident, so
+it is a caution against quoting any pitch-widening lever at its fetch ratio, not
+a coefficient to multiply by. Rows are the Rift strip at 32 slices and 50° FOV,
+so they read against the accuracy table above:
 
 | lever | fill | worst ΔS | shimmer | column | edge |
 | --- | --- | --- | --- | --- | --- |

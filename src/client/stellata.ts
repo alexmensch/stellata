@@ -496,9 +496,6 @@ export class Stellata implements FrameAnchor {
   private readonly passDebugScratch: starPhysics.RenderedSizeComponents =
     { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
 
-  // Pure target resolver; the click FSM in onPointerUp + the observe
-  // single/double-click dispatchers stay here as composition-layer
-  // orchestration.
   readonly picker!: Picker;
 
   // Per-kind geometry registry (camera/focus/focus-target.ts). Overlays
