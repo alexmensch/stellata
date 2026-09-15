@@ -145,7 +145,8 @@ function comparabilityRefusal(a: ScenarioRecord, b: ScenarioRecord): string | nu
 /**
  * The state a differential sweep was set up in, which the run records in
  * `params`. A pass held off with `--pre-disable`, or the adaptation
- * measurement kept live with `--no-park`, changes what the frame contains
+ * measurement kept live with `--no-park`, or the extinction kernel forced to
+ * run every frame with `--force-recompute`, changes what the frame contains
  * before the roster is touched at all — so the rows describe a scene the
  * other run never drew. The arithmetic those flags exist for
  * (`src/client/debug/frame-cost/passes/README.md` § The roster) is a
@@ -164,6 +165,20 @@ function comparabilityRefusal(a: ScenarioRecord, b: ScenarioRecord): string | nu
  * was no way to ask; a run that recorded no record count may have priced any
  * scene at all.
  */
+/** The two-state setup levers, in the order they are refused. A `false` here
+ *  is also what an absent field reads as, so a new lever needs no migration —
+ *  add the row and both gates refuse it. */
+const BOOLEAN_PRECONDITIONS = [
+  {
+    field: 'noPark', name: 'adaptation park', whenTrue: 'off', whenFalse: 'live',
+    why: 'one run priced the statistic writes and the other priced them parked',
+  },
+  {
+    field: 'forceRecompute', name: 'extinction recompute', whenTrue: 'forced', whenFalse: 'gated',
+    why: 'one run marched every star every frame and the other marched none',
+  },
+] as const;
+
 export function preconditionRefusal(
   a: Readonly<Record<string, unknown>>,
   b: Readonly<Record<string, unknown>>,
@@ -176,11 +191,11 @@ export function preconditionRefusal(
   if (ha !== hb) {
     return `passes held off ${ha} vs ${hb} — a pre-disabled sweep prices a frame the other run did not draw`;
   }
-  const park = (p: Readonly<Record<string, unknown>>): string =>
-    (p.noPark === true ? 'off' : 'live');
-  const [pa, pb] = [park(a), park(b)];
-  if (pa !== pb) {
-    return `adaptation park ${pa} vs ${pb} — one run priced the statistic writes and the other priced them parked`;
+  for (const lever of BOOLEAN_PRECONDITIONS) {
+    const state = (p: Readonly<Record<string, unknown>>): string =>
+      (p[lever.field] === true ? lever.whenTrue : lever.whenFalse);
+    const [sa, sb] = [state(a), state(b)];
+    if (sa !== sb) return `${lever.name} ${sa} vs ${sb} — ${lever.why}`;
   }
   const interleaved = (p: Readonly<Record<string, unknown>>): boolean => p.interleave !== false;
   if (interleaved(a) !== interleaved(b)) {

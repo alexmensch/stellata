@@ -68,7 +68,7 @@ scripts/perf/
 ```
 pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu|webgl2|both]
                  [--mode differential|probe|dwell|sweep] [--passes a,b]
-                 [--pre-disable a,b] [--no-park]
+                 [--pre-disable a,b] [--no-park] [--force-recompute]
                  [--method timer-query|timestamp|raf-delta]
                  [--budget-ms N] [--dwell-frames N] [--warmup-frames N] [--settle-frames N] [--no-interleave]
                  [--empty-passes N]
@@ -121,6 +121,22 @@ the band and the glow off cannot move it. **The `limitMag` columns are the
 tell either way** — equal across both runs, or the subtraction is between
 two different scenes.
 
+**`--force-recompute` is the one setup lever that switches something ON.**
+The per-star extinction cache is refilled only when the camera has moved
+more than 1 pc since the last fill, and every canon vantage is camera-idle —
+so the kernel is absent from every dwell a canon run takes. The flag arms the
+shell's forced-recompute lever before the measurement and restores it after,
+which makes the `extinctionRecompute` row present in `differential` and puts
+the compute pass into a `dwell`'s `computePasses` counts. It is read by those
+two modes only; the sweep's exponent relates frame time to pixels, and a cost
+that marches every star whatever is on screen would flatten it. Lands in the
+record's `params` and refuses to compare against a run without it
+(`diff/README.md` § The refusals) — including the pin, which such a run can
+neither be read against nor written as (`pins/README.md` § Setup levers).
+What the row means, why the scene is
+identical on both sides, and which vantages to take it at:
+`src/client/debug/frame-cost/passes/README.md` § The extinction rows.
+
 `--frames` sizes a dwell (dwell and sweep modes); `--scales` is the sweep's
 viewport set.
 
@@ -160,7 +176,8 @@ be compared. rAF wall time is the one clock both supply. An explicit
 `--mode dwell --method timer-query` is refused rather than quietly stamping
 the table `raf-delta`, and the same goes for `--passes`, `--pre-disable`,
 `--no-park`, `--budget-ms`, `--dwell-frames`, `--settle-frames` and
-`--no-interleave` outside `differential`, `--frames` and `--readback-every` outside dwell and
+`--no-interleave` outside `differential`, `--force-recompute` outside
+`differential` and `dwell`, `--frames` and `--readback-every` outside dwell and
 sweep, `--roundtrip` outside dwell, and `--scales` outside sweep. Only flags actually typed are checked,
 so a default never trips it, and `--warmup-frames` is exempt because every
 mode absorbs the same ramp. The in-app instrument takes the same posture on a

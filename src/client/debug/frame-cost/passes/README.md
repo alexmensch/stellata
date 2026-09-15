@@ -31,7 +31,7 @@ reduction (`reduction.enabled`), the star core depth-mask
 (`setCoreMaskEnabled`), the planet depth pre-stamp
 (`meshLayer.setDepthStampEnabled`, present only while some body's mesh is
 opaque — `../../../solar-system/planets/depth-stamp/README.md`), and the
-extinction prepass A/B. A pass inactive at the
+two extinction rows (§ The extinction rows). A pass inactive at the
 current view/state is skipped, not measured as zero.
 
 **Where the layer carries a contribution gate, `present()` asks whether it
@@ -67,7 +67,8 @@ two limit mags before believing that row at Earth close approach; the four
 vantages with no opaque body are unaffected. Disabling `planetDepthStamp`
 first removes the confound.
 
-Four rows are not what they look like:
+Three rows are not what they look like — the extinction pair has its own
+section below:
 
 - **`hdrChain`** disables via `hdr.setChartMode(true)` — the whole-target
   park, which also stops the statistic attachment and flips emitters to
@@ -77,8 +78,6 @@ Four rows are not what they look like:
   duration: without it the row prices the loss of the frame's only
   submission barrier on top of the chain (`../README.md` § The readback
   cadence confound).
-- **`extinctionPrepass`** ADDS the in-vertex raymarch when disabled, so
-  its `savedMs` is normally negative: the row is what the cache saves.
 - **`emptyPass`** ADDS `clearDepth()` calls to the local depth pass when
   disabled (`localDepthPass.extraEmptyPasses`). On WebGPU three encodes a
   clear as its own render pass and submit — every colour attachment loaded
@@ -118,7 +117,7 @@ Four rows are not what they look like:
   `baselineLimitMag` before believing any one reading, and expect the
   negative at deep-cut vantages.
 
-A fourth thing to know before reading rows at a no-cut vantage: the
+One more thing to know before reading rows at a no-cut vantage: the
 adaptation park (`../../../hdr/exposure/park/README.md`) stops the reduction
 draws and the statistic writes wherever the cut is not the measurement's,
 and the exposure pin freezes it there (collapsing a mid-probe park to
@@ -223,6 +222,66 @@ frame the chain can draw on, and the frames its readback is in flight — so
 the measurement's GPU work falls by roughly 60 %, not the ~83 % the
 interval alone suggests. Quoting these ~0 rows as the real-world saving
 overstates it.
+
+## The extinction rows
+
+Two rows, and they price opposite halves of the same cache.
+
+- **`extinctionPrepass`** is the consumer A/B: disabling parks the star
+  vertex stage on its in-vertex raymarch, so `savedMs` is normally negative
+  and the row is what the cache SAVES.
+- **`extinctionRecompute`** is the producer: what filling the cache costs.
+  One camera→star march per catalogue star — 388,071 threads × 48 volume
+  taps, ~18.6M fetches — plus its own compute submit on WebGPU
+  (`../../../webgpu/extinction/README.md` § The prepass kernel), or its own
+  fragment pass on WebGL2.
+
+**The producer row cannot appear on its own.** The cache is refilled only
+when the camera has moved more than `RECOMPUTE_EPSILON_PC` (1 pc) since the
+last fill, or a dust chunk landed — and **every canon vantage is
+camera-idle**, so a plain sweep prices a recompute that never ran and
+records `computePasses 0` throughout. The row is therefore present only
+while a **forced-recompute lever** is armed, which the caller arms *before*
+the sweep: `stellata.setExtinctionRecomputeForced(true)` on the console, or
+`--force-recompute` on the runner (`../../../../../scripts/perf/README.md`
+§ Invocation). Armed, the shell invalidates the cache before every
+per-frame `update()`, so the kernel runs on every frame and the row's two
+dwells are kernel-every-frame against kernel-never.
+
+**The scene is identical on both sides of that differential**, which is the
+whole reason the lever exists rather than a moving-camera scenario: a warp
+changes the star population and the exposure every frame, so a bracketed
+differential taken during one prices a different scene on each side. A
+recompute at a parked camera writes the same A_V values it already held, so
+`baselineLimitMag` and `disabledLimitMag` agree by construction — and if
+they do not, something other than the recompute moved.
+
+The cost is largely **vantage-independent**: every star is marched whatever
+is on screen, the pass having no per-star magnitude to gate on. So Sol
+default is the primary vantage and mw-plane 120° the second witness, rather
+than the usual five.
+
+**Under the lever, `extinctionPrepass` changes meaning** — and this is the
+honest warp-regime comparison. Baseline is now kernel-per-frame plus the
+buffer read; disabled is the in-vertex march per frame. Without the lever
+the same row prices the cache against the march at an idle camera, where
+the fill is free.
+
+Two things that look like defects and are not:
+
+- **Disabling the lever leaves one recompute owed.** The last forced
+  `markDirty()` stands, so the first `update()` after the toggle refills
+  once and then stops. It lands inside the dwell's `settleFrames` (30) and
+  never in the sampled frames.
+- **Pre-disabling `extinctionPrepass` makes the producer row vanish.**
+  Parking the vertex stage also pauses cache maintenance, so there is no
+  recompute left to force.
+
+**Never leave the lever on outside a measurement dwell.** In the live app
+the recompute advances the cache generation every frame, so a moving
+pointer re-arms the pick mirror's 1.48 MiB copy every frame
+(`../../../webgpu/extinction/README.md` § Cold reads). Headless runs send
+no pointer events, so a measurement is unaffected.
 
 ## Decomposing the HDR chain
 

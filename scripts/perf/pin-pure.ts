@@ -5,8 +5,9 @@
 import { basename, relative, resolve } from 'node:path';
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import {
-  VERDICT_MARK, band, bufferRefusal, dwellFloorMs, positionRefusal, readbackRefusal,
-  recordCountRefusal, splitFrameClasses, verdictFor, type DiffRefusal, type Verdict,
+  VERDICT_MARK, band, bufferRefusal, dwellFloorMs, positionRefusal, preconditionRefusal,
+  readbackRefusal, recordCountRefusal, splitFrameClasses, verdictFor,
+  type DiffRefusal, type Verdict,
 } from './diff/diff-pure';
 import {
   COMPUTE_ROW, computeClock, floorMove, frameFloor, gatingClock,
@@ -218,6 +219,13 @@ function rowRefusal(record: ScenarioRecord): string | null {
   if (record.backend.actual === null) return 'the backend never booted';
   if (record.recordCount === null) return 'no catalogue record count recorded — the rows cannot be placed on a scene';
   if (record.position == null) return 'no run position recorded — the row cannot be placed in a load history';
+  // The pin holds no `params` of its own and is taken with every setup lever at
+  // its default, so an empty record IS the pin's preconditions — and absent
+  // already reads as the default (`./diff/diff-pure.ts`). Here rather than in
+  // `compareToPin` alone because `--pin` reads this too: a forced dwell written
+  // as the pin would carry its lever's cost in every later run's verdict.
+  const precondition = preconditionRefusal({}, record.params);
+  if (precondition !== null) return precondition;
   if (PIN_UNGATED_SCENARIOS[record.name] === undefined
     && gatingClock(record.dwell).clock.stateGuard === 'trending') {
     return 'the dwell trended across its quarters — it straddled a load-state transition';

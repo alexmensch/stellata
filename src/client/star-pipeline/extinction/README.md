@@ -105,6 +105,12 @@ recomputations per visible star per frame.
   maintenance, so the fallback side never pays fill cost — the honest
   way to measure the prepass win on identical scenes; `true` restores
   the cache (re-validating against camera displacement).
+- **Forced-recompute lever:** `stellata.setExtinctionRecomputeForced(true)`
+  invalidates the cache before every `update()`, so the fill runs on every
+  frame at a parked camera. It exists because the displacement gate makes
+  the fill free at exactly the vantages a measurement can hold still at —
+  `../../debug/frame-cost/passes/README.md` § The extinction rows. Dwell
+  only; it re-arms the pick mirror's copy every frame in the live app.
 
 The prepass stores raw physical A_V; `uDustEnabled ×
 uExtinctionStrength` scales it at the point of consumption, so

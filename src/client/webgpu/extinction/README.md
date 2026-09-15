@@ -199,7 +199,9 @@ rather than merely untested.
 taps, 388,071 × 48. That is the whole per-recompute cost and it is paid
 *per frame* while the camera keeps moving more than
 `RECOMPUTE_EPSILON_PC` between frames — a warp pays it every frame, which
-is the case to measure, not the idle one. An idle camera costs zero, and
+is the case to measure, not the idle one. Every canon vantage is idle, so
+pricing it takes the forced-recompute lever
+(`../../debug/frame-cost/passes/README.md` § The extinction rows). An idle camera costs zero, and
 the visibility prefilter never applies here: the kernel marches every
 star, because the pass has no per-star magnitude to gate on.
 
@@ -262,7 +264,11 @@ while the last `update()` saw the camera displace, and the pick reads
 `null` and errs pickable across that stretch either way. The gate is the
 **displacement**, not the recompute: a dust chunk landing on a parked
 camera recomputes too, and that frame is one a pick can still be staged
-for. `lastCam*` starts at the Infinity sentinel, so the first compute
+for. The frame-cost lever that forces a recompute every frame at a parked
+camera is the same shape, and keying this gate on the recompute instead
+would swallow it — it would also spend 1.48 MiB a frame on a live pointer,
+which is why that lever is dwell-only
+(`../../debug/frame-cost/passes/README.md` § The extinction rows). `lastCam*` starts at the Infinity sentinel, so the first compute
 reads as a move from nowhere and is excluded from the gate rather than
 costing the boot its first warm.
 

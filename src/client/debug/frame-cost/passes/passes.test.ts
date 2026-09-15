@@ -102,3 +102,37 @@ describe('buildPassToggles', () => {
     }
   });
 });
+
+function recomputeStub(forced: boolean, prepassActive: boolean): {
+  stellata: Stellata;
+  state: { forced: boolean };
+} {
+  const state = { forced };
+  const stellata = {
+    isExtinctionRecomputeForced: () => state.forced,
+    isExtinctionPrepassActive: () => prepassActive,
+    setExtinctionRecomputeForced: (on: boolean) => { state.forced = on; },
+  } as unknown as Stellata;
+  return { stellata, state };
+}
+
+describe('the extinctionRecompute row', () => {
+  it('is present only with the lever armed and the prepass live', () => {
+    for (const [forced, active, expected] of [
+      [true, true, true], [true, false, false], [false, true, false], [false, false, false],
+    ] as const) {
+      const { stellata } = recomputeStub(forced, active);
+      expect(presentOf(stellata, 'extinctionRecompute'), `${forced}/${active}`).toBe(expected);
+    }
+  });
+
+  it('drops the forcing while disabled and re-arms it on restore', () => {
+    const { stellata, state } = recomputeStub(true, true);
+    const toggle = buildPassToggles(stellata).find((t) => t.key === 'extinctionRecompute');
+    if (toggle === undefined) throw new Error('no extinctionRecompute row in the roster');
+    const restore = toggle.disable();
+    expect(state.forced).toBe(false);
+    restore();
+    expect(state.forced).toBe(true);
+  });
+});

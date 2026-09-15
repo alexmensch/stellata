@@ -233,13 +233,20 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
       const setup = {
         preDisable: args.preDisable ?? [],
         noPark: args.noPark,
+        forceRecompute: args.forceRecompute,
         toggleModuleUrl: PASS_TOGGLES_MODULE_URL,
       };
-      record.params = { ...priceOptions, preDisable: setup.preDisable, noPark: setup.noPark };
-      if (setup.preDisable.length > 0 || setup.noPark) {
+      record.params = {
+        ...priceOptions,
+        preDisable: setup.preDisable,
+        noPark: setup.noPark,
+        forceRecompute: setup.forceRecompute,
+      };
+      if (setup.preDisable.length > 0 || setup.noPark || setup.forceRecompute) {
         console.log(
           `sweep preconditions: ${setup.preDisable.length > 0 ? `${setup.preDisable.join(', ')} held off` : 'every pass live'}` +
-          `${setup.noPark ? ' · adaptation park off' : ''}`,
+          `${setup.noPark ? ' · adaptation park off' : ''}` +
+          `${setup.forceRecompute ? ' · extinction recompute forced every frame' : ''}`,
         );
       }
       const rows = await runDifferential(page, priceOptions, setup);
@@ -261,6 +268,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
         backend,
         cadenceMs: record.idleRafMs,
         readbackEvery: plan.readbackEvery,
+        forceRecompute: args.forceRecompute,
       };
       record.method = DWELL_METHOD;
       if (args.mode === 'dwell') {

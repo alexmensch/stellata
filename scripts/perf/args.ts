@@ -48,6 +48,10 @@ export interface RunArgs {
   /** differential: keep the adaptation measurement unparked for the sweep
    *  (`src/client/hdr/exposure/park/README.md` § The lever). */
   readonly noPark: boolean;
+  /** differential and dwell: refill the per-star A_V cache every frame, which
+   *  the camera-displacement gate skips at every canon vantage
+   *  (`src/client/debug/frame-cost/passes/README.md` § The extinction rows). */
+  readonly forceRecompute: boolean;
   readonly method: GpuFrameMethod | undefined;
   readonly budgetMs: number;
   readonly dwellFrames: number | undefined;
@@ -112,6 +116,7 @@ const OPTIONS = {
   passes: { type: 'string' },
   'pre-disable': { type: 'string' },
   'no-park': { type: 'boolean', default: false },
+  'force-recompute': { type: 'boolean', default: false },
   method: { type: 'string' },
   'budget-ms': { type: 'string', default: String(ARG_DEFAULTS.budgetMs) },
   'dwell-frames': { type: 'string' },
@@ -147,6 +152,7 @@ export function usage(): string {
     '  --passes <keys>          comma list of priceFrame pass keys        (default: every present pass)',
     '  --pre-disable <keys>     differential: switch these passes OFF for the whole sweep (restored after)',
     '  --no-park                differential: keep the adaptation measurement unparked for the sweep',
+    '  --force-recompute        differential and dwell: run the extinction kernel every frame (a parked camera skips it)',
     `  --method <clock>         ${GPU_FRAME_METHODS.join('|')}       (default: the backend\'s best)`,
     `  --budget-ms <n>          whole-sweep wall-clock ceiling            (default ${ARG_DEFAULTS.budgetMs})`,
     '  --dwell-frames <n>  --warmup-frames <n>  --settle-frames <n>       (default: priceFrame\'s own)',
@@ -185,6 +191,7 @@ const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
   passes: ['differential'],
   'pre-disable': ['differential'],
   'no-park': ['differential'],
+  'force-recompute': ['differential', 'dwell'],
   method: ['differential'],
   'budget-ms': ['differential'],
   'dwell-frames': ['differential'],
@@ -376,6 +383,7 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     passes,
     preDisable,
     noPark: values['no-park'] as boolean,
+    forceRecompute: values['force-recompute'] as boolean,
     method: optionalOneOf('method', GPU_FRAME_METHODS),
     budgetMs: num('budget-ms'),
     dwellFrames: optionalNum('dwell-frames'),

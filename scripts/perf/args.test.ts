@@ -18,6 +18,7 @@ describe('parseRunArgs', () => {
       passes: undefined,
       preDisable: undefined,
       noPark: false,
+      forceRecompute: false,
       method: undefined,
       budgetMs: ARG_DEFAULTS.budgetMs,
       dwellFrames: undefined,
@@ -155,6 +156,16 @@ describe('parseRunArgs', () => {
     expect(a.passes).toEqual(['statisticWrites']);
     expect(a.preDisable).toEqual(['mwBand', 'lgEmission']);
     expect(a.noPark).toBe(true);
+  });
+
+  it('takes --force-recompute in differential mode and in dwell mode', () => {
+    expect(parseRunArgs(['--force-recompute']).forceRecompute).toBe(true);
+    expect(parseRunArgs(['--mode', 'dwell', '--force-recompute']).forceRecompute).toBe(true);
+  });
+
+  it('refuses --force-recompute outside the two modes that read it', () => {
+    expect(() => parseRunArgs(['--mode', 'sweep', '--force-recompute']))
+      .toThrow(/force-recompute/);
   });
 
   it('refuses a pass that is both held off and priced', () => {
