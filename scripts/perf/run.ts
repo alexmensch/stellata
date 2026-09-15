@@ -16,7 +16,7 @@ import {
   REPO_ROOT, gitMeta, mainCheckout, packageVersion, printAgainstPin, readJsonFlag, writePinFile,
 } from './checkout';
 import { diffRuns } from './diff/diff-pure';
-import type { DwellSummary } from './dwell/dwell-pure';
+import { computeClock, type DwellSummary } from './dwell/dwell-pure';
 import {
   PASS_TOGGLES_MODULE_URL, applyRoundTrip, measureDwell, measureSweep, type Measured,
 } from './measure';
@@ -123,6 +123,8 @@ function printDwell(
   if (d === null) return;
   const clocks: (readonly [string, DwellSummary])[] = [[DWELL_METHOD, d.stats]];
   if (d.gpuStats !== null) clocks.push(['gpu-timestamp', d.gpuStats]);
+  const compute = computeClock(d);
+  if (compute !== null) clocks.push(['gpu-compute', compute]);
   console.log(`${label}\n${formatDwellTable(clocks)}`);
   console.log(
     `gpu stream: ${d.gpuNote} · readback ${d.readbackPerFrame.toFixed(3)}/frame ` +

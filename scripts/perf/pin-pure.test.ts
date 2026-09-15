@@ -74,6 +74,11 @@ function dwell(wall: DwellSummary, gpu: DwellSummary | null): DwellRecord {
   };
 }
 
+/** A WebGPU dwell carrying the compute stream beside the frame's. */
+function withCompute(record: DwellRecord, compute: DwellSummary, computeMs: readonly number[] = []): DwellRecord {
+  return { ...record, computeMs, computeStats: compute };
+}
+
 function scenario(
   name: ScenarioName, backend: Backend, record: DwellRecord, overrides: Partial<ScenarioRecord> = {},
 ): ScenarioRecord {
@@ -499,6 +504,69 @@ describe('compareToPin', () => {
       .toContain('this run resolved none');
     const gained = scenario('sol', 'webgl2', dwell(stats(16.0, { iqrMs: 21 }), stats(15.2)));
     expect(compareToPin(pinOf([SOL_GL]), file([gained])).rows[0].note).toContain('this run does');
+  });
+
+  describe('the compute row', () => {
+    // A compute dispatch is priced by three's separate compute pool, and the
+    // gate exists to fail a PR that makes the frame dearer: every candidate
+    // in the cheaper-per-frame wave is a compute dispatch, so a 40 ms compute
+    // pass that read as no change was the instrument blind where the
+    // programme aims. Its own key, so it is accepted on its own.
+    const solCompute = (frame: number, compute: number, computeMs: readonly number[] = []) =>
+      scenario('sol', 'webgpu', withCompute(dwell(stats(25.2), stats(frame)), stats(compute), computeMs));
+    const SOL_COMPUTE = solCompute(21.8, 1.4);
+
+    it('pins the compute stream and its floor beside the frame, and reads a file without one as null', () => {
+      const row = pinOf([solCompute(21.8, 1.4, [1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1])]).rows[0];
+      expect(row.compute?.p50).toBe(1.4);
+      expect(row.computeFloor).toEqual({ p10: 1.2 });
+      expect(pinOf([SOL_GPU]).rows[0].compute).toBeNull();
+      expect(pinOf([SOL_GL]).rows[0].compute).toBeNull();
+    });
+
+    it('marks a compute move past the floor dearer under its own key, and the frame row separately', () => {
+      const diff = compareToPin(pinOf([SOL_COMPUTE]), file([solCompute(21.8, 1.7)]));
+      expect(diff.rows.map((r) => [r.key, r.metric, r.verdict])).toEqual([
+        ['sol|webgpu', 'gpu-p50', 'same'],
+        ['sol|webgpu|compute', 'compute-p50', 'dearer'],
+      ]);
+      expect(diff.rows[1].bandMs).toBe(dwellFloorMs(1.4));
+      expect(pinDiffFails(diff)).toBe(true);
+      expect(unacceptedMarks(diff, {})).toEqual(['sol|webgpu|compute']);
+      expect(unacceptedMarks(diff, { 'sol|webgpu': { bead: 'b' } })).toEqual(['sol|webgpu|compute']);
+      expect(unacceptedMarks(diff, { 'sol|webgpu|compute': { bead: 'b' } })).toEqual([]);
+      expect(compareToPin(pinOf([SOL_COMPUTE]), file([solCompute(21.8, 1.5)])).rows[1].verdict).toBe('same');
+      expect(compareToPin(pinOf([SOL_COMPUTE]), file([solCompute(21.8, 1.1)])).rows[1].verdict).toBe('cheaper');
+    });
+
+    it('prints the compute row ungated where only one side resolved the stream, naming that side', () => {
+      const fromOld = compareToPin(pinOf([SOL_GPU]), file([SOL_COMPUTE])).rows;
+      expect(fromOld.map((r) => [r.key, r.verdict])).toEqual([['sol|webgpu', 'same'], ['sol|webgpu|compute', 'ungated']]);
+      expect(fromOld[1].note).toContain('the pin carries no compute stream for this row; this run does');
+      const lost = compareToPin(pinOf([SOL_COMPUTE]), file([SOL_GPU])).rows[1];
+      expect([lost.verdict, lost.note]).toEqual(['ungated', 'the pin carries a compute stream for this row; this run resolved none']);
+    });
+
+    it('prints no compute row at all where neither side has one — every WebGL2 row', () => {
+      expect(compareToPin(pinOf([SOL_GL]), file([SOL_GL])).rows.map((r) => r.key)).toEqual(['sol|webgl2']);
+      expect(compareToPin(pinOf([SOL_GPU]), file([SOL_GPU])).rows.map((r) => r.key)).toEqual(['sol|webgpu']);
+    });
+
+    it('stands the band down on an ungated vantage and keeps the ceiling, exactly as for the frame', () => {
+      const lgCompute = (compute: number) => scenario('lg', 'webgpu', withCompute(dwell(stats(16.7), stats(11.891)), stats(compute)));
+      const wander = compareToPin(pinOf([lgCompute(1.4)]), file([lgCompute(3)])).rows[1];
+      expect([wander.key, wander.verdict]).toEqual(['lg|webgpu|compute', 'ungated']);
+      expect(wander.note).toContain(PIN_UNGATED_SCENARIOS.lg);
+      const hot = compareToPin(pinOf([lgCompute(1.4)]), file([lgCompute(33.5)])).rows[1];
+      expect([hot.verdict, hot.note]).toEqual(['dearer', 'compute-p50 over the 33.4 ms ceiling']);
+    });
+
+    it("rides the context's refusals: a refused frame carries no compute row", () => {
+      const trended = scenario('sol', 'webgpu', withCompute(dwell(stats(25.2), trending(21.8)), stats(1.4)));
+      const diff = compareToPin(pinOf([SOL_COMPUTE]), file([trended]));
+      expect(diff.rows).toEqual([]);
+      expect(diff.refusals.map((r) => r.key)).toEqual(['sol|webgpu']);
+    });
   });
 
   it('marks a GPU-stream p50 over the ceiling regardless of the band, and reads wall never', () => {

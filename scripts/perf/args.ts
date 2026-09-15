@@ -10,7 +10,7 @@ import {
   PRICED_PASS_KEYS,
   type PricedPassKey,
 } from '../../src/client/debug/frame-cost/passes/passes-pure';
-import { DEFAULT_DWELL_FRAMES, DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
+import { COMPUTE_ROW, DEFAULT_DWELL_FRAMES, DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
 import { DEFAULT_QUIET_MS } from './settle-pure';
 import { BACKENDS, SCENARIO_NAMES, type ScenarioName } from './scenarios';
@@ -28,8 +28,10 @@ export type BackendRequest = (typeof BACKEND_REQUESTS)[number];
 export const ROUNDTRIP_IDLE = 'idle';
 export type RoundTrip = PricedPassKey | typeof ROUNDTRIP_IDLE;
 
-/** `--accept <scenario>|<backend>:<bead>` — a mark the PR accepted, recorded
- *  in the pin as provenance for the value now pinned. */
+/** `--accept <scenario>|<backend>[|compute]:<bead>` — a mark the PR
+ *  accepted, recorded in the pin as provenance for the value now pinned. The
+ *  compute row of a context is its own key, so accepting the frame never
+ *  accepts the compute pass with it. */
 export interface AcceptedMark {
   readonly key: string;
   readonly bead: string;
@@ -166,7 +168,7 @@ export function usage(): string {
     '  --baseline <path>        diff this run against a saved one and print the verdicts',
     '  --pin <path>             dwell: write this run as the perf pin (with --json; RELEASING.md § Perf pin)',
     '  --against-pin <path>     dwell: verdicts against a pin; a ✗ or a refused row exits 1',
-    '  --accept <scenario>|<backend>:<bead>  dwell, with --pin: accept a ✗ and pin its value, repeatable',
+    '  --accept <scenario>|<backend>[|compute]:<bead>  dwell, with --pin: accept a ✗ and pin its value, repeatable',
     `  --cooldown-ms <n>        idle between contexts so each starts cold    (default ${ARG_DEFAULTS.cooldownMs})`,
     `Contexts run backend-major (${BACKENDS.join(', then ')}), scenarios in the order given; all = the canon order.`,
     'Exit codes: 0 ok · 1 scenario failed / refused / software adapter · 2 bad flags or unreachable url · 3 not armed',
@@ -200,7 +202,7 @@ const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
   accept: ['dwell'],
 };
 
-const ACCEPT_KEY = new RegExp(`^(${SCENARIO_NAMES.join('|')})\\|(${BACKENDS.join('|')})$`);
+const ACCEPT_KEY = new RegExp(`^(${SCENARIO_NAMES.join('|')})\\|(${BACKENDS.join('|')})(\\|${COMPUTE_ROW})?$`);
 
 /** The whole canon in canon order. Order, not membership: a pin's rows are
  *  only ever compared against a row taken at the same position, so a
@@ -216,7 +218,7 @@ export function parseAccept(raw: string): AcceptedMark {
   const key = at < 0 ? raw : raw.slice(0, at);
   const bead = at < 0 ? '' : raw.slice(at + 1).trim();
   if (!ACCEPT_KEY.test(key) || bead.length === 0) {
-    throw new ArgError(`--accept takes <scenario>|<backend>:<bead-id>; got '${raw}'`);
+    throw new ArgError(`--accept takes <scenario>|<backend>[|${COMPUTE_ROW}]:<bead-id>; got '${raw}'`);
   }
   return { key, bead };
 }
@@ -427,7 +429,7 @@ export function pinUsage(): string {
     'Usage: pnpm run perf:pin -- <run.json>... [flags]',
     '  <run.json>...            saved --json runs of ONE commit, any order; a row comes from the newest holding it sound',
     '  --pin <path>             the pin to write                          (default scripts/perf/pins/<adapter slug>.json)',
-    '  --accept <scenario>|<backend>:<bead>  accept a ✗ against the pin being replaced, repeatable',
+    '  --accept <scenario>|<backend>[|compute]:<bead>  accept a ✗ against the pin being replaced, repeatable',
     '  --dry-run                print the rows, their runs and the verdicts; write nothing',
     'Exit codes: 0 written (or a clean dry run) · 1 refused · 2 bad flags or an unreadable run file',
   ].join('\n');

@@ -127,7 +127,21 @@ export function floorMove(before: FrameFloor | null, after: FrameFloor | null): 
  *  because the two are different instruments and a reader cannot otherwise
  *  tell which one a delta came off. `gatingClock` returns it alongside the
  *  clock itself, so no caller re-derives the choice. */
-export type DwellMetric = 'gpu-p50' | 'wall-p50';
+export type DwellMetric = 'gpu-p50' | 'wall-p50' | 'compute-p50';
+
+/** Suffix of a context's compute row in both gates' tables and in
+ *  `--accept`: `mw120|webgpu|compute`. Its own key, so a mark on the frame
+ *  and a mark on the compute pass are accepted separately. */
+export const COMPUTE_ROW = 'compute';
+
+/** The compute-pass stream, or null where the record predates it or the
+ *  boot resolved none — one reader for the optional field, so no caller
+ *  tells `undefined` from `null` differently. */
+export function computeClock(
+  dwell: { readonly computeStats?: DwellSummary | null },
+): DwellSummary | null {
+  return dwell.computeStats ?? null;
+}
 
 export interface GatingClock {
   readonly clock: DwellSummary;

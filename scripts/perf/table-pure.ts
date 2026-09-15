@@ -4,7 +4,7 @@
 
 import { round3, type PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { VERDICT_MARK, type RunDiff } from './diff/diff-pure';
-import { PASS_COUNTERS, type DwellSummary, type PassCountsSummary } from './dwell/dwell-pure';
+import { PASS_COUNTERS, computeClock, type DwellSummary, type PassCountsSummary } from './dwell/dwell-pure';
 import { PIN_VERDICT_MARK, type PinDiff } from './pin-pure';
 import type { DwellRecord } from './schema';
 import type { SweepFit, SweepPoint } from './sweep/sweep-pure';
@@ -75,6 +75,10 @@ export function formatRoundTripLine(pass: string, before: DwellRecord, after: Dw
   const parts = [`round trip ${pass}: raf p50 ${ratio(before.stats.p50, after.stats.p50)}`];
   if (before.gpuStats !== null && after.gpuStats !== null) {
     parts.push(`gpu p50 ${ratio(before.gpuStats.p50, after.gpuStats.p50)}`);
+  }
+  const [computeBefore, computeAfter] = [computeClock(before), computeClock(after)];
+  if (computeBefore !== null && computeAfter !== null) {
+    parts.push(`compute p50 ${ratio(computeBefore.p50, computeAfter.p50)}`);
   }
   parts.push(`limit ${round3(before.limitMag)} → ${round3(after.limitMag)} mag`);
   parts.push(`dm ${round3(before.dm)} → ${round3(after.dm)}`);

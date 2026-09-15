@@ -60,6 +60,13 @@ export interface DwellRecord {
   readonly gpuNote: string;
   readonly stats: DwellSummary;
   readonly gpuStats: DwellSummary | null;
+  /** The compute-pass stream — the star compaction every frame, plus the
+   *  extinction prepass on the frames it recomputes — resolved in the same
+   *  cycle as `gpuMs` and never folded into it. Optional: a file written
+   *  before the compute pool was resolved carries no key, and a reader takes
+   *  that as null rather than as a fault. */
+  readonly computeMs?: readonly number[] | null;
+  readonly computeStats?: DwellSummary | null;
   readonly limitMag: number;
   readonly dm: number;
   readonly readbackPerFrame: number;

@@ -242,6 +242,7 @@ export interface DwellParams {
 export interface DwellRaw {
   readonly deltasMs: number[];
   readonly gpuMs: number[];
+  readonly computeMs: number[];
   readonly gpuNote: string;
   readonly passCounts: Record<PassCounter, number[]> | null;
   readonly passNote: string;
@@ -282,7 +283,9 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
   return page.evaluate(async (p) => {
     const s = (window as unknown as PerfWindow).stellata;
     const gpuMs: number[] = [];
+    const computeMs: number[] = [];
     let stopGpu: (() => void) | null = null;
+    let stopCompute: (() => void) | null = null;
     let gpuNote = 'not requested — rAF wall-clock deltas are the metric';
 
     type Proto = Record<string, unknown>;
@@ -303,10 +306,12 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
         const samples = await import(p.samplesModuleUrl) as {
           gpuFrameSamplesAreSound(): boolean;
           onGpuFrameSample(fn: (ms: number) => void): () => void;
+          onGpuComputeSample(fn: (ms: number) => void): () => void;
         };
         if (samples.gpuFrameSamplesAreSound()) {
           stopGpu = samples.onGpuFrameSample((ms) => gpuMs.push(ms));
-          gpuNote = 'subscribed';
+          stopCompute = samples.onGpuComputeSample((ms) => computeMs.push(ms));
+          gpuNote = 'subscribed, render and compute';
         } else {
           gpuNote = 'timestamp-query granted but resolving durations no frame can have';
         }
@@ -369,6 +374,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       s.adaptation.setHeld(true);
       dm = s.adaptation.getDm();
       gpuMs.length = 0;
+      computeMs.length = 0;
       const readbacksBefore = s.reduction.readbackRequests;
       let last = await new Promise<number>((r) => requestAnimationFrame(r));
       live.submits = 0;
@@ -396,6 +402,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       rateDuring = clock.getRate();
       cadence.every = readbackEveryBefore;
       stopGpu?.();
+      stopCompute?.();
       if (origSubmit !== null && queueProto !== undefined && encoderProto !== undefined) {
         queueProto.submit = origSubmit;
         encoderProto.beginRenderPass = origRenderPass;
@@ -409,6 +416,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     return {
       deltasMs,
       gpuMs,
+      computeMs,
       gpuNote,
       passCounts: origSubmit !== null ? perFrame : null,
       passNote,

@@ -58,9 +58,18 @@ readings at the first cadence bound the second. What the probe is for is
 
 **rAF wall-clock deltas are the metric.** On a WebGPU boot the frame-sample
 stream is subscribed alongside where `gpuFrameSamplesAreSound()` says the
-adapter resolves believable durations, and reported as a second row. The two
-are different instruments: read them side by side, never differenced. Where
-the stream is absent the `gpu stream:` line says which reason applied.
+adapter resolves believable durations, and reported as a second row
+(`gpu-timestamp`, the render passes) — and the compute stream from the same
+resolve cycle as a third (`gpu-compute`: the star compaction every frame,
+plus the extinction prepass on the frames it recomputes;
+`src/client/debug/gpu-timing/README.md` § WebGPU). The three are different
+instruments: read them side by side, never differenced, and never sum the
+two GPU rows into a frame total — `gpu.frame` means the render passes in
+every pin row and every archived dwell. Where the streams are absent the
+`gpu stream:` line says which reason applied. A canon vantage is
+camera-idle, so its compute row is the compaction alone; the recompute's
+own price needs the forced-recompute lever (`stellata-8cg.64`) before a
+dwell can see it.
 
 `p50 / p90 / p99` are nearest-rank, so every number printed is a frame that
 happened. **`vsyncClamped` invalidates the dwell rather than annotating it**:

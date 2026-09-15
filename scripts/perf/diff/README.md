@@ -79,6 +79,15 @@ timestamp median against a wall median is two instruments. The pin prints
 that pair as an ungated row instead, because a committed table shows every
 vantage; here there is a refusal list to say it in.
 
+**The compute passes are a second dwell row, keyed `|compute`.** Where both
+runs carry the compute stream (`../pins/README.md` § The compute row) it is
+banded exactly as the frame row, on `compute-p50`, with its own `floor`
+column off its own p10. One side alone refuses that row and leaves the
+frame row standing — an archive written before the compute pool was
+resolved carries no stream, and a run since does; neither side, every
+WebGL2 pair, prints no compute row at all. A frame row that is refused
+takes its compute row with it.
+
 ## The refusals
 
 **They matter as much as the rows.** Two runs on different clocks,

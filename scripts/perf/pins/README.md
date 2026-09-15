@@ -14,8 +14,8 @@ its path relative to that checkout, since this file ships in a public repo.
 --json <main checkout>/.perf-runs/<date>/pin.json --pin scripts/perf/pins/<slug>.json`
 
 Per `scenario|backend` the pin holds wall p50 / p90 / iqr / n /
-vsyncClamped and the GPU-stream p50 where it was sound, plus the
-state-guard verdict, buffer, catalogue record count, the context's
+vsyncClamped, the GPU-stream p50 where it was sound and the compute-stream
+p50 beside it (§ The compute row), plus the state-guard verdict, buffer, catalogue record count, the context's
 position in the run, the exposure readback rate the row was taken at and
 whether its frame drew two classes, cadence, adapter probe, commit pair,
 package version and the run file the row came from. **Any refused row
@@ -25,8 +25,10 @@ trip, a headed run, no record count, no position — because a pin missing a
 row narrows the gate silently, and for the same reason `--pin` refuses a
 command line short of `--scenario all --backend both`, or one naming the
 whole canon in another order (§ Run position).
-`--accept <scenario>|<backend>:<bead>` records an accepted mark as
-provenance for the value now pinned; it never filters a verdict.
+`--accept <scenario>|<backend>[|compute]:<bead>` records an accepted mark
+as provenance for the value now pinned; it never filters a verdict. The
+compute row is its own key, so accepting a context's frame never accepts
+its compute pass with it.
 
 ## From saved runs
 
@@ -94,6 +96,22 @@ canon to it; reordering either constant re-takes the pin. `--pin` enforces
 the order rather than the membership for the same reason — a permuted run
 covers all ten contexts and pins every one of them where nothing later
 looks.
+
+## The compute row
+
+Every WebGPU context prints two rows: `mw120|webgpu` for the frame's
+render passes and `mw120|webgpu|compute` for its compute passes, each
+from its own timestamp pool and each banded on its own pinned value with
+the same floor, ceiling and vantage stand-down (§ Reading `--against-pin`).
+The two are never summed: `gpu.frame` has meant the render passes in
+every pin row ever taken, and a compute pass that read as no change was
+the instrument blind where the programme aims — every cheaper-per-frame
+candidate on this backend is a compute dispatch, so a 40 ms kernel landed
+as `~` on the frame row. A compute row on neither side — every WebGL2 row
+— prints nothing; one side alone prints `·` ungated with a note naming
+the side that lacks it, which is what a pin taken before the compute pool
+was resolved reads as until it is re-taken. A context refused for its
+frame carries no compute row: the refusals are facts about the run.
 
 ## What the commit fields hold
 
