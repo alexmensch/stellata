@@ -285,12 +285,21 @@ In order down the page, and the order is the argument:
 1. **Hero** — the imagery, full-bleed, with the `h1` over it and the
    masthead riding on top of the same image. Stellata is a visual
    instrument; the page leads with what it looks like, not with prose.
-   **Nothing over the hero dims it.** The copy and the masthead both carry
-   `--text-halo` on the glyphs instead of a scrim behind them, because the
-   imagery is already a dark-adapted frame and a scrim spends the contrast
-   twice. The reason it is written down: the obvious repair for text that
-   looks marginal over a bright frame is a scrim, and that is the one
-   repair this hero may not have. Grade the media darker, or move the copy.
+   **Nothing dims the hero to make text readable.** The copy and the
+   masthead both carry `--text-halo` on the glyphs instead of a scrim
+   behind them, because the imagery is already a dark-adapted frame and a
+   scrim spends the contrast twice. The reason it is written down: the
+   obvious repair for text that looks marginal over a bright frame is a
+   scrim, and that is the one repair this hero may not have. Grade the
+   media darker, or move the copy.
+
+   The one overlay that stays is `.hero-media::after`, and it is a
+   different thing doing a different job: a gradient to the page ground
+   climbing `--hero-fade` from the bottom edge, so the frame dissolves into
+   the band below rather than ending on a cut. Tuning its reach by eye is
+   expected. **It stops being that overlay and starts being a scrim the
+   moment it reaches far enough to sit behind the heading** — which is the
+   line to hold, not the number.
 2. **Readout strip** — five figures, three of them substitutions.
 3. **What it is** — three claims, one each: a serious instrument for people
    who already know the sky · every object from a published catalogue, and
