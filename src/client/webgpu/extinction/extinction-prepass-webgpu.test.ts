@@ -116,7 +116,7 @@ describe('the dispatch order', () => {
 
   /** The two tables the kernel pairs, read back off the dispose registry —
    *  nothing else exposes a buffer no geometry owns. */
-  function tables(count = COUNT, positions?: Float32Array) {
+  function tables(count: number, positions: Float32Array) {
     const { prepass, released, attachDust } = makePrepass(count, positions);
     attachDust();
     prepass.update(0, 0, 0);
@@ -129,21 +129,20 @@ describe('the dispatch order', () => {
 
   // The pairing is the bug this can have: a position table sorted one way
   // and an order table sorted another writes every star's A_V onto some
-  // other star. The vec4 packing, w left at zero, rides along.
+  // other star. It bites only on a field the sort actually permutes — a
+  // monotone one sorts to the identity and pairs correctly by accident, so
+  // the non-identity assertion below is what keeps the rest honest.
   it('packs each slot with the star its order table names', () => {
-    const { slotPositions, starOfSlot } = tables();
-    for (const slot of [0, 1, 7, 1029, COUNT - 1]) {
-      const star = starOfSlot[slot];
-      expect(Array.from(slotPositions.slice(slot * 4, slot * 4 + 4)))
-        .toEqual([star * 3, star * 3 + 1, star * 3 + 2, 0]);
-    }
-  });
-
-  it('dispatches a spatially unordered catalogue out of catalogue order', () => {
-    const { starOfSlot } = tables(LATTICE_COUNT, scrambledLattice(SIDE, 331));
+    const positions = scrambledLattice(SIDE, 331);
+    const { slotPositions, starOfSlot } = tables(LATTICE_COUNT, positions);
     expect(new Set(starOfSlot).size).toBe(LATTICE_COUNT);
     expect(Array.from(starOfSlot))
       .not.toEqual(Array.from({ length: LATTICE_COUNT }, (_, i) => i));
+    for (const slot of [0, 1, 7, 300, LATTICE_COUNT - 1]) {
+      const star = starOfSlot[slot];
+      expect(Array.from(slotPositions.slice(slot * 4, slot * 4 + 4))).toEqual(
+        [positions[star * 3], positions[star * 3 + 1], positions[star * 3 + 2], 0]);
+    }
   });
 });
 

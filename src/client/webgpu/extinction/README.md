@@ -218,6 +218,14 @@ takes the same `order` array the table is built from, the pairing is
 pinned in the test, and `verifyExtinction()` is the acceptance
 (§ The prepass kernel).
 
+**That pin only bites over a field the sort actually permutes.** A
+catalogue monotone in all three axes sorts to the identity — Z-order
+preserves the dominance order — so slot equals star and a table paired
+wrongly passes anyway. The test builds its field from
+`dispatch-order-fixture.ts` and asserts the order is not the identity
+before it checks a single slot; a fixture swapped for a tidier monotone
+one silently retires the check.
+
 ## What it costs, and what it holds
 
 The first two rows are the WebGL2 pass's unchanged in size — the port
