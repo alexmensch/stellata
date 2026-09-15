@@ -184,8 +184,7 @@ the catalogue index as before.
 neighbouring threads, and neighbouring threads are what share a memory
 transaction. Two rows of the `stellata-ty4.9` sweep hold fetch count,
 ray length and working set identical and move only how the rays are laid
-out: **3.3× for coherence alone**, 3.3 against 10.9 G fetches/s, and
-that doc names the scattered rate as this pass's
+out: **3.3× for coherence alone**, 3.3 against 10.9 G fetches/s
 (`docs/science-galactic-structure.md` § What the fill measured). Over a
 recompute's 18.6M fetches that is roughly 5.6 ms against 1.7 ms, on
 every frame a warp moves past `RECOMPUTE_EPSILON_PC`. The stall is
