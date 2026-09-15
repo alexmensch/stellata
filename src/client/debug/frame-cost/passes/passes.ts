@@ -33,7 +33,9 @@ export interface PassToggleOptions {
  *  The four rows after it decompose that aggregate (README.md
  *  § Decomposing the HDR chain). extinctionPrepass reports the consumer
  *  A/B: disabling ADDS the in-vertex raymarch, so its savedMs is normally
- *  negative (what the cache saves). emptyPass ADDS `emptyPasses` empty
+ *  negative (what the cache saves). extinctionRecompute prices the fill
+ *  instead, and is present only under a lever the caller arms before the
+ *  sweep (README.md § The extinction rows). emptyPass ADDS `emptyPasses` empty
  *  render passes, so its savedMs is minus the floor times that count. */
 export function buildPassToggles(
   stellata: Stellata,
@@ -134,6 +136,12 @@ export function buildPassToggles(
       key: 'extinctionPrepass',
       present: () => stellata.isExtinctionPrepassActive(),
       disable: () => flag((on) => stellata.setExtinctionPrepassEnabled(on)),
+    },
+    {
+      key: 'extinctionRecompute',
+      present: () =>
+        stellata.isExtinctionRecomputeForced() && stellata.isExtinctionPrepassActive(),
+      disable: () => flag((on) => stellata.setExtinctionRecomputeForced(on)),
     },
     {
       key: 'emptyPass',
