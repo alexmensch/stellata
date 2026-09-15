@@ -305,16 +305,19 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       try {
         const samples = await import(p.samplesModuleUrl) as {
           gpuFrameSamplesAreSound(): boolean;
+          gpuComputeSamplesAreSound(): boolean;
           onGpuFrameSample(fn: (ms: number) => void): () => void;
           onGpuComputeSample(fn: (ms: number) => void): () => void;
         };
-        if (samples.gpuFrameSamplesAreSound()) {
-          stopGpu = samples.onGpuFrameSample((ms) => gpuMs.push(ms));
-          stopCompute = samples.onGpuComputeSample((ms) => computeMs.push(ms));
-          gpuNote = 'subscribed, render and compute';
-        } else {
-          gpuNote = 'timestamp-query granted but resolving durations no frame can have';
-        }
+        const renderSound = samples.gpuFrameSamplesAreSound();
+        const computeSound = samples.gpuComputeSamplesAreSound();
+        if (renderSound) stopGpu = samples.onGpuFrameSample((ms) => gpuMs.push(ms));
+        if (computeSound) stopCompute = samples.onGpuComputeSample((ms) => computeMs.push(ms));
+        const unsound = 'resolved durations no frame can have';
+        if (renderSound && computeSound) gpuNote = 'subscribed, render and compute';
+        else if (renderSound) gpuNote = `subscribed, render only — the compute pool ${unsound}`;
+        else if (computeSound) gpuNote = `subscribed, compute only — the render pool ${unsound}`;
+        else gpuNote = `timestamp-query granted but both pools ${unsound}`;
       } catch (e) {
         gpuNote = `${p.samplesModuleUrl} did not load (${(e as Error).message})`;
       }

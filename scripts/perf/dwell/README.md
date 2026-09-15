@@ -65,8 +65,9 @@ plus the extinction prepass on the frames it recomputes;
 `src/client/debug/gpu-timing/README.md` § WebGPU). The three are different
 instruments: read them side by side, never differenced, and never sum the
 two GPU rows into a frame total — `gpu.frame` means the render passes in
-every pin row and every archived dwell. Where the streams are absent the
-`gpu stream:` line says which reason applied. A canon vantage is
+every pin row and every archived dwell. Each stream is subscribed on its own
+soundness verdict, so one can be recorded while the other is refused, and
+the `gpu stream:` line names whichever side dropped out and why. A canon vantage is
 camera-idle, so its compute row is the compaction alone; the recompute's
 own price needs the forced-recompute lever (`stellata-8cg.64`) before a
 dwell can see it.

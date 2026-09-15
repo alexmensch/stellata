@@ -42,7 +42,8 @@ stays poisoned for the backend's lifetime.
 **And a grant is not a working clock either:** Chrome grants the feature
 and then resolves whole frames as a large negative number, so the channel
 drops any duration that is not finite and positive and degrades exactly
-as the withheld case does.
+as the withheld case does — per pool, so a lying compute pool leaves
+`gpu.frame` and every pin row that gates on it alone.
 
 ## Why the resolve is not gated on the HUD
 

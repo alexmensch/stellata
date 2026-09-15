@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   dropResolvedTimestamps,
+  gpuComputeSamplesAreSound,
   gpuFrameSamplesAreSound,
   onGpuComputeSample,
   onGpuFrameSample,
@@ -242,6 +243,40 @@ describe('resolving publishes one sample per resolve', () => {
     offC();
   });
 
+  it('latches the compute pool alone, leaving the frame clock sound', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const render: number[] = [];
+    const compute: number[] = [];
+    const offR = onGpuFrameSample((ms) => render.push(ms));
+    const offC = onGpuComputeSample((ms) => compute.push(ms));
+    const renderer = fakeResolver();
+
+    // gpu.frame is what every committed pin row gates on, and an unsound
+    // verdict takes the whole run's GPU stream down — ungated rows, which
+    // exit 0. So a lying compute pool must not reach it.
+    resolveAndPublishGpuFrame(renderer, true);
+    settleCycle(renderer, 0, 18.9, Number.NaN);
+    await flush();
+
+    expect(render).toEqual([18.9]);
+    expect(compute).toEqual([]);
+    expect(gpuFrameSamplesAreSound()).toBe(true);
+    expect(gpuComputeSamplesAreSound()).toBe(false);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain('[gpu.compute]');
+
+    // And the frame goes on being measured after it.
+    resolveAndPublishGpuFrame(renderer, true);
+    settleCycle(renderer, 1, 19.2, Number.NaN);
+    await flush();
+    expect(render).toEqual([18.9, 19.2]);
+    expect(warn).toHaveBeenCalledTimes(1);
+
+    offR();
+    offC();
+    warn.mockRestore();
+  });
+
   it('clears the guard on a rejected resolve rather than stopping for good', async () => {
     const seen: number[] = [];
     const off = onGpuFrameSample((ms) => seen.push(ms));
@@ -264,7 +299,7 @@ describe('resolving publishes one sample per resolve', () => {
 });
 
 describe('a duration no frame can have is dropped, not recorded', () => {
-  it('drops it, says so once, and latches the backend unsound', async () => {
+  it('drops it, says so once, and latches the render pool unsound', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const seen: number[] = [];
     const off = onGpuFrameSample((ms) => seen.push(ms));
@@ -282,10 +317,9 @@ describe('a duration no frame can have is dropped, not recorded', () => {
     expect(gpuFrameSamplesAreSound()).toBe(false);
     expect(warn).toHaveBeenCalledTimes(1);
 
-    // Once per tab, not once per frame — and the compute pool lying reads
-    // as the same backend lying, not a second fault.
+    // Once per tab, not once per frame.
     resolveAndPublishGpuFrame(renderer, true);
-    settleCycle(renderer, 1, Number.NaN, Number.NaN);
+    settleCycle(renderer, 1, Number.NaN, 1);
     await flush();
     expect(seen).toEqual([]);
     expect(warn).toHaveBeenCalledTimes(1);

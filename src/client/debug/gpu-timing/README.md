@@ -177,12 +177,15 @@ claiming a GPU measurement, while the table lists its top 8 rows by average
 A `gpu` headline above a table with no `gpu.*` row in it at all.
 
 So the channel drops any duration that is not finite and positive, says so
-once per tab, and latches `gpuFrameSamplesAreSound()` false; the headline
-falls back to `submit` and a sweep to `raf-delta`. That is the same
-degradation the withheld-feature path already had, reached one step later —
-**the grant is necessary, never sufficient.** A zero is NOT a fault: three
-seeds `lastValue` at 0 and returns it from every early-out that measured
-nothing, so zeros are dropped silently and leave the backend sound.
+once per tab, and latches that pool's soundness false — for the render pool,
+`gpuFrameSamplesAreSound()`, which drops the headline to `submit` and a
+sweep to `raf-delta`. That is the same degradation the withheld-feature path
+already had, reached one step later — **the grant is necessary, never
+sufficient.** The latch is per pool (§ The resolve must run on EVERY
+rendered frame), so this verdict is about the render pool alone. A zero is
+NOT a fault: three seeds `lastValue` at 0 and returns it from every
+early-out that measured nothing, so zeros are dropped silently and leave the
+backend sound.
 
 Three consequences, none of them a limitation to work around:
 
@@ -241,6 +244,28 @@ the newest frame's total — earlier frames' passes are dropped, not summed
 into it. So samples arrive at fewer than one per rendered frame under load,
 and each one is a single honest frame, which is what the ring average and
 the dwell medians need.
+
+**Covering both pools costs sample rate, because the cycle ends on the
+slower readback.** Measured across the two committed pins on this adapter
+(960-frame dwells at 4.096 Mpx), samples per rendered frame fell mw120
+0.916 → 0.748, sol 0.894 → 0.583, lg 0.917 → 0.744, mw50 0.246 → 0.200,
+while earth rose 0.845 → 0.911; main's own render-path work moved between
+the two runs, so the split between the two causes is not separated. It
+reaches no verdict today — at four of those rows the band is 0.007–0.104 ms
+against the 0.25 ms floor that decides, and earth, the one row where the
+sampling term binds, gained samples — but a row that loses enough of them
+widens its own band, so read a sample count as part of a dwell rather than
+as bookkeeping.
+
+**Soundness latches per pool, not per backend.** A pool resolving a
+duration no frame can have stops that pool's samples alone: `gpu.frame` is
+what every committed pin row gates on, and an unsound verdict there empties
+the run's whole GPU stream, leaving ungated rows that exit 0 — a gate gone
+blind without saying so. So a lying compute pool must not reach it, and
+`gpuComputeSamplesAreSound()` sits beside `gpuFrameSamplesAreSound()` with
+its own latch and its own one-shot warning. A dwell subscribes to each
+stream on its own verdict and its `gpu stream:` line names whichever side
+dropped out.
 
 ### The resolved-uid trim — three's Map never shrinks on its own
 
