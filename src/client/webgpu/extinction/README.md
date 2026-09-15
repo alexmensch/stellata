@@ -249,7 +249,9 @@ live app (`../../debug/memory/README.md`), and on a WebGL2 boot it
 So ~8.9 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
 `Float32Array` the position attribute keeps on the JS heap after upload
 and the ~1.5 MiB `Uint32Array` behind the order table, which the parity
-check reads (§ The prepass kernel) and three does not release either.
+check reads (§ The prepass kernel). **The buffer and that CPU copy are one
+array**, so `dispose()` drops the field as well as releasing the
+attribute — either reference alone keeps the 1.48 MiB alive.
 The WebGL2 twin's `DataTexture` holds the position copy the same way. All
 survive on an integrated or mobile GPU without argument.
 

@@ -368,6 +368,16 @@ describe('dispose', () => {
     expect(order.count).toBe(COUNT);
   });
 
+  // The buffer and the parity check's CPU copy are one array, so releasing
+  // the buffer alone leaves 1.48 MiB alive behind the surviving field.
+  it('drops the CPU order copy with the buffer', async () => {
+    const { prepass, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.dispose();
+    await expect(prepass.verifyParity()).resolves.toBeNull();
+  });
+
   it('a read in flight at dispose cannot land on a released cache', async () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();

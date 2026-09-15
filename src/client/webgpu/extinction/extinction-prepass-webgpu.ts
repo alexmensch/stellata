@@ -52,8 +52,10 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   private readonly positionsNode: ReturnType<typeof storage<'vec4'>>;
   private readonly orderNode: ReturnType<typeof storage<'uint'>>;
   /** Dispatch slot → catalogue index, the CPU copy the parity check needs
-   *  to put the reference march's slot-indexed target back into star order. */
-  private readonly dispatchOrder: Uint32Array;
+   *  to put the reference march's slot-indexed target back into star order.
+   *  Shares its array with the `order` buffer, so dispose has to drop both
+   *  or the 1.48 MiB outlives the pass. */
+  private dispatchOrder: Uint32Array | null;
   private readonly absCameraPos = uniform(new Vector3());
 
   // The whole A_V table on the CPU. `readAvMag` answers out of this and
@@ -201,7 +203,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  a fragment pass over the same positions, at the last computed camera,
    *  bit-compared against the whole buffer. Dev-console only. */
   async verifyParity(): Promise<AvParityReport | null> {
-    if (!this.isActive() || this.av === null) return null;
+    if (!this.isActive() || this.av === null || this.dispatchOrder === null) return null;
     return runReferenceMarch({
       renderer: this.renderer,
       nodes: this.nodes,
@@ -238,6 +240,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.av = null;
     this.positions = null;
     this.order = null;
+    this.dispatchOrder = null;
     this.mirror = null;
     this.mirrorGeneration = -1;
     this.movedOnLastUpdate = false;
