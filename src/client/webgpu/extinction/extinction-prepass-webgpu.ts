@@ -109,9 +109,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.orderNode = storage(this.order, 'uint', count).toReadOnly();
     // One thread per slot. three guards the threads past `count` in the
     // last workgroup with an early return, so no buffer is touched out of
-    // range. The read is the sorted slot and the write is the star it
-    // holds — coherent fetches against scattered 4-byte writes
-    // (README.md § Dispatch order).
+    // range. README.md § Dispatch order.
     this.kernel = compute(Fn(() => {
       slots.av.element(this.orderNode.element(instanceIndex)).assign(dustRaymarchAvTsl(
         nodes, slots.dust, this.absCameraPos,
