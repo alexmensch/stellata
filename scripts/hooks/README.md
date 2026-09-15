@@ -202,12 +202,12 @@ name rather than only the guarded ones keeps the rule table the single list
 of which skills gate anything.
 
 The gate exists because the load looks redundant from inside the repo and
-is not. A folder README documents the **house style** — which layer each
-rule landed in here, and why — while the system underneath it (the layout
-primitives, the no-width-query mandate, the review gates) belongs to the
-skill, and a README describing the one reads convincingly like coverage of
-the other. A session that has read the README therefore believes it is
-already briefed.
+is not. `src/site/README.md` § The stylesheet documents the **house
+style** — which layer each rule landed in here, and why — while the system
+underneath it (the layout primitives, the no-width-query mandate, the
+review gates) belongs to the skill, and a README describing the one reads
+convincingly like coverage of the other. A session that has read the
+README therefore believes it is already briefed.
 
 **code-craft has a second trap: the change does not look like design.**
 Its trigger names design, refactor and review, and a bug fix reads as none
