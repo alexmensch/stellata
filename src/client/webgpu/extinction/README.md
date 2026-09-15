@@ -207,6 +207,18 @@ pass at attach, alongside the ~128 MiB volume upload that triggers it;
 nothing re-sorts per frame, and the order is a function of
 `catalog.positions` alone.
 
+**It is synchronous on the main thread, and its timing is a dev-machine
+one**: ~77 ms at 388,071 stars, measured in Node on an M-series laptop, so
+budget several times that on the integrated and mobile floor this folder is
+sized for. It shares its frame with the volume upload, which already stalls.
+The cost is the comparator rather than the keys — a comparator-free
+`Float64Array.sort()` over the same element count measures ~21 ms — and
+taking that would mean packing key and slot index into one float64: 11 bits
+per axis plus a 19-bit index is 52, inside the mantissa. Declined for now
+because 11 bits quantises coarsely once a far outlier widens the bounding
+box. **Revisit on attach latency measured on a low-end device, never on
+catalogue size** — the key's width is not what catalogue growth pressures.
+
 **The A_V buffer stays catalogue-star-indexed** — so the position table
 is what moves. Thread *i* reads sorted position *i* and writes
 `av[order[i]]`. That trades coherent reads for scattered writes, and the
