@@ -202,6 +202,16 @@ edit blocked by a broken gate — is worse than one made without the skill.
 The deny message names the marker path, so a session that genuinely needs
 to proceed creates it.
 
+That path is also the answer to the one thing the test suite cannot
+settle, since it drives the script directly rather than through a harness:
+whether a given harness runs `PreToolUse` on `Skill` calls at all. Where
+one does not, the skill can be invoked and the marker still never appears,
+so the deny message says to create it and stop invoking — a loop being the
+failure mode a gate armed by another tool call invites.
+
+Registration is read at session start, so a session that adds or edits a
+hook here is not itself governed by it.
+
 ## How commit-sweep-guard works
 
 `PreToolUse` on `Bash`. Filters down to `git commit ...` invocations

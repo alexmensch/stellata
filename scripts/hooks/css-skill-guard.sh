@@ -50,7 +50,7 @@ Stylesheets here are CUBE CSS over Every Layout primitives: which layer a rule b
 
 Fix: call the Skill tool with skill 'cube-css', then retry the edit. Reach for the utopia skill alongside it when the change touches a type size, a space step or a clamp().
 
-If this is genuinely not a CUBE stylesheet, disable the gate for this session by creating $STATE_FILE — but the default answer is 'load the skill'."
+If you have just done that and this still denies, your harness does not run PreToolUse on Skill calls: arm the session by creating $STATE_FILE and carry on — do not invoke the skill a third time. The same file is the opt-out where the target is genuinely not a CUBE stylesheet."
 
 jq -n --arg reason "$reason" '{
   hookSpecificOutput: {
