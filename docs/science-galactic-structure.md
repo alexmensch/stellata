@@ -484,7 +484,11 @@ metal-3, Chrome headless, `raf-delta`, 4.096 Mpx,
 and fetches-per-voxel identical and move only the pattern the rays are laid out
 in: **3.3× for coherence alone**. The frustum grids are coherent by
 construction, neighbouring cells being neighbouring directions, so they read
-above that floor and the scattered rate prices only the per-star prepass.
+above that floor — as does the per-star extinction prepass, which dispatches
+in a spatial order for exactly this reason
+(`src/client/webgpu/extinction/README.md` § Dispatch order). The scattered
+rate is the floor a pass pays when neighbouring threads march unrelated
+sight-lines, and it is what that order exists to stay off.
 
 **Nothing else factors, because at a fixed fetch count the knobs are one knob.**
 Widening the angle between rays *is* how a row comes to touch more volume, so
