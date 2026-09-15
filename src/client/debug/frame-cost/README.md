@@ -87,7 +87,12 @@ src/client/debug/frame-cost/
   false }` prices the live path. `baselineLimitMag` / `disabledLimitMag`
   stay in the output as the check that it held.
 - **A GPU clock.** `timestamp` on WebGPU where the adapter granted
-  `timestamp-query`, `timer-query` on WebGL2 with the extension, and
+  `timestamp-query` — the render passes' `gpu.frame`, not the compute
+  row beside it, so a toggle that moves work between a render pass and a
+  compute kernel (`extinctionPrepass`) prices its render half here and
+  its compute half on a dwell's compute row
+  (`../gpu-timing/README.md` § `gpu.frame` is the only row that prices
+  anything) — `timer-query` on WebGL2 with the extension, and
   `raf-delta` wall time otherwise — WebGL2 Safari, any adapter that
   withheld the timestamp feature, and any backend that granted it but
   resolves durations no frame can have, which is Chrome today
