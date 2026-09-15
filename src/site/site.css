@@ -71,8 +71,8 @@
   --hero-min: clamp(30rem, 82svh, 48rem);
   --notfound-min: min(62svh, 35rem);
   --holder-min: clamp(11rem, 24vw, 17rem);
-  --holder-dim: 0.7;
 
+  --layer-hero-copy: 1;
   --layer-masthead: 2;
   --layer-skip-link: 3;
 
@@ -328,7 +328,12 @@ video {
 /* The scrim spans the whole image; the wrapper inside it holds the text to
    the column. One element cannot do both — a max-inline-size on the scrim
    leaves the image un-dimmed either side of it on a wide screen. */
+/* Positioned because the media may be a <video>: replaced content paints
+   after an unpositioned sibling's background whatever the DOM order, so an
+   unlayered copy loses its scrim behind the clip. */
 .hero-copy {
+  position: relative;
+  z-index: var(--layer-hero-copy);
   align-self: end;
   inline-size: 100%;
   padding-block: var(--space-xl) var(--space-l-xl);
@@ -510,11 +515,6 @@ a.sight-media:hover {
 }
 .holder code {
   overflow-wrap: anywhere;
-}
-.hero-media > .holder {
-  border: none;
-  background: none;
-  opacity: var(--holder-dim);
 }
 
 /* ── Block: pill ───────────────────────────────────────────────────── */

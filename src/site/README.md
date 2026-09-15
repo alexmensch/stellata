@@ -339,10 +339,10 @@ take the capture, then copy the address bar — which is what makes the
 image and the URL incapable of disagreeing. Deriving a share URL separately
 from the shot is the failure this shape exists to prevent.
 
-Every media slot currently holds a **`.holder`**: a dashed hairline box
-naming what to capture and the filename to save it as. The dashed border is
-deliberate — an empty styled box would ship unnoticed. `stellata-2h0e.8`
-tracks filling them.
+The hero holds a clip; every sight's slot still holds a **`.holder`**: a
+dashed hairline box naming what to capture and the filename to save it as.
+The dashed border is deliberate — an empty styled box would ship unnoticed.
+`stellata-2h0e.8` tracks filling them.
 
 To land a real capture:
 
@@ -379,6 +379,13 @@ To land a real capture:
    requires one for motion that starts on its own and runs longer than
    that. A clip that plays once and holds its last frame needs no control
    to comply. A looping hero would need one and has nowhere to put it.
+
+   Encode 1920×1080 H.264 High, `yuv420p`, no audio track, `-movflags
+   +faststart`, and the poster is the clip's **last** frame so the still
+   and the frame it settles on agree. **CRF around 17, not the usual 21.**
+   These scenes are near-black gradients — a dust lane, a Milky Way band —
+   and that is the content H.264 blocks up first, visibly, while costing
+   little to encode well: the hero's 4.2 s is 632 kB at 17.
 4. Put the address bar's URL on **both** anchors in that row — the media
    and the "Fly there" line.
 
