@@ -114,7 +114,8 @@ frame contained before the roster was touched at all, and `--no-interleave`
 changes how every row is differenced; all four are recorded in `params` and
 compared there. `--force-recompute` is the one of them a **dwell** carries
 too — a dwell taken under it runs the extinction kernel on every frame — so
-that refusal is what stops such a run being read against the pin.
+that refusal is what stops such a run being read against the pin, and what
+stops one being written as the pin (`../pins/README.md` § Setup levers).
 Pre-disabled keys compare as sets, so the order they were typed in is not a
 difference. `--empty-passes` refuses at the **row** level instead — it reaches
 the `emptyPass` row alone, and refusing a whole scenario for it would drop

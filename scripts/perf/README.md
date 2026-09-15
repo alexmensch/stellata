@@ -131,7 +131,9 @@ the compute pass into a `dwell`'s `computePasses` counts. It is read by those
 two modes only; the sweep's exponent relates frame time to pixels, and a cost
 that marches every star whatever is on screen would flatten it. Lands in the
 record's `params` and refuses to compare against a run without it
-(`diff/README.md` § The refusals). What the row means, why the scene is
+(`diff/README.md` § The refusals) — including the pin, which such a run can
+neither be read against nor written as (`pins/README.md` § Setup levers).
+What the row means, why the scene is
 identical on both sides, and which vantages to take it at:
 `src/client/debug/frame-cost/passes/README.md` § The extinction rows.
 

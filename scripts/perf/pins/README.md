@@ -21,7 +21,8 @@ whether its frame drew two classes, cadence, adapter probe, commit pair,
 package version and the run file the row came from. **Any refused row
 refuses the whole pin** — failed,
 tainted, not dwell, not `raf-delta`, trending at a *gated* vantage, a round
-trip, a headed run, no record count, no position — because a pin missing a
+trip, a headed run, no record count, no position, or **taken under a setup
+lever** (§ Setup levers) — because a pin missing a
 row narrows the gate silently, and for the same reason `--pin` refuses a
 command line short of `--scenario all --backend both`, or one naming the
 whole canon in another order (§ Run position).
@@ -131,6 +132,25 @@ compute median, so a compute row's own `stateGuard` cannot read anything but
 `steady` and nothing consults it — the frame row's verdict is what refuses
 the context. Calibrating a compute floor needs the repeat scatter of two
 cold runs and there has only ever been one: `stellata-8cg.74` owns it.
+
+## Setup levers
+
+A pin holds no `params` of its own: it is taken with every setup lever at its
+default, and an absent precondition already reads as that default
+(`../diff/README.md` § The refusals). So the empty record IS the pin's
+preconditions, and `preconditionRefusal` against it is the whole test — one
+implementation, so `--pin` and `--against-pin` refuse the same run for the
+same reason.
+
+**`--force-recompute` is the lever this catches**, being the only one a
+**dwell** carries; the rest are differential-only and a pin is dwell-mode, so
+they could never differ here. A dwell taken under it marches every star every
+frame, which lands on the compute row (§ The compute row) against a pinned
+value that is the compaction alone. Read against the pin, that is a large `✗`
+attributed to whatever code is under review; **written** as the pin, it
+carries the lever's cost in every later run's verdict — the ratchet
+`RELEASING.md` § Perf pin exists to stop. Any future lever a dwell can carry
+inherits the same refusal without another edit.
 
 ## What the commit fields hold
 
