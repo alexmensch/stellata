@@ -30,12 +30,8 @@ function interleave(x: number, y: number, z: number): number {
   return (part1By2(x) | (part1By2(y) << 1) | (part1By2(z) << 2)) >>> 0;
 }
 
-/**
- * Dispatch slot → star index, ordered so that consecutive slots hold stars
- * that are close in 3D. The key is spatial rather than angular on purpose:
- * a sky-direction order is coherent only from the vantage it was built for,
- * and the camera flies anywhere (AGENTS.md § Camera-anywhere).
- */
+/** Dispatch slot → star index, ordered so consecutive slots hold stars close
+ *  in 3D. Why spatial and not angular: README.md § Dispatch order. */
 export function mortonDispatchOrder(positions: Float32Array, count: number): Uint32Array {
   const order = new Uint32Array(count);
   for (let i = 0; i < count; i++) order[i] = i;
@@ -54,7 +50,6 @@ export function mortonDispatchOrder(positions: Float32Array, count: number): Uin
     if (z < minZ) minZ = z;
     if (z > maxZ) maxZ = z;
   }
-  // A degenerate axis quantises to zero rather than dividing by it.
   const scaleX = maxX > minX ? AXIS_MAX / (maxX - minX) : 0;
   const scaleY = maxY > minY ? AXIS_MAX / (maxY - minY) : 0;
   const scaleZ = maxZ > minZ ? AXIS_MAX / (maxZ - minZ) : 0;
@@ -71,11 +66,7 @@ export function mortonDispatchOrder(positions: Float32Array, count: number): Uin
   return order;
 }
 
-/**
- * Undo the permutation: element `i` of `src` belongs to star `order[i]`.
- * Moves float32 bit patterns rather than values, so a NaN payload survives
- * the trip and the parity check stays a bit comparison.
- */
+/** Undo the permutation: element `i` of `src` belongs to star `order[i]`. */
 export function scatterByOrder(
   src: Float32Array,
   order: Uint32Array,
