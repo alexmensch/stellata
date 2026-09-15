@@ -110,8 +110,27 @@ candidate on this backend is a compute dispatch, so a 40 ms kernel landed
 as `~` on the frame row. A compute row on neither side — every WebGL2 row
 — prints nothing; one side alone prints `·` ungated with a note naming
 the side that lacks it, which is what a pin taken before the compute pool
-was resolved reads as until it is re-taken. A context refused for its
-frame carries no compute row: the refusals are facts about the run.
+was resolved reads as until it is re-taken. The side with no reading prints
+**empty**, not zero: a fabricated zero makes `delta` restate `current`, and
+a whole column of untaken rows reads as a column of moves. A context refused
+for its frame carries no compute row: the refusals are facts about the run.
+
+**The floor is inherited, not calibrated here, and it is most of the
+quantity it gates.** `max(0.25 ms, 1 % × pinned)` was derived from how far
+two cold whole-frame dwells of one tree disagree — a 10–30 ms reading. The
+compute values it now bands are 0.299 / 0.394 / 0.410 / 0.311 / 0.626 ms, so
+the millisecond term runs **40–84 % of the pinned value**, while the pair's
+own sampling error is 0.003–0.021 ms, one to two orders under it. In
+absolute terms the row still catches what it exists for — a dispatch that
+adds or moves more than 0.25 ms of GPU work, the ceiling above catching a
+kernel that runs away entirely. What it cannot see is the existing
+compaction getting most of the way to twice as dear. Two of the three
+guards are inert at this magnitude for the same reason: `PIN_CEILING_MS` is
+112× mw120's compute value, and `STATE_GUARD_TREND_MS` (1 ms) exceeds every
+compute median, so a compute row's own `stateGuard` cannot read anything but
+`steady` and nothing consults it — the frame row's verdict is what refuses
+the context. Calibrating a compute floor needs the repeat scatter of two
+cold runs and there has only ever been one: `stellata-8cg.74` owns it.
 
 ## What the commit fields hold
 

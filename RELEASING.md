@@ -227,7 +227,10 @@ compute timestamps separately, so a WebGPU context prints a second row,
 `<scenario>|webgpu|compute`, banded on its own pinned value with the same
 floor and ceiling and accepted under its own key
 (`scripts/perf/pins/README.md` § The compute row). The two are never
-summed, and a compute regression marks whatever the frame row says. Wall time is quantised to the display's refresh
+summed, and a compute regression marks whatever the frame row says — but
+that floor is inherited from a whole-frame reading and runs 40–84 % of the
+compute values it bands, so the row catches a dispatch that adds a quarter
+of a millisecond and not the compaction getting half again as dear. Wall time is quantised to the display's refresh
 interval, so every canon row's wall p50 reads 16.7–17.5 ms with a
 middle-half spread of a whole interval, and its median turns on whether
 50.1 % or 49.9 % of the frames made the deadline: wall is recorded, never

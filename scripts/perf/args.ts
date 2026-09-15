@@ -29,9 +29,7 @@ export const ROUNDTRIP_IDLE = 'idle';
 export type RoundTrip = PricedPassKey | typeof ROUNDTRIP_IDLE;
 
 /** `--accept <scenario>|<backend>[|compute]:<bead>` — a mark the PR
- *  accepted, recorded in the pin as provenance for the value now pinned. The
- *  compute row of a context is its own key, so accepting the frame never
- *  accepts the compute pass with it. */
+ *  accepted, recorded in the pin as provenance for the value now pinned. */
 export interface AcceptedMark {
   readonly key: string;
   readonly bead: string;
