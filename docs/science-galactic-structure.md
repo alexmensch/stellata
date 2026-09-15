@@ -339,7 +339,7 @@ instrument change moves it. Fetches are counted against the shipped per-star
 extinction prepass — 390k stars × 48 steps = **18.6M fetches per rebuild**,
 which recomputes every frame during a warp — because that is a shipped GPU
 workload doing the same fetch against the same texture. Wall-clock GPU timings
-are not measured here.
+are § What the fill measured.
 
 **A screen-space grid is uniform in tan θ, not in solid angle**, and the cost
 table has to be read in those terms: `dθ/dx = cos²θ`, so the on-axis cell is
@@ -448,20 +448,38 @@ overrode:
   rebuilds on any camera change; the ε predicate the per-star prepass uses has
   no analogue here. That is the trade the 8.1× fill advantage pays for, and it
   is why the fill's absolute cost (3.0× the prepass, every frame the camera
-  moves) is the number ty4.7 has to land rather than a per-frame average.
+  moves) is a per-frame number rather than a per-frame average. § What the fill
+  measured is what it came to.
 
-#### What is not measured, and what to turn if it is too slow
+#### What the fill measured, and what to turn if it is too slow
 
 The costs above are exact fetch and texel counts anchored to a shipped GPU
-workload. **They are not frame times, and none of this has run on a GPU.**
+workload. **They are not frame times.** stellata-ty4.7 spiked the fill alone
+and turned them into frame times, and the answer condemns the pin:
 
-**Spike the fill pass on its own before ty4.5 builds the read**
-(stellata-ty4.7). The fill alone, behind a timer query and an A/B toggle
-mirroring `setExtinctionPrepassEnabled`, priced at the default 50° and at the
-**120° FOV × dpr 2** corner — which is the worst case at 763M fetches/frame and
-is reached by zooming out on a retina display, not by an exotic configuration.
-Doing this after ty4.5 means discovering the answer at the end of a PR that also
-carves 52 clouds and re-pins every sightline row.
+| | fetches/frame | measured |
+| --- | --- | --- |
+| **frustum, 50° — the default view** | 55M | **6–10 ms** |
+| frustum, 120° corner | 763M | **~85 ms** |
+
+Apple M4 through ANGLE, Chrome, at **5.3–9.0 G fetches/s**. That throughput is
+the durable figure — it does not depend on the grid's size, so it survives the
+spike's mis-sized frustum where that run's own absolute cell counts do not.
+Against a 16.7 ms frame the fill alone spends over a third of the budget at the
+default view, every frame the camera moves — and it spends it at the two
+vantages where band dust is the point, whose *whole* frame already costs 19.0 ms
+(`mw120`) and 29.0 ms (`mw50`) on the WebGPU pin. Re-running the fill as a
+compute kernel moves that constant, not its order.
+
+**The last row of the table below is unsound for this grid, and that is the
+larger finding.** Refilling a fraction of the cells per frame costs no accuracy
+only where a cell keeps pointing where it pointed. A frustum grid's cells move
+*and rotate* with the camera, so a partial refill holds cells aimed somewhere
+they no longer aim: the staleness is angular, not temporal. The lever is sound
+for a sky-fixed grid alone — and the 8.1× fill advantage the frustum won on is
+exactly what forecloses the rescue. **stellata-ty4.8 re-argues the mechanism on
+that basis** and blocks ty4.5, so the levers below are the fallbacks *within*
+the frustum choice and the floor the sky-fixed candidate is weighed against.
 
 The fill is linear in cell count and so quadratic in cell angle, and linear in
 the rate each ray marches at — which is what makes the fallbacks priced rather
@@ -476,7 +494,7 @@ against the accuracy table above:
 | fill 1/voxel | 0.5× (28M) | 0.037 | 0.014 | 0.057 | 27.7′ |
 | fill 4/voxel | 2× (111M) | 0.024 | 0.007 | 0.038 | 10.0′ |
 | 24 slices | unchanged | 0.034 | 0.007 | 0.041 | 17.0′ |
-| refill a fraction of the cells per frame | spike → smear | none | | | |
+| refill a fraction of the cells per frame | spike → smear | *unsound here* — angular staleness, above | | | |
 
 At 26′ the fill sits **below** the star prepass and is still an order off the
 1.27 mag that point-sampling costs, so there is a lot of room between correct
@@ -599,6 +617,13 @@ reference both convolved over a 32-point flat disc of 13.0′ diameter, the
 resolve's summation patch, and every error figure is the worst over five grid
 poses. Costs are exact texel and fetch counts over the pinned geometry, not
 timings.
+
+Fill timings (§ What the fill measured): a WebGL2 spike of the fill pass alone
+behind a timer query, Chrome on an Apple M4, taken before the WebGPU cutover and
+not on the shipped path. Only its **throughput** is carried forward — the run's
+frustum was mis-sized, so its absolute cell counts are not. Whole-frame costs
+beside it are the WebGPU pin, `scripts/perf/pins/` (the perf runner's own README
+is the authority on how such a row is read).
 
 ## Constellation stick figures
 
