@@ -18,18 +18,21 @@ export function avTexHeight(count: number): number {
   return Math.ceil(count / AV_TEX_WIDTH);
 }
 
-/** Pack xyz star positions into vec4 slots (w untouched): star i at
+/** Pack xyz star positions into vec4 slots (w untouched): slot i at
  *  `out[4i..4i+2]`. `out` is the caller's — a `count × 4` storage array,
- *  or the padded texture below. */
+ *  or the padded texture below. Slot i holds star i, or star `order[i]`
+ *  when the caller fills slots in an order of its own. */
 export function packPositionsVec4Into<T extends Float32Array>(
   out: T,
   positions: Float32Array,
   count: number,
+  order: Uint32Array | null = null,
 ): T {
   for (let i = 0; i < count; i++) {
-    out[i * 4] = positions[i * 3];
-    out[i * 4 + 1] = positions[i * 3 + 1];
-    out[i * 4 + 2] = positions[i * 3 + 2];
+    const star = order === null ? i : order[i];
+    out[i * 4] = positions[star * 3];
+    out[i * 4 + 1] = positions[star * 3 + 1];
+    out[i * 4 + 2] = positions[star * 3 + 2];
   }
   return out;
 }

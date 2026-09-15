@@ -14,6 +14,7 @@ import {
   compareAvBuffers, type AvParityReport,
 } from '../../star-pipeline/extinction/av-parity-pure';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
+import { scatterByOrder } from './dispatch-order-pure';
 import { dustRaymarchAvTsl, type DustTextureNode } from './dust-raymarch-tsl';
 
 export interface ReferenceMarchInputs {
@@ -22,16 +23,20 @@ export interface ReferenceMarchInputs {
   dust: DustTextureNode;
   /** The kernel's own inputs, so the only variable is the shader stage. */
   positions: ReturnType<typeof storage<'vec4'>>;
+  /** The kernel's dispatch slot → star map, which the positions above are
+   *  already in. Texel `i` therefore carries star `order[i]`. */
+  order: Uint32Array;
   absCameraPos: Parameters<typeof dustRaymarchAvTsl>[2];
   av: StorageBufferAttribute;
   count: number;
 }
 
 /**
- * Marches every star once more as a fragment — the 1024-wide star-indexed
- * layout the fragment prepass drew — reads both results back and compares
- * bits. Allocates the target for the call only. Texels past `count` read
- * the buffer's clamped last slot and are never compared.
+ * Marches every star once more as a fragment — the 1024-wide layout the
+ * fragment prepass drew, over the kernel's dispatch slots — puts the result
+ * back into star order, reads both back and compares bits. Allocates the
+ * target for the call only. Texels past `count` read the buffer's clamped
+ * last slot and are never compared.
  */
 export async function runReferenceMarch(inputs: ReferenceMarchInputs): Promise<AvParityReport> {
   const { renderer, count } = inputs;
@@ -66,8 +71,9 @@ export async function runReferenceMarch(inputs: ReferenceMarchInputs): Promise<A
       renderer.getArrayBufferAsync(inputs.av),
     ]);
     const texels = reference as Float32Array;
-    return compareAvBuffers(
-      new Float32Array(computed), texels, count, texels.length / (AV_TEX_WIDTH * height));
+    const starIndexed = scatterByOrder(
+      texels, inputs.order, count, texels.length / (AV_TEX_WIDTH * height));
+    return compareAvBuffers(new Float32Array(computed), starIndexed, count);
   } finally {
     material.dispose();
     rt.dispose();
