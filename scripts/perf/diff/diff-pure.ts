@@ -145,7 +145,8 @@ function comparabilityRefusal(a: ScenarioRecord, b: ScenarioRecord): string | nu
 /**
  * The state a differential sweep was set up in, which the run records in
  * `params`. A pass held off with `--pre-disable`, or the adaptation
- * measurement kept live with `--no-park`, changes what the frame contains
+ * measurement kept live with `--no-park`, or the extinction kernel forced to
+ * run every frame with `--force-recompute`, changes what the frame contains
  * before the roster is touched at all — so the rows describe a scene the
  * other run never drew. The arithmetic those flags exist for
  * (`src/client/debug/frame-cost/passes/README.md` § The roster) is a
@@ -181,6 +182,12 @@ export function preconditionRefusal(
   const [pa, pb] = [park(a), park(b)];
   if (pa !== pb) {
     return `adaptation park ${pa} vs ${pb} — one run priced the statistic writes and the other priced them parked`;
+  }
+  const recompute = (p: Readonly<Record<string, unknown>>): string =>
+    (p.forceRecompute === true ? 'forced' : 'gated');
+  const [ra, rb] = [recompute(a), recompute(b)];
+  if (ra !== rb) {
+    return `extinction recompute ${ra} vs ${rb} — one run marched every star every frame and the other marched none`;
   }
   const interleaved = (p: Readonly<Record<string, unknown>>): boolean => p.interleave !== false;
   if (interleaved(a) !== interleaved(b)) {

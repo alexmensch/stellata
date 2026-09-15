@@ -176,6 +176,10 @@ export interface DifferentialSetup {
   /** Hold the adaptation measurement unparked for the sweep
    *  (`src/client/hdr/exposure/park/README.md` § The lever). */
   readonly noPark: boolean;
+  /** Refill the per-star A_V cache every frame, which a parked camera
+   *  otherwise skips (`src/client/debug/frame-cost/passes/README.md`
+   *  § The extinction rows). */
+  readonly forceRecompute: boolean;
   /** Where the dev server serves the pass roster from. */
   readonly toggleModuleUrl: string;
 }
@@ -195,6 +199,11 @@ export function runDifferential(
     const w = window as unknown as PerfWindow;
     const restores: (() => void)[] = [];
     try {
+      if (p.forceRecompute) {
+        const forcedWas = w.stellata.isExtinctionRecomputeForced();
+        w.stellata.setExtinctionRecomputeForced(true);
+        restores.push(() => w.stellata.setExtinctionRecomputeForced(forcedWas));
+      }
       if (p.preDisable.length > 0) {
         const mod = await import(p.toggleModuleUrl) as {
           buildPassToggles(stellata: Stellata): PassToggle[];
@@ -237,6 +246,10 @@ export interface DwellParams {
   /** Rendered frames between statistic readbacks, held there from before
    *  the warmup until the restore (`dwell/README.md`). */
   readonly readbackEvery: number;
+  /** Refill the per-star A_V cache every timed frame, so `computePasses`
+   *  counts the kernel a parked camera skips
+   *  (`src/client/debug/frame-cost/passes/README.md` § The extinction rows). */
+  readonly forceRecompute: boolean;
 }
 
 export interface DwellRaw {
@@ -326,6 +339,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     const clock = s.timeClock;
     const cadence = s.reduction.readbackCadence;
     const readbackEveryBefore = cadence.every;
+    const recomputeForcedBefore = s.isExtinctionRecomputeForced();
     const rateBefore = clock.getRate();
     const holdsBefore = s.renderGate.debugState.holds;
     const releaseHold = s.renderGate.hold();
@@ -371,6 +385,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       // Before the warmup, so the frames being timed are drawn at a cadence
       // the page has already been running.
       cadence.every = p.readbackEvery;
+      s.setExtinctionRecomputeForced(p.forceRecompute);
       for (let f = 0; f < p.warmupFrames; f++) {
         await new Promise((r) => requestAnimationFrame(r));
       }
@@ -404,6 +419,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     } finally {
       rateDuring = clock.getRate();
       cadence.every = readbackEveryBefore;
+      s.setExtinctionRecomputeForced(recomputeForcedBefore);
       stopGpu?.();
       stopCompute?.();
       if (origSubmit !== null && queueProto !== undefined && encoderProto !== undefined) {

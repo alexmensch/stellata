@@ -483,6 +483,16 @@ describe('diffRuns — refusals', () => {
     expect(diff.refusals[0].reason).toContain('adaptation park live vs off');
   });
 
+  it('refuses a forced-recompute sweep against a camera-gated one', () => {
+    const diff = diffRuns(
+      withDifferential([priceRow({ pass: 'extinctionPrepass' })]),
+      withDifferential([priceRow({ pass: 'extinctionPrepass' })], {
+        params: { forceRecompute: true },
+      }),
+    );
+    expect(diff.refusals[0].reason).toContain('extinction recompute gated vs forced');
+  });
+
   it('refuses a bracketed sweep against a single-baseline one', () => {
     const diff = diffRuns(
       withDifferential([priceRow({ pass: 'localDepth' })]),
@@ -492,7 +502,10 @@ describe('diffRuns — refusals', () => {
   });
 
   it('reads an absent precondition as the flag default, so a pre-flag run still compares', () => {
-    expect(preconditionRefusal({}, { preDisable: [], noPark: false, interleave: true })).toBeNull();
+    expect(preconditionRefusal(
+      {},
+      { preDisable: [], noPark: false, forceRecompute: false, interleave: true },
+    )).toBeNull();
   });
 
   it('refuses the emptyPass row across two counts, and keeps every other row', () => {
