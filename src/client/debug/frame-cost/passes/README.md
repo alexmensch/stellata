@@ -231,15 +231,33 @@ overstates it.
 
 ## The throughput spike rows
 
-Six rows price nothing the app ships: `volFetchCoh50M / 101M / 201M` and
-`volFetchSct50M / 101M / 201M` each dispatch a compute kernel marching the
-Edenhofer volume an exact number of times, so a `savedMs` divided into the
-row's fetch count is a **G volume fetches per second** figure for this
-backend. `Coh` is a screen-space grid of ray directions (adjacent threads
-adjacent on the sky — the froxel fill's shape); `Sct` is a golden-angle
-spiral over the whole sphere with per-ray lengths varying as star distances
-do (the per-star prepass's). Three sizes 4× apart per pattern say whether
-the rate is flat in dispatch size.
+Six rows price nothing the app ships. Each dispatches a compute kernel
+marching the Edenhofer volume **exactly 100,663,296 times** — 2,097,152 rays
+of 48 taps, identical for every row — so `savedMs` compares directly across
+rows and a `savedMs` divided into that count is a **G volume fetches per
+second** figure for this backend.
+
+**Only the ray geometry varies, because that is what the rate turns on.** The
+first session measured 3.3 G/s scattered against 47–60 G/s coherent, an 18×
+spread, and could not say which of the two locality axes carried it: that
+sweep varied dispatch size and angular pitch together. These rows cross the
+two axes instead, at the froxel pin's own geometry — 13.0′ between
+neighbouring rays, and a 117.1 pc ray whose 48 taps therefore land 2.44 pc
+apart, which is the fill's half-voxel step.
+
+| row | ray pitch | tap pitch | what it isolates |
+| --- | --- | --- | --- |
+| `volCohCtl` | 1.46′ | 25 pc | first session's coherent row, unchanged |
+| `volSctCtl` | golden angle | 25 pc | first session's scattered row, unchanged |
+| **`volPin13`** | **13.0′** | **2.44 pc** | **the froxel fill, both axes right** |
+| `volPin26` | 26.0′ | 2.44 pc | the doc's 26′ cheap-cell lever |
+| `volPin13far` | 13.0′ | 25 pc | transverse right, along-ray wrong |
+| `volPin1p5near` | 1.46′ | 2.44 pc | along-ray right, transverse wrong |
+
+The two `Ctl` rows reproduce the first session's geometry exactly, so the two
+sessions compare rather than merely follow each other. The grid is angular,
+not tangent-space: a screen grid's off-axis cells are finer than its on-axis
+one, which would put a range of pitches under one row's name.
 
 **They are ON by default**, because a differential prices a row by taking it
 away — so this branch's app frame carries ~700M extra volume fetches and is

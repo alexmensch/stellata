@@ -1,43 +1,60 @@
 import { describe, expect, it } from 'vitest';
 import { DUST_STEPS } from '../../../star-pipeline/extinction/dust-raymarch-pure';
 import {
-  PROBE_AZIMUTH_PERIOD, PROBE_RANGE_PC, PROBE_SINK_SLOTS, VOLUME_PROBE_KEYS,
-  VOLUME_PROBE_SPECS, probeFetches,
+  PROBE_AZIMUTH_PERIOD, PROBE_GRID_W, PROBE_RAYS, PROBE_SINK_SLOTS,
+  VOLUME_PROBE_KEYS, VOLUME_PROBE_SPECS, probeFetches, rayPitchAtRangePc,
 } from './volume-probe-specs';
 
 // The half-extent of the Edenhofer cube the loader reports
-// (loaders/dust-loader.ts). A ray reaching past it leaves the volume, the
-// march's bbox test skips the tap, and the fetch count stops being exact.
+// (loaders/dust-loader.ts), and the voxel it is diced into. A ray reaching
+// past the first leaves the volume and the march's bbox test skips the tap.
 const DUST_BOUNDS_HALF_PC = 1250;
+const VOXEL_PC = 4.88;
 
 describe('the throughput sweep', () => {
-  it('issues the fetch counts its keys name', () => {
-    const fetches = VOLUME_PROBE_SPECS.map(probeFetches);
-    expect(fetches).toEqual([
-      50_331_648, 100_663_296, 201_326_592,
-      50_331_648, 100_663_296, 201_326_592,
-    ]);
+  it('issues one exact fetch count, the same for every row', () => {
     expect(DUST_STEPS).toBe(48);
+    expect(probeFetches()).toBe(100_663_296);
+    expect(PROBE_RAYS).toBe(2_097_152);
   });
 
-  it('spans 4x end to end per pattern, so the rate is a slope', () => {
-    const coherent = VOLUME_PROBE_SPECS.filter((s) => s.pattern === 'coherent');
-    const scattered = VOLUME_PROBE_SPECS.filter((s) => s.pattern === 'scattered');
-    for (const set of [coherent, scattered]) {
-      expect(set).toHaveLength(3);
-      expect(set[2]!.rays / set[0]!.rays).toBe(4);
+  it('keeps every tap inside the volume, so the count stays exact', () => {
+    for (const spec of VOLUME_PROBE_SPECS) {
+      expect(spec.rangePc, spec.key).toBeLessThan(DUST_BOUNDS_HALF_PC);
     }
+  });
+
+  // The first run swept dispatch size and angular pitch together, so its
+  // coherent rate could only be read as a bound. These four separate them.
+  it('crosses the two locality axes, so neither confounds the other', () => {
+    const cell = (key: string) => {
+      const spec = VOLUME_PROBE_SPECS.find((s) => s.key === key)!;
+      return {
+        transverse: rayPitchAtRangePc(spec) / VOXEL_PC,
+        alongRay: spec.rangePc / DUST_STEPS / VOXEL_PC,
+      };
+    };
+    // Taps half a voxel apart is the fill's own rate; five voxels is the
+    // long ray the first run measured.
+    expect(cell('volPin13').alongRay).toBeCloseTo(0.5, 2);
+    expect(cell('volPin13far').alongRay).toBeCloseTo(5.12, 2);
+    // At the pin, neighbouring rays are about one voxel apart at the far end
+    // — the regime the first run never sampled.
+    expect(cell('volPin13').transverse).toBeCloseTo(0.0908, 4);
+    expect(cell('volPin13far').transverse).toBeCloseTo(0.93, 2);
+    // …against a control whose neighbours sit well inside one voxel.
+    expect(cell('volCohCtl').transverse).toBeCloseTo(0.104, 3);
+    expect(cell('volPin1p5near').transverse).toBeCloseTo(0.0102, 4);
+  });
+
+  it('reproduces the first run in two rows, so the sessions compare', () => {
+    const ctl = VOLUME_PROBE_SPECS.filter((s) => s.key.endsWith('Ctl'));
+    expect(ctl.map((s) => s.pattern)).toEqual(['coherent', 'scattered']);
+    for (const spec of ctl) expect(spec.rangePc, spec.key).toBe(1200);
   });
 
   it('gives the coherent grid whole rows', () => {
-    for (const spec of VOLUME_PROBE_SPECS) {
-      if (spec.pattern !== 'coherent') continue;
-      expect(Number.isInteger(spec.rays / spec.gridW), spec.key).toBe(true);
-    }
-  });
-
-  it('keeps every tap inside the volume, so the count is exact', () => {
-    expect(PROBE_RANGE_PC).toBeLessThan(DUST_BOUNDS_HALF_PC);
+    expect(Number.isInteger(PROBE_RAYS / PROBE_GRID_W)).toBe(true);
   });
 
   it('scatters into a power-of-two sink the bitmask can address', () => {
