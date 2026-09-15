@@ -545,6 +545,23 @@ describe('compareToPin', () => {
       expect(fromOld[1].note).toContain('the pin carries no compute stream for this row; this run does');
       const lost = compareToPin(pinOf([SOL_COMPUTE]), file([SOL_GPU])).rows[1];
       expect([lost.verdict, lost.note]).toEqual(['ungated', 'the pin carries a compute stream for this row; this run resolved none']);
+
+      // The side with no reading prints empty. A zero there would make the
+      // delta column restate `current`, so five untaken rows would read as
+      // five ~0.3 ms moves on the table a PR pastes into its Perf section.
+      expect([fromOld[1].pinnedMs, fromOld[1].currentMs, fromOld[1].deltaMs]).toEqual([null, 1.4, null]);
+      expect([lost.pinnedMs, lost.currentMs, lost.deltaMs]).toEqual([1.4, null, null]);
+    });
+
+    it('keeps the frame row on the wall clock it always carries when its stream is one-sided', () => {
+      // Only the compute row has no second clock to fall back to; the frame
+      // substitutes wall rather than blanking, which is the pre-compute
+      // behaviour and what every WebGL2 row reads.
+      const lostStream = scenario('sol', 'webgpu', dwell(stats(30.1), null));
+      const row = compareToPin(pinOf([SOL_GPU]), file([lostStream])).rows[0];
+      expect([row.verdict, row.metric]).toEqual(['ungated', 'wall-p50']);
+      expect([row.pinnedMs, row.currentMs]).toEqual([25.2, 30.1]);
+      expect(row.deltaMs).toBeCloseTo(4.9, 6);
     });
 
     it('prints no compute row at all where neither side has one — every WebGL2 row', () => {

@@ -315,7 +315,7 @@ export function readbackRefusal(
   );
 }
 
-function verdictFor(deltaMs: number, bandMs: number): Verdict {
+export function verdictFor(deltaMs: number, bandMs: number): Verdict {
   if (Math.abs(deltaMs) <= bandMs) return 'same';
   return deltaMs < 0 ? 'cheaper' : 'dearer';
 }
@@ -410,13 +410,8 @@ function dwellRows(key: string, a: ScenarioRecord, b: ScenarioRecord): (DiffRow 
   return 'reason' in frame ? [frame] : [frame, ...computeRow(key, da, db)];
 }
 
-/**
- * The compute passes beside the frame, banded the same way and keyed
- * `|compute`. Both sides or neither: a run written before the compute pool
- * was resolved carries no stream, and a pair with one side missing is two
- * instruments — the refusal a mismatched GPU stream gets — while a pair
- * with neither (every WebGL2 row) has no compute row to print.
- */
+/** The compute passes beside the frame, banded the same way and keyed
+ *  `|compute`. Both sides or neither, and why: README.md. */
 function computeRow(key: string, da: DwellRecord, db: DwellRecord): (DiffRow | DiffRefusal)[] {
   const [ca, cb] = [computeClock(da), computeClock(db)];
   if (ca === null && cb === null) return [];

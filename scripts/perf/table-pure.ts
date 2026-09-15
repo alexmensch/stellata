@@ -98,6 +98,11 @@ export function formatSweepTable(points: readonly SweepPoint[], fit: SweepFit, b
     `bound ${fit.bound} · sweep bracket ${bracketMs.toFixed(3)} ms`;
 }
 
+/** A reading neither side holds prints empty, never as a zero. */
+function ms(value: number | null): number | undefined {
+  return value === null ? undefined : round3(value);
+}
+
 export const DIFF_COLUMNS = ['', 'row', 'metric', 'baseline', 'current', 'delta', 'floor', 'band'] as const;
 
 export function formatDiffTable(diff: RunDiff): string {
@@ -111,7 +116,7 @@ export function formatDiffTable(diff: RunDiff): string {
       diff.rows.map((row) => [
         VERDICT_MARK[row.verdict], row.key, row.metric,
         round3(row.baselineMs), round3(row.currentMs), round3(row.deltaMs),
-        row.floorDeltaMs === null ? undefined : round3(row.floorDeltaMs), round3(row.bandMs),
+        ms(row.floorDeltaMs), round3(row.bandMs),
       ]),
     ));
   }
@@ -133,8 +138,8 @@ export function formatPinTable(diff: PinDiff): string {
       PIN_DIFF_COLUMNS,
       diff.rows.map((row) => [
         PIN_VERDICT_MARK[row.verdict], row.key, row.metric,
-        round3(row.pinnedMs), round3(row.currentMs), round3(row.deltaMs),
-        row.floorDeltaMs === null ? undefined : round3(row.floorDeltaMs), round3(row.bandMs), row.note,
+        ms(row.pinnedMs), ms(row.currentMs), ms(row.deltaMs),
+        ms(row.floorDeltaMs), round3(row.bandMs), row.note,
       ]),
     ));
   }

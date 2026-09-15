@@ -6,7 +6,7 @@ import { basename, relative, resolve } from 'node:path';
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import {
   VERDICT_MARK, band, bufferRefusal, dwellFloorMs, positionRefusal, readbackRefusal,
-  recordCountRefusal, splitFrameClasses, type DiffRefusal, type Verdict,
+  recordCountRefusal, splitFrameClasses, verdictFor, type DiffRefusal, type Verdict,
 } from './diff/diff-pure';
 import {
   COMPUTE_ROW, computeClock, floorMove, frameFloor, gatingClock,
@@ -132,16 +132,16 @@ export type PinVerdict = Verdict | 'ungated';
 export const PIN_VERDICT_MARK: Record<PinVerdict, string> = { ...VERDICT_MARK, ungated: '·' };
 
 export interface PinVerdictRow {
-  /** `scenario|backend` for the frame, `scenario|backend|compute` for the
-   *  context's compute passes — the keys `--accept` takes. */
   readonly key: string;
   /** `wall-p50` appears only on an ungated row, where it is context rather
    *  than a reading the gate acts on; an ungated row may equally carry
    *  `gpu-p50` as context. */
   readonly metric: DwellMetric;
-  readonly pinnedMs: number;
-  readonly currentMs: number;
-  readonly deltaMs: number;
+  /** Null where that side holds no reading of this stream at all; the cell
+   *  prints empty, and `deltaMs` goes with it. */
+  readonly pinnedMs: number | null;
+  readonly currentMs: number | null;
+  readonly deltaMs: number | null;
   readonly bandMs: number;
   /** How far the 10th-percentile frame moved, where both sides hold a GPU
    *  floor; null otherwise. Context for `deltaMs`, never a verdict input. */
@@ -422,11 +422,6 @@ export function citeRunPath(jsonPath: string, mainCheckout: string): string {
   return rel === '' || rel.startsWith('..') ? basename(jsonPath) : rel;
 }
 
-function verdictFor(deltaMs: number, bandMs: number): Verdict {
-  if (Math.abs(deltaMs) <= bandMs) return 'same';
-  return deltaMs < 0 ? 'cheaper' : 'dearer';
-}
-
 /** Which side is missing the stream, so an ungated row says why rather than
  *  only that it is ungated — the pin having one and the run not is an
  *  instrument regression, not the WebGL2 backend being itself. */
@@ -443,18 +438,28 @@ function ungatedNote(
     : `the pin carries a ${stream} stream for this row; this run resolved none`;
 }
 
+/** A reading one side does not hold prints empty rather than as a zero: a
+ *  fabricated 0 makes `delta` restate `current` and reads as a move. */
 function ungatedRow(
-  key: string, metric: DwellMetric, pinnedMs: number, currentMs: number, note: string,
+  key: string, metric: DwellMetric, pinnedMs: number | null, currentMs: number | null, note: string,
 ): PinVerdictRow {
   return {
-    key, metric, pinnedMs, currentMs, deltaMs: currentMs - pinnedMs, bandMs: 0, floorDeltaMs: null, verdict: 'ungated', note,
+    key,
+    metric,
+    pinnedMs,
+    currentMs,
+    deltaMs: pinnedMs === null || currentMs === null ? null : currentMs - pinnedMs,
+    bandMs: 0,
+    floorDeltaMs: null,
+    verdict: 'ungated',
+    note,
   };
 }
 
 /** The reader's discriminator on a mark: a cost every frame pays lifts the
  *  floor with the median; a wander lifts the upper half alone. */
 function floorNote(row: PinVerdictRow): PinVerdictRow {
-  if (row.verdict !== 'dearer' || row.floorDeltaMs === null || row.deltaMs <= 0) return row;
+  if (row.verdict !== 'dearer' || row.floorDeltaMs === null || row.deltaMs === null || row.deltaMs <= 0) return row;
   if (row.floorDeltaMs >= FLOOR_FOLLOWS_FRACTION * row.deltaMs) return row;
   return {
     ...row,
@@ -466,30 +471,43 @@ function floorNote(row: PinVerdictRow): PinVerdictRow {
  *  the ceiling is an absolute bound, and the rows the band cannot mark are
  *  exactly the ones with nothing else watching them. */
 function underCeiling(row: PinVerdictRow): PinVerdictRow {
-  if (row.currentMs <= PIN_CEILING_MS) return row;
+  if (row.currentMs === null || row.currentMs <= PIN_CEILING_MS) return row;
   return { ...row, verdict: 'dearer', note: `${row.metric} over the ${PIN_CEILING_MS} ms ceiling` };
 }
 
-/**
- * One timestamp stream of a context judged against its pinned twin: the
- * band where both sides hold one, ungated by vantage or where a side lacks
- * the stream, the ceiling on every reading. The frame's GPU stream and the
- * compute stream are the same rule one field over — a compute regression is
- * what the band exists to catch, since every cheaper-per-frame candidate on
- * this backend is a compute dispatch.
- */
-function streamRow(
-  pinned: PinRow, key: string, metric: DwellMetric, stream: 'GPU' | 'compute',
-  pinnedClock: PinClock | null, pinnedFloor: FrameFloor | null,
-  current: DwellSummary | null, currentSamples: readonly number[] | null | undefined,
-): PinVerdictRow {
+/** One timestamp stream of a context and the two sides to judge it on. */
+interface StreamSpec {
+  readonly key: string;
+  readonly metric: DwellMetric;
+  readonly stream: 'GPU' | 'compute';
+  readonly pinnedClock: PinClock | null;
+  readonly pinnedFloor: FrameFloor | null;
+  readonly current: DwellSummary | null;
+  readonly currentSamples: readonly number[] | null | undefined;
+  /** Shown in place of this stream's own readings where a side lacks it.
+   *  The frame falls back to the wall clock every row carries; the compute
+   *  row has no second clock, so null leaves its cells empty. */
+  readonly ungatedContext: {
+    readonly metric: DwellMetric;
+    readonly pinnedMs: number;
+    readonly currentMs: number;
+  } | null;
+}
+
+/** One stream judged against its pinned twin: the band where both sides
+ *  hold one, ungated by vantage or where a side lacks it, the ceiling on
+ *  every reading. The frame's stream and the compute one are the same rule
+ *  one field over (`pins/README.md` § The compute row). */
+function streamRow(pinned: PinRow, spec: StreamSpec): PinVerdictRow {
+  const { key, metric, pinnedClock, current } = spec;
   if (pinnedClock === null || current === null) {
-    return ungatedRow(
-      key, metric, pinnedClock?.p50 ?? 0, current?.p50 ?? 0,
-      ungatedNote(stream, pinned.backend, pinnedClock, current),
-    );
+    const note = ungatedNote(spec.stream, pinned.backend, pinnedClock, current);
+    const context = spec.ungatedContext;
+    return context === null
+      ? ungatedRow(key, metric, pinnedClock?.p50 ?? null, current?.p50 ?? null, note)
+      : ungatedRow(key, context.metric, context.pinnedMs, context.currentMs, note);
   }
-  const floorDeltaMs = floorMove(pinnedFloor, frameFloor(currentSamples));
+  const floorDeltaMs = floorMove(spec.pinnedFloor, frameFloor(spec.currentSamples));
   const ungatedBecause = PIN_UNGATED_SCENARIOS[pinned.name];
   if (ungatedBecause !== undefined) {
     return underCeiling({
@@ -510,23 +528,30 @@ function streamRow(
   }));
 }
 
-/** The frame row, then the compute row where either side resolved compute
- *  passes. A context with compute on neither side — every WebGL2 row — gets
- *  no compute row at all rather than an ungated line saying nothing. */
 function compareRows(pinned: PinRow, dwell: DwellRecord): PinVerdictRow[] {
-  const frame = pinned.gpu === null || dwell.gpuStats === null
-    ? ungatedRow(
-      pinned.key, 'wall-p50', pinned.wall.p50, dwell.stats.p50,
-      ungatedNote('GPU', pinned.backend, pinned.gpu, dwell.gpuStats),
-    )
-    : streamRow(pinned, pinned.key, 'gpu-p50', 'GPU', pinned.gpu, pinned.gpuFloor, dwell.gpuStats, dwell.gpuMs);
+  const frame = streamRow(pinned, {
+    key: pinned.key,
+    metric: 'gpu-p50',
+    stream: 'GPU',
+    pinnedClock: pinned.gpu,
+    pinnedFloor: pinned.gpuFloor,
+    current: dwell.gpuStats,
+    currentSamples: dwell.gpuMs,
+    ungatedContext: { metric: 'wall-p50', pinnedMs: pinned.wall.p50, currentMs: dwell.stats.p50 },
+  });
   const pinnedCompute = pinned.compute ?? null;
   const compute = computeClock(dwell);
   if (pinnedCompute === null && compute === null) return [frame];
-  return [frame, streamRow(
-    pinned, `${pinned.key}|${COMPUTE_ROW}`, 'compute-p50', 'compute',
-    pinnedCompute, pinned.computeFloor ?? null, compute, dwell.computeMs,
-  )];
+  return [frame, streamRow(pinned, {
+    key: `${pinned.key}|${COMPUTE_ROW}`,
+    metric: 'compute-p50',
+    stream: 'compute',
+    pinnedClock: pinnedCompute,
+    pinnedFloor: pinned.computeFloor ?? null,
+    current: compute,
+    currentSamples: dwell.computeMs,
+    ungatedContext: null,
+  })];
 }
 
 /**
