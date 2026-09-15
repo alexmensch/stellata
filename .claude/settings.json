@@ -36,6 +36,15 @@
             "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/perf-guard.sh"
           }
         ]
+      },
+      {
+        "matcher": "Skill|Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/css-skill-guard.sh"
+          }
+        ]
       }
     ],
     "SessionStart": [

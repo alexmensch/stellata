@@ -1,6 +1,6 @@
 # Harness guard hooks
 
-Tool-call guards for Claude Code. The four `.sh` files are PreToolUse /
+Tool-call guards for Claude Code. The five `.sh` files are PreToolUse /
 SessionStart hooks registered in `.claude/settings.json`; each reads the
 hook payload as JSON on stdin and answers with a `permissionDecision`.
 
@@ -51,6 +51,11 @@ scripts/hooks/
                            scripts/perf/arming/README.md owns the
                            design. Behaviour pinned by
                            tests/perf-guard.test.ts.
+  css-skill-guard.sh       Blocks Write / Edit / NotebookEdit against
+                           any *.css until the cube-css skill has been
+                           invoked this session; a Skill call naming it
+                           arms the session. Behaviour pinned by
+                           tests/css-skill-guard.test.ts.
   comment-rules.json       The forbidden comment patterns, once. Read
                            by tests/code-comment-rules.test.ts and by
                            commit-sweep-guard.sh. The two hand-copied
@@ -172,6 +177,33 @@ conditional ("**If** this output is truncated by your host…"), and the
 host's truncation banner reads as plumbing metadata. Same conclusion
 as readme-guard: the harness executing the rule beats the model
 self-checking against it.
+
+## How css-skill-guard works
+
+Same shape as readme-guard, one skill wide. State is a marker file at
+`${TMPDIR:-/tmp}/claude-css-skill-guard/loaded-${GUARD_SESSION:-$PPID}`,
+so a session arms once and edits freely after.
+
+The hook sits on `Skill` as well as the edit tools, and that is the whole
+mechanism: a `Skill` call whose `skill` is `cube-css` — bare, or under a
+directory-scoped or plugin prefix — touches the marker and always passes
+through. Every other `Skill` call passes through untouched. Only then does
+an edit whose path ends `.css` find the marker and go ahead; without it the
+call is denied with the skill named.
+
+The gate exists because the load looks redundant from inside the repo and
+is not. `src/site/README.md` § The stylesheet documents the **house
+style** — which layer each rule landed in here, and why — while the system
+underneath it (the layout primitives, the no-width-query mandate, the
+review gates) belongs to the skill, and a README describing the one reads
+convincingly like coverage of the other. A session that has read the
+README therefore believes it is already briefed.
+
+**Arming, not consent**, so it fails open the way readme-guard does: a
+hook that errors lets the call through, and the alternative — a stylesheet
+edit blocked by a broken gate — is worse than one made without the skill.
+The deny message names the marker path, so a session that genuinely needs
+to proceed creates it.
 
 ## How commit-sweep-guard works
 
@@ -300,7 +332,8 @@ Two paths:
    commit message (covers the README check; comment violations still
    block — fix the comments). For `prime-guard`: delete the sentinel
    — any tool call naming that path is allowed through precisely so
-   the `rm` isn't itself blocked.
+   the `rm` isn't itself blocked. For `css-skill-guard`: invoke the
+   skill, which is the intended route rather than an escape.
 2. **Across the session.** Remove the entry from
    `.claude/settings.json`'s `hooks.PreToolUse` array, or
    temporarily move the hook script aside.
