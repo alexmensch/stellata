@@ -4,6 +4,7 @@
 // docs/authoring-patterns.md § Code-comment hygiene for the rules.
 
 import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { walkFiles } from './walk-files';
@@ -227,19 +228,91 @@ function commentCodeLines(path: string): { comment: number; code: number } {
   return { comment, code };
 }
 
+/** Paths out of `git status --porcelain`. The two-column status and its
+ *  separator are fixed-width, and a rename prints `old -> new` — the new
+ *  name being the one that exists to be read. */
+export function parseStatusPaths(stdout: string): string[] {
+  const out: string[] = [];
+  for (const line of stdout.split('\n')) {
+    if (line.length < 4) continue;
+    const path = line.slice(3).trim().split(' -> ').pop()?.replace(/^"|"$/g, '');
+    if (path !== undefined && path !== '') out.push(path);
+  }
+  return out;
+}
+
+/** Every source path this change touches: the working tree (staged,
+ *  unstaged and untracked) plus the branch's own commits against the
+ *  default branch, so the set survives the agent having already committed.
+ *  Empty on any git failure, which degrades the report to its summary line
+ *  rather than breaking a suite that must never fail. */
+function changedSourcePaths(): Set<string> {
+  const out = new Set<string>();
+  const run = (args: string[]): string => {
+    try {
+      return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    } catch { return ''; }
+  };
+  for (const path of parseStatusPaths(run(['status', '--porcelain']))) out.add(path);
+  for (const base of ['origin/main', 'main']) {
+    const merge = run(['merge-base', base, 'HEAD']).trim();
+    if (merge === '') continue;
+    for (const path of run(['diff', '--name-only', '--diff-filter=d', merge, 'HEAD']).split('\n')) {
+      if (path.trim() !== '') out.add(path.trim());
+    }
+    break;
+  }
+  return out;
+}
+
 // Reports, never fails. A hard threshold would be wrong in both
 // directions — a derivation-heavy pure helper is legitimately 60% prose
 // while a renderer at 40% is bloat — and the useful output is a list of
 // files to trim, which a pass/fail verdict cannot carry.
+//
+// It leads with the files THIS change touches, because a tree-wide top ten
+// reads identically whether the diff is one file or fifty, and a report
+// that cannot say which of its rows are yours is one a reader learns to
+// scroll past. The standing backlog keeps a single summary line.
+describe('the changed-file set behind that report', () => {
+  it('reads every porcelain shape, taking a rename by its new name', () => {
+    expect(parseStatusPaths([
+      ' M src/client/stellata.ts',
+      'A  src/client/webgpu/extinction/probe.ts',
+      '?? scripts/perf/scratch.ts',
+      'R  src/old/name.ts -> src/new/name.ts',
+      '"quoted/path with space.ts"'.padStart(28 + 3),
+      '',
+    ].join('\n'))).toEqual([
+      'src/client/stellata.ts',
+      'src/client/webgpu/extinction/probe.ts',
+      'scripts/perf/scratch.ts',
+      'src/new/name.ts',
+      'quoted/path with space.ts',
+    ]);
+  });
+
+  it('yields nothing for a clean tree, so the report falls back to its summary', () => {
+    expect(parseStatusPaths('')).toEqual([]);
+    expect(parseStatusPaths('\n\n')).toEqual([]);
+  });
+});
+
 describe('comment-to-code ratio', () => {
   const TARGET_FILE_SHARE_PCT = 20;
   const MIN_FILE_LINES = 80;
+  // A file in the diff is worth naming sooner: the tree-wide floor exists
+  // to keep a 30-line module off a 200-row backlog, and it is also why a
+  // newly written offender never appears until it has grown.
+  const MIN_CHANGED_FILE_LINES = 40;
   const REPORT_CAP = 10;
 
   it(`reports source files over ${TARGET_FILE_SHARE_PCT}% comment lines`, () => {
+    const changed = changedSourcePaths();
     let comment = 0;
     let code = 0;
     const files: Array<{ file: string; comment: number; code: number }> = [];
+    const mine: Array<{ file: string; comment: number; code: number }> = [];
     for (const root of SCAN_DIRS) {
       const start = join(ROOT, root);
       try { statSync(start); } catch { continue; }
@@ -251,31 +324,39 @@ describe('comment-to-code ratio', () => {
         const r = commentCodeLines(path);
         comment += r.comment;
         code += r.code;
-        if (r.comment + r.code >= MIN_FILE_LINES) {
-          files.push({ file: relative(ROOT, path), ...r });
-        }
+        const file = relative(ROOT, path);
+        const lines = r.comment + r.code;
+        if (lines >= MIN_FILE_LINES) files.push({ file, ...r });
+        if (changed.has(file) && lines >= MIN_CHANGED_FILE_LINES) mine.push({ file, ...r });
       }
     }
     const pct = (c: number, k: number) => (100 * c) / (c + k);
-    const over = files
-      .filter(f => pct(f.comment, f.code) > TARGET_FILE_SHARE_PCT)
-      .sort((a, b) => b.comment - a.comment);
-    if (over.length === 0) return;
+    const byProse = (a: typeof files[number], b: typeof files[number]) => b.comment - a.comment;
+    const overall = pct(comment, code).toFixed(1);
+    const over = files.filter(f => pct(f.comment, f.code) > TARGET_FILE_SHARE_PCT).sort(byProse);
+    const row = (f: typeof files[number]) =>
+      `  ${pct(f.comment, f.code).toFixed(0).padStart(3)}%  `
+      + `${String(f.comment).padStart(4)} comment / ${String(f.code).padStart(4)} code  ${f.file}`;
 
-    const listed = over.slice(0, REPORT_CAP)
-      .map(f => `  ${pct(f.comment, f.code).toFixed(0).padStart(3)}%  `
-        + `${String(f.comment).padStart(4)} comment / ${String(f.code).padStart(4)} code  ${f.file}`)
-      .join('\n');
-    const rest = over.length > REPORT_CAP
-      ? `\n  … and ${over.length - REPORT_CAP} more over ${TARGET_FILE_SHARE_PCT}%.\n` : '\n';
+    const overMine = mine.filter(f => pct(f.comment, f.code) > TARGET_FILE_SHARE_PCT).sort(byProse);
+    // Nothing in the diff is over: one line, so the number stays visible
+    // and a clean change costs the reader a line rather than a screen.
+    if (overMine.length === 0) {
+      if (over.length === 0) return;
+      process.stderr.write(
+        `\nComment lines: src/ and scripts/ ${overall}% overall, ${over.length} files over `
+        + `${TARGET_FILE_SHARE_PCT}%; none of them in this change.\n`);
+      return;
+    }
+
+    const rest = overMine.length > REPORT_CAP
+      ? `\n  … and ${overMine.length - REPORT_CAP} more in this change.\n` : '\n';
     process.stderr.write(
-      `\n── prose-heavy source files ──────────────────────────────────\n`
-      + `src/ and scripts/ are ${pct(comment, code).toFixed(1)}% comment lines overall. `
-      + `${over.length} files are over ${TARGET_FILE_SHARE_PCT}%, most prose first:\n\n`
-      + listed + rest
-      + `\nTrim the ones this change already touches — the list is a standing\n`
-      + `backlog, not a gate, and clearing it in one pass is not the point.\n`
-      + `For each block, in this order:\n`
+      `\n── prose-heavy files IN THIS CHANGE ──────────────────────────\n`
+      + `${overMine.length} of the files you touched are over ${TARGET_FILE_SHARE_PCT}% `
+      + `comment lines, most prose first:\n\n`
+      + overMine.slice(0, REPORT_CAP).map(row).join('\n') + rest
+      + `\nTrim these. For each block, in this order:\n`
       + `  1. Does it need to exist at all? Identifiers, types and control flow\n`
       + `     are the explanation. Deleting is the default, not the fallback.\n`
       + `  2. Does it explain a decision, an invariant, a rejected alternative,\n`
@@ -283,7 +364,9 @@ describe('comment-to-code ratio', () => {
       + `     folder README's job — move it there and leave a pointer at most.\n`
       + `  3. Only prose whose absence would make a reader of THIS line act\n`
       + `     wrongly stays in the code.\n`
-      + `AGENTS.md § Code comments; docs/authoring-patterns.md § Defer doc updates.\n`
+      + `AGENTS.md § Code comments; docs/authoring-patterns.md § Defer doc updates.\n\n`
+      + `Standing backlog, not a gate: src/ and scripts/ are ${overall}% overall, `
+      + `${over.length} files over ${TARGET_FILE_SHARE_PCT}%.\n`
       + `──────────────────────────────────────────────────────────────\n`
     );
   });
