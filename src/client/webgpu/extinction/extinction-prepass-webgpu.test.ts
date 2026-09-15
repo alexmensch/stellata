@@ -54,15 +54,21 @@ function moveAndSettle(prepass: { update(x: number, y: number, z: number): void 
   prepass.update(x, 0, 0);
 }
 
-function makePrepass(count = COUNT) {
+/** Star i at (3i, 3i+1, 3i+2) unless a test wants a field of its own: a
+ *  monotone diagonal, so a slot's contents name the star that filled it. */
+function diagonal(count: number) {
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count * 3; i++) positions[i] = i;
+  return positions;
+}
+
+function makePrepass(count = COUNT, positions: Float32Array = diagonal(count)) {
   const shared = buildSharedUniforms({
     pixelRatio: 2, fovYRad: 0.75, viewportW: 1600, viewportH: 900,
     hdr: makeHdrEmitterUniforms(),
   });
   const slots = new ExtinctionNodes();
   const fake = fakeRenderer();
-  const positions = new Float32Array(count * 3);
-  for (let i = 0; i < count * 3; i++) positions[i] = i;
   const prepass = new WebGpuExtinctionPrepass({
     renderer: fake.renderer,
     positions,
@@ -100,6 +106,50 @@ describe('construction', () => {
     attachDust();
     prepass.update(0, 0, 0);
     expect(computes[0].count).toBe(COUNT);
+  });
+});
+
+describe('the dispatch order', () => {
+  /** The two tables the kernel pairs, read back off the dispose registry —
+   *  nothing else exposes a buffer no geometry owns. */
+  function tables(count = COUNT, positions?: Float32Array) {
+    const { prepass, released, attachDust } = makePrepass(count, positions);
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.dispose();
+    return {
+      slotPositions: released.find((a) => a.itemSize === 4)!.array as Float32Array,
+      starOfSlot: released.find((a) => a.array instanceof Uint32Array)!.array as Uint32Array,
+    };
+  }
+
+  // The pairing is the bug this can have: a position table sorted one way
+  // and an order table sorted another writes every star's A_V onto some
+  // other star. The vec4 packing, w left at zero, rides along.
+  it('packs each slot with the star its order table names', () => {
+    const { slotPositions, starOfSlot } = tables();
+    for (const slot of [0, 1, 7, 1029, COUNT - 1]) {
+      const star = starOfSlot[slot];
+      expect(Array.from(slotPositions.slice(slot * 4, slot * 4 + 4)))
+        .toEqual([star * 3, star * 3 + 1, star * 3 + 2, 0]);
+    }
+  });
+
+  // A catalogue whose records arrive in no spatial order is the case the
+  // reorder exists for — 8³ cells walked by a stride coprime with the count.
+  it('dispatches a spatially unordered catalogue out of catalogue order', () => {
+    const side = 8;
+    const count = side ** 3;
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const cell = (i * 331) % count;
+      positions[i * 3] = (cell % side) * 10;
+      positions[i * 3 + 1] = (Math.floor(cell / side) % side) * 10;
+      positions[i * 3 + 2] = Math.floor(cell / (side * side)) * 10;
+    }
+    const { starOfSlot } = tables(count, positions);
+    expect(new Set(starOfSlot).size).toBe(count);
+    expect(Array.from(starOfSlot)).not.toEqual(Array.from({ length: count }, (_, i) => i));
   });
 });
 
@@ -309,21 +359,20 @@ describe('dispose', () => {
     expect(prepass.isActive()).toBe(false);
   });
 
-  // Neither buffer sits in a geometry, so nothing but this call frees
+  // None of the three sits in a geometry, so nothing but this call frees
   // them (../tsl/README.md § Storage attributes).
-  it('frees both storage buffers through the renderer registry', () => {
+  it('frees all three storage buffers through the renderer registry', () => {
     const { prepass, slots, released, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
     const av = slots.av.value as StorageBufferAttribute;
     prepass.dispose();
     expect(released).toContain(av);
-    expect(released).toHaveLength(2);
-    const positions = released.find((a) => a !== av)!;
-    expect(positions.itemSize).toBe(4);
+    expect(released).toHaveLength(3);
+    const positions = released.find((a) => a.itemSize === 4)!;
     expect(positions.count).toBe(COUNT);
-    // The vec4 packing, w left at zero: star 1's xyz sits at slot 1.
-    expect(Array.from(positions.array.slice(4, 8))).toEqual([3, 4, 5, 0]);
+    const order = released.find((a) => a.array instanceof Uint32Array)!;
+    expect(order.count).toBe(COUNT);
   });
 
   it('a read in flight at dispose cannot land on a released cache', async () => {

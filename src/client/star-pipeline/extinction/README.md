@@ -37,8 +37,10 @@ src/client/star-pipeline/extinction/
                                   the shared fullscreen vertex stage +
                                   geometry in ../../util/fullscreen-pass.
   extinction-prepass-pure.ts      Texture geometry, position packing (the
-    (+ test)                      vec4 loop both backends fill from), and
-                                  the ε-displacement predicate. Vitest-pinned.
+    (+ test)                      vec4 loop both backends fill from, in star
+                                  order here and in the WebGPU twin's own
+                                  dispatch order there), and the
+                                  ε-displacement predicate. Vitest-pinned.
   av-parity-pure.ts (+ test)      Bit-level compare of two per-star A_V
                                   arrays + its console line — the WebGPU
                                   kernel's parity check reads through it

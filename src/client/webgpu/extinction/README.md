@@ -18,6 +18,9 @@ src/client/webgpu/extinction/
                               Shared by the kernel, the parity reference
                               and the star vertex fallback exactly as the
                               GLSL chunk is.
+  dispatch-order-pure.ts      The Morton key, the slot → star permutation
+    (+ test)                  it sorts into, and the scatter that undoes it
+                              (§ Dispatch order).
   extinction-nodes.ts         The two slots as nodes — the dust volume
     (+ test)                  (texture) and the A_V cache (storage
                               buffer) — with their placeholders and the
@@ -40,7 +43,8 @@ src/client/webgpu/extinction/
   measurable on identical scenes.
 - **No `gl.readPixels`.** § Cold reads.
 - **No texture layout.** Star *i* is element *i* of a `count`-long float
-  buffer, and its position is element *i* of a `count`-long vec4 buffer.
+  buffer; its position is element *i* of a `count`-long vec4 buffer the
+  kernel fills and walks in an order of its own (§ Dispatch order).
   `AV_TEX_WIDTH` × `⌈count/1024⌉`, `packPositionsRgba` and the
   `(i % 1024, i / 1024)` arithmetic are the WebGL2 twin's — and the
   parity reference's, which draws that layout on purpose (§ The prepass
@@ -103,9 +107,10 @@ the buffer slot directly.
 
 `compute(count)` over one `Fn`: thread *i* reads position *i* out of a
 read-only vec4 storage buffer, marches from `absCameraPos` to it with the
-shared `dustRaymarchAvTsl`, and assigns the result to element *i* of the
-A_V buffer. three's default workgroup of 64 and its own early return for
-the threads past `count` in the last group; neither buffer is touched out
+shared `dustRaymarchAvTsl`, and assigns the result to the A_V element the
+slot → star table names (§ Dispatch order). three's default workgroup of
+64 and its own early return for the threads past `count` in the last
+group; no buffer is touched out
 of range. `update()` is one `renderer.compute(kernel)` — its own submit,
 exactly as the fragment pass was its own render (`docs/render-rules.md`
 § 8), and it binds no render target, so the ends-at-the-canvas contract
@@ -115,10 +120,10 @@ the fragment twin kept has nothing here to hold. Pinned as
 **Positions are vec4, not vec3, deliberately.** WGSL has no packed vec3
 in a storage buffer, and an itemSize-3 storage attribute is the one
 three silently re-strides (`../README.md` § One writer per buffer per
-submit). Both buffers are owned outright by the prepass — allocated,
-filled once, released through `disposeStorageAttribute` — and neither is
-a vertex attribute anyone uploads through `DirtyItemUploader`, so
-`iPosition` and the binaries partial-upload contract are untouched.
+submit). All three buffers are owned outright by the prepass —
+allocated, filled once, released through `disposeStorageAttribute` — and
+none is a vertex attribute anyone uploads through `DirtyItemUploader`,
+so `iPosition` and the binaries partial-upload contract are untouched.
 
 **Sampling is identical across the three stages that run this march.**
 A compute or vertex stage has no implicit derivatives, so three emits
@@ -136,6 +141,16 @@ first offender and the largest gap. The target exists for the call only.
 Run it at Sol default and on a Galactic-centre sightline (the bead's
 smoke views); a nonzero count there is a finding about the two stages'
 compilation, not a tolerance to widen.
+
+**The reference target is dispatch-slot-indexed, not star-indexed.** The
+fragment reads position texel *i*, which is slot *i*, so the texel it
+writes carries star `order[i]`; `scatterByOrder` puts the readback into
+star order before the compare, moving bit patterns rather than values so
+that a NaN payload stays distinguishable. Both offsets in the report are
+therefore catalogue indices, as they were when the kernel dispatched in
+catalogue order. A permutation mismatch between the two tables surfaces
+here as a near-total mismatch rather than as a tolerance —
+`A_V parity` is the acceptance for any change to the ordering.
 
 ### What this pass discharges of the buffer-writer requirements
 
@@ -160,25 +175,69 @@ its survivor-list slot to the star before reading `av.element(self)`, so
 the cold-read path (§ Cold reads) and any readback design over it key on
 the catalogue index as before.
 
+## Dispatch order
+
+`compute(count)` in catalogue order puts unrelated sight-lines on
+neighbouring threads, and neighbouring threads are what share a memory
+transaction. Two rows of the `stellata-ty4.9` sweep hold fetch count,
+ray length and working set identical and move only how the rays are laid
+out: **3.3× for coherence alone**, 3.3 against 10.9 G fetches/s, and
+that doc names the scattered rate as this pass's
+(`docs/science-galactic-structure.md` § What the fill measured). Over a
+recompute's 18.6M fetches that is roughly 5.6 ms against 1.7 ms, on
+every frame a warp moves past `RECOMPUTE_EPSILON_PC`. The stall is
+latency, not bandwidth — 10.9 G one-byte fetches/s is ~11 GB/s against a
+base M4's ~120 GB/s — and latency is what a coherent order hides.
+
+**The key is spatial, not angular.** A sky-direction sort is coherent
+only from the vantage it was built for, and the camera flies to the LMC
+and 3 kpc off-Sol, where a Sol-relative direction order is arbitrary
+again (`AGENTS.md` § Camera-anywhere). Stars adjacent in 3D have rays
+that converge near the camera *and* near the star from every vantage, so
+`mortonDispatchOrder` interleaves 16 quantised bits per axis over the
+catalogue's own bounding box into a 48-bit Z-order key — a float64 holds
+that exactly, which is what fixes the bit budget. The sort is one CPU
+pass at attach, alongside the ~128 MiB volume upload that triggers it;
+nothing re-sorts per frame, and the order is a function of
+`catalog.positions` alone.
+
+**The A_V buffer stays catalogue-star-indexed** — so the position table
+is what moves. Thread *i* reads sorted position *i* and writes
+`av[order[i]]`. That trades coherent reads for scattered writes, and the
+trade is strongly favourable: 4 bytes each into a 1.48 MiB buffer that
+stays in cache, against reads scattered across the whole volume.
+
+The indirection is the one thing here that can be wrong silently: a
+position table packed in one order against a slot → star table in
+another writes every star's A_V onto some other star, which reads as a
+plausible dust field rather than as a failure. `packPositionsVec4Into`
+takes the same `order` array the table is built from, the pairing is
+pinned in the test, and `verifyExtinction()` is the acceptance
+(§ The prepass kernel).
+
 ## What it costs, and what it holds
 
-Both figures below are the WebGL2 pass's unchanged in size — the port
-moved the work to a compute stage and allocated nothing new. **Re-derive
-rather than trust them**: they are `recordCount` (388,071 —
+The first two rows are the WebGL2 pass's unchanged in size — the port
+moved the work to a compute stage and the slot → star table is the one
+thing it added. **Re-derive rather than trust them**: they are
+`recordCount` (388,071 —
 `../../../../scripts/catalog/build-catalog-expected.json`) × the element
-size, and both move with the catalog. `debug.memory()` prices the live
-app (`../../debug/memory/README.md`), and on a WebGL2 boot it *measures*
-the A_V target rather than taking this table's word.
+size, and all three move with the catalog. `debug.memory()` prices the
+live app (`../../debug/memory/README.md`), and on a WebGL2 boot it
+*measures* the A_V target rather than taking this table's word.
 
 | Resident | Size |
 | --- | --- |
 | A_V buffer (one float32 per star) | 388,071 × 4 B ≈ 1.48 MiB |
-| Position buffer (one vec4 float32 per star) | 388,071 × 16 B ≈ 5.92 MiB |
+| Position buffer (one vec4 float32 per slot) | 388,071 × 16 B ≈ 5.92 MiB |
+| Slot → star table (one uint32 per slot) | 388,071 × 4 B ≈ 1.48 MiB |
 
-So ~7.4 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
+So ~8.9 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
 `Float32Array` the position attribute keeps on the JS heap after upload
-(three does not release it, and the WebGL2 twin's `DataTexture` holds the
-same). Both survive on an integrated or mobile GPU without argument.
+and the ~1.5 MiB `Uint32Array` behind the order table, which the parity
+check reads (§ The prepass kernel) and three does not release either.
+The WebGL2 twin's `DataTexture` holds the position copy the same way. All
+survive on an integrated or mobile GPU without argument.
 
 The pick mirror (§ Cold reads) is a third heap allocation, the A_V row's
 1.48 MiB again — but only from the first pointer event that asks for it,
