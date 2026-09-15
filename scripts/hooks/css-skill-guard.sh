@@ -3,8 +3,9 @@
 # Blocks edits to *.css until the cube-css skill has been invoked this
 # session. The skill carries the layout system the stylesheets are written
 # in — the cascade layers, the no-width-query mandate, the review gates —
-# a README describing the house style reads convincingly like coverage of
-# the system underneath it, which is what makes the load look redundant.
+# and src/site/README.md warns that a README describing the house style
+# reads convincingly like coverage of the system underneath it, which is
+# what makes the load look redundant.
 #
 # State scope: keyed on $PPID the way readme-guard is, for the same
 # reasons. $GUARD_SESSION overrides it for a harness that spawns a fresh
@@ -49,7 +50,7 @@ Stylesheets here are CUBE CSS over Every Layout primitives: which layer a rule b
 
 Fix: call the Skill tool with skill 'cube-css', then retry the edit. Reach for the utopia skill alongside it when the change touches a type size, a space step or a clamp().
 
-If you have just done that and this still denies, your harness does not run PreToolUse on Skill calls: arm the session by creating $STATE_FILE and carry on — do not invoke the skill a third time. The same file is the opt-out where the target is genuinely not a CUBE stylesheet."
+If this is genuinely not a CUBE stylesheet, disable the gate for this session by creating $STATE_FILE — but the default answer is 'load the skill'."
 
 jq -n --arg reason "$reason" '{
   hookSpecificOutput: {
