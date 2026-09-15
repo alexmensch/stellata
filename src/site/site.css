@@ -47,13 +47,14 @@
   --rule: var(--hairline) solid var(--border);
   --underline-offset: 3px;
   --focus-offset: 3px;
+  /* In em, so the halo grows with the type it backs rather than thinning
+     out under a display heading. */
+  --text-halo: 0 0 0.12em var(--halo), 0 0.04em 0.5em var(--halo);
 
-  /* Scrims and washes are the palette at partial alpha, mixed from the
+  /* Halos and washes are the palette at partial alpha, mixed from the
      tokens rather than restated, so design-tokens.css stays the only place
      a colour of both surfaces is written. */
-  --scrim-top: color-mix(in srgb, var(--bg) 72%, transparent);
-  --scrim-strong: color-mix(in srgb, var(--bg) 92%, transparent);
-  --scrim-mid: color-mix(in srgb, var(--bg) 55%, transparent);
+  --halo: color-mix(in srgb, var(--bg) 88%, transparent);
   --wash-accent: color-mix(in srgb, var(--accent) 9%, transparent);
   --wash-accent-faint: color-mix(in srgb, var(--accent) 5%, transparent);
   --selection-bg: color-mix(in srgb, var(--accent) 22%, transparent);
@@ -287,8 +288,8 @@ video {
 
 /* ── Block: banner ─────────────────────────────────────────────────── */
 /* The masthead rides over the hero image so the imagery is the first thing
-   on the page. Its own scrim, not the hero's — the hero's gradient is
-   anchored to the bottom where the heading sits. */
+   on the page. It carries its legibility in the glyphs' own halo rather than
+   in a scrim, because nothing over the hero may dim the hero. */
 
 .banner {
   position: relative;
@@ -298,7 +299,7 @@ video {
   inset: 0 0 auto;
   z-index: var(--layer-masthead);
   border-block-end: none;
-  background: linear-gradient(to bottom, var(--scrim-top), transparent);
+  text-shadow: var(--text-halo);
 }
 
 /* ── Block: hero ───────────────────────────────────────────────────── */
@@ -325,24 +326,18 @@ video {
   block-size: 100%;
   object-fit: cover;
 }
-/* The scrim spans the whole image; the wrapper inside it holds the text to
-   the column. One element cannot do both — a max-inline-size on the scrim
-   leaves the image un-dimmed either side of it on a wide screen. */
-/* Positioned because the media may be a <video>: replaced content paints
-   after an unpositioned sibling's background whatever the DOM order, so an
-   unlayered copy loses its scrim behind the clip. */
+/* The copy reads against the media with no scrim between them: the halo
+   travels with the glyphs, so the hero is seen at the brightness it was
+   graded at. Anything that dims a band of it here is a regression.
+   Positioned because the media may be a <video>: replaced content paints
+   after an unpositioned sibling whatever the DOM order. */
 .hero-copy {
   position: relative;
   z-index: var(--layer-hero-copy);
   align-self: end;
   inline-size: 100%;
   padding-block: var(--space-xl) var(--space-l-xl);
-  background: linear-gradient(
-    to top,
-    var(--scrim-strong) 15%,
-    var(--scrim-mid) 60%,
-    transparent
-  );
+  text-shadow: var(--text-halo);
 }
 .hero-copy h1 {
   max-inline-size: var(--measure-micro);

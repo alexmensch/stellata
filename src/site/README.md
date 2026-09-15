@@ -175,7 +175,7 @@ second visual language. A colour belonging to both surfaces goes in the
 token file; one belonging only here (`--bg-sunken`) goes in this file's own
 `:root` block, as the scales and measures do.
 
-**Alpha variants are mixed, not restated.** Every scrim and wash is a
+**Alpha variants are mixed, not restated.** Every halo and wash is a
 `color-mix(in srgb, var(--token) N%, transparent)`, so the hex for the
 ground and the accent exists in exactly one place. Writing
 `rgba(7, 9, 18, 0.72)` would fork the palette silently the next time a token
@@ -285,6 +285,12 @@ In order down the page, and the order is the argument:
 1. **Hero** — the imagery, full-bleed, with the `h1` over it and the
    masthead riding on top of the same image. Stellata is a visual
    instrument; the page leads with what it looks like, not with prose.
+   **Nothing over the hero dims it.** The copy and the masthead both carry
+   `--text-halo` on the glyphs instead of a scrim behind them, because the
+   imagery is already a dark-adapted frame and a scrim spends the contrast
+   twice. The reason it is written down: the obvious repair for text that
+   looks marginal over a bright frame is a scrim, and that is the one
+   repair this hero may not have. Grade the media darker, or move the copy.
 2. **Readout strip** — five figures, three of them substitutions.
 3. **What it is** — three claims, one each: a serious instrument for people
    who already know the sky · every object from a published catalogue, and
