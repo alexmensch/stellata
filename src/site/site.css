@@ -70,6 +70,7 @@
   --readout-item: 11rem;
 
   --hero-min: clamp(30rem, 82svh, 48rem);
+  --hero-fade: 38%;
   --notfound-min: min(62svh, 35rem);
   --holder-min: clamp(11rem, 24vw, 17rem);
 
@@ -312,6 +313,7 @@ video {
   grid-area: 1 / 1;
 }
 .hero-media {
+  position: relative;
   display: grid;
   align-content: start;
   overflow: hidden;
@@ -319,6 +321,18 @@ video {
     radial-gradient(120% 90% at 70% 15%, var(--wash-accent), transparent 60%),
     radial-gradient(90% 70% at 20% 80%, var(--wash-accent-faint), transparent 55%),
     var(--bg);
+}
+/* The media's bottom edge dissolves into the page ground so the hero has no
+   seam against the band below it. Reaches --hero-fade up and no further:
+   this reads as the frame ending, and the moment it climbs far enough to sit
+   behind the copy it has become the scrim this hero does without. */
+.hero-media::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: var(--hero-fade);
+  background: linear-gradient(to top, var(--bg), transparent);
 }
 .hero-media > img,
 .hero-media > video {
@@ -338,6 +352,13 @@ video {
   inline-size: 100%;
   padding-block: var(--space-xl) var(--space-l-xl);
   text-shadow: var(--text-halo);
+}
+/* The halo is for glyphs meeting the imagery, so anything bringing its own
+   ground is exempt — the pill's fill already separates its label, and the
+   halo only muddies it. Exempting rather than listing the elements that
+   take the halo: new copy over the media then arrives protected. */
+.hero-copy .pill {
+  text-shadow: none;
 }
 .hero-copy h1 {
   max-inline-size: var(--measure-micro);
