@@ -1,6 +1,8 @@
 // The priced-pass roster: every row key a priceFrame table can carry, and
 // the emptyPass row's default count. See README.md.
 
+import { VOLUME_PROBE_KEYS } from './volume-probe-specs';
+
 /** The one row whose meaning moves with a knob rather than with the frame:
  *  `--empty-passes` sets how many clears it adds, so two runs at different
  *  counts price different numbers of pass boundaries under one key. */
@@ -14,6 +16,7 @@ export const PRICED_PASS_KEYS = [
   'localDepth', 'mwBand', 'lgEmission', 'cloudAbsorption', 'hdrChain',
   'tonemapOp', 'statisticWrites', 'summation', 'summationTaps', 'mrtAttachments',
   'reduction', 'coreMask', 'planetDepthStamp', 'extinctionPrepass', EMPTY_PASS_KEY,
+  ...VOLUME_PROBE_KEYS,
 ] as const;
 
 export type PricedPassKey = (typeof PRICED_PASS_KEYS)[number];

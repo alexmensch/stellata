@@ -19,6 +19,11 @@ src/client/debug/frame-cost/passes/
                        key without pulling the renderer in — the perf
                        runner's diff reads both to refuse two runs that
                        added different numbers of empty passes.
+  volume-probe-specs.ts  Throwaway spike: the dispatch sweep the WebGPU
+    (+ test)           volume-fetch throughput probe runs (§ The
+                       throughput spike rows). Lives here rather than with
+                       the kernel because `passes-pure.ts` needs the keys
+                       and may not import across the WebGPU boundary.
 ```
 
 ## The roster
@@ -223,6 +228,30 @@ frame the chain can draw on, and the frames its readback is in flight — so
 the measurement's GPU work falls by roughly 60 %, not the ~83 % the
 interval alone suggests. Quoting these ~0 rows as the real-world saving
 overstates it.
+
+## The throughput spike rows
+
+Six rows price nothing the app ships: `volFetchCoh50M / 101M / 201M` and
+`volFetchSct50M / 101M / 201M` each dispatch a compute kernel marching the
+Edenhofer volume an exact number of times, so a `savedMs` divided into the
+row's fetch count is a **G volume fetches per second** figure for this
+backend. `Coh` is a screen-space grid of ray directions (adjacent threads
+adjacent on the sky — the froxel fill's shape); `Sct` is a golden-angle
+spiral over the whole sphere with per-ray lengths varying as star distances
+do (the per-star prepass's). Three sizes 4× apart per pattern say whether
+the rate is flat in dispatch size.
+
+**They are ON by default**, because a differential prices a row by taking it
+away — so this branch's app frame carries ~700M extra volume fetches and is
+not something to look at. The kernel and these rows go when the numbers land
+in `docs/science-galactic-structure.md`.
+
+**Read them on `raf-delta`, never the GPU stream.** `gpu.frame` is
+`resolveTimestampsAsync()` at its default, which resolves the RENDER pool
+alone — three pools compute passes separately and nothing resolves that one,
+so a compute dispatch is invisible to it
+(`../../gpu-timing/README.md` § WebGPU). Wall time is the whole frame and
+does see it.
 
 ## Decomposing the HDR chain
 

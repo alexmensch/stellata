@@ -111,7 +111,9 @@ import {
 import type { ConstellationOfKind } from './focus-card/constellation-row';
 import { focalRideStep } from './camera/focus/focal-ride-pure';
 import { makeFocalAnchorPolicy } from './camera/focus/focal-anchor-policy';
-import type { StellataRenderer, WebGpuSeam, WebGpuStarLayer } from './webgpu/seam';
+import type {
+  StellataRenderer, VolumeProbeHandle, WebGpuSeam, WebGpuStarLayer,
+} from './webgpu/seam';
 import type { PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import type { PlanetBodyField } from './solar-system/planets/planet-body-field';
@@ -489,6 +491,7 @@ export class Stellata implements FrameAnchor {
   // seam. Constructed lazily on the first attachDust so a dust-less
   // session pays nothing; null again after attachDust(null).
   private extinctionPrepass: ExtinctionPrepassSeam | null = null;
+  private volumeProbes: VolumeProbeHandle[] = [];
   private readonly pickSizeScratch: starPhysics.RenderedSizeComponents =
     { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
   // Separate from pickSizeScratch: the debug panel reads every frame and
@@ -496,9 +499,6 @@ export class Stellata implements FrameAnchor {
   private readonly passDebugScratch: starPhysics.RenderedSizeComponents =
     { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
 
-  // Pure target resolver; the click FSM in onPointerUp + the observe
-  // single/double-click dispatchers stay here as composition-layer
-  // orchestration.
   readonly picker!: Picker;
 
   // Per-kind geometry registry (camera/focus/focus-target.ts). Overlays
@@ -1618,6 +1618,7 @@ export class Stellata implements FrameAnchor {
       this.webgpu?.setDustTexture(null);
       this.extinctionPrepass?.dispose();
       this.extinctionPrepass = null;
+      this.disposeVolumeProbes();
       this.milkyway.attachDust(null);
       return;
     }
@@ -1644,6 +1645,9 @@ export class Stellata implements FrameAnchor {
           count: this.catalog.count,
           uniforms: u,
         });
+    }
+    if (this.webgpu !== null && this.volumeProbes.length === 0) {
+      this.volumeProbes = this.webgpu.attachVolumeThroughputProbes();
     }
     this.extinctionPrepass?.markDirty();
     // Each streamed voxel chunk changes sightline integrals — refresh the
@@ -2019,6 +2023,23 @@ export class Stellata implements FrameAnchor {
    *  harness's presence probe. */
   isExtinctionPrepassActive(): boolean {
     return this.extinctionPrepass?.isActive() ?? false;
+  }
+
+  private disposeVolumeProbes(): void {
+    for (const probe of this.volumeProbes) probe.dispose();
+    this.volumeProbes = [];
+  }
+
+  /** Throwaway spike lever: hold one volume-fetch throughput probe off, so
+   *  a priceFrame differential reads its dispatch as a row. */
+  setVolumeProbeEnabled(key: string, on: boolean): void {
+    this.volumeProbes.find((p) => p.key === key)?.setEnabled(on);
+  }
+
+  /** Whether that probe is dispatching this frame — the frame-cost
+   *  harness's presence probe. */
+  isVolumeProbeActive(key: string): boolean {
+    return this.volumeProbes.find((p) => p.key === key)?.isEnabled() ?? false;
   }
 
   /** A pointer event says a pick is coming: stage the per-star A_V table
@@ -2698,6 +2719,7 @@ export class Stellata implements FrameAnchor {
       );
       perfMeasure('extinction.prepass');
     }
+    for (const probe of this.volumeProbes) probe.update();
     // Per-frame layer fan-out through the registry. The context was
     // built above the gate; the extinction prepass and the pin above may
     // have moved nothing it reads, but the rides inside the fan-out do
@@ -3027,6 +3049,7 @@ export class Stellata implements FrameAnchor {
     this.webgpuStarLayer = null;
     this.extinctionPrepass?.dispose();
     this.extinctionPrepass = null;
+    this.disposeVolumeProbes();
     // Every scene layer (eager or lazily attached) disposes through the
     // registry — a registered layer can't be missing here.
     this.layers.disposeAll();

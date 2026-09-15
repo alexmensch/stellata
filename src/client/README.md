@@ -122,7 +122,9 @@ forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
 `exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,
-`debug/frame-cost/README.md`), `sceneGraphs` (read-only handles on every
+`debug/frame-cost/README.md`) — which `setVolumeProbeEnabled` /
+`isVolumeProbeActive` join for the throwaway WebGPU volume-fetch
+throughput spike — `sceneGraphs` (read-only handles on every
 scene this boot draws, for the memory inventory —
 `debug/memory/README.md`), and `renderGate`
 (`render-gate/README.md`). Callers write

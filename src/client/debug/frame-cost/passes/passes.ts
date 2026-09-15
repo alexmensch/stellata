@@ -3,6 +3,7 @@
 
 import type { Stellata } from '../../../stellata';
 import { EMPTY_PASSES_DEFAULT, type PricedPassKey } from './passes-pure';
+import { VOLUME_PROBE_SPECS } from './volume-probe-specs';
 
 export interface PassToggle {
   /** Row label in the output table. Adding one means adding it to
@@ -143,5 +144,10 @@ export function buildPassToggles(
         return () => { stellata.localDepthPass.extraEmptyPasses = 0; };
       },
     },
+    ...VOLUME_PROBE_SPECS.map((spec) => ({
+      key: spec.key,
+      present: () => stellata.isVolumeProbeActive(spec.key),
+      disable: () => flag((on) => stellata.setVolumeProbeEnabled(spec.key, on)),
+    })),
   ];
 }

@@ -79,9 +79,11 @@ src/client/webgpu/
                                     three attachments, and the inline
                                     operator off-target.
   extinction/                       The camera→star dust raymarch as a
-                                    compute kernel, and the per-star A_V
+                                    compute kernel, the per-star A_V
                                     buffer that feeds the star vertex
-                                    stage — its own README.
+                                    stage, and a throwaway throughput
+                                    probe over the same march — its own
+                                    README.
   star/                             The star layer: star-indexed storage
                                     tables, the compaction kernel, and the
                                     three depth-honest pipelines (D2 glow,
