@@ -28,12 +28,6 @@ src/client/webgpu/extinction/
   extinction-parity.ts        The kernel's parity instrument: the same
                               march as a fragment pass, bit-compared
                               against the buffer (§ The prepass kernel).
-  volume-throughput-probe.ts  Throwaway spike: the same march dispatched a
-                              known number of times, so a priceFrame
-                              differential prices a volume fetch. Its sweep
-                              and its levers are
-                              `../../debug/frame-cost/passes/README.md`
-                              § The throughput spike rows.
 ```
 
 ## What the port did NOT re-express

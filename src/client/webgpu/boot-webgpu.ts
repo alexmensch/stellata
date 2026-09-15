@@ -10,8 +10,6 @@ import type {
 } from '../solar-system/planets/planet-body-field';
 import { WebGpuExtinctionPrepass } from './extinction/extinction-prepass-webgpu';
 import { ExtinctionNodes } from './extinction/extinction-nodes';
-import { VolumeThroughputProbe } from './extinction/volume-throughput-probe';
-import { VOLUME_PROBE_SPECS } from '../debug/frame-cost/passes/volume-probe-specs';
 import { WebGpuHdrPipeline } from './hdr/hdr-pipeline-webgpu';
 import {
   reversedDepthOpaqueSort, reversedDepthTransparentSort,
@@ -206,12 +204,6 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
         slots: extinctionSlots,
         ...options,
       });
-    },
-    attachVolumeThroughputProbes() {
-      const nodes = nodesOrThrow('attachVolumeThroughputProbes');
-      return VOLUME_PROBE_SPECS.map((spec) => new VolumeThroughputProbe({
-        renderer, nodes, slots: extinctionSlots, spec,
-      }));
     },
     dispose() {
       extinctionSlots.dispose();

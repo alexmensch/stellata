@@ -106,9 +106,6 @@ export interface WebGpuSeam {
   attachExtinctionPrepass(
     options: WebGpuExtinctionPrepassSources,
   ): ExtinctionPrepassSeam;
-  /** The throwaway volume-fetch throughput probes, one per dispatch size ×
-   *  march pattern. Spike instrument; deleted with the measurement. */
-  attachVolumeThroughputProbes(): VolumeProbeHandle[];
   /** Release the boot-scoped GPU resources the seam owns and the shell has
    *  no handle to — today the shared extinction slots and their
    *  placeholders. NOT the renderer or the HDR pipeline: the shell holds
@@ -163,16 +160,6 @@ export interface WebGpuSeam {
     sources: PlanetGlareSources,
     mirrorParent: THREE.Object3D,
   ): WebGpuPlanetGlare;
-}
-
-/** One volume-fetch throughput probe as the shell drives it. Spike
- *  instrument; deleted with the measurement. */
-export interface VolumeProbeHandle {
-  readonly key: string;
-  setEnabled(on: boolean): void;
-  isEnabled(): boolean;
-  update(): void;
-  dispose(): void;
 }
 
 export interface WebGpuPlanetGlare {

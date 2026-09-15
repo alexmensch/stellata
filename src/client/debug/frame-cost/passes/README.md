@@ -19,11 +19,6 @@ src/client/debug/frame-cost/passes/
                        key without pulling the renderer in — the perf
                        runner's diff reads both to refuse two runs that
                        added different numbers of empty passes.
-  volume-probe-specs.ts  Throwaway spike: the dispatch sweep the WebGPU
-    (+ test)           volume-fetch throughput probe runs (§ The
-                       throughput spike rows). Lives here rather than with
-                       the kernel because `passes-pure.ts` needs the keys
-                       and may not import across the WebGPU boundary.
 ```
 
 ## The roster
@@ -228,48 +223,6 @@ frame the chain can draw on, and the frames its readback is in flight — so
 the measurement's GPU work falls by roughly 60 %, not the ~83 % the
 interval alone suggests. Quoting these ~0 rows as the real-world saving
 overstates it.
-
-## The throughput spike rows
-
-Six rows price nothing the app ships. Each dispatches a compute kernel
-marching the Edenhofer volume **exactly 100,663,296 times** — 2,097,152 rays
-of 48 taps, identical for every row — so `savedMs` compares directly across
-rows and a `savedMs` divided into that count is a **G volume fetches per
-second** figure for this backend.
-
-**Only the ray geometry varies, because that is what the rate turns on.** The
-first session measured 3.3 G/s scattered against 47–60 G/s coherent, an 18×
-spread, and could not say which of the two locality axes carried it: that
-sweep varied dispatch size and angular pitch together. These rows cross the
-two axes instead, at the froxel pin's own geometry — 13.0′ between
-neighbouring rays, and a 117.1 pc ray whose 48 taps therefore land 2.44 pc
-apart, which is the fill's half-voxel step.
-
-| row | ray pitch | tap pitch | what it isolates |
-| --- | --- | --- | --- |
-| `volCohCtl` | 1.46′ | 25 pc | first session's coherent row, unchanged |
-| `volSctCtl` | golden angle | 25 pc | first session's scattered row, unchanged |
-| **`volPin13`** | **13.0′** | **2.44 pc** | **the froxel fill, both axes right** |
-| `volPin26` | 26.0′ | 2.44 pc | the doc's 26′ cheap-cell lever |
-| `volPin13far` | 13.0′ | 25 pc | transverse right, along-ray wrong |
-| `volPin1p5near` | 1.46′ | 2.44 pc | along-ray right, transverse wrong |
-
-The two `Ctl` rows reproduce the first session's geometry exactly, so the two
-sessions compare rather than merely follow each other. The grid is angular,
-not tangent-space: a screen grid's off-axis cells are finer than its on-axis
-one, which would put a range of pitches under one row's name.
-
-**They are ON by default**, because a differential prices a row by taking it
-away — so this branch's app frame carries ~700M extra volume fetches and is
-not something to look at. The kernel and these rows go when the numbers land
-in `docs/science-galactic-structure.md`.
-
-**Read them on `raf-delta`, never the GPU stream.** `gpu.frame` is
-`resolveTimestampsAsync()` at its default, which resolves the RENDER pool
-alone — three pools compute passes separately and nothing resolves that one,
-so a compute dispatch is invisible to it
-(`../../gpu-timing/README.md` § WebGPU). Wall time is the whole frame and
-does see it.
 
 ## Decomposing the HDR chain
 
