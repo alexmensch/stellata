@@ -49,7 +49,7 @@ describe('parseRunArgs', () => {
   it('takes the pin flags in dwell mode, --accept as key:bead pairs, and a zero cool-down', () => {
     const a = parseRunArgs([
       ...PIN_RUN,
-      '--accept', 'sol|webgpu:bead-1', '--accept', 'mw50|webgl2: bead-2',
+      '--accept', 'sol|webgpu:bead-1', '--accept', 'mw50|webgl2: bead-2', '--accept', 'mw120|webgpu|compute:bead-3',
       '--against-pin', 'scripts/perf/pins/y.json', '--cooldown-ms', '120000',
     ]);
     expect(a.pin).toBe('scripts/perf/pins/x.json');
@@ -57,6 +57,7 @@ describe('parseRunArgs', () => {
     expect(a.accept).toEqual([
       { key: 'sol|webgpu', bead: 'bead-1' },
       { key: 'mw50|webgl2', bead: 'bead-2' },
+      { key: 'mw120|webgpu|compute', bead: 'bead-3' },
     ]);
     expect(a.cooldownMs).toBe(120000);
     expect(parseRunArgs(['--cooldown-ms', '0']).cooldownMs).toBe(0);
@@ -66,7 +67,8 @@ describe('parseRunArgs', () => {
     expect(() => parseRunArgs(['--mode', 'dwell', '--pin', 'p.json'])).toThrow(/needs --json/);
     expect(() => parseRunArgs(['--mode', 'dwell', '--accept', 'sol|webgpu:bead-1'])).toThrow(/needs --pin/);
     expect(() => parseRunArgs([...PIN_RUN, '--accept', 'sol:bead-1']))
-      .toThrow(/<scenario>\|<backend>:<bead-id>/);
+      .toThrow(/<scenario>\|<backend>\[\|compute\]:<bead-id>/);
+    expect(() => parseRunArgs([...PIN_RUN, '--accept', 'sol|webgpu|render:bead-1'])).toThrow(ArgError);
     expect(() => parseRunArgs([...PIN_RUN, '--accept', 'sol|webgpu']))
       .toThrow(ArgError);
     expect(() => parseRunArgs(['--cooldown-ms=-1'])).toThrow(/zero or a positive/);
@@ -293,7 +295,7 @@ describe('parsePinArgs — the pin from saved runs', () => {
   it('needs a run file unless asked for help, and refuses a malformed --accept or an unknown flag', () => {
     expect(() => parsePinArgs([])).toThrow(/at least one saved run file/);
     expect(parsePinArgs(['--help']).help).toBe(true);
-    expect(() => parsePinArgs(['a.json', '--accept', 'sol:bead-1'])).toThrow(/<scenario>\|<backend>:<bead-id>/);
+    expect(() => parsePinArgs(['a.json', '--accept', 'sol:bead-1'])).toThrow(/<scenario>\|<backend>\[\|compute\]:<bead-id>/);
     expect(() => parsePinArgs(['a.json', '--json', 'b.json'])).toThrow(ArgError);
   });
 

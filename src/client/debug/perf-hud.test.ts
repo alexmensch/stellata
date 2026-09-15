@@ -9,7 +9,7 @@ import {
   acquireGpuFrameSampler,
   _sectionsForTest,
 } from './perf-hud';
-import { publishGpuFrameSample } from './gpu-timing/gpu-frame-samples';
+import { GPU_COMPUTE_SCOPE, publishGpuComputeSample, publishGpuFrameSample } from './gpu-timing/gpu-frame-samples';
 import { GPU_WHOLE_FRAME_SCOPE } from './gpu-timing/gpu-timer';
 import { FakeGl, asGl } from './gpu-timing/fake-gl';
 
@@ -149,6 +149,28 @@ describe('perf-hud / install → dispose teardown', () => {
     section.dispose();
     publishGpuFrameSample(4.2);
     expect(_sectionsForTest().has(whole)).toBe(false);
+  });
+
+  it('records a compute sample as its own row and leaves the headline on the render frame', () => {
+    // The compute pool is the star compaction every frame plus the
+    // extinction prepass on the frames it recomputes. It resolves in the
+    // same cycle as the render passes but lands one row over: gpu.frame is
+    // what every committed pin row and archived dwell mean by the frame,
+    // and the headline reads it.
+    let clock = 0;
+    perfNowSpy.mockImplementation(() => (clock += 100));
+    const section = buildPerfSection(null);
+    for (let f = 0; f < 6; f++) {
+      publishGpuFrameSample(20);
+      publishGpuComputeSample(1.5);
+      frame();
+    }
+    expect(_sectionsForTest().has(`gpu.${GPU_COMPUTE_SCOPE}`)).toBe(true);
+    expect(headlineBusyText(section)).toBe('gpu 20.0ms');
+
+    section.dispose();
+    publishGpuComputeSample(1.5);
+    expect(_sectionsForTest().has(`gpu.${GPU_COMPUTE_SCOPE}`)).toBe(false);
   });
 
   it('section-GC: drops labels silent for a full ring window', () => {

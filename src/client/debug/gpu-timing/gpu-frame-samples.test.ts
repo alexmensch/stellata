@@ -1,10 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   dropResolvedTimestamps,
+  gpuComputeSamplesAreSound,
   gpuFrameSamplesAreSound,
+  onGpuComputeSample,
   onGpuFrameSample,
+  publishGpuComputeSample,
   publishGpuFrameSample,
   resolveAndPublishGpuFrame,
+  type TimestampPool,
 } from './gpu-frame-samples';
 
 describe('whole-frame GPU samples fan out', () => {
@@ -27,8 +31,27 @@ describe('whole-frame GPU samples fan out', () => {
     expect(b).toEqual([3, 4]);
   });
 
+  it('keeps the compute channel apart from the render one', () => {
+    const render: number[] = [];
+    const compute: number[] = [];
+    const offR = onGpuFrameSample((ms) => render.push(ms));
+    const offC = onGpuComputeSample((ms) => compute.push(ms));
+
+    publishGpuFrameSample(20);
+    publishGpuComputeSample(1.5);
+
+    // gpu.frame stays the render passes alone — every committed pin row and
+    // archived dwell reads that way — so a compute sample must never land in
+    // a render subscriber, and the other way round.
+    expect(render).toEqual([20]);
+    expect(compute).toEqual([1.5]);
+    offR();
+    offC();
+  });
+
   it('publishing with nobody listening is a no-op, not an error', () => {
     expect(() => publishGpuFrameSample(1)).not.toThrow();
+    expect(() => publishGpuComputeSample(1)).not.toThrow();
   });
 
   it('unsubscribing twice does not disturb the remaining listeners', () => {
@@ -43,24 +66,24 @@ describe('whole-frame GPU samples fan out', () => {
   });
 });
 
-/** A resolve the test settles by hand, so the coalescing window is
- *  explicit rather than dependent on real GPU latency. */
+/** A resolve the test settles by hand, per pool, so the coalescing window
+ *  is explicit rather than dependent on real GPU latency. */
 function fakeResolver(): {
-  calls: () => number;
-  settle: (i: number, ms: number | undefined) => void;
-  fail: (i: number) => void;
-  resolveTimestampsAsync: () => Promise<number | undefined>;
+  calls: (pool: TimestampPool) => number;
+  settle: (pool: TimestampPool, i: number, ms: number | undefined) => void;
+  fail: (pool: TimestampPool, i: number) => void;
+  resolveTimestampsAsync: (pool: TimestampPool) => Promise<number | undefined>;
 } {
-  const settles: Array<(ms: number | undefined) => void> = [];
-  const rejects: Array<(err: unknown) => void> = [];
+  const settles: Record<TimestampPool, Array<(ms: number | undefined) => void>> = { render: [], compute: [] };
+  const rejects: Record<TimestampPool, Array<(err: unknown) => void>> = { render: [], compute: [] };
   return {
-    calls: () => settles.length,
-    settle: (i, ms) => settles[i](ms),
-    fail: (i) => rejects[i](new Error('device lost')),
-    resolveTimestampsAsync: () =>
+    calls: (pool) => settles[pool].length,
+    settle: (pool, i, ms) => settles[pool][i](ms),
+    fail: (pool, i) => rejects[pool][i](new Error('device lost')),
+    resolveTimestampsAsync: (pool) =>
       new Promise<number | undefined>((resolve, reject) => {
-        settles.push(resolve);
-        rejects.push(reject);
+        settles[pool].push(resolve);
+        rejects[pool].push(reject);
       }),
   };
 }
@@ -68,6 +91,14 @@ function fakeResolver(): {
 /** A macrotask boundary, so every pending then/catch/finally has run. */
 const flush = (): Promise<void> =>
   new Promise((resolve) => { setTimeout(resolve, 0); });
+
+/** One cycle's two resolves, settled together. */
+function settleCycle(
+  renderer: ReturnType<typeof fakeResolver>, i: number, render: number | undefined, compute: number | undefined,
+): void {
+  renderer.settle('render', i, render);
+  renderer.settle('compute', i, compute);
+}
 
 describe('resolving publishes one sample per resolve', () => {
   it('coalesces the calls a resolve spans instead of publishing k copies', async () => {
@@ -82,20 +113,71 @@ describe('resolving publishes one sample per resolve', () => {
     resolveAndPublishGpuFrame(renderer, true);
     resolveAndPublishGpuFrame(renderer, true);
     resolveAndPublishGpuFrame(renderer, true);
-    expect(renderer.calls()).toBe(1);
+    expect(renderer.calls('render')).toBe(1);
 
-    renderer.settle(0, 7);
+    settleCycle(renderer, 0, 7, 1);
     await flush();
     expect(seen).toEqual([7]);
 
     // Settled means the guard cleared: the next frame measures again.
     resolveAndPublishGpuFrame(renderer, true);
-    expect(renderer.calls()).toBe(2);
-    renderer.settle(1, 9);
+    expect(renderer.calls('render')).toBe(2);
+    settleCycle(renderer, 1, 9, 1);
     await flush();
     expect(seen).toEqual([7, 9]);
 
     off();
+  });
+
+  it('resolves both pools in one cycle and publishes each to its own channel', async () => {
+    const render: number[] = [];
+    const compute: number[] = [];
+    const offR = onGpuFrameSample((ms) => render.push(ms));
+    const offC = onGpuComputeSample((ms) => compute.push(ms));
+    const renderer = fakeResolver();
+
+    // Only a resolve recycles a pool, and three keeps one per pass type: a
+    // render-only resolve left the compute pool overrunning its 2048 queries
+    // after ~1024 dispatches, one warning per session, and every compute
+    // pass unpriced. Both go out on one call, and the cycle is not over
+    // until both are back — one frame, two numbers.
+    resolveAndPublishGpuFrame(renderer, true);
+    expect([renderer.calls('render'), renderer.calls('compute')]).toEqual([1, 1]);
+
+    renderer.settle('render', 0, 18.9);
+    await flush();
+    expect(render).toEqual([]);
+    resolveAndPublishGpuFrame(renderer, true);
+    expect(renderer.calls('render')).toBe(1);
+
+    renderer.settle('compute', 0, 1.4);
+    await flush();
+    expect(render).toEqual([18.9]);
+    expect(compute).toEqual([1.4]);
+
+    offR();
+    offC();
+  });
+
+  it('publishes a render sample where the compute pool does not exist yet', async () => {
+    const render: number[] = [];
+    const compute: number[] = [];
+    const offR = onGpuFrameSample((ms) => render.push(ms));
+    const offC = onGpuComputeSample((ms) => compute.push(ms));
+    const renderer = fakeResolver();
+
+    // three creates a pool on the first pass of its type, and resolving a
+    // type with no pool returns undefined. A boot that has dispatched no
+    // compute yet still has a frame to report.
+    resolveAndPublishGpuFrame(renderer, true);
+    settleCycle(renderer, 0, 12, undefined);
+    await flush();
+    expect(render).toEqual([12]);
+    expect(compute).toEqual([]);
+    expect(gpuFrameSamplesAreSound()).toBe(true);
+
+    offR();
+    offC();
   });
 
   it('never calls a backend whose timestamps the probe refused', async () => {
@@ -111,14 +193,15 @@ describe('resolving publishes one sample per resolve', () => {
     resolveAndPublishGpuFrame(renderer, false);
     await flush();
 
-    expect(renderer.calls()).toBe(0);
+    expect(renderer.calls('render')).toBe(0);
+    expect(renderer.calls('compute')).toBe(0);
     expect(seen).toEqual([]);
 
     // The skip must not latch the in-flight guard: a backend that does have
     // timestamps still measures every frame.
     resolveAndPublishGpuFrame(renderer, true);
-    expect(renderer.calls()).toBe(1);
-    renderer.settle(0, 4);
+    expect(renderer.calls('render')).toBe(1);
+    settleCycle(renderer, 0, 4, 1);
     await flush();
     expect(seen).toEqual([4]);
 
@@ -133,7 +216,7 @@ describe('resolving publishes one sample per resolve', () => {
     // An adapter without timestamp-query resolves to undefined — three
     // clears trackTimestamp itself, so the resolve is a no-op every frame.
     resolveAndPublishGpuFrame(renderer, true);
-    renderer.settle(0, undefined);
+    settleCycle(renderer, 0, undefined, undefined);
     await flush();
 
     expect(seen).toEqual([]);
@@ -141,19 +224,57 @@ describe('resolving publishes one sample per resolve', () => {
   });
 
   it('drops three\'s zero seed without calling the backend unsound', async () => {
-    const seen: number[] = [];
-    const off = onGpuFrameSample((ms) => seen.push(ms));
+    const render: number[] = [];
+    const compute: number[] = [];
+    const offR = onGpuFrameSample((ms) => render.push(ms));
+    const offC = onGpuComputeSample((ms) => compute.push(ms));
     const renderer = fakeResolver();
 
     // three seeds lastValue at 0 and returns it from every early-out, so a
     // resolve that measured nothing is routine rather than a fault.
     resolveAndPublishGpuFrame(renderer, true);
-    renderer.settle(0, 0);
+    settleCycle(renderer, 0, 0, 0);
     await flush();
 
-    expect(seen).toEqual([]);
+    expect(render).toEqual([]);
+    expect(compute).toEqual([]);
     expect(gpuFrameSamplesAreSound()).toBe(true);
-    off();
+    offR();
+    offC();
+  });
+
+  it('latches the compute pool alone, leaving the frame clock sound', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const render: number[] = [];
+    const compute: number[] = [];
+    const offR = onGpuFrameSample((ms) => render.push(ms));
+    const offC = onGpuComputeSample((ms) => compute.push(ms));
+    const renderer = fakeResolver();
+
+    // gpu.frame is what every committed pin row gates on, and an unsound
+    // verdict takes the whole run's GPU stream down — ungated rows, which
+    // exit 0. So a lying compute pool must not reach it.
+    resolveAndPublishGpuFrame(renderer, true);
+    settleCycle(renderer, 0, 18.9, Number.NaN);
+    await flush();
+
+    expect(render).toEqual([18.9]);
+    expect(compute).toEqual([]);
+    expect(gpuFrameSamplesAreSound()).toBe(true);
+    expect(gpuComputeSamplesAreSound()).toBe(false);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain('[gpu.compute]');
+
+    // And the frame goes on being measured after it.
+    resolveAndPublishGpuFrame(renderer, true);
+    settleCycle(renderer, 1, 19.2, Number.NaN);
+    await flush();
+    expect(render).toEqual([18.9, 19.2]);
+    expect(warn).toHaveBeenCalledTimes(1);
+
+    offR();
+    offC();
+    warn.mockRestore();
   });
 
   it('clears the guard on a rejected resolve rather than stopping for good', async () => {
@@ -162,14 +283,14 @@ describe('resolving publishes one sample per resolve', () => {
     const renderer = fakeResolver();
 
     resolveAndPublishGpuFrame(renderer, true);
-    renderer.fail(0);
+    renderer.fail('render', 0);
     await flush();
 
     // A one-off rejection must not leave the flag stuck — that would stop
     // timing for the tab's lifetime.
     resolveAndPublishGpuFrame(renderer, true);
-    expect(renderer.calls()).toBe(2);
-    renderer.settle(1, 5);
+    expect(renderer.calls('render')).toBe(2);
+    settleCycle(renderer, 1, 5, 1);
     await flush();
     expect(seen).toEqual([5]);
 
@@ -178,7 +299,7 @@ describe('resolving publishes one sample per resolve', () => {
 });
 
 describe('a duration no frame can have is dropped, not recorded', () => {
-  it('drops it, says so once, and latches the backend unsound', async () => {
+  it('drops it, says so once, and latches the render pool unsound', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const seen: number[] = [];
     const off = onGpuFrameSample((ms) => seen.push(ms));
@@ -189,7 +310,7 @@ describe('a duration no frame can have is dropped, not recorded', () => {
     // Recorded, it sorts gpu.frame off the bottom of the HUD's top-8 table
     // while the headline still reads `gpu`, and poisons every dwell median.
     resolveAndPublishGpuFrame(renderer, true);
-    renderer.settle(0, -1706603456.88);
+    settleCycle(renderer, 0, -1706603456.88, 1);
     await flush();
 
     expect(seen).toEqual([]);
@@ -198,7 +319,7 @@ describe('a duration no frame can have is dropped, not recorded', () => {
 
     // Once per tab, not once per frame.
     resolveAndPublishGpuFrame(renderer, true);
-    renderer.settle(1, Number.NaN);
+    settleCycle(renderer, 1, Number.NaN, 1);
     await flush();
     expect(seen).toEqual([]);
     expect(warn).toHaveBeenCalledTimes(1);
@@ -206,7 +327,7 @@ describe('a duration no frame can have is dropped, not recorded', () => {
     // A backend that recovers still gets its good frames recorded; only the
     // sweep's clock choice stays demoted.
     resolveAndPublishGpuFrame(renderer, true);
-    renderer.settle(2, 8);
+    settleCycle(renderer, 2, 8, 1);
     await flush();
     expect(seen).toEqual([8]);
     expect(gpuFrameSamplesAreSound()).toBe(false);
@@ -268,13 +389,14 @@ describe('the resolved-uid trim keeps three\'s timestamp Map bounded', () => {
     // Still populated while the resolve is in flight: trimming early would
     // race the write three does inside resolveQueriesAsync.
     expect(host.backend.timestampQueryPool.render.timestamps.size).toBe(2);
-    renderer.settle(0, 4);
+    settleCycle(renderer, 0, 4, 1);
     await flush();
     expect(host.backend.timestampQueryPool.render.timestamps.size).toBe(0);
+    expect(host.backend.timestampQueryPool.compute.timestamps.size).toBe(0);
 
     host.backend.timestampQueryPool.render.timestamps.set('ctx:f9', 9);
     resolveAndPublishGpuFrame(renderer, true);
-    renderer.fail(1);
+    renderer.fail('render', 1);
     await flush();
     expect(host.backend.timestampQueryPool.render.timestamps.size).toBe(0);
   });
@@ -284,7 +406,7 @@ describe('the resolved-uid trim keeps three\'s timestamp Map bounded', () => {
     const renderer = { ...fakeResolver(), ...host };
     resolveAndPublishGpuFrame(renderer, false);
     // No resolve ran, so nothing was consumed and nothing is dropped.
-    expect(renderer.calls()).toBe(0);
+    expect(renderer.calls('render')).toBe(0);
     expect(host.backend.timestampQueryPool.render.timestamps.size).toBe(2);
   });
 });

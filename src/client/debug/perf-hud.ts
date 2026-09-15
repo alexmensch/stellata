@@ -12,7 +12,7 @@ import {
   type RowDatum,
 } from './perf-hud-pure';
 import { GPU_WHOLE_FRAME_SCOPE, GpuTimer } from './gpu-timing/gpu-timer';
-import { onGpuFrameSample } from './gpu-timing/gpu-frame-samples';
+import { GPU_COMPUTE_SCOPE, onGpuComputeSample, onGpuFrameSample } from './gpu-timing/gpu-frame-samples';
 
 const RING_SIZE = 60;
 const DOM_UPDATE_MS = 200;
@@ -160,6 +160,7 @@ export function gpuBegin(label: string): void { _gpuBegin(label); }
 export function gpuEnd(label: string): void { _gpuEnd(label); }
 
 let unsubGpuFrame: (() => void) | null = null;
+let unsubGpuCompute: (() => void) | null = null;
 
 /**
  * Exclusive whole-frame GPU sampler for console harnesses (frame-cost/frame-cost.ts).
@@ -227,6 +228,9 @@ export function buildPerfSection(gl: WebGL2RenderingContext | null): DebugSectio
     }
     unsubGpuFrame = onGpuFrameSample(
       (ms) => recordGpuSample(GPU_WHOLE_FRAME_SCOPE, ms),
+    );
+    unsubGpuCompute = onGpuComputeSample(
+      (ms) => recordGpuSample(GPU_COMPUTE_SCOPE, ms),
     );
   }
 
@@ -358,6 +362,8 @@ export function buildPerfSection(gl: WebGL2RenderingContext | null): DebugSectio
       _gpuEnd = () => {};
       unsubGpuFrame?.();
       unsubGpuFrame = null;
+      unsubGpuCompute?.();
+      unsubGpuCompute = null;
       installed = false;
       gpuTimer?.dispose();
       gpuTimer = null;

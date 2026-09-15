@@ -11,8 +11,10 @@ different number of them. The HUD that displays them is
 src/client/debug/gpu-timing/
   gpu-timer.ts (+ test)          EXT_disjoint_timer_query_webgl2 wrapper —
                                  one rotating scope per frame. WebGL2 only.
-  gpu-frame-samples.ts (+ test)  Fan-out channel for whole-frame GPU
-                                 durations the render loop measures itself.
+  gpu-frame-samples.ts (+ test)  Fan-out channels for the GPU durations the
+                                 render loop measures itself: the render
+                                 passes (`gpu.frame`) and the compute passes
+                                 (`gpu.compute`), resolved in one cycle.
                                  Publishes on WebGPU; the HUD and the
                                  pricing harness both subscribe.
   fake-gl.ts                     Test-only WebGL2 timer-query stub, shared
@@ -25,11 +27,20 @@ src/client/debug/gpu-timing/
 ## `gpu.frame` is the only row that prices anything
 
 `GPU_WHOLE_FRAME_SCOPE` (`gpu.frame`) exists on both backends and means
-the same thing on both: real GPU milliseconds for one whole frame. The
-perf HUD's headline says `gpu` whenever that row exists and `submit` (CPU
-wall-time around the render calls) when it does not — **presence of the
-row, never which timer object exists**, because the two backends produce
-it by unrelated means.
+the same thing on both: real GPU milliseconds for one frame's **render
+passes**. The perf HUD's headline says `gpu` whenever that row exists and
+`submit` (CPU wall-time around the render calls) when it does not —
+**presence of the row, never which timer object exists**, because the two
+backends produce it by unrelated means.
+
+**A compute pass is not in it.** On WebGPU the frame also dispatches
+compute — the star compaction every rendered frame, the extinction
+prepass on the frames it recomputes — and those land on their own row,
+`gpu.compute` (§ WebGPU). The two are never summed into one figure: every
+committed pin row and every archived dwell reads `gpu.frame` as the render
+passes, and folding compute in would re-price all of them. Read the two
+rows side by side; a change that moves work from a render pass into a
+compute kernel shows as the frame row falling and the compute row rising.
 
 **To price a single pass, disable it and difference `gpu.frame`.** That
 is true on both backends, for different reasons (§ WebGL2, § WebGPU), and
@@ -80,12 +91,22 @@ Two further properties a reader will otherwise get wrong:
 ## WebGPU — an exact frame total, and no per-pass rows at all
 
 The renderer boots with `trackTimestamp: true`, and three then allocates a
-timestamp query **pair per render pass**, automatically, with no scope
-calls from us. `resolveTimestampsAsync('render')` returns the summed real
-duration of every pass belonging to one frame. So `gpu.frame` here is a
-sum of true per-pass measurements rather than one derived elapsed span —
-strictly better than the WebGL2 figure, and available wherever the adapter
-grants the feature.
+timestamp query **pair per pass**, automatically, with no scope calls from
+us — into one of **two pools**, keyed by pass type. `gpu.frame` is
+`resolveTimestampsAsync('render')`: the summed real duration of every
+render pass tagged with the newest frame. `gpu.compute` is
+`resolveTimestampsAsync('compute')`, the same sum over that frame's
+compute passes. So `gpu.frame` here is a sum of true per-pass
+measurements rather than one derived elapsed span — strictly better than
+the WebGL2 figure, and available wherever the adapter grants the feature.
+
+**The two pools answer for the same frame.** three tags every query
+`<type>:<call>:<id>:f<frame>` off the renderer's frame counter, whichever
+pool it lands in, and each resolve returns the newest frame's total. Both
+are resolved from one call at the end of `animate()`, after the frame's
+last pass, so a render sample and the compute sample published beside it
+describe one frame. A frame that dispatched no compute — no pool exists
+yet — publishes a render sample alone; a WebGL2 boot publishes neither.
 
 **`trackTimestamp: true` is a request, not a grant.** three ANDs it with
 `hasFeature('timestamp-query')` at backend init and clears it silently
@@ -156,12 +177,15 @@ claiming a GPU measurement, while the table lists its top 8 rows by average
 A `gpu` headline above a table with no `gpu.*` row in it at all.
 
 So the channel drops any duration that is not finite and positive, says so
-once per tab, and latches `gpuFrameSamplesAreSound()` false; the headline
-falls back to `submit` and a sweep to `raf-delta`. That is the same
-degradation the withheld-feature path already had, reached one step later —
-**the grant is necessary, never sufficient.** A zero is NOT a fault: three
-seeds `lastValue` at 0 and returns it from every early-out that measured
-nothing, so zeros are dropped silently and leave the backend sound.
+once per tab, and latches that pool's soundness false — for the render pool,
+`gpuFrameSamplesAreSound()`, which drops the headline to `submit` and a
+sweep to `raf-delta`. That is the same degradation the withheld-feature path
+already had, reached one step later — **the grant is necessary, never
+sufficient.** The latch is per pool (§ The resolve must run on EVERY
+rendered frame), so this verdict is about the render pool alone. A zero is
+NOT a fault: three seeds `lastValue` at 0 and returns it from every
+early-out that measured nothing, so zeros are dropped silently and leave the
+backend sound.
 
 Three consequences, none of them a limitation to work around:
 
@@ -178,13 +202,19 @@ Three consequences, none of them a limitation to work around:
   gives us honestly, so **there are no per-pass `gpu.*` rows on WebGPU** —
   the `submit.*` CPU rows and `debug.priceFrame()` cover that ground.
 
-**The resolve must run on EVERY rendered frame that has a clock**, not only
-while the HUD is open. Tracking allocates the query pair whether or not
-anyone reads the result, and only the resolve recycles the pool: a resolve
-gated on the HUD overran the 2048-query pool after ~1024 frames (~17 s),
-logged `WebGPUTimestampQueryPool: Maximum number of queries exceeded`, and
-then stopped sampling until something resolved. So the subscriber list
-decides only whether a sample lands, never whether the resolve runs.
+**The resolve must run on EVERY rendered frame that has a clock, and it
+must resolve BOTH pools**, not only while the HUD is open and not only the
+render one. Tracking allocates the query pair whether or not anyone reads
+the result, and only a resolve of that pool recycles it: a resolve gated on
+the HUD overran the render pool after ~1024 frames (~17 s), logged
+`WebGPUTimestampQueryPool [render]: Maximum number of queries exceeded`,
+and stopped sampling until something resolved. A resolve with no argument
+— three's default is `'render'` — did the same to the compute pool once
+compute passes shipped: the `[compute]` warning in every session's
+console, and every compute dispatch absent from the number the pin, the
+dwell and every differential read. So the subscriber list decides only
+whether a sample lands, never whether the resolve runs, and the resolve
+names both pools.
 
 The single admissible gate is `WebGpuSeam.timestampsAvailable`, which
 `animate()` passes to `resolveAndPublishGpuFrame`. Where the probe cleared
@@ -193,24 +223,49 @@ pool, so that frame has no queries to overrun and the resolve would only
 log `WebGPURenderer: Timestamp tracking is disabled.` — the warning Safari
 surfaced when the gate was missing.
 
-**One resolve in flight at a time — the guard is load-bearing.** A resolve
-spans the frames its `mapAsync` readback takes, and three coalesces: a
-concurrent caller gets back the SAME promise, so it recycles no queries and
-yields the same number. Publishing per call therefore put ONE frame's
-duration in the ring k times, k being the frames the readback spanned. That
-is not a cosmetic duplicate — it inflates the sample count `noiseMs`
-divides by (√k too tight, so rows read as resolved that did not), and the
-adjacent repeats drive `baselineLag1` / `disabledLag1` positive, which
-`../frame-cost/README.md` § Reading a row tells you to read as drift.
-`resolveAndPublishGpuFrame` holds one resolve in flight and publishes once
-per completion; skipping the call while one is pending costs the pool
-nothing, because three resets the pool's counter before the GPU work.
+**One resolve cycle in flight at a time — the guard is load-bearing.** A
+resolve spans the frames its `mapAsync` readback takes, and three
+coalesces: a concurrent caller gets back the SAME promise, so it recycles
+no queries and yields the same number. Publishing per call therefore put
+ONE frame's duration in the ring k times, k being the frames the readback
+spanned. That is not a cosmetic duplicate — it inflates the sample count
+`noiseMs` divides by (√k too tight, so rows read as resolved that did not),
+and the adjacent repeats drive `baselineLag1` / `disabledLag1` positive,
+which `../frame-cost/README.md` § Reading a row tells you to read as drift.
+`resolveAndPublishGpuFrame` holds one cycle — both pools, one guard — in
+flight and publishes once per completion, render then compute; skipping
+the call while one is pending costs neither pool anything, because three
+resets a pool's counter before the GPU work. One guard rather than one per
+pool, so the two samples of a cycle cover the same span of frames and the
+same newest frame.
 
 The batch also covers every frame since the last resolve but returns only
 the newest frame's total — earlier frames' passes are dropped, not summed
 into it. So samples arrive at fewer than one per rendered frame under load,
 and each one is a single honest frame, which is what the ring average and
 the dwell medians need.
+
+**Covering both pools costs sample rate, because the cycle ends on the
+slower readback.** Measured across the two committed pins on this adapter
+(960-frame dwells at 4.096 Mpx), samples per rendered frame fell mw120
+0.916 → 0.748, sol 0.894 → 0.583, lg 0.917 → 0.744, mw50 0.246 → 0.200,
+while earth rose 0.845 → 0.911; main's own render-path work moved between
+the two runs, so the split between the two causes is not separated. It
+reaches no verdict today — at four of those rows the band is 0.007–0.104 ms
+against the 0.25 ms floor that decides, and earth, the one row where the
+sampling term binds, gained samples — but a row that loses enough of them
+widens its own band, so read a sample count as part of a dwell rather than
+as bookkeeping.
+
+**Soundness latches per pool, not per backend.** A pool resolving a
+duration no frame can have stops that pool's samples alone: `gpu.frame` is
+what every committed pin row gates on, and an unsound verdict there empties
+the run's whole GPU stream, leaving ungated rows that exit 0 — a gate gone
+blind without saying so. So a lying compute pool must not reach it, and
+`gpuComputeSamplesAreSound()` sits beside `gpuFrameSamplesAreSound()` with
+its own latch and its own one-shot warning. A dwell subscribes to each
+stream on its own verdict and its `gpu stream:` line names whichever side
+dropped out.
 
 ### The resolved-uid trim — three's Map never shrinks on its own
 

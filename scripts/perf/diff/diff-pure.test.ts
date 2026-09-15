@@ -555,6 +555,67 @@ describe('diffRuns — refusals', () => {
   });
 });
 
+describe('the compute row', () => {
+  const withCompute = (frame: number, compute: number | null, computeMs: readonly number[] = []): PerfFile =>
+    withDwell(dwellStats(16.7), {
+      dwell: {
+        deltasMs: [],
+        gpuMs: [],
+        gpuNote: 'sound',
+        stats: dwellStats(16.7),
+        gpuStats: dwellStats(frame),
+        computeMs: compute === null ? null : computeMs,
+        computeStats: compute === null ? null : dwellStats(compute),
+        limitMag: 1.5,
+        dm: -6.29,
+        readbackPerFrame: 0.25,
+        passCounts: null,
+      },
+    }, dwellStats(frame));
+
+  it('bands the compute stream beside the frame, keyed |compute, on the same floor', () => {
+    const diff = diffRuns(withCompute(18.98, 1.4, [1.2, 1.4]), withCompute(18.98, 2.0, [1.8, 2.0]));
+    expect(diff.refusals).toEqual([]);
+    expect(diff.rows.map((r) => [r.key, r.metric, r.verdict])).toEqual([
+      ['sol|webgl2|dwell', 'gpu-p50', 'same'],
+      ['sol|webgl2|compute', 'compute-p50', 'dearer'],
+    ]);
+    // 100 samples at iqr 1.349: two sigma of the pair is 0.354, over the
+    // 0.25 ms floor, so this fixture's band is its own sampling error.
+    expect(diff.rows[1].bandMs).toBeCloseTo(0.354, 3);
+    expect(diff.rows[1].bandMs).toBeGreaterThan(dwellFloorMs(1.4));
+    expect(diff.rows[1].floorDeltaMs).toBeCloseTo(0.6, 9);
+  });
+
+  it('refuses the compute row where one run recorded the stream and the other did not, and keeps the frame row', () => {
+    const diff = diffRuns(withCompute(18.98, null), withCompute(18.98, 1.4));
+    expect(diff.rows.map((r) => r.key)).toEqual(['sol|webgl2|dwell']);
+    expect(diff.refusals).toEqual([{
+      key: 'sol|webgl2|compute',
+      reason: 'one run recorded a compute stream for this row and the other did not',
+    }]);
+  });
+
+  it('prints no compute row where neither run has one — a pre-compute archive, or WebGL2', () => {
+    const diff = diffRuns(withCompute(18.98, null), withCompute(18.98, null));
+    expect(diff.rows.map((r) => r.key)).toEqual(['sol|webgl2|dwell']);
+    expect(diff.refusals).toEqual([]);
+    const old = only(diffRuns(withDwell(dwellStats(30)), withDwell(dwellStats(30))));
+    expect(old.key).toBe('sol|webgl2|dwell');
+  });
+
+  it('does not outlive a refused frame row', () => {
+    const trended = { ...dwellStats(18.98), quarterMedians: [17, 17, 20, 20], stateGuard: 'trending' as const };
+    const a = withCompute(18.98, 1.4);
+    const b = withDwell(dwellStats(16.7), {
+      dwell: { ...a.scenarios[0].dwell!, gpuStats: trended },
+    }, trended);
+    const diff = diffRuns(a, b);
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals.map((r) => r.key)).toEqual(['sol|webgl2|dwell']);
+  });
+});
+
 describe('the exposure readback duty cycle', () => {
   const counts = (min: number, p50: number, max: number): DwellRecord['passCounts'] => ({
     perFrame: { submits: [], commandBuffers: [], renderPasses: [], computePasses: [] },

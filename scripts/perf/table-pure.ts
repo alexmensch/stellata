@@ -4,7 +4,7 @@
 
 import { round3, type PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { VERDICT_MARK, type RunDiff } from './diff/diff-pure';
-import { PASS_COUNTERS, type DwellSummary, type PassCountsSummary } from './dwell/dwell-pure';
+import { PASS_COUNTERS, computeClock, type DwellSummary, type PassCountsSummary } from './dwell/dwell-pure';
 import { PIN_VERDICT_MARK, type PinDiff } from './pin-pure';
 import type { DwellRecord } from './schema';
 import type { SweepFit, SweepPoint } from './sweep/sweep-pure';
@@ -76,6 +76,10 @@ export function formatRoundTripLine(pass: string, before: DwellRecord, after: Dw
   if (before.gpuStats !== null && after.gpuStats !== null) {
     parts.push(`gpu p50 ${ratio(before.gpuStats.p50, after.gpuStats.p50)}`);
   }
+  const [computeBefore, computeAfter] = [computeClock(before), computeClock(after)];
+  if (computeBefore !== null && computeAfter !== null) {
+    parts.push(`compute p50 ${ratio(computeBefore.p50, computeAfter.p50)}`);
+  }
   parts.push(`limit ${round3(before.limitMag)} → ${round3(after.limitMag)} mag`);
   parts.push(`dm ${round3(before.dm)} → ${round3(after.dm)}`);
   return parts.join(' · ');
@@ -94,6 +98,11 @@ export function formatSweepTable(points: readonly SweepPoint[], fit: SweepFit, b
     `bound ${fit.bound} · sweep bracket ${bracketMs.toFixed(3)} ms`;
 }
 
+/** A reading neither side holds prints empty, never as a zero. */
+function ms(value: number | null): number | undefined {
+  return value === null ? undefined : round3(value);
+}
+
 export const DIFF_COLUMNS = ['', 'row', 'metric', 'baseline', 'current', 'delta', 'floor', 'band'] as const;
 
 export function formatDiffTable(diff: RunDiff): string {
@@ -107,7 +116,7 @@ export function formatDiffTable(diff: RunDiff): string {
       diff.rows.map((row) => [
         VERDICT_MARK[row.verdict], row.key, row.metric,
         round3(row.baselineMs), round3(row.currentMs), round3(row.deltaMs),
-        row.floorDeltaMs === null ? undefined : round3(row.floorDeltaMs), round3(row.bandMs),
+        ms(row.floorDeltaMs), round3(row.bandMs),
       ]),
     ));
   }
@@ -129,8 +138,8 @@ export function formatPinTable(diff: PinDiff): string {
       PIN_DIFF_COLUMNS,
       diff.rows.map((row) => [
         PIN_VERDICT_MARK[row.verdict], row.key, row.metric,
-        round3(row.pinnedMs), round3(row.currentMs), round3(row.deltaMs),
-        row.floorDeltaMs === null ? undefined : round3(row.floorDeltaMs), round3(row.bandMs), row.note,
+        ms(row.pinnedMs), ms(row.currentMs), ms(row.deltaMs),
+        ms(row.floorDeltaMs), round3(row.bandMs), row.note,
       ]),
     ));
   }

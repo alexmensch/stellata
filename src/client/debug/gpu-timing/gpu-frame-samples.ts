@@ -1,14 +1,33 @@
-// Whole-frame GPU durations the render loop measures itself, fanned out
-// to every consumer that wants them. See README.md § GPU timing.
+// Whole-frame GPU durations the render loop measures itself — the render
+// passes on one channel, the compute passes on another — fanned out to
+// every consumer that wants them. See README.md § GPU timing.
+
+import { GPU_WHOLE_FRAME_SCOPE } from './gpu-timer';
 
 type Subscriber = (ms: number) => void;
 
-const subscribers = new Set<Subscriber>();
+/** three keeps one timestamp pool per pass type and resolves them
+ *  separately; a resolve of one recycles nothing in the other. */
+export type TimestampPool = 'render' | 'compute';
+
+export const GPU_COMPUTE_SCOPE = 'compute';
+
+/** Which `gpu.*` row a pool fills. One mapping, so the channel, the HUD and
+ *  a dropped-sample warning cannot disagree about a pool's name. */
+const POOL_SCOPE: Record<TimestampPool, string> = {
+  render: GPU_WHOLE_FRAME_SCOPE,
+  compute: GPU_COMPUTE_SCOPE,
+};
+
+const subscribers: Record<TimestampPool, Set<Subscriber>> = {
+  render: new Set(),
+  compute: new Set(),
+};
 
 /** The renderer's frame-duration resolve, structurally — keeps this module
  *  off `three/webgpu` (`../../webgpu/README.md` § Import boundary). */
 export interface GpuFrameResolver {
-  resolveTimestampsAsync(): Promise<number | undefined>;
+  resolveTimestampsAsync(type: TimestampPool): Promise<number | undefined>;
 }
 
 /** `backend` is `unknown` because the trim reaches past what @types/three
@@ -37,53 +56,68 @@ export function dropResolvedTimestamps(host: TimestampPoolHost): void {
 }
 
 let resolveInFlight = false;
-let impossibleSeen = false;
+const unsound: Record<TimestampPool, boolean> = { render: false, compute: false };
 
-/** Publish one frame's measured GPU milliseconds. WebGPU only — a WebGL2
+function publish(pool: TimestampPool, ms: number): void {
+  for (const s of subscribers[pool]) s(ms);
+}
+
+/** Publish one frame's render-pass GPU milliseconds. WebGPU only — a WebGL2
  *  frame is timed by whichever GL timer owns the context's single query
  *  slot, so publishing here too would record `gpu.frame` twice per frame. */
 export function publishGpuFrameSample(ms: number): void {
-  for (const s of subscribers) s(ms);
+  publish('render', ms);
 }
 
-/** False once the backend has resolved a duration no frame can have, which
- *  latches for the tab: a granted `timestamp-query` is necessary but not
- *  sufficient (README.md § A granted feature can still resolve garbage). */
+/** Publish one frame's compute-pass GPU milliseconds. Never folded into
+ *  `gpu.frame`: README.md § WebGPU. */
+export function publishGpuComputeSample(ms: number): void {
+  publish('compute', ms);
+}
+
+/** False once the RENDER pool has resolved a duration no frame can have,
+ *  which latches for the tab: a granted `timestamp-query` is necessary but
+ *  not sufficient (README.md § A granted feature can still resolve garbage). */
 export function gpuFrameSamplesAreSound(): boolean {
-  return !impossibleSeen;
+  return !unsound.render;
 }
 
-function publishResolved(ms: number | undefined): void {
-  // undefined is the withheld feature; 0 is three's own seed, returned from
-  // the early-outs that resolve nothing.
+/** The same verdict for the compute pool. Latched per pool: `gpu.frame` is
+ *  what every committed pin row gates on, so a compute pool resolving
+ *  nonsense must not take the frame clock down with it. */
+export function gpuComputeSamplesAreSound(): boolean {
+  return !unsound.compute;
+}
+
+function publishResolved(pool: TimestampPool, ms: number | undefined): void {
+  // undefined is the withheld feature, or a pool no pass has allocated yet;
+  // 0 is three's own seed, returned from the early-outs that resolve nothing.
   if (ms === undefined || ms === 0) return;
   if (Number.isFinite(ms) && ms > 0) {
-    publishGpuFrameSample(ms);
+    publish(pool, ms);
     return;
   }
-  if (impossibleSeen) return;
-  impossibleSeen = true;
+  if (unsound[pool]) return;
+  unsound[pool] = true;
   console.warn(
-    `[gpu.frame] the backend resolved ${ms} ms for one frame. Impossible, so ` +
-    'this and every later sample is dropped: the HUD headline falls back to ' +
-    'submit and priceFrame to rAF-delta.',
+    `[gpu.${POOL_SCOPE[pool]}] the backend resolved ${ms} ms for one frame. ` +
+    `Impossible, so this and every later ${pool} sample is dropped. ` +
+    (pool === 'render'
+      ? 'The HUD headline falls back to submit and priceFrame to rAF-delta.'
+      : 'The gpu.frame row is unaffected — the pools latch separately.'),
   );
 }
 
 /**
- * Resolve one frame's timestamps and publish the duration, at most one
- * resolve in flight.
+ * Resolve one frame's timestamps — both pools, in one cycle — and publish
+ * each pool's duration to its own channel.
  *
- * A concurrent resolve recycles no queries and hands back the SAME promise,
- * so resolving unconditionally every frame publishes one frame's duration
- * once per coalesced caller — which inflates the sample count `noiseMs`
- * divides by (README.md § WebGPU).
+ * Why at most one cycle is in flight, and why one guard covers both pools
+ * rather than one each: README.md § WebGPU.
  *
  * `timestampsLive` is the boot probe's verdict
- * (`../../webgpu/seam.ts` `timestampsAvailable`), and false skips the
- * backend call entirely: three's `initTimestampQuery` allocates no pool
- * once tracking is off, so there is no pool left to recycle and a resolve
- * would only trip its own `warnOnce`.
+ * (`../../webgpu/seam.ts` `timestampsAvailable`); false skips the backend
+ * call, which has no pool to recycle and would only trip three's `warnOnce`.
  */
 export function resolveAndPublishGpuFrame(
   renderer: GpuFrameResolver & TimestampPoolHost,
@@ -92,9 +126,14 @@ export function resolveAndPublishGpuFrame(
   if (!timestampsLive) return;
   if (resolveInFlight) return;
   resolveInFlight = true;
-  void renderer
-    .resolveTimestampsAsync()
-    .then(publishResolved)
+  void Promise.all([
+    renderer.resolveTimestampsAsync('render'),
+    renderer.resolveTimestampsAsync('compute'),
+  ])
+    .then(([render, compute]) => {
+      publishResolved('render', render);
+      publishResolved('compute', compute);
+    })
     // A lost device rejects, and three has already logged it. The flag must
     // clear regardless, or timing stops for the tab's lifetime.
     .catch(() => {})
@@ -106,10 +145,15 @@ export function resolveAndPublishGpuFrame(
     });
 }
 
-/** Subscribe to those samples; the return value unsubscribes. Several
- *  consumers may listen at once — unlike a WebGL2 timer query, a timestamp
- *  resolve is not an exclusive resource. */
+/** Subscribe to the render-pass samples; the return value unsubscribes.
+ *  Several consumers may listen at once — unlike a WebGL2 timer query, a
+ *  timestamp resolve is not an exclusive resource. */
 export function onGpuFrameSample(fn: Subscriber): () => void {
-  subscribers.add(fn);
-  return () => { subscribers.delete(fn); };
+  subscribers.render.add(fn);
+  return () => { subscribers.render.delete(fn); };
+}
+
+export function onGpuComputeSample(fn: Subscriber): () => void {
+  subscribers.compute.add(fn);
+  return () => { subscribers.compute.delete(fn); };
 }

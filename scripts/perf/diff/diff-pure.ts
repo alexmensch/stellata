@@ -6,7 +6,9 @@ import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/fram
 import {
   EMPTY_PASSES_DEFAULT, EMPTY_PASS_KEY,
 } from '../../../src/client/debug/frame-cost/passes/passes-pure';
-import { floorMove, frameFloor, gatingClock, type DwellMetric } from '../dwell/dwell-pure';
+import {
+  COMPUTE_ROW, computeClock, floorMove, frameFloor, gatingClock, type DwellMetric,
+} from '../dwell/dwell-pure';
 import type { DwellRecord, PerfFile, ScenarioRecord } from '../schema';
 
 /** How far the two buffers may differ and still be compared. Both dominant
@@ -313,7 +315,7 @@ export function readbackRefusal(
   );
 }
 
-function verdictFor(deltaMs: number, bandMs: number): Verdict {
+export function verdictFor(deltaMs: number, bandMs: number): Verdict {
   if (Math.abs(deltaMs) <= bandMs) return 'same';
   return deltaMs < 0 ? 'cheaper' : 'dearer';
 }
@@ -399,11 +401,41 @@ function differentialRows(key: string, a: ScenarioRecord, b: ScenarioRecord): {
  * little: it is the one case in this function where a whole-interval delta
  * can be an artefact of the clock rather than the frame.
  */
-function dwellRow(key: string, a: ScenarioRecord, b: ScenarioRecord): DiffRow | DiffRefusal {
+function dwellRows(key: string, a: ScenarioRecord, b: ScenarioRecord): (DiffRow | DiffRefusal)[] {
   const [da, db] = [a.dwell, b.dwell];
   if (da === null || db === null) {
-    return { key: `${key}|dwell`, reason: 'one run has no dwell record' };
+    return [{ key: `${key}|dwell`, reason: 'one run has no dwell record' }];
   }
+  const frame = frameRow(key, da, db);
+  return 'reason' in frame ? [frame] : [frame, ...computeRow(key, da, db)];
+}
+
+/** The compute passes beside the frame, banded the same way and keyed
+ *  `|compute`. Both sides or neither, and why: README.md. */
+function computeRow(key: string, da: DwellRecord, db: DwellRecord): (DiffRow | DiffRefusal)[] {
+  const [ca, cb] = [computeClock(da), computeClock(db)];
+  if (ca === null && cb === null) return [];
+  if (ca === null || cb === null) {
+    return [{
+      key: `${key}|${COMPUTE_ROW}`,
+      reason: 'one run recorded a compute stream for this row and the other did not',
+    }];
+  }
+  const deltaMs = cb.p50 - ca.p50;
+  const bandMs = band(medianStandardErrorMs(ca), medianStandardErrorMs(cb), dwellFloorMs(ca.p50));
+  return [{
+    key: `${key}|${COMPUTE_ROW}`,
+    metric: 'compute-p50',
+    baselineMs: ca.p50,
+    currentMs: cb.p50,
+    deltaMs,
+    floorDeltaMs: floorMove(frameFloor(da.computeMs), frameFloor(db.computeMs)),
+    bandMs,
+    verdict: verdictFor(deltaMs, bandMs),
+  }];
+}
+
+function frameRow(key: string, da: DwellRecord, db: DwellRecord): DiffRow | DiffRefusal {
   if ((da.gpuStats === null) !== (db.gpuStats === null)) {
     return {
       key: `${key}|dwell`,
@@ -499,9 +531,10 @@ export function diffRuns(baseline: PerfFile, current: PerfFile): RunDiff {
       refusals.push(...diffed.refusals);
     }
     if (a.dwell !== null || b.dwell !== null) {
-      const outcome = dwellRow(key, a, b);
-      if ('reason' in outcome) refusals.push(outcome);
-      else rows.push(outcome);
+      for (const outcome of dwellRows(key, a, b)) {
+        if ('reason' in outcome) refusals.push(outcome);
+        else rows.push(outcome);
+      }
     }
     if (a.sweep !== null || b.sweep !== null) {
       refusals.push({

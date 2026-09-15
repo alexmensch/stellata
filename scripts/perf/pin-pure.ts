@@ -6,11 +6,11 @@ import { basename, relative, resolve } from 'node:path';
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import {
   VERDICT_MARK, band, bufferRefusal, dwellFloorMs, positionRefusal, readbackRefusal,
-  recordCountRefusal, splitFrameClasses, type DiffRefusal, type Verdict,
+  recordCountRefusal, splitFrameClasses, verdictFor, type DiffRefusal, type Verdict,
 } from './diff/diff-pure';
 import {
-  floorMove, frameFloor, gatingClock,
-  type DwellMetric, type FrameFloor, type StateGuard,
+  COMPUTE_ROW, computeClock, floorMove, frameFloor, gatingClock,
+  type DwellMetric, type DwellSummary, type FrameFloor, type StateGuard,
 } from './dwell/dwell-pure';
 import { DWELL_METHOD, contextOrder } from './run-pure';
 import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type GitProvenance, type PerfFile, type ScenarioRecord } from './schema';
@@ -83,6 +83,12 @@ export interface PinRow {
   /** The WebGPU frame-sample stream where it was sound; null on WebGL2. */
   readonly gpu: PinClock | null;
   readonly gpuFloor: FrameFloor | null;
+  /** The compute-pass stream beside it — its own row, never folded into
+   *  `gpu`, so every row taken before it existed stays comparable. Absent on
+   *  such a pin, which prints the compute row ungated rather than refusing
+   *  the context. */
+  readonly compute?: PinClock | null;
+  readonly computeFloor?: FrameFloor | null;
   /** The run file this row was summarised from, under `.perf-runs/`. Rows
    *  of one pin may cite different runs of the same commit (`pinFromRuns`). */
   readonly sourceRun: string;
@@ -131,9 +137,11 @@ export interface PinVerdictRow {
    *  than a reading the gate acts on; an ungated row may equally carry
    *  `gpu-p50` as context. */
   readonly metric: DwellMetric;
-  readonly pinnedMs: number;
-  readonly currentMs: number;
-  readonly deltaMs: number;
+  /** Null where that side holds no reading of this stream at all; the cell
+   *  prints empty, and `deltaMs` goes with it. */
+  readonly pinnedMs: number | null;
+  readonly currentMs: number | null;
+  readonly deltaMs: number | null;
   readonly bandMs: number;
   /** How far the 10th-percentile frame moved, where both sides hold a GPU
    *  floor; null otherwise. Context for `deltaMs`, never a verdict input. */
@@ -190,7 +198,7 @@ export const CANON_POSITIONS: ReadonlyMap<string, number> = new Map(
   contextOrder(SCENARIO_NAMES, BACKENDS).map(({ name, backend }, i) => [keyOf(name, backend), i + 1]),
 );
 
-function clockOf(stats: DwellRecord['stats']): PinClock {
+function clockOf(stats: DwellSummary): PinClock {
   return {
     p50: stats.p50,
     p90: stats.p90,
@@ -305,6 +313,7 @@ function keysAcross(sources: readonly RunSource[]): string[] {
 
 function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
   const dwell = record.dwell!;
+  const compute = computeClock(dwell);
   return {
     key: pinKey(record),
     name: record.name,
@@ -319,6 +328,8 @@ function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
     wall: { ...clockOf(dwell.stats), vsyncClamped: dwell.stats.vsyncClamped },
     gpu: dwell.gpuStats === null ? null : clockOf(dwell.gpuStats),
     gpuFloor: dwell.gpuStats === null ? null : frameFloor(dwell.gpuMs),
+    compute: compute === null ? null : clockOf(compute),
+    computeFloor: compute === null ? null : frameFloor(dwell.computeMs),
     sourceRun,
   };
 }
@@ -411,37 +422,44 @@ export function citeRunPath(jsonPath: string, mainCheckout: string): string {
   return rel === '' || rel.startsWith('..') ? basename(jsonPath) : rel;
 }
 
-function verdictFor(deltaMs: number, bandMs: number): Verdict {
-  if (Math.abs(deltaMs) <= bandMs) return 'same';
-  return deltaMs < 0 ? 'cheaper' : 'dearer';
-}
-
-/** Which side is missing the GPU stream, so an ungated row says why rather
- *  than only that it is ungated — the pin having one and the run not is an
+/** Which side is missing the stream, so an ungated row says why rather than
+ *  only that it is ungated — the pin having one and the run not is an
  *  instrument regression, not the WebGL2 backend being itself. */
-function ungatedNote(pinned: PinRow, current: PinClock | null): string {
-  if (pinned.gpu === null && current === null) {
-    return pinned.backend === 'webgl2'
-      ? 'no GPU stream — WebGL2 supplies none'
-      : 'no GPU stream on either side — the adapter resolved no believable durations';
+function ungatedNote(
+  stream: 'GPU' | 'compute', backend: Backend, pinned: PinClock | null, current: DwellSummary | null,
+): string {
+  if (pinned === null && current === null) {
+    return backend === 'webgl2'
+      ? `no ${stream} stream — WebGL2 supplies none`
+      : `no ${stream} stream on either side — the adapter resolved no believable durations`;
   }
-  return pinned.gpu === null
-    ? 'the pin carries no GPU stream for this row; this run does'
-    : 'the pin carries a GPU stream for this row; this run resolved none';
+  return pinned === null
+    ? `the pin carries no ${stream} stream for this row; this run does`
+    : `the pin carries a ${stream} stream for this row; this run resolved none`;
 }
 
+/** A reading one side does not hold prints empty rather than as a zero: a
+ *  fabricated 0 makes `delta` restate `current` and reads as a move. */
 function ungatedRow(
-  key: string, metric: DwellMetric, pinnedMs: number, currentMs: number, note: string,
+  key: string, metric: DwellMetric, pinnedMs: number | null, currentMs: number | null, note: string,
 ): PinVerdictRow {
   return {
-    key, metric, pinnedMs, currentMs, deltaMs: currentMs - pinnedMs, bandMs: 0, floorDeltaMs: null, verdict: 'ungated', note,
+    key,
+    metric,
+    pinnedMs,
+    currentMs,
+    deltaMs: pinnedMs === null || currentMs === null ? null : currentMs - pinnedMs,
+    bandMs: 0,
+    floorDeltaMs: null,
+    verdict: 'ungated',
+    note,
   };
 }
 
 /** The reader's discriminator on a mark: a cost every frame pays lifts the
  *  floor with the median; a wander lifts the upper half alone. */
 function floorNote(row: PinVerdictRow): PinVerdictRow {
-  if (row.verdict !== 'dearer' || row.floorDeltaMs === null || row.deltaMs <= 0) return row;
+  if (row.verdict !== 'dearer' || row.floorDeltaMs === null || row.deltaMs === null || row.deltaMs <= 0) return row;
   if (row.floorDeltaMs >= FLOOR_FOLLOWS_FRACTION * row.deltaMs) return row;
   return {
     ...row,
@@ -449,41 +467,91 @@ function floorNote(row: PinVerdictRow): PinVerdictRow {
   };
 }
 
-/** Applied to every row carrying a GPU reading, ungated ones included: the
- *  ceiling is an absolute bound, and the rows the band cannot mark are
+/** Applied to every row carrying a timestamp reading, ungated ones included:
+ *  the ceiling is an absolute bound, and the rows the band cannot mark are
  *  exactly the ones with nothing else watching them. */
 function underCeiling(row: PinVerdictRow): PinVerdictRow {
-  if (row.currentMs <= PIN_CEILING_MS) return row;
-  return { ...row, verdict: 'dearer', note: `GPU-stream p50 over the ${PIN_CEILING_MS} ms ceiling` };
+  if (row.currentMs === null || row.currentMs <= PIN_CEILING_MS) return row;
+  return { ...row, verdict: 'dearer', note: `${row.metric} over the ${PIN_CEILING_MS} ms ceiling` };
 }
 
-function compareRow(pinned: PinRow, dwell: DwellRecord): PinVerdictRow {
-  if (pinned.gpu === null || dwell.gpuStats === null) {
-    return ungatedRow(
-      pinned.key, 'wall-p50', pinned.wall.p50, dwell.stats.p50, ungatedNote(pinned, dwell.gpuStats),
-    );
-  }
+/** One timestamp stream of a context and the two sides to judge it on. */
+interface StreamSpec {
+  readonly key: string;
+  readonly metric: DwellMetric;
+  readonly stream: 'GPU' | 'compute';
+  readonly pinnedClock: PinClock | null;
+  readonly pinnedFloor: FrameFloor | null;
+  readonly current: DwellSummary | null;
+  readonly currentSamples: readonly number[] | null | undefined;
+  /** Shown in place of this stream's own readings where a side lacks it.
+   *  The frame falls back to the wall clock every row carries; the compute
+   *  row has no second clock, so null leaves its cells empty. */
+  readonly ungatedContext: {
+    readonly metric: DwellMetric;
+    readonly pinnedMs: number;
+    readonly currentMs: number;
+  } | null;
+}
 
-  const floorDeltaMs = floorMove(pinned.gpuFloor ?? null, frameFloor(dwell.gpuMs));
+/** One stream judged against its pinned twin: the band where both sides
+ *  hold one, ungated by vantage or where a side lacks it, the ceiling on
+ *  every reading. The frame's stream and the compute one are the same rule
+ *  one field over (`pins/README.md` § The compute row). */
+function streamRow(pinned: PinRow, spec: StreamSpec): PinVerdictRow {
+  const { key, metric, pinnedClock, current } = spec;
+  if (pinnedClock === null || current === null) {
+    const note = ungatedNote(spec.stream, pinned.backend, pinnedClock, current);
+    const context = spec.ungatedContext;
+    return context === null
+      ? ungatedRow(key, metric, pinnedClock?.p50 ?? null, current?.p50 ?? null, note)
+      : ungatedRow(key, context.metric, context.pinnedMs, context.currentMs, note);
+  }
+  const floorDeltaMs = floorMove(spec.pinnedFloor, frameFloor(spec.currentSamples));
   const ungatedBecause = PIN_UNGATED_SCENARIOS[pinned.name];
   if (ungatedBecause !== undefined) {
     return underCeiling({
       ...ungatedRow(
-        pinned.key, 'gpu-p50', pinned.gpu.p50, dwell.gpuStats.p50,
+        key, metric, pinnedClock.p50, current.p50,
         `${pinned.name} ${ungatedBecause} — recorded, never marked below the ceiling`,
       ),
       floorDeltaMs,
     });
   }
-
-  const deltaMs = dwell.gpuStats.p50 - pinned.gpu.p50;
+  const deltaMs = current.p50 - pinnedClock.p50;
   const bandMs = band(
-    medianStandardErrorMs(pinned.gpu), medianStandardErrorMs(dwell.gpuStats), dwellFloorMs(pinned.gpu.p50),
+    medianStandardErrorMs(pinnedClock), medianStandardErrorMs(current), dwellFloorMs(pinnedClock.p50),
   );
   return underCeiling(floorNote({
-    key: pinned.key, metric: 'gpu-p50', pinnedMs: pinned.gpu.p50, currentMs: dwell.gpuStats.p50,
+    key, metric, pinnedMs: pinnedClock.p50, currentMs: current.p50,
     deltaMs, bandMs, floorDeltaMs, verdict: verdictFor(deltaMs, bandMs), note: '',
   }));
+}
+
+function compareRows(pinned: PinRow, dwell: DwellRecord): PinVerdictRow[] {
+  const frame = streamRow(pinned, {
+    key: pinned.key,
+    metric: 'gpu-p50',
+    stream: 'GPU',
+    pinnedClock: pinned.gpu,
+    pinnedFloor: pinned.gpuFloor,
+    current: dwell.gpuStats,
+    currentSamples: dwell.gpuMs,
+    ungatedContext: { metric: 'wall-p50', pinnedMs: pinned.wall.p50, currentMs: dwell.stats.p50 },
+  });
+  const pinnedCompute = pinned.compute ?? null;
+  const compute = computeClock(dwell);
+  if (pinnedCompute === null && compute === null) return [frame];
+  return [frame, streamRow(pinned, {
+    key: `${pinned.key}|${COMPUTE_ROW}`,
+    metric: 'compute-p50',
+    stream: 'compute',
+    pinnedClock: pinnedCompute,
+    pinnedFloor: pinned.computeFloor ?? null,
+    current: compute,
+    currentSamples: dwell.computeMs,
+    ungatedContext: null,
+  })];
 }
 
 /**
@@ -532,7 +600,7 @@ export function compareToPin(pin: PinFile, current: PerfFile): PinDiff {
       ?? recordCountRefusal(pinned.recordCount, record.recordCount)
       ?? positionRefusal(pinned.position, record.position)
       // Gated on the pin holding a GPU stream for the row, matching the clock
-      // `compareRow` goes on to judge: a pair with none is printed ungated and
+      // `compareRows` goes on to judge: a pair with none is printed ungated and
       // never marked, so narrowing it would refuse a row nothing reads.
       ?? (pinned.gpu === null || dwell.gpuStats === null ? null : readbackRefusal(
         pinned.readbackPerFrame, dwell.readbackPerFrame,
@@ -542,7 +610,7 @@ export function compareToPin(pin: PinFile, current: PerfFile): PinDiff {
       refusals.push({ key, reason: incomparable });
       continue;
     }
-    rows.push(compareRow(pinned, dwell));
+    rows.push(...compareRows(pinned, dwell));
   }
   const unmeasured = pin.rows.map((row) => row.key).filter((key) => !visited.has(key));
   return { refusedWholeRun: null, rows, refusals, unmeasured };

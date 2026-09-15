@@ -56,7 +56,7 @@ export interface DwellPlan {
   readonly readbackEvery: number;
 }
 
-// The GPU row passes no cadence: a resolved timestamp span is not wall time,
+// The GPU rows pass no cadence: a resolved timestamp span is not wall time,
 // so no compositor can have padded it and `vsyncClamped` cannot apply.
 function toRecord(raw: DwellRaw, cadenceMs: number | null): DwellRecord | null {
   const stats = summarizeFrameDwell(raw.deltasMs, cadenceMs);
@@ -68,6 +68,8 @@ function toRecord(raw: DwellRaw, cadenceMs: number | null): DwellRecord | null {
     gpuNote: raw.gpuNote,
     stats,
     gpuStats: summarizeFrameDwell(raw.gpuMs, null),
+    computeMs: raw.computeMs.length > 0 ? raw.computeMs : null,
+    computeStats: summarizeFrameDwell(raw.computeMs, null),
     limitMag: raw.effectiveLimitMag,
     dm: raw.dm,
     readbackPerFrame: raw.readbackPerFrame,

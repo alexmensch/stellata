@@ -75,7 +75,7 @@ pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu|we
                  [--frames 240] [--readback-every 4|4,1,2] [--roundtrip <pass>|idle] [--scales 0.5,1,1.5,2]
                  [--headed] [--width 1280] [--height 800] [--dpr 2] [--quiet-ms 5000]
                  [--json <path>] [--baseline <path>] [--cooldown-ms 0]
-                 [--pin <path> [--accept <scenario>|<backend>:<bead>]...] [--against-pin <path>]
+                 [--pin <path> [--accept <scenario>|<backend>[|compute]:<bead>]...] [--against-pin <path>]
                  [--url http://localhost:5173] [--chrome-arg=<switch>]... [--hash <fragment>]
 ```
 
@@ -259,7 +259,7 @@ Any failure exits 1.
 
 `--mode dwell` measures the whole frame at a vantage instead of pricing its
 passes, and is what the pin and both gates read. Its metric, the GPU-stream
-row beside it, the vsync clamp, the state guard, the pass counters, the
+and compute-stream rows beside it, the vsync clamp, the state guard, the pass counters, the
 pinned readback duty cycle and `--roundtrip`: `dwell/README.md`.
 
 ## Sweep mode

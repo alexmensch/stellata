@@ -42,28 +42,35 @@ stays poisoned for the backend's lifetime.
 **And a grant is not a working clock either:** Chrome grants the feature
 and then resolves whole frames as a large negative number, so the channel
 drops any duration that is not finite and positive and degrades exactly
-as the withheld case does.
+as the withheld case does — per pool, so a lying compute pool leaves
+`gpu.frame` and every pin row that gates on it alone.
 
 ## Why the resolve is not gated on the HUD
 
 `animate()` resolves on **every rendered frame the probe left timestamps
 live on** — not only while the inspector is open, and gated on
-`timestampsAvailable` alone. The resolve is what recycles the query pool:
-tracking allocates a query pair per render pass whether or not anyone
-reads the result, so a resolve gated on the HUD overruns the 2048-query
-pool after ~1024 frames, three logs `Maximum number of queries exceeded`,
-and sampling stops until something resolves.
+`timestampsAvailable` alone — and it resolves **both pools**, render and
+compute. A resolve is what recycles a query pool, and three keeps one per
+pass type: tracking allocates a query pair per pass whether or not anyone
+reads the result, so a pool nothing resolves overruns its 2048 queries
+after ~1024 passes, three logs `Maximum number of queries exceeded` for
+that pool, and its sampling stops until something resolves it.
 
-**One resolve in flight:** a concurrent resolve returns the same promise
-and the same number, so `resolveAndPublishGpuFrame` publishes once per
-completion rather than once per frame the readback spanned.
+**One resolve cycle in flight:** a concurrent resolve returns the same
+promise and the same number, so `resolveAndPublishGpuFrame` publishes once
+per completion rather than once per frame the readback spanned.
 
-## What the figure is
+## What the figures are
 
-The summed real duration of every render pass in one frame, so it lands
-as `gpu.frame` — the same row the WebGL2 timer query fills, and the perf
-HUD's headline reads `gpu` rather than `submit` on either backend.
-Subscribers (the HUD, a `debug.priceFrame()` sweep) come and go through
+Two, one per pool. The summed real duration of every **render** pass in
+one frame lands as `gpu.frame` — the same row the WebGL2 timer query
+fills, and the perf HUD's headline reads `gpu` rather than `submit` on
+either backend. The summed duration of that frame's **compute** passes —
+the star compaction, the extinction prepass when it recomputes — lands as
+`gpu.compute`, a row of its own that is never folded into `gpu.frame`
+(`../../debug/gpu-timing/README.md` § `gpu.frame` is the only row that
+prices anything). Subscribers (the HUD, a `debug.priceFrame()` sweep, the
+perf runner's dwell) come and go through
 `../../debug/gpu-timing/gpu-frame-samples.ts` while the resolve itself is
 gated on nothing but the probe's verdict.
 

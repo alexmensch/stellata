@@ -2776,11 +2776,9 @@ export class Stellata implements FrameAnchor {
     perfMeasure('submit.reduction');
     perfGpuEnd(GPU_WHOLE_FRAME_SCOPE);
     if (this.webgpu !== null) {
-      // After the frame's LAST pass, so gpu.frame sums the whole stack.
-      // Every rendered frame must resolve: the resolve is what recycles
-      // the timestamp query pool, and trackTimestamp allocates a pair per
-      // render pass whether or not anyone reads them. Skipping it while
-      // the HUD is closed overruns the 2048-query pool in ~1024 frames.
+      // After the frame's LAST pass, and on every rendered frame whatever
+      // is listening: a pool nothing resolves overruns and stops sampling.
+      // See debug/gpu-timing/README.md § WebGPU.
       resolveAndPublishGpuFrame(
         this.webgpu.renderer, this.webgpu.timestampsAvailable);
     }

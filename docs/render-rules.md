@@ -395,7 +395,18 @@ at the canonical vantages is what explains a row that moved.
   moves. The pin gates on the GPU-stream p50 where the backend supplies
   one and records wall beside it (`RELEASING.md` § Perf pin). This is the
   frame's own span, not a per-pass slot — attribution is still a
-  differential. A vantage whose reading does not reproduce between cold
+  differential.
+- **`gpu.frame` is the render passes; compute passes are their own row.**
+  three keeps a timestamp pool per pass type, and `gpu.frame` sums the
+  render pool alone — the meaning every pin row and archived dwell carries.
+  The compute pool (the star compaction every frame, the extinction
+  prepass on recompute frames) is resolved in the same cycle and lands as
+  `gpu.compute` / `compute-p50`, gated by the pin under its own key with
+  the same band (`scripts/perf/pins/README.md` § The compute row). Never
+  sum the two into a frame total, and never read a compute dispatch off
+  the frame row: a kernel that moved work out of a render pass shows as
+  the frame falling and the compute row rising, and only the pair says
+  whether the frame got cheaper. A vantage whose reading does not reproduce between cold
   runs is recorded and left to the ceiling instead; `lg` is that vantage
   today, which is what makes the Local Group the one layer a pin table
   cannot price.

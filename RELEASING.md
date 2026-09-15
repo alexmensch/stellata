@@ -213,14 +213,24 @@ rows no later run reaches, and `--pin` refuses one), 1280×800 at dpr 2
 (4.096 Mpx), 240 frames or more, `raf-delta`,
 exposure pinned — a vantage whose quarter medians straddle its two readback
 classes settles with a longer dwell rather than with another arm. Every row records the wall p50 / p90, the catalogue record
-count it priced, and, on WebGPU, the GPU-stream p50. The commit pair is on
+count it priced, and, on WebGPU, the GPU-stream p50 and the compute-stream
+p50 beside it. The commit pair is on
 the run, not the row. The per-pass differential is attribution, run when a row
 moves or when the PR touches a pass directly; it explains a mark and never
 fails one.
 
-**The GPU-stream p50 is the only number that gates.** It is the one
+**The GPU-stream p50 gates the frame, and the compute-stream p50 gates
+the compute passes — nothing else marks.** The GPU stream is the one
 continuous whole-frame reading the pin holds — the middle half of a canon
-row spans 0.03–0.36 ms. Wall time is quantised to the display's refresh
+row spans 0.03–0.36 ms — and it is the render passes alone: three pools
+compute timestamps separately, so a WebGPU context prints a second row,
+`<scenario>|webgpu|compute`, banded on its own pinned value with the same
+floor and ceiling and accepted under its own key
+(`scripts/perf/pins/README.md` § The compute row). The two are never
+summed, and a compute regression marks whatever the frame row says — but
+that floor is inherited from a whole-frame reading and runs 40–84 % of the
+compute values it bands, so the row catches a dispatch that adds a quarter
+of a millisecond and not the compaction getting half again as dear. Wall time is quantised to the display's refresh
 interval, so every canon row's wall p50 reads 16.7–17.5 ms with a
 middle-half spread of a whole interval, and its median turns on whether
 50.1 % or 49.9 % of the frames made the deadline: wall is recorded, never
@@ -287,11 +297,11 @@ moved in between:
   per-frame code at all, for ~1,600 insertions of main's own render-path
   work (stellata-8cg.49.24).
 
-**What a mark means.** A row is `✗` when its GPU-stream p50 moves past the
-pair's two-sigma band *and* past `max(0.25 ms, 1 %)` of the pinned value, or
-when it crosses the ceiling — 33.4 ms of GPU-stream p50 at any canon
-vantage, two 60 Hz intervals of hardware time — whatever the band says
-and whether or not the vantage is gated. mw50 at 31.936 is the nearest
+**What a mark means.** A row is `✗` when its GPU-stream p50 — or, on a
+compute row, its compute-stream p50 — moves past the pair's two-sigma band
+*and* past `max(0.25 ms, 1 %)` of the pinned value, or when it crosses the
+ceiling — 33.4 ms at any canon vantage, two 60 Hz intervals of hardware
+time — whatever the band says and whether or not the vantage is gated. mw50 at 31.936 is the nearest
 row today, 1.46 ms under. `✓` is cheaper, `~` is not resolved — not "no
 change". The `floor` column beside `delta` — how far the 10th-percentile
 frame moved — never marks; it says whether a `✗` lifted every frame or

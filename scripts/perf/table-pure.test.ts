@@ -131,6 +131,14 @@ describe('formatRoundTripLine', () => {
   it('omits the GPU clock where either dwell lacks a stream', () => {
     expect(formatRoundTripLine('idle', record(20, null), record(20, 17))).not.toContain('gpu p50');
   });
+
+  it('reads the compute stream as a third ratio where both dwells carry one, and omits it otherwise', () => {
+    const withCompute = (p50: number, compute: number): DwellRecord =>
+      ({ ...record(p50, 17), computeMs: [compute], computeStats: { ...dwell, p50: compute } });
+    expect(formatRoundTripLine('idle', withCompute(20, 1.4), withCompute(20, 1.75)))
+      .toContain('compute p50 1.4 → 1.75 (×1.250)');
+    expect(formatRoundTripLine('idle', record(20, 17), withCompute(20, 1.4))).not.toContain('compute p50');
+  });
 });
 
 describe('formatSweepTable', () => {
