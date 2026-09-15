@@ -70,7 +70,7 @@
   --readout-item: 11rem;
 
   --hero-min: clamp(30rem, 82svh, 48rem);
-  --hero-fade: 38%;
+  --hero-fade: 30%;
   --notfound-min: min(62svh, 35rem);
   --holder-min: clamp(11rem, 24vw, 17rem);
 
