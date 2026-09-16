@@ -133,7 +133,6 @@ export function planColumn(plan: MarchPlan, av: StepAv): number {
   return relativeLuminance(total);
 }
 
-/** Measured column one component accumulates over its own march. */
 export function planMeasuredColumn(
   plan: MarchPlan,
   name: MilkywayComponent['name'],

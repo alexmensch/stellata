@@ -29,11 +29,14 @@ will not fit a uint8 table; the star vertex shader divides its sample by
 well — the smallest component anywhere in the table is 0.189 (red end),
 so uint8 costs at most 0.91%.
 
-Three consumers reach past the table into the pure module:
-`scripts/catalog/record/catalog-pure.ts` for the Ballesteros inverse at build
-time, and both volumetric layers for their population tints
-(`src/client/milkyway/calibration/README.md` § Population colours) —
-which is why the chain lives there and not beside the CLI. A layer's
+Four consumers reach past the table into the pure module:
+`scripts/catalog/spectral/physical-radius.ts` for the Ballesteros inverse at
+build time, and — for their population tints
+(`src/client/milkyway/calibration/README.md` § Population colours) — the
+band's column integrand, the Local Group emission block, and the
+population constants the two layers share in
+`src/client/hdr/emission/population-colour-pure.ts`. Which is why the
+chain lives there and not beside the CLI. A layer's
 component hue and a single star's are then the same function of B–V,
 differing only in that the layer takes it unquantised.
 
@@ -50,7 +53,7 @@ so the two routes cannot silently diverge. The chain's own behaviour
 `BALLESTEROS_DISC_K2` are exported from `blackbody-lut-pure.ts` and are
 the single definition. Two of the three implementations import them
 (the functions here, and the TSL graph in
-`src/client/webgpu/star/star-glow-tsl.ts`); GLSL cannot, so
+`src/client/webgpu/star/star-vertex-tsl.ts`); GLSL cannot, so
 `star.vert.glsl` carries literals and
 `ballesteros-glsl-drift.test.ts` pins each one at its position in the
 expression against the exported constant, plus an inline snapshot of the
