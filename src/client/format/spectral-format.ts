@@ -11,9 +11,9 @@ export interface SpectralDisplay {
 }
 
 // spectClass byte → colour word (indices per spectral-classify
-// spectClassIndex:
-// O B A F G K M). Index 7 (carbon / S / Wolf-Rayet bucket) and 8 (unknown)
-// are handled as special cases in descriptorFor.
+// spectClassIndex: O B A F G K M). Index 7 (carbon / S / Wolf-Rayet
+// bucket) branches in descriptorFor; index 8 (unknown) falls off the end
+// of this array, so the descriptor drops its colour word.
 const COLOUR_BY_CLASS = [
   'blue',
   'blue-white',
