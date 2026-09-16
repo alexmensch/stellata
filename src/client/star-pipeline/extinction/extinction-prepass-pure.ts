@@ -47,9 +47,7 @@ export function packPositionsRgba(
     new Float32Array(AV_TEX_WIDTH * avTexHeight(count) * 4), positions, count);
 }
 
-/** True when the camera has moved beyond epsilon from the last-computed
- *  position. An Infinity component (the first-frame sentinel) always
- *  returns true. */
+/** An Infinity component (the first-frame sentinel) always returns true. */
 export function movedBeyondEpsilon(
   lastX: number, lastY: number, lastZ: number,
   x: number, y: number, z: number,

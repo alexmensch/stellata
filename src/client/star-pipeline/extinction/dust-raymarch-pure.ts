@@ -57,7 +57,6 @@ export function dustRaymarchAv(
   return accumDensity * stepPc * p.avPerDensityPc;
 }
 
-/** Colour excess E(B-V) from a V-band column at the global R_V. */
 export function ebvFromAv(av: number, rV: number = R_V): number {
   return av / rV;
 }

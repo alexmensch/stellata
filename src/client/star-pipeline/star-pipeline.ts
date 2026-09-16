@@ -98,12 +98,11 @@ export interface StarPipelineOptions {
   /** Per-star log10(physicalRadius_solar). Decoded shader-side via
    *  `pow(10, iLogRadius)` and multiplied by `uRSunPc` to recover parsecs. */
   logRadii: Float32Array;
-  /** Per-star luminosity class as Float32 (255 = unknown, preserved
-   *  through the conversion and handled inside the shader). */
+  /** 255 = unknown, preserved through the conversion and handled inside the
+   *  shader. */
   lumClassF32: Float32Array;
-  /** Per-star distance from Sol in pc. Replaces the shader's old
-   *  `length(iPosition)` derivation, which broke when iPosition shifted
-   *  to local-frame after the floating-origin recentre. */
+  /** Parsecs. Not derivable shader-side as `length(iPosition)`: iPosition is
+   *  local-frame once the floating origin recentres. */
   distSol: Float32Array;
   /** Per-star best Apsis Teff (K). 0 = no Apsis solution; gates the
    *  shader's Apsis-direct routing tier (`iTeffApsis > 0`). Built from
@@ -125,17 +124,17 @@ export interface StarPipelineOptions {
    *  dip when one star transits the other from the camera viewpoint.
    *  Written by `EclipsePhotometryField`. Must outlive the pipeline. */
   eclipseDim: Float32Array;
-  /** Per-instance pulsation-suppress flag. 1.0 zeros the GCVS-amplitude
-   *  radial pulsation in the vertex shader. Built once at catalog-load
-   *  from `varType` alone (binary-independent); not rewritten per-frame.
+  /** 1.0 zeros the GCVS-amplitude radial pulsation in the vertex shader.
+   *  Built once at catalog-load from `varType` alone (binary-independent);
+   *  not rewritten per-frame.
    *  See src/client/binaries/eclipse/README.md § Pulsation gate for eclipsing
    *  binaries. */
   suppressPulsation: Float32Array;
   vertexShader: string;
   fragmentShader: string;
-  /** Shared uniforms map. Each pass spreads it with its own
-   *  `uRenderMode`; the value-object identities are preserved so a
-   *  single uniform write propagates to disc + glow + core-mask. */
+  /** Each pass spreads it with its own `uRenderMode`; the value-object
+   *  identities are preserved so a single uniform write propagates to
+   *  disc + glow + core-mask. */
   sharedUniforms: Record<string, THREE.IUniform>;
   /** Bounding-sphere radius (pc) covering every star in the catalog —
    *  feeds three.js frustum culling (we disable it on the meshes too,

@@ -41,11 +41,8 @@ interface MirrorAttr {
 
 /**
  * A MIRROR_CAPACITY-slot copy of the star geometry, re-filled from the
- * live source arrays each frame. Both backends share it: the slot layout
- * is a property of the geometry being mirrored, not of the shader
- * language, and a copy that resolved a differently-named or
- * differently-packed component on one backend would read as a silent
- * brightness bug.
+ * live source arrays each frame. Shared by both backends deliberately —
+ * README.md carries why a per-backend copy reads as a brightness bug.
  */
 export class MirrorSlots {
   readonly geometry: THREE.InstancedBufferGeometry;

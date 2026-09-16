@@ -46,11 +46,9 @@ export function pulsationParamsForType(varType: number): PulsationParams {
   return PULSATION_PARAMS_BY_TYPE[varType] ?? PULSATION_PARAMS_DEFAULT;
 }
 
-/** Per-instance pulsation params from the catalog varType column,
- *  following the buildPulsationSuppressMask pattern. Non-pulsators take
- *  the default row; the values are inert on non-variables because the
- *  shader / renderedSizePx gate radius modulation on period > 0 &&
- *  amplitude > 0 && !suppressed. */
+/** Non-pulsators take the default row; the values are inert on
+ *  non-variables because the shader / renderedSizePx gate radius modulation
+ *  on period > 0 && amplitude > 0 && !suppressed. */
 export function buildPulsationParams(varType: Uint8Array): {
   rho: Float32Array;
   colorSwing: Float32Array;

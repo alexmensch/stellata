@@ -16,7 +16,6 @@ export type StarPass =
  *  one — it draws a subset of the disc pass's stars. */
 export type ColourPass = typeof STAR_PASS_GLOW | typeof STAR_PASS_DISC;
 
-/** Which colour pass draws a star with these size terms. */
 export function colourPassFor(appSizePx: number, physSizePx: number): ColourPass {
   return isDiscDominant(appSizePx, physSizePx) ? STAR_PASS_DISC : STAR_PASS_GLOW;
 }

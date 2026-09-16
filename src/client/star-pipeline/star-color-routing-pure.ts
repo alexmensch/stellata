@@ -7,8 +7,7 @@
  *  positive when present, so the shader can gate with `iTeffApsis > 0.0`. */
 export const NO_APSIS_TEFF = 0;
 
-/** Best Apsis Teff for the shader-side per-instance attribute. Picks
- *  gspphot over gspspec when both are present; returns NO_APSIS_TEFF
+/** Picks gspphot over gspspec when both are present; returns NO_APSIS_TEFF
  *  when neither is available. Bridges the v6 catalog fields to the
  *  single-float `iTeffApsis` attribute the vertex shader reads. */
 export function bestApsisTeff(

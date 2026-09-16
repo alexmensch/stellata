@@ -31,7 +31,7 @@ export interface SharedUniformsOptions {
 export type SharedUniforms = ReturnType<typeof buildSharedUniforms>;
 
 /**
- * Build the shared uniform map. All three star passes
+ * All three star passes
  * point at the same value objects, so any filter / theme / resize write
  * propagates to every pass without duplicate bookkeeping; `uRenderMode`
  * is the only divergent uniform and `StarPipeline` binds it per
