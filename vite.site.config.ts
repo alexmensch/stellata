@@ -6,13 +6,7 @@ import { publishBuildEnv } from './vite.env.ts';
 
 publishBuildEnv(import.meta.dirname);
 
-/**
- * Each page's markdown rendition, emitted beside the document it renders —
- * `src/site/index.html` → `dist/index.md`, served at `/index.md`. Derived
- * from the authored page rather than authored beside it, so the two cannot
- * come to state different things. `src/site/README.md` § The markdown
- * rendition.
- */
+/** `src/site/README.md` § The markdown rendition. */
 function markdownRenditions(pages: Record<string, string>): Plugin {
   return {
     name: 'stellata:markdown-renditions',
@@ -35,22 +29,17 @@ export default defineConfig(() => ({
   base: '/',
   plugins: [markdownRenditions({ 'index.md': HOME })],
   root: resolve(import.meta.dirname, 'src/site'),
-  // The app pass already copied public/ into dist/. Copying it twice
-  // would only re-walk the built catalogue chunks.
+  // Both of these belong to the app pass, which runs first. Reversing
+  // either wipes dist/ — src/site/README.md § The build seam.
   publicDir: false,
   build: {
     outDir: resolve(import.meta.dirname, 'dist'),
-    // The app pass owns emptying dist/, and it runs first.
     emptyOutDir: false,
     target: 'es2020',
     rollupOptions: {
-      // One key per page. The key is cosmetic; the emitted path is the
-      // input's own path relative to `root`, which is what puts the
-      // homepage at dist/index.html and so serves it at /.
+      // src/site/README.md § A page's path is its folder.
       input: {
         home: HOME,
-        // Emitted at dist/404.html, which is the filename Cloudflare's
-        // not_found_handling = "404-page" looks for.
         notFound: resolve(import.meta.dirname, 'src/site/404.html'),
       },
     },
