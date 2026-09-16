@@ -430,13 +430,15 @@ is the whole buffer. The star tables carry the default usage and upload on
 version alone; a per-frame-rewritten attribute elsewhere that keeps the
 hint pays its full byte count every rendered frame.
 
-**The hint is free only where the writer flags the attribute in the same
-render call that draws it** — the upload was owed anyway, so the usage
-changes nothing. Every carrier reachable on this boot meets that test: the
-probe markers and trails and the star mirror's slots each set `needsUpdate`
-from the update that also decides their visibility. The glare billboard's
-packed geometry was the one that did not (`solar-system/README.md` § The
-glare packs).
+**The hint is free only where the writer flags the attribute in EVERY
+render call that draws it** — then the upload was owed anyway. One geometry
+drawn by N meshes is N render calls against one flag, so the draw count is
+the half that bites. The probe markers and trails pass on both: each flags
+from the update that settles its visibility, and only one of the main /
+local-pass pair is ever visible. The glare billboard dropped the hint
+(`solar-system/README.md` § The glare packs); the star mirror's slots keep
+it on a size ceiling, not on the rule
+(`../star-pipeline/local-pass/README.md` § Mirror draw).
 
 ## Timestamps
 
