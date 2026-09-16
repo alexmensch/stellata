@@ -9,6 +9,44 @@ import { resolve } from 'node:path';
 import { publishBuildEnv } from '../vite.env';
 import { devRoute, documentRoutingInDev } from '../vite.site-dev';
 
+const ROOT = resolve(__dirname, '..');
+
+interface Server {
+  handler: (req: never, res: never, next: never) => unknown;
+  watched: string[];
+  change: (file: string) => void;
+  sent: { type: string; path?: string }[];
+}
+
+function start(): Server {
+  // `vite.config.ts` does this at config load, which is what puts the
+  // figures the rendition resolves into the dev server's environment.
+  publishBuildEnv(ROOT);
+  const registered: ((req: never, res: never, next: never) => unknown)[] = [];
+  const watched: string[] = [];
+  const changed: ((file: string) => void)[] = [];
+  const sent: { type: string; path?: string }[] = [];
+  const plugin = documentRoutingInDev(ROOT);
+  const post = plugin.configureServer!({
+    middlewares: { use: (fn: never) => registered.push(fn) },
+    transformIndexHtml: async (_base: string, html: string) => html,
+    watcher: {
+      add: (path: string) => watched.push(path),
+      on: (event: string, fn: (file: string) => void) => {
+        if (event === 'change') changed.push(fn);
+      },
+    },
+    hot: { send: (payload: { type: string }) => sent.push(payload) },
+  } as never) as () => void;
+  post();
+  return {
+    handler: registered[0],
+    watched,
+    change: (file) => changed.forEach((fn) => fn(file)),
+    sent,
+  };
+}
+
 describe('the dev server answers the deploy’s routing table', () => {
   it('301s both legacy share transports onto the canonical form', () => {
     expect(devRoute('/v/AQAA/', '')).toEqual({ kind: 'redirect', to: '/app/v/AQAA/' });
@@ -55,21 +93,7 @@ describe('the middleware answers whatever the client accepts', () => {
     fellThrough: boolean;
   }
 
-  const ROOT = resolve(__dirname, '..');
-
-  const handler = (() => {
-    // `vite.config.ts` does this at config load, which is what puts the
-    // figures the rendition resolves into the dev server's environment.
-    publishBuildEnv(ROOT);
-    const registered: ((req: never, res: never, next: never) => unknown)[] = [];
-    const plugin = documentRoutingInDev(ROOT);
-    const post = plugin.configureServer!({
-      middlewares: { use: (fn: never) => registered.push(fn) },
-      transformIndexHtml: async (_base: string, html: string) => html,
-    } as never) as () => void;
-    post();
-    return registered[0];
-  })();
+  const { handler } = start();
 
   async function fetchPath(path: string, accept?: string): Promise<Answer> {
     const answer: Answer = { status: 200, headers: {}, body: '', fellThrough: false };
@@ -148,5 +172,29 @@ describe('the middleware answers whatever the client accepts', () => {
     const answer = await fetchPath('/v/AQAA/', 'text/markdown');
     expect(answer.status).toBe(301);
     expect(answer.headers.location).toBe('/app/v/AQAA/');
+  });
+});
+
+describe('an edit to a page reloads the browser', () => {
+  it('watches the folder the pages are in', () => {
+    expect(start().watched).toContain(resolve(ROOT, 'src/site'));
+  });
+
+  it('reloads on a page edit', () => {
+    const server = start();
+    server.change(resolve(ROOT, 'src/site/index.html'));
+    expect(server.sent).toEqual([{ type: 'full-reload', path: '*' }]);
+  });
+
+  it('leaves the stylesheet to Vite’s own css update', () => {
+    const server = start();
+    server.change(resolve(ROOT, 'src/site/site.css'));
+    expect(server.sent).toEqual([]);
+  });
+
+  it('ignores a document elsewhere in the tree', () => {
+    const server = start();
+    server.change(resolve(ROOT, 'src/client/app/index.html'));
+    expect(server.sent).toEqual([]);
   });
 });
