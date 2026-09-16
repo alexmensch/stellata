@@ -218,6 +218,25 @@ describe('pinFromRuns — one run', () => {
     expect(refusals).toEqual([`sol|webgpu: ${RUN}: taken at position 1; the pin run takes sol|webgpu at 2`]);
   });
 
+  // A dwell under --force-recompute marches every star every frame, which lands
+  // on the compute row. Pinned, that lever's cost would ride in every later
+  // run's verdict — the ratchet RELEASING.md § Perf pin exists to stop.
+  it('refuses a run taken under a setup lever, so the lever cannot be written into the pin', () => {
+    const forced = scenario('sol', 'webgpu', dwell(stats(25.2), stats(21.8)), {
+      params: { forceRecompute: true },
+    });
+    const { pin, refusals } = pinFromRuns([runOf(file([forced]))], SOURCE);
+    expect(pin).toBeNull();
+    expect(refusals[0]).toContain('extinction recompute gated vs forced');
+  });
+
+  it('pins a run that recorded the lever off, which every dwell now stamps', () => {
+    const off = scenario('sol', 'webgpu', dwell(stats(25.2), stats(21.8)), {
+      params: { forceRecompute: false, readbackEvery: 4 },
+    });
+    expect(pinFromRuns([runOf(file([off]))], SOURCE).refusals).toEqual([]);
+  });
+
   it('pins a row whose wall clock alternates while its GPU stream holds still', () => {
     const mw50 = scenario('mw50', 'webgpu', dwell(alternatingWall(), stats(31.84)));
     const { pin, refusals } = pinFromRuns([runOf(file([mw50]))], SOURCE);
@@ -614,6 +633,19 @@ describe('compareToPin', () => {
     expect(diff.refusals[0].reason).toContain('load-state transition');
     expect(diff.unmeasured).toEqual(['mw120|webgpu', 'sol|webgl2']);
     expect(compareToPin(pinOf([SOL_GPU]), file([resized])).refusals[0].reason).toContain('Mpx');
+  });
+
+  // The pin holds no params of its own and is taken with every lever at its
+  // default, so this is the pair that would otherwise certify a frame carrying
+  // a kernel the pin never measured.
+  it('refuses a row taken under a setup lever the pin was not taken under', () => {
+    const forced = scenario('sol', 'webgpu', dwell(stats(25.2), stats(21.8)), {
+      params: { forceRecompute: true },
+    });
+    const diff = compareToPin(pinOf(), file([forced]));
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('extinction recompute gated vs forced');
+    expect(pinDiffFails(diff)).toBe(true);
   });
 
   // Tier 1 visits two of the pin's ten contexts and answers for those two.

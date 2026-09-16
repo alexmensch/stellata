@@ -54,6 +54,9 @@ export interface DwellPlan {
   readonly cadenceMs: number | null;
   /** Rendered frames between statistic readbacks, pinned for the dwell. */
   readonly readbackEvery: number;
+  /** Refill the per-star A_V cache every timed frame
+   *  (`src/client/debug/frame-cost/passes/README.md` § The extinction rows). */
+  readonly forceRecompute: boolean;
 }
 
 // The GPU rows pass no cadence: a resolved timestamp span is not wall time,
@@ -94,6 +97,7 @@ export async function measureDwell(page: Page, plan: DwellPlan): Promise<Measure
     samplesModuleUrl: GPU_SAMPLES_MODULE_URL,
     countPasses: plan.backend === 'webgpu',
     readbackEvery: plan.readbackEvery,
+    forceRecompute: plan.forceRecompute,
   });
   const record = toRecord(raw, plan.cadenceMs);
   if (record === null) {

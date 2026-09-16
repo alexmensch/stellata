@@ -13,7 +13,8 @@ export const EMPTY_PASS_KEY = 'emptyPass';
 export const PRICED_PASS_KEYS = [
   'localDepth', 'mwBand', 'lgEmission', 'cloudAbsorption', 'hdrChain',
   'tonemapOp', 'statisticWrites', 'summation', 'summationTaps', 'mrtAttachments',
-  'reduction', 'coreMask', 'planetDepthStamp', 'extinctionPrepass', EMPTY_PASS_KEY,
+  'reduction', 'coreMask', 'planetDepthStamp', 'extinctionPrepass',
+  'extinctionRecompute', EMPTY_PASS_KEY,
 ] as const;
 
 export type PricedPassKey = (typeof PRICED_PASS_KEYS)[number];

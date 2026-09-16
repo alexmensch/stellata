@@ -489,6 +489,7 @@ export class Stellata implements FrameAnchor {
   // seam. Constructed lazily on the first attachDust so a dust-less
   // session pays nothing; null again after attachDust(null).
   private extinctionPrepass: ExtinctionPrepassSeam | null = null;
+  private extinctionRecomputeForced = false;
   private readonly pickSizeScratch: starPhysics.RenderedSizeComponents =
     { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
   // Separate from pickSizeScratch: the debug panel reads every frame and
@@ -2018,6 +2019,19 @@ export class Stellata implements FrameAnchor {
     return this.extinctionPrepass?.isActive() ?? false;
   }
 
+  /** Frame-cost lever: invalidate the A_V cache before every update, so the
+   *  recompute the camera-displacement gate skips at a parked camera runs on
+   *  every frame. Every canon vantage is camera-idle, so the kernel is
+   *  otherwise unpriced — `debug/frame-cost/passes/README.md` § The
+   *  extinction rows. Never leave it on outside a measurement dwell. */
+  setExtinctionRecomputeForced(on: boolean) {
+    this.extinctionRecomputeForced = on;
+  }
+
+  isExtinctionRecomputeForced(): boolean {
+    return this.extinctionRecomputeForced;
+  }
+
   /** A pointer event says a pick is coming: stage the per-star A_V table
    *  the star pick gates on, so `extinctionAvMagFor` is exact by the time
    *  the dwell fires (`webgpu/extinction/README.md` § Cold reads). */
@@ -2688,6 +2702,7 @@ export class Stellata implements FrameAnchor {
       // Absolute camera position in JS float64 — same frame convention as
       // the shader-side iPosition + uWorldOffset reconstruction.
       perfMark('extinction.prepass');
+      if (this.extinctionRecomputeForced) this.extinctionPrepass.markDirty();
       this.extinctionPrepass.update(
         this.camera.position.x + this.worldOffset.x,
         this.camera.position.y + this.worldOffset.y,
