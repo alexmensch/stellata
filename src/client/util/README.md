@@ -114,9 +114,14 @@ build scripts, tests, and shader uniforms.
 - `orbit-line.ts` (+ test) — shared bits of the line overlays
   (`solar-system/ephemerides/orbit-rings-layer.ts`, `binaries/orbit-paths/binary-orbit-path-layer.ts`,
   `solar-system/probes/probe-path-layer.ts`,
-  `constellation-figure/constellation-figure-layer.ts`): the alpha-blended
+  `constellation-figure/constellation-figure-layer.ts`,
+  `constellation-boundaries/constellation-boundary-layer.ts`,
+  `galactic/galactic-disc.ts`, `galactic/coord-spheres/coord-sphere.ts`,
+  `local-group/local-group.ts`): the alpha-blended
   primitives `makeOrbitLineLoop` / `makeOrbitLine` (open polyline, for a
-  traversed path with two ends) / `makeOrbitLineSegments` / `mirrorOrbitLine`
+  traversed path with two ends) / `makeOrbitLineSegments` /
+  `makeOrbitRingSegments` (many closed rings of one vertex count, indexed
+  into a single draw) / `mirrorOrbitLine`
   — the **geometry** half only; the materials they take come from
   `../chrome-lines/README.md`, and `ORBIT_LINE_OPACITY` / `ORBIT_LINE_COLOUR`
   are the alpha and the stroke colour every consumer passes it. The colour is
@@ -137,8 +142,18 @@ build scripts, tests, and shader uniforms.
   layers use for their pixel-size visibility gate, plus the shared
   `FEATURE_LEGIBILITY_MIN_PX` floor + `isFeatureLegible` predicate that both
   the orbit-ring gate and the boundary-shell silhouette labels
-  (`fresnel-shell/`) ride so their legibility cutoff can't drift. Also the
-  anchored-line
+  (`fresnel-shell/`) ride so their legibility cutoff can't drift.
+  **An index entry's width turns on the vertices it addresses, never on
+  how many entries there are** — `lineIndexFor` is the single place that
+  rule lives, because both indexed primitives routinely build more than
+  65,535 entries over a buffer a 16-bit entry still indexes, and reading
+  the ceiling off the entry count widens it for nothing (the Local Group
+  wireframe: 23,616 vertices, 47,232 entries, 16-bit). `writeRingVerts`
+  is the ellipse sweep those buffers are filled by — a `RingSpec` names
+  the two axes it sweeps and displaces the ring along the third, and a
+  `place` callback carries each vertex into whatever frame the buffer
+  holds. Shared by the galactic disc and the Local Group wireframe so the
+  two cannot drift on the axis mapping. Also the anchored-line
   precision pair `bakeAnchoredLineVerts` / `trackAnchoredLine`: a loop
   whose centre rides far from the floating origin (a host star's ring
   under planet focus) keeps a float64 centre-relative master array and
