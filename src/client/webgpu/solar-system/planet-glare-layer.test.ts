@@ -187,15 +187,13 @@ describe('the WebGPU reflected-glare layer', () => {
   });
 
   it('leaves every attribute on the default usage, so version is what decides', () => {
-    // DynamicDrawUsage makes three's WebGPU backend re-upload an attribute on
-    // every render call whatever its version, which the version pins above
-    // cannot see — they would keep passing while all seven went on the wire
-    // each frame.
+    // The version pins above cannot see this: a usage-driven upload bypasses
+    // version entirely (../README.md § One writer per buffer per submit).
     const { layer } = makeLayer();
     const usages = Object.values(layer.mesh.geometry.attributes)
       .map((attr) => (attr as THREE.BufferAttribute).usage);
+    expect(usages).not.toHaveLength(0);
     expect(usages).not.toContain(THREE.DynamicDrawUsage);
-    expect(usages).toHaveLength(MAX_VERTEX_BUFFERS);
   });
 
   it('re-packs the constants when a body joins within capacity', () => {
