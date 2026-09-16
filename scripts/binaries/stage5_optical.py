@@ -49,18 +49,7 @@ OPTICAL_VIA_VALUES: tuple[str, ...] = (
 )
 
 # Orbit-via values that count as "orbit on file" for the orbit-override
-# tier. Fires for pairs Stage 4 selected real orbital elements for — an
-# empirical orbit fit is strong evidence of physical association and
-# wins over every gate below, including the separation limit. A close
-# visual pair's Gaia parallaxes are routinely corrupted by blending, so
-# a few-pc parallax split does NOT beat a tracked relative orbit; and
-# NSS orbits that could leak onto a genuinely wide (unbound) companion
-# are already blocked upstream by Stage 4's separation-sanity gate. So
-# the only pairs the separation limit needs to catch — wide line-of-
-# sight optical doubles like Pollux F — carry no orbit and fall through
-# to it. (Sirius A-B: grade-2 ORB6 orbit past a 9.9-mag WD gap; η Cas AB
-# / 61 Cyg AB: orbits whose orbital proper-motion split would otherwise
-# trip the velocity gate.)
+# tier — every ORBIT_VIA_VALUES member but "none".
 ORBIT_VIA_ON_FILE: frozenset[str] = frozenset({
     "gaia_nss", "orb6", "orb6_spectroscopic", "msc",
 })
@@ -74,15 +63,9 @@ ORBIT_VIA_ON_FILE: frozenset[str] = frozenset({
 WDS_NOTES_PHYSICAL_CHARS: frozenset[str] = frozenset({"T", "V", "Z"})
 WDS_NOTES_OPTICAL_CHARS: frozenset[str] = frozenset({"S", "U", "X", "Y"})
 
-# Separation-limit gate. Bound stellar pairs can't exceed the Galactic
-# tidal-disruption limit for field binaries — ~1 pc (~2×10⁵ AU) — so two
-# components more than this apart in 3D are a line-of-sight optical
-# double, not a bound system. The gate compares the pair's OWN two
-# components against each other (each at its own parallax, or the system
-# anchor when a component has none), so a real inner binary of an
-# optically-projected member — both components at the SAME true distance
-# — is kept, not split against the unrelated system anchor. Controls sit
-# far inside: Mizar+Alcor ~0.2 pc, ε Lyr ~0.3 pc, α Cen ~0.06 pc.
+# Galactic tidal-disruption limit for field binaries, ~2×10⁵ AU.
+# Controls sit far inside it: Mizar+Alcor ~0.2 pc, ε Lyr ~0.3 pc,
+# α Cen ~0.06 pc.
 SEPARATION_LIMIT_PC = 1.0
 AU_PER_PC = 206_264.806
 
@@ -102,15 +85,9 @@ RADIAL_SEPARATION_SIGMA = 3.0
 # than dropped on a noisy distance.
 SEPARATION_POE_MIN = 5.0
 
-# Both-Gaia gate (tier 4). A 3σ parallax disagreement on the combined
-# error rejects — but, mirroring the tier-5 asymmetric gate, only when
-# the implied 3D separation also exceeds the physical bound-pair limit;
-# a close visual pair's blended Gaia parallaxes (routine, per the
-# orbit-tier note) must not split a within-limit pair on a parallax
-# nuance. A within-limit disagreement, and an agreement, both fall to
-# the escape-velocity sub-gate, which replaces the historic 5 mas/yr
-# per-axis PM cut that mistook a nearby bound pair's real orbital
-# proper-motion split for optical contamination.
+# Both-Gaia gate (tier 4) — parallax disagreement in σ of the combined
+# error. A disagreement rejects only alongside an over-limit 3D
+# separation; everything else falls to the escape-velocity sub-gate.
 BOTH_GAIA_PLX_GATE_SIGMA = 3.0
 
 # Asymmetric-Gaia gate (tier 5). When only one component has a Gaia 5p
@@ -183,13 +160,10 @@ KM_S_PER_AU_YR = 4.740470446
 # v_escape = √2 × v_circular ⇒ v_escape(M, r) = this × √(2·M / r_AU).
 _CIRCULAR_KM_S_1AU_1MSUN = 2.0 * math.pi * KM_S_PER_AU_YR
 
-# WDS epoch-baseline common-proper-motion test (tier 6a, ahead of the
-# mag heuristic). A bound companion shares the primary's space motion,
-# so its relative sep/PA is near-stable across the WDS baseline; a
-# background star is sky-static while the primary's PM slides it away.
-# Only engages with real discriminating power (predicted slip ≥ 10″),
-# so low-PM primaries fall through unchanged and the ~10k legitimate
-# faint wide companions with inherited/synthesized distances keep.
+# Tier 6a engages only with real discriminating power — a predicted
+# slip this large. Below it, low-PM primaries fall through unchanged
+# and the ~10k legitimate faint wide companions with inherited /
+# synthesized distances keep.
 CPM_SLIP_MIN_ARCSEC = 10.0
 # observed_drift ≥ this fraction of the predicted slip ⇒ optical.
 CPM_DRIFT_REJECT_FRACTION = 0.5
@@ -606,12 +580,13 @@ def classify_pair_optical(
 
     1. WDS Notes flag chars — T/V/Z keep (physical), S/U/X/Y reject
        (optical), other chars silent.
-    2. Orbit on file — Stage 4 selected real orbital elements (Gaia NSS
-       or any ORB6 grade). An empirical orbit fit is the strongest
-       evidence of physical association and wins over every gate below,
-       including the separation limit (a close pair's blended Gaia
-       parallaxes don't beat a tracked relative orbit; NSS leaks onto
-       wide companions are already blocked upstream by Stage 4).
+    2. Orbit on file — Stage 4 selected real orbital elements (Gaia NSS,
+       any ORB6 grade, or a Pulkovo MSC compiled orbit). An empirical
+       orbit fit is the strongest evidence of physical association and
+       wins over every gate below, including the separation limit (a
+       close pair's blended Gaia parallaxes don't beat a tracked
+       relative orbit; NSS leaks onto wide companions are already
+       blocked upstream by Stage 4).
     3. Separation limit — reject when the pair's two components sit beyond
        the physical bound-pair limit (``SEPARATION_LIMIT_PC``) apart in 3D
        (each at its own parallax, or the system anchor when it has none).
@@ -652,14 +627,12 @@ def classify_pair_optical(
     if notes_chars & WDS_NOTES_PHYSICAL_CHARS:
         return OpticalClassification(True, "wds_notes_kept")
 
-    # Tier 2 — orbit on file. An empirical orbit is the strongest
-    # physical evidence and wins over the separation / σ / velocity gates.
+    # Tier 2 — orbit on file.
     if orbit_via in ORBIT_VIA_ON_FILE:
         return OpticalClassification(True, "orbit_kept")
 
-    # Tier 3 — separation limit. The pair's two components more than the
-    # physical bound-pair limit apart in 3D are a line-of-sight optical
-    # double (Pollux F). Silent without any usable parallax on both sides.
+    # Tier 3 — separation limit. Silent without a usable parallax on
+    # both sides.
     if _pair_beyond_separation_limit(
         primary, secondary, system_parallax_anchor, pair.rho_last, indices,
     ):
@@ -699,18 +672,11 @@ def classify_pair_optical(
             if verdict is False:
                 return OpticalClassification(False, "asymm_rejected")
 
-    # Tier 6a — WDS epoch-baseline CPM test. Only for would-be tier-6
-    # pairs whose secondary carries no independent parallax (inherited
-    # from the system anchor or synthesized from an AT-HYG position
-    # match) — tiers 3-5 never cross-checked the two in 3D, and the mag
-    # gap can't tell a faint companion from a background star the
-    # primary's proper motion slid past. Low-PM primaries (predicted
-    # slip < CPM_SLIP_MIN_ARCSEC) fall through, protecting the wide-
-    # companion coverage the athyg_position route was added to render.
-    # A primary with no PM of its own (identity-less letters riding the
-    # Stage-6 system anchor) borrows the system PM anchor: the pair's
-    # membership claim places it at the anchor, so the anchor's motion
-    # is the slip a background secondary would show.
+    # Tier 6a — WDS epoch-baseline CPM test. A primary with no PM of its
+    # own (identity-less letters riding the Stage-6 system anchor)
+    # borrows the system PM anchor: the pair's membership claim places it
+    # at the anchor, so the anchor's motion is the slip a background
+    # secondary would show.
     if (
         secondary_astrometry is not None
         and secondary_astrometry.astrometry_via

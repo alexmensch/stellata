@@ -92,9 +92,10 @@ NSS_TI_DERIVED_SOLUTION_TYPES: frozenset[str] = frozenset({
 # NSS eclipsing solution types — inclination and arg_periastron stored
 # directly in the catalog columns (no TI). EclipsingSpectro adds mass
 # ratio from spectroscopy. No semi-major axis is recoverable from
-# eclipse photometry alone, so ``a_AU`` / ``Omega_rad`` are left None
-# and the downstream renderer is expected to fall back to conventional
-# defaults for these axes.
+# eclipse photometry alone, so ``a_AU`` leaves this stage None and
+# Stage 6's ``finalize_renderable_elements`` estimates it off Kepler's
+# third law; ``Omega_rad`` stays None, which the Tier-2 orbit walk
+# ignores.
 NSS_ECLIPSING_SOLUTION_TYPES: frozenset[str] = frozenset({
     "EclipsingBinary",
     "EclipsingSpectro",
