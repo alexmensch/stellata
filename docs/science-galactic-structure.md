@@ -531,11 +531,14 @@ judgement about which end, not a measurement. **stellata-ty4.8 argues a split
 rather than one verdict**, and the lever table below is what it turns at the
 corner.
 
-The same measurement prices the shipped per-star prepass in the same currency:
-18.6M fetches, scattered by construction, ≈**5.6 ms every frame the camera
-moves**. That is a cost `gpu.frame` cannot see at all today, because the WebGPU
-frame total resolves render passes only and the prepass is a compute dispatch —
-stellata-8cg.49.31.
+The same measurement puts the shipped per-star prepass in the same currency —
+18.6M fetches, scattered by construction — and inferring from the golden-angle
+row above gives ≈5.6 ms every frame the camera moves. The pass has since been
+measured on its own compute clock, and it is **worse than that inference:
+12.89 ms**, so catalogue order scatters harder than a golden angle does.
+Morton-ordering the dispatch takes it to 2.48 ms
+(`src/client/webgpu/extinction/README.md` § Dispatch order). The rate to price
+a scattered march against here is the floor, not the estimate.
 
 **The last row of the table below is unsound for this grid, and that is the
 larger finding.** Refilling a fraction of the cells per frame costs no accuracy
