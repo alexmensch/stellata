@@ -111,8 +111,11 @@ one rejects.
 **Sweep preconditions: the state a differential was SET UP in refuses the
 pair.** `--pre-disable`, `--no-park` and `--force-recompute` change what the
 frame contained before the roster was touched at all, and `--no-interleave`
-changes how every row is differenced; all four are recorded in `params` and
-compared there. `--force-recompute` is the one of them a **dwell** carries
+changes how every row is differenced — a non-interleaved sweep differences
+every row against the leading baseline alone rather than against the pair
+either side of it, so the two sides estimate the same cost with different
+estimators (`src/client/debug/frame-cost/README.md` § Reading a row). All
+four are recorded in `params` and compared there. `--force-recompute` is the one of them a **dwell** carries
 too — a dwell taken under it runs the extinction kernel on every frame — so
 that refusal is what stops such a run being read against the pin, and what
 stops one being written as the pin (`../pins/README.md` § Setup levers).

@@ -180,7 +180,7 @@ export function usage(): string {
 }
 
 /**
- * Which flags each mode actually reads. A flag the chosen mode ignores is an
+ * A flag the chosen mode ignores is an
  * error rather than a no-op: the in-app instrument refuses a pin it cannot
  * honour rather than switching clocks underneath the caller
  * (`src/client/debug/frame-cost/README.md` § Preconditions), and a table
