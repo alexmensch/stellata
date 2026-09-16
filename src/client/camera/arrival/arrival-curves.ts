@@ -135,8 +135,7 @@ function hybridInnerF(
   return Math.log(dTarget / d0) / logRatio;
 }
 
-/** Resolve the hybrid curve closure for a given seam_k and per-warp
- *  context.  Captures both at resolve time so the next warp picks up
+/** Captures `seamK` and `ctx` at resolve time so the next warp picks up
  *  the latest slider value without mutating an in-flight warp.
  *
  *  `ctx == null` (or `ctx.targetRadius == null`, or outbound) falls

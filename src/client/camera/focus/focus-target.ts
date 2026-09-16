@@ -58,7 +58,6 @@ export type HardKind = {
   [K in TargetKind]: (typeof KIND_TRAITS)[K]['hard'] extends true ? K : never;
 }[TargetKind];
 
-/** A Target statically known to be a hard kind. */
 export type HardTarget = Target & { readonly kind: HardKind };
 
 /** Hard-kind predicate over the declared traits — never spell the

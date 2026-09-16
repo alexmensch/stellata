@@ -63,12 +63,10 @@ export interface WarpControllerDeps {
   camera: THREE.PerspectiveCamera;
   controls: TrackballControls;
   observeControls: ObserveControls;
-  /** Per-kind focal-body hide (star: uHideFocusIdx; planet: the body
-   *  field's uHideIdx). The source body stays hidden across the
-   *  observe-launch reorient (it was hidden at observe entry), so the
-   *  controller only unhides on navigate-mode arrival and swaps the
-   *  hide to the destination on observe→observe arrival via
-   *  finishObserveAnchorSwap. */
+  /** The source body stays hidden across the observe-launch reorient (it
+   *  was hidden at observe entry), so the controller only unhides on
+   *  navigate-mode arrival and swaps the hide to the destination on
+   *  observe→observe arrival via finishObserveAnchorSwap. */
   setFocalBodyHidden: (target: Target | null) => void;
   bus: EventBus<StellataEventMap>;
   getCameraMode: () => CameraMode;
@@ -453,7 +451,6 @@ export class WarpController {
     }
     this.deps.controls.target.copy(B);
     this.state = null;
-    // Clear the vector slot (any kind) — the destination has been reached.
     this.deps.focus.clearVector();
     if (state.returnToObserve) {
       // observe→observe arrival (hard-kind destination by construction).
@@ -710,13 +707,9 @@ export class WarpController {
     // Post-arrival phase: slerp the quaternion from the fly-end
     // "looking at destination" orientation back to the warp's captured
     // starting orientation, AND for observe→observe arrivals lerp
-    // position from pEnd → B so the parallax view ends with the
-    // camera exactly at the destination star (rather than offset by
-    // endOffset, which would leave a hidden teleport for
-    // finishObserveAnchorSwap to absorb at finishWarp). The user sees the
-    // same celestial direction they had at warp start, now from the
-    // new vantage — foreground stars shift via parallax, distant Milky
-    // Way stays roughly fixed.
+    // position from pEnd → B so the phase ends with the camera exactly at
+    // the destination rather than offset by endOffset, which would leave a
+    // hidden teleport for finishObserveAnchorSwap to absorb at finishWarp.
     const postElapsed = flyElapsed - state.durationMs;
     if (postElapsed < state.postArrivalMs) {
       const out = this.tmpLocal;
@@ -727,23 +720,17 @@ export class WarpController {
         this.deps.camera.position.copy(state.pEnd);
         if (B) this.deps.camera.lookAt(B);
         state.flyEndQuaternion = this.deps.camera.quaternion.clone();
-        // observe→observe arrivals: pull the destination recentre
-        // forward from finishWarp to phase-3 start. The parallax slerp
-        // lasts OBSERVE_TRANSITION_MS during which the camera sits on
-        // top of the destination star in the source's local frame;
-        // with both camera and B at kpc-scale magnitudes,
-        // matrixWorldInverse * B loses float32 precision and the
-        // destination jitters as the quaternion rotates.
-        // After this recentre the destination is at local (0,0,0) and
-        // the camera lerps in from a small offset, so the projection
-        // chain stays clean for the entire phase 3. uHideFocusIdx still
-        // points at the source for the duration so the destination
-        // remains visible during the parallax slerp; finishObserveAnchorSwap
-        // at finishWarp re-points it to the destination on landing.
+        // observe→observe arrivals: pull the destination recentre forward
+        // from finishWarp to phase-3 start, or camera and B both sit at
+        // kpc-scale magnitudes in the source's local frame for the whole
+        // slerp and the destination jitters. uHideFocusIdx still points at
+        // the source for the duration so the destination stays visible
+        // through the parallax slerp; finishObserveAnchorSwap at finishWarp
+        // re-points it on landing.
         //
- // After this is just tryMidFlyRecentre invoked at a
-        // different time — the navigate-mode mid-Fly path uses the
-        // same dispatch. Skipped when the mid-Fly path already fired.
+        // This is tryMidFlyRecentre invoked at a different time — the
+        // navigate-mode mid-Fly path uses the same dispatch. Skipped when
+        // the mid-Fly path already fired.
         if (state.returnToObserve && !state.recenteredToDest) {
           this.tryMidFlyRecentre(state);
           // _localPositions has been rewritten — re-bind B in the new
