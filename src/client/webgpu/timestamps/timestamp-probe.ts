@@ -88,10 +88,9 @@ export async function timestampWritesValidate(device: ProbeDevice): Promise<bool
   return (await device.popErrorScope()) === null;
 }
 
-/** Must run before the first frame: three caches the render pass
- *  descriptor per render target and never clears a `timestampWrites` it
- *  already attached, so a descriptor built while this is still true stays
- *  poisoned for the backend's lifetime. Returns whether timestamps live. */
+/** Must run before the first frame — a later call cannot unpoison a cached
+ *  render pass descriptor (README.md § The flag is a request). Returns
+ *  whether timestamps live. */
 export async function settleTimestampSupport(backend: TimestampBackend): Promise<boolean> {
   if (!backend.trackTimestamp) return false;
   if (await timestampWritesValidate(backend.device)) return true;

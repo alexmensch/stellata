@@ -76,8 +76,7 @@ export class WebGpuHdrPipeline implements HdrSeam {
     this.syncMode();
   }
 
-  /** Register a layer for the single↔struct output swap; applies the
-   *  current mode immediately. Returns the unregister. */
+  /** Applies the current mode immediately. Returns the unregister. */
   registerMrtLayer(layer: MrtOutputLayer): () => void {
     this.mrtLayers.add(layer);
     layer.setMrtOutputs(this.mrtOutputsOn());

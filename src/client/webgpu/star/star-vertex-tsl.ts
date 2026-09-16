@@ -116,11 +116,10 @@ export interface StarSolveOptions {
 }
 
 /**
- * Emit the shared solve for star `self` at `localPos` and call `onAlive`
- * inside the survivor branch. The compaction kernel and all six vertex
- * stages run THIS graph, so the disc/glow split resolves to the same bits
- * everywhere: a kernel that tiered a star differently from the pass drawing
- * it would drop the star from both lists' fragment partitions.
+ * Calls `onAlive` inside the survivor branch. The compaction kernel and all
+ * six vertex stages run THIS graph, so the disc/glow split resolves to the
+ * same bits everywhere: a kernel that tiered a star differently from the pass
+ * drawing it would drop the star from both lists' fragment partitions.
  */
 export function solveStarTsl(
   deps: StarTslDeps,

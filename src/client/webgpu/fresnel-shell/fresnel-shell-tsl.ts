@@ -18,14 +18,10 @@ export function buildFresnelShellMaterial(
   material.transparent = true;
   material.depthWrite = false;
   material.blending = opts.blending ?? NormalBlending;
-  // The hide-when-inside contract: outward winding plus front-face-only
-  // means the shell culls when the camera sits inside it
+  // Not a redundant default — this IS the hide-when-inside contract
   // (`../../fresnel-shell/README.md` § Invariants).
   material.side = FrontSide;
 
-  // No vertexNode: NodeMaterial's own model-view-projection is exactly what
-  // fresnel-shell.vert.glsl does, and both its varyings are built-ins
-  // (`../solar-system/README.md` § Vertex stages).
   return finishMrtMaterial(material, () => {
     const dView = length(positionView).toVar();
     const alpha = fresnelRimAlphaTsl(

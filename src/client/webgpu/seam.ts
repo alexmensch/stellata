@@ -53,9 +53,9 @@ export interface WebGpuStarLayer {
    *  `syncUniformNodes` (the kernel reads those scalars) and before the
    *  render (star/compaction/README.md). */
   update(camera: THREE.Camera): void;
-  /** The local-depth-pass mirror this layer built. The shell hands it to
-   *  StarLocalCluster in place of the GLSL StarLocalMirror; the cluster
-   *  parents its group into the pass scene and owns its dispose. */
+  /** The shell hands it to StarLocalCluster in place of the GLSL
+   *  StarLocalMirror; the cluster parents its group into the pass scene and
+   *  owns its dispose. */
   readonly localMirror: StarMirror;
   dispose(): void;
 }
@@ -86,9 +86,8 @@ export interface WebGpuSeam {
    *  called from animate() before the render (tsl/README.md § Shared
    *  uniform nodes). */
   syncUniformNodes(): void;
-  /** Build the TSL star layer into the shell's scene. Requires
-   *  bindSharedUniforms to have run — the materials take their slots
-   *  from the uniform-node mirror. */
+  /** Requires bindSharedUniforms to have run — the materials take their
+   *  slots from the uniform-node mirror. */
   attachStarLayer(
     scene: THREE.Scene,
     sources: StarLayerSources,
@@ -126,16 +125,15 @@ export interface WebGpuSeam {
    *  ONCE per field: each read is a fresh factory, and the shared-material
    *  refcount lives inside one. */
   readonly probeMaterial: ProbeMaterials;
-  /** The TSL chrome line strokes. Read only AFTER `bindSharedUniforms`:
-   *  building the graphs resolves the shared uniform nodes, so an earlier
-   *  read throws (`../chrome-lines/README.md` § One factory per boot). */
+  /** Read only AFTER `bindSharedUniforms`: building the graphs resolves the
+   *  shared uniform nodes, so an earlier read throws
+   *  (`../chrome-lines/README.md` § One factory per boot). */
   readonly chromeLineMaterials: ChromeLineMaterials;
   /** The TSL boundary-shell surface (heliopause, Local Bubble). Each
    *  consumer builds its own — colour, limb alpha and blend are per-shell. */
   readonly shellMaterials: ShellMaterials;
-  /** The TSL dust-particle sprite. Its six shared slots come off the
-   *  uniform-node mirror, so the factory takes no uniform argument of its
-   *  own (`dust/tsl-dust-materials.ts`). */
+  /** Its six shared slots come off the uniform-node mirror, so the factory
+   *  takes no uniform argument of its own (`dust/tsl-dust-materials.ts`). */
   readonly dustParticleMaterials: DustParticleMaterials;
   /** The TSL molecular-cloud surfaces: one absorption material per cloud
    *  (the traced / analytic tier is compile-time, so they cannot share) and

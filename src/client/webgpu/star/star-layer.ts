@@ -37,9 +37,9 @@ export class StarLayer {
   readonly glowMesh: THREE.Mesh;
   /** Owned by this layer alone — the WebGL pipeline builds its own. */
   readonly colorLut: THREE.DataTexture;
-  /** The local-depth-pass mirror. NOT in the scene above: the shell hands
-   *  it to StarLocalCluster, which parents it into the pass scene and owns
-   *  its dispose — the same split as the GLSL mirror. */
+  /** NOT in the scene above: the shell hands it to StarLocalCluster, which
+   *  parents it into the pass scene and owns its dispose — the same split as
+   *  the GLSL mirror. */
   readonly localMirror: StarLocalMirrorTsl;
   readonly tables: StarTables;
   readonly compaction: StarCompaction;

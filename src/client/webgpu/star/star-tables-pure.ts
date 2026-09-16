@@ -3,10 +3,9 @@
 
 import { STAR_STATIC_FIELDS, type StarStaticField } from '../star-attribute-roster';
 
-/** Floats per star record — the roster rounded up to whole vec4s. Scalar
- *  reads out of a float table need no alignment, so the spare slot is
- *  headroom for the next static field rather than a layout requirement:
- *  a twelfth field costs no bytes, a thirteenth costs four per star. */
+/** Padded to whole vec4s for headroom, not alignment — scalar reads out of a
+ *  float table need none. A twelfth static field costs no bytes; a thirteenth
+ *  costs four per star. */
 export const STAR_STATIC_STRIDE = Math.ceil(STAR_STATIC_FIELDS.length / 4) * 4;
 
 export function staticSlot(field: StarStaticField): number {
@@ -22,7 +21,7 @@ export function staticElement(idx: number, field: StarStaticField): number {
 
 export type StaticFieldSources = Readonly<Record<StarStaticField, ArrayLike<number>>>;
 
-/** Interleave the roster's per-star arrays into one table. Pad slots stay 0. */
+/** Pad slots stay 0. */
 export function buildStaticTable(sources: StaticFieldSources, count: number): Float32Array {
   const table = new Float32Array(count * STAR_STATIC_STRIDE);
   for (const field of STAR_STATIC_FIELDS) {
