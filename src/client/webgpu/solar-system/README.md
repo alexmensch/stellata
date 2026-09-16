@@ -182,6 +182,26 @@ floating-origin recentre rewrites it **without** bumping `layoutVersion`,
 so the layout signal cannot cover it. A grow is the one layout event that
 also replaces every array and needs the geometry rebuilt.
 
+**The split holds only while every attribute stays on the default usage.**
+`DynamicDrawUsage` uploads an attribute on every render call whatever its
+version (`../README.md` § One writer per buffer per submit), so the hint on
+the four layout-rate attributes costs 2 KiB of constants per render call —
+twice a frame while the local pass draws the mirror too — against a table
+whose whole point is skipping them. Version carries the layout rate for
+free: `packGlareLayout` runs behind the `layoutVersion` sentinel, and
+`packGlareFrame` from `onBeforeRender`, which the renderer calls before it
+reads the attributes. `planet-glare-layer.test.ts` pins the usages, because
+the version assertions beside it cannot see an upload that bypasses
+version.
+
+**The three per-frame attributes still upload twice on a frame that draws
+the mirror**, and that is accepted. Both meshes carry the `onBeforeRender`
+hook, so the second `sync()` re-bumps the version the first upload just
+satisfied — 1 KiB on the queue for bytes already there. Collapsing it wants
+a frame identity `PlanetGlareSources` does not carry, to buy a quarter of
+what the layout split already saves, well under anything `gpu.frame`
+resolves.
+
 ## Which pass draws them
 
 The mesh, the annulus and the shell render in the local depth pass

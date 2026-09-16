@@ -67,6 +67,20 @@ attributes (the WebGL2 guaranteed minimum). Pinned per-variant in
 `../star-pipeline.test.ts`, along with the uniform-array-size ↔
 `MIRROR_CAPACITY` tie.
 
+**The slot attributes carry `DynamicDrawUsage`, and on the WebGPU boot that
+rides on a size ceiling rather than on the usual argument.** `sync()` flags
+them once a frame, but `buildGroup` hangs three meshes off the one slot
+geometry under a single `group.visible`, so two of the three draws read an
+attribute nothing flagged in them — and three r185 re-uploads a
+`DynamicDrawUsage` attribute on every render call whatever its version
+(`../../webgpu/README.md` § One writer per buffer per submit). It costs 64 B
+a frame here only because the TSL mirror source carries no per-instance
+attribute, leaving `iSourceIdx`'s 32 B as the whole carrier. **Give that
+geometry one per-instance attribute and the hint becomes a full upload of
+every slot, three times per rendered frame.** The answer then is a
+per-backend usage rather than a removal: `MirrorSlots` is shared, and on the
+WebGL2 boot `DYNAMIC_DRAW` is the correct hint and costs nothing.
+
 ## Membership
 
 `star-local-cluster.ts` unions three triggers per frame: the active

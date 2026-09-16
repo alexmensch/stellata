@@ -58,9 +58,10 @@ export class PlanetGlareLayer implements MrtOutputLayer {
       m.name = name;
       m.frustumCulled = false;
       m.renderOrder = GLARE_RENDER_ORDER;
-      // Both meshes carry the hook — either may be the one drawn — and
-      // the re-pack is idempotent, so a frame that draws both pays it
-      // twice over tens of slots rather than needing a frame sentinel.
+      // Both meshes carry the hook: setVisible() can hide the main mesh
+      // while the mirror still draws, so one hook would stop the re-pack.
+      // A frame drawing both re-packs and re-uploads twice (README.md
+      // § The glare packs).
       m.onBeforeRender = () => this.sync();
       parent.add(m);
       return m;

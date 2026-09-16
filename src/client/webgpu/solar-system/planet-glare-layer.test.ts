@@ -186,6 +186,16 @@ describe('the WebGPU reflected-glare layer', () => {
     ]);
   });
 
+  it('leaves every attribute on the default usage, so version is what decides', () => {
+    // The version pins above cannot see this: a usage-driven upload bypasses
+    // version entirely (../README.md § One writer per buffer per submit).
+    const { layer } = makeLayer();
+    const usages = Object.values(layer.mesh.geometry.attributes)
+      .map((attr) => (attr as THREE.BufferAttribute).usage);
+    expect(usages).not.toHaveLength(0);
+    expect(usages).not.toContain(THREE.DynamicDrawUsage);
+  });
+
   it('re-packs the constants when a body joins within capacity', () => {
     // Same-capacity attach keeps the geometry, so the packed vec4s are the
     // only place the new body's albedo and radius can land.

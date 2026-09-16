@@ -86,7 +86,6 @@ export function buildPlanetGlareGeometry(
 
   const shared = (name: string, array: Float32Array, dims: number) => {
     const attr = new THREE.InstancedBufferAttribute(array, dims);
-    attr.setUsage(THREE.DynamicDrawUsage);
     geometry.setAttribute(name, attr);
     return attr;
   };
