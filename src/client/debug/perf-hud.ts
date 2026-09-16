@@ -29,10 +29,7 @@ interface SectionStats {
   ring: Float32Array;
   idx: number;
   count: number;
-  // Last frame index where this section was written. Sections that go
-  // dormant (e.g. chart.* after exiting chart mode) get garbage-collected
-  // once they've been silent for RING_SIZE frames so the HUD doesn't keep
-  // averaging stale ring data.
+  // Last frame index written; the dormant-section sweep in realFrame reads it.
   lastFrame: number;
 }
 
@@ -40,9 +37,9 @@ const sections = new Map<string, SectionStats>();
 const starts = new Map<string, number>();
 let frameCounter = 0;
 
-// True displayed frame rate, from rAF-to-rAF deltas. NOT derived from
-// frame.total: that measures how much work a frame does, and inverting it
-// reports e.g. "347 FPS" on a 60 Hz display whenever the work is cheap.
+// True displayed frame rate, from rAF-to-rAF deltas. Never 1000 /
+// frame.total, which inverts how much work a frame does rather than how
+// often one lands.
 const frameDeltas: RingStats = { ring: new Float32Array(RING_SIZE), idx: 0, count: 0 };
 let lastFrameNowMs = 0;
 
@@ -69,15 +66,12 @@ const histoBars: HTMLSpanElement[] = [];
 // values — same dirty-tracking pattern chart-labels.ts uses for SVG.
 const histoLastHeight: number[] = [];
 const histoLastColour: string[] = [];
-// Per-row last-written colour. style.color's CSSOM getter returns the
-// serialised form (#cfe → rgb(204,238,255)), so comparing against the
-// input hex always mismatches; cache the input hex separately. Mirrors
-// histoLastColour above.
+// style.color's CSSOM getter returns the serialised form (#cfe →
+// rgb(204,238,255)), so comparing against the input hex always mismatches;
+// cache the input hex separately. Mirrors histoLastColour above.
 const rowLastColour: string[] = [];
 
-// Scratch row data reused across ticks. Index 0..N-1 holds the current
-// frame's top sections in descending-avg order; only the first N rows
-// in rowPool are visible, the rest are display:none.
+// Reused across ticks; holds the frame's top sections in descending-avg order.
 const rowScratch: RowDatum[] = [];
 
 function ensureSection(label: string): SectionStats {
@@ -163,7 +157,7 @@ let unsubGpuFrame: (() => void) | null = null;
 let unsubGpuCompute: (() => void) | null = null;
 
 /**
- * Exclusive whole-frame GPU sampler for console harnesses (frame-cost/frame-cost.ts).
+ * Exclusive whole-frame GPU sampler for the pricing sweep.
  *
  * WebGL2 only — the WebGPU renderer measures its own frames and the
  * harness subscribes to `onGpuFrameSample` instead

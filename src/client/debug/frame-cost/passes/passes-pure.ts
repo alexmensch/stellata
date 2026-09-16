@@ -19,7 +19,7 @@ export const PRICED_PASS_KEYS = [
 
 export type PricedPassKey = (typeof PRICED_PASS_KEYS)[number];
 
-/** Empty render passes the `emptyPass` row adds while "disabled" wherever
- *  the caller names no count. One is often under `bracketMs` and the row
- *  then does not resolve — README.md § The roster. */
+/** Empty render passes the `emptyPass` row ADDS while "disabled", wherever
+ *  the caller names no count. One often fails to resolve — README.md
+ *  § The roster. */
 export const EMPTY_PASSES_DEFAULT = 1;

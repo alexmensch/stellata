@@ -43,8 +43,7 @@ function clearable(v: unknown): { clear(): void } | null {
     : null;
 }
 
-/** Drop the uids a resolve just recorded — three's own Map never shrinks.
- *  Why clearing is safe, and what it is worth: README.md § The resolved-uid
+/** Why clearing is safe, and what it is worth: README.md § The resolved-uid
  *  trim. */
 export function dropResolvedTimestamps(host: TimestampPoolHost): void {
   const pools = (host.backend as { timestampQueryPool?: unknown } | null | undefined)
@@ -62,15 +61,14 @@ function publish(pool: TimestampPool, ms: number): void {
   for (const s of subscribers[pool]) s(ms);
 }
 
-/** Publish one frame's render-pass GPU milliseconds. WebGPU only — a WebGL2
- *  frame is timed by whichever GL timer owns the context's single query
- *  slot, so publishing here too would record `gpu.frame` twice per frame. */
+/** WebGPU only — a WebGL2 frame is timed by whichever GL timer owns the
+ *  context's single query slot, so publishing here too would record
+ *  `gpu.frame` twice per frame. */
 export function publishGpuFrameSample(ms: number): void {
   publish('render', ms);
 }
 
-/** Publish one frame's compute-pass GPU milliseconds. Never folded into
- *  `gpu.frame`: README.md § WebGPU. */
+/** Never folded into `gpu.frame`: README.md § WebGPU. */
 export function publishGpuComputeSample(ms: number): void {
   publish('compute', ms);
 }

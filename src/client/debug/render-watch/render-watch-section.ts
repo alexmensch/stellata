@@ -4,8 +4,6 @@
 import type { DebugSection } from '../debug-panel';
 
 export interface RenderWatchSectionOpts {
-  /** Close the panel, then mount the watcher — in that order, because the
-   *  panel's gate hold is what the watcher cannot see past. */
   onStart: () => void;
   isRunning: () => boolean;
 }

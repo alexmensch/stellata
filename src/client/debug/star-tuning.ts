@@ -1,16 +1,12 @@
 import type { Stellata } from '../stellata';
 import { type DebugSection, makeMonoReadout, makeSlider, setReadoutText } from './debug-panel';
 
-// Dev-only tuning section for star-disc rendering. Each slider drives one
-// uniform on the shared star material. Defaults match the production
-// values; pulling sliders gives an immediate visual sweep.
+// Each slider drives one uniform on the shared star material, starting from
+// the production value. See star.frag.glsl for what each uniform shapes.
 //
-// See star.frag.glsl for what each uniform shapes — comments there are
-// the source of truth. Slider ranges are conservative envelopes around
-// values that produce sensible visuals; nothing crashes outside them, but
-// extremes (e.g. lumBias < 0.3) start to look cartoony.
-//
-// No reverse sync — see `SliderOpts.initial` in debug-panel.ts.
+// Slider ranges are conservative envelopes: nothing crashes outside them, but
+// extremes (lumBias < 0.3, say) start to look cartoony. No reverse sync —
+// see `SliderOpts.initial` in debug-panel.ts.
 
 export function buildStarSection(stellata: Stellata): DebugSection {
   const body = document.createElement('div');

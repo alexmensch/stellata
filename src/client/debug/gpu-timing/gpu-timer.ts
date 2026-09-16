@@ -54,7 +54,7 @@ export class GpuTimer {
     return ext ? new GpuTimer(gl, ext) : null;
   }
 
-  /** Scope labels this timer rotates through, in rotation order. */
+  /** In rotation order. */
   scopeLabels(): readonly string[] {
     return this.order;
   }

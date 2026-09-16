@@ -41,10 +41,9 @@ export interface PriceFrameOptions extends PassToggleOptions {
    *  dwells instead of N+2; the only honest mode on a drifting
    *  instrument. Set false for a fast, drift-exposed sweep. */
   interleave?: boolean;
-  /** Pause the simulation clock for the sweep and restore its rate after.
-   *  A running clock re-arms the binary orbit field's full per-frame
-   *  upload and moves every ephemeris body, both inside the timed scope.
-   *  Set false to price the live path instead of a static frame. */
+  /** Pause the simulation clock for the sweep, restoring its rate after.
+   *  Set false to price the live path — a running clock's orbit-field and
+   *  ephemeris uploads then sit inside the timed scope. */
   pauseClock?: boolean;
   /** Whole-sweep wall-clock ceiling. Dwells are shortened to fit it
    *  before the sweep starts; only a sweep that cannot fit even at
@@ -60,12 +59,10 @@ export interface PriceFrameOptions extends PassToggleOptions {
    *  when toggled, and the differential then prices a different star
    *  population instead of the pass. Set false to price the live path. */
   pinExposure?: boolean;
-  /** Pin the sample clock instead of taking the backend's best. The
-   *  per-backend preference order picks a different method per browser ×
-   *  backend, and numbers from two methods must never be compared — so a
-   *  cross-backend table pins 'raf-delta', the one clock all of them
-   *  share. A pinned method the backend cannot supply refuses the sweep
-   *  (console says why) rather than silently switching clocks. */
+  /** Pin the sample clock instead of taking the backend's best. A
+   *  cross-backend table has to pin 'raf-delta', the one clock every
+   *  browser × backend pairing shares; a method the backend cannot supply
+   *  refuses the sweep rather than silently switching clocks. */
   method?: GpuFrameMethod;
 }
 
