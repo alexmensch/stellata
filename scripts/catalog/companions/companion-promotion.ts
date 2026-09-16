@@ -309,13 +309,10 @@ export function projectFromSepPa(
   };
 }
 
-// A tangent-projected companion is placed at the primary's distance, so
-// its projected physical separation ρ·d is a lower bound on the pair's
-// true 3D separation. Beyond OPTICAL_DOUBLE_MIN_SEP_PC (the Galactic
-// tidal-disruption limit) no pair can be bound — refuse to fabricate a
-// companion there. Only the projection branch consults this; a secondary
-// with its own resolved astrometry is already vetted by Stage 5's
-// parallax gate, which can't reach an unresolved (parallax-less) one.
+// ρ measured at the anchor's distance is a LOWER bound on the pair's true 3D
+// separation, so exceeding the limit is decisive. Only the projection branch
+// consults this — a secondary with its own astrometry is vetted by Stage 5,
+// which cannot reach a parallax-less one.
 function projectionBeyondTidalLimit(
   anchorX: number,
   anchorY: number,
@@ -344,12 +341,9 @@ export interface PromotionStats {
   droppedNoIdentifier: number;
   /** Dropped because no anchor — neither own astrometry nor sep+PA. */
   droppedNoPosition: number;
-  /** Dropped because the tangent projection ρ·d exceeds the Galactic
-   *  tidal-disruption limit (OPTICAL_DOUBLE_MIN_SEP_PC): a fabricated
-   *  companion that far can't be gravitationally bound, so an unresolved
-   *  WDS secondary there is a line-of-sight optical double. The projected
-   *  separation is a lower bound on the true 3D separation, and Stage 5's
-   *  parallax gate can't reach it (the secondary has no parallax). */
+  /** Dropped because the tangent projection ρ·d exceeds
+   *  OPTICAL_DOUBLE_MIN_SEP_PC — a line-of-sight optical double Stage 5's
+   *  parallax gate cannot reach, the secondary having no parallax. */
   droppedBeyondTidalLimit: number;
   /** Dropped because primary's catalog row wasn't found (orphaned pair). */
   droppedNoPrimary: number;
@@ -611,8 +605,8 @@ export function emptyPromotionStats(): PromotionStats {
   };
 }
 
-/** Compose `synth-<wds_id>-<comp>`. See ./README.md § Companion promotion
- *  from `data/binaries/multiples.tsv` for when this fires. */
+/** See ./README.md § Companion promotion from `data/binaries/multiples.tsv`
+ *  for when this fires. */
 export function composeSyntheticId(
   systemId: string,
   comp: string,
@@ -788,8 +782,8 @@ export function imputeCompanionCi(
 }
 
 
-/** Which path produced a companion's absmag. `dmag_imputed` = primary +
- *  WDS Δmag; `own` = the row's own (non-inherited) photometry;
+/** `dmag_imputed` = primary + WDS Δmag; `own` = the row's own
+ *  (non-inherited) photometry;
  *  `wds_mag` = the row's own WDS apparent magnitude at the system
  *  distance (M = m − 5·log₁₀(d/10)) — fires when both Δmag paths are
  *  unavailable, ahead of the spectral calibration;
@@ -820,29 +814,15 @@ export interface CompanionAbsmag {
 export const OWN_BRIGHTNESS_ABSMAG_SOURCES: ReadonlySet<CompanionAbsmagSource> =
   new Set(['dmag_imputed', 'own', 'wds_mag']);
 
-// Companion absmag. Preference order: primary + WDS Δmag when the
-// row's photometry is inherited; the row's own absmag when it isn't;
-// primary + Δmag fallback; the row's own WDS apparent mag at the
-// system distance; class→M_V from a per-component spectral type. A
-// row with none of those has NO honest brightness source — returning
-// the inherited absmag would mint a full-luminosity twin of the
-// primary (Algol Aa2, Betelgeuse Ab). Those rows return null (caller
-// drops) unless the pair carries a renderable orbit, where the record
-// must survive for binaries.bin's sake and the twin is kept, tagged,
-// and counted.
+// Null means no honest brightness source, and the caller drops the row —
+// except where the pair has a renderable orbit binaries.bin must keep
+// addressing, which keeps the inherited twin and tags it.
 //
-// anchorDmagApplies is false for a pair-row-primary escape: that row's
-// Δmag describes the SUB-pair it heads (40 Eri B's Δmag is the B→C
-// delta), not the anchor→row separation, so adding it to the anchor's
-// absmag is meaningless. Both primary+Δmag paths are skipped, and when
-// no honest brightness exists the record inherits the anchor's
-// collocated brightness rather than a corrupted A+Δmag.
-//
-// ownPhotometryIsAnchorBlend is true for an escape row whose only ids
-// were inherited from the anchor: its "own" AT-HYG photometry was
-// reached through the anchor's identifier, so it is the anchor's BLEND
-// magnitude, not this component's (Acrux B's row carries A's −4.2
-// blend). The own path is skipped and the row's WDS mag wins.
+// anchorDmagApplies is false for a pair-row-primary escape: that row's Δmag
+// spans the SUB-pair it heads, not the anchor→row separation.
+// ownPhotometryIsAnchorBlend is true when the escape row's only ids were
+// inherited, so its "own" photometry was reached through the anchor's
+// identifier and IS the anchor's blend.
 export function imputeCompanionAbsmag(
   secondary: MultiplesTsvRow,
   primary: MultiplesTsvRow | null,
@@ -972,15 +952,12 @@ function resolvePosition(
   }
   const sepArcsec = row.sepArcsec;
   const paDeg = row.paDeg;
-  // Sub-resolution (rho 0.000) or unmeasured pairs: there is no static
-  // placement to bake. When the runtime animates the pair, collocate
-  // the secondary bit-identically on the anchor — a placement choice
-  // for the LOD fallback only; the runtime renders the relative offset
-  // as R(t) from the orbital elements alone regardless of the baked
-  // placement (see src/client/binaries/orbit-relation-cache.ts
-  // baseDiffPc). Without a renderable orbit nothing ever separates the
-  // two records and the collocated star double-counts the blend
-  // photometry (ξ UMa Bb inside A) — drop.
+  // Sub-resolution or unmeasured: no static placement exists. Collocating is
+  // safe only under a renderable orbit, where the runtime draws the offset as
+  // R(t) from the elements alone whatever was baked
+  // (src/client/binaries/orbit-relation-cache.ts baseDiffPc). Without one
+  // nothing ever separates the two records and the collocated star
+  // double-counts the blend photometry.
   if (sepArcsec === null || sepArcsec === 0) {
     if (!hasRenderableOrbit(row)) return null;
     return {
@@ -1127,10 +1104,7 @@ function anchorAloneMagnitude(cands: AnchorDimCandidate[]): number | null {
   return best?.mag ?? null;
 }
 
-/** SpectralInfo for an existing catalog record, for re-deriving its
- *  radius after a brightness change. Re-parses the display string when
- *  possible; otherwise reconstructs the coarse class/lum fields the
- *  record already carries (subclass defaults to the mid-class 5). */
+/** Subclass defaults to the mid-class 5 where only the coarse fields survive. */
 function recordSpectralInfo(star: Star): SpectralInfo {
   const parsed = star.spectDisplay ? classifyFromSimbad(star.spectDisplay) : null;
   return parsed ?? {
@@ -1142,13 +1116,9 @@ function recordSpectralInfo(star: Star): SpectralInfo {
   };
 }
 
-// Spectral inheritance for a promoted companion. The row's own
-// `spect` column carries the SIMBAD-per-component sp_type when available
-// (spect_via=simbad); otherwise it inherits the primary's AT-HYG class.
-// We re-run the strict SIMBAD parser so we get a SpectralInfo, not just
-// a display string. White-dwarf rows like "DA1.9" parse with classIdx=8
-// and isWhiteDwarf=true — wdSubclass flows into the colour-temperature
-// LUT downstream.
+// Re-runs the strict SIMBAD parser rather than taking the string as-is, so the
+// caller gets a SpectralInfo: "DA1.9" parses with isWhiteDwarf=true, and its
+// wdSubclass flows into the colour-temperature LUT downstream.
 function resolveCompanionSpectral(row: MultiplesTsvRow): {
   info: SpectralInfo;
   display: string | null;
@@ -1164,14 +1134,11 @@ function resolveCompanionSpectral(row: MultiplesTsvRow): {
   return { info: SPECTRAL_UNKNOWN, display: null };
 }
 
-/** Every name AT-HYG could be carrying this pair's secondary under, used
- *  only to find the collocated double entry it sometimes ships alongside
- *  the primary (see promoteRow). Not display names — the ladder composes
- *  those from structure (`../naming/README.md`). These probe AT-HYG's OWN
- *  convention, a name cell or the anchor's name with the component letter
- *  appended, against the records AT-HYG itself named; the index they hit
- *  holds nothing but spine `proper` cells, so a base composed off a Bayer
- *  or catalogue designation could never match one and none is tried. */
+/** Not display names — the ladder composes those from structure
+ *  (`../naming/README.md`). These probe AT-HYG's OWN convention, a name cell
+ *  or the anchor's name with the component letter appended, and the index they
+ *  hit holds the manifest's `proper` cells alone, so a base composed off a
+ *  Bayer or catalogue designation could never match one. */
 function athygDoubleProbeNames(
   ctx: PromoteRowContext,
   anchorStar: Star | null,
@@ -1196,10 +1163,8 @@ export function wdsRootOf(systemId: string): string | null {
   return root || null;
 }
 
-/** Index of single-character comp letters present in each WDS root.
- *  Both primary and secondary slots contribute. Used by
- *  isUnresolvedCompound to confirm a candidate compound's constituent
- *  letters actually appear as resolved components. */
+/** Single-character comp letters per WDS root — the resolved components
+ *  isUnresolvedCompound confirms a candidate compound's characters against. */
 function buildWdsRootSingleLetters(
   groups: Map<string, PairCursor>,
 ): Map<string, Set<string>> {
@@ -1318,13 +1283,6 @@ function buildWdsRootAnchors(
   return anchors;
 }
 
-/** Per-row promotion shared by the secondary loop and the
- *  pair-row-primary escape. Both paths run the same identifier
- *  resolution, dedup, photometry, spectral, and naming pipeline; only
- *  the position and anchor sources differ between callers.
- *  Returns the absolute catalog index of the new record, or null when
- *  any gate (dedup, missing position/absmag/identifier) drops the row.
- *  Increments the matching stats counter on each drop. */
 interface PromoteRowContext {
   row: MultiplesTsvRow;
   /** Multiples row of the anchor primary — drives the inherited-HIP gate.
@@ -1334,8 +1292,8 @@ interface PromoteRowContext {
    *  asks {@link hasIndependentFitRoute} what an id shared with it means, and a
    *  different row there makes the pin answer about a different pairing. */
   anchorPrimaryRow: MultiplesTsvRow;
-  /** Catalog Star of the anchor primary — the inherited-HIP gate and the
-   *  field-inheritance source. */
+  /** Catalog Star of the local anchor primary; null when it never made it
+   *  into the catalog. */
   anchorStar: Star | null;
   /** Catalog Star of the WDS-root system primary — the inheritance source
    *  when the local anchor is unresolved (δ Vel CD's local primary C never
@@ -1420,9 +1378,7 @@ interface BlendSplitCandidate {
   spectral: SpectralInfo;
 }
 
-/** Register an existing catalog record as one of its anchor's dim candidates.
- *
- *  A member that is already its own record never reaches the minting path below,
+/** A member that is already its own record never reaches the minting path below,
  *  so the subset solve could not see it and an anchor on a printed blend tier
  *  kept the pair's combined light (ξ UMa, ξ Sco, HD 75632 all shipped ~0.5–0.8
  *  mag too bright). The record's absmag is an independent measurement, so it
@@ -1453,15 +1409,10 @@ function registerExistingMemberForAnchorDim(
     memberSpectral: recordSpectralInfo(member),
     source: 'own',
     dmag: row.dmag,
-    // Never structural, and not for want of symmetry with the mint path: the
-    // identity bypass exists for a member with no other evidence — ids
-    // inherited-then-stripped and a separation WDS never published (VV Crv B).
-    // A member that is already a record has its own measured magnitude AND a
-    // published separation, so the fit and the 10″ bound can both judge it and
-    // should. ζ UMa B shares the anchor's HIP and HD but sits at 14.4″, and the
-    // printed cell is A alone (V 2.23) — letting the shared id outrank that
-    // measurement subtracted light the entry never held, dimming Mizar Aa
-    // 0.274 mag off its `validate/known-stars.tsv` value.
+    // Never structural, and the asymmetry with the mint path is load-bearing:
+    // the identity bypass is for a member with no other evidence, and one that
+    // is already a record has its own measured magnitude AND a published
+    // separation, so the fit and the separation bound can both judge it.
     structural: false,
     ...anchorDimGeometry(row, anchorPrimaryRow.comp),
     av: dustGrid ? avSolToStar(dustGrid, member.x, member.y, member.z) : 0,
@@ -1489,6 +1440,10 @@ function inheritAnchorDesignationCon(
   stats.existingDesigConFromAnchor++;
 }
 
+/** Returns the absolute catalog index of the new record, or null when a gate
+ *  drops the row, incrementing the matching stats counter as it does. Shared
+ *  by the secondary loop and the pair-row-primary escape; only the position
+ *  and anchor sources differ between them. */
 function promoteRow(
   ctx: PromoteRowContext,
   state: PromotionState,
@@ -1530,11 +1485,10 @@ function promoteRow(
   const inheritedHip = row.hip !== null && row.hip > 0
     && (anchorPrimaryRow.hip === row.hip
       || (anchorStar !== null && anchorStar.hip === row.hip));
-  // Membership in the anchor's catalogue entry, for the flux-conservation
-  // post-pass and the escape row's photometry. An id of the row's OWN does not
-  // buy the anchor's cell back: AT-HYG keys photometry on the record it merged,
-  // so a row sharing the anchor's HD/HIP reads the SYSTEM's magnitude however
-  // Gaia later resolved the component. Which tier can hold a member at all is
+  // An id of the row's OWN does not buy the anchor's cell back: AT-HYG keys
+  // photometry on the record it merged, so a row sharing the anchor's HD/HIP
+  // reads the SYSTEM's magnitude however Gaia later resolved the component.
+  // Which tier can hold a member at all is
   // README.md § Anchor flux conservation.
   const idsInheritedFromAnchor = inheritedGaia || inheritedHip;
   // Dedup against existing catalog + previously-promoted records.
@@ -1559,14 +1513,11 @@ function promoteRow(
       registerExistingMemberForAnchorDim(ctx, state, existingIdx, dustGrid);
       return null;
     }
-    // A pair whose two ends resolve to ONE record has no second star to mint.
-    // p Eri's `01398-5612` A row carries B's HD, HIP and Gaia cells, so the
-    // cursor anchors on the B record and the B row's ids then strip as
-    // inherited — the Sirius-B shape, but the companion is already a record.
-    // Minting bakes a twin of the anchor and the pair's orbit animates a star
-    // against its own copy. The authority's component attribution is the
-    // independent witness: where it already letters the anchor record as THIS
-    // component, that record IS the component.
+    // A pair whose two ends resolve to ONE record has no second star to mint;
+    // minting would bake a twin of the anchor and animate the orbit against
+    // its own copy. The authority's component attribution is the independent
+    // witness — where it already letters the anchor record as THIS component,
+    // that record IS the component.
     if (inheritedIdCollision && anchorStar !== null
         && anchorStar.bayerComponent === canonicalComp) {
       stats.anchorIsComponent++;
@@ -1663,32 +1614,26 @@ function promoteRow(
   // The row's own observed ci embeds A_V too; a derived ci (Ballesteros /
   // solar fallback) is already intrinsic.
   if (companionCiIsObserved(row)) ci -= av / R_V;
-  // System-level inheritance source: the local anchor primary, falling
-  // back to the WDS-root system primary when the local anchor never made
+  // Falls back to the WDS-root system primary when the local anchor never made
   // it into the catalog (δ Vel CD class — local primary C never promotes).
-  // Velocity and constellation are both whole-system properties and must
-  // resolve the same anchor, else a companion inherits one but not the
-  // other and desynchronises from its system.
+  // Velocity and the DESIGNATION constellation are the two inherited fields
+  // and must resolve one anchor, else a companion takes one without the other
+  // and desynchronises from its system. The positional constellation below is
+  // the companion's own.
   const inheritAnchor = anchorStar ?? systemAnchorStar;
-  // Space-motion velocity: inherit the anchor's. A promoted companion
-  // carries no own PM (multiples.tsv has no PM columns), and a Tier-3
-  // static companion is baked into catalog.bin and SKIPPED by the runtime
-  // BinaryOrbitField — only a shared velocity keeps it glued to the
+  // A promoted companion carries no own PM (multiples.tsv has no PM columns),
+  // and a Tier-3 static companion is baked into catalog.bin and SKIPPED by the
+  // runtime BinaryOrbitField — only a shared velocity keeps it glued to the
   // primary through the epoch-advance pass instead of shearing away. The
-  // systemic-velocity pass below reconciles the anchor's own velocity for
-  // renderable-orbit pairs. Anchor-less escapes fall back to zero.
+  // systemic-velocity pass below reconciles renderable-orbit pairs.
   const anchorVel = inheritAnchor
     ? { x: inheritAnchor.vx, y: inheritAnchor.vy, z: inheritAnchor.vz }
     : { x: 0, y: 0, z: 0 };
-  // Collocated AT-HYG double-entry merge. AT-HYG occasionally carries
-  // BOTH members of a resolved pair at the same printed blend
-  // coordinates (ξ UMa: "Alula Australis" + "Alula Australis B" are
-  // bit-identical). The companion being promoted here IS that second
-  // record — same composed name, sitting exactly on the anchor — so
-  // minting a new star would render the pair twice: once collocated
-  // with the primary, once at the projected separation. Reposition
-  // the existing record instead, and backfill the row's Gaia id so
-  // the runtime binaries resolver can address it.
+  // Collocated AT-HYG double-entry merge. A record sitting bit-identically on
+  // the anchor under the anchor's name plus this letter IS the companion, so
+  // minting would render the pair twice — once collocated, once at the
+  // projected separation. Reposition it and backfill the row's Gaia id so the
+  // runtime binaries resolver can address it.
   if (anchorStar !== null && anchorCatalogIdx !== null) {
     for (const probe of athygDoubleProbeNames(ctx, anchorStar)) {
       const dupIdx = state.existing.byProper.get(probe);
@@ -1716,10 +1661,6 @@ function promoteRow(
   let flags = FLAG_BINARY_COMPANION_ONLY;
   if (usesSynth) flags |= FLAG_BINARY_COMPANION_SYNTHETIC;
 
-  // Constellation: positional from the companion's own placement, so a pair
-  // straddling a boundary lands its members on the correct sides. The
-  // designation constellation is still the anchor's — a composed name
-  // ("Xi Boo B") is named for whatever the primary's designation is.
   const conIndex = state.conAssignment.indexAt(position.x, position.y, position.z);
   const desigConIndex = inheritAnchor?.desigConIndex ?? NO_CONSTELLATION_INDEX;
   if (inheritAnchor !== null && conIndex !== inheritAnchor.conIndex) {
@@ -1751,10 +1692,9 @@ function promoteRow(
     hd: null,
     hr: null,
     // An anchor's alternative HD is often the pair's OTHER component number,
-    // which makes handing it to this record tempting and wrong: the overlay
-    // asserts both numbers against one Gaia source and names no component, so
-    // attributing one here would invent evidence. They stay search aliases of
-    // the record holding the blended light.
+    // and the overlay asserts both numbers against one Gaia source while
+    // naming no component — so inheriting one here would invent evidence.
+    // They stay search aliases of the record holding the blended light.
     hdAlt: [],
     hrAlt: [],
     flam: null,
@@ -1905,9 +1845,8 @@ export function promoteCompanions(
     // pair geometry needs a different rule than this path.
     if (cursor.primary === null) continue;
 
-    // Resolve the cursor primary's catalog row. Check existing AT-HYG
-    // first, then previously-promoted records (40 Eri B class — promoted
-    // in BC, then reused as anchor for BD).
+    // Existing records first, then previously-promoted ones — 40 Eri B is
+    // promoted in the BC group and reused as the anchor for BD.
     let primaryCatalogIdx = findExistingPrimary(cursor.primary, existing, existingStars);
     const rootAnchorEntry = wdsRootOf(cursor.primary.systemId) !== null
       ? wdsRootAnchors.get(wdsRootOf(cursor.primary.systemId) as string)
@@ -1945,12 +1884,9 @@ export function promoteCompanions(
       primaryCatalogIdx = lookupPromoted(cursor.primary, state);
     }
     if (primaryCatalogIdx === null) {
-      // Cursor primary isn't in catalog and hasn't been promoted yet.
-      // Pair-row-primary escape: promote it as a companion of the
-      // WDS-root system anchor (40 Eri B is the canonical case — it
-      // appears as a primary in BC/BD/BE groups but never as a
-      // secondary of A, so the existing secondary loop never
-      // reached it).
+      // Pair-row-primary escape: promote it as a companion of the WDS-root
+      // system anchor. 40 Eri B is the canonical case — a primary in BC/BD/BE
+      // but never a secondary of A, so the secondary loop never reaches it.
       primaryCatalogIdx = tryPromoteCursorPrimary(
         cursor, wdsRootAnchors, state, stats, dustGrid,
       );
@@ -2149,30 +2085,16 @@ export function promoteCompanions(
     }
   }
 
-  // Anchor-dimming post-pass (flux conservation) — a per-anchor joint
-  // subset solve. Each candidate member's light MAY be embedded in its
-  // anchor's athyg_own blend magnitude; total system flux must stay what
-  // AT-HYG measured. Membership: structural members (ids inherited from the
-  // anchor, stripped or not) are always in; every other member is judged
-  // by the best-fit subset — the hypothesis m(S) = −2.5·log₁₀(F_anchor +
-  // Σ_{i∈S} F_i) over observed-frame WDS magnitudes that lands closest to
-  // the anchor's observed apparent magnitude, decisive only when it beats
-  // "anchor alone" AND the runner-up by ≥0.01 mag. This is what keeps a
-  // multi-member anchor honest: 36 Oph D cannot claim A+B's blend (any
-  // subset containing D fits worse than {A,B}), while Polaris Ab (inside
-  // the 1.98 blend) dims its anchor ~0.16 mag.
+  // Anchor-dimming post-pass (flux conservation). The subset solve scores the
+  // hypothesis m(S) = −2.5·log₁₀(F_anchor + Σ_{i∈S} F_i) over observed-frame
+  // WDS magnitudes against the anchor's own observed magnitude.
   //
-  // Apply (once per anchor, exact conservation): members with independent
-  // brightness ('own' / 'wds_mag') subtract their actual flux; blend-
-  // relative members ('dmag_imputed') re-split the residual by Δmag —
+  // Apply, once per anchor with exact conservation: 'own' / 'wds_mag' members
+  // subtract their actual flux; 'dmag_imputed' members re-split the residual —
   //   F_A · (1 + Σ 10^(−0.4·Δ_i)) = F_blend − Σ F_own
-  // generalising the pairwise M_A = M_blend + 2.5·log₁₀(1 + 10^(−0.4Δ)).
-  // The relative split reduces to "anchor barely dims" for a faint
-  // companion (Sirius B would shift 10⁻⁴ mag — blocked by the decisive
-  // margin anyway) and to the equal split for Δ = 0 (Capella: a naive
-  // subtraction would gut a near-equal anchor). The too-bright guard
-  // skips an independent member whose light would zero or invert the
-  // residual (counted blendDimSkipped, a ratchet).
+  // generalising the pairwise M_A = M_blend + 2.5·log₁₀(1 + 10^(−0.4Δ)). That
+  // reduces to "anchor barely dims" for a faint companion, and to the equal
+  // split at Δ = 0 where a naive subtraction would gut a near-equal anchor.
   const dimByAnchor = new Map<number, AnchorDimCandidate[]>();
   for (const cand of state.anchorDimCandidates) {
     const bucket = dimByAnchor.get(cand.anchorIdx);
@@ -2217,36 +2139,19 @@ export function promoteCompanions(
           : null;
     };
 
-    // An anchor's magnitude holds exactly what the catalogue behind it could
-    // not resolve. A printed tier resolves nothing inside one entry, so every
-    // member sharing that entry is in it and skips the fit. A Gaia-derived V
-    // resolves per source: a member Gaia handed its OWN source_id is separated
-    // from the anchor by measurement (HD 153557's B at 5″, σ Ori's E at 42″)
-    // and cannot be in its G, while a member with no own source is one Gaia
-    // could not split — including one whose ids were the anchor's, where the
-    // shared identifier now says only that the cross-match could not separate
-    // them. Those go to the subset solve rather than straight into the blend.
+    // A printed tier resolves nothing inside one entry, so a structural member
+    // is in the blend by construction; a Gaia-derived V resolves per source, so
+    // a member Gaia handed its OWN source_id was separated by measurement and
+    // cannot be in it. Everything else goes to the subset solve.
     //
     // "OWN source_id" needs no comparison against the anchor's: promoteRow
     // nulls a minted member's gaiaSourceId whenever the row's source is the
     // anchor row's or the anchor record's, so non-null here already means
     // different. A member sharing the anchor's source arrives with null.
     //
-    // Identity evidence answers that only where the catalogue published one; a
-    // member with no own source has no such evidence, and photometry alone
-    // cannot tell "inside the photocentre" from "525″ away". The tier's own
-    // blending scale is the missing term — a member past it is outside the
-    // entry no matter how well its flux happens to fit (AR Cas I at 234″,
-    // σ Ori I at 525″, both held out until now only by the smallest-subset
-    // tie-break).
-    //
-    // Structural members skip the bound in BOTH tiers: ids inherited from the
-    // anchor mean the catalogue could not separate this pair, which is direct
-    // evidence about it and outranks a population threshold. That is not the
-    // same as bypassing the fit — only a printed tier's structural members do
-    // that (above), and a Gaia tier's stay fit participants, where a shared
-    // identifier says the cross-match could not separate them rather than that
-    // the photometry blends.
+    // Structural members skip the separation bound in BOTH tiers — ids
+    // inherited from the anchor are evidence about THIS pair and outrank a
+    // population threshold — which is not the same as bypassing the fit.
     const anchorMagIsSystemBlend = vTierIsSystemBlend(anchor.vVia);
     const maxSepArcsec = anchorMagIsSystemBlend
       ? PRINTED_BLEND_MAX_SEP_ARCSEC : GAIA_BLEND_MAX_SEP_ARCSEC;
@@ -2294,10 +2199,6 @@ export function promoteCompanions(
         // class (the Sirius Δmag≈10 shape).
         const bestErr = Math.min(...errs);
         if (bestErr > ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG) {
-          // Closest is not close. Every hypothesis misses the anchor's observed
-          // magnitude by more than the input's own error scale, so the winner
-          // was picked out of a field of wrong answers and its membership claim
-          // carries no information.
           stats.blendDimMembersMisfit += participants.length;
         } else if (errs[0] - bestErr < ANCHOR_DIM_DECISIVE_MAG) {
           stats.blendDimMembersOutside += participants.length;
@@ -2399,30 +2300,19 @@ function tryPromoteCursorPrimary(
 ): number | null {
   const primary = cursor.primary;
   if (primary === null) return null;
-  // No own-identifier requirement: an id-less row (Rigel B or Acrux B
-  // after the Stage-2 sibling-identity claims gate strips a stolen HIP)
-  // mints a synth-<wds>-<comp> slot exactly like an identifier-less
-  // secondary, and that key is fully addressable post-promotion. The
-  // position and absmag requirements below still gate honesty; a
-  // reappearing previously-retired component is reconciled in the SID
-  // ledger via data/sid/reinstatements.tsv, never by dropping the star.
+  // No own-identifier requirement: an id-less row mints an addressable
+  // synth-<wds>-<comp> slot like any identifier-less secondary, and the gates
+  // below are position and brightness rather than identity.
   const wdsRoot = wdsRootOf(primary.systemId);
   if (wdsRoot === null) return null;
   const anchor = wdsRootAnchors.get(wdsRoot);
   if (!anchor) return null;
   if (anchor.primaryRow === primary) return null;  // would self-promote
-  // Position. Preference order:
-  //  1. The row's own per-component astrometry when Stage 3 supplied a
-  //     real independent fit (own gaia_5p / hip2_long_baseline whose id
-  //     differs from the anchor's).
-  //  2. Project the row's Stage-6 anchor_sep/pa offset off the WDS-root
-  //     anchor star — Acrux B lands 3.5″/114° off A (the Stage-5-rejected
-  //     AB row's geometry); 40 Eri B lands at the A,BC compound proxy.
-  // Neither available → drop. Collocating at the anchor would bake a
-  // false coincident star inside the anchor's disc (Alsephina C): the
-  // escape only fires for cursor primaries that never appear as a
-  // secondary of the anchor, so no anchor→self orbital pair exists for
-  // BinaryOrbitField to animate it away from centre at runtime.
+  // Neither route available → drop. Collocating at the anchor would bake a
+  // false coincident star inside the anchor's disc: this escape fires only for
+  // cursor primaries that never appear as a secondary of the anchor, so no
+  // anchor→self orbital pair exists for BinaryOrbitField to animate it away
+  // from centre at runtime.
   let position = resolveIndependentAstrometry(
     primary, anchor.primaryRow.gaiaSourceId, anchor.primaryRow.hip,
   );

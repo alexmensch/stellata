@@ -289,26 +289,17 @@ export interface ComponentDesignation {
 }
 
 /** A component letter is stated relative to the WDS ROOT, so the base it
- *  attaches to has to be the root's, not the cursor primary's. WDS lists
- *  θ¹ Ori C as component D of the θ² Ori root (`05354-0525`), and taking
- *  the cursor primary composed that root's E as "θ¹ Ori E" — colliding with
- *  the real θ¹ Ori E in root `05353-0523`.
+ *  attaches to has to be the root's, not the cursor primary's — a cursor
+ *  primary is routinely a component of a DIFFERENT root, and composing
+ *  against it collides with that root's own letter.
  *
  *  A root may not borrow its identity from a star another root already owns.
- *  `05353-0524` is an Orion Nebula Cluster multiple whose only identified
- *  member is θ¹ Ori C, arriving as its component I — so every letter in it
- *  composed against θ¹ Ori, asserting an identity the data does not
- *  support. Refusing the anchor leaves those records on their own
- *  designations, which is what the gate means by a surviving collision
- *  being a data finding rather than a renderer concession
- *  (docs/star-naming.md § 8).
+ *  Refusing the anchor leaves those records on their own designations, which
+ *  is what the gate means by a surviving collision being a data finding
+ *  rather than a renderer concession (docs/star-naming.md § 8).
  *
- *  Map each multiples.tsv component to a root-relative designation so the
- *  composer and the runtime can both build "<base> <letter>". The anchor is
- *  included with its own comp letter (so "α Cen A" focuses it). Resolution
- *  mirrors binaries.bin (`resolvePairComponents`); coverage is bounded by
- *  what decomposes in multiples.tsv. First-write-wins on a record shared
- *  across pairs (α Cen A appears in both the AB and AC rows). */
+ *  The anchor is included with its own comp letter so "α Cen A" focuses it,
+ *  and a record shared across pairs takes first-write-wins. */
 export function buildComponentDesignations(
   rows: MultiplesTsvRow[],
   rowIndexMap: CatalogRowIndexMap,
