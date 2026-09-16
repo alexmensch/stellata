@@ -8,13 +8,9 @@ import {
   type GateVVia,
   type PrintedVLookups,
 } from '../photometry/v-magnitude-pure';
-// Type-only: the merge imports this module's values, so the runtime graph
-// stays one-way.
-
-/** Multi-value separator inside an overlay cell. A designation that names a
+/** No cell is single-valued by construction: a designation naming a
  *  catalogue granularity rather than one object attaches to every matching
- *  record, and a record can carry several (137 sources carry >1 HD), so no
- *  cell is single-valued by construction. */
+ *  record, and a record can carry several. */
 export const OVERLAY_VALUE_SEPARATOR = '|';
 
 export const OVERLAY_COLUMNS = [
@@ -59,11 +55,10 @@ export interface OverlayInput {
  *  star's designations belong to the faint companion Gaia actually fitted. */
 export interface BindingEvidence {
   gMagOf: (sourceId: string) => number | null;
-  /** Whether the astrometry pull returned a row for this source at all. A
-   *  missing G is a PASS at the gate either way, so the two causes have to be
-   *  told apart: no row means the request under-covers the candidate set and is
-   *  fixable there, while a row with a null `phot_g_mean_mag` is a source Gaia
-   *  publishes no G for and no request can supply. */
+  /** A missing G is a PASS at the gate either way, so the two causes have to
+   *  be told apart: no row means the request under-covers the candidate set
+   *  and is fixable there, while a row with a null `phot_g_mean_mag` is a
+   *  source Gaia publishes no G for and no request can supply. */
   hasPulledRow: (sourceId: string) => boolean;
   vMagOfHip: (hip: number) => number | null;
   /** The V cascade's tiers below Hipparcos, so both gates weigh a row with no
@@ -116,28 +111,17 @@ function designationSummary(entry: OverlayEntry): string {
   return parts.join(' · ');
 }
 
-/** Drop every overlay row whose source_id the record build would refuse to
- *  bind, running the SAME `resolveGaiaSourceId` gates `stars-parse.ts` applies
- *  rather than a second implementation of them.
+/** Runs the SAME `resolveGaiaSourceId` gates `stars-parse.ts` applies, never
+ *  a second implementation of them. Dropping the WHOLE row rather than just
+ *  its `hip` cell is the point: both walks routinely land on the same wrong
+ *  source, so if the source is not the star then every designation keyed on
+ *  it is misattributed, and the labels ride the inherited spine instead.
  *
- *  The printed V the magnitude gate compares against Gaia's G comes from the
- *  row's own designations in the V cascade's own tier order — Hipparcos on its
- *  HIPs, else Tycho-2 on the Tycho entries IV/25 routes to this source, else
- *  Gliese on its GJ cells (`../photometry/README.md` § The V cascade). Only a
- *  row carrying none of the three is ungateable, and `skippedNoPrintedV`
- *  counts it. Dropping the WHOLE row rather than just its `hip` cell is the
- *  point: both walks routinely land on the same wrong source, so if the source
- *  is not the star then every designation keyed on it is misattributed. The
- *  labels then ride the inherited spine, exactly as they do for the record
- *  build's rejected rows.
- *
- *  A gateable row with no `G` is NOT a rejection — `resolveGaiaSourceId` passes a
- *  candidate it cannot weigh — so both no-G counts are the gate's own coverage
- *  alarms, split by cause. `skippedNoGMag` is the fixable one, pinned at zero:
- *  non-zero means the request stopped covering the candidate set
- *  (`../astrometry-request/README.md` § The request is a union).
- *  `skippedNullGMag` is Gaia publishing no `phot_g_mean_mag` for a source it
- *  does have a row for, which no request can supply. */
+ *  A gateable row with no `G` is NOT a rejection — `resolveGaiaSourceId`
+ *  passes a candidate it cannot weigh — so both no-G counts are the gate's
+ *  own coverage alarms, split by cause
+ *  (`../astrometry-request/README.md` § The request is a union;
+ *  `../photometry/README.md` § The V cascade). */
 export function applyBindingGate(
   overlay: ClassicIdOverlay,
   evidence: BindingEvidence,

@@ -387,11 +387,11 @@ export function labelFlipDesignationDelta(
   return delta;
 }
 
-/** The spine designations the queue takes off their record, unnetted. The
- *  delta above cancels one against an addition that lands the same designation
- *  on another record, which is exactly what a same-as class cares about and
- *  exactly what a ledger canonical key does not — its row resolves through the
- *  record it was keyed on (`../../spine/README.md` § The swap parity ledger). */
+/** UNNETTED, where the delta above cancels a removal against an addition that
+ *  lands the same designation on another record — exactly what a same-as class
+ *  cares about and exactly what a ledger canonical key does not, its row
+ *  resolving through the record it was keyed on
+ *  (`../../spine/README.md` § The swap parity ledger). */
 export function spineDesignationsRemovedBy(flips: readonly LabelFlip[]): string[] {
   const removed: string[] = [];
   for (const flip of flips) {
@@ -460,12 +460,10 @@ interface Proposal {
   droppedExtras: string[];
 }
 
-/** Merge the source_id-keyed classic-ID overlay onto each record's inherited
- *  labels, IN PLACE. Union semantics: the overlay adds identifiers the spine
- *  lacks and wins where the two disagree, but never removes one it has no
- *  opinion on — the overlay reaches 62–96% per identifier and has no row at all
- *  for 115 of the 178 records at V ≤ 3, so the spine is the backstop for a
- *  double-digit fraction of every label, not a rare fallback.
+/** Rewrites each record's inherited labels IN PLACE. Union semantics: the
+ *  overlay adds identifiers the spine lacks and wins where the two disagree,
+ *  but never removes one it has no opinion on — the spine is the backstop for
+ *  a double-digit fraction of every label, not a rare fallback.
  *
  *  Two passes: the collision guard can only be scored against the post-merge
  *  assignment. */
@@ -642,30 +640,13 @@ function applyCollisionGuard<R extends LabelMergeRecord>(
   }
 }
 
-/** Decide what becomes of each value a single-valued field could not display.
- *
- *  Three outcomes, and the field's `writeAlt` is only the first of the gates:
- *
- *  - **`extra-dropped`** — the field has no alias list, so there is nowhere to
- *    put the value and the record will not answer to it.
- *  - **`extra-sibling-rendered`** — the pair's other component is a record of
- *    its own, so the number names THAT record. HD numbered two spectra of a
- *    pair Tycho-2 sees as one entry, and the overlay hangs both numbers on the
- *    one source_id without saying which component is which; where the pair is
- *    resolved, letting the primary answer to both would point a number at a
- *    star we draw separately.
- *  - **`extra-alias`** — the pair is unresolved, so the single record carries
- *    both components' light and answers to both numbers. That is the
- *    granularity the catalogue has, not a misattribution: 93 of these have no
- *    `multiples.tsv` row at all, so no separation, position angle or component
- *    magnitude exists to split them with.
+/** The field's `writeAlt` is only the first of the gates.
  *
  *  An alias also has to clear the collision guard's own rule, which
  *  `applyCollisionGuard` cannot apply for it: aliases are not display cells, so
  *  the guard's tally never sees them, and an alias equal to a value another
  *  record DISPLAYS would go ambiguous under `docs/sid.md` § 4.1 and cost both
- *  records the key. Such a value is withheld to `extra-dropped` — the record
- *  keeps its own display value and the queue carries the withheld label. */
+ *  records the key. Such a value is withheld to `extra-dropped`. */
 function partitionExtras<R extends LabelMergeRecord>(
   records: readonly R[],
   proposals: readonly Proposal[],
