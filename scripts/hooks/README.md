@@ -25,10 +25,13 @@ scripts/hooks/
                            staged tree touches a guarded folder
                            without updating its README.md (AGENTS.md
                            § Folder READMEs trigger 4 — "At commit
-                           time, update"), and/or when the staged
-                           diff introduces forbidden code-comment
+                           time, update"), when the staged diff
+                           introduces forbidden code-comment
                            patterns (same set as
-                           tests/code-comment-rules.test.ts).
+                           tests/code-comment-rules.test.ts), and/or
+                           when a staged comment block restates
+                           markdown prose the same commit adds
+                           — § The restatement sweep.
                            Behaviour pinned by
                            tests/commit-sweep-guard.test.ts.
   perf-guard.sh            Two independent gates on Bash / Write / Edit /
@@ -206,8 +209,43 @@ matched commit:
    references. Scoped to NEW content so pre-existing legacy
    violations don't block unrelated commits.
 
-Either check fires a `permissionDecision: "deny"` with a per-finding
+3. **Restatement sweep.** § The restatement sweep below.
+
+Any check fires a `permissionDecision: "deny"` with a per-finding
 breakdown and the relevant AGENTS.md § Code comments substitution.
+
+## The restatement sweep
+
+`docs/authoring-patterns.md` § Code-comment hygiene calls a comment
+restating README content written minutes earlier **the dominant failure
+mode**, and says CI cannot catch it. That is true of prose written in an
+earlier PR and false of the case the sentence actually describes: prose
+arriving in the *same commit* is in the staged diff, next to the comment.
+So this sweep compares the two halves of one commit.
+
+**It compares vocabulary, not phrasing**, because exact wording rarely
+survives the move from prose into a comment — a paraphrase is still a
+restatement. For each contiguous block of added comment lines it takes the
+distinct content words (stopwords and short tokens dropped, trailing `s`
+normalised so "pages" meets "page") and measures what share of them appear
+in markdown the same commit adds. Two lines minimum, twelve distinct words
+minimum, half of them shared, and the block is reported.
+
+Those floors are what keep a **pointer** legal: `// see src/site/README.md
+§ Reading it in dev` is one line and a handful of words, so it never
+reaches the test however much vocabulary it shares. That is the shape the
+deny message asks for.
+
+`[comment-ok: <reason>]` in the commit message opts out, and is visible in
+the PR the way `[readme-skip:]` is. It exists because vocabulary overlap is
+evidence rather than proof: a long comment carrying a genuine invariant
+about the subject its README also describes can reach the threshold
+honestly.
+
+Known limit: a comment committed **apart** from the prose it restates is
+invisible to this. The README-staleness check above is what makes the two
+usually land together, and that coupling does not cover root-level files,
+which no folder README is charged for.
 
 Scope caveat: `-a` / `--all` commits aren't fully inspected; only
 already-staged files are checked. The standard `git add <files> &&

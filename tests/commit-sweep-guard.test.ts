@@ -153,3 +153,66 @@ describe('commit-sweep-guard — the comment patterns, through Perl', () => {
     expect(allowed(`git commit -m "a thing ${SKIP_REASON}"`)).toBe(false);
   });
 });
+
+describe('restatement sweep', () => {
+  const DOC = `# thing
+
+An edit to a page here reloads the browser, and that takes the plugin's own
+watcher wiring rather than Vite's: this folder is outside the app server's
+root, so nothing here is watched by default, and Vite's own HTML reload
+addresses a page by its path relative to that root — which no URL served
+from here matches.
+`;
+
+  const RESTATES = `// These pages sit outside this server's root, so Vite's watcher never
+// reaches them and an edit fires no reload at all. Vite's own html
+// handling would not help even once watched: it sends a path relative
+// to root, and the page the browser is on never matches.
+export const x = 1;
+`;
+
+  // Spliced for the same reason the bead IDs above are: written literally
+  // this is a doc pointer into a fixture path, and
+  // tests/doc-pointer-resolution.test.ts resolves every one it finds.
+  const POINTER = `src/thing/README.md ${'§'} Reading it in dev`;
+
+  const POINTS = `// Not Vite's own html reload: ${POINTER}.
+export const x = 1;
+`;
+
+  function stagePair(code: string): void {
+    write('src/thing/README.md', '# thing\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'seed');
+    write('src/thing/README.md', DOC);
+    write('src/thing/thing.ts', code);
+    git('add', '-A');
+  }
+
+  it('denies a comment that restates prose the same commit adds', () => {
+    stagePair(RESTATES);
+    expect(allowed('git commit -m "wire the reload"')).toBe(false);
+  });
+
+  it('allows the one-line pointer that replaces it', () => {
+    stagePair(POINTS);
+    expect(allowed('git commit -m "wire the reload"')).toBe(true);
+  });
+
+  it('honours the comment-ok opt-out', () => {
+    stagePair(RESTATES);
+    const ok = '[comment-ok: the block carries an invariant the prose does not]';
+    expect(allowed(`git commit -m "wire it ${ok}"`)).toBe(true);
+  });
+
+  // Overlap with prose the commit does NOT touch is not evidence of
+  // anything; the prose has to be arriving alongside the comment.
+  it('stays quiet when the commit adds no markdown', () => {
+    write('src/thing/README.md', DOC);
+    git('add', '-A');
+    git('commit', '-q', '-m', 'seed');
+    write('src/thing/thing.ts', RESTATES);
+    git('add', '-A');
+    expect(allowed(`git commit -m "a thing ${SKIP_REASON}"`)).toBe(true);
+  });
+});
