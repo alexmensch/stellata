@@ -42,7 +42,7 @@ registry only describes what to display.
 | `Shift` `Z` | Aim at the opposite point, 180° longitude — where `Z` followed by an invert would land, in one sweep |
 | `Shift` `V` | Invert the view — the INV chip's keyboard path, which observe needs because the chip rides a navigate-only instrument (`../attitude/README.md` § Inverting the view) |
 | `H` | Toggle `showHud` |
-| `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`) — works in every mode. Single `F` opens Find in observe mode only (both are deferred by the double-tap window, like `C`). |
+| `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`) — works in every mode. Single `F` opens Find in observe mode only, deferred by the double-tap window so the second press can take fullscreen instead. `F` is the only key left with that deferral. |
 | `U` | Show/hide the controls — the top-right stack and the bottom-left Instruments panel (`controls-hidden.ts`) |
 | `K` | Open the display-calibration screen (`../calibration/README.md`) — also reachable from the panel's Camera section |
 | `+` / `-` | EV trim ± one 1/3-stop grid step (`steppedEv`; clamped to ±`EV_MAX_STOPS` by `ExposureController.setEv`) |
@@ -314,7 +314,8 @@ native html/css... we shouldn't dictate layout"). Do not reintroduce it.
   pixel box. It differs from Settings only in what bounds it: hanging off the
   bottom of the viewport, it sizes to its contents instead of sharing a
   column's height budget.
-- `.meta` is the catalog count (`.meta-count`, e.g. "313,242 stars") +
+- `.meta` is the catalog count (`.meta-count` — the loaded record count,
+  thousands-separated, "N stars") +
   the time readout / scrubber. Focused-object identity + camera
   distance live in the card rolodex (`../focus-card/README.md`).
 - Both containers set `pointer-events: none` on themselves and `auto` on

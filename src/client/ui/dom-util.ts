@@ -1,6 +1,5 @@
-// Minimal HTML-escape used by anywhere we splice user/catalog strings
-// into innerHTML. Three distinct call sites had identical copies before
-// this was lifted out (search.ts, constellation-typeahead.ts, main.ts).
+// Minimal HTML-escape for anywhere a user or catalog string is spliced
+// into innerHTML.
 export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')

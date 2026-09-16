@@ -80,8 +80,6 @@ export const SHORTCUTS: readonly ShortcutDescriptor[] = [
   { keys: ['D'], label: 'Debug panel', debug: true },
 ];
 
-/** Shortcuts shown in the `?` help modal — everything the user can act on,
- *  excluding hidden debug affordances. */
 export function helpModalShortcuts(): ShortcutDescriptor[] {
   return SHORTCUTS.filter((s) => !s.debug);
 }
