@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   LocalGroupLayer,
+  RING_SEGMENTS,
+  RINGS_PER_OBJECT,
   computeVisibleLabelsInto,
   createLocalGroupLabels,
   type LgLabelHost,
@@ -51,28 +53,90 @@ function makeCatalog(objects: LgObject[]): LgCatalog {
   return { count: objects.length, objects };
 }
 
+const wireframeOf = (layer: LocalGroupLayer) =>
+  layer.group.children[0] as THREE.LineSegments;
+
+const positionsOf = (layer: LocalGroupLayer) =>
+  wireframeOf(layer).geometry.getAttribute('position') as THREE.BufferAttribute;
+
+const indexOf = (layer: LocalGroupLayer) => wireframeOf(layer).geometry.getIndex()!;
+
 describe('LocalGroupLayer', () => {
-  it('builds three meridian LineLoops per ellipsoid object', () => {
+  it('draws the whole catalogue in one LineSegments, whatever the roster', () => {
+    // One draw submission for every ring of every object, and with it one
+    // material the per-frame opacity write reaches.
     const layer = new LocalGroupLayer(makeCatalog([
       makeObject({ kind: 'ellipsoid' }),
       makeObject({ kind: 'ellipsoid', id: 'b' }),
+      makeObject({ kind: 'disc', id: 'c' }),
     ]), builtinChromeLineMaterials());
-    // 2 objects × 3 rings = 6 LineLoops.
-    expect(layer.group.children.length).toBe(6);
+    expect(layer.group.children).toHaveLength(1);
+    expect(wireframeOf(layer)).toBeInstanceOf(THREE.LineSegments);
     layer.dispose();
   });
 
-  it('builds three LineLoops per disc object (midplane + thickness pair)', () => {
+  it('carries three rings per object, whichever kind it is', () => {
+    const rings = (objects: LgObject[]) => {
+      const layer = new LocalGroupLayer(makeCatalog(objects), builtinChromeLineMaterials());
+      const count = positionsOf(layer).count;
+      layer.dispose();
+      // One vertex per ring corner — the index, not a duplicate, closes it.
+      return count / RING_SEGMENTS;
+    };
+    expect(rings([makeObject({ kind: 'ellipsoid' })])).toBe(RINGS_PER_OBJECT);
+    expect(rings([makeObject({ kind: 'disc' })])).toBe(RINGS_PER_OBJECT);
+    expect(rings([
+      makeObject({ kind: 'ellipsoid' }),
+      makeObject({ kind: 'disc', id: 'b' }),
+    ])).toBe(2 * RINGS_PER_OBJECT);
+  });
+
+  it('closes every ring on its own first vertex, never on the next ring', () => {
+    // A ring one segment short leaves a gap in the outline; a closing entry
+    // that ran on into the next ring's base would draw a spoke between two
+    // objects megaparsecs apart.
     const layer = new LocalGroupLayer(makeCatalog([
-      makeObject({ kind: 'disc' }),
+      makeObject({ kind: 'disc', axes: [300, 200, 50] }),
+      makeObject({ kind: 'ellipsoid', id: 'b', axes: [120, 90, 60] }),
     ]), builtinChromeLineMaterials());
-    expect(layer.group.children.length).toBe(3);
+    const index = indexOf(layer);
+    const ringCount = 2 * RINGS_PER_OBJECT;
+    expect(index.count).toBe(ringCount * RING_SEGMENTS * 2);
+    for (let ring = 0; ring < ringCount; ring++) {
+      const base = ring * RING_SEGMENTS;
+      const last = (base + RING_SEGMENTS - 1) * 2;
+      expect(index.getX(last)).toBe(base + RING_SEGMENTS - 1);
+      expect(index.getX(last + 1)).toBe(base);
+    }
+    layer.dispose();
+  });
+
+  it('joins consecutive segments end to start, so the ring reads continuous', () => {
+    const layer = new LocalGroupLayer(makeCatalog([
+      makeObject({ kind: 'ellipsoid', axes: [120, 90, 60] }),
+    ]), builtinChromeLineMaterials());
+    const index = indexOf(layer);
+    for (let seg = 0; seg < RING_SEGMENTS - 1; seg++) {
+      expect(index.getX(seg * 2 + 1)).toBe(index.getX(seg * 2 + 2));
+    }
+    layer.dispose();
+  });
+
+  it('keeps the whole catalogue inside a 16-bit index', () => {
+    // 123 objects x 3 rings x 64 corners = 23,616 vertices, well under the
+    // 65,535 a Uint16 entry addresses. The full roster costs 369 KiB
+    // indexed against 554 KiB un-indexed (README.md § Runtime layer).
+    const layer = new LocalGroupLayer(
+      makeCatalog(Array.from({ length: 123 }, (_, i) => makeObject({ id: `o${i}` }))),
+      builtinChromeLineMaterials());
+    expect(positionsOf(layer).count).toBe(123 * RINGS_PER_OBJECT * RING_SEGMENTS);
+    expect(indexOf(layer).array).toBeInstanceOf(Uint16Array);
     layer.dispose();
   });
 
   it('starts hidden with material opacity = 0 — fades in via update()', () => {
     const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
-    const mat = (layer.group.children[0] as THREE.LineLoop).material as THREE.LineBasicMaterial;
+    const mat = (layer.group.children[0] as THREE.LineSegments).material as THREE.LineBasicMaterial;
     expect(mat.opacity).toBe(0);
     layer.dispose();
   });
@@ -88,7 +152,8 @@ describe('LocalGroupLayer', () => {
     const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
     layer.update(new THREE.Vector3(), FADE_OUTER_PC + 1000);
     expect(layer.group.visible).toBe(true);
-    const mat = (layer.group.children[0] as THREE.LineLoop).material as THREE.LineBasicMaterial;
+    const mat = (layer.group.children[0] as THREE.LineSegments)
+      .material as THREE.LineBasicMaterial;
     expect(mat.opacity).toBeGreaterThan(0);
     layer.dispose();
   });
@@ -132,19 +197,6 @@ describe('LocalGroupLayer', () => {
       // slop). The poles sit exactly at c=6000.
       expect(r).toBeLessThanOrEqual(maxAxis + 1e-6);
     }
-    layer.dispose();
-  });
-
-  it('shares a single material across all rings (per-frame opacity write hits one slot)', () => {
-    const layer = new LocalGroupLayer(makeCatalog([
-      makeObject({ kind: 'ellipsoid' }),
-      makeObject({ kind: 'ellipsoid', id: 'b' }),
-      makeObject({ kind: 'disc', id: 'c' }),
-    ]), builtinChromeLineMaterials());
-    const materials = new Set(layer.group.children.map(
-      (c) => (c as THREE.LineLoop).material as THREE.LineBasicMaterial,
-    ));
-    expect(materials.size).toBe(1);
     layer.dispose();
   });
 });

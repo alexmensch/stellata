@@ -82,13 +82,19 @@ export function makeOrbitLineLoop(
 ): THREE.Line {
   const geometry = orbitLineGeometry(points);
   const vertexCount = points.length / 3;
-  const index = vertexCount > 65535
-    ? new Uint32Array(vertexCount + 1)
-    : new Uint16Array(vertexCount + 1);
+  const index = lineIndexFor(vertexCount, vertexCount + 1);
   for (let i = 0; i < vertexCount; i++) index[i] = i;
   index[vertexCount] = 0;
   geometry.setIndex(new THREE.BufferAttribute(index, 1));
   return configureLinePrimitive(new THREE.Line(geometry, material), renderOrder);
+}
+
+/** An index buffer of `length` entries addressing `vertexCount` vertices.
+ *  A 16-bit entry reaches vertex 65535, so the widening turns on the
+ *  vertices addressed and never on the entry count, which routinely
+ *  exceeds it on a buffer a Uint16Array still indexes. */
+function lineIndexFor(vertexCount: number, length: number): Uint16Array | Uint32Array {
+  return vertexCount > 65535 ? new Uint32Array(length) : new Uint16Array(length);
 }
 
 /** Open polyline through `points` in order — the variant for a traversed
@@ -124,6 +130,70 @@ export function makeOrbitLineSegments(
 ): THREE.LineSegments {
   return configureLinePrimitive(
     new THREE.LineSegments(orbitLineGeometry(points), material), renderOrder);
+}
+
+/** One draw over many closed rings of `segmentsPerRing` vertices each,
+ *  laid end to end in `points`. The index closes every ring onto its own
+ *  first vertex, so the position buffer keeps one vertex per corner where
+ *  the un-indexed form above duplicates each shared endpoint. */
+export function makeOrbitRingSegments(
+  points: Float32Array,
+  segmentsPerRing: number,
+  material: THREE.Material,
+  renderOrder: number,
+): THREE.LineSegments {
+  const geometry = orbitLineGeometry(points);
+  const vertexCount = points.length / 3;
+  const index = lineIndexFor(vertexCount, vertexCount * 2);
+  let w = 0;
+  for (let base = 0; base < vertexCount; base += segmentsPerRing) {
+    for (let i = 0; i < segmentsPerRing; i++) {
+      index[w++] = base + i;
+      index[w++] = base + ((i + 1) % segmentsPerRing);
+    }
+  }
+  geometry.setIndex(new THREE.BufferAttribute(index, 1));
+  return configureLinePrimitive(
+    new THREE.LineSegments(geometry, material), renderOrder);
+}
+
+/** An ellipse on two axes of a local frame. `plane` names the two the sweep
+ *  runs over and `offset` displaces the ring along the third — 'xy' sweeps
+ *  x × y and offsets along z, 'xz' sweeps x × z and offsets along y, 'yz'
+ *  sweeps y × z and offsets along x. `radiusA` is the cosine leg. */
+export interface RingSpec {
+  radiusA: number;
+  radiusB: number;
+  plane: 'xy' | 'xz' | 'yz';
+  offset: number;
+}
+
+/** Write one ring's vertices into `out` at `at`, returning the next write
+ *  offset. `place` carries each vertex out of the ring's local frame into
+ *  the one the buffer holds — a quaternion and centre for a Local Group
+ *  object, the galactic-to-ICRS rotation and the GC offset for the disc. */
+export function writeRingVerts(
+  ring: RingSpec,
+  segments: number,
+  place: (v: THREE.Vector3) => void,
+  out: Float32Array,
+  at: number,
+): number {
+  const tmp = new THREE.Vector3();
+  let w = at;
+  for (let i = 0; i < segments; i++) {
+    const t = (i / segments) * Math.PI * 2;
+    const a = Math.cos(t) * ring.radiusA;
+    const b = Math.sin(t) * ring.radiusB;
+    if (ring.plane === 'xy') tmp.set(a, b, ring.offset);
+    else if (ring.plane === 'xz') tmp.set(a, ring.offset, b);
+    else tmp.set(ring.offset, a, b);
+    place(tmp);
+    out[w++] = tmp.x;
+    out[w++] = tmp.y;
+    out[w++] = tmp.z;
+  }
+  return w;
 }
 
 function orbitLineGeometry(points: Float32Array): THREE.BufferGeometry {

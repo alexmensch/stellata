@@ -4,7 +4,7 @@ import { farFieldFadeOpacity } from './galactic-fade';
 import type {
   ChromeLineMaterial, ChromeLineMaterials,
 } from '../chrome-lines/chrome-line-materials';
-import { makeOrbitLineLoop } from '../util/orbit-line';
+import { makeOrbitLineLoop, writeRingVerts } from '../util/orbit-line';
 import {
   BULGE_HALF_THICKNESS_PC,
   BULGE_RADIUS_PC,
@@ -45,6 +45,10 @@ export function galacticDiscOpacity(distFromSolPc: number): number {
   return farFieldFadeOpacity(DARK_BASE_OPACITY, distFromSolPc);
 }
 
+const galacticToAbsIcrs = (v: THREE.Vector3): void => {
+  v.applyMatrix4(GAL_TO_ICRS).add(GALACTIC_CENTRE_PC);
+};
+
 /** Radius of the bounding sphere the frustum test culls against, centred
  *  on the galactic centre. The thickness rings are the outermost vertices
  *  — the midplane radius offset along galactic z — not the midplane ring. */
@@ -55,7 +59,7 @@ export const GALACTIC_DISC_BOUND_PC = Math.hypot(DISC_RADIUS_PC, THICKNESS_HALF_
  * in absolute equatorial space centred on the galactic centre:
  *
  *   1. a 15 kpc radius midplane ring (b=0),
- *   2. two thickness rings offset ±400 pc along the galactic z-axis,
+ *   2. two thickness rings offset ±DISC_HALF_THICKNESS_PC along galactic z,
  *   3. a small bulge wireframe at the galactic centre itself.
  *
  * Sol sits ~8 kpc *inside* the disc, so the rendered disc is centred on the
@@ -140,16 +144,9 @@ export class GalacticDisc {
     this.mono = on;
   }
 
-  /**
-   * Build a closed line loop in the galactic frame, transform to ICRS, and
-   * translate by GALACTIC_CENTRE_PC so it lives in absolute equatorial pc.
-   * `plane` selects which two galactic axes carry the radial sweep:
-   *  - 'xy' → ring lies in the b=0 plane (z held at zOffset)
-   *  - 'xz' → meridian in the l=0 plane
-   *  - 'yz' → meridian in the l=90 plane
-   * For 'xz'/'yz' rings, the secondary axis sweeps to ±radiusB so we can
-   * draw oblate ellipses (e.g. the 3 kpc × 1.5 kpc bulge).
-   */
+  /** One ring of the wireframe, swept in the galactic frame and baked into
+   *  absolute equatorial pc. The 'xy' plane is the b=0 disc, 'xz' and 'yz'
+   *  the l=0 and l=90 meridians. */
   private makeRing(
     radiusA: number,
     radiusB: number,
@@ -158,22 +155,7 @@ export class GalacticDisc {
     plane: 'xy' | 'xz' | 'yz',
   ): THREE.Line {
     const v = new Float32Array(segments * 3);
-    const tmp = new THREE.Vector3();
-    for (let i = 0; i < segments; i++) {
-      const t = (i / segments) * Math.PI * 2;
-      const a = Math.cos(t) * radiusA;
-      const b = Math.sin(t) * radiusB;
-      if (plane === 'xy') tmp.set(a, b, zOffset);
-      else if (plane === 'xz') tmp.set(a, 0, b);
-      else /* yz */ tmp.set(0, a, b);
-      tmp.applyMatrix4(GAL_TO_ICRS).add(GALACTIC_CENTRE_PC);
-      v[i * 3 + 0] = tmp.x;
-      v[i * 3 + 1] = tmp.y;
-      v[i * 3 + 2] = tmp.z;
-    }
-    // A bounding sphere drawn from the geometry would be huge and miscentred
-    // (group origin is offset per frame), so the primitive turns frustum
-    // culling off and the disc never disappears at extreme camera positions.
+    writeRingVerts({ radiusA, radiusB, plane, offset: zOffset }, segments, galacticToAbsIcrs, v, 0);
     return makeOrbitLineLoop(v, this.stroke.material, DISC_RENDER_ORDER);
   }
 

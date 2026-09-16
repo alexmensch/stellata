@@ -13,7 +13,7 @@ import { MIDPLANE_RADIUS_PC } from '../galactic/galactic-disc';
 import type {
   ChromeLineMaterial, ChromeLineMaterials,
 } from '../chrome-lines/chrome-line-materials';
-import { makeOrbitLineLoop } from '../util/orbit-line';
+import { makeOrbitRingSegments, writeRingVerts, type RingSpec } from '../util/orbit-line';
 import {
   angularDiameterPx,
   discHitRadiusPx,
@@ -31,7 +31,13 @@ type LgPickCandidate = PickCandidate & {
   lx: number; ly: number; lz: number;
 };
 
-const RING_SEGMENTS = 64;
+export const RING_SEGMENTS = 64;
+
+/** Rings each object draws, whichever kind it is — three either way
+ *  (README.md § Runtime layer). The merged buffer sizes off it, and
+ *  `buildWireframeSegments` throws rather than truncate if the two
+ *  ever disagree. */
+export const RINGS_PER_OBJECT = 3;
 
 // Sample grid for the silhouette projection that drives label placement.
 // 12 longitudes × 5 mid-latitudes + 2 poles = 62 points per object —
@@ -82,11 +88,10 @@ export class LocalGroupLayer {
     this.stroke = chromeLines.solid(DARK_COLOUR, 0);
 
     this.absSamples = [];
-    for (const obj of this.objects) {
-      const loops = buildObjectLineLoops(obj, this.stroke.material);
-      for (const loop of loops) this.group.add(loop);
-      this.absSamples.push(buildSilhouetteSamples(obj));
-    }
+    for (const obj of this.objects) this.absSamples.push(buildSilhouetteSamples(obj));
+    this.group.add(makeOrbitRingSegments(
+      buildWireframeSegments(this.objects), RING_SEGMENTS,
+      this.stroke.material, WIREFRAME_RENDER_ORDER));
   }
 
   /** Per-frame update. Call before render.
@@ -240,61 +245,42 @@ export class LocalGroupLayer {
   }
 }
 
-/** Build the closed rings for one Local Group object. For discs: midplane
- *  + thickness pair. For ellipsoids: three orthogonal meridians. */
-function buildObjectLineLoops(
-  obj: LgObject,
-  material: THREE.Material,
-): THREE.Line[] {
-  const rings: THREE.Line[] = [];
+/** A disc's axes[2] is its semi-thickness along the normal, not a third
+ *  radius, so its rings are one plane at three heights rather than three
+ *  planes. README.md § Runtime layer. */
+function ringSpecsOf(obj: LgObject): RingSpec[] {
+  const [a, b, c] = obj.axes;
   if (obj.kind === 'disc') {
-    // Disc-local frame: a (=axes[0]) and b (=axes[1]) span the disc
-    // plane; c (=axes[2]) is the semi-thickness along disc normal.
-    // Three rings of radius (a, b) — one at z=0 (midplane), two at
-    // z=±c (thickness markers).
-    rings.push(makeRing(obj, 'xy', 0, material));
-    rings.push(makeRing(obj, 'xy', obj.axes[2], material));
-    rings.push(makeRing(obj, 'xy', -obj.axes[2], material));
-  } else {
-    // Ellipsoid: three orthogonal meridian rings in the local frame.
-    rings.push(makeRing(obj, 'xy', 0, material));
-    rings.push(makeRing(obj, 'xz', 0, material));
-    rings.push(makeRing(obj, 'yz', 0, material));
+    return [
+      { radiusA: a, radiusB: b, plane: 'xy', offset: 0 },
+      { radiusA: a, radiusB: b, plane: 'xy', offset: c },
+      { radiusA: a, radiusB: b, plane: 'xy', offset: -c },
+    ];
   }
-  return rings;
+  return [
+    { radiusA: a, radiusB: b, plane: 'xy', offset: 0 },
+    { radiusA: a, radiusB: c, plane: 'xz', offset: 0 },
+    { radiusA: b, radiusB: c, plane: 'yz', offset: 0 },
+  ];
 }
 
-/** Build a single closed ring. `plane` selects which two local
- *  axes carry the radial sweep:
- *   - 'xy' → axes[0] × axes[1], offset along local z by zOffset
- *   - 'xz' → axes[0] × axes[2], offset along local y by zOffset
- *   - 'yz' → axes[1] × axes[2], offset along local x by zOffset
- *  Vertices are pre-rotated by the object's quaternion and translated
- *  by centerAbs so the geometry lives in absolute ICRS pc. The group
- *  applies per-frame floating-origin offset. */
-function makeRing(
-  obj: LgObject,
-  plane: 'xy' | 'xz' | 'yz',
-  zOffset: number,
-  material: THREE.Material,
-): THREE.Line {
-  const verts = new Float32Array(RING_SEGMENTS * 3);
-  const tmp = new THREE.Vector3();
-  for (let i = 0; i < RING_SEGMENTS; i++) {
-    const t = (i / RING_SEGMENTS) * Math.PI * 2;
-    const ct = Math.cos(t);
-    const st = Math.sin(t);
-    if (plane === 'xy') tmp.set(obj.axes[0] * ct, obj.axes[1] * st, zOffset);
-    else if (plane === 'xz') tmp.set(obj.axes[0] * ct, zOffset, obj.axes[2] * st);
-    else /* yz */ tmp.set(zOffset, obj.axes[1] * ct, obj.axes[2] * st);
-    tmp.applyQuaternion(obj.quat).add(obj.centerAbs);
-    verts[i * 3 + 0] = tmp.x;
-    verts[i * 3 + 1] = tmp.y;
-    verts[i * 3 + 2] = tmp.z;
+/** Every object's rings as one vertex buffer in absolute ICRS pc, ring
+ *  after ring — README.md § Runtime layer. */
+function buildWireframeSegments(objects: readonly LgObject[]): Float32Array {
+  const out = new Float32Array(objects.length * RINGS_PER_OBJECT * RING_SEGMENTS * 3);
+  let at = 0;
+  for (const obj of objects) {
+    const toAbsIcrs = (v: THREE.Vector3): void => {
+      v.applyQuaternion(obj.quat).add(obj.centerAbs);
+    };
+    for (const spec of ringSpecsOf(obj)) {
+      at = writeRingVerts(spec, RING_SEGMENTS, toAbsIcrs, out, at);
+    }
   }
-  // frustumCulled off inside the primitive — the group origin is offset per
-  // frame, so a geometry-derived bounding sphere is miscentred.
-  return makeOrbitLineLoop(verts, material, WIREFRAME_RENDER_ORDER);
+  if (at !== out.length) {
+    throw new Error(`LG wireframe filled ${at} of ${out.length} floats`);
+  }
+  return out;
 }
 
 /** Precompute silhouette sample points in absolute ICRS pc for one
