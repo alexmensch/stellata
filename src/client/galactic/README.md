@@ -78,8 +78,11 @@ Being registered below the orbit lock is what makes that test legal at all.
 
 Each ring takes the chrome line seam's solid stroke
 (`../chrome-lines/README.md`) over `../util/orbit-line.ts`'s
-`makeOrbitLineLoop`, and its vertices are pre-baked once into absolute ICRS
-via `GAL_TO_ICRS` plus the GC offset; per frame `discGroup.position` is
+`makeOrbitLineLoop`, and its vertices come from that module's shared
+`writeRingVerts` sweep — the same one the Local Group wireframe fills its
+buffer with, so the `'xy'`/`'xz'`/`'yz'` axis mapping cannot drift between
+the two — pre-baked once into absolute ICRS via `GAL_TO_ICRS` plus the GC
+offset; per frame `discGroup.position` is
 rebased to `-worldOffset` (via `.copy(worldOffset).negate()` on the
 group's own position vector so the shared `worldOffset` is never
 mutated). Opacity smoothsteps from 0 to 0.55 between
