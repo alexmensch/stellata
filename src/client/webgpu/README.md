@@ -430,6 +430,14 @@ is the whole buffer. The star tables carry the default usage and upload on
 version alone; a per-frame-rewritten attribute elsewhere that keeps the
 hint pays its full byte count every rendered frame.
 
+**The hint is free only where the writer flags the attribute in the same
+render call that draws it** — the upload was owed anyway, so the usage
+changes nothing. Every carrier reachable on this boot meets that test: the
+probe markers and trails and the star mirror's slots each set `needsUpdate`
+from the update that also decides their visibility. The glare billboard's
+packed geometry was the one that did not (`solar-system/README.md` § The
+glare packs).
+
 ## Timestamps
 
 The renderer boots with `trackTimestamp: true`, and a grant is not proof
