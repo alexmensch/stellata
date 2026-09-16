@@ -1,12 +1,7 @@
-/**
- * Dev-only document routing, so one `pnpm run dev` answers the same paths the
- * deploy does: the app at /app, the homepage at /, its markdown rendition to
- * a client that asks for one, the 404 page for the rest, and a 301 off either
- * legacy share transport.
- */
+/** Dev-only document routing: one `pnpm run dev` answers every path the deploy does. */
 
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import type { Plugin } from 'vite';
 
 import { markdownRendition as renderMarkdown } from './scripts/site/markdown-rendition.ts';
@@ -27,10 +22,8 @@ export type DevRoute =
   | { kind: 'document'; doc: 'app' | 'home' | 'notFound' };
 
 /**
- * The four rules `src/worker.ts` answers in production, in its order. Both
- * read `legacyShareRedirect` rather than restating the share grammar: a dev
- * server that 404s a link the deploy redirects is a bug nobody sees until
- * someone pastes a real share URL.
+ * The rules `src/worker.ts` answers in production, in its order. Reads
+ * `legacyShareRedirect` rather than restating the share grammar.
  */
 export function devRoute(pathname: string, search: string): DevRoute {
   const legacy = legacyShareRedirect(pathname, search);
@@ -40,33 +33,17 @@ export function devRoute(pathname: string, search: string): DevRoute {
   return { kind: 'document', doc: 'notFound' };
 }
 
-/**
- * The app document's own `../main.ts` and `../styles.css`. The build rewrites
- * these to hashed absolute URLs; dev serves the file as authored, so the
- * browser resolves them against whatever URL it is on — and on a share link
- * (`/app/v/<blob>/`) that is three levels deep, where `../main.ts` is
- * nothing. Root-absolute is correct from every depth.
- */
+/** A third relative reference needs the same treatment — `src/client/app/README.md`. */
 const SIBLING_OF_ROOT = /(src|href)="\.\.\//g;
 
-/**
- * Requires `appType: 'custom'` on the config that installs it. Vite's own
- * html fallback rewrites an unmatched path to `/index.html` *before* a
- * plugin's middleware runs, which made every wrong URL — and `/app` itself —
- * serve the homepage; `'custom'` is how Vite hands document routing over
- * rather than guessing.
- */
+/** Requires `appType: 'custom'`. `src/site/README.md` § Reading it in dev. */
 export function documentRoutingInDev(repoRoot: string): Plugin {
   const appDoc = resolve(repoRoot, 'src/client/app/index.html');
   const siteDir = resolve(repoRoot, 'src/site');
-  // Each site page's stylesheet is its sibling, outside this server's root
-  // (`src/client`), so it is reached through Vite's filesystem route instead.
-  // `server.fs.allow` already covers the repo.
+  // Outside this server's root, so the filesystem route is the only way in.
   const stylesheet = `/@fs${resolve(siteDir, 'site.css')}`;
 
-  // `base` is the root-relative URL Vite resolves a document's own relative
-  // imports against, so the app document's `../main.ts` lands on
-  // `src/client/main.ts`.
+  // `base` is what Vite resolves a document's own relative imports against.
   const documents = {
     app: { file: appDoc, base: '/app/index.html', status: 200 },
     home: { file: resolve(siteDir, 'index.html'), base: '/index.html', status: 200 },
@@ -77,9 +54,15 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
     name: 'stellata:document-routing-in-dev',
     apply: 'serve',
     configureServer(server) {
-      // Post-hook form: installed after Vite's own middlewares, so real files
-      // — `public/` artifacts, `/@fs` and `/@vite` routes, source modules —
-      // are served first and only documents reach this.
+      // Not Vite's own html reload: src/site/README.md § Reading it in dev.
+      server.watcher.add(siteDir);
+      server.watcher.on('change', (file) => {
+        if (dirname(file) === siteDir && file.endsWith('.html')) {
+          server.hot.send({ type: 'full-reload', path: '*' });
+        }
+      });
+
+      // Post-hook: runs after Vite's own middlewares, so only documents reach it.
       return () => {
         server.middlewares.use(async (req, res, next) => {
           if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -89,8 +72,7 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
           const [pathname, query] = (req.url ?? '/').split('?');
           const route = devRoute(pathname, query === undefined ? '' : `?${query}`);
 
-          // A share link is answered whatever the client asked for, matching
-          // the Worker.
+          // Answered ahead of the Accept gate, matching the Worker.
           if (route.kind === 'redirect') {
             res.statusCode = 301;
             res.setHeader('Location', route.to);
@@ -109,10 +91,7 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
           try {
             const raw = await readFile(file, 'utf8');
 
-            // The deploy serves the rendition out of `dist/index.md`, which
-            // the build emits from this same module. Deriving it per request
-            // keeps an edit to the page visible without a build, as the HTML
-            // is.
+            // The derivation the build uses, so an edit shows without one.
             if (rendition !== null && prefersMarkdown(accept)) {
               res.statusCode = status;
               res.setHeader('Content-Type', MARKDOWN_TYPE);

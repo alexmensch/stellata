@@ -64,6 +64,13 @@ a 301 off either legacy share transport. That is `vite.site-dev.ts`, a
 dev-only plugin on the *app's* config — the two build passes have different
 roots, so nothing else would have put both documents on one server.
 
+**An edit to a page here reloads the browser**, and that takes the plugin's
+own watcher wiring rather than Vite's: this folder is outside the app
+server's root, so nothing here is watched by default, and Vite's own HTML
+reload addresses a page by its path relative to that root — which no URL
+served from here matches. The stylesheet needs none of it, being a real
+module request.
+
 It needs `appType: 'custom'` there, and that is not a detail to undo:
 Vite's own SPA fallback rewrites an unmatched path to `/index.html` before
 any plugin middleware runs, which made every wrong URL — and `/app` itself
