@@ -14,10 +14,10 @@ export interface SpectralInfo {
   isWolfRayet?: boolean;
 }
 
-/** Sentinel classIdx for "unparseable / unknown spectral class". Routes
- *  through T_TABLE[UNKNOWN_CLASS_IDX]'s neutral 5000 K row in tempKelvin
- *  / boloCorr, and tells the renderer's star-color routing to treat the
- *  spectral tier as missing and fall through to ballesteros / solar. */
+/** Routes through T_TABLE[UNKNOWN_CLASS_IDX]'s neutral 5000 K row in
+ *  tempKelvin / boloCorr, and tells the renderer's star-color routing to
+ *  treat the spectral tier as missing and fall through to
+ *  ballesteros / solar. */
 export const UNKNOWN_CLASS_IDX = 8;
 
 // Luminosity-class encoding shared with the renderer:

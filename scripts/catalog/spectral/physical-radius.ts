@@ -139,9 +139,7 @@ export function resolveApsisTeff(apsis: ApsisRow | null | undefined): number | n
   return null;
 }
 
-// Compute physical radius in solar radii from absolute magnitude + spectral
-// info via Stefan-Boltzmann. Clamped to sane bounds so odd catalog entries
-// don't produce absurd values. `teffOverride` (a measured Apsis Teff via
+// `teffOverride` (a measured Apsis Teff via
 // resolveApsisTeff) replaces the class-table Teff when present; BC stays
 // class-table (class-table BC against a measured T still beats class-table
 // both). White dwarfs and Wolf-Rayets keep their dedicated treatments —
