@@ -15,6 +15,7 @@ import {
 } from '../../star-pipeline/extinction/extinction-prepass-pure';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { disposeStorageAttribute } from '../tsl/storage-attribute';
+import { mortonDispatchOrder } from './dispatch-order-pure';
 import { dustRaymarchAvTsl } from './dust-raymarch-tsl';
 import type { ExtinctionNodes } from './extinction-nodes';
 import { runReferenceMarch } from './extinction-parity';
@@ -45,9 +46,16 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   private readonly nodes: SharedUniformNodes;
   private readonly count: number;
   private positions: StorageBufferAttribute | null;
+  private order: StorageBufferAttribute | null;
   private av: StorageBufferAttribute | null;
   private kernel: ComputeNode | null;
   private readonly positionsNode: ReturnType<typeof storage<'vec4'>>;
+  private readonly orderNode: ReturnType<typeof storage<'uint'>>;
+  /** Dispatch slot → catalogue index, the CPU copy the parity check needs
+   *  to put the reference march's slot-indexed target back into star order.
+   *  Shares its array with the `order` buffer, so dispose has to drop both
+   *  or the 1.48 MiB outlives the pass. */
+  private dispatchOrder: Uint32Array | null;
   private readonly absCameraPos = uniform(new Vector3());
 
   // The whole A_V table on the CPU. `readAvMag` answers out of this and
@@ -85,11 +93,14 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.nodes = nodes;
     this.count = count;
 
+    this.dispatchOrder = mortonDispatchOrder(positions, count);
     // vec4 slots, not vec3: WGSL has no packed vec3 in a storage buffer, and
     // an itemSize-3 attribute is the one the backend silently re-strides
     // (../README.md § One writer per buffer per submit).
     this.positions = new StorageBufferAttribute(count, 4);
-    packPositionsVec4Into(this.positions.array as Float32Array, positions, count);
+    packPositionsVec4Into(
+      this.positions.array as Float32Array, positions, count, this.dispatchOrder);
+    this.order = new StorageBufferAttribute(this.dispatchOrder, 1);
     this.av = new StorageBufferAttribute(count, 1);
     // The consumers' slot points here for this instance's whole life;
     // `uAvPrepassEnabled` is what gates the read, so a buffer that has not
@@ -97,11 +108,12 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     slots.setAvBuffer(this.av);
 
     this.positionsNode = storage(this.positions, 'vec4', count).toReadOnly();
-    // One thread per star. three guards the threads past `count` in the
-    // last workgroup with an early return, so neither buffer is touched
-    // out of range.
+    this.orderNode = storage(this.order, 'uint', count).toReadOnly();
+    // One thread per slot. three guards the threads past `count` in the
+    // last workgroup with an early return, so no buffer is touched out of
+    // range. README.md § Dispatch order.
     this.kernel = compute(Fn(() => {
-      slots.av.element(instanceIndex).assign(dustRaymarchAvTsl(
+      slots.av.element(this.orderNode.element(instanceIndex)).assign(dustRaymarchAvTsl(
         nodes, slots.dust, this.absCameraPos,
         this.positionsNode.element(instanceIndex).xyz));
     })(), count);
@@ -191,12 +203,13 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  a fragment pass over the same positions, at the last computed camera,
    *  bit-compared against the whole buffer. Dev-console only. */
   async verifyParity(): Promise<AvParityReport | null> {
-    if (!this.isActive() || this.av === null) return null;
+    if (!this.isActive() || this.av === null || this.dispatchOrder === null) return null;
     return runReferenceMarch({
       renderer: this.renderer,
       nodes: this.nodes,
       dust: this.slots.dust,
       positions: this.positionsNode,
+      order: this.dispatchOrder,
       absCameraPos: this.absCameraPos,
       av: this.av,
       count: this.count,
@@ -218,13 +231,16 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.disposed = true;
     this.uniforms.uAvPrepassEnabled.value = 0;
     this.slots.setAvBuffer(null);
-    // The kernel's bind group references both buffers: drop it first.
+    // The kernel's bind group references all three buffers: drop it first.
     this.kernel?.dispose();
     if (this.av !== null) disposeStorageAttribute(this.renderer, this.av);
     if (this.positions !== null) disposeStorageAttribute(this.renderer, this.positions);
+    if (this.order !== null) disposeStorageAttribute(this.renderer, this.order);
     this.kernel = null;
     this.av = null;
     this.positions = null;
+    this.order = null;
+    this.dispatchOrder = null;
     this.mirror = null;
     this.mirrorGeneration = -1;
     this.movedOnLastUpdate = false;

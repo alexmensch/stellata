@@ -39,6 +39,13 @@ describe('packPositionsVec4Into', () => {
     expect(packPositionsVec4Into(out, positions, 2)).toBe(out);
     expect(Array.from(out)).toEqual([1, 2, 3, 9, 4, 5, 6, 9]);
   });
+
+  it('fills slot i with star order[i] when the caller brings an order', () => {
+    const positions = new Float32Array([1, 2, 3, 4, 5, 6]);
+    const out = new Float32Array(8).fill(9);
+    packPositionsVec4Into(out, positions, 2, Uint32Array.from([1, 0]));
+    expect(Array.from(out)).toEqual([4, 5, 6, 9, 1, 2, 3, 9]);
+  });
 });
 
 describe('movedBeyondEpsilon', () => {

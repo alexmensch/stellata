@@ -484,7 +484,11 @@ metal-3, Chrome headless, `raf-delta`, 4.096 Mpx,
 and fetches-per-voxel identical and move only the pattern the rays are laid out
 in: **3.3× for coherence alone**. The frustum grids are coherent by
 construction, neighbouring cells being neighbouring directions, so they read
-above that floor and the scattered rate prices only the per-star prepass.
+above that floor — as does the per-star extinction prepass, which dispatches
+in a spatial order for exactly this reason
+(`src/client/webgpu/extinction/README.md` § Dispatch order). The scattered
+rate is the floor a pass pays when neighbouring threads march unrelated
+sight-lines, and it is what that order exists to stay off.
 
 **Nothing else factors, because at a fixed fetch count the knobs are one knob.**
 Widening the angle between rays *is* how a row comes to touch more volume, so
@@ -527,11 +531,14 @@ judgement about which end, not a measurement. **stellata-ty4.8 argues a split
 rather than one verdict**, and the lever table below is what it turns at the
 corner.
 
-The same measurement prices the shipped per-star prepass in the same currency:
-18.6M fetches, scattered by construction, ≈**5.6 ms every frame the camera
-moves**. That is a cost `gpu.frame` cannot see at all today, because the WebGPU
-frame total resolves render passes only and the prepass is a compute dispatch —
-stellata-8cg.49.31.
+The same measurement puts the shipped per-star prepass in the same currency —
+18.6M fetches, scattered by construction — and inferring from the golden-angle
+row above gives ≈5.6 ms every frame the camera moves. The pass has since been
+measured on its own compute clock, and it is **worse than that inference:
+12.89 ms**, so catalogue order scatters harder than a golden angle does.
+Morton-ordering the dispatch takes it to 2.48 ms
+(`src/client/webgpu/extinction/README.md` § Dispatch order). The rate to price
+a scattered march against here is the floor, not the estimate.
 
 **The last row of the table below is unsound for this grid, and that is the
 larger finding.** Refilling a fraction of the cells per frame costs no accuracy
