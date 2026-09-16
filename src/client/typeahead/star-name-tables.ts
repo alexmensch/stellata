@@ -12,10 +12,7 @@ import type { Catalog } from '../loaders/catalog-loader';
 /** Display label per star, composed by the SAME pure ladder the record
  *  build used — `catalog.bin`'s name table carries the NAME tiers, and
  *  every designation below them is composed here from the structured wire
- *  (docs/star-naming.md § 6). Two of the ladder's rules are relational (a
- *  component borrows its system's base; a letter is appended only where a
- *  sibling owns the same designation), which is why one pass over the whole
- *  corpus replaces the old per-entry fallback chain.
+ *  (docs/star-naming.md § 6).
  *
  *  Records the search index does not carry — no identifier a user could
  *  type — keep the name table's entry where they have one and otherwise
@@ -50,9 +47,9 @@ export interface BayerInfo {
   suffix: string;
 }
 
-// Map star idx → its Bayer designation parts. Used by chart mode to render
-// the letter glyph + optional superscript alongside proper names. The wire
-// carries the glyph itself, so there is nothing to parse.
+// Used by chart mode to render the letter glyph + optional superscript
+// alongside proper names. The wire carries the glyph itself, so there is
+// nothing to parse.
 export function buildBayerMap(raw: SearchEntry[]): Map<number, BayerInfo> {
   const out = new Map<number, BayerInfo>();
   for (const entry of raw) {
