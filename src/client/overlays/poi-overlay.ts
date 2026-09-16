@@ -256,12 +256,6 @@ export function createPoiOverlay(stellata: Stellata): void {
     }
   }
 
-  // Hide an entry. The visible d / display writes go through the dirty-
-  // track gate; the remaining numeric + text sentinels are wiped via
-  // resetEntrySentinels so the next show-from-hide cycle's first write
-  // always lands — without this reset, re-pinning at slightly different
-  // geometry could skip the setAttribute and inherit stale cx/cy/lx/ly
-  // from the prior session.
   function hideEntry(e: Entry) {
     e.lastArrowD = setStrAttr(e.arrowPath, 'd', '', e.lastArrowD);
     e.lastArrowLabelDisplay = setStyle(e.arrowLabel, 'display', 'none', e.lastArrowLabelDisplay);

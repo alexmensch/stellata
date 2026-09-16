@@ -91,10 +91,10 @@ which one a family takes is decided by **what the label points at**:
   whose projection sits furthest along a chosen screen direction, so
   the gap from the curve stays constant as the camera orbits (a
   bbox-corner anchor varies, since the silhouette falls inside the
-  corner). Molecular clouds, the heliopause, the Local Bubble, the
-  Milky Way, the Local Group objects — the last three through
-  `../fresnel-shell/`'s `createShellSilhouetteLabel`, which fixes the
-  shared shell config. It owns a subscription rather than a call:
+  corner). Molecular clouds, the heliopause and the Local Bubble go
+  through `../fresnel-shell/`'s `createShellSilhouetteLabel`, which
+  fixes the shared shell config; the Local Group objects call the
+  engine directly. It owns a subscription rather than a call:
   `createDistanceGatedLabel` registers its own frame handler and
   returns the teardown.
 

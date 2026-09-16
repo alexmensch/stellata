@@ -84,12 +84,6 @@ export function createDistanceVectorOverlay(stellata: Stellata) {
   let lastLabelText = '\0';
   let lastLabelX = NaN;
   let lastLabelY = NaN;
-  // Fade state (opacity + pointer-events). Shares the applyFade /
-  // dirty-track / pointer-policy contract with hud-overlay's Sol/GC
-  // arrows but computes its OWN alpha against its OWN drawn shaft
-  // length — the distance-vector is typically longer than Sol/GC and
-  // outlasts their fade by design (ml8 option B). See applyFade in
-  // dirty-attr.ts and focusedArrowFadeAlpha in arrow-fade.ts.
   const fadeState = emptyFadeState();
   let lastDistUiDisplay = '\0';
   // Cache getComputedTextLength keyed on the rendered string. SVG's
@@ -203,7 +197,7 @@ export function createDistanceVectorOverlay(stellata: Stellata) {
     // star's disc grows past THIS arrow's drawn shaft length. The
     // distance-vector is typically longer than the nominal Sol/GC
     // chevrons (it spans from focal star to its destination), so it
-    // outlasts them — by design, per the ml8 bead's option B. The HUD
+    // outlasts them, by design. The HUD
     // Sol/GC arrows compute their own shared alpha inside hud-overlay.ts
     // against `max(solShaftLen, gcShaftLen)`.
     //

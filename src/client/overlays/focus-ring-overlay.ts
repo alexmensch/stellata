@@ -3,10 +3,10 @@ import type { Stellata } from '../stellata';
 import { projectToScreenInto } from './overlay-project';
 import { setNumAttr, setStyle } from './dirty-attr';
 
-// Canonical screen-pixel radius for the dashed focus ring. Exported so the
-// HUD ring (which morphs out of it during navigate↔observe transitions) and
-// the POI ring (same visual indicator at a different anchor) can pin to the
-// same value instead of carrying duplicate magic numbers.
+// Canonical screen-pixel radius for the dashed focus ring. Every layer that
+// draws or measures against that ring imports it — the HUD ring morphs out
+// of it across the navigate↔observe transition — so none of them carries a
+// duplicate magic number.
 export const FOCUS_RING_RADIUS_PX = 24;
 
 export function createFocusRingOverlay(stellata: Stellata) {

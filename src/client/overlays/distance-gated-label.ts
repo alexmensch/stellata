@@ -1,6 +1,6 @@
 // Per-frame SVG label anchored to a 3D object's projected silhouette,
-// with a caller-supplied visibility predicate. Shared by the heliopause
-// and Local Group label families.
+// with a caller-supplied visibility predicate. Shared by the Local Group
+// family and, through fresnel-shell, every boundary-shell family.
 
 import * as THREE from 'three';
 import type { KindContext } from '../kinds/kind-module';

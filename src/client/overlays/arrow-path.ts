@@ -2,10 +2,8 @@ import * as THREE from 'three';
 
 // Shared arrow shape used by the distance-vector overlay and the Sol/GC
 // locator arrows. Both render in screen space as solid shaft + chevron
-// arrowhead so all on-screen arrows in the app share one silhouette.
-//
-// Arrowhead size matches the original distance-vector chevron — the user
-// settled on this proportion as visually appealing.
+// arrowhead so all on-screen arrows in the app share one silhouette. The
+// head proportion is authored taste, not derived from anything.
 export const ARROW_HEAD_DEPTH_PX = 5;
 export const ARROW_HEAD_HALF_WIDTH_PX = 4;
 
@@ -21,6 +19,8 @@ export const ARROW_PIXEL_LENGTH = 110;
 // it. Same gap everywhere so the arrows visually detach from their ring
 // identically in every layer.
 export const RING_HALO_GAP_PX = 4;
+
+const scratchVS = /*@__PURE__*/ new THREE.Vector3();
 
 /**
  * Screen-space unit direction from screen centre to a world-space
@@ -43,12 +43,6 @@ export const RING_HALO_GAP_PX = 4;
  * (view-space x and y both ≈ 0), where no rotation brings the target into
  * view in any preferred direction.
  */
-// Module-scope scratch vector for viewSpaceScreenDirInto. Owning it inside
-// the helper keeps arrow-path symmetric with focus-ring-overlay /
-// distance-vector-overlay (all of which hide their per-frame scratch
-// state) and frees call sites from threading a Vector3 through.
-const scratchVS = /*@__PURE__*/ new THREE.Vector3();
-
 export function viewSpaceScreenDirInto(
   worldDir: THREE.Vector3,
   camera: THREE.Camera,
