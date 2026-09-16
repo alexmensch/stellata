@@ -1,7 +1,4 @@
-/**
- * Build-time values every Vite config in the repo publishes, so the app and
- * the public site read one set.
- */
+/** Build-time values every Vite config publishes, so app and site read one set. */
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -12,10 +9,8 @@ import {
 } from './scripts/site/site-metrics.ts';
 
 /**
- * The VITE_ prefix is the supported way to inject build-time values that
- * work in both dev and prod (`define` behaves differently across the two).
- * Each is also an HTML substitution — `%VITE_STAR_COUNT%` — which is what
- * keeps a figure a page states off the list of things a human maintains.
+ * The VITE_ prefix, rather than `define`, because only it behaves the same
+ * in dev and prod. `src/site/README.md` § Numbers in copy.
  */
 export function publishBuildEnv(root: string): void {
   process.env.VITE_APP_VERSION = JSON.parse(

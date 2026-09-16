@@ -27,6 +27,15 @@ served, and would put `robots.txt` at a path no crawler reads. So the
 document alone lives under `/app`; its assets and every artifact stay at
 the root.
 
+## The chunk-size limit is raised, not chased
+
+`vite.config.ts` sets `chunkSizeWarningLimit` above what the entry chunk
+weighs, deliberately. JavaScript is around 1% of the bytes this document
+needs before its first frame — the catalogue fetch dominates by orders of
+magnitude — so the warning is measuring the wrong thing here. Splitting
+three and the app into separate vendor chunks leaves both halves near
+500 kB and silences nothing, which is why the limit moved instead.
+
 ## In dev, this document answers at `/app`
 
 `pnpm run dev` serves it at **`http://localhost:5173/app`** — and serves
