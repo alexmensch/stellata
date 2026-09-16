@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   LocalGroupLayer,
+  RING_SEGMENTS,
+  RINGS_PER_OBJECT,
   computeVisibleLabelsInto,
   createLocalGroupLabels,
   type LgLabelHost,
@@ -51,28 +53,72 @@ function makeCatalog(objects: LgObject[]): LgCatalog {
   return { count: objects.length, objects };
 }
 
+const wireframeOf = (layer: LocalGroupLayer) =>
+  layer.group.children[0] as THREE.LineSegments;
+
+const positionsOf = (layer: LocalGroupLayer) =>
+  wireframeOf(layer).geometry.getAttribute('position') as THREE.BufferAttribute;
+
 describe('LocalGroupLayer', () => {
-  it('builds three meridian LineLoops per ellipsoid object', () => {
+  it('draws the whole catalogue in one LineSegments, whatever the roster', () => {
+    // One draw submission for every ring of every object, and with it one
+    // material the per-frame opacity write reaches.
     const layer = new LocalGroupLayer(makeCatalog([
       makeObject({ kind: 'ellipsoid' }),
       makeObject({ kind: 'ellipsoid', id: 'b' }),
+      makeObject({ kind: 'disc', id: 'c' }),
     ]), builtinChromeLineMaterials());
-    // 2 objects × 3 rings = 6 LineLoops.
-    expect(layer.group.children.length).toBe(6);
+    expect(layer.group.children).toHaveLength(1);
+    expect(wireframeOf(layer)).toBeInstanceOf(THREE.LineSegments);
     layer.dispose();
   });
 
-  it('builds three LineLoops per disc object (midplane + thickness pair)', () => {
+  it('carries three rings per object, whichever kind it is', () => {
+    const rings = (objects: LgObject[]) => {
+      const layer = new LocalGroupLayer(makeCatalog(objects), builtinChromeLineMaterials());
+      const count = positionsOf(layer).count;
+      layer.dispose();
+      // Each ring is RING_SEGMENTS disjoint segments, so two vertices each.
+      return count / (RING_SEGMENTS * 2);
+    };
+    expect(rings([makeObject({ kind: 'ellipsoid' })])).toBe(RINGS_PER_OBJECT);
+    expect(rings([makeObject({ kind: 'disc' })])).toBe(RINGS_PER_OBJECT);
+    expect(rings([
+      makeObject({ kind: 'ellipsoid' }),
+      makeObject({ kind: 'disc', id: 'b' }),
+    ])).toBe(2 * RINGS_PER_OBJECT);
+  });
+
+  it('closes every ring — the last segment returns to the first vertex', () => {
+    // Nothing but the vertices closes a ring in a segment-pair buffer, so
+    // a ring one segment short would leave a visible gap in the outline.
     const layer = new LocalGroupLayer(makeCatalog([
-      makeObject({ kind: 'disc' }),
+      makeObject({ kind: 'disc', axes: [300, 200, 50] }),
     ]), builtinChromeLineMaterials());
-    expect(layer.group.children.length).toBe(3);
+    const pos = positionsOf(layer);
+    const vertex = (i: number) => new THREE.Vector3().fromBufferAttribute(pos, i);
+    for (let ring = 0; ring < RINGS_PER_OBJECT; ring++) {
+      const base = ring * RING_SEGMENTS * 2;
+      expect(vertex(base + RING_SEGMENTS * 2 - 1).distanceTo(vertex(base))).toBeLessThan(1e-6);
+    }
+    layer.dispose();
+  });
+
+  it('joins consecutive segments end to start, so the ring reads continuous', () => {
+    const layer = new LocalGroupLayer(makeCatalog([
+      makeObject({ kind: 'ellipsoid', axes: [120, 90, 60] }),
+    ]), builtinChromeLineMaterials());
+    const pos = positionsOf(layer);
+    const vertex = (i: number) => new THREE.Vector3().fromBufferAttribute(pos, i);
+    for (let seg = 0; seg < RING_SEGMENTS - 1; seg++) {
+      expect(vertex(seg * 2 + 1).distanceTo(vertex(seg * 2 + 2))).toBeLessThan(1e-6);
+    }
     layer.dispose();
   });
 
   it('starts hidden with material opacity = 0 — fades in via update()', () => {
     const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
-    const mat = (layer.group.children[0] as THREE.LineLoop).material as THREE.LineBasicMaterial;
+    const mat = (layer.group.children[0] as THREE.LineSegments).material as THREE.LineBasicMaterial;
     expect(mat.opacity).toBe(0);
     layer.dispose();
   });
@@ -88,7 +134,8 @@ describe('LocalGroupLayer', () => {
     const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
     layer.update(new THREE.Vector3(), FADE_OUTER_PC + 1000);
     expect(layer.group.visible).toBe(true);
-    const mat = (layer.group.children[0] as THREE.LineLoop).material as THREE.LineBasicMaterial;
+    const mat = (layer.group.children[0] as THREE.LineSegments)
+      .material as THREE.LineBasicMaterial;
     expect(mat.opacity).toBeGreaterThan(0);
     layer.dispose();
   });
@@ -132,19 +179,6 @@ describe('LocalGroupLayer', () => {
       // slop). The poles sit exactly at c=6000.
       expect(r).toBeLessThanOrEqual(maxAxis + 1e-6);
     }
-    layer.dispose();
-  });
-
-  it('shares a single material across all rings (per-frame opacity write hits one slot)', () => {
-    const layer = new LocalGroupLayer(makeCatalog([
-      makeObject({ kind: 'ellipsoid' }),
-      makeObject({ kind: 'ellipsoid', id: 'b' }),
-      makeObject({ kind: 'disc', id: 'c' }),
-    ]), builtinChromeLineMaterials());
-    const materials = new Set(layer.group.children.map(
-      (c) => (c as THREE.LineLoop).material as THREE.LineBasicMaterial,
-    ));
-    expect(materials.size).toBe(1);
     layer.dispose();
   });
 });

@@ -13,7 +13,7 @@ import { MIDPLANE_RADIUS_PC } from '../galactic/galactic-disc';
 import type {
   ChromeLineMaterial, ChromeLineMaterials,
 } from '../chrome-lines/chrome-line-materials';
-import { makeOrbitLineLoop } from '../util/orbit-line';
+import { makeOrbitLineSegments } from '../util/orbit-line';
 import {
   angularDiameterPx,
   discHitRadiusPx,
@@ -31,7 +31,11 @@ type LgPickCandidate = PickCandidate & {
   lx: number; ly: number; lz: number;
 };
 
-const RING_SEGMENTS = 64;
+export const RING_SEGMENTS = 64;
+
+/** Rings each object draws, whichever kind it is — three either way
+ *  (§ Runtime layer). The merged buffer sizes off it. */
+export const RINGS_PER_OBJECT = 3;
 
 // Sample grid for the silhouette projection that drives label placement.
 // 12 longitudes × 5 mid-latitudes + 2 poles = 62 points per object —
@@ -82,11 +86,9 @@ export class LocalGroupLayer {
     this.stroke = chromeLines.solid(DARK_COLOUR, 0);
 
     this.absSamples = [];
-    for (const obj of this.objects) {
-      const loops = buildObjectLineLoops(obj, this.stroke.material);
-      for (const loop of loops) this.group.add(loop);
-      this.absSamples.push(buildSilhouetteSamples(obj));
-    }
+    for (const obj of this.objects) this.absSamples.push(buildSilhouetteSamples(obj));
+    this.group.add(makeOrbitLineSegments(
+      buildWireframeSegments(this.objects), this.stroke.material, WIREFRAME_RENDER_ORDER));
   }
 
   /** Per-frame update. Call before render.
@@ -240,61 +242,75 @@ export class LocalGroupLayer {
   }
 }
 
-/** Build the closed rings for one Local Group object. For discs: midplane
- *  + thickness pair. For ellipsoids: three orthogonal meridians. */
-function buildObjectLineLoops(
-  obj: LgObject,
-  material: THREE.Material,
-): THREE.Line[] {
-  const rings: THREE.Line[] = [];
-  if (obj.kind === 'disc') {
-    // Disc-local frame: a (=axes[0]) and b (=axes[1]) span the disc
-    // plane; c (=axes[2]) is the semi-thickness along disc normal.
-    // Three rings of radius (a, b) — one at z=0 (midplane), two at
-    // z=±c (thickness markers).
-    rings.push(makeRing(obj, 'xy', 0, material));
-    rings.push(makeRing(obj, 'xy', obj.axes[2], material));
-    rings.push(makeRing(obj, 'xy', -obj.axes[2], material));
-  } else {
-    // Ellipsoid: three orthogonal meridian rings in the local frame.
-    rings.push(makeRing(obj, 'xy', 0, material));
-    rings.push(makeRing(obj, 'xz', 0, material));
-    rings.push(makeRing(obj, 'yz', 0, material));
-  }
-  return rings;
+/** `plane` names the two local axes a ring sweeps; `offset` displaces it
+ *  along the third — 'xy' sweeps axes[0] × axes[1] and offsets along z,
+ *  'xz' sweeps axes[0] × axes[2] and offsets along y, 'yz' sweeps
+ *  axes[1] × axes[2] and offsets along x. */
+interface RingSpec {
+  plane: 'xy' | 'xz' | 'yz';
+  offset: number;
 }
 
-/** Build a single closed ring. `plane` selects which two local
- *  axes carry the radial sweep:
- *   - 'xy' → axes[0] × axes[1], offset along local z by zOffset
- *   - 'xz' → axes[0] × axes[2], offset along local y by zOffset
- *   - 'yz' → axes[1] × axes[2], offset along local x by zOffset
- *  Vertices are pre-rotated by the object's quaternion and translated
- *  by centerAbs so the geometry lives in absolute ICRS pc. The group
- *  applies per-frame floating-origin offset. */
-function makeRing(
+/** A disc's axes[2] is its semi-thickness along the normal, not a third
+ *  radius, so its rings are one plane at three heights rather than three
+ *  planes. README.md § Runtime layer. */
+function ringSpecsOf(obj: LgObject): RingSpec[] {
+  if (obj.kind === 'disc') {
+    return [
+      { plane: 'xy', offset: 0 },
+      { plane: 'xy', offset: obj.axes[2] },
+      { plane: 'xy', offset: -obj.axes[2] },
+    ];
+  }
+  return [
+    { plane: 'xy', offset: 0 },
+    { plane: 'xz', offset: 0 },
+    { plane: 'yz', offset: 0 },
+  ];
+}
+
+/** Every object's rings as one segment-pair buffer in absolute ICRS pc —
+ *  README.md § Runtime layer. */
+function buildWireframeSegments(objects: readonly LgObject[]): Float32Array {
+  const floatsPerRing = RING_SEGMENTS * 2 * 3;
+  const out = new Float32Array(objects.length * RINGS_PER_OBJECT * floatsPerRing);
+  let at = 0;
+  for (const obj of objects) {
+    for (const spec of ringSpecsOf(obj)) at = appendRingSegments(obj, spec, out, at);
+  }
+  return out;
+}
+
+/** Write one ring into `out` at `at`, returning the next write offset.
+ *  The final segment must end on vertex 0 — nothing else closes the ring. */
+function appendRingSegments(
   obj: LgObject,
-  plane: 'xy' | 'xz' | 'yz',
-  zOffset: number,
-  material: THREE.Material,
-): THREE.Line {
-  const verts = new Float32Array(RING_SEGMENTS * 3);
+  spec: RingSpec,
+  out: Float32Array,
+  at: number,
+): number {
+  const ring = new Float32Array(RING_SEGMENTS * 3);
   const tmp = new THREE.Vector3();
   for (let i = 0; i < RING_SEGMENTS; i++) {
     const t = (i / RING_SEGMENTS) * Math.PI * 2;
     const ct = Math.cos(t);
     const st = Math.sin(t);
-    if (plane === 'xy') tmp.set(obj.axes[0] * ct, obj.axes[1] * st, zOffset);
-    else if (plane === 'xz') tmp.set(obj.axes[0] * ct, zOffset, obj.axes[2] * st);
-    else /* yz */ tmp.set(zOffset, obj.axes[1] * ct, obj.axes[2] * st);
+    if (spec.plane === 'xy') tmp.set(obj.axes[0] * ct, obj.axes[1] * st, spec.offset);
+    else if (spec.plane === 'xz') tmp.set(obj.axes[0] * ct, spec.offset, obj.axes[2] * st);
+    else /* yz */ tmp.set(spec.offset, obj.axes[1] * ct, obj.axes[2] * st);
     tmp.applyQuaternion(obj.quat).add(obj.centerAbs);
-    verts[i * 3 + 0] = tmp.x;
-    verts[i * 3 + 1] = tmp.y;
-    verts[i * 3 + 2] = tmp.z;
+    ring[i * 3 + 0] = tmp.x;
+    ring[i * 3 + 1] = tmp.y;
+    ring[i * 3 + 2] = tmp.z;
   }
-  // frustumCulled off inside the primitive — the group origin is offset per
-  // frame, so a geometry-derived bounding sphere is miscentred.
-  return makeOrbitLineLoop(verts, material, WIREFRAME_RENDER_ORDER);
+  let w = at;
+  for (let i = 0; i < RING_SEGMENTS; i++) {
+    const a = i * 3;
+    const b = ((i + 1) % RING_SEGMENTS) * 3;
+    out[w++] = ring[a]; out[w++] = ring[a + 1]; out[w++] = ring[a + 2];
+    out[w++] = ring[b]; out[w++] = ring[b + 1]; out[w++] = ring[b + 2];
+  }
+  return w;
 }
 
 /** Precompute silhouette sample points in absolute ICRS pc for one

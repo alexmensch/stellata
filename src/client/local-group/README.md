@@ -120,16 +120,27 @@ tradeoff § Wireframe extent is making deliberately.
 - **ellipsoid**: three orthogonal meridian rings on the principal axes
   (xy, xz, yz). Reads as an ellipsoid silhouette from any angle.
 
-Each is `../util/orbit-line.ts`'s `makeOrbitLineLoop` — an index-closed
-`THREE.Line`, since the WebGPU renderer refuses `THREE.LineLoop`.
+**The whole catalogue is one draw.** Every object's rings go into a
+single `../util/orbit-line.ts` `makeOrbitLineSegments` buffer, each ring
+expanded into `RING_SEGMENTS` disjoint segment pairs whose last one ends
+back on vertex 0 — nothing but the vertices closes a ring in that form,
+so a ring written one segment short leaves a gap in the outline.
 
-Each ring's vertices are pre-rotated by the object's quaternion and
-translated by `centerAbs`, then committed to a single `BufferGeometry`
-in absolute ICRS pc. The layer's group is rebased to `-worldOffset`
-each frame so the floating origin doesn't drift the outlines. One
-shared stroke from the chrome line seam (`../chrome-lines/README.md`)
-across the whole catalog — the per-frame opacity write hits one slot,
-and the wireframe draws on either backend.
+**The merge is free because the layer holds no per-object render state.**
+Vertices are pre-rotated by each object's quaternion and translated by
+its `centerAbs` at construction, so the buffer is absolute ICRS pc and
+the group's per-frame rebase to `-worldOffset` carries all of it at
+once; and one shared stroke from the chrome line seam
+(`../chrome-lines/README.md`) already served every ring, so the
+per-frame opacity write still hits one slot. Nothing fades, hides or
+moves an object on its own — a feature that needed to would have to add
+a per-instance attribute rather than split the geometry back up. The
+wireframe draws on either backend.
+
+Duplicating each shared endpoint costs ~230 KiB more buffer than
+per-ring geometries do (554 KiB against 324 KiB at 123 objects) and
+removes 368 draw submissions. That is the trade the constellation figure
+and boundary layers already take through the same primitive.
 
 ## Emission layer
 
