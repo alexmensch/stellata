@@ -43,13 +43,13 @@ function scannedFiles(): string[] {
       skipDir: (name) => SKIP_DIRS.has(name),
     }),
   ]);
-  // Repo-root docs too. CLAUDE.md is a symlink to AGENTS.md and would double
-  // every finding in it.
-  const rootDocs = readdirSync(ROOT)
-    .filter((name) => name.endsWith('.md'))
+  // Repo-root docs and build config too. CLAUDE.md is a symlink to AGENTS.md
+  // and would double every finding in it.
+  const rootFiles = readdirSync(ROOT)
+    .filter((name) => SCANNED_EXT.test(name))
     .map((name) => join(ROOT, name))
     .filter((path) => !lstatSync(path).isSymbolicLink());
-  return [...files, ...rootDocs];
+  return [...files, ...rootFiles];
 }
 
 describe('doc pointers resolve', () => {
