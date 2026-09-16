@@ -121,10 +121,13 @@ tradeoff § Wireframe extent is making deliberately.
   (xy, xz, yz). Reads as an ellipsoid silhouette from any angle.
 
 **The whole catalogue is one draw.** Every object's rings go into a
-single `../util/orbit-line.ts` `makeOrbitLineSegments` buffer, each ring
-expanded into `RING_SEGMENTS` disjoint segment pairs whose last one ends
-back on vertex 0 — nothing but the vertices closes a ring in that form,
-so a ring written one segment short leaves a gap in the outline.
+single `../util/orbit-line.ts` `makeOrbitRingSegments` buffer — one
+vertex per ring corner, in `RING_SEGMENTS` blocks, with the index
+closing each ring onto its own first vertex. That closure is the whole
+correctness surface: an entry short leaves a gap in the outline, and one
+that ran on into the next ring's base would draw a spoke between two
+objects megaparsecs apart. Both are pinned on the index rather than on
+vertex positions.
 
 **The merge is free because the layer holds no per-object render state.**
 Vertices are pre-rotated by each object's quaternion and translated by
@@ -137,10 +140,15 @@ moves an object on its own — a feature that needed to would have to add
 a per-instance attribute rather than split the geometry back up. The
 wireframe draws on either backend.
 
-Duplicating each shared endpoint costs ~230 KiB more buffer than
-per-ring geometries do (554 KiB against 324 KiB at 123 objects) and
-removes 368 draw submissions. That is the trade the constellation figure
-and boundary layers already take through the same primitive.
+At 123 objects the buffer holds 23,616 vertices: 277 KiB of positions
+plus a 92 KiB 16-bit index, so 369 KiB against the 324 KiB the per-ring
+geometries held — 45 KiB for 368 fewer draw submissions. **The index
+width turns on the vertices addressed, never on the entry count**, and
+23,616 sits well inside the 65,535 a 16-bit entry reaches; the roster
+would have to pass 341 objects before the index widens and the buffer
+jumps ~92 KiB. Folding the shared endpoints out instead — the un-indexed
+`makeOrbitLineSegments` the constellation figure and boundary arcs take,
+whose segments are not uniform closed rings — would cost 554 KiB.
 
 ## Emission layer
 

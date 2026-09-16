@@ -13,7 +13,7 @@ import { MIDPLANE_RADIUS_PC } from '../galactic/galactic-disc';
 import type {
   ChromeLineMaterial, ChromeLineMaterials,
 } from '../chrome-lines/chrome-line-materials';
-import { makeOrbitLineSegments } from '../util/orbit-line';
+import { makeOrbitRingSegments, writeRingVerts, type RingSpec } from '../util/orbit-line';
 import {
   angularDiameterPx,
   discHitRadiusPx,
@@ -34,7 +34,9 @@ type LgPickCandidate = PickCandidate & {
 export const RING_SEGMENTS = 64;
 
 /** Rings each object draws, whichever kind it is — three either way
- *  (§ Runtime layer). The merged buffer sizes off it. */
+ *  (README.md § Runtime layer). The merged buffer sizes off it, and
+ *  `buildWireframeSegments` throws rather than truncate if the two
+ *  ever disagree. */
 export const RINGS_PER_OBJECT = 3;
 
 // Sample grid for the silhouette projection that drives label placement.
@@ -87,8 +89,9 @@ export class LocalGroupLayer {
 
     this.absSamples = [];
     for (const obj of this.objects) this.absSamples.push(buildSilhouetteSamples(obj));
-    this.group.add(makeOrbitLineSegments(
-      buildWireframeSegments(this.objects), this.stroke.material, WIREFRAME_RENDER_ORDER));
+    this.group.add(makeOrbitRingSegments(
+      buildWireframeSegments(this.objects), RING_SEGMENTS,
+      this.stroke.material, WIREFRAME_RENDER_ORDER));
   }
 
   /** Per-frame update. Call before render.
@@ -242,75 +245,42 @@ export class LocalGroupLayer {
   }
 }
 
-/** `plane` names the two local axes a ring sweeps; `offset` displaces it
- *  along the third — 'xy' sweeps axes[0] × axes[1] and offsets along z,
- *  'xz' sweeps axes[0] × axes[2] and offsets along y, 'yz' sweeps
- *  axes[1] × axes[2] and offsets along x. */
-interface RingSpec {
-  plane: 'xy' | 'xz' | 'yz';
-  offset: number;
-}
-
 /** A disc's axes[2] is its semi-thickness along the normal, not a third
  *  radius, so its rings are one plane at three heights rather than three
  *  planes. README.md § Runtime layer. */
 function ringSpecsOf(obj: LgObject): RingSpec[] {
+  const [a, b, c] = obj.axes;
   if (obj.kind === 'disc') {
     return [
-      { plane: 'xy', offset: 0 },
-      { plane: 'xy', offset: obj.axes[2] },
-      { plane: 'xy', offset: -obj.axes[2] },
+      { radiusA: a, radiusB: b, plane: 'xy', offset: 0 },
+      { radiusA: a, radiusB: b, plane: 'xy', offset: c },
+      { radiusA: a, radiusB: b, plane: 'xy', offset: -c },
     ];
   }
   return [
-    { plane: 'xy', offset: 0 },
-    { plane: 'xz', offset: 0 },
-    { plane: 'yz', offset: 0 },
+    { radiusA: a, radiusB: b, plane: 'xy', offset: 0 },
+    { radiusA: a, radiusB: c, plane: 'xz', offset: 0 },
+    { radiusA: b, radiusB: c, plane: 'yz', offset: 0 },
   ];
 }
 
-/** Every object's rings as one segment-pair buffer in absolute ICRS pc —
- *  README.md § Runtime layer. */
+/** Every object's rings as one vertex buffer in absolute ICRS pc, ring
+ *  after ring — README.md § Runtime layer. */
 function buildWireframeSegments(objects: readonly LgObject[]): Float32Array {
-  const floatsPerRing = RING_SEGMENTS * 2 * 3;
-  const out = new Float32Array(objects.length * RINGS_PER_OBJECT * floatsPerRing);
+  const out = new Float32Array(objects.length * RINGS_PER_OBJECT * RING_SEGMENTS * 3);
   let at = 0;
   for (const obj of objects) {
-    for (const spec of ringSpecsOf(obj)) at = appendRingSegments(obj, spec, out, at);
+    const toAbsIcrs = (v: THREE.Vector3): void => {
+      v.applyQuaternion(obj.quat).add(obj.centerAbs);
+    };
+    for (const spec of ringSpecsOf(obj)) {
+      at = writeRingVerts(spec, RING_SEGMENTS, toAbsIcrs, out, at);
+    }
+  }
+  if (at !== out.length) {
+    throw new Error(`LG wireframe filled ${at} of ${out.length} floats`);
   }
   return out;
-}
-
-/** Write one ring into `out` at `at`, returning the next write offset.
- *  The final segment must end on vertex 0 — nothing else closes the ring. */
-function appendRingSegments(
-  obj: LgObject,
-  spec: RingSpec,
-  out: Float32Array,
-  at: number,
-): number {
-  const ring = new Float32Array(RING_SEGMENTS * 3);
-  const tmp = new THREE.Vector3();
-  for (let i = 0; i < RING_SEGMENTS; i++) {
-    const t = (i / RING_SEGMENTS) * Math.PI * 2;
-    const ct = Math.cos(t);
-    const st = Math.sin(t);
-    if (spec.plane === 'xy') tmp.set(obj.axes[0] * ct, obj.axes[1] * st, spec.offset);
-    else if (spec.plane === 'xz') tmp.set(obj.axes[0] * ct, spec.offset, obj.axes[2] * st);
-    else /* yz */ tmp.set(spec.offset, obj.axes[1] * ct, obj.axes[2] * st);
-    tmp.applyQuaternion(obj.quat).add(obj.centerAbs);
-    ring[i * 3 + 0] = tmp.x;
-    ring[i * 3 + 1] = tmp.y;
-    ring[i * 3 + 2] = tmp.z;
-  }
-  let w = at;
-  for (let i = 0; i < RING_SEGMENTS; i++) {
-    const a = i * 3;
-    const b = ((i + 1) % RING_SEGMENTS) * 3;
-    out[w++] = ring[a]; out[w++] = ring[a + 1]; out[w++] = ring[a + 2];
-    out[w++] = ring[b]; out[w++] = ring[b + 1]; out[w++] = ring[b + 2];
-  }
-  return w;
 }
 
 /** Precompute silhouette sample points in absolute ICRS pc for one

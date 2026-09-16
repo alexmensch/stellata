@@ -59,6 +59,8 @@ const wireframeOf = (layer: LocalGroupLayer) =>
 const positionsOf = (layer: LocalGroupLayer) =>
   wireframeOf(layer).geometry.getAttribute('position') as THREE.BufferAttribute;
 
+const indexOf = (layer: LocalGroupLayer) => wireframeOf(layer).geometry.getIndex()!;
+
 describe('LocalGroupLayer', () => {
   it('draws the whole catalogue in one LineSegments, whatever the roster', () => {
     // One draw submission for every ring of every object, and with it one
@@ -78,8 +80,8 @@ describe('LocalGroupLayer', () => {
       const layer = new LocalGroupLayer(makeCatalog(objects), builtinChromeLineMaterials());
       const count = positionsOf(layer).count;
       layer.dispose();
-      // Each ring is RING_SEGMENTS disjoint segments, so two vertices each.
-      return count / (RING_SEGMENTS * 2);
+      // One vertex per ring corner — the index, not a duplicate, closes it.
+      return count / RING_SEGMENTS;
     };
     expect(rings([makeObject({ kind: 'ellipsoid' })])).toBe(RINGS_PER_OBJECT);
     expect(rings([makeObject({ kind: 'disc' })])).toBe(RINGS_PER_OBJECT);
@@ -89,17 +91,22 @@ describe('LocalGroupLayer', () => {
     ])).toBe(2 * RINGS_PER_OBJECT);
   });
 
-  it('closes every ring — the last segment returns to the first vertex', () => {
-    // Nothing but the vertices closes a ring in a segment-pair buffer, so
-    // a ring one segment short would leave a visible gap in the outline.
+  it('closes every ring on its own first vertex, never on the next ring', () => {
+    // A ring one segment short leaves a gap in the outline; a closing entry
+    // that ran on into the next ring's base would draw a spoke between two
+    // objects megaparsecs apart.
     const layer = new LocalGroupLayer(makeCatalog([
       makeObject({ kind: 'disc', axes: [300, 200, 50] }),
+      makeObject({ kind: 'ellipsoid', id: 'b', axes: [120, 90, 60] }),
     ]), builtinChromeLineMaterials());
-    const pos = positionsOf(layer);
-    const vertex = (i: number) => new THREE.Vector3().fromBufferAttribute(pos, i);
-    for (let ring = 0; ring < RINGS_PER_OBJECT; ring++) {
-      const base = ring * RING_SEGMENTS * 2;
-      expect(vertex(base + RING_SEGMENTS * 2 - 1).distanceTo(vertex(base))).toBeLessThan(1e-6);
+    const index = indexOf(layer);
+    const ringCount = 2 * RINGS_PER_OBJECT;
+    expect(index.count).toBe(ringCount * RING_SEGMENTS * 2);
+    for (let ring = 0; ring < ringCount; ring++) {
+      const base = ring * RING_SEGMENTS;
+      const last = (base + RING_SEGMENTS - 1) * 2;
+      expect(index.getX(last)).toBe(base + RING_SEGMENTS - 1);
+      expect(index.getX(last + 1)).toBe(base);
     }
     layer.dispose();
   });
@@ -108,11 +115,22 @@ describe('LocalGroupLayer', () => {
     const layer = new LocalGroupLayer(makeCatalog([
       makeObject({ kind: 'ellipsoid', axes: [120, 90, 60] }),
     ]), builtinChromeLineMaterials());
-    const pos = positionsOf(layer);
-    const vertex = (i: number) => new THREE.Vector3().fromBufferAttribute(pos, i);
+    const index = indexOf(layer);
     for (let seg = 0; seg < RING_SEGMENTS - 1; seg++) {
-      expect(vertex(seg * 2 + 1).distanceTo(vertex(seg * 2 + 2))).toBeLessThan(1e-6);
+      expect(index.getX(seg * 2 + 1)).toBe(index.getX(seg * 2 + 2));
     }
+    layer.dispose();
+  });
+
+  it('keeps the whole catalogue inside a 16-bit index', () => {
+    // 123 objects x 3 rings x 64 corners = 23,616 vertices, well under the
+    // 65,535 a Uint16 entry addresses. The full roster costs 369 KiB
+    // indexed against 554 KiB un-indexed (README.md § Runtime layer).
+    const layer = new LocalGroupLayer(
+      makeCatalog(Array.from({ length: 123 }, (_, i) => makeObject({ id: `o${i}` }))),
+      builtinChromeLineMaterials());
+    expect(positionsOf(layer).count).toBe(123 * RINGS_PER_OBJECT * RING_SEGMENTS);
+    expect(indexOf(layer).array).toBeInstanceOf(Uint16Array);
     layer.dispose();
   });
 
