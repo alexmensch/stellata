@@ -70,14 +70,8 @@ export function reductionChainSizes(
 
 /**
  * The executable spec `reduce.frag.glsl` is pinned against: combine the
- * (at most four) in-bounds parent texels of one output texel.
- *
- * The weight is what makes the chain exact on a non-power-of-two frame.
- * Each texel's weight times its level's `4^k` is the number of level-0
- * texels behind it, that product is additive down the chain, and dividing
- * by the summed weight is therefore the true area-weighted mean at every
- * level — including the tile level the chain stops at, which is what lets
- * the CPU combine there reproduce the frame mean exactly.
+ * (at most four) in-bounds parent texels of one output texel. The weight
+ * channel is what makes the chain exact on a non-power-of-two frame.
  */
 export function combineReductionTexels(taps: readonly ReductionTexel[]): ReductionTexel {
   let weight = 0;
@@ -124,10 +118,8 @@ export function createTileScratch(capacity: number): TileScratch {
 
 /**
  * The whole tile level, combined. `L̄` and the coverage come out EXACTLY as
- * the dropped tail of the chain would have produced them — a texel's
- * `weight · 4^k` is the count of level-0 texels behind it and that product
- * is additive, so weighting by `weight` alone across one level is the frame
- * mean.
+ * the dropped tail of the chain would have produced them, not to a
+ * tolerance.
  *
  * `discL` is where the tile level earns itself: the pin's subject is the
  * coverage-weighted MEDIAN of the tiles' own masked means, not their mean.

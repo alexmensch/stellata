@@ -29,8 +29,8 @@ export const OLD_SPHEROID_COLOUR_INDEX_BV = 0.9574;
 export const OLD_SPHEROID_COLOR_RGB: [number, number, number] =
   linearSrgbFromColourIndex(OLD_SPHEROID_COLOUR_INDEX_BV);
 
-/** A colour index as a zero-point-free B/V flux ratio. Zero points cancel
- *  in every expression below because all three indices are in one system. */
+/** Zero points cancel in every expression below, because all three indices
+ *  are in one system. */
 function colourFlux(bv: number): number {
   return 10 ** (-0.4 * bv);
 }
@@ -38,10 +38,6 @@ function colourFlux(bv: number): number {
 /**
  * Integrated colour index of a two-component galaxy, given each
  * component's index and the spheroid's share of the **V-band light**.
- *
- * ```
- * 10^(−0.4·(B−V)_tot) = f·10^(−0.4·(B−V)_sph) + (1−f)·10^(−0.4·(B−V)_disc)
- * ```
  *
  * f has to be a light ratio, not a mass one: this mixes V-band
  * luminosities, so a mass share used here carries the same error it

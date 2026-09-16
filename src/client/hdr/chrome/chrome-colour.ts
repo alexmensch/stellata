@@ -24,11 +24,8 @@ interface ChromeBinding {
 const bindings = new Map<THREE.Color, ChromeBinding>();
 
 let operatorActive = true;
-/** The white point the mapping inverts against. It has to track the
- *  operator's live value, not the default: a `DR_MAG` change moves the
- *  curve every physical layer runs through, and chrome mapped against a
- *  stale white point drifts against them. `HdrPipeline.syncMode` is the
- *  only writer. */
+/** Tracks the operator's live value rather than the default, and
+ *  `HdrPipeline.syncMode` is the only writer. */
 let whitePoint = tonemapWhitePoint();
 
 function srgbFromHex(hex: number): Rgb {
@@ -98,10 +95,9 @@ export function setChromeOperatorActive(on: boolean): void {
   reauthorAll();
 }
 
-/** Re-author every registered chrome colour against a new white point.
- *  The mapping is baked at set-time, so a live `DR_MAG` change has to
- *  reach every existing binding or chrome drifts while the physical
- *  layers track the new curve. */
+/** The mapping is baked at set-time, so a live `DR_MAG` change has to reach
+ *  every existing binding or chrome drifts while the physical layers track
+ *  the new curve. */
 export function setChromeWhitePoint(lw: number): void {
   if (whitePoint === lw) return;
   whitePoint = lw;

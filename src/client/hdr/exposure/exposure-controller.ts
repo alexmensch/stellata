@@ -59,7 +59,8 @@ export class ExposureController {
    *  manual trim. The shaders' taper anchor. */
   getThresholdMag(): number { return thresholdMagFor(this.getLimitMag(), this.ev); }
 
-  /** The faintest drawn magnitude, for the CPU pick / LOD mirrors. */
+  /** The bound every CPU "is it drawn?" test gates on — a conservative
+   *  superset of what renders, never a visibility test. */
   drawCutoffMag(chart: boolean): number {
     return drawCutoffMag(this.getLimitMag(), this.getThresholdMag(), chart);
   }

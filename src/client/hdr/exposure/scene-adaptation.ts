@@ -37,9 +37,9 @@ export interface SceneAdaptationDeps {
    *  frame the chain sits out pays the statistic writes with nothing
    *  reducing what they wrote. */
   measurementReady: () => boolean;
-  /** The operator's live white point. The display floor is derived from
-   *  it, so `DR_MAG` has to reach the floor or the two describe different
-   *  display ranges (`README.md` § Adaptation). */
+  /** Taken live rather than off the default constant: the display floor is
+   *  derived from it, so `DR_MAG` has to reach the floor or the two describe
+   *  different display ranges (`README.md` § Adaptation). */
   whitePoint: () => number;
 }
 
@@ -132,7 +132,6 @@ export class SceneAdaptation {
     return this.park.phase === 'parked';
   }
 
-  /** The park machine's phase, for the readout. */
   getParkPhase(): ParkPhase {
     return this.park.phase;
   }
@@ -173,20 +172,14 @@ export class SceneAdaptation {
   getSlewTauS(): number { return this.slewTauS; }
 
   /**
-   * Freeze the applied cut where it stands, measurement and slew both.
-   * A frame-cost lever (`../../debug/frame-cost/README.md`): a pass that
-   * writes the statistic attachment moves the cut when it is toggled, so
-   * the differential would price a scene with a different star population
-   * rather than the pass. **Held outranks chart's reset**, or parking the
-   * HDR chain would zero the cut and change the scene the same way.
+   * Freeze the applied cut where it stands, measurement and slew both — a
+   * frame-cost lever (`../../debug/frame-cost/README.md`). It outranks both
+   * chart's reset and the park, and a hold landing mid-probe collapses the
+   * probe back to parked, so a sweep prices one state throughout rather than
+   * whichever the pin happened to land on.
    *
-   * Releasing drops `lastNowMs` so the next frame snaps to the live
-   * measurement instead of ramping from a cut minutes stale.
-   *
-   * A hold landing mid-probe collapses the probe back to parked: frozen
-   * probing keeps the chain live for the whole hold, so a sweep's rows
-   * would price a parked or a live measurement depending on which frame
-   * the pin happened to land on.
+   * Releasing drops `lastNowMs`, so the next frame snaps instead of ramping
+   * from a stale cut.
    */
   setHeld(on: boolean): void {
     this.held = on;

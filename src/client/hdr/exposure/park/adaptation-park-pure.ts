@@ -9,8 +9,8 @@ import { ADAPT_SLEW_SETTLE_MAG, type AdaptationRegime } from '../scene-adaptatio
 export const ADAPT_PARK_SETTLED_LANDINGS = 3;
 
 /** Rendered frames between wake probes while parked. Detection of a scene
- *  turning bright is bounded by this many rendered frames, the wait for a
- *  frame the chain can draw on, and the slew. */
+ *  turning bright is bounded by this PLUS the wait for a frame the chain can
+ *  draw on, plus the slew — the interval alone is not the latency. */
 export const ADAPT_PARK_PROBE_INTERVAL_FRAMES = 6;
 
 /** Each phase carries its own counter and no other: a streak of parkable
@@ -63,19 +63,11 @@ function noCut(dm: number): boolean {
 
 /**
  * Whether a landing's cut is set by something other than the measurement, so
- * a measurement that stops arriving cannot change it. Two cases, and the
- * generalisation over them is the whole reason this is a predicate rather
- * than a test for zero:
- *
- * - **No cut.** Nothing asked for one, so nothing is being applied.
- * - **The display floor governs.** `floor = −2.5·log10(Lw / L_ADAPT)` reads
- *   the operator's white point and the adaptation anchor and nothing from the
- *   frame, so where it wins the applied cut is a CONSTANT while it keeps
- *   winning. It wins exactly where the pin's weight is zero and `eye ≤
- *   floor`, i.e. where `L̄ ≥ Lw`, and holding it there needs no measurement:
- *   there is no frame-dependent input left for it to drift on. What ends the
- *   regime is the scene changing, and the probe cadence is what bounds how
- *   long either way of ending it takes to be seen (`README.md` § Wake).
+ * a measurement that stops arriving cannot change it. Generalising over the
+ * two cases — no cut, and the display floor governing — is the whole reason
+ * this is a predicate rather than a test for zero. Why the floor case is
+ * exact rather than approximate, and what bounds how long a scene change
+ * takes to be seen: `README.md` § Wake.
  *
  * The settled test is on the DIFFERENCE rather than on each cut separately:
  * a floor-governed cut parks at the floor, not at zero, so "both read no

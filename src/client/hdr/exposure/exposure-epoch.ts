@@ -37,30 +37,29 @@ export function exposureForMagLimit(magLimit: number, lThresh = L_THRESH): numbe
 }
 
 /**
- * The scene's single exposure scalar. `dm` is the automatic adaptation
- * cut (≤ 0 by invariant — nothing adapts to see fainter than
- * threshold); `ev` is the manual trim and is the one term that may go
- * positive.
+ * `dm` is the automatic adaptation cut, ≤ 0 by invariant — nothing adapts to
+ * see fainter than threshold. `ev` is the manual trim, and is the one term
+ * that may go positive.
  */
 export function sceneExposure(limitMag: number, dm = 0, ev = 0): number {
   return exposureForMagLimit(limitMag) * 10 ** (0.4 * Math.min(0, dm)) * 2 ** ev;
 }
 
 /**
- * The magnitude a source lands on `L_THRESH` at — the visible faint
- * edge. Adaptation is deliberately absent: only the instrument and the
- * manual trim move where "just visible" sits, which is why the cull
- * bound below can be static.
+ * The magnitude a source lands on `L_THRESH` at — the taper's anchor, and a
+ * bound rather than a visibility test: the toe carries light on past it, so
+ * the edge a viewer sees sits fainter still (`visibility/README.md`).
+ * Adaptation is deliberately absent, which is why the cull bound below can
+ * be static.
  */
 export function thresholdMagFor(limitMag: number, ev = 0): number {
   return limitMag + MAG_PER_STOP * ev;
 }
 
 /**
- * Population cull bound — the faintest star the vertex stage keeps. Set
- * at the deepest threshold the trim can reach plus the soft taper, so
- * the visible faint edge is always the taper and can never be a
- * population edge. Static in the instrument: adaptation only ever cuts.
+ * Set at the deepest threshold the trim can reach plus the soft taper, so
+ * the visible faint edge is always the taper and can never be a population
+ * edge. Static in the instrument: adaptation only ever cuts.
  */
 export function cullMagFor(limitMag: number): number {
   return thresholdMagFor(limitMag, EV_MAX_STOPS) + SOFT_TAPER_MARGIN_MAG;

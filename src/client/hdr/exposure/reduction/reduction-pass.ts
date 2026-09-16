@@ -65,8 +65,7 @@ export class LuminanceReduction implements ReductionSeam {
   /**
    * Reduce `source` — the statistic attachment, at the drawing buffer's
    * size — and ask for its tile level back. A frame whose predecessor has
-   * not landed does no GPU work at all, so the measurement refreshes every
-   * other frame at worst, far inside `ADAPT_SLEW_TAU_S`.
+   * not landed does no GPU work at all.
    *
    * `renderExposure` is the scalar the frame was drawn with, captured here
    * because the readback outlives it.

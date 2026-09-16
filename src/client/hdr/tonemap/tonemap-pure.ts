@@ -24,8 +24,7 @@ export const SRGB_DECODE_KNEE = 0.04045;
 export const DITHER_IGN_SCALE = 52.9829189;
 export const DITHER_IGN_DOT: readonly [number, number] = [0.06711056, 0.00583715];
 
-/** Levels an 8-bit channel carries, so a ±0.5 dither spans exactly one
- *  output step. */
+/** A ±0.5 dither over this spans exactly one 8-bit output step. */
 export const DITHER_LSB_LEVELS = 255;
 
 /** Added to the fragment position before the output dither, so a layer
