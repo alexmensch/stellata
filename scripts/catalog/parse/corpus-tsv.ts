@@ -1,14 +1,8 @@
 // Shared TSV header, cell and record-ref parsing for the build's committed
 // tables and the Tier A corpora. See README.md § TSV header resolution.
 
-/** Resolve a header line to a column → index map, throwing when any required
- *  column is absent.
- *
- *  An empty or headerless file therefore throws rather than reading as a
- *  zero-row table. Every caller's input is a committed (usually LFS) artifact,
- *  so "no rows" means truncated or unsmudged, never an empty dataset — and a
- *  parser that answers with an empty map turns a missing file into a silently
- *  zeroed join that only surfaces as a count drift much later. */
+/** Throws on a missing column AND on an empty or headerless file, so a
+ *  truncated or unsmudged input can never read as a zero-row table. */
 export function headerIndex(
   headerLine: string,
   cols: readonly string[],
@@ -31,9 +25,7 @@ export function headerIndex(
   return idx;
 }
 
-/** Walk a committed TSV's data rows as raw cell arrays, with the header
- *  resolved once. Inherits `headerIndex`'s hard fail, so a truncated input can
- *  never read as a zero-row table. */
+/** Resolves the header once, and inherits `headerIndex`'s hard fail. */
 export function* dataRows(
   text: string,
   cols: readonly string[],
@@ -73,8 +65,7 @@ export function parseIntOrNull(s: string | undefined): number | null {
 export const RECORD_REF_KINDS = ['hip', 'gaia', 'name', 'hd'] as const;
 export type RecordRefKind = (typeof RECORD_REF_KINDS)[number];
 
-/** What each kind's value looks like, for the parse error. Total over the
- *  union, so a new kind cannot be added without describing itself. */
+/** What each kind's value looks like, for the parse error. */
 const REF_VALUE_SHAPE: Record<RecordRefKind, string> = {
   hip: 'n', gaia: 'id', name: 'name', hd: 'n',
 };

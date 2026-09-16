@@ -203,12 +203,9 @@ export function createConstellationAssignment(
   };
 }
 
-// Extracts classical stick-figure lines per IAU constellation from
-// Stellarium's modern sky culture `index.json`. Each polyline in the source
-// is a list of HIP integers; we resolve each HIP to a record index via
-// `hipToIndex`. Missing HIPs are a hard error unless in KNOWN_MISSING_HIPS —
-// the whole point of using Stellarium data (vs. fuzzy RA/Dec match) is
-// deterministic mapping.
+// An unresolved HIP is a hard error unless KNOWN_MISSING_HIPS carries it:
+// deterministic HIP mapping is the whole point of the Stellarium source, and
+// a soft warning gives it up.
 export function buildFigureLines(
   srcStellariumPath: string,
   hipToIndex: Map<number, number>,
