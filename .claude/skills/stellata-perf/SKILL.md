@@ -35,8 +35,10 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
 - **Appearance, layout, UX.** The runner reads clocks only — GPU timestamps
   and rAF wall-clock deltas — and never a pixel. Looks are checked by Alex in
   the browser.
-- **Starting a dev server.** Alex always has one running; `--url` targets it
-  (a worktree server sits on another port).
+- **Starting a dev server, or hunting for one.** Do not probe ports, read
+  `lsof`, or curl candidate URLs to discover where the app is served. Name the
+  worktree the run must measure, ask Alex to start its server, and wait for
+  the port he gives back; `--url` then targets it.
 - **Naming `.perf-go` in any tool call.** The guard denies every Bash command
   containing the string and every Write/Edit of the marker, whether or not the
   same call launches anything. Need it in a commit message or a PR body? Use
@@ -46,7 +48,9 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
 
 ## Protocol — announce → arm → run, one run per arm
 
-1. Say what you want to measure and why, with the exact command you will run.
+1. Say what you want to measure and why, with the exact command you will
+   run, and name the worktree whose dev server the run needs. Alex starts
+   that server and gives back the port; `--url` carries it.
 2. Start `bash scripts/perf/arming/await-go.sh` in the background (Bash
    `run_in_background`). It polls every 15 s for up to an hour and prints one
    line when a fresh marker exists. The poll and the runner both resolve the
