@@ -14,11 +14,10 @@ interface Env {
   ASSETS: Fetcher;
 }
 
-// Thin passthrough. The Worker exists so per-request analytics,
-// observability logs, and tail are available — pure assets-only deploys
-// lose those. It does no routing: `/v/<blob>/` share URLs resolve through
-// the assets binding's single-page-application not_found_handling
-// (wrangler.toml), so every request just hands off to ASSETS.
+// The Worker exists so per-request analytics, observability logs, and tail
+// are available — pure assets-only deploys lose those. It does no routing:
+// `/v/<blob>/` share URLs resolve through the assets binding's
+// single-page-application not_found_handling (wrangler.toml).
 export default {
   fetch(request: Request, env: Env): Promise<Response> {
     return env.ASSETS.fetch(request);

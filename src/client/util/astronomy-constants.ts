@@ -32,9 +32,9 @@ export const SUN_ABSMAG_V = 4.83;
 // that divide by it or take its log.
 export const MIN_PHYSICAL_RADIUS_R_SUN = 1e-9;
 
-// Arcseconds → radians. π / (180 × 3600). Same magnitude as 1 / AU_PER_PC
-// (1 AU subtends 1 arcsec at 1 pc by definition) but written out here so
-// the unit conversion reads as the angular operation it is.
+// π / (180 × 3600). Same magnitude as 1 / AU_PER_PC (1 AU subtends 1 arcsec
+// at 1 pc by definition) but written out here so the unit conversion reads as
+// the angular operation it is.
 export const ARCSEC_TO_RAD = Math.PI / (180.0 * 3600.0);
 
 // Julian Date of the J2000.0 epoch (2000 Jan 1.5 TT). Anchor for
@@ -49,12 +49,11 @@ export const J2000_JD = 2451545.0;
 // time-varying obliquity term.
 export const J2000_OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
 
-// Days in a Julian year (used by WDS year-of-observation → JD conversion).
 export const DAYS_PER_JULIAN_YEAR = 365.25;
 
-// Right ascension in hours → degrees. Catalogue RA columns (AT-HYG's `ra`)
-// and sexagesimal `hh:mm:ss` boundary coordinates both arrive in hours;
-// everything downstream of the parse works in degrees.
+// Catalogue RA columns (AT-HYG's `ra`) and sexagesimal `hh:mm:ss` boundary
+// coordinates both arrive in hours; everything downstream of the parse works
+// in degrees.
 export const RA_HOURS_TO_DEG = 15;
 
 // Light travel time over one AU, seconds (IAU 2009). Two consumers: the

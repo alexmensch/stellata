@@ -225,9 +225,8 @@ export interface NamedScene {
   readonly scene: THREE.Scene;
 }
 
-// Event-bus payload map. Subscribers register via `Stellata.on(name, fn)`
-// and the compiler enforces the payload type per event. `state` and
-// `frame` are no-payload events.
+// Subscribers register via `Stellata.on(name, fn)` and the compiler enforces
+// the payload type per event. `state` and `frame` are no-payload events.
 //
 // `focus` / `vector` carry the full kind-tagged Target (or null) — one
 // event each for every focusable kind; a payload change from kind A to
@@ -471,8 +470,8 @@ export class Stellata implements FrameAnchor {
   }
   private coordSpheres: Record<DrawnCoordSphereFrame, CoordSphere>;
   readonly hud: HudOverlay;
-  /** Chart-mode label + glyph engine. `chart-mode.ts` starts / stops it on
-   *  the chart activation predicate; the shell owns its lifetime. */
+  /** `chart-mode.ts` starts / stops it on the chart activation predicate;
+   *  the shell owns its lifetime. */
   readonly chartLabels = new ChartLabels(this);
 
   // Milky Way analytic background. Constructed eagerly so the
@@ -2108,8 +2107,8 @@ export class Stellata implements FrameAnchor {
     this.webgpuStarLayer?.setCoreMaskVisible(on);
   }
 
-  /** Build the dust-particle mesh from loaded data. The layer is shelved
-   *  — see src/client/dust/README.md before re-enabling. */
+  /** The layer is shelved — see src/client/dust/README.md before
+   *  re-enabling. */
   attachDustParticles(data: DustParticleData) {
     this.renderGate.invalidate('attach:dustParticles');
     this.dustParticles.attach(data);
@@ -2805,11 +2804,10 @@ export class Stellata implements FrameAnchor {
     requestAnimationFrame(this.animate);
   };
 
-  /** Refresh the shared per-frame context. Runs ABOVE the gate: the
-   *  `'realtime'` predicate needs it on skipped ticks too, and every
-   *  input is available pre-render. `distFromSol` is the camera's
-   *  absolute ICRS distance, summed in JS float64 so it stays exact with
-   *  kpc-scale worldOffset values (the disc-fade smoothstep consuming it
+  /** Runs ABOVE the gate: the `'realtime'` predicate needs it on skipped
+   *  ticks too, and every input is available pre-render. `distFromSol` is the
+   *  camera's absolute ICRS distance, summed in JS float64 so it stays exact
+   *  with kpc-scale worldOffset values (the disc-fade smoothstep consuming it
    *  spans a small range, so precision matters). */
   private refreshFrameCtx(): void {
     const cam = this.camera.position;

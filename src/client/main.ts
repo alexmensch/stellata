@@ -98,9 +98,8 @@ async function main() {
       // ran `pnpm run build:catalog`). Chart mode then draws no boundaries.
       // Never rejects — inside this Promise.all a rejection blanks the app.
       loadBoundaries(`${import.meta.env.BASE_URL}constellation-boundaries.json`),
-      // Kind-module artifacts. Only the critical module (star: catalog +
-      // search index) can reject out of here — the catch below is the
-      // error screen.
+      // Only the critical module (star: catalog + search index) can reject
+      // out of here — the catch below is the error screen.
       ...loadKindModules(kinds, import.meta.env.BASE_URL, showCatalogProgress),
     ]);
     const catalog = kinds.star.catalog;
