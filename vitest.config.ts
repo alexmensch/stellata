@@ -4,9 +4,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'scripts/**/*.test.ts', 'tests/**/*.test.ts'],
-    // Corpus suites sweep the whole 380k-record catalog; vitest's 5 s
-    // default is a unit-test ceiling they cross under parallel load.
-    // See tests/README.md#suite-wide-timeouts.
+    // tests/README.md#suite-wide-timeouts.
     testTimeout: 30_000,
     hookTimeout: 30_000,
     coverage: {
