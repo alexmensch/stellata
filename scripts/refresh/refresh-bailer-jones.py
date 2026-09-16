@@ -36,8 +36,8 @@ DISTANCE_DECIMALS = 3
 
 # VizieR-on-the-wire → paper-name TSV column mapping. The keys are the
 # case-sensitive column names exposed by I/352/gedr3dis on the VizieR
-# TAP service; the values are the Bailer-Jones 2021 paper's names (and
-# what downstream consumers — build-catalog.ts etc. — will read).
+# TAP service; the values are the Bailer-Jones 2021 paper's names, which
+# is what the catalog build reads (``parse/read-stars-inputs.ts``).
 VIZIER_TO_PAPER = {
     "Source": "source_id",
     "rgeo": "r_med_geo",
@@ -49,7 +49,6 @@ VIZIER_TO_PAPER = {
     "Flag": "flag",
 }
 
-# Output column order — see file docstring for semantics.
 TSV_COLUMNS = list(VIZIER_TO_PAPER.values())
 
 # Schema expected from the VizieR TAP table (validated post-query).
