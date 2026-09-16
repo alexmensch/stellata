@@ -33,8 +33,8 @@ const SRC_OVERRIDES = resolve(ROOT, 'data/local-group/overrides.tsv');
 const SRC_ALIASES = resolve(ROOT, 'data/local-group/aliases.tsv');
 const OUT = resolve(ROOT, 'public/local-group.json');
 
-/** Parse the LVDB CSV into a flat array of rows. Coerces strings to
- *  numbers / null per LVDB convention ("" = missing for numeric cols). */
+/** Coerces strings to numbers / null per LVDB convention ("" = missing
+ *  for numeric cols). */
 export function parseLvdb(csv: string): LvdbRow[] {
   const records = parse(csv, {
     columns: true,
@@ -238,8 +238,7 @@ export function parseAliases(tsv: string): AliasRow[] {
   return out;
 }
 
-/** Convert merged LgObject(s) to the on-disk JSON shape. Trims numeric
- *  precision so repeat builds produce stable diffs. */
+/** Trims numeric precision so repeat builds produce stable diffs. */
 function sersicParamsToJson(p: SersicParams) {
   return {
     reffAxesPc: p.reffAxesPc.map((v) => roundN(v, 2)),

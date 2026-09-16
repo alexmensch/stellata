@@ -20,9 +20,9 @@ import {
  *  ~1.5 Mpc IAU-style boundary. Beyond 2 Mpc we'd be picking up the
  *  IC 342 / Maffei groups — a separate decision.
  *
- *  Single source of truth — the runtime camera envelope in
- *  `src/client/stellata.ts` imports this and derives `CAMERA_FAR_PC`
- *  from it, so the build filter and the camera can never drift. */
+ *  Single source of truth — `CAMERA_FAR_PC` below derives from it, and
+ *  the runtime camera envelope in `src/client/stellata.ts` imports both,
+ *  so the build filter and the camera can never drift. */
 export const MAX_DISTANCE_PC = 2_000_000;
 
 /** Far plane for the runtime camera, paired with `MAX_DISTANCE_PC`.
@@ -180,9 +180,9 @@ export function canonicalDesignation(name: string): string {
   return name;
 }
 
-/** Aliases in precedence order with `displayName` dropped — the search
- *  corpus prepends that separately. `sort` is stable, so curation order
- *  still decides between two designations of equal rank. */
+/** `displayName` is dropped — the search corpus prepends it separately.
+ *  `sort` is stable, so curation order still decides between two
+ *  designations of equal rank. */
 export function orderAliases(
   aliases: readonly string[],
   displayName: string,
@@ -191,8 +191,7 @@ export function orderAliases(
   return unique.sort((a, b) => NAME_TIERS.indexOf(nameTier(a)) - NAME_TIERS.indexOf(nameTier(b)));
 }
 
-/** Morphological-type string for the search dropdown + focus card.
- *  Curated rows win; the default splits on the display-name suffix. */
+/** Morphological-type string for the search dropdown + focus card. */
 export function objectTypeFor(displayName: string, curated?: string): string {
   if (curated) return curated;
   return displayName.endsWith(DEFAULT_TYPE_SUFFIX) ? 'Dwarf spheroidal' : 'Dwarf galaxy';
@@ -219,8 +218,8 @@ export interface LgObject {
   emission: LgEmission;
 }
 
-/** Convert (RA, Dec, d) → ICRS heliocentric Cartesian [x, y, z]. RA/Dec
- *  in degrees; distance unit matches output unit. */
+/** RA/Dec in degrees; the result is ICRS heliocentric Cartesian, in
+ *  whatever unit `distance` carries. */
 export function raDecDistanceToIcrs(
   raDeg: number,
   decDeg: number,
@@ -440,8 +439,8 @@ export function filterForRendering(rows: LvdbRow[]): LvdbRow[] {
   });
 }
 
-/** Display-name overrides applied at output. LVDB's `name` column drives
- *  override-merge (overrides.tsv → LVDB row) and per-row identity, but
+/** LVDB's `name` column drives override-merge (overrides.tsv → LVDB
+ *  row) and per-row identity, but
  *  the on-disk + on-screen display string is rewritten through this
  *  map for objects whose canonical name diverges from the LVDB
  *  shortform OR whose type-suffix differs from the default.
@@ -478,9 +477,8 @@ export const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
  *  matches how astronomers refer to these objects in papers. */
 export const DEFAULT_TYPE_SUFFIX = 'Dwarf Spheroidal';
 
-/** True if the name reads as a galaxy-catalog designation. Catalog
- *  designations already self-identify and don't need a type suffix
- *  ("NGC 205" reads cleaner than "NGC 205 Dwarf Spheroidal"). */
+/** Catalog designations already self-identify and don't need a type
+ *  suffix ("NGC 205" reads cleaner than "NGC 205 Dwarf Spheroidal"). */
 export function isCatalogDesignation(name: string): boolean {
   return nameTier(name) !== 'proper';
 }
@@ -698,7 +696,7 @@ function buildLgObjectFromOrient(
   };
 }
 
-/** Overlay a curated alias/type row onto a built object. The row is
+/** The curated row is
  *  keyed by the source name (LVDB `name` / standalone override name),
  *  which the caller matches before the display-name rewrite. Type must be
  *  derived before the promotion renames `obj` — the suffix fallback reads
@@ -716,8 +714,7 @@ export function applyAliasMeta(obj: LgObject, meta: AliasRow | undefined): LgObj
   return obj;
 }
 
-/** Merge an LVDB row with an optional override into a fully-shaped
- *  LgObject. Override (when present) replaces axes + orient; LVDB
+/** Override (when present) replaces axes + orient; LVDB
  *  always provides the position. Returns null when the row has no
  *  override AND no LVDB structural data — i.e. there's nothing to
  *  render. */
@@ -807,8 +804,8 @@ export function roundN(x: number, decimals: number): number {
   return Math.round(x * f) / f;
 }
 
-/** Round to N significant digits — for quantities whose magnitude
- *  spans decades across the catalog (density0). */
+/** For quantities whose magnitude spans decades across the catalog
+ *  (density0); `roundN` above covers the fixed-decimal rest. */
 export function roundSig(x: number, sig: number): number {
   if (x === 0) return 0;
   const mag = Math.ceil(Math.log10(Math.abs(x)));
