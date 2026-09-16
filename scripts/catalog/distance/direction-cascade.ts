@@ -204,9 +204,9 @@ export function directionOnPm(
 export const KM_S_TO_PC_YR = 3.15576e7 / 3.0856775814913673e13;
 
 // Space-velocity sanity ceiling. The Galactic escape velocity near Sol is
-// ~550 km/s; the fastest known hypervelocity stars reach ~1700 km/s but are
-// absent from this bright classic-IDs subset, so a ceiling at 1500 (~3×
-// escape) clamps no real star here. A computed speed past it is a
+// ~550 km/s; the fastest known hypervelocity stars reach ~1700 km/s but none
+// is a record here, so a ceiling at 1500 (~3× escape) clamps no real star. A
+// computed speed past it is a
 // PM×distance artifact — noisy proper motion on a faint distant star, where
 // v = d·μ blows a spurious sub-arcsec/yr μ up to thousands of km/s. Such
 // rows drop to zero velocity (kept at J2016.0, the same fall-through as
@@ -392,8 +392,6 @@ export function resolveDirection(
     };
   }
 
-  // Sol carries no source_id, HIP, TYC or GJ, so every tier above misses it
-  // and it would otherwise leave the cascade with no direction and be dropped.
   // The vector is arbitrary and unobservable: Sol's distance is zero, so the
   // walk multiplies it to the origin whatever it points at.
   if (isSol) {
@@ -418,9 +416,8 @@ function floatCell(cells: string[], i: number): number | null {
   return Number.isFinite(v) ? v : null;
 }
 
-/** Parse `data/gaia/gaia_dr3_astrometry_catalog.tsv` into a source_id →
- *  row map. source_id stays a string — Gaia IDs exceed
- *  Number.MAX_SAFE_INTEGER, so a numeric parse would corrupt the key. */
+/** source_id stays a string — Gaia IDs exceed Number.MAX_SAFE_INTEGER, so a
+ *  numeric parse would corrupt the key. */
 export function parseGaiaAstrometryCatalogTsv(
   text: string,
 ): Map<string, GaiaAstrometryCatalogRow> {
@@ -461,8 +458,6 @@ export function parseGaiaAstrometryCatalogTsv(
   return out;
 }
 
-/** Parse `data/hipparcos/hip2_van_leeuwen.tsv` into a HIP →
- *  Hip2AstrometryRow map. */
 export function parseHip2Tsv(text: string): Map<number, Hip2AstrometryRow> {
   const out = new Map<number, Hip2AstrometryRow>();
   const lines = text.split(/\r?\n/);
