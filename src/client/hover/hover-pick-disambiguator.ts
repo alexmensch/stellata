@@ -5,11 +5,8 @@ import type * as THREE from 'three';
 import type { OccluderQuery } from '../occlusion/occluder-set';
 import type { HoverHit, HoverProvider } from './hover-types';
 
-// One provider's hit, paired with the provider that produced it.
-// The engine collects these by calling each registered provider's
-// `pick()` and keeping the non-null results. Used as both the input
-// and output type so callers can route the winner straight back to
-// `winner.provider.format(winner.hit.idx)`.
+// Both the input and the output type, so a caller routes the winner
+// straight back to `winner.provider.format(winner.hit.idx)`.
 export type HoverProviderHit = {
   provider: HoverProvider;
   hit: HoverHit;

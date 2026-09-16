@@ -3,9 +3,6 @@
 
 import type { TargetKind } from '../camera/focus/focus-target';
 
-/** Every object kind the app can focus — `TargetKind` itself. Extending
- *  that union without adding a provider to `FocusCardProviders` fails
- *  the TypeScript build — that is the contract, not a convention. */
 export type FocusKind = TargetKind;
 
 export interface FocusCardRow {
