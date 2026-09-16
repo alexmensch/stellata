@@ -66,16 +66,22 @@ field mapping but not the script mtime (e.g. edit in a way that
 updates atime only), you may need to `touch
 scripts/catalog/build-catalog.ts` or delete the generated files.
 
-## Building in a worktree — never symlink `public/`
+## Building in a worktree
 
-A fresh worktree has no `public/` artifacts (they are gitignored), so
-artifact-backed suites self-skip. Symlinking them in from the main checkout
-makes those suites run — and then any build in the worktree writes *through*
+A fresh worktree has no `public/` artifacts — they are gitignored. Build them
+there: `pnpm run dev` preprocesses and then serves, so starting the worktree's
+dev server builds that worktree's artifacts, about a minute. `pnpm run build`
+is the headless equivalent when no server is wanted, and Alex runs one dev
+server per worktree, each on its own port. A missing `public/` is a setup step,
+never a reason to route work back to the main checkout — not a perf run, not an
+artifact-backed suite, not anything.
+
+**Never symlink the main checkout's `public/` into a worktree.**
+Artifact-backed suites self-skip without artifacts, and symlinking them in
+makes those suites run — but then any build in the worktree writes *through*
 the symlinks into the main checkout's `public/`, leaving it with artifacts that
 disagree with each other. `tests/artifact-freshness.test.ts` exists to catch
-exactly that mismatch.
-
-Need artifacts in a worktree for a read-only test run? **Copy** them (`cp`), or
+exactly that mismatch. Want artifacts without a build? **Copy** them (`cp`), or
 symlink and then materialise (`rm link && cp target link`) before any build.
 Before running `build:catalog` or `build:binaries-runtime` in a worktree,
 confirm nothing is a symlink: `find public -maxdepth 1 -type l`.
