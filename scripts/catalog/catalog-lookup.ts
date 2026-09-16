@@ -37,8 +37,7 @@ export const DEFAULT_CONSTELLATIONS_JSON = resolve(REPO_ROOT, 'public/constellat
 export const DEFAULT_SEARCH_INDEX = resolve(REPO_ROOT, 'public/search-index.json');
 export const DEFAULT_ROW_INDEX_MAP = resolve(REPO_ROOT, 'public/catalog-row-index-map.json');
 
-/** Read + reassemble the transport-chunked catalog binary from a manifest
- *  path. The client loader's Node-side twin — same `assembleCatalogChunks`
+/** The client loader's Node-side twin — same `assembleCatalogChunks`
  *  contract, fs instead of fetch. */
 export async function readCatalogBuffer(
   manifestPath: string = DEFAULT_CATALOG_MANIFEST,
