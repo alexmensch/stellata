@@ -58,8 +58,7 @@ export function phaseDV(coefs: PhaseCoefficients, aDeg: number): number {
   );
 }
 
-/** Empirical phase factor. Inside [0, αmax°] uses the published
- *  polynomial; beyond αmax falls back to anchor-scaled Lambert
+/** Inside [0, αmax°] uses the published polynomial; beyond αmax falls back to anchor-scaled Lambert
  *  (continuous at the boundary). α clamped to [0, π] — Horner
  *  diverges wildly past its fitted domain, so the αmax fallback is
  *  load-bearing against accidental degrees/radians swaps. */
@@ -143,8 +142,7 @@ export function phaseAngleFromLegs(
  * Phase factor φ(α) given viewer→planet and viewer→host displacement
  * vectors. Computes α via `phaseAngleFor` and dispatches into the
  * empirical polynomial (when the body has one) or Lambertian (the
- * default fallback for Pluto, every moon but Earth's, and every
- * exoplanet). Mirrors the
+ * fallback wherever a body carries no published curve). Mirrors the
  * `if (alphaMaxDeg > 0.0 && alphaDeg <= alphaMaxDeg)` branch in
  * `planet.vert.glsl` exactly through the shared helpers above.
  * Degenerate zero-length legs land at α = 0 ⇒ φ = 1.

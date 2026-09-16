@@ -52,8 +52,7 @@ function farRoot(ox: number, oy: number, oz: number, dx: number, dy: number, dz:
 }
 
 /**
- * Scale a vector's component along `pole` by `s`. Mirrors
- * stellata_scalePolar in the GLSL; the arithmetic and what the map
+ * Mirrors stellata_scalePolar in the GLSL; the arithmetic and what the map
  * guarantees live in `../../util/polar-scale.ts`.
  *
  * This is the seam between an oblate body and a march that assumes a unit

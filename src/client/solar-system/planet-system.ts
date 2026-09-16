@@ -157,8 +157,7 @@ export interface PlanetRings {
 }
 
 export interface PlanetSystem {
-  // Catalog index of the host star. Stable for as long as the loaded
-  // catalog instance is alive.
+  // Stable for as long as the loaded catalog instance is alive.
   readonly hostStarIdx: number;
   readonly planets: readonly Planet[];
   /** Optional time-evolved position resolver. When present, the
@@ -285,9 +284,8 @@ function solPositionsAt(t: number, out: Float64Array): void {
   }
 }
 
-// Sol's eight planets. Radii from NASA planetary fact sheets (equatorial).
-// Semi-major axes and eccentricities from JPL DE440 mean elements at
-// J2000. Colours are observation-derived representative tones — pixel-
+// Radii from NASA planetary fact sheets (equatorial). Semi-major axes and
+// eccentricities from JPL DE440 mean elements at J2000. Colours are observation-derived representative tones — pixel-
 // accurate texturing depends on the future planet-as-object epic
 // clearing its design gate; for now bodies are flat-
 // coloured discs.

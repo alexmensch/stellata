@@ -24,9 +24,9 @@ const HELIOPAUSE_SHELL_IDX = SHELL_KEYS.indexOf('heliopause');
 // Nose (upwind apex) direction: the interstellar He inflow measured by
 // IBEX/Ulysses, J2000 ecliptic (λ, β) = (255.7°, 5.1°) — McComas et al.
 // 2015 (ApJS 220, 22). NOT the solar apex of motion vs nearby stars
-// (RA 17h53m, Dec +27.4°), which sits ~47° away and once shipped here —
-// the heliosphere is shaped by motion relative to the Local Interstellar
-// Cloud, not relative to the stellar neighbourhood.
+// (RA 17h53m, Dec +27.4°), which sits ~47° away: the heliosphere is
+// shaped by motion relative to the Local Interstellar Cloud, not relative
+// to the stellar neighbourhood.
 const NOSE_ECL_LON_RAD = 255.7 * Math.PI / 180;
 const NOSE_ECL_LAT_RAD = 5.1 * Math.PI / 180;
 
@@ -72,8 +72,7 @@ const ALPHA_LIMB = 0.45;
 export const HELIOPAUSE_APEX_SOL_PC: Readonly<THREE.Vector3> =
   APEX_DIR_ICRS.clone().multiplyScalar(UPWIND_APEX_AU * AU_PC);
 
-/** DOM element id of the SVG `<text>` node that renders the apex label.
- *  Exported so the hover picker can hit-test the label's bounding rect
+/** Exported so the hover picker can hit-test the label's bounding rect
  *  via getElementById — single source so the id can't drift between
  *  the label engine and the hover picker. */
 export const HELIOPAUSE_LABEL_ELEMENT_ID = 'heliopause-label';
@@ -231,10 +230,9 @@ export const HELIOPAUSE_SAMPLE_POINTS_SOL: readonly THREE.Vector3[] = (() => {
   return arr;
 })();
 
-/** Mount the SVG "Heliopause" label and bind per-frame projection.
- *  Thin wrapper around the shared distance-gated label engine that
- *  carries the heliopause-specific configuration: the 62-sample
- *  ellipsoid silhouette, the bottom-right anchor direction, and
+/** Thin wrapper around the shared distance-gated label engine, carrying
+ *  the heliopause-specific configuration: the ellipsoid silhouette
+ *  samples, the bottom-right anchor direction, and
  *  `isHeliopauseApexVisible`. */
 export function createHeliopauseLabel(ctx: KindContext, shells: ShellRegistry): () => void {
   return createShellSilhouetteLabel(ctx, {

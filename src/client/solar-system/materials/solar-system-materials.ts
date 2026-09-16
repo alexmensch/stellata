@@ -36,9 +36,8 @@ export interface ViewportUniforms {
 }
 
 /**
- * The probe glyph, built alone: it reads neither the HDR seam nor a
- * texture, and the layer that owns it is not the one that owns the planet
- * surfaces (`README.md` § Why the probe glyph is split out).
+ * The probe glyph, built alone — `README.md` § Why the probe glyph is
+ * split out.
  */
 export interface ProbeMaterials {
   /**
