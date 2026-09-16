@@ -231,10 +231,10 @@ normalised so "pages" meets "page") and measures what share of them appear
 in markdown the same commit adds. Two lines minimum, twelve distinct words
 minimum, half of them shared, and the block is reported.
 
-Those floors are what keep a **pointer** legal: `// see src/site/README.md
-§ Reading it in dev` is one line and a handful of words, so it never
-reaches the test however much vocabulary it shares. That is the shape the
-deny message asks for.
+Those floors are what keep a **pointer** legal: `// see
+src/client/webgpu/tsl/README.md § Interleaved gradient noise` is one line
+and a handful of words, so it never reaches the test however much
+vocabulary it shares. That is the shape the deny message asks for.
 
 `[comment-ok: <reason>]` in the commit message opts out, and is visible in
 the PR the way `[readme-skip:]` is. It exists because vocabulary overlap is
