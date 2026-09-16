@@ -28,7 +28,7 @@ describe('scenarios', () => {
   });
 
   it('appends --hash as the fragment, and omits it when empty', () => {
-    expect(scenarioUrl('http://h', 'B', 'webgpu-gate=force')).toBe('http://h/v/B/#webgpu-gate=force');
-    expect(scenarioUrl('http://h', 'B', '')).toBe('http://h/v/B/');
+    expect(scenarioUrl('http://h', 'B', 'webgpu-gate=force')).toBe('http://h/app/v/B/#webgpu-gate=force');
+    expect(scenarioUrl('http://h', 'B', '')).toBe('http://h/app/v/B/');
   });
 });
