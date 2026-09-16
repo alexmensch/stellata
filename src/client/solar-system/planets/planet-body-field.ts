@@ -89,8 +89,7 @@ export const BODY_COLLAPSE_THRESHOLD_PX = 6;
 const SPIN_DEG_PER_DAY_TO_RAD_PER_S = Math.PI / 180 / 86400;
 const DEG_TO_RAD = Math.PI / 180;
 
-/** Magnitude of a body's own surface rotation rate, rad per sim second.
- *  Zero for a body publishing no IAU rotation elements — the mesh layer
+/** Zero for a body publishing no IAU rotation elements — the mesh layer
  *  poses no spin for one either, so nothing on its surface moves. */
 function bodySpinRadPerSimS(planet: Planet): number {
   const w = planet.rotation?.wDegPerDay;
@@ -112,9 +111,9 @@ interface PlanetView {
   physDiscPx: number;
 }
 
-// Initial slot capacity. v1 attaches Sol (9 planets + 18 moons = 27
-// bodies) once; sized to hold that in one shot so the sole attach doesn't
-// immediately grow. bk5 may grow this as exoplanet hosts come online.
+// v1 attaches Sol (9 planets + 18 moons = 27 bodies) once; sized to hold
+// that in one shot so the sole attach doesn't immediately grow. bk5 may
+// grow this as exoplanet hosts come online.
 // Resizing reallocates the instanced attribute buffers — relatively cheap
 // compared to a frame.
 const INITIAL_CAPACITY = 32;
@@ -226,8 +225,7 @@ interface AttachedHost {
   hostStarIdx: number;
   ps: PlanetSystem;
   hostAbsmag: number;
-  /** Host star's physical radius in pc — the occluding disc of the
-   *  true-eclipse dim. */
+  /** The occluding disc of the true-eclipse dim. */
   hostRadiusPc: number;
   /** Absolute (catalog-space) host position in pc. Static for the
    *  session — used to recompute hostLocalPos whenever worldOffset
@@ -251,10 +249,9 @@ interface AttachedHost {
   count: number;
 }
 
-// Per-candidate row in the cross-host pick reducer. Extends the shared
-// `PickCandidate` shape so `pickFromCandidates` in star-geometry.ts
-// reduces it under the same tightest-enclosure contract every layered
-// picker uses. `idx` is the planet-within-host index (decoded from the
+// Extends the shared `PickCandidate` shape so `pickFromCandidates` in
+// star-geometry.ts reduces it under the same tightest-enclosure contract
+// every layered picker uses. `idx` is the planet-within-host index (decoded from the
 // winning candidate as `hostStarIdx + idx`); the host axis rides
 // through on `hostStarIdx`.
 type CrossHostCandidate = PickCandidate & {
@@ -286,10 +283,10 @@ export class PlanetBodyField {
   // Grown, shifted, and written in lockstep with bufs.localRel.
   private localRel64!: Float64Array;
   private dimTargets = new Map<number, number>();
-  // Last rendered frame's dim targets. Ping-ponged with `dimTargets` at
-  // the top of update() so the pair costs no allocation, and read by the
-  // cadence report: a dim's own slope is the difference between the two,
-  // which is exact, goes to zero through totality on its own, and needs
+  // Ping-ponged with `dimTargets` at the top of update() so the pair costs
+  // no allocation, and read by the cadence report: a dim's own slope is
+  // the difference between the two, which is exact, goes to zero through
+  // totality on its own, and needs
   // no model of stellar radii or shadow speeds.
   private prevDimTargets = new Map<number, number>();
   private readonly tmpUmbraGlow: [number, number, number] = [0, 0, 0];
@@ -915,7 +912,6 @@ export class PlanetBodyField {
   // Flat indices are NOT stable across detach compaction — resolve per
   // use, never cache one across an attach/detach cycle.
 
-  /** Live flat-instance count (mesh-LOD layer iteration bound). */
   get liveInstanceCount(): number {
     return this.liveCount;
   }
@@ -1336,8 +1332,7 @@ export class PlanetBodyField {
     return hostStarIdx < 0 ? null : this.hosts.get(hostStarIdx) ?? null;
   }
 
-  /** Rebuild the flat-instance → hostStarIdx reverse index from the
-   *  attach table. Called after every attach/detach. */
+  /** Called after every attach/detach. */
   private rebuildInstanceMap(): void {
     this.instanceHost.fill(-1);
     for (const host of this.hosts.values()) {
@@ -1501,13 +1496,8 @@ export class PlanetBodyField {
    * exposure — and must, since a resolved surface in frame drives the cut
    * deep enough to black out every faint body along with the star field.
    *
-   * The glare test is the star pipeline's, unchanged: the billboard IS
-   * the shared star-perceptual point (`glare/README.md`). The mesh
-   * OR-branch mirrors `forEachDrawnBodyView`'s — an opaque surface is
-   * pickable whatever the exposure, which is why a parked body already
-   * picked correctly. Chart adds nothing: it inherits no exposure state,
-   * and `drawCutoffMag` has already applied its hard clip at the
-   * instrument limit, so anything reaching here has passed it.
+   * Chart adds nothing of its own: it inherits no exposure state, and
+   * `drawCutoffMag` has already hard-clipped it at the instrument limit.
    */
   private bodyInkVisible(view: PlanetView): boolean {
     if (view.physDiscPx >= MESH_FADE_MIN_PX) return true;
@@ -1578,8 +1568,6 @@ export class PlanetBodyField {
   }
 
 
-  /** Attach-table view for the solar-system cluster: slot range +
-   *  live host geometry per attached host. */
   attachedHosts(): IterableIterator<{
     hostStarIdx: number;
     startInstance: number;

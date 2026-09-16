@@ -51,8 +51,7 @@ function parentOf(planets: readonly Planet[], name: string): Planet | undefined 
   return i >= 0 ? planets[i] : undefined;
 }
 
-/** Orbit descriptor for a body at flat instance `planet` in `system`. A
- *  planet fills it from its host star + solar-mass period (a^1.5 years, in
+/** A planet fills it from its host star + solar-mass period (a^1.5 years, in
  *  AU); a moon from its `parentName` + the parent planet's GM (Kepler-III
  *  period in days, orbit in km). Returns null for a moon whose parent
  *  record is missing or carries no GM — none of the in-scope moons hit
@@ -83,8 +82,7 @@ export function orbitDescriptorFor(
   };
 }
 
-/** Orbital-period row string for a descriptor. Shared by the hover card
- *  and the focus card so a shared field can't diverge between tiers. The
+/** Shared by the hover card and the focus card so a shared field can't diverge between tiers. The
  *  decade split (integer ≥ 10, else two decimals) is unit-agnostic; the
  *  descriptor's `periodUnit` supplies the suffix. */
 export function formatOrbitPeriod(d: OrbitDescriptor): string {

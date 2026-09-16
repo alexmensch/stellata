@@ -192,7 +192,7 @@ const RINGS_SUFFIX = '-rings';
 const textureKey = (name: string, suffix = ''): string =>
   `${name.toLowerCase()}${suffix}`;
 
-/** The ladder key for a body — the colour map's key without any rung. */
+/** The colour map's key without any rung. */
 const ladderKey = (name: string): string => name.toLowerCase();
 
 /** The body's DEM elevation span, or null where it ships no relief maps —
@@ -211,7 +211,7 @@ const reliefHorizonOf = (planet: Planet): THREE.Vector2 => {
 
 type TextureExt = 'jpg' | 'png' | 'webp';
 
-/** Decode options for every planet map. `imageOrientation` puts the flip in the
+/** `imageOrientation` puts the flip in the
  *  bitmap, where no GL state can skip it: three issues no UNPACK_FLIP_Y_WEBGL
  *  at all for an ImageBitmap source, so a pixel-store cache desynced from GL
  *  (`../../loaders/README.md`) cannot reach these maps, and a map that arrives
@@ -734,9 +734,8 @@ export class PlanetMeshLayer {
     return out[0] > 0 || out[1] > 0 || out[2] > 0;
   }
 
-  /** The colour-map state for the rung currently drawn, if any. Touching it
-   *  marks it used this frame, which is what keeps eviction off anything on
-   *  screen. */
+  /** Marks the drawn rung used this frame, which is what keeps eviction
+   *  off anything on screen. */
   private colourState(planet: Planet): TextureState | undefined {
     const shown = this.shownRung.get(ladderKey(planet.name));
     if (shown === undefined) return undefined;
@@ -750,7 +749,6 @@ export class PlanetMeshLayer {
     return this.textures.get(key)?.state === 'ready';
   }
 
-  /** Look a texture up and stamp it as used this frame. */
   private useTexture(key: string): TextureState | undefined {
     const state = this.textures.get(key);
     if (state?.state === 'ready') state.lastFrame = this.frame;

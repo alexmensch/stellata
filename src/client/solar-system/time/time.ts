@@ -4,8 +4,7 @@
 import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../util/astronomy-constants';
 import { deltaTSeconds } from './delta-t-pure';
 
-// Julian Date of the Unix epoch (1970-01-01T00:00:00Z). Subtracting
-// from any JD gives Unix-seconds × 86400.
+// Julian Date of the Unix epoch (1970-01-01T00:00:00Z).
 const UNIX_EPOCH_JD = 2440587.5;
 
 // Tolerance (seconds) under which a value of `t` is considered "live"
@@ -88,10 +87,8 @@ export function nextRewindRate(rate: number): number {
   return rate === 1 ? -1 : rate / 2;
 }
 
-/** The jump field's datetime format, for the placeholder and the README. */
 export const LOCAL_DATETIME_FORMAT = 'YYYY-MM-DD HH:MM:SS';
 
-/** The jump field's placeholder: the datetime format plus the JD escape. */
 export const JUMP_FIELD_PLACEHOLDER = `${LOCAL_DATETIME_FORMAT} or JD`;
 
 /** Epoch-ms → a zoneless jump-field value in **local** time:
@@ -140,10 +137,8 @@ export function parseLocalDatetimeValue(value: string): number {
 const JULIAN_DATE_RE = /^(jd\s*)?(\d{1,7}(?:\.\d+)?)\s*(tt|ut)?$/i;
 
 /** A jump-field Julian Date entry → Unix-seconds `t`, or NaN if it isn't
- *  one. Sibling of `parseLocalDatetimeValue` — the second form the field
- *  accepts, because astronomically-pinned events are published as a JD and
- *  retyping one as a calendar date means doing the ΔT arithmetic by hand.
- *  The scale defaults to **TT** — what catalogues publish and what the
+ *  one. Sibling of `parseLocalDatetimeValue`, the field's second accepted
+ *  form. The scale defaults to **TT** — what catalogues publish and what the
  *  readout's JD line shows — so a canon value round-trips verbatim; a
  *  `UT` suffix overrides (the two differ by ΔT: 13 hours at 2000 BC). */
 export function parseJulianDateValue(value: string): number {

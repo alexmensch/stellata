@@ -140,13 +140,11 @@ export function ringGeometryDrifted(
 }
 
 /**
- * Resolve the orbital plane normal for a host star. Sol's planets ride
- * the ecliptic (J2000 obliquity tilt against ICRS); every other host
- * defaults to the galactic plane.
+ * Sol's planets ride the ecliptic (J2000 obliquity tilt against ICRS);
+ * every other host defaults to the galactic plane.
  *
- * `solIndex` is passed in rather than reading the catalog so this function
- * stays pure — easy to test, reusable from any layer that needs the
- * same per-host plane decision.
+ * `solIndex` is passed in rather than read off the catalog so this stays
+ * pure.
  */
 export function orbitalPlaneNormalFor(
   hostStarIdx: number,
@@ -157,9 +155,8 @@ export function orbitalPlaneNormalFor(
 }
 
 /**
- * Compute the visibility flags for a sequence of rings ordered by
- * increasing pixel radius. Pure function — extracted so the heuristic
- * can be unit-tested independently of three.js scene state.
+ * Visibility flags for a sequence of rings ordered by increasing pixel
+ * radius.
  *
  * Ring i renders when its pixel-radius gap to both neighbours exceeds
  * `thresholdPx` AND its own radius does. The innermost and outermost
@@ -183,8 +180,7 @@ export function ringVisibility(
 
 /**
  * Build the vertices of one Keplerian ellipse with the host star at one
- * focus and the perihelion along local +x. Pure / scene-agnostic so the
- * geometry can be unit-tested on the CPU.
+ * focus and the perihelion along local +x.
  *
  * - `aPc` — semi-major axis in parsecs.
  * - `e`  — orbital eccentricity, in [0, 1).
@@ -221,12 +217,9 @@ export function buildEllipsePoints(
 }
 
 /**
- * Placeholder eccentric anomaly for the i-th planet of an N-planet
- * system. Spreads bodies evenly around their respective orbits so all
- * N don't pile up at perihelion (+x). Used by PlanetBodyField as the
- * fallback when a host's PlanetSystem doesn't supply a positionsAt
- * resolver. Deterministic — re-running with the same i and N produces
- * the same angle.
+ * Spreads the N bodies evenly around their respective orbits so they
+ * don't pile up at perihelion (+x). PlanetBodyField's fallback when a
+ * host's PlanetSystem supplies no positionsAt resolver.
  */
 export function placeholderEccentricAnomaly(i: number, n: number): number {
   if (n <= 0) return 0;
@@ -234,10 +227,7 @@ export function placeholderEccentricAnomaly(i: number, n: number): number {
 }
 
 /**
- * Local-frame position of a planet at a given eccentric anomaly.
- * Pure helper used by the placeholder fallback path in PlanetBodyField.
- *
- * `out` is mutated and returned for convenience.
+ * `out` is mutated and returned.
  */
 export function planetLocalPosition(
   semiMajorAxisAu: number,
@@ -259,10 +249,9 @@ export function planetLocalPosition(
 }
 
 /**
- * Map a planet type to a shader solidity factor. Consumed by
- * PlanetBodyField as a per-instance attribute; the planet fragment
- * shader interpolates the inner-edge fade window between gas-giant
- * softness and rocky sharpness on this value.
+ * Consumed by PlanetBodyField as a per-instance attribute; the planet
+ * fragment shader interpolates the inner-edge fade window between
+ * gas-giant softness and rocky sharpness on this value.
  */
 export function solidityForType(type: PlanetType): number {
   switch (type) {
@@ -414,8 +403,8 @@ export class OrbitRingsLayer {
   }
 
   /**
-   * Replace the active planet system. Pass null to tear the rings down
-   * (e.g. when focus clears or moves to a host without planets).
+   * Pass null to tear the rings down (e.g. when focus clears or moves
+   * to a host without planets).
    * Geometry is disposed eagerly — Three.js doesn't reclaim it
    * otherwise. `t` is the model clock — ring geometry
    * derives from the system's live element source at `t`, and update()
@@ -518,9 +507,8 @@ export class OrbitRingsLayer {
 
     const pxPerRad = pixelsPerRadian(camera.fov, viewportHeightPx);
     const dHost = camera.position.distanceTo(this.hostLocal);
-    // The pixel-gap heuristic runs per centre body: host-centred rings
-    // gap against each other; each parent's moon rings form their own
-    // group measured at the parent's distance (key = parentIdx).
+    // Keyed by centre body (parentIdx): a ring gaps only against others
+    // sharing its centre, measured at that centre's camera distance.
     const groups = new Map<number, { idxs: number[]; radii: number[] }>();
     for (let i = 0; i < this.rings.length; i++) {
       const r = this.rings[i];
@@ -574,9 +562,8 @@ export class OrbitRingsLayer {
   }
 
   /**
-   * True when the orbit ring for planet `i` is currently rendering. The
-   * planet-labels overlay gates label visibility on this per-planet flag
-   * so labels appear only when their associated ring does.
+   * The planet-labels overlay gates label visibility on this per-planet
+   * flag, so labels appear only when their associated ring does.
    *
    * Crucially: labels follow rings, NOT body apparent-magnitude. A
    * planet whose body is below the slider cutoff still shows a label
