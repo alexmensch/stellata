@@ -30,13 +30,12 @@ binary" even when no companion renders:
   `resolvePairComponents` walk the wings pass runs
   (`wingRenderablePrimaries` returns it), so it tracks the records the
   binaries pipeline actually addresses — primaries AND promoted
-  companions alike (~20.9k records).
+  companions alike.
 - **`MULTIPLICITY_UNRESOLVED` (2)** — SIMBAD flags the star as a
   multiple (`otype = '**'` in `data/simbad/simbad_sptype.tsv`, keyed by
   Gaia source_id) but nothing resolves: the spectroscopic-binary
   population invisible to WDS/CCDM/NSS. 64 Vir (HIP 65241, classical
-  Am star — the class is ~75% short-period SBs) is the canonical pin
-  (~4.4k records).
+  Am star — the class is ~75% short-period SBs) is the canonical pin.
 - **`MULTIPLICITY_SINGLE` (0)** — neither signal; the default.
 
 Counted `multiplicityResolved` / `multiplicityUnresolved` in
@@ -56,13 +55,10 @@ anything farther than that subtends >45° from the camera — it wouldn't
 fit the viewport as a visual "system", which is what the render layer
 wants. Wider bound pairs exist in the catalog but won't render usefully.
 
-What you'll see from the classic_ids subset: ~14 pairs. Feels low but is
-accurate. The subset selects stars with classical designations, and most
-"wide binary" companions in physically-bound pairs don't have their own
-classical ID — the brighter primary does. The pairs we do find are
-almost all famous named visual binaries (α Cen A/B, Alula Australis,
-Struve 2398, etc.). Reaching thousands of pairs would require the fuller
-`reduced_m10` subset, which has a different selection profile.
+`binaryPairs` and `binaryMutualPairs` in build-counts pin what the pass
+finds. The separation threshold, not catalogue membership, is what bounds
+it — every wider bound pair reaches chart mode through the CCDM pass or
+through companion promotion instead.
 
 Each star records its **directed** nearest in `companionIdx`: A's
 nearest may be B while B's nearest is some third star C. The
@@ -81,10 +77,9 @@ per system on the canonical anchor.
 
 Visual binaries get the same `flags` bit 4 the geometric pass uses, so
 chart mode renders wings on either source with no renderer-side
-changes. The geometric pass alone yields ~14 pairs (the only AT-HYG
-rows where both components survive the classic-IDs cut); the CCDM
-pass pulls in everything else where the primary has a HIP — Sirius,
-Mizar, Castor, α Cen, Polaris, Albireo, γ And, ε Lyr, etc.
+changes. The geometric pass reaches only what fits its `0.005 pc` cell;
+the CCDM pass pulls in the wider systems where the primary has a HIP —
+Sirius, Mizar, Castor, α Cen, Polaris, Albireo, γ And, ε Lyr, etc.
 
 `parseHipCcdm` in `build-catalog.ts` reads `data/hipparcos/hip_ccdm.tsv`, a
 three-column slice of the **Hipparcos main catalogue** (VizieR
@@ -186,26 +181,27 @@ noisy parallax can never strip real wings:
   wide background star that merely shares the CCDM string — the
   failure mode that made a naive "3D-separation over full CCDM
   membership" test regress η Cas. Counted `ccdmSuppressedOptical`
-  (~487 of the ~11k flagged primaries; median suppressed separation
-  ~54 pc).
+  against `ccdmFlagged`; median suppressed separation ~54 pc.
 
-`parseHipCcdm` returns systems grouped by `CCDM_ID` (real CCDM
-strings for file-driven entries, synthetic `OVERRIDE-N` keys for
-the `KNOWN_VISUAL_DOUBLES` list). `applyDoublesFlag` then walks
-each group, picks the **brightest** catalog member (lowest
+`parseHipCcdm` returns systems grouped by `CCDM_ID`, **real CCDM strings
+only** — it skips any HIP the curated list already claims, and mints no
+key of its own for one. `applyDoublesFlag` is what unions the two, and it
+does so as bare component lists rather than keyed groups, so a curated
+system never needs a CCDM identifier it does not have. That wrapper then
+walks each group, picks the **brightest** catalog member (lowest
 `absmag`), and — unless the optical-double gate above vetoes it —
 ORs `0x10` onto only that one, so each Hipparcos-resolved system
 contributes exactly one chart-mode wings glyph, matching the
 geometric pass's mutual-primary semantics. Stars that
 are CCDM secondaries do not get the bit; they remain in the
 catalog with their other flags intact. No `companionIdx` write —
-the secondary often isn't in the AT-HYG classic_ids subset, and
+the secondary often isn't a catalog record at all, and
 the renderer's zoom-fit code at `stellata.ts` already guards on
 `companion ≥ 0`, so a flagged-but-unpaired primary is fine.
 
 If the CCDM file is absent the build logs and continues — the
-geometric pass still runs and chart mode still works, just with the
-~14-pair coverage.
+geometric pass still runs and chart mode still works, at that pass's
+own coverage.
 
 ## System distance coherence
 
