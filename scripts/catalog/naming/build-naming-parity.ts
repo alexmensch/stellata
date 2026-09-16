@@ -28,11 +28,10 @@ function readJson<T>(name: string): T {
   return JSON.parse(readFileSync(resolve(PUBLIC, name), 'utf8')) as T;
 }
 
-/** The `old` column is frozen — it is the string a user could type before
- *  the ladder landed, and the gate is that it still resolves. It carries
- *  forward from the committed ledger; `NAMING_PARITY_SEED` re-seeds it from
- *  a `key`/`old` TSV, which is what a deliberate wholesale naming change
- *  needs and nothing else should touch. */
+/** FROZEN, and carried forward from the committed ledger.
+ *  `NAMING_PARITY_SEED` re-seeds it from a `key`/`old` TSV, which is what a
+ *  deliberate wholesale naming change needs and nothing else should
+ *  touch. */
 function frozenOldLabels(): Map<string, string> {
   const seed = process.env.NAMING_PARITY_SEED;
   if (seed !== undefined) {

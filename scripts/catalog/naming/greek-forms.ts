@@ -17,13 +17,12 @@ export function foldCurlyGreek(s: string): string {
   return s.replace(/[ϕϵϑϱϰς]/g, (ch) => CURLY_GREEK_FOLDS[ch]);
 }
 
-/** Every published spelling of each Greek Bayer letter, keyed by the glyph
- *  the wire carries. `abbr` is the three-letter form AT-HYG prints and
- *  SIMBAD/IV/27A lowercase (`Alp` / `alp`); `variants` are the further
- *  lowercase ASCII conventions the same letter appears under. The build's
- *  normalisers read the lowercased set (`ASCII_GREEK`), the runtime's search
- *  labels title-case it — one table, so a spelling added for either side
- *  reaches both. */
+/** `abbr` is the three-letter form AT-HYG prints and SIMBAD/IV/27A
+ *  lowercase (`Alp` / `alp`); `variants` are the further lowercase ASCII
+ *  conventions the same letter appears under. The build's normalisers read
+ *  the lowercased set (`ASCII_GREEK`), the runtime's search labels
+ *  title-case it — one table, so a spelling added for either side reaches
+ *  both. */
 export const GREEK_SPELLINGS: Record<string, {
   full: string;
   abbr: string;
@@ -64,8 +63,7 @@ export const ASCII_GREEK: Record<string, string> = Object.fromEntries(
     [s.abbr.toLowerCase(), ...s.variants].map((k) => [k, glyph])),
 );
 
-/** Constellation genitive → IAU 3-letter code, the 88 IAU constellations.
- *  Multi-word genitives are single map keys — match longest-first. */
+/** Multi-word genitives are single map keys — match longest-first. */
 export const CONSTELLATION_GENITIVES: Record<string, string> = {
   'Andromedae': 'And', 'Antliae': 'Ant', 'Apodis': 'Aps', 'Aquarii': 'Aqr',
   'Aquilae': 'Aql', 'Arae': 'Ara', 'Arietis': 'Ari', 'Aurigae': 'Aur',

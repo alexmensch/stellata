@@ -73,7 +73,6 @@ function matchConstellation(
   return null;
 }
 
-/** A trailing WDS-style component token (`A`, `B`, `Ca`, `Ab`). */
 function isComponentToken(t: string): boolean {
   return /^[A-Z][a-c]?$/.test(t);
 }
@@ -112,9 +111,8 @@ const NON_STELLAR_RE = /^(NGC|IC|NAME|Cl\*?|\[SC\d+\]|C)\s/;
 const M_OBJECT_RE = /^M\s?\d+$/;
 const OTHER_CATALOGUE_RE = /^(BD\s?[+-]|CD-|Gliese\s|GJ\s|Groombridge\s|WASP-|HAT-P-|ASAS\s|FAUST\s|\d+\s+H\.\s)/;
 
-/** Normalise one NEC / wgsnFaints `Bayer/other` cell. Mechanical — every
- *  rule here is a measured population (docs/star-naming.md § 4), and the
- *  build pins the per-class counts. */
+/** Mechanical — every rule here is a measured population
+ *  (docs/star-naming.md § 4), and the build pins the per-class counts. */
 export function normaliseWgsnCell(raw: string | null): NormalisedCell {
   if (raw === null) return { class: 'empty' };
   let cell = foldCurlyGreek(raw.trim()).replace(/\[\d+\]$/, '');
@@ -264,8 +262,7 @@ export function splitNameCell(
   return { name: parts[0], aliases: [...parts.slice(1), ...aliases] };
 }
 
-/** Diacritic-folded, lowercased key for name matching — the § 2
- *  measurement's convention (`Yunü` finds `Yunu`). */
+/** The § 2 measurement's convention — `Yunü` finds `Yunu`. */
 export function foldNameKey(name: string): string {
   return name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }

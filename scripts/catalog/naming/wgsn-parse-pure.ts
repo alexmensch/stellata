@@ -14,7 +14,6 @@ export interface WgsnRow {
   /** HD number with any trailing component letter separated off. */
   hd: number | null;
   hdComponent: string | null;
-  /** Raw `Bayer/other` cell for the normaliser. */
   bayerOther: string | null;
   vmag: number | null;
   /** wgsnFaints only. Empty in every row of the 2025-05 release; the build

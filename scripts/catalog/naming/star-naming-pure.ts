@@ -109,8 +109,7 @@ export function gouldDesignation(num: number, half: string | undefined, dc: stri
   return `${num} G. ${dc}${half ? ` ${half}` : ''}`;
 }
 
-/** How this designation set renders at ONE tier, ignoring every other.
- *  Total over `NAME_TIERS`, and the single statement of every tier's
+/** Total over `NAME_TIERS`, and the single statement of every tier's
  *  rendering — `ownDesignation` walks it rather than restating the ladder,
  *  so the two cannot answer one tier differently. */
 export function designationAtTier(
@@ -191,23 +190,10 @@ export interface DisplayName {
   lettered: boolean;
 }
 
-/** Compose every star's display name at once. Two of the three rules are
- *  relational, which is why the composer is a collection pass rather than a
- *  per-star function:
- *
- *  - a star with no designation of its own takes the WDS root anchor's base
- *    plus its own component letter (`Sirius B`, `HIP 82676 Ab`);
- *  - a component letter is appended to a DESIGNATION only where a SIBLING
- *    OWNS the same designation — several records own `θ¹ Ori`, so each
- *    takes its letter, while β² Sco owns its designation alone and stays
- *    bare. Ownership, not label uniqueness: a sibling that owns the
- *    designation and then borrows a higher tier still displays a lettered
- *    form of it, so δ Cep A reads as such beside δ Cep C/D/E rather than
- *    reverting to the bare designation its siblings no longer claim.
- *
- *  Injective given (naming anchor, component letter). A surviving duplicate
- *  is therefore a data finding — two catalogue entries claiming one
- *  designation — never something the renderer should qualify away. */
+/** The letter turns on OWNERSHIP, not on label uniqueness: a sibling that
+ *  owns the designation and then borrows a higher tier still displays a
+ *  lettered form of it, so δ Cep A reads as such beside δ Cep C/D/E rather
+ *  than reverting to the bare designation its siblings no longer claim. */
 export function resolveDisplayNames<K>(
   inputs: readonly DisplayNameInput<K>[],
 ): Map<K, DisplayName> {
@@ -225,16 +211,9 @@ export function resolveDisplayNames<K>(
   const out = new Map<K, DisplayName>();
   for (const input of inputs) {
     const o = own.get(input.key);
-    // A component borrows its system's base wherever it holds no sky
-    // designation of its own: nothing at all, or a mere identifier the
-    // system can better — σ² UMa C reads better than its own HIP 45064 and
-    // λ Oph B better than its NSV serial, and both are what their siblings
-    // read. A sky designation of its own wins outright however high the
-    // system's tier: β² Sco stays β² Sco rather than becoming a lettered
-    // Acrab, and θ¹ Tau stays θ¹ Tau rather than borrowing θ² Tau's
-    // approved name. Two DIFFERENT identifiers of one tier trade nothing.
-    // The anchor is included in its own root with its own letter, and a
-    // record lends itself nothing.
+    // Two DIFFERENT identifiers of one tier trade nothing. The anchor is
+    // included in its own root with its own letter, and a record lends
+    // itself nothing.
     const anchorKey = input.anchorKey === input.key ? undefined : input.anchorKey;
     const anchorInput = anchorKey === undefined ? undefined : byKey.get(anchorKey);
     const anchor = anchorKey === undefined ? undefined : own.get(anchorKey);
@@ -272,9 +251,9 @@ export function resolveDisplayNames<K>(
   return out;
 }
 
-/** A search-index entry's designation set. `p` enters as the name tier —
- *  the build wrote it from this same ladder — so a record the authority
- *  named never takes a component letter on top of it. */
+/** `p` enters as the name tier — the build wrote it from this same ladder —
+ *  so a record the authority named never takes a component letter on top
+ *  of it. */
 export function designationSetOfEntry(
   entry: SearchEntry,
   constellations: readonly { code: string }[],
