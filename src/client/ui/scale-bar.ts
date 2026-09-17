@@ -59,8 +59,7 @@ export function createScaleBar(stellata: Stellata) {
     let barPx: number;
     let label: string;
     if (stellata.focus.getCameraMode() === 'observe') {
-      // OBSERVE: angular extent of sky — "scene scale at camera-target
-      // depth" is meaningless when the camera sits on the focal star.
+      // OBSERVE: angular extent of sky rather than scene scale.
       const targetBarPx = w * TARGET_BAR_FRAC;
       const pxPerDeg = h / camera.fov;
       const idealDeg = targetBarPx / pxPerDeg;

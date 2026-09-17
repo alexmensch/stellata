@@ -41,7 +41,7 @@ const GL_PREFIX = '(?:Gliese|GJ|Gl)';
 
 // The query form the runner dispatches on. A Gliese designation is not a
 // number — it carries an optional decimal series and a run of component
-// letters ("Gl 563.2A", "GJ 2060AB", "GJ 10314ABC").
+// letters ("Gl 563.2A", "GJ 2060AB", "GJ 3193ABC").
 export const GL_QUERY_RE = new RegExp(`^${GL_PREFIX}\\s*(\\d+(?:\\.\\d+)?\\s*[a-z]*)$`, 'i');
 
 // Canonical Gliese lookup key: strip the prefix and all whitespace, lowercase.
@@ -90,11 +90,9 @@ export function buildBayerLabels(
 // "V645 Cen" and "V645 Centaurus" both resolve.
 //
 // The expansion is gated on the trailing token actually BEING this entry's
-// constellation abbreviation, not on the entry having a constellation at all.
-// 6,079 of the 14,148 GCVS-named entries end in something else — NSV serials
-// ("NSV 04199") and Magellanic field numbers ("LMC V0471") — and rewriting
-// that token invented "NSV Lupus" and "LMC Dorado": a designation that does
-// not exist, in a constellation the number has nothing to do with.
+// constellation abbreviation, never on the entry merely having one: NSV
+// serials and Magellanic field numbers end in something else, and rewriting
+// that token invents a designation that does not exist.
 export function buildGcvsLabels(
   designation: string,
   conCode: string,
@@ -111,11 +109,8 @@ export function buildGcvsLabels(
 
 // Search labels for a multiple-star component: "<system designation> <letter>"
 // across every Bayer variant of the SYSTEM PRIMARY ("α Cen C", "Alpha Cen C",
-// "Alf Cen C", …) plus the Flamsteed form, so "Alpha Centauri C" focuses
-// Proxima. The base is the primary's designation because a component often
-// carries none of its own (Proxima has no Bayer). Proper names are excluded
-// on purpose: the primary's proper (Rigil Kentaurus) names component A, not
-// the system, so "Rigil Kentaurus C" would be wrong.
+// "Alf Cen C", …) plus the Flamsteed form. Proper names are excluded on
+// purpose — an approved NAME designates component A, not the system.
 export function buildComponentLabels(
   primary: SearchEntry,
   conCode: string,
@@ -190,9 +185,7 @@ export function buildSearchIndex(
   const byIndex = new Map<number, SearchEntry>();
   for (const entry of raw) byIndex.set(entry.i, entry);
 
-  // One composer pass over the corpus: a component borrows its WDS root
-  // anchor's base and a letter is appended only where a sibling owns the
-  // same designation, so both rules need every entry in hand
+  // The composer's two relational rules need every entry in hand
   // (docs/star-naming.md § 6).
   const composed = displayNamesFromSearchIndex(raw, constellations);
 
@@ -222,11 +215,9 @@ export function buildSearchIndex(
     const primary = properName !== null && bayerDisplay !== null
       ? `${properName} (${bayerDisplay})`
       : display?.label ?? null;
-    // The composed label is fuzzy-indexed only where no other path emits
-    // it: a NAME, or a component composite ("θ¹ Ori C", "HIP 82676 Ab")
-    // that exists nowhere else. Every bare designation is already reached
-    // by its own tier's derived labels or its exact-match map, and
-    // fuzzy-indexing 300k catalogue numbers would only dilute the corpus.
+    // Fuzzy-indexed only where no other path emits the label: a NAME, or a
+    // component composite ("θ¹ Ori C", "HIP 82676 Ab") that exists nowhere
+    // else.
     const indexedLabel = display !== undefined
       && (properName !== null || display.lettered || display.borrowed)
       ? display.label : null;

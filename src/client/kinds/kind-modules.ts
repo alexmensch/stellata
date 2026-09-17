@@ -41,9 +41,8 @@ type RosterCoversEveryKind =
 export type KindModules =
   { readonly [K in TargetKind]: ObjectKindModule<K> | null } & RosterCoversEveryKind;
 
-/** Build the per-shell KIND_MODULES record. A factory rather than a
- *  module-scope constant because modules are stateful (they hold their
- *  loaded artifact and attach-time runtime). */
+/** A factory rather than a module-scope constant because modules are
+ *  stateful — they hold their loaded artifact and attach-time runtime. */
 export function buildKindModules() {
   return {
     star: createStarKindModule(),

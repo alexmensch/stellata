@@ -7,8 +7,11 @@ surface must show the IDENTICAL value — one formatter per field is
 what enforces that. All functions are pure and vitest-pinned.
 
 ```
-spectral-format.ts        formatSpectral(raw, spectClass, lumClass) →
-                          { label, descriptor }. Label keeps the PRIMARY
+spectral-format.ts        formatSpectral(raw, spectClass, lumClass,
+                          estimated?) → { label, descriptor }. `estimated`
+                          marks class bytes derived from brightness rather
+                          than observed, and appends "(estimated)" to the
+                          descriptor. Label keeps the PRIMARY
                           component of a composite ("K0III+K7V" →
                           "K0 III") and normalises spacing; descriptor
                           is plain language ("orange giant") composed

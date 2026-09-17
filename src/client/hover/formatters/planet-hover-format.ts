@@ -67,10 +67,8 @@ export function formatPlanetHover(
   const headLine = [fmtDistAuto(cameraDistancePc), magStr].filter(Boolean).join(' · ');
   lines.push(headLine);
 
-  // Period above Radius — orbital period is the user's first "is this
-  // a fast inner planet or a slow outer one?" tell, and the AU
-  // distance on line 2 pairs naturally with the period rather than
-  // with the body's physical size.
+  // Period above Radius: camera-relative quantities lead, intrinsic ones
+  // follow. Reordering these is a UX-rule change, not a tidy-up.
   const orbit = ctx.orbitOf(planetIdx);
   if (orbit) lines.push(`Period ${formatOrbitPeriod(orbit)}`);
   lines.push(`Radius ${formatEarthRadii(planet.radiusKm)}`);

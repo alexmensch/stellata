@@ -29,9 +29,6 @@ export interface KeyboardShortcutsDeps {
   /** Reveal/dismiss the unified debug panel. Bound to the hidden
    *  triple-tap-D affordance. */
   toggleDebugPanel: () => void;
-  /** The first-class time scrubber. `T` toggles it; while it's open,
-   *  `←`/`→` step rewind/fast-forward, Space toggles play/pause, and
-   *  Backspace resets to live-now. */
   timeScrubber: TimeScrubberWidget;
   /** Zero the camera's roll against the attitude indicator's active
    *  reference frame — the same action as clicking its ball. */
@@ -90,9 +87,8 @@ export function bindKeyboardShortcuts(
     toggleFullscreen,
   );
 
-  // Rolling window of recent D-key tap timestamps. Three taps inside
-  // D_TRIPLE_TAP_MS open the debug panel — hidden affordance, intentionally
-  // undocumented.
+  // Three taps inside D_TRIPLE_TAP_MS open the debug panel — a hidden
+  // affordance, and it stays out of the help-modal registry.
   const dTapTimes: number[] = [];
 
   // Capture phase so we observe foreground-modal state BEFORE bubble-phase
@@ -285,9 +281,7 @@ function cycleDetailLevel(stellata: Stellata) {
   stellata.filters.applyDetailPreset(next);
 }
 
-// R: reset only the sliders living under the panel's "Camera" section —
-// FOV, EV trim, exaggeration. Mirrors the per-row "reset" buttons wired
-// in controls.ts.
+// Calls the same APIs the per-row reset buttons in controls.ts use.
 function resetCameraSection(stellata: Stellata) {
   stellata.setCameraFov(DEFAULT_FOV);
   stellata.exposure.setEv(0);

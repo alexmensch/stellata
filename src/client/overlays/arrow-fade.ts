@@ -41,8 +41,8 @@ export function discCoverageAlpha(
  * vector overlay) make the same decision from the same inputs within a
  * frame.
  *
- * Per-arrow vs. shared shaft length is the caller's choice (option B from
- * the ml8 bead): the HUD Sol/GC chevrons feed `max(solLen, gcLen)` so the
+ * Per-arrow vs. shared shaft length is the caller's choice: the HUD
+ * Sol/GC chevrons feed `max(solLen, gcLen)` so the
  * pair fades together, while the distance-vector overlay feeds its own
  * drawn shaft length so a long focal-star → destination arrow outlasts
  * the shorter Sol/GC chevrons by design.

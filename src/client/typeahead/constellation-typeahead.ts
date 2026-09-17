@@ -69,7 +69,6 @@ export function bindConstellationTypeahead(stellata: Stellata) {
     },
   });
 
-  // Reverse-sync from filter state — URL restore, "None"-pick, etc.
   const syncFromFilter = () => {
     typeahead.setName(nameForIdx(stellata.filters.getFilter().highlightCon));
   };

@@ -15,12 +15,6 @@ import { projectToScreenInto } from './overlay-project';
 import { applyFade, setNumAttr, setStyle, setText } from './dirty-attr';
 import { FOCUS_RING_RADIUS_PX } from './focus-ring-overlay';
 import { focusedArrowFadeAlpha } from './arrow-fade';
-// (Removed MIN_SHAFT_PIXEL_LENGTH cutoff — used to be 8 px; we now render at
-// any positive length so the drawn shaft is a continuous function of the
-// arrow's projection geometry. This is what makes the navigate-mode disc-
-// coverage fade work cleanly: the fade keys on the longest currently-drawn
-// shaft, so the shaft shrinking smoothly toward 0 — instead of snapping to
-// 0 at 8 px — keeps the alpha consistent with what's visible.)
 // FOV anchor for the OBSERVE ring: at 10° vertical FOV the ring radius
 // equals `RING_SIZE_FACTOR × f.sizeMax`. Above that the radius scales
 // `1/fov` so the ring's angular size stays constant as FOV changes; the
@@ -99,9 +93,9 @@ export interface HudUpdateOpts {
   /** Focused star's peak-amplitude rendered disc *radius* in CSS pixels,
    *  or 0 when no star is focused. The Sol/GC chevrons fade together once
    *  the disc grows past `max(solShaftLen, gcShaftLen)` — see
-   *  arrow-fade.ts. Computing alpha from this-frame's shaft geometry +
-   *  this-frame's disc size eliminates the one-frame lag that caused the
-   *  ml8 toggle-on flash. */
+   *  arrow-fade.ts. Alpha comes from this-frame's shaft geometry and
+   *  this-frame's disc size: reading either from the previous frame
+   *  flashes both arrows at full alpha on a HUD toggle-on. */
   focusedDiscRadiusPx: number;
   /** Viewport size in CSS pixels. */
   w: number;
@@ -133,10 +127,9 @@ export class HudOverlay {
   private gcLabel: SVGTextElement;
 
   // Most-recently rendered shaft length per arrow, in CSS pixels. 0 when the
-  // arrow was hidden this frame. Read by Stellata's nav-arrow fade alpha
-  // computation (with one frame of lag — alpha computed at the start of the
-  // next frame uses these values) so the fade keys on the longest *actually
-  // drawn* shaft rather than a re-derived geometric estimate.
+  // arrow was hidden this frame. `update` feeds them straight into the shared
+  // fade alpha, so it keys on the longest *actually drawn* shaft rather than
+  // a re-derived geometric estimate.
   private solDrawnLen = 0;
   private gcDrawnLen = 0;
 
@@ -157,8 +150,6 @@ export class HudOverlay {
   private tmpTargetScreen: [number, number] = [0, 0];
   private tmpScreenDir: [number, number] = [0, 0];
 
-  // Dirty-track state for Sol/GC arrows + the OBSERVE ring. See
-  // ArrowState comment above.
   private solArrowState: ArrowState = emptyArrowState();
   private gcArrowState: ArrowState = emptyArrowState();
   private lastRingDisplay = '\0';
@@ -264,7 +255,7 @@ export class HudOverlay {
     // shaft lengths and apply it. The previous design read last frame's
     // drawn lengths from `getDrawnLengths()` to compute alpha BEFORE
     // updateOne ran — that one-frame lag is exactly what flashed Sol/GC at
-    // alpha=1 the first frame after a HUD toggle-on (ml8 symptom 1).
+    // alpha=1 the first frame after a HUD toggle-on.
     const solDist = this.tmpSolLocal.distanceTo(origin);
     this.solDrawnLen = this.updateOne(
       this.solPath, this.solBg, this.solLabel,
@@ -292,7 +283,7 @@ export class HudOverlay {
     // (Sol projects close to focus, shrunk to 0) doesn't drag the pair to
     // alpha=0 — the still-visible sibling drives the threshold. The
     // distance-vector overlay computes its OWN alpha against its OWN
-    // shaft length (option B from the ml8 bead).
+    // shaft length.
     const refLen = Math.max(this.solDrawnLen, this.gcDrawnLen);
     const alpha = focusedArrowFadeAlpha(
       cameraMode, transition, focusedDiscRadiusPx, refLen, shaftStartPx,
@@ -309,8 +300,7 @@ export class HudOverlay {
   }
 
   /** Sol/GC arrow shaft lengths actually drawn last frame, in CSS pixels.
-   *  0 when the arrow was hidden. Used by the nav-arrow fade alpha calc
-   *  in Stellata to key the fade on `max(sol, gc)`. */
+   *  0 when the arrow was hidden. */
   getDrawnLengths(): { sol: number; gc: number } {
     return { sol: this.solDrawnLen, gc: this.gcDrawnLen };
   }
@@ -400,6 +390,9 @@ export class HudOverlay {
     // the projected target when the target falls inside the nominal shaft.
     // When the target is behind the camera (no targetScreen) the arrow is
     // drawn at full length to indicate direction only.
+    // Any positive length draws — never floor this at a minimum. The
+    // disc-coverage fade keys on the longest drawn shaft, so a cutoff
+    // would step the alpha where a shrinking shaft should ease it.
     let shaftLengthPx = ARROW_PIXEL_LENGTH;
     if (targetScreen) {
       const tdx = targetScreen[0] - cx;
@@ -476,14 +469,6 @@ export class HudOverlay {
     Object.assign(this.gcDebug, emptyArrowDebug());
   }
 
-  // Hide an arrow. The visible d / display writes go through the dirty-
-  // track gate; the remaining numeric + text sentinels are reset to poison
-  // via resetArrowSentinels so the next show-from-hide cycle's first write
-  // always lands — without this reset, a re-show whose new label coords
-  // fell within ATTR_DIRTY_PX of the prior session's values would silently
-  // skip the setAttribute and inherit the stale x/y. Same shape as the
-  // heliopause first-load fix (PR #64) and the consistency-at-the-seam §3
-  // rule.
   private hideArrow(
     path: SVGPathElement,
     bg: SVGPathElement,
@@ -506,9 +491,9 @@ export class HudOverlay {
  * Reset every per-attribute sentinel in `state` to its poison-init value
  * so the next visible frame's first write through the dirty-attr gate
  * always lands. Used by `hideArrow` after the gated d / display writes.
- * Surfaced for direct test coverage of the sentinel-wipe contract (
- * — without this reset the first show-from-hide cycle would inherit stale
- * cx/cy/lx/ly/opacity from the prior visible session).
+ * Without this reset the first show-from-hide cycle would inherit stale
+ * cx/cy/lx/ly/opacity from the prior visible session — a re-show whose new
+ * label coords land within ATTR_DIRTY_PX of the old ones skips the write.
  *
  * `lastD` and `lastLabelDisplay` are NOT wiped — they pass through the
  * dirty-attr gate so the hide-state value is the correct cached value.

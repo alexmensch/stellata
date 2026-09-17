@@ -7,8 +7,8 @@ export const D_TRIPLE_TAP_MS = 500;
 /** Number of D taps that fire the hidden debug-panel affordance. */
 export const D_TRIPLE_TAP_COUNT = 3;
 
-/** Window inside which two presses count as a double-tap (C picker
- *  toggle, F fullscreen). */
+/** Window inside which two presses count as a double-tap (`F`: find vs
+ *  fullscreen). */
 export const DOUBLE_TAP_MS = 200;
 export const DOUBLE_TAP_COUNT = 2;
 
@@ -18,10 +18,6 @@ export const DOUBLE_TAP_COUNT = 2;
  * fire. When it does, the window is cleared so the next tap starts a
  * fresh count rather than chaining (4th tap doesn't refire — the next
  * triple-tap needs three fresh presses).
- *
- * Pulled out for testability — the production caller in
- * `keyboard-shortcuts.ts` passes `performance.now()`; tests pass a
- * controlled clock.
  */
 export function pushTapAndCheckTriple(
   taps: number[],
@@ -41,11 +37,10 @@ export function pushTapAndCheckTriple(
 }
 
 /**
- * Single-tap / double-tap gate. The returned `press` schedules `onSingle`
- * after `windowMs`; a second `press` inside that window cancels it and
- * fires `onDouble` instead. Shared by the C (picker / master-toggle) and F
- * (find / fullscreen) shortcuts, which need identical deferral so a second
- * press can intercept the first.
+ * The returned `press` schedules `onSingle` after `windowMs`; a second
+ * `press` inside that window cancels it and fires `onDouble` instead.
+ * One key needs that deferral today: `F` holds Find back so a second F
+ * can take fullscreen instead.
  */
 export function makeDoubleTapGate(
   onSingle: () => void,

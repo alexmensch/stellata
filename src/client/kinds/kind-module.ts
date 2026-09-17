@@ -66,12 +66,9 @@ export interface KindContext {
    *  (`../occlusion/README.md`). */
   readonly occluders: OccluderQuery;
   /** Ask for a frame. Frames are on demand
-   *  (`../render-gate/README.md`), and the gate sees only the camera,
-   *  the clock, and the bus — so anything landing between ticks that
-   *  changes what a layer draws (a texture resolving, a deferred fetch)
-   *  must say so here or it renders on whatever tick happens next.
-   *  `reason` is a short stable slug the render watcher prints, so a
-   *  frame rate pinned by one of these is attributable. */
+   *  (`../render-gate/README.md`), so anything landing between ticks that
+   *  changes what a layer draws must say so here. `reason` is a short
+   *  stable slug the render watcher prints. */
   requestRender(reason: string): void;
   /** The WebGPU seam, or null on the WebGL2 escape hatch. A kind reads
    *  its TSL surfaces from here and adds its groups to `scene` either
@@ -85,9 +82,6 @@ export interface KindContext {
   readonly chromeLines: ChromeLineMaterials;
 }
 
-/** One kind's pick path. It IS `HoverProvider.pick` — the Picker
- *  dispatches click picks through the kind's hover provider so click
- *  and hover can never disagree on a hit. */
 export type KindPick = HoverProvider['pick'];
 
 /** Byte progress of a kind's artifact download — boot threads the

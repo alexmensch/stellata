@@ -16,16 +16,15 @@ export interface Instrument {
   defaultFovDeg: number;
   /** PSF width on the sky. */
   psfArcsec: number;
-  /** Crowding half of the exaggeration K, NOT the shipped 12/9/5 —
-   *  the plate-scale half is derived per frame by `starPxSizes`. */
+  /** Crowding half of the exaggeration K — the plate-scale half is
+   *  derived per frame by `starPxSizes`. */
   kDensity: number;
   /** Magnitude window the footprint curve grows across. NOT display
    *  dynamic range — that is the tone-map's `DR_MAG` (`../hdr/tonemap/README.md`
    *  § Operator). */
   sizeSpan: number;
   /** Doubles as the extended-source detection threshold
-   *  (`../hdr/exposure/exposure-epoch.ts` `extendedThresholdSbFor`). Not
-   *  yet an additive floor on `L`, which is the other half of the axis. */
+   *  (`../hdr/exposure/exposure-epoch.ts` `extendedThresholdSbFor`). */
   skyBackgroundMagArcsec2: number;
   /** No consumer yet — § 3.4's remaining preset axis. */
   passband: 'V';
@@ -65,13 +64,10 @@ export function instrumentLimitMag(name: InstrumentName): number {
  * The extended-source sibling of `instrumentLimitMag`: the surface
  * brightness at which a large diffuse source is at the edge of detection.
  *
- * It **is** the instrument's sky background, and that identity is the
- * claim — an extended source is detected as a contrast against the sky it
- * sits in, and threshold contrast for a large, soft, scotopic target is of
- * order unity. `docs/science-hdr-pipeline.md` § 1 (*Extended sources*)
- * carries the derivation and the summation area it implies;
- * `../hdr/exposure/exposure-epoch.ts` `summationSolidAngleFor` pairs it
- * with `m_lim`.
+ * It **is** the instrument's sky background: threshold contrast for a
+ * large, soft, scotopic target is of order unity.
+ * `docs/science-hdr-pipeline.md` § 1 (*Extended sources*)
+ * carries the derivation and the summation area it implies.
  */
 export function extendedThresholdSbFor(name: InstrumentName): number {
   return INSTRUMENTS[name].skyBackgroundMagArcsec2;
@@ -175,8 +171,8 @@ export interface StarRenderParams {
   lumBiasMin: number;
   lumBiasMax: number;
   // Soft-knee saturation extent (magnitudes) for the Gaussian-PSF disc
-  // size formula. See uSizeKnee comment in star.vert.glsl. 0 = hard cap
-  // (legacy behaviour); larger values let bright stars keep growing
+  // size formula. See uSizeKnee comment in star.vert.glsl. 0 = hard cap;
+  // larger values let bright stars keep growing
   // before saturating. 16 lands ~43% size advantage for Sol over Sirius
   // when standing at the unfocused floor inside the solar system.
   sizeKnee: number;
@@ -192,8 +188,7 @@ export const STAR_RENDER_DEFAULTS: StarRenderParams = {
   sizeKnee: 16,
 };
 
-// Default vertical FOV (degrees). User-tunable via the FOV slider; the
-// reset button snaps back to this value.
+// Default vertical FOV (degrees).
 export const DEFAULT_FOV = INSTRUMENTS[DEFAULT_INSTRUMENT].defaultFovDeg;
 
 export const DEFAULT_FILTER: FilterState = {

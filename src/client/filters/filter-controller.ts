@@ -137,10 +137,9 @@ export class FilterController {
     });
   }
 
-  // Re-derive the pixel sizes from the instrument's angular targets at the
-  // live plate scale. Called on viewport resize, FOV change, K-multiplier
-  // change, and at construction. `starPxSizes` already floors sizeMax at
-  // sizeMin, so the pair cannot invert.
+  // Called on viewport resize, FOV change, K-multiplier change, and at
+  // construction. `starPxSizes` floors sizeMax at sizeMin, so no clamp
+  // belongs here.
   recomputeStarPxSizes(): void {
     const sizes = this.computeStarPxSizes(this.filter.instrument);
     this.setFilter({ sizeMin: sizes.sizeMinPx, sizeMax: sizes.sizeMaxPx });
@@ -150,12 +149,8 @@ export class FilterController {
     return starPxSizes(name, this.deps.camera.fov, window.innerHeight);
   }
 
-  // Camera FOV setter. Updates the projection matrix, mirrors the new FOV
-  // into uFovYRad (drives the angular-diameter shader formula), recomputes
-  // the focused star's orbit floor (which depends on FOV), and rebases the
-  // derived pixel sizes (arcsec/px depends on FOV). The recompute runs
-  // last: its `setFilter` is what emits filter + state, so URL sync sees
-  // the new FOV already mirrored.
+  // The recompute runs LAST: its `setFilter` is what emits filter + state,
+  // so URL sync sees the new FOV already mirrored.
   setCameraFov(fov: number): void {
     if (this.deps.camera.fov === fov) return;
     this.deps.camera.fov = fov;
@@ -166,9 +161,6 @@ export class FilterController {
   }
   getCameraFov(): number { return this.deps.camera.fov; }
 
-  // Multiplier on the plate-scale-derived exaggeration K — the panel's
-  // "Star size exaggeration" slider. Re-derives the pixel sizes so the
-  // change shows live.
   setStarKMultiplier(m: number): void {
     patchStarKMultiplier(m);
     this.recomputeStarPxSizes();
