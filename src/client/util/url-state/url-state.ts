@@ -644,14 +644,8 @@ function boolBitField(bit: number, key: 'orb' | 'orbLock'): FieldSpec {
 
 // Which coordinate sphere FLAG_GRID means — one zero-byte presence bit per
 // frame past the default, since the flags byte is full. No bit set = galactic.
-//
-// Layering these over FLAG_GRID rather than replacing that bit with a 1-byte
-// enum is what keeps both directions of compatibility free: a pre-equatorial
-// link (FLAG_GRID alone) still decodes to the galactic sphere, and a client
-// predating a frame's bit ignores the unknown high mask bit and shows the
-// galactic sphere instead of none. Each decodes after flagsField (bit 13), so
-// it overwrites the 'galactic' that unpackFlags wrote. A frame's bit is frozen
-// once it ships — a link in the wild carries it.
+// Each decodes after flagsField (bit 13), so it overwrites the 'galactic' that
+// unpackFlags wrote. A frame's bit is frozen once it ships.
 function coordSphereFrameField(bit: number, frame: DrawnCoordSphereFrame): FieldSpec {
   return {
     bit, key: `coordSphere-${frame}`, ...fixed(0),
@@ -1057,9 +1051,8 @@ function fromBase64Url(blob: string): Uint8Array {
   return out;
 }
 
-// Build a DecodedView from current Stellata state. Default-equality is
-// computed against canonical defaults so omitted fields keep the blob
-// minimal.
+// Default-equality is computed against canonical defaults so omitted fields
+// keep the blob minimal.
 export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView {
   const f = stellata.filters.getFilter();
   const view: DecodedView = {};
@@ -1217,7 +1210,7 @@ function setCameraToDefault(stellata: Stellata, mode: 'navigate' | 'observe' | u
   stellata.camera.position.set(d[0], d[1], d[2]);
 }
 
-// Apply a decoded view to Stellata. **The order here is load-bearing**:
+// **The order here is load-bearing**:
 //   - unit is applied first so any DOM sync triggered later reads it
 //   - preset before filter, so derived size defaults are populated before
 //     explicit overrides layer on top
@@ -1431,9 +1424,9 @@ export function applyDecodedView(
   restoreOrbitFrame(stellata, view);
 }
 
-/** Re-arm ORB and the orbit lock from the blob. Absent bits mean the gesture
- *  was never made, which is a positive statement — a sky-frame link has to
- *  disarm an ORB the session was already holding, not leave it standing. */
+/** Absent bits mean the gesture was never made, which is a positive
+ *  statement — a sky-frame link has to disarm an ORB the session was already
+ *  holding, not leave it standing. */
 function restoreOrbitFrame(stellata: Stellata, view: DecodedView): void {
   stellata.getOrbitFramePort()?.restore(view.orb === true, view.orbLock === true);
 }

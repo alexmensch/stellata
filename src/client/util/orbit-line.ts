@@ -29,8 +29,6 @@ export function pixelsPerRadian(fovDeg: number, viewportHeightPx: number): numbe
   return pixelsPerRadianFromFovRad((fovDeg * Math.PI) / 180, viewportHeightPx);
 }
 
-/** As `pixelsPerRadian`, for callers that already hold the vertical FOV in
- *  radians (e.g. the shared uFovYRad uniform). */
 export function pixelsPerRadianFromFovRad(fovRad: number, viewportHeightPx: number): number {
   return viewportHeightPx / fovRad;
 }
