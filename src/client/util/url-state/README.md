@@ -149,11 +149,14 @@ bit order, so mode isn't known until the field loop completes).
   **running** session — a pasted link, a `debug.capture` take — land in the
   frame its coordinates were measured in rather than whichever one the
   session had drifted to.
-- If the blob carries a focus without camera params (a hand-typed share),
-  `applyDecodedView` calls `focusStar(idx, { animate: false })` which
-  snaps the camera to the park pose — URL restore must not surface as a
-  2 s glide on page load. If camera params are also present, it uses
-  `setOrbitTarget` so the explicit camera wins.
+- **Every focus a blob asks for lands through `applyFocusTarget`**, whatever
+  kind it names and whichever of the four routes decoded it — the asserted
+  default frame above, a v4 sid, a legacy star ref, a legacy cloud ref. Its
+  one argument is whether the blob also carries `cam` or `tgt`. Without one,
+  it parks: `flyTo(target, { animate: false })`, snapping rather than gliding,
+  because a URL restore must not surface as a 2 s glide on page load. With
+  one, `setOrbitTarget` rebuilds the frame and skips the park the lines below
+  would overwrite anyway, so the explicit camera wins.
 - Camera changes are tracked via the `'frame'` event with the scale-free
   comparison of § What counts as a camera move (no per-frame allocations)
   feeding a 1 s debounced writer. The comparison covers position, target,
@@ -177,7 +180,7 @@ bit order, so mode isn't known until the field loop completes).
   whatever the session last held; at boot that is the pole projected into the
   *default* view axis, which renders level from that vantage and no other, so
   a level share from elsewhere came back rolled by up to 66°. It is applied
-  **before** focus/orbit dispatch because `focusStar` / `setOrbitTarget`
+  **before** focus/orbit dispatch because both of `applyFocusTarget`'s legs
   call `controls.update()`, which reads it — so it lands as a raw axis and
   the `lookAt` inside that update projects it. One `adoptFromCamera` after
   the final update puts `up` back on the perpendicular invariant.
