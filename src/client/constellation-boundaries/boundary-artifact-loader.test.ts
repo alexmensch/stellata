@@ -153,10 +153,8 @@ describe('loadBoundaries', () => {
     expect(await loadBoundaries(URL)).toBeNull();
   });
 
-  // A 200 whose body isn't the artifact — a truncated write, or an
-  // interposed proxy page — reaches the parse rather than the !ok branch.
-  // Rejecting here blanked the entire app instead of dropping the arcs.
-  it('resolves null when a 200 carries something other than the artifact', async () => {
+  // Why absence lands here and not on !ok: README.md § Validated at load.
+  it('resolves null when the SPA fallback serves index.html at 200', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: async () => { throw new SyntaxError('Unexpected token \'<\''); },

@@ -114,15 +114,8 @@ export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
   return artifact;
 }
 
-/**
- * Null means no layer at all — the chart renders without it.
- *
- * **Nothing here may reject.** `main.ts` loads this inside a `Promise.all`
- * alongside the catalog, so a rejection takes the whole app's boot with it,
- * which is never the proportionate answer for an optional layer. Absence is
- * a real 404; the parse guard below it covers a present-but-truncated
- * artifact.
- */
+/** Null means no layer at all, and this **must never reject**:
+ *  README.md § Validated at load, but never fatal. */
 export async function loadBoundaries(url: string): Promise<BoundaryArtifact | null> {
   let raw: unknown;
   try {
