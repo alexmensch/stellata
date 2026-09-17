@@ -1292,6 +1292,21 @@ export function applyDecodedView(
   const hasCam = view.cam !== undefined;
   const hasTgt = view.tgt !== undefined;
 
+  // A Sol focus rides the wire as an ABSENT field, and a hard focus is also
+  // what elides `worldOffset` — so a blob carrying neither states the default
+  // frame and leaves the receiver owing the rebuild. Inheriting instead is
+  // invisible at boot, where the session is already on Sol, and wrong for
+  // every blob applied to a running session: `cam` / `tgt` below would be
+  // written as coordinates of a frame this session never established.
+  const legacyCloudFocus = view.cloud !== undefined && view.cloud >= 0;
+  const assertsDefaultFrame = view.focus === undefined
+    && !legacyCloudFocus
+    && view.worldOffset === undefined;
+  if (assertsDefaultFrame && idMaps.solIndex >= 0) {
+    if (hasCam || hasTgt) stellata.focus.setOrbitTarget({ kind: 'star', idx: idMaps.solIndex });
+    else stellata.focus.focusStar(idMaps.solIndex, { animate: false });
+  }
+
   if (view.focus !== undefined) {
     if (view.focus === 'cleared') {
       // URL restore — bypass the close-zoom unfocus animation.

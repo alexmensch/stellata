@@ -91,7 +91,9 @@ current frame, so nothing else the take caches has to be migrated.
 
 Soft focuses (cloud, LG object, boundary shell) don't recentre the origin, so
 their coordinates are offsets from nothing and the pose is written as it
-stands. Same for a take with no focus at all.
+stands. Same for a blob that is explicitly unfocused. A blob that names no
+focus at all is a Sol take — the start view re-establishes that frame before
+the move opens (`../../util/url-state/README.md`).
 
 ## The move is an arc at a geometric radius
 

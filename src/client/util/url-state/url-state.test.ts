@@ -1863,6 +1863,60 @@ describe('url-state', () => {
       expect(snapRx.state.focusedProbe).toBe(1);
     });
 
+    it('a Sol focus rides as an absent field and rebuilds the frame on the receiver', () => {
+      // The encoder omits `focus` for Sol and omits `worldOffset` for any
+      // hard focus, so the blob states the default frame by saying nothing.
+      // A receiver already sitting on another star has to be moved back, or
+      // the cam/tgt it writes are coordinates of a frame it never had.
+      const idMaps = makeIdMaps();
+      const tx = makeStatefulStellata();
+      const view = currentStateOf(tx.stellata, idMaps);
+      expect(view.focus).toBeUndefined();
+      expect(view.worldOffset).toBeUndefined();
+
+      const rx = makeStatefulStellata();
+      rx.state.focusedStar = 2;
+      applyDecodedView(rx.stellata, decodeBlob(encodeBlob(view)).view, idMaps);
+      expect(rx.state.focusedStar).toBe(0);
+    });
+
+    it('takes the snap branch when the blob carries a pose, the fly branch when not', () => {
+      const idMaps = makeIdMaps();
+      const snapRx = makeStatefulStellata();
+      snapRx.state.focusedStar = 3;
+      applyDecodedView(snapRx.stellata, decodeBlob(encodeBlob({ cam: [4, 5, 6] })).view, idMaps);
+      expect(snapRx.state.focusedStar).toBe(0);
+
+      const flyRx = makeStatefulStellata();
+      flyRx.state.focusedStar = 3;
+      applyDecodedView(flyRx.stellata, decodeBlob(encodeBlob({})).view, idMaps);
+      expect(flyRx.state.focusedStar).toBe(0);
+    });
+
+    it('a blob asserting its frame another way is left alone', () => {
+      const idMaps = makeIdMaps();
+      // worldOffset carries the sender's origin for a soft / unfocused view,
+      // so the default-frame rebuild must not fire and recentre twice.
+      const offsetRx = makeStatefulStellata();
+      offsetRx.state.focusedStar = null;
+      offsetRx.state.focusedCloud = 1;
+      applyDecodedView(offsetRx.stellata, { worldOffset: [1, 2, 3], cam: [4, 5, 6] }, idMaps);
+      expect(offsetRx.state.focusedStar).toBeNull();
+
+      // A legacy v1-v3 cloud focus lives in `cloud`, not `focus`.
+      const legacyRx = makeStatefulStellata();
+      applyDecodedView(legacyRx.stellata, { cloud: 1, cam: [4, 5, 6] }, idMaps);
+      expect(legacyRx.state.focusedCloud).toBe(1);
+      expect(legacyRx.state.focusedStar).toBeNull();
+    });
+
+    it('an explicitly cleared focus stays cleared', () => {
+      const idMaps = makeIdMaps();
+      const rx = makeStatefulStellata();
+      applyDecodedView(rx.stellata, decodeBlob(encodeBlob({ focus: 'cleared' })).view, idMaps);
+      expect(rx.state.focusedStar).toBeNull();
+    });
+
     it('mixed star + planet POIs round-trip through the untagged SID list', () => {
       const PLANET_SIDS = [901, 902, 903];
       const FLAT_OFFSET = 5;

@@ -138,6 +138,17 @@ bit order, so mode isn't known until the field loop completes).
   encoded by *omitting* the field; "explicitly unfocused" uses a
   separate zero-byte presence bit so the three states (default Sol /
   specific object / cleared) stay unambiguous.
+- **An absent `focus` is a positive statement, and the receiver owes the
+  rebuild.** A hard focus is also what elides `worldOffset` (§ worldOffset
+  below), so a blob carrying neither field is asserting the default frame —
+  origin on Sol — and `applyDecodedView` re-establishes it before writing
+  `cam` / `tgt`. A blob that states its frame some other way (an explicit
+  `worldOffset`, or a legacy v1–v3 `cloud` focus) is left alone so nothing
+  recentres twice. On a page load this changes nothing, because catalog
+  attach has already focused Sol; it is what makes a blob applied to a
+  **running** session — a pasted link, a `debug.capture` take — land in the
+  frame its coordinates were measured in rather than whichever one the
+  session had drifted to.
 - If the blob carries a focus without camera params (a hand-typed share),
   `applyDecodedView` calls `focusStar(idx, { animate: false })` which
   snaps the camera to the park pose — URL restore must not surface as a
