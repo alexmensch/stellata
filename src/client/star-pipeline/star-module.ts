@@ -49,12 +49,12 @@ export interface StarModuleRuntime {
 }
 
 export interface StarKindModule extends ObjectKindModule<'star'> {
-  /** The decoded catalog. Valid after `load`. */
+  /** Valid after `load`. */
   readonly catalog: Catalog;
   /** The kind's population shards mapped into flat Target.idx space —
    *  the catalog is shard 0. Valid after `load`. */
   readonly shardTable: StarShardTable;
-  /** The raw search-index rows. Valid after `load`. */
+  /** Valid after `load`. */
   readonly searchIndex: SearchEntry[];
   /** Star idx → display label, derived from the search index at `load`.
    *  Chart mode and the planet card's host breadcrumb read the same

@@ -54,8 +54,7 @@ export interface StarFrameOptions {
 export class StarFrame {
   /** Per-star log10(physicalRadius_solar) for the `iLogRadius` attribute. */
   readonly logRadii: Float32Array;
-  /** Per-star luminosity class as Float32 (255 = unknown, handled in
-   *  the shader). */
+  /** 255 = unknown, handled in the shader. */
   readonly lumClassF32: Float32Array;
   /** Per-star distance from Sol in pc — the `iDistSol` attribute, and
    *  the key the proximity index sorts on. */
@@ -265,7 +264,7 @@ export class StarFrame {
     const cx = this.cameraPosition.x;
     const cy = this.cameraPosition.y;
     const cz = this.cameraPosition.z;
-    // Camera distance from Sol in absolute space (catalog frame).
+    // Camera position in absolute space (catalog frame).
     const camAbsX = cx + this.worldOffset.x;
     const camAbsY = cy + this.worldOffset.y;
     const camAbsZ = cz + this.worldOffset.z;
@@ -291,9 +290,8 @@ export class StarFrame {
     }
   }
 
-  /** Should the core depth-mask render this frame? True iff at least one
-   *  star is close enough that its disc could reach RESOLVED_DISC_MIN_PX —
-   *  below that, bleed-through is too small to see. */
+  /** True iff at least one star is close enough that its disc could reach
+   *  RESOLVED_DISC_MIN_PX — below that, bleed-through is too small to see. */
   shouldEnableCoreMask(): boolean {
     let found = false;
     this.forEachStarNearCamera(
