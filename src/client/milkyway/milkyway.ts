@@ -70,9 +70,9 @@ export const GC_SIGHTLINE_MAG_ARCSEC2 =
 const GAL_QUAT = new THREE.Quaternion().setFromRotationMatrix(GAL_TO_ICRS);
 
 export interface MilkywayDeps {
-  /** The star pipeline's `uLimitMag`, by reference. Only the chart-mode
-   *  isobar contour reads it — the band's brightness is photometric, so
-   *  the exposure model reaches it through `uExposure` instead. */
+  /** By reference. Only the chart-mode isobar contour reads it — the band's
+   *  brightness is photometric and reaches the exposure model through
+   *  `uExposure`. */
   uLimitMag: { value: number };
   /** `HdrPipeline.emitterUniforms`, spread in by reference so exposure,
    *  pixel solid angle and the inline-operator branch reach both
@@ -300,9 +300,7 @@ export class MilkyWay {
     (c.tint.value as THREE.Color).copy(tintColor(r, g, b));
   }
 
-  /** Set the wavelength-reddening per-channel τ multipliers. CCM
-   *  default is (0.751, 1.0, 1.32). Larger spread = more dramatic
-   *  reddening. */
+  /** CCM default is (0.751, 1.0, 1.32); larger spread reddens harder. */
   setReddeningRGB(r: number, g: number, b: number) {
     (this.shared.uReddeningRGB.value as THREE.Vector3).set(r, g, b);
   }
@@ -338,12 +336,10 @@ export class MilkyWay {
     (this.shared.uWorldOffset.value as THREE.Vector3).copy(worldOffset);
   }
 
-  /** The band's brightness contribution verdict
-   *  (`docs/science-hdr-pipeline.md` § 3.5). Two tiers: the dust-free
-   *  ceiling is brighter than any vantage can render, so a skip it already
-   *  proves costs nothing; only where it cannot decide does the live dusty
-   *  peak get marched, at 3.8–6.0 ms per cache miss. Both arrive as
-   *  thunks so the predicate's own refusals — warp above all — come first. */
+  /** `docs/science-hdr-pipeline.md` § 3.5. Two tiers: the dust-free ceiling
+   *  decides most vantages for free, and only where it cannot does the live
+   *  dusty peak get marched. Both arrive as thunks so the predicate's own
+   *  refusals — warp above all — come first. */
   contributionSkip(
     exposure: FrameExposure,
     cameraAbsPc: THREE.Vector3,

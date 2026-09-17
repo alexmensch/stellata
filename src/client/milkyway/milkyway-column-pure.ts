@@ -37,9 +37,9 @@ export const DISC_SCALE_LENGTH_PC = 3_000;
 export const DISC_SCALE_HEIGHT_PC = 300;
 
 /** Thick disc, Bland-Hawthorn & Gerhard 2016 § 5.1: z_T = 900 ± 180 pc
- *  carrying f_ρ = 4 ± 2 % of the local density at the midplane. Shares the
- *  thin disc's radial scale length, which is the one place this departs
- *  from the literature — see README.md § Density profiles. */
+ *  carrying f_ρ = 4 ± 2 % of the local density at the midplane. The shared
+ *  radial scale length is the one departure from the literature —
+ *  README.md § Density profiles. */
 export const DISC_THICK_SCALE_HEIGHT_PC = 900;
 export const DISC_THICK_DENSITY_FRACTION = 0.04;
 
@@ -62,8 +62,7 @@ export const BULGE_TINT_RGB: Rgb = lumaNormalisedTint(BULGE_COLOR_RGB);
 export const ANALYTICAL_DUST_SCALE_LENGTH_PC = 3_500;
 export const ANALYTICAL_DUST_SCALE_HEIGHT_PC = 125;
 
-/** V-band extinction the slab produces per kpc at (R₀, z = 0) — the
- *  declarative dust anchor, from which the normalisation is derived.
+/** The declarative dust anchor, from which the normalisation is derived.
  *  1.0 mag/kpc is the upper end of the range commonly adopted for the
  *  solar-neighbourhood plane (0.7–1.0; the historical low-|b| figure runs
  *  to 1.8). Two independent constraints meet here: at the 125 pc scale
@@ -94,17 +93,15 @@ export const MAG_PER_TAU = 1.0857;
 export const STEPS = 32;
 export const S_MIN_PC = 1;
 
-/** Steps in the camera→mesh-boundary dust pre-march. Linear rather than
- *  log-distributed: the span's integrand rises monotonically toward the
- *  far end (the boundary), which is the opposite of the in-volume march's
- *  distribution. Sized for oblique crossings of the 125 pc dust slab, not
- *  for the in-plane case — `milkyway-column-pure.test.ts` pins both
- *  against a converged reference march. */
+/** Linear rather than log-distributed: the span's integrand rises
+ *  monotonically toward the far end (the boundary), the opposite of the
+ *  in-volume march's distribution. Sized for oblique crossings of the 125 pc
+ *  dust slab, not for the in-plane case — `milkyway-column-pure.test.ts`
+ *  pins both against a converged reference march. */
 export const FOREGROUND_DUST_STEPS = 16;
 
-/** The unit ball, with the slack a log-stepped boundary sample can drift
- *  past 1.0 by. Shared with the Local Group's march, which generalises
- *  this scheme to N instances. */
+/** The slack a log-stepped boundary sample can drift past 1.0 by. The Local
+ *  Group's march carries its own copy of the same rule. */
 export const UNIT_BALL_SLACK = 1.001;
 
 // --- Profiles ----------------------------------------------------------
@@ -257,7 +254,7 @@ export const MILKYWAY_COMPONENTS: readonly MilkywayComponent[] = [
  *  Galactic centre sits at +X, so Sol is at −R₀ along it. */
 export const SOL_GALACTOCENTRIC_PC: Vec3 = [-R0_PC, 0, 0];
 
-/** Unit galactic direction for a sightline in degrees. */
+/** Unit vector. */
 export function galacticDirection(lDeg: number, bDeg: number): Vec3 {
   const l = (lDeg * Math.PI) / 180;
   const b = (bDeg * Math.PI) / 180;
@@ -372,11 +369,8 @@ export interface ColumnOptions {
 }
 
 /**
- * One component's dust-attenuated emission column, in the shared flux
- * unit. Mirrors milkyway.frag.glsl: log-distributed steps from the front
- * face (or `S_MIN_PC` when inside) to the back face, Beer-Lambert
- * attenuation with half-step self-shielding, seeded with the foreground
- * dust column.
+ * In the shared flux unit. Mirrors milkyway.frag.glsl — keep the two in
+ * lockstep.
  */
 export function componentColumnRgb(
   component: MilkywayComponent,
@@ -493,7 +487,7 @@ export function sightlineColumn(
   return relativeLuminance(sightlineColumnRgb(originPc, dirUnit, options));
 }
 
-/** Surface brightness in mag/arcsec² for a sightline. */
+/** mag/arcsec². */
 export function sightlineSurfaceBrightness(
   glowMagOffset: number,
   originPc: Vec3,

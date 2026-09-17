@@ -9,13 +9,14 @@ export interface FigureConstellationLike {
 export interface FigureSelectionInput {
   /** Chart mode draws all 88, and is an OBSERVE-only overlay. */
   readonly chart: boolean;
-  /** Highlighted constellation, or negative for none. */
+  /** Negative for none. */
   readonly highlightCon: number;
   readonly constellationCount: number;
   readonly inObserve: boolean;
-  /** An OBSERVE enter/exit glide is animating (`ObserveTransition.isActive`). */
+  /** `ObserveTransition.isActive` — an enter/exit glide, never navigate's
+   *  `unfocus`. */
   readonly observeGlideActive: boolean;
-  /** Focused star's catalog index; null for every non-star kind. */
+  /** Null for every non-star kind. */
   readonly focusedStar: number | null;
 }
 
@@ -26,9 +27,9 @@ export interface FigureSelection {
   readonly signature: string;
 }
 
-/** Which figures draw, and which star's segments drop out. The anchor
- *  suppression spans the OBSERVE glide as well as the settled pose — see
- *  README.md § Visibility gates for why the glide is the whole point. */
+/** The anchor suppression spans the OBSERVE glide as well as the settled
+ *  pose — README.md § The observe anchor for why the glide is the whole
+ *  point. */
 export function selectFigures(input: FigureSelectionInput): FigureSelection {
   const chartActive = input.chart && input.inObserve;
   const anchored = input.inObserve || input.observeGlideActive;

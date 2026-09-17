@@ -25,16 +25,13 @@ import type { LgEmission, LgObject } from '../local-group-loader';
 export const M31_TOTAL_COLOUR_INDEX_BV = 0.86;
 
 /**
- * M31's bulge share of the V light, Courteau et al. 2011 — the **same**
- * `bulge_to_total` the emission solver splits M31's flux by
- * (`data/local-group/overrides.tsv`, pinned in
- * `local-group-emission.test.ts`). Sharing it is what makes the solve
- * below reproduce Tempel's integrated colour on the rendered pixels
- * rather than only on paper.
+ * Courteau et al. 2011 — the **same** `bulge_to_total` the emission
+ * solver splits M31's flux by (`data/local-group/overrides.tsv`, pinned
+ * in `local-group-emission.test.ts`).
  */
 export const M31_BULGE_TO_TOTAL_LIGHT = 0.31;
 
-/** Solved index of the disc population — README.md § Population tints. */
+/** README.md § Population tints. */
 export const DISC_COLOUR_INDEX_BV = discColourIndex(
   M31_TOTAL_COLOUR_INDEX_BV,
   OLD_SPHEROID_COLOUR_INDEX_BV,
@@ -55,14 +52,8 @@ export const DISC_COLOR_RGB: [number, number, number] =
 export const MIN_PROJECTED_RADIUS_PX = 1;
 
 /**
- * Scale factor expanding a sub-pixel proxy mesh to the resolution floor.
- *
- * Applied as: axes × k, profile scale lengths × k, density0 ÷ k³. That
- * triple is flux-exact rather than approximately so — the column
- * ∫ρ ds picks up k from the path and k⁻³ from the density, and the solid
- * angle picks up k², so Φ is invariant while the image is the identical
- * profile magnified. k → 1 continuously at the floor, so there is no
- * cutover to hysteresis against.
+ * README.md carries the flux-exact triple this feeds (axes × k, scale
+ * lengths × k, density0 ÷ k³) and why k → 1 needs no hysteresis.
  */
 export function subPixelExpansion(meshRadiusPx: number): number {
   if (!(meshRadiusPx > 0)) return 1;
@@ -102,9 +93,8 @@ export const EMISSION_STEPS_DISC = 64;
 export const EMISSION_S_MIN_PC = 0.1;
 /** Ellipsoidal-radius floor guarding the u^(−pn) central singularity. */
 export const EMISSION_U_FLOOR = 1e-4;
-/** Slack on the unit-ball exit test. A sample stepping past the back face
- *  by rounding alone must not end the march, so the test is > 1 + slack
- *  rather than > 1. */
+/** A sample stepping past the back face by rounding alone must not end
+ *  the march, so the exit test is > 1 + slack rather than > 1. */
 export const EMISSION_UNIT_BALL_SLACK = 1.001;
 
 /** The screen-space hash the march jitters its in-step sample position
@@ -176,7 +166,7 @@ export function emissionStepsFor(comp: EmissionComponent): number {
   return comp.family === 'disc' ? EMISSION_STEPS_DISC : EMISSION_STEPS_SERSIC;
 }
 
-/** Rotate v by quaternion q = [x, y, z, w] — the shader's quatRotate. */
+/** q = [x, y, z, w]; the shader's `quatRotate`. */
 export function quatRotate(
   q: readonly [number, number, number, number],
   v: readonly [number, number, number],
@@ -223,7 +213,7 @@ export interface EmissionInstanceCommon {
   axes: Float32Array;
   /** vec3 per instance — population tint. */
   color: Float32Array;
-  /** Source object index per instance (test / debug read-back). */
+  /** Test / debug read-back only. */
   objectIndex: number[];
 }
 
@@ -425,7 +415,7 @@ export function intensityFromMag(mag: number, zeroPoint: number): number {
   return Math.pow(10, (zeroPoint - mag) / 2.5);
 }
 
-/** Surface brightness a raymarched column carries, mag/arcsec². */
+/** mag/arcsec². */
 export function columnSurfaceBrightness(column: number): number {
   return magFromIntensity(column, SB_ZERO_POINT);
 }

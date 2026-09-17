@@ -47,8 +47,6 @@ export interface BandSharedSlots {
 }
 
 /**
- * Write every shared slot's authored constant into it.
- *
  * A TSL `uniform()` node is constructed on a literal rather than on the
  * layer's constant, so without this the WebGPU band marches a placeholder
  * dust model. Both factories call it, which is what makes

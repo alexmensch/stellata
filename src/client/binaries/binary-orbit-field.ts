@@ -29,12 +29,9 @@ import { angleBetweenRad } from '../util/angles';
 
 export interface BinaryOrbitFieldOptions {
   binaries: BinariesData;
-  /** Catalog-wide absolute ICRS positions, length = catalog.count * 3.
-   *  Read-only inside this field. The primary's slot is the per-star
-   *  catalog baseline + the Tier-1 tangent-basis anchor; the pair's
-   *  RELATIVE offset does NOT come from subtracting two slots (that
-   *  float32 diff carries WDS/Kepler placement disagreement) — it rides
-   *  on `OrbitRelationCache.baseDiffPc` + ΔR(t). */
+  /** Length `catalog.count * 3`, read-only inside this field. The pair's
+   *  RELATIVE offset never comes from subtracting two of these slots — it
+   *  rides `OrbitRelationCache.baseDiffPc` + ΔR(t). */
   absolutePositions: Float32Array;
   /** Immutable J2016.0 catalog baseline (count × 3) + per-star space-motion
    *  velocities (pc/yr). Unfocused, relations reset their local slots from
@@ -45,14 +42,12 @@ export interface BinaryOrbitFieldOptions {
   /** Catalog-wide absolute magnitudes, length = catalog.count. Drives
    *  the per-relation primary-visibility LOD. */
   absoluteMags: Float32Array;
-  /** Per-instance local-frame positions; the star pipeline's
-   *  `iPosition` attribute backs this buffer. Mutated in-place each
-   *  frame for active relations. */
+  /** The star pipeline's `iPosition` attribute backs this buffer. Mutated
+   *  in place each frame for active relations. */
   localPositions: Float32Array;
-  /** Per-instance composite-suppress flag. 1.0 means the close-range
-   *  disc + core depth-mask passes skip this instance; the additive
-   *  glow pass still runs so the two near-coincident point sources sum
-   *  brightness correctly. Mutated in-place each frame. */
+  /** 1.0 means the close-range disc + core depth-mask passes skip this
+   *  instance; the additive glow pass still runs so the two near-coincident
+   *  point sources sum brightness correctly. Mutated in place each frame. */
   compositeSuppress: Float32Array;
   /** Star-pipeline attributes the field flushes after each update(). */
   iPositionAttr: THREE.InstancedBufferAttribute;
@@ -71,15 +66,11 @@ export class BinaryOrbitField {
   private positionUploader: DirtyItemUploader;
   private suppressUploader: DirtyItemUploader;
 
-  // Relations (by BinariesData.relations index) on the current focal
-  // star's slot-chain — every relation that writes the focal's slot
-  // (focal as primary or secondary) plus their parentRelation ancestors.
   // Rebuilt only when the focal index changes. Members bypass all LOD
   // gates so the focal-frame ride reads a continuous perturbation.
   private focalChainRelIdx = new Set<number>();
   private focalChainIdx: number | null = null;
-  // Per-slot float64 perturbation accumulators, reused by
-  // focalPerturbationInto across frames (cleared per call).
+  // Reused by focalPerturbationInto across frames; cleared per call.
   private slotPert = new Map<number, SlotPert>();
 
   // Static-frame skip state. When the previous update() evaluated zero
@@ -108,8 +99,7 @@ export class BinaryOrbitField {
    *  that moves anything on screen: gated-out and sub-pixel-suppressed
    *  relations never reach the split. */
   private activeRelations: number[] = [];
-  /** Member slots' local positions as the last rendered frame drew them,
-   *  in `memberOrdinal` order. */
+  /** In `memberOrdinal` order, as the last rendered frame drew them. */
   private prevMemberLocal: Float64Array;
   private readonly memberOrdinal: Map<number, number>;
   /** False for one frame after a wholesale rewrite of `localPositions`
@@ -149,9 +139,8 @@ export class BinaryOrbitField {
     this.prevMemberLocal = new Float64Array(memberSlots.length * 3);
   }
 
-  /** Read-only access to the cached relation list. Tests and the
-   *  reflection sweep import this to iterate active orbital pairs
-   *  without re-parsing binaries.bin. */
+  /** Lets the tests iterate orbital pairs without re-parsing
+   *  binaries.bin. */
   get cachedRelations(): readonly OrbitRelationCache[] {
     return this.relations;
   }
@@ -180,9 +169,9 @@ export class BinaryOrbitField {
 
   /** Per-frame walk + perturbation pass.
    *
-   *  - `thresholdMag` is the just-visible floor — relations whose primary
-   *    sits below it (m_app > thresholdMag + 0.5, matching the shader's
-   *    soft-taper kill) skip Kepler eval entirely.
+   *  - `thresholdMag` is the exposure bound, never a visibility test —
+   *    relations whose primary sits below it (m_app > thresholdMag + 0.5,
+   *    matching the shader's soft-taper kill) skip Kepler eval entirely.
    *  - `viewportPx` is the GL canvas's pixel height; `fovYRad` the
    *    camera's vertical field of view. Together they convert an angle
    *    in radians to pixels: `pxPerRad = viewportPx / fovYRad`.
@@ -287,12 +276,9 @@ export class BinaryOrbitField {
       const aPy = local[pBase + 1];
       const aPz = local[pBase + 2];
 
-      // Relations on the focal star's slot-chain bypass all three LOD
-      // gates (horizon, magnitude, sub-pixel). Their ΔR feeds the
-      // focal-frame ride, which the camera tracks per frame; a gate
-      // firing mid-focus would snap the focal to its baseline and jolt
-      // the camera. Non-chain relations gate freely — they cannot touch
-      // the focal's slot.
+      // Chain ΔR feeds the focal-frame ride, which the camera tracks per
+      // frame; a gate firing mid-focus would snap the focal to its baseline
+      // and jolt the camera.
       const onFocalChain = focalIdx !== null && this.focalChainRelIdx.has(rc.relationIdx);
       if (!onFocalChain) {
         // Primary's camera distance — magnitude + horizon filters share it.

@@ -13,7 +13,7 @@ export const CLOUD_RIM_EXTENT_PC = 20;
  *  extent above rather than authored, so neither is a third scale. */
 export const CLOUD_RIM_DISTANCES = rimDistancesForExtent(CLOUD_RIM_EXTENT_PC);
 
-/** Chart-mode stipple period, in CSS pixels. */
+/** CSS pixels. */
 export const STIPPLE_PERIOD_PX = 6.0;
 
 /** Dot radius as a fraction of the stipple period. */

@@ -42,7 +42,7 @@ backend. So a built-in `LineBasicMaterial` in either reaches the HDR
 target's three colour attachments with a one-output fragment, fails WGSL
 pipeline creation, and **one invalid pipeline discards the whole
 submit**: every planet mesh, ring annulus, atmosphere shell and star
-mirror with it. Three of the five consumers draw in the local pass (orbit
+mirror with it. Three of the consumers draw in the local pass (orbit
 rings, binary orbit paths, the probe trail's mirror), which is why they
 took their groups out of it until this seam existed.
 

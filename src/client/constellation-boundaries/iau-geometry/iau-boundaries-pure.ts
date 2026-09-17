@@ -323,9 +323,9 @@ function lastIndexAtOrBelow(ascending: readonly number[], value: number): number
   return lo - 1;
 }
 
-/** The edge-set code (`AND`, `SER1`, …) covering a position already precessed
- *  to B1875. The boundaries partition the whole sphere, so every position
- *  resolves — catalogued or not. */
+/** `b1875` must already be precessed — a J2000 position resolves to the
+ *  wrong constellation, not to nothing. The boundaries partition the whole
+ *  sphere, so every position resolves to some code (`AND`, `SER1`, …). */
 export function constellationEdgeCodeAt(
   grid: ConstellationRegionGrid,
   b1875: SkyPosition,
@@ -337,8 +337,7 @@ export function constellationEdgeCodeAt(
   ];
 }
 
-/** Edge-set code → the lowercase key the IAU-88 constellation table is
- *  indexed by. Serpens' two parts collapse onto its single entry. */
+/** → the lowercase key the IAU-88 constellation table is indexed by. */
 export function constellationKey(edgeCode: string): string {
   const key = edgeCode.toLowerCase();
   return key === 'ser1' || key === 'ser2' ? 'ser' : key;
@@ -362,19 +361,11 @@ export interface RegionLabelAnchor {
 
 /** Equal-surface-weight centre of mass of every region, in ICRS.
  *
- *  Each cell is a spherical rectangle in B1875, so its area and its integral
- *  of the unit direction both close in elementary functions — no sampling, and
- *  the vector sum over a region's cells is exactly its centre of mass. A
- *  region's emitted area reproduces the published IAU constellation area,
- *  which is what makes this an externally checkable quantity rather than an
- *  internal one.
- *
  *  **Every anchor is asserted to land inside its own region**, and the walk
- *  throws rather than emit one that doesn't: a centre of mass is only
- *  guaranteed inside a convex region, and the flux-weighted centroid this
- *  replaces put Serpens' label in Ophiuchus. Splitting Serpens into SER1/SER2
- *  is what keeps that true here — a single Serpens anchor would fail the
- *  assertion, not slip past it. */
+ *  throws rather than emit one that doesn't — a centre of mass is only
+ *  guaranteed inside a convex region. Splitting Serpens into SER1/SER2 is
+ *  what keeps that true: a single Serpens anchor would fail the assertion,
+ *  not slip past it. */
 export function buildRegionLabelAnchors(
   grid: ConstellationRegionGrid,
 ): RegionLabelAnchor[] {
@@ -434,12 +425,10 @@ function angularSeparationDeg(a: SkyPosition, b: SkyPosition): number {
   return Math.acos(Math.max(-1, Math.min(1, u.x * v.x + u.y * v.y + u.z * v.z))) * RAD_TO_DEG;
 }
 
-// The perpendicular foot onto a constant-RA great circle does NOT keep the
-// point's own declination — it sits at `atan2(sin δ, cos δ·cos Δα)`, which
-// leaves ±90° once the point is more than a quarter turn away in RA, putting
-// the foot on the antimeridian half of the circle and off this arc entirely.
-// Gating on the point's declination instead measures to that far half: it
-// reports 0° for a wall 20° away.
+// Gated on the FOOT's declination, never the point's. The foot sits at
+// `atan2(sin δ, cos δ·cos Δα)`, which leaves ±90° once the point is more than
+// a quarter turn away in RA — off this arc entirely. Gating on the point
+// instead reports 0° for a wall 20° away.
 function distanceToMeridianDeg(edge: MeridianEdge, at: SkyPosition): number {
   const decRad = at.decDeg * DEG_TO_RAD;
   const deltaRaRad = (at.raDeg - edge.raDeg) * DEG_TO_RAD;
@@ -468,9 +457,8 @@ function distanceToParallelDeg(edge: ParallelEdge, at: SkyPosition): number {
   });
 }
 
-/** Angular distance from a B1875 position to the nearest boundary arc, by
- *  linear scan. The reference implementation `createNearestEdgeIndex` is
- *  pinned against; `createIauConstellationLookup` uses the index. */
+/** The linear-scan reference implementation `createNearestEdgeIndex` is
+ *  pinned against; `createIauConstellationLookup` uses the index instead. */
 export function angularDistanceToNearestEdgeDeg(
   edges: IauBoundaryEdges,
   b1875: SkyPosition,
@@ -524,13 +512,10 @@ function resample(
   return out;
 }
 
-/** Resamples every arc along its own B1875 geometry, then carries each sample
- *  to ICRS. **Subdividing is not an optimisation.** A constant-Dec arc is a
- *  SMALL circle, which precession maps to neither a straight line nor a great
+/** **Subdividing is not an optimisation** — a constant-Dec arc is a SMALL
+ *  circle, which precession maps to neither a straight line nor a great
  *  circle, so a two-endpoint parallel renders as a chord cutting up to a
- *  degree inside the true boundary. Meridians are great circles and precession
- *  is a pure rotation, so they would survive two endpoints — they subdivide
- *  anyway to keep one code path and a uniform tessellation.
+ *  degree inside the true boundary.
  *
  *  Each arc appears exactly once in the edge set with both its neighbours
  *  named, so the flat list is already deduped: there are no per-constellation
@@ -567,11 +552,8 @@ export interface NearestEdgeIndex {
   distanceDeg(b1875: SkyPosition): number;
 }
 
-/** Declination band width of the pruning index. Any point on an arc lies
- *  within the arc's own declination range, and angular separation is at least
- *  the declination difference, so a band's distance from the query's band is a
- *  valid lower bound on every arc bucketed there — once it exceeds the best
- *  distance found so far, no remaining band can improve on it. */
+/** The pruning stays exact at any width — a band's declination gap from the
+ *  query lower-bounds every arc bucketed there. */
 const NEAREST_EDGE_BAND_DEG = 1;
 
 /** Buckets the edge set by declination band so a per-star sweep prunes instead
@@ -636,7 +618,7 @@ export function createNearestEdgeIndex(edges: IauBoundaryEdges): NearestEdgeInde
  *  needs no edge set, which is what lets a browser consumer have it from the
  *  shipped artifact's grid (§ How each consumer gets this). */
 export interface GridConstellationLookup {
-  /** Edge-set code (`AND`, `SER1`, …) for a J2000 position. */
+  /** `AND`, `SER1`, … */
   edgeCodeAt(j2000: SkyPosition): string;
   /** Lowercase IAU-88 table key; Serpens' two parts collapse to `ser`. */
   keyAt(j2000: SkyPosition): string;

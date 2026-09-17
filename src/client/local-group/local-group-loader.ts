@@ -79,11 +79,9 @@ interface RawCatalog {
 }
 
 /**
- * Fetch the Local Group catalog. Returns null if the file is missing
- * (fresh checkout without `pnpm run build:local-group`, or a deploy
- * that didn't include the artifact). Callers must treat null as
- * "no Local Group layer", not an error — same contract loadClouds
- * uses.
+ * Null means "no Local Group layer", never an error — the same contract
+ * `loadClouds` uses. A missing file is an ordinary fresh checkout
+ * without `pnpm run build:local-group`.
  */
 export async function loadLocalGroup(url: string): Promise<LgCatalog | null> {
   let res: Response;

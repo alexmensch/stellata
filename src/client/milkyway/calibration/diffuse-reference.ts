@@ -59,17 +59,12 @@ export const BULGE_ML_V = 3.15;
 export const DISC_ML_V = 1.5;
 
 /**
- * A stellar-mass bulge fraction converted to a V-band **light** fraction
- * through the two populations' Υ\*_V:
- *
  * ```
  * L_b/L_tot = 1 / (1 + ((1 − f_M)/f_M) · (Υ_b/Υ_d))
  * ```
  *
- * Only the RATIO Υ_b/Υ_d survives, which is why mixing a measured disc
- * value with a modelled bulge one is defensible: IMF normalisation
- * cancels and what is left is the population difference the whole
- * correction is about.
+ * Only the RATIO Υ_b/Υ_d survives, so a measured disc value and a modelled
+ * bulge one are commensurable.
  *
  * Parameterised rather than inlined so the metallicity sensitivity is
  * reproducible from the other two tables in `data/bc03/`
@@ -84,9 +79,8 @@ export function bulgeToTotalLight(
 }
 
 /**
- * Bulge share of the Galaxy's V-band **light** — what the emissivity
- * solve splits flux by. No published Milky Way value exists, so it is
- * derived: 0.150 in mass buys 0.0775 in V light.
+ * No published Milky Way value exists, so it is derived: 0.150 in mass
+ * buys 0.0775 in V light.
  */
 export const BULGE_TO_TOTAL_LIGHT_V = bulgeToTotalLight(
   BULGE_TO_TOTAL_MASS,

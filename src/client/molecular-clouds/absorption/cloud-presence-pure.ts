@@ -19,16 +19,15 @@ export const AV_SATURATED = 6.0;
  *  only; the analytic tier goes through AV_RATE_PER_NH instead. */
 export const AV_PER_DENSITY = 2.742;
 
-/** Where the mass-budget envelope starts tapering, as a fraction of
- *  `uEnv`. */
+/** A fraction of `uEnv`. */
 export const ENVELOPE_TAPER_FRAC = 0.85;
 
 /** Step floor for the screen-adaptive budget: below this the jittered
  *  lattice reads as banding rather than grain. */
 export const MARCH_MIN_STEPS = 4;
 
-/** Shortest chord worth marching, in unit-sphere t. Doubles as the divisor
- *  floor that keeps the step count finite on a grazing ray. */
+/** Unit-sphere t. Doubles as the divisor floor that keeps the step count
+ *  finite on a grazing ray. */
 export const MARCH_MIN_CHORD_T = 1e-6;
 
 function smoothstep(e0: number, e1: number, x: number): number {
@@ -55,7 +54,7 @@ export function cloudModelDensity(
   return n0Cal * (1 + q * q) ** (-p / 2) * envelope;
 }
 
-/** Absorption opacity from a raymarched A_V column (§ 9). */
+/** `av` is a raymarched A_V column (§ 9). */
 export function absorptionAlpha(av: number): number {
   return Math.min(1 - Math.exp(-TAU_PER_AV * av), ALPHA_CAP);
 }

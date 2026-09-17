@@ -34,7 +34,7 @@ export interface FresnelShellMaterialOptions {
   /** Authored sRGB hex; mapped through the tone-map inverse here so the
    *  shell resolves at its tuned appearance (../hdr/README.md § Chrome). */
   colourHex: number;
-  /** Alpha at the silhouette (limb); face-on alpha is this × faceOnFloor. */
+  /** Face-on alpha is this × `faceOnFloor`. */
   alphaLimb: number;
   /** The shell's representative radius (pc). Both camera-distance reaches
    *  come off it via `rimDistancesForExtent` — consumers span five orders

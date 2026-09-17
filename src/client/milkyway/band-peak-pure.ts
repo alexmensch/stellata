@@ -11,10 +11,9 @@ import {
 
 const REFERENCE_STEPS = 4096;
 
-/** Dust-free full central chord of disc + bulge, marched dense. Dust only
- *  dims, a chord through the centre is the longest and densest path, and a
- *  camera outside the proxy sees all of it — so no vantage renders a
- *  brighter pixel. */
+/** Dust only dims, a chord through the centre is the longest and densest
+ *  path, and a camera outside the proxy sees all of it — so no vantage
+ *  renders a brighter pixel. */
 export const MW_PEAK_SB_DUST_FREE = sightlineSurfaceBrightness(
   SB_ZERO_POINT,
   [-10 * DISC_RADIUS_PC, 0, 0],
@@ -168,7 +167,6 @@ export function bandPeakFan(
   return { sb: best.sb, dir: best.dir };
 }
 
-/** The fan's peak made a bound: brighter by the pinned margin. */
 export function bandPeakSurfaceBrightnessBound(cameraGalPc: Vec3): number {
   return bandPeakFan(cameraGalPc).sb - BAND_PEAK_MARGIN_MAG;
 }

@@ -42,20 +42,8 @@ export const BOUNDARY_DOT_PX = 1.5;
 export const BOUNDARY_GAP_PX = 3;
 
 /**
- * The Delporte boundary arcs drawn Sol-centred at `SPHERE_RADIUS_PC`, faded
- * out by camera distance from Sol.
- *
- * **Sol-centred, not camera-tracked** — the deliberate difference from the
- * galactic coordinate sphere, which does track the camera. The partition is a
- * Sol-frame construct: pinning it to Sol is what keeps a star assigned to
- * Orion drawn inside Orion's cell. The group rebases to `−worldOffset` each
- * frame so its absolute-space vertices project into the renderer's local
- * frame, exactly like `galactic/galactic-disc.ts`.
- *
- * Which also means the drawing is only true near Sol, so the fade window is
- * derived from the artifact's quantile table against the live magnitude limit
- * rather than picked — it lands sub-parsec to a few parsecs, and the arcs
- * self-hide before the camera reaches the first star.
+ * The Delporte boundary arcs, Sol-centred at `SPHERE_RADIUS_PC` and faded out
+ * by camera distance from Sol.
  */
 export class ConstellationBoundaryLayer {
   readonly group: THREE.Group;
@@ -100,9 +88,8 @@ export class ConstellationBoundaryLayer {
     this.setMagnitudeLimit(limitMag);
   }
 
-  /** Re-derive the fade window for a new apparent-magnitude limit. Pushed on
-   *  the filter event: a fainter limit admits stars nearer their walls, which
-   *  widens the offset at which the drawing stops being true.
+  /** Pushed on the filter event: a fainter limit admits stars nearer their
+   *  walls, which widens the offset at which the drawing stops being true.
    *
    *  The no-table guard has to precede the sentinel, not follow it: filter
    *  pushes land while the artifact is still in flight, and recording the
@@ -129,9 +116,7 @@ export class ConstellationBoundaryLayer {
     this.group.position.copy(worldOffset).negate();
     this.stroke.material.opacity = opacity;
     // World arc length → screen pixels, which is what the dot pattern is
-    // authored in. One scale covers the whole sphere: the arcs sit 50 kpc out
-    // and the camera never leaves Sol's neighbourhood while they draw, so
-    // every vertex is at effectively the same range.
+    // authored in.
     this.stroke.material.scale =
       pixelsPerRadianFromUniforms(this.shared) / SPHERE_RADIUS_PC;
     this.group.visible = true;

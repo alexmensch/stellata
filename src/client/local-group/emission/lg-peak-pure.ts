@@ -18,13 +18,10 @@ import {
 type Vec3 = readonly [number, number, number];
 type Quat = readonly [number, number, number, number];
 
-/** Jitter phases the central ray is scanned at, alongside the cusp phase
- *  (§ The brightest rendered pixel). The shader shifts every pixel's samples
- *  by a hash in [0, 1) of a step, so the nucleus pixel can land a sample
- *  anywhere in the step that straddles the centre. The scan is the safety net
- *  for structure away from the centre; `centralRayCuspPhase` is what actually
- *  finds the maximum, so this is 16 rather than the ~4000 a scan alone would
- *  need to match it. */
+/** § The brightest rendered pixel. Small only because
+ *  `centralRayCuspPhase` finds the maximum outright — the scan is the
+ *  safety net for structure away from the centre, and a scan alone would
+ *  need thousands of phases to match it. */
 export const LG_PEAK_JITTER_PHASES = 16;
 
 /** Camera travel the cached bound stays valid over. Surface brightness is

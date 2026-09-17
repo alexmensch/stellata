@@ -20,17 +20,15 @@ export const LATITUDES_DEG = [-80, -70, -60, -50, -40, -30, -20, -10, 10, 20, 30
 // thins out before the lines bunch up at the poles, whatever the spacing.
 const MERIDIAN_TRIM_LATITUDE_DEG = 80;
 
-/** Which coordinate sphere the user has up. Mutually exclusive: two grids
- *  drawn together are illegible, and their edge labels would fight in one
+/** Mutually exclusive by design, not a set of booleans — two grids drawn
+ *  together are illegible, and their edge labels would fight in one
  *  repulsion pass. */
 export type CoordSphereFrame = 'none' | 'galactic' | 'ecliptic' | 'equatorial';
 
-/** A frame that has a sphere behind it — every `CoordSphereFrame` but `none`. */
 export type DrawnCoordSphereFrame = Exclude<CoordSphereFrame, 'none'>;
 
 /**
- * Longitude/latitude (radians) in some sky frame → the ICRS unit direction,
- * written into `out`.
+ * Angles in **radians**.
  */
 export type DirToIcrs = (lonRad: number, latRad: number, out: THREE.Vector3) => THREE.Vector3;
 
@@ -43,7 +41,7 @@ export interface CoordSphereSpec {
   dirToIcrs: DirToIcrs;
   /** Meridians drawn, evenly spaced over the full longitude turn. */
   meridianCount: number;
-  /** `id` of the SVG `<g>` the edge labels are pooled under. */
+  /** The SVG `<g>` the edge labels pool under. */
   labelGroupId: string;
   lonLabel: (deg: number) => string;
   latLabel: (deg: number) => string;
@@ -136,8 +134,7 @@ export class CoordSphere {
     this.stroke.material.opacity = this.mono ? 1 : DARK_LINE_OPACITY;
   }
 
-  // Colour + blend state. Mono mode runs opaque with blending off for the
-  // paper aesthetic.
+  // Mono runs opaque with blending off, for the paper aesthetic.
   private applyBlendState() {
     const on = this.mono;
     for (const handle of [this.equator, this.stroke]) {

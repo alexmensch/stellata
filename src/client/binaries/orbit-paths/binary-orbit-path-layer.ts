@@ -77,10 +77,10 @@ export class BinaryOrbitPathLayer {
   }
 
   /**
-   * Rebuild the paths for the focused system's Kepler pairs. Visual
-   * companions (no elements) and unfocused systems yield none. Rebuilds
-   * geometry — call on focus change, not per frame. `absolutePositions`
-   * anchors each Tier-1 tangent basis at its system's ICRS direction.
+   * Rebuilds geometry — call on focus change, never per frame. Visual
+   * companions (no elements) and unfocused systems yield none;
+   * `absolutePositions` anchors each Tier-1 tangent basis at its system's
+   * ICRS direction.
    */
   setSystem(
     binaries: BinariesData | null,

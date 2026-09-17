@@ -209,11 +209,10 @@ export function eclipseDimFromOffsets(
   return { dim, front, thetaRad: theta, alphaPri, alphaSec };
 }
 
-/** Unit normal of a cached relation's orbit plane in ICRS. Convention-
- *  proof: sampled from the same evaluation + projection path the
- *  renderer uses, so it can't drift from the rendered orbit. Returns
- *  null when the two samples are near-collinear (degenerate elements) —
- *  callers must then treat every view direction as eclipse-capable. */
+/** Unit vector, sampled from the same evaluation + projection path the
+ *  renderer uses, so it cannot drift from the rendered orbit. Null when
+ *  the two samples are near-collinear (degenerate elements) — callers must
+ *  then treat every view direction as eclipse-capable. */
 export function orbitPlaneNormalICRS(
   tier: 1 | 2,
   elements: OrbitalElements,

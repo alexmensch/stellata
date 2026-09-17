@@ -52,9 +52,8 @@ export interface Attitude {
 // direction to project — 1e-3 rad off the axis.
 const DEGENERATE_SEED_COS = Math.cos(1e-3);
 
-/** An empty frame to write into. Only a caller that rebuilds a frame every
- *  tick needs one — `emptyReferenceFrame()` plus the `*Into` builders below
- *  keep that path allocation-free. */
+/** Only a caller that rebuilds a frame every tick needs one — this plus the
+ *  `*Into` builders below keep that path allocation-free. */
 export function emptyReferenceFrame(): ReferenceFrame {
   return {
     key: 'galactic',
@@ -253,7 +252,6 @@ export function ridePoseBy(
   up.applyQuaternion(rotation).normalize();
 }
 
-/** Which of the datum chip's three stops is showing. */
 export type DatumStop = 'off' | 'reference' | 'target';
 
 /** Is the padlock chip on screen — which is the whole rule for whether the
@@ -329,11 +327,6 @@ export interface FocusFrameInputs {
   isSol: boolean;
 }
 
-/** Which frame the focused object implies. Everything in Sol's system rides
- *  the ecliptic — that is the plane its planets actually orbit in — with Earth
- *  the single exception, where RA/Dec is the frame anyone reading the sky from
- *  the surface already thinks in. Beyond the system, galactic is the only frame
- *  still defined by something real. */
 export function autoFrameFor(focus: FocusFrameInputs): AutoFrameKey {
   if (focus.kind === null) return 'galactic';
   if (focus.kind === 'planet') {
@@ -468,18 +461,11 @@ function projectInto(
     .multiplyScalar(sign);
 }
 
-/** The ball's model matrix: ball coordinates → instrument coordinates (+X
- *  right, +Y up, +Z toward the viewer).
- *
- *  **Determinant is −1 — this is a reflection, and that is the whole trick.**
- *  A direction lands on the instrument exactly where it lands on screen in the
- *  real view, so the ball's grid is a true miniature of the coordinate sphere
- *  the scene draws, with the boresight at the centre. A pure rotation cannot
- *  do that: it would put the *anti*-boresight at the centre, because a globe
- *  read from outside is the mirror of a sky read from inside. Two consequences
- *  callers must honour — the texture has to be drawn mirrored in longitude to
- *  read the right way round, and a lit material would light the far side, so
- *  the ball is unlit with its shading faked on top. */
+/** Ball coordinates → instrument coordinates (+X right, +Y up, +Z toward the
+ *  viewer). **Determinant −1 — a reflection, not a rotation.** Making it a
+ *  pure rotation puts the *anti*-boresight at the centre; the mirrored
+ *  texture and the unlit material are both consequences callers must honour
+ *  (README.md). */
 export function ballBasisInto(
   out: THREE.Matrix4,
   camera: THREE.Camera,

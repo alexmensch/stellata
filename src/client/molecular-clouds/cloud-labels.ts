@@ -5,7 +5,7 @@ import type { KindContext } from '../kinds/kind-module';
 import { createShellSilhouetteLabel } from '../fresnel-shell/fresnel-shell';
 import type { MolecularClouds } from './molecular-clouds';
 
-/** Container `<g>` in index.html the per-cloud `<text>` nodes mint into. */
+/** Must exist in index.html. */
 export const CLOUD_LABELS_GROUP_ID = 'cloud-labels';
 
 // A label only shows once the cloud's silhouette is large enough on
