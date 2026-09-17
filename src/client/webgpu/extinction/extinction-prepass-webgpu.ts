@@ -142,8 +142,9 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
       absCamX, absCamY, absCamZ,
       RECOMPUTE_EPSILON_PC,
     );
-    // lastCam* starts at the Infinity sentinel, so the first compute reads
-    // as a move from nowhere rather than as a camera under way.
+    // `hasComputed` guards the Infinity sentinel in lastCam*: without it the
+    // first compute reads as a camera under way and costs the boot its first
+    // warm (README.md § A camera under way warms nothing at all).
     this.movedOnLastUpdate = moved && this.hasComputed;
     if (!this.dirty && !moved) return;
 

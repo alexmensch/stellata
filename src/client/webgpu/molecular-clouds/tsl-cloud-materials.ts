@@ -42,9 +42,8 @@ export function makeTslCloudMaterials(cfg: TslCloudConfig): CloudMaterials {
       const nodes = cloudAbsorptionUniformNodes(spec);
       const field = spec.field === null ? null : cloudFieldUniformNodes(spec.field);
       const built = buildCloudAbsorptionMaterial(cfg.nodes, nodes, field);
-      // The brick's own slots are deliberately NOT in the written record:
-      // nothing drives them after construction, and a texture node carries
-      // no `.value` face a layer would want.
+      // `field` is deliberately withheld from the written record
+      // (README.md § The shared pair is not in this record).
       return wrap(built, nodes);
     },
 

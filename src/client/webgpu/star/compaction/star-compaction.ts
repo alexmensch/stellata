@@ -73,10 +73,9 @@ export class StarCompaction {
       solveStarTsl(deps, self, localPos, {
         pass: STAR_PASS_GLOW, eclipseDim: null,
       }, (s) => {
-        // The frustum test, the CPU mirror being starQuadOffscreen. The
-        // pinned focal star projects through a substituted matrix in the
-        // vertex stage, so its true projection says nothing about where
-        // it draws — never culled.
+        // Mirror any change here into `starQuadOffscreen` (compaction-pure.ts),
+        // which carries the tests. The pinned focal star draws through a
+        // substituted matrix, so its true projection cannot cull it.
         const clip = this.viewProjection.mul(vec4(localPos, 1.0)).toVar();
         const halfExtent = s.pxSize.div(u.uViewport);
         const offscreen = clip.w.lessThanEqual(0.0)

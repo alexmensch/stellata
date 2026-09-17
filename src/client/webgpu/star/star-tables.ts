@@ -119,7 +119,7 @@ export class StarTables {
     return this.forwarded[name].attr;
   }
 
-  /** Every storage attribute this owns — what dispose releases. */
+  /** What dispose releases. */
   storageAttributes(): StorageBufferAttribute[] {
     return [this.statics, ...STAR_FORWARDED_ATTRIBUTES.map((n) => this.forwarded[n].attr)];
   }

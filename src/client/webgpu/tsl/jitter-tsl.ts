@@ -9,10 +9,8 @@ import {
 
 type N2 = Node<'vec2'>;
 
-/**
- * Static per pixel and never reseeded per frame — animated jitter
- * shimmers (`docs/science-molecular-clouds.md` § 9.1 rules 3–4).
- */
+/** Static per pixel — never reseed it per frame (README.md § Interleaved
+ *  gradient noise). */
 export const interleavedGradientNoiseTsl = /* @__PURE__ */ Fn(
   ([fragCoord]: [N2]) =>
     fract(fract(dot(fragCoord, vec2(...DITHER_IGN_DOT))).mul(DITHER_IGN_SCALE)),

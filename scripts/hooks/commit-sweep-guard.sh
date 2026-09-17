@@ -12,7 +12,12 @@
 #      rule patterns from comment-rules.json — the same file
 #      tests/code-comment-rules.test.ts reads, scoped to NEW lines so
 #      pre-existing legacy violations don't block unrelated commits —
-#      enforces AGENTS.md § Code comments.
+#      enforces AGENTS.md § Code comments;
+#
+#  (c) a comment block the commit adds restates markdown prose the same
+#      commit adds — the "README written minutes earlier" failure named
+#      in docs/authoring-patterns.md § Code-comment hygiene. Opt out with
+#      `[comment-ok: <reason>]`.
 #
 # Scope is `git diff --cached`: -a / --all commits aren't fully
 # inspected. Most commits go through `git add <files> && git commit`,
@@ -76,6 +81,11 @@ done
 opt_out=0
 if printf '%s' "$skip_scan" | tr '\n' ' ' | grep -qE '\[readme-skip:[^]]*\]'; then
   opt_out=1
+fi
+
+comment_ok=0
+if printf '%s' "$skip_scan" | tr '\n' ' ' | grep -qE '\[comment-ok:[^]]*\]'; then
+  comment_ok=1
 fi
 
 # README staleness check.
@@ -159,7 +169,79 @@ violations="$(
     ' || true
 )"
 
-if [ -z "$stale" ] && [ -z "$violations" ]; then
+# Restatement sweep. Exact wording rarely survives the move from prose to
+# a comment, so this compares vocabulary rather than phrasing: the share of
+# a block's distinct content words that also appear in markdown the same
+# commit adds. A pointer is short enough to fall under MIN_WORDS.
+restate=""
+if [ "$comment_ok" = 0 ]; then
+  md_file="$(mktemp "${TMPDIR:-/tmp}/commit-sweep-md.XXXXXX")"
+  git -C "$toplevel" diff --cached -U0 -- '*.md' 2>/dev/null \
+    | grep -E '^\+' | grep -vE '^\+\+\+ ' > "$md_file" || true
+  if [ -s "$md_file" ]; then
+    restate="$(
+      git -C "$toplevel" diff --cached -U0 -- '*.ts' '*.js' '*.py' 2>/dev/null \
+      | MD_FILE="$md_file" perl -nE '
+          # Defined above the BEGIN block that calls it: BEGIN runs at the
+          # point it is parsed, when anything below is not yet compiled.
+          sub norm { my $w = shift; $w =~ s/s$// if length($w) > 3; $w }
+          BEGIN {
+            our $MIN_WORDS = 12;
+            our $THRESHOLD = 0.5;
+            our %STOP = map { $_ => 1 } qw(
+              the and for that this with from into are was were been being
+              have has had not but its it is be to of in on at as by or an a
+              so than then there here what which when where if else do does
+              did we you they them their our one all any every each own only
+              just also can could would will shall may might how why who
+              because while about after before over under again more most
+              same such no nor too very now per via
+            );
+            open my $fh, "<", $ENV{MD_FILE} or die "md: $!";
+            local $/;
+            my $text = lc <$fh>;
+            close $fh;
+            our %MD;
+            $MD{norm($_)} = 1 for ($text =~ /([a-z][a-z0-9_\x27-]{2,})/g);
+          }
+          sub flush {
+            our (@block, $file, %STOP, %MD, $MIN_WORDS, $THRESHOLD);
+            return if @block < 2;
+            my $text = lc join " ", @block;
+            $text =~ s{(?:^|\s)(?://+|\#+|/\*+|\*+)}{ }g;
+            $text =~ s{\*/}{ }g;
+            my %seen;
+            for my $w ($text =~ /([a-z][a-z0-9_\x27-]{2,})/g) {
+              $seen{norm($w)} = 1 unless $STOP{$w};
+            }
+            my @words = keys %seen;
+            return if @words < $MIN_WORDS;
+            my $hit = grep { $MD{$_} } @words;
+            my $pct = int(100 * $hit / @words + 0.5);
+            return if $pct < 100 * $THRESHOLD;
+            say sprintf("  %s — %d%% of this block\x27s words are in prose this commit adds", $file // "?", $pct);
+            say "    " . substr(join(" ", @block), 0, 140);
+          }
+          our (@block, $file);
+          chomp;
+          if (/^\+\+\+ b\/(.+)$/) { flush(); @block = (); $file = $1; next; }
+          if (/^\@\@/)            { flush(); @block = (); next; }
+          next unless /^\+/;
+          my $t = $_;
+          $t =~ s/^\+//;
+          $t =~ s/^\s+//;
+          my $is_comment = (defined $file && $file =~ /\.py$/)
+            ? ($t =~ m{^\#})
+            : ($t =~ m{^(?://|/\*|\*)});
+          if ($is_comment) { push @block, $t } else { flush(); @block = () }
+          END { flush() }
+        ' || true
+    )"
+  fi
+  rm -f "$md_file"
+fi
+
+if [ -z "$stale" ] && [ -z "$violations" ] && [ -z "$restate" ]; then
   exit 0
 fi
 
@@ -175,6 +257,12 @@ if [ -n "$violations" ]; then
   reason+=$'\n\nForbidden comment-rule patterns in the staged diff (AGENTS.md § Code comments):\n'
   reason+="$violations"$'\n'
   reason+=$'\nFix: rewrite per AGENTS.md § Code comments. Credit a bead → commit subject, not the code. Reference a memory → no link in code (invisible to readers without bd). Cite a PR → drop it; git blame carries the history.'
+fi
+
+if [ -n "$restate" ]; then
+  reason+=$'\n\nComment blocks that repeat prose this same commit adds (docs/authoring-patterns.md § Code-comment hygiene — "a comment restating README content written minutes earlier is the dominant failure mode"):\n'
+  reason+="$restate"$'\n'
+  reason+=$'\nFix: cut the block to a one-line pointer at the section that now carries it (`// see <file> § <section>`). The prose is already written; a second copy rots. If the comment genuinely says something the prose does not, add `[comment-ok: <reason>]` to the commit message — visible in the PR for review.'
 fi
 
 jq -n --arg reason "$reason" '{

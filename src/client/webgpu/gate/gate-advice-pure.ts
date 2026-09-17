@@ -7,11 +7,11 @@ import type { WebGpuVerdict } from './webgpu-support';
 /** The two verdicts that can reach a page; `supported` never does. */
 export type GateVerdict = Exclude<WebGpuVerdict, 'supported'>;
 
-/** The mounted takeover's element id. Here rather than beside the builder
- *  because the perf runner reads it to tell a gated boot from a hung one
- *  (`scripts/perf/README.md` § What a run does), and that is Node code: a
- *  value import of the builder would put a module written against
- *  `document` and `navigator` in the runner's import graph. */
+/** Lives here rather than beside the builder because the perf runner reads it
+ *  to tell a gated boot from a hung one (`scripts/perf/README.md` § What a run
+ *  does), and that is Node code: a value import of the builder would put a
+ *  module written against `document` and `navigator` in the runner's import
+ *  graph. */
 export const GATE_ELEMENT_ID = 'webgpu-gate';
 
 /** What the page can read off the browser without asking it to render.
