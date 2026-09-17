@@ -131,8 +131,8 @@ ORB6_SPECTROSCOPIC_GRADES: frozenset[int] = frozenset({7, 8, 9})
 class OrbitElements:
     """Canonical per-system orbital-element payload. Mirrors the runtime
     units that ``binary-orbit-pure.ts`` consumes (days / JD / radians) so
-    Stage 6's multiples.tsv writer + Phase 3's v6-binary writer can
-    serialise without per-consumer unit conversion.
+    Stage 6's multiples.tsv writer + ``build-runtime-binaries.py``'s
+    binary writer can serialise without per-consumer unit conversion.
 
     Fields are ``None`` when the underlying solution doesn't constrain
     them. The ``orb6_spectroscopic`` route leaves the underdetermined

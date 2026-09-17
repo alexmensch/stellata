@@ -698,7 +698,10 @@ def run(force: bool) -> int:
         )
         return 1
 
-    log("Stage 7 complete. data/binaries/multiples.tsv ready for Phase 3 ingest.")
+    log(
+        "Stage 7 complete. data/binaries/multiples.tsv ready for "
+        "build-runtime-binaries.py."
+    )
     return 0
 
 
