@@ -97,9 +97,8 @@ export class ProbeField {
   private localPassActive = false;
   private hiddenIdx = -1;
   private worldOffset = new THREE.Vector3();
-  /** Sol's renderer-local position. Sol is the catalog origin, so this is
-   *  just the negated floating-origin offset — non-zero under any focus
-   *  other than Sol. */
+  /** Sol is the catalog origin, so this is just the negated
+   *  floating-origin offset — non-zero under any focus other than Sol. */
   private solLocal = new THREE.Vector3();
   private localPos = new Float32Array(0);
   private alpha = new Float32Array(0);
@@ -279,8 +278,7 @@ export class ProbeField {
     }
   }
 
-  /** This frame's cadence report over the markers actually drawn — the
-   *  render gate's README owns the design.
+  /** The render gate's README owns the design.
    *
    *  One motion term per drawn marker: the sampler's own interpolated
    *  velocity (never a finite difference — the trajectory grid spacing runs
@@ -367,8 +365,7 @@ export class ProbeField {
     return true;
   }
 
-  /** Route the markers through the local depth pass instead of the main
-   *  pass. Set by `SolarSystemCluster` each frame: while the solar system is
+  /** Set by `SolarSystemCluster` each frame: while the solar system is
    *  locally active every one of its bodies renders in the bracketed pass
    *  with depth cleared, so a main-pass marker is painted over by any planet
    *  disc regardless of true depth. */
@@ -377,7 +374,7 @@ export class ProbeField {
     this.setDrawn(this.group.visible || this.localGroup.visible);
   }
 
-  /** Contribution gate. Clearing `visible` matters as much as hiding the
+  /** Clearing `visible` matters as much as hiding the
    *  groups: the labels, the trails and the pick surface all read it, and
    *  the `update` that would clear it does not run while skipped. */
   setContributing(on: boolean): void {
