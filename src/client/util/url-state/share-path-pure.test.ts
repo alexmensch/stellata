@@ -142,6 +142,8 @@ describe('legacyShareRedirect', () => {
 
 describe('shareBlobFrom', () => {
   it.each([
+    ['https://stellata.xyz/app/v/AQAA/', 'AQAA'],
+    ['/app/v/AQAA/', 'AQAA'],
     ['https://stellata.xyz/v/AQAA/', 'AQAA'],
     ['/v/AQAA/', 'AQAA'],
     ['https://stellata.xyz/?v=AQAA', 'AQAA'],
@@ -152,7 +154,7 @@ describe('shareBlobFrom', () => {
     expect(shareBlobFrom(input)).toBe(blob);
   });
 
-  it.each(['', 'https://stellata.xyz/', 'not a blob!'])(
+  it.each(['', '/app', 'https://stellata.xyz/', 'not a blob!'])(
     'answers null for %s, which carries none', (input) => {
       expect(shareBlobFrom(input)).toBeNull();
     },

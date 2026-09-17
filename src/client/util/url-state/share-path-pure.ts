@@ -59,25 +59,6 @@ export function pickShareBlob(pathname: string, search: string): ShareBlobSource
 }
 
 /**
- * Where a request carrying a legacy transport belongs, or null when it
- * carries none. The Worker answers with a 301 so the canonical form is what
- * gets bookmarked and re-shared; the client's own rewrite then handles a
- * legacy link that reached it some other way.
- *
- * The blob is not parsed out and rebuilt — an undecodable one still has to
- * land on the app, which strips the bar itself (README § Transport).
- */
-export function legacyShareRedirect(pathname: string, search: string): string | null {
-  if (pathname === '/v' || pathname.startsWith('/v/')) {
-    return APP_PATH + pathname + search;
-  }
-  if (pathname === '/' && new URLSearchParams(search).has(SHARE_PARAM)) {
-    return `${APP_PATH}/${search}`;
-  }
-  return null;
-}
-
-/**
  * The blob inside anything a human pastes into the dev console: a whole
  * share URL on any of the three transports, a bare `v=<blob>` fragment, or
  * the blob itself. Null when the text carries no blob at all.
@@ -97,4 +78,23 @@ export function shareBlobFrom(input: string): string | null {
   }
   const afterParam = text.includes('=') ? text.slice(text.lastIndexOf('=') + 1) : text;
   return /^[A-Za-z0-9_-]+$/.test(afterParam) ? afterParam : null;
+}
+
+/**
+ * Where a request carrying a legacy transport belongs, or null when it
+ * carries none. The Worker answers with a 301 so the canonical form is what
+ * gets bookmarked and re-shared; the client's own rewrite then handles a
+ * legacy link that reached it some other way.
+ *
+ * The blob is not parsed out and rebuilt — an undecodable one still has to
+ * land on the app, which strips the bar itself (README § Transport).
+ */
+export function legacyShareRedirect(pathname: string, search: string): string | null {
+  if (pathname === '/v' || pathname.startsWith('/v/')) {
+    return APP_PATH + pathname + search;
+  }
+  if (pathname === '/' && new URLSearchParams(search).has(SHARE_PARAM)) {
+    return `${APP_PATH}/${search}`;
+  }
+  return null;
 }
