@@ -393,7 +393,7 @@ function preflightPaths(args: RunArgs): Preflight {
   return { baseline, pin, error: null };
 }
 
-/** Write the run as the pin, or say why it cannot be one. Returns whether it failed. */
+/** Returns whether writing the pin failed. */
 function writePin(args: RunArgs, file: PerfFile, against: PinDiff | null): boolean {
   const { pin, refusals } = pinFromRuns(
     [{ file, sourceRun: citeRunPath(args.json!, mainCheckout()) }],

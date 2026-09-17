@@ -99,9 +99,7 @@ export interface PinAcceptance {
   readonly bead: string;
 }
 
-/** Parsed `--accept` marks as the pin records them, keyed like the rows.
- *  Both writers fill the field from their own flags, so the mapping lives
- *  with the field rather than beside either caller. */
+/** Parsed `--accept` marks as the pin records them, keyed like the rows. */
 export function acceptedMarks(
   marks: readonly (PinAcceptance & { readonly key: string })[],
 ): Record<string, PinAcceptance> {
@@ -412,14 +410,13 @@ export function pinFromRuns(given: readonly RunSource[], source: PinSource): Pin
   };
 }
 
-/** Canon rows a pin does not hold. */
 export function missingCanonRows(pin: PinFile): readonly string[] {
   const held = new Set(pin.rows.map((row) => row.key));
   return [...CANON_POSITIONS.keys()].filter((key) => !held.has(key));
 }
 
 /**
- * How the pin cites the run it was summarised from. Runs are filed under
+ * Runs are filed under
  * `.perf-runs/<date>/` in the main checkout (README.md § Recording), so that
  * is the path worth committing: an absolute one names one machine's home
  * directory, resolves nowhere else, and this file ships in a public repo.

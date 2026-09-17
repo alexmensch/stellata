@@ -34,8 +34,8 @@ export const DWELL_READBACK_EVERY_FRAMES = 4;
 const CADENCE_WINDOW_STRADDLE_FRAMES = 2;
 
 /**
- * Whether the pinned cadence actually held. It CAPS the rate — at most one
- * request per `every` rendered frames over the window above — so a rate past
+ * The pinned cadence CAPS the rate — at most one request per `every`
+ * rendered frames over the window above — so a rate past
  * that bound is the lever not having taken at all. One-sided on purpose: a
  * vantage whose readback round trip outran the cadence requests LESS often,
  * which is sound and recorded. The margin is a frame either way and the fault

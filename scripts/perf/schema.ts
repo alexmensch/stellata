@@ -51,8 +51,7 @@ export interface PassCountsRecord {
 }
 
 export interface DwellRecord {
-  /** Every sample, never just the summary: a re-analysis with a different
-   *  estimator has to be possible from the file alone. */
+  /** Every sample, never just the summary. */
   readonly deltasMs: readonly number[];
   /** The WebGPU frame-sample stream, present only where it was subscribed
    *  and sound. `gpuNote` says why on every other path. */
@@ -172,7 +171,7 @@ export interface PerfFile {
 }
 
 /**
- * Parse a file as a perf run, or throw. The schema string is checked
+ * The schema string is checked
  * first and by equality: a file written under another suffix carries fields
  * that mean something else, and reading it under this one would produce a
  * diff table whose rows are quietly wrong.

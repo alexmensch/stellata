@@ -142,29 +142,6 @@ function comparabilityRefusal(a: ScenarioRecord, b: ScenarioRecord): string | nu
     ?? preconditionRefusal(a.params, b.params);
 }
 
-/**
- * The state a differential sweep was set up in, which the run records in
- * `params`. A pass held off with `--pre-disable`, or the adaptation
- * measurement kept live with `--no-park`, or the extinction kernel forced to
- * run every frame with `--force-recompute`, changes what the frame contains
- * before the roster is touched at all — so the rows describe a scene the
- * other run never drew. The arithmetic those flags exist for
- * (`src/client/debug/frame-cost/passes/README.md` § The roster) is a
- * subtraction across two such runs done by hand, and reading it off a
- * row-against-row verdict instead would take two bounds for one share.
- *
- * `interleave` is refused for a different reason: a non-interleaved sweep
- * differences every row against the leading baseline alone rather than
- * against the pair either side of it, so the two sides estimate the same
- * cost with different estimators
- * (`src/client/debug/frame-cost/README.md` § Reading a row).
- *
- * **Absent reads as the flag's own default, not as unknown** — the opposite
- * of the record count, and the difference is what a missing field proves. A
- * run written before these flags existed pre-disabled nothing because there
- * was no way to ask; a run that recorded no record count may have priced any
- * scene at all.
- */
 /** The two-state setup levers, in the order they are refused. A `false` here
  *  is also what an absent field reads as, so a new lever needs no migration —
  *  add the row and both gates refuse it. */
@@ -222,13 +199,10 @@ export function bufferRefusal(a: number, b: number): string | null {
 
 /**
  * Two rows compare only at the same position in their runs. The GPU's load
- * history before a context moves its frame on unchanged code — the same
- * vantage read 0.486 ms apart between 8th of 10 behind cool-downs and 1st
- * of 2 cold, while two runs of the same shape agreed to 0.019 — and each
- * run's own state guard reads steady throughout, so nothing else catches
- * it. A cool-down does not reset it: sol at 2nd of 10 behind 120 s idle
- * matched sol at 2nd of 2 with none to 2e-6 ms. Position, not idle time, is
- * the variable, and absent on either side refuses as an absent count does.
+ * history before a context moves its frame on unchanged code, and each run's
+ * own state guard reads steady throughout, so nothing else catches it. A
+ * cool-down does not reset it — position, not idle time, is the variable.
+ * Absent on either side refuses as an absent count does.
  */
 export function positionRefusal(a: number | null | undefined, b: number | null | undefined): string | null {
   if (a == null || b == null) {
@@ -502,7 +476,7 @@ function frameRow(key: string, da: DwellRecord, db: DwellRecord): DiffRow | Diff
 }
 
 /**
- * Difference `current` against `baseline`. Refusals are the point of this
+ * Refusals are the point of this
  * function as much as the rows are: two runs on different clocks, buffers
  * or adapters produce a table that looks like a comparison and is not, so
  * every incomparable pair is named rather than dropped.

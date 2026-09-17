@@ -16,8 +16,7 @@ export type MirrorSpec = {
   label: string;
   /**
    * Subfolders of `srcDir` whose files are **flattened** into the same
-   * destination. Lets a data folder group large artifacts at rest without
-   * moving them in `public/` — so no consumer URL changes when it does.
+   * destination.
    * Names must stay unique across all of them; the allowlist is by name
    * and the purge pass cannot tell two same-named files apart.
    */

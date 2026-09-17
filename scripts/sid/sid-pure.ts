@@ -63,10 +63,12 @@ export interface StarDesignationFields {
   syntheticId: string | null;
 }
 
-/** External designations for one catalog star. The single extractor shared
- *  by `sid:allocate` (over the built artifacts) and `build-catalog`'s
- *  in-record resolution (over its in-memory records) so both derive an
- *  identical class from the same record. */
+/** External designations for one catalog star. The single extractor:
+ *  `sid:allocate` reaches it through `catalog-designations.ts` (over the
+ *  built artifacts), `build-catalog` for its in-record resolution (over
+ *  in-memory records), and the spine, label-merge and membership-manifest
+ *  modules for the set a row stands in for — so none of them can derive a
+ *  different class from the same record. */
 export function starDesignations(f: StarDesignationFields): string[] {
   const d: string[] = [];
   if (f.isSol) d.push('sol:sun');
