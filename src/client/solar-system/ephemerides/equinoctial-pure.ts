@@ -66,8 +66,7 @@ export function equinoctialFromAngles(
 }
 
 /**
- * Recover the classical set. The node and argument of perihelion come back
- * in the canonical `i ≥ 0` convention, which for a near-coplanar orbit is
+ * The node and argument of perihelion come back in the canonical `i ≥ 0` convention, which for a near-coplanar orbit is
  * not the pair the source table printed: a negative tabulated inclination
  * reappears as `(|i|, Ω ± 180°, ω ± 180°)`. That is the same rotation —
  * `Rz(π)·Rx(i)·Rz(π) = Rx(−i)` — so positions and rings are unaffected;

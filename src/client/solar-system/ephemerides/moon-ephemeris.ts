@@ -361,8 +361,7 @@ export function moonOffsetEcliptic(elem: MoonElements, t: number, out: Vec3): vo
   icrsToEcliptic(out, out);
 }
 
-/** Split the Earth–Moon barycentre into Earth-centre and Moon positions.
- *  `bary` is the Standish EM-barycentre; `moonGeoOffset` is the Moon's
+/** `bary` is the Standish EM-barycentre; `moonGeoOffset` is the Moon's
  *  geocentric offset from `moonOffsetEcliptic`. All vectors ecliptic pc. */
 export function earthMoonSplit(
   bary: Readonly<Vec3>,

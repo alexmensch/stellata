@@ -86,7 +86,6 @@ function earthAndRetardedMoon(t: number): { earth: Vec3; moon: Vec3 } {
   return { earth: now.earth, moon: earthMoonAt(t - earthMoonLightTimeS(now)).moon };
 }
 
-/** Earth–Moon light time (s) for a resolved pair. */
 function earthMoonLightTimeS(pair: { earth: Vec3; moon: Vec3 }): number {
   return Math.hypot(
     pair.moon.x - pair.earth.x, pair.moon.y - pair.earth.y, pair.moon.z - pair.earth.z,
@@ -242,7 +241,7 @@ export function findGreatestLunarEclipse(
   );
 }
 
-/** Sun–Earth distance in AU at `t` — the canons' own sanity column. */
+/** The canons' own sanity column. */
 export function sunEarthDistanceAu(t: number): number {
   const { earth } = earthMoonAt(t);
   return Math.hypot(earth.x, earth.y, earth.z) * AU_PER_PC;

@@ -111,8 +111,6 @@ export function selectRung(
 }
 
 /**
- * The body's top rung, lowered to the widest one this device will accept.
- *
  * WebGL2 only guarantees `MAX_TEXTURE_SIZE` 2048, and an upload past the
  * device's own limit fails outright — leaving the body on its white
  * placeholder with nothing else looking wrong. A body whose NARROWEST rung

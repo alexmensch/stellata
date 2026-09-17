@@ -259,15 +259,14 @@ function planetEquinoctialAt(
   blendEquinoctialInto(out, scratchTableEq, w, out);
 }
 
-/** Install the loaded element tables. */
 export function installPlanetElementTables(
   loaded: ReadonlyMap<PlanetName, PlanetElementTable>,
 ): void {
   PLANET_ORDER.forEach((name, i) => {
     tables[i] = loaded.get(name) ?? null;
   });
-  // The swap moves the outer planets by up to 0.06 AU; a live cache entry
-  // would hold the pre-table position for the rest of this frame.
+  // A live cache entry would hold the pre-table position for the rest of
+  // the frame the swap lands in.
   resetPositionCache();
 }
 

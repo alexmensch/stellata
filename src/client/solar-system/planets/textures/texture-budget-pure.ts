@@ -4,21 +4,17 @@
 import { MIP_CHAIN_FACTOR } from '../../../util/texture-bytes-pure';
 
 /**
- * Ceiling on resident planet-map VRAM before least-recently-drawn maps are
- * released.
- *
  * Sized on the worst LEGITIMATE working set rather than a round number: one
- * body parked at the camera floor on a high-DPI display, which is Earth at
- * its 8192 colour rung (179 MB) plus its own 8192 normal map and 4096 horizon
- * pair (179 MB together) — 358 MB for the one body the camera is actually
- * looking at. The rest is headroom for the handful of distant bodies holding
+ * body parked at the camera floor on a high-DPI display, holding its top
+ * colour rung plus EVERY relief plane it ships — each a fixed width the
+ * ladder's clamp cannot lower, so they enter the worst case in full or not
+ * at all. The rest is headroom for the handful of distant bodies holding
  * 1024s at 2.8 MB each.
  *
  * A device that cannot afford this does not break, it just evicts more often,
- * and a re-fetch comes off the HTTP cache. What the budget prevents is the
- * unbounded case: before it existed nothing was ever released, so a session
- * that visited the Moon, Earth and Mars held ~980 MB until the layer was
- * torn down.
+ * and a re-fetch comes off the HTTP cache. What the budget prevents is
+ * resident memory tracking the session's high-water mark instead of what is
+ * on screen: nothing releases a map by any other route.
  */
 export const TEXTURE_VRAM_BUDGET_BYTES = 512 * 1024 * 1024;
 
