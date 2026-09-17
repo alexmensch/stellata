@@ -30,9 +30,8 @@ export const FADE_OFFSET_DECIMALS = 4;
  *  rather than arguable. */
 export const MISPLACEMENT_TOLERANCE_DEG = 0.5;
 
-/** Apparent-magnitude limits the fade quantiles are keyed by. Spans 0–15 at
- *  1 mag, wide enough for any instrument's limit; the runtime lerps between
- *  rows. */
+/** Apparent-magnitude limits the fade quantiles are keyed by — wide enough
+ *  for any instrument's limit, and the runtime lerps between rows. */
 export const FADE_MAG_LIMITS: readonly number[] = [
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
 ];
@@ -83,7 +82,7 @@ export interface RegionGridWire {
   codes: string[];
   /** Band-major run-length pairs `[cellCount, codeIndex, …]`. Runs never
    *  straddle a band, so each band's counts sum to the column count — which is
-   *  what `decodeRegionGrid` checks rather than trusting a total. */
+   *  what `validateRegionGridWire` checks rather than trusting a total. */
   runs: number[];
 }
 

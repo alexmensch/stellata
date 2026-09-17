@@ -257,31 +257,17 @@ export function parseCns5Tsv(text: string): Cns5Row[] {
   return out;
 }
 
-/** CNS5's astrometry keyed the way a record asks for it: on its own `gl`
- *  cell, folded through `normaliseGjKey` so `Gl 165A` / `GJ 165A` / `165 A`
- *  — and CNS5's own `165.0` — meet as one key, the same reduction the SIMBAD
- *  ladder's GJ namespace uses. The component letter is part of the key because
- *  a GJ number carries one, so this names the component rather than the system.
- *  Exact `number+comp` keys are laid down first and a repeat throws, as it does
- *  in every other index over a committed table here: two rows claiming one
- *  component is an upstream change rather than a binding to arbitrate silently.
+/** Keyed on the record's own `gl` cell through `normaliseGjKey`, COMPONENT
+ *  LETTER INCLUDED, so this names the component rather than the system. Exact
+ *  `number+comp` keys are laid down first and a repeat throws: two rows
+ *  claiming one component is an upstream change, never a binding to arbitrate
+ *  silently. Each letter of a combined `gj_comp` then aliases onto its row,
+ *  never displacing an exact key.
  *
- *  **`gj_comp` states the letters COMBINED, not one per row** — Gl 423 reads
- *  `ABCD` on a single entry — so the exact key alone reaches no record, whose
- *  own cell names one component (`Gl 423A`). Each letter therefore aliases onto
- *  its row, never displacing an exact key, which is the same two-pass reduction
- *  `parseGlieseTsv` performs on V/70A's `comp`.
- *
- *  **Unlike V/70A's, this index carries NO bare-number fold**, and the
- *  difference is what the two tiers serve rather than an oversight. A V read off
- *  a system entry is a blend and advertises itself as one; a parallax read off
- *  it is a distance the components share. A POSITION and a PROPER MOTION are
- *  neither — they belong to one component, and the tier below this one (SIMBAD)
- *  resolves per object, so answering a bare `Gl 1294` with whichever component
- *  the file lists first would swap a per-object measurement for a sibling's
- *  from a HIGHER tier. Where lending a bound sibling's parallax is right, the
- *  cascade has a tier for it, gated on anchor-grade quality
- *  (`../distance/parallax/pair-member-parallax.ts`) rather than on file order. */
+ *  **Unlike V/70A's, this index carries NO bare-number fold.** A position and
+ *  a proper motion belong to one component, so answering a bare number with
+ *  whichever component CNS5 lists first would swap a per-object measurement
+ *  for a sibling's from a HIGHER tier. */
 export function cns5AstrometryByGj(rows: readonly Cns5Row[]): Map<string, Cns5Astrometry> {
   const out = new Map<string, Cns5Astrometry>();
   for (const row of rows) {

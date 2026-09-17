@@ -7,8 +7,7 @@ import { createInterface } from 'node:readline';
 const GAIA_COL = 'gaia_source_id';
 const ANG_COL = 'angular_distance';
 
-/** One best-neighbour table's key column and how its raw cell parses.
- *  `parseKey` returning null drops the row. */
+/** `parseKey` returning null drops the row. */
 interface BestNeighbourSpec<K> {
   readonly keyColumn: string;
   readonly parseKey: (raw: string) => K | null;

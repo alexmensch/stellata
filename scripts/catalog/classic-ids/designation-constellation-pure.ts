@@ -20,13 +20,11 @@ export interface DesignationConIndexCounts {
   crossIndexUnknownCst: number;
 }
 
-/** Build the lookup. A designation → designation cross index carries NO
- *  astrometric claim — it says the star named HD 216956 is also named α PsA,
- *  never which Gaia source holds that star's photons — so unlike the
- *  source_id-keyed label overlay it needs no binding gate, and it may key on
- *  HD/HIP where the overlay may not. That is also what lets it reach the
- *  bright tier: Gaia saturates near G ≈ 3, so 117 records at V ≤ 3 have no
- *  overlay row at all, Fomalhaut among them. */
+/** Carries NO astrometric claim, so unlike the source_id-keyed label overlay
+ *  it needs no binding gate and may key on HD/HIP where the overlay may not.
+ *  That is also what lets it reach the bright tier, where Gaia saturates and
+ *  most records have no overlay row at all
+ *  (`spineBrightRowsWithoutOverlayEntry` is the count). */
 export function buildDesignationConIndex(
   rows: readonly CrossIndexRow[],
 ): { index: DesignationConIndex; counts: DesignationConIndexCounts } {

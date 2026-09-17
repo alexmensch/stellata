@@ -18,12 +18,7 @@ export const GAIA_PHOTOMETRY_SATURATION_G = 4.0;
 /** G and BP−RP as plain numbers, for a row whose photometry sits in the regime
  *  the published relations were calibrated on — every band present and finite,
  *  and G above the saturation bound. Null otherwise; each relation applies its
- *  own colour range on top.
- *
- *  Returns the values rather than a boolean so the algebra downstream reads the
- *  very numbers the gate accepted: a predicate would leave every caller
- *  re-deriving them behind non-null assertions, where a later edit to either
- *  half silently stops matching the other. */
+ *  own colour range on top. */
 export function calibratedPhotometry(
   photometry: GaiaPhotometry | null,
 ): { gMag: number; bpMinusRp: number } | null {

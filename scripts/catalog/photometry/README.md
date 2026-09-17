@@ -87,8 +87,8 @@ V = G − f(BP−RP)      Riello+ 2021, inside the relation's validity
   → curated            Sol alone
 ```
 
-Per-tier routing, pinned in build-counts: `gaia_riello` **311,071** ·
-`printed_hip` **2,046** · `tycho2` **123** · `gliese` **16** · `curated`
+Per-tier routing, pinned in build-counts: `gaia_riello` **366,455** ·
+`printed_hip` **1,585** · `tycho2` **3,784** · `gliese` **20** · `curated`
 **1**, residual `none` **0**.
 
 `resolveVMagnitude` returns the value **and** the tier that produced it, so
@@ -97,7 +97,7 @@ cascade pins `directionVia`. The tier also rides on the record, because it
 answers a question no consumer can answer from the magnitude alone.
 
 **There is no SIMBAD tier**, though `docs/catalog-driver.md` § 5 projected
-one. Gliese reaches every row Tycho-2 misses, and for the nine that would
+one. Gliese reaches every row Tycho-2 misses, and for the handful that would
 have fallen through to SIMBAD the pull holds fluxes in `B`, `J`, `H`, `K`,
 `R`, `g`, `r`, `i` and `G` and no `V` at all — so the § 5 rule that a SIMBAD
 tier serves only cohorts no first-order catalogue reaches leaves it nothing
@@ -107,18 +107,18 @@ to serve. Nor is CNS5 a candidate: it publishes no Johnson V either
 ### The Tycho-2 tier runs outside its published colour range
 
 SP-1200 states `V = VT − 0.090(BT−VT)` over `BT−VT` ∈ [−0.25, 2.0].
-**5** of the tier's 123 rows sit outside it — four red out to 2.69 and one
-blue at −0.282 — where the linear form runs ~0.19–0.24 mag bright against
-the printed cell it replaces. `tycho2VMagnitude` transforms them anyway and
-`vTycho2OutsideBtVtRange` pins the count.
+**44** of the tier's 3,784 rows sit outside it, on both the red and the blue
+side, where the linear form runs bright against the printed cell it replaces.
+`tycho2VMagnitude` transforms them anyway and `vTycho2OutsideBtVtRange` pins
+the count.
 
 That is the opposite call from § Where the colour bound comes from, which
 refuses to extend Table 5.9 past its note (k). The difference is what sits
 underneath: the ci cascade has three more tiers, so a refused row still gets
-a colour, while **none of these five carries a `gl`** — nothing is below
-them, and V is a membership gate, so gating would cost each row its record
-rather than its precision. A tier with no fall-through cannot afford the
-same conservatism as one with three.
+a colour, while a row this tier serves that carries no `gl` has **nothing
+below it at all** — and V is a membership gate, so gating would cost that row
+its record rather than its precision. A tier with no fall-through cannot
+afford the same conservatism as one with three.
 
 ## The ci cascade
 
@@ -130,18 +130,17 @@ B−V = (G−V)(BP−RP) − (G−B)(BP−RP)    inside both relations' validity
   → SOLAR_BV_FALLBACK
 ```
 
-Per-tier routing, pinned in build-counts: `gaia_relation` **291,943** ·
-`printed_hip_bv` **10,341** · `gspc` **9,169** · `spectral_derived` **279** ·
-`solar_fallback` **1,525**. The relation carries the bulk; the two tiers under
-it split the 21,314 rows past its colour and saturation bounds, and **1,804**
-reach neither and take a derived colour.
+Per-tier routing, pinned in build-counts: `gaia_relation` **342,594** ·
+`printed_hip_bv` **9,830** · `gspc` **11,907** · `spectral_derived` **4,510** ·
+`solar_fallback` **3,004**. The relation carries the bulk; the two measured
+tiers under it split the **21,737** rows past its colour and saturation
+bounds, and **7,514** reach neither and take a derived colour.
 
-The spine's printed `ci` cell used to sit where those two tiers now do,
-carrying all 20,241 of them. It is not a source — it is AT-HYG's
-amalgamation of catalogues we can pull ourselves
-(`docs/catalog-driver.md` § 5) — so retiring it costs 731 rows a measured
-colour and hands them to the derived tiers. That is the trade the residual
-policy asks for.
+The spine's printed `ci` cell used to sit where those two tiers now do. It is
+not a source — it is AT-HYG's amalgamation of catalogues we can pull
+ourselves (`docs/catalog-driver.md` § 5) — so retiring it costs the rows it
+alone reached a measured colour and hands them to the derived tiers. That is
+the trade the residual policy asks for.
 
 `resolveColourIndex` returns the value, the tier, **and** whether the value
 is observed-convention. That last one is not a convenience: build-time

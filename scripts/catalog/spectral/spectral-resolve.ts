@@ -36,21 +36,18 @@ export interface SimbadSpectralRow {
   sourceId: string | null;
 }
 
-/** SIMBAD sp_type under all four namespaces. The HIP index carries the
- *  Gaia-saturated bright stars (Algol, Alsephina, ~700 others) whose SIMBAD
- *  row has a valid sp_type but no source_id; TYC is the only namespace
- *  reaching an object SIMBAD holds no Gaia id for at all. */
+/** SIMBAD sp_type under all four namespaces. */
 export type SimbadSpectralIndex = SimbadNamespaceIndex<SimbadSpectralRow>;
 
 export function emptySimbadSpectralIndex(): SimbadSpectralIndex {
   return emptySimbadNamespaceIndex<SimbadSpectralRow>();
 }
 
-/** Parse the TSV produced by `scripts/refresh/refresh-simbad-sptype.py`
- *  into a `SimbadSpectralIndex`. source_id is kept as a string for the
- *  same > Number.MAX_SAFE_INTEGER reason that `parseGaiaApsisTsv` uses.
- *  A row is indexed under every namespace it carries; the 1,104 rows the
- *  pull enumerated by SIMBAD oid alone carry none and index nowhere. */
+/** Parses the TSV `scripts/refresh/refresh-simbad-sptype.py` produces.
+ *  source_id is kept as a string for the same > Number.MAX_SAFE_INTEGER
+ *  reason `parseGaiaApsisTsv` uses. A row is indexed under every namespace it
+ *  carries; the rows the pull enumerated by SIMBAD oid alone carry none and
+ *  index nowhere. */
 export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
   const index = emptySimbadSpectralIndex();
   const lines = text.split(/\r?\n/);

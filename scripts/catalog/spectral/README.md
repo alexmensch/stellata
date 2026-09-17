@@ -103,8 +103,8 @@ priority chain:
    `lumClass=255` for rows no upstream covers.
 
 AT-HYG's contaminated `spect` cell is no longer consulted for
-classification (build-counts: ~89.5% SIMBAD / ~10.1% GSP-Spec / ~0.3%
-fallback against the v3.3 classic-IDs subset); it is still used as a
+classification (build-counts over the walked records: ~91.3% SIMBAD /
+~8.3% GSP-Spec / ~0.4% fallback); it is still used as a
 last-resort hover-display fallback when both upstream sources are blank.
 
 `physicalRadius` then computes R/R☉ via Stefan–Boltzmann:
@@ -167,15 +167,15 @@ identifier naming the component (tier 3) over the one naming the system (tier
 about which value is right. Both joins share this walk, so the spectral
 resolver and the values cascade move together — the point, not a side effect.
 
-**This order is load-bearing on 11 records, and only became so with the
-union.** Re-measured 2026-09-02 against the committed `simbad_sptype.tsv`:
-**1,497** records reach a typed row under BOTH their GJ and their TYC, and on
-**11** of them the two strings differ. Before the union the same measurement
+**This order is load-bearing on 14 records, and only became so with the
+union.** Re-measured 2026-09-16 against the committed `simbad_sptype.tsv`:
+**1,576** records reach a typed row under BOTH their GJ and their TYC, and on
+**14** of them the two strings differ. Before the union the same measurement
 read 5 reachable and 0 differing — every one of the 5 resolved to the
 *identical* row under both keys, so the order decided nothing and was kept as
 policy rather than for effect. The union asks every namespace a record
 reaches, so both rows now genuinely exist for a large population, and on the
-11 the component-naming identifier is what stops a system blend displacing a
+14 the component-naming identifier is what stops a system blend displacing a
 component type.
 
 Re-derive it with:

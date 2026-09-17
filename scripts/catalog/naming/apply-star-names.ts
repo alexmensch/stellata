@@ -206,14 +206,8 @@ export function applyStarNames(
   return counts;
 }
 
-/** The authority states which constellation its own designation is named
- *  for, so it is the top tier of the cascade the label merge started
- *  (`../classic-ids/README.md` § The designation constellation). One
- *  `uint8` serves one designation, and the tier that COMPOSES the label
- *  owns it — so where the authority's Bayer names a different constellation
- *  from the record's Flamsteed number (16 Lyn is also ψ¹⁰ Aur), the
- *  displaced Flamsteed form ships as an alias rather than going
- *  unsearchable. */
+/** The top tier of the cascade the label merge started
+ *  (`../classic-ids/README.md` § The designation constellation). */
 function applyDesignationConstellation(
   star: NamingTarget,
   dc: string,

@@ -160,10 +160,9 @@ export interface Star {
    *  ladder replaces it; no consumer parses it either way. */
   bayer: string | null;
   bayerSup: number | null;
-  /** The component the authority attributes this Bayer designation to.
-   *  `κ Her` names component A, so NEC's row for the B component states it
-   *  — and the letter then renders unconditionally, where a WDS letter
-   *  renders only to break a tie (docs/star-naming.md § 3). */
+  /** `κ Her` names component A, so NEC's row for the B component states it —
+   *  and the letter then renders unconditionally, where a WDS letter renders
+   *  only to break a tie (docs/star-naming.md § 3). */
   bayerComponent: string | null;
   gould: number | null;
   /** Serpens' Gould halves are numbered separately (`4 G. Ser Cau`). */
@@ -252,10 +251,8 @@ function altCells(cell: string, column: string): number[] {
   });
 }
 
-/** The one gate a manifest row can still fail that is NOT a § 6.1 park.
- *  Pinned at 0 in build-catalog-expected.json: a row landing past MAX_DIST_PC
- *  after every override is a reference table disagreeing with the tiers above
- *  it, never a membership decision — those are the parked ledger's. */
+/** The one gate a manifest row can still fail that is NOT a § 6.1 park, and
+ *  pinned at 0 in build-catalog-expected.json for that reason. */
 export interface ReadStarsDrops {
   tooFar: number;
 }
@@ -758,9 +755,8 @@ export function readStars(
       lumClass: spectInfo.lumClass,
       physicalRadius: physRadius,
       conIndex,
-      // The manifest carries no editorial constellation cell, so nothing here
-      // names a designation's constellation. The IAU WGSN, IV/27A and GCVS
-      // passes supply it downstream; everything else reads `conIndex`.
+      // Left unset here: three later passes fill it, and everything else
+      // reads `conIndex`.
       desigConIndex: NO_CONSTELLATION_INDEX,
       flags,
       proper, bayer, hip,

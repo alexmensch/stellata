@@ -184,8 +184,8 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     );
   }
 
-  // SIMBAD sp_type under all four namespaces. First tier of the spectral
-  // resolver; the binary defaults to GSP-Spec + unknown sentinel without it.
+  // SIMBAD sp_type under all four namespaces — the spectral resolver's first
+  // tier.
   let simbadSpectral: SimbadSpectralIndex = emptySimbadSpectralIndex();
   if (existsSync(SRC_SIMBAD_SPTYPE)) {
     console.log('Parsing SIMBAD sp_type catalogue...');
@@ -202,10 +202,9 @@ export function loadReadStarsInputs(): ReadStarsInputs {
     );
   }
 
-  // SIMBAD bibcoded values over the § 5 cohort — the bottom tier of the rv
-  // cascade. Optional on the same terms as the tables above; without it the
-  // rows no first-order catalogue reaches take a zero radial term, which
-  // shows up as an rvVia drift in the count snapshot.
+  // SIMBAD bibcoded values over the § 5 cohort — the rv cascade's bottom
+  // tier. Without it the rows no first-order catalogue reaches take a zero
+  // radial term, which shows up as an rvVia drift in the count snapshot.
   let simbadValues: SimbadValueIndex = emptySimbadValueIndex();
   if (existsSync(SRC_SIMBAD_VALUES)) {
     console.log('Parsing SIMBAD bibcoded values...');

@@ -51,9 +51,8 @@ export function designationFromCell(
   return null;
 }
 
-/** Which stars the Bayer designations already reach, by either key. Built
- *  once before the IV/27A union to decide what the tail adds, and again
- *  after it to measure spine coverage. */
+/** Built once before the IV/27A union to decide what the tail adds, and
+ *  again after it to measure spine coverage. */
 export function bayerKeySets(rows: DesignationRow[]): {
   reaches: (hip: number | null, hd: number | null) => boolean;
 } {
@@ -78,8 +77,6 @@ export interface Iv27aUnion {
   unparsed: number;
 }
 
-/** WGSN is the primary designation source; IV/27A supplies only the Bayer
- *  tail, and only for stars no WGSN Bayer row already reaches. */
 export function unionIv27aBayer(
   wgsnDesignations: DesignationRow[],
   crossIndex: CrossIndexRow[],

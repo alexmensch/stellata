@@ -102,9 +102,6 @@ export type BindingReviewVerdict = (typeof BINDING_REVIEW_VERDICTS)[number];
 
 export const BINDING_DISPOSITIONS_FILE = 'data/membership/binding-review-dispositions.tsv';
 export const BINDING_REVIEW_KEY_COLUMNS = ['tyc', 'hip', 'hd', 'gl'] as const;
-/** `keep_source_id` is the value the row ships: the frozen id, the derived id,
- *  any other candidate the queue row lists, or empty for none — an id no
- *  committed source proposed is refused at parse. */
 export const BINDING_DISPOSITION_COLUMNS = [
   ...BINDING_REVIEW_KEY_COLUMNS, 'frozen_source_id', 'derived_source_id',
   'keep_source_id', 'basis', 'evidence',
@@ -170,10 +167,6 @@ export const LEDGER_COLUMNS = ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reas
 export type AdditionLedgerRow = Record<(typeof LEDGER_COLUMNS)[number], string>;
 
 export const SPINE_CORRECTIONS_FILE = 'data/membership/spine-corrections.tsv';
-/** The spine row a correction names, on the same four cells
- *  `bindingReviewKey` uses. Unique across all 313,257 rows of the frozen
- *  spine, so a key matching none is a hard error rather than a silent
- *  no-op. */
 export const SPINE_CORRECTION_COLUMNS = [
   ...BINDING_REVIEW_KEY_COLUMNS, 'op', 'cell', 'value', 'evidence',
 ] as const;
@@ -181,9 +174,8 @@ export const SPINE_CORRECTION_COLUMNS = [
  *  duplicate and `value` is that row's key. */
 export const SPINE_CORRECTION_OPS = ['set', 'fold'] as const;
 export type SpineCorrectionOp = (typeof SPINE_CORRECTION_OPS)[number];
-/** The cells `set` may write. `tyc` alone: every other identifier the spine
- *  states is the label merge's, and a curated exception to a LABEL belongs in
- *  `classic_id_overrides.tsv` where the merge can see it. */
+/** `tyc` alone — a curated exception to a LABEL belongs in
+ *  `classic_id_overrides.tsv`, where the merge can see it. */
 export const SPINE_CORRECTION_CELLS = ['tyc'] as const;
 export type SpineCorrectionCell = (typeof SPINE_CORRECTION_CELLS)[number];
 export type SpineCorrectionRow = Record<
@@ -400,7 +392,6 @@ export interface MembershipCounts extends LabelMergeCounts {
   /** Spine rows a correction folds onto another, so they become no manifest
    *  row of their own. `spineRows` stays the file's length. */
   spineRowsFolded: number;
-  /** Spine cells a correction rewrites, per cell. */
   spineCellsCorrected: Record<SpineCorrectionCell, number>;
   /** Spine rows whose derived binding is empty, so no overlay entry can reach
    *  them and their labels are the spine's whole story. */
@@ -620,14 +611,9 @@ export function sortManifestRows(rows: readonly ManifestRow[]): ManifestRow[] {
 
 // ---- the spine side ----------------------------------------------------------
 
-/** Every designation a record already answers to, in the forms an addition's
- *  cells compare on. An addition may take none of them: a designation on two
- *  records names a granularity and keys no SID (docs/sid.md § 4.1), so
- *  attaching one another record holds would cost that record its key — the
- *  collision guard's rule, applied at admission.
- *
- *  Seeded from the spine after the label merge and grown as each addition is
- *  admitted, so two addition groups cannot take one designation either. */
+/** Seeded from the spine after the label merge and GROWN as each addition is
+ *  admitted, so two addition groups cannot take one designation either
+ *  (docs/sid.md § 4.1). */
 interface Claims {
   hd: Set<number>;
   hr: Set<number>;
@@ -648,12 +634,9 @@ function glDesignation(cell: string): string {
   return `gl:${cell.trim().replace(/\s+/g, '_')}`;
 }
 
-/** The designation of the record already answering to this GJ key, or null.
- *  Matched on the normalised key alone, letter included: `GJ 3131B` is the
- *  other component of `GJ 3131A`'s pair, a second star under a second
- *  designation, and blocking it would drop a record rather than protect a key.
- *  Whether the system is already represented at all is the cohort filter's
- *  question, and `spineKeys` answers it against the bare number there. */
+/** Matched on the normalised key alone, LETTER INCLUDED — never the bare
+ *  number, which is the cohort filter's question and `spineKeys`' to
+ *  answer. */
 function claimedGl(claims: Claims, key: string): string | null {
   return claims.gl.get(key) ?? null;
 }
@@ -705,10 +688,10 @@ function compareBinding(
   return derived.sourceId === frozen ? 'match' : 'differs';
 }
 
-/** Derive every spine row, then withhold any source two rows derive: a Gaia
- *  source on two records keys neither (docs/sid.md § 4.1), so the row whose
- *  frozen cell already held it keeps it and the other is queued as a
- *  `collision`. Where neither held it, both are. */
+/** Withholds any source two rows derive: a Gaia source on two records keys
+ *  neither (docs/sid.md § 4.1), so the row whose frozen cell already held it
+ *  keeps it and the other is queued as a `collision`. Where neither held it,
+ *  both are. */
 function deriveSpineBindings(
   spine: readonly SpineRow[], tables: PrimaryTables, idx: PrimaryIndex, evidence: BindingEvidence,
 ): SpineBinding[] {
@@ -920,10 +903,8 @@ function indexAdditions(tables: PrimaryTables): AdditionIndex {
   return { hrByHd, hipByHdIv27a, flamByHd, flamByHip };
 }
 
-/** Merge the three cohorts into one group per star: an HD item joins the HIP
- *  item Tycho-2's own `hip` column (or IV/27A) names for it, and items naming
- *  one raw source are one star — except two TYC items, which are two Tycho-2
- *  stars whatever the best-neighbour walk says, and take no side. */
+/** Two TYC items are two Tycho-2 stars whatever the best-neighbour walk
+ *  says, and take no side. */
 function groupAdditions(
   items: readonly AdditionItem[],
   tables: PrimaryTables,

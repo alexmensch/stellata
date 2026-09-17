@@ -32,11 +32,7 @@ export interface SimbadSourceIndex {
   byHip: Map<number, string | null>;
   byTyc: Map<string, string | null>;
   /** Keyed on SIMBAD's own `gj` through `normaliseGjKey` — `820 B` → `820B` —
-   *  and on its bare number. The pull keeps one GJ ident per object, so an
-   *  unresolved pair's object (EZ Aqr, holding GJ 866 A, B and C) is keyed
-   *  under whichever letter it kept; the bare key is what lets the record's
-   *  cell reach it, and the two-claimants guard is what stops a resolved
-   *  pair's components answering for each other. */
+   *  AND on its bare number. */
   byGj: Map<string, string | null>;
 }
 
@@ -181,16 +177,10 @@ export function bindingClassOf(via: readonly BindingSource[]): DerivedBindingCla
   return via.some((s) => s !== 'simbad') ? 'crosswalk_gated' : 'simbad_corroborated';
 }
 
-/** Weigh **every** ranked candidate through `resolveGaiaSourceId` — the same
- *  call `applyBindingGate` makes, so the label side and the record side cannot
- *  drift on what counts as a bad binding — and take the first that passes.
- *  Nothing passing is a derived refusal.
- *
- *  The losers are weighed too, not just the candidates ahead of the winner:
- *  `passingRunnersUp` reads `rejected` to decide whether a row's sources
- *  genuinely disagree, so a candidate left unweighed would count as passing on
- *  evidence never taken and queue a `contested` verdict the gate settles by
- *  itself. */
+/** Weighs **every** ranked candidate, the winner's losing rivals included,
+ *  through the same `resolveGaiaSourceId` call `applyBindingGate` makes — so
+ *  the label side and the record side cannot drift on what counts as a bad
+ *  binding. Nothing passing is a derived refusal. */
 export function deriveBinding(
   candidates: BindingCandidates,
   gate: RowGateEvidence,

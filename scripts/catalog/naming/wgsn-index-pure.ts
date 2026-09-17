@@ -44,8 +44,7 @@ const STRING_DESIGNATION_CLASSES: ReadonlySet<ProperDisposition> = new Set<Prope
   'discovery-designation', 'catalogue-designation', 'gould-designation',
 ]);
 
-/** Classes whose string never displays but must keep resolving a search.
- *  `latin-bayer` is here as well as in the structured Bayer tier: the tier
+/** `latin-bayer` is here as well as in the structured Bayer tier: the tier
  *  renders `p Eri`, and the spelling AT-HYG printed — `p Eridani`, the full
  *  genitive — is not derivable from it. */
 const ALIAS_ONLY_CLASSES: ReadonlySet<ProperDisposition> = new Set<ProperDisposition>([
@@ -102,12 +101,8 @@ export function parseProperDispositionsTsv(
   return out;
 }
 
-/** The record's own identifiers, most component-specific first. Hipparcos
- *  resolved close pairs as ONE star, so its number is the least
- *  component-specific of the three: NEC lists both p Eri rows against
- *  HIP 7751 and separates them only by HR (486 / 487) and HD
- *  (10360 / 10361), so a HIP-first join collapses p Eri A and B onto one
- *  record. */
+/** Most component-specific first: a HIP-first join collapses p Eri A and B
+ *  onto one record. */
 const KEY_ORDER = ['hr', 'hd', 'hip'] as const;
 type KeyKind = typeof KEY_ORDER[number];
 
@@ -172,17 +167,10 @@ export function pickNameRow(rows: readonly WgsnNameRow[]): WgsnNameRow {
 }
 
 /** Several Bayer rows can reach one record, and the choice is not
- *  arbitrary. In precedence order:
- *
- *  - a Greek glyph outranks the Latin overflow series. NEC hangs `y Cen B`
- *    on γ Cen's keys, and reading that as the star's designation renamed
- *    γ Cen to `y Cen` and collided it with the real y Cen (HIP 67819);
- *  - a row with no component cell names the STAR where a lettered one names
- *    a component of it, and γ Cen's keys carry all three (`γ Cen`,
- *    `γ Cen A`, `γ Cen B`) — the bare row is the star's designation;
- *  - a superscripted row is the component's own designation where the bare
- *    one names the pair (β Sco and β¹ Sco both key HIP 78820 — the star is
- *    β¹ Sco). */
+ *  arbitrary: a Greek glyph outranks the Latin overflow series, then a row
+ *  with no component cell names the STAR where a lettered one names a
+ *  component of it, then a superscripted row is the component's own
+ *  designation where the bare one names the pair. */
 export function pickBayerRow(
   rows: readonly WgsnDesignationRow[],
 ): WgsnDesignationRow {
@@ -260,8 +248,7 @@ export interface DispositionRouting {
   alias: string | null;
 }
 
-/** Route one spine `proper` by the class the disposition file assigns it.
- *  A proper the authority approves is not disposed at all and arrives
+/** A proper the authority approves is not disposed at all and arrives
  *  through the name tier instead. */
 export function routeDisposedProper(
   proper: string,
