@@ -120,8 +120,8 @@ export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
  * **Nothing here may reject.** `main.ts` loads this inside a `Promise.all`
  * alongside the catalog, so a rejection takes the whole app's boot with it,
  * which is never the proportionate answer for an optional layer. Absence is
- * a real 404 (`src/README.md` § Request routing); the parse guard below it
- * covers a present-but-truncated artifact.
+ * a real 404; the parse guard below it covers a present-but-truncated
+ * artifact.
  */
 export async function loadBoundaries(url: string): Promise<BoundaryArtifact | null> {
   let raw: unknown;

@@ -5,8 +5,7 @@ number of seconds, with the simulation clock under the take, and holds the
 render gate open for the length of it. It exists so a video of the model is
 a *take* — re-shoot it after a copy tweak, a palette change or a renderer
 change and get the same move back — rather than a mouse flight nobody can
-reproduce. The homepage's sight slots (`src/site/README.md` § Sights) are
-what it feeds.
+reproduce. The marketing site's sight slots are what it feeds.
 
 ## Files in this area
 

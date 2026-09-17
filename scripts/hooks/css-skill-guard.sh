@@ -3,9 +3,8 @@
 # Blocks edits to *.css until the cube-css skill has been invoked this
 # session. The skill carries the layout system the stylesheets are written
 # in — the cascade layers, the no-width-query mandate, the review gates —
-# and src/site/README.md warns that a README describing the house style
-# reads convincingly like coverage of the system underneath it, which is
-# what makes the load look redundant.
+# a README describing the house style reads convincingly like coverage of
+# the system underneath it, which is what makes the load look redundant.
 #
 # State scope: keyed on $PPID the way readme-guard is, for the same
 # reasons. $GUARD_SESSION overrides it for a harness that spawns a fresh
