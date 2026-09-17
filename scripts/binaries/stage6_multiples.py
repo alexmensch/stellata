@@ -58,10 +58,10 @@ from scripts.util.astronomy_constants import J2000_JD, DAYS_PER_JULIAN_YEAR
 CATALOG_SCENE_EPOCH = 2016.0
 
 
-# multiples.tsv column order. Read by Phase 3 (binary format v6) and
-# Phase 4 (statistical gates against curated SIMBAD). The order is
-# canonical — changes break downstream readers and must propagate
-# through ``build-binaries-expected.json`` + Phase 3 binary writer.
+# Canonical order — a change breaks every downstream reader
+# (``build-runtime-binaries.py``, the catalog build's companion
+# promotion, the SIMBAD statistical gates) and must propagate through
+# ``build-binaries-expected.json``.
 MULTIPLES_TSV_COLUMNS: tuple[str, ...] = (
     "system_id",
     "comp",
@@ -127,17 +127,11 @@ SPECT_VIA_VALUES: tuple[str, ...] = (
 
 
 # ``photometry_via`` provenance for the per-component absmag + ci
-# columns. ``athyg_own`` means the component's OWN AT-HYG row supplied
-# the photometry; ``athyg_system_inherited`` means the AT-HYG row that
-# answered is shared with the system primary (Hipparcos resolved the
-# system as one star; both component rows return the same AT-HYG row
-# from _athyg_row_for_component). ``gaia_photometry`` means no AT-HYG
-# row backed the component but its own Gaia DR3 5p row supplied G + BP/RP
-# + parallax, from which absmag (G→V) and ci (BP−RP→Teff→B−V) were
-# derived (see gaia_photometry_absmag_ci). ``none`` means no photometry
-# source at all — absmag and ci are empty. Companion promotion keys off
-# this tag: any non-``athyg_system_inherited`` value routes through the
-# "own photometry" path (observed absmag/ci, de-extincted downstream).
+# columns. ``athyg_system_inherited`` is the shared-row case — both
+# component rows come back from ``_athyg_row_for_component`` with the
+# system primary's AT-HYG row. Companion promotion keys off that: any
+# other value routes through the "own photometry" path (observed
+# absmag/ci, de-extincted downstream).
 PHOTOMETRY_VIA_OWN = "athyg_own"
 PHOTOMETRY_VIA_SYSTEM_INHERITED = "athyg_system_inherited"
 PHOTOMETRY_VIA_GAIA = "gaia_photometry"
@@ -164,9 +158,8 @@ A_VIA_VALUES: tuple[str, ...] = (
 
 # ``orbit_role`` values. ``primary`` / ``secondary`` are the two sides of
 # a WDS pair row; ``standalone`` is for a SIMBAD-known WDS component the
-# pair-walk didn't already emit (the 40 Eri B case: B is in BC, BD, BE
-# pair rows but every one is dropped at Stage 6's position gate because
-# neither B nor C has Gaia 5p astrometry).
+# pair-walk didn't already emit, because WDS enumerates it on no
+# decomposing pair (40 Eri D and E).
 ORBIT_ROLE_PRIMARY = "primary"
 ORBIT_ROLE_SECONDARY = "secondary"
 ORBIT_ROLE_STANDALONE = "standalone"
@@ -194,11 +187,11 @@ ASTROMETRY_VIA_SYSTEM_INHERITED = "system_inherited"
 ASTROMETRY_VIA_GAIA_5P = "gaia_5p"
 
 
-# orbit_via → numeric ``regime`` tag for parity with the legacy v5
-# column. 0 = no orbital information; 2 = full orbital elements (Gaia
-# NSS or ORB6 visual); 3 = spectroscopic-only. Phase 3's v6 binary
-# writer keys orbit-element population off this tag; finer provenance
-# lives in ``orbit_via`` alongside.
+# orbit_via → numeric ``regime`` tag, carried for parity with the legacy
+# v5 column. 0 = no orbital information; 2 = full orbital elements (Gaia
+# NSS or ORB6 visual); 3 = no measured visual orbit (spectroscopic fit or
+# MSC-compiled). Finer provenance lives in ``orbit_via`` alongside, which
+# is what the runtime writer and the count snapshots read.
 ORBIT_VIA_TO_REGIME: dict[str, int] = {
     "gaia_nss": 2,
     "orb6": 2,

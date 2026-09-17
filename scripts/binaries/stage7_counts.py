@@ -355,10 +355,9 @@ GAIA_RESOLVE_TAGS: tuple[str, ...] = (
     "orb6_hip", "athyg_gaia_native", "simbad_xid",
 )
 
-# Optical cascade tiers that REJECT a candidate pair. Per ``orbit_kept``
-# survives in any case (orbital evidence overrides the cascade), the
-# rate is over the union of cascade decisions, denominator =
-# ``decomposing_pairs``.
+# ``orbit_kept`` survives in any case (orbital evidence overrides the
+# cascade), so the rate runs over the union of cascade decisions with
+# ``decomposing_pairs`` as the denominator.
 OPTICAL_REJECT_TAGS: tuple[str, ...] = tuple(
     tag for tag in OPTICAL_VIA_VALUES if tag.endswith("_rejected")
 )

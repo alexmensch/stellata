@@ -23,8 +23,8 @@ OUT = ROOT / "data" / "simbad" / "simbad_sample.tsv"
 
 # Reproducibility seed. Bumping this regenerates every row; treat it as a
 # breaking change to the validation corpus (downstream pinned hashes
-# rebaseline). The numeric form is the bead-spec convention `YYYYMMDD`
-# of the date the corpus was first cut.
+# rebaseline). The numeric form is `YYYYMMDD` of the date the corpus was
+# first cut.
 SEED = 20260515
 
 # Bin definitions — (min_V_inclusive, max_V_exclusive, target_count, mod_K).
@@ -108,7 +108,6 @@ IDENT_SCHEMA: dict[str, type | tuple[type, ...]] = {
     "id": str,
 }
 
-# Output column order (matches the TSV-columns block in the file docstring).
 TSV_COLUMNS = [
     "simbad_oid",
     "simbad_main_id",

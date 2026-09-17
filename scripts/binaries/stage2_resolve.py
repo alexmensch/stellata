@@ -761,10 +761,10 @@ def _bind_ccdm_hip(
 # ─── Position-match path ─────────────────────────────────────────────
 
 
-# Position-match tolerance for the AT-HYG position branch. 2″ matches
-# the bead's stated bar and is well below the typical AT-HYG inter-
-# source separation away from the densest clusters. The match runs
-# with ``target_epoch=WDS_PRECISE_COORD_EPOCH`` so high-PM rows whose
+# Position-match tolerance for the AT-HYG position branch. 2″ is well
+# below the typical AT-HYG inter-source separation away from the densest
+# clusters. The match runs with
+# ``target_epoch=WDS_PRECISE_COORD_EPOCH`` so high-PM rows whose
 # J1991.25 stored ra/dec drift past 2″ at J2000 (α Cen, Sirius) still
 # resolve through this tier.
 ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC = 2.0
@@ -1596,16 +1596,10 @@ BINDING_INTEGRITY_COUNT_KEYS: tuple[str, ...] = (
 ARBITRATION_ABS_TOLERANCE_ARCSEC = 2.0
 ARBITRATION_RUNNERUP_FACTOR = 0.5
 
-# Photocentre-blend floor. A source→letters conflict whose contested source
-# is bound to both sides of a *measured* pair is a Gaia blend — one
-# photocentre for two components it could not resolve. Enforcement unbinds a
-# blend loser only when geometry places the source essentially ON one
-# component (winner error within this floor); a larger error means the
-# source is the blend centroid sitting *between* the components, and
-# arbitration cannot honestly assign it to either — the conflict is skipped
-# and the blended-away component is re-homed later by the slot-minting
-# machinery (Acrux/Castor shape). Tighter than the general tolerance because
-# a genuine coincidence is sub-arcsecond, not merely "not far".
+# Photocentre-blend floor — the winner-error bound inside which a blend
+# conflict is enforced rather than skipped. Tighter than the general
+# arbitration tolerance because a genuine coincidence is sub-arcsecond,
+# not merely "not far".
 ARBITRATION_BLEND_FLOOR_ARCSEC = 1.0
 
 
@@ -1650,7 +1644,8 @@ class _SystemContext:
     token_sources: dict[str, set[int]] = field(default_factory=dict)
     token_mag: dict[str, float] = field(default_factory=dict)
     # Two sides of every sub-resolution (ρ = 0) pair — the blend-mate
-    # exemption set. Measured-separation pairs are deliberately absent.
+    # exemption set. ρ = 0 only: two letters at a measured ρ cannot be
+    # one source, so those pairs take no exemption.
     blend_pairs: list[tuple[str, str]] = field(default_factory=list)
     # Sources bound to BOTH sides of a measured (ρ > 0) pair — Gaia blends
     # (one photocentre for two components it could not resolve). A
