@@ -6,8 +6,8 @@ import type { DecodedView, ViewPose } from '../../util/url-state';
 
 export type EaseName = 'smooth' | 'linear';
 
-/** Quintic smootherstep: zero velocity AND zero acceleration at both ends,
- *  the shape `../../camera/arrival/README.md` § Profile lands arrivals on. */
+/** Quintic smootherstep — the shape `../../camera/arrival/README.md`
+ *  § Profile lands arrivals on. */
 export function easeAt(name: EaseName, u: number): number {
   const t = Math.min(1, Math.max(0, u));
   if (name === 'linear') return t;
@@ -31,12 +31,7 @@ export function capturePose(pose: ViewPose): CapturePose {
 }
 
 /** Move a focal-relative pose onto where the focal object currently sits.
- *
- *  A blob carrying a hard focus states `cam` / `tgt` against an origin that is
- *  the focal object itself, so both are offsets FROM it rather than fixed
- *  points of the local frame — and an origin shift leaves an offset alone,
- *  which is what lets a take survive a mid-take recentre without migrating
- *  anything. See README.md § The take rides the focal object. */
+ *  README.md § The take rides the focal object. */
 export function anchorPose(
   pose: CapturePose, anchor: THREE.Vector3, out: CapturePose,
 ): CapturePose {
@@ -52,8 +47,7 @@ const partial = new THREE.Quaternion();
 const dirA = new THREE.Vector3();
 const dirB = new THREE.Vector3();
 
-/** Rotate `a` toward `b` by fraction `s` along the great circle joining
- *  them. Both must be unit; antipodal inputs resolve through
+/** Both inputs must be unit. An antipodal pair resolves through
  *  `setFromUnitVectors`'s own perpendicular-axis pick. */
 export function slerpUnit(
   a: THREE.Vector3, b: THREE.Vector3, s: number, out: THREE.Vector3,
@@ -63,12 +57,8 @@ export function slerpUnit(
   return out.copy(a).applyQuaternion(partial).normalize();
 }
 
-/** Interpolate along an ARC at a GEOMETRIC radius, not along the chord.
- *  A take that closes from 30 pc to 0.9 pc covers 1.5 decades: linear
- *  distance spends the whole move in the far field and then slams, because
- *  angular size runs as 1/d (`../../camera/arrival/README.md`
- *  § The angular-arrival problem). Equal time per decade is equal time per
- *  octave of apparent size. FOV rides the same rule, being angular too.
+/** Interpolate along an ARC at a GEOMETRIC radius, not along the chord, FOV
+ *  included — README.md § The move is an arc at a geometric radius.
  *
  *  A radius of zero has no direction to slerp — the OBSERVE pose, parked at
  *  the focal origin — so those fall back to a straight chord. */
@@ -104,13 +94,7 @@ function offsetKey(view: DecodedView): string {
 }
 
 /** Why these two blobs cannot be interpolated, or null when they can.
- *
- *  `cam` and `tgt` are coordinates in the floating local frame, whose origin
- *  is the focused object (`../../frame/README.md`). Two blobs anchored on
- *  different objects therefore describe their poses in different frames and
- *  a component-wise blend between them means nothing — it is not a near-miss
- *  that reads as slightly wrong, it is a take pointing somewhere neither blob
- *  asked for. */
+ *  README.md § Both blobs must be anchored on the same object. */
 export function frameMismatch(start: DecodedView, end: DecodedView): string | null {
   if (start.mode === 'observe' || end.mode === 'observe') {
     return 'OBSERVE-mode blob: the pose there is an orientation, not a camera '
@@ -145,11 +129,8 @@ export interface TakeFrame {
   s: number;
 }
 
-/** Where a take stands this frame, from wall-clock elapsed since it began.
- *  Deriving the phase from elapsed time rather than advancing a counter is
- *  what makes a dropped frame cost that frame alone: the next one reads the
- *  clock and lands where it should be, instead of running the whole take
- *  late by the stall. */
+/** Where a take stands this frame, from wall-clock elapsed since it began —
+ *  never an advancing counter, or a stall runs the whole take late. */
 export function takeFrameAt(
   shape: TakeShape, elapsedMs: number, ease: EaseName,
 ): TakeFrame {
@@ -180,10 +161,8 @@ export interface ClockRequest {
   currentT: number;
 }
 
-/** An end time is a destination, so it SOLVES the rate: the clock runs at
- *  whatever multiple lands on it as the camera lands on the end pose, and is
- *  pinned there for the rest of the take. With no end time the requested
- *  rate runs throughout — 0 for a frozen sky. */
+/** An end time is a destination, so it SOLVES the rate — README.md
+ *  § What the clock does. */
 export function planClock(request: ClockRequest): ClockPlan {
   const { startT, endT, rate, seconds, currentT } = request;
   if (endT === null) return { startT, moveRate: rate, idleRate: rate, endT: null };

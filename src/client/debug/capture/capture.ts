@@ -100,9 +100,7 @@ export function runCapture(
 
   cancelActive?.();
 
-  // A blob asking for navigate says nothing about OBSERVE, so a session
-  // already in it would stay there and re-pin the look target under every
-  // pose this take writes. The take opens from one known mode either way.
+  // README.md § Calling it — a take opens in navigate whatever preceded it.
   if (stellata.focus.getCameraMode() === 'observe') {
     stellata.observe.setMode('navigate', { animate: false });
   }
@@ -132,20 +130,18 @@ export function runCapture(
   let closed = false;
   let finish = () => {};
   const done = new Promise<void>((resolve) => {
-    // Frames settle the applied start view first: a focus carried by a sid
-    // whose domain attaches late recentres the floating origin when it
-    // lands, which moves every local coordinate the take interpolates.
+    // README.md § What a take holds for its duration, last paragraph.
     let settleFrames = 2;
     let takeStartMs = 0;
     let phase: TakePhase = 'delay';
 
-    // Soft kinds leave the origin where it was, so their blob's coordinates
-    // are not offsets from anything and ride nothing.
+    // A zero anchor is a soft or absent focus — README.md § The take rides
+    // the focal object.
     const focalAnchor = (): THREE.Vector3 => {
       const focal = stellata.focus.getFocusedHardTarget();
-      const live = focal !== null
+      const resolved = focal !== null
         && stellata.focusables[focal.kind].localPositionInto(focal.idx, anchor);
-      return live ? anchor : anchor.set(0, 0, 0);
+      return resolved ? anchor : anchor.set(0, 0, 0);
     };
 
     const writePose = (pose: CapturePose) => {
