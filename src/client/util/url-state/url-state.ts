@@ -92,9 +92,8 @@ function defaultCamForMode(mode: 'navigate' | 'observe' | undefined): [number, n
   return mode === 'observe' ? OBSERVE_CAM_LOCAL : DEFAULT_CAM;
 }
 
-/** Every pose slot a blob can carry, with the omitted ones filled from the
- *  same defaults `applyDecodedView` restores — so a consumer interpolating
- *  two decoded views never respells one. */
+/** Every pose slot a blob can carry, omitted ones filled.
+ *  README.md, the applyFocusTarget bullet. */
 export interface ViewPose {
   cam: [number, number, number];
   tgt: [number, number, number];

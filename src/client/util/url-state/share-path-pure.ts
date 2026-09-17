@@ -7,6 +7,9 @@ const SHARE_PATH_RE = /^\/v\/([A-Za-z0-9_-]+)\/?$/;
 // Legacy query param `?v=<blob>`, decoded forever (README § Transport).
 export const SHARE_PARAM = 'v';
 
+// Resolves a pasted relative path and is never read back, so any host parses.
+const SHARE_BASE = 'https://stellata.xyz';
+
 export interface ShareBlobSource {
   blob: string | null;
   // The blob arrived in the legacy `?v=` query form — applyFromUrl uses
@@ -41,7 +44,13 @@ export function shareBlobFrom(input: string): string | null {
   const text = input.trim();
   if (text === '') return null;
   if (text.includes('/')) {
-    const url = new URL(text, 'https://stellata.xyz');
+    // `new URL` raises on a scheme with no host; that is junk, not an error.
+    let url: URL;
+    try {
+      url = new URL(text, SHARE_BASE);
+    } catch {
+      return null;
+    }
     return pickShareBlob(url.pathname, url.search).blob;
   }
   const afterParam = text.includes('=') ? text.slice(text.lastIndexOf('=') + 1) : text;

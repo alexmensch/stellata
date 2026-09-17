@@ -80,4 +80,12 @@ describe('shareBlobFrom', () => {
       expect(shareBlobFrom(input)).toBeNull();
     },
   );
+
+  // These reach `new URL`, which throws on a scheme with no host. A console
+  // helper that answers null for junk has to answer null for this junk too.
+  it.each(['//', 'https://', 'https://[', 'http:// /v/AQAA/'])(
+    'answers null rather than throwing for %s', (input) => {
+      expect(shareBlobFrom(input)).toBeNull();
+    },
+  );
 });

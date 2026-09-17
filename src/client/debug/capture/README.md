@@ -40,6 +40,12 @@ await debug.capture({
 | `delay` | `0` | seconds holding the start view before the move — room to start the recorder. |
 | `hold` | `0` | seconds holding the end view after arriving, so the recording has a tail. |
 
+**Shoot from a shared view, never a hand-typed one.** A blob naming a focus
+and no camera has no pose for the take to read, so it opens at the canonical
+30 pc rather than at the park pose the same link would restore
+(`../../util/url-state/README.md`, the `applyFocusTarget` bullet). Every blob
+the app itself produces carries its camera.
+
 The return value is a promise that resolves when the take ends, with a
 `cancel()` on it that stops it where it stands. Starting a take cancels any
 take already running. One console line goes out at each end of a take — the

@@ -157,6 +157,14 @@ bit order, so mode isn't known until the field loop completes).
   because a URL restore must not surface as a 2 s glide on page load. With
   one, `setOrbitTarget` rebuilds the frame and skips the park the lines below
   would overwrite anyway, so the explicit camera wins.
+  **`viewPose` cannot answer for the park leg, and that is the one place the
+  two disagree.** Its fills are the encoder's elision defaults, which is what
+  a consumer blending two blobs needs; the park pose is per-object and comes
+  from the kind's provider at apply time, so a pose-less focused blob restores
+  somewhere `viewPose` reports as `[0,0,30]`. Only a hand-typed share is
+  pose-less — the encoder emits `cam` for any park it did not elide against —
+  and the consumer to watch is `debug.capture`, which would open such a take
+  30 pc out rather than where the link lands.
 - Camera changes are tracked via the `'frame'` event with the scale-free
   comparison of § What counts as a camera move (no per-frame allocations)
   feeding a 1 s debounced writer. The comparison covers position, target,
