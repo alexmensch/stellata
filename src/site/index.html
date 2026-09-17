@@ -288,9 +288,7 @@
         <div class="[ cluster ] [ wrapper ]" data-state="repel">
           <a class="wordmark" href="/">Stellata</a>
           <nav class="cluster" aria-label="Elsewhere">
-            <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">Science</a>
-            <a href="https://doi.org/10.5281/zenodo.22392528">Cite</a>
-            <a href="/app">Open the model&nbsp;→</a>
+            <a href="/app">Launch the model&nbsp;→</a>
           </nav>
         </div>
       </header>
@@ -310,19 +308,19 @@
         </div>
         <div class="hero-copy">
           <div class="[ flow ] [ wrapper ]">
-            <span class="label">Observational 3D model of the local universe</span>
-            <h1 id="hero-heading">A 3D model of the universe with nothing invented in it.</h1>
+            <h1 id="hero-heading">A model of the universe anchored in science</h1>
             <p class="lead">
-              Around 390,000 real objects — stars, planets, moons, the dust
-              between them, the Milky Way, the nearest galaxies — at the
-              positions astronomers have measured, drawn at the colour and
-              brightness your eye would see from wherever you are standing.
+              Explore %VITE_STAR_COUNT% astronomical objects in 3D, all positioned
+              and drawn according to the latest astrometric data.
+            </p>
+            <p class="lead">
+              True color, real-time HDR rendering simulates your eyes' perception
+              from every vantage.
             </p>
             <div class="cluster">
-              <a class="pill" data-primary href="/app">Open the model</a>
+              <a class="pill" data-primary href="/app">Launch Stellata</a>
               <span class="aside">
-                Free, no account, no install.
-                <a href="#requirements">Needs WebGPU and a desktop</a>.
+                Runs in your browser, no installation required
               </span>
             </div>
           </div>
@@ -350,215 +348,145 @@
         </div>
         <div class="readout-cell">
           <dt class="label">Clock range</dt>
-          <dd class="readout-value">3000 BC – 3000 AD</dd>
+          <dd class="readout-value">3000 BCE – 3000 CE</dd>
         </div>
       </dl>
     </div>
 
     <main id="main">
-      <section class="[ section ] [ region ]" id="instrument">
-        <div class="[ flow ] [ wrapper ]">
-          <div class="[ section-head ] [ flow ]">
-            <span class="label" data-accent>What it is</span>
-            <h2>Three things this is.</h2>
-          </div>
-
-          <div class="[ claims ] [ flow ]">
-            <article class="[ claim ] [ flow ]">
-              <h3>An instrument, built for people who already know the sky.</h3>
-              <p>
-                The controls are the ones an observer expects. Limiting
-                magnitude derived from an aperture rather than a taste
-                slider. Exposure in stops, so a change of one halves or
-                doubles the light. Star sizes set by plate scale. An
-                attitude indicator reading the camera against the ecliptic,
-                equatorial or galactic frame, or against the focused
-                object's own orbital plane. Coordinate spheres in all three
-                frames with edge-labelled gridlines. The IAU constellation
-                boundaries as Delporte drew them in 1930. A chart mode in
-                the manner of <i>Sky Atlas 2000.0</i>, with Bayer and
-                Flamsteed designations, double-star wings and variable-star
-                rings.
-              </p>
-              <p>
-                Every view — camera pose, clock, filters, exposure, mode —
-                packs into the address bar, so a view you found is a link
-                you can put in a paper, an email or a lecture and know it
-                comes back identically.
-              </p>
-            </article>
-
-            <article class="[ claim ] [ flow ]">
-              <h3>Every object came out of a published catalogue, and says which.</h3>
-              <p>
-                Positions, distances, proper motions, colours, temperatures,
-                radii, pulsation periods, orbital elements, dust densities:
-                each is read from published data, and the source is named in
-                the application and in the repository. Star radii are
-                computed from catalogued absolute magnitude and spectral
-                class through Stefan–Boltzmann rather than assigned by eye.
-                Variable stars pulse on their catalogued periods. Close
-                binaries orbit on their measured elements. Every star is
-                propagated from the epoch its position was measured at to
-                the date on the clock, along its measured motion through
-                space.
-              </p>
-              <p>
-                Theoretical predictions and conjectured structures are
-                excluded on purpose. There is no procedural filler and no
-                painted backdrop, which is also why the model has an edge:
-                it currently reaches 6.5 million light years, and stops
-                where the measurements do.
-              </p>
-            </article>
-
-            <article class="[ claim ] [ flow ]">
-              <h3>What your eye would see, from any point in the model.</h3>
-              <p>
-                There is no false colour anywhere in Stellata — no infrared,
-                no radio, no narrowband palette, none of the composites that
-                make published astronomy imagery beautiful and misleading
-                about what is actually visible. Colour comes from measured
-                temperature and photometry through the human visual
-                response.
-              </p>
-              <p>
-                Brightness is handled the same way. Apparent magnitude is
-                recomputed for the camera's real position every frame, so
-                moving changes what you can see, and the light is
-                attenuated and reddened by raymarching the actual
-                three-dimensional dust map between camera and star. One
-                global tone-map turns that into pixels, calibrated so a
-                star at the naked-eye threshold sits at the threshold of
-                your display. There is a calibration screen in the
-                application for setting your monitor's black point, because
-                on an uncalibrated screen in a lit room none of it means
-                anything.
-              </p>
-            </article>
-          </div>
-
-          <figure class="[ plate ] [ flow ]">
-            <div class="holder">
-              <span class="label">Plate 02 — placeholder</span>
-              <b>Extinction structure, from a few kiloparsecs out.</b>
-              The strongest single demonstration that the dust is a real
-              volume rather than a texture. Show all stars, pull the camera
-              to roughly 3 kpc from Sol and orbit until the filaments and
-              clear windows of the local interstellar medium paint
-              themselves across the stellar density. Save as
-              <code>public/site/dust.jpg</code>.
-            </div>
-            <figcaption class="plate-caption">
-              Stars behind dense lanes dim and redden; stars in clear
-              windows shine through. The pattern is the local interstellar
-              medium, traced from a published 3D dust map, not a stylistic
-              overlay.
-            </figcaption>
-          </figure>
-        </div>
-      </section>
-
       <section class="[ section ] [ region ]" id="sights">
         <div class="[ flow ] [ wrapper ]">
           <div class="[ section-head ] [ flow ]">
-            <span class="label" data-accent>Where to go first</span>
-            <h2>Things worth going to look at.</h2>
+            <span class="label" data-accent>Start exploring</span>
+            <h2>Witness the scale of the universe in motion</h2>
           </div>
-          <p class="[ measure dim ]">
-            Each of these exercises something the renderer does that a
-            still image cannot show. Every picture below is a link into the
-            model at that view.
-          </p>
 
           <div class="[ sights ] [ flow ]">
             <article class="[ sight ] [ switcher ]">
-              <a class="sight-media" href="/app/v/BICAAaMD/">
-                <div class="holder">
-                  <span class="label">Capture</span>
-                  <b>Betelgeuse and Rigel, discs resolved.</b>
-                  Approach until both show as discs rather than points.
-                  <code>public/site/supergiants.jpg</code>
-                </div>
-              </a>
-              <div class="[ sight-copy ] [ flow ]">
-                <h3>Two supergiants, two different sizes</h3>
-                <p>
-                  Both in Orion, both supergiants. Rigel is intrinsically
-                  brighter but hotter, so Stefan–Boltzmann gives it the
-                  smaller radius — the <i>L</i> = <i>R</i>²<i>T</i>⁴
-                  trade-off, visible as two discs of different size.
-                  Approach slowly; they fill more of the view than you
-                  expect.
-                </p>
-                <p class="sight-go"><a href="/app/v/BICAAaMD/">Fly there →</a></p>
-              </div>
-            </article>
-
-            <article class="[ sight ] [ switcher ]">
-              <a class="sight-media" href="/app/v/BICAAcdG/">
-                <div class="holder">
-                  <span class="label">Capture</span>
-                  <b>Albireo, seen from off the Earth–Albireo line.</b>
-                  Move until the two stars separate in depth.
-                  <code>public/site/albireo.jpg</code>
-                </div>
+              <a class="sight-media" href="/app/v/BIWAgwQHnjbNvnolMj9bXdi-B7ToFL8ABxo--KRMP8dGp4MDAA/">
+                <video
+                  src="/site/ex-albireo.mp4"
+                  poster="/site/ex-albireo.jpg"
+                  aria-label="Albireo and Albireo B revealed as an optical
+                  double as the camera moves from Sol's sightline"
+                  width="1920"
+                  height="1080"
+                  autoplay
+                  muted
+                  playsinline
+                ></video>
+                <!--
+                await debug.capture({
+                  start: 'BIWAgwQHh94lwe8XxkHStmPBByyDGb8kt0c-N7BGP8dGp4MDAA',
+                  end:   'BIWAgwQHzzTNvvcnMj81e9i-B5XuFL_VLxo-xZ5MP8dGp4MDAA',
+                  seconds: 5,
+                });
+                -->
               </a>
               <div class="[ sight-copy ] [ flow ]">
                 <h3>A famous double that isn't one</h3>
                 <p>
-                  Albireo is the gold-and-blue colour pair everyone points a
-                  telescope at. In three dimensions it separates: 111 pc and
-                  122 pc, about 35 light years apart along the line of
-                  sight, far too distant to be bound. The colour contrast is
-                  real, the pairing is a chance alignment — the modern
-                  post-Gaia consensus, and impossible to see from Earth.
+                  Albireo appears as a gold-and-blue coloured binary pair
+                  visible through a small telescope. Seen in 3D, this optical
+                  double splits into two stars separated by over 30 light
+                  years, far too distant to be bound in an orbit. This
+                  beautiful colour pairing is a chance alignment seen from
+                  Earth, and the true separation can only be seen in simulation.
                 </p>
-                <p class="sight-go"><a href="/app/v/BICAAcdG/">Fly there →</a></p>
+                <p class="sight-go"><a href="/app/v/BIWAgwQHnjbNvnolMj9bXdi-B7ToFL8ABxo--KRMP8dGp4MDAA/">Explore the separation →</a></p>
               </div>
             </article>
 
             <article class="[ sight ] [ switcher ]">
-              <a class="sight-media" href="/app/v/BICAAYIX/">
-                <div class="holder">
-                  <span class="label">Capture — short silent loop</span>
-                  <b>δ Cephei pulsating, clock accelerated.</b>
-                  A few seconds of the disc swelling and reddening on its
-                  catalogued period.
-                  <code>public/site/variables.mp4</code>
-                </div>
+              <a class="sight-media" href="/app/v/BIWAgQQH0ep7NsBvG7cmgpQ2B6hbZr9fhjG-F_TMPrgEAA/">
+                <video
+                  src="/site/ex-variable.mp4"
+                  poster="/site/ex-variable.jpg"
+                  aria-label="l Carinae pulsating over its 35.6d period"
+                  width="1920"
+                  height="1080"
+                  autoplay
+                  muted
+                  playsinline
+                ></video>
+                <!--
+                await debug.capture({
+                  start: 'BIWAgQUH0ep7NsBvG7cmgpQ2B6hbZr9fhjG-F_TMPrgEke3M-9-22kEA',
+                  seconds: 5,
+                  startTime: '2026-9-17 16:40:25',
+                  endTime: '2026-10-23 16:40:25',
+                });
+                -->
               </a>
               <div class="[ sight-copy ] [ flow ]">
-                <h3>Stars that pulse on their own measured periods</h3>
+                <h3>Watch variable stars pulse on their measured periods</h3>
                 <p>
-                  δ Cephei, Mira, η Aquilae. Open the time scrubber and
-                  accelerate the clock: each swings in brightness, disc
-                  radius and colour together, on the period the variable-star
-                  catalogue records for it.
+                  δ Cephei, Mira, η Aquilae, l Carinae, and R Lyrae are among
+                  thousands of variable stars in the catalogue. Use the time
+                  scrubber to accelerate the clock: watch them change in
+                  brightness, disc radius and colour together, all based on
+                  their observational records and colour-temperature index.
                 </p>
-                <p class="sight-go"><a href="/app/v/BICAAYIX/">Fly there →</a></p>
+                <p class="sight-go"><a href="/app/v/BIWAgQQH0ep7NsBvG7cmgpQ2B6hbZr9fhjG-F_TMPrgEAA/">Accelerate
+                time →</a></p>
               </div>
             </article>
 
             <article class="[ sight ] [ switcher ]">
               <a class="sight-media" href="/app/v/BICAAWo/">
-                <div class="holder">
-                  <span class="label">Capture</span>
-                  <b>Orion's figure, deformed.</b>
-                  Land on Rigel, then fly a few tens of parsecs off the
-                  Earth line with the constellation figure drawn.
-                  <code>public/site/orion.jpg</code>
-                </div>
+                <video
+                  src="/site/ex-orion.mp4"
+                  poster="/site/ex-orion.jpg"
+                  aria-label="Orion's constellation lines deforming as the
+                    camera moves"
+                  width="1920"
+                  height="1080"
+                  autoplay
+                  muted
+                  playsinline
+                ></video>
+                <!--
+                await debug.capture({
+                  start: 'BIWEgAQHtKHgvT5cBL807v-9BzVEVb8u8DE9OiwNPzsB',
+                  end: 'BIWEgAQHz7_JQIDAGMKDz_FAB7zmU79w3tK8XX4PPzsB',
+                  seconds: 5
+                });
+                -->
               </a>
               <div class="[ sight-copy ] [ flow ]">
-                <h3>Orion, from thirty parsecs off</h3>
+                <h3>See what Orion looks like 100 light-years away</h3>
                 <p>
-                  The constellation lines are drawn from Earth's viewpoint.
-                  Move a few tens of parsecs and the figure deforms
-                  asymmetrically, because its stars were never at the same
-                  distance. This is the moment it stops being a planetarium.
+                  All constellation lines are drawn from Earth's viewpoint,
+                  and these shapes deform quickly with a retreat of just a
+                  few light-years. Watch constellation shapes shift to reveal
+                  the vast differences in distances and brightnesses that make
+                  up the asterisms we're familiar with in our night sky.
                 </p>
-                <p class="sight-go"><a href="/app/v/BICAAWo/">Fly there →</a></p>
+                <p class="sight-go"><a href="/app/v/BICAAWo/">Travel between stars →</a></p>
+              </div>
+            </article>
+
+            <article class="[ sight ] [ switcher ]">
+              <a class="sight-media" href="/app/v/BIWAgQQHzLhPtz9TCDfyFQe4BxlaRb8pNvY-ItrVPqMDAQ/">
+                <img
+                  src="/site/ex-betelgeuse.jpg"
+                  alt="Betelgeuse resolved as a massive disc, dwarfing the
+                  size of Sol at the same viewing distance"
+                  width="2400"
+                  height="1350"
+                />
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>Feel dwarfed by the supergiants</h3>
+                <p>
+                  Betelgeuse marks one of Orion's shoulders, a star that is
+                  nearly 600 times the diameter of Earth's sun, Sol. Seen from
+                  the equivalent of Jupiter's orbit, a supergiant like
+                  Betelgeuse fills the entire screen compared to Sol's small,
+                  distant disc. If Sol were the same size, every planet out to
+                  Mars would be consumed by the star.
+                </p>
+                <p class="sight-go"><a href="/app/v/BIWAgQQHzLhPtz9TCDfyFQe4BxlaRb8pNvY-ItrVPqMDAQ/">Get up close →</a></p>
               </div>
             </article>
 
@@ -681,6 +609,109 @@
               </div>
             </article>
           </div>
+        </div>
+      </section>
+
+      <section class="[ section ] [ region ]" id="instrument">
+        <div class="[ flow ] [ wrapper ]">
+          <div class="[ section-head ] [ flow ]">
+            <span class="label" data-accent>What it is</span>
+            <h2>Three things this is.</h2>
+          </div>
+
+          <div class="[ claims ] [ flow ]">
+            <article class="[ claim ] [ flow ]">
+              <h3>An instrument, built for people who already know the sky.</h3>
+              <p>
+                The controls are the ones an observer expects. Limiting
+                magnitude derived from an aperture rather than a taste
+                slider. Exposure in stops, so a change of one halves or
+                doubles the light. Star sizes set by plate scale. An
+                attitude indicator reading the camera against the ecliptic,
+                equatorial or galactic frame, or against the focused
+                object's own orbital plane. Coordinate spheres in all three
+                frames with edge-labelled gridlines. The IAU constellation
+                boundaries as Delporte drew them in 1930. A chart mode in
+                the manner of <i>Sky Atlas 2000.0</i>, with Bayer and
+                Flamsteed designations, double-star wings and variable-star
+                rings.
+              </p>
+              <p>
+                Every view — camera pose, clock, filters, exposure, mode —
+                packs into the address bar, so a view you found is a link
+                you can put in a paper, an email or a lecture and know it
+                comes back identically.
+              </p>
+            </article>
+
+            <article class="[ claim ] [ flow ]">
+              <h3>Every object came out of a published catalogue, and says which.</h3>
+              <p>
+                Positions, distances, proper motions, colours, temperatures,
+                radii, pulsation periods, orbital elements, dust densities:
+                each is read from published data, and the source is named in
+                the application and in the repository. Star radii are
+                computed from catalogued absolute magnitude and spectral
+                class through Stefan–Boltzmann rather than assigned by eye.
+                Variable stars pulse on their catalogued periods. Close
+                binaries orbit on their measured elements. Every star is
+                propagated from the epoch its position was measured at to
+                the date on the clock, along its measured motion through
+                space.
+              </p>
+              <p>
+                Theoretical predictions and conjectured structures are
+                excluded on purpose. There is no procedural filler and no
+                painted backdrop, which is also why the model has an edge:
+                it currently reaches 6.5 million light years, and stops
+                where the measurements do.
+              </p>
+            </article>
+
+            <article class="[ claim ] [ flow ]">
+              <h3>What your eye would see, from any point in the model.</h3>
+              <p>
+                There is no false colour anywhere in Stellata — no infrared,
+                no radio, no narrowband palette, none of the composites that
+                make published astronomy imagery beautiful and misleading
+                about what is actually visible. Colour comes from measured
+                temperature and photometry through the human visual
+                response.
+              </p>
+              <p>
+                Brightness is handled the same way. Apparent magnitude is
+                recomputed for the camera's real position every frame, so
+                moving changes what you can see, and the light is
+                attenuated and reddened by raymarching the actual
+                three-dimensional dust map between camera and star. One
+                global tone-map turns that into pixels, calibrated so a
+                star at the naked-eye threshold sits at the threshold of
+                your display. There is a calibration screen in the
+                application for setting your monitor's black point, because
+                on an uncalibrated screen in a lit room none of it means
+                anything.
+              </p>
+            </article>
+          </div>
+
+          <figure class="[ plate ] [ flow ]">
+            <div class="holder">
+              <span class="label">Plate 02 — placeholder</span>
+              <b>Extinction structure, from a few kiloparsecs out.</b>
+              The strongest single demonstration that the dust is a real
+              volume rather than a texture. Show all stars, pull the camera
+              to roughly 3 kpc from Sol and orbit until the filaments and
+              clear windows of the local interstellar medium paint
+              themselves across the stellar density. Save as
+              <code>public/site/dust.jpg</code>.
+            </div>
+            <figcaption class="plate-caption">
+              Stars behind dense lanes dim and redden; stars in clear
+              windows shine through. The pattern is the local interstellar
+              medium, traced from a published 3D dust map, not a stylistic
+              overlay.
+            </figcaption>
+          </figure>
         </div>
       </section>
 
