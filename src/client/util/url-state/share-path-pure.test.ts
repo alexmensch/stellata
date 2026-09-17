@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { buildSharePath, parseSharePath, pickShareBlob } from './share-path-pure';
+import {
+  buildSharePath, parseSharePath, pickShareBlob, shareBlobFrom,
+} from './share-path-pure';
 
 describe('buildSharePath', () => {
   it('wraps the blob in /v/<blob>/ with a trailing slash', () => {
@@ -59,4 +61,23 @@ describe('pickShareBlob', () => {
     expect(pickShareBlob('/garbage', '')).toEqual({ blob: null, legacyQueryForm: false });
     expect(pickShareBlob('/', '')).toEqual({ blob: null, legacyQueryForm: false });
   });
+});
+
+describe('shareBlobFrom', () => {
+  it.each([
+    ['https://stellata.xyz/v/AQAA/', 'AQAA'],
+    ['/v/AQAA/', 'AQAA'],
+    ['https://stellata.xyz/?v=AQAA', 'AQAA'],
+    ['v=AQAA', 'AQAA'],
+    ['  AQAA  ', 'AQAA'],
+    ['B-_09z', 'B-_09z'],
+  ])('reads the blob out of %s', (input, blob) => {
+    expect(shareBlobFrom(input)).toBe(blob);
+  });
+
+  it.each(['', 'https://stellata.xyz/', 'not a blob!'])(
+    'answers null for %s, which carries none', (input) => {
+      expect(shareBlobFrom(input)).toBeNull();
+    },
+  );
 });

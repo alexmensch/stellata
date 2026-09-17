@@ -9,6 +9,7 @@ import {
   writeVarint,
   readVarint,
   varintLen,
+  viewPose,
   type DecodedView,
   type StarRef,
   type IdMaps,
@@ -2245,5 +2246,27 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       vi.advanceTimersByTime(1000);
       expect(replaceState).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('viewPose', () => {
+  it('fills every omitted slot with the default the decoder restores', () => {
+    expect(viewPose({})).toEqual({
+      cam: [0, 0, 30],
+      tgt: [0, 0, 0],
+      up: [
+        GALACTIC_NORTH_POLE_ICRS.x, GALACTIC_NORTH_POLE_ICRS.y, GALACTIC_NORTH_POLE_ICRS.z,
+      ],
+      fov: DEFAULT_FOV,
+    });
+  });
+
+  it('takes the observe default for cam, which is the focal origin', () => {
+    expect(viewPose({ mode: 'observe' }).cam).toEqual([0, 0, 0]);
+  });
+
+  it('carries what the blob does', () => {
+    const pose = viewPose({ cam: [1, 2, 3], tgt: [4, 5, 6], up: [0, 0, 1], fov: 35 });
+    expect(pose).toEqual({ cam: [1, 2, 3], tgt: [4, 5, 6], up: [0, 0, 1], fov: 35 });
   });
 });

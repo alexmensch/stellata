@@ -92,6 +92,25 @@ function defaultCamForMode(mode: 'navigate' | 'observe' | undefined): [number, n
   return mode === 'observe' ? OBSERVE_CAM_LOCAL : DEFAULT_CAM;
 }
 
+/** Every pose slot a blob can carry, with the omitted ones filled from the
+ *  same defaults `applyDecodedView` restores — so a consumer interpolating
+ *  two decoded views never respells one. */
+export interface ViewPose {
+  cam: [number, number, number];
+  tgt: [number, number, number];
+  up: [number, number, number];
+  fov: number;
+}
+
+export function viewPose(view: DecodedView): ViewPose {
+  return {
+    cam: view.cam ?? defaultCamForMode(view.mode),
+    tgt: view.tgt ?? DEFAULT_TGT,
+    up: view.up ?? DEFAULT_UP,
+    fov: view.fov !== undefined && view.fov > 0 ? view.fov : DEFAULT_FOV,
+  };
+}
+
 // Focus-tag-bit semantics: high bit set = HIP-resolved ID, clear = raw
 // row index. The 0xFFFFFFFF sentinel is reserved (won't naturally appear
 // since "explicitly unfocused" uses a separate presence bit, not a magic

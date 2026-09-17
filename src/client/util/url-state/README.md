@@ -47,6 +47,9 @@ src/client/util/url-state/
                                   Pure string helpers, split out so the
                                   path regex is unit-testable without
                                   url-state.ts's location/history writes.
+                                  `shareBlobFrom` is the paste-tolerant
+                                  reader over all three transports that the
+                                  console helpers take their blob from.
   pose-change-pure.ts (+ test)    the one scale-free test behind both the
                                   per-frame write trigger and the encoder's
                                   cam / tgt / worldOffset elision. See
@@ -343,4 +346,9 @@ so the attach table is populated when a planet ref resolves.
 **Console helpers.** `window.debug.decodeView('AQAA…')` decodes a blob
 and `console.table`s the fields; `window.debug.encodeView()` returns
 the blob for the current Stellata state. Useful when debugging a
-shared URL that someone reports.
+shared URL that someone reports. Both read their argument through
+`shareBlobFrom`, so a pasted address bar works as well as a bare blob.
+`window.debug.capture()` flies a recordable take between two blobs and
+reads their poses through `viewPose`, the one place a decoded view's
+omitted pose slots resolve to the values `applyDecodedView` restores
+(`../../debug/capture/README.md`).
