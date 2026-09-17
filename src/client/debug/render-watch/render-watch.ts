@@ -41,7 +41,7 @@ export interface RenderWatchOpts {
   onClose?: () => void;
 }
 
-/** Mount the watcher. Returns an idempotent disposer. */
+/** Returns an idempotent disposer. */
 export function mountRenderWatch(stellata: Stellata, opts: RenderWatchOpts = {}): () => void {
   const hud = document.createElement('div');
   hud.id = 'stellata-render-watch';
@@ -75,8 +75,8 @@ export function mountRenderWatch(stellata: Stellata, opts: RenderWatchOpts = {})
   let hitches = 0;
   let worstGapMs = 0;
   let lastFrameAt = 0;
-  /** Was the PREVIOUS rendered frame one the cadence scheduled? A gap that
-   *  either end of scheduled is a gap the gate meant to leave. */
+  /** A gap with a scheduled frame at EITHER end is one the gate meant to
+   *  leave, so the hitch test needs the previous frame's verdict too. */
   let lastFrameScheduled = false;
   let lastWakeAtMs = Number.NEGATIVE_INFINITY;
   let flashTimer: number | null = null;

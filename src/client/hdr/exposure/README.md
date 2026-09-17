@@ -397,6 +397,6 @@ calibration it was reached for.
 
 ## Not here yet
 
-Veiling glare — the angular term a single global scalar cannot
-express — is its own bead and belongs on the emission side, upstream of
-the operator, not in this folder's scalar.
+Veiling glare — the angular term a single global scalar cannot express —
+belongs on the emission side, upstream of the operator, and not in this
+folder's scalar.

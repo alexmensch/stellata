@@ -29,15 +29,13 @@ export const SB_ZERO_POINT = -2.5 * Math.log10(ARCSEC_TO_RAD * ARCSEC_TO_RAD);
  *  see the GLSL's STELLATA_SQRT12. */
 export const FOOTPRINT_SQRT12 = Math.sqrt(12);
 
-/** Linear luminance of a source at V-band apparent magnitude `m`.
- *  Unclamped — the ceiling belongs to whatever writes the fragment. */
+/** `m` is a V-band APPARENT magnitude. Unclamped — the ceiling belongs to
+ *  whatever writes the fragment. */
 export function luminanceForMagnitude(exposure: number, m: number): number {
   return exposure * 10 ** (-0.4 * m);
 }
 
 /**
- * Peak luminance of a point source's display kernel.
- *
  * `physRadiusPx` is the source's true angular radius in **CSS** pixels,
  * unclamped by any viewport-fraction cap. Below 1 px the source is
  * physically unresolved and its whole flux lands on the peak; above it
@@ -127,12 +125,9 @@ export function footprintAlong(
 }
 
 /**
- * Luminance from an extended source of surface brightness
- * `magPerArcsec2`, spread over `omegaArcsec2`. The flux magnitude inside
- * that solid angle is `magPerArcsec2 − 2.5·log10(omegaArcsec2)`; feeding
- * that through `luminanceForMagnitude` collapses the log round-trip to
- * this product, which is why a layer can apply it as a single scalar gain
- * and keep its chromaticity.
+ * The log round-trip through `luminanceForMagnitude` collapses to a plain
+ * product, which is why a layer can apply this as a single scalar gain and
+ * keep its chromaticity.
  *
  * The pixel solid angle is the **physical** answer and is what the
  * adaptation statistic wants. A **display** path takes

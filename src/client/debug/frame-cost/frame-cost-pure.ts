@@ -7,10 +7,8 @@ export const GPU_FRAME_METHODS = ['timer-query', 'timestamp', 'raf-delta'] as co
 
 export type GpuFrameMethod = (typeof GPU_FRAME_METHODS)[number];
 
-/** Frames discarded before the first dwell of a measurement. Long because
- *  an Apple-silicon GPU ramps its clocks up over the first seconds of
- *  sustained load, so a measurement started cold walks its frame time
- *  down. It absorbs that ramp and NOT the slow rise over the minutes after
+/** Frames discarded before the first dwell of a measurement. Long enough to
+ *  absorb the cold-clock ramp and NOT the slow rise over the minutes after
  *  it — README.md § The instrument drifts names both directions, and
  *  `baselineTrend` is what reports the second. Shared with the headless
  *  runner's dwell mode, which needs the same ramp absorbed. */
@@ -55,19 +53,9 @@ export function isVsyncClamped(p50: number, iqrMs: number, cadenceMs: number | n
 
 /**
  * A dwell whose wall-clock median the display's refresh interval set, so a
- * differential across it cannot resolve a sub-interval cost. Two ways in,
- * and both are needed:
- *
- * - **at or under one interval, whatever the spread** — the frame made every
- *   deadline with room to spare, so an addition smaller than the interval
- *   cannot appear at all. A wide spread here is dropped frames, not evidence
- *   the median measured the frame.
- * - **on a higher multiple with a tight spread** — `isVsyncClamped`. The
- *   frame overran, but consistently enough that the compositor still set the
- *   number.
- *
- * Between them lies the only honest wall-clock case: a frame comfortably
- * over one interval whose spread shows it is not pinned to the panel.
+ * differential across it cannot resolve a sub-interval cost. Under one
+ * interval a wide spread is dropped frames rather than evidence the median
+ * measured the frame, which is why only the higher-multiple arm gates on it.
  */
 export function isCadenceBound(medianMs: number, iqrMs: number, cadenceMs: number): boolean {
   if (!(cadenceMs > 0)) return false;
@@ -91,8 +79,7 @@ export interface DwellStats {
   /** Serial structure in the samples, not a duration — see
    *  `lag1Autocorrelation`. */
   readonly lag1: number;
-  /** Reduction readbacks issued per frame over the dwell. 0.5 is the
-   *  every-other-frame rhythm; 1.0 is one per frame. */
+  /** Reduction readbacks issued per frame over the dwell. */
   readonly readbackPerFrame: number;
   /** Faintest magnitude the frame was rendering — threshold plus the
    *  adaptation cut. What the dwell DREW, as opposed to how long it took. */
@@ -253,9 +240,8 @@ function ranks(xs: readonly number[]): number[] {
   return out;
 }
 
-/** Lag-1 autocorrelation of a dwell's frame times, on ranks. Negative is
- *  alternation, zero independent scatter, positive drift — and `noiseMs`
- *  is only an honest standard error in the middle case. Reading one:
+/** Lag-1 autocorrelation of a dwell's frame times, on ranks. What each sign
+ *  means, and where `noiseMs` stops being an honest standard error:
  *  README.md § Reading a row. */
 export function lag1Autocorrelation(samples: readonly number[]): number {
   if (samples.length < 3) return 0;
@@ -303,9 +289,9 @@ export function differentialNoiseMs(a: DwellStats, b: DwellStats): number {
   return Math.hypot(medianStandardErrorMs(a), medianStandardErrorMs(b));
 }
 
-/** Standard error of one dwell's median, from a robust σ. Takes the two
- *  fields it reads rather than a `DwellStats`, so the runner's own dwell
- *  summary feeds the same estimator its baseline diff band is built on. */
+/** Takes the two fields it reads rather than a `DwellStats`, so the headless
+ *  runner's own dwell summary feeds the same estimator its baseline diff
+ *  bands are built on. */
 export function medianStandardErrorMs(
   stats: { readonly samples: number; readonly iqrMs: number },
 ): number {

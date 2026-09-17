@@ -32,18 +32,11 @@ const IDLE_TOLERANCE = 0.7;
  *  minutes of real idling and a sort nobody can measure. */
 export const GAP_SAMPLE_COUNT = 32;
 
-/** The HUD container's inline style.
- *
- *  `pointer-events: auto` is what makes the readout selectable, and it
- *  also protects the measurement rather than threatening it: the gate's
- *  wake listeners sit on the CANVAS, so `none` would pass every pointer
- *  move in this corner straight through to it and wake the gate the HUD
- *  is watching. Absorbing them is the quiet option.
- *
- *  Selection opt-in follows the panel's pattern — `body` sets
- *  `user-select: none` and UI chrome opts back in, with the `-webkit-`
- *  property set explicitly because Safari does not reliably inherit it
- *  (`../../styles.css`). */
+/** `pointer-events: auto` is load-bearing: the gate's wake listeners sit on
+ *  the CANVAS, so `none` would pass every pointer move in this corner
+ *  through to it and wake the gate the HUD exists to watch. The `-webkit-`
+ *  select property is spelled out because Safari does not reliably inherit
+ *  it (`../../styles.css`). */
 export function hudContainerCss(): string {
   return 'position:fixed;top:10px;left:10px;z-index:99999;'
     + 'pointer-events:auto;user-select:text;-webkit-user-select:text;cursor:text;'
@@ -90,7 +83,8 @@ export interface RenderWatchVerdict {
   reason: string;
   /** Gap the budget implies, in ms — NaN when the clock is paused. */
   expectedGapMs: number;
-  /** Median measured gap, ms. NaN with fewer than two samples. */
+  /** Median measured gap, ms. NaN only when no gap has been measured yet;
+   *  a single gap yields that gap. */
   medianGapMs: number;
 }
 
@@ -183,15 +177,10 @@ export function observedAsRate(observed: number, simDtS: number): number {
   return Number.isFinite(simDtS) && simDtS !== 0 ? observed / Math.abs(simDtS) : Number.NaN;
 }
 
-/** The pose-drift line: which slot moved, how far, and — the part that
- *  decides the diagnosis — how many representable float steps that is.
- *
- *  A handful of ULP means the slot is being RE-DERIVED each frame from
- *  inputs that round differently, so it can never compare equal and the
- *  gate can never idle. Waiting does not fix it and no threshold on the
- *  absolute delta finds it, because the number is correct to every digit a
- *  viewer could care about. Anything past a few thousand ULP is real
- *  motion instead, and the question becomes what is moving. */
+/** Representable float steps are the part that decides the diagnosis: no
+ *  threshold on the absolute delta separates a slot being re-derived each
+ *  frame from one genuinely moving, because both are correct to every digit
+ *  a viewer could care about. */
 export function poseDriftLabel(drift: PoseDrift | null): string {
   if (drift === null) return 'unknown slot';
   if (!Number.isFinite(drift.ulps)) return `${drift.slot} (first frame)`;

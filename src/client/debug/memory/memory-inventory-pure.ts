@@ -64,9 +64,8 @@ export function textureResidency(
   };
 }
 
-/** Resident bytes for one geometry: every attribute array plus the index.
- *  Interleaved attributes share one buffer, so they are counted through
- *  the buffer they view rather than once per attribute. */
+/** Interleaved attributes share one buffer, so they are counted through the
+ *  buffer they view rather than once per attribute. */
 export function geometryBytes(geometry: THREE.BufferGeometry): { bytes: number; detail: string } {
   const counted = new Set<ArrayBufferLike>();
   let bytes = 0;
@@ -134,10 +133,8 @@ export function formatBytes(bytes: number): string {
   return `${value.toFixed(decimals)} ${UNITS[unit]}`;
 }
 
-/** Sum the distinct typed arrays hanging off a plain object — the catalog
- *  bag and its kin. Views sharing one ArrayBuffer (a parsed artifact
- *  sliced into columns) are counted once, against the first name that
- *  reaches them, so the total is what the heap actually holds. */
+/** Views sharing one ArrayBuffer are counted once, against the first name
+ *  that reaches them, so the total is what the heap actually holds. */
 export function typedArrayRows(source: object, prefix: string): ResidencyRow[] {
   const counted = new Set<ArrayBufferLike>();
   const rows: ResidencyRow[] = [];
@@ -199,11 +196,8 @@ export interface CrossCheck {
   /** Uploaded but off-scene — render targets, and anything parented into
    *  a scene the walk does not visit. */
   offScene: ResourceCounts;
-  /** Walked but never uploaded. Three counts a geometry when the draw
-   *  path first asks for its buffers, so a scene-graph resource missing
-   *  from its count has no GPU allocation at all: the walk charges bytes
-   *  the device is not holding. Over-counting is the safe direction, but
-   *  it has to be visible or the total reads as residency. */
+  /** Walked but never uploaded — bytes the walk charges and the device is
+   *  not holding. It has to stay visible, or the total reads as residency. */
   unuploaded: ResourceCounts;
 }
 

@@ -300,8 +300,8 @@ describe('the resolved-surface pin', () => {
   });
 
   it('cannot be moved by a minority emitter, however bright', () => {
-    // The regression guard the whole bead turns on, discharged by
-    // construction rather than by a threshold: Sol's disc at Earth park is
+    // Discharged by construction rather than by a threshold: Sol's disc at
+    // Earth park is
     // 71 px² of a masked 57 326 px², so it owns 0.12 % of the masked area
     // and five decades of extra brightness buy it nothing.
     const earth = { coverage: 57255 / 1440000, discMeanL: 8.6e4 };
@@ -369,7 +369,7 @@ describe('the resolved-surface pin', () => {
   });
 
   it('takes a resolved photosphere past the display floor', () => {
-    // The bug this bead is: a star at closest approach used to collapse onto
+    // The regression this pins: a star at closest approach collapsed onto
     // max(eye, floor) — a flat blown-out white disc at −6.29 whatever the
     // star was — because the disc pass claimed no coverage. A photosphere's
     // surface brightness is a constant of the model (Sol 1.82e10 at the base

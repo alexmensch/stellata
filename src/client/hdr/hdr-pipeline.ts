@@ -244,14 +244,9 @@ export class HdrPipeline implements HdrSeam {
     return true;
   }
 
-  /** Bind the surface the scene draws into. Call immediately before the
-   *  main render; the local depth pass inherits the binding, which is
-   *  what puts its repaint into the same target.
-   *
-   *  The explicit clear is the one place attachments 1 and 2 are written
-   *  with every gate open: the renderer's own auto-clear runs after this,
-   *  with them shut, so without it both would accumulate across frames
-   *  forever. It costs a redundant clear of attachment 0. */
+  /** Call immediately before the main render; the local depth pass
+   *  inherits the binding, which is what puts its repaint into the same
+   *  target. */
   bind(): void {
     const target = this.wantsTarget() && this.ensureResources() ? this.rt : null;
     this.rendererGL.setRenderTarget(target);
@@ -353,10 +348,9 @@ export class HdrPipeline implements HdrSeam {
     this.applyGateState('clear');
   };
 
-  /** Pixel solid angle for surface-brightness emitters. `pxPerRadian` is
-   *  `angularToPx(viewportHeightCssPx, fovYRad)` — CSS pixels, so the
-   *  scene's brightness is `devicePixelRatio`-independent. Every FOV
-   *  change and every resize has to reach this. */
+  /** `pxPerRadian` is `angularToPx(viewportHeightCssPx, fovYRad)` — CSS
+   *  pixels, so the scene's brightness is `devicePixelRatio`-independent.
+   *  Every FOV change and every resize has to reach this. */
   setPixelSolidAngle(pxPerRadian: number): void {
     this.emitterUniforms.uOmegaPxArcsec2.value = pixelSolidAngleArcsec2(pxPerRadian);
   }
@@ -449,11 +443,8 @@ export class HdrPipeline implements HdrSeam {
     this.summationTapsOn = on;
   }
 
-  /** Frame-cost lever — the MRT-vs-single-target cut: rebuild the target with
-   *  attachment 0 alone. The statistic parks (hold `fenceWhileParked` across
-   *  it, as the chart park does) and every diffuse write discards, so the band
-   *  and the Local Group vanish for the span. Reallocates the target both
-   *  ways. */
+  /** Frame-cost lever. The caller must hold `fenceWhileParked` across it, as
+   *  the chart park does; reallocates the target both ways. */
   setExtraAttachmentsEnabled(on: boolean): void {
     if (on === this.extraAttachments) return;
     this.extraAttachments = on;

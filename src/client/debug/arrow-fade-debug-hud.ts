@@ -14,11 +14,8 @@ import { type DebugSection, buildDiagnosticReadout, setReadoutText } from './deb
 //     drawn shafts, coverage = (discRadius - shaftStart) / refLen, the
 //     fade alpha both sides agreed on, and any latched extremes.
 //
-// The bottom row shows latched min/max for alpha, drawn shafts, and disc
-// radius, so brief snaps / jumps are visible after they happen. Click
-// the reset link to clear them. The section's left border turns red
-// when the two arrows disagree on draw / behind-camera state — fast
-// visual cue that an independent snap is happening.
+// The bottom row latches min/max for alpha, drawn shafts and disc radius, so
+// brief snaps stay visible after they happen.
 
 interface Latch {
   alphaMin: number; alphaMax: number;
@@ -66,10 +63,9 @@ export function buildArrowSection(stellata: Stellata): DebugSection {
     const lengths = stellata.hud.getDrawnLengths();
     const dbg = stellata.hud.getDebugSnapshot();
     const shaftStart = stellata.hud.getShaftStartPx();
-    // Sol/GC pair share one alpha sourced from this-frame's geometry
-    // inside hud-overlay (ml8 fix). The distance-vector's own alpha is
-    // computed independently in distance-vector-overlay and not surfaced
-    // here — open `debug.distVec()` if a future section is needed.
+    // Sol and GC share one alpha, sourced from this frame's geometry inside
+    // hud-overlay. The distance vector solves its own alpha independently in
+    // distance-vector-overlay and is not surfaced here.
     const alpha = stellata.hud.getCurrentFadeAlpha();
     const focused = stellata.focus.getFocusedStar();
     const discRadius = focused !== null

@@ -3,11 +3,10 @@
 // disc's area-overlap weights. CPU mirror of summation.glsl — see README.md.
 
 /**
- * Radius of the eye's summation patch in **CSS pixels**.
- *
- * `Ω_sum` is fixed in angle and `Ω_px` is not, so this is the one quantity in
- * the pass that moves with FOV — and it is why the convolution has to be
- * resolution-adaptive rather than a fixed-radius blur.
+ * In **CSS pixels** — a caller choosing a downsample factor has to cross to
+ * drawing-buffer texels first. `Ω_sum` is fixed in angle and `Ω_px` is not,
+ * so this is the one quantity in the pass that moves with FOV, which is why
+ * the convolution is resolution-adaptive rather than a fixed-radius blur.
  */
 export function summationRadiusPx(
   omegaSummationArcsec2: number,
@@ -68,12 +67,10 @@ export function summationWeight(dx: number, dy: number, radiusTexels: number): n
 }
 
 /**
- * Weighted mean of `sample` over the summation disc. `sample(dx, dy)` reads
- * the source texel at an integer offset from the fragment's own.
- *
- * This is the average half of average-then-gain: the caller multiplies the
- * result by `Ω_sum`, and because the mean is over an angular patch rather
- * than a pixel, the product carries no plate scale at all.
+ * `sample(dx, dy)` reads the source texel at an integer offset from the
+ * fragment's own. This is the average half of average-then-gain — the caller
+ * multiplies the result by `Ω_sum`, and the product carries no plate scale
+ * because the mean is over an angular patch rather than a pixel.
  */
 export function summationMean(
   sample: (dx: number, dy: number) => number,

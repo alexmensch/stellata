@@ -253,13 +253,10 @@ export interface DiagnosticReadout {
 export interface DiagnosticReadoutOpts {
   /** Render a green left-border bar (3 px). Without this, no border. */
   withLeftBorder?: boolean;
-  /** Latch reset handler; wired to the [click to reset latches] link. */
   onResetLatches: () => void;
 }
 
-/** Green-on-black selectable mono block — the shape every live readout in
- *  the panel takes. Write into it with `setReadoutText`, never
- *  `textContent` directly. */
+/** Write into it with `setReadoutText`, never `textContent` directly. */
 export function makeMonoReadout(extraCss = ''): HTMLDivElement {
   const el = document.createElement('div');
   el.style.cssText =
@@ -275,11 +272,9 @@ function selectionRanges(sel: Selection): Range[] {
   return out;
 }
 
-/** Write a live readout's text, holding the write while a selection touches
- *  it. Rewriting `textContent` replaces the text node and collapses any
- *  selection over it, so a per-frame readout is impossible to drag-select
- *  without this gate — which is every readout in the panel. The dedupe
- *  lives here too, so no caller keeps its own last-text cache. */
+/** Write a live readout's text. Holds the write while a selection touches the
+ *  element — assigning `textContent` replaces the text node and collapses the
+ *  selection — and dedupes identical text, so no caller keeps a `last` cache. */
 export function setReadoutText(el: HTMLElement, text: string): void {
   if (el.textContent === text) return;
   const sel = document.getSelection();
@@ -287,8 +282,8 @@ export function setReadoutText(el: HTMLElement, text: string): void {
   el.textContent = text;
 }
 
-/** Mono readout plus the [click to reset latches] link — pin-debug-hud and
- *  arrow-fade-debug-hud, the two sections with latched extremes. */
+/** Mono readout plus the [click to reset latches] link. A section holding no
+ *  latched extremes passes a no-op reset. */
 export function buildDiagnosticReadout(opts: DiagnosticReadoutOpts): DiagnosticReadout {
   const root = makeMonoReadout(
     opts.withLeftBorder ? 'border-left:3px solid #0f0;' : '',

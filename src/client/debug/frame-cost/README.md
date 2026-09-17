@@ -25,18 +25,22 @@ src/client/debug/frame-cost/
   frame-cost.ts               runPriceFrame / runPriceFrameRepeat, the
                               sweep's options and defaults, the dwell loop.
   frame-cost-pure.ts (+ test) Dwell statistics, the noise floor, and the
-                              differential rows. Owns GpuFrameMethod,
-                              WARMUP_FRAMES, RAF_PROBE_FRAMES, the median
-                              standard error, the interquartile spread,
-                              round3, the two rising-baseline verdicts
-                              (baselineTrend, singleBaselineTrend,
-                              RISING_BASELINE_MIN_FRACTION) and the cadence
-                              rules (CADENCE_TOLERANCE,
-                              isVsyncClamped, isCadenceBound), which the
-                              headless runner imports rather than
-                              re-deriving — its dwell clamp and this
+                              differential rows. Owns GpuFrameMethod, the
+                              frame counts (WARMUP_FRAMES, SETTLE_FRAMES,
+                              RAF_PROBE_FRAMES), the median standard error,
+                              the interquartile spread, round3, the two
+                              rising-baseline verdicts (baselineTrend,
+                              singleBaselineTrend) and the cadence rules
+                              (CADENCE_TOLERANCE, isVsyncClamped,
+                              isCadenceBound). Whatever the headless runner
+                              needs it imports from here rather than
+                              re-deriving, so its dwell clamp and this
                               folder's cadenceBound are one predicate pair
-                              (`scripts/perf/README.md`).
+                              built on the same isVsyncClamped
+                              (`scripts/perf/README.md`). The verdicts and
+                              isCadenceBound itself stay client-side — the
+                              runner reads the `cadenceBound` and
+                              `baselineRising` fields off a row instead.
   gpu-frame-source.ts         Which sample source a sweep gets, per
     (+ test)                  backend, and the method label it stamps.
   passes/                     buildPassToggles and PRICED_PASS_KEYS: what

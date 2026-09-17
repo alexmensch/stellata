@@ -56,9 +56,8 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } {
   };
 }
 
-// Parse a sessionStorage blob into a Pos. Number.isFinite (not typeof
-// 'number') so a once-saved NaN-shaped JSON gets rejected rather than
-// clamping to the corner forever.
+// Number.isFinite, not typeof 'number', so a once-saved NaN-shaped JSON gets
+// rejected rather than clamping to the corner forever.
 export function parsePosition(raw: string | null): Pos | null {
   if (!raw) return null;
   try {

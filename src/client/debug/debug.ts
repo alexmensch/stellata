@@ -38,19 +38,16 @@ import {
 export interface DebugTools {
   /** Toggle the unified dev panel. */
   panel(): void;
-  /** Decode a `?v=` blob (with or without the `v=` prefix) into a DecodedView. */
+  /** Tolerates a whole URL or a `v=` prefix around the blob. */
   decodeView(blob: string): DecodedView;
-  /** Encode the current Stellata state into a `?v=` blob string. */
   encodeView(): string;
   /** Price each render pass by gpu.frame differential from the current
-   *  viewpoint. Camera stationary, panel CLOSED — its perf timer holds
-   *  the context's single query slot. */
+   *  viewpoint. Camera stationary; on WebGL2 also panel CLOSED, since the
+   *  sweep needs the context's single query slot. */
   priceFrame(options?: PriceFrameOptions): Promise<PriceFrameRow[]>;
-  /** priceFrame N times over; prints per-pass savedMs ranges across
-   *  runs (the repeatability check). */
+  /** Prints per-pass savedMs ranges across runs — the repeatability check. */
   priceFrameRepeat(runs: number, options?: PriceFrameOptions): Promise<PriceFrameRow[][]>;
-  /** Toggle the render watcher: why is this scene rendering, or not.
-   *  Deliberately NOT a panel section — the panel holds the gate open, so
+  /** Deliberately NOT a panel section — the panel holds the gate open, so
    *  no section can observe idling (`render-watch/README.md`). */
   renderWatch(): void;
   /** Print the GPU-residency + JS-heap inventory for the current state,
@@ -59,8 +56,7 @@ export interface DebugTools {
   memory(): MemoryInventory;
 }
 
-/** Wrap a DebugSection in a collapsible-section and mount it on the panel.
- *  Visibility gate wires both ways: collapse → setVisible(false),
+/** Visibility gate wires both ways: collapse → setVisible(false),
  *  initial-from-storage → setVisible(!collapsed). Returns the module's
  *  disposer for the closePanel cleanup pass. */
 function mountSection(
