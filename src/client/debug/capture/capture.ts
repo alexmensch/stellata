@@ -81,6 +81,8 @@ export function runCapture(
 
   const seconds = options.seconds ?? DEFAULT_SECONDS;
   if (!(seconds > 0)) throw new Error('capture: seconds must be positive');
+  const startT = resolveTime(options.startTime, 'startTime');
+  const endT = resolveTime(options.endTime, 'endTime');
   const ease = options.ease ?? 'smooth';
   const shape: TakeShape = {
     delayMs: (options.delay ?? 0) * 1000,
@@ -107,12 +109,10 @@ export function runCapture(
   applyDecodedView(stellata, startView, idMaps);
 
   const clock = stellata.timeClock;
+  // Solve against the applied view's clock, not the caller's — a start blob
+  // carrying a pinned `t` has just moved it.
   const plan = planClock({
-    startT: resolveTime(options.startTime, 'startTime'),
-    endT: resolveTime(options.endTime, 'endTime'),
-    rate: options.rate ?? 1,
-    seconds,
-    currentT: stellata.getT(),
+    startT, endT, rate: options.rate ?? 1, seconds, currentT: stellata.getT(),
   });
   if (plan.startT !== null) clock.setTimeAbsolute(plan.startT);
   clock.setRate(plan.idleRate);
