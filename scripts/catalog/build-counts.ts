@@ -418,8 +418,8 @@ export interface BuildCounts {
    *  size) — the V cascade's bright-tier coverage. */
   hipVMagEntries: number;
   /** Total printed B−V entries in the same slice — the ci cascade's
-   *  printed-tier coverage. Lower than `hipVMagEntries`: 1,281 Hipparcos rows
-   *  carry a V with no colour. */
+   *  printed-tier coverage. Lower than `hipVMagEntries` by the Hipparcos rows
+   *  carrying a V with no colour. */
   hipBvEntries: number;
   /** Distinct Gaia DR3 source_ids carrying an NSS two-body orbit —
    *  input to the gaia_nss_systemic routing tag. */
@@ -631,9 +631,9 @@ export interface BuildCounts {
    *  refresh that moves it forces this snapshot to be reviewed. */
   rvGaiaErrorMaxKmS: number;
   /** Records whose designation constellation came from IV/27A keyed on their
-   *  own HD / HIP — the nomenclature source that replaced AT-HYG's editorial
-   *  `con` cell. The GCVS pass overwrites it where a variable designation
-   *  carries its own (`gcvsDesignationCon`). */
+   *  own HD / HIP — the nomenclature authority for the field. The GCVS pass
+   *  overwrites it where a variable designation carries its own
+   *  (`gcvsDesignationCon`). */
   desigConFromCrossIndex: number;
   /** IV/27A rows whose `cst` names no IAU-88 constellation. **Pinned at 0** —
    *  the table's abbreviations ARE the IAU set, so a non-zero value is an
@@ -650,8 +650,7 @@ export type CountDiff =
       actual: number;
     };
 
-/** Compare actual counts against an expected manifest and emit a per-key
- *  diff. Partition-valued entries (a `Record<tier, number>`) expand to one
+/** Partition-valued entries (a `Record<tier, number>`) expand to one
  *  `parent.bucket` row each, so a single drifting bucket names itself.
  *  Pure — no I/O. The caller decides whether mismatches are fatal.
  *
@@ -689,9 +688,8 @@ export function formatPartition(partition: Readonly<Record<string, number>>): st
   return Object.entries(partition).map(([b, n]) => `${b}=${n}`).join(', ');
 }
 
-/** Pretty-printer for the diff. Used by the build script and any future
- *  CLI consumer. Only mismatching rows are listed, so a fatal exit doesn't
- *  scroll the actionable ones off-screen. */
+/** Only mismatching rows are listed, so a fatal exit doesn't scroll the
+ *  actionable ones off-screen. */
 export function formatCountDiff(diff: CountDiff[]): string {
   const mismatches = diff.filter((d) => d.status === 'mismatch');
   const lines: string[] = [];

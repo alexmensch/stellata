@@ -115,43 +115,17 @@ export function belowParallaxSnFloor(plx: number, err: number | null): boolean {
   return sn !== null && sn < PARALLAX_SN_FLOOR;
 }
 
-/** The parallax a record's distance inverts, resolved through the § 5 cascade.
- *
- *  **Gaia leads, mirroring the direction cascade.** `hip2_saturated` fires only
- *  where Gaia states no usable parallax, and distance follows the same
- *  astrometric solution the position did rather than a second opinion. § 5's
- *  table lists HIP2 above the inversion; that order was written when this tier
- *  fired only for the Gaia-saturated bright set, and re-keyed off `dist_src` it
- *  would hand 115 rows to 1991 Hipparcos over a converged DR3 fit.
+/** **Gaia leads, and § 5's table has the order wrong.** `hip2_saturated` fires
+ *  only where Gaia states no usable parallax, so distance follows the same
+ *  astrometric solution the position did. Restoring the doc's order would hand
+ *  a converged DR3 fit back to 1991 Hipparcos on thousands of records.
  *
  *  **Two skip rules, one principle** — a courier may not re-serve a value
- *  attributed to a publication a tier above it already refused:
- *   - `gaiaIs2p` → no Gaia release. DR3 published a position for this source and
- *     withdrew the parallax DR2 had; a CNS5 or SIMBAD value citing a release is
- *     that withdrawn fit returning.
- *   - HIP2 refused on the S/N floor → no van Leeuwen. For a HIP-bearing record
- *     SIMBAD's parallax usually IS van Leeuwen's, so without this the floor
- *     refuses a value and re-admits the same number without its error bar.
- *
- *  **The S/N floor gates every tier below Gaia**, not HIP2 alone. It used to
- *  gate HIP2 and the sibling index because no other index HELD a sub-floor row
- *  a record could reach — true while the SIMBAD value cohort was spine-scoped
- *  and its tier served 116 records. Rebased onto the membership manifest that
- *  tier serves thousands, and 8 of SIMBAD's sub-floor rows became reachable:
- *  parallaxes of S/N 0.01–0.33, each one indistinguishable from zero, inverting
- *  to 54,000–714,000 pc. Those rows left `readStars` through the MAX_DIST_PC
- *  drop — the one exit that is not a § 6.1 park and is pinned at zero — instead
- *  of being refused here. Gaia stays ungated for the reason it always was:
- *  Bailer-Jones sits above it for exactly the low-S/N case, and a gate here
- *  would strip a record of a posterior that exists for it.
- *
- *  Gliese V/70A is subject to neither skip rule, for two different reasons, which is why
- *  it is TWO tiers on either side of SIMBAD. Its trigonometric parallaxes
- *  predate both instruments, so no later reduction stands behind them to
- *  withdraw. Its photometric and spectroscopic ones are not measurements at
- *  all, so there is nothing to withdraw either — but for the same reason they
- *  rank below a bibcoded parallax of the star itself, and below is where the
- *  cascade puts them. `GlieseParallax.trigonometric` is the split. */
+ *  attributed to a publication a tier above it already refused: a Gaia release
+ *  cited on a 2p row, and van Leeuwen re-served after the S/N floor refused
+ *  HIP2. The floor gates every tier BELOW Gaia; Gaia itself stays ungated
+ *  because Bailer-Jones sits above it for exactly the low-S/N case, and a gate
+ *  here would strip a record of a posterior that exists for it. */
 export function resolveParallax(
   { gaia, hip2, cns5, gliese, simbad, pairMember }: ParallaxSources,
   gaiaIs2p: boolean,
@@ -243,8 +217,8 @@ export function resolveParallax(
   const photometric = glieseHit(false, 'gliese_photometric_plx');
   if (photometric !== null) return photometric;
 
-  // Sol carries no identifier any tier keys on, and its distance is zero rather
-  // than a parallax — the same curated exit the direction and V cascades take.
+  // Sol's distance is zero rather than a parallax — the same curated exit the
+  // direction and V cascades take.
   if (isSol) {
     return {
       plxMas: null, via: 'curated', lowPrecision: false, refusedPlxMas: [],

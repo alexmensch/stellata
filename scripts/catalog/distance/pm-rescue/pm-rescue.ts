@@ -53,14 +53,12 @@ const NO_PM = { pmRaMasyr: null, pmDecMasyr: null } as const;
  *  a first-order catalogue always outranks the second-order index.
  *
  *  **The skip rule** is the rv cascade's, on the quantity Gaia withheld rather
- *  than the one it published. A 2p row is one Gaia could not fit five
- *  parameters to; CNS5 and SIMBAD both republish Gaia's own earlier fit of that
- *  same source under a Gaia release bibcode, so admitting it would return the
- *  motion DR3 declined to state. Tycho-2 needs no such check — its citation is
- *  Høg et al. 2000, which no Gaia reduction can be hiding behind. Where the row
- *  carries no Gaia solution at all there is no blend to distrust and a Gaia
- *  bibcode is an ordinary citation, so `gaiaIs2p` gates the rule rather than
- *  the tier. */
+ *  than the one it published: CNS5 and SIMBAD both republish Gaia's own earlier
+ *  fit under a release bibcode, so admitting it would return the motion DR3
+ *  declined to state. Tycho-2 needs no such check — no Gaia reduction can be
+ *  hiding behind Høg et al. 2000. `gaiaIs2p` gates the rule rather than the
+ *  tier, because a row with no Gaia solution has no blend to distrust and its
+ *  Gaia bibcode is an ordinary citation. */
 export function resolvePmRescue(
   { tycho2, cns5, simbad }: PmRescueSources,
   gaiaIs2p: boolean,

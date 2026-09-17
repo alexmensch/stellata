@@ -12,10 +12,8 @@ import { headerIndex } from '../parse/corpus-tsv.ts';
 // value import would close a cycle. Erased at compile.
 import type { DistVia } from '../distance/parallax/parallax-cascade.ts';
 
-/** Solar-type B-V used as a fallback when no chromaticity input is
- *  available. ~0.65 yields a yellow disc rather than a hot blue or
- *  cold red default. Consumed by stars-parse's AT-HYG read (blank ci
- *  cells) and by star-color-routing-pure's tier-6 fallback. */
+/** The bottom of every chromaticity cascade: ~0.65 renders a yellow disc
+ *  rather than a hot blue or cold red default. */
 export const SOLAR_BV_FALLBACK = 0.65;
 
 // ---- SIMBAD namespace ladder ---------------------------------------------
@@ -196,8 +194,6 @@ export function walkSimbadNamespaces<T, R>(
 
 // ---- GCVS variable-star catalogue parsing -------------------------------
 
-// Split pipe-delimited catalogue text into per-line trimmed-cell arrays.
-// Blank / whitespace-only lines are skipped; CRLF and LF both accepted.
 export function splitPipeDelimited(text: string): string[][] {
   const out: string[][] = [];
   for (const line of text.split(/\r?\n/)) {
@@ -226,9 +222,7 @@ export function parseGcvsNumber(s: string): number | null {
   return Number.isFinite(v) ? v : null;
 }
 
-// Per-star variability-type enum. Stored at RECORD_LAYOUT.varType (uint8
-// at byte 37); shaders + runtime gate pulsation off this. Tagged with
-// 0 = unknown so a build that predates the varType column reads as
+// 0 = unknown, so a build predating the varType column reads as
 // "non-variable" by default without a magic-version bump.
 //
 // Eclipsing = 2 is the load-bearing value — paired with binaries.bin's
@@ -410,8 +404,8 @@ export const NO_SID = 0;
 // constellation assignment. Valid IAU constellation indexes are
 // 0..87 (88 modern constellations); 255 is unambiguous.
 export const NO_CONSTELLATION_INDEX = 0xff;
-// Sentinel uint64 stored at RECORD_LAYOUT.gaiaSourceId when AT-HYG's
-// `gaia` column is blank. Valid Gaia DR3 source_ids are positive 63-bit
+// Sentinel uint64 stored at RECORD_LAYOUT.gaiaSourceId when the manifest
+// carries no `gaia_source_id`. Valid Gaia DR3 source_ids are positive 63-bit
 // integers, so 0 is unambiguous.
 export const NO_GAIA_SOURCE_ID = 0n;
 // Float32 NaN is the null sentinel for the seven Gaia DR3 Apsis fields
@@ -662,8 +656,7 @@ export function writeStarRecord(view: DataView, off: number, r: WireStarRecord):
   view.setUint8(off + RECORD_LAYOUT.multiplicityStatus, r.multiplicityStatus);
 }
 
-/** Encode the fixed-size header — the writer side shared with the loader
- *  round-trip tests. Reserved bytes (20..31) stay zero. */
+/** Reserved bytes (20..31) stay zero. */
 export function writeCatalogHeader(
   view: DataView,
   fields: { count: number; nameTableOffset: number; nameTableLength: number },
@@ -676,12 +669,6 @@ export function writeCatalogHeader(
   view.setUint32(HEADER_LAYOUT.nameTableLength, fields.nameTableLength, true);
 }
 
-/** Read one field of the record starting at `recordOff` — the reader side
- *  of the layout contract, shared by the SoA runtime loader
- *  (src/client/loaders/catalog-loader.ts) and the AoS Node reader
- *  (catalog-lookup.ts). The `view.get*` call is chosen from
- *  RECORD_FIELD_KINDS, so a field's declared wire type and the bytes a
- *  reader actually pulls can never disagree. */
 export function readRecordField(
   view: DataView,
   recordOff: number,
@@ -708,7 +695,6 @@ export function readRecordFieldBig(
   return view.getBigUint64(recordOff + RECORD_LAYOUT[field], true);
 }
 
-/** Numeric sinks a decoded column can land in. */
 export type RecordColumnSink = Float32Array | Uint8Array | Uint16Array | Uint32Array;
 
 export interface DecodeRecordColumnOptions {
@@ -1196,12 +1182,11 @@ export function markPrimaryIfUnflagged(
 // otherwise — does not read or write any other fields.
 export interface DoublesStar { absmag: number; flags: number; hip: number | null; }
 
-// HIP → record-index lookup over a star list. When the same HIP appears
-// on multiple rows (rare; binary companions sharing an identifier), the
-// FIRST occurrence wins via the `!has` check — so against the
-// absmag-sorted star array build-catalog.ts produces, the value is the
-// brightest row. Shared between the constellation stick-figure resolver
-// and the CCDM doubles pass so the two never disagree on a duplicate.
+// When the same HIP appears on multiple rows (rare; binary companions sharing
+// an identifier) the FIRST occurrence wins, so against the absmag-sorted star
+// array build-catalog.ts produces the value is the brightest row. Shared
+// between the stick-figure resolver and the CCDM doubles pass so the two never
+// disagree on a duplicate.
 export function buildHipToIndex(
   stars: { hip: number | null }[],
 ): Map<number, number> {
@@ -1434,11 +1419,10 @@ export function isBailerJonesEligible(
   return !!gaiaSourceId && distVia === 'gaia_dr3_inversion';
 }
 
-/** Parse a Gaia DR3 source_id cell into a decimal string suitable for
- *  `BigInt()`. Returns null for blank cells AND for cells that aren't
- *  pure decimal digits — guards the build's `BigInt(s.gaiaSourceId)`
- *  call against a malformed AT-HYG row throwing a SyntaxError mid-write.
- *  Same `/^\d+$/` shape gate as `parseGaiaHipXmatchTsv` in `gaia-xmatch.ts`. */
+/** Null for a blank cell AND for one that is not pure decimal digits, which
+ *  guards the build's `BigInt(s.gaiaSourceId)` call against a malformed row
+ *  throwing a SyntaxError mid-write. Same `/^\d+$/` shape gate as
+ *  `parseGaiaHipXmatchTsv` in `gaia-xmatch.ts`. */
 export function parseGaiaSourceIdStr(s: string | undefined | null): string | null {
   if (s === undefined || s === null) return null;
   const t = s.trim();
@@ -1762,8 +1746,7 @@ export function absoluteToApparentMagnitude(absmag: number, distPc: number): num
   return absmag + 5 * Math.log10(distPc / 10);
 }
 
-/** When `gaiaSourceId` has a Bailer-Jones entry, returns the snapped distance
- *  in parsecs; otherwise null.
+/** The posterior distance in parsecs, B-J's own unit.
  *
  *  Every distance-override layer (Bailer-Jones, LMC kinematic, and future SMC
  *  kinematic / structural-disc / OGLE Cepheid layers) returns a bare distance:
@@ -1795,7 +1778,7 @@ export function applyBailerJonesOverride(
 //     spread (±0.3 mas/yr) both sit well inside the ±0.5 tolerance.
 //   - The 15° cone is wide enough to admit the visible disc and
 //     30 Doradus while keeping confusion with Galactic foreground low.
-// Tolerances chosen so AT-HYG halo / runaway stars in the same sky region
+// Tolerances chosen so Galactic halo / runaway stars in the same sky region
 // (which have very different PMs) fail the test — see catalog-pure.test.ts.
 export const LMC_DISTANCE_PC = 49_594;
 export const LMC_CENTRE_RA_HOURS = 5.25067;       // 78.76° / 15

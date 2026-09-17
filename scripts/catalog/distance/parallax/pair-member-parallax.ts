@@ -19,8 +19,8 @@ export interface SiblingParallax {
  *  plus `entryCount` are a partition of every deduped source: a refusal path
  *  added without a bucket breaks it silently. */
 export interface PairMemberSiblingRefusals {
-  /** The astrometry pull carries no row for the source at all — the request
-   *  under-covering the pair-row half of its union. */
+  /** The request under-covering the pair-row half of its union — the one
+   *  refusal here a re-pull can fix, which is why it is pinned at zero. */
   noAstrometryRow: number;
   /** Gaia has the source and published no parallax for it. */
   noParallax: number;
@@ -81,10 +81,7 @@ export function pairMemberSourceIds(
   return ids;
 }
 
-/** Index the kept-physical pair rows of `multiples.tsv` by WDS root, carrying
- *  each root's anchor-grade member parallaxes.
- *
- *  A member's parallax is read on its OWN `gaia_source_id`, which is what keeps
+/** A member's parallax is read on its OWN `gaia_source_id`, which is what keeps
  *  the index honest: Stage 2/3 bind one blended source to every component of a
  *  sub-arcsec pair, so a root's rows routinely repeat the primary's id. Reading
  *  the astrometry table on that id twice would offer a member the fit it

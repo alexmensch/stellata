@@ -797,12 +797,9 @@ async function main() {
   // are final after this point.
   stars.sort((a, b) => a.absmag - b.absmag);
 
-  // HIP → record index over the absmag-sorted star array. Shared with the
-  // CCDM doubles pass below so duplicate HIPs resolve identically.
   const hipToIndex = buildHipToIndex(stars);
 
-  // Resolve Stellarium stick-figure lines to star indices. Throws if any
-  // referenced HIP is missing from the catalog.
+  // Throws if a referenced HIP is missing from the catalog.
   const figureLines = buildFigureLines(SRC_STELLARIUM, hipToIndex);
 
   // Geometric binary inference.

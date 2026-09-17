@@ -132,8 +132,7 @@ export function detectSimbadOutlier(
   };
 }
 
-/** Sweep the catalog and produce the full regression report. Sorted by
- *  id within each section for stable snapshot diffs. */
+/** Sorted by id within each section, for stable snapshot diffs. */
 export function buildRegressionReport(
   stars: readonly Star[],
   simbadSample: ReadonlyMap<string, SimbadDistanceEntry>,
@@ -151,10 +150,9 @@ export function buildRegressionReport(
   return { selfConsistency, simbad };
 }
 
-/** Parse the SIMBAD sample TSV into a join-key Map. Each row may
- *  contribute up to two entries (gaia:N and hip:N) when both identifiers
- *  are present, so star-side lookup can succeed via either key. Rows
- *  with no usable distance are skipped. */
+/** Each row may contribute up to two entries (gaia:N and hip:N) when both
+ *  identifiers are present, so star-side lookup can succeed via either key.
+ *  Rows with no usable distance are skipped. */
 export function parseSimbadSampleTsv(
   text: string,
 ): Map<string, SimbadDistanceEntry> {
@@ -221,10 +219,9 @@ function diffSection<T extends SelfConsistencyOutlier | SimbadOutlier>(
   return diffs;
 }
 
-/** Carry over hand-edited `reason` rationales from a prior snapshot onto
- *  a freshly-computed report. Called on UPDATE_DISTANCE_OUTLIERS=1
- *  refreshes so existing reasons survive an explicit rebaseline; new
- *  outliers land without a reason for the committing human to fill in. */
+/** Called on UPDATE_DISTANCE_OUTLIERS=1 refreshes so hand-edited rationales
+ *  survive an explicit rebaseline; a new outlier lands without one, for the
+ *  committing human to fill in. */
 export function mergeReasonsFromSnapshot(
   expected: RegressionReport,
   actual: RegressionReport,
@@ -243,7 +240,6 @@ export function mergeReasonsFromSnapshot(
   };
 }
 
-/** Compare two reports and emit per-outlier diffs. Pure — no I/O. */
 export function compareRegressionReports(
   expected: RegressionReport,
   actual: RegressionReport,
@@ -254,8 +250,8 @@ export function compareRegressionReports(
   ];
 }
 
-/** Pretty-printer for the diff. Mismatches (added / removed / changed)
- *  surface first; the unchanged tail is summarised as a count. */
+/** Mismatches (added / removed / changed) surface first; the unchanged tail
+ *  is summarised as a count. */
 export function formatRegressionDiff(diff: readonly OutlierDiff[]): string {
   const drift = diff.filter((d) => d.status !== 'unchanged');
   const unchangedSc = diff.filter(

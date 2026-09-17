@@ -17,9 +17,9 @@ export const GAIA_UNSATURATED_G_MIN = 3.0;
 
 /** Gaia's ipd_frac_multi_peak is a PERCENT (0–100), not a fraction —
  *  AU Mic carries 1 (1%, clean). Distinct from direction-cascade's
- *  GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD = 0.02, which compares the same
- *  column on the fraction scale (tracked as a bead — its effect is
- *  masked by the NSS-membership requirement). */
+ *  GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD, which compares the same column on
+ *  the fraction scale; there the NSS-membership requirement masks the
+ *  difference, so do not read the two as one threshold. */
 export const ANCHOR_IPD_MAX_PERCENT = 2.0;
 
 /** A member snaps to the anchor distance only when the radial gap is
@@ -40,10 +40,9 @@ export const COHERENCE_RADIAL_SIGMA = 3.0;
 export const COHERENCE_NO_SIGMA_MAX_RELATIVE_GAP = 0.2;
 export const COHERENCE_NO_SIGMA_MIN_GAP_PC = 1.0;
 
-/** Distance-anchor quality tiers, best first. Purpose-aware, not
- *  recency-aware: HIP2's long baseline beats Gaia exactly where Gaia is
- *  saturated or binarity-corrupted (Acrux), while a clean unsaturated
- *  Gaia 5p beats HIP2 everywhere else. */
+/** Best first, and purpose-aware rather than recency-aware: HIP2's long
+ *  baseline outranks Gaia exactly where Gaia is saturated or
+ *  binarity-corrupted. */
 export const ANCHOR_TIER_GAIA_CLEAN = 0;
 export const ANCHOR_TIER_HIP2 = 1;
 export const ANCHOR_TIER_BAILER_JONES = 2;

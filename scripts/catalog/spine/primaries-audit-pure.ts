@@ -102,7 +102,6 @@ export interface PrimaryIndex extends Cns5Index {
   iv27aFlamByHip: Map<number, Set<number>>;
 }
 
-/** Insert into a map of key → set, creating the set on first write. */
 export function addKeyed(by: Map<number, Set<number>>, key: number, value: number): void {
   const set = by.get(key) ?? new Set<number>();
   set.add(value);

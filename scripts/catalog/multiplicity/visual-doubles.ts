@@ -49,37 +49,17 @@ export const KNOWN_VISUAL_DOUBLE_HIPS: Set<number> = new Set(
   KNOWN_VISUAL_DOUBLES.flatMap((s) => s.components),
 );
 
-// Hipparcos main catalogue carries a CCDM cross-reference per star: the
-// `CCDM` column is non-blank when the star is a component of a system in
-// the Catalog of the Components of Double and Multiple stars (Dommanget &
-// Nys 1994), the curated pre-WDS reference for visual doubles. CCDM alone
-// is too permissive — it lumps physical doubles together with wide
-// line-of-sight optical pairs (so Vega and Pollux end up tagged) — so we
-// gate it with Hipparcos's own `MultFlag` column (H59):
-//
-//   C = component star in a Hipparcos-resolved system
-//   G = double resolved within the Hipparcos field
-//   O = orbit known (spectroscopic / astrometric)
-//   blank, V, X = unconfirmed by Hipparcos's own astrometry
-//
-// Keeping `{C, G, O}` removes the bulk of CCDM optical pairs while
-// preserving real binaries Hipparcos modelled. A handful of canonical
-// visual doubles are still dropped this way (Polaris, ε¹ Lyr, 61 Cyg —
-// wide pairs Hipparcos treated as single stars); KNOWN_VISUAL_DOUBLES
-// recovers them.
+// `MultFlag` (H59) gates CCDM's permissiveness: {C, G, O} are the systems
+// Hipparcos itself modelled, and blank / V / X are not.
 //
 // Expected file: VizieR TSV from
 // `asu-tsv?-source=I/239/hip_main&-out=HIP,CCDM,MultFlag&-out.max=unlimited`.
 // The parser tolerates VizieR's preamble (`#` comments, header row,
 // dash-separator row, then data).
-
-// Returns a map from CCDM_ID → list of component HIPs. Curated visual
-// doubles are NOT included here — they live in KNOWN_VISUAL_DOUBLES and
-// applyDoublesFlag unions both sources at flag time. Keeping them
-// separate avoids minting synthetic CCDM keys that share a type with
-// real CCDM IDs.
-// Components in the same group are siblings of one system —
-// applyDoublesFlag picks the brightest as the primary.
+//
+// Real CCDM keys only. A HIP the curated list already claims is skipped here
+// and unioned in by applyDoublesFlag instead, so no synthetic key is minted
+// that would share a type with a real CCDM ID.
 export function parseHipCcdm(srcPath: string): Map<string, number[]> {
   const groups = new Map<string, number[]>();
 
@@ -128,7 +108,7 @@ export function parseHipCcdm(srcPath: string): Map<string, number[]> {
 
     if (KNOWN_VISUAL_DOUBLE_HIPS.has(hip)) {
       viaOverride++;
-      continue; // already in an OVERRIDE-* group
+      continue; // the curated list supplies this system at flag time
     }
 
     const ccdm = (cols[ccdmIdx] ?? '').trim();
@@ -163,10 +143,9 @@ export interface PhysicalPairKeys {
   gaia: ReadonlySet<string>;
 }
 
-// Collect the HIP / Gaia source_id keys of every kept physical-pair
-// component from multiples.tsv. Stage 6 drops optical pairs entirely, so a
-// non-standalone row is a bound-pair member; standalone rows are single
-// stars carrying no boundness evidence.
+// Stage 6 drops optical pairs entirely, so a non-standalone row is a
+// bound-pair member; standalone rows are single stars carrying no
+// boundness evidence.
 export function collectPhysicalPairKeys(
   rows: readonly MultiplesTsvRow[] | null,
 ): PhysicalPairKeys {
