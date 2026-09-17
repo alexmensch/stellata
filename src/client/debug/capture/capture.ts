@@ -17,6 +17,7 @@ import {
   type EaseName,
   type TakePhase,
   type TakeShape,
+  anchorPose,
   capturePose,
   frameMismatch,
   lerpPose,
@@ -92,6 +93,10 @@ export function runCapture(
   const live: CapturePose = {
     cam: new THREE.Vector3(), tgt: new THREE.Vector3(), up: new THREE.Vector3(), fov: from.fov,
   };
+  const ridden: CapturePose = {
+    cam: new THREE.Vector3(), tgt: new THREE.Vector3(), up: new THREE.Vector3(), fov: from.fov,
+  };
+  const anchor = new THREE.Vector3();
 
   cancelActive?.();
 
@@ -134,11 +139,21 @@ export function runCapture(
     let takeStartMs = 0;
     let phase: TakePhase = 'delay';
 
+    // Soft kinds leave the origin where it was, so their blob's coordinates
+    // are not offsets from anything and ride nothing.
+    const focalAnchor = (): THREE.Vector3 => {
+      const focal = stellata.focus.getFocusedHardTarget();
+      const live = focal !== null
+        && stellata.focusables[focal.kind].localPositionInto(focal.idx, anchor);
+      return live ? anchor : anchor.set(0, 0, 0);
+    };
+
     const writePose = (pose: CapturePose) => {
-      stellata.camera.position.copy(pose.cam);
-      stellata.controls.target.copy(pose.tgt);
-      stellata.camera.up.copy(pose.up);
-      if (pose.fov !== stellata.camera.fov) stellata.setCameraFov(pose.fov);
+      const p = anchorPose(pose, focalAnchor(), ridden);
+      stellata.camera.position.copy(p.cam);
+      stellata.controls.target.copy(p.tgt);
+      stellata.camera.up.copy(p.up);
+      if (p.fov !== stellata.camera.fov) stellata.setCameraFov(p.fov);
     };
 
     const onFrame = () => {

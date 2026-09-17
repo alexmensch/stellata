@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
   type CapturePose,
+  anchorPose,
   capturePose,
   easeAt,
   frameMismatch,
@@ -41,6 +42,40 @@ describe('easeAt', () => {
 
   it('linear is the identity', () => {
     expect(easeAt('linear', 0.25)).toBe(0.25);
+  });
+});
+
+describe('anchorPose', () => {
+  it('carries cam and tgt onto the anchor, leaving up and fov alone', () => {
+    const got = anchorPose(
+      pose([0, 0, 3], [0, 0, 0], [0, 1, 0], 42), new THREE.Vector3(10, 20, 30), out(),
+    );
+    expect(got.cam.toArray()).toEqual([10, 20, 33]);
+    expect(got.tgt.toArray()).toEqual([10, 20, 30]);
+    expect(got.up.toArray()).toEqual([0, 1, 0]);
+    expect(got.fov).toBe(42);
+  });
+
+  it('holds the orbit radius whatever the focal has done', () => {
+    const p = pose([2, 0, 0], [0, 1, 0]);
+    const far = anchorPose(p, new THREE.Vector3(-400, 900, 7), out());
+    expect(far.cam.distanceTo(far.tgt)).toBeCloseTo(p.cam.distanceTo(p.tgt), 12);
+  });
+
+  it('is frame-invariant: an origin shift moves the anchor and the pose together', () => {
+    const p = pose([0.004, -0.002, 0.001], [0, 0, 0]);
+    const focal = new THREE.Vector3(0.5, -0.25, 0.75);
+    const shift = new THREE.Vector3(120, -80, 40);
+    const before = anchorPose(p, focal, out());
+    const after = anchorPose(p, focal.clone().add(shift), out());
+    expect(after.cam.sub(shift).distanceTo(before.cam)).toBeCloseTo(0, 12);
+    expect(after.tgt.sub(shift).distanceTo(before.tgt)).toBeCloseTo(0, 12);
+  });
+
+  it('a zero anchor is the untouched pose — an unfocused or soft-focus take', () => {
+    const got = anchorPose(pose([1, 2, 3], [4, 5, 6]), new THREE.Vector3(), out());
+    expect(got.cam.toArray()).toEqual([1, 2, 3]);
+    expect(got.tgt.toArray()).toEqual([4, 5, 6]);
   });
 });
 

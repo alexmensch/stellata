@@ -30,6 +30,23 @@ export function capturePose(pose: ViewPose): CapturePose {
   };
 }
 
+/** Move a focal-relative pose onto where the focal object currently sits.
+ *
+ *  A blob carrying a hard focus states `cam` / `tgt` against an origin that is
+ *  the focal object itself, so both are offsets FROM it rather than fixed
+ *  points of the local frame — and an origin shift leaves an offset alone,
+ *  which is what lets a take survive a mid-take recentre without migrating
+ *  anything. See README.md § The take rides the focal object. */
+export function anchorPose(
+  pose: CapturePose, anchor: THREE.Vector3, out: CapturePose,
+): CapturePose {
+  out.cam.addVectors(pose.cam, anchor);
+  out.tgt.addVectors(pose.tgt, anchor);
+  out.up.copy(pose.up);
+  out.fov = pose.fov;
+  return out;
+}
+
 const rotation = new THREE.Quaternion();
 const partial = new THREE.Quaternion();
 const dirA = new THREE.Vector3();

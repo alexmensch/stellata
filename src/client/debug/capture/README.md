@@ -14,8 +14,9 @@ what it feeds.
 src/client/debug/capture/
   capture.ts                  The run: apply the start view, drive pose and
                               clock per frame, restore everything after.
-  capture-pure.ts (+ test)    Easing, the pose interpolation, the frame
-                              compatibility test, the clock plan.
+  capture-pure.ts (+ test)    Easing, the pose interpolation, the focal
+                              anchoring, the frame compatibility test, the
+                              clock plan.
 ```
 
 ## Calling it
@@ -64,6 +65,34 @@ mode whose pose is an orientation rather than a position and a target.
 Travel between two different objects is what warp is for. To shoot one, put
 the warp in the take's subject rather than in its camera track.
 
+## The take rides the focal object
+
+A hard focus — star, planet, probe — puts the floating origin *on* the object,
+so a blob written under one states `cam` and `tgt` as offsets **from that
+object**, not as fixed points of the frame. The take reads the focal's live
+local position every frame and writes the pose onto it, which is what holds
+the object under `controls.target` and keeps `uPinFocusToCenter` engaged for
+the length of a take (`../../camera/focus/README.md` § Pin-to-center).
+
+The object really does move, and fast: a clock spending a year in five seconds
+crosses an epoch re-advance bucket every 0.05 Julian year, and each crossing
+steps the focal by its whole space motion over that bucket
+(`../../star-pipeline/star-frame/README.md` § The star frame). Close in, that
+step is not small against the orbit radius — a take on Mira parked at 1.3 AU
+covers about eighteen times its own camera-to-star distance over one pulsation
+period, so a pose written as fixed frame coordinates does not drift off the
+subject, it loses it inside the first second.
+
+Riding the anchor is also what makes a take survive a **mid-take recentre**.
+The focal-anchor policy shifts the origin onto the object as it travels
+(`../../frame/README.md`), which renumbers every local coordinate — but an
+offset between two of them is unchanged by it. Only the anchor is read in the
+current frame, so nothing else the take caches has to be migrated.
+
+Soft focuses (cloud, LG object, boundary shell) don't recentre the origin, so
+their coordinates are offsets from nothing and the pose is written as it
+stands. Same for a take with no focus at all.
+
 ## The move is an arc at a geometric radius
 
 The orbit vector `cam − tgt` is slerped and its length interpolated
@@ -101,6 +130,18 @@ owes `Stellata.notifyClockJumped()` for it like any other transport
 pins at the bound partway through the move and the clock stands still for
 the rest of it.
 
+### A fast clock slows short variables down
+
+Variable pulsation carries an anti-strobe floor: no cycle is allowed to
+complete in under `uMinPeriodSec` (4 s) of real time, so above
+`period / 4 s` the star pulsates at the floor rather than at its own period
+(`../../star-pipeline/star.vert.glsl`). A take shooting a variable has to
+stay under that, and it is the take's rate that decides — Mira's 332 days in
+5 seconds runs at 64 model-days a second, whose floor is 256 days, just
+inside its period. Ask for the same span in 4 seconds and the floor is 320
+days: the star would visibly pulsate slower than the clock says. Divide the
+period by 4 seconds for the fastest model-days-per-second a subject takes.
+
 ## What a take holds for its duration
 
 - **A render-gate hold**, so every rAF tick draws rather than the gate
@@ -117,9 +158,9 @@ Every one of them is released on completion and on `cancel()`, including the
 camera mode's own `enabled` value as it stood before the take.
 
 The first two frames after the start view is applied are spent holding that
-pose: a focus carried by a SID whose domain attaches late recentres the
-floating origin when it lands, and that moves every local coordinate the
-take interpolates.
+pose, so a focus carried by a SID whose domain attaches late has landed
+before the move opens — until it does there is no focal anchor to ride and
+the pose writes as bare frame coordinates.
 
 ## Pacing
 
