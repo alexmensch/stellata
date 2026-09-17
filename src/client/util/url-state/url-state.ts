@@ -92,6 +92,24 @@ function defaultCamForMode(mode: 'navigate' | 'observe' | undefined): [number, n
   return mode === 'observe' ? OBSERVE_CAM_LOCAL : DEFAULT_CAM;
 }
 
+/** Every pose slot a blob can carry, omitted ones filled.
+ *  README.md, the applyFocusTarget bullet. */
+export interface ViewPose {
+  cam: [number, number, number];
+  tgt: [number, number, number];
+  up: [number, number, number];
+  fov: number;
+}
+
+export function viewPose(view: DecodedView): ViewPose {
+  return {
+    cam: view.cam ?? defaultCamForMode(view.mode),
+    tgt: view.tgt ?? DEFAULT_TGT,
+    up: view.up ?? DEFAULT_UP,
+    fov: view.fov !== undefined && view.fov > 0 ? view.fov : DEFAULT_FOV,
+  };
+}
+
 // Focus-tag-bit semantics: high bit set = HIP-resolved ID, clear = raw
 // row index. The 0xFFFFFFFF sentinel is reserved (won't naturally appear
 // since "explicitly unfocused" uses a separate presence bit, not a magic
@@ -1210,6 +1228,13 @@ function setCameraToDefault(stellata: Stellata, mode: 'navigate' | 'observe' | u
   stellata.camera.position.set(d[0], d[1], d[2]);
 }
 
+// The one route into focus for every decoded blob — README.md, the
+// applyFocusTarget bullet.
+function applyFocusTarget(stellata: Stellata, target: Target, snap: boolean): void {
+  if (snap) stellata.focus.setOrbitTarget(target);
+  else stellata.focus.flyTo(target, { animate: false });
+}
+
 // **The order here is load-bearing**:
 //   - unit is applied first so any DOM sync triggered later reads it
 //   - preset before filter, so derived size defaults are populated before
@@ -1272,6 +1297,21 @@ export function applyDecodedView(
 
   const hasCam = view.cam !== undefined;
   const hasTgt = view.tgt !== undefined;
+  const snap = hasCam || hasTgt;
+
+  // A Sol focus rides the wire as an ABSENT field, and a hard focus is also
+  // what elides `worldOffset` — so a blob carrying neither states the default
+  // frame and leaves the receiver owing the rebuild. Inheriting instead is
+  // invisible at boot, where the session is already on Sol, and wrong for
+  // every blob applied to a running session: `cam` / `tgt` below would be
+  // written as coordinates of a frame this session never established.
+  const legacyCloudFocus = view.cloud !== undefined && view.cloud >= 0;
+  const assertsDefaultFrame = view.focus === undefined
+    && !legacyCloudFocus
+    && view.worldOffset === undefined;
+  if (assertsDefaultFrame && idMaps.solIndex >= 0) {
+    applyFocusTarget(stellata, { kind: 'star', idx: idMaps.solIndex }, snap);
+  }
 
   if (view.focus !== undefined) {
     if (view.focus === 'cleared') {
@@ -1287,12 +1327,10 @@ export function applyDecodedView(
       // the rest of the decoded state stands. Planet sids translate
       // domain index → flat Target index; a translation miss (host
       // body-field not attached) drops the focus like an unknown sid.
-      const snap = hasCam || hasTgt;
       idMaps.sidResolver.whenResolved(view.focus.id, (kind, localIndex) => {
         const idx = targetIdxOf(idMaps, kind, localIndex);
         if (idx === null) return;
-        if (snap) stellata.focus.setOrbitTarget({ kind, idx });
-        else stellata.focus.flyTo({ kind, idx }, { animate: false });
+        applyFocusTarget(stellata, { kind, idx }, snap);
         // A sid whose domain attaches after this function returns fires its
         // 'focus' event then, disarming the ORB the tail already restored.
         restoreOrbitFrame(stellata, view);
@@ -1300,8 +1338,7 @@ export function applyDecodedView(
     } else {
       const idx = resolveStarRef(view.focus, idMaps, idMaps.solIndex);
       if (idx >= 0 && idx < idMaps.starCount) {
-        if (hasCam || hasTgt) stellata.focus.setOrbitTarget({ kind: 'star', idx });
-        else stellata.focus.focusStar(idx, { animate: false });
+        applyFocusTarget(stellata, { kind: 'star', idx }, snap);
       }
     }
   }
@@ -1309,8 +1346,7 @@ export function applyDecodedView(
   // encoder never emitted both — apply after `focus` so cloud wins on
   // the off chance both are present in a hand-crafted blob.
   if (view.cloud !== undefined && view.cloud >= 0) {
-    if (hasCam || hasTgt) stellata.focus.setOrbitTarget({ kind: 'cloud', idx: view.cloud });
-    else stellata.focus.flyTo({ kind: 'cloud', idx: view.cloud }, { animate: false });
+    applyFocusTarget(stellata, { kind: 'cloud', idx: view.cloud }, snap);
   }
   if (view.toc !== undefined && view.toc >= 0) {
     stellata.focus.setVector({ kind: 'cloud', idx: view.toc });

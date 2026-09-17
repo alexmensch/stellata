@@ -47,6 +47,9 @@ src/client/util/url-state/
                                   Pure string helpers, split out so the
                                   path regex is unit-testable without
                                   url-state.ts's location/history writes.
+                                  `shareBlobFrom` is the paste-tolerant
+                                  reader over all three transports that the
+                                  console helpers take their blob from.
   pose-change-pure.ts (+ test)    the one scale-free test behind both the
                                   per-frame write trigger and the encoder's
                                   cam / tgt / worldOffset elision. See
@@ -135,11 +138,33 @@ bit order, so mode isn't known until the field loop completes).
   encoded by *omitting* the field; "explicitly unfocused" uses a
   separate zero-byte presence bit so the three states (default Sol /
   specific object / cleared) stay unambiguous.
-- If the blob carries a focus without camera params (a hand-typed share),
-  `applyDecodedView` calls `focusStar(idx, { animate: false })` which
-  snaps the camera to the park pose — URL restore must not surface as a
-  2 s glide on page load. If camera params are also present, it uses
-  `setOrbitTarget` so the explicit camera wins.
+- **An absent `focus` is a positive statement, and the receiver owes the
+  rebuild.** A hard focus is also what elides `worldOffset` (§ worldOffset
+  below), so a blob carrying neither field is asserting the default frame —
+  origin on Sol — and `applyDecodedView` re-establishes it before writing
+  `cam` / `tgt`. A blob that states its frame some other way (an explicit
+  `worldOffset`, or a legacy v1–v3 `cloud` focus) is left alone so nothing
+  recentres twice. On a page load this changes nothing, because catalog
+  attach has already focused Sol; it is what makes a blob applied to a
+  **running** session — a pasted link, a `debug.capture` take — land in the
+  frame its coordinates were measured in rather than whichever one the
+  session had drifted to.
+- **Every focus a blob asks for lands through `applyFocusTarget`**, whatever
+  kind it names and whichever of the four routes decoded it — the asserted
+  default frame above, a v4 sid, a legacy star ref, a legacy cloud ref. Its
+  one argument is whether the blob also carries `cam` or `tgt`. Without one,
+  it parks: `flyTo(target, { animate: false })`, snapping rather than gliding,
+  because a URL restore must not surface as a 2 s glide on page load. With
+  one, `setOrbitTarget` rebuilds the frame and skips the park the lines below
+  would overwrite anyway, so the explicit camera wins.
+  **`viewPose` cannot answer for the park leg, and that is the one place the
+  two disagree.** Its fills are the encoder's elision defaults, which is what
+  a consumer blending two blobs needs; the park pose is per-object and comes
+  from the kind's provider at apply time, so a pose-less focused blob restores
+  somewhere `viewPose` reports as `[0,0,30]`. Only a hand-typed share is
+  pose-less — the encoder emits `cam` for any park it did not elide against —
+  and the consumer to watch is `debug.capture`, which would open such a take
+  30 pc out rather than where the link lands.
 - Camera changes are tracked via the `'frame'` event with the scale-free
   comparison of § What counts as a camera move (no per-frame allocations)
   feeding a 1 s debounced writer. The comparison covers position, target,
@@ -163,7 +188,7 @@ bit order, so mode isn't known until the field loop completes).
   whatever the session last held; at boot that is the pole projected into the
   *default* view axis, which renders level from that vantage and no other, so
   a level share from elsewhere came back rolled by up to 66°. It is applied
-  **before** focus/orbit dispatch because `focusStar` / `setOrbitTarget`
+  **before** focus/orbit dispatch because both of `applyFocusTarget`'s legs
   call `controls.update()`, which reads it — so it lands as a raw axis and
   the `lookAt` inside that update projects it. One `adoptFromCamera` after
   the final update puts `up` back on the perpendicular invariant.
@@ -343,4 +368,9 @@ so the attach table is populated when a planet ref resolves.
 **Console helpers.** `window.debug.decodeView('AQAA…')` decodes a blob
 and `console.table`s the fields; `window.debug.encodeView()` returns
 the blob for the current Stellata state. Useful when debugging a
-shared URL that someone reports.
+shared URL that someone reports. Both read their argument through
+`shareBlobFrom`, so a pasted address bar works as well as a bare blob.
+`window.debug.capture()` flies a recordable take between two blobs and
+reads their poses through `viewPose`, the one place a decoded view's
+omitted pose slots resolve to the values `applyDecodedView` restores
+(`../../debug/capture/README.md`).

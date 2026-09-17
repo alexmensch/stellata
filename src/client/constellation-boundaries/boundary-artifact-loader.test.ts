@@ -153,10 +153,7 @@ describe('loadBoundaries', () => {
     expect(await loadBoundaries(URL)).toBeNull();
   });
 
-  // `not_found_handling = "single-page-application"` (wrangler.toml) answers a
-  // missing asset with index.html at 200, so a deployed build that never ran
-  // build:catalog reaches the parse, not the !ok branch. Rejecting here blanked
-  // the entire app instead of dropping the arcs.
+  // Why absence lands here and not on !ok: README.md § Validated at load.
   it('resolves null when the SPA fallback serves index.html at 200', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,

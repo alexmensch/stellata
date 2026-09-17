@@ -114,17 +114,8 @@ export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
   return artifact;
 }
 
-/**
- * Null means no layer at all — the chart renders without it.
- *
- * **Nothing here may reject.** `main.ts` loads this inside a `Promise.all`
- * alongside the catalog, so a rejection takes the whole app's boot with it,
- * which is never the proportionate answer for an optional layer. Absence
- * can't be detected by status alone either: `not_found_handling =
- * "single-page-application"` (`wrangler.toml`) answers a missing asset with
- * index.html at 200, so a deployed build that never ran `build:catalog`
- * arrives here as a JSON parse error rather than a 404.
- */
+/** Null means no layer at all, and this **must never reject**:
+ *  README.md § Validated at load, but never fatal. */
 export async function loadBoundaries(url: string): Promise<BoundaryArtifact | null> {
   let raw: unknown;
   try {

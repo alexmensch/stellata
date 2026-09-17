@@ -61,6 +61,13 @@ owns a layer. The orbit lock is the worked example: it rides through
 `Stellata.setOrbitFrameTick` from a sequencing-only registry entry, and only
 its *drawing* rides `frame` (`../../attitude/orbit-frame/README.md` § The lock).
 
+**One standing exception, argued rather than assumed:** `debug.capture` writes
+the camera from `frame` for the length of a take. It is the sole writer while
+it runs and has no readout of its own, so the rule's two harms reduce to a
+constant one-frame lag — `../../debug/capture/README.md` § Writing the pose
+from `frame`, which is a departure. A second camera writer on that path retires
+the exception.
+
 ## Authoring a new event
 
 Payload types live in `StellataEventMap` (`../../stellata.ts`, where

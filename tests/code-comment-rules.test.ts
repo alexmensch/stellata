@@ -1,17 +1,16 @@
-// Enforces the comment-rule "law" section of AGENTS.md across src/ and
-// scripts/ TS/Py source. Fails CI when bead-IDs, PR references, memory-
-// key wikilinks, or oversized module docstrings appear — see
-// docs/authoring-patterns.md § Code-comment hygiene for the rules.
+// Enforces the comment-rule "law" section of AGENTS.md across every
+// TS/Py source the repo owns — see docs/authoring-patterns.md
+// § Code-comment hygiene for the rules.
 
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { walkFiles } from './walk-files';
 import { loadCommentRules } from '../scripts/hooks/comment-rules';
 
 const ROOT = resolve(__dirname, '..');
-const SCAN_DIRS = ['src', 'scripts'];
+const SCAN_DIRS = ['src', 'scripts', 'tests'];
 const DOCSTRING_ALLOWLIST_PATH = resolve(__dirname, 'code-comment-rules-allowlist.txt');
 
 function loadDocstringAllowlist(): Set<string> {
@@ -45,11 +44,22 @@ const FORBIDDEN: Pattern[] = loadCommentRules(ROOT).map((entry) => ({
   re: new RegExp(entry.pattern, entry.flags),
 }));
 
+const SCANNABLE = (path: string): boolean =>
+  /\.(?:ts|js|py)$/.test(path) && !/\.d\.ts$/.test(path);
+
 const walk = (dir: string): Generator<string> =>
-  walkFiles(dir, {
-    skipDir: (name) => EXCLUDED_DIRS.has(name),
-    include: (path) => /\.(?:ts|js|py)$/.test(path) && !/\.d\.ts$/.test(path),
-  });
+  walkFiles(dir, { skipDir: (name) => EXCLUDED_DIRS.has(name), include: SCANNABLE });
+
+function* scannedFiles(): Generator<string> {
+  for (const root of SCAN_DIRS) {
+    const start = join(ROOT, root);
+    try { statSync(start); } catch { continue; }
+    yield* walk(start);
+  }
+  for (const name of readdirSync(ROOT)) {
+    if (SCANNABLE(name)) yield join(ROOT, name);
+  }
+}
 
 interface Violation {
   file: string;
@@ -84,12 +94,8 @@ function scanFile(path: string): Violation[] {
 
 function collectAllViolations(): Violation[] {
   const all: Violation[] = [];
-  for (const root of SCAN_DIRS) {
-    const start = join(ROOT, root);
-    try { statSync(start); } catch { continue; }
-    for (const path of walk(start)) {
-      all.push(...scanFile(path));
-    }
+  for (const path of scannedFiles()) {
+    all.push(...scanFile(path));
   }
   return all;
 }
@@ -182,7 +188,7 @@ describe('forbidden-pattern shapes', () => {
 });
 
 describe('forbidden code-comment patterns', () => {
-  it('no bead-IDs, PR refs, or memory-key wikilinks in src/ or scripts/', () => {
+  it('no bead-IDs, PR refs, or memory-key wikilinks in any scanned source', () => {
     const violations = collectAllViolations();
     if (violations.length === 0) return;
     violations.sort((a, b) =>
@@ -372,17 +378,13 @@ describe('module docstring length', () => {
 
   it(`every non-allowlisted module docstring is ≤ ${MAX_LINES} lines`, () => {
     const offenders: Array<{ file: string; lines: number }> = [];
-    for (const root of SCAN_DIRS) {
-      const start = join(ROOT, root);
-      try { statSync(start); } catch { continue; }
-      for (const path of walk(start)) {
-        if (resolve(path) === SELF) continue;
-        const rel = relative(ROOT, path);
-        if (allowlist.has(rel)) continue;
-        const count = moduleDocstringLines(path);
-        if (count > MAX_LINES) {
-          offenders.push({ file: rel, lines: count });
-        }
+    for (const path of scannedFiles()) {
+      if (resolve(path) === SELF) continue;
+      const rel = relative(ROOT, path);
+      if (allowlist.has(rel)) continue;
+      const count = moduleDocstringLines(path);
+      if (count > MAX_LINES) {
+        offenders.push({ file: rel, lines: count });
       }
     }
     if (offenders.length === 0) return;
