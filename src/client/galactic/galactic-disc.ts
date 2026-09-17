@@ -27,10 +27,7 @@ const THICKNESS_HALF_PC = DISC_HALF_THICKNESS_PC;
 const MIDPLANE_SEGMENTS = 128;
 const BULGE_SEGMENTS = 64;
 
-// Default colour — warm amber for the dark theme. Chart (mono) mode hides
-// the disc entirely rather than swapping the stroke; a 15 kpc reference ring
-// reads as visual noise on a paper-chart aesthetic, and the arrows + sphere
-// already provide orientation in mono.
+// Chart (mono) mode hides the disc entirely rather than swapping this stroke.
 const DARK_COLOUR = 0xa08660;
 
 const DARK_BASE_OPACITY = 0.55;
@@ -49,9 +46,8 @@ const galacticToAbsIcrs = (v: THREE.Vector3): void => {
   v.applyMatrix4(GAL_TO_ICRS).add(GALACTIC_CENTRE_PC);
 };
 
-/** Radius of the bounding sphere the frustum test culls against, centred
- *  on the galactic centre. The thickness rings are the outermost vertices
- *  — the midplane radius offset along galactic z — not the midplane ring. */
+/** The thickness rings are the outermost vertices — the midplane radius
+ *  offset along galactic z — not the midplane ring itself. */
 export const GALACTIC_DISC_BOUND_PC = Math.hypot(DISC_RADIUS_PC, THICKNESS_HALF_PC);
 
 /**

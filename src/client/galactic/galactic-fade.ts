@@ -1,10 +1,7 @@
 // Distance-from-Sol fade curves: the far-field reveal and its inverse, the
 // Sol-frame self-hide. See src/client/galactic/README.md § Distance fades.
 
-/** Inner edge of the fade-in band (distance from Sol, parsecs). */
 export const FADE_INNER_PC = 500;
-
-/** Outer edge of the fade-in band (distance from Sol, parsecs). */
 export const FADE_OUTER_PC = 5000;
 
 /** Standard Hermite smoothstep — t² · (3 − 2t) with clamped edges. */

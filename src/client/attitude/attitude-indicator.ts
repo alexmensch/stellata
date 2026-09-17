@@ -1,5 +1,5 @@
-// A gyro-sphere attitude indicator driven by the camera quaternion against a
-// reference frame that follows the focused object, with click-to-level.
+// The instrument itself: the canvas host, the fixed SVG chrome, the corner
+// chips and the level affordances.
 
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
@@ -119,12 +119,9 @@ function buildBezel() {
   return g;
 }
 
-/** The fixed index amber. Like the caret below it is read against the ball,
- *  never the page, so it stays put when the page palette flips.
- *
- *  It clears 9.5:1 against the dark hemisphere and only 1.8:1 against the
- *  light one — and no warm colour clears the 3:1 a non-text graphic wants on
- *  both, warmth being brightness. The outline below is what carries it. */
+/** Read against the ball, never the page, so it stays put when the page
+ *  palette flips. The hairline outline below is not decoration — amber alone
+ *  fails contrast against the light hemisphere. */
 const INDEX_AMBER = '#ff9d0a';
 
 const SYMBOL_STROKE = 2.2;
@@ -196,8 +193,8 @@ function buildBankPointer() {
   return g;
 }
 
-/** A chip in one of the square's free corners, outside the disc-clipped
- *  stage. `variant` places it and carries nothing else. */
+/** Sibling of the disc-clipped stage, never a child — that clip takes
+ *  hit-testing with it. `variant` places it and carries nothing else. */
 function cornerChip(variant: string, label: string, title: string) {
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -232,11 +229,10 @@ export interface AttitudeIndicator {
   /** Step the reference frame on. The corner flag's click, and `S` in
    *  navigate — where the ball is what a frame change moves. */
   cycleFrame(): void;
-  /** Aim the camera at the showing frame's origin — 0° longitude, 0°
-   *  latitude — or at its antipode. `Z` and `Shift`+`Z`. */
+  /** The showing frame's 0°/0°, or its antipode. `Z` and `Shift`+`Z`. */
   aimAtFrameOrigin(opposite: boolean): void;
-  /** Engage or release the orbit lock. The padlock chip, and `Shift`+`L`.
-   *  Silently does nothing while the chip is off screen. */
+  /** The padlock chip, and `Shift`+`L`. Silently does nothing while the
+   *  chip is off screen. */
   toggleOrbitLock(): void;
   /** Re-read ORB and, while the lock is engaged, carry the camera by however
    *  far the frame turned. Runs on every rendered frame whether or not the
@@ -323,9 +319,9 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     return orbitSource;
   }
 
-  /** Re-read the orbit and rewrite `orbitFrame` in place. False when nothing
-   *  focused rides an orbit the model has elements for, which is also how the
-   *  frame stops being offered the moment that stops being true. */
+  /** False when nothing focused rides an orbit the model has elements for,
+   *  which is also how ORB stops being offered the moment that stops being
+   *  true. */
   function refreshOrbitFrame(): boolean {
     const source = orbitSourceNow();
     if (source === null || !focusedOrbitFrom(orbit, source, stellata)) return false;
@@ -569,14 +565,9 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   const aimDir = new THREE.Vector3();
 
-  /** Aim along where the showing frame reads 0/0 — or, opposite, along where
-   *  it reads 180/0. A frame origin is a direction and nothing else, so it
-   *  goes to `aimAlong` rather than onto a point at some radius, which in
-   *  navigate misses by the camera's parallax from the orbit pivot.
-   *
-   *  Observe reads the drawn grid rather than the instrument, which is not on
-   *  screen there: with no grid up there is no origin to aim at, and a datum
-   *  armed back in navigate is not what the user can see. */
+  /** A frame origin is a direction and nothing else, so this goes to
+   *  `aimAlong` rather than onto a point at some radius — which in navigate
+   *  misses by the camera's parallax from the orbit pivot. */
   function aimAtFrameOrigin(opposite: boolean): void {
     let origin = frame.zeroLon;
     if (stellata.focus.getCameraMode() === 'observe') {
@@ -644,10 +635,8 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     return destination.lengthSq() > 0 ? destination : null;
   }
 
-  // off → REF → TGT → off, and TGT is skipped outright with no destination
-  // set rather than offered as a stop that does nothing. Cycling rather than
-  // toggling is what keeps one control the whole mechanism: every datum is
-  // armed and cleared here, and none is stranded outside the flag's rotation.
+  // TGT with no destination set is skipped outright, never offered as a stop
+  // that does nothing.
   refBtn.addEventListener('click', () => {
     const stop = datumStop();
     if (stop === 'target') {
@@ -668,9 +657,9 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     capture(captureReferenceFrame(stellata.camera));
   });
 
-  /** Toggle the orbit lock — the chip, and `Shift`+`L`. Gated on the chip's
-   *  own `hidden`, which `refresh` writes from `orbitLockShowing`, so the key
-   *  and the chip cannot disagree about when the lock exists. */
+  /** Gated on the chip's own `hidden`, which `refresh` writes from
+   *  `orbitLockShowing`, so the key and the chip cannot disagree about when
+   *  the lock exists. */
   function toggleOrbitLock() {
     if (lockBtn.hidden) return;
     orbitLocked = !orbitLocked;

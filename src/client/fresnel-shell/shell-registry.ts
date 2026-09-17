@@ -31,7 +31,6 @@ export interface ShellCardInfo {
    *  of labelled extents each rendered as its own right-justified row
    *  (the heliopause's asymmetric axes). */
   size: string | ShellSizeMeasurement[];
-  /** "Known from" row value. */
   knownFrom: string;
 }
 
@@ -88,9 +87,8 @@ export class ShellRegistry {
     return SHELL_KEYS.length;
   }
 
-  /** Shell center in the renderer's local frame (absolute − worldOffset).
-   *  false when the shell or its geometry is absent — the shell provider's
-   *  localPositionInto leg. */
+  /** The shell provider's `localPositionInto` leg. False when the shell or
+   *  its geometry is absent. */
   localPositionInto(
     idx: number,
     worldOffset: Readonly<THREE.Vector3>,
@@ -102,7 +100,7 @@ export class ShellRegistry {
     return true;
   }
 
-  /** Live camera→center distance in the local frame, pc; 0 when absent. */
+  /** pc; 0 when absent. */
   cameraDistancePc(
     idx: number,
     worldOffset: Readonly<THREE.Vector3>,
@@ -130,8 +128,7 @@ export class ShellRegistry {
     return shell ? viewingDistanceForExtent(shell.extentPc(), 0) : 0;
   }
 
-  /** Park distance every camera arrival lands at — the provider's
-   *  focusParkDistance leg. 0 when absent. */
+  /** The provider's `focusParkDistance` leg. 0 when absent. */
   focusParkDistancePc(idx: number): number {
     const shell = this.at(idx);
     if (!shell) return 0;

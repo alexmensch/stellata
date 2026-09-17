@@ -41,7 +41,7 @@ interface FamilyPass {
 
 export class LocalGroupEmission {
   readonly group: THREE.Group;
-  /** Packed instance data, exposed for tests / debug read-back. */
+  /** Exposed for tests / debug read-back. */
   readonly instanceData: { sersic: SersicInstanceData; disc: DiscInstanceData };
 
   private readonly baseGeometry: THREE.SphereGeometry;
@@ -140,12 +140,10 @@ export class LocalGroupEmission {
     this.groupVisible();
   }
 
-  /** The glow's brightness contribution verdict
-   *  (`docs/science-hdr-pipeline.md` § 3.5). One tier: the bound is the
-   *  brightest object's own central ray at the live plate scale, already
-   *  cache-backed on camera pose and `Ω_px`, and 6.7–9.7 ms on a miss —
-   *  so it arrives as a thunk the predicate calls after its own refusals
-   *  (README.md § The brightest rendered pixel). */
+  /** `docs/science-hdr-pipeline.md` § 3.5. The bound arrives as a thunk
+   *  the predicate calls only after its own refusals, because a miss
+   *  marches every object's central ray (README.md § The brightest
+   *  rendered pixel). */
   contributionSkip(
     exposure: FrameExposure,
     cameraAbsPc: THREE.Vector3,

@@ -35,9 +35,9 @@ export interface ChromeLineMaterial<
   dispose(): void;
 }
 
-/** A fat stroke carries its object too. The mesh class is backend-specific
- *  — `three/addons/lines/Line2.js` and `.../lines/webgpu/Line2.js` each
- *  refuse the other's material — so the seam owns the primitive here where
+/** The mesh class is backend-specific — `three/addons/lines/Line2.js` and
+ *  `.../lines/webgpu/Line2.js` each refuse the other's material — so the
+ *  seam owns the primitive here, where
  *  `../util/orbit-line.ts` owns the thin ones. Its geometry stays with the
  *  layer's own child sweep, exactly as a thin line's does. */
 export interface ChromeFatLine extends ChromeLineMaterial<FatChromeLineStroke> {

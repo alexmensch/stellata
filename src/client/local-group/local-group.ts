@@ -23,9 +23,6 @@ import {
 } from '../camera/controls/star-geometry';
 import type { HoverHit } from '../hover/hover-types';
 
-// LG-specific pick candidate. Carries `cameraDistancePc` so the
-// winning candidate rides distance through to the `HoverHit` without
-// the picker re-projecting after the reducer runs.
 type LgPickCandidate = PickCandidate & {
   cameraDistancePc: number;
   lx: number; ly: number; lz: number;
@@ -33,8 +30,7 @@ type LgPickCandidate = PickCandidate & {
 
 export const RING_SEGMENTS = 64;
 
-/** Rings each object draws, whichever kind it is — three either way
- *  (README.md § Runtime layer). The merged buffer sizes off it, and
+/** README.md § Runtime layer. The merged buffer sizes off it, and
  *  `buildWireframeSegments` throws rather than truncate if the two
  *  ever disagree. */
 export const RINGS_PER_OBJECT = 3;
@@ -71,8 +67,7 @@ export class LocalGroupLayer {
   readonly group: THREE.Group;
   readonly objects: LgObject[];
   private readonly stroke: ChromeLineMaterial;
-  /** Per-object silhouette samples in absolute ICRS pc. Indexed
-   *  `absSamples[objectIdx][sampleIdx]`. */
+  /** Absolute ICRS pc, indexed `[objectIdx][sampleIdx]`. */
   private readonly absSamples: THREE.Vector3[][];
   private mono = false;
   private readonly tmpFocusableLocal = new THREE.Vector3();
@@ -120,8 +115,7 @@ export class LocalGroupLayer {
     this.mono = on;
   }
 
-  /** LG object's centroid in the renderer's local frame — the lg
-   *  provider's localPositionInto leg. */
+  /** The lg provider's `localPositionInto` leg. */
   lgLocalPositionInto(idx: number, worldOffset: THREE.Vector3, out: THREE.Vector3): boolean {
     const obj = this.objects[idx];
     if (!obj) return false;
@@ -149,8 +143,7 @@ export class LocalGroupLayer {
     return this.absSamples[objectIdx].length;
   }
 
-  /** Write sample i (absolute ICRS pc) into `out`. The label engine
-   *  subtracts worldOffset to get world-space coords for projection. */
+  /** Absolute ICRS pc — the label engine subtracts worldOffset itself. */
   getAbsSample(objectIdx: number, sampleIdx: number, out: THREE.Vector3): void {
     out.copy(this.absSamples[objectIdx][sampleIdx]);
   }
@@ -352,26 +345,24 @@ export interface LabelCandidate {
 
 /** Inputs to the pure ranking helper. */
 export interface RankingParams {
-  /** Absolute camera position (camera.position + worldOffset), ICRS pc. */
+  /** `camera.position + worldOffset`, ICRS pc. */
   cameraAbs: THREE.Vector3;
-  /** Galactic centre in absolute ICRS pc — pivot of the inside-MW guard. */
+  /** Absolute ICRS pc — pivot of the inside-MW guard. */
   galacticCentreAbs: THREE.Vector3;
   /** Floating-origin offset — subtracted from each candidate's centerAbs
    *  to get its position in the renderer's local world frame. */
   worldOffset: THREE.Vector3;
-  /** Camera matrixWorldInverse — for renderer-local-world → camera-space. */
+  /** renderer-local-world → camera-space. */
   matrixWorldInverse: THREE.Matrix4;
-  /** Camera projectionMatrix — for camera-space → NDC. */
+  /** camera-space → NDC. */
   projectionMatrix: THREE.Matrix4;
-  /** Camera vertical FOV in degrees. */
+  /** Vertical field of view. */
   fovDeg: number;
-  /** Viewport width in pixels. */
   viewportWidthPx: number;
-  /** Viewport height in pixels. */
   viewportHeightPx: number;
   /** Max number of labels visible at once. */
   topN: number;
-  /** Apparent-size floor (pixels). Anything smaller is suppressed. */
+  /** Apparent-size floor. */
   minPixelSize: number;
   /** Camera-to-GC distance (pc) below which every label is suppressed. */
   mwInsideDiscPc: number;
@@ -408,28 +399,8 @@ const rankedIds: string[] = [];
 const rankedPx: number[] = [];
 
 /** Fill `out` with the IDs whose labels should be visible this frame.
- *
- *  Filters in this order:
- *  1. Inside-MW guard — when the camera sits inside the disc, every
- *     label is suppressed (you can't usefully label extragalactic
- *     context while you're inside the galaxy yourself).
- *  2. Behind-camera test — candidate's camera-space z must be < 0
- *     (camera looks down -Z by Three.js convention).
- *  3. Sub-pixel floor — apparent pixel diameter
- *     `2·atan(maxAxis / cam-to-centre) × (h_px / fov_rad)` must be ≥
- *     `minPixelSize`.
- *  4. Viewport-overlap test — the candidate's silhouette bounding
- *     circle (projected centroid ± half pxSize) must intersect the
- *     viewport rectangle. This lets big objects whose centroid is
- *     off-screen but whose disc edge crosses the viewport still
- *     compete for a label slot.
- *
- *  Survivors are ranked by descending pxSize; the top `topN` win, ties
- *  broken toward the earlier candidate.
- *
- *  Writes into a caller-owned Set rather than returning one: this runs
- *  every frame, and the verdict is read through one long-lived Set
- *  anyway. */
+ *  Filter order, the ranking rule and the zero-allocation contract are
+ *  in README.md. */
 export function computeVisibleLabelsInto(
   candidates: readonly LabelCandidate[],
   params: RankingParams,
@@ -459,7 +430,6 @@ export function computeVisibleLabelsInto(
     tmpProj.applyMatrix4(params.matrixWorldInverse);
     // Camera looks down -Z: anything at z ≥ 0 is behind the camera.
     if (tmpProj.z >= 0) continue;
-    // Camera-space length = camera-to-object distance.
     const camToObj = tmpProj.length();
     const angSizeRad = 2 * Math.atan(cand.maxAxis / Math.max(camToObj, 1));
     const pxSize = angSizeRad * pxPerRad;
@@ -522,10 +492,9 @@ const tmpCamAbs = new THREE.Vector3();
 let rankingHolders = 0;
 let stopRanking: (() => void) | null = null;
 
-/** Subscribe the shared ranking pass for the first holder and hand back
- *  that holder's release. The last release unsubscribes it and clears
- *  the verdict, so a re-created host registers a fresh pass instead of
- *  reading a disposed host's `visibleLabelIds` forever. */
+/** The last release unsubscribes the shared pass and clears the verdict
+ *  — skip it and a re-created host reads a disposed host's
+ *  `visibleLabelIds` forever. */
 function acquireRankingHandler(host: LgLabelHost): () => void {
   rankingHolders++;
   if (!stopRanking) {
@@ -584,11 +553,6 @@ function acquireRankingHandler(host: LgLabelHost): () => void {
   };
 }
 
-/** Mount the SVG "Milky Way" label and bind per-frame projection.
- *  Anchored to 32 sample points around the 15 kpc disc rim. Visibility
- *  is governed by the global apparent-size ranking — MW competes with
- *  every LG object for the top-N slots, with the one exception that
- *  when the camera is inside the disc the ranking returns empty. */
 export function createMilkyWayLabel(stellata: Stellata): void {
   const host = lgLabelHostOf(stellata);
   acquireRankingHandler(host);
@@ -609,10 +573,8 @@ export function createMilkyWayLabel(stellata: Stellata): void {
   });
 }
 
-/** Precompute the 32-point MW disc rim sample ring in absolute ICRS pc.
- *  Mirrors galactic-disc.ts's midplane ring construction —
- *  galactic-frame circle of radius MIDPLANE_RADIUS_PC rotated to ICRS
- *  via GAL_TO_ICRS and translated by GALACTIC_CENTRE_PC. */
+/** Mirrors galactic-disc.ts's midplane ring construction; absolute
+ *  ICRS pc. */
 function buildMwRimSamples(): THREE.Vector3[] {
   const out: THREE.Vector3[] = [];
   for (let i = 0; i < MW_RIM_SEGMENTS; i++) {

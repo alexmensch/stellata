@@ -11,7 +11,7 @@ import {
 // Dev-only tuning section for the Local Group layers — the three
 // label-ranking knobs:
 //
-//   • top N        — max labels visible at once (default 5).
+//   • top N        — max labels visible at once.
 //   • minPxSize    — apparent-size floor; sub-pixel objects can't earn
 //                    a label even if they'd otherwise rank.
 //   • mwInsideDisc — camera-to-GC distance below which every label is

@@ -36,16 +36,14 @@ export const LOCAL_BUBBLE_CARD: ShellCardInfo = {
   knownFrom: 'Zucker et al. 2022',
 };
 
-// Surface samples the label projects each frame for its silhouette bbox.
-// ~96 vertices spread across the shell: enough to hug the silhouette, and
-// — since they sit ON the wall — the label engine auto-hides the label
-// when the camera is inside (a sample crosses behind the near plane).
+// The samples sit ON the wall, which is what makes the label engine hide the
+// label from inside the bubble — a sample crosses behind the near plane.
 const LABEL_SAMPLE_TARGET = 96;
 
 export class LocalBubbleShell extends FresnelShell {
   private geometry: THREE.BufferGeometry | null = null;
   private mesh: THREE.Mesh | null = null;
-  // Absolute ICRS pc (Sol origin) surface samples for the label silhouette.
+  // Absolute ICRS pc, Sol origin.
   private sampleAbs = new Float32Array(0);
 
   constructor(materials: ShellMaterials = makeGlslShellMaterials()) {
@@ -94,14 +92,12 @@ export class LocalBubbleShell extends FresnelShell {
     return this.mesh !== null;
   }
 
-  /** Number of label silhouette samples (0 until a mesh is attached). */
+  /** 0 until a mesh is attached. */
   labelSampleCount(): number {
     return this.sampleAbs.length / 3;
   }
 
-  /** Surface sample `i` in renderer-local coords (absolute − worldOffset).
-   *  The label engine projects these for its silhouette bbox + inside-hide.
-   *  Written into `out`. */
+  /** Renderer-local (absolute − worldOffset), written into `out`. */
   labelSampleInto(i: number, worldOffset: Readonly<THREE.Vector3>, out: THREE.Vector3): THREE.Vector3 {
     return out.set(
       this.sampleAbs[i * 3],
@@ -137,15 +133,6 @@ export class LocalBubbleShell extends FresnelShell {
   }
 }
 
-/** Mount the SVG "Local Bubble" label. A `labels`-tier declutter element
- *  (`localBubbleLabel`) — shows at detail level `all` in realistic mode,
- *  hugging the shell's silhouette. It hides when the camera is inside the
- *  bubble: a surface sample then crosses behind the near plane and the
- *  label engine bails (same mechanism as the heliopause apex label). It
- *  also hides once the shell's projected silhouette shrinks below the
- *  legibility floor (`isShellLabelResolvable`) — the shell has no distance
- *  cutoff of its own, so without this the label would outlive the shell's
- *  legibility as the camera zooms out. */
 export function createLocalBubbleLabel(
   ctx: KindContext,
   shell: LocalBubbleShell,

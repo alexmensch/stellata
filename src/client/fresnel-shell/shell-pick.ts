@@ -13,7 +13,7 @@ export interface ShellPickParams {
   clientX: number;
   clientY: number;
   surface: ShellPickSurface;
-  /** Camera→center distance for the returned hit. */
+  /** To the shell's centre, not the hit surface. */
   cameraDistancePc: number;
   /** Shell Target idx (SHELL_KEYS index). */
   idx: number;

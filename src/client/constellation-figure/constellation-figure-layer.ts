@@ -74,13 +74,9 @@ export class ConstellationFigureLayer {
     this.group.visible = this.permitted;
   }
 
-  /** Re-copy vertex positions from the live local-frame buffer. Runs every
-   *  drawn frame: a figure vertex tracks its star through proper-motion epoch
-   *  advance, floating-origin recentre, AND binary orbital motion under time
-   *  scrub — all of which rewrite `localPositions` with no separate signal.
-   *  The buffer is at most a few thousand floats, so the copy + re-upload is
-   *  negligible (the `BinaryOrbitPathLayer` repositions per frame the same
-   *  way). Skipped while hidden. */
+  /** Runs every drawn frame: proper-motion epoch advance, floating-origin
+   *  recentre and binary orbital motion all rewrite `localPositions` with no
+   *  separate signal. Skipped while hidden. */
   update(localPositions: Float32Array): void {
     if (this.lineSegments === null || !this.group.visible) return;
     this.writePositions(localPositions);

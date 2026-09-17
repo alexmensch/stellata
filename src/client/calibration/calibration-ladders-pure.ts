@@ -4,8 +4,8 @@
 
 import { srgbEncode } from '../hdr/tonemap/tonemap-pure';
 
-/** Near-black patches on a code-0 field. Spaced so each is a visible
- *  step at the bottom of the transfer rather than an even code interval. */
+/** Spaced so each is a visible step at the bottom of the transfer rather
+ *  than an even code interval. */
 export const BLACK_POINT_CODES = [1, 2, 3, 4, 6, 8, 11, 16] as const;
 
 /** Near-white patches on a code-255 field, mirroring the black ladder. */
@@ -15,8 +15,8 @@ export const HIGHLIGHT_SURROUND_CODE = 255;
 
 export const GREY_WEDGE_STEPS = 16;
 
-/** Pure-power-law gammas the match patches are cut for — a scale for
- *  reading how far a display sits from the reference, not targets. */
+/** A scale for reading how far a display sits from the reference, never
+ *  targets to hit. */
 export const GAMMA_STOPS = [1.8, 2.0, 2.2, 2.4, 2.6] as const;
 
 export const MAX_CODE = 255;

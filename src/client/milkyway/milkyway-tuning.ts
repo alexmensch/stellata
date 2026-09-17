@@ -1,9 +1,7 @@
 import type { MilkyWay } from './milkyway';
 import { type DebugSection, makeColor, makeSlider } from '../debug/debug-panel';
 
-// Dev-only tuning section for the volumetric Milky Way layer. Builds a
-// labelled section with sliders + colour pickers wired to the layer's
-// setters. Designed to be appended into the shared debug panel root.
+// Dev-only tuning section for the volumetric Milky Way layer.
 //
 // Reddening uses linear sliders since the CCM default has channels above
 // 1.0 (1.32 in blue), which rules out an HTML colour picker. Disc/bulge

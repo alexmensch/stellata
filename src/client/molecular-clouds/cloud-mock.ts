@@ -68,5 +68,5 @@ export function makeMockAbsorptionSpec(withField: boolean): CloudAbsorptionSpec 
   };
 }
 
-/** The rim's authored starting values, matching the layer's defaults. */
+/** Must match the layer's defaults. */
 export const MOCK_RIM_SPEC = { inkHex: 0x000000, inkAlpha: 0.95, opacity: 1 };

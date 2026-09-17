@@ -37,8 +37,8 @@ export interface OrbitRelationCache {
    *  the record carries none. See README § Tier mapping for why this
    *  replaces the float32 slot diff. */
   baseDiffPc: Vec3;
-  /** Peak relative-separation envelope, AU. a · (1 + e). Used by the
-   *  screen-separation LOD as the worst-case sub-pixel test. */
+  /** a · (1 + e), AU — the screen-separation LOD's worst-case sub-pixel
+   *  test. */
   peakSepAU: number;
 }
 
@@ -89,17 +89,6 @@ export function keplerRelationParams(
  *  only when the star is in no pair, or its pair carries no orbital elements
  *  (README § Which pair a star rides).
  *
- *  **The tier is not a gate.** Tier 2 has no published inclination, so the
- *  whole runtime places its orbit in the galactic plane; this answers with
- *  that same plane rather than refusing. Both tiers draw an orbit ring, so a
- *  tier-conditional ORB frame would appear and disappear on a distinction
- *  nothing on screen exposes. A pair with no elements draws no ring at all —
- *  that no-op is the one the user can see.
- *
- *  `relationIdx` is returned so a caller wanting the same pair's other
- *  member reads it off this answer rather than resolving the innermost
- *  relation a second time and trusting the two to agree.
- *
  *  `systemXyzPc` is the pair's ICRS position, supplying the sky tangent
  *  basis a Tier-1 normal projects through; Tier 2 needs no vantage. */
 export function starOrbitNormalIcrs(
@@ -133,10 +122,9 @@ export function relationIndicesInBounds(r: BinaryRelation, absLength: number): b
   return r.primaryIdx * 3 + 2 < absLength && r.secondaryIdx * 3 + 2 < absLength;
 }
 
-/** Build one cache entry per Kepler-evaluable relation.
- *  `absolutePositions` is the catalog-wide xyz buffer; relations whose
- *  member indices fall outside it are skipped (defensive against a
- *  binaries.bin / catalog.bin generation mismatch). */
+/** Relations whose member indices fall outside `absolutePositions` are
+ *  skipped — defensive against a binaries.bin / catalog.bin generation
+ *  mismatch. */
 export function buildOrbitRelationCaches(
   binaries: BinariesData,
   absolutePositions: Float32Array,

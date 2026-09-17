@@ -62,15 +62,14 @@ export interface BinaryRelation {
    *  Primary moves by −q·R, secondary by +(1−q)·R about the barycentre.
    *  Range (0, 0.5] when the brighter side is the primary. */
   q: number;
-  /** WDS separation, arcsec, at sep_pa_epoch_jd. */
+  /** WDS, at `sepPaEpochJd`. */
   sepArcsec: number;
   /** WDS position angle, degrees east of north, at sep_pa_epoch_jd. */
   paDeg: number;
-  /** Epoch of the published WDS sep+PA, absolute JD. Stored on the
-   *  wire as a float32 offset from J2000_JD (2451545.0) so float32
-   *  retains ~minute-scale precision instead of the ~0.3-day loss that
-   *  encoding the full JD would force. The loader adds J2000_JD back
-   *  before exposing the field. */
+  /** Absolute JD. On the wire it is a float32 offset from J2000_JD
+   *  (2451545.0), so float32 keeps ~minute precision instead of the
+   *  ~0.3-day loss the full JD would force; the loader adds J2000_JD
+   *  back. */
   sepPaEpochJd: number;
 }
 
@@ -85,10 +84,8 @@ export interface BinariesData {
    *  row is the primary side of a pair. A primary can host several
    *  relations (Castor / α Cen multi-pair systems). */
   primaryIdxToRelations: Map<number, number[]>;
-  /** Secondary catalog row index → indices into `relations` where that
-   *  row is the secondary side. Usually one, but a star can be the
-   *  measured secondary of several primaries (HD 108250 = α Cru C is
-   *  secondary of both the A→C and B→C WDS pairs). */
+  /** Secondary catalog row index → its `relations` indices. One-to-many:
+   *  HD 108250 = α Cru C is the measured secondary of both A and B. */
   secondaryIdxToRelations: Map<number, number[]>;
 }
 

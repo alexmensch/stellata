@@ -203,8 +203,7 @@ is what it cannot:
 
 Both want a per-object colour index rather than a family seed —
 `emission.color` already exists as the per-object hook, and LVDB carries
-age and metallicity per dwarf but **no colour column at all**. Deferred,
-with the bead naming the two.
+age and metallicity per dwarf but **no colour column at all**. Deferred.
 
 ## Sub-pixel proxies expand rather than lose flux
 

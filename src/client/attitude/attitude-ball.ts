@@ -78,10 +78,8 @@ function segment(
   ctx.stroke();
 }
 
-/** Solid graticule every 30°, and on the 15° offsets **no line at all** — a
- *  track of ticks every 5°, perpendicular to the line they stand in for. Where
- *  two tracks cross they read as the FDAI's little `+`. The equator and the
- *  prime meridian are omitted here; both carry their own scale. */
+/** The equator and the prime meridian are omitted here; both carry their own
+ *  scale. */
 function paintGraticule(ctx: CanvasRenderingContext2D) {
   const tick = deg(1.4);
 
@@ -124,8 +122,7 @@ function paintGraticule(ctx: CanvasRenderingContext2D) {
 const PRIME_BANDS_DEG = [2.5, 1.5, 0.5];
 const PRIME_HALF_DEG = PRIME_BANDS_DEG[0] / 2;
 
-/** Ticks flanking the prime meridian, in whichever ink the hemisphere needs.
- *  They start outside the painted band rather than crossing it. */
+/** They start outside the painted band rather than crossing it. */
 function paintPrimeTicks(ctx: CanvasRenderingContext2D) {
   const x = lonToX(0);
   ctx.lineWidth = deg(SCALE_TICK_W_DEG);
@@ -139,8 +136,6 @@ function paintPrimeTicks(ctx: CanvasRenderingContext2D) {
   }
 }
 
-/** The prime meridian's rails, painted unclipped so each hemisphere shows
- *  whichever bands contrast against it. */
 function paintPrimeRails(ctx: CanvasRenderingContext2D) {
   PRIME_BANDS_DEG.forEach((width, i) => {
     ctx.fillStyle = i % 2 === 0 ? BALL_DARK : BALL_LIGHT;

@@ -28,9 +28,8 @@ export function assembleFatChromeLine<T extends FatChromeLineObject>(
   return line;
 }
 
-/** Run a stroke opaque with blending off, or alpha-composited. The fat
- *  stroke's WebGPU material is the one that cannot express it this way —
- *  `../webgpu/chrome-lines/README.md` § The fat stroke keeps three's
+/** The fat stroke's WebGPU material is the one that cannot express it this
+ *  way — `../webgpu/chrome-lines/README.md` § The fat stroke keeps three's
  *  fragment. */
 export function setStrokeOpaque(material: THREE.Material, on: boolean) {
   material.transparent = !on;

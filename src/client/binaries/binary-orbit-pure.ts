@@ -82,10 +82,8 @@ export function orbitNormalSky(
   };
 }
 
-/** In-plane orbital position (AU) rotated by ω so periastron sits along
- *  the local x-axis. Used by Tier 2: the orbit plane is the galactic
- *  plane, so this 2D vector is placed in galactic-XY before rotating to
- *  ICRS. Ω is irrelevant here (no ascending node when i=0). */
+/** AU, rotated by ω so periastron sits along the local x-axis. Ω is
+ *  irrelevant here — there is no ascending node when i = 0. */
 export function evaluateOrbitInPlaneAU(
   elements: OrbitalElements,
   tJd: number,
@@ -102,9 +100,8 @@ export function evaluateOrbitInPlaneAU(
   };
 }
 
-/** Instantaneous relative separation |R(t)| in AU — r = a(1 − e·cos E).
- *  Orientation-free, so Tier 2's fallback plane cannot skew it (README
- *  § Tier mapping). One Kepler solve, no projection. */
+/** AU, r = a(1 − e·cos E) — orientation-free, so Tier 2's fallback plane
+ *  cannot skew it (README § Tier mapping). */
 export function evaluateOrbitSeparationAU(
   elements: OrbitalElements,
   tJd: number,
@@ -137,10 +134,8 @@ export function projectSkyToICRS(
 
 const gal4 = new THREE.Vector4();
 
-/** Convert a galactic-plane vector (xGal, yGal) in pc into ICRS Δxyz in
- *  pc. Tier 2 path: the orbit normal is the North Galactic Pole; the
- *  in-plane (x, y) coords ride directly into the galactic-X / galactic-Y
- *  axes, then the standard galactic→ICRS rotation places them in ICRS. */
+/** pc in, pc out. The Tier 2 path, where the orbit normal is the North
+ *  Galactic Pole. */
 export function projectGalacticPlaneToICRS(
   xGalPc: number,
   yGalPc: number,

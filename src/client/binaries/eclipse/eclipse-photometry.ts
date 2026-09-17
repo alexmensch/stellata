@@ -32,20 +32,17 @@ import {
 
 export interface EclipsePhotometryFieldOptions {
   binaries: BinariesData;
-  /** Catalog-wide absolute ICRS positions. Read for the Tier-1
-   *  tangent-basis anchor (primary slot) only; the pair-relative offset
-   *  rides on `OrbitRelationCache.baseDiffPc` + ΔR(t), never a float32
-   *  slot subtraction. */
+  /** Read for the Tier-1 tangent-basis anchor (primary slot) only; the
+   *  pair-relative offset rides `OrbitRelationCache.baseDiffPc` + ΔR(t),
+   *  never a float32 slot subtraction. */
   absolutePositions: Float32Array;
-  /** Per-instance local-frame star positions, read for the camera→
-   *  primary line of sight only. The pair-RELATIVE geometry never
-   *  touches this buffer — its float32 quantum exceeds typical pair
-   *  separations whenever the local origin is far from the system. */
+  /** Read for the camera→primary line of sight only. The pair-RELATIVE
+   *  geometry never touches this buffer — its float32 quantum exceeds
+   *  typical pair separations. */
   localPositions: Float32Array;
   /** Catalog-wide absolute magnitudes; drives the primary-visibility LOD. */
   absoluteMags: Float32Array;
-  /** Per-star physical radius in solar radii. Promoted to parsecs by
-   *  multiplying through `R_SUN_PC` at cache build. */
+  /** Promoted to parsecs through `R_SUN_PC` at cache build. */
   physicalRadiusSolar: Float32Array;
   /** Per-instance multiplicative dim factor on the back component's flux.
    *  Length = catalog.count. Initialised to 1.0 by the integration shell
@@ -118,13 +115,9 @@ export class EclipsePhotometryField {
   private prevTargets = new Map<number, number>();
   private lastNowMs: number | null = null;
   private dimUploader: DirtyItemUploader;
-  /** The integration shell fills the WHOLE dim buffer with 1.0 on every
-   *  re-attach, reaching stars outside the tracked member set, so the
-   *  first WRITING flush after construction or dispose has to upload in
-   *  full: three.js honours a non-empty range list over the full array,
-   *  so ranges appended before a render consumed the shell's own full
-   *  upload would strand every untracked star at the previous attach's
-   *  values. */
+  /** The first WRITING flush after construction or dispose must upload in
+   *  full — ranges over the tracked members alone would strand every
+   *  untracked star the shell's own 1.0 fill reached. */
   private pendingFull = true;
 
   constructor(opts: EclipsePhotometryFieldOptions) {
@@ -139,13 +132,8 @@ export class EclipsePhotometryField {
     return this.relations;
   }
 
-  /** Per-frame walk. `t` is the sim time (same value the orbit field
-   *  receives); `nowMs` is the real-time frame stamp driving the
-   *  anti-strobe smoothing. The magnitude + horizon prefilters share
-   *  their shape with BinaryOrbitField's so the two fields skip the
-   *  same off-screen population; the Kepler eval here is deliberately
-   *  NOT gated on the orbit field's screen-pixel LOD — the photometric
-   *  dip is exactly the signal that remains when the pair is sub-pixel. */
+  /** `t` is sim time (the same value the orbit field receives); `nowMs` is
+   *  the real-time frame stamp driving the anti-strobe smoothing. */
   update(
     t: number,
     cameraPos: Readonly<THREE.Vector3>,
@@ -194,21 +182,8 @@ export class EclipsePhotometryField {
     return this.active.size;
   }
 
-  /** This frame's cadence report: the fastest dip slope over the pairs
-   *  that reached the dim walk, as a fraction of the back component's own
-   *  flux per sim second.
-   *
-   *  Photometric only — the members' on-screen motion is
-   *  `BinaryOrbitField`'s to report, and this field deliberately shares
-   *  none of its screen-pixel LOD (a sub-pixel pair still dips). The
-   *  relations reaching a target have already passed the magnitude gate
-   *  against the LIVE threshold, so a dip on a star the exposure cut has
-   *  taken off screen cannot set the frame rate: that miss held the frame
-   *  rate through every invisible eclipse in the model.
-   *
-   *  A dip's FIRST frame differences 1 against 1 and reports nothing —
-   *  onset is what `CADENCE_CAP_SIM_S` is for, and the frame after it
-   *  measures the true slope. */
+  /** The fastest dip slope over the pairs that reached the dim walk, as a
+   *  fraction of the back component's own flux per sim second. */
   cadenceReport(simDtS: number): CadenceReport {
     if (!(Number.isFinite(simDtS) && simDtS !== 0)) return CADENCE_REPORT_STILL;
     let observedFluxFrac = 0;

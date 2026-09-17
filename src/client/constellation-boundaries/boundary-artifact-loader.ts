@@ -115,8 +115,7 @@ export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
 }
 
 /**
- * Fetch + validate the boundary artifact, or null for no layer at all — the
- * chart renders without it.
+ * Null means no layer at all — the chart renders without it.
  *
  * **Nothing here may reject.** `main.ts` loads this inside a `Promise.all`
  * alongside the catalog, so a rejection takes the whole app's boot with it,
@@ -138,9 +137,6 @@ export async function loadBoundaries(url: string): Promise<BoundaryArtifact | nu
   try {
     return validateBoundaryArtifact(raw);
   } catch (err) {
-    // Present but wrong shape: warn and draw nothing, the contract
-    // local-group-loader uses for a stale artifact. Dropping the layer still
-    // honours the frame check — a B1875-framed artifact never reaches the GPU.
     console.warn(`${(err as Error).message} — rebuild with \`pnpm run build:catalog\``);
     return null;
   }

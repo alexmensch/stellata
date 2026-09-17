@@ -8,10 +8,9 @@ import type {
 } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import type { SolFrameFadeWindow } from '../galactic/galactic-fade';
 
-/** Share of the magnitude-limited population that may read as misplaced
- *  before the boundaries start fading, and where they reach zero. Both must
- *  be columns of the artifact's own `quantilePcts` — the loader rejects an
- *  artifact that dropped either, rather than silently picking a neighbour. */
+/** Both must be columns of the artifact's own `quantilePcts` — the loader
+ *  rejects an artifact that dropped either, rather than silently picking a
+ *  neighbour. */
 export const FADE_START_MISPLACED_PCT = 1;
 export const FADE_END_MISPLACED_PCT = 5;
 
@@ -96,8 +95,7 @@ function quantileColumn(fade: BoundaryFadeTableWire, pct: number): number {
   return col;
 }
 
-/** Bracketing row indices for `limitMag` in an ascending `magLimits`, plus
- *  the fraction between them. Clamps to a single row at either end. */
+/** `magLimits` must ascend. Clamps to a single row at either end. */
 function bracketMagRow(
   magLimits: readonly number[],
   limitMag: number,

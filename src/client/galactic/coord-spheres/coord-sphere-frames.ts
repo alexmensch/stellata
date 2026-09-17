@@ -12,9 +12,7 @@ import type {
 import { galacticDirToIcrs } from '../galactic-coords';
 
 /**
- * ICRS (α, δ) in radians → the ICRS unit direction, written into `out`.
- *
- * The identity frame: catalog.bin's Cartesian basis already has x toward
+ * Radians in. The identity frame: catalog.bin's Cartesian basis already has x toward
  * α = 0h and z toward the north celestial pole, so no rotation composes here —
  * unlike `galacticDirToIcrs`. Routed through the shared tangent basis rather
  * than restating cos δ·cos α, which is the drift `../util/README.md` warns of.
@@ -35,9 +33,7 @@ const COS_OBLIQUITY = Math.cos(OBLIQUITY_RAD);
 const SIN_OBLIQUITY = Math.sin(OBLIQUITY_RAD);
 
 /**
- * Ecliptic (λ, β) in radians → the ICRS unit direction, written into `out`.
- *
- * The two frames share the vernal equinox as their zero longitude and differ
+ * Radians in. The two frames share the vernal equinox as their zero longitude and differ
  * only by a rotation about it, so this is the equatorial mapping turned about
  * x by the obliquity: the ecliptic pole lands at α 18h, δ +66.56°.
  */
@@ -54,12 +50,12 @@ export function eclipticDirToIcrs(
   );
 }
 
-/** Whole-degree label wrapped to [0, 360) — galactic longitude. */
+/** Whole degrees, wrapped to [0, 360). */
 export function fmtLonDeg(deg: number): string {
   return `${((Math.round(deg) % 360) + 360) % 360}°`;
 }
 
-/** Whole-degree signed label — galactic latitude. */
+/** Whole degrees, signed. */
 export function fmtLatDeg(deg: number): string {
   return `${Math.round(deg)}°`;
 }

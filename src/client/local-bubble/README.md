@@ -80,4 +80,4 @@ cross-checks the surface against the independent Edenhofer dust grid
 ## Not yet
 
 Per-layer visual tuning (opacity / colour / Fresnel power / smoothing
-column) is follow-up (`stellata`-tracked).
+column) is follow-up.

@@ -93,9 +93,9 @@ export class MolecularClouds {
   private rimFallbackGeometry: THREE.SphereGeometry;
   /** Owned per-cloud isosurface geometries (disposed with the layer). */
   private rimSurfaceGeometries: THREE.BufferGeometry[] = [];
-  /** Owned per-cloud density-brick textures (disposed with the layer). */
+  /** Owned here, disposed with the layer. */
   private brickTextures: THREE.Data3DTexture[] = [];
-  /** Per-cloud absolute-ICRS surface samples for the silhouette labels. */
+  /** Absolute ICRS, for the silhouette labels. */
   private labelSampleAbs: Float32Array[] = [];
   /** Effective focus geometry: the traced mesh's vertex centroid + max
    *  vertex radius, else the Zucker ellipsoid centroid + envelope extent.
@@ -106,10 +106,10 @@ export class MolecularClouds {
   private traced: boolean[] = [];
   private mono = false;
   private absorptionEnabled = true;
-  /** Rim-shell meshes in catalog order — the pick / hover target. This is
-   *  the *depicted* shape (traced isosurface, or the u = uEnv ellipsoid for
-   *  fallback clouds), the same geometry that renders the fresnel rim and
-   *  the chart stipple outline, so the hitbox matches the silhouette in both
+  /** In catalog order. The *depicted* shape (traced isosurface, or the
+   *  u = uEnv ellipsoid for fallback clouds) — the same geometry that
+   *  renders the fresnel rim and the chart stipple outline, so the hitbox
+   *  matches the silhouette in both
    *  modes, chart mode included. Cloud index
    *  rides `mesh.userData.cloudIdx`. The absorption meshes deliberately do
    *  NOT pick — their ellipsoid is only the raymarch domain, far larger than
@@ -366,8 +366,7 @@ export class MolecularClouds {
   setRimParams(p: RimParams) {
     applyRimParams(this.rimSurface.uniforms, p);
   }
-  /** Force-boost the rim glow — handy for "is the layer rendering at
-   *  all?" debugging. Pass null to restore the configured gain. */
+  /** Null restores the configured gain. */
   setDebugBoost(strength: number | null) {
     this.rimSurface.uniforms.uOpacity.value = strength === null ? this.rimGain : strength;
   }
@@ -462,9 +461,6 @@ export class MolecularClouds {
   }
 
   /**
-   * One cloud's absorption material inputs, in the backend-neutral shape
-   * both factories consume.
-   *
    * The brick texture is built here rather than in a factory because this
    * layer owns its lifetime on either backend — `brickTextures` is what
    * disposes it.

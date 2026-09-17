@@ -54,7 +54,6 @@ function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v;
 }
 
-// AABB half-extents of a text box (half-size halfW × halfH) rotated by rotRad.
 function rotatedHalfExtents(halfW: number, halfH: number, rotRad: number): [number, number] {
   const c = Math.abs(Math.cos(rotRad));
   const s = Math.abs(Math.sin(rotRad));
