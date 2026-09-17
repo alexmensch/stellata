@@ -152,16 +152,42 @@ period by 4 seconds for the fastest model-days-per-second a subject takes.
   running — that flag gates its listeners, not its per-frame work, which is
   what still rebuilds the camera from the position and target written each
   frame.
-- **The `'frame'` subscription** the pose is written from. It lands after
-  the render, so each write is drawn by the following tick.
+- **The `'frame'` subscription** the pose is written from — § Writing the pose
+  from `frame`, which is a departure.
 
 Every one of them is released on completion and on `cancel()`, including the
 camera mode's own `enabled` value as it stood before the take.
+
+**What a take does not put back is the sky.** The clock rate, the pinned `t`
+and the FOV are left where the take landed them, and the camera with them: a
+take ends on its end view, which is the whole point of shooting one. So a take
+is not a probe — run it when the session is free to be moved, and re-apply a
+share link to get a known state back.
 
 The first two frames after the start view is applied are spent holding that
 pose, so a focus carried by a SID whose domain attaches late has landed
 before the move opens — until it does there is no focal anchor to ride and
 the pose writes as bare frame coordinates.
+
+## Writing the pose from `frame`, which is a departure
+
+`../../util/event-bus/README.md` rules the `'frame'` event out for camera
+writes, and names the scene registry as the seam that can order one — the orbit
+lock is the worked example. A take writes the camera from `'frame'` anyway, so
+the reason has to be on the record rather than inferred from the code.
+
+The rule's harm is that a write landing after the draw shows up a frame late,
+and that anything the frame drew from the camera — an instrument's own readout
+— disagrees with it in between. A take has no readout, and the lag is a
+constant: `TrackballControls.update()` rebuilds the camera from the written
+position and target at the top of the next tick, ahead of the whole layer
+fan-out, so every layer in a recorded frame agrees with the camera that frame
+was drawn with. The take is one interpolation step behind wall time and nothing
+else is behind the take.
+
+What would change that is a second writer. A take that has to interleave with
+per-frame camera work owned elsewhere wants a sequencing registry entry, at
+which point this section is the thing to delete.
 
 ## Pacing
 
