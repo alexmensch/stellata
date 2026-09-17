@@ -35,7 +35,8 @@ const ROOT_FILES = [
  *  the claim rather than a passing aside. `public/llms.txt` is here because
  *  `public/` is otherwise gitignored, so no directory root reaches it. */
 const PROSE_SURFACES = [
-  'README.md', 'CITATION.cff', 'public/llms.txt', 'src/client/index.html',
+  'README.md', 'CITATION.cff', 'public/llms.txt',
+  'src/client/app/index.html', 'src/site/index.html',
 ];
 
 /** Any three-hundred-thousand-odd star figure: `380,000`, `~384k`, `390k`. */

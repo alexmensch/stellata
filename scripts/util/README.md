@@ -1,8 +1,17 @@
 # Util — shared build-script helpers
 
 Cross-pipeline helpers that don't belong to any single per-pipeline
-folder. New entries land here only when at least two build scripts
-need the same thing — single-use helpers stay with their consumer.
+folder. New entries land here only when at least two consumers need the
+same thing — single-use helpers stay with their consumer. One entry is
+shared with `tests/` rather than with a second pipeline, and that is the
+bar: repo plumbing with several callers, not a build helper with one.
+
+- `walk-files.ts` — the recursive file walk over a directory, taking
+  `include` / `skipDir` predicates. Follows symlinked directories, which
+  `public/` carries. Read by `site/site-metrics.ts` at build time and by
+  every repo-meta scanner in `tests/` (code-comment rules, bundle
+  content, both TSL rosters, doc pointers). Carries `isProductionTs`
+  too: a `.ts` that is neither a test nor an ambient declaration.
 
 - `astronomy_constants.py` — Python mirror of
   `src/client/util/astronomy-constants.ts`. `J2000_JD`,

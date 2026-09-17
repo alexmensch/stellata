@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import { walkFiles } from './walk-files';
+import { walkFiles } from '../scripts/util/walk-files';
 
 const ROOT = resolve(__dirname, '..');
 const ALLOWED = new Set(['src/client/star-pipeline/star.frag.glsl']);

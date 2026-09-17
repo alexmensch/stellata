@@ -44,6 +44,10 @@ cross-script policy and pointers.
   vantages and prints the differential table. Clocks only, never a
   pixel; launches only past the operator's `.perf-go` marker
   (`hooks/perf-guard.sh`). Not part of `pnpm test` or the build.
+- `site/` — the figures the public pages quote, counted off the
+  catalogue, the application's Credits tab and the modelling record.
+  Writes no artifact: `vite.env.ts` reads it at config load and Vite
+  substitutes each count into the HTML.
 - `hooks/` — Claude Code guard hooks (PreToolUse / SessionStart).
 - `clouds/`, `cloud-surfaces/`, `dust/`, `local-group/`,
   `local-bubble/`, `textures/` — per-layer build helpers.

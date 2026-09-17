@@ -155,7 +155,7 @@ boot — `--hash webgpu-gate=force` shows the requires-WebGPU page on a
 browser that supports it, the one way to exercise the gate's `BootError`
 end to end. It composes with the `#renderer=webgl2` a WebGL2 boot already
 carries (`&`-joined; the app reads every switch off one hash). `--url`
-cannot carry it: the base is prefixed with `/v/<blob>/`, so a fragment
+cannot carry it: the base is prefixed with `/app/v/<blob>/`, so a fragment
 there lands mid-path.
 
 **Contexts run backend-major — every WebGPU context, then every WebGL2
@@ -226,7 +226,7 @@ device pixel ratio, with `localStorage['stellata.info-dismissed']` and
 `sessionStorage['stellata.mobile-advisory-dismissed']` seeded to `'1'` so
 neither modal ever shows:
 
-1. **Boot** `<url>/v/<blob>/`, plus `#renderer=webgl2` for the escape
+1. **Boot** `<url>/app/v/<blob>/`, plus `#renderer=webgl2` for the escape
    hatch — WebGPU is the default (`src/client/webgpu/README.md`
    § The renderer is WebGPU). Wait for `window.debug`,
    `window.stellata` and `#loading` gone; a `#loading-status` starting

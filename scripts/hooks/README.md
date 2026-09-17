@@ -192,12 +192,12 @@ an edit whose path ends `.css` find the marker and go ahead; without it the
 call is denied with the skill named.
 
 The gate exists because the load looks redundant from inside the repo and
-is not. A folder README documents the **house style** — which layer each
-rule landed in here, and why — while the system underneath it (the layout
-primitives, the no-width-query mandate, the review gates) belongs to the
-skill, and a README describing the one reads convincingly like coverage of
-the other. A session that has read the README therefore believes it is
-already briefed.
+is not. `src/site/README.md` § The stylesheet documents the **house
+style** — which layer each rule landed in here, and why — while the system
+underneath it (the layout primitives, the no-width-query mandate, the
+review gates) belongs to the skill, and a README describing the one reads
+convincingly like coverage of the other. A session that has read the
+README therefore believes it is already briefed.
 
 **Arming, not consent**, so it fails open the way readme-guard does: a
 hook that errors lets the call through, and the alternative — a stylesheet

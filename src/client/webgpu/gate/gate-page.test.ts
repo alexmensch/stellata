@@ -112,7 +112,7 @@ describe('the requires-WebGPU gate page', () => {
   // needs pinning: an id renamed in the markup would hide nothing and no
   // assertion above would notice.
   it('hides ids that actually exist in the markup', () => {
-    const html = readFileSync(join(__dirname, '../../index.html'), 'utf8');
+    const html = readFileSync(join(__dirname, '../../app/index.html'), 'utf8');
     const ids = [...GATE_HIDES.matchAll(/#([\w-]+)/g)].map((m) => m[1]);
     expect(ids.length).toBeGreaterThan(0);
     for (const id of ids) expect(html).toContain(`id="${id}"`);

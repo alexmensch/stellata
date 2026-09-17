@@ -184,10 +184,10 @@ reaches the fade factor as NaN.
 
 `loadBoundaries` wraps all of that and **cannot reject**: `main.ts` loads it
 inside a `Promise.all` alongside the catalog, so a rejection blanks the
-whole app rather than dropping one optional layer. A missing asset can't be
-detected by status alone either — `not_found_handling =
-"single-page-application"` (`wrangler.toml`) answers it with index.html at
-200, so an undeployed artifact arrives as a JSON parse error, not a 404.
+whole app rather than dropping one optional layer. An undeployed artifact
+arrives as a real 404 (`not_found_handling = "none"` — `src/README.md`
+§ Request routing), which the `!res.ok` branch answers; the parse-error
+branch below it still covers an artifact that is present but truncated.
 Absent resolves null silently; present-but-invalid warns and resolves null,
 the contract `../local-group/local-group-loader.ts` uses for a stale
 artifact. Dropping the layer still honours the frame check — a B1875-framed
