@@ -35,6 +35,9 @@ src/client/debug/
   memory/                         debug.memory() — GPU residency + JS-heap
                                   inventory. The perf HUD prices time;
                                   this prices space. Own README.
+  capture/                        debug.capture() — a repeatable camera take
+                                  between two shared views, with the clock
+                                  under it, for screen recording. Own README.
   pin-debug-hud.ts                Pin-to-center diagnostic HUD.
   arrow-fade-debug-hud.ts         Sol/GC arrow shaft-fade diagnostic HUD.
   eclipse-debug-hud.ts            Eclipse-photometry per-relation gate /
@@ -198,6 +201,15 @@ measures wall time and so counts the panel's own per-tick work),
 the drift bracketing, and how to read `noiseMs` / `bracketMs` / `iqrMs`.
 `frame-cost/passes/README.md` owns the priced-pass roster — what each row
 disables and what its number is therefore worth.
+
+## Takes for recording — `debug.capture()`
+
+A camera move between two shared views over a stated number of seconds, with
+the simulation clock under it and the render gate held open — the tool that
+makes a video of the model reproducible after the scene it shows changes.
+`capture/README.md` owns it: the options, why both blobs must sit on one
+focus, and why the radius interpolates geometrically rather than along the
+straight line between the two camera positions.
 
 Adding a WebGL2 GPU scope: wrap the draw in `gpuBegin('name')` / `gpuEnd('name')`.
 The label lands as `gpu.name`; pair it with a `submit.name` CPU measure so

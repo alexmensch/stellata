@@ -30,6 +30,8 @@ import {
   decodeBlob,
   encodeBlob,
 } from '../util/url-state';
+import { shareBlobFrom } from '../util/url-state/share-path-pure';
+import { type CaptureOptions, type CaptureRun, runCapture } from './capture/capture';
 
 // `window.debug.*` dev tooling — panel toggle plus URL-state codec.
 // See src/client/debug/README.md § Debug panel for the section catalogue
@@ -41,6 +43,10 @@ export interface DebugTools {
   /** Tolerates a whole URL or a `v=` prefix around the blob. */
   decodeView(blob: string): DecodedView;
   encodeView(): string;
+  /** Fly a repeatable take between two shared views with the clock under
+   *  it, for screen recording. Awaitable; `.cancel()` stops it where it is.
+   *  Navigate mode, both blobs on one focus — `capture/README.md`. */
+  capture(options: CaptureOptions): CaptureRun;
   /** Price each render pass by gpu.frame differential from the current
    *  viewpoint. Camera stationary; on WebGL2 also panel CLOSED, since the
    *  sweep needs the context's single query slot. */
@@ -142,13 +148,12 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
   const tools: DebugTools = {
     panel: togglePanel,
     decodeView: (blob) => {
-      // Tolerate full URLs and `v=...` prefixes for paste-in convenience.
-      const stripped = blob.includes('v=') ? blob.split('v=').pop()! : blob;
-      const { view } = decodeBlob(stripped);
+      const { view } = decodeBlob(shareBlobFrom(blob) ?? blob);
       console.table(view);
       return view;
     },
     encodeView: () => encodeBlob(currentStateOf(stellata, idMaps)),
+    capture: (options) => runCapture(stellata, idMaps, options),
     priceFrame: (options) =>
       runPriceFrame(stellata, buildPassToggles(stellata, options), options),
     priceFrameRepeat: (runs, options) =>
