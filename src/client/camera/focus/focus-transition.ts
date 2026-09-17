@@ -38,13 +38,13 @@ export function viewingDistanceForExtent(maxAxisPc: number, floorPc = 5): number
 }
 
 /** The focus-park lerp is one of the three park-arrival sites that share
- *  `camera-motion`'s `ArrivalState`. The alias preserves the historic name
- *  so call sites that hold the state slot don't have to track a rename. */
+ *  `camera-motion`'s `ArrivalState`; this alias is the name the call sites
+ *  holding the state slot use for it. */
 export type FocusLerpState = ArrivalState;
 
 /**
- * Build a focus lerp from the current camera pose. The destination is the
- * point at `parkDist` from `target`, along the current eye-to-target line —
+ * The destination is the point at `parkDist` from `target`, along the
+ * current eye-to-target line —
  * so the camera glides in along its existing viewing direction rather than
  * jumping sideways. Orientation slerps in parallel: starting from
  * `cameraQuat`, ending at "looking at `target` from `toPos` with `startUp`

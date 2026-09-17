@@ -21,9 +21,9 @@ import { arrivalEaseFn } from '../camera-config';
 /** Cross-controller seam consumed by ObserveTransition; implemented by
  *  FocusController (in ../focus/). */
 export interface ObserveFocusOps {
-  /** The focused hard-kind (star / planet) Target — the observe
-   *  anchor. Null when the focus is empty or a soft kind (cloud / LG),
-   *  which can't anchor observe: no floating-origin recentre. */
+  /** The focused hard-kind Target — the observe anchor. Null when the
+   *  focus is empty or a soft kind, which can't anchor observe: no
+   *  floating-origin recentre. */
   getFocusedHardTarget(): Target | null;
   /** Full setFocus path — fires 'focus' / 'state'. Used by the 'exit'
    *  kind's finish branch when `clearFocusOnExit` is true (the
@@ -96,17 +96,16 @@ export interface ObserveTransitionDeps {
    *  entry. */
   aim: AimController;
   roll: RollController;
-  /** Per-kind focal-body hide (star: uHideFocusIdx; planet: the body
-   *  field's uHideIdx). The 'enter' kind hides the focal body at
-   *  finish (the user is standing ON it — its disc would render from
-   *  the interior). 'exit' unhides at start. */
+  /** The 'enter' kind hides the focal body at finish (the user is
+   *  standing ON it — its disc would render from the interior). 'exit'
+   *  unhides at start. */
   setFocalBodyHidden: (target: Target | null) => void;
   bus: EventBus<StellataEventMap>;
   focus: ObserveFocusOps;
   getCameraMode: () => CameraMode;
   /** Raw field setter — the controller writes mode then emits
-   *  'cameraMode' itself. Stellata still owns the field; this callback
-   *  is just the write. */
+   *  'cameraMode' itself. FocusController still owns the field; this
+   *  callback is just the write. */
   setCameraModeValue: (mode: CameraMode) => void;
 }
 

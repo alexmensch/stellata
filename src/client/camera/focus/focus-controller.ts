@@ -211,7 +211,6 @@ export class FocusController implements FocusOps {
     this.deps.bus.emit('state');
   }
 
-  /** Clear whichever vector destination is set (any kind). */
   clearVector(): void {
     if (this.vector !== null) this.setVectorSlot(this.vector.kind, null);
   }
@@ -327,8 +326,8 @@ export class FocusController implements FocusOps {
     return this.deps.getFocusables()[t.kind].localPositionInto(t.idx, out);
   }
 
-  /** The focused hard-kind (star / planet) Target, or null when the
-   *  focus is empty or soft. The observe anchor — observe parks the
+  /** The focused hard-kind Target, or null when the focus is empty or
+   *  soft. The observe anchor — observe parks the
    *  camera exactly at the object, which requires the recentred local
    *  frame only hard kinds establish. */
   getFocusedHardTarget(): HardTarget | null {
@@ -427,8 +426,7 @@ export class FocusController implements FocusOps {
     this.deps.bus.emit('cameraMode', 'navigate');
   }
 
-  /** Shared setter for the soft-focus kinds (cloud / LG / shell). A hard
-   *  focus is displaced through the full setFocus(null) path
+  /** A hard focus is displaced through the full setFocus(null) path
    *  (orbit floor clamp + planet-system detach + observe bail-out);
    *  another soft kind is displaced structurally by the slot write. */
   private setSoftFocus(target: Target): void {
@@ -456,8 +454,8 @@ export class FocusController implements FocusOps {
     return delta;
   }
 
-  // Reload the focused star's planet system. Called from every code path
-  // that mutates the focus slot (setFocus, setHardFocus, applyFocusFor).
+  // Called from every code path that mutates the focus slot (setFocus,
+  // setHardFocus, applyFocusFor).
   // The token guard drops a previous in-flight load if the focus changes
   // again before the Promise resolves — relevant once the exoplanet epic
   // introduces truly async fetches; for Sol the resolve happens on the
@@ -544,9 +542,8 @@ export class FocusController implements FocusOps {
 
   // ─── click/select-driven focus paths ───────────────────────────────
 
-  /** Focus a star — the star leg of `focusHardTarget`. Public for the
-   *  double-click / URL-restore call sites that carry a bare catalog
-   *  index. */
+  /** The star leg of `focusHardTarget`, public for the double-click /
+   *  URL-restore call sites that carry a bare catalog index. */
   focusStar(starIndex: number, opts: { animate?: boolean } = {}): void {
     this.focusHardTarget({ kind: 'star', idx: starIndex }, opts);
   }
@@ -891,8 +888,6 @@ export class FocusController implements FocusOps {
     };
   }
 
-  /** Build a FocusTarget describing whichever object is currently
-   *  focused, or null if nothing is focused. Source side of a warp. */
   currentFocusTarget(): FocusTarget | null {
     return this.focused === null ? null : this.makeFocusTarget(this.focused);
   }

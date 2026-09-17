@@ -81,8 +81,7 @@ export class Picker {
 
   // ─── Click picks ──────────────────────────────────────────────────
 
-  /** Pick a star under the cursor for the click FSM. Returns the
-   *  winning catalog index or -1 if no star is hit. */
+  /** Returns the winning catalog index, or -1 if no star is hit. */
   pickStar(
     clientX: number,
     clientY: number,
