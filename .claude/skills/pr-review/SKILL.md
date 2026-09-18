@@ -250,3 +250,16 @@ whichever epic owns the code; do not create an umbrella by reflex.
 A file you are touching is a file you own for that PR: pre-existing rule
 violations, stale prose, and bugs in the diff's own files are in scope. See
 § Correct stale context before the session ends in the user-level ~/.claude/CLAUDE.md.
+
+## Mark the PR reviewed once the fixes are on it
+
+`gh pr edit <N> --add-label reviewed`, after the agreed fixes are committed and
+pushed. The label says a review happened and its findings landed, which is what
+a reader of the PR list cannot otherwise tell from a green tick.
+
+Add it only once every agreed finding is pushed — a finding deferred to a bead
+counts as landed, an unpushed commit does not. A review that ends in approval
+with no changes agreed earns it too; a review whose findings the author has not
+acted on does not. Do not wait on CI for it (§ Never wait on PR CI checks in
+the user-level `~/.claude/CLAUDE.md`), and do not treat it as approval to
+merge, which stays a separate per-PR decision.
