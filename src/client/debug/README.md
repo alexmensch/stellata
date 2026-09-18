@@ -119,7 +119,9 @@ up as a hot path in its own measurements.
 actually in frame here" — the number every elision decision on the star
 path is sized against. It prints the glow-tier and disc-tier instance
 counts the compaction kernel last wrote, with the catalogue record count
-beside them, and returns the report.
+beside them, then the count passing the dust-independent prefilter and
+the drawn share of those — the frustum's own prize, once a kernel already
+gates on the prefilter — and returns the report.
 
 WebGPU only: the WebGL2 boot lists no survivors and prices its three draws
 at the whole catalogue, so the call warns and returns null there. It maps

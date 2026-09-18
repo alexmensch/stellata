@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CULL_SLACK_NDC, INDIRECT_ARGS_STRIDE, INDIRECT_INSTANCE_COUNT_SLOT, STAR_TIERS, STAR_TIER_DISC,
+  ARGS_ELEMENTS, CULL_SLACK_NDC, INDIRECT_ARGS_STRIDE, INDIRECT_INSTANCE_COUNT_SLOT,
+  PREFILTER_COUNT_ELEMENT, STAR_TIERS, STAR_TIER_DISC,
   STAR_TIER_GLOW, initialIndirectArgs, starQuadOffscreen, survivorCountsFromArgs,
   tierArgsInstanceCountElement, tierArgsOffsetBytes, tierListBase,
 } from './compaction-pure';
@@ -63,8 +64,16 @@ describe('compaction layout', () => {
     expect(tierArgsOffsetBytes(STAR_TIER_DISC)).toBe(20);
   });
 
-  it('the initial args draw the quad over zero instances in both slots', () => {
-    expect(Array.from(initialIndirectArgs(6))).toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0]);
+  it('the initial args draw the quad over zero instances in both slots, prefilter count zero', () => {
+    expect(Array.from(initialIndirectArgs(6))).toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0]);
+  });
+
+  // The counter sits past both draw slots, so no indirect draw reads it.
+  it('the prefilter counter is the element past the last draw slot', () => {
+    expect(PREFILTER_COUNT_ELEMENT).toBe(10);
+    expect(ARGS_ELEMENTS).toBe(11);
+    expect(PREFILTER_COUNT_ELEMENT).toBeGreaterThanOrEqual(
+      tierArgsOffsetBytes(STAR_TIER_DISC) / 4 + INDIRECT_ARGS_STRIDE);
   });
 
   // The readback takes the very slots the draws take their instance count
@@ -73,10 +82,11 @@ describe('compaction layout', () => {
     const args = initialIndirectArgs(6);
     args[tierArgsInstanceCountElement(STAR_TIER_GLOW)] = 1234;
     args[tierArgsInstanceCountElement(STAR_TIER_DISC)] = 7;
-    expect(survivorCountsFromArgs(args)).toEqual({ glow: 1234, disc: 7 });
+    args[PREFILTER_COUNT_ELEMENT] = 5000;
+    expect(survivorCountsFromArgs(args)).toEqual({ glow: 1234, disc: 7, prefilter: 5000 });
   });
 
   it('a short buffer reads zero rather than undefined', () => {
-    expect(survivorCountsFromArgs(new Uint32Array(2))).toEqual({ glow: 0, disc: 0 });
+    expect(survivorCountsFromArgs(new Uint32Array(2))).toEqual({ glow: 0, disc: 0, prefilter: 0 });
   });
 });

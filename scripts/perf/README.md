@@ -77,9 +77,11 @@ scripts/perf/
 `pnpm run survivors` boots each canon vantage on WebGPU, waits for the same
 render-gate settle the runner waits for, and prints what the compaction
 kernel listed: glow-tier and disc-tier instance counts against the
-catalogue record count (`src/client/webgpu/star/compaction/README.md`
-§ Reading the counts back). It reuses `scenarios.ts` and `page-protocol.ts`
-so its vantages and its boot are the runner's, byte for byte.
+catalogue record count, and the count passing the dust-independent
+prefilter with the drawn share of it
+(`src/client/webgpu/star/compaction/README.md` § Reading the counts back).
+It reuses `scenarios.ts` and `page-protocol.ts` so its vantages and its
+boot are the runner's, byte for byte.
 
 **It reads no clock**, which is why it lives beside the runner without
 inheriting the arm. The consent gate exists to protect an idle machine for a

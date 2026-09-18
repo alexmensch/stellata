@@ -16,7 +16,7 @@ import { STAR_PASS_GLOW } from '../../../star-pipeline/star-pass';
 import { disposeStorageAttribute } from '../../tsl/storage-attribute';
 import { solveStarTsl, type StarTslDeps } from '../star-vertex-tsl';
 import {
-  CULL_SLACK_NDC, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
+  CULL_SLACK_NDC, PREFILTER_COUNT_ELEMENT, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
   initialIndirectArgs, survivorCountsFromArgs, tierArgsInstanceCountElement,
   tierListBase, type StarTier, type SurvivorCounts,
 } from './compaction-pure';
@@ -55,6 +55,7 @@ export class StarCompaction {
       for (const tier of STAR_TIERS) {
         atomicStore(argsNode.element(tierArgsInstanceCountElement(tier)), uint(0));
       }
+      atomicStore(argsNode.element(PREFILTER_COUNT_ELEMENT), uint(0));
     })(), 1);
     reset.setName('star-compaction-reset');
 
@@ -74,6 +75,7 @@ export class StarCompaction {
       solveStarTsl(deps, self, localPos, {
         pass: STAR_PASS_GLOW, eclipseDim: null,
       }, (s) => {
+        atomicAdd(argsNode.element(PREFILTER_COUNT_ELEMENT), uint(1));
         // Mirror any change here into `starQuadOffscreen` (compaction-pure.ts),
         // which carries the tests. The pinned focal star draws through a
         // substituted matrix, so its true projection cannot cull it.

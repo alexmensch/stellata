@@ -121,6 +121,15 @@ elision decision on the star path — "how much of the catalogue is actually
 in frame here" is otherwise unanswerable, since the counts exist only on
 the GPU and no draw ever reads them on the CPU.
 
+**A third counter, `PREFILTER_COUNT_ELEMENT`, sits one u32 past the two
+draw slots**: every star the dust-independent prefilter admits, counted
+before the frustum test, one atomic per admitted star per frame. No draw
+reads it. `drawn / prefilter` is the share the frustum alone keeps of a
+population a prefilter-gated kernel already runs over — the extinction
+cache's gate is that kernel (`../../extinction/README.md` § The cache
+gate), so this ratio, not `drawn / records`, is the frustum's prize
+there.
+
 **On demand, never per frame.** The readback resolves frames later, so a
 per-frame one would either stall the render path or report a stale frame's
 number as the current one; neither buys anything a console call at a

@@ -45,7 +45,7 @@ describe('StarCompaction buffers', () => {
   it('the args buffer is indirect-capable and starts every slot at zero instances', () => {
     const { compaction } = make();
     expect(compaction.args.isIndirectStorageBufferAttribute).toBe(true);
-    expect(Array.from(compaction.args.array)).toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0]);
+    expect(Array.from(compaction.args.array)).toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0]);
   });
 });
 
