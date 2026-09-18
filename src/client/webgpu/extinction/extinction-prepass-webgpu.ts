@@ -150,9 +150,8 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     const visible = this.visible;
     this.kernel = compute(Fn(() => {
       const slot = instanceIndex.add(this.sliceBase);
-      // Ours, not three's. three's early return bounds `instanceIndex`
-      // against the node's own `count`, which a sliced dispatch no longer
-      // reaches; the last slice's workgroup tail runs past the catalogue.
+      // Ours, not three's: three's early return bounds `instanceIndex`, not
+      // the slot (refill/README.md § The kernel bounds its own slot).
       If(slot.lessThan(uint(count)), () => {
         const self = int(this.orderNode.element(slot));
         const starAbs = this.positionsNode.element(slot).xyz;
@@ -206,9 +205,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     );
     if (this.syncGateBounds()) this.dirty = true;
     const wanted = this.dirty || moved;
-    // The first fill is whole. Until it is, every consumer runs its own
-    // in-vertex march, which is dearer than the dispatch it would be
-    // waiting on (refill/README.md § Three places).
+    // The first fill is whole (refill/README.md § Three places).
     if (!this.hasComputed) {
       if (!wanted) return;
       this.absCameraPos.value.set(absCamX, absCamY, absCamZ);
@@ -260,13 +257,8 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  inside the hover dwell. */
   warmAvReadback(): void {
     if (!this.isActive()) return;
-    // A refill still cycling drops this copy before the dwell that wanted
-    // it can read a byte — the next slice bumps the generation the frame
-    // after — so issuing one buys the pick nothing and costs the whole
-    // table every frame. A cycle parks only once nothing is asking for a
-    // refill, so this covers the camera under way too. The pick reads null
-    // and errs pickable across that stretch either way (README.md
-    // § Cold reads).
+    // A parked cursor only: a copy taken mid-cycle is superseded before the
+    // dwell that wanted it can read a byte (README.md § Cold reads).
     if (this.refill.base < this.count) return;
     if (this.mirrorGeneration === this.generation) return;
     const generation = this.generation;
@@ -288,9 +280,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  bit-compared against the whole buffer. Dev-console only. */
   async verifyParity(): Promise<AvParityReport | null> {
     if (!this.isActive() || this.av === null || this.dispatchOrder === null) return null;
-    // A bit compare against one reference camera needs one camera behind
-    // the whole buffer, and a spread refill leaves up to REFILL_SLICES in
-    // it (refill/README.md § Three places).
+    // One camera behind the whole buffer (refill/README.md § Three places).
     this.computeWholeCatalogue();
     this.refill = idleRefill(this.count);
     this.generation++;
