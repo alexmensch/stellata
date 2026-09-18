@@ -1,11 +1,13 @@
 // Build-time Sol→star extinction integral through the same encoded
-// Edenhofer dust grid star.vert.glsl raymarches. See
+// Edenhofer dust grid the runtime march samples. See
 // scripts/catalog/distance/README.md § Build-time de-extinction.
 
-// Reddening ratio A_V / E(B−V). MUST equal R_V in
-// src/client/star-pipeline/star.vert.glsl — the shader re-reddens by the
-// same ratio, so a divergence breaks the Sol-view cancellation.
-export const R_V = 3.1;
+import {
+  segmentCubeOverlap,
+  type Vec3,
+} from '../../../src/client/star-pipeline/extinction/dust-raymarch-pure';
+
+export { R_V } from '../../../src/client/star-pipeline/extinction/dust-raymarch-pure';
 
 /** In-memory decode of the dust artifact `dust-loader.ts` streams at
  *  runtime. `data` is the flat gridSize³ grid of encoded uint8 voxels,
@@ -21,27 +23,18 @@ export interface DustGrid {
   data: Uint8Array;
 }
 
+const ORIGIN: Vec3 = [0, 0, 0];
+
 function mix(a: number, b: number, f: number): number {
   return a + (b - a) * f;
 }
 
-// Trilinear read matching the GPU sampler3D (LinearFilter, ClampToEdge):
-// normalise uint8 → [0,1], interpolate in encoded space, THEN decode.
-// Returns 0 for positions outside the cube — the shader `continue`s on
-// out-of-range uvw and the boundary voxels are zero-padded.
-export function sampleDensityAt(
-  grid: DustGrid,
-  x: number,
-  y: number,
-  z: number,
-): number {
+/** Trilinear read of the ENCODED value at volume coordinates, matching the
+ *  GPU sampler3D (LinearFilter, ClampToEdge): normalise uint8 → [0,1] and
+ *  interpolate in encoded space. Coordinates outside [0,1] clamp to the
+ *  edge voxel. */
+export function sampleEncodedAt(grid: DustGrid, u: number, v: number, w: number): number {
   const n = grid.gridSize;
-  const invRange = 0.5 / grid.boundsHalfPc;
-  const u = x * invRange + 0.5;
-  const v = y * invRange + 0.5;
-  const w = z * invRange + 0.5;
-  if (u < 0 || u > 1 || v < 0 || v > 1 || w < 0 || w > 1) return 0;
-
   const cx = u * n - 0.5;
   const cy = v * n - 0.5;
   const cz = w * n - 0.5;
@@ -65,39 +58,50 @@ export function sampleDensityAt(
   const c11 = mix(get(x0c, y1c, z1c), get(x1c, y1c, z1c), fx);
   const c0 = mix(c00, c10, fy);
   const c1 = mix(c01, c11, fy);
-  const encoded = mix(c0, c1, fz);
-
-  return grid.densityMin * Math.exp(encoded * grid.logRatio);
+  return mix(c0, c1, fz);
 }
 
-// Converged A_V from Sol (origin) to the star, integrating only the
-// portion of the sightline inside the cube (the ray from the cube's
-// centre exits exactly once). Midpoint rule with step ≤ one voxel — the
-// build reference that the shader's coarser 48-step march approximates,
-// so the only at-Sol residual is the shader's quadrature error.
+/** Decoded E_ZGR/pc density at an absolute position; 0 outside the cube. */
+export function sampleDensityAt(
+  grid: DustGrid,
+  x: number,
+  y: number,
+  z: number,
+): number {
+  const invRange = 0.5 / grid.boundsHalfPc;
+  const u = x * invRange + 0.5;
+  const v = y * invRange + 0.5;
+  const w = z * invRange + 0.5;
+  if (u < 0 || u > 1 || v < 0 || v > 1 || w < 0 || w > 1) return 0;
+  return grid.densityMin * Math.exp(sampleEncodedAt(grid, u, v, w) * grid.logRatio);
+}
+
+/** Converged A_V along `from`→`to` (absolute pc). */
+export function avAlongSegment(grid: DustGrid, from: Vec3, to: Vec3): number {
+  const delta: Vec3 = [to[0] - from[0], to[1] - from[1], to[2] - from[2]];
+  const lenPc = Math.hypot(delta[0], delta[1], delta[2]);
+  if (lenPc < 1e-6) return 0;
+  const [t0, t1] = segmentCubeOverlap(from, delta, grid.boundsHalfPc);
+  if (t1 <= t0) return 0;
+  const inCubeLenPc = (t1 - t0) * lenPc;
+
+  const numSteps = Math.max(1, Math.ceil(inCubeLenPc / grid.voxelSizePc));
+  const stepPc = inCubeLenPc / numSteps;
+  let accumDensity = 0;
+  for (let i = 0; i < numSteps; i++) {
+    const t = t0 + (t1 - t0) * ((i + 0.5) / numSteps);
+    accumDensity += sampleDensityAt(
+      grid, from[0] + delta[0] * t, from[1] + delta[1] * t, from[2] + delta[2] * t);
+  }
+  return accumDensity * stepPc * grid.avPerDensityPc;
+}
+
+/** The build's Sol→star de-extinction integral. */
 export function avSolToStar(
   grid: DustGrid,
   x: number,
   y: number,
   z: number,
 ): number {
-  const lenPc = Math.hypot(x, y, z);
-  if (lenPc < 1e-6) return 0;
-  const dx = x / lenPc, dy = y / lenPc, dz = z / lenPc;
-
-  const b = grid.boundsHalfPc;
-  let tExit = Infinity;
-  if (dx !== 0) tExit = Math.min(tExit, b / Math.abs(dx));
-  if (dy !== 0) tExit = Math.min(tExit, b / Math.abs(dy));
-  if (dz !== 0) tExit = Math.min(tExit, b / Math.abs(dz));
-  const inCubeLen = Math.min(lenPc, tExit);
-
-  const numSteps = Math.max(1, Math.ceil(inCubeLen / grid.voxelSizePc));
-  const stepPc = inCubeLen / numSteps;
-  let accumDensity = 0;
-  for (let i = 0; i < numSteps; i++) {
-    const t = (i + 0.5) * stepPc;
-    accumDensity += sampleDensityAt(grid, dx * t, dy * t, dz * t);
-  }
-  return accumDensity * stepPc * grid.avPerDensityPc;
+  return avAlongSegment(grid, ORIGIN, [x, y, z]);
 }

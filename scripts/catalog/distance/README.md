@@ -199,13 +199,18 @@ the runtime re-adds, at camera=Sol the build subtraction and the runtime
 addition cancel identically for every star — map calibration, cube
 truncation at 1.25 kpc, and the `avPerDensityPerPc` conversion all cancel
 by construction — so rendered `appMag` reproduces the AT-HYG observed
-magnitude (the only at-Sol residual is the shader's 48-step quadrature vs
-the build's converged integral). Camera-anywhere: from within the cube,
-vantages get physically consistent re-lighting.
+magnitude (the only at-Sol residual is the shader's tap-rule quadrature
+vs the build's converged integral —
+`src/client/star-pipeline/extinction/README.md` § The march, and
+`scripts/dust/march-taps/README.md` measures it). Camera-anywhere: from
+within the cube, vantages get physically consistent re-lighting.
 
-- `dust-deextinction-pure.ts` — the pure integral + trilinear sampler
-  mirroring the GPU decode (`sampleDensityAt`, `avSolToStar`) and the
-  shared `R_V`. `dust-deextinction.ts` — `loadDustGrid` assembles
+- `dust-deextinction-pure.ts` — the converged integral over a segment's
+  overlap with the cube (`avAlongSegment`, with `avSolToStar` the
+  origin-anchored form the build calls), sharing the runtime march's
+  `segmentCubeOverlap`; the trilinear sampler mirroring the GPU read
+  (`sampleEncodedAt`, decoded by `sampleDensityAt`); and the shared
+  `R_V`. `dust-deextinction.ts` — `loadDustGrid` assembles
   `data/dust/` (manifest + 64 chunks) into one flat grid; decode
   constants come from the manifest, never redefined.
 - Runs inside `readStars` after the distance overrides settle final xyz,
