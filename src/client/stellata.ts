@@ -1676,10 +1676,6 @@ export class Stellata implements FrameAnchor {
     return reports;
   }
 
-  /** Numeric check that the compute A_V kernel and a fragment march of the
-   *  same integral agree bit for bit over the whole catalogue — the parity
-   *  a WebGPU boot has no pixel to show. Null on WebGL2 or with no dust.
-   *  `webgpu/extinction/README.md` § The prepass kernel. */
   /** How many stars each tier's draw issued on the last compaction
    *  dispatch. Null on a WebGL2 boot, which lists no survivors
    *  (`webgpu/star/compaction/README.md` § Reading the counts back). */
@@ -1687,6 +1683,10 @@ export class Stellata implements FrameAnchor {
     return this.webgpuStarLayer?.readSurvivorCounts() ?? Promise.resolve(null);
   }
 
+  /** Numeric check that the compute A_V kernel and a fragment march of the
+   *  same integral agree bit for bit over the whole catalogue — the parity
+   *  a WebGPU boot has no pixel to show. Null on WebGL2 or with no dust.
+   *  `webgpu/extinction/README.md` § The prepass kernel. */
   async verifyExtinction(): Promise<AvParityReport | null> {
     const report = await this.extinctionPrepass?.verifyParity?.() ?? null;
     if (report === null) {
