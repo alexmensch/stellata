@@ -6,11 +6,8 @@ import {
   StorageBufferAttribute, Vector3, type ComputeNode, type WebGPURenderer,
 } from 'three/webgpu';
 import { Fn, If, compute, distance, float, instanceIndex, int, max, storage, uniform } from 'three/tsl';
-import {
-  STAR_VISIBILITY_BOUND_KEYS,
-  type ExtinctionPrepassSeam,
-  type ExtinctionPrepassUniforms,
-  type StarVisibilityBoundValues,
+import type {
+  ExtinctionPrepassSeam, ExtinctionPrepassUniforms,
 } from '../../star-pipeline/extinction/extinction-seam';
 import type { AvParityReport } from '../../star-pipeline/extinction/av-parity-pure';
 import {
@@ -19,7 +16,10 @@ import {
   packPositionsVec4Into,
 } from '../../star-pipeline/extinction/extinction-prepass-pure';
 import type { StarTables } from '../star/star-tables';
-import { starCacheVisibleTsl, type StarVisibilityUniforms } from '../star/star-visibility-tsl';
+import {
+  STAR_VISIBILITY_BOUND_KEYS, starCacheVisibleTsl,
+  type StarVisibilityBoundValues, type StarVisibilityUniforms,
+} from '../star/star-visibility-tsl';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { disposeStorageAttribute } from '../tsl/storage-attribute';
 import { mortonDispatchOrder } from './dispatch-order/dispatch-order-pure';

@@ -272,7 +272,7 @@ The vertex stage re-runs its prefilter every frame, so it needs no
 invalidation. Three obligations fall out of caching the same test:
 
 - **The bounds are watched, not pushed.** `STAR_VISIBILITY_BOUND_KEYS`
-  (`../../star-pipeline/extinction/extinction-seam.ts`) is the complete
+  (`../star/star-visibility-tsl.ts`) is the complete
   input set, and `update()` compares each against the value it last
   dispatched with — raising the aperture raises `uCullMag`, a filter
   change moves the mask or the band, and neither displaces the camera.

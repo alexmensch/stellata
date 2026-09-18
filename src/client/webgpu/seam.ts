@@ -19,8 +19,9 @@ import type {
   ProbeMaterials, SolarSystemMaterials,
 } from '../solar-system/materials/solar-system-materials';
 import type {
-  ExtinctionPrepassSeam, ExtinctionPrepassUniforms, StarVisibilityBoundValues,
+  ExtinctionPrepassSeam, ExtinctionPrepassUniforms,
 } from '../star-pipeline/extinction/extinction-seam';
+import type { StarVisibilityBoundValues } from './star/star-visibility-tsl';
 import type { StarMirror } from '../star-pipeline/local-pass/star-mirror-slots';
 import type { SharedUniformNodes } from './tsl/shared-uniform-nodes';
 import type { SurvivorCounts } from './star/compaction/compaction-pure';

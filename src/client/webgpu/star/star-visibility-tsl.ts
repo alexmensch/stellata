@@ -6,11 +6,25 @@ import { Fn, float, log, uint } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 import { STAR_PASS_GLOW, type StarPass } from '../../star-pipeline/star-pass';
-import type { StarVisibilityBoundKey } from '../../star-pipeline/extinction/extinction-seam';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import type { StarTables } from './star-tables';
 
 type NF = Node<'float'>;
+
+/** The instrument and filter uniforms the A_V cache gates its march on, and
+ *  therefore the complete set a change to any of which has to invalidate it
+ *  (`../extinction/README.md` § The cache gate). The list is the authority:
+ *  both types below and the cache's dirty watch derive from it, so a bound
+ *  the gate reads cannot be watched by nothing. */
+export const STAR_VISIBILITY_BOUND_KEYS = [
+  'uThresholdMag', 'uCullMag', 'uMinDistSol', 'uMaxDistSol', 'uSpectMask', 'uMonochrome',
+] as const;
+
+export type StarVisibilityBoundKey = typeof STAR_VISIBILITY_BOUND_KEYS[number];
+
+/** Those slots as the shell's value objects, shared by reference with the
+ *  star pipeline's sharedUniforms map. */
+export type StarVisibilityBoundValues = Record<StarVisibilityBoundKey, { value: number }>;
 
 /** `SharedUniformNodes` satisfies this, and so does the extinction
  *  prepass's own record (`../extinction/README.md` § The cache gate). */

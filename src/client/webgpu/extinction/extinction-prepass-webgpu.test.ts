@@ -5,7 +5,7 @@ import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { createVoxelTexture } from '../../loaders/dust-voxel-upload';
 import { RECOMPUTE_EPSILON_PC } from '../../star-pipeline/extinction/extinction-prepass-pure';
-import { STAR_VISIBILITY_BOUND_KEYS } from '../../star-pipeline/extinction/extinction-seam';
+import { STAR_VISIBILITY_BOUND_KEYS } from '../star/star-visibility-tsl';
 import { makeStarLayerSources } from '../star/star-sources-mock';
 import { StarTables } from '../star/star-tables';
 import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
