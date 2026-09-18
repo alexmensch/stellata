@@ -231,13 +231,18 @@ Two rows, and they price opposite halves of the same cache.
   vertex stage on its in-vertex raymarch, so `savedMs` is normally negative
   and the row is what the cache SAVES.
 - **`extinctionRecompute`** is the producer: what filling the cache costs.
-  One camera→star march per catalogue star — 388,071 threads, each
-  spending taps in proportion to its in-cube path, so ~17M volume fetches
-  at Sol against a ~37M ceiling
+  A whole fill is one camera→star march per catalogue star — 388,071
+  threads, each spending taps in proportion to its in-cube path, so ~17M
+  volume fetches at Sol against a ~37M ceiling
   (`../../../star-pipeline/extinction/README.md` § The march) — plus its
   own compute submit on WebGPU
   (`../../../webgpu/extinction/README.md` § The prepass kernel), or its own
-  fragment pass on WebGL2.
+  fragment pass on WebGL2. **On WebGPU the row is a fraction of that**: the
+  fill spreads over `REFILL_SLICES` frames, so a frame dispatches one slice
+  of the slot space, and inside it only the stars the prefilter and the
+  frustum both admit march at all
+  (`../../../webgpu/extinction/refill/README.md`). Read the row as the
+  per-frame cost under the lever, never as the whole-fill figure above.
 
 **The producer row cannot appear on its own.** The cache is refilled only
 when the camera has moved more than `RECOMPUTE_EPSILON_PC` (1 pc) since the
@@ -259,10 +264,14 @@ recompute at a parked camera writes the same A_V values it already held, so
 `baselineLimitMag` and `disabledLimitMag` agree by construction — and if
 they do not, something other than the recompute moved.
 
-The cost is largely **vantage-independent**: every star is marched whatever
-is on screen, the pass having no per-star magnitude to gate on. So Sol
-default is the primary vantage and mw-plane 120° the second witness, rather
-than the usual five.
+The cost is **vantage-dependent, deliberately, and all five vantages are
+the witness.** The kernel gates on the star stages' own prefilter
+(`../../../webgpu/extinction/README.md` § The cache gate) and then on the
+frustum, so what it marches is a function of where the camera is pointing
+and how wide the aperture is: the wasted share the gate removes runs 15.2%
+at Sol and 99.5% at the Galactic centre, and collapses to 0.2% at Sol at
+200 mm. A two-vantage read cannot see that, and `lg` — where the gate's own
+cost once outran the march it was skipping — is the row that moves most.
 
 **Under the lever, `extinctionPrepass` changes meaning** — and this is the
 honest warp-regime comparison. Baseline is now kernel-per-frame plus the

@@ -42,9 +42,11 @@ export interface ExtinctionPrepassSeam {
   /** Whether the star vertex stage is consuming the cache this frame. */
   isActive(): boolean;
   /** Per-frame hook, taking the camera's absolute (heliocentric ICRS)
-   *  position before the main render. Recomputes when dirty or the camera
-   *  moved beyond RECOMPUTE_EPSILON_PC; otherwise free. `view` is read on
-   *  WebGPU only. */
+   *  position before the main render. Refills when dirty or the camera moved
+   *  beyond RECOMPUTE_EPSILON_PC, and on WebGPU when the view turned as well
+   *  — `view` is read there only, and a turn is an ordinary refill request
+   *  (`../../webgpu/extinction/refill/README.md` § A view change is a refill
+   *  request). Free only with the camera parked and the view still. */
   update(absCamX: number, absCamY: number, absCamZ: number, view?: ExtinctionView): void;
   /** Raw physical A_V for one star, out of the very texel the star vertex
    *  stage fetches. Null when the cache is inert, and on WebGPU also
