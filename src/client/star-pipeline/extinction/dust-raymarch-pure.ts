@@ -1,8 +1,8 @@
 // CPU mirror of dust-raymarch.glsl / dust-raymarch-tsl.ts — README.md § The march.
 
-export const DUST_TAP_PC = 20;
+export const DUST_TAP_PC = 15;
 export const DUST_TAPS_MIN = 4;
-export const DUST_TAPS_MAX = 48;
+export const DUST_TAPS_MAX = 96;
 
 /** A segment component smaller than this is axis-parallel to the slab: its
  *  entry/exit parameters would be ~1e9 and lie outside [0, 1] anyway. */

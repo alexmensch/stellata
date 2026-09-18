@@ -85,10 +85,14 @@ CPU mirror:
    so at equal mean cost the adaptive rule carries less error.
 
 **The tail is bounded by `DUST_TAPS_MAX`, not by the density.** A
-sightline through a dense core is wrong by up to ~1.3 mag at Sol at the
-cap, whatever the rule, because the log decode makes cores far narrower
-than the encoded field. Choose the rule on the p90/p99 of the sweep, and
-raise the cap rather than the density when the tail is the complaint.
+sightline through a dense core is wrong at the cap whatever the density,
+because the log decode makes cores far narrower than the encoded field.
+Choose the rule on the p90/p99 of the sweep, and raise the cap rather
+than the density when the tail is the complaint. The shipped pair —
+15 pc per tap, cap 96 — was chosen against a fixed 48 at Sol: about a
+third fewer taps on the mean AND a smaller p99 and max, because the
+taps a nearby star no longer wastes are what the cap lets a dusty
+distant one spend.
 
 The instrument is `pnpm run analyse:march-taps`
 (`scripts/dust/march-taps/README.md`): every scheme against the

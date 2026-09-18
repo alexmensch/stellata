@@ -35,9 +35,10 @@ Schemes:
   whole camera→star segment, out-of-cube taps skipped but spent.
 - **clipped fixed N** — `dustRaymarchAv` with a constant tap rule: N taps
   over the in-cube overlap.
-- **adaptive d pc/tap** — `dustRaymarchAv` with `dustMarchTapCount(len, d)`:
-  one tap per `d` pc of in-cube path, clamped to `[DUST_TAPS_MIN,
-  DUST_TAPS_MAX]`. The shipped rule is `d = DUST_TAP_PC`.
+- **d pc/tap cap c** — `dustRaymarchAv` with `dustMarchTapCount(len, d)`
+  capped at `c`: one tap per `d` pc of in-cube path, clamped to
+  `[DUST_TAPS_MIN, c]`, at the pre-clip cap of 48 and at `DUST_TAPS_MAX`.
+  The row marked *(shipped)* is `DUST_TAP_PC` at `DUST_TAPS_MAX`.
 
 Vantages: Sol, and 500 pc / 3 kpc / 1 Mpc along the galactic north pole
 (`GALACTIC_NORTH_POLE_ICRS`). The 1 Mpc row is the `lg` canon vantage's
@@ -50,6 +51,11 @@ regime — every sightline crosses the whole cube.
 over a cloud core, and a star a few tenths of a magnitude wrong is the
 visible failure. State the vantage with any figure: from inside the dust
 the unclipped and clipped fixed schemes agree, from outside they do not.
+
+**The density moves the mean; the cap moves the tail.** Every scheme
+sharing a cap shares its max at Sol, because the worst sightline runs
+through a core the cap cannot resolve at any density. Raise the cap for
+the tail, lower the density for the cost.
 
 The clipped schemes' mean taps at Sol are what a `--force-recompute`
 dwell pays per star in the fetch-bound kernel; the unclipped row's 48 is

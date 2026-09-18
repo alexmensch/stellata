@@ -50,7 +50,7 @@ reads it: the reduction takes means of R and G only.
 only ever dims, so a star already past the bound before extinction is
 past it after — the same monotonicity the magnitude prefilter beside it
 runs on. Testing there keeps the extinction read (one `texelFetch` on the
-prepass path, the 48-tap raymarch on the fallback) off the whole culled
+prepass path, the raymarch on the fallback) off the whole culled
 population; the second call, on the extincted value, is the exact one.
 The TSL twin needs one test only because no extinction read is ported yet
 (`../../webgpu/star/README.md` § Dust extinction) — when

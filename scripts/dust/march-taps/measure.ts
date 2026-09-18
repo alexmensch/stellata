@@ -11,6 +11,7 @@ import { REPO_ROOT } from '../../util/paths';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../../src/client/galactic/galactic-coords';
 import {
   DUST_TAPS_MAX,
+  DUST_TAP_PC,
   dustMarchTapCount,
   dustRaymarchAv,
   segmentCubeOverlap,
@@ -21,8 +22,11 @@ import {
 import { strideSample, summarise, unclippedFixedMarch } from './march-taps-pure';
 
 const DEFAULT_STARS = 20_000;
+/** The fixed-count march every scheme is measured against. */
+const UNCLIPPED_TAPS = 48;
 const FIXED_TAPS = [48, 32, 24, 16];
 const TAP_DENSITIES_PC = [5, 10, 15, 20, 30];
+const TAP_CAPS = [48, DUST_TAPS_MAX];
 
 interface Scheme {
   name: string;
@@ -34,21 +38,27 @@ interface Scheme {
 function schemes(sample: (u: number, v: number, w: number) => number, p: DustDecodeParams): Scheme[] {
   const clipped = (rule: TapCountRule) => (from: Vec3, to: Vec3) =>
     dustRaymarchAv(from, to, sample, p, rule);
+  const capped = (d: number, cap: number): TapCountRule => (len) =>
+    Math.min(cap, dustMarchTapCount(len, d));
   return [
     {
-      name: `unclipped fixed ${DUST_TAPS_MAX}`,
-      av: (from, to) => unclippedFixedMarch(from, to, sample, p, DUST_TAPS_MAX),
-      taps: () => DUST_TAPS_MAX,
+      name: `unclipped fixed ${UNCLIPPED_TAPS}`,
+      av: (from, to) => unclippedFixedMarch(from, to, sample, p, UNCLIPPED_TAPS),
+      taps: () => UNCLIPPED_TAPS,
     },
     ...FIXED_TAPS.map((n): Scheme => ({
       name: `clipped fixed ${n}`,
       av: clipped(() => n),
       taps: (len) => (len === null ? 0 : n),
     })),
-    ...TAP_DENSITIES_PC.map((d): Scheme => ({
-      name: `adaptive ${d} pc/tap`,
-      av: clipped((len) => dustMarchTapCount(len, d)),
-      taps: (len) => (len === null ? 0 : dustMarchTapCount(len, d)),
+    ...TAP_CAPS.flatMap((cap) => TAP_DENSITIES_PC.map((d): Scheme => {
+      const rule = capped(d, cap);
+      const shipped = d === DUST_TAP_PC && cap === DUST_TAPS_MAX ? ' (shipped)' : '';
+      return {
+        name: `${d} pc/tap cap ${cap}${shipped}`,
+        av: clipped(rule),
+        taps: (len) => (len === null ? 0 : rule(len)),
+      };
     })),
   ];
 }
@@ -106,7 +116,7 @@ async function run(): Promise<void> {
       `camera: ${name} — ${((inCube / stars.length) * 100).toFixed(1)}% of sightlines cross the cube`,
     );
     console.log(
-      `  ${'scheme'.padEnd(22)} ${'mean taps'.padStart(9)} ${'p50'.padStart(8)} ` +
+      `  ${'scheme'.padEnd(26)} ${'mean taps'.padStart(9)} ${'p50'.padStart(8)} ` +
         `${'p90'.padStart(8)} ${'p99'.padStart(8)} ${'max'.padStart(8)}`,
     );
     for (const scheme of table) {
@@ -118,7 +128,7 @@ async function run(): Promise<void> {
       });
       const e = summarise(errors);
       console.log(
-        `  ${scheme.name.padEnd(22)} ${(taps / stars.length).toFixed(1).padStart(9)} ` +
+        `  ${scheme.name.padEnd(26)} ${(taps / stars.length).toFixed(1).padStart(9)} ` +
           `${e.p50.toFixed(4).padStart(8)} ${e.p90.toFixed(4).padStart(8)} ` +
           `${e.p99.toFixed(4).padStart(8)} ${e.max.toFixed(4).padStart(8)}`,
       );

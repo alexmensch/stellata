@@ -64,8 +64,8 @@ describe('dustMarchTapCount', () => {
   it('scales with the in-cube length and clamps to the tap window', () => {
     expect(dustMarchTapCount(0)).toBe(DUST_TAPS_MIN);
     expect(dustMarchTapCount(DUST_TAP_PC + 1e-4)).toBe(DUST_TAPS_MIN);
-    expect(dustMarchTapCount(100)).toBe(5);
-    expect(dustMarchTapCount(200)).toBe(10);
+    expect(dustMarchTapCount(100)).toBe(7);
+    expect(dustMarchTapCount(200)).toBe(14);
     expect(dustMarchTapCount(DUST_TAP_PC * DUST_TAPS_MAX)).toBe(DUST_TAPS_MAX);
     expect(dustMarchTapCount(1e6)).toBe(DUST_TAPS_MAX);
   });
@@ -114,7 +114,7 @@ describe('dustRaymarchAv — synthetic single-cloud fixtures', () => {
     it('converges toward the reference as the tap density rises', () => {
       const coarse = dustRaymarchAv([-100, 0, 0], [100, 0, 0], core, P);
       const fine = dustRaymarchAv([-100, 0, 0], [100, 0, 0], core, P, (l) => dustMarchTapCount(l, 10));
-      expect(coarse).toBeCloseTo(0.047494477517784545, 9);
+      expect(coarse).toBeCloseTo(0.2597246789362073, 9);
       expect(fine).toBeCloseTo(0.651847165486207, 9);
       expect(Math.abs(fine - reference)).toBeLessThan(Math.abs(coarse - reference));
     });
@@ -140,9 +140,9 @@ describe('dustRaymarchAv — synthetic single-cloud fixtures', () => {
 
 describe('reddening constants', () => {
   it('pins the tap window and global R_V', () => {
-    expect(DUST_TAP_PC).toBe(20);
+    expect(DUST_TAP_PC).toBe(15);
     expect(DUST_TAPS_MIN).toBe(4);
-    expect(DUST_TAPS_MAX).toBe(48);
+    expect(DUST_TAPS_MAX).toBe(96);
     expect(R_V).toBe(3.1);
   });
 

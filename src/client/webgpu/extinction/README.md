@@ -218,11 +218,12 @@ boot refuses such a device outright (`../tsl/README.md` § Storage
 attributes), which is what makes `supported` constant true here honest
 rather than merely untested.
 
-**A full recompute is at most ~18.6M volume samples**: one thread per
-star × `DUST_TAPS_MAX` (48), 388,071 × 48. The mean is the tap rule's
-(`../../star-pipeline/extinction/README.md` § The march) — the cap binds
-wherever the in-cube path is long, so from outside the cube the ceiling is
-very nearly the cost. It is paid
+**A full recompute is at most ~37M volume samples**: one thread per
+star × `DUST_TAPS_MAX` (96), 388,071 × 96; at Sol the tap rule spends
+~31 per star, ~12M (`../../star-pipeline/extinction/README.md` § The
+march). The cap binds wherever the in-cube path runs past
+`DUST_TAP_PC × DUST_TAPS_MAX` ≈ 1.4 kpc, so from outside the cube the
+ceiling is very nearly the per-admitted-star cost. It is paid
 *per frame* while the camera keeps moving more than
 `RECOMPUTE_EPSILON_PC` between frames — a warp pays it every frame, which
 is the case to measure, not the idle one. Every canon vantage is idle, so
