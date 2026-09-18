@@ -1571,9 +1571,7 @@ export class Stellata implements FrameAnchor {
     // no longer assume nothing moved: a bucket crossing between cadence
     // frames must repaint.
     this.renderGate.invalidate('epoch-bucket');
-    // The A_V cache packed its own copy of catalog.positions at attach,
-    // and the pass above rewrote that array — so it marches to where the
-    // stars used to be, and on WebGPU decides visibility from there too.
+    // The pass above rewrote catalog.positions; the A_V cache holds a copy.
     this.extinctionPrepass?.refreshPositions();
     if (this.warp.isActive() || d.lengthSq() === 0) return;
     this.camera.position.add(d);

@@ -27,9 +27,7 @@ export interface ExtinctionPrepassSeam {
    *  camera displacement. Called on dust attach and per chunk upload. */
   markDirty(): void;
   /** Re-pack the position table off `catalog.positions` and invalidate.
-   *  The model clock's space-motion pass rewrites that array in place, so
-   *  a table packed at attach marches to where the stars used to be — and
-   *  on WebGPU the visibility gate would decide from there too. */
+   *  Called from the epoch advance, which rewrote that array in place. */
   refreshPositions(): void;
   /** Dev-console A/B switch: false parks the star vertex stage on the
    *  in-vertex raymarch fallback and pauses cache maintenance, so the

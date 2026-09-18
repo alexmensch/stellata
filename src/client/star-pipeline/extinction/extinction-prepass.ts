@@ -34,9 +34,7 @@ export class ExtinctionPrepass implements ExtinctionPrepassSeam {
 
   private renderer: THREE.WebGLRenderer;
   private uniforms: ExtinctionPrepassUniforms;
-  /** `catalog.positions` itself — StarFrame rewrites it in place on every
-   *  epoch bucket the model clock crosses, and `refreshPositions` re-packs
-   *  from whatever it holds then. */
+  /** `catalog.positions` itself, which StarFrame rewrites in place. */
   private readonly sourcePositions: Float32Array;
   private readonly count: number;
   private rt: THREE.WebGLRenderTarget | null = null;

@@ -173,13 +173,7 @@ export function solveStarTsl(
   const vis = starVisibilityTsl(u, stat('iSpectClass'), stat('iDistSol'), appMag, pass);
   const chart = vis.chart;
 
-  // Visibility prefilter — dust-independent. Spectral mask and
-  // distance band are absolute; the magnitude and taper bounds are
-  // monotonic in dust (A_V ≥ 0), so testing them ahead of the
-  // extinction read is exact and is what keeps that read — one buffer
-  // element, or the full 48-tap march on the fallback — off the culled
-  // population. The extinction prepass gates its march on the same four
-  // terms (../extinction/README.md § The cache gate).
+  // The prepass kernel gates its march on these same four terms.
   If(vis.alive(), () => {
     // Survivors only. The prepass cache is one read of the star's own
     // float; the fallback marches camera→star in ABSOLUTE space, since

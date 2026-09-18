@@ -12,10 +12,9 @@ import type { StarTables } from './star-tables';
 type NF = Node<'float'>;
 
 /** The instrument and filter uniforms the A_V cache gates its march on, and
- *  therefore the complete set a change to any of which has to invalidate it
- *  (`../extinction/README.md` § The cache gate). The list is the authority:
- *  both types below and the cache's dirty watch derive from it, so a bound
- *  the gate reads cannot be watched by nothing. */
+ *  therefore the complete set a change to any of which has to invalidate it.
+ *  Both types below and the cache's watch derive from this list rather than
+ *  restating it (`../extinction/README.md` § The cache gate). */
 export const STAR_VISIBILITY_BOUND_KEYS = [
   'uThresholdMag', 'uCullMag', 'uMinDistSol', 'uMaxDistSol', 'uSpectMask', 'uMonochrome',
 ] as const;
@@ -78,8 +77,8 @@ export function starVisibilityTsl(
 
 /**
  * The prefilter a per-star CACHE may gate on: the same four terms over the
- * BRIGHTEST magnitude the star can reach, so nothing in the answer moves on
- * the model clock and every stage's own prefilter admits a subset of it.
+ * BRIGHTEST magnitude the star can reach, so the answer is clock-independent
+ * and every stage's own prefilter admits a subset of it.
  * `../extinction/README.md` § The cache gate.
  */
 export function starCacheVisibleTsl(

@@ -107,12 +107,10 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // second factory would give the layer a second, independent dust model
   // and an MRT registration nothing disposes.
   let bandMaterialsCache: BandMaterials | null = null;
-  // The star layer's tables, boot-scoped so the extinction prepass — built
-  // later, on the first attachDust — can gate its march on the same
-  // visibility prefilter the star stages run
-  // (extinction/README.md § The cache gate). Cleared with the layer, so a
-  // prepass built after a teardown gates on nothing rather than on dead
-  // storage nodes.
+  // Boot-scoped so the extinction prepass, built later on the first
+  // attachDust, can gate on them (extinction/README.md § The cache gate).
+  // Cleared with the layer, so a prepass built after a teardown gates on
+  // nothing rather than on dead storage nodes.
   let starTables: StarTables | null = null;
   return {
     renderer,

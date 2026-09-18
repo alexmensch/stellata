@@ -69,10 +69,9 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   private readonly absCameraPos = uniform(new Vector3());
   /** `catalog.positions` itself, which StarFrame rewrites in place. */
   private readonly sourcePositions: Float32Array;
-  /** The gate's bounds as nodes this pass owns rather than the shared
-   *  registry's, which syncs after this pass dispatches — a kernel on
-   *  those would gate a frame behind the watch below, and the two
-   *  disagreeing leaves a star unfilled (README.md § The cache gate). */
+  /** Nodes this pass owns, not the shared registry's: that syncs after this
+   *  pass dispatches, so a kernel on it would gate a frame behind the watch
+   *  below (README.md § The cache gate). */
   private readonly gateBounds: (StarVisibilityUniforms & StarVisibilityBoundValues) | null;
   /** Built once, run by both the kernel and the reference march, so the
    *  two cannot skip different stars. */
@@ -274,9 +273,8 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     });
   }
 
-  /** Copy the bounds the gate reads and report whether any moved. Watched
-   *  rather than pushed, so a new writer of one cannot forget to
-   *  invalidate (README.md § The cache gate). */
+  /** Copy the bounds the gate reads and report whether any moved
+   *  (README.md § The cache gate). */
   private syncGateBounds(): boolean {
     const bounds = this.gateBounds;
     if (bounds === null) return false;

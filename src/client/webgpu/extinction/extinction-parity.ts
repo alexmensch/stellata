@@ -4,10 +4,9 @@
 
 import {
   FloatType, NearestFilter, NoBlending, NodeMaterial, QuadMesh, RedFormat,
-  RenderTarget, type StorageBufferAttribute, type WebGPURenderer,
+  RenderTarget, type Node, type StorageBufferAttribute, type WebGPURenderer,
 } from 'three/webgpu';
 import { Fn, If, float, int, ivec2, screenCoordinate, vec4, type storage } from 'three/tsl';
-import type { Node } from 'three/webgpu';
 import {
   AV_TEX_WIDTH, avTexHeight,
 } from '../../star-pipeline/extinction/extinction-prepass-pure';
