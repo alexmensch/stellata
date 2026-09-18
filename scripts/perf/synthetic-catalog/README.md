@@ -44,6 +44,10 @@ tsx scripts/perf/synthetic-catalog/build-synthetic-catalog.ts \
 `catalog.bin.<i>` first so a shrunk chunk count cannot strand files.
 `--max-records` caps the synthetic count for a quick shape check.
 
+Sets live under `.synthetic/<depth>/` (gitignored — hundreds of MB), one
+directory per depth, and a dev server is pointed at one by copying it over
+`public/`.
+
 Copy the artifacts into the worktree, never symlink them — a build in a
 worktree writes through a symlink into the main checkout (`scripts/README.md`
 § Building in a worktree).
@@ -83,6 +87,24 @@ whose rendered magnitude lands past the limit once the raymarch re-adds A_V,
 which culls them and flatters the result. Sampling is by precomputed CDF —
 8192 equal-area sky cells × 192 radial steps — so each star costs two table
 lookups rather than a rejection loop that would run at ~1e-4 acceptance.
+
+## Two approximations in how many stars get made
+
+Both sit in the count, not the distribution, and they pull opposite ways. The
+ladder is a scale measurement, so neither is worth the cost of removing — but a
+figure read off it is good to a few percent, not to the record.
+
+**The target is a G-band census; the cut is a V-band one.** `GAIA_CENSUS_BY_G`
+holds counts of stars brighter than a limit in Gaia's own broad `G` band,
+while selection here cuts on `V` — what the catalogue's `absmag` is measured
+in. `G` runs slightly brighter than `V` for most stars, so the census sweeps in
+some stars a true `V` cut would leave out, and the target is a little generous.
+
+**Real records are counted against the limit without extinction.** The
+synthetic draw is magnitude-limited *after* the dust column, but the tally of
+real records already at the limit is not — so that tally is too high, and the
+shortfall it is subtracted from comes out too low. This under-makes stars,
+against the previous paragraph's over-count.
 
 ## The band double-counts, and it moves the number
 
