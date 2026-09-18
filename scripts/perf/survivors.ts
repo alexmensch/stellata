@@ -5,26 +5,24 @@ import { parseArgs } from 'node:util';
 import { chromium, type Page } from 'playwright';
 import { survivorPct, type SurvivorReport } from '../../src/client/debug/survivor-counts';
 import { ARG_DEFAULTS, ArgError } from './args';
+import { gitMeta } from './checkout';
 import {
   BOOT_TIMEOUT_MS, DEFAULT_CHROME_ARGS, SETTLE_TIMEOUT_MS,
-  awaitSettle, bootScenario, seedDismissals, type PerfWindow,
+  awaitSettle, bootScenario, probeAdapters, seedDismissals, type PerfWindow,
 } from './page-protocol';
-import { SCENARIOS, SCENARIO_NAMES, scenarioUrl, type ScenarioName } from './scenarios';
+import { SURVIVORS_SCHEMA, type AdapterProbe, type SurvivorsFile, type SurvivorsRecord } from './schema';
+import { SCENARIOS, SCENARIO_NAMES, scenarioUrl } from './scenarios';
 import { formatTable } from './table-pure';
 
 const QUIET_MS = 1500;
 const TABLE_DECIMALS = 3;
-
-interface Row extends SurvivorReport {
-  scenario: ScenarioName;
-}
 
 /** Callers must settle first — README.md § Survivor counts. */
 function readSurvivors(page: Page): Promise<SurvivorReport | null> {
   return page.evaluate(() => (window as unknown as PerfWindow).debug.survivors());
 }
 
-function survivorTable(rows: readonly Row[]): string {
+function survivorTable(rows: readonly SurvivorsRecord[]): string {
   return formatTable(
     ['vantage', 'records', 'glow', 'disc', 'drawn', 'drawn %'],
     rows.map((r) => [
@@ -62,10 +60,13 @@ async function main(): Promise<number> {
     return 2;
   }
 
+  const startedAt = new Date().toISOString();
   const browser = await chromium.launch({
     channel: 'chromium', headless: true, args: DEFAULT_CHROME_ARGS,
   });
-  const rows: Row[] = [];
+  const browserVersion = browser.version();
+  const rows: SurvivorsRecord[] = [];
+  let probe: AdapterProbe | null = null;
   try {
     for (const scenario of SCENARIO_NAMES) {
       const context = await browser.newContext({
@@ -87,7 +88,10 @@ async function main(): Promise<number> {
         console.log(
           `${scenario} — ${SCENARIOS[scenario].label} · settled ${settleMs} ms · `
           + `${report.records} records`);
-        rows.push({ ...report, scenario });
+        rows.push({ ...report, scenario, settleMs });
+        // After the read, never before: the WebGL branch of the probe opens a
+        // throwaway context in the page the counts just came off.
+        probe ??= await probeAdapters(page);
       } finally {
         await context.close();
       }
@@ -98,7 +102,28 @@ async function main(): Promise<number> {
 
   console.log(`\n${survivorTable(rows)}`);
   if (args.json !== null) {
-    writeFileSync(args.json, `${JSON.stringify({ url: args.url, rows }, null, 2)}\n`);
+    const file: SurvivorsFile = {
+      schema: SURVIVORS_SCHEMA,
+      run: {
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        url: args.url,
+        argv: process.argv.slice(2),
+        git: gitMeta(),
+        browser: {
+          name: 'chromium',
+          version: browserVersion,
+          channel: 'chromium',
+          headless: true,
+          args: DEFAULT_CHROME_ARGS,
+        },
+        gpu: probe,
+        host: { platform: process.platform, arch: process.arch },
+        viewport: { width: ARG_DEFAULTS.width, height: ARG_DEFAULTS.height, dpr: ARG_DEFAULTS.dpr },
+      },
+      rows,
+    };
+    writeFileSync(args.json, `${JSON.stringify(file, null, 2)}\n`);
     console.log(`\nwrote ${args.json}`);
   }
   return 0;

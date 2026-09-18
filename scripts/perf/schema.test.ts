@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PERF_SCHEMA, SchemaError, assertPerfFile } from './schema';
+import { PERF_SCHEMA, SURVIVORS_SCHEMA, SchemaError, assertPerfFile } from './schema';
 
 const CURRENT = {
   schema: PERF_SCHEMA,
@@ -41,5 +41,20 @@ describe('assertPerfFile', () => {
     for (const value of [null, undefined, 3, 'x', []]) {
       expect(() => assertPerfFile(value, 'fixture')).toThrow(SchemaError);
     }
+  });
+
+  it('rejects a survivors file, which carries a run block but no scenarios', () => {
+    expect(() => assertPerfFile({ schema: SURVIVORS_SCHEMA, run: CURRENT.run, rows: [] }, 'survivors.json'))
+      .toThrow(SchemaError);
+  });
+});
+
+describe('SURVIVORS_SCHEMA', () => {
+  it('names the suffix in force', () => {
+    expect(SURVIVORS_SCHEMA).toBe('stellata-survivors/1');
+  });
+
+  it('is a separate suffix from the runner\'s, not a version of it', () => {
+    expect(SURVIVORS_SCHEMA).not.toBe(PERF_SCHEMA);
   });
 });

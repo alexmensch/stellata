@@ -7,12 +7,18 @@ says the part the tracked folder does not do for you: the file reaches main
 only if the PR that cites it adds it.
 
 `pnpm run survivors` writes here too — the survivor-count read, which is not
-a cost instrument and takes no clock. Its file is `{url, rows}` and nothing
-else: no `run` provenance block, so the commit, adapter, viewport and device
-pixel ratio behind its numbers are not in it. **Survivor counts move with
-viewport and field of view** (the frustum test is what produces them), so a
-survivors file is readable only alongside the bead note that records the
-envelope. Say it there.
+a cost instrument and takes no clock. Its file is schema
+`stellata-survivors/1`: a `run` block carrying the same provenance the
+runner's does, plus the viewport and device pixel ratio every vantage was
+visited at, and one row per vantage. **Survivor counts move with viewport and
+field of view** (the frustum test is what produces them) and with the commit
+whenever the tiering or the cull changes, so `run.viewport` and
+`run.git.commit` are what decide whether two survivors files are each other's
+comparison.
+
+`2026-09-18/8cg574-survivors-canon.json` predates that block and is `{url,
+rows}`; its envelope is recorded in `stellata-8cg.57.4`'s notes, and the
+archive being write-once is why it stays that way.
 
 ## Evidence, not canon
 
