@@ -15,13 +15,19 @@ import type { AdapterProbe, WebGlProbe, WebGpuProbe } from './schema';
 import type { Backend } from './scenarios';
 import { settleVerdict, type GateSnapshot } from './settle-pure';
 
-interface PerfWindow {
+export interface PerfWindow {
   readonly debug: DebugTools;
   readonly stellata: Stellata;
 }
 
 export class BootError extends Error {}
 export class SettleTimeout extends Error {}
+
+/** The switches every Chromium this folder launches needs to reach a real
+ *  GPU adapter. Composed with any `--chrome-arg` the caller typed. */
+export const DEFAULT_CHROME_ARGS = ['--ignore-gpu-blocklist', '--enable-unsafe-webgpu'];
+export const BOOT_TIMEOUT_MS = 120_000;
+export const SETTLE_TIMEOUT_MS = 120_000;
 
 export const DISMISSAL_SEEDS = {
   localStorage: { 'stellata.info-dismissed': '1' },

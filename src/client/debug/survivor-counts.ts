@@ -24,13 +24,16 @@ export function survivorReport(counts: SurvivorCounts, records: number): Survivo
   };
 }
 
-const pct = (x: number) => `${(x * 100).toFixed(2)}%`;
+/** A fraction as a percentage. `decimals` is the caller's, because the
+ *  console line and the canon-vantage table want different resolutions. */
+export const survivorPct = (x: number, decimals = 2): string =>
+  `${(x * 100).toFixed(decimals)}%`;
 
 export function formatSurvivorReport(r: SurvivorReport): string {
   return [
-    `survivors: ${r.glow + r.disc} of ${r.records} records (${pct(r.drawnFraction)})`,
-    `  glow tier ${r.glow} (${pct(r.glowFraction)})`,
-    `  disc tier ${r.disc} (${pct(r.discFraction)})`,
+    `survivors: ${r.glow + r.disc} of ${r.records} records (${survivorPct(r.drawnFraction)})`,
+    `  glow tier ${r.glow} (${survivorPct(r.glowFraction)})`,
+    `  disc tier ${r.disc} (${survivorPct(r.discFraction)})`,
   ].join('\n');
 }
 

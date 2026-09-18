@@ -1,64 +1,81 @@
 // Reads debug.survivors() at the canon vantages. README.md § Survivor counts.
 
 import { writeFileSync } from 'node:fs';
+import { parseArgs } from 'node:util';
 import { chromium, type Page } from 'playwright';
-import type { SurvivorReport } from '../../src/client/debug/survivor-counts';
+import { survivorPct, type SurvivorReport } from '../../src/client/debug/survivor-counts';
+import { ARG_DEFAULTS, ArgError } from './args';
 import {
-  awaitSettle, bootScenario, readRecordCount, seedDismissals,
+  BOOT_TIMEOUT_MS, DEFAULT_CHROME_ARGS, SETTLE_TIMEOUT_MS,
+  awaitSettle, bootScenario, seedDismissals, type PerfWindow,
 } from './page-protocol';
 import { SCENARIOS, SCENARIO_NAMES, scenarioUrl, type ScenarioName } from './scenarios';
+import { formatTable } from './table-pure';
 
-const CHROME_ARGS = ['--ignore-gpu-blocklist', '--enable-unsafe-webgpu'];
-const BOOT_TIMEOUT_MS = 120_000;
-const SETTLE_TIMEOUT_MS = 120_000;
 const QUIET_MS = 1500;
-const VIEWPORT = { width: 1280, height: 800 } as const;
-const DPR = 2;
+const TABLE_DECIMALS = 3;
 
 interface Row extends SurvivorReport {
   scenario: ScenarioName;
 }
 
-interface SurvivorsWindow {
-  debug: { survivors(): Promise<SurvivorReport | null> };
-}
-
 /** Callers must settle first — README.md § Survivor counts. */
 function readSurvivors(page: Page): Promise<SurvivorReport | null> {
-  return page.evaluate(() => (window as unknown as SurvivorsWindow).debug.survivors());
+  return page.evaluate(() => (window as unknown as PerfWindow).debug.survivors());
 }
 
-const pct = (x: number) => `${(x * 100).toFixed(3)}%`;
-
-function formatTable(rows: Row[]): string {
-  const head = ['vantage', 'records', 'glow', 'disc', 'drawn', 'drawn %'];
-  const body = rows.map((r) => [
-    r.scenario, String(r.records), String(r.glow), String(r.disc),
-    String(r.glow + r.disc), pct(r.drawnFraction),
-  ]);
-  const w = head.map((h, i) => Math.max(h.length, ...body.map((b) => b[i].length)));
-  const line = (cells: string[]) => cells.map((c, i) => c.padStart(w[i])).join('  ');
-  return [line(head), ...body.map(line)].join('\n');
+function survivorTable(rows: readonly Row[]): string {
+  return formatTable(
+    ['vantage', 'records', 'glow', 'disc', 'drawn', 'drawn %'],
+    rows.map((r) => [
+      r.scenario, r.records, r.glow, r.disc, r.glow + r.disc,
+      survivorPct(r.drawnFraction, TABLE_DECIMALS),
+    ]),
+  );
 }
 
-function flag(name: string): string | null {
-  const i = process.argv.indexOf(name);
-  return i === -1 ? null : process.argv[i + 1] ?? null;
+interface SurvivorsArgs {
+  readonly url: string;
+  readonly json: string | null;
+}
+
+export function parseSurvivorsArgs(argv: readonly string[]): SurvivorsArgs {
+  try {
+    const { values } = parseArgs({
+      args: [...argv],
+      options: { url: { type: 'string' }, json: { type: 'string' } },
+      strict: true,
+    });
+    return { url: values.url ?? ARG_DEFAULTS.url, json: values.json ?? null };
+  } catch (e) {
+    throw new ArgError(e instanceof Error ? e.message : String(e));
+  }
 }
 
 async function main(): Promise<number> {
-  const url = flag('--url') ?? 'http://localhost:5173';
-  const jsonPath = flag('--json');
+  let args: SurvivorsArgs;
+  try {
+    args = parseSurvivorsArgs(process.argv.slice(2));
+  } catch (e) {
+    console.error(`${e instanceof Error ? e.message : String(e)}\n`
+      + 'usage: pnpm run survivors -- [--url <base>] [--json <path>]');
+    return 2;
+  }
 
-  const browser = await chromium.launch({ channel: 'chromium', headless: true, args: CHROME_ARGS });
+  const browser = await chromium.launch({
+    channel: 'chromium', headless: true, args: DEFAULT_CHROME_ARGS,
+  });
   const rows: Row[] = [];
   try {
     for (const scenario of SCENARIO_NAMES) {
-      const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: DPR });
+      const context = await browser.newContext({
+        viewport: { width: ARG_DEFAULTS.width, height: ARG_DEFAULTS.height },
+        deviceScaleFactor: ARG_DEFAULTS.dpr,
+      });
       await seedDismissals(context);
       const page = await context.newPage();
       try {
-        await bootScenario(page, scenarioUrl(url, SCENARIOS[scenario].blob, 'webgpu'), {
+        await bootScenario(page, scenarioUrl(args.url, SCENARIOS[scenario].blob, 'webgpu'), {
           backend: 'webgpu', timeoutMs: BOOT_TIMEOUT_MS,
         });
         const settleMs = await awaitSettle(page, { quietMs: QUIET_MS, timeoutMs: SETTLE_TIMEOUT_MS });
@@ -67,10 +84,9 @@ async function main(): Promise<number> {
           console.error(`${scenario}: debug.survivors() returned null — not a WebGPU boot`);
           return 1;
         }
-        const records = await readRecordCount(page);
         console.log(
           `${scenario} — ${SCENARIOS[scenario].label} · settled ${settleMs} ms · `
-          + `${records ?? report.records} records`);
+          + `${report.records} records`);
         rows.push({ ...report, scenario });
       } finally {
         await context.close();
@@ -80,10 +96,10 @@ async function main(): Promise<number> {
     await browser.close();
   }
 
-  console.log(`\n${formatTable(rows)}`);
-  if (jsonPath !== null) {
-    writeFileSync(jsonPath, `${JSON.stringify({ url, rows }, null, 2)}\n`);
-    console.log(`\nwrote ${jsonPath}`);
+  console.log(`\n${survivorTable(rows)}`);
+  if (args.json !== null) {
+    writeFileSync(args.json, `${JSON.stringify({ url: args.url, rows }, null, 2)}\n`);
+    console.log(`\nwrote ${args.json}`);
   }
   return 0;
 }
