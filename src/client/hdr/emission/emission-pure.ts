@@ -43,6 +43,11 @@ export function luminanceForMagnitude(exposure: number, m: number): number {
  * physical disc — so a star dims per-pixel as the camera closes in,
  * exactly as in nature.
  */
+/** Diameter at or below which `max(1, π·r²)` saturates, so the peak below
+ *  carries the whole flux and is exactly insensitive to `physRadiusPx`.
+ *  A DIAMETER, against the function's radius argument. */
+export const POINT_SOURCE_FLAT_PEAK_DIAMETER_PX = 2 / Math.sqrt(Math.PI);
+
 export function pointSourcePeakLuminance(
   exposure: number,
   m: number,

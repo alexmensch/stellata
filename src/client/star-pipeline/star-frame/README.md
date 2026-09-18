@@ -49,6 +49,22 @@ actually are:
   `forEachStarNearCamera` / `discWindowPcFor` / `shouldEnableCoreMask`
   built on it (§ Star rendering, core depth-mask). `Picker` slices the
   same index for its distSol-filter window.
+- **The physical-size window.** `syncPhysSizeWindow()` — § below.
+
+## The physical-size window
+
+`syncPhysSizeWindow()` is the **single writer** of `uPhysSizeWindowPc`,
+the camera distance past which the WebGPU size solve skips the physical-
+size branch. It composes `discWindowPcFor` over
+`physSizeElisionBoundPx`, which owns what the bound has to satisfy
+(`../perceptual-disc/README.md` § Eliding the physical-size branch).
+
+The shell calls it once per rendered frame, **before** the node sync that
+copies scalars onto the TSL uniform nodes: the window moves with FOV,
+viewport and both `distN` sliders, so a write landing after the sync
+would gate a frame against the previous one's plate scale. The slot
+seeds past any distance the model reaches, so a solve running before the
+first write takes the branch rather than eliding it.
 
 Anything that writes `onLocalPositionsWritten` side effects — the GPU
 re-upload flag and `BinaryOrbitField`'s baseline invalidation — is

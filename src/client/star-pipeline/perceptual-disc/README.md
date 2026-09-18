@@ -18,6 +18,9 @@ it. Stars and planet glare share this kernel exactly.
   + divisor guards) and the kernel's area integral `Φ(n)`. The pick path,
   planet body field, and the port's TSL graph compose over them rather
   than re-deriving.
+- `phys-size-elision-pure.ts` (+ test) — the `physSize` below which every
+  consumer of it stops responding, and the tolerance the one graceful
+  consumer is held to (§ Eliding the physical-size branch).
 - `perceptual-disc-uniforms.ts` — TypeScript shape for the uniforms the
   chunk consumes. `buildSharedUniforms` `satisfies` this interface, and
   `PlanetBodyField.buildMaterials` picks exactly these keys out via
@@ -121,6 +124,46 @@ headroom even for white dwarfs and Sirius B-class radii.
 A varying `vPhysRatio = physSize / max(pxSize, 0.001)` is passed to
 the fragment shader to drive the pass split (`../README.md` § Star
 rendering) and the luminosity-class softness blending (below).
+
+## Eliding the physical-size branch
+
+`physSize` costs a `pow`, a divide and an `atan` per star per frame, and
+past a camera distance no star in the catalog can reach a size any
+consumer notices. `physSizeElisionBoundPx` is that size; `StarFrame`
+turns it into `uPhysSizeWindowPc`, and the WebGPU size solve skips the
+branch beyond it with `physSize` pinned to 0
+(`../../webgpu/star/star-vertex-tsl.ts`).
+
+**Four consumers, not three, and the fourth is what sets the bound.**
+Three stop responding at a hard threshold:
+
+- **Tiering** — `physRatio ≥ PHYS_RATIO_THRESHOLD` needs
+  `physSize ≥ uSizeMin/2`, since `routeAppSize` is floored at `uSizeMin`.
+- **`pxSize`** — `max(appSize, physSize)` is unaffected below that same
+  floor, so tiering's bound implies this one.
+- **The peak** — `stellataPointSourcePeak`'s `max(1, π·r²)` saturates at
+  or below `POINT_SOURCE_FLAT_PEAK_DIAMETER_PX` = 2/√π
+  (`../../hdr/emission/README.md` § Unit), where pinning the radius to 0
+  changes the peak by nothing at all.
+
+The fourth has **no plateau**: `physRatio` is also a varying, and
+`perceptualDiscExponent` morphs `n` through
+`smoothstep(0, PHYS_RATIO_THRESHOLD, physRatio)` (§ Star intensity
+profile). Zeroing it snaps `n` toward `distNMin` from wherever it was, so
+no distance makes this one exact — it is held to
+`DISC_EXPONENT_TOLERANCE` instead, and that term is ~60× tighter than the
+other three at the shipped uniforms. **Keep the `min()`**: the bound is
+uniform-driven because `uSizeMin` grows once the exaggeration K floors
+and both `distN` endpoints are debug sliders, and which term binds can
+change with them.
+
+Measured over the shipped catalog at a Sol vantage: of the 44,882 stars
+the window admits, none moves its exponent by even 0.01% — the tolerance
+is stated against a max-radius star sitting at the `uSizeMin` floor, a
+pairing no real star reaches, since a disc that wide is far too bright to
+size at the floor. The elision is WebGPU-only; the GLSL twin runs the
+branch unconditionally, so an A/B parity check differs by at most the
+tolerance.
 
 ## Star intensity profile
 

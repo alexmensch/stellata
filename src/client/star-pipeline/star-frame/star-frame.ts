@@ -15,6 +15,7 @@ import { T_CLAMP_MAX_S, T_CLAMP_MIN_S, tToJdUt } from '../../solar-system/time/t
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
 import { bestApsisTeff } from '../star-color-routing-pure';
 import { discWindowPc, RESOLVED_DISC_MIN_PX } from '../local-pass/star-local-cluster-pure';
+import { physSizeElisionBoundPx } from '../perceptual-disc/phys-size-elision-pure';
 import type { SharedUniforms } from '../../frame/shared-uniforms';
 
 export interface StarFrameOptions {
@@ -248,6 +249,16 @@ export class StarFrame {
       this.uniforms.uFovYRad.value,
       this.uniforms.uViewport.value.y,
     );
+  }
+
+  /** Writes `uPhysSizeWindowPc` from the live disc uniforms — the single
+   *  writer of that slot (README.md § The physical-size window). */
+  syncPhysSizeWindow(): void {
+    this.uniforms.uPhysSizeWindowPc.value = this.discWindowPcFor(physSizeElisionBoundPx(
+      this.uniforms.uSizeMin.value,
+      this.uniforms.uDistNMin.value,
+      this.uniforms.uDistNMax.value,
+    ));
   }
 
   /**

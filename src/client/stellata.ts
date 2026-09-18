@@ -2764,6 +2764,10 @@ export class Stellata implements FrameAnchor {
     perfMark('submit.main');
     perfGpuBegin('main');
     this.hdr.bind();
+    // Ahead of the node sync that copies it: the window moves with FOV,
+    // viewport and the two distN sliders, so a stale one would elide the
+    // physical-size branch against last frame's plate scale.
+    this.starFrame.syncPhysSizeWindow();
     this.webgpu?.syncUniformNodes();
     // Reads the scalars the sync above just copied, writes the lists every
     // star draw below reads — its own submit, so it has to sit between

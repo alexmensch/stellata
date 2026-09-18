@@ -81,6 +81,13 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     // TS-side ZOOM_FLOOR_FRACTION so the shader and the renderedSizePx
     // mirror clamp resolved discs to the same viewport fraction.
     uMaxPhysFrac: { value: ZOOM_FLOOR_FRACTION },
+    // Camera distance past which no star's physical size can reach any
+    // consumer of it, so the size solve skips the branch entirely.
+    // StarFrame is the single writer (../star-pipeline/star-frame/
+    // README.md § The physical-size window). Seeded past any distance the
+    // model reaches: the branch must RUN on a slot nothing has written,
+    // and a zero here would elide it for the whole catalog instead.
+    uPhysSizeWindowPc: { value: 1e30 },
     // Variability clock. Pulsation runs on the model clock (getT()) at
     // real GCVS periods, so it responds to time-warp like binary orbits.
     // uModelDays is model time in days since J2000; uModelDaysPerRealSec

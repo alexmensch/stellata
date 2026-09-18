@@ -219,9 +219,17 @@ export function solveStarTsl(
         const dMEff = perceptualDmEffTsl(appMag, u.uLimitMag, u.uSizeSpan, u.uSizeKnee);
         const appSize = perceptualAppSizePxTsl(dMEff, u.uSizeMin, u.uSizeMax, u.uSizeSpan);
 
-        const rPc = pow(10.0, stat('iLogRadius')).mul(u.uRSunPc);
-        const angularToPx = u.uViewport.y.div(max(u.uFovYRad, 1e-9));
-        const physSizeRaw = atan(rPc.mul(radiusFactor).div(dPc)).mul(2.0).mul(angularToPx);
+        // Past uPhysSizeWindowPc the catalog's largest star cannot reach
+        // physSizeElisionBoundPx, where tiering and pxSize are exact and
+        // the peak is bit-exact, so the pow / divide / atan are skipped
+        // outright (../../star-pipeline/perceptual-disc/README.md
+        // § Eliding the physical-size branch).
+        const physSizeRaw = float(0.0).toVar();
+        If(dPc.lessThanEqual(u.uPhysSizeWindowPc), () => {
+          const rPc = pow(10.0, stat('iLogRadius')).mul(u.uRSunPc);
+          const angularToPx = u.uViewport.y.div(max(u.uFovYRad, 1e-9));
+          physSizeRaw.assign(atan(rPc.mul(radiusFactor).div(dPc)).mul(2.0).mul(angularToPx));
+        });
         // The peak takes the UNCLAMPED physical radius (CSS px) — the
         // clamp below is display-only (../../star-pipeline/README.md
         // § Physical-luminance emission).

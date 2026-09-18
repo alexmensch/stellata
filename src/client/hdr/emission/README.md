@@ -23,7 +23,9 @@ src/client/hdr/emission/
                              truncated ellipsoid, ρ₀ = d²·F/G
                              (§ Solving ρ₀).
   emission-pure.ts (+ test)  CPU mirror, plus both solid-angle derivations
-                             and their inverses, LUMA_CEIL, SB_ZERO_POINT
+                             and their inverses, LUMA_CEIL,
+                             POINT_SOURCE_FLAT_PEAK_DIAMETER_PX
+                             (§ Unit), SB_ZERO_POINT
                              (the zero point both volumetric emitters
                              share) and lumaNormalisedTint, the hue-only
                              tint they multiply.
@@ -53,6 +55,13 @@ uncapped by any viewport-fraction clamp, and CSS rather than device
 pixels so a resolved disc's surface brightness doesn't shift with
 `devicePixelRatio`. Below 1 px the whole flux lands on the peak; above
 it the emission is true surface brightness.
+
+That saturation has a consumer: `POINT_SOURCE_FLAT_PEAK_DIAMETER_PX`
+(2/√π) is the **diameter** at which `max(1, π·r²)` reaches 1, so a
+source at or under it carries a peak exactly insensitive to its own
+radius — which is what lets the star solve drop the radius entirely past
+a distance bound (`../../star-pipeline/perceptual-disc/README.md`
+§ Eliding the physical-size branch).
 
 A layer that draws an **extended source** instead of a kernel takes
 `stellataSurfaceBrightnessLuminance` — the flux magnitude inside a solid

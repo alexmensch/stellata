@@ -74,6 +74,13 @@ src/client/webgpu/star/
                                the layer tests dispatch into.
 ```
 
+`solveStarTsl` skips its physical-size branch — the `pow`, the divide and
+the `atan` — for every star past `uPhysSizeWindowPc`, where no catalog
+star can reach a size any consumer of it notices. What the bound has to
+satisfy, and the one consumer held to a tolerance rather than an exact
+threshold, is `../../star-pipeline/perceptual-disc/README.md` § Eliding
+the physical-size branch.
+
 Which WebGL attribute lands where — the static-table fields, the
 forwarded four, the one per-vertex attribute — is
 `../star-attribute-roster.ts`, pinned against the live WebGL geometry by
