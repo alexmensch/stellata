@@ -253,10 +253,14 @@ Two commands write here, and this section governs both: `pnpm run perf`, and
 (`scripts/perf/README.md` § Survivor counts).
 
 Write every run under the `.perf-runs/<date>/` of **the checkout you will
-commit from** — the `--json` path and a `tee` of the console log. Never the
+commit from** — the `--json` path. Never the
 home directory, never `/tmp`, and never another checkout's `.perf-runs/`: a
 run written into the main checkout while you work in a worktree is invisible
 to that worktree's `git status`, so nothing will ever prompt you for it.
+
+A `tee` of the console alongside it is a local convenience only: `*.log` is
+ignored repo-wide, so `git add` refuses it and the archive holds none. The
+`.json` carries the raw per-frame samples the console merely summarised.
 
 **Then `git add` it, in the PR that cites it.** This is a step, not a
 property — the folder being tracked commits nothing by itself, and the run
