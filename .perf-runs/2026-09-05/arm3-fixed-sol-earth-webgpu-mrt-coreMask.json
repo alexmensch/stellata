@@ -1,0 +1,236 @@
+{
+  "schema": "stellata-perf/1",
+  "run": {
+    "startedAt": "2026-09-05T18:24:12.598Z",
+    "finishedAt": "2026-09-05T18:25:13.038Z",
+    "url": "http://localhost:5174",
+    "argv": [
+      "--",
+      "--scenario",
+      "sol,earth",
+      "--backend",
+      "webgpu",
+      "--passes",
+      "mrtAttachments,coreMask",
+      "--method",
+      "raf-delta",
+      "--url",
+      "http://localhost:5174",
+      "--json",
+      "/Users/alexm/github/alexmensch/stellata/.perf-runs/2026-09-05/arm3-fixed-sol-earth-webgpu-mrt-coreMask.json"
+    ],
+    "git": {
+      "commit": "0ecc4ac7b2e4e73bd6d418650d0cf31af14d8b63",
+      "dirty": false
+    },
+    "browser": {
+      "name": "chromium",
+      "version": "151.0.7922.34",
+      "channel": "chromium",
+      "headless": true,
+      "args": [
+        "--ignore-gpu-blocklist",
+        "--enable-unsafe-webgpu"
+      ]
+    },
+    "gpu": {
+      "webgl": {
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "vendor": "Google Inc. (Apple)",
+        "timerQuery": true
+      },
+      "webgpu": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false,
+        "timestampsAvailable": true
+      }
+    },
+    "host": {
+      "platform": "darwin",
+      "arch": "arm64"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "sol",
+      "blob": "BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB",
+      "backend": {
+        "requested": "webgpu",
+        "actual": "webgpu"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "mode": "differential",
+      "method": "raf-delta",
+      "params": {
+        "passes": [
+          "mrtAttachments",
+          "coreMask"
+        ],
+        "method": "raf-delta",
+        "budgetMs": 180000,
+        "interleave": true
+      },
+      "settleMs": 7426,
+      "idleRafMs": 16.69999999999891,
+      "differential": [
+        {
+          "pass": "mrtAttachments",
+          "method": "raf-delta",
+          "baselineMs": 24.775,
+          "disabledMs": 23.5,
+          "savedMs": 1.275,
+          "savedPct": 5.1,
+          "samples": 120,
+          "iqrMs": 0.5,
+          "noiseMs": 0.042,
+          "bracketMs": 0.05,
+          "baselineLag1": -0.143,
+          "disabledLag1": -0.203,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "bufferMpx": 4.096
+        },
+        {
+          "pass": "coreMask",
+          "method": "raf-delta",
+          "baselineMs": 24.775,
+          "disabledMs": 23.4,
+          "savedMs": 1.375,
+          "savedPct": 5.5,
+          "samples": 120,
+          "iqrMs": 0.6,
+          "noiseMs": 0.044,
+          "bracketMs": 0.05,
+          "baselineLag1": -0.016,
+          "disabledLag1": -0.11,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "bufferMpx": 4.096
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: method pinned to raf-delta wall time — the one clock every backend shares, so cross-backend tables compare. Differentials below the vsync quantum read as zero unless the frame is already over budget.",
+        "[info] priceFrame: exposure pinned at dm -6.289 (effective limit 1.51 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'mrtAttachments' disabled — dwelling",
+        "[info] priceFrame: 'coreMask' disabled — dwelling",
+        "[info] priceFrame: baseline 24.800 ms, re-measured 24.800 ms (drift 0.000 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 2560x1600 (4.096 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    },
+    {
+      "name": "earth",
+      "blob": "BIXAgQEHPFWisPEAmy_pTIAvB3JRp77d8BW_muE9PwL6_xMZBH4XOKDaQQ",
+      "backend": {
+        "requested": "webgpu",
+        "actual": "webgpu"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "mode": "differential",
+      "method": "raf-delta",
+      "params": {
+        "passes": [
+          "mrtAttachments",
+          "coreMask"
+        ],
+        "method": "raf-delta",
+        "budgetMs": 180000,
+        "interleave": true
+      },
+      "settleMs": 6122,
+      "idleRafMs": 16.69999999999891,
+      "differential": [
+        {
+          "pass": "mrtAttachments",
+          "method": "raf-delta",
+          "baselineMs": 18.55,
+          "disabledMs": 17.4,
+          "savedMs": 1.15,
+          "savedPct": 6.2,
+          "samples": 120,
+          "iqrMs": 0.5,
+          "noiseMs": 0.039,
+          "bracketMs": 0.1,
+          "baselineLag1": -0.186,
+          "disabledLag1": 0.091,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": -4.053,
+          "disabledLimitMag": -4.053,
+          "bufferMpx": 4.096
+        },
+        {
+          "pass": "coreMask",
+          "method": "raf-delta",
+          "baselineMs": 18.5,
+          "disabledMs": 17.2,
+          "savedMs": 1.3,
+          "savedPct": 7,
+          "samples": 120,
+          "iqrMs": 0.5,
+          "noiseMs": 0.05,
+          "bracketMs": 0,
+          "baselineLag1": -0.291,
+          "disabledLag1": -0.402,
+          "baselineReadback": 0.242,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": -4.053,
+          "disabledLimitMag": -4.053,
+          "bufferMpx": 4.096
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: method pinned to raf-delta wall time — the one clock every backend shares, so cross-backend tables compare. Differentials below the vsync quantum read as zero unless the frame is already over budget.",
+        "[info] priceFrame: exposure pinned at dm -11.853 (effective limit -4.05 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'mrtAttachments' disabled — dwelling",
+        "[info] priceFrame: 'coreMask' disabled — dwelling",
+        "[info] priceFrame: baseline 18.600 ms, re-measured 18.500 ms (drift -0.100 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 2560x1600 (4.096 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    }
+  ]
+}

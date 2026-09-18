@@ -1,0 +1,95 @@
+{
+  "schema": "stellata-perf/2",
+  "run": {
+    "startedAt": "2026-09-10T14:01:28.202Z",
+    "finishedAt": "2026-09-10T14:01:40.083Z",
+    "url": "http://localhost:5173",
+    "argv": [
+      "--",
+      "--mode",
+      "probe",
+      "--scenario",
+      "sol",
+      "--backend",
+      "webgpu",
+      "--chrome-arg=--disable-features=WebGPU",
+      "--json",
+      "/Users/alexm/github/alexmensch/stellata/.perf-runs/2026-09-10/gate-check-49-25.json"
+    ],
+    "git": {
+      "commit": "9f56f2fbd7af26d050873134ef7aa9098c2baed8",
+      "dirty": false,
+      "mainCommit": "9f56f2fbd7af26d050873134ef7aa9098c2baed8",
+      "mainReachable": true
+    },
+    "browser": {
+      "name": "chromium",
+      "version": "151.0.7922.34",
+      "channel": "chromium",
+      "headless": true,
+      "args": [
+        "--ignore-gpu-blocklist",
+        "--enable-unsafe-webgpu",
+        "--disable-features=WebGPU"
+      ]
+    },
+    "gpu": {
+      "webgl": {
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "vendor": "Google Inc. (Apple)",
+        "timerQuery": true
+      },
+      "webgpu": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false,
+        "timestampsAvailable": true
+      }
+    },
+    "host": {
+      "platform": "darwin",
+      "arch": "arm64"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "sol",
+      "blob": "BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB",
+      "backend": {
+        "requested": "webgpu",
+        "actual": "webgpu"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "recordCount": 388071,
+      "mode": "probe",
+      "method": null,
+      "params": {},
+      "settleMs": 7352,
+      "idleRafMs": 16.699999999999818,
+      "differential": null,
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "schema": "stellata-perf/2",
+  "run": {
+    "startedAt": "2026-09-11T11:15:52.647Z",
+    "finishedAt": "2026-09-11T11:16:23.921Z",
+    "url": "http://localhost:5173",
+    "argv": [
+      "--",
+      "--mode",
+      "differential",
+      "--backend",
+      "webgl2",
+      "--scenario",
+      "sol",
+      "--passes",
+      "statisticWrites",
+      "--no-park",
+      "--url",
+      "http://localhost:5173",
+      "--json",
+      "/Users/alexm/github/alexmensch/stellata/.perf-runs/2026-09-11/8cg-34-writes-all.json"
+    ],
+    "git": {
+      "commit": "7da8a1cb8458cd8992feb570711a2d03b57cb07e",
+      "dirty": false,
+      "mainCommit": "6f760528dfb28c51b0fc85cdc1afe6c40ea36a5b",
+      "mainReachable": false
+    },
+    "browser": {
+      "name": "chromium",
+      "version": "151.0.7922.34",
+      "channel": "chromium",
+      "headless": true,
+      "args": [
+        "--ignore-gpu-blocklist",
+        "--enable-unsafe-webgpu"
+      ]
+    },
+    "gpu": {
+      "webgl": {
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "vendor": "Google Inc. (Apple)",
+        "timerQuery": true
+      },
+      "webgpu": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false,
+        "timestampsAvailable": null
+      }
+    },
+    "host": {
+      "platform": "darwin",
+      "arch": "arm64"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "sol",
+      "blob": "BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB",
+      "backend": {
+        "requested": "webgl2",
+        "actual": "webgl2"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "recordCount": 388071,
+      "position": 1,
+      "mode": "differential",
+      "method": "timer-query",
+      "params": {
+        "passes": [
+          "statisticWrites"
+        ],
+        "budgetMs": 180000,
+        "interleave": true,
+        "cadenceMs": 16.69999999999891,
+        "preDisable": [],
+        "noPark": true
+      },
+      "settleMs": 7804,
+      "idleRafMs": 16.69999999999891,
+      "differential": [
+        {
+          "pass": "statisticWrites",
+          "method": "timer-query",
+          "baselineMs": 48.769,
+          "disabledMs": 26.283,
+          "savedMs": 22.485,
+          "savedPct": 46.1,
+          "samples": 120,
+          "iqrMs": 30.314,
+          "noiseMs": 1.795,
+          "bracketMs": 0.809,
+          "baselineLag1": -0.056,
+          "disabledLag1": 0.031,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "bufferMpx": 4.096
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: exposure pinned at dm -6.289 (effective limit 1.51 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'statisticWrites' disabled — dwelling",
+        "[info] priceFrame: baseline 48.364 ms, re-measured 49.173 ms (drift 0.809 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 2560x1600 (4.096 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    }
+  ]
+}

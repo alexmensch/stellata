@@ -2,7 +2,7 @@ import { describe, it } from 'vitest';
 import { readFileSync, lstatSync, readlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const MAX_LINES = 362;
+const MAX_LINES = 363;
 const MAX_BYTES = 18 * 1024;
 
 const agentsMdPath = resolve(process.cwd(), 'AGENTS.md');

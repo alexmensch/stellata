@@ -353,11 +353,10 @@ ceiling: `pins/README.md`. When a PR must run it and what a mark means:
 
 ## Recording
 
-`--json` output and the run's log go under `.perf-runs/<date>/` in the
-**main checkout** (gitignored; never a worktree, the home directory or
-`/tmp`). A worktree is deleted with its PR and would take the runs with it;
-the main checkout persists. From a worktree, `git rev-parse
---path-format=absolute --git-common-dir` prints `<main checkout>/.git`, and
-its parent is the directory to pass. Results go to the bead's notes with the
-`.perf-runs/<date>/<file>` path, never into this README. Say which vantage,
-backend, method, headless flag and buffer size the run used.
+`--json` output and the run's log go under `.perf-runs/<date>/`, never the
+home directory or `/tmp`. The folder is tracked (`../../.perf-runs/README.md`),
+so a run taken in a worktree is committed with the PR it justifies and reaches
+main that way, which is also what stops it dying with the worktree. Results go
+to the bead's notes with the `.perf-runs/<date>/<file>` path, never into this
+README. Say which vantage, backend, method, headless flag and buffer size the
+run used.

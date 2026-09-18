@@ -230,6 +230,7 @@ docs/     Genuinely cross-cutting docs that don't belong to one
 tests/    Repo-meta tests (AGENTS.md size guard, etc.).
 .claude/  Harness config, deliberately outside this index: hook wiring
           for Claude Code. Bodies live in scripts/hooks/ (own README).
+.perf-runs/ Archived runs: evidence, not canon. Own README.
 ```
 
 `SCIENCE.md` carries scope principles, data sources, and non-goals;

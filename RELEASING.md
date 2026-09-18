@@ -175,10 +175,9 @@ only the PR's if nothing else moved the frame in between
 (`scripts/perf/pins/README.md` § What the commit fields hold). A run that
 cannot be compared is refused rather than trusted: a differing adapter,
 buffer, method, mode or record count, and a row taken at another position
-in its run (below). A committed index and a `.perf-runs/` naming convention
-were both declined — the index for being a second thing to keep current,
-the convention for being unverifiable, since `.perf-runs/` is gitignored
-and lives in the main checkout only.
+in its run (below). A committed index was declined for being a
+second thing to keep current; the naming convention lives in
+`.perf-runs/README.md` beside the runs it governs.
 
 **Run position.** Where a context sits in its run moves its frame time on
 unchanged code: mw120|webgpu read 21.950 ms as 8th of 10 behind 120 s
