@@ -8,8 +8,87 @@ request flag, and one function that turns them into this frame's dispatch.
 ```
 src/client/webgpu/extinction/refill/
   refill-slices-pure.ts       REFILL_SLICES, refillSliceLength, planRefill
-    (+ test)                  and the cursor they move.
+    (+ test)                  and the cursor they move; planFrame, which
+                              picks this frame's slice, sweep or nothing.
+  refill-decision-pure.ts     The kernel's per-slot verdict in frustum mode
+    (+ test)                  (slotRefills), the slack, and the view it
+                              tests against (composeViewProjectionAbs,
+                              sameView). The rotation case is pinned here.
 ```
+
+## Only what is in frame
+
+A_V is read for the stars the compaction lists — the ones whose quad can
+touch the viewport — and for nothing else, so a refill of everything the
+prefilter admits marches, at the `mw120` canon vantage, some five times
+the stars any draw will consult. The kernel therefore tests the frustum
+itself, in **frustum mode**, on the position each thread already holds:
+
+1. `viewProjectionAbs × vec4(absPos, 1)` — projection × view × T(−worldOffset),
+   composed on the CPU in float64 each frame from the camera the shell
+   hands `update()`, so clip space comes straight off the absolute
+   position table. The same projection × view the compaction kernel
+   tests against, with the origin shift folded in.
+2. `starQuadOffscreenTsl` (`../../star/compaction/frustum-tsl.ts`) with a
+   fixed half-extent of `EXTINCTION_FRUSTUM_SLACK_PX` in place of the
+   quad's size, which is not known here — it needs the size solve, which
+   needs the A_V being computed. The pinned focal star counts as seen
+   whatever its projection, as it does in the compaction.
+3. Out of frame → the thread returns before the gate's four static-table
+   reads, leaving the star's A_V and stamp as they were. In frame → the
+   **generation stamp** below decides.
+
+**The slack's failure mode is a stale A_V, never a missing star.** The
+compaction still lists a star whose quad overlaps the screen edge by more
+than the slack, and the vertex stage draws it with its last A_V. That is a
+resolved disc hundreds of px wide with its centre well past the edge — a
+close-approach case, where the camera's AU-scale motion moves A_V by
+nothing. State the vantage before narrowing the slack.
+
+### The generation stamp
+
+`stamps[star]` is the **camera generation** the star's A_V was last
+marched at; the generation bumps on exactly the requests that used to
+recompute everything — displacement past `RECOMPUTE_EPSILON_PC`, a moved
+gate bound, a dirty mark — and `absCameraPos` is set at the bump. A slot
+in frame whose stamp equals the generation is skipped; one whose stamp
+predates it marches and is stamped. So a rotation, which bumps nothing,
+marches only the stars it newly exposes, and each star marches at most
+once per camera generation and only if seen. The values are the same
+march at the same camera: exact, no accuracy change, no catalogue rebuild.
+`slotRefills` is the CPU form and the rotation case is its test.
+
+**The epsilon measures from the generation's camera, never from the last
+dispatch.** A slice or a sweep leaves `lastCam` where the bump set it. Reset
+it per dispatch and a camera creeping under one epsilon a frame outruns the
+gate for good once a cycle has run — pinned in the prepass test.
+
+### Slice, sweep, or nothing — `planFrame`
+
+- A **bump** runs the cursor cycle exactly as § The cursor says; each slice
+  marches the in-frame unstamped stars in its slot range, so the staleness
+  bound above is now paid by the stars in frame alone.
+- A **view change with no bump** and no cycle running dispatches the WHOLE
+  slot range once — a *sweep*. Nearly every thread finds its star out of
+  frame or already stamped, so the sweep costs the frustum test and little
+  else, and a star entering the frame at a parked camera is exact on the
+  frame it appears. A view turning every frame sweeps every frame; a
+  still one dispatches nothing.
+- **Both at once** — a warp with the view turning — runs the cycle, and a
+  newly exposed star waits for its slice: up to `REFILL_SLICES` frames
+  carrying the value of its last stamp, which may predate the warp. A
+  bounded transient during motion, and `REFILL_SLICES` = 1 removes it; the
+  spike the slices flatten is several times smaller once out-of-frame
+  stars stop marching, so re-measure before keeping 4.
+
+The pick mirror treats a sweep frame like a mid-cycle one: a copy issued
+then is superseded by the buffer it just rewrote (`../README.md` § Cold
+reads).
+
+**Whole mode** — the first fill and `verifyExtinction()` — skips the
+frustum test and the stamp check and stamps every star, so the parity
+instrument's total bit compare is unchanged. Until the shell has supplied
+a view, every dispatch runs in whole mode over its slots.
 
 ## The spike is the problem, not the total
 
@@ -82,6 +161,9 @@ frames. Raising the constant divides the per-frame cost and multiplies that
 error by the same factor — re-derive the line above before moving it.
 
 ## Three places a whole-catalogue dispatch is still the right one
+
+Whole in both senses: every slot, and whole mode (§ Only what is in
+frame).
 
 - **The first fill.** Until the buffer is whole, `uAvPrepassEnabled` stays
   0 and every consumer runs its own in-vertex march, 8–12 times per visible

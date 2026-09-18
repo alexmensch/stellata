@@ -19,6 +19,12 @@ src/client/webgpu/star/compaction/
                                 buffers, the reset + compaction kernels,
                                 the per-frame dispatch, the on-demand
                                 count readback, dispose.
+  frustum-tsl.ts                The frustum test as TSL over a clip-space
+                                centre and an NDC half-extent, shared with
+                                the extinction cache's refill
+                                (../../extinction/refill/README.md § Only
+                                what is in frame); `starQuadOffscreen` is
+                                its CPU mirror.
 ```
 
 ## Two lists, one kernel, three draws

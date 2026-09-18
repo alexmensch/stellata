@@ -17,6 +17,12 @@ export interface ExtinctionPrepassUniforms {
   uAvPrepassEnabled: { value: number };
 }
 
+/** see ../../webgpu/extinction/refill/README.md § Only what is in frame */
+export interface ExtinctionView {
+  camera: THREE.Camera;
+  worldOffset: THREE.Vector3;
+}
+
 export interface ExtinctionPrepassSeam {
   /** False only where the backend cannot render a float target — WebGL2
    *  without EXT_color_buffer_float. Constant true on WebGPU, where float
@@ -37,8 +43,9 @@ export interface ExtinctionPrepassSeam {
   isActive(): boolean;
   /** Per-frame hook, taking the camera's absolute (heliocentric ICRS)
    *  position before the main render. Recomputes when dirty or the camera
-   *  moved beyond RECOMPUTE_EPSILON_PC; otherwise free. */
-  update(absCamX: number, absCamY: number, absCamZ: number): void;
+   *  moved beyond RECOMPUTE_EPSILON_PC; otherwise free. `view` is read on
+   *  WebGPU only. */
+  update(absCamX: number, absCamY: number, absCamZ: number, view?: ExtinctionView): void;
   /** Raw physical A_V for one star, out of the very texel the star vertex
    *  stage fetches. Null when the cache is inert, and on WebGPU also
    *  until `warmAvReadback` has landed the table

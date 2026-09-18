@@ -2716,6 +2716,7 @@ export class Stellata implements FrameAnchor {
         this.camera.position.x + this.worldOffset.x,
         this.camera.position.y + this.worldOffset.y,
         this.camera.position.z + this.worldOffset.z,
+        { camera: this.camera, worldOffset: this.worldOffset },
       );
       perfMeasure('extinction.prepass');
     }

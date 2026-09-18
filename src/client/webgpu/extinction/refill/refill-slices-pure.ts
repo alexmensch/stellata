@@ -28,6 +28,25 @@ export interface RefillPlan {
   readonly completesCycle: boolean;
 }
 
+export interface FramePlan {
+  readonly refill: RefillPlan;
+  /** see README.md § Slice, sweep, or nothing */
+  readonly sweep: boolean;
+}
+
+/** A frame's dispatch: the cursor's slice when a refill is running or
+ *  wanted, else a sweep when only the view moved, else nothing. */
+export function planFrame(
+  cursor: RefillCursor,
+  wanted: boolean,
+  viewChanged: boolean,
+  count: number,
+  sliceLength: number,
+): FramePlan {
+  const refill = planRefill(cursor, wanted, count, sliceLength);
+  return { refill, sweep: refill.base === null && viewChanged && count > 0 };
+}
+
 /** A request never restarts a running cycle — README.md § The cursor. */
 export function planRefill(
   cursor: RefillCursor, wanted: boolean, count: number, sliceLength: number,

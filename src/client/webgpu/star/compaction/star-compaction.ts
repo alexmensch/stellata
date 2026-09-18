@@ -9,17 +9,18 @@ import {
   type ComputeNode, type WebGPURenderer,
 } from 'three/webgpu';
 import {
-  Fn, If, abs, atomicAdd, atomicStore, compute, instanceIndex, int, storage, uniform, uint, vec4,
+  Fn, If, atomicAdd, atomicStore, compute, instanceIndex, int, storage, uniform, uint, vec4,
 } from 'three/tsl';
 import { PHYS_RATIO_THRESHOLD } from '../../../star-pipeline/local-pass/star-local-cluster-pure';
 import { STAR_PASS_GLOW } from '../../../star-pipeline/star-pass';
 import { disposeStorageAttribute } from '../../tsl/storage-attribute';
 import { solveStarTsl, type StarTslDeps } from '../star-vertex-tsl';
 import {
-  CULL_SLACK_NDC, PREFILTER_COUNT_ELEMENT, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
+  PREFILTER_COUNT_ELEMENT, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
   initialIndirectArgs, survivorCountsFromArgs, tierArgsInstanceCountElement,
   tierListBase, type StarTier, type SurvivorCounts,
 } from './compaction-pure';
+import { starQuadOffscreenTsl } from './frustum-tsl';
 
 export type SurvivorsNode = ReturnType<typeof storage<'uint'>>;
 
@@ -76,14 +77,10 @@ export class StarCompaction {
         pass: STAR_PASS_GLOW, eclipseDim: null,
       }, (s) => {
         atomicAdd(argsNode.element(PREFILTER_COUNT_ELEMENT), uint(1));
-        // Mirror any change here into `starQuadOffscreen` (compaction-pure.ts),
-        // which carries the tests. The pinned focal star draws through a
-        // substituted matrix, so its true projection cannot cull it.
+        // The pinned focal star draws through a substituted matrix, so its
+        // true projection cannot cull it.
         const clip = this.viewProjection.mul(vec4(localPos, 1.0)).toVar();
-        const halfExtent = s.pxSize.div(u.uViewport);
-        const offscreen = clip.w.lessThanEqual(0.0)
-          .or(abs(clip.x).greaterThan(clip.w.mul(halfExtent.x.add(1.0 + CULL_SLACK_NDC))))
-          .or(abs(clip.y).greaterThan(clip.w.mul(halfExtent.y.add(1.0 + CULL_SLACK_NDC))));
+        const offscreen = starQuadOffscreenTsl(clip, s.pxSize.div(u.uViewport));
         const pinned = self.equal(u.uPinFocusToCenter);
         If(pinned.or(offscreen.not()), () => {
           If(s.physRatio.greaterThanEqual(PHYS_RATIO_THRESHOLD), () => {

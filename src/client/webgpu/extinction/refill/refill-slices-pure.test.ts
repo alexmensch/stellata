@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  REFILL_SLICES, idleRefill, planRefill, refillSliceLength, type RefillCursor,
+  REFILL_SLICES, idleRefill, planFrame, planRefill, refillSliceLength, type RefillCursor,
 } from './refill-slices-pure';
 
 const COUNT = 100;
@@ -74,6 +74,32 @@ describe('planRefill', () => {
 
   it('dispatches nothing when the catalogue is empty', () => {
     expect(planRefill(idleRefill(0), true, 0, 1).base).toBeNull();
+  });
+});
+
+describe('planFrame', () => {
+  it('sweeps the whole range when only the view moved and no cycle is running', () => {
+    const plan = planFrame(idleRefill(COUNT), false, true, COUNT, SLICE);
+    expect(plan.refill.base).toBeNull();
+    expect(plan.sweep).toBe(true);
+  });
+
+  it('runs the slice, not a sweep, while a cycle is running or wanted', () => {
+    expect(planFrame(idleRefill(COUNT), true, true, COUNT, SLICE).sweep).toBe(false);
+    const mid: RefillCursor = { base: SLICE, pending: false };
+    const plan = planFrame(mid, false, true, COUNT, SLICE);
+    expect(plan.refill.base).toBe(SLICE);
+    expect(plan.sweep).toBe(false);
+  });
+
+  it('dispatches nothing at a parked camera and a still view', () => {
+    const plan = planFrame(idleRefill(COUNT), false, false, COUNT, SLICE);
+    expect(plan.refill.base).toBeNull();
+    expect(plan.sweep).toBe(false);
+  });
+
+  it('never sweeps an empty catalogue', () => {
+    expect(planFrame(idleRefill(0), false, true, 0, 1).sweep).toBe(false);
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { BufferAttribute } from 'three';
+import { PerspectiveCamera, Vector3, type BufferAttribute } from 'three';
 import type { ComputeNode, StorageBufferAttribute, WebGPURenderer } from 'three/webgpu';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
@@ -71,6 +71,21 @@ function diagonal(count: number) {
   const positions = new Float32Array(count * 3);
   for (let i = 0; i < count * 3; i++) positions[i] = i;
   return positions;
+}
+
+/** The uint buffer with nonzero contents — the other one is stamps. */
+function orderTable(released: readonly BufferAttribute[]): Uint32Array {
+  return released
+    .map((a) => a.array)
+    .filter((a): a is Uint32Array => a instanceof Uint32Array)
+    .find((a) => a.some((v) => v !== 0)) ?? new Uint32Array(0);
+}
+
+/** A camera at the origin looking down −z, as the shell would hand it. */
+function viewAt(yawRad: number) {
+  const camera = new PerspectiveCamera(50, 16 / 9, 0.01, 1e5);
+  camera.rotation.set(0, yawRad, 0);
+  return { camera, worldOffset: new Vector3() };
 }
 
 function makePrepass(
@@ -190,12 +205,72 @@ describe('spreading the refill', () => {
   });
 });
 
+describe('only what is in frame', () => {
+  // The first fill records the view, so a still view the next frame is free.
+  it('a still view at a parked camera dispatches nothing', () => {
+    const { prepass, dispatched, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0, viewAt(0));
+    prepass.update(0, 0, 0, viewAt(0));
+    expect(dispatched).toEqual([COUNT]);
+  });
+
+  it('a turned view sweeps the whole slot range, each frame it turns', () => {
+    const { prepass, dispatched, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0, viewAt(0));
+    prepass.update(0, 0, 0, viewAt(0.1));
+    prepass.update(0, 0, 0, viewAt(0.2));
+    prepass.update(0, 0, 0, viewAt(0.2));
+    expect(dispatched).toEqual([COUNT, COUNT, COUNT]);
+  });
+
+  it('a translation past epsilon runs the slice cycle, not a sweep, view turning or not', () => {
+    const { prepass, dispatched, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0, viewAt(0));
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0, viewAt(0.1));
+    expect(dispatched[1]).toBe(refillSliceLength(COUNT));
+    for (let frame = 2; frame <= REFILL_SLICES; frame++) {
+      prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0, viewAt(0.1 * frame));
+    }
+    expect(dispatched.slice(1).reduce<number>((n, len) => n + (len ?? 0), 0)).toBe(COUNT);
+  });
+
+  it('a sweep frame stages no mirror; the still frame after it does', () => {
+    const { prepass, reads, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0, viewAt(0));
+    prepass.update(0, 0, 0, viewAt(0.1));
+    prepass.warmAvReadback();
+    expect(reads).toHaveLength(0);
+    prepass.update(0, 0, 0, viewAt(0.1));
+    prepass.warmAvReadback();
+    expect(reads).toHaveLength(1);
+  });
+
+  // see ../refill/README.md § The generation stamp
+  it('a camera creeping under epsilon per frame keeps recomputing', () => {
+    const { prepass, computes, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    for (let frame = 1; frame <= 40; frame++) {
+      prepass.update(RECOMPUTE_EPSILON_PC * 0.6 * frame, 0, 0);
+    }
+    // 40 frames × 0.6 ε is 24 ε of travel: a bump every second frame, each
+    // extending the cycle, so the kernel ran on nearly every frame.
+    expect(computes.length).toBeGreaterThan(1 + 2 * REFILL_SLICES);
+  });
+});
+
 describe('the dispatch order', () => {
   const SIDE = 8;
   const LATTICE_COUNT = SIDE ** 3;
 
   /** The two tables the kernel pairs, read back off the dispose registry —
-   *  nothing else exposes a buffer no geometry owns. */
+   *  nothing else exposes a buffer no geometry owns. The order table is the
+   *  uint buffer whose contents are a permutation; the stamp buffer is the
+   *  other one and starts all zero. */
   function tables(count: number, positions: Float32Array) {
     const { prepass, released, attachDust } = makePrepass(count, positions);
     attachDust();
@@ -203,7 +278,7 @@ describe('the dispatch order', () => {
     prepass.dispose();
     return {
       slotPositions: released.find((a) => a.itemSize === 4)!.array as Float32Array,
-      starOfSlot: released.find((a) => a.array instanceof Uint32Array)!.array as Uint32Array,
+      starOfSlot: orderTable(released),
     };
   }
 
@@ -367,7 +442,7 @@ describe('the epoch refresh', () => {
     expect(computes).toHaveLength(2);
     prepass.dispose();
     const slotPositions = released.find((a) => a.itemSize === 4)!.array as Float32Array;
-    const starOfSlot = released.find((a) => a.array instanceof Uint32Array)!.array as Uint32Array;
+    const starOfSlot = orderTable(released);
     const slot = starOfSlot.indexOf(0);
     expect(slotPositions[slot * 4]).toBe(4321);
   });
@@ -539,20 +614,21 @@ describe('dispose', () => {
     expect(prepass.isActive()).toBe(false);
   });
 
-  // None of the three sits in a geometry, so nothing but this call frees
+  // None of the four sits in a geometry, so nothing but this call frees
   // them (../tsl/README.md § Storage attributes).
-  it('frees all three storage buffers through the renderer registry', () => {
+  it('frees all four storage buffers through the renderer registry', () => {
     const { prepass, slots, released, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
     const av = slots.av.value as StorageBufferAttribute;
     prepass.dispose();
     expect(released).toContain(av);
-    expect(released).toHaveLength(3);
+    expect(released).toHaveLength(4);
     const positions = released.find((a) => a.itemSize === 4)!;
     expect(positions.count).toBe(COUNT);
-    const order = released.find((a) => a.array instanceof Uint32Array)!;
-    expect(order.count).toBe(COUNT);
+    const uints = released.filter((a) => a.array instanceof Uint32Array);
+    expect(uints).toHaveLength(2);
+    for (const u of uints) expect(u.count).toBe(COUNT);
   });
 
   // The buffer and the parity check's CPU copy are one array, so releasing

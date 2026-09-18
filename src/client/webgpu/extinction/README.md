@@ -21,9 +21,11 @@ src/client/webgpu/extinction/
                               GLSL chunk is.
   dispatch-order/             The Morton key the kernel dispatches in and
                               the scatter that undoes it — its own README.
-  refill/                     Which slots a frame refills: the cursor, the
-                              staleness bound, and the three dispatches
-                              that stay whole — its own README.
+  refill/                     Which slots a frame refills and which of them
+                              march: the cursor and its staleness bound,
+                              the in-frame test and the per-star camera
+                              generation stamp, the three dispatches that
+                              stay whole — its own README.
   extinction-nodes.ts         The two slots as nodes — the dust volume
     (+ test)                  (texture) and the A_V cache (storage
                               buffer) — with their placeholders and the
@@ -200,8 +202,9 @@ live app (`../../debug/memory/README.md`), and on a WebGL2 boot it
 | A_V buffer (one float32 per star) | 388,071 × 4 B ≈ 1.48 MiB |
 | Position buffer (one vec4 float32 per slot) | 388,071 × 16 B ≈ 5.92 MiB |
 | Slot → star table (one uint32 per slot) | 388,071 × 4 B ≈ 1.48 MiB |
+| Camera-generation stamp (one uint32 per star) | 388,071 × 4 B ≈ 1.48 MiB |
 
-So ~8.9 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
+So ~10.4 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
 `Float32Array` the position attribute keeps on the JS heap after upload
 and the ~1.5 MiB `Uint32Array` behind the order table, which the parity
 check reads (§ The prepass kernel). **The buffer and that CPU copy are one
@@ -264,6 +267,14 @@ so the buffer stays a function of the dispatch and `verifyExtinction()`
 keeps its total bit compare — the reference march runs the identical gate
 closure (§ The prepass kernel).
 
+**Ahead of those four reads sits the frustum**, in every dispatch but the
+whole-mode ones: a thread whose star is out of frame returns on its
+position alone, before touching the static table, and one whose star is
+already stamped at this camera generation returns after one more read
+(`refill/README.md` § Only what is in frame). The four scattered reads
+that made the gate a net loss at `lg` are therefore paid by the in-frame
+population only.
+
 **What it saves is a function of the vantage, and collapses with
 aperture.** Share of the march that is wasted without the gate, unaided
 eye (cull 10.56), real catalogue / the V≤11 synthetic set: 15.2% / 12.7%
@@ -274,20 +285,22 @@ all 1,278,785. At 200 mm aperture (limit ~15.1, cull 17.86) the same
 figures are 0.2% at Sol and 4.6% at 3 kpc: the gate stays exact, it stops
 paying.
 
-**What it costs is paid at every vantage, and at `lg` it is currently a
-net loss.** The gate itself is four scattered reads into the 17.8 MiB
-static record table plus a log and four compares, on all 388,071 threads,
-whether or not the march it guards would have done anything. Measured on
-the forced-recompute dwell (`gpu-compute` p50, ms): sol 3.195 → 1.729,
-earth 3.285 → 1.815, mw50 2.697 → 1.392, mw120 2.634 → 1.363 — and
-**lg 0.982 → 1.316, +34%** (`.perf-runs/2026-09-18/8cg576-lg-clean.json`,
-against `cns-real-recompute-all.json`). `lg` is not an anomaly to explain
-away: that run predates the clip, when 48 taps spread over a 1 Mpc
+**What the gate's own reads cost was paid at every vantage before the
+frustum sat ahead of them, and at `lg` it was a net loss.** Four scattered
+reads into the 17.8 MiB static record table plus a log and four compares,
+on all 388,071 threads, whether or not the march it guards would have done
+anything. Measured on the forced-recompute dwell (`gpu-compute` p50, ms):
+sol 3.195 → 1.729, earth 3.285 → 1.815, mw50 2.697 → 1.392, mw120
+2.634 → 1.363 — and **lg 0.982 → 1.316, +34%**
+(`.perf-runs/2026-09-18/8cg576-lg-clean.json`, against
+`cns-real-recompute-all.json`). `lg` is not an anomaly to explain away:
+that run predates the clipped march, when 48 taps spread over a 1 Mpc
 segment of which only the last ~1.25 kpc was inside the dust cube, so the
 march the gate skipped there was already a no-op and only the gate's own
 cost landed. The clipped march spends every tap inside the cube at `lg`,
-so the march is genuinely expensive there and the row flips to the
-table's largest saving; a camera-outside-the-cube bypass is deliberately
+so the march is genuinely expensive there and the row flips to the table's
+largest saving; the frustum test now returns the out-of-frame threads
+before the gate reads, and a camera-outside-the-cube bypass is deliberately
 **not** built. Re-measured there by `stellata-8cg.57.7`; do not quote the
 `lg` figure above as current.
 
