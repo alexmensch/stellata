@@ -339,7 +339,7 @@ instrument change moves it. Fetches are counted against a fixed yardstick —
 390k stars × 48 taps = **18.6M fetches**, one fixed-count per-star extinction
 march over the catalogue, which recomputes every frame during a warp — because
 that is a GPU workload doing the same fetch against the same texture. The
-shipped march now spends taps by in-cube path length, ~31 per star at Sol
+shipped march now spends taps by in-cube path length, ~44 per star at Sol
 (`src/client/star-pipeline/extinction/README.md` § The march); the yardstick
 is kept so the ratios below stay comparable. Wall-clock GPU timings are § What
 the fill measured.

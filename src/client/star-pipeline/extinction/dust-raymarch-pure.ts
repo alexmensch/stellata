@@ -1,6 +1,6 @@
 // CPU mirror of dust-raymarch.glsl / dust-raymarch-tsl.ts — README.md § The march.
 
-export const DUST_TAP_PC = 15;
+export const DUST_TAP_PC = 10;
 export const DUST_TAPS_MIN = 4;
 export const DUST_TAPS_MAX = 96;
 

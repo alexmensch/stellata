@@ -232,7 +232,7 @@ Two rows, and they price opposite halves of the same cache.
   and the row is what the cache SAVES.
 - **`extinctionRecompute`** is the producer: what filling the cache costs.
   One camera→star march per catalogue star — 388,071 threads, each
-  spending taps in proportion to its in-cube path, so ~12M volume fetches
+  spending taps in proportion to its in-cube path, so ~17M volume fetches
   at Sol against a ~37M ceiling
   (`../../../star-pipeline/extinction/README.md` § The march) — plus its
   own compute submit on WebGPU

@@ -89,10 +89,21 @@ sightline through a dense core is wrong at the cap whatever the density,
 because the log decode makes cores far narrower than the encoded field.
 Choose the rule on the p90/p99 of the sweep, and raise the cap rather
 than the density when the tail is the complaint. The shipped pair —
-15 pc per tap, cap 96 — was chosen against a fixed 48 at Sol: about a
-third fewer taps on the mean AND a smaller p99 and max, because the
-taps a nearby star no longer wastes are what the cap lets a dusty
-distant one spend.
+10 pc per tap, cap 96 — reads 44 taps per star at Sol against the flat
+48 it replaced: fewer taps AND less than half the tail (p99 0.130 →
+0.066 mag, max 1.28 → 0.47), because the taps a nearby star no longer
+wastes are what the cap lets a dusty distant one spend.
+
+**Do not spend taps to buy frame time back — they are not what the
+kernel costs.** Measured 2026-09-18 over two dwells
+(`.perf-runs/2026-09-18/8cg584-recompute-all.json` and
+`-cold.json`): cutting the mean tap count 35% moved the compute-stream
+p50 by −0.114 ms and then +0.085 ms, scatter around zero against a
+0.25 ms band. Roughly three quarters of this kernel's cost is
+per-THREAD — the visibility gate's scattered reads, the dispatch, the
+position read — and no tap rule reaches it. The density is therefore an
+accuracy knob with a cost ceiling, which is why it is set finer than the
+error budget strictly needs.
 
 The instrument is `pnpm run analyse:march-taps`
 (`scripts/dust/march-taps/README.md`): every scheme against the

@@ -11,7 +11,7 @@ uniform float uDustDensityMin;
 uniform float uDustLogRatio;
 uniform float uDustAvPerDensityPc;
 
-const float DUST_TAP_PC = 15.0;
+const float DUST_TAP_PC = 10.0;
 const int DUST_TAPS_MIN = 4;
 const int DUST_TAPS_MAX = 96;
 const float SLAB_PARALLEL_EPS_PC = 1e-6;

@@ -64,14 +64,18 @@ describe('dustMarchTapCount', () => {
   it('scales with the in-cube length and clamps to the tap window', () => {
     expect(dustMarchTapCount(0)).toBe(DUST_TAPS_MIN);
     expect(dustMarchTapCount(DUST_TAP_PC + 1e-4)).toBe(DUST_TAPS_MIN);
-    expect(dustMarchTapCount(100)).toBe(7);
-    expect(dustMarchTapCount(200)).toBe(14);
+    expect(dustMarchTapCount(100)).toBe(10);
+    expect(dustMarchTapCount(200)).toBe(20);
     expect(dustMarchTapCount(DUST_TAP_PC * DUST_TAPS_MAX)).toBe(DUST_TAPS_MAX);
     expect(dustMarchTapCount(1e6)).toBe(DUST_TAPS_MAX);
   });
 
   it('takes a tap density argument for the sweep', () => {
-    expect(dustMarchTapCount(200, 10)).toBe(20);
+    expect(dustMarchTapCount(200, 25)).toBe(8);
+  });
+
+  it('takes a cap argument, so the sweep need not re-cap a capped count', () => {
+    expect(dustMarchTapCount(1e6, DUST_TAP_PC, 48)).toBe(48);
   });
 });
 
@@ -112,15 +116,15 @@ describe('dustRaymarchAv — synthetic single-cloud fixtures', () => {
     })();
 
     it('converges toward the reference as the tap density rises', () => {
-      const coarse = dustRaymarchAv([-100, 0, 0], [100, 0, 0], core, P);
-      const fine = dustRaymarchAv([-100, 0, 0], [100, 0, 0], core, P, (l) => dustMarchTapCount(l, 10));
+      const coarse = dustRaymarchAv([-100, 0, 0], [100, 0, 0], core, P, (l) => dustMarchTapCount(l, 15));
+      const fine = dustRaymarchAv([-100, 0, 0], [100, 0, 0], core, P);
       expect(coarse).toBeCloseTo(0.2597246789362073, 9);
       expect(fine).toBeCloseTo(0.651847165486207, 9);
       expect(Math.abs(fine - reference)).toBeLessThan(Math.abs(coarse - reference));
     });
 
     it('reddens by E(B−V) = A_V / R_V on top of the intrinsic colour', () => {
-      const av = dustRaymarchAv([-100, 0, 0], [100, 0, 0], core, P, (l) => dustMarchTapCount(l, 10));
+      const av = dustRaymarchAv([-100, 0, 0], [100, 0, 0], core, P);
       expect(ebvFromAv(av)).toBeCloseTo(av / R_V, 12);
       // An intrinsically blue O star (B−V ≈ −0.30) reddens toward neutral.
       expect(reddenedBv(-0.3, av)).toBeCloseTo(-0.3 + av / R_V, 12);
@@ -140,7 +144,7 @@ describe('dustRaymarchAv — synthetic single-cloud fixtures', () => {
 
 describe('reddening constants', () => {
   it('pins the tap window and global R_V', () => {
-    expect(DUST_TAP_PC).toBe(15);
+    expect(DUST_TAP_PC).toBe(10);
     expect(DUST_TAPS_MIN).toBe(4);
     expect(DUST_TAPS_MAX).toBe(96);
     expect(R_V).toBe(3.1);
