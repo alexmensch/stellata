@@ -115,8 +115,9 @@ shared `dustRaymarchAvTsl`, and assigns the result to the A_V element the
 slot → star table names (`dispatch-order/README.md` § Dispatch order).
 three's default workgroup of 64, and **the kernel's own bound on that slot**
 rather than three's: three's early return compares `instanceIndex` against
-the node's `count`, which a sliced dispatch no longer reaches, and the last
-slice's workgroup tail runs past the catalogue (`refill/README.md`).
+the node's `count`, which a sliced dispatch no longer reaches, and a slice's
+workgroup tail runs past the slice — past the catalogue, on the last one
+(`refill/README.md` § The kernel bounds its own slot).
 `update()` is one `renderer.compute(kernel, slice)` — its own submit,
 exactly as the fragment pass was its own render (`docs/render-rules.md`
 § 8), and it binds no render target, so the ends-at-the-canvas contract

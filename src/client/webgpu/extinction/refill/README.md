@@ -21,9 +21,20 @@ more than `RECOMPUTE_EPSILON_PC`. At 1.28M that took mw50's wall-clock median
 from 16.7 to 33.3 ms — a frame crossing the vsync boundary, which is a thing
 the user sees, where the same total spread under the boundary is not.
 
-Spreading changes no total. One slice of `1/REFILL_SLICES` of the catalogue
-dispatches per frame, so a whole refill takes `REFILL_SLICES` frames and
-each costs that fraction.
+Spreading changes no per-frame total: one slice of `1/REFILL_SLICES` of the
+catalogue dispatches per frame, so a whole refill takes `REFILL_SLICES` frames
+and each costs that fraction.
+
+**The run total is not fixed, and a lone request is what moves it.** The wrap
+below restarts the cursor at slot 0 and clears `pending`, so the cycle it
+starts runs all `REFILL_SLICES` slices rather than the *k* the request still
+owed — a request landing at slice *k* costs `(REFILL_SLICES − k) +
+REFILL_SLICES` slices, up to two whole refills for one request, worst when it
+lands early in a cycle. A camera that keeps moving asks every frame, where the
+cycling is continuous and nothing is spent twice, so what pays that ceiling is
+the isolated request: one dust chunk, one aperture change, the last frame of a
+warp. Parking the cursor at the slot the request arrived at recovers it, at a
+third state field and a park-mid-cycle branch (`stellata-8cg.58.8`).
 
 ## The cursor, and why a request never restarts it
 
@@ -87,3 +98,21 @@ error by the same factor — re-derive the line above before moving it.
   same argument the camera-under-way gate it replaces was making — and a
   parked cursor means nothing has asked for a refill, so it covers that
   case too (`../README.md` § Cold reads).
+
+## The kernel bounds its own slot
+
+`instanceIndex` is bounded against the **dispatch**, not the catalogue. three
+prepends `if (instanceIndex >= count) { return; }` using the compute node's
+own `count`, and a dispatch of `plan.length` threads never climbs that far, so
+the guard is dead code under slicing. Every slice's trailing workgroup
+therefore overruns its slice — harmlessly into the next slice's slots for all
+but the last, whose tail runs past the catalogue. The kernel tests
+`sliceBase + instanceIndex < count` itself.
+
+**What a missing guard costs is not an out-of-bounds write.** WebGPU
+bounds-checks storage access, so the tail's read of `order[slot]` comes back
+clamped or zero instead, `self` resolves to a *valid* star, and the tail
+writes a garbage A_V onto a real catalogue entry. `verifyExtinction()` cannot
+see it: it refills whole first, and a whole dispatch is the one case three's
+own early return does cover. Code review is the only thing standing behind
+this guard — keep it.
