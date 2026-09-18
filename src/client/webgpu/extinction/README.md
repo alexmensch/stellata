@@ -43,7 +43,8 @@ src/client/webgpu/extinction/
 - **No `gl.readPixels`.** § Cold reads.
 - **No texture layout.** Star *i* is element *i* of a `count`-long float
   buffer; its position is element *i* of a `count`-long vec4 buffer the
-  kernel fills and walks in an order of its own (`dispatch-order/README.md` § Dispatch order).
+  kernel fills and walks in an order of its own
+  (`dispatch-order/README.md` § Dispatch order).
   `AV_TEX_WIDTH` × `⌈count/1024⌉`, `packPositionsRgba` and the
   `(i % 1024, i / 1024)` arithmetic are the WebGL2 twin's — and the
   parity reference's, which draws that layout on purpose (§ The prepass
@@ -107,7 +108,8 @@ the buffer slot directly.
 `compute(count)` over one `Fn`: thread *i* reads position *i* out of a
 read-only vec4 storage buffer, marches from `absCameraPos` to it with the
 shared `dustRaymarchAvTsl`, and assigns the result to the A_V element the
-slot → star table names (`dispatch-order/README.md` § Dispatch order). three's default workgroup of
+slot → star table names (`dispatch-order/README.md` § Dispatch order).
+three's default workgroup of
 64 and its own early return for the threads past `count` in the last
 group; no buffer is touched out
 of range. `update()` is one `renderer.compute(kernel)` — its own submit,
@@ -255,6 +257,24 @@ all 1,278,785. At 200 mm aperture (limit ~15.1, cull 17.86) the same
 figures are 0.2% at Sol and 4.6% at 3 kpc: the gate stays exact, it stops
 paying.
 
+**What it costs is paid at every vantage, and at `lg` it is currently a
+net loss.** The gate itself is four scattered reads into the 17.8 MiB
+static record table plus a log and four compares, on all 388,071 threads,
+whether or not the march it guards would have done anything. Measured on
+the forced-recompute dwell (`gpu-compute` p50, ms): sol 3.195 → 1.729,
+earth 3.285 → 1.815, mw50 2.697 → 1.392, mw120 2.634 → 1.363 — and
+**lg 0.982 → 1.316, +34%** (`.perf-runs/2026-09-18/8cg576-lg-clean.json`,
+against `cns-real-recompute-all.json`). `lg` is not an anomaly to explain
+away: at 1 Mpc the 48 taps spread over a segment of which only the last
+~1.25 kpc is inside the dust cube, so the march the gate skips there was
+already a no-op and only the gate's own cost lands. A camera-outside-the-
+cube bypass is deliberately **not** built, because `stellata-8cg.58.4`
+clips the taps to the in-cube overlap and removes the accident — all 48
+taps then land inside at `lg`, the march becomes genuinely expensive, and
+the row flips to the table's largest saving. Re-measured there by
+`stellata-8cg.57.7`; do not re-derive the `lg` figure from a run taken
+before 58.4.
+
 **The two stages compute `dPc` in different frames** — this pass in
 absolute heliocentric coordinates, the vertex stage in the floating-origin
 local ones — so their last float32 bits can disagree, and a star sitting
@@ -280,6 +300,15 @@ invalidation. Three obligations fall out of caching the same test:
   *future* writer of those uniforms from silently skipping the
   invalidation. The list is the authority: the type of the value objects
   and the watch loop both derive from it.
+  **Every key on it must stay free of the per-frame scene adaptation**,
+  or this cache refills its 18.6M samples on every frame instead of on
+  every settle. `uThresholdMag` is the one that could move: it is
+  `m_lim + MAG_PER_STOP·ev`, and `ev` is the user's discrete trim, with
+  the adaptation cut held out of it on exactly this ground
+  (`../../hdr/exposure/README.md` § Adaptation is deliberately absent —
+  which names a dirty-tracked cache keyed on the cut as the thing that
+  would thrash). Folding `dm` into a bound here is silent: the answers
+  stay correct and the cost goes up by the whole march.
 - **The gate reads nodes this pass owns**, mirroring those six slots,
   because the shared registry's `sync()` runs *after* this pass
   dispatches (`../../stellata.ts` `animate`). A kernel on the shared
@@ -359,7 +388,8 @@ for. The frame-cost lever that forces a recompute every frame at a parked
 camera is the same shape, and keying this gate on the recompute instead
 would swallow it — it would also spend 1.48 MiB a frame on a live pointer,
 which is why that lever is dwell-only
-(`../../debug/frame-cost/passes/README.md` § The extinction rows). `lastCam*` starts at the Infinity sentinel, so the first compute
+(`../../debug/frame-cost/passes/README.md` § The extinction rows).
+`lastCam*` starts at the Infinity sentinel, so the first compute
 reads as a move from nowhere and is excluded from the gate rather than
 costing the boot its first warm.
 

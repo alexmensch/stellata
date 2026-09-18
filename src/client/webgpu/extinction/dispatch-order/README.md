@@ -22,7 +22,8 @@ neighbouring threads, and neighbouring threads are what share a memory
 transaction. Two rows of the `stellata-ty4.9` sweep hold fetch count,
 ray length and working set identical and move only how the rays are laid
 out: **3.3× for coherence alone**, 3.3 against 10.9 G fetches/s
-(`../../../../../docs/science-galactic-structure.md` § What the fill measured). This
+(`../../../../../docs/science-galactic-structure.md`
+§ What the fill measured). This
 pass is measured rather than inferred from that: the recompute's 18.6M
 fetches cost **12.89 ms in catalogue order against 2.48 ms in Morton
 order** at mw120, 5.20×, on every frame a warp moves past
@@ -72,7 +73,7 @@ another writes every star's A_V onto some other star, which reads as a
 plausible dust field rather than as a failure. `packPositionsVec4Into`
 takes the same `order` array the table is built from, the pairing is
 pinned in the test, and `verifyExtinction()` is the acceptance
-(§ The prepass kernel).
+(`../README.md` § The prepass kernel).
 
 **That pin only bites over a field the sort actually permutes.** A
 catalogue monotone in all three axes sorts to the identity — Z-order

@@ -134,7 +134,8 @@ are unchanged either way, and the divergence is
 The pick paths are the only caller: a star's extinction decides whether
 the renderer puts a pixel on screen for it at all, and a pick gated on
 the intrinsic magnitude selects stars the frame drew black
-(`../../hdr/exposure/visibility/README.md` § What "visible" means to a pick path).
+(`../../hdr/exposure/visibility/README.md`
+§ What "visible" means to a pick path).
 
 **Reading the texel is the point** — the alternative, a CPU march, needs
 the ~128 MiB voxel grid that `../../loaders/dust-loader.ts` uploads and
@@ -145,7 +146,8 @@ that reason.
 Two constraints on any new caller:
 
 - **Event rate only — on this backend.** A cold read here is a
-  synchronous `readPixels`, so it stalls the pipeline — the thing the reduction's fence exists to avoid
+  synchronous `readPixels`, so it stalls the pipeline — the thing the
+  reduction's fence exists to avoid
   (`../../hdr/exposure/reduction/README.md` § Latency). Reads are
   **memoised per star** and the memo is cleared exactly where the target
   is rewritten (`update()`'s recompute) — that one line is the whole
