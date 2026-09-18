@@ -50,12 +50,56 @@ src/client/star-pipeline/extinction/
                                   (stellata_dust_raymarch), included by the
                                   prepass and by ../star.vert.glsl's fallback
                                   path. Spliced in stellata.ts via ?raw.
-  dust-raymarch-pure.ts (+ test)  CPU mirror of the raymarch decode +
-                                  trapezoidal integration and the
-                                  E(B−V) = A_V / R_V reddening. Test-only;
-                                  pins the shader math against
-                                  synthetic-cloud fixtures.
+  dust-raymarch-pure.ts (+ test)  CPU mirror of the march — the segment–cube
+                                  clip, the tap rule, the decode, the midpoint
+                                  sum — and the E(B−V) = A_V / R_V reddening.
+                                  The TSL twin imports its constants; the
+                                  build's integral imports its clip; the
+                                  runtime never calls it.
+  dust-raymarch-glsl-drift.test.ts  Pins the GLSL chunk's literals to the
+                                  constants above.
 ```
+
+## The march
+
+`dustRaymarchAV(absFrom, absTo)` integrates A_V along the camera→star
+segment in two steps, identical in the GLSL chunk, the TSL twin and the
+CPU mirror:
+
+1. **Clip to the cube.** A slab test per axis yields the segment's
+   parametric overlap `[t0, t1]` with the ±`uDustBoundsPc` cube
+   (`segmentCubeOverlap`); an empty overlap returns 0 before any fetch.
+   Outside the cube the grid is zero-padded, so a tap there could only
+   ever add ≈0 — clipping changes where the taps LAND, not what the
+   integral means. From inside the dust nearly every tap already landed
+   inside; from a far vantage the unclipped march spent almost all of
+   them on empty space, and the clip is a ~2–9× tail-error win at
+   identical cost (3 kpc out: p90 0.094 → 0.040 mag; 1 Mpc:
+   0.347 → 0.038).
+2. **Spend taps in proportion to the in-cube path.** One tap per
+   `DUST_TAP_PC` of overlap, clamped to `[DUST_TAPS_MIN, DUST_TAPS_MAX]`
+   (`dustMarchTapCount`), midpoints over the overlap, each `uvw` clamped
+   to the volume exactly as the sampler's clamp-to-edge does. A fixed
+   count spreads itself over path lengths that vary by an order of
+   magnitude — 48 taps on a 30 pc neighbour and on a 1.2 kpc sightline —
+   so at equal mean cost the adaptive rule carries less error.
+
+**The tail is bounded by `DUST_TAPS_MAX`, not by the density.** A
+sightline through a dense core is wrong by up to ~1.3 mag at Sol at the
+cap, whatever the rule, because the log decode makes cores far narrower
+than the encoded field. Choose the rule on the p90/p99 of the sweep, and
+raise the cap rather than the density when the tail is the complaint.
+
+The instrument is `pnpm run analyse:march-taps`
+(`scripts/dust/march-taps/README.md`): every scheme against the
+converged in-cube integral the catalogue build uses, at four vantages.
+Re-run it before moving any of the three constants; the numbers belong in
+the PR and the bead, not here.
+
+**Any change here ships with the mirrored build-side integral**
+(§ The cancellation invariant). The build integrates the same clipped
+overlap at a step of at most one voxel (`avAlongSegment`), so today the
+only at-Sol residual is this march's quadrature.
 
 ## What the read produces
 
@@ -101,10 +145,7 @@ recomputations per visible star per frame.
   (`dust-raymarch.glsl`). That gate has no WebGPU counterpart — float
   render targets are core there, so the port's `supported` is constant
   true and the fallback branch survives only as the A/B switch below.
-  The march's 48 fixed samples are a pragmatic trapezoidal integration:
-  at 1.25 kpc that's 26 pc per step ≈ 5 voxels of the texture's native
-  ~5 pc resolution; more samples cost proportionally with marginal
-  quality gain.
+  The march's tap count and clip are § The march.
 - **A/B switch:** `stellata.setExtinctionPrepassEnabled(false)` (dev
   console) parks the shader on the fallback path AND pauses cache
   maintenance, so the fallback side never pays fill cost — the honest
