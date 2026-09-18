@@ -8,8 +8,8 @@ request flag, and one function that turns them into this frame's dispatch.
 ```
 src/client/webgpu/extinction/refill/
   refill-slices-pure.ts       REFILL_SLICES, refillSliceLength, planRefill
-    (+ test)                  and the cursor they move; planFrame, which
-                              picks this frame's slice, sweep or nothing.
+    (+ test)                  and the cursor they move — which slots this
+                              frame dispatches, or none.
   refill-decision-pure.ts     The kernel's per-slot verdict in frustum mode
     (+ test)                  (slotRefills), the slack, and the view it
                               tests against (composeViewProjectionAbs,
@@ -59,31 +59,40 @@ march at the same camera: exact, no accuracy change, no catalogue rebuild.
 `slotRefills` is the CPU form and the rotation case is its test.
 
 **The epsilon measures from the generation's camera, never from the last
-dispatch.** A slice or a sweep leaves `lastCam` where the bump set it. Reset
+dispatch.** A slice leaves `lastCam` where the bump set it. Reset
 it per dispatch and a camera creeping under one epsilon a frame outruns the
 gate for good once a cycle has run — pinned in the prepass test.
 
-### Slice, sweep, or nothing — `planFrame`
+### A view change is a refill request — nothing more
 
-- A **bump** runs the cursor cycle exactly as § The cursor says; each slice
-  marches the in-frame unstamped stars in its slot range, so the staleness
-  bound above is now paid by the stars in frame alone.
-- A **view change with no bump** and no cycle running dispatches the WHOLE
-  slot range once — a *sweep*. Nearly every thread finds its star out of
-  frame or already stamped, so the sweep costs the frustum test and little
-  else, and a star entering the frame at a parked camera is exact on the
-  frame it appears. A view turning every frame sweeps every frame; a
-  still one dispatches nothing.
-- **Both at once** — a warp with the view turning — runs the cycle, and a
-  newly exposed star waits for its slice: up to `REFILL_SLICES` frames
-  carrying the value of its last stamp, which may predate the warp. A
-  bounded transient during motion, and `REFILL_SLICES` = 1 removes it; the
-  spike the slices flatten is several times smaller once out-of-frame
-  stars stop marching, so re-measure before keeping 4.
+`planRefill`'s `wanted` is `bump || viewChanged`, so **turning the camera
+asks for a refill exactly as displacing it does** and the cursor answers
+both the same way: one slice a frame, wrapping while requests keep
+arriving, parking when they stop. Past the first fill no frame dispatches
+more than `refillSliceLength` slots, whatever the camera did.
 
-The pick mirror treats a sweep frame like a mid-cycle one: a copy issued
-then is superseded by the buffer it just rewrote (`../README.md` § Cold
-reads).
+What that costs a star the turn newly exposes is `REFILL_SLICES` frames of
+its last stamp's value, the same bound § The staleness this buys derives
+for displacement — and for the same reason, since a turn at a parked camera
+moves A_V by nothing at all. The star is exact once its slice comes round.
+
+**Never dispatch the whole slot range on a view change**, however little of
+it can march. The tempting version buys a newly exposed star its exactness
+one frame sooner and costs a thread per catalogue star on every turning
+frame; each of those threads pays a `u32` order read, a `vec4` position
+read and a mat4×vec4 before it can early-out — 20 B per star, 7.8 MB at
+388,071 records and 25.6 MB at 1,278,785, per frame, for as long as the
+camera turns.
+
+Order of magnitude for that, from two archived runs rather than a
+differential — different commits and one has `--readback-every 4`, so read
+it as a bound and not a price: 57.6's gated kernel over all 388,071 threads
+at `lg`, where the march is a no-op and every thread pays only the gate,
+sits at 0.642 ms (`.perf-runs/2026-09-18/8cg576-gated-recompute-all.json`
+compute p50 1.336, against `cns-real-dwell-all.json`'s 0.694 with no
+recompute running). The frustum prologue does strictly less per thread than
+that gate, so it lands under 0.642 ms at 388k — against a slice's quarter of
+it, on the commonest thing a user does.
 
 **Whole mode** — the first fill and `verifyExtinction()` — skips the
 frustum test and the stamp check and stamps every star, so the parity
@@ -178,8 +187,9 @@ frame).
   cursor is parked. A copy issued mid-cycle is superseded by the next
   slice before the hover dwell that wanted it can read a byte, which is the
   same argument the camera-under-way gate it replaces was making — and a
-  parked cursor means nothing has asked for a refill, so it covers that
-  case too (`../README.md` § Cold reads).
+  parked cursor means nothing has asked for a refill, camera or view, so
+  that one test covers a turning camera as well as a travelling one
+  (`../README.md` § Cold reads).
 
 ## The kernel bounds its own slot
 

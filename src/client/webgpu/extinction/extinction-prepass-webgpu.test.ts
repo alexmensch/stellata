@@ -215,36 +215,40 @@ describe('only what is in frame', () => {
     expect(dispatched).toEqual([COUNT]);
   });
 
-  it('a turned view sweeps the whole slot range, each frame it turns', () => {
+  // The whole point of routing the view change through the cursor: past the
+  // first fill no frame ever dispatches the catalogue.
+  it('a turned view runs the cursor cycle, one slice a frame', () => {
     const { prepass, dispatched, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0, viewAt(0));
-    prepass.update(0, 0, 0, viewAt(0.1));
-    prepass.update(0, 0, 0, viewAt(0.2));
-    prepass.update(0, 0, 0, viewAt(0.2));
-    expect(dispatched).toEqual([COUNT, COUNT, COUNT]);
+    for (let frame = 1; frame <= REFILL_SLICES; frame++) {
+      prepass.update(0, 0, 0, viewAt(0.1 * frame));
+    }
+    expect(dispatched[0]).toBe(COUNT);
+    const slices = dispatched.slice(1).map((len) => len ?? 0);
+    expect(slices).toHaveLength(REFILL_SLICES);
+    expect(Math.max(...slices)).toBe(refillSliceLength(COUNT));
+    expect(slices.reduce((n, len) => n + len, 0)).toBe(COUNT);
   });
 
-  it('a translation past epsilon runs the slice cycle, not a sweep, view turning or not', () => {
+  it('a translation and a turn on the same frame dispatch one slice, not two', () => {
     const { prepass, dispatched, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0, viewAt(0));
     prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0, viewAt(0.1));
-    expect(dispatched[1]).toBe(refillSliceLength(COUNT));
-    for (let frame = 2; frame <= REFILL_SLICES; frame++) {
-      prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0, viewAt(0.1 * frame));
-    }
-    expect(dispatched.slice(1).reduce<number>((n, len) => n + (len ?? 0), 0)).toBe(COUNT);
+    expect(dispatched).toEqual([COUNT, refillSliceLength(COUNT)]);
   });
 
-  it('a sweep frame stages no mirror; the still frame after it does', () => {
+  it('a turning view stages no mirror until the cursor parks', () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0, viewAt(0));
     prepass.update(0, 0, 0, viewAt(0.1));
     prepass.warmAvReadback();
     expect(reads).toHaveLength(0);
-    prepass.update(0, 0, 0, viewAt(0.1));
+    for (let frame = 0; frame < REFILL_SLICES; frame++) {
+      prepass.update(0, 0, 0, viewAt(0.1));
+    }
     prepass.warmAvReadback();
     expect(reads).toHaveLength(1);
   });

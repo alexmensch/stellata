@@ -404,8 +404,10 @@ refusing the copy cannot turn a pointer sweep into a 1.48 MiB-per-event
 drip.
 
 **A refill still cycling warms nothing at all**, which is the other half of
-that bound and the one the generation counter alone does not give. A warp
-or a focus lerp asks for a refill every frame, so the cursor never parks,
+that bound and the one the generation counter alone does not give. A warp,
+a focus lerp or a camera simply turning asks for a refill every frame
+(`refill/README.md` § A view change is a refill request), so the cursor
+never parks,
 the generation advances every frame, and a copy issued against one is
 superseded before the 280 ms dwell that wanted it can read a byte — every
 such copy is spent and dropped, at 1.48 MiB a frame for as long as the

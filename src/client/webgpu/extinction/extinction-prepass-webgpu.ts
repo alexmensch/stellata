@@ -33,7 +33,7 @@ import {
   EXTINCTION_FRUSTUM_SLACK_PX, composeViewProjectionAbs, sameView,
 } from './refill/refill-decision-pure';
 import {
-  idleRefill, planFrame, refillSliceLength, type RefillCursor,
+  idleRefill, planRefill, refillSliceLength, type RefillCursor,
 } from './refill/refill-slices-pure';
 
 export interface WebGpuExtinctionPrepassOptions {
@@ -118,7 +118,6 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   /** Bumped on every dispatch: a read that resolves against an older
    *  buffer's contents lands in a generation nobody will consult. */
   private generation = 0;
-  private sweptThisFrame = false;
   private dirty = true;
   private hasComputed = false;
   private forceDisabled = false;
@@ -234,7 +233,6 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     if (this.kernel === null) return;
     if (this.dustTexture === null) return;
     if (this.forceDisabled) return;
-    this.sweptThisFrame = false;
     const moved = movedBeyondEpsilon(
       this.lastCamX, this.lastCamY, this.lastCamZ,
       absCamX, absCamY, absCamZ,
@@ -255,7 +253,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     if (!this.hasComputed) {
       if (!bump) return;
       this.setCameraGeneration(absCamX, absCamY, absCamZ);
-      this.computeWholeCatalogue();
+      this.dispatch(0, this.count, MODE_WHOLE);
       this.refill = idleRefill(this.count);
       this.hasComputed = true;
     } else {
@@ -263,16 +261,11 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
         this.cameraGeneration.value += 1;
         this.setCameraGeneration(absCamX, absCamY, absCamZ);
       }
-      const plan = planFrame(this.refill, bump, viewChanged, this.count, this.sliceLength);
-      this.refill = plan.refill.next;
-      if (plan.refill.base !== null) {
-        this.dispatchSlots(plan.refill.base, plan.refill.length);
-      } else if (plan.sweep) {
-        this.dispatchSlots(0, this.count);
-        this.sweptThisFrame = true;
-      } else {
-        return;
-      }
+      const plan = planRefill(this.refill, bump || viewChanged, this.count, this.sliceLength);
+      this.refill = plan.next;
+      if (plan.base === null) return;
+      this.dispatch(
+        plan.base, plan.length, this.lastView === null ? MODE_WHOLE : MODE_FRUSTUM);
     }
 
     this.generation++;
@@ -289,23 +282,14 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.lastCamZ = z;
   }
 
-  /** A slice or a sweep: frustum mode once a view has been supplied, else
-   *  the whole-catalogue semantics over the same slots. */
-  private dispatchSlots(base: number, length: number): void {
+  /** `length` slots from `base`. Whole mode over every slot is the one that
+   *  leaves the buffer belonging to a single camera (refill/README.md
+   *  § Three places). */
+  private dispatch(base: number, length: number, mode: number): void {
     if (this.kernel === null) return;
-    this.frustumMode.value = this.lastView === null ? MODE_WHOLE : MODE_FRUSTUM;
+    this.frustumMode.value = mode;
     this.sliceBase.value = base;
     this.renderer.compute(this.kernel, length);
-  }
-
-  /** One dispatch over every slot at the current `absCameraPos`, so the
-   *  whole buffer belongs to one camera. The boot fill and the parity
-   *  check are the two callers that need that. */
-  private computeWholeCatalogue(): void {
-    if (this.kernel === null) return;
-    this.frustumMode.value = MODE_WHOLE;
-    this.sliceBase.value = 0;
-    this.renderer.compute(this.kernel, this.count);
   }
 
   /**
@@ -329,7 +313,6 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     // A parked cursor only: a copy taken mid-cycle is superseded before the
     // dwell that wanted it can read a byte (README.md § Cold reads).
     if (this.refill.base < this.count) return;
-    if (this.sweptThisFrame) return;
     if (this.mirrorGeneration === this.generation) return;
     const generation = this.generation;
     this.mirrorGeneration = generation;
@@ -351,7 +334,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   async verifyParity(): Promise<AvParityReport | null> {
     if (!this.isActive() || this.av === null || this.dispatchOrder === null) return null;
     // One camera behind the whole buffer (refill/README.md § Three places).
-    this.computeWholeCatalogue();
+    this.dispatch(0, this.count, MODE_WHOLE);
     this.refill = idleRefill(this.count);
     this.generation++;
     this.mirror = null;
