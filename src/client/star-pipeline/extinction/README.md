@@ -88,9 +88,12 @@ recomputations per visible star per frame.
   frame, which still costs ~1/10th of the old per-vertex-per-pass
   scheme.
 - **Positions are the catalog baseline** (`catalog.positions`, packed
-  once into an RGBA float texture) — binary-orbit perturbations
-  (sub-AU) are ignored, as is the floating origin (both the prepass
-  march and the fallback run in absolute heliocentric space).
+  into an RGBA float texture) — binary-orbit perturbations (sub-AU) are
+  ignored, as is the floating origin (both the prepass march and the
+  fallback run in absolute heliocentric space). The pack is a *copy*, and
+  the model clock's space-motion pass rewrites that array in place, so
+  `refreshPositions()` re-packs it from the epoch advance itself; without
+  that the march follows the stars no further than the attach epoch.
 - **Fallback:** on WebGL2 contexts without `EXT_color_buffer_float` (no
   float-renderable target) the prepass is inert and the vertex shader
   runs the in-vertex camera→star raymarch, gated by the visibility

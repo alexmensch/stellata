@@ -17,6 +17,22 @@ export interface ExtinctionPrepassUniforms {
   uAvPrepassEnabled: { value: number };
 }
 
+/** The instrument and filter uniforms the WebGPU A_V cache gates its march
+ *  on, and therefore the complete set a change to any of which has to
+ *  invalidate it (`../../webgpu/extinction/README.md` § The cache gate).
+ *  The list is the authority: both the type below and the cache's dirty
+ *  watch derive from it, so a bound the gate reads cannot be watched by
+ *  nothing. */
+export const STAR_VISIBILITY_BOUND_KEYS = [
+  'uThresholdMag', 'uCullMag', 'uMinDistSol', 'uMaxDistSol', 'uSpectMask', 'uMonochrome',
+] as const;
+
+export type StarVisibilityBoundKey = typeof STAR_VISIBILITY_BOUND_KEYS[number];
+
+/** Those slots as the shell's value objects, shared by reference with the
+ *  star pipeline's sharedUniforms map. */
+export type StarVisibilityBoundValues = Record<StarVisibilityBoundKey, { value: number }>;
+
 export interface ExtinctionPrepassSeam {
   /** False only where the backend cannot render a float target — WebGL2
    *  without EXT_color_buffer_float. Constant true on WebGPU, where float
@@ -26,6 +42,11 @@ export interface ExtinctionPrepassSeam {
   /** Invalidate the cache — next update() recomputes regardless of
    *  camera displacement. Called on dust attach and per chunk upload. */
   markDirty(): void;
+  /** Re-pack the position table off `catalog.positions` and invalidate.
+   *  The model clock's space-motion pass rewrites that array in place, so
+   *  a table packed at attach marches to where the stars used to be — and
+   *  on WebGPU the visibility gate would decide from there too. */
+  refreshPositions(): void;
   /** Dev-console A/B switch: false parks the star vertex stage on the
    *  in-vertex raymarch fallback and pauses cache maintenance, so the
    *  fallback side of the comparison never pays fill cost. */

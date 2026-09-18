@@ -14,6 +14,7 @@ import {
   RECOMPUTE_EPSILON_PC,
   avTexHeight,
   packPositionsRgba,
+  packPositionsVec4Into,
   movedBeyondEpsilon,
 } from './extinction-prepass-pure';
 
@@ -33,6 +34,11 @@ export class ExtinctionPrepass implements ExtinctionPrepassSeam {
 
   private renderer: THREE.WebGLRenderer;
   private uniforms: ExtinctionPrepassUniforms;
+  /** `catalog.positions` itself — StarFrame rewrites it in place on every
+   *  epoch bucket the model clock crosses, and `refreshPositions` re-packs
+   *  from whatever it holds then. */
+  private readonly sourcePositions: Float32Array;
+  private readonly count: number;
   private rt: THREE.WebGLRenderTarget | null = null;
   private posTex: THREE.DataTexture | null = null;
   private material: THREE.RawShaderMaterial | null = null;
@@ -58,6 +64,8 @@ export class ExtinctionPrepass implements ExtinctionPrepassSeam {
   constructor({ renderer, positions, count, uniforms }: ExtinctionPrepassOptions) {
     this.renderer = renderer;
     this.uniforms = uniforms;
+    this.sourcePositions = positions;
+    this.count = count;
     this.supported =
       renderer.getContext().getExtension('EXT_color_buffer_float') !== null;
     if (!this.supported) return;
@@ -109,6 +117,15 @@ export class ExtinctionPrepass implements ExtinctionPrepassSeam {
   /** Invalidate the cache — next update() recomputes regardless of
    *  camera displacement. Called on dust attach and per chunk upload. */
   markDirty() {
+    this.dirty = true;
+  }
+
+  /** Re-pack the position texture at the catalogue's current epoch. */
+  refreshPositions() {
+    if (this.posTex === null) return;
+    packPositionsVec4Into(
+      this.posTex.image.data as Float32Array, this.sourcePositions, this.count);
+    this.posTex.needsUpdate = true;
     this.dirty = true;
   }
 

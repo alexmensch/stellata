@@ -19,7 +19,7 @@ import type {
   ProbeMaterials, SolarSystemMaterials,
 } from '../solar-system/materials/solar-system-materials';
 import type {
-  ExtinctionPrepassSeam, ExtinctionPrepassUniforms,
+  ExtinctionPrepassSeam, ExtinctionPrepassUniforms, StarVisibilityBoundValues,
 } from '../star-pipeline/extinction/extinction-seam';
 import type { StarMirror } from '../star-pipeline/local-pass/star-mirror-slots';
 import type { SharedUniformNodes } from './tsl/shared-uniform-nodes';
@@ -37,7 +37,7 @@ export interface WebGpuExtinctionPrepassSources {
    *  catalog.positions, NOT the floating-origin local buffer. */
   positions: Float32Array;
   count: number;
-  uniforms: ExtinctionPrepassUniforms;
+  uniforms: ExtinctionPrepassUniforms & StarVisibilityBoundValues;
 }
 
 export interface WebGpuStarLayer {

@@ -286,15 +286,15 @@ boot refuses such a device outright (`../tsl/README.md` § Storage
 attributes), which is what makes `supported` constant true here honest
 rather than merely untested.
 
-**A recompute is ~18.6M volume samples**: one thread per star × 48
-taps, 388,071 × 48. That is the whole per-recompute cost and it is paid
+**A full recompute is ~18.6M volume samples**: one thread per star × 48
+taps, 388,071 × 48. That is the per-recompute ceiling and it is paid
 *per frame* while the camera keeps moving more than
 `RECOMPUTE_EPSILON_PC` between frames — a warp pays it every frame, which
 is the case to measure, not the idle one. Every canon vantage is idle, so
 pricing it takes the forced-recompute lever
-(`../../debug/frame-cost/passes/README.md` § The extinction rows). An idle camera costs zero, and
-the visibility prefilter never applies here: the kernel marches every
-star, because the pass has no per-star magnitude to gate on.
+(`../../debug/frame-cost/passes/README.md` § The extinction rows). An idle
+camera costs zero, and what the gate below skips never reaches the march
+at all — from far outside the disc that is very nearly all of it.
 
 **On a WebGPU boot `debug.memory()` cannot price either row.** Both bind
 through TSL nodes rather than a `uniforms` slot, so the walk reaches
@@ -302,6 +302,66 @@ neither and the star materials surface as `unknown`-basis rows instead —
 flagged, not silently dropped. Until `8cg.42` changes that, this table is
 the authority on that backend, which is the reason it states the
 arithmetic and not just the totals.
+
+## The cache gate
+
+The kernel marches only stars that can reach the display, on the **same
+four dust-independent terms** the star vertex stage prefilters with —
+spectral mask, distance band, cull bound, taper bound. One expression
+serves both (`../star/star-visibility-tsl.ts`); a second statement of it
+here would be a prepass and a vertex stage that disagree about who is
+visible, which reads as a wrongly un-reddened star rather than as a
+failure. A skipped star's element is assigned **zero**, not left alone,
+so the buffer stays a function of the dispatch and `verifyExtinction()`
+keeps its total bit compare — the reference march runs the identical gate
+closure (§ The prepass kernel).
+
+**What it saves is a function of the vantage, and collapses with
+aperture.** Share of the march that is wasted without the gate, unaided
+eye (cull 10.56), real catalogue / the V≤11 synthetic set: 15.2% / 12.7%
+at Sol, 27.7% / 24.6% at 200 pc, 76.3% / 70.7% at 1 kpc, 97.2% / 93.1% at
+3 kpc, 99.5% / 97.8% at the Galactic centre, 100% at the halo and Local
+Group vantages — where no star can render and the ungated kernel marched
+all 1,278,785. At 200 mm aperture (limit ~15.1, cull 17.86) the same
+figures are 0.2% at Sol and 4.6% at 3 kpc: the gate stays exact, it stops
+paying.
+
+### What a CACHE owes that a per-frame prefilter does not
+
+The vertex stage re-runs its prefilter every frame, so it needs no
+invalidation. Three obligations fall out of caching the same test:
+
+- **The bounds are watched, not pushed.** `STAR_VISIBILITY_BOUND_KEYS`
+  (`../../star-pipeline/extinction/extinction-seam.ts`) is the complete
+  input set, and `update()` compares each against the value it last
+  dispatched with — raising the aperture raises `uCullMag`, a filter
+  change moves the mask or the band, and neither displaces the camera.
+  A watch rather than a `markDirty()` at each writer is what keeps a
+  *future* writer of those uniforms from silently skipping the
+  invalidation. The list is the authority: the type of the value objects
+  and the watch loop both derive from it.
+- **The gate reads nodes this pass owns**, mirroring those six slots,
+  because the shared registry's `sync()` runs *after* this pass
+  dispatches (`../../stellata.ts` `animate`). A kernel on the shared
+  nodes would gate on the previous frame's instrument while the watch had
+  already seen the new one — and the two disagreeing is a star admitted
+  by the vertex stage that no dispatch ever fills.
+- **The model clock moves nothing it reads.** A pulsating variable is
+  credited its whole brightward swing (`−0.5 · iAmplitudeMag`) instead of
+  its live phase, so the answer is phase-independent and `uModelDays`
+  is deliberately not a watched bound. The credit only ever *admits*
+  stars, so every stage's own prefilter passes a subset of this one —
+  which is also why the glow pass's looser taper bound is the one taken.
+
+**Positions are the fourth input, and they are not static.** The model
+clock's space-motion pass rewrites `catalog.positions` in place on every
+epoch bucket it crosses (`../../star-pipeline/star-frame/README.md`), and
+this pass packed a copy at attach. `refreshPositions()` re-packs it —
+which the shell calls from the epoch advance itself — so the march and
+the gate both follow the stars over the ±5,000 yr the clock reaches. The
+Morton order is *not* rebuilt: it buys memory coherence rather than
+correctness, and re-sorting would cost ~77 ms per bucket crossing
+(§ Dispatch order).
 
 ## Cold reads — the one behaviour that is not parity
 
