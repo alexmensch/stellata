@@ -36,6 +36,7 @@ import {
 } from '../perceptual-disc-tsl';
 import type { SurvivorsNode } from './compaction/star-compaction';
 import type { StarTables } from './star-tables';
+import { appMagAtTsl, starVisibilityTsl } from './star-visibility-tsl';
 
 type NF = Node<'float'>;
 
@@ -133,8 +134,7 @@ export function solveStarTsl(
   const stat = (name: Parameters<StarTables['stat']>[1]) => tables.stat(self, name);
 
   const dPc = max(distance(localPos, u.uCameraPos), 1e-30).toVar();
-  const appMag = stat('iAbsmag')
-    .add(log(dPc).mul(1 / Math.LN10).sub(1.0).mul(5.0)).toVar();
+  const appMag = float(appMagAtTsl(stat('iAbsmag'), dPc)).toVar();
 
   const radiusFactor = float(1.0).toVar();
   const ciMod = float(0.0).toVar();
@@ -170,31 +170,17 @@ export function solveStarTsl(
     });
   }
 
-  const spectOk = u.uSpectMask
-    .bitAnd(uint(1).shiftLeft(uint(stat('iSpectClass'))))
-    .notEqual(uint(0));
-  const distSol = stat('iDistSol');
-  const distOk = distSol.greaterThanEqual(u.uMinDistSol)
-    .and(distSol.lessThanEqual(u.uMaxDistSol));
-  // Chart sizes and clips against uLimitMag in the fragment stage and
-  // keeps its quads, so the taper cull is off there entirely — GLSL
-  // twin is star.vert.glsl's `starTaperDead` early exit.
-  const chart = u.uMonochrome.greaterThan(0.5);
-  // Both bounds are read TWICE — once as the dust-independent
-  // prefilter, once on the extincted magnitude — so each call builds
-  // a fresh node that reads `appMag` where it is emitted.
-  const magOk = () => appMag.lessThanEqual(u.uCullMag);
-  const taperAlive = () => chart.or(pass === STAR_PASS_GLOW
-    ? appMag.lessThan(u.uThresholdMag.add(SOFT_TAPER_MARGIN_MAG))
-    : appMag.lessThanEqual(u.uThresholdMag));
+  const vis = starVisibilityTsl(u, stat('iSpectClass'), stat('iDistSol'), appMag, pass);
+  const chart = vis.chart;
 
   // Visibility prefilter — dust-independent. Spectral mask and
   // distance band are absolute; the magnitude and taper bounds are
   // monotonic in dust (A_V ≥ 0), so testing them ahead of the
   // extinction read is exact and is what keeps that read — one buffer
   // element, or the full 48-tap march on the fallback — off the culled
-  // population.
-  If(spectOk.and(distOk).and(magOk()).and(taperAlive()), () => {
+  // population. The extinction prepass gates its march on the same four
+  // terms (../extinction/README.md § The cache gate).
+  If(vis.alive(), () => {
     // Survivors only. The prepass cache is one read of the star's own
     // float; the fallback marches camera→star in ABSOLUTE space, since
     // the dust grid is anchored to Sol rather than to the renderer's
@@ -218,7 +204,7 @@ export function solveStarTsl(
     // Both bounds again on the extincted value. The taper bound is the
     // LIVE uThresholdMag, so the EV trim moves it exactly as it moves
     // the fragment taper — which is what makes the cull bit-exact.
-    If(magOk().and(taperAlive()), () => {
+    If(vis.magOk().and(vis.taperAlive()), () => {
       const pxSize = float(0.0).toVar();
       const physRatio = float(1.0).toVar();
       const peakL = float(0.0).toVar();

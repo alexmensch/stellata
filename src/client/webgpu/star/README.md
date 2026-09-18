@@ -33,6 +33,10 @@ src/client/webgpu/star/
   star-geometry.ts (+ test)    The two quad geometries, corner + index
                                only, each drawn indirect off its tier's
                                args slot.
+  star-visibility-tsl.ts       The dust-independent prefilter's four
+                               terms, the two bounds re-tested after
+                               extinction, and the clock-independent form
+                               the A_V cache gates on (§ Dust extinction).
   star-vertex-tsl.ts           `solveStarTsl`, the per-star solve the
                                compaction kernel and all six vertex
                                stages share, and the vertex stage over
@@ -100,6 +104,12 @@ belong here rather than there:
   reads its variable where the enclosing `If` emits it, so one node
   object in two places would read two different values and only look
   like an accident.
+- **The prepass kernel runs the same four terms**, over
+  `starCacheVisibleTsl`'s clock-independent magnitude, so the cache
+  fills exactly the population this stage can ask about. Both call
+  `starVisibilityTsl`; restating either would let the two disagree about
+  who is visible, and what a cache additionally owes for that is
+  `../extinction/README.md` § The cache gate.
 - **The march runs in ABSOLUTE space** (`iPosition + uWorldOffset`,
   camera likewise) because the dust grid is anchored to Sol, not to the
   renderer's floating local origin.
