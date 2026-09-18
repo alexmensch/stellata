@@ -11,7 +11,7 @@ restores extinction rather than adding it twice.
 **This march has no analytic slab term** — it integrates the measured
 grid alone, and a sample outside the cube clamps to the zero-padded edge
 rather than handing over to a slab. So extinction beyond the 1.25 kpc
-coverage adds ≈0, which is what `scripts/catalog/distance/README.md`
+coverage adds ≈0, which is what `scripts/catalog/distance/dust/README.md`
 § Build-time de-extinction states from the build side and what the
 cancellation invariant below requires: the runtime addition can only
 cancel the terms the build subtraction actually used. The Milky Way
@@ -214,7 +214,7 @@ Two constraints on any new caller:
 
 Catalog `absmag` and `ci` are stored **intrinsic** (de-extincted at
 build against the same voxel grid — see
-`scripts/catalog/distance/README.md` § Build-time de-extinction), so this
+`scripts/catalog/distance/dust/README.md` § Build-time de-extinction), so this
 runtime extinction *restores* the observer-relative extinction rather
 than double-applying it: at camera=Sol the build subtraction and this
 addition cancel, so a dusty-sightline star renders at its AT-HYG

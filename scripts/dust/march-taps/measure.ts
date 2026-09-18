@@ -3,10 +3,10 @@
 import { resolve } from 'node:path';
 
 import { loadCatalog } from '../../catalog/catalog-lookup';
-import { loadDustGrid } from '../../catalog/distance/dust-deextinction';
+import { loadDustGrid } from '../../catalog/distance/dust/dust-deextinction';
 import {
   avAlongSegment, sampleEncodedAt, type DustGrid,
-} from '../../catalog/distance/dust-deextinction-pure';
+} from '../../catalog/distance/dust/dust-deextinction-pure';
 import { REPO_ROOT } from '../../util/paths';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../../src/client/galactic/galactic-coords';
 import {

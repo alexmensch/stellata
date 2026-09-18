@@ -1,13 +1,12 @@
 // Build-time Sol→star extinction integral through the same encoded
-// Edenhofer dust grid the runtime march samples. See
-// scripts/catalog/distance/README.md § Build-time de-extinction.
+// Edenhofer dust grid the runtime march samples — README.md.
 
 import {
   segmentCubeOverlap,
   type Vec3,
-} from '../../../src/client/star-pipeline/extinction/dust-raymarch-pure';
+} from '../../../../src/client/star-pipeline/extinction/dust-raymarch-pure';
 
-export { R_V } from '../../../src/client/star-pipeline/extinction/dust-raymarch-pure';
+export { R_V } from '../../../../src/client/star-pipeline/extinction/dust-raymarch-pure';
 
 /** In-memory decode of the dust artifact `dust-loader.ts` streams at
  *  runtime. `data` is the flat gridSize³ grid of encoded uint8 voxels,

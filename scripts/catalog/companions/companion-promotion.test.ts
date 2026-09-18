@@ -29,7 +29,7 @@ import {
   classifyFromSimbad,
 } from '../spectral/spectral-classify';
 import { CONSTELLATIONS, createConstellationAssignment } from '../parse/constellations';
-import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
+import { R_V, avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import type { Star } from '../parse/stars-parse';
 import { makeStar as makeStarWithDefaults } from '../parse/star-fixture';
 import { multiplesRow } from './multiples-fixture';

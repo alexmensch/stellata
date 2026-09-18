@@ -24,7 +24,7 @@ Per vantage, per scheme: mean taps per star (the GPU loop's trip count —
 the kernel is texture-fetch bound, so this is close to a linear cost
 lever) and the p50 / p90 / p99 / max of |A_V(scheme) − A_V(reference)| in
 magnitudes. The reference is `avAlongSegment`
-(`scripts/catalog/distance/dust-deextinction-pure.ts`): midpoint rule at
+(`scripts/catalog/distance/dust/dust-deextinction-pure.ts`): midpoint rule at
 a step of at most one voxel over the segment's overlap with the cube.
 Every scheme samples the same CPU trilinear read of the encoded grid the
 GPU sampler performs, so the residual is quadrature alone.
