@@ -165,6 +165,18 @@ describe('spreading the refill', () => {
   // A camera crossing the epsilon every frame asks every frame. Restarting
   // the cycle on each request would refill the first slice forever and
   // leave every other star at the value the boot fill gave it.
+  it('refills the whole catalogue before the parity march', () => {
+    const { prepass, dispatched, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    dispatched.length = 0;
+    // The reference march wants a render target the fake has no answer for;
+    // the dispatch that precedes it is what a bit compare rests on.
+    void prepass.verifyParity().catch(() => {});
+    expect(dispatched).toEqual([COUNT]);
+  });
+
   it('keeps cycling under a request that fires every frame', () => {
     const { prepass, dispatched, attachDust } = makePrepass();
     attachDust();
