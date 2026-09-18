@@ -387,10 +387,19 @@ ceiling: `pins/README.md`. When a PR must run it and what a mark means:
 
 ## Recording
 
-`--json` output and the run's log go under `.perf-runs/<date>/`, never the
-home directory or `/tmp`. The folder is tracked (`../../.perf-runs/README.md`),
-so a run taken in a worktree is committed with the PR it justifies and reaches
-main that way, which is also what stops it dying with the worktree. Results go
-to the bead's notes with the `.perf-runs/<date>/<file>` path, never into this
-README. Say which vantage, backend, method, headless flag and buffer size the
-run used.
+`--json` output and the run's log go under the `.perf-runs/<date>/` of **the
+checkout you will commit from** — the worktree holding the branch, not the main
+checkout and not `/tmp` or the home directory. A run written into another
+checkout never appears in this branch's `git status`, so nothing will prompt
+you for it and the PR ships a citation to a file no one else has.
+
+**`git add` the run file in the PR that cites it — the folder being tracked
+does not commit anything.** A bead note, a PR body or a README quoting
+`.perf-runs/<date>/<file>` is a promise that the path resolves for the next
+reader; `../../.perf-runs/README.md` § Names is where that promise is written
+down. Until the file is in a commit it resolves on one machine only, and a
+`git clean` ends it.
+
+Results go to the bead's notes with the `.perf-runs/<date>/<file>` path, never
+into this README. Say which vantage, backend, method, headless flag and buffer
+size the run used.
