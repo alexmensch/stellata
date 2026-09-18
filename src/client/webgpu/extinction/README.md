@@ -305,8 +305,9 @@ invalidation. Three obligations fall out of caching the same test:
   invalidation. The list is the authority: the type of the value objects
   and the watch loop both derive from it.
   **Every key on it must stay free of the per-frame scene adaptation**,
-  or this cache refills its 18.6M samples on every frame instead of on
-  every settle. `uThresholdMag` is the one that could move: it is
+  or this cache refills the whole catalogue's march on every frame
+  instead of on every settle (§ What it costs, and what it holds, for the
+  sample count that is). `uThresholdMag` is the one that could move: it is
   `m_lim + MAG_PER_STOP·ev`, and `ev` is the user's discrete trim, with
   the adaptation cut held out of it on exactly this ground
   (`../../hdr/exposure/README.md` § Adaptation is deliberately absent —
