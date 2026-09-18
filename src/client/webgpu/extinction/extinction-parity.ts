@@ -15,7 +15,7 @@ import {
   compareAvBuffers, type AvParityReport,
 } from '../../star-pipeline/extinction/av-parity-pure';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
-import { scatterByOrder } from './dispatch-order-pure';
+import { scatterByOrder } from './dispatch-order/dispatch-order-pure';
 import { dustRaymarchAvTsl, type DustTextureNode } from './dust-raymarch-tsl';
 
 /** Whether the cache fills this star at all, given its absolute position

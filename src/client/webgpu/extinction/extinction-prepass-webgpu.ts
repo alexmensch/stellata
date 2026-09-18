@@ -22,7 +22,7 @@ import type { StarTables } from '../star/star-tables';
 import { starCacheVisibleTsl, type StarVisibilityUniforms } from '../star/star-visibility-tsl';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { disposeStorageAttribute } from '../tsl/storage-attribute';
-import { mortonDispatchOrder } from './dispatch-order-pure';
+import { mortonDispatchOrder } from './dispatch-order/dispatch-order-pure';
 import { dustRaymarchAvTsl } from './dust-raymarch-tsl';
 import type { ExtinctionNodes } from './extinction-nodes';
 import { runReferenceMarch, type StarCacheGate } from './extinction-parity';
@@ -140,7 +140,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.orderNode = storage(this.order, 'uint', count).toReadOnly();
     // One thread per slot. three guards the threads past `count` in the
     // last workgroup with an early return, so no buffer is touched out of
-    // range. README.md § Dispatch order.
+    // range. dispatch-order/README.md § Dispatch order.
     const gateBounds = this.gateBounds;
     this.visible = tables === null || gateBounds === null ? null
       : (self, starAbs) => starCacheVisibleTsl(

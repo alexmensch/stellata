@@ -486,7 +486,7 @@ in: **3.3× for coherence alone**. The frustum grids are coherent by
 construction, neighbouring cells being neighbouring directions, so they read
 above that floor — as does the per-star extinction prepass, which dispatches
 in a spatial order for exactly this reason
-(`src/client/webgpu/extinction/README.md` § Dispatch order). The scattered
+(`src/client/webgpu/extinction/dispatch-order/README.md` § Dispatch order). The scattered
 rate is the floor a pass pays when neighbouring threads march unrelated
 sight-lines, and it is what that order exists to stay off.
 
@@ -537,7 +537,7 @@ row above gives ≈5.6 ms every frame the camera moves. The pass has since been
 measured on its own compute clock, and it is **worse than that inference:
 12.89 ms**, so catalogue order scatters harder than a golden angle does.
 Morton-ordering the dispatch takes it to 2.48 ms
-(`src/client/webgpu/extinction/README.md` § Dispatch order). The rate to price
+(`src/client/webgpu/extinction/dispatch-order/README.md` § Dispatch order). The rate to price
 a scattered march against here is the floor, not the estimate.
 
 **The last row of the table below is unsound for this grid, and that is the

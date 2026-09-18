@@ -11,7 +11,7 @@ import { StarTables } from '../star/star-tables';
 import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { WebGpuExtinctionPrepass } from './extinction-prepass-webgpu';
 import { ExtinctionNodes } from './extinction-nodes';
-import { scrambledLattice } from './dispatch-order-fixture';
+import { scrambledLattice } from './dispatch-order/dispatch-order-fixture';
 
 /** A renderer whose readbacks resolve only when the test says so — the
  *  frame-decoupled semantics a cold read has to live with. */
