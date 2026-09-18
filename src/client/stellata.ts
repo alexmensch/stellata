@@ -1678,11 +1678,15 @@ export class Stellata implements FrameAnchor {
     return reports;
   }
 
-  /** How many stars each tier's draw issued on the last compaction
-   *  dispatch. Null on a WebGL2 boot, which lists no survivors
-   *  (`webgpu/star/compaction/README.md` § Reading the counts back). */
+  /** How many stars each tier's draw issued, and how many passed the
+   *  prefilter. Null on a WebGL2 boot, which lists no survivors
+   *  (`webgpu/star/compaction/README.md` § Reading the counts back).
+   *  The read waits on a dispatch to count into, which a settled camera has
+   *  parked the gate out of. */
   readSurvivorCounts(): Promise<SurvivorCounts | null> {
-    return this.webgpuStarLayer?.readSurvivorCounts() ?? Promise.resolve(null);
+    if (this.webgpuStarLayer === null) return Promise.resolve(null);
+    this.renderGate.invalidate('debug:survivors');
+    return this.webgpuStarLayer.readSurvivorCounts();
   }
 
   /** Numeric check that the compute A_V kernel and a fragment march of the

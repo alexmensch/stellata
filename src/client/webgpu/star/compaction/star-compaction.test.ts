@@ -108,6 +108,26 @@ describe('StarCompaction dispatch', () => {
   });
 });
 
+// The counter feeds no draw, so it must not run on frames nobody asked for
+// a count on (README.md § Reading the counts back).
+describe('the prefilter counter is armed only across its readback', () => {
+  it('waits for a dispatch to count into', async () => {
+    const { compaction, dispatches } = make();
+    const pending = compaction.readSurvivorCounts();
+    expect(await Promise.race([pending, Promise.resolve('unsettled')])).toBe('unsettled');
+    expect(dispatches).toHaveLength(0);
+    compaction.dispatch(camera());
+    expect(await pending).toEqual({ glow: 0, disc: 0, prefilter: 0 });
+  });
+
+  it('releases a waiting readback on dispose rather than hanging for the boot', async () => {
+    const { compaction } = make();
+    const pending = compaction.readSurvivorCounts();
+    compaction.dispose();
+    expect(await pending).toBeNull();
+  });
+});
+
 describe('StarCompaction dispose', () => {
   it('releases both buffers through the renderer registry and disposes both kernels', () => {
     const { compaction, released, dispatches } = make();

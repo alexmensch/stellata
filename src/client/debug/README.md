@@ -127,7 +127,10 @@ WebGPU only: the WebGL2 boot lists no survivors and prices its three draws
 at the whole catalogue, so the call warns and returns null there. It maps
 a copy of the indirect args on demand — the mechanism and why it is not a
 per-frame row are `../webgpu/star/compaction/README.md` § Reading the
-counts back. Take it with the camera settled; it reads the last dispatch.
+counts back. Take it with the camera settled. The prefilter count is armed
+by the call itself and costs nothing between calls, so the read wakes the
+render gate for the one frame it counts on and resolves a frame or two
+later rather than returning at once.
 
 ## Instrumented sections
 

@@ -40,6 +40,8 @@ export function makeFakeStarRenderer() {
     released,
     renderer: {
       compute: (nodes: unknown) => dispatches.push(Array.isArray(nodes) ? nodes : [nodes]),
+      getArrayBufferAsync: (a: { array: ArrayBufferView }) =>
+        Promise.resolve(a.array.buffer.slice(0) as ArrayBuffer),
       _attributes: { delete: (a: unknown) => released.push(a) },
     },
   };
