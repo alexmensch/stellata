@@ -249,7 +249,7 @@ describe('only what is in frame', () => {
     expect(reads).toHaveLength(1);
   });
 
-  // see ../refill/README.md § The generation stamp
+  // see ./refill/README.md § The generation stamp
   it('a camera creeping under epsilon per frame keeps recomputing', () => {
     const { prepass, computes, attachDust } = makePrepass();
     attachDust();
