@@ -26,6 +26,9 @@ export interface ExtinctionPrepassSeam {
   /** Invalidate the cache — next update() recomputes regardless of
    *  camera displacement. Called on dust attach and per chunk upload. */
   markDirty(): void;
+  /** Re-pack the position table off `catalog.positions` and invalidate.
+   *  Called from the epoch advance, which rewrote that array in place. */
+  refreshPositions(): void;
   /** Dev-console A/B switch: false parks the star vertex stage on the
    *  in-vertex raymarch fallback and pauses cache maintenance, so the
    *  fallback side of the comparison never pays fill cost. */

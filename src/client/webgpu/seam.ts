@@ -21,6 +21,7 @@ import type {
 import type {
   ExtinctionPrepassSeam, ExtinctionPrepassUniforms,
 } from '../star-pipeline/extinction/extinction-seam';
+import type { StarVisibilityBoundValues } from './star/star-visibility-tsl';
 import type { StarMirror } from '../star-pipeline/local-pass/star-mirror-slots';
 import type { SharedUniformNodes } from './tsl/shared-uniform-nodes';
 import type { SurvivorCounts } from './star/compaction/compaction-pure';
@@ -37,7 +38,7 @@ export interface WebGpuExtinctionPrepassSources {
    *  catalog.positions, NOT the floating-origin local buffer. */
   positions: Float32Array;
   count: number;
-  uniforms: ExtinctionPrepassUniforms;
+  uniforms: ExtinctionPrepassUniforms & StarVisibilityBoundValues;
 }
 
 export interface WebGpuStarLayer {

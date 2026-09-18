@@ -5,10 +5,13 @@ import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { createVoxelTexture } from '../../loaders/dust-voxel-upload';
 import { RECOMPUTE_EPSILON_PC } from '../../star-pipeline/extinction/extinction-prepass-pure';
+import { STAR_VISIBILITY_BOUND_KEYS } from '../star/star-visibility-tsl';
+import { makeStarLayerSources } from '../star/star-sources-mock';
+import { StarTables } from '../star/star-tables';
 import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { WebGpuExtinctionPrepass } from './extinction-prepass-webgpu';
 import { ExtinctionNodes } from './extinction-nodes';
-import { scrambledLattice } from './dispatch-order-fixture';
+import { scrambledLattice } from './dispatch-order/dispatch-order-fixture';
 
 /** A renderer whose readbacks resolve only when the test says so — the
  *  frame-decoupled semantics a cold read has to live with. */
@@ -63,13 +66,21 @@ function diagonal(count: number) {
   return positions;
 }
 
-function makePrepass(count = COUNT, positions: Float32Array = diagonal(count)) {
+function makePrepass(
+  count = COUNT,
+  positions: Float32Array = diagonal(count),
+  gated = true,
+) {
   const shared = buildSharedUniforms({
     pixelRatio: 2, fovYRad: 0.75, viewportW: 1600, viewportH: 900,
     hdr: makeHdrEmitterUniforms(),
   });
   const slots = new ExtinctionNodes();
   const fake = fakeRenderer();
+  // The gate reads per-star statics, so it needs the star layer's tables —
+  // built over the mock's zero-filled attributes, which is enough for the
+  // graph to compose; what it evaluates to is the A/B parity smoke's.
+  const tables = gated ? new StarTables(makeStarLayerSources(count).sources) : null;
   const prepass = new WebGpuExtinctionPrepass({
     renderer: fake.renderer,
     positions,
@@ -77,6 +88,7 @@ function makePrepass(count = COUNT, positions: Float32Array = diagonal(count)) {
     nodes: buildSharedUniformNodes(shared).nodes,
     slots,
     uniforms: shared,
+    tables,
   });
   const attachDust = () => {
     shared.uDustTexture.value = createVoxelTexture(4, new Uint8Array(64));
@@ -195,6 +207,86 @@ describe('the displacement gate', () => {
     expect(computes).toHaveLength(1);
     prepass.setEnabled(true);
     expect(shared.uAvPrepassEnabled.value).toBe(1);
+  });
+});
+
+describe('the cache gate', () => {
+  // The vertex-stage prefilter needs no invalidation because it re-runs
+  // every frame. This one is a cache: raising the aperture raises
+  // uCullMag, and a filter change moves the mask or the distance band —
+  // each makes a star the last dispatch skipped renderable, with no
+  // camera motion to fire the displacement gate.
+  it.each(STAR_VISIBILITY_BOUND_KEYS)('%s moving refills a parked camera', (key) => {
+    const { prepass, computes, shared, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    expect(computes).toHaveLength(1);
+    prepass.update(0, 0, 0);
+    expect(computes).toHaveLength(1);
+    shared[key].value += 1;
+    prepass.update(0, 0, 0);
+    expect(computes).toHaveLength(2);
+    // And settles again: a watch that re-fired every frame would cost the
+    // whole march per frame at a parked camera.
+    prepass.update(0, 0, 0);
+    expect(computes).toHaveLength(2);
+  });
+
+  // uModelDays is deliberately absent above: the gate credits every star
+  // its whole brightward pulsation swing rather than its live phase, so
+  // the running clock moves nothing it reads.
+  it('the model clock is not one of them', () => {
+    expect(STAR_VISIBILITY_BOUND_KEYS).not.toContain('uModelDays');
+  });
+
+  it('every bound is a slot of the shared map the shell writes', () => {
+    const shared = buildSharedUniforms({
+      pixelRatio: 1, fovYRad: 0.75, viewportW: 800, viewportH: 600,
+      hdr: makeHdrEmitterUniforms(),
+    });
+    for (const key of STAR_VISIBILITY_BOUND_KEYS) {
+      expect(typeof shared[key].value).toBe('number');
+    }
+  });
+
+  // Without tables there is nothing per-star to gate on, and the kernel
+  // marches the catalogue exactly as it did before.
+  it('an ungated pass watches nothing and still dispatches', () => {
+    const { prepass, computes, shared, attachDust } = makePrepass(COUNT, diagonal(COUNT), false);
+    attachDust();
+    prepass.update(0, 0, 0);
+    shared.uCullMag.value += 1;
+    prepass.update(0, 0, 0);
+    expect(computes).toHaveLength(1);
+  });
+});
+
+describe('the epoch refresh', () => {
+  // StarFrame rewrites catalog.positions in place every bucket the model
+  // clock crosses. The table packed at attach is a copy, so without this
+  // the march — and the gate over it — stay at the attach epoch.
+  it('re-packs from the array the space-motion pass rewrote, and refills', () => {
+    const positions = diagonal(COUNT);
+    const { prepass, computes, released, attachDust } = makePrepass(COUNT, positions);
+    attachDust();
+    prepass.update(0, 0, 0);
+    positions[0] = 4321;
+    prepass.refreshPositions();
+    prepass.update(0, 0, 0);
+    expect(computes).toHaveLength(2);
+    prepass.dispose();
+    const slotPositions = released.find((a) => a.itemSize === 4)!.array as Float32Array;
+    const starOfSlot = released.find((a) => a.array instanceof Uint32Array)!.array as Uint32Array;
+    const slot = starOfSlot.indexOf(0);
+    expect(slotPositions[slot * 4]).toBe(4321);
+  });
+
+  it('is inert after dispose rather than writing a released buffer', () => {
+    const { prepass, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.dispose();
+    expect(() => prepass.refreshPositions()).not.toThrow();
   });
 });
 

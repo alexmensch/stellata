@@ -115,6 +115,14 @@ would thrash — an on-demand consumer that recomputes from scratch and
 stores nothing may read adaptation, and the pick paths do, through the
 live `uExposure` rather than through this readout.
 
+**The per-star A_V cache is the consumer with the most to lose**, and it
+is the reason to keep the prohibition rather than a mere illustration of
+it: it watches `uThresholdMag` and `uCullMag` and refills 18.6M volume
+samples whenever either moves
+(`../../webgpu/extinction/README.md` § The cache gate). Both stay free of
+the cut today; putting `dm` into either makes that refill per-frame with
+nothing failing.
+
 **`FrameCtx.exposure` is the exempt class, named.** The shell fills a
 `FrameExposure` record every tick and hands it to each gated layer's
 `skip` (`../../scene/README.md` § The brightness reason). It is per frame,

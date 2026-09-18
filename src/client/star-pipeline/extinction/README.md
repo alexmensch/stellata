@@ -88,9 +88,12 @@ recomputations per visible star per frame.
   frame, which still costs ~1/10th of the old per-vertex-per-pass
   scheme.
 - **Positions are the catalog baseline** (`catalog.positions`, packed
-  once into an RGBA float texture) — binary-orbit perturbations
-  (sub-AU) are ignored, as is the floating origin (both the prepass
-  march and the fallback run in absolute heliocentric space).
+  into an RGBA float texture) — binary-orbit perturbations (sub-AU) are
+  ignored, as is the floating origin (both the prepass march and the
+  fallback run in absolute heliocentric space). The pack is a *copy*, and
+  the model clock's space-motion pass rewrites that array in place, so
+  `refreshPositions()` re-packs it from the epoch advance itself; without
+  that the march follows the stars no further than the attach epoch.
 - **Fallback:** on WebGL2 contexts without `EXT_color_buffer_float` (no
   float-renderable target) the prepass is inert and the vertex shader
   runs the in-vertex camera→star raymarch, gated by the visibility
@@ -131,7 +134,8 @@ are unchanged either way, and the divergence is
 The pick paths are the only caller: a star's extinction decides whether
 the renderer puts a pixel on screen for it at all, and a pick gated on
 the intrinsic magnitude selects stars the frame drew black
-(`../../hdr/exposure/visibility/README.md` § What "visible" means to a pick path).
+(`../../hdr/exposure/visibility/README.md`
+§ What "visible" means to a pick path).
 
 **Reading the texel is the point** — the alternative, a CPU march, needs
 the ~128 MiB voxel grid that `../../loaders/dust-loader.ts` uploads and
@@ -142,7 +146,8 @@ that reason.
 Two constraints on any new caller:
 
 - **Event rate only — on this backend.** A cold read here is a
-  synchronous `readPixels`, so it stalls the pipeline — the thing the reduction's fence exists to avoid
+  synchronous `readPixels`, so it stalls the pipeline — the thing the
+  reduction's fence exists to avoid
   (`../../hdr/exposure/reduction/README.md` § Latency). Reads are
   **memoised per star** and the memo is cleared exactly where the target
   is rewritten (`update()`'s recompute) — that one line is the whole

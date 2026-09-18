@@ -5,20 +5,27 @@
 import {
   StorageBufferAttribute, Vector3, type ComputeNode, type WebGPURenderer,
 } from 'three/webgpu';
-import { Fn, compute, instanceIndex, storage, uniform } from 'three/tsl';
-import type { ExtinctionPrepassSeam, ExtinctionPrepassUniforms } from '../../star-pipeline/extinction/extinction-seam';
+import { Fn, If, compute, distance, float, instanceIndex, int, max, storage, uniform } from 'three/tsl';
+import type {
+  ExtinctionPrepassSeam, ExtinctionPrepassUniforms,
+} from '../../star-pipeline/extinction/extinction-seam';
 import type { AvParityReport } from '../../star-pipeline/extinction/av-parity-pure';
 import {
   RECOMPUTE_EPSILON_PC,
   movedBeyondEpsilon,
   packPositionsVec4Into,
 } from '../../star-pipeline/extinction/extinction-prepass-pure';
+import type { StarTables } from '../star/star-tables';
+import {
+  STAR_VISIBILITY_BOUND_KEYS, starCacheVisibleTsl,
+  type StarVisibilityBoundValues, type StarVisibilityUniforms,
+} from '../star/star-visibility-tsl';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { disposeStorageAttribute } from '../tsl/storage-attribute';
-import { mortonDispatchOrder } from './dispatch-order-pure';
+import { mortonDispatchOrder } from './dispatch-order/dispatch-order-pure';
 import { dustRaymarchAvTsl } from './dust-raymarch-tsl';
 import type { ExtinctionNodes } from './extinction-nodes';
-import { runReferenceMarch } from './extinction-parity';
+import { runReferenceMarch, type StarCacheGate } from './extinction-parity';
 
 export interface WebGpuExtinctionPrepassOptions {
   renderer: WebGPURenderer;
@@ -32,7 +39,10 @@ export interface WebGpuExtinctionPrepassOptions {
    *  vertex fallback march, and this pass points the A_V slot at its own
    *  buffer rather than the shell wiring it. */
   slots: ExtinctionNodes;
-  uniforms: ExtinctionPrepassUniforms;
+  uniforms: ExtinctionPrepassUniforms & StarVisibilityBoundValues;
+  /** Null leaves the kernel marching the whole catalogue; supplied, it
+   *  gates on the star stages' own prefilter (README.md § The cache gate). */
+  tables: StarTables | null;
 }
 
 export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
@@ -41,7 +51,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   readonly supported = true;
 
   private readonly renderer: WebGPURenderer;
-  private readonly uniforms: ExtinctionPrepassUniforms;
+  private readonly uniforms: ExtinctionPrepassUniforms & StarVisibilityBoundValues;
   private readonly slots: ExtinctionNodes;
   private readonly nodes: SharedUniformNodes;
   private readonly count: number;
@@ -57,6 +67,15 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  or the 1.48 MiB outlives the pass. */
   private dispatchOrder: Uint32Array | null;
   private readonly absCameraPos = uniform(new Vector3());
+  /** `catalog.positions` itself, which StarFrame rewrites in place. */
+  private readonly sourcePositions: Float32Array;
+  /** Nodes this pass owns, not the shared registry's: that syncs after this
+   *  pass dispatches, so a kernel on it would gate a frame behind the watch
+   *  below (README.md § The cache gate). */
+  private readonly gateBounds: (StarVisibilityUniforms & StarVisibilityBoundValues) | null;
+  /** Built once, run by both the kernel and the reference march, so the
+   *  two cannot skip different stars. */
+  private readonly visible: StarCacheGate | null;
 
   // The whole A_V table on the CPU. `readAvMag` answers out of this and
   // nothing else: a copy issued by the pick that wants the value cannot
@@ -85,13 +104,22 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   private lastCamZ = Infinity;
 
   constructor({
-    renderer, positions, count, nodes, slots, uniforms,
+    renderer, positions, count, nodes, slots, uniforms, tables,
   }: WebGpuExtinctionPrepassOptions) {
     this.renderer = renderer;
     this.uniforms = uniforms;
     this.slots = slots;
     this.nodes = nodes;
     this.count = count;
+    this.sourcePositions = positions;
+    this.gateBounds = tables === null ? null : {
+      uThresholdMag: uniform(uniforms.uThresholdMag.value),
+      uCullMag: uniform(uniforms.uCullMag.value),
+      uMinDistSol: uniform(uniforms.uMinDistSol.value),
+      uMaxDistSol: uniform(uniforms.uMaxDistSol.value),
+      uSpectMask: uniform(uniforms.uSpectMask.value, 'uint'),
+      uMonochrome: uniform(uniforms.uMonochrome.value),
+    };
 
     this.dispatchOrder = mortonDispatchOrder(positions, count);
     // vec4 slots, not vec3: WGSL has no packed vec3 in a storage buffer, and
@@ -111,16 +139,41 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.orderNode = storage(this.order, 'uint', count).toReadOnly();
     // One thread per slot. three guards the threads past `count` in the
     // last workgroup with an early return, so no buffer is touched out of
-    // range. README.md § Dispatch order.
+    // range. dispatch-order/README.md § Dispatch order.
+    const gateBounds = this.gateBounds;
+    this.visible = tables === null || gateBounds === null ? null
+      : (self, starAbs) => starCacheVisibleTsl(
+        gateBounds, tables, self, max(distance(starAbs, this.absCameraPos), 1e-30));
+    const visible = this.visible;
     this.kernel = compute(Fn(() => {
-      slots.av.element(this.orderNode.element(instanceIndex)).assign(dustRaymarchAvTsl(
-        nodes, slots.dust, this.absCameraPos,
-        this.positionsNode.element(instanceIndex).xyz));
+      const self = int(this.orderNode.element(instanceIndex));
+      const starAbs = this.positionsNode.element(instanceIndex).xyz;
+      const march = () => dustRaymarchAvTsl(nodes, slots.dust, this.absCameraPos, starAbs);
+      if (visible === null) {
+        slots.av.element(self).assign(march());
+        return;
+      }
+      const av = float(0.0).toVar();
+      If(visible(self, starAbs), () => { av.assign(march()); });
+      // Zero rather than a skipped write — the compare in
+      // README.md § The cache gate is total.
+      slots.av.element(self).assign(av);
     })(), count);
     this.kernel.setName('extinction-prepass-compute');
   }
 
   markDirty(): void {
+    this.dirty = true;
+  }
+
+  /** Re-pack the position table at the catalogue's current epoch,
+   *  reusing the Morton order (README.md § The cache gate). */
+  refreshPositions(): void {
+    if (this.positions === null || this.dispatchOrder === null) return;
+    packPositionsVec4Into(
+      this.positions.array as Float32Array, this.sourcePositions, this.count,
+      this.dispatchOrder);
+    this.positions.needsUpdate = true;
     this.dirty = true;
   }
 
@@ -146,6 +199,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     // first compute reads as a camera under way and costs the boot its first
     // warm (README.md § A camera under way warms nothing at all).
     this.movedOnLastUpdate = moved && this.hasComputed;
+    if (this.syncGateBounds()) this.dirty = true;
     if (!this.dirty && !moved) return;
 
     this.absCameraPos.value.set(absCamX, absCamY, absCamZ);
@@ -211,10 +265,27 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
       dust: this.slots.dust,
       positions: this.positionsNode,
       order: this.dispatchOrder,
+      orderNode: this.orderNode,
+      gate: this.visible,
       absCameraPos: this.absCameraPos,
       av: this.av,
       count: this.count,
     });
+  }
+
+  /** Copy the bounds the gate reads and report whether any moved
+   *  (README.md § The cache gate). */
+  private syncGateBounds(): boolean {
+    const bounds = this.gateBounds;
+    if (bounds === null) return false;
+    let moved = false;
+    for (const key of STAR_VISIBILITY_BOUND_KEYS) {
+      const next = this.uniforms[key].value;
+      if (bounds[key].value === next) continue;
+      bounds[key].value = next;
+      moved = true;
+    }
+    return moved;
   }
 
   /** The consumer's `uAvPrepassEnabled` gate is the one shared-map write

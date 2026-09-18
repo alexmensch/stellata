@@ -4,9 +4,9 @@
 
 import {
   FloatType, NearestFilter, NoBlending, NodeMaterial, QuadMesh, RedFormat,
-  RenderTarget, type StorageBufferAttribute, type WebGPURenderer,
+  RenderTarget, type Node, type StorageBufferAttribute, type WebGPURenderer,
 } from 'three/webgpu';
-import { Fn, ivec2, screenCoordinate, vec4, type storage } from 'three/tsl';
+import { Fn, If, float, int, ivec2, screenCoordinate, vec4, type storage } from 'three/tsl';
 import {
   AV_TEX_WIDTH, avTexHeight,
 } from '../../star-pipeline/extinction/extinction-prepass-pure';
@@ -14,8 +14,13 @@ import {
   compareAvBuffers, type AvParityReport,
 } from '../../star-pipeline/extinction/av-parity-pure';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
-import { scatterByOrder } from './dispatch-order-pure';
+import { scatterByOrder } from './dispatch-order/dispatch-order-pure';
 import { dustRaymarchAvTsl, type DustTextureNode } from './dust-raymarch-tsl';
+
+/** Whether the cache fills this star at all, given its absolute position
+ *  — the kernel's own gate, so the reference cannot skip a different set
+ *  (`extinction-prepass-webgpu.ts`). */
+export type StarCacheGate = (self: Node<'int'>, starAbs: Node<'vec3'>) => Node<'bool'>;
 
 export interface ReferenceMarchInputs {
   renderer: WebGPURenderer;
@@ -26,6 +31,10 @@ export interface ReferenceMarchInputs {
   /** The kernel's dispatch slot → star map, which the positions above are
    *  already in. Texel `i` therefore carries star `order[i]`. */
   order: Uint32Array;
+  /** The same map on the GPU: the gate below keys on the star, not the
+   *  slot the fragment is drawing. */
+  orderNode: ReturnType<typeof storage<'uint'>>;
+  gate: StarCacheGate | null;
   absCameraPos: Parameters<typeof dustRaymarchAvTsl>[2];
   av: StorageBufferAttribute;
   count: number;
@@ -54,9 +63,16 @@ export async function runReferenceMarch(inputs: ReferenceMarchInputs): Promise<A
   material.name = 'extinction-reference-march';
   material.fragmentNode = Fn(() => {
     const px = ivec2(screenCoordinate);
-    const starAbs = inputs.positions.element(px.y.mul(AV_TEX_WIDTH).add(px.x)).xyz;
-    return vec4(
-      dustRaymarchAvTsl(inputs.nodes, inputs.dust, inputs.absCameraPos, starAbs), 0, 0, 1);
+    const slot = px.y.mul(AV_TEX_WIDTH).add(px.x);
+    const starAbs = inputs.positions.element(slot).xyz;
+    const march = () => dustRaymarchAvTsl(
+      inputs.nodes, inputs.dust, inputs.absCameraPos, starAbs);
+    if (inputs.gate === null) return vec4(march(), 0, 0, 1);
+    const av = float(0.0).toVar();
+    If(inputs.gate(int(inputs.orderNode.element(slot)), starAbs), () => {
+      av.assign(march());
+    });
+    return vec4(av, 0, 0, 1);
   })();
   material.depthTest = false;
   material.depthWrite = false;

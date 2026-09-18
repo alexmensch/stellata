@@ -18,12 +18,8 @@ src/client/webgpu/extinction/
                               Shared by the kernel, the parity reference
                               and the star vertex fallback exactly as the
                               GLSL chunk is.
-  dispatch-order-pure.ts      The Morton key, the slot → star permutation
-    (+ test)                  it sorts into, and the scatter that undoes it
-                              (§ Dispatch order).
-  dispatch-order-fixture.ts   The spatially unordered lattice both dispatch
-                              suites sort. Never in a bundle; the `-fixture`
-                              suffix is what marks that.
+  dispatch-order/             The Morton key the kernel dispatches in and
+                              the scatter that undoes it — its own README.
   extinction-nodes.ts         The two slots as nodes — the dust volume
     (+ test)                  (texture) and the A_V cache (storage
                               buffer) — with their placeholders and the
@@ -47,7 +43,8 @@ src/client/webgpu/extinction/
 - **No `gl.readPixels`.** § Cold reads.
 - **No texture layout.** Star *i* is element *i* of a `count`-long float
   buffer; its position is element *i* of a `count`-long vec4 buffer the
-  kernel fills and walks in an order of its own (§ Dispatch order).
+  kernel fills and walks in an order of its own
+  (`dispatch-order/README.md` § Dispatch order).
   `AV_TEX_WIDTH` × `⌈count/1024⌉`, `packPositionsRgba` and the
   `(i % 1024, i / 1024)` arithmetic are the WebGL2 twin's — and the
   parity reference's, which draws that layout on purpose (§ The prepass
@@ -111,7 +108,8 @@ the buffer slot directly.
 `compute(count)` over one `Fn`: thread *i* reads position *i* out of a
 read-only vec4 storage buffer, marches from `absCameraPos` to it with the
 shared `dustRaymarchAvTsl`, and assigns the result to the A_V element the
-slot → star table names (§ Dispatch order). three's default workgroup of
+slot → star table names (`dispatch-order/README.md` § Dispatch order).
+three's default workgroup of
 64 and its own early return for the threads past `count` in the last
 group; no buffer is touched out
 of range. `update()` is one `renderer.compute(kernel)` — its own submit,
@@ -178,73 +176,6 @@ its survivor-list slot to the star before reading `av.element(self)`, so
 the cold-read path (§ Cold reads) and any readback design over it key on
 the catalogue index as before.
 
-## Dispatch order
-
-`compute(count)` in catalogue order puts unrelated sight-lines on
-neighbouring threads, and neighbouring threads are what share a memory
-transaction. Two rows of the `stellata-ty4.9` sweep hold fetch count,
-ray length and working set identical and move only how the rays are laid
-out: **3.3× for coherence alone**, 3.3 against 10.9 G fetches/s
-(`docs/science-galactic-structure.md` § What the fill measured). This
-pass is measured rather than inferred from that: the recompute's 18.6M
-fetches cost **12.89 ms in catalogue order against 2.48 ms in Morton
-order** at mw120, 5.20×, on every frame a warp moves past
-`RECOMPUTE_EPSILON_PC` (`stellata-8cg.58.2` notes carry both arms and
-the sol pair). It beats the sweep's 3.3× because catalogue order
-scatters worse than the golden-angle row that measured that. The stall is
-latency, not bandwidth — 10.9 G one-byte fetches/s is ~11 GB/s against a
-base M4's ~120 GB/s — and latency is what a coherent order hides.
-
-**The key is spatial, not angular.** A sky-direction sort is coherent
-only from the vantage it was built for, and the camera flies to the LMC
-and 3 kpc off-Sol, where a Sol-relative direction order is arbitrary
-again (`AGENTS.md` § Camera-anywhere). Stars adjacent in 3D have rays
-that converge near the camera *and* near the star from every vantage, so
-`mortonDispatchOrder` interleaves 16 quantised bits per axis over the
-catalogue's own bounding box into a 48-bit Z-order key. **What fixes 16 is
-the spreader, not the mantissa**: `part1By2` takes 8 bits and the key is
-assembled from two halves, so a half wider than 8 drops its top bits and
-collapses the order with nothing failing. A float64 has room to spare at
-48 bits — 17 per axis would still fit it — which is why the pin is on the
-half-width and not on the budget. The sort is one CPU
-pass at attach, alongside the ~128 MiB volume upload that triggers it;
-nothing re-sorts per frame, and the order is a function of
-`catalog.positions` alone.
-
-**It is synchronous on the main thread, and its timing is a dev-machine
-one**: ~77 ms at 388,071 stars, measured in Node on an M-series laptop, so
-budget several times that on the integrated and mobile floor this folder is
-sized for. It shares its frame with the volume upload, which already stalls.
-The cost is the comparator rather than the keys — a comparator-free
-`Float64Array.sort()` over the same element count measures ~21 ms — and
-taking that would mean packing key and slot index into one float64: 11 bits
-per axis plus a 19-bit index is 52, inside the mantissa. Declined for now
-because 11 bits quantises coarsely once a far outlier widens the bounding
-box. **Revisit on attach latency measured on a low-end device, never on
-catalogue size** — the key's width is not what catalogue growth pressures.
-
-**The A_V buffer stays catalogue-star-indexed** — so the position table
-is what moves. Thread *i* reads sorted position *i* and writes
-`av[order[i]]`. That trades coherent reads for scattered writes, and the
-trade is strongly favourable: 4 bytes each into a 1.48 MiB buffer that
-stays in cache, against reads scattered across the whole volume.
-
-The indirection is the one thing here that can be wrong silently: a
-position table packed in one order against a slot → star table in
-another writes every star's A_V onto some other star, which reads as a
-plausible dust field rather than as a failure. `packPositionsVec4Into`
-takes the same `order` array the table is built from, the pairing is
-pinned in the test, and `verifyExtinction()` is the acceptance
-(§ The prepass kernel).
-
-**That pin only bites over a field the sort actually permutes.** A
-catalogue monotone in all three axes sorts to the identity — Z-order
-preserves the dominance order — so slot equals star and a table paired
-wrongly passes anyway. The test builds its field from
-`dispatch-order-fixture.ts` and asserts the order is not the identity
-before it checks a single slot; a fixture swapped for a tidier monotone
-one silently retires the check.
-
 ## What it costs, and what it holds
 
 The first two rows are the WebGL2 pass's unchanged in size — the port
@@ -286,15 +217,15 @@ boot refuses such a device outright (`../tsl/README.md` § Storage
 attributes), which is what makes `supported` constant true here honest
 rather than merely untested.
 
-**A recompute is ~18.6M volume samples**: one thread per star × 48
-taps, 388,071 × 48. That is the whole per-recompute cost and it is paid
+**A full recompute is ~18.6M volume samples**: one thread per star × 48
+taps, 388,071 × 48. That is the per-recompute ceiling and it is paid
 *per frame* while the camera keeps moving more than
 `RECOMPUTE_EPSILON_PC` between frames — a warp pays it every frame, which
 is the case to measure, not the idle one. Every canon vantage is idle, so
 pricing it takes the forced-recompute lever
-(`../../debug/frame-cost/passes/README.md` § The extinction rows). An idle camera costs zero, and
-the visibility prefilter never applies here: the kernel marches every
-star, because the pass has no per-star magnitude to gate on.
+(`../../debug/frame-cost/passes/README.md` § The extinction rows). An idle
+camera costs zero, and what the gate below skips never reaches the march
+at all — from far outside the disc that is very nearly all of it.
 
 **On a WebGPU boot `debug.memory()` cannot price either row.** Both bind
 through TSL nodes rather than a `uniforms` slot, so the walk reaches
@@ -302,6 +233,104 @@ neither and the star materials surface as `unknown`-basis rows instead —
 flagged, not silently dropped. Until `8cg.42` changes that, this table is
 the authority on that backend, which is the reason it states the
 arithmetic and not just the totals.
+
+## The cache gate
+
+The kernel marches only stars that can reach the display, on the **same
+four dust-independent terms** the star vertex stage prefilters with —
+spectral mask, distance band, cull bound, taper bound. One expression
+serves both (`../star/star-visibility-tsl.ts`); a second statement of it
+here would be a prepass and a vertex stage that disagree about who is
+visible, which reads as a wrongly un-reddened star rather than as a
+failure. A skipped star's element is assigned **zero**, not left alone,
+so the buffer stays a function of the dispatch and `verifyExtinction()`
+keeps its total bit compare — the reference march runs the identical gate
+closure (§ The prepass kernel).
+
+**What it saves is a function of the vantage, and collapses with
+aperture.** Share of the march that is wasted without the gate, unaided
+eye (cull 10.56), real catalogue / the V≤11 synthetic set: 15.2% / 12.7%
+at Sol, 27.7% / 24.6% at 200 pc, 76.3% / 70.7% at 1 kpc, 97.2% / 93.1% at
+3 kpc, 99.5% / 97.8% at the Galactic centre, 100% at the halo and Local
+Group vantages — where no star can render and the ungated kernel marched
+all 1,278,785. At 200 mm aperture (limit ~15.1, cull 17.86) the same
+figures are 0.2% at Sol and 4.6% at 3 kpc: the gate stays exact, it stops
+paying.
+
+**What it costs is paid at every vantage, and at `lg` it is currently a
+net loss.** The gate itself is four scattered reads into the 17.8 MiB
+static record table plus a log and four compares, on all 388,071 threads,
+whether or not the march it guards would have done anything. Measured on
+the forced-recompute dwell (`gpu-compute` p50, ms): sol 3.195 → 1.729,
+earth 3.285 → 1.815, mw50 2.697 → 1.392, mw120 2.634 → 1.363 — and
+**lg 0.982 → 1.316, +34%** (`.perf-runs/2026-09-18/8cg576-lg-clean.json`,
+against `cns-real-recompute-all.json`). `lg` is not an anomaly to explain
+away: at 1 Mpc the 48 taps spread over a segment of which only the last
+~1.25 kpc is inside the dust cube, so the march the gate skips there was
+already a no-op and only the gate's own cost lands. A camera-outside-the-
+cube bypass is deliberately **not** built, because `stellata-8cg.58.4`
+clips the taps to the in-cube overlap and removes the accident — all 48
+taps then land inside at `lg`, the march becomes genuinely expensive, and
+the row flips to the table's largest saving. Re-measured there by
+`stellata-8cg.57.7`; do not re-derive the `lg` figure from a run taken
+before 58.4.
+
+**The two stages compute `dPc` in different frames** — this pass in
+absolute heliocentric coordinates, the vertex stage in the floating-origin
+local ones — so their last float32 bits can disagree, and a star sitting
+within ~1e-4 mag of a bound can be gated here and admitted there. Neither
+bound leaks anything: at the cull bound the vertex stage discards the star
+too, and at the taper bound the soft taper is exactly zero, so the star
+the disagreement can reach contributes no light from any vantage at any
+epoch. Do not close it by marching in local coordinates — the positions
+here are the pristine absolute ones and the march's bit-parity with the
+reference is what `verifyExtinction()` checks.
+
+### What a CACHE owes that a per-frame prefilter does not
+
+The vertex stage re-runs its prefilter every frame, so it needs no
+invalidation. Three obligations fall out of caching the same test:
+
+- **The bounds are watched, not pushed.** `STAR_VISIBILITY_BOUND_KEYS`
+  (`../star/star-visibility-tsl.ts`) is the complete
+  input set, and `update()` compares each against the value it last
+  dispatched with — raising the aperture raises `uCullMag`, a filter
+  change moves the mask or the band, and neither displaces the camera.
+  A watch rather than a `markDirty()` at each writer is what keeps a
+  *future* writer of those uniforms from silently skipping the
+  invalidation. The list is the authority: the type of the value objects
+  and the watch loop both derive from it.
+  **Every key on it must stay free of the per-frame scene adaptation**,
+  or this cache refills its 18.6M samples on every frame instead of on
+  every settle. `uThresholdMag` is the one that could move: it is
+  `m_lim + MAG_PER_STOP·ev`, and `ev` is the user's discrete trim, with
+  the adaptation cut held out of it on exactly this ground
+  (`../../hdr/exposure/README.md` § Adaptation is deliberately absent —
+  which names a dirty-tracked cache keyed on the cut as the thing that
+  would thrash). Folding `dm` into a bound here is silent: the answers
+  stay correct and the cost goes up by the whole march.
+- **The gate reads nodes this pass owns**, mirroring those six slots,
+  because the shared registry's `sync()` runs *after* this pass
+  dispatches (`../../stellata.ts` `animate`). A kernel on the shared
+  nodes would gate on the previous frame's instrument while the watch had
+  already seen the new one — and the two disagreeing is a star admitted
+  by the vertex stage that no dispatch ever fills.
+- **The model clock moves nothing it reads.** A pulsating variable is
+  credited its whole brightward swing (`−0.5 · iAmplitudeMag`) instead of
+  its live phase, so the answer is phase-independent and `uModelDays`
+  is deliberately not a watched bound. The credit only ever *admits*
+  stars, so every stage's own prefilter passes a subset of this one —
+  which is also why the glow pass's looser taper bound is the one taken.
+
+**Positions are the fourth input, and they are not static.** The model
+clock's space-motion pass rewrites `catalog.positions` in place on every
+epoch bucket it crosses (`../../star-pipeline/star-frame/README.md`), and
+this pass packed a copy at attach. `refreshPositions()` re-packs it —
+which the shell calls from the epoch advance itself — so the march and
+the gate both follow the stars over the ±5,000 yr the clock reaches. The
+Morton order is *not* rebuilt: it buys memory coherence rather than
+correctness, and re-sorting would cost ~77 ms per bucket crossing
+(`dispatch-order/README.md` § Dispatch order).
 
 ## Cold reads — the one behaviour that is not parity
 
@@ -359,7 +388,8 @@ for. The frame-cost lever that forces a recompute every frame at a parked
 camera is the same shape, and keying this gate on the recompute instead
 would swallow it — it would also spend 1.48 MiB a frame on a live pointer,
 which is why that lever is dwell-only
-(`../../debug/frame-cost/passes/README.md` § The extinction rows). `lastCam*` starts at the Infinity sentinel, so the first compute
+(`../../debug/frame-cost/passes/README.md` § The extinction rows).
+`lastCam*` starts at the Infinity sentinel, so the first compute
 reads as a move from nowhere and is excluded from the gate rather than
 costing the boot its first warm.
 

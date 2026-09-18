@@ -31,6 +31,7 @@ import { makeTslLgEmissionMaterials } from './local-group/tsl-lg-materials';
 import { makeTslBandMaterials } from './milkyway/tsl-band-materials';
 import type { BandMaterials } from '../milkyway/band-materials';
 import { STAR_VERTEX_STAGE_STORAGE_BUFFERS, StarLayer } from './star/star-layer';
+import type { StarTables } from './star/star-tables';
 import { settleTimestampSupport, type TimestampBackend } from './timestamps/timestamp-probe';
 
 /** Null when the device came back and then refused the renderer. The
@@ -106,6 +107,11 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // second factory would give the layer a second, independent dust model
   // and an MRT registration nothing disposes.
   let bandMaterialsCache: BandMaterials | null = null;
+  // Boot-scoped so the extinction prepass, built later on the first
+  // attachDust, can gate on them (extinction/README.md § The cache gate).
+  // Cleared with the layer, so a prepass built after a teardown gates on
+  // nothing rather than on dead storage nodes.
+  let starTables: StarTables | null = null;
   return {
     renderer,
     hdr,
@@ -183,6 +189,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
       // with the pipeline's target mode; dispose must sever it or a dead
       // layer keeps taking mode swaps.
       const unregister = hdr.registerMrtLayer(layer);
+      starTables = layer.tables;
       return {
         setCoreMaskVisible: (on: boolean) => layer.setCoreMaskVisible(on),
         setMonochrome: (on: boolean) => layer.setMonochrome(on),
@@ -192,6 +199,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
         dispose() {
           unregister();
           layer.dispose();
+          starTables = null;
         },
       };
     },
@@ -203,6 +211,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
         renderer,
         nodes: nodesOrThrow('attachExtinctionPrepass'),
         slots: extinctionSlots,
+        tables: starTables,
         ...options,
       });
     },
