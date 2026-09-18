@@ -18,14 +18,9 @@ export function slotRefills(
 
 const originShift = new Matrix4();
 
-/** projection × view × T(−worldOffset), for an ABSOLUTE position.
- *
- *  The `projection × view` half is the compaction kernel's own
- *  (`../../star/compaction/star-compaction.ts` `dispatch`), and the two are
- *  only the same test while both read the camera at the same point in the
- *  frame — `../../../stellata.ts` `animate` runs this one after the ride
- *  fan-out for that reason. `updateMatrixWorld` first for the same reason it
- *  does: the controls mutate position and quaternion without propagating. */
+/** projection × view × T(−worldOffset), for an ABSOLUTE position. The same
+ *  test as the compaction's only while both read the camera at the same
+ *  point in the frame (README.md § Only what is in frame). */
 export function composeViewProjectionAbs(
   camera: Camera,
   worldOffset: Vector3,

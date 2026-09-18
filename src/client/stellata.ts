@@ -489,8 +489,7 @@ export class Stellata implements FrameAnchor {
   // seam. Constructed lazily on the first attachDust so a dust-less
   // session pays nothing; null again after attachDust(null).
   private extinctionPrepass: ExtinctionPrepassSeam | null = null;
-  /** Built once: `camera` and `worldOffset` are stable identities mutated
-   *  in place, and this is handed over on every frame. */
+  /** Built once — both members are stable identities mutated in place. */
   private _extinctionView: ExtinctionView | null = null;
   private extinctionRecomputeForced = false;
   private readonly pickSizeScratch: starPhysics.RenderedSizeComponents =
@@ -2725,13 +2724,8 @@ export class Stellata implements FrameAnchor {
     this.occluders.beginFrame();
     this.layers.updateAll(this.frameCtx);
     if (this.extinctionPrepass !== null) {
-      // After the fan-out, because the rides above move the camera and this
-      // pass frustum-tests against it — the compaction below tests the same
-      // camera, and a gap between the two is a star listed for drawing whose
-      // refill never saw it (webgpu/extinction/refill/README.md § Only what
-      // is in frame). Still ahead of syncUniformNodes, which is what the
-      // pass mirroring its own gate-bound nodes rests on
-      // (webgpu/extinction/README.md § The cache gate).
+      // Between the ride fan-out and syncUniformNodes, and both edges bind
+      // (webgpu/extinction/refill/README.md § Only what is in frame).
       // Absolute camera position in JS float64 — same frame convention as
       // the shader-side iPosition + uWorldOffset reconstruction.
       perfMark('extinction.prepass');
