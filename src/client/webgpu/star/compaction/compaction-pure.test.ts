@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   CULL_SLACK_NDC, INDIRECT_ARGS_STRIDE, INDIRECT_INSTANCE_COUNT_SLOT, STAR_TIERS, STAR_TIER_DISC,
-  STAR_TIER_GLOW, initialIndirectArgs, starQuadOffscreen, tierArgsInstanceCountElement,
-  tierArgsOffsetBytes, tierListBase,
+  STAR_TIER_GLOW, initialIndirectArgs, starQuadOffscreen, survivorCountsFromArgs,
+  tierArgsInstanceCountElement, tierArgsOffsetBytes, tierListBase,
 } from './compaction-pure';
 
 describe('starQuadOffscreen', () => {
@@ -65,5 +65,18 @@ describe('compaction layout', () => {
 
   it('the initial args draw the quad over zero instances in both slots', () => {
     expect(Array.from(initialIndirectArgs(6))).toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0]);
+  });
+
+  // The readback takes the very slots the draws take their instance count
+  // from, so a layout change cannot move one without moving the other.
+  it('reads each tier count out of the slot that tier draws at', () => {
+    const args = initialIndirectArgs(6);
+    args[tierArgsInstanceCountElement(STAR_TIER_GLOW)] = 1234;
+    args[tierArgsInstanceCountElement(STAR_TIER_DISC)] = 7;
+    expect(survivorCountsFromArgs(args)).toEqual({ glow: 1234, disc: 7 });
+  });
+
+  it('a short buffer reads zero rather than undefined', () => {
+    expect(survivorCountsFromArgs(new Uint32Array(2))).toEqual({ glow: 0, disc: 0 });
   });
 });

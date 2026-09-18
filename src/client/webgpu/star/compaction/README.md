@@ -17,7 +17,8 @@ src/client/webgpu/star/compaction/
                                 each tier's five-u32 indirect-args slot.
   star-compaction.ts (+ test)   StarCompaction — the survivor and args
                                 buffers, the reset + compaction kernels,
-                                the per-frame dispatch, dispose.
+                                the per-frame dispatch, the on-demand
+                                count readback, dispose.
 ```
 
 ## Two lists, one kernel, three draws
@@ -110,6 +111,26 @@ compaction kernel are one `renderer.compute([...])`: one compute pass,
 one submit, and WebGPU orders dispatches within a pass so the atomics
 see the reset. Every rendered frame pays that submit; the render gate
 already decides whether a frame renders at all.
+
+## Reading the counts back
+
+`debug.survivors()` maps a copy of the args buffer and prints each tier's
+`instanceCount` beside the catalogue record count
+(`../../../debug/survivor-counts.ts`). That ratio is what sizes every
+elision decision on the star path — "how much of the catalogue is actually
+in frame here" is otherwise unanswerable, since the counts exist only on
+the GPU and no draw ever reads them on the CPU.
+
+**On demand, never per frame.** The readback resolves frames later, so a
+per-frame one would either stall the render path or report a stale frame's
+number as the current one; neither buys anything a console call at a
+parked camera does not. It reads the *last dispatch's* counts, so take it
+with the camera settled.
+
+`survivorCountsFromArgs` (`compaction-pure.ts`) takes the very slots the
+three draws take their instance count from — the same
+`tierArgsInstanceCountElement` — so a layout change cannot move one
+without moving the other, and the test pins both.
 
 ## The buffer-writer requirements, discharged
 
