@@ -1,0 +1,50 @@
+{
+  "url": "http://localhost:5173",
+  "rows": [
+    {
+      "glow": 20595,
+      "disc": 0,
+      "records": 388071,
+      "glowFraction": 0.05307018561036511,
+      "discFraction": 0,
+      "drawnFraction": 0.05307018561036511,
+      "scenario": "mw120"
+    },
+    {
+      "glow": 6305,
+      "disc": 0,
+      "records": 388071,
+      "glowFraction": 0.01624702696156116,
+      "discFraction": 0,
+      "drawnFraction": 0.01624702696156116,
+      "scenario": "sol"
+    },
+    {
+      "glow": 3627,
+      "disc": 0,
+      "records": 388071,
+      "glowFraction": 0.009346227880980542,
+      "discFraction": 0,
+      "drawnFraction": 0.009346227880980542,
+      "scenario": "earth"
+    },
+    {
+      "glow": 6174,
+      "disc": 0,
+      "records": 388071,
+      "glowFraction": 0.01590945986688003,
+      "discFraction": 0,
+      "drawnFraction": 0.01590945986688003,
+      "scenario": "mw50"
+    },
+    {
+      "glow": 0,
+      "disc": 0,
+      "records": 388071,
+      "glowFraction": 0,
+      "discFraction": 0,
+      "drawnFraction": 0,
+      "scenario": "lg"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 ---
 name: stellata-perf
-description: Take a GPU frame-cost measurement with the human-armed headless perf runner (`pnpm run perf`) — the arm protocol, the flags, how to read a row, how to tell a real regression from a warm machine or a two-valued frame, where results go. Use when asked to measure, price, baseline or compare render cost, when reading an archived run or a pin verdict, when a perf number looks wrong or a row was refused, and before stating any perf number in a PR body or a bead.
+description: Take a GPU frame-cost measurement with the human-armed headless perf runner (`pnpm run perf`) — the arm protocol, the flags, how to read a row, how to tell a real regression from a warm machine or a two-valued frame, where results go. Use when asked to measure, price, baseline or compare render cost, when reading an archived run or a pin verdict, when a perf number looks wrong or a row was refused, and before stating any perf number in a PR body or a bead. Also covers § Recording for the other instrument that writes into `.perf-runs/` — `pnpm run survivors`, the non-clock survivor-count read — so load it before running that or citing its output too.
 ---
 
 # Measuring frame cost with the perf runner
@@ -248,10 +248,32 @@ say in the announcement what has run recently.
 
 ## Recording
 
-Write every run under `.perf-runs/<date>/` — the `--json` path and a `tee`
-of the console log — never the home directory or `/tmp`. The folder is tracked,
-so a run taken in a worktree is committed with the PR it justifies rather than
-dying with the worktree; `.perf-runs/README.md` carries what a run file is and
-is not. Results go to the bead's notes with the `.perf-runs/<date>/<file>`
+Two commands write here, and this section governs both: `pnpm run perf`, and
+`pnpm run survivors` — the non-clock survivor-count read, which needs no arm
+(`scripts/perf/README.md` § Survivor counts).
+
+Write every run under the `.perf-runs/<date>/` of **the checkout you will
+commit from** — the `--json` path and a `tee` of the console log. Never the
+home directory, never `/tmp`, and never another checkout's `.perf-runs/`: a
+run written into the main checkout while you work in a worktree is invisible
+to that worktree's `git status`, so nothing will ever prompt you for it.
+
+**Then `git add` it, in the PR that cites it.** This is a step, not a
+property — the folder being tracked commits nothing by itself, and the run
+dies with the worktree if you skip it. Do it in the same commit as the work
+the run justifies, or its own; `.perf-runs/README.md` carries what a run file
+is and is not.
+
+**Before you quote a `.perf-runs/<date>/<file>` path anywhere** — a bead note,
+a PR body, a commit message — confirm it is tracked:
+
+```
+git ls-files --error-unmatch .perf-runs/<date>/<file>
+```
+
+A non-zero exit means the path resolves on your machine and nobody else's, and
+every citation you are about to write is already broken.
+
+Results go to the bead's notes with the `.perf-runs/<date>/<file>`
 path, never into a README. Paste the table and the adapter block, and say which
 vantage, backend, method, headless flag and buffer size the run used.
