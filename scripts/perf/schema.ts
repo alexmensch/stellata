@@ -188,20 +188,12 @@ export interface PerfFile {
  */
 export const SURVIVORS_SCHEMA = 'stellata-survivors/1';
 
-export interface SurvivorsRecord extends SurvivorReport {
+export interface SurvivorsRecord extends Readonly<SurvivorReport> {
   readonly scenario: ScenarioName;
-  /** The counts come off the last compaction dispatch, so a read taken
-   *  before the gate went quiet belongs to a camera still arriving —
-   *  README.md § Survivor counts. */
+  /** README.md § Survivor counts. */
   readonly settleMs: number;
 }
 
-/**
- * The viewport belongs to the run rather than the record because every
- * vantage is visited at one size. It is in the block at all because the
- * frustum test produces these counts, so they move with viewport, field of
- * view and device pixel ratio the way a frame time moves with Mpx.
- */
 export interface SurvivorsRunMeta extends RunProvenance {
   readonly viewport: Viewport;
 }
