@@ -110,16 +110,49 @@ describe('every star is refilled within REFILL_SLICES frames of a request', () =
     return first;
   }
 
-  it('holds wherever in the cycle the request lands', () => {
+  // The slowest slot lands on exactly the last frame of the bound, so this
+  // pins the bound TIGHT: an over-eager wrap that re-covered slots the
+  // request did not need would pass an inequality and fail this.
+  it('holds wherever in the cycle the request lands, and is exact', () => {
     for (let requestFrame = 0; requestFrame < 2 * REFILL_SLICES; requestFrame++) {
       const wanted = Array<boolean>(requestFrame + 2 * REFILL_SLICES).fill(false);
       wanted[0] = true;
       wanted[requestFrame] = true;
       const first = firstRefillFrom(wanted, requestFrame);
-      for (const [slot, frame] of first.entries()) {
-        expect(frame, `slot ${slot}, request on frame ${requestFrame}`)
-          .toBeLessThanOrEqual(requestFrame + REFILL_SLICES - 1);
-      }
+      expect(Math.max(...first), `request on frame ${requestFrame}`)
+        .toBe(requestFrame + REFILL_SLICES - 1);
     }
+  });
+});
+
+describe('what a request costs in total', () => {
+  // The wrap restarts at slot 0 and clears `pending`, so the cycle it starts
+  // runs to the end rather than stopping where the request arrived —
+  // README.md § The spike is the problem, not the total.
+  it('charges a mid-cycle request the slices it owed plus a whole cycle', () => {
+    const wanted = Array<boolean>(3 * REFILL_SLICES).fill(false);
+    wanted[0] = true;
+    wanted[1] = true;
+    let cursor = idleRefill(COUNT);
+    let slots = 0;
+    for (const w of wanted) {
+      const plan = planRefill(cursor, w, COUNT, SLICE);
+      slots += plan.length;
+      cursor = plan.next;
+    }
+    expect(slots).toBe(2 * COUNT);
+  });
+
+  it('charges a request from a parked cursor exactly one cycle', () => {
+    const wanted = Array<boolean>(3 * REFILL_SLICES).fill(false);
+    wanted[0] = true;
+    let cursor = idleRefill(COUNT);
+    let slots = 0;
+    for (const w of wanted) {
+      const plan = planRefill(cursor, w, COUNT, SLICE);
+      slots += plan.length;
+      cursor = plan.next;
+    }
+    expect(slots).toBe(COUNT);
   });
 });
