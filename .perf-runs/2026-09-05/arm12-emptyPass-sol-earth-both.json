@@ -1,0 +1,328 @@
+{
+  "schema": "stellata-perf/1",
+  "run": {
+    "startedAt": "2026-09-05T20:30:05.011Z",
+    "finishedAt": "2026-09-05T20:31:46.637Z",
+    "url": "http://localhost:5174",
+    "argv": [
+      "--",
+      "--scenario",
+      "sol,earth",
+      "--backend",
+      "both",
+      "--passes",
+      "emptyPass",
+      "--url",
+      "http://localhost:5174",
+      "--json",
+      "/Users/alexm/github/alexmensch/stellata/.perf-runs/2026-09-05/arm12-emptyPass-sol-earth-both.json"
+    ],
+    "git": {
+      "commit": "f2deaab6bbbc04e6dcea9b61df1ff3070b07fcd4",
+      "dirty": false
+    },
+    "browser": {
+      "name": "chromium",
+      "version": "151.0.7922.34",
+      "channel": "chromium",
+      "headless": true,
+      "args": [
+        "--ignore-gpu-blocklist",
+        "--enable-unsafe-webgpu"
+      ]
+    },
+    "gpu": {
+      "webgl": {
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "vendor": "Google Inc. (Apple)",
+        "timerQuery": true
+      },
+      "webgpu": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false,
+        "timestampsAvailable": null
+      }
+    },
+    "host": {
+      "platform": "darwin",
+      "arch": "arm64"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "sol",
+      "blob": "BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB",
+      "backend": {
+        "requested": "webgl2",
+        "actual": "webgl2"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "mode": "differential",
+      "method": "raf-delta",
+      "params": {
+        "passes": [
+          "emptyPass"
+        ],
+        "method": "raf-delta",
+        "budgetMs": 180000,
+        "interleave": true
+      },
+      "settleMs": 7809,
+      "idleRafMs": 16.69999999999891,
+      "differential": [
+        {
+          "pass": "emptyPass",
+          "method": "raf-delta",
+          "baselineMs": 15.975,
+          "disabledMs": 16,
+          "savedMs": -0.025,
+          "savedPct": -0.2,
+          "samples": 120,
+          "iqrMs": 21.4,
+          "noiseMs": 1.946,
+          "bracketMs": 0.25,
+          "baselineLag1": -0.133,
+          "disabledLag1": -0.138,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "bufferMpx": 4.096
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: method pinned to raf-delta wall time — the one clock every backend shares, so cross-backend tables compare. Differentials below the vsync quantum read as zero unless the frame is already over budget.",
+        "[info] priceFrame: exposure pinned at dm -6.289 (effective limit 1.51 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'emptyPass' disabled — dwelling",
+        "[info] priceFrame: baseline 15.850 ms, re-measured 16.100 ms (drift 0.250 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 2560x1600 (4.096 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    },
+    {
+      "name": "sol",
+      "blob": "BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB",
+      "backend": {
+        "requested": "webgpu",
+        "actual": "webgpu"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "mode": "differential",
+      "method": "raf-delta",
+      "params": {
+        "passes": [
+          "emptyPass"
+        ],
+        "method": "raf-delta",
+        "budgetMs": 180000,
+        "interleave": true
+      },
+      "settleMs": 7140,
+      "idleRafMs": 16.69999999999891,
+      "differential": [
+        {
+          "pass": "emptyPass",
+          "method": "raf-delta",
+          "baselineMs": 25.45,
+          "disabledMs": 25.9,
+          "savedMs": -0.45,
+          "savedPct": -1.8,
+          "samples": 120,
+          "iqrMs": 1.2,
+          "noiseMs": 0.09,
+          "bracketMs": 0.5,
+          "baselineLag1": 0.326,
+          "disabledLag1": 0.224,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "bufferMpx": 4.096
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: method pinned to raf-delta wall time — the one clock every backend shares, so cross-backend tables compare. Differentials below the vsync quantum read as zero unless the frame is already over budget.",
+        "[info] priceFrame: exposure pinned at dm -6.289 (effective limit 1.51 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'emptyPass' disabled — dwelling",
+        "[info] priceFrame: baseline 25.200 ms, re-measured 25.700 ms (drift 0.500 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 2560x1600 (4.096 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    },
+    {
+      "name": "earth",
+      "blob": "BIXAgQEHPFWisPEAmy_pTIAvB3JRp77d8BW_muE9PwL6_xMZBH4XOKDaQQ",
+      "backend": {
+        "requested": "webgl2",
+        "actual": "webgl2"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "mode": "differential",
+      "method": "raf-delta",
+      "params": {
+        "passes": [
+          "emptyPass"
+        ],
+        "method": "raf-delta",
+        "budgetMs": 180000,
+        "interleave": true
+      },
+      "settleMs": 6501,
+      "idleRafMs": 16.69999999999891,
+      "differential": [
+        {
+          "pass": "emptyPass",
+          "method": "raf-delta",
+          "baselineMs": 15.75,
+          "disabledMs": 15.8,
+          "savedMs": -0.05,
+          "savedPct": -0.3,
+          "samples": 120,
+          "iqrMs": 15.9,
+          "noiseMs": 1.63,
+          "bracketMs": 0.4,
+          "baselineLag1": -0.131,
+          "disabledLag1": -0.089,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": -4.03,
+          "disabledLimitMag": -4.03,
+          "bufferMpx": 4.096
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: method pinned to raf-delta wall time — the one clock every backend shares, so cross-backend tables compare. Differentials below the vsync quantum read as zero unless the frame is already over budget.",
+        "[info] priceFrame: exposure pinned at dm -11.830 (effective limit -4.03 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'emptyPass' disabled — dwelling",
+        "[info] priceFrame: baseline 15.950 ms, re-measured 15.550 ms (drift -0.400 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 2560x1600 (4.096 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    },
+    {
+      "name": "earth",
+      "blob": "BIXAgQEHPFWisPEAmy_pTIAvB3JRp77d8BW_muE9PwL6_xMZBH4XOKDaQQ",
+      "backend": {
+        "requested": "webgpu",
+        "actual": "webgpu"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "mode": "differential",
+      "method": "raf-delta",
+      "params": {
+        "passes": [
+          "emptyPass"
+        ],
+        "method": "raf-delta",
+        "budgetMs": 180000,
+        "interleave": true
+      },
+      "settleMs": 6611,
+      "idleRafMs": 16.69999999999891,
+      "differential": [
+        {
+          "pass": "emptyPass",
+          "method": "raf-delta",
+          "baselineMs": 18.7,
+          "disabledMs": 18.8,
+          "savedMs": -0.1,
+          "savedPct": -0.5,
+          "samples": 120,
+          "iqrMs": 0.5,
+          "noiseMs": 0.05,
+          "bracketMs": 0,
+          "baselineLag1": -0.121,
+          "disabledLag1": -0.212,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": -4.052,
+          "disabledLimitMag": -4.052,
+          "bufferMpx": 4.096
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: method pinned to raf-delta wall time — the one clock every backend shares, so cross-backend tables compare. Differentials below the vsync quantum read as zero unless the frame is already over budget.",
+        "[info] priceFrame: exposure pinned at dm -11.852 (effective limit -4.05 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'emptyPass' disabled — dwelling",
+        "[info] priceFrame: baseline 18.700 ms, re-measured 18.700 ms (drift 0.000 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 2560x1600 (4.096 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    }
+  ]
+}

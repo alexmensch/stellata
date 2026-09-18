@@ -360,7 +360,7 @@ identical from a bound. `--empty-passes 16` at Sol separates them (linear
 resolves near 0.4 ms; coalescing stays pinned near 0.1).
 
 **Where.** The counts and the floor are stellata-0it.37's notes, which
-name the `.perf-runs` file each arm wrote in the main checkout. The
+name the `.perf-runs` file each arm wrote. The
 instrument is `src/client/debug/frame-cost/passes/README.md` § The
 roster.
 

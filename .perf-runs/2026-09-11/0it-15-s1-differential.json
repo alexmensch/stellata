@@ -1,0 +1,415 @@
+{
+  "schema": "stellata-perf/2",
+  "run": {
+    "startedAt": "2026-09-11T18:40:14.993Z",
+    "finishedAt": "2026-09-11T18:42:19.052Z",
+    "url": "http://localhost:5173",
+    "argv": [
+      "--",
+      "--mode",
+      "differential",
+      "--scenario",
+      "all",
+      "--backend",
+      "webgpu",
+      "--passes",
+      "extinctionPrepass",
+      "--url",
+      "http://localhost:5173",
+      "--json",
+      "/Users/alexm/github/alexmensch/stellata/.perf-runs/2026-09-11/0it-15-s1-differential.json"
+    ],
+    "git": {
+      "commit": "45b15c44a61b91416ab540e8217014b9b489f3df",
+      "dirty": false,
+      "mainCommit": "ef9d2f2372dd158cccce909db48d760d364f1eec",
+      "mainReachable": false
+    },
+    "browser": {
+      "name": "chromium",
+      "version": "151.0.7922.34",
+      "channel": "chromium",
+      "headless": true,
+      "args": [
+        "--ignore-gpu-blocklist",
+        "--enable-unsafe-webgpu"
+      ]
+    },
+    "gpu": {
+      "webgl": {
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "vendor": "Google Inc. (Apple)",
+        "timerQuery": true
+      },
+      "webgpu": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false,
+        "timestampsAvailable": true
+      }
+    },
+    "host": {
+      "platform": "darwin",
+      "arch": "arm64"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "mw120",
+      "blob": "BI3AgQEHrJQCP5TnAUFu649AB3JRp77d8BW_muE9P24C-v8TGQR-Fzig2kE",
+      "backend": {
+        "requested": "webgpu",
+        "actual": "webgpu"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "recordCount": 388071,
+      "position": 1,
+      "mode": "differential",
+      "method": "timestamp",
+      "params": {
+        "passes": [
+          "extinctionPrepass"
+        ],
+        "budgetMs": 180000,
+        "interleave": true,
+        "cadenceMs": 16.69999999999891,
+        "preDisable": [],
+        "noPark": false
+      },
+      "settleMs": 5314,
+      "idleRafMs": 16.69999999999891,
+      "differential": [
+        {
+          "pass": "extinctionPrepass",
+          "method": "timestamp",
+          "baselineMs": 21.43,
+          "disabledMs": 29.836,
+          "savedMs": -8.405,
+          "savedPct": -39.2,
+          "samples": 27,
+          "iqrMs": 0.053,
+          "noiseMs": 0.009,
+          "bracketMs": 0.001,
+          "baselineLag1": -0.114,
+          "disabledLag1": -0.131,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 7.8,
+          "disabledLimitMag": 7.8,
+          "bufferMpx": 4.096
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: exposure pinned at dm 0.000 (effective limit 7.80 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'extinctionPrepass' disabled — dwelling",
+        "[info] priceFrame: baseline 21.431 ms, re-measured 21.430 ms (drift -0.001 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 2560x1600 (4.096 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    },
+    {
+      "name": "sol",
+      "blob": "BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB",
+      "backend": {
+        "requested": "webgpu",
+        "actual": "webgpu"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "recordCount": 388071,
+      "position": 2,
+      "mode": "differential",
+      "method": "timestamp",
+      "params": {
+        "passes": [
+          "extinctionPrepass"
+        ],
+        "budgetMs": 180000,
+        "interleave": true,
+        "cadenceMs": 16.69999999999891,
+        "preDisable": [],
+        "noPark": false
+      },
+      "settleMs": 7409,
+      "idleRafMs": 16.69999999999891,
+      "differential": [
+        {
+          "pass": "extinctionPrepass",
+          "method": "timestamp",
+          "baselineMs": 22.411,
+          "disabledMs": 33.618,
+          "savedMs": -11.208,
+          "savedPct": -50,
+          "samples": 29,
+          "iqrMs": 0.111,
+          "noiseMs": 0.019,
+          "bracketMs": 0.005,
+          "baselineLag1": -0.033,
+          "disabledLag1": 0.618,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "bufferMpx": 4.096
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: exposure pinned at dm -6.289 (effective limit 1.51 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'extinctionPrepass' disabled — dwelling",
+        "[info] priceFrame: baseline 22.408 ms, re-measured 22.413 ms (drift 0.005 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 2560x1600 (4.096 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    },
+    {
+      "name": "earth",
+      "blob": "BIXAgQEHPFWisPEAmy_pTIAvB3JRp77d8BW_muE9PwL6_xMZBH4XOKDaQQ",
+      "backend": {
+        "requested": "webgpu",
+        "actual": "webgpu"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "recordCount": 388071,
+      "position": 3,
+      "mode": "differential",
+      "method": "timestamp",
+      "params": {
+        "passes": [
+          "extinctionPrepass"
+        ],
+        "budgetMs": 180000,
+        "interleave": true,
+        "cadenceMs": 16.69999999999891,
+        "preDisable": [],
+        "noPark": false
+      },
+      "settleMs": 7114,
+      "idleRafMs": 16.69999999999891,
+      "differential": [
+        {
+          "pass": "extinctionPrepass",
+          "method": "timestamp",
+          "baselineMs": 17.147,
+          "disabledMs": 28.43,
+          "savedMs": -11.283,
+          "savedPct": -65.8,
+          "samples": 29,
+          "iqrMs": 36.852,
+          "noiseMs": 6.358,
+          "bracketMs": 0.005,
+          "baselineLag1": -0.134,
+          "disabledLag1": 0.584,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": -4.052,
+          "disabledLimitMag": -4.052,
+          "bufferMpx": 4.096
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: exposure pinned at dm -11.852 (effective limit -4.05 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'extinctionPrepass' disabled — dwelling",
+        "[info] priceFrame: baseline 17.150 ms, re-measured 17.144 ms (drift -0.005 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 2560x1600 (4.096 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    },
+    {
+      "name": "mw50",
+      "blob": "BIXAgQEHPpUCPyboAUEQ7I9AB3JRp77d8BW_muE9PwL6_xMZBH4XOKDaQQ",
+      "backend": {
+        "requested": "webgpu",
+        "actual": "webgpu"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "recordCount": 388071,
+      "position": 4,
+      "mode": "differential",
+      "method": "timestamp",
+      "params": {
+        "passes": [
+          "extinctionPrepass"
+        ],
+        "budgetMs": 180000,
+        "interleave": true,
+        "cadenceMs": 16.600000000000364,
+        "preDisable": [],
+        "noPark": false
+      },
+      "settleMs": 5325,
+      "idleRafMs": 16.600000000000364,
+      "differential": [
+        {
+          "pass": "extinctionPrepass",
+          "method": "timestamp",
+          "baselineMs": 31.87,
+          "disabledMs": 40.193,
+          "savedMs": -8.323,
+          "savedPct": -26.1,
+          "samples": 28,
+          "iqrMs": 0.056,
+          "noiseMs": 0.01,
+          "bracketMs": 0.001,
+          "baselineLag1": -0.133,
+          "disabledLag1": 0.013,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 7.8,
+          "disabledLimitMag": 7.8,
+          "bufferMpx": 4.096
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: exposure pinned at dm 0.000 (effective limit 7.80 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'extinctionPrepass' disabled — dwelling",
+        "[info] priceFrame: baseline 31.870 ms, re-measured 31.869 ms (drift -0.001 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 2560x1600 (4.096 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    },
+    {
+      "name": "lg",
+      "blob": "BIXAgQEHntYpSaZnI0jhszBJB3JRp77d8BW_muE9PwL6_xMZBH4XOKDaQQ",
+      "backend": {
+        "requested": "webgpu",
+        "actual": "webgpu"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "recordCount": 388071,
+      "position": 5,
+      "mode": "differential",
+      "method": "timestamp",
+      "params": {
+        "passes": [
+          "extinctionPrepass"
+        ],
+        "budgetMs": 180000,
+        "interleave": true,
+        "cadenceMs": 16.699999999999818,
+        "preDisable": [],
+        "noPark": false
+      },
+      "settleMs": 4804,
+      "idleRafMs": 16.699999999999818,
+      "differential": [
+        {
+          "pass": "extinctionPrepass",
+          "method": "timestamp",
+          "baselineMs": 12.617,
+          "disabledMs": 13.203,
+          "savedMs": -0.586,
+          "savedPct": -4.6,
+          "samples": 60,
+          "iqrMs": 2.558,
+          "noiseMs": 0.146,
+          "bracketMs": 1.372,
+          "baselineLag1": 0.918,
+          "disabledLag1": 0.826,
+          "baselineReadback": 0.575,
+          "disabledReadback": 0.5,
+          "baselineLimitMag": 7.8,
+          "disabledLimitMag": 7.8,
+          "bufferMpx": 4.096
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: exposure pinned at dm 0.000 (effective limit 7.80 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'extinctionPrepass' disabled — dwelling",
+        "[info] priceFrame: baseline 11.931 ms, re-measured 13.303 ms (drift 1.372 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 2560x1600 (4.096 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    }
+  ]
+}

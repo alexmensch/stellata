@@ -248,13 +248,10 @@ say in the announcement what has run recently.
 
 ## Recording
 
-Write every run under `.perf-runs/<date>/` in the **main checkout** — the
-`--json` path and a `tee` of the console log — never inside a worktree, the
-home directory or `/tmp`. The worktree goes when its PR lands and the runs
-would go with it; the main checkout persists and the folder is gitignored
-there. From a worktree, run `git rev-parse --path-format=absolute
---git-common-dir` first (it prints `<main checkout>/.git`) and pass its parent
-spelled out — the worktree guard rejects `$( )` in a command. Results go to
-the bead's notes with the `.perf-runs/<date>/<file>` path, never into a
-README. Paste the table and the adapter block, and say which vantage,
-backend, method, headless flag and buffer size the run used.
+Write every run under `.perf-runs/<date>/` — the `--json` path and a `tee`
+of the console log — never the home directory or `/tmp`. The folder is tracked,
+so a run taken in a worktree is committed with the PR it justifies rather than
+dying with the worktree; `.perf-runs/README.md` carries what a run file is and
+is not. Results go to the bead's notes with the `.perf-runs/<date>/<file>`
+path, never into a README. Paste the table and the adapter block, and say which
+vantage, backend, method, headless flag and buffer size the run used.

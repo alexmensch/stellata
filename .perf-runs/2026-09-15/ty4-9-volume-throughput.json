@@ -1,0 +1,256 @@
+{
+  "schema": "stellata-perf/2",
+  "run": {
+    "startedAt": "2026-09-15T10:24:00.939Z",
+    "finishedAt": "2026-09-15T10:28:17.159Z",
+    "url": "http://localhost:5173",
+    "argv": [
+      "--",
+      "--mode",
+      "differential",
+      "--scenario",
+      "sol",
+      "--backend",
+      "webgpu",
+      "--method",
+      "raf-delta",
+      "--passes",
+      "volFetchCoh50M,volFetchCoh101M,volFetchCoh201M,volFetchSct50M,volFetchSct101M,volFetchSct201M",
+      "--budget-ms",
+      "420000",
+      "--url",
+      "http://localhost:5173",
+      "--json",
+      "/Users/alexm/github/alexmensch/stellata/.perf-runs/2026-09-15/ty4-9-volume-throughput.json"
+    ],
+    "git": {
+      "commit": "297e12fe3d3f472fab254ca31c8e774cfdd37471",
+      "dirty": false,
+      "mainCommit": "f03d23b9061f5c97cfe638fa51336bd806bd95cf",
+      "mainReachable": false
+    },
+    "browser": {
+      "name": "chromium",
+      "version": "151.0.7922.34",
+      "channel": "chromium",
+      "headless": true,
+      "args": [
+        "--ignore-gpu-blocklist",
+        "--enable-unsafe-webgpu"
+      ]
+    },
+    "gpu": {
+      "webgl": {
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "vendor": "Google Inc. (Apple)",
+        "timerQuery": true
+      },
+      "webgpu": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false,
+        "timestampsAvailable": true
+      }
+    },
+    "host": {
+      "platform": "darwin",
+      "arch": "arm64"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "sol",
+      "blob": "BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB",
+      "backend": {
+        "requested": "webgpu",
+        "actual": "webgpu"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "recordCount": 388071,
+      "position": 1,
+      "mode": "differential",
+      "method": "raf-delta",
+      "params": {
+        "passes": [
+          "volFetchCoh50M",
+          "volFetchCoh101M",
+          "volFetchCoh201M",
+          "volFetchSct50M",
+          "volFetchSct101M",
+          "volFetchSct201M"
+        ],
+        "method": "raf-delta",
+        "budgetMs": 420000,
+        "interleave": true,
+        "cadenceMs": 16.69999999999891,
+        "preDisable": [],
+        "noPark": false
+      },
+      "settleMs": 8412,
+      "idleRafMs": 16.69999999999891,
+      "differential": [
+        {
+          "pass": "volFetchCoh50M",
+          "method": "raf-delta",
+          "baselineMs": 119.675,
+          "disabledMs": 118.6,
+          "savedMs": 1.075,
+          "savedPct": 0.9,
+          "samples": 120,
+          "iqrMs": 1.9,
+          "noiseMs": 0.167,
+          "bracketMs": 0.15,
+          "baselineLag1": -0.063,
+          "disabledLag1": -0.067,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "cadenceBound": false,
+          "bufferMpx": 4.096,
+          "baselineRising": false
+        },
+        {
+          "pass": "volFetchCoh101M",
+          "method": "raf-delta",
+          "baselineMs": 119.875,
+          "disabledMs": 117.95,
+          "savedMs": 1.925,
+          "savedPct": 1.6,
+          "samples": 120,
+          "iqrMs": 1.9,
+          "noiseMs": 0.189,
+          "bracketMs": 0.25,
+          "baselineLag1": -0.096,
+          "disabledLag1": -0.125,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "cadenceBound": false,
+          "bufferMpx": 4.096,
+          "baselineRising": false
+        },
+        {
+          "pass": "volFetchCoh201M",
+          "method": "raf-delta",
+          "baselineMs": 119.85,
+          "disabledMs": 116.5,
+          "savedMs": 3.35,
+          "savedPct": 2.8,
+          "samples": 120,
+          "iqrMs": 1.9,
+          "noiseMs": 0.179,
+          "bracketMs": 0.3,
+          "baselineLag1": -0.134,
+          "disabledLag1": 0.038,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "cadenceBound": false,
+          "bufferMpx": 4.096,
+          "baselineRising": false
+        },
+        {
+          "pass": "volFetchSct50M",
+          "method": "raf-delta",
+          "baselineMs": 119.825,
+          "disabledMs": 104.55,
+          "savedMs": 15.275,
+          "savedPct": 12.7,
+          "samples": 120,
+          "iqrMs": 1.9,
+          "noiseMs": 0.193,
+          "bracketMs": 0.25,
+          "baselineLag1": -0.063,
+          "disabledLag1": 0.052,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "cadenceBound": false,
+          "bufferMpx": 4.096,
+          "baselineRising": false
+        },
+        {
+          "pass": "volFetchSct101M",
+          "method": "raf-delta",
+          "baselineMs": 120.725,
+          "disabledMs": 91.3,
+          "savedMs": 29.425,
+          "savedPct": 24.4,
+          "samples": 120,
+          "iqrMs": 3.4,
+          "noiseMs": 0.304,
+          "bracketMs": 1.55,
+          "baselineLag1": -0.001,
+          "disabledLag1": 0.324,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "cadenceBound": false,
+          "bufferMpx": 4.096,
+          "baselineRising": false
+        },
+        {
+          "pass": "volFetchSct201M",
+          "method": "raf-delta",
+          "baselineMs": 124.625,
+          "disabledMs": 62.9,
+          "savedMs": 61.725,
+          "savedPct": 49.5,
+          "samples": 120,
+          "iqrMs": 4.1,
+          "noiseMs": 0.309,
+          "bracketMs": 6.25,
+          "baselineLag1": 0.065,
+          "disabledLag1": -0.289,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "cadenceBound": false,
+          "bufferMpx": 4.096,
+          "baselineRising": false
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: method pinned to raf-delta wall time — the one clock every backend shares, so cross-backend tables compare. Differentials below the vsync quantum read as zero unless the frame is already over budget.",
+        "[info] priceFrame: display cadence 16.70 ms (59.9 Hz) — a row whose dwells sat on it is stamped cadenceBound and resolves nothing.",
+        "[warning] THREE.WebGPUTimestampQueryPool [compute]: Maximum number of queries exceeded, when using trackTimestamp it is necessary to resolves the queries via renderer.resolveTimestampsAsync( THREE.TimestampQuery.COMPUTE ).",
+        "[info] priceFrame: exposure pinned at dm -6.289 (effective limit 1.51 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'volFetchCoh50M' disabled — dwelling",
+        "[info] priceFrame: 'volFetchCoh101M' disabled — dwelling",
+        "[info] priceFrame: 'volFetchCoh201M' disabled — dwelling",
+        "[info] priceFrame: 'volFetchSct50M' disabled — dwelling",
+        "[info] priceFrame: 'volFetchSct101M' disabled — dwelling",
+        "[info] priceFrame: 'volFetchSct201M' disabled — dwelling",
+        "[info] priceFrame: baseline 119.600 ms, re-measured 127.750 ms (drift 8.150 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 2560x1600 (4.096 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    }
+  ]
+}

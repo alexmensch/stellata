@@ -1,0 +1,590 @@
+{
+  "schema": "stellata-perf/1",
+  "run": {
+    "startedAt": "2026-09-06T08:36:59.928Z",
+    "finishedAt": "2026-09-06T08:48:04.369Z",
+    "url": "http://localhost:5173",
+    "argv": [
+      "--",
+      "--mode",
+      "differential",
+      "--scenario",
+      "sol,earth",
+      "--backend",
+      "both",
+      "--width",
+      "1920",
+      "--height",
+      "1200",
+      "--dpr",
+      "2",
+      "--passes",
+      "reduction,hdrChain,mwBand,mrtAttachments",
+      "--cooldown-ms",
+      "120000",
+      "--url",
+      "http://localhost:5173",
+      "--json",
+      "/Users/alexm/github/alexmensch/stellata/.perf-runs/2026-09-06/9mpx-sol-earth-both-diff.json"
+    ],
+    "git": {
+      "commit": "803c9211b6207879cff5e82be1fc2bf2e3132073",
+      "dirty": false
+    },
+    "browser": {
+      "name": "chromium",
+      "version": "151.0.7922.34",
+      "channel": "chromium",
+      "headless": true,
+      "args": [
+        "--ignore-gpu-blocklist",
+        "--enable-unsafe-webgpu"
+      ]
+    },
+    "gpu": {
+      "webgl": {
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "vendor": "Google Inc. (Apple)",
+        "timerQuery": true
+      },
+      "webgpu": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false,
+        "timestampsAvailable": null
+      }
+    },
+    "host": {
+      "platform": "darwin",
+      "arch": "arm64"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "sol",
+      "blob": "BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB",
+      "backend": {
+        "requested": "webgl2",
+        "actual": "webgl2"
+      },
+      "viewport": {
+        "width": 1920,
+        "height": 1200,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 3840,
+        "height": 2400
+      },
+      "bufferMpx": 9.216,
+      "mode": "differential",
+      "method": "raf-delta",
+      "params": {
+        "passes": [
+          "reduction",
+          "hdrChain",
+          "mwBand",
+          "mrtAttachments"
+        ],
+        "method": "raf-delta",
+        "budgetMs": 180000,
+        "interleave": true
+      },
+      "settleMs": 9955,
+      "idleRafMs": 16.69999999999891,
+      "differential": [
+        {
+          "pass": "mwBand",
+          "method": "raf-delta",
+          "baselineMs": 26.25,
+          "disabledMs": 16.5,
+          "savedMs": 9.75,
+          "savedPct": 37.1,
+          "samples": 120,
+          "iqrMs": 48.8,
+          "noiseMs": 3.154,
+          "bracketMs": 1.9,
+          "baselineLag1": -0.13,
+          "disabledLag1": -0.141,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "bufferMpx": 9.216
+        },
+        {
+          "pass": "hdrChain",
+          "method": "raf-delta",
+          "baselineMs": 26.35,
+          "disabledMs": 18.1,
+          "savedMs": 8.25,
+          "savedPct": 31.3,
+          "samples": 120,
+          "iqrMs": 48.8,
+          "noiseMs": 3.981,
+          "bracketMs": 1.7,
+          "baselineLag1": -0.141,
+          "disabledLag1": -0.095,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "bufferMpx": 9.216
+        },
+        {
+          "pass": "mrtAttachments",
+          "method": "raf-delta",
+          "baselineMs": 25.825,
+          "disabledMs": 13.6,
+          "savedMs": 12.225,
+          "savedPct": 47.3,
+          "samples": 120,
+          "iqrMs": 48,
+          "noiseMs": 4.923,
+          "bracketMs": 0.65,
+          "baselineLag1": -0.128,
+          "disabledLag1": -0.235,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.275,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "bufferMpx": 9.216
+        },
+        {
+          "pass": "reduction",
+          "method": "raf-delta",
+          "baselineMs": 26.275,
+          "disabledMs": 26.75,
+          "savedMs": -0.475,
+          "savedPct": -1.8,
+          "samples": 120,
+          "iqrMs": 48,
+          "noiseMs": 4.661,
+          "bracketMs": 0.25,
+          "baselineLag1": -0.11,
+          "disabledLag1": -0.104,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "bufferMpx": 9.216
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: method pinned to raf-delta wall time — the one clock every backend shares, so cross-backend tables compare. Differentials below the vsync quantum read as zero unless the frame is already over budget.",
+        "[info] priceFrame: exposure pinned at dm -6.289 (effective limit 1.51 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'mwBand' disabled — dwelling",
+        "[info] priceFrame: 'hdrChain' disabled — dwelling",
+        "[info] priceFrame: 'mrtAttachments' disabled — dwelling",
+        "[info] priceFrame: 'reduction' disabled — dwelling",
+        "[info] priceFrame: baseline 25.300 ms, re-measured 26.400 ms (drift 1.100 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 3840x2400 (9.216 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    },
+    {
+      "name": "sol",
+      "blob": "BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB",
+      "backend": {
+        "requested": "webgpu",
+        "actual": "webgpu"
+      },
+      "viewport": {
+        "width": 1920,
+        "height": 1200,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 3840,
+        "height": 2400
+      },
+      "bufferMpx": 9.216,
+      "mode": "differential",
+      "method": "raf-delta",
+      "params": {
+        "passes": [
+          "reduction",
+          "hdrChain",
+          "mwBand",
+          "mrtAttachments"
+        ],
+        "method": "raf-delta",
+        "budgetMs": 180000,
+        "interleave": true
+      },
+      "settleMs": 8689,
+      "idleRafMs": 16.699999999999818,
+      "differential": [
+        {
+          "pass": "mwBand",
+          "method": "raf-delta",
+          "baselineMs": 47.75,
+          "disabledMs": 22.8,
+          "savedMs": 24.95,
+          "savedPct": 52.3,
+          "samples": 120,
+          "iqrMs": 2.5,
+          "noiseMs": 0.135,
+          "bracketMs": 1.7,
+          "baselineLag1": 0.328,
+          "disabledLag1": 0.023,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "bufferMpx": 9.216
+        },
+        {
+          "pass": "hdrChain",
+          "method": "raf-delta",
+          "baselineMs": 47.75,
+          "disabledMs": 35.5,
+          "savedMs": 12.25,
+          "savedPct": 25.7,
+          "samples": 120,
+          "iqrMs": 2.8,
+          "noiseMs": 0.184,
+          "bracketMs": 1.7,
+          "baselineLag1": 0.324,
+          "disabledLag1": -0.238,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "bufferMpx": 9.216
+        },
+        {
+          "pass": "mrtAttachments",
+          "method": "raf-delta",
+          "baselineMs": 49.1,
+          "disabledMs": 46.4,
+          "savedMs": 2.7,
+          "savedPct": 5.5,
+          "samples": 120,
+          "iqrMs": 2.8,
+          "noiseMs": 0.156,
+          "bracketMs": 1,
+          "baselineLag1": 0.161,
+          "disabledLag1": 0.174,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "bufferMpx": 9.216
+        },
+        {
+          "pass": "reduction",
+          "method": "raf-delta",
+          "baselineMs": 49.55,
+          "disabledMs": 49.8,
+          "savedMs": -0.25,
+          "savedPct": -0.5,
+          "samples": 120,
+          "iqrMs": 1.3,
+          "noiseMs": 0.126,
+          "bracketMs": 0.1,
+          "baselineLag1": 0.098,
+          "disabledLag1": 0.24,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "bufferMpx": 9.216
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: method pinned to raf-delta wall time — the one clock every backend shares, so cross-backend tables compare. Differentials below the vsync quantum read as zero unless the frame is already over budget.",
+        "[info] priceFrame: exposure pinned at dm -6.289 (effective limit 1.51 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'mwBand' disabled — dwelling",
+        "[info] priceFrame: 'hdrChain' disabled — dwelling",
+        "[info] priceFrame: 'mrtAttachments' disabled — dwelling",
+        "[info] priceFrame: 'reduction' disabled — dwelling",
+        "[info] priceFrame: baseline 48.600 ms, re-measured 49.500 ms (drift 0.900 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 3840x2400 (9.216 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    },
+    {
+      "name": "earth",
+      "blob": "BIXAgQEHPFWisPEAmy_pTIAvB3JRp77d8BW_muE9PwL6_xMZBH4XOKDaQQ",
+      "backend": {
+        "requested": "webgl2",
+        "actual": "webgl2"
+      },
+      "viewport": {
+        "width": 1920,
+        "height": 1200,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 3840,
+        "height": 2400
+      },
+      "bufferMpx": 9.216,
+      "mode": "differential",
+      "method": "raf-delta",
+      "params": {
+        "passes": [
+          "reduction",
+          "hdrChain",
+          "mwBand",
+          "mrtAttachments"
+        ],
+        "method": "raf-delta",
+        "budgetMs": 180000,
+        "interleave": true
+      },
+      "settleMs": 7142,
+      "idleRafMs": 16.69999999999891,
+      "differential": [
+        {
+          "pass": "mwBand",
+          "method": "raf-delta",
+          "baselineMs": 19.75,
+          "disabledMs": 16.35,
+          "savedMs": 3.4,
+          "savedPct": 17.2,
+          "samples": 120,
+          "iqrMs": 38.7,
+          "noiseMs": 3.113,
+          "bracketMs": 1.2,
+          "baselineLag1": -0.108,
+          "disabledLag1": -0.146,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": -3.156,
+          "disabledLimitMag": -3.156,
+          "bufferMpx": 9.216
+        },
+        {
+          "pass": "hdrChain",
+          "method": "raf-delta",
+          "baselineMs": 19.975,
+          "disabledMs": 15.5,
+          "savedMs": 4.475,
+          "savedPct": 22.4,
+          "samples": 120,
+          "iqrMs": 38.7,
+          "noiseMs": 2.692,
+          "bracketMs": 1.65,
+          "baselineLag1": -0.124,
+          "disabledLag1": -0.147,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": -3.156,
+          "disabledLimitMag": -3.156,
+          "bufferMpx": 9.216
+        },
+        {
+          "pass": "mrtAttachments",
+          "method": "raf-delta",
+          "baselineMs": 20.575,
+          "disabledMs": 16.35,
+          "savedMs": 4.225,
+          "savedPct": 20.5,
+          "samples": 120,
+          "iqrMs": 37.8,
+          "noiseMs": 2.586,
+          "bracketMs": 0.45,
+          "baselineLag1": -0.129,
+          "disabledLag1": -0.155,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": -3.156,
+          "disabledLimitMag": -3.156,
+          "bufferMpx": 9.216
+        },
+        {
+          "pass": "reduction",
+          "method": "raf-delta",
+          "baselineMs": 19.9,
+          "disabledMs": 20.05,
+          "savedMs": -0.15,
+          "savedPct": -0.8,
+          "samples": 120,
+          "iqrMs": 37.9,
+          "noiseMs": 3.904,
+          "bracketMs": 0.9,
+          "baselineLag1": -0.122,
+          "disabledLag1": -0.109,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": -3.156,
+          "disabledLimitMag": -3.156,
+          "bufferMpx": 9.216
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: method pinned to raf-delta wall time — the one clock every backend shares, so cross-backend tables compare. Differentials below the vsync quantum read as zero unless the frame is already over budget.",
+        "[info] priceFrame: exposure pinned at dm -10.956 (effective limit -3.16 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'mwBand' disabled — dwelling",
+        "[info] priceFrame: 'hdrChain' disabled — dwelling",
+        "[info] priceFrame: 'mrtAttachments' disabled — dwelling",
+        "[info] priceFrame: 'reduction' disabled — dwelling",
+        "[info] priceFrame: baseline 20.350 ms, re-measured 19.450 ms (drift -0.900 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 3840x2400 (9.216 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    },
+    {
+      "name": "earth",
+      "blob": "BIXAgQEHPFWisPEAmy_pTIAvB3JRp77d8BW_muE9PwL6_xMZBH4XOKDaQQ",
+      "backend": {
+        "requested": "webgpu",
+        "actual": "webgpu"
+      },
+      "viewport": {
+        "width": 1920,
+        "height": 1200,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 3840,
+        "height": 2400
+      },
+      "bufferMpx": 9.216,
+      "mode": "differential",
+      "method": "raf-delta",
+      "params": {
+        "passes": [
+          "reduction",
+          "hdrChain",
+          "mwBand",
+          "mrtAttachments"
+        ],
+        "method": "raf-delta",
+        "budgetMs": 180000,
+        "interleave": true
+      },
+      "settleMs": 6257,
+      "idleRafMs": 16.69999999999891,
+      "differential": [
+        {
+          "pass": "mwBand",
+          "method": "raf-delta",
+          "baselineMs": 35.9,
+          "disabledMs": 21.6,
+          "savedMs": 14.3,
+          "savedPct": 39.8,
+          "samples": 120,
+          "iqrMs": 1.7,
+          "noiseMs": 0.115,
+          "bracketMs": 0,
+          "baselineLag1": 0.219,
+          "disabledLag1": -0.312,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.217,
+          "baselineLimitMag": -3.198,
+          "disabledLimitMag": -3.198,
+          "bufferMpx": 9.216
+        },
+        {
+          "pass": "hdrChain",
+          "method": "raf-delta",
+          "baselineMs": 36,
+          "disabledMs": 21.9,
+          "savedMs": 14.1,
+          "savedPct": 39.2,
+          "samples": 120,
+          "iqrMs": 1.6,
+          "noiseMs": 0.106,
+          "bracketMs": 0.2,
+          "baselineLag1": 0.114,
+          "disabledLag1": -0.123,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": -3.198,
+          "disabledLimitMag": -3.198,
+          "bufferMpx": 9.216
+        },
+        {
+          "pass": "mrtAttachments",
+          "method": "raf-delta",
+          "baselineMs": 36.075,
+          "disabledMs": 32.8,
+          "savedMs": 3.275,
+          "savedPct": 9.1,
+          "samples": 120,
+          "iqrMs": 1.6,
+          "noiseMs": 0.154,
+          "bracketMs": 0.05,
+          "baselineLag1": 0.082,
+          "disabledLag1": 0.604,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": -3.198,
+          "disabledLimitMag": -3.198,
+          "bufferMpx": 9.216
+        },
+        {
+          "pass": "reduction",
+          "method": "raf-delta",
+          "baselineMs": 35.25,
+          "disabledMs": 33.9,
+          "savedMs": 1.35,
+          "savedPct": 3.8,
+          "samples": 120,
+          "iqrMs": 2.1,
+          "noiseMs": 0.183,
+          "bracketMs": 1.6,
+          "baselineLag1": 0.289,
+          "disabledLag1": 0.364,
+          "baselineReadback": 0.246,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": -3.198,
+          "disabledLimitMag": -3.198,
+          "bufferMpx": 9.216
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: method pinned to raf-delta wall time — the one clock every backend shares, so cross-backend tables compare. Differentials below the vsync quantum read as zero unless the frame is already over budget.",
+        "[info] priceFrame: exposure pinned at dm -10.998 (effective limit -3.20 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'mwBand' disabled — dwelling",
+        "[info] priceFrame: 'hdrChain' disabled — dwelling",
+        "[info] priceFrame: 'mrtAttachments' disabled — dwelling",
+        "[info] priceFrame: 'reduction' disabled — dwelling",
+        "[info] priceFrame: baseline 35.900 ms, re-measured 34.450 ms (drift -1.450 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 3840x2400 (9.216 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    }
+  ]
+}

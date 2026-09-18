@@ -1,0 +1,79 @@
+{
+  "schema": "stellata-perf/2",
+  "run": {
+    "startedAt": "2026-09-10T21:20:38.422Z",
+    "finishedAt": "2026-09-10T21:20:39.653Z",
+    "url": "http://localhost:5173",
+    "argv": [
+      "--",
+      "--mode",
+      "probe",
+      "--scenario",
+      "sol",
+      "--backend",
+      "webgpu",
+      "--hash",
+      "webgpu-gate=force",
+      "--json",
+      "/Users/alexm/github/alexmensch/stellata/.perf-runs/2026-09-10/gate-force-49-28.json"
+    ],
+    "git": {
+      "commit": "117aefe5cdc3ba2b69cfdfbd6694fcb89b8050da",
+      "dirty": false,
+      "mainCommit": "9f56f2fbd7af26d050873134ef7aa9098c2baed8",
+      "mainReachable": false
+    },
+    "browser": {
+      "name": "chromium",
+      "version": "151.0.7922.34",
+      "channel": "chromium",
+      "headless": true,
+      "args": [
+        "--ignore-gpu-blocklist",
+        "--enable-unsafe-webgpu"
+      ]
+    },
+    "gpu": null,
+    "host": {
+      "platform": "darwin",
+      "arch": "arm64"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "sol",
+      "blob": "BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB",
+      "backend": {
+        "requested": "webgpu",
+        "actual": null
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": null,
+      "bufferMpx": null,
+      "recordCount": null,
+      "position": 1,
+      "mode": "probe",
+      "method": null,
+      "params": {},
+      "settleMs": null,
+      "idleRafMs": null,
+      "differential": null,
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": true,
+      "failure": "the requires-WebGPU gate took the page over, verdict 'no-api' — this browser cannot run the renderer, so there is no frame to price",
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    }
+  ]
+}

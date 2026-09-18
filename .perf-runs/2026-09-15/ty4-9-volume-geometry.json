@@ -1,0 +1,256 @@
+{
+  "schema": "stellata-perf/2",
+  "run": {
+    "startedAt": "2026-09-15T10:39:20.871Z",
+    "finishedAt": "2026-09-15T10:41:26.302Z",
+    "url": "http://localhost:5173",
+    "argv": [
+      "--",
+      "--mode",
+      "differential",
+      "--scenario",
+      "sol",
+      "--backend",
+      "webgpu",
+      "--method",
+      "raf-delta",
+      "--passes",
+      "volCohCtl,volSctCtl,volPin13,volPin26,volPin13far,volPin1p5near",
+      "--budget-ms",
+      "420000",
+      "--url",
+      "http://localhost:5173",
+      "--json",
+      "/Users/alexm/github/alexmensch/stellata/.perf-runs/2026-09-15/ty4-9-volume-geometry.json"
+    ],
+    "git": {
+      "commit": "3edd22a51680129934a628981ef765237363cf5d",
+      "dirty": false,
+      "mainCommit": "f03d23b9061f5c97cfe638fa51336bd806bd95cf",
+      "mainReachable": false
+    },
+    "browser": {
+      "name": "chromium",
+      "version": "151.0.7922.34",
+      "channel": "chromium",
+      "headless": true,
+      "args": [
+        "--ignore-gpu-blocklist",
+        "--enable-unsafe-webgpu"
+      ]
+    },
+    "gpu": {
+      "webgl": {
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "vendor": "Google Inc. (Apple)",
+        "timerQuery": true
+      },
+      "webgpu": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false,
+        "timestampsAvailable": true
+      }
+    },
+    "host": {
+      "platform": "darwin",
+      "arch": "arm64"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "sol",
+      "blob": "BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB",
+      "backend": {
+        "requested": "webgpu",
+        "actual": "webgpu"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "recordCount": 388071,
+      "position": 1,
+      "mode": "differential",
+      "method": "raf-delta",
+      "params": {
+        "passes": [
+          "volCohCtl",
+          "volSctCtl",
+          "volPin13",
+          "volPin26",
+          "volPin13far",
+          "volPin1p5near"
+        ],
+        "method": "raf-delta",
+        "budgetMs": 420000,
+        "interleave": true,
+        "cadenceMs": 16.69999999999891,
+        "preDisable": [],
+        "noPark": false
+      },
+      "settleMs": 7505,
+      "idleRafMs": 16.69999999999891,
+      "differential": [
+        {
+          "pass": "volCohCtl",
+          "method": "raf-delta",
+          "baselineMs": 55.525,
+          "disabledMs": 53.8,
+          "savedMs": 1.725,
+          "savedPct": 3.1,
+          "samples": 120,
+          "iqrMs": 0.9,
+          "noiseMs": 0.085,
+          "bracketMs": 0.05,
+          "baselineLag1": -0.068,
+          "disabledLag1": -0.05,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "cadenceBound": false,
+          "bufferMpx": 4.096,
+          "baselineRising": false
+        },
+        {
+          "pass": "volSctCtl",
+          "method": "raf-delta",
+          "baselineMs": 55.55,
+          "disabledMs": 25.2,
+          "savedMs": 30.35,
+          "savedPct": 54.6,
+          "samples": 120,
+          "iqrMs": 1.2,
+          "noiseMs": 0.111,
+          "bracketMs": 0,
+          "baselineLag1": -0.135,
+          "disabledLag1": -0.336,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "cadenceBound": false,
+          "bufferMpx": 4.096,
+          "baselineRising": false
+        },
+        {
+          "pass": "volPin13",
+          "method": "raf-delta",
+          "baselineMs": 55.575,
+          "disabledMs": 54.3,
+          "savedMs": 1.275,
+          "savedPct": 2.3,
+          "samples": 120,
+          "iqrMs": 0.8,
+          "noiseMs": 0.075,
+          "bracketMs": 0.05,
+          "baselineLag1": -0.216,
+          "disabledLag1": -0.126,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "cadenceBound": false,
+          "bufferMpx": 4.096,
+          "baselineRising": false
+        },
+        {
+          "pass": "volPin26",
+          "method": "raf-delta",
+          "baselineMs": 55.65,
+          "disabledMs": 53.9,
+          "savedMs": 1.75,
+          "savedPct": 3.1,
+          "samples": 120,
+          "iqrMs": 0.8,
+          "noiseMs": 0.075,
+          "bracketMs": 0.1,
+          "baselineLag1": -0.251,
+          "disabledLag1": -0.075,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "cadenceBound": false,
+          "bufferMpx": 4.096,
+          "baselineRising": false
+        },
+        {
+          "pass": "volPin13far",
+          "method": "raf-delta",
+          "baselineMs": 55.7,
+          "disabledMs": 46.5,
+          "savedMs": 9.2,
+          "savedPct": 16.5,
+          "samples": 120,
+          "iqrMs": 1.1,
+          "noiseMs": 0.088,
+          "bracketMs": 0,
+          "baselineLag1": -0.2,
+          "disabledLag1": -0.053,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "cadenceBound": false,
+          "bufferMpx": 4.096,
+          "baselineRising": false
+        },
+        {
+          "pass": "volPin1p5near",
+          "method": "raf-delta",
+          "baselineMs": 56.6,
+          "disabledMs": 54,
+          "savedMs": 2.6,
+          "savedPct": 4.6,
+          "samples": 120,
+          "iqrMs": 2.4,
+          "noiseMs": 0.131,
+          "bracketMs": 1.8,
+          "baselineLag1": -0.206,
+          "disabledLag1": -0.132,
+          "baselineReadback": 0.25,
+          "disabledReadback": 0.25,
+          "baselineLimitMag": 1.511,
+          "disabledLimitMag": 1.511,
+          "cadenceBound": false,
+          "bufferMpx": 4.096,
+          "baselineRising": false
+        }
+      ],
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": null,
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[info] priceFrame: method pinned to raf-delta wall time — the one clock every backend shares, so cross-backend tables compare. Differentials below the vsync quantum read as zero unless the frame is already over budget.",
+        "[info] priceFrame: display cadence 16.70 ms (59.9 Hz) — a row whose dwells sat on it is stamped cadenceBound and resolves nothing.",
+        "[warning] THREE.WebGPUTimestampQueryPool [compute]: Maximum number of queries exceeded, when using trackTimestamp it is necessary to resolves the queries via renderer.resolveTimestampsAsync( THREE.TimestampQuery.COMPUTE ).",
+        "[info] priceFrame: exposure pinned at dm -6.289 (effective limit 1.51 mag) — every row now prices its pass against the same star population. Pass { pinExposure: false } to price the live path.",
+        "[info] priceFrame: 'volCohCtl' disabled — dwelling",
+        "[info] priceFrame: 'volSctCtl' disabled — dwelling",
+        "[info] priceFrame: 'volPin13' disabled — dwelling",
+        "[info] priceFrame: 'volPin26' disabled — dwelling",
+        "[info] priceFrame: 'volPin13far' disabled — dwelling",
+        "[info] priceFrame: 'volPin1p5near' disabled — dwelling",
+        "[info] priceFrame: baseline 55.500 ms, re-measured 57.500 ms (drift 2.000 ms over the sweep; bracketed rows already absorb it — read each row's bracketMs)",
+        "[info] priceFrame: drawing buffer 2560x1600 (4.096 Mpx) — both dominant passes scale with it, so only compare tables at the same buffer size."
+      ],
+      "pageErrors": [],
+      "tainted": false
+    }
+  ]
+}
