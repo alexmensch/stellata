@@ -11,7 +11,7 @@ file it came from by its repo-relative path.
 ## Taking one
 
 `pnpm run perf -- --mode dwell --scenario all --backend both --cooldown-ms 120000
---json <main checkout>/.perf-runs/<date>/pin.json --pin scripts/perf/pins/<slug>.json`
+--json .perf-runs/<date>/pin.json --pin scripts/perf/pins/<slug>.json`
 
 Per `scenario|backend` the pin holds wall p50 / p90 / iqr / n /
 vsyncClamped, the GPU-stream p50 where it was sound and the compute-stream
