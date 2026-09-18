@@ -37,6 +37,7 @@ import {
   equalAreaSkyGrid,
   galacticUnitVector,
   marchSightline,
+  marchStepPc,
   mulberry32,
   sampleCdf,
   sightlineWeights,
@@ -51,6 +52,7 @@ const N_SIN_B = 64;
 const RADIAL_STEPS = 192;
 const POOL_MAX_DIST_PC = 100;
 const MIN_SYNTHETIC_DIST_PC = 50;
+const DRAW_ATTEMPTS_PER_RECORD = 8;
 /** ~30 km/s in pc/yr, the disc's velocity dispersion. */
 const VELOCITY_SIGMA_PC_PER_YR = 3.07e-5;
 
@@ -122,7 +124,9 @@ function cellIndexFor(lRad: number, bRad: number): number {
 }
 
 /** Modal constellation per sky cell, so a synthetic star inherits a plausible
- *  positional constellation without re-running the IAU boundary resolve. */
+ *  positional constellation without re-running the IAU boundary resolve.
+ *  Indexed in `equalAreaSkyGrid(N_LON, N_SIN_B)` order, so a sampled cell
+ *  index addresses it directly. */
 function constellationByCell(
   real: readonly RealRecordView[],
   icrsToGal: THREE.Matrix3,
@@ -209,7 +213,8 @@ function main(): void {
       : census - alreadyAtLimit;
   const wanted = Math.max(0, cap);
   console.log(
-    `census at V<=${limitMag}: ${census}; already held: ${alreadyAtLimit}; synthesising ${wanted}`,
+    `census at G<=${limitMag}: ${census}; real records at V<=${limitMag} ` +
+      `unextincted: ${alreadyAtLimit}; synthesising ${wanted}`,
   );
 
   const cells = equalAreaSkyGrid(N_LON, N_SIN_B);
@@ -233,11 +238,11 @@ function main(): void {
   }
 
   const rng = mulberry32(seed);
-  const outCount = header.count + wanted;
+  const maxCount = header.count + wanted;
   const nameTable = new Uint8Array(
     buffer.slice(header.nameTableOffset, header.nameTableOffset + header.nameTableLength),
   );
-  const outBuf = new ArrayBuffer(HEADER_SIZE + outCount * RECORD_SIZE + nameTable.byteLength);
+  const outBuf = new ArrayBuffer(HEADER_SIZE + maxCount * RECORD_SIZE + nameTable.byteLength);
   const outView = new DataView(outBuf);
 
   new Uint8Array(outBuf).set(
@@ -253,9 +258,18 @@ function main(): void {
 
   const galToIcrs = new THREE.Matrix3().setFromMatrix4(GAL_TO_ICRS);
   const p = new THREE.Vector3();
+  const dStep = marchStepPc(cellMarches[0]);
+  const attemptBudget = (wanted + 1) * DRAW_ATTEMPTS_PER_RECORD;
   let written = 0;
   let rejected = 0;
+  let attempts = 0;
   while (written < wanted) {
+    if (++attempts > attemptBudget) {
+      throw new Error(
+        `draw budget exhausted at ${written}/${wanted} (${rejected} rejected) — ` +
+          `check --limit-mag against the intrinsic pool`,
+      );
+    }
     const ci = sampleCdf(skyCdf, rng());
     if (ci < 0) break;
     const march = cellMarches[ci];
@@ -265,7 +279,6 @@ function main(): void {
       continue;
     }
     const cell = cells[ci];
-    const dStep = march.length > 1 ? march[1].distPc - march[0].distPc : 0;
 
     const dLon = (2 * Math.PI * (rng() - 0.5)) / N_LON;
     const sinB = Math.max(
@@ -286,7 +299,7 @@ function main(): void {
     }
 
     p.set(dir[0] * distPc, dir[1] * distPc, dir[2] * distPc).applyMatrix3(galToIcrs);
-    const con = conByCell[cellIndexFor(cell.lRad, cell.bRad)];
+    const con = conByCell[ci];
     writeStarRecord(outView, HEADER_SIZE + (header.count + written) * RECORD_SIZE, {
       x: p.x,
       y: p.y,
@@ -315,7 +328,9 @@ function main(): void {
     written++;
   }
 
+  const outCount = header.count + written;
   const nameTableOffset = HEADER_SIZE + outCount * RECORD_SIZE;
+  const outBytes = nameTableOffset + nameTable.byteLength;
   new Uint8Array(outBuf).set(nameTable, nameTableOffset);
   writeCatalogHeader(outView, {
     count: outCount,
@@ -327,7 +342,7 @@ function main(): void {
   for (const f of readdirSync(outDir)) {
     if (/^catalog\.bin\.\d+$/.test(f)) rmSync(join(outDir, f));
   }
-  const plan = planCatalogChunks(outBuf.byteLength);
+  const plan = planCatalogChunks(outBytes);
   let at = 0;
   plan.forEach((bytes, i) => {
     writeFileSync(join(outDir, catalogChunkFilename(i)), Buffer.from(outBuf, at, bytes));
@@ -335,12 +350,12 @@ function main(): void {
   });
   writeFileSync(
     join(outDir, CATALOG_MANIFEST_FILENAME),
-    JSON.stringify({ ...manifest, chunkBytes: plan, totalBytes: outBuf.byteLength }),
+    JSON.stringify({ ...manifest, chunkBytes: plan, totalBytes: outBytes }),
   );
 
   console.log(
     `wrote ${outCount} records (${written} synthetic, ${rejected} rejected draws) ` +
-      `in ${plan.length} chunks, ${outBuf.byteLength} bytes`,
+      `in ${plan.length} chunks, ${outBytes} bytes`,
   );
 }
 

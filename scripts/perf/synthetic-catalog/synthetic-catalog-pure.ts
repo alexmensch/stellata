@@ -40,14 +40,6 @@ export function distanceModulus(distPc: number): number {
   return 5 * Math.log10(distPc / 10);
 }
 
-export function apparentMagnitude(
-  absMag: number,
-  distPc: number,
-  extinctionMag: number,
-): number {
-  return absMag + distanceModulus(distPc) + extinctionMag;
-}
-
 /** The intrinsic half of a record — everything that does not depend on where
  *  the star sits. Synthetic stars reuse these tuples verbatim rather than
  *  inventing a colour/radius/class relation. */
@@ -152,6 +144,10 @@ export function marchSightline(
   return out;
 }
 
+export function marchStepPc(march: readonly SightlineStep[]): number {
+  return march.length > 1 ? march[1].distPc - march[0].distPc : 0;
+}
+
 /** Per-step weight of a magnitude-limited draw along one sightline: the shell
  *  volume element times the density times the share of the pool still bright
  *  enough at that distance and extinction. */
@@ -162,7 +158,7 @@ export function sightlineWeights(
   solidAngle: number,
   minDistPc: number,
 ): number[] {
-  const ds = march.length > 1 ? march[1].distPc - march[0].distPc : 0;
+  const ds = marchStepPc(march);
   return march.map((s) => {
     if (s.distPc < minDistPc || s.density <= 0) return 0;
     const absMagMax = limitMag - distanceModulus(s.distPc) - s.extinctionMag;
@@ -173,8 +169,8 @@ export function sightlineWeights(
   });
 }
 
-/** In-place prefix sum. The last entry is the total, and `sampleCdf` treats a
- *  zero total as "nothing to draw". */
+/** Prefix sum. The last entry is the total, and `sampleCdf` treats a zero
+ *  total as "nothing to draw". */
 export function toCdf(weights: readonly number[]): number[] {
   const cdf: number[] = new Array(weights.length);
   let acc = 0;

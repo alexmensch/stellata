@@ -5,7 +5,6 @@ import {
 } from '../../../src/client/milkyway/milkyway-column-pure';
 import {
   GAIA_CENSUS_BY_G,
-  apparentMagnitude,
   buildIntrinsicPool,
   distanceModulus,
   drawTupleBrighterThan,
@@ -13,6 +12,7 @@ import {
   galacticUnitVector,
   galactocentricRz,
   marchSightline,
+  marchStepPc,
   mulberry32,
   numberDensityAt,
   poolCountBrighterThan,
@@ -40,18 +40,13 @@ describe('census targets', () => {
 });
 
 describe('photometry', () => {
-  it('puts an absolute magnitude at 10 pc at its own value', () => {
+  it('vanishes at 10 pc, where apparent and absolute magnitude agree', () => {
     expect(distanceModulus(10)).toBe(0);
-    expect(apparentMagnitude(4.83, 10, 0)).toBeCloseTo(4.83, 10);
   });
 
   it('adds five magnitudes per factor of ten in distance', () => {
     expect(distanceModulus(100)).toBeCloseTo(5, 10);
     expect(distanceModulus(1000)).toBeCloseTo(10, 10);
-  });
-
-  it('carries extinction straight into the apparent magnitude', () => {
-    expect(apparentMagnitude(0, 1000, 2)).toBeCloseTo(12, 10);
   });
 });
 
@@ -103,17 +98,19 @@ describe('galactic geometry', () => {
   });
 });
 
+const R0_PC = Math.abs(SOL_GALACTOCENTRIC_PC[0]);
+
 describe('number density', () => {
   it('falls off with height above the plane', () => {
-    const mid = numberDensityAt(8122, 0);
-    const up = numberDensityAt(8122, DISC_SCALE_HEIGHT_PC);
+    const mid = numberDensityAt(R0_PC, 0);
+    const up = numberDensityAt(R0_PC, DISC_SCALE_HEIGHT_PC);
     expect(up).toBeGreaterThan(0);
     expect(up).toBeLessThan(mid);
   });
 
   it('is zero outside both proxy envelopes', () => {
     expect(numberDensityAt(30_000, 0)).toBe(0);
-    expect(numberDensityAt(8122, 5000)).toBe(0);
+    expect(numberDensityAt(R0_PC, 5000)).toBe(0);
   });
 
   it('is brightest toward the centre', () => {
@@ -134,6 +131,15 @@ describe('sightline march', () => {
     const pole = marchSightline(galacticUnitVector(0, Math.PI / 2), 3000, 96);
     const last = (m: ReturnType<typeof marchSightline>) => m[m.length - 1].extinctionMag;
     expect(last(plane)).toBeGreaterThan(last(pole) * 5);
+  });
+
+  it('reports the step the sampler jitters a drawn distance across', () => {
+    expect(marchStepPc(marchSightline(galacticUnitVector(0, 0), 4800, 64))).toBeCloseTo(75, 10);
+  });
+
+  it('reports a zero step for a march too short to have one', () => {
+    expect(marchStepPc([])).toBe(0);
+    expect(marchStepPc(marchSightline(galacticUnitVector(0, 0), 100, 1))).toBe(0);
   });
 });
 
