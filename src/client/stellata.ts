@@ -112,6 +112,7 @@ import type { ConstellationOfKind } from './focus-card/constellation-row';
 import { focalRideStep } from './camera/focus/focal-ride-pure';
 import { makeFocalAnchorPolicy } from './camera/focus/focal-anchor-policy';
 import type { StellataRenderer, WebGpuSeam, WebGpuStarLayer } from './webgpu/seam';
+import type { SurvivorCounts } from './webgpu/star/compaction/compaction-pure';
 import type { PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import type { PlanetBodyField } from './solar-system/planets/planet-body-field';
@@ -1679,6 +1680,13 @@ export class Stellata implements FrameAnchor {
    *  same integral agree bit for bit over the whole catalogue — the parity
    *  a WebGPU boot has no pixel to show. Null on WebGL2 or with no dust.
    *  `webgpu/extinction/README.md` § The prepass kernel. */
+  /** How many stars each tier's draw issued on the last compaction
+   *  dispatch. Null on a WebGL2 boot, which lists no survivors
+   *  (`webgpu/star/compaction/README.md` § Reading the counts back). */
+  readSurvivorCounts(): Promise<SurvivorCounts | null> {
+    return this.webgpuStarLayer?.readSurvivorCounts() ?? Promise.resolve(null);
+  }
+
   async verifyExtinction(): Promise<AvParityReport | null> {
     const report = await this.extinctionPrepass?.verifyParity?.() ?? null;
     if (report === null) {
