@@ -32,6 +32,9 @@ import {
 } from '../util/url-state';
 import { shareBlobFrom } from '../util/url-state/share-path-pure';
 import { type CaptureOptions, type CaptureRun, runCapture } from './capture/capture';
+import {
+  formatSurvivorReport, readSurvivorReport, type SurvivorReport,
+} from './survivor-counts';
 
 // `window.debug.*` dev tooling — panel toggle plus URL-state codec.
 // See src/client/debug/README.md § Debug panel for the section catalogue
@@ -60,6 +63,11 @@ export interface DebugTools {
    *  and return it. Read `memory/README.md` before quoting a number —
    *  what the walk reaches, and what it cannot, both matter. */
   memory(): MemoryInventory;
+  /** Print how much of the catalogue each star tier's draw actually issues
+   *  from this vantage, and return it. One mapped copy of the indirect
+   *  args, on demand — never on the render path
+   *  (`../webgpu/star/compaction/README.md` § Reading the counts back). */
+  survivors(): Promise<SurvivorReport | null>;
 }
 
 /** Visibility gate wires both ways: collapse → setVisible(false),
@@ -162,6 +170,15 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
       const inventory = collectMemoryInventory(stellata);
       printMemoryInventory(inventory);
       return inventory;
+    },
+    survivors: async () => {
+      const report = await readSurvivorReport(stellata);
+      if (report === null) {
+        console.warn('survivors: no compaction kernel — this is a WebGL2 boot');
+        return null;
+      }
+      console.log(formatSurvivorReport(report));
+      return report;
     },
     renderWatch: () => {
       if (closeRenderWatch !== null) {

@@ -17,7 +17,8 @@ import { disposeStorageAttribute } from '../../tsl/storage-attribute';
 import { solveStarTsl, type StarTslDeps } from '../star-vertex-tsl';
 import {
   CULL_SLACK_NDC, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
-  initialIndirectArgs, tierArgsInstanceCountElement, tierListBase, type StarTier,
+  initialIndirectArgs, survivorCountsFromArgs, tierArgsInstanceCountElement,
+  tierListBase, type StarTier, type SurvivorCounts,
 } from './compaction-pure';
 
 export type SurvivorsNode = ReturnType<typeof storage<'uint'>>;
@@ -100,6 +101,17 @@ export class StarCompaction {
    *  retarget the cull. */
   get viewProjectionMatrix(): Matrix4 {
     return this.viewProjection.value.clone();
+  }
+
+  /** What the last dispatch counted, per tier — a mapped copy of the args
+   *  buffer, on demand. Never per frame: the readback resolves frames later
+   *  and nothing on the render path waits for it (README.md § Reading the
+   *  counts back). */
+  async readSurvivorCounts(): Promise<SurvivorCounts | null> {
+    if (this.kernels === null) return null;
+    const bytes = await this.renderer.getArrayBufferAsync(this.args);
+    if (this.kernels === null) return null;
+    return survivorCountsFromArgs(new Uint32Array(bytes));
   }
 
   /** One compute pass, one submit: reset then compact. Must follow the

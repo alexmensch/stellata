@@ -1,6 +1,6 @@
 {
   "name": "stellata",
-  "version": "4.2.7",
+  "version": "4.2.8",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.24.0",
@@ -64,6 +64,7 @@
     "deploy": "pnpm run build && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "perf": "tsx scripts/perf/run.ts",
+    "survivors": "tsx scripts/perf/survivors.ts",
     "perf:pin": "tsx scripts/perf/pin.ts",
     "perf:synthetic": "tsx scripts/perf/synthetic-catalog/build-synthetic-catalog.ts",
     "test": "vitest run",

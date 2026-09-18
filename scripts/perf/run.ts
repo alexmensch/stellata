@@ -37,7 +37,10 @@ import {
   type MarkerVerdict,
 } from './run-pure';
 import {
+  BOOT_TIMEOUT_MS,
   BootError,
+  DEFAULT_CHROME_ARGS,
+  SETTLE_TIMEOUT_MS,
   awaitSettle,
   bootScenario,
   probeAdapters,
@@ -64,9 +67,6 @@ import {
 const MARKER = resolve(REPO_ROOT, PERF_GO_MARKER_NAME);
 const MARKER_MAX_AGE_MS = PERF_GO_MAX_AGE_S * 1000;
 const REACHABILITY_TIMEOUT_MS = 5000;
-const DEFAULT_CHROME_ARGS = ['--ignore-gpu-blocklist', '--enable-unsafe-webgpu'];
-const BOOT_TIMEOUT_MS = 120_000;
-const SETTLE_TIMEOUT_MS = 120_000;
 
 const EXIT = { ok: 0, failed: 1, usage: 2, unarmed: 3 } as const;
 

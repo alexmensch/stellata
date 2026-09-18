@@ -160,6 +160,11 @@ export class StarLayer {
     this.tables.endFrame();
   }
 
+  /** compaction/README.md § Reading the counts back. */
+  readSurvivorCounts() {
+    return this.compaction.readSurvivorCounts();
+  }
+
   dispose(): void {
     for (const m of this.meshes()) {
       this.scene.remove(m);

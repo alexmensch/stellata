@@ -23,6 +23,7 @@ import type {
 } from '../star-pipeline/extinction/extinction-seam';
 import type { StarMirror } from '../star-pipeline/local-pass/star-mirror-slots';
 import type { SharedUniformNodes } from './tsl/shared-uniform-nodes';
+import type { SurvivorCounts } from './star/compaction/compaction-pure';
 import type { StarLayerSources } from './star/star-tables';
 
 export type StellataRenderer = THREE.WebGLRenderer | WebGPURenderer;
@@ -53,6 +54,11 @@ export interface WebGpuStarLayer {
    *  `syncUniformNodes` (the kernel reads those scalars) and before the
    *  render (star/compaction/README.md). */
   update(camera: THREE.Camera): void;
+  /** How many stars each tier's draw actually issued on the last dispatch,
+   *  off a mapped copy of the indirect args. On demand only — the readback
+   *  resolves frames later (star/compaction/README.md § Reading the counts
+   *  back). Null once the layer is disposed. */
+  readSurvivorCounts(): Promise<SurvivorCounts | null>;
   /** The shell hands it to StarLocalCluster in place of the GLSL
    *  StarLocalMirror; the cluster parents its group into the pass scene and
    *  owns its dispose. */

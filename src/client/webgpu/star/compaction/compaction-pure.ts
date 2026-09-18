@@ -23,6 +23,21 @@ export function tierArgsInstanceCountElement(tier: StarTier): number {
   return tier * INDIRECT_ARGS_STRIDE + INDIRECT_INSTANCE_COUNT_SLOT;
 }
 
+/** What the kernel's atomics left in each tier's `instanceCount`, off a
+ *  copy of the args buffer — the very numbers the three draws take their
+ *  instance count from. */
+export interface SurvivorCounts {
+  glow: number;
+  disc: number;
+}
+
+export function survivorCountsFromArgs(args: Uint32Array): SurvivorCounts {
+  return {
+    glow: args[tierArgsInstanceCountElement(STAR_TIER_GLOW)] ?? 0,
+    disc: args[tierArgsInstanceCountElement(STAR_TIER_DISC)] ?? 0,
+  };
+}
+
 /** Byte offset of `tier`'s slot — what the geometry's indirectOffset takes. */
 export function tierArgsOffsetBytes(tier: StarTier): number {
   return tier * INDIRECT_ARGS_STRIDE * Uint32Array.BYTES_PER_ELEMENT;

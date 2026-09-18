@@ -43,6 +43,10 @@ src/client/debug/
   eclipse-debug-hud.ts            Eclipse-photometry per-relation gate /
                                   geometry readout (focused star, or all
                                   active dims when unfocused).
+  survivor-counts.ts (+ test)     debug.survivors() — each star tier's
+                                  drawn instance count against the
+                                  catalogue record count
+                                  (§ Survivor counts).
   star-tuning.ts                  Live-tunable star-disc knobs, plus the
                                   derived-K readout (K, plate scale, FOV,
                                   resulting sizeMin/Max).
@@ -108,6 +112,20 @@ up as a hot path in its own measurements.
   means the main thread is *blocking* on the driver — a real symptom, but
   not a measure of GPU work. Never compare a `submit` number against a
   `gpu` one.
+
+## Survivor counts
+
+**`debug.survivors()`** answers "what fraction of the catalogue is
+actually in frame here" — the number every elision decision on the star
+path is sized against. It prints the glow-tier and disc-tier instance
+counts the compaction kernel last wrote, with the catalogue record count
+beside them, and returns the report.
+
+WebGPU only: the WebGL2 boot lists no survivors and prices its three draws
+at the whole catalogue, so the call warns and returns null there. It maps
+a copy of the indirect args on demand — the mechanism and why it is not a
+per-frame row are `../webgpu/star/compaction/README.md` § Reading the
+counts back. Take it with the camera settled; it reads the last dispatch.
 
 ## Instrumented sections
 
