@@ -33,18 +33,23 @@ scripts/perf/
   run-pure.ts (+ test)      The decisions around a launch: which clock a
                             backend request gets, which adapters disqualify a
                             run, how the probe reads, whether a marker arms,
-                            why a boot produced no page. Here rather than in
-                            run.ts so a test can import them without
-                            launching a browser.
+                            why a boot produced no page. Also the Chromium
+                            channel both launches pass and the `run` block
+                            both instruments write, assembled in one place so
+                            two files cannot disagree about what they record.
+                            Here rather than in run.ts so a test can import
+                            them without launching a browser.
   scenarios.ts (+ test)     The five canon vantages as share blobs, and
                             scenarioUrl().
   page-protocol.ts          Every page.evaluate: boot, gate snapshot, adapter
                             probe, rAF probe, drawing-buffer read, the
                             priceFrame call, the dwell loop.
   measure.ts (+ test)       What each mode does to a settled page.
-  schema.ts (+ test)        The on-disk record types, PERF_SCHEMA, and
-                            assertPerfFile. Owns the adapter/scenario/mode
-                            shapes the runner, the tables and the diff share.
+  schema.ts (+ test)        The on-disk record types, PERF_SCHEMA,
+                            SURVIVORS_SCHEMA and assertPerfFile. Owns the
+                            adapter/scenario/mode shapes the runner, the
+                            tables and the diff share, and the run
+                            provenance both instruments write.
   settle-pure.ts (+ test)   settleVerdict over one render-gate snapshot.
   pin-pure.ts (+ test)      The perf pin: adapter slug, pinFromRuns,
                             compareToPin and its floor, cadence and ceiling
@@ -96,6 +101,19 @@ It visits every canon vantage on WebGPU at the runner's own default viewport
 and device pixel ratio, so there is nothing to select. An unknown flag is a
 usage error, exit 2 — `parseArgs` runs `strict` here for the same reason the
 runner's does. Exit 1 is a boot that came up on the other backend.
+
+**`--json` writes schema `stellata-survivors/1`**: the `run` provenance block
+a perf file carries — timestamps, argv, the commit pair and dirty flag,
+browser and switches, the adapter probe, host — plus the `viewport` the whole
+run used, and one row per vantage with its counts and its settle. A separate
+suffix rather than a mode of `stellata-perf/2`, because `assertPerfFile`
+judges the suffix by equality and a bump there abandons every recorded
+baseline (`schema.ts`, on `SURVIVORS_SCHEMA`). The viewport is in the block
+because the frustum test produces these counts: they move with viewport and
+field of view the way a frame time moves with Mpx, so two files at different
+viewports are not each other's comparison. The adapter probe is taken
+*after* the counts are read — its WebGL branch opens a throwaway context in
+the page they came off.
 
 ## Invocation
 

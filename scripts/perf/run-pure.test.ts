@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DWELL_METHOD, GATE_BOOT_PREFIX, bootFailure, bufferShortfall, describeProbe, markerVerdict,
-  methodFor, planContexts, readbackOrder, softwareRenderer,
+  BROWSER_CHANNEL, DWELL_METHOD, GATE_BOOT_PREFIX, bootFailure, bufferShortfall, describeProbe,
+  markerVerdict, methodFor, planContexts, readbackOrder, runProvenance, softwareRenderer,
 } from './run-pure';
 import { SCENARIO_NAMES, TIER1_SCENARIOS } from './scenarios';
-import type { AdapterProbe } from './schema';
+import type { AdapterProbe, GitProvenance } from './schema';
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -184,5 +184,47 @@ describe('bootFailure — a boot that produced no page says which kind', () => {
   // reads like a verdict is still reported as the page's own error.
   it('reports a loading-status error as itself', () => {
     expect(bootFailure('Error: catalogue fetch failed')).toBe('Error: catalogue fetch failed');
+  });
+});
+
+describe('runProvenance', () => {
+  const GIT: GitProvenance = { commit: 'abc', dirty: false, mainCommit: 'def', mainReachable: true };
+  const START = {
+    startedAt: '2026-09-18T00:00:00.000Z',
+    url: 'http://localhost:5173',
+    browserVersion: '151.0',
+    headless: true,
+    chromeArgs: ['--ignore-gpu-blocklist'],
+    git: GIT,
+    gpu: null,
+  };
+
+  it('records the channel every launch here passes, as both name and channel', () => {
+    const run = runProvenance(START);
+    expect(run.browser.name).toBe(BROWSER_CHANNEL);
+    expect(run.browser.channel).toBe(BROWSER_CHANNEL);
+    expect(BROWSER_CHANNEL).toBe('chromium');
+  });
+
+  it("carries the caller's own fields through untouched", () => {
+    const run = runProvenance({ ...START, headless: false, gpu: probe() });
+    expect(run.startedAt).toBe(START.startedAt);
+    expect(run.url).toBe(START.url);
+    expect(run.git).toBe(GIT);
+    expect(run.browser.version).toBe('151.0');
+    expect(run.browser.headless).toBe(false);
+    expect(run.browser.args).toEqual(['--ignore-gpu-blocklist']);
+    expect(run.gpu).not.toBeNull();
+  });
+
+  it('stamps finishedAt at or after the start it was given', () => {
+    const run = runProvenance(START);
+    expect(Date.parse(run.finishedAt)).toBeGreaterThanOrEqual(Date.parse(START.startedAt));
+  });
+
+  it('takes argv and the host from the process, so neither instrument spells them', () => {
+    const run = runProvenance(START);
+    expect(run.argv).toEqual(process.argv.slice(2));
+    expect(run.host).toEqual({ platform: process.platform, arch: process.arch });
   });
 });

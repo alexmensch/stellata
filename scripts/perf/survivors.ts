@@ -5,26 +5,31 @@ import { parseArgs } from 'node:util';
 import { chromium, type Page } from 'playwright';
 import { survivorPct, type SurvivorReport } from '../../src/client/debug/survivor-counts';
 import { ARG_DEFAULTS, ArgError } from './args';
+import { gitMeta } from './checkout';
 import {
   BOOT_TIMEOUT_MS, DEFAULT_CHROME_ARGS, SETTLE_TIMEOUT_MS,
-  awaitSettle, bootScenario, seedDismissals, type PerfWindow,
+  awaitSettle, bootScenario, probeAdapters, seedDismissals, type PerfWindow,
 } from './page-protocol';
-import { SCENARIOS, SCENARIO_NAMES, scenarioUrl, type ScenarioName } from './scenarios';
+import { BROWSER_CHANNEL, runProvenance } from './run-pure';
+import {
+  SURVIVORS_SCHEMA, type AdapterProbe, type SurvivorsFile, type SurvivorsRecord, type Viewport,
+} from './schema';
+import { SCENARIOS, SCENARIO_NAMES, scenarioUrl } from './scenarios';
 import { formatTable } from './table-pure';
 
 const QUIET_MS = 1500;
 const TABLE_DECIMALS = 3;
 
-interface Row extends SurvivorReport {
-  scenario: ScenarioName;
-}
+/** The runner's own default, and the one size every vantage is visited at —
+ *  which is why it belongs to the run block rather than to a row. */
+const VIEWPORT: Viewport = { width: ARG_DEFAULTS.width, height: ARG_DEFAULTS.height, dpr: ARG_DEFAULTS.dpr };
 
 /** Callers must settle first — README.md § Survivor counts. */
 function readSurvivors(page: Page): Promise<SurvivorReport | null> {
   return page.evaluate(() => (window as unknown as PerfWindow).debug.survivors());
 }
 
-function survivorTable(rows: readonly Row[]): string {
+function survivorTable(rows: readonly SurvivorsRecord[]): string {
   return formatTable(
     ['vantage', 'records', 'glow', 'disc', 'drawn', 'drawn %'],
     rows.map((r) => [
@@ -62,15 +67,18 @@ async function main(): Promise<number> {
     return 2;
   }
 
+  const startedAt = new Date().toISOString();
   const browser = await chromium.launch({
-    channel: 'chromium', headless: true, args: DEFAULT_CHROME_ARGS,
+    channel: BROWSER_CHANNEL, headless: true, args: DEFAULT_CHROME_ARGS,
   });
-  const rows: Row[] = [];
+  const browserVersion = browser.version();
+  const rows: SurvivorsRecord[] = [];
+  let probe: AdapterProbe | null = null;
   try {
     for (const scenario of SCENARIO_NAMES) {
       const context = await browser.newContext({
-        viewport: { width: ARG_DEFAULTS.width, height: ARG_DEFAULTS.height },
-        deviceScaleFactor: ARG_DEFAULTS.dpr,
+        viewport: { width: VIEWPORT.width, height: VIEWPORT.height },
+        deviceScaleFactor: VIEWPORT.dpr,
       });
       await seedDismissals(context);
       const page = await context.newPage();
@@ -87,7 +95,10 @@ async function main(): Promise<number> {
         console.log(
           `${scenario} — ${SCENARIOS[scenario].label} · settled ${settleMs} ms · `
           + `${report.records} records`);
-        rows.push({ ...report, scenario });
+        rows.push({ ...report, scenario, settleMs });
+        // After the read, never before: the WebGL branch of the probe opens a
+        // throwaway context in the page the counts just came off.
+        probe ??= await probeAdapters(page);
       } finally {
         await context.close();
       }
@@ -98,7 +109,23 @@ async function main(): Promise<number> {
 
   console.log(`\n${survivorTable(rows)}`);
   if (args.json !== null) {
-    writeFileSync(args.json, `${JSON.stringify({ url: args.url, rows }, null, 2)}\n`);
+    const file: SurvivorsFile = {
+      schema: SURVIVORS_SCHEMA,
+      run: {
+        ...runProvenance({
+          startedAt,
+          url: args.url,
+          browserVersion,
+          headless: true,
+          chromeArgs: DEFAULT_CHROME_ARGS,
+          git: gitMeta(),
+          gpu: probe,
+        }),
+        viewport: VIEWPORT,
+      },
+      rows,
+    };
+    writeFileSync(args.json, `${JSON.stringify(file, null, 2)}\n`);
     console.log(`\nwrote ${args.json}`);
   }
   return 0;

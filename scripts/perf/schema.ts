@@ -1,8 +1,9 @@
-// The on-disk shape of a perf run — schema stellata-perf/2. Owns the
-// adapter, scenario and per-mode records, so the runner, the tables and
-// the baseline diff all read one set of types. README.md § JSON output.
+// The on-disk shapes both instruments write — stellata-perf/2 and
+// stellata-survivors/1 — plus the adapter, scenario and per-mode records the
+// runner, the tables and the baseline diff share. README.md § JSON output.
 
 import type { GpuFrameMethod, PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import type { SurvivorReport } from '../../src/client/debug/survivor-counts';
 import type { Backend, ScenarioName } from './scenarios';
 import type { DwellSummary, PassCountsPerFrame, PassCountsSummary } from './dwell/dwell-pure';
 import type { SweepFit, SweepPoint } from './sweep/sweep-pure';
@@ -86,11 +87,17 @@ export interface SweepRecord {
   readonly bracketMs: number;
 }
 
+export interface Viewport {
+  readonly width: number;
+  readonly height: number;
+  readonly dpr: number;
+}
+
 export interface ScenarioRecord {
   readonly name: ScenarioName;
   readonly blob: string;
   readonly backend: { readonly requested: Backend; readonly actual: Backend | null };
-  readonly viewport: { readonly width: number; readonly height: number; readonly dpr: number };
+  readonly viewport: Viewport;
   readonly buffer: { readonly width: number; readonly height: number } | null;
   readonly bufferMpx: number | null;
   readonly mode: string;
@@ -147,7 +154,10 @@ export interface GitProvenance {
   readonly mainReachable: boolean;
 }
 
-export interface PerfRunMeta {
+/** What both instruments record about the tree, the browser and the host
+ *  they ran on. Everything a later reader needs to decide whether two files
+ *  are each other's comparison, minus what only one instrument varies. */
+export interface RunProvenance {
   readonly startedAt: string;
   readonly finishedAt: string;
   readonly url: string;
@@ -166,8 +176,32 @@ export interface PerfRunMeta {
 
 export interface PerfFile {
   readonly schema: typeof PERF_SCHEMA;
-  readonly run: PerfRunMeta;
+  readonly run: RunProvenance;
   readonly scenarios: readonly ScenarioRecord[];
+}
+
+/**
+ * `pnpm run survivors`. A separate suffix rather than a mode of
+ * stellata-perf/2: `assertPerfFile` judges the suffix by equality before
+ * reading anything, so reusing it would offer the diff and the pin a file
+ * with no `scenarios`, and bumping it would abandon every recorded baseline.
+ */
+export const SURVIVORS_SCHEMA = 'stellata-survivors/1';
+
+export interface SurvivorsRecord extends Readonly<SurvivorReport> {
+  readonly scenario: ScenarioName;
+  /** README.md § Survivor counts. */
+  readonly settleMs: number;
+}
+
+export interface SurvivorsRunMeta extends RunProvenance {
+  readonly viewport: Viewport;
+}
+
+export interface SurvivorsFile {
+  readonly schema: typeof SURVIVORS_SCHEMA;
+  readonly run: SurvivorsRunMeta;
+  readonly rows: readonly SurvivorsRecord[];
 }
 
 /**
