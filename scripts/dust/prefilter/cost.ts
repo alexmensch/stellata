@@ -19,14 +19,13 @@ import {
   S_MIN_PC,
   STEPS,
 } from '../../../src/client/milkyway/milkyway-column-pure';
+import { FIXED_MARCH_TAPS } from '../march-taps/march-taps-pure';
 
 const BYTES_PER_TEXEL = 2;
 const STAR_COUNT = (JSON.parse(
   readFileSync(resolve(REPO_ROOT, BUILD_COUNTS_EXPECTED_FILE), 'utf8'),
 ) as BuildCounts).recordCount;
-/** The yardstick every fill is quoted against (README.md § What it measures). */
-const YARDSTICK_TAPS = 48;
-const PREPASS_FETCHES = STAR_COUNT * YARDSTICK_TAPS;
+const PREPASS_FETCHES = STAR_COUNT * FIXED_MARCH_TAPS;
 
 const FOVS_DEG = [10, 50, 120];
 const ASPECT = 16 / 9;
@@ -119,7 +118,7 @@ function run(): void {
       '\n',
   );
   console.log(
-    `yardstick: ${STAR_COUNT / 1000}k stars x ${YARDSTICK_TAPS} taps = ` +
+    `yardstick: ${STAR_COUNT / 1000}k stars x ${FIXED_MARCH_TAPS} taps = ` +
       `${m(PREPASS_FETCHES)} fetches\n`,
   );
 

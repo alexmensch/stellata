@@ -54,14 +54,18 @@ export function segmentCubeOverlap(from: Vec3, delta: Vec3, boundsPc: number): [
   return [t0, t1];
 }
 
-export function dustMarchTapCount(inCubeLenPc: number, tapPc: number = DUST_TAP_PC): number {
-  return Math.min(DUST_TAPS_MAX, Math.max(DUST_TAPS_MIN, Math.ceil(inCubeLenPc / tapPc)));
+export function dustMarchTapCount(
+  inCubeLenPc: number,
+  tapPc: number = DUST_TAP_PC,
+  maxTaps: number = DUST_TAPS_MAX,
+): number {
+  return Math.min(maxTaps, Math.max(DUST_TAPS_MIN, Math.ceil(inCubeLenPc / tapPc)));
 }
 
 /** Taps to spend on a given in-cube path length. */
 export type TapCountRule = (inCubeLenPc: number) => number;
 
-function clamp01(x: number): number {
+export function clamp01(x: number): number {
   return x < 0 ? 0 : x > 1 ? 1 : x;
 }
 

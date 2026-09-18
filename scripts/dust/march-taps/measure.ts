@@ -19,14 +19,14 @@ import {
   type TapCountRule,
   type Vec3,
 } from '../../../src/client/star-pipeline/extinction/dust-raymarch-pure';
-import { strideSample, summarise, unclippedFixedMarch } from './march-taps-pure';
+import {
+  FIXED_MARCH_TAPS, fp32March, strideSample, summarise, unclippedFixedMarch,
+} from './march-taps-pure';
 
 const DEFAULT_STARS = 20_000;
-/** The fixed-count march every scheme is measured against. */
-const UNCLIPPED_TAPS = 48;
-const FIXED_TAPS = [48, 32, 24, 16];
+const FIXED_TAPS = [FIXED_MARCH_TAPS, 32, 24, 16];
 const TAP_DENSITIES_PC = [5, 10, 15, 20, 30];
-const TAP_CAPS = [48, DUST_TAPS_MAX];
+const TAP_CAPS = [FIXED_MARCH_TAPS, DUST_TAPS_MAX];
 
 interface Scheme {
   name: string;
@@ -39,12 +39,12 @@ function schemes(sample: (u: number, v: number, w: number) => number, p: DustDec
   const clipped = (rule: TapCountRule) => (from: Vec3, to: Vec3) =>
     dustRaymarchAv(from, to, sample, p, rule);
   const capped = (d: number, cap: number): TapCountRule => (len) =>
-    Math.min(cap, dustMarchTapCount(len, d));
+    dustMarchTapCount(len, d, cap);
   return [
     {
-      name: `unclipped fixed ${UNCLIPPED_TAPS}`,
-      av: (from, to) => unclippedFixedMarch(from, to, sample, p, UNCLIPPED_TAPS),
-      taps: () => UNCLIPPED_TAPS,
+      name: `unclipped fixed ${FIXED_MARCH_TAPS}`,
+      av: (from, to) => unclippedFixedMarch(from, to, sample, p, FIXED_MARCH_TAPS),
+      taps: () => FIXED_MARCH_TAPS,
     },
     ...FIXED_TAPS.map((n): Scheme => ({
       name: `clipped fixed ${n}`,
@@ -60,6 +60,11 @@ function schemes(sample: (u: number, v: number, w: number) => number, p: DustDec
         taps: (len) => (len === null ? 0 : rule(len)),
       };
     })),
+    {
+      name: `${DUST_TAP_PC} pc/tap cap ${DUST_TAPS_MAX}, fp32`,
+      av: (from, to) => fp32March(from, to, sample, p),
+      taps: (len) => (len === null ? 0 : dustMarchTapCount(len)),
+    },
   ];
 }
 
