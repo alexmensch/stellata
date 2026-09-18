@@ -28,7 +28,14 @@ itself, in **frustum mode**, on the position each thread already holds:
    composed on the CPU in float64 each frame from the camera the shell
    hands `update()`, so clip space comes straight off the absolute
    position table. The same projection × view the compaction kernel
-   tests against, with the origin shift folded in.
+   tests against, with the origin shift folded in — **and the same camera,
+   which is a frame-order constraint, not an identity**. The rides inside
+   the layer fan-out move the camera, so the shell runs this pass *after*
+   the fan-out and the compaction after that (`../../../stellata.ts`
+   `animate`). Run it before, and a warp or focus lerp leaves the two
+   kernels disagreeing about what is in frame on exactly the frames the
+   camera is moving fastest — the compaction lists a star for drawing whose
+   refill never saw it.
 2. `starQuadOffscreenTsl` (`../../star/compaction/frustum-tsl.ts`) with a
    fixed half-extent of `EXTINCTION_FRUSTUM_SLACK_PX` in place of the
    quad's size, which is not known here — it needs the size solve, which
