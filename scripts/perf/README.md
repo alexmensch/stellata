@@ -20,6 +20,9 @@ scripts/perf/
   pin.ts                    `pnpm run perf:pin`: the pin from saved run
                             files, offline — no browser, no arm.
                             pins/README.md § From saved runs.
+  survivors.ts              `pnpm run survivors`: debug.survivors() at the
+                            canon vantages. Reads no clock and is not a cost
+                            instrument (§ Survivor counts).
   checkout.ts               What run.ts and pin.ts share about the checkout:
                             root, main checkout, git provenance, the pin's
                             read / compare / write.
@@ -62,6 +65,27 @@ scripts/perf/
                             the bracket. Own README.
   pins/                     The committed per-GPU pin. Own README.
 ```
+
+## Survivor counts — the one entry point here that is not a cost instrument
+
+`pnpm run survivors` boots each canon vantage on WebGPU, waits for the same
+render-gate settle the runner waits for, and prints what the compaction
+kernel listed: glow-tier and disc-tier instance counts against the
+catalogue record count (`src/client/webgpu/star/compaction/README.md`
+§ Reading the counts back). It reuses `scenarios.ts` and `page-protocol.ts`
+so its vantages and its boot are the runner's, byte for byte.
+
+**It reads no clock**, which is why it lives beside the runner without
+inheriting the arm. The consent gate exists to protect an idle machine for a
+*timing* measurement; a buffer readback of six integers needs neither an idle
+machine nor Alex's attention, and `readRecordCount` is the precedent — the
+runner already reads non-clock scene state to guard its rows. Do not run it
+while a perf run is armed: two headless Chromiums contend for the GPU, and
+that would taint the run rather than this.
+
+**The settle is load-bearing, not tidiness.** The counts come off the *last*
+compaction dispatch, so a read issued before the gate goes quiet belongs to a
+camera still arriving.
 
 ## Invocation
 
