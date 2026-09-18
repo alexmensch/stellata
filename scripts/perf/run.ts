@@ -26,12 +26,14 @@ import {
   type PinDiff, type PinFile,
 } from './pin-pure';
 import {
+  BROWSER_CHANNEL,
   DWELL_METHOD,
   bufferShortfall,
   describeProbe,
   markerVerdict,
   methodFor,
   planContexts,
+  runProvenance,
   softwareRenderer,
   type ContextPlan,
   type MarkerVerdict,
@@ -451,10 +453,10 @@ async function main(): Promise<number> {
 
   const chromeArgs = [...DEFAULT_CHROME_ARGS, ...args.chromeArgs];
   const startedAt = new Date().toISOString();
-  const browser = await chromium.launch({ channel: 'chromium', headless: !args.headed, args: chromeArgs });
+  const browser = await chromium.launch({ channel: BROWSER_CHANNEL, headless: !args.headed, args: chromeArgs });
   const browserVersion = browser.version();
   console.log(
-    `perf: ${browser.browserType().name()} ${browserVersion} · channel chromium · ${args.headed ? 'HEADED' : 'HEADLESS'} · ` +
+    `perf: ${browser.browserType().name()} ${browserVersion} · channel ${BROWSER_CHANNEL} · ${args.headed ? 'HEADED' : 'HEADLESS'} · ` +
     `${process.platform}/${process.arch}\nargs: ${chromeArgs.join(' ')}\n` +
     `viewport ${args.width}x${args.height} @ dpr ${args.dpr} · mode ${args.mode} · backend ${args.backend}` +
     (method ? ` · method pinned ${method}` : ''),
@@ -490,22 +492,15 @@ async function main(): Promise<number> {
 
   const file: PerfFile = {
     schema: PERF_SCHEMA,
-    run: {
+    run: runProvenance({
       startedAt,
-      finishedAt: new Date().toISOString(),
       url: args.url,
-      argv: process.argv.slice(2),
+      browserVersion,
+      headless: !args.headed,
+      chromeArgs,
       git: gitMeta(),
-      browser: {
-        name: 'chromium',
-        version: browserVersion,
-        channel: 'chromium',
-        headless: !args.headed,
-        args: chromeArgs,
-      },
       gpu: probes[0] ?? null,
-      host: { platform: process.platform, arch: process.arch },
-    },
+    }),
     scenarios: records,
   };
 

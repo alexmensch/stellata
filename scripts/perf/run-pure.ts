@@ -1,9 +1,9 @@
-// Decisions the runner makes before and around a launch: which clock, which
-// adapters disqualify a run, how the probe reads. Pure, so they are testable
-// away from run.ts, which cannot be imported without launching.
+// Decisions the runner makes before and around a launch, and the `run` block
+// both instruments write. Pure, so they are testable away from run.ts, which
+// cannot be imported without launching.
 
 import type { GpuFrameMethod } from '../../src/client/debug/frame-cost/frame-cost-pure';
-import type { AdapterProbe } from './schema';
+import type { AdapterProbe, GitProvenance, RunProvenance } from './schema';
 import type { BackendRequest } from './args';
 import { BACKENDS, type Backend, type ScenarioName } from './scenarios';
 
@@ -14,6 +14,11 @@ export const SOFTWARE_RENDERER = /swiftshader|llvmpipe|software/i;
 /** rAF wall-clock deltas, whatever else was subscribed alongside. The GPU
  *  stream is a second opinion on the same frames, never the row's clock. */
 export const DWELL_METHOD: GpuFrameMethod = 'raf-delta';
+
+/** Playwright's full Chromium build, the one with a GPU process rather than
+ *  the headless shell. Every launch here passes it and every `run` block
+ *  records it, so the two cannot disagree about what was measured. */
+export const BROWSER_CHANNEL = 'chromium';
 
 export type MarkerVerdict = 'armed' | 'absent' | 'stale';
 
@@ -160,4 +165,36 @@ export function bootFailure(text: string): string | null {
     );
   }
   return text;
+}
+
+/** What only the caller knows about a run: the rest of the block is the same
+ *  for every instrument, which is why it is assembled in one place. */
+export interface RunStart {
+  readonly startedAt: string;
+  readonly url: string;
+  readonly browserVersion: string;
+  readonly headless: boolean;
+  readonly chromeArgs: readonly string[];
+  readonly git: GitProvenance;
+  readonly gpu: AdapterProbe | null;
+}
+
+/** Stamps `finishedAt`, so it is called once the last context has closed. */
+export function runProvenance(start: RunStart): RunProvenance {
+  return {
+    startedAt: start.startedAt,
+    finishedAt: new Date().toISOString(),
+    url: start.url,
+    argv: process.argv.slice(2),
+    git: start.git,
+    browser: {
+      name: BROWSER_CHANNEL,
+      version: start.browserVersion,
+      channel: BROWSER_CHANNEL,
+      headless: start.headless,
+      args: start.chromeArgs,
+    },
+    gpu: start.gpu,
+    host: { platform: process.platform, arch: process.arch },
+  };
 }

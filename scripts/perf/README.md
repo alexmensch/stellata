@@ -33,9 +33,12 @@ scripts/perf/
   run-pure.ts (+ test)      The decisions around a launch: which clock a
                             backend request gets, which adapters disqualify a
                             run, how the probe reads, whether a marker arms,
-                            why a boot produced no page. Here rather than in
-                            run.ts so a test can import them without
-                            launching a browser.
+                            why a boot produced no page. Also the Chromium
+                            channel both launches pass and the `run` block
+                            both instruments write, assembled in one place so
+                            two files cannot disagree about what they record.
+                            Here rather than in run.ts so a test can import
+                            them without launching a browser.
   scenarios.ts (+ test)     The five canon vantages as share blobs, and
                             scenarioUrl().
   page-protocol.ts          Every page.evaluate: boot, gate snapshot, adapter

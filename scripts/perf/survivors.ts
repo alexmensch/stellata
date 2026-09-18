@@ -10,12 +10,19 @@ import {
   BOOT_TIMEOUT_MS, DEFAULT_CHROME_ARGS, SETTLE_TIMEOUT_MS,
   awaitSettle, bootScenario, probeAdapters, seedDismissals, type PerfWindow,
 } from './page-protocol';
-import { SURVIVORS_SCHEMA, type AdapterProbe, type SurvivorsFile, type SurvivorsRecord } from './schema';
+import { BROWSER_CHANNEL, runProvenance } from './run-pure';
+import {
+  SURVIVORS_SCHEMA, type AdapterProbe, type SurvivorsFile, type SurvivorsRecord, type Viewport,
+} from './schema';
 import { SCENARIOS, SCENARIO_NAMES, scenarioUrl } from './scenarios';
 import { formatTable } from './table-pure';
 
 const QUIET_MS = 1500;
 const TABLE_DECIMALS = 3;
+
+/** The runner's own default, and the one size every vantage is visited at —
+ *  which is why it belongs to the run block rather than to a row. */
+const VIEWPORT: Viewport = { width: ARG_DEFAULTS.width, height: ARG_DEFAULTS.height, dpr: ARG_DEFAULTS.dpr };
 
 /** Callers must settle first — README.md § Survivor counts. */
 function readSurvivors(page: Page): Promise<SurvivorReport | null> {
@@ -62,7 +69,7 @@ async function main(): Promise<number> {
 
   const startedAt = new Date().toISOString();
   const browser = await chromium.launch({
-    channel: 'chromium', headless: true, args: DEFAULT_CHROME_ARGS,
+    channel: BROWSER_CHANNEL, headless: true, args: DEFAULT_CHROME_ARGS,
   });
   const browserVersion = browser.version();
   const rows: SurvivorsRecord[] = [];
@@ -70,8 +77,8 @@ async function main(): Promise<number> {
   try {
     for (const scenario of SCENARIO_NAMES) {
       const context = await browser.newContext({
-        viewport: { width: ARG_DEFAULTS.width, height: ARG_DEFAULTS.height },
-        deviceScaleFactor: ARG_DEFAULTS.dpr,
+        viewport: { width: VIEWPORT.width, height: VIEWPORT.height },
+        deviceScaleFactor: VIEWPORT.dpr,
       });
       await seedDismissals(context);
       const page = await context.newPage();
@@ -105,21 +112,16 @@ async function main(): Promise<number> {
     const file: SurvivorsFile = {
       schema: SURVIVORS_SCHEMA,
       run: {
-        startedAt,
-        finishedAt: new Date().toISOString(),
-        url: args.url,
-        argv: process.argv.slice(2),
-        git: gitMeta(),
-        browser: {
-          name: 'chromium',
-          version: browserVersion,
-          channel: 'chromium',
+        ...runProvenance({
+          startedAt,
+          url: args.url,
+          browserVersion,
           headless: true,
-          args: DEFAULT_CHROME_ARGS,
-        },
-        gpu: probe,
-        host: { platform: process.platform, arch: process.arch },
-        viewport: { width: ARG_DEFAULTS.width, height: ARG_DEFAULTS.height, dpr: ARG_DEFAULTS.dpr },
+          chromeArgs: DEFAULT_CHROME_ARGS,
+          git: gitMeta(),
+          gpu: probe,
+        }),
+        viewport: VIEWPORT,
       },
       rows,
     };
