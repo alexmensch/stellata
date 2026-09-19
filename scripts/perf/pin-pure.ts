@@ -5,8 +5,8 @@
 import { basename, relative, resolve } from 'node:path';
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import {
-  VERDICT_MARK, band, bufferRefusal, dwellFloorMs, positionRefusal, preconditionRefusal,
-  readbackRefusal, recordCountRefusal, splitFrameClasses, verdictFor,
+  VERDICT_MARK, band, bufferRefusal, dwellFloorMs, dwellFrames, framesRefusal, positionRefusal,
+  preconditionRefusal, readbackRefusal, recordCountRefusal, splitFrameClasses, verdictFor,
   type DiffRefusal, type Verdict,
 } from './diff/diff-pure';
 import {
@@ -79,6 +79,12 @@ export interface PinRow {
    *  reading flat, so a run alone cannot answer it. Absent on a pin taken
    *  before the field existed, which reads as the run's own verdict. */
   readonly splitFrame?: boolean;
+  /** Frames the pinned dwell timed. A row compares only against one taken
+   *  over the same count: a median converges with dwell length, so two
+   *  lengths are two statistics rather than two readings
+   *  (`./diff/diff-pure.ts`). Absent on a pin taken before the field
+   *  existed, which declines the guard rather than refusing the row. */
+  readonly frames?: number;
   readonly method: string;
   readonly wall: PinClock & { readonly vsyncClamped: boolean };
   /** The WebGPU frame-sample stream where it was sound; null on WebGL2. */
@@ -330,6 +336,7 @@ function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
     idleRafMs: record.idleRafMs,
     readbackPerFrame: dwell.readbackPerFrame,
     splitFrame: splitFrameClasses(dwell.passCounts),
+    frames: dwellFrames(record),
     method: record.method!,
     wall: { ...clockOf(dwell.stats), vsyncClamped: dwell.stats.vsyncClamped },
     gpu: dwell.gpuStats === null ? null : clockOf(dwell.gpuStats),
@@ -416,14 +423,20 @@ export function missingCanonRows(pin: PinFile): readonly string[] {
 }
 
 /**
- * Runs are filed under
- * `.perf-runs/<date>/` in the main checkout (README.md § Recording), so that
- * is the path worth committing: an absolute one names one machine's home
- * directory, resolves nowhere else, and this file ships in a public repo.
- * A run stored outside the checkout keeps its name and loses its location.
+ * Runs are filed under `.perf-runs/<date>/` of the checkout they will be
+ * committed from (README.md § Recording), so that is the path worth
+ * committing: an absolute one names one machine's home directory, resolves
+ * nowhere else, and this file ships in a public repo. A run stored outside
+ * the checkout keeps its name and loses its location.
+ *
+ * `checkoutRoot` is the root of the checkout the run was WRITTEN in, which
+ * from a worktree is the worktree — not the main checkout. Resolving against
+ * the main checkout yields `.claude/worktrees/<name>/.perf-runs/…`, a path
+ * that stops resolving the moment the worktree is removed, and a pin is
+ * normally taken on a branch.
  */
-export function citeRunPath(jsonPath: string, mainCheckout: string): string {
-  const rel = relative(mainCheckout, resolve(jsonPath));
+export function citeRunPath(jsonPath: string, checkoutRoot: string): string {
+  const rel = relative(checkoutRoot, resolve(jsonPath));
   return rel === '' || rel.startsWith('..') ? basename(jsonPath) : rel;
 }
 
@@ -604,6 +617,7 @@ export function compareToPin(pin: PinFile, current: PerfFile): PinDiff {
     const incomparable = bufferRefusal(pinned.bufferMpx, record.bufferMpx!)
       ?? recordCountRefusal(pinned.recordCount, record.recordCount)
       ?? positionRefusal(pinned.position, record.position)
+      ?? framesRefusal(pinned.frames, dwellFrames(record))
       // Gated on the pin holding a GPU stream for the row, matching the clock
       // `compareRows` goes on to judge: a pair with none is printed ungated and
       // never marked, so narrowing it would refuse a row nothing reads.

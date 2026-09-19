@@ -149,12 +149,12 @@ information.
   `--mode dwell --scenario all --backend both --cooldown-ms 120000
   --frames 960 --pin`, ~15–25 min. Every row the pin records is this tier's
   to re-take. **`--frames` is not optional and its value is whatever the
-  outgoing pin's rows were taken at** — today 960. Omit it and the runner
-  dwells at its default 240, which writes a pin nothing can compare against:
-  Tier 1 reads at 960, two dwell lengths do not compare, and a pin row
-  records no frame count, so nothing refuses the mismatch and the next PR
-  reads a verdict that means nothing. Check the outgoing pin's `sourceRun`
-  before re-taking.
+  outgoing pin's rows were taken at** — today 960, and every pin row carries
+  its own `frames` so the outgoing pin answers the question itself. Omit it
+  and the runner dwells at its default 240, which is a different statistic
+  rather than a noisier one; `--against-pin` and `--baseline` both refuse the
+  mismatch (`scripts/perf/diff/README.md` § The refusals), so it costs a run
+  rather than corrupting the next PR's verdict.
   A sweep refused for one row — a first-context settle, a dwell that
   trended — is not re-armed: `pnpm run perf:pin` writes the pin offline
   from the saved run files of one commit, taking each row from the run

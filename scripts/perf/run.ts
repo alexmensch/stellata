@@ -13,7 +13,7 @@ import {
 } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { ArgError, parseRunArgs, usage, type RunArgs } from './args';
 import {
-  REPO_ROOT, gitMeta, mainCheckout, packageVersion, printAgainstPin, readJsonFlag, writePinFile,
+  REPO_ROOT, gitMeta, packageVersion, printAgainstPin, readJsonFlag, writePinFile,
 } from './checkout';
 import { diffRuns } from './diff/diff-pure';
 import { computeClock, type DwellSummary } from './dwell/dwell-pure';
@@ -398,7 +398,7 @@ function preflightPaths(args: RunArgs): Preflight {
 /** Returns whether writing the pin failed. */
 function writePin(args: RunArgs, file: PerfFile, against: PinDiff | null): boolean {
   const { pin, refusals } = pinFromRuns(
-    [{ file, sourceRun: citeRunPath(args.json!, mainCheckout()) }],
+    [{ file, sourceRun: citeRunPath(args.json!, REPO_ROOT) }],
     { version: packageVersion(), accepted: acceptedMarks(args.accept) },
   );
   if (pin === null) {

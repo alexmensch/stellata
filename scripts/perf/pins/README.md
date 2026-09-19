@@ -178,6 +178,17 @@ holds the older of the two, and the insertions and deletions are then the
 other way up; naming both ends also makes the line a `git diff` command a
 reader can re-run.
 
+### `sourceRun` is relative to the checkout the run was written in
+
+Not to the main checkout. A pin is normally taken on a branch and a branch
+normally lives in a worktree, where runs are filed under that worktree's own
+`.perf-runs/` (`../README.md` § Recording) — so resolving against the main
+checkout writes `.claude/worktrees/<name>/.perf-runs/…`, a path that stops
+resolving the moment the worktree is removed, which is to say shortly after
+the PR merges. `citeRunPath` takes the writing checkout's root for that
+reason, and a run stored outside any checkout still keeps its basename and
+loses its location.
+
 ### A deferred measurement cites a run file, never the pin
 
 A bead that asks for a measurement later names the baseline **run** —

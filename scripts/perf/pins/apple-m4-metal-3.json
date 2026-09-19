@@ -38,6 +38,7 @@
       "idleRafMs": 16.699999999999818,
       "readbackPerFrame": 0.25,
       "splitFrame": false,
+      "frames": 960,
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
@@ -79,6 +80,7 @@
       "idleRafMs": 16.69999999999891,
       "readbackPerFrame": 0.25,
       "splitFrame": false,
+      "frames": 960,
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
@@ -120,6 +122,7 @@
       "idleRafMs": 16.69999999999891,
       "readbackPerFrame": 0.25,
       "splitFrame": true,
+      "frames": 960,
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
@@ -161,6 +164,7 @@
       "idleRafMs": 16.699999999999818,
       "readbackPerFrame": 0.25,
       "splitFrame": false,
+      "frames": 960,
       "method": "raf-delta",
       "wall": {
         "p50": 16.700000000000728,
@@ -202,6 +206,7 @@
       "idleRafMs": 16.699999999999818,
       "readbackPerFrame": 0.25,
       "splitFrame": false,
+      "frames": 960,
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
@@ -243,6 +248,7 @@
       "idleRafMs": 16.69999999999891,
       "readbackPerFrame": 0.25,
       "splitFrame": false,
+      "frames": 960,
       "method": "raf-delta",
       "wall": {
         "p50": 16.700000000000728,
@@ -268,6 +274,7 @@
       "idleRafMs": 16.69999999999891,
       "readbackPerFrame": 0.25,
       "splitFrame": false,
+      "frames": 960,
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
@@ -293,6 +300,7 @@
       "idleRafMs": 16.69999999999891,
       "readbackPerFrame": 0.25,
       "splitFrame": false,
+      "frames": 960,
       "method": "raf-delta",
       "wall": {
         "p50": 16.700000000000728,
@@ -318,6 +326,7 @@
       "idleRafMs": 16.649999999999636,
       "readbackPerFrame": 0.25,
       "splitFrame": false,
+      "frames": 960,
       "method": "raf-delta",
       "wall": {
         "p50": 16.700000000004366,
@@ -343,6 +352,7 @@
       "idleRafMs": 16.699999999999818,
       "readbackPerFrame": 0.25,
       "splitFrame": false,
+      "frames": 960,
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,

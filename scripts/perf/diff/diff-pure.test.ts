@@ -3,7 +3,7 @@ import type { PriceFrameRow } from '../../../src/client/debug/frame-cost/frame-c
 import { EMPTY_PASS_KEY } from '../../../src/client/debug/frame-cost/passes/passes-pure';
 import {
   BUFFER_MPX_TOLERANCE, DWELL_FLOOR_FRACTION, DWELL_FLOOR_MS, READBACK_TOLERANCE,
-  RECORD_COUNT_TOLERANCE, diffRuns, dwellFloorMs, positionRefusal, preconditionRefusal,
+  RECORD_COUNT_TOLERANCE, diffRuns, dwellFloorMs, framesRefusal, positionRefusal, preconditionRefusal,
   splitFrameClasses, type RunDiff,
 } from './diff-pure';
 import type { DwellSummary } from '../dwell/dwell-pure';
@@ -443,6 +443,30 @@ describe('diffRuns — refusals', () => {
       expect(diffRuns(a, b).refusals[0].reason).toContain('cannot be placed in a load history');
     }
     expect(positionRefusal(undefined, 1)).toContain('unknown vs 1');
+  });
+
+  // The failure this exists for: a pin re-taken at the runner's default 240
+  // replaces one taken at 960, both dwells read steady, the band widens with
+  // neither, and every later verdict against it means nothing.
+  it('refuses two dwells taken over different frame counts', () => {
+    const diff = diffRuns(
+      withDwell(dwellStats(16.7), { params: { frames: 960 } }, dwellStats(19.0)),
+      withDwell(dwellStats(16.7), { params: { frames: 240 } }, dwellStats(18.9)),
+    );
+    expect(diff.rows).toEqual([]);
+    expect(diff.refusals[0].reason).toContain('dwell 960 vs 240 frames');
+    expect(framesRefusal(960, 960)).toBeNull();
+  });
+
+  // Unlike the record count, an absent frame count DECLINES rather than
+  // refuses: a pin written before the field existed has to stay usable.
+  it('declines the frame-count guard where either side did not record one', () => {
+    expect(framesRefusal(undefined, 960)).toBeNull();
+    expect(framesRefusal(960, undefined)).toBeNull();
+    expect(framesRefusal(undefined, undefined)).toBeNull();
+    const counted = withDwell(dwellStats(30), { params: { frames: 960 } });
+    const uncounted = withDwell(dwellStats(30), { params: {} });
+    expect(diffRuns(counted, uncounted).refusals).toEqual([]);
   });
 
   it('refuses a comparison where either side recorded no record count', () => {
