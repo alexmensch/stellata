@@ -1,0 +1,129 @@
+{
+  "schema": "stellata-survivors/1",
+  "run": {
+    "startedAt": "2026-09-19T12:07:44.004Z",
+    "finishedAt": "2026-09-19T12:08:13.067Z",
+    "url": "http://localhost:5173",
+    "argv": [
+      "--json",
+      ".perf-runs/2026-09-19/8cg596-survivors-m11.json"
+    ],
+    "git": {
+      "commit": "5dd786a50685762341c9518aeb7830bd853d09a6",
+      "dirty": true,
+      "mainCommit": "1d5f934eea78b01aed3d2b050f45717a9593f9da",
+      "mainReachable": false
+    },
+    "browser": {
+      "name": "chromium",
+      "version": "151.0.7922.34",
+      "channel": "chromium",
+      "headless": true,
+      "args": [
+        "--ignore-gpu-blocklist",
+        "--enable-unsafe-webgpu"
+      ]
+    },
+    "gpu": {
+      "webgl": {
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "vendor": "Google Inc. (Apple)",
+        "timerQuery": true
+      },
+      "webgpu": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false,
+        "timestampsAvailable": true
+      }
+    },
+    "host": {
+      "platform": "darwin",
+      "arch": "arm64"
+    },
+    "viewport": {
+      "width": 1280,
+      "height": 800,
+      "dpr": 2
+    }
+  },
+  "rows": [
+    {
+      "glow": 42655,
+      "disc": 0,
+      "prefilter": 139995,
+      "inFrame": 572687,
+      "records": 1278785,
+      "glowFraction": 0.03335588077745673,
+      "discFraction": 0,
+      "drawnFraction": 0.03335588077745673,
+      "prefilterFraction": 0.10947500948165642,
+      "drawnOfPrefilter": 0.30468945319475693,
+      "inFrameFraction": 0.4478368138506473,
+      "scenario": "mw120",
+      "settleMs": 1798
+    },
+    {
+      "glow": 13452,
+      "disc": 0,
+      "prefilter": 146882,
+      "inFrame": 243889,
+      "records": 1278785,
+      "glowFraction": 0.010519360173915084,
+      "discFraction": 0,
+      "drawnFraction": 0.010519360173915084,
+      "prefilterFraction": 0.11486059032597348,
+      "drawnOfPrefilter": 0.09158372026524693,
+      "inFrameFraction": 0.19071931560035502,
+      "scenario": "sol",
+      "settleMs": 4105
+    },
+    {
+      "glow": 7120,
+      "disc": 0,
+      "prefilter": 160786,
+      "inFrame": 91231,
+      "records": 1278785,
+      "glowFraction": 0.005567785045961596,
+      "discFraction": 0,
+      "drawnFraction": 0.005567785045961596,
+      "prefilterFraction": 0.1257334110112333,
+      "drawnOfPrefilter": 0.044282462403443086,
+      "inFrameFraction": 0.07134193785507337,
+      "scenario": "earth",
+      "settleMs": 3574
+    },
+    {
+      "glow": 12991,
+      "disc": 0,
+      "prefilter": 146872,
+      "inFrame": 247087,
+      "records": 1278785,
+      "glowFraction": 0.010158861732034705,
+      "discFraction": 0,
+      "drawnFraction": 0.010158861732034705,
+      "prefilterFraction": 0.11485277040315613,
+      "drawnOfPrefilter": 0.08845116836429,
+      "inFrameFraction": 0.19322012691734733,
+      "scenario": "mw50",
+      "settleMs": 2052
+    },
+    {
+      "glow": 0,
+      "disc": 0,
+      "prefilter": 0,
+      "inFrame": 1278785,
+      "records": 1278785,
+      "glowFraction": 0,
+      "discFraction": 0,
+      "drawnFraction": 0,
+      "prefilterFraction": 0,
+      "drawnOfPrefilter": 0,
+      "inFrameFraction": 1,
+      "scenario": "lg",
+      "settleMs": 1519
+    }
+  ]
+}

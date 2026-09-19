@@ -27,6 +27,7 @@ import {
   type ApsisField,
   type CatalogManifest,
 } from '../../catalog/record/catalog-pure';
+import { withoutPassthroughDash } from '../args';
 import { GAL_TO_ICRS } from '../../../src/client/galactic/galactic-coords';
 import { DISC_RADIUS_PC } from '../../../src/client/milkyway/milkyway-column-pure';
 import {
@@ -169,6 +170,7 @@ function gaussian(rng: () => number): number {
 
 function main(): void {
   const { values } = parseArgs({
+    args: withoutPassthroughDash(process.argv.slice(2)),
     options: {
       'limit-mag': { type: 'string', default: '11' },
       seed: { type: 'string', default: '1' },

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { PerspectiveCamera, Vector3, type BufferAttribute } from 'three';
+import { Matrix4, PerspectiveCamera, Vector3, type BufferAttribute } from 'three';
 import type { ComputeNode, StorageBufferAttribute, WebGPURenderer } from 'three/webgpu';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
@@ -15,6 +15,7 @@ import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { WebGpuExtinctionPrepass } from './extinction-prepass-webgpu';
 import { ExtinctionNodes } from './extinction-nodes';
 import { scrambledLattice } from './dispatch-order/dispatch-order-fixture';
+import { composeViewProjectionAbs, countInFrameAbs } from './refill/refill-decision-pure';
 import { REFILL_SLICES, refillSliceLength } from './refill/refill-slices-pure';
 
 /** A renderer whose readbacks resolve only when the test says so — the
@@ -264,6 +265,23 @@ describe('only what is in frame', () => {
     }
     prepass.warmAvReadback();
     expect(reads).toHaveLength(1);
+  });
+
+  // see ./refill/README.md § Counting the in-frame population
+  it('counts the in-frame population at the view it last dispatched with', () => {
+    const { prepass, shared, attachDust } = makePrepass();
+    attachDust();
+    expect(prepass.countInFrame()).toBeNull();
+    prepass.update(0, 0, 0, viewAt(0));
+    const view = composeViewProjectionAbs(viewAt(0).camera, new Vector3(), new Matrix4());
+    const viewport = shared.uViewport.value;
+    expect(prepass.countInFrame())
+      .toBe(countInFrameAbs(diagonal(COUNT), COUNT, view, viewport.x, viewport.y, -1));
+    prepass.update(0, 0, 0, viewAt(Math.PI));
+    const turned = composeViewProjectionAbs(viewAt(Math.PI).camera, new Vector3(), new Matrix4());
+    expect(prepass.countInFrame())
+      .toBe(countInFrameAbs(diagonal(COUNT), COUNT, turned, viewport.x, viewport.y, -1));
+    expect(prepass.countInFrame()).not.toBe(0);
   });
 
   // see ./refill/README.md § The generation stamp

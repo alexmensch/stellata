@@ -69,6 +69,11 @@ export interface ExtinctionPrepassSeam {
    *  later. Reads are synchronous on WebGL2, so there is nothing to
    *  warm. */
   warmAvReadback?(): void;
+  /** WebGPU only: how many catalogue stars the refill's frustum test admits
+   *  at the view it last dispatched with — the population that pays the
+   *  gate reads (`../../webgpu/extinction/refill/README.md` § Counting the
+   *  in-frame population). Null until a view has been supplied. */
+  countInFrame?(): number | null;
   /** WebGPU only: march every star once more as a fragment pass and
    *  bit-compare against the compute kernel's buffer. Null while the cache
    *  is inert. Dev-console only — it reads the whole buffer back. */

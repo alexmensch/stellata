@@ -1,10 +1,9 @@
 // Reads debug.survivors() at the canon vantages. README.md § Survivor counts.
 
 import { writeFileSync } from 'node:fs';
-import { parseArgs } from 'node:util';
 import { chromium, type Page } from 'playwright';
 import { survivorPct, type SurvivorReport } from '../../src/client/debug/survivor-counts';
-import { ARG_DEFAULTS, ArgError } from './args';
+import { ARG_DEFAULTS, parseSurvivorsArgs, type SurvivorsArgs } from './args';
 import { gitMeta } from './checkout';
 import {
   BOOT_TIMEOUT_MS, DEFAULT_CHROME_ARGS, SETTLE_TIMEOUT_MS,
@@ -31,31 +30,16 @@ function readSurvivors(page: Page): Promise<SurvivorReport | null> {
 
 function survivorTable(rows: readonly SurvivorsRecord[]): string {
   return formatTable(
-    ['vantage', 'records', 'glow', 'disc', 'drawn', 'drawn %', 'prefilter', 'drawn / prefilter'],
+    ['vantage', 'records', 'glow', 'disc', 'drawn', 'drawn %', 'prefilter', 'drawn / prefilter',
+      'in frame', 'in frame %'],
     rows.map((r) => [
       r.scenario, r.records, r.glow, r.disc, r.glow + r.disc,
       survivorPct(r.drawnFraction, TABLE_DECIMALS),
       r.prefilter, survivorPct(r.drawnOfPrefilter, TABLE_DECIMALS),
+      r.inFrame ?? 'n/a',
+      r.inFrameFraction === null ? 'n/a' : survivorPct(r.inFrameFraction, TABLE_DECIMALS),
     ]),
   );
-}
-
-interface SurvivorsArgs {
-  readonly url: string;
-  readonly json: string | null;
-}
-
-export function parseSurvivorsArgs(argv: readonly string[]): SurvivorsArgs {
-  try {
-    const { values } = parseArgs({
-      args: [...argv],
-      options: { url: { type: 'string' }, json: { type: 'string' } },
-      strict: true,
-    });
-    return { url: values.url ?? ARG_DEFAULTS.url, json: values.json ?? null };
-  } catch (e) {
-    throw new ArgError(e instanceof Error ? e.message : String(e));
-  }
 }
 
 async function main(): Promise<number> {

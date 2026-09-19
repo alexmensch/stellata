@@ -281,6 +281,17 @@ already stamped at this camera generation returns after one more read
 that made the gate a net loss at `lg` are therefore paid by the in-frame
 population only.
 
+**That population is measured, and at `lg` it is the whole catalogue.**
+Share of the catalogue the frustum admits, real set / the V≤11 synthetic
+set (`.perf-runs/2026-09-19/8cg596-survivors-real.json` and
+`8cg596-survivors-m11.json`, 1280×800 at dpr 2): 46% / 45% at `mw120`,
+17% / 19% at `sol`, 6.9% / 7.1% at `earth`, 18% / 19% at `mw50`, and
+**100% at `lg`** at both sizes — every star is in frame there, so the
+frustum returns nothing and all four reads are still paid on every thread
+at the one vantage where the gate saved least. The counts move with
+viewport and field of view, so a reading at another buffer size is not
+this one's comparison.
+
 **What it saves is a function of the vantage, and collapses with
 aperture.** Share of the march that is wasted without the gate, unaided
 eye (cull 10.56), real catalogue / the V≤11 synthetic set: 15.2% / 12.7%

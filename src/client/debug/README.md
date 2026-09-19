@@ -121,7 +121,10 @@ path is sized against. It prints the glow-tier and disc-tier instance
 counts the compaction kernel last wrote, with the catalogue record count
 beside them, then the count passing the dust-independent prefilter and
 the drawn share of those — the frustum's own prize, once a kernel already
-gates on the prefilter — and returns the report.
+gates on the prefilter — then the count the extinction refill's frustum
+test admits at this view, which is the population that pays the cache
+gate's reads (`../webgpu/extinction/refill/README.md` § Counting the
+in-frame population), and returns the report.
 
 WebGPU only: the WebGL2 boot lists no survivors and prices its three draws
 at the whole catalogue, so the call warns and returns null there. It maps
