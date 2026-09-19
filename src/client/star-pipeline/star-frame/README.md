@@ -59,6 +59,13 @@ size branch. It composes `discWindowPcFor` over
 `physSizeElisionBoundPx`, which owns what the bound has to satisfy
 (`../perceptual-disc/README.md` § Eliding the physical-size branch).
 
+Every window solved through `discWindowPcFor` — this one, the core-mask
+gate, the member scan — reads `maxPhysicalRadiusPc`, which is taken at
+each star's **pulsation peak**, not its static radius. These are bounds
+that must not move as a star breathes, and the peak/live distinction is
+the one that already cost the occluder set a Mira
+(`../../camera/controls/README.md` § The live-versus-peak pair).
+
 The shell calls it once per rendered frame, **before** the node sync that
 copies scalars onto the TSL uniform nodes: the window moves with FOV,
 viewport and both `distN` sliders, so a write landing after the sync

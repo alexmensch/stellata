@@ -13,6 +13,7 @@ import {
 } from '../../loaders/epoch-advance-pure';
 import { T_CLAMP_MAX_S, T_CLAMP_MIN_S, tToJdUt } from '../../solar-system/time/time';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
+import { peakAmplitudeFactor } from '../../camera/controls/star-geometry';
 import { bestApsisTeff } from '../star-color-routing-pure';
 import { discWindowPc, RESOLVED_DISC_MIN_PX } from '../local-pass/star-local-cluster-pure';
 import { physSizeElisionBoundPx } from '../perceptual-disc/phys-size-elision-pure';
@@ -62,9 +63,10 @@ export class StarFrame {
   readonly distSol: Float32Array;
   /** Per-star best Apsis Teff (K); 0 = no Apsis solution. */
   readonly teffApsis: Float32Array;
-  /** Largest physicalRadius in the catalog, in pc. The core-mask and
-   *  member-scan windows solve for the distance at which this worst-case
-   *  disc crosses their pixel threshold. */
+  /** Largest physicalRadius in the catalog, in pc, at each star's pulsation
+   *  PEAK — a window solved from it must not move as a star breathes
+   *  (`../../camera/controls/README.md` § The live-versus-peak pair). The
+   *  core-mask, member-scan and physical-size windows all read it. */
   readonly maxPhysicalRadiusPc: number;
 
   /** `catalog.positions − worldOffset`, bound to the dynamic
@@ -133,7 +135,9 @@ export class StarFrame {
     for (let i = 0; i < catalog.count; i++) {
       const r = Math.max(catalog.physicalRadius[i], MIN_PHYSICAL_RADIUS_R_SUN);
       this.logRadii[i] = Math.log10(r);
-      if (r > maxPhysicalRadius) maxPhysicalRadius = r;
+      const rPeak = r * peakAmplitudeFactor(
+        catalog.pulsRho[i], catalog.amplitudeMag[i], catalog.periodDays[i]);
+      if (rPeak > maxPhysicalRadius) maxPhysicalRadius = rPeak;
       this.lumClassF32[i] = catalog.luminosityClass[i];
       const x = catalog.positions[i * 3];
       const y = catalog.positions[i * 3 + 1];
