@@ -171,15 +171,6 @@ def main() -> None:
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
 
-    request_ids = rl.read_source_id_request(REQUEST)
-    if not request_ids:
-        raise SystemExit(f"{SCRIPT_NAME}: no source_ids in {REQUEST}")
-    print(
-        f"pulling {TABLE} over the deep population: {rl.SLICE_COUNT} magnitude "
-        f"slices at G <= {rl.G_MAG_FLOOR} plus what {len(request_ids)} requested "
-        f"source_ids add (MAXREC {SYNC_MAXREC:,})"
-    )
-
     lines: dict[int, str] = {}
     spot_ids = {spec["source_id"] for spec in SPOT_CHECKS}
     spot_rows: dict[int, Any] = {}
@@ -203,20 +194,21 @@ def main() -> None:
         lines[source_id] = rl.format_tsv_row(write_row(row), TSV_COLUMNS)
 
     start = time.time()
-    seen, from_magnitude = rl.pull_deep_population(
+    pulled = rl.pull_deep_population(
         rl.gaia_sync_client(SYNC_MAXREC),
         table=TABLE,
         columns=TSV_COLUMNS,
-        request_ids=request_ids,
+        request_path=REQUEST,
         on_row=on_row,
         script_name=SCRIPT_NAME,
+        maxrec=SYNC_MAXREC,
         checkpoint_base=OUT,
         schema=EXPECTED_SCHEMA,
         schema_label=TABLE,
     )
 
     rl.assert_row_count(
-        from_magnitude,
+        pulled.from_magnitude,
         EXPECTED_MAGNITUDE_ROWS_MIN,
         EXPECTED_MAGNITUDE_ROWS_MAX,
         SCRIPT_NAME,
@@ -225,12 +217,8 @@ def main() -> None:
         "before re-pinning.",
     )
 
-    print(
-        f"  magnitude leg     {from_magnitude:>9,}\n"
-        f"  request leg adds  {len(seen) - from_magnitude:>9,}"
-    )
     union_coverage = rl.report_coverage_counts(
-        len(seen), len(seen),
+        len(pulled.seen), len(pulled.seen),
         [
             ("(teff_gspphot AND logg_gspphot)", gspphot),
             ("(teff_gspspec AND logg_gspspec)", gspspec),
@@ -246,7 +234,7 @@ def main() -> None:
             f"regressed; investigate."
         )
 
-    spectraltype_coverage = spectraltype_filled / len(seen)
+    spectraltype_coverage = spectraltype_filled / len(pulled.seen)
     print(
         f"  spectraltype_esphs non-null:     {spectraltype_filled:>9,} "
         f"({100*spectraltype_coverage:.1f}%)"
@@ -258,12 +246,6 @@ def main() -> None:
             f"{EXPECTED_SPECTRALTYPE_COVERAGE_MIN:.0%} — verify the SELECT "
             f"includes spectraltype_esphs and that ESP-HS returns real values."
         )
-
-    matched_request = sum(1 for sid in request_ids if sid in seen)
-    print(
-        f"  of {len(request_ids)} requested source_ids: {matched_request} "
-        f"({100 * matched_request / len(request_ids):.1f}%)"
-    )
 
     rl.validate_spot_rows(spot_rows, SPOT_CHECKS, script_name=SCRIPT_NAME)
 

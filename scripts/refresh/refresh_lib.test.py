@@ -1392,24 +1392,34 @@ class PullDeepPopulationTests(unittest.TestCase):
 
     def _run(self, answer, request_ids, **kwargs):
         seen_rows: list[dict] = []
+        checkpoints: list[Path] = []
         saved = rl.BatchCheckpoint
-        rl.BatchCheckpoint = lambda _path: None  # FakeTable has no VOTable form
+        # FakeTable has no VOTable form, so the cache is stubbed — but the
+        # path it would have used is recorded, since the two legs sharing one
+        # would replay the magnitude leg's batches as the request leg's.
+        rl.BatchCheckpoint = lambda path: checkpoints.append(path)
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                seen, from_magnitude = rl.pull_deep_population(
+                request = Path(tmp) / "request.tsv"
+                request.write_text(
+                    rl.SOURCE_ID_REQUEST_HEADER + "\n"
+                    + "".join(f"{sid}\n" for sid in request_ids)
+                )
+                pulled = rl.pull_deep_population(
                     fake_tap_client(rl, answer),
                     table="cat.t",
                     columns=self.COLUMNS,
-                    request_ids=request_ids,
+                    request_path=request,
                     on_row=seen_rows.append,
                     script_name="s",
+                    maxrec=1000,
                     checkpoint_base=Path(tmp) / "out.tsv",
                     log=lambda _m: None,
                     **kwargs,
                 )
         finally:
             rl.BatchCheckpoint = saved
-        return seen, from_magnitude, seen_rows
+        return pulled, seen_rows, checkpoints
 
     def test_request_leg_asks_only_for_what_the_magnitude_leg_missed(self) -> None:
         asked: list[set[int]] = []
@@ -1421,11 +1431,13 @@ class PullDeepPopulationTests(unittest.TestCase):
             asked.append({int(p) for p in query.split("(")[1].rstrip(")").split(",")})
             return FakeTable([{"source_id": 2, "v": 2}], self.COLUMNS)
 
-        seen, from_magnitude, rows = self._run(run, [1, 2], batch_size=10)
+        pulled, rows, checkpoints = self._run(run, [1, 2], batch_size=10)
         self.assertEqual(asked, [{2}])          # 1 came from the magnitude leg
-        self.assertEqual(from_magnitude, 1)
-        self.assertEqual(seen, {1, 2})
+        self.assertEqual(pulled.from_magnitude, 1)
+        self.assertEqual(pulled.seen, {1, 2})
         self.assertEqual([r["source_id"] for r in rows], [1, 2])
+        self.assertEqual((pulled.requested, pulled.matched_request), (2, 2))
+        self.assertEqual(len(set(checkpoints)), 2)
 
     def test_no_request_leg_when_the_bound_covers_the_request_set(self) -> None:
         asked: list[str] = []
@@ -1449,6 +1461,33 @@ class PullDeepPopulationTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as caught:
             self._run(run, [9], batch_size=10)
         self.assertIn("more than one slice", str(caught.exception))
+
+    def test_each_leg_caches_under_its_own_directory(self) -> None:
+        base = Path("/tmp/out.tsv")
+        legs = {rl._leg_checkpoint(base, "magnitude"), rl._leg_checkpoint(base, "request")}
+        self.assertEqual(len(legs), 2)
+        # .gitignore matches these as data/**/*.tsv.ckpt*/
+        for leg in legs:
+            self.assertTrue(leg.name.startswith("out.tsv.ckpt-"))
+
+    def test_an_empty_request_file_is_refused(self) -> None:
+        with self.assertRaises(SystemExit) as caught:
+            self._run(lambda _q: FakeTable([], self.COLUMNS), [], batch_size=10)
+        self.assertIn("no source_ids", str(caught.exception))
+
+
+class AssertRequestCoverageTests(unittest.TestCase):
+    def _result(self, matched: int, requested: int) -> rl.DeepPopulation:
+        return rl.DeepPopulation(set(), 0, requested, matched)
+
+    def test_accepts_coverage_at_the_floor(self) -> None:
+        self.assertEqual(rl.assert_request_coverage(self._result(9, 10), 0.9, "s"), 0.9)
+
+    def test_rejects_a_request_leg_that_returned_nothing(self) -> None:
+        # The magnitude leg's row-count band says nothing about this.
+        with self.assertRaises(SystemExit) as caught:
+            rl.assert_request_coverage(self._result(0, 10), 0.9, "s")
+        self.assertIn("below floor", str(caught.exception))
 
 
 if __name__ == "__main__":

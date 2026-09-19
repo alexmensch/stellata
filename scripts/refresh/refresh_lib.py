@@ -13,7 +13,9 @@ import re
 import sys
 import time
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence, TypeVar
+from typing import (
+    Any, Callable, Iterable, Iterator, Mapping, NamedTuple, Sequence, TypeVar
+)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
@@ -562,33 +564,59 @@ def request_leg_adql(
     )
 
 
+class DeepPopulation(NamedTuple):
+    """What `pull_deep_population` reached. `matched_request` is the share
+    of the request set either leg served — the number a caller gates on.
+    """
+
+    seen: set[int]
+    from_magnitude: int
+    requested: int
+    matched_request: int
+
+
 def pull_deep_population(
     client: TapClient,
     *,
     table: str,
     columns: Sequence[str],
-    request_ids: Sequence[int],
+    request_path: Path,
     on_row: Callable[[Any], None],
     script_name: str,
+    maxrec: int,
     checkpoint_base: Path,
     schema: Mapping[str, type | tuple[type, ...]] | None = None,
     schema_label: str = "batch",
     batch_size: int = ID_BATCH_SIZE,
     log: Callable[[str], None] = print,
-) -> tuple[set[int], int]:
+) -> DeepPopulation:
     """Every `table` row for the catalogue's deep population, handed to
-    `on_row` exactly once per source_id. Returns the source_ids reached and
-    how many of them the magnitude leg served.
+    `on_row` exactly once per source_id.
 
     Two legs, because the population has two definitions and neither
     contains the other. The magnitude leg is a SELECTION — every source at
     `G_MAG_FLOOR` or brighter, which no request set names because nothing
-    binds them yet. The request leg is the catalogue's own source_ids,
-    whose classic tiers reach fainter than the floor. Restricting the
-    request leg to the ids the magnitude leg did not return is what keeps
-    it to the genuine remainder, and is also what makes `on_row` a
-    once-per-source contract the caller can write straight to a line.
+    binds them yet. The request leg is `request_path`'s source_ids, whose
+    classic tiers reach fainter than the floor. Restricting the request leg
+    to the ids the magnitude leg did not return is what keeps it to the
+    genuine remainder, and is also what makes `on_row` a once-per-source
+    contract the caller can write straight to a line.
+
+    Reading the request file, reporting both legs and counting the request
+    set's coverage all live here so a calling script is its gates and
+    nothing else.
     """
+    request_ids = read_source_id_request(request_path)
+    if not request_ids:
+        raise SystemExit(f"{script_name}: no source_ids in {request_path}")
+
+    slices = magnitude_slices()
+    log(
+        f"pulling {table} over the deep population: {len(slices)} magnitude "
+        f"slices at G <= {G_MAG_FLOOR} plus what {len(request_ids):,} requested "
+        f"source_ids add (MAXREC {maxrec:,})"
+    )
+
     seen: set[int] = set()
     returned = 0
 
@@ -600,8 +628,6 @@ def pull_deep_population(
             seen.add(source_id)
             on_row(row)
 
-    slices = magnitude_slices()
-    log(f"  magnitude leg: {len(slices)} slices of {table} at G <= {G_MAG_FLOOR}")
     run_in_batches(
         slices, 1,
         lambda batch: client.run(magnitude_leg_adql(columns, table, batch[0])),
@@ -615,7 +641,7 @@ def pull_deep_population(
 
     remainder = [sid for sid in request_ids if sid not in seen]
     log(
-        f"  request leg: {len(remainder)} of {len(request_ids)} requested "
+        f"  request leg: {len(remainder):,} of {len(request_ids):,} requested "
         f"source_ids the magnitude leg did not reach"
     )
     run_in_batches(
@@ -626,10 +652,41 @@ def pull_deep_population(
         checkpoint=BatchCheckpoint(_leg_checkpoint(checkpoint_base, "request")),
         log=log,
     )
-    return seen, from_magnitude
+
+    matched_request = sum(1 for sid in request_ids if sid in seen)
+    log(
+        f"  magnitude leg     {from_magnitude:>9,}\n"
+        f"  request leg adds  {len(seen) - from_magnitude:>9,}\n"
+        f"  of {len(request_ids):,} requested source_ids: {matched_request:,} "
+        f"({100 * matched_request / len(request_ids):.1f}%)"
+    )
+    return DeepPopulation(seen, from_magnitude, len(request_ids), matched_request)
+
+
+def assert_request_coverage(
+    result: DeepPopulation, floor: float, script_name: str
+) -> float:
+    """Gate the share of the request set the pull served. The magnitude leg
+    is gated by its own row-count band, which says nothing about the request
+    leg — so without this a request leg that returned nothing still passes
+    every other check, and the promoted companions the union exists to reach
+    go missing until a downstream shortfall pin notices.
+    """
+    coverage = result.matched_request / result.requested
+    if coverage < floor:
+        raise SystemExit(
+            f"{script_name}: coverage {coverage:.1%} of the request set is "
+            f"below floor {floor:.0%} — the catalogue's source_ids or the "
+            f"upstream table has changed; investigate before re-pinning."
+        )
+    return coverage
 
 
 def _leg_checkpoint(base: Path, leg: str) -> Path:
+    """One cache directory per leg. They must not collide: a resumed run
+    replays a leg's cached batches, and a shared directory would feed the
+    magnitude leg's results back as the request leg's.
+    """
     return base.with_suffix(f"{base.suffix}.ckpt-{leg}")
 
 

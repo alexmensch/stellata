@@ -338,6 +338,11 @@ reach, which takes two legs: that population has two definitions and neither
 contains the other. `refresh_lib.pull_deep_population` is the one statement of
 the shape, and each script supplies only a table, a column list and its gates.
 
+It owns the request-file read, both legs' logging, and the count of the
+request set either leg served; it hands back a `DeepPopulation`
+(`seen` · `from_magnitude` · `requested` · `matched_request`). A third pull
+scoped this way writes its gates and nothing else.
+
 - The **magnitude leg** is a selection — every source at the floor or
   brighter, which no request set names because nothing binds most of them yet.
   Neither table carries a magnitude, so each slice joins to
