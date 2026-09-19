@@ -22,13 +22,18 @@ describe('the quarter partition', () => {
   // Each sub-list holds one residue class, so its capacity is the class
   // size and a build can never overflow it.
   it.each([1, 5, 100, 101, 388_071, 1_278_785])('no residue class outruns its sub-list at %i', (count) => {
-    const sizes = new Array<number>(REFILL_SLICES).fill(0);
-    for (let star = 0; star < Math.min(count, 4096); star++) sizes[refillQuarterOf(star)]++;
-    const classSize = (q: number) => Math.floor((count - 1 - q) / REFILL_SLICES) + 1;
+    const classSize = (q: number) => Math.max(0, Math.floor((count - 1 - q) / REFILL_SLICES) + 1);
     for (let q = 0; q < REFILL_SLICES; q++) {
-      expect(Math.max(0, classSize(q))).toBeLessThanOrEqual(refillSliceLength(count));
+      expect(classSize(q)).toBeLessThanOrEqual(refillSliceLength(count));
     }
-    expect(sizes.reduce((n, s) => n + s, 0)).toBe(Math.min(count, 4096));
+    // The capacity rests on that formula being the partition the kernel's
+    // `self % REFILL_SLICES` actually makes, so count one out and compare.
+    if (count <= 4096) {
+      const sizes = new Array<number>(REFILL_SLICES).fill(0);
+      for (let star = 0; star < count; star++) sizes[refillQuarterOf(star)]++;
+      expect(sizes).toEqual(Array.from({ length: REFILL_SLICES }, (_, q) => classSize(q)));
+      expect(sizes.reduce((n, s) => n + s, 0)).toBe(count);
+    }
   });
 
   it('lays the sub-lists back to back at slice-length stride', () => {

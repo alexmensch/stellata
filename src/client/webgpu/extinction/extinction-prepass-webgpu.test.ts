@@ -19,10 +19,13 @@ import { REFILL_SLICES, refillWorklistLength } from './refill/refill-slices-pure
 
 /** A renderer whose readbacks resolve only when the test says so — the
  *  frame-decoupled semantics a cold read has to live with. */
-function fakeRenderer() {
+function fakeRenderer(refill?: { quarter: { value: number } }) {
   const computes: ComputeNode[] = [];
   /** The count of each dispatch, in call order — undefined for an indirect one. */
   const dispatched: (number | undefined)[] = [];
+  /** `quarter` as each dispatch was issued, not as `update()` left it: the
+   *  consumer's own class, which the very next line overwrites. */
+  const dispatchedQuarter: number[] = [];
   const reads: {
     attr: BufferAttribute;
     offset: number | undefined;
@@ -35,6 +38,7 @@ function fakeRenderer() {
   const renderer = {
     compute: (node: ComputeNode, dispatchSize?: number) => {
       dispatched.push(dispatchSize);
+      if (refill !== undefined) dispatchedQuarter.push(refill.quarter.value);
       return computes.push(node);
     },
     setRenderTarget,
@@ -48,6 +52,7 @@ function fakeRenderer() {
     renderer: renderer as unknown as WebGPURenderer,
     computes,
     dispatched,
+    dispatchedQuarter,
     reads,
     released,
     setRenderTarget,
@@ -98,7 +103,7 @@ function makePrepass(count = COUNT, positions: Float32Array = diagonal(count)) {
     hdr: makeHdrEmitterUniforms(),
   });
   const slots = new ExtinctionNodes();
-  const fake = fakeRenderer();
+  const fake = fakeRenderer(slots.refill);
   const nodes = buildSharedUniformNodes(shared).nodes;
   // The gate reads per-star statics, so it needs the star layer's tables —
   // built over the mock's zero-filled attributes, which is enough for the
@@ -180,7 +185,9 @@ describe('the worklist refill', () => {
   // The arm stays up while classes are still to build and drops on the frame
   // the last one marches.
   it('then marches one class a frame at the compaction\'s indirect count, and parks', () => {
-    const { prepass, computes, dispatched, refill, compaction, attachDust } = makePrepass();
+    const {
+      prepass, computes, dispatched, dispatchedQuarter, refill, compaction, attachDust,
+    } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
     prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
@@ -202,6 +209,10 @@ describe('the worklist refill', () => {
     // and the prepass marches next frame.
     expect(quarters).toEqual([1, 2, 3, 0]);
     expect(arms).toEqual([1, 1, 1, 0]);
+    // Consume, then produce, in one update(): each dispatch carried the class
+    // the compaction built LAST frame, not the one the same call goes on to
+    // arm. The uniform holds the first value only across that one line.
+    expect(dispatchedQuarter.slice(1)).toEqual([0, 1, 2, 3]);
     for (let frame = 0; frame < 5; frame++) prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
     expect(computes).toHaveLength(1 + REFILL_SLICES);
   });
