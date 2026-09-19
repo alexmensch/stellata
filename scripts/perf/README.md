@@ -77,9 +77,13 @@ scripts/perf/
 `pnpm run survivors` boots each canon vantage on WebGPU, waits for the same
 render-gate settle the runner waits for, and prints what the compaction
 kernel listed: glow-tier and disc-tier instance counts against the
-catalogue record count, and the count passing the dust-independent
+catalogue record count, the count passing the dust-independent
 prefilter with the drawn share of it
-(`src/client/webgpu/star/compaction/README.md` § Reading the counts back).
+(`src/client/webgpu/star/compaction/README.md` § Reading the counts back),
+and the count the extinction refill's frustum test admits — the
+population that pays the cache gate's reads
+(`src/client/webgpu/extinction/refill/README.md` § Counting the in-frame
+population).
 It reuses `scenarios.ts` and `page-protocol.ts` so its vantages and its
 boot are the runner's, byte for byte.
 

@@ -112,7 +112,7 @@ import type { ConstellationOfKind } from './focus-card/constellation-row';
 import { focalRideStep } from './camera/focus/focal-ride-pure';
 import { makeFocalAnchorPolicy } from './camera/focus/focal-anchor-policy';
 import type { StellataRenderer, WebGpuSeam, WebGpuStarLayer } from './webgpu/seam';
-import type { SurvivorCounts } from './webgpu/star/compaction/compaction-pure';
+import type { SurvivorCountsRead } from './debug/survivor-counts';
 import type { PlanetSystem } from './solar-system/planet-system';
 import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import type { PlanetBodyField } from './solar-system/planets/planet-body-field';
@@ -1685,10 +1685,12 @@ export class Stellata implements FrameAnchor {
    *  (`webgpu/star/compaction/README.md` § Reading the counts back).
    *  The read waits on a dispatch to count into, which a settled camera has
    *  parked the gate out of. */
-  readSurvivorCounts(): Promise<SurvivorCounts | null> {
-    if (this.webgpuStarLayer === null) return Promise.resolve(null);
+  async readSurvivorCounts(): Promise<SurvivorCountsRead | null> {
+    if (this.webgpuStarLayer === null) return null;
     this.renderGate.invalidate('debug:survivors');
-    return this.webgpuStarLayer.readSurvivorCounts();
+    const counts = await this.webgpuStarLayer.readSurvivorCounts();
+    if (counts === null) return null;
+    return { ...counts, inFrame: this.extinctionPrepass?.countInFrame?.() ?? null };
   }
 
   /** Numeric check that the compute A_V kernel and a fragment march of the

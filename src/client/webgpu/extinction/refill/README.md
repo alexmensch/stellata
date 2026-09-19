@@ -11,9 +11,11 @@ src/client/webgpu/extinction/refill/
     (+ test)                  and the cursor they move — which slots this
                               frame dispatches, or none.
   refill-decision-pure.ts     The kernel's per-slot verdict in frustum mode
-    (+ test)                  (slotRefills), the slack, and the view it
-                              tests against (composeViewProjectionAbs,
-                              sameView). The rotation case is pinned here.
+    (+ test)                  (slotRefills), the slack, the view it tests
+                              against (composeViewProjectionAbs, sameView),
+                              and the CPU count of what that view admits
+                              (countInFrameAbs). The rotation case is
+                              pinned here.
 ```
 
 ## Only what is in frame
@@ -51,6 +53,21 @@ than the slack, and the vertex stage draws it with its last A_V. That is a
 resolved disc hundreds of px wide with its centre well past the edge — a
 close-approach case, where the camera's AU-scale motion moves A_V by
 nothing. State the vantage before narrowing the slack.
+
+### Counting the in-frame population
+
+`countInFrame()` runs the frustum test above over `catalog.positions` on
+the CPU at the view the kernel last dispatched with — the same matrix,
+the same `uViewport`, the same pinned-star exemption — and returns how
+many stars it admits. It is the number that sizes what the gate's four
+reads cost: only an in-frame thread reaches them. `debug.survivors()`
+prints it beside the compaction's counters and `pnpm run survivors`
+records it (`../../../debug/README.md` § Survivor counts), so the split
+of a catalogue at a vantage into frustum-rejected, in frame but
+gate-rejected, and drawn is readable without a clock. The count is
+float64 where the kernel is float32, so a star within a few ulp of the
+screen edge can fall either side; at a 256 px slack that is not a number
+anyone reads.
 
 ### The generation stamp
 
