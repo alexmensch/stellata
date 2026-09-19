@@ -26,6 +26,10 @@ src/client/webgpu/extinction/
                               the in-frame test and the per-star camera
                               generation stamp, the three dispatches that
                               stay whole — its own README.
+  mirror/                     The pick's CPU copy of the A_V table: the
+                              mapped readback, its staging gate and the
+                              epoch that drops a superseded copy — its own
+                              README.
   extinction-nodes.ts         The two slots as nodes — the dust volume
     (+ test)                  (texture) and the A_V cache (storage
                               buffer) — with their placeholders and the
@@ -308,14 +312,25 @@ gate and the refill sliced, `.perf-runs/2026-09-19/8cg575-frustum-recompute-all.
 (`gpu-compute` p50, ms, 388,071 records): mw120 0.526, sol 0.525, earth
 0.487, mw50 0.394, **lg 0.926**. Against the gated column above that is −31%
 at `lg` and −61% to −73% elsewhere, and `lg` now sits below its own
-pre-gate 0.982 — the net loss there is gone. **Both columns predate 58.4's
-clipped march**, which this branch now carries, so the differential holds
-but neither absolute figure is this tree's. Two changes are folded into that
-column and it cannot separate them: the slicing dispatches a quarter of the
-slot space per frame, and the frustum returns the out-of-frame threads
-inside it. Attributing the gain to either alone needs a forced-recompute run
-at 58.5's tip, which does not exist. `stellata-8cg.57.7` re-reads `lg`
-against the clipped march.
+pre-gate 0.982 — the net loss there is gone. Two changes are folded into
+that column and on the real catalogue it cannot separate them: the slicing
+dispatches a quarter of the slot space per frame, and the frustum returns the
+out-of-frame threads inside it. **Every run quoted below and above predates
+58.4's clipped march**, which this branch now carries, so the differentials
+hold but no absolute figure here is this tree's;
+`stellata-8cg.57.7` re-reads `lg` against the clipped march.
+
+**The frustum's own share is separable at 1,278,785**, where a run exists at
+the slicing's tip with the same lever and flags. `gpu-compute` p50, ms:
+`cns-m11-recompute-all.json` 8.955 mw120 / 9.123 mw50 ungated,
+`8cg585-m11-spread.json` 1.961 / 1.928 with the gate and the slicing, and
+`.perf-runs/2026-09-19/8cg575-m11-recompute-all.json` **1.396 / 1.177** with
+the frustum as well — so the frustum alone takes **−29% at mw120 and −39% at
+mw50** off an already-gated, already-sliced kernel. The whole five-vantage
+column there reads mw120 1.396, sol 1.478, earth 1.288, mw50 1.177, lg 2.364.
+That artifact is the synthetic set and its band is uncorrected, as the
+baseline's was (`../../../../scripts/perf/synthetic-catalog/README.md` § The
+band double-counts); a run over it never compares to `pins/`.
 
 **The two stages compute `dPc` in different frames** — this pass in
 absolute heliocentric coordinates, the vertex stage in the floating-origin
@@ -377,85 +392,8 @@ correctness, and re-sorting would cost ~77 ms per bucket crossing
 
 ## Cold reads — the one behaviour that is not parity
 
-`readAvMag(idx)` is synchronous on WebGL (`gl.readPixels`, memoised) and
-the pick paths call it that way: a star's extinction decides whether the
-renderer put a pixel on screen for it, so a pick gated on the intrinsic
-magnitude selects stars the frame drew black.
-
-WebGPU has **no synchronous readback**, and that is not a latency to
-shorten but a shape the design has to take. `getArrayBufferAsync` stages
-a `copyBufferToBuffer` and maps it, resolving frames later — so a copy
-issued *by* the pick lands after the verdict it was meant to decide, and
-the caller has already read `null` as "no cache, not no dust"
-(`../../star-pipeline/extinction/README.md` § Reading A_V back) and erred
-toward *pickable*. No per-star refinement of that read closes it. The
-value has to be on the CPU **before** the pick asks.
-
-**`warmAvReadback()` is the whole mechanism**: one mapped copy of the
-entire `count`-long buffer into a `Float32Array` mirror, which
-`readAvMag` then answers out of — exactly, for every star in the
-catalogue, at no further GPU cost until the next recompute. The pointer
-events that precede a pick are what drive it (`onPickImminent` on
-`../../hover/hover-engine.ts` → `Stellata.notifyPickImminent`), so the
-280 ms hover dwell and the click FSM's own hold each cover the map's
-latency and the **first** hover already rejects a star behind heavy dust.
-
-**The whole table, not the candidates, because the event does not know
-them.** A candidate list is what the pick's own catalogue scan produces,
-one dwell later; the pointer event that has to start the copy knows only
-that *a* pick is coming. Warming what the event knows means warming
-everything — and 1.48 MiB copied once beats racing the scan.
-
-**The generation is what bounds the cost, not the event rate.** The
-mirror is dropped on every recompute and re-read at most once per
-recompute, so a `pointermove` sweep across a dusty field costs one copy
-and a still pointer costs none. The same counter drops a read that
-resolves against a superseded buffer — the WebGL twin's `avCache.clear()`
-expressed for a promise that can outlive the thing it was reading. A map
-that *fails* consumes that one attempt rather than re-arming, so a device
-refusing the copy cannot turn a pointer sweep into a 1.48 MiB-per-event
-drip.
-
-**A refill still cycling warms nothing at all**, which is the other half of
-that bound and the one the generation counter alone does not give. A warp,
-a focus lerp or a camera simply turning asks for a refill every frame
-(`refill/README.md` § A view change is a refill request), so the cursor
-never parks,
-the generation advances every frame, and a copy issued against one is
-superseded before the 280 ms dwell that wanted it can read a byte — every
-such copy is spent and dropped, at 1.48 MiB a frame for as long as the
-motion lasts. `warmAvReadback` therefore returns early while the cursor is
-mid-cycle, and the pick reads `null` and errs pickable across that stretch
-either way. **The gate is the cursor, not the recompute**: a dust chunk
-landing on a parked camera recomputes too, and the frame its cycle parks on
-is one a pick can still be staged for. The frame-cost lever that forces a
-recompute every frame at a parked camera is the same shape, and keying this
-gate on the recompute instead would swallow it — it would also spend 1.48
-MiB a frame on a live pointer, which is why that lever is dwell-only
-(`../../debug/frame-cost/passes/README.md` § The extinction rows). A parked
-cursor also means the buffer belongs to one completed cycle rather than to
-a half-written one, which is the second thing the mirror needs and the
-camera the old gate watched never said (`refill/README.md` § Three places).
-
-A drag announces nothing either: hover is suppressed for its duration
-anyway, and the camera motion under it would invalidate each copy before
-the next event. The residual hole is that shape and only that shape — a
-pick dispatched while the camera is still crossing more than
-`RECOMPUTE_EPSILON_PC` per frame reads `null` and errs pickable, as every
-pick did before. Hover cannot reach it (it needs a `pointermove` the
-drag latch swallows); a click during a focus lerp can.
-
-Why not the alternatives: reading the buffer on every recompute is
-1.5 MB per read and a warp recomputes every frame, which spends it
-exactly where nobody picks; marching on the CPU needs the ~128 MiB voxel
-grid the loader uploads and drops, and would be a second implementation
-of the integral free to drift from the shader's.
-
-The copy goes through `getArrayBufferAsync` with a **null target**, which
-creates its staging buffer per call and destroys it after the map. three
-also offers a `ReadbackBuffer` target that holds one across calls; it
-trades 1.48 MiB of VRAM for the renderer's whole life against a create
-and destroy per warm, and with the camera gate above a warm is a
-per-settle event rather than a per-frame one. On the integrated and
-mobile floor this folder is sized for, the resident megabyte is the
-dearer half of that trade.
+`readAvMag` answers out of a CPU mirror of the buffer, staged by the pointer
+events that precede a pick, because WebGPU has no synchronous readback and a
+copy issued *by* a pick resolves after the verdict it was meant to decide.
+`mirror/README.md` owns it — the staging gate, the two counters, and why a
+refill still cycling warms nothing.

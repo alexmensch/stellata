@@ -29,6 +29,7 @@ import { mortonDispatchOrder } from './dispatch-order/dispatch-order-pure';
 import { dustRaymarchAvTsl } from './dust-raymarch-tsl';
 import type { ExtinctionNodes } from './extinction-nodes';
 import { runReferenceMarch, type StarCacheGate } from './extinction-parity';
+import { AvMirror } from './mirror/av-mirror';
 import {
   EXTINCTION_FRUSTUM_SLACK_PX, composeViewProjectionAbs, sameView,
 } from './refill/refill-decision-pure';
@@ -106,22 +107,14 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  two cannot skip different stars. */
   private readonly visible: StarCacheGate | null;
 
-  // The whole A_V table on the CPU. `readAvMag` answers out of this and
-  // nothing else: a copy issued by the pick that wants the value cannot
-  // resolve before that pick's verdict (README.md § Cold reads).
-  private mirror: Float32Array | null = null;
-  // The generation the outstanding-or-landed mirror read belongs to.
-  // Holding it at `generation` is what makes a pointermove sweep cost one
-  // copy rather than one per event, and a failed read one attempt rather
-  // than one per event for as long as the buffer stands.
-  private mirrorGeneration = -1;
+  /** The pick's CPU copy of the table (mirror/README.md). */
+  private readonly mirror: AvMirror;
   /** Bumped on every dispatch: a read that resolves against an older
    *  buffer's contents lands in a generation nobody will consult. */
   private generation = 0;
   private dirty = true;
   private hasComputed = false;
   private forceDisabled = false;
-  private disposed = false;
   private lastCamX = Infinity;
   private lastCamY = Infinity;
   private lastCamZ = Infinity;
@@ -130,6 +123,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     renderer, positions, count, nodes, slots, uniforms, tables,
   }: WebGpuExtinctionPrepassOptions) {
     this.renderer = renderer;
+    this.mirror = new AvMirror(renderer);
     this.uniforms = uniforms;
     this.slots = slots;
     this.nodes = nodes;
@@ -269,7 +263,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     }
 
     this.generation++;
-    this.mirror = null;
+    this.mirror.invalidate();
     this.dirty = false;
     this.syncConsumerUniforms();
   }
@@ -300,8 +294,8 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    * synchronous readback (README.md § Cold reads).
    */
   readAvMag(idx: number): number | null {
-    if (!this.isActive() || this.mirror === null) return null;
-    return this.mirror[idx] ?? null;
+    if (!this.isActive()) return null;
+    return this.mirror.read(idx);
   }
 
   /** Stage the whole table for the picks a pointer event is about to
@@ -309,23 +303,11 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  once per recompute and never while the camera is under way, landing
    *  inside the hover dwell. */
   warmAvReadback(): void {
-    if (!this.isActive()) return;
+    if (!this.isActive() || this.av === null) return;
     // A parked cursor only: a copy taken mid-cycle is superseded before the
     // dwell that wanted it can read a byte (README.md § Cold reads).
     if (this.refill.base < this.count) return;
-    if (this.mirrorGeneration === this.generation) return;
-    const generation = this.generation;
-    this.mirrorGeneration = generation;
-    this.renderer
-      .getArrayBufferAsync(this.av!)
-      .then((bytes) => {
-        if (this.disposed || generation !== this.generation) return;
-        this.mirror = new Float32Array(bytes);
-      })
-      .catch(() => {
-        // Leave mirrorGeneration where it is: a device that refuses the
-        // map gets one attempt per recompute, not one per pointer event.
-      });
+    this.mirror.stage(this.av, this.generation);
   }
 
   /** The parity check of README.md § The prepass kernel: the same march as
@@ -337,7 +319,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.dispatch(0, this.count, MODE_WHOLE);
     this.refill = idleRefill(this.count);
     this.generation++;
-    this.mirror = null;
+    this.mirror.invalidate();
     return runReferenceMarch({
       renderer: this.renderer,
       nodes: this.nodes,
@@ -379,7 +361,6 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   }
 
   dispose(): void {
-    this.disposed = true;
     this.uniforms.uAvPrepassEnabled.value = 0;
     this.slots.setAvBuffer(null);
     // The kernel's bind group references all four buffers: drop it first.
@@ -394,8 +375,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.order = null;
     this.stamps = null;
     this.dispatchOrder = null;
-    this.mirror = null;
-    this.mirrorGeneration = -1;
+    this.mirror.dispose();
     this.refill = idleRefill(this.count);
     this.lastView = null;
     this.hasComputed = false;
