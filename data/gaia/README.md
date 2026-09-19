@@ -202,12 +202,13 @@ printed tier to key on. `V >= G + 0.0268` does not bound them from above, so
 `G <= 11` decides nothing about their floor membership. `stellata-cns.11` owns
 the rule; until it settles they are dropped, unledgered.
 
-## The record total the floor implies — ~990,299
+## The record total the floor implies — ~985,000
 
 The catalogue is not the magnitude pull. It is the pull's `V <= 11` population
-**unioned** with the membership manifest and deduped on `source_id`, and the
-size of the overlap was the open question blocking every sizing decision under
-`stellata-cns`. Measured on the committed files, 2026-09-19:
+**unioned** with the membership manifest and deduped on `source_id`, then put
+through the build's own two corrections. The overlap was the open question
+blocking every sizing decision under `stellata-cns`. Measured on the committed
+files, 2026-09-19:
 
 | term | count |
 |---|---|
@@ -215,15 +216,31 @@ size of the overlap was the open question blocking every sizing decision under
 | distinct `gaia_source_id` in the manifest | 370,994 |
 | in both | **327,701** |
 | source_id union | **973,222** |
-| manifest rows carrying no `gaia_source_id` | 5,938 |
-| rows the build promotes to their own record | 11,139 |
-| **records** | **~990,299** |
+| manifest rows carrying no `gaia_source_id` | + 5,938 |
+| companions promoted to their own record | + 16,226 |
+| rows parked, so never a record | − ~10,429 |
+| **records** | **~984,957** |
 
 That replaces the `[930,562 … 1,307,491]` bracket with one number, and makes
-the catalogue **2.55x** today's 388,071 records. The last term is the only
-soft one: it is today's gap between 376,932 manifest rows and 388,071 built
-records, carried forward on the assumption that promotion is driven by the
-classic-ID population rather than by the deep one.
+the catalogue **2.54x** today's 388,071 records.
+
+**The last two terms are the build's, not the manifest's, and they pull in
+opposite directions** — which is why a projection that reads the net gap
+between manifest rows and records gets the scaling wrong. Today the identity
+holds exactly: `376,932 + 16,226 − 5,087 = 388,071`. Promotion is WDS-driven
+(`../../scripts/catalog/companions/README.md`), so 16,226 is carried forward
+unchanged; the deep population is not what WDS describes. Parking is not
+carried forward, because it is a property of the rows themselves: today's
+5,087 are `parkedNoParallaxPublished` 3,423 · `parkedRefusedNoDefensibleParallax`
+975 · `parkedNoVMagnitude` 688 · `parkedNoPosition` 1, and the 602,228
+newcomers add **5,342** of their own — 0.887% of them publish no parallax.
+They add nothing to the other three: every newcomer has a V by construction of
+the floor, and none is missing a position.
+
+So ~984,957 is an **upper** bound in one respect. What share of the newcomers
+the defensible-parallax gate refuses on top of the 5,342 is unmeasured; 414
+carry a non-positive parallax and 679 a S/N below 1, so the true figure sits a
+few hundred lower at most.
 
 **43,293 of the manifest's bindings sit outside the kept set** — stars fainter
 than the floor that the classic-ID term keeps deliberately (Proxima, `V ≈
@@ -245,11 +262,11 @@ log prints them:
 
 | | today | at `V <= 11` |
 |---|---|---|
-| `catalog.bin` raw | 37.0 | 94.4 |
-| `gzip -9` | 24.2 | **61.8** |
-| brotli-5 | 23.0 | **58.8** |
+| `catalog.bin` raw | 37.0 | 93.9 |
+| `gzip -9` | 24.2 | **61.5** |
+| brotli-5 | 23.0 | **58.5** |
 
-61.8 MiB is 64.8 MB decimal, which supersedes the **~82 MB gz** `cns.6` was
+61.5 MiB is 64.5 MB decimal, which supersedes the **~82 MB gz** `cns.6` was
 written against — that figure scaled the 1,247,240 pull count rather than the
 record total. Read the projections as an upper bound: the deep population
 carries more absent enrichment than today's, and sentinel runs compress better
