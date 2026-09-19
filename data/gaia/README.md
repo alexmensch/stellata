@@ -136,6 +136,14 @@ consumer is that "complete to `V <= 11`" is a claim about Sol's sky and never
 about the modelled volume — moving the camera outward does not arrive
 somewhere the catalogue stays complete around it.
 
+**And the claim is made only over sources the V cascade can light.** That is
+the third bound, and the one easiest to read as a gap: a record needs a place
+*and* a brightness, so a source whose V no tier reaches is outside the domain
+the completeness claim is quantified over rather than missing from inside it.
+The catalogue's promise is what it can draw physically, never a row count — so
+a star it cannot light is one it declines to invent, and § What the filter
+keeps has the cohort that tests this.
+
 ## Why the floor carries no margin
 
 `gaia_dr3_magnitude_pull.tsv` selects on `G` alone, at `G <= 11`, and that
@@ -199,8 +207,42 @@ every one of them is far past the floor however the extrapolation is read.
 The **943** with no colour at all are the genuine residue — `G` 6.95 to
 10.99992, no tier able to reach them, and 925 carrying no designation for a
 printed tier to key on. `V >= G + 0.0268` does not bound them from above, so
-`G <= 11` decides nothing about their floor membership. `stellata-cns.11` owns
-the rule; until it settles they are dropped, unledgered.
+`G <= 11` decides nothing about their floor membership.
+
+**They do not enter, and no new rule decides that.** Membership is
+`SPINE ∪ MAGNITUDE PULL(V ≤ floor)` (`docs/catalog-driver.md` § 1), and the
+magnitude term's predicate is a bound on V. A source carrying no V satisfies no
+predicate over V, so 925 of these are never candidates — non-selection by the
+term's own definition, not a drop the § 6.1 no-silent-drops rule speaks to.
+Ledgering them would equally oblige ledgering the 312,475 rows the floor
+excludes. The 18 that are manifest rows *are* candidates and route through the
+existing park: `no_v_magnitude` is "a row placed but unlit ... and a record
+needs both" (`../../scripts/catalog/distance/parallax/parked-ledger.ts`), and 8
+of them sit in `data/membership/parked-ledger.tsv` today.
+
+A park is a **presence event, not a retirement** (`docs/sid.md`), so these keep
+their identity and reinstate unchanged when a release resolves the blend —
+which is the same future `../../scripts/catalog/distance/parallax/README.md`
+already names for its own blended cohort.
+
+**Every one of them is the faint member of a close pair**, which is the fact to
+hold rather than the magnitude: all 943 have another `G <= 11` Gaia source
+within 5", median separation **1.82"**, against a **1.4%** base rate over a
+G-matched control sample of rows that do have a colour. 940 of the neighbours
+are brighter and 931 are themselves `V <= 11`. That is the BP/RP window — a few
+arcsec across, against an astrometric field that resolves far finer — so a
+companion inside it costs the source its spectro-photometry while leaving `G`
+intact. Absence of colour here is a statement about a neighbour, not about the
+star.
+
+Two consequences that are easy to get backwards. They are **not** plane-crowded:
+19.5% sit within `|b| < 5°` against the pull's own 19.71%, so this is local
+blending and nothing a galactic-latitude cut would find. And the companion
+promotion path does not already cover them — it mints from WDS rows
+(`../../scripts/catalog/companions/README.md`), which name only **212** of the
+943, so routing the rest there would be the same silent drop under another
+name. 836 of the pairs have their primary in today's manifest, making this a
+standing gap rather than one the floor move creates.
 
 ## The record total the floor implies — ~985,000
 
