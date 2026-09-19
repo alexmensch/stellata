@@ -65,7 +65,7 @@ EXPECTED_MAGNITUDE_ROWS_MAX = 1_260_000
 EXPECTED_UNION_COVERAGE_MIN = 0.80
 
 # scripts/refresh/README.md § Gaia TAP: synchronous endpoints only.
-SYNC_MAXREC = 4 * (EXPECTED_MAGNITUDE_ROWS_MAX // rl.SLICE_COUNT)
+SYNC_MAXREC = rl.slice_sync_maxrec(EXPECTED_MAGNITUDE_ROWS_MAX)
 
 # ESP-HS spectral-type enum coverage floor. ESP-HS is the hottest-star
 # branch of the Apsis chain and resolves spectraltype_esphs for ~30%+

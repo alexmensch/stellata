@@ -33,7 +33,7 @@ EXPECTED_ROW_COUNT_MIN = 1_222_000
 EXPECTED_ROW_COUNT_MAX = 1_273_000
 
 # scripts/refresh/README.md § Gaia TAP: synchronous endpoints only.
-SYNC_MAXREC = 4 * (EXPECTED_ROW_COUNT_MAX // SLICE_COUNT)
+SYNC_MAXREC = rl.slice_sync_maxrec(EXPECTED_ROW_COUNT_MAX)
 
 # Pinned from the live ESA archive 2026-09-19, spanning the selection:
 # eta UMa is its brightest row and carries a 2p solution, so it also pins the

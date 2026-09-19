@@ -67,7 +67,7 @@ EXPECTED_MAGNITUDE_ROWS_MAX = 1_262_000
 EXPECTED_COVERAGE_MIN = 0.90
 
 # scripts/refresh/README.md § Gaia TAP: synchronous endpoints only.
-SYNC_MAXREC = 4 * (EXPECTED_MAGNITUDE_ROWS_MAX // rl.SLICE_COUNT)
+SYNC_MAXREC = rl.slice_sync_maxrec(EXPECTED_MAGNITUDE_ROWS_MAX)
 
 # Pinned posterior rows. Unlike the HIP / Tyc xmatch tables, the external
 # anchor here IS the Gaia source_id — which a future DR4 maintenance reload

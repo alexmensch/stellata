@@ -240,6 +240,27 @@ def magnitude_predicate(bounds: MagnitudeSlice, column: str) -> str:
     return where if lo is None else f"{column} > {lo} AND {where}"
 
 
+SLICE_MAXREC_HEADROOM = 4
+
+
+def slice_sync_maxrec(
+    expected_row_count_max: int,
+    *,
+    count: int = SLICE_COUNT,
+    headroom: int = SLICE_MAXREC_HEADROOM,
+) -> int:
+    """MAXREC for one slice of a magnitude-partitioned pull: `headroom`
+    times the nominal slice population. The factor is margin against the
+    magnitude distribution moving, not against the slices being uneven —
+    `magnitude_slices` already holds those within ~5% of each other.
+
+    A slice count is not a batch size, so `run_in_batches`' `BATCH_SIZE * 2`
+    rule has nothing to multiply here; every pull that slices on magnitude
+    sizes its cap this way.
+    """
+    return headroom * (expected_row_count_max // count)
+
+
 def assert_partitioned(returned: int, unique: int, script_name: str) -> None:
     """No source returned by more than one slice. Takes the two counts
     rather than the ids: at seven figures the caller already holds whichever

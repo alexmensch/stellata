@@ -1331,6 +1331,20 @@ class MagnitudeSliceTests(unittest.TestCase):
         self.assertLess(max(populations) / min(populations), 1.05)
 
 
+class SliceSyncMaxrecTests(unittest.TestCase):
+    def test_sizes_off_the_nominal_slice_population(self) -> None:
+        self.assertEqual(rl.slice_sync_maxrec(4_800, count=48), 400)
+
+    def test_clears_the_largest_slice_the_partition_produces(self) -> None:
+        # The cap has to hold the fattest slice, not the mean one.
+        ceiling = 1_260_000
+        edges = [float(hi) for _, hi in rl.magnitude_slices()]
+        shares = [rl.SOURCES_PER_MAGNITUDE**e for e in edges]
+        fractions = [b - a for a, b in zip([0.0, *shares], shares)]
+        largest = ceiling * max(fractions) / shares[-1]
+        self.assertGreater(rl.slice_sync_maxrec(ceiling), largest)
+
+
 class MagnitudePredicateTests(unittest.TestCase):
     def test_open_slice_states_only_the_upper_bound(self) -> None:
         self.assertEqual(rl.magnitude_predicate((None, "6.7"), "g"), "g <= 6.7")

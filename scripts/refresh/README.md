@@ -294,11 +294,13 @@ rules, and none may be replaced with a bare literal:
 - Batched pulls size MAXREC off their batch size (`BATCH_SIZE * 2`),
   except `refresh-gaia-dr2-neighbourhood.py`, where one requested id can
   return several rows.
-- `refresh-gaia-magnitude.py` batches on a **value range** rather than a
-  count, so it has no batch size to multiply: MAXREC is four times the
-  nominal slice population (`EXPECTED_ROW_COUNT_MAX // SLICE_COUNT`). The
-  factor is headroom against the distribution moving, not against the
-  slices being uneven — see § Slicing a magnitude-bounded pull.
+- Pulls that batch on a **value range** rather than a count have no batch
+  size to multiply, so all three call `slice_sync_maxrec(<the pinned
+  ceiling>)` — four times the nominal slice population. The factor is
+  headroom against the distribution moving, not against the slices being
+  uneven; see § Slicing a magnitude-bounded pull. One cap serves both legs
+  of a deep-population pull, since a request-leg batch is far smaller than
+  a slice.
 
 ### Slicing a magnitude-bounded pull
 
