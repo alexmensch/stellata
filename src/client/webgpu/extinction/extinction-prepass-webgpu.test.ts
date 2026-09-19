@@ -12,11 +12,14 @@ import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { WebGpuExtinctionPrepass } from './extinction-prepass-webgpu';
 import { ExtinctionNodes } from './extinction-nodes';
 import { scrambledLattice } from './dispatch-order/dispatch-order-fixture';
+import { REFILL_SLICES, refillSliceLength } from './refill/refill-slices-pure';
 
 /** A renderer whose readbacks resolve only when the test says so — the
  *  frame-decoupled semantics a cold read has to live with. */
 function fakeRenderer() {
   const computes: ComputeNode[] = [];
+  /** The slot span of each dispatch, in call order. */
+  const dispatched: (number | undefined)[] = [];
   const reads: {
     attr: BufferAttribute;
     offset: number | undefined;
@@ -27,7 +30,10 @@ function fakeRenderer() {
   const released: BufferAttribute[] = [];
   const setRenderTarget = vi.fn();
   const renderer = {
-    compute: (node: ComputeNode) => computes.push(node),
+    compute: (node: ComputeNode, dispatchSize?: number) => {
+      dispatched.push(dispatchSize);
+      return computes.push(node);
+    },
     setRenderTarget,
     getArrayBufferAsync: (attr: BufferAttribute, _t?: null, offset?: number, count?: number) =>
       new Promise<ArrayBuffer>((resolve, reject) => {
@@ -38,6 +44,7 @@ function fakeRenderer() {
   return {
     renderer: renderer as unknown as WebGPURenderer,
     computes,
+    dispatched,
     reads,
     released,
     setRenderTarget,
@@ -50,12 +57,12 @@ const flush = () => new Promise<void>((r) => { setTimeout(r, 0); });
  *  tell a value read at the right offset from one read at any other. */
 const tableOf = (count = COUNT) => Float32Array.from({ length: count }, (_, i) => i / 8).buffer;
 
-/** Fly the camera to `x` and let it stop: the displacing frame recomputes,
- *  the next one holds still. Only the second is a frame a pick can be
- *  staged for, which is the shape every warming test wants. */
+/** Fly the camera to `x` and let it stop: the displacing frame starts a
+ *  refill cycle and the rest of the cycle runs out while it holds still.
+ *  Only a frame after the cycle parks is one a pick can be staged for,
+ *  which is the shape every warming test wants. */
 function moveAndSettle(prepass: { update(x: number, y: number, z: number): void }, x: number) {
-  prepass.update(x, 0, 0);
-  prepass.update(x, 0, 0);
+  for (let frame = 0; frame <= REFILL_SLICES; frame++) prepass.update(x, 0, 0);
 }
 
 /** Star i at (3i, 3i+1, 3i+2) unless a test wants a field of its own: a
@@ -122,6 +129,67 @@ describe('construction', () => {
   });
 });
 
+describe('spreading the refill', () => {
+  // The first fill is whole: until it lands every consumer runs its own
+  // in-vertex march, which is dearer than the dispatch it waits on.
+  it('fills the whole catalogue on the first frame, then slices', () => {
+    const { prepass, dispatched, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    expect(dispatched).toEqual([COUNT]);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    expect(dispatched[1]).toBe(refillSliceLength(COUNT));
+  });
+
+  it('covers the catalogue exactly once per cycle', () => {
+    const { prepass, dispatched, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    dispatched.length = 0;
+    for (let frame = 1; frame <= REFILL_SLICES; frame++) {
+      prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    }
+    expect(dispatched).toHaveLength(REFILL_SLICES);
+    expect(dispatched.reduce<number>((n, len) => n + (len ?? 0), 0)).toBe(COUNT);
+  });
+
+  it('parks once the cycle has run out and nothing has asked again', () => {
+    const { prepass, computes, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    for (let frame = 0; frame < 20; frame++) prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    expect(computes).toHaveLength(1 + REFILL_SLICES);
+  });
+
+  // A camera crossing the epsilon every frame asks every frame. Restarting
+  // the cycle on each request would refill the first slice forever and
+  // leave every other star at the value the boot fill gave it.
+  it('refills the whole catalogue before the parity march', () => {
+    const { prepass, dispatched, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    dispatched.length = 0;
+    // The reference march wants a render target the fake has no answer for;
+    // the dispatch that precedes it is what a bit compare rests on.
+    void prepass.verifyParity().catch(() => {});
+    expect(dispatched).toEqual([COUNT]);
+  });
+
+  it('keeps cycling under a request that fires every frame', () => {
+    const { prepass, dispatched, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    dispatched.length = 0;
+    for (let frame = 1; frame <= 2 * REFILL_SLICES; frame++) {
+      prepass.update(RECOMPUTE_EPSILON_PC * 2 * frame, 0, 0);
+    }
+    expect(dispatched).toHaveLength(2 * REFILL_SLICES);
+    expect(dispatched.reduce<number>((n, len) => n + (len ?? 0), 0)).toBe(2 * COUNT);
+  });
+});
+
 describe('the dispatch order', () => {
   const SIDE = 8;
   const LATTICE_COUNT = SIDE ** 3;
@@ -178,6 +246,15 @@ describe('the displacement gate', () => {
     expect(computes).toHaveLength(2);
   });
 
+  it('an idle camera stays free once the cycle the move started has run out', () => {
+    const { prepass, computes, attachDust } = makePrepass();
+    attachDust();
+    moveAndSettle(prepass, RECOMPUTE_EPSILON_PC * 2);
+    const settled = computes.length;
+    for (let frame = 0; frame < 10; frame++) prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    expect(computes).toHaveLength(settled);
+  });
+
   // A compute pass binds no render target, so the ends-at-the-canvas
   // contract the fragment twin kept (../hdr/reduction-webgpu.ts) has
   // nothing here to hold — pin that nothing is bound at all.
@@ -195,6 +272,17 @@ describe('the displacement gate', () => {
     prepass.markDirty();
     prepass.update(0, 0, 0);
     expect(computes).toHaveLength(2);
+  });
+
+  it('the A/B switch does not leave a half-refilled cycle running', () => {
+    const { prepass, computes, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.setEnabled(false);
+    const held = computes.length;
+    for (let frame = 0; frame < 10; frame++) prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    expect(computes).toHaveLength(held);
   });
 
   it('the A/B switch pauses maintenance, so the fallback side pays no fill', () => {
@@ -224,12 +312,15 @@ describe('the cache gate', () => {
     prepass.update(0, 0, 0);
     expect(computes).toHaveLength(1);
     shared[key].value += 1;
-    prepass.update(0, 0, 0);
-    expect(computes).toHaveLength(2);
+    // The cycle it starts refills the WHOLE catalogue over the next
+    // REFILL_SLICES frames — a bound that landed in one slice and nowhere
+    // else would leave most of the buffer answering to the old aperture.
+    for (let frame = 0; frame < REFILL_SLICES; frame++) prepass.update(0, 0, 0);
+    expect(computes).toHaveLength(1 + REFILL_SLICES);
     // And settles again: a watch that re-fired every frame would cost the
     // whole march per frame at a parked camera.
     prepass.update(0, 0, 0);
-    expect(computes).toHaveLength(2);
+    expect(computes).toHaveLength(1 + REFILL_SLICES);
   });
 
   // uModelDays is deliberately absent above: the gate credits every star
@@ -404,21 +495,25 @@ describe('the pick mirror', () => {
     expect(reads).toHaveLength(0);
   });
 
-  it('warms on the first frame the camera holds still', () => {
+  // A mirror taken mid-cycle is superseded by the next slice before the
+  // dwell that wanted it can read a byte, so the cycle has to park first.
+  it('warms on the frame the cycle the move started parks, not before', () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
-    prepass.warmAvReadback();
-    expect(reads).toHaveLength(0);
+    for (let frame = 1; frame < REFILL_SLICES; frame++) {
+      prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+      prepass.warmAvReadback();
+      expect(reads, `frame ${frame} of the cycle`).toHaveLength(0);
+    }
     prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
     prepass.warmAvReadback();
     expect(reads).toHaveLength(1);
   });
 
-  // A dust chunk landing on a parked camera recomputes too, and that frame
-  // is one a pick CAN be staged for — gating on the recompute rather than
-  // on the displacement would swallow it.
+  // A dust chunk landing on a parked camera recomputes too, and once its
+  // cycle parks that IS a frame a pick can be staged for — gating on the
+  // recompute rather than on the cycle would swallow it.
   it('warms through a dirty recompute the camera did not cause', () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
@@ -426,7 +521,7 @@ describe('the pick mirror', () => {
     prepass.warmAvReadback();
     reads.length = 0;
     prepass.markDirty();
-    prepass.update(0, 0, 0);
+    for (let frame = 0; frame <= REFILL_SLICES; frame++) prepass.update(0, 0, 0);
     prepass.warmAvReadback();
     expect(reads).toHaveLength(1);
   });

@@ -21,6 +21,9 @@ src/client/webgpu/extinction/
                               GLSL chunk is.
   dispatch-order/             The Morton key the kernel dispatches in and
                               the scatter that undoes it — its own README.
+  refill/                     Which slots a frame refills: the cursor, the
+                              staleness bound, and the three dispatches
+                              that stay whole — its own README.
   extinction-nodes.ts         The two slots as nodes — the dust volume
     (+ test)                  (texture) and the A_V cache (storage
                               buffer) — with their placeholders and the
@@ -106,14 +109,16 @@ the buffer slot directly.
 
 ## The prepass kernel
 
-`compute(count)` over one `Fn`: thread *i* reads position *i* out of a
+One `Fn`: the thread reads position `sliceBase + instanceIndex` out of a
 read-only vec4 storage buffer, marches from `absCameraPos` to it with the
 shared `dustRaymarchAvTsl`, and assigns the result to the A_V element the
 slot → star table names (`dispatch-order/README.md` § Dispatch order).
-three's default workgroup of
-64 and its own early return for the threads past `count` in the last
-group; no buffer is touched out
-of range. `update()` is one `renderer.compute(kernel)` — its own submit,
+three's default workgroup of 64, and **the kernel's own bound on that slot**
+rather than three's: three's early return compares `instanceIndex` against
+the node's `count`, which a sliced dispatch no longer reaches, and a slice's
+workgroup tail runs past the slice — past the catalogue, on the last one
+(`refill/README.md` § The kernel bounds its own slot).
+`update()` is one `renderer.compute(kernel, slice)` — its own submit,
 exactly as the fragment pass was its own render (`docs/render-rules.md`
 § 8), and it binds no render target, so the ends-at-the-canvas contract
 the fragment twin kept has nothing here to hold. Pinned as
@@ -139,7 +144,9 @@ once more as a fragment pass over the *same* position buffer, at the last
 computed camera, into an R32F target of the WebGL2 layout, reads both
 back and compares float32 bit patterns over the whole catalogue —
 `A_V parity: N stars, bit-identical`, or the count that differ with the
-first offender and the largest gap. The target exists for the call only.
+first offender and the largest gap. It refills the whole catalogue first,
+so one camera stands behind the buffer it compares (`refill/README.md`
+§ Three places). The target exists for the call only.
 Run it at Sol default and on a Galactic-centre sightline (the bead's
 smoke views); a nonzero count there is a finding about the two stages'
 compilation, not a tolerance to widen.
@@ -226,10 +233,12 @@ march). The cap binds wherever the in-cube path runs past
 ceiling is very nearly the per-admitted-star cost. **None of those
 figures is a time**: the same README records two dwells in which a 35%
 tap cut did not resolve against the band, because most of this kernel's
-cost is per-thread. It is paid
-*per frame* while the camera keeps moving more than
-`RECOMPUTE_EPSILON_PC` between frames — a warp pays it every frame, which
-is the case to measure, not the idle one. Every canon vantage is idle, so
+cost is per-thread. That is the per-recompute ceiling, and a recompute is
+spread over `REFILL_SLICES` frames (`refill/README.md`), so a warp — which
+asks for one on every frame, the camera moving more than
+`RECOMPUTE_EPSILON_PC` between them — pays that fraction of it per frame
+rather than the whole. The moving camera is still the case to measure, not
+the idle one. Every canon vantage is idle, so
 pricing it takes the forced-recompute lever
 (`../../debug/frame-cost/passes/README.md` § The extinction rows). An idle
 camera costs zero, and what the gate below skips never reaches the march
@@ -381,25 +390,24 @@ that *fails* consumes that one attempt rather than re-arming, so a device
 refusing the copy cannot turn a pointer sweep into a 1.48 MiB-per-event
 drip.
 
-**A camera under way warms nothing at all**, which is the other half of
+**A refill still cycling warms nothing at all**, which is the other half of
 that bound and the one the generation counter alone does not give. A warp
-or a focus lerp crosses more than `RECOMPUTE_EPSILON_PC` every frame, so
-the generation advances every frame and a copy issued against one is
-superseded two frames later, before the 280 ms dwell that wanted it can
-read a byte — every such copy is spent and dropped, at 1.48 MiB a frame
-for as long as the motion lasts. `warmAvReadback` therefore returns early
-while the last `update()` saw the camera displace, and the pick reads
-`null` and errs pickable across that stretch either way. The gate is the
-**displacement**, not the recompute: a dust chunk landing on a parked
-camera recomputes too, and that frame is one a pick can still be staged
-for. The frame-cost lever that forces a recompute every frame at a parked
-camera is the same shape, and keying this gate on the recompute instead
-would swallow it — it would also spend 1.48 MiB a frame on a live pointer,
-which is why that lever is dwell-only
-(`../../debug/frame-cost/passes/README.md` § The extinction rows).
-`lastCam*` starts at the Infinity sentinel, so the first compute
-reads as a move from nowhere and is excluded from the gate rather than
-costing the boot its first warm.
+or a focus lerp asks for a refill every frame, so the cursor never parks,
+the generation advances every frame, and a copy issued against one is
+superseded before the 280 ms dwell that wanted it can read a byte — every
+such copy is spent and dropped, at 1.48 MiB a frame for as long as the
+motion lasts. `warmAvReadback` therefore returns early while the cursor is
+mid-cycle, and the pick reads `null` and errs pickable across that stretch
+either way. **The gate is the cursor, not the recompute**: a dust chunk
+landing on a parked camera recomputes too, and the frame its cycle parks on
+is one a pick can still be staged for. The frame-cost lever that forces a
+recompute every frame at a parked camera is the same shape, and keying this
+gate on the recompute instead would swallow it — it would also spend 1.48
+MiB a frame on a live pointer, which is why that lever is dwell-only
+(`../../debug/frame-cost/passes/README.md` § The extinction rows). A parked
+cursor also means the buffer belongs to one completed cycle rather than to
+a half-written one, which is the second thing the mirror needs and the
+camera the old gate watched never said (`refill/README.md` § Three places).
 
 A drag announces nothing either: hover is suppressed for its duration
 anyway, and the camera motion under it would invalidate each copy before

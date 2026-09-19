@@ -5,7 +5,7 @@
 import {
   StorageBufferAttribute, Vector3, type ComputeNode, type WebGPURenderer,
 } from 'three/webgpu';
-import { Fn, If, compute, distance, float, instanceIndex, int, max, storage, uniform } from 'three/tsl';
+import { Fn, If, compute, distance, float, instanceIndex, int, max, storage, uint, uniform } from 'three/tsl';
 import type {
   ExtinctionPrepassSeam, ExtinctionPrepassUniforms,
 } from '../../star-pipeline/extinction/extinction-seam';
@@ -26,6 +26,9 @@ import { mortonDispatchOrder } from './dispatch-order/dispatch-order-pure';
 import { dustRaymarchAvTsl } from './dust-raymarch-tsl';
 import type { ExtinctionNodes } from './extinction-nodes';
 import { runReferenceMarch, type StarCacheGate } from './extinction-parity';
+import {
+  idleRefill, planRefill, refillSliceLength, type RefillCursor,
+} from './refill/refill-slices-pure';
 
 export interface WebGpuExtinctionPrepassOptions {
   renderer: WebGPURenderer;
@@ -67,6 +70,11 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  or the 1.48 MiB outlives the pass. */
   private dispatchOrder: Uint32Array | null;
   private readonly absCameraPos = uniform(new Vector3());
+  /** Slot the running dispatch starts at (refill/README.md § The cursor).
+   *  Zero for the whole-catalogue dispatches. */
+  private readonly sliceBase = uniform(0, 'uint');
+  private readonly sliceLength: number;
+  private refill: RefillCursor;
   /** `catalog.positions` itself, which StarFrame rewrites in place. */
   private readonly sourcePositions: Float32Array;
   /** Nodes this pass owns, not the shared registry's: that syncs after this
@@ -89,12 +97,6 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   /** Bumped on every recompute: a read that resolves against an older
    *  buffer's contents lands in a generation nobody will consult. */
   private generation = 0;
-  // Whether the camera displaced past the epsilon on the last update. A
-  // warp or a focus lerp recomputes every frame, which supersedes a copy
-  // before it can land — so warming across one spends the whole table per
-  // frame on a generation nobody will ever read.
-  private movedOnLastUpdate = false;
-
   private dirty = true;
   private hasComputed = false;
   private forceDisabled = false;
@@ -111,6 +113,8 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.slots = slots;
     this.nodes = nodes;
     this.count = count;
+    this.sliceLength = refillSliceLength(count);
+    this.refill = idleRefill(count);
     this.sourcePositions = positions;
     this.gateBounds = tables === null ? null : {
       uThresholdMag: uniform(uniforms.uThresholdMag.value),
@@ -137,27 +141,31 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
 
     this.positionsNode = storage(this.positions, 'vec4', count).toReadOnly();
     this.orderNode = storage(this.order, 'uint', count).toReadOnly();
-    // One thread per slot. three guards the threads past `count` in the
-    // last workgroup with an early return, so no buffer is touched out of
-    // range. dispatch-order/README.md § Dispatch order.
+    // One thread per slot of the dispatched slice.
+    // dispatch-order/README.md § Dispatch order.
     const gateBounds = this.gateBounds;
     this.visible = tables === null || gateBounds === null ? null
       : (self, starAbs) => starCacheVisibleTsl(
         gateBounds, tables, self, max(distance(starAbs, this.absCameraPos), 1e-30));
     const visible = this.visible;
     this.kernel = compute(Fn(() => {
-      const self = int(this.orderNode.element(instanceIndex));
-      const starAbs = this.positionsNode.element(instanceIndex).xyz;
-      const march = () => dustRaymarchAvTsl(nodes, slots.dust, this.absCameraPos, starAbs);
-      if (visible === null) {
-        slots.av.element(self).assign(march());
-        return;
-      }
-      const av = float(0.0).toVar();
-      If(visible(self, starAbs), () => { av.assign(march()); });
-      // Zero rather than a skipped write — the compare in
-      // README.md § The cache gate is total.
-      slots.av.element(self).assign(av);
+      const slot = instanceIndex.add(this.sliceBase);
+      // Ours, not three's: three's early return bounds `instanceIndex`, not
+      // the slot (refill/README.md § The kernel bounds its own slot).
+      If(slot.lessThan(uint(count)), () => {
+        const self = int(this.orderNode.element(slot));
+        const starAbs = this.positionsNode.element(slot).xyz;
+        const march = () => dustRaymarchAvTsl(nodes, slots.dust, this.absCameraPos, starAbs);
+        if (visible === null) {
+          slots.av.element(self).assign(march());
+        } else {
+          const av = float(0.0).toVar();
+          If(visible(self, starAbs), () => { av.assign(march()); });
+          // Zero rather than a skipped write — the compare in
+          // README.md § The cache gate is total.
+          slots.av.element(self).assign(av);
+        }
+      });
     })(), count);
     this.kernel.setName('extinction-prepass-compute');
   }
@@ -195,15 +203,23 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
       absCamX, absCamY, absCamZ,
       RECOMPUTE_EPSILON_PC,
     );
-    // `hasComputed` guards the Infinity sentinel in lastCam*: without it the
-    // first compute reads as a camera under way and costs the boot its first
-    // warm (README.md § A camera under way warms nothing at all).
-    this.movedOnLastUpdate = moved && this.hasComputed;
     if (this.syncGateBounds()) this.dirty = true;
-    if (!this.dirty && !moved) return;
-
-    this.absCameraPos.value.set(absCamX, absCamY, absCamZ);
-    this.renderer.compute(this.kernel);
+    const wanted = this.dirty || moved;
+    // The first fill is whole (refill/README.md § Three places).
+    if (!this.hasComputed) {
+      if (!wanted) return;
+      this.absCameraPos.value.set(absCamX, absCamY, absCamZ);
+      this.computeWholeCatalogue();
+      this.refill = idleRefill(this.count);
+      this.hasComputed = true;
+    } else {
+      const plan = planRefill(this.refill, wanted, this.count, this.sliceLength);
+      this.refill = plan.next;
+      if (plan.base === null) return;
+      this.absCameraPos.value.set(absCamX, absCamY, absCamZ);
+      this.sliceBase.value = plan.base;
+      this.renderer.compute(this.kernel, plan.length);
+    }
 
     this.generation++;
     this.mirror = null;
@@ -211,8 +227,16 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.lastCamY = absCamY;
     this.lastCamZ = absCamZ;
     this.dirty = false;
-    this.hasComputed = true;
     this.syncConsumerUniforms();
+  }
+
+  /** One dispatch over every slot at the current `absCameraPos`, so the
+   *  whole buffer belongs to one camera. The boot fill and the parity
+   *  check are the two callers that need that. */
+  private computeWholeCatalogue(): void {
+    if (this.kernel === null) return;
+    this.sliceBase.value = 0;
+    this.renderer.compute(this.kernel, this.count);
   }
 
   /**
@@ -233,12 +257,9 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  inside the hover dwell. */
   warmAvReadback(): void {
     if (!this.isActive()) return;
-    // A camera still recomputing every frame drops this copy before the
-    // dwell that wanted it can read it, so issuing one buys the pick
-    // nothing and costs the whole table every frame. The pick reads null
-    // and errs pickable across that stretch either way (README.md
-    // § Cold reads).
-    if (this.movedOnLastUpdate) return;
+    // A parked cursor only: a copy taken mid-cycle is superseded before the
+    // dwell that wanted it can read a byte (README.md § Cold reads).
+    if (this.refill.base < this.count) return;
     if (this.mirrorGeneration === this.generation) return;
     const generation = this.generation;
     this.mirrorGeneration = generation;
@@ -259,6 +280,11 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  bit-compared against the whole buffer. Dev-console only. */
   async verifyParity(): Promise<AvParityReport | null> {
     if (!this.isActive() || this.av === null || this.dispatchOrder === null) return null;
+    // One camera behind the whole buffer (refill/README.md § Three places).
+    this.computeWholeCatalogue();
+    this.refill = idleRefill(this.count);
+    this.generation++;
+    this.mirror = null;
     return runReferenceMarch({
       renderer: this.renderer,
       nodes: this.nodes,
@@ -315,7 +341,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.dispatchOrder = null;
     this.mirror = null;
     this.mirrorGeneration = -1;
-    this.movedOnLastUpdate = false;
+    this.refill = idleRefill(this.count);
     this.hasComputed = false;
     this.dirty = true;
     this.lastCamX = Infinity;
