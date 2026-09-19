@@ -334,10 +334,10 @@ component on the spine — HD 23068, 37703, 45900, 63846, 86269, which IV/25
 flags `n_tyc > 1` and which would otherwise have minted `gaia_dr3:`-keyed
 SIDs, one of them keyless — and the rest are the second Tycho-2 entry of a
 pair Tycho-2 resolved whose HD (and, through Tycho-2's `hip` column, HIP) a
-spine record already carries. The per-outcome table, the two source-left-empty outcomes (105 + 13),
-the order that decides which of two groups takes a contested designation, and
-the admission rule in full: `scripts/catalog/membership/README.md`
-§ The additions. An addition then
+spine record already carries. The per-outcome table, the two
+source-left-empty outcomes (105 + 13), the order that decides which of two
+groups takes a contested designation, and the admission rule in full:
+`scripts/catalog/membership/README.md` § The additions. An addition then
 walks the § 5 cascades like any row, and one no owned parallax or V reaches
 parks on the existing ledger under the existing codes — Tycho-2 publishes no
 parallax, so most of the ~4.5k with neither a DR3 neighbour nor a HIP park,
@@ -346,9 +346,10 @@ on the manifest's `binding` column, four classes: `crosswalk_gated`
 358,458 (a TYC, HIP or CNS5 candidate through the gates) ·
 `simbad_corroborated` 12,483 (SIMBAD's source for the record's own
 designation, through the gates) · `reviewed` 53 (a disposition row's value) ·
-`none` 5,938 (the derived refusals, the withheld collision, Sol; additions
-no gated walk binds). The review queue is `data/membership/binding-review.tsv`
-with its dispositions beside it, 54 rows. The swap itself was 63,672 mints,
+`none` 5,938 (the 576 derived refusals, the withheld collision, Sol;
+additions no gated walk binds). The review queue is
+`data/membership/binding-review.tsv` with its dispositions beside it, 53
+rows. The swap itself was 63,672 mints,
 zero retirements, zero reinstatements; deriving the binding then retired
 **8** Gaia-keyed ledger rows with a successor each — AT-HYG had carried the
 Gaia source as a row of its own beside the HIP record it belongs to, and the
@@ -360,13 +361,14 @@ because it snapshots a build that no longer exists; the primaries-derived
 membership is a pure function of committed inputs, so it can be, and that
 is what replaces the byte guard with a regenerate-and-diff. The swap emits a
 committed **membership manifest** (`data/membership/membership-manifest.tsv`,
-376,932 rows = 313,257 spine less the one folded + 63,676 admitted) — one row per admitted
-record: admitting designations, route, source_id and its provenance class —
-regenerated in CI and diffed like `classic_id_overlay.tsv`. Those four counts
-are `rows` / `spineRows` / `spineRowsFolded` / `additionRows` in
+376,932 rows = 313,257 spine less the one folded + 63,676 admitted) — one
+row per admitted record: admitting designations, route, source_id and its
+provenance class — regenerated in CI and diffed like
+`classic_id_overlay.tsv`. Those four counts are `rows` / `spineRows` /
+`spineRowsFolded` / `additionRows` in
 `scripts/catalog/membership/membership-manifest-expected.json`, which the gate
-pins — so read them there rather than from any prose restating them. Columns and
-sort order: `scripts/catalog/membership/README.md` § Columns. The gate
+pins — so read them there rather than from any prose restating them. Columns
+and sort order: `scripts/catalog/membership/README.md` § Columns. The gate
 asserts three things: (i) every row of the 2026-07-28 spine maps through its
 designation class to exactly one manifest row — the same SID — or to a § 6.1
 drop row; (ii) every manifest row absent from the spine is on the additions
