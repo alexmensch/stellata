@@ -13,7 +13,6 @@ import {
 } from 'three/tsl';
 import { PHYS_RATIO_THRESHOLD } from '../../../star-pipeline/local-pass/star-local-cluster-pure';
 import { STAR_PASS_GLOW } from '../../../star-pipeline/star-pass';
-import { REFILL_SLICES } from '../../extinction/refill/refill-slices-pure';
 import type { RefillWorklistNodes } from '../../extinction/refill/refill-worklist-nodes';
 import { appendRefillWorklistTsl } from '../../extinction/refill/refill-worklist-tsl';
 import { disposeStorageAttribute } from '../../tsl/storage-attribute';
@@ -21,7 +20,7 @@ import { solveStarTsl, type StarTslDeps } from '../star-vertex-tsl';
 import {
   PREFILTER_COUNT_ELEMENT, REFILL_DISPATCH_ELEMENTS, REFILL_DISPATCH_LENGTH_ELEMENT,
   REFILL_LIST_COUNT_BASE, REFILL_WORKGROUP_SIZE, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
-  initialIndirectArgs, initialRefillDispatch, refillListCountElement, survivorCountsFromArgs,
+  initialIndirectArgs, initialRefillDispatch, survivorCountsFromArgs,
   tierArgsInstanceCountElement, tierListBase,
   type StarTier, type SurvivorCounts,
 } from './compaction-pure';
@@ -77,17 +76,16 @@ export class StarCompaction {
     const { u } = deps;
 
     // Every counter starts the frame at zero; the same compute pass then
-    // runs the kernel, so its atomics see the reset. The sub-list counters
-    // hold between armed frames: the prepass is still marching them.
+    // runs the kernel, so its atomics see the reset. Of the sub-list
+    // counters only the class being built resets: the others hold the lists
+    // the prepass is still marching.
     const reset = compute(Fn(() => {
       for (const tier of STAR_TIERS) {
         atomicStore(argsNode.element(tierArgsInstanceCountElement(tier)), uint(0));
       }
       atomicStore(argsNode.element(PREFILTER_COUNT_ELEMENT), uint(0));
       If(refill.arm.equal(uint(1)), () => {
-        for (let q = 0; q < REFILL_SLICES; q++) {
-          atomicStore(argsNode.element(refillListCountElement(q)), uint(0));
-        }
+        atomicStore(argsNode.element(uint(REFILL_LIST_COUNT_BASE).add(refill.quarter)), uint(0));
       });
     })(), 1);
     reset.setName('star-compaction-reset');
@@ -105,10 +103,6 @@ export class StarCompaction {
     const kernel = compute(Fn(() => {
       const self = int(instanceIndex);
       const localPos = deps.tables.position(self).toVar();
-      appendRefillWorklistTsl({
-        refill, u, tables: deps.tables, counters: argsNode,
-        viewProjection: this.viewProjection, count: this.count, self, localPos,
-      });
       solveStarTsl(deps, self, localPos, {
         pass: STAR_PASS_GLOW, eclipseDim: null,
       }, (s) => {
@@ -127,6 +121,11 @@ export class StarCompaction {
             append(STAR_TIER_GLOW, self);
           });
         });
+      });
+      // After the solve, whose unconditional record reads this re-reads.
+      appendRefillWorklistTsl({
+        refill, u, tables: deps.tables, counters: argsNode,
+        viewProjection: this.viewProjection, count: this.count, self, localPos,
       });
     })(), this.count);
     kernel.setName('star-compaction');

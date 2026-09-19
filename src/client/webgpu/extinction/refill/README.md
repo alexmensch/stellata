@@ -32,7 +32,7 @@ touch the viewport — and for nothing else, so a refill of everything the
 prefilter admits marches, at the `mw120` canon vantage, some five times
 the stars any draw will consult. The frustum test therefore sits ahead of
 the refill, and the kernel that runs it is the **compaction's**, which
-already holds every star's clip position:
+already holds every star's position:
 
 1. `viewProjection × vec4(localPos, 1)` — the compaction's own matrix over
    the floating-origin local position, the same clip its survivor test
@@ -122,20 +122,32 @@ round.
 
 A turn costs no dispatch of its own: the compaction runs over every
 catalogue star on every rendered frame regardless, and an armed frame adds
-the producer block to it (§ The compaction appends the worklist). What a
-turning camera pays per frame is one quarter of the stars it exposed.
+the producer block to a quarter of its threads (§ The compaction appends
+the worklist). What a turning camera pays per frame is the march of one
+class of the stars it exposed.
 
 ## The compaction appends the worklist
 
 The compaction kernel already runs one thread per catalogue star every
-rendered frame and already has the clip position. On an **armed** frame it
-also runs `appendRefillWorklistTsl` ahead of the solve: frustum at the
-refill's slack, then the cache gate (`starCacheVisibleTsl`, the four
-dust-independent terms over the *brightest* magnitude), then
+rendered frame and already has the clip position. On an **armed** frame
+the threads of **one residue class** — `self % REFILL_SLICES` equal to the
+`quarter` uniform — also run `appendRefillWorklistTsl` after the solve:
+frustum at the refill's slack, then the cache gate (`starCacheVisibleTsl`,
+the four dust-independent terms over the *brightest* magnitude), then
 `stamps[self] != cameraGeneration`, and a star passing all three is
-appended to a worklist with one `atomicAdd`. The arm is a uniform the
-prepass raises for exactly the frames a request lands on; a settled frame
+appended to that class's sub-list with one `atomicAdd`. The arm is a
+uniform the prepass holds up for `REFILL_SLICES` frames from a request, so
+the four classes are built on four consecutive frames; a settled frame
 pays one uniform compare per thread and reads nothing else.
+
+**One class per armed frame, not four.** Building every class every frame
+was measured first (`stellata-8cg.58.10` notes, 2026-09-19): at 1,278,785
+records it read 0.90 ms per moving frame at `mw120` against the sliced
+kernel's 0.57, and the excess followed the in-frame, gate-admitted
+population — a stamp read, an atomic and a list write for every stale star
+on every frame, four times what the sliced kernel amortised. Building a
+quarter of the catalogue per frame puts the producer's data work at the
+sliced kernel's rate while the frame still marches one class.
 
 **The population is the cache gate's, not the survivor list's.** Two
 reasons, each of which alone rules the survivor list out as the
@@ -154,10 +166,11 @@ population:
 
 Both are dust-independent and phase-independent, which is what lets the
 list be built ahead of the read and marched with **no gate in the refill
-kernel at all** — a listed star has passed it. Placing the block ahead of
-the solve rather than inside its prefilter is the cost of the second
-point: on an armed frame every thread re-evaluates the four terms the
-solve is about to read from the same record, cache-hot.
+kernel at all** — a listed star has passed it. Placing the block outside
+the solve's prefilter is the cost of the second point: a building thread
+re-evaluates the four terms the solve just read from the same record,
+cache-hot, and the block sits after the solve so those reads are the
+solve's to reuse.
 
 **Four sub-lists by residue.** A star lands in sub-list
 `self % REFILL_SLICES`, each of capacity `⌈count / REFILL_SLICES⌉`
@@ -171,15 +184,15 @@ args, and now stamps and worklist
 (`../../star/compaction/README.md` § Binding budget). A ninth would need a
 counter folded somewhere else, not a new buffer.
 
-**The finish kernel sizes one quarter.** The compaction's one-thread finish
-kernel reads the counter of the quarter the prepass will march next
-(`quarter`, a shared uniform) and writes `[⌈n / 64⌉, 1, 1, n]` into
-`refillDispatch`: the three u32 `dispatchWorkgroupsIndirect` reads, then
-the length the refill kernel bounds itself by (§ The kernel bounds itself
-by the listed length). It runs on every frame, armed or not, off counters
-that hold between armed frames — the reset kernel zeroes them only under
-the arm — so a list built on frame N is still sized correctly on frames
-N+2 and N+3 when its later quarters march.
+**The finish kernel sizes the class just built.** The compaction's
+one-thread finish kernel reads that class's counter (`quarter`, the same
+shared uniform the producer keyed on) and writes `[⌈n / 64⌉, 1, 1, n]`
+into `refillDispatch`: the three u32 `dispatchWorkgroupsIndirect` reads,
+then the length the refill kernel bounds itself by (§ The kernel bounds
+itself by the listed length). The reset kernel zeroes only that class's
+counter, under the same arm; the other three hold the lists built on the
+frames before, of which the prepass marches exactly one — the one built
+last frame — so nothing is ever overwritten before it is read.
 
 **The refill kernel resolves star → slot.** The list carries catalogue
 indices; the position table is in Morton slot order
@@ -203,35 +216,34 @@ tree's forced pair and never before it.
 
 ## The cursor, and why a request never stalls it
 
-`planRefill` holds `owed`, the quarters still to march on the list the
-compaction last built, and `quarter`, the one the next dispatch marches. A
-request (camera displacement past the epsilon, a turn, a moved gate bound,
-a re-packed position table, a dust chunk) sets `arm` for the compaction
-this frame and `owed` back to `REFILL_SLICES`; a frame with anything owed
-marches `quarter` and advances it. The prepass runs *before* the
-compaction, so the quarter marched on frame N is off the list built on
-frame N−1 — one frame of lag — and the quarter left in the uniform after
-the dispatch is the one the compaction's finish kernel sizes for frame
-N+1. Consume, then produce, in that order and in one `update()`.
+`planRefill` holds `owed`, the armed frames still to run — one class built
+per frame — `quarter`, the class built last frame, and `built`, whether one
+was. A request (camera displacement past the epsilon, a turn, a moved gate
+bound, a re-packed position table, a dust chunk) sets `owed` back to
+`REFILL_SLICES`; the arm is up while anything is owed, and a frame whose
+predecessor built a class marches it and advances `quarter`. The prepass
+runs *before* the compaction, so the class marched on frame N is the one
+built on frame N−1 — one frame of lag — and the class left in the uniform
+after the dispatch is the one the compaction builds and sizes on frame N.
+Consume, then produce, in that order and in one `update()`.
 
-**Every star listed by a build is marched within `REFILL_SLICES` frames of
-it, wherever the next request lands.** A star's residue never moves, so
-under a request every frame — a warp, where the generation bumps each
-frame and every in-frame star is re-listed each frame — it is marched on
-exactly every fourth frame; and when requests stop, the last build's four
-quarters march on the next four frames. A request landing mid-flight owes
-the quarters again from the rebuilt list, which re-lists whatever an
-earlier quarter stamped at the old generation and marches it within the
-same bound. The pure test simulates producer and consumer over a catalogue
-and pins the bound tight: the last quarter of a lone request lands on
-frame `REFILL_SLICES` exactly.
+**Every star a request makes stale is marched within `REFILL_SLICES`
+frames of it, wherever in a flight the request lands.** A star's residue
+never moves, so under a request every frame — a warp, where the generation
+bumps each frame — its class is built every fourth frame and it is marched
+the frame after, every fourth frame; and when requests stop, the arm holds
+for the frames still owed, so every class is built once more from the
+final generation and marched. The pure test simulates producer and
+consumer over a catalogue and pins the bound tight: the last class of a
+lone request marches on frame `REFILL_SLICES` exactly.
 
 **A parked cursor, and only a parked cursor, is a frame the pick mirror can
-be staged on.** `warmAvReadback` refuses while anything is owed: a copy
-taken mid-flight is superseded by the next quarter before the hover dwell
-that wanted it can read a byte (`../README.md` § Cold reads). Nothing owed
-means no request has landed for `REFILL_SLICES` frames, camera or view, so
-that one test covers a turning camera as well as a travelling one.
+be staged on.** `warmAvReadback` refuses while anything is in flight — a
+frame owed or a class built and not yet marched: a copy taken mid-flight
+is superseded by the next class before the hover dwell that wanted it can
+read a byte (`../README.md` § Cold reads). Nothing in flight means no
+request has landed for `REFILL_SLICES` frames, camera or view, so that one
+test covers a turning camera as well as a travelling one.
 
 ## The staleness this buys, and what sets REFILL_SLICES
 

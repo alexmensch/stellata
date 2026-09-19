@@ -285,14 +285,14 @@ not left alone, so the buffer stays a function of the dispatch and
 the identical gate closure (§ The prepass kernel).
 
 **The refill runs the gate in the compaction, ahead of the read, and the
-refill kernel runs none.** On an armed frame the compaction kernel tests
-the frustum at the refill's slack first, then these four terms, then the
-stamp, and appends the star that passes all three
-(`refill/README.md` § The compaction appends the worklist); the refill
-kernel then marches every listed star unconditionally. The four scattered
-reads are therefore paid by the in-frame population, once per armed frame,
-by a kernel already holding the record — and never by a dispatch of their
-own.
+refill kernel runs none.** On an armed frame the compaction kernel's
+threads of one residue class test the frustum at the refill's slack
+first, then these four terms, then the stamp, and append the star that
+passes all three (`refill/README.md` § The compaction appends the
+worklist); the refill kernel then marches every listed star
+unconditionally. The four scattered reads are therefore paid by a quarter
+of the in-frame population per armed frame, by a kernel that just read the
+same record — and never by a dispatch of their own.
 
 **That population is measured, and at `lg` it is the whole catalogue.**
 Share of the catalogue the frustum admits, real set / the V≤11 synthetic

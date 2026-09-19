@@ -175,18 +175,21 @@ describe('the worklist refill', () => {
     expect(refill.cameraGeneration.value).toBe(2);
   });
 
-  // The kernel marches the list the compaction built LAST frame, at the
+  // The kernel marches the class the compaction built LAST frame, at the
   // workgroup count its finish kernel wrote — nothing crosses to the CPU.
-  it('then marches one quarter a frame at the compaction\'s indirect count, and parks', () => {
+  // The arm stays up while classes are still to build and drops on the frame
+  // the last one marches.
+  it('then marches one class a frame at the compaction\'s indirect count, and parks', () => {
     const { prepass, computes, dispatched, refill, compaction, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
     prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
     const quarters: number[] = [];
+    const arms: number[] = [];
     for (let frame = 0; frame < REFILL_SLICES; frame++) {
       prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
       quarters.push(refill.quarter.value);
-      expect(refill.arm.value).toBe(0);
+      arms.push(refill.arm.value);
     }
     expect(dispatched).toEqual([COUNT, undefined, undefined, undefined, undefined]);
     for (const k of computes.slice(1)) {
@@ -195,8 +198,10 @@ describe('the worklist refill', () => {
       // A numeric count would make three prepend an early return on it.
       expect(k.count).toBeNull();
     }
-    // The quarter left behind is the one the compaction sizes for next frame.
+    // The class left behind is the one the compaction builds and sizes now,
+    // and the prepass marches next frame.
     expect(quarters).toEqual([1, 2, 3, 0]);
+    expect(arms).toEqual([1, 1, 1, 0]);
     for (let frame = 0; frame < 5; frame++) prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
     expect(computes).toHaveLength(1 + REFILL_SLICES);
   });

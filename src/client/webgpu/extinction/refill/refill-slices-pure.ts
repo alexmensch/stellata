@@ -27,37 +27,44 @@ export function refillWorklistLength(count: number, slices: number = REFILL_SLIC
 }
 
 export interface RefillCursor {
-  /** Quarters still owed on the list the compaction last built; 0 parked. */
+  /** Armed frames still owed — one residue class built per frame; 0 parked. */
   readonly owed: number;
-  /** Marched next, and sized by the compaction's finish kernel. */
+  /** The class built last frame and marched this one, if `built`. */
   readonly quarter: number;
+  /** The compaction built a class last frame, so a march is owed now. */
+  readonly built: boolean;
 }
 
-export const idleRefill = (): RefillCursor => ({ owed: 0, quarter: 0 });
+export const idleRefill = (): RefillCursor => ({ owed: 0, quarter: 0, built: false });
+
+export const refillInFlight = (cursor: RefillCursor): boolean => cursor.owed > 0 || cursor.built;
 
 export interface RefillPlan {
-  /** March `quarter` of the list this frame. */
+  /** March `quarter` this frame. */
   readonly dispatch: boolean;
   readonly quarter: number;
-  /** The compaction rebuilds the list this frame. */
+  /** The compaction builds `next.quarter` this frame. */
   readonly arm: boolean;
   readonly next: RefillCursor;
 }
 
-/** A request arms the producer and owes every quarter again; a frame with
- *  quarters owed marches one — README.md § The cursor. */
+/** A request arms the producer for every class again; each armed frame
+ *  builds one and the next frame marches it — README.md § The cursor. */
 export function planRefill(
   cursor: RefillCursor, wanted: boolean, slices: number = REFILL_SLICES,
 ): RefillPlan {
-  const dispatch = cursor.owed > 0;
+  const dispatch = cursor.built;
+  const owed = wanted ? slices : cursor.owed;
+  const arm = owed > 0;
   const { quarter } = cursor;
   return {
     dispatch,
     quarter,
-    arm: wanted,
+    arm,
     next: {
-      owed: wanted ? slices : Math.max(0, cursor.owed - 1),
+      owed: arm ? owed - 1 : 0,
       quarter: dispatch ? (quarter + 1) % slices : quarter,
+      built: arm,
     },
   };
 }

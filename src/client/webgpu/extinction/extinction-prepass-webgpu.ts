@@ -34,7 +34,8 @@ import { runReferenceMarch, type StarCacheGate } from './extinction-parity';
 import { AvMirror } from './mirror/av-mirror';
 import { composeViewProjectionAbs, countInFrameAbs, sameView } from './refill/refill-decision-pure';
 import {
-  idleRefill, planRefill, refillSliceLength, refillWorklistLength, type RefillCursor,
+  idleRefill, planRefill, refillInFlight, refillSliceLength, refillWorklistLength,
+  type RefillCursor,
 } from './refill/refill-slices-pure';
 
 export interface WebGpuExtinctionPrepassOptions {
@@ -259,9 +260,9 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
       refill.cameraGeneration.value += 1;
       this.setCameraGeneration(absCamX, absCamY, absCamZ);
     }
-    // Consume before produce: the quarter marched now is off the list the
+    // Consume before produce: the class marched now is the one the
     // compaction built LAST frame; the compaction this frame reads the arm
-    // and the quarter left here (refill/README.md § The cursor).
+    // and the class left here (refill/README.md § The cursor).
     const plan = planRefill(this.refill, bump || viewChanged);
     this.refill = plan.next;
     if (plan.dispatch) {
@@ -313,9 +314,9 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  inside the hover dwell. */
   warmAvReadback(): void {
     if (!this.isActive() || this.av === null) return;
-    // Nothing owed only: a copy taken mid-flight is superseded before the
-    // dwell that wanted it can read a byte (README.md § Cold reads).
-    if (this.refill.owed > 0) return;
+    // Nothing in flight only: a copy taken mid-flight is superseded before
+    // the dwell that wanted it can read a byte (README.md § Cold reads).
+    if (refillInFlight(this.refill)) return;
     this.mirror.stage(this.av, this.generation);
   }
 

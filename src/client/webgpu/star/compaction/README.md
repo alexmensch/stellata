@@ -120,7 +120,8 @@ positions — a kernel listing survivors off last frame's positions on a
 recentre frame would flicker the whole field.
 
 The reset kernel (one thread: both `instanceCount`s and the prefilter
-counter to zero, and the refill sub-list counters too on an armed frame),
+counter to zero, and on an armed frame the counter of the refill class
+being built),
 the compaction kernel and the finish kernel (§ The refill dispatch) are one
 `renderer.compute([...])`: one compute pass, one submit, and WebGPU orders
 dispatches within a pass so the atomics see the reset and the finish sees
@@ -175,17 +176,17 @@ without moving the other, and the test pins both.
 
 ## The refill dispatch
 
-The kernel appends every star the extinction refill has to march to one of
-`REFILL_SLICES` sub-lists by residue, counting with an `atomicAdd` on that
-sub-list's counter — four u32 past the prefilter counter in the args buffer
-(`refillListCountElement`), so the counters cost no binding. The block runs
-only under `arm`, a uniform the prepass raises on the frames a refill
-request lands, and the reset kernel zeroes the four counters under the same
-arm: between armed frames they hold, because the prepass is still marching
-the quarters they count.
+On an armed frame the threads of one residue class — `quarter`, a shared
+uniform — append every star of that class the extinction refill has to
+march to the class's sub-list, counting with an `atomicAdd` on its counter:
+four u32 past the prefilter counter in the args buffer
+(`refillListCountElement`), so the counters cost no binding. `arm` is a
+uniform the prepass holds up for `REFILL_SLICES` frames from a request, and
+the reset kernel zeroes that one counter under the same arm; the other three
+hold, because the prepass marches the class built the frame before.
 
-A third kernel closes the pass: one thread reads the counter of the quarter
-the prepass marches next (`quarter`, a shared uniform) through the same
+A third kernel closes the pass: one thread reads the counter of the class
+just built (`quarter` again) through the same
 atomic view the kernel added into and writes
 `[⌈n / REFILL_WORKGROUP_SIZE⌉, 1, 1, n]` into `refillDispatch` — the three
 u32 `dispatchWorkgroupsIndirect` reads, then the listed length the refill
@@ -262,9 +263,10 @@ The refill's stamps and worklist are the prepass's
 Per rendered frame: one compute submit, 388,071 threads each running the
 solve to the routing point (magnitude, pulsation, prefilter, one A_V read
 or the fallback march, the size solve), one projection, and two atomics
-per survivor; on an armed frame, the refill producer as well — the frustum
-at the refill's slack, the four gate terms, a stamp read for the in-frame
-admitted, and one atomic per stale star. What it removes is the vertex-stage floor: each of the
+per survivor; on an armed frame, the refill producer on a quarter of the
+threads as well — the frustum at the refill's slack, the four gate terms,
+a stamp read for the in-frame admitted, and one atomic per stale star of
+the class. What it removes is the vertex-stage floor: each of the
 three passes ran its stage over 4 corners × the whole catalogue with the
 invisible members exiting to the clip sentinel; now each runs over
 4 corners × the survivors inside the view. The frame-time delta is the

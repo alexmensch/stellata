@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  REFILL_SLICES, idleRefill, planRefill, refillListBase, refillQuarterOf, refillSliceLength,
-  refillWorklistLength, type RefillCursor,
+  REFILL_SLICES, idleRefill, planRefill, refillInFlight, refillListBase, refillQuarterOf,
+  refillSliceLength, refillWorklistLength, type RefillCursor,
 } from './refill-slices-pure';
 
 describe('refillSliceLength', () => {
@@ -46,82 +46,94 @@ describe('planRefill', () => {
     expect(plan.dispatch).toBe(false);
     expect(plan.arm).toBe(false);
     expect(plan.next).toEqual(idleRefill());
+    expect(refillInFlight(plan.next)).toBe(false);
   });
 
-  // The compaction builds this frame; the march starts next frame, since the
-  // prepass runs ahead of the compaction in the frame.
+  // The compaction builds one class this frame; the march starts next
+  // frame, since the prepass runs ahead of the compaction in the frame.
   it('a request arms the producer this frame and marches nothing yet', () => {
     const plan = planRefill(idleRefill(), true);
     expect(plan.arm).toBe(true);
     expect(plan.dispatch).toBe(false);
-    expect(plan.next).toEqual({ owed: REFILL_SLICES, quarter: 0 });
+    expect(plan.next).toEqual({ owed: REFILL_SLICES - 1, quarter: 0, built: true });
+    expect(refillInFlight(plan.next)).toBe(true);
   });
 
-  it('then marches one quarter a frame, every quarter once, and parks', () => {
+  // Built classes 0..3 on frames 0..3, marched one frame later each; the
+  // arm drops on the frame the last class marches.
+  it('builds one class an armed frame, marches it the next, every class once, and parks', () => {
     let cursor: RefillCursor = idleRefill();
     const marched: (number | null)[] = [];
+    const built: (number | null)[] = [];
     for (let frame = 0; frame < REFILL_SLICES + 3; frame++) {
       const plan = planRefill(cursor, frame === 0);
       marched.push(plan.dispatch ? plan.quarter : null);
+      built.push(plan.arm ? plan.next.quarter : null);
       cursor = plan.next;
     }
+    expect(built).toEqual([0, 1, 2, 3, null, null, null]);
     expect(marched).toEqual([null, 0, 1, 2, 3, null, null]);
-    expect(cursor.owed).toBe(0);
+    expect(refillInFlight(cursor)).toBe(false);
   });
 
-  it('a request landing mid-flight owes every quarter again from the rebuilt list', () => {
+  it('a request landing mid-flight owes every class again', () => {
     let cursor: RefillCursor = idleRefill();
-    const marched: (number | null)[] = [];
+    const built: (number | null)[] = [];
     for (let frame = 0; frame < 2 * REFILL_SLICES + 2; frame++) {
       const plan = planRefill(cursor, frame === 0 || frame === 2);
-      marched.push(plan.dispatch ? plan.quarter : null);
+      built.push(plan.arm ? plan.next.quarter : null);
       cursor = plan.next;
     }
-    expect(marched).toEqual([null, 0, 1, 2, 3, 0, 1, null, null, null]);
+    expect(built).toEqual([0, 1, 2, 3, 0, 1, null, null, null, null]);
   });
 
-  it('the quarter advances only on a dispatch, so the finish kernel sizes the one marched next', () => {
-    const parked = planRefill({ owed: 0, quarter: 2 }, false);
+  it('the class advances only on a march, so the one built is the one marched next', () => {
+    const parked = planRefill({ owed: 0, quarter: 2, built: false }, false);
     expect(parked.next.quarter).toBe(2);
-    const armed = planRefill({ owed: 0, quarter: 2 }, true);
+    const armed = planRefill({ owed: 0, quarter: 2, built: false }, true);
     expect(armed.next.quarter).toBe(2);
-    const marched = planRefill({ owed: 1, quarter: 3 }, false);
+    const marched = planRefill({ owed: 0, quarter: 3, built: true }, false);
+    expect(marched.dispatch).toBe(true);
     expect(marched.quarter).toBe(3);
     expect(marched.next.quarter).toBe(0);
+    expect(marched.arm).toBe(false);
   });
 });
 
 /** The producer and the consumer over a CPU catalogue: per frame the
- *  generation bumps on a request, the owed quarter is marched at the current
- *  generation, then an armed compaction rebuilds every sub-list from the
- *  stars still stale. Returns, per star, the frames it was marched on, and
- *  the longest wait any listed star had from the build that listed it to the
- *  march that stamped it. */
+ *  generation bumps on a request, the built class is marched at the current
+ *  generation, then an armed compaction builds one class from the stars of
+ *  that residue still stale. Returns, per star, the frames it was marched
+ *  on, and the longest wait any star had from the request that made it stale
+ *  to the march that stamped it. */
 function simulate(count: number, wantedPerFrame: readonly boolean[]) {
   const stamps = new Array<number>(count).fill(0);
-  const listedAt = new Array<number>(count).fill(-1);
+  const staleSince = new Array<number>(count).fill(0);
   let generation = 1;
   let cursor = idleRefill();
-  let lists: number[][] = Array.from({ length: REFILL_SLICES }, () => []);
+  const lists: number[][] = Array.from({ length: REFILL_SLICES }, () => []);
   const marchedOn: number[][] = Array.from({ length: count }, () => []);
   let longestWait = 0;
   for (const [frame, wanted] of wantedPerFrame.entries()) {
-    if (wanted) generation++;
+    if (wanted) {
+      generation++;
+      for (let star = 0; star < count; star++) {
+        if (stamps[star] === generation - 1) staleSince[star] = frame;
+      }
+    }
     const plan = planRefill(cursor, wanted);
     if (plan.dispatch) {
       for (const star of lists[plan.quarter]) {
         stamps[star] = generation;
         marchedOn[star].push(frame);
-        longestWait = Math.max(longestWait, frame - listedAt[star]);
-        listedAt[star] = -1;
+        longestWait = Math.max(longestWait, frame - staleSince[star]);
       }
     }
     if (plan.arm) {
-      lists = Array.from({ length: REFILL_SLICES }, () => []);
+      const q = plan.next.quarter;
+      lists[q] = [];
       for (let star = 0; star < count; star++) {
-        if (stamps[star] === generation) continue;
-        lists[refillQuarterOf(star)].push(star);
-        if (listedAt[star] < 0) listedAt[star] = frame;
+        if (refillQuarterOf(star) === q && stamps[star] !== generation) lists[q].push(star);
       }
     }
     cursor = plan.next;
@@ -129,10 +141,10 @@ function simulate(count: number, wantedPerFrame: readonly boolean[]) {
   return { marchedOn, longestWait, stale: stamps.filter((s) => s !== generation).length };
 }
 
-describe('every stale star is marched within REFILL_SLICES frames of the build that listed it', () => {
+describe('every stale star is marched within REFILL_SLICES frames of the request', () => {
   const COUNT = 103;
 
-  it('a lone request marches the whole stale set exactly once, the last quarter on the bound', () => {
+  it('a lone request marches the whole stale set exactly once, the last class on the bound', () => {
     const wanted = Array<boolean>(3 * REFILL_SLICES).fill(false);
     wanted[0] = true;
     const { marchedOn, stale, longestWait } = simulate(COUNT, wanted);
@@ -141,22 +153,18 @@ describe('every stale star is marched within REFILL_SLICES frames of the build t
     expect(longestWait).toBe(REFILL_SLICES);
   });
 
-  // A request every frame rebuilds the list every frame, and a star's
+  // A request every frame builds one class every frame, and a star's
   // residue never moves, so it is marched on exactly every fourth frame.
   it('under a request every frame no star waits more than REFILL_SLICES frames', () => {
     const frames = 4 * REFILL_SLICES;
     const { marchedOn, longestWait } = simulate(COUNT, Array<boolean>(frames).fill(true));
-    expect(longestWait).toBe(REFILL_SLICES);
+    expect(longestWait).toBeLessThanOrEqual(REFILL_SLICES);
     for (const f of marchedOn) {
       expect(f.length).toBeGreaterThanOrEqual(3);
       for (let i = 1; i < f.length; i++) expect(f[i] - f[i - 1]).toBe(REFILL_SLICES);
     }
   });
 
-  // A quarter marched on the request's own frame is marched at the new
-  // generation, so a request early in a flight closes a frame sooner than the
-  // bound; one landing later re-lists what an earlier quarter stamped and
-  // waits the full bound for it. Neither exceeds it.
   it('holds wherever in a flight a second request lands, and closes on settle', () => {
     for (let second = 1; second <= REFILL_SLICES + 1; second++) {
       const wanted = Array<boolean>(second + 2 * REFILL_SLICES + 1).fill(false);

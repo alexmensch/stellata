@@ -26,22 +26,23 @@ export interface RefillProducerInputs {
   localPos: Node<'vec3'>;
 }
 
-/** The frustum first, at the refill's own slack, then the four-term gate over
- *  the brightest magnitude, then the stamp — cheapest test outermost. */
+/** One residue class per armed frame — the one `refill.quarter` names — then
+ *  the frustum at the refill's own slack, the four-term gate over the
+ *  brightest magnitude, and the stamp: cheapest test outermost. */
 export function appendRefillWorklistTsl({
   refill, u, tables, counters, viewProjection, count, self, localPos,
 }: RefillProducerInputs): void {
-  If(refill.arm.equal(uint(1)), () => {
+  If(refill.arm.equal(uint(1)).and(uint(self).mod(uint(REFILL_SLICES)).equal(refill.quarter)), () => {
     const clip = viewProjection.mul(vec4(localPos, 1.0)).toVar();
     const seen = self.equal(u.uPinFocusToCenter).or(
       starQuadOffscreenTsl(clip, float(EXTINCTION_FRUSTUM_SLACK_PX).div(u.uViewport)).not());
     const dPc = max(distance(localPos, u.uCameraPos), 1e-30);
     If(seen.and(starCacheVisibleTsl(u, tables, self, dPc)), () => {
       If(refill.stamps.element(self).notEqual(refill.cameraGeneration), () => {
-        const quarter = uint(self).mod(uint(REFILL_SLICES));
-        const slot = atomicAdd(counters.element(uint(REFILL_LIST_COUNT_BASE).add(quarter)), uint(1));
+        const slot = atomicAdd(
+          counters.element(uint(REFILL_LIST_COUNT_BASE).add(refill.quarter)), uint(1));
         refill.worklist
-          .element(quarter.mul(uint(refillSliceLength(count))).add(slot))
+          .element(refill.quarter.mul(uint(refillSliceLength(count))).add(slot))
           .assign(uint(self));
       });
     });
