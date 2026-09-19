@@ -14,7 +14,7 @@ this file carries only the cross-folder policies.
 | [`membership/`](membership/README.md) | Pipeline-derived membership manifest (`build:membership`): **the record build's membership term**, its § 6.1 additions and parked ledgers, and the binding review queue. |
 | [`iau-wgsn/`](iau-wgsn/README.md) | IAU WGSN approved names + glyph-bearing designations (the naming authority) + the derived keyed tables. |
 | [`bailer-jones/`](bailer-jones/README.md) | Bailer-Jones 2021 Bayesian distance posteriors. |
-| [`gaia/`](gaia/README.md) | Gaia DR3 — cross-walks, astrometry, NSS orbits, Apsis. |
+| [`gaia/`](gaia/README.md) | Gaia DR3 — cross-walks, astrometry, NSS orbits, Apsis, and the `G ≤ 11` magnitude term of membership. |
 | [`hipparcos/`](hipparcos/README.md) | Hipparcos CCDM cross-reference + HIP2 reduction. |
 | [`tycho2/`](tycho2/README.md) | Tycho-2 mean positions + per-star mean epochs, PM, BT/VT — the first-order source for TYC-bearing rows Gaia misses. |
 | [`gliese/`](gliese/README.md) | Gliese & Jahreiss V/70A printed Johnson V + B−V, spectral type, parallax — the first-order source behind every `mag_src=GJ` cell. |

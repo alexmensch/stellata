@@ -78,6 +78,7 @@ write the worktree's `data/`.
 | `refresh:gaia-astrometry` | `refresh-gaia-astrometry.py` | `data/gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 5-parameter astrometry for exactly the source_ids `build-binaries.py` Stage 2 resolved (reads `data/gaia/gaia_astrometry_source_id_request.tsv` as input). Run AFTER `refresh:gaia-hip` + `refresh:gaia-tyc` + a fresh `pnpm run build:binaries`. |
 | `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — the manifest's `gaia_source_id` column (the same binding the record build reads) UNION the classic-ID binding gate's candidate sources UNION the membership derivation's candidate sources UNION `multiples.tsv`'s kept-physical pair members. Not a network pull. Reads the manifest, the spine and both Gaia cross-walks, so it still runs AFTER `refresh:gaia-hip` / `refresh:gaia-tyc`. |
 | `refresh:gaia-astrometry-catalog` | `refresh-gaia-astrometry-catalog.py` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5p astrometry + `radial_velocity` for every catalog source_id (379,135) — tier 1 of the direction, rv, V and ci cascades. Same schema/query as `refresh:gaia-astrometry`; reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
+| `refresh:gaia-magnitude` | `refresh-gaia-magnitude.py` | `data/gaia/gaia_dr3_magnitude_pull.tsv` | Every `gaiadr3.gaia_source` row at `G ≤ 11` (1,247,240) — membership's magnitude term (`docs/catalog-driver.md` § 1), on `gaia_astrometry_pull.TSV_COLUMNS`. The one Gaia pull with **no request set**: its selection is the magnitude bound, so it reads nothing under `data/` and has no ordering constraint. Floor rationale — why `G ≤ 11` needs no margin over `V ≤ 11` — `data/gaia/README.md` § Why the floor carries no margin. |
 | `refresh:gaia-apsis` | `refresh-gaia-apsis.py` | `data/gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) — Teff / log g / [M/H] / A0 + GSP-Spec `spectraltype_esphs` enum. |
 | `refresh:gaia-gspc` | `refresh-gaia-gspc.py` | `data/gaia/gaia_dr3_gspc.tsv` | Gaia DR3 `synthetic_photometry_gspc` — Johnson-Kron-Cousins B/V synthesised per source from its BP/RP spectrum, with fluxes and the per-band validated-range flag. Reads `gaia_catalog_source_id_request.tsv`, so it runs AFTER `build:astrometry-request`. Flag polarity and the S/N > 30 cut this table already applies — `data/gaia/README.md` § The GSPC validated-range flag. |
 | `refresh:gaia-dr2-neighbourhood` | `refresh-gaia-dr2-neighbourhood.py` | `data/gaia/gaia_dr2_neighbourhood.tsv` | DR2 ↔ DR3 cross-match candidates (`gaiadr3.dr2_neighbourhood`) for the Gaia-only catalog stars (reads `data/gaia/gaia_dr2_neighbourhood_request.tsv`). Input to the SID DR-reconciliation dry run — `docs/sid.md` § DR2→DR3 dry run, incl. the request-file derivation recipe. |
@@ -202,10 +203,26 @@ one pull, because three scopes now read the same one-column TSV contract:
 the binaries astrometry list, the full-catalog list, and the DR2
 neighbourhood risk set.
 
+**`refresh:gaia-magnitude` is scoped by a selection, not a request set**, and
+so sits outside this whole section: membership's magnitude term is defined by
+a bound on `phot_g_mean_mag`, not by a list of ids, so the pull reads nothing
+under `data/`, derives from nothing, and cannot go stale against a column
+that moved. Its shortfall gate is a row-count band rather than a coverage
+fraction — there is no numerator, because there was no request. What it
+shares with the two request-scoped pulls is the schema: all three project
+`gaia_astrometry_pull.TSV_COLUMNS` through `SELECT_CLAUSE`, so one added
+column reaches all three and one parser reads all three outputs.
+
 Non-network dependency: `refresh-simbad-tyc-hd.test.py` covers that pull's
 request-set union, the space-padded ident join, its compose gates and the
 row-count / spot-row bands against an in-memory TAP backend. Run it with
 `python3 scripts/refresh/refresh-simbad-tyc-hd.test.py`.
+
+Non-network dependency: `refresh-gaia-magnitude.test.py` covers the slice
+partition (shared edge literals, the open bright end, the floor as the last
+edge, near-equal populations), the per-slice ADQL shape, and both gates
+against an in-memory TAP backend. Run it with
+`python3 scripts/refresh/refresh-gaia-magnitude.test.py`.
 
 Non-network dependency: `refresh-gaia-gspc.test.py` covers that pull's
 write widths, the per-band-null shape a both-bands-or-nothing writer
@@ -282,8 +299,8 @@ VizieR-only. SIMBAD gets `[simbad_backend()]` for its divergent dialect.
 
 **MAXREC is load-bearing.** A sync endpoint answers HTTP 200 and flags
 truncation in a VOTable `QUERY_STATUS` INFO rather than erroring, so a
-MAXREC below the result size would silently short a pull. Two sizing
-rules, and neither may be replaced with a bare literal:
+MAXREC below the result size would silently short a pull. Three sizing
+rules, and none may be replaced with a bare literal:
 
 - Whole-table pulls (hip-xmatch, tyc-xmatch, nss) call
   `whole_table_sync_maxrec(EXPECTED_ROW_COUNT_MAX)` — double the pinned
@@ -294,6 +311,31 @@ rules, and neither may be replaced with a bare literal:
 - Batched pulls size MAXREC off their batch size (`BATCH_SIZE * 2`),
   except `refresh-gaia-dr2-neighbourhood.py`, where one requested id can
   return several rows.
+- `refresh-gaia-magnitude.py` batches on a **value range** rather than a
+  count, so it has no batch size to multiply: MAXREC is four times the
+  nominal slice population (`EXPECTED_ROW_COUNT_MAX // SLICE_COUNT`). The
+  factor is headroom against the distribution moving, not against the
+  slices being uneven — see § Slicing a magnitude-bounded pull.
+
+### Slicing a magnitude-bounded pull
+
+A selection with no request set still has to be batched: 1.25 M rows in one
+sync query has no resume point and a 300 s timeout. `refresh-gaia-magnitude.py`
+splits on `phot_g_mean_mag`, and the spacing is the part worth not
+re-deriving. Source counts grow ~2.48x per magnitude at this depth, so equal
+magnitude steps would make the faintest slice ~27x the brightest. Equal steps
+in **log-count** space instead — edge `k` at `floor + ln(k/K)/ln(2.48)` —
+land every slice but the first within ~5% of the mean: measured 15,897 to
+27,367 over 48 slices, the low figure being the open-ended bright slice, where
+the power law stops holding. The whole pull runs in about four minutes.
+
+**The edges are shared as formatted strings, not recomputed per side.**
+Slice `k`'s `<=` bound and slice `k+1`'s `>` bound are the same literal, which
+is what makes the bounds a partition: a source can satisfy neither only if the
+two sides disagree in their last decimal. `assert_partitioned` gates the other
+direction (no source returned twice) and `assert_within_floor` gates the
+result against the bound, so a bad edge fails the pull rather than quietly
+moving the floor.
 
 `SyncOverflowError` covers the truncation case and is deliberately NOT
 classified transient — retrying or switching mirrors at the same MAXREC
@@ -356,6 +398,9 @@ catalogue inconsistent. Order matters:
    `refresh-gaia-hip-xmatch.py`, `refresh-gaia-tyc-xmatch.py`,
    `refresh-gaia-astrometry.py`, `refresh-gaia-nss.py`,
    `refresh-gaia-apsis.py`, `refresh-bailer-jones.py`.
+   `refresh-gaia-magnitude.py` goes here too and is the one with no
+   ordering constraint at all — it asks the new release for a magnitude
+   range, so it neither reads nor bridges a DR3 id.
    Each commits its TSV under `data/gaia/` or `data/bailer-jones/`.
    Then regenerate the full-catalog astrometry (two stages, in this
    order): `pnpm run build:astrometry-request` (the manifest's

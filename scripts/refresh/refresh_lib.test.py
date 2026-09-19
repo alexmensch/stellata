@@ -737,6 +737,70 @@ class SyncOverflowTests(unittest.TestCase):
         self.assertEqual(calls, ["esa"])
 
 
+def _error_votable(message: bytes) -> bytes:
+    return (
+        b'<VOTABLE version="1.2" xmlns="http://www.ivoa.net/xml/VOTable/v1.2">'
+        b'<RESOURCE type="results">'
+        b'<INFO name="QUERY_STATUS" value="ERROR">' + message +
+        b"</INFO></RESOURCE></VOTABLE>"
+    )
+
+
+class SyncErrorDetailTests(unittest.TestCase):
+    def test_lifts_the_query_status_message_out_of_an_error_votable(self) -> None:
+        # The archive answers a rejected query with a VOTable whatever the
+        # status line, and the parser's complaint is the only thing naming the
+        # clause it rejected.
+        status, detail = rl._sync_error_detail(_error_votable(b'Encountered "GROUP BY".'))
+        self.assertIn('Encountered "GROUP BY"', status)
+        self.assertIn('Encountered "GROUP BY"', detail)
+
+    def test_falls_back_to_the_raw_body_when_it_is_not_a_votable(self) -> None:
+        status, detail = rl._sync_error_detail(b"<html>Bad Gateway</html>")
+        self.assertIn("Bad Gateway", detail)
+        # Empty, so the permanent-fault words are never matched against a
+        # proxy's page — a "service not found" there must still fail over.
+        self.assertEqual(status, "")
+
+    def test_truncates_a_long_body(self) -> None:
+        _, detail = rl._sync_error_detail(b"x" * 10_000)
+        self.assertEqual(len(detail), rl._SYNC_ERROR_DETAIL_CHARS)
+
+
+class SyncErrorClassificationTests(unittest.TestCase):
+    """A rejected query reaches the parser, so the archive's complaint decides
+    whether to retry — not the status code it arrives under."""
+
+    def _run(self, status_code: int, body: bytes) -> BaseException:
+        import requests
+
+        class _Resp:
+            ok = False
+            content = body
+            status_code = 0
+
+        resp = _Resp()
+        resp.status_code = status_code
+        original = requests.post
+        requests.post = lambda *_a, **_k: resp
+        try:
+            with self.assertRaises(Exception) as caught:
+                rl._sync_tap_run("https://example.test/tap", "SELECT 1", 10)
+        finally:
+            requests.post = original
+        return caught.exception
+
+    def test_a_parse_complaint_under_a_5xx_escapes_the_retry(self) -> None:
+        exc = self._run(500, _error_votable(b'Encountered "GROUP BY".'))
+        self.assertIn('Encountered "GROUP BY"', str(exc))
+        self.assertFalse(rl.is_transient_http_error(exc))
+
+    def test_a_5xx_with_no_query_status_still_retries(self) -> None:
+        exc = self._run(503, b"<html>Bad Gateway</html>")
+        self.assertIn("Bad Gateway", str(exc))
+        self.assertTrue(rl.is_transient_http_error(exc))
+
+
 class WholeTableSyncMaxrecTests(unittest.TestCase):
     def test_doubles_the_pinned_ceiling(self) -> None:
         self.assertEqual(rl.whole_table_sync_maxrec(99_600), 199_200)
@@ -811,6 +875,60 @@ class CoerceMaskedTests(unittest.TestCase):
                 output=out,
             )
             self.assertEqual(out.read_text(), "a\tb\n\t2.5\n")
+
+
+# ─── format_tsv_row / write_tsv_lines ─────────────────────────────────
+
+class FormatTsvRowTests(unittest.TestCase):
+    def test_joins_cells_in_column_order(self) -> None:
+        self.assertEqual(
+            rl.format_tsv_row({"b": 2, "a": 1}, ["a", "b"]), "1\t2"
+        )
+
+    def test_none_becomes_an_empty_cell(self) -> None:
+        self.assertEqual(rl.format_tsv_row({"a": None, "b": 7}, ["a", "b"]), "\t7")
+
+    def test_missing_key_is_an_empty_cell(self) -> None:
+        self.assertEqual(rl.format_tsv_row({}, ["a"]), "")
+
+    def test_rounds_floats_when_asked(self) -> None:
+        self.assertEqual(
+            rl.format_tsv_row({"ra": 1.234567}, ["ra"], round_floats=3), "1.235"
+        )
+
+    def test_is_the_line_write_tsv_emits(self) -> None:
+        # The two must not drift: write_tsv delegates here, and a pull large
+        # enough to keep lines instead of mappings has to produce the same file.
+        row = {"a": None, "b": 1.23456}
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "out.tsv"
+            rl.write_tsv([row], columns=["a", "b"], output=out, round_floats=2)
+            self.assertEqual(
+                out.read_text().splitlines()[1],
+                rl.format_tsv_row(row, ["a", "b"], round_floats=2),
+            )
+
+
+class WriteTsvLinesTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.dir = tempfile.TemporaryDirectory()
+        self.path = Path(self.dir.name) / "out.tsv"
+        self.addCleanup(self.dir.cleanup)
+
+    def test_writes_the_header_from_columns(self) -> None:
+        n = rl.write_tsv_lines(["1\tx"], ["a", "b"], self.path)
+        self.assertEqual(n, 1)
+        self.assertEqual(self.path.read_text(), "a\tb\n1\tx\n")
+
+    def test_leaves_no_output_when_the_stream_raises(self) -> None:
+        def explode():
+            yield "1\tx"
+            raise RuntimeError("mid-stream")
+
+        with self.assertRaises(RuntimeError):
+            rl.write_tsv_lines(explode(), ["a", "b"], self.path)
+        self.assertFalse(self.path.exists())
+        self.assertFalse(self.path.with_suffix(".tsv.tmp").exists())
 
 
 # ─── write_tsv ────────────────────────────────────────────────────────
