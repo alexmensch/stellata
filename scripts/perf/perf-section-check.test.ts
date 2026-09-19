@@ -220,6 +220,37 @@ describe('perf-section-check', () => {
         ['src/client/milkyway/band.ts']);
       expect(r.code, r.stdout).toBe(0);
     });
+
+    // The cost of matching anywhere, pinned rather than discovered in CI: the
+    // guard cannot tell a sentence ABOUT the marker from a regression written
+    // out in words, so the character is reserved for rows being accepted and
+    // RELEASING.md § What the section carries says so.
+    it('fails a section that merely talks about the marker', () => {
+      const r = check([
+        '## Perf',
+        '',
+        'Tier 0 — no per-frame code reachable from animate(), so no ✗ rows.',
+        '',
+        '## Release notes',
+        '',
+        '- x',
+      ].join('\n'), ['src/client/milkyway/band.ts']);
+      expect(r.code, r.stdout).toBe(1);
+      expect(r.stdout).toContain('unnamed row');
+    });
+
+    it('passes the same claim written without the character', () => {
+      const r = check([
+        '## Perf',
+        '',
+        'Tier 0 — no per-frame code reachable from animate(); every row within band.',
+        '',
+        '## Release notes',
+        '',
+        '- x',
+      ].join('\n'), ['src/client/milkyway/band.ts']);
+      expect(r.code, r.stdout).toBe(0);
+    });
   });
 
   // RELEASING.md § Perf pin promises Tier 0 a prose reachability argument

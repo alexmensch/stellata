@@ -119,8 +119,9 @@ information.
   a pass, or a per-frame buffer write. A camera-gesture change whose
   handlers run on a keypress is the canonical instance. The guard already
   accepts this — it requires a non-empty section and an `accepted:` line
-  per `✗`, and a body with no table has no `✗` — so a table is not what
-  the gate asks for, an answer is.
+  per `✗`, and a section with no row to mark writes none — so a table is
+  not what the gate asks for, an answer is. Keep the character out of the
+  prose, though: it marks wherever it appears (§ What the section carries).
 - **Tier 1 — per-frame code touched, no change to draw counts or pass
   structure.** `--mode dwell --scenario mw120,sol --backend webgpu
   --against-pin scripts/perf/pins/<slug>.json`. Two contexts, ~4 min, one
@@ -396,6 +397,20 @@ so it checks the section the way `release-notes-guard` does — and the
 is for the reviewer, who is the one who can dispute it; the guard cannot
 read a reachability argument and does not try. There is no skip label: a
 change that costs nothing says why, or shows a table of `~`.
+
+**The character is the mark, wherever it sits on the line.** The guard
+takes every row key a marked line names — `<scenario>|<backend>`, an
+optional `|compute`, emphasis and punctuation stripped — and demands an
+`accepted:` line for each, so reporting one inline (`all ~ except
+**lg|webgpu|compute +0.44 ✗** (compaction, not refill)`) is as binding as a
+pasted table row. A marked line naming no key fails on its own text: there
+is no row an `accepted:` line could answer it with.
+
+So **`✗` inside the section is reserved for rows you are accepting** —
+never for prose about the convention. "No `✗` rows" fails the guard, and
+it fails for the right reason, because the guard cannot tell that sentence
+from a regression reported in words. Say it as *every row within band*, or
+show the table. This bites hardest at Tier 0, whose section is prose only.
 
 **How the pin advances.** A Tier 2 PR commits its re-taken pin in the same
 PR, so the pin always describes what the version bump deploys. A `✗` is
