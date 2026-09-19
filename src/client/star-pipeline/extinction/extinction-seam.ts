@@ -17,9 +17,6 @@ export interface ExtinctionPrepassUniforms {
   uAvPrepassEnabled: { value: number };
 }
 
-/** see ../../webgpu/extinction/refill/README.md § The survivor-driven probe */
-export type ExtinctionRefillMode = 'sliced' | 'survivors';
-
 /** see ../../webgpu/extinction/refill/README.md § Only what is in frame */
 export interface ExtinctionView {
   camera: THREE.Camera;

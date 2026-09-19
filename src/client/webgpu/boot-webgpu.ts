@@ -8,7 +8,6 @@ import type { SharedUniforms } from '../frame/shared-uniforms';
 import type {
   PlanetGlareSources,
 } from '../solar-system/planets/planet-body-field';
-import type { ExtinctionRefillMode } from '../star-pipeline/extinction/extinction-seam';
 import { WebGpuExtinctionPrepass } from './extinction/extinction-prepass-webgpu';
 import { ExtinctionNodes } from './extinction/extinction-nodes';
 import { WebGpuHdrPipeline } from './hdr/hdr-pipeline-webgpu';
@@ -36,19 +35,10 @@ import { STAR_VERTEX_STAGE_STORAGE_BUFFERS, StarLayer } from './star/star-layer'
 import type { StarTables } from './star/star-tables';
 import { settleTimestampSupport, type TimestampBackend } from './timestamps/timestamp-probe';
 
-export interface BootWebGpuOptions {
-  /** `#av-refill=<mode>` off the URL fragment (renderer-flag.ts); null or
-   *  absent boots the shipped `sliced` schedule. */
-  extinctionRefillMode?: ExtinctionRefillMode | null;
-}
-
 /** Null when the device came back and then refused the renderer. The
  *  caller shows the requires-WebGPU page rather than a broken canvas —
  *  there is no WebGL2 fallback (README.md § The renderer is WebGPU). */
-export async function bootWebGpu(
-  canvas: HTMLCanvasElement,
-  { extinctionRefillMode }: BootWebGpuOptions = {},
-): Promise<WebGpuSeam | null> {
+export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam | null> {
   if (!('gpu' in navigator)) return null;
   const renderer = new WebGPURenderer({
     canvas,
@@ -120,9 +110,10 @@ export async function bootWebGpu(
   let bandMaterialsCache: BandMaterials | null = null;
   // Boot-scoped so the extinction prepass, built later on the first
   // attachDust, can gate on the tables (extinction/README.md § The cache
-  // gate) and dispatch over the compaction's lists (extinction/refill/README.md
-  // § The survivor-driven probe). Cleared with the layer, so a prepass built
-  // after a teardown gates on nothing rather than on dead storage nodes.
+  // gate) and march the worklist the compaction appends
+  // (extinction/refill/README.md § The compaction appends the worklist).
+  // Cleared with the layer, so a prepass built after a teardown refuses
+  // rather than binding dead storage nodes.
   let starTables: StarTables | null = null;
   let starCompaction: StarCompaction | null = null;
   return {
@@ -222,13 +213,15 @@ export async function bootWebGpu(
       extinctionSlots.setDustTexture(texture);
     },
     attachExtinctionPrepass(options: WebGpuExtinctionPrepassSources) {
+      if (starTables === null || starCompaction === null) {
+        throw new Error('attachExtinctionPrepass before attachStarLayer');
+      }
       return new WebGpuExtinctionPrepass({
         renderer,
         nodes: nodesOrThrow('attachExtinctionPrepass'),
         slots: extinctionSlots,
         tables: starTables,
         compaction: starCompaction,
-        refillMode: extinctionRefillMode ?? 'sliced',
         ...options,
       });
     },
