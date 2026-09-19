@@ -76,7 +76,8 @@ export class StarLayer {
       dust: extinction.dust,
       av: extinction.av,
     };
-    this.compaction = new StarCompaction(renderer, deps, STAR_QUAD_INDEX_COUNT);
+    this.compaction = new StarCompaction(
+      renderer, deps, STAR_QUAD_INDEX_COUNT, extinction.refill);
     this.geometries = buildStarGeometries(
       this.tables.count, sources.boundingSphereRadiusPc, this.compaction.args);
     const listSource = (tier: StarTier): StarVertexSource => ({

@@ -53,6 +53,37 @@ describe('ExtinctionNodes', () => {
     nodes.dispose();
   });
 
+  // Both are bound by the compaction kernel from the first frame, so each
+  // needs a valid uint buffer behind it before any prepass exists.
+  it('gives the refill stamps and worklist one-uint placeholders, disarmed', () => {
+    const nodes = new ExtinctionNodes();
+    for (const slot of [nodes.refill.stamps, nodes.refill.worklist]) {
+      const placeholder = slot.value as StorageBufferAttribute;
+      expect(placeholder.isStorageBufferAttribute).toBe(true);
+      expect(placeholder.count).toBe(1);
+      expect(placeholder.array).toBeInstanceOf(Uint32Array);
+    }
+    expect(nodes.refill.arm.value).toBe(0);
+    expect(nodes.refill.cameraGeneration.value).toBe(1);
+    nodes.dispose();
+  });
+
+  it('swaps the refill slots in and out together, and disarms on release', () => {
+    const nodes = new ExtinctionNodes();
+    const stampsPlaceholder = nodes.refill.stamps.value;
+    const worklistPlaceholder = nodes.refill.worklist.value;
+    const stamps = new StorageBufferAttribute(new Uint32Array(8), 1);
+    const worklist = new StorageBufferAttribute(new Uint32Array(8), 1);
+    nodes.refill.setBuffers(stamps, worklist);
+    nodes.refill.arm.value = 1;
+    expect(nodes.refill.stamps.value).toBe(stamps);
+    expect(nodes.refill.worklist.value).toBe(worklist);
+    nodes.dispose();
+    expect(nodes.refill.stamps.value).toBe(stampsPlaceholder);
+    expect(nodes.refill.worklist.value).toBe(worklistPlaceholder);
+    expect(nodes.refill.arm.value).toBe(0);
+  });
+
   it('swaps each slot in and back out to its own placeholder', () => {
     const nodes = new ExtinctionNodes();
     const dustPlaceholder = nodes.dust.value;
