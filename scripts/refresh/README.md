@@ -325,9 +325,9 @@ splits on `phot_g_mean_mag`, and the spacing is the part worth not
 re-deriving. Source counts grow ~2.48x per magnitude at this depth, so equal
 magnitude steps would make the faintest slice ~27x the brightest. Equal steps
 in **log-count** space instead — edge `k` at `floor + ln(k/K)/ln(2.48)` —
-land every slice within ~5% of the mean: measured 15,897 to 27,367 over 48
-slices, the low one being the open-ended bright slice where the power law
-stops holding. The whole pull runs in about four minutes.
+land every slice but the first within ~5% of the mean: measured 15,897 to
+27,367 over 48 slices, the low figure being the open-ended bright slice, where
+the power law stops holding. The whole pull runs in about four minutes.
 
 **The edges are shared as formatted strings, not recomputed per side.**
 Slice `k`'s `<=` bound and slice `k+1`'s `>` bound are the same literal, which

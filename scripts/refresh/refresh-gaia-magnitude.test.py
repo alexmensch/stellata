@@ -147,6 +147,34 @@ class WriteTests(unittest.TestCase):
                 out.read_text().splitlines(), ["source_id\tx", "2\ta", "9\tb"]
             )
 
+    def test_an_overlapping_slice_fails_before_the_tsv_is_written(self) -> None:
+        # The gate has to precede the write: a partition fault that still
+        # committed its TSV would ship a silently doubled pull under a count
+        # the row-count band is wide enough to accept.
+        import contextlib
+        import io as _io
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "magnitude.tsv"
+            saved = (mag.OUT, rl.gaia_sync_client, rl.BatchCheckpoint)
+            mag.OUT = out
+            rl.gaia_sync_client = lambda _maxrec: fake_tap_client(
+                rl, lambda _q: _table([_row(7, 4.5)])
+            )
+            rl.BatchCheckpoint = lambda _path: None
+            try:
+                with self.assertRaises(SystemExit) as caught, (
+                    contextlib.redirect_stdout(_io.StringIO())
+                ):
+                    mag.main()
+            finally:
+                mag.OUT, rl.gaia_sync_client, rl.BatchCheckpoint = saved
+            # Named, because the row-count band rejects this fixture too and a
+            # bare SystemExit would pass with the partition gate deleted.
+            self.assertIn("more than one slice", str(caught.exception))
+            self.assertFalse(out.exists())
+
 
 if __name__ == "__main__":
     unittest.main()
