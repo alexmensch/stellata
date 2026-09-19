@@ -5,11 +5,10 @@ G <= 11. See scripts/refresh/README.md and data/gaia/README.md."""
 
 from __future__ import annotations
 
-import math
 import sys
 import time
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
@@ -22,14 +21,11 @@ SCRIPT_NAME = "refresh-gaia-magnitude"
 ROOT = REPO_ROOT
 OUT = ROOT / "data" / "gaia" / "gaia_dr3_magnitude_pull.tsv"
 
-# No V <= 11 source carries G above 10.97208, so this needs no margin —
-# data/gaia/README.md § Why the floor carries no margin.
-G_MAG_FLOOR = 11.0
-
-# scripts/refresh/README.md § Slicing a magnitude-bounded pull.
-SOURCES_PER_MAGNITUDE = 2.48
-SLICE_COUNT = 48
-EDGE_DECIMALS = 6
+# see data/gaia/README.md § Why the floor carries no margin
+G_MAG_FLOOR = rl.G_MAG_FLOOR
+G_MAG_COLUMN = rl.G_MAG_COLUMN
+SLICE_COUNT = rl.SLICE_COUNT
+EDGE_DECIMALS = rl.EDGE_DECIMALS
 
 # DR3 is a published static release, so the count should not move at all;
 # the band absorbs an archive reload, not a change of selection.
@@ -76,36 +72,11 @@ SPOT_CHECKS: list[dict[str, Any]] = [
     },
 ]
 
-MagnitudeSlice = tuple[str | None, str]
+magnitude_slices = rl.magnitude_slices
 
 
-def magnitude_slices(
-    floor: float = G_MAG_FLOOR,
-    count: int = SLICE_COUNT,
-    ratio: float = SOURCES_PER_MAGNITUDE,
-) -> list[MagnitudeSlice]:
-    """The pull's `(lo, hi)` magnitude bounds as formatted ADQL literals,
-    brightest slice first. `lo` is None on the first slice alone, which is
-    open at the bright end so a source brighter than any edge cannot fall
-    outside the pull.
-
-    Consecutive slices share one edge STRING, so the bounds partition the
-    range exactly: no source can satisfy both `> e` and `<= e`, and none
-    can satisfy neither.
-    """
-    edges = [
-        f"{floor + math.log(k / count) / math.log(ratio):.{EDGE_DECIMALS}f}"
-        for k in range(1, count + 1)
-    ]
-    return list(zip([None, *edges[:-1]], edges))
-
-
-def slice_adql(bounds: MagnitudeSlice) -> str:
-    lo, hi = bounds
-    where = f"phot_g_mean_mag <= {hi}"
-    if lo is not None:
-        where = f"phot_g_mean_mag > {lo} AND {where}"
-    return f"{gap.SELECT_CLAUSE} WHERE {where}"
+def slice_adql(bounds: rl.MagnitudeSlice) -> str:
+    return f"{gap.SELECT_CLAUSE} WHERE {rl.magnitude_predicate(bounds, G_MAG_COLUMN)}"
 
 
 def assert_within_floor(source_id: int, g_mag: Any) -> None:
@@ -122,15 +93,6 @@ def assert_within_floor(source_id: int, g_mag: Any) -> None:
         raise SystemExit(
             f"{SCRIPT_NAME}: source_id {source_id} has G={float(g_mag)} above "
             f"the floor {G_MAG_FLOOR} — a slice bound is wrong."
-        )
-
-
-def assert_partitioned(rows: Sequence[tuple[int, str]]) -> None:
-    unique = len({source_id for source_id, _ in rows})
-    if unique != len(rows):
-        raise SystemExit(
-            f"{SCRIPT_NAME}: {len(rows) - unique} source_ids returned by more "
-            f"than one slice — the slice edges overlap; see magnitude_slices."
         )
 
 
@@ -191,7 +153,9 @@ def main() -> None:
         rl.BatchCheckpoint(OUT.with_suffix(OUT.suffix + ".ckpt")),
     )
 
-    assert_partitioned(rows)
+    rl.assert_partitioned(
+        len(rows), len({source_id for source_id, _ in rows}), SCRIPT_NAME
+    )
     rl.assert_row_count(
         len(rows),
         EXPECTED_ROW_COUNT_MIN,

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Declarative whole-table VizieR column slice → committed TSV. See
-scripts/refresh/README.md § VizieR column slices."""
+scripts/refresh/vizier/README.md."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from typing import Any, Callable, Mapping, Sequence
 import sys
 import time
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import refresh_lib as rl  # noqa: E402
 

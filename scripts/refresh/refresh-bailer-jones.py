@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Refresh data/bailer-jones/bailer-jones-dr3.tsv — Bailer-Jones 2021
-(VizieR I/352) Bayesian DR3 distance posteriors per membership source_id."""
+Bayesian DR3 distance posteriors over the catalogue's deep population.
+See data/bailer-jones/README.md."""
 
 from __future__ import annotations
 
@@ -15,77 +16,70 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
+SCRIPT_NAME = "refresh-bailer-jones"
 ROOT = REPO_ROOT
-MEMBERSHIP = rl.MEMBERSHIP_MANIFEST
+REQUEST = ROOT / "data" / "gaia" / "gaia_catalog_source_id_request.tsv"
 OUT = ROOT / "data" / "bailer-jones" / "bailer-jones-dr3.tsv"
 
-# 5000 ids → ~98 KB query, ~80 s round-trip on CDS TAP. 10000 was ~5 min
-# (superlinear server cost in IN-clause length).
-BATCH_SIZE = 5_000
+# see data/bailer-jones/README.md § Why the pull is ESA-side
+TABLE = "external.gaiaedr3_distance"
 
-# Pinned coverage floor. The empirical first 5000-id probe returned 98.7%, so
-# ≥ 90%. The ceiling is the input set itself — a match cannot exceed it — so it
-# is read off `total` rather than pinned; a literal beside it drifts above the
-# request set and stops catching the duplicate rows it is there to catch.
-EXPECTED_COVERAGE_MIN = 0.90
+TSV_COLUMNS = [
+    "source_id",
+    "r_med_geo",
+    "r_lo_geo",
+    "r_hi_geo",
+    "r_med_photogeo",
+    "r_lo_photogeo",
+    "r_hi_photogeo",
+    "flag",
+]
+
+# `flag` is a five-digit decision-tree code the build does not read; it is
+# a VARCHAR on the archive, so it passes through as a string.
+STRING_COLUMNS: frozenset[str] = frozenset({"flag"})
+
+EXPECTED_SCHEMA: dict[str, type | tuple[type, ...]] = {
+    "source_id": int,
+    "r_med_geo": float,
+    "r_lo_geo": float,
+    "r_hi_geo": float,
+    "r_med_photogeo": float,
+    "r_lo_photogeo": float,
+    "r_hi_photogeo": float,
+    "flag": str,
+}
 
 # Distance precision: B-J posterior intervals are typically ±10% of the
 # median (e.g. ±30 pc on a 350 pc star), so 0.001 pc (millipc) preserves
 # all useful signal without bloating the TSV.
 DISTANCE_DECIMALS = 3
 
-# VizieR-on-the-wire → paper-name TSV column mapping. The keys are the
-# case-sensitive column names exposed by I/352/gedr3dis on the VizieR
-# TAP service; the values are the Bailer-Jones 2021 paper's names, which
-# is what the catalog build reads (``parse/read-stars-inputs.ts``).
-VIZIER_TO_PAPER = {
-    "Source": "source_id",
-    "rgeo": "r_med_geo",
-    "b_rgeo": "r_lo_geo",
-    "B_rgeo": "r_hi_geo",
-    "rpgeo": "r_med_photogeo",
-    "b_rpgeo": "r_lo_photogeo",
-    "B_rpgeo": "r_hi_photogeo",
-    "Flag": "flag",
-}
+# The magnitude leg's own band. Measured 2026-09-19: 1,236,322 of the
+# 1,247,240 sources at G <= 11 carry a posterior (99.1%) — a source without
+# one published no usable parallax. DR3 is static, so the band absorbs an
+# archive reload rather than a change of selection.
+EXPECTED_MAGNITUDE_ROWS_MIN = 1_210_000
+EXPECTED_MAGNITUDE_ROWS_MAX = 1_262_000
 
-TSV_COLUMNS = list(VIZIER_TO_PAPER.values())
+# Coverage floor over the request set. The empirical first 5000-id probe
+# returned 98.7%, so >= 90%.
+EXPECTED_COVERAGE_MIN = 0.90
 
-# Schema expected from the VizieR TAP table (validated post-query).
-EXPECTED_SCHEMA: dict[str, type | tuple[type, ...]] = {
-    "Source": int,
-    "rgeo": float,
-    "b_rgeo": float,
-    "B_rgeo": float,
-    "rpgeo": float,
-    "b_rpgeo": float,
-    "B_rpgeo": float,
-    "Flag": int,
-}
+# scripts/refresh/README.md § Gaia TAP: synchronous endpoints only.
+SYNC_MAXREC = 4 * (EXPECTED_MAGNITUDE_ROWS_MAX // rl.SLICE_COUNT)
 
-ADQL_TEMPLATE = (
-    'SELECT "Source", "rgeo", "b_rgeo", "B_rgeo", '
-    '"rpgeo", "b_rpgeo", "B_rpgeo", "Flag" '
-    'FROM "I/352/gedr3dis" '
-    'WHERE "Source" IN ({inlist})'
-)
-
-SCRIPT_NAME = "refresh-bailer-jones"
-
-# Pinned source_id → posterior rows from VizieR I/352/gedr3dis (the
-# machine-readable form of Bailer-Jones et al. 2021, AJ 161, 147). Unlike
-# the HIP / Tyc xmatch tables, the external anchor here IS the Gaia
-# source_id — which a future DR4 maintenance reload could quietly retire
-# for 1-2 IDs in a 5-ID sample. Tolerate up to MAX_MISSING_PINS quiet
-# retirements (logged as a warning); above that, hard-fail. The helper
-# still raises immediately on any present-but-drifting row, so the
-# regression-detection goal is preserved.
+# Pinned posterior rows. Unlike the HIP / Tyc xmatch tables, the external
+# anchor here IS the Gaia source_id — which a future DR4 maintenance reload
+# could quietly retire for 1-2 IDs in a 5-ID sample. Tolerate up to
+# MAX_MISSING_PINS quiet retirements (logged as a warning); above that,
+# hard-fail. The helper still raises immediately on any present-but-drifting
+# row, so the regression-detection goal is preserved.
 MAX_MISSING_PINS = 1
 
 # Five fixtures cross-listed with scripts/catalog/record/catalog-pure.test.ts —
 # the four catastrophic-parallax-inversion supergiants (HIP 22365, 25733,
-# 38430, 46144) and the well-measured F-dwarf HIP 23785 control. r_med_*
-# values agree to the per-row resolution published in the paper; pinning
+# 38430, 46144) and the well-measured F-dwarf HIP 23785 control. Pinning
 # both r_med_geo + r_med_photogeo guards against a column-rename or unit
 # shift either pipeline.
 SPOT_CHECKS: list[dict[str, Any]] = [
@@ -93,118 +87,149 @@ SPOT_CHECKS: list[dict[str, Any]] = [
         "source_id":      204531088580182016,    # HIP 22365 (37% B-J pullback)
         "r_med_geo":      (6366.668, 0.5),
         "r_med_photogeo": (6244.791, 0.5),
-        "flag":           10033,
+        "flag":           "10033",
     },
     {
         "source_id":      183255985260080896,    # HIP 25733 (62% B-J pullback)
         "r_med_geo":      (5839.921, 0.5),
         "r_med_photogeo": (5466.246, 0.5),
-        "flag":           10033,
+        "flag":           "10033",
     },
     {
         "source_id":      5602025904044961536,   # HIP 38430 (51% B-J pullback)
         "r_med_geo":      (6622.035, 0.5),
         "r_med_photogeo": (6215.232, 0.5),
-        "flag":           10033,
+        "flag":           "10033",
     },
     {
         "source_id":      1040043514891491968,   # HIP 46144 (18% B-J pullback)
         "r_med_geo":      (7509.293, 0.5),
         "r_med_photogeo": (7515.496, 0.5),
-        "flag":           10022,
+        "flag":           "10022",
     },
     {
         "source_id":      4773096563064098432,   # HIP 23785 (F-dwarf, within 5%)
         "r_med_geo":      (93.528, 0.5),
         "r_med_photogeo": (92.871, 0.5),
-        "flag":           10023,
+        "flag":           "10023",
     },
 ]
 
 
-def query_batch(client: rl.TapClient, ids: list[int]):
-    inlist = ",".join(str(i) for i in ids)
-    return client.run(ADQL_TEMPLATE.format(inlist=inlist))
-
-
-def rename_row(row, vizier_to_paper: dict[str, str]) -> dict[str, object]:
-    return {paper: row[vizier] for vizier, paper in vizier_to_paper.items()}
+def write_row(row: Any) -> dict[str, Any]:
+    out: dict[str, Any] = {"source_id": int(row["source_id"])}
+    for col in TSV_COLUMNS[1:]:
+        v = rl.coerce_masked(row[col])
+        if v is None:
+            out[col] = None
+        elif col in STRING_COLUMNS:
+            out[col] = str(v)
+        else:
+            out[col] = f"{float(v):.{DISTANCE_DECIMALS}f}"
+    return out
 
 
 def main() -> None:
     force = "--force" in sys.argv
 
-    if not force and rl.is_up_to_date(OUT, [Path(__file__), MEMBERSHIP]):
+    if not force and rl.is_up_to_date(OUT, [Path(__file__), REQUEST]):
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
 
-    source_ids = rl.read_membership_source_ids(MEMBERSHIP)
-    total = len(source_ids)
-    if total == 0:
-        raise SystemExit(f"refresh-bailer-jones: no source_ids in {MEMBERSHIP}")
-    n_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
+    request_ids = rl.read_source_id_request(REQUEST)
+    if not request_ids:
+        raise SystemExit(f"{SCRIPT_NAME}: no source_ids in {REQUEST}")
     print(
-        f"reading {total} manifest source_ids → {n_batches} batches of "
-        f"{BATCH_SIZE} on CDS TAP (I/352/gedr3dis)"
+        f"pulling {TABLE} over the deep population: {rl.SLICE_COUNT} magnitude "
+        f"slices at G <= {rl.G_MAG_FLOOR} plus what {len(request_ids)} requested "
+        f"source_ids add (MAXREC {SYNC_MAXREC:,})"
     )
 
-    client = rl.TapClient(backends=[rl.cds_backend()])
-    rows: list[dict[str, object]] = []
+    lines: dict[int, str] = {}
+    spot_ids = {spec["source_id"] for spec in SPOT_CHECKS}
+    spot_rows: dict[int, Any] = {}
+    photogeo = 0
+    geo = 0
+    usable = 0
 
-    def collect(table: Any) -> None:
-        for row in table:
-            rows.append(rename_row(row, VIZIER_TO_PAPER))
+    def on_row(row: Any) -> None:
+        nonlocal photogeo, geo, usable
+        source_id = int(row["source_id"])
+        if source_id in spot_ids:
+            spot_rows[source_id] = row
+        has_photogeo = rl.coerce_masked(row["r_med_photogeo"]) is not None
+        has_geo = rl.coerce_masked(row["r_med_geo"]) is not None
+        photogeo += has_photogeo
+        geo += has_geo
+        usable += has_photogeo or has_geo
+        lines[source_id] = rl.format_tsv_row(write_row(row), TSV_COLUMNS)
 
     start = time.time()
-    rl.run_in_batches(
-        source_ids, BATCH_SIZE, lambda b: query_batch(client, b), collect,
-        schema=EXPECTED_SCHEMA, schema_label="bailer-jones I/352/gedr3dis",
-        checkpoint=rl.BatchCheckpoint(OUT.with_suffix(OUT.suffix + ".ckpt")),
+    seen, from_magnitude = rl.pull_deep_population(
+        rl.gaia_sync_client(SYNC_MAXREC),
+        table=TABLE,
+        columns=TSV_COLUMNS,
+        request_ids=request_ids,
+        on_row=on_row,
+        script_name=SCRIPT_NAME,
+        checkpoint_base=OUT,
+        schema=EXPECTED_SCHEMA,
+        schema_label=TABLE,
     )
 
-    matched = len(rows)
-    coverage = matched / total
-    print(f"matched in {(time.time()-start)/60:.1f}m")
-    rl.report_coverage(
-        rows, total,
-        [
-            ("r_med_geo",
-             lambda r: rl.coerce_masked(r["r_med_geo"]) is not None),
-            ("r_med_photogeo",
-             lambda r: rl.coerce_masked(r["r_med_photogeo"]) is not None),
-        ],
-        label="manifest source_ids",
+    rl.assert_row_count(
+        from_magnitude,
+        EXPECTED_MAGNITUDE_ROWS_MIN,
+        EXPECTED_MAGNITUDE_ROWS_MAX,
+        SCRIPT_NAME,
+        hint=(
+            "DR3 and the Bailer-Jones catalogue are both static, so a count "
+            "outside the band means the floor, the slice edges or the "
+            "archive's own reduction moved — investigate before re-pinning."
+        ),
+    )
+
+    print(
+        f"  magnitude leg     {from_magnitude:>9,}\n"
+        f"  request leg adds  {len(seen) - from_magnitude:>9,}"
+    )
+    rl.report_coverage_counts(
+        len(seen), len(seen),
+        [("r_med_photogeo", photogeo), ("r_med_geo", geo)],
+        usable,
+        label="pulled source_ids",
+    )
+
+    matched_request = sum(1 for sid in request_ids if sid in seen)
+    coverage = matched_request / len(request_ids)
+    print(
+        f"  of {len(request_ids)} requested source_ids: {matched_request} "
+        f"({100 * coverage:.1f}%)"
     )
     if coverage < EXPECTED_COVERAGE_MIN:
         raise SystemExit(
-            f"{SCRIPT_NAME}: coverage {coverage:.1%} below floor "
-            f"{EXPECTED_COVERAGE_MIN:.0%} — VizieR table or the manifest's "
-            f"source_id set has changed; investigate before re-pinning."
-        )
-    if matched > total:
-        raise SystemExit(
-            f"{SCRIPT_NAME}: matched {matched} of a {total}-id request set — "
-            f"a match cannot exceed its input, so the pull returned duplicate "
-            f"source_ids."
+            f"{SCRIPT_NAME}: coverage {coverage:.1%} of the request set is "
+            f"below floor {EXPECTED_COVERAGE_MIN:.0%} — the catalogue's "
+            f"source_ids or the upstream table has changed; investigate "
+            f"before re-pinning."
         )
 
-    rows_by_id = {int(r["source_id"]): r for r in rows}
     rl.check_spot_rows_tolerant(
-        rows_by_id, SPOT_CHECKS, script_name=SCRIPT_NAME,
+        spot_rows, SPOT_CHECKS, script_name=SCRIPT_NAME,
         max_missing=MAX_MISSING_PINS,
         warn_template="  WARNING: pinned source_id {key} not in result "
         "(a DR4 maintenance reload may have retired this ID)",
-        fail_hint="VizieR I/352 has dropped more rows than expected; "
+        fail_hint="the archive has dropped more rows than expected; "
         "investigate before re-pinning.",
     )
 
-    written = rl.write_tsv(
-        rows,
-        columns=TSV_COLUMNS,
-        output=OUT,
-        round_floats=DISTANCE_DECIMALS,
+    written = rl.write_tsv_lines(
+        (lines[sid] for sid in sorted(lines)), TSV_COLUMNS, OUT
     )
-    print(f"wrote {OUT.relative_to(ROOT)} ({written} rows)")
+    print(
+        f"wrote {OUT.relative_to(ROOT)} ({written:,} rows) in "
+        f"{(time.time() - start) / 60:.1f}m"
+    )
 
 
 if __name__ == "__main__":

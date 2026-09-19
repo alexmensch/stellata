@@ -40,38 +40,6 @@ def _table(rows):
     return FakeTable(rows, gap.TSV_COLUMNS)
 
 
-class MagnitudeSliceTests(unittest.TestCase):
-    def test_emits_one_slice_per_configured_count(self) -> None:
-        self.assertEqual(len(mag.magnitude_slices()), mag.SLICE_COUNT)
-
-    def test_first_slice_is_open_at_the_bright_end(self) -> None:
-        # A source brighter than any computed edge must still be pulled.
-        self.assertIsNone(mag.magnitude_slices()[0][0])
-        self.assertIsNotNone(mag.magnitude_slices()[1][0])
-
-    def test_last_slice_closes_exactly_on_the_floor(self) -> None:
-        self.assertEqual(
-            mag.magnitude_slices()[-1][1], f"{mag.G_MAG_FLOOR:.{mag.EDGE_DECIMALS}f}"
-        )
-
-    def test_consecutive_slices_share_the_edge_string(self) -> None:
-        slices = mag.magnitude_slices()
-        for (_, hi), (lo, _) in zip(slices, slices[1:]):
-            self.assertEqual(hi, lo)
-
-    def test_edges_increase_monotonically(self) -> None:
-        edges = [float(hi) for _, hi in mag.magnitude_slices()]
-        self.assertEqual(edges, sorted(edges))
-
-    def test_slices_are_near_equal_in_expected_population(self) -> None:
-        # The geometric spacing is the whole reason the pull is not one
-        # 27x-heavier final slice. Populations follow ratio**G.
-        edges = [float(hi) for _, hi in mag.magnitude_slices()]
-        shares = [mag.SOURCES_PER_MAGNITUDE**e for e in edges]
-        populations = [b - a for a, b in zip([0.0, *shares], shares)]
-        self.assertLess(max(populations) / min(populations), 1.05)
-
-
 class SliceAdqlTests(unittest.TestCase):
     def test_open_slice_states_only_the_upper_bound(self) -> None:
         adql = mag.slice_adql((None, "6.737800"))
@@ -101,13 +69,6 @@ class FloorGateTests(unittest.TestCase):
             mag.assert_within_floor(1, None)
 
 
-class PartitionGateTests(unittest.TestCase):
-    def test_accepts_distinct_source_ids(self) -> None:
-        mag.assert_partitioned([(1, "a"), (2, "b")])
-
-    def test_rejects_a_source_id_returned_twice(self) -> None:
-        with self.assertRaises(SystemExit):
-            mag.assert_partitioned([(1, "a"), (1, "b")])
 
 
 class PullTests(unittest.TestCase):
