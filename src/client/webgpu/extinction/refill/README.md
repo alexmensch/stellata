@@ -91,15 +91,21 @@ read and a mat4×vec4 before it can early-out — 20 B per star, 7.8 MB at
 388,071 records and 25.6 MB at 1,278,785, per frame, for as long as the
 camera turns.
 
-Order of magnitude for that, from two archived runs rather than a
-differential — different commits, so read it as a bound and not a price:
-57.6's gated kernel over all 388,071 threads at `lg`, where the march is a
-no-op and every thread pays only the gate, sits at **0.67 ms**
-(`.perf-runs/2026-09-18/8cg576-gated-recompute-all.json` compute p50 1.336
-under the forced-recompute lever, against `8cg585-real-pin.json`'s 0.662 with
-no recompute running, which is the compaction alone). The frustum prologue
-does strictly less per thread than that gate, so it lands under that at
-388k — against a slice's quarter of it, on the commonest thing a user does.
+**The argument is the thread count, and it holds whatever a thread costs.**
+A whole-range dispatch runs `REFILL_SLICES` times the threads of a slice over
+the same per-thread work, so routing the request through the cursor divides
+that cost by `REFILL_SLICES` — no claim about how the frustum prologue
+compares to anything else is needed, and none should be made. Under the
+forced-recompute lever the extinction pass costs about 0.25 ms a frame at
+`mw120` and `lg` over a `count/REFILL_SLICES` slice
+(`.perf-runs/2026-09-19/8cg575-frustum-recompute-all.json` compute p50 minus
+`8cg585-real-pin.json`'s, which has no recompute running). Scaling the
+per-thread part by four puts a whole-range dispatch near **1 ms per turning
+frame at 388,071 records** — an over-estimate, since one compute pass's
+submit does not scale with it, and over three times that at 1,278,785.
+
+That difference is also why the dispatch shape has to stay one concept: two
+shapes means the cheap one is measured and the dear one is not.
 
 **Whole mode** — the first fill and `verifyExtinction()` — skips the
 frustum test and the stamp check and stamps every star, so the parity

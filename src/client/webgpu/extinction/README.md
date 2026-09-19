@@ -301,8 +301,21 @@ cost landed. The clipped march spends every tap inside the cube at `lg`,
 so the march is genuinely expensive there and the row flips to the table's
 largest saving; the frustum test now returns the out-of-frame threads
 before the gate reads, and a camera-outside-the-cube bypass is deliberately
-**not** built. Re-measured there by `stellata-8cg.57.7`; do not quote the
-`lg` figure above as current.
+**not** built. Do not quote the `lg` figure above as current.
+
+**Current, on the same instrument and lever** — the frustum ahead of the
+gate and the refill sliced, `.perf-runs/2026-09-19/8cg575-frustum-recompute-all.json`
+(`gpu-compute` p50, ms, 388,071 records): mw120 0.526, sol 0.525, earth
+0.487, mw50 0.394, **lg 0.926**. Against the gated column above that is −31%
+at `lg` and −61% to −73% elsewhere, and `lg` now sits below its own
+pre-gate 0.982 — the net loss there is gone. **Both columns predate 58.4's
+clipped march**, which this branch now carries, so the differential holds
+but neither absolute figure is this tree's. Two changes are folded into that
+column and it cannot separate them: the slicing dispatches a quarter of the
+slot space per frame, and the frustum returns the out-of-frame threads
+inside it. Attributing the gain to either alone needs a forced-recompute run
+at 58.5's tip, which does not exist. `stellata-8cg.57.7` re-reads `lg`
+against the clipped march.
 
 **The two stages compute `dPc` in different frames** — this pass in
 absolute heliocentric coordinates, the vertex stage in the floating-origin
