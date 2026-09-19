@@ -10,6 +10,7 @@ import {
   COMPUTE_ROW, computeClock, floorMove, frameFloor, gatingClock, type DwellMetric,
 } from '../dwell/dwell-pure';
 import type { DwellRecord, PerfFile, ScenarioRecord } from '../schema';
+import type { ScenarioName } from '../scenarios';
 
 /** How far the two buffers may differ and still be compared. Both dominant
  *  passes scale with area, so a resized window is a different measurement
@@ -57,8 +58,34 @@ export const BAND_SIGMAS = 2;
 export const DWELL_FLOOR_MS = 0.25;
 export const DWELL_FLOOR_FRACTION = 0.01;
 
+/** Each vantage's own COMPUTE-row repeat scatter, as 1.5× the spread of its
+ *  whole comparable population rounded up to 0.05. That scatter runs 0.017 ms
+ *  at mw50 to 0.303 at lg — a factor of 18 no single constant fits, which is
+ *  why `DWELL_FLOOR_MS` reads as 15× the noise at mw50 and about 1× it at
+ *  sol. `../pins/README.md` § The compute row carries both measurements. */
+export const COMPUTE_SCATTER_FLOOR_MS: Readonly<Record<ScenarioName, number>> = {
+  mw120: 0.05,
+  sol: 0.45,
+  earth: 0.15,
+  mw50: 0.05,
+  lg: 0.45,
+};
+
+function floorFor(floorMs: number, baselineMs: number): number {
+  return Math.max(floorMs, DWELL_FLOOR_FRACTION * baselineMs);
+}
+
 export function dwellFloorMs(baselineMs: number): number {
-  return Math.max(DWELL_FLOOR_MS, DWELL_FLOOR_FRACTION * baselineMs);
+  return floorFor(DWELL_FLOOR_MS, baselineMs);
+}
+
+/** Capped at `DWELL_FLOOR_MS`, so a re-floor only ever tightens. sol's and
+ *  lg's measured scatter is past that constant, and widening to meet it would
+ *  blind the row at the vantage where a compute regression is likeliest to
+ *  hide — the frame row cannot see one, a 40 ms kernel having landed inside
+ *  its band (`../pins/README.md` § The compute row). */
+export function computeFloorMs(name: ScenarioName, baselineMs: number): number {
+  return floorFor(Math.min(COMPUTE_SCATTER_FLOOR_MS[name], DWELL_FLOOR_MS), baselineMs);
 }
 
 export type Verdict = 'cheaper' | 'dearer' | 'same';
@@ -219,9 +246,10 @@ export function positionRefusal(a: number | null | undefined, b: number | null |
  * Two dwells compare only over the same number of timed frames. A median
  * converges with dwell length rather than merely getting quieter: at the
  * runner's default 240 the mw120 GPU median has not settled — eight archived
- * rows span 0.725 ms against a 0.25 ms band, where two at 960, on different
- * commits, agree to 0.067. So a 240-frame row read against a 960-frame one
- * is two statistics, not two readings.
+ * rows span 0.725 ms against a 0.25 ms band. So a 240-frame row read against
+ * a 960-frame one is two statistics, not two readings. 960 makes them
+ * comparable without making either quiet, which is the re-run rule's job
+ * rather than this refusal's (`RELEASING.md` § What a mark means).
  *
  * Nothing else catches it: the state guard compares quarters within one
  * dwell and both read steady, and the band is computed from the pair and
@@ -429,12 +457,15 @@ function dwellRows(key: string, a: ScenarioRecord, b: ScenarioRecord): (DiffRow 
     return [{ key: `${key}|dwell`, reason: 'one run has no dwell record' }];
   }
   const frame = frameRow(key, da, db);
-  return 'reason' in frame ? [frame] : [frame, ...computeRow(key, da, db)];
+  return 'reason' in frame ? [frame] : [frame, ...computeRow(key, a.name, da, db)];
 }
 
-/** The compute passes beside the frame, banded the same way and keyed
- *  `|compute`. Both sides or neither, and why: README.md. */
-function computeRow(key: string, da: DwellRecord, db: DwellRecord): (DiffRow | DiffRefusal)[] {
+/** The compute passes beside the frame, keyed `|compute` and banded the same
+ *  way but on the vantage's own floor (`computeFloorMs`). Both sides or
+ *  neither, and why: README.md. */
+function computeRow(
+  key: string, name: ScenarioName, da: DwellRecord, db: DwellRecord,
+): (DiffRow | DiffRefusal)[] {
   const [ca, cb] = [computeClock(da), computeClock(db)];
   if (ca === null && cb === null) return [];
   if (ca === null || cb === null) {
@@ -444,7 +475,9 @@ function computeRow(key: string, da: DwellRecord, db: DwellRecord): (DiffRow | D
     }];
   }
   const deltaMs = cb.p50 - ca.p50;
-  const bandMs = band(medianStandardErrorMs(ca), medianStandardErrorMs(cb), dwellFloorMs(ca.p50));
+  const bandMs = band(
+    medianStandardErrorMs(ca), medianStandardErrorMs(cb), computeFloorMs(name, ca.p50),
+  );
   return [{
     key: `${key}|${COMPUTE_ROW}`,
     metric: 'compute-p50',

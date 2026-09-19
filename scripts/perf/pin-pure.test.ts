@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, dwellFloorMs } from './diff/diff-pure';
+import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, computeFloorMs, dwellFloorMs } from './diff/diff-pure';
 import { frameFloor, type DwellSummary } from './dwell/dwell-pure';
 import {
   CANON_POSITIONS,
@@ -549,13 +549,29 @@ describe('compareToPin', () => {
         ['sol|webgpu', 'gpu-p50', 'same'],
         ['sol|webgpu|compute', 'compute-p50', 'dearer'],
       ]);
-      expect(diff.rows[1].bandMs).toBe(dwellFloorMs(1.4));
+      expect(diff.rows[1].bandMs).toBe(computeFloorMs('sol', 1.4));
       expect(pinDiffFails(diff)).toBe(true);
       expect(unacceptedMarks(diff, {})).toEqual(['sol|webgpu|compute']);
       expect(unacceptedMarks(diff, { 'sol|webgpu': { bead: 'b' } })).toEqual(['sol|webgpu|compute']);
       expect(unacceptedMarks(diff, { 'sol|webgpu|compute': { bead: 'b' } })).toEqual([]);
       expect(compareToPin(pinOf([SOL_COMPUTE]), file([solCompute(21.8, 1.5)])).rows[1].verdict).toBe('same');
       expect(compareToPin(pinOf([SOL_COMPUTE]), file([solCompute(21.8, 1.1)])).rows[1].verdict).toBe('cheaper');
+    });
+
+    // Both gates read one implementation of the floor, so the tighter cannot
+    // certify what the looser rejects. Measured: mw120's compute repeat
+    // scatter is 0.009 ms against a pinned 0.289, so 0.06 is a fifth of the
+    // pass and six times the noise — and `~` under the inherited constant.
+    it('floors the compute band per vantage here too, tightening mw120 to 0.05 ms', () => {
+      const tight = { samples: 960, iqrMs: 0.02 };
+      const mw120Compute = (compute: number) => scenario('mw120', 'webgpu', withCompute(
+        dwell(stats(25.2), stats(19.227, tight)), stats(compute, tight),
+      ));
+      const diff = compareToPin(pinOf([mw120Compute(0.289)]), file([mw120Compute(0.350)]));
+      expect(diff.rows[1].key).toBe('mw120|webgpu|compute');
+      expect(diff.rows[1].bandMs).toBe(0.05);
+      expect(diff.rows[1].verdict).toBe('dearer');
+      expect(diff.rows[0].bandMs).toBe(dwellFloorMs(19.227));
     });
 
     it('prints the compute row ungated where only one side resolved the stream, naming that side', () => {

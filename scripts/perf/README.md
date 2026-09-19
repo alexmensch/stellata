@@ -370,7 +370,8 @@ abandons every recorded baseline: `schema.ts`, on `PERF_SCHEMA`.
 
 `--baseline <path>` differences this run against a saved one and prints
 `✓` cheaper · `✗` dearer · `~` inside the band, keyed
-`scenario|backend|pass` (or `|dwell`). The band and its shared floor, the
+`scenario|backend|pass` (or `|dwell`). The band and its two shared floors —
+one constant under a frame row, one per vantage under a compute row — the
 `floor` column, which clock a dwell row is judged on, and every refusal that
 stops an invalid comparison — most of them applied by `--against-pin`
 too: `diff/README.md`.

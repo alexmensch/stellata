@@ -7,7 +7,7 @@ is `../pins/README.md`.
 
 ```
 scripts/perf/diff/
-  diff-pure.ts (+ test)   diffRuns, the band and its floor, and every
+  diff-pure.ts (+ test)   diffRuns, the band and its two floors, and every
                           refusal that stops an invalid comparison. The
                           buffer, record-count, position, readback and
                           precondition refusals are exported because
@@ -23,9 +23,10 @@ A row counts as moved only past **two sigma of the pair's own uncertainty**.
 Differential rows combine the two `noiseMs` floors, then take the larger of
 that and the two `bracketMs` values — the bracket is instrument drift, which
 no amount of sampling reduces. Dwell rows use the median's standard error,
-`1.2533·(iqr/1.349)/√n`, on both sides, floored at the same
-`max(0.25 ms, 1 %)` the pin uses (`../pins/README.md` § Reading
-`--against-pin`). **The floor is shared deliberately.** Two sigma of the
+`1.2533·(iqr/1.349)/√n`, on both sides, floored at the same figure the pin
+uses — `max(0.25 ms, 1 %)` on a frame row, the vantage's own constant on a
+compute row (`../pins/README.md` § Reading `--against-pin`, § The compute
+row). **The floors are shared deliberately.** Two sigma of the
 medians' own scatter describes sampling and nothing else, and a dwell's run
 conditions move it further: at 240 frames on a steady vantage that band
 draws around 0.02 ms, while moving a context's position within its run
@@ -81,8 +82,10 @@ vantage; here there is a refusal list to say it in.
 
 **The compute passes are a second dwell row, keyed `|compute`.** Where both
 runs carry the compute stream (`../pins/README.md` § The compute row) it is
-banded exactly as the frame row, on `compute-p50`, with its own `floor`
-column off its own p10. One side alone refuses that row and leaves the
+banded as the frame row is but on **that vantage's own floor**, on
+`compute-p50`, with its own `floor` column off its own p10 — the whole-frame
+constant runs 15× the compute row's noise at mw50 and about 1× it at sol, a
+factor of 70 across the five. One side alone refuses that row and leaves the
 frame row standing — an archive written before the compute pool was
 resolved carries no stream, and a run since does; neither side, every
 WebGL2 pair, prints no compute row at all. A frame row that is refused
@@ -112,9 +115,12 @@ one rejects.
 **Dwell length: two dwells compare only over the same number of timed
 frames.** A median converges with dwell length rather than merely getting
 quieter — at the runner's default 240 the `mw120` GPU median has not settled,
-eight archived rows spanning 0.725 ms against a 0.25 ms band, where two at 960
-on different commits agree to 0.067. So the two are different statistics and
-the verdict between them means nothing. Nothing else catches it: the state
+eight archived rows spanning 0.725 ms against a 0.25 ms band. So the two are
+different statistics and the verdict between them means nothing. 960 frames
+makes them comparable without making either quiet: a same-tree repeat pair
+there still reaches 1.272 ms at `mw120`, which is the re-run rule in
+`RELEASING.md` § What a mark means, not this refusal. Nothing else catches
+the length mismatch itself: the state
 guard compares quarters within one dwell and both read steady, and the band is
 computed from the pair and widens with neither, so a pin re-taken at the wrong
 length replaces a good one silently. Read off `params.frames`, where the
