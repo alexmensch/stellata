@@ -19,8 +19,9 @@ src/client/webgpu/extinction/refill/
                               view admits (countInFrameAbs). The rotation
                               case is pinned here.
   refill-worklist-nodes.ts    The shared slots: stamps and worklist over
-                              placeholders, and the arm / generation /
-                              quarter uniforms both kernels read.
+                              placeholders, the arm / generation / quarter
+                              uniforms both kernels read, and counterElement
+                              — the quarter's counter in the args buffer.
   refill-worklist-tsl.ts      The producer block the compaction kernel
                               runs — frustum, gate, stamp, append.
 ```
@@ -177,7 +178,8 @@ solve's to reuse.
 (`refillSliceLength`), so the list can never overflow — a residue class is
 exactly that large — and the whole buffer is `count` rounded up to the
 slice. The four append counters ride in the compaction's args buffer past
-the prefilter counter (`compaction-pure.ts` `refillListCountElement`),
+the prefilter counter (`compaction-pure.ts` `REFILL_LIST_COUNT_BASE`; all
+three kernels address one through `counterElement` here),
 which is what keeps the compaction kernel at **8 storage buffers**, the
 core guarantee: position, statics, suppress-pulsation, A_V, survivors,
 args, and now stamps and worklist

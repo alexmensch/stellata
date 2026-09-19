@@ -28,12 +28,10 @@ export function tierArgsInstanceCountElement(tier: StarTier): number {
 
 /** README.md § Reading the counts back. */
 export const PREFILTER_COUNT_ELEMENT = STAR_TIERS.length * INDIRECT_ARGS_STRIDE;
-/** One append counter per refill sub-list, past the prefilter count
- *  (README.md § The refill dispatch). */
+/** First of one append counter per refill sub-list, past the prefilter count
+ *  (README.md § The refill dispatch). The kernels address a class's counter
+ *  through `RefillWorklistNodes.counterElement`. */
 export const REFILL_LIST_COUNT_BASE = PREFILTER_COUNT_ELEMENT + 1;
-export function refillListCountElement(quarter: number): number {
-  return REFILL_LIST_COUNT_BASE + quarter;
-}
 export const ARGS_ELEMENTS = REFILL_LIST_COUNT_BASE + REFILL_SLICES;
 
 /** What the kernel's atomics left in each tier's `instanceCount`, off a

@@ -4,7 +4,7 @@ import {
   ARGS_ELEMENTS, CULL_SLACK_NDC, INDIRECT_ARGS_STRIDE, INDIRECT_INSTANCE_COUNT_SLOT,
   PREFILTER_COUNT_ELEMENT, REFILL_DISPATCH_ELEMENTS, REFILL_DISPATCH_LENGTH_ELEMENT,
   REFILL_LIST_COUNT_BASE, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW, initialIndirectArgs,
-  initialRefillDispatch, refillListCountElement, starQuadOffscreen, survivorCountsFromArgs,
+  initialRefillDispatch, starQuadOffscreen, survivorCountsFromArgs,
   tierArgsInstanceCountElement, tierArgsOffsetBytes, tierListBase,
 } from './compaction-pure';
 
@@ -80,9 +80,8 @@ describe('compaction layout', () => {
 
   it('one refill sub-list counter per quarter follows it, closing the buffer', () => {
     expect(REFILL_LIST_COUNT_BASE).toBe(11);
-    expect(refillListCountElement(0)).toBe(11);
-    expect(refillListCountElement(REFILL_SLICES - 1)).toBe(14);
     expect(ARGS_ELEMENTS).toBe(15);
+    expect(ARGS_ELEMENTS - REFILL_LIST_COUNT_BASE).toBe(REFILL_SLICES);
   });
 
   // The readback takes the very slots the draws take their instance count

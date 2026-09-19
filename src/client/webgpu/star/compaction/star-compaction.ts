@@ -19,7 +19,7 @@ import { disposeStorageAttribute } from '../../tsl/storage-attribute';
 import { solveStarTsl, type StarTslDeps } from '../star-vertex-tsl';
 import {
   PREFILTER_COUNT_ELEMENT, REFILL_DISPATCH_ELEMENTS, REFILL_DISPATCH_LENGTH_ELEMENT,
-  REFILL_LIST_COUNT_BASE, REFILL_WORKGROUP_SIZE, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
+  REFILL_WORKGROUP_SIZE, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
   initialIndirectArgs, initialRefillDispatch, survivorCountsFromArgs,
   tierArgsInstanceCountElement, tierListBase,
   type StarTier, type SurvivorCounts,
@@ -28,6 +28,15 @@ import { starQuadOffscreenTsl } from './frustum-tsl';
 
 export type UintStorageNode = ReturnType<typeof storage<'uint'>>;
 export type SurvivorsNode = UintStorageNode;
+
+/** Storage buffers the compaction kernel binds, against the 8 WebGPU
+ *  guarantees a stage (`../../tsl/README.md` § Storage attributes). At the
+ *  ceiling: a ninth needs a counter folded into the args buffer or a table
+ *  folded into another, never a new binding (README.md § Binding budget). */
+export const STAR_COMPACTION_KERNEL_STORAGE_BUFFERS = [
+  'position', 'statics', 'suppressPulsation', 'av', 'survivors', 'args',
+  'refillStamps', 'refillWorklist',
+].length;
 
 export class StarCompaction {
   readonly count: number;
@@ -71,21 +80,17 @@ export class StarCompaction {
     // An add of zero, consumed as an operator ARGUMENT, mirrors `append`'s
     // value use of an atomic below. atomicLoad as the receiver of `.add`
     // generated no code in three r185 ("expected a uint" at boot).
-    const counter = (element: Node<'uint'>) => atomicAdd(
-      argsNode.element(element), uint(0)) as unknown as Node<'uint'>;
+    const readCounter = (element: Node<'uint'>) => atomicAdd(
+      element, uint(0)) as unknown as Node<'uint'>;
     const { u } = deps;
 
-    // Every counter starts the frame at zero; the same compute pass then
-    // runs the kernel, so its atomics see the reset. Of the sub-list
-    // counters only the class being built resets: the others hold the lists
-    // the prepass is still marching.
     const reset = compute(Fn(() => {
       for (const tier of STAR_TIERS) {
         atomicStore(argsNode.element(tierArgsInstanceCountElement(tier)), uint(0));
       }
       atomicStore(argsNode.element(PREFILTER_COUNT_ELEMENT), uint(0));
       If(refill.arm.equal(uint(1)), () => {
-        atomicStore(argsNode.element(uint(REFILL_LIST_COUNT_BASE).add(refill.quarter)), uint(0));
+        atomicStore(refill.counterElement(argsNode), uint(0));
       });
     })(), 1);
     reset.setName('star-compaction-reset');
@@ -130,8 +135,7 @@ export class StarCompaction {
     })(), this.count);
     kernel.setName('star-compaction');
     const finish = compute(Fn(() => {
-      const listed = uint(0)
-        .add(counter(uint(REFILL_LIST_COUNT_BASE).add(refill.quarter))).toVar();
+      const listed = uint(0).add(readCounter(refill.counterElement(argsNode))).toVar();
       refillDispatchNode.element(0).assign(
         listed.add(uint(REFILL_WORKGROUP_SIZE - 1)).div(uint(REFILL_WORKGROUP_SIZE)));
       refillDispatchNode.element(REFILL_DISPATCH_LENGTH_ELEMENT).assign(listed);

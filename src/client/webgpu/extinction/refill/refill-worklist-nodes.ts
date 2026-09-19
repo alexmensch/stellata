@@ -3,7 +3,8 @@
 // them. README.md § The compaction appends the worklist.
 
 import { StorageBufferAttribute } from 'three/webgpu';
-import { storage, uniform } from 'three/tsl';
+import { storage, uint, uniform } from 'three/tsl';
+import { REFILL_LIST_COUNT_BASE } from '../../star/compaction/compaction-pure';
 
 export type UintStorageNode = ReturnType<typeof storage<'uint'>>;
 
@@ -33,6 +34,13 @@ export class RefillWorklistNodes {
   setBuffers(stamps: StorageBufferAttribute | null, worklist: StorageBufferAttribute | null): void {
     this.stamps.value = stamps ?? this.stampsPlaceholder;
     this.worklist.value = worklist ?? this.worklistPlaceholder;
+  }
+
+  /** `quarter`'s append counter inside the compaction's args buffer — the
+   *  producer adds into it, the reset zeroes it and the finish kernel reads
+   *  it, all three through this one element. */
+  counterElement(counters: UintStorageNode): ReturnType<UintStorageNode['element']> {
+    return counters.element(uint(REFILL_LIST_COUNT_BASE).add(this.quarter));
   }
 
   dispose(): void {

@@ -4,7 +4,6 @@
 
 import { If, atomicAdd, distance, float, max, uint, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import { REFILL_LIST_COUNT_BASE } from '../../star/compaction/compaction-pure';
 import { starQuadOffscreenTsl } from '../../star/compaction/frustum-tsl';
 import { starCacheVisibleTsl } from '../../star/star-visibility-tsl';
 import type { StarTables } from '../../star/star-tables';
@@ -18,7 +17,7 @@ export interface RefillProducerInputs {
   u: SharedUniformNodes;
   tables: StarTables;
   /** The compaction's atomic view of its args buffer, which holds the
-   *  sub-list counters (compaction-pure.ts `refillListCountElement`). */
+   *  sub-list counters (`refill.counterElement`). */
   counters: UintStorageNode;
   viewProjection: Node<'mat4'>;
   count: number;
@@ -26,9 +25,7 @@ export interface RefillProducerInputs {
   localPos: Node<'vec3'>;
 }
 
-/** One residue class per armed frame — the one `refill.quarter` names — then
- *  the frustum at the refill's own slack, the four-term gate over the
- *  brightest magnitude, and the stamp: cheapest test outermost. */
+/** Cheapest test outermost, which is why the stamp read comes last. */
 export function appendRefillWorklistTsl({
   refill, u, tables, counters, viewProjection, count, self, localPos,
 }: RefillProducerInputs): void {
@@ -39,8 +36,7 @@ export function appendRefillWorklistTsl({
     const dPc = max(distance(localPos, u.uCameraPos), 1e-30);
     If(seen.and(starCacheVisibleTsl(u, tables, self, dPc)), () => {
       If(refill.stamps.element(self).notEqual(refill.cameraGeneration), () => {
-        const slot = atomicAdd(
-          counters.element(uint(REFILL_LIST_COUNT_BASE).add(refill.quarter)), uint(1));
+        const slot = atomicAdd(refill.counterElement(counters), uint(1));
         refill.worklist
           .element(refill.quarter.mul(uint(refillSliceLength(count))).add(slot))
           .assign(uint(self));

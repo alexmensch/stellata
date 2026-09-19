@@ -180,7 +180,9 @@ On an armed frame the threads of one residue class — `quarter`, a shared
 uniform — append every star of that class the extinction refill has to
 march to the class's sub-list, counting with an `atomicAdd` on its counter:
 four u32 past the prefilter counter in the args buffer
-(`refillListCountElement`), so the counters cost no binding. `arm` is a
+(`REFILL_LIST_COUNT_BASE`), so the counters cost no binding. All three
+kernels address that counter through one expression,
+`RefillWorklistNodes.counterElement`. `arm` is a
 uniform the prepass holds up for `REFILL_SLICES` frames from a request, and
 the reset kernel zeroes that one counter under the same arm; the other three
 hold, because the prepass marches the class built the frame before.
@@ -236,10 +238,11 @@ Of the four the single-writer audit put on this design (bead
 A main-pass star vertex stage binds `STAR_VERTEX_STAGE_STORAGE_BUFFERS`
 (7) storage buffers: the survivor list, the A_V cache, the static table
 and the four forwarded tables. The mirror's binds 6 (no list). **The
-kernel binds 8** — position, statics, suppress-pulsation, A_V, survivors,
-args, and the refill's stamps and worklist — which is the whole core
-guarantee of 8 per stage; a ninth needs a counter folded into the args
-buffer or a table folded into another, never a new binding
+kernel binds `STAR_COMPACTION_KERNEL_STORAGE_BUFFERS` (8)** — position,
+statics, suppress-pulsation, A_V, survivors, args, and the refill's stamps
+and worklist — which is the whole core guarantee of 8 per stage
+(`WEBGPU_CORE_STORAGE_BUFFERS_PER_STAGE`); a ninth needs a counter folded
+into the args buffer or a table folded into another, never a new binding
 (`../../extinction/refill/README.md` § The compaction appends the
 worklist). The finish kernel binds 2, args and the refill dispatch. The
 compatibility level reports 0 in the vertex stage and the boot refuses it

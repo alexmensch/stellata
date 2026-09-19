@@ -9,8 +9,9 @@ import { buildSharedUniformNodes } from '../../tsl/shared-uniform-nodes';
 import { makeFakeStarRenderer, makeStarLayerSources } from '../star-sources-mock';
 import { StarTables } from '../star-tables';
 import type { StarTslDeps } from '../star-vertex-tsl';
+import { WEBGPU_CORE_STORAGE_BUFFERS_PER_STAGE } from '../../tsl/storage-attribute';
 import { STAR_TIERS } from './compaction-pure';
-import { StarCompaction } from './star-compaction';
+import { STAR_COMPACTION_KERNEL_STORAGE_BUFFERS, StarCompaction } from './star-compaction';
 
 const COUNT = 6;
 
@@ -37,6 +38,16 @@ function make() {
 }
 
 describe('StarCompaction buffers', () => {
+  // The kernel sits ON the core ceiling, so a ninth binding is a boot
+  // failure on a device that grants only what WebGPU guarantees. Adding one
+  // means folding a counter or a table, not raising this number.
+  it('binds the eight storage buffers WebGPU guarantees a stage, and no more', () => {
+    expect(STAR_COMPACTION_KERNEL_STORAGE_BUFFERS).toBe(8);
+    expect(WEBGPU_CORE_STORAGE_BUFFERS_PER_STAGE).toBe(8);
+    expect(STAR_COMPACTION_KERNEL_STORAGE_BUFFERS)
+      .toBeLessThanOrEqual(WEBGPU_CORE_STORAGE_BUFFERS_PER_STAGE);
+  });
+
   it('one survivor slot per star per tier, uint32', () => {
     const { compaction } = make();
     expect(compaction.survivors.count).toBe(STAR_TIERS.length * COUNT);

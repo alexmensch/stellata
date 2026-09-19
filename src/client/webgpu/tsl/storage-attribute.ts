@@ -9,6 +9,11 @@ interface AttributeRegistry {
   delete(attribute: BufferAttribute): unknown;
 }
 
+/** `maxStorageBuffersPerShaderStage` at WebGPU's core level — the ceiling a
+ *  stage may bind to without asking the device for anything
+ *  (README.md § Storage attributes). */
+export const WEBGPU_CORE_STORAGE_BUFFERS_PER_STAGE = 8;
+
 /** The slice of the backend the limit read needs, structurally — the project
  *  pulls in no WebGPU type package (`../timestamps/timestamp-probe.ts` takes
  *  the same route). */
