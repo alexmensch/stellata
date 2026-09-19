@@ -239,6 +239,12 @@ final generation and marched. The pure test simulates producer and
 consumer over a catalogue and pins the bound tight: the last class of a
 lone request marches on frame `REFILL_SLICES` exactly.
 
+**The A/B switch parks the cursor and re-requests, rather than resuming.**
+Disarming mid-flight strands the classes still owed, and at a camera that
+never moves again nothing would ever ask for them, so `setEnabled(false)`
+marks the pass dirty: the first re-enabled frame bumps the generation and
+builds all four afresh.
+
 **A parked cursor, and only a parked cursor, is a frame the pick mirror can
 be staged on.** `warmAvReadback` refuses while anything is in flight — a
 frame owed or a class built and not yet marched: a copy taken mid-flight

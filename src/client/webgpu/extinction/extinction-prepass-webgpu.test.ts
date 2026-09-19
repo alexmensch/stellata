@@ -431,6 +431,33 @@ describe('the displacement gate', () => {
     expect(refill.arm.value).toBe(0);
   });
 
+  // Disarming leaves the compaction with a class built and unmarched. Park
+  // the cursor with it — or the re-enabling frame dispatches over that stale
+  // sub-list, at the count the finish kernel has republished ever since —
+  // and re-request, so the classes the switch abandoned are not lost at a
+  // camera that never moves again.
+  it('the A/B switch parks the cursor and re-requests rather than resuming', () => {
+    const { prepass, computes, refill, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    expect(refill.arm.value).toBe(1);
+    const generation = refill.cameraGeneration.value;
+    prepass.setEnabled(false);
+    prepass.setEnabled(true);
+    const held = computes.length;
+    // Same camera: without the park this frame would march the class built
+    // before the switch.
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    expect(computes).toHaveLength(held);
+    expect(refill.cameraGeneration.value).toBe(generation + 1);
+    expect(refill.arm.value).toBe(1);
+    for (let frame = 0; frame < REFILL_SLICES; frame++) {
+      prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    }
+    expect(computes).toHaveLength(held + REFILL_SLICES);
+  });
+
   it('the A/B switch pauses maintenance, so the fallback side pays no fill', () => {
     const { prepass, computes, shared, attachDust } = makePrepass();
     attachDust();
