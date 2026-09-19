@@ -692,6 +692,23 @@ _SYNC_OVERFLOW = re.compile(r"overflow", re.I)
 _SYNC_PERMANENT_FAULT = re.compile(r"unknown column|not found|syntax|invalid", re.I)
 
 
+_SYNC_ERROR_DETAIL_CHARS = 400
+
+
+def _sync_error_detail(body: bytes) -> str:
+    """The QUERY_STATUS message out of an error response, or the raw body
+    when it is not a VOTable at all (a proxy's HTML error page)."""
+    import io
+    from astropy.io.votable import parse as parse_votable
+
+    try:
+        _, msg = votable_query_status(parse_votable(io.BytesIO(body)))
+    except Exception:  # noqa: BLE001 — a body we cannot parse is still evidence
+        msg = ""
+    text = msg or body.decode("utf-8", "replace")
+    return " ".join(text.split())[:_SYNC_ERROR_DETAIL_CHARS]
+
+
 def _sync_tap_run(base_url: str, query: str, maxrec: int) -> Any:
     """Run one synchronous ADQL query over HTTP POST and parse the VOTable
     result into an astropy Table. Sync avoids the archive's async
@@ -715,7 +732,17 @@ def _sync_tap_run(base_url: str, query: str, maxrec: int) -> Any:
         },
         timeout=300,
     )
-    resp.raise_for_status()
+    if not resp.ok:
+        # The archive answers a rejected query with a VOTable body whatever the
+        # status line, and the parser's complaint is the only thing that says
+        # WHICH clause it rejected. `raise_for_status` alone discards it, and a
+        # 5xx then retries both mirrors before surfacing a message naming no
+        # cause at all.
+        raise requests.HTTPError(
+            f"{resp.status_code} from {base_url}: "
+            f"{_sync_error_detail(resp.content)}",
+            response=resp,
+        )
     votable = parse_votable(io.BytesIO(resp.content))
     ok, msg = votable_query_status(votable)
     if not ok:
@@ -982,26 +1009,48 @@ def coerce_masked(value: Any) -> Any:
 
 # ─── TSV writer ───────────────────────────────────────────────────────
 
-def write_tsv(
-    rows: Iterable[Mapping[str, Any]],
+def format_tsv_row(
+    row: Mapping[str, Any],
     columns: Sequence[str],
-    output: Path,
     *,
     round_floats: int | None = None,
+) -> str:
+    """One row as a tab-joined line, in `columns` order. None values become
+    empty cells; floats (Python float OR numpy floating width) round to
+    `round_floats` decimal places when set.
+
+    Public because a pull large enough to care about peak memory formats each
+    row as it arrives and keeps the line rather than the mapping — a dict of
+    cells costs several times what its line does, and at seven figures that
+    is the difference between hundreds of megabytes and gigabytes.
+    """
+    cells: list[str] = []
+    for col in columns:
+        v = row.get(col)
+        if v is None:
+            cells.append("")
+        elif round_floats is not None and _is_float(v):
+            cells.append(f"{float(v):.{round_floats}f}")
+        else:
+            cells.append(str(v))
+    return "\t".join(cells)
+
+
+def write_tsv_lines(
+    lines: Iterable[str], columns: Sequence[str], output: Path
 ) -> int:
-    """Write `rows` to `output` as tab-separated values with a header line.
-    Returns the row count written. None values become empty cells; floats
-    (Python float OR numpy floating width) round to `round_floats` decimal
-    places when set.
+    """Write a header from `columns` plus one output line per entry of
+    `lines`, and return the count written. Callers holding mappings want
+    ``write_tsv``; this is the atomic-write core both share.
 
     Atomic: writes to ``output.with_suffix(output.suffix + ".tmp")`` and
-    swaps in via ``os.replace`` once the row stream completes. Any
-    mid-stream failure (disk full, KeyboardInterrupt, masked-cell coerce
-    raising, OOM on a large batch) leaves the committed output untouched
-    — never half-written — and the ``.tmp`` sibling is cleaned up so a
-    future ``is_up_to_date`` check can't be fooled by a stale partial.
-    POSIX ``rename(2)`` guarantees the swap is atomic on the same
-    filesystem, which the sibling-path layout ensures.
+    swaps in via ``os.replace`` once the stream completes. Any mid-stream
+    failure (disk full, KeyboardInterrupt, masked-cell coerce raising, OOM
+    on a large batch) leaves the committed output untouched — never
+    half-written — and the ``.tmp`` sibling is cleaned up so a future
+    ``is_up_to_date`` check can't be fooled by a stale partial. POSIX
+    ``rename(2)`` guarantees the swap is atomic on the same filesystem,
+    which the sibling-path layout ensures.
     """
     output.parent.mkdir(parents=True, exist_ok=True)
     tmp = output.with_suffix(output.suffix + ".tmp")
@@ -1009,23 +1058,32 @@ def write_tsv(
     try:
         with tmp.open("w", encoding="utf-8") as f:
             f.write("\t".join(columns) + "\n")
-            for row in rows:
-                cells: list[str] = []
-                for col in columns:
-                    v = row.get(col)
-                    if v is None:
-                        cells.append("")
-                    elif round_floats is not None and _is_float(v):
-                        cells.append(f"{float(v):.{round_floats}f}")
-                    else:
-                        cells.append(str(v))
-                f.write("\t".join(cells) + "\n")
+            for line in lines:
+                f.write(line + "\n")
                 n += 1
     except BaseException:
         tmp.unlink(missing_ok=True)
         raise
     os.replace(tmp, output)
     return n
+
+
+def write_tsv(
+    rows: Iterable[Mapping[str, Any]],
+    columns: Sequence[str],
+    output: Path,
+    *,
+    round_floats: int | None = None,
+) -> int:
+    """Write `rows` to `output` as tab-separated values with a header line,
+    returning the row count written. Cell conventions are
+    ``format_tsv_row``'s; the write is ``write_tsv_lines``'s.
+    """
+    return write_tsv_lines(
+        (format_tsv_row(row, columns, round_floats=round_floats) for row in rows),
+        columns,
+        output,
+    )
 
 
 def _is_float(v: Any) -> bool:
