@@ -3,9 +3,10 @@
 Per-Gaia-source pulls keyed on Gaia DR3 `source_id`. Together they
 supply: HIP/Tycho cross-IDs (so non-Gaia identifiers reach the
 DR3 source space); 5-parameter astrometry for resolved sources;
-two-body orbital solutions from the NSS pipeline; and `gspphot ∪
+two-body orbital solutions from the NSS pipeline; `gspphot ∪
 gspspec` astrophysical parameters (Teff, log g, [M/H], A0, GSP-Spec
-spectral type enum).
+spectral type enum); and the magnitude-bounded population that is
+membership's second term.
 
 ```
 gaia_dr3_hip_xmatch.tsv                ~3.7 MB, LFS. HIP → DR3 source_id.
@@ -21,6 +22,14 @@ gaia_dr3_astrometry_catalog.tsv        ~58 MB, LFS. 5p astrometry +
                                        the G evidence the overlay gate and the
                                        membership derivation weigh, and the
                                        parallax cascade's sibling tier.
+gaia_dr3_magnitude_pull.tsv            ~200 MB, LFS. Every gaia_source row at
+                                       G <= 11 (1,247,240) on the SAME schema
+                                       as the two astrometry pulls — the
+                                       magnitude term of membership
+                                       (docs/catalog-driver.md § 1), floor-
+                                       agnostic below V <= 11. Not keyed on a
+                                       request set: its selection is the
+                                       magnitude bound itself.
 gaia_dr3_nss_two_body.tsv              ~90 MB, LFS. NSS two-body orbits.
 gaia_dr3_apsis.tsv                     ~20 MB, LFS. gspphot ∪ gspspec
                                        Teff/logg/[M/H]/A0 + spectraltype_esphs.
@@ -82,6 +91,8 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
     by deduped source_id).
   - `gaia_dr3_astrometry_catalog.tsv` ← `gaia_source` (full-catalog
     subset — same schema, same query, wider source_id list).
+  - `gaia_dr3_magnitude_pull.tsv` ← `gaia_source` (same schema again,
+    selected on `phot_g_mean_mag` rather than on a source_id list).
   - `gaia_dr3_nss_two_body.tsv` ← `nss_two_body_orbit`.
   - `gaia_dr3_apsis.tsv` ← `astrophysical_parameters` (gspphot ∪
     gspspec).
@@ -90,6 +101,42 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
   - `gaia_dr2_neighbourhood.tsv` ← `dr2_neighbourhood` (the DPAC
     DR2→(E)DR3 cross-match, Torra et al. 2021; queried by
     dr3_source_id).
+
+## Why the floor carries no margin
+
+`gaia_dr3_magnitude_pull.tsv` selects on `G` alone, at `G <= 11`, and that
+is complete for a `V <= 11` floor with nothing to spare and nothing needed.
+
+The V cascade's top tier is `V = G − f(BP−RP)`, `f` the Riello+ 2021 cubic
+(`scripts/catalog/photometry/README.md`). **`f` is negative across its whole
+validity range**, peaking at **−0.02680** at `BP−RP` 0.0331, so every source
+the transform accepts has `V >= G + 0.0268`. A `V <= 11` source therefore
+cannot carry `G` above **10.97208** — which is exactly the maximum the
+archive reports over that population, and the count of `V <= 11` sources in
+`11 < G <= 11.5` is **0** (ESA TAP, 2026-09-19). `{V ≤ 11} ⊂ {G ≤ 11}`,
+strictly. `v-magnitude-pure.test.ts` pins the peak so a successor
+calibration that turned it positive fails rather than silently shortening
+the pull.
+
+**The intuition a margin protects against is the wrong sign.** Gaia's `G`
+passband is broader than Johnson V, so `G` is the *brighter* number, and the
+pull over-reaches the floor rather than falling short of it: the filter in
+`cns.5` drops the red rows whose `V` exceeds 11 (930,562 of the 1,247,240
+are `V <= 11` with an in-range colour). Adding 0.5 mag of margin would carry
+**725,768** rows past the floor — every one of them `V > 11` by
+construction, and ~120 MB of LFS to hold them.
+
+Two cohorts the bound does not speak for, and why neither needs margin:
+**4,203** rows at `G <= 11` whose colour is absent or outside the relation's
+range, and the **634** saturated below `G` 4. Neither gets a transformed V —
+both fall to the printed `I/239` / Tycho-2 / Gliese tiers, which are keyed on
+a classical designation, and a source carrying one is already in the
+membership term this pull is unioned with (`docs/catalog-driver.md` § 1). The
+magnitude term only ever has to be complete for the sources the transform
+serves.
+
+Moving the floor is a re-pull, not a redesign, and costs about four minutes
+of wall clock — which is the other half of why no margin is warranted.
 
 ## The GSPC validated-range flag — `1` means IN range
 
@@ -178,10 +225,11 @@ science-side rationale.
 
 ## Refresh
 
-`pnpm run refresh:gaia-{hip,tyc,astrometry,astrometry-catalog,nss,apsis,gspc,dr2-neighbourhood}` →
+`pnpm run refresh:gaia-{hip,tyc,astrometry,astrometry-catalog,nss,apsis,gspc,magnitude,dr2-neighbourhood}` →
 [`scripts/refresh/`](../../scripts/refresh/README.md). DR4 transition
-order is documented there. Three pulls read a source_id request file as
-input — `refresh:gaia-gspc` reads the same
+order is documented there. `refresh:gaia-magnitude` has no input beyond its
+own magnitude bound, so it runs at any point in that order. Three pulls read
+a source_id request file as input — `refresh:gaia-gspc` reads the same
 `gaia_catalog_source_id_request.tsv` as the catalog astrometry pull, so
 it has the same ordering constraint:
 

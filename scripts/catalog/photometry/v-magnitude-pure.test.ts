@@ -20,7 +20,7 @@ import { GAIA_PHOTOMETRY_SATURATION_G } from './gaia-photometry-pure';
 import { photometry, printedVOf } from './photometry-fixture';
 
 describe('Riello+ 2021 G−V relation', () => {
-  // The literals ARE the assertion: these are the published Table 5.7 values
+  // The literals ARE the assertion: these are the published Table 5.9 values
   // (Gaia EDR3 documentation, § Photometric relationships with other
   // photometric systems). A transcription slip is the failure this catches,
   // so the test cannot import them from the module under test.
@@ -48,6 +48,16 @@ describe('Riello+ 2021 G−V relation', () => {
     for (let x = RIELLO_BP_RP_MIN; x <= RIELLO_BP_RP_MAX; x += 0.1) {
       expect(rielloGMinusV(x)).toBeLessThan(0);
     }
+  });
+
+  // A contract with the G-only magnitude pull, not a property read here —
+  // README.md § Citation.
+  it('peaks at −0.0268, the headroom the G-only magnitude pull relies on', () => {
+    let peak = -Infinity;
+    for (let x = RIELLO_BP_RP_MIN; x <= RIELLO_BP_RP_MAX; x += 0.0001) {
+      peak = Math.max(peak, rielloGMinusV(x));
+    }
+    expect(peak).toBeCloseTo(-0.02680, 5);
   });
 });
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Shared batched Gaia DR3 5-parameter astrometry pull. Two request
-scopes drive it: the binaries per-component list and the full-catalog
-list. See scripts/refresh/README.md."""
+"""Shared batched Gaia DR3 5-parameter astrometry pull for the binaries
+and full-catalog request lists, and the schema the magnitude pull shares.
+See scripts/refresh/README.md."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import Any
 
 import refresh_lib as rl
 
-_MODULE_PATH = Path(__file__).resolve()
+MODULE_PATH = Path(__file__).resolve()
 
 TSV_COLUMNS = [
     "source_id",
@@ -35,11 +35,9 @@ TSV_COLUMNS = [
     "radial_velocity_error",
 ]
 
-ADQL_TEMPLATE = (
-    "SELECT " + ", ".join(TSV_COLUMNS) + " "
-    "FROM gaiadr3.gaia_source "
-    "WHERE source_id IN ({inlist})"
-)
+SELECT_CLAUSE = "SELECT " + ", ".join(TSV_COLUMNS) + " FROM gaiadr3.gaia_source"
+
+ADQL_TEMPLATE = SELECT_CLAUSE + " WHERE source_id IN ({inlist})"
 
 # Gaia DR3 dtype shape: ``ipd_frac_multi_peak`` is a short (0-100
 # percent) integer; everything else is float64 except ``source_id``
@@ -152,7 +150,7 @@ def run_pull(
     caller) and this module's own mtime alongside the request file, so a
     fix here or in either wrapper invalidates a cached output.
     """
-    if not force and rl.is_up_to_date(out, [script_path, _MODULE_PATH, request]):
+    if not force and rl.is_up_to_date(out, [script_path, MODULE_PATH, request]):
         print(f"{out.relative_to(root)} up to date — skipping (use --force to rebuild)")
         return
 
