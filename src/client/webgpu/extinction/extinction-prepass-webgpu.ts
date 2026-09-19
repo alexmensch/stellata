@@ -78,7 +78,6 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   /** Star → slot, the refill kernel's route into the position table. */
   private slotOf: StorageBufferAttribute | null;
   private worklist: StorageBufferAttribute | null;
-  /** Every slot, whole mode (refill/README.md § Three places). */
   private fillKernel: ComputeNode | null;
   /** One quarter of the worklist, at the count the compaction wrote. */
   private refillKernel: ComputeNode | null;
