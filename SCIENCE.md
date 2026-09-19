@@ -101,7 +101,13 @@ enough to see it.
   non-single-star orbits): ESA / DPAC, https://gea.esac.esa.int/archive/ —
   Gaia Collaboration, Vallenari A. et al. 2023, *A&A* 674, A1. Licence
   CC-BY-4.0. Per-source ADQL pulls under `data/gaia/`; per-table provenance in
-  `data/gaia/README.md`. Three roles the rest of the model rests on:
+  `data/gaia/README.md`. The roles the rest of the model rests on:
+    - **Membership** — every `gaia_source` row at `G ≤ 11` is the magnitude
+      term of catalogue membership, unioned with the designation-keyed term
+      (`docs/catalog-driver.md` § 1). The bound is on `G` alone and is
+      nonetheless complete for a `V ≤ 11` floor, because the Riello relation
+      below keeps `V` fainter than `G` across its whole validity range
+      (`data/gaia/README.md` § Why the floor carries no margin).
     - **Sky direction and parallax** — 5-parameter solutions are tier 1 of the
       direction cascade and the input Bailer-Jones inverts (below).
     - **Johnson V** — `G` and `BP − RP` transformed through **Riello M., De
