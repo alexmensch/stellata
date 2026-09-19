@@ -165,14 +165,24 @@ without moving the other, and the test pins both.
 ## The refill dispatch
 
 A third kernel closes the pass: one thread reads both tiers' `instanceCount`
-through the same atomic view the kernel added into (`listed(tier)`) and
-writes `⌈(glow + disc) / REFILL_WORKGROUP_SIZE⌉` into element 0 of
-`refillDispatch`, a `[workgroups, 1, 1]` indirect buffer. The extinction
-prepass dispatches its survivor-driven kernel at that count
+through the same atomic view the kernel added into and writes
+`⌈(glow + disc) / REFILL_WORKGROUP_SIZE⌉` into element 0 of `refillDispatch`,
+a `[workgroups, 1, 1]` indirect buffer. The extinction prepass dispatches its
+survivor-driven kernel at that count
 (`../../extinction/refill/README.md` § The survivor-driven probe) — one
 thread per listed star, and the survivor count never crosses to the CPU.
 The divisor is the workgroup size that kernel is built with, one constant
 for both.
+
+**The same thread republishes the two counts as plain `u32`** — glow, then
+glow + disc — into `listedCounts`, which is what the refill kernel reads to
+place its thread in the two lists. The tier atomics stay the compaction
+kernel's alone. A refill thread reading them directly is the shape § Reading
+the counts back refuses for `PREFILTER_COUNT_ELEMENT`: an atomic
+read-modify-write on one address from every thread of the dispatch, at the
+survivor count rather than the prefilter count, and twice over. One thread
+already holds both numbers at the end of the pass, so the read costs nothing
+to hoist — and a plain load is what the shippable worklist producer inherits.
 
 ## The buffer-writer requirements, discharged
 
@@ -209,7 +219,7 @@ A main-pass star vertex stage binds `STAR_VERTEX_STAGE_STORAGE_BUFFERS`
 (7) storage buffers: the survivor list, the A_V cache, the static table
 and the four forwarded tables. The mirror's binds 6 (no list). The kernel
 binds 6: position, statics, suppress-pulsation, A_V, survivors, args; the
-finish kernel 2, args and the refill dispatch.
+finish kernel 3, args, the refill dispatch and the listed counts.
 Core WebGPU guarantees 8 per stage; the compatibility level reports 0 in
 the vertex stage and the boot refuses it against that constant
 (`../../tsl/README.md` § Storage attributes). A new per-star table costs a
@@ -225,6 +235,7 @@ Byte counts, derived not measured — `recordCount`
 | Survivor lists (2 × count × u32) | 388,071 × 8 B ≈ 2.96 MiB |
 | Indirect args (2 slots × 5 × u32 + prefilter counter) | 44 B |
 | Refill dispatch (3 × u32) | 12 B |
+| Listed counts (2 × u32) | 8 B |
 
 Per rendered frame: one compute submit, 388,071 threads each running the
 solve to the routing point (magnitude, pulsation, prefilter, one A_V read

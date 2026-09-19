@@ -238,12 +238,13 @@ describe('StarLayer', () => {
       'material:star-core-mask-webgpu', 'material:star-disc-webgpu',
       'material:star-glow-webgpu',
     ]);
-    // Statics + four forwarded + survivors + args + refill dispatch: none
-    // sits in a geometry.
-    expect(released).toHaveLength(1 + STAR_FORWARDED_ATTRIBUTES.length + 3);
+    // Statics + four forwarded + survivors + args + refill dispatch + listed
+    // counts: none sits in a geometry.
+    expect(released).toHaveLength(1 + STAR_FORWARDED_ATTRIBUTES.length + 4);
     expect(released).toContain(layer.compaction.survivors);
     expect(released).toContain(layer.compaction.args);
     expect(released).toContain(layer.compaction.refillDispatch);
+    expect(released).toContain(layer.compaction.listedCounts);
     expect(released).toContain(layer.tables.statics);
   });
 });

@@ -243,11 +243,13 @@ the compaction's two survivor lists: one thread per listed star, both tiers
 back to back, at the workgroup count the compaction's finish kernel wrote
 into `refillDispatch` (`../../star/compaction/README.md` § The refill
 dispatch) — `dispatchWorkgroupsIndirect`, so no count crosses to the CPU.
-Each thread resolves its star through `slotOf`, the order table's inverse,
-into the slot-indexed position table, marches if its stamp predates the
-generation, and stamps. No gate read: a survivor has passed the prefilter,
-and the cache gate admits a superset of it. The first fill and
-`verifyExtinction()` stay whole-mode over the Morton slots.
+A thread places itself in the two lists off `listedCounts`, the plain `u32`
+pair that same finish kernel publishes, then resolves its star through
+`slotOf`, the order table's inverse, into the slot-indexed position table,
+marches if its stamp predates the generation, and stamps. No gate read: a
+survivor has passed the prefilter, and the cache gate admits a superset of
+it. The first fill and `verifyExtinction()` stay whole-mode over the Morton
+slots.
 
 **It reads last frame's list.** The prepass dispatches before
 `StarLayer.update` builds this frame's, so a request is served one frame
@@ -268,6 +270,18 @@ stale-high is culled, unlisted, and never refilled — a hysteresis the
 dust-independent gate above cannot show. The shippable producer is the
 compaction appending the in-frame, prefilter-admitted, stale stars to a
 worklist of its own, ahead of its A_V read.
+
+**The archived coherence figure is an upper bound on the penalty, and the
+tree no longer produces it.** The runs on `stellata-8cg.58.10` read the two
+list counts with an `atomicAdd` of zero per thread, twice over — some 85k
+read-modify-writes onto two addresses per dispatch at `mw120` and 1,278,785
+records — so the serialisation sits inside the survivors column and inflates
+it. The direction is safe: it can only make list order look dearer than it
+is, so "2–6× Morton per marched star" is a ceiling and the conclusion the
+dispatch saving outweighs it holds a fortiori. What it does not support is
+sizing a coherence lever off the gap
+(`../../star/compaction/README.md` § The refill dispatch for the plain pair
+that replaced it). Re-measure before scoping one.
 
 ## The kernel bounds its own slot
 

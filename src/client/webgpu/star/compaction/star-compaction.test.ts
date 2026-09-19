@@ -53,6 +53,15 @@ describe('StarCompaction buffers', () => {
     expect(compaction.refillDispatch.isIndirectStorageBufferAttribute).toBe(true);
     expect(Array.from(compaction.refillDispatch.array)).toEqual([0, 1, 1]);
   });
+
+  // Plain, not indirect and not atomic: a refill thread reads the pair once
+  // and the tier atomics stay the compaction kernel's alone.
+  it('the listed counts are a plain pair starting at zero', () => {
+    const { compaction } = make();
+    expect(compaction.listedCounts.isStorageBufferAttribute).toBe(true);
+    expect('isIndirectStorageBufferAttribute' in compaction.listedCounts).toBe(false);
+    expect(Array.from(compaction.listedCounts.array)).toEqual([0, 0]);
+  });
 });
 
 const camera = () => {
@@ -139,7 +148,7 @@ describe('the prefilter counter is armed only across its readback', () => {
 });
 
 describe('StarCompaction dispose', () => {
-  it('releases all three buffers through the renderer registry and disposes all three kernels', () => {
+  it('releases every buffer through the renderer registry and disposes all three kernels', () => {
     const { compaction, released, dispatches } = make();
     compaction.dispatch(camera());
     const disposed: string[] = [];
@@ -147,7 +156,9 @@ describe('StarCompaction dispose', () => {
       k.addEventListener('dispose', () => disposed.push(k.name));
     }
     compaction.dispose();
-    expect(released).toEqual([compaction.survivors, compaction.args, compaction.refillDispatch]);
+    expect(released).toEqual([
+      compaction.survivors, compaction.args, compaction.refillDispatch, compaction.listedCounts,
+    ]);
     expect(disposed.sort()).toEqual(
       ['star-compaction', 'star-compaction-refill-dispatch', 'star-compaction-reset']);
     compaction.dispatch(camera());

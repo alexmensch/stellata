@@ -19,7 +19,8 @@ import {
   packPositionsVec4Into,
 } from '../../star-pipeline/extinction/extinction-prepass-pure';
 import {
-  REFILL_WORKGROUP_SIZE, STAR_TIER_DISC, STAR_TIER_GLOW, tierListBase,
+  LISTED_GLOW_ELEMENT, LISTED_TOTAL_ELEMENT, REFILL_WORKGROUP_SIZE,
+  STAR_TIER_DISC, STAR_TIER_GLOW, tierListBase,
 } from '../star/compaction/compaction-pure';
 import { starQuadOffscreenTsl } from '../star/compaction/frustum-tsl';
 import type { StarCompaction } from '../star/compaction/star-compaction';
@@ -234,10 +235,11 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.slotOf = new StorageBufferAttribute(inverseOrder(order), 1);
     const slotOfNode = storage(this.slotOf, 'uint', count).toReadOnly();
     const { nodes, slots } = this;
+    const counts = compaction.listedCountsNode;
     const kernel = computeIndirect(Fn(() => {
       const i = instanceIndex;
-      const glow = uint(0).add(compaction.listed(STAR_TIER_GLOW)).toVar();
-      If(i.lessThan(glow.add(compaction.listed(STAR_TIER_DISC))), () => {
+      const glow = counts.element(LISTED_GLOW_ELEMENT).toVar();
+      If(i.lessThan(counts.element(LISTED_TOTAL_ELEMENT)), () => {
         const entry = select(
           i.lessThan(glow),
           i.add(uint(tierListBase(STAR_TIER_GLOW, count))),

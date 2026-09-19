@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   ARGS_ELEMENTS, CULL_SLACK_NDC, INDIRECT_ARGS_STRIDE, INDIRECT_INSTANCE_COUNT_SLOT,
-  PREFILTER_COUNT_ELEMENT, REFILL_DISPATCH_ELEMENTS, STAR_TIERS, STAR_TIER_DISC,
-  STAR_TIER_GLOW, initialIndirectArgs, initialRefillDispatch, starQuadOffscreen,
-  survivorCountsFromArgs, tierArgsInstanceCountElement, tierArgsOffsetBytes, tierListBase,
+  LISTED_COUNT_ELEMENTS, LISTED_GLOW_ELEMENT, LISTED_TOTAL_ELEMENT, PREFILTER_COUNT_ELEMENT,
+  REFILL_DISPATCH_ELEMENTS, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW, initialIndirectArgs,
+  initialListedCounts, initialRefillDispatch, starQuadOffscreen, survivorCountsFromArgs,
+  tierArgsInstanceCountElement, tierArgsOffsetBytes, tierListBase,
 } from './compaction-pure';
 
 describe('starQuadOffscreen', () => {
@@ -96,5 +97,11 @@ describe('compaction layout', () => {
     const initial = initialRefillDispatch();
     expect(initial).toHaveLength(REFILL_DISPATCH_ELEMENTS);
     expect(Array.from(initial)).toEqual([0, 1, 1]);
+  });
+
+  it('the listed counts are a distinct pair of elements, starting at zero', () => {
+    expect(new Set([LISTED_GLOW_ELEMENT, LISTED_TOTAL_ELEMENT]).size).toBe(2);
+    expect(LISTED_COUNT_ELEMENTS).toBe(2);
+    expect(Array.from(initialListedCounts())).toEqual([0, 0]);
   });
 });
