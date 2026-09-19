@@ -206,8 +206,11 @@ render knobs), `PlanetBodyField` (via `pickPerceptualDiscUniforms` +
 branch — which has never drawn, so nothing rendered reads it; the band's
 own brightness is photometric),
 `StarLocalMirror`, `ExtinctionPrepass`, `FloatingOrigin`
-(`uWorldOffset`), `StarFrame` (`uFovYRad` / `uViewport` for its
-windows), `DustParticleLayer`, `Picker`, and every kind module through
+(`uWorldOffset`), `StarFrame` (reads `uFovYRad` / `uViewport` / `uSizeMin`
+and both `distN` slots for its windows, and is the sole writer of
+`uPhysSizeWindowPc` —
+`../star-pipeline/star-frame/README.md` § The physical-size window),
+`DustParticleLayer`, `Picker`, and every kind module through
 `KindContext.sharedUniforms`. The three renderer-derived seeds (pixel
 ratio, FOV, viewport) are arguments; the rest come from
 `DEFAULT_FILTER` / `STAR_RENDER_DEFAULTS` and the star pipeline's own

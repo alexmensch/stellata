@@ -8,6 +8,8 @@ import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { FloatingOrigin } from '../../frame/floating-origin';
 import { StarFrame } from './star-frame';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
+import { DEFAULT_FILTER } from '../../filters/filter-state';
+import { physSizeElisionBoundPx } from '../perceptual-disc/phys-size-elision-pure';
 
 const T_LOAD = julianEpochYearToT(2016.0);
 
@@ -235,5 +237,46 @@ describe('StarFrame proximity queries', () => {
     const before = frame.discWindowPcFor(5);
     uniforms.uViewport.value.y = 2000;
     expect(frame.discWindowPcFor(5)).toBeGreaterThan(before);
+  });
+});
+
+describe('the physical-size window', () => {
+  it('seeds past the model reach, so a solve before the first write takes the branch', () => {
+    const { uniforms } = makeFrame(makeCatalog([[0, 0, 0]]));
+    expect(uniforms.uPhysSizeWindowPc.value).toBe(1e30);
+    expect(uniforms.uPhysSizeWindowPc.value).toBeGreaterThan(DEFAULT_FILTER.maxDistSol);
+  });
+
+  it('writes the distance at which the worst-case disc subtends exactly the bound', () => {
+    const { frame, uniforms } = makeFrame(makeCatalog([[0, 0, 0]], [100]));
+    frame.syncPhysSizeWindow();
+
+    const bound = physSizeElisionBoundPx(
+      uniforms.uSizeMin.value, uniforms.uDistNMin.value, uniforms.uDistNMax.value);
+    const subtendedPx = 2 * Math.atan(frame.maxPhysicalRadiusPc / uniforms.uPhysSizeWindowPc.value)
+      * (uniforms.uViewport.value.y / uniforms.uFovYRad.value);
+    expect(subtendedPx).toBeCloseTo(bound, 9);
+  });
+
+  it('takes the pulsation peak, so a variable widens it past its static radius', () => {
+    const pulsing = makeCatalog([[0, 0, 0]], [100]);
+    pulsing.periodDays[0] = 300;
+    pulsing.amplitudeMag[0] = 4;
+    pulsing.pulsRho[0] = 1.4;
+
+    const staticFrame = makeFrame(makeCatalog([[0, 0, 0]], [100])).frame;
+    const pulsingFrame = makeFrame(pulsing).frame;
+
+    expect(pulsingFrame.maxPhysicalRadiusPc)
+      .toBeCloseTo(staticFrame.maxPhysicalRadiusPc * Math.sqrt(1.4), 12);
+    expect(pulsingFrame.discWindowPcFor(0.02))
+      .toBeGreaterThan(staticFrame.discWindowPcFor(0.02));
+  });
+
+  it('disables the elision across the whole model on a degenerate distN', () => {
+    const { frame, uniforms } = makeFrame(makeCatalog([[0, 0, 0]], [100]));
+    uniforms.uDistNMin.value = 0;
+    frame.syncPhysSizeWindow();
+    expect(uniforms.uPhysSizeWindowPc.value).toBeGreaterThan(DEFAULT_FILTER.maxDistSol);
   });
 });

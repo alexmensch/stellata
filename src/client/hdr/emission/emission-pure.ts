@@ -35,6 +35,11 @@ export function luminanceForMagnitude(exposure: number, m: number): number {
   return exposure * 10 ** (-0.4 * m);
 }
 
+/** Diameter at or below which `max(1, π·r²)` saturates, so the peak below
+ *  carries the whole flux and is exactly insensitive to `physRadiusPx`.
+ *  A DIAMETER, against the function's radius argument. */
+export const POINT_SOURCE_FLAT_PEAK_DIAMETER_PX = 2 / Math.sqrt(Math.PI);
+
 /**
  * `physRadiusPx` is the source's true angular radius in **CSS** pixels,
  * unclamped by any viewport-fraction cap. Below 1 px the source is

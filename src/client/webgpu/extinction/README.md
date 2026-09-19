@@ -238,9 +238,9 @@ star × `DUST_TAPS_MAX` (96), 388,071 × 96; at Sol the tap rule spends
 march). The cap binds wherever the in-cube path runs past
 `DUST_TAP_PC × DUST_TAPS_MAX` ≈ 960 pc, so from outside the cube the
 ceiling is very nearly the per-admitted-star cost. **None of those
-figures is a time**: the same README records two dwells in which a 35%
-tap cut did not resolve against the band, because most of this kernel's
-cost is per-thread. That is the per-recompute ceiling, and a recompute is
+figures is a time**: the same README records the same-commit pair in
+which roughly half of this kernel's cost is a per-thread floor no tap
+count touches, and the other half is the march. That is the per-recompute ceiling, and a recompute is
 spread over `REFILL_SLICES` frames (`refill/README.md`), so a warp — which
 asks for one on every frame, the camera moving more than
 `RECOMPUTE_EPSILON_PC` between them — pays that fraction of it per frame

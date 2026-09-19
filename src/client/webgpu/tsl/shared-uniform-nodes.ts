@@ -58,6 +58,7 @@ function buildNodes(shared: SharedUniforms) {
     uRSunPc: uniform(shared.uRSunPc.value),
     uViewport: uniform(shared.uViewport.value),
     uMaxPhysFrac: uniform(shared.uMaxPhysFrac.value),
+    uPhysSizeWindowPc: uniform(shared.uPhysSizeWindowPc.value),
     uModelDays: uniform(shared.uModelDays.value),
     uModelDaysPerRealSec: uniform(shared.uModelDaysPerRealSec.value),
     uMinPeriodSec: uniform(shared.uMinPeriodSec.value),
