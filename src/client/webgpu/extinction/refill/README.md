@@ -92,14 +92,14 @@ read and a mat4×vec4 before it can early-out — 20 B per star, 7.8 MB at
 camera turns.
 
 Order of magnitude for that, from two archived runs rather than a
-differential — different commits and one has `--readback-every 4`, so read
-it as a bound and not a price: 57.6's gated kernel over all 388,071 threads
-at `lg`, where the march is a no-op and every thread pays only the gate,
-sits at 0.642 ms (`.perf-runs/2026-09-18/8cg576-gated-recompute-all.json`
-compute p50 1.336, against `cns-real-dwell-all.json`'s 0.694 with no
-recompute running). The frustum prologue does strictly less per thread than
-that gate, so it lands under 0.642 ms at 388k — against a slice's quarter of
-it, on the commonest thing a user does.
+differential — different commits, so read it as a bound and not a price:
+57.6's gated kernel over all 388,071 threads at `lg`, where the march is a
+no-op and every thread pays only the gate, sits at **0.67 ms**
+(`.perf-runs/2026-09-18/8cg576-gated-recompute-all.json` compute p50 1.336
+under the forced-recompute lever, against `8cg585-real-pin.json`'s 0.662 with
+no recompute running, which is the compaction alone). The frustum prologue
+does strictly less per thread than that gate, so it lands under that at
+388k — against a slice's quarter of it, on the commonest thing a user does.
 
 **Whole mode** — the first fill and `verifyExtinction()` — skips the
 frustum test and the stamp check and stamps every star, so the parity
