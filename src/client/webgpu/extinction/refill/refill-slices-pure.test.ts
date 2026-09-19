@@ -1,158 +1,170 @@
 import { describe, expect, it } from 'vitest';
 import {
-  REFILL_SLICES, idleRefill, planRefill, refillSliceLength, type RefillCursor,
+  REFILL_SLICES, idleRefill, planRefill, refillListBase, refillQuarterOf, refillSliceLength,
+  refillWorklistLength, type RefillCursor,
 } from './refill-slices-pure';
 
-const COUNT = 100;
-const SLICE = refillSliceLength(COUNT, 4);
-
-/** Runs `frames` updates and returns, per slot, the frame it was last
- *  refilled on — -1 for a slot no dispatch reached. */
-function coverage(wantedPerFrame: readonly boolean[], count = COUNT, slice = SLICE): number[] {
-  const filled = new Array<number>(count).fill(-1);
-  let cursor = idleRefill(count);
-  for (const [frame, wanted] of wantedPerFrame.entries()) {
-    const plan = planRefill(cursor, wanted, count, slice);
-    if (plan.base !== null) {
-      for (let i = plan.base; i < plan.base + plan.length; i++) filled[i] = frame;
-    }
-    cursor = plan.next;
-  }
-  return filled;
-}
-
 describe('refillSliceLength', () => {
-  it('divides the catalogue into the slice count, last slice short', () => {
+  it('divides the catalogue into the slice count, rounding up', () => {
     expect(refillSliceLength(100, 4)).toBe(25);
     expect(refillSliceLength(101, 4)).toBe(26);
     expect(refillSliceLength(388_071, REFILL_SLICES)).toBe(97_018);
   });
 
-  it('never returns zero, so a cursor cannot stall', () => {
+  it('never returns zero', () => {
     expect(refillSliceLength(0, 4)).toBe(1);
     expect(refillSliceLength(1, 4)).toBe(1);
     expect(refillSliceLength(3, 0)).toBe(3);
   });
 });
 
+describe('the quarter partition', () => {
+  // Each sub-list holds one residue class, so its capacity is the class
+  // size and a build can never overflow it.
+  it.each([1, 5, 100, 101, 388_071, 1_278_785])('no residue class outruns its sub-list at %i', (count) => {
+    const sizes = new Array<number>(REFILL_SLICES).fill(0);
+    for (let star = 0; star < Math.min(count, 4096); star++) sizes[refillQuarterOf(star)]++;
+    const classSize = (q: number) => Math.floor((count - 1 - q) / REFILL_SLICES) + 1;
+    for (let q = 0; q < REFILL_SLICES; q++) {
+      expect(Math.max(0, classSize(q))).toBeLessThanOrEqual(refillSliceLength(count));
+    }
+    expect(sizes.reduce((n, s) => n + s, 0)).toBe(Math.min(count, 4096));
+  });
+
+  it('lays the sub-lists back to back at slice-length stride', () => {
+    expect(refillListBase(0, 101)).toBe(0);
+    expect(refillListBase(1, 101)).toBe(26);
+    expect(refillListBase(3, 101)).toBe(78);
+    expect(refillWorklistLength(101)).toBe(104);
+    expect(refillWorklistLength(388_071)).toBe(388_072);
+  });
+});
+
 describe('planRefill', () => {
-  it('dispatches nothing while idle and unwanted', () => {
-    const plan = planRefill(idleRefill(COUNT), false, COUNT, SLICE);
-    expect(plan.base).toBeNull();
-    expect(plan.length).toBe(0);
+  it('dispatches nothing while parked and unwanted, and stays parked', () => {
+    const plan = planRefill(idleRefill(), false);
+    expect(plan.dispatch).toBe(false);
+    expect(plan.arm).toBe(false);
+    expect(plan.next).toEqual(idleRefill());
   });
 
-  it('starts a cycle at slot 0 when a refill is wanted from idle', () => {
-    const plan = planRefill(idleRefill(COUNT), true, COUNT, SLICE);
-    expect(plan.base).toBe(0);
-    expect(plan.length).toBe(SLICE);
+  // The compaction builds this frame; the march starts next frame, since the
+  // prepass runs ahead of the compaction in the frame.
+  it('a request arms the producer this frame and marches nothing yet', () => {
+    const plan = planRefill(idleRefill(), true);
+    expect(plan.arm).toBe(true);
+    expect(plan.dispatch).toBe(false);
+    expect(plan.next).toEqual({ owed: REFILL_SLICES, quarter: 0 });
   });
 
-  it('runs the cycle out with no further request', () => {
-    let cursor: RefillCursor = idleRefill(COUNT);
-    const bases: (number | null)[] = [];
-    for (let frame = 0; frame < 6; frame++) {
-      const plan = planRefill(cursor, frame === 0, COUNT, SLICE);
-      bases.push(plan.base);
+  it('then marches one quarter a frame, every quarter once, and parks', () => {
+    let cursor: RefillCursor = idleRefill();
+    const marched: (number | null)[] = [];
+    for (let frame = 0; frame < REFILL_SLICES + 3; frame++) {
+      const plan = planRefill(cursor, frame === 0);
+      marched.push(plan.dispatch ? plan.quarter : null);
       cursor = plan.next;
     }
-    expect(bases).toEqual([0, 25, 50, 75, null, null]);
+    expect(marched).toEqual([null, 0, 1, 2, 3, null, null]);
+    expect(cursor.owed).toBe(0);
   });
 
-  it('shortens the last slice rather than running past the catalogue', () => {
-    let cursor: RefillCursor = idleRefill(101);
-    const slice = refillSliceLength(101, 4);
-    const spans: [number, number][] = [];
-    for (let frame = 0; frame < 4; frame++) {
-      const plan = planRefill(cursor, frame === 0, 101, slice);
-      if (plan.base !== null) spans.push([plan.base, plan.length]);
+  it('a request landing mid-flight owes every quarter again from the rebuilt list', () => {
+    let cursor: RefillCursor = idleRefill();
+    const marched: (number | null)[] = [];
+    for (let frame = 0; frame < 2 * REFILL_SLICES + 2; frame++) {
+      const plan = planRefill(cursor, frame === 0 || frame === 2);
+      marched.push(plan.dispatch ? plan.quarter : null);
       cursor = plan.next;
     }
-    expect(spans).toEqual([[0, 26], [26, 26], [52, 26], [78, 23]]);
-    expect(spans.reduce((n, [, len]) => n + len, 0)).toBe(101);
+    expect(marched).toEqual([null, 0, 1, 2, 3, 0, 1, null, null, null]);
   });
 
-  it('dispatches nothing when the catalogue is empty', () => {
-    expect(planRefill(idleRefill(0), true, 0, 1).base).toBeNull();
+  it('the quarter advances only on a dispatch, so the finish kernel sizes the one marched next', () => {
+    const parked = planRefill({ owed: 0, quarter: 2 }, false);
+    expect(parked.next.quarter).toBe(2);
+    const armed = planRefill({ owed: 0, quarter: 2 }, true);
+    expect(armed.next.quarter).toBe(2);
+    const marched = planRefill({ owed: 1, quarter: 3 }, false);
+    expect(marched.quarter).toBe(3);
+    expect(marched.next.quarter).toBe(0);
   });
 });
 
-describe('a request never restarts a running cycle', () => {
-  it('keeps advancing rather than returning to slot 0 every frame', () => {
-    const filled = coverage(Array<boolean>(8).fill(true));
-    expect(filled.every((frame) => frame >= 0)).toBe(true);
-  });
-
-  it('cycles one slice per frame while the request keeps firing', () => {
-    const filled = coverage(Array<boolean>(8).fill(true));
-    expect(filled[0]).toBe(4);
-    expect(filled[25]).toBe(5);
-    expect(filled[50]).toBe(6);
-    expect(filled[75]).toBe(7);
-  });
-});
-
-describe('every star is refilled within REFILL_SLICES frames of a request', () => {
-  /** Per slot, the first frame at or after `from` on which it was refilled,
-   *  or Infinity if none was. */
-  function firstRefillFrom(wantedPerFrame: readonly boolean[], from: number): number[] {
-    const first = new Array<number>(COUNT).fill(Infinity);
-    let cursor = idleRefill(COUNT);
-    for (const [frame, wanted] of wantedPerFrame.entries()) {
-      const plan = planRefill(cursor, wanted, COUNT, SLICE);
-      if (plan.base !== null && frame >= from) {
-        for (let i = plan.base; i < plan.base + plan.length; i++) {
-          first[i] = Math.min(first[i] ?? Infinity, frame);
-        }
+/** The producer and the consumer over a CPU catalogue: per frame the
+ *  generation bumps on a request, the owed quarter is marched at the current
+ *  generation, then an armed compaction rebuilds every sub-list from the
+ *  stars still stale. Returns, per star, the frames it was marched on, and
+ *  the longest wait any listed star had from the build that listed it to the
+ *  march that stamped it. */
+function simulate(count: number, wantedPerFrame: readonly boolean[]) {
+  const stamps = new Array<number>(count).fill(0);
+  const listedAt = new Array<number>(count).fill(-1);
+  let generation = 1;
+  let cursor = idleRefill();
+  let lists: number[][] = Array.from({ length: REFILL_SLICES }, () => []);
+  const marchedOn: number[][] = Array.from({ length: count }, () => []);
+  let longestWait = 0;
+  for (const [frame, wanted] of wantedPerFrame.entries()) {
+    if (wanted) generation++;
+    const plan = planRefill(cursor, wanted);
+    if (plan.dispatch) {
+      for (const star of lists[plan.quarter]) {
+        stamps[star] = generation;
+        marchedOn[star].push(frame);
+        longestWait = Math.max(longestWait, frame - listedAt[star]);
+        listedAt[star] = -1;
       }
-      cursor = plan.next;
     }
-    return first;
+    if (plan.arm) {
+      lists = Array.from({ length: REFILL_SLICES }, () => []);
+      for (let star = 0; star < count; star++) {
+        if (stamps[star] === generation) continue;
+        lists[refillQuarterOf(star)].push(star);
+        if (listedAt[star] < 0) listedAt[star] = frame;
+      }
+    }
+    cursor = plan.next;
   }
+  return { marchedOn, longestWait, stale: stamps.filter((s) => s !== generation).length };
+}
 
-  // The slowest slot lands on exactly the last frame of the bound, so this
-  // pins the bound TIGHT: an over-eager wrap that re-covered slots the
-  // request did not need would pass an inequality and fail this.
-  it('holds wherever in the cycle the request lands, and is exact', () => {
-    for (let requestFrame = 0; requestFrame < 2 * REFILL_SLICES; requestFrame++) {
-      const wanted = Array<boolean>(requestFrame + 2 * REFILL_SLICES).fill(false);
+describe('every stale star is marched within REFILL_SLICES frames of the build that listed it', () => {
+  const COUNT = 103;
+
+  it('a lone request marches the whole stale set exactly once, the last quarter on the bound', () => {
+    const wanted = Array<boolean>(3 * REFILL_SLICES).fill(false);
+    wanted[0] = true;
+    const { marchedOn, stale, longestWait } = simulate(COUNT, wanted);
+    expect(stale).toBe(0);
+    for (const frames of marchedOn) expect(frames).toHaveLength(1);
+    expect(longestWait).toBe(REFILL_SLICES);
+  });
+
+  // A request every frame rebuilds the list every frame, and a star's
+  // residue never moves, so it is marched on exactly every fourth frame.
+  it('under a request every frame no star waits more than REFILL_SLICES frames', () => {
+    const frames = 4 * REFILL_SLICES;
+    const { marchedOn, longestWait } = simulate(COUNT, Array<boolean>(frames).fill(true));
+    expect(longestWait).toBe(REFILL_SLICES);
+    for (const f of marchedOn) {
+      expect(f.length).toBeGreaterThanOrEqual(3);
+      for (let i = 1; i < f.length; i++) expect(f[i] - f[i - 1]).toBe(REFILL_SLICES);
+    }
+  });
+
+  // A quarter marched on the request's own frame is marched at the new
+  // generation, so a request early in a flight closes a frame sooner than the
+  // bound; one landing later re-lists what an earlier quarter stamped and
+  // waits the full bound for it. Neither exceeds it.
+  it('holds wherever in a flight a second request lands, and closes on settle', () => {
+    for (let second = 1; second <= REFILL_SLICES + 1; second++) {
+      const wanted = Array<boolean>(second + 2 * REFILL_SLICES + 1).fill(false);
       wanted[0] = true;
-      wanted[requestFrame] = true;
-      const first = firstRefillFrom(wanted, requestFrame);
-      expect(Math.max(...first), `request on frame ${requestFrame}`)
-        .toBe(requestFrame + REFILL_SLICES - 1);
+      wanted[second] = true;
+      const { stale, longestWait } = simulate(COUNT, wanted);
+      expect(stale, `second request on frame ${second}`).toBe(0);
+      expect(longestWait, `second request on frame ${second}`).toBeLessThanOrEqual(REFILL_SLICES);
     }
-  });
-});
-
-describe('what a request costs in total', () => {
-  // The wrap restarts at slot 0 and clears `pending`, so the cycle it starts
-  // runs to the end rather than stopping where the request arrived —
-  // README.md § The spike is the problem, not the total.
-  it('charges a mid-cycle request the slices it owed plus a whole cycle', () => {
-    const wanted = Array<boolean>(3 * REFILL_SLICES).fill(false);
-    wanted[0] = true;
-    wanted[1] = true;
-    let cursor = idleRefill(COUNT);
-    let slots = 0;
-    for (const w of wanted) {
-      const plan = planRefill(cursor, w, COUNT, SLICE);
-      slots += plan.length;
-      cursor = plan.next;
-    }
-    expect(slots).toBe(2 * COUNT);
-  });
-
-  it('charges a request from a parked cursor exactly one cycle', () => {
-    const wanted = Array<boolean>(3 * REFILL_SLICES).fill(false);
-    wanted[0] = true;
-    let cursor = idleRefill(COUNT);
-    let slots = 0;
-    for (const w of wanted) {
-      const plan = planRefill(cursor, w, COUNT, SLICE);
-      slots += plan.length;
-      cursor = plan.next;
-    }
-    expect(slots).toBe(COUNT);
   });
 });

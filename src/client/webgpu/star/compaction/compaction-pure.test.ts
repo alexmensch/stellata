@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { REFILL_SLICES } from '../../extinction/refill/refill-slices-pure';
 import {
   ARGS_ELEMENTS, CULL_SLACK_NDC, INDIRECT_ARGS_STRIDE, INDIRECT_INSTANCE_COUNT_SLOT,
-  LISTED_COUNT_ELEMENTS, LISTED_GLOW_ELEMENT, LISTED_TOTAL_ELEMENT, PREFILTER_COUNT_ELEMENT,
-  REFILL_DISPATCH_ELEMENTS, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW, initialIndirectArgs,
-  initialListedCounts, initialRefillDispatch, starQuadOffscreen, survivorCountsFromArgs,
+  PREFILTER_COUNT_ELEMENT, REFILL_DISPATCH_ELEMENTS, REFILL_DISPATCH_LENGTH_ELEMENT,
+  REFILL_LIST_COUNT_BASE, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW, initialIndirectArgs,
+  initialRefillDispatch, refillListCountElement, starQuadOffscreen, survivorCountsFromArgs,
   tierArgsInstanceCountElement, tierArgsOffsetBytes, tierListBase,
 } from './compaction-pure';
 
@@ -65,16 +66,23 @@ describe('compaction layout', () => {
     expect(tierArgsOffsetBytes(STAR_TIER_DISC)).toBe(20);
   });
 
-  it('the initial args draw the quad over zero instances in both slots, prefilter count zero', () => {
-    expect(Array.from(initialIndirectArgs(6))).toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0]);
+  it('the initial args draw the quad over zero instances in both slots, every counter zero', () => {
+    expect(Array.from(initialIndirectArgs(6)))
+      .toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
-  // The counter sits past both draw slots, so no indirect draw reads it.
+  // The counters sit past both draw slots, so no indirect draw reads them.
   it('the prefilter counter is the element past the last draw slot', () => {
     expect(PREFILTER_COUNT_ELEMENT).toBe(10);
-    expect(ARGS_ELEMENTS).toBe(11);
     expect(PREFILTER_COUNT_ELEMENT).toBeGreaterThanOrEqual(
       tierArgsOffsetBytes(STAR_TIER_DISC) / 4 + INDIRECT_ARGS_STRIDE);
+  });
+
+  it('one refill sub-list counter per quarter follows it, closing the buffer', () => {
+    expect(REFILL_LIST_COUNT_BASE).toBe(11);
+    expect(refillListCountElement(0)).toBe(11);
+    expect(refillListCountElement(REFILL_SLICES - 1)).toBe(14);
+    expect(ARGS_ELEMENTS).toBe(15);
   });
 
   // The readback takes the very slots the draws take their instance count
@@ -92,16 +100,12 @@ describe('compaction layout', () => {
   });
 
   // dispatchWorkgroupsIndirect reads three u32; y and z stay 1 so element 0
-  // alone is the workgroup count the finish kernel writes.
-  it('the refill dispatch starts at zero workgroups of one row', () => {
+  // alone is the workgroup count the finish kernel writes. The listed length
+  // rides past them, where the dispatch never looks.
+  it('the refill dispatch starts at zero workgroups of one row, zero listed', () => {
     const initial = initialRefillDispatch();
     expect(initial).toHaveLength(REFILL_DISPATCH_ELEMENTS);
-    expect(Array.from(initial)).toEqual([0, 1, 1]);
-  });
-
-  it('the listed counts are a distinct pair of elements, starting at zero', () => {
-    expect(new Set([LISTED_GLOW_ELEMENT, LISTED_TOTAL_ELEMENT]).size).toBe(2);
-    expect(LISTED_COUNT_ELEMENTS).toBe(2);
-    expect(Array.from(initialListedCounts())).toEqual([0, 0]);
+    expect(Array.from(initial)).toEqual([0, 1, 1, 0]);
+    expect(REFILL_DISPATCH_LENGTH_ELEMENT).toBe(3);
   });
 });
