@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   ARGS_ELEMENTS, CULL_SLACK_NDC, INDIRECT_ARGS_STRIDE, INDIRECT_INSTANCE_COUNT_SLOT,
-  PREFILTER_COUNT_ELEMENT, STAR_TIERS, STAR_TIER_DISC,
-  STAR_TIER_GLOW, initialIndirectArgs, starQuadOffscreen, survivorCountsFromArgs,
-  tierArgsInstanceCountElement, tierArgsOffsetBytes, tierListBase,
+  PREFILTER_COUNT_ELEMENT, REFILL_DISPATCH_ELEMENTS, STAR_TIERS, STAR_TIER_DISC,
+  STAR_TIER_GLOW, initialIndirectArgs, initialRefillDispatch, starQuadOffscreen,
+  survivorCountsFromArgs, tierArgsInstanceCountElement, tierArgsOffsetBytes, tierListBase,
 } from './compaction-pure';
 
 describe('starQuadOffscreen', () => {
@@ -88,5 +88,13 @@ describe('compaction layout', () => {
 
   it('a short buffer reads zero rather than undefined', () => {
     expect(survivorCountsFromArgs(new Uint32Array(2))).toEqual({ glow: 0, disc: 0, prefilter: 0 });
+  });
+
+  // dispatchWorkgroupsIndirect reads three u32; y and z stay 1 so element 0
+  // alone is the workgroup count the finish kernel writes.
+  it('the refill dispatch starts at zero workgroups of one row', () => {
+    const initial = initialRefillDispatch();
+    expect(initial).toHaveLength(REFILL_DISPATCH_ELEMENTS);
+    expect(Array.from(initial)).toEqual([0, 1, 1]);
   });
 });

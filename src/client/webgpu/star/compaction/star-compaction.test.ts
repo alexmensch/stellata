@@ -47,6 +47,12 @@ describe('StarCompaction buffers', () => {
     expect(compaction.args.isIndirectStorageBufferAttribute).toBe(true);
     expect(Array.from(compaction.args.array)).toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0]);
   });
+
+  it('the refill dispatch is indirect-capable and starts at zero workgroups', () => {
+    const { compaction } = make();
+    expect(compaction.refillDispatch.isIndirectStorageBufferAttribute).toBe(true);
+    expect(Array.from(compaction.refillDispatch.array)).toEqual([0, 1, 1]);
+  });
 });
 
 const camera = () => {
@@ -58,16 +64,20 @@ const camera = () => {
 
 describe('StarCompaction dispatch', () => {
   // One compute pass, one submit: the reset's stores are visible to the
-  // kernel's atomics, and every draw of the render submit reads the result.
-  it('runs the reset then the kernel in a single compute call', () => {
+  // kernel's atomics, the kernel's adds to the finish kernel's loads, and
+  // every draw of the render submit reads the result.
+  it('runs the reset, the kernel, then the refill-dispatch finish in a single compute call', () => {
     const { compaction, dispatches } = make();
     compaction.dispatch(camera());
     expect(dispatches).toHaveLength(1);
-    const [reset, kernel] = dispatches[0] as ComputeNode[];
+    const [reset, kernel, finish] = dispatches[0] as ComputeNode[];
+    expect(dispatches[0]).toHaveLength(3);
     expect(reset.count).toBe(1);
     expect(kernel.count).toBe(COUNT);
+    expect(finish.count).toBe(1);
     expect(reset.name).toBe('star-compaction-reset');
     expect(kernel.name).toBe('star-compaction');
+    expect(finish.name).toBe('star-compaction-refill-dispatch');
   });
 
   // The kernels are built once: a frame re-dispatches the same array rather
@@ -129,7 +139,7 @@ describe('the prefilter counter is armed only across its readback', () => {
 });
 
 describe('StarCompaction dispose', () => {
-  it('releases both buffers through the renderer registry and disposes both kernels', () => {
+  it('releases all three buffers through the renderer registry and disposes all three kernels', () => {
     const { compaction, released, dispatches } = make();
     compaction.dispatch(camera());
     const disposed: string[] = [];
@@ -137,8 +147,9 @@ describe('StarCompaction dispose', () => {
       k.addEventListener('dispose', () => disposed.push(k.name));
     }
     compaction.dispose();
-    expect(released).toEqual([compaction.survivors, compaction.args]);
-    expect(disposed.sort()).toEqual(['star-compaction', 'star-compaction-reset']);
+    expect(released).toEqual([compaction.survivors, compaction.args, compaction.refillDispatch]);
+    expect(disposed.sort()).toEqual(
+      ['star-compaction', 'star-compaction-refill-dispatch', 'star-compaction-reset']);
     compaction.dispatch(camera());
     expect(dispatches).toHaveLength(1);
   });

@@ -9,16 +9,18 @@ import {
   type ComputeNode, type WebGPURenderer,
 } from 'three/webgpu';
 import {
-  Fn, If, atomicAdd, atomicStore, compute, instanceIndex, int, storage, uniform, uint, vec4,
+  Fn, If, atomicAdd, atomicLoad, atomicStore, compute, instanceIndex, int, storage, uniform, uint,
+  vec4,
 } from 'three/tsl';
 import { PHYS_RATIO_THRESHOLD } from '../../../star-pipeline/local-pass/star-local-cluster-pure';
 import { STAR_PASS_GLOW } from '../../../star-pipeline/star-pass';
 import { disposeStorageAttribute } from '../../tsl/storage-attribute';
 import { solveStarTsl, type StarTslDeps } from '../star-vertex-tsl';
 import {
-  PREFILTER_COUNT_ELEMENT, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
-  initialIndirectArgs, survivorCountsFromArgs, tierArgsInstanceCountElement,
-  tierListBase, type StarTier, type SurvivorCounts,
+  PREFILTER_COUNT_ELEMENT, REFILL_DISPATCH_ELEMENTS, REFILL_WORKGROUP_SIZE, STAR_TIERS,
+  STAR_TIER_DISC, STAR_TIER_GLOW, initialIndirectArgs, initialRefillDispatch,
+  survivorCountsFromArgs, tierArgsInstanceCountElement, tierListBase,
+  type StarTier, type SurvivorCounts,
 } from './compaction-pure';
 import { starQuadOffscreenTsl } from './frustum-tsl';
 
@@ -31,10 +33,18 @@ export class StarCompaction {
   /** drawIndexedIndirect arguments, one slot per tier — the geometry the
    *  tier's draws share binds it at that slot's byte offset. */
   readonly args: IndirectStorageBufferAttribute;
+  /** `[workgroups, 1, 1]` for one thread per listed survivor, both tiers
+   *  back to back — the extinction refill's dispatch size, written by the
+   *  finish kernel from the counts this frame's atomics left
+   *  (README.md § The refill dispatch). */
+  readonly refillDispatch: IndirectStorageBufferAttribute;
   /** The vertex stages' read of the lists. One node object: access is a
    *  property of the stage, so it is read_write in the kernel and read in
    *  every draw (../../tsl/README.md § Storage attributes). */
   readonly survivorsNode: SurvivorsNode;
+  /** `tier`'s listed count as a node expression, through the same atomic
+   *  view of the args the kernel adds into. */
+  readonly listed: (tier: StarTier) => ReturnType<typeof uint>;
 
   private readonly renderer: WebGPURenderer;
   private readonly viewProjection = uniform(new Matrix4());
@@ -50,8 +60,11 @@ export class StarCompaction {
     this.survivors = new StorageBufferAttribute(
       new Uint32Array(STAR_TIERS.length * this.count), 1);
     this.args = new IndirectStorageBufferAttribute(initialIndirectArgs(indexCount), 1);
+    this.refillDispatch = new IndirectStorageBufferAttribute(initialRefillDispatch(), 1);
     this.survivorsNode = storage(this.survivors, 'uint', this.survivors.count);
     const argsNode = storage(this.args, 'uint', this.args.count).toAtomic();
+    const refillDispatchNode = storage(this.refillDispatch, 'uint', REFILL_DISPATCH_ELEMENTS);
+    this.listed = (tier) => uint(atomicLoad(argsNode.element(tierArgsInstanceCountElement(tier))));
     const { u } = deps;
 
     // Both instance counts start the frame at zero; the same compute pass
@@ -98,7 +111,13 @@ export class StarCompaction {
       });
     })(), this.count);
     kernel.setName('star-compaction');
-    this.kernels = [reset, kernel];
+    const finish = compute(Fn(() => {
+      const listed = this.listed(STAR_TIER_GLOW).add(this.listed(STAR_TIER_DISC));
+      refillDispatchNode.element(0).assign(
+        listed.add(uint(REFILL_WORKGROUP_SIZE - 1)).div(uint(REFILL_WORKGROUP_SIZE)));
+    })(), 1);
+    finish.setName('star-compaction-refill-dispatch');
+    this.kernels = [reset, kernel, finish];
   }
 
   /** The view-projection the kernel tested against on the last dispatch, as a
@@ -125,8 +144,8 @@ export class StarCompaction {
     return survivorCountsFromArgs(new Uint32Array(bytes));
   }
 
-  /** One compute pass, one submit: reset then compact. Must follow the
-   *  frame's uniform sync and precede its render. The camera's matrices are
+  /** One compute pass, one submit: reset, compact, then write the refill
+   *  dispatch. Must follow the frame's uniform sync and precede its render. The camera's matrices are
    *  refreshed here because the controls mutate position and quaternion
    *  without propagating them, and the render that would is still ahead. */
   dispatch(camera: Camera): void {
@@ -150,5 +169,6 @@ export class StarCompaction {
     this.releaseWaiters();
     disposeStorageAttribute(this.renderer, this.survivors);
     disposeStorageAttribute(this.renderer, this.args);
+    disposeStorageAttribute(this.renderer, this.refillDispatch);
   }
 }

@@ -44,6 +44,18 @@ export function survivorCountsFromArgs(args: Uint32Array): SurvivorCounts {
   };
 }
 
+/** The extinction refill's indirect dispatch, `[workgroups, 1, 1]`: the
+ *  finish kernel writes element 0 every frame from the lists it just
+ *  counted (README.md § The refill dispatch). */
+export const REFILL_DISPATCH_ELEMENTS = 3;
+/** Threads per workgroup of the kernel dispatched at that count — the
+ *  divisor the finish kernel rounds up by, so both read one constant. */
+export const REFILL_WORKGROUP_SIZE = 64;
+
+export function initialRefillDispatch(): Uint32Array {
+  return Uint32Array.from([0, 1, 1]);
+}
+
 /** Byte offset of `tier`'s slot — what the geometry's indirectOffset takes. */
 export function tierArgsOffsetBytes(tier: StarTier): number {
   return tier * INDIRECT_ARGS_STRIDE * Uint32Array.BYTES_PER_ELEMENT;

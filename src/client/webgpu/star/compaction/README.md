@@ -112,10 +112,11 @@ the layer first forwards this frame's attribute writes onto the tables
 positions — a kernel listing survivors off last frame's positions on a
 recentre frame would flicker the whole field.
 
-The reset kernel (one thread, both `instanceCount`s to zero) and the
-compaction kernel are one `renderer.compute([...])`: one compute pass,
-one submit, and WebGPU orders dispatches within a pass so the atomics
-see the reset. Every rendered frame pays that submit; the render gate
+The reset kernel (one thread, both `instanceCount`s to zero), the
+compaction kernel and the finish kernel (§ The refill dispatch) are one
+`renderer.compute([...])`: one compute pass, one submit, and WebGPU orders
+dispatches within a pass so the atomics see the reset and the finish sees
+the atomics. Every rendered frame pays that submit; the render gate
 already decides whether a frame renders at all.
 
 ## Reading the counts back
@@ -161,6 +162,18 @@ three draws take their instance count from — the same
 `tierArgsInstanceCountElement` — so a layout change cannot move one
 without moving the other, and the test pins both.
 
+## The refill dispatch
+
+A third kernel closes the pass: one thread reads both tiers' `instanceCount`
+through the same atomic view the kernel added into (`listed(tier)`) and
+writes `⌈(glow + disc) / REFILL_WORKGROUP_SIZE⌉` into element 0 of
+`refillDispatch`, a `[workgroups, 1, 1]` indirect buffer. The extinction
+prepass dispatches its survivor-driven kernel at that count
+(`../../extinction/refill/README.md` § The survivor-driven probe) — one
+thread per listed star, and the survivor count never crosses to the CPU.
+The divisor is the workgroup size that kernel is built with, one constant
+for both.
+
 ## The buffer-writer requirements, discharged
 
 Of the four the single-writer audit put on this design (bead
@@ -195,7 +208,8 @@ Of the four the single-writer audit put on this design (bead
 A main-pass star vertex stage binds `STAR_VERTEX_STAGE_STORAGE_BUFFERS`
 (7) storage buffers: the survivor list, the A_V cache, the static table
 and the four forwarded tables. The mirror's binds 6 (no list). The kernel
-binds 6: position, statics, suppress-pulsation, A_V, survivors, args.
+binds 6: position, statics, suppress-pulsation, A_V, survivors, args; the
+finish kernel 2, args and the refill dispatch.
 Core WebGPU guarantees 8 per stage; the compatibility level reports 0 in
 the vertex stage and the boot refuses it against that constant
 (`../../tsl/README.md` § Storage attributes). A new per-star table costs a
@@ -209,7 +223,8 @@ Byte counts, derived not measured — `recordCount`
 | Resident | Size |
 | --- | --- |
 | Survivor lists (2 × count × u32) | 388,071 × 8 B ≈ 2.96 MiB |
-| Indirect args (2 slots × 5 × u32) | 40 B |
+| Indirect args (2 slots × 5 × u32 + prefilter counter) | 44 B |
+| Refill dispatch (3 × u32) | 12 B |
 
 Per rendered frame: one compute submit, 388,071 threads each running the
 solve to the routing point (magnitude, pulsation, prefilter, one A_V read
