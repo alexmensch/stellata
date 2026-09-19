@@ -21,6 +21,9 @@ it. Stars and planet glare share this kernel exactly.
 - `phys-size-elision-pure.ts` (+ test) — the `physSize` below which every
   consumer of it stops responding, and the tolerance the one graceful
   consumer is held to (§ Eliding the physical-size branch).
+  `phys-size-elision-catalog.test.ts` is the second leg: it re-derives the
+  window and the worst gated star over `public/catalog.bin`, so the
+  measured figures in that section are regenerated rather than quoted.
 - `perceptual-disc-uniforms.ts` — TypeScript shape for the uniforms the
   chunk consumes. `buildSharedUniforms` `satisfies` this interface, and
   `PlanetBodyField.buildMaterials` picks exactly these keys out via
@@ -151,19 +154,37 @@ The fourth has **no plateau**: `physRatio` is also a varying, and
 `smoothstep(0, PHYS_RATIO_THRESHOLD, physRatio)` (§ Star intensity
 profile). Zeroing it snaps `n` toward `distNMin` from wherever it was, so
 no distance makes this one exact — it is held to
-`DISC_EXPONENT_TOLERANCE` instead, and that term is ~60× tighter than the
-other three at the shipped uniforms. **Keep the `min()`**: the bound is
-uniform-driven because `uSizeMin` grows once the exaggeration K floors
-and both `distN` endpoints are debug sliders, and which term binds can
-change with them.
+`DISC_EXPONENT_TOLERANCE` instead.
 
-Measured over the shipped catalog at a Sol vantage: of the 44,882 stars
-the window admits, none moves its exponent by even 0.01% — the tolerance
-is stated against a max-radius star sitting at the `uSizeMin` floor, a
-pairing no real star reaches, since a disc that wide is far too bright to
-size at the floor. The elision is WebGPU-only; the GLSL twin runs the
-branch unconditionally, so an A/B parity check differs by at most the
-tolerance.
+**The bound is a `min()` of two terms, not four.** The exponent term
+carries tiering's `uSizeMin · PHYS_RATIO_THRESHOLD` scaled by a factor at
+most 1, so it can never exceed the tiering bound and `pxSize` rides on
+tiering — leaving the peak as the only term that can outrank it. Both
+survive because the bound is uniform-driven: `uSizeMin` grows once the
+exaggeration K floors, both `distN` endpoints are debug sliders, and
+which of the two binds changes with them. At the shipped uniforms the
+exponent term binds, ~57× inside the peak.
+
+**The window takes each star's pulsation peak, never its static radius.**
+`StarFrame.maxPhysicalRadiusPc` folds `peakAmplitudeFactor` in, because a
+gate that decides whether to compute a size at all is a bound that must
+not move as a star breathes (`../../camera/controls/README.md` § The
+live-versus-peak pair). The catalog's widest disc swells 9.5% over its
+cycle, and a window solved from the static radius would sit that much too
+close.
+
+Measured over the built catalog at a Sol vantage, 50° FOV and 1000 px
+(`phys-size-elision-catalog.test.ts`, which pins every figure here): the
+window is 7.12 pc and admits **165 of 388,071 records**; the other
+387,906 are gated, and the widest disc among them subtends 2.14e-4 px —
+93× inside the 0.0199 px bound, so the worst exponent movement in the
+whole gated population is 2.9e-7, about 8,600× inside the tolerance. That
+margin is why the tolerance reads loose: it is stated against a
+max-radius star sitting at the `uSizeMin` floor, a pairing no real star
+reaches, since a disc that wide is far too bright to size at the floor.
+
+The elision is WebGPU-only; the GLSL twin runs the branch
+unconditionally, so an A/B parity check differs by at most the tolerance.
 
 ## Star intensity profile
 
