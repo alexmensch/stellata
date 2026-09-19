@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseGateOverride, parseRendererFlag } from './renderer-flag';
+import { parseExtinctionRefillMode, parseGateOverride, parseRendererFlag } from './renderer-flag';
 
 describe('parseRendererFlag', () => {
   it('reads #renderer=webgpu', () => {
@@ -50,5 +50,20 @@ describe('parseGateOverride', () => {
   it('leaves the renderer flag alone', () => {
     expect(parseRendererFlag('#webgpu-gate=force')).toBeNull();
     expect(parseRendererFlag('#renderer=webgpu&webgpu-gate=force')).toBe('webgpu');
+  });
+});
+
+describe('parseExtinctionRefillMode', () => {
+  it('selects the refill schedule', () => {
+    expect(parseExtinctionRefillMode('#av-refill=survivors')).toBe('survivors');
+    expect(parseExtinctionRefillMode('#av-refill=sliced')).toBe('sliced');
+    expect(parseExtinctionRefillMode('#renderer=webgpu&av-refill=survivors')).toBe('survivors');
+  });
+
+  // The shipped boot carries no fragment, and a typo must not pick a kernel.
+  it('is null on every other form', () => {
+    for (const h of ['', '#', '#av-refill', '#av-refill=', '#av-refill=morton', '#renderer=webgpu']) {
+      expect(parseExtinctionRefillMode(h)).toBeNull();
+    }
   });
 });

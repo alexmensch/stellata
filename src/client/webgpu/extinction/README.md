@@ -207,8 +207,10 @@ live app (`../../debug/memory/README.md`), and on a WebGL2 boot it
 | Position buffer (one vec4 float32 per slot) | 388,071 × 16 B ≈ 5.92 MiB |
 | Slot → star table (one uint32 per slot) | 388,071 × 4 B ≈ 1.48 MiB |
 | Camera-generation stamp (one uint32 per star) | 388,071 × 4 B ≈ 1.48 MiB |
+| Star → slot table (one uint32 per star; `#av-refill=survivors` only) | 388,071 × 4 B ≈ 1.48 MiB |
 
-So ~10.4 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
+So ~10.4 MiB of video memory for the pass's whole life (~11.9 under the
+survivor probe, `refill/README.md` § The survivor-driven probe), plus the ~5.9 MiB
 `Float32Array` the position attribute keeps on the JS heap after upload
 and the ~1.5 MiB `Uint32Array` behind the order table, which the parity
 check reads (§ The prepass kernel). **The buffer and that CPU copy are one

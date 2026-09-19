@@ -4,7 +4,10 @@ import type { ComputeNode, StorageBufferAttribute, WebGPURenderer } from 'three/
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
 import { createVoxelTexture } from '../../loaders/dust-voxel-upload';
+import { makeColorLutTexture } from '../../star-pipeline/blackbody-lut';
 import { RECOMPUTE_EPSILON_PC } from '../../star-pipeline/extinction/extinction-prepass-pure';
+import type { ExtinctionRefillMode } from '../../star-pipeline/extinction/extinction-seam';
+import { StarCompaction } from '../star/compaction/star-compaction';
 import { STAR_VISIBILITY_BOUND_KEYS } from '../star/star-visibility-tsl';
 import { makeStarLayerSources } from '../star/star-sources-mock';
 import { StarTables } from '../star/star-tables';
@@ -92,6 +95,8 @@ function makePrepass(
   count = COUNT,
   positions: Float32Array = diagonal(count),
   gated = true,
+  refillMode: ExtinctionRefillMode = 'sliced',
+  withCompaction = refillMode === 'survivors',
 ) {
   const shared = buildSharedUniforms({
     pixelRatio: 2, fovYRad: 0.75, viewportW: 1600, viewportH: 900,
@@ -99,24 +104,32 @@ function makePrepass(
   });
   const slots = new ExtinctionNodes();
   const fake = fakeRenderer();
+  const nodes = buildSharedUniformNodes(shared).nodes;
   // The gate reads per-star statics, so it needs the star layer's tables —
   // built over the mock's zero-filled attributes, which is enough for the
   // graph to compose; what it evaluates to is the A/B parity smoke's.
   const tables = gated ? new StarTables(makeStarLayerSources(count).sources) : null;
+  const compaction = withCompaction && tables !== null
+    ? new StarCompaction(fake.renderer, {
+      u: nodes, tables, lut: makeColorLutTexture(), dust: slots.dust, av: slots.av,
+    }, 6)
+    : null;
   const prepass = new WebGpuExtinctionPrepass({
     renderer: fake.renderer,
     positions,
     count,
-    nodes: buildSharedUniformNodes(shared).nodes,
+    nodes,
     slots,
     uniforms: shared,
     tables,
+    compaction,
+    refillMode,
   });
   const attachDust = () => {
     shared.uDustTexture.value = createVoxelTexture(4, new Uint8Array(64));
     slots.setDustTexture(shared.uDustTexture.value);
   };
-  return { ...fake, prepass, shared, slots, attachDust };
+  return { ...fake, prepass, shared, slots, compaction, attachDust };
 }
 
 describe('construction', () => {
@@ -302,6 +315,93 @@ describe('the dispatch order', () => {
       expect(Array.from(slotPositions.slice(slot * 4, slot * 4 + 4))).toEqual(
         [positions[star * 3], positions[star * 3 + 1], positions[star * 3 + 2], 0]);
     }
+  });
+});
+
+describe('the survivor-driven probe', () => {
+  const survivors = () => makePrepass(COUNT, diagonal(COUNT), true, 'survivors');
+
+  it('refuses to build without the compaction whose lists it would read', () => {
+    expect(() => makePrepass(COUNT, diagonal(COUNT), true, 'survivors', false))
+      .toThrow(/star layer/);
+  });
+
+  it('fills whole first, then dispatches the survivor kernel at the compaction\'s count', () => {
+    const { prepass, computes, dispatched, compaction, attachDust } = survivors();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    expect(dispatched).toEqual([COUNT, undefined]);
+    expect(computes[1].name).toBe('extinction-refill-survivors');
+    expect(computes[1].dispatchSize).toBe(compaction!.refillDispatch);
+    // A numeric count would make three prepend an early return on it.
+    expect(computes[1].count).toBeNull();
+  });
+
+  // The kernel reads the list the compaction built LAST frame, so the frame
+  // after the last request still owes one dispatch — then it parks.
+  it('a request dispatches on its frame and the next, then parks', () => {
+    const { prepass, computes, attachDust } = survivors();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    expect(computes).toHaveLength(3);
+    for (let frame = 0; frame < 5; frame++) prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    expect(computes).toHaveLength(3);
+  });
+
+  it('a turned view is a request here too', () => {
+    const { prepass, computes, attachDust } = survivors();
+    attachDust();
+    prepass.update(0, 0, 0, viewAt(0));
+    prepass.update(0, 0, 0, viewAt(0));
+    expect(computes).toHaveLength(1);
+    prepass.update(0, 0, 0, viewAt(0.1));
+    expect(computes).toHaveLength(2);
+  });
+
+  it('stages no mirror while a dispatch is still owed', () => {
+    const { prepass, reads, attachDust } = survivors();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.warmAvReadback();
+    expect(reads).toHaveLength(0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.warmAvReadback();
+    expect(reads).toHaveLength(1);
+  });
+
+  it('the parity march still refills whole and leaves nothing owed', () => {
+    const { prepass, dispatched, reads, attachDust } = survivors();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    dispatched.length = 0;
+    void prepass.verifyParity().catch(() => {});
+    expect(dispatched).toEqual([COUNT]);
+    prepass.warmAvReadback();
+    expect(reads).toHaveLength(1);
+  });
+
+  // A kernel handed a star has to find it in the slot-indexed table, so the
+  // slot table is the order table's inverse — and it is freed with the rest.
+  it('pairs the slot table as the inverse of the order table, and frees it', () => {
+    const SIDE = 8;
+    const count = SIDE ** 3;
+    const { prepass, released, attachDust } =
+      makePrepass(count, scrambledLattice(SIDE, 331), true, 'survivors');
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.dispose();
+    expect(released).toHaveLength(5);
+    const permutations = released
+      .map((a) => a.array)
+      .filter((a): a is Uint32Array => a instanceof Uint32Array && a.some((v) => v !== 0));
+    expect(permutations).toHaveLength(2);
+    const [a, b] = permutations;
+    for (let i = 0; i < count; i++) expect(b[a[i]]).toBe(i);
   });
 });
 

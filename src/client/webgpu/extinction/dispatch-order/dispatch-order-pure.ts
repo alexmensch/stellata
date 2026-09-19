@@ -66,6 +66,14 @@ export function mortonDispatchOrder(positions: Float32Array, count: number): Uin
   return order;
 }
 
+/** Star → dispatch slot, the inverse of `order`: what a kernel handed a
+ *  star index needs to find that star in the slot-indexed position table. */
+export function inverseOrder(order: Uint32Array): Uint32Array {
+  const slotOf = new Uint32Array(order.length);
+  for (let i = 0; i < order.length; i++) slotOf[order[i]] = i;
+  return slotOf;
+}
+
 /** Undo the permutation: element `i` of `src` belongs to star `order[i]`. */
 export function scatterByOrder(
   src: Float32Array,

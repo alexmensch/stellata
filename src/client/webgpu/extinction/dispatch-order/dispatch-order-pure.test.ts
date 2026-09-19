@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MORTON_BITS_PER_AXIS, mortonDispatchOrder, scatterByOrder,
+  MORTON_BITS_PER_AXIS, inverseOrder, mortonDispatchOrder, scatterByOrder,
 } from './dispatch-order-pure';
 import { scrambledLattice } from './dispatch-order-fixture';
 
@@ -71,6 +71,19 @@ describe('mortonDispatchOrder', () => {
   it('quantises each axis to the widest half the spreader accepts', () => {
     expect(MORTON_BITS_PER_AXIS).toBe(16);
     expect(MORTON_BITS_PER_AXIS >> 1).toBe(8);
+  });
+});
+
+describe('inverseOrder', () => {
+  it('composes with the order to the identity in both directions', () => {
+    const order = mortonDispatchOrder(lattice(), COUNT);
+    const slotOf = inverseOrder(order);
+    for (let slot = 0; slot < COUNT; slot++) expect(slotOf[order[slot]]).toBe(slot);
+    for (let star = 0; star < COUNT; star++) expect(order[slotOf[star]]).toBe(star);
+  });
+
+  it('inverts a small explicit permutation', () => {
+    expect(Array.from(inverseOrder(Uint32Array.from([2, 0, 3, 1])))).toEqual([1, 3, 0, 2]);
   });
 });
 

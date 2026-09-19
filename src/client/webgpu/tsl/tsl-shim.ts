@@ -3,10 +3,12 @@
 // (README.md § TSL typing shim).
 
 import {
-  attribute, min as minIntPinned, mix as mixFloatPinnedT,
+  attribute, compute as computeCountPinned, min as minIntPinned, mix as mixFloatPinnedT,
   step as stepFloatPinned, textureSize as textureSizeBare,
 } from 'three/tsl';
-import type { Node, TextureNode } from 'three/webgpu';
+import type {
+  ComputeNode, IndirectStorageBufferAttribute, Node, TextureNode,
+} from 'three/webgpu';
 import type { Vector2, Vector3, Vector4 } from 'three';
 import type { NodeObject } from 'three/src/nodes/tsl/TSLCore.js';
 
@@ -59,6 +61,17 @@ interface MinIntCapable {
   (x: Node<'ivec2'>, y: Node<'ivec2'>): Node<'ivec2'>;
 }
 export const min = minIntPinned as unknown as MinIntCapable;
+
+// compute()'s count is number-pinned upstream while the runtime takes an
+// IndirectStorageBufferAttribute as the dispatch size and reads the
+// workgroup count off the GPU (WebGPUBackend.compute). A numeric count
+// would also make three prepend `if (instanceIndex >= count) return`, which
+// an indirect dispatch has no count to bound by.
+export const computeIndirect = computeCountPinned as unknown as (
+  node: Node,
+  dispatch: IndirectStorageBufferAttribute,
+  workgroupSize?: number[],
+) => ComputeNode;
 
 // textureSize() returns the bare TextureSizeNode class type, losing the
 // whole node-object surface (swizzles, operators, conversions).

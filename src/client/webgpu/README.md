@@ -10,9 +10,9 @@ members reach a browser that cannot run it (§ Import boundary).
 
 ```
 src/client/webgpu/
-  renderer-flag.ts (+ test)         Parse #renderer=webgpu|webgl2 and the
-                                    #webgpu-gate=<verdict> dev switch from
-                                    the URL fragment.
+  renderer-flag.ts (+ test)         Parse the URL-fragment switches:
+                                    #renderer=, #webgpu-gate= and
+                                    #av-refill= (extinction/refill/).
   boot-route.ts (+ test)            resolveBootRoute — gate page or
                                     renderer, off the fragment and the
                                     capability probe. In the entry
