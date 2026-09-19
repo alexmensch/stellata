@@ -133,19 +133,23 @@ lg          0.106             0.303         0.25   ungated
 
 The two measured columns are independent readings of the same quantity and
 agree in order: the worst strict same-tree repeat pair on disk, and the
-span of the whole comparable population (960 frames, canon position, one
-catalogue, no setup lever), which bounds the noise from above by containing
-any real change as well. Each constant is 1.5× the span rounded up to 0.05
-— so `COMPUTE_SCATTER_FLOOR_MS` holds 0.45 at sol and lg, and the FLOOR
-column above is what `computeFloorMs` applies after **capping at
-`DWELL_FLOOR_MS`**. Widening those two to meet their own scatter would
-blind the one row that can see a compute regression at all, so the cap is
-what makes a re-derivation only ever tighten a row.
+span of the whole comparable population, which bounds the noise from above
+by containing any real change as well. That population is every row a gate
+would actually compare — 960 frames, canon position, one catalogue, no
+setup lever, **and its frame row steady**, the last because a trending
+context is refused rather than banded (§ State guard) and reading its
+compute median back in widens earth from 0.094 to 0.145 on one row. Each
+constant is 1.5× the span rounded up to 0.05 — so `COMPUTE_SCATTER_FLOOR_MS`
+holds 0.45 at sol and 0.50 at lg, and the FLOOR column above is what
+`computeFloorMs` applies after **capping at `DWELL_FLOOR_MS`**. Widening
+those two to meet their own scatter would blind the one row that can see a
+compute regression at all, so the cap is what makes a re-derivation only
+ever tighten a row.
 
 The `max(0.25 ms, 1 % × pinned)` this replaces was drawn from how far two
 cold **whole-frame** dwells of one tree disagree — a 10–30 ms reading — and
 it does not transfer: it reads as 15× the noise at mw50 and about 1× it at
-sol, a factor of 70 across the five under one constant. At mw120 the
+sol, a factor of 18 across the five under one constant. At mw120 the
 compaction could have got most of the way to twice as dear and printed `~`,
 which is the row's whole purpose missed. The 1 % term survives for a row
 that has run away — under `--force-recompute` mw120's compute reads 13.17 ms,

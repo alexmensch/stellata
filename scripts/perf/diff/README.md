@@ -85,7 +85,7 @@ runs carry the compute stream (`../pins/README.md` § The compute row) it is
 banded as the frame row is but on **that vantage's own floor**, on
 `compute-p50`, with its own `floor` column off its own p10 — the whole-frame
 constant runs 15× the compute row's noise at mw50 and about 1× it at sol, a
-factor of 70 across the five. One side alone refuses that row and leaves the
+factor of 18 across the five. One side alone refuses that row and leaves the
 frame row standing — an archive written before the compute pool was
 resolved carries no stream, and a run since does; neither side, every
 WebGL2 pair, prints no compute row at all. A frame row that is refused

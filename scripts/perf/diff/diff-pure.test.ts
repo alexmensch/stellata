@@ -638,13 +638,25 @@ describe('the compute row', () => {
     expect(diff.rows[1].floorDeltaMs).toBeCloseTo(0.6, 9);
   });
 
-  it('bands it on the vantage own floor, not the whole-frame constant', () => {
+  it("bands it on the vantage's own floor, not the whole-frame constant", () => {
     expect(COMPUTE_SCATTER_FLOOR_MS).toEqual({
-      mw120: 0.05, sol: 0.45, earth: 0.15, mw50: 0.05, lg: 0.45,
+      mw120: 0.05, sol: 0.45, earth: 0.15, mw50: 0.05, lg: 0.50,
     });
     expect(computeFloorMs('mw120', 0.289)).toBe(0.05);
     expect(computeFloorMs('mw50', 0.308)).toBe(0.05);
     expect(computeFloorMs('earth', 0.418)).toBe(0.15);
+  });
+
+  // Every constant is 1.5x its vantage's population span rounded up to 0.05,
+  // and a table that does not re-derive is one a later session re-litigates.
+  it('holds each constant at the derivation the README states', () => {
+    const POPULATION_SPAN_MS = {
+      mw120: 0.032, sol: 0.284, earth: 0.094, mw50: 0.017, lg: 0.303,
+    } as const;
+    for (const [name, span] of Object.entries(POPULATION_SPAN_MS)) {
+      const derived = Number((Math.ceil((1.5 * span) / 0.05) * 0.05).toFixed(2));
+      expect([name, COMPUTE_SCATTER_FLOOR_MS[name as ScenarioName]]).toEqual([name, derived]);
+    }
   });
 
   // sol's and lg's measured scatter is 0.284 and 0.303 ms, past the inherited

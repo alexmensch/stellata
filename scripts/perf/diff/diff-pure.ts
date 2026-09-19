@@ -68,7 +68,7 @@ export const COMPUTE_SCATTER_FLOOR_MS: Readonly<Record<ScenarioName, number>> = 
   sol: 0.45,
   earth: 0.15,
   mw50: 0.05,
-  lg: 0.45,
+  lg: 0.50,
 };
 
 function floorFor(floorMs: number, baselineMs: number): number {
