@@ -308,6 +308,14 @@ count the finish kernel wrote is `⌈n / 64⌉`, whose last workgroup runs past
 the `n` listed entries. The kernel tests `instanceIndex < refillDispatch[3]`
 itself, against the length written beside the dispatch.
 
+**The prepass therefore binds a buffer the star layer owns, and that fixes
+a teardown order.** `refillDispatch` is the compaction's; the refill
+kernel's bind group holds it. So the shell disposes the prepass *before*
+the star layer (`../../../stellata.ts`), or the layer releases the buffer
+while a live bind group still names it. The reverse order is what reads as
+correct — layers before the passes that feed them — which is why it is
+written down here.
+
 **What a missing guard costs is not an out-of-bounds write.** WebGPU
 bounds-checks storage access, so the tail's read of the worklist comes back
 clamped or zero, `self` resolves to a *valid* star, and the tail writes a
