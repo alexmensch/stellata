@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ARG_DEFAULTS, ArgError, BACKEND_REQUESTS, MODES, ROUNDTRIP_IDLE, parsePinArgs, parseRunArgs, pinUsage, usage,
+  ARG_DEFAULTS, ArgError, BACKEND_REQUESTS, MODES, ROUNDTRIP_IDLE,
+  parsePinArgs, parseRunArgs, parseSurvivorsArgs, pinUsage, usage,
 } from './args';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
 import { DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
@@ -312,5 +313,20 @@ describe('parsePinArgs — the pin from saved runs', () => {
 
   it('prints every flag in the usage text', () => {
     for (const flag of ['--pin', '--accept', '--dry-run']) expect(pinUsage()).toContain(flag);
+  });
+});
+
+describe('parseSurvivorsArgs', () => {
+  it('defaults the url and writes no file unless asked', () => {
+    expect(parseSurvivorsArgs([])).toEqual({ url: ARG_DEFAULTS.url, json: null });
+  });
+
+  it('drops the -- that pnpm run forwards ahead of the flags', () => {
+    expect(parseSurvivorsArgs(['--', '--url', 'http://localhost:5199', '--json', 'a.json']))
+      .toEqual({ url: 'http://localhost:5199', json: 'a.json' });
+  });
+
+  it('refuses an unknown flag rather than ignoring it', () => {
+    expect(() => parseSurvivorsArgs(['--scenario', 'lg'])).toThrow(ArgError);
   });
 });

@@ -27,9 +27,11 @@ scripts/perf/
   checkout.ts               What run.ts and pin.ts share about the checkout:
                             root, main checkout, git provenance, the pin's
                             read / compare / write.
-  args.ts (+ test)          Flags → RunArgs and PinArgs (node:util
-                            parseArgs), plus the mode-compatibility check
-                            over the flags actually typed.
+  args.ts (+ test)          Flags → RunArgs, PinArgs and SurvivorsArgs
+                            (node:util parseArgs), plus the mode-compatibility
+                            check over the flags actually typed. All three
+                            parsers here, including the survivors one, because
+                            survivors.ts cannot be imported by a test.
   run-pure.ts (+ test)      The decisions around a launch: which clock a
                             backend request gets, which adapters disqualify a
                             run, how the probe reads, whether a marker arms,

@@ -466,3 +466,24 @@ export function parsePinArgs(argv: readonly string[]): PinArgs {
     dryRun: values['dry-run'] as boolean,
   };
 }
+
+/** `pnpm run survivors` — README.md § Survivor counts. */
+export interface SurvivorsArgs {
+  readonly url: string;
+  readonly json: string | null;
+}
+
+/** Here rather than beside the instrument so a test can reach it: survivors.ts
+ *  imports Playwright as a value (README.md § Files). */
+export function parseSurvivorsArgs(argv: readonly string[]): SurvivorsArgs {
+  try {
+    const { values } = parseArgs({
+      args: withoutPassthroughDash(argv),
+      options: { url: { type: 'string' }, json: { type: 'string' } },
+      strict: true,
+    });
+    return { url: values.url ?? ARG_DEFAULTS.url, json: values.json ?? null };
+  } catch (e) {
+    throw new ArgError(e instanceof Error ? e.message : String(e));
+  }
+}
