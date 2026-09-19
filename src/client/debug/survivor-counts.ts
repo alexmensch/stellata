@@ -24,7 +24,7 @@ export interface SurvivorReport extends SurvivorCountsRead {
    *  from a kernel that already gates on the prefilter. */
   drawnOfPrefilter: number;
   /** Stars the refill's frustum test admits, over records — the population
-   *  that pays the gate's reads. Null with `inFrame`. */
+   *  that pays the gate's reads. Null where `inFrame` is. */
   inFrameFraction: number | null;
 }
 

@@ -467,7 +467,7 @@ export function parsePinArgs(argv: readonly string[]): PinArgs {
   };
 }
 
-/** `pnpm run survivors` — README.md § Survivor counts. */
+/** `pnpm run survivors` — the canon-vantage survivor counts, no clock. */
 export interface SurvivorsArgs {
   readonly url: string;
   readonly json: string | null;

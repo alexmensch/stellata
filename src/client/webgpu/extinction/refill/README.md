@@ -57,17 +57,32 @@ nothing. State the vantage before narrowing the slack.
 ### Counting the in-frame population
 
 `countInFrame()` runs the frustum test above over `catalog.positions` on
-the CPU at the view the kernel last dispatched with — the same matrix,
-the same `uViewport`, the same pinned-star exemption — and returns how
-many stars it admits. It is the number that sizes what the gate's four
-reads cost: only an in-frame thread reaches them. `debug.survivors()`
-prints it beside the compaction's counters and `pnpm run survivors`
-records it (`../../../debug/README.md` § Survivor counts), so the split
-of a catalogue at a vantage into frustum-rejected, in frame but
-gate-rejected, and drawn is readable without a clock. The count is
-float64 where the kernel is float32, so a star within a few ulp of the
-screen edge can fall either side; at a 256 px slack that is not a number
-anyone reads.
+the CPU at the view the kernel last dispatched with, and returns how many
+stars it admits. It is the number that sizes what the gate's four reads
+cost: only an in-frame thread reaches them. `debug.survivors()` prints it
+beside the compaction's counters and `pnpm run survivors` records it
+(`../../../debug/README.md` § Survivor counts), so the population paying
+those reads is readable at a vantage without a clock.
+
+**Only the matrix is the last dispatch's.** `uViewport` and
+`uPinFocusToCenter` are read live. A viewport change moves the projection
+and so re-dispatches, but setting the focal pin bumps nothing — a count
+taken after a focus change carries the new pin against the old matrix, one
+star either way. Take it at a settled camera, as `debug.survivors()`
+already asks.
+
+**`in frame − drawn` bounds the gate-rejected population from above; it is
+not that population.** `drawn` is the compaction's survivor count, taken
+under its own frustum — the quad's half-extent, not this test's fixed
+256 px — while the gate's own four terms are the `prefilter` counter,
+which is counted over the whole catalogue ahead of any frustum. So
+in-frame-and-gate-admitted is not measured here and does not follow from
+these three numbers; a scoping argument may lean on the bound and not on
+more. Where nothing draws, the bound is exact.
+
+The count is float64 where the kernel is float32, so a star within a few
+ulp of the screen edge can fall either side; at a 256 px slack that is not
+a number anyone reads.
 
 ### The generation stamp
 
