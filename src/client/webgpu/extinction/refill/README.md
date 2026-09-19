@@ -1,21 +1,29 @@
-# Spreading the extinction refill across frames
+# Refilling the extinction cache off a worklist
 
-Which slots the A_V cache refills on a given frame. The kernel and the
-cache gate are the parent's (`../README.md`); this folder owns only the
-schedule, and `refill-slices-pure.ts` is the whole of it — a cursor, a
-request flag, and one function that turns them into this frame's dispatch.
+Which stars the A_V cache refills on a given frame. The march and the
+cache gate are the parent's (`../README.md`); this folder owns the
+population and the schedule: the compaction kernel appends the stars a
+frame has to refill to a worklist, and the prepass marches one quarter of
+it per frame.
 
 ```
 src/client/webgpu/extinction/refill/
-  refill-slices-pure.ts       REFILL_SLICES, refillSliceLength, planRefill
-    (+ test)                  and the cursor they move — which slots this
-                              frame dispatches, or none.
-  refill-decision-pure.ts     The kernel's per-slot verdict in frustum mode
-    (+ test)                  (slotRefills), the slack, the view it tests
-                              against (composeViewProjectionAbs, sameView),
-                              and the CPU count of what that view admits
-                              (countInFrameAbs). The rotation case is
-                              pinned here.
+  refill-slices-pure.ts       REFILL_SLICES, the residue partition
+    (+ test)                  (refillQuarterOf, refillListBase,
+                              refillWorklistLength), and the cursor —
+                              planRefill over the quarters still owed.
+  refill-decision-pure.ts     The per-star verdict as CPU arithmetic
+    (+ test)                  (slotRefills), the slack, the view a turn is
+                              detected against (composeViewProjectionAbs,
+                              sameView), and the CPU count of what that
+                              view admits (countInFrameAbs). The rotation
+                              case is pinned here.
+  refill-worklist-nodes.ts    The shared slots: stamps and worklist over
+                              placeholders, the arm / generation / quarter
+                              uniforms both kernels read, and counterElement
+                              — the quarter's counter in the args buffer.
+  refill-worklist-tsl.ts      The producer block the compaction kernel
+                              runs — frustum, gate, stamp, append.
 ```
 
 ## Only what is in frame
@@ -23,29 +31,21 @@ src/client/webgpu/extinction/refill/
 A_V is read for the stars the compaction lists — the ones whose quad can
 touch the viewport — and for nothing else, so a refill of everything the
 prefilter admits marches, at the `mw120` canon vantage, some five times
-the stars any draw will consult. The kernel therefore tests the frustum
-itself, in **frustum mode**, on the position each thread already holds:
+the stars any draw will consult. The frustum test therefore sits ahead of
+the refill, and the kernel that runs it is the **compaction's**, which
+already holds every star's position:
 
-1. `viewProjectionAbs × vec4(absPos, 1)` — projection × view × T(−worldOffset),
-   composed on the CPU in float64 each frame from the camera the shell
-   hands `update()`, so clip space comes straight off the absolute
-   position table. The same projection × view the compaction kernel
-   tests against, with the origin shift folded in — **and the same camera,
-   which is a frame-order constraint, not an identity**. The rides inside
-   the layer fan-out move the camera, so the shell runs this pass *after*
-   the fan-out and the compaction after that (`../../../stellata.ts`
-   `animate`). Run it before, and a warp or focus lerp leaves the two
-   kernels disagreeing about what is in frame on exactly the frames the
-   camera is moving fastest — the compaction lists a star for drawing whose
-   refill never saw it.
+1. `viewProjection × vec4(localPos, 1)` — the compaction's own matrix over
+   the floating-origin local position, the same clip its survivor test
+   takes. No second matrix and no second camera: producer and survivor
+   list are one dispatch.
 2. `starQuadOffscreenTsl` (`../../star/compaction/frustum-tsl.ts`) with a
    fixed half-extent of `EXTINCTION_FRUSTUM_SLACK_PX` in place of the
-   quad's size, which is not known here — it needs the size solve, which
-   needs the A_V being computed. The pinned focal star counts as seen
+   quad's size, which is not known ahead of the solve — it needs the size,
+   which needs the A_V being computed. The pinned focal star counts as seen
    whatever its projection, as it does in the compaction.
-3. Out of frame → the thread returns before the gate's four static-table
-   reads, leaving the star's A_V and stamp as they were. In frame → the
-   **generation stamp** below decides.
+3. Out of frame → nothing, and the star's A_V and stamp stay as they were.
+   In frame → the cache gate, then the **generation stamp** below.
 
 **The slack's failure mode is a stale A_V, never a missing star.** The
 compaction still lists a star whose quad overlaps the screen edge by more
@@ -54,19 +54,26 @@ resolved disc hundreds of px wide with its centre well past the edge — a
 close-approach case, where the camera's AU-scale motion moves A_V by
 nothing. State the vantage before narrowing the slack.
 
+**The prepass still composes the absolute view each frame** —
+projection × view × T(−worldOffset) in float64 from the camera the shell
+hands `update()` — to *detect* a turn (`sameView`), since a turn is a
+request (§ A view change is a refill request), and for `countInFrame()`.
+The shell runs the prepass after the ride fan-out and the compaction after
+that (`../../../stellata.ts` `animate`): the request the prepass raises
+from this frame's camera is what the compaction answers in this frame.
+
 ### Counting the in-frame population
 
 `countInFrame()` runs the frustum test above over `catalog.positions` on
-the CPU at the view the kernel last dispatched with, and returns how many
-stars it admits. It is the number that sizes what the gate's four reads
-cost: only an in-frame thread reaches them. `debug.survivors()` prints it
-beside the compaction's counters and `pnpm run survivors` records it
-(`../../../debug/README.md` § Survivor counts), so the population paying
-those reads is readable at a vantage without a clock.
+the CPU at the view the prepass last saw, and returns how many stars it
+admits — the population the producer runs the cache gate over on an armed
+frame. `debug.survivors()` prints it beside the compaction's counters and
+`pnpm run survivors` records it (`../../../debug/README.md` § Survivor
+counts), so that population is readable at a vantage without a clock.
 
-**Only the matrix is the last dispatch's.** `uViewport` and
+**Only the matrix is the last view's.** `uViewport` and
 `uPinFocusToCenter` are read live. A viewport change moves the projection
-and so re-dispatches, but setting the focal pin bumps nothing — a count
+and so is a new view, but setting the focal pin bumps nothing — a count
 taken after a focus change carries the new pin against the old matrix, one
 star either way. Take it at a settled camera, as `debug.survivors()`
 already asks.
@@ -89,117 +96,172 @@ a number anyone reads.
 `stamps[star]` is the **camera generation** the star's A_V was last
 marched at; the generation bumps on exactly the requests that used to
 recompute everything — displacement past `RECOMPUTE_EPSILON_PC`, a moved
-gate bound, a dirty mark — and `absCameraPos` is set at the bump. A slot
+gate bound, a dirty mark — and `absCameraPos` is set at the bump. A star
 in frame whose stamp equals the generation is skipped; one whose stamp
-predates it marches and is stamped. So a rotation, which bumps nothing,
-marches only the stars it newly exposes, and each star marches at most
-once per camera generation and only if seen. The values are the same
-march at the same camera: exact, no accuracy change, no catalogue rebuild.
-`slotRefills` is the CPU form and the rotation case is its test.
+predates it is appended, marched when its quarter comes, and stamped. So a
+rotation, which bumps nothing, appends only the stars it newly exposes,
+and each star marches at most once per camera generation and only if seen.
+The values are the same march at the same camera: exact, no accuracy
+change, no catalogue rebuild. `slotRefills` is the CPU form and the
+rotation case is its test.
 
 **The epsilon measures from the generation's camera, never from the last
-dispatch.** A slice leaves `lastCam` where the bump set it. Reset
-it per dispatch and a camera creeping under one epsilon a frame outruns the
-gate for good once a cycle has run — pinned in the prepass test.
+dispatch.** A quarter leaves `lastCam` where the bump set it. Reset it per
+dispatch and a camera creeping under one epsilon a frame outruns the gate
+for good once a flight has run — pinned in the prepass test.
 
 ### A view change is a refill request — nothing more
 
-`planRefill`'s `wanted` is `bump || viewChanged`, so **turning the camera
-asks for a refill exactly as displacing it does** and the cursor answers
-both the same way: one slice a frame, wrapping while requests keep
-arriving, parking when they stop. Past the first fill no frame dispatches
-more than `refillSliceLength` slots, whatever the camera did.
+`wanted` is `bump || viewChanged`, so **turning the camera asks for a
+refill exactly as displacing it does** and the cursor answers both the
+same way: arm the compaction, then march the quarters it lists. What that
+costs a star the turn newly exposes is up to `REFILL_SLICES` frames of its
+last stamp's value, the same bound § The staleness this buys derives for
+displacement — and for the same reason, since a turn at a parked camera
+moves A_V by nothing at all. The star is exact once its quarter comes
+round.
 
-What that costs a star the turn newly exposes is `REFILL_SLICES` frames of
-its last stamp's value, the same bound § The staleness this buys derives
-for displacement — and for the same reason, since a turn at a parked camera
-moves A_V by nothing at all. The star is exact once its slice comes round.
+A turn costs no dispatch of its own: the compaction runs over every
+catalogue star on every rendered frame regardless, and an armed frame adds
+the producer block to a quarter of its threads (§ The compaction appends
+the worklist). What a turning camera pays per frame is the march of one
+class of the stars it exposed.
 
-**Never dispatch the whole slot range on a view change**, however little of
-it can march. The tempting version buys a newly exposed star its exactness
-one frame sooner and costs a thread per catalogue star on every turning
-frame; each of those threads pays a `u32` order read, a `vec4` position
-read and a mat4×vec4 before it can early-out — 20 B per star, 7.8 MB at
-388,071 records and 25.6 MB at 1,278,785, per frame, for as long as the
-camera turns.
+## The compaction appends the worklist
 
-**The argument is the thread count, and it holds whatever a thread costs.**
-A whole-range dispatch runs `REFILL_SLICES` times the threads of a slice over
-the same per-thread work, so routing the request through the cursor divides
-that cost by `REFILL_SLICES` — no claim about how the frustum prologue
-compares to anything else is needed, and none should be made. Under the
-forced-recompute lever the extinction pass costs about 0.25 ms a frame at
-`mw120` and `lg` over a `count/REFILL_SLICES` slice
-(`.perf-runs/2026-09-19/8cg575-frustum-recompute-all.json` compute p50 minus
-`8cg585-real-pin.json`'s, which has no recompute running). Scaling the
-per-thread part by four puts a whole-range dispatch near **1 ms per turning
-frame at 388,071 records** — an over-estimate, since one compute pass's
-submit does not scale with it, and over three times that at 1,278,785.
+The compaction kernel already runs one thread per catalogue star every
+rendered frame and already has the clip position. On an **armed** frame
+the threads of **one residue class** — `self % REFILL_SLICES` equal to the
+`quarter` uniform — also run `appendRefillWorklistTsl` after the solve:
+frustum at the refill's slack, then the cache gate (`starCacheVisibleTsl`,
+the four dust-independent terms over the *brightest* magnitude), then
+`stamps[self] != cameraGeneration`, and a star passing all three is
+appended to that class's sub-list with one `atomicAdd`. The arm is a
+uniform the prepass holds up for `REFILL_SLICES` frames from a request, so
+the four classes are built on four consecutive frames; a settled frame
+pays one uniform compare per thread and reads nothing else.
 
-That difference is also why the dispatch shape has to stay one concept: two
-shapes means the cheap one is measured and the dear one is not.
+**One class per armed frame, not four.** Building every class every frame
+was measured first (`stellata-8cg.58.10` notes, 2026-09-19): at 1,278,785
+records it read 0.90 ms per moving frame at `mw120` against the sliced
+kernel's 0.57, and the excess followed the in-frame, gate-admitted
+population — a stamp read, an atomic and a list write for every stale star
+on every frame, four times what the sliced kernel amortised. Building a
+quarter of the catalogue per frame puts the producer's data work at the
+sliced kernel's rate while the frame still marches one class.
 
-**Whole mode** — the first fill and `verifyExtinction()` — skips the
-frustum test and the stamp check and stamps every star, so the parity
-instrument's total bit compare is unchanged. Until the shell has supplied
-a view, every dispatch runs in whole mode over its slots.
+**The population is the cache gate's, not the survivor list's.** Two
+reasons, each of which alone rules the survivor list out as the
+population:
 
-## The spike is the problem, not the total
+- Survival is decided *after* the A_V read — `solveStarTsl` adds
+  `absorbAV` and re-tests the bounds before `onAlive` fires — so a star
+  whose cached A_V is stale-high is culled, unlisted, and never refilled: a
+  hysteresis that leaves it dark until something forces a whole fill.
+- The survivor prefilter runs over the *live* pulsation phase, and a
+  variable in its faint phase through the last armed frames of a move
+  would then brighten at a settled camera with the A_V of wherever the
+  move began. The cache gate credits every star its whole brightward
+  swing, so it admits a superset and the clock moves nothing it reads
+  (`../README.md` § What a CACHE owes).
 
-A whole-catalogue refill is one thread per star × 48 taps — 18.6M volume
-samples at 388,071 records, and 61M at the V≤11 synthetic set's 1,278,785.
-Measured on the forced-recompute dwell before the cache gate landed: 2.4–2.9
-ms at 388,071 and 7.8–8.2 ms at 1,278,785, on every frame the camera moves
-more than `RECOMPUTE_EPSILON_PC`. At 1.28M that took mw50's wall-clock median
-from 16.7 to 33.3 ms — a frame crossing the vsync boundary, which is a thing
-the user sees, where the same total spread under the boundary is not.
+Both are dust-independent and phase-independent, which is what lets the
+list be built ahead of the read and marched with **no gate in the refill
+kernel at all** — a listed star has passed it. Placing the block outside
+the solve's prefilter is the cost of the second point: a building thread
+re-evaluates the four terms the solve just read from the same record,
+cache-hot, and the block sits after the solve so those reads are the
+solve's to reuse.
 
-Spreading changes no per-frame total: one slice of `1/REFILL_SLICES` of the
-catalogue dispatches per frame, so a whole refill takes `REFILL_SLICES` frames
-and each costs that fraction.
+**Four sub-lists by residue.** A star lands in sub-list
+`self % REFILL_SLICES`, each of capacity `⌈count / REFILL_SLICES⌉`
+(`refillSliceLength`), so the list can never overflow — a residue class is
+exactly that large — and the whole buffer is `count` rounded up to the
+slice. The four append counters ride in the compaction's args buffer past
+the prefilter counter (`compaction-pure.ts` `REFILL_LIST_COUNT_BASE`; all
+three kernels address one through `counterElement` here),
+which is what keeps the compaction kernel at **8 storage buffers**, the
+core guarantee: position, statics, suppress-pulsation, A_V, survivors,
+args, and now stamps and worklist
+(`../../star/compaction/README.md` § Binding budget). A ninth would need a
+counter folded somewhere else, not a new buffer.
 
-**The run total is not fixed, and a lone request is what moves it.** The wrap
-below restarts the cursor at slot 0 and clears `pending`, so the cycle it
-starts runs all `REFILL_SLICES` slices rather than the *k* the request still
-owed — a request landing at slice *k* costs `(REFILL_SLICES − k) +
-REFILL_SLICES` slices, up to two whole refills for one request, worst when it
-lands early in a cycle. A camera that keeps moving asks every frame, where the
-cycling is continuous and nothing is spent twice, so what pays that ceiling is
-the isolated request: one dust chunk, one aperture change, the last frame of a
-warp. Parking the cursor at the slot the request arrived at recovers it, at a
-third state field and a park-mid-cycle branch (`stellata-8cg.58.8`).
+**The finish kernel sizes the class just built.** The compaction's
+one-thread finish kernel reads that class's counter (`quarter`, the same
+shared uniform the producer keyed on) and writes `[⌈n / 64⌉, 1, 1, n]`
+into `refillDispatch`: the three u32 `dispatchWorkgroupsIndirect` reads,
+then the length the refill kernel bounds itself by (§ The kernel bounds
+itself by the listed length). The reset kernel zeroes only that class's
+counter, under the same arm; the other three hold the lists built on the
+frames before, of which the prepass marches exactly one — the one built
+last frame — so nothing is ever overwritten before it is read.
 
-## The cursor, and why a request never restarts it
+**The refill kernel resolves star → slot.** The list carries catalogue
+indices; the position table is in Morton slot order
+(`../dispatch-order/README.md`), so the kernel reads `slotOf[self]` — the
+order table's inverse, 1.48 MiB at 388,071 — then the position, marches,
+and writes `av[self]` and `stamps[self]`. The A_V buffer stays
+catalogue-star-indexed, as every consumer expects.
 
-`planRefill` holds a `base` — the next slot to refill, or `count` for a
-parked cursor — and a `pending` flag. A request (camera displacement past
-the epsilon, a moved gate bound, a re-packed position table, a dust chunk)
-**starts** a cycle from a parked cursor and otherwise only sets `pending`.
-The cursor advances one slice per frame, and on reaching the end wraps to
-slot 0 if `pending` is set, or parks.
+**Coherence is the open cost, and the order is the residue's, not the
+Morton key's.** A sub-list is in append order: catalogue order, brightest
+first and spatially random, scrambled further by the atomics. Per marched
+star that is dearer than the Morton order the fill kernel marches in — the
+probe that preceded this design bracketed it at up to 2–6× on a
+contaminated measurement (`stellata-8cg.58.10` notes; the runs are
+`.perf-runs/2026-09-19/8cg5810-m11-*.json`), and per whole refill the list
+dispatch still won at every vantage because what it removes — a thread per
+catalogue star and four gate reads per in-frame thread — outweighs what the
+order loses. The residue is the seam a coherence lever moves: bucketing by
+`slotOf` range instead is `stellata-8cg.58.11`, measured against this
+tree's forced pair and never before it.
 
-Restarting on every request is the obvious spelling and it starves the
-catalogue: camera displacement fires on **every** frame of a warp, and an
-epoch scrub fires `refreshPositions` nearly as often, so slice 0 would be
-refilled forever and every other star would keep the value its last
-completed cycle gave it.
+## The cursor, and why a request never stalls it
 
-**Every star is refilled within `REFILL_SLICES` frames of any request,
-wherever in the cycle the request lands.** With the cursor at slice *k* when
-a request arrives, slices *k…S−1* refill over the next *S−k* frames, the
-wrap then covers *0…k−1* over the *k* after that, and *(S−k) + k = S*. That
-is the bound the staleness below rests on, and the test that pins it sweeps
-the request across every position in the cycle.
+`planRefill` holds `owed`, the armed frames still to run — one class built
+per frame — `quarter`, the class built last frame, and `built`, whether one
+was. A request (camera displacement past the epsilon, a turn, a moved gate
+bound, a re-packed position table, a dust chunk) sets `owed` back to
+`REFILL_SLICES`; the arm is up while anything is owed, and a frame whose
+predecessor built a class marches it and advances `quarter`. The prepass
+runs *before* the compaction, so the class marched on frame N is the one
+built on frame N−1 — one frame of lag — and the class left in the uniform
+after the dispatch is the one the compaction builds and sizes on frame N.
+Consume, then produce, in that order and in one `update()`.
+
+**Every star a request makes stale is marched within `REFILL_SLICES`
+frames of it, wherever in a flight the request lands.** A star's residue
+never moves, so under a request every frame — a warp, where the generation
+bumps each frame — its class is built every fourth frame and it is marched
+the frame after, every fourth frame; and when requests stop, the arm holds
+for the frames still owed, so every class is built once more from the
+final generation and marched. The pure test simulates producer and
+consumer over a catalogue and pins the bound tight: the last class of a
+lone request marches on frame `REFILL_SLICES` exactly.
+
+**The A/B switch parks the cursor and re-requests, rather than resuming.**
+Disarming mid-flight strands the classes still owed, and at a camera that
+never moves again nothing would ever ask for them, so `setEnabled(false)`
+marks the pass dirty: the first re-enabled frame bumps the generation and
+builds all four afresh.
+
+**A parked cursor, and only a parked cursor, is a frame the pick mirror can
+be staged on.** `warmAvReadback` refuses while anything is in flight — a
+frame owed or a class built and not yet marched: a copy taken mid-flight
+is superseded by the next class before the hover dwell that wanted it can
+read a byte (`../README.md` § Cold reads). Nothing in flight means no
+request has landed for `REFILL_SLICES` frames, camera or view, so that one
+test covers a turning camera as well as a travelling one.
 
 ## The staleness this buys, and what sets REFILL_SLICES
 
 A_V depends on camera **position** only — the ray is camera→star — so a
-star's value is stale by however far the camera has moved since that star's
-slice ran, at most `REFILL_SLICES` frames' worth. Extinction varies on the
-dust texture's ~5 pc voxel scale, about **3 mmag of A_V per pc** of camera
-displacement (`../../../star-pipeline/extinction/README.md` § The prepass
-cache, which sizes `RECOMPUTE_EPSILON_PC` off the same rate). So the error
-is `REFILL_SLICES × (displacement per frame) × 3 mmag/pc`.
+star's value is stale by however far the camera has moved since its quarter
+last marched, at most `REFILL_SLICES` frames' worth. Extinction varies on
+the dust texture's ~5 pc voxel scale, about **3 mmag of A_V per pc** of
+camera displacement (`../../../star-pipeline/extinction/README.md` § The
+prepass cache, which sizes `RECOMPUTE_EPSILON_PC` off the same rate). So
+the error is `REFILL_SLICES × (displacement per frame) × 3 mmag/pc`.
 
 The vantage that maximises it is inside the dust cube, flying, at any epoch
 — the clock moves stars rather than the camera, and a star's own motion over
@@ -210,93 +272,54 @@ a warp's per-frame displacement is enormous and its staleness is the dust in
 a segment that has none.
 
 **It is a transient, and it closes itself.** The moment the camera settles
-the cycle runs out and every star is exact again within `REFILL_SLICES`
+the flight runs out and every star is exact again within `REFILL_SLICES`
 frames. Raising the constant divides the per-frame cost and multiplies that
 error by the same factor — re-derive the line above before moving it.
 
+**What the quarters buy is the spike, not the total.** A whole in-frame
+refill in one frame is what crosses the vsync boundary: at 1,278,785
+records the in-frame, gate-admitted set at `mw120` is ~63k stars, and
+marching all of it every moving frame read 1.52 ms against a quarter's
+~0.55 (`stellata-8cg.58.10` notes). Quartering changes no per-frame total
+for a star; it caps what one frame pays.
+
 ## Three places a whole-catalogue dispatch is still the right one
 
-Whole in both senses: every slot, and whole mode (§ Only what is in
-frame).
+Whole in both senses: every Morton slot, gated per thread, stamping every
+star.
 
 - **The first fill.** Until the buffer is whole, `uAvPrepassEnabled` stays
   0 and every consumer runs its own in-vertex march, 8–12 times per visible
   star per frame — dearer than the dispatch it would be waiting on. So the
   boot fill is one dispatch and the cursor parks behind it.
 - **`verifyExtinction()`.** The parity check is a bit compare against one
-  reference march at one camera, and a spread refill leaves up to
+  reference march at one camera, and a worklist flight leaves up to
   `REFILL_SLICES` cameras in the buffer. It refills whole first, so what it
   compares is the march rather than the schedule (`../README.md` § The
   prepass kernel).
-- **The pick mirror.** `warmAvReadback` maps the buffer only while the
-  cursor is parked. A copy issued mid-cycle is superseded by the next
-  slice before the hover dwell that wanted it can read a byte, which is the
-  same argument the camera-under-way gate it replaces was making — and a
-  parked cursor means nothing has asked for a refill, camera or view, so
-  that one test covers a turning camera as well as a travelling one
-  (`../README.md` § Cold reads).
+- **The pick mirror.** `warmAvReadback` maps the buffer only while nothing
+  is owed (§ The cursor).
 
-## The survivor-driven probe
+## The kernel bounds itself by the listed length
 
-`#av-refill=survivors` at boot swaps the frustum-mode dispatch for one over
-the compaction's two survivor lists: one thread per listed star, both tiers
-back to back, at the workgroup count the compaction's finish kernel wrote
-into `refillDispatch` (`../../star/compaction/README.md` § The refill
-dispatch) — `dispatchWorkgroupsIndirect`, so no count crosses to the CPU.
-A thread places itself in the two lists off `listedCounts`, the plain `u32`
-pair that same finish kernel publishes, then resolves its star through
-`slotOf`, the order table's inverse, into the slot-indexed position table,
-marches if its stamp predates the generation, and stamps. No gate read: a
-survivor has passed the prefilter, and the cache gate admits a superset of
-it. The first fill and `verifyExtinction()` stay whole-mode over the Morton
-slots.
+An indirect dispatch has no count for three to guard on — `computeIndirect`
+leaves `count` null, so no early return is prepended — and the workgroup
+count the finish kernel wrote is `⌈n / 64⌉`, whose last workgroup runs past
+the `n` listed entries. The kernel tests `instanceIndex < refillDispatch[3]`
+itself, against the length written beside the dispatch.
 
-**It reads last frame's list.** The prepass dispatches before
-`StarLayer.update` builds this frame's, so a request is served one frame
-late and the frame after the last request still owes a dispatch —
-`survivorPending` carries it, and the pick mirror treats it as the cursor
-mid-cycle. A camera that stops leaves every drawn star exact two frames on.
-
-**What it measures, and why it cannot ship as is.** The slot space is
-dispatched in Morton order; a survivor list is in append order — catalogue
-order, brightest first and spatially random, scrambled further by the
-atomics. Whether the drawn set's march loses more in memory coherence than
-the dispatch saves in threads is the open question
-(`../dispatch-order/README.md` § Dispatch order), and at a parked camera
-under the forced-recompute lever the survivor set is stable, so a pair of
-forced dwells reads it directly. Shipping it needs a different population:
-survival is decided after the A_V read, so a star whose cached A_V is
-stale-high is culled, unlisted, and never refilled — a hysteresis the
-dust-independent gate above cannot show. The shippable producer is the
-compaction appending the in-frame, prefilter-admitted, stale stars to a
-worklist of its own, ahead of its A_V read.
-
-**The archived coherence figure is an upper bound on the penalty, and the
-tree no longer produces it.** The runs on `stellata-8cg.58.10` read the two
-list counts with an `atomicAdd` of zero per thread, twice over — some 85k
-read-modify-writes onto two addresses per dispatch at `mw120` and 1,278,785
-records — so the serialisation sits inside the survivors column and inflates
-it. The direction is safe: it can only make list order look dearer than it
-is, so "2–6× Morton per marched star" is a ceiling and the conclusion the
-dispatch saving outweighs it holds a fortiori. What it does not support is
-sizing a coherence lever off the gap
-(`../../star/compaction/README.md` § The refill dispatch for the plain pair
-that replaced it). Re-measure before scoping one.
-
-## The kernel bounds its own slot
-
-`instanceIndex` is bounded against the **dispatch**, not the catalogue. three
-prepends `if (instanceIndex >= count) { return; }` using the compute node's
-own `count`, and a dispatch of `plan.length` threads never climbs that far, so
-the guard is dead code under slicing. Every slice's trailing workgroup
-therefore overruns its slice — harmlessly into the next slice's slots for all
-but the last, whose tail runs past the catalogue. The kernel tests
-`sliceBase + instanceIndex < count` itself.
+**The prepass therefore binds a buffer the star layer owns, and that fixes
+a teardown order.** `refillDispatch` is the compaction's; the refill
+kernel's bind group holds it. So the shell disposes the prepass *before*
+the star layer (`../../../stellata.ts`), or the layer releases the buffer
+while a live bind group still names it. The reverse order is what reads as
+correct — layers before the passes that feed them — which is why it is
+written down here.
 
 **What a missing guard costs is not an out-of-bounds write.** WebGPU
-bounds-checks storage access, so the tail's read of `order[slot]` comes back
-clamped or zero instead, `self` resolves to a *valid* star, and the tail
-writes a garbage A_V onto a real catalogue entry. `verifyExtinction()` cannot
-see it: it refills whole first, and a whole dispatch is the one case three's
-own early return does cover. Code review is the only thing standing behind
-this guard — keep it.
+bounds-checks storage access, so the tail's read of the worklist comes back
+clamped or zero, `self` resolves to a *valid* star, and the tail writes a
+garbage A_V onto a real catalogue entry. `verifyExtinction()` cannot see it:
+it refills whole first, and the whole dispatch is the one three's own early
+return does cover. Code review is the only thing standing behind this
+guard — keep it.

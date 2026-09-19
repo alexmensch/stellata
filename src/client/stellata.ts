@@ -3056,10 +3056,14 @@ export class Stellata implements FrameAnchor {
     this.focus.dispose();
     this.controls.dispose();
     this.starPipeline.dispose();
-    this.webgpuStarLayer?.dispose();
-    this.webgpuStarLayer = null;
+    // The prepass's refill kernel binds the compaction's dispatch buffer, so
+    // it has to drop its bind groups before the star layer releases that
+    // buffer (webgpu/extinction/refill/README.md § The kernel bounds itself
+    // by the listed length).
     this.extinctionPrepass?.dispose();
     this.extinctionPrepass = null;
+    this.webgpuStarLayer?.dispose();
+    this.webgpuStarLayer = null;
     // Every scene layer (eager or lazily attached) disposes through the
     // registry — a registered layer can't be missing here.
     this.layers.disposeAll();

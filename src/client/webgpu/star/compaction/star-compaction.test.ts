@@ -9,8 +9,9 @@ import { buildSharedUniformNodes } from '../../tsl/shared-uniform-nodes';
 import { makeFakeStarRenderer, makeStarLayerSources } from '../star-sources-mock';
 import { StarTables } from '../star-tables';
 import type { StarTslDeps } from '../star-vertex-tsl';
+import { WEBGPU_CORE_STORAGE_BUFFERS_PER_STAGE } from '../../tsl/storage-attribute';
 import { STAR_TIERS } from './compaction-pure';
-import { StarCompaction } from './star-compaction';
+import { STAR_COMPACTION_KERNEL_STORAGE_BUFFERS, StarCompaction } from './star-compaction';
 
 const COUNT = 6;
 
@@ -30,11 +31,23 @@ function make() {
   const fake = makeFakeStarRenderer();
   return {
     ...fake,
-    compaction: new StarCompaction(fake.renderer as unknown as WebGPURenderer, deps, 6),
+    extinction,
+    compaction: new StarCompaction(
+      fake.renderer as unknown as WebGPURenderer, deps, 6, extinction.refill),
   };
 }
 
 describe('StarCompaction buffers', () => {
+  // The kernel sits ON the core ceiling, so a ninth binding is a boot
+  // failure on a device that grants only what WebGPU guarantees. Adding one
+  // means folding a counter or a table, not raising this number.
+  it('binds the eight storage buffers WebGPU guarantees a stage, and no more', () => {
+    expect(STAR_COMPACTION_KERNEL_STORAGE_BUFFERS).toBe(8);
+    expect(WEBGPU_CORE_STORAGE_BUFFERS_PER_STAGE).toBe(8);
+    expect(STAR_COMPACTION_KERNEL_STORAGE_BUFFERS)
+      .toBeLessThanOrEqual(WEBGPU_CORE_STORAGE_BUFFERS_PER_STAGE);
+  });
+
   it('one survivor slot per star per tier, uint32', () => {
     const { compaction } = make();
     expect(compaction.survivors.count).toBe(STAR_TIERS.length * COUNT);
@@ -42,25 +55,25 @@ describe('StarCompaction buffers', () => {
     expect(compaction.survivors.isStorageBufferAttribute).toBe(true);
   });
 
-  it('the args buffer is indirect-capable and starts every slot at zero instances', () => {
+  it('the args buffer is indirect-capable and starts every slot and counter at zero', () => {
     const { compaction } = make();
     expect(compaction.args.isIndirectStorageBufferAttribute).toBe(true);
-    expect(Array.from(compaction.args.array)).toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0]);
+    expect(Array.from(compaction.args.array))
+      .toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
-  it('the refill dispatch is indirect-capable and starts at zero workgroups', () => {
+  it('the refill dispatch is indirect-capable and starts at zero workgroups, zero listed', () => {
     const { compaction } = make();
     expect(compaction.refillDispatch.isIndirectStorageBufferAttribute).toBe(true);
-    expect(Array.from(compaction.refillDispatch.array)).toEqual([0, 1, 1]);
+    expect(Array.from(compaction.refillDispatch.array)).toEqual([0, 1, 1, 0]);
   });
 
-  // Plain, not indirect and not atomic: a refill thread reads the pair once
-  // and the tier atomics stay the compaction kernel's alone.
-  it('the listed counts are a plain pair starting at zero', () => {
+  // The refill kernel bounds itself by the listed length in that buffer, so
+  // it gets a read-only view distinct from the finish kernel's writer.
+  it('exposes a read-only view of the refill dispatch over the same attribute', () => {
     const { compaction } = make();
-    expect(compaction.listedCounts.isStorageBufferAttribute).toBe(true);
-    expect('isIndirectStorageBufferAttribute' in compaction.listedCounts).toBe(false);
-    expect(Array.from(compaction.listedCounts.array)).toEqual([0, 0]);
+    expect(compaction.refillDispatchNode.value).toBe(compaction.refillDispatch);
+    expect(compaction.refillDispatchNode.access).toBe('readOnly');
   });
 });
 
@@ -156,9 +169,7 @@ describe('StarCompaction dispose', () => {
       k.addEventListener('dispose', () => disposed.push(k.name));
     }
     compaction.dispose();
-    expect(released).toEqual([
-      compaction.survivors, compaction.args, compaction.refillDispatch, compaction.listedCounts,
-    ]);
+    expect(released).toEqual([compaction.survivors, compaction.args, compaction.refillDispatch]);
     expect(disposed.sort()).toEqual(
       ['star-compaction', 'star-compaction-refill-dispatch', 'star-compaction-reset']);
     compaction.dispatch(camera());

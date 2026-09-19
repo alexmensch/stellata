@@ -13,12 +13,14 @@ import {
 } from 'three/tsl';
 import { PHYS_RATIO_THRESHOLD } from '../../../star-pipeline/local-pass/star-local-cluster-pure';
 import { STAR_PASS_GLOW } from '../../../star-pipeline/star-pass';
+import type { RefillWorklistNodes } from '../../extinction/refill/refill-worklist-nodes';
+import { appendRefillWorklistTsl } from '../../extinction/refill/refill-worklist-tsl';
 import { disposeStorageAttribute } from '../../tsl/storage-attribute';
 import { solveStarTsl, type StarTslDeps } from '../star-vertex-tsl';
 import {
-  LISTED_COUNT_ELEMENTS, LISTED_GLOW_ELEMENT, LISTED_TOTAL_ELEMENT, PREFILTER_COUNT_ELEMENT,
-  REFILL_DISPATCH_ELEMENTS, REFILL_WORKGROUP_SIZE, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
-  initialIndirectArgs, initialListedCounts, initialRefillDispatch, survivorCountsFromArgs,
+  PREFILTER_COUNT_ELEMENT, REFILL_DISPATCH_ELEMENTS, REFILL_DISPATCH_LENGTH_ELEMENT,
+  REFILL_WORKGROUP_SIZE, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
+  initialIndirectArgs, initialRefillDispatch, survivorCountsFromArgs,
   tierArgsInstanceCountElement, tierListBase,
   type StarTier, type SurvivorCounts,
 } from './compaction-pure';
@@ -27,24 +29,31 @@ import { starQuadOffscreenTsl } from './frustum-tsl';
 export type UintStorageNode = ReturnType<typeof storage<'uint'>>;
 export type SurvivorsNode = UintStorageNode;
 
+/** Storage buffers the compaction kernel binds, against the 8 WebGPU
+ *  guarantees a stage (`../../tsl/README.md` § Storage attributes). At the
+ *  ceiling: a ninth needs a counter folded into the args buffer or a table
+ *  folded into another, never a new binding (README.md § Binding budget). */
+export const STAR_COMPACTION_KERNEL_STORAGE_BUFFERS = [
+  'position', 'statics', 'suppressPulsation', 'av', 'survivors', 'args',
+  'refillStamps', 'refillWorklist',
+].length;
+
 export class StarCompaction {
   readonly count: number;
   /** Catalogue star indices, one list per tier of `count` slots each. */
   readonly survivors: StorageBufferAttribute;
   /** drawIndexedIndirect arguments, one slot per tier — the geometry the
-   *  tier's draws share binds it at that slot's byte offset. */
+   *  tier's draws share binds it at that slot's byte offset — then the
+   *  prefilter counter and the refill sub-list counters. */
   readonly args: IndirectStorageBufferAttribute;
   /** README.md § The refill dispatch. */
   readonly refillDispatch: IndirectStorageBufferAttribute;
-  /** Glow count, then glow + disc, as plain u32 (README.md § The refill
-   *  dispatch). A refill thread reads these and never the tier atomics. */
-  readonly listedCounts: StorageBufferAttribute;
   /** The vertex stages' read of the lists. One node object: access is a
    *  property of the stage, so it is read_write in the kernel and read in
    *  every draw (../../tsl/README.md § Storage attributes). */
   readonly survivorsNode: SurvivorsNode;
-  /** Read-only view of `listedCounts` for the refill kernel. */
-  readonly listedCountsNode: UintStorageNode;
+  /** Read-only view of `refillDispatch` for the refill kernel's own bound. */
+  readonly refillDispatchNode: UintStorageNode;
 
   private readonly renderer: WebGPURenderer;
   private readonly viewProjection = uniform(new Matrix4());
@@ -54,33 +63,35 @@ export class StarCompaction {
   private readonly awaitingDispatch: (() => void)[] = [];
   private kernels: ComputeNode[] | null;
 
-  constructor(renderer: WebGPURenderer, deps: StarTslDeps, indexCount: number) {
+  constructor(
+    renderer: WebGPURenderer, deps: StarTslDeps, indexCount: number, refill: RefillWorklistNodes,
+  ) {
     this.renderer = renderer;
     this.count = deps.tables.count;
     this.survivors = new StorageBufferAttribute(
       new Uint32Array(STAR_TIERS.length * this.count), 1);
     this.args = new IndirectStorageBufferAttribute(initialIndirectArgs(indexCount), 1);
     this.refillDispatch = new IndirectStorageBufferAttribute(initialRefillDispatch(), 1);
-    this.listedCounts = new StorageBufferAttribute(initialListedCounts(), 1);
     this.survivorsNode = storage(this.survivors, 'uint', this.survivors.count);
     const argsNode = storage(this.args, 'uint', this.args.count).toAtomic();
     const refillDispatchNode = storage(this.refillDispatch, 'uint', REFILL_DISPATCH_ELEMENTS);
-    const listedCountsNode = storage(this.listedCounts, 'uint', LISTED_COUNT_ELEMENTS);
-    this.listedCountsNode = listedCountsNode.toReadOnly();
+    this.refillDispatchNode =
+      storage(this.refillDispatch, 'uint', REFILL_DISPATCH_ELEMENTS).toReadOnly();
     // An add of zero, consumed as an operator ARGUMENT, mirrors `append`'s
     // value use of an atomic below. atomicLoad as the receiver of `.add`
     // generated no code in three r185 ("expected a uint" at boot).
-    const listed = (tier: StarTier) => atomicAdd(
-      argsNode.element(tierArgsInstanceCountElement(tier)), uint(0)) as unknown as Node<'uint'>;
+    const readCounter = (element: Node<'uint'>) => atomicAdd(
+      element, uint(0)) as unknown as Node<'uint'>;
     const { u } = deps;
 
-    // Both instance counts start the frame at zero; the same compute pass
-    // then runs the kernel, so its atomics see the reset.
     const reset = compute(Fn(() => {
       for (const tier of STAR_TIERS) {
         atomicStore(argsNode.element(tierArgsInstanceCountElement(tier)), uint(0));
       }
       atomicStore(argsNode.element(PREFILTER_COUNT_ELEMENT), uint(0));
+      If(refill.arm.equal(uint(1)), () => {
+        atomicStore(refill.counterElement(argsNode), uint(0));
+      });
     })(), 1);
     reset.setName('star-compaction-reset');
 
@@ -116,15 +127,18 @@ export class StarCompaction {
           });
         });
       });
+      // After the solve, whose unconditional record reads this re-reads.
+      appendRefillWorklistTsl({
+        refill, u, tables: deps.tables, counters: argsNode,
+        viewProjection: this.viewProjection, count: this.count, self, localPos,
+      });
     })(), this.count);
     kernel.setName('star-compaction');
     const finish = compute(Fn(() => {
-      const glow = uint(0).add(listed(STAR_TIER_GLOW)).toVar();
-      const total = glow.add(listed(STAR_TIER_DISC)).toVar();
-      listedCountsNode.element(LISTED_GLOW_ELEMENT).assign(glow);
-      listedCountsNode.element(LISTED_TOTAL_ELEMENT).assign(total);
+      const listed = uint(0).add(readCounter(refill.counterElement(argsNode))).toVar();
       refillDispatchNode.element(0).assign(
-        total.add(uint(REFILL_WORKGROUP_SIZE - 1)).div(uint(REFILL_WORKGROUP_SIZE)));
+        listed.add(uint(REFILL_WORKGROUP_SIZE - 1)).div(uint(REFILL_WORKGROUP_SIZE)));
+      refillDispatchNode.element(REFILL_DISPATCH_LENGTH_ELEMENT).assign(listed);
     })(), 1);
     finish.setName('star-compaction-refill-dispatch');
     this.kernels = [reset, kernel, finish];
@@ -180,6 +194,5 @@ export class StarCompaction {
     disposeStorageAttribute(this.renderer, this.survivors);
     disposeStorageAttribute(this.renderer, this.args);
     disposeStorageAttribute(this.renderer, this.refillDispatch);
-    disposeStorageAttribute(this.renderer, this.listedCounts);
   }
 }

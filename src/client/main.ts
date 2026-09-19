@@ -34,7 +34,6 @@ import { bindKeyboardShortcuts } from './ui/keyboard-shortcuts';
 import { bindControlsHideToggle } from './ui/controls-hidden';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
 import { resolveBootRoute } from './webgpu/boot-route';
-import { parseExtinctionRefillMode } from './webgpu/renderer-flag';
 import type { WebGpuSeam } from './webgpu/seam';
 import { showWebGpuGate } from './webgpu/gate/gate-page';
 import { detectWebGpuSupport } from './webgpu/gate/webgpu-support';
@@ -82,9 +81,7 @@ async function main() {
     // surface as an unhandled rejection instead of a refused renderer.
     const webgpuBoot: Promise<WebGpuSeam | null> = route.renderer === 'webgpu'
       ? import('./webgpu/boot-webgpu')
-        .then(({ bootWebGpu }) => bootWebGpu(canvas, {
-          extinctionRefillMode: parseExtinctionRefillMode(location.hash),
-        }))
+        .then(({ bootWebGpu }) => bootWebGpu(canvas))
         .catch((err) => {
           console.warn('WebGPU boot rejected:', err);
           return null;

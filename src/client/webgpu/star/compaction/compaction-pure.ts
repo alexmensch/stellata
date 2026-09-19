@@ -1,5 +1,8 @@
 // Layout of the compaction kernel's outputs: two survivor lists in one
-// buffer, and one drawIndexedIndirect argument slot per list.
+// buffer, one drawIndexedIndirect argument slot per list, and the counters
+// and dispatch of the extinction refill worklist it appends.
+
+import { REFILL_SLICES } from '../../extinction/refill/refill-slices-pure';
 
 /** The two survivor lists, in list order. Mask and disc draw the disc
  *  list; glow draws its own. */
@@ -25,7 +28,11 @@ export function tierArgsInstanceCountElement(tier: StarTier): number {
 
 /** README.md § Reading the counts back. */
 export const PREFILTER_COUNT_ELEMENT = STAR_TIERS.length * INDIRECT_ARGS_STRIDE;
-export const ARGS_ELEMENTS = PREFILTER_COUNT_ELEMENT + 1;
+/** First of one append counter per refill sub-list, past the prefilter count
+ *  (README.md § The refill dispatch). The kernels address a class's counter
+ *  through `RefillWorklistNodes.counterElement`. */
+export const REFILL_LIST_COUNT_BASE = PREFILTER_COUNT_ELEMENT + 1;
+export const ARGS_ELEMENTS = REFILL_LIST_COUNT_BASE + REFILL_SLICES;
 
 /** What the kernel's atomics left in each tier's `instanceCount`, off a
  *  copy of the args buffer — the very numbers the three draws take their
@@ -44,24 +51,17 @@ export function survivorCountsFromArgs(args: Uint32Array): SurvivorCounts {
   };
 }
 
-/** README.md § The refill dispatch. */
-export const REFILL_DISPATCH_ELEMENTS = 3;
+/** `[workgroups, 1, 1, listed]`: the three u32 `dispatchWorkgroupsIndirect`
+ *  reads, then the sub-list length the refill kernel bounds its threads by
+ *  (README.md § The refill dispatch). */
+export const REFILL_DISPATCH_ELEMENTS = 4;
+export const REFILL_DISPATCH_LENGTH_ELEMENT = 3;
 /** Threads per workgroup of the kernel dispatched at that count — the
  *  divisor the finish kernel rounds up by, so both read one constant. */
 export const REFILL_WORKGROUP_SIZE = 64;
 
 export function initialRefillDispatch(): Uint32Array {
-  return Uint32Array.from([0, 1, 1]);
-}
-
-/** Elements of the plain count pair the finish kernel publishes for the
- *  refill kernel (README.md § The refill dispatch). */
-export const LISTED_GLOW_ELEMENT = 0;
-export const LISTED_TOTAL_ELEMENT = 1;
-export const LISTED_COUNT_ELEMENTS = 2;
-
-export function initialListedCounts(): Uint32Array {
-  return new Uint32Array(LISTED_COUNT_ELEMENTS);
+  return Uint32Array.from([0, 1, 1, 0]);
 }
 
 /** Byte offset of `tier`'s slot — what the geometry's indirectOffset takes. */

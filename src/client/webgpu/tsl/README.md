@@ -52,7 +52,7 @@ WebGL map and never learns about the port. The contract:
   fills later (`uDustTexture`) binds over a placeholder whose `.value` is
   swapped on attach — one node per slot for the whole boot, since two
   consumers of the same volume must not be able to diverge
-  (`../extinction/README.md` § Two nodes, one owner). The A_V cache is a
+  (`../extinction/README.md` § One owner for every shared slot). The A_V cache is a
   storage buffer on this backend, bound the same way (§ Storage
   attributes), so `uAvPrepassTex` in the shared map stays null for a
   WebGPU boot's whole life.
@@ -114,7 +114,7 @@ Three properties of a storage node worth knowing before binding one:
   `StorageBufferNode` object can be the kernel's write target and a
   vertex stage's read source at once. Sharing it by identity is what
   makes a `.value` swap reach every consumer (the extinction A_V slot,
-  `../extinction/README.md` § Two nodes, one owner).
+  `../extinction/README.md` § One owner for every shared slot).
 - **The WGSL array is runtime-sized.** `bufferCount` reaches the shader
   only for uniform buffers, so a node built over a 1-element placeholder
   and later pointed at the real attribute needs no rebuild — the binding
