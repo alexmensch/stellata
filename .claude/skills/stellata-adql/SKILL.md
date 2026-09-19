@@ -33,7 +33,7 @@ Measured against the live services 2026-09-19. `OK` means the query ran.
 | | Gaia (ESA) | SIMBAD | VizieR |
 |---|---|---|---|
 | `GROUP BY <expression>` | **400** | — | — |
-| `GROUP BY <select alias>` | **500** (see below) | — | — |
+| `GROUP BY <select alias>` | **500**, not 400 (see below) | — | — |
 | `GROUP BY <subquery column>` | OK | — | — |
 | `ORDER BY <select alias>` | OK | — | — |
 | `ORDER BY <qualified column>` | OK | **400** | — |
@@ -60,11 +60,11 @@ FROM (SELECT FLOOR(phot_g_mean_mag * 4) AS gbin
 GROUP BY gbin ORDER BY gbin
 ```
 
-**Grouping by the SELECT alias instead answers 500, not 400**, and a 5xx is
-classified transient — so `TapClient` burns five attempts on ESA and five on
-ARI with backoff before surfacing a permanent query fault as something that
-reads like a network problem. A slow, network-flavoured failure on a query you
-just edited is this, most of the time.
+**Grouping by the SELECT alias instead answers 500, not 400.** `refresh_lib`
+classifies on the archive's `QUERY_STATUS` complaint rather than on the status
+code, so a rejected query fails fast under a 5xx instead of spending the whole
+backoff schedule on both mirrors. That holds only for pulls that go through it
+— a bare POST sees the status code and nothing else.
 
 There is no `CASE`, so a conditional aggregate has no one-query form. Count
 the subset with a second query carrying the extra predicate rather than
@@ -119,7 +119,10 @@ magnitude slicing cheap rather than a full scan per slice.
 
 `refresh_lib` lifts the VOTable `QUERY_STATUS` message into the raised
 exception for any non-2xx response, so an in-repo pull already tells you which
-clause was rejected. Outside that path, POST directly and print `resp.text`:
+clause was rejected — and a complaint naming one escapes the retry rather than
+being mistaken for a degraded service. Only the parsed message is read that
+way: a proxy's HTML page saying "not found" must still fail over to the mirror.
+Outside that path, POST directly and print `resp.text`:
 the status line alone never names the fault, and `raise_for_status()` discards
 the body that does.
 

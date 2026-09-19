@@ -689,15 +689,22 @@ class SyncOverflowError(Exception):
 
 
 _SYNC_OVERFLOW = re.compile(r"overflow", re.I)
-_SYNC_PERMANENT_FAULT = re.compile(r"unknown column|not found|syntax|invalid", re.I)
+_SYNC_PERMANENT_FAULT = re.compile(
+    r"unknown column|not found|syntax|invalid|encountered|parse error", re.I
+)
 
 
 _SYNC_ERROR_DETAIL_CHARS = 400
 
 
-def _sync_error_detail(body: bytes) -> str:
-    """The QUERY_STATUS message out of an error response, or the raw body
-    when it is not a VOTable at all (a proxy's HTML error page)."""
+def _sync_error_detail(body: bytes) -> tuple[str, str]:
+    """`(query_status, detail)` for an error response — the archive's own
+    QUERY_STATUS message, and the text to report. `query_status` is empty
+    unless the body parsed as a VOTable carrying one, and it is the ONLY
+    thing `_SYNC_PERMANENT_FAULT` may be matched against: a proxy's HTML
+    error page can say "not found" about the service rather than the query,
+    and classifying on that would defeat the mirror fallback.
+    """
     import io
     from astropy.io.votable import parse as parse_votable
 
@@ -706,7 +713,7 @@ def _sync_error_detail(body: bytes) -> str:
     except Exception:  # noqa: BLE001 — a body we cannot parse is still evidence
         msg = ""
     text = msg or body.decode("utf-8", "replace")
-    return " ".join(text.split())[:_SYNC_ERROR_DETAIL_CHARS]
+    return msg, " ".join(text.split())[:_SYNC_ERROR_DETAIL_CHARS]
 
 
 def _sync_tap_run(base_url: str, query: str, maxrec: int) -> Any:
@@ -735,14 +742,15 @@ def _sync_tap_run(base_url: str, query: str, maxrec: int) -> Any:
     if not resp.ok:
         # The archive answers a rejected query with a VOTable body whatever the
         # status line, and the parser's complaint is the only thing that says
-        # WHICH clause it rejected. `raise_for_status` alone discards it, and a
-        # 5xx then retries both mirrors before surfacing a message naming no
-        # cause at all.
-        raise requests.HTTPError(
-            f"{resp.status_code} from {base_url}: "
-            f"{_sync_error_detail(resp.content)}",
-            response=resp,
-        )
+        # WHICH clause it rejected. `raise_for_status` alone discards it.
+        query_status, detail = _sync_error_detail(resp.content)
+        report = f"{resp.status_code} from {base_url}: {detail}"
+        # A rejected query reaches the parser, so a 5xx carrying a parse
+        # complaint is permanent however transient its status code looks —
+        # without this it burns the whole backoff schedule on both mirrors.
+        if _SYNC_PERMANENT_FAULT.search(query_status):
+            raise RuntimeError(f"sync TAP query error: {report}")
+        raise requests.HTTPError(report, response=resp)
     votable = parse_votable(io.BytesIO(resp.content))
     ok, msg = votable_query_status(votable)
     if not ok:

@@ -737,25 +737,68 @@ class SyncOverflowTests(unittest.TestCase):
         self.assertEqual(calls, ["esa"])
 
 
+def _error_votable(message: bytes) -> bytes:
+    return (
+        b'<VOTABLE version="1.2" xmlns="http://www.ivoa.net/xml/VOTable/v1.2">'
+        b'<RESOURCE type="results">'
+        b'<INFO name="QUERY_STATUS" value="ERROR">' + message +
+        b"</INFO></RESOURCE></VOTABLE>"
+    )
+
+
 class SyncErrorDetailTests(unittest.TestCase):
     def test_lifts_the_query_status_message_out_of_an_error_votable(self) -> None:
         # The archive answers a rejected query with a VOTable whatever the
         # status line, and the parser's complaint is the only thing naming the
         # clause it rejected.
-        body = (
-            b'<VOTABLE version="1.2" xmlns="http://www.ivoa.net/xml/VOTable/v1.2">'
-            b'<RESOURCE type="results">'
-            b'<INFO name="QUERY_STATUS" value="ERROR">Encountered "GROUP BY".'
-            b"</INFO></RESOURCE></VOTABLE>"
-        )
-        self.assertIn('Encountered "GROUP BY"', rl._sync_error_detail(body))
+        status, detail = rl._sync_error_detail(_error_votable(b'Encountered "GROUP BY".'))
+        self.assertIn('Encountered "GROUP BY"', status)
+        self.assertIn('Encountered "GROUP BY"', detail)
 
     def test_falls_back_to_the_raw_body_when_it_is_not_a_votable(self) -> None:
-        self.assertIn("Bad Gateway", rl._sync_error_detail(b"<html>Bad Gateway</html>"))
+        status, detail = rl._sync_error_detail(b"<html>Bad Gateway</html>")
+        self.assertIn("Bad Gateway", detail)
+        # Empty, so the permanent-fault words are never matched against a
+        # proxy's page — a "service not found" there must still fail over.
+        self.assertEqual(status, "")
 
     def test_truncates_a_long_body(self) -> None:
-        detail = rl._sync_error_detail(b"x" * 10_000)
+        _, detail = rl._sync_error_detail(b"x" * 10_000)
         self.assertEqual(len(detail), rl._SYNC_ERROR_DETAIL_CHARS)
+
+
+class SyncErrorClassificationTests(unittest.TestCase):
+    """A rejected query reaches the parser, so the archive's complaint decides
+    whether to retry — not the status code it arrives under."""
+
+    def _run(self, status_code: int, body: bytes) -> BaseException:
+        import requests
+
+        class _Resp:
+            ok = False
+            content = body
+            status_code = 0
+
+        resp = _Resp()
+        resp.status_code = status_code
+        original = requests.post
+        requests.post = lambda *_a, **_k: resp
+        try:
+            with self.assertRaises(Exception) as caught:
+                rl._sync_tap_run("https://example.test/tap", "SELECT 1", 10)
+        finally:
+            requests.post = original
+        return caught.exception
+
+    def test_a_parse_complaint_under_a_5xx_escapes_the_retry(self) -> None:
+        exc = self._run(500, _error_votable(b'Encountered "GROUP BY".'))
+        self.assertIn('Encountered "GROUP BY"', str(exc))
+        self.assertFalse(rl.is_transient_http_error(exc))
+
+    def test_a_5xx_with_no_query_status_still_retries(self) -> None:
+        exc = self._run(503, b"<html>Bad Gateway</html>")
+        self.assertIn("Bad Gateway", str(exc))
+        self.assertTrue(rl.is_transient_http_error(exc))
 
 
 class WholeTableSyncMaxrecTests(unittest.TestCase):
