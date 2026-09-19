@@ -236,6 +236,53 @@ frame).
   that one test covers a turning camera as well as a travelling one
   (`../README.md` § Cold reads).
 
+## The survivor-driven probe
+
+`#av-refill=survivors` at boot swaps the frustum-mode dispatch for one over
+the compaction's two survivor lists: one thread per listed star, both tiers
+back to back, at the workgroup count the compaction's finish kernel wrote
+into `refillDispatch` (`../../star/compaction/README.md` § The refill
+dispatch) — `dispatchWorkgroupsIndirect`, so no count crosses to the CPU.
+A thread places itself in the two lists off `listedCounts`, the plain `u32`
+pair that same finish kernel publishes, then resolves its star through
+`slotOf`, the order table's inverse, into the slot-indexed position table,
+marches if its stamp predates the generation, and stamps. No gate read: a
+survivor has passed the prefilter, and the cache gate admits a superset of
+it. The first fill and `verifyExtinction()` stay whole-mode over the Morton
+slots.
+
+**It reads last frame's list.** The prepass dispatches before
+`StarLayer.update` builds this frame's, so a request is served one frame
+late and the frame after the last request still owes a dispatch —
+`survivorPending` carries it, and the pick mirror treats it as the cursor
+mid-cycle. A camera that stops leaves every drawn star exact two frames on.
+
+**What it measures, and why it cannot ship as is.** The slot space is
+dispatched in Morton order; a survivor list is in append order — catalogue
+order, brightest first and spatially random, scrambled further by the
+atomics. Whether the drawn set's march loses more in memory coherence than
+the dispatch saves in threads is the open question
+(`../dispatch-order/README.md` § Dispatch order), and at a parked camera
+under the forced-recompute lever the survivor set is stable, so a pair of
+forced dwells reads it directly. Shipping it needs a different population:
+survival is decided after the A_V read, so a star whose cached A_V is
+stale-high is culled, unlisted, and never refilled — a hysteresis the
+dust-independent gate above cannot show. The shippable producer is the
+compaction appending the in-frame, prefilter-admitted, stale stars to a
+worklist of its own, ahead of its A_V read.
+
+**The archived coherence figure is an upper bound on the penalty, and the
+tree no longer produces it.** The runs on `stellata-8cg.58.10` read the two
+list counts with an `atomicAdd` of zero per thread, twice over — some 85k
+read-modify-writes onto two addresses per dispatch at `mw120` and 1,278,785
+records — so the serialisation sits inside the survivors column and inflates
+it. The direction is safe: it can only make list order look dearer than it
+is, so "2–6× Morton per marched star" is a ceiling and the conclusion the
+dispatch saving outweighs it holds a fortiori. What it does not support is
+sizing a coherence lever off the gap
+(`../../star/compaction/README.md` § The refill dispatch for the plain pair
+that replaced it). Re-measure before scoping one.
+
 ## The kernel bounds its own slot
 
 `instanceIndex` is bounded against the **dispatch**, not the catalogue. three

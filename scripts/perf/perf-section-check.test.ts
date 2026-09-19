@@ -176,6 +176,83 @@ describe('perf-section-check', () => {
     expect(r.code, r.stdout).toBe(0);
   });
 
+  // The mark is only ever the first field in a pasted table. Prose reports
+  // it inline, and a line-start match let such a body through with nothing
+  // accepted — so the match is anywhere on the line, and the row is taken
+  // from the line's own key.
+  describe('a ✗ reported inline', () => {
+    const inline = (mark: string, accepted = '') => [
+      '## Perf',
+      '',
+      'pin 194f817d · apple-m4-metal-3 · every context steady',
+      `all ~ except ${mark} (compaction, not refill)`,
+      ...(accepted === '' ? [] : [accepted]),
+      '',
+      '## Release notes',
+      '',
+      '- x',
+    ].join('\n');
+
+    it('fails when the marked line names no row an accepted: line could match', () => {
+      const r = check(inline('**lg compute +0.44 ✗**'), ['src/client/milkyway/band.ts']);
+      expect(r.code, r.stdout).toBe(1);
+      expect(r.stdout).toContain('accepted:');
+      expect(r.stdout).toContain('unnamed row');
+    });
+
+    it('fails a named row without its accepted: line, naming the row', () => {
+      const r = check(inline('**lg|webgpu|compute +0.44 ✗**'), ['src/client/milkyway/band.ts']);
+      expect(r.code, r.stdout).toBe(1);
+      expect(r.stdout).toContain('lg|webgpu|compute');
+    });
+
+    it('passes a named row whose accepted: line is present', () => {
+      const r = check(
+        inline('**lg|webgpu|compute +0.44 ✗**', 'accepted: lg|webgpu|compute compaction got dearer at 1.28M (bead-9)'),
+        ['src/client/milkyway/band.ts']);
+      expect(r.code, r.stdout).toBe(0);
+      expect(r.stdout).toContain('every ✗ accepted');
+    });
+
+    it('strips the emphasis around a key, so **key** and `key` read as the row', () => {
+      const r = check(
+        inline('`mw50|webgpu` +1.7 ✗', 'accepted: mw50|webgpu the new band pass draws at mw50 (bead-7)'),
+        ['src/client/milkyway/band.ts']);
+      expect(r.code, r.stdout).toBe(0);
+    });
+
+    // The cost of matching anywhere, pinned rather than discovered in CI: the
+    // guard cannot tell a sentence ABOUT the marker from a regression written
+    // out in words, so the character is reserved for rows being accepted and
+    // RELEASING.md § What the section carries says so.
+    it('fails a section that merely talks about the marker', () => {
+      const r = check([
+        '## Perf',
+        '',
+        'Tier 0 — no per-frame code reachable from animate(), so no ✗ rows.',
+        '',
+        '## Release notes',
+        '',
+        '- x',
+      ].join('\n'), ['src/client/milkyway/band.ts']);
+      expect(r.code, r.stdout).toBe(1);
+      expect(r.stdout).toContain('unnamed row');
+    });
+
+    it('passes the same claim written without the character', () => {
+      const r = check([
+        '## Perf',
+        '',
+        'Tier 0 — no per-frame code reachable from animate(); every row within band.',
+        '',
+        '## Release notes',
+        '',
+        '- x',
+      ].join('\n'), ['src/client/milkyway/band.ts']);
+      expect(r.code, r.stdout).toBe(0);
+    });
+  });
+
   // RELEASING.md § Perf pin promises Tier 0 a prose reachability argument
   // in place of a table. Nothing in the script had to change for that — a
   // body with no table has no ✗ — but the promise is now written down, so

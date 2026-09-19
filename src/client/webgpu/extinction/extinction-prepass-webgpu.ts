@@ -6,10 +6,11 @@ import {
   Matrix4, StorageBufferAttribute, Vector3, type ComputeNode, type WebGPURenderer,
 } from 'three/webgpu';
 import {
-  Fn, If, bool, compute, distance, float, instanceIndex, int, max, storage, uint, uniform, vec4,
+  Fn, If, bool, compute, distance, float, instanceIndex, int, max, select, storage, uint, uniform,
+  vec4,
 } from 'three/tsl';
 import type {
-  ExtinctionPrepassSeam, ExtinctionPrepassUniforms, ExtinctionView,
+  ExtinctionPrepassSeam, ExtinctionPrepassUniforms, ExtinctionRefillMode, ExtinctionView,
 } from '../../star-pipeline/extinction/extinction-seam';
 import type { AvParityReport } from '../../star-pipeline/extinction/av-parity-pure';
 import {
@@ -17,7 +18,12 @@ import {
   movedBeyondEpsilon,
   packPositionsVec4Into,
 } from '../../star-pipeline/extinction/extinction-prepass-pure';
+import {
+  LISTED_GLOW_ELEMENT, LISTED_TOTAL_ELEMENT, REFILL_WORKGROUP_SIZE,
+  STAR_TIER_DISC, STAR_TIER_GLOW, tierListBase,
+} from '../star/compaction/compaction-pure';
 import { starQuadOffscreenTsl } from '../star/compaction/frustum-tsl';
+import type { StarCompaction } from '../star/compaction/star-compaction';
 import type { StarTables } from '../star/star-tables';
 import {
   STAR_VISIBILITY_BOUND_KEYS, starCacheVisibleTsl,
@@ -25,7 +31,8 @@ import {
 } from '../star/star-visibility-tsl';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { disposeStorageAttribute } from '../tsl/storage-attribute';
-import { mortonDispatchOrder } from './dispatch-order/dispatch-order-pure';
+import { computeIndirect } from '../tsl/tsl-shim';
+import { inverseOrder, mortonDispatchOrder } from './dispatch-order/dispatch-order-pure';
 import { dustRaymarchAvTsl } from './dust-raymarch-tsl';
 import type { ExtinctionNodes } from './extinction-nodes';
 import { runReferenceMarch, type StarCacheGate } from './extinction-parity';
@@ -53,6 +60,11 @@ export interface WebGpuExtinctionPrepassOptions {
   /** Null leaves the kernel marching the whole catalogue; supplied, it
    *  gates on the star stages' own prefilter (README.md § The cache gate). */
   tables: StarTables | null;
+  /** The compaction whose lists the `survivors` schedule dispatches over;
+   *  `sliced` reads nothing of it. */
+  compaction: StarCompaction | null;
+  /** Default `sliced` (refill/README.md § The survivor-driven probe). */
+  refillMode?: ExtinctionRefillMode;
 }
 
 /** `frustumMode` values: the whole catalogue marches, or only what the
@@ -85,6 +97,13 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  Shares its array with the `order` buffer, so dispose has to drop both
    *  or the 1.48 MiB outlives the pass. */
   private dispatchOrder: Uint32Array | null;
+  /** Star → slot, the survivor kernel's route into the position table. */
+  private slotOf: StorageBufferAttribute | null = null;
+  private survivorKernel: ComputeNode | null = null;
+  /** A request landed this frame or the last: the list the compaction
+   *  builds after this frame's dispatch is still owed one
+   *  (refill/README.md § The survivor-driven probe). */
+  private survivorPending = false;
   private readonly absCameraPos = uniform(new Vector3());
   /** Slot the running dispatch starts at (refill/README.md § The cursor).
    *  Zero for the whole-catalogue dispatches. */
@@ -120,7 +139,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   private lastCamZ = Infinity;
 
   constructor({
-    renderer, positions, count, nodes, slots, uniforms, tables,
+    renderer, positions, count, nodes, slots, uniforms, tables, compaction, refillMode = 'sliced',
   }: WebGpuExtinctionPrepassOptions) {
     this.renderer = renderer;
     this.mirror = new AvMirror(renderer);
@@ -197,6 +216,43 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
       });
     })(), count);
     this.kernel.setName('extinction-prepass-compute');
+    if (refillMode === 'survivors') {
+      if (compaction === null) {
+        throw new Error('av-refill=survivors needs the star layer attached before the dust');
+      }
+      this.survivorKernel = this.buildSurvivorKernel(compaction, this.dispatchOrder, count);
+    }
+  }
+
+  /** One thread per listed survivor, both tiers back to back
+   *  (refill/README.md § The survivor-driven probe). The gate is not
+   *  re-read: a survivor has already passed it. */
+  private buildSurvivorKernel(
+    compaction: StarCompaction, order: Uint32Array, count: number,
+  ): ComputeNode {
+    this.slotOf = new StorageBufferAttribute(inverseOrder(order), 1);
+    const slotOfNode = storage(this.slotOf, 'uint', count).toReadOnly();
+    const { nodes, slots } = this;
+    const counts = compaction.listedCountsNode;
+    const kernel = computeIndirect(Fn(() => {
+      const i = instanceIndex;
+      const glow = counts.element(LISTED_GLOW_ELEMENT).toVar();
+      If(i.lessThan(counts.element(LISTED_TOTAL_ELEMENT)), () => {
+        const entry = select(
+          i.lessThan(glow),
+          i.add(uint(tierListBase(STAR_TIER_GLOW, count))),
+          i.sub(glow).add(uint(tierListBase(STAR_TIER_DISC, count))));
+        const self = int(compaction.survivorsNode.element(entry));
+        If(this.stampsNode.element(self).notEqual(this.cameraGeneration), () => {
+          const starAbs = this.positionsNode.element(slotOfNode.element(self)).xyz;
+          slots.av.element(self).assign(
+            dustRaymarchAvTsl(nodes, slots.dust, this.absCameraPos, starAbs));
+          this.stampsNode.element(self).assign(this.cameraGeneration);
+        });
+      });
+    })(), compaction.refillDispatch, [REFILL_WORKGROUP_SIZE]);
+    kernel.setName('extinction-refill-survivors');
+    return kernel;
   }
 
   markDirty(): void {
@@ -263,11 +319,19 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
         this.cameraGeneration.value += 1;
         this.setCameraGeneration(absCamX, absCamY, absCamZ);
       }
-      const plan = planRefill(this.refill, bump || viewChanged, this.count, this.sliceLength);
-      this.refill = plan.next;
-      if (plan.base === null) return;
-      this.dispatch(
-        plan.base, plan.length, this.lastView === null ? MODE_WHOLE : MODE_FRUSTUM);
+      const wanted = bump || viewChanged;
+      if (this.survivorKernel !== null) {
+        const owed = wanted || this.survivorPending;
+        this.survivorPending = wanted;
+        if (!owed) return;
+        this.renderer.compute(this.survivorKernel);
+      } else {
+        const plan = planRefill(this.refill, wanted, this.count, this.sliceLength);
+        this.refill = plan.next;
+        if (plan.base === null) return;
+        this.dispatch(
+          plan.base, plan.length, this.lastView === null ? MODE_WHOLE : MODE_FRUSTUM);
+      }
     }
 
     this.generation++;
@@ -314,7 +378,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     if (!this.isActive() || this.av === null) return;
     // A parked cursor only: a copy taken mid-cycle is superseded before the
     // dwell that wanted it can read a byte (README.md § Cold reads).
-    if (this.refill.base < this.count) return;
+    if (this.refill.base < this.count || this.survivorPending) return;
     this.mirror.stage(this.av, this.generation);
   }
 
@@ -326,6 +390,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     // One camera behind the whole buffer (refill/README.md § Three places).
     this.dispatch(0, this.count, MODE_WHOLE);
     this.refill = idleRefill(this.count);
+    this.survivorPending = false;
     this.generation++;
     this.mirror.invalidate();
     return runReferenceMarch({
@@ -371,20 +436,25 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   dispose(): void {
     this.uniforms.uAvPrepassEnabled.value = 0;
     this.slots.setAvBuffer(null);
-    // The kernel's bind group references all four buffers: drop it first.
+    // The kernels' bind groups reference every buffer below: drop them first.
     this.kernel?.dispose();
+    this.survivorKernel?.dispose();
     if (this.av !== null) disposeStorageAttribute(this.renderer, this.av);
     if (this.positions !== null) disposeStorageAttribute(this.renderer, this.positions);
     if (this.order !== null) disposeStorageAttribute(this.renderer, this.order);
     if (this.stamps !== null) disposeStorageAttribute(this.renderer, this.stamps);
+    if (this.slotOf !== null) disposeStorageAttribute(this.renderer, this.slotOf);
     this.kernel = null;
+    this.survivorKernel = null;
     this.av = null;
     this.positions = null;
     this.order = null;
     this.stamps = null;
+    this.slotOf = null;
     this.dispatchOrder = null;
     this.mirror.dispose();
     this.refill = idleRefill(this.count);
+    this.survivorPending = false;
     this.lastView = null;
     this.hasComputed = false;
     this.dirty = true;

@@ -44,6 +44,26 @@ export function survivorCountsFromArgs(args: Uint32Array): SurvivorCounts {
   };
 }
 
+/** README.md § The refill dispatch. */
+export const REFILL_DISPATCH_ELEMENTS = 3;
+/** Threads per workgroup of the kernel dispatched at that count — the
+ *  divisor the finish kernel rounds up by, so both read one constant. */
+export const REFILL_WORKGROUP_SIZE = 64;
+
+export function initialRefillDispatch(): Uint32Array {
+  return Uint32Array.from([0, 1, 1]);
+}
+
+/** Elements of the plain count pair the finish kernel publishes for the
+ *  refill kernel (README.md § The refill dispatch). */
+export const LISTED_GLOW_ELEMENT = 0;
+export const LISTED_TOTAL_ELEMENT = 1;
+export const LISTED_COUNT_ELEMENTS = 2;
+
+export function initialListedCounts(): Uint32Array {
+  return new Uint32Array(LISTED_COUNT_ELEMENTS);
+}
+
 /** Byte offset of `tier`'s slot — what the geometry's indirectOffset takes. */
 export function tierArgsOffsetBytes(tier: StarTier): number {
   return tier * INDIRECT_ARGS_STRIDE * Uint32Array.BYTES_PER_ELEMENT;

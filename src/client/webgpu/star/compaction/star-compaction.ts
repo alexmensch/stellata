@@ -6,7 +6,7 @@ import type { Camera } from 'three';
 import { Matrix4 } from 'three';
 import {
   IndirectStorageBufferAttribute, StorageBufferAttribute,
-  type ComputeNode, type WebGPURenderer,
+  type ComputeNode, type Node, type WebGPURenderer,
 } from 'three/webgpu';
 import {
   Fn, If, atomicAdd, atomicStore, compute, instanceIndex, int, storage, uniform, uint, vec4,
@@ -16,13 +16,16 @@ import { STAR_PASS_GLOW } from '../../../star-pipeline/star-pass';
 import { disposeStorageAttribute } from '../../tsl/storage-attribute';
 import { solveStarTsl, type StarTslDeps } from '../star-vertex-tsl';
 import {
-  PREFILTER_COUNT_ELEMENT, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
-  initialIndirectArgs, survivorCountsFromArgs, tierArgsInstanceCountElement,
-  tierListBase, type StarTier, type SurvivorCounts,
+  LISTED_COUNT_ELEMENTS, LISTED_GLOW_ELEMENT, LISTED_TOTAL_ELEMENT, PREFILTER_COUNT_ELEMENT,
+  REFILL_DISPATCH_ELEMENTS, REFILL_WORKGROUP_SIZE, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
+  initialIndirectArgs, initialListedCounts, initialRefillDispatch, survivorCountsFromArgs,
+  tierArgsInstanceCountElement, tierListBase,
+  type StarTier, type SurvivorCounts,
 } from './compaction-pure';
 import { starQuadOffscreenTsl } from './frustum-tsl';
 
-export type SurvivorsNode = ReturnType<typeof storage<'uint'>>;
+export type UintStorageNode = ReturnType<typeof storage<'uint'>>;
+export type SurvivorsNode = UintStorageNode;
 
 export class StarCompaction {
   readonly count: number;
@@ -31,10 +34,17 @@ export class StarCompaction {
   /** drawIndexedIndirect arguments, one slot per tier — the geometry the
    *  tier's draws share binds it at that slot's byte offset. */
   readonly args: IndirectStorageBufferAttribute;
+  /** README.md § The refill dispatch. */
+  readonly refillDispatch: IndirectStorageBufferAttribute;
+  /** Glow count, then glow + disc, as plain u32 (README.md § The refill
+   *  dispatch). A refill thread reads these and never the tier atomics. */
+  readonly listedCounts: StorageBufferAttribute;
   /** The vertex stages' read of the lists. One node object: access is a
    *  property of the stage, so it is read_write in the kernel and read in
    *  every draw (../../tsl/README.md § Storage attributes). */
   readonly survivorsNode: SurvivorsNode;
+  /** Read-only view of `listedCounts` for the refill kernel. */
+  readonly listedCountsNode: UintStorageNode;
 
   private readonly renderer: WebGPURenderer;
   private readonly viewProjection = uniform(new Matrix4());
@@ -50,8 +60,18 @@ export class StarCompaction {
     this.survivors = new StorageBufferAttribute(
       new Uint32Array(STAR_TIERS.length * this.count), 1);
     this.args = new IndirectStorageBufferAttribute(initialIndirectArgs(indexCount), 1);
+    this.refillDispatch = new IndirectStorageBufferAttribute(initialRefillDispatch(), 1);
+    this.listedCounts = new StorageBufferAttribute(initialListedCounts(), 1);
     this.survivorsNode = storage(this.survivors, 'uint', this.survivors.count);
     const argsNode = storage(this.args, 'uint', this.args.count).toAtomic();
+    const refillDispatchNode = storage(this.refillDispatch, 'uint', REFILL_DISPATCH_ELEMENTS);
+    const listedCountsNode = storage(this.listedCounts, 'uint', LISTED_COUNT_ELEMENTS);
+    this.listedCountsNode = listedCountsNode.toReadOnly();
+    // An add of zero, consumed as an operator ARGUMENT, mirrors `append`'s
+    // value use of an atomic below. atomicLoad as the receiver of `.add`
+    // generated no code in three r185 ("expected a uint" at boot).
+    const listed = (tier: StarTier) => atomicAdd(
+      argsNode.element(tierArgsInstanceCountElement(tier)), uint(0)) as unknown as Node<'uint'>;
     const { u } = deps;
 
     // Both instance counts start the frame at zero; the same compute pass
@@ -98,7 +118,16 @@ export class StarCompaction {
       });
     })(), this.count);
     kernel.setName('star-compaction');
-    this.kernels = [reset, kernel];
+    const finish = compute(Fn(() => {
+      const glow = uint(0).add(listed(STAR_TIER_GLOW)).toVar();
+      const total = glow.add(listed(STAR_TIER_DISC)).toVar();
+      listedCountsNode.element(LISTED_GLOW_ELEMENT).assign(glow);
+      listedCountsNode.element(LISTED_TOTAL_ELEMENT).assign(total);
+      refillDispatchNode.element(0).assign(
+        total.add(uint(REFILL_WORKGROUP_SIZE - 1)).div(uint(REFILL_WORKGROUP_SIZE)));
+    })(), 1);
+    finish.setName('star-compaction-refill-dispatch');
+    this.kernels = [reset, kernel, finish];
   }
 
   /** The view-projection the kernel tested against on the last dispatch, as a
@@ -125,8 +154,8 @@ export class StarCompaction {
     return survivorCountsFromArgs(new Uint32Array(bytes));
   }
 
-  /** One compute pass, one submit: reset then compact. Must follow the
-   *  frame's uniform sync and precede its render. The camera's matrices are
+  /** One compute pass, one submit: reset, compact, then write the refill
+   *  dispatch. Must follow the frame's uniform sync and precede its render. The camera's matrices are
    *  refreshed here because the controls mutate position and quaternion
    *  without propagating them, and the render that would is still ahead. */
   dispatch(camera: Camera): void {
@@ -150,5 +179,7 @@ export class StarCompaction {
     this.releaseWaiters();
     disposeStorageAttribute(this.renderer, this.survivors);
     disposeStorageAttribute(this.renderer, this.args);
+    disposeStorageAttribute(this.renderer, this.refillDispatch);
+    disposeStorageAttribute(this.renderer, this.listedCounts);
   }
 }

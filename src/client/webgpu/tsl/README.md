@@ -223,6 +223,11 @@ vectors, getter swizzles are typed); what survives:
 - `ShaderNodeObject` is exported from neither `three/tsl` nor
   `three/webgpu`; the shim re-exports the typing's `NodeObject` under
   the runtime's name.
+- `compute`'s count is number-pinned while the runtime takes an
+  `IndirectStorageBufferAttribute` and dispatches at the workgroup count
+  the GPU wrote into it — `computeIndirect`. A numeric count would also
+  make three prepend an early return on it, which an indirect dispatch
+  has no count to bound by.
 
 Before adding an entry, compile-probe the gap against the installed
 @types — a cast that upstream already fixed is a shim that never dies.
