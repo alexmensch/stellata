@@ -89,7 +89,7 @@ glare already takes all three, exactly as it takes the GLSL chunks.
 The vertex stage reddens and dims every survivor of the prefilter, on the
 same two-tier shape the GLSL has: the per-star A_V cache is one read of
 the star's own element of a storage buffer when `uAvPrepassEnabled` is
-set, and the full 48-tap camera→star march otherwise. Both come from
+set, and the full camera→star march otherwise. Both come from
 `../extinction/`, which owns the march, the cache and the one behaviour
 that is *not* parity (a cold CPU read of the cache). Three properties
 belong here rather than there:

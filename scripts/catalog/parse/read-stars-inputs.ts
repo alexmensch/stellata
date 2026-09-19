@@ -21,8 +21,8 @@ import {
   parseNssSourceIdSet,
   type DirectionSources,
 } from '../distance/direction-cascade';
-import { loadDustGrid } from '../distance/dust-deextinction';
-import type { DustGrid } from '../distance/dust-deextinction-pure';
+import { loadDustGrid } from '../distance/dust/dust-deextinction';
+import type { DustGrid } from '../distance/dust/dust-deextinction-pure';
 import {
   createConstellationAssignment,
   STELLARIUM_SKYCULTURE_JSON,

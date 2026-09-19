@@ -24,8 +24,9 @@ ray length and working set identical and move only how the rays are laid
 out: **3.3× for coherence alone**, 3.3 against 10.9 G fetches/s
 (`../../../../../docs/science-galactic-structure.md`
 § What the fill measured). This
-pass is measured rather than inferred from that: the recompute's 18.6M
-fetches cost **12.89 ms in catalogue order against 2.48 ms in Morton
+pass is measured rather than inferred from that: a recompute of 18.6M
+fetches — the fixed 48 taps per star the march spent when the pair was
+taken — cost **12.89 ms in catalogue order against 2.48 ms in Morton
 order** at mw120, 5.20×, on every frame a warp moves past
 `RECOMPUTE_EPSILON_PC` (`stellata-8cg.58.2` notes carry both arms and
 the sol pair). It beats the sweep's 3.3× because catalogue order

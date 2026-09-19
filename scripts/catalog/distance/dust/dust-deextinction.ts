@@ -1,6 +1,5 @@
 // Loads the LFS-committed Edenhofer dust artifact (data/dust/) into a
-// DustGrid for the build-time de-extinction integral. See
-// scripts/catalog/distance/README.md § Build-time de-extinction.
+// DustGrid for the build-time de-extinction integral — README.md.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';

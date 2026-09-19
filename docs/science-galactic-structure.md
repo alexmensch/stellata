@@ -127,7 +127,7 @@ parsec; the conversion `A_V / E_ZGR ≈ 2.742` at V band is baked in.
 
 Catalog `absmag` and `ci` are stored **intrinsic** — the build subtracts
 the Sol→star integral through this same voxel grid at write time (see
-`scripts/catalog/distance/README.md` § Build-time de-extinction), so this
+`scripts/catalog/distance/dust/README.md` § Build-time de-extinction), so this
 raymarch *restores* the observer-relative extinction instead of adding
 it a second time. Because both sides integrate the same model, at
 camera=Sol the build subtraction and the runtime addition cancel and a
@@ -335,11 +335,14 @@ Pin: **13.0′ cells × 32 log slices, one ray per cell, 2 bytes per texel, the
 fill marching each ray at half a voxel (2.44 pc, 512 samples to the coverage
 edge).** The cell angle is not a round number chosen for the table — it is one
 summation-patch diameter, derived from `DEFAULT_SUMMATION_ARCSEC2`, so an
-instrument change moves it. Fetches are counted against the shipped per-star
-extinction prepass — 390k stars × 48 steps = **18.6M fetches per rebuild**,
-which recomputes every frame during a warp — because that is a shipped GPU
-workload doing the same fetch against the same texture. Wall-clock GPU timings
-are § What the fill measured.
+instrument change moves it. Fetches are counted against a fixed yardstick —
+390k stars × 48 taps = **18.6M fetches**, one fixed-count per-star extinction
+march over the catalogue, which recomputes every frame during a warp — because
+that is a GPU workload doing the same fetch against the same texture. The
+shipped march now spends taps by in-cube path length, ~44 per star at Sol
+(`src/client/star-pipeline/extinction/README.md` § The march); the yardstick
+is kept so the ratios below stay comparable. Wall-clock GPU timings are § What
+the fill measured.
 
 **A screen-space grid is uniform in tan θ, not in solid angle**, and the cost
 table has to be read in those terms: `dθ/dx = cos²θ`, so the on-axis cell is

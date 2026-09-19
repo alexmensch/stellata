@@ -117,8 +117,8 @@ live `uExposure` rather than through this readout.
 
 **The per-star A_V cache is the consumer with the most to lose**, and it
 is the reason to keep the prohibition rather than a mere illustration of
-it: it watches `uThresholdMag` and `uCullMag` and refills 18.6M volume
-samples whenever either moves
+it: it watches `uThresholdMag` and `uCullMag` and re-marches every star it
+admits whenever either moves, tens of millions of volume samples
 (`../../webgpu/extinction/README.md` § The cache gate). Both stay free of
 the cut today; putting `dm` into either makes that refill per-frame with
 nothing failing.

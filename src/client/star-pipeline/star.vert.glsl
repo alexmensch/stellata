@@ -404,7 +404,7 @@ void main() {
     // appMag already sits above uCullMag cannot become visible after
     // extinction — the prefilter is exact, no dust headroom needed.
     // Skip the extinction read for those stars — a texelFetch on the
-    // prepass path, the full 48-tap raymarch on the fallback path (where
+    // prepass path, the full raymarch on the fallback path (where
     // this is the dominant vertex-shader saving).
     bool spectOk = (uSpectMask & (1u << uint(iSpectClass))) != 0u;
     bool distOk = iDistSol >= uMinDistSol && iDistSol <= uMaxDistSol;

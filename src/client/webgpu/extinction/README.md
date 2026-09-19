@@ -3,7 +3,7 @@
 The TSL twin of `../../star-pipeline/extinction/`: the camera→star
 Edenhofer raymarch as a **compute kernel**, and the per-star A_V buffer
 the star vertex stage indexes instead of re-marching. What the read
-*means* — the two-tier colour routing it reddens, the 48-tap calibration,
+*means* — the two-tier colour routing it reddens, the clip and tap rule,
 and above all the **cancellation invariant** (catalog `absmag`/`ci` are
 stored de-extincted, so this stack restores extinction rather than adding
 it twice) — is not re-decided here; that README owns it and a change to
@@ -14,7 +14,8 @@ either march has to ship with the mirrored build-side integral.
 ```
 src/client/webgpu/extinction/
   dust-raymarch-tsl.ts        TSL mirror of the stellata_dust_raymarch
-                              chunk, over dust-raymarch-pure's DUST_STEPS.
+                              chunk, over dust-raymarch-pure's clip and
+                              tap constants.
                               Shared by the kernel, the parity reference
                               and the star vertex fallback exactly as the
                               GLSL chunk is.
@@ -217,8 +218,15 @@ boot refuses such a device outright (`../tsl/README.md` § Storage
 attributes), which is what makes `supported` constant true here honest
 rather than merely untested.
 
-**A full recompute is ~18.6M volume samples**: one thread per star × 48
-taps, 388,071 × 48. That is the per-recompute ceiling and it is paid
+**A full recompute is at most ~37M volume samples**: one thread per
+star × `DUST_TAPS_MAX` (96), 388,071 × 96; at Sol the tap rule spends
+~44 per star, ~17M (`../../star-pipeline/extinction/README.md` § The
+march). The cap binds wherever the in-cube path runs past
+`DUST_TAP_PC × DUST_TAPS_MAX` ≈ 960 pc, so from outside the cube the
+ceiling is very nearly the per-admitted-star cost. **None of those
+figures is a time**: the same README records two dwells in which a 35%
+tap cut did not resolve against the band, because most of this kernel's
+cost is per-thread. It is paid
 *per frame* while the camera keeps moving more than
 `RECOMPUTE_EPSILON_PC` between frames — a warp pays it every frame, which
 is the case to measure, not the idle one. Every canon vantage is idle, so
@@ -265,15 +273,14 @@ the forced-recompute dwell (`gpu-compute` p50, ms): sol 3.195 → 1.729,
 earth 3.285 → 1.815, mw50 2.697 → 1.392, mw120 2.634 → 1.363 — and
 **lg 0.982 → 1.316, +34%** (`.perf-runs/2026-09-18/8cg576-lg-clean.json`,
 against `cns-real-recompute-all.json`). `lg` is not an anomaly to explain
-away: at 1 Mpc the 48 taps spread over a segment of which only the last
-~1.25 kpc is inside the dust cube, so the march the gate skips there was
-already a no-op and only the gate's own cost lands. A camera-outside-the-
-cube bypass is deliberately **not** built, because `stellata-8cg.58.4`
-clips the taps to the in-cube overlap and removes the accident — all 48
-taps then land inside at `lg`, the march becomes genuinely expensive, and
-the row flips to the table's largest saving. Re-measured there by
-`stellata-8cg.57.7`; do not re-derive the `lg` figure from a run taken
-before 58.4.
+away: that run predates the clip, when 48 taps spread over a 1 Mpc
+segment of which only the last ~1.25 kpc was inside the dust cube, so the
+march the gate skipped there was already a no-op and only the gate's own
+cost landed. The clipped march spends every tap inside the cube at `lg`,
+so the march is genuinely expensive there and the row flips to the
+table's largest saving; a camera-outside-the-cube bypass is deliberately
+**not** built. Re-measured there by `stellata-8cg.57.7`; do not quote the
+`lg` figure above as current.
 
 **The two stages compute `dPc` in different frames** — this pass in
 absolute heliocentric coordinates, the vertex stage in the floating-origin
@@ -301,8 +308,9 @@ invalidation. Three obligations fall out of caching the same test:
   invalidation. The list is the authority: the type of the value objects
   and the watch loop both derive from it.
   **Every key on it must stay free of the per-frame scene adaptation**,
-  or this cache refills its 18.6M samples on every frame instead of on
-  every settle. `uThresholdMag` is the one that could move: it is
+  or this cache refills the whole catalogue's march on every frame
+  instead of on every settle (§ What it costs, and what it holds, for the
+  sample count that is). `uThresholdMag` is the one that could move: it is
   `m_lim + MAG_PER_STOP·ev`, and `ev` is the user's discrete trim, with
   the adaptation cut held out of it on exactly this ground
   (`../../hdr/exposure/README.md` § Adaptation is deliberately absent —

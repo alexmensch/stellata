@@ -1,10 +1,16 @@
 # Archived perf runs
 
-Every `pnpm run perf` invocation worth citing, as the runner wrote it:
-`--json` record plus a `tee` of the console log, under `<date>/`. Written
-here by the protocol in `../scripts/perf/README.md` § Recording, which also
-says the part the tracked folder does not do for you: the file reaches main
-only if the PR that cites it adds it.
+Every `pnpm run perf` invocation worth citing, as the runner wrote it: the
+`--json` record, under `<date>/`. Written here by the protocol in
+`../scripts/perf/README.md` § Recording, which also says the part the tracked
+folder does not do for you: the file reaches main only if the PR that cites
+it adds it.
+
+**The console log is not archived.** `*.log` is ignored repo-wide, so a `tee`
+of the run is a local convenience for the session that took it and nothing
+more — `git add` refuses it rather than silently keeping it. Everything a
+later reader needs is in the `.json`: the envelope, the verdict inputs and
+the raw per-frame samples the console only ever summarised.
 
 `pnpm run survivors` writes here too — the survivor-count read, which is not
 a cost instrument and takes no clock. Its file is schema
@@ -52,9 +58,8 @@ has moved repeatedly — `run.git.commit` in the file is what says which.
 
 ## Names
 
-`<date>/<slug>.json` + `.log`, the slug naming the bead or question the run
-answers (`8cg-58-2-dwell-on`, `cns-m11-recompute-all`). A `survivors` file is
-the `.json` alone — that command tees no console log worth keeping. Files are
+`<date>/<slug>.json`, the slug naming the bead or question the run
+answers (`8cg-58-2-dwell-on`, `cns-m11-recompute-all`). Files are
 write-once: a re-measurement is a new file, never an edit, so the archive is
 append-only and a path quoted in a bead note stays valid.
 

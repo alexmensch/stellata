@@ -11,7 +11,7 @@ restores extinction rather than adding it twice.
 **This march has no analytic slab term** — it integrates the measured
 grid alone, and a sample outside the cube clamps to the zero-padded edge
 rather than handing over to a slab. So extinction beyond the 1.25 kpc
-coverage adds ≈0, which is what `scripts/catalog/distance/README.md`
+coverage adds ≈0, which is what `scripts/catalog/distance/dust/README.md`
 § Build-time de-extinction states from the build side and what the
 cancellation invariant below requires: the runtime addition can only
 cancel the terms the build subtraction actually used. The Milky Way
@@ -50,12 +50,71 @@ src/client/star-pipeline/extinction/
                                   (stellata_dust_raymarch), included by the
                                   prepass and by ../star.vert.glsl's fallback
                                   path. Spliced in stellata.ts via ?raw.
-  dust-raymarch-pure.ts (+ test)  CPU mirror of the raymarch decode +
-                                  trapezoidal integration and the
-                                  E(B−V) = A_V / R_V reddening. Test-only;
-                                  pins the shader math against
-                                  synthetic-cloud fixtures.
+  dust-raymarch-pure.ts (+ test)  CPU mirror of the march — the segment–cube
+                                  clip, the tap rule, the decode, the midpoint
+                                  sum — and the E(B−V) = A_V / R_V reddening.
+                                  The TSL twin imports its constants; the
+                                  build's integral imports its clip; the
+                                  runtime never calls it.
+  dust-raymarch-glsl-drift.test.ts  Pins the GLSL chunk's literals to the
+                                  constants above.
 ```
+
+## The march
+
+`dustRaymarchAV(absFrom, absTo)` integrates A_V along the camera→star
+segment in two steps, identical in the GLSL chunk, the TSL twin and the
+CPU mirror:
+
+1. **Clip to the cube.** A slab test per axis yields the segment's
+   parametric overlap `[t0, t1]` with the ±`uDustBoundsPc` cube
+   (`segmentCubeOverlap`); an empty overlap returns 0 before any fetch.
+   Outside the cube the grid is zero-padded, so a tap there could only
+   ever add ≈0 — clipping changes where the taps LAND, not what the
+   integral means. From inside the dust nearly every tap already landed
+   inside; from a far vantage the unclipped march spent almost all of
+   them on empty space, and the clip is a ~2–9× tail-error win at
+   identical cost (3 kpc out: p90 0.094 → 0.040 mag; 1 Mpc:
+   0.347 → 0.038).
+2. **Spend taps in proportion to the in-cube path.** One tap per
+   `DUST_TAP_PC` of overlap, clamped to `[DUST_TAPS_MIN, DUST_TAPS_MAX]`
+   (`dustMarchTapCount`), midpoints over the overlap, each `uvw` clamped
+   to the volume exactly as the sampler's clamp-to-edge does. A fixed
+   count spreads itself over path lengths that vary by an order of
+   magnitude — 48 taps on a 30 pc neighbour and on a 1.2 kpc sightline —
+   so at equal mean cost the adaptive rule carries less error.
+
+**The tail is bounded by `DUST_TAPS_MAX`, not by the density.** A
+sightline through a dense core is wrong at the cap whatever the density,
+because the log decode makes cores far narrower than the encoded field.
+Choose the rule on the p90/p99 of the sweep, and raise the cap rather
+than the density when the tail is the complaint. The shipped pair —
+10 pc per tap, cap 96 — reads 44 taps per star at Sol against the flat
+48 it replaced: fewer taps AND less than half the tail (p99 0.130 →
+0.066 mag, max 1.28 → 0.47), because the taps a nearby star no longer
+wastes are what the cap lets a dusty distant one spend.
+
+**Do not spend taps to buy frame time back — they are not what the
+kernel costs.** Measured 2026-09-18 over two dwells
+(`.perf-runs/2026-09-18/8cg584-recompute-all.json` and
+`-cold.json`): cutting the mean tap count 35% moved the compute-stream
+p50 by −0.114 ms and then +0.085 ms, scatter around zero against a
+0.25 ms band. Roughly three quarters of this kernel's cost is
+per-THREAD — the visibility gate's scattered reads, the dispatch, the
+position read — and no tap rule reaches it. The density is therefore an
+accuracy knob with a cost ceiling, which is why it is set finer than the
+error budget strictly needs.
+
+The instrument is `pnpm run analyse:march-taps`
+(`scripts/dust/march-taps/README.md`): every scheme against the
+converged in-cube integral the catalogue build uses, at four vantages.
+Re-run it before moving any of the three constants; the numbers belong in
+the PR and the bead, not here.
+
+**Any change here ships with the mirrored build-side integral**
+(§ The cancellation invariant). The build integrates the same clipped
+overlap at a step of at most one voxel (`avAlongSegment`), so today the
+only at-Sol residual is this march's quadrature.
 
 ## What the read produces
 
@@ -101,10 +160,7 @@ recomputations per visible star per frame.
   (`dust-raymarch.glsl`). That gate has no WebGPU counterpart — float
   render targets are core there, so the port's `supported` is constant
   true and the fallback branch survives only as the A/B switch below.
-  The march's 48 fixed samples are a pragmatic trapezoidal integration:
-  at 1.25 kpc that's 26 pc per step ≈ 5 voxels of the texture's native
-  ~5 pc resolution; more samples cost proportionally with marginal
-  quality gain.
+  The march's tap count and clip are § The march.
 - **A/B switch:** `stellata.setExtinctionPrepassEnabled(false)` (dev
   console) parks the shader on the fallback path AND pauses cache
   maintenance, so the fallback side never pays fill cost — the honest
@@ -169,7 +225,7 @@ Two constraints on any new caller:
 
 Catalog `absmag` and `ci` are stored **intrinsic** (de-extincted at
 build against the same voxel grid — see
-`scripts/catalog/distance/README.md` § Build-time de-extinction), so this
+`scripts/catalog/distance/dust/README.md` § Build-time de-extinction), so this
 runtime extinction *restores* the observer-relative extinction rather
 than double-applying it: at camera=Sol the build subtraction and this
 addition cancel, so a dusty-sightline star renders at its AT-HYG

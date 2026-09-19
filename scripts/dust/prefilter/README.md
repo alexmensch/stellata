@@ -51,8 +51,11 @@ and the shimmer a screen-space grid shows as its cells slide under rotation.
 Both the displacement and the shimmer are taken **across grid poses**, since a
 screen grid arrives at an arbitrary sub-cell offset *and* an arbitrary roll; a
 sky-fixed grid holds one pose, so its shimmer is identically zero. `cost.ts` is
-arithmetic only, in dust-texture fetches per fill and texels held, against the
-shipped per-star extinction prepass as the scale.
+arithmetic only, in dust-texture fetches per fill and texels held, quoted
+against a fixed yardstick of one 48-tap march per catalogue star (18.6M fetches
+at 388k) so the ratios in `docs/science-galactic-structure.md` § Cost stay
+comparable; the shipped per-star march spends taps by path length
+(`src/client/star-pipeline/extinction/README.md` § The march).
 
 ## Three things to know before changing it
 

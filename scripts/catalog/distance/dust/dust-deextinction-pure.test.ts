@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   R_V,
   sampleDensityAt,
+  sampleEncodedAt,
+  avAlongSegment,
   avSolToStar,
   type DustGrid,
 } from './dust-deextinction-pure';
@@ -54,6 +56,31 @@ describe('sampleDensityAt', () => {
     };
     // Mean encoded = 0.5 → density = 1e-3·exp(0.5·ln100) = 1e-3·10 = 0.01.
     expect(sampleDensityAt(g, 0, 0, 0)).toBeCloseTo(0.01, 12);
+    expect(sampleEncodedAt(g, 0.5, 0.5, 0.5)).toBeCloseTo(0.5, 12);
+  });
+
+  it('clamps an out-of-range encoded read to the edge voxel', () => {
+    const g = uniformGrid(255);
+    expect(sampleEncodedAt(g, -3, 0.5, 7)).toBe(1);
+  });
+});
+
+describe('avAlongSegment', () => {
+  it('integrates only the in-cube overlap of a segment that crosses the cube', () => {
+    // 400 pc segment along +x through a 100 pc half-cube: 200 pc inside.
+    // A_V = 0.1 · 200 · 2 = 40.
+    expect(avAlongSegment(uniformGrid(255), [-200, 0, 0], [200, 0, 0])).toBeCloseTo(40, 6);
+  });
+
+  it('is zero for a segment that misses the cube', () => {
+    expect(avAlongSegment(uniformGrid(255), [-200, 150, 0], [200, 150, 0])).toBe(0);
+  });
+
+  it('from a vantage outside the cube equals the Sol integral over the shared stretch', () => {
+    // Both segments cover x ∈ [0, 100] inside the cube along the same line.
+    const g = uniformGrid(255);
+    expect(avAlongSegment(g, [-300, 0, 0], [100, 0, 0]))
+      .toBeCloseTo(avSolToStar(g, -100, 0, 0) + avSolToStar(g, 100, 0, 0), 6);
   });
 });
 

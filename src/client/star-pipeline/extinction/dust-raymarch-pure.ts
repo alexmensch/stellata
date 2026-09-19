@@ -1,8 +1,12 @@
-// CPU mirror of the Edenhofer dust raymarch + reddening in
-// dust-raymarch.glsl / star.vert.glsl. Test-only; pins the shader math.
-// See src/client/star-pipeline/extinction/README.md.
+// CPU mirror of dust-raymarch.glsl / dust-raymarch-tsl.ts — README.md § The march.
 
-export const DUST_STEPS = 48;
+export const DUST_TAP_PC = 10;
+export const DUST_TAPS_MIN = 4;
+export const DUST_TAPS_MAX = 96;
+
+/** A segment component smaller than this is axis-parallel to the slab: its
+ *  entry/exit parameters would be ~1e9 and lie outside [0, 1] anyway. */
+export const SLAB_PARALLEL_EPS_PC = 1e-6;
 
 /** Canonical interstellar reddening ratio A_V / E(B-V) (CCM 1989,
  *  diffuse ISM). Single global value — mirrors `R_V` in star.vert.glsl.
@@ -21,40 +25,77 @@ export interface DustDecodeParams {
   avPerDensityPc: number;
 }
 
+export type Vec3 = readonly [number, number, number];
+
 /** Decode a normalised [0,1] texture sample back to E_ZGR/pc density.
  *  Inverse of build-dust.py's pure-log u8 encoding. */
 export function decodeDensity(encoded: number, p: DustDecodeParams): number {
   return p.densityMin * Math.exp(encoded * p.logRatio);
 }
 
-/** Integrated V-band extinction A_V along `from`→`to` (absolute pc).
- *  `sampleEncoded(u, v, w)` returns the normalised [0,1] texture value at
- *  volume coordinates; callers outside the [0,1] cube are skipped exactly
- *  as the GLSL bbox test does. Trapezoidal midpoint sum, DUST_STEPS taps. */
+/** Parametric overlap [t0, t1] of the segment `from + t·delta`, t ∈ [0, 1],
+ *  with the cube |x|,|y|,|z| ≤ boundsPc. Empty when t1 ≤ t0. */
+export function segmentCubeOverlap(from: Vec3, delta: Vec3, boundsPc: number): [number, number] {
+  let t0 = 0;
+  let t1 = 1;
+  for (let k = 0; k < 3; k++) {
+    const f = from[k];
+    const d = delta[k];
+    if (Math.abs(d) > SLAB_PARALLEL_EPS_PC) {
+      const ta = (-boundsPc - f) / d;
+      const tb = (boundsPc - f) / d;
+      t0 = Math.max(t0, Math.min(ta, tb));
+      t1 = Math.min(t1, Math.max(ta, tb));
+    } else if (Math.abs(f) > boundsPc) {
+      t0 = 1;
+      t1 = 0;
+    }
+  }
+  return [t0, t1];
+}
+
+export function dustMarchTapCount(
+  inCubeLenPc: number,
+  tapPc: number = DUST_TAP_PC,
+  maxTaps: number = DUST_TAPS_MAX,
+): number {
+  return Math.min(maxTaps, Math.max(DUST_TAPS_MIN, Math.ceil(inCubeLenPc / tapPc)));
+}
+
+/** Taps to spend on a given in-cube path length. */
+export type TapCountRule = (inCubeLenPc: number) => number;
+
+export function clamp01(x: number): number {
+  return x < 0 ? 0 : x > 1 ? 1 : x;
+}
+
+/** A_V along `from`→`to` (absolute pc); `sampleEncoded(u, v, w)` is the
+ *  normalised [0,1] texture read at volume coordinates. */
 export function dustRaymarchAv(
-  from: readonly [number, number, number],
-  to: readonly [number, number, number],
+  from: Vec3,
+  to: Vec3,
   sampleEncoded: (u: number, v: number, w: number) => number,
   p: DustDecodeParams,
+  tapCount: TapCountRule = dustMarchTapCount,
 ): number {
-  const dx = to[0] - from[0];
-  const dy = to[1] - from[1];
-  const dz = to[2] - from[2];
-  const lenPc = Math.hypot(dx, dy, dz);
+  const delta: Vec3 = [to[0] - from[0], to[1] - from[1], to[2] - from[2]];
+  const lenPc = Math.hypot(delta[0], delta[1], delta[2]);
   if (lenPc < 0.001) return 0;
-  const stepPc = lenPc / DUST_STEPS;
+  const [t0, t1] = segmentCubeOverlap(from, delta, p.boundsPc);
+  if (t1 <= t0) return 0;
+  const inCubeLenPc = (t1 - t0) * lenPc;
+  const taps = tapCount(inCubeLenPc);
   const invRange = 0.5 / p.boundsPc;
 
   let accumDensity = 0;
-  for (let i = 0; i < DUST_STEPS; i++) {
-    const t = (i + 0.5) / DUST_STEPS;
-    const u = (from[0] + dx * t) * invRange + 0.5;
-    const v = (from[1] + dy * t) * invRange + 0.5;
-    const w = (from[2] + dz * t) * invRange + 0.5;
-    if (u < 0 || v < 0 || w < 0 || u > 1 || v > 1 || w > 1) continue;
+  for (let i = 0; i < taps; i++) {
+    const t = t0 + (t1 - t0) * ((i + 0.5) / taps);
+    const u = clamp01((from[0] + delta[0] * t) * invRange + 0.5);
+    const v = clamp01((from[1] + delta[1] * t) * invRange + 0.5);
+    const w = clamp01((from[2] + delta[2] * t) * invRange + 0.5);
     accumDensity += decodeDensity(sampleEncoded(u, v, w), p);
   }
-  return accumDensity * stepPc * p.avPerDensityPc;
+  return accumDensity * (inCubeLenPc / taps) * p.avPerDensityPc;
 }
 
 export function ebvFromAv(av: number, rV: number = R_V): number {

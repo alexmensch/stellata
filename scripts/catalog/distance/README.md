@@ -6,11 +6,13 @@ distances.
 The authoring discipline for adding an override layer is the load-bearing
 part of this file — read it before touching the stack.
 
-Three subfolders carry their own cascade and their own README: `parallax/`,
+Four subfolders carry their own topic and their own README: `parallax/`,
 which owns the measured parallax every distance inverts and is where this
-stack's input comes from, plus the space-motion velocity's two fall-backs,
-`radial-velocity/` and `pm-rescue/`. This one owns the assembly, and the
-proper motion each direction tier supplies alongside its own position.
+stack's input comes from; the space-motion velocity's two fall-backs,
+`radial-velocity/` and `pm-rescue/`; and `dust/`, the build-time
+de-extinction and its cancellation invariant with the runtime march. This
+one owns the assembly, and the proper motion each direction tier supplies
+alongside its own position.
 
 ## Files in this area
 
@@ -49,9 +51,10 @@ scripts/catalog/distance/
                                   folders build these rows, and the point
                                   is that a column added to the interface
                                   lands in one place.
-  dust-deextinction.ts (+ test)   Build-time de-extinction against the
-    (+ -pure, + pure test)        Edenhofer dust grid; the pure half is
-                                  shared with ../companions/.
+  dust/                           Build-time de-extinction against the
+                                  Edenhofer dust grid, and the invariant
+                                  tying it to the runtime march. Its own
+                                  README.
   distance-regression-check.ts    Post-build check that no override layer
     (+ test)                      moved a star further than its budget,
                                   pinned by
@@ -180,57 +183,6 @@ source should supply the position too records why it does not.
 `velocityVia` credits the catalogue rather than the route to it, so
 `velocityTycho2Pm` **43** counts this cascade's 5 rows alongside the
 direction tier's 38.
-
-## Build-time de-extinction
-
-AT-HYG `absmag` is `mag − 5·log₁₀(d/10)` with no de-extinction, so it
-embeds the real Sol→star extinction A_V; the ~15% of stars without an
-Apsis Teff carry the observed (reddened) B−V in `ci` too. The runtime
-shader (`star.vert.glsl`) then raymarches the camera→star A_V and adds
-it on top — so with the camera at Sol a dusty-sightline star used to
-render ≈2·A_V too faint (and tier-3 colours double-reddened): extinction
-counted once in the data and once in the raymarch.
-
-The fix de-extincts at build time against **the same encoded dust the
-shader raymarches**: `absmag' = absmag − A_map(Sol→star)` and
-`ci' = ci − A_map/R_V`, where `A_map` is a converged Sol→star integral
-through the Edenhofer voxel grid. Because the source is the same model
-the runtime re-adds, at camera=Sol the build subtraction and the runtime
-addition cancel identically for every star — map calibration, cube
-truncation at 1.25 kpc, and the `avPerDensityPerPc` conversion all cancel
-by construction — so rendered `appMag` reproduces the AT-HYG observed
-magnitude (the only at-Sol residual is the shader's 48-step quadrature vs
-the build's converged integral). Camera-anywhere: from within the cube,
-vantages get physically consistent re-lighting.
-
-- `dust-deextinction-pure.ts` — the pure integral + trilinear sampler
-  mirroring the GPU decode (`sampleDensityAt`, `avSolToStar`) and the
-  shared `R_V`. `dust-deextinction.ts` — `loadDustGrid` assembles
-  `data/dust/` (manifest + 64 chunks) into one flat grid; decode
-  constants come from the manifest, never redefined.
-- Runs inside `readStars` after the distance overrides settle final xyz,
-  **before** `physicalRadius` (radii size off the de-extincted, brighter
-  absmag — hence the count re-pin) and before companion promotion.
-- Promoted companions de-extinct along their own sightline in
-  `companion-promotion.ts`, except where the value is already intrinsic:
-  a spectral-derived absmag (class→M_V) and a derived ci (Ballesteros /
-  solar fallback) are left untouched; observed-photometry absmag and the
-  row's own observed ci get the subtraction.
-- **Dust data absent at build → HARD FAIL** (`loadDustGrid` throws). The
-  Bailer-Jones soft-continue precedent does not apply: a soft-continue
-  would ship extincted absmags into a runtime that assumes de-extincted,
-  silently reintroducing the double-count.
-- Beyond the 1.25 kpc cube the runtime raymarch adds ≈0, so distant
-  dusty sightlines stay single-counted (extinction embedded in absmag,
-  still exact from Sol) until the raymarch stack is extended.
-
-**Invariant:** the build-time de-extinction integral and the runtime
-extinction stack must model the same dust (same maps + slab). Any
-runtime-stack change ships with the mirrored build-side integral
-extension + a catalog rebuild in the same release. Apsis `azero_gspphot`
-(offset 64–67) is a validation cross-check only, never the de-extinction
-source — a different estimator than the raymarch would leave a Sol
-residual.
 
 ## Multi-layer distance refinement
 

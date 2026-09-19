@@ -78,7 +78,7 @@ import {
   type RvVia,
   type RvErrorBand,
 } from '../distance/radial-velocity/radial-velocity';
-import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
+import { R_V, avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import {
   emptySimbadValueIndex,
   lookupSimbadValues,

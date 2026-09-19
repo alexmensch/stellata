@@ -53,7 +53,7 @@ for its coverage and the runtime colour-LUT re-key it enables.
   - 12–15 `float32`      absmag — **intrinsic** (de-extincted). The build
                           subtracts the Sol→star Edenhofer A_V so the runtime
                           raymarch re-adds it without double-counting (see
-                          `../distance/README.md` § Build-time de-extinction).
+                          `../distance/dust/README.md` § Build-time de-extinction).
   - 16–19 `float32`      ci (intrinsic B–V colour index, de-reddened by the
                           same integral; default 0.65 for missing)
   - 20–23 `float32`      physicalRadius in solar radii (computed at build time)

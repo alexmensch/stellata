@@ -14,7 +14,9 @@ contract + the Zucker column-check provenance.
 Python deps in `requirements-dust.txt`.
 
 `prefilter/` is analysis only — the sweep that picked the Milky Way band's
-prefilter mechanism against this grid. Its own README.
+prefilter mechanism against this grid. Its own README. `march-taps/` is
+the other analysis folder: the per-star extinction march's tap budget
+priced against the converged integral. Its own README.
 
 Particle-layer rendering is currently shelved (strength = 0 → mesh
 hidden); voxel extinction (read per-star in the star pipeline) stays
@@ -60,7 +62,7 @@ clipped molecular-cloud cores 25× — peak cloud columns encoded at
 (`docs/science-molecular-clouds.md` § 2.2). Changing the ceiling re-scales
 the decode of every voxel, so a rebuild ships with a catalog rebuild
 (build-time de-extinction integrates the same encoded grid —
-`scripts/catalog/distance/README.md` § Build-time de-extinction).
+`scripts/catalog/distance/dust/README.md` § Build-time de-extinction).
 
 The build also runs a per-cloud column check (`zucker` block in the
 manifest): peak A_V columns through each Zucker 2021 profiled cloud

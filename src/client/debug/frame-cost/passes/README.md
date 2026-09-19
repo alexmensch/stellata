@@ -231,8 +231,11 @@ Two rows, and they price opposite halves of the same cache.
   vertex stage on its in-vertex raymarch, so `savedMs` is normally negative
   and the row is what the cache SAVES.
 - **`extinctionRecompute`** is the producer: what filling the cache costs.
-  One camera→star march per catalogue star — 388,071 threads × 48 volume
-  taps, ~18.6M fetches — plus its own compute submit on WebGPU
+  One camera→star march per catalogue star — 388,071 threads, each
+  spending taps in proportion to its in-cube path, so ~17M volume fetches
+  at Sol against a ~37M ceiling
+  (`../../../star-pipeline/extinction/README.md` § The march) — plus its
+  own compute submit on WebGPU
   (`../../../webgpu/extinction/README.md` § The prepass kernel), or its own
   fragment pass on WebGL2.
 

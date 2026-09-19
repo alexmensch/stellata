@@ -27,7 +27,7 @@ import {
   spectralClassCi,
   spectralFromAbsmag,
 } from '../spectral/physical-radius';
-import { R_V, avSolToStar, type DustGrid } from '../distance/dust-deextinction-pure';
+import { R_V, avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import {
   RIELLO_G_MINUS_V_SIGMA,
   vTierIsSystemBlend,
