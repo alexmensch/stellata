@@ -80,13 +80,28 @@ if ! printf '%s' "$stripped" | grep -qE '[^[:space:]]'; then
   exit 1
 fi
 
+# A ✗ anywhere on a line marks that line, not only one in the first field: a
+# mark reported inline in prose escapes a line-start match and passes a body
+# that accepted nothing. Every row key on a marked line (scenario|backend, with
+# an optional |compute, emphasis and punctuation stripped) owes an accepted:
+# line, and a marked line naming no row fails on its own text — there is no
+# row an accepted: line could name for it.
 missing=()
 while IFS= read -r key; do
   [ -z "$key" ] && continue
   if ! printf '%s\n' "$stripped" | awk -v k="$key" '$1 == "accepted:" && $2 == k { found=1 } END { exit !found }'; then
     missing+=("$key")
   fi
-done < <(printf '%s\n' "$stripped" | awk '$1 == "✗" { print $2 }')
+done < <(printf '%s\n' "$stripped" | awk '
+  index($0, "✗") {
+    named = 0
+    for (i = 1; i <= NF; i++) {
+      f = $i
+      gsub(/[*`_,;:()]/, "", f)
+      if (f ~ /^[A-Za-z0-9-]+\|(webgpu|webgl2)(\|compute)?$/) { print f; named = 1 }
+    }
+    if (!named) print "<unnamed row on line " NR ">"
+  }')
 
 if [ ${#missing[@]} -gt 0 ]; then
   echo "::error::'## Perf' carries ✗ rows without an 'accepted: <row> <reason> (<bead-id>)' line: ${missing[*]}"
