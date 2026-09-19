@@ -4,7 +4,7 @@ import { writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { chromium, type Page } from 'playwright';
 import { survivorPct, type SurvivorReport } from '../../src/client/debug/survivor-counts';
-import { ARG_DEFAULTS, ArgError } from './args';
+import { ARG_DEFAULTS, ArgError, withoutPassthroughDash } from './args';
 import { gitMeta } from './checkout';
 import {
   BOOT_TIMEOUT_MS, DEFAULT_CHROME_ARGS, SETTLE_TIMEOUT_MS,
@@ -51,7 +51,7 @@ interface SurvivorsArgs {
 export function parseSurvivorsArgs(argv: readonly string[]): SurvivorsArgs {
   try {
     const { values } = parseArgs({
-      args: [...argv],
+      args: withoutPassthroughDash(argv),
       options: { url: { type: 'string' }, json: { type: 'string' } },
       strict: true,
     });
