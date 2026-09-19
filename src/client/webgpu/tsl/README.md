@@ -22,8 +22,10 @@ src/client/webgpu/tsl/
                                     fragment position, and the ±0.5-LSB
                                     output dither over that.
   storage-attribute.ts (+ test)     Release of a storage buffer attribute
-                                    no geometry owns, and the vertex-stage
-                                    device limit (§ Storage attributes).
+                                    no geometry owns, the write/read node
+                                    pair over one buffer, and the
+                                    vertex-stage device limit
+                                    (§ Storage attributes).
 ```
 
 Which WebGL star attribute feeds which storage table is
@@ -108,13 +110,28 @@ call, in its dispose, in the same diff (`../../../../docs/authoring-patterns.md`
 
 Three properties of a storage node worth knowing before binding one:
 
-- **Access is per stage, not per node.** The WGSL builder declares a
-  storage buffer `read` in any non-compute stage whatever the node's own
-  access, and the bind-group layout types it read-only there — so ONE
-  `StorageBufferNode` object can be the kernel's write target and a
-  vertex stage's read source at once. Sharing it by identity is what
-  makes a `.value` swap reach every consumer (the extinction A_V slot,
-  `../extinction/README.md` § One owner for every shared slot).
+- **Access is per stage, not per node — until something narrows it.** The
+  WGSL builder declares a storage buffer `read` in any non-compute stage
+  whatever the node's own access, and the bind-group layout types it
+  read-only there — so ONE `StorageBufferNode` object can be the kernel's
+  write target and a vertex stage's read source at once. Sharing it by
+  identity is what makes a `.value` swap reach every consumer (the
+  extinction A_V slot, `../extinction/README.md` § One owner for every
+  shared slot).
+  **`toReadOnly()` is the exception, and it narrows in place.** It is
+  `setAccess(READ_ONLY)` returning the same node, not a view, and an
+  explicit access binds in the compute stage too — so narrowing a node a
+  kernel assigns through makes that kernel's own pipeline fail to compile
+  (`cannot store into a read-only type`), at boot, on the device, where
+  neither vitest nor tsc can see it. A buffer one kernel writes and
+  another only reads therefore needs **two `storage()` calls over the one
+  attribute**. `storageWriteRead(build)` (`storage-attribute.ts`) is that
+  pair — it calls `build` twice and narrows only the reader — and the
+  refill dispatch takes it (`../star/compaction/README.md` § The refill
+  dispatch). **Narrowing is safe only on a `storage()` call's own
+  result**, which no other holder can reach;
+  `../../../../tests/tsl-storage-narrowing.test.ts` scans `src/` for the
+  rest, and the pair builder is its one exemption.
 - **The WGSL array is runtime-sized.** `bufferCount` reaches the shader
   only for uniform buffers, so a node built over a 1-element placeholder
   and later pointed at the real attribute needs no rebuild — the binding
@@ -308,3 +325,10 @@ Node-graph introspection (walking the built node tree and asserting
 structure) was considered and rejected: it pins three's internal node
 representation, so every three bump breaks every shader test while
 verifying no actual math.
+
+A node's own **binding** properties are the exception, and `access` is the
+one that has to be asserted: `access`, `value` and `isStorageBufferNode`
+are typed public surface rather than graph shape, they survive a bump that
+changes code generation, and a change in what `toReadOnly()` does to them
+is precisely what must fail a test rather than a boot (§ Storage
+attributes).

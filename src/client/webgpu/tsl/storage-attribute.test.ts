@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { BufferAttribute } from 'three';
-import type { WebGPURenderer } from 'three/webgpu';
+import { storage } from 'three/tsl';
+import { StorageBufferAttribute, type WebGPURenderer } from 'three/webgpu';
 import {
-  disposeStorageAttribute, supportsVertexStageStorageBuffers,
+  disposeStorageAttribute, storageWriteRead, supportsVertexStageStorageBuffers,
 } from './storage-attribute';
 
 const rendererReporting = (limits: Record<string, number> | null) => ({
@@ -22,6 +23,34 @@ describe('disposeStorageAttribute', () => {
     const attr = new BufferAttribute(new Float32Array(4), 1);
     expect(() => disposeStorageAttribute(
       { _attributes: null } as unknown as WebGPURenderer, attr)).not.toThrow();
+  });
+});
+
+describe('storageWriteRead', () => {
+  const dispatch = () => new StorageBufferAttribute(new Uint32Array(3), 1);
+
+  // The shape this exists to make unwritable: one node narrowed for the
+  // reader is the writer's node too, so the writing kernel emits a store
+  // three accepts and the device refuses at pipeline creation.
+  it('narrows the node it is called on, so one node cannot serve both', () => {
+    const node = storage(dispatch(), 'uint', 3);
+    expect(node.toReadOnly()).toBe(node);
+    expect(node.access).toBe('readOnly');
+  });
+
+  it('builds a separate node per side and narrows only the reader', () => {
+    const attribute = dispatch();
+    const { write, read } = storageWriteRead(() => storage(attribute, 'uint', 3));
+    expect(write).not.toBe(read);
+    expect(read.access).toBe('readOnly');
+    expect(write.access).not.toBe('readOnly');
+  });
+
+  it('binds both sides to the one attribute', () => {
+    const attribute = dispatch();
+    const { write, read } = storageWriteRead(() => storage(attribute, 'uint', 3));
+    expect(write.value).toBe(attribute);
+    expect(read.value).toBe(attribute);
   });
 });
 
