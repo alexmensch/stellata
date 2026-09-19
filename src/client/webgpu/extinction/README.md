@@ -315,10 +315,14 @@ at `lg` and −61% to −73% elsewhere, and `lg` now sits below its own
 pre-gate 0.982 — the net loss there is gone. Two changes are folded into
 that column and on the real catalogue it cannot separate them: the slicing
 dispatches a quarter of the slot space per frame, and the frustum returns the
-out-of-frame threads inside it. **Every run quoted below and above predates
-58.4's clipped march**, which this branch now carries, so the differentials
-hold but no absolute figure here is this tree's;
-`stellata-8cg.57.7` re-reads `lg` against the clipped march.
+out-of-frame threads inside it. Every run quoted above predates 58.4's
+clipped march; **this tree's own figure is the same-commit pair at
+`1d5f934e`** (`.perf-runs/2026-09-19/poststack-refill-off.json` and
+`-refill-on.json`, 960 frames, readback one in four): forced 0.452 / 0.587
+/ 0.507 / 0.393 / **0.923** against the compaction alone at 0.286 / 0.392
+/ 0.390 / 0.306 / 0.693 (mw120 / sol / earth / mw50 / lg), so the refill
+costs 0.09–0.23 ms per forced frame — under the 0.25 ms band at every
+vantage, `lg` included.
 
 **The frustum's own share is separable at 1,278,785**, where a run exists at
 the slicing's tip with the same lever and flags. `gpu-compute` p50, ms:
