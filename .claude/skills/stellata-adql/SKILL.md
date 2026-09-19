@@ -26,6 +26,13 @@ does not host `gaiadr3.*`, so an ESA→CDS fallback reports "table not found"
 and hides the real fault. `TapClient` takes `backends=` with no default for
 exactly this reason.
 
+It runs the other way too: ESA carries `external.*` copies of catalogues you
+may reach for on VizieR, and the copy you pick decides what you can ASK. The
+Bailer-Jones distances are `external.gaiaedr3_distance` on ESA, already on the
+paper's column names, where VizieR's `I/352/gedr3dis` carries no magnitude —
+so only the ESA copy can be bounded by one. Check both services for a table
+before accepting the constraints of the first.
+
 ## Verified dialect differences
 
 Measured against the live services 2026-09-19. `OK` means the query ran.
@@ -107,13 +114,28 @@ and a 300 s timeout. Slice on the bound itself, and space the slices so their
 counts grow geometrically, so equal steps in log-count space give near-equal
 slices where equal magnitude steps give a 27x spread.
 `refresh-gaia-magnitude.py` is the worked example;
-`scripts/refresh/README.md` § Slicing a magnitude-bounded pull carries the
+`scripts/refresh/magnitude/README.md` § Slicing a magnitude-bounded pull carries the
 spacing rule and the partition discipline (share the edge as a formatted
 literal, gate that no row is returned twice).
 
 `phot_g_mean_mag` is indexed on ESA — a `COUNT(*)` under a magnitude bound
 over the 1.8-billion-row table returns in ~2 s — which is what makes
 magnitude slicing cheap rather than a full scan per slice.
+
+**A table with no magnitude of its own is still sliceable: join to
+`gaiadr3.gaia_source` for the bound.** Both sides key on the indexed
+`source_id`, so the slice costs about what an unjoined one does — ~4 s for
+~26 k rows out of `external.gaiaedr3_distance` or
+`gaiadr3.astrophysical_parameters`, against ~5.5 h to pull the same scope as
+5000-id IN-clauses. Qualify the projection but do NOT rename it
+(`SELECT t.source_id, t.teff_gspphot …`): the result carries the bare column
+names, so a joined leg and an IN-clause leg feed one collector unchanged.
+
+**Add a predicate to that join and it stops being cheap.** A bare joined
+`COUNT(*)` under the bound returns in ~20 s, but the same count with
+`AND a.teff_gspphot IS NOT NULL` answers **408 "Job timeout/aborted"**. Sample
+the predicate over two or three real slices and extrapolate instead — a
+coverage fraction does not need the whole table to be trustworthy.
 
 ## Reading the real error
 

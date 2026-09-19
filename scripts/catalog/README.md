@@ -134,9 +134,10 @@ decoding it.
 `scripts/catalog/build-catalog.ts` loads `data/gaia/gaia_dr3_apsis.tsv`
 via `parseGaiaApsisTsv` into a `Map<source_id, ApsisRow>` and writes
 seven `float32` Apsis fields per record into the v6 binary (offsets
-52–79; see § Binary catalog format above). Coverage: ~99.6% of records
-that resolve to a Gaia source_id match an Apsis row; ~85% have a
-non-null Teff in either gspphot or gspspec. The remaining ~15%
+52–79; see § Binary catalog format above). Coverage: 99.9% of records
+that resolve to a Gaia source_id match an Apsis row (371,974 of
+372,458); ~85% of those have a non-null Teff in either gspphot or
+gspspec. The remaining ~15%
 (typically faint Tycho-only stars without high-S/N BP/RP photometry,
 plus hot O/B stars where gspphot doesn't converge) are written as
 `NaN` (the `NO_APSIS` sentinel).

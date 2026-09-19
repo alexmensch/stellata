@@ -8,8 +8,8 @@ AGB stars) where the inverse-parallax estimator catastrophically
 fails.
 
 ```
-bailer-jones-dr3.tsv   ~26 MB, LFS. Keyed by Gaia DR3 source_id.
-                       365,980 rows.
+bailer-jones-dr3.tsv   ~95 MB, LFS. Keyed by Gaia DR3 source_id.
+                       1,273,650 rows.
 ```
 
 ## Provenance
@@ -17,7 +17,9 @@ bailer-jones-dr3.tsv   ~26 MB, LFS. Keyed by Gaia DR3 source_id.
 - **Citation**: Bailer-Jones C. A. L., Rybizki J., Fouesneau M.,
   Demleitner M., Andrae R. 2021, *AJ* 161, 147.
   DOI: [10.3847/1538-3881/abd806](https://doi.org/10.3847/1538-3881/abd806).
-- **VizieR catalog**: `I/352/gedr3dis`.
+- **Table**: `external.gaiaedr3_distance` on the ESA Gaia archive — the
+  archive's own copy of what VizieR publishes as `I/352/gedr3dis`, already
+  on the paper's column names. § Why the pull is ESA-side.
 - **Columns ingested**: `source_id`, `r_med_photogeo`, `r_med_geo`.
   Photogeometric (`r_med_photogeo`) is preferred; geometric
   (`r_med_geo`) is the fallback when photogeo is absent.
@@ -39,16 +41,34 @@ different, worse one. Coverage pins as `bjOverridden / bjEligible` in
 `scripts/catalog/build-catalog-expected.json`, and the **shortfall between
 them pins at zero** (`bjEligibleNotPulled`): an eligible record has its own
 DR3 parallax, so this publication covers it, and an absence means this pull's
-request set — the membership manifest's `gaia_source_id` column, § Refresh
-below — has moved since the table was pulled. See
+scope — § Refresh below — has moved since the table was pulled. See
 `scripts/catalog/distance/README.md` § Multi-layer distance refinement and
-§ Manifest-derived pulls.
+§ Scope-derived pulls.
+
+## Why the pull is ESA-side
+
+The scope is the catalogue's deep population, whose larger half is defined by
+a magnitude bound rather than by a list of ids
+(`scripts/refresh/magnitude/README.md` § The deep population). Expressing that bound
+takes a join against `gaiadr3.gaia_source`, and only the ESA archive hosts
+both tables: VizieR's `I/352/gedr3dis` carries no magnitude column, so there
+the same scope is 250 id batches and about five and a half hours against four
+minutes of sliced join.
+
+The two copies agree. Sampling 2,034 committed rows across the file against
+ESA, 2,021 matched cell-for-cell and 13 differed — 12 in the last decimal
+only (float32 rounding ties, ±0.001 pc, well inside the ±10% posterior
+interval), and one where the VizieR-sourced file had written astropy's masked
+repr `--` into an absent `r_med_photogeo` rather than an empty cell. 744 rows
+carried that `--`; `parseBailerJonesTsv` reads it as NaN and falls back to
+`r_med_geo`, which is what an empty cell does, so the encoding was invisible
+to the build and is gone from the ESA-side write.
 
 ## Refresh
 
 `pnpm run refresh:bailer-jones` →
 [`scripts/refresh/refresh-bailer-jones.py`](../../scripts/refresh/README.md).
-The request set is the membership manifest's `gaia_source_id` column
-(`scripts/refresh/README.md` § Request sets are membership-derived); the pull
-batches over it and checkpoints per batch, so `--force` resumes rather than
-restarting.
+Two legs — every source at `G ≤ 11`, plus what the exported catalog request
+adds below that floor — per `scripts/refresh/magnitude/README.md` § The deep population.
+Runs AFTER `pnpm run build:astrometry-request`. Each leg checkpoints per
+batch, so `--force` resumes rather than restarting.

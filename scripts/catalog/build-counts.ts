@@ -79,7 +79,7 @@ export interface BuildCounts {
    *  the count actually overridden. Coverage = bjOverridden / bjEligible. */
   bjOverridden: number;
   /** The shortfall between those two, **pinned at zero** — the pull-staleness
-   *  gate. § Manifest-derived pulls in `distance/README.md` owns the rule and
+   *  gate. § Scope-derived pulls in `distance/README.md` owns the rule and
    *  why the numerator above cannot serve as one. */
   bjEligibleNotPulled: number;
   /** Records carrying a source_id the committed Apsis / GSPC pull holds no row

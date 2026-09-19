@@ -31,8 +31,9 @@ gaia_dr3_magnitude_pull.tsv            ~200 MB, LFS. Every gaia_source row at
                                        request set: its selection is the
                                        magnitude bound itself.
 gaia_dr3_nss_two_body.tsv              ~90 MB, LFS. NSS two-body orbits.
-gaia_dr3_apsis.tsv                     ~20 MB, LFS. gspphot ∪ gspspec
-                                       Teff/logg/[M/H]/A0 + spectraltype_esphs.
+gaia_dr3_apsis.tsv                     ~70 MB, LFS. gspphot ∪ gspspec
+                                       Teff/logg/[M/H]/A0 + spectraltype_esphs,
+                                       over the deep population (1,284,663).
 gaia_dr3_gspc.tsv                      ~31 MB, LFS. Johnson-Kron-Cousins B and
                                        V synthesised from each source's BP/RP
                                        spectrum, + fluxes, flux errors and the
@@ -95,7 +96,8 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
     selected on `phot_g_mean_mag` rather than on a source_id list).
   - `gaia_dr3_nss_two_body.tsv` ← `nss_two_body_orbit`.
   - `gaia_dr3_apsis.tsv` ← `astrophysical_parameters` (gspphot ∪
-    gspspec).
+    gspspec; scoped like the magnitude pull plus the catalog request —
+    `../../scripts/refresh/magnitude/README.md` § The deep population).
   - `gaia_dr3_gspc.tsv` ← `synthetic_photometry_gspc` (queried by the
     same catalog source_id request the astrometry pull reads).
   - `gaia_dr2_neighbourhood.tsv` ← `dr2_neighbourhood` (the DPAC

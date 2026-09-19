@@ -644,8 +644,10 @@ def _simbad_run(query: str) -> Any:
 
 def cds_backend() -> TapBackend:
     """CDS / VizieR TAP backend. Required for VizieR-only tables (e.g.
-    Bailer-Jones I/352/gedr3dis, Hipparcos-2 I/311/hip2) that ESA does
-    not host."""
+    Hipparcos-2 I/311/hip2) that ESA does not host. Check ESA's
+    `external.*` schema before assuming a catalogue is one of them — the
+    Bailer-Jones distances are there as `external.gaiaedr3_distance`, and
+    only that copy can be bounded by magnitude."""
     return TapBackend(name="CDS", run=_cds_run)
 
 
@@ -963,16 +965,37 @@ def report_coverage(
     their observability reads the same way.
     """
     rows = list(rows)
-    n = len(rows)
+    return report_coverage_counts(
+        len(rows),
+        total_input,
+        [(name, sum(1 for r in rows if pred(r))) for name, pred in groups],
+        sum(1 for r in rows if any(pred(r) for _, pred in groups)),
+        label=label,
+        log=log,
+    )
+
+
+def report_coverage_counts(
+    rows_present: int,
+    total_input: int,
+    groups: Sequence[tuple[str, int]],
+    union: int,
+    *,
+    label: str = "source_ids",
+    log: Callable[[str], None] = print,
+) -> float:
+    """`report_coverage` with the counting already done — what a pull large
+    enough to stream its rows has, since it cannot hand the same rows to a
+    predicate twice.
+    """
     width = max([len("row present"), len("union"), *(len(name) for name, _ in groups)])
 
     def line(name: str, count: int) -> str:
-        return f"  {name.ljust(width)}  {count:>6} ({100 * count / total_input:.1f}%)"
+        return f"  {name.ljust(width)}  {count:>9,} ({100 * count / total_input:.1f}%)"
 
-    out = [f"coverage of {total_input} {label}:", line("row present", n)]
-    for name, pred in groups:
-        out.append(line(name, sum(1 for r in rows if pred(r))))
-    union = sum(1 for r in rows if any(pred(r) for _, pred in groups))
+    out = [f"coverage of {total_input} {label}:", line("row present", rows_present)]
+    for name, count in groups:
+        out.append(line(name, count))
     out.append(line("union", union))
     log("\n".join(out))
     return union / total_input

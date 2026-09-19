@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Unit tests for vizier_slice (no network; in-memory TAP backend). Run via
-`python3 scripts/refresh/vizier_slice.test.py`."""
+`python3 scripts/refresh/vizier/vizier_slice.test.py`."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import refresh_lib as rl  # noqa: E402
 from test_helpers import FakeTable, fake_tap_client  # noqa: E402

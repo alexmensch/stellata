@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh data/gaia/gaia_dr3_apsis.tsv — Gaia DR3 Apsis astrophysical
-parameters (Teff, logg, [M/H], A0, ESP-HS spectral type) per membership
-source_id."""
+parameters (Teff, logg, [M/H], A0, ESP-HS spectral type) over the
+catalogue's deep population. See data/gaia/README.md."""
 
 from __future__ import annotations
 
@@ -14,11 +14,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
 import refresh_lib as rl  # noqa: E402
+from magnitude import magnitude_pull as mp  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
-MEMBERSHIP = rl.MEMBERSHIP_MANIFEST
+REQUEST = ROOT / "data" / "gaia" / "gaia_catalog_source_id_request.tsv"
 OUT = ROOT / "data" / "gaia" / "gaia_dr3_apsis.tsv"
+
+TABLE = "gaiadr3.astrophysical_parameters"
 
 TSV_COLUMNS = [
     "source_id",
@@ -37,12 +40,6 @@ TSV_COLUMNS = [
 # column means one append here in addition to TSV_COLUMNS + EXPECTED_SCHEMA.
 STRING_COLUMNS: frozenset[str] = frozenset({"spectraltype_esphs"})
 
-ADQL_TEMPLATE = (
-    "SELECT " + ", ".join(TSV_COLUMNS) + " "
-    "FROM gaiadr3.astrophysical_parameters "
-    "WHERE source_id IN ({inlist})"
-)
-
 # upstream dtypes: int64 + 7 × float32 (live probe 2026-05-18).
 # validate_schema maps `float` to np.floating via _dtype_matches so the
 # float32 width passes — bailer-jones uses the same pattern.
@@ -58,27 +55,33 @@ EXPECTED_SCHEMA: dict[str, type | tuple[type, ...]] = {
     "spectraltype_esphs": str,
 }
 
-# 5000 ids per IN-clause — same empirical sweet spot as refresh-bailer-jones.py
-# (CDS / ESA TAP runtime is superlinear in IN-clause length beyond ~5k).
-BATCH_SIZE = 5_000
+# Counts every matched row, all-NULL Apsis rows included — not the
+# union-(teff+logg) projection below it. Measured 1,246,769 on 2026-09-19.
+EXPECTED_MAGNITUDE_ROWS_MIN = 1_222_000
+EXPECTED_MAGNITUDE_ROWS_MAX = 1_260_000
 
-# DR3 is frozen — the 1000-source-id probe returned 999 rows (99.9% of
-# input). The manifest binds ~370 k source_ids, so ~370 k ± 5% is the
-# expected count: the query's matched-row count (unfiltered TAP returns
-# every matched row, all-NULL Apsis rows included), not the union-(teff+logg)
-# coverage projection below it. The band tracks the membership term's size.
-EXPECTED_ROW_COUNT_MIN = 350_000
-EXPECTED_ROW_COUNT_MAX = 390_000
-
-# Union-(teff+logg) coverage — the actual ingestable bucket. Floor sits
-# ~5 pts below the ~84.8% observed at last probe, absorbing Apsis
+# Union-(teff+logg) coverage — the actual ingestable bucket. Measured 89.9%
+# over the deep population, 2026-09-19; the floor absorbs Apsis
 # pipeline-version variation without false-failing.
 EXPECTED_UNION_COVERAGE_MIN = 0.80
 
-# ESP-HS spectral-type enum coverage floor. ESP-HS is the hottest-star
-# branch of the Apsis chain and resolves spectraltype_esphs for ~30%+
-# of DR3 sources. Below this floor the pull is likely broken.
-EXPECTED_SPECTRALTYPE_COVERAGE_MIN = 0.20
+# Coverage floor over the request set, matching refresh-bailer-jones.py.
+# Measured 99.8% at depth, 2026-09-19.
+EXPECTED_COVERAGE_MIN = 0.90
+
+# scripts/refresh/README.md § Gaia TAP: synchronous endpoints only.
+SYNC_MAXREC = mp.slice_sync_maxrec(EXPECTED_MAGNITUDE_ROWS_MAX)
+
+# ESP-HS resolves a spectral-type letter for nearly the whole population,
+# not just its hot branch: 98.9% over the deep pull once its own
+# not-determined value is excluded, measured 2026-09-19 (K 544,631 ·
+# F 265,280 · A 127,289 · G 125,287 · M 118,954 · B 84,468 · O 2,148 ·
+# CSTAR 1,991 · unknown 3,327 · empty 11,288).
+EXPECTED_SPECTRALTYPE_COVERAGE_MIN = 0.90
+
+# Scoring the enum's own not-determined value as coverage would let the
+# floor above pass on a pull that resolved nothing.
+SPECTRALTYPE_UNRESOLVED = "unknown"
 
 # Teff has order ~1-10 K formal uncertainty, logg ~0.01-0.1 dex,
 # [M/H] ~0.01-0.1 dex, A_0 ~0.01-0.1 mag. 4 decimals on logg/mh/azero
@@ -139,11 +142,6 @@ SPOT_CHECKS: list[dict[str, Any]] = [
 ]
 
 
-def query_batch(client: rl.TapClient, ids: list[int]):
-    inlist = ",".join(str(i) for i in ids)
-    return client.run(ADQL_TEMPLATE.format(inlist=inlist))
-
-
 SCRIPT_NAME = "refresh-gaia-apsis"
 
 
@@ -180,85 +178,102 @@ def write_row(row: Any) -> dict[str, Any]:
 def main() -> None:
     force = "--force" in sys.argv
 
-    if not force and rl.is_up_to_date(OUT, [Path(__file__), MEMBERSHIP]):
+    if not force and rl.is_up_to_date(OUT, [Path(__file__), REQUEST, mp.MODULE_PATH]):
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
 
-    source_ids = rl.read_membership_source_ids(MEMBERSHIP)
-    total = len(source_ids)
-    if total == 0:
-        raise SystemExit(f"refresh-gaia-apsis: no source_ids in {MEMBERSHIP}")
-    n_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
-    print(
-        f"reading {total} manifest source_ids → {n_batches} batches of "
-        f"{BATCH_SIZE} on Gaia TAP (gaiadr3.astrophysical_parameters)"
-    )
+    lines: dict[int, str] = {}
+    spot_ids = {spec["source_id"] for spec in SPOT_CHECKS}
+    spot_rows: dict[int, Any] = {}
+    gspphot = 0
+    gspspec = 0
+    union = 0
+    spectraltype_filled = 0
 
-    client = rl.gaia_sync_client(BATCH_SIZE * 2)
-    rows_by_id: dict[int, Any] = {}
-
-    def collect(table: Any) -> None:
-        for row in table:
-            rows_by_id[int(row["source_id"])] = row
+    def on_row(row: Any) -> None:
+        nonlocal gspphot, gspspec, union, spectraltype_filled
+        source_id = int(row["source_id"])
+        if source_id in spot_ids:
+            spot_rows[source_id] = row
+        phot = _has_teff_logg(row, "teff_gspphot", "logg_gspphot")
+        spec = _has_teff_logg(row, "teff_gspspec", "logg_gspspec")
+        gspphot += phot
+        gspspec += spec
+        union += phot or spec
+        esphs = rl.coerce_masked(row["spectraltype_esphs"])
+        spectraltype_filled += bool(
+            esphs is not None
+            and str(esphs).strip()
+            and str(esphs).strip().lower() != SPECTRALTYPE_UNRESOLVED
+        )
+        lines[source_id] = rl.format_tsv_row(write_row(row), TSV_COLUMNS)
 
     start = time.time()
-    rl.run_in_batches(
-        source_ids, BATCH_SIZE, lambda b: query_batch(client, b), collect,
-        schema=EXPECTED_SCHEMA, schema_label="gaiadr3.astrophysical_parameters",
-        checkpoint=rl.BatchCheckpoint(OUT.with_suffix(OUT.suffix + ".ckpt")),
+    pulled = mp.pull_deep_population(
+        rl.gaia_sync_client(SYNC_MAXREC),
+        table=TABLE,
+        columns=TSV_COLUMNS,
+        request_path=REQUEST,
+        on_row=on_row,
+        script_name=SCRIPT_NAME,
+        maxrec=SYNC_MAXREC,
+        checkpoint_base=OUT,
+        schema=EXPECTED_SCHEMA,
+        schema_label=TABLE,
     )
-
-    matched = len(rows_by_id)
-    print(f"matched {matched}/{total} in {(time.time()-start)/60:.1f}m")
 
     rl.assert_row_count(
-        matched, EXPECTED_ROW_COUNT_MIN, EXPECTED_ROW_COUNT_MAX, SCRIPT_NAME,
-        hint="upstream selection or the manifest's source_id set has changed; "
-        "investigate before re-pinning.",
+        pulled.from_magnitude,
+        EXPECTED_MAGNITUDE_ROWS_MIN,
+        EXPECTED_MAGNITUDE_ROWS_MAX,
+        SCRIPT_NAME,
+        hint="DR3 is frozen, so a count outside the band means the floor, the "
+        "slice edges or the archive's own reduction moved — investigate "
+        "before re-pinning.",
     )
 
-    union_coverage = rl.report_coverage(
-        rows_by_id.values(), total,
+    union_coverage = rl.report_coverage_counts(
+        len(pulled.seen), len(pulled.seen),
         [
-            ("(teff_gspphot AND logg_gspphot)",
-             lambda r: _has_teff_logg(r, "teff_gspphot", "logg_gspphot")),
-            ("(teff_gspspec AND logg_gspspec)",
-             lambda r: _has_teff_logg(r, "teff_gspspec", "logg_gspspec")),
+            ("(teff_gspphot AND logg_gspphot)", gspphot),
+            ("(teff_gspspec AND logg_gspspec)", gspspec),
         ],
-        label="manifest source_ids",
+        union,
+        label="pulled source_ids",
     )
     if union_coverage < EXPECTED_UNION_COVERAGE_MIN:
         raise SystemExit(
-            f"refresh-gaia-apsis: union (teff+logg) coverage "
+            f"{SCRIPT_NAME}: union (teff+logg) coverage "
             f"{union_coverage:.1%} below floor "
-            f"{EXPECTED_UNION_COVERAGE_MIN:.0%} — Apsis pipeline output "
-            f"or the manifest's bindings have regressed; investigate."
+            f"{EXPECTED_UNION_COVERAGE_MIN:.0%} — Apsis pipeline output has "
+            f"regressed; investigate."
         )
 
-    spectraltype_filled = sum(
-        1 for r in rows_by_id.values()
-        if rl.coerce_masked(r["spectraltype_esphs"]) is not None
-        and str(rl.coerce_masked(r["spectraltype_esphs"])).strip()
-    )
-    spectraltype_coverage = spectraltype_filled / total
+    spectraltype_coverage = spectraltype_filled / len(pulled.seen)
     print(
-        f"  spectraltype_esphs non-null:     {spectraltype_filled:>6} "
+        f"  spectraltype_esphs resolved:     {spectraltype_filled:>9,} "
         f"({100*spectraltype_coverage:.1f}%)"
     )
     if spectraltype_coverage < EXPECTED_SPECTRALTYPE_COVERAGE_MIN:
         raise SystemExit(
-            f"refresh-gaia-apsis: spectraltype_esphs coverage "
+            f"{SCRIPT_NAME}: spectraltype_esphs coverage "
             f"{spectraltype_coverage:.1%} below floor "
             f"{EXPECTED_SPECTRALTYPE_COVERAGE_MIN:.0%} — verify the SELECT "
             f"includes spectraltype_esphs and that ESP-HS returns real values."
         )
 
-    rl.validate_spot_rows(rows_by_id, SPOT_CHECKS, script_name=SCRIPT_NAME)
+    mp.assert_request_coverage(pulled, EXPECTED_COVERAGE_MIN, SCRIPT_NAME)
+
+    rl.validate_spot_rows(spot_rows, SPOT_CHECKS, script_name=SCRIPT_NAME)
 
     # Emit sorted by source_id so re-runs are byte-identical.
-    rows = (write_row(rows_by_id[sid]) for sid in sorted(rows_by_id))
-    written = rl.write_tsv(rows, columns=TSV_COLUMNS, output=OUT)
-    print(f"wrote {OUT.relative_to(ROOT)} ({written} rows)")
+    written = rl.write_tsv_lines(
+        (lines[sid] for sid in sorted(lines)), TSV_COLUMNS, OUT
+    )
+    print(
+        f"wrote {OUT.relative_to(ROOT)} ({written:,} rows) in "
+        f"{(time.time() - start) / 60:.1f}m"
+    )
 
 
 if __name__ == "__main__":
