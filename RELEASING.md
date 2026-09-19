@@ -134,10 +134,8 @@ information.
   count the pin's own rows were taken at**, today 960: two rows at
   different dwell lengths do not compare, and at the default 240 the
   mw120 median has not converged — eight archived rows span 0.725 ms
-  against a 0.25 ms band, where two at 960 frames, on different commits,
-  agree to 0.067. sol scatters 0.48–0.62 ms across cold runs of one tree
-  at 240 and is not yet measured enough at 960 to say, so a mark there
-  can still sit inside the instrument's own noise (stellata-8cg.74).
+  against a 0.25 ms band. 960 does not settle it either, so **neither
+  witness's `✗` stands on one run** (§ What a mark means).
   Not the dearest gated row: that is mw50|webgpu, which sits 4th in
   the canon order, so a two-context run would measure it at a position the
   pin does not hold for it and the row would refuse
@@ -221,13 +219,21 @@ wall p50 sits at two refresh intervals and mw120's at one — so a row
 marked on wall would compare two quantised medians and refuse or fabricate
 by turns (`scripts/perf/diff/README.md` § Reading the table).
 
-**And the same floor: `max(0.25 ms, 1 % of the baseline)`**, one constant
-in `scripts/perf/diff-pure.ts` that both gates apply. Tier 1 may not gate
+**And the same floor**, one implementation in
+`scripts/perf/diff/diff-pure.ts` that both gates apply. Tier 1 may not gate
 tighter than the Tier 2 it feeds, or it marks moves Tier 2 calls
 unresolved — which is what an unfloored band did, two sigma of the
 medians' own scatter being about 0.02 ms at 240 frames on a steady
 vantage. The floor covers sampling; the position refusal above covers
 the run-condition difference that exceeds it.
+
+A frame row is floored at `max(0.25 ms, 1 % of the baseline)`. A compute row
+takes **its vantage's own** floor — 0.05 ms at mw120 and mw50, 0.15 at
+earth, the 0.25 constant at sol and lg — because repeat scatter there runs
+0.017 to 0.303 ms across the five, a factor of 18 one constant cannot fit,
+and the constant reads as 15× the noise at mw50
+(`scripts/perf/pins/README.md` § The compute row). Each is capped at the
+0.25, so a re-derivation only ever tightens a row.
 
 **What is pinned.** `--mode dwell` at the five canon vantages in canon
 order (mw120, sol, earth, mw50, lg — § Run position: a permutation pins
@@ -246,13 +252,10 @@ the compute passes — nothing else marks.** The GPU stream is the one
 continuous whole-frame reading the pin holds — the middle half of a canon
 row spans 0.03–0.36 ms — and it is the render passes alone: three pools
 compute timestamps separately, so a WebGPU context prints a second row,
-`<scenario>|webgpu|compute`, banded on its own pinned value with the same
-floor and ceiling and accepted under its own key
+`<scenario>|webgpu|compute`, banded on its own pinned value with its own
+vantage's floor (above), the same ceiling, and accepted under its own key
 (`scripts/perf/pins/README.md` § The compute row). The two are never
-summed, and a compute regression marks whatever the frame row says — but
-that floor is inherited from a whole-frame reading and runs 40–84 % of the
-compute values it bands, so the row catches a dispatch that adds a quarter
-of a millisecond and not the compaction getting half again as dear. Wall time is quantised to the display's refresh
+summed, and a compute regression marks whatever the frame row says. Wall time is quantised to the display's refresh
 interval, so every canon row's wall p50 reads 16.7–17.5 ms with a
 middle-half spread of a whole interval, and its median turns on whether
 50.1 % or 49.9 % of the frames made the deadline: wall is recorded, never
@@ -321,13 +324,30 @@ moved in between:
 
 **What a mark means.** A row is `✗` when its GPU-stream p50 — or, on a
 compute row, its compute-stream p50 — moves past the pair's two-sigma band
-*and* past `max(0.25 ms, 1 %)` of the pinned value, or when it crosses the
+*and* past that row's floor (above), or when it crosses the
 ceiling — 33.4 ms at any canon vantage, two 60 Hz intervals of hardware
 time — whatever the band says and whether or not the vantage is gated. mw50 at 31.936 is the nearest
 row today, 1.46 ms under. `✓` is cheaper, `~` is not resolved — not "no
 change". The `floor` column beside `delta` — how far the 10th-percentile
 frame moved — never marks; it says whether a `✗` lifted every frame or
 only the slow half (`scripts/perf/pins/README.md` § Reading `--against-pin`).
+
+**A FRAME row's `✗` does not stand until a second cold run of the same tree
+reproduces it.** Re-arm the identical command — same scenarios, backend,
+positions, frame count — and quote both runs in the `## Perf` section. Two
+marks is a regression. One mark and one `~` is the instrument, and
+`perf-section-guard` still reads the printed `✗`, so the row still owes its
+`accepted:` line — with the second run's path as the reason. The
+frame band sits under its own repeat scatter and no amount of flooring
+fixes that: across every same-tree repeat pair on disk, 4 of 9 at mw120,
+6 of 11 at sol and 3 of 5 at earth land further apart than the 0.25 ms
+band, reaching 1.272 ms at mw120 — 7 % of the frame, so a floor covering it
+would end the gate rather than tighten it. A second run is the only thing
+that separates the two, and nothing inside a single run does: `iqrMs`, the
+resolved-sample count and the state guard each read the wandered runs as
+sound (stellata-8cg.74). The **compute** rows need no such re-run — their
+floors are calibrated against exactly this scatter — and neither does a
+ceiling crossing, which is a collapse rather than a move.
 
 **The floor is measured, and lg is the reason it is not one number.** Two
 cold pins taken on identical code — 2026-09-05 and 2026-09-06, `--mode
@@ -388,7 +408,9 @@ which tier it is claiming. Tier 2: the `--against-pin` table, the pin
 commit it was read against, the adapter slug, the state-guard line per
 context, and one `accepted: <row> <reason> (<bead-id>)` line per `✗`.
 Tier 1: the `--against-pin` table over its two rows and the pin commit it
-was read against. Tier 0: the reachability argument, no table.
+was read against. Tier 0: the reachability argument, no table. Either tier
+that marked a frame row carries its confirming run's table too
+(§ What a mark means).
 
 The `perf-section-guard` workflow fails the PR when the section is
 missing, empty, or has a `✗` without an `accepted:` line — CI has no GPU,

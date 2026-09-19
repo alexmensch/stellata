@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { PriceFrameRow } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 import { EMPTY_PASS_KEY } from '../../../src/client/debug/frame-cost/passes/passes-pure';
 import {
-  BUFFER_MPX_TOLERANCE, DWELL_FLOOR_FRACTION, DWELL_FLOOR_MS, READBACK_TOLERANCE,
-  RECORD_COUNT_TOLERANCE, diffRuns, dwellFloorMs, framesRefusal, positionRefusal, preconditionRefusal,
-  splitFrameClasses, type RunDiff,
+  BUFFER_MPX_TOLERANCE, COMPUTE_SCATTER_FLOOR_MS, DWELL_FLOOR_FRACTION, DWELL_FLOOR_MS,
+  READBACK_TOLERANCE, RECORD_COUNT_TOLERANCE, computeFloorMs, diffRuns, dwellFloorMs, framesRefusal,
+  positionRefusal, preconditionRefusal, splitFrameClasses, type RunDiff,
 } from './diff-pure';
 import type { DwellSummary } from '../dwell/dwell-pure';
 import { PERF_SCHEMA, type DwellRecord, type PerfFile, type ScenarioRecord } from '../schema';
+import type { ScenarioName } from '../scenarios';
 
 function priceRow(overrides: Partial<PriceFrameRow> & { pass: string }): PriceFrameRow {
   return {
@@ -123,6 +124,33 @@ function withDwell(
     },
     ...overrides,
   })]);
+}
+
+function withCompute(
+  frame: number,
+  compute: number | null,
+  { computeMs = [], name = 'sol', stats = {} }: {
+    computeMs?: readonly number[];
+    name?: ScenarioName;
+    stats?: Partial<DwellSummary>;
+  } = {},
+): PerfFile {
+  return withDwell(dwellStats(16.7), {
+    name,
+    dwell: {
+      deltasMs: [],
+      gpuMs: [],
+      gpuNote: 'sound',
+      stats: dwellStats(16.7),
+      gpuStats: dwellStats(frame, stats),
+      computeMs: compute === null ? null : computeMs,
+      computeStats: compute === null ? null : dwellStats(compute, stats),
+      limitMag: 1.5,
+      dm: -6.29,
+      readbackPerFrame: 0.25,
+      passCounts: null,
+    },
+  }, dwellStats(frame, stats));
 }
 
 function only(diff: RunDiff) {
@@ -593,25 +621,11 @@ describe('diffRuns — refusals', () => {
 });
 
 describe('the compute row', () => {
-  const withCompute = (frame: number, compute: number | null, computeMs: readonly number[] = []): PerfFile =>
-    withDwell(dwellStats(16.7), {
-      dwell: {
-        deltasMs: [],
-        gpuMs: [],
-        gpuNote: 'sound',
-        stats: dwellStats(16.7),
-        gpuStats: dwellStats(frame),
-        computeMs: compute === null ? null : computeMs,
-        computeStats: compute === null ? null : dwellStats(compute),
-        limitMag: 1.5,
-        dm: -6.29,
-        readbackPerFrame: 0.25,
-        passCounts: null,
-      },
-    }, dwellStats(frame));
-
-  it('bands the compute stream beside the frame, keyed |compute, on the same floor', () => {
-    const diff = diffRuns(withCompute(18.98, 1.4, [1.2, 1.4]), withCompute(18.98, 2.0, [1.8, 2.0]));
+  it('bands the compute stream beside the frame, keyed |compute', () => {
+    const diff = diffRuns(
+      withCompute(18.98, 1.4, { computeMs: [1.2, 1.4] }),
+      withCompute(18.98, 2.0, { computeMs: [1.8, 2.0] }),
+    );
     expect(diff.refusals).toEqual([]);
     expect(diff.rows.map((r) => [r.key, r.metric, r.verdict])).toEqual([
       ['sol|webgl2|dwell', 'gpu-p50', 'same'],
@@ -620,8 +634,83 @@ describe('the compute row', () => {
     // 100 samples at iqr 1.349: two sigma of the pair is 0.354, over the
     // 0.25 ms floor, so this fixture's band is its own sampling error.
     expect(diff.rows[1].bandMs).toBeCloseTo(0.354, 3);
-    expect(diff.rows[1].bandMs).toBeGreaterThan(dwellFloorMs(1.4));
+    expect(diff.rows[1].bandMs).toBeGreaterThan(computeFloorMs('sol', 1.4));
     expect(diff.rows[1].floorDeltaMs).toBeCloseTo(0.6, 9);
+  });
+
+  it("bands it on the vantage's own floor, not the whole-frame constant", () => {
+    expect(COMPUTE_SCATTER_FLOOR_MS).toEqual({
+      mw120: 0.05, sol: 0.45, earth: 0.15, mw50: 0.05, lg: 0.50,
+    });
+    expect(computeFloorMs('mw120', 0.289)).toBe(0.05);
+    expect(computeFloorMs('mw50', 0.308)).toBe(0.05);
+    expect(computeFloorMs('earth', 0.418)).toBe(0.15);
+  });
+
+  // Every constant is 1.5x its vantage's population span rounded up to 0.05,
+  // and a table that does not re-derive is one a later session re-litigates.
+  it('holds each constant at the derivation the README states', () => {
+    const POPULATION_SPAN_MS = {
+      mw120: 0.032, sol: 0.284, earth: 0.094, mw50: 0.017, lg: 0.303,
+    } as const;
+    for (const [name, span] of Object.entries(POPULATION_SPAN_MS)) {
+      const derived = Number((Math.ceil((1.5 * span) / 0.05) * 0.05).toFixed(2));
+      expect([name, COMPUTE_SCATTER_FLOOR_MS[name as ScenarioName]]).toEqual([name, derived]);
+    }
+  });
+
+  // A pin or run naming a vantage the canon no longer holds reaches this:
+  // neither file's assertion checks the name. Without the fallback the band
+  // is NaN, which no delta compares inside, so every compute row marks.
+  it('falls back to the whole-frame floor for a vantage off the canon', () => {
+    expect(computeFloorMs('mw90' as ScenarioName, 0.3)).toBe(DWELL_FLOOR_MS);
+  });
+
+  // sol's and lg's measured scatter is 0.284 and 0.303 ms, past the inherited
+  // constant — following it would WIDEN the only row that can see a compute
+  // regression at all.
+  it('caps every vantage at the whole-frame floor, so a re-floor only tightens', () => {
+    expect(computeFloorMs('sol', 0.446)).toBe(DWELL_FLOOR_MS);
+    expect(computeFloorMs('lg', 0.589)).toBe(DWELL_FLOOR_MS);
+  });
+
+  it('keeps the 1 % term, which binds on a compute row that has run away', () => {
+    expect(computeFloorMs('mw120', 13.17)).toBeCloseTo(0.1317, 9);
+  });
+
+  // The measured case, both sides from `.perf-runs/2026-09-15/8cg-74-compute-
+  // scatter.json`: mw120's repeat scatter is 0.009 ms and its pinned compute
+  // 0.289, so a move of 0.06 is six times the noise and a fifth of the pass.
+  // Under the inherited 0.25 the compaction could have gone most of the way
+  // to twice as dear and read `~`.
+  it('marks a mw120 compute move the inherited constant could not see', () => {
+    const tight = { samples: 960, iqrMs: 0.02 };
+    const diff = diffRuns(
+      withCompute(19.227, 0.289, { name: 'mw120', stats: tight }),
+      withCompute(19.227, 0.350, { name: 'mw120', stats: tight }),
+    );
+    expect(diff.refusals).toEqual([]);
+    const compute = diff.rows[1];
+    expect(compute.key).toBe('mw120|webgl2|compute');
+    expect(compute.bandMs).toBe(0.05);
+    expect(compute.verdict).toBe('dearer');
+    expect(Math.abs(compute.deltaMs)).toBeLessThan(DWELL_FLOOR_MS);
+  });
+
+  // The re-floor reaches the compute row alone: the frame rows' own repeat
+  // scatter runs PAST 0.25 at three of five vantages, so a floor sized for it
+  // would end the gate rather than tighten it (`../pins/README.md` § The
+  // compute row).
+  it('leaves the frame row at the same vantage on the whole-frame floor', () => {
+    const tight = { samples: 960, iqrMs: 0.02 };
+    const diff = diffRuns(
+      withCompute(19.227, 0.289, { name: 'mw120', stats: tight }),
+      withCompute(19.350, 0.289, { name: 'mw120', stats: tight }),
+    );
+    const frame = diff.rows[0];
+    expect(frame.key).toBe('mw120|webgl2|dwell');
+    expect(frame.bandMs).toBe(DWELL_FLOOR_MS);
+    expect(frame.verdict).toBe('same');
   });
 
   it('refuses the compute row where one run recorded the stream and the other did not, and keeps the frame row', () => {

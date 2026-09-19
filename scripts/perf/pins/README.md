@@ -102,8 +102,9 @@ looks.
 
 Every WebGPU context prints two rows: `mw120|webgpu` for the frame's
 render passes and `mw120|webgpu|compute` for its compute passes, each
-from its own timestamp pool and each banded on its own pinned value with
-the same floor, ceiling and vantage stand-down (§ Reading `--against-pin`).
+from its own timestamp pool and each banded on its own pinned value, the
+compute row on its own floor below and both on the same ceiling and vantage
+stand-down (§ Reading `--against-pin`).
 The two are never summed: `gpu.frame` has meant the render passes in
 every pin row ever taken, and a compute pass that read as no change was
 the instrument blind where the programme aims — every cheaper-per-frame
@@ -116,22 +117,59 @@ was resolved reads as until it is re-taken. The side with no reading prints
 a whole column of untaken rows reads as a column of moves. A context refused
 for its frame carries no compute row: the refusals are facts about the run.
 
-**The floor is inherited, not calibrated here, and it is most of the
-quantity it gates.** `max(0.25 ms, 1 % × pinned)` was derived from how far
-two cold whole-frame dwells of one tree disagree — a 10–30 ms reading. The
-compute values it now bands are 0.299 / 0.394 / 0.410 / 0.311 / 0.626 ms, so
-the millisecond term runs **40–84 % of the pinned value**, while the pair's
-own sampling error is 0.003–0.021 ms, one to two orders under it. In
-absolute terms the row still catches what it exists for — a dispatch that
-adds or moves more than 0.25 ms of GPU work, the ceiling above catching a
-kernel that runs away entirely. What it cannot see is the existing
-compaction getting most of the way to twice as dear. Two of the three
-guards are inert at this magnitude for the same reason: `PIN_CEILING_MS` is
+**The floor is this row's own, one number per vantage** —
+`COMPUTE_SCATTER_FLOOR_MS` in `../diff/diff-pure.ts`, keyed on the vantage
+the way `PIN_UNGATED_SCENARIOS` keys lg's stand-down, and applied by both
+gates through `computeFloorMs`:
+
+```
+        repeat scatter   population span   FLOOR
+mw120       0.009             0.032         0.05
+mw50        0.001             0.017         0.05
+earth       0.065             0.094         0.15
+sol         0.211             0.284         0.25
+lg          0.106             0.303         0.25   ungated
+```
+
+The two measured columns are independent readings of the same quantity and
+agree in order: the worst strict same-tree repeat pair on disk, and the
+span of the whole comparable population, which bounds the noise from above
+by containing any real change as well. That population is every row a gate
+would actually compare — 960 frames, canon position, one catalogue, no
+setup lever, **and its frame row steady**, the last because a trending
+context is refused rather than banded (§ State guard) and reading its
+compute median back in widens earth from 0.094 to 0.145 on one row. Each
+constant is 1.5× the span rounded up to 0.05 — so `COMPUTE_SCATTER_FLOOR_MS`
+holds 0.45 at sol and 0.50 at lg, and the FLOOR column above is what
+`computeFloorMs` applies after **capping at `DWELL_FLOOR_MS`**. Widening
+those two to meet their own scatter would blind the one row that can see a
+compute regression at all, so the cap is what makes a re-derivation only
+ever tighten a row. A name outside these five — no canon vantage is one
+today — takes `DWELL_FLOOR_MS` rather than banding the row on a `NaN`.
+
+The `max(0.25 ms, 1 % × pinned)` this replaces was drawn from how far two
+cold **whole-frame** dwells of one tree disagree — a 10–30 ms reading — and
+it does not transfer: it reads as 15× the noise at mw50 and about 1× it at
+sol, a factor of 18 across the five under one constant. At mw120 the
+compaction could have got most of the way to twice as dear and printed `~`,
+which is the row's whole purpose missed. The 1 % term survives for a row
+that has run away — under `--force-recompute` mw120's compute reads 13.17 ms,
+where 1 % is 0.132 and the vantage floor is not what binds.
+
+Two of the three guards stay inert at this magnitude: `PIN_CEILING_MS` is
 112× mw120's compute value, and `STATE_GUARD_TREND_MS` (1 ms) exceeds every
 compute median, so a compute row's own `stateGuard` cannot read anything but
 `steady` and nothing consults it — the frame row's verdict is what refuses
-the context. Calibrating a compute floor needs the repeat scatter of two
-cold runs and there has only ever been one: `stellata-8cg.74` owns it.
+the context.
+
+**The frame rows are deliberately NOT re-floored, and the asymmetry is the
+finding.** Their repeat scatter runs *past* the 0.25 they are gated on: of
+the same-tree pairs on disk, 4 of 9 at mw120, 6 of 11 at sol and 3 of 5 at
+earth land outside the band, the worst 1.272 ms at mw120 — 7 % of the frame,
+so a floor sized for it ends the gate rather than tightening it. What
+covers that instead is an operator rule, `RELEASING.md` § What a mark means:
+a frame-row `✗` does not stand until a second cold run reproduces it.
+`stellata-8cg.74` carries both measurements and the decision.
 
 ## Setup levers
 
@@ -286,15 +324,18 @@ the whole pin, it blocked the pin for *every* render-path PR at random. Wall
   `src/client/local-group/` render change has no pin row that prices it short
   of the ceiling: price one with a per-pass differential at lg instead, never
   with its pin row.
-- **Band.** The pair's two-sigma standard error, floored at
-  `max(DWELL_FLOOR_MS 0.25 ms, DWELL_FLOOR_FRACTION 1 % × pinned)` — about
-  8× the largest cold-to-cold move those four rows showed. A `✗` is past
-  both; `~` is not resolved, never "no change". The millisecond term is
-  the larger of the two at every canon row but mw50, so it is what sets
-  sensitivity in practice. The floor lives in `../diff/diff-pure.ts` beside
-  `band` because `--baseline` applies the same one: the tighter of two
-  gates is the one that decides, so a Tier 1 band under this one would
-  mark a move Tier 2 calls unresolved (`RELEASING.md` § Perf pin).
+- **Band.** The pair's two-sigma standard error, floored — on a frame row at
+  `max(DWELL_FLOOR_MS 0.25 ms, DWELL_FLOOR_FRACTION 1 % × pinned)`, on a
+  compute row at that vantage's own constant instead (§ The compute row).
+  A `✗` is past both; `~` is not resolved, never "no change". The
+  millisecond term is the larger of the two at every canon frame row but
+  mw50, so it is what sets sensitivity in practice. Both floors live in
+  `../diff/diff-pure.ts` beside `band` because `--baseline` applies the same
+  ones: the tighter of two gates is the one that decides, so a Tier 1 band
+  under this one would mark a move Tier 2 calls unresolved
+  (`RELEASING.md` § Perf pin). **A frame row's `✗` is not final on one run**
+  — its band sits under its own repeat scatter, and what covers that is the
+  re-run rule in `RELEASING.md` § What a mark means, not a wider floor.
 - **Floor.** Each GPU row also records its 10th-percentile frame off the raw
   samples, and the table prints how far that p10 moved beside `delta`. A cost
   every frame pays lifts the floor as far as the median (across 111 archived

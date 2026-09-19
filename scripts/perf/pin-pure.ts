@@ -5,7 +5,7 @@
 import { basename, relative, resolve } from 'node:path';
 import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import {
-  VERDICT_MARK, band, bufferRefusal, dwellFloorMs, dwellFrames, framesRefusal, positionRefusal,
+  VERDICT_MARK, band, bufferRefusal, computeFloorMs, dwellFloorMs, dwellFrames, framesRefusal, positionRefusal,
   preconditionRefusal, readbackRefusal, recordCountRefusal, splitFrameClasses, verdictFor,
   type DiffRefusal, type Verdict,
 } from './diff/diff-pure';
@@ -537,8 +537,11 @@ function streamRow(pinned: PinRow, spec: StreamSpec): PinVerdictRow {
     });
   }
   const deltaMs = current.p50 - pinnedClock.p50;
+  const floorMs = spec.stream === 'compute'
+    ? computeFloorMs(pinned.name, pinnedClock.p50)
+    : dwellFloorMs(pinnedClock.p50);
   const bandMs = band(
-    medianStandardErrorMs(pinnedClock), medianStandardErrorMs(current), dwellFloorMs(pinnedClock.p50),
+    medianStandardErrorMs(pinnedClock), medianStandardErrorMs(current), floorMs,
   );
   return underCeiling(floorNote({
     key, metric, pinnedMs: pinnedClock.p50, currentMs: current.p50,
