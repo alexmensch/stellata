@@ -10,9 +10,9 @@ members reach a browser that cannot run it (§ Import boundary).
 
 ```
 src/client/webgpu/
-  renderer-flag.ts (+ test)         Parse the URL-fragment switches:
-                                    #renderer=, #webgpu-gate= and
-                                    #av-refill= (extinction/refill/).
+  renderer-flag.ts (+ test)         Parse #renderer=webgpu|webgl2 and the
+                                    #webgpu-gate=<verdict> dev switch from
+                                    the URL fragment.
   boot-route.ts (+ test)            resolveBootRoute — gate page or
                                     renderer, off the fragment and the
                                     capability probe. In the entry
@@ -210,7 +210,7 @@ Three tiers, and a new allocation has to pick one:
   keeps taking output-mode swaps is the failure that shape prevents.
 - **Boot-scoped.** Resources `bootWebGpu` builds once and hands to
   several layers: today the extinction slots
-  (`extinction/README.md` § Two nodes, one owner). `WebGpuSeam.dispose()`
+  (`extinction/README.md` § One owner for every shared slot). `WebGpuSeam.dispose()`
   is the *only* path that frees these, and the shell calls it after every
   layer and the prepass, since those hand their slots back to the
   placeholders it then releases. A boot-scoped allocation added without a

@@ -21,22 +21,24 @@ src/client/webgpu/extinction/
                               GLSL chunk is.
   dispatch-order/             The Morton key the kernel dispatches in and
                               the scatter that undoes it — its own README.
-  refill/                     Which slots a frame refills and which of them
-                              march: the cursor and its staleness bound,
-                              the in-frame test and the per-star camera
-                              generation stamp, the three dispatches that
+  refill/                     Which stars a frame refills: the worklist the
+                              compaction appends (frustum, gate, stamp),
+                              the quarter a frame marches and its
+                              staleness bound, the three dispatches that
                               stay whole — its own README.
   mirror/                     The pick's CPU copy of the A_V table: the
                               mapped readback, its staging gate and the
                               epoch that drops a superseded copy — its own
                               README.
-  extinction-nodes.ts         The two slots as nodes — the dust volume
-    (+ test)                  (texture) and the A_V cache (storage
-                              buffer) — with their placeholders and the
-                              attach-time swap (§ Two nodes, one owner).
-  extinction-prepass-webgpu.ts  WebGpuExtinctionPrepass — one compute
-    (+ test)                  thread per star into a star-indexed float
-                              storage buffer, behind ExtinctionPrepassSeam.
+  extinction-nodes.ts         The shared slots as nodes — the dust volume
+    (+ test)                  (texture), the A_V cache (storage buffer)
+                              and the refill worklist's — with their
+                              placeholders and the attach-time swap
+                              (§ One owner for every shared slot).
+  extinction-prepass-webgpu.ts  WebGpuExtinctionPrepass — the whole fill
+    (+ test)                  and the worklist refill into a star-indexed
+                              float storage buffer, behind
+                              ExtinctionPrepassSeam.
   extinction-parity.ts        The kernel's parity instrument: the same
                               march as a fragment pass, bit-compared
                               against the buffer (§ The prepass kernel).
@@ -64,11 +66,13 @@ src/client/webgpu/extinction/
 The algorithm, the tap count and the `RECOMPUTE_EPSILON_PC` displacement
 gate are the same, so an idle camera still costs zero.
 
-## Two nodes, one owner
+## One owner for every shared slot
 
-`ExtinctionNodes` holds both slots for the whole boot and `boot-webgpu.ts`
-constructs exactly one. That single ownership is load-bearing in both
-directions:
+`ExtinctionNodes` holds every slot the star layer and the prepass share —
+the dust volume, the A_V cache, and the refill worklist's stamps, list and
+uniforms (`refill/refill-worklist-nodes.ts`) — for the whole boot, and
+`boot-webgpu.ts` constructs exactly one. That single ownership is
+load-bearing in both directions:
 
 - **The dust volume is sampled from two places** — the kernel and the
   star vertex stage's fallback march. They share the node by object
@@ -95,10 +99,13 @@ job, paired with `initTexture` in an order that matters
 (`../../loaders/README.md` § Dust voxel upload) — so a placeholder from
 that factory marks itself. Pinned in the test, which fails without it.
 
-The A_V placeholder is a one-float `StorageBufferAttribute`. Its WGSL
-declaration is a runtime-sized array, so the swap to the real
-`count`-long buffer rebinds without rebuilding any pipeline, and three
-rebinds on its own when it sees a different attribute behind the node.
+The A_V placeholder is a one-float `StorageBufferAttribute`, the stamp
+and worklist placeholders one-uint ones. Each WGSL declaration is a
+runtime-sized array, so the swap to the real `count`-long buffer rebinds
+without rebuilding any pipeline, and three rebinds on its own when it sees
+a different attribute behind the node. The compaction kernel binds the
+refill slots from its first frame and reads them only under the arm the
+prepass raises, so before any dust attaches they are bound and untouched.
 
 The pair is **boot-scoped**, and `WebGpuSeam.dispose()` is the only path
 that frees it — the shell calls that after every layer and the prepass,
@@ -115,25 +122,27 @@ the buffer slot directly.
 
 ## The prepass kernel
 
-One `Fn`: the thread reads position `sliceBase + instanceIndex` out of a
-read-only vec4 storage buffer, marches from `absCameraPos` to it with the
+Two kernels over one march. The **fill** runs one thread per Morton slot:
+it reads position `instanceIndex` out of a read-only vec4 storage buffer,
+gates on the cache gate below, marches from `absCameraPos` to it with the
 shared `dustRaymarchAvTsl`, and assigns the result to the A_V element the
 slot → star table names (`dispatch-order/README.md` § Dispatch order).
-three's default workgroup of 64, and **the kernel's own bound on that slot**
-rather than three's: three's early return compares `instanceIndex` against
-the node's `count`, which a sliced dispatch no longer reaches, and a slice's
-workgroup tail runs past the slice — past the catalogue, on the last one
-(`refill/README.md` § The kernel bounds its own slot).
-`update()` is one `renderer.compute(kernel, slice)` — its own submit,
-exactly as the fragment pass was its own render (`docs/render-rules.md`
-§ 8), and it binds no render target, so the ends-at-the-canvas contract
-the fragment twin kept has nothing here to hold. Pinned as
-"never touches the render-target binding".
+The **refill** runs one thread per star of this frame's worklist quarter
+at the workgroup count the compaction wrote (`refill/README.md` § The
+compaction appends the worklist): it resolves the star through the
+star → slot table to its position, marches with no gate, and bounds itself
+by the listed length rather than three's count (`refill/README.md` § The
+kernel bounds itself by the listed length). Both default to three's
+workgroup of 64. `update()` issues at most one `renderer.compute` — its own
+submit, exactly as the fragment pass was its own render
+(`docs/render-rules.md` § 8), and it binds no render target, so the
+ends-at-the-canvas contract the fragment twin kept has nothing here to
+hold. Pinned as "never touches the render-target binding".
 
 **Positions are vec4, not vec3, deliberately.** WGSL has no packed vec3
 in a storage buffer, and an itemSize-3 storage attribute is the one
 three silently re-strides (`../README.md` § One writer per buffer per
-submit). All three buffers are owned outright by the prepass —
+submit). All six buffers are owned outright by the prepass —
 allocated, filled once, released through `disposeStorageAttribute` — and
 none is a vertex attribute anyone uploads through `DirtyItemUploader`,
 so `iPosition` and the binaries partial-upload contract are untouched.
@@ -186,18 +195,19 @@ Of the four requirements the single-writer audit put on this design
   through an itemSize-1 table instead.
 
 **The A_V buffer stays catalogue-star-indexed.** The compaction resolves
-its survivor-list slot to the star before reading `av.element(self)`, so
-the cold-read path (§ Cold reads) and any readback design over it key on
-the catalogue index as before.
+its survivor-list slot to the star before reading `av.element(self)`, and
+the refill kernel writes through the star index it was handed, so the
+cold-read path (§ Cold reads) and any readback design over it key on the
+catalogue index as before.
 
 ## What it costs, and what it holds
 
 The first two rows are the WebGL2 pass's unchanged in size — the port
-moved the work to a compute stage and the slot → star table is the one
-thing it added. **Re-derive rather than trust them**: they are
+moved the work to a compute stage and the four uint tables are what it
+added. **Re-derive rather than trust them**: they are
 `recordCount` (388,071 —
 `../../../../scripts/catalog/build-catalog-expected.json`) × the element
-size, and all three move with the catalog. `debug.memory()` prices the
+size, and every row moves with the catalog. `debug.memory()` prices the
 live app (`../../debug/memory/README.md`), and on a WebGL2 boot it
 *measures* the A_V target rather than taking this table's word.
 
@@ -206,11 +216,11 @@ live app (`../../debug/memory/README.md`), and on a WebGL2 boot it
 | A_V buffer (one float32 per star) | 388,071 × 4 B ≈ 1.48 MiB |
 | Position buffer (one vec4 float32 per slot) | 388,071 × 16 B ≈ 5.92 MiB |
 | Slot → star table (one uint32 per slot) | 388,071 × 4 B ≈ 1.48 MiB |
+| Star → slot table (one uint32 per star) | 388,071 × 4 B ≈ 1.48 MiB |
 | Camera-generation stamp (one uint32 per star) | 388,071 × 4 B ≈ 1.48 MiB |
-| Star → slot table (one uint32 per star; `#av-refill=survivors` only) | 388,071 × 4 B ≈ 1.48 MiB |
+| Refill worklist (`REFILL_SLICES` × ⌈count / `REFILL_SLICES`⌉ uint32) | 388,072 × 4 B ≈ 1.48 MiB |
 
-So ~10.4 MiB of video memory for the pass's whole life (~11.9 under the
-survivor probe, `refill/README.md` § The survivor-driven probe), plus the ~5.9 MiB
+So ~13.3 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
 `Float32Array` the position attribute keeps on the JS heap after upload
 and the ~1.5 MiB `Uint32Array` behind the order table, which the parity
 check reads (§ The prepass kernel). **The buffer and that CPU copy are one
@@ -242,16 +252,17 @@ march). The cap binds wherever the in-cube path runs past
 ceiling is very nearly the per-admitted-star cost. **None of those
 figures is a time**: the same README records the same-commit pair in
 which roughly half of this kernel's cost is a per-thread floor no tap
-count touches, and the other half is the march. That is the per-recompute ceiling, and a recompute is
-spread over `REFILL_SLICES` frames (`refill/README.md`), so a warp — which
-asks for one on every frame, the camera moving more than
-`RECOMPUTE_EPSILON_PC` between them — pays that fraction of it per frame
-rather than the whole. The moving camera is still the case to measure, not
-the idle one. Every canon vantage is idle, so
-pricing it takes the forced-recompute lever
+count touches, and the other half is the march. That is the per-recompute ceiling for the whole fill; a
+refill marches only the in-frame stars the gate admits, a quarter of them
+per frame (`refill/README.md`), so a warp — which asks on every frame, the
+camera moving more than `RECOMPUTE_EPSILON_PC` between them — pays a
+quarter of that population per frame rather than the whole catalogue. The
+moving camera is still the case to measure, not the idle one. Every canon
+vantage is idle, so pricing it takes the forced-recompute lever
 (`../../debug/frame-cost/passes/README.md` § The extinction rows). An idle
-camera costs zero, and what the gate below skips never reaches the march
-at all — from far outside the disc that is very nearly all of it.
+camera costs zero, and what the gate below skips is never listed, so it
+never reaches the march at all — from far outside the disc that is very
+nearly all of it.
 
 **On a WebGPU boot `debug.memory()` cannot price either row.** Both bind
 through TSL nodes rather than a `uniforms` slot, so the walk reaches
@@ -262,24 +273,26 @@ arithmetic and not just the totals.
 
 ## The cache gate
 
-The kernel marches only stars that can reach the display, on the **same
+The cache holds only stars that can reach the display, on the **same
 four dust-independent terms** the star vertex stage prefilters with —
 spectral mask, distance band, cull bound, taper bound. One expression
 serves both (`../star/star-visibility-tsl.ts`); a second statement of it
 here would be a prepass and a vertex stage that disagree about who is
 visible, which reads as a wrongly un-reddened star rather than as a
-failure. A skipped star's element is assigned **zero**, not left alone,
-so the buffer stays a function of the dispatch and `verifyExtinction()`
-keeps its total bit compare — the reference march runs the identical gate
-closure (§ The prepass kernel).
+failure. In the whole fill a skipped star's element is assigned **zero**,
+not left alone, so the buffer stays a function of the dispatch and
+`verifyExtinction()` keeps its total bit compare — the reference march runs
+the identical gate closure (§ The prepass kernel).
 
-**Ahead of those four reads sits the frustum**, in every dispatch but the
-whole-mode ones: a thread whose star is out of frame returns on its
-position alone, before touching the static table, and one whose star is
-already stamped at this camera generation returns after one more read
-(`refill/README.md` § Only what is in frame). The four scattered reads
-that made the gate a net loss at `lg` are therefore paid by the in-frame
-population only.
+**The refill runs the gate in the compaction, ahead of the read, and the
+refill kernel runs none.** On an armed frame the compaction kernel tests
+the frustum at the refill's slack first, then these four terms, then the
+stamp, and appends the star that passes all three
+(`refill/README.md` § The compaction appends the worklist); the refill
+kernel then marches every listed star unconditionally. The four scattered
+reads are therefore paid by the in-frame population, once per armed frame,
+by a kernel already holding the record — and never by a dispatch of their
+own.
 
 **That population is measured, and at `lg` it is the whole catalogue.**
 Share of the catalogue the frustum admits, real set / the V≤11 synthetic
@@ -287,10 +300,10 @@ set (`.perf-runs/2026-09-19/8cg596-survivors-real.json` and
 `8cg596-survivors-m11.json`, 1280×800 at dpr 2): 46% / 45% at `mw120`,
 17% / 19% at `sol`, 6.9% / 7.1% at `earth`, 18% / 19% at `mw50`, and
 **100% at `lg`** at both sizes — every star is in frame there, so the
-frustum returns nothing and all four reads are still paid on every thread
-at the one vantage where the gate saved least. The counts move with
-viewport and field of view, so a reading at another buffer size is not
-this one's comparison.
+frustum returns nothing and all four reads are paid on every thread of an
+armed compaction at the one vantage where the gate admits nothing. The
+counts move with viewport and field of view, so a reading at another
+buffer size is not this one's comparison.
 
 **What it saves is a function of the vantage, and collapses with
 aperture.** Share of the march that is wasted without the gate, unaided
@@ -349,16 +362,17 @@ That artifact is the synthetic set and its band is uncorrected, as the
 baseline's was (`../../../../scripts/perf/synthetic-catalog/README.md` § The
 band double-counts); a run over it never compares to `pins/`.
 
-**The two stages compute `dPc` in different frames** — this pass in
-absolute heliocentric coordinates, the vertex stage in the floating-origin
-local ones — so their last float32 bits can disagree, and a star sitting
-within ~1e-4 mag of a bound can be gated here and admitted there. Neither
-bound leaks anything: at the cull bound the vertex stage discards the star
-too, and at the taper bound the soft taper is exactly zero, so the star
-the disagreement can reach contributes no light from any vantage at any
-epoch. Do not close it by marching in local coordinates — the positions
-here are the pristine absolute ones and the march's bit-parity with the
-reference is what `verifyExtinction()` checks.
+**The whole fill and the vertex stage compute `dPc` in different frames**
+— the fill in absolute heliocentric coordinates, the vertex stage and the
+compaction's producer in the floating-origin local ones — so their last
+float32 bits can disagree, and a star sitting within ~1e-4 mag of a bound
+can be gated in one and admitted in another. Neither bound leaks anything:
+at the cull bound the vertex stage discards the star too, and at the taper
+bound the soft taper is exactly zero, so the star the disagreement can
+reach contributes no light from any vantage at any epoch. Do not close it
+by marching in local coordinates — the positions here are the pristine
+absolute ones and the march's bit-parity with the reference is what
+`verifyExtinction()` checks.
 
 ### What a CACHE owes that a per-frame prefilter does not
 
@@ -384,12 +398,14 @@ invalidation. Three obligations fall out of caching the same test:
   which names a dirty-tracked cache keyed on the cut as the thing that
   would thrash). Folding `dm` into a bound here is silent: the answers
   stay correct and the cost goes up by the whole march.
-- **The gate reads nodes this pass owns**, mirroring those six slots,
-  because the shared registry's `sync()` runs *after* this pass
-  dispatches (`../../stellata.ts` `animate`). A kernel on the shared
+- **The whole fill's gate reads nodes this pass owns**, mirroring those
+  six slots, because the shared registry's `sync()` runs *after* this
+  pass dispatches (`../../stellata.ts` `animate`). A kernel on the shared
   nodes would gate on the previous frame's instrument while the watch had
   already seen the new one — and the two disagreeing is a star admitted
-  by the vertex stage that no dispatch ever fills.
+  by the vertex stage that no dispatch ever fills. The compaction's
+  producer runs after the sync and reads the shared nodes, which the same
+  frame's watch has just matched.
 - **The model clock moves nothing it reads.** A pulsating variable is
   credited its whole brightward swing (`−0.5 · iAmplitudeMag`) instead of
   its live phase, so the answer is phase-independent and `uModelDays`

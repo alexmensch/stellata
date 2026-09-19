@@ -20,12 +20,19 @@ src/client/webgpu/star/compaction/
                                 the per-frame dispatch, the on-demand
                                 count readback, dispose.
   frustum-tsl.ts                The frustum test as TSL over a clip-space
-                                centre and an NDC half-extent, shared with
-                                the extinction cache's refill
+                                centre and an NDC half-extent, run twice by
+                                the kernel — at the quad's extent for the
+                                survivor list, at the extinction slack for
+                                the refill worklist
                                 (../../extinction/refill/README.md § Only
                                 what is in frame); `starQuadOffscreen` is
                                 its CPU mirror.
 ```
+
+The kernel also appends the extinction refill's worklist; that block, its
+population and its schedule are `../../extinction/refill/README.md` § The
+compaction appends the worklist, and this file carries only what it costs
+the compaction (§ The refill dispatch, § Binding budget).
 
 ## Two lists, one kernel, three draws
 
@@ -112,12 +119,16 @@ the layer first forwards this frame's attribute writes onto the tables
 positions — a kernel listing survivors off last frame's positions on a
 recentre frame would flicker the whole field.
 
-The reset kernel (one thread, both `instanceCount`s to zero), the
-compaction kernel and the finish kernel (§ The refill dispatch) are one
+The reset kernel (one thread: both `instanceCount`s and the prefilter
+counter to zero, and the refill sub-list counters too on an armed frame),
+the compaction kernel and the finish kernel (§ The refill dispatch) are one
 `renderer.compute([...])`: one compute pass, one submit, and WebGPU orders
 dispatches within a pass so the atomics see the reset and the finish sees
 the atomics. Every rendered frame pays that submit; the render gate
-already decides whether a frame renders at all.
+already decides whether a frame renders at all. The extinction prepass
+dispatches *before* this pass in the frame and reads the worklist this
+pass wrote the frame before (`../../extinction/refill/README.md` § The
+cursor).
 
 ## Reading the counts back
 
@@ -164,25 +175,31 @@ without moving the other, and the test pins both.
 
 ## The refill dispatch
 
-A third kernel closes the pass: one thread reads both tiers' `instanceCount`
-through the same atomic view the kernel added into and writes
-`⌈(glow + disc) / REFILL_WORKGROUP_SIZE⌉` into element 0 of `refillDispatch`,
-a `[workgroups, 1, 1]` indirect buffer. The extinction prepass dispatches its
-survivor-driven kernel at that count
-(`../../extinction/refill/README.md` § The survivor-driven probe) — one
-thread per listed star, and the survivor count never crosses to the CPU.
-The divisor is the workgroup size that kernel is built with, one constant
-for both.
+The kernel appends every star the extinction refill has to march to one of
+`REFILL_SLICES` sub-lists by residue, counting with an `atomicAdd` on that
+sub-list's counter — four u32 past the prefilter counter in the args buffer
+(`refillListCountElement`), so the counters cost no binding. The block runs
+only under `arm`, a uniform the prepass raises on the frames a refill
+request lands, and the reset kernel zeroes the four counters under the same
+arm: between armed frames they hold, because the prepass is still marching
+the quarters they count.
 
-**The same thread republishes the two counts as plain `u32`** — glow, then
-glow + disc — into `listedCounts`, which is what the refill kernel reads to
-place its thread in the two lists. The tier atomics stay the compaction
-kernel's alone. A refill thread reading them directly is the shape § Reading
+A third kernel closes the pass: one thread reads the counter of the quarter
+the prepass marches next (`quarter`, a shared uniform) through the same
+atomic view the kernel added into and writes
+`[⌈n / REFILL_WORKGROUP_SIZE⌉, 1, 1, n]` into `refillDispatch` — the three
+u32 `dispatchWorkgroupsIndirect` reads, then the listed length the refill
+kernel bounds its threads by. The extinction prepass dispatches at that
+count and reads that length through `refillDispatchNode`, a read-only view
+over the same attribute, so no count ever crosses to the CPU. The divisor is
+the workgroup size the refill kernel is built with, one constant for both.
+
+**The finish kernel is the only reader of an atomic outside the compaction
+kernel.** A refill thread reading a counter directly is the shape § Reading
 the counts back refuses for `PREFILTER_COUNT_ELEMENT`: an atomic
-read-modify-write on one address from every thread of the dispatch, at the
-survivor count rather than the prefilter count, and twice over. One thread
-already holds both numbers at the end of the pass, so the read costs nothing
-to hoist — and a plain load is what the shippable worklist producer inherits.
+read-modify-write on one address from every thread of the dispatch. One
+thread already holds the number at the end of the pass, so republishing it
+as a plain `u32` beside the dispatch costs nothing.
 
 ## The buffer-writer requirements, discharged
 
@@ -217,13 +234,16 @@ Of the four the single-writer audit put on this design (bead
 
 A main-pass star vertex stage binds `STAR_VERTEX_STAGE_STORAGE_BUFFERS`
 (7) storage buffers: the survivor list, the A_V cache, the static table
-and the four forwarded tables. The mirror's binds 6 (no list). The kernel
-binds 6: position, statics, suppress-pulsation, A_V, survivors, args; the
-finish kernel 3, args, the refill dispatch and the listed counts.
-Core WebGPU guarantees 8 per stage; the compatibility level reports 0 in
-the vertex stage and the boot refuses it against that constant
-(`../../tsl/README.md` § Storage attributes). A new per-star table costs a
-binding in every one of those stages.
+and the four forwarded tables. The mirror's binds 6 (no list). **The
+kernel binds 8** — position, statics, suppress-pulsation, A_V, survivors,
+args, and the refill's stamps and worklist — which is the whole core
+guarantee of 8 per stage; a ninth needs a counter folded into the args
+buffer or a table folded into another, never a new binding
+(`../../extinction/refill/README.md` § The compaction appends the
+worklist). The finish kernel binds 2, args and the refill dispatch. The
+compatibility level reports 0 in the vertex stage and the boot refuses it
+against that constant (`../../tsl/README.md` § Storage attributes). A new
+per-star table costs a binding in every one of those stages.
 
 ## What it costs, and what it holds
 
@@ -233,14 +253,18 @@ Byte counts, derived not measured — `recordCount`
 | Resident | Size |
 | --- | --- |
 | Survivor lists (2 × count × u32) | 388,071 × 8 B ≈ 2.96 MiB |
-| Indirect args (2 slots × 5 × u32 + prefilter counter) | 44 B |
-| Refill dispatch (3 × u32) | 12 B |
-| Listed counts (2 × u32) | 8 B |
+| Indirect args (2 slots × 5 × u32 + prefilter counter + 4 refill counters) | 60 B |
+| Refill dispatch (4 × u32) | 16 B |
+
+The refill's stamps and worklist are the prepass's
+(`../../extinction/README.md` § What it costs, and what it holds).
 
 Per rendered frame: one compute submit, 388,071 threads each running the
 solve to the routing point (magnitude, pulsation, prefilter, one A_V read
 or the fallback march, the size solve), one projection, and two atomics
-per survivor. What it removes is the vertex-stage floor: each of the
+per survivor; on an armed frame, the refill producer as well — the frustum
+at the refill's slack, the four gate terms, a stamp read for the in-frame
+admitted, and one atomic per stale star. What it removes is the vertex-stage floor: each of the
 three passes ran its stage over 4 corners × the whole catalogue with the
 invisible members exiting to the clip sentinel; now each runs over
 4 corners × the survivors inside the view. The frame-time delta is the
