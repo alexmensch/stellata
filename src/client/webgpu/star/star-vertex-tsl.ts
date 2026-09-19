@@ -219,11 +219,8 @@ export function solveStarTsl(
         const dMEff = perceptualDmEffTsl(appMag, u.uLimitMag, u.uSizeSpan, u.uSizeKnee);
         const appSize = perceptualAppSizePxTsl(dMEff, u.uSizeMin, u.uSizeMax, u.uSizeSpan);
 
-        // Past uPhysSizeWindowPc the catalog's largest star cannot reach
-        // physSizeElisionBoundPx, where tiering and pxSize are exact and
-        // the peak is bit-exact, so the pow / divide / atan are skipped
-        // outright (../../star-pipeline/perceptual-disc/README.md
-        // § Eliding the physical-size branch).
+        // ../../star-pipeline/perceptual-disc/README.md § Eliding the
+        // physical-size branch.
         const physSizeRaw = float(0.0).toVar();
         If(dPc.lessThanEqual(u.uPhysSizeWindowPc), () => {
           const rPc = pow(10.0, stat('iLogRadius')).mul(u.uRSunPc);
