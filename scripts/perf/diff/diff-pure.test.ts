@@ -659,6 +659,13 @@ describe('the compute row', () => {
     }
   });
 
+  // A pin or run naming a vantage the canon no longer holds reaches this:
+  // neither file's assertion checks the name. Without the fallback the band
+  // is NaN, which no delta compares inside, so every compute row marks.
+  it('falls back to the whole-frame floor for a vantage off the canon', () => {
+    expect(computeFloorMs('mw90' as ScenarioName, 0.3)).toBe(DWELL_FLOOR_MS);
+  });
+
   // sol's and lg's measured scatter is 0.284 and 0.303 ms, past the inherited
   // constant — following it would WIDEN the only row that can see a compute
   // regression at all.

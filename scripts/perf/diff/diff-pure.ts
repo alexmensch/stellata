@@ -83,9 +83,14 @@ export function dwellFloorMs(baselineMs: number): number {
  *  lg's measured scatter is past that constant, and widening to meet it would
  *  blind the row at the vantage where a compute regression is likeliest to
  *  hide — the frame row cannot see one, a 40 ms kernel having landed inside
- *  its band (`../pins/README.md` § The compute row). */
+ *  its band (`../pins/README.md` § The compute row).
+ *
+ *  A name off a parsed run or pin need not be one of the canon five — neither
+ *  file's assertion checks it — so the lookup falls back rather than banding
+ *  the row on a `NaN` every delta marks against. */
 export function computeFloorMs(name: ScenarioName, baselineMs: number): number {
-  return floorFor(Math.min(COMPUTE_SCATTER_FLOOR_MS[name], DWELL_FLOOR_MS), baselineMs);
+  const derived: number | undefined = COMPUTE_SCATTER_FLOOR_MS[name];
+  return floorFor(Math.min(derived ?? DWELL_FLOOR_MS, DWELL_FLOOR_MS), baselineMs);
 }
 
 export type Verdict = 'cheaper' | 'dearer' | 'same';

@@ -144,7 +144,8 @@ holds 0.45 at sol and 0.50 at lg, and the FLOOR column above is what
 `computeFloorMs` applies after **capping at `DWELL_FLOOR_MS`**. Widening
 those two to meet their own scatter would blind the one row that can see a
 compute regression at all, so the cap is what makes a re-derivation only
-ever tighten a row.
+ever tighten a row. A name outside these five — no canon vantage is one
+today — takes `DWELL_FLOOR_MS` rather than banding the row on a `NaN`.
 
 The `max(0.25 ms, 1 % × pinned)` this replaces was drawn from how far two
 cold **whole-frame** dwells of one tree disagree — a 10–30 ms reading — and
