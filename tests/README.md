@@ -150,6 +150,17 @@ tsl-loop-control.test.ts A TSL authoring trap, not a policy: a concise
                          hands the jump back as the branch's output and it
                          emits twice — unreachable WGSL, warned on every
                          boot. Brace the body.
+tsl-storage-narrowing.test.ts
+                         A third TSL authoring trap: `toReadOnly()` narrows
+                         the node it is called on rather than returning a
+                         view, so narrowing a node a kernel assigns through
+                         pins it read-only there too and the device refuses
+                         that pipeline at boot — one invalid pipeline
+                         discards the whole submit. Narrowing is allowed
+                         only on a `storage()` call's own result; the
+                         write/read pair builder is the one exemption
+                         (src/client/webgpu/tsl/README.md § Storage
+                         attributes).
 tsl-standin-filters.test.ts
                          The other TSL authoring trap: DataTexture and
                          Data3DTexture default BOTH filters to nearest, and
