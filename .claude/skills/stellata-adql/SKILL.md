@@ -38,6 +38,7 @@ Measured against the live services 2026-09-19. `OK` means the query ran.
 | `ORDER BY <select alias>` | OK | — | — |
 | `ORDER BY <qualified column>` | OK | **400** | — |
 | `POWER(x, 2)` | OK | — | — |
+| `CASE WHEN … THEN … END` | **400** | — | — |
 | `TOP n` | OK | OK | OK |
 | `LIMIT n` | **400** | — | — |
 | unquoted table id with `/` | — | — | **400** |
@@ -64,6 +65,10 @@ classified transient — so `TapClient` burns five attempts on ESA and five on
 ARI with backoff before surfacing a permanent query fault as something that
 reads like a network problem. A slow, network-flavoured failure on a query you
 just edited is this, most of the time.
+
+There is no `CASE`, so a conditional aggregate has no one-query form. Count
+the subset with a second query carrying the extra predicate rather than
+reaching for `SUM(CASE WHEN …)`.
 
 ### SIMBAD
 
