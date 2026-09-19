@@ -27,9 +27,11 @@ scripts/perf/
   checkout.ts               What run.ts and pin.ts share about the checkout:
                             root, main checkout, git provenance, the pin's
                             read / compare / write.
-  args.ts (+ test)          Flags → RunArgs and PinArgs (node:util
-                            parseArgs), plus the mode-compatibility check
-                            over the flags actually typed.
+  args.ts (+ test)          Flags → RunArgs, PinArgs and SurvivorsArgs
+                            (node:util parseArgs), plus the mode-compatibility
+                            check over the flags actually typed. All three
+                            parsers here, including the survivors one, because
+                            survivors.ts cannot be imported by a test.
   run-pure.ts (+ test)      The decisions around a launch: which clock a
                             backend request gets, which adapters disqualify a
                             run, how the probe reads, whether a marker arms,
@@ -77,9 +79,13 @@ scripts/perf/
 `pnpm run survivors` boots each canon vantage on WebGPU, waits for the same
 render-gate settle the runner waits for, and prints what the compaction
 kernel listed: glow-tier and disc-tier instance counts against the
-catalogue record count, and the count passing the dust-independent
+catalogue record count, the count passing the dust-independent
 prefilter with the drawn share of it
-(`src/client/webgpu/star/compaction/README.md` § Reading the counts back).
+(`src/client/webgpu/star/compaction/README.md` § Reading the counts back),
+and the count the extinction refill's frustum test admits — the
+population that pays the cache gate's reads
+(`src/client/webgpu/extinction/refill/README.md` § Counting the in-frame
+population).
 It reuses `scenarios.ts` and `page-protocol.ts` so its vantages and its
 boot are the runner's, byte for byte.
 

@@ -3,7 +3,14 @@
 import type { Stellata } from '../stellata';
 import type { SurvivorCounts } from '../webgpu/star/compaction/compaction-pure';
 
-export interface SurvivorReport extends SurvivorCounts {
+/** The compaction's counters plus the refill's in-frame population, which
+ *  the shell composes (`Stellata.readSurvivorCounts`). `inFrame` is null
+ *  where the refill has no view yet. */
+export interface SurvivorCountsRead extends SurvivorCounts {
+  inFrame: number | null;
+}
+
+export interface SurvivorReport extends SurvivorCountsRead {
   /** Catalogue records the kernel dispatched over. */
   records: number;
   glowFraction: number;
@@ -16,9 +23,12 @@ export interface SurvivorReport extends SurvivorCounts {
   /** Both tiers over the prefilter count — what the frustum alone removes
    *  from a kernel that already gates on the prefilter. */
   drawnOfPrefilter: number;
+  /** Stars the refill's frustum test admits, over records — the population
+   *  that pays the gate's reads. Null where `inFrame` is. */
+  inFrameFraction: number | null;
 }
 
-export function survivorReport(counts: SurvivorCounts, records: number): SurvivorReport {
+export function survivorReport(counts: SurvivorCountsRead, records: number): SurvivorReport {
   const per = (n: number) => (records > 0 ? n / records : 0);
   const drawn = counts.glow + counts.disc;
   return {
@@ -29,6 +39,7 @@ export function survivorReport(counts: SurvivorCounts, records: number): Survivo
     drawnFraction: per(drawn),
     prefilterFraction: per(counts.prefilter),
     drawnOfPrefilter: counts.prefilter > 0 ? drawn / counts.prefilter : 0,
+    inFrameFraction: counts.inFrame === null ? null : per(counts.inFrame),
   };
 }
 
@@ -44,6 +55,9 @@ export function formatSurvivorReport(r: SurvivorReport): string {
     `  disc tier ${r.disc} (${survivorPct(r.discFraction)})`,
     `  passing the prefilter ${r.prefilter} (${survivorPct(r.prefilterFraction)}); `
       + `drawn of those ${survivorPct(r.drawnOfPrefilter)}`,
+    r.inFrame === null || r.inFrameFraction === null
+      ? '  in the refill frustum: no view yet'
+      : `  in the refill frustum ${r.inFrame} (${survivorPct(r.inFrameFraction)})`,
   ].join('\n');
 }
 

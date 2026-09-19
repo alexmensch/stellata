@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Matrix4, PerspectiveCamera, Vector3, Vector4 } from 'three';
 import { starQuadOffscreen } from '../../star/compaction/compaction-pure';
 import {
-  EXTINCTION_FRUSTUM_SLACK_PX, composeViewProjectionAbs, sameView, slotRefills,
+  EXTINCTION_FRUSTUM_SLACK_PX, composeViewProjectionAbs, countInFrameAbs, sameView, slotRefills,
 } from './refill-decision-pure';
 
 // The slack is a stated bound, not a tuning knob — README.md § Only what is
@@ -116,5 +116,37 @@ describe('rotation without translation', () => {
     const stamps = new Array<number>(stars.length).fill(7);
     const s2 = inFrame(view2);
     expect(stars.map((_, i) => slotRefills(s2[i], false, stamps[i], 8))).toEqual(s2);
+  });
+
+  describe('countInFrameAbs', () => {
+    const positions = new Float32Array(stars.length * 3);
+    stars.forEach((s, i) => { positions[i * 3] = s.x; positions[i * 3 + 1] = s.y; positions[i * 3 + 2] = s.z; });
+
+    it('counts exactly the stars the per-star rule admits, at either view', () => {
+      for (const view of [view1, view2]) {
+        const expected = inFrame(view).filter(Boolean).length;
+        expect(expected).toBeGreaterThan(0);
+        expect(expected).toBeLessThan(stars.length);
+        expect(countInFrameAbs(positions, stars.length, view, W, H, -1)).toBe(expected);
+      }
+    });
+
+    it('counts the pinned focal star as seen wherever it projects', () => {
+      const s1 = inFrame(view1);
+      const behind = s1.findIndex((v) => !v);
+      expect(behind).toBeGreaterThanOrEqual(0);
+      const plain = countInFrameAbs(positions, stars.length, view1, W, H, -1);
+      expect(countInFrameAbs(positions, stars.length, view1, W, H, behind)).toBe(plain + 1);
+      const seen = s1.findIndex(Boolean);
+      expect(countInFrameAbs(positions, stars.length, view1, W, H, seen)).toBe(plain);
+    });
+
+    it('reads zero over a catalogue entirely behind the camera', () => {
+      const camera = new PerspectiveCamera(50, W / H, 0.01, 1e4);
+      camera.position.set(0, 0, -1000);
+      camera.lookAt(0, 0, -2000);
+      const away = composeViewProjectionAbs(camera, new Vector3(), new Matrix4());
+      expect(countInFrameAbs(positions, stars.length, away, W, H, -1)).toBe(0);
+    });
   });
 });

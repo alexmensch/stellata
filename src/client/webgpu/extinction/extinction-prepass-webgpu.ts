@@ -31,7 +31,7 @@ import type { ExtinctionNodes } from './extinction-nodes';
 import { runReferenceMarch, type StarCacheGate } from './extinction-parity';
 import { AvMirror } from './mirror/av-mirror';
 import {
-  EXTINCTION_FRUSTUM_SLACK_PX, composeViewProjectionAbs, sameView,
+  EXTINCTION_FRUSTUM_SLACK_PX, composeViewProjectionAbs, countInFrameAbs, sameView,
 } from './refill/refill-decision-pure';
 import {
   idleRefill, planRefill, refillSliceLength, type RefillCursor,
@@ -212,6 +212,14 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
       this.dispatchOrder);
     this.positions.needsUpdate = true;
     this.dirty = true;
+  }
+
+  countInFrame(): number | null {
+    if (this.lastView === null) return null;
+    const viewport = this.nodes.uViewport.value;
+    return countInFrameAbs(
+      this.sourcePositions, this.count, this.lastView,
+      viewport.x, viewport.y, this.nodes.uPinFocusToCenter.value);
   }
 
   setEnabled(on: boolean): void {

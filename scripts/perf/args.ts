@@ -228,12 +228,18 @@ export function parseAccept(raw: string): AcceptedMark {
   return { key, bead };
 }
 
+/** `pnpm run <script> -- <flags>` hands the script the `--` itself, which a
+ *  strict parseArgs reads as a positional. */
+export function withoutPassthroughDash(argv: readonly string[]): string[] {
+  return argv[0] === '--' ? argv.slice(1) : [...argv];
+}
+
 export function parseRunArgs(argv: readonly string[]): RunArgs {
   let values: Record<string, unknown>;
   // Which flags were actually typed, as against which carry a default. Only
   // the typed set can be checked for mode compatibility.
   let supplied: Set<string>;
-  const args = argv[0] === '--' ? argv.slice(1) : [...argv];
+  const args = withoutPassthroughDash(argv);
   try {
     const parsed = parseArgs({ args, options: OPTIONS, strict: true, tokens: true });
     values = parsed.values;
@@ -442,7 +448,7 @@ export function pinUsage(): string {
 }
 
 export function parsePinArgs(argv: readonly string[]): PinArgs {
-  const args = argv[0] === '--' ? argv.slice(1) : [...argv];
+  const args = withoutPassthroughDash(argv);
   let values: Record<string, unknown>;
   let runs: string[];
   try {
@@ -459,4 +465,25 @@ export function parsePinArgs(argv: readonly string[]): PinArgs {
     accept: (values.accept as string[]).map(parseAccept),
     dryRun: values['dry-run'] as boolean,
   };
+}
+
+/** `pnpm run survivors` — the canon-vantage survivor counts, no clock. */
+export interface SurvivorsArgs {
+  readonly url: string;
+  readonly json: string | null;
+}
+
+/** Here rather than beside the instrument so a test can reach it: survivors.ts
+ *  imports Playwright as a value (README.md § Files). */
+export function parseSurvivorsArgs(argv: readonly string[]): SurvivorsArgs {
+  try {
+    const { values } = parseArgs({
+      args: withoutPassthroughDash(argv),
+      options: { url: { type: 'string' }, json: { type: 'string' } },
+      strict: true,
+    });
+    return { url: values.url ?? ARG_DEFAULTS.url, json: values.json ?? null };
+  } catch (e) {
+    throw new ArgError(e instanceof Error ? e.message : String(e));
+  }
 }
