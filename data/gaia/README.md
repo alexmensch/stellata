@@ -97,7 +97,7 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
   - `gaia_dr3_nss_two_body.tsv` ← `nss_two_body_orbit`.
   - `gaia_dr3_apsis.tsv` ← `astrophysical_parameters` (gspphot ∪
     gspspec; scoped like the magnitude pull plus the catalog request —
-    `../../scripts/refresh/README.md` § The deep population).
+    `../../scripts/refresh/magnitude/README.md` § The deep population).
   - `gaia_dr3_gspc.tsv` ← `synthetic_photometry_gspc` (queried by the
     same catalog source_id request the astrometry pull reads).
   - `gaia_dr2_neighbourhood.tsv` ← `dr2_neighbourhood` (the DPAC

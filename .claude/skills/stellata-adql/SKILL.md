@@ -114,7 +114,7 @@ and a 300 s timeout. Slice on the bound itself, and space the slices so their
 counts grow geometrically, so equal steps in log-count space give near-equal
 slices where equal magnitude steps give a 27x spread.
 `refresh-gaia-magnitude.py` is the worked example;
-`scripts/refresh/README.md` § Slicing a magnitude-bounded pull carries the
+`scripts/refresh/magnitude/README.md` § Slicing a magnitude-bounded pull carries the
 spacing rule and the partition discipline (share the edge as a formatted
 literal, gate that no row is returned twice).
 

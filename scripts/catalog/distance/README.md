@@ -295,7 +295,7 @@ al. 2021 (CDS I/352). The pipeline:
    `{ dist, absmag }` with `absmag = mag − 5·log₁₀(dist / 10)`.
 4. Coverage is `bjOverridden / bjEligible`, printed per build and pinned
    in `../build-catalog-expected.json`, and the **shortfall between the two
-   is pinned at zero** as `bjEligibleNotPulled` — § Manifest-derived pulls
+   is pinned at zero** as `bjEligibleNotPulled` — § Scope-derived pulls
    below.
 5. The override also rescues stars the Layer 3 cap would otherwise drop:
    catastrophic-parallax-inversion supergiants whose Bayesian
@@ -305,12 +305,14 @@ If `data/bailer-jones/bailer-jones-dr3.tsv` is absent (fresh clone
 without LFS pulled), the build logs and continues — every star keeps
 the cascade's naive inversion. Data refresh: `pnpm run refresh:bailer-jones`.
 
-### Manifest-derived pulls — why the zero pin is here
+### Scope-derived pulls — why the zero pin is here
 
 **An eligible row cannot legitimately lack a posterior.** Eligibility is
 `gaia_dr3_inversion`, so the row has its own DR3 parallax and the publication
-covers every DR3 source that has one. An absence is this pull's request set —
-the manifest's `gaia_source_id` column — having moved, not a gap upstream.
+covers every DR3 source that has one. An absence is this pull's scope — every
+source at `G ≤ 11`, plus the exported catalog request below that floor
+(`scripts/refresh/magnitude/README.md` § The deep population) — having moved, not a gap
+upstream.
 
 It slips in the worst direction: the row keeps a naive `1/π`, and rows that
 newly gain a binding are disproportionately saturated bright stars with poor

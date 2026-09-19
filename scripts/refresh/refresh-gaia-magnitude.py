@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
 import gaia_astrometry_pull as gap  # noqa: E402
 import refresh_lib as rl  # noqa: E402
+from magnitude import magnitude_pull as mp  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 SCRIPT_NAME = "refresh-gaia-magnitude"
@@ -22,10 +23,10 @@ ROOT = REPO_ROOT
 OUT = ROOT / "data" / "gaia" / "gaia_dr3_magnitude_pull.tsv"
 
 # see data/gaia/README.md § Why the floor carries no margin
-G_MAG_FLOOR = rl.G_MAG_FLOOR
-G_MAG_COLUMN = rl.G_MAG_COLUMN
-SLICE_COUNT = rl.SLICE_COUNT
-EDGE_DECIMALS = rl.EDGE_DECIMALS
+G_MAG_FLOOR = mp.G_MAG_FLOOR
+G_MAG_COLUMN = mp.G_MAG_COLUMN
+SLICE_COUNT = mp.SLICE_COUNT
+EDGE_DECIMALS = mp.EDGE_DECIMALS
 
 # DR3 is a published static release, so the count should not move at all;
 # the band absorbs an archive reload, not a change of selection.
@@ -33,7 +34,7 @@ EXPECTED_ROW_COUNT_MIN = 1_222_000
 EXPECTED_ROW_COUNT_MAX = 1_273_000
 
 # scripts/refresh/README.md § Gaia TAP: synchronous endpoints only.
-SYNC_MAXREC = rl.slice_sync_maxrec(EXPECTED_ROW_COUNT_MAX)
+SYNC_MAXREC = mp.slice_sync_maxrec(EXPECTED_ROW_COUNT_MAX)
 
 # Pinned from the live ESA archive 2026-09-19, spanning the selection:
 # eta UMa is its brightest row and carries a 2p solution, so it also pins the
@@ -72,11 +73,11 @@ SPOT_CHECKS: list[dict[str, Any]] = [
     },
 ]
 
-magnitude_slices = rl.magnitude_slices
+magnitude_slices = mp.magnitude_slices
 
 
-def slice_adql(bounds: rl.MagnitudeSlice) -> str:
-    return f"{gap.SELECT_CLAUSE} WHERE {rl.magnitude_predicate(bounds, G_MAG_COLUMN)}"
+def slice_adql(bounds: mp.MagnitudeSlice) -> str:
+    return f"{gap.SELECT_CLAUSE} WHERE {mp.magnitude_predicate(bounds, G_MAG_COLUMN)}"
 
 
 def assert_within_floor(source_id: int, g_mag: Any) -> None:
@@ -139,7 +140,7 @@ def pull(
 def main() -> None:
     force = "--force" in sys.argv
     script_path = Path(__file__).resolve()
-    if not force and rl.is_up_to_date(OUT, [script_path, gap.MODULE_PATH]):
+    if not force and rl.is_up_to_date(OUT, [script_path, gap.MODULE_PATH, mp.MODULE_PATH]):
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
 
@@ -153,7 +154,7 @@ def main() -> None:
         rl.BatchCheckpoint(OUT.with_suffix(OUT.suffix + ".ckpt")),
     )
 
-    rl.assert_partitioned(
+    mp.assert_partitioned(
         len(rows), len({source_id for source_id, _ in rows}), SCRIPT_NAME
     )
     rl.assert_row_count(

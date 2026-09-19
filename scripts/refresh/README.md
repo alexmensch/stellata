@@ -79,10 +79,10 @@ write the worktree's `data/`.
 | `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — the manifest's `gaia_source_id` column (the same binding the record build reads) UNION the classic-ID binding gate's candidate sources UNION the membership derivation's candidate sources UNION `multiples.tsv`'s kept-physical pair members. Not a network pull. Reads the manifest, the spine and both Gaia cross-walks, so it still runs AFTER `refresh:gaia-hip` / `refresh:gaia-tyc`. |
 | `refresh:gaia-astrometry-catalog` | `refresh-gaia-astrometry-catalog.py` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5p astrometry + `radial_velocity` for every catalog source_id (379,135) — tier 1 of the direction, rv, V and ci cascades. Same schema/query as `refresh:gaia-astrometry`; reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
 | `refresh:gaia-magnitude` | `refresh-gaia-magnitude.py` | `data/gaia/gaia_dr3_magnitude_pull.tsv` | Every `gaiadr3.gaia_source` row at `G ≤ 11` (1,247,240) — membership's magnitude term (`docs/catalog-driver.md` § 1), on `gaia_astrometry_pull.TSV_COLUMNS`. The one Gaia pull with **no request set**: its selection is the magnitude bound, so it reads nothing under `data/` and has no ordering constraint. Floor rationale — why `G ≤ 11` needs no margin over `V ≤ 11` — `data/gaia/README.md` § Why the floor carries no margin. |
-| `refresh:gaia-apsis` | `refresh-gaia-apsis.py` | `data/gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) — Teff / log g / [M/H] / A0 + GSP-Spec `spectraltype_esphs` enum. Scoped to the deep population (§ below), so it runs AFTER `build:astrometry-request`. |
+| `refresh:gaia-apsis` | `refresh-gaia-apsis.py` | `data/gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) — Teff / log g / [M/H] / A0 + GSP-Spec `spectraltype_esphs` enum. Scoped to the deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
 | `refresh:gaia-gspc` | `refresh-gaia-gspc.py` | `data/gaia/gaia_dr3_gspc.tsv` | Gaia DR3 `synthetic_photometry_gspc` — Johnson-Kron-Cousins B/V synthesised per source from its BP/RP spectrum, with fluxes and the per-band validated-range flag. Reads `gaia_catalog_source_id_request.tsv`, so it runs AFTER `build:astrometry-request`. Flag polarity and the S/N > 30 cut this table already applies — `data/gaia/README.md` § The GSPC validated-range flag. |
 | `refresh:gaia-dr2-neighbourhood` | `refresh-gaia-dr2-neighbourhood.py` | `data/gaia/gaia_dr2_neighbourhood.tsv` | DR2 ↔ DR3 cross-match candidates (`gaiadr3.dr2_neighbourhood`) for the Gaia-only catalog stars (reads `data/gaia/gaia_dr2_neighbourhood_request.tsv`). Input to the SID DR-reconciliation dry run — `docs/sid.md` § DR2→DR3 dry run, incl. the request-file derivation recipe. |
-| `refresh:bailer-jones` | `refresh-bailer-jones.py` | `data/bailer-jones/bailer-jones-dr3.tsv` | Bailer-Jones 2021 photogeometric + geometric distance posteriors per Gaia DR3 source_id, from `external.gaiaedr3_distance` on ESA rather than VizieR's `I/352` (`data/bailer-jones/README.md` § Why the pull is ESA-side). Deep population (§ below), so it runs AFTER `build:astrometry-request`. |
+| `refresh:bailer-jones` | `refresh-bailer-jones.py` | `data/bailer-jones/bailer-jones-dr3.tsv` | Bailer-Jones 2021 photogeometric + geometric distance posteriors per Gaia DR3 source_id, from `external.gaiaedr3_distance` on ESA rather than VizieR's `I/352` (`data/bailer-jones/README.md` § Why the pull is ESA-side). Deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
 | `refresh:hip2` | `refresh-hipparcos2.py` | `data/hipparcos/hip2_van_leeuwen.tsv` | Hipparcos-2 (van Leeuwen 2007) reduction. |
 | `refresh:hip-vmag` | `refresh-hipparcos-vmag.py` | `data/hipparcos/hip_main_vmag.tsv` | Printed Johnson V and B−V per HIP from `I/239/hip_main` — the printed tiers of the V-magnitude and ci cascades — plus the catalogue's own HD column, the `hd:i239` attestation route. |
 | `refresh:classic-ids` | `refresh-classic-ids.py` | `data/classic-ids/{tyc2_hd,cross_index,bsc5,cns5}.tsv` | The four frozen CDS classic-designation cross indexes (`IV/25`, `IV/27A`, `V/50`, CNS5 `J/A+A/670/A19`). Four slices in one script; `--only <stem>` limits it to one. |
@@ -140,7 +140,7 @@ above. Editing `refresh_lib.py` or a `simbad/*.py` module invalidates
 `is_up_to_date`, so the next invocation re-pulls rather than skips.
 
 Bailer-Jones and Apsis add a second, magnitude-bounded leg on top of that
-request — § Slicing a magnitude-bounded pull.
+request — `magnitude/README.md` § The deep population.
 
 ### The staleness gate — pin the shortfall, never the numerator
 
@@ -245,13 +245,10 @@ The declarative whole-table case — `VizierSlice` / `pull_slices()`, CDS's
 non-load-bearing MAXREC, identifier quoting — lives in
 `scripts/refresh/vizier/` with its own README.
 
-`refresh-tycho2.py` deliberately does **not** use `VizierSlice`: its
-output is a filtered subset rather than a whole table, and its gate is a
-band on kept rows as a fraction of the request set rather than an
-absolute row count, so a membership term that gains or loses rows moves the
-gate with it. It still shares the projection (`rl.select_columns`) and every
-gate helper. **Its pull and its write are separate calls on purpose** —
-`pull_table` gates and returns rows, `write_table` commits them, and
+`refresh-tycho2.py` stays here and does not use `VizierSlice` — why is
+`vizier/README.md`'s to state. **Its pull and its write are separate calls
+on purpose** — `pull_table` gates and returns rows, `write_table` commits
+them, and
 nothing is written until the cross-table membership cover has also passed
 (`data/tycho2/README.md` § Why the pull is range-batched, last paragraph).
 Its non-network test (`refresh-tycho2.test.py`) covers the request-set
@@ -276,9 +273,13 @@ it the `astroquery` dependency.
 default list, because which service can serve a query is a property of
 the table. CDS VizieR doesn't host `gaiadr3.*`, so an ESA→CDS fallback
 would fail with a misleading "table not found";
-`refresh-bailer-jones.py` and `refresh-hipparcos2.py` go the other way
-and pass `backends=[cds_backend()]` because their tables are
-VizieR-only. SIMBAD gets `[simbad_backend()]` for its divergent dialect.
+`refresh-hipparcos2.py` goes the other way and passes
+`backends=[cds_backend()]` because `I/311/hip2` is VizieR-only. SIMBAD
+gets `[simbad_backend()]` for its divergent dialect. Check ESA's
+`external.*` schema before concluding a catalogue is VizieR-only:
+Bailer-Jones is on both, and `refresh-bailer-jones.py` takes the ESA copy
+through `gaia_sync_client` precisely because only that one can be joined
+to a magnitude (`data/bailer-jones/README.md` § Why the pull is ESA-side).
 
 **MAXREC is load-bearing.** A sync endpoint answers HTTP 200 and flags
 truncation in a VOTable `QUERY_STATUS` INFO rather than erroring, so a
@@ -298,87 +299,34 @@ rules, and none may be replaced with a bare literal:
   size to multiply, so all three call `slice_sync_maxrec(<the pinned
   ceiling>)` — four times the nominal slice population. The factor is
   headroom against the distribution moving, not against the slices being
-  uneven; see § Slicing a magnitude-bounded pull. One cap serves both legs
+  uneven; see `magnitude/README.md` § Slicing a magnitude-bounded pull. One cap serves both legs
   of a deep-population pull, since a request-leg batch is far smaller than
   a slice.
 
-### Slicing a magnitude-bounded pull
+### Magnitude-bounded pulls
 
-A selection with no request set still has to be batched: 1.25 M rows in one
-sync query has no resume point and a 300 s timeout. `refresh-gaia-magnitude.py`
-splits on `phot_g_mean_mag`, and the spacing is the part worth not
-re-deriving. Source counts grow ~2.48x per magnitude at this depth, so equal
-magnitude steps would make the faintest slice ~27x the brightest. Equal steps
-in **log-count** space instead — edge `k` at `floor + ln(k/K)/ln(2.48)` —
-land every slice but the first within ~5% of the mean: measured 15,897 to
-27,367 over 48 slices, the low figure being the open-ended bright slice, where
-the power law stops holding. The whole pull runs in about four minutes.
-
-**The edges are shared as formatted strings, not recomputed per side.**
-Slice `k`'s `<=` bound and slice `k+1`'s `>` bound are the same literal, which
-is what makes the bounds a partition: a source can satisfy neither only if the
-two sides disagree in their last decimal. `assert_partitioned` gates the other
-direction (no source returned twice) and `assert_within_floor` gates the
-result against the bound, so a bad edge fails the pull rather than quietly
-moving the floor.
-
-`SyncOverflowError` covers the truncation case and is deliberately NOT
-classified transient — retrying or switching mirrors at the same MAXREC
-truncates identically, so it fails fast naming the MAXREC to raise.
-
-**The floor and the partition are `refresh_lib`'s** (`G_MAG_FLOOR`,
-`magnitude_slices`): three pulls name the same population, and a floor that
-drifted between them would leave the enrichment tables covering a different
-set of records than the magnitude term admits.
-
-#### The deep population — a bounded leg plus a request leg
-
-Bailer-Jones and Apsis are scoped to every source the catalogue's RECORDS can
-reach, which takes two legs: that population has two definitions and neither
-contains the other. `refresh_lib.pull_deep_population` is the one statement of
-the shape, and each script supplies only a table, a column list and its gates.
-
-It owns the request-file read, both legs' logging, and the count of the
-request set either leg served; it hands back a `DeepPopulation`
-(`seen` · `from_magnitude` · `requested` · `matched_request`). A third pull
-scoped this way writes its gates and nothing else.
-
-**Both legs need a gate, and they are different gates.** The magnitude leg
-answers to a row-count band on `from_magnitude`; that band says nothing
-about the request leg, so a request leg returning nothing would otherwise
-pass every check and drop exactly the promoted companions the union exists
-to reach. `assert_request_coverage` is the second gate and both pulls carry
-it at 0.90.
-
-- The **magnitude leg** is a selection — every source at the floor or
-  brighter, which no request set names because nothing binds most of them yet.
-  Neither table carries a magnitude, so each slice joins to
-  `gaiadr3.gaia_source`, where the bound lives; both are keyed on the indexed
-  `source_id`, so the join costs about what the slice does. Why that beats an
-  id list, and why Bailer-Jones is pulled from ESA rather than VizieR:
-  `data/bailer-jones/README.md` § Why the pull is ESA-side.
-- The **request leg** is `gaia_catalog_source_id_request.tsv`, whose classic
-  tiers reach fainter than the floor, restricted to the ids the magnitude leg
-  did not return. That restriction keeps it to the genuine remainder and makes
-  "each source exactly once" a property of the helper rather than of a dedupe.
-
-Reading the exported union rather than the manifest is also what closes the
-asymmetry § The staleness gate names: the union covers `multiples.tsv`'s
-kept-physical pair members, so a promoted companion is requestable.
+A pull scoped by a bound on `phot_g_mean_mag` rather than by a request set —
+the slice partition, `slice_sync_maxrec`, and the two-leg deep population
+Bailer-Jones and Apsis are pulled over — lives in `scripts/refresh/magnitude/`
+with its own README.
 
 ### Resuming a long pull
 
 `run_in_batches(..., checkpoint=rl.BatchCheckpoint(out.with_suffix(
 out.suffix + '.ckpt')))` makes a batched pull resumable: each batch is
 cached under `<output>.tsv.ckpt/` as it lands, and a re-run replays the
-cached batches and queries only what's missing. Apsis and Bailer-Jones
-run ~63 batches each, so a drop on batch 60 used to cost the whole pull.
-The directory is removed only once every batch has landed — **a
-surviving `.tsv.ckpt/` directory means the previous run did not finish**.
-It's gitignored, and discarded automatically when the request set or
+cached batches and queries only what's missing. The directory is removed
+only once every batch has landed — **a surviving `.tsv.ckpt*/` directory
+means the previous run did not finish**. It's gitignored, and discarded automatically when the request set or
 batch size changes (the cache is fingerprinted on both, since batch N of
 a different request set covers different source_ids). Deleting it by
 hand is always safe — it only forces a full re-pull.
+
+**A deep-population pull writes two of them**, `.tsv.ckpt-magnitude/` and
+`.tsv.ckpt-request/`, one per leg — they must not share a directory, or a
+resume would replay the magnitude leg's batches as the request leg's. So
+Apsis and Bailer-Jones resume at 48 slices plus the request batches (~8
+for Apsis), not the ~63 id batches the manifest-keyed pulls ran.
 
 `scripts/refresh/gaia_astrometry_pull.py` is the shared 5p-astrometry
 pull (schema, ADQL, batching, coverage + spot-check gates, atomic

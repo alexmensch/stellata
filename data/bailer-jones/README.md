@@ -43,13 +43,13 @@ them pins at zero** (`bjEligibleNotPulled`): an eligible record has its own
 DR3 parallax, so this publication covers it, and an absence means this pull's
 scope — § Refresh below — has moved since the table was pulled. See
 `scripts/catalog/distance/README.md` § Multi-layer distance refinement and
-§ Manifest-derived pulls.
+§ Scope-derived pulls.
 
 ## Why the pull is ESA-side
 
 The scope is the catalogue's deep population, whose larger half is defined by
 a magnitude bound rather than by a list of ids
-(`scripts/refresh/README.md` § The deep population). Expressing that bound
+(`scripts/refresh/magnitude/README.md` § The deep population). Expressing that bound
 takes a join against `gaiadr3.gaia_source`, and only the ESA archive hosts
 both tables: VizieR's `I/352/gedr3dis` carries no magnitude column, so there
 the same scope is 250 id batches and about five and a half hours against four
@@ -69,6 +69,6 @@ to the build and is gone from the ESA-side write.
 `pnpm run refresh:bailer-jones` →
 [`scripts/refresh/refresh-bailer-jones.py`](../../scripts/refresh/README.md).
 Two legs — every source at `G ≤ 11`, plus what the exported catalog request
-adds below that floor — per `scripts/refresh/README.md` § The deep population.
+adds below that floor — per `scripts/refresh/magnitude/README.md` § The deep population.
 Runs AFTER `pnpm run build:astrometry-request`. Each leg checkpoints per
 batch, so `--force` resumes rather than restarting.

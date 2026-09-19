@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
 import refresh_lib as rl  # noqa: E402
+from magnitude import magnitude_pull as mp  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
@@ -69,7 +70,7 @@ EXPECTED_UNION_COVERAGE_MIN = 0.80
 EXPECTED_COVERAGE_MIN = 0.90
 
 # scripts/refresh/README.md § Gaia TAP: synchronous endpoints only.
-SYNC_MAXREC = rl.slice_sync_maxrec(EXPECTED_MAGNITUDE_ROWS_MAX)
+SYNC_MAXREC = mp.slice_sync_maxrec(EXPECTED_MAGNITUDE_ROWS_MAX)
 
 # ESP-HS resolves a spectral-type letter for nearly the whole population,
 # not just its hot branch: 98.9% over the deep pull once its own
@@ -177,7 +178,7 @@ def write_row(row: Any) -> dict[str, Any]:
 def main() -> None:
     force = "--force" in sys.argv
 
-    if not force and rl.is_up_to_date(OUT, [Path(__file__), REQUEST]):
+    if not force and rl.is_up_to_date(OUT, [Path(__file__), REQUEST, mp.MODULE_PATH]):
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
 
@@ -208,7 +209,7 @@ def main() -> None:
         lines[source_id] = rl.format_tsv_row(write_row(row), TSV_COLUMNS)
 
     start = time.time()
-    pulled = rl.pull_deep_population(
+    pulled = mp.pull_deep_population(
         rl.gaia_sync_client(SYNC_MAXREC),
         table=TABLE,
         columns=TSV_COLUMNS,
@@ -261,7 +262,7 @@ def main() -> None:
             f"includes spectraltype_esphs and that ESP-HS returns real values."
         )
 
-    rl.assert_request_coverage(pulled, EXPECTED_COVERAGE_MIN, SCRIPT_NAME)
+    mp.assert_request_coverage(pulled, EXPECTED_COVERAGE_MIN, SCRIPT_NAME)
 
     rl.validate_spot_rows(spot_rows, SPOT_CHECKS, script_name=SCRIPT_NAME)
 
