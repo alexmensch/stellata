@@ -147,7 +147,14 @@ information.
 - **Tier 2 — passes, buffers, draw counts, the catalogue, or the
   instrument itself.** The full cold sweep, and it re-takes the pin:
   `--mode dwell --scenario all --backend both --cooldown-ms 120000
-  --pin`, ~15–25 min. Every row the pin records is this tier's to re-take.
+  --frames 960 --pin`, ~15–25 min. Every row the pin records is this tier's
+  to re-take. **`--frames` is not optional and its value is whatever the
+  outgoing pin's rows were taken at** — today 960. Omit it and the runner
+  dwells at its default 240, which writes a pin nothing can compare against:
+  Tier 1 reads at 960, two dwell lengths do not compare, and a pin row
+  records no frame count, so nothing refuses the mismatch and the next PR
+  reads a verdict that means nothing. Check the outgoing pin's `sourceRun`
+  before re-taking.
   A sweep refused for one row — a first-context settle, a dwell that
   trended — is not re-armed: `pnpm run perf:pin` writes the pin offline
   from the saved run files of one commit, taking each row from the run
