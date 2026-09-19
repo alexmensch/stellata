@@ -193,9 +193,18 @@ atomic view the kernel added into and writes
 `[⌈n / REFILL_WORKGROUP_SIZE⌉, 1, 1, n]` into `refillDispatch` — the three
 u32 `dispatchWorkgroupsIndirect` reads, then the listed length the refill
 kernel bounds its threads by. The extinction prepass dispatches at that
-count and reads that length through `refillDispatchNode`, a read-only view
-over the same attribute, so no count ever crosses to the CPU. The divisor is
-the workgroup size the refill kernel is built with, one constant for both.
+count and reads that length through `refillDispatchNode`, a read-only node of
+its own over the same attribute, so no count ever crosses to the CPU. The
+divisor is the workgroup size the refill kernel is built with, one constant
+for both.
+
+**Two storage nodes over that one attribute, never one narrowed.**
+`toReadOnly()` narrows the node it is called on rather than returning a view,
+so a single node narrowed for the refill kernel is read-only in the finish
+kernel too and that kernel's pipeline then fails to compile on the device —
+which discards the whole submit, and with it every star this pass lists.
+`storageWriteRead` builds the pair (`../../tsl/README.md` § Storage
+attributes).
 
 **The finish kernel is the only reader of an atomic outside the compaction
 kernel.** A refill thread reading a counter directly is the shape § Reading
