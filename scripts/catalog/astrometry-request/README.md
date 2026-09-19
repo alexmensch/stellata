@@ -38,8 +38,10 @@ comparator — and it is what matches the ordering
 
 ## Request and record build name the same set by construction
 
-**371,098 source_ids** over 376,929 manifest rows; the 5,831 rows carrying
-none are the no-Gaia tier.
+**370,994 source_ids** over 376,932 manifest rows; the 5,938 rows carrying
+none are the no-Gaia tier. The row total is pinned as `rows` in
+`../membership/membership-manifest-expected.json`; the split is a walk over
+that file's `gaia_source_id` column, and every id in it is distinct.
 
 Reading the column is what makes the two agree — `readStars` reads the same
 cell, and the binding it carries was derived once, in the generator, through
@@ -54,7 +56,7 @@ different sets, so the request is the union of all four:
 
 | Contribution | Ids | Consumer |
 |---|---|---|
-| the manifest's `gaia_source_id` column | 371,098 | the record build: direction / rv / V / ci cascades |
+| the manifest's `gaia_source_id` column | 370,994 | the record build: direction / rv / V / ci cascades |
 | `../classic-ids/`' binding-gate candidates | 354,987, +1,024 beyond the manifest | the gate's `phot_g_mean_mag` evidence |
 | `../membership/`' binding-derivation candidates | 313,290, +128 beyond the two above | the derivation's `phot_g_mean_mag` evidence — every source any spine row could be bound to |
 | `multiples.tsv`' kept-physical pair members | 16,108, +6,885 beyond the three above | the parallax cascade's `pair_member_parallax` tier |

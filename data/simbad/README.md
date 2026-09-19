@@ -51,8 +51,11 @@ costs is visible in the pull's own report, which prints values reached
 before it prints values shipped.
 
 **The request set is an enumerated cohort, not the catalogue.** It is the
-**membership manifest** rows a § 5 value tier can reach — 75,037 of 376,929
-(19.9%), keyed `gaia_source_id` → HIP → TYC → GJ. Four rows in five are
+**membership manifest** rows a § 5 value tier can reach — 75,040 of 376,932
+(19.9%), keyed `gaia_source_id` → HIP → TYC → GJ. `refresh-simbad-values`
+prints that first number as its `value cohort:` line before it opens a
+connection, so re-deriving it costs a local run of the predicate rather than
+a pull. Four rows in five are
 absent by construction, so a consumer cannot quietly reach for SIMBAD where a
 first-hand catalogue already serves. **Widening the cohort is a re-pull**, not
 a filter change: the predicate is `simbad_value_cohort` in

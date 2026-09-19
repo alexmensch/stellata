@@ -270,7 +270,7 @@ identity bullet, which measures the frozen column.
 **Additions: the primaries admit ~64k records the spine lacks, and 55,008 of
 them are one upstream defect.** Every figure in this paragraph is counted per
 primary, before the grouping and admission *The rule* below applies; what ships
-is 63,672 records, and that paragraph reconciles the two. IV/25 numbers
+is 63,676 records, and that paragraph reconciles the two. IV/25 numbers
 **60,344** Tycho-2 stars no
 spine row carries (a further 394 HD numbers, on 393 TYCs, land on existing
 records). AT-HYG's version notes take HD "from HYG if known, otherwise
@@ -325,16 +325,16 @@ answers to** — a designation on two records keys no SID (`docs/sid.md` § 4.1)
 so attaching one another record holds would cost that record its key. The claim
 set is the spine's after the label merge and grows as each group is admitted,
 so an earlier addition blocks a later one exactly as a spine row does. That
-lands **63,672** records — `hd_link_gap` 54,812 · `hd_omitted` 5,060 ·
-`hip_omitted` 444 · `cns5_census` 3,356 — and ledgers **471** groups as
+lands **63,676** records — `hd_link_gap` 54,813 · `hd_omitted` 5,063 ·
+`hip_omitted` 444 · `cns5_census` 3,356 — and ledgers **466** groups as
 `component:<anchor>`, not as records. They are not the ~90 bright-double
 secondaries above, which reach the manifest as HD-addition records or as second
-HD numbers on spine TYCs: 466 are the second Tycho-2 entry of a pair Tycho-2
-resolved whose HD (and, through Tycho-2's `hip` column, HIP) a spine record
-already carries, and 5 are the second of such a pair with neither component on
-the spine — HD 23068, 37703, 45900, 63846, 86269, which IV/25 flags `n_tyc > 1`
-and which would otherwise have minted `gaia_dr3:`-keyed SIDs, one of them
-keyless. The per-outcome table, the two source-left-empty outcomes (105 + 13),
+HD numbers on spine TYCs: five are the second of such a pair with neither
+component on the spine — HD 23068, 37703, 45900, 63846, 86269, which IV/25
+flags `n_tyc > 1` and which would otherwise have minted `gaia_dr3:`-keyed
+SIDs, one of them keyless — and the rest are the second Tycho-2 entry of a
+pair Tycho-2 resolved whose HD (and, through Tycho-2's `hip` column, HIP) a
+spine record already carries. The per-outcome table, the two source-left-empty outcomes (105 + 13),
 the order that decides which of two groups takes a contested designation, and
 the admission rule in full: `scripts/catalog/membership/README.md`
 § The additions. An addition then
@@ -343,10 +343,10 @@ parks on the existing ledger under the existing codes — Tycho-2 publishes no
 parallax, so most of the ~4.5k with neither a DR3 neighbour nor a HIP park,
 as do CNS5's 514 without a DR3 id, which no V tier reaches. Identity rides
 on the manifest's `binding` column, four classes: `crosswalk_gated`
-358,560 (a TYC, HIP or CNS5 candidate through the gates) ·
-`simbad_corroborated` 12,485 (SIMBAD's source for the record's own
+358,458 (a TYC, HIP or CNS5 candidate through the gates) ·
+`simbad_corroborated` 12,483 (SIMBAD's source for the record's own
 designation, through the gates) · `reviewed` 53 (a disposition row's value) ·
-`none` 5,831 (the 576 derived refusals, the withheld collision, Sol; additions
+`none` 5,938 (the derived refusals, the withheld collision, Sol; additions
 no gated walk binds). The review queue is `data/membership/binding-review.tsv`
 with its dispositions beside it, 54 rows. The swap itself was 63,672 mints,
 zero retirements, zero reinstatements; deriving the binding then retired
@@ -360,9 +360,12 @@ because it snapshots a build that no longer exists; the primaries-derived
 membership is a pure function of committed inputs, so it can be, and that
 is what replaces the byte guard with a regenerate-and-diff. The swap emits a
 committed **membership manifest** (`data/membership/membership-manifest.tsv`,
-376,929 rows = 313,257 spine + 63,672 admitted) — one row per admitted
+376,932 rows = 313,257 spine less the one folded + 63,676 admitted) — one row per admitted
 record: admitting designations, route, source_id and its provenance class —
-regenerated in CI and diffed like `classic_id_overlay.tsv`. Columns and
+regenerated in CI and diffed like `classic_id_overlay.tsv`. Those four counts
+are `rows` / `spineRows` / `spineRowsFolded` / `additionRows` in
+`scripts/catalog/membership/membership-manifest-expected.json`, which the gate
+pins — so read them there rather than from any prose restating them. Columns and
 sort order: `scripts/catalog/membership/README.md` § Columns. The gate
 asserts three things: (i) every row of the 2026-07-28 spine maps through its
 designation class to exactly one manifest row — the same SID — or to a § 6.1
