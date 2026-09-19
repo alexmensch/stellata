@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ArgError, parsePinArgs, pinUsage, type PinArgs } from './args';
 import {
-  REPO_ROOT, mainCheckout, packageVersion, printAgainstPin, readJsonFlag, writePinFile,
+  REPO_ROOT, packageVersion, printAgainstPin, readJsonFlag, writePinFile,
 } from './checkout';
 import {
   acceptedMarks, assertPinFile, citeRunPath, pinFromRuns, pinPathFor, pinWriteRefusal,
@@ -16,12 +16,11 @@ import { assertPerfFile } from './schema';
 const EXIT = { ok: 0, refused: 1, usage: 2 } as const;
 
 function readSources(paths: readonly string[]): { sources: RunSource[]; error: string | null } {
-  const checkout = mainCheckout();
   const sources: RunSource[] = [];
   for (const path of paths) {
     const read = readJsonFlag('run', path, assertPerfFile);
     if (read.error !== null) return { sources, error: read.error };
-    sources.push({ file: read.value!, sourceRun: citeRunPath(path, checkout) });
+    sources.push({ file: read.value!, sourceRun: citeRunPath(path, REPO_ROOT) });
   }
   return { sources, error: null };
 }

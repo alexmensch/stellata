@@ -3,11 +3,13 @@
 // instance, mirrored to the CPU in one mapped copy for the pick. README.md.
 
 import {
-  StorageBufferAttribute, Vector3, type ComputeNode, type WebGPURenderer,
+  Matrix4, StorageBufferAttribute, Vector3, type ComputeNode, type WebGPURenderer,
 } from 'three/webgpu';
-import { Fn, If, compute, distance, float, instanceIndex, int, max, storage, uint, uniform } from 'three/tsl';
+import {
+  Fn, If, bool, compute, distance, float, instanceIndex, int, max, storage, uint, uniform, vec4,
+} from 'three/tsl';
 import type {
-  ExtinctionPrepassSeam, ExtinctionPrepassUniforms,
+  ExtinctionPrepassSeam, ExtinctionPrepassUniforms, ExtinctionView,
 } from '../../star-pipeline/extinction/extinction-seam';
 import type { AvParityReport } from '../../star-pipeline/extinction/av-parity-pure';
 import {
@@ -15,6 +17,7 @@ import {
   movedBeyondEpsilon,
   packPositionsVec4Into,
 } from '../../star-pipeline/extinction/extinction-prepass-pure';
+import { starQuadOffscreenTsl } from '../star/compaction/frustum-tsl';
 import type { StarTables } from '../star/star-tables';
 import {
   STAR_VISIBILITY_BOUND_KEYS, starCacheVisibleTsl,
@@ -26,6 +29,10 @@ import { mortonDispatchOrder } from './dispatch-order/dispatch-order-pure';
 import { dustRaymarchAvTsl } from './dust-raymarch-tsl';
 import type { ExtinctionNodes } from './extinction-nodes';
 import { runReferenceMarch, type StarCacheGate } from './extinction-parity';
+import { AvMirror } from './mirror/av-mirror';
+import {
+  EXTINCTION_FRUSTUM_SLACK_PX, composeViewProjectionAbs, sameView,
+} from './refill/refill-decision-pure';
 import {
   idleRefill, planRefill, refillSliceLength, type RefillCursor,
 } from './refill/refill-slices-pure';
@@ -48,6 +55,11 @@ export interface WebGpuExtinctionPrepassOptions {
   tables: StarTables | null;
 }
 
+/** `frustumMode` values: the whole catalogue marches, or only what the
+ *  view sees and the generation has not stamped. */
+const MODE_WHOLE = 0;
+const MODE_FRUSTUM = 1;
+
 export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   /** Storage buffers and compute are core WebGPU — there is no
    *  EXT_color_buffer_float to gate on and no fallback branch to port. */
@@ -61,9 +73,13 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   private positions: StorageBufferAttribute | null;
   private order: StorageBufferAttribute | null;
   private av: StorageBufferAttribute | null;
+  /** Per star, the camera generation its A_V was computed at
+   *  (refill/README.md § Only what is in frame). */
+  private stamps: StorageBufferAttribute | null;
   private kernel: ComputeNode | null;
   private readonly positionsNode: ReturnType<typeof storage<'vec4'>>;
   private readonly orderNode: ReturnType<typeof storage<'uint'>>;
+  private readonly stampsNode: ReturnType<typeof storage<'uint'>>;
   /** Dispatch slot → catalogue index, the CPU copy the parity check needs
    *  to put the reference march's slot-indexed target back into star order.
    *  Shares its array with the `order` buffer, so dispose has to drop both
@@ -73,6 +89,12 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   /** Slot the running dispatch starts at (refill/README.md § The cursor).
    *  Zero for the whole-catalogue dispatches. */
   private readonly sliceBase = uniform(0, 'uint');
+  private readonly frustumMode = uniform(MODE_WHOLE, 'uint');
+  /** Starts past the zero the stamp buffer allocates with. */
+  private readonly cameraGeneration = uniform(1, 'uint');
+  private readonly viewProjectionAbs = uniform(new Matrix4());
+  private readonly viewScratch = new Matrix4();
+  private lastView: Matrix4 | null = null;
   private readonly sliceLength: number;
   private refill: RefillCursor;
   /** `catalog.positions` itself, which StarFrame rewrites in place. */
@@ -85,22 +107,14 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  two cannot skip different stars. */
   private readonly visible: StarCacheGate | null;
 
-  // The whole A_V table on the CPU. `readAvMag` answers out of this and
-  // nothing else: a copy issued by the pick that wants the value cannot
-  // resolve before that pick's verdict (README.md § Cold reads).
-  private mirror: Float32Array | null = null;
-  // The generation the outstanding-or-landed mirror read belongs to.
-  // Holding it at `generation` is what makes a pointermove sweep cost one
-  // copy rather than one per event, and a failed read one attempt rather
-  // than one per event for as long as the buffer stands.
-  private mirrorGeneration = -1;
-  /** Bumped on every recompute: a read that resolves against an older
+  /** The pick's CPU copy of the table (mirror/README.md). */
+  private readonly mirror: AvMirror;
+  /** Bumped on every dispatch: a read that resolves against an older
    *  buffer's contents lands in a generation nobody will consult. */
   private generation = 0;
   private dirty = true;
   private hasComputed = false;
   private forceDisabled = false;
-  private disposed = false;
   private lastCamX = Infinity;
   private lastCamY = Infinity;
   private lastCamZ = Infinity;
@@ -109,6 +123,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     renderer, positions, count, nodes, slots, uniforms, tables,
   }: WebGpuExtinctionPrepassOptions) {
     this.renderer = renderer;
+    this.mirror = new AvMirror(renderer);
     this.uniforms = uniforms;
     this.slots = slots;
     this.nodes = nodes;
@@ -134,6 +149,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
       this.positions.array as Float32Array, positions, count, this.dispatchOrder);
     this.order = new StorageBufferAttribute(this.dispatchOrder, 1);
     this.av = new StorageBufferAttribute(count, 1);
+    this.stamps = new StorageBufferAttribute(new Uint32Array(count), 1);
     // The consumers' slot points here for this instance's whole life;
     // `uAvPrepassEnabled` is what gates the read, so a buffer that has not
     // been computed yet is bound but never fetched.
@@ -141,6 +157,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
 
     this.positionsNode = storage(this.positions, 'vec4', count).toReadOnly();
     this.orderNode = storage(this.order, 'uint', count).toReadOnly();
+    this.stampsNode = storage(this.stamps, 'uint', count);
     // One thread per slot of the dispatched slice.
     // dispatch-order/README.md § Dispatch order.
     const gateBounds = this.gateBounds;
@@ -148,6 +165,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
       : (self, starAbs) => starCacheVisibleTsl(
         gateBounds, tables, self, max(distance(starAbs, this.absCameraPos), 1e-30));
     const visible = this.visible;
+    const slackNdc = float(EXTINCTION_FRUSTUM_SLACK_PX).div(nodes.uViewport);
     this.kernel = compute(Fn(() => {
       const slot = instanceIndex.add(this.sliceBase);
       // Ours, not three's: three's early return bounds `instanceIndex`, not
@@ -155,16 +173,27 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
       If(slot.lessThan(uint(count)), () => {
         const self = int(this.orderNode.element(slot));
         const starAbs = this.positionsNode.element(slot).xyz;
-        const march = () => dustRaymarchAvTsl(nodes, slots.dust, this.absCameraPos, starAbs);
-        if (visible === null) {
-          slots.av.element(self).assign(march());
-        } else {
-          const av = float(0.0).toVar();
-          If(visible(self, starAbs), () => { av.assign(march()); });
-          // Zero rather than a skipped write — the compare in
-          // README.md § The cache gate is total.
-          slots.av.element(self).assign(av);
-        }
+        const refills = bool(true).toVar();
+        If(this.frustumMode.equal(uint(MODE_FRUSTUM)), () => {
+          const clip = this.viewProjectionAbs.mul(vec4(starAbs, 1.0)).toVar();
+          const seen = starQuadOffscreenTsl(clip, slackNdc).not()
+            .or(self.equal(nodes.uPinFocusToCenter));
+          refills.assign(
+            seen.and(this.stampsNode.element(self).notEqual(this.cameraGeneration)));
+        });
+        If(refills, () => {
+          const march = () => dustRaymarchAvTsl(nodes, slots.dust, this.absCameraPos, starAbs);
+          if (visible === null) {
+            slots.av.element(self).assign(march());
+          } else {
+            const av = float(0.0).toVar();
+            If(visible(self, starAbs), () => { av.assign(march()); });
+            // Zero rather than a skipped write — the compare in
+            // README.md § The cache gate is total.
+            slots.av.element(self).assign(av);
+          }
+          this.stampsNode.element(self).assign(this.cameraGeneration);
+        });
       });
     })(), count);
     this.kernel.setName('extinction-prepass-compute');
@@ -194,7 +223,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     return this.hasComputed && !this.forceDisabled && this.kernel !== null;
   }
 
-  update(absCamX: number, absCamY: number, absCamZ: number): void {
+  update(absCamX: number, absCamY: number, absCamZ: number, view?: ExtinctionView): void {
     if (this.kernel === null) return;
     if (this.dustTexture === null) return;
     if (this.forceDisabled) return;
@@ -204,39 +233,57 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
       RECOMPUTE_EPSILON_PC,
     );
     if (this.syncGateBounds()) this.dirty = true;
-    const wanted = this.dirty || moved;
+    const bump = this.dirty || moved;
+    let viewChanged = false;
+    if (view !== undefined) {
+      composeViewProjectionAbs(view.camera, view.worldOffset, this.viewScratch);
+      viewChanged = !sameView(this.lastView, this.viewScratch);
+      if (viewChanged) {
+        this.viewProjectionAbs.value.copy(this.viewScratch);
+        this.lastView = (this.lastView ?? new Matrix4()).copy(this.viewScratch);
+      }
+    }
     // The first fill is whole (refill/README.md § Three places).
     if (!this.hasComputed) {
-      if (!wanted) return;
-      this.absCameraPos.value.set(absCamX, absCamY, absCamZ);
-      this.computeWholeCatalogue();
+      if (!bump) return;
+      this.setCameraGeneration(absCamX, absCamY, absCamZ);
+      this.dispatch(0, this.count, MODE_WHOLE);
       this.refill = idleRefill(this.count);
       this.hasComputed = true;
     } else {
-      const plan = planRefill(this.refill, wanted, this.count, this.sliceLength);
+      if (bump) {
+        this.cameraGeneration.value += 1;
+        this.setCameraGeneration(absCamX, absCamY, absCamZ);
+      }
+      const plan = planRefill(this.refill, bump || viewChanged, this.count, this.sliceLength);
       this.refill = plan.next;
       if (plan.base === null) return;
-      this.absCameraPos.value.set(absCamX, absCamY, absCamZ);
-      this.sliceBase.value = plan.base;
-      this.renderer.compute(this.kernel, plan.length);
+      this.dispatch(
+        plan.base, plan.length, this.lastView === null ? MODE_WHOLE : MODE_FRUSTUM);
     }
 
     this.generation++;
-    this.mirror = null;
-    this.lastCamX = absCamX;
-    this.lastCamY = absCamY;
-    this.lastCamZ = absCamZ;
+    this.mirror.invalidate();
     this.dirty = false;
     this.syncConsumerUniforms();
   }
 
-  /** One dispatch over every slot at the current `absCameraPos`, so the
-   *  whole buffer belongs to one camera. The boot fill and the parity
-   *  check are the two callers that need that. */
-  private computeWholeCatalogue(): void {
+  /** see refill/README.md § The generation stamp */
+  private setCameraGeneration(x: number, y: number, z: number): void {
+    this.absCameraPos.value.set(x, y, z);
+    this.lastCamX = x;
+    this.lastCamY = y;
+    this.lastCamZ = z;
+  }
+
+  /** `length` slots from `base`. Whole mode over every slot is the one that
+   *  leaves the buffer belonging to a single camera (refill/README.md
+   *  § Three places). */
+  private dispatch(base: number, length: number, mode: number): void {
     if (this.kernel === null) return;
-    this.sliceBase.value = 0;
-    this.renderer.compute(this.kernel, this.count);
+    this.frustumMode.value = mode;
+    this.sliceBase.value = base;
+    this.renderer.compute(this.kernel, length);
   }
 
   /**
@@ -247,8 +294,8 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    * synchronous readback (README.md § Cold reads).
    */
   readAvMag(idx: number): number | null {
-    if (!this.isActive() || this.mirror === null) return null;
-    return this.mirror[idx] ?? null;
+    if (!this.isActive()) return null;
+    return this.mirror.read(idx);
   }
 
   /** Stage the whole table for the picks a pointer event is about to
@@ -256,23 +303,11 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  once per recompute and never while the camera is under way, landing
    *  inside the hover dwell. */
   warmAvReadback(): void {
-    if (!this.isActive()) return;
+    if (!this.isActive() || this.av === null) return;
     // A parked cursor only: a copy taken mid-cycle is superseded before the
     // dwell that wanted it can read a byte (README.md § Cold reads).
     if (this.refill.base < this.count) return;
-    if (this.mirrorGeneration === this.generation) return;
-    const generation = this.generation;
-    this.mirrorGeneration = generation;
-    this.renderer
-      .getArrayBufferAsync(this.av!)
-      .then((bytes) => {
-        if (this.disposed || generation !== this.generation) return;
-        this.mirror = new Float32Array(bytes);
-      })
-      .catch(() => {
-        // Leave mirrorGeneration where it is: a device that refuses the
-        // map gets one attempt per recompute, not one per pointer event.
-      });
+    this.mirror.stage(this.av, this.generation);
   }
 
   /** The parity check of README.md § The prepass kernel: the same march as
@@ -281,10 +316,10 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   async verifyParity(): Promise<AvParityReport | null> {
     if (!this.isActive() || this.av === null || this.dispatchOrder === null) return null;
     // One camera behind the whole buffer (refill/README.md § Three places).
-    this.computeWholeCatalogue();
+    this.dispatch(0, this.count, MODE_WHOLE);
     this.refill = idleRefill(this.count);
     this.generation++;
-    this.mirror = null;
+    this.mirror.invalidate();
     return runReferenceMarch({
       renderer: this.renderer,
       nodes: this.nodes,
@@ -326,22 +361,23 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   }
 
   dispose(): void {
-    this.disposed = true;
     this.uniforms.uAvPrepassEnabled.value = 0;
     this.slots.setAvBuffer(null);
-    // The kernel's bind group references all three buffers: drop it first.
+    // The kernel's bind group references all four buffers: drop it first.
     this.kernel?.dispose();
     if (this.av !== null) disposeStorageAttribute(this.renderer, this.av);
     if (this.positions !== null) disposeStorageAttribute(this.renderer, this.positions);
     if (this.order !== null) disposeStorageAttribute(this.renderer, this.order);
+    if (this.stamps !== null) disposeStorageAttribute(this.renderer, this.stamps);
     this.kernel = null;
     this.av = null;
     this.positions = null;
     this.order = null;
+    this.stamps = null;
     this.dispatchOrder = null;
-    this.mirror = null;
-    this.mirrorGeneration = -1;
+    this.mirror.dispose();
     this.refill = idleRefill(this.count);
+    this.lastView = null;
     this.hasComputed = false;
     this.dirty = true;
     this.lastCamX = Infinity;

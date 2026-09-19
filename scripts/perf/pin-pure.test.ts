@@ -846,13 +846,47 @@ describe('unacceptedMarks — writing a pin must not ratchet the frame upward', 
 });
 
 describe('citeRunPath — the pin ships in a public repo', () => {
-  it('cites a run under the main checkout by its repo-relative path', () => {
+  it('cites a run under the checkout by its repo-relative path', () => {
     expect(citeRunPath('/Users/alexm/github/stellata/.perf-runs/2026-09-05/pin.json', '/Users/alexm/github/stellata'))
       .toBe('.perf-runs/2026-09-05/pin.json');
   });
 
   it('keeps the name and drops the location of a run stored elsewhere', () => {
     expect(citeRunPath('/tmp/scratch/pin.json', '/Users/alexm/github/stellata')).toBe('pin.json');
+  });
+
+  // A pin is normally taken on a branch, and a branch normally lives in a
+  // worktree. Resolving against the MAIN checkout prefixes the path with
+  // .claude/worktrees/<name>/, which stops resolving the moment the worktree
+  // is removed — so the root passed is the checkout the run was written in.
+  it('cites a worktree run relative to that worktree, not to the main checkout', () => {
+    const worktree = '/Users/alexm/github/stellata/.claude/worktrees/topic';
+    const run = `${worktree}/.perf-runs/2026-09-19/pin.json`;
+    expect(citeRunPath(run, worktree)).toBe('.perf-runs/2026-09-19/pin.json');
+    expect(citeRunPath(run, '/Users/alexm/github/stellata'))
+      .toBe('.claude/worktrees/topic/.perf-runs/2026-09-19/pin.json');
+  });
+});
+
+describe('the pinned dwell length', () => {
+  it('is carried on every row, off the params the runner stamped', () => {
+    const pin = pinOf([scenario('sol', 'webgpu', dwell(stats(18.7), stats(16.9)), { params: { frames: 960 } })]);
+    expect(pin.rows[0].frames).toBe(960);
+  });
+
+  // The failure it exists for: a re-take at the runner's default 240 replaces
+  // a 960-frame pin, both dwells read steady, and nothing downstream objects.
+  it('refuses a run dwelt over a different count', () => {
+    const pin = pinOf([scenario('sol', 'webgpu', dwell(stats(18.7), stats(16.9)), { params: { frames: 960 } })]);
+    const short = file([scenario('sol', 'webgpu', dwell(stats(18.7), stats(16.9)), { params: { frames: 240 } })]);
+    expect(compareToPin(pin, short).refusals[0].reason).toContain('dwell 960 vs 240 frames');
+  });
+
+  it('declines the guard against a pin taken before the field existed', () => {
+    const pin = pinOf([scenario('sol', 'webgpu', dwell(stats(18.7), stats(16.9)), { params: {} })]);
+    expect(pin.rows[0].frames).toBeUndefined();
+    const run = file([scenario('sol', 'webgpu', dwell(stats(18.7), stats(16.9)), { params: { frames: 960 } })]);
+    expect(compareToPin(pin, run).refusals).toEqual([]);
   });
 });
 

@@ -45,7 +45,7 @@ describe('StarCompaction buffers', () => {
   it('the args buffer is indirect-capable and starts every slot at zero instances', () => {
     const { compaction } = make();
     expect(compaction.args.isIndirectStorageBufferAttribute).toBe(true);
-    expect(Array.from(compaction.args.array)).toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0]);
+    expect(Array.from(compaction.args.array)).toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0]);
   });
 });
 
@@ -105,6 +105,26 @@ describe('StarCompaction dispatch', () => {
     const taken = compaction.viewProjectionMatrix;
     taken.identity();
     expect(compaction.viewProjectionMatrix.elements).not.toEqual(taken.elements);
+  });
+});
+
+// The counter feeds no draw, so it must not run on frames nobody asked for
+// a count on (README.md § Reading the counts back).
+describe('the prefilter counter is armed only across its readback', () => {
+  it('waits for a dispatch to count into', async () => {
+    const { compaction, dispatches } = make();
+    const pending = compaction.readSurvivorCounts();
+    expect(await Promise.race([pending, Promise.resolve('unsettled')])).toBe('unsettled');
+    expect(dispatches).toHaveLength(0);
+    compaction.dispatch(camera());
+    expect(await pending).toEqual({ glow: 0, disc: 0, prefilter: 0 });
+  });
+
+  it('releases a waiting readback on dispose rather than hanging for the boot', async () => {
+    const { compaction } = make();
+    const pending = compaction.readSurvivorCounts();
+    compaction.dispose();
+    expect(await pending).toBeNull();
   });
 });
 

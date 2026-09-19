@@ -98,7 +98,8 @@ reaches the diff — `../README.md` § JSON output); a differing method or
 mode, a buffer more than 1 % apart, a **record count** more than 1 % apart or
 absent on either side (a row priced against a different catalogue is not a
 comparison), a **run position** that differs or is absent on either side
-(below), a **sweep precondition** that differs (below), a failed or tainted
+(below), a **dwell length** that differs (below), a **sweep precondition**
+that differs (below), a failed or tainted
 scenario, a dwell clamped or trending on its gating clock, a **readback duty
 cycle** over 25 % apart where the frame has two pass classes
 (`../dwell/README.md`), a mismatched GPU stream, a `cadenceBound` row (either
@@ -107,6 +108,22 @@ count, position, readback and precondition refusals are one implementation in
 `diff-pure.ts`, applied by `--against-pin` too: the two gates must refuse the
 same pair for the same reason, or the looser one certifies what the tighter
 one rejects.
+
+**Dwell length: two dwells compare only over the same number of timed
+frames.** A median converges with dwell length rather than merely getting
+quieter — at the runner's default 240 the `mw120` GPU median has not settled,
+eight archived rows spanning 0.725 ms against a 0.25 ms band, where two at 960
+on different commits agree to 0.067. So the two are different statistics and
+the verdict between them means nothing. Nothing else catches it: the state
+guard compares quarters within one dwell and both read steady, and the band is
+computed from the pair and widens with neither, so a pin re-taken at the wrong
+length replaces a good one silently. Read off `params.frames`, where the
+runner stamps the `--frames` it honoured, and carried on every pin row.
+**Absent on either side declines the guard rather than refusing**, the posture
+`readbackPerFrame` takes and the opposite of the record count's — a pin
+written before the field existed stays usable, and only a known mismatch
+refuses. `RELEASING.md` § Perf pin states the Tier 2 command that has to carry
+it.
 
 **Sweep preconditions: the state a differential was SET UP in refuses the
 pair.** `--pre-disable`, `--no-park` and `--force-recompute` change what the

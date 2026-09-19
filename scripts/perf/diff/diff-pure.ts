@@ -139,6 +139,7 @@ function comparabilityRefusal(a: ScenarioRecord, b: ScenarioRecord): string | nu
   return bufferRefusal(ma, mb)
     ?? recordCountRefusal(a.recordCount, b.recordCount)
     ?? positionRefusal(a.position, b.position)
+    ?? framesRefusal(dwellFrames(a), dwellFrames(b))
     ?? preconditionRefusal(a.params, b.params);
 }
 
@@ -212,6 +213,38 @@ export function positionRefusal(a: number | null | undefined, b: number | null |
     return `run position ${a} vs ${b} — the GPU's load history before a context moves its frame on unchanged code`;
   }
   return null;
+}
+
+/**
+ * Two dwells compare only over the same number of timed frames. A median
+ * converges with dwell length rather than merely getting quieter: at the
+ * runner's default 240 the mw120 GPU median has not settled — eight archived
+ * rows span 0.725 ms against a 0.25 ms band, where two at 960, on different
+ * commits, agree to 0.067. So a 240-frame row read against a 960-frame one
+ * is two statistics, not two readings.
+ *
+ * Nothing else catches it: the state guard compares quarters within one
+ * dwell and both read steady, and the band is computed from the pair and
+ * widens with neither. A pin re-taken at the wrong length therefore replaces
+ * a good one silently, which is what this refuses.
+ *
+ * ABSENT on either side declines the guard rather than refusing, as
+ * `readbackPerFrame` does — a pin written before the field existed stays
+ * usable, and only a known mismatch refuses.
+ */
+/** The dwell length off the record's own params, where the runner stamps the
+ *  `--frames` it honoured. Undefined rather than a guess on a record that
+ *  carries none, which `framesRefusal` declines rather than refuses. */
+export function dwellFrames(record: ScenarioRecord): number | undefined {
+  const frames = record.params?.frames;
+  return typeof frames === 'number' ? frames : undefined;
+}
+
+export function framesRefusal(
+  a: number | null | undefined, b: number | null | undefined,
+): string | null {
+  if (a == null || b == null || a === b) return null;
+  return `dwell ${a} vs ${b} frames — a median converges with dwell length, so these are two statistics rather than two readings`;
 }
 
 /**

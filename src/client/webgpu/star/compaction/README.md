@@ -19,6 +19,12 @@ src/client/webgpu/star/compaction/
                                 buffers, the reset + compaction kernels,
                                 the per-frame dispatch, the on-demand
                                 count readback, dispose.
+  frustum-tsl.ts                The frustum test as TSL over a clip-space
+                                centre and an NDC half-extent, shared with
+                                the extinction cache's refill
+                                (../../extinction/refill/README.md § Only
+                                what is in frame); `starQuadOffscreen` is
+                                its CPU mirror.
 ```
 
 ## Two lists, one kernel, three draws
@@ -121,11 +127,34 @@ elision decision on the star path — "how much of the catalogue is actually
 in frame here" is otherwise unanswerable, since the counts exist only on
 the GPU and no draw ever reads them on the CPU.
 
+**A third counter, `PREFILTER_COUNT_ELEMENT`, sits one u32 past the two
+draw slots**: every star the dust-independent prefilter admits, counted
+before the frustum test. No draw reads it. `drawn / prefilter` is the share
+the frustum alone keeps of a population a prefilter-gated kernel already
+runs over — the extinction cache's gate is that kernel
+(`../../extinction/README.md` § The cache gate), so this ratio, not
+`drawn / records`, is the frustum's prize there.
+
+**It is armed by the readback and by nothing else**, because it would
+otherwise be an `atomicAdd` on a single address from every admitted thread
+— near 116k of them at `mw120`, some five times the two tier atomics
+combined — on every rendered frame, for a number no draw consults. A
+`uCountPrefilter` uniform gates it; `readSurvivorCounts` raises it, waits
+for one dispatch to count into and lowers it again. So the count belongs to
+a frame that exists *because* something asked for it, and every other frame
+pays one uniform compare.
+
 **On demand, never per frame.** The readback resolves frames later, so a
 per-frame one would either stall the render path or report a stale frame's
 number as the current one; neither buys anything a console call at a
-parked camera does not. It reads the *last dispatch's* counts, so take it
-with the camera settled.
+parked camera does not.
+
+**The caller owes it a rendered frame.** A settled camera has parked the
+render gate, and an armed read waits on a dispatch that will never come, so
+`Stellata.readSurvivorCounts` invalidates the gate before awaiting. Dispose
+releases a waiter rather than leaving it pending for the boot's life. Take
+the number with the camera settled all the same: the one frame the
+invalidation buys draws the settled view.
 
 `survivorCountsFromArgs` (`compaction-pure.ts`) takes the very slots the
 three draws take their instance count from — the same

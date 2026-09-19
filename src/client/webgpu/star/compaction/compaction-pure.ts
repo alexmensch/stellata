@@ -23,18 +23,24 @@ export function tierArgsInstanceCountElement(tier: StarTier): number {
   return tier * INDIRECT_ARGS_STRIDE + INDIRECT_INSTANCE_COUNT_SLOT;
 }
 
+/** README.md § Reading the counts back. */
+export const PREFILTER_COUNT_ELEMENT = STAR_TIERS.length * INDIRECT_ARGS_STRIDE;
+export const ARGS_ELEMENTS = PREFILTER_COUNT_ELEMENT + 1;
+
 /** What the kernel's atomics left in each tier's `instanceCount`, off a
  *  copy of the args buffer — the very numbers the three draws take their
- *  instance count from. */
+ *  instance count from — and the prefilter count beside them. */
 export interface SurvivorCounts {
   glow: number;
   disc: number;
+  prefilter: number;
 }
 
 export function survivorCountsFromArgs(args: Uint32Array): SurvivorCounts {
   return {
     glow: args[tierArgsInstanceCountElement(STAR_TIER_GLOW)] ?? 0,
     disc: args[tierArgsInstanceCountElement(STAR_TIER_DISC)] ?? 0,
+    prefilter: args[PREFILTER_COUNT_ELEMENT] ?? 0,
   };
 }
 
@@ -75,7 +81,7 @@ export function starQuadOffscreen(
 /** The args buffer as uploaded once: every slot draws the quad's
  *  `indexCount` indices over zero instances until the kernel counts. */
 export function initialIndirectArgs(indexCount: number): Uint32Array {
-  const args = new Uint32Array(STAR_TIERS.length * INDIRECT_ARGS_STRIDE);
+  const args = new Uint32Array(ARGS_ELEMENTS);
   for (const tier of STAR_TIERS) args[tier * INDIRECT_ARGS_STRIDE] = indexCount;
   return args;
 }

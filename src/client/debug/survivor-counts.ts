@@ -11,16 +11,24 @@ export interface SurvivorReport extends SurvivorCounts {
   /** Both tiers over records — the ratio an elision decision on the star
    *  path is sized against. */
   drawnFraction: number;
+  /** Stars passing the dust-independent prefilter, over records. */
+  prefilterFraction: number;
+  /** Both tiers over the prefilter count — what the frustum alone removes
+   *  from a kernel that already gates on the prefilter. */
+  drawnOfPrefilter: number;
 }
 
 export function survivorReport(counts: SurvivorCounts, records: number): SurvivorReport {
   const per = (n: number) => (records > 0 ? n / records : 0);
+  const drawn = counts.glow + counts.disc;
   return {
     ...counts,
     records,
     glowFraction: per(counts.glow),
     discFraction: per(counts.disc),
-    drawnFraction: per(counts.glow + counts.disc),
+    drawnFraction: per(drawn),
+    prefilterFraction: per(counts.prefilter),
+    drawnOfPrefilter: counts.prefilter > 0 ? drawn / counts.prefilter : 0,
   };
 }
 
@@ -34,6 +42,8 @@ export function formatSurvivorReport(r: SurvivorReport): string {
     `survivors: ${r.glow + r.disc} of ${r.records} records (${survivorPct(r.drawnFraction)})`,
     `  glow tier ${r.glow} (${survivorPct(r.glowFraction)})`,
     `  disc tier ${r.disc} (${survivorPct(r.discFraction)})`,
+    `  passing the prefilter ${r.prefilter} (${survivorPct(r.prefilterFraction)}); `
+      + `drawn of those ${survivorPct(r.drawnOfPrefilter)}`,
   ].join('\n');
 }
 

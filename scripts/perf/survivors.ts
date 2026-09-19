@@ -31,10 +31,11 @@ function readSurvivors(page: Page): Promise<SurvivorReport | null> {
 
 function survivorTable(rows: readonly SurvivorsRecord[]): string {
   return formatTable(
-    ['vantage', 'records', 'glow', 'disc', 'drawn', 'drawn %'],
+    ['vantage', 'records', 'glow', 'disc', 'drawn', 'drawn %', 'prefilter', 'drawn / prefilter'],
     rows.map((r) => [
       r.scenario, r.records, r.glow, r.disc, r.glow + r.disc,
       survivorPct(r.drawnFraction, TABLE_DECIMALS),
+      r.prefilter, survivorPct(r.drawnOfPrefilter, TABLE_DECIMALS),
     ]),
   );
 }

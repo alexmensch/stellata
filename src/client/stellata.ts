@@ -185,7 +185,7 @@ import { FloatingOrigin } from './frame/floating-origin';
 import { ExtinctionPrepass } from './star-pipeline/extinction/extinction-prepass';
 import { formatAvParity, type AvParityReport } from './star-pipeline/extinction/av-parity-pure';
 import type {
-  ExtinctionPrepassSeam,
+  ExtinctionPrepassSeam, ExtinctionView,
 } from './star-pipeline/extinction/extinction-seam';
 import { BinaryOrbitField } from './binaries/binary-orbit-field';
 import { BinaryOrbitPathLayer } from './binaries/orbit-paths/binary-orbit-path-layer';
@@ -489,6 +489,8 @@ export class Stellata implements FrameAnchor {
   // seam. Constructed lazily on the first attachDust so a dust-less
   // session pays nothing; null again after attachDust(null).
   private extinctionPrepass: ExtinctionPrepassSeam | null = null;
+  /** Built once — both members are stable identities mutated in place. */
+  private _extinctionView: ExtinctionView | null = null;
   private extinctionRecomputeForced = false;
   private readonly pickSizeScratch: starPhysics.RenderedSizeComponents =
     { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
@@ -1678,11 +1680,15 @@ export class Stellata implements FrameAnchor {
     return reports;
   }
 
-  /** How many stars each tier's draw issued on the last compaction
-   *  dispatch. Null on a WebGL2 boot, which lists no survivors
-   *  (`webgpu/star/compaction/README.md` § Reading the counts back). */
+  /** How many stars each tier's draw issued, and how many passed the
+   *  prefilter. Null on a WebGL2 boot, which lists no survivors
+   *  (`webgpu/star/compaction/README.md` § Reading the counts back).
+   *  The read waits on a dispatch to count into, which a settled camera has
+   *  parked the gate out of. */
   readSurvivorCounts(): Promise<SurvivorCounts | null> {
-    return this.webgpuStarLayer?.readSurvivorCounts() ?? Promise.resolve(null);
+    if (this.webgpuStarLayer === null) return Promise.resolve(null);
+    this.renderGate.invalidate('debug:survivors');
+    return this.webgpuStarLayer.readSurvivorCounts();
   }
 
   /** Numeric check that the compute A_V kernel and a fragment march of the
@@ -2707,29 +2713,32 @@ export class Stellata implements FrameAnchor {
     // the warp rate in model-days/real-second for the anti-strobe floor.
     this.sharedUniforms.uModelDays.value = tToJdUt(this.getT()) - J2000_JD;
     this.sharedUniforms.uModelDaysPerRealSec.value = Math.abs(this.clock.getRate()) / 86400;
-    if (this.extinctionPrepass !== null) {
-      // Absolute camera position in JS float64 — same frame convention as
-      // the shader-side iPosition + uWorldOffset reconstruction.
-      perfMark('extinction.prepass');
-      if (this.extinctionRecomputeForced) this.extinctionPrepass.markDirty();
-      this.extinctionPrepass.update(
-        this.camera.position.x + this.worldOffset.x,
-        this.camera.position.y + this.worldOffset.y,
-        this.camera.position.z + this.worldOffset.z,
-      );
-      perfMeasure('extinction.prepass');
-    }
     // Per-frame layer fan-out through the registry. The context was
-    // built above the gate; the extinction prepass and the pin above may
-    // have moved nothing it reads, but the rides inside the fan-out do
-    // move the camera, which is why the accumulator is cleared here and
-    // read straight after.
+    // built above the gate; the pin above may have moved nothing it reads,
+    // but the rides inside the fan-out do move the camera, which is why the
+    // accumulator is cleared here and read straight after.
     this._rideAccum.set(0, 0, 0);
     // Cleared here rather than by either publisher: both local-depth
     // clusters push into it during the fan-out below, and whichever ran
     // first would otherwise drop the other's entries.
     this.occluders.beginFrame();
     this.layers.updateAll(this.frameCtx);
+    if (this.extinctionPrepass !== null) {
+      // Between the ride fan-out and syncUniformNodes, and both edges bind
+      // (webgpu/extinction/refill/README.md § Only what is in frame).
+      // Absolute camera position in JS float64 — same frame convention as
+      // the shader-side iPosition + uWorldOffset reconstruction.
+      perfMark('extinction.prepass');
+      if (this.extinctionRecomputeForced) this.extinctionPrepass.markDirty();
+      this._extinctionView ??= { camera: this.camera, worldOffset: this.worldOffset };
+      this.extinctionPrepass.update(
+        this.camera.position.x + this.worldOffset.x,
+        this.camera.position.y + this.worldOffset.y,
+        this.camera.position.z + this.worldOffset.z,
+        this._extinctionView,
+      );
+      perfMeasure('extinction.prepass');
+    }
     this.refreshCadence();
     // After the fan-out: the statistic reads this frame's ephemeris
     // positions, and the cut it writes has to land before the first draw

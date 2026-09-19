@@ -146,6 +146,14 @@ recomputations per visible star per frame.
   (AU-scale motion) never recomputes; a fast warp recomputes per
   frame, which still costs ~1/10th of the old per-vertex-per-pass
   scheme.
+  **On WebGPU a fourth trigger joins those three: the view turning.**
+  The kernel refills only what the frustum holds, so a turn exposes stars
+  no camera position ever asked for, and it requests a refill exactly as a
+  displacement does — which is why AU-scale orbiting is free of a *march*
+  there but not of a dispatch. Displacement alone still governs the
+  values, since A_V depends on camera position only
+  (`../../webgpu/extinction/refill/README.md` § A view change is a refill
+  request).
 - **Positions are the catalog baseline** (`catalog.positions`, packed
   into an RGBA float texture) — binary-orbit perturbations (sub-AU) are
   ignored, as is the floating origin (both the prepass march and the

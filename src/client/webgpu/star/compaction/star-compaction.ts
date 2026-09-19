@@ -9,17 +9,18 @@ import {
   type ComputeNode, type WebGPURenderer,
 } from 'three/webgpu';
 import {
-  Fn, If, abs, atomicAdd, atomicStore, compute, instanceIndex, int, storage, uniform, uint, vec4,
+  Fn, If, atomicAdd, atomicStore, compute, instanceIndex, int, storage, uniform, uint, vec4,
 } from 'three/tsl';
 import { PHYS_RATIO_THRESHOLD } from '../../../star-pipeline/local-pass/star-local-cluster-pure';
 import { STAR_PASS_GLOW } from '../../../star-pipeline/star-pass';
 import { disposeStorageAttribute } from '../../tsl/storage-attribute';
 import { solveStarTsl, type StarTslDeps } from '../star-vertex-tsl';
 import {
-  CULL_SLACK_NDC, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
+  PREFILTER_COUNT_ELEMENT, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
   initialIndirectArgs, survivorCountsFromArgs, tierArgsInstanceCountElement,
   tierListBase, type StarTier, type SurvivorCounts,
 } from './compaction-pure';
+import { starQuadOffscreenTsl } from './frustum-tsl';
 
 export type SurvivorsNode = ReturnType<typeof storage<'uint'>>;
 
@@ -37,6 +38,10 @@ export class StarCompaction {
 
   private readonly renderer: WebGPURenderer;
   private readonly viewProjection = uniform(new Matrix4());
+  /** 1 only while a readback is waiting for its dispatch — the counter it
+   *  gates feeds no draw (README.md § Reading the counts back). */
+  private readonly countPrefilter = uniform(0, 'uint');
+  private readonly awaitingDispatch: (() => void)[] = [];
   private kernels: ComputeNode[] | null;
 
   constructor(renderer: WebGPURenderer, deps: StarTslDeps, indexCount: number) {
@@ -55,6 +60,7 @@ export class StarCompaction {
       for (const tier of STAR_TIERS) {
         atomicStore(argsNode.element(tierArgsInstanceCountElement(tier)), uint(0));
       }
+      atomicStore(argsNode.element(PREFILTER_COUNT_ELEMENT), uint(0));
     })(), 1);
     reset.setName('star-compaction-reset');
 
@@ -74,14 +80,13 @@ export class StarCompaction {
       solveStarTsl(deps, self, localPos, {
         pass: STAR_PASS_GLOW, eclipseDim: null,
       }, (s) => {
-        // Mirror any change here into `starQuadOffscreen` (compaction-pure.ts),
-        // which carries the tests. The pinned focal star draws through a
-        // substituted matrix, so its true projection cannot cull it.
+        If(this.countPrefilter.equal(uint(1)), () => {
+          atomicAdd(argsNode.element(PREFILTER_COUNT_ELEMENT), uint(1));
+        });
+        // The pinned focal star draws through a substituted matrix, so its
+        // true projection cannot cull it.
         const clip = this.viewProjection.mul(vec4(localPos, 1.0)).toVar();
-        const halfExtent = s.pxSize.div(u.uViewport);
-        const offscreen = clip.w.lessThanEqual(0.0)
-          .or(abs(clip.x).greaterThan(clip.w.mul(halfExtent.x.add(1.0 + CULL_SLACK_NDC))))
-          .or(abs(clip.y).greaterThan(clip.w.mul(halfExtent.y.add(1.0 + CULL_SLACK_NDC))));
+        const offscreen = starQuadOffscreenTsl(clip, s.pxSize.div(u.uViewport));
         const pinned = self.equal(u.uPinFocusToCenter);
         If(pinned.or(offscreen.not()), () => {
           If(s.physRatio.greaterThanEqual(PHYS_RATIO_THRESHOLD), () => {
@@ -103,11 +108,17 @@ export class StarCompaction {
     return this.viewProjection.value.clone();
   }
 
-  /** What the last dispatch counted, per tier — a mapped copy of the args
-   *  buffer, on demand. Never per frame: the readback resolves frames later
-   *  and nothing on the render path waits for it (README.md § Reading the
-   *  counts back). */
+  /** Per tier, off a mapped copy of the args buffer, on demand. Never per
+   *  frame: the readback resolves frames later and nothing on the render
+   *  path waits for it (README.md § Reading the counts back).
+   *
+   *  Arms the prefilter counter and waits one dispatch for it, so the caller
+   *  owes this a rendered frame — a parked render gate never resolves it. */
   async readSurvivorCounts(): Promise<SurvivorCounts | null> {
+    if (this.kernels === null) return null;
+    this.countPrefilter.value = 1;
+    await new Promise<void>((resolve) => { this.awaitingDispatch.push(resolve); });
+    this.countPrefilter.value = 0;
     if (this.kernels === null) return null;
     const bytes = await this.renderer.getArrayBufferAsync(this.args);
     if (this.kernels === null) return null;
@@ -124,11 +135,19 @@ export class StarCompaction {
     this.viewProjection.value.multiplyMatrices(
       camera.projectionMatrix, camera.matrixWorldInverse);
     this.renderer.compute(this.kernels);
+    this.releaseWaiters();
+  }
+
+  private releaseWaiters(): void {
+    const waiters = this.awaitingDispatch.splice(0);
+    for (const resolve of waiters) resolve();
   }
 
   dispose(): void {
     for (const k of this.kernels ?? []) k.dispose();
     this.kernels = null;
+    // Or an armed readback never settles and its caller hangs for the boot.
+    this.releaseWaiters();
     disposeStorageAttribute(this.renderer, this.survivors);
     disposeStorageAttribute(this.renderer, this.args);
   }
