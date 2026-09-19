@@ -37,6 +37,20 @@ export function disposeStorageAttribute(
 }
 
 /**
+ * Two nodes over the one buffer a kernel writes and another only reads —
+ * `build` is called twice, so each side gets its own. `toReadOnly()` narrows
+ * the node it is called on rather than returning a view, so a single shared
+ * node narrowed for the reader is pinned read-only in the writer too and that
+ * kernel's pipeline stops compiling on the device (README.md § Storage
+ * attributes).
+ */
+export function storageWriteRead<N extends { toReadOnly(): N }>(
+  build: () => N,
+): { write: N; read: N } {
+  return { write: build(), read: build().toReadOnly() };
+}
+
+/**
  * Whether a vertex stage on this device may read `required` storage
  * buffers. Zero is what WebGPU's compatibility feature level reports, and
  * three requests that level unconditionally, so a device can arrive holding

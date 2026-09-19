@@ -15,7 +15,7 @@ import { PHYS_RATIO_THRESHOLD } from '../../../star-pipeline/local-pass/star-loc
 import { STAR_PASS_GLOW } from '../../../star-pipeline/star-pass';
 import type { RefillWorklistNodes } from '../../extinction/refill/refill-worklist-nodes';
 import { appendRefillWorklistTsl } from '../../extinction/refill/refill-worklist-tsl';
-import { disposeStorageAttribute } from '../../tsl/storage-attribute';
+import { disposeStorageAttribute, storageWriteRead } from '../../tsl/storage-attribute';
 import { solveStarTsl, type StarTslDeps } from '../star-vertex-tsl';
 import {
   PREFILTER_COUNT_ELEMENT, REFILL_DISPATCH_ELEMENTS, REFILL_DISPATCH_LENGTH_ELEMENT,
@@ -52,7 +52,8 @@ export class StarCompaction {
    *  property of the stage, so it is read_write in the kernel and read in
    *  every draw (../../tsl/README.md § Storage attributes). */
   readonly survivorsNode: SurvivorsNode;
-  /** Read-only view of `refillDispatch` for the refill kernel's own bound. */
+  /** The refill kernel's read-only node over `refillDispatch`, for its own
+   *  bound — its own node, not the one the finish kernel assigns through. */
   readonly refillDispatchNode: UintStorageNode;
 
   private readonly renderer: WebGPURenderer;
@@ -74,9 +75,9 @@ export class StarCompaction {
     this.refillDispatch = new IndirectStorageBufferAttribute(initialRefillDispatch(), 1);
     this.survivorsNode = storage(this.survivors, 'uint', this.survivors.count);
     const argsNode = storage(this.args, 'uint', this.args.count).toAtomic();
-    const refillDispatchNode = storage(this.refillDispatch, 'uint', REFILL_DISPATCH_ELEMENTS);
-    this.refillDispatchNode =
-      storage(this.refillDispatch, 'uint', REFILL_DISPATCH_ELEMENTS).toReadOnly();
+    const refillDispatchNodes = storageWriteRead(
+      () => storage(this.refillDispatch, 'uint', REFILL_DISPATCH_ELEMENTS));
+    this.refillDispatchNode = refillDispatchNodes.read;
     // An add of zero, consumed as an operator ARGUMENT, mirrors `append`'s
     // value use of an atomic below. atomicLoad as the receiver of `.add`
     // generated no code in three r185 ("expected a uint" at boot).
@@ -136,9 +137,9 @@ export class StarCompaction {
     kernel.setName('star-compaction');
     const finish = compute(Fn(() => {
       const listed = uint(0).add(readCounter(refill.counterElement(argsNode))).toVar();
-      refillDispatchNode.element(0).assign(
+      refillDispatchNodes.write.element(0).assign(
         listed.add(uint(REFILL_WORKGROUP_SIZE - 1)).div(uint(REFILL_WORKGROUP_SIZE)));
-      refillDispatchNode.element(REFILL_DISPATCH_LENGTH_ELEMENT).assign(listed);
+      refillDispatchNodes.write.element(REFILL_DISPATCH_LENGTH_ELEMENT).assign(listed);
     })(), 1);
     finish.setName('star-compaction-refill-dispatch');
     this.kernels = [reset, kernel, finish];
