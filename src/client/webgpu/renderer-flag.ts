@@ -1,6 +1,6 @@
-// Parse the renderer escape hatch and the gate override from the URL
-// fragment — the one URL slot the address-bar writers preserve verbatim
-// (see README.md).
+// Parse the renderer escape hatch, the gate override and the refill-mode
+// probe from the URL fragment — the one URL slot the address-bar writers
+// preserve verbatim (see README.md).
 
 import type { ExtinctionRefillMode } from '../star-pipeline/extinction/extinction-seam';
 import type { GateVerdict } from './gate/gate-advice-pure';
@@ -16,12 +16,9 @@ export function parseRendererFlag(hash: string): RendererKind | null {
   return v === 'webgpu' || v === 'webgl2' ? v : null;
 }
 
-/**
- * `#av-refill=survivors` — the dev switch that dispatches the A_V refill
- * over the compaction's survivor lists instead of the Morton slot space
- * (`extinction/refill/README.md` § The survivor-driven probe). Absent, the
- * boot takes the shipped `sliced` schedule.
- */
+/** `#av-refill=survivors` — the dev switch for the probe schedule
+ *  (`extinction/refill/README.md` § The survivor-driven probe). Absent, the
+ *  boot takes the shipped `sliced` one. */
 export function parseExtinctionRefillMode(hash: string): ExtinctionRefillMode | null {
   const v = fragmentParam(hash, 'av-refill');
   return v === 'sliced' || v === 'survivors' ? v : null;

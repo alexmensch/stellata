@@ -63,10 +63,8 @@ interface MinIntCapable {
 export const min = minIntPinned as unknown as MinIntCapable;
 
 // compute()'s count is number-pinned upstream while the runtime takes an
-// IndirectStorageBufferAttribute as the dispatch size and reads the
-// workgroup count off the GPU (WebGPUBackend.compute). A numeric count
-// would also make three prepend `if (instanceIndex >= count) return`, which
-// an indirect dispatch has no count to bound by.
+// IndirectStorageBufferAttribute and dispatches at the workgroup count the
+// GPU wrote into it (README.md § TSL typing shim).
 export const computeIndirect = computeCountPinned as unknown as (
   node: Node,
   dispatch: IndirectStorageBufferAttribute,

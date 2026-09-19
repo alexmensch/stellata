@@ -224,11 +224,9 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     }
   }
 
-  /** One thread per listed survivor, both tiers back to back, at the
-   *  workgroup count the compaction's finish kernel wrote. A survivor has
-   *  passed the prefilter and the cache gate admits a superset of it, so no
-   *  gate read is repeated here; the pinned star is listed whatever its
-   *  projection, as the frustum kernel refills it. */
+  /** One thread per listed survivor, both tiers back to back
+   *  (refill/README.md § The survivor-driven probe). The gate is not
+   *  re-read: a survivor has already passed it. */
   private buildSurvivorKernel(
     compaction: StarCompaction, order: Uint32Array, count: number,
   ): ComputeNode {

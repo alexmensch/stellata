@@ -17,10 +17,7 @@ export interface ExtinctionPrepassUniforms {
   uAvPrepassEnabled: { value: number };
 }
 
-/** Which population the WebGPU refill dispatches over past the first fill:
- *  `sliced` walks the Morton slot space a slice a frame; `survivors` is the
- *  probe over the compaction's lists
- *  (`../../webgpu/extinction/refill/README.md` § The survivor-driven probe). */
+/** see ../../webgpu/extinction/refill/README.md § The survivor-driven probe */
 export type ExtinctionRefillMode = 'sliced' | 'survivors';
 
 /** see ../../webgpu/extinction/refill/README.md § Only what is in frame */
