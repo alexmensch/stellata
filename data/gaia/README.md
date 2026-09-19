@@ -102,6 +102,40 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
     DR2→(E)DR3 cross-match, Torra et al. 2021; queried by
     dr3_source_id).
 
+## The floor is apparent magnitude, seen from Sol
+
+`V <= 11` is **apparent** Johnson V — what a photometer at Sol measures — not
+absolute magnitude and not a distance bound. It derives from Gaia's
+*observed* `phot_g_mean_mag`, so interstellar dust is in it: the build
+subtracts the Sol→star extinction when it derives `absmag`
+(`../../scripts/catalog/distance/dust/README.md` § Why the build subtracts),
+but membership is decided on the reddened value the archive publishes.
+
+Catalogue completeness is therefore a Sol-centred bubble whose radius depends
+on how luminous the star is, which is the shape worth holding rather than the
+magnitude (AGENTS.md § Camera-anywhere, any-epoch):
+
+| Star | `M_V` | Complete to |
+|---|---|---|
+| supergiant | −7 | 39,800 pc |
+| B main sequence | −1 | 2,512 pc |
+| Sun-like | +4.8 | 171 pc |
+| early M dwarf | +9 | 25 pc |
+| mid M dwarf | +12 | 6 pc |
+
+Dust shortens every row of that along a plane sightline, so the bubble is not
+round either. The pulled population is accordingly dominated by distant
+luminous stars rather than by the solar neighbourhood — by naive parallax
+inversion **0.7%** of the 1,247,240 rows lie inside 50 pc and **72%** beyond
+500 pc.
+
+**Apparent is forced, not preferred.** Gaia is an apparent-magnitude-limited
+survey, so no absolute-magnitude-complete population exists to select from: a
+star nobody detected has no measured distance to convert. What follows for a
+consumer is that "complete to `V <= 11`" is a claim about Sol's sky and never
+about the modelled volume — moving the camera outward does not arrive
+somewhere the catalogue stays complete around it.
+
 ## Why the floor carries no margin
 
 `gaia_dr3_magnitude_pull.tsv` selects on `G` alone, at `G <= 11`, and that
