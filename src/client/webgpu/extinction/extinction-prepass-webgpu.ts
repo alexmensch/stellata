@@ -236,7 +236,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     const { nodes, slots } = this;
     const kernel = computeIndirect(Fn(() => {
       const i = instanceIndex;
-      const glow = compaction.listed(STAR_TIER_GLOW).toVar();
+      const glow = uint(0).add(compaction.listed(STAR_TIER_GLOW)).toVar();
       If(i.lessThan(glow.add(compaction.listed(STAR_TIER_DISC))), () => {
         const entry = select(
           i.lessThan(glow),

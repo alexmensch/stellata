@@ -6,11 +6,10 @@ import type { Camera } from 'three';
 import { Matrix4 } from 'three';
 import {
   IndirectStorageBufferAttribute, StorageBufferAttribute,
-  type ComputeNode, type WebGPURenderer,
+  type ComputeNode, type Node, type WebGPURenderer,
 } from 'three/webgpu';
 import {
-  Fn, If, atomicAdd, atomicLoad, atomicStore, compute, instanceIndex, int, storage, uniform, uint,
-  vec4,
+  Fn, If, atomicAdd, atomicStore, compute, instanceIndex, int, storage, uniform, uint, vec4,
 } from 'three/tsl';
 import { PHYS_RATIO_THRESHOLD } from '../../../star-pipeline/local-pass/star-local-cluster-pure';
 import { STAR_PASS_GLOW } from '../../../star-pipeline/star-pass';
@@ -44,7 +43,7 @@ export class StarCompaction {
   readonly survivorsNode: SurvivorsNode;
   /** `tier`'s listed count as a node expression, through the same atomic
    *  view of the args the kernel adds into. */
-  readonly listed: (tier: StarTier) => ReturnType<typeof uint>;
+  readonly listed: (tier: StarTier) => Node<'uint'>;
 
   private readonly renderer: WebGPURenderer;
   private readonly viewProjection = uniform(new Matrix4());
@@ -64,7 +63,11 @@ export class StarCompaction {
     this.survivorsNode = storage(this.survivors, 'uint', this.survivors.count);
     const argsNode = storage(this.args, 'uint', this.args.count).toAtomic();
     const refillDispatchNode = storage(this.refillDispatch, 'uint', REFILL_DISPATCH_ELEMENTS);
-    this.listed = (tier) => uint(atomicLoad(argsNode.element(tierArgsInstanceCountElement(tier))));
+    // An add of zero, consumed as an operator ARGUMENT, mirrors `append`'s
+    // value use of an atomic below. atomicLoad as the receiver of `.add`
+    // generated no code in three r185 ("expected a uint" at boot).
+    this.listed = (tier) => atomicAdd(
+      argsNode.element(tierArgsInstanceCountElement(tier)), uint(0)) as unknown as Node<'uint'>;
     const { u } = deps;
 
     // Both instance counts start the frame at zero; the same compute pass
@@ -112,7 +115,7 @@ export class StarCompaction {
     })(), this.count);
     kernel.setName('star-compaction');
     const finish = compute(Fn(() => {
-      const listed = this.listed(STAR_TIER_GLOW).add(this.listed(STAR_TIER_DISC));
+      const listed = uint(0).add(this.listed(STAR_TIER_GLOW)).add(this.listed(STAR_TIER_DISC));
       refillDispatchNode.element(0).assign(
         listed.add(uint(REFILL_WORKGROUP_SIZE - 1)).div(uint(REFILL_WORKGROUP_SIZE)));
     })(), 1);
