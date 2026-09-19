@@ -59,18 +59,28 @@ EXPECTED_SCHEMA: dict[str, type | tuple[type, ...]] = {
 EXPECTED_MAGNITUDE_ROWS_MIN = 1_222_000
 EXPECTED_MAGNITUDE_ROWS_MAX = 1_260_000
 
-# Union-(teff+logg) coverage — the actual ingestable bucket. Floor sits
-# ~5 pts below the ~84.8% observed at last probe, absorbing Apsis
+# Union-(teff+logg) coverage — the actual ingestable bucket. Measured 89.9%
+# over the deep population, 2026-09-19; the floor absorbs Apsis
 # pipeline-version variation without false-failing.
 EXPECTED_UNION_COVERAGE_MIN = 0.80
+
+# Coverage floor over the request set, matching refresh-bailer-jones.py.
+# Measured 99.8% at depth, 2026-09-19.
+EXPECTED_COVERAGE_MIN = 0.90
 
 # scripts/refresh/README.md § Gaia TAP: synchronous endpoints only.
 SYNC_MAXREC = rl.slice_sync_maxrec(EXPECTED_MAGNITUDE_ROWS_MAX)
 
-# ESP-HS spectral-type enum coverage floor. ESP-HS is the hottest-star
-# branch of the Apsis chain and resolves spectraltype_esphs for ~30%+
-# of DR3 sources. Below this floor the pull is likely broken.
-EXPECTED_SPECTRALTYPE_COVERAGE_MIN = 0.20
+# ESP-HS resolves a spectral-type letter for nearly the whole population,
+# not just its hot branch: 98.9% over the deep pull once its own
+# not-determined value is excluded, measured 2026-09-19 (K 544,631 ·
+# F 265,280 · A 127,289 · G 125,287 · M 118,954 · B 84,468 · O 2,148 ·
+# CSTAR 1,991 · unknown 3,327 · empty 11,288).
+EXPECTED_SPECTRALTYPE_COVERAGE_MIN = 0.90
+
+# Scoring the enum's own not-determined value as coverage would let the
+# floor above pass on a pull that resolved nothing.
+SPECTRALTYPE_UNRESOLVED = "unknown"
 
 # Teff has order ~1-10 K formal uncertainty, logg ~0.01-0.1 dex,
 # [M/H] ~0.01-0.1 dex, A_0 ~0.01-0.1 mag. 4 decimals on logg/mh/azero
@@ -190,7 +200,11 @@ def main() -> None:
         gspspec += spec
         union += phot or spec
         esphs = rl.coerce_masked(row["spectraltype_esphs"])
-        spectraltype_filled += bool(esphs is not None and str(esphs).strip())
+        spectraltype_filled += bool(
+            esphs is not None
+            and str(esphs).strip()
+            and str(esphs).strip().lower() != SPECTRALTYPE_UNRESOLVED
+        )
         lines[source_id] = rl.format_tsv_row(write_row(row), TSV_COLUMNS)
 
     start = time.time()
@@ -236,7 +250,7 @@ def main() -> None:
 
     spectraltype_coverage = spectraltype_filled / len(pulled.seen)
     print(
-        f"  spectraltype_esphs non-null:     {spectraltype_filled:>9,} "
+        f"  spectraltype_esphs resolved:     {spectraltype_filled:>9,} "
         f"({100*spectraltype_coverage:.1f}%)"
     )
     if spectraltype_coverage < EXPECTED_SPECTRALTYPE_COVERAGE_MIN:
@@ -246,6 +260,8 @@ def main() -> None:
             f"{EXPECTED_SPECTRALTYPE_COVERAGE_MIN:.0%} — verify the SELECT "
             f"includes spectraltype_esphs and that ESP-HS returns real values."
         )
+
+    rl.assert_request_coverage(pulled, EXPECTED_COVERAGE_MIN, SCRIPT_NAME)
 
     rl.validate_spot_rows(spot_rows, SPOT_CHECKS, script_name=SCRIPT_NAME)
 

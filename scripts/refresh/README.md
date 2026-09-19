@@ -343,6 +343,13 @@ request set either leg served; it hands back a `DeepPopulation`
 (`seen` · `from_magnitude` · `requested` · `matched_request`). A third pull
 scoped this way writes its gates and nothing else.
 
+**Both legs need a gate, and they are different gates.** The magnitude leg
+answers to a row-count band on `from_magnitude`; that band says nothing
+about the request leg, so a request leg returning nothing would otherwise
+pass every check and drop exactly the promoted companions the union exists
+to reach. `assert_request_coverage` is the second gate and both pulls carry
+it at 0.90.
+
 - The **magnitude leg** is a selection — every source at the floor or
   brighter, which no request set names because nothing binds most of them yet.
   Neither table carries a magnitude, so each slice joins to
