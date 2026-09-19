@@ -155,22 +155,111 @@ the pull.
 **The intuition a margin protects against is the wrong sign.** Gaia's `G`
 passband is broader than Johnson V, so `G` is the *brighter* number, and the
 pull over-reaches the floor rather than falling short of it: the filter in
-`cns.5` drops the red rows whose `V` exceeds 11 (930,562 of the 1,247,240
-are `V <= 11` with an in-range colour). Adding 0.5 mag of margin would carry
-**725,768** rows past the floor — every one of them `V > 11` by
+`cns.5` drops the red rows whose `V` exceeds 11. Adding 0.5 mag of margin
+would carry **725,768** rows past the floor — every one of them `V > 11` by
 construction, and ~120 MB of LFS to hold them.
-
-Two cohorts the bound does not speak for, and why neither needs margin:
-**4,203** rows at `G <= 11` whose colour is absent or outside the relation's
-range, and the **634** saturated below `G` 4. Neither gets a transformed V —
-both fall to the printed `I/239` / Tycho-2 / Gliese tiers, which are keyed on
-a classical designation, and a source carrying one is already in the
-membership term this pull is unioned with (`docs/catalog-driver.md` § 1). The
-magnitude term only ever has to be complete for the sources the transform
-serves.
 
 Moving the floor is a re-pull, not a redesign, and costs about four minutes
 of wall clock — which is the other half of why no margin is warranted.
+
+### What the filter keeps, and what falls through it
+
+Running the shipped `rielloVMagnitude` over every row — the function itself,
+so this is the population the V cascade's top tier admits rather than a
+restatement of the cubic:
+
+| | rows |
+|---|---|
+| `V <= 11`, transform applies | **929,929** |
+| `V > 11`, transform applies | 312,475 |
+| no transformed V | 4,836 |
+| | 1,247,240 |
+
+**929,929, not the 930,562 an ESA TAP count of the same population reports.**
+The difference is exactly the **633** saturated rows that carry an in-range
+colour: `calibratedPhotometry` refuses `G` below
+`GAIA_PHOTOMETRY_SATURATION_G`, and a TAP predicate written as a colour range
+alone does not. The gate is the authority — those 633 are among the brightest
+stars in the sky and reach their V through the printed tier instead.
+
+The 4,836 rows no transform serves, against whether the membership term this
+pull is unioned with (`docs/catalog-driver.md` § 1) already holds them:
+
+| cohort | rows | of those, bound in the manifest |
+|---|---|---|
+| saturated, `G < 4` | 634 | 624 |
+| `BP-RP > 5` | 3,250 | 211 |
+| a band missing | 943 | 18 |
+| `BP-RP < -0.5` | 9 | 2 |
+
+**Only the saturated cohort is covered by a designation**, so completeness for
+the other three rests on something else. For the red rows it rests on the
+physics and holds: at `BP-RP` 5 the relation already gives `V ≈ G + 3.56`, so
+every one of them is far past the floor however the extrapolation is read.
+The **943** with no colour at all are the genuine residue — `G` 6.95 to
+10.99992, no tier able to reach them, and 925 carrying no designation for a
+printed tier to key on. `V >= G + 0.0268` does not bound them from above, so
+`G <= 11` decides nothing about their floor membership. `stellata-cns.11` owns
+the rule; until it settles they are dropped, unledgered.
+
+## The record total the floor implies — ~990,299
+
+The catalogue is not the magnitude pull. It is the pull's `V <= 11` population
+**unioned** with the membership manifest and deduped on `source_id`, and the
+size of the overlap was the open question blocking every sizing decision under
+`stellata-cns`. Measured on the committed files, 2026-09-19:
+
+| term | count |
+|---|---|
+| `V <= 11` source_ids from the pull | 929,929 |
+| distinct `gaia_source_id` in the manifest | 370,994 |
+| in both | **327,701** |
+| source_id union | **973,222** |
+| manifest rows carrying no `gaia_source_id` | 5,938 |
+| rows the build promotes to their own record | 11,139 |
+| **records** | **~990,299** |
+
+That replaces the `[930,562 … 1,307,491]` bracket with one number, and makes
+the catalogue **2.55x** today's 388,071 records. The last term is the only
+soft one: it is today's gap between 376,932 manifest rows and 388,071 built
+records, carried forward on the assumption that promotion is driven by the
+classic-ID population rather than by the deep one.
+
+**43,293 of the manifest's bindings sit outside the kept set** — stars fainter
+than the floor that the classic-ID term keeps deliberately (Proxima, `V ≈
+11.1`), plus the 855 pull rows no transform served that a designation reaches
+anyway. The floor bounds the magnitude term, never the catalogue.
+
+Reproduce by streaming the pull through `rielloVMagnitude` and intersecting
+the kept `source_id`s against the manifest's `gaia_source_id` column. **Key on
+strings**: a Gaia `source_id` runs to 19 digits and loses precision silently
+as a float64.
+
+### What that costs on the wire
+
+`RECORD_SIZE` is 100 bytes (`scripts/catalog/record/README.md`), so the record
+array is linear in the count. Compression measured on a build of today's
+catalogue — 388,071 records, 38,814,407 bytes over three chunks — is **0.6545**
+for `gzip -9` and **0.6224** for brotli quality 5. Sizes in MiB, as the build
+log prints them:
+
+| | today | at `V <= 11` |
+|---|---|---|
+| `catalog.bin` raw | 37.0 | 94.4 |
+| `gzip -9` | 24.2 | **61.8** |
+| brotli-5 | 23.0 | **58.8** |
+
+61.8 MiB is 64.8 MB decimal, which supersedes the **~82 MB gz** `cns.6` was
+written against — that figure scaled the 1,247,240 pull count rather than the
+record total. Read the projections as an upper bound: the deep population
+carries more absent enrichment than today's, and sentinel runs compress better
+than measured values.
+
+Two sidecars scale alongside and are in none of those numbers:
+`search-index.json` (17.9 MB raw, 4.3 MB gz today) and
+`catalog-row-index-map.json` (12.7 MB, 5.3 MB), the second keyed on
+`source_id` and so tracking the union directly. `cns.6` owns the chunking
+call these totals drive.
 
 ## The GSPC validated-range flag — `1` means IN range
 
