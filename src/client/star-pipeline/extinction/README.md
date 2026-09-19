@@ -94,16 +94,19 @@ than the density when the tail is the complaint. The shipped pair —
 0.066 mag, max 1.28 → 0.47), because the taps a nearby star no longer
 wastes are what the cap lets a dusty distant one spend.
 
-**Do not spend taps to buy frame time back — they are not what the
-kernel costs.** Measured 2026-09-18 over two dwells
-(`.perf-runs/2026-09-18/8cg584-recompute-all.json` and
-`-cold.json`): cutting the mean tap count 35% moved the compute-stream
-p50 by −0.114 ms and then +0.085 ms, scatter around zero against a
-0.25 ms band. Roughly three quarters of this kernel's cost is
-per-THREAD — the visibility gate's scattered reads, the dispatch, the
-position read — and no tap rule reaches it. The density is therefore an
-accuracy knob with a cost ceiling, which is why it is set finer than the
-error budget strictly needs.
+**Do not spend taps to buy frame time back.** The density is an accuracy
+knob, chosen on the sweep's tail above; what it costs is known and
+bounded. Measured 2026-09-19 at one commit over the five canon vantages
+(`.perf-runs/2026-09-19/8cg595-refill-off.json` against
+`-refill-on.json`), the kernel splits roughly in half: a per-THREAD
+floor of ~0.6–0.8 ms at every vantage — the visibility gate's scattered
+reads, the position read, the write, the dispatch — read directly at
+`lg`, where the gate admits nothing and no tap is spent; and the march
+itself, ~0.5–1.2 ms from inside the disc. No tap rule reaches the floor.
+The march's half does move with density — 15 → 10 pc per tap read
++0.42 ms at `mw120` against `.perf-runs/2026-09-18/8cg584-recompute-all-cold.json`
+— so a coarser rule buys frame time only out of that half, at the tail
+error the sweep prices.
 
 The instrument is `pnpm run analyse:march-taps`
 (`scripts/dust/march-taps/README.md`): every scheme against the
