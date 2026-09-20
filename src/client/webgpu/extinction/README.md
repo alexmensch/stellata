@@ -412,15 +412,28 @@ invalidation. Three obligations fall out of caching the same test:
   stars, so every stage's own prefilter passes a subset of this one —
   which is also why the glow pass's looser taper bound is the one taken.
 
-**Positions are the fourth input, and they are not static.** The model
-clock's space-motion pass rewrites `catalog.positions` in place on every
-epoch bucket it crosses (`../../star-pipeline/star-frame/README.md`), and
-this pass packed a copy at attach. `refreshPositions()` re-packs it —
-which the shell calls from the epoch advance itself — so the march and
-the gate both follow the stars over the ±5,000 yr the clock reaches. The
-Morton order is *not* rebuilt: it buys memory coherence rather than
-correctness, and re-sorting would cost ~77 ms per bucket crossing
-(`dispatch-order/README.md` § Dispatch order).
+**Positions are the fourth input, and they are not static.** This pass
+packed a copy at attach, and `catalog.positions` is rewritten under it by
+**two** separate mechanisms — so `refreshPositions()` has two callers and
+a third would be a third:
+
+- the model clock's space-motion pass, on every epoch bucket it crosses
+  (`../../star-pipeline/star-frame/README.md`), so the march and the gate
+  follow the stars over the ±5,000 yr the clock reaches;
+- each landing transport chunk, because the catalogue streams and attach
+  happens on the first one (`../../loaders/README.md` § Progressive catalog
+  load). `markDirty()` is NOT enough here and the failure is silent: the
+  kernel re-marches the copy it already holds, so every record past the
+  attach-time prefix keeps an A_V computed from its undecoded `(0,0,0)` —
+  Sol to Sol, zero extinction — until a bucket crossing happens to re-pack
+  it, which on an unscrubbed clock is never.
+
+The Morton order is *not* rebuilt by either: it buys memory coherence
+rather than correctness, and re-sorting would cost ~77 ms per bucket
+crossing (`dispatch-order/README.md` § Dispatch order). Under a
+progressive load that leaves the order keyed on an attach-time table that
+was mostly zeros, so the coherence it buys is lost for the session —
+a cost, not a wrong answer.
 
 ## Cold reads — the one behaviour that is not parity
 

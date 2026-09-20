@@ -1692,7 +1692,8 @@ export class Stellata implements FrameAnchor {
     this.starFrame.absorbRecords();
     this.starPipeline.absorbRecords();
     this.webgpuStarLayer?.absorbRecords();
-    this.extinctionPrepass?.markDirty();
+    // Not markDirty — see webgpu/extinction/README.md § The cache gate.
+    this.extinctionPrepass?.refreshPositions();
 
     // The fastest pulsating variable bounds how long any frame may idle
     // before some star's brightness moves a JND, so a chunk carrying a
