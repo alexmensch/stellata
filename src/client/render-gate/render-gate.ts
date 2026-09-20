@@ -193,6 +193,7 @@ export class RenderGate {
     this.detachDom?.();
     this.detachDom = null;
     this.holds = 0;
+    this._sawUserInput = false;
     this.lastActiveMs = Number.NEGATIVE_INFINITY;
     this.lastRenderedPose.fill(Number.NaN);
     this.lastWake = null;
