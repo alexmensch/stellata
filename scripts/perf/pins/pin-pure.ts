@@ -9,8 +9,8 @@ import {
   type DiffRefusal, type Verdict,
 } from '../diff/diff-pure';
 import {
-  COMPUTE_ROW, classClock, computeClock, frameFloor, gatingClock, sampleClasses,
-  type DwellMetric, type DwellSummary, type FrameFloor, type StateGuard,
+  COMPUTE_ROW, classClock, computeClock, frameFloor, gatingClock, pointMove, sampleClasses,
+  spreadMove, type DwellMetric, type DwellSummary, type FrameFloor, type StateGuard,
 } from '../dwell/dwell-pure';
 import { DWELL_METHOD, contextOrder } from '../run-pure';
 import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type GitProvenance, type PerfFile, type ScenarioRecord } from '../schema';
@@ -552,8 +552,6 @@ interface StreamSpec {
   } | null;
 }
 
-const endMove = (a: number | null, b: number | null): number | null => (a === null || b === null ? null : b - a);
-
 /** One stream judged against its pinned twin: the band where both sides
  *  hold one, ungated by vantage or where a side lacks it, the ceiling on
  *  every reading. The frame's stream and the compute one are the same rule
@@ -569,10 +567,8 @@ function streamRow(pinned: PinRow, spec: StreamSpec): PinVerdictRow {
       : ungatedRow(key, context.metric, context.pinnedMs, context.currentMs, note);
   }
   // Null where the p10 IS the metric: the column would restate `delta`.
-  const floorDeltaMs = metric === 'compute-p10' ? null : endMove(side.p10, current.p10);
-  const spreadDeltaMs = side.p10 === null || side.p90 === null || current.p10 === null || current.p90 === null
-    ? null
-    : (current.p90 - current.p10) - (side.p90 - side.p10);
+  const floorDeltaMs = metric === 'compute-p10' ? null : pointMove(side.p10, current.p10);
+  const spreadDeltaMs = spreadMove(side, current);
   const ungatedBecause = PIN_UNGATED_SCENARIOS[pinned.name];
   if (ungatedBecause !== undefined) {
     return underCeiling({

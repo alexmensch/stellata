@@ -116,11 +116,32 @@ export function frameFloor(samples: readonly number[] | null | undefined): Frame
   return { p10: percentile(samples, 0.1) };
 }
 
-/** How far the fast end moved between two dwells, or null where either side
- *  has no floor — a floor against nothing is not a move. Context for the
- *  median's delta in both tables, never an input to a verdict. */
+/** A reading against nothing is not a move, so either side absent is null. */
+export function pointMove(
+  before: number | null | undefined, after: number | null | undefined,
+): number | null {
+  return before == null || after == null ? null : after - before;
+}
+
+/** How far the fast end moved between two dwells. Context for the median's
+ *  delta in both tables, never an input to a verdict. */
 export function floorMove(before: FrameFloor | null, after: FrameFloor | null): number | null {
-  return before === null || after === null ? null : after.p10 - before.p10;
+  return pointMove(before?.p10, after?.p10);
+}
+
+/** The two ends both gates read a stream's spread off. */
+export interface StreamEnds {
+  readonly p10: number | null;
+  readonly p90: number | null;
+}
+
+/** How far `p90 - p10` moved. The reading the gated statistic is chosen not
+ *  to follow — some frames got dearer while the rest did not — so it is
+ *  printed on every dwell row in both tables and marks on neither. */
+export function spreadMove(before: StreamEnds | null, after: StreamEnds | null): number | null {
+  const spread = (ends: StreamEnds | null): number | null =>
+    pointMove(ends?.p10, ends?.p90);
+  return pointMove(spread(before), spread(after));
 }
 
 /** The widest gap must exceed the lower class's own median to be a cut at

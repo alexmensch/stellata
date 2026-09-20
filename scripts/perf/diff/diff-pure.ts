@@ -8,7 +8,7 @@ import {
 } from '../../../src/client/debug/frame-cost/passes/passes-pure';
 import {
   COMPUTE_ROW, classClock, computeClock, floorMove, frameFloor, gatingClock, sampleClasses,
-  type ClassClock, type DwellMetric,
+  spreadMove, type ClassClock, type DwellMetric,
 } from '../dwell/dwell-pure';
 import type { DwellRecord, PerfFile, ScenarioRecord } from '../schema';
 import type { ScenarioName } from '../scenarios';
@@ -493,7 +493,7 @@ function computeRow(
     currentMs: fb.p10,
     deltaMs,
     floorDeltaMs: null,
-    spreadDeltaMs: (cb.p90 - fb.p10) - (ca.p90 - fa.p10),
+    spreadDeltaMs: spreadMove({ p10: fa.p10, p90: ca.p90 }, { p10: fb.p10, p90: cb.p90 }),
     bandMs,
     verdict: verdictFor(deltaMs, bandMs),
   }];
@@ -556,7 +556,9 @@ function frameRow(key: string, da: DwellRecord, db: DwellRecord): DiffRow | Diff
     currentMs: jb.clock.p50,
     deltaMs,
     floorDeltaMs: floorMove(fa, fb),
-    spreadDeltaMs: fa === null || fb === null ? null : (cb.p90 - fb.p10) - (ca.p90 - fa.p10),
+    spreadDeltaMs: spreadMove(
+      { p10: fa?.p10 ?? null, p90: ca.p90 }, { p10: fb?.p10 ?? null, p90: cb.p90 },
+    ),
     bandMs,
     verdict: verdictFor(deltaMs, bandMs),
   };
