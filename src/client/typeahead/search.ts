@@ -38,6 +38,7 @@ export {
   buildBayerMap,
   buildSpectralMap,
   buildStarLabels,
+  composedLabelsOf,
 } from './star-name-tables';
 
 import type { FuzzyEntry } from './search-corpus';

@@ -26,7 +26,7 @@ import type { SceneLayer } from '../scene/scene-layer';
 import { StarShardTable } from './shards/star-shard-table';
 import { catalogShard } from './shards/star-shards-pure';
 import { tToJdUt } from '../solar-system/time/time';
-import { seedStarLabelsFromNames } from '../typeahead/star-name-tables';
+import { buildStarLabels, seedStarLabelsFromNames } from '../typeahead/star-name-tables';
 import { loadSearchIndex } from '../typeahead/search-index-host';
 import type { SearchIndexPayload } from '../typeahead/search-index-payload';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
@@ -94,7 +94,7 @@ export function createStarKindModule(): StarKindModule {
   let runtime: StarModuleRuntime | null = null;
   let ready: Promise<void> = Promise.resolve();
   let offRecords: (() => void) | null = null;
-  let corpus: SearchIndexPayload | null = null;
+  let searchTables: SearchIndexPayload | null = null;
   // Filled in place rather than reassigned — every card provider, chart
   // binding and hover formatter captures these at boot, before the search
   // index has landed.
@@ -140,8 +140,8 @@ export function createStarKindModule(): StarKindModule {
     get ready(): Promise<void> { return ready; },
     derivedGeneration: () => derivedGeneration,
     get searchTables(): SearchIndexPayload {
-      if (!corpus) throw new Error('star module search tables read before ready');
-      return corpus;
+      if (!searchTables) throw new Error('star module search tables read before ready');
+      return searchTables;
     },
     photometry: photometryOf,
     setRuntime(rt) {
@@ -183,18 +183,13 @@ export function createStarKindModule(): StarKindModule {
       ready = (async () => {
         const [, { raw, tables }] = await Promise.all([loaded.whenComplete, derived]);
         searchIndex = raw;
-        // The per-chunk seeding has done its job. The name tier stays
-        // authoritative over the worker's composed tier — an authority
-        // named these stars, and the composer only fills the rest.
+        // The per-chunk seeding has done its job.
         offRecords?.();
         offRecords = null;
-        seedStarLabelsFromNames(loaded, starLabels);
-        for (const [idx, label] of tables.composedLabels) {
-          if (!starLabels.has(idx)) starLabels.set(idx, label);
-        }
+        buildStarLabels(loaded, tables.composedLabels, starLabels);
         for (const [idx, spect] of tables.spectral) spectralMap.set(idx, spect);
         for (const e of raw) searchEntryById.set(e.i, e);
-        corpus = tables;
+        searchTables = tables;
         derivedGeneration++;
       })();
     },
@@ -247,7 +242,7 @@ export function createStarKindModule(): StarKindModule {
         spectralMap,
         searchEntries: searchEntryById,
         getBinaries: () => runtime?.getBinaries() ?? null,
-        tablesComplete: () => corpus !== null,
+        tablesComplete: () => searchTables !== null,
         cameraDistancePc: (idx) => (runtime
           ? runtime.localPositionInto(idx, tmpLocal).distanceTo(attached.camera.position)
           : 0),

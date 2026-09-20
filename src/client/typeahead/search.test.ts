@@ -8,6 +8,7 @@ import {
   buildSpectralMap,
   buildSearchIndex,
   buildStarLabels,
+  composedLabelsOf,
   formatGcvsDesignation,
   buildGcvsLabels,
   createSearchRunner,
@@ -19,6 +20,7 @@ import {
 import { displayNamesFromSearchIndex } from '../../../scripts/catalog/naming/star-naming-pure';
 import type { SearchIndex as SearchIndexLike } from './search-corpus';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
+import type { Catalog } from '../loaders/catalog-loader';
 import { KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
 import type { KindSearchEntry, ObjectKindModule } from '../kinds/kind-module';
 import type { TargetKind } from '../camera/focus/focus-target';
@@ -495,13 +497,20 @@ describe('search / buildSearchIndex', () => {
 });
 
 describe('search / buildStarLabels', () => {
+  // The composer runs once for the whole catalogue now, so these compose
+  // explicitly rather than through the merge under test.
+  const labelsFor = (catalog: Catalog, raw: SearchEntry[]) => buildStarLabels(
+    catalog,
+    composedLabelsOf(displayNamesFromSearchIndex(raw, catalog.constellations)),
+  );
+
   it('prepends a prefix to the bare-numeric HIP/HD/HR identifiers', () => {
     const raw: SearchEntry[] = [
       { i: 0, hip: 91262 },
       { i: 1, hd: 172167 },
       { i: 2, hr: 7001 },
     ];
-    const labels = buildStarLabels(makeEmptyCatalog(3), raw);
+    const labels = labelsFor(makeEmptyCatalog(3), raw);
     expect(labels.get(0)).toBe('HIP 91262');
     expect(labels.get(1)).toBe('HD 172167');
     expect(labels.get(2)).toBe('HR 7001');
@@ -512,7 +521,7 @@ describe('search / buildStarLabels', () => {
       { i: 0, gl: 'Gl 195A' },
       { i: 1, gl: 'GJ 9581' },
     ];
-    const labels = buildStarLabels(makeEmptyCatalog(2), raw);
+    const labels = labelsFor(makeEmptyCatalog(2), raw);
     expect(labels.get(0)).toBe('Gl 195A');
     expect(labels.get(1)).toBe('GJ 9581');
   });
@@ -521,14 +530,14 @@ describe('search / buildStarLabels', () => {
     const catalog = makeEmptyCatalog(1);
     catalog.constellations = [{ code: 'Aql', name: 'Aquila' }, { code: 'Del', name: 'Delphinus' }];
     const raw: SearchEntry[] = [{ i: 0, f: 67, c: 1, dc: 0 }];
-    expect(buildStarLabels(catalog, raw).get(0)).toBe('67 Aql');
+    expect(labelsFor(catalog, raw).get(0)).toBe('67 Aql');
   });
 
   it('labels an otherwise-anonymous variable by its GCVS designation, in preference to HIP', () => {
     // VY CMa has only HIP/HD in AT-HYG; without the GCVS tier it would read
     // "HIP 35793". The designation is the recognisable name, so it wins.
     const raw: SearchEntry[] = [{ i: 0, g: 'V0645 Cen', hip: 70890 }];
-    const labels = buildStarLabels(makeEmptyCatalog(1), raw);
+    const labels = labelsFor(makeEmptyCatalog(1), raw);
     expect(labels.get(0)).toBe('V645 Cen');
   });
 });

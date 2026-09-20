@@ -16,15 +16,18 @@ three, so either import path stays valid.
 - `star-designations.ts` — the per-entry designation list
   (`starDesignations`) plus the wire adapter onto the composer.
 - `star-name-tables.ts` — the per-catalog derived maps
-  (`buildStarLabels`, `buildSpectralMap`, `buildBayerMap`). The star
-  module builds the first two inside its own `load`; `buildBayerMap` is
-  the one derivation no module consumes, so boot still calls it for
-  chart mode. **All three fill a caller-owned map rather than returning a
-  fresh one**, because their source — the search index — lands well after
-  the consumers that captured the map (`../README.md`, the boot-waves
-  note). Chart mode binds against an empty `bayerMap` and the glyphs
-  appear as it fills; returning a new map would strand it on the empty
-  one for the session.
+  (`buildSpectralMap`, `buildBayerMap`, `composedLabelsOf`) plus
+  `buildStarLabels`, which merges the composed tier under the name table.
+  The payload pass builds all three in the worker; the star module runs
+  `buildStarLabels` on the main thread because the name tier is the
+  binary's and only the main thread holds it, and boot reads the Bayer map
+  off `kinds.star.searchTables` rather than deriving its own.
+  **A table whose consumers captured it before the index landed is filled
+  in place, never replaced** (`../README.md` § Boot in two waves):
+  `buildStarLabels` takes the module's own `starLabels` map, and boot
+  copies the worker's Bayer map into the one chart mode bound against in
+  wave 1 — swapping either strands its consumer on the empty map for the
+  session.
 - `search-corpus.ts` — the fuzzy corpus and the exact-match identifier
   maps (`buildSearchIndex` and the label builders).
 - `search-index-payload.ts` — every catalogue-wide derivation of the search
@@ -102,8 +105,8 @@ here, if one is ever needed, is deriving `spectral` and `bayer` main-side
 letter as a glyph with its index alongside (`b` / `bx`), and every label —
 display and search alike — is rendered from that structure by the one pure
 composer the record build wrote it with
-(`scripts/catalog/naming/README.md` § Two callers, one composer). So
-`buildStarLabels` is a single pass of that composer over the corpus rather
+(`scripts/catalog/naming/README.md` § Two callers, one composer). So the
+label tier is a single pass of that composer over the corpus rather
 than a per-entry fallback chain: two of the ladder's rules are relational
 (a component borrows its system's base, and a letter is appended only
 where a sibling OWNS the same designation), which no per-entry
