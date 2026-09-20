@@ -70,6 +70,12 @@ geometry and attribute writers.
   record as an absolute-magnitude-zero star sitting on Sol. `iPuls` is the
   one static attribute backed by a copy rather than a catalog column, so
   its window is re-interleaved rather than just flagged.
+  **The attributes it flags are derived from the geometry** — every
+  instanced attribute whose `usage` is not `DynamicDrawUsage` — rather
+  than listed. A hand-kept roster is a list a later attribute gets left
+  off, and the symptom is that attribute rendering its whole post-chunk-0
+  tail stale with nothing failing; the four dynamic ones upload whole and
+  need no range.
 - `star.vert.glsl`, `star.frag.glsl` — GLSL3 / WebGL2 shaders.
 - `star-pass.ts` (+ test) — the pass identities (`STAR_PASS_GLOW` /
   `STAR_PASS_DISC` / `STAR_PASS_CORE_MASK`, = the shaders' `uRenderMode`

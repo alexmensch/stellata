@@ -8,8 +8,9 @@ import type { StarPipelineOptions } from './star-pipeline';
 
 export function makeStarPipelineOptions(
   count = 4,
+  loadedCount = count,
 ): StarPipelineOptions & { scene: THREE.Scene } {
-  const catalog = makeEmptyCatalog(count);
+  const catalog = makeEmptyCatalog(count, loadedCount);
   return {
     scene: new THREE.Scene(),
     catalog,

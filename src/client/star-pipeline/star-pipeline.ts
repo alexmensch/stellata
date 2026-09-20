@@ -160,14 +160,6 @@ export interface StarPipelineOptions {
  * (src/client/frame/shared-uniforms.ts), which the materials hold by
  * reference — the encapsulation here is resource ownership + dispose.
  */
-/** The instanced attributes bound over a catalog / star-frame column and
- *  uploaded once. Their windows are re-flagged per landing chunk; the four
- *  dynamic-usage attributes upload whole and need no entry. */
-const STAR_STATIC_ATTRIBUTES = [
-  'iAbsmag', 'iCi', 'iSpectClass', 'iLogRadius', 'iPeriodDays',
-  'iAmplitudeMag', 'iPuls', 'iLumClass', 'iDistSol', 'iTeffApsis',
-] as const;
-
 export class StarPipeline {
   readonly geometry: THREE.InstancedBufferGeometry;
   /** Dynamic — overwritten on every Stellata.recenterOrigin. Callers
@@ -319,16 +311,7 @@ export class StarPipeline {
       this.discMaterial, this.glowMaterial, on, applyDiscBlendDefaults);
   }
 
-  /**
-   * Grow the drawn instance count to the records decoded so far and upload
-   * the window that just landed. Three reads `instanceCount` per draw, and
-   * the eleven static attributes carry no dynamic-usage hint — they upload
-   * once and never again — so each needs its own range flagged.
-   *
-   * The escape-hatch backend has no compaction pass, so the instance count
-   * IS the bound: leave it at the full catalogue and every undecoded record
-   * draws as an absolute-magnitude-zero star sitting on Sol.
-   */
+  /** README.md, the star-pipeline.ts bullet. */
   absorbRecords(): void {
     const first = this.absorbedCount;
     const end = this.catalog.loadedCount;
@@ -340,8 +323,10 @@ export class StarPipeline {
       first,
       end,
     );
-    for (const name of STAR_STATIC_ATTRIBUTES) {
-      const attr = this.geometry.getAttribute(name) as THREE.InstancedBufferAttribute;
+    // Derived, never listed — README.md, the star-pipeline.ts bullet.
+    for (const attr of Object.values(this.geometry.attributes)) {
+      if (!(attr instanceof THREE.InstancedBufferAttribute)) continue;
+      if (attr.usage === THREE.DynamicDrawUsage) continue;
       attr.addUpdateRange(first * attr.itemSize, (end - first) * attr.itemSize);
       attr.needsUpdate = true;
     }
