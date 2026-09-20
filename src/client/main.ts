@@ -160,18 +160,25 @@ async function main() {
     // artifact is absent — focus/pin then fall through to null via the
     // empty registry slot.
     //
-    // The STAR domain is held back to `starReady`, and held back WHOLE: a
-    // domain attached over a partial catalogue reports `unknown` and drops
-    // a deep-link intent, where an unattached one reports `pending` and
-    // queues it. That is what keeps a `?v=` link to a star in a late chunk
-    // working (util/sid-resolver/README.md).
+    // The STAR domain attaches now but declares itself STILL FILLING, so a
+    // hit resolves immediately and only a miss stays pending
+    // (util/sid-resolver/README.md § A domain that is still filling). That
+    // ordering matters beyond latency: with a focus the encoder elides
+    // `worldOffset`, so the URL's cam/tgt are in the focal star's local
+    // frame — resolving the focus after they are applied puts the camera in
+    // the wrong frame and then recentres out from under it.
     for (const kind of KIND_ROSTER) {
       const m = kinds[kind];
-      if (!m || kind === 'star') continue;
+      if (!m) continue;
       const sids = m.sids();
-      if (sids) sidResolver.attach(kind, arrayDomain(sids));
-      else sidResolver.conclude(kind);
+      if (!sids) { sidResolver.conclude(kind); continue; }
+      sidResolver.attach(kind, kind === 'star'
+        ? arrayDomain(sids, () => catalog.loadedCount)
+        : arrayDomain(sids));
     }
+    // Each landing chunk can claim a queued intent, and a still-filling
+    // domain has no attach event of its own to flush on.
+    const offSidRefresh = catalog.onRecordsDecoded(() => sidResolver.refresh());
 
     const idMaps: IdMaps = {
       hipToIndex,
@@ -330,11 +337,10 @@ async function main() {
       const h = catalog.hip[i];
       if (h > 0 && !hipToIndex.has(h)) hipToIndex.set(h, i);
     }
-    await frame();
-    // Whole, and only now — the partial-attach trap above.
-    const starSids = kinds.star.sids();
-    if (starSids) sidResolver.attach('star', arrayDomain(starSids));
-    else sidResolver.conclude('star');
+    // The column is full, so the domain now answers `unknown` for a sid
+    // nothing carries instead of holding its intent open forever.
+    offSidRefresh();
+    sidResolver.refresh();
     await frame();
 
     // Relation caches bake each system's anchor from its primary's

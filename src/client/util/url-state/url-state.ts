@@ -1230,6 +1230,15 @@ function setCameraToDefault(stellata: Stellata, mode: 'navigate' | 'observe' | u
 
 // The one route into focus for every decoded blob — README.md, the
 // applyFocusTarget bullet.
+/** Re-seat the camera in a local frame that only existed once a deferred
+ *  focus recentred the origin. Only the frame-relative part of the pose —
+ *  everything else in the restore is absolute and already correct. */
+function reapplyPose(stellata: Stellata, view: DecodedView): void {
+  if (view.cam) stellata.camera.position.set(view.cam[0], view.cam[1], view.cam[2]);
+  if (view.tgt) stellata.controls.target.set(view.tgt[0], view.tgt[1], view.tgt[2]);
+  if (view.cam || view.tgt) stellata.controls.update();
+}
+
 function applyFocusTarget(stellata: Stellata, target: Target, snap: boolean): void {
   if (snap) stellata.focus.setOrbitTarget(target);
   else stellata.focus.flyTo(target, { animate: false });
@@ -1327,6 +1336,7 @@ export function applyDecodedView(
       // the rest of the decoded state stands. Planet sids translate
       // domain index → flat Target index; a translation miss (host
       // body-field not attached) drops the focus like an unknown sid.
+      let resolvedInline = false;
       idMaps.sidResolver.whenResolved(view.focus.id, (kind, localIndex) => {
         const idx = targetIdxOf(idMaps, kind, localIndex);
         if (idx === null) return;
@@ -1334,7 +1344,22 @@ export function applyDecodedView(
         // A sid whose domain attaches after this function returns fires its
         // 'focus' event then, disarming the ORB the tail already restored.
         restoreOrbitFrame(stellata, view);
+        // Focusing recentres the origin, and WITH a focus the encoder
+        // elides `worldOffset` — so the cam/tgt applied below sit in the
+        // focal object's local frame. When this callback runs late, because
+        // the catalogue chunk carrying the star had not landed, they were
+        // applied against the wrong origin and the camera ends up somewhere
+        // else entirely. Re-seat them now that the frame exists.
+        //
+        // Not if the user has taken the camera meanwhile: a restore that
+        // yanks the view out from under a deliberate move is worse than one
+        // that quietly gives up.
+        if (resolvedInline || stellata.renderGate.sawUserInput) return;
+        reapplyPose(stellata, view);
       });
+      // Set after the call, so the callback can tell "ran synchronously,
+      // the pose below has not happened yet" from "ran later".
+      resolvedInline = true;
     } else {
       const idx = resolveStarRef(view.focus, idMaps, idMaps.solIndex);
       if (idx >= 0 && idx < idMaps.starCount) {

@@ -383,3 +383,25 @@ shared URL that someone reports. Both read their argument through
 reads their poses through `viewPose`, the one place a decoded view's
 omitted pose slots resolve to the values `applyDecodedView` restores
 (`../../debug/capture/README.md`).
+
+## A focus that resolves after the pose
+
+**With a focus, `cam` and `tgt` are frame-relative.** Focusing recentres
+the floating origin onto the focal object, and the encoder elides
+`worldOffset` in that case, so the restored pose is expressed in a frame
+that only exists once the focus has been applied. Everything else in the
+restore is absolute.
+
+That makes focus-before-pose an ordering requirement, not a preference, and
+the streaming catalogue can break it: a star in a late chunk resolves after
+`applyFromUrl` has already seated the camera against the un-recentred
+origin, which lands it somewhere else entirely. So the deferred branch
+re-seats `cam`/`tgt` itself once the focus lands. A `resolvedInline` flag
+distinguishes the synchronous case — where the pose below simply has not
+run yet — from the late one.
+
+**It declines when `renderGate.sawUserInput` has latched.** If the user has
+touched the canvas or the keyboard while the catalogue was still arriving,
+the view is theirs; a restore that yanks it back is worse than one that
+gives up. The focus itself still attaches, because that costs nothing and
+is what the link asked for — only the camera move is abandoned.

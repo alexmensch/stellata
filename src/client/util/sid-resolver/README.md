@@ -93,3 +93,29 @@ index) — the URL layer translates through `IdMaps.planetDomainIndexOf`
 / `planetTargetIndexOf` (wired in `main.ts`). Routing the runtime's
 index-keyed APIs through this resolver is `stellata-9mm.227`; POI
 generalisation to non-star kinds is `stellata-o6nx.1`.
+
+## A domain that is still filling
+
+`SidDomain.isComplete` is the third state between "attached" and "not
+attached". A domain that answers `false` makes a **miss** indeterminate
+rather than absent: the sid may sit in a part of the artifact that has not
+arrived, so resolution stays `pending` and the intent queues instead of
+being dropped.
+
+The star domain needs it because the catalogue streams
+(`../../loaders/README.md` § Progressive catalog load). The alternative —
+withholding the domain until the last chunk lands — looks safer and is
+worse, because **order matters, not just eventual correctness**: with a
+focus present the URL encoder elides `worldOffset`, so the restored
+`cam`/`tgt` are expressed in the focal object's local frame. A focus that
+resolves after they are applied puts the camera in the wrong frame and then
+recentres out from under it. A star in the first chunk — which is most of
+them, the order being apparent brightness — has to resolve *synchronously*,
+during `applyFromUrl`, for the restore to be right.
+
+`arrayDomain` takes an optional `loadedCount` thunk for this. It indexes
+lazily up to that bound on every lookup, so a growing column needs no
+re-attach; the owner calls `SidResolver.refresh()` as it fills, which is
+what retries the queued intents. When the column completes, `isComplete`
+starts answering `true` and a sid nothing carries finally settles to
+`unknown` instead of holding its intent open forever.

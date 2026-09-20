@@ -313,6 +313,10 @@ function makeStatefulStellata() {
     roll: rollStub() as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     controls: { target: mockVec3(), update() {} } as any,
+    // A restore that lands after the user has taken the camera declines to
+    // re-seat it; these cases all restore into an untouched view.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    renderGate: { sawUserInput: false } as any,
   };
   return { stellata: stub as Stellata, state };
 }

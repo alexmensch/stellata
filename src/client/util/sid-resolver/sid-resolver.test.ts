@@ -241,3 +241,55 @@ describe('sidColumnError', () => {
     expect(sidColumnError([1, 2, 1])).toMatch(/duplicate sid 1 at record 2/);
   });
 });
+
+describe('a domain that is still filling', () => {
+  const ROSTER: SidRuntimeKind[] = ['star'];
+  // Apparent-brightness order, so the prefix is the bright stars.
+  const COLUMN = [11, 22, 33, 44];
+
+  it('resolves a sid in the loaded prefix synchronously', () => {
+    // The whole point: a first-chunk star has to resolve DURING
+    // applyFromUrl, because the pose restored after it is expressed in the
+    // frame focusing recentres to.
+    let loaded = 2;
+    const r = new SidResolver(ROSTER);
+    r.attach('star', arrayDomain(COLUMN, () => loaded));
+
+    let applied: number | null = null;
+    r.whenResolved(22, (_k, i) => { applied = i; });
+    expect(applied).toBe(1);
+  });
+
+  it('holds a sid past the prefix pending, then fires it on refresh', () => {
+    let loaded = 2;
+    const r = new SidResolver(ROSTER);
+    r.attach('star', arrayDomain(COLUMN, () => loaded));
+
+    let applied: number | null = null;
+    r.whenResolved(44, (_k, i) => { applied = i; });
+    // Attached but incomplete: a miss is indeterminate, not absent.
+    expect(r.resolve(44)).toEqual({ status: 'pending' });
+    expect(applied).toBeNull();
+
+    loaded = 4;
+    r.refresh();
+    expect(applied).toBe(3);
+  });
+
+  it('settles a sid nothing carries to unknown once the column completes', () => {
+    let loaded = 2;
+    const r = new SidResolver(ROSTER);
+    r.attach('star', arrayDomain(COLUMN, () => loaded));
+    expect(r.resolve(99)).toEqual({ status: 'pending' });
+
+    loaded = 4;
+    // Otherwise a deep link to a retired sid holds its intent open forever.
+    expect(r.resolve(99)).toEqual({ status: 'unknown' });
+  });
+
+  it('treats an absent loadedCount as complete on attach', () => {
+    const r = new SidResolver(ROSTER);
+    r.attach('star', arrayDomain(COLUMN));
+    expect(r.resolve(99)).toEqual({ status: 'unknown' });
+  });
+});
