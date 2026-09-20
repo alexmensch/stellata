@@ -6,12 +6,19 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../../util/paths';
 import { MEMBERSHIP_MANIFEST_FILE, iterManifestTsv } from '../membership-manifest-pure';
-import { MAGNITUDE_PULL_TSV, readMagnitudeTerm } from './magnitude-term';
 import {
-  MAGNITUDE_PULL_G_BOUND,
+  MAGNITUDE_PULL_TSV,
+  readMagnitudeTerm,
+  readMagnitudeTermAstrometry,
+} from './magnitude-term';
+import {
   magnitudeTermNewcomers,
   type MagnitudeTermSelection,
 } from './magnitude-term-pure';
+
+/** The floor the committed figures below were measured at. Distinct from
+ *  MAGNITUDE_PULL_G_BOUND, which bounds the file rather than the term. */
+const GATE_FLOOR_V = 11;
 
 const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 const readable = [MAGNITUDE_PULL_TSV, MANIFEST_PATH].every(lfsContentReadable);
@@ -21,7 +28,7 @@ describe.skipIf(!readable)('the floor over the committed pull', () => {
   let boundSourceIds: Set<string>;
 
   beforeAll(async () => {
-    selection = await readMagnitudeTerm(MAGNITUDE_PULL_G_BOUND);
+    selection = await readMagnitudeTerm(GATE_FLOOR_V);
     boundSourceIds = new Set<string>();
     for (const row of iterManifestTsv(readFileSync(MANIFEST_PATH, 'utf8'))) {
       if (row.gaia_source_id) boundSourceIds.add(row.gaia_source_id);
@@ -50,5 +57,18 @@ describe.skipIf(!readable)('the floor over the committed pull', () => {
       if (boundSourceIds.has(sourceId)) both++;
     }
     expect(both).toBe(327_701);
+  });
+
+  it('reads the 5p astrometry of exactly the sources it is handed', async () => {
+    const keep = new Set([...selection.keptSourceIds].slice(0, 500));
+    const rows = await readMagnitudeTermAstrometry(keep);
+    expect(new Set(rows.keys())).toEqual(keep);
+    for (const row of rows.values()) {
+      expect(Number.isFinite(row.raDeg) && Number.isFinite(row.decDeg)).toBe(true);
+    }
+  }, 120_000);
+
+  it('reads nothing for an empty keep-set', async () => {
+    expect((await readMagnitudeTermAstrometry(new Set())).size).toBe(0);
   });
 });
