@@ -1257,7 +1257,7 @@ export function applyDecodedView(
   stellata: Stellata,
   view: DecodedView,
   idMaps: IdMaps,
-): void {
+): Promise<void> | null {
   if (view.unit) setUnit(view.unit);
 
   // Declutter level — applied before the filter patch below; drives the
@@ -1293,6 +1293,9 @@ export function applyDecodedView(
   // update() reads as "if any of those happened, refresh" — replaces
   // a hand-maintained N-way OR that grew with every new branch.
   let controlsDirty = false;
+  // Non-null once a focus sid has queued as a deferred intent — README.md
+  // § A focus that resolves after the pose.
+  let focusPending: Promise<void> | null = null;
 
   // An omitted `up` is a positive statement — the sender was galactic-LEVEL
   // — so the receiver restores the pole itself and lets the `lookAt` below
@@ -1339,26 +1342,34 @@ export function applyDecodedView(
       // Flips once `whenResolved` has returned, so the callback can tell
       // which side of the synchronous window it ran on.
       let deferred = false;
+      let resolvedInline = false;
+      let settle: (() => void) | undefined;
       idMaps.sidResolver.whenResolved(view.focus.id, (kind, localIndex) => {
+        if (!deferred) resolvedInline = true;
         const idx = targetIdxOf(idMaps, kind, localIndex);
-        if (idx === null) return;
-        applyFocusTarget(stellata, { kind, idx }, snap);
-        // A sid whose domain attaches after this function returns fires its
-        // 'focus' event then, disarming the ORB the tail already restored.
-        restoreOrbitFrame(stellata, view);
-        // Focusing recentres the origin, and WITH a focus the encoder
-        // elides `worldOffset` — so the cam/tgt applied below sit in the
-        // focal object's local frame. When this callback runs late, because
-        // the catalogue chunk carrying the star had not landed, they were
-        // applied against the wrong origin and the camera ends up somewhere
-        // else entirely. Re-seat them now that the frame exists.
-        //
-        // Not if the user has taken the camera meanwhile: a restore that
-        // yanks the view out from under a deliberate move is worse than one
-        // that quietly gives up.
-        if (deferred && !stellata.renderGate.sawUserInput) reapplyPose(stellata, view);
+        if (idx !== null) {
+          applyFocusTarget(stellata, { kind, idx }, snap);
+          // A sid whose domain attaches after this function returns fires its
+          // 'focus' event then, disarming the ORB the tail already restored.
+          restoreOrbitFrame(stellata, view);
+          // Focusing recentres the origin, and WITH a focus the encoder
+          // elides `worldOffset` — so the cam/tgt applied below sit in the
+          // focal object's local frame. When this callback runs late, because
+          // the catalogue chunk carrying the star had not landed, they were
+          // applied against the wrong origin and the camera ends up somewhere
+          // else entirely. Re-seat them now that the frame exists.
+          //
+          // Not if the user has taken the camera meanwhile: a restore that
+          // yanks the view out from under a deliberate move is worse than one
+          // that quietly gives up.
+          if (deferred && !stellata.renderGate.sawUserInput) reapplyPose(stellata, view);
+        }
+        settle?.();
       });
       deferred = true;
+      if (!resolvedInline) {
+        focusPending = new Promise<void>((resolve) => { settle = resolve; });
+      }
     } else {
       const idx = resolveStarRef(view.focus, idMaps, idMaps.solIndex);
       if (idx >= 0 && idx < idMaps.starCount) {
@@ -1482,6 +1493,8 @@ export function applyDecodedView(
   // this same function. Applied again from the deferred focus callback for the
   // one case that lands after this returns; `restore` is idempotent.
   restoreOrbitFrame(stellata, view);
+
+  return focusPending;
 }
 
 /** Absent bits mean the gesture was never made, which is a positive
@@ -1521,16 +1534,22 @@ function resetJunkUrl(): void {
   }
 }
 
-// Returns true when a state blob was present and applied — from the
-// canonical `/v/<blob>/` path or the legacy `?v=` query param, any schema
-// version. The caller uses the false branch to fall back to the canonical
-// first-load view. A malformed blob also returns false so the user lands
-// on the framed default rather than the unframed canvas-default pose.
-export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): boolean {
+export interface AppliedUrl {
+  /** A state blob was present and applied — from the canonical `/v/<blob>/`
+   *  path or the legacy `?v=` query param, any schema version. False sends
+   *  the caller to the canonical first-load view; a malformed blob is false
+   *  too, so the user lands on the framed default rather than the unframed
+   *  canvas-default pose. */
+  applied: boolean;
+  /** README.md § A focus that resolves after the pose. */
+  focusPending: Promise<void> | null;
+}
+
+export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): AppliedUrl {
   const { blob, legacyQueryForm } = pickShareBlob(location.pathname, location.search);
   if (!blob) {
     resetJunkUrl();
-    return false;
+    return { applied: false, focusPending: null };
   }
   let decoded: DecodedBlob;
   try {
@@ -1538,9 +1557,9 @@ export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): boolean {
   } catch (err) {
     console.warn('Failed to decode URL state:', err);
     resetJunkUrl();
-    return false;
+    return { applied: false, focusPending: null };
   }
-  applyDecodedView(stellata, decoded.view, idMaps);
+  const focusPending = applyDecodedView(stellata, decoded.view, idMaps);
   // After the same debounce as routine writes, rewrite the address bar to
   // the canonical path form when the link arrived in legacy query form OR
   // in a superseded schema (the docs/sid.md § 9.4 migration: HIP refs land
@@ -1553,7 +1572,7 @@ export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): boolean {
   if (legacyQueryForm || decoded.version !== SCHEMA_VERSION) {
     setTimeout(() => writeUrl(stellata, idMaps), DEBOUNCE_MS);
   }
-  return true;
+  return { applied: true, focusPending };
 }
 
 // Write the live camera/target/up triple into `out` at the canonical

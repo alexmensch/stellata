@@ -261,7 +261,8 @@ async function main() {
     // the galactic centre, HUD on, no constellation highlight).
     // Planet-focus refs need the body field's attach table, settled by
     // the kinds.planet.systemsReady await above.
-    if (!applyFromUrl(stellata, idMaps)) {
+    const { applied, focusPending } = applyFromUrl(stellata, idMaps);
+    if (!applied) {
       applyFirstLoadView(stellata, idMaps);
     }
     startUrlSync(stellata, idMaps);
@@ -306,6 +307,8 @@ async function main() {
     // FIRST PAINT. The scene is live on the catalogue's first chunk, so the
     // chrome comes up now and the loading panel stays on top of a rendering
     // sky rather than in front of a blank one.
+    // util/url-state/README.md § A focus that resolves after the pose.
+    if (focusPending) await Promise.race([focusPending, kinds.star.ready]);
     await new Promise((r) => requestAnimationFrame(r));
     document.body.classList.add('scene-live');
     topbar.hidden = false;

@@ -405,3 +405,20 @@ touched the canvas or the keyboard while the catalogue was still arriving,
 the view is theirs; a restore that yanks it back is worse than one that
 gives up. The focus itself still attaches, because that costs nothing and
 is what the link asked for — only the camera move is abandoned.
+
+**Re-seating it is not enough, because the wrong frame is on screen
+meanwhile.** Boot paints on the catalogue's first chunk, so between first
+paint and the focal star's chunk the camera sits at the default Sol view and
+the restore reads as a jump from Sol rather than as arriving. So
+`applyDecodedView` returns a promise whenever a focus queued as a deferred
+intent — null otherwise, including for every focus the resolver answered
+synchronously — and `applyFromUrl` hands it to boot as `focusPending`.
+`main.ts` holds the **full-bleed** loading cover on it rather than
+revealing the live scene behind the panel, so no wrong vantage is ever
+drawn.
+
+It settles on the unresolvable branch too — a retired sid, or a planet whose
+host body field never attached — because boot is waiting on it and a dropped
+focus still ends the wait. `kinds.star.ready` is the backstop for a focus
+that settles no other way: at the complete catalogue it never will, and
+holding that long is what boot did before it painted progressively at all.
