@@ -38,6 +38,8 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          `multiplicityStatus: Uint8Array` (v9:
                          single/resolved/unresolved — see
                          scripts/catalog/multiplicity/README.md § Multiplicity status).
+catalog-progressive.ts   chunk fetch scheduling + the record window each
+                         landing chunk unlocks (§ Progressive catalog load).
 catalog-loader.test.ts   pin for layout decode + the BigUint64Array
                          source_id handling + the v8 velocity columns +
                          the v7 sid column + a full-record writer→reader
@@ -97,6 +99,57 @@ dust-renderer-mock.ts    Recording WebGL2 / WebGPU renderer stand-ins,
                          enough surface for the upload and readback tests
                          to run headless.
 ```
+
+## Progressive catalog load
+
+`loadCatalog` resolves on the **first chunk carrying a whole record**, not on
+the whole artifact, so boot paints a sky while the rest is still on the wire.
+Records are apparent-V ordered and the chunk plan ramps from 1 MiB
+(`scripts/catalog/record/README.md` § Record order, § On-disk transport
+chunking), so that prefix is roughly the naked-eye sky.
+
+The shape: one buffer pre-allocated at `manifest.totalBytes`, every chunk
+fetched at once straight into its own slice, and each decoded as soon as it
+and all its predecessors have landed. `Catalog.loadedCount` grows,
+`onRecordsDecoded` announces each window, and `whenComplete` settles when the
+last one lands (and rejects if a chunk fails, so a caller waiting for the full
+population sees the same error boot would).
+
+**Every column is allocated at the full `count` from chunk 0**, because the
+count is in the header. Nothing reallocates, no GPU buffer resizes, and every
+array identity a consumer captured at boot stays valid — which is the whole
+reason the tail can be filled in place.
+
+What the undecoded tail holds, and why each is what it is:
+
+- **`companion` is pre-filled with −1.** A zeroed `Uint32Array` decodes as
+  "my companion is record 0", not as absent, so the sentinel has to be seeded
+  rather than left.
+- **`StarFrame.distSol` is pre-filled with `Infinity`**, so an undecoded
+  record sorts past every window the proximity index is queried over. At zero
+  it would sort to the *front*, alongside Sol, and flood both the near-camera
+  walk and the Picker's distSol slice with phantoms at the origin.
+- **Positions, magnitudes and flags stay zero**, which is safe only because
+  nothing walks past `loadedCount`: the WebGPU compaction kernel's thread
+  count and the WebGL2 geometry's `instanceCount` are both the decoded count
+  (`../webgpu/star/compaction/README.md`).
+
+Three traps, all of them silent if missed:
+
+- **The epoch baseline is extended, never re-snapshotted.** `advanceEpochTo`
+  writes `base + v·Δt` back over `catalog.positions`, so a baseline taken
+  before the tail landed would erase those records the first time the model
+  clock crossed a bucket (`../star-pipeline/star-frame/README.md`).
+- **Each landing chunk must invalidate the render gate**, or a settled camera
+  never draws and the new stars simply do not appear. `Stellata`'s
+  `absorbCatalogRecords` is the single place that fans a chunk out to the star
+  frame, both pipelines and the gate — same shape as the dust loader's
+  `onProgress` below.
+- **The SID resolver's star domain attaches once, on completion, never
+  partially.** A partly-attached domain reports `unknown` and *drops* a
+  deep-link intent; an unattached one reports `pending` and queues it
+  (`../util/sid-resolver/README.md`). This is what keeps a `?v=` link to a
+  star in a late chunk working.
 
 ## Dust voxel upload
 

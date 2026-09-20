@@ -55,12 +55,25 @@ export function buildPulsationParams(varType: Uint8Array): {
 } {
   const rho = new Float32Array(varType.length);
   const colorSwing = new Float32Array(varType.length);
-  for (let i = 0; i < varType.length; i++) {
+  writePulsationParams(varType, rho, colorSwing, 0, varType.length);
+  return { rho, colorSwing };
+}
+
+/** `buildPulsationParams` over one record window, into arrays the caller
+ *  owns. The progressive load fills each landing chunk's window without
+ *  replacing arrays a GPU attribute is already bound over. */
+export function writePulsationParams(
+  varType: Uint8Array,
+  rho: Float32Array,
+  colorSwing: Float32Array,
+  first: number,
+  end: number,
+): void {
+  for (let i = first; i < end; i++) {
     const p = pulsationParamsForType(varType[i]);
     rho[i] = p.rho;
     colorSwing[i] = p.colorSwing;
   }
-  return { rho, colorSwing };
 }
 
 /** {ρ, ΔB−V} interleaved as the iPuls vec2 attribute's backing array —
@@ -71,9 +84,23 @@ export function interleavePulsParams(
   colorSwing: Float32Array,
 ): Float32Array {
   const out = new Float32Array(rho.length * 2);
-  for (let i = 0; i < rho.length; i++) {
+  writeInterleavedPulsParams(rho, colorSwing, out, 0, rho.length);
+  return out;
+}
+
+/** `interleavePulsParams` over one record window. The attribute's backing
+ *  array is a COPY of the two source columns, so a progressive load that
+ *  only refills `catalog.pulsRho` never reaches the shader — the window has
+ *  to be re-interleaved and the attribute's range flagged. */
+export function writeInterleavedPulsParams(
+  rho: Float32Array,
+  colorSwing: Float32Array,
+  out: Float32Array,
+  first: number,
+  end: number,
+): void {
+  for (let i = first; i < end; i++) {
     out[i * 2] = rho[i];
     out[i * 2 + 1] = colorSwing[i];
   }
-  return out;
 }

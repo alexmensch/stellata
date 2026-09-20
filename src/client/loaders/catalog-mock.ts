@@ -18,6 +18,7 @@ export function makeEmptyCatalog(count: number): Catalog {
   const { rho: pulsRho, colorSwing: pulsColorSwing } = buildPulsationParams(varType);
   return {
     count,
+    loadedCount: count,
     positions: new Float32Array(count * 3),
     velocities: new Float32Array(count * 3),
     absmag: new Float32Array(count),
@@ -42,5 +43,7 @@ export function makeEmptyCatalog(count: number): Catalog {
     solIndex: -1,
     constellations: [],
     sidSuccessors: new Map(),
+    onRecordsDecoded: () => () => {},
+    whenComplete: Promise.resolve(),
   };
 }

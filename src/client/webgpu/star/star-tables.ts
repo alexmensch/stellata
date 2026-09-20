@@ -14,7 +14,7 @@ import {
 } from '../star-attribute-roster';
 import { disposeStorageAttribute } from '../tsl/storage-attribute';
 import {
-  STAR_STATIC_STRIDE, buildStaticTable, staticSlot, type StaticFieldSources,
+  STAR_STATIC_STRIDE, writeStaticTable, staticSlot, type StaticFieldSources,
 } from './star-tables-pure';
 
 export type FloatStorageNode = ReturnType<typeof storage<'float'>>;
@@ -82,11 +82,15 @@ export class StarTables {
 
   private readonly staticsNode: FloatStorageNode;
   private readonly forwarded: Record<StarForwardedAttribute, ForwardedTable>;
+  private readonly sources: StarLayerSources;
+  private staticsWritten = 0;
 
   constructor(sources: StarLayerSources) {
+    this.sources = sources;
     this.count = sources.catalog.count;
     this.statics = new StorageBufferAttribute(
-      buildStaticTable(staticFieldSources(sources), this.count), 1);
+      new Float32Array(this.count * STAR_STATIC_STRIDE), 1);
+    this.absorbRecords();
     this.staticsNode = storage(this.statics, 'float', this.statics.count).toReadOnly();
     const srcAttrs = forwardedSourceAttrs(sources);
     const entries = STAR_FORWARDED_ATTRIBUTES.map((name) => {
@@ -96,6 +100,27 @@ export class StarTables {
       return [name, { src, attr, node, last: -1, fullPending: false }] as const;
     });
     this.forwarded = Object.fromEntries(entries) as Record<StarForwardedAttribute, ForwardedTable>;
+  }
+
+  /** Interleave every record decoded since the last call into the static
+   *  table and flag just those elements for upload. Append-only, so one
+   *  contiguous range per chunk — never the diff uploader, which tracks a
+   *  fixed item list. */
+  absorbRecords(): void {
+    const first = this.staticsWritten;
+    const end = this.sources.catalog.loadedCount;
+    if (end <= first) return;
+    writeStaticTable(
+      staticFieldSources(this.sources),
+      this.statics.array as Float32Array,
+      this.count,
+      first,
+      end,
+    );
+    this.statics.addUpdateRange(
+      first * STAR_STATIC_STRIDE, (end - first) * STAR_STATIC_STRIDE);
+    this.statics.needsUpdate = true;
+    this.staticsWritten = end;
   }
 
   stat(self: Node<'int'>, field: StarStaticField): Node<'float'> {

@@ -67,7 +67,7 @@ export class StarFrame {
    *  PEAK — a window solved from it must not move as a star breathes
    *  (`../../camera/controls/README.md` § The live-versus-peak pair). The
    *  core-mask, member-scan and physical-size windows all read it. */
-  readonly maxPhysicalRadiusPc: number;
+  get maxPhysicalRadiusPc(): number { return this._maxPhysicalRadiusPc; }
 
   /** `catalog.positions − worldOffset`, bound to the dynamic
    *  `iPosition` attribute. Rewritten in place. */
@@ -94,8 +94,12 @@ export class StarFrame {
   private readonly onLocalPositionsWritten: () => void;
 
   private _advancedEpochJyr: number;
-  private readonly maxEpochDriftPc: number;
+  private _maxPhysicalRadiusPc = 0;
+  private maxEpochDriftPc = 0;
   private localPositionsStale = false;
+  /** Records folded into the derived buffers and the proximity index so
+   *  far — `catalog.loadedCount` at the last `absorbRecords`. */
+  private derivedCount = 0;
 
   constructor(opts: StarFrameOptions) {
     const { catalog, uniforms, worldOffset, cameraPosition, t, onLocalPositionsWritten } = opts;
@@ -111,28 +115,62 @@ export class StarFrame {
     // hover/focus/warp targets, constellation lines, binaries baselines, and
     // eclipse photometry all inherit current-epoch positions by construction.
     // See docs/science-catalog-ingestion.md § Current-epoch star positions.
-    this.basePositions = new Float32Array(catalog.positions);
+    this.basePositions = new Float32Array(catalog.count * 3);
     this._advancedEpochJyr = bucketEpochJyr(jdeToJulianEpochYear(tToJdUt(t)));
+
+    this.logRadii = new Float32Array(catalog.count);
+    this.lumClassF32 = new Float32Array(catalog.count);
+    // An undecoded record must sort PAST every window the proximity index
+    // is ever queried over, not to distance zero where Sol sits.
+    this.distSol = new Float32Array(catalog.count).fill(Infinity);
+    this.teffApsis = new Float32Array(catalog.count);
+    this.localPositions = new Float32Array(catalog.count * 3);
+    this.sortedByDistFromSol = new Uint32Array(catalog.count);
+    this.sortedDistFromSol = new Float32Array(catalog.count);
+
+    this.absorbRecords();
+  }
+
+  /**
+   * Fold every record decoded since the last call into the baseline, the
+   * derived buffers and the proximity index. Called once from the
+   * constructor and again per landing transport chunk.
+   *
+   * The baseline is EXTENDED, never re-snapshotted: `advanceEpochTo` writes
+   * `base + v·Δt` back over `catalog.positions`, so a baseline taken before
+   * the tail landed would overwrite those records with zeros the first time
+   * the model clock crossed a bucket.
+   */
+  absorbRecords(): void {
+    const { catalog } = this;
+    const first = this.derivedCount;
+    const end = catalog.loadedCount;
+    if (end <= first) return;
+
+    this.basePositions.set(
+      catalog.positions.subarray(first * 3, end * 3), first * 3,
+    );
     advancePositionsToEpoch(
       this.basePositions,
       catalog.velocities,
       this._advancedEpochJyr,
       catalog.positions,
+      first,
+      end,
     );
     // How far any star can sit from its load-epoch position over the full
     // clamped scrub range — the widening the load-time sortedDistFromSol
     // windows need to stay correct at any scrubbed t.
-    this.maxEpochDriftPc = maxSpeedPcPerYr(catalog.velocities) * Math.max(
-      this._advancedEpochJyr - jdeToJulianEpochYear(tToJdUt(T_CLAMP_MIN_S)),
-      jdeToJulianEpochYear(tToJdUt(T_CLAMP_MAX_S)) - this._advancedEpochJyr,
+    this.maxEpochDriftPc = Math.max(
+      this.maxEpochDriftPc,
+      maxSpeedPcPerYr(catalog.velocities, first, end) * Math.max(
+        this._advancedEpochJyr - jdeToJulianEpochYear(tToJdUt(T_CLAMP_MIN_S)),
+        jdeToJulianEpochYear(tToJdUt(T_CLAMP_MAX_S)) - this._advancedEpochJyr,
+      ),
     );
 
-    this.logRadii = new Float32Array(catalog.count);
-    this.lumClassF32 = new Float32Array(catalog.count);
-    this.distSol = new Float32Array(catalog.count);
-    this.teffApsis = new Float32Array(catalog.count);
-    let maxPhysicalRadius = 0;
-    for (let i = 0; i < catalog.count; i++) {
+    let maxPhysicalRadius = this._maxPhysicalRadiusPc / R_SUN_PC;
+    for (let i = first; i < end; i++) {
       const r = Math.max(catalog.physicalRadius[i], MIN_PHYSICAL_RADIUS_R_SUN);
       this.logRadii[i] = Math.log10(r);
       const rPeak = r * peakAmplitudeFactor(
@@ -145,18 +183,20 @@ export class StarFrame {
       this.distSol[i] = Math.sqrt(x * x + y * y + z * z);
       this.teffApsis[i] = bestApsisTeff(catalog.teffGspphot[i], catalog.teffGspspec[i]);
     }
-    this.maxPhysicalRadiusPc = maxPhysicalRadius * R_SUN_PC;
+    this._maxPhysicalRadiusPc = maxPhysicalRadius * R_SUN_PC;
+    this.derivedCount = end;
 
-    // Starts identical to catalog.positions since worldOffset is (0,0,0).
-    this.localPositions = new Float32Array(catalog.positions);
-
-    this.sortedByDistFromSol = new Uint32Array(catalog.count);
+    // In place on both arrays: the Picker captured them by reference at
+    // construction and would be left on a stale pair by any reallocation.
     for (let i = 0; i < catalog.count; i++) this.sortedByDistFromSol[i] = i;
     this.sortedByDistFromSol.sort((a, b) => this.distSol[a] - this.distSol[b]);
-    this.sortedDistFromSol = new Float32Array(catalog.count);
     for (let i = 0; i < catalog.count; i++) {
       this.sortedDistFromSol[i] = this.distSol[this.sortedByDistFromSol[i]];
     }
+
+    this.writeLocalPositions(
+      this.worldOffset.x, this.worldOffset.y, this.worldOffset.z,
+    );
   }
 
   /** Bucketised Julian epoch year the catalog positions currently sit
@@ -208,6 +248,8 @@ export class StarFrame {
       this.catalog.velocities,
       targetJyr,
       abs,
+      0,
+      this.catalog.loadedCount,
     );
     this._advancedEpochJyr = targetJyr;
     this.localPositionsStale = true;
@@ -232,7 +274,7 @@ export class StarFrame {
   private writeLocalPositions(ox: number, oy: number, oz: number): void {
     const abs = this.catalog.positions;
     const loc = this.localPositions;
-    const n = this.catalog.count;
+    const n = this.catalog.loadedCount;
     for (let i = 0; i < n; i++) {
       const j = i * 3;
       loc[j] = abs[j] - ox;

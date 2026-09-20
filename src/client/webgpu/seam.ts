@@ -55,6 +55,11 @@ export interface WebGpuStarLayer {
    *  `syncUniformNodes` (the kernel reads those scalars) and before the
    *  render (star/compaction/README.md). */
   update(camera: THREE.Camera): void;
+  /** Fold the records decoded since the last call into the static table and
+   *  bound the compaction kernel to them. Called once per landing transport
+   *  chunk; an undecoded record is all-zero and would otherwise list as a
+   *  bright survivor at Sol (star/compaction/README.md). */
+  absorbRecords(): void;
   /** How many stars each tier's draw actually issued on the last dispatch,
    *  off a mapped copy of the indirect args. On demand only — the readback
    *  resolves frames later (star/compaction/README.md § Reading the counts

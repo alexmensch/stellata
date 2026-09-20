@@ -24,13 +24,27 @@ export type StaticFieldSources = Readonly<Record<StarStaticField, ArrayLike<numb
 /** Pad slots stay 0. */
 export function buildStaticTable(sources: StaticFieldSources, count: number): Float32Array {
   const table = new Float32Array(count * STAR_STATIC_STRIDE);
+  writeStaticTable(sources, table, count, 0, count);
+  return table;
+}
+
+/** `buildStaticTable` over one record window. The table is a COPY of the
+ *  eleven source columns, so a progressive load that refills the columns
+ *  alone never reaches the GPU — the window has to be re-interleaved and
+ *  its range flagged on the storage attribute. */
+export function writeStaticTable(
+  sources: StaticFieldSources,
+  table: Float32Array,
+  count: number,
+  first: number,
+  end: number,
+): void {
   for (const field of STAR_STATIC_FIELDS) {
     const src = sources[field];
     if (src.length !== count) {
       throw new Error(`static star field ${field}: ${src.length} values for ${count} stars`);
     }
     const slot = staticSlot(field);
-    for (let i = 0; i < count; i++) table[i * STAR_STATIC_STRIDE + slot] = src[i];
+    for (let i = first; i < end; i++) table[i * STAR_STATIC_STRIDE + slot] = src[i];
   }
-  return table;
 }

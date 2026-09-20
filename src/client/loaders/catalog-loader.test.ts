@@ -47,34 +47,31 @@ function buildCatalog(
   let nameTableLength = 2;
   for (const n of encodedNames) nameTableLength += 2 + n.bytes.length;
 
-  const total = HEADER_SIZE + records.length * RECORD_SIZE
-    + (encodedNames.length > 0 ? nameTableLength : 0);
-  const ab = new ArrayBuffer(total);
+  const tableLength = encodedNames.length > 0 ? nameTableLength : 0;
+  const recordsBase = HEADER_SIZE + tableLength;
+  const ab = new ArrayBuffer(recordsBase + records.length * RECORD_SIZE);
   const dv = new DataView(ab);
   const u8 = new Uint8Array(ab);
 
-  const nameTableOffset = encodedNames.length > 0
-    ? HEADER_SIZE + records.length * RECORD_SIZE
-    : 0;
   writeCatalogHeader(dv, {
     count: records.length,
-    nameTableOffset,
-    nameTableLength: encodedNames.length > 0 ? nameTableLength : 0,
+    nameTableOffset: HEADER_SIZE,
+    nameTableLength: tableLength,
   });
 
-  records.forEach((r, i) => writeStarRecord(dv, HEADER_SIZE + i * RECORD_SIZE, r));
-
-  // Name table (after records). parseBinary stores each entry under the
-  // offset of its length prefix relative to the name-table start; tests
-  // pass that same value through StarRecord.nameOffset.
+  // Name table (ahead of the records, v10). parseBinary stores each entry
+  // under the offset of its length prefix relative to the name-table start;
+  // tests pass that same value through StarRecord.nameOffset.
   if (encodedNames.length > 0) {
-    let p = nameTableOffset + 2; // skip 2-byte zero-sentinel padding
+    let p = HEADER_SIZE + 2; // skip 2-byte zero-sentinel padding
     for (const n of encodedNames) {
       dv.setUint16(p, n.bytes.length, true);
       u8.set(n.bytes, p + 2);
       p += 2 + n.bytes.length;
     }
   }
+
+  records.forEach((r, i) => writeStarRecord(dv, recordsBase + i * RECORD_SIZE, r));
 
   return ab;
 }
@@ -540,8 +537,52 @@ describe('catalog-loader / parseBinary', () => {
       stubFetch(chunkRoutes(source, manifest, 1));
 
       const cat = await loadCatalog(MANIFEST_URL, CON_URL);
+      await cat.whenComplete;
       expect(cat.count).toBe(3);
+      expect(cat.loadedCount).toBe(3);
       expect(cat.names.get(2)).toBe('Betelgeuse');
+    });
+
+    it('resolves on the first chunk with the rest still in flight', async () => {
+      const { source, manifest } = catalogFixture();
+      stubFetch(chunkRoutes(source, manifest, 1));
+
+      const cat = await loadCatalog(MANIFEST_URL, CON_URL);
+      // The whole point of the progressive load: boot has a catalogue to
+      // paint before the last chunk has landed.
+      expect(cat.loadedCount).toBeGreaterThan(0);
+      expect(cat.loadedCount).toBeLessThan(cat.count);
+      expect(cat.count).toBe(3);
+
+      await cat.whenComplete;
+      expect(cat.loadedCount).toBe(3);
+    });
+
+    it('announces each landing chunk as a half-open record window', async () => {
+      const { source, manifest } = catalogFixture();
+      stubFetch(chunkRoutes(source, manifest, 1));
+
+      const spans: { first: number; end: number }[] = [];
+      const cat = await loadCatalog(MANIFEST_URL, CON_URL);
+      cat.onRecordsDecoded((span) => spans.push(span));
+      await cat.whenComplete;
+
+      // Contiguous, ascending, and finishing exactly at the record count —
+      // a gap would leave zeroed records inside the loaded prefix.
+      expect(spans.length).toBeGreaterThan(0);
+      expect(spans[0].first).toBe(cat.loadedCount - spans.reduce((n, s) => n + (s.end - s.first), 0));
+      for (let i = 1; i < spans.length; i++) expect(spans[i].first).toBe(spans[i - 1].end);
+      expect(spans[spans.length - 1].end).toBe(3);
+    });
+
+    it('leaves the undecoded tail on the no-companion sentinel, not record 0', async () => {
+      const { source, manifest } = catalogFixture();
+      stubFetch(chunkRoutes(source, manifest, 1));
+
+      const cat = await loadCatalog(MANIFEST_URL, CON_URL);
+      for (let i = cat.loadedCount; i < cat.count; i++) {
+        expect(cat.companion[i], `record ${i}`).toBe(-1);
+      }
     });
 
     it('reports monotonic progress across chunks up to the manifest total', async () => {

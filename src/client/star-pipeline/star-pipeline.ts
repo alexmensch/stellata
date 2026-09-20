@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import type { Catalog } from '../loaders/catalog-loader';
 import { markStatisticEmitter } from '../hdr/attachments/attachment-gate';
 import { DEPTH_MASK_RENDER_ORDER } from '../scene/render-order';
-import { interleavePulsParams } from './pulsation/pulsation-params-pure';
+import {
+  interleavePulsParams, writeInterleavedPulsParams,
+} from './pulsation/pulsation-params-pure';
 import { STAR_PASS_CORE_MASK, STAR_PASS_DISC, STAR_PASS_GLOW } from './star-pass';
 
 // Disc-pass blending state. Applied at material construction and re-applied
@@ -158,6 +160,14 @@ export interface StarPipelineOptions {
  * (src/client/frame/shared-uniforms.ts), which the materials hold by
  * reference — the encapsulation here is resource ownership + dispose.
  */
+/** The instanced attributes bound over a catalog / star-frame column and
+ *  uploaded once. Their windows are re-flagged per landing chunk; the four
+ *  dynamic-usage attributes upload whole and need no entry. */
+const STAR_STATIC_ATTRIBUTES = [
+  'iAbsmag', 'iCi', 'iSpectClass', 'iLogRadius', 'iPeriodDays',
+  'iAmplitudeMag', 'iPuls', 'iLumClass', 'iDistSol', 'iTeffApsis',
+] as const;
+
 export class StarPipeline {
   readonly geometry: THREE.InstancedBufferGeometry;
   /** Dynamic — overwritten on every Stellata.recenterOrigin. Callers
@@ -170,6 +180,10 @@ export class StarPipeline {
   /** Built once per attachBinaries; the integration shell flips
    *  `needsUpdate` after rewriting the backing buffer. */
   readonly iSuppressPulsationAttr: THREE.InstancedBufferAttribute;
+  /** {ρ, ΔB−V} interleaved — the one static attribute backed by a COPY
+   *  rather than a catalog column, so a progressive load has to re-pack
+   *  each landing window rather than just flagging the source. */
+  readonly iPulsAttr: THREE.InstancedBufferAttribute;
   readonly discMaterial: THREE.ShaderMaterial;
   readonly glowMaterial: THREE.ShaderMaterial;
   readonly coreMaskMaterial: THREE.ShaderMaterial;
@@ -178,6 +192,8 @@ export class StarPipeline {
   readonly coreMaskMesh: THREE.Mesh;
 
   private scene: THREE.Scene | null;
+  private readonly catalog: Catalog;
+  private absorbedCount = 0;
 
   constructor(opts: StarPipelineOptions) {
     const {
@@ -187,6 +203,7 @@ export class StarPipeline {
       sharedUniforms, boundingSphereRadiusPc,
     } = opts;
     this.scene = scene;
+    this.catalog = catalog;
 
     // Instanced quads: one unit square per star, expanded in screen space in
     // the vertex shader. This replaces the earlier THREE.Points approach,
@@ -214,12 +231,13 @@ export class StarPipeline {
     this.geometry.setAttribute('iLogRadius', new THREE.InstancedBufferAttribute(logRadii, 1));
     this.geometry.setAttribute('iPeriodDays', new THREE.InstancedBufferAttribute(catalog.periodDays, 1));
     this.geometry.setAttribute('iAmplitudeMag', new THREE.InstancedBufferAttribute(catalog.amplitudeMag, 1));
-    this.geometry.setAttribute('iPuls', new THREE.InstancedBufferAttribute(
-      interleavePulsParams(catalog.pulsRho, catalog.pulsColorSwing), 2));
+    this.iPulsAttr = new THREE.InstancedBufferAttribute(
+      interleavePulsParams(catalog.pulsRho, catalog.pulsColorSwing), 2);
+    this.geometry.setAttribute('iPuls', this.iPulsAttr);
     this.geometry.setAttribute('iLumClass', new THREE.InstancedBufferAttribute(lumClassF32, 1));
     this.geometry.setAttribute('iDistSol', new THREE.InstancedBufferAttribute(distSol, 1));
     this.geometry.setAttribute('iTeffApsis', new THREE.InstancedBufferAttribute(teffApsis, 1));
-    this.geometry.instanceCount = catalog.count;
+    this.geometry.instanceCount = catalog.loadedCount;
     this.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), boundingSphereRadiusPc);
 
     // RawShaderMaterial (not ShaderMaterial) so three.js doesn't auto-inject
@@ -299,6 +317,36 @@ export class StarPipeline {
   setMonochromeBlend(on: boolean) {
     applyChartBlendSwap(
       this.discMaterial, this.glowMaterial, on, applyDiscBlendDefaults);
+  }
+
+  /**
+   * Grow the drawn instance count to the records decoded so far and upload
+   * the window that just landed. Three reads `instanceCount` per draw, and
+   * the eleven static attributes carry no dynamic-usage hint — they upload
+   * once and never again — so each needs its own range flagged.
+   *
+   * The escape-hatch backend has no compaction pass, so the instance count
+   * IS the bound: leave it at the full catalogue and every undecoded record
+   * draws as an absolute-magnitude-zero star sitting on Sol.
+   */
+  absorbRecords(): void {
+    const first = this.absorbedCount;
+    const end = this.catalog.loadedCount;
+    if (end <= first) return;
+    writeInterleavedPulsParams(
+      this.catalog.pulsRho,
+      this.catalog.pulsColorSwing,
+      this.iPulsAttr.array as Float32Array,
+      first,
+      end,
+    );
+    for (const name of STAR_STATIC_ATTRIBUTES) {
+      const attr = this.geometry.getAttribute(name) as THREE.InstancedBufferAttribute;
+      attr.addUpdateRange(first * attr.itemSize, (end - first) * attr.itemSize);
+      attr.needsUpdate = true;
+    }
+    this.geometry.instanceCount = end;
+    this.absorbedCount = end;
   }
 
   dispose() {

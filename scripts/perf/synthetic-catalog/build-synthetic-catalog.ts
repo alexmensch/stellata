@@ -11,6 +11,7 @@ import {
   APSIS_FIELDS,
   CATALOG_MANIFEST_FILENAME,
   HEADER_SIZE,
+  recordsOffset,
   MULTIPLICITY_SINGLE,
   NO_APSIS,
   NO_COMPANION,
@@ -80,10 +81,10 @@ function readSourceCatalog(dir: string): { buffer: ArrayBuffer; manifest: Catalo
   return { buffer: assembleCatalogChunks(chunks, manifest), manifest };
 }
 
-function decodeReal(view: DataView, count: number): RealRecordView[] {
+function decodeReal(view: DataView, base: number, count: number): RealRecordView[] {
   const out: RealRecordView[] = new Array(count);
   for (let i = 0; i < count; i++) {
-    const off = HEADER_SIZE + i * RECORD_SIZE;
+    const off = base + i * RECORD_SIZE;
     const xPc = readRecordField(view, off, 'x');
     const yPc = readRecordField(view, off, 'y');
     const zPc = readRecordField(view, off, 'z');
@@ -99,13 +100,17 @@ function decodeReal(view: DataView, count: number): RealRecordView[] {
   return out;
 }
 
-function buildPool(view: DataView, real: readonly RealRecordView[]): IntrinsicTuple[] {
+function buildPool(
+  view: DataView,
+  base: number,
+  real: readonly RealRecordView[],
+): IntrinsicTuple[] {
   const tuples: IntrinsicTuple[] = [];
   for (let i = 0; i < real.length; i++) {
     const r = real[i];
     if (r.distPc <= 0 || r.distPc > POOL_MAX_DIST_PC) continue;
     if (!Number.isFinite(r.absMag)) continue;
-    const off = HEADER_SIZE + i * RECORD_SIZE;
+    const off = base + i * RECORD_SIZE;
     tuples.push({
       absMag: r.absMag,
       ci: readRecordField(view, off, 'ci'),
@@ -199,8 +204,9 @@ function main(): void {
   const header = readCatalogHeader(buffer);
   console.log(`source: ${header.count} records, ${buffer.byteLength} bytes`);
 
-  const real = decodeReal(view, header.count);
-  const pool = buildIntrinsicPool(buildPool(view, real));
+  const srcBase = recordsOffset(header);
+  const real = decodeReal(view, srcBase, header.count);
+  const pool = buildIntrinsicPool(buildPool(view, srcBase, real));
   console.log(`intrinsic pool: ${pool.tuples.length} records within ${POOL_MAX_DIST_PC} pc`);
 
   const icrsToGal = new THREE.Matrix3().setFromMatrix4(GAL_TO_ICRS).transpose();
@@ -244,17 +250,19 @@ function main(): void {
   const nameTable = new Uint8Array(
     buffer.slice(header.nameTableOffset, header.nameTableOffset + header.nameTableLength),
   );
-  const outBuf = new ArrayBuffer(HEADER_SIZE + maxCount * RECORD_SIZE + nameTable.byteLength);
+  const outBase = HEADER_SIZE + nameTable.byteLength;
+  const outBuf = new ArrayBuffer(outBase + maxCount * RECORD_SIZE);
   const outView = new DataView(outBuf);
 
+  new Uint8Array(outBuf).set(nameTable, HEADER_SIZE);
   new Uint8Array(outBuf).set(
-    new Uint8Array(buffer, HEADER_SIZE, header.count * RECORD_SIZE),
-    HEADER_SIZE,
+    new Uint8Array(buffer, srcBase, header.count * RECORD_SIZE),
+    outBase,
   );
 
   let maxSid = 0;
   for (let i = 0; i < header.count; i++) {
-    const sid = readRecordField(view, HEADER_SIZE + i * RECORD_SIZE, 'sid');
+    const sid = readRecordField(view, srcBase + i * RECORD_SIZE, 'sid');
     if (sid > maxSid) maxSid = sid;
   }
 
@@ -302,7 +310,7 @@ function main(): void {
 
     p.set(dir[0] * distPc, dir[1] * distPc, dir[2] * distPc).applyMatrix3(galToIcrs);
     const con = conByCell[ci];
-    writeStarRecord(outView, HEADER_SIZE + (header.count + written) * RECORD_SIZE, {
+    writeStarRecord(outView, outBase + (header.count + written) * RECORD_SIZE, {
       x: p.x,
       y: p.y,
       z: p.z,
@@ -331,12 +339,10 @@ function main(): void {
   }
 
   const outCount = header.count + written;
-  const nameTableOffset = HEADER_SIZE + outCount * RECORD_SIZE;
-  const outBytes = nameTableOffset + nameTable.byteLength;
-  new Uint8Array(outBuf).set(nameTable, nameTableOffset);
+  const outBytes = outBase + outCount * RECORD_SIZE;
   writeCatalogHeader(outView, {
     count: outCount,
-    nameTableOffset,
+    nameTableOffset: HEADER_SIZE,
     nameTableLength: nameTable.byteLength,
   });
 

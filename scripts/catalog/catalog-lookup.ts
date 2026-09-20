@@ -12,8 +12,8 @@ import {
   NO_COMPANION,
   NO_CONSTELLATION_INDEX,
   PERIOD_DAYS_PER_UNIT,
-  HEADER_SIZE,
   RECORD_SIZE,
+  recordsOffset,
   CATALOG_MANIFEST_FILENAME,
   catalogChunkFilename,
   assembleCatalogChunks,
@@ -126,8 +126,10 @@ export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalo
   const constellations: ConstellationEntry[] = JSON.parse(conText);
   const nameAt = readNameTable(ab, nameTableOffset, nameTableLength);
 
+  const recordsBase = recordsOffset(header);
+
   function readRecord(i: number): CatalogRecord {
-    const off = HEADER_SIZE + i * RECORD_SIZE;
+    const off = recordsBase + i * RECORD_SIZE;
     const flags = readRecordField(view, off, 'flags');
     const nameOffset = readRecordField(view, off, 'nameOffset');
     const name = flags & FLAG_HAS_NAME ? nameAt.get(nameOffset) ?? null : null;

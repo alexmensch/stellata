@@ -58,6 +58,10 @@ export class StarCompaction {
    *  bound — its own node, not the one the finish kernel assigns through. */
   readonly refillDispatchNode: UintStorageNode;
 
+  /** The per-star kernel, held so its thread count can follow the decoded
+   *  record count. */
+  private readonly kernel: ComputeNode;
+
   private readonly renderer: WebGPURenderer;
   private readonly viewProjection = uniform(new Matrix4());
   /** 1 only while a readback is waiting for its dispatch — the counter it
@@ -145,6 +149,7 @@ export class StarCompaction {
       });
     })(), this.count);
     kernel.setName('star-compaction');
+    this.kernel = kernel;
     // README.md § The refill dispatch.
     const dispatchBuf = refillDispatchNodes.write;
     const copyCounts = compute(Fn(() => {
@@ -172,6 +177,23 @@ export class StarCompaction {
     finish.setName('star-compaction-refill-dispatch');
     this.kernels = [reset, kernel, copyCounts, finish];
     this.plainKernels = [reset, kernel];
+  }
+
+  /**
+   * Bound the per-star kernel to the records actually decoded. Three treats
+   * `ComputeNode.count` as a mutable field feeding both the dispatch size
+   * and an in-shader `instanceIndex >= count` guard delivered as a uniform,
+   * so this recompiles nothing and rebinds nothing.
+   *
+   * Without the bound an undecoded record is all-zero — position at Sol,
+   * absmag 0 — which passes the prefilter and the frustum test and lands
+   * several hundred thousand phantom bright stars in the disc list. The
+   * survivor buffer's own `tierListBase` keeps using the FULL count: the
+   * second tier's base is a fixed address, not a function of how many
+   * threads ran.
+   */
+  setLoadedCount(loaded: number): void {
+    this.kernel.count = Math.min(loaded, this.count);
   }
 
   /** The view-projection the kernel tested against on the last dispatch, as a

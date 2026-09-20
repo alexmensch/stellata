@@ -39,6 +39,8 @@ import {
   type SearchEntry,
   type CatalogManifest,
 } from './record/catalog-pure';
+import { apparentVFromSol } from './record/record-order-pure';
+import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   BUILD_COUNTS_EXPECTED_FILE,
   compareBuildCounts,
@@ -793,9 +795,16 @@ async function main() {
 
   counts.recordCount = stars.length;
 
-  // Sort by absolute magnitude ascending (brightest first). Record indices
-  // are final after this point.
-  stars.sort((a, b) => a.absmag - b.absmag);
+  // Sort by apparent V from Sol ascending (brightest-looking first), so any
+  // prefix of the record array is a usable sky and the transport chunks can
+  // stream one (record/README.md § Record order). Record indices are final
+  // after this point.
+  const keyed = stars.map((s) => ({
+    s,
+    v: apparentVFromSol(s, dustGrid ? avSolToStar(dustGrid, s.x, s.y, s.z) : 0),
+  }));
+  keyed.sort((a, b) => a.v - b.v);
+  for (let i = 0; i < keyed.length; i++) stars[i] = keyed[i].s;
 
   const hipToIndex = buildHipToIndex(stars);
 
@@ -1041,20 +1050,27 @@ async function main() {
 
   // Allocate output buffer.
   const recordsLength = stars.length * RECORD_SIZE;
-  const totalLength = HEADER_SIZE + recordsLength + nameTableLength;
+  const totalLength = HEADER_SIZE + nameTableLength + recordsLength;
   const out = new ArrayBuffer(totalLength);
   const view = new DataView(out);
   const bytes = new Uint8Array(out);
 
-  // Header.
+  // Header, then the name table, then the records — the order the first
+  // transport chunk needs to decode standalone (`record/README.md`
+  // § On-disk transport chunking).
   writeCatalogHeader(view, {
     count: stars.length,
-    nameTableOffset: HEADER_SIZE + recordsLength,
+    nameTableOffset: HEADER_SIZE,
     nameTableLength,
   });
 
-  // Records.
   let off = HEADER_SIZE;
+  for (const chunk of nameChunks) {
+    bytes.set(chunk, off);
+    off += chunk.length;
+  }
+
+  // Records.
   let solIndex = -1;
   const unclassifiedCon: number[] = [];
   let variableCount = 0;
@@ -1130,12 +1146,6 @@ async function main() {
       + `constellation; got ${unclassifiedCon.length}: `
       + `${unclassifiedCon.slice(0, 10).join(', ')}`,
     );
-  }
-
-  // Name table.
-  for (const chunk of nameChunks) {
-    bytes.set(chunk, off);
-    off += chunk.length;
   }
 
   if (off !== totalLength) {

@@ -56,6 +56,7 @@ export class StarLayer {
    *  `setMonochromeBlend` makes. */
   private readonly discMaterial: THREE.Material;
   private readonly glowMaterial: THREE.Material;
+  private readonly sources: StarLayerSources;
 
   constructor(
     renderer: WebGPURenderer,
@@ -67,6 +68,7 @@ export class StarLayer {
   ) {
     this.renderer = renderer;
     this.scene = scene;
+    this.sources = sources;
     this.tables = new StarTables(sources);
     this.colorLut = makeColorLutTexture();
     const deps: StarTslDeps = {
@@ -78,6 +80,7 @@ export class StarLayer {
     };
     this.compaction = new StarCompaction(
       renderer, deps, STAR_QUAD_INDEX_COUNT, extinction.refill);
+    this.compaction.setLoadedCount(sources.catalog.loadedCount);
     this.geometries = buildStarGeometries(
       this.tables.count, sources.boundingSphereRadiusPc, this.compaction.args);
     const listSource = (tier: StarTier): StarVertexSource => ({
@@ -159,6 +162,12 @@ export class StarLayer {
     this.tables.syncSources();
     this.compaction.dispatch(camera);
     this.tables.endFrame();
+  }
+
+  /** seam.ts § absorbRecords. */
+  absorbRecords(): void {
+    this.tables.absorbRecords();
+    this.compaction.setLoadedCount(this.sources.catalog.loadedCount);
   }
 
   /** compaction/README.md § Reading the counts back. */

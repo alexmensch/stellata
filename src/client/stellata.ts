@@ -203,7 +203,7 @@ import {
   type EclipseRelationDebugRow,
 } from './binaries/eclipse/eclipse-photometry';
 import { type BinariesData } from './binaries/binaries-loader';
-import { buildPulsationSuppressMask } from './star-pipeline/pulsation/pulsation-suppress-pure';
+import { writePulsationSuppressMask } from './star-pipeline/pulsation/pulsation-suppress-pure';
 
 export interface StellataOptions {
   canvas: HTMLCanvasElement;
@@ -309,6 +309,11 @@ export class Stellata implements FrameAnchor {
   // (varType == ECLIPSING). Built once at catalog-load (binary-independent).
   // See src/client/binaries/eclipse/README.md § Pulsation gate for eclipsing binaries.
   private _suppressPulsation: Float32Array;
+  /** Records already folded into `_suppressPulsation` — the mask is written
+   *  in place so the attribute bound over it keeps its array. */
+  private absorbedSuppressCount = 0;
+  /** Unsubscribe from the catalog's chunk-decode fan-out. */
+  private offCatalogRecords: (() => void) | null = null;
   // Lazily attached when main.ts loads public/binaries.bin. Null until
   // then — the renderer functions identically with the static catalog
   // positions; binary orbital evolution simply doesn't fire.
@@ -646,7 +651,7 @@ export class Stellata implements FrameAnchor {
     this._eclipseDim = new Float32Array(catalog.count).fill(1);
     // Built here (not attachBinaries) because the gate is varType-driven
     // and binary-independent; see the field declaration for the rationale.
-    this._suppressPulsation = buildPulsationSuppressMask(catalog.varType);
+    this._suppressPulsation = new Float32Array(catalog.count);
 
     this.starPipeline = new StarPipeline({
       scene: this.webgpu === null ? this.scene : null,
@@ -680,6 +685,13 @@ export class Stellata implements FrameAnchor {
       iEclipseDimAttr: this.starPipeline.iEclipseDimAttr,
       iSuppressPulsationAttr: this.starPipeline.iSuppressPulsationAttr,
     }) ?? null;
+
+    // Chunk 0 is already decoded and both pipelines were constructed
+    // against it, so this first call folds it in; every later one follows a
+    // landing chunk.
+    this.offCatalogRecords = this.catalog.onRecordsDecoded(
+      () => this.absorbCatalogRecords());
+    this.absorbCatalogRecords();
 
     // Shared uniforms passed by reference so floating-origin recenters,
     // resize updates, and dust loads propagate to the particle pass
@@ -1057,13 +1069,6 @@ export class Stellata implements FrameAnchor {
       frustum: new FrameFrustum(),
       exposure: null,
     };
-    // Catalog-wide constant: the fastest pulsating variable bounds how
-    // long any frame may idle before some star's brightness moves a JND.
-    // Allowed to be a constant only because it does not bind — see
-    // `pulsationCadenceBudgetS`.
-    this.pulsationCadenceBudgetS = pulsationCadenceBudgetS(
-      catalog.periodDays, catalog.amplitudeMag, this._suppressPulsation,
-    );
     this.registerSceneLayers();
     // Seed the declutter cycle so the imperative-push layers receive their
     // initial permission. `detailPermitted` starts all-true for the
@@ -1658,6 +1663,43 @@ export class Stellata implements FrameAnchor {
     // attenuation shows the actual Edenhofer voxel structure (Great Rift,
     // Coalsack, etc.) rather than only the analytic slab.
     this.milkyway.attachDust(dust);
+  }
+
+  /**
+   * Fold a landing transport chunk's records into everything derived from
+   * the catalogue, in dependency order, and wake the frame.
+   *
+   * Registered against `catalog.onRecordsDecoded` by the constructor, so the
+   * shell never polls. The order matters: the star frame advances the new
+   * records to the model epoch and rewrites the local-position buffer, and
+   * only then do the GPU tables have current values to interleave.
+   *
+   * The render gate invalidation is not optional — a settled camera draws no
+   * frame, so without it the newly-decoded stars would not appear until the
+   * user moved.
+   */
+  private absorbCatalogRecords(): void {
+    writePulsationSuppressMask(
+      this.catalog.varType,
+      this._suppressPulsation,
+      this.absorbedSuppressCount,
+      this.catalog.loadedCount,
+    );
+    this.absorbedSuppressCount = this.catalog.loadedCount;
+    uploadFull(this.starPipeline.iSuppressPulsationAttr);
+
+    this.starFrame.absorbRecords();
+    this.starPipeline.absorbRecords();
+    this.webgpuStarLayer?.absorbRecords();
+    this.extinctionPrepass?.markDirty();
+
+    // The fastest pulsating variable bounds how long any frame may idle
+    // before some star's brightness moves a JND, so a chunk carrying a
+    // faster one has to shorten the budget.
+    this.pulsationCadenceBudgetS = pulsationCadenceBudgetS(
+      this.catalog.periodDays, this.catalog.amplitudeMag, this._suppressPulsation,
+    );
+    this.renderGate.invalidate('catalog-chunk');
   }
 
   /** Numeric check that streamed dust really is in the volume texture where
@@ -3028,6 +3070,8 @@ export class Stellata implements FrameAnchor {
 
   dispose() {
     this.disposed = true;
+    this.offCatalogRecords?.();
+    this.offCatalogRecords = null;
     this.observePinQuat.set(Number.NaN, 0, 0, 0);
     window.removeEventListener('resize', this.onResize);
     this.renderGate.dispose();

@@ -4,18 +4,19 @@ import {
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
   NO_COMPANION,
-  catalogChunkFilename,
-  assembleCatalogChunks,
   decodeRecordColumn,
   decodeRecordColumnBig,
   readCatalogHeader,
   readNameTable,
+  recordsOffset,
   AMP_MAG_PER_UNIT,
   PERIOD_DAYS_PER_UNIT,
   type DecodeRecordColumnOptions,
   type CatalogManifest,
+  type RecordSpan,
 } from '../../../scripts/catalog/record/catalog-pure';
-import { buildPulsationParams } from '../star-pipeline/pulsation/pulsation-params-pure';
+import { chunkRecordSpan, startChunkFetches } from './catalog-progressive';
+import { writePulsationParams } from '../star-pipeline/pulsation/pulsation-params-pure';
 
 export interface Constellation {
   code: string;
@@ -27,7 +28,17 @@ export interface Constellation {
 }
 
 export interface Catalog {
+  /** Every record the artifact holds. Array lengths are fixed against this
+   *  from the first chunk, so nothing downstream reallocates as the tail
+   *  arrives. */
   count: number;
+  /** Records decoded so far — a prefix of `count`, growing as transport
+   *  chunks land, and equal to `count` once `whenComplete` settles. Records
+   *  are apparent-brightness ordered, so the prefix is always the
+   *  brightest-looking sky rather than an arbitrary subset. Anything that
+   *  walks the catalogue during load bounds itself here; past it the arrays
+   *  hold zeros, and a zero position is Sol's own. */
+  loadedCount: number;
   positions: Float32Array;       // length = count * 3
   // Space-motion velocity, equatorial Cartesian pc/yr (Sol at origin).
   // length = count * 3. Consumed once at load by the epoch-advance pass
@@ -94,6 +105,18 @@ export interface Catalog {
   // (docs/sid.md § 9.4). Empty until a merge-type retirement ships. Fed to
   // the SID resolver so retired wire sids resolve to their successor.
   sidSuccessors: ReadonlyMap<number, number>;
+  /** Called after each chunk's records decode, with the window that just
+   *  landed. Returns its own unsubscribe. */
+  onRecordsDecoded(listener: (span: DecodedSpan) => void): () => void;
+  /** Settles when `loadedCount === count`. Rejects if any chunk fails, so a
+   *  caller awaiting the full catalogue sees the same error boot would. */
+  readonly whenComplete: Promise<void>;
+}
+
+/** The half-open record window one chunk's decode filled. */
+export interface DecodedSpan {
+  first: number;
+  end: number;
 }
 
 export interface LoadProgress {
@@ -101,81 +124,102 @@ export interface LoadProgress {
   total: number;
 }
 
+/** Resolves once the FIRST transport chunk has decoded, with the rest still
+ *  in flight — boot paints off the returned prefix and the catalogue fills
+ *  behind it (`./README.md` § Progressive catalog load). Await
+ *  `catalog.whenComplete` for the whole population. */
 export async function loadCatalog(
   manifestUrl: string,
   conUrl: string,
   onProgress?: (p: LoadProgress) => void,
 ): Promise<Catalog> {
-  const [{ binBuf, manifest }, constellations] = await Promise.all([
-    fetchCatalogChunks(manifestUrl, onProgress),
+  const [manifest, constellations] = await Promise.all([
+    fetchManifest(manifestUrl),
     fetch(conUrl).then((r) => r.json() as Promise<Constellation[]>),
   ]);
-
-  return parseBinary(binBuf, constellations, manifest.sidSuccessors);
-}
-
-async function fetchCatalogChunks(
-  manifestUrl: string,
-  onProgress?: (p: LoadProgress) => void,
-): Promise<{ binBuf: ArrayBuffer; manifest: CatalogManifest }> {
-  const mres = await fetch(manifestUrl);
-  if (!mres.ok) throw new Error(`Failed to load ${manifestUrl}: ${mres.status}`);
-  const manifest = (await mres.json()) as CatalogManifest;
 
   // Chunk URLs are siblings of the manifest — same directory prefix, name
   // from the shared `catalogChunkFilename` so client + writer agree.
   const dirUrl = manifestUrl.slice(0, manifestUrl.lastIndexOf('/') + 1);
+  const assembled = new Uint8Array(manifest.totalBytes);
   let loaded = 0;
   const report = onProgress
     ? (delta: number) => {
-        loaded += delta;
-        onProgress({ bytes: loaded, total: manifest.totalBytes });
-      }
+      loaded += delta;
+      onProgress({ bytes: loaded, total: manifest.totalBytes });
+    }
     : undefined;
-  const chunks = await Promise.all(
-    manifest.chunkBytes.map((byteLength, i) =>
-      fetchCatalogChunk(dirUrl + catalogChunkFilename(i), byteLength, report),
-    ),
-  );
+  const fetches = startChunkFetches({ dirUrl, manifest, into: assembled, onBytes: report });
 
-  return { binBuf: assembleCatalogChunks(chunks, manifest), manifest };
+  await fetches[0];
+  const catalog = beginCatalog(assembled.buffer, constellations, manifest);
+  // Resolve on the first chunk that carries a whole record, not merely on
+  // chunk 0: the header and the name table precede the records, so on a
+  // small artifact chunk 0 can decode to nothing and boot would have no
+  // star to paint.
+  let next = 1;
+  while (catalog.loadedCount === 0 && next < fetches.length) {
+    await fetches[next];
+    catalog.absorbChunk(next);
+    next++;
+  }
+  const from = next;
+  catalog.settleOn((async () => {
+    for (let i = from; i < fetches.length; i++) {
+      await fetches[i];
+      catalog.absorbChunk(i);
+    }
+  })());
+  return catalog;
 }
 
-async function fetchCatalogChunk(
-  url: string,
-  byteLength: number,
-  onBytes?: (delta: number) => void,
-): Promise<Uint8Array> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
-  if (!res.body || !onBytes) return new Uint8Array(await res.arrayBuffer());
-
-  // Stream so the loading bar advances mid-chunk, not once per finished file.
-  // out is pre-sized from the manifest, so a truncated response would silently
-  // zero-pad and pass assembly's length check — the short-read guard rejects it.
-  const out = new Uint8Array(byteLength);
-  const reader = res.body.getReader();
-  let off = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    out.set(value, off);
-    off += value.byteLength;
-    onBytes(value.byteLength);
-  }
-  if (off !== byteLength) {
-    throw new Error(`Catalog chunk short read at ${url}: got ${off}, expected ${byteLength}`);
-  }
-  return out;
+async function fetchManifest(manifestUrl: string): Promise<CatalogManifest> {
+  const res = await fetch(manifestUrl);
+  if (!res.ok) throw new Error(`Failed to load ${manifestUrl}: ${res.status}`);
+  return (await res.json()) as CatalogManifest;
 }
 
+/** A fully-decoded catalogue from one assembled buffer — the Node readers
+ *  and every test that has all the bytes already. Boot goes through
+ *  `loadCatalog` instead, which decodes chunk by chunk. */
 export function parseBinary(
   ab: ArrayBuffer,
   constellations: Constellation[],
   sidSuccessorPairs: readonly [number, number][] = [],
 ): Catalog {
+  const catalog = beginCatalog(ab, constellations, { sidSuccessors: sidSuccessorPairs });
+  catalog.decodeTo(catalog.count);
+  catalog.settleOn(Promise.resolve());
+  return catalog;
+}
+
+interface GrowingCatalog extends Catalog {
+  /** Decode every record the given chunk index completes. */
+  absorbChunk(index: number): void;
+  /** Decode forward to `end`, whatever chunk boundary it came from. */
+  decodeTo(end: number): void;
+  /** Bind `whenComplete` to the caller's chunk walk. */
+  settleOn(rest: Promise<void>): void;
+}
+
+/** What `beginCatalog` needs off the manifest: the chunk plan when there is
+ *  one to decode against, and the successor pairs either way. A whole-buffer
+ *  caller passes no chunk plan and decodes with `decodeTo`. */
+interface CatalogSource {
+  chunkBytes?: number[];
+  totalBytes?: number;
+  sidSuccessors?: readonly [number, number][];
+}
+
+function beginCatalog(
+  ab: ArrayBuffer,
+  constellations: Constellation[],
+  manifest: CatalogSource,
+): GrowingCatalog {
   const view = new DataView(ab);
-  const { count, nameTableOffset, nameTableLength } = readCatalogHeader(ab);
+  const header = readCatalogHeader(ab);
+  const { count, nameTableOffset, nameTableLength } = header;
+  const offset = recordsOffset(header);
 
   const positions = new Float32Array(count * 3);
   const velocities = new Float32Array(count * 3);
@@ -196,60 +240,69 @@ export function parseBinary(
   const multiplicityStatus = new Uint8Array(count);
   const apsis = {} as Record<ApsisField, Float32Array>;
   for (const name of APSIS_FIELDS) apsis[name] = new Float32Array(count);
-  // Name resolution needs the table, which sits past the records, so the
-  // per-record offsets are parked here and joined after the columns land.
   const nameOffsetArr = new Uint32Array(count);
   const companionRaw = new Uint32Array(count);
-
-  const column = (
-    field: Parameters<typeof decodeRecordColumn>[2],
-    out: Parameters<typeof decodeRecordColumn>[3],
-    opts?: DecodeRecordColumnOptions,
-  ) => decodeRecordColumn(view, count, field, out, opts);
-
-  column('x', positions, { stride: 3, component: 0 });
-  column('y', positions, { stride: 3, component: 1 });
-  column('z', positions, { stride: 3, component: 2 });
-  column('vx', velocities, { stride: 3, component: 0 });
-  column('vy', velocities, { stride: 3, component: 1 });
-  column('vz', velocities, { stride: 3, component: 2 });
-  column('absmag', absmag);
-  column('ci', ci);
-  column('physRadius', physicalRadius);
-  column('companion', companionRaw);
-  column('nameOffset', nameOffsetArr);
-  column('spectClass', spectClass);
-  column('lumClass', luminosityClass);
-  column('conIndex', constellation);
-  column('flags', flags);
-  column('varType', varType);
-  column('ampUnits', amplitudeMag, { scale: AMP_MAG_PER_UNIT });
-  column('period', periodDays, { scale: PERIOD_DAYS_PER_UNIT });
-  column('hip', hip);
-  column('sid', sid);
-  column('multiplicityStatus', multiplicityStatus);
-  for (const name of APSIS_FIELDS) column(name, apsis[name]);
-  decodeRecordColumnBig(view, count, 'gaiaSourceId', gaiaSourceId);
-
-  let solIndex = -1;
-  for (let i = 0; i < count; i++) {
-    companion[i] = companionRaw[i] === NO_COMPANION ? -1 : companionRaw[i];
-    if (flags[i] & FLAG_IS_SOL) solIndex = i;
-  }
-
-  const { rho: pulsRho, colorSwing: pulsColorSwing } = buildPulsationParams(varType);
+  const pulsRho = new Float32Array(count);
+  const pulsColorSwing = new Float32Array(count);
+  // Zero decodes as "my companion is record 0", not as absent, so the
+  // undecoded tail is seeded with the real sentinel rather than a live
+  // reference into the prefix.
+  companion.fill(-1);
 
   const names = new Map<number, string>();
   const offsetToName = readNameTable(ab, nameTableOffset, nameTableLength);
-  for (let i = 0; i < count; i++) {
-    if (flags[i] & FLAG_HAS_NAME) {
-      const name = offsetToName.get(nameOffsetArr[i]);
-      if (name) names.set(i, name);
-    }
-  }
 
-  return {
+  const listeners = new Set<(span: DecodedSpan) => void>();
+  let loadedCount = 0;
+  let solIndex = -1;
+
+  const decodeSpan = (first: number, end: number): void => {
+    if (end <= first) return;
+    const span: RecordSpan = { offset, first, end };
+    const column = (
+      field: Parameters<typeof decodeRecordColumn>[2],
+      out: Parameters<typeof decodeRecordColumn>[3],
+      opts?: DecodeRecordColumnOptions,
+    ) => decodeRecordColumn(view, span, field, out, opts);
+
+    column('x', positions, { stride: 3, component: 0 });
+    column('y', positions, { stride: 3, component: 1 });
+    column('z', positions, { stride: 3, component: 2 });
+    column('vx', velocities, { stride: 3, component: 0 });
+    column('vy', velocities, { stride: 3, component: 1 });
+    column('vz', velocities, { stride: 3, component: 2 });
+    column('absmag', absmag);
+    column('ci', ci);
+    column('physRadius', physicalRadius);
+    column('companion', companionRaw);
+    column('nameOffset', nameOffsetArr);
+    column('spectClass', spectClass);
+    column('lumClass', luminosityClass);
+    column('conIndex', constellation);
+    column('flags', flags);
+    column('varType', varType);
+    column('ampUnits', amplitudeMag, { scale: AMP_MAG_PER_UNIT });
+    column('period', periodDays, { scale: PERIOD_DAYS_PER_UNIT });
+    column('hip', hip);
+    column('sid', sid);
+    column('multiplicityStatus', multiplicityStatus);
+    for (const name of APSIS_FIELDS) column(name, apsis[name]);
+    decodeRecordColumnBig(view, span, 'gaiaSourceId', gaiaSourceId);
+
+    for (let i = first; i < end; i++) {
+      if (companionRaw[i] !== NO_COMPANION) companion[i] = companionRaw[i];
+      if (flags[i] & FLAG_IS_SOL) solIndex = i;
+      if (flags[i] & FLAG_HAS_NAME) {
+        const name = offsetToName.get(nameOffsetArr[i]);
+        if (name) names.set(i, name);
+      }
+    }
+    writePulsationParams(varType, pulsRho, pulsColorSwing, first, end);
+  };
+
+  const catalog: GrowingCatalog = {
     count,
+    get loadedCount() { return loadedCount; },
     positions,
     velocities,
     absmag,
@@ -271,8 +324,48 @@ export function parseBinary(
     multiplicityStatus,
     ...apsis,
     names,
-    solIndex,
+    get solIndex() { return solIndex; },
     constellations,
-    sidSuccessors: new Map(sidSuccessorPairs),
+    sidSuccessors: new Map(manifest.sidSuccessors ?? []),
+    whenComplete: Promise.resolve(),
+
+    onRecordsDecoded(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+
+    decodeTo(end) {
+      const first = loadedCount;
+      if (end <= first) return;
+      decodeSpan(first, end);
+      loadedCount = end;
+      for (const listener of listeners) listener({ first, end });
+    },
+
+    absorbChunk(index) {
+      if (!manifest.chunkBytes) throw new Error('absorbChunk needs a chunked manifest');
+      catalog.decodeTo(
+        chunkRecordSpan(manifest as CatalogManifest, index, offset, count).end,
+      );
+    },
+
+    settleOn(rest) {
+      // Writable only here: the interface exposes it readonly so a consumer
+      // cannot swap the promise the boot sequence is gated on.
+      (catalog as { whenComplete: Promise<void> }).whenComplete = rest.then(() => {
+        if (loadedCount !== count) {
+          throw new Error(
+            `Catalog load settled at ${loadedCount} of ${count} records`,
+          );
+        }
+      });
+    },
   };
+
+  catalog.decodeTo(
+    manifest.chunkBytes
+      ? chunkRecordSpan(manifest as CatalogManifest, 0, offset, count).end
+      : 0,
+  );
+  return catalog;
 }

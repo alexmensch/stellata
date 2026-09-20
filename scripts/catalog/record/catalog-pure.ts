@@ -375,8 +375,12 @@ export function isPlanetaryTransitOnly(rawType: string | null | undefined): bool
 //
 // File structure:
 //   [0,                       HEADER_SIZE)                              header
-//   [HEADER_SIZE,             HEADER_SIZE + count*RECORD_SIZE)          records
-//   [HEADER_SIZE + count*RECORD_SIZE,                       end)        name table
+//   [nameTableOffset,         nameTableOffset + nameTableLength)        name table
+//   [recordsOffset(header),                                 end)        records
+//
+// The name table precedes the records so the first transport chunk decodes
+// standalone: a progressive load paints its prefix with real names rather
+// than composed designations (see § On-disk transport chunking).
 //
 // HEADER_LAYOUT / RECORD_LAYOUT below carry the per-field byte offsets;
 // HEADER_FIELD_KINDS / RECORD_FIELD_KINDS carry the matching wire types
@@ -385,8 +389,8 @@ export function isPlanetaryTransitOnly(rawType: string | null | undefined): bool
 // offset and kind, and the writer + reader + tests pick the change up
 // automatically.
 
-export const MAGIC = 'HYG9';
-export const BINARY_VERSION = 9;
+export const MAGIC = 'HYGA';
+export const BINARY_VERSION = 10;
 export const HEADER_SIZE = 32;
 export const RECORD_SIZE = 100;
 // Bytes 97..99 are reserved (zero-filled): the v9 multiplicityStatus uint8
@@ -425,6 +429,12 @@ export const CATALOG_MANIFEST_FILENAME = 'catalog-manifest.json';
 // headroom — do not raise toward 25 or a fuller catalog breaks deploy.
 export const CATALOG_CHUNK_TARGET_BYTES = 16 * 1024 * 1024;
 
+// Chunk 0 is the first-paint payload, not a transport unit, so it is sized
+// for latency rather than against the Workers ceiling. Flattening the ramp
+// to CATALOG_CHUNK_TARGET_BYTES to save requests costs first paint an order
+// of magnitude — see ./README.md § On-disk transport chunking.
+export const CATALOG_FIRST_CHUNK_TARGET_BYTES = 1024 * 1024;
+
 export interface CatalogManifest {
   /** Byte length of each chunk in `catalog.bin.<i>` order. */
   chunkBytes: number[];
@@ -440,20 +450,43 @@ export function catalogChunkFilename(index: number): string {
   return `catalog.bin.${index}`;
 }
 
-/** Split a total byte length into sequential per-chunk lengths, each
- *  ≤ targetBytes. A zero-length buffer yields one empty chunk so the
- *  manifest always carries ≥1 entry. */
+/** Split a total byte length into sequential per-chunk lengths, doubling
+ *  from `firstBytes` up to a `targetBytes` ceiling. A zero-length buffer
+ *  yields one empty chunk so the manifest always carries ≥1 entry. */
 export function planCatalogChunks(
   totalBytes: number,
   targetBytes: number = CATALOG_CHUNK_TARGET_BYTES,
+  firstBytes: number = CATALOG_FIRST_CHUNK_TARGET_BYTES,
 ): number[] {
   if (targetBytes <= 0) throw new Error(`Invalid chunk target: ${targetBytes}`);
+  if (firstBytes <= 0) throw new Error(`Invalid first-chunk target: ${firstBytes}`);
   if (totalBytes <= 0) return [0];
   const chunkBytes: number[] = [];
-  for (let off = 0; off < totalBytes; off += targetBytes) {
-    chunkBytes.push(Math.min(targetBytes, totalBytes - off));
+  let step = Math.min(firstBytes, targetBytes);
+  for (let off = 0; off < totalBytes; off += step, step = Math.min(step * 2, targetBytes)) {
+    chunkBytes.push(Math.min(step, totalBytes - off));
   }
   return chunkBytes;
+}
+
+/** Byte offset chunk `index` lands at in the assembled buffer. */
+export function catalogChunkOffset(chunkBytes: readonly number[], index: number): number {
+  let off = 0;
+  for (let i = 0; i < index; i++) off += chunkBytes[i];
+  return off;
+}
+
+/** How many records the first `chunkCount` chunks fully contain, given the
+ *  buffer offset record 0 sits at. A record straddling the boundary belongs
+ *  to the later chunk, so this never reports one the prefix cannot decode. */
+export function recordsInChunkPrefix(
+  chunkBytes: readonly number[],
+  chunkCount: number,
+  offset: number,
+  count: number,
+): number {
+  const bytes = catalogChunkOffset(chunkBytes, chunkCount);
+  return Math.max(0, Math.min(count, Math.floor((bytes - offset) / RECORD_SIZE)));
 }
 
 /** Concatenate transport chunks back into the assembled buffer, validating
@@ -707,38 +740,54 @@ export interface DecodeRecordColumnOptions {
   scale?: number;
 }
 
-/** Decode one field across all `count` records into a parallel array — the
+/** The half-open record window a bulk decode covers, against the buffer
+ *  offset record 0 sits at. The progressive loader decodes one chunk's
+ *  window at a time; a whole-buffer read passes `{ offset, first: 0, end:
+ *  count }`. */
+export interface RecordSpan {
+  offset: number;
+  first: number;
+  end: number;
+}
+
+export function wholeRecordSpan(
+  header: Pick<CatalogHeaderFields, 'count' | 'nameTableOffset' | 'nameTableLength'>,
+): RecordSpan {
+  return { offset: recordsOffset(header), first: 0, end: header.count };
+}
+
+/** Decode one field across a record window into a parallel array — the
  *  bulk counterpart of `readRecordField` for the SoA runtime loader.
  *  Column-at-a-time (one kind dispatch per column, then a tight
  *  constant-getter loop) decodes the 390k-record catalog measurably faster
  *  than a per-record pass over every field. */
 export function decodeRecordColumn(
   view: DataView,
-  count: number,
+  { offset, first, end }: RecordSpan,
   field: NumericRecordField,
   out: RecordColumnSink,
   { stride = 1, component = 0, scale = 1 }: DecodeRecordColumnOptions = {},
 ): void {
-  const base = HEADER_SIZE + RECORD_LAYOUT[field];
+  const base = offset + RECORD_LAYOUT[field];
   const kind: FieldKind = RECORD_FIELD_KINDS[field];
   switch (kind) {
     case 'f32':
-      for (let i = 0; i < count; i++) {
+      for (let i = first; i < end; i++) {
         out[i * stride + component] = view.getFloat32(base + i * RECORD_SIZE, true) * scale;
       }
       return;
     case 'u8':
-      for (let i = 0; i < count; i++) {
+      for (let i = first; i < end; i++) {
         out[i * stride + component] = view.getUint8(base + i * RECORD_SIZE) * scale;
       }
       return;
     case 'u16':
-      for (let i = 0; i < count; i++) {
+      for (let i = first; i < end; i++) {
         out[i * stride + component] = view.getUint16(base + i * RECORD_SIZE, true) * scale;
       }
       return;
     case 'u32':
-      for (let i = 0; i < count; i++) {
+      for (let i = first; i < end; i++) {
         out[i * stride + component] = view.getUint32(base + i * RECORD_SIZE, true) * scale;
       }
       return;
@@ -750,12 +799,12 @@ export function decodeRecordColumn(
 /** `decodeRecordColumn` for the u64 fields. */
 export function decodeRecordColumnBig(
   view: DataView,
-  count: number,
+  { offset, first, end }: RecordSpan,
   field: BigRecordField,
   out: BigUint64Array,
 ): void {
-  const base = HEADER_SIZE + RECORD_LAYOUT[field];
-  for (let i = 0; i < count; i++) {
+  const base = offset + RECORD_LAYOUT[field];
+  for (let i = first; i < end; i++) {
     out[i] = view.getBigUint64(base + i * RECORD_SIZE, true);
   }
 }
@@ -788,6 +837,14 @@ export function readCatalogHeader(buffer: ArrayBuffer): CatalogHeaderFields {
     nameTableOffset: view.getUint32(HEADER_LAYOUT.nameTableOffset, true),
     nameTableLength: view.getUint32(HEADER_LAYOUT.nameTableLength, true),
   };
+}
+
+/** Byte offset of record 0. Every reader derives it rather than assuming a
+ *  constant, so the name table can sit ahead of the records. */
+export function recordsOffset(
+  header: Pick<CatalogHeaderFields, 'nameTableOffset' | 'nameTableLength'>,
+): number {
+  return header.nameTableOffset + header.nameTableLength;
 }
 
 // Name table layout: two zero bytes of padding so name offset 0 reads as

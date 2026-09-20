@@ -43,14 +43,19 @@ export function advancePositionsToEpoch(
   velocities: Float32Array,
   epochJyr: number,
   outPositions: Float32Array = basePositions,
+  first = 0,
+  end = basePositions.length / 3,
 ): void {
   const dt = epochJyr - CATALOG_SCENE_EPOCH_JYR;
-  const n = basePositions.length;
+  const lo = first * 3;
+  const hi = end * 3;
   if (dt === 0) {
-    if (outPositions !== basePositions) outPositions.set(basePositions);
+    if (outPositions !== basePositions) {
+      outPositions.set(basePositions.subarray(lo, hi), lo);
+    }
     return;
   }
-  for (let i = 0; i < n; i++) {
+  for (let i = lo; i < hi; i++) {
     outPositions[i] = basePositions[i] + velocities[i] * dt;
   }
 }
@@ -83,9 +88,13 @@ export function writeAdvancedLocal(
 /** Largest space-motion speed (pc/yr) in a flat `count × 3` velocity
  *  buffer. Bounds how far any star can drift from its load-epoch
  *  position over the scrubbable range. */
-export function maxSpeedPcPerYr(velocities: Float32Array): number {
+export function maxSpeedPcPerYr(
+  velocities: Float32Array,
+  first = 0,
+  end = velocities.length / 3,
+): number {
   let maxSq = 0;
-  for (let i = 0; i < velocities.length; i += 3) {
+  for (let i = first * 3; i < end * 3; i += 3) {
     const vx = velocities[i];
     const vy = velocities[i + 1];
     const vz = velocities[i + 2];

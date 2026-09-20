@@ -1,7 +1,8 @@
 # Catalog record — the on-disk contract
 
-The shapes the build writes and the runtime reads: the v9 `catalog.bin` record
-layout with both directions of its codec, the transport chunk plan, and the
+The shapes the build writes and the runtime reads: the v10 `catalog.bin` record
+layout with both directions of its codec, the record order, the transport chunk
+plan, and the
 `search-index.json` wire entry. `catalog-pure.ts` is the single statement of
 all three, which is why every subfolder and `src/client/loaders/` import it and
 it imports back from none of them but `../parse/corpus-tsv.ts` and
@@ -11,7 +12,7 @@ it imports back from none of them but `../parse/corpus-tsv.ts` and
 
 ```
 scripts/catalog/record/
-  catalog-pure.ts (+ test)        The v9 binary layout and its codec, the
+  catalog-pure.ts (+ test)        The v10 binary layout and its codec, the
                                   chunk plan, the SearchEntry wire shape, the
                                   aliased-id index the runtime dispatches
                                   search on, the override math the distance
@@ -20,13 +21,53 @@ scripts/catalog/record/
                                   index and join through
                                   (`../spectral/README.md` § The ladder is
                                   ordered by what an identifier names). Pure.
+  record-order-pure.ts (+ test)   `apparentVFromSol` — the key the build sorts
+                                  records on. Pure. § Record order.
 ```
+
+## Record order
+
+Records are sorted by **apparent V from Sol at J2016.0, brightest first**, in
+one line of `../build-catalog.ts`; indices are final after it. The key is
+`apparentVFromSol` in `record-order-pure.ts`: the stored `absmag` is intrinsic,
+so the Sol→star A_V the build subtracted is added back before the distance
+modulus, and a reddened star sorts as faint as it looks.
+
+**The order is load-bearing, not cosmetic.** Any prefix of the record array is
+then the brightest-looking sky, which is exactly what the progressive load
+paints from its first transport chunk (§ On-disk transport chunking,
+`src/client/loaders/README.md` § Progressive catalog load). It also puts Sol at
+index 0 by some twenty-two magnitudes — and `catalog.solIndex` gates the boot
+focus, the floating-origin seed and the whole solar system, none of which could
+exist in a prefix under the absolute-magnitude order this replaced.
+
+The order is Sol-relative and epoch-fixed, which is a claim about **transport**
+and nothing else. Every record arrives regardless, so a camera deep-linked to
+the LMC simply fills in from a different direction than the ordering favours;
+no render decision reads it.
+
+Three consequences for anything addressing a record by index:
+
+- **Every cross-artifact index reference moves with it** — `binaries.bin`
+  `primary_idx` / `secondary_idx`, `constellations.json` `lines[][]`,
+  `search-index.json` `i`, the in-record `companionIdx`, and
+  `catalog-row-index-map.json`. All are emitted by this same build, so they
+  stay consistent by construction; anything generated out of band does not.
+- **First-seen-wins collisions resolve differently.** `hipToIndex` and the
+  typeahead's HD / HR / Gliese maps take the first record carrying a number,
+  which now means the *apparently* brighter component rather than the
+  intrinsically brighter one (`src/client/typeahead/README.md`).
+- **Stellata IDs are unaffected** — they are frozen per object, so shared v4
+  links survive any reorder (docs/sid.md). Legacy v1–v3 raw-index links were
+  already best-effort across a rebuild.
 
 ## Binary catalog format (`public/catalog.bin.<i>` + manifest)
 
-Fixed-size records, sorted brightest-first by `absmag`. Current version is
-**v9** with a 100-byte stride. Magic and version step together
-(v3=`HYG3` … v8=`HYG8`, v9=`HYG9`). v9 appended a `uint8`
+Fixed-size records in apparent-V order (§ Record order). Current version is
+**v10** with a 100-byte stride. Magic and version step together
+(v3=`HYG3` … v9=`HYG9`, v10=`HYGA` — the field is four ASCII bytes, so v10
+takes the next character rather than a second digit). v10 moved the name table
+ahead of the records and changed no record byte; v9 appended a `uint8`
 `multiplicity_status` at byte 96 (bytes 97–99 reserved, zero-filled, so
 the stride stays a multiple of 4) — see `../multiplicity/README.md` § Multiplicity status. v8
 appended three `float32` space-motion velocity components (`vx/vy/vz`,
@@ -42,12 +83,16 @@ keyed by the v5 `gaia_source_id` field — see § Gaia DR3 Apsis surfacing
 for its coverage and the runtime colour-LUT re-key it enables.
 
 - Header (32 bytes)
-  - 0–3   ASCII `HYG9`
-  - 4–7   `uint32` version (currently 9)
+  - 0–3   ASCII `HYGA`
+  - 4–7   `uint32` version (currently 10)
   - 8–11  `uint32` count
-  - 12–15 `uint32` nameTableOffset
+  - 12–15 `uint32` nameTableOffset (= `HEADER_SIZE`; readers indirect through
+                          the field rather than assuming it)
   - 16–19 `uint32` nameTableLength
   - 20–31 reserved
+- Name table, then records. **Record 0 starts at
+  `nameTableOffset + nameTableLength`**, which `recordsOffset(header)` is the
+  single statement of — no reader adds `HEADER_SIZE` to reach a record.
 - Record (100 bytes per star)
   - 0–11  `float32 × 3`  x, y, z in parsecs (equatorial, Sol at origin)
   - 12–15 `float32`      absmag — **intrinsic** (de-extincted). The build
@@ -139,7 +184,11 @@ for its coverage and the runtime colour-LUT re-key it enables.
                           taking a reserved byte still bumps the version).
 - Name table: length-prefixed UTF-8 strings (`uint16` length then bytes).
   **Offset 0 is reserved** as the "no name" sentinel (2 zero bytes of
-  padding); real names start at offset ≥ 2.
+  padding); real names start at offset ≥ 2. It sits **ahead of** the records
+  so the first transport chunk is self-contained: behind the records, a
+  progressive load would show every named star its composed designation until
+  the last chunk landed, and the named stars are exactly the ones a first
+  paint puts on screen.
 
 Luminosity class encoding (Morgan–Keenan):
 `0=VII/D (white dwarf), 1=VI/sd, 2=V (dwarf), 3=IV (subgiant), 4=III
@@ -195,13 +244,31 @@ block in `scripts/catalog/record/catalog-pure.test.ts`.
 ### On-disk transport chunking
 
 Cloudflare Workers rejects any single static asset > 25 MiB, and the
-assembled v6 binary is ~26 MiB, so it is **not** written as one file.
+assembled binary is well past that, so it is **not** written as one file.
 The build slices the assembled buffer into sequential byte-range chunks
-(`public/catalog.bin.0`, `.1`, …), each ≤ `CATALOG_CHUNK_TARGET_BYTES`
-(16 MiB, headroom under the limit), plus `public/catalog-manifest.json`
+(`public/catalog.bin.0`, `.1`, …), plus `public/catalog-manifest.json`
 carrying `{ chunkBytes[], totalBytes }`. The split is **transport-only**
 — the record layout above is untouched, and `assembleCatalogChunks`
-reconstructs the source buffer byte-for-byte. The manifest also carries
+reconstructs the source buffer byte-for-byte.
+
+**The chunk sizes ramp**: `planCatalogChunks` starts at
+`CATALOG_FIRST_CHUNK_TARGET_BYTES` (1 MiB) and doubles each chunk up to a
+`CATALOG_CHUNK_TARGET_BYTES` ceiling (16 MiB, headroom under the Workers
+limit). Two things follow from the ramp, and both are the point:
+
+- **Chunk 0 is the first-paint payload.** At a 100-byte stride 1 MiB is
+  ~10,500 records, and in apparent-V order (§ Record order) that is roughly
+  the naked-eye sky — smaller than every other artifact boot fetches, so the
+  star catalogue stops being the thing first paint waits on.
+- **Each chunk roughly doubles the star count**, which is a near-constant
+  perceptual step (a magnitude is ~2.5× the count, so a doubling is ~0.75
+  mag). The sky densifies in even steps instead of arriving in one lump.
+
+The ceiling is what the deploy limit constrains; the floor is what latency
+constrains. Flattening the ramp to save requests trades first paint for a
+handful of round trips and is the wrong side of that deal.
+
+The manifest also carries
 the optional `sidSuccessors` side-field (retired sid → successor sid
 pairs, docs/sid.md § 9.4, derived from `data/sid/retirements.tsv` net
 of reinstatements) so the runtime SID resolver can follow merge-type

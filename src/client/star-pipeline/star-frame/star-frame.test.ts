@@ -44,6 +44,9 @@ function makeFrame(catalog: Catalog, opts: { t?: number } = {}) {
     onLocalPositionsWritten: () => { writes += 1; },
   });
   origin.onRecenter((o) => frame.rewriteAt(o));
+  // Construction folds in the records already decoded, which writes the
+  // local buffer once; the counter measures what the TEST provokes.
+  writes = 0;
   return { frame, origin, uniforms, cameraPosition, writeCount: () => writes };
 }
 
