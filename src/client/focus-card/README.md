@@ -143,10 +143,12 @@ could answer, until something unrelated made it rebuild.
 
 So the rolodex watches **one number**: `derivedGeneration`, bumped by the star
 module at each fill, compared on the `'frame'` tick it already runs and
-reconciled when it moves. An integer compare, and a rebuild only on the two
-or three frames where a table actually landed — a row changing under a still
-generation deliberately does not reach the card, which is what keeps this off
-every frame's cost.
+reconciled when it moves. An integer compare against a field — the frame leg
+allocates nothing — and a rebuild only on the two or three frames where a
+table actually landed. A row changing under a still generation deliberately
+does not reach the card, which is what keeps this off every frame's cost.
+The pending-focus flag rides the same comparison, since it clears without a
+table landing.
 
 **Watching a number rather than subscribing per source is the point.** A
 notification per late-filling artifact is a list to remember, and the next
@@ -164,6 +166,14 @@ sites, so a fourth table added later could forget it. Making that impossible
 means replacing the bare `Map` handoffs with a table type whose `set` bumps —
 weighed and not taken, since it touches every consumer signature. This test
 is what catches the omission instead.
+
+The same convention binds `ready()`: **it may only answer from quantities
+that bump the generation.** A predicate reading something that moves
+silently would flip on a frame nothing reconciles, and the card would wait
+for an unrelated table to land. The star provider's two terms — the decoded
+record count and `tablesComplete` — both move at a bump, and the gate test
+drives the generation by hand, so this is the one part of the mechanism no
+test can check for you.
 
 ## Files
 

@@ -41,8 +41,8 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
   let frontKey: CardKey | null = null;
   let knownPois: readonly Target[] = stellata.pois.get();
   // README.md § Surfaces retained over a growing catalogue.
-  const renderStamp = () => `${derivedGeneration()}:${focusPending()}`;
-  let seenStamp = '';
+  let seenGeneration = -1;
+  let seenFocusPending = true;
 
   bindCollapse({
     container: stack,
@@ -65,10 +65,8 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
 
   // Recompute from current state on any input event rather than
   // tracking event payloads; the provider map is exhaustive over kind.
-  const focusContent = (): FocusCardContent | null => {
-    const focused = stellata.focus.getFocusedTarget();
-    return focused !== null ? providers[focused.kind].format(focused.idx) : null;
-  };
+  const focusContent = (focused: Target | null): FocusCardContent | null =>
+    (focused !== null ? providers[focused.kind].format(focused.idx) : null);
 
   const dismiss = (key: CardKey) => {
     if (key === FOCUS_KEY) stellata.focus.unfocus();
@@ -100,13 +98,14 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
   };
 
   const reconcile = () => {
-    seenStamp = renderStamp();
+    seenGeneration = derivedGeneration();
+    seenFocusPending = focusPending();
     // README.md § A card appears only when its own subject is ready.
     const focused = stellata.focus.getFocusedTarget();
     const suppress = stellata.focus.getCameraMode() === 'observe'
-      || focusPending()
+      || seenFocusPending
       || (focused !== null && !subjectReady(focused));
-    const focus = suppress ? null : focusContent();
+    const focus = suppress ? null : focusContent(focused);
     const plan = planRolodex({
       pois: stellata.pois.get().filter(subjectReady),
       focused,
@@ -173,7 +172,9 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
       reconcile();
     }),
     stellata.on('frame', () => {
-      if (renderStamp() !== seenStamp) reconcile();
+      if (derivedGeneration() !== seenGeneration || focusPending() !== seenFocusPending) {
+        reconcile();
+      }
       body.tick();
     }),
   ];
