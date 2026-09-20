@@ -55,8 +55,9 @@ async function main() {
   const meta = document.getElementById('meta')!;
   const tooltip = document.getElementById('tooltip')!;
 
-  // Byte progress of the critical artifact — the star catalog is the
-  // only download first paint waits on.
+  // Byte progress of the star catalog. It keeps running past first paint:
+  // the scene is live from chunk 0 and the rest of the population streams
+  // in behind this panel (loaders/README.md § Progressive catalog load).
   const showCatalogProgress = ({ bytes, total }: KindLoadProgress) => {
     loadingBar.style.width = `${((bytes / total) * 100).toFixed(0)}%`;
     loadingStatus.textContent =
@@ -103,15 +104,7 @@ async function main() {
       ...loadKindModules(kinds, import.meta.env.BASE_URL, showCatalogProgress),
     ]);
     const catalog = kinds.star.catalog;
-    const searchIndex = kinds.star.searchIndex;
     const starLabels = kinds.star.starLabels;
-
-    loadingStatus.textContent = `Parsed ${catalog.count.toLocaleString()} stars`;
-    loadingBar.style.width = '100%';
-
-    // Chart-mode's Greek-letter labels are the one search-index
-    // derivation no kind module consumes.
-    const bayerMap = buildBayerMap(searchIndex);
 
     const webgpu = await webgpuBoot;
     // The probe said supported, so a null here is a device that came back
@@ -126,11 +119,6 @@ async function main() {
     // dust debugging and not worth gating behind an env check on a solo
     // project.
     window.stellata = stellata;
-    // Binary-orbit runtime — visible orbital motion for ~hundreds of
-    // catalog pairs against `Stellata.getT()`. Static placements remain
-    // identical when this artifact is absent.
-    if (binaries) stellata.attachBinaries(binaries);
-
     // IAU constellation boundaries — a chart-only declutter element at floor
     // 'all'; absent artifact = no arcs.
     if (boundaries) stellata.attachConstellationBoundaries(boundaries);
@@ -147,18 +135,14 @@ async function main() {
 
     // HIP → row-index lookup, used by url-state to encode/decode shared
     // links with stable star IDs that survive a future catalog reorder.
-    // Built once over `catalog.hip` (uint32 per row, 0 = no HIP). First-
-    // seen wins on collision (matches Stellarium-figure HIP resolution).
+    // Filled in place under `starReady` below, once every record carries a
+    // HIP to be seen: first-seen wins on collision (matching
+    // Stellarium-figure HIP resolution), and a prefix would hand the
+    // collision to whichever component happened to have landed.
     const hipToIndex = new Map<number, number>();
-    for (let i = 0; i < catalog.count; i++) {
-      const h = catalog.hip[i];
-      if (h > 0 && !hipToIndex.has(h)) hipToIndex.set(h, i);
-    }
-    // Global SID resolver (docs/sid.md § 8). Every domain this client can
-    // attach settles here at boot; `pending` is only reachable for a
-    // future genuinely-async domain. `sun` is not in the planet domain —
-    // Sol's catalog record carries the same sid, so the star domain
-    // claims it (see util/sid-resolver/README.md).
+    // Global SID resolver (docs/sid.md § 8). `sun` is not in the planet
+    // domain — Sol's catalog record carries the same sid, so the star
+    // domain claims it (see util/sid-resolver/README.md).
     const sidResolver = new SidResolver(
       ['star', 'planet', 'cloud', 'lg', 'shell', 'probe'],
       catalog.sidSuccessors,
@@ -169,9 +153,15 @@ async function main() {
     // below). Static lists (planet, shell) attach even when a layer's
     // artifact is absent — focus/pin then fall through to null via the
     // empty registry slot.
+    //
+    // The STAR domain is held back to `starReady`, and held back WHOLE: a
+    // domain attached over a partial catalogue reports `unknown` and drops
+    // a deep-link intent, where an unattached one reports `pending` and
+    // queues it. That is what keeps a `?v=` link to a star in a late chunk
+    // working (util/sid-resolver/README.md).
     for (const kind of KIND_ROSTER) {
       const m = kinds[kind];
-      if (!m) continue;
+      if (!m || kind === 'star') continue;
       const sids = m.sids();
       if (sids) sidResolver.attach(kind, arrayDomain(sids));
       else sidResolver.conclude(kind);
@@ -222,10 +212,7 @@ async function main() {
 
     bindUnitToggle();
     registerThemeStellata(stellata);
-    bindChartMode(stellata, { bayerMap, starLabels });
     bindControls(stellata);
-    bindSearch(stellata, catalog, searchIndex);
-    bindFindSearch(stellata, catalog, searchIndex);
     createDistanceVectorOverlay(stellata);
     createFocusRingOverlay(stellata);
     createPoiOverlay(stellata);
@@ -303,26 +290,60 @@ async function main() {
       },
     });
 
+    // FIRST PAINT. The scene is live on the catalogue's first chunk, so the
+    // chrome comes up now and the loading panel stays on top of a rendering
+    // sky rather than in front of a blank one.
     await new Promise((r) => requestAnimationFrame(r));
+    document.body.classList.add('scene-live');
+    topbar.hidden = false;
+    panel.hidden = false;
+    brandBox.hidden = false;
+    meta.hidden = false;
+    bindPanelLayout();
+    bindBrandModals(catalog.count);
+    bindControlsHideToggle();
+    bindKeyboardShortcuts(stellata, {
+      levelAttitude: () => attitude?.level(),
+      cycleReferenceFrame: () => attitude?.cycleFrame(),
+      aimAtFrameOrigin: (opposite) => attitude?.aimAtFrameOrigin(opposite),
+      toggleOrbitLock: () => attitude?.toggleOrbitLock(),
+      toggleDebugPanel: debugTools.panel,
+      timeScrubber,
+    });
+
+    // WAVE 2. Everything that needs the COMPLETE record set, or the search
+    // index that rides beside it. Each entry here is a correctness
+    // requirement, not a tidiness one — see the comment at each call.
+    await kinds.star.ready;
+    const searchIndex = kinds.star.searchIndex;
+
+    // First-seen wins on collision, so every record has to be present
+    // before the first lookup freezes the answer.
+    for (let i = 0; i < catalog.count; i++) {
+      const h = catalog.hip[i];
+      if (h > 0 && !hipToIndex.has(h)) hipToIndex.set(h, i);
+    }
+    // Whole, and only now — the partial-attach trap above.
+    const starSids = kinds.star.sids();
+    if (starSids) sidResolver.attach('star', arrayDomain(starSids));
+    else sidResolver.conclude('star');
+
+    // Relation caches bake each system's anchor from its primary's
+    // position, and `relationIndicesInBounds` tests against the full
+    // allocation — so a pair in a late chunk would cache (0,0,0) as its
+    // anchor and project the whole orbit in the wrong frame, silently.
+    if (binaries) stellata.attachBinaries(binaries);
+
+    // Chart-mode's Greek-letter labels are the one search-index
+    // derivation no kind module consumes.
+    bindChartMode(stellata, { bayerMap: buildBayerMap(searchIndex), starLabels });
+    bindSearch(stellata, catalog, searchIndex);
+    bindFindSearch(stellata, catalog, searchIndex);
+
     loading.style.transition = 'opacity 0.4s ease';
     loading.style.opacity = '0';
     setTimeout(() => {
       loading.remove();
-      topbar.hidden = false;
-      panel.hidden = false;
-      brandBox.hidden = false;
-      meta.hidden = false;
-      bindPanelLayout();
-      bindBrandModals(catalog.count);
-      bindControlsHideToggle();
-      bindKeyboardShortcuts(stellata, {
-        levelAttitude: () => attitude?.level(),
-        cycleReferenceFrame: () => attitude?.cycleFrame(),
-        aimAtFrameOrigin: (opposite) => attitude?.aimAtFrameOrigin(opposite),
-        toggleOrbitLock: () => attitude?.toggleOrbitLock(),
-        toggleDebugPanel: debugTools.panel,
-        timeScrubber,
-      });
       // On a bare touch device the mobile advisory takes the one splash
       // slot; otherwise the welcome modal shows as usual.
       if (!maybeShowMobileAdvisory()) {

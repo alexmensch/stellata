@@ -174,8 +174,10 @@ All four identifier maps — `hipMap`, `hdMap`, `hrMap`, `glMap` — are built b
 numbers records DISPLAY are laid down first, then the `hda` / `hra` aliases,
 first write winning. That one rule settles two collisions — 57 HD and 11 HR
 numbers are displayed by two records each (a component pair sharing one
-catalogue number), and entries arrive brightest-first, so an ambiguous number
-resolves to the brighter record; and an alias never displaces a record that
+catalogue number), and entries arrive apparent-brightest-first
+(`scripts/catalog/record/README.md` § Record order), so an ambiguous number
+resolves to the record that LOOKS brighter — which is the one a reader typing
+the number is generally after; and an alias never displaces a record that
 displays that number outright. The other two carry no aliases and still take
 the first-write pass, because brightest-wins follows the identifier being
 ambiguous rather than the map having an alias list: `Gl 277A` is displayed by

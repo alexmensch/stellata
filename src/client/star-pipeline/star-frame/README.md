@@ -41,10 +41,13 @@ actually are:
   `bucketEpochJyr` bucket and reports the focal star's space-motion
   delta so the shell can translate the camera by it.
 - **Derived per-instance buffers.** `logRadii`, `lumClassF32`,
-  `distSol`, `teffApsis`, and `maxPhysicalRadiusPc`, all computed once
+  `distSol`, `teffApsis`, and `maxPhysicalRadiusPc`, all computed
   off the *advanced* positions, so `StarPipeline`'s attributes and
   every downstream consumer inherit current-epoch positions by
   construction.
+- **Growing with the catalogue.** `absorbRecords()` folds each landing
+  transport chunk's records into all of the above — see § Absorbing a
+  chunk, which carries the two traps.
 - **Proximity queries.** The Sol-distance-sorted index and
   `forEachStarNearCamera` / `discWindowPcFor` / `shouldEnableCoreMask`
   built on it (§ Star rendering, core depth-mask). `Picker` slices the
@@ -92,6 +95,34 @@ clears the flag. That leaves exactly one window where
 and the flush. Nothing may read the buffer inside it (the focal-drift
 recentre in that gap reads only camera + orbit target), and anything
 new landing there has to sit after the flush instead.
+
+## Absorbing a chunk
+
+The catalogue arrives progressively (`../../loaders/README.md`
+§ Progressive catalog load), so every buffer above is allocated at the full
+record count and filled forward, one window per chunk, by `absorbRecords()`.
+The shell calls it from `Stellata.absorbCatalogRecords`, never on a timer.
+
+Two things here are traps rather than choices:
+
+- **`basePositions` is EXTENDED, never re-snapshotted.** `advanceEpochTo`
+  writes `base + v·Δt` back over `catalog.positions`. A baseline taken while
+  the tail was still zeroed would therefore overwrite those records with
+  zeros the first time the model clock crossed a bucket — the stars would
+  arrive, render, and then vanish on the first scrub.
+- **Both sorted-distance arrays are re-sorted IN PLACE.** `Picker` captures
+  `sortedByDistFromSol` and `sortedDistFromSol` by array reference, not
+  through a getter, so reallocating either leaves it on a stale pair for the
+  session.
+
+`distSol` is pre-filled with `Infinity` rather than left at zero, so an
+undecoded record sorts past every window the index is queried over. At zero
+it would sort to the *front*, next to Sol, and both consumers of the window
+below would walk several hundred thousand phantoms at the origin.
+
+`maxPhysicalRadiusPc` and `maxEpochDriftPc` are running maxima over what has
+landed. Both bound windows, so they may only grow — a chunk carrying a larger
+star or a faster mover widens them, and nothing narrows them.
 
 ## `forEachStarNearCamera` — sorted-distance binary-search window
 

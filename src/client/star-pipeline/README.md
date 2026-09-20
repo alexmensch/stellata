@@ -42,10 +42,18 @@ geometry and attribute writers.
   (`../kinds/README.md`): catalog + search-index load (`critical:
   true` — its load may reject and boot treats that as fatal) and the
   focusable / card / hover / search / SID / pinnable / focal-hide legs.
+  **`load` resolves on the catalogue's FIRST chunk**, so boot can paint;
+  `ready` is the second promise, settling when the whole population and
+  the search index have landed and every table derived from them is built
+  (`../loaders/README.md` § Progressive catalog load). The search index is
+  deliberately not awaited in `load` — 4.4 MB gzipped feeding only search,
+  chart labels and designations, none of it on the first-paint path.
   `load` also derives the name tables the card tiers read
   (`../typeahead/star-name-tables.ts`), so `starLabels` is a getter
   beside `catalog` / `searchIndex` rather than something boot hands
-  back. The render layers stay shell-wired (`attach` returns null), and
+  back — and it is ONE map filled in place, because every card provider
+  and chart binding captures it before the index lands. The render layers
+  stay shell-wired (`attach` returns null), and
   the legs reach the shell-owned machinery — StarFrame positions, park
   solve, rendered size, the Picker's star pick, the binaries table —
   through the single injected `StarModuleRuntime`. `photometry()` is
@@ -55,6 +63,13 @@ geometry and attribute writers.
   coreMask `RawShaderMaterial`s + meshes. Owns
   `applyDiscBlendDefaults` + `applyGlowBlendDefaults` (shared with the
   local mirror + planet body field) + `setMonochromeBlend` + `dispose`.
+  `absorbRecords()` grows `instanceCount` to the decoded record count and
+  range-uploads the window that landed. **On this backend the instance
+  count IS the bound** — there is no compaction pass — so leaving it at
+  the full catalogue during a progressive load draws every undecoded
+  record as an absolute-magnitude-zero star sitting on Sol. `iPuls` is the
+  one static attribute backed by a copy rather than a catalog column, so
+  its window is re-interleaved rather than just flagged.
 - `star.vert.glsl`, `star.frag.glsl` — GLSL3 / WebGL2 shaders.
 - `star-pass.ts` (+ test) — the pass identities (`STAR_PASS_GLOW` /
   `STAR_PASS_DISC` / `STAR_PASS_CORE_MASK`, = the shaders' `uRenderMode`

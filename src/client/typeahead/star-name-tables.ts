@@ -20,24 +20,26 @@ import type { Catalog } from '../loaders/catalog-loader';
 export function buildStarLabels(
   catalog: Catalog,
   raw: SearchEntry[],
+  into: Map<number, string> = new Map(),
 ): Map<number, string> {
-  const labels = new Map<number, string>();
-  for (const [idx, name] of catalog.names) labels.set(idx, name);
+  for (const [idx, name] of catalog.names) into.set(idx, name);
   for (const [idx, composed] of displayNamesFromSearchIndex(raw, catalog.constellations)) {
-    if (!labels.has(idx)) labels.set(idx, composed.label);
+    if (!into.has(idx)) into.set(idx, composed.label);
   }
-  return labels;
+  return into;
 }
 
 // Map of star index → spectral designation string ("G2 V", "M1.5Iab-b",
 // "K0III+K7V", etc.), as carried from the source catalog via search-index.
 // Used by the hover tooltip to show full classification info.
-export function buildSpectralMap(raw: SearchEntry[]): Map<number, string> {
-  const out = new Map<number, string>();
+export function buildSpectralMap(
+  raw: SearchEntry[],
+  into: Map<number, string> = new Map(),
+): Map<number, string> {
   for (const entry of raw) {
-    if (entry.s) out.set(entry.i, entry.s);
+    if (entry.s) into.set(entry.i, entry.s);
   }
-  return out;
+  return into;
 }
 
 export interface BayerInfo {

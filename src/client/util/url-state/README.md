@@ -111,9 +111,18 @@ The v1/v2/v3 `FIELDS_V*` tables are **frozen** — standalone literal
 arrays, never edited (a golden-blob corpus in `url-state.test.ts`
 pins them byte-for-byte). SID refs that arrive before their object's
 artifact attaches ride the resolver's deferred-intent contract; a
-retired/unknown SID expires silently. POI SIDs resolve synchronously
-— every pinnable kind's SID domain (star, planet, lg) attaches at
-boot, strictly before `applyFromUrl`.
+retired/unknown SID expires silently.
+
+**The STAR domain attaches after `applyFromUrl`, not before it.** The
+catalogue loads progressively (`../../loaders/README.md` § Progressive
+catalog load), so a star ref restores through the deferred-intent path
+and lands when the last chunk does — camera pose, which is coordinates,
+restores at first paint either way. The domain is held back WHOLE for
+exactly this reason: attached over a partial catalogue it would answer
+`unknown` for a star in a late chunk and drop the intent, where
+unattached it answers `pending` and queues it. Every other pinnable
+kind's domain (planet, lg) still attaches at boot, strictly before
+`applyFromUrl`, and resolves synchronously.
 
 The vec3 sub-mask uses **strict equality** (`!==`), not the EPS=1e-3
 `approx` check — under floating origin (a7d.2.11) the local-frame cam

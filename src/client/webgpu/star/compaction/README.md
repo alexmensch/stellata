@@ -235,6 +235,29 @@ from every thread of the dispatch. The counts already exist at the end of
 the pass, so republishing them as plain `u32` beside the dispatch costs one
 read each and buys a scan and a search that touch no atomic at all.
 
+## The kernel's thread count follows the decoded records
+
+`setLoadedCount` assigns `ComputeNode.count` on the per-star kernel alone.
+Three treats that as a mutable field feeding both the dispatch size and an
+`instanceIndex >= count` guard delivered as a **uniform**, so a progressive
+catalog load moves it per landing chunk with no pipeline recompile and no
+bind-group rebuild (`../../../loaders/README.md` § Progressive catalog load).
+
+It is a correctness bound before it is a saving. An undecoded record is
+all-zero — position (0,0,0), which is Sol, and `absmag` 0 — so it passes the
+prefilter and the frustum test and lands in the disc list as a phantom bright
+star at the origin. The static table's padding does not prevent that; only
+the bound does.
+
+**`tierListBase` keeps using the FULL count.** The second tier's base is an
+address in the survivor buffer, not a function of how many threads ran, and
+the buffer stays allocated at `2 × count`.
+
+**Never use `Renderer.compute`'s per-call `dispatchSize` for this.** It
+applies the override to every node in the array, which would blow the
+one-thread reset and finish kernels up to the record count. The extinction
+prepass may pass it only because it dispatches a single node.
+
 ## The buffer-writer requirements, discharged
 
 Of the four the single-writer audit put on this design (bead
