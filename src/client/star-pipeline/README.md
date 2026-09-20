@@ -47,7 +47,10 @@ geometry and attribute writers.
   the search index have landed and every table derived from them is built
   (`../loaders/README.md` § Progressive catalog load). The search index is
   deliberately not awaited in `load` — 4.4 MB gzipped feeding only search,
-  chart labels and designations, none of it on the first-paint path.
+  chart labels and designations, none of it on the first-paint path. Its
+  fetch is issued before the catalogue is awaited and nothing attaches to
+  it until `ready` exists, so it carries a silent catch to mark it handled
+  across that window; `ready` still sees the rejection.
   `load` also derives the name tables the card tiers read
   (`../typeahead/star-name-tables.ts`), so `starLabels` is a getter
   beside `catalog` / `searchIndex` rather than something boot hands

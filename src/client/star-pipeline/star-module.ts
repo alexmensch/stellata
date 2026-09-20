@@ -140,6 +140,8 @@ export function createStarKindModule(): StarKindModule {
       const index = fetch(`${baseUrl}search-index.json`).then(
         (r) => r.json() as Promise<SearchEntry[]>,
       );
+      // Handled-marker only — README.md, the star-module.ts bullet.
+      index.catch(() => {});
       catalog = await loadCatalog(
         `${baseUrl}${CATALOG_MANIFEST_FILENAME}`,
         `${baseUrl}constellations.json`,

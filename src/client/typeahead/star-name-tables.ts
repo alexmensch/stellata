@@ -66,8 +66,10 @@ export interface BayerInfo {
 // Used by chart mode to render the letter glyph + optional superscript
 // alongside proper names. The wire carries the glyph itself, so there is
 // nothing to parse.
-export function buildBayerMap(raw: SearchEntry[]): Map<number, BayerInfo> {
-  const out = new Map<number, BayerInfo>();
+export function buildBayerMap(
+  raw: SearchEntry[],
+  out: Map<number, BayerInfo> = new Map(),
+): Map<number, BayerInfo> {
   for (const entry of raw) {
     if (entry.b === undefined) continue;
     out.set(entry.i, {

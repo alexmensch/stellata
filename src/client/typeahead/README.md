@@ -19,7 +19,12 @@ three, so either import path stays valid.
   (`buildStarLabels`, `buildSpectralMap`, `buildBayerMap`). The star
   module builds the first two inside its own `load`; `buildBayerMap` is
   the one derivation no module consumes, so boot still calls it for
-  chart mode.
+  chart mode. **All three fill a caller-owned map rather than returning a
+  fresh one**, because their source — the search index — lands well after
+  the consumers that captured the map (`../README.md`, the boot-waves
+  note). Chart mode binds against an empty `bayerMap` and the glyphs
+  appear as it fills; returning a new map would strand it on the empty
+  one for the session.
 - `search-corpus.ts` — the fuzzy corpus and the exact-match identifier
   maps (`buildSearchIndex` and the label builders).
 

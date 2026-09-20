@@ -5,7 +5,7 @@ import { createMilkyWayLabel } from './local-group/local-group';
 import { Stellata } from './stellata';
 import { bindControls } from './camera/controls/controls';
 import { bindSearch, bindFindSearch } from './typeahead/search';
-import { buildBayerMap } from './typeahead/star-name-tables';
+import { buildBayerMap, type BayerInfo } from './typeahead/star-name-tables';
 import { createDistanceVectorOverlay } from './overlays/distance-vector-overlay';
 import { createFocusRingOverlay } from './overlays/focus-ring-overlay';
 import { createPoiOverlay } from './overlays/poi-overlay';
@@ -231,6 +231,10 @@ async function main() {
 
     bindUnitToggle();
     registerThemeStellata(stellata);
+    // Bound in wave 1 over a map filled in wave 2 — README.md § Boot in
+    // two waves.
+    const bayerMap = new Map<number, BayerInfo>();
+    bindChartMode(stellata, { bayerMap, starLabels });
     bindControls(stellata);
     createDistanceVectorOverlay(stellata);
     createFocusRingOverlay(stellata);
@@ -320,6 +324,15 @@ async function main() {
     // styles.css § .loading.
     document.getElementById('bottom-left-stack')!.prepend(loading);
     document.body.classList.add('scene-live');
+    // README.md § Boot in two waves, the dead-control rule.
+    const searchInputs = [
+      document.getElementById('search-focus'),
+      document.getElementById('search-to'),
+    ].filter((el): el is HTMLInputElement => el !== null);
+    for (const el of searchInputs) {
+      el.disabled = true;
+      el.placeholder = 'Loading catalogue…';
+    }
     topbar.hidden = false;
     panel.hidden = false;
     brandBox.hidden = false;
@@ -359,12 +372,16 @@ async function main() {
 
     // Chart-mode's Greek-letter labels are the one search-index
     // derivation no kind module consumes.
-    bindChartMode(stellata, { bayerMap: buildBayerMap(searchIndex), starLabels });
+    buildBayerMap(searchIndex, bayerMap);
     await frame();
     // The dearest step in this wave by a distance — a fuzzy corpus over
     // every searchable entry, half a second of main thread on its own.
     bindSearch(stellata, catalog, searchIndex);
     bindFindSearch(stellata, catalog, searchIndex);
+    for (const el of searchInputs) {
+      el.disabled = false;
+      el.placeholder = el.id === 'search-to' ? 'Search destination…' : 'Search stars…';
+    }
     await frame();
 
     loading.style.transition = 'opacity 0.4s ease';
