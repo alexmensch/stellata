@@ -30,23 +30,28 @@ parked-ledger.tsv        ~282 KB, regular git. The § 6.1 ledger for manifest
                          record walk. The parity gate subtracts exactly these
                          rows and no more, so a park that is not on this list
                          fails the build rather than vanishing.
-binding-review.tsv       ~12 KB, regular git. The 53 spine rows whose derived
-                         Gaia binding the generator cannot settle against the
-                         frozen spine cell — differs · unreached · contested ·
-                         collision — with every source's candidate, the gate
-                         rejections, the printed V and both candidates' G and
-                         SIMBAD cross-IDs. Pipeline-derived.
+binding-review.tsv       ~60 KB, regular git. The 280 spine rows the derivation
+                         cannot settle alone or a review already settled —
+                         contested · collision · disposed — with every
+                         source's candidate, the gate rejections, the printed V
+                         and the derived candidate's G and SIMBAD cross-IDs.
+                         A contested row ships its winner while it waits, so
+                         being queued is a flag, not a withhold.
+                         Pipeline-derived.
 binding-review-dispositions.tsv
-                         ~16 KB, regular git. Hand-curated: one row per
-                         binding-review.tsv row on the record's tyc/hip/hd/gl
-                         cells, restating the frozen and derived ids, the id
-                         the row ships (keep_source_id: frozen, derived, a
-                         listed runner-up, or empty), a basis from the closed
-                         enum (tycho2_position · v70a_astrometry ·
+                         ~16 KB, regular git. Hand-curated, and AUTHORITATIVE
+                         wherever it keys a record: tyc/hip/hd/gl cells, the
+                         derived id the review was taken over, the id the row
+                         ships (keep_source_id: the derived id, a listed
+                         runner-up, an id no committed source proposes, or
+                         empty), a basis from the closed enum
+                         (tycho2_position · v70a_astrometry ·
                          simbad_dr2_object · gaia_photometry · pair_component
                          · shared_source) and the measured evidence. 53 rows:
-                         46 frozen, 6 derived, 1 runner-up; a kept value rides
-                         the manifest as binding=reviewed.
+                         6 take the derived id, 47 another — 36 of those an id
+                         only the cited basis stands behind
+                         (dispositionAsserted). A kept value rides the manifest
+                         as binding=reviewed.
 spine-corrections.tsv    ~4 KB, regular git. Hand-curated: where review found
                          AT-HYG's MERGE DECISION wrong, which no other curated
                          file covers. Keyed on tyc/hip/hd/gl, one row per

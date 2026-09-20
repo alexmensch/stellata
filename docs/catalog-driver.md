@@ -264,9 +264,9 @@ for all 313,257. **233 is the walk-only figure**: the manifest no longer copies
 the column but derives it, and the derivation's fourth source — SIMBAD's
 frozen cross-IDs — takes the fills to 940 ungated and 791 through both gates,
 leaving 576 derived refusals that ship designation-keyed on the § 5 tiers. The
-binding's authority is the manifest's own `derivedVsFrozen` count
-(`scripts/catalog/membership/README.md` § The spine side), not this audit's
-identity bullet, which measures the frozen column.
+binding's authority is the manifest's own `derivationOutcome` count
+(`scripts/catalog/membership/binding/README.md`), not this audit's identity
+bullet, which measures the frozen column.
 
 **Additions: the primaries admit ~64k records the spine lacks, and 55,008 of
 them are one upstream defect.** Every figure in this paragraph is counted per
@@ -311,7 +311,7 @@ name (WGSN) — keyed on that designation, with a `gaia_source_id` **derived**
 from the TYC and HIP cross-walks, CNS5 and SIMBAD's frozen cross-IDs through
 the § 4 gates, or settled by a committed review disposition where the sources
 disagree with each other or with the frozen column
-(`scripts/catalog/membership/README.md` § The binding is derived). That
+(`scripts/catalog/membership/binding/README.md`). That
 is AT-HYG's *stated* selection rule reproduced from the primaries. AT-HYG's
 *realised* membership is that rule minus its link defect and merge drops, and
 reproducing the realised set
@@ -437,8 +437,8 @@ Of the 132 GJ cells, 112 are attested by V/70A alone and 20 by CNS5.
 | `flam` | merge backstop (694 rows); 2,604 attested, 120 not, 119 dropped to `label-drops.tsv` | IV/27A + WGSN by HD/HIP already attest the rest. The 119 are a **source** question: a frozen SIMBAD identifier pull (`* NN Con`) attests them, or the drop ledger freezes as a committed record — the spine gone, nothing regenerates it | `stellata-hooj.17.4` |
 | `bayer` | copied to the manifest; naming reads it as two counters only (`namingBayerAdded` 515, `namingBayerDropped` 2) | WGSN ∪ IV/27A by HR/HD/HIP resolves 1,520 of 1,522 and the 2 drop by design (`scripts/catalog/naming/README.md` § Measured coverage): the manifest column goes, the counters re-pin on the authority | `stellata-hooj.17.3` |
 | `proper` | the `Sol` sentinel (`isSol` in the spine, manifest and derivation codecs and in `readStars`); copied to the manifest; naming's last join key (3 records — Albireo B, Kaewkosin, Maru); the spelling alias where the IAU superseded it; the 46 disposed names (26 display, 20 alias); `build:wgsn`'s § 2 residual gate | Sol → the generator emits its one row. 445 → WGSN by identifier, already. 3 → `data/naming/name_overrides.tsv`, SID-keyed. 46 by class: 8 component-letter compose by borrowing (`docs/star-naming.md` § 3); 21 discovery, 2 catalogue and 3 Gould designations need a cited source — the same SIMBAD identifier pull, or curated rows; 2 Latin-Bayer genitives and 10 unattributed drop to a ledger as aliases | `stellata-hooj.17.3` |
-| `gaia_source_id` | the derivation's diff surface (`derivedVsFrozen`); the verdicts `differs` / `unreached`; each disposition restating the frozen id; the collision keeper rule; the DR2 queue's guard | none: the verdicts restate on the derivation alone, the 46 kept ids ship on their disposition's own basis (each row already restates the value), the DR2 queue folds into the `simbad_dr2_object` dispositions, and `derivedVia` / `bindingByClass` / the review counts pin the derivation's outputs | `stellata-hooj.17.6` |
-| `mag` | `spineBrightRows` / `spineBrightRowsWithoutOverlayEntry`, the V ≤ 3 coverage counters | Hipparcos V, already loaded as gate evidence; re-pin | `stellata-hooj.17.6` |
+| `gaia_source_id` | **none — `17.6` landed.** `derivationOutcome` replaced `derivedVsFrozen`; `differs` / `unreached` collapsed into `bound` / `refused`; the disposition file dropped its `frozen_source_id` column and became a standing overlay keyed on the record, authoritative wherever it keys; the collision keeper rule withholds from both rows | `derivedVia` / `bindingByClass` / `derivationOutcome` / the review counts, plus `dispositionAsserted` — the 36 ids no committed source proposes, shipping on a cited basis | `stellata-hooj.17.6` ✓ |
+| `mag` | **none — `17.6` landed.** `spineBrightRows` / `spineBrightRowsWithoutOverlayEntry` re-keyed onto the printed-V cascade the binding gate already weighs each row against, reproducing 178 / 114 exactly (Sol named directly, having no gate evidence) | — | `stellata-hooj.17.6` ✓ |
 | `ra` `dec` `dist` `ci` `spect` `rv` `pm_ra` `pm_dec`, six `*_src` | none | none | `stellata-hooj.17.7` |
 
 **Per consumer.**
@@ -451,7 +451,7 @@ Of the 132 GJ cells, 112 are attested by V/70A alone and 20 by CNS5.
 | `parity-ledger.test.ts` | the shipped record set | the manifest — closer to what ships than the spine was | 17.5 |
 | `build:astrometry-request` | the derivation's candidate set | manifest TYCs; candidates over every manifest row once one derivation runs for all rows | 17.2 |
 | `audit:spine-primaries`, `audit:spine-associations` | the retirement's measurement | retire with the file: attestation already ships as the manifest's `routes`, and admission is the generator's own | 17.7 |
-| `inherited-spine-guard.test.ts`, `stale_gaia_source_ids.tsv` | the frozen artifact's integrity; the DR2 queue | retire; the queue's two live facts (two DR2 ids still shipped, both disposed) move to the dispositions and the refresh staleness gate | 17.6 / 17.7 |
+| `inherited-spine-guard.test.ts`, `stale_gaia_source_ids.tsv` | the frozen artifact's integrity; the DR2 queue | retire. The queue's live facts already read out of the `simbad_dr2_object` dispositions, whose evidence names each DR2 id outright rather than pointing at the file (`17.6`); the guard and the file go with the artifact | 17.6 ✓ / 17.7 |
 | manifest `bayer` / `proper` → `readStars` → naming | see the two column rows | see the two column rows | 17.3 |
 | prose: § 3, `data/athyg/`, `data/membership/`, `data/classic-ids/` § Coverage, `SCIENCE.md`, `README.md`, `docs/star-naming.md`, `docs/science-catalog-ingestion.md`, `tests/star-count-consistency.test.ts`'s `313,257` pin | | the sweep | 17.7 |
 
@@ -459,8 +459,10 @@ Of the 132 GJ cells, 112 are attested by V/70A alone and 20 by CNS5.
 is held by the gates that remain:
 
 1. `17.8` — the stale § 3 claim (landed with this section).
-2. `17.6` — the binding diff surface. Afterwards the spine is a
-   merge-decision and label input only; no shipped id changes.
+2. `17.6` — the binding diff surface. **Landed**: no shipped id changed —
+   `rows`, `bindingByClass` and `derivedVia` all held byte for byte — and the
+   spine is now a merge-decision and label input only, its `gaia_source_id`
+   and `mag` columns read by nothing.
 3. `17.3` ∥ `17.4` — the name and label cells, independent of each other
    and of the merge decisions. `17.4` must settle before `17.7`, since the
    drop ledger regenerates from spine cells.
@@ -477,15 +479,17 @@ is held by the gates that remain:
 **Expected movement, stated in advance.** Records: **zero** drops at every
 step — § 3.1's residual is zero, so every row keeps an attested key; `rows`
 (376,932) and `bindingByClass` hold across the epic except as this
-paragraph enumerates. Labels: `17.2` moves at most the 136 cells above, each
+paragraph enumerates. `17.6` moved none of them, as predicted. Labels: `17.2`
+moves at most the 136 cells above, each
 re-attested by the positional witness, corrected with evidence, or on a
 ledger row; `17.3` changes no displayed name among the 445 + Sol and the 46
 each land on a naming-parity row; `17.4` adds 119 Flamsteed labels if the
 SIMBAD pull is adopted, else none. Identity: at most the Gl 863.1A split and
 a review outcome on ξ UMa's shared HIP; none from `17.6`, `17.5`, `17.7`.
-Bindings: none — `17.6` restates verdicts, it moves no id. Pins that retire
-with the file: `spineRows`, `spineRowsFolded`, `derivedVsFrozen`, the
-frozen-relative verdict names, the byte pin, both audits' counts.
+Bindings: none — `17.6` restated the verdicts and moved no id, confirmed on a
+build. Pins that retired with `17.6`: `derivedVsFrozen`, `derivedContestedMatch`
+and the frozen-relative verdict names. Pins still to retire with the file:
+`spineRows`, `spineRowsFolded`, the byte pin, both audits' counts.
 
 **The residual curation file — one or three.** Neither: no new file of the
 167-row shape. The 1 HD is disposed. The 119 Flamsteed numbers and the 26
@@ -534,7 +538,7 @@ therefore gated through the record build's own `resolveGaiaSourceId` checks
 consumer keying labels off the overlay inherits this gate for free; one that
 derives bindings from the raw cross-walks must apply it** — the membership
 generator does, through the same call
-(`scripts/catalog/membership/README.md` § The binding is derived);
+(`scripts/catalog/membership/binding/README.md`);
 `data/classic-ids/README.md` § The binding gate carries the reach bound.
 
 **Ambiguity policy** (IV/25 `n_HD`/`n_TYC` > 1, and any designation

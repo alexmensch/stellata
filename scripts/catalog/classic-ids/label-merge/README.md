@@ -22,8 +22,8 @@ producer is what makes `label_flips.tsv` describe the labels actually shipped:
 it used to take a byte-identity assertion between two runs, and that assertion
 is what pinned the merge to the spine's frozen `gaia_source_id` cell.
 
-**The key is the DERIVED binding** (`../../membership/README.md` § The binding
-is derived). Keyed on the frozen cell a label names a source the record is no
+**The key is the DERIVED binding** (`../../membership/binding/README.md`).
+Keyed on the frozen cell a label names a source the record is no
 longer bound to, and 1,371 rows reach no overlay entry where the derivation
 leaves 578 — mostly the bright end, whose saturated 2-parameter sources are an
 identity statement rather than a measurement.

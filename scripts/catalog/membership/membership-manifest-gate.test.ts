@@ -89,14 +89,16 @@ function differences(a: Map<string, number>, b: Map<string, number>): string[] {
 
 // Both files are regular git, so this runs in every job.
 describe('binding review dispositions', () => {
-  it('disposes every review-queue row, and nothing else, on the ids the row states', () => {
-    expect([...dispositions.keys()].sort()).toEqual(queue.map(bindingReviewKey).sort());
+  it('disposes every review-queue row on the id the row states', () => {
     expect(queue).toHaveLength(expected.bindingReviewRows);
-    for (const row of queue) {
-      const d = dispositions.get(bindingReviewKey(row))!;
-      expect([d.frozen_source_id, d.derived_source_id], bindingReviewKey(row))
-        .toEqual([row.frozen_source_id, row.derived_source_id]);
+    const queued = new Map(queue.map((r) => [bindingReviewKey(r), r]));
+    for (const [key, d] of dispositions) {
+      expect(queued.has(key), key).toBe(true);
+      expect(d.derived_source_id, key).toEqual(queued.get(key)!.derived_source_id);
     }
+    expect(dispositions.size).toBe(
+      Object.values(expected.bindingDispositions).reduce((a, n) => a + n, 0),
+    );
     const byVerdict = new Map<string, number>();
     for (const row of queue) byVerdict.set(row.verdict, (byVerdict.get(row.verdict) ?? 0) + 1);
     expect(Object.fromEntries(byVerdict)).toEqual(

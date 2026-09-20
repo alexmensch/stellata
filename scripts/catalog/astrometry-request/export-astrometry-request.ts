@@ -19,7 +19,7 @@ import { pairMemberSourceIds } from '../distance/parallax/pair-member-parallax';
 import {
   derivationCandidateSourceIds,
   indexSimbadSources,
-} from '../membership/binding-derivation-pure';
+} from '../membership/binding/binding-derivation-pure';
 import {
   MEMBERSHIP_MANIFEST_FILE,
   iterManifestTsv,

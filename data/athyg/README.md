@@ -110,7 +110,7 @@ ladder, and its corroboration rule).
 frozen record of AT-HYG's merge decisions — which designations name one
 star — that the primaries-derived manifest re-keys, and reads its
 `gaia_source_id` column only as the diff surface for the binding it derives
-itself (`scripts/catalog/membership/README.md` § The binding is derived).
+itself (`scripts/catalog/membership/binding/README.md`).
 The manifest's parity gate reads it as the baseline every manifest row must
 account for; `scripts/catalog/classic-ids/parity-ledger.test.ts` backs two
 dispositions against its cells; `pnpm run build:astrometry-request` reads its

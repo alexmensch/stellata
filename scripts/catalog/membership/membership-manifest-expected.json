@@ -91,26 +91,21 @@
     "gaia_native": 0,
     "none": 5938
   },
-  "bindingReviewRows": 53,
+  "bindingReviewRows": 280,
   "bindingReviewByVerdict": {
-    "differs": 8,
-    "unreached": 43,
-    "contested": 2,
-    "collision": 0
+    "contested": 231,
+    "collision": 0,
+    "disposed": 49
   },
   "bindingDispositions": {
     "derived": 6,
-    "frozen": 46,
-    "other": 1,
+    "other": 47,
     "none": 0
   },
-  "derivedVsFrozen": {
-    "match": 311834,
-    "fill": 792,
-    "refused": 576,
-    "differs": 8,
-    "unreached": 43,
-    "contested": 2,
+  "derivationOutcome": {
+    "bound": 312405,
+    "refused": 619,
+    "contested": 231,
     "collision": 0,
     "sol": 1
   },
@@ -121,7 +116,7 @@
     "simbad": 12487
   },
   "derivedConsensus": 295202,
-  "derivedContestedMatch": 227,
+  "dispositionAsserted": 36,
   "derivedRejected": {
     "mag": 317,
     "sibling": 119

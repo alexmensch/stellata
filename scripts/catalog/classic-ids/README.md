@@ -202,8 +202,7 @@ at all. `bindingCandidateSourceIds` applies the same reach, so the request and
 the gate agree by construction and `gateSkippedNoGMag` stays pinnable at zero.
 The membership derivation runs the same checks on the record side through the
 same `resolveGaiaSourceId` call, with its own candidate contribution to the
-request and its own zero-pin (`../membership/README.md` § The binding is
-derived).
+request and its own zero-pin (`../membership/binding/README.md`).
 
 **An ambiguous designation attaches to every matching record** (§ 4) —
 `buildClassicIdOverlay` never picks a winner, so overlay cells are
@@ -312,8 +311,8 @@ constellation out of the designation string and loses only its expanded alias
 - **`gate*`** — rows dropped per gate, `gateableVia` per printed tier, and
   `gateSkippedNoPrintedV`, the population no tier reaches and so unvettable.
   That last one is the count to watch alongside `../membership/`'s
-  `spineBrightRowsWithoutOverlayEntry`: it is where the known-unfixed
-  mis-bindings live.
+  `spineBrightRowsWithoutOverlayEntry` — 114 of the 178 rows the printed-V
+  cascade puts at V <= 3 — which is where the known-unfixed mis-bindings live.
 
 The merge's own counts are `label-merge/README.md` § What the merge compares
 values on.

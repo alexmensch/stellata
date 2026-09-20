@@ -254,7 +254,7 @@ asserting nothing:
 Additions the spine had no value for: hd 149, hr 4, gl 205, flam 67.
 
 Measured after the merge moved onto the DERIVED binding
-(`scripts/catalog/membership/README.md` § The binding is derived). Keyed on the
+(`scripts/catalog/membership/binding/README.md`). Keyed on the
 spine's frozen `gaia_source_id` cell the same walk read 41 rows fewer as having
 an overlay entry at all, and the `gl` line 31 reproductions lower.
 

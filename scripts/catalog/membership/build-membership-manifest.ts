@@ -133,8 +133,8 @@ async function main(): Promise<void> {
   const tally = (counts: Record<string, number>): string =>
     Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(', ');
   console.log(
-    `derived against the frozen column: ${tally(c.derivedVsFrozen)}; ` +
-      `via ${tally(c.derivedVia)}, consensus ${c.derivedConsensus}; ` +
+    `derivation: ${tally(c.derivationOutcome)}; ` +
+      `via ${tally(c.derivedVia)}, consensus ${c.derivedConsensus}, asserted by review ${c.dispositionAsserted}; ` +
       `gate refused ${tally(c.derivedRejected)}; ` +
       `${c.derivedUngateable} rows have a candidate and no printed V; ` +
       `${c.derivedWeighedNoGMag} candidates weighed with no pulled row (must be 0), ` +
