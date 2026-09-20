@@ -55,10 +55,8 @@ export function seedStarLabelsFromNames(
 // Map of star index → spectral designation string ("G2 V", "M1.5Iab-b",
 // "K0III+K7V", etc.), as carried from the source catalog via search-index.
 // Used by the hover tooltip to show full classification info.
-export function buildSpectralMap(
-  raw: SearchEntry[],
-  into: Map<number, string> = new Map(),
-): Map<number, string> {
+export function buildSpectralMap(raw: SearchEntry[]): Map<number, string> {
+  const into = new Map<number, string>();
   for (const entry of raw) {
     if (entry.s) into.set(entry.i, entry.s);
   }
@@ -75,10 +73,8 @@ export interface BayerInfo {
 // Used by chart mode to render the letter glyph + optional superscript
 // alongside proper names. The wire carries the glyph itself, so there is
 // nothing to parse.
-export function buildBayerMap(
-  raw: SearchEntry[],
-  out: Map<number, BayerInfo> = new Map(),
-): Map<number, BayerInfo> {
+export function buildBayerMap(raw: SearchEntry[]): Map<number, BayerInfo> {
+  const out = new Map<number, BayerInfo>();
   for (const entry of raw) {
     if (entry.b === undefined) continue;
     out.set(entry.i, {
