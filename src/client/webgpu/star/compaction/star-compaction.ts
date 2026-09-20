@@ -64,12 +64,17 @@ export class StarCompaction {
    *  gates feeds no draw (README.md § Reading the counts back). */
   private readonly countPrefilter = uniform(0, 'uint');
   private readonly awaitingDispatch: (() => void)[] = [];
+  /** The armed frame's set, and what dispose releases — so every kernel is
+   *  reachable from it (README.md § The refill dispatch). */
   private kernels: ComputeNode[] | null;
+  private plainKernels: ComputeNode[] | null;
+  private readonly refill: RefillWorklistNodes;
 
   constructor(
     renderer: WebGPURenderer, deps: StarTslDeps, indexCount: number, refill: RefillWorklistNodes,
   ) {
     this.renderer = renderer;
+    this.refill = refill;
     this.count = deps.tables.count;
     this.survivors = new StorageBufferAttribute(
       new Uint32Array(STAR_TIERS.length * this.count), 1);
@@ -140,9 +145,7 @@ export class StarCompaction {
       });
     })(), this.count);
     kernel.setName('star-compaction');
-    // The counters are atomics and the scan reads each of them O(REFILL_BUCKETS)
-    // times, so it reads a plain copy this kernel makes once
-    // (README.md § The refill dispatch).
+    // README.md § The refill dispatch.
     const dispatchBuf = refillDispatchNodes.write;
     const copyCounts = compute(Fn(() => {
       const bucket = instanceIndex;
@@ -168,6 +171,7 @@ export class StarCompaction {
     })(), REFILL_BUCKETS);
     finish.setName('star-compaction-refill-dispatch');
     this.kernels = [reset, kernel, copyCounts, finish];
+    this.plainKernels = [reset, kernel];
   }
 
   /** The view-projection the kernel tested against on the last dispatch, as a
@@ -194,16 +198,16 @@ export class StarCompaction {
     return survivorCountsFromArgs(new Uint32Array(bytes));
   }
 
-  /** One compute pass, one submit: reset, compact, then write the refill
-   *  dispatch. Must follow the frame's uniform sync and precede its render. The camera's matrices are
+  /** One compute pass, one submit: reset, compact, and on an armed frame the
+   *  two scan kernels. Must follow the frame's uniform sync and precede its render. The camera's matrices are
    *  refreshed here because the controls mutate position and quaternion
    *  without propagating them, and the render that would is still ahead. */
   dispatch(camera: Camera): void {
-    if (this.kernels === null) return;
+    if (this.kernels === null || this.plainKernels === null) return;
     camera.updateMatrixWorld();
     this.viewProjection.value.multiplyMatrices(
       camera.projectionMatrix, camera.matrixWorldInverse);
-    this.renderer.compute(this.kernels);
+    this.renderer.compute(this.refill.arm.value === 1 ? this.kernels : this.plainKernels);
     this.releaseWaiters();
   }
 
@@ -215,6 +219,7 @@ export class StarCompaction {
   dispose(): void {
     for (const k of this.kernels ?? []) k.dispose();
     this.kernels = null;
+    this.plainKernels = null;
     // Or an armed readback never settles and its caller hangs for the boot.
     this.releaseWaiters();
     disposeStorageAttribute(this.renderer, this.survivors);

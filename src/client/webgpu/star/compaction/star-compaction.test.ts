@@ -92,7 +92,8 @@ describe('StarCompaction dispatch', () => {
   // kernel's atomics, the kernel's adds to the finish kernel's loads, and
   // every draw of the render submit reads the result.
   it('runs the reset, the kernel, then the two scan kernels in a single compute call', () => {
-    const { compaction, dispatches } = make();
+    const { compaction, dispatches, extinction } = make();
+    extinction.refill.arm.value = 1;
     compaction.dispatch(camera());
     expect(dispatches).toHaveLength(1);
     const [reset, kernel, copyCounts, finish] = dispatches[0] as ComputeNode[];
@@ -104,6 +105,30 @@ describe('StarCompaction dispatch', () => {
     expect(reset.name).toBe('star-compaction-reset');
     expect(kernel.name).toBe('star-compaction');
     expect(finish.name).toBe('star-compaction-refill-dispatch');
+  });
+
+  // The scan's output is read only by the refill kernel, which the prepass
+  // dispatches only on the frame after a class was built — and a class is
+  // built only under the arm. So an unarmed frame would scan counters
+  // nothing appended into and write a dispatch nothing reads.
+  it('leaves both scan kernels out of an unarmed frame', () => {
+    const { compaction, dispatches, extinction } = make();
+    extinction.refill.arm.value = 0;
+    compaction.dispatch(camera());
+    const kernels = dispatches[0] as ComputeNode[];
+    expect(kernels.map((k) => k.name)).toEqual(['star-compaction-reset', 'star-compaction']);
+  });
+
+  it('picks the set by the arm the prepass left up, frame by frame', () => {
+    const { compaction, dispatches, extinction } = make();
+    const c = camera();
+    extinction.refill.arm.value = 1;
+    compaction.dispatch(c);
+    extinction.refill.arm.value = 0;
+    compaction.dispatch(c);
+    extinction.refill.arm.value = 1;
+    compaction.dispatch(c);
+    expect(dispatches.map((d) => (d as ComputeNode[]).length)).toEqual([4, 2, 4]);
   });
 
   // The kernels are built once: a frame re-dispatches the same array rather
@@ -166,7 +191,8 @@ describe('the prefilter counter is armed only across its readback', () => {
 
 describe('StarCompaction dispose', () => {
   it('releases every buffer through the renderer registry and disposes all four kernels', () => {
-    const { compaction, released, dispatches } = make();
+    const { compaction, released, dispatches, extinction } = make();
+    extinction.refill.arm.value = 1;
     compaction.dispatch(camera());
     const disposed: string[] = [];
     for (const k of dispatches[0] as ComputeNode[]) {

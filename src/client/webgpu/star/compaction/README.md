@@ -119,10 +119,11 @@ the layer first forwards this frame's attribute writes onto the tables
 positions — a kernel listing survivors off last frame's positions on a
 recentre frame would flicker the whole field.
 
-The reset kernel (one thread: both `instanceCount`s and the prefilter
-counter to zero, and on an armed frame the counter of the refill class
-being built),
-the compaction kernel and the two scan kernels (§ The refill dispatch) are
+The reset kernel (`REFILL_BUCKETS` threads: thread 0 zeroes both
+`instanceCount`s and the prefilter counter, and on an armed frame every
+thread zeroes its bucket's refill counter),
+the compaction kernel and — on an armed frame — the two scan kernels
+(§ The refill dispatch) are
 one `renderer.compute([...])`: one compute pass, one submit, and WebGPU
 orders dispatches within a pass so the atomics see the reset, the scan sees
 the atomics, and its second half sees the copy its first half made. Every rendered frame pays that submit; the render gate
@@ -214,6 +215,18 @@ which discards the whole submit, and with it every star this pass lists.
 `storageWriteRead` builds the pair (`../../tsl/README.md` § Storage
 attributes).
 
+**Both scan kernels are dispatched on armed frames only, and `dispatch()`
+picks the kernel list by `refill.arm` rather than branching inside them.**
+What they write is read only by the refill kernel, which the prepass
+dispatches only on the frame after a class was built — and a class is built
+only under the arm. So a parked camera would otherwise pay
+`O(REFILL_BUCKETS²)` L1 reads every frame to republish a prefix nothing
+reads: measured at 0.028 ms per frame at 1,278,785 records, against a win
+that only lands while the camera moves. The arm is set by the prepass,
+which runs earlier in the frame (§ The frame order), so the CPU knows it
+before this pass is submitted and the two dispatches cost nothing at all on
+a settled frame.
+
 **The scan's copy kernel is the only reader of an atomic outside the
 compaction kernel, and it reads each counter once.** A refill thread
 reading a counter directly is the shape § Reading the counts back refuses
@@ -289,7 +302,8 @@ or the fallback march, the size solve), one projection, and two atomics
 per survivor; on an armed frame, the refill producer on a quarter of the
 threads as well — the frustum at the refill's slack, the four gate terms,
 a stamp read for the in-frame admitted, and a slot read plus one atomic per
-stale star of the class. What it removes is the vertex-stage floor: each of the
+stale star of the class — plus the two `REFILL_BUCKETS`-wide scan
+dispatches, which an unarmed frame does not issue. What it removes is the vertex-stage floor: each of the
 three passes ran its stage over 4 corners × the whole catalogue with the
 invisible members exiting to the clip sentinel; now each runs over
 4 corners × the survivors inside the view. The frame-time delta is the

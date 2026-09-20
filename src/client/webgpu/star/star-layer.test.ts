@@ -20,11 +20,12 @@ export function makeLayer(count = 4) {
   const scene = new THREE.Scene();
   const { sources } = makeStarLayerSources(count);
   const fake = makeFakeStarRenderer();
+  const extinction = new ExtinctionNodes();
   return {
-    scene, sources, ...fake,
+    scene, sources, extinction, ...fake,
     layer: new StarLayer(
       fake.renderer as unknown as WebGPURenderer, scene, nodes, sources,
-      makeEmitterGateNodes(), new ExtinctionNodes()),
+      makeEmitterGateNodes(), extinction),
   };
 }
 
@@ -216,7 +217,10 @@ describe('StarLayer', () => {
   });
 
   it('dispose removes every mesh and releases geometries, materials, LUT, kernels and every storage buffer', () => {
-    const { scene, layer, released, dispatches } = makeLayer();
+    const { scene, layer, released, dispatches, extinction } = makeLayer();
+    // Armed, so the frame dispatches the scan kernels too and every kernel
+    // dispose has to reach is watchable from this one list.
+    extinction.refill.arm.value = 1;
     layer.update(new THREE.PerspectiveCamera());
     const disposed = new Set<string>();
     const watch = (
