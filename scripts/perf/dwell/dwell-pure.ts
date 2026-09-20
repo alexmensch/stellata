@@ -148,6 +148,12 @@ export function spreadMove(before: StreamEnds | null, after: StreamEnds | null):
  *  all — README.md § Where the frame has two classes. */
 export const CLASS_GAP_OVER_MEDIAN = 1;
 
+/** Each class must hold at least this share of the samples for the gap above
+ *  it to be a candidate cut. A class is a population the frame draws
+ *  repeatedly, so one sample is never one; earth's dear class runs 22-38 % of
+ *  its resolved samples across the archive, four times clear of this. */
+export const CLASS_MIN_SHARE = 0.05;
+
 /** One dwell's samples cut into the two classes a split frame draws. */
 export interface SampleClasses {
   readonly cutMs: number;
@@ -158,14 +164,25 @@ export interface SampleClasses {
   readonly dear: readonly number[];
 }
 
-/** The two classes, or null where the samples are one population. Callers
- *  gate this on the pass counters: a gap alone finds a cut at `lg` too. */
+/**
+ * The two classes, or null where the samples are one population. Callers
+ * gate this on the pass counters: a gap alone finds a cut at `lg` too.
+ *
+ * Only gaps leaving `CLASS_MIN_SHARE` on both sides are candidates, so the
+ * search is not the widest gap in the stream — one dear frame above the dear
+ * class beats the real separation on width alone, and the cut then lands
+ * above both classes with `plain` holding the whole mixture. Measured on
+ * earth's pinned stream: the classes sit 51.8 ms apart, so a single 133 ms
+ * frame reverses the choice and the row reports the mixture median 13.307
+ * still labelled `gpu-plain-p50`.
+ */
 export function sampleClasses(samples: readonly number[] | null | undefined): SampleClasses | null {
   if (samples == null || samples.length < 2) return null;
   const sorted = [...samples].sort((a, b) => a - b);
+  const minCount = Math.max(1, Math.ceil(CLASS_MIN_SHARE * sorted.length));
   let widest = 0;
   let at = 0;
-  for (let i = 1; i < sorted.length; i++) {
+  for (let i = minCount; i <= sorted.length - minCount; i++) {
     const gap = sorted[i]! - sorted[i - 1]!;
     if (gap > widest) [widest, at] = [gap, i];
   }

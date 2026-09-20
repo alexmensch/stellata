@@ -175,7 +175,14 @@ cuts the stream at the widest gap between consecutive samples, taken only
 where that gap exceeds the median of everything below it — earth's classes sit
 about four times apart and separate on every archived dwell, while a stream
 holding one population, or two modes that merely overlap, correctly finds
-nothing. The **counters** are what says there are two classes to find:
+nothing. **The widest gap is sought only among those leaving
+`CLASS_MIN_SHARE` of the samples on each side**, because a class is a
+population the frame draws repeatedly and one sample is never one: earth's
+classes stand 51.8 ms apart, so a single 133 ms frame outranks that
+separation on width alone, and the cut then lands above both classes with the
+lower one holding the whole mixture — the mixture median reported under the
+`gpu-plain-p50` label, which is the one reading this whole section exists to
+stop. The **counters** are what says there are two classes to find:
 `renderPasses` min against max. Without that gate a vantage that merely
 wanders takes a cut of its own, `lg` on every dwell it has ever recorded.
 What the pin then holds, and what the band is built from:

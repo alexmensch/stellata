@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CLASS_GAP_OVER_MEDIAN,
+  CLASS_MIN_SHARE,
   DEFAULT_DWELL_FRAMES,
   DWELL_READBACK_EVERY_FRAMES,
   PASS_COUNTERS,
@@ -252,6 +253,28 @@ describe('sampleClasses — the two classes a split frame draws', () => {
     // more than twice the other — well under earth's own 4×.
     expect(sampleClasses([10, 10, 20])).toBeNull();
     expect(sampleClasses([10, 10, 20.1])).not.toBeNull();
+  });
+
+  it('keeps the real cut when one frame sits above the dear class, where the widest gap alone does not', () => {
+    // earth's own separation is 51.8 ms, so a single frame past the dear
+    // class outranks it on width and cuts above BOTH classes — leaving the
+    // mixture in `plain` under the `gpu-plain-p50` label.
+    const hitched = [...Array.from({ length: 40 }, (_, i) => 12 + i * 0.05), 74.2, 75.6, 77.1, 210];
+    const classes = sampleClasses(hitched);
+    expect(classes!.cutMs).toBeGreaterThan(14);
+    expect(classes!.cutMs).toBeLessThan(74);
+    expect(classes!.plain).toHaveLength(40);
+    expect(classes!.dear).toEqual([74.2, 75.6, 77.1, 210]);
+  });
+
+  it('holds the minimum share at the constant the README states', () => {
+    expect(CLASS_MIN_SHARE).toBe(0.05);
+    const ramp = (n: number): number[] => Array.from({ length: n }, (_, i) => 10 + i * 0.01);
+    // 20 samples admit a class of one, 21 require two, and a lone sample past
+    // a real gap stops being a population of its own at the crossing.
+    expect(sampleClasses([...ramp(19), 40])!.dear).toEqual([40]);
+    expect(sampleClasses([...ramp(20), 40])).toBeNull();
+    expect(sampleClasses([...ramp(20), 40, 40.1])!.dear).toEqual([40, 40.1]);
   });
 
   it('gives classClock the three fields a band is built from', () => {
