@@ -5,7 +5,7 @@ import { createMilkyWayLabel } from './local-group/local-group';
 import { Stellata } from './stellata';
 import { bindControls } from './camera/controls/controls';
 import { bindSearch, bindFindSearch } from './typeahead/search';
-import { buildBayerMap, type BayerInfo } from './typeahead/star-name-tables';
+import type { BayerInfo } from './typeahead/star-name-tables';
 import { createDistanceVectorOverlay } from './overlays/distance-vector-overlay';
 import { createFocusRingOverlay } from './overlays/focus-ring-overlay';
 import { createPoiOverlay } from './overlays/poi-overlay';
@@ -370,14 +370,15 @@ async function main() {
     if (binaries) stellata.attachBinaries(binaries);
     await frame();
 
-    // Chart-mode's Greek-letter labels are the one search-index
-    // derivation no kind module consumes.
-    buildBayerMap(searchIndex, bayerMap);
+    // Chart mode bound against this map in wave 1 and holds it by
+    // reference (README.md § Boot in two waves), so fill it, never swap it.
+    const searchTables = kinds.star.searchTables;
+    for (const [idx, info] of searchTables.bayer) bayerMap.set(idx, info);
     await frame();
-    // The dearest step in this wave by a distance — a fuzzy corpus over
-    // every searchable entry, half a second of main thread on its own.
-    bindSearch(stellata, catalog, searchIndex);
-    bindFindSearch(stellata, catalog, searchIndex);
+    // Both the corpus and the Bayer map were derived off the main thread
+    // (typeahead/README.md § The search-index worker); these bind them.
+    bindSearch(stellata, catalog, searchIndex, searchTables.corpus);
+    bindFindSearch(stellata, catalog, searchIndex, searchTables.corpus);
     for (const el of searchInputs) {
       el.disabled = false;
       el.placeholder = el.id === 'search-to' ? 'Search destination…' : 'Search stars…';

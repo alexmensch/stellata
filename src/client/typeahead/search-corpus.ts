@@ -169,6 +169,10 @@ export interface SearchIndex {
 export function buildSearchIndex(
   raw: SearchEntry[],
   constellations: { code: string; name: string }[],
+  /** The composer's output when a caller has already run it. It is the
+   *  dearest step in this build by a distance, and the label table needs
+   *  the same pass — `search-index-payload.ts` runs it once for both. */
+  precomposed?: ReturnType<typeof displayNamesFromSearchIndex>,
 ): SearchIndex {
   const hipMap = buildAliasedIdIndex(raw, (e) => e.hip);
   const hdMap = buildAliasedIdIndex(raw, (e) => e.hd, (e) => e.hda);
@@ -187,7 +191,7 @@ export function buildSearchIndex(
 
   // The composer's two relational rules need every entry in hand
   // (docs/star-naming.md § 6).
-  const composed = displayNamesFromSearchIndex(raw, constellations);
+  const composed = precomposed ?? displayNamesFromSearchIndex(raw, constellations);
 
   const addFlam = (key: string, e: FuzzyEntry) => {
     const arr = flamMap.get(key);

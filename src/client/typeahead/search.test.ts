@@ -16,6 +16,8 @@ import {
   type FuzzyEntry,
   type SearchEntry,
 } from './search';
+import { displayNamesFromSearchIndex } from '../../../scripts/catalog/naming/star-naming-pure';
+import type { SearchIndex as SearchIndexLike } from './search-corpus';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import { KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
 import type { KindSearchEntry, ObjectKindModule } from '../kinds/kind-module';
@@ -320,6 +322,30 @@ describe('search / buildSearchIndex', () => {
     { code: 'Ori', name: 'Orionis' },
     { code: 'CMa', name: 'Canis Majoris' },
   ];
+
+  it('takes a precomputed composer pass without changing its output', () => {
+    // The composer is the dearest step in this build and the label table
+    // needs the same pass, so the payload builder runs it once and hands it
+    // here. If the two ever diverge, search rows and focus-card labels stop
+    // agreeing — silently.
+    const raw: SearchEntry[] = [
+      { i: 7, g: 'VY CMa', c: 2 },
+      { i: 8, p: 'Deneb', b: 'α', bx: 1, c: 0 },
+      { i: 9, f: 61, c: 0 },
+    ];
+    const fresh = buildSearchIndex(raw, CONS);
+    const shared = buildSearchIndex(raw, CONS, displayNamesFromSearchIndex(raw, CONS));
+
+    const norm = (x: SearchIndexLike) => ({
+      fuzzy: x.fuzzyEntries.map((e) => `${e.index}|${e.label}|${e.primary}`).sort(),
+      hip: [...x.hipMap].sort(),
+      hd: [...x.hdMap].sort(),
+      hr: [...x.hrMap].sort(),
+      gl: [...x.glMap].sort(),
+      flam: [...x.flamMap].map(([k, v]) => `${k}:${v.map((e) => e.index).sort()}`).sort(),
+    });
+    expect(norm(shared)).toEqual(norm(fresh));
+  });
 
   it('emits fuzzy GCVS labels, taking the designation as primary when unnamed', () => {
     // VY CMa carries no proper/Bayer/Flamsteed — its display + fuzzy labels

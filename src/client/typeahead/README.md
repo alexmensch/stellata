@@ -27,6 +27,56 @@ three, so either import path stays valid.
   one for the session.
 - `search-corpus.ts` — the fuzzy corpus and the exact-match identifier
   maps (`buildSearchIndex` and the label builders).
+- `search-index-payload.ts` — every catalogue-wide derivation of the search
+  index, in ONE composer pass. § The search-index worker.
+- `search-index-worker.ts` / `search-index-host.ts` — that pass, off the
+  main thread, and the spawn + inline fallback around it.
+
+## The search-index worker
+
+Deriving the search index's catalogue-wide tables costs about a second of
+main thread at boot, and since the catalogue now paints from its first
+chunk (`../loaders/README.md` § Progressive catalog load) that second
+freezes a **rendered** app rather than sitting behind a loading cover. So
+it runs in a worker.
+
+Measured over the 384,767-entry index:
+
+| step | cost |
+| --- | --- |
+| `displayNamesFromSearchIndex` | 329 ms |
+| rest of `buildSearchIndex` | 136 ms |
+| `JSON.parse` of the 17.8 MB index | 76 ms |
+| `buildSpectralMap`, `buildBayerMap`, id maps | ~30 ms |
+| `new Fuse(fuzzyEntries)` | 13 ms |
+
+**The composer was running twice** — once for `buildStarLabels`, once
+inside `buildSearchIndex` — which alone was 658 ms of it.
+`buildSearchIndexPayload` runs it once and both callers take the result;
+`buildSearchIndex` accepts it as `precomposed`.
+
+Three things decided the split, each measured rather than assumed:
+
+- **Nothing raw crosses.** Structured-cloning the parsed entries back costs
+  189 ms against 76 ms to parse them again on the main thread, so both
+  sides fetch the same URL and the second is served from cache. The main
+  thread keeps the raw entries because the focus card looks one up per
+  focused star.
+- **Only derived tables cross**, and they clone in 130 ms — labels 45,
+  corpus entries 30, the rest small. So the main thread pays ~206 ms of the
+  original ~1,050.
+- **Fuse is not serialised.** Constructing it over the returned entries is
+  13 ms, so `createIndex`/`parseIndex` would buy nothing and would pin the
+  search options into this module. The corpus crosses as data and
+  `search.ts` builds Fuse from it.
+
+Everything crossing is plain Maps and arrays by construction — no class
+instances — which is what makes it structured-cloneable at all.
+
+`loadSearchIndexPayload` **never rejects**: no `Worker`, a failed spawn, a
+throw inside, or an `onerror` all fall back to computing inline on the main
+thread. Search arriving late is a degradation; search never arriving is a
+broken app.
 
 **Nothing here parses a designation string.** The wire carries the Bayer
 letter as a glyph with its index alongside (`b` / `bx`), and every label —

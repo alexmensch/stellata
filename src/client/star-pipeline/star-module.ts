@@ -26,9 +26,9 @@ import type { SceneLayer } from '../scene/scene-layer';
 import { StarShardTable } from './shards/star-shard-table';
 import { catalogShard } from './shards/star-shards-pure';
 import { tToJdUt } from '../solar-system/time/time';
-import {
-  buildSpectralMap, buildStarLabels, seedStarLabelsFromNames,
-} from '../typeahead/star-name-tables';
+import { seedStarLabelsFromNames } from '../typeahead/star-name-tables';
+import { loadSearchIndexPayload } from '../typeahead/search-index-host';
+import type { SearchIndexPayload } from '../typeahead/search-index-payload';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
 
 /** Shell-owned star machinery the module's legs read through closures —
@@ -64,6 +64,11 @@ export interface StarKindModule extends ObjectKindModule<'star'> {
    *  Chart mode and the planet card's host breadcrumb read the same
    *  table the module's own name ladder does. */
   readonly starLabels: Map<number, string>;
+  /** Every catalogue-wide search-index derivation, built off the main
+   *  thread (`../typeahead/README.md` § The search-index worker). Valid
+   *  after `ready`; boot hands the corpus to the search runner and the
+   *  Bayer map to chart mode rather than rebuilding either. */
+  readonly searchTables: SearchIndexPayload;
   /** Settles when the whole catalogue and the search index have landed and
    *  every table derived from them is built. `load` resolves far earlier —
    *  on the catalogue's first chunk — so anything needing the COMPLETE
@@ -85,6 +90,7 @@ export function createStarKindModule(): StarKindModule {
   let runtime: StarModuleRuntime | null = null;
   let ready: Promise<void> = Promise.resolve();
   let offRecords: (() => void) | null = null;
+  let corpus: SearchIndexPayload | null = null;
   // Filled in place rather than reassigned — every card provider, chart
   // binding and hover formatter captures these at boot, before the search
   // index has landed.
@@ -127,6 +133,10 @@ export function createStarKindModule(): StarKindModule {
       return starLabels;
     },
     get ready(): Promise<void> { return ready; },
+    get searchTables(): SearchIndexPayload {
+      if (!corpus) throw new Error('star module search tables read before ready');
+      return corpus;
+    },
     photometry: photometryOf,
     setRuntime(rt) {
       runtime = rt;
@@ -137,6 +147,12 @@ export function createStarKindModule(): StarKindModule {
      *  and feeds only search, chart labels and designations, none of which
      *  is on the first-paint path. Both land under `ready`. */
     async load(baseUrl: string, onProgress?: (p: KindLoadProgress) => void): Promise<void> {
+      // Two readers of the same URL, both served from one fetch by the HTTP
+      // cache: the worker derives the catalogue-wide tables, and this one
+      // keeps the raw entries the focus card looks up per star. Crossing
+      // the parsed entries back from the worker costs more than parsing
+      // them here (189 ms against 76 ms).
+      const derived = loadSearchIndexPayload(baseUrl);
       const index = fetch(`${baseUrl}search-index.json`).then(
         (r) => r.json() as Promise<SearchEntry[]>,
       );
@@ -161,15 +177,22 @@ export function createStarKindModule(): StarKindModule {
       );
       const loaded = catalog;
       ready = (async () => {
-        const [, raw] = await Promise.all([loaded.whenComplete, index]);
+        const [, raw, tables] = await Promise.all([
+          loaded.whenComplete, index, derived,
+        ]);
         searchIndex = raw;
-        // The per-chunk seeding above has done its job; this pass redoes it
-        // and adds the composed-designation tier.
+        // The per-chunk seeding has done its job. The name tier stays
+        // authoritative over the worker's composed tier — an authority
+        // named these stars, and the composer only fills the rest.
         offRecords?.();
         offRecords = null;
-        buildStarLabels(loaded, raw, starLabels);
-        buildSpectralMap(raw, spectralMap);
+        seedStarLabelsFromNames(loaded, starLabels);
+        for (const [idx, label] of tables.composedLabels) {
+          if (!starLabels.has(idx)) starLabels.set(idx, label);
+        }
+        for (const [idx, spect] of tables.spectral) spectralMap.set(idx, spect);
         for (const e of raw) searchEntryById.set(e.i, e);
+        corpus = tables;
       })();
     },
 
