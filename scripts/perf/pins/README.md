@@ -126,7 +126,7 @@ gates through `computeFloorMs`:
         repeat scatter   population span   FLOOR
 mw120       0.009             0.032         0.05
 mw50        0.001             0.017         0.05
-earth       0.065             0.094         0.15
+earth       0.065             0.169         0.15   span exceeds its floor
 sol         0.211             0.284         0.25
 lg          0.106             0.303         0.25   ungated
 ```
@@ -138,7 +138,7 @@ by containing any real change as well. That population is every row a gate
 would actually compare — 960 frames, canon position, one catalogue, no
 setup lever, **and its frame row steady**, the last because a trending
 context is refused rather than banded (§ State guard) and reading its
-compute median back in widens earth from 0.094 to 0.145 on one row. Each
+compute median back in widens earth from 0.169 to 0.221 on one row. Each
 constant is 1.5× the span rounded up to 0.05 — so `COMPUTE_SCATTER_FLOOR_MS`
 holds 0.45 at sol and 0.50 at lg, and the FLOOR column above is what
 `computeFloorMs` applies after **capping at `DWELL_FLOOR_MS`**. Widening
@@ -146,6 +146,20 @@ those two to meet their own scatter would blind the one row that can see a
 compute regression at all, so the cap is what makes a re-derivation only
 ever tighten a row. A name outside these five — no canon vantage is one
 today — takes `DWELL_FLOOR_MS` rather than banding the row on a `NaN`.
+
+**earth is the row whose span the FLOOR column no longer covers, and a wider
+floor is not the fix.** Its compute row is two-valued — one population near
+0.39 ms and one near 0.62 — so its median records which mode the dwell spent
+most of its frames in rather than what the dispatch cost: across the
+population the share of samples at or above 0.5 ms runs 0 % to 58 % and the
+p50 follows it, while the p10 stays inside 0.065. The span above is that duty
+cycle, the gap between the modes is about 0.22, and the row therefore marks
+whenever a run lands on the other side of the halfway point. Read `dear` —
+the share of samples in the upper mode — before reading an earth compute
+mark; a flat set of quarter medians does not separate the two, because each
+quarter contains both. `stellata-8cg.49.34` owns the re-derivation; until it
+lands the row is accepted rather than gated, and sol is the same shape hidden
+by a wider floor.
 
 The `max(0.25 ms, 1 % × pinned)` this replaces was drawn from how far two
 cold **whole-frame** dwells of one tree disagree — a 10–30 ms reading — and
