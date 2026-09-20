@@ -185,6 +185,32 @@ covers that instead is an operator rule, `RELEASING.md` § What a mark means:
 a frame-row `✗` does not stand until a second cold run reproduces it.
 `stellata-8cg.74` carries both measurements and the decision.
 
+**A split-frame frame row bands on its duty cycle, and the floor never
+binds it.** Where a vantage draws two pass classes — `earth` alone in the
+canon — the GPU stream holds two populations, so the middle-half spread the
+standard error is built from is a cliff on what share of the *resolved*
+samples are the dear ones: under a quarter the 75th percentile sits at the
+boundary between the modes, past a quarter it sits inside the upper one.
+Two cold shipped-path runs, identical scene, `readbackPerFrame` 0.25 on
+both:
+
+```
+            resolved   dear   share     p75      IQR   band floor
+ce361e6f     850/960    210   24.7 %   14.47     2.73        0.25
+83439653     515/960    195   37.9 %   73.95    61.22        5.01
+```
+
+The dear frames resolve either way — 210 and 195 of the ~240 the cadence
+asks for. What moved is the cheap frames' resolve rate, 0.89 to 0.44, which
+is the instrument's and not the tree's. So the pinned side alone can open
+the band to 38 % of the frame it gates, and no later run narrows it: the
+band is `max(2σ, floor)` over the pair, and one side's σ is already past
+every floor. Read a split-frame row's own spread before trusting its band.
+Nothing else catches it — `readbackPerFrame` is a share of all frames, not
+of resolved ones, so it matches on both sides and the readback guard stays
+silent. `stellata-8cg.49.34` owns the re-derivation for both of earth's
+rows.
+
 ## Setup levers
 
 A pin holds no `params` of its own: it is taken with every setup lever at its
@@ -343,7 +369,8 @@ the whole pin, it blocked the pin for *every* render-path PR at random. Wall
   compute row at that vantage's own constant instead (§ The compute row).
   A `✗` is past both; `~` is not resolved, never "no change". The
   millisecond term is the larger of the two at every canon frame row but
-  mw50, so it is what sets sensitivity in practice. Both floors live in
+  mw50 — but a floor binds only where the two-sigma term sits under it, and
+  at a split-frame vantage it need not (§ The compute row, last). Both floors live in
   `../diff/diff-pure.ts` beside `band` because `--baseline` applies the same
   ones: the tighter of two gates is the one that decides, so a Tier 1 band
   under this one would mark a move Tier 2 calls unresolved
