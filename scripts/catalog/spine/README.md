@@ -273,6 +273,15 @@ adds the two witnesses the binding derivation already trusts, the Gaia
 best-neighbour walks naming one source for two cells and SIMBAD's frozen
 cross-IDs under a cell's source carrying another cell's value.
 
+**Both witnesses reach `tyc`, `hip` and `gl` only**, so an `hd` or `hr` cell
+the primaries do not link stays disconnected whatever they say: the walks key
+on TYC and HIP, CNS5 supplies the GJ, and `simbad_sptype.tsv`'s cross-ID
+columns are `hip` / `tyc` / `gj` with no HD among them. The two `hd` rows and
+the one `hr` row below are therefore the `published` residual unchanged, not a
+verdict that the witnesses examined them. An HD cross-ID column on the frozen
+SIMBAD identifier pull `docs/catalog-driver.md` § 3.2 proposes would bring
+them into reach.
+
 Measured 2026-09-20: 312,280 rows carry two or more of the five cells;
 **316** do not connect under `published`, **136** under `witnessed` — 131 a
 GJ number on a TYC+HIP row with no HD, plus HD 96600 / HIP 54335,

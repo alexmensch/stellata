@@ -413,8 +413,11 @@ column GJ↔HD. Over the 312,280 rows carrying two or more of
 but **316**; adding the two witnesses the binding derivation already trusts —
 the Gaia best-neighbour walks naming one source, and SIMBAD's frozen
 cross-IDs under that source — leaves **136** rows whose association only
-AT-HYG makes. Those 136 are the retirement's whole curation surface for
-the merge decisions:
+AT-HYG makes. Both witnesses key on `tyc`, `hip` and `gl` alone, so the `hd`
+and `hr` rows below carry the `published` verdict unchanged rather than one
+the witnesses reached; the identifier pull `17.4` turns on would change that
+if it carries an HD cross-ID column. Those 136 are the retirement's whole
+curation surface for the merge decisions:
 
 | Pattern | Rows | What is unlinked | Witness left |
 |---|---|---|---|
