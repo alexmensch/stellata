@@ -169,9 +169,7 @@ export interface SearchIndex {
 export function buildSearchIndex(
   raw: SearchEntry[],
   constellations: { code: string; name: string }[],
-  /** The composer's output when a caller has already run it. It is the
-   *  dearest step in this build by a distance, and the label table needs
-   *  the same pass — `search-index-payload.ts` runs it once for both. */
+  /** `./README.md` § The search-index worker. */
   precomposed?: ReturnType<typeof displayNamesFromSearchIndex>,
 ): SearchIndex {
   const hipMap = buildAliasedIdIndex(raw, (e) => e.hip);

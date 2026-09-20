@@ -52,9 +52,7 @@ export function createSearchRunner(
   catalog: Catalog,
   raw: SearchEntry[],
   kinds: KindModules | null = null,
-  /** The corpus when it was built off the main thread
-   *  (`./README.md` § The search-index worker). Building it here instead
-   *  costs half a second of main thread at boot. */
+  /** `./README.md` § The search-index worker. */
   prebuilt?: SearchIndex,
 ): (q: string) => FuzzyEntry[] {
   // Direct-lookup maps for numeric IDs. Prefix form ("HIP 12345", "HD 128620")

@@ -68,10 +68,8 @@ export interface StarKindModule extends ObjectKindModule<'star'> {
    *  (`../focus-card/README.md` § Surfaces retained over a growing
    *  catalogue). */
   derivedGeneration(): number;
-  /** Every catalogue-wide search-index derivation, built off the main
-   *  thread (`../typeahead/README.md` § The search-index worker). Valid
-   *  after `ready`; boot hands the corpus to the search runner and the
-   *  Bayer map to chart mode rather than rebuilding either. */
+  /** Valid after `ready` — `../typeahead/README.md` § The search-index
+   *  worker. */
   readonly searchTables: SearchIndexPayload;
   /** Settles when the whole catalogue and the search index have landed and
    *  every table derived from them is built. `load` resolves far earlier —

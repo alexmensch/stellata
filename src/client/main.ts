@@ -275,7 +275,8 @@ async function main() {
     if (!applied) {
       applyFirstLoadView(stellata, idMaps);
     }
-    // Cleared at the same point that lifts the cover, below.
+    // Clear this only alongside `scene-live` below — the two decide
+    // together whether anything renders over a covered scene.
     let awaitingFocus = focusPending !== null;
     startUrlSync(stellata, idMaps);
 
@@ -380,8 +381,6 @@ async function main() {
     const searchTables = kinds.star.searchTables;
     for (const [idx, info] of searchTables.bayer) bayerMap.set(idx, info);
     await frame();
-    // Both the corpus and the Bayer map were derived off the main thread
-    // (typeahead/README.md § The search-index worker); these bind them.
     bindSearch(stellata, catalog, searchIndex, searchTables.corpus);
     bindFindSearch(stellata, catalog, searchIndex, searchTables.corpus);
     for (const el of searchInputs) {
