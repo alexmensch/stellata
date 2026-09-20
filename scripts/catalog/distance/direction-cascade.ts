@@ -416,46 +416,69 @@ function floatCell(cells: string[], i: number): number | null {
   return Number.isFinite(v) ? v : null;
 }
 
-/** source_id stays a string — Gaia IDs exceed Number.MAX_SAFE_INTEGER, so a
- *  numeric parse would corrupt the key. */
+const ASTROMETRY_COLUMNS = [
+  'source_id', 'ra', 'dec', 'parallax', 'parallax_error', 'pmra', 'pmdec',
+  'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag', 'phot_bp_mean_mag',
+  'phot_rp_mean_mag', 'radial_velocity', 'radial_velocity_error',
+] as const;
+
+/** Line-fed, so the whole-text parse and a streaming read over the magnitude
+ *  pull share one implementation. `keep` filters to a subset without holding
+ *  the table; source_id stays a string — Gaia IDs exceed
+ *  Number.MAX_SAFE_INTEGER, so a numeric parse would corrupt the key. */
+export function gaiaAstrometryAccumulator(
+  fileLabel: string,
+  refreshHint: string,
+  keep?: ReadonlySet<string>,
+): {
+  line: (raw: string) => void;
+  result: () => Map<string, GaiaAstrometryCatalogRow>;
+} {
+  let idx: Record<string, number> | null = null;
+  const out = new Map<string, GaiaAstrometryCatalogRow>();
+  return {
+    line: (raw) => {
+      if (idx === null) {
+        idx = headerIndex(raw, ASTROMETRY_COLUMNS, fileLabel, refreshHint);
+        return;
+      }
+      if (!raw.trim()) return;
+      const cells = raw.split('\t');
+      const sourceId = (cells[idx.source_id] ?? '').trim();
+      if (!sourceId) return;
+      if (keep && !keep.has(sourceId)) return;
+      const raDeg = floatCell(cells, idx.ra);
+      const decDeg = floatCell(cells, idx.dec);
+      if (raDeg === null || decDeg === null) return;
+      out.set(sourceId, {
+        raDeg,
+        decDeg,
+        parallaxMas: floatCell(cells, idx.parallax),
+        parallaxErrorMas: floatCell(cells, idx.parallax_error),
+        pmraMasyr: floatCell(cells, idx.pmra),
+        pmdecMasyr: floatCell(cells, idx.pmdec),
+        ruwe: floatCell(cells, idx.ruwe),
+        ipdFracMultiPeak: floatCell(cells, idx.ipd_frac_multi_peak),
+        gMag: floatCell(cells, idx.phot_g_mean_mag),
+        bpMag: floatCell(cells, idx.phot_bp_mean_mag),
+        rpMag: floatCell(cells, idx.phot_rp_mean_mag),
+        radialVelocityKmS: floatCell(cells, idx.radial_velocity),
+        radialVelocityErrorKmS: floatCell(cells, idx.radial_velocity_error),
+      });
+    },
+    result: () => out,
+  };
+}
+
 export function parseGaiaAstrometryCatalogTsv(
   text: string,
 ): Map<string, GaiaAstrometryCatalogRow> {
-  const out = new Map<string, GaiaAstrometryCatalogRow>();
-  const lines = text.split(/\r?\n/);
-  if (lines.length === 0) return out;
-  const idx = headerIndex(
-    lines[0],
-    ['source_id', 'ra', 'dec', 'parallax', 'parallax_error', 'pmra', 'pmdec', 'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag', 'radial_velocity', 'radial_velocity_error'],
+  const acc = gaiaAstrometryAccumulator(
     'Gaia astrometry catalog TSV',
     'Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.',
   );
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
-    const cells = line.split('\t');
-    const sourceId = (cells[idx.source_id] ?? '').trim();
-    if (!sourceId) continue;
-    const raDeg = floatCell(cells, idx.ra);
-    const decDeg = floatCell(cells, idx.dec);
-    if (raDeg === null || decDeg === null) continue;
-    out.set(sourceId, {
-      raDeg,
-      decDeg,
-      parallaxMas: floatCell(cells, idx.parallax),
-      parallaxErrorMas: floatCell(cells, idx.parallax_error),
-      pmraMasyr: floatCell(cells, idx.pmra),
-      pmdecMasyr: floatCell(cells, idx.pmdec),
-      ruwe: floatCell(cells, idx.ruwe),
-      ipdFracMultiPeak: floatCell(cells, idx.ipd_frac_multi_peak),
-      gMag: floatCell(cells, idx.phot_g_mean_mag),
-      bpMag: floatCell(cells, idx.phot_bp_mean_mag),
-      rpMag: floatCell(cells, idx.phot_rp_mean_mag),
-      radialVelocityKmS: floatCell(cells, idx.radial_velocity),
-      radialVelocityErrorKmS: floatCell(cells, idx.radial_velocity_error),
-    });
-  }
-  return out;
+  for (const line of text.split(/\r?\n/)) acc.line(line);
+  return acc.result();
 }
 
 export function parseHip2Tsv(text: string): Map<number, Hip2AstrometryRow> {

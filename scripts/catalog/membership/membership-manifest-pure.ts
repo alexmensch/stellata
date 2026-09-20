@@ -61,6 +61,11 @@ import {
   starDesignations,
   type SameasEdge,
 } from '../../sid/sid-pure';
+import {
+  magnitudeTermNewcomers,
+  type MagnitudeTermCounts,
+  type MagnitudeTermSelection,
+} from './magnitude-term/magnitude-term-pure';
 
 export const MEMBERSHIP_MANIFEST_FILE = 'data/membership/membership-manifest.tsv';
 export const ADDITIONS_LEDGER_FILE = 'data/membership/additions-ledger.tsv';
@@ -73,18 +78,24 @@ export const MANIFEST_VALUE_SEPARATOR = '|';
 
 export const MANIFEST_COLUMNS = [
   'tyc', 'hip', 'hd', 'hd_alt', 'hr', 'hr_alt', 'gl', 'flam', 'bayer', 'proper',
-  'gaia_source_id', 'binding', 'routes',
+  'gaia_source_id', 'binding', 'routes', 'term',
 ] as const;
 export type ManifestColumn = (typeof MANIFEST_COLUMNS)[number];
 export type ManifestRow = Record<ManifestColumn, string>;
+
+/** Which term of `docs/catalog-driver.md` § 1's union admitted the row.
+ *  `magnitude-term/README.md` § The column is the ledger. */
+export const MEMBERSHIP_TERMS = ['primaries', 'magnitude'] as const;
+export type MembershipTerm = (typeof MEMBERSHIP_TERMS)[number];
 
 /** How the row's `gaia_source_id` is justified. `crosswalk_gated` is a TYC /
  *  HIP / CNS5 candidate the § 4 gates passed; `simbad_corroborated` is the
  *  source SIMBAD's frozen cross-IDs hold under the record's own designation,
  *  through the same gates; `reviewed` is the value a committed disposition row
- *  settles on stated evidence; `none` is an empty cell. */
+ *  settles on stated evidence; `gaia_native` is the pull row itself; `none` is
+ *  an empty cell. */
 export const BINDING_CLASSES = [
-  'crosswalk_gated', 'simbad_corroborated', 'reviewed', 'none',
+  'crosswalk_gated', 'simbad_corroborated', 'reviewed', 'gaia_native', 'none',
 ] as const;
 export type BindingClass = (typeof BINDING_CLASSES)[number];
 
@@ -321,12 +332,18 @@ export interface MembershipInput {
   /** The committed corrections to AT-HYG's merge decisions
    *  (§ Correcting a merge decision). */
   corrections: readonly SpineCorrectionRow[];
+  /** `magnitude-term/README.md` § The union dedupes on the derived binding. */
+  magnitudeTerm: MagnitudeTermSelection | null;
 }
 
 export interface MembershipCounts extends LabelMergeCounts {
   rows: number;
   spineRows: number;
   additionRows: number;
+  /** The pull partitioned by the floor, and what survives the dedupe. All zero
+   *  while the floor is null. */
+  magnitudeTerm: MagnitudeTermCounts;
+  magnitudeRows: number;
   additionsByReason: Record<AdditionReason, number>;
   /** Groups a primary admits that resolve onto an existing record instead. */
   componentRows: number;
@@ -447,30 +464,53 @@ export function serializeManifest(rows: readonly ManifestRow[]): string {
 
 /** Demands the header byte for byte, as `iterSpineTsv` does: the only writers
  *  are this module's serializers, so a header that merely parses was never
- *  shipped. Walks the text rather than splitting it — the manifest runs to tens
- *  of megabytes, and every reader here shares the walk. */
+ *  shipped. */
+function checkTsvHeader(header: string, columns: readonly string[], label: string): void {
+  if (header !== columns.join('\t')) {
+    throw new Error(`${label}: header mismatch: got ${header}`);
+  }
+}
+
+function tsvCells(line: string, columns: readonly string[], label: string): string[] {
+  const cells = line.split('\t');
+  if (cells.length !== columns.length) {
+    throw new Error(
+      `${label}: row has ${cells.length} cells, expected ${columns.length}: "${line}"`,
+    );
+  }
+  return cells;
+}
+
+/** Walks the text rather than splitting it — the manifest runs to tens of
+ *  megabytes, and every reader here shares the walk. */
 function* tsvRows(
   text: string, columns: readonly string[], label: string,
 ): Generator<string[]> {
   const headerEnd = text.indexOf('\n');
-  const header = headerEnd === -1 ? text : text.slice(0, headerEnd);
-  if (header !== columns.join('\t')) {
-    throw new Error(`${label}: header mismatch: got ${header}`);
-  }
+  checkTsvHeader(headerEnd === -1 ? text : text.slice(0, headerEnd), columns, label);
   let start = headerEnd === -1 ? text.length : headerEnd + 1;
   while (start < text.length) {
     const end = text.indexOf('\n', start);
     const line = text.slice(start, end === -1 ? text.length : end);
     start = end === -1 ? text.length : end + 1;
     if (line === '') continue;
-    const cells = line.split('\t');
-    if (cells.length !== columns.length) {
-      throw new Error(
-        `${label}: row has ${cells.length} cells, expected ${columns.length}: "${line}"`,
-      );
-    }
-    yield cells;
+    yield tsvCells(line, columns, label);
   }
+}
+
+/** The same contract, fed a line at a time, so a reader needing one column can
+ *  stream the manifest instead of holding it as one string. */
+export function manifestLineReader(onRow: (row: ManifestRow) => void): (line: string) => void {
+  let sawHeader = false;
+  return (line) => {
+    if (!sawHeader) {
+      checkTsvHeader(line, MANIFEST_COLUMNS, MEMBERSHIP_MANIFEST_FILE);
+      sawHeader = true;
+      return;
+    }
+    if (line === '') return;
+    onRow(rowFrom(MANIFEST_COLUMNS, tsvCells(line, MANIFEST_COLUMNS, MEMBERSHIP_MANIFEST_FILE)));
+  };
 }
 
 function rowFrom<C extends string>(
@@ -862,6 +902,20 @@ function manifestRowFromRecord(
     gaia_source_id: r.gaiaSourceId ?? '',
     binding,
     routes: '',
+    term: 'primaries',
+  };
+}
+
+/** One magnitude-term row — every classical cell empty, the source_id its
+ *  whole identity. */
+export function magnitudeTermRow(sourceId: string): ManifestRow {
+  return {
+    tyc: '', hip: '', hd: '', hd_alt: '', hr: '', hr_alt: '', gl: '', flam: '',
+    bayer: '', proper: '',
+    gaia_source_id: sourceId,
+    binding: 'gaia_native',
+    routes: '',
+    term: 'magnitude',
   };
 }
 
@@ -1121,9 +1175,9 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     ).length]),
   ) as Record<SpineCorrectionCell, number>;
 
-  const bindingByClass: Record<BindingClass, number> = {
-    crosswalk_gated: 0, simbad_corroborated: 0, reviewed: 0, none: 0,
-  };
+  const bindingByClass = Object.fromEntries(
+    BINDING_CLASSES.map((c) => [c, 0]),
+  ) as Record<BindingClass, number>;
   const unattestedByCell = Object.fromEntries(
     CLASSICAL_CELLS.map((c) => [c, 0]),
   ) as Record<ClassicalCell, number>;
@@ -1301,6 +1355,19 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     attest(a.row);
   }
 
+  const primariesRows = rows.length;
+  const boundSourceIds = new Set(
+    rows.map((r) => r.gaia_source_id).filter((s) => s !== ''),
+  );
+  for (const sourceId of magnitudeTermNewcomers(
+    input.magnitudeTerm?.keptSourceIds ?? new Set(),
+    boundSourceIds,
+  )) {
+    const row = magnitudeTermRow(sourceId);
+    bindingByClass[row.binding as BindingClass]++;
+    rows.push(row);
+  }
+
   const sorted = sortManifestRows(rows);
   const owners = new Map<string, number>();
   for (const row of sorted) {
@@ -1312,7 +1379,10 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     spineRows: spine.length,
     spineRowsFolded: spine.length - kept.length,
     spineCellsCorrected,
-    additionRows: sorted.length - kept.length,
+    additionRows: primariesRows - kept.length,
+    magnitudeTerm: input.magnitudeTerm?.counts
+      ?? { rows: 0, kept: 0, above_floor: 0, no_v: 0 },
+    magnitudeRows: sorted.length - primariesRows,
     additionsByReason,
     componentRows,
     bindingByClass,

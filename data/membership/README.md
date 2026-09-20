@@ -5,10 +5,14 @@ Pipeline-derived, like `../binaries/multiples.tsv`: written by
 diffed in CI, never hand-edited. Contract: `docs/catalog-driver.md` § 3.1.
 
 ```
-membership-manifest.tsv  ~30 MB, LFS. One row per admitted record: final
+membership-manifest.tsv  ~34 MB, LFS. One row per admitted record: final
                          labels (hd/hd_alt/hr/hr_alt/hip/gl/flam, the spine's
                          bayer/proper), gaia_source_id with its binding class,
-                         and the primary attesting each cell. 376,932 rows.
+                         the primary attesting each cell, and `term` — which
+                         side of docs/catalog-driver.md § 1's union admitted
+                         the row. 376,932 rows, every one `primaries`:
+                         the magnitude term is off
+                         (scripts/catalog/membership/magnitude-term/README.md).
 additions-ledger.tsv     ~3.6 MB, LFS. The § 6.1 ledger for everything the
                          primaries admit that the spine lacked: one row per
                          group, keyed on the same five identifier cells as

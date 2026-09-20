@@ -1,8 +1,9 @@
 // Gaia DR3 best-neighbour cross-walks (HIP, TYC) bridging classical catalog
 // IDs onto gaia_source_id anchors. Many-to-one collisions keep the
 // nearest match.
-import { createReadStream, readFileSync } from 'node:fs';
-import { createInterface } from 'node:readline';
+import { readFileSync } from 'node:fs';
+
+import { forEachLine } from './tsv-stream';
 
 const GAIA_COL = 'gaia_source_id';
 const ANG_COL = 'angular_distance';
@@ -107,11 +108,7 @@ async function readBestNeighbourStreamed<K>(
   keep?: ReadonlySet<K>,
 ): Promise<Map<K, string>> {
   const acc = bestNeighbourAccumulator(spec, keep);
-  const lines = createInterface({
-    input: createReadStream(path),
-    crlfDelay: Number.POSITIVE_INFINITY,
-  });
-  for await (const line of lines) acc.line(line);
+  await forEachLine(path, acc.line);
   return acc.result();
 }
 

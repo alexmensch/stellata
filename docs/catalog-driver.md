@@ -28,10 +28,12 @@ fields            = per-field source cascades keyed on gaia_source_id
   Its retirement has since replaced this term with the primaries-derived
   membership of § 3.1: the record build walks the manifest, and the spine
   is the parity baseline plus the generator's merge-decision input.
-- **Magnitude pull**: the Gaia-native `V ≤ floor` union term. It ships
-  **off** at the swap — membership was exactly the spine, so record
-  parity held by construction. The completeness phase turns it on
-  (V ≤ 11); deepening later is a re-pull, not a redesign.
+- **Magnitude pull**: the Gaia-native `V ≤ floor` union term, built by
+  `scripts/catalog/membership/magnitude-term/`. It ships **off** — one
+  constant, `MAGNITUDE_FLOOR_V`, is `null` — so membership is exactly the
+  primaries and record parity holds by construction. Setting it re-cuts the
+  catalogue with no other edit; deepening past `V ≤ 11` is a re-pull, not a
+  redesign. The manifest's `term` column says which side admitted each row.
 - Classic stars fainter than any floor (Proxima V = 11.1, the faint
   Gliese tail) ship forever because the membership term never drops on
   magnitude — the "classic rescue tier" IS that term.
