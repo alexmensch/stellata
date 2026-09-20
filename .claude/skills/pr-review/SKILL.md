@@ -110,10 +110,11 @@ hypothesis and must be called one.
 render path is any `.ts`, `.glsl` or `.wgsl` under `src/client/` outside the
 folders `RELEASING.md` § Perf pin exempts. Refuse the review until the
 section is there. A `✗` row without an `accepted: <row> <reason>
-(<bead-id>)` line is P1, and the bead must exist. Only the GPU-stream p50
-(the frame row) and the compute-stream p50 (the `|compute` row) are marked —
-a `·` row is recorded and not gated, and reading a wall-clock median as a
-verdict is the mistake the pin exists to prevent. A diff that adds or moves a
+(<bead-id>)` line is P1, and the bead must exist. Only the frame row and the
+`|compute` row are marked, each on the statistic its own `metric` column
+names — a `·` row is recorded and not gated, the `floor` and `spread`
+columns never mark, and reading a wall-clock median as a verdict is the
+mistake the pin exists to prevent. A diff that adds or moves a
 compute dispatch answers on the compute row; a `~` on the frame row alone
 says nothing about it.
 
