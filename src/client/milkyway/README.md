@@ -28,8 +28,8 @@ disables. Hidden in chart mode.
   from a camera position, as a bound (§ The brightest rendered sightline).
 - `calibration/` — the published photometry the solve runs on (M_V, B/T,
   the two components' B−V), the light ratio and the disc colour derived
-  from it, and the two sightline checks it is graded against. Its own
-  README.
+  from it, the resolution hole the march multiplies the emissivity by, and
+  the two sightline checks it is graded against. Its own README.
 - `milkyway-tuning.ts` — Milky Way section of the debug panel
   (surface-brightness anchor, density, extinction, reddening RGB
   sliders).
@@ -106,6 +106,12 @@ populations' (B−V) rather than authored (`calibration/README.md`
 § Population colours). Neither carries flux at emission, and neither
 component has a hand-set weight any more: both `density0` values are
 solved.
+
+**Both components are multiplied by one minus the resolution hole** — the
+star catalogue's measured share of the model's light at each step, a
+table both shaders sample through the shared `uResolvedHole` slot and the
+CPU mirror through the same `resolvedLightFraction`, applied ahead of the
+dust step (`calibration/README.md` § The resolution hole).
 
 ### Population tints carry hue, never flux
 
@@ -422,9 +428,12 @@ camera flies past the GC is the realism payoff.
 ## Dev levers
 
 `milkyway-tuning.ts` registers the panel section — sliders for
-`glowMagOffset`, `discDensity`, `bulgeDensity`, `extinctionStrength` and the
-three reddening RGB multipliers, plus both palette colour pickers. Every one
-is also callable as `stellata.milkyway.set<Name>(...)`.
+`glowMagOffset`, `discDensity`, `bulgeDensity`, `extinctionStrength`,
+`resolvedHole` and the three reddening RGB multipliers, plus both palette
+colour pickers. Every one is also callable as
+`stellata.milkyway.set<Name>(...)`. `resolvedHole` scales the hole table
+in place through its one writer: 0 is the A/B against a band that draws
+the resolved stars' light twice, 1 the shipped table.
 
 Two are not knobs despite the slider: `setGlowMagOffset` desynchronises the
 band from the Local Group layer (both read the one zero point), and

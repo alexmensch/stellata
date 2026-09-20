@@ -69,8 +69,8 @@ function latitudeDeg(dir: Vec3): number {
 }
 
 describe('dust-free ceiling', () => {
-  it('is the full central chord, 17.11 mag/arcsec²', () => {
-    expect(MW_PEAK_SB_DUST_FREE).toBeCloseTo(17.107, 2);
+  it('is the full central chord, 17.13 mag/arcsec²', () => {
+    expect(MW_PEAK_SB_DUST_FREE).toBeCloseTo(17.128, 2);
   });
 
   it('is brighter than the dusty peak from every vantage on the grid', () => {
@@ -84,8 +84,8 @@ describe('the fan from Sol', () => {
   const peak = bandPeakFan(SOL);
 
   // The model is symmetric under z → −z, so the two 6.4° sightlines tie.
-  it('lands 6.4° off the plane toward the centre at 20.70 mag/arcsec²', () => {
-    expect(peak.sb).toBeCloseTo(20.695, 2);
+  it('lands 6.4° off the plane toward the centre at 20.86 mag/arcsec²', () => {
+    expect(peak.sb).toBeCloseTo(20.859, 2);
     expect(Math.abs(latitudeDeg(peak.dir))).toBeCloseTo(6.4, 0);
   });
 
@@ -151,7 +151,7 @@ describe('the margin', () => {
       expect(`${name}: ${mag <= BAND_PEAK_STALENESS_MAG}`).toBe(`${name}: true`);
     }
     expect(Math.max(...Object.values(byVantage))).toBeCloseTo(byVantage.sol, 6);
-    expect(byVantage.sol).toBeCloseTo(0.060, 3);
+    expect(byVantage.sol).toBeCloseTo(0.063, 3);
   });
 
   // The whole point of scaling it: at the camera's 2 Mpc limit the bound

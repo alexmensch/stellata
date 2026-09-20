@@ -11,6 +11,9 @@ import {
   type BandMaterials,
   type BandSharedSlots,
 } from './band-materials';
+import {
+  RESOLVED_HOLE_BANDS, RESOLVED_HOLE_SHELLS,
+} from './calibration/resolved-fraction-pure';
 
 const hdr = makeHdrEmitterUniforms();
 const uLimitMag = { value: 6.5 };
@@ -39,6 +42,7 @@ function unseededSlots(): BandSharedSlots {
       UNSEEDED, UNSEEDED, UNSEEDED) },
     uGalCenter: v(),
     uR0Pc: n(),
+    uResolvedHole: { value: new Float32Array(RESOLVED_HOLE_SHELLS * RESOLVED_HOLE_BANDS).fill(UNSEEDED) },
     uGlowMagOffset: n(),
     uChartIsobar: n(),
     uChartInkColor: { value: new THREE.Color().setRGB(UNSEEDED, UNSEEDED, UNSEEDED) },
@@ -48,6 +52,7 @@ function unseededSlots(): BandSharedSlots {
 /** One representative scalar per slot-value kind, for the sentinel sweep. */
 function probe(value: unknown): number {
   if (typeof value === 'number') return value;
+  if (Array.isArray(value) || value instanceof Float32Array) return value[0];
   if (value instanceof THREE.Vector3) return value.x;
   if (value instanceof THREE.Matrix3) return value.elements[0];
   if (value instanceof THREE.Color) return value.r;

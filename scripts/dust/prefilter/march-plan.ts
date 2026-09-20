@@ -13,9 +13,11 @@ import {
   S_MIN_PC,
   STEPS,
   meshSpanPc,
+  unresolvedBandLightAt,
   type MilkywayComponent,
   type Vec3,
 } from '../../../src/client/milkyway/milkyway-column-pure';
+import { SHIPPED_RESOLVED_HOLE } from '../../../src/client/milkyway/calibration/resolved-fraction-pure';
 import { relativeLuminance } from '../../../src/client/hdr/tonemap/tonemap-pure';
 
 export interface PlanStep {
@@ -88,7 +90,9 @@ export function buildMarchPlan(field: DustField, originPc: Vec3, dirUnit: Vec3):
         sa,
         sb,
         dsPc: sb - sa,
-        density: component.density(Math.hypot(px, py), pz),
+        density:
+          unresolvedBandLightAt([px, py, pz], SHIPPED_RESOLVED_HOLE) *
+          component.density(Math.hypot(px, py), pz),
         analytic: analyticAv(field, ray, cov, sa, sb),
       });
     }

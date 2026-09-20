@@ -53,7 +53,17 @@ import {
   GALAXY_TOTAL_ABSMAG_V,
   LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2,
   NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2,
+  RESOLVED_CATALOGUE_MAG_ARCSEC2,
 } from './calibration/diffuse-reference';
+import {
+  RESOLVED_HOLE_BANDS,
+  RESOLVED_HOLE_DEX_PER_SHELL,
+  RESOLVED_HOLE_LOG_DISTANCE0,
+  RESOLVED_HOLE_SHELLS,
+  SHIPPED_RESOLVED_HOLE,
+} from './calibration/resolved-fraction-pure';
+import { buildHoleCells, holeLight } from '../../../scripts/milkyway-calibration/resolved-light-pure';
+import { fluxNumber } from '../hdr/emission/density0-solver-pure';
 import { linearSrgbFromColourIndex } from '../../../scripts/colour/blackbody-lut-pure';
 import { makeHdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import {
@@ -226,7 +236,7 @@ describe('MilkyWay population tints', () => {
     expect(column(bluer, true)).toBeLessThan(column(shipped, true));
     expect(
       -2.5 * Math.log10(column(bluer, true) / column(shipped, true)),
-    ).toBeCloseTo(0.0124, 4);
+    ).toBeCloseTo(0.0181, 4);
   });
 
   it('keeps a colour-picker edit off the flux', () => {
@@ -329,8 +339,7 @@ describe('MilkyWay luminosity solve', () => {
 
   // Check 1, the sightline the model used to be anchored ON. A single
   // sightline cannot constrain a luminosity, and this is by how much the
-  // two disagree once it stops trying: the solve puts the pole 1.59 mag
-  // brighter than Leinert's total minus the star field the app draws.
+  // two disagree once it stops trying.
   it('states the NGP residual as a check, and by how much it disagrees', () => {
     const dustFree =
       SB_ZERO_POINT -
@@ -340,7 +349,7 @@ describe('MilkyWay luminosity solve', () => {
             dustEnabled: false,
           }),
         );
-    expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - dustFree).toBeCloseTo(1.697, 3);
+    expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - dustFree).toBeCloseTo(1.350, 3);
   });
 
   // Check 2, the sightline the ORIGINAL anchor used. Compared against
@@ -353,14 +362,31 @@ describe('MilkyWay luminosity solve', () => {
     expect(
       LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.galacticCentre -
         GC_SIGHTLINE_MAG_ARCSEC2,
-    ).toBeCloseTo(1.043, 3);
+    ).toBeCloseTo(0.367, 3);
+  });
+
+  // Light moved, none made or lost: calibration/README.md § Two checks.
+  it('adds the band and the catalogue at the pole without the double count', () => {
+    const catalogue = fluxNumber(RESOLVED_CATALOGUE_MAG_ARCSEC2.northGalacticPole);
+    const sky = -2.5 * Math.log10(fluxNumber(sbAt(0, 90)) + catalogue);
+    const bandWithoutHole = sightlineSurfaceBrightness(
+      SB_ZERO_POINT,
+      SOL_GALACTOCENTRIC_PC,
+      galacticDirection(0, 90),
+      { resolvedHole: null },
+    );
+    const doubleCounted = -2.5 * Math.log10(fluxNumber(bandWithoutHole) + catalogue);
+    expect(LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - sky).toBeCloseTo(0.433, 3);
+    expect(sky - bandWithoutHole).toBeCloseTo(0, 2);
+    expect(LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - doubleCounted).toBeCloseTo(0.884, 3);
   });
 
   // The cross-layer symptom the epic opened on: the Galaxy seen from M31
   // has to be at least as bright as M31 seen from here, and under the
   // sightline anchor it was 1.11 mag fainter. M31's own photometry is read
   // from the build's source of truth so a catalogue edit moves this pin
-  // rather than silently invalidating it.
+  // rather than silently invalidating it. Re-run with the hole's share of
+  // the band's light taken out.
   it('orders the Galaxy from M31 against M31 from Sol', () => {
     const row = parseOverrides(
       readFileSync(
@@ -381,6 +407,18 @@ describe('MilkyWay luminosity solve', () => {
     expect(galaxyFromM31).toBeCloseTo(3.079, 3);
     expect(galaxyFromM31).toBeLessThan(m31ApparentV);
     expect(m31ApparentV - galaxyFromM31).toBeCloseTo(0.361, 3);
+
+    const cells = buildHoleCells(
+      { x: new Float32Array(0), y: new Float32Array(0), z: new Float32Array(0), absmag: new Float32Array(0), count: 0 },
+      [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    );
+    const holeShare =
+      cells.reduce((s, c) => s + holeLight(c, SHIPPED_RESOLVED_HOLE), 0) /
+      cells.reduce((s, c) => s + c.model, 0);
+    expect(holeShare).toBeCloseTo(3.50e-3, 5);
+    const bandFromM31 = galaxyFromM31 - 2.5 * Math.log10(1 - holeShare);
+    expect(bandFromM31).toBeCloseTo(3.083, 3);
+    expect(bandFromM31).toBeLessThan(m31ApparentV);
   });
 
   // The split conserves the total, so the pin above cannot see it at all —
@@ -406,7 +444,7 @@ describe('MilkyWay luminosity solve', () => {
     };
 
     expect(centrePixelBulgeShare([0, 0, 100_000])).toBeCloseTo(0.305, 3);
-    expect(centrePixelBulgeShare([-100_000, 0, 0])).toBeCloseTo(5.0084e-5, 8);
+    expect(centrePixelBulgeShare([-100_000, 0, 0])).toBeCloseTo(5.6443e-5, 8);
 
     // The integrated ratio the density0 split sets, which the face-on
     // number above is the marched consequence of. Under the mass B/T it
@@ -511,8 +549,19 @@ describe('MilkyWay surface-brightness calibration', () => {
   // Derived from the raymarch mirror rather than hand-tuned, so these pins
   // are what catch a profile / quadrature change.
   it('derives the GC column and the surface brightness it implies', () => {
-    expect(GC_SIGHTLINE_COLUMN).toBeCloseTo(75.520, 3);
-    expect(GC_SIGHTLINE_MAG_ARCSEC2).toBeCloseTo(21.877, 3);
+    expect(GC_SIGHTLINE_COLUMN).toBeCloseTo(40.507, 3);
+    expect(GC_SIGHTLINE_MAG_ARCSEC2).toBeCloseTo(22.553, 3);
+  });
+
+  it('gives the resolved stars’ share of the column back', () => {
+    const whole = sightlineSurfaceBrightness(
+      SB_ZERO_POINT,
+      SOL_GALACTOCENTRIC_PC,
+      galacticDirection(0, 0),
+      { resolvedHole: null },
+    );
+    expect(whole).toBeCloseTo(21.877, 3);
+    expect(GC_SIGHTLINE_MAG_ARCSEC2 - whole).toBeCloseTo(0.676, 3);
   });
 
   // The emissivity is solved against a luminosity, not a sightline, so the
@@ -532,8 +581,8 @@ describe('MilkyWay surface-brightness calibration', () => {
       galacticDirection(0, 90),
       { dustEnabled: false },
     );
-    expect(s(0, 90) - dustFree).toBeCloseTo(0.0852, 4);
-    expect(s(180, 0)).toBeCloseTo(22.061, 3);
+    expect(s(0, 90) - dustFree).toBeCloseTo(0.1033, 4);
+    expect(s(180, 0)).toBeCloseTo(22.704, 3);
     expect(s(0, 0)).toBeCloseTo(GC_SIGHTLINE_MAG_ARCSEC2, 6);
   });
 
@@ -548,8 +597,8 @@ describe('MilkyWay surface-brightness calibration', () => {
         galacticDirection(0, bDeg),
       );
     expect(s(5)).toBeLessThan(s(0));
-    expect(s(5)).toBeCloseTo(20.744, 3);
-    expect(s(0)).toBeCloseTo(21.877, 3);
+    expect(s(5)).toBeCloseTo(20.932, 3);
+    expect(s(0)).toBeCloseTo(22.553, 3);
   });
 
   // The whole point of the rework: extinction attenuates, it does not
@@ -572,7 +621,7 @@ describe('MilkyWay surface-brightness calibration', () => {
     // Quadrupling the dust attenuates the pole and moves nothing else.
     // Pinned rather than bounded: a loose ceiling here would also pass if
     // the emissivity had silently re-coupled and cancelled the change.
-    expect(at(4) - at(0)).toBeCloseTo(0.333, 3);
+    expect(at(4) - at(0)).toBeCloseTo(0.409, 3);
   });
 
   // The plane-to-pole contrast the retired anchor got wrong by 4 mag.
@@ -583,24 +632,23 @@ describe('MilkyWay surface-brightness calibration', () => {
         SOL_GALACTOCENTRIC_PC,
         galacticDirection(lDeg, bDeg),
       );
-    expect(s(0, 90) - s(0, 0)).toBeCloseTo(1.524, 3);
+    expect(s(0, 90) - s(0, 0)).toBeCloseTo(1.638, 3);
   });
 
   // The whole band, in 8-bit display levels at the base epoch with no EV
   // trim. Pinned as a table because the ORDERING is the acceptance. The
   // faint-end toe is in these figures: sightlines over the extended
   // threshold are untouched, sub-threshold ones roll off, and the pole —
-  // 1.40 mag under, pre-toe 15.65 — lands back on the dither floor
-  // because a patch the modelled eye cannot detect must not read plainly
-  // visible (calibration/README.md).
+  // 2.19 mag under — sits on the dither floor because a patch the modelled
+  // eye cannot detect must not read plainly visible (calibration/README.md).
   it('pins the band against a threshold star at the base epoch', () => {
     expect(displayLevel(L_THRESH) * 255).toBeCloseTo(38.25, 2);
 
-    expect(bandDisplayLevel(sbAt(0, 5)) * 255).toBeCloseTo(69.18, 2);
-    expect(bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255).toBeCloseTo(40.73, 2);
-    expect(bandDisplayLevel(sbAt(180, 0)) * 255).toBeCloseTo(36.95, 2);
-    expect(bandDisplayLevel(sbAt(0, 30)) * 255).toBeCloseTo(22.04, 2);
-    expect(bandDisplayLevel(sbAt(0, 90)) * 255).toBeCloseTo(0.85, 2);
+    expect(bandDisplayLevel(sbAt(0, 5)) * 255).toBeCloseTo(63.69, 2);
+    expect(bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255).toBeCloseTo(20.82, 2);
+    expect(bandDisplayLevel(sbAt(180, 0)) * 255).toBeCloseTo(15.09, 2);
+    expect(bandDisplayLevel(sbAt(0, 30)) * 255).toBeCloseTo(3.99, 2);
+    expect(bandDisplayLevel(sbAt(0, 90)) * 255).toBeCloseTo(0.005, 3);
   });
 
   // How far under threshold each sightline sits, which is the photometric
@@ -613,11 +661,11 @@ describe('MilkyWay surface-brightness calibration', () => {
     const sLim = extendedThresholdSbFor(DEFAULT_INSTRUMENT);
     expect(sLim).toBe(22);
 
-    expect(sbAt(0, 5) - sLim).toBeCloseTo(-1.256, 3);
-    expect(GC_SIGHTLINE_MAG_ARCSEC2 - sLim).toBeCloseTo(-0.123, 3);
-    expect(sbAt(180, 0) - sLim).toBeCloseTo(0.061, 3);
-    expect(sbAt(0, 30) - sLim).toBeCloseTo(0.521, 3);
-    expect(sbAt(0, 90) - sLim).toBeCloseTo(1.401, 3);
+    expect(sbAt(0, 5) - sLim).toBeCloseTo(-1.068, 3);
+    expect(GC_SIGHTLINE_MAG_ARCSEC2 - sLim).toBeCloseTo(0.553, 3);
+    expect(sbAt(180, 0) - sLim).toBeCloseTo(0.704, 3);
+    expect(sbAt(0, 30) - sLim).toBeCloseTo(1.079, 3);
+    expect(sbAt(0, 90) - sLim).toBeCloseTo(2.191, 3);
 
     // Negative is OVER threshold. Nothing pins the band to it any more —
     // the solve is against a luminosity, and where the plane lands against
@@ -646,7 +694,7 @@ describe('MilkyWay surface-brightness calibration', () => {
   // Keeping the concession off attachment 1 is only safe if what the band
   // does write cannot provoke an adaptation cut. It cannot, twice over: a
   // diffuse column writes no lit-surface mask, so it can never reach the
-  // resolved-surface pin, and its own level sits 3.5 stops under the
+  // resolved-surface pin, and its own level sits 3.8 stops under the
   // perception branch's anchor. The margin is measured on the Ω_px value the
   // statistic actually carries, not on the 12x-larger level the band
   // displays at (../hdr/attachments/README.md § The unit).
@@ -656,8 +704,8 @@ describe('MilkyWay surface-brightness calibration', () => {
       sbAt(0, 5),
       REFERENCE_OMEGA_PX,
     );
-    expect(statisticL).toBeCloseTo(5.3167e-3, 6);
-    expect(Math.log2(L_ADAPT / statisticL)).toBeCloseTo(3.5, 1);
+    expect(statisticL).toBeCloseTo(4.4709e-3, 6);
+    expect(Math.log2(L_ADAPT / statisticL)).toBeCloseTo(3.8, 1);
   });
 
   // The footprint softening exists for the Local Group's Sérsic cusp and for
@@ -665,7 +713,7 @@ describe('MilkyWay surface-brightness calibration', () => {
   // above is the shipped look. The camera sits INSIDE the disc, so the
   // footprint is metres over the near half of the march and a few parsecs at
   // the far rim — against a 300 pc scale height and a 3 kpc scale length. The
-  // worst residual is 0.0029 mag, so it cannot move a row pinned to 0.01.
+  // worst residual is 0.0042 mag, so it cannot move a row pinned to 0.01.
   it('leaves every Sol sightline where it was, at both FOV extremes', () => {
     let worst = 0;
     for (const fovDeg of [FOV_MIN_DEG, FOV_MAX_DEG]) {
@@ -684,7 +732,7 @@ describe('MilkyWay surface-brightness calibration', () => {
     }
     // Pinned rather than bounded: the figure the READMEs quote is this one,
     // and a two-place tolerance would have let 0.005 through.
-    expect(worst).toBeCloseTo(0.00281, 5);
+    expect(worst).toBeCloseTo(0.00424, 5);
   });
 
   // What the concession is worth at the reference viewport, stated as the
@@ -740,6 +788,22 @@ describe('raymarch parameters the mirror duplicates from GLSL', () => {
 
   it('agrees on the τ→magnitude conversion', () => {
     expect(glslConst('float', 'MAG_PER_TAU')).toBe(MAG_PER_TAU);
+  });
+
+  // Drift in a layout literal samples the wrong cell with no error.
+  it('agrees on the resolution-hole table layout', () => {
+    expect(glslConst('int', 'RESOLVED_HOLE_SHELLS')).toBe(RESOLVED_HOLE_SHELLS);
+    expect(glslConst('int', 'RESOLVED_HOLE_BANDS')).toBe(RESOLVED_HOLE_BANDS);
+    expect(glslConst('float', 'RESOLVED_HOLE_LOG_DISTANCE0')).toBe(RESOLVED_HOLE_LOG_DISTANCE0);
+    expect(glslConst('float', 'RESOLVED_HOLE_DEX_PER_SHELL')).toBe(RESOLVED_HOLE_DEX_PER_SHELL);
+    expect(frag).toMatch(/uniform float uResolvedHole\[RESOLVED_HOLE_SHELLS \* RESOLVED_HOLE_BANDS\];/);
+    expect(frag).toMatch(/return uResolvedHole\[band \* RESOLVED_HOLE_SHELLS \+ shell\];/);
+  });
+
+  // The hole multiplies the emissivity before the dust, so the resolved
+  // stars and what the band still draws see the same column.
+  it('applies the hole to the emissivity ahead of the dust step', () => {
+    expect(frag).toMatch(/float densityVal = \(1\.0 - resolvedLightFraction\(posGalCentric\)\) \* \(uIsBulge/);
   });
 
   // The pre-march has to seed the accumulator, not be computed and

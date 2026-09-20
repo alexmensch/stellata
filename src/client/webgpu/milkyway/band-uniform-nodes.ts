@@ -3,8 +3,11 @@
 // a key-parity test.
 
 import { Color, Matrix3, Vector3 } from 'three';
-import { uniform } from 'three/tsl';
+import { uniform, uniformArray } from 'three/tsl';
 import type { BandComponentSpec } from '../../milkyway/band-materials';
+import {
+  RESOLVED_HOLE_BANDS, RESOLVED_HOLE_SHELLS,
+} from '../../milkyway/calibration/resolved-fraction-pure';
 
 /**
  * The slots both components hold by reference to each other.
@@ -29,6 +32,8 @@ export function bandSharedUniformNodes() {
     uIcrsToGal: uniform(new Matrix3()),
     uGalCenter: uniform(new Vector3()),
     uR0Pc: uniform(1),
+    uResolvedHole: uniformArray<'float'>(
+      new Array<number>(RESOLVED_HOLE_SHELLS * RESOLVED_HOLE_BANDS).fill(0), 'float'),
     uGlowMagOffset: uniform(0),
     uChartIsobar: uniform(0),
     uChartInkColor: uniform(new Color(0x000000)),

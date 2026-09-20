@@ -43,10 +43,15 @@ yields a bound on a picture nobody is looking at — and the failure is silent,
 because the bound stays internally consistent while being about the wrong
 shader. `milkyway-band-tsl-drift.test.ts` holds the march's own shape
 (`STEPS`, `FOREGROUND_DUST_STEPS`, `S_MIN_PC`, `UNIT_BALL_SLACK`,
-`MAG_PER_TAU`) to the mirror's constants by import. The profile and dust
-parameters need no entry there: they arrive as uniform nodes that
-`seedBandSharedSlots` alone writes (§ Seeding, because a node starts on its
-declared default).
+`MAG_PER_TAU`) and the resolution-hole table's layout
+(`RESOLVED_HOLE_SHELLS` / `_BANDS` / `_LOG_DISTANCE0` / `_DEX_PER_SHELL`)
+to the mirror's constants by import. The profile and dust parameters need
+no entry there: they arrive as uniform nodes that `seedBandSharedSlots`
+alone writes (§ Seeding, because a node starts on its declared default).
+The hole table itself crosses the same way, as a float `uniformArray` whose
+backing array the seed and the debug lever write in place — the layout
+constants are what turn a flat index into a cell, so they are the part that
+can drift.
 
 The write tail it ends on is `../extended-emitter-tsl.ts`, shared with
 the Local Group emission exactly as the GLSL chunk is.

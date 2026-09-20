@@ -72,6 +72,16 @@ uniform vec3  uColor;               // population palette
 
 uniform float uR0Pc;  // Sol galactocentric radius
 
+// The resolution hole — the share of the model's light the star catalogue
+// already draws, removed here so the two do not add (calibration/README.md
+// § The resolution hole). Tabulated over log distance from Sol × |sin b|,
+// band-major; layout mirrors calibration/resolved-fraction-pure.ts.
+const int   RESOLVED_HOLE_SHELLS = 32;
+const int   RESOLVED_HOLE_BANDS = 8;
+const float RESOLVED_HOLE_LOG_DISTANCE0 = 1.0;
+const float RESOLVED_HOLE_DEX_PER_SHELL = 0.1;
+uniform float uResolvedHole[RESOLVED_HOLE_SHELLS * RESOLVED_HOLE_BANDS];
+
 // Analytical disc dust profile.
 uniform float uAnalyticalDustScaleLengthPc;
 uniform float uAnalyticalDustScaleHeightPc;
@@ -137,6 +147,32 @@ float bulgeDensityVal(float R, float zVal, float footprintPc) {
   float zEff = zVal / uBulgeAxisRatio;
   float rPrime = stellataSoftenRadius(sqrt(R * R + zEff * zEff), footprintPc);
   return uDensity0 * exp(-rPrime / uBulgeScaleRadiusPc);
+}
+
+float resolvedHoleAt(int shell, int band) {
+  return uResolvedHole[band * RESOLVED_HOLE_SHELLS + shell];
+}
+
+// Bilinear over the cell centres, clamped to the edge cells beyond them. Sol
+// sits at (−R₀, 0, 0) in this frame and in the plane, so |sin b| from Sol is
+// |z| over the distance from Sol.
+float resolvedLightFraction(vec3 posGalCentric) {
+  vec3 fromSol = posGalCentric + vec3(uR0Pc, 0.0, 0.0);
+  float d = length(fromSol);
+  float u = clamp(
+    (log(d) / STELLATA_LOG10 - RESOLVED_HOLE_LOG_DISTANCE0) / RESOLVED_HOLE_DEX_PER_SHELL - 0.5,
+    0.0, float(RESOLVED_HOLE_SHELLS - 1));
+  float v = clamp(
+    abs(fromSol.z) / max(d, 1e-6) * float(RESOLVED_HOLE_BANDS) - 0.5,
+    0.0, float(RESOLVED_HOLE_BANDS - 1));
+  int i0 = int(u);
+  int j0 = int(v);
+  int i1 = min(i0 + 1, RESOLVED_HOLE_SHELLS - 1);
+  int j1 = min(j0 + 1, RESOLVED_HOLE_BANDS - 1);
+  float fu = u - float(i0);
+  float fv = v - float(j0);
+  return mix(mix(resolvedHoleAt(i0, j0), resolvedHoleAt(i1, j0), fu),
+             mix(resolvedHoleAt(i0, j1), resolvedHoleAt(i1, j1), fu), fv);
 }
 
 float analyticalDustDensity(float R, float zVal) {
@@ -260,9 +296,9 @@ void main() {
     float zVal = posGalCentric.z;
 
     float footprintPc = stellataFootprintPc(sMid, uOmegaPxArcsec2);
-    float densityVal = uIsBulge
+    float densityVal = (1.0 - resolvedLightFraction(posGalCentric)) * (uIsBulge
       ? bulgeDensityVal(R, zVal, footprintPc)
-      : discDensityVal(R, zVal, footprintPc, footprintPc * zFootprintScale);
+      : discDensityVal(R, zVal, footprintPc, footprintPc * zFootprintScale));
 
     vec3 dTauRGB = dustTauStepRGB(R, zVal, dsPc, dustEffective);
 

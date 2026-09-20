@@ -62,6 +62,17 @@ export function buildMilkywaySection(layer: MilkyWay): DebugSection {
     onChange: (x) => layer.setExtinctionStrength(x),
   }));
 
+  // 0 draws the resolved stars' light twice; 1 is the shipped table.
+  body.appendChild(makeSlider({
+    label: 'resolvedHole',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    initial: v.resolvedHoleStrength,
+    format: (x) => x.toFixed(2),
+    onChange: (x) => layer.setResolvedHoleStrength(x),
+  }));
+
   body.appendChild(makeColor({
     label: 'discColor',
     initial: v.discColor,

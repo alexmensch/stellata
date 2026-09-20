@@ -95,9 +95,9 @@ describe('effect of seeding τ from the camera', () => {
   const withoutFix = (dir: Vec3) =>
     sightlineColumn(SOL, dir, { foregroundSteps: 0 });
 
-  it('dims the Galactic-centre sightline by 0.013 mag', () => {
+  it('dims the Galactic-centre sightline by 0.024 mag', () => {
     const ratio = withFix(TO_GC) / withoutFix(TO_GC);
-    expect(-2.5 * Math.log10(ratio)).toBeCloseTo(0.0132, 3);
+    expect(-2.5 * Math.log10(ratio)).toBeCloseTo(0.0243, 3);
   });
 
   it('leaves sightlines that miss the bulge proxy bit-identical', () => {
@@ -110,9 +110,9 @@ describe('effect of seeding τ from the camera', () => {
     const offsets = [0, 10, 30].map(
       (d) => -2.5 * Math.log10(withFix(galacticDirection(d, 0)) / withoutFix(galacticDirection(d, 0))),
     );
-    expect(offsets[0]).toBeCloseTo(0.0132, 3);
-    expect(offsets[1]).toBeCloseTo(0.0130, 3);
-    expect(offsets[2]).toBeCloseTo(0.0113, 3);
+    expect(offsets[0]).toBeCloseTo(0.0243, 3);
+    expect(offsets[1]).toBeCloseTo(0.0239, 3);
+    expect(offsets[2]).toBeCloseTo(0.0207, 3);
   });
 });
 
@@ -124,7 +124,7 @@ describe('effect of seeding τ from the camera', () => {
 describe('per-component split toward the Galactic centre', () => {
   it('has the disc carrying essentially the whole column', () => {
     expect(componentLuminanceShare(DISC_COMPONENT, SOL, TO_GC)).toBeCloseTo(
-      0.99980,
+      0.99963,
       5,
     );
   });
@@ -133,13 +133,23 @@ describe('per-component split toward the Galactic centre', () => {
 describe('quadrature of the in-volume march', () => {
   // Left alone deliberately: STEPS is a visual + perf decision, and it
   // cannot bias the calibration at all — ρ₀ is solved as a volume
-  // integral, so no march feeds it.
-  it('under-counts the GC column by 1.6% against a dense march', () => {
+  // integral, so no march feeds it. The hole doubles the shortfall: the
+  // emissivity now turns over inside the first kiloparsec, where the log
+  // march spends six of its steps.
+  it('under-counts the GC column by 3.1% against a dense march', () => {
     const shipped = sightlineColumn(SOL, TO_GC);
     const ref = sightlineColumn(SOL, TO_GC, {
       steps: REFERENCE_STEPS,
       foregroundSteps: REFERENCE_STEPS,
     });
-    expect(shipped / ref).toBeCloseTo(0.9841, 3);
+    expect(shipped / ref).toBeCloseTo(0.9694, 3);
+    expect(
+      sightlineColumn(SOL, TO_GC, { resolvedHole: null }) /
+        sightlineColumn(SOL, TO_GC, {
+          steps: REFERENCE_STEPS,
+          foregroundSteps: REFERENCE_STEPS,
+          resolvedHole: null,
+        }),
+    ).toBeCloseTo(0.9841, 3);
   });
 });

@@ -8,6 +8,7 @@ import {
   makeGlslBandMaterials, type BandMaterials, type BandSharedSlots,
 } from './band-materials';
 import type { DustField } from '../loaders/dust-loader';
+import { writeResolvedHoleSlot } from './calibration/resolved-fraction-pure';
 import {
   BandPeakCache,
   galactocentricPc,
@@ -120,6 +121,7 @@ export class MilkyWay {
    *  they are TSL nodes, and a write has to reach the shader through them
    *  (README.md § The material seam). */
   private shared: BandSharedSlots;
+  private resolvedHoleStrength = 1;
   private readonly materials: BandMaterials;
 
   private enabled = true;
@@ -281,6 +283,15 @@ export class MilkyWay {
     this.shared.uGlowMagOffset.value = x;
   }
 
+  /** 0 switches the hole off. */
+  setResolvedHoleStrength(k: number) {
+    this.resolvedHoleStrength = Math.max(0, k);
+    writeResolvedHoleSlot(
+      this.shared.uResolvedHole.value as { [i: number]: number },
+      this.resolvedHoleStrength,
+    );
+  }
+
   setDiscDensity(x: number) {
     this.disc.density0.value = Math.max(0, x);
   }
@@ -314,6 +325,7 @@ export class MilkyWay {
       discDensity: this.disc.density0.value,
       bulgeDensity: this.bulge.density0.value,
       extinctionStrength: this.shared.uExtinctionStrength.value,
+      resolvedHoleStrength: this.resolvedHoleStrength,
       discColor: rgbOf(this.disc.authoredColor),
       bulgeColor: rgbOf(this.bulge.authoredColor),
       reddening: { r: c.x, g: c.y, b: c.z },
