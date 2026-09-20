@@ -26,7 +26,9 @@ import type { SceneLayer } from '../scene/scene-layer';
 import { StarShardTable } from './shards/star-shard-table';
 import { catalogShard } from './shards/star-shards-pure';
 import { tToJdUt } from '../solar-system/time/time';
-import { buildSpectralMap, buildStarLabels } from '../typeahead/star-name-tables';
+import {
+  buildSpectralMap, buildStarLabels, seedStarLabelsFromNames,
+} from '../typeahead/star-name-tables';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
 
 /** Shell-owned star machinery the module's legs read through closures —
@@ -82,6 +84,7 @@ export function createStarKindModule(): StarKindModule {
   let ctx: KindContext | null = null;
   let runtime: StarModuleRuntime | null = null;
   let ready: Promise<void> = Promise.resolve();
+  let offRecords: (() => void) | null = null;
   // Filled in place rather than reassigned — every card provider, chart
   // binding and hover formatter captures these at boot, before the search
   // index has landed.
@@ -145,10 +148,23 @@ export function createStarKindModule(): StarKindModule {
       // Sized off the header count, which chunk 0 carries, so the shard's
       // SID domain spans the whole population from the start.
       shardTable = new StarShardTable([catalogShard(catalog)]);
+      // Names ride chunk 0 and every chunk after it, so the label ladder's
+      // authority tier is live from first paint — a focused Sol shows
+      // "Sol", not the SID fallback, while the search index is still on the
+      // wire.
+      seedStarLabelsFromNames(catalog, starLabels);
+      offRecords?.();
+      offRecords = catalog.onRecordsDecoded(
+        () => seedStarLabelsFromNames(catalog!, starLabels),
+      );
       const loaded = catalog;
       ready = (async () => {
         const [, raw] = await Promise.all([loaded.whenComplete, index]);
         searchIndex = raw;
+        // The per-chunk seeding above has done its job; this pass redoes it
+        // and adds the composed-designation tier.
+        offRecords?.();
+        offRecords = null;
         buildStarLabels(loaded, raw, starLabels);
         buildSpectralMap(raw, spectralMap);
         for (const e of raw) searchEntryById.set(e.i, e);

@@ -22,10 +22,24 @@ export function buildStarLabels(
   raw: SearchEntry[],
   into: Map<number, string> = new Map(),
 ): Map<number, string> {
-  for (const [idx, name] of catalog.names) into.set(idx, name);
+  seedStarLabelsFromNames(catalog, into);
   for (const [idx, composed] of displayNamesFromSearchIndex(raw, catalog.constellations)) {
     if (!into.has(idx)) into.set(idx, composed.label);
   }
+  return into;
+}
+
+/** The name-table half of the label ladder, which is available from the
+ *  catalogue's FIRST chunk — the table precedes the records on the wire for
+ *  exactly this reason (`scripts/catalog/record/README.md` § Record order).
+ *  Seeded per landing chunk so a named star carries its name the moment it
+ *  is drawn, rather than showing a bare SID until the search index lands
+ *  and supplies the composed-designation half. */
+export function seedStarLabelsFromNames(
+  catalog: Catalog,
+  into: Map<number, string>,
+): Map<number, string> {
+  for (const [idx, name] of catalog.names) into.set(idx, name);
   return into;
 }
 
