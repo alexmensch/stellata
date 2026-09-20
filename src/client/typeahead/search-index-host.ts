@@ -1,4 +1,3 @@
-// Spawns the search-index worker and falls back to computing inline.
 // See ./README.md § The search-index worker.
 
 import type { SearchEntry } from '../../../scripts/catalog/record/catalog-pure';
@@ -12,66 +11,51 @@ import type {
   SearchIndexWorkerResponse,
 } from './search-index-worker';
 
-/** The inline path, for a runtime with no `Worker` and for the rejection
- *  case. Identical output, on the main thread, at the cost the worker
- *  exists to move. */
-async function computeInline(
-  searchIndexUrl: string,
-  constellationsUrl: string,
-): Promise<SearchIndexPayload> {
-  const [raw, constellations] = await Promise.all([
-    fetch(searchIndexUrl).then((r) => r.json() as Promise<SearchEntry[]>),
-    fetch(constellationsUrl).then((r) => r.json() as Promise<ConstellationName[]>),
-  ]);
-  return buildSearchIndexPayload(raw, constellations);
+export interface SearchIndexLoad {
+  raw: SearchEntry[];
+  tables: SearchIndexPayload;
 }
 
-/**
- * Derive the search index's catalogue-wide tables off the main thread.
- *
- * Everything crossing back is structured-cloneable by construction — plain
- * Maps and arrays, no class instances — which is why the corpus is data the
- * caller hands to Fuse rather than a built Fuse index: constructing Fuse
- * over the returned entries costs 13 ms, so serialising one would buy
- * nothing and pin the search options to this module.
- *
- * Never rejects. A worker that fails to start, throws, or is absent falls
- * back to the inline path, because search arriving late is a degradation
- * and search never arriving is a broken app.
- */
-export function loadSearchIndexPayload(
-  baseUrl: string,
-): Promise<SearchIndexPayload> {
-  const searchIndexUrl = `${baseUrl}search-index.json`;
-  const constellationsUrl = `${baseUrl}constellations.json`;
-  if (typeof Worker === 'undefined') {
-    return computeInline(searchIndexUrl, constellationsUrl);
-  }
-  return new Promise<SearchIndexPayload>((resolve) => {
+function deriveOffThread(
+  bytes: ArrayBuffer,
+  constellations: ConstellationName[],
+): Promise<SearchIndexPayload | null> {
+  if (typeof Worker === 'undefined') return Promise.resolve(null);
+  return new Promise((resolve) => {
     let worker: Worker;
-    const inline = (why: string) => {
+    const giveUp = (why: string) => {
       console.warn(`search-index worker unavailable (${why}); deriving inline`);
-      resolve(computeInline(searchIndexUrl, constellationsUrl));
+      resolve(null);
     };
     try {
       worker = new Worker(new URL('./search-index-worker.ts', import.meta.url), {
         type: 'module',
       });
     } catch (err) {
-      inline(err instanceof Error ? err.message : String(err));
+      giveUp(err instanceof Error ? err.message : String(err));
       return;
     }
     worker.onmessage = (event: MessageEvent<SearchIndexWorkerResponse>) => {
-      const data = event.data;
       worker.terminate();
+      const data = event.data;
       if (data.ok) resolve(data.payload);
-      else inline(data.message);
+      else giveUp(data.message);
     };
     worker.onerror = (event) => {
       worker.terminate();
-      inline(event.message || 'worker error');
+      giveUp(event.message || 'worker error');
     };
-    const request: SearchIndexWorkerRequest = { searchIndexUrl, constellationsUrl };
+    const request: SearchIndexWorkerRequest = { bytes, constellations };
     worker.postMessage(request);
   });
+}
+
+export async function loadSearchIndex(
+  bytes: ArrayBuffer,
+  constellations: readonly ConstellationName[],
+): Promise<SearchIndexLoad> {
+  const names = constellations.map((c) => ({ code: c.code, name: c.name }));
+  const offThread = deriveOffThread(bytes, names);
+  const raw = JSON.parse(new TextDecoder().decode(bytes)) as SearchEntry[];
+  return { raw, tables: (await offThread) ?? buildSearchIndexPayload(raw, names) };
 }

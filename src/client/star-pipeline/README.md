@@ -42,6 +42,9 @@ geometry and attribute writers.
   (`../kinds/README.md`): catalog + search-index load (`critical:
   true` — its load may reject and boot treats that as fatal) and the
   focusable / card / hover / search / SID / pinnable / focal-hide legs.
+  **This is the only fetch of `search-index.json`** — it lands as bytes
+  and every reader, worker included, works from them
+  (`../typeahead/README.md` § The search-index worker).
   **`load` resolves on the catalogue's FIRST chunk**, so boot can paint;
   `ready` is the second promise, settling when the whole population and
   the search index have landed and every table derived from them is built

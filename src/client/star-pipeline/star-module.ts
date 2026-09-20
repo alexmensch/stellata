@@ -27,7 +27,7 @@ import { StarShardTable } from './shards/star-shard-table';
 import { catalogShard } from './shards/star-shards-pure';
 import { tToJdUt } from '../solar-system/time/time';
 import { seedStarLabelsFromNames } from '../typeahead/star-name-tables';
-import { loadSearchIndexPayload } from '../typeahead/search-index-host';
+import { loadSearchIndex } from '../typeahead/search-index-host';
 import type { SearchIndexPayload } from '../typeahead/search-index-payload';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
 
@@ -153,17 +153,12 @@ export function createStarKindModule(): StarKindModule {
      *  and feeds only search, chart labels and designations, none of which
      *  is on the first-paint path. Both land under `ready`. */
     async load(baseUrl: string, onProgress?: (p: KindLoadProgress) => void): Promise<void> {
-      // Two readers of the same URL, both served from one fetch by the HTTP
-      // cache: the worker derives the catalogue-wide tables, and this one
-      // keeps the raw entries the focus card looks up per star. Crossing
-      // the parsed entries back from the worker costs more than parsing
-      // them here (189 ms against 76 ms).
-      const derived = loadSearchIndexPayload(baseUrl);
-      const index = fetch(`${baseUrl}search-index.json`).then(
-        (r) => r.json() as Promise<SearchEntry[]>,
-      );
+      const indexBytes = fetch(`${baseUrl}search-index.json`).then((r) => {
+        if (!r.ok) throw new Error(`search-index.json: HTTP ${r.status}`);
+        return r.arrayBuffer();
+      });
       // Handled-marker only — README.md, the star-module.ts bullet.
-      index.catch(() => {});
+      indexBytes.catch(() => {});
       catalog = await loadCatalog(
         `${baseUrl}${CATALOG_MANIFEST_FILENAME}`,
         `${baseUrl}constellations.json`,
@@ -184,10 +179,9 @@ export function createStarKindModule(): StarKindModule {
         derivedGeneration++;
       });
       const loaded = catalog;
+      const derived = indexBytes.then((b) => loadSearchIndex(b, loaded.constellations));
       ready = (async () => {
-        const [, raw, tables] = await Promise.all([
-          loaded.whenComplete, index, derived,
-        ]);
+        const [, { raw, tables }] = await Promise.all([loaded.whenComplete, derived]);
         searchIndex = raw;
         // The per-chunk seeding has done its job. The name tier stays
         // authoritative over the worker's composed tier — an authority

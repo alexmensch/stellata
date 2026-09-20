@@ -30,7 +30,7 @@ three, so either import path stays valid.
 - `search-index-payload.ts` — every catalogue-wide derivation of the search
   index, in ONE composer pass. § The search-index worker.
 - `search-index-worker.ts` / `search-index-host.ts` — that pass, off the
-  main thread, and the spawn + inline fallback around it.
+  main thread, and the parse + spawn + inline fallback around it.
 
 ## The search-index worker
 
@@ -58,9 +58,8 @@ inside `buildSearchIndex` — which alone was 658 ms of it.
 Three things decided the split, each measured rather than assumed:
 
 - **Nothing raw crosses.** Structured-cloning the parsed entries back costs
-  189 ms against 76 ms to parse them again on the main thread, so both
-  sides fetch the same URL and the second is served from cache. The main
-  thread keeps the raw entries because the focus card looks one up per
+  189 ms against 76 ms to parse them again, so each side parses its own. The
+  main thread keeps the raw entries because the focus card looks one up per
   focused star.
 - **Only derived tables cross**, and they clone in 130 ms — labels 45,
   corpus entries 30, the rest small. So the main thread pays ~206 ms of the
@@ -73,10 +72,31 @@ Three things decided the split, each measured rather than assumed:
 Everything crossing is plain Maps and arrays by construction — no class
 instances — which is what makes it structured-cloneable at all.
 
-`loadSearchIndexPayload` **never rejects**: no `Worker`, a failed spawn, a
-throw inside, or an `onerror` all fall back to computing inline on the main
-thread. Search arriving late is a degradation; search never arriving is a
-broken app.
+**The index is fetched once, by the star module, and the bytes are what
+cross.** `loadSearchIndex` takes that `ArrayBuffer`, hands the worker a copy
+(~1 ms for 17 MB) and parses its own — two readers of one 4.4 MB-gzipped
+download, rather than two downloads relying on the HTTP cache to collapse
+them, which it does not do reliably while both are in flight. `TextDecoder`
++ `JSON.parse` is 72–75 ms against `Response.json()`'s 76–90, so owning the
+bytes costs nothing. Constellations cross narrowed to `{code, name}` — the
+composer reads no asterism geometry.
+
+`loadSearchIndex` rejects only on a corrupt artifact, because the fallback
+needs nothing the caller does not already hold: `deriveOffThread` resolves
+**null** — never rejects — for a missing `Worker`, a failed spawn, a throw
+inside or an `onerror`, and the tables are then built from the entries the
+main thread has already parsed. Search arriving late is a degradation;
+search never arriving is a broken app. Serving the URL as anything but the
+index is the one failure inline cannot paper over, so the star module's
+fetch checks `r.ok` and lets `ready` reject.
+
+**Footprint, measured on the 384,767-entry artifact** (Node, `--expose-gc`):
+17.0 MB on the wire, 36.3 MB parsed, 64.5 MB of derived tables. Both sides
+hold both for the window between the worker finishing and the main thread
+taking the clone, so the index costs ~200 MB at that peak against ~101 MB
+resident afterwards. `stellata-8cg.52` owns the whole-app budget; the lever
+here, if one is ever needed, is deriving `spectral` and `bayer` main-side
+(~30 ms) so only the composer's labels and the corpus cross.
 
 **Nothing here parses a designation string.** The wire carries the Bayer
 letter as a glyph with its index alongside (`b` / `bx`), and every label —
