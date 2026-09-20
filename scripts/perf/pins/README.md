@@ -166,12 +166,19 @@ setup lever, **and its frame row steady**, the last because a trending
 context is refused rather than banded (§ State guard). Each constant is
 1.5× the p10 span rounded up to 0.05 — so `COMPUTE_SCATTER_FLOOR_MS` holds
 0.45 at lg, and the FLOOR column is what `computeFloorMs` applies after
-**capping at `DWELL_FLOOR_MS`**. Widening lg to meet its own scatter would
-blind the one row that can see a compute regression at all, so the cap is
-what makes a re-derivation only ever tighten a row; lg is ungated, so today
-the cap binds nothing the gate reads. A name outside these five — no canon
-vantage is one today — takes `DWELL_FLOOR_MS` rather than banding the row on
-a `NaN`.
+**capping at `DWELL_FLOOR_MS`**. The cap is what makes a re-derivation only
+ever tighten a row, and lg is the one vantage it binds at: **the pin stands
+lg down by vantage, but `--baseline` does not** (§ State guard), so lg's
+compute row is banded there at 0.25 under its own measured scatter of 0.267
+and a repeat pair can mark it on nothing. That is the cost of the cap, and
+`--baseline` is the gate that pays it; lifting lg to its derived 0.45 would
+buy it back and is the alternative on the table. A name outside these five —
+no canon vantage is one today — takes `DWELL_FLOOR_MS` rather than banding
+the row on a `NaN`.
+
+lg's 1.5× lands at 0.4005, within a thousandth of the 0.40 rung, so a
+re-derivation off a population differing by one run reads 0.40 rather than
+0.45. Both cap to the same 0.25; do not chase the rung.
 
 The p10 keeps the sensitivity the median had and adds some. A real per-frame
 cost lifts it: earth's compute reads 0.351 plain and 3.100 under

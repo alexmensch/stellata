@@ -657,7 +657,9 @@ describe('the compute row', () => {
 
   // Every constant is 1.5x its vantage's population span rounded up to 0.05,
   // measured on the p10 the row is gated on, and a table that does not
-  // re-derive is one a later session re-litigates.
+  // re-derive is one a later session re-litigates. lg alone sits on a rung
+  // boundary — 1.5 x 0.267 is 0.4005 — so a population differing by one run
+  // derives 0.40; both cap to 0.25 and neither changes a verdict.
   it('holds each constant at the derivation the README states', () => {
     const POPULATION_SPAN_MS = {
       mw120: 0.023, sol: 0.087, earth: 0.057, mw50: 0.008, lg: 0.267,
@@ -676,8 +678,9 @@ describe('the compute row', () => {
   });
 
   // lg's measured scatter is 0.267 ms, whose 1.5x is past the inherited
-  // constant — following it would WIDEN the only row that can see a compute
-  // regression at all. lg is ungated, so the cap binds nothing the gate reads.
+  // constant, so the cap binds there and nowhere else. The pin stands lg
+  // down by vantage; --baseline does not, and bands it under its own
+  // scatter as the price — README.md § The compute row.
   it('caps every vantage at the whole-frame floor, so a re-floor only tightens', () => {
     expect(computeFloorMs('lg', 0.589)).toBe(DWELL_FLOOR_MS);
     expect(computeFloorMs('sol', 0.446)).toBe(0.15);
