@@ -205,7 +205,7 @@ so its tree is not main's by construction: `--against-pin` re-asks the
 ancestry at comparison time, and where the tip never landed it prints
 main's own `git diff --shortstat` between the two bases, because a mark is
 only the PR's if nothing else moved the frame in between
-(`scripts/perf/pins/README.md` § What the commit fields hold). A run that
+(`scripts/perf/pins/provenance/README.md` § What the commit fields hold). A run that
 cannot be compared is refused rather than trusted: a differing adapter,
 buffer, method, mode or record count, and a row taken at another position
 in its run (below). A committed index was declined for being a

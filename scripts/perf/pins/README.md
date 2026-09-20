@@ -3,10 +3,19 @@
 `<adapter-slug>.json` (schema `stellata-perf/pin-3`) is the whole frame at
 the canon vantages on one GPU, taken cold: what every render-path PR diffs
 against and re-takes. Operator rules — when a PR must run it, what a mark
-means, how the pin advances — are `RELEASING.md` § Perf pin; the code is
-`../pin-pure.ts`, the flags `../README.md` § Invocation. Runs stay under
-`.perf-runs/` (tracked; `../../../.perf-runs/README.md`) and the pin cites the
-file it came from by its repo-relative path.
+means, how the pin advances — are `RELEASING.md` § Perf pin; the flags are
+`../README.md` § Invocation. Runs stay under `.perf-runs/` (tracked;
+`../../../.perf-runs/README.md`) and the pin cites the file it came from by
+its repo-relative path.
+
+```
+scripts/perf/pins/
+  <adapter-slug>.json       The committed pin, one per GPU.
+  pin-pure.ts (+ test)      adapterSlug, pinFromRuns, compareToPin, the
+                            band, the floor and the ceiling.
+  provenance/               Which run and which tree a row came from, and
+                            the drift above it. Own README.
+```
 
 ## Taking one
 
@@ -229,69 +238,6 @@ attributed to whatever code is under review; **written** as the pin, it
 carries the lever's cost in every later run's verdict — the ratchet
 `RELEASING.md` § Perf pin exists to stop. Any future lever a dwell can carry
 inherits the same refusal without another edit.
-
-## What the commit fields hold
-
-`git.commit` is HEAD at take time and `git.mainCommit` is its merge base
-with `origin/main`. Both, because a pin is always taken on a branch and a
-squash merge lands that tree under a hash the branch tip never had — so the
-tip alone cannot answer "how far has main moved since?". The merge base can,
-and survives the squash. `git.mainReachable` records whether the tip was on
-main when taken, which for most runs is simply `false`.
-
-`--against-pin` re-asks the ancestry at comparison time rather than trusting
-`mainReachable`, since a tip unlanded when the pin was taken may have landed
-since. A tip that never lands is **reported, not refused** — taking a pin on
-a branch is the normal case, and refusing would leave no usable pin at the
-moment one is most wanted. The header then prints main's own
-`git diff --shortstat` under `src/client` between the two bases, because a
-mark is only the PR's if nothing else moved the frame in between: one pin sat
-at an unlanded tip and charged four consecutive PRs — one with no per-frame
-code at all — for ~1,600 insertions of main's own render-path work
-(stellata-8cg.49.24).
-
-The line **names both bases and reads the counts in that direction** rather
-than saying main moved since the pin. A branch cut before the pin was taken
-holds the older of the two, and the insertions and deletions are then the
-other way up; naming both ends also makes the line a `git diff` command a
-reader can re-run.
-
-### `sourceRun` is relative to the checkout the run was written in
-
-Not to the main checkout. A pin is normally taken on a branch and a branch
-normally lives in a worktree, where runs are filed under that worktree's own
-`.perf-runs/` (`../README.md` § Recording) — so resolving against the main
-checkout writes `.claude/worktrees/<name>/.perf-runs/…`, a path that stops
-resolving the moment the worktree is removed, which is to say shortly after
-the PR merges. `citeRunPath` takes the writing checkout's root for that
-reason, and a run stored outside any checkout still keeps its basename and
-loses its location.
-
-### A deferred measurement cites a run file, never the pin
-
-A bead that asks for a measurement later names the baseline **run** —
-`.perf-runs/<date>/<file>.json` — and not "compare against the pin".
-
-Retrieval is not what makes a late comparison fail. Every pin is committed,
-so any historical one comes back without checking anything out:
-
-```
-git show <commit>:scripts/perf/pins/<slug>.json > /tmp/pin.json
-pnpm run perf -- … --against-pin /tmp/pin.json
-```
-
-What fails is the **drift above**, which only grows while the bead waits, and
-which no amount of recovering old pins repairs — the thing being priced is
-today's code, and the older the pin the more of main's own render-path work
-sits between the two bases and lands on this diff's row. A run file cannot
-drift: it is one tree's numbers, immutable, and it stays a usable baseline
-long after the pin that was current beside it has moved on.
-
-So the order of preference is **take the run while the context that wants it
-is loaded**; failing that, record the baseline run file and what flags it
-used, since a comparison is only valid against a run whose flags match
-(§ Setup levers — a `--force-recompute` or `--readback-every` mismatch is not
-a comparison).
 
 ## State guard
 

@@ -1,21 +1,20 @@
 // The perf pin: a committed summary of the whole frame at the canon vantages
 // on one GPU, and the verdicts of a later run against it. Operator rules:
-// RELEASING.md § Perf pin; mechanics: pins/README.md.
+// RELEASING.md § Perf pin; mechanics: README.md.
 
-import { basename, relative, resolve } from 'node:path';
-import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 import {
   VERDICT_MARK, band, bufferRefusal, computeFloorMs, dwellFloorMs, dwellFrames, framesRefusal, positionRefusal,
   preconditionRefusal, readbackRefusal, recordCountRefusal, splitFrameClasses, verdictFor,
   type DiffRefusal, type Verdict,
-} from './diff/diff-pure';
+} from '../diff/diff-pure';
 import {
   COMPUTE_ROW, computeClock, floorMove, frameFloor, gatingClock,
   type DwellMetric, type DwellSummary, type FrameFloor, type StateGuard,
-} from './dwell/dwell-pure';
-import { DWELL_METHOD, contextOrder } from './run-pure';
-import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type GitProvenance, type PerfFile, type ScenarioRecord } from './schema';
-import { BACKENDS, SCENARIO_NAMES, type Backend, type ScenarioName } from './scenarios';
+} from '../dwell/dwell-pure';
+import { DWELL_METHOD, contextOrder } from '../run-pure';
+import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type GitProvenance, type PerfFile, type ScenarioRecord } from '../schema';
+import { BACKENDS, SCENARIO_NAMES, type Backend, type ScenarioName } from '../scenarios';
 
 /** Removing a field or changing what one MEANS bumps the suffix; adding one
  *  does not — the same contract as `PERF_SCHEMA`. */
@@ -27,7 +26,7 @@ export const PIN_SCHEMA = 'stellata-perf/pin-3';
  *  whether the row is comparable — and a trending one must therefore not
  *  refuse it, since any refused row refuses the whole pin. The ceiling still
  *  applies: a vantage that wanders 1.5 ms is no licence for a frame that
- *  doubled. pins/README.md § Reading `--against-pin`. */
+ *  doubled. README.md § Reading `--against-pin`. */
 export const PIN_UNGATED_SCENARIOS: Readonly<Partial<Record<ScenarioName, string>>> = {
   lg: 'wanders as much inside one dwell as between runs',
 };
@@ -63,12 +62,12 @@ export interface PinRow {
   /** The scene the row priced: star records the page had loaded. */
   readonly recordCount: number;
   /** Where the context sat in the pin run, 1-based; a row compares only
-   *  against one taken at the same position (`./diff/diff-pure.ts`). */
+   *  against one taken at the same position (`../diff/diff-pure.ts`). */
   readonly position: number;
   readonly idleRafMs: number | null;
   /** Exposure readbacks per frame over the dwell. Where the vantage draws a
    *  readback frame and a plain one, the GPU-stream median follows this rate,
-   *  so a row taken at another one is not the same statistic (`./diff/diff-pure.ts`).
+   *  so a row taken at another one is not the same statistic (`../diff/diff-pure.ts`).
    *  Absent on a pin taken before the rate was summarised, which declines the
    *  guard rather than refusing the row. */
   readonly readbackPerFrame?: number;
@@ -82,7 +81,7 @@ export interface PinRow {
   /** Frames the pinned dwell timed. A row compares only against one taken
    *  over the same count: a median converges with dwell length, so two
    *  lengths are two statistics rather than two readings
-   *  (`./diff/diff-pure.ts`). Absent on a pin taken before the field
+   *  (`../diff/diff-pure.ts`). Absent on a pin taken before the field
    *  existed, which declines the guard rather than refusing the row. */
   readonly frames?: number;
   readonly method: string;
@@ -198,7 +197,7 @@ export function pinKey(record: ScenarioRecord): string {
 
 /** Every canon row and the position a pin run takes it at — backend-major in
  *  canon order, so mw120|webgpu is 1 and lg|webgl2 is 10. A pin holds all of
- *  them and each at its own position (pins/README.md § Run position). */
+ *  them and each at its own position (README.md § Run position). */
 export const CANON_POSITIONS: ReadonlyMap<string, number> = new Map(
   contextOrder(SCENARIO_NAMES, BACKENDS).map(({ name, backend }, i) => [keyOf(name, backend), i + 1]),
 );
@@ -225,7 +224,7 @@ function rowRefusal(record: ScenarioRecord): string | null {
   if (record.position == null) return 'no run position recorded — the row cannot be placed in a load history';
   // The pin holds no `params` of its own and is taken with every setup lever at
   // its default, so an empty record IS the pin's preconditions — and absent
-  // already reads as the default (`./diff/diff-pure.ts`). Here rather than in
+  // already reads as the default (`../diff/diff-pure.ts`). Here rather than in
   // `compareToPin` alone because `--pin` reads this too: a forced dwell written
   // as the pin would carry its lever's cost in every later run's verdict.
   const precondition = preconditionRefusal({}, record.params);
@@ -238,7 +237,7 @@ function rowRefusal(record: ScenarioRecord): string | null {
 }
 
 /** A row taken where the pin run never takes it compares with nothing later:
- *  every comparison is at equal position (pins/README.md § Run position). */
+ *  every comparison is at equal position (README.md § Run position). */
 function canonPositionRefusal(record: ScenarioRecord): string | null {
   const canon = CANON_POSITIONS.get(pinKey(record));
   if (canon === undefined || record.position === canon) return null;
@@ -355,7 +354,7 @@ function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
  * of identical code narrow nothing, so a row one run refused for straddling
  * a load state is taken from the run that held it steady — which is what
  * lets a pin come from saved runs without a second arm
- * (pins/README.md § From saved runs).
+ * (README.md § From saved runs).
  */
 export function pinFromRuns(given: readonly RunSource[], source: PinSource): PinSummary {
   const sources = oldestFirst(given);
@@ -420,24 +419,6 @@ export function pinFromRuns(given: readonly RunSource[], source: PinSource): Pin
 export function missingCanonRows(pin: PinFile): readonly string[] {
   const held = new Set(pin.rows.map((row) => row.key));
   return [...CANON_POSITIONS.keys()].filter((key) => !held.has(key));
-}
-
-/**
- * Runs are filed under `.perf-runs/<date>/` of the checkout they will be
- * committed from (README.md § Recording), so that is the path worth
- * committing: an absolute one names one machine's home directory, resolves
- * nowhere else, and this file ships in a public repo. A run stored outside
- * the checkout keeps its name and loses its location.
- *
- * `checkoutRoot` is the root of the checkout the run was WRITTEN in, which
- * from a worktree is the worktree — not the main checkout. Resolving against
- * the main checkout yields `.claude/worktrees/<name>/.perf-runs/…`, a path
- * that stops resolving the moment the worktree is removed, and a pin is
- * normally taken on a branch.
- */
-export function citeRunPath(jsonPath: string, checkoutRoot: string): string {
-  const rel = relative(checkoutRoot, resolve(jsonPath));
-  return rel === '' || rel.startsWith('..') ? basename(jsonPath) : rel;
 }
 
 /** Which side is missing the stream, so an ungated row says why rather than
@@ -515,7 +496,7 @@ interface StreamSpec {
 /** One stream judged against its pinned twin: the band where both sides
  *  hold one, ungated by vantage or where a side lacks it, the ceiling on
  *  every reading. The frame's stream and the compute one are the same rule
- *  one field over (`pins/README.md` § The compute row). */
+ *  one field over (`README.md` § The compute row). */
 function streamRow(pinned: PinRow, spec: StreamSpec): PinVerdictRow {
   const { key, metric, pinnedClock, current } = spec;
   if (pinnedClock === null || current === null) {
@@ -707,99 +688,4 @@ export function assertPinFile(value: unknown, source: string): PinFile {
 /** `scripts/perf/pins/<slug>.json`, relative to the repo root. */
 export function pinPathFor(slug: string): string {
   return `scripts/perf/pins/${slug}.json`;
-}
-
-/** Whether the pin's recorded `commit` resolves on main as git answers it
- *  *now* — not as it answered when the pin was taken. A branch tip that has
- *  since squash-merged reads `unlanded` forever: the measured tree landed,
- *  under another hash. `unknown` is an unreadable object or no `origin/main`. */
-export type PinCommitState = 'landed' | 'unlanded' | 'unknown';
-
-/**
- * `git merge-base --is-ancestor` answers in exit codes, and only **1** means
- * "asked and answered no". Every other non-zero status is the question having
- * failed — an unknown object, no `origin/main`, a broken repository — and
- * reading those as `unlanded` would print a confident "pre-squash branch tip"
- * line about a commit git never resolved.
- */
-export function commitStateFromExitStatus(status: number | undefined): PinCommitState {
-  if (status === 0) return 'landed';
-  return status === 1 ? 'unlanded' : 'unknown';
-}
-
-/** `git diff --shortstat <pin main base> <run main base> -- src/client`:
- *  main's own render-path movement between the two trees. Read A-to-B, in
- *  that order — a branch cut before the pin was taken has the older base,
- *  and calling the counts "since the pin" would then have them backwards. */
-export interface RenderPathDrift {
-  readonly files: number;
-  readonly insertions: number;
-  readonly deletions: number;
-}
-
-const SHORTSTAT = /(\d+) files? changed(?:, (\d+) insertions?\(\+\))?(?:, (\d+) deletions?\(-\))?/;
-
-/**
- * Read a `--shortstat` line. An empty line is git saying the two trees are
- * identical under the pathspec, which is a drift of zero and not a failure
- * to measure one — the difference decides whether the header stays silent or
- * says the drift could not be read. Either count is absent when it is zero,
- * so a deletion-only diff prints no insertions clause at all.
- */
-export function parseRenderPathDrift(shortstat: string): RenderPathDrift | null {
-  if (shortstat.trim() === '') return { files: 0, insertions: 0, deletions: 0 };
-  const m = SHORTSTAT.exec(shortstat);
-  if (m === null) return null;
-  return { files: Number(m[1]), insertions: Number(m[2] ?? 0), deletions: Number(m[3] ?? 0) };
-}
-
-/**
- * What the `--against-pin` header must say about the tree the pin measured,
- * before any row is read.
- *
- * A mark is only the PR's if nothing else moved the frame in between, and a
- * pin cites a branch tip: squash-merge means that hash carries no landed
- * tree, so the drift it hides is attributed to whoever runs next. One pin
- * sat at an unlanded tip for two days and charged four consecutive PRs —
- * one of them with no per-frame code at all — for ~1,600 insertions of
- * main's own render-path work.
- *
- * Reported rather than refused: taking a pin on a branch is the normal case,
- * and a refusal would leave no usable pin at the moment one is most wanted.
- * The row-level refusals stay for what is measurable — adapter, buffer,
- * record count, state guard — and this names what a reader must weigh.
- */
-export function pinProvenanceLines(
-  pin: PinFile,
-  state: PinCommitState,
-  drift: RenderPathDrift | null,
-  runMainCommit: string | null,
-): readonly string[] {
-  const short = pin.git.commit.slice(0, 8);
-  const lines: string[] = [];
-  if (state === 'unlanded') {
-    lines.push(
-      `pin commit ${short} is not an ancestor of origin/main — a pre-squash branch tip, ` +
-      'so no hash on main carries the tree it measured',
-    );
-  } else if (state === 'unknown') {
-    lines.push(`pin commit ${short} could not be placed against origin/main — drift is unbounded`);
-  }
-  if (pin.git.mainCommit === null) {
-    lines.push('the pin records no main base, so its drift from main cannot be measured at all');
-  } else if (drift === null) {
-    lines.push(`pin main base ${pin.git.mainCommit.slice(0, 8)}; render-path drift could not be read`);
-  } else if (drift.files > 0) {
-    // Both bases named, and the counts read in that direction: whichever is
-    // the older tree, `git diff A B -- src/client` is the command that
-    // reproduces the line, and "moved since the pin" would not be.
-    const from = pin.git.mainCommit.slice(0, 8);
-    const to = runMainCommit === null ? 'unrecorded base' : runMainCommit.slice(0, 8);
-    lines.push(
-      `main's src/client differs from the pin's base ${from} to this run's ${to}: ` +
-      `${drift.files} file${drift.files === 1 ? '' : 's'}, +${drift.insertions}/-${drift.deletions} — ` +
-      'a mark below may be that difference rather than this diff',
-    );
-  }
-  return lines;
 }

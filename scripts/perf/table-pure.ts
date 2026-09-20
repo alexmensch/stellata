@@ -5,7 +5,7 @@
 import { round3, type PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { VERDICT_MARK, type RunDiff } from './diff/diff-pure';
 import { PASS_COUNTERS, computeClock, type DwellSummary, type PassCountsSummary } from './dwell/dwell-pure';
-import { PIN_VERDICT_MARK, type PinDiff } from './pin-pure';
+import { PIN_VERDICT_MARK, type PinDiff } from './pins/pin-pure';
 import type { DwellRecord } from './schema';
 import type { SweepFit, SweepPoint } from './sweep/sweep-pure';
 

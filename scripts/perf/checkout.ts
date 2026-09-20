@@ -6,9 +6,12 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import {
-  PIN_SCHEMA, PinError, commitStateFromExitStatus, compareToPin, parseRenderPathDrift, pinProvenanceLines,
-  type PinCommitState, type PinDiff, type PinFile, type RenderPathDrift,
-} from './pin-pure';
+  PIN_SCHEMA, PinError, compareToPin, type PinDiff, type PinFile,
+} from './pins/pin-pure';
+import {
+  commitStateFromExitStatus, parseRenderPathDrift, pinProvenanceLines,
+  type PinCommitState, type RenderPathDrift,
+} from './pins/provenance/provenance-pure';
 import { SchemaError, type GitProvenance, type PerfFile } from './schema';
 import { formatPinTable } from './table-pure';
 
@@ -33,7 +36,7 @@ export function mainCheckout(): string {
   }
 }
 
-/** pins/README.md § What the commit fields hold. */
+/** pins/provenance/README.md § What the commit fields hold. */
 export function gitMeta(): GitProvenance {
   let commit = 'unavailable';
   let dirty = true;
@@ -98,7 +101,7 @@ export function readJsonFlag<T>(
 export function printAgainstPin(path: string, pin: PinFile, current: PerfFile): PinDiff {
   console.log(`\nperf: against pin ${path} (${pin.git.commit.slice(0, 8)}, v${pin.version}, ${pin.adapterSlug})`);
   for (const line of pinProvenanceLines(
-    pin,
+    pin.git,
     commitState(pin.git.commit),
     renderPathDrift(pin.git.mainCommit, current.run.git.mainCommit),
     current.run.git.mainCommit,
