@@ -190,8 +190,9 @@ at its `iSourceIdx`. Two kinds of table:
   slot zero. The stride rounds the roster's eleven fields up to whole
   vec4s for headroom, not for alignment — scalar reads out of a float
   table need none — so a twelfth static field costs no bytes and a
-  thirteenth costs 1.5 MiB. Built from the catalogue and star-frame
-  arrays; never written again.
+  thirteenth takes the stride to 16, costing a whole vec4 rather than a
+  slot: 16 B per star, 5.9 MiB at today's count. Built from the
+  catalogue and star-frame arrays; never written again.
 - **The forwarded tables** — `iPosition`, `iCompositeSuppress`,
   `iEclipseDim`, `iSuppressPulsation`. The shell constructs the WebGL
   `StarPipeline` on every boot; on this one its meshes never render, but

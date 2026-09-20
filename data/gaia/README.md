@@ -246,81 +246,10 @@ promotion path does not already cover them — it mints from WDS rows
 name. 836 of the pairs have their primary in today's manifest, making this a
 standing gap rather than one the floor move creates.
 
-## The record total the floor implies — ~985,000
-
-The catalogue is not the magnitude pull. It is the pull's `V <= 11` population
-**unioned** with the membership manifest and deduped on `source_id`, then put
-through the build's own two corrections. The overlap was the open question
-blocking every sizing decision under `stellata-cns`. Measured on the committed
-files, 2026-09-19:
-
-| term | count |
-|---|---|
-| `V <= 11` source_ids from the pull | 929,929 |
-| distinct `gaia_source_id` in the manifest | 370,994 |
-| in both | **327,701** |
-| source_id union | **973,222** |
-| manifest rows carrying no `gaia_source_id` | + 5,938 |
-| companions promoted to their own record | + 16,226 |
-| rows parked, so never a record | − ~10,429 |
-| **records** | **~984,957** |
-
-That replaces the `[930,562 … 1,307,491]` bracket with one number, and makes
-the catalogue **2.54x** today's 388,071 records.
-
-**The last two terms are the build's, not the manifest's, and they pull in
-opposite directions** — which is why a projection that reads the net gap
-between manifest rows and records gets the scaling wrong. Today the identity
-holds exactly: `376,932 + 16,226 − 5,087 = 388,071`. Promotion is WDS-driven
-(`../../scripts/catalog/companions/README.md`), so 16,226 is carried forward
-unchanged; the deep population is not what WDS describes. Parking is not
-carried forward, because it is a property of the rows themselves: today's
-5,087 are `parkedNoParallaxPublished` 3,423 · `parkedRefusedNoDefensibleParallax`
-975 · `parkedNoVMagnitude` 688 · `parkedNoPosition` 1, and the 602,228
-newcomers add **5,342** of their own — 0.887% of them publish no parallax.
-They add nothing to the other three: every newcomer has a V by construction of
-the floor, and none is missing a position.
-
-So ~984,957 is an **upper** bound in one respect. What share of the newcomers
-the defensible-parallax gate refuses on top of the 5,342 is unmeasured; 414
-carry a non-positive parallax and 679 a S/N below 1, so the true figure sits a
-few hundred lower at most.
-
-**43,293 of the manifest's bindings sit outside the kept set** — stars fainter
-than the floor that the classic-ID term keeps deliberately (Proxima, `V ≈
-11.1`), plus the 855 pull rows no transform served that a designation reaches
-anyway. The floor bounds the magnitude term, never the catalogue.
-
-Reproduce by streaming the pull through `rielloVMagnitude` and intersecting
-the kept `source_id`s against the manifest's `gaia_source_id` column. **Key on
-strings**: a Gaia `source_id` runs to 19 digits and loses precision silently
-as a float64.
-
-### What that costs on the wire
-
-`RECORD_SIZE` is 100 bytes (`scripts/catalog/record/README.md`), so the record
-array is linear in the count. Compression measured on a build of today's
-catalogue — 388,071 records, 38,814,407 bytes over three chunks — is **0.6545**
-for `gzip -9` and **0.6224** for brotli quality 5. Sizes in MiB, as the build
-log prints them:
-
-| | today | at `V <= 11` |
-|---|---|---|
-| `catalog.bin` raw | 37.0 | 93.9 |
-| `gzip -9` | 24.2 | **61.5** |
-| brotli-5 | 23.0 | **58.5** |
-
-61.5 MiB is 64.5 MB decimal, which supersedes the **~82 MB gz** `cns.6` was
-written against — that figure scaled the 1,247,240 pull count rather than the
-record total. Read the projections as an upper bound: the deep population
-carries more absent enrichment than today's, and sentinel runs compress better
-than measured values.
-
-Two sidecars scale alongside and are in none of those numbers:
-`search-index.json` (17.9 MB raw, 4.3 MB gz today) and
-`catalog-row-index-map.json` (12.7 MB, 5.3 MB), the second keyed on
-`source_id` and so tracking the union directly. `cns.6` owns the chunking
-call these totals drive.
+The record total that floor implies, what promotion and parking do to it, and
+what the result costs on the wire are the build's, not this folder's:
+`../../scripts/catalog/membership/magnitude-term/README.md`
+§ The record total the floor implies.
 
 ## The GSPC validated-range flag — `1` means IN range
 

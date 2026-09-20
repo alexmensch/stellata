@@ -82,7 +82,7 @@ sources without erroring.
 Against today's manifest the union measures 370,994 bound source_ids, 327,701
 of them in the kept set, so 602,228 rows are the term's own and the union is
 973,222 source_ids. The record total that implies, once promotion and parking
-apply: `data/gaia/README.md` § The record total the floor implies.
+apply: § The record total the floor implies, below.
 
 Run at `V ≤ 11` the generator writes **979,160** manifest rows — 376,932 plus
 those 602,228 — and every primaries-side count holds byte for byte, which is
@@ -107,6 +107,133 @@ key anything else. That is the opposite of `additionGaiaKeyedOnly`, which the
 primaries' own additions pin at zero: an admitted group falling through to its
 Gaia id means the admission rule leaked, while a magnitude row doing so is the
 term working. The two counts must not be read against each other.
+
+## The record total the floor implies — 983,069, measured
+
+The catalogue is not the magnitude pull. It is the pull's `V <= 11` population
+**unioned** with the membership manifest and deduped on `source_id`, then put
+through the build's own two corrections. Projected 2026-09-19 from the
+committed files, then measured on a real floor-11 build, 2026-09-20:
+
+| term | projected | measured |
+|---|---|---|
+| `V <= 11` source_ids from the pull | 929,929 | 929,929 |
+| distinct `gaia_source_id` in the manifest | 370,994 | 370,994 |
+| in both | 327,701 | 327,701 |
+| source_id union | 973,222 | 973,222 |
+| manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 |
+| companions promoted to their own record | + 16,226 | **+ 14,657** |
+| rows parked, so never a record | − 10,429 | **− 10,748** |
+| **records** | ~984,957 | **983,069** |
+
+The manifest side reproduced exactly: `build:membership` at the floor writes
+979,160 rows and every primaries-side count holds. Both build-side terms
+missed, in opposite directions, for 0.19% net. The catalogue is **2.53x**
+today's 388,071 records.
+
+**Promotion is not carried forward unchanged**, which is what the projection
+assumed on the ground that WDS drives it and the deep population is not what
+WDS describes. It falls to 14,657, because promotion is gated on the secondary
+not already holding a record: `already-in-catalog` rises 1,668 → 3,317 as the
+deep population turns out to *contain* stars the build used to promote under a
+synthetic id. A deeper floor converts promoted companions into ordinary records
+rather than adding to them. Two of those synthetic classes then match only
+retired sids and need `../../../../data/sid/reinstatements.tsv` rows.
+
+**Parking scaled close to the projection**, against today's 5,087:
+
+| reason | today | at `V <= 11` |
+|---|---|---|
+| `no_parallax_published` | 3,423 | 9,032 |
+| `refused_no_defensible_parallax` | 975 | 1,027 |
+| `no_v_magnitude` | 688 | 688 |
+| `no_position` | 1 | 1 |
+
+The newcomers publish no parallax at 0.931%, not the projected 0.887%, and the
+defensible-parallax gate refuses 52 on top — inside the "a few hundred at most"
+the projection allowed. The other two reasons add exactly nothing, as
+predicted: every newcomer has a V by construction of the floor, and none is
+missing a position.
+
+**The floor measures complete.** Today's apparent-V histogram over the built
+records turns over at V 9–10 — 93,143 · 127,771 · 79,930 across the 8–9, 9–10
+and 10–11 bins — and that turnover is the incompleteness signature, not
+structure. At the floor the same bins read 113,478 · 298,221 · 482,489, rising
+to the floor with no turnover. The additions land where the 2026-09-14 working
+predicted, 250 pc – 2.5 kpc concentrated toward the plane.
+
+**43,293 of the manifest's bindings sit outside the kept set** — stars fainter
+than the floor that the classic-ID term keeps deliberately (Proxima, `V ≈
+11.1`), plus the 855 pull rows no transform served that a designation reaches
+anyway. The floor bounds the magnitude term, never the catalogue.
+
+Reproduce the projection by streaming the pull through `rielloVMagnitude` and
+intersecting the kept `source_id`s against the manifest's `gaia_source_id`
+column; reproduce the measurement by setting `MAGNITUDE_FLOOR_V` to 11 and
+running `build:membership` then `build:catalog`. **Key on strings**: a Gaia
+`source_id` runs to 19 digits and loses precision silently as a float64.
+
+### What that costs on the wire
+
+`RECORD_SIZE` is 100 bytes (`../../record/README.md`), so the
+record array is linear in the count. Measured on both builds rather than scaled
+from a ratio:
+
+| | today | at `V <= 11` |
+|---|---|---|
+| records | 388,071 | 983,069 |
+| `catalog.bin` raw | 37.0 MiB | 93.8 MiB |
+| `gzip -9` | 24.3 MiB | **59.5 MiB** |
+| brotli-5 | 23.1 MiB | **56.7 MiB** |
+| transport chunks | 3 | 6 |
+
+The deep population compresses better than today's, as the projection warned it
+would: `gzip -9` lands at 0.6347 against today's 0.6556, so the ratio-scaled
+61.5 MiB was 2 MiB high. 59.5 MiB is 62.4 MB decimal, 63.5 gzipped bytes per
+record.
+
+**One sidecar is on the wire, and it does not scale.** `search-index.json` is
+fetched beside the binary inside boot's one `Promise.all`
+(`../../../../src/client/star-pipeline/star-module.ts`), and grows 4.35 → 4.46 MB
+gz — 2.5%, because the deep population carries no designation and contributes
+2,221 searchable entries against 594,998 new records.
+`catalog-row-index-map.json` does scale, 5.3 → 12.6 MB gz, but **no client code
+reads it**: it is a build- and test-side sidecar addressed only from `scripts/`
+and `tests/`, so it is not a first-load cost and cannot drive a wire-chunking
+decision.
+
+First load therefore moves 29.8 → 66.9 MB gz, **2.24x**. `cns.6` owns the
+barrier that makes that matter: the loader fetches every chunk under one
+`Promise.all` and reassembles before decoding, so nothing renders until the
+last byte of the last chunk lands.
+
+### What that costs in video memory
+
+Per-star GPU residency is derived, never pinned — the two folders that own
+these buffers both say to re-derive rather than trust a byte count
+(`../../../../src/client/webgpu/star/compaction/README.md` and
+`../../../../src/client/webgpu/extinction/README.md`, each § What it costs, and
+what it holds):
+
+| resident | B/star | today | at `V <= 11` |
+|---|---|---|---|
+| static record table (`STAR_STATIC_STRIDE`, 12 floats) | 48 | 17.8 MiB | 45.0 MiB |
+| forwarded tables (`iPosition` ×3 + three scalars) | 24 | 8.9 MiB | 22.5 MiB |
+| compaction survivor lists (2 × `u32`) | 8 | 3.0 MiB | 7.5 MiB |
+| extinction prepass (six buffers) | 36 | 13.3 MiB | 33.8 MiB |
+| | **116** | **42.9 MiB** | **108.8 MiB** |
+
+**+65.8 MiB of video memory** — and ordinary memory grows alongside it, which
+is the tighter bound on an integrated or mobile device. Three of those buffers
+keep a copy the renderer never releases: the static table's `Float32Array`
+(48 B/star), extinction's packed position copy (16 B/star) and the order table
+behind it (4 B/star) — 25.2 MiB today against **63.8 MiB** at the floor. The
+forwarded tables add none, their arrays being the shell's, and the decoded
+record columns sit on top of all of it.
+
+A twelfth static field still costs no bytes at this stride; a thirteenth takes
+the stride to 16 and so costs a whole vec4 rather than a slot — 15.0 MiB at the
+floor, 5.9 MiB today.
 
 ## The astrometry comes with it
 
