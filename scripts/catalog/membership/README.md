@@ -72,7 +72,8 @@ gaia_source_id  binding  routes  term
   source SIMBAD's frozen cross-IDs hold under the record's own HIP, TYC or GJ,
   through the same gates), `reviewed` (the value a row of
   `data/membership/binding-review-dispositions.tsv` settles on stated
-  evidence), or `none`. `binding/README.md` is the rule.
+  evidence), or `none`. `binding/README.md` § Both gates weigh every candidate
+  is the rule.
 - `term` is which side of `docs/catalog-driver.md` § 1's union admitted the
   row. Every row reads `primaries` today; `magnitude-term/README.md` owns the
   other side, its floor and its dedupe against the bindings derived below.
@@ -118,7 +119,8 @@ A/B, whose letters AT-HYG swapped, is reached mechanically now the merge scores
 § The gl comparison is specificity-aware).
 
 The binding is **derived**, not copied, and **nothing holds it against the
-spine's `gaia_source_id` cell**: `binding/README.md` walks four committed
+spine's `gaia_source_id` cell**: `binding/README.md`
+§ The four sources, in precedence order walks four committed
 sources through both gates and writes what survives. `derivationOutcome` in the
 count snapshot pins what the derivation reached, over every spine row:
 
@@ -170,7 +172,7 @@ value ships as `reviewed`.
 How a row reaches its `gaia_source_id` — the four committed sources, the
 precedence and consensus ranking, both gates, and the `contested` /
 `collision` outcomes the derivation cannot settle alone — is
-`binding/README.md`, which owns it.
+`binding/README.md` § What the derivation cannot settle alone, which owns it.
 
 ## The unattested labels leave the row
 

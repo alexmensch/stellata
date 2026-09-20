@@ -12,7 +12,7 @@ input to and a baseline for. What the spine still supplies is the one thing no
 primary does: **which designations name one star**. `build:membership` reads
 it for those merge decisions and for the label cells the merge starts from,
 deriving each row's Gaia binding from committed evidence alone
-(`../membership/binding/README.md`); the
+(`../membership/binding/README.md` § The four sources, in precedence order); the
 manifest's parity gate (i) reads it as the baseline every manifest row must
 account for; `../classic-ids/parity-ledger.test.ts` backs two dispositions
 against its cells; `../astrometry-request/` reads its TYCs to narrow the
@@ -105,7 +105,7 @@ The classical cells come off the column and the manifest re-keys them; the
 `gaia_source_id` cell is the one column the manifest **does not read at all**.
 The generator derives each binding from the TYC and HIP cross-walks, CNS5 and
 SIMBAD's cross-IDs through both binding gates
-(`../membership/binding/README.md`). The
+(`../membership/binding/README.md` § Both gates weigh every candidate). The
 native → HIP-cross-walk precedence that produced the frozen column took
 AT-HYG's own `gaia` cell as its first input, which is not in the repo, so no
 walk order reproduces it; the derivation is a fresh answer, never a replay
@@ -119,7 +119,7 @@ which settles 11,687 of the 11,721 the walks cannot reach and takes the fills
 to 940 ungated, 791 after both gates — a reader scoping off 233 under-budgets
 by four. The manifest's `derivationOutcome` count carries what the derivation
 reaches; nothing compares it against the frozen column any more
-(`../membership/binding/README.md`).
+(`../membership/README.md` § The spine side).
 
 **Four rows carry identifiers the frozen build resolved *after* its walk**:
 the three `multiples.tsv` HD-only primaries it stamped from their
@@ -361,8 +361,10 @@ unless another home is named; the committed gates are
 ### The derived-binding ledger
 
 The § 6 instantiation for the manifest deriving its `gaia_source_id` instead
-of copying this file's column (`../membership/binding/README.md`), measured 2026-09-08 by diffing the built catalogue against the one
-built from the copied column, records matched on their canonical designation.
+of copying this file's column (`../membership/binding/README.md`
+§ The four sources, in precedence order), measured 2026-09-08 by diffing the
+built catalogue against the one built from the copied column, records matched
+on their canonical designation.
 That baseline also predates the four manifest-derived re-pulls
 (`../../refresh/README.md` § The staleness gate), so a move below carries both
 the new binding and the table row it can now reach; two records whose binding

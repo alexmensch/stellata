@@ -265,8 +265,8 @@ the column but derives it, and the derivation's fourth source — SIMBAD's
 frozen cross-IDs — takes the fills to 940 ungated and 791 through both gates,
 leaving 576 derived refusals that ship designation-keyed on the § 5 tiers. The
 binding's authority is the manifest's own `derivationOutcome` count
-(`scripts/catalog/membership/binding/README.md`), not this audit's identity
-bullet, which measures the frozen column.
+(`scripts/catalog/membership/README.md` § The spine side), not this audit's
+identity bullet, which measures the frozen column.
 
 **Additions: the primaries admit ~64k records the spine lacks, and 55,008 of
 them are one upstream defect.** Every figure in this paragraph is counted per
@@ -311,7 +311,8 @@ name (WGSN) — keyed on that designation, with a `gaia_source_id` **derived**
 from the TYC and HIP cross-walks, CNS5 and SIMBAD's frozen cross-IDs through
 the § 4 gates, or settled by a committed review disposition where the sources
 disagree with each other or reach nothing at all
-(`scripts/catalog/membership/binding/README.md`). That
+(`scripts/catalog/membership/binding/README.md`
+§ The four sources, in precedence order). That
 is AT-HYG's *stated* selection rule reproduced from the primaries. AT-HYG's
 *realised* membership is that rule minus its link defect and merge drops, and
 reproducing the realised set
@@ -538,7 +539,8 @@ therefore gated through the record build's own `resolveGaiaSourceId` checks
 consumer keying labels off the overlay inherits this gate for free; one that
 derives bindings from the raw cross-walks must apply it** — the membership
 generator does, through the same call
-(`scripts/catalog/membership/binding/README.md`);
+(`scripts/catalog/membership/binding/README.md`
+§ Both gates weigh every candidate);
 `data/classic-ids/README.md` § The binding gate carries the reach bound.
 
 **Ambiguity policy** (IV/25 `n_HD`/`n_TYC` > 1, and any designation

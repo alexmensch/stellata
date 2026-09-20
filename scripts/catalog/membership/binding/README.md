@@ -4,6 +4,8 @@ A spine row's `gaia_source_id`, derived from committed evidence alone. The
 manifest that consumes it is `../README.md`; the retirement this derivation
 completes is `docs/catalog-driver.md` § 3.2.
 
+## Files in this area
+
 ```
 scripts/catalog/membership/binding/
   binding-derivation-pure.ts    The four candidate sources, the consensus
@@ -14,6 +16,8 @@ scripts/catalog/membership/binding/
                                 `../../spine/` and
                                 `../../astrometry-request/` read it too.
 ```
+
+## The four sources, in precedence order
 
 `deriveBinding` (`binding-derivation-pure.ts`) answers each spine row from four
 committed sources, in precedence order:
@@ -38,7 +42,11 @@ committed sources, in precedence order:
    components answering for each other.
 
 A value two sources agree on outranks a lone leader; ties fall in the order
-above. **Every** candidate then goes through **both binding gates by calling
+above.
+
+## Both gates weigh every candidate
+
+**Every** candidate goes through **both binding gates by calling
 `resolveGaiaSourceId`** — the one call `applyBindingGate` makes on the label
 side, so the two cannot drift on what counts as a bad binding — and the first
 that passes wins. The magnitude gate weighs G
@@ -59,39 +67,45 @@ under any tier, so nothing could be weighed against it.
 `passingRunnersUp` reads the rejections to decide whether a row's sources
 genuinely disagree, so a candidate left unweighed would read as passing on a
 verdict never taken and queue a `contested` review the gate settles by itself.
-Gl 864 shipped exactly that way before the derivation weighed its losers: the
-runner-up was the TYC walk's neighbour at G 13.90 against the star's printed
-V 9.98, and a human had to write the disposition restating what the magnitude
-gate already knew.
+Gl 864 is the shape: its runner-up was the TYC walk's neighbour at G 13.90
+against the star's printed V 9.98, which the magnitude gate already refuses.
 
-Two things the derivation cannot settle alone are queued. A **contested** row
-is one whose winner has a runner-up the gates also passed: the precedence order
-chose, not the evidence. It **ships the winner** and queues for review rather
-than withholding — 227 such rows shipped under the frozen column because the
-cell corroborated the winner, and withholding them once the cell went would
-have dropped 227 bindings to express less confidence than the derivation has.
-A disposition may still name a different value — Gl 563.2 A is the shape: the CNS5 route reads the
-spine's own `gl` cell, so AT-HYG's swapped letter sends it to CNS5's A row,
-which is the OTHER component's source, while SIMBAD binds the star the HIP
-names. CNS5 itself letters the two the way SIMBAD and the HIP do. A
-**collision** is one source two spine rows derive: a Gaia source on two records
-keys neither (`docs/sid.md` § 4.1), so **both** are withheld and queued. The
-tie used to fall to whichever row's frozen cell already carried the source;
-nothing in the derivation ranks one row over the other, so there is no tiebreak
-to inherit and inventing one would settle an identity question on walk order.
+## What the derivation cannot settle alone
 
-**The candidates have to be in the astrometry pull.** A missing G is a pass at
+Two outcomes are queued into `data/membership/binding-review.tsv`.
+
+A **contested** row is one whose winner has a runner-up the gates also passed:
+the precedence order chose, not the evidence. It **ships the winner** and
+queues for review rather than withholding — 227 such rows shipped under the
+frozen column because the cell corroborated the winner, and withholding them
+once the cell went would have dropped 227 bindings to express less confidence
+than the derivation has. A disposition may still name a different value —
+Gl 563.2 A is the shape: the CNS5 route reads the spine's own `gl` cell, so
+AT-HYG's swapped letter sends it to CNS5's A row, which is the OTHER
+component's source, while SIMBAD binds the star the HIP names. CNS5 itself
+letters the two the way SIMBAD and the HIP do.
+
+A **collision** is one source two spine rows derive: a Gaia source on two
+records keys neither (`docs/sid.md` § 4.1), so **both** are withheld and
+queued. Nothing in the derivation ranks one row over the other, so there is no
+tiebreak to inherit, and inventing one would settle an identity question on
+walk order.
+
+## The candidates have to be in the astrometry pull
+
+A missing G is a pass at
 the gate, so `derivationCandidateSourceIds` feeds every source any row could be
 bound to into `../../astrometry-request/` and `derivedWeighedNoGMag` is pinned at
 **0** — a candidate weighed with no pulled row is the request under-covering
 the derivation. `derivedWeighedNullGMag` (77) is Gaia publishing no G for a
 source it has a row for, which no request can supply.
 
-**A Gaia id for a bright star is an identity statement, not a data source.**
+## A Gaia id for a bright star is an identity statement, not a data source
+
 Most of the fills are saturated stars whose source is a 2-parameter solution:
 sky position only, no parallax, no proper motion. Such a source satisfies
 neither the direction cascade (5p) nor the distance cascade (a parallax), and
 `GAIA_PHOTOMETRY_SATURATION_G` refuses the Riello V transform below G 4, so
 those records keep their Hipparcos-2 astrometry and printed V whatever goes
-in the identifier cell. The bright end is already protected by evidence-keyed
-conditions; an empty cell was the worse way to express one.
+in the identifier cell. The bright end is protected by evidence-keyed
+conditions; an empty cell is the worse way to express one.

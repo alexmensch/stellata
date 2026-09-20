@@ -111,7 +111,8 @@ frozen record of AT-HYG's merge decisions — which designations name one
 star — that the primaries-derived manifest re-keys, plus the label cells the
 merge starts from. Its `gaia_source_id` and `mag` columns it reads not at all:
 the binding is derived from committed evidence alone
-(`scripts/catalog/membership/binding/README.md`).
+(`scripts/catalog/membership/binding/README.md`
+§ The four sources, in precedence order).
 The manifest's parity gate reads it as the baseline every manifest row must
 account for; `scripts/catalog/classic-ids/parity-ledger.test.ts` backs two
 dispositions against its cells; `pnpm run build:astrometry-request` reads its

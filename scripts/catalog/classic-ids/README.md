@@ -202,7 +202,8 @@ at all. `bindingCandidateSourceIds` applies the same reach, so the request and
 the gate agree by construction and `gateSkippedNoGMag` stays pinnable at zero.
 The membership derivation runs the same checks on the record side through the
 same `resolveGaiaSourceId` call, with its own candidate contribution to the
-request and its own zero-pin (`../membership/binding/README.md`).
+request and its own zero-pin (`../membership/binding/README.md`
+§ The candidates have to be in the astrometry pull).
 
 **An ambiguous designation attaches to every matching record** (§ 4) —
 `buildClassicIdOverlay` never picks a winner, so overlay cells are
