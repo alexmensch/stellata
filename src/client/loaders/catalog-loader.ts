@@ -1,23 +1,20 @@
 import {
-  APSIS_FIELDS,
-  type ApsisField,
-  FLAG_HAS_NAME,
-  FLAG_IS_SOL,
-  NO_COMPANION,
-  decodeRecordColumn,
-  decodeRecordColumnBig,
   readCatalogHeader,
   readNameTable,
   recordsOffset,
   catalogChunkOffset,
-  AMP_MAG_PER_UNIT,
-  PERIOD_DAYS_PER_UNIT,
-  type DecodeRecordColumnOptions,
+  wholeRecordSpan,
   type CatalogManifest,
   type RecordSpan,
 } from '../../../scripts/catalog/record/catalog-pure';
 import { chunkRecordSpan, startChunkFetches } from './catalog-progressive';
-import { writePulsationParams } from '../star-pipeline/pulsation/pulsation-params-pure';
+import { createCatalogDecoder, decodeInline } from './catalog-decode-host';
+import {
+  CATALOG_WINDOW_COLUMNS,
+  allocateCatalogColumns,
+  copyWindowColumn,
+  type CatalogWindow,
+} from './catalog-window';
 
 export interface Constellation {
   code: string;
@@ -165,19 +162,28 @@ export async function loadCatalog(
     next++;
   }
   const catalog = beginCatalog(assembled.buffer, constellations, manifest);
-  // Then on to the first chunk carrying a whole record — with a small first
+  const decoder = createCatalogDecoder();
+  const absorbChunk = async (index: number): Promise<void> => {
+    const span = catalog.chunkSpan(index);
+    if (span) catalog.absorb(await decoder.decode(assembled.buffer, span));
+  };
+  // On to the first chunk carrying a whole record — with a small first
   // chunk that is not chunk 0, and boot needs a star to paint.
-  for (let i = 1; i < next; i++) catalog.absorbChunk(i);
+  for (let i = 0; i < next; i++) await absorbChunk(i);
   while (catalog.loadedCount === 0 && next < fetches.length) {
     await fetches[next];
-    catalog.absorbChunk(next);
+    await absorbChunk(next);
     next++;
   }
   const from = next;
   catalog.settleOn((async () => {
-    for (let i = from; i < fetches.length; i++) {
-      await fetches[i];
-      catalog.absorbChunk(i);
+    try {
+      for (let i = from; i < fetches.length; i++) {
+        await fetches[i];
+        await absorbChunk(i);
+      }
+    } finally {
+      decoder.dispose();
     }
   })());
   return catalog;
@@ -198,16 +204,18 @@ export function parseBinary(
   sidSuccessorPairs: readonly [number, number][] = [],
 ): Catalog {
   const catalog = beginCatalog(ab, constellations, { sidSuccessors: sidSuccessorPairs });
-  catalog.decodeTo(catalog.count);
+  catalog.absorb(decodeInline(ab, wholeRecordSpan(readCatalogHeader(ab))));
   catalog.settleOn(Promise.resolve());
   return catalog;
 }
 
 interface GrowingCatalog extends Catalog {
-  /** Decode every record the given chunk index completes. */
-  absorbChunk(index: number): void;
-  /** Decode forward to `end`, whatever chunk boundary it came from. */
-  decodeTo(end: number): void;
+  /** Land a decoded window and announce it. Windows arrive in record order,
+   *  each starting where the last ended. */
+  absorb(window: CatalogWindow): void;
+  /** The record window the given chunk index completes, or null where it
+   *  completes none — true of a chunk 0 that is all header and name table. */
+  chunkSpan(index: number): RecordSpan | null;
   /** Bind `whenComplete` to the caller's chunk walk. */
   settleOn(rest: Promise<void>): void;
 }
@@ -226,36 +234,13 @@ function beginCatalog(
   constellations: Constellation[],
   manifest: CatalogSource,
 ): GrowingCatalog {
-  const view = new DataView(ab);
   const header = readCatalogHeader(ab);
   const { count, nameTableOffset, nameTableLength } = header;
   const offset = recordsOffset(header);
 
-  const positions = new Float32Array(count * 3);
-  const velocities = new Float32Array(count * 3);
-  const absmag = new Float32Array(count);
-  const ci = new Float32Array(count);
-  const physicalRadius = new Float32Array(count);
-  const spectClass = new Float32Array(count);
-  const luminosityClass = new Uint8Array(count);
-  const constellation = new Float32Array(count);
-  const flags = new Uint8Array(count);
-  const companion = new Int32Array(count);
-  const periodDays = new Float32Array(count);
-  const amplitudeMag = new Float32Array(count);
-  const varType = new Uint8Array(count);
-  const hip = new Uint32Array(count);
-  const sid = new Uint32Array(count);
-  const gaiaSourceId = new BigUint64Array(count);
-  const multiplicityStatus = new Uint8Array(count);
-  const apsis = {} as Record<ApsisField, Float32Array>;
-  for (const name of APSIS_FIELDS) apsis[name] = new Float32Array(count);
-  const nameOffsetArr = new Uint32Array(count);
-  const companionRaw = new Uint32Array(count);
-  const pulsRho = new Float32Array(count);
-  const pulsColorSwing = new Float32Array(count);
+  const columns = allocateCatalogColumns(count);
   // ./README.md § Progressive catalog load, the undecoded-tail list.
-  companion.fill(-1);
+  columns.companion.fill(-1);
 
   const names = new Map<number, string>();
   const offsetToName = readNameTable(ab, nameTableOffset, nameTableLength);
@@ -264,73 +249,10 @@ function beginCatalog(
   let loadedCount = 0;
   let solIndex = -1;
 
-  const decodeSpan = (first: number, end: number): void => {
-    if (end <= first) return;
-    const span: RecordSpan = { offset, first, end };
-    const column = (
-      field: Parameters<typeof decodeRecordColumn>[2],
-      out: Parameters<typeof decodeRecordColumn>[3],
-      opts?: DecodeRecordColumnOptions,
-    ) => decodeRecordColumn(view, span, field, out, opts);
-
-    column('x', positions, { stride: 3, component: 0 });
-    column('y', positions, { stride: 3, component: 1 });
-    column('z', positions, { stride: 3, component: 2 });
-    column('vx', velocities, { stride: 3, component: 0 });
-    column('vy', velocities, { stride: 3, component: 1 });
-    column('vz', velocities, { stride: 3, component: 2 });
-    column('absmag', absmag);
-    column('ci', ci);
-    column('physRadius', physicalRadius);
-    column('companion', companionRaw);
-    column('nameOffset', nameOffsetArr);
-    column('spectClass', spectClass);
-    column('lumClass', luminosityClass);
-    column('conIndex', constellation);
-    column('flags', flags);
-    column('varType', varType);
-    column('ampUnits', amplitudeMag, { scale: AMP_MAG_PER_UNIT });
-    column('period', periodDays, { scale: PERIOD_DAYS_PER_UNIT });
-    column('hip', hip);
-    column('sid', sid);
-    column('multiplicityStatus', multiplicityStatus);
-    for (const name of APSIS_FIELDS) column(name, apsis[name]);
-    decodeRecordColumnBig(view, span, 'gaiaSourceId', gaiaSourceId);
-
-    for (let i = first; i < end; i++) {
-      if (companionRaw[i] !== NO_COMPANION) companion[i] = companionRaw[i];
-      if (flags[i] & FLAG_IS_SOL) solIndex = i;
-      if (flags[i] & FLAG_HAS_NAME) {
-        const name = offsetToName.get(nameOffsetArr[i]);
-        if (name) names.set(i, name);
-      }
-    }
-    writePulsationParams(varType, pulsRho, pulsColorSwing, first, end);
-  };
-
   const catalog: GrowingCatalog = {
     count,
     get loadedCount() { return loadedCount; },
-    positions,
-    velocities,
-    absmag,
-    ci,
-    spectClass,
-    luminosityClass,
-    physicalRadius,
-    constellation,
-    flags,
-    companion,
-    periodDays,
-    amplitudeMag,
-    varType,
-    pulsRho,
-    pulsColorSwing,
-    hip,
-    sid,
-    gaiaSourceId,
-    multiplicityStatus,
-    ...apsis,
+    ...columns,
     names,
     get solIndex() { return solIndex; },
     constellations,
@@ -342,19 +264,25 @@ function beginCatalog(
       return () => listeners.delete(listener);
     },
 
-    decodeTo(end) {
-      const first = loadedCount;
-      if (end <= first) return;
-      decodeSpan(first, end);
-      loadedCount = end;
-      for (const listener of listeners) listener({ first, end });
+    absorb(window) {
+      const { first, count: length } = window;
+      if (length === 0) return;
+      for (const [key, stride] of CATALOG_WINDOW_COLUMNS) {
+        copyWindowColumn(columns[key], window.columns[key], first * stride);
+      }
+      if (window.solIndex >= 0) solIndex = first + window.solIndex;
+      for (let k = 0; k < window.namedAt.length; k++) {
+        const name = offsetToName.get(window.namedOffsets[k]);
+        if (name) names.set(first + window.namedAt[k], name);
+      }
+      loadedCount = first + length;
+      for (const listener of listeners) listener({ first, end: loadedCount });
     },
 
-    absorbChunk(index) {
-      if (!manifest.chunkBytes) throw new Error('absorbChunk needs a chunked manifest');
-      catalog.decodeTo(
-        chunkRecordSpan(manifest as CatalogManifest, index, offset, count).end,
-      );
+    chunkSpan(index) {
+      if (!manifest.chunkBytes) throw new Error('chunkSpan needs a chunked manifest');
+      const span = chunkRecordSpan(manifest as CatalogManifest, index, offset, count);
+      return span.end > span.first ? span : null;
     },
 
     settleOn(rest) {
@@ -370,10 +298,5 @@ function beginCatalog(
     },
   };
 
-  catalog.decodeTo(
-    manifest.chunkBytes
-      ? chunkRecordSpan(manifest as CatalogManifest, 0, offset, count).end
-      : 0,
-  );
   return catalog;
 }

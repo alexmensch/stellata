@@ -7,88 +7,18 @@ import {
   FLAG_BINARY_PRIMARY,
   HEADER_LAYOUT,
   HEADER_SIZE,
-  RECORD_SIZE,
-  NO_APSIS,
   APSIS_FIELDS,
-  type ApsisField,
-  type WireStarRecord,
-  writeStarRecord,
-  writeCatalogHeader,
   catalogChunkFilename,
   planCatalogChunks,
   assembleCatalogChunks,
   type CatalogManifest,
 } from '../../../scripts/catalog/record/catalog-pure';
-
-// Test-side view of one record: WireStarRecord with the wide/rarely-set
-// fields defaulted so fixtures stay terse. Encoded through the REAL
-// writer (writeStarRecord), so every parse below is a writer→reader
-// round-trip of the shipped layout.
-type StarRecord = Omit<WireStarRecord, 'apsis'> & { apsis: Record<ApsisField, number> };
-
-function nanApsis(): Record<ApsisField, number> {
-  const out = {} as Record<ApsisField, number>;
-  for (const name of APSIS_FIELDS) out[name] = NO_APSIS;
-  return out;
-}
-
-// Build a synthetic catalog buffer through the shared writer. Tests
-// construct the smallest reasonable catalogs (a few stars + optional name
-// table) so the parser sees realistic input without needing the real
-// catalog.bin on disk.
-function buildCatalog(
-  records: StarRecord[],
-  names: { offset: number; name: string }[] = [],
-): ArrayBuffer {
-  // Name table layout: 2 bytes of zero padding (offset-0 sentinel),
-  // then for each name: uint16 length, then UTF-8 bytes.
-  const enc = new TextEncoder();
-  const encodedNames = names.map(n => ({ ...n, bytes: enc.encode(n.name) }));
-  let nameTableLength = 2;
-  for (const n of encodedNames) nameTableLength += 2 + n.bytes.length;
-
-  const tableLength = encodedNames.length > 0 ? nameTableLength : 0;
-  const recordsBase = HEADER_SIZE + tableLength;
-  const ab = new ArrayBuffer(recordsBase + records.length * RECORD_SIZE);
-  const dv = new DataView(ab);
-  const u8 = new Uint8Array(ab);
-
-  writeCatalogHeader(dv, {
-    count: records.length,
-    nameTableOffset: HEADER_SIZE,
-    nameTableLength: tableLength,
-  });
-
-  // Name table (ahead of the records, v10). parseBinary stores each entry
-  // under the offset of its length prefix relative to the name-table start;
-  // tests pass that same value through StarRecord.nameOffset.
-  if (encodedNames.length > 0) {
-    let p = HEADER_SIZE + 2; // skip 2-byte zero-sentinel padding
-    for (const n of encodedNames) {
-      dv.setUint16(p, n.bytes.length, true);
-      u8.set(n.bytes, p + 2);
-      p += 2 + n.bytes.length;
-    }
-  }
-
-  records.forEach((r, i) => writeStarRecord(dv, recordsBase + i * RECORD_SIZE, r));
-
-  return ab;
-}
-
-// Convenience for building name-table entries with computed offsets.
-// Returns the offset (relative to the name-table start, which is what
-// parseBinary stores) that should go in StarRecord.nameOffset.
-function nameTableOffsets(names: string[]): number[] {
-  const enc = new TextEncoder();
-  const offsets: number[] = [];
-  let p = 2; // skip the 2-byte zero-sentinel padding at table start
-  for (const n of names) {
-    offsets.push(p);
-    p += 2 + enc.encode(n).length;
-  }
-  return offsets;
-}
+import { baseStar, buildCatalog, nameTableOffsets, type StarRecord } from './catalog-fixture';
+import { decodeCatalogWindow } from './catalog-window';
+import type {
+  CatalogDecodeRequest,
+  CatalogDecodeResponse,
+} from './catalog-decode-worker';
 
 const blankConstellations: Constellation[] = [];
 
@@ -116,28 +46,6 @@ function streamedResponse(data: Uint8Array, reads: number): Response {
   });
   return new Response(stream);
 }
-
-const baseStar: StarRecord = {
-  x: 0, y: 0, z: 0,
-  vx: 0, vy: 0, vz: 0,
-  absmag: 0,
-  ci: 0,
-  physRadius: 1,
-  companionIdx: 0xffffffff,
-  nameOffset: 0,
-  spectClass: 0,
-  lumClass: 255,
-  conIndex: 0,
-  flags: 0,
-  ampUnits: 0,
-  periodUnits: 0,
-  varType: 0,
-  hip: 0,
-  gaiaSourceId: 0n,
-  apsis: nanApsis(),
-  sid: 0,
-  multiplicityStatus: 0,
-};
 
 describe('catalog-loader / parseBinary', () => {
   describe('header validation', () => {
@@ -653,6 +561,62 @@ describe('catalog-loader / parseBinary', () => {
       routes[`/assets/${catalogChunkFilename(0)}`] = () => new Response(null, { status: 500 });
       stubFetch(routes);
       await expect(loadCatalog(MANIFEST_URL, CON_URL)).rejects.toThrow(/500/);
+    });
+
+    it('decodes each chunk through the worker, contiguously and once', async () => {
+      const { source, manifest } = catalogFixture();
+      stubFetch(chunkRoutes(source, manifest, 1));
+      const windows: { first: number; count: number }[] = [];
+      vi.stubGlobal('Worker', class {
+        onmessage: ((e: MessageEvent<CatalogDecodeResponse>) => void) | null = null;
+        onerror: ((e: { message: string }) => void) | null = null;
+        postMessage(req: CatalogDecodeRequest) {
+          windows.push({ first: req.first, count: req.count });
+          const window = decodeCatalogWindow(new DataView(req.bytes), req.first, req.count);
+          this.onmessage?.({ data: { id: req.id, ok: true, window } } as MessageEvent);
+        }
+        terminate() {}
+      });
+
+      const cat = await loadCatalog(MANIFEST_URL, CON_URL);
+      await cat.whenComplete;
+
+      // A window per chunk that completes records, each starting where the
+      // last ended — a gap leaves zeroed records inside the loaded prefix.
+      expect(windows.length).toBeGreaterThan(1);
+      let at = 0;
+      for (const w of windows) {
+        expect(w.first).toBe(at);
+        at += w.count;
+      }
+      expect(at).toBe(3);
+      expect(cat.loadedCount).toBe(3);
+      expect(cat.names.get(2)).toBe('Betelgeuse');
+      expect(cat.positions[3]).toBeCloseTo(1.5, 5);
+    });
+
+    it('lands a catalogue identical to the inline one when the worker fails', async () => {
+      const { source, manifest } = catalogFixture();
+      stubFetch(chunkRoutes(source, manifest, 1));
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      vi.stubGlobal('Worker', class {
+        onmessage: ((e: MessageEvent<CatalogDecodeResponse>) => void) | null = null;
+        onerror: ((e: { message: string }) => void) | null = null;
+        postMessage(req: CatalogDecodeRequest) {
+          this.onmessage?.({
+            data: { id: req.id, ok: false, message: 'boom' },
+          } as MessageEvent);
+        }
+        terminate() {}
+      });
+
+      const cat = await loadCatalog(MANIFEST_URL, CON_URL);
+      await cat.whenComplete;
+      const inline = parseBinary(source.buffer.slice(0) as ArrayBuffer, blankConstellations);
+      expect(cat.loadedCount).toBe(inline.count);
+      expect(cat.positions).toEqual(inline.positions);
+      expect([...cat.names]).toEqual([...inline.names]);
+      vi.restoreAllMocks();
     });
 
     it('rejects a truncated chunk instead of zero-padding it', async () => {

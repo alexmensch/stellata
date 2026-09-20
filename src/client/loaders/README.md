@@ -18,10 +18,9 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          helpers imported from
                          scripts/catalog/record/catalog-pure.ts — single source
                          of truth shared with the writer and the Node
-                         AoS reader; the per-record decode is
-                         column-at-a-time via decodeRecordColumn (see
-                         scripts/catalog/record/README.md § Binary
-                         catalog format). Exposes
+                         AoS reader; the decode itself is
+                         catalog-window.ts, off the main thread
+                         (§ The catalog-decode worker). Exposes
                          `varType: Uint8Array` for the runtime
                          pulsation-suppress gate (see
                          `../binaries/eclipse/README.md`) plus
@@ -40,6 +39,21 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          scripts/catalog/multiplicity/README.md § Multiplicity status).
 catalog-progressive.ts   chunk fetch scheduling + the record window each
                          landing chunk unlocks (§ Progressive catalog load).
+catalog-window.ts        one record window's decode as plain typed arrays,
+  (+ test)               window-relative — the pass both the worker and the
+                         inline fallback run, plus the column roster the
+                         memcpy back walks and the allocator the full
+                         catalogue shares (§ The catalog-decode worker).
+                         Column-at-a-time via decodeRecordColumn (see
+                         scripts/catalog/record/README.md § Binary catalog
+                         format).
+catalog-decode-worker.ts that pass off the main thread, and the spawn +
+catalog-decode-host.ts   inline fallback around it
+  (+ host test)          (§ The catalog-decode worker).
+catalog-fixture.ts       test-only catalog.bin builder — synthetic records
+                         through the shipped writeStarRecord, so every
+                         parse in these suites is a writer→reader
+                         round-trip of the layout that ships.
 catalog-loader.test.ts   pin for layout decode + the BigUint64Array
                          source_id handling + the v8 velocity columns +
                          the v7 sid column + a full-record writer→reader
@@ -160,6 +174,69 @@ Three traps, all of them silent if missed:
   focus has to resolve before the pose is applied, not eventually
   (`../util/url-state/README.md` § A focus that resolves after the pose).
   `idMaps.hipToIndex` grows per chunk for the same reason.
+
+## The catalog-decode worker
+
+Every landing chunk's decode used to run on the main thread, and by then the
+scene is already rendering off chunk 0 (§ Progressive catalog load) — so each
+one froze a **rendered** app rather than sitting behind a loading cover. The
+decode runs in a worker; the main thread keeps the fetch, the name table and a
+memcpy.
+
+**The catalogue's own columns cannot cross.** They are allocated at the full
+count from chunk 0 and filled in place, because every consumer captured those
+array identities at boot, so a Transferable would detach the very arrays the
+tail is still being written into. What crosses is one window's worth:
+`decodeCatalogWindow` allocates arrays sized to the chunk alone and **indexed
+from zero**, `catalogWindowTransfers` hands their buffers over so the window is
+moved rather than cloned, and `absorb` lands each one with a single `set` at
+`first × stride`. `CATALOG_WINDOW_COLUMNS` is that memcpy's roster and
+`allocateCatalogColumns` sizes both the window and the full catalogue, so a
+column cannot exist on one side and not the other.
+
+Measured in Node on the shipped 388,071-record artifact, six chunks,
+`--expose-gc`:
+
+| step | cost | whose thread |
+| --- | --- | --- |
+| decode (26 columns + the sentinel/Sol/named pass) | 30.6 ms | the worker's |
+| slicing each window's record bytes for the worker | 2.6 ms | main |
+| memcpy of the decoded columns into the full ones | 2.8 ms | main |
+
+Main-thread decode goes 30.6 ms → 5.4 ms, 82 % of it off the thread that is
+drawing. Read the **split** rather than the absolute: the same pass measures
+189 ms in the browser, where the engine is slower at `DataView` reads and boot
+is competing for the thread.
+
+**A window is held once, not twice.** Peak addition while the largest chunk
+(167,772 records) is in flight is 36.1 MB against 43.5 MB of full columns —
+18.8 MB of decoded window plus the 16.8 MB byte slice, and the slice detaches
+at `postMessage`. Nothing is resident on both sides, which is what a transfer
+buys over the search index's structured clone
+(`../typeahead/README.md` § The search-index worker, 64.5 MB held twice).
+`stellata-8cg.52` owns the whole-app budget.
+
+**Only the window's bytes cross, never the assembled buffer.** Transferring
+that would detach the destination the remaining chunk fetches stream into, and
+strand the inline fallback with nothing to read. A `slice` of the window's
+records costs the 2.6 ms above.
+
+**The name table stays main-side.** It precedes the records and is read whole,
+once, so the worker returns the `FLAG_HAS_NAME` records as window-relative
+indices beside the name-table offset each carries, and the main thread does the
+map lookup for those alone. Sol comes back the same way, window-relative.
+
+**One worker for the load**, spawned on the first window and terminated when
+the last chunk lands — the chunks arrive one at a time, so a decode never
+overlaps the next.
+
+**The fallback is inline, and never rejects**: no `Worker` in the runtime, a
+spawn that throws, a throw inside and an `onerror` all decode from the bytes
+the caller already holds, and the first failure retires the worker so later
+windows do not re-pay the round trip. A catalogue arriving slowly is a
+degradation; a catalogue never arriving is a broken app — the same contract
+phase 1 holds. `parseBinary` (Node readers, whole-buffer tests) runs
+`decodeInline` directly and stays synchronous.
 
 ## Dust voxel upload
 
