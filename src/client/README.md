@@ -28,6 +28,25 @@ themselves.
   kind modules the rule is enforced rather than trusted — `loadKindModules`
   swallows every non-`critical` rejection (`kinds/README.md`).
 - `stellata-events.test.ts` — integration-shell event-emission test.
+
+**`main.ts` boots in two waves**, because the catalogue streams
+(`loaders/README.md` § Progressive catalog load). Wave 1 ends at first
+paint, on the catalogue's FIRST chunk; wave 2 waits on
+`kinds.star.ready` — the complete record set plus the search index.
+Three things follow, and each has cost a defect:
+
+- **A wave-1 consumer sees a prefix, not the catalogue.** Anything
+  walking records, or reading a table built from them, either bounds
+  itself at `catalog.loadedCount` or grows per chunk via
+  `catalog.onRecordsDecoded`. Deferring it to wave 2 is the third
+  option and the one that needs justifying — `applyFromUrl` runs in
+  wave 1, so any table it reads has to exist by then.
+- **A wave-1 affordance whose wiring is in wave 2 is a dead control.**
+  The chrome comes up at first paint; anything it drives that is not
+  bound yet is disabled until it is, never merely left inert.
+- **Wave 2 yields a frame between steps.** The scene is live by then,
+  so a run of catalogue-wide table builds freezes it for their sum
+  unless each hands the render loop a frame.
 - `kinds/` — the `ObjectKindModule` / `KindContext` contracts and the
   kind-module roster: one module per `TargetKind` (all six migrated)
   supplies load/attach + every capability leg, and the shell/boot

@@ -1462,11 +1462,8 @@ export function applyDecodedView(
   // Legacy HIP POI lists resolve through idMaps (star-kind by
   // construction); v4 SID lists through the resolver, any pinnable
   // kind. Entries that don't resolve are silently dropped (graceful
-  // partial restore). SID POIs resolve synchronously rather than via
-  // deferred intents: the star domain attaches at catalog load and
-  // main.ts awaits kinds.planet.systemsReady, both strictly before
-  // applyFromUrl — a pending POI sid is therefore as dead as an
-  // unknown one.
+  // partial restore) — a pending POI sid included, since unlike the
+  // focus below nothing re-runs this list when a later chunk lands.
   {
     const resolved: Target[] = [];
     if (Array.isArray(view.pois)) {

@@ -113,16 +113,27 @@ pins them byte-for-byte). SID refs that arrive before their object's
 artifact attaches ride the resolver's deferred-intent contract; a
 retired/unknown SID expires silently.
 
-**The STAR domain attaches after `applyFromUrl`, not before it.** The
-catalogue loads progressively (`../../loaders/README.md` § Progressive
-catalog load), so a star ref restores through the deferred-intent path
-and lands when the last chunk does — camera pose, which is coordinates,
-restores at first paint either way. The domain is held back WHOLE for
-exactly this reason: attached over a partial catalogue it would answer
-`unknown` for a star in a late chunk and drop the intent, where
-unattached it answers `pending` and queues it. Every other pinnable
-kind's domain (planet, lg) still attaches at boot, strictly before
-`applyFromUrl`, and resolves synchronously.
+**The STAR domain is attached but STILL FILLING when `applyFromUrl`
+runs**, because the catalogue streams (`../../loaders/README.md`
+§ Progressive catalog load). A hit resolves synchronously — which is the
+whole naked-eye sky, records being apparent-V ordered — and only a miss
+stays `pending` and queues, because the sid may sit in a chunk that has
+not arrived (`../sid-resolver/README.md` § A domain that is still
+filling). Withholding the domain until the last chunk instead would make
+every star ref deferred, and § A focus that resolves after the pose is
+why that is wrong rather than merely slow. Every other pinnable kind's
+domain (planet, lg) attaches complete at boot, strictly before
+`applyFromUrl`.
+
+### Legacy HIP refs
+
+They resolve against a map that is also still filling.
+`idMaps.hipToIndex` is grown per landing chunk by `main.ts` for the same
+reason and with the same guarantee: records arrive in their final order,
+so first-seen-wins over a growing prefix picks the winner a complete pass
+would. A v1–v3 focus or POI list therefore restores at first paint when
+its stars are in the prefix, and its misses drop — the pre-existing
+best-effort contract, not a new one.
 
 The vec3 sub-mask uses **strict equality** (`!==`), not the EPS=1e-3
 `approx` check — under floating origin (a7d.2.11) the local-frame cam

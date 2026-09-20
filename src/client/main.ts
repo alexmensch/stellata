@@ -139,13 +139,16 @@ async function main() {
     // all read it, so settle it first.
     await stellata.kinds.planet.systemsReady;
 
-    // HIP → row-index lookup, used by url-state to encode/decode shared
-    // links with stable star IDs that survive a future catalog reorder.
-    // Filled in place under `starReady` below, once every record carries a
-    // HIP to be seen: first-seen wins on collision (matching
-    // Stellarium-figure HIP resolution), and a prefix would hand the
-    // collision to whichever component happened to have landed.
+    // util/url-state/README.md § Legacy HIP refs.
     const hipToIndex = new Map<number, number>();
+    let hipIndexed = 0;
+    const indexHips = () => {
+      for (; hipIndexed < catalog.loadedCount; hipIndexed++) {
+        const h = catalog.hip[hipIndexed];
+        if (h > 0 && !hipToIndex.has(h)) hipToIndex.set(h, hipIndexed);
+      }
+    };
+    indexHips();
     // Global SID resolver (docs/sid.md § 8). `sun` is not in the planet
     // domain — Sol's catalog record carries the same sid, so the star
     // domain claims it (see util/sid-resolver/README.md).
@@ -178,7 +181,10 @@ async function main() {
     }
     // Each landing chunk can claim a queued intent, and a still-filling
     // domain has no attach event of its own to flush on.
-    const offSidRefresh = catalog.onRecordsDecoded(() => sidResolver.refresh());
+    const offChunk = catalog.onRecordsDecoded(() => {
+      indexHips();
+      sidResolver.refresh();
+    });
 
     const idMaps: IdMaps = {
       hipToIndex,
@@ -334,15 +340,10 @@ async function main() {
     const searchIndex = kinds.star.searchIndex;
     await frame();
 
-    // First-seen wins on collision, so every record has to be present
-    // before the first lookup freezes the answer.
-    for (let i = 0; i < catalog.count; i++) {
-      const h = catalog.hip[i];
-      if (h > 0 && !hipToIndex.has(h)) hipToIndex.set(h, i);
-    }
     // The column is full, so the domain now answers `unknown` for a sid
     // nothing carries instead of holding its intent open forever.
-    offSidRefresh();
+    offChunk();
+    indexHips();
     sidResolver.refresh();
     await frame();
 
