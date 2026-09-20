@@ -31,6 +31,7 @@ function baseCounts(): BuildCounts {
     ccdmGroups: 4000,
     ccdmResolved: 3500,
     ccdmFlagged: 200,
+    recordsInFirstChunk: 10412,
     ccdmSuppressedOptical: 50,
     eclipsingWinged: 300,
     renderableCompanionWinged: 400,

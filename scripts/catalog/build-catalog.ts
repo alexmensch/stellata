@@ -35,6 +35,7 @@ import {
   CATALOG_MANIFEST_FILENAME,
   catalogChunkFilename,
   planCatalogChunks,
+  recordsInChunkPrefix,
   buildSearchEntry,
   type SearchEntry,
   type CatalogManifest,
@@ -278,6 +279,7 @@ async function main() {
     ccdmGroups: 0,
     ccdmResolved: 0,
     ccdmFlagged: 0,
+    recordsInFirstChunk: 0,
     ccdmSuppressedOptical: 0,
     eclipsingWinged: 0,
     renderableCompanionWinged: 0,
@@ -805,6 +807,18 @@ async function main() {
   }));
   keyed.sort((a, b) => a.v - b.v);
   for (let i = 0; i < keyed.length; i++) stars[i] = keyed[i].s;
+  // The whole progressive load rests on this: every prefix of the record
+  // array is the brightest-looking sky. Asserted here because this is the
+  // only place the key and the records are both in hand — a reader of the
+  // built artifact cannot recompute it without the dust grid.
+  for (let i = 1; i < keyed.length; i++) {
+    if (keyed[i].v < keyed[i - 1].v) {
+      throw new Error(
+        `Record order is not monotone in apparent V at ${i}: `
+        + `${keyed[i - 1].v} then ${keyed[i].v}`,
+      );
+    }
+  }
 
   const hipToIndex = buildHipToIndex(stars);
 
@@ -1155,6 +1169,12 @@ async function main() {
   await mkdir(PUBLIC_DIR, { recursive: true });
   await removeStaleCatalogChunks(PUBLIC_DIR);
   const chunkBytes = planCatalogChunks(totalLength);
+  // What first paint actually gets. Pinned because it is the number the
+  // progressive load's whole latency argument rests on, and it moves with
+  // the name table's length as well as the chunk target.
+  counts.recordsInFirstChunk = recordsInChunkPrefix(
+    chunkBytes, 1, HEADER_SIZE + nameTableLength, stars.length,
+  );
   const sidSuccessors = sidSuccessorPairs(registry.retirements, registry.reinstatements);
   const manifest: CatalogManifest = {
     chunkBytes,

@@ -256,13 +256,29 @@ reconstructs the source buffer byte-for-byte.
 `CATALOG_CHUNK_TARGET_BYTES` ceiling (16 MiB, headroom under the Workers
 limit). Two things follow from the ramp, and both are the point:
 
-- **Chunk 0 is the first-paint payload.** At a 100-byte stride 1 MiB is
-  ~10,500 records, and in apparent-V order (§ Record order) that is roughly
-  the naked-eye sky — smaller than every other artifact boot fetches, so the
-  star catalogue stops being the thing first paint waits on.
+- **Chunk 0 is the first-paint payload.** Measured on today's build:
+  **10,412 records, 716 KB gzipped, ending at apparent V 6.62** — in
+  apparent-V order (§ Record order) that is the naked-eye sky, and it is
+  smaller than every other artifact boot fetches, so the star catalogue
+  stops being the thing first paint waits on. `recordsInFirstChunk` in
+  `../build-catalog-expected.json` pins the count.
 - **Each chunk roughly doubles the star count**, which is a near-constant
   perceptual step (a magnitude is ~2.5× the count, so a doubling is ~0.75
   mag). The sky densifies in even steps instead of arriving in one lump.
+  Measured, cumulative, today's 388,071-record build:
+
+  | chunk | raw | gz | cumulative gz | records | faintest V |
+  | --- | --- | --- | --- | --- | --- |
+  | 0 | 1 MiB | 716 KB | 716 KB | 10,412 | 6.62 |
+  | 1 | 2 MiB | 1.47 MB | 2.19 MB | 31,384 | 7.64 |
+  | 2 | 4 MiB | 2.93 MB | 5.11 MB | 73,327 | 8.44 |
+  | 3 | 8 MiB | 5.77 MB | 10.9 MB | 157,213 | 9.27 |
+  | 4 | 16 MiB | 11.3 MB | 22.2 MB | 324,985 | 10.66 |
+  | 5 | 6.02 MiB | 3.92 MB | 26.1 MB | 388,071 | 32.21 |
+
+  The last row's faintest V is an LMC-distance record at the 50 kpc cutoff,
+  not a bad sort — the column is each chunk's faintest, so it tracks the
+  population's tail rather than a bound.
 
 The ceiling is what the deploy limit constrains; the floor is what latency
 constrains. Flattening the ramp to save requests trades first paint for a
