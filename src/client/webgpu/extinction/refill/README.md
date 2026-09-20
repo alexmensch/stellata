@@ -24,8 +24,10 @@ src/client/webgpu/extinction/refill/
   refill-worklist-nodes.ts    The shared slots: stamps and the fused
                               slot/worklist table over placeholders, the
                               arm / generation / quarter uniforms both
-                              kernels read, and counterElement — a bucket's
-                              counter in the args buffer.
+                              kernels read, counterElement — a bucket's
+                              counter in the args buffer — and the three
+                              accessors that address the fused table
+                              (slotOf, bucketOf, worklistElement).
   refill-worklist-tsl.ts      The producer block the compaction kernel
                               runs — frustum, gate, stamp, append.
 ```
@@ -233,8 +235,16 @@ removed — so the compaction closes its pass with two `REFILL_BUCKETS`-wide
 kernels: one copies each bucket's counter out of the atomic args buffer,
 the next has thread *b* sum the copies before it into the exclusive prefix
 and its last thread write `[⌈n / 64⌉, 1, 1, n]`. Both tables ride in
-`refillDispatch`, which the refill kernel already binds
+`refillDispatch`, which the refill kernel already binds, and both kernels
+are dispatched on armed frames alone
 (`../../star/compaction/README.md` § The refill dispatch).
+
+**Producer and refill kernel address one entry through the same two
+accessors** — `bucketOf` for the key, `worklistElement(count, bucket,
+offset)` for the slot — so the `bucket × capacity + offset` the two must
+agree on is written once. A star appended at an address the march does not
+recover is the silent-corruption case § One region describes, and the
+round trip is pinned in `refill-buckets-pure.test.ts`.
 
 **The refill kernel finds its bucket by one bit per step.** Thread *i*
 walks the prefix from `REFILL_BUCKETS / 2` down, taking each step whose

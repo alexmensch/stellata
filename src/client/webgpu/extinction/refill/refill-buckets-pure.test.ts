@@ -73,3 +73,49 @@ describe('the scan and the search the kernels run', () => {
     expect(visited).toEqual([0, 0, 2, 2, 2, 3]);
   });
 });
+
+/** The producer composes a write address from its bucket and its atomic's
+ *  return; the refill kernel composes a read address from its search and the
+ *  prefix. Nothing else pins that the two agree. */
+describe('the producer writes where the refill kernel reads', () => {
+  const march = (count: number, admit: (star: number) => boolean) => {
+    const slotOf = Array.from({ length: count }, (_, s) => (s * 613 + 11) % count);
+    const admitted = Array.from({ length: count }, (_, s) => s).filter(admit);
+
+    // Producer: one atomic per bucket, the star landing in that bucket's
+    // static region at the offset the atomic returned.
+    const region = new Map<number, number>();
+    const counts = new Array<number>(REFILL_BUCKETS).fill(0);
+    for (const star of admitted) {
+      const bucket = refillBucketOf(slotOf[star], count);
+      region.set(refillBucketBase(bucket, count) + counts[bucket]++, star);
+    }
+
+    // Consumer: the scan, then one thread per dense index.
+    const prefix = refillBucketPrefix(counts);
+    const marched = Array.from({ length: prefix[REFILL_BUCKETS] }, (_, i) => {
+      const bucket = refillBucketAt(prefix, i);
+      return region.get(refillBucketBase(bucket, count) + (i - prefix[bucket]));
+    });
+    return { admitted, counts, marched, slotOf };
+  };
+
+  it('recovers exactly the appended stars, and marches them in bucket order', () => {
+    const count = 1025;
+    const { admitted, marched, slotOf } = march(count, (s) => s % 7 === 0);
+    expect(marched).not.toContain(undefined);
+    expect(new Set(marched)).toEqual(new Set(admitted));
+    const buckets = marched.map((s) => refillBucketOf(slotOf[s as number], count));
+    expect(buckets).toEqual([...buckets].sort((a, b) => a - b));
+  });
+
+  // The whole catalogue admitted is the case the capacity argument covers:
+  // no gate, camera or residue class can put more stars in a bucket than it
+  // has slots, so overflow is not a case the kernels handle.
+  it.each([1025, 388_071, 1_278_785])('holds every star at %i without overflowing a bucket', (count) => {
+    const { admitted, counts, marched } = march(count, () => true);
+    expect(Math.max(...counts)).toBeLessThanOrEqual(refillBucketCapacity(count));
+    expect(marched).toHaveLength(admitted.length);
+    expect(new Set(marched).size).toBe(count);
+  });
+});

@@ -8,7 +8,6 @@ import { starQuadOffscreenTsl } from '../../star/compaction/frustum-tsl';
 import { starCacheVisibleTsl } from '../../star/star-visibility-tsl';
 import type { StarTables } from '../../star/star-tables';
 import type { SharedUniformNodes } from '../../tsl/shared-uniform-nodes';
-import { refillBucketCapacity } from './refill-buckets-pure';
 import { EXTINCTION_FRUSTUM_SLACK_PX } from './refill-decision-pure';
 import { REFILL_SLICES } from './refill-slices-pure';
 import type { RefillWorklistNodes, UintStorageNode } from './refill-worklist-nodes';
@@ -31,7 +30,6 @@ export interface RefillProducerInputs {
 export function appendRefillWorklistTsl({
   refill, u, tables, counters, viewProjection, count, self, localPos,
 }: RefillProducerInputs): void {
-  const capacity = refillBucketCapacity(count);
   If(refill.arm.equal(uint(1)).and(uint(self).mod(uint(REFILL_SLICES)).equal(refill.quarter)), () => {
     const clip = viewProjection.mul(vec4(localPos, 1.0)).toVar();
     const seen = self.equal(u.uPinFocusToCenter).or(
@@ -39,9 +37,9 @@ export function appendRefillWorklistTsl({
     const dPc = max(distance(localPos, u.uCameraPos), 1e-30);
     If(seen.and(starCacheVisibleTsl(u, tables, self, dPc)), () => {
       If(refill.stamps.element(self).notEqual(refill.cameraGeneration), () => {
-        const bucket = refill.slotOf(self).div(uint(capacity)).toVar();
+        const bucket = refill.bucketOf(count, self).toVar();
         const local = atomicAdd(refill.counterElement(counters, bucket), uint(1));
-        refill.worklistElement(count, bucket.mul(uint(capacity)).add(local)).assign(uint(self));
+        refill.worklistElement(count, bucket, local).assign(uint(self));
       });
     });
   });

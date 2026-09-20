@@ -36,7 +36,7 @@ import { runReferenceMarch, type StarCacheGate } from './extinction-parity';
 import { AvMirror } from './mirror/av-mirror';
 import { composeViewProjectionAbs, countInFrameAbs, sameView } from './refill/refill-decision-pure';
 import {
-  REFILL_BUCKETS, refillBucketCapacity, refillWorklistLength,
+  REFILL_BUCKETS, refillWorklistLength,
 } from './refill/refill-buckets-pure';
 import { idleRefill, planRefill, refillInFlight, type RefillCursor } from './refill/refill-slices-pure';
 
@@ -145,9 +145,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.order = new StorageBufferAttribute(this.dispatchOrder, 1);
     this.av = new StorageBufferAttribute(count, 1);
     this.stamps = new StorageBufferAttribute(new Uint32Array(count), 1);
-    // Star → slot then the worklist, in one buffer: the compaction reads the
-    // first and writes the second, and it has no ninth binding for them
-    // (../star/compaction/README.md § Binding budget).
+    // ../star/compaction/README.md § Binding budget.
     const table = new Uint32Array(count + refillWorklistLength(count));
     table.set(inverseOrder(this.dispatchOrder));
     this.refillTable = new StorageBufferAttribute(table, 1);
@@ -183,22 +181,18 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     // One thread per listed star of this frame's quarter. No gate: the
     // compaction applied it before appending
     // (refill/README.md § The kernel bounds itself by the listed length).
-    const capacity = refillBucketCapacity(count);
     const prefix = (bucket: Node<'uint'>) =>
       compaction.refillDispatchNode.element(uint(REFILL_PREFIX_BASE).add(bucket));
     this.refillKernel = computeIndirect(Fn(() => {
       const i = instanceIndex;
       If(i.lessThan(compaction.refillDispatchNode.element(REFILL_DISPATCH_LENGTH_ELEMENT)), () => {
-        // One bit per step over the prefix, from REFILL_BUCKETS / 2 — the
-        // largest bucket whose prefix i has reached, which is the one
-        // holding it (refill/README.md § Bucketed by Morton range).
+        // refill/README.md § Bucketed by Morton range.
         const bucket = uint(0).toVar();
         for (let step = REFILL_BUCKETS >> 1; step >= 1; step >>= 1) {
           const next = bucket.add(uint(step)).toVar();
           If(prefix(next).lessThanEqual(i), () => { bucket.assign(next); });
         }
-        const self = int(refill.worklistElement(
-          count, bucket.mul(uint(capacity)).add(i.sub(prefix(bucket)))));
+        const self = int(refill.worklistElement(count, bucket, i.sub(prefix(bucket))));
         const starAbs = this.positionsNode.element(refill.slotOf(self)).xyz;
         slots.av.element(self).assign(march(starAbs));
         refill.stamps.element(self).assign(refill.cameraGeneration);

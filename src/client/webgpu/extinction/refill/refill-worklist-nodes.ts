@@ -5,6 +5,7 @@
 import { StorageBufferAttribute, type Node } from 'three/webgpu';
 import { storage, uint, uniform } from 'three/tsl';
 import { REFILL_LIST_COUNT_BASE } from '../../star/compaction/compaction-pure';
+import { refillBucketCapacity } from './refill-buckets-pure';
 
 export type UintStorageNode = ReturnType<typeof storage<'uint'>>;
 
@@ -14,11 +15,9 @@ export type UintStorageNode = ReturnType<typeof storage<'uint'>>;
 export class RefillWorklistNodes {
   /** Per star, the camera generation its A_V was marched at. */
   readonly stamps: UintStorageNode;
-  /** Star → slot over `[0, count)`, then the worklist — one buffer, because
-   *  the compaction reads the first and writes the second and a ninth
-   *  binding does not exist (../../star/compaction/README.md
-   *  § Binding budget). Address it through `slotOf` and `worklistElement`,
-   *  never by raw index. */
+  /** Star → slot over `[0, count)`, then the worklist
+   *  (../../star/compaction/README.md § Binding budget). Address it through
+   *  `slotOf`, `bucketOf` and `worklistElement`, never by raw index. */
   readonly table: UintStorageNode;
   readonly arm = uniform(0, 'uint');
   /** Starts past the zero a fresh stamp buffer holds. */
@@ -45,8 +44,18 @@ export class RefillWorklistNodes {
     return this.table.element(star);
   }
 
-  worklistElement(count: number, index: Node<'uint'>): ReturnType<UintStorageNode['element']> {
-    return this.table.element(uint(count).add(index));
+  /** The Morton bucket a star appends under. */
+  bucketOf(count: number, star: Node<'int'> | Node<'uint'>): Node<'uint'> {
+    return this.slotOf(star).div(uint(refillBucketCapacity(count)));
+  }
+
+  /** A star's entry inside `bucket`'s static region — the one place the
+   *  address producer and refill kernel must agree on is written. */
+  worklistElement(
+    count: number, bucket: Node<'uint'>, offset: Node<'uint'>,
+  ): ReturnType<UintStorageNode['element']> {
+    return this.table.element(
+      bucket.mul(uint(refillBucketCapacity(count))).add(offset).add(uint(count)));
   }
 
   /** A bucket's append counter inside the compaction's args buffer — the
