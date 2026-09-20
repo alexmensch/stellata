@@ -21,7 +21,13 @@ scripts/catalog/distance/
   direction-cascade.ts (+ test)   Per-row sky-direction resolution cascade
                                   (which position source wins, and the
                                   precision each carries) plus the
-                                  space-motion velocity assembly.
+                                  space-motion velocity assembly. Owns
+                                  gaiaAstrometryAccumulator, the fold behind
+                                  parseGaiaAstrometryCatalogTsv: tier 1's own
+                                  table reads it whole, and the magnitude term
+                                  streams its pull through the same fold with a
+                                  keep-set (`../parse/README.md` § Streaming a
+                                  committed table).
   gaia-distrust.ts (+ test)       `gaiaHas5pSolution`, `gaiaRowIs2p` and
                                   `isGaiaCatalogueBibcode` — one predicate per
                                   way this build refuses a Gaia value on a

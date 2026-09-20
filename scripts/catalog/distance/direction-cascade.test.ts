@@ -13,6 +13,7 @@ import {
   directionOnPm,
   gaia5pUnreliable,
   hip2PmDisagrees,
+  gaiaAstrometryAccumulator,
   parseGaiaAstrometryCatalogTsv,
   parseHip2Tsv,
   parseNssSourceIdSet,
@@ -471,6 +472,26 @@ describe('direction-cascade / TSV parsers', () => {
 
   it('parseGaiaAstrometryCatalogTsv throws on a missing column', () => {
     expect(() => parseGaiaAstrometryCatalogTsv('source_id\tra\tdec\n')).toThrow(/missing required columns/);
+  });
+
+  it('gaiaAstrometryAccumulator keeps only the requested sources', () => {
+    const lines = [
+      'source_id\tra\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity\tradial_velocity_error',
+      '123\t100.5\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51\t0.22',
+      '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t\t\t',
+    ];
+    const acc = gaiaAstrometryAccumulator('pull', 'hint', new Set(['456']));
+    for (const line of lines) acc.line(line);
+    const map = acc.result();
+    expect([...map.keys()]).toEqual(['456']);
+    expect(map.get('456')?.raDeg).toBe(200.0);
+  });
+
+  it('gaiaAstrometryAccumulator resolves source_id by name, not by position', () => {
+    const acc = gaiaAstrometryAccumulator('pull', 'hint', new Set(['123']));
+    acc.line('ra\tsource_id\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity\tradial_velocity_error');
+    acc.line('100.5\t123\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51\t0.22');
+    expect(acc.result().get('123')?.raDeg).toBe(100.5);
   });
 
   it('parseHip2Tsv decodes rows keyed by HIP', () => {

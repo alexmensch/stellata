@@ -47,6 +47,9 @@ scripts/catalog/parse/
                                   createConstellationAssignment, which binds
                                   the boundary lookup to the table's indices
                                   (§ Positional constellation membership).
+  tsv-stream.ts                   forEachLine — the one line-at-a-time read
+                                  over a committed table too large to hold as
+                                  one string (§ Streaming a committed table).
   corpus-tsv.ts                   Shared TSV header, cell and record-ref
                                   parsing. RECORD_REF_KINDS is the one list of
                                   ways a corpus row addresses a record —
@@ -103,6 +106,29 @@ Three deliberate exceptions:
   assert. Tightening the parser onto `headerIndex` would move that catch
   upstream to the read.
 
+## Streaming a committed table
+
+Three tables are too large to hold as one string: the 2.5 M-row TYC
+cross-walk, the ~200 MB magnitude pull, and the manifest once the magnitude
+term is on. Each is read through `forEachLine` (`tsv-stream.ts`) feeding a
+**line-fed accumulator** — a `{ line, result }` pair whose `line` resolves the
+header on first call and folds every row after it.
+
+The accumulator is what makes the streaming real. A reader that collects
+matching lines and re-joins them for a whole-text parser holds the subset
+three times over — the array, the joined string, and the parser's own split —
+which is the cost streaming was reached for. Writing one means the whole-text
+entry point becomes a thin wrapper feeding the same accumulator, so the two
+paths cannot diverge on what a row means:
+`bestNeighbourAccumulator` (`gaia-xmatch.ts`),
+`gaiaAstrometryAccumulator` (`../distance/direction-cascade.ts`),
+`magnitudeTermAccumulator` (`../membership/magnitude-term/`) and
+`manifestLineReader` (`../membership/membership-manifest-pure.ts`) are the
+four, each paired with its whole-text sibling.
+
+An accumulator that takes a **keep-set** filters during the fold rather than
+after it, so a subset join never materialises the table.
+
 ## The direction tier's two Gaia files
 
 `directions.gaiaAstrometry` is fed by `gaia_dr3_astrometry_catalog.tsv` and,
@@ -110,7 +136,10 @@ when `MAGNITUDE_FLOOR_V` is set, by the magnitude pull's own rows for the
 sources that term admitted — same schema, same parser, so tier 1 sees one kind
 of row and cannot tell which file it came from. Only the manifest rows marked
 `term=magnitude` are read out of the pull, and a source the catalogue file
-already answers for keeps that row. With the floor off, neither read happens.
+already answers for keeps that row. Both passes stream (§ Streaming a
+committed table): the keep-set folds out of the manifest a line at a time, and
+the pull's rows are filtered against it during the fold rather than collected
+and re-parsed. With the floor off, neither read happens.
 `../membership/magnitude-term/README.md` § The astrometry comes with it.
 
 ## Per-row pipeline
