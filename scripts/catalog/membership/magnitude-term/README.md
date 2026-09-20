@@ -72,8 +72,9 @@ Measured over the committed pull at `V ≤ 11`, and pinned by the gate suite:
 
 `buildMembership` runs the dedupe itself rather than taking a newcomer list,
 because the sources the primaries bind are the bindings it has just derived
-(`../README.md` § The binding is derived) — a caller deduping against the
-*previous* manifest would re-admit every source that run's derivation moved.
+(`../binding/README.md` § The four sources, in precedence order) — a caller
+deduping against the *previous* manifest would re-admit every source that
+run's derivation moved.
 
 `source_id` is keyed as a **string** throughout. A Gaia id runs to 19 digits
 and loses precision silently as a float64, so a numeric key merges distinct

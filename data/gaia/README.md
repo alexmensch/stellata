@@ -309,7 +309,8 @@ re-deriving:
   `gaia_source_id` itself: the record build reads each binding off the
   manifest column, where `build:membership` derived it from both cross-walks,
   CNS5 and SIMBAD through the binding gates
-  (`scripts/catalog/membership/README.md` § The binding is derived) — the
+  (`scripts/catalog/membership/binding/README.md`
+  § Both gates weigh every candidate) — the
   membership generator and the classic-ID overlay build are the cross-walks'
   two resolution consumers, and the astrometry request reads the manifest
   column plus both of their candidate sets

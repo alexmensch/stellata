@@ -46,8 +46,9 @@ every id in it is distinct.
 
 Reading the column is what makes the two agree — `readStars` reads the same
 cell, and the binding it carries was derived once, in the generator, through
-the G−V / sibling-letter gates (`../membership/README.md` § The binding is
-derived). The derivation's own candidates are the third contribution below,
+the G−V / sibling-letter gates (`../membership/binding/README.md`
+§ Both gates weigh every candidate). The
+derivation's own candidates are the third contribution below,
 so the pull carries a G for every source it might bind before it binds one.
 
 ## The request is a union, and why that is not a compromise

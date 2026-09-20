@@ -10,9 +10,9 @@ the spine is load-bearing rather than a rare fallback is
 the membership manifest (`../membership/README.md`), which this file is an
 input to and a baseline for. What the spine still supplies is the one thing no
 primary does: **which designations name one star**. `build:membership` reads
-it for those merge decisions, derives each row's Gaia binding from committed
-evidence and holds the result against the frozen `gaia_source_id` column as a
-diff surface (`../membership/README.md` § The binding is derived); the
+it for those merge decisions and for the label cells the merge starts from,
+deriving each row's Gaia binding from committed evidence alone
+(`../membership/binding/README.md` § The four sources, in precedence order); the
 manifest's parity gate (i) reads it as the baseline every manifest row must
 account for; `../classic-ids/parity-ledger.test.ts` backs two dispositions
 against its cells; `../astrometry-request/` reads its TYCs to narrow the
@@ -102,14 +102,14 @@ reads them.
 ## The identifier columns are read, never re-derived
 
 The classical cells come off the column and the manifest re-keys them; the
-`gaia_source_id` cell is the one column the manifest **does not** copy. The
-generator derives each binding from the TYC and HIP cross-walks, CNS5 and
-SIMBAD's cross-IDs through both binding gates, and reads the frozen cell only
-to diff against (`../membership/README.md` § The binding is derived). The
+`gaia_source_id` cell is the one column the manifest **does not read at all**.
+The generator derives each binding from the TYC and HIP cross-walks, CNS5 and
+SIMBAD's cross-IDs through both binding gates
+(`../membership/binding/README.md` § Both gates weigh every candidate). The
 native → HIP-cross-walk precedence that produced the frozen column took
 AT-HYG's own `gaia` cell as its first input, which is not in the repo, so no
-walk order reproduces it; the derivation is a fresh answer held against it,
-not a replay of it.
+walk order reproduces it; the derivation is a fresh answer, never a replay
+of it.
 
 What that answer decides differently is measured rather than feared:
 § The primaries audit puts the frozen column at 11,731 bindings no **raw walk**
@@ -117,7 +117,9 @@ reaches or agrees with, and 233 empty cells a raw walk would fill. **233 is the
 walk-only figure.** The derivation adds SIMBAD's cross-IDs as a fourth source,
 which settles 11,687 of the 11,721 the walks cannot reach and takes the fills
 to 940 ungated, 791 after both gates — a reader scoping off 233 under-budgets
-by four. The manifest's `derivedVsFrozen` count carries the full comparison.
+by four. The manifest's `derivationOutcome` count carries what the derivation
+reaches; nothing compares it against the frozen column any more
+(`../membership/README.md` § The spine side).
 
 **Four rows carry identifiers the frozen build resolved *after* its walk**:
 the three `multiples.tsv` HD-only primaries it stamped from their
@@ -359,14 +361,15 @@ unless another home is named; the committed gates are
 ### The derived-binding ledger
 
 The § 6 instantiation for the manifest deriving its `gaia_source_id` instead
-of copying this file's column (`../membership/README.md` § The binding is
-derived), measured 2026-09-08 by diffing the built catalogue against the one
-built from the copied column, records matched on their canonical designation.
+of copying this file's column (`../membership/binding/README.md`
+§ The four sources, in precedence order), measured 2026-09-08 by diffing the
+built catalogue against the one built from the copied column, records matched
+on their canonical designation.
 That baseline also predates the four manifest-derived re-pulls
 (`../../refresh/README.md` § The staleness gate), so a move below carries both
 the new binding and the table row it can now reach; two records whose binding
 never changed move for the second reason alone.
-Pins: `derivedVsFrozen` and the review counts in
+Pins: `derivationOutcome`, `derivedVia` and the review counts in
 `../membership/membership-manifest-expected.json`; per-tier routing in
 `../build-catalog-expected.json`.
 

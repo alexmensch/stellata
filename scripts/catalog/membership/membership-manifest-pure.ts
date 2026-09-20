@@ -2,7 +2,7 @@
 // the primaries' additions, the two ledgers, the TSV codecs, and the
 // spine ↔ manifest matcher the parity gate runs. Contract: docs/catalog-driver.md § 3.1.
 
-import { SOL_PROPER_NAME, normaliseGjKey } from '../record/catalog-pure';
+import { SOL_APPARENT_V_MAGNITUDE, SOL_PROPER_NAME, normaliseGjKey } from '../record/catalog-pure';
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';
 import {
   BRIGHT_TIER_MAG_CEILING,
@@ -20,7 +20,7 @@ import {
   type DerivedBinding,
   type RankedCandidate,
   type RowGateEvidence,
-} from './binding-derivation-pure';
+} from './binding/binding-derivation-pure';
 import {
   CLASSIC_ID_OVERRIDES_FILE,
   mergeClassicIdLabels,
@@ -31,7 +31,7 @@ import {
   type LabelOverrides,
 } from '../classic-ids/label-merge/label-merge-pure';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
-import { dataRows, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
+import { dataRows, parseIntOrNull } from '../parse/corpus-tsv';
 import {
   printedVBelowHip,
   printedVLookups,
@@ -99,26 +99,22 @@ export const BINDING_CLASSES = [
 ] as const;
 export type BindingClass = (typeof BINDING_CLASSES)[number];
 
-/** How the derived binding stands against the frozen spine cell — the diff
- *  surface, not a gate. The review-queue verdicts are the four the derivation
- *  cannot settle alone: `differs` (derived ≠ frozen), `unreached` (frozen has a
- *  value no source binds), `contested` (a fill whose winner has a passing
- *  runner-up), `collision` (another row already holds the derived source). */
-export const BINDING_COMPARISONS = [
-  'match', 'fill', 'refused', 'differs', 'unreached', 'contested', 'collision', 'sol',
+/** See binding/README.md. */
+export const BINDING_OUTCOMES = [
+  'bound', 'refused', 'contested', 'collision', 'sol',
 ] as const;
-export type BindingComparison = (typeof BINDING_COMPARISONS)[number];
-export const BINDING_REVIEW_VERDICTS = ['differs', 'unreached', 'contested', 'collision'] as const;
+export type BindingOutcome = (typeof BINDING_OUTCOMES)[number];
+export const BINDING_REVIEW_VERDICTS = ['contested', 'collision', 'disposed'] as const;
 export type BindingReviewVerdict = (typeof BINDING_REVIEW_VERDICTS)[number];
 
 export const BINDING_DISPOSITIONS_FILE = 'data/membership/binding-review-dispositions.tsv';
 export const BINDING_REVIEW_KEY_COLUMNS = ['tyc', 'hip', 'hd', 'gl'] as const;
 export const BINDING_DISPOSITION_COLUMNS = [
-  ...BINDING_REVIEW_KEY_COLUMNS, 'frozen_source_id', 'derived_source_id',
+  ...BINDING_REVIEW_KEY_COLUMNS, 'derived_source_id',
   'keep_source_id', 'basis', 'evidence',
 ] as const;
-/** Which side a disposition settled on, for the count snapshot. */
-export const BINDING_DISPOSITIONS = ['derived', 'frozen', 'other', 'none'] as const;
+/** Which value a disposition settled on, for the count snapshot. */
+export const BINDING_DISPOSITIONS = ['derived', 'other', 'none'] as const;
 export type BindingDisposition = (typeof BINDING_DISPOSITIONS)[number];
 /** What a disposition rests on: the record's own Tycho-2 position against the
  *  Gaia source; V/70A's position and proper motion against it; SIMBAD's object
@@ -138,7 +134,6 @@ export type BindingDispositionRow = Record<(typeof BINDING_DISPOSITION_COLUMNS)[
 export function dispositionOf(d: BindingDispositionRow): BindingDisposition {
   if (d.keep_source_id === '') return 'none';
   if (d.keep_source_id === d.derived_source_id) return 'derived';
-  if (d.keep_source_id === d.frozen_source_id) return 'frozen';
   return 'other';
 }
 
@@ -305,13 +300,13 @@ export function applySpineCorrections(
   return { corrected: rows, kept, folds };
 }
 
-/** One queue row: the frozen cell against the derived value, with everything
+/** One queue row: what the derivation reached, with everything
  *  the derivation weighed — every source's candidate, the gate rejections, the
  *  printed V and both candidates' G, and SIMBAD's cross-IDs for each. */
 export const BINDING_REVIEW_COLUMNS = [
-  'tyc', 'hip', 'hd', 'hr', 'gl', 'verdict', 'frozen_source_id', 'derived_source_id',
-  'derived_via', 'candidates', 'rejected', 'v_mag', 'v_via', 'frozen_g', 'derived_g',
-  'frozen_simbad', 'derived_simbad',
+  'tyc', 'hip', 'hd', 'hr', 'gl', 'verdict', 'derived_source_id',
+  'derived_via', 'candidates', 'rejected', 'v_mag', 'v_via', 'derived_g',
+  'derived_simbad',
 ] as const;
 export type BindingReviewRow = Record<(typeof BINDING_REVIEW_COLUMNS)[number], string>;
 
@@ -351,18 +346,17 @@ export interface MembershipCounts extends LabelMergeCounts {
   /** Spine rows in the review queue, all verdicts. */
   bindingReviewRows: number;
   bindingReviewByVerdict: Record<BindingReviewVerdict, number>;
-  /** Queue rows a committed disposition settled, per outcome. */
+  /** Rows a committed disposition settled, per outcome. */
   bindingDispositions: Record<BindingDisposition, number>;
-  /** The derived binding against the frozen spine cell, over every spine row. */
-  derivedVsFrozen: Record<BindingComparison, number>;
+  /** What the derivation reached, over every spine row. */
+  derivationOutcome: Record<BindingOutcome, number>;
   /** The source leading the winning candidate on spine rows that derive one. */
   derivedVia: Record<BindingSource, number>;
   /** Winners two or more sources agreed on. */
   derivedConsensus: number;
-  /** Matches with a passing runner-up: the frozen cell sides with the winner,
-   *  so the disagreement is counted, not queued. A fill with one is
-   *  `contested` and queued. */
-  derivedContestedMatch: number;
+  /** Disposed ids no committed source proposes, shipping on the review's
+   *  cited basis alone. */
+  dispositionAsserted: number;
   /** Candidates a gate refused, the winner's losing rivals included. */
   derivedRejected: Record<'mag' | 'sibling', number>;
   /** Spine rows with a candidate and no printed V to weigh it against. */
@@ -552,8 +546,8 @@ function compareBigIntStrings(a: string, b: string): number {
 
 export function serializeBindingReview(rows: readonly BindingReviewRow[]): string {
   const lines = [...rows]
-    .sort((a, b) => compareBigIntStrings(a.frozen_source_id, b.frozen_source_id)
-      || compareBigIntStrings(a.derived_source_id, b.derived_source_id))
+    .sort((a, b) => compareBigIntStrings(a.derived_source_id, b.derived_source_id)
+      || a.verdict.localeCompare(b.verdict) || bindingReviewKey(a).localeCompare(bindingReviewKey(b)))
     .map((r) => BINDING_REVIEW_COLUMNS.map((c) => r[c]).join('\t'));
   return `${[BINDING_REVIEW_COLUMNS.join('\t'), ...lines].join('\n')}\n`;
 }
@@ -580,7 +574,7 @@ export function parseBindingDispositionsTsv(text: string): Map<string, BindingDi
   for (const cells of tsvRows(text, BINDING_DISPOSITION_COLUMNS, BINDING_DISPOSITIONS_FILE)) {
     const raw = rowFrom(BINDING_DISPOSITION_COLUMNS, cells);
     const key = bindingReviewKey(raw);
-    for (const column of ['frozen_source_id', 'derived_source_id', 'keep_source_id'] as const) {
+    for (const column of ['derived_source_id', 'keep_source_id'] as const) {
       if (!/^\d*$/.test(raw[column])) {
         throw new Error(`${BINDING_DISPOSITIONS_FILE}: ${column} "${raw[column]}" is not an integer`);
       }
@@ -702,12 +696,11 @@ function spineClaims(records: readonly LabelMergeRecord[]): Claims {
   return claims;
 }
 
-/** A spine row's derived binding held against its frozen cell. */
+/** What the derivation reached for one spine row. */
 interface SpineBinding {
-  frozen: string | null;
   derived: DerivedBinding | null;
   gate: RowGateEvidence | null;
-  comparison: BindingComparison;
+  outcome: BindingOutcome;
 }
 
 /** Candidates the gates passed that did not win — a disagreement between
@@ -719,19 +712,13 @@ export function passingRunnersUp(d: DerivedBinding): RankedCandidate[] {
     && !d.rejected.some((r) => r.sourceId === c.sourceId));
 }
 
-function compareBinding(
-  frozen: string | null, derived: DerivedBinding, withheld: boolean,
-): BindingComparison {
+function bindingOutcome(derived: DerivedBinding, withheld: boolean): BindingOutcome {
   if (withheld) return 'collision';
-  if (derived.sourceId === null) return frozen === null ? 'refused' : 'unreached';
-  if (frozen === null) return passingRunnersUp(derived).length > 0 ? 'contested' : 'fill';
-  return derived.sourceId === frozen ? 'match' : 'differs';
+  if (derived.sourceId === null) return 'refused';
+  return passingRunnersUp(derived).length > 0 ? 'contested' : 'bound';
 }
 
-/** Withholds any source two rows derive: a Gaia source on two records keys
- *  neither (docs/sid.md § 4.1), so the row whose frozen cell already held it
- *  keeps it and the other is queued as a `collision`. Where neither held it,
- *  both are. */
+/** Withholds any source two rows derive — see binding/README.md. */
 function deriveSpineBindings(
   spine: readonly SpineRow[], tables: PrimaryTables, idx: PrimaryIndex, evidence: BindingEvidence,
 ): SpineBinding[] {
@@ -741,24 +728,20 @@ function deriveSpineBindings(
     row.tyc === '' ? [] : [row.tyc], row.gl === '' ? [] : [row.gl], printedV,
   );
   const bindings: SpineBinding[] = spine.map((row) => {
-    const frozen = row.gaia_source_id === '' ? null : row.gaia_source_id;
     if (row.proper === SOL_PROPER_NAME) {
-      return { frozen, derived: null, gate: null, comparison: 'sol' };
+      return { derived: null, gate: null, outcome: 'sol' };
     }
     const gate = rowGateEvidence(row, evidence, belowHip);
     const derived = deriveBinding(bindingCandidates(row, tables, idx.cns5ByOwnKey, simbad), gate);
-    return { frozen, derived, gate, comparison: compareBinding(frozen, derived, false) };
+    return { derived, gate, outcome: bindingOutcome(derived, false) };
   });
   const holders = new Map<string, number[]>();
   bindings.forEach((b, i) => {
     if (b.derived?.sourceId != null) pushKeyed(holders, b.derived.sourceId, i);
   });
-  for (const [sourceId, rows] of holders) {
+  for (const rows of holders.values()) {
     if (rows.length < 2) continue;
-    for (const i of rows) {
-      if (bindings[i].frozen === sourceId) continue;
-      bindings[i].comparison = compareBinding(bindings[i].frozen, bindings[i].derived!, true);
-    }
+    for (const i of rows) bindings[i].outcome = bindingOutcome(bindings[i].derived!, true);
   }
   return bindings;
 }
@@ -787,50 +770,48 @@ function bindingReviewRow(
   return {
     tyc: row.tyc, hip: row.hip, hd: row.hd, hr: row.hr, gl: row.gl,
     verdict,
-    frozen_source_id: b.frozen ?? '',
     derived_source_id: derived.sourceId ?? '',
     derived_via: derived.via.join('+'),
     candidates: joinValues(candidates),
     rejected: joinValues(derived.rejected.map((r) => `${r.sourceId}:${r.reason}`)),
     v_mag: magCell(gate.vMag),
     v_via: gate.vVia ?? '',
-    frozen_g: gOf(b.frozen),
     derived_g: gOf(derived.sourceId),
-    frozen_simbad: xidsOf(b.frozen),
     derived_simbad: xidsOf(derived.sourceId),
   };
 }
 
-/** The value and class a queued row ships: its disposition's where one is
- *  committed, otherwise the derivation's own answer — the derived value on a
- *  `differs`, nothing on an `unreached`, a `contested` or a `collision`. */
-function settleReviewedBinding(
-  b: SpineBinding, verdict: BindingReviewVerdict, disposition: BindingDispositionRow | undefined,
-): { value: string | null; binding: BindingClass } {
+/** See binding/README.md. */
+function settleBinding(
+  b: SpineBinding, disposition: BindingDispositionRow | undefined, evidence: BindingEvidence,
+): { value: string | null; binding: BindingClass; asserted: boolean } {
   const derived = b.derived!;
   if (disposition === undefined) {
-    return verdict === 'differs' && derived.sourceId !== null
-      ? { value: derived.sourceId, binding: derived.binding }
-      : { value: null, binding: 'none' };
+    const shippable = b.outcome === 'bound' || b.outcome === 'contested';
+    return shippable && derived.sourceId !== null
+      ? { value: derived.sourceId, binding: derived.binding, asserted: false }
+      : { value: null, binding: 'none', asserted: false };
   }
   const key = bindingReviewKey(disposition);
-  if (disposition.frozen_source_id !== (b.frozen ?? '')
-    || disposition.derived_source_id !== (derived.sourceId ?? '')) {
+  if (disposition.derived_source_id !== (derived.sourceId ?? '')) {
     throw new Error(
-      `${BINDING_DISPOSITIONS_FILE}: row ${key} disposes `
-        + `${disposition.frozen_source_id} → ${disposition.derived_source_id}, but the queue reads `
-        + `${b.frozen ?? ''} → ${derived.sourceId ?? ''}; re-review it`,
+      `${BINDING_DISPOSITIONS_FILE}: row ${key} disposes a derivation reaching `
+        + `${disposition.derived_source_id || '(nothing)'}, but it now reaches `
+        + `${derived.sourceId || '(nothing)'}; re-review it`,
     );
   }
   const keep = disposition.keep_source_id;
-  if (keep === '') return { value: null, binding: 'none' };
-  if (keep !== b.frozen && !derived.ranked.some((c) => c.sourceId === keep)) {
+  if (keep === '') return { value: null, binding: 'none', asserted: false };
+  const asserted = !derived.ranked.some((c) => c.sourceId === keep);
+  // A `simbad_dr2_object` id is in the DR2 namespace, so no DR3 table can carry
+  // it; dropping the exemption fails the build on the rows that basis exists for.
+  if (asserted && disposition.basis !== 'simbad_dr2_object' && !evidence.hasPulledRow(keep)) {
     throw new Error(
-      `${BINDING_DISPOSITIONS_FILE}: row ${key} keeps ${keep}, which neither the frozen cell `
-        + 'nor any source proposes',
+      `${BINDING_DISPOSITIONS_FILE}: row ${key} keeps ${keep}, which no source proposes `
+        + 'and the Gaia DR3 astrometry catalogue has no row for; re-check the id',
     );
   }
-  return { value: keep, binding: 'reviewed' };
+  return { value: keep, binding: 'reviewed', asserted };
 }
 
 /** Empty the spine-label cells no primary attests — the Flamsteed number, and
@@ -1192,9 +1173,9 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     rows.push(row);
   };
 
-  const derivedVsFrozen = Object.fromEntries(
-    BINDING_COMPARISONS.map((c) => [c, 0]),
-  ) as Record<BindingComparison, number>;
+  const derivationOutcome = Object.fromEntries(
+    BINDING_OUTCOMES.map((c) => [c, 0]),
+  ) as Record<BindingOutcome, number>;
   const bindingReviewByVerdict = Object.fromEntries(
     BINDING_REVIEW_VERDICTS.map((v) => [v, 0]),
   ) as Record<BindingReviewVerdict, number>;
@@ -1206,15 +1187,16 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   ) as Record<BindingSource, number>;
   const derivedRejected = { mag: 0, sibling: 0 };
   let derivedConsensus = 0;
-  let derivedContestedMatch = 0;
+  let dispositionAsserted = 0;
   let derivedUngateable = 0;
   let derivedWeighedNoGMag = 0;
   let derivedWeighedNullGMag = 0;
   const applied = new Set<string>();
 
-  const settled = deriveSpineBindings(kept, tables, idx, evidence).map((b, i) => {
+  const spineBindings = deriveSpineBindings(kept, tables, idx, evidence);
+  const settled = spineBindings.map((b, i) => {
     const spineRow = kept[i];
-    derivedVsFrozen[b.comparison]++;
+    derivationOutcome[b.outcome]++;
     let value: string | null = null;
     let binding: BindingClass = 'none';
     if (b.derived !== null) {
@@ -1223,32 +1205,34 @@ export function buildMembership(input: MembershipInput): MembershipResult {
       derivedWeighedNoGMag += d.weighedNoGMag;
       derivedWeighedNullGMag += d.weighedNullGMag;
       if (!d.gateable && d.ranked.length > 0) derivedUngateable++;
-      if ((BINDING_REVIEW_VERDICTS as readonly string[]).includes(b.comparison)) {
-        const verdict = b.comparison as BindingReviewVerdict;
+      const key = bindingReviewKey(spineRow);
+      const disposition = dispositions.get(key);
+      const verdict: BindingReviewVerdict | null =
+        (BINDING_REVIEW_VERDICTS as readonly string[]).includes(b.outcome)
+          ? b.outcome as BindingReviewVerdict
+          : disposition !== undefined ? 'disposed' : null;
+      if (verdict !== null) {
         bindingReviewByVerdict[verdict]++;
         bindingReview.push(bindingReviewRow(spineRow, b, verdict, tables));
-        const key = bindingReviewKey(spineRow);
-        const disposition = dispositions.get(key);
-        ({ value, binding } = settleReviewedBinding(b, verdict, disposition));
-        if (disposition !== undefined) {
-          bindingDispositions[dispositionOf(disposition)]++;
-          applied.add(key);
-        }
-      } else if (d.sourceId !== null) {
-        value = d.sourceId;
-        binding = d.binding;
+      }
+      const s = settleBinding(b, disposition, evidence);
+      value = s.value;
+      binding = s.binding;
+      if (disposition !== undefined) {
+        bindingDispositions[dispositionOf(disposition)]++;
+        if (s.asserted) dispositionAsserted++;
+        applied.add(key);
       }
       if (value !== null && value === d.sourceId) {
         derivedVia[d.via[0]]++;
         if (d.via.length > 1) derivedConsensus++;
-        if (b.comparison === 'match' && passingRunnersUp(d).length > 0) derivedContestedMatch++;
       }
     }
     return { value, binding };
   });
   for (const key of dispositions.keys()) {
     if (!applied.has(key)) {
-      throw new Error(`${BINDING_DISPOSITIONS_FILE}: row ${key} disposes no queue row; remove it`);
+      throw new Error(`${BINDING_DISPOSITIONS_FILE}: row ${key} disposes no spine row; remove it`);
     }
   }
   const held = new Map<string, number>();
@@ -1278,7 +1262,10 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   records.forEach((record, i) => {
     const noEntry = record.gaiaSourceId === null || !overlay.has(record.gaiaSourceId);
     if (record.gaiaSourceId === null) spineRowsWithoutSourceId++;
-    const mag = parseFloatOrNull(kept[i].mag);
+    // Sol derives no binding, so it carries no gate evidence of its own.
+    const mag = kept[i].proper === SOL_PROPER_NAME
+      ? SOL_APPARENT_V_MAGNITUDE
+      : spineBindings[i].gate?.vMag ?? null;
     if (mag !== null && mag <= BRIGHT_TIER_MAG_CEILING) {
       spineBrightRows++;
       if (noEntry) spineBrightRowsWithoutOverlayEntry++;
@@ -1389,10 +1376,10 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     bindingReviewRows: bindingReview.length,
     bindingReviewByVerdict,
     bindingDispositions,
-    derivedVsFrozen,
+    derivationOutcome,
     derivedVia,
     derivedConsensus,
-    derivedContestedMatch,
+    dispositionAsserted,
     derivedRejected,
     derivedUngateable,
     derivedWeighedNoGMag,

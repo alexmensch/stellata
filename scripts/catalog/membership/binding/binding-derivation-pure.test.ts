@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseSimbadWdsXidsTsv } from '../record/catalog-pure';
-import { bindingEvidence } from '../classic-ids/classic-id-overlay-pure';
-import { cns5Row } from '../classic-ids/cns5-fixture';
-import { indexCns5, type BindingTables, type SimbadXids } from '../spine/primaries-audit-pure';
+import { parseSimbadWdsXidsTsv } from '../../record/catalog-pure';
+import { bindingEvidence } from '../../classic-ids/classic-id-overlay-pure';
+import { cns5Row } from '../../classic-ids/cns5-fixture';
+import { indexCns5, type BindingTables, type SimbadXids } from '../../spine/primaries-audit-pure';
 import {
   bindingCandidates,
   bindingClassOf,
@@ -15,7 +15,7 @@ import {
   simbadCandidate,
   type BindingCandidates,
 } from './binding-derivation-pure';
-import { NO_PRINTED_V_BELOW_HIP } from '../photometry/photometry-fixture';
+import { NO_PRINTED_V_BELOW_HIP } from '../../photometry/photometry-fixture';
 
 const simbadBySourceId = new Map<string, SimbadXids>([
   ['100', { hip: 10, tyc: '1-1-1', gj: null }],

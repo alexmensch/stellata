@@ -19,18 +19,12 @@ and fails on any diff under `data/membership/`.
 
 ```
 scripts/catalog/membership/
-  binding-derivation-pure.ts      A row's gaia_source_id from committed
-    (+ test)                      evidence: the four candidate sources, the
-                                  consensus ranking, both gates through
-                                  resolveGaiaSourceId, and the candidate set
-                                  the astrometry request has to cover
-                                  (§ The binding is derived). Pure.
   membership-manifest-pure.ts     Row assembly (spine side, additions), the
-    (+ test)                      derived binding held against the frozen
-                                  cell, the review queue and its dispositions,
-                                  the admission rule, the § 6.1 reason codes,
-                                  the label drops, the TSV codecs, and the
-                                  spine ↔ manifest matcher the gate runs. Pure.
+    (+ test)                      review queue and the dispositions settling
+                                  it, the admission rule, the § 6.1 reason
+                                  codes, the label drops, the TSV codecs, and
+                                  the spine ↔ manifest matcher the gate runs.
+                                  Pure.
   build-membership-manifest.ts    `pnpm run build:membership` — loads the
                                   spine and its corrections, the primaries, the
                                   overlay, the binding gates' evidence,
@@ -47,6 +41,10 @@ scripts/catalog/membership/
   membership-manifest-expected.json
                                   Pinned count snapshot. Refresh with
                                   UPDATE_BUILD_COUNTS=1.
+  binding/                        A row's gaia_source_id from committed
+                                  evidence alone: the four sources, both
+                                  gates, and the outcomes the derivation
+                                  cannot settle by itself. Own README.
   magnitude-term/                 The union's second term — the V floor, its
                                   filter over the Gaia pull and the 5p
                                   astrometry that comes with it. Own README.
@@ -74,7 +72,8 @@ gaia_source_id  binding  routes  term
   source SIMBAD's frozen cross-IDs hold under the record's own HIP, TYC or GJ,
   through the same gates), `reviewed` (the value a row of
   `data/membership/binding-review-dispositions.tsv` settles on stated
-  evidence), or `none`. § The binding is derived is the rule.
+  evidence), or `none`. `binding/README.md` § Both gates weigh every candidate
+  is the rule.
 - `term` is which side of `docs/catalog-driver.md` § 1's union admitted the
   row. Every row reads `primaries` today; `magnitude-term/README.md` owns the
   other side, its floor and its dedupe against the bindings derived below.
@@ -83,8 +82,8 @@ gaia_source_id  binding  routes  term
   `attestSpineRow` over the merged cells. A cell absent from the list is one
   no primary publishes — 46 today, the proper names
   `data/iau-wgsn/athyg_proper_dispositions.tsv` disposes; an unattested
-  Flamsteed or HD cell leaves the row for `label-drops.tsv` instead (§ The
-  spine side).
+  Flamsteed or HD cell leaves the row for `label-drops.tsv` instead
+  (§ The unattested labels leave the row).
 
 Rows are sorted by SID canonical key (`sortManifestRows`), then TYC, then
 source — a total order over content, so a regeneration diffs by what changed
@@ -119,122 +118,63 @@ A/B, whose letters AT-HYG swapped, is reached mechanically now the merge scores
 `gl` on the component the two sides name (`../classic-ids/label-merge/README.md`
 § The gl comparison is specificity-aware).
 
-The binding is **derived**, not copied: § The binding is derived walks four
-committed sources through both gates and writes what survives. The spine's
-`gaia_source_id` cell is read once more, as the **diff surface** — every row
-where the derived value and the frozen cell part company is a review item in
-`data/membership/binding-review.tsv`, never a gate failure — and
-`derivedVsFrozen` in the count snapshot pins the whole comparison:
+The binding is **derived**, not copied, and **nothing holds it against the
+spine's `gaia_source_id` cell**: `binding/README.md`
+§ The four sources, in precedence order walks four committed
+sources through both gates and writes what survives. `derivationOutcome` in the
+count snapshot pins what the derivation reached, over every spine row:
 
-| Comparison | Rows | What it is |
+| Outcome | Rows | What it is |
 |---|---|---|
-| `match` | 311,834 | the sources bind what AT-HYG bound |
-| `fill` | 792 | a source binds where the frozen cell was empty; the record takes it |
-| `refused` | 576 | no source binds and the cell was empty — a derived refusal, not an absence |
-| `differs` | 8 | the sources bind a different id; reviewed |
-| `unreached` | 43 | the frozen cell has a value no source binds; reviewed |
-| `contested` | 2 | a fill whose winner has a passing runner-up; ships nothing until reviewed |
-| `collision` | 0 | another spine row already holds the derived source; withheld and reviewed |
+| `bound` | 312,405 | one source survives both gates, with no passing rival |
+| `refused` | 619 | no source binds — a derived refusal, not an absence |
+| `contested` | 231 | the winner has a passing runner-up, so precedence chose and not the evidence. Ships the winner and queues the row |
+| `collision` | 0 | a second row derives the same source; both withheld and queued |
 | `sol` | 1 | |
 
-Every reviewed row has one row in `binding-review-dispositions.tsv`, keyed on
-the record's `tyc` / `hip` / `hd` / `gl` cells and restating the frozen and
-derived ids it adjudicated between — a re-pull that moves either one re-opens
-the review rather than carrying a stale verdict forward. `keep_source_id` is
-what the row ships: the frozen id, the derived id, any other candidate the
-queue row lists, or empty for none; an id no committed source proposed is
-refused at parse. `basis` comes from a closed enum: `tycho2_position` (the
-record's own Tycho-2 position against the source), `v70a_astrometry` (V/70A's
-B1950 position and proper motion against it), `simbad_dr2_object` (SIMBAD
-holds the frozen id in the DR2 namespace and the derived one as its DR3
-renumbering), `gaia_photometry` (G against the record's printed V on each
+The outcome is a property of the derivation alone, so a count moving is the
+derivation moving. That is what replaced the frozen comparison: `derivedVia`,
+`bindingByClass` and the review counts are the pins a binding change has to
+get past, in place of a diff against a cell AT-HYG wrote.
+
+**A disposition is the authority wherever one keys a row**, whatever the
+derivation reached — `data/membership/binding-review-dispositions.tsv`, keyed on
+the record's `tyc` / `hip` / `hd` / `gl` cells and restating the derived id it
+was taken over, so a re-pull that moves the derivation re-opens the review
+rather than carrying a stale verdict forward. `keep_source_id` is what the row
+ships: the derived id, any other candidate the queue row lists, an id **no
+committed source proposes at all**, or empty for none. That last case is 36 of
+the 53 today (`dispositionAsserted`) and is why the file exists — the review
+reached evidence the derivation cannot, and the count is what keeps the number
+of ids resting on it visible.
+
+**An asserted id still needs a second witness**, because the count cannot
+supply one: a mistyped digit leaves `dispositionAsserted`, `bindingDispositions`
+and `bindingByClass` all reading what they read before, so nothing but the
+value itself says it is wrong. The generator therefore requires every asserted
+id to be a source `data/gaia/gaia_dr3_astrometry_catalog.tsv` carries, and
+fails the build otherwise. The one exemption is `basis = simbad_dr2_object`,
+whose ids are in the DR2 namespace and so cannot appear in a DR3 table at all —
+a gap in what SIMBAD publishes for two objects, not a rule
+(`stellata-hooj.17.10`).
+
+`basis` comes from a closed enum: `tycho2_position` (the record's own Tycho-2
+position against the source), `v70a_astrometry` (V/70A's B1950 position and
+proper motion against it), `simbad_dr2_object` (SIMBAD holds the id in the DR2
+namespace), `gaia_photometry` (G against the record's printed V on each
 candidate), `pair_component` (a resolved pair's components bound crosswise,
 the HIP and SIMBAD's letters deciding), `shared_source` (one source two records
-reach). Today: 46 keep the frozen value, 6 take the derived one, 1 takes a
-runner-up. The six derived are the four DR2 ids of
-`data/athyg/stale_gaia_source_ids.tsv` that SIMBAD carries a DR3 successor for,
-HD 2094 (the HIP record follows its canonical key onto the primary) and
-Gl 225.2 A. A kept value ships as `reviewed`.
+reach). Today `bindingDispositions` reads 6 `derived` and 47 `other`. The six
+are the four DR2 ids SIMBAD carries a DR3 successor for, HD 2094 (the HIP
+record follows its canonical key onto the primary) and Gl 225.2 A. A kept
+value ships as `reviewed`.
 
-## The binding is derived
+How a row reaches its `gaia_source_id` — the four committed sources, the
+precedence and consensus ranking, both gates, and the `contested` /
+`collision` outcomes the derivation cannot settle alone — is
+`binding/README.md` § What the derivation cannot settle alone, which owns it.
 
-`deriveBinding` (`binding-derivation-pure.ts`) answers each spine row from four
-committed sources, in precedence order:
-
-1. **TYC** — `data/gaia/gaia_dr3_tyc_xmatch.tsv` on the record's own TYC.
-2. **HIP** — `data/gaia/gaia_dr3_hip_xmatch.tsv` on its HIP.
-3. **CNS5** — `data/classic-ids/cns5.tsv` on its GJ: the exact
-   number-plus-letter key, each letter of a combined `gj_comp` separately,
-   and the bare number **only from a row CNS5 lists without letters**. A
-   binding takes one component's source, so a bare cell may not fold onto a
-   lettered row — GJ 1001 is the shape, where CNS5 lists the L-dwarf pair C
-   first (`../classic-ids/README.md` § The GJ fold stops at the component).
-   The `gl:` ↔ `gl:` bridges of `data/sid/sameas-overrides.tsv` are read as
-   one designation, so CNS5's `GJ 9140` row answers for `Gl 157.1`.
-4. **SIMBAD** — the Gaia source SIMBAD's frozen cross-IDs
-   (`data/simbad/simbad_sptype.tsv`) hold under the record's HIP, then TYC,
-   then GJ (exact, with its bridged spellings, before bare). A key two SIMBAD
-   objects claim proposes nothing. The bare GJ key is what lets a lettered
-   cell reach an unresolved pair's one object — the pull keeps a single GJ
-   ident per object, so EZ Aqr sits under `866 C` whatever letter the record
-   names — and the two-claimants guard is what stops a resolved pair's
-   components answering for each other.
-
-A value two sources agree on outranks a lone leader; ties fall in the order
-above. **Every** candidate then goes through **both binding gates by calling
-`resolveGaiaSourceId`** — the one call `applyBindingGate` makes on the label
-side, so the two cannot drift on what counts as a bad binding — and the first
-that passes wins. The magnitude gate weighs G
-against the record's **printed V in the V cascade's own tier order**:
-Hipparcos on its HIP, else Tycho-2's `VT − 0.090(BT − VT)` on its TYC, else
-Gliese's `Vmag` on its GJ cell — the last two through `printedVLookups`, the
-one bundle both gates read them by (`../photometry/README.md` § The V
-cascade). The Tycho-2 arm is what reaches
-the HD-only rows: a best-neighbour walk landing on a faint neighbour of a
-Tycho star has no HIP to be caught by, and 32 fills sat more than a magnitude
-below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. The
-gates refuse 317 candidates on G − V and 119 on sibling-letter attribution
-(`derivedRejected`); falling off the end is a derived refusal.
-`derivedUngateable` (7) is the rows that reached a candidate with no printed V
-under any tier, so nothing could be weighed against it.
-
-**The losers are weighed too, not only the candidates ahead of the winner.**
-`passingRunnersUp` reads the rejections to decide whether a row's sources
-genuinely disagree, so a candidate left unweighed would read as passing on a
-verdict never taken and queue a `contested` review the gate settles by itself.
-Gl 864 shipped exactly that way before the derivation weighed its losers: the
-runner-up was the TYC walk's neighbour at G 13.90 against the star's printed
-V 9.98, and a human had to write the disposition restating what the magnitude
-gate already knew.
-
-Two things the derivation cannot settle alone are queued rather than decided.
-A **contested** fill is one whose winner has a runner-up the gates also passed:
-the precedence order chose, not the evidence, so the row ships nothing until a
-disposition names a value — Gl 563.2 A is the shape: the CNS5 route reads the
-spine's own `gl` cell, so AT-HYG's swapped letter sends it to CNS5's A row,
-which is the OTHER component's source, while SIMBAD binds the star the HIP
-names. CNS5 itself letters the two the way SIMBAD and the HIP do. A **collision**
-is a derived source another spine row already holds: a Gaia source on two
-records keys neither (`docs/sid.md` § 4.1), so the row whose frozen cell held
-it keeps it and the other is withheld. Matches with a passing runner-up are
-counted (`derivedContestedMatch`, 227), not queued: the frozen cell sides
-with the winner and nothing moves.
-
-**The candidates have to be in the astrometry pull.** A missing G is a pass at
-the gate, so `derivationCandidateSourceIds` feeds every source any row could be
-bound to into `../astrometry-request/` and `derivedWeighedNoGMag` is pinned at
-**0** — a candidate weighed with no pulled row is the request under-covering
-the derivation. `derivedWeighedNullGMag` (77) is Gaia publishing no G for a
-source it has a row for, which no request can supply.
-
-**A Gaia id for a bright star is an identity statement, not a data source.**
-Most of the fills are saturated stars whose source is a 2-parameter solution:
-sky position only, no parallax, no proper motion. Such a source satisfies
-neither the direction cascade (5p) nor the distance cascade (a parallax), and
-`GAIA_PHOTOMETRY_SATURATION_G` refuses the Riello V transform below G 4, so
-those records keep their Hipparcos-2 astrometry and printed V whatever goes
-in the identifier cell. The bright end is already protected by evidence-keyed
-conditions; an empty cell was the worse way to express one.
+## The unattested labels leave the row
 
 **A label no primary attests leaves the row.** After the merge, an HD —
 display cell or alias — that IV/25, V/50 and I/239's own `HD` column all
@@ -245,10 +185,10 @@ the manifest row as it stands afterwards, under `hd_unattested` or
 I/239 prints HD 336187 — and 119 Flamsteed numbers. Those 119 are real
 designations with no frozen primary behind them: IV/27A is the whole
 3,690-row table (3,688 after its curated corrections) and publishes 2,755
-Flamsteed numbers, and SIMBAD lists every
-one of the 119 as `* NN Con` (measured 2026-09-06). Attesting them from a
-frozen SIMBAD identifier pull is the open option; until one exists the
-manifest ships without them and the ledger says which.
+Flamsteed numbers, and SIMBAD lists every one of the 119 as `* NN Con`
+(measured 2026-09-06). Attesting them from a frozen SIMBAD identifier pull is
+the open option; until one exists the manifest ships without them and the
+ledger says which.
 
 **No dropped label was keying its record**, which is the same question § 7 asks
 of a dropped binding and the reason neither queue writes a SID event. A
@@ -413,12 +353,13 @@ arithmetic and label-flips replay:
   manifest: the build now reads the same cells the manifest publishes, so a
   dropped label is dropped in both. Needs a built catalogue, so it self-skips
   in the bare `test` job and runs in `tier-a-corpus`.
-- **The two joins.** Every `binding-review.tsv` row has exactly one
-  disposition row on the same record naming the same frozen and derived ids,
-  every disposition names a queue row, and every disposed row ships the value
-  its disposition settled on (both files regular git, so this runs in every
-  job); every `label-drops.tsv` row keys a manifest row, and the per-reason
-  counts are pinned.
+- **The two joins.** Every disposition names a queue row on the same record
+  and the same derived id, and every disposed row ships the value its
+  disposition settled on (both files regular git, so this runs in every job).
+  The converse does not hold and must not be asserted: a queue row need not be
+  disposed, since an undisposed `contested` ships its winner while it waits.
+  Every `label-drops.tsv` row keys a manifest row, and the per-reason counts
+  are pinned.
 
 ## The identifier columns are read, never re-derived
 
@@ -439,11 +380,11 @@ the generator, so the record build applies no label pass to them
 The spine stays committed as the baseline gate (i) reads, as the record of
 AT-HYG's merge decisions — which designations name one star — that the
 generator re-keys (with the corrections of § Correcting a merge decision
-applied), as the inherited label cells the merge above starts from,
-and as the frozen `gaia_source_id` column the derivation is diffed against
-(§ The spine side). Its binding cell is not an input to the manifest's: no row
-takes a value from it except through a committed disposition row that says so,
-and since the label merge moved onto the derived binding `build:classic-ids`
-does not read this file at all. After the swap release the baseline becomes the
-previous manifest. The per-column, per-consumer retirement plan and its order:
-`docs/catalog-driver.md` § 3.2.
+applied), and as the inherited label cells the merge above starts from. **Its
+`gaia_source_id` and `mag` columns are no longer read by anything**: the
+derivation stands on its own outputs (§ The spine side) and the V ≤ 3 coverage
+counters take the printed-V cascade the binding gate already weighs each row
+against. Since the label merge moved onto the derived binding,
+`build:classic-ids` does not read this file at all. After the swap release the
+baseline becomes the previous manifest. The per-column, per-consumer
+retirement plan and its order: `docs/catalog-driver.md` § 3.2.

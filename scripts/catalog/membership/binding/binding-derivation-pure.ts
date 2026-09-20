@@ -1,19 +1,19 @@
 // A manifest row's gaia_source_id derived from committed evidence: four sources,
 // two-source consensus first, each candidate through both binding gates.
-// See README.md § The binding is derived.
+// See README.md.
 
-import { normaliseGjKey, resolveGaiaSourceId } from '../record/catalog-pure';
-import type { GateVVia, PrintedV } from '../photometry/v-magnitude-pure';
-import type { BindingEvidence } from '../classic-ids/classic-id-overlay-pure';
-import type { Cns5Row } from '../classic-ids/classic-ids-parse';
-import { parseIntOrNull } from '../parse/corpus-tsv';
+import { normaliseGjKey, resolveGaiaSourceId } from '../../record/catalog-pure';
+import type { GateVVia, PrintedV } from '../../photometry/v-magnitude-pure';
+import type { BindingEvidence } from '../../classic-ids/classic-id-overlay-pure';
+import type { Cns5Row } from '../../classic-ids/classic-ids-parse';
+import { parseIntOrNull } from '../../parse/corpus-tsv';
 import {
   bareGjKey,
   glKeyForms,
   glKeyVariants,
   type BindingTables,
   type SimbadXids,
-} from '../spine/primaries-audit-pure';
+} from '../../spine/primaries-audit-pure';
 
 /** Precedence order: the record's own TYC through the Tycho-2 best-neighbour
  *  walk, its HIP through the Hipparcos-2 walk, CNS5's EDR3 id on its GJ, then
@@ -216,7 +216,7 @@ export function deriveBinding(
 
 /** Every source the derivation could propose for these rows — what the
  *  astrometry pull has to carry a G for, so no candidate reaches the gate
- *  unweighed (`../astrometry-request/README.md` § The request is a union). */
+ *  unweighed (`../../astrometry-request/README.md` § The request is a union). */
 export function derivationCandidateSourceIds(
   rows: Iterable<BindingCells>,
   tables: BindingTables,
