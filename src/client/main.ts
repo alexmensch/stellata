@@ -44,6 +44,12 @@ import { createHoverEngine } from './hover/hover-engine';
 import { createCardRolodex } from './focus-card/card-rolodex';
 import type { HoverProvider } from './hover/hover-types';
 
+/** Hand the render loop a frame. Wave 2 builds several catalogue-wide
+ *  tables back to back, and without a yield between them the scene — which
+ *  is live by then — stops dead for their sum rather than hitching once per
+ *  table. Yielding splits the block; it does not shrink it. */
+const frame = () => new Promise<void>((r) => { requestAnimationFrame(() => r()); });
+
 async function main() {
   const canvas = document.getElementById('scene') as HTMLCanvasElement;
   const loading = document.getElementById('loading')!;
@@ -316,6 +322,7 @@ async function main() {
     // requirement, not a tidiness one — see the comment at each call.
     await kinds.star.ready;
     const searchIndex = kinds.star.searchIndex;
+    await frame();
 
     // First-seen wins on collision, so every record has to be present
     // before the first lookup freezes the answer.
@@ -323,22 +330,29 @@ async function main() {
       const h = catalog.hip[i];
       if (h > 0 && !hipToIndex.has(h)) hipToIndex.set(h, i);
     }
+    await frame();
     // Whole, and only now — the partial-attach trap above.
     const starSids = kinds.star.sids();
     if (starSids) sidResolver.attach('star', arrayDomain(starSids));
     else sidResolver.conclude('star');
+    await frame();
 
     // Relation caches bake each system's anchor from its primary's
     // position, and `relationIndicesInBounds` tests against the full
     // allocation — so a pair in a late chunk would cache (0,0,0) as its
     // anchor and project the whole orbit in the wrong frame, silently.
     if (binaries) stellata.attachBinaries(binaries);
+    await frame();
 
     // Chart-mode's Greek-letter labels are the one search-index
     // derivation no kind module consumes.
     bindChartMode(stellata, { bayerMap: buildBayerMap(searchIndex), starLabels });
+    await frame();
+    // The dearest step in this wave by a distance — a fuzzy corpus over
+    // every searchable entry, half a second of main thread on its own.
     bindSearch(stellata, catalog, searchIndex);
     bindFindSearch(stellata, catalog, searchIndex);
+    await frame();
 
     loading.style.transition = 'opacity 0.4s ease';
     loading.style.opacity = '0';
