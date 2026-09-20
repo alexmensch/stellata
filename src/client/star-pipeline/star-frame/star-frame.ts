@@ -97,6 +97,11 @@ export class StarFrame {
   private _maxPhysicalRadiusPc = 0;
   private maxEpochDriftPc = 0;
   private localPositionsStale = false;
+  /** The write callback is a GPU-upload side channel, and the shell
+   *  constructs the pipeline it uploads to AFTER this class. The
+   *  constructor's own fill therefore stays silent; three uploads the
+   *  attribute on its first render regardless. */
+  private notifyLocalWrites = false;
   /** Records folded into the derived buffers and the proximity index so
    *  far — `catalog.loadedCount` at the last `absorbRecords`. */
   private derivedCount = 0;
@@ -129,6 +134,7 @@ export class StarFrame {
     this.sortedDistFromSol = new Float32Array(catalog.count);
 
     this.absorbRecords();
+    this.notifyLocalWrites = true;
   }
 
   /**
@@ -282,7 +288,7 @@ export class StarFrame {
       loc[j + 2] = abs[j + 2] - oz;
     }
     this.localPositionsStale = false;
-    this.onLocalPositionsWritten();
+    if (this.notifyLocalWrites) this.onLocalPositionsWritten();
   }
 
   /** Camera-distance bound at which the catalog's largest star subtends

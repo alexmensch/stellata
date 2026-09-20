@@ -44,9 +44,6 @@ function makeFrame(catalog: Catalog, opts: { t?: number } = {}) {
     onLocalPositionsWritten: () => { writes += 1; },
   });
   origin.onRecenter((o) => frame.rewriteAt(o));
-  // Construction folds in the records already decoded, which writes the
-  // local buffer once; the counter measures what the TEST provokes.
-  writes = 0;
   return { frame, origin, uniforms, cameraPosition, writeCount: () => writes };
 }
 
@@ -59,6 +56,16 @@ describe('StarFrame construction', () => {
     expect(frame.logRadii[1]).toBeCloseTo(2, 12);
     expect(Array.from(frame.lumClassF32)).toEqual([255, 255]);
     expect(frame.maxPhysicalRadiusPc).toBeCloseTo(100 * R_SUN_PC, 12);
+  });
+
+  it('fills the local buffer without firing the write callback', () => {
+    // The callback is a GPU-upload side channel and the shell builds the
+    // pipeline it uploads to AFTER this class, so a notify here dereferences
+    // an unassigned field and blanks the app on boot.
+    const { frame, writeCount } = makeFrame(makeCatalog([[3, 4, 0], [0, 0, 10]]));
+
+    expect(writeCount()).toBe(0);
+    expect(Array.from(frame.localPositions)).toEqual([3, 4, 0, 0, 0, 10]);
   });
 
   it('snapshots an immutable J2016.0 baseline and advances the catalog to t', () => {
