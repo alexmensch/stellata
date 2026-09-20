@@ -583,6 +583,9 @@ describe('catalog-loader / parseBinary', () => {
       for (let i = cat.loadedCount; i < cat.count; i++) {
         expect(cat.companion[i], `record ${i}`).toBe(-1);
       }
+      // The serial chain outlives the assertions; left running it reaches the
+      // real fetch once afterEach unstubs.
+      await cat.whenComplete;
     });
 
     it('reports monotonic progress across chunks up to the manifest total', async () => {

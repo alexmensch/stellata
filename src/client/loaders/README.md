@@ -9,9 +9,9 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          public/catalog.bin.<i> chunks +
                          public/constellations.json → Catalog (typed-array
                          views + name table). Fetches the manifest, then
-                         all chunks in parallel, and reassembles via the
-                         shared `assembleCatalogChunks` contract before
-                         decoding (byte-range chunking clears Cloudflare
+                         the chunks one at a time in order
+                         (§ Progressive catalog load), decoding each as it
+                         lands (byte-range chunking clears Cloudflare
                          Workers' 25 MiB per-asset limit — see
                          scripts/catalog/record/README.md § On-disk
                          transport chunking). Layout, chunk and record-decode
@@ -108,9 +108,13 @@ Records are apparent-V ordered and the chunk plan ramps from 1 MiB
 (`scripts/catalog/record/README.md` § Record order, § On-disk transport
 chunking), so that prefix is roughly the naked-eye sky.
 
-The shape: one buffer pre-allocated at `manifest.totalBytes`, every chunk
-fetched at once straight into its own slice, and each decoded as soon as it
-and all its predecessors have landed. `Catalog.loadedCount` grows,
+The shape: one buffer pre-allocated at `manifest.totalBytes`, the chunks
+fetched **one at a time in order** straight into their own slices, each
+decoded as it lands. Issuing them at once splits the link N ways, so chunk 0
+— the one first paint waits on — crawls in at a fraction of the bandwidth
+while the other boot artifacts compete in the same pool; serialised, chunk 0
+gets the whole link and the tail yields to whatever else boot needs.
+`Catalog.loadedCount` grows,
 `onRecordsDecoded` announces each window, and `whenComplete` settles when the
 last one lands (and rejects if a chunk fails, so a caller waiting for the full
 population sees the same error boot would).

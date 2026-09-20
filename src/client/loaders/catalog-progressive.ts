@@ -78,6 +78,9 @@ export function startChunkFetches({
     const slice = into.subarray(off, off + byteLength);
     off += byteLength;
     chain = chain.then(() => fetchChunkInto(dirUrl + catalogChunkFilename(i), slice, onBytes));
+    // The caller awaits these in order and stops at the first failure, so
+    // every chunk after it would otherwise reject with nothing attached.
+    chain.catch(() => {});
     return chain;
   });
 }
