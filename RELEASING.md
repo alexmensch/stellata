@@ -262,7 +262,7 @@ cannot fit, and the constant reads as 30× the noise at mw50
 **What is pinned.** `--mode dwell` at the five canon vantages in canon
 order (mw120, sol, earth, mw50, lg — § Run position: a permutation pins
 rows no later run reaches, and `--pin` refuses one), 1280×800 at dpr 2
-(4.096 Mpx), 240 frames or more, `raf-delta`,
+(4.096 Mpx), `--frames 960`, `raf-delta`,
 exposure pinned. Every row records the wall p50 / p90, the catalogue record
 count it priced, and, on WebGPU, the GPU stream and the compute stream
 beside it — each with the p10, p50 and p90 the `metric`, `floor` and
