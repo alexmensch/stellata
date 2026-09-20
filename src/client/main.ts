@@ -316,6 +316,9 @@ async function main() {
     // util/url-state/README.md § A focus that resolves after the pose.
     if (focusPending) await Promise.race([focusPending, kinds.star.ready]);
     await new Promise((r) => requestAnimationFrame(r));
+    // Out of the root stacking context and into the instrument stack —
+    // styles.css § .loading.
+    document.getElementById('bottom-left-stack')!.prepend(loading);
     document.body.classList.add('scene-live');
     topbar.hidden = false;
     panel.hidden = false;

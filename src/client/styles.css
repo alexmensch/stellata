@@ -79,11 +79,20 @@ html, body {
   touch-action: none;
 }
 
-/* Two states, one element. Before the first frame it is a full-bleed cover
-   over a blank canvas, taken out of flow by `position: fixed`; once the
-   scene is live (`body.scene-live`, set after the first rendered frame) it
-   returns to flow as the top card of the bottom-left stack and finishes
-   loading in the same chrome as the instruments below it. */
+/* Two states, one element, and `main.ts` MOVES IT IN THE DOM between them:
+   a root-level full-bleed cover before the first frame, re-parented into
+   #bottom-left-stack at `body.scene-live` to finish loading as the top card
+   of the instrument stack.
+
+   Authoring it inside that stack instead does not work, in two ways that
+   both look fine until a deep link holds the cover for several seconds.
+   `.ui-bottom` carries `z-index: 7`, which is a stacking context, so the
+   cover's own z-index is capped inside it and the tooltip (11) and both
+   `.ui-top*` columns (10) paint over the full-bleed state. And
+   `.bottom-left-stack` sets `pointer-events: none`, which the cover would
+   inherit — a drag then reaches the canvas it is hiding and latches
+   `renderGate.sawUserInput`, cancelling the restore it is being held for
+   (`util/url-state/README.md` § A focus that resolves after the pose). */
 .loading {
   position: fixed;
   inset: 0;
