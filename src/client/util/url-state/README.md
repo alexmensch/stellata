@@ -428,8 +428,14 @@ synchronously — and `applyFromUrl` hands it to boot as `focusPending`.
 revealing the live scene behind the panel, so no wrong vantage is ever
 drawn.
 
-It settles on the unresolvable branch too — a retired sid, or a planet whose
-host body field never attached — because boot is waiting on it and a dropped
-focus still ends the wait. `kinds.star.ready` is the backstop for a focus
-that settles no other way: at the complete catalogue it never will, and
-holding that long is what boot did before it painted progressively at all.
+**It settles itself only where the callback runs**, which is a resolution
+that lands — including one that lands and then translates to nothing, like
+a planet whose host body field never attached. A sid that never resolves
+never fires the callback at all: `flushIntents` drops an intent that has
+gone `unknown` without calling it, so nothing on this side settles the
+promise. `kinds.star.ready` is not a belt-and-braces backstop, it is the
+*only* thing that ends that wait, and boot races the two for exactly that
+reason. At the complete catalogue a focus that has not landed never will,
+and holding the cover that long is what boot did before it painted
+progressively at all — so the worst case is the old behaviour, not a black
+screen forever.

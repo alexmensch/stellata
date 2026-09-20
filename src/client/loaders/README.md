@@ -149,11 +149,17 @@ Three traps, all of them silent if missed:
   `absorbCatalogRecords` is the single place that fans a chunk out to the star
   frame, both pipelines and the gate — same shape as the dust loader's
   `onProgress` below.
-- **The SID resolver's star domain attaches once, on completion, never
-  partially.** A partly-attached domain reports `unknown` and *drops* a
-  deep-link intent; an unattached one reports `pending` and queues it
-  (`../util/sid-resolver/README.md`). This is what keeps a `?v=` link to a
-  star in a late chunk working.
+- **The SID resolver's star domain attaches on the FIRST chunk and declares
+  itself still filling.** A domain that answers `isComplete() === false`
+  makes a miss indeterminate rather than absent, so a sid in a chunk that
+  has not arrived stays `pending` and queues instead of being dropped, and
+  every landing chunk calls `refresh()` to retry the queue
+  (`../util/sid-resolver/README.md` § A domain that is still filling).
+  Withholding it until the last chunk is the obvious alternative and is
+  wrong — a `?v=` link's cam/tgt are in the focal object's frame, so the
+  focus has to resolve before the pose is applied, not eventually
+  (`../util/url-state/README.md` § A focus that resolves after the pose).
+  `idMaps.hipToIndex` grows per chunk for the same reason.
 
 ## Dust voxel upload
 
