@@ -1352,16 +1352,8 @@ export function applyDecodedView(
           // A sid whose domain attaches after this function returns fires its
           // 'focus' event then, disarming the ORB the tail already restored.
           restoreOrbitFrame(stellata, view);
-          // Focusing recentres the origin, and WITH a focus the encoder
-          // elides `worldOffset` — so the cam/tgt applied below sit in the
-          // focal object's local frame. When this callback runs late, because
-          // the catalogue chunk carrying the star had not landed, they were
-          // applied against the wrong origin and the camera ends up somewhere
-          // else entirely. Re-seat them now that the frame exists.
-          //
-          // Not if the user has taken the camera meanwhile: a restore that
-          // yanks the view out from under a deliberate move is worse than one
-          // that quietly gives up.
+          // README.md § A focus that resolves after the pose, both halves:
+          // why a late focus has to re-seat, and why user input vetoes it.
           if (deferred && !stellata.renderGate.sawUserInput) reapplyPose(stellata, view);
         }
         settle?.();

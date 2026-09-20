@@ -34,11 +34,9 @@ export interface Catalog {
    *  arrives. */
   count: number;
   /** Records decoded so far — a prefix of `count`, growing as transport
-   *  chunks land, and equal to `count` once `whenComplete` settles. Records
-   *  are apparent-brightness ordered, so the prefix is always the
-   *  brightest-looking sky rather than an arbitrary subset. Anything that
-   *  walks the catalogue during load bounds itself here; past it the arrays
-   *  hold zeros, and a zero position is Sol's own. */
+   *  chunks land. Anything walking the catalogue during load bounds itself
+   *  here; past it the arrays hold zeros, and a zero position is Sol's own.
+   *  ./README.md § Progressive catalog load. */
   loadedCount: number;
   positions: Float32Array;       // length = count * 3
   // Space-motion velocity, equatorial Cartesian pc/yr (Sol at origin).
@@ -256,9 +254,7 @@ function beginCatalog(
   const companionRaw = new Uint32Array(count);
   const pulsRho = new Float32Array(count);
   const pulsColorSwing = new Float32Array(count);
-  // Zero decodes as "my companion is record 0", not as absent, so the
-  // undecoded tail is seeded with the real sentinel rather than a live
-  // reference into the prefix.
+  // ./README.md § Progressive catalog load, the undecoded-tail list.
   companion.fill(-1);
 
   const names = new Map<number, string>();

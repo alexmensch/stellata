@@ -55,20 +55,10 @@ async function fetchChunkInto(
   }
 }
 
-/**
- * Each chunk's fetch, chained so exactly one is in flight at a time, each
- * resolving into its own slice of the shared buffer. Index i of the
- * returned array settles when chunk i has landed.
- *
- * **Serial, not parallel, and that is the whole point.** Issuing all of
- * them at once splits the link N ways, so chunk 0 — the one first paint
- * waits on — crawls in at a fraction of the bandwidth while chunks nobody
- * needs yet saturate the rest. Worse, the other boot artifacts are
- * competing in the same pool: the tail of this catalogue can hold up every
- * one of them, which defers first paint until essentially the whole
- * download has landed. Serialised, chunk 0 gets the entire link and the
- * tail yields to whatever else boot still needs.
- */
+/** Each chunk's fetch, chained so exactly one is in flight at a time, each
+ *  resolving into its own slice of the shared buffer. Index i settles when
+ *  chunk i has landed. Serial, not parallel, and that is load-bearing:
+ *  ./README.md § Progressive catalog load. */
 export function startChunkFetches({
   dirUrl, manifest, into, onBytes,
 }: ChunkFetchDeps): Promise<void>[] {

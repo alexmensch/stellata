@@ -179,19 +179,10 @@ export class StarCompaction {
     this.plainKernels = [reset, kernel];
   }
 
-  /**
-   * Bound the per-star kernel to the records actually decoded. Three treats
-   * `ComputeNode.count` as a mutable field feeding both the dispatch size
-   * and an in-shader `instanceIndex >= count` guard delivered as a uniform,
-   * so this recompiles nothing and rebinds nothing.
-   *
-   * Without the bound an undecoded record is all-zero — position at Sol,
-   * absmag 0 — which passes the prefilter and the frustum test and lands
-   * several hundred thousand phantom bright stars in the disc list. The
-   * survivor buffer's own `tierListBase` keeps using the FULL count: the
-   * second tier's base is a fixed address, not a function of how many
-   * threads ran.
-   */
+  /** Bound the per-star kernel to the records actually decoded — it is a
+   *  correctness bound before it is a saving, and `tierListBase` keeps the
+   *  full count. README.md § The kernel's thread count follows the decoded
+   *  records. */
   setLoadedCount(loaded: number): void {
     this.kernel.count = Math.min(loaded, this.count);
   }

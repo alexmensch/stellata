@@ -314,8 +314,9 @@ native html/css... we shouldn't dictate layout"). Do not reintroduce it.
   pixel box. It differs from Settings only in what bounds it: hanging off the
   bottom of the viewport, it sizes to its contents instead of sharing a
   column's height budget.
-- `.meta` is the catalog count (`.meta-count` — the loaded record count,
-  thousands-separated, "N stars") +
+- `.meta` is the catalog count (`.meta-count` — `catalog.count`, the whole
+  population rather than the streamed-in prefix, thousands-separated,
+  "N stars") +
   the time readout / scrubber. Focused-object identity + camera
   distance live in the card rolodex (`../focus-card/README.md`).
 - Both containers set `pointer-events: none` on themselves and `auto` on
