@@ -64,6 +64,10 @@ export interface StarKindModule extends ObjectKindModule<'star'> {
    *  Chart mode and the planet card's host breadcrumb read the same
    *  table the module's own name ladder does. */
   readonly starLabels: Map<number, string>;
+  /** Fills into `starLabels` and its sibling tables, counted
+   *  (`../focus-card/README.md` § Surfaces retained over a growing
+   *  catalogue). */
+  derivedGeneration(): number;
   /** Every catalogue-wide search-index derivation, built off the main
    *  thread (`../typeahead/README.md` § The search-index worker). Valid
    *  after `ready`; boot hands the corpus to the search runner and the
@@ -97,6 +101,7 @@ export function createStarKindModule(): StarKindModule {
   const starLabels = new Map<number, string>();
   const spectralMap = new Map<number, string>();
   const searchEntryById = new Map<number, SearchEntry>();
+  let derivedGeneration = 0;
   const tmpLocal = new THREE.Vector3();
 
   const nameCtx = () => ({
@@ -133,6 +138,7 @@ export function createStarKindModule(): StarKindModule {
       return starLabels;
     },
     get ready(): Promise<void> { return ready; },
+    derivedGeneration: () => derivedGeneration,
     get searchTables(): SearchIndexPayload {
       if (!corpus) throw new Error('star module search tables read before ready');
       return corpus;
@@ -171,10 +177,12 @@ export function createStarKindModule(): StarKindModule {
       // "Sol", not the SID fallback, while the search index is still on the
       // wire.
       seedStarLabelsFromNames(catalog, starLabels);
+      derivedGeneration++;
       offRecords?.();
-      offRecords = catalog.onRecordsDecoded(
-        () => seedStarLabelsFromNames(catalog!, starLabels),
-      );
+      offRecords = catalog.onRecordsDecoded(() => {
+        seedStarLabelsFromNames(catalog!, starLabels);
+        derivedGeneration++;
+      });
       const loaded = catalog;
       ready = (async () => {
         const [, raw, tables] = await Promise.all([
@@ -193,6 +201,7 @@ export function createStarKindModule(): StarKindModule {
         for (const [idx, spect] of tables.spectral) spectralMap.set(idx, spect);
         for (const e of raw) searchEntryById.set(e.i, e);
         corpus = tables;
+        derivedGeneration++;
       })();
     },
 
@@ -244,6 +253,7 @@ export function createStarKindModule(): StarKindModule {
         spectralMap,
         searchEntries: searchEntryById,
         getBinaries: () => runtime?.getBinaries() ?? null,
+        tablesComplete: () => corpus !== null,
         cameraDistancePc: (idx) => (runtime
           ? runtime.localPositionInto(idx, tmpLocal).distanceTo(attached.camera.position)
           : 0),

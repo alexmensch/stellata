@@ -275,6 +275,8 @@ async function main() {
     if (!applied) {
       applyFirstLoadView(stellata, idMaps);
     }
+    // Cleared at the same point that lifts the cover, below.
+    let awaitingFocus = focusPending !== null;
     startUrlSync(stellata, idMaps);
 
     // Bottom-right meta: catalog count + (when focused on a planet host)
@@ -304,6 +306,8 @@ async function main() {
     // so the values match what hover's pick paths report.
     createCardRolodex({
       stellata,
+      derivedGeneration: () => kinds.star.derivedGeneration(),
+      focusPending: () => awaitingFocus,
       providers: {
         star: kinds.star.card(),
         planet: kinds.planet.card(),
@@ -319,6 +323,7 @@ async function main() {
     // sky rather than in front of a blank one.
     // util/url-state/README.md § A focus that resolves after the pose.
     if (focusPending) await Promise.race([focusPending, kinds.star.ready]);
+    awaitingFocus = false;
     await new Promise((r) => requestAnimationFrame(r));
     // Out of the root stacking context and into the instrument stack —
     // styles.css § .loading.

@@ -55,7 +55,11 @@ geometry and attribute writers.
   (`../typeahead/star-name-tables.ts`), so `starLabels` is a getter
   beside `catalog` / `searchIndex` rather than something boot hands
   back — and it is ONE map filled in place, because every card provider
-  and chart binding captures it before the index lands. The render layers
+  and chart binding captures it before the index lands. `derivedGeneration()`
+  counts those fills so a retained surface can tell that a table moved
+  under it (`../focus-card/README.md` § Surfaces retained over a growing
+  catalogue); `card()`'s `tablesComplete` leg answers whether they are all
+  in, which is what withholds a half-built card. The render layers
   stay shell-wired (`attach` returns null), and
   the legs reach the shell-owned machinery — StarFrame positions, park
   solve, rendered size, the Picker's star pick, the binaries table —
