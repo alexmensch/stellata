@@ -590,10 +590,11 @@ describe('catalog-loader / parseBinary', () => {
       stubFetch(chunkRoutes(source, manifest, 3));
 
       const seen: number[] = [];
-      await loadCatalog(MANIFEST_URL, CON_URL, ({ bytes, total }) => {
+      const cat = await loadCatalog(MANIFEST_URL, CON_URL, ({ bytes, total }) => {
         expect(total).toBe(manifest.totalBytes);
         seen.push(bytes);
       });
+      await cat.whenComplete;
 
       // > chunk count proves mid-chunk reporting, not one jump per file.
       expect(seen.length).toBeGreaterThan(manifest.chunkBytes.length);
@@ -607,6 +608,40 @@ describe('catalog-loader / parseBinary', () => {
         [CON_URL]: () => new Response(JSON.stringify(blankConstellations)),
       });
       await expect(loadCatalog(MANIFEST_URL, CON_URL)).rejects.toThrow(/manifest\.json: 404/);
+    });
+
+    it('keeps exactly one chunk fetch in flight, in order', async () => {
+      // Issuing them all at once splits the link N ways: chunk 0 crawls in
+      // at a fraction of the bandwidth while chunks nobody needs yet
+      // saturate the rest, AND the other boot artifacts compete in the same
+      // pool — which defers first paint until essentially the whole
+      // download has landed. That was the shipped behaviour once.
+      const { source, manifest } = catalogFixture();
+      expect(manifest.chunkBytes.length).toBeGreaterThan(2);
+      const slices = sliceByPlan(source, manifest.chunkBytes);
+      const order: number[] = [];
+      let inFlight = 0;
+      let maxInFlight = 0;
+
+      const routes = chunkRoutes(source, manifest, 1);
+      vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+        const chunk = slices.findIndex((_, n) => url.endsWith(`/${catalogChunkFilename(n)}`));
+        if (chunk < 0) return routes[url]();
+        order.push(chunk);
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        // A turn of the microtask queue is enough: a parallel issue would
+        // have started every other chunk before this one resolved.
+        await Promise.resolve();
+        inFlight--;
+        return routes[url]();
+      }));
+
+      const cat = await loadCatalog(MANIFEST_URL, CON_URL);
+      await cat.whenComplete;
+
+      expect(maxInFlight).toBe(1);
+      expect(order).toEqual(slices.map((_, i) => i));
     });
 
     it('rejects when a chunk fetch fails', async () => {

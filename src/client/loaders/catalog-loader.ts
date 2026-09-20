@@ -9,6 +9,7 @@ import {
   readCatalogHeader,
   readNameTable,
   recordsOffset,
+  catalogChunkOffset,
   AMP_MAG_PER_UNIT,
   PERIOD_DAYS_PER_UNIT,
   type DecodeRecordColumnOptions,
@@ -152,12 +153,23 @@ export async function loadCatalog(
   const fetches = startChunkFetches({ dirUrl, manifest, into: assembled, onBytes: report });
 
   await fetches[0];
-  const catalog = beginCatalog(assembled.buffer, constellations, manifest);
-  // Resolve on the first chunk that carries a whole record, not merely on
-  // chunk 0: the header and the name table precede the records, so on a
-  // small artifact chunk 0 can decode to nothing and boot would have no
-  // star to paint.
+  // The name table precedes the records and is read whole, once, so the
+  // chunks covering it have to be in before the catalogue is built — a
+  // half-landed table reads its tail as zeros and silently loses those
+  // names. Chunk 0 carries the 32-byte header in every plan.
+  const base = recordsOffset(readCatalogHeader(assembled.buffer));
   let next = 1;
+  while (
+    next < fetches.length
+    && catalogChunkOffset(manifest.chunkBytes, next) < base
+  ) {
+    await fetches[next];
+    next++;
+  }
+  const catalog = beginCatalog(assembled.buffer, constellations, manifest);
+  // Then on to the first chunk carrying a whole record — with a small first
+  // chunk that is not chunk 0, and boot needs a star to paint.
+  for (let i = 1; i < next; i++) catalog.absorbChunk(i);
   while (catalog.loadedCount === 0 && next < fetches.length) {
     await fetches[next];
     catalog.absorbChunk(next);

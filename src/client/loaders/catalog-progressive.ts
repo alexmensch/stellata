@@ -55,18 +55,30 @@ async function fetchChunkInto(
   }
 }
 
-/** Every chunk's fetch, started at once, each resolving into its own slice
- *  of the shared buffer. Index i of the returned array settles when chunk i
- *  has landed; the caller walks them in order so decoding never runs ahead
- *  of a gap. */
+/**
+ * Each chunk's fetch, chained so exactly one is in flight at a time, each
+ * resolving into its own slice of the shared buffer. Index i of the
+ * returned array settles when chunk i has landed.
+ *
+ * **Serial, not parallel, and that is the whole point.** Issuing all of
+ * them at once splits the link N ways, so chunk 0 — the one first paint
+ * waits on — crawls in at a fraction of the bandwidth while chunks nobody
+ * needs yet saturate the rest. Worse, the other boot artifacts are
+ * competing in the same pool: the tail of this catalogue can hold up every
+ * one of them, which defers first paint until essentially the whole
+ * download has landed. Serialised, chunk 0 gets the entire link and the
+ * tail yields to whatever else boot still needs.
+ */
 export function startChunkFetches({
   dirUrl, manifest, into, onBytes,
 }: ChunkFetchDeps): Promise<void>[] {
   let off = 0;
+  let chain: Promise<void> = Promise.resolve();
   return manifest.chunkBytes.map((byteLength, i) => {
     const slice = into.subarray(off, off + byteLength);
     off += byteLength;
-    return fetchChunkInto(dirUrl + catalogChunkFilename(i), slice, onBytes);
+    chain = chain.then(() => fetchChunkInto(dirUrl + catalogChunkFilename(i), slice, onBytes));
+    return chain;
   });
 }
 

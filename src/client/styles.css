@@ -79,10 +79,11 @@ html, body {
   touch-action: none;
 }
 
-/* The scene renders behind this from the catalogue's first chunk, so the
-   overlay is a panel over a live sky, not a cover over a blank one. Opaque
-   full-bleed until the first frame lands: `body.scene-live` is what swaps
-   it, set once the renderer has drawn. */
+/* Two states, one element. Before the first frame it is a full-bleed cover
+   over a blank canvas, taken out of flow by `position: fixed`; once the
+   scene is live (`body.scene-live`, set after the first rendered frame) it
+   returns to flow as the top card of the bottom-left stack and finishes
+   loading in the same chrome as the instruments below it. */
 .loading {
   position: fixed;
   inset: 0;
@@ -90,20 +91,22 @@ html, body {
   place-items: center;
   background: var(--bg);
   z-index: 20;
-  transition: background 0.4s ease;
 }
 body.scene-live .loading {
-  inset: auto auto var(--page-margin-bottom) var(--page-margin-x);
-  place-items: stretch;
+  position: static;
+  display: block;
   background: none;
-  pointer-events: none;
+  z-index: auto;
+  flex: 0 0 auto;
+  width: var(--panel-width);
+  max-width: calc(100vw - 2 * var(--page-margin-x));
 }
 .loading-inner {
   width: min(420px, 80vw);
   text-align: center;
 }
 body.scene-live .loading-inner {
-  width: min(280px, calc(100vw - 2 * var(--page-margin-x)));
+  width: auto;
   padding: 10px 14px 12px;
   text-align: left;
   background: rgba(7, 9, 18, 0.85);
