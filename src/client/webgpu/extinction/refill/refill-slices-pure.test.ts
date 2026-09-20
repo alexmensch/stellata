@@ -1,47 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
-  REFILL_SLICES, idleRefill, planRefill, refillInFlight, refillListBase, refillQuarterOf,
-  refillSliceLength, refillWorklistLength, type RefillCursor,
+  REFILL_SLICES, idleRefill, planRefill, refillInFlight, refillQuarterOf, type RefillCursor,
 } from './refill-slices-pure';
 
-describe('refillSliceLength', () => {
-  it('divides the catalogue into the slice count, rounding up', () => {
-    expect(refillSliceLength(100, 4)).toBe(25);
-    expect(refillSliceLength(101, 4)).toBe(26);
-    expect(refillSliceLength(388_071, REFILL_SLICES)).toBe(97_018);
-  });
-
-  it('never returns zero', () => {
-    expect(refillSliceLength(0, 4)).toBe(1);
-    expect(refillSliceLength(1, 4)).toBe(1);
-    expect(refillSliceLength(3, 0)).toBe(3);
-  });
-});
-
 describe('the quarter partition', () => {
-  // Each sub-list holds one residue class, so its capacity is the class
-  // size and a build can never overflow it.
-  it.each([1, 5, 100, 101, 388_071, 1_278_785])('no residue class outruns its sub-list at %i', (count) => {
+  it.each([1, 5, 100, 101, 4096])('is exactly `self %% REFILL_SLICES` at %i', (count) => {
     const classSize = (q: number) => Math.max(0, Math.floor((count - 1 - q) / REFILL_SLICES) + 1);
-    for (let q = 0; q < REFILL_SLICES; q++) {
-      expect(classSize(q)).toBeLessThanOrEqual(refillSliceLength(count));
-    }
-    // The capacity rests on that formula being the partition the kernel's
-    // `self % REFILL_SLICES` actually makes, so count one out and compare.
-    if (count <= 4096) {
-      const sizes = new Array<number>(REFILL_SLICES).fill(0);
-      for (let star = 0; star < count; star++) sizes[refillQuarterOf(star)]++;
-      expect(sizes).toEqual(Array.from({ length: REFILL_SLICES }, (_, q) => classSize(q)));
-      expect(sizes.reduce((n, s) => n + s, 0)).toBe(count);
-    }
-  });
-
-  it('lays the sub-lists back to back at slice-length stride', () => {
-    expect(refillListBase(0, 101)).toBe(0);
-    expect(refillListBase(1, 101)).toBe(26);
-    expect(refillListBase(3, 101)).toBe(78);
-    expect(refillWorklistLength(101)).toBe(104);
-    expect(refillWorklistLength(388_071)).toBe(388_072);
+    const sizes = new Array<number>(REFILL_SLICES).fill(0);
+    for (let star = 0; star < count; star++) sizes[refillQuarterOf(star)]++;
+    expect(sizes).toEqual(Array.from({ length: REFILL_SLICES }, (_, q) => classSize(q)));
+    expect(sizes.reduce((n, s) => n + s, 0)).toBe(count);
   });
 });
 
@@ -116,7 +84,8 @@ function simulate(count: number, wantedPerFrame: readonly boolean[]) {
   const staleSince = new Array<number>(count).fill(0);
   let generation = 1;
   let cursor = idleRefill();
-  const lists: number[][] = Array.from({ length: REFILL_SLICES }, () => []);
+  let list: number[] = [];
+  let listQuarter: number | null = null;
   const marchedOn: number[][] = Array.from({ length: count }, () => []);
   let longestWait = 0;
   for (const [frame, wanted] of wantedPerFrame.entries()) {
@@ -128,7 +97,10 @@ function simulate(count: number, wantedPerFrame: readonly boolean[]) {
     }
     const plan = planRefill(cursor, wanted);
     if (plan.dispatch) {
-      for (const star of lists[plan.quarter]) {
+      // The one region holds only the class built last frame, so the march
+      // has to want exactly that one (README.md § One region).
+      expect(listQuarter).toBe(plan.quarter);
+      for (const star of list) {
         stamps[star] = generation;
         marchedOn[star].push(frame);
         longestWait = Math.max(longestWait, frame - staleSince[star]);
@@ -136,9 +108,10 @@ function simulate(count: number, wantedPerFrame: readonly boolean[]) {
     }
     if (plan.arm) {
       const q = plan.next.quarter;
-      lists[q] = [];
+      list = [];
+      listQuarter = q;
       for (let star = 0; star < count; star++) {
-        if (refillQuarterOf(star) === q && stamps[star] !== generation) lists[q].push(star);
+        if (refillQuarterOf(star) === q && stamps[star] !== generation) list.push(star);
       }
     }
     cursor = plan.next;

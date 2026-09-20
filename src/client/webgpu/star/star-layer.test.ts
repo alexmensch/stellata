@@ -232,8 +232,8 @@ describe('StarLayer', () => {
     layer.dispose();
     for (const mesh of meshes) expect(scene.children).not.toContain(mesh);
     expect([...disposed].sort()).toEqual([
-      'compute:star-compaction', 'compute:star-compaction-refill-dispatch',
-      'compute:star-compaction-reset',
+      'compute:star-compaction', 'compute:star-compaction-refill-counts',
+      'compute:star-compaction-refill-dispatch', 'compute:star-compaction-reset',
       'geometry:disc', 'geometry:glow', 'lut',
       'material:star-core-mask-webgpu', 'material:star-disc-webgpu',
       'material:star-glow-webgpu',

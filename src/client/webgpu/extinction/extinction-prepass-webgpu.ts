@@ -3,7 +3,7 @@
 // instance, mirrored to the CPU in one mapped copy for the pick. README.md.
 
 import {
-  Matrix4, StorageBufferAttribute, Vector3, type ComputeNode, type WebGPURenderer,
+  Matrix4, StorageBufferAttribute, Vector3, type ComputeNode, type Node, type WebGPURenderer,
 } from 'three/webgpu';
 import {
   Fn, If, compute, distance, float, instanceIndex, int, max, storage, uint, uniform,
@@ -17,7 +17,9 @@ import {
   movedBeyondEpsilon,
   packPositionsVec4Into,
 } from '../../star-pipeline/extinction/extinction-prepass-pure';
-import { REFILL_DISPATCH_LENGTH_ELEMENT, REFILL_WORKGROUP_SIZE } from '../star/compaction/compaction-pure';
+import {
+  REFILL_DISPATCH_LENGTH_ELEMENT, REFILL_PREFIX_BASE, REFILL_WORKGROUP_SIZE,
+} from '../star/compaction/compaction-pure';
 import type { StarCompaction } from '../star/compaction/star-compaction';
 import type { StarTables } from '../star/star-tables';
 import {
@@ -34,9 +36,9 @@ import { runReferenceMarch, type StarCacheGate } from './extinction-parity';
 import { AvMirror } from './mirror/av-mirror';
 import { composeViewProjectionAbs, countInFrameAbs, sameView } from './refill/refill-decision-pure';
 import {
-  idleRefill, planRefill, refillInFlight, refillSliceLength, refillWorklistLength,
-  type RefillCursor,
-} from './refill/refill-slices-pure';
+  REFILL_BUCKETS, refillBucketCapacity, refillWorklistLength,
+} from './refill/refill-buckets-pure';
+import { idleRefill, planRefill, refillInFlight, type RefillCursor } from './refill/refill-slices-pure';
 
 export interface WebGpuExtinctionPrepassOptions {
   renderer: WebGPURenderer;
@@ -75,11 +77,11 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   /** Per star, the camera generation its A_V was computed at
    *  (refill/README.md § The generation stamp). */
   private stamps: StorageBufferAttribute | null;
-  /** Star → slot, the refill kernel's route into the position table. */
-  private slotOf: StorageBufferAttribute | null;
-  private worklist: StorageBufferAttribute | null;
+  /** Star → slot — the refill kernel's route into the position table and the
+   *  producer's bucket key — followed by the worklist itself. */
+  private refillTable: StorageBufferAttribute | null;
   private fillKernel: ComputeNode | null;
-  /** One quarter of the worklist, at the count the compaction wrote. */
+  /** The listed stars of one quarter, at the count the compaction wrote. */
   private refillKernel: ComputeNode | null;
   private readonly positionsNode: ReturnType<typeof storage<'vec4'>>;
   private readonly orderNode: ReturnType<typeof storage<'uint'>>;
@@ -141,19 +143,22 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     packPositionsVec4Into(
       this.positions.array as Float32Array, positions, count, this.dispatchOrder);
     this.order = new StorageBufferAttribute(this.dispatchOrder, 1);
-    this.slotOf = new StorageBufferAttribute(inverseOrder(this.dispatchOrder), 1);
     this.av = new StorageBufferAttribute(count, 1);
     this.stamps = new StorageBufferAttribute(new Uint32Array(count), 1);
-    this.worklist = new StorageBufferAttribute(new Uint32Array(refillWorklistLength(count)), 1);
+    // Star → slot then the worklist, in one buffer: the compaction reads the
+    // first and writes the second, and it has no ninth binding for them
+    // (../star/compaction/README.md § Binding budget).
+    const table = new Uint32Array(count + refillWorklistLength(count));
+    table.set(inverseOrder(this.dispatchOrder));
+    this.refillTable = new StorageBufferAttribute(table, 1);
     // The consumers' slots point here for this instance's whole life;
     // `uAvPrepassEnabled` is what gates the read, so a buffer that has not
     // been computed yet is bound but never fetched.
     slots.setAvBuffer(this.av);
-    slots.refill.setBuffers(this.stamps, this.worklist);
+    slots.refill.setBuffers(this.stamps, this.refillTable);
 
     this.positionsNode = storage(this.positions, 'vec4', count).toReadOnly();
     this.orderNode = storage(this.order, 'uint', count).toReadOnly();
-    const slotOfNode = storage(this.slotOf, 'uint', count).toReadOnly();
     const { refill } = slots;
     const gateBounds = this.gateBounds;
     this.visible = (self, starAbs) => starCacheVisibleTsl(
@@ -178,12 +183,23 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     // One thread per listed star of this frame's quarter. No gate: the
     // compaction applied it before appending
     // (refill/README.md § The kernel bounds itself by the listed length).
-    const sliceLength = refillSliceLength(count);
+    const capacity = refillBucketCapacity(count);
+    const prefix = (bucket: Node<'uint'>) =>
+      compaction.refillDispatchNode.element(uint(REFILL_PREFIX_BASE).add(bucket));
     this.refillKernel = computeIndirect(Fn(() => {
       const i = instanceIndex;
       If(i.lessThan(compaction.refillDispatchNode.element(REFILL_DISPATCH_LENGTH_ELEMENT)), () => {
-        const self = int(refill.worklist.element(refill.quarter.mul(uint(sliceLength)).add(i)));
-        const starAbs = this.positionsNode.element(slotOfNode.element(self)).xyz;
+        // One bit per step over the prefix, from REFILL_BUCKETS / 2 — the
+        // largest bucket whose prefix i has reached, which is the one
+        // holding it (refill/README.md § Bucketed by Morton range).
+        const bucket = uint(0).toVar();
+        for (let step = REFILL_BUCKETS >> 1; step >= 1; step >>= 1) {
+          const next = bucket.add(uint(step)).toVar();
+          If(prefix(next).lessThanEqual(i), () => { bucket.assign(next); });
+        }
+        const self = int(refill.worklistElement(
+          count, bucket.mul(uint(capacity)).add(i.sub(prefix(bucket)))));
+        const starAbs = this.positionsNode.element(refill.slotOf(self)).xyz;
         slots.av.element(self).assign(march(starAbs));
         refill.stamps.element(self).assign(refill.cameraGeneration);
       });
@@ -378,7 +394,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.fillKernel?.dispose();
     this.refillKernel?.dispose();
     for (const attr of [
-      this.av, this.positions, this.order, this.stamps, this.slotOf, this.worklist,
+      this.av, this.positions, this.order, this.stamps, this.refillTable,
     ]) {
       if (attr !== null) disposeStorageAttribute(this.renderer, attr);
     }
@@ -388,8 +404,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.positions = null;
     this.order = null;
     this.stamps = null;
-    this.slotOf = null;
-    this.worklist = null;
+    this.refillTable = null;
     this.dispatchOrder = null;
     this.mirror.dispose();
     this.refill = idleRefill();

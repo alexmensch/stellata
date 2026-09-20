@@ -142,7 +142,7 @@ hold. Pinned as "never touches the render-target binding".
 **Positions are vec4, not vec3, deliberately.** WGSL has no packed vec3
 in a storage buffer, and an itemSize-3 storage attribute is the one
 three silently re-strides (`../README.md` § One writer per buffer per
-submit). All six buffers are owned outright by the prepass —
+submit). All five buffers are owned outright by the prepass —
 allocated, filled once, released through `disposeStorageAttribute` — and
 none is a vertex attribute anyone uploads through `DirtyItemUploader`,
 so `iPosition` and the binaries partial-upload contract are untouched.
@@ -216,9 +216,8 @@ live app (`../../debug/memory/README.md`), and on a WebGL2 boot it
 | A_V buffer (one float32 per star) | 388,071 × 4 B ≈ 1.48 MiB |
 | Position buffer (one vec4 float32 per slot) | 388,071 × 16 B ≈ 5.92 MiB |
 | Slot → star table (one uint32 per slot) | 388,071 × 4 B ≈ 1.48 MiB |
-| Star → slot table (one uint32 per star) | 388,071 × 4 B ≈ 1.48 MiB |
 | Camera-generation stamp (one uint32 per star) | 388,071 × 4 B ≈ 1.48 MiB |
-| Refill worklist (`REFILL_SLICES` × ⌈count / `REFILL_SLICES`⌉ uint32) | 388,072 × 4 B ≈ 1.48 MiB |
+| Refill table — star → slot, then the worklist at `REFILL_BUCKETS` × ⌈count / `REFILL_BUCKETS`⌉ uint32 | (388,071 + 388,096) × 4 B ≈ 2.96 MiB |
 
 So ~13.3 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
 `Float32Array` the position attribute keeps on the JS heap after upload

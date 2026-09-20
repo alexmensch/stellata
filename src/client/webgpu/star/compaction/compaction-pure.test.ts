@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { REFILL_SLICES } from '../../extinction/refill/refill-slices-pure';
+import { REFILL_BUCKETS } from '../../extinction/refill/refill-buckets-pure';
 import {
   ARGS_ELEMENTS, CULL_SLACK_NDC, INDIRECT_ARGS_STRIDE, INDIRECT_INSTANCE_COUNT_SLOT,
-  PREFILTER_COUNT_ELEMENT, REFILL_DISPATCH_ELEMENTS, REFILL_DISPATCH_LENGTH_ELEMENT,
+  PREFILTER_COUNT_ELEMENT, REFILL_BUCKET_COUNT_BASE, REFILL_DISPATCH_ELEMENTS,
+  REFILL_DISPATCH_LENGTH_ELEMENT, REFILL_PREFIX_BASE,
   REFILL_LIST_COUNT_BASE, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW, initialIndirectArgs,
   initialRefillDispatch, starQuadOffscreen, survivorCountsFromArgs,
   tierArgsInstanceCountElement, tierArgsOffsetBytes, tierListBase,
@@ -67,8 +68,10 @@ describe('compaction layout', () => {
   });
 
   it('the initial args draw the quad over zero instances in both slots, every counter zero', () => {
-    expect(Array.from(initialIndirectArgs(6)))
-      .toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    const args = initialIndirectArgs(6);
+    expect(args).toHaveLength(ARGS_ELEMENTS);
+    expect(Array.from(args.subarray(0, 11))).toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0]);
+    expect(Array.from(args.subarray(REFILL_LIST_COUNT_BASE)).every((v) => v === 0)).toBe(true);
   });
 
   // The counters sit past both draw slots, so no indirect draw reads them.
@@ -78,10 +81,10 @@ describe('compaction layout', () => {
       tierArgsOffsetBytes(STAR_TIER_DISC) / 4 + INDIRECT_ARGS_STRIDE);
   });
 
-  it('one refill sub-list counter per quarter follows it, closing the buffer', () => {
+  it('one refill append counter per bucket follows it, closing the buffer', () => {
     expect(REFILL_LIST_COUNT_BASE).toBe(11);
-    expect(ARGS_ELEMENTS).toBe(15);
-    expect(ARGS_ELEMENTS - REFILL_LIST_COUNT_BASE).toBe(REFILL_SLICES);
+    expect(ARGS_ELEMENTS).toBe(267);
+    expect(ARGS_ELEMENTS - REFILL_LIST_COUNT_BASE).toBe(REFILL_BUCKETS);
   });
 
   // The readback takes the very slots the draws take their instance count
@@ -104,7 +107,17 @@ describe('compaction layout', () => {
   it('the refill dispatch starts at zero workgroups of one row, zero listed', () => {
     const initial = initialRefillDispatch();
     expect(initial).toHaveLength(REFILL_DISPATCH_ELEMENTS);
-    expect(Array.from(initial)).toEqual([0, 1, 1, 0]);
+    expect(REFILL_DISPATCH_ELEMENTS).toBe(4 + 2 * REFILL_BUCKETS);
+    expect(Array.from(initial.subarray(0, 4))).toEqual([0, 1, 1, 0]);
+    expect(initial.every((v, i) => (i === 1 || i === 2 ? v === 1 : v === 0))).toBe(true);
     expect(REFILL_DISPATCH_LENGTH_ELEMENT).toBe(3);
+  });
+
+  // The prefix the refill kernel searches and the plain copy of the atomic
+  // counters the scan reads are disjoint, so the scan never reads a value it
+  // is in the middle of writing (README.md § The refill dispatch).
+  it('lays the two scan tables back to back past the listed length', () => {
+    expect(REFILL_PREFIX_BASE).toBe(REFILL_DISPATCH_LENGTH_ELEMENT + 1);
+    expect(REFILL_BUCKET_COUNT_BASE).toBe(REFILL_PREFIX_BASE + REFILL_BUCKETS);
   });
 });
