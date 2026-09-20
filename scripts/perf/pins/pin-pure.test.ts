@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, computeFloorMs, dwellFloorMs } from '../diff/diff-pure';
 import { frameFloor, type DwellSummary } from '../dwell/dwell-pure';
 import {
+  BAND_OVER_FLOOR_FACTOR,
   CANON_POSITIONS,
   FLOOR_FOLLOWS_FRACTION,
   PIN_CEILING_MS,
@@ -71,7 +73,7 @@ function dwell(wall: DwellSummary, gpu: DwellSummary | null): DwellRecord {
 }
 
 /** A WebGPU dwell carrying the compute stream beside the frame's. */
-function withCompute(record: DwellRecord, compute: DwellSummary, computeMs: readonly number[] = []): DwellRecord {
+function withCompute(record: DwellRecord, compute: DwellSummary, computeMs: readonly number[] = [compute.p50]): DwellRecord {
   return { ...record, computeMs, computeStats: compute };
 }
 
@@ -527,7 +529,7 @@ describe('compareToPin', () => {
     // in the cheaper-per-frame wave is a compute dispatch, so a 40 ms compute
     // pass that read as no change was the instrument blind where the
     // programme aims. Its own key, so it is accepted on its own.
-    const solCompute = (frame: number, compute: number, computeMs: readonly number[] = []) =>
+    const solCompute = (frame: number, compute: number, computeMs: readonly number[] = [compute]) =>
       scenario('sol', 'webgpu', withCompute(dwell(stats(25.2), stats(frame)), stats(compute), computeMs));
     const SOL_COMPUTE = solCompute(21.8, 1.4);
 
@@ -543,7 +545,7 @@ describe('compareToPin', () => {
       const diff = compareToPin(pinOf([SOL_COMPUTE]), file([solCompute(21.8, 1.7)]));
       expect(diff.rows.map((r) => [r.key, r.metric, r.verdict])).toEqual([
         ['sol|webgpu', 'gpu-p50', 'same'],
-        ['sol|webgpu|compute', 'compute-p50', 'dearer'],
+        ['sol|webgpu|compute', 'compute-p10', 'dearer'],
       ]);
       expect(diff.rows[1].bandMs).toBe(computeFloorMs('sol', 1.4));
       expect(pinDiffFails(diff)).toBe(true);
@@ -606,7 +608,28 @@ describe('compareToPin', () => {
       expect([wander.key, wander.verdict]).toEqual(['lg|webgpu|compute', 'ungated']);
       expect(wander.note).toContain(PIN_UNGATED_SCENARIOS.lg);
       const hot = compareToPin(pinOf([lgCompute(1.4)]), file([lgCompute(33.5)])).rows[1];
-      expect([hot.verdict, hot.note]).toEqual(['dearer', 'compute-p50 over the 33.4 ms ceiling']);
+      expect([hot.verdict, hot.note]).toEqual(['dearer', 'compute-p10 over the 33.4 ms ceiling']);
+    });
+
+    it('reads the p10 through a duty-cycle crossing the median marks on', () => {
+      const oneMode = Array.from({ length: 100 }, () => 0.39);
+      const crossed = [...Array.from({ length: 42 }, () => 0.39), ...Array.from({ length: 58 }, () => 0.61)];
+      const earth = (samples: readonly number[], p50: number, p90: number) =>
+        scenario('earth', 'webgpu', withCompute(
+          dwell(stats(16.7), stats(13.3)), stats(p50, { p90 }), samples,
+        ));
+      const diff = compareToPin(
+        pinOf([earth(oneMode, 0.39, 0.40)]), file([earth(crossed, 0.61, 0.62)]),
+      );
+      const compute = diff.rows[1]!;
+      expect([compute.key, compute.metric, compute.verdict]).toEqual([
+        'earth|webgpu|compute', 'compute-p10', 'same',
+      ]);
+      expect(compute.deltaMs).toBeCloseTo(0, 9);
+      expect(compute.bandMs).toBe(computeFloorMs('earth', 0.39));
+      expect(0.61 - 0.39).toBeGreaterThan(compute.bandMs);
+      // The dear mode is not lost with it: the spread is exactly that gap.
+      expect(compute.spreadDeltaMs).toBeCloseTo(0.22, 9);
     });
 
     it("rides the context's refusals: a refused frame carries no compute row", () => {
@@ -892,5 +915,95 @@ describe('the exposure readback duty cycle', () => {
     const diff = compareToPin(older, file([at('earth', 52.854, 0.5792, SPLIT)]));
     expect(diff.refusals).toEqual([]);
     expect(diff.rows[0].verdict).toBe('dearer');
+  });
+});
+
+describe('a split-frame frame row bands on its plain class', () => {
+  function earthSamples(plainMs: number, plainN: number, dearN: number): number[] {
+    return [
+      ...Array.from({ length: plainN }, (_, i) => plainMs + (i % 5) * 0.1),
+      ...Array.from({ length: dearN }, (_, i) => 74 + (i % 7) * 0.4),
+    ];
+  }
+
+  const TWO_CLASSES: DwellRecord['passCounts'] = {
+    perFrame: { submits: [], commandBuffers: [], renderPasses: [], computePasses: [] },
+    summary: {
+      submits: { min: 5, p50: 5, max: 14 },
+      commandBuffers: { min: 5, p50: 5, max: 14 },
+      renderPasses: { min: 4, p50: 4, max: 10 },
+      computePasses: { min: 1, p50: 1, max: 1 },
+    },
+    note: 'counted',
+  };
+
+  const earthAt = (samples: readonly number[], passCounts = TWO_CLASSES) => scenario('earth', 'webgpu', {
+    ...dwell(stats(16.7), stats(percentileAt(samples, 0.5), {
+      samples: samples.length, iqrMs: iqrOf(samples), p90: percentileAt(samples, 0.9),
+    })),
+    gpuMs: samples,
+    passCounts,
+  });
+
+  const percentileAt = (xs: readonly number[], p: number): number =>
+    [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.ceil(p * xs.length) - 1)]!;
+  const iqrOf = (xs: readonly number[]): number => percentileAt(xs, 0.75) - percentileAt(xs, 0.25);
+
+  const RESOLVED_HIGH = earthSamples(12.0, 640, 210);
+  const RESOLVED_LOW = earthSamples(12.0, 320, 195);
+
+  it('gates the plain class and leaves the mixture unread', () => {
+    const diff = compareToPin(pinOf([earthAt(RESOLVED_HIGH)]), file([earthAt(RESOLVED_LOW)]));
+    expect(diff.refusals).toEqual([]);
+    const frame = diff.rows[0]!;
+    expect([frame.key, frame.metric, frame.verdict]).toEqual(['earth|webgpu', 'gpu-plain-p50', 'same']);
+    expect(frame.pinnedMs).toBeLessThan(14);
+    expect(frame.currentMs).toBeLessThan(14);
+  });
+
+  it('bands at the floor where the mixture would have banded far past it', () => {
+    const diff = compareToPin(pinOf([earthAt(RESOLVED_HIGH)]), file([earthAt(RESOLVED_LOW)]));
+    expect(diff.rows[0]!.bandMs).toBe(dwellFloorMs(diff.rows[0]!.pinnedMs!));
+    const mixtureBand = 2 * Math.hypot(
+      medianStandardErrorMs({ samples: RESOLVED_HIGH.length, iqrMs: iqrOf(RESOLVED_HIGH) }),
+      medianStandardErrorMs({ samples: RESOLVED_LOW.length, iqrMs: iqrOf(RESOLVED_LOW) }),
+    );
+    expect(mixtureBand).toBeGreaterThan(10 * diff.rows[0]!.bandMs);
+  });
+
+  it('records both classes, so the dear one keeps a reading of its own', () => {
+    const classes = pinOf([earthAt(RESOLVED_HIGH)]).rows[0]!.gpuClasses!;
+    expect(classes.plain.samples).toBe(640);
+    expect(classes.dear.samples).toBe(210);
+    expect(classes.dear.p50).toBeGreaterThan(74);
+    expect(classes.cutMs).toBeGreaterThan(13);
+    expect(classes.cutMs).toBeLessThan(74);
+    expect(pinOf([SOL_GPU]).rows[0]!.gpuClasses).toBeNull();
+  });
+
+  it('takes no cut where the counters read one class, however wide the gap', () => {
+    const wandering = [...Array.from({ length: 40 }, () => 10.2), ...Array.from({ length: 10 }, () => 31.0)];
+    const flat: DwellRecord['passCounts'] = {
+      ...TWO_CLASSES,
+      summary: { ...TWO_CLASSES!.summary, renderPasses: { min: 4, p50: 4, max: 4 } },
+    };
+    expect(pinOf([earthAt(wandering, flat)]).rows[0]!.gpuClasses).toBeNull();
+    expect(compareToPin(pinOf([earthAt(wandering, flat)]), file([earthAt(wandering, flat)])).rows[0]!.metric)
+      .toBe('gpu-p50');
+  });
+
+  it('falls back to the mixture where the pin holds no classes', () => {
+    const pin = pinOf([earthAt(RESOLVED_HIGH)]);
+    const older: PinFile = { ...pin, rows: pin.rows.map(({ gpuClasses, ...rest }) => rest) };
+    const frame = compareToPin(older, file([earthAt(RESOLVED_LOW)])).rows[0]!;
+    expect(frame.metric).toBe('gpu-p50');
+  });
+
+  it('names a band its own spread set rather than its floor', () => {
+    const pin = pinOf([earthAt(RESOLVED_HIGH)]);
+    const older: PinFile = { ...pin, rows: pin.rows.map(({ gpuClasses, ...rest }) => rest) };
+    const frame = compareToPin(older, file([earthAt(RESOLVED_LOW)])).rows[0]!;
+    expect(frame.bandMs).toBeGreaterThan(BAND_OVER_FLOOR_FACTOR * dwellFloorMs(frame.pinnedMs!));
+    expect(frame.note).toContain("the row's own spread sets it, not the floor");
   });
 });

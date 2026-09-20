@@ -129,7 +129,7 @@ function withDwell(
 function withCompute(
   frame: number,
   compute: number | null,
-  { computeMs = [], name = 'sol', stats = {} }: {
+  { computeMs = compute === null ? [] : [compute], name = 'sol', stats = {} }: {
     computeMs?: readonly number[];
     name?: ScenarioName;
     stats?: Partial<DwellSummary>;
@@ -621,7 +621,7 @@ describe('diffRuns — refusals', () => {
 });
 
 describe('the compute row', () => {
-  it('bands the compute stream beside the frame, keyed |compute', () => {
+  it('gates the compute stream on its p10 beside the frame, keyed |compute', () => {
     const diff = diffRuns(
       withCompute(18.98, 1.4, { computeMs: [1.2, 1.4] }),
       withCompute(18.98, 2.0, { computeMs: [1.8, 2.0] }),
@@ -629,29 +629,38 @@ describe('the compute row', () => {
     expect(diff.refusals).toEqual([]);
     expect(diff.rows.map((r) => [r.key, r.metric, r.verdict])).toEqual([
       ['sol|webgl2|dwell', 'gpu-p50', 'same'],
-      ['sol|webgl2|compute', 'compute-p50', 'dearer'],
+      ['sol|webgl2|compute', 'compute-p10', 'dearer'],
     ]);
-    // 100 samples at iqr 1.349: two sigma of the pair is 0.354, over the
-    // 0.25 ms floor, so this fixture's band is its own sampling error.
-    expect(diff.rows[1].bandMs).toBeCloseTo(0.354, 3);
-    expect(diff.rows[1].bandMs).toBeGreaterThan(computeFloorMs('sol', 1.4));
-    expect(diff.rows[1].floorDeltaMs).toBeCloseTo(0.6, 9);
+    expect(diff.rows[1].bandMs).toBe(computeFloorMs('sol', 1.2));
+    expect(diff.rows[1].baselineMs).toBe(1.2);
+    expect(diff.rows[1].currentMs).toBe(1.8);
+    expect(diff.rows[1].floorDeltaMs).toBeNull();
+  });
+
+  it('prints the p90-p10 spread beside every dwell row, and never marks on it', () => {
+    const diff = diffRuns(
+      withCompute(18.98, 1.4, { computeMs: [1.4, 1.4], stats: { p90: 1.5 } }),
+      withCompute(18.98, 1.4, { computeMs: [1.4, 1.4], stats: { p90: 2.1 } }),
+    );
+    expect(diff.rows[1].verdict).toBe('same');
+    expect(diff.rows[1].spreadDeltaMs).toBeCloseTo(0.6, 9);
   });
 
   it("bands it on the vantage's own floor, not the whole-frame constant", () => {
     expect(COMPUTE_SCATTER_FLOOR_MS).toEqual({
-      mw120: 0.05, sol: 0.45, earth: 0.15, mw50: 0.05, lg: 0.50,
+      mw120: 0.05, sol: 0.15, earth: 0.10, mw50: 0.05, lg: 0.45,
     });
     expect(computeFloorMs('mw120', 0.289)).toBe(0.05);
     expect(computeFloorMs('mw50', 0.308)).toBe(0.05);
-    expect(computeFloorMs('earth', 0.418)).toBe(0.15);
+    expect(computeFloorMs('earth', 0.318)).toBe(0.10);
   });
 
   // Every constant is 1.5x its vantage's population span rounded up to 0.05,
-  // and a table that does not re-derive is one a later session re-litigates.
+  // measured on the p10 the row is gated on, and a table that does not
+  // re-derive is one a later session re-litigates.
   it('holds each constant at the derivation the README states', () => {
     const POPULATION_SPAN_MS = {
-      mw120: 0.032, sol: 0.284, earth: 0.094, mw50: 0.017, lg: 0.303,
+      mw120: 0.023, sol: 0.087, earth: 0.057, mw50: 0.008, lg: 0.267,
     } as const;
     for (const [name, span] of Object.entries(POPULATION_SPAN_MS)) {
       const derived = Number((Math.ceil((1.5 * span) / 0.05) * 0.05).toFixed(2));
@@ -666,12 +675,12 @@ describe('the compute row', () => {
     expect(computeFloorMs('mw90' as ScenarioName, 0.3)).toBe(DWELL_FLOOR_MS);
   });
 
-  // sol's and lg's measured scatter is 0.284 and 0.303 ms, past the inherited
+  // lg's measured scatter is 0.267 ms, whose 1.5x is past the inherited
   // constant — following it would WIDEN the only row that can see a compute
-  // regression at all.
+  // regression at all. lg is ungated, so the cap binds nothing the gate reads.
   it('caps every vantage at the whole-frame floor, so a re-floor only tightens', () => {
-    expect(computeFloorMs('sol', 0.446)).toBe(DWELL_FLOOR_MS);
     expect(computeFloorMs('lg', 0.589)).toBe(DWELL_FLOOR_MS);
+    expect(computeFloorMs('sol', 0.446)).toBe(0.15);
   });
 
   it('keeps the 1 % term, which binds on a compute row that has run away', () => {

@@ -1,18 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CLASS_GAP_OVER_MEDIAN,
   DEFAULT_DWELL_FRAMES,
   DWELL_READBACK_EVERY_FRAMES,
   PASS_COUNTERS,
   STATE_GUARD_QUARTERS,
   STATE_GUARD_TREND_MS,
+  classClock,
   gatingClock,
   quarterMedians,
   readbackCadenceHeld,
+  sampleClasses,
   stateGuardVerdict,
   summarizeFrameDwell,
   summarizePassCounts,
 } from './dwell-pure';
-import { vsyncClampToleranceMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
+import { interquartileRange, vsyncClampToleranceMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 
 /** 1..20 ms, so every percentile lands on a value that is easy to name. */
 const RAMP = Array.from({ length: 20 }, (_, i) => i + 1);
@@ -211,5 +214,48 @@ describe('the pinned readback cadence held', () => {
     // 52.854 ms against 17.157 at 0.25 (README.md).
     expect(held(139)).toBe(false);
     expect(held(234, 1)).toBe(true);
+  });
+});
+
+describe('sampleClasses — the two classes a split frame draws', () => {
+  // earth's own shape: ordinary frames near 12 ms, exposure-readback frames
+  // near 75, a gap of ~60 against a lower median of 12.9.
+  const EARTH = [12.0, 12.4, 12.9, 13.1, 13.4, 74.2, 75.6, 77.1];
+
+  it('cuts at the widest gap and keeps both classes', () => {
+    const classes = sampleClasses(EARTH);
+    expect(classes).not.toBeNull();
+    expect(classes!.plain).toEqual([12.0, 12.4, 12.9, 13.1, 13.4]);
+    expect(classes!.dear).toEqual([74.2, 75.6, 77.1]);
+    expect(classes!.cutMs).toBeCloseTo(43.8, 6);
+  });
+
+  it('sorts the samples, so the cut does not depend on the order they arrived', () => {
+    const shuffled = [75.6, 12.4, 77.1, 13.4, 12.0, 74.2, 13.1, 12.9];
+    expect(sampleClasses(shuffled)).toEqual(sampleClasses(EARTH));
+  });
+
+  it('finds nothing in two overlapping modes, however far apart their centres', () => {
+    const overlapping = [0.36, 0.38, 0.39, 0.41, 0.45, 0.50, 0.55, 0.58, 0.60, 0.62];
+    expect(sampleClasses(overlapping)).toBeNull();
+  });
+
+  it('finds nothing in one population, and nothing in too few samples to hold two', () => {
+    expect(sampleClasses([18.9, 19.0, 19.1, 19.2, 19.4])).toBeNull();
+    expect(sampleClasses([12.0])).toBeNull();
+    expect(sampleClasses(null)).toBeNull();
+  });
+
+  it('holds the gap rule at the ratio the constant names', () => {
+    expect(CLASS_GAP_OVER_MEDIAN).toBe(1);
+    // Strictly past, so the smallest pair separated is one class costing
+    // more than twice the other — well under earth's own 4×.
+    expect(sampleClasses([10, 10, 20])).toBeNull();
+    expect(sampleClasses([10, 10, 20.1])).not.toBeNull();
+  });
+
+  it('gives classClock the three fields a band is built from', () => {
+    const plain = [12.0, 12.4, 12.9, 13.1, 13.4];
+    expect(classClock(plain)).toEqual({ p50: 12.9, iqrMs: interquartileRange(plain), samples: 5 });
   });
 });

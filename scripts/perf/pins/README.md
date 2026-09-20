@@ -12,7 +12,8 @@ its repo-relative path.
 scripts/perf/pins/
   <adapter-slug>.json       The committed pin, one per GPU.
   pin-pure.ts (+ test)      adapterSlug, pinFromRuns, compareToPin, the
-                            band, the floor and the ceiling.
+                            gated statistic per stream, the ceiling and the
+                            band-over-floor note.
   provenance/               Which run and which tree a row came from, and
                             the drift above it. Own README.
 ```
@@ -126,58 +127,78 @@ was resolved reads as until it is re-taken. The side with no reading prints
 a whole column of untaken rows reads as a column of moves. A context refused
 for its frame carries no compute row: the refusals are facts about the run.
 
+**The row is gated on its p10, not its median, because the stream holds two
+modes and the median is a statistic of their share.** Every WebGPU compute
+stream carries one population near a floor value and a dearer one about
+0.22 ms above it at earth, interleaved at a scale of one to three frames.
+A dear sample sits on a frame whose render time is unchanged — 13.06 ms
+against 12.68 at earth, the cheap frames split by their own sample's mode —
+so it is not the GPU downclocking, and it is uncorrelated with the readback
+class. The share of the dear mode runs **0 % to 58 % across runs of identical
+code**, and the median follows it: earth's p50 spans 0.169 ms over the gate's
+own comparable population while its p10 spans 0.057.
+
+Nothing inside a run separates them. Every one of those runs reads
+`stateGuard: steady`, and the quarter medians of the 58 % run are flat
+(0.557 / 0.568 / 0.580 / 0.535) because every quarter holds both modes. A
+longer dwell does not settle it either: the interleave is already at frame
+scale and the level is flat across the dwell's deciles, so what varies is the
+share **between** runs, which no dwell length reaches.
+
 **The floor is this row's own, one number per vantage** —
 `COMPUTE_SCATTER_FLOOR_MS` in `../diff/diff-pure.ts`, keyed on the vantage
 the way `PIN_UNGATED_SCENARIOS` keys lg's stand-down, and applied by both
 gates through `computeFloorMs`:
 
 ```
-        repeat scatter   population span   FLOOR
-mw120       0.009             0.032         0.05
-mw50        0.001             0.017         0.05
-earth       0.065             0.169         0.15   span exceeds its floor
-sol         0.211             0.284         0.25
-lg          0.106             0.303         0.25   ungated
+        p10 span   FLOOR       p50 span
+mw120     0.023     0.05         0.032
+mw50      0.008     0.05         0.017
+earth     0.057     0.10         0.169
+sol       0.087     0.15         0.284
+lg        0.267     0.25         0.303   ungated, capped
 ```
 
-The two measured columns are independent readings of the same quantity and
-agree in order: the worst strict same-tree repeat pair on disk, and the
-span of the whole comparable population, which bounds the noise from above
-by containing any real change as well. That population is every row a gate
-would actually compare — 960 frames, canon position, one catalogue, no
+The span is of the whole comparable population, which bounds the noise from
+above by containing any real change as well. That population is every row a
+gate would actually compare — 960 frames, canon position, one catalogue, no
 setup lever, **and its frame row steady**, the last because a trending
-context is refused rather than banded (§ State guard) and reading its
-compute median back in widens earth from 0.169 to 0.221 on one row. Each
-constant is 1.5× the span rounded up to 0.05 — so `COMPUTE_SCATTER_FLOOR_MS`
-holds 0.45 at sol and 0.50 at lg, and the FLOOR column above is what
-`computeFloorMs` applies after **capping at `DWELL_FLOOR_MS`**. Widening
-those two to meet their own scatter would blind the one row that can see a
-compute regression at all, so the cap is what makes a re-derivation only
-ever tighten a row. A name outside these five — no canon vantage is one
-today — takes `DWELL_FLOOR_MS` rather than banding the row on a `NaN`.
+context is refused rather than banded (§ State guard). Each constant is
+1.5× the p10 span rounded up to 0.05 — so `COMPUTE_SCATTER_FLOOR_MS` holds
+0.45 at lg, and the FLOOR column is what `computeFloorMs` applies after
+**capping at `DWELL_FLOOR_MS`**. Widening lg to meet its own scatter would
+blind the one row that can see a compute regression at all, so the cap is
+what makes a re-derivation only ever tighten a row; lg is ungated, so today
+the cap binds nothing the gate reads. A name outside these five — no canon
+vantage is one today — takes `DWELL_FLOOR_MS` rather than banding the row on
+a `NaN`.
 
-**earth is the row whose span the FLOOR column no longer covers, and a wider
-floor is not the fix.** Its compute row is two-valued — one population near
-0.39 ms and one near 0.62 — so its median records which mode the dwell spent
-most of its frames in rather than what the dispatch cost: across the
-population the share of samples at or above 0.5 ms runs 0 % to 58 % and the
-p50 follows it, while the p10 stays inside 0.065. The span above is that duty
-cycle, the gap between the modes is about 0.22, and the row therefore marks
-whenever a run lands on the other side of the halfway point. Read `dear` —
-the share of samples in the upper mode — before reading an earth compute
-mark; a flat set of quarter medians does not separate the two, because each
-quarter contains both. `stellata-8cg.49.34` owns the re-derivation; until it
-lands the row is accepted rather than gated, and sol is the same shape hidden
-by a wider floor.
+The p10 keeps the sensitivity the median had and adds some. A real per-frame
+cost lifts it: earth's compute reads 0.351 plain and 3.100 under
+`--force-recompute`, and the extinction-refill pair moved it 0.081 — a change
+the median missed against earth's own floor while reading 0.117.
 
-The `max(0.25 ms, 1 % × pinned)` this replaces was drawn from how far two
-cold **whole-frame** dwells of one tree disagree — a 10–30 ms reading — and
-it does not transfer: it reads as 15× the noise at mw50 and about 1× it at
-sol, a factor of 18 across the five under one constant. At mw120 the
-compaction could have got most of the way to twice as dear and printed `~`,
-which is the row's whole purpose missed. The 1 % term survives for a row
-that has run away — under `--force-recompute` mw120's compute reads 13.17 ms,
-where 1 % is 0.132 and the vantage floor is not what binds.
+**The floor IS the whole band on this row.** The p10's own sampling term runs
+an order of magnitude under every constant above, and the constants are
+measured repeat scatter, which contains it; so the two-sigma term would change
+no verdict and is not taken. The 1 % term survives for a row that has run
+away — under `--force-recompute` mw120's compute reads 13.17 ms, where 1 % is
+0.132 and the vantage floor is not what binds.
+
+**The dear mode is printed, never gated.** `spread` is `p90 − p10` on the same
+stream, and its delta sits beside every dwell row in both tables. A pass that
+genuinely costs more on some frames than others — work deliberately spread
+across frames, as the extinction refill is — lifts that column and leaves the
+p10, which is a reading worth having rather than scatter to divide out. What
+the gate refuses to do is mark on it, because a coincidence of timing moves
+the same number.
+
+The `max(0.25 ms, 1 % × pinned)` this whole section replaces was drawn from
+how far two cold **whole-frame** dwells of one tree disagree — a 10–30 ms
+reading — and it does not transfer: it reads as 15× the noise at mw50 and
+about 1× it at sol, a factor of 18 across the five under one constant. At
+mw120 the compaction could have got most of the way to twice as dear and
+printed `~`, which is the row's whole purpose missed.
 
 Two of the three guards stay inert at this magnitude: `PIN_CEILING_MS` is
 112× mw120's compute value, and `STATE_GUARD_TREND_MS` (1 ms) exceeds every
@@ -194,31 +215,57 @@ covers that instead is an operator rule, `RELEASING.md` § What a mark means:
 a frame-row `✗` does not stand until a second cold run reproduces it.
 `stellata-8cg.74` carries both measurements and the decision.
 
-**A split-frame frame row bands on its duty cycle, and the floor never
-binds it.** Where a vantage draws two pass classes — `earth` alone in the
-canon — the GPU stream holds two populations, so the middle-half spread the
-standard error is built from is a cliff on what share of the *resolved*
-samples are the dear ones: under a quarter the 75th percentile sits at the
-boundary between the modes, past a quarter it sits inside the upper one.
-Two cold shipped-path runs, identical scene, `readbackPerFrame` 0.25 on
-both:
+**A split-frame frame row is read on its plain class, and both classes are
+recorded.** Where a vantage draws two pass classes — `earth` alone in the
+canon — the GPU stream holds two populations, ordinary frames near 12 ms and
+readback frames near 75. The mixture's median is a statistic of their share
+and its middle-half spread straddles both, so the standard error built from
+that spread is a cliff on what fraction of the *resolved* samples are the
+dear ones: under a quarter the 75th percentile sits at the boundary between
+the classes, past a quarter inside the upper one. Two cold shipped-path runs,
+identical scene, `readbackPerFrame` 0.25 on both:
 
 ```
-            resolved   dear   share     p75      IQR   band floor
-ce361e6f     850/960    210   24.7 %   14.47     2.73        0.25
-83439653     515/960    195   37.9 %   73.95    61.22        5.01
+            resolved   dear   share     p75      IQR   mixture band
+ce361e6f     850/960    210   24.7 %   14.47     2.73           0.25
+83439653     515/960    195   37.9 %   73.95    61.22           5.01
 ```
 
 The dear frames resolve either way — 210 and 195 of the ~240 the cadence
 asks for. What moved is the cheap frames' resolve rate, 0.89 to 0.44, which
-is the instrument's and not the tree's. So the pinned side alone can open
-the band to 38 % of the frame it gates, and no later run narrows it: the
-band is `max(2σ, floor)` over the pair, and one side's σ is already past
-every floor. Read a split-frame row's own spread before trusting its band.
-Nothing else catches it — `readbackPerFrame` is a share of all frames, not
-of resolved ones, so it matches on both sides and the readback guard stays
-silent. `stellata-8cg.49.34` owns the re-derivation for both of earth's
-rows.
+is the instrument's and not the tree's. So the pinned side alone could open
+the band to 38 % of the frame it gated, and no later run narrowed it: the
+band is `max(2σ, floor)` over the pair, and one side's σ was already past
+every floor. `readbackPerFrame` does not catch it either, being a share of
+all frames rather than of resolved ones, so it matched on both sides and the
+readback guard stayed silent.
+
+Taken from the class the median sits in, that spread runs **0.036 to 0.104 ms**
+over the same population against **0.128 to 5.013** for the mixture — always
+under the floor, exactly as every unsplit vantage's is. So the row's metric is
+`gpu-plain-p50` and its band is the floor again. The median barely moves with
+it (mixture span 1.448 ms, plain class 1.524), which is what says this is a
+spread fix and not a change of what is measured.
+
+`gpuClasses` on the row carries **both** classes — cut, median, `iqrMs` and
+sample count each — so the readback frame keeps a reading of its own where the
+mixture median gave it none. Read it as summed pass occupancy rather than
+frame time (`../dwell/README.md` § Where the frame has two classes).
+
+**The counters decide that there are two classes; the gap only says where to
+cut.** `splitFrameClasses` reads `renderPasses` min against max, and the class
+cut is taken only where that says two. Without it a vantage that merely
+wanders takes a cut of its own — `lg`'s stream spans as far inside one dwell
+as it does between runs, and read `gpu-plain-p50` on every archived dwell when
+the widest gap alone decided. Both sides must yield classes, or the row falls
+back to the mixture on both: a plain-class median against a mixture one is two
+statistics.
+
+**A band far past its floor is named on the row.** `BAND_OVER_FLOOR_FACTOR`
+(4×) puts a note on any row whose own two-sigma term, not its floor, is what
+sets the band — the shape that wrote a 5.01 ms gate on a 13.31 ms frame with
+nothing looking. A note and not a refusal, because any refused row refuses the
+whole pin.
 
 ## Setup levers
 
@@ -239,37 +286,22 @@ carries the lever's cost in every later run's verdict — the ratchet
 `RELEASING.md` § Perf pin exists to stop. Any future lever a dwell can carry
 inherits the same refusal without another edit.
 
+
 ## State guard
 
-Every dwell summary is read in four consecutive quarters
-(`quarterMedians`); their medians spanning more than
-`STATE_GUARD_TREND_MS` (1 ms) reads `trending`: the machine changed state
-under the dwell — the sustained-load GPU power step (stellata-0it.38),
-entered after roughly 2–2.5 min of continuous frames and re-entered
-inside one row when warm. **The test is the spread, not a rise through
-the quarters**: that power step is a step, so it lands as
-`[16.9, 16.9, 21.8, 21.8]`, flat and then flat higher, which a
-strictly-rising test reads as steady. Frames either side of the
-transition never compare, so a trending row at a gated vantage refuses the
-pin and refuses a comparison — at an ungated one it does neither
-(§ Reading `--against-pin`). **`--baseline` goes on refusing it either way,
-and that divergence is the rule rather than an oversight**: the two gates
-share one implementation of every refusal that is a fact about the run, but
-this one is a fact about the vantage, and `--baseline` bands lg like any
-other row it holds. A gate stands down only where it does not mark.
-`--cooldown-ms` idles between contexts so each one starts cold; tune it
-until every gated context in a pin run reads `steady`.
+What `trending` means, which clock the verdict is read off, and why it is the
+quarters' spread rather than a rise through them: `../dwell/README.md`
+§ The state guard, beside `stateGuardVerdict` itself.
 
-**The verdict is read off the clock the band gates** — the GPU stream where
-the row has one, wall only where it does not (`gatingClock`, every WebGL2
-row). Wall deltas are quantised to the refresh interval, so at a vantage
-whose frame exceeds one interval they alternate between one and two and the
-quarter medians swing by a whole interval however idle the machine is: mw50
-split 240 deltas 120/120 and 117/123 on two cold runs whose GPU quarters
-spanned 0.017 ms. Read off wall, that verdict is a coin flip decided per
-quarter by which side of 50 % it landed — and since any refused row refuses
-the whole pin, it blocked the pin for *every* render-path PR at random. Wall
-`stateGuard` is still recorded, unmarked, exactly as wall p50 is.
+Here it decides two things. A trending row at a **gated** vantage refuses the
+pin and refuses a comparison; at an ungated one it does neither
+(§ Reading `--against-pin`). And **`--baseline` goes on refusing it either
+way, which is the rule rather than an oversight**: the two gates share one
+implementation of every refusal that is a fact about the run, but this one is
+a fact about the vantage, and `--baseline` bands lg like any other row it
+holds. A gate stands down only where it does not mark. `--cooldown-ms` idles
+between contexts so each one starts cold; tune it until every gated context in
+a pin run reads `steady`.
 
 ## Reading `--against-pin`
 
@@ -278,7 +310,10 @@ the whole pin, it blocked the pin for *every* render-path PR at random. Wall
   five canon vantages inside 0.18 %. Wall time is quantised to the
   display's refresh interval, so it is recorded and never marked: a row
   with no GPU stream on either side, every WebGL2 row among them, reads
-  `·` ungated with its wall p50 shown as context.
+  `·` ungated with its wall p50 shown as context. The `metric` column
+  names which statistic the row was judged on, and it is not the same at
+  every row: `gpu-plain-p50` where the vantage draws two pass classes and
+  `compute-p10` on a compute row (§ The compute row).
 - **Ungated vantages, and `lg` is permanently one.** `PIN_UNGATED_SCENARIOS`
   maps a vantage the band never marks to the reason, which the row's note
   prints. `lg`'s GPU duration **wanders as much inside a single dwell as it
@@ -310,33 +345,40 @@ the whole pin, it blocked the pin for *every* render-path PR at random. Wall
   `src/client/local-group/` render change has no pin row that prices it short
   of the ceiling: price one with a per-pass differential at lg instead, never
   with its pin row.
-- **Band.** The pair's two-sigma standard error, floored — on a frame row at
-  `max(DWELL_FLOOR_MS 0.25 ms, DWELL_FLOOR_FRACTION 1 % × pinned)`, on a
-  compute row at that vantage's own constant instead (§ The compute row).
-  A `✗` is past both; `~` is not resolved, never "no change". The
+- **Band.** On a frame row the pair's two-sigma standard error floored at
+  `max(DWELL_FLOOR_MS 0.25 ms, DWELL_FLOOR_FRACTION 1 % × pinned)`; on a
+  compute row the vantage's own constant and nothing else (§ The compute
+  row). A `✗` is past it; `~` is not resolved, never "no change". The
   millisecond term is the larger of the two at every canon frame row but
-  mw50 — but a floor binds only where the two-sigma term sits under it, and
-  at a split-frame vantage it need not (§ The compute row, last). Both floors live in
-  `../diff/diff-pure.ts` beside `band` because `--baseline` applies the same
-  ones: the tighter of two gates is the one that decides, so a Tier 1 band
-  under this one would mark a move Tier 2 calls unresolved
-  (`RELEASING.md` § Perf pin). **A frame row's `✗` is not final on one run**
-  — its band sits under its own repeat scatter, and what covers that is the
-  re-run rule in `RELEASING.md` § What a mark means, not a wider floor.
+  mw50. A band the two-sigma term rather than the floor set is named on the
+  row (`BAND_OVER_FLOOR_FACTOR`), which is what catches a spread that belongs
+  to the instrument. Both floors live in `../diff/diff-pure.ts` beside `band`
+  because `--baseline` applies the same ones: the tighter of two gates is the
+  one that decides, so a Tier 1 band under this one would mark a move Tier 2
+  calls unresolved (`RELEASING.md` § Perf pin). **A frame row's `✗` is not
+  final on one run** — its band sits under its own repeat scatter, and what
+  covers that is the re-run rule in `RELEASING.md` § What a mark means, not a
+  wider floor.
 - **Floor.** Each GPU row also records its 10th-percentile frame off the raw
   samples, and the table prints how far that p10 moved beside `delta`. A cost
   every frame pays lifts the floor as far as the median (across 111 archived
   cross-commit moves, ×1.07); a wander lifts the upper half alone and leaves
   it (the two 2026-09-13 false marks: median +0.47 / +0.43, p10 −0.08 /
   +0.01). A `✗` whose floor moved under `FLOOR_FOLLOWS_FRACTION` (a quarter)
-  of the median's says so in its note. Never marked: the floor's own repeat
-  scatter is wider than the median's at earth and sol, so it is the
-  discriminator, not the gate. The p10 and not the single fastest frame,
-  which is noisier again — repeat-pair |Δ| tails of 1.473 ms against 1.353.
-  `frameFloor` lives in `../dwell/dwell-pure.ts` because `--baseline` prints
-  the same column off the same statistic (`../README.md` § Comparing against
-  a baseline), and a reader asking "cost or wander?" must not have to ask it
-  differently of the two tables.
+  of the median's says so in its note. Never marked on a frame row: the
+  floor's own repeat scatter is wider than the median's at earth and sol, so
+  it is the discriminator, not the gate. The p10 and not the single fastest
+  frame, which is noisier again — repeat-pair |Δ| tails of 1.473 ms against
+  1.353. Blank on a compute row, where the p10 *is* the metric and the column
+  would restate `delta`. `frameFloor` lives in `../dwell/dwell-pure.ts`
+  because `--baseline` prints the same column off the same statistic
+  (`../README.md` § Comparing against a baseline), and a reader asking "cost
+  or wander?" must not have to ask it differently of the two tables.
+- **Spread.** `p90 − p10` on the same stream, and how far it moved. Never
+  marked, on any row: it is the reading that says some frames got dearer
+  while the rest did not — a pass deliberately spread across frames, or a
+  class of frame that costs more — which the gated statistic is chosen not to
+  follow.
 - **Ceiling.** A GPU-stream p50 over `PIN_CEILING_MS` (33.4 ms, two 60 Hz
   intervals of hardware time) is `✗` whatever the band says — and on an
   ungated vantage too, which is where it earns its keep: those rows have

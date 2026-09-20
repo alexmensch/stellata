@@ -7,7 +7,8 @@ import {
   EMPTY_PASSES_DEFAULT, EMPTY_PASS_KEY,
 } from '../../../src/client/debug/frame-cost/passes/passes-pure';
 import {
-  COMPUTE_ROW, computeClock, floorMove, frameFloor, gatingClock, type DwellMetric,
+  COMPUTE_ROW, classClock, computeClock, floorMove, frameFloor, gatingClock, sampleClasses,
+  type ClassClock, type DwellMetric,
 } from '../dwell/dwell-pure';
 import type { DwellRecord, PerfFile, ScenarioRecord } from '../schema';
 import type { ScenarioName } from '../scenarios';
@@ -58,17 +59,14 @@ export const BAND_SIGMAS = 2;
 export const DWELL_FLOOR_MS = 0.25;
 export const DWELL_FLOOR_FRACTION = 0.01;
 
-/** Each vantage's own COMPUTE-row repeat scatter, as 1.5× the spread of its
- *  whole comparable population rounded up to 0.05. That scatter runs 0.017 ms
- *  at mw50 to 0.303 at lg — a factor of 18 no single constant fits, which is
- *  why `DWELL_FLOOR_MS` reads as 15× the noise at mw50 and about 1× it at
- *  sol. `../pins/README.md` § The compute row carries both measurements. */
+/** 1.5× each vantage's p10 scatter, rounded up to 0.05 — the derivation and
+ *  the measurement are `../pins/README.md` § The compute row. */
 export const COMPUTE_SCATTER_FLOOR_MS: Readonly<Record<ScenarioName, number>> = {
   mw120: 0.05,
-  sol: 0.45,
-  earth: 0.15,
+  sol: 0.15,
+  earth: 0.10,
   mw50: 0.05,
-  lg: 0.50,
+  lg: 0.45,
 };
 
 function floorFor(floorMs: number, baselineMs: number): number {
@@ -79,11 +77,8 @@ export function dwellFloorMs(baselineMs: number): number {
   return floorFor(DWELL_FLOOR_MS, baselineMs);
 }
 
-/** Capped at `DWELL_FLOOR_MS`, so a re-floor only ever tightens. sol's and
- *  lg's measured scatter is past that constant, and widening to meet it would
- *  blind the row at the vantage where a compute regression is likeliest to
- *  hide — the frame row cannot see one, a 40 ms kernel having landed inside
- *  its band (`../pins/README.md` § The compute row).
+/** Capped at `DWELL_FLOOR_MS`, so a re-floor only ever tightens.
+ *
  *
  *  A name off a parsed run or pin need not be one of the canon five — neither
  *  file's assertion checks it — so the lookup falls back rather than banding
@@ -117,6 +112,9 @@ export interface DiffRow {
    *  a reader asking "cost or wander?" must not have to ask it differently
    *  of the two tables. */
   readonly floorDeltaMs: number | null;
+  /** How far `p90 - p10` moved; null off a dwell row. Never a verdict input
+   *  — README.md, on the `spread` column. */
+  readonly spreadDeltaMs: number | null;
   readonly bandMs: number;
   readonly verdict: Verdict;
 }
@@ -426,6 +424,7 @@ function differentialRows(key: string, a: ScenarioRecord, b: ScenarioRecord): {
       currentMs: row.savedMs,
       deltaMs,
       floorDeltaMs: null,
+      spreadDeltaMs: null,
       bandMs,
       verdict: verdictFor(deltaMs, bandMs),
     });
@@ -465,9 +464,8 @@ function dwellRows(key: string, a: ScenarioRecord, b: ScenarioRecord): (DiffRow 
   return 'reason' in frame ? [frame] : [frame, ...computeRow(key, a.name, da, db)];
 }
 
-/** The compute passes beside the frame, keyed `|compute` and banded the same
- *  way but on the vantage's own floor (`computeFloorMs`). Both sides or
- *  neither, and why: README.md. */
+/** README.md, on the compute row; why the p10, `../pins/README.md` § The
+ *  compute row. */
 function computeRow(
   key: string, name: ScenarioName, da: DwellRecord, db: DwellRecord,
 ): (DiffRow | DiffRefusal)[] {
@@ -479,17 +477,23 @@ function computeRow(
       reason: 'one run recorded a compute stream for this row and the other did not',
     }];
   }
-  const deltaMs = cb.p50 - ca.p50;
-  const bandMs = band(
-    medianStandardErrorMs(ca), medianStandardErrorMs(cb), computeFloorMs(name, ca.p50),
-  );
+  const [fa, fb] = [frameFloor(da.computeMs), frameFloor(db.computeMs)];
+  if (fa === null || fb === null) {
+    return [{
+      key: `${key}|${COMPUTE_ROW}`,
+      reason: 'one run retained no compute samples, so the p10 the row is gated on cannot be read',
+    }];
+  }
+  const deltaMs = fb.p10 - fa.p10;
+  const bandMs = computeFloorMs(name, fa.p10);
   return [{
     key: `${key}|${COMPUTE_ROW}`,
-    metric: 'compute-p50',
-    baselineMs: ca.p50,
-    currentMs: cb.p50,
+    metric: 'compute-p10',
+    baselineMs: fa.p10,
+    currentMs: fb.p10,
     deltaMs,
-    floorDeltaMs: floorMove(frameFloor(da.computeMs), frameFloor(db.computeMs)),
+    floorDeltaMs: null,
+    spreadDeltaMs: (cb.p90 - fb.p10) - (ca.p90 - fa.p10),
     bandMs,
     verdict: verdictFor(deltaMs, bandMs),
   }];
@@ -526,24 +530,48 @@ function frameRow(key: string, da: DwellRecord, db: DwellRecord): DiffRow | Diff
     const drifted = readbackRefusal(da.readbackPerFrame, db.readbackPerFrame, split);
     if (drifted !== null) return { key: `${key}|dwell`, reason: drifted };
   }
-  const deltaMs = cb.p50 - ca.p50;
-  const bandMs = band(medianStandardErrorMs(ca), medianStandardErrorMs(cb), dwellFloorMs(ca.p50));
+  const [ja, jb] = [judgedFrameStat(da, ga), judgedFrameStat(db, gb)];
+  if (ja.metric !== jb.metric) {
+    return {
+      key: `${key}|dwell`,
+      reason:
+        `${ja.metric} vs ${jb.metric} — one run's frame separated into two pass classes and the ` +
+        "other's did not, and a plain-class median against a mixture median is two statistics",
+    };
+  }
+  const deltaMs = jb.clock.p50 - ja.clock.p50;
+  const bandMs = band(
+    medianStandardErrorMs(ja.clock), medianStandardErrorMs(jb.clock), dwellFloorMs(ja.clock.p50),
+  );
   // Off the GPU stream alone. A wall floor is quantised to the refresh
   // interval exactly as its median is, so its p10 is the same value the
   // median already reports and the column would answer nothing.
-  const floorDeltaMs = ga.metric === 'gpu-p50'
-    ? floorMove(frameFloor(da.gpuMs), frameFloor(db.gpuMs))
-    : null;
+  const [fa, fb] = ga.metric === 'wall-p50'
+    ? [null, null]
+    : [frameFloor(da.gpuMs), frameFloor(db.gpuMs)];
   return {
     key: `${key}|dwell`,
-    metric: ga.metric,
-    baselineMs: ca.p50,
-    currentMs: cb.p50,
+    metric: ja.metric,
+    baselineMs: ja.clock.p50,
+    currentMs: jb.clock.p50,
     deltaMs,
-    floorDeltaMs,
+    floorDeltaMs: floorMove(fa, fb),
+    spreadDeltaMs: fa === null || fb === null ? null : (cb.p90 - fb.p10) - (ca.p90 - fa.p10),
     bandMs,
     verdict: verdictFor(deltaMs, bandMs),
   };
+}
+
+/** The plain class where the vantage draws two, the whole dwell otherwise —
+ *  `../pins/README.md` § The compute row, last. */
+function judgedFrameStat(
+  dwell: DwellRecord, gating: ReturnType<typeof gatingClock>,
+): { readonly clock: ClassClock; readonly metric: DwellMetric } {
+  if (gating.metric === 'wall-p50') return { clock: gating.clock, metric: gating.metric };
+  const classes = splitFrameClasses(dwell.passCounts) ? sampleClasses(dwell.gpuMs) : null;
+  return classes === null
+    ? { clock: gating.clock, metric: 'gpu-p50' }
+    : { clock: classClock(classes.plain), metric: 'gpu-plain-p50' };
 }
 
 /**
