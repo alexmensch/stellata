@@ -81,8 +81,8 @@ gaia_source_id  binding  routes  term
   `attestSpineRow` over the merged cells. A cell absent from the list is one
   no primary publishes — 46 today, the proper names
   `data/iau-wgsn/athyg_proper_dispositions.tsv` disposes; an unattested
-  Flamsteed or HD cell leaves the row for `label-drops.tsv` instead (§ The
-  spine side).
+  Flamsteed or HD cell leaves the row for `label-drops.tsv` instead
+  (§ The unattested labels leave the row).
 
 Rows are sorted by SID canonical key (`sortManifestRows`), then TYC, then
 source — a total order over content, so a regeneration diffs by what changed
@@ -171,6 +171,30 @@ How a row reaches its `gaia_source_id` — the four committed sources, the
 precedence and consensus ranking, both gates, and the `contested` /
 `collision` outcomes the derivation cannot settle alone — is
 `binding/README.md`, which owns it.
+
+## The unattested labels leave the row
+
+**A label no primary attests leaves the row.** After the merge, an HD —
+display cell or alias — that IV/25, V/50 and I/239's own `HD` column all
+lack, and a Flamsteed number neither IV/27A nor WGSN publishes for the star,
+are emptied into `data/membership/label-drops.tsv`: one row per cell, keyed on
+the manifest row as it stands afterwards, under `hd_unattested` or
+`flamsteed_unattested`. Today that is 1 HD — HD 336196 on HIP 90265, where
+I/239 prints HD 336187 — and 119 Flamsteed numbers. Those 119 are real
+designations with no frozen primary behind them: IV/27A is the whole
+3,690-row table (3,688 after its curated corrections) and publishes 2,755
+Flamsteed numbers, and SIMBAD lists every one of the 119 as `* NN Con`
+(measured 2026-09-06). Attesting them from a frozen SIMBAD identifier pull is
+the open option; until one exists the manifest ships without them and the
+ledger says which.
+
+**No dropped label was keying its record**, which is the same question § 7 asks
+of a dropped binding and the reason neither queue writes a SID event. A
+Flamsteed number is not a designation at all, so the 119 cannot move a key. An
+HD can, so the gate states the rule rather than the coincidence: whatever keys
+the row after the drop must already outrank the cell it lost. Dropping the
+display HD promotes the first surviving alias into it, so the cell a record
+publishes stays the one a primary attests.
 
 ## Correcting a merge decision
 
