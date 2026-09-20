@@ -2,7 +2,7 @@
 // buffer, one drawIndexedIndirect argument slot per list, and the counters
 // and dispatch of the extinction refill worklist it appends.
 
-import { REFILL_SLICES } from '../../extinction/refill/refill-slices-pure';
+import { REFILL_BUCKETS } from '../../extinction/refill/refill-buckets-pure';
 
 /** The two survivor lists, in list order. Mask and disc draw the disc
  *  list; glow draws its own. */
@@ -28,11 +28,11 @@ export function tierArgsInstanceCountElement(tier: StarTier): number {
 
 /** README.md § Reading the counts back. */
 export const PREFILTER_COUNT_ELEMENT = STAR_TIERS.length * INDIRECT_ARGS_STRIDE;
-/** First of one append counter per refill sub-list, past the prefilter count
- *  (README.md § The refill dispatch). The kernels address a class's counter
+/** First of one append counter per refill bucket, past the prefilter count
+ *  (README.md § The refill dispatch). The kernels address a bucket's counter
  *  through `RefillWorklistNodes.counterElement`. */
 export const REFILL_LIST_COUNT_BASE = PREFILTER_COUNT_ELEMENT + 1;
-export const ARGS_ELEMENTS = REFILL_LIST_COUNT_BASE + REFILL_SLICES;
+export const ARGS_ELEMENTS = REFILL_LIST_COUNT_BASE + REFILL_BUCKETS;
 
 /** What the kernel's atomics left in each tier's `instanceCount`, off a
  *  copy of the args buffer — the very numbers the three draws take their
@@ -51,17 +51,24 @@ export function survivorCountsFromArgs(args: Uint32Array): SurvivorCounts {
   };
 }
 
-/** `[workgroups, 1, 1, listed]`: the three u32 `dispatchWorkgroupsIndirect`
- *  reads, then the sub-list length the refill kernel bounds its threads by
- *  (README.md § The refill dispatch). */
-export const REFILL_DISPATCH_ELEMENTS = 4;
+/** `[workgroups, 1, 1, listed, prefix…, counts…]`: the three u32
+ *  `dispatchWorkgroupsIndirect` reads, the listed length the refill kernel
+ *  bounds its threads by, then the two scan tables — the exclusive prefix
+ *  the kernel searches and the plain copy of the atomic counters the scan
+ *  reads (README.md § The refill dispatch). */
 export const REFILL_DISPATCH_LENGTH_ELEMENT = 3;
+export const REFILL_PREFIX_BASE = 4;
+export const REFILL_BUCKET_COUNT_BASE = REFILL_PREFIX_BASE + REFILL_BUCKETS;
+export const REFILL_DISPATCH_ELEMENTS = REFILL_BUCKET_COUNT_BASE + REFILL_BUCKETS;
 /** Threads per workgroup of the kernel dispatched at that count — the
  *  divisor the finish kernel rounds up by, so both read one constant. */
 export const REFILL_WORKGROUP_SIZE = 64;
 
 export function initialRefillDispatch(): Uint32Array {
-  return Uint32Array.from([0, 1, 1, 0]);
+  const dispatch = new Uint32Array(REFILL_DISPATCH_ELEMENTS);
+  dispatch[1] = 1;
+  dispatch[2] = 1;
+  return dispatch;
 }
 
 /** Byte offset of `tier`'s slot — what the geometry's indirectOffset takes. */

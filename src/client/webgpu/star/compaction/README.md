@@ -119,13 +119,14 @@ the layer first forwards this frame's attribute writes onto the tables
 positions — a kernel listing survivors off last frame's positions on a
 recentre frame would flicker the whole field.
 
-The reset kernel (one thread: both `instanceCount`s and the prefilter
-counter to zero, and on an armed frame the counter of the refill class
-being built),
-the compaction kernel and the finish kernel (§ The refill dispatch) are one
-`renderer.compute([...])`: one compute pass, one submit, and WebGPU orders
-dispatches within a pass so the atomics see the reset and the finish sees
-the atomics. Every rendered frame pays that submit; the render gate
+The reset kernel (`REFILL_BUCKETS` threads: thread 0 zeroes both
+`instanceCount`s and the prefilter counter, and on an armed frame every
+thread zeroes its bucket's refill counter),
+the compaction kernel and — on an armed frame — the two scan kernels
+(§ The refill dispatch) are
+one `renderer.compute([...])`: one compute pass, one submit, and WebGPU
+orders dispatches within a pass so the atomics see the reset, the scan sees
+the atomics, and its second half sees the copy its first half made. Every rendered frame pays that submit; the render gate
 already decides whether a frame renders at all. The extinction prepass
 dispatches *before* this pass in the frame and reads the worklist this
 pass wrote the frame before (`../../extinction/refill/README.md` § The
@@ -178,25 +179,33 @@ without moving the other, and the test pins both.
 
 On an armed frame the threads of one residue class — `quarter`, a shared
 uniform — append every star of that class the extinction refill has to
-march to the class's sub-list, counting with an `atomicAdd` on its counter:
-four u32 past the prefilter counter in the args buffer
-(`REFILL_LIST_COUNT_BASE`), so the counters cost no binding. All three
-kernels address that counter through one expression,
-`RefillWorklistNodes.counterElement`. `arm` is a
-uniform the prepass holds up for `REFILL_SLICES` frames from a request, and
-the reset kernel zeroes that one counter under the same arm; the other three
-hold, because the prepass marches the class built the frame before.
+march to the star's **Morton bucket**, counting with an `atomicAdd` on that
+bucket's counter: `REFILL_BUCKETS` u32 past the prefilter counter in the
+args buffer (`REFILL_LIST_COUNT_BASE`), so the counters cost no binding.
+Every kernel addresses one through the same expression,
+`RefillWorklistNodes.counterElement`. `arm` is a uniform the prepass holds
+up for `REFILL_SLICES` frames from a request, and the reset kernel — now
+`REFILL_BUCKETS` threads wide, its thread 0 still doing the tiers and the
+prefilter — zeroes the counters under that same arm. The bucket partition
+and what the list order buys are
+`../../extinction/refill/README.md` § Bucketed by Morton range.
 
-A third kernel closes the pass: one thread reads the counter of the class
-just built (`quarter` again) through the same
-atomic view the kernel added into and writes
-`[⌈n / REFILL_WORKGROUP_SIZE⌉, 1, 1, n]` into `refillDispatch` — the three
-u32 `dispatchWorkgroupsIndirect` reads, then the listed length the refill
-kernel bounds its threads by. The extinction prepass dispatches at that
-count and reads that length through `refillDispatchNode`, a read-only node of
-its own over the same attribute, so no count ever crosses to the CPU. The
-divisor is the workgroup size the refill kernel is built with, one constant
-for both.
+**Two kernels close the pass, because the scan must not read the atomics
+`REFILL_BUCKETS` times each.** The first copies every bucket's counter out
+of the args buffer into `refillDispatch`, one thread per bucket, through
+the same atomic view the kernel added into. The second has thread *b* sum
+the copies before it — plain reads out of a 1 KiB table, so the
+`O(REFILL_BUCKETS²)` of a per-thread scan stays in L1 — and write the
+exclusive prefix the refill kernel searches; its last thread also writes
+`[⌈n / REFILL_WORKGROUP_SIZE⌉, 1, 1, n]`, the three u32
+`dispatchWorkgroupsIndirect` reads and the listed length the refill kernel
+bounds its threads by. The prefix and the copies occupy disjoint ranges of
+`refillDispatch` (`REFILL_PREFIX_BASE`, `REFILL_BUCKET_COUNT_BASE`), so no
+thread reads a word another is writing. The extinction prepass dispatches
+at that count and reads both tables through `refillDispatchNode`, a
+read-only node of its own over the same attribute, so no count ever crosses
+to the CPU. The divisor is the workgroup size the refill kernel is built
+with, one constant for both.
 
 **Two storage nodes over that one attribute, never one narrowed.**
 `toReadOnly()` narrows the node it is called on rather than returning a view,
@@ -206,12 +215,25 @@ which discards the whole submit, and with it every star this pass lists.
 `storageWriteRead` builds the pair (`../../tsl/README.md` § Storage
 attributes).
 
-**The finish kernel is the only reader of an atomic outside the compaction
-kernel.** A refill thread reading a counter directly is the shape § Reading
-the counts back refuses for `PREFILTER_COUNT_ELEMENT`: an atomic
-read-modify-write on one address from every thread of the dispatch. One
-thread already holds the number at the end of the pass, so republishing it
-as a plain `u32` beside the dispatch costs nothing.
+**Both scan kernels are dispatched on armed frames only, and `dispatch()`
+picks the kernel list by `refill.arm` rather than branching inside them.**
+What they write is read only by the refill kernel, which the prepass
+dispatches only on the frame after a class was built — and a class is built
+only under the arm. So a parked camera would otherwise pay
+`O(REFILL_BUCKETS²)` L1 reads every frame to republish a prefix nothing
+reads: measured at 0.028 ms per frame at 1,278,785 records, against a win
+that only lands while the camera moves. The arm is set by the prepass,
+which runs earlier in the frame (§ The frame order), so the CPU knows it
+before this pass is submitted and the two dispatches cost nothing at all on
+a settled frame.
+
+**The scan's copy kernel is the only reader of an atomic outside the
+compaction kernel, and it reads each counter once.** A refill thread
+reading a counter directly is the shape § Reading the counts back refuses
+for `PREFILTER_COUNT_ELEMENT`: an atomic read-modify-write on one address
+from every thread of the dispatch. The counts already exist at the end of
+the pass, so republishing them as plain `u32` beside the dispatch costs one
+read each and buys a scan and a search that touch no atomic at all.
 
 ## The buffer-writer requirements, discharged
 
@@ -251,9 +273,11 @@ kernel binds `STAR_COMPACTION_KERNEL_STORAGE_BUFFERS` (8)** — position,
 statics, suppress-pulsation, A_V, survivors, args, and the refill's stamps
 and worklist — which is the whole core guarantee of 8 per stage
 (`WEBGPU_CORE_STORAGE_BUFFERS_PER_STAGE`); a ninth needs a counter folded
-into the args buffer or a table folded into another, never a new binding
+into the args buffer or a table folded into another, never a new binding —
+both of which this pass has now spent, the refill's bucket counters on the
+first and its `slotOf` read on the second
 (`../../extinction/refill/README.md` § The compaction appends the
-worklist). The finish kernel binds 2, args and the refill dispatch. The
+worklist). Each scan kernel binds 2, args and the refill dispatch. The
 compatibility level reports 0 in the vertex stage and the boot refuses it
 against that constant (`../../tsl/README.md` § Storage attributes). A new
 per-star table costs a binding in every one of those stages.
@@ -266,8 +290,8 @@ Byte counts, derived not measured — `recordCount`
 | Resident | Size |
 | --- | --- |
 | Survivor lists (2 × count × u32) | 388,071 × 8 B ≈ 2.96 MiB |
-| Indirect args (2 slots × 5 × u32 + prefilter counter + 4 refill counters) | 60 B |
-| Refill dispatch (4 × u32) | 16 B |
+| Indirect args (2 slots × 5 × u32 + prefilter counter + `REFILL_BUCKETS` refill counters) | 1,068 B |
+| Refill dispatch (4 × u32 + two `REFILL_BUCKETS` scan tables) | 2,064 B |
 
 The refill's stamps and worklist are the prepass's
 (`../../extinction/README.md` § What it costs, and what it holds).
@@ -277,8 +301,9 @@ solve to the routing point (magnitude, pulsation, prefilter, one A_V read
 or the fallback march, the size solve), one projection, and two atomics
 per survivor; on an armed frame, the refill producer on a quarter of the
 threads as well — the frustum at the refill's slack, the four gate terms,
-a stamp read for the in-frame admitted, and one atomic per stale star of
-the class. What it removes is the vertex-stage floor: each of the
+a stamp read for the in-frame admitted, and a slot read plus one atomic per
+stale star of the class — plus the two `REFILL_BUCKETS`-wide scan
+dispatches, which an unarmed frame does not issue. What it removes is the vertex-stage floor: each of the
 three passes ran its stage over 4 corners × the whole catalogue with the
 invisible members exiting to the clip sentinel; now each runs over
 4 corners × the survivors inside the view. The frame-time delta is the

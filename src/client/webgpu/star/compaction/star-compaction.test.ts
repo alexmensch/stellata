@@ -5,6 +5,7 @@ import { makeHdrEmitterUniforms } from '../../../hdr/hdr-pipeline';
 import { buildSharedUniforms } from '../../../frame/shared-uniforms';
 import { makeColorLutTexture } from '../../../star-pipeline/blackbody-lut';
 import { ExtinctionNodes } from '../../extinction/extinction-nodes';
+import { REFILL_BUCKETS } from '../../extinction/refill/refill-buckets-pure';
 import { buildSharedUniformNodes } from '../../tsl/shared-uniform-nodes';
 import { makeFakeStarRenderer, makeStarLayerSources } from '../star-sources-mock';
 import { StarTables } from '../star-tables';
@@ -58,14 +59,16 @@ describe('StarCompaction buffers', () => {
   it('the args buffer is indirect-capable and starts every slot and counter at zero', () => {
     const { compaction } = make();
     expect(compaction.args.isIndirectStorageBufferAttribute).toBe(true);
-    expect(Array.from(compaction.args.array))
-      .toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(Array.from(compaction.args.array.subarray(0, 11)))
+      .toEqual([6, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0]);
+    expect(compaction.args.array.subarray(11).every((v) => v === 0)).toBe(true);
   });
 
   it('the refill dispatch is indirect-capable and starts at zero workgroups, zero listed', () => {
     const { compaction } = make();
     expect(compaction.refillDispatch.isIndirectStorageBufferAttribute).toBe(true);
-    expect(Array.from(compaction.refillDispatch.array)).toEqual([0, 1, 1, 0]);
+    expect(Array.from(compaction.refillDispatch.array.subarray(0, 4))).toEqual([0, 1, 1, 0]);
+    expect(compaction.refillDispatch.array.subarray(4).every((v) => v === 0)).toBe(true);
   });
 
   // The refill kernel bounds itself by the listed length in that buffer, so
@@ -88,18 +91,44 @@ describe('StarCompaction dispatch', () => {
   // One compute pass, one submit: the reset's stores are visible to the
   // kernel's atomics, the kernel's adds to the finish kernel's loads, and
   // every draw of the render submit reads the result.
-  it('runs the reset, the kernel, then the refill-dispatch finish in a single compute call', () => {
-    const { compaction, dispatches } = make();
+  it('runs the reset, the kernel, then the two scan kernels in a single compute call', () => {
+    const { compaction, dispatches, extinction } = make();
+    extinction.refill.arm.value = 1;
     compaction.dispatch(camera());
     expect(dispatches).toHaveLength(1);
-    const [reset, kernel, finish] = dispatches[0] as ComputeNode[];
-    expect(dispatches[0]).toHaveLength(3);
-    expect(reset.count).toBe(1);
+    const [reset, kernel, copyCounts, finish] = dispatches[0] as ComputeNode[];
+    expect(dispatches[0]).toHaveLength(4);
+    expect(reset.count).toBe(REFILL_BUCKETS);
     expect(kernel.count).toBe(COUNT);
-    expect(finish.count).toBe(1);
+    expect(copyCounts.count).toBe(REFILL_BUCKETS);
+    expect(finish.count).toBe(REFILL_BUCKETS);
     expect(reset.name).toBe('star-compaction-reset');
     expect(kernel.name).toBe('star-compaction');
     expect(finish.name).toBe('star-compaction-refill-dispatch');
+  });
+
+  // The scan's output is read only by the refill kernel, which the prepass
+  // dispatches only on the frame after a class was built — and a class is
+  // built only under the arm. So an unarmed frame would scan counters
+  // nothing appended into and write a dispatch nothing reads.
+  it('leaves both scan kernels out of an unarmed frame', () => {
+    const { compaction, dispatches, extinction } = make();
+    extinction.refill.arm.value = 0;
+    compaction.dispatch(camera());
+    const kernels = dispatches[0] as ComputeNode[];
+    expect(kernels.map((k) => k.name)).toEqual(['star-compaction-reset', 'star-compaction']);
+  });
+
+  it('picks the set by the arm the prepass left up, frame by frame', () => {
+    const { compaction, dispatches, extinction } = make();
+    const c = camera();
+    extinction.refill.arm.value = 1;
+    compaction.dispatch(c);
+    extinction.refill.arm.value = 0;
+    compaction.dispatch(c);
+    extinction.refill.arm.value = 1;
+    compaction.dispatch(c);
+    expect(dispatches.map((d) => (d as ComputeNode[]).length)).toEqual([4, 2, 4]);
   });
 
   // The kernels are built once: a frame re-dispatches the same array rather
@@ -161,8 +190,9 @@ describe('the prefilter counter is armed only across its readback', () => {
 });
 
 describe('StarCompaction dispose', () => {
-  it('releases every buffer through the renderer registry and disposes all three kernels', () => {
-    const { compaction, released, dispatches } = make();
+  it('releases every buffer through the renderer registry and disposes all four kernels', () => {
+    const { compaction, released, dispatches, extinction } = make();
+    extinction.refill.arm.value = 1;
     compaction.dispatch(camera());
     const disposed: string[] = [];
     for (const k of dispatches[0] as ComputeNode[]) {
@@ -170,8 +200,10 @@ describe('StarCompaction dispose', () => {
     }
     compaction.dispose();
     expect(released).toEqual([compaction.survivors, compaction.args, compaction.refillDispatch]);
-    expect(disposed.sort()).toEqual(
-      ['star-compaction', 'star-compaction-refill-dispatch', 'star-compaction-reset']);
+    expect(disposed.sort()).toEqual([
+      'star-compaction', 'star-compaction-refill-counts',
+      'star-compaction-refill-dispatch', 'star-compaction-reset',
+    ]);
     compaction.dispatch(camera());
     expect(dispatches).toHaveLength(1);
   });

@@ -9,19 +9,25 @@ it per frame.
 ```
 src/client/webgpu/extinction/refill/
   refill-slices-pure.ts       REFILL_SLICES, the residue partition
-    (+ test)                  (refillQuarterOf, refillListBase,
-                              refillWorklistLength), and the cursor —
+    (+ test)                  (refillQuarterOf), and the cursor —
                               planRefill over the quarters still owed.
+  refill-buckets-pure.ts      REFILL_BUCKETS, the Morton-range partition a
+    (+ test)                  star is appended under (refillBucketCapacity,
+                              refillBucketOf, refillWorklistLength), and the
+                              scan and search the kernels mirror.
   refill-decision-pure.ts     The per-star verdict as CPU arithmetic
     (+ test)                  (slotRefills), the slack, the view a turn is
                               detected against (composeViewProjectionAbs,
                               sameView), and the CPU count of what that
                               view admits (countInFrameAbs). The rotation
                               case is pinned here.
-  refill-worklist-nodes.ts    The shared slots: stamps and worklist over
-                              placeholders, the arm / generation / quarter
-                              uniforms both kernels read, and counterElement
-                              — the quarter's counter in the args buffer.
+  refill-worklist-nodes.ts    The shared slots: stamps and the fused
+                              slot/worklist table over placeholders, the
+                              arm / generation / quarter uniforms both
+                              kernels read, counterElement — a bucket's
+                              counter in the args buffer — and the three
+                              accessors that address the fused table
+                              (slotOf, bucketOf, worklistElement).
   refill-worklist-tsl.ts      The producer block the compaction kernel
                               runs — frustum, gate, stamp, append.
 ```
@@ -136,7 +142,8 @@ the threads of **one residue class** — `self % REFILL_SLICES` equal to the
 frustum at the refill's slack, then the cache gate (`starCacheVisibleTsl`,
 the four dust-independent terms over the *brightest* magnitude), then
 `stamps[self] != cameraGeneration`, and a star passing all three is
-appended to that class's sub-list with one `atomicAdd`. The arm is a
+appended to its Morton bucket with one `atomicAdd`
+(§ Bucketed by Morton range). The arm is a
 uniform the prepass holds up for `REFILL_SLICES` frames from a request, so
 the four classes are built on four consecutive frames; a settled frame
 pays one uniform compare per thread and reads nothing else.
@@ -173,48 +180,96 @@ re-evaluates the four terms the solve just read from the same record,
 cache-hot, and the block sits after the solve so those reads are the
 solve's to reuse.
 
-**Four sub-lists by residue.** A star lands in sub-list
-`self % REFILL_SLICES`, each of capacity `⌈count / REFILL_SLICES⌉`
-(`refillSliceLength`), so the list can never overflow — a residue class is
-exactly that large — and the whole buffer is `count` rounded up to the
-slice. The four append counters ride in the compaction's args buffer past
-the prefilter counter (`compaction-pure.ts` `REFILL_LIST_COUNT_BASE`; all
-three kernels address one through `counterElement` here),
-which is what keeps the compaction kernel at **8 storage buffers**, the
-core guarantee: position, statics, suppress-pulsation, A_V, survivors,
-args, and now stamps and worklist
-(`../../star/compaction/README.md` § Binding budget). A ninth would need a
-counter folded somewhere else, not a new buffer.
-
-**The finish kernel sizes the class just built.** The compaction's
-one-thread finish kernel reads that class's counter (`quarter`, the same
-shared uniform the producer keyed on) and writes `[⌈n / 64⌉, 1, 1, n]`
-into `refillDispatch`: the three u32 `dispatchWorkgroupsIndirect` reads,
-then the length the refill kernel bounds itself by (§ The kernel bounds
-itself by the listed length). The reset kernel zeroes only that class's
-counter, under the same arm; the other three hold the lists built on the
-frames before, of which the prepass marches exactly one — the one built
-last frame — so nothing is ever overwritten before it is read.
-
 **The refill kernel resolves star → slot.** The list carries catalogue
 indices; the position table is in Morton slot order
-(`../dispatch-order/README.md`), so the kernel reads `slotOf[self]` — the
-order table's inverse, 1.48 MiB at 388,071 — then the position, marches,
-and writes `av[self]` and `stamps[self]`. The A_V buffer stays
-catalogue-star-indexed, as every consumer expects.
+(`../dispatch-order/README.md`), so the march reads `slotOf[self]` — the
+order table's inverse — then the position, marches, and writes `av[self]`
+and `stamps[self]`. The A_V buffer stays catalogue-star-indexed, as every
+consumer expects.
 
-**Coherence is the open cost, and the order is the residue's, not the
-Morton key's.** A sub-list is in append order: catalogue order, brightest
-first and spatially random, scrambled further by the atomics. Per marched
-star that is dearer than the Morton order the fill kernel marches in — the
-probe that preceded this design bracketed it at up to 2–6× on a
-contaminated measurement (`stellata-8cg.58.10` notes; the runs are
-`.perf-runs/2026-09-19/8cg5810-m11-*.json`), and per whole refill the list
-dispatch still won at every vantage because what it removes — a thread per
-catalogue star and four gate reads per in-frame thread — outweighs what the
-order loses. The residue is the seam a coherence lever moves: bucketing by
-`slotOf` range instead is `stellata-8cg.58.11`, measured against this
-tree's forced pair and never before it.
+**`slotOf` and the worklist are one buffer, and that is what pays for the
+bucket key.** The compaction kernel binds **8 storage buffers**, the core
+guarantee — position, statics, suppress-pulsation, A_V, survivors, args,
+stamps and this table (`../../star/compaction/README.md` § Binding
+budget) — so the producer's `slotOf[self]` read cannot have a binding of
+its own. It does not need one: star → slot occupies `[0, count)` of the
+same buffer the producer appends into, and `RefillWorklistNodes.slotOf`
+and `.worklistElement` are the two ways to address it. Nothing else may
+index that node raw.
+
+## Bucketed by Morton range
+
+**A star is appended under its Morton slot, not its append order.** The
+producer reads `slotOf[self]` for a star that has passed all three tests,
+divides by `refillBucketCapacity` and adds into that bucket's counter; the
+slot it gets back is the star's place inside the bucket's static region.
+So the list is sorted to `REFILL_BUCKETS` (256) Morton ranges and
+scrambled only *within* one, and the march reads the dust volume in
+roughly the order the whole fill does — which is worth 5.2× on this pass
+(`../dispatch-order/README.md` § Dispatch order).
+
+**Capacity is a hard bound, and the geometry is why.** Bucket *b* spans
+exactly `⌈count / REFILL_BUCKETS⌉` Morton slots and a star occupies one
+slot, so no gate, no camera and no residue class can put more stars in a
+bucket than it has room for — overflow is not a case that exists, and the
+whole worklist is `count` rounded up to the bucket. The bound holds
+whatever the producer keys the *quarter* on, which is why the quarter
+stays `self % REFILL_SLICES`: free arithmetic, outermost, and it keeps the
+`slotOf` read off three quarters of the threads.
+
+**What `REFILL_BUCKETS` trades.** Raising it narrows each bucket's Morton
+span — the thing the march is paid for — and costs one more step in the
+kernel's search (log₂) and quadratically more in the scan below, which is
+`O(REFILL_BUCKETS²)` L1 reads in one dispatch. The span that matters is a
+warp's: 32 threads of a marched list of *n* stars cover `32 ·
+REFILL_BUCKETS / n` buckets, and a fully sorted list would put them inside
+`32 · count / n` slots — so the bucketing reaches a full sort's coherence
+once a bucket holds about a warp, and buys nothing past it. At `mw120` and
+1,278,785 records the quarter marched is ~16k stars, which puts 256 near
+that point.
+
+**The scan packs the buckets back into one dense dispatch.** The marched
+list has to be contiguous — a dispatch over the static regions would be
+one thread per catalogue star again, which is the whole thing the worklist
+removed — so the compaction closes its pass with two `REFILL_BUCKETS`-wide
+kernels: one copies each bucket's counter out of the atomic args buffer,
+the next has thread *b* sum the copies before it into the exclusive prefix
+and its last thread write `[⌈n / 64⌉, 1, 1, n]`. Both tables ride in
+`refillDispatch`, which the refill kernel already binds, and both kernels
+are dispatched on armed frames alone
+(`../../star/compaction/README.md` § The refill dispatch).
+
+**Producer and refill kernel address one entry through the same two
+accessors** — `bucketOf` for the key, `worklistElement(count, bucket,
+offset)` for the slot — so the `bucket × capacity + offset` the two must
+agree on is written once. A star appended at an address the march does not
+recover is the silent-corruption case § One region describes, and the
+round trip is pinned in `refill-buckets-pure.test.ts`.
+
+**The refill kernel finds its bucket by one bit per step.** Thread *i*
+walks the prefix from `REFILL_BUCKETS / 2` down, taking each step whose
+prefix it has reached, and lands on the largest bucket whose prefix is at
+or below *i* — its own, because an empty bucket carries its successor's
+prefix and so is never the largest. `i` minus that prefix is the star's
+place inside the bucket's region. `refillBucketAt` is the CPU mirror and
+the empty-bucket case is its test.
+
+## One region, and the frame order behind it
+
+**The worklist holds one built class at a time, not four.** The prepass
+runs ahead of the compaction in the frame (§ The cursor), so a frame
+marches the class built last frame in its own submit and only then does
+the compaction reset the counters and build the next one over the same
+region. The list is read before it is overwritten, every frame, by
+submit order.
+
+That is a tighter margin than four regions would leave, and it is the
+invariant to hold: **a change that moves the prepass after the compaction,
+or marches a class more than one frame old, corrupts the march silently**
+— the entries resolve to real stars and write a plausible A_V onto them.
+`planRefill`'s simulation pins it directly (the class marched is always
+the class built on the preceding frame), and `verifyExtinction()` cannot,
+since it refills whole first.
 
 ## The cursor, and why a request never stalls it
 
@@ -304,7 +359,7 @@ star.
 
 An indirect dispatch has no count for three to guard on — `computeIndirect`
 leaves `count` null, so no early return is prepended — and the workgroup
-count the finish kernel wrote is `⌈n / 64⌉`, whose last workgroup runs past
+count the scan wrote is `⌈n / 64⌉`, whose last workgroup runs past
 the `n` listed entries. The kernel tests `instanceIndex < refillDispatch[3]`
 itself, against the length written beside the dispatch.
 

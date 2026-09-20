@@ -5,25 +5,9 @@
  *  this buys. */
 export const REFILL_SLICES = 4;
 
-/** Capacity of one quarter's sub-list — a residue class is at most this
- *  large (README.md § The compaction appends the worklist). */
-export function refillSliceLength(count: number, slices: number = REFILL_SLICES): number {
-  return Math.max(1, Math.ceil(count / Math.max(1, slices)));
-}
-
 /** CPU mirror of the kernel's `self % REFILL_SLICES`. */
 export function refillQuarterOf(star: number, slices: number = REFILL_SLICES): number {
   return star % slices;
-}
-
-export function refillListBase(
-  quarter: number, count: number, slices: number = REFILL_SLICES,
-): number {
-  return quarter * refillSliceLength(count, slices);
-}
-
-export function refillWorklistLength(count: number, slices: number = REFILL_SLICES): number {
-  return slices * refillSliceLength(count, slices);
 }
 
 export interface RefillCursor {

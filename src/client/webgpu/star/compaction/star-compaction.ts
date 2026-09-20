@@ -9,7 +9,7 @@ import {
   type ComputeNode, type Node, type WebGPURenderer,
 } from 'three/webgpu';
 import {
-  Fn, If, atomicAdd, atomicStore, compute, instanceIndex, int, storage, uniform, uint, vec4,
+  Fn, If, Loop, atomicAdd, atomicStore, compute, instanceIndex, int, storage, uniform, uint, vec4,
 } from 'three/tsl';
 import { PHYS_RATIO_THRESHOLD } from '../../../star-pipeline/local-pass/star-local-cluster-pure';
 import { STAR_PASS_GLOW } from '../../../star-pipeline/star-pass';
@@ -17,8 +17,10 @@ import type { RefillWorklistNodes } from '../../extinction/refill/refill-worklis
 import { appendRefillWorklistTsl } from '../../extinction/refill/refill-worklist-tsl';
 import { disposeStorageAttribute, storageWriteRead } from '../../tsl/storage-attribute';
 import { solveStarTsl, type StarTslDeps } from '../star-vertex-tsl';
+import { REFILL_BUCKETS } from '../../extinction/refill/refill-buckets-pure';
 import {
-  PREFILTER_COUNT_ELEMENT, REFILL_DISPATCH_ELEMENTS, REFILL_DISPATCH_LENGTH_ELEMENT,
+  PREFILTER_COUNT_ELEMENT, REFILL_BUCKET_COUNT_BASE, REFILL_DISPATCH_ELEMENTS,
+  REFILL_DISPATCH_LENGTH_ELEMENT, REFILL_PREFIX_BASE,
   REFILL_WORKGROUP_SIZE, STAR_TIERS, STAR_TIER_DISC, STAR_TIER_GLOW,
   initialIndirectArgs, initialRefillDispatch, survivorCountsFromArgs,
   tierArgsInstanceCountElement, tierListBase,
@@ -35,7 +37,7 @@ export type SurvivorsNode = UintStorageNode;
  *  folded into another, never a new binding (README.md § Binding budget). */
 export const STAR_COMPACTION_KERNEL_STORAGE_BUFFERS = [
   'position', 'statics', 'suppressPulsation', 'av', 'survivors', 'args',
-  'refillStamps', 'refillWorklist',
+  'refillStamps', 'refillTable',
 ].length;
 
 export class StarCompaction {
@@ -62,12 +64,17 @@ export class StarCompaction {
    *  gates feeds no draw (README.md § Reading the counts back). */
   private readonly countPrefilter = uniform(0, 'uint');
   private readonly awaitingDispatch: (() => void)[] = [];
+  /** The armed frame's set, and what dispose releases — so every kernel is
+   *  reachable from it (README.md § The refill dispatch). */
   private kernels: ComputeNode[] | null;
+  private plainKernels: ComputeNode[] | null;
+  private readonly refill: RefillWorklistNodes;
 
   constructor(
     renderer: WebGPURenderer, deps: StarTslDeps, indexCount: number, refill: RefillWorklistNodes,
   ) {
     this.renderer = renderer;
+    this.refill = refill;
     this.count = deps.tables.count;
     this.survivors = new StorageBufferAttribute(
       new Uint32Array(STAR_TIERS.length * this.count), 1);
@@ -86,14 +93,17 @@ export class StarCompaction {
     const { u } = deps;
 
     const reset = compute(Fn(() => {
-      for (const tier of STAR_TIERS) {
-        atomicStore(argsNode.element(tierArgsInstanceCountElement(tier)), uint(0));
-      }
-      atomicStore(argsNode.element(PREFILTER_COUNT_ELEMENT), uint(0));
-      If(refill.arm.equal(uint(1)), () => {
-        atomicStore(refill.counterElement(argsNode), uint(0));
+      const bucket = instanceIndex;
+      If(bucket.equal(uint(0)), () => {
+        for (const tier of STAR_TIERS) {
+          atomicStore(argsNode.element(tierArgsInstanceCountElement(tier)), uint(0));
+        }
+        atomicStore(argsNode.element(PREFILTER_COUNT_ELEMENT), uint(0));
       });
-    })(), 1);
+      If(refill.arm.equal(uint(1)), () => {
+        atomicStore(refill.counterElement(argsNode, bucket), uint(0));
+      });
+    })(), REFILL_BUCKETS);
     reset.setName('star-compaction-reset');
 
     const append = (tier: StarTier, self: ReturnType<typeof int>) => {
@@ -135,14 +145,33 @@ export class StarCompaction {
       });
     })(), this.count);
     kernel.setName('star-compaction');
+    // README.md § The refill dispatch.
+    const dispatchBuf = refillDispatchNodes.write;
+    const copyCounts = compute(Fn(() => {
+      const bucket = instanceIndex;
+      dispatchBuf.element(uint(REFILL_BUCKET_COUNT_BASE).add(bucket))
+        .assign(readCounter(refill.counterElement(argsNode, bucket)));
+    })(), REFILL_BUCKETS);
+    copyCounts.setName('star-compaction-refill-counts');
     const finish = compute(Fn(() => {
-      const listed = uint(0).add(readCounter(refill.counterElement(argsNode))).toVar();
-      refillDispatchNodes.write.element(0).assign(
-        listed.add(uint(REFILL_WORKGROUP_SIZE - 1)).div(uint(REFILL_WORKGROUP_SIZE)));
-      refillDispatchNodes.write.element(REFILL_DISPATCH_LENGTH_ELEMENT).assign(listed);
-    })(), 1);
+      const bucket = instanceIndex;
+      const bucketCount = (b: Node<'uint'>) =>
+        dispatchBuf.element(uint(REFILL_BUCKET_COUNT_BASE).add(b));
+      const running = uint(0).toVar();
+      Loop({ start: uint(0), end: bucket, type: 'uint', condition: '<' }, ({ i }) => {
+        running.addAssign(bucketCount(i));
+      });
+      dispatchBuf.element(uint(REFILL_PREFIX_BASE).add(bucket)).assign(running);
+      If(bucket.equal(uint(REFILL_BUCKETS - 1)), () => {
+        const listed = running.add(bucketCount(bucket)).toVar();
+        dispatchBuf.element(0).assign(
+          listed.add(uint(REFILL_WORKGROUP_SIZE - 1)).div(uint(REFILL_WORKGROUP_SIZE)));
+        dispatchBuf.element(REFILL_DISPATCH_LENGTH_ELEMENT).assign(listed);
+      });
+    })(), REFILL_BUCKETS);
     finish.setName('star-compaction-refill-dispatch');
-    this.kernels = [reset, kernel, finish];
+    this.kernels = [reset, kernel, copyCounts, finish];
+    this.plainKernels = [reset, kernel];
   }
 
   /** The view-projection the kernel tested against on the last dispatch, as a
@@ -169,16 +198,16 @@ export class StarCompaction {
     return survivorCountsFromArgs(new Uint32Array(bytes));
   }
 
-  /** One compute pass, one submit: reset, compact, then write the refill
-   *  dispatch. Must follow the frame's uniform sync and precede its render. The camera's matrices are
+  /** One compute pass, one submit: reset, compact, and on an armed frame the
+   *  two scan kernels. Must follow the frame's uniform sync and precede its render. The camera's matrices are
    *  refreshed here because the controls mutate position and quaternion
    *  without propagating them, and the render that would is still ahead. */
   dispatch(camera: Camera): void {
-    if (this.kernels === null) return;
+    if (this.kernels === null || this.plainKernels === null) return;
     camera.updateMatrixWorld();
     this.viewProjection.value.multiplyMatrices(
       camera.projectionMatrix, camera.matrixWorldInverse);
-    this.renderer.compute(this.kernels);
+    this.renderer.compute(this.refill.arm.value === 1 ? this.kernels : this.plainKernels);
     this.releaseWaiters();
   }
 
@@ -190,6 +219,7 @@ export class StarCompaction {
   dispose(): void {
     for (const k of this.kernels ?? []) k.dispose();
     this.kernels = null;
+    this.plainKernels = null;
     // Or an armed readback never settles and its caller hangs for the boot.
     this.releaseWaiters();
     disposeStorageAttribute(this.renderer, this.survivors);

@@ -15,7 +15,8 @@ import { WebGpuExtinctionPrepass } from './extinction-prepass-webgpu';
 import { ExtinctionNodes } from './extinction-nodes';
 import { scrambledLattice } from './dispatch-order/dispatch-order-fixture';
 import { composeViewProjectionAbs, countInFrameAbs } from './refill/refill-decision-pure';
-import { REFILL_SLICES, refillWorklistLength } from './refill/refill-slices-pure';
+import { refillWorklistLength } from './refill/refill-buckets-pure';
+import { REFILL_SLICES } from './refill/refill-slices-pure';
 
 /** A renderer whose readbacks resolve only when the test says so — the
  *  frame-decoupled semantics a cold read has to live with. */
@@ -147,11 +148,11 @@ describe('construction', () => {
   });
 
   // The compaction kernel binds both from its first frame.
-  it('points the refill slots at a stamp per star and a worklist of every sub-list', () => {
+  it('points the refill slots at a stamp per star and one table of slots then worklist', () => {
     const { prepass, refill } = makePrepass();
     expect((refill.stamps.value as StorageBufferAttribute).count).toBe(COUNT);
-    expect((refill.worklist.value as StorageBufferAttribute).count)
-      .toBe(refillWorklistLength(COUNT));
+    expect((refill.table.value as StorageBufferAttribute).count)
+      .toBe(COUNT + refillWorklistLength(COUNT));
     expect(refill.arm.value).toBe(0);
     prepass.dispose();
   });
@@ -337,11 +338,12 @@ describe('the dispatch order', () => {
     attachDust();
     prepass.update(0, 0, 0);
     prepass.dispose();
-    const [starOfSlot, slotOfStar] = permutations(released);
+    const [starOfSlot, refillTable] = permutations(released);
     return {
       slotPositions: released.find((a) => a.itemSize === 4)!.array as Float32Array,
       starOfSlot,
-      slotOfStar,
+      // Star → slot leads the fused table; the worklist follows it.
+      slotOfStar: refillTable.subarray(0, count),
     };
   }
 
@@ -726,29 +728,29 @@ describe('dispose', () => {
     prepass.update(0, 0, 0);
     prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
     const stamps = refill.stamps.value;
-    const worklist = refill.worklist.value;
+    const table = refill.table.value;
     prepass.dispose();
     expect(refill.stamps.value).not.toBe(stamps);
-    expect(refill.worklist.value).not.toBe(worklist);
+    expect(refill.table.value).not.toBe(table);
     expect((refill.stamps.value as StorageBufferAttribute).count).toBe(1);
     expect(refill.arm.value).toBe(0);
   });
 
-  // None of the six sits in a geometry, so nothing but this call frees
+  // None of the five sits in a geometry, so nothing but this call frees
   // them (../tsl/README.md § Storage attributes).
-  it('frees all six storage buffers through the renderer registry', () => {
+  it('frees all five storage buffers through the renderer registry', () => {
     const { prepass, slots, released, attachDust } = makePrepass();
     attachDust();
     prepass.update(0, 0, 0);
     const av = slots.av.value as StorageBufferAttribute;
     prepass.dispose();
     expect(released).toContain(av);
-    expect(released).toHaveLength(6);
+    expect(released).toHaveLength(5);
     const positions = released.find((a) => a.itemSize === 4)!;
     expect(positions.count).toBe(COUNT);
     const uints = released.filter((a) => a.array instanceof Uint32Array);
     expect(uints.map((u) => u.count).sort((a, b) => a - b))
-      .toEqual([COUNT, COUNT, COUNT, refillWorklistLength(COUNT)].sort((a, b) => a - b));
+      .toEqual([COUNT, COUNT, COUNT + refillWorklistLength(COUNT)].sort((a, b) => a - b));
   });
 
   // The buffer and the parity check's CPU copy are one array, so releasing
