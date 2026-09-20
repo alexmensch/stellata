@@ -112,8 +112,13 @@ star — that the primaries-derived manifest re-keys, and reads its
 `gaia_source_id` column only as the diff surface for the binding it derives
 itself (`scripts/catalog/membership/README.md` § The binding is derived).
 The manifest's parity gate reads it as the baseline every manifest row must
-account for; `build:classic-ids` does not read it at all. `scripts/catalog/spine/inherited-spine-guard.test.ts` pins its
-bytes, committed counts and the queue above.
+account for; `scripts/catalog/classic-ids/parity-ledger.test.ts` backs two
+dispositions against its cells; `pnpm run build:astrometry-request` reads its
+TYCs and rows for the cross-walk narrowing and the derivation's candidates;
+the two `audit:spine-*` instruments measure it; `build:classic-ids` does not
+read it at all. `scripts/catalog/spine/inherited-spine-guard.test.ts` pins its
+bytes, committed counts and the queue above. The order those readers leave
+in: `docs/catalog-driver.md` § 3.2.
 
 **`build:catalog` does not read it.** `readStars` walks
 `../membership/membership-manifest.tsv`; membership is that file less the

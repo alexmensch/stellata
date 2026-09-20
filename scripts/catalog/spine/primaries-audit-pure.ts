@@ -71,6 +71,8 @@ export interface PrimaryTables extends BindingTables {
   hipI239: ReadonlySet<number>;
   /** HD numbers I/239's own `HD` column publishes. */
   hdI239: ReadonlySet<number>;
+  /** I/239's HIP → HD pairing, for the rows publishing both. */
+  i239HipHd: ReadonlyMap<number, number>;
   /** HIP numbers carrying a van Leeuwen HIP2 re-reduction solution. */
   hip2: ReadonlySet<number>;
   wgsn: WgsnKeys;
@@ -201,6 +203,17 @@ export function glKeyVariants(
 export function glKeyForms(key: string, aliases: ReadonlyMap<string, readonly string[]>): string[] {
   const { exact } = glKeyVariants(key, aliases);
   return [...new Set(exact.flatMap((k) => [k, bareGjKey(k)]))];
+}
+
+/** The CNS5 row a record's own `gl` cell reaches, first form to answer. */
+export function cns5RowFor(
+  gl: string | null,
+  cns5ByKey: ReadonlyMap<string, Cns5Row>,
+  aliases: ReadonlyMap<string, readonly string[]>,
+): Cns5Row | undefined {
+  const key = normaliseGjKey(gl);
+  if (key === null) return undefined;
+  return glKeyForms(key, aliases).map((k) => cns5ByKey.get(k)).find((r) => r !== undefined);
 }
 export type GlAttestation = 'cns5' | 'v70a' | null;
 
@@ -389,10 +402,7 @@ export function checkIdentity(
   const hip = parseIntOrNull(row.hip);
   const viaTyc = row.tyc === '' ? null : tables.tycToSource.get(row.tyc) ?? null;
   const viaHip = hip === null ? null : tables.hipToSource.get(hip) ?? null;
-  const glKey = normaliseGjKey(row.gl === '' ? null : row.gl);
-  const cns5Row = glKey === null
-    ? undefined
-    : glKeyForms(glKey, tables.glAliases).map((k) => idx.cns5ByKey.get(k)).find((r) => r !== undefined);
+  const cns5Row = cns5RowFor(row.gl === '' ? null : row.gl, idx.cns5ByKey, tables.glAliases);
   const viaCns5 = cns5Row?.gaiaSourceId ?? null;
   const agreeing: IdentityCheck['agreeing'] = [];
   if (spine !== null) {

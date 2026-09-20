@@ -35,21 +35,31 @@ export const LFS_HINT = 'run `git lfs pull`.';
 const HIP_VMAG_HINT = 'run `pnpm run refresh:hip-vmag`.';
 const WGSN_HINT = 'run `pnpm run build:wgsn`.';
 
-/** One pass per file, however many columns the caller wants as key sets:
- *  `hip_main_vmag.tsv` answers for two of them. */
-function readIntColumns<C extends string>(
-  path: string, hint: string, label: string, columns: readonly C[],
-): Record<C, Set<number>> {
-  const into = Object.fromEntries(
-    columns.map((c) => [c, new Set<number>()]),
-  ) as Record<C, Set<number>>;
-  for (const { cells, idx } of dataRows(readRequired(path, hint), columns, label, hint)) {
-    for (const column of columns) {
-      const value = parseIntOrNull(cells[idx[column]]);
-      if (value !== null) into[column].add(value);
-    }
+function readIntColumn(path: string, hint: string, label: string, column: string): Set<number> {
+  const into = new Set<number>();
+  for (const { cells, idx } of dataRows(readRequired(path, hint), [column], label, hint)) {
+    const value = parseIntOrNull(cells[idx[column]]);
+    if (value !== null) into.add(value);
   }
   return into;
+}
+
+/** I/239 in one pass: the two key sets, and the HIP → HD pairing that the
+ *  association audit's HIP↔HD link reads. */
+function readI239(): { hip: Set<number>; hd: Set<number>; hipHd: Map<number, number> } {
+  const hip = new Set<number>();
+  const hd = new Set<number>();
+  const hipHd = new Map<number, number>();
+  for (const { cells, idx } of dataRows(
+    readRequired(SRC_HIP_MAIN, HIP_VMAG_HINT), ['hip', 'hd'], 'hip_main_vmag.tsv', HIP_VMAG_HINT,
+  )) {
+    const h = parseIntOrNull(cells[idx.hip]);
+    const d = parseIntOrNull(cells[idx.hd]);
+    if (h !== null) hip.add(h);
+    if (d !== null) hd.add(d);
+    if (h !== null && d !== null) hipHd.set(h, d);
+  }
+  return { hip, hd, hipHd };
 }
 
 function readWgsn(): WgsnKeys {
@@ -126,7 +136,7 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
   const iv25 = parseTyc2HdTsv(readRequired(SRC_TYC2_HD, LFS_HINT));
   const keep = new Set<string>(iv25.map((r) => r.tyc));
   for (const tyc of keepTycs) keep.add(tyc);
-  const i239 = readIntColumns(SRC_HIP_MAIN, HIP_VMAG_HINT, 'hip_main_vmag.tsv', ['hip', 'hd']);
+  const i239 = readI239();
   return {
     ...await loadBindingTables(keep),
     iv25,
@@ -135,7 +145,8 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
     gliese: parseGlieseTsv(readRequired(SRC_GLIESE, LFS_HINT)),
     hipI239: i239.hip,
     hdI239: i239.hd,
-    hip2: readIntColumns(SRC_HIP2, LFS_HINT, 'hip2_van_leeuwen.tsv', ['hip']).hip,
+    i239HipHd: i239.hipHd,
+    hip2: readIntColumn(SRC_HIP2, LFS_HINT, 'hip2_van_leeuwen.tsv', 'hip'),
     wgsn: readWgsn(),
     tycho2: parseTycho2Tsvs(
       readRequired(SRC_TYCHO2_MAIN, LFS_HINT), readRequired(SRC_TYCHO2_SUPPL1, LFS_HINT),

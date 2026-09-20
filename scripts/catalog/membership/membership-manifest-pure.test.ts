@@ -59,8 +59,8 @@ function entry(e: Partial<OverlayEntry>): OverlayEntry {
 }
 
 const GLIESE_TSV = [
-  'name\tcomp\tvmag\tbv\tsp\tplx_mas\te_plx_mas\tn_plx',
-  'Gl 165\tAB\t9.0\t\t\t\t\t',
+  'name\tcomp\tvmag\tbv\tsp\tplx_mas\te_plx_mas\tn_plx\thd',
+  'Gl 165\tAB\t9.0\t\t\t\t\t\t',
 ].join('\n') + '\n';
 
 /** Spine: Sol; HD 100001 / HIP 10 bound and reproduced by both walks; HD 5
@@ -133,6 +133,7 @@ const tables: PrimaryTables = {
   gliese: parseGlieseTsv(GLIESE_TSV),
   hipI239: new Set([10, 20, 30, 40, 50, 70]),
   hdI239: new Set<number>(),
+  i239HipHd: new Map<number, number>(),
   glAliases: new Map<string, string[]>(),
   hip2: new Set<number>(),
   wgsn: {

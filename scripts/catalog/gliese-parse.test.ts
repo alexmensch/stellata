@@ -6,8 +6,8 @@ const HEADER = ['name', 'comp', 'vmag', 'n_vmag', 'r_vmag', 'bv', 'n_bv',
   'r_bv', 'sp', 'r_sp', 'plx_mas', 'e_plx_mas', 'n_plx', 'trplx_mas',
   'rv', 'n_rv', 'hd'].join('\t');
 
-const row = (name: string, comp: string, vmag: string, bv = '', sp = '') =>
-  [name, comp, vmag, '', '', bv, '', '', sp, '', '', '', '', '', '', '', ''].join('\t');
+const row = (name: string, comp: string, vmag: string, bv = '', sp = '', hd = '') =>
+  [name, comp, vmag, '', '', bv, '', '', sp, '', '', '', '', '', '', '', hd].join('\t');
 
 /** The same row with V/70A's four parallax cells filled: resulting value, its
  *  error, the `n_plx` code stating which kind of parallax that is, and the
@@ -34,6 +34,15 @@ describe('parseGlieseTsv', () => {
     expect(lookupGliese(index, 'GJ 3417')?.vMag).toBe(13.65);
     expect(lookupGliese(index, 'Gl 3417')?.vMag).toBe(13.65);
     expect(lookupGliese(index, 'GJ 1001')?.vMag).toBe(12.84);
+  });
+
+  it('reads the HD column, null where V/70A prints none', () => {
+    const index = parseGlieseTsv(tsv(
+      row('Gl 559', 'A', '0.01', '', '', '128620'),
+      row('NN 3417', '', '13.65'),
+    ));
+    expect(lookupGliese(index, 'Gl 559A')?.hd).toBe(128620);
+    expect(lookupGliese(index, 'GJ 3417')?.hd).toBeNull();
   });
 
   it('resolves a component against the row that covers it', () => {

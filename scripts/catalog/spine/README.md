@@ -6,16 +6,19 @@ plus AT-HYG's printed cells. The contract is `docs/catalog-driver.md` § 3; why
 the spine is load-bearing rather than a rare fallback is
 `data/classic-ids/README.md` § Coverage.
 
-**Two readers, and the record build is not one of them.** `readStars` walks
+**Six readers, and the record build is not one of them.** `readStars` walks
 the membership manifest (`../membership/README.md`), which this file is an
 input to and a baseline for. What the spine still supplies is the one thing no
 primary does: **which designations name one star**. `build:membership` reads
 it for those merge decisions, derives each row's Gaia binding from committed
 evidence and holds the result against the frozen `gaia_source_id` column as a
-diff surface (`../membership/README.md` § The binding is derived), and the
+diff surface (`../membership/README.md` § The binding is derived); the
 manifest's parity gate (i) reads it as the baseline every manifest row must
-account for. After the swap release that baseline becomes the previous
-manifest.
+account for; `../classic-ids/parity-ledger.test.ts` backs two dispositions
+against its cells; `../astrometry-request/` reads its TYCs to narrow the
+cross-walk and its rows for the derivation's candidates; the two audits here
+measure it; the guard below pins it. Which column each reads, what replaces
+it and the order they leave in: `docs/catalog-driver.md` § 3.2.
 
 **The file is frozen, so a merge decision review finds wrong is corrected in
 `data/membership/spine-corrections.tsv`** — a committed, evidenced row the
@@ -62,6 +65,12 @@ scripts/catalog/spine/
                                   one table set for both instruments — plus
                                   the gl: ↔ gl: bridges of
                                   data/sid/sameas-overrides.tsv.
+  association-audit-pure.ts       Per row, whether the primaries' own
+    (+ test)                      cross-references connect every identifier
+                                  it carries (§ The association audit).
+  association-audit.ts            `pnpm run audit:spine-associations` —
+                                  prints the report; --out=<dir> writes the
+                                  rows behind it.
 ```
 
 ## Where each column comes from
@@ -250,6 +259,37 @@ and the swap's own gate (§ 3.1's manifest) is what will hold them. Re-run it
 with `--out=<dir>` to get the rows before trusting a number quoted here —
 every count above has a file, `attestation.tsv` carrying one row per spine
 row with the primary behind each of its cells.
+
+## The association audit
+
+`pnpm run audit:spine-associations` asks the question the primaries audit
+does not: the values are attested, but does anything other than AT-HYG say
+they name **one** star? Per row, over the cells `tyc` `hip` `hd` `hr` `gl`, it
+joins the pairs a primary's own columns link — IV/25 TYC↔HD, Tycho-2's
+`hip` TYC↔HIP, I/239's `HD` and IV/27A HIP↔HD, V/50 HR↔HD, CNS5's `hip`
+GJ↔HIP, V/70A's `HD` GJ↔HD — and reports the rows whose cells do not all
+connect. Two link classes: `published` is those columns alone; `witnessed`
+adds the two witnesses the binding derivation already trusts, the Gaia
+best-neighbour walks naming one source for two cells and SIMBAD's frozen
+cross-IDs under a cell's source carrying another cell's value.
+
+**Both witnesses reach `tyc`, `hip` and `gl` only**, so an `hd` or `hr` cell
+the primaries do not link stays disconnected whatever they say: the walks key
+on TYC and HIP, CNS5 supplies the GJ, and `simbad_sptype.tsv`'s cross-ID
+columns are `hip` / `tyc` / `gj` with no HD among them. The two `hd` rows and
+the one `hr` row below are therefore the `published` residual unchanged, not a
+verdict that the witnesses examined them. An HD cross-ID column on the frozen
+SIMBAD identifier pull `docs/catalog-driver.md` § 3.2 proposes would bring
+them into reach.
+
+Measured 2026-09-20: 312,280 rows carry two or more of the five cells;
+**316** do not connect under `published`, **136** under `witnessed` — 131 a
+GJ number on a TYC+HIP row with no HD, plus HD 96600 / HIP 54335,
+HD 336196 / HIP 90265, HR 4401 / HD 99103, HIP 55203 on ξ UMa, and
+Gl 863.1A / HIP 111293 with no TYC. `docs/catalog-driver.md` § 3.2 carries
+the table and what each pattern needs. `--out=<dir>` writes
+`disconnected.tsv`, one row per `witnessed` miss with both partitions, so
+the merge-decision retirement has its diff surface before it starts.
 
 ## The swap parity ledger
 
