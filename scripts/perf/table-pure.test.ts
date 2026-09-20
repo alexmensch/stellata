@@ -161,9 +161,9 @@ describe('formatDiffTable', () => {
       refusedWholeRun: null,
       refusals: [],
       rows: [
-        { key: 'sol|webgl2|a', metric: 'savedMs', baselineMs: 10, currentMs: 10, deltaMs: 0, floorDeltaMs: null, bandMs: 2, verdict: 'same' },
-        { key: 'sol|webgl2|b', metric: 'savedMs', baselineMs: 10, currentMs: 4, deltaMs: -6, floorDeltaMs: null, bandMs: 2, verdict: 'cheaper' },
-        { key: 'sol|webgl2|dwell', metric: 'wall-p50', baselineMs: 30, currentMs: 38, deltaMs: 8, floorDeltaMs: null, bandMs: 2, verdict: 'dearer' },
+        { key: 'sol|webgl2|a', metric: 'savedMs', baselineMs: 10, currentMs: 10, deltaMs: 0, floorDeltaMs: null, spreadDeltaMs: null, bandMs: 2, verdict: 'same' },
+        { key: 'sol|webgl2|b', metric: 'savedMs', baselineMs: 10, currentMs: 4, deltaMs: -6, floorDeltaMs: null, spreadDeltaMs: null, bandMs: 2, verdict: 'cheaper' },
+        { key: 'sol|webgl2|dwell', metric: 'wall-p50', baselineMs: 30, currentMs: 38, deltaMs: 8, floorDeltaMs: null, spreadDeltaMs: null, bandMs: 2, verdict: 'dearer' },
       ],
     };
     const lines = formatDiffTable(diff).split('\n');
@@ -177,11 +177,11 @@ describe('formatDiffTable', () => {
       refusedWholeRun: null,
       refusals: [],
       rows: [
-        { key: 'mw120|webgpu|dwell', metric: 'gpu-p50', baselineMs: 18.99, currentMs: 19.42, deltaMs: 0.43, floorDeltaMs: 0, bandMs: 0.25, verdict: 'dearer' },
-        { key: 'sol|webgl2|dwell', metric: 'wall-p50', baselineMs: 16.7, currentMs: 16.7, deltaMs: 0, floorDeltaMs: null, bandMs: 0.25, verdict: 'same' },
+        { key: 'mw120|webgpu|dwell', metric: 'gpu-p50', baselineMs: 18.99, currentMs: 19.42, deltaMs: 0.43, floorDeltaMs: 0, spreadDeltaMs: null, bandMs: 0.25, verdict: 'dearer' },
+        { key: 'sol|webgl2|dwell', metric: 'wall-p50', baselineMs: 16.7, currentMs: 16.7, deltaMs: 0, floorDeltaMs: null, spreadDeltaMs: null, bandMs: 0.25, verdict: 'same' },
       ],
     }).split('\n');
-    expect(lines[0]).toMatch(/delta\s+floor\s+band/);
+    expect(lines[0]).toMatch(/delta\s+floor\s+spread\s+band/);
     expect(lines[1]).toMatch(/^\s*✗\s+mw120\|webgpu\|dwell\s+gpu-p50\s+18\.99\s+19\.42\s+0\.43\s+0\s+0\.25$/);
     expect(lines[2]).toMatch(/^\s*~\s+sol\|webgl2\|dwell\s+wall-p50\s+16\.7\s+16\.7\s+0\s+0\.25$/);
   });
@@ -212,10 +212,10 @@ describe('formatPinTable', () => {
       refusedWholeRun: null,
       rows: [{
         key: 'sol|webgpu', metric: 'gpu-p50', pinnedMs: 21.8, currentMs: 22.6, deltaMs: 0.8,
-        floorDeltaMs: 0.75, bandMs: 0.25, verdict: 'dearer', note: '',
+        floorDeltaMs: 0.75, spreadDeltaMs: null, bandMs: 0.25, verdict: 'dearer', note: '',
       }, {
         key: 'mw120|webgl2', metric: 'wall-p50', pinnedMs: 16.7, currentMs: 16.7, deltaMs: 0,
-        floorDeltaMs: null, bandMs: 0, verdict: 'ungated', note: 'no GPU stream — WebGL2 supplies none',
+        floorDeltaMs: null, spreadDeltaMs: null, bandMs: 0, verdict: 'ungated', note: 'no GPU stream — WebGL2 supplies none',
       }],
       refusals: [{ key: 'lg|webgpu', reason: 'run position 10 vs 1' }],
       unmeasured: ['earth|webgpu', 'mw50|webgpu'],
@@ -224,7 +224,7 @@ describe('formatPinTable', () => {
     expect(lines[0]).toContain('pinned');
     expect(text).toContain('not compared: lg|webgpu — run position 10 vs 1');
     expect(text).toContain('not measured in this run: earth|webgpu, mw50|webgpu');
-    expect(lines[0]).toMatch(/delta\s+floor\s+band/);
+    expect(lines[0]).toMatch(/delta\s+floor\s+spread\s+band/);
     expect(lines[1]).toMatch(/^\s*✗\s+sol\|webgpu\s+gpu-p50\s+21\.8\s+22\.6\s+0\.8\s+0\.75\s+0\.25/);
     expect(lines[2]).toMatch(/^\s*·\s+mw120\|webgl2\s+wall-p50\s+16\.7\s+16\.7\s+0\s+0\s+no GPU/);
     expect(lines[2]).toContain('no GPU stream — WebGL2 supplies none');

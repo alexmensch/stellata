@@ -107,10 +107,11 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
 - `pnpm run perf -- --mode dwell --scenario all --backend both --cooldown-ms 120000 --json <run> --pin scripts/perf/pins/<slug>.json`
   — take the perf pin, cold: one launch, idle between contexts, every
   context state-guarded. `--against-pin <path>` prints the verdicts a
-  render-path PR pastes into its `## Perf` section. Only the GPU-stream p50
-  is marked on the frame row, and the compute-stream p50 on the
+  render-path PR pastes into its `## Perf` section. The `metric` column names
+  the statistic each row was marked on — `gpu-p50`, or `gpu-plain-p50` where
+  the vantage draws two pass classes, and `compute-p10` on the
   `<scenario>|webgpu|compute` row beside it; every WebGL2 row reads `·`
-  ungated. A `✗` exits 1, and so does a refused row — a run whose rows were
+  ungated, and the `spread` column never marks at all. A `✗` exits 1, and so does a refused row — a run whose rows were
   all refused shows a table with no `✗` in it. Taking the pin in the same
   run as `--against-pin` needs `--accept <row>:<bead>` for each `✗` — the
   compute row under its own key — or nothing is written.

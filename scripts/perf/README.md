@@ -53,9 +53,6 @@ scripts/perf/
                             tables and the diff share, and the run
                             provenance both instruments write.
   settle-pure.ts (+ test)   settleVerdict over one render-gate snapshot.
-  pin-pure.ts (+ test)      The perf pin: adapter slug, pinFromRuns,
-                            compareToPin and its floor, cadence and ceiling
-                            rules. pins/<slug>.json is the committed pin.
   table-pure.ts (+ test)    Every text table. formatTable is the shared
                             width/alignment pass.
   perf-section-check.sh     perf-section-guard's check: a render-path diff,
@@ -71,7 +68,9 @@ scripts/perf/
                             both tables print. Own README.
   sweep/                    Sweep mode: measurement order, the log-log fit,
                             the bracket. Own README.
-  pins/                     The committed per-GPU pin. Own README.
+  pins/                     The committed per-GPU pin: adapterSlug,
+                            pinFromRuns, compareToPin, the gated statistic
+                            per stream, the ceiling. Own README.
 ```
 
 ## Survivor counts — the one entry point here that is not a cost instrument

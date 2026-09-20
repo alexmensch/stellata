@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, computeFloorMs, dwellFloorMs } from './diff/diff-pure';
-import { frameFloor, type DwellSummary } from './dwell/dwell-pure';
+import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
+import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, computeFloorMs, dwellFloorMs } from '../diff/diff-pure';
+import { frameFloor, type DwellSummary } from '../dwell/dwell-pure';
 import {
+  BAND_OVER_FLOOR_FACTOR,
   CANON_POSITIONS,
   FLOOR_FOLLOWS_FRACTION,
   PIN_CEILING_MS,
@@ -10,21 +12,17 @@ import {
   PinError,
   adapterSlug,
   assertPinFile,
-  citeRunPath,
-  commitStateFromExitStatus,
   compareToPin,
   missingCanonRows,
   pinDiffFails,
   pinFromRuns,
   pinPathFor,
   pinWriteRefusal,
-  parseRenderPathDrift,
-  pinProvenanceLines,
   unacceptedMarks,
   type PinFile,
 } from './pin-pure';
-import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type PerfFile, type ScenarioRecord } from './schema';
-import { BACKENDS, SCENARIO_NAMES, TIER1_SCENARIOS, type Backend, type ScenarioName } from './scenarios';
+import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type PerfFile, type ScenarioRecord } from '../schema';
+import { BACKENDS, SCENARIO_NAMES, TIER1_SCENARIOS, type Backend, type ScenarioName } from '../scenarios';
 
 const M4: AdapterProbe = {
   webgl: {
@@ -75,7 +73,7 @@ function dwell(wall: DwellSummary, gpu: DwellSummary | null): DwellRecord {
 }
 
 /** A WebGPU dwell carrying the compute stream beside the frame's. */
-function withCompute(record: DwellRecord, compute: DwellSummary, computeMs: readonly number[] = []): DwellRecord {
+function withCompute(record: DwellRecord, compute: DwellSummary, computeMs: readonly number[] = [compute.p50]): DwellRecord {
   return { ...record, computeMs, computeStats: compute };
 }
 
@@ -531,7 +529,7 @@ describe('compareToPin', () => {
     // in the cheaper-per-frame wave is a compute dispatch, so a 40 ms compute
     // pass that read as no change was the instrument blind where the
     // programme aims. Its own key, so it is accepted on its own.
-    const solCompute = (frame: number, compute: number, computeMs: readonly number[] = []) =>
+    const solCompute = (frame: number, compute: number, computeMs: readonly number[] = [compute]) =>
       scenario('sol', 'webgpu', withCompute(dwell(stats(25.2), stats(frame)), stats(compute), computeMs));
     const SOL_COMPUTE = solCompute(21.8, 1.4);
 
@@ -547,7 +545,7 @@ describe('compareToPin', () => {
       const diff = compareToPin(pinOf([SOL_COMPUTE]), file([solCompute(21.8, 1.7)]));
       expect(diff.rows.map((r) => [r.key, r.metric, r.verdict])).toEqual([
         ['sol|webgpu', 'gpu-p50', 'same'],
-        ['sol|webgpu|compute', 'compute-p50', 'dearer'],
+        ['sol|webgpu|compute', 'compute-p10', 'dearer'],
       ]);
       expect(diff.rows[1].bandMs).toBe(computeFloorMs('sol', 1.4));
       expect(pinDiffFails(diff)).toBe(true);
@@ -610,7 +608,28 @@ describe('compareToPin', () => {
       expect([wander.key, wander.verdict]).toEqual(['lg|webgpu|compute', 'ungated']);
       expect(wander.note).toContain(PIN_UNGATED_SCENARIOS.lg);
       const hot = compareToPin(pinOf([lgCompute(1.4)]), file([lgCompute(33.5)])).rows[1];
-      expect([hot.verdict, hot.note]).toEqual(['dearer', 'compute-p50 over the 33.4 ms ceiling']);
+      expect([hot.verdict, hot.note]).toEqual(['dearer', 'compute-p10 over the 33.4 ms ceiling']);
+    });
+
+    it('reads the p10 through a duty-cycle crossing the median marks on', () => {
+      const oneMode = Array.from({ length: 100 }, () => 0.39);
+      const crossed = [...Array.from({ length: 42 }, () => 0.39), ...Array.from({ length: 58 }, () => 0.61)];
+      const earth = (samples: readonly number[], p50: number, p90: number) =>
+        scenario('earth', 'webgpu', withCompute(
+          dwell(stats(16.7), stats(13.3)), stats(p50, { p90 }), samples,
+        ));
+      const diff = compareToPin(
+        pinOf([earth(oneMode, 0.39, 0.40)]), file([earth(crossed, 0.61, 0.62)]),
+      );
+      const compute = diff.rows[1]!;
+      expect([compute.key, compute.metric, compute.verdict]).toEqual([
+        'earth|webgpu|compute', 'compute-p10', 'same',
+      ]);
+      expect(compute.deltaMs).toBeCloseTo(0, 9);
+      expect(compute.bandMs).toBe(computeFloorMs('earth', 0.39));
+      expect(0.61 - 0.39).toBeGreaterThan(compute.bandMs);
+      // The dear mode is not lost with it: the spread is exactly that gap.
+      expect(compute.spreadDeltaMs).toBeCloseTo(0.22, 9);
     });
 
     it("rides the context's refusals: a refused frame carries no compute row", () => {
@@ -738,94 +757,6 @@ describe('compareToPin', () => {
   });
 });
 
-describe('parseRenderPathDrift', () => {
-  it('reads a full shortstat line', () => {
-    expect(parseRenderPathDrift(' 42 files changed, 1600 insertions(+), 30 deletions(-)'))
-      .toEqual({ files: 42, insertions: 1600, deletions: 30 });
-  });
-
-  it('reads a clause git omits when its count is zero', () => {
-    expect(parseRenderPathDrift(' 3 files changed, 12 insertions(+)'))
-      .toEqual({ files: 3, insertions: 12, deletions: 0 });
-    expect(parseRenderPathDrift(' 2 files changed, 7 deletions(-)'))
-      .toEqual({ files: 2, insertions: 0, deletions: 7 });
-    expect(parseRenderPathDrift(' 1 file changed, 1 insertion(+), 1 deletion(-)'))
-      .toEqual({ files: 1, insertions: 1, deletions: 1 });
-  });
-
-  it('reads an empty line as a measured zero, not as a failure to measure', () => {
-    expect(parseRenderPathDrift('')).toEqual({ files: 0, insertions: 0, deletions: 0 });
-    expect(parseRenderPathDrift('\n')).toEqual({ files: 0, insertions: 0, deletions: 0 });
-  });
-
-  it('returns null on anything it cannot read', () => {
-    expect(parseRenderPathDrift('fatal: bad revision')).toBeNull();
-  });
-});
-
-describe('commitStateFromExitStatus — only exit 1 is an answer', () => {
-  it('reads a clean exit as landed and exit 1 as unlanded', () => {
-    expect(commitStateFromExitStatus(0)).toBe('landed');
-    expect(commitStateFromExitStatus(1)).toBe('unlanded');
-  });
-
-  it('reads every other status as unknown, never as unlanded', () => {
-    // 128 is git's "bad object / no such ref" — the question failed rather
-    // than being answered no, and a confident "pre-squash tip" line about a
-    // commit git never resolved is the thing this separation prevents.
-    for (const status of [128, 129, 2, -1, undefined]) {
-      expect(commitStateFromExitStatus(status), `status ${status}`).toBe('unknown');
-    }
-  });
-});
-
-describe('pinProvenanceLines — what the pin measured, before any row is read', () => {
-  const pin = pinOf([SOL_GPU]);
-  const onMain = { ...pin, git: { ...pin.git, commit: 'landed7', mainCommit: 'base1234' } };
-  const RUN_BASE = 'runbase9';
-  const NO_DRIFT = { files: 0, insertions: 0, deletions: 0 };
-
-  it('says nothing when the commit landed and main has not moved under src/client', () => {
-    expect(pinProvenanceLines(onMain, 'landed', NO_DRIFT, RUN_BASE)).toEqual([]);
-  });
-
-  it('names a pre-squash tip that no hash on main carries', () => {
-    const lines = pinProvenanceLines(onMain, 'unlanded', NO_DRIFT, RUN_BASE);
-    expect(lines[0]).toContain('not an ancestor of origin/main');
-    expect(lines[0]).toContain('pre-squash branch tip');
-  });
-
-  it('quotes the render-path difference a mark might really be', () => {
-    const lines = pinProvenanceLines(onMain, 'unlanded', { files: 42, insertions: 1600, deletions: 30 }, RUN_BASE);
-    expect(lines[1]).toContain('42 files, +1600/-30');
-    expect(lines[1]).toContain('may be that difference rather than this diff');
-  });
-
-  // The counts are `git diff <pin base> <run base>`, so they read in that
-  // direction whichever tree is older. Naming both ends is what keeps the
-  // line true for a branch cut BEFORE the pin was taken, where "main moved
-  // since the pin" would have the insertions and deletions the wrong way up.
-  it('names both bases and the direction, rather than claiming main moved forward', () => {
-    const lines = pinProvenanceLines(onMain, 'landed', { files: 3, insertions: 9, deletions: 1 }, RUN_BASE);
-    expect(lines[0]).toContain("from the pin's base base1234 to this run's runbase9");
-    expect(lines[0]).not.toContain('moved');
-  });
-
-  it('still reads without a run base to name', () => {
-    const lines = pinProvenanceLines(onMain, 'landed', { files: 3, insertions: 9, deletions: 1 }, null);
-    expect(lines[0]).toContain("to this run's unrecorded base");
-  });
-
-  it('says so when the pin records no main base at all', () => {
-    const based = { ...pin, git: { ...pin.git, mainCommit: null } };
-    expect(pinProvenanceLines(based, 'unlanded', null, RUN_BASE).at(-1)).toContain('cannot be measured at all');
-  });
-
-  it('separates an unreadable ancestry from a known-unlanded one', () => {
-    expect(pinProvenanceLines(onMain, 'unknown', null, RUN_BASE)[0]).toContain('drift is unbounded');
-  });
-});
-
 describe('pinDiffFails — a refused comparison is not a pass', () => {
   it('fails on a ✗ row, on a whole-run refusal, and on a per-row refusal', () => {
     const dearer = scenario('sol', 'webgpu', dwell(stats(25.2), stats(22.6)));
@@ -858,29 +789,6 @@ describe('unacceptedMarks — writing a pin must not ratchet the frame upward', 
     const cheaper = scenario('sol', 'webgpu', dwell(stats(25.2), stats(20.9)));
     expect(unacceptedMarks(compareToPin(pinOf([SOL_GPU]), file([cheaper])), {})).toEqual([]);
     expect(unacceptedMarks(compareToPin(pinOf([SOL_GL]), file([SOL_GL])), {})).toEqual([]);
-  });
-});
-
-describe('citeRunPath — the pin ships in a public repo', () => {
-  it('cites a run under the checkout by its repo-relative path', () => {
-    expect(citeRunPath('/Users/alexm/github/stellata/.perf-runs/2026-09-05/pin.json', '/Users/alexm/github/stellata'))
-      .toBe('.perf-runs/2026-09-05/pin.json');
-  });
-
-  it('keeps the name and drops the location of a run stored elsewhere', () => {
-    expect(citeRunPath('/tmp/scratch/pin.json', '/Users/alexm/github/stellata')).toBe('pin.json');
-  });
-
-  // A pin is normally taken on a branch, and a branch normally lives in a
-  // worktree. Resolving against the MAIN checkout prefixes the path with
-  // .claude/worktrees/<name>/, which stops resolving the moment the worktree
-  // is removed — so the root passed is the checkout the run was written in.
-  it('cites a worktree run relative to that worktree, not to the main checkout', () => {
-    const worktree = '/Users/alexm/github/stellata/.claude/worktrees/topic';
-    const run = `${worktree}/.perf-runs/2026-09-19/pin.json`;
-    expect(citeRunPath(run, worktree)).toBe('.perf-runs/2026-09-19/pin.json');
-    expect(citeRunPath(run, '/Users/alexm/github/stellata'))
-      .toBe('.claude/worktrees/topic/.perf-runs/2026-09-19/pin.json');
   });
 });
 
@@ -1007,5 +915,95 @@ describe('the exposure readback duty cycle', () => {
     const diff = compareToPin(older, file([at('earth', 52.854, 0.5792, SPLIT)]));
     expect(diff.refusals).toEqual([]);
     expect(diff.rows[0].verdict).toBe('dearer');
+  });
+});
+
+describe('a split-frame frame row bands on its plain class', () => {
+  function earthSamples(plainMs: number, plainN: number, dearN: number): number[] {
+    return [
+      ...Array.from({ length: plainN }, (_, i) => plainMs + (i % 5) * 0.1),
+      ...Array.from({ length: dearN }, (_, i) => 74 + (i % 7) * 0.4),
+    ];
+  }
+
+  const TWO_CLASSES: DwellRecord['passCounts'] = {
+    perFrame: { submits: [], commandBuffers: [], renderPasses: [], computePasses: [] },
+    summary: {
+      submits: { min: 5, p50: 5, max: 14 },
+      commandBuffers: { min: 5, p50: 5, max: 14 },
+      renderPasses: { min: 4, p50: 4, max: 10 },
+      computePasses: { min: 1, p50: 1, max: 1 },
+    },
+    note: 'counted',
+  };
+
+  const earthAt = (samples: readonly number[], passCounts = TWO_CLASSES) => scenario('earth', 'webgpu', {
+    ...dwell(stats(16.7), stats(percentileAt(samples, 0.5), {
+      samples: samples.length, iqrMs: iqrOf(samples), p90: percentileAt(samples, 0.9),
+    })),
+    gpuMs: samples,
+    passCounts,
+  });
+
+  const percentileAt = (xs: readonly number[], p: number): number =>
+    [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.ceil(p * xs.length) - 1)]!;
+  const iqrOf = (xs: readonly number[]): number => percentileAt(xs, 0.75) - percentileAt(xs, 0.25);
+
+  const RESOLVED_HIGH = earthSamples(12.0, 640, 210);
+  const RESOLVED_LOW = earthSamples(12.0, 320, 195);
+
+  it('gates the plain class and leaves the mixture unread', () => {
+    const diff = compareToPin(pinOf([earthAt(RESOLVED_HIGH)]), file([earthAt(RESOLVED_LOW)]));
+    expect(diff.refusals).toEqual([]);
+    const frame = diff.rows[0]!;
+    expect([frame.key, frame.metric, frame.verdict]).toEqual(['earth|webgpu', 'gpu-plain-p50', 'same']);
+    expect(frame.pinnedMs).toBeLessThan(14);
+    expect(frame.currentMs).toBeLessThan(14);
+  });
+
+  it('bands at the floor where the mixture would have banded far past it', () => {
+    const diff = compareToPin(pinOf([earthAt(RESOLVED_HIGH)]), file([earthAt(RESOLVED_LOW)]));
+    expect(diff.rows[0]!.bandMs).toBe(dwellFloorMs(diff.rows[0]!.pinnedMs!));
+    const mixtureBand = 2 * Math.hypot(
+      medianStandardErrorMs({ samples: RESOLVED_HIGH.length, iqrMs: iqrOf(RESOLVED_HIGH) }),
+      medianStandardErrorMs({ samples: RESOLVED_LOW.length, iqrMs: iqrOf(RESOLVED_LOW) }),
+    );
+    expect(mixtureBand).toBeGreaterThan(10 * diff.rows[0]!.bandMs);
+  });
+
+  it('records both classes, so the dear one keeps a reading of its own', () => {
+    const classes = pinOf([earthAt(RESOLVED_HIGH)]).rows[0]!.gpuClasses!;
+    expect(classes.plain.samples).toBe(640);
+    expect(classes.dear.samples).toBe(210);
+    expect(classes.dear.p50).toBeGreaterThan(74);
+    expect(classes.cutMs).toBeGreaterThan(13);
+    expect(classes.cutMs).toBeLessThan(74);
+    expect(pinOf([SOL_GPU]).rows[0]!.gpuClasses).toBeNull();
+  });
+
+  it('takes no cut where the counters read one class, however wide the gap', () => {
+    const wandering = [...Array.from({ length: 40 }, () => 10.2), ...Array.from({ length: 10 }, () => 31.0)];
+    const flat: DwellRecord['passCounts'] = {
+      ...TWO_CLASSES,
+      summary: { ...TWO_CLASSES!.summary, renderPasses: { min: 4, p50: 4, max: 4 } },
+    };
+    expect(pinOf([earthAt(wandering, flat)]).rows[0]!.gpuClasses).toBeNull();
+    expect(compareToPin(pinOf([earthAt(wandering, flat)]), file([earthAt(wandering, flat)])).rows[0]!.metric)
+      .toBe('gpu-p50');
+  });
+
+  it('falls back to the mixture where the pin holds no classes', () => {
+    const pin = pinOf([earthAt(RESOLVED_HIGH)]);
+    const older: PinFile = { ...pin, rows: pin.rows.map(({ gpuClasses, ...rest }) => rest) };
+    const frame = compareToPin(older, file([earthAt(RESOLVED_LOW)])).rows[0]!;
+    expect(frame.metric).toBe('gpu-p50');
+  });
+
+  it('names a band its own spread set rather than its floor', () => {
+    const pin = pinOf([earthAt(RESOLVED_HIGH)]);
+    const older: PinFile = { ...pin, rows: pin.rows.map(({ gpuClasses, ...rest }) => rest) };
+    const frame = compareToPin(older, file([earthAt(RESOLVED_LOW)])).rows[0]!;
+    expect(frame.bandMs).toBeGreaterThan(BAND_OVER_FLOOR_FACTOR * dwellFloorMs(frame.pinnedMs!));
+    expect(frame.note).toContain("the row's own spread sets it, not the floor");
   });
 });

@@ -173,15 +173,27 @@ nobody is shipping, so it is worth it only when the drift is already large;
 the normal case stays the branch take the paragraph on Tier 1 describes.
 
 **"The instrument" in Tier 2 means what it records or how it samples**, not
-every file under `scripts/perf/`. A change to `pinFromRuns`, `compareToPin`,
-the recorded schema, the sampling knobs or the clock a row is taken on
-re-takes the pin, because the committed rows stop describing the same
-measurement. A change to how a comparison is *judged or presented* —
-a band floor, a refusal, a metric column, a table's layout — leaves every
-recorded number where it was, so the pin stays comparable and no run is
-owed. Say which of the two a diff is when it touches the runner, and the
-tier follows. First applied by stellata-8cg.49.21 itself, which rewrote
-`--baseline`'s verdict and claimed Tier 0 on exactly this ground.
+every file under `scripts/perf/`.
+
+**The test is whether the committed rows stop describing the same
+measurement — not which function the diff lands in.** A change to the
+sampling knobs, the clock a row is taken on, or the meaning of a recorded
+field re-takes the pin, because every pinned number now answers a different
+question. A change to how a comparison is *judged or presented* — a band
+floor, a refusal, which recorded statistic a row is gated on, a metric
+column, a table's layout — leaves every recorded number where it was, so the
+pin stays comparable and no run is owed. Function names are illustration of
+the first kind, never triggers in their own right: a refusal edited inside
+`pinFromRuns` or `compareToPin` is Tier 0, because a refusal moves no number.
+
+**A schema bump is the case that divides on this and not on the suffix.**
+Purely **additive** — a field derived from samples the run file already
+holds, every existing field byte-identical — is Tier 0, and the offline
+re-derivation is what proves it: `pnpm run perf:pin` rewrites the pin from
+the saved run and the two files are compared field by field. A bump that
+changes what an **existing** field means is Tier 2, and no offline rewrite
+can stand in for the arm. Say which, and show the comparison, in the
+`## Perf` section.
 
 **"Buffers" in Tier 2 means GPU-resident state a frame reads or writes** — a
 new or resized resident allocation, a new binding on a per-frame stage, a
@@ -205,7 +217,7 @@ so its tree is not main's by construction: `--against-pin` re-asks the
 ancestry at comparison time, and where the tip never landed it prints
 main's own `git diff --shortstat` between the two bases, because a mark is
 only the PR's if nothing else moved the frame in between
-(`scripts/perf/pins/README.md` § What the commit fields hold). A run that
+(`scripts/perf/pins/provenance/README.md` § What the commit fields hold). A run that
 cannot be compared is refused rather than trusted: a differing adapter,
 buffer, method, mode or record count, and a row taken at another position
 in its run (below). A committed index was declined for being a
@@ -240,34 +252,46 @@ vantage. The floor covers sampling; the position refusal above covers
 the run-condition difference that exceeds it.
 
 A frame row is floored at `max(0.25 ms, 1 % of the baseline)`. A compute row
-takes **its vantage's own** floor — 0.05 ms at mw120 and mw50, 0.15 at
-earth, the 0.25 constant at sol and lg — because repeat scatter there runs
-0.017 to 0.303 ms across the five, a factor of 18 one constant cannot fit,
-and the constant reads as 15× the noise at mw50
+takes **its vantage's own** floor as its whole band — 0.05 ms at mw120 and
+mw50, 0.10 at earth, 0.15 at sol, the 0.25 constant at lg — because scatter
+there runs 0.008 to 0.267 ms across the five, a factor of 33 one constant
+cannot fit, and the constant reads as 30× the noise at mw50
 (`scripts/perf/pins/README.md` § The compute row). Each is capped at the
 0.25, so a re-derivation only ever tightens a row.
 
 **What is pinned.** `--mode dwell` at the five canon vantages in canon
 order (mw120, sol, earth, mw50, lg — § Run position: a permutation pins
 rows no later run reaches, and `--pin` refuses one), 1280×800 at dpr 2
-(4.096 Mpx), 240 frames or more, `raf-delta`,
-exposure pinned — a vantage whose quarter medians straddle its two readback
-classes settles with a longer dwell rather than with another arm. Every row records the wall p50 / p90, the catalogue record
-count it priced, and, on WebGPU, the GPU-stream p50 and the compute-stream
-p50 beside it. The commit pair is on
+(4.096 Mpx), `--frames 960`, `raf-delta`,
+exposure pinned. Every row records the wall p50 / p90, the catalogue record
+count it priced, and, on WebGPU, the GPU stream and the compute stream
+beside it — each with the p10, p50 and p90 the `metric`, `floor` and
+`spread` columns read, plus, at a vantage drawing two pass classes, the two
+classes separately. The commit pair is on
 the run, not the row. The per-pass differential is attribution, run when a row
 moves or when the PR touches a pass directly; it explains a mark and never
 fails one.
 
-**The GPU-stream p50 gates the frame, and the compute-stream p50 gates
-the compute passes — nothing else marks.** The GPU stream is the one
-continuous whole-frame reading the pin holds — the middle half of a canon
-row spans 0.03–0.36 ms — and it is the render passes alone: three pools
-compute timestamps separately, so a WebGPU context prints a second row,
-`<scenario>|webgpu|compute`, banded on its own pinned value with its own
-vantage's floor (above), the same ceiling, and accepted under its own key
+**The GPU stream gates the frame, and the compute stream gates the compute
+passes — nothing else marks.** The GPU stream is the one continuous
+whole-frame reading the pin holds — the middle half of a canon row spans
+0.03–0.36 ms — and it is the render passes alone: three pools compute
+timestamps separately, so a WebGPU context prints a second row,
+`<scenario>|webgpu|compute`, banded on its own vantage's floor (above), the
+same ceiling, and accepted under its own key
 (`scripts/perf/pins/README.md` § The compute row). The two are never
-summed, and a compute regression marks whatever the frame row says. Wall time is quantised to the display's refresh
+summed, and a compute regression marks whatever the frame row says.
+
+**Which statistic of each stream is the `metric` column's job**, and it is
+not the same at every row. A frame row reads `gpu-p50`, except where the
+vantage draws two pass classes — `earth` alone — where it reads the plain
+class, `gpu-plain-p50`. A compute row reads `compute-p10`. Both exceptions
+exist for one reason: a stream holding two populations has a median that
+follows their share rather than the work, so it marks on unchanged code when
+a run happens to land the other side of the halfway point. Both classes and
+both ends are still recorded, and the `spread` column (`p90 − p10`) prints
+how far apart they moved — never marked, because a pass deliberately spread
+across frames and a coincidence of timing move it alike. Wall time is quantised to the display's refresh
 interval, so every canon row's wall p50 reads 16.7–17.5 ms with a
 middle-half spread of a whole interval, and its median turns on whether
 50.1 % or 49.9 % of the frames made the deadline: wall is recorded, never
@@ -334,9 +358,10 @@ moved in between:
   per-frame code at all, for ~1,600 insertions of main's own render-path
   work (stellata-8cg.49.24).
 
-**What a mark means.** A row is `✗` when its GPU-stream p50 — or, on a
-compute row, its compute-stream p50 — moves past the pair's two-sigma band
-*and* past that row's floor (above), or when it crosses the
+**What a mark means.** A row is `✗` when the statistic its `metric` column
+names moves past its band — the pair's two-sigma standard error floored, on a
+frame row; the vantage's own constant alone, on a compute row — or when it
+crosses the
 ceiling — 33.4 ms at any canon vantage, two 60 Hz intervals of hardware
 time — whatever the band says and whether or not the vantage is gated. mw50 at 31.936 is the nearest
 row today, 1.46 ms under. `✓` is cheaper, `~` is not resolved — not "no
@@ -358,8 +383,9 @@ would end the gate rather than tighten it. A second run is the only thing
 that separates the two, and nothing inside a single run does: `iqrMs`, the
 resolved-sample count and the state guard each read the wandered runs as
 sound (stellata-8cg.74). The **compute** rows need no such re-run — their
-floors are calibrated against exactly this scatter — and neither does a
-ceiling crossing, which is a collapse rather than a move.
+floors are measured on the p10 those rows are gated on, which is the
+statistic the stream's two modes leave alone — and neither does a ceiling
+crossing, which is a collapse rather than a move.
 
 **The floor is measured, and lg is the reason it is not one number.** Two
 cold pins taken on identical code — 2026-09-05 and 2026-09-06, `--mode

@@ -401,8 +401,10 @@ at the canonical vantages is what explains a row that moved.
   render pool alone — the meaning every pin row and archived dwell carries.
   The compute pool (the star compaction every frame, the extinction
   prepass on recompute frames) is resolved in the same cycle and lands as
-  `gpu.compute` / `compute-p50`, gated by the pin under its own key and on
-  its vantage's own floor, tighter than the frame's at three of the five
+  `gpu.compute` / `compute-p10`, gated by the pin under its own key and on
+  its vantage's own floor, tighter than the frame's at four of the five —
+  the p10 and not the median, because that stream holds two overlapping
+  modes whose share varies between runs of identical code
   (`scripts/perf/pins/README.md` § The compute row). Never
   sum the two into a frame total, and never read a compute dispatch off
   the frame row: a kernel that moved work out of a render pass shows as

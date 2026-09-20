@@ -1,21 +1,20 @@
 // The perf pin: a committed summary of the whole frame at the canon vantages
 // on one GPU, and the verdicts of a later run against it. Operator rules:
-// RELEASING.md § Perf pin; mechanics: pins/README.md.
+// RELEASING.md § Perf pin; mechanics: README.md.
 
-import { basename, relative, resolve } from 'node:path';
-import { medianStandardErrorMs } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 import {
   VERDICT_MARK, band, bufferRefusal, computeFloorMs, dwellFloorMs, dwellFrames, framesRefusal, positionRefusal,
   preconditionRefusal, readbackRefusal, recordCountRefusal, splitFrameClasses, verdictFor,
   type DiffRefusal, type Verdict,
-} from './diff/diff-pure';
+} from '../diff/diff-pure';
 import {
-  COMPUTE_ROW, computeClock, floorMove, frameFloor, gatingClock,
-  type DwellMetric, type DwellSummary, type FrameFloor, type StateGuard,
-} from './dwell/dwell-pure';
-import { DWELL_METHOD, contextOrder } from './run-pure';
-import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type GitProvenance, type PerfFile, type ScenarioRecord } from './schema';
-import { BACKENDS, SCENARIO_NAMES, type Backend, type ScenarioName } from './scenarios';
+  COMPUTE_ROW, classClock, computeClock, frameFloor, gatingClock, pointMove, sampleClasses,
+  spreadMove, type DwellMetric, type DwellSummary, type FrameFloor, type StateGuard,
+} from '../dwell/dwell-pure';
+import { DWELL_METHOD, contextOrder } from '../run-pure';
+import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type GitProvenance, type PerfFile, type ScenarioRecord } from '../schema';
+import { BACKENDS, SCENARIO_NAMES, type Backend, type ScenarioName } from '../scenarios';
 
 /** Removing a field or changing what one MEANS bumps the suffix; adding one
  *  does not — the same contract as `PERF_SCHEMA`. */
@@ -27,7 +26,7 @@ export const PIN_SCHEMA = 'stellata-perf/pin-3';
  *  whether the row is comparable — and a trending one must therefore not
  *  refuse it, since any refused row refuses the whole pin. The ceiling still
  *  applies: a vantage that wanders 1.5 ms is no licence for a frame that
- *  doubled. pins/README.md § Reading `--against-pin`. */
+ *  doubled. README.md § Reading `--against-pin`. */
 export const PIN_UNGATED_SCENARIOS: Readonly<Partial<Record<ScenarioName, string>>> = {
   lg: 'wanders as much inside one dwell as between runs',
 };
@@ -54,6 +53,21 @@ export interface PinClock {
   readonly stateGuard: StateGuard;
 }
 
+/** Enough to band on and nothing else. */
+export interface PinClassClock {
+  readonly p50: number;
+  readonly iqrMs: number;
+  readonly samples: number;
+}
+
+/** Both classes where the vantage draws two — README.md § The compute row,
+ *  last. `dear` is summed pass occupancy, not a frame time. */
+export interface PinFrameClasses {
+  readonly cutMs: number;
+  readonly plain: PinClassClock;
+  readonly dear: PinClassClock;
+}
+
 export interface PinRow {
   /** `scenario|backend`, the key `--baseline` uses too. */
   readonly key: string;
@@ -63,12 +77,12 @@ export interface PinRow {
   /** The scene the row priced: star records the page had loaded. */
   readonly recordCount: number;
   /** Where the context sat in the pin run, 1-based; a row compares only
-   *  against one taken at the same position (`./diff/diff-pure.ts`). */
+   *  against one taken at the same position (`../diff/diff-pure.ts`). */
   readonly position: number;
   readonly idleRafMs: number | null;
   /** Exposure readbacks per frame over the dwell. Where the vantage draws a
    *  readback frame and a plain one, the GPU-stream median follows this rate,
-   *  so a row taken at another one is not the same statistic (`./diff/diff-pure.ts`).
+   *  so a row taken at another one is not the same statistic (`../diff/diff-pure.ts`).
    *  Absent on a pin taken before the rate was summarised, which declines the
    *  guard rather than refusing the row. */
   readonly readbackPerFrame?: number;
@@ -82,7 +96,7 @@ export interface PinRow {
   /** Frames the pinned dwell timed. A row compares only against one taken
    *  over the same count: a median converges with dwell length, so two
    *  lengths are two statistics rather than two readings
-   *  (`./diff/diff-pure.ts`). Absent on a pin taken before the field
+   *  (`../diff/diff-pure.ts`). Absent on a pin taken before the field
    *  existed, which declines the guard rather than refusing the row. */
   readonly frames?: number;
   readonly method: string;
@@ -90,6 +104,9 @@ export interface PinRow {
   /** The WebGPU frame-sample stream where it was sound; null on WebGL2. */
   readonly gpu: PinClock | null;
   readonly gpuFloor: FrameFloor | null;
+  /** The band gates `plain` here rather than `gpu.p50`. Absent on a pin taken
+   *  before the split was recorded, which gates the mixture as before. */
+  readonly gpuClasses?: PinFrameClasses | null;
   /** The compute-pass stream beside it — its own row, never folded into
    *  `gpu`, so every row taken before it existed stays comparable. Absent on
    *  such a pin, which prints the compute row ungated rather than refusing
@@ -151,6 +168,9 @@ export interface PinVerdictRow {
   /** How far the 10th-percentile frame moved, where both sides hold a GPU
    *  floor; null otherwise. Context for `deltaMs`, never a verdict input. */
   readonly floorDeltaMs: number | null;
+  /** How far `p90 - p10` moved. Never a verdict input — README.md § Reading
+   *  `--against-pin`, on the `spread` column. */
+  readonly spreadDeltaMs: number | null;
   readonly verdict: PinVerdict;
   readonly note: string;
 }
@@ -198,10 +218,22 @@ export function pinKey(record: ScenarioRecord): string {
 
 /** Every canon row and the position a pin run takes it at — backend-major in
  *  canon order, so mw120|webgpu is 1 and lg|webgl2 is 10. A pin holds all of
- *  them and each at its own position (pins/README.md § Run position). */
+ *  them and each at its own position (README.md § Run position). */
 export const CANON_POSITIONS: ReadonlyMap<string, number> = new Map(
   contextOrder(SCENARIO_NAMES, BACKENDS).map(({ name, backend }, i) => [keyOf(name, backend), i + 1]),
 );
+
+/** Gated on the counters: the gap alone finds a cut at `lg` too. */
+function frameClassesOf(dwell: DwellRecord): PinFrameClasses | null {
+  if (!splitFrameClasses(dwell.passCounts)) return null;
+  const classes = sampleClasses(dwell.gpuMs);
+  if (classes === null) return null;
+  return {
+    cutMs: classes.cutMs,
+    plain: classClock(classes.plain),
+    dear: classClock(classes.dear),
+  };
+}
 
 function clockOf(stats: DwellSummary): PinClock {
   return {
@@ -225,7 +257,7 @@ function rowRefusal(record: ScenarioRecord): string | null {
   if (record.position == null) return 'no run position recorded — the row cannot be placed in a load history';
   // The pin holds no `params` of its own and is taken with every setup lever at
   // its default, so an empty record IS the pin's preconditions — and absent
-  // already reads as the default (`./diff/diff-pure.ts`). Here rather than in
+  // already reads as the default (`../diff/diff-pure.ts`). Here rather than in
   // `compareToPin` alone because `--pin` reads this too: a forced dwell written
   // as the pin would carry its lever's cost in every later run's verdict.
   const precondition = preconditionRefusal({}, record.params);
@@ -238,7 +270,7 @@ function rowRefusal(record: ScenarioRecord): string | null {
 }
 
 /** A row taken where the pin run never takes it compares with nothing later:
- *  every comparison is at equal position (pins/README.md § Run position). */
+ *  every comparison is at equal position (README.md § Run position). */
 function canonPositionRefusal(record: ScenarioRecord): string | null {
   const canon = CANON_POSITIONS.get(pinKey(record));
   if (canon === undefined || record.position === canon) return null;
@@ -341,6 +373,7 @@ function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
     wall: { ...clockOf(dwell.stats), vsyncClamped: dwell.stats.vsyncClamped },
     gpu: dwell.gpuStats === null ? null : clockOf(dwell.gpuStats),
     gpuFloor: dwell.gpuStats === null ? null : frameFloor(dwell.gpuMs),
+    gpuClasses: dwell.gpuStats === null ? null : frameClassesOf(dwell),
     compute: compute === null ? null : clockOf(compute),
     computeFloor: compute === null ? null : frameFloor(dwell.computeMs),
     sourceRun,
@@ -355,7 +388,7 @@ function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
  * of identical code narrow nothing, so a row one run refused for straddling
  * a load state is taken from the run that held it steady — which is what
  * lets a pin come from saved runs without a second arm
- * (pins/README.md § From saved runs).
+ * (README.md § From saved runs).
  */
 export function pinFromRuns(given: readonly RunSource[], source: PinSource): PinSummary {
   const sources = oldestFirst(given);
@@ -422,38 +455,20 @@ export function missingCanonRows(pin: PinFile): readonly string[] {
   return [...CANON_POSITIONS.keys()].filter((key) => !held.has(key));
 }
 
-/**
- * Runs are filed under `.perf-runs/<date>/` of the checkout they will be
- * committed from (README.md § Recording), so that is the path worth
- * committing: an absolute one names one machine's home directory, resolves
- * nowhere else, and this file ships in a public repo. A run stored outside
- * the checkout keeps its name and loses its location.
- *
- * `checkoutRoot` is the root of the checkout the run was WRITTEN in, which
- * from a worktree is the worktree — not the main checkout. Resolving against
- * the main checkout yields `.claude/worktrees/<name>/.perf-runs/…`, a path
- * that stops resolving the moment the worktree is removed, and a pin is
- * normally taken on a branch.
- */
-export function citeRunPath(jsonPath: string, checkoutRoot: string): string {
-  const rel = relative(checkoutRoot, resolve(jsonPath));
-  return rel === '' || rel.startsWith('..') ? basename(jsonPath) : rel;
-}
-
 /** Which side is missing the stream, so an ungated row says why rather than
  *  only that it is ungated — the pin having one and the run not is an
  *  instrument regression, not the WebGL2 backend being itself. */
 function ungatedNote(
-  stream: 'GPU' | 'compute', backend: Backend, pinned: PinClock | null, current: DwellSummary | null,
+  stream: 'GPU' | 'compute', backend: Backend, hasPinned: boolean, hasCurrent: boolean,
 ): string {
-  if (pinned === null && current === null) {
+  if (!hasPinned && !hasCurrent) {
     return backend === 'webgl2'
       ? `no ${stream} stream — WebGL2 supplies none`
       : `no ${stream} stream on either side — the adapter resolved no believable durations`;
   }
-  return pinned === null
-    ? `the pin carries no ${stream} stream for this row; this run does`
-    : `the pin carries a ${stream} stream for this row; this run resolved none`;
+  return hasPinned
+    ? `the pin carries a ${stream} stream for this row; this run resolved none`
+    : `the pin carries no ${stream} stream for this row; this run does`;
 }
 
 /** A reading one side does not hold prints empty rather than as a zero: a
@@ -469,19 +484,38 @@ function ungatedRow(
     deltaMs: pinnedMs === null || currentMs === null ? null : currentMs - pinnedMs,
     bandMs: 0,
     floorDeltaMs: null,
+    spreadDeltaMs: null,
     verdict: 'ungated',
     note,
   };
 }
 
 /** The reader's discriminator on a mark: a cost every frame pays lifts the
- *  floor with the median; a wander lifts the upper half alone. */
+ *  floor with the median; a wander lifts the upper half alone.
+ *
+ *  Yields to a note already written. There is one note column, and this one
+ *  discriminates WITHIN a mark while `bandNote` says the gate could not have
+ *  marked at all — so a row carrying both must print the wider finding. */
 function floorNote(row: PinVerdictRow): PinVerdictRow {
+  if (row.note !== '') return row;
   if (row.verdict !== 'dearer' || row.floorDeltaMs === null || row.deltaMs === null || row.deltaMs <= 0) return row;
   if (row.floorDeltaMs >= FLOOR_FOLLOWS_FRACTION * row.deltaMs) return row;
   return {
     ...row,
     note: `floor moved ${row.floorDeltaMs.toFixed(3)} of ${row.deltaMs.toFixed(3)} — the upper half alone rose; read the quarters before accepting`,
+  };
+}
+
+/** Past this multiple of its floor, the row's own spread is what sets the
+ *  band — README.md § Reading `--against-pin`, on the band. A note and not a
+ *  refusal: any refused row refuses the whole pin. */
+export const BAND_OVER_FLOOR_FACTOR = 4;
+
+function bandNote(row: PinVerdictRow, floorMs: number): PinVerdictRow {
+  if (row.bandMs <= BAND_OVER_FLOOR_FACTOR * floorMs) return row;
+  return {
+    ...row,
+    note: `band ${row.bandMs.toFixed(3)} is ${(row.bandMs / floorMs).toFixed(1)}× its ${floorMs.toFixed(3)} floor — the row's own spread sets it, not the floor`,
   };
 }
 
@@ -493,15 +527,26 @@ function underCeiling(row: PinVerdictRow): PinVerdictRow {
   return { ...row, verdict: 'dearer', note: `${row.metric} over the ${PIN_CEILING_MS} ms ceiling` };
 }
 
+/** One side of one stream, reduced to what a verdict needs. The pin resolves
+ *  it from its recorded rows and a run from its raw samples, so `streamRow`
+ *  never asks which it was given. */
+interface GatedSide {
+  readonly valueMs: number;
+  /** Zero where the row bands on its floor alone — README.md § The compute
+   *  row. */
+  readonly standardErrorMs: number;
+  readonly p10: number | null;
+  readonly p90: number | null;
+}
+
 /** One timestamp stream of a context and the two sides to judge it on. */
 interface StreamSpec {
   readonly key: string;
   readonly metric: DwellMetric;
   readonly stream: 'GPU' | 'compute';
-  readonly pinnedClock: PinClock | null;
-  readonly pinnedFloor: FrameFloor | null;
-  readonly current: DwellSummary | null;
-  readonly currentSamples: readonly number[] | null | undefined;
+  readonly pinned: GatedSide | null;
+  readonly current: GatedSide | null;
+  readonly floorMs: number;
   /** Shown in place of this stream's own readings where a side lacks it.
    *  The frame falls back to the wall clock every row carries; the compute
    *  row has no second clock, so null leaves its cells empty. */
@@ -515,62 +560,89 @@ interface StreamSpec {
 /** One stream judged against its pinned twin: the band where both sides
  *  hold one, ungated by vantage or where a side lacks it, the ceiling on
  *  every reading. The frame's stream and the compute one are the same rule
- *  one field over (`pins/README.md` § The compute row). */
+ *  one statistic over (`README.md` § The compute row). */
 function streamRow(pinned: PinRow, spec: StreamSpec): PinVerdictRow {
-  const { key, metric, pinnedClock, current } = spec;
-  if (pinnedClock === null || current === null) {
-    const note = ungatedNote(spec.stream, pinned.backend, pinnedClock, current);
+  const { key, metric, current } = spec;
+  const side = spec.pinned;
+  if (side === null || current === null) {
+    const note = ungatedNote(spec.stream, pinned.backend, side !== null, current !== null);
     const context = spec.ungatedContext;
     return context === null
-      ? ungatedRow(key, metric, pinnedClock?.p50 ?? null, current?.p50 ?? null, note)
+      ? ungatedRow(key, metric, side?.valueMs ?? null, current?.valueMs ?? null, note)
       : ungatedRow(key, context.metric, context.pinnedMs, context.currentMs, note);
   }
-  const floorDeltaMs = floorMove(spec.pinnedFloor, frameFloor(spec.currentSamples));
+  // Null where the p10 IS the metric: the column would restate `delta`.
+  const floorDeltaMs = metric === 'compute-p10' ? null : pointMove(side.p10, current.p10);
+  const spreadDeltaMs = spreadMove(side, current);
   const ungatedBecause = PIN_UNGATED_SCENARIOS[pinned.name];
   if (ungatedBecause !== undefined) {
     return underCeiling({
       ...ungatedRow(
-        key, metric, pinnedClock.p50, current.p50,
+        key, metric, side.valueMs, current.valueMs,
         `${pinned.name} ${ungatedBecause} — recorded, never marked below the ceiling`,
       ),
       floorDeltaMs,
+      spreadDeltaMs,
     });
   }
-  const deltaMs = current.p50 - pinnedClock.p50;
-  const floorMs = spec.stream === 'compute'
-    ? computeFloorMs(pinned.name, pinnedClock.p50)
-    : dwellFloorMs(pinnedClock.p50);
-  const bandMs = band(
-    medianStandardErrorMs(pinnedClock), medianStandardErrorMs(current), floorMs,
-  );
-  return underCeiling(floorNote({
-    key, metric, pinnedMs: pinnedClock.p50, currentMs: current.p50,
-    deltaMs, bandMs, floorDeltaMs, verdict: verdictFor(deltaMs, bandMs), note: '',
-  }));
+  const deltaMs = current.valueMs - side.valueMs;
+  const bandMs = band(side.standardErrorMs, current.standardErrorMs, spec.floorMs);
+  return underCeiling(floorNote(bandNote({
+    key, metric, pinnedMs: side.valueMs, currentMs: current.valueMs,
+    deltaMs, bandMs, floorDeltaMs, spreadDeltaMs, verdict: verdictFor(deltaMs, bandMs), note: '',
+  }, spec.floorMs)));
+}
+
+/** The frame row's gated statistic: the plain class where the stream holds
+ *  two, the whole dwell where it holds one. */
+function gatedFrame(
+  clock: PinClock | DwellSummary | null,
+  classes: PinFrameClasses | null,
+  floor: FrameFloor | null,
+): GatedSide | null {
+  if (clock === null) return null;
+  const gated: PinClassClock = classes === null
+    ? { p50: clock.p50, iqrMs: clock.iqrMs, samples: clock.samples }
+    : classes.plain;
+  return {
+    valueMs: gated.p50,
+    standardErrorMs: medianStandardErrorMs(gated),
+    p10: floor?.p10 ?? null,
+    p90: clock.p90,
+  };
+}
+
+/** The compute row's. A side that retained no samples reads as no stream,
+ *  rather than being marked on a statistic it cannot supply. */
+function gatedCompute(clock: PinClock | DwellSummary | null, floor: FrameFloor | null): GatedSide | null {
+  if (clock === null || floor === null) return null;
+  return { valueMs: floor.p10, standardErrorMs: 0, p10: floor.p10, p90: clock.p90 };
 }
 
 function compareRows(pinned: PinRow, dwell: DwellRecord): PinVerdictRow[] {
+  const pinnedClasses = pinned.gpuClasses ?? null;
+  const currentClasses = frameClassesOf(dwell);
+  const split = pinnedClasses !== null && currentClasses !== null;
   const frame = streamRow(pinned, {
     key: pinned.key,
-    metric: 'gpu-p50',
+    metric: split ? 'gpu-plain-p50' : 'gpu-p50',
     stream: 'GPU',
-    pinnedClock: pinned.gpu,
-    pinnedFloor: pinned.gpuFloor,
-    current: dwell.gpuStats,
-    currentSamples: dwell.gpuMs,
+    pinned: gatedFrame(pinned.gpu, split ? pinnedClasses : null, pinned.gpuFloor),
+    current: gatedFrame(dwell.gpuStats, split ? currentClasses : null, frameFloor(dwell.gpuMs)),
+    floorMs: dwellFloorMs(split ? pinnedClasses!.plain.p50 : pinned.gpu?.p50 ?? 0),
     ungatedContext: { metric: 'wall-p50', pinnedMs: pinned.wall.p50, currentMs: dwell.stats.p50 },
   });
   const pinnedCompute = pinned.compute ?? null;
   const compute = computeClock(dwell);
   if (pinnedCompute === null && compute === null) return [frame];
+  const pinnedComputeFloor = pinned.computeFloor ?? null;
   return [frame, streamRow(pinned, {
     key: `${pinned.key}|${COMPUTE_ROW}`,
-    metric: 'compute-p50',
+    metric: 'compute-p10',
     stream: 'compute',
-    pinnedClock: pinnedCompute,
-    pinnedFloor: pinned.computeFloor ?? null,
-    current: compute,
-    currentSamples: dwell.computeMs,
+    pinned: gatedCompute(pinnedCompute, pinnedComputeFloor),
+    current: gatedCompute(compute, frameFloor(dwell.computeMs)),
+    floorMs: computeFloorMs(pinned.name, pinnedComputeFloor?.p10 ?? 0),
     ungatedContext: null,
   })];
 }
@@ -707,99 +779,4 @@ export function assertPinFile(value: unknown, source: string): PinFile {
 /** `scripts/perf/pins/<slug>.json`, relative to the repo root. */
 export function pinPathFor(slug: string): string {
   return `scripts/perf/pins/${slug}.json`;
-}
-
-/** Whether the pin's recorded `commit` resolves on main as git answers it
- *  *now* — not as it answered when the pin was taken. A branch tip that has
- *  since squash-merged reads `unlanded` forever: the measured tree landed,
- *  under another hash. `unknown` is an unreadable object or no `origin/main`. */
-export type PinCommitState = 'landed' | 'unlanded' | 'unknown';
-
-/**
- * `git merge-base --is-ancestor` answers in exit codes, and only **1** means
- * "asked and answered no". Every other non-zero status is the question having
- * failed — an unknown object, no `origin/main`, a broken repository — and
- * reading those as `unlanded` would print a confident "pre-squash branch tip"
- * line about a commit git never resolved.
- */
-export function commitStateFromExitStatus(status: number | undefined): PinCommitState {
-  if (status === 0) return 'landed';
-  return status === 1 ? 'unlanded' : 'unknown';
-}
-
-/** `git diff --shortstat <pin main base> <run main base> -- src/client`:
- *  main's own render-path movement between the two trees. Read A-to-B, in
- *  that order — a branch cut before the pin was taken has the older base,
- *  and calling the counts "since the pin" would then have them backwards. */
-export interface RenderPathDrift {
-  readonly files: number;
-  readonly insertions: number;
-  readonly deletions: number;
-}
-
-const SHORTSTAT = /(\d+) files? changed(?:, (\d+) insertions?\(\+\))?(?:, (\d+) deletions?\(-\))?/;
-
-/**
- * Read a `--shortstat` line. An empty line is git saying the two trees are
- * identical under the pathspec, which is a drift of zero and not a failure
- * to measure one — the difference decides whether the header stays silent or
- * says the drift could not be read. Either count is absent when it is zero,
- * so a deletion-only diff prints no insertions clause at all.
- */
-export function parseRenderPathDrift(shortstat: string): RenderPathDrift | null {
-  if (shortstat.trim() === '') return { files: 0, insertions: 0, deletions: 0 };
-  const m = SHORTSTAT.exec(shortstat);
-  if (m === null) return null;
-  return { files: Number(m[1]), insertions: Number(m[2] ?? 0), deletions: Number(m[3] ?? 0) };
-}
-
-/**
- * What the `--against-pin` header must say about the tree the pin measured,
- * before any row is read.
- *
- * A mark is only the PR's if nothing else moved the frame in between, and a
- * pin cites a branch tip: squash-merge means that hash carries no landed
- * tree, so the drift it hides is attributed to whoever runs next. One pin
- * sat at an unlanded tip for two days and charged four consecutive PRs —
- * one of them with no per-frame code at all — for ~1,600 insertions of
- * main's own render-path work.
- *
- * Reported rather than refused: taking a pin on a branch is the normal case,
- * and a refusal would leave no usable pin at the moment one is most wanted.
- * The row-level refusals stay for what is measurable — adapter, buffer,
- * record count, state guard — and this names what a reader must weigh.
- */
-export function pinProvenanceLines(
-  pin: PinFile,
-  state: PinCommitState,
-  drift: RenderPathDrift | null,
-  runMainCommit: string | null,
-): readonly string[] {
-  const short = pin.git.commit.slice(0, 8);
-  const lines: string[] = [];
-  if (state === 'unlanded') {
-    lines.push(
-      `pin commit ${short} is not an ancestor of origin/main — a pre-squash branch tip, ` +
-      'so no hash on main carries the tree it measured',
-    );
-  } else if (state === 'unknown') {
-    lines.push(`pin commit ${short} could not be placed against origin/main — drift is unbounded`);
-  }
-  if (pin.git.mainCommit === null) {
-    lines.push('the pin records no main base, so its drift from main cannot be measured at all');
-  } else if (drift === null) {
-    lines.push(`pin main base ${pin.git.mainCommit.slice(0, 8)}; render-path drift could not be read`);
-  } else if (drift.files > 0) {
-    // Both bases named, and the counts read in that direction: whichever is
-    // the older tree, `git diff A B -- src/client` is the command that
-    // reproduces the line, and "moved since the pin" would not be.
-    const from = pin.git.mainCommit.slice(0, 8);
-    const to = runMainCommit === null ? 'unrecorded base' : runMainCommit.slice(0, 8);
-    lines.push(
-      `main's src/client differs from the pin's base ${from} to this run's ${to}: ` +
-      `${drift.files} file${drift.files === 1 ? '' : 's'}, +${drift.insertions}/-${drift.deletions} — ` +
-      'a mark below may be that difference rather than this diff',
-    );
-  }
-  return lines;
 }

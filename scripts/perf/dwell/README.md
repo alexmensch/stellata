@@ -10,7 +10,8 @@ flags and the other modes: `../README.md`.
 scripts/perf/dwell/
   dwell-pure.ts (+ test)    One dwell's percentiles, the vsync-clamp flag,
                             the state guard (quarter medians), the gating
-                            clock a row is judged on, the per-frame WebGPU
+                            clock a row is judged on, the two pass classes a
+                            split frame draws, the per-frame WebGPU
                             pass-count summary, and the pinned readback
                             cadence with the bound that says it held.
 ```
@@ -95,9 +96,30 @@ The console line says which cadence the verdict was judged against. **The GPU
 row is never clamped**: a resolved timestamp is a span the hardware reports,
 and no compositor can pad it.
 
-**Every summary carries a state guard** (`quarterMedians`, `stateGuard`):
-a dwell that trended is refused by `--baseline`, and by `--against-pin`
-where the vantage is one the band gates — `../pins/README.md` § State guard.
+## The state guard
+
+Every dwell summary is read in four consecutive quarters (`quarterMedians`);
+their medians spanning more than `STATE_GUARD_TREND_MS` (1 ms) reads
+`trending`: the machine changed state under the dwell — the sustained-load GPU
+power step (stellata-0it.38), entered after roughly 2–2.5 min of continuous
+frames and re-entered inside one row when warm. **The test is the spread, not
+a rise through the quarters**: that power step is a step, so it lands as
+`[16.9, 16.9, 21.8, 21.8]`, flat and then flat higher, which a strictly-rising
+test reads as steady. Frames either side of the transition never compare.
+
+**The verdict is read off the clock the band gates** — the GPU stream where
+the row has one, wall only where it does not (`gatingClock`, every WebGL2
+row). Wall deltas are quantised to the refresh interval, so at a vantage whose
+frame exceeds one interval they alternate between one and two and the quarter
+medians swing by a whole interval however idle the machine is: mw50 split 240
+deltas 120/120 and 117/123 on two cold runs whose GPU quarters spanned
+0.017 ms. Read off wall, that verdict is a coin flip decided per quarter by
+which side of 50 % it landed — and since any refused row refuses the whole
+pin, it blocked the pin for *every* render-path PR at random. Wall
+`stateGuard` is still recorded, unmarked, exactly as wall p50 is.
+
+Which gate acts on the verdict, and where it stands down:
+`../pins/README.md` § State guard.
 
 **A WebGPU dwell also counts what the frame submits.** For the timed frames
 it wraps `GPUQueue.submit` and `GPUCommandEncoder.beginRenderPass` /
@@ -147,6 +169,24 @@ cadence reads 0.79–0.93×. three allocates a timestamp pair per render pass an
 sums them, so a 10-pass readback frame counts overlapping spans twice over
 where a 4-pass frame has little to overlap. Read the GPU row at a two-class
 vantage as summed pass occupancy, never as frame time.
+
+**So the gate reads the classes apart, and records both.** `sampleClasses`
+cuts the stream at the widest gap between consecutive samples, taken only
+where that gap exceeds the median of everything below it — earth's classes sit
+about four times apart and separate on every archived dwell, while a stream
+holding one population, or two modes that merely overlap, correctly finds
+nothing. **The widest gap is sought only among those leaving
+`CLASS_MIN_SHARE` of the samples on each side**, because a class is a
+population the frame draws repeatedly and one sample is never one: earth's
+classes stand 51.8 ms apart, so a single 133 ms frame outranks that
+separation on width alone, and the cut then lands above both classes with the
+lower one holding the whole mixture — the mixture median reported under the
+`gpu-plain-p50` label, which is the one reading this whole section exists to
+stop. The **counters** are what says there are two classes to find:
+`renderPasses` min against max. Without that gate a vantage that merely
+wanders takes a cut of its own, `lg` on every dwell it has ever recorded.
+What the pin then holds, and what the band is built from:
+`../pins/README.md` § The compute row, last.
 
 `READBACK_TOLERANCE` (25 %) bounds the rate drift, clear of the 7 % spread
 `earth` holds across 25 cold runs. **The guard is gated on the frame being

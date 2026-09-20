@@ -116,18 +116,98 @@ export function frameFloor(samples: readonly number[] | null | undefined): Frame
   return { p10: percentile(samples, 0.1) };
 }
 
-/** How far the fast end moved between two dwells, or null where either side
- *  has no floor — a floor against nothing is not a move. Context for the
- *  median's delta in both tables, never an input to a verdict. */
-export function floorMove(before: FrameFloor | null, after: FrameFloor | null): number | null {
-  return before === null || after === null ? null : after.p10 - before.p10;
+/** A reading against nothing is not a move, so either side absent is null. */
+export function pointMove(
+  before: number | null | undefined, after: number | null | undefined,
+): number | null {
+  return before == null || after == null ? null : after - before;
 }
 
-/** Which of a dwell's two clocks a row was judged on, named in every table
- *  because the two are different instruments and a reader cannot otherwise
- *  tell which one a delta came off. `gatingClock` returns it alongside the
- *  clock itself, so no caller re-derives the choice. */
-export type DwellMetric = 'gpu-p50' | 'wall-p50' | 'compute-p50';
+/** How far the fast end moved between two dwells. Context for the median's
+ *  delta in both tables, never an input to a verdict. */
+export function floorMove(before: FrameFloor | null, after: FrameFloor | null): number | null {
+  return pointMove(before?.p10, after?.p10);
+}
+
+/** The two ends both gates read a stream's spread off. */
+export interface StreamEnds {
+  readonly p10: number | null;
+  readonly p90: number | null;
+}
+
+/** How far `p90 - p10` moved. The reading the gated statistic is chosen not
+ *  to follow — some frames got dearer while the rest did not — so it is
+ *  printed on every dwell row in both tables and marks on neither. */
+export function spreadMove(before: StreamEnds | null, after: StreamEnds | null): number | null {
+  const spread = (ends: StreamEnds | null): number | null =>
+    pointMove(ends?.p10, ends?.p90);
+  return pointMove(spread(before), spread(after));
+}
+
+/** The widest gap must exceed the lower class's own median to be a cut at
+ *  all — README.md § Where the frame has two classes. */
+export const CLASS_GAP_OVER_MEDIAN = 1;
+
+/** Each class must hold at least this share of the samples for the gap above
+ *  it to be a candidate cut. A class is a population the frame draws
+ *  repeatedly, so one sample is never one; earth's dear class runs 22-38 % of
+ *  its resolved samples across the archive, four times clear of this. */
+export const CLASS_MIN_SHARE = 0.05;
+
+/** One dwell's samples cut into the two classes a split frame draws. */
+export interface SampleClasses {
+  readonly cutMs: number;
+  /** Below the cut: at a split-frame vantage the plain frames, the class
+   *  that is a frame time. */
+  readonly plain: readonly number[];
+  /** Above it. Recorded and printed, never gated. */
+  readonly dear: readonly number[];
+}
+
+/**
+ * The two classes, or null where the samples are one population. Callers
+ * gate this on the pass counters: a gap alone finds a cut at `lg` too.
+ *
+ * Only gaps leaving `CLASS_MIN_SHARE` on both sides are candidates, so the
+ * search is not the widest gap in the stream — one dear frame above the dear
+ * class beats the real separation on width alone, and the cut then lands
+ * above both classes with `plain` holding the whole mixture. Measured on
+ * earth's pinned stream: the classes sit 51.8 ms apart, so a single 133 ms
+ * frame reverses the choice and the row reports the mixture median 13.307
+ * still labelled `gpu-plain-p50`.
+ */
+export function sampleClasses(samples: readonly number[] | null | undefined): SampleClasses | null {
+  if (samples == null || samples.length < 2) return null;
+  const sorted = [...samples].sort((a, b) => a - b);
+  const minCount = Math.max(1, Math.ceil(CLASS_MIN_SHARE * sorted.length));
+  let widest = 0;
+  let at = 0;
+  for (let i = minCount; i <= sorted.length - minCount; i++) {
+    const gap = sorted[i]! - sorted[i - 1]!;
+    if (gap > widest) [widest, at] = [gap, i];
+  }
+  if (at === 0) return null;
+  const plain = sorted.slice(0, at);
+  if (widest <= CLASS_GAP_OVER_MEDIAN * median(plain)) return null;
+  return { cutMs: (sorted[at]! + sorted[at - 1]!) / 2, plain, dear: sorted.slice(at) };
+}
+
+/** No state guard: the quarters are the dwell's in time order, and a class
+ *  is a subset taken out of that order. */
+export interface ClassClock {
+  readonly p50: number;
+  readonly iqrMs: number;
+  readonly samples: number;
+}
+
+export function classClock(samples: readonly number[]): ClassClock {
+  return { p50: percentile(samples, 0.5), iqrMs: interquartileRange(samples), samples: samples.length };
+}
+
+/** Which clock — and which statistic of it — a row was judged on. Named in
+ *  every table, and `gatingClock` returns it alongside the clock itself so no
+ *  caller re-derives the choice. */
+export type DwellMetric = 'gpu-p50' | 'gpu-plain-p50' | 'wall-p50' | 'compute-p10';
 
 /** Row-key suffix (`mw120|webgpu|compute`). Its own key, so a mark on the
  *  frame and one on the compute pass are accepted separately. */

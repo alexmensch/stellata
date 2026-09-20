@@ -1,18 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CLASS_GAP_OVER_MEDIAN,
+  CLASS_MIN_SHARE,
   DEFAULT_DWELL_FRAMES,
   DWELL_READBACK_EVERY_FRAMES,
   PASS_COUNTERS,
   STATE_GUARD_QUARTERS,
   STATE_GUARD_TREND_MS,
+  classClock,
   gatingClock,
   quarterMedians,
   readbackCadenceHeld,
+  sampleClasses,
   stateGuardVerdict,
   summarizeFrameDwell,
   summarizePassCounts,
 } from './dwell-pure';
-import { vsyncClampToleranceMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
+import { interquartileRange, vsyncClampToleranceMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 
 /** 1..20 ms, so every percentile lands on a value that is easy to name. */
 const RAMP = Array.from({ length: 20 }, (_, i) => i + 1);
@@ -211,5 +215,70 @@ describe('the pinned readback cadence held', () => {
     // 52.854 ms against 17.157 at 0.25 (README.md).
     expect(held(139)).toBe(false);
     expect(held(234, 1)).toBe(true);
+  });
+});
+
+describe('sampleClasses — the two classes a split frame draws', () => {
+  // earth's own shape: ordinary frames near 12 ms, exposure-readback frames
+  // near 75, a gap of ~60 against a lower median of 12.9.
+  const EARTH = [12.0, 12.4, 12.9, 13.1, 13.4, 74.2, 75.6, 77.1];
+
+  it('cuts at the widest gap and keeps both classes', () => {
+    const classes = sampleClasses(EARTH);
+    expect(classes).not.toBeNull();
+    expect(classes!.plain).toEqual([12.0, 12.4, 12.9, 13.1, 13.4]);
+    expect(classes!.dear).toEqual([74.2, 75.6, 77.1]);
+    expect(classes!.cutMs).toBeCloseTo(43.8, 6);
+  });
+
+  it('sorts the samples, so the cut does not depend on the order they arrived', () => {
+    const shuffled = [75.6, 12.4, 77.1, 13.4, 12.0, 74.2, 13.1, 12.9];
+    expect(sampleClasses(shuffled)).toEqual(sampleClasses(EARTH));
+  });
+
+  it('finds nothing in two overlapping modes, however far apart their centres', () => {
+    const overlapping = [0.36, 0.38, 0.39, 0.41, 0.45, 0.50, 0.55, 0.58, 0.60, 0.62];
+    expect(sampleClasses(overlapping)).toBeNull();
+  });
+
+  it('finds nothing in one population, and nothing in too few samples to hold two', () => {
+    expect(sampleClasses([18.9, 19.0, 19.1, 19.2, 19.4])).toBeNull();
+    expect(sampleClasses([12.0])).toBeNull();
+    expect(sampleClasses(null)).toBeNull();
+  });
+
+  it('holds the gap rule at the ratio the constant names', () => {
+    expect(CLASS_GAP_OVER_MEDIAN).toBe(1);
+    // Strictly past, so the smallest pair separated is one class costing
+    // more than twice the other — well under earth's own 4×.
+    expect(sampleClasses([10, 10, 20])).toBeNull();
+    expect(sampleClasses([10, 10, 20.1])).not.toBeNull();
+  });
+
+  it('keeps the real cut when one frame sits above the dear class, where the widest gap alone does not', () => {
+    // earth's own separation is 51.8 ms, so a single frame past the dear
+    // class outranks it on width and cuts above BOTH classes — leaving the
+    // mixture in `plain` under the `gpu-plain-p50` label.
+    const hitched = [...Array.from({ length: 40 }, (_, i) => 12 + i * 0.05), 74.2, 75.6, 77.1, 210];
+    const classes = sampleClasses(hitched);
+    expect(classes!.cutMs).toBeGreaterThan(14);
+    expect(classes!.cutMs).toBeLessThan(74);
+    expect(classes!.plain).toHaveLength(40);
+    expect(classes!.dear).toEqual([74.2, 75.6, 77.1, 210]);
+  });
+
+  it('holds the minimum share at the constant the README states', () => {
+    expect(CLASS_MIN_SHARE).toBe(0.05);
+    const ramp = (n: number): number[] => Array.from({ length: n }, (_, i) => 10 + i * 0.01);
+    // 20 samples admit a class of one, 21 require two, and a lone sample past
+    // a real gap stops being a population of its own at the crossing.
+    expect(sampleClasses([...ramp(19), 40])!.dear).toEqual([40]);
+    expect(sampleClasses([...ramp(20), 40])).toBeNull();
+    expect(sampleClasses([...ramp(20), 40, 40.1])!.dear).toEqual([40, 40.1]);
+  });
+
+  it('gives classClock the three fields a band is built from', () => {
+    const plain = [12.0, 12.4, 12.9, 13.1, 13.4];
+    expect(classClock(plain)).toEqual({ p50: 12.9, iqrMs: interquartileRange(plain), samples: 5 });
   });
 });

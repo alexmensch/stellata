@@ -45,9 +45,15 @@ median, a wander lifts the upper half alone and leaves it. The same column
 off the same statistic as the pin's — `frameFloor` is in
 `../dwell/dwell-pure.ts` so both read one implementation, because a reader
 asking "cost or wander?" must not have to ask it differently of the two
-tables. Blank on a differential row and on a wall-gated dwell, where the
-p10 is quantised to the refresh interval exactly as the median is and would
-answer nothing. What the two tables do differently is only the note: the pin
+tables. Blank on a differential row, on a wall-gated dwell where the p10 is
+quantised to the refresh interval exactly as the median is, and on a compute
+row where the p10 is the metric and the column would restate `delta`.
+
+**The `spread` column is `p90 − p10`, and never marks either.** It is the
+reading the gated statistic is chosen not to follow: some frames got dearer
+while the rest did not. A pass spread deliberately across frames moves it and
+leaves `delta`; so does a coincidence of timing, which is why no verdict
+rests on it. What the two tables do differently is only the note: the pin
 calls out a `✗` whose floor did not follow (`../pins/README.md` § Reading
 `--against-pin`), and this table has no note column to say it in.
 
@@ -82,14 +88,23 @@ vantage; here there is a refusal list to say it in.
 
 **The compute passes are a second dwell row, keyed `|compute`.** Where both
 runs carry the compute stream (`../pins/README.md` § The compute row) it is
-banded as the frame row is but on **that vantage's own floor**, on
-`compute-p50`, with its own `floor` column off its own p10 — the whole-frame
-constant runs 15× the compute row's noise at mw50 and about 1× it at sol, a
-factor of 18 across the five. One side alone refuses that row and leaves the
-frame row standing — an archive written before the compute pool was
-resolved carries no stream, and a run since does; neither side, every
-WebGL2 pair, prints no compute row at all. A frame row that is refused
-takes its compute row with it.
+judged on `compute-p10` and banded on **that vantage's own floor** and nothing
+else — the stream holds two overlapping modes whose share varies between runs
+of identical code, so its median is a statistic of that share, while the p10
+is not. The whole-frame constant would run 15× the row's noise at mw50 and
+about 1× it at sol, a factor of 18 across the five. One side alone refuses the
+row and leaves the frame row standing — an archive written before the compute
+pool was resolved carries no stream, and a run since does; neither side, every
+WebGL2 pair, prints no compute row at all. A frame row that is refused takes
+its compute row with it.
+
+**A frame row at a vantage drawing two pass classes is judged on the plain
+class**, `gpu-plain-p50`, for the same reason one field over: the mixture's
+median follows the classes' share and its middle-half spread straddles them,
+so the band built from that spread turns on how many samples resolved in each.
+One run splitting and the other not refuses the row — a plain-class median
+against a mixture median is two statistics. Where the cut comes from, and what
+says there are two classes at all: `../dwell/README.md`.
 
 ## The refusals
 

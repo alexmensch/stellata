@@ -8,9 +8,10 @@ import {
   REPO_ROOT, packageVersion, printAgainstPin, readJsonFlag, writePinFile,
 } from './checkout';
 import {
-  acceptedMarks, assertPinFile, citeRunPath, pinFromRuns, pinPathFor, pinWriteRefusal,
+  acceptedMarks, assertPinFile, pinFromRuns, pinPathFor, pinWriteRefusal,
   type PinDiff, type RunSource,
-} from './pin-pure';
+} from './pins/pin-pure';
+import { citeRunPath } from './pins/provenance/provenance-pure';
 import { assertPerfFile } from './schema';
 
 const EXIT = { ok: 0, refused: 1, usage: 2 } as const;

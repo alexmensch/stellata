@@ -22,9 +22,10 @@ import {
 } from './measure';
 import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './arming/perf-go-lib';
 import {
-  acceptedMarks, assertPinFile, citeRunPath, pinDiffFails, pinFromRuns, pinWriteRefusal,
+  acceptedMarks, assertPinFile, pinDiffFails, pinFromRuns, pinWriteRefusal,
   type PinDiff, type PinFile,
-} from './pin-pure';
+} from './pins/pin-pure';
+import { citeRunPath } from './pins/provenance/provenance-pure';
 import {
   BROWSER_CHANNEL,
   DWELL_METHOD,

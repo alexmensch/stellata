@@ -5,7 +5,7 @@
 import { round3, type PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { VERDICT_MARK, type RunDiff } from './diff/diff-pure';
 import { PASS_COUNTERS, computeClock, type DwellSummary, type PassCountsSummary } from './dwell/dwell-pure';
-import { PIN_VERDICT_MARK, type PinDiff } from './pin-pure';
+import { PIN_VERDICT_MARK, type PinDiff } from './pins/pin-pure';
 import type { DwellRecord } from './schema';
 import type { SweepFit, SweepPoint } from './sweep/sweep-pure';
 
@@ -103,7 +103,7 @@ function ms(value: number | null): number | undefined {
   return value === null ? undefined : round3(value);
 }
 
-export const DIFF_COLUMNS = ['', 'row', 'metric', 'baseline', 'current', 'delta', 'floor', 'band'] as const;
+export const DIFF_COLUMNS = ['', 'row', 'metric', 'baseline', 'current', 'delta', 'floor', 'spread', 'band'] as const;
 
 export function formatDiffTable(diff: RunDiff): string {
   if (diff.refusedWholeRun !== null) {
@@ -116,7 +116,7 @@ export function formatDiffTable(diff: RunDiff): string {
       diff.rows.map((row) => [
         VERDICT_MARK[row.verdict], row.key, row.metric,
         round3(row.baselineMs), round3(row.currentMs), round3(row.deltaMs),
-        ms(row.floorDeltaMs), round3(row.bandMs),
+        ms(row.floorDeltaMs), ms(row.spreadDeltaMs), round3(row.bandMs),
       ]),
     ));
   }
@@ -126,7 +126,7 @@ export function formatDiffTable(diff: RunDiff): string {
   return parts.length > 0 ? parts.join('\n') : 'baseline: nothing comparable in either run';
 }
 
-export const PIN_DIFF_COLUMNS = ['', 'row', 'metric', 'pinned', 'current', 'delta', 'floor', 'band', 'note'] as const;
+export const PIN_DIFF_COLUMNS = ['', 'row', 'metric', 'pinned', 'current', 'delta', 'floor', 'spread', 'band', 'note'] as const;
 
 export function formatPinTable(diff: PinDiff): string {
   if (diff.refusedWholeRun !== null) {
@@ -139,7 +139,7 @@ export function formatPinTable(diff: PinDiff): string {
       diff.rows.map((row) => [
         PIN_VERDICT_MARK[row.verdict], row.key, row.metric,
         ms(row.pinnedMs), ms(row.currentMs), ms(row.deltaMs),
-        ms(row.floorDeltaMs), round3(row.bandMs), row.note,
+        ms(row.floorDeltaMs), ms(row.spreadDeltaMs), round3(row.bandMs), row.note,
       ]),
     ));
   }

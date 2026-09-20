@@ -58,6 +58,7 @@
       "gpuFloor": {
         "p10": 18.780796000000002
       },
+      "gpuClasses": null,
       "compute": {
         "p50": 0.284538,
         "p90": 0.551783,
@@ -100,6 +101,7 @@
       "gpuFloor": {
         "p10": 10.787421
       },
+      "gpuClasses": null,
       "compute": {
         "p50": 0.46966,
         "p90": 0.703239,
@@ -141,6 +143,19 @@
       },
       "gpuFloor": {
         "p10": 12.137773000000001
+      },
+      "gpuClasses": {
+        "cutMs": 40.790836,
+        "plain": {
+          "p50": 12.868013,
+          "iqrMs": 0.8494449999999993,
+          "samples": 320
+        },
+        "dear": {
+          "p50": 75.595598,
+          "iqrMs": 4.51943,
+          "samples": 195
+        }
       },
       "compute": {
         "p50": 0.559325,
@@ -184,6 +199,7 @@
       "gpuFloor": {
         "p10": 29.009641000000002
       },
+      "gpuClasses": null,
       "compute": {
         "p50": 0.309412,
         "p90": 0.316995,
@@ -226,6 +242,7 @@
       "gpuFloor": {
         "p10": 9.901138999999999
       },
+      "gpuClasses": null,
       "compute": {
         "p50": 0.662406,
         "p90": 0.788905,
@@ -260,6 +277,7 @@
       },
       "gpu": null,
       "gpuFloor": null,
+      "gpuClasses": null,
       "compute": null,
       "computeFloor": null,
       "sourceRun": ".perf-runs/2026-09-20/8cg4932-main-pin.json"
@@ -286,6 +304,7 @@
       },
       "gpu": null,
       "gpuFloor": null,
+      "gpuClasses": null,
       "compute": null,
       "computeFloor": null,
       "sourceRun": ".perf-runs/2026-09-20/8cg4932-main-pin.json"
@@ -312,6 +331,7 @@
       },
       "gpu": null,
       "gpuFloor": null,
+      "gpuClasses": null,
       "compute": null,
       "computeFloor": null,
       "sourceRun": ".perf-runs/2026-09-20/8cg4932-main-pin.json"
@@ -338,6 +358,7 @@
       },
       "gpu": null,
       "gpuFloor": null,
+      "gpuClasses": null,
       "compute": null,
       "computeFloor": null,
       "sourceRun": ".perf-runs/2026-09-20/8cg4932-main-pin.json"
@@ -364,14 +385,11 @@
       },
       "gpu": null,
       "gpuFloor": null,
+      "gpuClasses": null,
       "compute": null,
       "computeFloor": null,
       "sourceRun": ".perf-runs/2026-09-20/8cg4932-main-pin.json"
     }
   ],
-  "accepted": {
-    "earth|webgpu|compute": {
-      "bead": "stellata-8cg.49.34"
-    }
-  }
+  "accepted": {}
 }
