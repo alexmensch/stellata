@@ -19,8 +19,7 @@ export function refillBucketOf(
   return Math.floor(slot / refillBucketCapacity(count, buckets));
 }
 
-/** The whole worklist: every bucket at capacity, one region shared by all
- *  quarters (README.md § One region, and the frame order behind it). */
+/** One region, shared by all four quarters (README.md § One region). */
 export function refillWorklistLength(count: number, buckets: number = REFILL_BUCKETS): number {
   return Math.max(1, buckets) * refillBucketCapacity(count, buckets);
 }
@@ -31,8 +30,7 @@ export function refillBucketBase(
   return bucket * refillBucketCapacity(count, buckets);
 }
 
-/** CPU mirror of the finish kernel's scan: element `b` is how many stars the
- *  buckets before `b` hold, and the return's last element the total. */
+/** CPU mirror of the finish kernel's scan; the last element is the total. */
 export function refillBucketPrefix(counts: readonly number[]): number[] {
   const prefix: number[] = [];
   let running = 0;
@@ -44,8 +42,7 @@ export function refillBucketPrefix(counts: readonly number[]): number[] {
   return prefix;
 }
 
-/** CPU mirror of the refill kernel's search: the bucket holding dense index
- *  `i`, given the exclusive prefix. */
+/** CPU mirror of the refill kernel's search over the exclusive prefix. */
 export function refillBucketAt(prefix: readonly number[], i: number, buckets = REFILL_BUCKETS): number {
   let bucket = 0;
   for (let step = buckets >> 1; step >= 1; step >>= 1) {
