@@ -83,6 +83,8 @@ import {
   type NumericRecordField,
   type WireStarRecord,
   planCatalogChunks,
+  CATALOG_CHUNK_TARGET_BYTES,
+  CATALOG_FIRST_CHUNK_TARGET_BYTES,
   assembleCatalogChunks,
   type CatalogManifest,
   parseGaiaApsisTsv,
@@ -2007,6 +2009,30 @@ describe('catalog-pure / transport chunking', () => {
 
   it('planCatalogChunks rejects a non-positive target', () => {
     expect(() => planCatalogChunks(100, 0)).toThrow(/Invalid chunk target/);
+    expect(() => planCatalogChunks(100, 10, 0)).toThrow(/Invalid first-chunk target/);
+  });
+
+  it('planCatalogChunks doubles from the first-chunk target up to the ceiling', () => {
+    expect(planCatalogChunks(1000, 64, 4)).toEqual(
+      [4, 8, 16, 32, ...Array<number>(14).fill(64), 44],
+    );
+  });
+
+  it('no chunk ever exceeds the target, at any catalogue size', () => {
+    // The ceiling is the Cloudflare Workers 25 MiB per-asset limit with
+    // headroom; a plan that doubled past it would break deploy rather than
+    // fail a test, so the doubling is asserted clamped rather than trusted.
+    const MiB = 1024 * 1024;
+    for (const totalMiB of [37, 94, 235, 4096]) {
+      const plan = planCatalogChunks(totalMiB * MiB);
+      expect(Math.max(...plan), `${totalMiB} MiB`).toBe(CATALOG_CHUNK_TARGET_BYTES);
+      expect(plan.reduce((a, b) => a + b, 0)).toBe(totalMiB * MiB);
+    }
+  });
+
+  it('the first chunk is the first-paint payload, not the transport ceiling', () => {
+    expect(CATALOG_FIRST_CHUNK_TARGET_BYTES).toBeLessThan(CATALOG_CHUNK_TARGET_BYTES);
+    expect(planCatalogChunks(100 * 1024 * 1024)[0]).toBe(CATALOG_FIRST_CHUNK_TARGET_BYTES);
   });
 
   it('assembleCatalogChunks throws on chunk-count mismatch', () => {
