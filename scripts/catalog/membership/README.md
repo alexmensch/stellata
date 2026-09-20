@@ -445,4 +445,5 @@ and as the frozen `gaia_source_id` column the derivation is diffed against
 takes a value from it except through a committed disposition row that says so,
 and since the label merge moved onto the derived binding `build:classic-ids`
 does not read this file at all. After the swap release the baseline becomes the
-previous manifest.
+previous manifest. The per-column, per-consumer retirement plan and its order:
+`docs/catalog-driver.md` § 3.2.
