@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { sortedDistRange } from '../../camera/controls/star-geometry';
 import type { Catalog } from '../../loaders/catalog-loader';
+import { mergeSortedByDistance } from './star-frame-pure';
 import {
   advancePositionsToEpoch,
   bucketEpochJyr,
@@ -125,28 +126,18 @@ export class StarFrame {
 
     this.logRadii = new Float32Array(catalog.count);
     this.lumClassF32 = new Float32Array(catalog.count);
-    // An undecoded record must sort PAST every window the proximity index
-    // is ever queried over, not to distance zero where Sol sits.
     this.distSol = new Float32Array(catalog.count).fill(Infinity);
     this.teffApsis = new Float32Array(catalog.count);
     this.localPositions = new Float32Array(catalog.count * 3);
     this.sortedByDistFromSol = new Uint32Array(catalog.count);
-    this.sortedDistFromSol = new Float32Array(catalog.count);
+    // Both sentinels: README.md § Absorbing a chunk.
+    this.sortedDistFromSol = new Float32Array(catalog.count).fill(Infinity);
 
     this.absorbRecords();
     this.notifyLocalWrites = true;
   }
 
-  /**
-   * Fold every record decoded since the last call into the baseline, the
-   * derived buffers and the proximity index. Called once from the
-   * constructor and again per landing transport chunk.
-   *
-   * The baseline is EXTENDED, never re-snapshotted: `advanceEpochTo` writes
-   * `base + v·Δt` back over `catalog.positions`, so a baseline taken before
-   * the tail landed would overwrite those records with zeros the first time
-   * the model clock crossed a bucket.
-   */
+  /** See README.md § Absorbing a chunk — two silent traps in here. */
   absorbRecords(): void {
     const { catalog } = this;
     const first = this.derivedCount;
@@ -192,7 +183,9 @@ export class StarFrame {
     this._maxPhysicalRadiusPc = maxPhysicalRadius * R_SUN_PC;
     this.derivedCount = end;
 
-    this.mergeIntoProximityIndex(first, end);
+    mergeSortedByDistance(
+      this.distSol, this.sortedByDistFromSol, this.sortedDistFromSol, first, end,
+    );
     // Only the new window needs writing — the prefix already sits at this
     // origin — unless an epoch advance left the whole buffer stale, in
     // which case this call is what discharges it.
@@ -201,44 +194,6 @@ export class StarFrame {
       this.localPositionsStale ? 0 : first,
       end,
     );
-  }
-
-  /**
-   * Merge the newly-derived window into the Sol-distance index, in place on
-   * both arrays — the Picker captured them by reference at construction and
-   * a reallocation would strand it on a stale pair.
-   *
-   * A merge, not a re-sort. Re-sorting the whole catalogue per landing chunk
-   * is a comparator sort over every record each time, which blocks the main
-   * thread long enough to read as a frozen scene; the prefix is already
-   * ordered and the window is small, so sorting the window and merging the
-   * two runs is linear in what actually moved.
-   */
-  private mergeIntoProximityIndex(first: number, end: number): void {
-    const dist = this.distSol;
-    const idx = this.sortedByDistFromSol;
-    const key = this.sortedDistFromSol;
-
-    const incoming = new Uint32Array(end - first);
-    for (let i = first; i < end; i++) incoming[i - first] = i;
-    incoming.sort((a, b) => dist[a] - dist[b]);
-
-    // Walk both runs back to front into the tail the undecoded records
-    // still occupy, so neither run is overwritten before it is read.
-    let a = first - 1;
-    let b = incoming.length - 1;
-    let w = end - 1;
-    while (b >= 0) {
-      if (a >= 0 && dist[idx[a]] > dist[incoming[b]]) {
-        idx[w] = idx[a];
-        a--;
-      } else {
-        idx[w] = incoming[b];
-        b--;
-      }
-      w--;
-    }
-    for (let i = 0; i < end; i++) key[i] = dist[idx[i]];
   }
 
   /** Bucketised Julian epoch year the catalog positions currently sit

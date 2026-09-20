@@ -129,10 +129,10 @@ What the undecoded tail holds, and why each is what it is:
 - **`companion` is pre-filled with −1.** A zeroed `Uint32Array` decodes as
   "my companion is record 0", not as absent, so the sentinel has to be seeded
   rather than left.
-- **`StarFrame.distSol` is pre-filled with `Infinity`**, so an undecoded
-  record sorts past every window the proximity index is queried over. At zero
-  it would sort to the *front*, alongside Sol, and flood both the near-camera
-  walk and the Picker's distSol slice with phantoms at the origin.
+- **`StarFrame.distSol` and `StarFrame.sortedDistFromSol` are both pre-filled
+  with `Infinity`** — the sorted one is what the proximity window's binary
+  search actually reads, and filling only `distSol` looks sufficient and is
+  not (`../star-pipeline/star-frame/README.md` § Absorbing a chunk).
 - **Positions, magnitudes and flags stay zero**, which is safe only because
   nothing walks past `loadedCount`: the WebGPU compaction kernel's thread
   count and the WebGL2 geometry's `instanceCount` are both the decoded count

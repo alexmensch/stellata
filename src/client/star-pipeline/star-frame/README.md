@@ -17,8 +17,13 @@ src/client/star-pipeline/star-frame/
                                   and the Sol-distance proximity
                                   queries including the core-mask gate.
                                   The test covers the recentre rewrite,
-                                  epoch re-advance + focal delta, and
-                                  the proximity / core-mask window.
+                                  epoch re-advance + focal delta, the
+                                  proximity / core-mask window, and the
+                                  partial-catalogue window bound.
+  star-frame-pure.ts (+ test)     The proximity index's in-place merge
+                                  (§ Absorbing a chunk). Pure; pinned
+                                  against a full re-sort over an
+                                  arbitrary chunk ramp.
 ```
 
 ## The star frame
@@ -115,10 +120,27 @@ Two things here are traps rather than choices:
   through a getter, so reallocating either leaves it on a stale pair for the
   session.
 
-`distSol` is pre-filled with `Infinity` rather than left at zero, so an
-undecoded record sorts past every window the index is queried over. At zero
-it would sort to the *front*, next to Sol, and both consumers of the window
-below would walk several hundred thousand phantoms at the origin.
+**`distSol` AND `sortedDistFromSol` are both pre-filled with `Infinity`**,
+and the second one is the one that matters. `sortedDistRange` binary-searches
+`sortedDistFromSol` over its full allocated length, so whatever sits past the
+decoded prefix decides where the search stops:
+
+- At `Infinity` the array is monotone, every band ends at the decoded count,
+  and the untouched `sortedByDistFromSol` tail is unreachable.
+- At zero it is not monotone, and zero is *inside* every band a consumer asks
+  for — so the search walks off the prefix and the window runs to the full
+  record count. Every index slot out there reads 0, which is record 0, which
+  is Sol. The Picker's band then scans several hundred thousand phantoms at
+  the origin on every pick, and a camera far from Sol gets the opposite
+  failure: `start` and `end` both land past the prefix and the near-camera
+  walk sees *no* stars, so the core-mask gate never fires for the whole load.
+
+`mergeSortedByDistance` (`star-frame-pure.ts`) takes that as its contract —
+`Infinity` past `end` on entry, and the same on exit.
+
+Filling `distSol` alone is the trap, because it looks sufficient: an
+undecoded record does sort past every window, but only the *sorted* array is
+ever searched.
 
 `maxPhysicalRadiusPc` and `maxEpochDriftPc` are running maxima over what has
 landed. Both bound windows, so they may only grow — a chunk carrying a larger
