@@ -198,8 +198,8 @@ fetched beside the binary inside boot's one `Promise.all`
 gz — 2.5%, because the deep population carries no designation and contributes
 2,221 searchable entries against 594,998 new records.
 `catalog-row-index-map.json` does scale, 5.3 → 12.6 MB gz, but **no client code
-reads it**: it is a build- and test-side sidecar addressed only from
-`scripts/`, so it is not a first-load cost and cannot drive a wire-chunking
+reads it**: it is a build- and test-side sidecar addressed only from `scripts/`
+and `tests/`, so it is not a first-load cost and cannot drive a wire-chunking
 decision.
 
 First load therefore moves 29.8 → 66.9 MB gz, **2.24x**. `cns.6` owns the
@@ -220,12 +220,20 @@ what it holds):
 | static record table (`STAR_STATIC_STRIDE`, 12 floats) | 48 | 17.8 MiB | 45.0 MiB |
 | forwarded tables (`iPosition` ×3 + three scalars) | 24 | 8.9 MiB | 22.5 MiB |
 | compaction survivor lists (2 × `u32`) | 8 | 3.0 MiB | 7.5 MiB |
-| extinction prepass (six buffers) | 36 | 13.3 MiB | 33.7 MiB |
-| | **116** | **42.9 MiB** | **108.7 MiB** |
+| extinction prepass (six buffers) | 36 | 13.3 MiB | 33.8 MiB |
+| | **116** | **42.9 MiB** | **108.8 MiB** |
 
-**+65.8 MiB of video memory**, and the decoded binary the JS heap holds grows
-with it. A twelfth static field still costs no bytes at this stride; a
-thirteenth costs 3.8 MiB at the floor rather than 1.5 MiB today.
+**+65.8 MiB of video memory** — and ordinary memory grows alongside it, which
+is the tighter bound on an integrated or mobile device. Three of those buffers
+keep a copy the renderer never releases: the static table's `Float32Array`
+(48 B/star), extinction's packed position copy (16 B/star) and the order table
+behind it (4 B/star) — 25.2 MiB today against **63.8 MiB** at the floor. The
+forwarded tables add none, their arrays being the shell's, and the decoded
+record columns sit on top of all of it.
+
+A twelfth static field still costs no bytes at this stride; a thirteenth takes
+the stride to 16 and so costs a whole vec4 rather than a slot — 15.0 MiB at the
+floor, 5.9 MiB today.
 
 ## The astrometry comes with it
 

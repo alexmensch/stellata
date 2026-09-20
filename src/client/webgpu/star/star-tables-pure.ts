@@ -5,7 +5,7 @@ import { STAR_STATIC_FIELDS, type StarStaticField } from '../star-attribute-rost
 
 /** Padded to whole vec4s for headroom, not alignment — scalar reads out of a
  *  float table need none. A twelfth static field costs no bytes; a thirteenth
- *  costs four per star. */
+ *  takes the stride to 16, so sixteen bytes per star. */
 export const STAR_STATIC_STRIDE = Math.ceil(STAR_STATIC_FIELDS.length / 4) * 4;
 
 export function staticSlot(field: StarStaticField): number {
