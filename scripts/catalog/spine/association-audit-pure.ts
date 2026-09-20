@@ -6,7 +6,7 @@ import { lookupGliese } from '../gliese-parse';
 import { normaliseGjKey } from '../record/catalog-pure';
 import type { SpineRow } from './inherited-spine-pure';
 import {
-  bareGjKey, glKeyForms, indexCns5, type PrimaryTables, type SimbadXids,
+  bareGjKey, cns5RowFor, indexCns5, type PrimaryTables, type SimbadXids,
 } from './primaries-audit-pure';
 
 export type KeyCell = 'tyc' | 'hip' | 'hd' | 'hr' | 'gl';
@@ -46,7 +46,10 @@ export interface RowPartition {
   cells: KeyCell[];
   /** Per class, the connected components, each `cell+cell`, joined ` | `. */
   partition: Record<LinkClass, string>;
-  /** Per class, cells outside the largest component. */
+  /** Per class, cells outside the largest component. Which component is
+   *  "largest" breaks ties alphabetically, so on an even split (`gl | hip`)
+   *  this names one side arbitrarily: count rows by `partition`, not cells
+   *  by this. */
   minority: Record<LinkClass, KeyCell[]>;
 }
 
@@ -215,14 +218,7 @@ export function formatAssociationReport(s: AssociationSummary): string {
   return lines.join('\n');
 }
 
-export interface LinkTableInputs {
-  /** I/239 `HIP` → `HD`, read as pairs. */
-  i239HipHd: ReadonlyMap<number, number>;
-  /** V/70A `HD`, keyed `${name}\t${comp}` as the frozen slice prints them. */
-  v70aHd: ReadonlyMap<string, number>;
-}
-
-export function linkTablesFrom(tables: PrimaryTables, inputs: LinkTableInputs): LinkTables {
+export function linkTablesFrom(tables: PrimaryTables): LinkTables {
   const tycHd = new Map<string, Set<number>>();
   for (const r of tables.iv25) {
     const set = tycHd.get(r.tyc) ?? new Set<number>();
@@ -237,26 +233,19 @@ export function linkTablesFrom(tables: PrimaryTables, inputs: LinkTableInputs): 
     set.add(hd);
     hipHd.set(hip, set);
   };
-  for (const [hip, hd] of inputs.i239HipHd) addHipHd(hip, hd);
+  for (const [hip, hd] of tables.i239HipHd) addHipHd(hip, hd);
   for (const r of tables.iv27a) if (r.hip !== null) addHipHd(r.hip, r.hd);
   const hrHd = new Map<number, number>();
   for (const r of tables.v50) if (r.hd !== null) hrHd.set(r.hr, r.hd);
   const { cns5ByKey } = indexCns5(tables.cns5);
-  const cns5For = (gl: string) => {
-    const key = normaliseGjKey(gl);
-    if (key === null) return undefined;
-    return glKeyForms(key, tables.glAliases).map((k) => cns5ByKey.get(k)).find((r) => r !== undefined);
-  };
+  const cns5For = (gl: string) => cns5RowFor(gl, cns5ByKey, tables.glAliases);
   return {
     tycHd,
     tycHip,
     hipHd,
     hrHd,
     glHip: (gl) => cns5For(gl)?.hip ?? null,
-    glHd: (gl) => {
-      const g = lookupGliese(tables.gliese, gl);
-      return g === null ? null : inputs.v70aHd.get(`${g.name}\t${g.comp}`) ?? null;
-    },
+    glHd: (gl) => lookupGliese(tables.gliese, gl)?.hd ?? null,
     sourceOf: {
       tyc: (tyc) => tables.tycToSource.get(tyc) ?? null,
       hip: (hip) => tables.hipToSource.get(hip) ?? null,

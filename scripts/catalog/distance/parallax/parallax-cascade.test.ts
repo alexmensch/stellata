@@ -26,7 +26,7 @@ const hip2 = (plxMas: number, plxErrorMas: number | null) => ({
   raDeg: 0, decDeg: 0, plxMas, plxErrorMas, pmRaMasyr: null, pmDeMasyr: null,
 });
 const gliese = (plxMas: number | null, trigonometric = true): GlieseRow => ({
-  name: 'Gl 423', comp: 'A', vMag: null, bMinusV: null, spectral: null,
+  name: 'Gl 423', comp: 'A', vMag: null, bMinusV: null, spectral: null, hd: null,
   parallax: plxMas === null
     ? null
     : { mas: plxMas, errMas: 1.0, trigonometric },
@@ -177,7 +177,7 @@ describe('parallax-cascade / the precision floor', () => {
   it('admits a sub-floor-looking Gliese parallax whose error is unpublished, '
     + 'on the same benefit-of-the-doubt rule HIP2 gets', () => {
     const noError: GlieseRow = {
-      name: 'Gl 423', comp: 'A', vMag: null, bMinusV: null, spectral: null,
+      name: 'Gl 423', comp: 'A', vMag: null, bMinusV: null, spectral: null, hd: null,
       parallax: { mas: 0.5, errMas: null, trigonometric: true },
     };
     const res = resolveParallax({ ...NONE, gliese: noError }, false, false);

@@ -59,7 +59,7 @@ function glieseParallaxes(
   return {
     byKey: new Map(rows.map((r) => [r.gl, {
       name: `Gl ${r.gl}`, comp: '',
-      vMag: null, bMinusV: null, spectral: null,
+      vMag: null, bMinusV: null, spectral: null, hd: null,
       parallax: { mas: 1000 / r.distPc, errMas: 0.001, trigonometric: true },
     }])),
     rowCount: rows.length,

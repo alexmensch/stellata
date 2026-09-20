@@ -33,9 +33,9 @@ function tycho2(vtMag: number, hip: number | null = null): Tycho2Row {
 }
 
 const GLIESE_TSV = [
-  'name\tcomp\tvmag\tbv\tsp\tplx_mas\te_plx_mas\tn_plx',
-  'NN 3001\t\t12.1\t\t\t\t\t',
-  'Gl 165\tAB\t9.0\t\t\t\t\t',
+  'name\tcomp\tvmag\tbv\tsp\tplx_mas\te_plx_mas\tn_plx\thd',
+  'NN 3001\t\t12.1\t\t\t\t\t\t',
+  'Gl 165\tAB\t9.0\t\t\t\t\t\t',
 ].join('\n') + '\n';
 
 const tables: PrimaryTables = {
@@ -63,6 +63,7 @@ const tables: PrimaryTables = {
   gliese: parseGlieseTsv(GLIESE_TSV),
   hipI239: new Set([10, 20, 70890]),
   hdI239: new Set([330122]),
+  i239HipHd: new Map([[70890, 330122]]),
   glAliases: glAliasesFromEdges([
     { a: 'gl:Gl_157.1', b: 'gl:GJ_9140' },
     { a: 'synth:00047+3416-Db', b: 'gaia_dr3:2875176250406193920' },

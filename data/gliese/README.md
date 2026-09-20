@@ -143,6 +143,9 @@ the newer catalogue does not retire this one.
   (`scripts/catalog/distance/parallax/README.md`). `vmag`, `bv`, `sp` and the
   `n_plx`-gated `plx_mas` / `e_plx_mas` are read; the parser adds a field per
   bead, the same terms as `data/simbad/simbad_values.tsv`.
+- `scripts/catalog/spine/association-audit-pure.ts` → the GJ↔HD link of the
+  spine's association audit (`scripts/catalog/spine/README.md` § The
+  association audit), which is what `hd` is on the parsed row for.
 
 ## Refresh
 

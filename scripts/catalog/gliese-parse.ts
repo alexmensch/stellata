@@ -2,14 +2,14 @@
 // first-order tier under Tycho-2 in the V cascade of
 // docs/catalog-driver.md § 5.
 
-import { dataRows, nonEmpty, parseFloatOrNull } from './parse/corpus-tsv';
+import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from './parse/corpus-tsv';
 import { normaliseGjKey } from './record/catalog-pure';
 
 const FILE_LABEL = 'data/gliese/gliese_v70a.tsv';
 const REFRESH_HINT = 'Re-run `pnpm run refresh:gliese`.';
 
 const COLUMNS = [
-  'name', 'comp', 'vmag', 'bv', 'sp', 'plx_mas', 'e_plx_mas', 'n_plx',
+  'name', 'comp', 'vmag', 'bv', 'sp', 'plx_mas', 'e_plx_mas', 'n_plx', 'hd',
 ] as const;
 
 /** V/70A's resulting parallax, carrying which KIND of parallax it is.
@@ -37,6 +37,8 @@ export interface GlieseRow {
   bMinusV: number | null;
   spectral: string | null;
   parallax: GlieseParallax | null;
+  /** V/70A's own `HD` column — the GJ↔HD link the association audit joins on. */
+  hd: number | null;
 }
 
 export interface GlieseIndex {
@@ -91,6 +93,7 @@ export function parseGlieseTsv(text: string): GlieseIndex {
         // or spectroscopic estimate.
         trigonometric: nonEmpty(cells[idx.n_plx]) === null,
       },
+      hd: parseIntOrNull(cells[idx.hd]),
     };
     if (index.byKey.has(key)) {
       throw new Error(`${FILE_LABEL} has two rows keyed ${key}. ${REFRESH_HINT}`);
