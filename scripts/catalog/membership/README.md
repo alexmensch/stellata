@@ -385,6 +385,6 @@ applied), and as the inherited label cells the merge above starts from. **Its
 derivation stands on its own outputs (§ The spine side) and the V ≤ 3 coverage
 counters take the printed-V cascade the binding gate already weighs each row
 against. Since the label merge moved onto the derived binding,
-`build:classic-ids` does not read this file at all. After the swap release the baseline becomes the
-previous manifest. The per-column, per-consumer retirement plan and its order:
-`docs/catalog-driver.md` § 3.2.
+`build:classic-ids` does not read this file at all. After the swap release the
+baseline becomes the previous manifest. The per-column, per-consumer
+retirement plan and its order: `docs/catalog-driver.md` § 3.2.
