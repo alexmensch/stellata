@@ -1745,8 +1745,8 @@ at the time (+1.02 GC-anchored, +1.68 pole-anchored), which bracket that
 scale. **The panorama's pixels hold the resolved stars too**, so once the
 hole moved their light out of the band the model row to grade is the band
 plus the catalogue's patch sum, not the band alone — the re-grade is
-stellata-cns.9's follow-up bead, and until it lands the pre-hole table
-below remains the like-for-like comparison.
+stellata-xypg.43, and until it lands the pre-hole table below remains the
+like-for-like comparison.
 
 Scope: the Milky Way band only, at the unaided-eye instrument, base
 epoch, no EV trim — the only shipping instrument (the per-preset framing
