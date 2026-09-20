@@ -20,11 +20,11 @@ and fails on any diff under `data/membership/`.
 ```
 scripts/catalog/membership/
   membership-manifest-pure.ts     Row assembly (spine side, additions), the
-    (+ test)                      derived binding held against the frozen
-                                  cell, the review queue and its dispositions,
-                                  the admission rule, the § 6.1 reason codes,
-                                  the label drops, the TSV codecs, and the
-                                  spine ↔ manifest matcher the gate runs. Pure.
+    (+ test)                      review queue and the dispositions settling
+                                  it, the admission rule, the § 6.1 reason
+                                  codes, the label drops, the TSV codecs, and
+                                  the spine ↔ manifest matcher the gate runs.
+                                  Pure.
   build-membership-manifest.ts    `pnpm run build:membership` — loads the
                                   spine and its corrections, the primaries, the
                                   overlay, the binding gates' evidence,
@@ -42,8 +42,9 @@ scripts/catalog/membership/
                                   Pinned count snapshot. Refresh with
                                   UPDATE_BUILD_COUNTS=1.
   binding/                        A row's gaia_source_id from committed
-                                  evidence alone, and the review queue and
-                                  dispositions over it. Own README.
+                                  evidence alone: the four sources, both
+                                  gates, and the outcomes the derivation
+                                  cannot settle by itself. Own README.
   magnitude-term/                 The union's second term — the V floor, its
                                   filter over the Gaia pull and the 5p
                                   astrometry that comes with it. Own README.

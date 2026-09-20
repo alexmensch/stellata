@@ -310,7 +310,7 @@ Bayer / Flamsteed (WGSN, IV/27A), HIP (I/239), GJ (CNS5, V/70A), IAU proper
 name (WGSN) — keyed on that designation, with a `gaia_source_id` **derived**
 from the TYC and HIP cross-walks, CNS5 and SIMBAD's frozen cross-IDs through
 the § 4 gates, or settled by a committed review disposition where the sources
-disagree with each other or with the frozen column
+disagree with each other or reach nothing at all
 (`scripts/catalog/membership/binding/README.md`). That
 is AT-HYG's *stated* selection rule reproduced from the primaries. AT-HYG's
 *realised* membership is that rule minus its link defect and merge drops, and

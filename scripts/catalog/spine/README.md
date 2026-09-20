@@ -10,9 +10,9 @@ the spine is load-bearing rather than a rare fallback is
 the membership manifest (`../membership/README.md`), which this file is an
 input to and a baseline for. What the spine still supplies is the one thing no
 primary does: **which designations name one star**. `build:membership` reads
-it for those merge decisions, derives each row's Gaia binding from committed
-evidence and holds the result against the frozen `gaia_source_id` column as a
-derivation (`../membership/binding/README.md`); the
+it for those merge decisions and for the label cells the merge starts from,
+deriving each row's Gaia binding from committed evidence alone
+(`../membership/binding/README.md`); the
 manifest's parity gate (i) reads it as the baseline every manifest row must
 account for; `../classic-ids/parity-ledger.test.ts` backs two dispositions
 against its cells; `../astrometry-request/` reads its TYCs to narrow the
@@ -102,14 +102,14 @@ reads them.
 ## The identifier columns are read, never re-derived
 
 The classical cells come off the column and the manifest re-keys them; the
-`gaia_source_id` cell is the one column the manifest **does not** copy. The
-generator derives each binding from the TYC and HIP cross-walks, CNS5 and
-SIMBAD's cross-IDs through both binding gates, and reads the frozen cell only
-to diff against (`../membership/binding/README.md`). The
+`gaia_source_id` cell is the one column the manifest **does not read at all**.
+The generator derives each binding from the TYC and HIP cross-walks, CNS5 and
+SIMBAD's cross-IDs through both binding gates
+(`../membership/binding/README.md`). The
 native → HIP-cross-walk precedence that produced the frozen column took
 AT-HYG's own `gaia` cell as its first input, which is not in the repo, so no
-walk order reproduces it; the derivation is a fresh answer held against it,
-not a replay of it.
+walk order reproduces it; the derivation is a fresh answer, never a replay
+of it.
 
 What that answer decides differently is measured rather than feared:
 § The primaries audit puts the frozen column at 11,731 bindings no **raw walk**

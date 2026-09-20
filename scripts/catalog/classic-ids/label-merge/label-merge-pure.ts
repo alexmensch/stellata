@@ -269,10 +269,9 @@ export function parseLabelOverridesTsv(text: string): LabelOverrides {
 /** A spine row's inherited labels as the merge's record, keyed on the binding
  *  the caller derived for it. The binding is a parameter rather than the row's
  *  own `gaia_source_id` cell because the two part company on 800-odd rows: the
- *  manifest derives the binding and reads the frozen cell only as a diff
- *  surface (`../../membership/binding/README.md`), and labels
- *  keyed on the retired cell would name a source the record is no longer
- *  bound to. */
+ *  manifest derives the binding from committed evidence alone
+ *  (`../../membership/binding/README.md`), and labels keyed on that cell
+ *  would name a source the record is no longer bound to. */
 export function spineLabelMergeRecord(
   row: SpineRow, gaiaSourceId: string | null,
 ): { record: LabelMergeRecord; label: string } {
