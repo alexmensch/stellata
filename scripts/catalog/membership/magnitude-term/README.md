@@ -14,10 +14,9 @@ scripts/catalog/membership/magnitude-term/
     (+ test)                    the Riello transform, the line-fed accumulator
                                 the whole-text and streaming readers share,
                                 and the union's dedupe. Pure.
-  magnitude-term.ts             The two streaming reads over the ~200 MB pull:
-                                the floor's selection for build:membership,
-                                and the 5p astrometry for the sources it
-                                admitted.
+  magnitude-term.ts             The streaming reads: the floor's selection and
+                                the 5p astrometry over the ~200 MB pull, and
+                                the term's own source_ids out of the manifest.
   magnitude-term-gate.test.ts   The floor measured over the COMMITTED pull and
                                 manifest, pinning the four figures
                                 data/gaia/README.md states. LFS-gated.
@@ -32,11 +31,14 @@ manifest, and the record build walks the longer file unchanged.
 
 Moving it **deeper than `V ≤ 11` needs a re-pull first**. The file on disk is
 bounded at `G ≤ 11` and `{V ≤ 11} ⊂ {G ≤ 11}` strictly, so any floor at or
-below 11 is complete and a floor above it silently claims a completeness the
-file does not hold. `MAGNITUDE_PULL_G_BOUND` states that bound and the suite
-holds the floor under it. The argument, and why the pull carries no margin over
-the floor rather than the 0.5 mag one intuition asks for:
-`data/gaia/README.md` § Why the floor carries no margin.
+below 11 is complete and a floor above it would claim a completeness the file
+does not hold. `MAGNITUDE_PULL_G_BOUND` states that bound and the accumulator
+**throws** on a floor past it, beside its non-finite check — the read refuses
+rather than under-selecting, so an ad-hoc call with a deeper floor fails at the
+build and not at whatever later point a count is read as complete. The
+argument, and why the pull carries no margin over the floor rather than the
+0.5 mag one intuition asks for: `data/gaia/README.md` § Why the floor carries
+no margin.
 
 The pull is `data/gaia/gaia_dr3_magnitude_pull.tsv`, refreshed by
 `pnpm run refresh:gaia-magnitude` (`scripts/refresh/README.md`).
@@ -111,14 +113,20 @@ term working. The two counts must not be read against each other.
 The pull carries full 5p astrometry and `radial_velocity` for every row, on
 `gaia_astrometry_pull.TSV_COLUMNS` — the same schema
 `gaia_dr3_astrometry_catalog.tsv` uses. `readMagnitudeTermAstrometry` therefore
-hands its rows to `parseGaiaAstrometryCatalogTsv`, the same parser, so the
-direction cascade stays single-sourced and the overlap between the two files
-cannot drift. No request-file extension reaches these sources, and none is
-needed.
+feeds `gaiaAstrometryAccumulator` (`../../distance/direction-cascade.ts`), the
+fold behind the same parser, so the direction cascade stays single-sourced and
+the overlap between the two files cannot drift. No request-file extension
+reaches these sources, and none is needed.
 
 It takes a keep-set and streams, for the reason `../../parse/gaia-xmatch.ts`
 does: parsing 1.25 M rows to join a subset holds the whole table in memory for
-no gain.
+no gain. The keep-set arrives the same way — `readMagnitudeTermSourceIds`
+folds the `term=magnitude` rows out of the manifest a line at a time, since
+the record build needs it *before* it walks that file and the manifest is the
+build's largest artifact once the term is on. Both reads resolve their columns
+from the header by name; neither assumes a column's position.
+`../../parse/README.md` § Streaming a committed table carries the pattern and
+why a collect-then-rejoin reader defeats it.
 
 Bailer-Jones distances and Apsis parameters for the same population arrive
 through `refresh_lib.pull_deep_population` (`scripts/refresh/README.md`), not

@@ -19,7 +19,7 @@ const PULL_COLUMNS = [
   'source_id', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag',
 ] as const;
 
-const PULL_HINT = 'run `pnpm run refresh:gaia-magnitude`.';
+export const MAGNITUDE_PULL_HINT = 'run `pnpm run refresh:gaia-magnitude`.';
 
 /** README.md § The filter is the shipped cascade's own top tier. */
 export const MAGNITUDE_VERDICTS = ['kept', 'above_floor', 'no_v'] as const;
@@ -51,6 +51,12 @@ export function magnitudeTermAccumulator(floorV: number): {
   if (!Number.isFinite(floorV)) {
     throw new Error(`magnitude floor must be finite, got ${floorV}`);
   }
+  if (floorV > MAGNITUDE_PULL_G_BOUND) {
+    throw new Error(
+      `magnitude floor V <= ${floorV} exceeds the pull's G <= ${MAGNITUDE_PULL_G_BOUND} `
+        + `bound, so the selection would be incomplete — re-pull deeper first: ${MAGNITUDE_PULL_HINT}`,
+    );
+  }
   let idx: Record<string, number> | null = null;
   const keptSourceIds = new Set<string>();
   const counts: MagnitudeTermCounts = { rows: 0, kept: 0, above_floor: 0, no_v: 0 };
@@ -65,7 +71,7 @@ export function magnitudeTermAccumulator(floorV: number): {
   return {
     line: (raw) => {
       if (idx === null) {
-        idx = headerIndex(raw, PULL_COLUMNS, MAGNITUDE_PULL_FILE, PULL_HINT);
+        idx = headerIndex(raw, PULL_COLUMNS, MAGNITUDE_PULL_FILE, MAGNITUDE_PULL_HINT);
         return;
       }
       if (!raw.trim()) return;
@@ -94,16 +100,12 @@ export function selectMagnitudeTerm(text: string, floorV: number): MagnitudeTerm
   return acc.result();
 }
 
-/** The manifest rows the magnitude term contributed — the keep-set the record
- *  build's astrometry read needs. */
-export function magnitudeTermSourceIds(
-  rows: Iterable<{ term: string; gaia_source_id: string }>,
-): Set<string> {
-  const out = new Set<string>();
-  for (const row of rows) {
-    if (row.term === 'magnitude' && row.gaia_source_id !== '') out.add(row.gaia_source_id);
-  }
-  return out;
+/** A manifest row the magnitude term contributed, carrying the source_id the
+ *  record build's astrometry read keys on. */
+export function isMagnitudeTermRow(
+  row: { term: string; gaia_source_id: string },
+): boolean {
+  return row.term === 'magnitude' && row.gaia_source_id !== '';
 }
 
 export function magnitudeTermNewcomers(

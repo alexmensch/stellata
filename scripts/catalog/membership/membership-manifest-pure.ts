@@ -464,30 +464,53 @@ export function serializeManifest(rows: readonly ManifestRow[]): string {
 
 /** Demands the header byte for byte, as `iterSpineTsv` does: the only writers
  *  are this module's serializers, so a header that merely parses was never
- *  shipped. Walks the text rather than splitting it — the manifest runs to tens
- *  of megabytes, and every reader here shares the walk. */
+ *  shipped. */
+function checkTsvHeader(header: string, columns: readonly string[], label: string): void {
+  if (header !== columns.join('\t')) {
+    throw new Error(`${label}: header mismatch: got ${header}`);
+  }
+}
+
+function tsvCells(line: string, columns: readonly string[], label: string): string[] {
+  const cells = line.split('\t');
+  if (cells.length !== columns.length) {
+    throw new Error(
+      `${label}: row has ${cells.length} cells, expected ${columns.length}: "${line}"`,
+    );
+  }
+  return cells;
+}
+
+/** Walks the text rather than splitting it — the manifest runs to tens of
+ *  megabytes, and every reader here shares the walk. */
 function* tsvRows(
   text: string, columns: readonly string[], label: string,
 ): Generator<string[]> {
   const headerEnd = text.indexOf('\n');
-  const header = headerEnd === -1 ? text : text.slice(0, headerEnd);
-  if (header !== columns.join('\t')) {
-    throw new Error(`${label}: header mismatch: got ${header}`);
-  }
+  checkTsvHeader(headerEnd === -1 ? text : text.slice(0, headerEnd), columns, label);
   let start = headerEnd === -1 ? text.length : headerEnd + 1;
   while (start < text.length) {
     const end = text.indexOf('\n', start);
     const line = text.slice(start, end === -1 ? text.length : end);
     start = end === -1 ? text.length : end + 1;
     if (line === '') continue;
-    const cells = line.split('\t');
-    if (cells.length !== columns.length) {
-      throw new Error(
-        `${label}: row has ${cells.length} cells, expected ${columns.length}: "${line}"`,
-      );
-    }
-    yield cells;
+    yield tsvCells(line, columns, label);
   }
+}
+
+/** The same contract, fed a line at a time, so a reader needing one column can
+ *  stream the manifest instead of holding it as one string. */
+export function manifestLineReader(onRow: (row: ManifestRow) => void): (line: string) => void {
+  let sawHeader = false;
+  return (line) => {
+    if (!sawHeader) {
+      checkTsvHeader(line, MANIFEST_COLUMNS, MEMBERSHIP_MANIFEST_FILE);
+      sawHeader = true;
+      return;
+    }
+    if (line === '') return;
+    onRow(rowFrom(MANIFEST_COLUMNS, tsvCells(line, MANIFEST_COLUMNS, MEMBERSHIP_MANIFEST_FILE)));
+  };
 }
 
 function rowFrom<C extends string>(

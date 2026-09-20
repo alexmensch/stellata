@@ -50,12 +50,12 @@ import {
   emptyPairMemberParallaxIndex,
   type PairMemberParallaxIndex,
 } from '../distance/parallax/pair-member-parallax';
-import { MEMBERSHIP_MANIFEST_FILE, iterManifestTsv } from '../membership/membership-manifest-pure';
-import { readMagnitudeTermAstrometry } from '../membership/magnitude-term/magnitude-term';
+import { MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-pure';
 import {
-  MAGNITUDE_FLOOR_V,
-  magnitudeTermSourceIds,
-} from '../membership/magnitude-term/magnitude-term-pure';
+  readMagnitudeTermAstrometry,
+  readMagnitudeTermSourceIds,
+} from '../membership/magnitude-term/magnitude-term';
+import { MAGNITUDE_FLOOR_V } from '../membership/magnitude-term/magnitude-term-pure';
 import type { ReadStarsOptions } from './stars-parse';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 
@@ -252,13 +252,14 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   if (MAGNITUDE_FLOOR_V !== null) {
     console.log('Parsing Gaia DR3 5p astrometry (magnitude term)...');
     const t = Date.now();
-    const keep = magnitudeTermSourceIds(
-      iterManifestTsv(readFileSync(MEMBERSHIP_MANIFEST_TSV, 'utf8')),
-    );
+    const keep = await readMagnitudeTermSourceIds(MEMBERSHIP_MANIFEST_TSV);
+    let added = 0;
     for (const [sourceId, row] of await readMagnitudeTermAstrometry(keep)) {
-      if (!directions.gaiaAstrometry.has(sourceId)) directions.gaiaAstrometry.set(sourceId, row);
+      if (directions.gaiaAstrometry.has(sourceId)) continue;
+      directions.gaiaAstrometry.set(sourceId, row);
+      added++;
     }
-    console.log(`  ${keep.size} sources in ${Date.now() - t}ms`);
+    console.log(`  ${added} of ${keep.size} sources in ${Date.now() - t}ms`);
     sizes.gaiaAstrometryEntries = directions.gaiaAstrometry.size;
   }
   if (existsSync(SRC_HIP2)) {

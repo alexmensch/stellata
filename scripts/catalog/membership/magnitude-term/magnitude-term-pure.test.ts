@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   MAGNITUDE_FLOOR_V,
   MAGNITUDE_PULL_G_BOUND,
+  isMagnitudeTermRow,
   magnitudeTermNewcomers,
-  magnitudeTermSourceIds,
   magnitudeVerdict,
   selectMagnitudeTerm,
 } from './magnitude-term-pure';
@@ -87,6 +87,13 @@ describe('selectMagnitudeTerm', () => {
   it('refuses a non-finite floor', () => {
     expect(() => selectMagnitudeTerm(HEADER, Number.NaN)).toThrow(/finite/);
   });
+
+  it('refuses a floor deeper than the pull on disk, rather than under-selecting', () => {
+    expect(() => selectMagnitudeTerm(HEADER, MAGNITUDE_PULL_G_BOUND + 0.5)).toThrow(
+      /exceeds the pull's G <= 11 bound/,
+    );
+    expect(() => selectMagnitudeTerm(HEADER, MAGNITUDE_PULL_G_BOUND)).not.toThrow();
+  });
 });
 
 describe('magnitudeTermNewcomers', () => {
@@ -99,20 +106,14 @@ describe('magnitudeTermNewcomers', () => {
   });
 });
 
-describe('magnitudeTermSourceIds', () => {
-  const rows = [
-    { term: 'primaries', gaia_source_id: '1' },
-    { term: 'magnitude', gaia_source_id: '2' },
-    { term: 'primaries', gaia_source_id: '' },
-    { term: 'magnitude', gaia_source_id: '3' },
-  ];
-
+describe('isMagnitudeTermRow', () => {
   it('takes the magnitude rows and leaves the primaries alone', () => {
-    expect([...magnitudeTermSourceIds(rows)]).toEqual(['2', '3']);
+    expect(isMagnitudeTermRow({ term: 'magnitude', gaia_source_id: '2' })).toBe(true);
+    expect(isMagnitudeTermRow({ term: 'primaries', gaia_source_id: '1' })).toBe(false);
   });
 
-  it('is empty on a manifest the term contributed nothing to', () => {
-    expect(magnitudeTermSourceIds(rows.filter((r) => r.term === 'primaries')).size).toBe(0);
+  it('refuses a magnitude row with no source_id, which could key nothing', () => {
+    expect(isMagnitudeTermRow({ term: 'magnitude', gaia_source_id: '' })).toBe(false);
   });
 });
 
