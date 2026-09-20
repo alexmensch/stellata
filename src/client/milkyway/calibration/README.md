@@ -19,6 +19,13 @@ comes out* is here.
   derivation and the colour solve, reading all three `data/bc03/` tables
   back: the shipped Υ\*_V and (B−V) off `m62` and the metallicity
   brackets off `m52` / `m72`.
+- `resolved-hole-table.ts` — **generated** by
+  `scripts/milkyway-calibration/` off the built catalogue: the two cap
+  rows, the record count they were measured on, and the resolution-hole
+  table (§ The resolution hole). Never edited by hand.
+- `resolved-fraction-pure.ts` (+ test) — the table's layout constants, the
+  bilinear sampler both shaders and the CPU mirror share, and the one
+  writer of the shader slot.
 
 ## The zero point is not the band's own — it is the emission unit's
 
@@ -181,38 +188,89 @@ march, so a redder population transmits more of its own light. The plane
 gained 0.026 mag at b = 5 and 0.023 mag toward the centre; the poles did
 not move. Every row below is post-derivation.
 
+## The resolution hole — the band marches the model minus the drawn stars
+
+`GALAXY_TOTAL_ABSMAG_V` is the light of every star, and the star field
+draws the resolved ones itself, so a band marching the whole emissivity
+counts them twice. The two shaders and the CPU mirror therefore multiply
+the emissivity at each step by **one minus the catalogue's share of the
+model's light at that point**, read out of `resolved-hole-table.ts`:
+
+- **32 distance shells from Sol**, a tenth of a dex wide from 10 pc to
+  15.8 kpc, **× 8 equal-|sin b| bands** — equal solid angle each, |sin b|
+  from Sol being |z| over the distance since Sol sits in the plane.
+- Each cell is the catalogue's intrinsic luminosity inside it
+  (`100·10^(−0.4·M_V)` per record) over the model's
+  (`ρ₀ × shape` integrated on the same cell), clamped to [0, 1]. A cell the
+  catalogue outshines is wholly resolved; the band cannot emit negative
+  light for the rest. A cell under 500 stars takes its shell's all-sky
+  share (`scripts/milkyway-calibration/README.md` § How a cell is measured).
+- Sampled **bilinearly in (log d, |sin b|)** over the cell centres and
+  clamped to the edge cells beyond them, so the first shell's value holds
+  inside 10 pc and the last shell's past 15.8 kpc. Both shaders and
+  `resolvedLightFraction` are the one sampler; the GLSL layout literals are
+  pinned against the wrapper's constants in `../milkyway.test.ts` and the
+  TSL imports them by name.
+- Applied **before the dust**, so the resolved stars and what the band
+  still draws see the same column — the catalogue's stars are rendered
+  through the per-star extinction prepass, the band's remainder through its
+  march.
+
+**Measured on the V ≤ 11 catalogue (983,069 records), not authored.**
+Within 200 pc the catalogue carries the whole of the model's light — the
+model's emissivity at Sol is right to a few percent, which is the one
+sightline-free check the solve has. From there the share falls: half the
+plane's light is resolved at 500 pc, a third at 1 kpc, under 2 % past
+3 kpc; the pole's population is thinner and its share is 44 % at 250 pc.
+Over the whole model the hole removes **0.35 %** of the band's light —
+0.004 mag from M31, so the ordering below stands — and 1.03× the
+catalogue's own light over the tabulated volume, the shell average being
+blind to structure in longitude.
+
+The hole's own columns are the acceptance: dust-free from Sol, the light
+it removes toward the pole reads 24.05 against the catalogue's 24.11 cap,
+and toward the centre 21.92 against 22.19 — the 10° cap averaging over
+structure a single ray does not. **What it does on screen is a fainter
+diffuse band with the same stars in it**: the dusty column toward the
+centre is the nearest two kiloparsecs, so it dims 0.68 mag; the anticentre
+0.64, b = 30 0.56, the pole 0.79, b = 5 — where the column reaches through
+the plane — 0.19. The sky's total does not move; its light shifts from the
+smooth march into the points.
+
+Regenerate with `pnpm run measure:band-resolved` on a floor-on build
+whenever the catalogue's membership or photometry moves inside 15 kpc;
+the script refuses a shallower catalogue than the table was measured on.
+`MilkyWay.setResolvedHoleStrength(0)` — the `resolvedHole` slider in the
+debug panel — switches the hole off for an A/B, at which point the band
+draws the resolved stars' light a second time.
+
 ## Two checks, and both disagree by the same sign and order
 
-Neither is an anchor. Both are pinned in `../milkyway.test.ts`.
+Neither is an anchor. Both are pinned in `../milkyway.test.ts`, with the
+hole in the model column.
 
 | check | published | model | model is |
 | --- | --- | --- | --- |
-| NGP diffuse residual | 25.01 | 23.31 | **1.697 mag brighter** |
-| Galactic centre, Leinert total | 22.92 | 21.88 | **1.043 mag brighter** |
+| NGP diffuse residual | 25.44 | 24.09 | **1.350 mag brighter** |
+| Galactic centre, Leinert total | 22.92 | 22.55 | **0.367 mag brighter** |
 
-The 25.01 is *not* published; `diffuse-reference.ts` builds it:
+The 25.44 is *not* published; `diffuse-reference.ts` builds it:
 
 | | mag/arcsec² |
 | --- | --- |
 | Leinert et al. 1998 Table 24, NGP — **total** starlight | 23.83 |
-| The 388,070 catalogue stars Stellata already draws | 24.275 |
-| Residual left for the diffuse band | **25.01** |
+| The 983,069 catalogue stars Stellata draws at V ≤ 11 | 24.110 |
+| Residual left for the diffuse band | **25.44** |
 
-**The catalogue row is re-derived per build, and the residual moves with
-it.** The manifest-driven catalogue took the pole from 24.286 to 24.275 —
-the additions are faint, so the centre does not move at three decimals and
-the pole gains 0.011 mag — which widens this check by 0.021 and no more.
-**A record has to land INSIDE a 10° cap to move a constant**, so
-`recordCount` can move without moving either row: re-derive when a record
-lands within 10° of a centre, not whenever the count changes. The
-branch-first WDS root anchor is the first case — it reproduced both exactly,
-22.3737 / 24.2748 over 11,662 and 1,154 stars, because the records it gained
-and lost sit far outside both caps. The widened SIMBAD value cohort is the
-second, and it does move one: 113 of the rows it newly places fall inside the
-Galactic-centre cap, taking that cap from 11,662 stars to 11,775 and
-brightening it 22.3737 → 22.3681, while the pole gains a single star and holds
-at three decimals (24.2748 → 24.2747). Nothing rendered moves either way —
-both constants are read by tests alone.
+**The catalogue rows are measured per build, into `resolved-hole-table.ts`
+beside the hole** (`scripts/milkyway-calibration/`), and the residual moves
+with them. The 388k catalogue before the floor read 24.271 at the pole over
+1,155 stars and 22.368 toward the centre over 11,776; V ≤ 11 takes the pole
+to 24.110 over 2,763 and the centre to 22.187 over 16,960, so the star field's
+share of Leinert's pole total goes from two thirds to **77 %**. **A record
+has to land INSIDE a 10° cap to move a row**, so `recordCount` can move
+without moving either: re-derive when a record lands within 10° of a centre,
+not whenever the count changes.
 
 Leinert's table is a sky model (Wainscoat et al. 1992) for *all* stars,
 resolved or not, so pinning the published figure would double-count the
@@ -227,10 +285,14 @@ them** — the argument is `docs/science-galactic-structure.md` § The
 luminosity solve. The total wins because it is what the camera sees from
 outside: the Galaxy from M31 reads 3.08 against M31 from Sol at 3.44,
 ordered correctly, where the sightline anchor had it 1.11 mag *fainter*
-than M31 — the cross-layer symptom the HDR epic opened on. The cost is
-at the pole: diffuse + catalogue reads 23.00 against Leinert's 23.83.
-eso0932a sides with the total but confirms that pole cost independently,
-reading 1.40 mag fainter at b = +30 (`docs/science-hdr-pipeline.md` § 8).
+than M31 — and the residual anchor re-run at V ≤ 11 would put it a
+magnitude fainter still. What the deeper catalogue changed is the size of
+the disagreement, not its sign: **band plus catalogue at the pole reads
+23.40 against Leinert's 23.83**, 0.43 mag over, where band-without-hole
+plus catalogue read 0.88 over — the double count was the other 0.45. That
+0.43 is the scale disagreement proper. eso0932a sides with the total but
+confirms a pole-side excess independently (`docs/science-hdr-pipeline.md`
+§ 8, graded on the pre-hole table).
 
 ## The gradient this produces, and what it reads on screen
 
@@ -246,22 +308,24 @@ pole.
 
 | sightline | mag/arcsec² | Δ vs S_lim | /255 |
 | --- | --- | --- | --- |
-| l = 0, b = 5 | 20.74 | **1.26 OVER** — the maximum | 69.2 |
-| l = 0, b = 0 (GC) | 21.88 | 0.12 over | 40.7 |
-| anticentre | 22.06 | 0.06 under | 36.9 |
-| b = 30 | 22.52 | 0.52 under | 22.0 |
-| NGP | 23.40 | 1.40 under | 0.9 |
+| l = 0, b = 5 | 20.93 | **1.07 OVER** — the maximum | 63.7 |
+| l = 0, b = 0 (GC) | 22.55 | 0.55 under | 20.8 |
+| anticentre | 22.70 | 0.70 under | 15.1 |
+| b = 30 | 23.08 | 1.08 under | 4.0 |
+| NGP | 24.19 | 2.19 under | 0.0 |
 
-Plane-to-pole contrast **1.52 mag** photometrically. **The midplane is
+Plane-to-pole contrast **1.64 mag** photometrically. **The midplane is
 not the maximum** — b ≈ 5° is, because the in-plane sightline eats the
 most dust. The real band behaves the same way; the dark rift is dust,
-not a gap in the stars.
+not a gap in the stars. Every row is the band alone — the resolved stars
+the hole took out of it are drawn as points on top (§ The resolution
+hole), and b = 5 is the one row the hole barely touches, because that
+column reaches through the plane past where the catalogue resolves.
 
 **Sub-threshold rows carry the operator's faint-end toe**
 (`../../hdr/tonemap/README.md` § Operator): over-threshold levels are untouched,
-and 1.5 mag under threshold is black by construction — the NGP at 1.40
-under sits on the dither floor instead of 16.7/255. Nothing pins the band
-to the threshold.
+and 1.5 mag under threshold is black by construction — the NGP at 2.19
+under sits on the dither floor. Nothing pins the band to the threshold.
 
 **Every row here is dust-attenuated, so the dust cascade moves them and the
 solve does not.** `docs/science-galactic-structure.md` § The dust stack fixes
@@ -271,15 +335,17 @@ Leinert GC check are outcomes that move when the measured tiers land, to
 21.09 / 21.91 / 21.91 / 22.83 / 23.33 and a 1.42 contrast on the measured
 cascade. Re-pin them there; do not treat a moved row as a calibration error.
 
-**The 32-step in-volume march under-counts the GC column by 1.6 %**
-against a converged march (pinned). Deliberately left: `STEPS` is a visual
-+ perf decision, and it cannot bias the calibration at all — the solve is
-a volume integral, so no march feeds it.
+**The 32-step in-volume march under-counts the GC column by 3.1 %**
+against a converged march (pinned; 1.6 % without the hole, which turns the
+emissivity over inside the first kiloparsec where the log march spends six
+steps). Deliberately left: `STEPS` is a visual + perf decision, and it
+cannot bias the calibration at all — the solve is a volume integral, so no
+march feeds it.
 
 **The convolution and the footprint softening both leave this table where it
 is** — the first is an identity on a uniform field, the second is metres
 against a 300 pc scale height from inside the disc. Every row moves under
-0.003 mag at both FOV extremes (pinned). Neither is inert from *outside* the
+0.005 mag at both FOV extremes (pinned). Neither is inert from *outside* the
 Galaxy, which is where they were needed.
 
 **Do not raise or lower the emissivity if the band still reads wrong** —

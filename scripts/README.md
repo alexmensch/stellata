@@ -31,6 +31,11 @@ cross-script policy and pointers.
   `public/ephemerides/` mirror. Fetch is manual
   (`pnpm run fetch:ephemerides`); only the mirror runs in the build.
 - `colour/` — blackbody → sRGB LUT generator.
+- `milkyway-calibration/` — the resolved catalogue measured against the
+  Milky Way band model off a built `catalog.bin`
+  (`pnpm run measure:band-resolved`): the Leinert cap rows and the
+  resolution-hole table, written as one generated module into
+  `src/client/milkyway/calibration/`. Not part of the build.
 - `release/` — `deploy.yml`'s release step: plans and cuts one tag +
   GitHub release per version bump in a pushed range (a merged stack is
   one push carrying several). Not part of `pnpm run build`.
