@@ -412,7 +412,7 @@ describe('search / buildSearchIndex', () => {
   });
 
   // An alias must never displace a record that displays the number outright,
-  // whichever way the absmag sort happened to order the two.
+  // whichever way the record order happened to place the two.
   it('lets a displayed HD outrank another record alias, in either order', () => {
     const aliasFirst: SearchEntry[] = [
       { i: 0, hd: 49618, hda: [49619] }, { i: 5, hd: 49619 },

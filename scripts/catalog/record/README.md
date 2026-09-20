@@ -28,10 +28,16 @@ scripts/catalog/record/
 ## Record order
 
 Records are sorted by **apparent V from Sol at J2016.0, brightest first**, in
-one line of `../build-catalog.ts`; indices are final after it. The key is
+`../build-catalog.ts`; indices are final after it. The key is
 `apparentVFromSol` in `record-order-pure.ts`: the stored `absmag` is intrinsic,
 so the Sol→star A_V the build subtracted is added back before the distance
 modulus, and a reddened star sorts as faint as it looks.
+
+**Each key is checked finite before the sort, not after it.** A comparator
+sort is monotone by construction, so a pass over the sorted result can only
+fail on a `NaN` key — and cannot, because `NaN` compares false in both
+directions. `NaN` also scrambles every run it takes part in rather than just
+its own record, so the key is the only thing worth asserting on.
 
 **The order is load-bearing, not cosmetic.** Any prefix of the record array is
 then the brightest-looking sky, which is exactly what the progressive load

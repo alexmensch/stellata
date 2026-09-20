@@ -2074,7 +2074,7 @@ export function promoteCompanions(
   // for a pair Gaia couldn't resolve, and exact for the near-equal pairs
   // that dominate; WDS Δmag is absent on these ρ=0 sub-pairs). ci is left
   // as the combined colour (near-equal blend ⇒ shared class). Runs before
-  // build-catalog's absmag sort and re-derives radius off the split absmag.
+  // build-catalog's record sort and re-derives radius off the split absmag.
   for (const bucket of state.gaiaPhotometryByBackingSource.values()) {
     if (bucket.length < 2) continue;
     const splitMag = 2.5 * Math.log10(bucket.length);

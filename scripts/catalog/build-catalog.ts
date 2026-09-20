@@ -801,24 +801,19 @@ async function main() {
   // prefix of the record array is a usable sky and the transport chunks can
   // stream one (record/README.md § Record order). Record indices are final
   // after this point.
-  const keyed = stars.map((s) => ({
-    s,
-    v: apparentVFromSol(s, dustGrid ? avSolToStar(dustGrid, s.x, s.y, s.z) : 0),
-  }));
-  keyed.sort((a, b) => a.v - b.v);
-  for (let i = 0; i < keyed.length; i++) stars[i] = keyed[i].s;
-  // The whole progressive load rests on this: every prefix of the record
-  // array is the brightest-looking sky. Asserted here because this is the
-  // only place the key and the records are both in hand — a reader of the
-  // built artifact cannot recompute it without the dust grid.
-  for (let i = 1; i < keyed.length; i++) {
-    if (keyed[i].v < keyed[i - 1].v) {
-      throw new Error(
-        `Record order is not monotone in apparent V at ${i}: `
-        + `${keyed[i - 1].v} then ${keyed[i].v}`,
-      );
+  const sortKey = new Float64Array(stars.length);
+  for (let i = 0; i < stars.length; i++) {
+    const s = stars[i];
+    const v = apparentVFromSol(s, dustGrid ? avSolToStar(dustGrid, s.x, s.y, s.z) : 0);
+    // On the key, before the sort — record/README.md § Record order.
+    if (!Number.isFinite(v)) {
+      throw new Error(`Record ${i} has a non-finite apparent V sort key: ${v}`);
     }
+    sortKey[i] = v;
   }
+  const order = Array.from(stars.keys()).sort((a, b) => sortKey[a] - sortKey[b]);
+  const sorted = order.map((i) => stars[i]);
+  for (let i = 0; i < sorted.length; i++) stars[i] = sorted[i];
 
   const hipToIndex = buildHipToIndex(stars);
 

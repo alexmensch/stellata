@@ -970,12 +970,13 @@ export function designationConIndex(
  *  records DISPLAY first, then the aliases beside them.
  *
  *  Two passes and first-write-wins, which settles two collisions with one rule.
- *  Entries arrive brightest-first (the absmag sort fixes record order), so an
- *  ambiguous designation resolves to the brightest record carrying it — 57 HD
+ *  Entries arrive apparent-brightest-first (§ Record order fixes record
+ *  order), so an ambiguous designation resolves to the record that LOOKS
+ *  brightest — 57 HD
  *  and 11 HR numbers are displayed by two records each, always a component pair
  *  sharing one catalogue number, and `Gl 277A` likewise. And an alias never
  *  displaces a record that displays that number outright, whichever way the
- *  absmag sort happened to order the two.
+ *  record order happened to place the two.
  *  `../classic-ids/label-merge/README.md`
  *  § An alias stops at the blend is the same rule on the write side;
  *  `cns5AstrometryByGj` is the same two-pass reduction over CNS5's component
