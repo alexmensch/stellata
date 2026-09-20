@@ -491,8 +491,13 @@ function ungatedRow(
 }
 
 /** The reader's discriminator on a mark: a cost every frame pays lifts the
- *  floor with the median; a wander lifts the upper half alone. */
+ *  floor with the median; a wander lifts the upper half alone.
+ *
+ *  Yields to a note already written. There is one note column, and this one
+ *  discriminates WITHIN a mark while `bandNote` says the gate could not have
+ *  marked at all — so a row carrying both must print the wider finding. */
 function floorNote(row: PinVerdictRow): PinVerdictRow {
+  if (row.note !== '') return row;
   if (row.verdict !== 'dearer' || row.floorDeltaMs === null || row.deltaMs === null || row.deltaMs <= 0) return row;
   if (row.floorDeltaMs >= FLOOR_FOLLOWS_FRACTION * row.deltaMs) return row;
   return {
@@ -507,7 +512,7 @@ function floorNote(row: PinVerdictRow): PinVerdictRow {
 export const BAND_OVER_FLOOR_FACTOR = 4;
 
 function bandNote(row: PinVerdictRow, floorMs: number): PinVerdictRow {
-  if (row.bandMs <= BAND_OVER_FLOOR_FACTOR * floorMs || row.note !== '') return row;
+  if (row.bandMs <= BAND_OVER_FLOOR_FACTOR * floorMs) return row;
   return {
     ...row,
     note: `band ${row.bandMs.toFixed(3)} is ${(row.bandMs / floorMs).toFixed(1)}× its ${floorMs.toFixed(3)} floor — the row's own spread sets it, not the floor`,
@@ -582,10 +587,10 @@ function streamRow(pinned: PinRow, spec: StreamSpec): PinVerdictRow {
   }
   const deltaMs = current.valueMs - side.valueMs;
   const bandMs = band(side.standardErrorMs, current.standardErrorMs, spec.floorMs);
-  return underCeiling(bandNote(floorNote({
+  return underCeiling(floorNote(bandNote({
     key, metric, pinnedMs: side.valueMs, currentMs: current.valueMs,
     deltaMs, bandMs, floorDeltaMs, spreadDeltaMs, verdict: verdictFor(deltaMs, bandMs), note: '',
-  }), spec.floorMs));
+  }, spec.floorMs)));
 }
 
 /** The frame row's gated statistic: the plain class where the stream holds
