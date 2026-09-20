@@ -1679,6 +1679,7 @@ export class Stellata implements FrameAnchor {
    * user moved.
    */
   private absorbCatalogRecords(): void {
+    const absorbedFrom = this.absorbedSuppressCount;
     writePulsationSuppressMask(
       this.catalog.varType,
       this._suppressPulsation,
@@ -1695,9 +1696,18 @@ export class Stellata implements FrameAnchor {
 
     // The fastest pulsating variable bounds how long any frame may idle
     // before some star's brightness moves a JND, so a chunk carrying a
-    // faster one has to shorten the budget.
-    this.pulsationCadenceBudgetS = pulsationCadenceBudgetS(
-      this.catalog.periodDays, this.catalog.amplitudeMag, this._suppressPulsation,
+    // faster one has to shorten the budget. A minimum over the window
+    // alone: rescanning every record per chunk is main-thread time the
+    // frame is waiting on, and the answer cannot rise.
+    this.pulsationCadenceBudgetS = Math.min(
+      this.pulsationCadenceBudgetS,
+      pulsationCadenceBudgetS(
+        this.catalog.periodDays,
+        this.catalog.amplitudeMag,
+        this._suppressPulsation,
+        absorbedFrom,
+        this.catalog.loadedCount,
+      ),
     );
     this.renderGate.invalidate('catalog-chunk');
   }

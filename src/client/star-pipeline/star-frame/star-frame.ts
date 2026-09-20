@@ -192,17 +192,53 @@ export class StarFrame {
     this._maxPhysicalRadiusPc = maxPhysicalRadius * R_SUN_PC;
     this.derivedCount = end;
 
-    // In place on both arrays: the Picker captured them by reference at
-    // construction and would be left on a stale pair by any reallocation.
-    for (let i = 0; i < catalog.count; i++) this.sortedByDistFromSol[i] = i;
-    this.sortedByDistFromSol.sort((a, b) => this.distSol[a] - this.distSol[b]);
-    for (let i = 0; i < catalog.count; i++) {
-      this.sortedDistFromSol[i] = this.distSol[this.sortedByDistFromSol[i]];
-    }
-
+    this.mergeIntoProximityIndex(first, end);
+    // Only the new window needs writing — the prefix already sits at this
+    // origin — unless an epoch advance left the whole buffer stale, in
+    // which case this call is what discharges it.
     this.writeLocalPositions(
       this.worldOffset.x, this.worldOffset.y, this.worldOffset.z,
+      this.localPositionsStale ? 0 : first,
+      end,
     );
+  }
+
+  /**
+   * Merge the newly-derived window into the Sol-distance index, in place on
+   * both arrays — the Picker captured them by reference at construction and
+   * a reallocation would strand it on a stale pair.
+   *
+   * A merge, not a re-sort. Re-sorting the whole catalogue per landing chunk
+   * is a comparator sort over every record each time, which blocks the main
+   * thread long enough to read as a frozen scene; the prefix is already
+   * ordered and the window is small, so sorting the window and merging the
+   * two runs is linear in what actually moved.
+   */
+  private mergeIntoProximityIndex(first: number, end: number): void {
+    const dist = this.distSol;
+    const idx = this.sortedByDistFromSol;
+    const key = this.sortedDistFromSol;
+
+    const incoming = new Uint32Array(end - first);
+    for (let i = first; i < end; i++) incoming[i - first] = i;
+    incoming.sort((a, b) => dist[a] - dist[b]);
+
+    // Walk both runs back to front into the tail the undecoded records
+    // still occupy, so neither run is overwritten before it is read.
+    let a = first - 1;
+    let b = incoming.length - 1;
+    let w = end - 1;
+    while (b >= 0) {
+      if (a >= 0 && dist[idx[a]] > dist[incoming[b]]) {
+        idx[w] = idx[a];
+        a--;
+      } else {
+        idx[w] = incoming[b];
+        b--;
+      }
+      w--;
+    }
+    for (let i = 0; i < end; i++) key[i] = dist[idx[i]];
   }
 
   /** Bucketised Julian epoch year the catalog positions currently sit
@@ -277,11 +313,16 @@ export class StarFrame {
     this.writeLocalPositions(this.worldOffset.x, this.worldOffset.y, this.worldOffset.z);
   }
 
-  private writeLocalPositions(ox: number, oy: number, oz: number): void {
+  private writeLocalPositions(
+    ox: number,
+    oy: number,
+    oz: number,
+    first = 0,
+    end = this.catalog.loadedCount,
+  ): void {
     const abs = this.catalog.positions;
     const loc = this.localPositions;
-    const n = this.catalog.loadedCount;
-    for (let i = 0; i < n; i++) {
+    for (let i = first; i < end; i++) {
       const j = i * 3;
       loc[j] = abs[j] - ox;
       loc[j + 1] = abs[j + 1] - oy;
