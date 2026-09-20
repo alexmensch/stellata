@@ -70,6 +70,13 @@
     "tyc": 1
   },
   "additionRows": 63676,
+  "magnitudeTerm": {
+    "rows": 0,
+    "kept": 0,
+    "above_floor": 0,
+    "no_v": 0
+  },
+  "magnitudeRows": 0,
   "additionsByReason": {
     "admitted:hd_link_gap": 54813,
     "admitted:hd_omitted": 5063,
@@ -81,6 +88,7 @@
     "crosswalk_gated": 358458,
     "simbad_corroborated": 12483,
     "reviewed": 53,
+    "gaia_native": 0,
     "none": 5938
   },
   "bindingReviewRows": 53,

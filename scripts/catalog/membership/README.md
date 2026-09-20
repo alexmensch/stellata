@@ -47,6 +47,9 @@ scripts/catalog/membership/
   membership-manifest-expected.json
                                   Pinned count snapshot. Refresh with
                                   UPDATE_BUILD_COUNTS=1.
+  magnitude-term/                 The union's second term — the V floor, its
+                                  filter over the Gaia pull and the 5p
+                                  astrometry that comes with it. Own README.
 ```
 
 The primaries load through `../spine/primaries-tables.ts`, shared with the
@@ -56,7 +59,7 @@ audit, so the two instruments read one table set.
 
 ```
 tyc  hip  hd  hd_alt  hr  hr_alt  gl  flam  bayer  proper
-gaia_source_id  binding  routes
+gaia_source_id  binding  routes  term
 ```
 
 - The identifier cells carry the record's **final** labels: for a spine row
@@ -72,6 +75,9 @@ gaia_source_id  binding  routes
   through the same gates), `reviewed` (the value a row of
   `data/membership/binding-review-dispositions.tsv` settles on stated
   evidence), or `none`. § The binding is derived is the rule.
+- `term` is which side of `docs/catalog-driver.md` § 1's union admitted the
+  row. Every row reads `primaries` today; `magnitude-term/README.md` owns the
+  other side, its floor and its dedupe against the bindings derived below.
 - `routes` names the primary attesting each classical cell
   (`hd:iv25|hip:i239|gl:cns5|tyc:tycho2`), computed by the audit's
   `attestSpineRow` over the merged cells. A cell absent from the list is one

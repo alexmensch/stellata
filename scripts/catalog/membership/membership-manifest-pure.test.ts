@@ -177,6 +177,7 @@ const input = {
   evidence: bindingEvidence(new Map(), new Map(), null, NO_PRINTED_V_BELOW_HIP),
   dispositions: new Map<string, BindingDispositionRow>(),
   corrections: [] as SpineCorrectionRow[],
+  magnitudeTerm: null,
 };
 const result = buildMembership(input);
 const byTyc = new Map(result.rows.map((r) => [r.tyc, r]));

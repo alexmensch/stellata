@@ -25,6 +25,8 @@ import {
   readMultiplesTsv,
   sourceIdsWithSiblingComponent,
 } from '../companions/companion-promotion';
+import { readMagnitudeTerm } from './magnitude-term/magnitude-term';
+import { MAGNITUDE_FLOOR_V } from './magnitude-term/magnitude-term-pure';
 import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pure';
 import { LFS_HINT, loadPrimaryTables } from '../spine/primaries-tables';
 import {
@@ -103,6 +105,9 @@ async function main(): Promise<void> {
     corrections: parseSpineCorrectionsTsv(
       readRequired(resolve(ROOT, SPINE_CORRECTIONS_FILE), CORRECTIONS_HINT),
     ),
+    magnitudeTerm: MAGNITUDE_FLOOR_V === null
+      ? null
+      : await readMagnitudeTerm(MAGNITUDE_FLOOR_V),
   });
 
   writeArtifact(LABEL_FLIPS_FILE, labelFlipsTsv(result.flips));
@@ -116,6 +121,14 @@ async function main(): Promise<void> {
     `manifest: ${c.rows} rows — ${c.spineRows} from the spine, ${c.additionRows} admitted ` +
       `(${Object.entries(c.additionsByReason).map(([k, v]) => `${k} ${v}`).join(', ')}); ` +
       `${c.componentRows} groups resolve onto an existing record`,
+  );
+  console.log(
+    MAGNITUDE_FLOOR_V === null
+      ? 'magnitude term: off — membership is the primaries alone'
+      : `magnitude term at V <= ${MAGNITUDE_FLOOR_V}: ${c.magnitudeTerm.rows} pull rows — ` +
+        `kept ${c.magnitudeTerm.kept}, above the floor ${c.magnitudeTerm.above_floor}, ` +
+        `no transformed V ${c.magnitudeTerm.no_v}; ${c.magnitudeRows} rows after the ` +
+        'primaries dedupe',
   );
   const tally = (counts: Record<string, number>): string =>
     Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(', ');
