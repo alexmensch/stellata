@@ -82,6 +82,11 @@ of them in the kept set, so 602,228 rows are the term's own and the union is
 973,222 source_ids. The record total that implies, once promotion and parking
 apply: `data/gaia/README.md` § The record total the floor implies.
 
+Run at `V ≤ 11` the generator writes **979,160** manifest rows — 376,932 plus
+those 602,228 — and every primaries-side count holds byte for byte, which is
+what says the term adds and moves nothing. Reproduce by setting the floor and
+running `pnpm run build:membership`; nothing else changes.
+
 ## The column is the ledger
 
 A magnitude-term row carries no classical cell, `binding` `gaia_native` and

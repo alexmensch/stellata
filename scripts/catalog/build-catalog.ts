@@ -461,7 +461,7 @@ async function main() {
     rvGaiaErrorMaxKmS: 0,
   };
 
-  const inputs = loadReadStarsInputs();
+  const inputs = await loadReadStarsInputs();
   const {
     bjMap, apsisMap, simbadSpectral, directions,
     dustGrid, conAssignment, sizes,

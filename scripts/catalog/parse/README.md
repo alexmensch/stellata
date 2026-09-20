@@ -22,7 +22,9 @@ scripts/catalog/parse/
                                   bound-sibling parallaxes the distance
                                   cascade's bottom tier lends, which cross
                                   multiples.tsv with the Gaia table already
-                                  loaded here.
+                                  loaded here. Async, because the 5p tier has
+                                  a second source once the magnitude term is
+                                  on (§ The direction tier's two Gaia files).
   gaia-xmatch.ts (+ test)         Gaia DR3 best-neighbour cross-walk parsing
                                   (HIP + TYC, one shared accumulator) plus the
                                   Apsis and 5p astrometry side-tables. The HIP
@@ -100,6 +102,16 @@ Three deliberate exceptions:
   `../build-catalog-expected.json`, so a zeroed tier fails the build's count
   assert. Tightening the parser onto `headerIndex` would move that catch
   upstream to the read.
+
+## The direction tier's two Gaia files
+
+`directions.gaiaAstrometry` is fed by `gaia_dr3_astrometry_catalog.tsv` and,
+when `MAGNITUDE_FLOOR_V` is set, by the magnitude pull's own rows for the
+sources that term admitted — same schema, same parser, so tier 1 sees one kind
+of row and cannot tell which file it came from. Only the manifest rows marked
+`term=magnitude` are read out of the pull, and a source the catalogue file
+already answers for keeps that row. With the floor off, neither read happens.
+`../membership/magnitude-term/README.md` § The astrometry comes with it.
 
 ## Per-row pipeline
 

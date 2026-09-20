@@ -94,6 +94,18 @@ export function selectMagnitudeTerm(text: string, floorV: number): MagnitudeTerm
   return acc.result();
 }
 
+/** The manifest rows the magnitude term contributed — the keep-set the record
+ *  build's astrometry read needs. */
+export function magnitudeTermSourceIds(
+  rows: Iterable<{ term: string; gaia_source_id: string }>,
+): Set<string> {
+  const out = new Set<string>();
+  for (const row of rows) {
+    if (row.term === 'magnitude' && row.gaia_source_id !== '') out.add(row.gaia_source_id);
+  }
+  return out;
+}
+
 export function magnitudeTermNewcomers(
   keptSourceIds: ReadonlySet<string>,
   boundSourceIds: ReadonlySet<string>,

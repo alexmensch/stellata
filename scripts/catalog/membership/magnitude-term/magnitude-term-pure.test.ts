@@ -4,6 +4,7 @@ import {
   MAGNITUDE_FLOOR_V,
   MAGNITUDE_PULL_G_BOUND,
   magnitudeTermNewcomers,
+  magnitudeTermSourceIds,
   magnitudeVerdict,
   selectMagnitudeTerm,
 } from './magnitude-term-pure';
@@ -95,6 +96,23 @@ describe('magnitudeTermNewcomers', () => {
 
   it('yields nothing when the primaries bind the whole selection', () => {
     expect(magnitudeTermNewcomers(new Set(['1']), new Set(['1']))).toEqual([]);
+  });
+});
+
+describe('magnitudeTermSourceIds', () => {
+  const rows = [
+    { term: 'primaries', gaia_source_id: '1' },
+    { term: 'magnitude', gaia_source_id: '2' },
+    { term: 'primaries', gaia_source_id: '' },
+    { term: 'magnitude', gaia_source_id: '3' },
+  ];
+
+  it('takes the magnitude rows and leaves the primaries alone', () => {
+    expect([...magnitudeTermSourceIds(rows)]).toEqual(['2', '3']);
+  });
+
+  it('is empty on a manifest the term contributed nothing to', () => {
+    expect(magnitudeTermSourceIds(rows.filter((r) => r.term === 'primaries')).size).toBe(0);
   });
 });
 
