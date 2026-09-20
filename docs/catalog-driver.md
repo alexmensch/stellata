@@ -466,8 +466,10 @@ is held by the gates that remain:
    nothing but the 136.
 5. `17.5` — the baseline swap, after `17.2` so the previous manifest the gate
    adopts is the re-derived one.
-6. `17.7` — drop the file, retire the instruments and the byte guard, sweep
-   the prose.
+6. `17.9` — move `build:binaries` off the AT-HYG CSV (below); independent of
+   the spine children, so it runs alongside them.
+7. `17.7` — drop the file, retire the instruments and the byte guard, sweep
+   the prose, restate the licence once.
 
 **Expected movement, stated in advance.** Records: **zero** drops at every
 step — § 3.1's residual is zero, so every row keeps an attested key; `rows`
@@ -498,8 +500,9 @@ Stages 1–3 parse `data/athyg/athyg_33_classic_ids.csv` on the `build:binaries`
 path — identifier binding, `athyg_gaia_native` bindings, the `athyg_position`
 fallback — so `multiples.tsv` and every companion built from it inherit
 CC-BY-SA-4.0 through the CSV whatever `17.7` deletes. Severing that read is
-its own child under the epic, and `17.7`'s licence statement names it as the
-remaining inheritance path until it lands.
+`17.9`, and `17.7` depends on it: the licence is restated once, after the
+last AT-HYG read is gone, never as an interim statement naming the binaries
+build as the path still open.
 
 ## 4. How HD reaches Gaia
 
