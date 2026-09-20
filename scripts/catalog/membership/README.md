@@ -143,17 +143,28 @@ ships: the derived id, any other candidate the queue row lists, an id **no
 committed source proposes at all**, or empty for none. That last case is 36 of
 the 53 today (`dispositionAsserted`) and is why the file exists — the review
 reached evidence the derivation cannot, and the count is what keeps the number
-of ids resting on it visible. `basis` comes from a closed enum: `tycho2_position` (the
-record's own Tycho-2 position against the source), `v70a_astrometry` (V/70A's
-B1950 position and proper motion against it), `simbad_dr2_object` (SIMBAD
-holds the frozen id in the DR2 namespace and the derived one as its DR3
-renumbering), `gaia_photometry` (G against the record's printed V on each
+of ids resting on it visible.
+
+**An asserted id still needs a second witness**, because the count cannot
+supply one: a mistyped digit leaves `dispositionAsserted`, `bindingDispositions`
+and `bindingByClass` all reading what they read before, so nothing but the
+value itself says it is wrong. The generator therefore requires every asserted
+id to be a source `data/gaia/gaia_dr3_astrometry_catalog.tsv` carries, and
+fails the build otherwise. The one exemption is `basis = simbad_dr2_object`,
+whose ids are in the DR2 namespace and so cannot appear in a DR3 table at all —
+a gap in what SIMBAD publishes for two objects, not a rule
+(`stellata-hooj.17.10`).
+
+`basis` comes from a closed enum: `tycho2_position` (the record's own Tycho-2
+position against the source), `v70a_astrometry` (V/70A's B1950 position and
+proper motion against it), `simbad_dr2_object` (SIMBAD holds the id in the DR2
+namespace), `gaia_photometry` (G against the record's printed V on each
 candidate), `pair_component` (a resolved pair's components bound crosswise,
 the HIP and SIMBAD's letters deciding), `shared_source` (one source two records
-reach). Today `bindingDispositions` reads 6 `derived` and 47 `other`.
-The six are the four DR2 ids SIMBAD carries a
-DR3 successor for, HD 2094 (the HIP record follows its canonical key onto the
-primary) and Gl 225.2 A. A kept value ships as `reviewed`.
+reach). Today `bindingDispositions` reads 6 `derived` and 47 `other`. The six
+are the four DR2 ids SIMBAD carries a DR3 successor for, HD 2094 (the HIP
+record follows its canonical key onto the primary) and Gl 225.2 A. A kept
+value ships as `reviewed`.
 
 How a row reaches its `gaia_source_id` — the four committed sources, the
 precedence and consensus ranking, both gates, and the `contested` /

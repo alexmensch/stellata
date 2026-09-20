@@ -175,7 +175,9 @@ const overlay: ClassicIdOverlay = new Map([
 
 const input = {
   spine, tables, overlay, overrides: new Map(), siblingRenderedSourceIds: new Set<string>(),
-  evidence: bindingEvidence(new Map(), new Map(), null, NO_PRINTED_V_BELOW_HIP),
+  evidence: bindingEvidence(
+    new Map(), new Map(), null, NO_PRINTED_V_BELOW_HIP, new Set(['888', '6060']),
+  ),
   dispositions: new Map<string, BindingDispositionRow>(),
   corrections: [] as SpineCorrectionRow[],
   magnitudeTerm: null,
@@ -225,7 +227,28 @@ describe('buildMembership — the spine side', () => {
     expect(() => buildMembership({
       ...input,
       dispositions: new Map([['x|||', disposition({ tyc: 'x', hd: '' })]]),
-    })).toThrow(/disposes no queue row/);
+    })).toThrow(/disposes no spine row/);
+  });
+
+  // An asserted id — one no source proposes — rests on the review's cited basis
+  // alone, so Gaia carrying a row for it is the only second witness left that a
+  // mistyped digit cannot pass.
+  it('refuses an asserted id the Gaia DR3 catalogue has no row for', () => {
+    expect(() => buildMembership({
+      ...input, dispositions: new Map([[HD40_KEY, disposition({ keep_source_id: '999' })]]),
+    })).toThrow(/no source proposes and the Gaia DR3 astrometry catalogue has no row for/);
+  });
+
+  it('exempts a DR2-namespace id, which no DR3 table can carry', () => {
+    const dr2 = buildMembership({
+      ...input,
+      dispositions: new Map([[HD40_KEY, disposition({
+        keep_source_id: '999', basis: 'simbad_dr2_object',
+      })]]),
+    });
+    expect(dr2.rows.find((r) => r.hd === '40'))
+      .toMatchObject({ gaia_source_id: '999', binding: 'reviewed' });
+    expect(dr2.counts.dispositionAsserted).toBe(1);
   });
 
   it('ships a cleanly bound row unqueued, and lets a disposition override it', () => {

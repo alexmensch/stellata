@@ -783,7 +783,7 @@ function bindingReviewRow(
 
 /** See binding/README.md. */
 function settleBinding(
-  b: SpineBinding, disposition: BindingDispositionRow | undefined,
+  b: SpineBinding, disposition: BindingDispositionRow | undefined, evidence: BindingEvidence,
 ): { value: string | null; binding: BindingClass; asserted: boolean } {
   const derived = b.derived!;
   if (disposition === undefined) {
@@ -802,11 +802,16 @@ function settleBinding(
   }
   const keep = disposition.keep_source_id;
   if (keep === '') return { value: null, binding: 'none', asserted: false };
-  return {
-    value: keep,
-    binding: 'reviewed',
-    asserted: !derived.ranked.some((c) => c.sourceId === keep),
-  };
+  const asserted = !derived.ranked.some((c) => c.sourceId === keep);
+  // A `simbad_dr2_object` id is in the DR2 namespace, so no DR3 table can carry
+  // it; dropping the exemption fails the build on the rows that basis exists for.
+  if (asserted && disposition.basis !== 'simbad_dr2_object' && !evidence.hasPulledRow(keep)) {
+    throw new Error(
+      `${BINDING_DISPOSITIONS_FILE}: row ${key} keeps ${keep}, which no source proposes `
+        + 'and the Gaia DR3 astrometry catalogue has no row for; re-check the id',
+    );
+  }
+  return { value: keep, binding: 'reviewed', asserted };
 }
 
 /** Empty the spine-label cells no primary attests — the Flamsteed number, and
@@ -1210,7 +1215,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
         bindingReviewByVerdict[verdict]++;
         bindingReview.push(bindingReviewRow(spineRow, b, verdict, tables));
       }
-      const s = settleBinding(b, disposition);
+      const s = settleBinding(b, disposition, evidence);
       value = s.value;
       binding = s.binding;
       if (disposition !== undefined) {
@@ -1227,7 +1232,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   });
   for (const key of dispositions.keys()) {
     if (!applied.has(key)) {
-      throw new Error(`${BINDING_DISPOSITIONS_FILE}: row ${key} disposes no queue row; remove it`);
+      throw new Error(`${BINDING_DISPOSITIONS_FILE}: row ${key} disposes no spine row; remove it`);
     }
   }
   const held = new Map<string, number>();
