@@ -173,15 +173,27 @@ nobody is shipping, so it is worth it only when the drift is already large;
 the normal case stays the branch take the paragraph on Tier 1 describes.
 
 **"The instrument" in Tier 2 means what it records or how it samples**, not
-every file under `scripts/perf/`. A change to `pinFromRuns`, `compareToPin`,
-the recorded schema, the sampling knobs or the clock a row is taken on
-re-takes the pin, because the committed rows stop describing the same
-measurement. A change to how a comparison is *judged or presented* —
-a band floor, a refusal, a metric column, a table's layout — leaves every
-recorded number where it was, so the pin stays comparable and no run is
-owed. Say which of the two a diff is when it touches the runner, and the
-tier follows. First applied by stellata-8cg.49.21 itself, which rewrote
-`--baseline`'s verdict and claimed Tier 0 on exactly this ground.
+every file under `scripts/perf/`.
+
+**The test is whether the committed rows stop describing the same
+measurement — not which function the diff lands in.** A change to the
+sampling knobs, the clock a row is taken on, or the meaning of a recorded
+field re-takes the pin, because every pinned number now answers a different
+question. A change to how a comparison is *judged or presented* — a band
+floor, a refusal, which recorded statistic a row is gated on, a metric
+column, a table's layout — leaves every recorded number where it was, so the
+pin stays comparable and no run is owed. Function names are illustration of
+the first kind, never triggers in their own right: a refusal edited inside
+`pinFromRuns` or `compareToPin` is Tier 0, because a refusal moves no number.
+
+**A schema bump is the case that divides on this and not on the suffix.**
+Purely **additive** — a field derived from samples the run file already
+holds, every existing field byte-identical — is Tier 0, and the offline
+re-derivation is what proves it: `pnpm run perf:pin` rewrites the pin from
+the saved run and the two files are compared field by field. A bump that
+changes what an **existing** field means is Tier 2, and no offline rewrite
+can stand in for the arm. Say which, and show the comparison, in the
+`## Perf` section.
 
 **"Buffers" in Tier 2 means GPU-resident state a frame reads or writes** — a
 new or resized resident allocation, a new binding on a per-frame stage, a
