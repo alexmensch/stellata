@@ -160,6 +160,18 @@ information.
   that held it steady, with the same `--accept` gate
   (`scripts/perf/pins/README.md` § From saved runs).
 
+**A re-take may be taken on main instead, in a PR of its own, where the
+drift above the outgoing pin would swamp the diff being judged.** A pin at
+an unlanded branch tip charges every later PR for main's own render-path
+work between the two bases, which `--against-pin` prints but cannot
+subtract; past a few hundred changed lines no mark is attributable to the
+PR reading it. Taking the pin at a commit where `commit == mainCommit`
+puts that drift at zero, and the Tier 2 PR then reads `--against-pin` this
+pin rather than writing one — with the run archived and the override
+stated in its `## Perf` section. The gain is bought with an arm on a tree
+nobody is shipping, so it is worth it only when the drift is already large;
+the normal case stays the branch take the paragraph on Tier 1 describes.
+
 **"The instrument" in Tier 2 means what it records or how it samples**, not
 every file under `scripts/perf/`. A change to `pinFromRuns`, `compareToPin`,
 the recorded schema, the sampling knobs or the clock a row is taken on
