@@ -1336,7 +1336,9 @@ export function applyDecodedView(
       // the rest of the decoded state stands. Planet sids translate
       // domain index → flat Target index; a translation miss (host
       // body-field not attached) drops the focus like an unknown sid.
-      let resolvedInline = false;
+      // Flips once `whenResolved` has returned, so the callback can tell
+      // which side of the synchronous window it ran on.
+      let deferred = false;
       idMaps.sidResolver.whenResolved(view.focus.id, (kind, localIndex) => {
         const idx = targetIdxOf(idMaps, kind, localIndex);
         if (idx === null) return;
@@ -1354,12 +1356,9 @@ export function applyDecodedView(
         // Not if the user has taken the camera meanwhile: a restore that
         // yanks the view out from under a deliberate move is worse than one
         // that quietly gives up.
-        if (resolvedInline || stellata.renderGate.sawUserInput) return;
-        reapplyPose(stellata, view);
+        if (deferred && !stellata.renderGate.sawUserInput) reapplyPose(stellata, view);
       });
-      // Set after the call, so the callback can tell "ran synchronously,
-      // the pose below has not happened yet" from "ran later".
-      resolvedInline = true;
+      deferred = true;
     } else {
       const idx = resolveStarRef(view.focus, idMaps, idMaps.solIndex);
       if (idx >= 0 && idx < idMaps.starCount) {

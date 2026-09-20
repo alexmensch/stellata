@@ -1809,6 +1809,51 @@ describe('url-state', () => {
       expect(state.focusedCloud).toBe(1);
     });
 
+    it('re-seats the camera when the focus resolves after the pose', () => {
+      // With a focus the encoder elides worldOffset, so `cam` is in the
+      // FOCAL object's local frame. A star whose catalogue chunk lands late
+      // resolves after the pose was applied against the un-recentred
+      // origin, which leaves the camera short by the focal object's own
+      // offset — and re-encoding bakes it in, so the error compounds on
+      // every reload.
+      const sidResolver = new SidResolver(['star', 'cloud']);
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+      const idMaps = makeIdMaps({ sidResolver });
+      const { stellata } = makeStatefulStellata();
+      const CAM: [number, number, number] = [0.08, 9.26, -0.76];
+      const blob = encodeBlob({ focus: { kind: 'sid', id: 202 }, cam: CAM });
+      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+
+      // Something else moved the camera between the pose and the resolve —
+      // standing in for the recentre the real focus performs.
+      stellata.camera.position.set(999, 999, 999);
+      sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+
+      // Blob floats are float32, so compare at that precision.
+      const { x, y, z } = stellata.camera.position;
+      expect(x).toBeCloseTo(CAM[0], 6);
+      expect(y).toBeCloseTo(CAM[1], 5);
+      expect(z).toBeCloseTo(CAM[2], 6);
+    });
+
+    it('leaves a camera the user has taken alone when the focus resolves late', () => {
+      // A restore that yanks the view out from under a deliberate move is
+      // worse than one that quietly gives up.
+      const sidResolver = new SidResolver(['star', 'cloud']);
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+      const idMaps = makeIdMaps({ sidResolver });
+      const { stellata } = makeStatefulStellata();
+      const blob = encodeBlob({ focus: { kind: 'sid', id: 202 }, cam: [1, 2, 3] });
+      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+
+      (stellata.renderGate as { sawUserInput: boolean }).sawUserInput = true;
+      stellata.camera.position.set(42, 43, 44);
+      sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+
+      const { x, y, z } = stellata.camera.position;
+      expect([x, y, z]).toEqual([42, 43, 44]);
+    });
+
     it('planet focus round-trips: sid on the wire, flat Target index in the runtime', () => {
       // The planet SID domain is keyed planet-within-host; the Target
       // currency is the body field's flat instance index.
