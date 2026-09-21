@@ -226,7 +226,8 @@ interface GrowingCatalog extends Catalog {
 
 /** What `beginCatalog` needs off the manifest: the chunk plan when there is
  *  one to decode against, and the successor pairs either way. A whole-buffer
- *  caller passes no chunk plan and decodes with `decodeTo`. */
+ *  caller passes no chunk plan and absorbs a single `decodeInline` window
+ *  spanning every record. */
 interface CatalogSource {
   chunkBytes?: number[];
   totalBytes?: number;
