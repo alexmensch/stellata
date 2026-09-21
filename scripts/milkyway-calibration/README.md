@@ -22,6 +22,11 @@ scripts/milkyway-calibration/
                               removes. Pure.
 ```
 
+The quadrature samples stay on the cell that owns them and nothing copies
+them: 8,000 directions × 8 sub-steps × 32 shells is 2 M of them, and the
+all-sky roll-up (`shellTotals`) needs two scalars per shell, not the
+samples. `shellHoleLight` reaches them where they are.
+
 ## What it writes
 
 `resolved-hole-table.ts` carries three things, all measured, none authored:

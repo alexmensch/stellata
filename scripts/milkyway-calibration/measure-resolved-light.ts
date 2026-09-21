@@ -30,7 +30,6 @@ import {
 import { RESOLVED_HOLE_CATALOGUE_RECORDS } from '../../src/client/milkyway/calibration/resolved-hole-table';
 import {
   type CapSurfaceBrightness,
-  type HoleCell,
   MIN_STARS_PER_CELL,
   type Rotation3,
   type StarColumns,
@@ -38,7 +37,9 @@ import {
   capSurfaceBrightness,
   holeLight,
   resolvedHoleTableFromCells,
-  sumOverBands,
+  type ShellTotal,
+  shellHoleLight,
+  shellTotals,
 } from './resolved-light-pure';
 
 const TABLE_MODULE = 'src/client/milkyway/calibration/resolved-hole-table.ts';
@@ -93,14 +94,14 @@ ${rows.join('\n')}
 `;
 }
 
-function printShells(title: string, cells: readonly HoleCell[], table: ResolvedHoleTable): void {
+function printShells(title: string, rows: readonly ShellTotal[], removed: readonly number[]): void {
   console.log(`\n## ${title}`);
   console.log('  shell (pc)            stars      catalogue      model   resolved   table');
-  for (const c of cells) {
+  for (const c of rows) {
     console.log(
       `  ${fmt(c.innerPc, 0).padStart(6)}–${fmt(c.outerPc, 0).padEnd(6)} ${String(c.stars).padStart(9)}` +
         `  ${c.catalogue.toExponential(3).padStart(11)}  ${c.model.toExponential(3).padStart(10)}` +
-        `  ${fmt(c.model > 0 ? c.catalogue / c.model : 0, 3).padStart(6)}   ${fmt(holeLight(c, table) / c.model, 3)}`,
+        `  ${fmt(c.model > 0 ? c.catalogue / c.model : 0, 3).padStart(6)}   ${fmt(removed[c.shell] / c.model, 3)}`,
     );
   }
 }
@@ -141,7 +142,9 @@ async function main(): Promise<void> {
     console.log('  ' + cells.filter((c) => c.band === b).map((c) => String(c.stars).padStart(5)).join(' '));
   }
 
-  printShells('All sky, by shell — resolved share observed, and what the sampled table removes', sumOverBands(cells), table);
+  printShells(
+    'All sky, by shell — resolved share observed, and what the sampled table removes',
+    shellTotals(cells), shellHoleLight(cells, table));
 
   const totalCatalogue = cells.reduce((s, c) => s + c.catalogue, 0);
   const totalHole = cells.reduce((s, c) => s + holeLight(c, table), 0);

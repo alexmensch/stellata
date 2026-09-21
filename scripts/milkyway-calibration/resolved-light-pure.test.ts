@@ -18,8 +18,9 @@ import {
   holeLight,
   resolvedHoleTableFromCells,
   resolvedShare,
+  shellHoleLight,
+  shellTotals,
   starLuminosity,
-  sumOverBands,
 } from './resolved-light-pure';
 
 const IDENTITY: Rotation3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -89,8 +90,6 @@ describe('hole cells on the table’s own edges', () => {
         [0, 0, 500, 5],
       ]),
       IDENTITY,
-      undefined,
-      undefined,
       COARSE,
     );
     expect(cells).toHaveLength(RESOLVED_HOLE_SHELLS * RESOLVED_HOLE_BANDS);
@@ -104,31 +103,43 @@ describe('hole cells on the table’s own edges', () => {
   // 2 % under ρ(Sol) × volume: the vertical exponential falls faster than
   // the radial one rises across a 10–12.6 pc shell.
   it('samples the model to the emissivity at Sol in the first shell', () => {
-    const [inner] = sumOverBands(buildHoleCells(stars([]), IDENTITY));
+    const [inner] = shellTotals(buildHoleCells(stars([]), IDENTITY));
     const volume = (4 / 3) * Math.PI * (inner.outerPc ** 3 - inner.innerPc ** 3);
     expect(inner.model / (bandEmissivity([-R0_PC, 0, 0]) * volume)).toBeCloseTo(0.982, 3);
   });
 
+  // Scalars only: the roll-up used to concatenate every cell's samples —
+  // 49 MB of copies — to read the two terms of one ratio.
   it('sums the bands back into all-sky shells', () => {
-    const cells = buildHoleCells(stars([[50, 0, 0, 0]]), IDENTITY, undefined, undefined, COARSE);
-    const shells = sumOverBands(cells);
+    const cells = buildHoleCells(stars([[50, 0, 0, 0]]), IDENTITY, COARSE);
+    const shells = shellTotals(cells);
     expect(shells).toHaveLength(RESOLVED_HOLE_SHELLS);
     expect(shells[6].catalogue).toBe(100);
     expect(shells[6].model).toBeCloseTo(
       cells.filter((c) => c.shell === 6).reduce((s, c) => s + c.model, 0),
       9,
     );
-    expect(shells[6].samples.light.length).toBe(COARSE.directions * COARSE.radialSteps);
+    expect(cells.filter((c) => c.shell === 6)
+      .reduce((n, c) => n + c.samples.light.length, 0))
+      .toBe(COARSE.directions * COARSE.radialSteps);
+  });
+
+  it('removes the same light per shell whether summed by cell or by row', () => {
+    const cells = buildHoleCells(stars([]), IDENTITY, COARSE);
+    const table = resolvedHoleTableFromCells(cells);
+    const removed = shellHoleLight(cells, table);
+    expect(removed[6]).toBeCloseTo(
+      cells.filter((c) => c.shell === 6).reduce((s, c) => s + holeLight(c, table), 0), 12);
   });
 
   it('clamps a cell the catalogue outshines to wholly resolved', () => {
-    const [cell] = buildHoleCells(stars([[12, 0, 0, -10]]), IDENTITY, undefined, undefined, COARSE);
+    const [cell] = buildHoleCells(stars([[12, 0, 0, -10]]), IDENTITY, COARSE);
     expect(cell.catalogue).toBeGreaterThan(cell.model);
     expect(resolvedShare(cell)).toBe(1);
   });
 
   it('removes the whole cell at a table of ones and nothing at zeros', () => {
-    const [cell] = sumOverBands(buildHoleCells(stars([]), IDENTITY, undefined, undefined, COARSE));
+    const [cell] = buildHoleCells(stars([]), IDENTITY, COARSE);
     const size = RESOLVED_HOLE_SHELLS * RESOLVED_HOLE_BANDS;
     expect(holeLight(cell, { values: new Array(size).fill(1) })).toBeCloseTo(cell.model, 9);
     expect(holeLight(cell, { values: new Array(size).fill(0) })).toBe(0);
@@ -136,7 +147,7 @@ describe('hole cells on the table’s own edges', () => {
 });
 
 describe('the table from the cells', () => {
-  const cells = buildHoleCells(stars([]), IDENTITY, undefined, undefined, COARSE);
+  const cells = buildHoleCells(stars([]), IDENTITY, COARSE);
 
   it('gives a well-populated cell its own share', () => {
     const own = cells.map((c) =>
@@ -147,7 +158,7 @@ describe('the table from the cells', () => {
     const table = resolvedHoleTableFromCells(own);
     expect(table.values[resolvedHoleIndex(10, 2)]).toBeCloseTo(0.25, 12);
     expect(table.values[resolvedHoleIndex(10, 3)]).toBeCloseTo(
-      resolvedShare(sumOverBands(own)[10]),
+      resolvedShare(shellTotals(own)[10]),
       12,
     );
   });
@@ -159,7 +170,7 @@ describe('the table from the cells', () => {
         : c,
     );
     const table = resolvedHoleTableFromCells(thin);
-    const shellShare = resolvedShare(sumOverBands(thin)[10]);
+    const shellShare = resolvedShare(shellTotals(thin)[10]);
     expect(shellShare).toBeGreaterThan(0);
     expect(shellShare).toBeLessThan(0.25);
     expect(table.values[resolvedHoleIndex(10, 2)]).toBeCloseTo(shellShare, 12);

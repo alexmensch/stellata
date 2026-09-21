@@ -13,9 +13,10 @@ import {
 } from '../../src/client/milkyway/milkyway-column-pure';
 import {
   RESOLVED_HOLE_BANDS,
+  RESOLVED_HOLE_DEX_PER_SHELL,
+  RESOLVED_HOLE_LOG_DISTANCE0,
   RESOLVED_HOLE_SHELLS,
   type ResolvedHoleTable,
-  resolvedHoleBandEdges,
   resolvedHoleIndex,
   resolvedHoleShellEdgesPc,
   resolvedLightFraction,
@@ -128,22 +129,28 @@ export interface HoleCell {
   readonly samples: CellSamples;
 }
 
-function edgeIndex(value: number, edges: readonly number[]): number {
-  let i = 0;
-  while (i < edges.length - 2 && value >= edges[i + 1]) i++;
-  return i;
+/** Closed form — the shells are a tenth of a dex each from 10 pc. */
+function shellIndex(dSolPc: number): number {
+  return Math.floor(
+    (Math.log10(dSolPc) - RESOLVED_HOLE_LOG_DISTANCE0) / RESOLVED_HOLE_DEX_PER_SHELL,
+  );
 }
 
-/** The table's own cells by default. README.md § How a cell is measured. */
+/** Closed form — the bands are equal steps of |sin b|, and |sin b| = 1
+ *  would otherwise index one past the last. */
+function bandIndex(absSinB: number): number {
+  return Math.min(Math.floor(absSinB * RESOLVED_HOLE_BANDS), RESOLVED_HOLE_BANDS - 1);
+}
+
+/** On the table's own edges. README.md § How a cell is measured. */
 export function buildHoleCells(
   stars: StarColumns,
   icrsToGal: Rotation3,
-  edgesPc: readonly number[] = resolvedHoleShellEdgesPc(),
-  bandEdges: readonly number[] = resolvedHoleBandEdges(),
   quadrature: ShellQuadrature = DEFAULT_QUADRATURE,
 ): HoleCell[] {
-  const shells = edgesPc.length - 1;
-  const bands = bandEdges.length - 1;
+  const edgesPc = resolvedHoleShellEdgesPc();
+  const shells = RESOLVED_HOLE_SHELLS;
+  const bands = RESOLVED_HOLE_BANDS;
   const cellOf = (shell: number, band: number) => shell * bands + band;
   const catalogue = new Float64Array(shells * bands);
   const count = new Uint32Array(shells * bands);
@@ -154,19 +161,31 @@ export function buildHoleCells(
     const d = Math.hypot(x, y, z);
     if (d < edgesPc[0] || d >= edgesPc[shells]) continue;
     const zGal = icrsToGal[6] * x + icrsToGal[7] * y + icrsToGal[8] * z;
-    const cell = cellOf(edgeIndex(d, edgesPc), edgeIndex(Math.abs(zGal) / d, bandEdges));
+    const cell = cellOf(shellIndex(d), bandIndex(Math.abs(zGal) / d));
     catalogue[cell] += starLuminosity(stars.absmag[i]);
     count[cell]++;
   }
 
   const dirs = fibonacciSphere(quadrature.directions);
-  const dirBand = dirs.map((dir) => edgeIndex(Math.abs(dir[2]), bandEdges));
+  const dirBand = dirs.map((dir) => bandIndex(Math.abs(dir[2])));
   const solidAnglePerDir = (4 * Math.PI) / quadrature.directions;
-  const samples = Array.from({ length: shells * bands }, () => ({
-    d: [] as number[],
-    sinB: [] as number[],
-    w: [] as number[],
-  }));
+
+  // Every shell sees the same directions, so one pass over dirBand sizes
+  // each cell's sample arrays and they fill without growing.
+  const perBand = new Uint32Array(bands);
+  for (const b of dirBand) perBand[b] += quadrature.radialSteps;
+  const samples: CellSamples[] = [];
+  const filled = new Uint32Array(shells * bands);
+  for (let s = 0; s < shells; s++) {
+    for (let b = 0; b < bands; b++) {
+      samples.push({
+        dSolPc: new Float64Array(perBand[b]),
+        absSinB: new Float64Array(perBand[b]),
+        light: new Float64Array(perBand[b]),
+      });
+    }
+  }
+
   for (let s = 0; s < shells; s++) {
     const dr = (edgesPc[s + 1] - edgesPc[s]) / quadrature.radialSteps;
     for (let j = 0; j < quadrature.radialSteps; j++) {
@@ -179,10 +198,11 @@ export function buildHoleCells(
           SOL_GALACTOCENTRIC_PC[1] + r * dir[1],
           SOL_GALACTOCENTRIC_PC[2] + r * dir[2],
         ];
-        const cell = samples[cellOf(s, dirBand[k])];
-        cell.d.push(r);
-        cell.sinB.push(Math.abs(dir[2]));
-        cell.w.push(bandEmissivity(p) * volumePerDir);
+        const cell = cellOf(s, dirBand[k]);
+        const at = filled[cell]++;
+        samples[cell].dSolPc[at] = r;
+        samples[cell].absSinB[at] = Math.abs(dir[2]);
+        samples[cell].light[at] = bandEmissivity(p) * volumePerDir;
       }
     }
   }
@@ -191,7 +211,6 @@ export function buildHoleCells(
   for (let s = 0; s < shells; s++) {
     for (let b = 0; b < bands; b++) {
       const c = cellOf(s, b);
-      const light = Float64Array.from(samples[c].w);
       cells.push({
         shell: s,
         band: b,
@@ -199,20 +218,17 @@ export function buildHoleCells(
         outerPc: edgesPc[s + 1],
         catalogue: catalogue[c],
         stars: count[c],
-        model: light.reduce((sum, v) => sum + v, 0),
-        samples: {
-          dSolPc: Float64Array.from(samples[c].d),
-          absSinB: Float64Array.from(samples[c].sinB),
-          light,
-        },
+        model: samples[c].light.reduce((sum, v) => sum + v, 0),
+        samples: samples[c],
       });
     }
   }
   return cells;
 }
 
-export function resolvedShare(cell: HoleCell): number {
-  return cell.model > 0 ? Math.min(cell.catalogue / cell.model, 1) : 0;
+/** Both a cell and a shell row carry the two terms of the ratio. */
+export function resolvedShare(of: { catalogue: number; model: number }): number {
+  return of.model > 0 ? Math.min(of.catalogue / of.model, 1) : 0;
 }
 
 /** README.md § How a cell is measured. */
@@ -221,10 +237,10 @@ export const MIN_STARS_PER_CELL = 500;
 /** The table the band marches, from cells binned on the table's own edges. */
 export function resolvedHoleTableFromCells(cells: readonly HoleCell[]): ResolvedHoleTable {
   const values = new Array<number>(RESOLVED_HOLE_SHELLS * RESOLVED_HOLE_BANDS).fill(0);
-  const shellShare = new Map(sumOverBands(cells).map((s) => [s.shell, resolvedShare(s)]));
+  const shellShare = shellTotals(cells).map(resolvedShare);
   for (const c of cells) {
     values[resolvedHoleIndex(c.shell, c.band)] =
-      c.stars >= MIN_STARS_PER_CELL ? resolvedShare(c) : shellShare.get(c.shell)!;
+      c.stars >= MIN_STARS_PER_CELL ? resolvedShare(c) : shellShare[c.shell];
   }
   return { values };
 }
@@ -240,31 +256,38 @@ export function holeLight(cell: HoleCell, table: ResolvedHoleTable): number {
   return sum;
 }
 
-/** Cells summed over latitude into one row per shell. */
-export function sumOverBands(cells: readonly HoleCell[]): HoleCell[] {
-  const byShell = new Map<number, HoleCell[]>();
-  for (const c of cells) byShell.set(c.shell, [...(byShell.get(c.shell) ?? []), c]);
-  return [...byShell.values()].map((group) => {
-    const concat = (pick: (s: CellSamples) => Float64Array) => {
-      const out = new Float64Array(group.reduce((n, c) => n + pick(c.samples).length, 0));
-      let at = 0;
-      for (const c of group) {
-        out.set(pick(c.samples), at);
-        at += pick(c.samples).length;
-      }
-      return out;
-    };
-    return {
-      ...group[0],
-      band: 0,
-      catalogue: group.reduce((s, c) => s + c.catalogue, 0),
-      stars: group.reduce((s, c) => s + c.stars, 0),
-      model: group.reduce((s, c) => s + c.model, 0),
-      samples: {
-        dSolPc: concat((s) => s.dSolPc),
-        absSinB: concat((s) => s.absSinB),
-        light: concat((s) => s.light),
-      },
-    };
-  });
+/** One all-sky row per shell. Scalars only — the quadrature samples stay
+ *  with the cells that own them, and `shellHoleLight` reaches them there. */
+export interface ShellTotal {
+  readonly shell: number;
+  readonly innerPc: number;
+  readonly outerPc: number;
+  readonly catalogue: number;
+  readonly stars: number;
+  readonly model: number;
+}
+
+export function shellTotals(cells: readonly HoleCell[]): ShellTotal[] {
+  const rows: ShellTotal[] = [];
+  for (const c of cells) {
+    const row = rows[c.shell];
+    rows[c.shell] = row === undefined
+      ? { shell: c.shell, innerPc: c.innerPc, outerPc: c.outerPc,
+        catalogue: c.catalogue, stars: c.stars, model: c.model }
+      : { ...row,
+        catalogue: row.catalogue + c.catalogue,
+        stars: row.stars + c.stars,
+        model: row.model + c.model };
+  }
+  return rows;
+}
+
+/** What the table removes from each shell, summed over its bands. */
+export function shellHoleLight(
+  cells: readonly HoleCell[],
+  table: ResolvedHoleTable,
+): number[] {
+  const out: number[] = [];
+  for (const c of cells) out[c.shell] = (out[c.shell] ?? 0) + holeLight(c, table);
+  return out;
 }
