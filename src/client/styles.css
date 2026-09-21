@@ -1537,6 +1537,7 @@ body.monochrome .search-row,
 body.monochrome .search-results,
 body.monochrome .card-strips,
 body.monochrome .attitude-chip,
+body.monochrome.scene-live .loading-inner,
 body.monochrome select {
   background: rgba(255, 255, 255, 0.92);
   color: var(--fg);
