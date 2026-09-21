@@ -820,7 +820,7 @@ describe('raymarch parameters the mirror duplicates from GLSL', () => {
   // renders a plausible wrong picture rather than failing.
   it('maps the two table axes onto the texture the same way the mirror does', () => {
     expect(frag).toMatch(
-      /\(log\(d\) \/ STELLATA_LOG10 - RESOLVED_HOLE_LOG_DISTANCE0\) \/ RESOLVED_HOLE_DEX_SPAN,\n\s*abs\(fromSol\.z\) \/ d\)/);
+      /\(0\.5 \* log\(d2\) \/ STELLATA_LOG10 - RESOLVED_HOLE_LOG_DISTANCE0\) \/ RESOLVED_HOLE_DEX_SPAN,\n\s*abs\(fromSol\.z\) \* inversesqrt\(d2\)\)/);
     expect(frag).toMatch(
       /RESOLVED_HOLE_DEX_SPAN =\n?\s*float\(RESOLVED_HOLE_SHELLS\) \* RESOLVED_HOLE_DEX_PER_SHELL;/);
     expect(frag).toMatch(/return textureLod\(uUnresolvedLight, uv, 0\.0\)\.r;/);

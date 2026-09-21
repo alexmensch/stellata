@@ -4,8 +4,8 @@
 
 import { AdditiveBlending, BackSide } from 'three';
 import {
-  Break, If, Loop, abs, cameraPosition, dFdx, dFdy, dot, exp, float, int, length, log,
-  log2,
+  Break, If, Loop, abs, cameraPosition, dFdx, dFdy, dot, exp, float, int, inverseSqrt,
+  length, log, log2,
   max, positionGeometry, positionWorld, select, smoothstep, sqrt, varying, vec2,
   vec3, vec4,
 } from 'three/tsl';
@@ -73,11 +73,14 @@ export function buildMilkyWayBandMaterial(
   /** Transcribes the GLSL `unresolvedBandLight`. */
   const unresolvedBandLight = (posGalCentric: N3): NF => {
     const fromSol = posGalCentric.add(vec3(s.uR0Pc, 0.0, 0.0)).toVar();
-    const d = max(length(fromSol), RESOLVED_HOLE_MIN_DISTANCE_PC).toVar();
+    const d2 = max(
+      dot(fromSol, fromSol),
+      RESOLVED_HOLE_MIN_DISTANCE_PC * RESOLVED_HOLE_MIN_DISTANCE_PC,
+    ).toVar();
     return s.uUnresolvedLight.sample(vec2(
-      log(d).div(Math.LN10).sub(RESOLVED_HOLE_LOG_DISTANCE0)
+      log(d2).mul(0.5 / Math.LN10).sub(RESOLVED_HOLE_LOG_DISTANCE0)
         .div(RESOLVED_HOLE_DEX_PER_SHELL * RESOLVED_HOLE_SHELLS),
-      abs(fromSol.z).div(d),
+      abs(fromSol.z).mul(inverseSqrt(d2)),
     )).level(int(0)).r;
   };
 

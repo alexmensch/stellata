@@ -83,6 +83,8 @@ const float RESOLVED_HOLE_DEX_PER_SHELL = 0.1;
 const float RESOLVED_HOLE_MIN_DISTANCE_PC = 1e-6;
 const float RESOLVED_HOLE_DEX_SPAN =
   float(RESOLVED_HOLE_SHELLS) * RESOLVED_HOLE_DEX_PER_SHELL;
+const float RESOLVED_HOLE_MIN_DISTANCE_SQ =
+  RESOLVED_HOLE_MIN_DISTANCE_PC * RESOLVED_HOLE_MIN_DISTANCE_PC;
 uniform sampler2D uUnresolvedLight;
 
 // Analytical disc dust profile.
@@ -156,10 +158,12 @@ float bulgeDensityVal(float R, float zVal, float footprintPc) {
 // Sol is |z| over the distance from Sol.
 float unresolvedBandLight(vec3 posGalCentric) {
   vec3 fromSol = posGalCentric + vec3(uR0Pc, 0.0, 0.0);
-  float d = max(length(fromSol), RESOLVED_HOLE_MIN_DISTANCE_PC);
+  // Squared throughout: log10(d) is half log10(d2), and |sin b| takes the
+  // reciprocal root directly, so the step pays no sqrt and no divide.
+  float d2 = max(dot(fromSol, fromSol), RESOLVED_HOLE_MIN_DISTANCE_SQ);
   vec2 uv = vec2(
-    (log(d) / STELLATA_LOG10 - RESOLVED_HOLE_LOG_DISTANCE0) / RESOLVED_HOLE_DEX_SPAN,
-    abs(fromSol.z) / d);
+    (0.5 * log(d2) / STELLATA_LOG10 - RESOLVED_HOLE_LOG_DISTANCE0) / RESOLVED_HOLE_DEX_SPAN,
+    abs(fromSol.z) * inversesqrt(d2));
   // Level 0 explicitly. The table carries no mips, so an implicit LOD only
   // buys the sampler's derivatives — inside the march's Break, where they
   // are non-uniform. Keep both shaders on the same fetch.
