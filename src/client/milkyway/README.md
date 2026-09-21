@@ -108,10 +108,11 @@ component has a hand-set weight any more: both `density0` values are
 solved.
 
 **Both components are multiplied by one minus the resolution hole** — the
-star catalogue's measured share of the model's light at each step, a
-table both shaders sample through the shared `uResolvedHole` slot and the
-CPU mirror through the same `resolvedLightFraction`, applied ahead of the
-dust step (`calibration/README.md` § The resolution hole).
+star catalogue's measured share of the model's light at each step,
+applied ahead of the dust step. It reaches both shaders as one filtered
+fetch of the shared `uUnresolvedLight` texture, and the CPU mirror
+through `unresolvedLightFraction` over the same table
+(`calibration/README.md` § The resolution hole).
 
 ### Population tints carry hue, never flux
 

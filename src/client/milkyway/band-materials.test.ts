@@ -11,9 +11,7 @@ import {
   type BandMaterials,
   type BandSharedSlots,
 } from './band-materials';
-import {
-  RESOLVED_HOLE_BANDS, RESOLVED_HOLE_SHELLS,
-} from './calibration/resolved-fraction-pure';
+import { makeResolvedHoleTexture } from './calibration/resolved-hole-texture';
 
 const hdr = makeHdrEmitterUniforms();
 const uLimitMag = { value: 6.5 };
@@ -22,8 +20,10 @@ const glsl = () => makeGlslBandMaterials({ hdr, uLimitMag });
 /** A value no authored constant takes, in every slot. The record is typed
  *  as BandSharedSlots, so a new slot fails to compile here before it can
  *  fail the assertion — which is what makes the seeding list unforgettable
- *  rather than merely tested. */
-const UNSEEDED = -987654;
+ *  rather than merely tested. It has to be exactly representable in
+ *  half-float, because one slot is a texture: a sentinel that quantises on
+ *  the way in reads back as something else and passes unseeded.  */
+const UNSEEDED = -8192;
 function unseededSlots(): BandSharedSlots {
   const n = () => ({ value: UNSEEDED });
   const v = () => ({ value: new THREE.Vector3(UNSEEDED, UNSEEDED, UNSEEDED) });
@@ -42,17 +42,25 @@ function unseededSlots(): BandSharedSlots {
       UNSEEDED, UNSEEDED, UNSEEDED) },
     uGalCenter: v(),
     uR0Pc: n(),
-    uResolvedHole: { value: new Float32Array(RESOLVED_HOLE_SHELLS * RESOLVED_HOLE_BANDS).fill(UNSEEDED) },
+    uUnresolvedLight: { value: unseededTexture() },
     uGlowMagOffset: n(),
     uChartIsobar: n(),
     uChartInkColor: { value: new THREE.Color().setRGB(UNSEEDED, UNSEEDED, UNSEEDED) },
   };
 }
 
+function unseededTexture(): THREE.DataTexture {
+  const tex = makeResolvedHoleTexture();
+  (tex.image.data as Uint16Array).fill(THREE.DataUtils.toHalfFloat(UNSEEDED));
+  return tex;
+}
+
 /** One representative scalar per slot-value kind, for the sentinel sweep. */
 function probe(value: unknown): number {
   if (typeof value === 'number') return value;
-  if (Array.isArray(value) || value instanceof Float32Array) return value[0];
+  if (value instanceof THREE.DataTexture) {
+    return THREE.DataUtils.fromHalfFloat((value.image.data as Uint16Array)[0]);
+  }
   if (value instanceof THREE.Vector3) return value.x;
   if (value instanceof THREE.Matrix3) return value.elements[0];
   if (value instanceof THREE.Color) return value.r;

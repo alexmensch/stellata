@@ -8,9 +8,8 @@ import {
   makeGlslBandMaterials, type BandMaterials, type BandSharedSlots,
 } from './band-materials';
 import type { DustField } from '../loaders/dust-loader';
-import {
-  clampResolvedHoleStrength, writeResolvedHoleSlot,
-} from './calibration/resolved-fraction-pure';
+import { clampResolvedHoleStrength } from './calibration/resolved-fraction-pure';
+import { writeResolvedHoleTexture } from './calibration/resolved-hole-texture';
 import {
   BandPeakCache,
   galactocentricPc,
@@ -288,8 +287,8 @@ export class MilkyWay {
   /** 0 switches the hole off; 1 is the shipped table. */
   setResolvedHoleStrength(k: number) {
     this.resolvedHoleStrength = clampResolvedHoleStrength(k);
-    writeResolvedHoleSlot(
-      this.shared.uResolvedHole.value as { [i: number]: number },
+    writeResolvedHoleTexture(
+      this.shared.uUnresolvedLight.value as THREE.DataTexture,
       this.resolvedHoleStrength,
     );
   }
@@ -385,6 +384,7 @@ export class MilkyWay {
     this.bulgeMesh.geometry.dispose();
     this.disc.surface.dispose();
     this.bulge.surface.dispose();
+    this.materials.dispose();
     this.peakCache.reset();
   }
 }

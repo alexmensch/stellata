@@ -24,8 +24,11 @@ comes out* is here.
   rows, the record count they were measured on, and the resolution-hole
   table (§ The resolution hole). Never edited by hand.
 - `resolved-fraction-pure.ts` (+ test) — the table's layout constants, the
-  bilinear sampler both shaders and the CPU mirror share, and the one
-  writer of the shader slot.
+  two texture coordinates both shaders compute, the CPU mirror of the
+  sampler's own filtering rule, and the texel values the slot is written
+  with.
+- `resolved-hole-texture.ts` (+ test) — the `DataTexture` those texels go
+  into and its filter pair.
 
 ## The zero point is not the band's own — it is the emission unit's
 
@@ -207,10 +210,12 @@ model's light at that point**, read out of `resolved-hole-table.ts`:
   share (`scripts/milkyway-calibration/README.md` § How a cell is measured).
 - Sampled **bilinearly in (log d, |sin b|)** over the cell centres and
   clamped to the edge cells beyond them, so the first shell's value holds
-  inside 10 pc and the last shell's past 15.8 kpc. Both shaders and
-  `resolvedLightFraction` are the one sampler; the GLSL layout literals are
-  pinned against the wrapper's constants in `../milkyway.test.ts` and the
-  TSL imports them by name.
+  inside 10 pc and the last shell's past 15.8 kpc — and that is the whole
+  of it, because both are a filtering sampler's own conventions (§ The
+  table is a texture, not a uniform array). Each shader computes two
+  coordinates and fetches; `sampleTexelCentres` mirrors the hardware for
+  the CPU march. The GLSL layout literals are pinned against the wrapper's
+  constants in `../milkyway.test.ts` and the TSL imports them by name.
 - Applied **before the dust**, so the resolved stars and what the band
   still draws see the same column — the catalogue's stars are rendered
   through the per-star extinction prepass, the band's remainder through its
@@ -236,6 +241,35 @@ centre is the nearest two kiloparsecs, so it dims 0.68 mag; the anticentre
 0.64, b = 30 0.56, the pole 0.79, b = 5 — where the column reaches through
 the plane — 0.19. The sky's total does not move; its light shifts from the
 smooth march into the points.
+
+## The table is a texture, not a uniform array
+
+A 32 × 8 `DataTexture`, `RedFormat` + `HalfFloatType`, **linear/linear and
+clamp-to-edge on both axes** — every one of those load-bearing. The
+sampler's texel centres are the table's cell centres, its clamp-to-edge is
+the edge rule above, and its filter is the bilinear, so one fetch replaces
+four dynamically indexed reads, three `mix`es and the `floor` / `min` /
+`clamp` ladder around them, per march step, on a layer that is pure fill.
+A texture also uploads only when written, where a `uniformArray` node
+re-packs its backing array and re-uploads its padded buffer **every
+render** — for a table that moves only when the debug slider does.
+
+**The texels are `1 − strength·hole`, not the hole**, which is what the
+march multiplies by anyway. The scaling is affine, so interpolating these
+IS one minus the interpolated hole; what it buys is that half-float's
+error is *relative*, and the multiplier is smallest exactly where the hole
+is largest. Storing the hole would have put a ~1e-3 absolute floor under a
+residual that goes to zero in the inner shells.
+
+Half rather than single: `r16float` is core-filterable on both backends,
+where `r32float` needs `OES_texture_float_linear` on WebGL2 and the
+`float32-filterable` feature on WebGPU. The worst texel round-trip is
+**8.1e-4 relative** (three's converter truncates rather than rounds), and
+the worst Sol sightline moves **4.4e-4 mag** — pinned in
+`../milkyway.test.ts`, two orders under the 0.01 mag the footprint
+residual is held to. A filter unit's own weight quantisation adds at most
+the largest neighbour step (0.42) over its subtexel precision, the same
+order again.
 
 Regenerate with `pnpm run measure:band-resolved` on a floor-on build
 whenever the catalogue's membership or photometry moves inside 15 kpc;

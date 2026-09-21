@@ -43,15 +43,15 @@ yields a bound on a picture nobody is looking at — and the failure is silent,
 because the bound stays internally consistent while being about the wrong
 shader. `milkyway-band-tsl-drift.test.ts` holds the march's own shape
 (`STEPS`, `FOREGROUND_DUST_STEPS`, `S_MIN_PC`, `UNIT_BALL_SLACK`,
-`MAG_PER_TAU`) and the resolution-hole table's layout
-(`RESOLVED_HOLE_SHELLS` / `_BANDS` / `_LOG_DISTANCE0` / `_DEX_PER_SHELL`)
-to the mirror's constants by import. The profile and dust parameters need
-no entry there: they arrive as uniform nodes that `seedBandSharedSlots`
-alone writes (§ Seeding, because a node starts on its declared default).
-The hole table itself crosses the same way, as a float `uniformArray` whose
-backing array the seed and the debug lever write in place — the layout
-constants are what turn a flat index into a cell, so they are the part that
-can drift.
+`MAG_PER_TAU`) and what the resolution-hole fetch scales its two
+coordinates by (`RESOLVED_HOLE_SHELLS` / `_LOG_DISTANCE0` /
+`_DEX_PER_SHELL` / `_MIN_DISTANCE_PC`) to the mirror's constants by
+import. The profile and dust parameters need no entry there: they arrive
+as uniform nodes that `seedBandSharedSlots` alone writes (§ Seeding,
+because a node starts on its declared default). The hole table crosses as
+a `texture()` node over the `DataTexture` the seed and the debug lever
+write in place — its 8 latitude rows reach the shader as the texture's own
+height, so `RESOLVED_HOLE_BANDS` is not restated here and cannot drift.
 
 The write tail it ends on is `../extended-emitter-tsl.ts`, shared with
 the Local Group emission exactly as the GLSL chunk is.

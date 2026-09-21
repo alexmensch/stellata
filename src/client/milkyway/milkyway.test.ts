@@ -56,11 +56,12 @@ import {
   RESOLVED_CATALOGUE_MAG_ARCSEC2,
 } from './calibration/diffuse-reference';
 import {
-  RESOLVED_HOLE_BANDS,
   RESOLVED_HOLE_DEX_PER_SHELL,
   RESOLVED_HOLE_LOG_DISTANCE0,
+  RESOLVED_HOLE_MIN_DISTANCE_PC,
   RESOLVED_HOLE_SHELLS,
   SHIPPED_RESOLVED_HOLE,
+  unresolvedHoleTexels,
 } from './calibration/resolved-fraction-pure';
 import { buildHoleCells, holeLight } from '../../../scripts/milkyway-calibration/resolved-light-pure';
 import { fluxNumber } from '../hdr/emission/density0-solver-pure';
@@ -553,6 +554,21 @@ describe('MilkyWay surface-brightness calibration', () => {
     expect(GC_SIGHTLINE_MAG_ARCSEC2).toBeCloseTo(22.553, 3);
   });
 
+  // The mirror marches the exact table, so this is the one place the
+  // shipped pins' distance from what the GPU renders is stated.
+  it('loses under 5e-4 mag to the texture\u2019s half-float storage', () => {
+    const half = (x: number) => THREE.DataUtils.fromHalfFloat(THREE.DataUtils.toHalfFloat(x));
+    const quantised = { values: Array.from(unresolvedHoleTexels(), (v) => 1 - half(v)) };
+    let worst = 0;
+    for (const [l, b] of [[0, 5], [0, 0], [180, 0], [0, 30], [0, 90], [90, 10], [45, 60]]) {
+      const dir = galacticDirection(l, b);
+      worst = Math.max(worst, Math.abs(
+        sightlineSurfaceBrightness(SB_ZERO_POINT, SOL_GALACTOCENTRIC_PC, dir, { resolvedHole: quantised })
+        - sightlineSurfaceBrightness(SB_ZERO_POINT, SOL_GALACTOCENTRIC_PC, dir)));
+    }
+    expect(worst).toBeCloseTo(4.443e-4, 6);
+  });
+
   it('gives the resolved stars’ share of the column back', () => {
     const whole = sightlineSurfaceBrightness(
       SB_ZERO_POINT,
@@ -759,7 +775,7 @@ describe('raymarch parameters the mirror duplicates from GLSL', () => {
   );
   const glslConst = (decl: string, name: string): number => {
     const m = frag.match(
-      new RegExp(`const ${decl}\\s+${name}\\s*=\\s*([\\d.]+);`),
+      new RegExp(`const ${decl}\\s+${name}\\s*=\\s*([\\d.]+(?:[eE][-+]?\\d+)?);`),
     );
     if (m === null) throw new Error(`${name} not declared in milkyway.frag.glsl`);
     return Number(m[1]);
@@ -793,17 +809,27 @@ describe('raymarch parameters the mirror duplicates from GLSL', () => {
   // Drift in a layout literal samples the wrong cell with no error.
   it('agrees on the resolution-hole table layout', () => {
     expect(glslConst('int', 'RESOLVED_HOLE_SHELLS')).toBe(RESOLVED_HOLE_SHELLS);
-    expect(glslConst('int', 'RESOLVED_HOLE_BANDS')).toBe(RESOLVED_HOLE_BANDS);
     expect(glslConst('float', 'RESOLVED_HOLE_LOG_DISTANCE0')).toBe(RESOLVED_HOLE_LOG_DISTANCE0);
     expect(glslConst('float', 'RESOLVED_HOLE_DEX_PER_SHELL')).toBe(RESOLVED_HOLE_DEX_PER_SHELL);
-    expect(frag).toMatch(/uniform float uResolvedHole\[RESOLVED_HOLE_SHELLS \* RESOLVED_HOLE_BANDS\];/);
-    expect(frag).toMatch(/return uResolvedHole\[band \* RESOLVED_HOLE_SHELLS \+ shell\];/);
+    expect(glslConst('float', 'RESOLVED_HOLE_MIN_DISTANCE_PC'))
+      .toBe(RESOLVED_HOLE_MIN_DISTANCE_PC);
+    expect(frag).toMatch(/uniform sampler2D uUnresolvedLight;/);
+  });
+
+  // The two coordinates ARE the transcription: a swapped or unscaled axis
+  // renders a plausible wrong picture rather than failing.
+  it('maps the two table axes onto the texture the same way the mirror does', () => {
+    expect(frag).toMatch(
+      /\(log\(d\) \/ STELLATA_LOG10 - RESOLVED_HOLE_LOG_DISTANCE0\) \/ RESOLVED_HOLE_DEX_SPAN,\n\s*abs\(fromSol\.z\) \/ d\)/);
+    expect(frag).toMatch(
+      /RESOLVED_HOLE_DEX_SPAN =\n?\s*float\(RESOLVED_HOLE_SHELLS\) \* RESOLVED_HOLE_DEX_PER_SHELL;/);
+    expect(frag).toMatch(/return texture\(uUnresolvedLight, uv\)\.r;/);
   });
 
   // The hole multiplies the emissivity before the dust, so the resolved
   // stars and what the band still draws see the same column.
   it('applies the hole to the emissivity ahead of the dust step', () => {
-    expect(frag).toMatch(/float densityVal = \(1\.0 - resolvedLightFraction\(posGalCentric\)\) \* \(uIsBulge/);
+    expect(frag).toMatch(/float densityVal = unresolvedBandLight\(posGalCentric\) \* \(uIsBulge/);
   });
 
   // The pre-march has to seed the accumulator, not be computed and

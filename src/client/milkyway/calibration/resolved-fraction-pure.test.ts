@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DataUtils } from 'three';
 import {
   RESOLVED_HOLE_BANDS,
   RESOLVED_HOLE_DEX_PER_SHELL,
@@ -10,9 +11,11 @@ import {
   resolvedHoleBandEdges,
   resolvedHoleIndex,
   resolvedHoleShellEdgesPc,
+  resolvedHoleUv,
   resolvedLightFraction,
+  sampleTexelCentres,
+  unresolvedHoleTexels,
   unresolvedLightFraction,
-  writeResolvedHoleSlot,
 } from './resolved-fraction-pure';
 import {
   RESOLVED_HOLE_CATALOGUE_RECORDS,
@@ -100,12 +103,12 @@ describe('the shipped table', () => {
     expect(resolvedLightFraction(250, 1)).toBeCloseTo(0.44, 2);
   });
 
-  it('writes a scaled copy into a slot in place', () => {
-    const slot = new Float32Array(RESOLVED_HOLE_VALUES.length);
-    writeResolvedHoleSlot(slot, 0.5);
-    expect(slot[resolvedHoleIndex(18, 0)]).toBeCloseTo(0.5 * RESOLVED_HOLE_VALUES[18], 6);
-    writeResolvedHoleSlot(slot, 0);
-    expect(Math.max(...slot)).toBe(0);
+  it('turns into the scaled multiplier the shaders fetch', () => {
+    expect(unresolvedHoleTexels(1)[resolvedHoleIndex(18, 0)])
+      .toBeCloseTo(1 - RESOLVED_HOLE_VALUES[18], 6);
+    expect(unresolvedHoleTexels(0.5)[resolvedHoleIndex(18, 0)])
+      .toBeCloseTo(1 - 0.5 * RESOLVED_HOLE_VALUES[18], 6);
+    expect(Math.min(...unresolvedHoleTexels(0))).toBe(1);
   });
 
   // A hole over 1 makes the band's emissivity negative and its magnitude
@@ -113,9 +116,52 @@ describe('the shipped table', () => {
   it('admits no strength outside [0, 1]', () => {
     expect(clampResolvedHoleStrength(2)).toBe(1);
     expect(clampResolvedHoleStrength(-1)).toBe(0);
-    const slot = new Float32Array(RESOLVED_HOLE_VALUES.length);
-    writeResolvedHoleSlot(slot, 2);
-    expect(Math.max(...slot)).toBeLessThanOrEqual(1);
-    expect(Math.min(...slot)).toBeGreaterThanOrEqual(0);
+    for (const k of [2, -1]) {
+      const texels = unresolvedHoleTexels(k);
+      expect(Math.min(...texels)).toBeGreaterThanOrEqual(0);
+      expect(Math.max(...texels)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  // Over the 4.9e-4 round-to-nearest bound because three's converter
+  // truncates. What it is worth on a sightline: ../milkyway.test.ts.
+  it('quantises to half-float inside 8.2e-4 relative', () => {
+    let worst = 0;
+    for (const v of unresolvedHoleTexels()) {
+      const back = DataUtils.fromHalfFloat(DataUtils.toHalfFloat(v));
+      if (v > 0) worst = Math.max(worst, Math.abs(back - v) / v);
+    }
+    expect(worst).toBeCloseTo(8.107e-4, 7);
+  });
+});
+
+describe('the sampler both shaders get from hardware', () => {
+  it('puts each cell centre on its own texel centre', () => {
+    for (const s of [0, 7, RESOLVED_HOLE_SHELLS - 1]) {
+      const [u] = resolvedHoleUv(shellCentrePc(s), 0);
+      expect(u * RESOLVED_HOLE_SHELLS).toBeCloseTo(s + 0.5, 9);
+    }
+    for (const b of [0, 3, RESOLVED_HOLE_BANDS - 1]) {
+      const [, v] = resolvedHoleUv(100, bandCentre(b));
+      expect(v * RESOLVED_HOLE_BANDS).toBeCloseTo(b + 0.5, 9);
+    }
+  });
+
+  // Every value the fetch can return comes off a table clamped to [0, 1],
+  // so nothing a filter weight does can take the band's emissivity
+  // negative — the interpolation is a convex combination.
+  it('never leaves the table\u2019s own range', () => {
+    const texels = unresolvedHoleTexels();
+    const table: ResolvedHoleTable = { values: texels };
+    for (let i = 0; i <= 400; i++) {
+      const d = 10 ** (0.5 + (i / 400) * 4.5);
+      for (const sinB of [0, 0.31, 0.5, 0.87, 1]) {
+        const [u, v] = resolvedHoleUv(d, sinB);
+        const got = sampleTexelCentres(
+          table.values, RESOLVED_HOLE_SHELLS, RESOLVED_HOLE_BANDS, u, v);
+        expect(got).toBeGreaterThanOrEqual(0);
+        expect(got).toBeLessThanOrEqual(1);
+      }
+    }
   });
 });

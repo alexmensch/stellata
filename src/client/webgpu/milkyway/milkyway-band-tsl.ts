@@ -4,17 +4,17 @@
 
 import { AdditiveBlending, BackSide } from 'three';
 import {
-  Break, If, Loop, abs, cameraPosition, clamp, dFdx, dFdy, dot, exp, float, floor, int,
-  length, log, log2, max, min, mix, positionGeometry, positionWorld, select, smoothstep,
-  sqrt, varying, vec3, vec4,
+  Break, If, Loop, abs, cameraPosition, dFdx, dFdy, dot, exp, float, length, log, log2,
+  max, positionGeometry, positionWorld, select, smoothstep, sqrt, varying, vec2,
+  vec3, vec4,
 } from 'three/tsl';
 import { NodeMaterial, type Node } from 'three/webgpu';
 import {
   FOREGROUND_DUST_STEPS, MAG_PER_TAU, S_MIN_PC, STEPS, UNIT_BALL_SLACK,
 } from '../../milkyway/milkyway-column-pure';
 import {
-  RESOLVED_HOLE_BANDS, RESOLVED_HOLE_DEX_PER_SHELL, RESOLVED_HOLE_LOG_DISTANCE0,
-  RESOLVED_HOLE_SHELLS,
+  RESOLVED_HOLE_DEX_PER_SHELL, RESOLVED_HOLE_LOG_DISTANCE0,
+  RESOLVED_HOLE_MIN_DISTANCE_PC, RESOLVED_HOLE_SHELLS,
 } from '../../milkyway/calibration/resolved-fraction-pure';
 import { LUMA_WEIGHTS } from '../../hdr/tonemap/tonemap-pure';
 import { MAG_PER_STOP } from '../../hdr/emission/emission-pure';
@@ -69,30 +69,15 @@ export function buildMilkyWayBandMaterial(
       .mul(vertical);
   };
 
-  /** Whole-number shell and band, still float-typed: the index is cast once. */
-  const resolvedHoleAt = (shell: NF, band: NF): NF =>
-    s.uResolvedHole.element(int(band.mul(RESOLVED_HOLE_SHELLS).add(shell)));
-
-  /** Transcribes the GLSL `resolvedLightFraction`; the mirror is the third copy. */
-  const resolvedLightFraction = (posGalCentric: N3): NF => {
+  /** Transcribes the GLSL `unresolvedBandLight`. */
+  const unresolvedBandLight = (posGalCentric: N3): NF => {
     const fromSol = posGalCentric.add(vec3(s.uR0Pc, 0.0, 0.0)).toVar();
-    const d = length(fromSol).toVar();
-    const u = clamp(
-      log(d).div(Math.LN10).sub(RESOLVED_HOLE_LOG_DISTANCE0).div(RESOLVED_HOLE_DEX_PER_SHELL).sub(0.5),
-      0.0, RESOLVED_HOLE_SHELLS - 1).toVar();
-    const v = clamp(
-      abs(fromSol.z).div(max(d, 1e-6)).mul(RESOLVED_HOLE_BANDS).sub(0.5),
-      0.0, RESOLVED_HOLE_BANDS - 1).toVar();
-    const i0 = floor(u).toVar();
-    const j0 = floor(v).toVar();
-    const i1 = min(i0.add(1), RESOLVED_HOLE_SHELLS - 1).toVar();
-    const j1 = min(j0.add(1), RESOLVED_HOLE_BANDS - 1).toVar();
-    const fu = u.sub(i0);
-    const fv = v.sub(j0);
-    return mix(
-      mix(resolvedHoleAt(i0, j0), resolvedHoleAt(i1, j0), fu),
-      mix(resolvedHoleAt(i0, j1), resolvedHoleAt(i1, j1), fu),
-      fv);
+    const d = max(length(fromSol), RESOLVED_HOLE_MIN_DISTANCE_PC).toVar();
+    return s.uUnresolvedLight.sample(vec2(
+      log(d).div(Math.LN10).sub(RESOLVED_HOLE_LOG_DISTANCE0)
+        .div(RESOLVED_HOLE_DEX_PER_SHELL * RESOLVED_HOLE_SHELLS),
+      abs(fromSol.z).div(d),
+    )).r;
   };
 
   const bulgeDensityVal = (R: NF, zVal: NF, footprintPc: NF): NF => {
@@ -173,7 +158,7 @@ export function buildMilkyWayBandMaterial(
         const R = length(posGalCentric.xy).toVar();
         const zVal = posGalCentric.z.toVar();
         const footprintPc = footprintPcTsl(sMid, u.uOmegaPxArcsec2).toVar();
-        const densityVal = float(1.0).sub(resolvedLightFraction(posGalCentric)).mul(isBulge
+        const densityVal = unresolvedBandLight(posGalCentric).mul(isBulge
           ? bulgeDensityVal(R, zVal, footprintPc)
           : discDensityVal(R, zVal, footprintPc, footprintPc.mul(zFootprintScale)));
 

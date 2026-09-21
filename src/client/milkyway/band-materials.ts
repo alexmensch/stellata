@@ -15,10 +15,9 @@ import {
   REDDENING_RGB,
 } from './milkyway-column-pure';
 import {
-  RESOLVED_HOLE_BANDS,
-  RESOLVED_HOLE_SHELLS,
-  writeResolvedHoleSlot,
-} from './calibration/resolved-fraction-pure';
+  makeResolvedHoleTexture,
+  writeResolvedHoleTexture,
+} from './calibration/resolved-hole-texture';
 import milkywayVert from './milkyway.vert.glsl?raw';
 import milkywayFrag from './milkyway.frag.glsl?raw';
 
@@ -46,8 +45,9 @@ export interface BandSharedSlots {
   uIcrsToGal: THREE.IUniform;
   uGalCenter: THREE.IUniform;
   uR0Pc: THREE.IUniform;
-  /** Written in place through `writeResolvedHoleSlot`, never reassigned. */
-  uResolvedHole: THREE.IUniform;
+  /** The `DataTexture`, written in place through `writeResolvedHoleTexture`
+   *  and never reassigned — both graphs hold it from build time. */
+  uUnresolvedLight: THREE.IUniform;
   uGlowMagOffset: THREE.IUniform;
   uChartIsobar: THREE.IUniform;
   uChartInkColor: THREE.IUniform;
@@ -73,7 +73,7 @@ export function seedBandSharedSlots(s: BandSharedSlots): void {
   (s.uIcrsToGal.value as THREE.Matrix3).copy(ICRS_TO_GAL_M3);
   (s.uGalCenter.value as THREE.Vector3).copy(GALACTIC_CENTRE_PC);
   s.uR0Pc.value = R0_PC;
-  writeResolvedHoleSlot(s.uResolvedHole.value as { [i: number]: number });
+  writeResolvedHoleTexture(s.uUnresolvedLight.value as THREE.DataTexture);
   s.uGlowMagOffset.value = SB_ZERO_POINT;
   s.uChartIsobar.value = 0;
   (s.uChartInkColor.value as THREE.Color).setHex(0x000000);
@@ -99,6 +99,9 @@ export interface BandMaterials {
   /** The slots both components share; the layer writes through these. */
   readonly shared: BandSharedSlots;
   component(spec: BandComponentSpec): EmitterMaterial;
+  /** Releases what the factory allocated outside any one material — the
+   *  resolution-hole texture. Each component disposes its own. */
+  dispose(): void;
 }
 
 export interface GlslBandConfig {
@@ -123,7 +126,7 @@ export function makeGlslBandMaterials(cfg: GlslBandConfig): BandMaterials {
     uIcrsToGal: { value: new THREE.Matrix3() },
     uGalCenter: { value: new THREE.Vector3() },
     uR0Pc: { value: 0 },
-    uResolvedHole: { value: new Float32Array(RESOLVED_HOLE_SHELLS * RESOLVED_HOLE_BANDS) },
+    uUnresolvedLight: { value: makeResolvedHoleTexture() },
     uGlowMagOffset: { value: 0 },
     uChartIsobar: { value: 0 },
     uChartInkColor: { value: new THREE.Color() },
@@ -131,6 +134,9 @@ export function makeGlslBandMaterials(cfg: GlslBandConfig): BandMaterials {
   seedBandSharedSlots(shared);
   return {
     shared,
+    dispose() {
+      (shared.uUnresolvedLight.value as THREE.DataTexture).dispose();
+    },
     component(spec) {
       const material = new THREE.ShaderMaterial({
         glslVersion: THREE.GLSL3,
