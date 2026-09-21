@@ -54,6 +54,11 @@ catalog-fixture.ts       test-only catalog.bin builder — synthetic records
                          through the shipped writeStarRecord, so every
                          parse in these suites is a writer→reader
                          round-trip of the layout that ships.
+catalog-decode-stub.ts   test-only Worker stand-in for the decode host,
+                         parameterised on how it answers a window (decode
+                         it, fail it, ignore it) plus its spawn and
+                         terminate counts — the host and loader suites
+                         drive the same fallback legs through one shape.
 catalog-loader.test.ts   pin for layout decode + the BigUint64Array
                          source_id handling + the v8 velocity columns +
                          the v7 sid column + a full-record writer→reader

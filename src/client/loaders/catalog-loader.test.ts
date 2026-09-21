@@ -14,11 +14,11 @@ import {
   type CatalogManifest,
 } from '../../../scripts/catalog/record/catalog-pure';
 import { baseStar, buildCatalog, nameTableOffsets, type StarRecord } from './catalog-fixture';
-import { decodeCatalogWindow } from './catalog-window';
-import type {
-  CatalogDecodeRequest,
-  CatalogDecodeResponse,
-} from './catalog-decode-worker';
+import {
+  replyAsWorker,
+  replyWithFailure,
+  stubCatalogDecodeWorker,
+} from './catalog-decode-stub';
 
 const blankConstellations: Constellation[] = [];
 
@@ -566,17 +566,8 @@ describe('catalog-loader / parseBinary', () => {
     it('decodes the tail through the worker, contiguously and once', async () => {
       const { source, manifest } = catalogFixture();
       stubFetch(chunkRoutes(source, manifest, 1));
-      const windows: { first: number; count: number }[] = [];
-      vi.stubGlobal('Worker', class {
-        onmessage: ((e: MessageEvent<CatalogDecodeResponse>) => void) | null = null;
-        onerror: ((e: { message: string }) => void) | null = null;
-        postMessage(req: CatalogDecodeRequest) {
-          windows.push({ first: req.first, count: req.count });
-          const window = decodeCatalogWindow(new DataView(req.bytes), req.first, req.count);
-          this.onmessage?.({ data: { id: req.id, ok: true, window } } as MessageEvent);
-        }
-        terminate() {}
-      });
+      const stub = stubCatalogDecodeWorker(replyAsWorker);
+      vi.stubGlobal('Worker', stub.Worker);
 
       const cat = await loadCatalog(MANIFEST_URL, CON_URL);
       const prePaint = cat.loadedCount;
@@ -585,9 +576,9 @@ describe('catalog-loader / parseBinary', () => {
       // The worker picks up where the inline pre-paint prefix ended, and its
       // windows run contiguous from there — a gap leaves zeroed records
       // inside the loaded prefix.
-      expect(windows.length).toBeGreaterThan(0);
+      expect(stub.requests.length).toBeGreaterThan(0);
       let at = prePaint;
-      for (const w of windows) {
+      for (const w of stub.requests) {
         expect(w.first).toBe(at);
         at += w.count;
       }
@@ -600,43 +591,24 @@ describe('catalog-loader / parseBinary', () => {
     it('spawns no worker before first paint, and one for the tail', async () => {
       const { source, manifest } = catalogFixture();
       stubFetch(chunkRoutes(source, manifest, 1));
-      let spawned = 0;
-      let terminated = 0;
-      vi.stubGlobal('Worker', class {
-        onmessage: ((e: MessageEvent<CatalogDecodeResponse>) => void) | null = null;
-        onerror: ((e: { message: string }) => void) | null = null;
-        constructor() { spawned++; }
-        postMessage(req: CatalogDecodeRequest) {
-          const window = decodeCatalogWindow(new DataView(req.bytes), req.first, req.count);
-          this.onmessage?.({ data: { id: req.id, ok: true, window } } as MessageEvent);
-        }
-        terminate() { terminated++; }
-      });
+      const stub = stubCatalogDecodeWorker(replyAsWorker);
+      vi.stubGlobal('Worker', stub.Worker);
 
       const cat = await loadCatalog(MANIFEST_URL, CON_URL);
       // See ./README.md § The catalog-decode worker, the pre-paint windows.
-      expect(spawned).toBe(0);
+      expect(stub.spawned()).toBe(0);
       expect(cat.loadedCount).toBeGreaterThan(0);
 
       await cat.whenComplete;
-      expect(spawned).toBe(1);
-      expect(terminated).toBe(1);
+      expect(stub.spawned()).toBe(1);
+      expect(stub.terminated()).toBe(1);
     });
 
     it('lands a catalogue identical to the inline one when the worker fails', async () => {
       const { source, manifest } = catalogFixture();
       stubFetch(chunkRoutes(source, manifest, 1));
       vi.spyOn(console, 'warn').mockImplementation(() => {});
-      vi.stubGlobal('Worker', class {
-        onmessage: ((e: MessageEvent<CatalogDecodeResponse>) => void) | null = null;
-        onerror: ((e: { message: string }) => void) | null = null;
-        postMessage(req: CatalogDecodeRequest) {
-          this.onmessage?.({
-            data: { id: req.id, ok: false, message: 'boom' },
-          } as MessageEvent);
-        }
-        terminate() {}
-      });
+      vi.stubGlobal('Worker', stubCatalogDecodeWorker(replyWithFailure('boom')).Worker);
 
       const cat = await loadCatalog(MANIFEST_URL, CON_URL);
       await cat.whenComplete;
