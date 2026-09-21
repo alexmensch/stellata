@@ -239,8 +239,20 @@ structure a single ray does not. **What it does on screen is a fainter
 diffuse band with the same stars in it**: the dusty column toward the
 centre is the nearest two kiloparsecs, so it dims 0.68 mag; the anticentre
 0.64, b = 30 0.56, the pole 0.79, b = 5 — where the column reaches through
-the plane — 0.19. The sky's total does not move; its light shifts from the
-smooth march into the points.
+the plane — 0.19.
+
+**From Sol, at any epoch the clock reaches, the sky's total does not
+move**: its light shifts from the smooth march into the points, and the
+two columns above are that check measured. The epoch is free because
+5,000 yr of proper motion is sub-parsec for the whole catalogue against a
+tenth-dex shell, so no star changes cell. **From outside the Galaxy the
+claim is not yet measured.** What is pinned there is the band alone,
+0.004 mag fainter (§ Two checks). Giving it back needs the star field to
+carry the whole of what came out, and the display-floor collapse does
+preserve a star's flux integral (`docs/render-rules.md` § 4) while the
+magnitude cull above it does not — so the like-for-like total from
+1 Mpc is the band plus the catalogue's own patch sum, which is
+`stellata-xypg.43`.
 
 ## The table is a texture, not a uniform array
 

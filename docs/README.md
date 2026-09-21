@@ -112,7 +112,9 @@ science-local-group.md         Wireframe layer + per-object
                         luminosity/density model for the volumetric
                         emission raymarch.
 science-galactic-structure.md  Galactic coordinate frame, Milky Way
-                        density profiles, interstellar dust extinction,
+                        density profiles, the luminosity solve and the
+                        resolution hole that keeps the band off the stars
+                        the catalogue draws, interstellar dust extinction,
                         constellation stick figures.
 science-molecular-clouds.md    Extinction units chain, calibrated Zucker
                         density model, taxonomy + embedded-star cavities,

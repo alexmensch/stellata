@@ -92,11 +92,14 @@ emissivity counts them twice. The band therefore multiplies the emissivity
 at each step by one minus the catalogue's measured share of the model's
 light there — a table over distance from Sol and |sin b|, read off the
 built catalogue (`src/client/milkyway/calibration/README.md` § The
-resolution hole). At V ≤ 11 the catalogue holds 0.35 % of the Galaxy's
-light and 77 % of the pole's; in the plane it keeps half the model's light
-resolved out to 500 pc and a third at 1 kpc, and the dusty column toward
-the centre — the nearest two kiloparsecs, the dust takes the rest — dims
-0.68 mag when that share comes out.
+resolution hole). At V ≤ 11 the hole removes **0.35 %** of the model's
+light over the tabulated volume — 1.03× the catalogue's own light there,
+the shell average being blind to structure in longitude — while the
+catalogue carries **77 %** of Leinert's total starlight at the pole, where
+the column is almost entirely local. In the plane the hole keeps half the
+model's light resolved out to 500 pc and a third at 1 kpc, and the dusty
+column toward the centre — the nearest two kiloparsecs, the dust takes the
+rest — dims 0.68 mag when that share comes out.
 
 **The model cannot also satisfy the sightline it used to be anchored on,
 and no shape parameter bridges the gap.** The earlier calibration pinned

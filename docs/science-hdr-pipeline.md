@@ -627,7 +627,7 @@ own gradient derives (`src/client/milkyway/calibration/README.md`), not a
 round 22:
 the band is what a frame pointed at it actually contains, and the layer is
 the authority on how bright that is. The test reads it out of the layer
-rather than copying it, because it has moved three times — 22.55 under the
+rather than copying it, because it has moved four times — 22.55 under the
 retired 20.0 anchor, 23.47 once the dust was normalised, 22.06 on the
 luminosity solve, 22.70 once the resolution hole took the catalogue's share
 back out (`src/client/milkyway/calibration/README.md` § The resolution
