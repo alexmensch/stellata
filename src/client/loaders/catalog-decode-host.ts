@@ -19,19 +19,27 @@ export function decodeInline(source: ArrayBuffer, span: RecordSpan): CatalogWind
   return decodeCatalogWindow(new DataView(source, start, length), span.first, span.end - span.first);
 }
 
+/** See ./README.md § The catalog-decode worker, silence as a failure mode. */
+const WORKER_REPLY_TIMEOUT_MS = 10_000;
+
 export function createCatalogDecoder(): CatalogDecoder {
   let worker: Worker | null = null;
   let retired = typeof Worker === 'undefined';
   let nextId = 0;
   const pending = new Map<number, (r: CatalogDecodeResponse | null) => void>();
 
-  const retire = (why: string): void => {
-    console.warn(`catalog-decode worker unavailable (${why}); decoding inline`);
+  /** See ./README.md § The catalog-decode worker, terminating and settling. */
+  const stop = (): void => {
     retired = true;
     worker?.terminate();
     worker = null;
     for (const settle of pending.values()) settle(null);
     pending.clear();
+  };
+
+  const retire = (why: string): void => {
+    console.warn(`catalog-decode worker unavailable (${why}); decoding inline`);
+    stop();
   };
 
   const spawn = (): Worker | null => {
@@ -56,28 +64,32 @@ export function createCatalogDecoder(): CatalogDecoder {
     async decode(source, span) {
       const live = spawn();
       if (!live) return decodeInline(source, span);
-      const { start, length } = recordWindowBytes(span.offset, span.first, span.end);
       const id = nextId++;
       const answer = await new Promise<CatalogDecodeResponse | null>((resolve) => {
-        pending.set(id, resolve);
-        const request: CatalogDecodeRequest = {
-          id,
-          first: span.first,
-          count: span.end - span.first,
-          // A copy — ./README.md § The catalog-decode worker.
-          bytes: source.slice(start, start + length),
-        };
-        live.postMessage(request, [request.bytes]);
+        const timer = setTimeout(
+          () => retire(`no reply in ${WORKER_REPLY_TIMEOUT_MS} ms`),
+          WORKER_REPLY_TIMEOUT_MS,
+        );
+        pending.set(id, (r) => { clearTimeout(timer); resolve(r); });
+        try {
+          const { start, length } = recordWindowBytes(span.offset, span.first, span.end);
+          const request: CatalogDecodeRequest = {
+            id,
+            first: span.first,
+            count: span.end - span.first,
+            // A copy — ./README.md § The catalog-decode worker.
+            bytes: source.slice(start, start + length),
+          };
+          live.postMessage(request, [request.bytes]);
+        } catch (err) {
+          retire(err instanceof Error ? err.message : String(err));
+        }
       });
       if (answer?.ok) return answer.window;
       if (answer) retire(answer.message);
       return decodeInline(source, span);
     },
 
-    dispose() {
-      worker?.terminate();
-      worker = null;
-      pending.clear();
-    },
+    dispose: stop,
   };
 }

@@ -24,6 +24,7 @@ const SPAN: RecordSpan = { offset: OFFSET, first: 1, end: 4 };
 
 const requests: CatalogDecodeRequest[] = [];
 let spawned = 0;
+let terminated = 0;
 
 /** A Worker that answers `reply` to whatever it is posted. `null` leaves the
  *  request unanswered, for the `onerror` path to settle instead. */
@@ -40,7 +41,7 @@ function stubWorker(
       const answer = reply(req);
       if (answer) this.onmessage?.({ data: answer } as MessageEvent<CatalogDecodeResponse>);
     }
-    terminate() {}
+    terminate() { terminated++; }
   }
   vi.stubGlobal('Worker', StubWorker);
   return { fail: (message) => live?.onerror?.({ message }) };
@@ -59,6 +60,7 @@ function decodeAsWorker(req: CatalogDecodeRequest): CatalogDecodeResponse {
 beforeEach(() => {
   requests.length = 0;
   spawned = 0;
+  terminated = 0;
   vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
@@ -121,5 +123,63 @@ describe('createCatalogDecoder', () => {
     const pending = decoder.decode(SOURCE, SPAN);
     control.fail('worker died');
     expect(await pending).toEqual(decodeInline(SOURCE, SPAN));
+  });
+});
+
+describe('the decoder\'s teardown', () => {
+  it('terminates the worker and never respawns after dispose', async () => {
+    stubWorker(decodeAsWorker);
+    const decoder = createCatalogDecoder();
+    await decoder.decode(SOURCE, SPAN);
+    decoder.dispose();
+    expect(terminated).toBe(1);
+
+    const after = await decoder.decode(SOURCE, SPAN);
+    expect(after).toEqual(decodeInline(SOURCE, SPAN));
+    expect(spawned).toBe(1);
+    expect(requests.length).toBe(1);
+  });
+
+  it('settles a window still in flight when disposed', async () => {
+    stubWorker(() => null);
+    const decoder = createCatalogDecoder();
+    const pending = decoder.decode(SOURCE, SPAN);
+    decoder.dispose();
+    expect(await pending).toEqual(decodeInline(SOURCE, SPAN));
+  });
+
+  it('is idempotent', async () => {
+    stubWorker(decodeAsWorker);
+    const decoder = createCatalogDecoder();
+    await decoder.decode(SOURCE, SPAN);
+    decoder.dispose();
+    decoder.dispose();
+    expect(terminated).toBe(1);
+  });
+
+  it('falls back inline when the worker never answers', async () => {
+    vi.useFakeTimers();
+    try {
+      stubWorker(() => null);
+      const decoder = createCatalogDecoder();
+      const pending = decoder.decode(SOURCE, SPAN);
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(await pending).toEqual(decodeInline(SOURCE, SPAN));
+      expect(terminated).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('leaves no timer behind on a window the worker answered', async () => {
+    vi.useFakeTimers();
+    try {
+      stubWorker(decodeAsWorker);
+      const decoder = createCatalogDecoder();
+      await decoder.decode(SOURCE, SPAN);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

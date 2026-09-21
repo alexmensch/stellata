@@ -245,12 +245,28 @@ the last chunk lands — the chunks arrive one at a time, so a decode never
 overlaps the next.
 
 **The fallback is inline, and never rejects**: no `Worker` in the runtime, a
-spawn that throws, a throw inside and an `onerror` all decode from the bytes
-the caller already holds, and the first failure retires the worker so later
-windows do not re-pay the round trip. A catalogue arriving slowly is a
-degradation; a catalogue never arriving is a broken app — the same contract
-phase 1 holds. `parseBinary` (Node readers, whole-buffer tests) runs
-`decodeInline` directly and stays synchronous.
+spawn that throws, a `postMessage` that throws, a throw inside, an `onerror`
+and a worker that simply never answers all decode from the bytes the caller
+already holds, and the first failure retires the worker so later windows do
+not re-pay the round trip. A catalogue arriving slowly is a degradation; a
+catalogue never arriving is a broken app — the same contract phase 1 holds.
+`parseBinary` (Node readers, whole-buffer tests) runs `decodeInline` directly
+and stays synchronous.
+
+**Silence is a failure mode too, and it is the one with no event.** A worker
+killed from outside — an out-of-memory kill on a small device, which is where
+a 2.53× catalogue lands first — fires no `error`, so nothing would settle the
+window in flight: the tail walk would stall mid-catalogue, `whenComplete`
+would never settle, `kinds.star.ready` would never resolve, and wave 2 would
+never run. `WORKER_REPLY_TIMEOUT_MS` bounds it. It is deliberately far above
+any real decode, so it cannot fire on a working worker and costs a stalled
+load one wait rather than a hang.
+
+**Terminating and settling are one operation** (`stop`), so teardown and
+failure cannot drift apart. `dispose` is that operation without the warning:
+it ends the worker, retires the decoder so nothing respawns behind the
+finished load, and settles any window still waiting to decode inline instead
+of leaving its caller awaiting a reply that can no longer come.
 
 ## Dust voxel upload
 
