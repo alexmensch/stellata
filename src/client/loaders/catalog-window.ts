@@ -11,6 +11,7 @@ import {
   decodeRecordColumn,
   decodeRecordColumnBig,
   type NumericRecordField,
+  type RecordColumnSink,
   type RecordSpan,
 } from '../../../scripts/catalog/record/catalog-pure';
 import { writePulsationParams } from '../star-pipeline/pulsation/pulsation-params-pure';
@@ -56,8 +57,15 @@ export interface CatalogWindow {
   namedOffsets: Uint32Array;
 }
 
+/** The columns `decodeRecordColumn` can write into — every key whose array
+ *  the sink union accepts. `companion` and `gaiaSourceId` are outside it and
+ *  decode through their own passes below. */
+type DecodedColumnKey = {
+  [K in CatalogWindowColumn]: CatalogWindowColumns[K] extends RecordColumnSink ? K : never;
+}[CatalogWindowColumn];
+
 interface DecodedColumn {
-  key: CatalogWindowColumn;
+  key: DecodedColumnKey;
   fields: readonly NumericRecordField[];
   scale?: number;
 }
@@ -154,7 +162,7 @@ export function decodeCatalogWindow(
   const columns = allocateCatalogColumns(count);
   const span: RecordSpan = { offset: 0, first: 0, end: count };
   for (const { key, fields, scale } of DECODED_COLUMNS) {
-    const out = columns[key] as Float32Array;
+    const out = columns[key];
     fields.forEach((field, component) => {
       decodeRecordColumn(view, span, field, out, { stride: fields.length, component, scale });
     });
