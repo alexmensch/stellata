@@ -563,7 +563,7 @@ describe('catalog-loader / parseBinary', () => {
       await expect(loadCatalog(MANIFEST_URL, CON_URL)).rejects.toThrow(/500/);
     });
 
-    it('decodes each chunk through the worker, contiguously and once', async () => {
+    it('decodes the tail through the worker, contiguously and once', async () => {
       const { source, manifest } = catalogFixture();
       stubFetch(chunkRoutes(source, manifest, 1));
       const windows: { first: number; count: number }[] = [];
@@ -579,12 +579,14 @@ describe('catalog-loader / parseBinary', () => {
       });
 
       const cat = await loadCatalog(MANIFEST_URL, CON_URL);
+      const prePaint = cat.loadedCount;
       await cat.whenComplete;
 
-      // A window per chunk that completes records, each starting where the
-      // last ended — a gap leaves zeroed records inside the loaded prefix.
-      expect(windows.length).toBeGreaterThan(1);
-      let at = 0;
+      // The worker picks up where the inline pre-paint prefix ended, and its
+      // windows run contiguous from there — a gap leaves zeroed records
+      // inside the loaded prefix.
+      expect(windows.length).toBeGreaterThan(0);
+      let at = prePaint;
       for (const w of windows) {
         expect(w.first).toBe(at);
         at += w.count;
@@ -593,6 +595,32 @@ describe('catalog-loader / parseBinary', () => {
       expect(cat.loadedCount).toBe(3);
       expect(cat.names.get(2)).toBe('Betelgeuse');
       expect(cat.positions[3]).toBeCloseTo(1.5, 5);
+    });
+
+    it('spawns no worker before first paint, and one for the tail', async () => {
+      const { source, manifest } = catalogFixture();
+      stubFetch(chunkRoutes(source, manifest, 1));
+      let spawned = 0;
+      let terminated = 0;
+      vi.stubGlobal('Worker', class {
+        onmessage: ((e: MessageEvent<CatalogDecodeResponse>) => void) | null = null;
+        onerror: ((e: { message: string }) => void) | null = null;
+        constructor() { spawned++; }
+        postMessage(req: CatalogDecodeRequest) {
+          const window = decodeCatalogWindow(new DataView(req.bytes), req.first, req.count);
+          this.onmessage?.({ data: { id: req.id, ok: true, window } } as MessageEvent);
+        }
+        terminate() { terminated++; }
+      });
+
+      const cat = await loadCatalog(MANIFEST_URL, CON_URL);
+      // See ./README.md § The catalog-decode worker, the pre-paint windows.
+      expect(spawned).toBe(0);
+      expect(cat.loadedCount).toBeGreaterThan(0);
+
+      await cat.whenComplete;
+      expect(spawned).toBe(1);
+      expect(terminated).toBe(1);
     });
 
     it('lands a catalogue identical to the inline one when the worker fails', async () => {

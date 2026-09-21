@@ -203,10 +203,11 @@ Measured in Node on the shipped 388,071-record artifact, six chunks,
 | slicing each window's record bytes for the worker | 2.6 ms | main |
 | memcpy of the decoded columns into the full ones | 2.8 ms | main |
 
-Main-thread decode goes 30.6 ms → 5.4 ms, 82 % of it off the thread that is
-drawing. Read the **split** rather than the absolute: the same pass measures
-189 ms in the browser, where the engine is slower at `DataView` reads and boot
-is competing for the thread.
+The pre-paint window decodes inline and keeps its share on main. Every window
+after it — the only decode that lands while the scene is drawing — goes to the
+worker, main keeping the slice and the memcpy. Read the **split** rather than
+the absolute: the same pass measures 189 ms in the browser, where the engine
+is slower at `DataView` reads and boot is competing for the thread.
 
 **A window is held once, not twice.** Peak addition while the largest chunk
 (167,772 records) is in flight is 36.1 MB against 43.5 MB of full columns —
@@ -226,7 +227,20 @@ once, so the worker returns the `FLAG_HAS_NAME` records as window-relative
 indices beside the name-table offset each carries, and the main thread does the
 map lookup for those alone. Sol comes back the same way, window-relative.
 
-**One worker for the load**, spawned on the first window and terminated when
+**The pre-paint windows decode inline; the worker is built for the tail.**
+Wave 1 ends on the catalogue's first chunk (`../README.md` § Boot in two
+waves), so every window up to that point sits behind the loading cover with
+nothing drawing yet — an honest wait, and the one regime a worker cannot
+improve. It can only spoil it: `new Worker` fetches its own emitted chunk,
+which no `modulepreload` covers, so spawning there puts a cold round trip on
+the path to first paint in order to move a decode that is competing with
+nothing. `loadCatalog` therefore passes `decodeInline` for the windows before
+first paint and constructs the decoder inside the tail walk, where the scene
+IS drawing and each decode would otherwise be a hitch — and where the
+worker's own module fetch overlaps the remaining chunk fetches instead of
+blocking a paint.
+
+**One worker for the tail**, spawned on its first window and terminated when
 the last chunk lands — the chunks arrive one at a time, so a decode never
 overlaps the next.
 

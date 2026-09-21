@@ -162,25 +162,29 @@ export async function loadCatalog(
     next++;
   }
   const catalog = beginCatalog(assembled.buffer, constellations, manifest);
-  const decoder = createCatalogDecoder();
-  const absorbChunk = async (index: number): Promise<void> => {
+  const absorbWith = async (
+    index: number,
+    decode: (source: ArrayBuffer, span: RecordSpan) => CatalogWindow | Promise<CatalogWindow>,
+  ): Promise<void> => {
     const span = catalog.chunkSpan(index);
-    if (span) catalog.absorb(await decoder.decode(assembled.buffer, span));
+    if (span) catalog.absorb(await decode(assembled.buffer, span));
   };
   // On to the first chunk carrying a whole record — with a small first
-  // chunk that is not chunk 0, and boot needs a star to paint.
-  for (let i = 0; i < next; i++) await absorbChunk(i);
+  // chunk that is not chunk 0, and boot needs a star to paint. Inline:
+  // ./README.md § The catalog-decode worker, the pre-paint windows.
+  for (let i = 0; i < next; i++) await absorbWith(i, decodeInline);
   while (catalog.loadedCount === 0 && next < fetches.length) {
     await fetches[next];
-    await absorbChunk(next);
+    await absorbWith(next, decodeInline);
     next++;
   }
   const from = next;
   catalog.settleOn((async () => {
+    const decoder = createCatalogDecoder();
     try {
       for (let i = from; i < fetches.length; i++) {
         await fetches[i];
-        await absorbChunk(i);
+        await absorbWith(i, (source, span) => decoder.decode(source, span));
       }
     } finally {
       decoder.dispose();
