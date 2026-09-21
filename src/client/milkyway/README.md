@@ -214,8 +214,9 @@ the brightness skip compares against the live extended threshold
 - `bandPeakFan(cameraGalPc)` — the dusty peak from the live camera: a polar
   fan around the Galactic-centre direction out to the cone that still meets
   the disc proxy (24 rings × 36 azimuths, then three 7×7 refinements at a
-  third of the spacing each) — 976 marched sightlines, **3.8–6.0 ms** per
-  recompute on a 2024 M-series laptop under node, and CPU work on the frame
+  third of the spacing each) — 976 marched sightlines, **11.8 ms** per
+  recompute on a 2024 M-series laptop under node, three quarters of it the
+  resolution-hole lookup at every step, and CPU work on the frame
   thread, which is why the brightness skip takes it as a thunk and calls it
   only past the refusals that do not need it
   (`../hdr/exposure/visibility/README.md` § Skipping an emitter the display
