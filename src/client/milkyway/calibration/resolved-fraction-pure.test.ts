@@ -6,6 +6,7 @@ import {
   RESOLVED_HOLE_SHELLS,
   SHIPPED_RESOLVED_HOLE,
   type ResolvedHoleTable,
+  clampResolvedHoleStrength,
   resolvedHoleBandEdges,
   resolvedHoleIndex,
   resolvedHoleShellEdgesPc,
@@ -105,5 +106,16 @@ describe('the shipped table', () => {
     expect(slot[resolvedHoleIndex(18, 0)]).toBeCloseTo(0.5 * RESOLVED_HOLE_VALUES[18], 6);
     writeResolvedHoleSlot(slot, 0);
     expect(Math.max(...slot)).toBe(0);
+  });
+
+  // A hole over 1 makes the band's emissivity negative and its magnitude
+  // NaN, and `setResolvedHoleStrength` is public whatever the slider caps at.
+  it('admits no strength outside [0, 1]', () => {
+    expect(clampResolvedHoleStrength(2)).toBe(1);
+    expect(clampResolvedHoleStrength(-1)).toBe(0);
+    const slot = new Float32Array(RESOLVED_HOLE_VALUES.length);
+    writeResolvedHoleSlot(slot, 2);
+    expect(Math.max(...slot)).toBeLessThanOrEqual(1);
+    expect(Math.min(...slot)).toBeGreaterThanOrEqual(0);
   });
 });

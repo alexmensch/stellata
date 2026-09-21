@@ -70,10 +70,16 @@ export function unresolvedLightFraction(
   return 1 - resolvedLightFraction(dSolPc, absSinB, table);
 }
 
+/** See README.md § The resolution hole. */
+export function clampResolvedHoleStrength(k: number): number {
+  return Math.min(1, Math.max(0, k));
+}
+
 /** In place, never by reassignment: on WebGPU the slot's value is the array
  *  node's own backing array behind a getter. */
 export function writeResolvedHoleSlot(target: { [i: number]: number }, strength = 1): void {
+  const k = clampResolvedHoleStrength(strength);
   for (let i = 0; i < RESOLVED_HOLE_VALUES.length; i++) {
-    target[i] = strength * RESOLVED_HOLE_VALUES[i];
+    target[i] = k * RESOLVED_HOLE_VALUES[i];
   }
 }

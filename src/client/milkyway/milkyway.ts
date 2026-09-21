@@ -8,7 +8,9 @@ import {
   makeGlslBandMaterials, type BandMaterials, type BandSharedSlots,
 } from './band-materials';
 import type { DustField } from '../loaders/dust-loader';
-import { writeResolvedHoleSlot } from './calibration/resolved-fraction-pure';
+import {
+  clampResolvedHoleStrength, writeResolvedHoleSlot,
+} from './calibration/resolved-fraction-pure';
 import {
   BandPeakCache,
   galactocentricPc,
@@ -283,9 +285,9 @@ export class MilkyWay {
     this.shared.uGlowMagOffset.value = x;
   }
 
-  /** 0 switches the hole off. */
+  /** 0 switches the hole off; 1 is the shipped table. */
   setResolvedHoleStrength(k: number) {
-    this.resolvedHoleStrength = Math.max(0, k);
+    this.resolvedHoleStrength = clampResolvedHoleStrength(k);
     writeResolvedHoleSlot(
       this.shared.uResolvedHole.value as { [i: number]: number },
       this.resolvedHoleStrength,

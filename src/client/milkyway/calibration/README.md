@@ -242,7 +242,9 @@ whenever the catalogue's membership or photometry moves inside 15 kpc;
 the script refuses a shallower catalogue than the table was measured on.
 `MilkyWay.setResolvedHoleStrength(0)` — the `resolvedHole` slider in the
 debug panel — switches the hole off for an A/B, at which point the band
-draws the resolved stars' light a second time.
+draws the resolved stars' light a second time. The one writer clamps it to
+[0, 1] rather than the slider doing it: past 1 the hole outruns the model,
+the column goes negative and its `−2.5·log10` is NaN.
 
 ## Two checks, and both disagree by the same sign and order
 
