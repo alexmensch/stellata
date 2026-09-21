@@ -823,7 +823,7 @@ describe('raymarch parameters the mirror duplicates from GLSL', () => {
       /\(log\(d\) \/ STELLATA_LOG10 - RESOLVED_HOLE_LOG_DISTANCE0\) \/ RESOLVED_HOLE_DEX_SPAN,\n\s*abs\(fromSol\.z\) \/ d\)/);
     expect(frag).toMatch(
       /RESOLVED_HOLE_DEX_SPAN =\n?\s*float\(RESOLVED_HOLE_SHELLS\) \* RESOLVED_HOLE_DEX_PER_SHELL;/);
-    expect(frag).toMatch(/return texture\(uUnresolvedLight, uv\)\.r;/);
+    expect(frag).toMatch(/return textureLod\(uUnresolvedLight, uv, 0\.0\)\.r;/);
   });
 
   // The hole multiplies the emissivity before the dust, so the resolved

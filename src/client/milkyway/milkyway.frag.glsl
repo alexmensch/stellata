@@ -160,7 +160,10 @@ float unresolvedBandLight(vec3 posGalCentric) {
   vec2 uv = vec2(
     (log(d) / STELLATA_LOG10 - RESOLVED_HOLE_LOG_DISTANCE0) / RESOLVED_HOLE_DEX_SPAN,
     abs(fromSol.z) / d);
-  return texture(uUnresolvedLight, uv).r;
+  // Level 0 explicitly. The table carries no mips, so an implicit LOD only
+  // buys the sampler's derivatives — inside the march's Break, where they
+  // are non-uniform. Keep both shaders on the same fetch.
+  return textureLod(uUnresolvedLight, uv, 0.0).r;
 }
 
 float analyticalDustDensity(float R, float zVal) {

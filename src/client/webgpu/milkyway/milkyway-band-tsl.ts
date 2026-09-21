@@ -4,7 +4,8 @@
 
 import { AdditiveBlending, BackSide } from 'three';
 import {
-  Break, If, Loop, abs, cameraPosition, dFdx, dFdy, dot, exp, float, length, log, log2,
+  Break, If, Loop, abs, cameraPosition, dFdx, dFdy, dot, exp, float, int, length, log,
+  log2,
   max, positionGeometry, positionWorld, select, smoothstep, sqrt, varying, vec2,
   vec3, vec4,
 } from 'three/tsl';
@@ -77,7 +78,7 @@ export function buildMilkyWayBandMaterial(
       log(d).div(Math.LN10).sub(RESOLVED_HOLE_LOG_DISTANCE0)
         .div(RESOLVED_HOLE_DEX_PER_SHELL * RESOLVED_HOLE_SHELLS),
       abs(fromSol.z).div(d),
-    )).r;
+    )).level(int(0)).r;
   };
 
   const bulgeDensityVal = (R: NF, zVal: NF, footprintPc: NF): NF => {

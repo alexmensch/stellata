@@ -46,6 +46,14 @@ describe('the TSL band reads the mirror its bound is taken from', () => {
     expect(src).toMatch(/from '\.\.\/\.\.\/milkyway\/milkyway-column-pure'/);
     expect(src).toMatch(/from '\.\.\/\.\.\/milkyway\/calibration\/resolved-fraction-pure'/);
   });
+
+  // The GLSL's textureLod twin (../../milkyway/milkyway.test.ts pins that
+  // side). Dropping it here re-arms the sampler's derivatives on one backend
+  // only, which reads as a WebGPU-versus-WebGL2 cost gap with no diff to
+  // explain it.
+  it('fetches the hole at level 0, as the GLSL does', () => {
+    expect(src).toContain('.level(int(0))');
+  });
 });
 
 describe('the TSL band restates no pinned constant as a literal', () => {

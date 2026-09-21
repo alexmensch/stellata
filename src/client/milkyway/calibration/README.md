@@ -273,6 +273,12 @@ error is *relative*, and the multiplier is smallest exactly where the hole
 is largest. Storing the hole would have put a ~1e-3 absolute floor under a
 residual that goes to zero in the inner shells.
 
+**Both shaders fetch level 0 explicitly** — `textureLod` in the GLSL,
+`.level(int(0))` in the TSL, pinned on each side. A `DataTexture` carries no mip
+chain, so an implicit LOD selects nothing; what it does buy is the sampler's
+screen-space derivatives, computed inside the march's `Break` where they are
+non-uniform, on a layer that is pure fill.
+
 Half rather than single: `r16float` is core-filterable on both backends,
 where `r32float` needs `OES_texture_float_linear` on WebGL2 and the
 `float32-filterable` feature on WebGPU. The worst texel round-trip is

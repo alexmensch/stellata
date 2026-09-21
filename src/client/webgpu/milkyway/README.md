@@ -46,7 +46,9 @@ shader. `milkyway-band-tsl-drift.test.ts` holds the march's own shape
 `MAG_PER_TAU`) and what the resolution-hole fetch scales its two
 coordinates by (`RESOLVED_HOLE_SHELLS` / `_LOG_DISTANCE0` /
 `_DEX_PER_SHELL` / `_MIN_DISTANCE_PC`) to the mirror's constants by
-import. The profile and dust parameters need no entry there: they arrive
+import, plus the explicit `.level(int(0))` on the hole fetch that keeps this
+backend on the same sampling as the GLSL
+(`../../milkyway/calibration/README.md` § The table is a texture). The profile and dust parameters need no entry there: they arrive
 as uniform nodes that `seedBandSharedSlots` alone writes (§ Seeding,
 because a node starts on its declared default). The hole table crosses as
 a `texture()` node over the `DataTexture` the seed and the debug lever
