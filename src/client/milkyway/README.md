@@ -111,8 +111,7 @@ solved.
 star catalogue's measured share of the model's light at each step,
 applied ahead of the dust step. It reaches both shaders as one filtered
 fetch of the shared `uUnresolvedLight` grid, and the CPU mirror through
-`unresolvedLightFraction` over the measured table itself — the two differ
-by up to 0.044 mag while the grid is on trial
+`unresolvedBandLightAt` over the same cube
 (`calibration/README.md` § The resolution hole, § The table is a 3D grid).
 
 ### Population tints carry hue, never flux

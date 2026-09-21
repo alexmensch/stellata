@@ -142,7 +142,7 @@ describe('quadrature of the in-volume march', () => {
       steps: REFERENCE_STEPS,
       foregroundSteps: REFERENCE_STEPS,
     });
-    expect(shipped / ref).toBeCloseTo(0.9694, 3);
+    expect(shipped / ref).toBeCloseTo(0.9732, 3);
     expect(
       sightlineColumn(SOL, TO_GC, { resolvedHole: null }) /
         sightlineColumn(SOL, TO_GC, {

@@ -49,6 +49,11 @@ export function resolvedHoleUv(dSolPc: number, absSinB: number): [number, number
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
+/** A normalised coordinate onto a texel-centre index, clamped to the edge —
+ *  the filtering rule both samplers mirror. */
+const texelCoord = (c: number, size: number) =>
+  Math.min(Math.max(c * size - 0.5, 0), size - 1);
+
 /** README.md § The table is a texture, not a uniform array. */
 export function sampleTexelCentres(
   values: ArrayLike<number>,
@@ -57,8 +62,8 @@ export function sampleTexelCentres(
   u: number,
   v: number,
 ): number {
-  const x = Math.min(Math.max(u * width - 0.5, 0), width - 1);
-  const y = Math.min(Math.max(v * height - 0.5, 0), height - 1);
+  const x = texelCoord(u, width);
+  const y = texelCoord(v, height);
   const x0 = Math.floor(x);
   const y0 = Math.floor(y);
   const x1 = Math.min(x0 + 1, width - 1);
@@ -96,7 +101,10 @@ export const RESOLVED_HOLE_GRID_N = 64;
 export const RESOLVED_HOLE_GRID_HALF_PC = 4000;
 
 /** What the 3D slot is written with. README.md § The table is a 3D grid. */
-export function unresolvedHoleVoxels(strength = 1): Float32Array {
+export function unresolvedHoleVoxels(
+  strength = 1,
+  table: ResolvedHoleTable = SHIPPED_RESOLVED_HOLE,
+): Float32Array {
   const k = clampResolvedHoleStrength(strength);
   const n = RESOLVED_HOLE_GRID_N;
   const step = (2 * RESOLVED_HOLE_GRID_HALF_PC) / n;
@@ -108,12 +116,72 @@ export function unresolvedHoleVoxels(strength = 1): Float32Array {
       for (let ix = 0; ix < n; ix++) {
         const x = -RESOLVED_HOLE_GRID_HALF_PC + (ix + 0.5) * step;
         const d = Math.hypot(x, y, z);
-        const hole = resolvedLightFraction(d, d > 0 ? Math.abs(z) / d : 0);
+        const hole = resolvedLightFraction(d, d > 0 ? Math.abs(z) / d : 0, table);
         out[(iz * n + iy) * n + ix] = 1 - k * hole;
       }
     }
   }
   return out;
+}
+
+/** `RESOLVED_HOLE_GRID_N` cubed of `1 − strength·hole`. */
+export interface ResolvedHoleGrid {
+  readonly voxels: ArrayLike<number>;
+}
+
+export const SHIPPED_RESOLVED_HOLE_GRID: ResolvedHoleGrid = {
+  voxels: unresolvedHoleVoxels(),
+};
+
+/** The cube a freshly measured table implies — what the shaders would fetch
+ *  once it is committed. */
+export function resolvedHoleGridOf(
+  table: ResolvedHoleTable,
+  strength = 1,
+): ResolvedHoleGrid {
+  return { voxels: unresolvedHoleVoxels(strength, table) };
+}
+
+/** The CPU mirror of the hardware's trilinear fetch. */
+export function sampleVoxelCentres(
+  voxels: ArrayLike<number>,
+  n: number,
+  u: number,
+  v: number,
+  w: number,
+): number {
+  const x = texelCoord(u, n), y = texelCoord(v, n), z = texelCoord(w, n);
+  const x0 = Math.floor(x), y0 = Math.floor(y), z0 = Math.floor(z);
+  const x1 = Math.min(x0 + 1, n - 1);
+  const y1 = Math.min(y0 + 1, n - 1);
+  const z1 = Math.min(z0 + 1, n - 1);
+  const tx = x - x0, ty = y - y0, tz = z - z0;
+  const at = (i: number, j: number, k: number) => voxels[(k * n + j) * n + i];
+  const plane = (k: number) => lerp(
+    lerp(at(x0, y0, k), at(x1, y0, k), tx),
+    lerp(at(x0, y1, k), at(x1, y1, k), tx), ty);
+  return lerp(plane(z0), plane(z1), tz);
+}
+
+/** The whole of what each shader computes before the fetch. */
+export function resolvedHoleUvw(
+  xFromSolPc: number,
+  yFromSolPc: number,
+  zFromSolPc: number,
+): [number, number, number] {
+  const k = 0.5 / RESOLVED_HOLE_GRID_HALF_PC;
+  return [xFromSolPc * k + 0.5, yFromSolPc * k + 0.5, zFromSolPc * k + 0.5];
+}
+
+/** What the band still owes at a point: the model's emissivity times this. */
+export function unresolvedGridLight(
+  xFromSolPc: number,
+  yFromSolPc: number,
+  zFromSolPc: number,
+  grid: ResolvedHoleGrid = SHIPPED_RESOLVED_HOLE_GRID,
+): number {
+  const [u, v, w] = resolvedHoleUvw(xFromSolPc, yFromSolPc, zFromSolPc);
+  return sampleVoxelCentres(grid.voxels, RESOLVED_HOLE_GRID_N, u, v, w);
 }
 
 /** See README.md § The resolution hole. */

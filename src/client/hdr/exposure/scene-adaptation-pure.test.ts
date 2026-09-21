@@ -58,7 +58,7 @@ const THRESHOLD_STAR_L = luminanceForMagnitude(EXPOSURE, 7.8);
  *  the frame's share of the threshold-star population plus the Milky Way
  *  band. Both are measured out of the buffer now; this is what they sum
  *  to, and it is the floor the must-not-adapt cases sit on. */
-const AGGREGATE_FIELD_L = 7.107e-4;
+const AGGREGATE_FIELD_L = 7.1686e-4;
 
 /** What a source of apparent magnitude `m` adds to `L̄` once the frame has
  *  drawn it: its whole flux spread over the frame. The buffer reduction
@@ -191,10 +191,10 @@ describe('§ 3.1 contribution table', () => {
       galacticDirection(180, 0),
     );
     const milkyWayBand = surfaceBrightnessLuminance(EXPOSURE, bandAnticentreSb, OMEGA_PX);
-    expect(bandAnticentreSb).toBeCloseTo(22.704, 3);
+    expect(bandAnticentreSb).toBeCloseTo(22.693, 3);
     expect(thresholdStars).toBeCloseTo(1.04e-4, 5);
-    expect(milkyWayBand).toBeCloseTo(6.068e-4, 5);
-    expect(milkyWayBand / thresholdStars).toBeCloseTo(5.84, 2);
+    expect(milkyWayBand).toBeCloseTo(6.1295e-4, 5);
+    expect(milkyWayBand / thresholdStars).toBeCloseTo(5.899, 2);
     // Both rows are drawn light now, so both land in the buffer rather
     // than in a constant — and both are inert either way: their sum
     // cannot reach the anchor on its own, with two decades to spare.

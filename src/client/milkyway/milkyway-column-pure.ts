@@ -21,9 +21,9 @@ import {
   GALAXY_TOTAL_ABSMAG_V,
 } from './calibration/diffuse-reference';
 import {
-  type ResolvedHoleTable,
-  SHIPPED_RESOLVED_HOLE,
-  unresolvedLightFraction,
+  type ResolvedHoleGrid,
+  SHIPPED_RESOLVED_HOLE_GRID,
+  unresolvedGridLight,
 } from './calibration/resolved-fraction-pure';
 import { OLD_SPHEROID_COLOR_RGB } from '../hdr/emission/population-colour-pure';
 import { linearSrgbFromColourIndex } from '../../../scripts/colour/blackbody-lut-pure';
@@ -356,15 +356,15 @@ export function foregroundDustTauRgb(
   return tau;
 }
 
-/** Mirrors the shaders' `resolvedLightFraction`; every CPU march of the band
+/** Mirrors the shaders' `unresolvedBandLight`; every CPU march of the band
  *  multiplies by it. */
-export function unresolvedBandLightAt(pGal: Vec3, table: ResolvedHoleTable): number {
-  const dSol = Math.hypot(
+export function unresolvedBandLightAt(pGal: Vec3, grid: ResolvedHoleGrid): number {
+  return unresolvedGridLight(
     pGal[0] - SOL_GALACTOCENTRIC_PC[0],
     pGal[1] - SOL_GALACTOCENTRIC_PC[1],
     pGal[2] - SOL_GALACTOCENTRIC_PC[2],
+    grid,
   );
-  return unresolvedLightFraction(dSol, dSol > 0 ? Math.abs(pGal[2]) / dSol : 0, table);
 }
 
 // --- Emission column ---------------------------------------------------
@@ -383,7 +383,7 @@ export interface ColumnOptions {
    *  and from Sol the footprint is metres against a 300 pc scale height. */
   readonly omegaPxArcsec2?: number;
   /** `null` marches the whole emissivity, resolved stars included. */
-  readonly resolvedHole?: ResolvedHoleTable | null;
+  readonly resolvedHole?: ResolvedHoleGrid | null;
 }
 
 /**
@@ -402,7 +402,7 @@ export function componentColumnRgb(
     steps = STEPS,
     foregroundSteps = FOREGROUND_DUST_STEPS,
     omegaPxArcsec2 = 0,
-    resolvedHole = SHIPPED_RESOLVED_HOLE,
+    resolvedHole = SHIPPED_RESOLVED_HOLE_GRID,
   } = options;
   const dustEffective = dustEnabled ? extinctionStrength : 0;
 

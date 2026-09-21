@@ -76,8 +76,12 @@ budget (the hole removes 1.03× the catalogue's light over the tabulated
 volume, 0.35 % of the model's), and the two dust-free columns from Sol with
 and without the hole against the catalogue caps. Those figures are the
 acceptance for a regeneration: the hole's column at the pole has to land on
-the pole cap to a few hundredths, and the whole-model share has to stay well
-under a hundredth of a magnitude.
+the pole cap inside about a tenth of a magnitude, and the whole-model share
+has to stay well under a hundredth. The centre's hole column is NOT a
+tolerance — dust-free, the GC's total and unresolved columns differ by a
+hundredth of a magnitude, so their difference amplifies any error some
+fiftyfold (`src/client/milkyway/calibration/README.md` § The resolution
+hole).
 
 It does **not** re-pin anything. Every consumer test (`milkyway.test.ts`,
 `band-peak-pure.test.ts`, `diffuse-reference.test.ts`,

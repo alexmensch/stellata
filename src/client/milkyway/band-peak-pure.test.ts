@@ -70,7 +70,7 @@ function latitudeDeg(dir: Vec3): number {
 
 describe('dust-free ceiling', () => {
   it('is the full central chord, 17.13 mag/arcsec²', () => {
-    expect(MW_PEAK_SB_DUST_FREE).toBeCloseTo(17.128, 2);
+    expect(MW_PEAK_SB_DUST_FREE).toBeCloseTo(17.134, 2);
   });
 
   it('is brighter than the dusty peak from every vantage on the grid', () => {

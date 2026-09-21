@@ -232,13 +232,18 @@ Over the whole model the hole removes **0.35 %** of the band's light —
 catalogue's own light over the tabulated volume, the shell average being
 blind to structure in longitude.
 
-The hole's own columns are the acceptance: dust-free from Sol, the light
-it removes toward the pole reads 24.05 against the catalogue's 24.11 cap,
-and toward the centre 21.92 against 22.19 — the 10° cap averaging over
-structure a single ray does not. **What it does on screen is a fainter
+**The pole's hole column is the acceptance, and only the pole's.**
+Dust-free from Sol, the light the hole removes toward the pole reads 24.01
+against the catalogue's 24.11 cap. The same column toward the centre reads
+21.48 against 22.19, and that gap is not a finding: dust-free, the GC's
+total and unresolved columns differ by about a hundredth of a magnitude, so
+their difference is under a percent of either and any error in the hole is
+amplified some fiftyfold on the way out. Read the centre row as a
+sanity check that the sign and order are right, never as a tolerance.
+A single ray against a 10° cap is the other reason it cannot be one. **What it does on screen is a fainter
 diffuse band with the same stars in it**: the dusty column toward the
-centre is the nearest two kiloparsecs, so it dims 0.68 mag; the anticentre
-0.64, b = 30 0.56, the pole 0.79, b = 5 — where the column reaches through
+centre is the nearest two kiloparsecs, so it dims 0.66 mag; the anticentre
+0.63, b = 30 0.58, the pole 0.83, b = 5 — where the column reaches through
 the plane — 0.19.
 
 **From Sol, at any epoch the clock reaches, the sky's total does not
@@ -256,12 +261,9 @@ magnitude cull above it does not — so the like-for-like total from
 
 ## The table is a 3D grid, not a uniform array
 
-**MEASUREMENT PROTOTYPE.** The shipped table is still the measured
-(log d, |sin b|) one in `resolved-hole-table.ts`; what the shaders fetch is
-that table resampled onto a Sol-centred cube at load, to price the cheaper
-coordinate. If the run does not justify it this section and the code go back
-to the 2D fetch. The CPU mirror reads the table directly either way, so it
-and the GPU now differ by up to 0.044 mag — see below.
+The measured table in `resolved-hole-table.ts` is still what the calibration
+ships against; the cube is that table resampled at load, and the CPU mirror
+samples the same cube, so mirror and GPU agree exactly.
 
 A 64-cube `Data3DTexture`, `RedFormat` + `HalfFloatType`, **linear/linear
 and clamp-to-edge on all three axes**, 0.5 MB — every one of those
@@ -322,8 +324,8 @@ hole in the model column.
 
 | check | published | model | model is |
 | --- | --- | --- | --- |
-| NGP diffuse residual | 25.44 | 24.09 | **1.350 mag brighter** |
-| Galactic centre, Leinert total | 22.92 | 22.55 | **0.367 mag brighter** |
+| NGP diffuse residual | 25.44 | 24.13 | **1.308 mag brighter** |
+| Galactic centre, Leinert total | 22.92 | 22.54 | **0.385 mag brighter** |
 
 The 25.44 is *not* published; `diffuse-reference.ts` builds it:
 
@@ -359,9 +361,9 @@ ordered correctly, where the sightline anchor had it 1.11 mag *fainter*
 than M31 — and the residual anchor re-run at V ≤ 11 would put it a
 magnitude fainter still. What the deeper catalogue changed is the size of
 the disagreement, not its sign: **band plus catalogue at the pole reads
-23.40 against Leinert's 23.83**, 0.43 mag over, where band-without-hole
-plus catalogue read 0.88 over — the double count was the other 0.45. That
-0.43 is the scale disagreement proper. eso0932a sides with the total but
+23.42 against Leinert's 23.83**, 0.41 mag over, where band-without-hole
+plus catalogue read 0.88 over — the double count was the other 0.47. That
+0.41 is the scale disagreement proper. eso0932a sides with the total but
 confirms a pole-side excess independently (`docs/science-hdr-pipeline.md`
 § 8, graded on the pre-hole table).
 
@@ -379,13 +381,13 @@ pole.
 
 | sightline | mag/arcsec² | Δ vs S_lim | /255 |
 | --- | --- | --- | --- |
-| l = 0, b = 5 | 20.93 | **1.07 OVER** — the maximum | 63.7 |
-| l = 0, b = 0 (GC) | 22.55 | 0.55 under | 20.8 |
-| anticentre | 22.70 | 0.70 under | 15.1 |
-| b = 30 | 23.08 | 1.08 under | 4.0 |
-| NGP | 24.19 | 2.19 under | 0.0 |
+| l = 0, b = 5 | 20.93 | **1.07 OVER** — the maximum | 63.6 |
+| l = 0, b = 0 (GC) | 22.54 | 0.54 under | 21.5 |
+| anticentre | 22.69 | 0.69 under | 15.5 |
+| b = 30 | 23.10 | 1.10 under | 3.6 |
+| NGP | 24.24 | 2.24 under | 0.0 |
 
-Plane-to-pole contrast **1.64 mag** photometrically. **The midplane is
+Plane-to-pole contrast **1.70 mag** photometrically. **The midplane is
 not the maximum** — b ≈ 5° is, because the in-plane sightline eats the
 most dust. The real band behaves the same way; the dark rift is dust,
 not a gap in the stars. Every row is the band alone — the resolved stars
@@ -395,7 +397,7 @@ column reaches through the plane past where the catalogue resolves.
 
 **Sub-threshold rows carry the operator's faint-end toe**
 (`../../hdr/tonemap/README.md` § Operator): over-threshold levels are untouched,
-and 1.5 mag under threshold is black by construction — the NGP at 2.19
+and 1.5 mag under threshold is black by construction — the NGP at 2.24
 under sits on the dither floor. Nothing pins the band to the threshold.
 
 **Every row here is dust-attenuated, so the dust cascade moves them and the

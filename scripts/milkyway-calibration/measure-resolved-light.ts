@@ -25,6 +25,7 @@ import {
   RESOLVED_HOLE_SHELLS,
   type ResolvedHoleTable,
   resolvedHoleIndex,
+  resolvedHoleGridOf,
 } from '../../src/client/milkyway/calibration/resolved-fraction-pure';
 import { RESOLVED_HOLE_CATALOGUE_RECORDS } from '../../src/client/milkyway/calibration/resolved-hole-table';
 import {
@@ -158,7 +159,7 @@ async function main(): Promise<void> {
   ];
   for (const [name, dir] of sightlines) {
     const total = sightlineColumn(SOL_GALACTOCENTRIC_PC, dir, { dustEnabled: false, resolvedHole: null });
-    const unresolved = sightlineColumn(SOL_GALACTOCENTRIC_PC, dir, { dustEnabled: false, resolvedHole: table });
+    const unresolved = sightlineColumn(SOL_GALACTOCENTRIC_PC, dir, { dustEnabled: false, resolvedHole: resolvedHoleGridOf(table) });
     console.log(
       `  ${name.padEnd(18)} total ${fmt(SB_ZERO_POINT + mag(total), 3)}  unresolved ${fmt(SB_ZERO_POINT + mag(unresolved), 3)}` +
         `  hole ${fmt(SB_ZERO_POINT + mag(total - unresolved), 3)}  catalogue cap ${fmt(caps[name].magArcsec2, 3)}`,
