@@ -254,49 +254,66 @@ magnitude cull above it does not — so the like-for-like total from
 1 Mpc is the band plus the catalogue's own patch sum, which is
 `stellata-xypg.43`.
 
-## The table is a texture, not a uniform array
+## The table is a 3D grid, not a uniform array
 
-A 32 × 8 `DataTexture`, `RedFormat` + `HalfFloatType`, **linear/linear and
-clamp-to-edge on both axes** — every one of those load-bearing. The
-sampler's texel centres are the table's cell centres, its clamp-to-edge is
-the edge rule above, and its filter is the bilinear, so one fetch replaces
-four dynamically indexed reads, three `mix`es and the `floor` / `min` /
-`clamp` ladder around them, per march step, on a layer that is pure fill.
-A texture also uploads only when written, where a `uniformArray` node
-re-packs its backing array and re-uploads its padded buffer **every
-render** — for a table that moves only when the debug slider does.
+**MEASUREMENT PROTOTYPE.** The shipped table is still the measured
+(log d, |sin b|) one in `resolved-hole-table.ts`; what the shaders fetch is
+that table resampled onto a Sol-centred cube at load, to price the cheaper
+coordinate. If the run does not justify it this section and the code go back
+to the 2D fetch. The CPU mirror reads the table directly either way, so it
+and the GPU now differ by up to 0.044 mag — see below.
 
-**The texels are `1 − strength·hole`, not the hole**, which is what the
+A 64-cube `Data3DTexture`, `RedFormat` + `HalfFloatType`, **linear/linear
+and clamp-to-edge on all three axes**, 0.5 MB — every one of those
+load-bearing. The shader's whole coordinate is `fromSol / 8000 + 0.5`, one
+multiply-add, where the 2D fetch cost a `dot`, a `max`, a `log`, an
+`inversesqrt` and an `abs`. Clamp-to-edge is the outside-the-cube rule and
+needs no branch, because the edge cells are already ~0: a corner sits
+6.9 kpc from Sol, past where the catalogue resolves anything.
+
+**Why a cube and not a finer 1D re-binning.** The hole is a resolved
+fraction under a magnitude limit, so it is intrinsically a sigmoid in
+log d, and log spacing is its natural parameterisation. Re-binning linear in
+d² to kill the `log` does not converge: the first cell spans
+0 → dMax/√(2N), still 177 pc at 512 cells, and the high-latitude columns are
+made of exactly that near field — measured worst error 0.113 mag at 8 KB
+against 0.115 at 4 KB. A uniform cube has no degenerate cell at the origin
+and does converge: 250 pc cells give 0.103 mag, 125 pc give **0.044**, 63 pc
+give 0.009.
+
+**0.044 mag is the price of the 64-cube**, measured against the shipped
+table over the 32-step log march, emissivity-weighted and dust-free, worst
+of eight sightlines and concentrated at the poles. Against the 4.4e-4 mag
+half-float budget that is four hundred times larger; against the 0.378 mag a
+single scalar rescale would cost, nine times smaller. It is a field in
+galactocentric space, so it is right from every vantage, not just Sol's.
+
+**The voxels are `1 − strength·hole`, not the hole**, which is what the
 march multiplies by anyway. The scaling is affine, so interpolating these
-IS one minus the interpolated hole; what it buys is that half-float's
-error is *relative*, and the multiplier is smallest exactly where the hole
-is largest. Storing the hole would have put a ~1e-3 absolute floor under a
-residual that goes to zero in the inner shells.
+IS one minus the interpolated hole; what it buys is that half-float's error
+is *relative*, and the multiplier is smallest exactly where the hole is
+largest. Storing the hole would have put a ~1e-3 absolute floor under a
+residual that goes to zero in the inner cells.
 
 **Both shaders fetch level 0 explicitly** — `textureLod` in the GLSL,
-`.level(int(0))` in the TSL, pinned on each side. A `DataTexture` carries no mip
-chain, so an implicit LOD selects nothing; what it does buy is the sampler's
-screen-space derivatives, computed inside the march's `Break` where they are
-non-uniform, on a layer that is pure fill.
+`.level(int(0))` in the TSL, pinned on each side. A `Data3DTexture` carries
+no mip chain, so an implicit LOD selects nothing; what it does buy is the
+sampler's screen-space derivatives, computed inside the march's `Break`
+where they are non-uniform, on a layer that is pure fill.
 
 Half rather than single: `r16float` is core-filterable on both backends,
 where `r32float` needs `OES_texture_float_linear` on WebGL2 and the
-`float32-filterable` feature on WebGPU. The worst texel round-trip is
-**8.1e-4 relative** (three's converter truncates rather than rounds), and
-the worst Sol sightline moves **4.4e-4 mag** — pinned in
-`../milkyway.test.ts`, two orders under the 0.01 mag the footprint
-residual is held to. A filter unit's own weight quantisation adds at most
-the largest neighbour step (0.42) over its subtexel precision, the same
-order again.
+`float32-filterable` feature on WebGPU.
 
-Regenerate with `pnpm run measure:band-resolved` on a floor-on build
-whenever the catalogue's membership or photometry moves inside 15 kpc;
-the script refuses a shallower catalogue than the table was measured on.
-`MilkyWay.setResolvedHoleStrength(0)` — the `resolvedHole` slider in the
-debug panel — switches the hole off for an A/B, at which point the band
-draws the resolved stars' light a second time. The one writer clamps it to
-[0, 1] rather than the slider doing it: past 1 the hole outruns the model,
-the column goes negative and its `−2.5·log10` is NaN.
+Regenerate the underlying table with `pnpm run measure:band-resolved` on a
+floor-on build whenever the catalogue's membership or photometry moves
+inside 15 kpc; the script refuses a shallower catalogue than the table was
+measured on. `MilkyWay.setResolvedHoleStrength(0)` — the `resolvedHole`
+slider in the debug panel — switches the hole off for an A/B, rebuilding the
+cube, at which point the band draws the resolved stars' light a second time.
+The one writer clamps it to [0, 1] rather than the slider doing it: past 1
+the hole outruns the model, the column goes negative and its `−2.5·log10`
+is NaN.
 
 ## Two checks, and both disagree by the same sign and order
 

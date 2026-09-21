@@ -4,9 +4,9 @@
 
 import { AdditiveBlending, BackSide } from 'three';
 import {
-  Break, If, Loop, abs, cameraPosition, dFdx, dFdy, dot, exp, float, int, inverseSqrt,
-  length, log, log2,
-  max, positionGeometry, positionWorld, select, smoothstep, sqrt, varying, vec2,
+  Break, If, Loop, abs, cameraPosition, dFdx, dFdy, dot, exp, float, int, length, log,
+  log2,
+  max, positionGeometry, positionWorld, select, smoothstep, sqrt, varying,
   vec3, vec4,
 } from 'three/tsl';
 import { NodeMaterial, type Node } from 'three/webgpu';
@@ -14,8 +14,7 @@ import {
   FOREGROUND_DUST_STEPS, MAG_PER_TAU, S_MIN_PC, STEPS, UNIT_BALL_SLACK,
 } from '../../milkyway/milkyway-column-pure';
 import {
-  RESOLVED_HOLE_DEX_PER_SHELL, RESOLVED_HOLE_LOG_DISTANCE0,
-  RESOLVED_HOLE_MIN_DISTANCE_PC, RESOLVED_HOLE_SHELLS,
+  RESOLVED_HOLE_GRID_HALF_PC,
 } from '../../milkyway/calibration/resolved-fraction-pure';
 import { LUMA_WEIGHTS } from '../../hdr/tonemap/tonemap-pure';
 import { MAG_PER_STOP } from '../../hdr/emission/emission-pure';
@@ -73,15 +72,9 @@ export function buildMilkyWayBandMaterial(
   /** Transcribes the GLSL `unresolvedBandLight`. */
   const unresolvedBandLight = (posGalCentric: N3): NF => {
     const fromSol = posGalCentric.add(vec3(s.uR0Pc, 0.0, 0.0)).toVar();
-    const d2 = max(
-      dot(fromSol, fromSol),
-      RESOLVED_HOLE_MIN_DISTANCE_PC * RESOLVED_HOLE_MIN_DISTANCE_PC,
-    ).toVar();
-    return s.uUnresolvedLight.sample(vec2(
-      log(d2).mul(0.5 / Math.LN10).sub(RESOLVED_HOLE_LOG_DISTANCE0)
-        .div(RESOLVED_HOLE_DEX_PER_SHELL * RESOLVED_HOLE_SHELLS),
-      abs(fromSol.z).mul(inverseSqrt(d2)),
-    )).level(int(0)).r;
+    return s.uUnresolvedLight.sample(
+      fromSol.mul(0.5 / RESOLVED_HOLE_GRID_HALF_PC).add(0.5),
+    ).level(int(0)).r;
   };
 
   const bulgeDensityVal = (R: NF, zVal: NF, footprintPc: NF): NF => {

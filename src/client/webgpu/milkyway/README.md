@@ -48,12 +48,12 @@ coordinates by (`RESOLVED_HOLE_SHELLS` / `_LOG_DISTANCE0` /
 `_DEX_PER_SHELL` / `_MIN_DISTANCE_PC`) to the mirror's constants by
 import, plus the explicit `.level(int(0))` on the hole fetch that keeps this
 backend on the same sampling as the GLSL
-(`../../milkyway/calibration/README.md` § The table is a texture). The profile and dust parameters need no entry there: they arrive
+(`../../milkyway/calibration/README.md` § The table is a 3D grid). The profile and dust parameters need no entry there: they arrive
 as uniform nodes that `seedBandSharedSlots` alone writes (§ Seeding,
-because a node starts on its declared default). The hole table crosses as
-a `texture()` node over the `DataTexture` the seed and the debug lever
-write in place — its 8 latitude rows reach the shader as the texture's own
-height, so `RESOLVED_HOLE_BANDS` is not restated here and cannot drift.
+because a node starts on its declared default). The hole grid crosses as
+a `texture3D()` node over the `Data3DTexture` the seed and the debug lever
+write in place — its extent reaches the shader as the one constant the
+coordinate divides by, so nothing else about the layout can drift.
 
 The write tail it ends on is `../extended-emitter-tsl.ts`, shared with
 the Local Group emission exactly as the GLSL chunk is.

@@ -91,6 +91,31 @@ export function unresolvedLightFraction(
   return 1 - resolvedLightFraction(dSolPc, absSinB, table);
 }
 
+/** README.md § The table is a 3D grid. */
+export const RESOLVED_HOLE_GRID_N = 64;
+export const RESOLVED_HOLE_GRID_HALF_PC = 4000;
+
+/** What the 3D slot is written with. README.md § The table is a 3D grid. */
+export function unresolvedHoleVoxels(strength = 1): Float32Array {
+  const k = clampResolvedHoleStrength(strength);
+  const n = RESOLVED_HOLE_GRID_N;
+  const step = (2 * RESOLVED_HOLE_GRID_HALF_PC) / n;
+  const out = new Float32Array(n * n * n);
+  for (let iz = 0; iz < n; iz++) {
+    const z = -RESOLVED_HOLE_GRID_HALF_PC + (iz + 0.5) * step;
+    for (let iy = 0; iy < n; iy++) {
+      const y = -RESOLVED_HOLE_GRID_HALF_PC + (iy + 0.5) * step;
+      for (let ix = 0; ix < n; ix++) {
+        const x = -RESOLVED_HOLE_GRID_HALF_PC + (ix + 0.5) * step;
+        const d = Math.hypot(x, y, z);
+        const hole = resolvedLightFraction(d, d > 0 ? Math.abs(z) / d : 0);
+        out[(iz * n + iy) * n + ix] = 1 - k * hole;
+      }
+    }
+  }
+  return out;
+}
+
 /** See README.md § The resolution hole. */
 export function clampResolvedHoleStrength(k: number): number {
   return Math.min(1, Math.max(0, k));

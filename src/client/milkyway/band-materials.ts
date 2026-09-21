@@ -45,8 +45,9 @@ export interface BandSharedSlots {
   uIcrsToGal: THREE.IUniform;
   uGalCenter: THREE.IUniform;
   uR0Pc: THREE.IUniform;
-  /** The `DataTexture`, written in place through `writeResolvedHoleTexture`
-   *  and never reassigned — both graphs hold it from build time. */
+  /** The `Data3DTexture`, written in place through
+   *  `writeResolvedHoleTexture` and never reassigned — both graphs hold it
+   *  from build time. */
   uUnresolvedLight: THREE.IUniform;
   uGlowMagOffset: THREE.IUniform;
   uChartIsobar: THREE.IUniform;
@@ -73,7 +74,7 @@ export function seedBandSharedSlots(s: BandSharedSlots): void {
   (s.uIcrsToGal.value as THREE.Matrix3).copy(ICRS_TO_GAL_M3);
   (s.uGalCenter.value as THREE.Vector3).copy(GALACTIC_CENTRE_PC);
   s.uR0Pc.value = R0_PC;
-  writeResolvedHoleTexture(s.uUnresolvedLight.value as THREE.DataTexture);
+  writeResolvedHoleTexture(s.uUnresolvedLight.value as THREE.Data3DTexture);
   s.uGlowMagOffset.value = SB_ZERO_POINT;
   s.uChartIsobar.value = 0;
   (s.uChartInkColor.value as THREE.Color).setHex(0x000000);

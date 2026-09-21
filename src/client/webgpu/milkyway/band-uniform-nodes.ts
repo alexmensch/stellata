@@ -3,7 +3,7 @@
 // a key-parity test.
 
 import { Color, Matrix3, Vector3 } from 'three';
-import { texture, uniform } from 'three/tsl';
+import { texture3D, uniform } from 'three/tsl';
 import type { BandComponentSpec } from '../../milkyway/band-materials';
 import { makeResolvedHoleTexture } from '../../milkyway/calibration/resolved-hole-texture';
 
@@ -30,7 +30,7 @@ export function bandSharedUniformNodes() {
     uIcrsToGal: uniform(new Matrix3()),
     uGalCenter: uniform(new Vector3()),
     uR0Pc: uniform(1),
-    uUnresolvedLight: texture(makeResolvedHoleTexture()),
+    uUnresolvedLight: texture3D(makeResolvedHoleTexture()),
     uGlowMagOffset: uniform(0),
     uChartIsobar: uniform(0),
     uChartInkColor: uniform(new Color(0x000000)),

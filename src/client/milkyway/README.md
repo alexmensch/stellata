@@ -110,9 +110,10 @@ solved.
 **Both components are multiplied by one minus the resolution hole** — the
 star catalogue's measured share of the model's light at each step,
 applied ahead of the dust step. It reaches both shaders as one filtered
-fetch of the shared `uUnresolvedLight` texture, and the CPU mirror
-through `unresolvedLightFraction` over the same table
-(`calibration/README.md` § The resolution hole).
+fetch of the shared `uUnresolvedLight` grid, and the CPU mirror through
+`unresolvedLightFraction` over the measured table itself — the two differ
+by up to 0.044 mag while the grid is on trial
+(`calibration/README.md` § The resolution hole, § The table is a 3D grid).
 
 ### Population tints carry hue, never flux
 

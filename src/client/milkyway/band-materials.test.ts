@@ -49,7 +49,7 @@ function unseededSlots(): BandSharedSlots {
   };
 }
 
-function unseededTexture(): THREE.DataTexture {
+function unseededTexture(): THREE.Data3DTexture {
   const tex = makeResolvedHoleTexture();
   (tex.image.data as Uint16Array).fill(THREE.DataUtils.toHalfFloat(UNSEEDED));
   return tex;
@@ -58,7 +58,7 @@ function unseededTexture(): THREE.DataTexture {
 /** One representative scalar per slot-value kind, for the sentinel sweep. */
 function probe(value: unknown): number {
   if (typeof value === 'number') return value;
-  if (value instanceof THREE.DataTexture) {
+  if (value instanceof THREE.Data3DTexture) {
     return THREE.DataUtils.fromHalfFloat((value.image.data as Uint16Array)[0]);
   }
   if (value instanceof THREE.Vector3) return value.x;

@@ -288,7 +288,7 @@ export class MilkyWay {
   setResolvedHoleStrength(k: number) {
     this.resolvedHoleStrength = clampResolvedHoleStrength(k);
     writeResolvedHoleTexture(
-      this.shared.uUnresolvedLight.value as THREE.DataTexture,
+      this.shared.uUnresolvedLight.value as THREE.Data3DTexture,
       this.resolvedHoleStrength,
     );
   }

@@ -9,8 +9,7 @@ import {
   FOREGROUND_DUST_STEPS, MAG_PER_TAU, S_MIN_PC, STEPS, UNIT_BALL_SLACK,
 } from '../../milkyway/milkyway-column-pure';
 import {
-  RESOLVED_HOLE_DEX_PER_SHELL, RESOLVED_HOLE_LOG_DISTANCE0,
-  RESOLVED_HOLE_MIN_DISTANCE_PC, RESOLVED_HOLE_SHELLS,
+  RESOLVED_HOLE_GRID_HALF_PC,
 } from '../../milkyway/calibration/resolved-fraction-pure';
 import { literalDriftOffenders, type PinnedConstant } from '../tsl/literal-drift-pure';
 
@@ -29,10 +28,7 @@ const PINNED: readonly PinnedConstant[] = [
   { identifier: 'S_MIN_PC', values: [S_MIN_PC] },
   { identifier: 'UNIT_BALL_SLACK', values: [UNIT_BALL_SLACK] },
   { identifier: 'MAG_PER_TAU', values: [MAG_PER_TAU] },
-  { identifier: 'RESOLVED_HOLE_SHELLS', values: [RESOLVED_HOLE_SHELLS] },
-  { identifier: 'RESOLVED_HOLE_LOG_DISTANCE0', values: [RESOLVED_HOLE_LOG_DISTANCE0] },
-  { identifier: 'RESOLVED_HOLE_DEX_PER_SHELL', values: [RESOLVED_HOLE_DEX_PER_SHELL] },
-  { identifier: 'RESOLVED_HOLE_MIN_DISTANCE_PC', values: [RESOLVED_HOLE_MIN_DISTANCE_PC] },
+  { identifier: 'RESOLVED_HOLE_GRID_HALF_PC', values: [RESOLVED_HOLE_GRID_HALF_PC] },
 ];
 
 describe('the TSL band reads the mirror its bound is taken from', () => {

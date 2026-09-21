@@ -1,45 +1,49 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
-  RESOLVED_HOLE_BANDS,
-  RESOLVED_HOLE_SHELLS,
-  resolvedHoleIndex,
-  unresolvedHoleTexels,
+  RESOLVED_HOLE_GRID_HALF_PC,
+  RESOLVED_HOLE_GRID_N,
+  unresolvedHoleVoxels,
 } from './resolved-fraction-pure';
-import { RESOLVED_HOLE_VALUES } from './resolved-hole-table';
 import { makeResolvedHoleTexture, writeResolvedHoleTexture } from './resolved-hole-texture';
 
-const texelAt = (tex: THREE.DataTexture, i: number) =>
+const voxelAt = (tex: THREE.Data3DTexture, i: number) =>
   THREE.DataUtils.fromHalfFloat((tex.image.data as Uint16Array)[i]);
 
-describe('the resolution-hole texture', () => {
+const index = (ix: number, iy: number, iz: number) =>
+  (iz * RESOLVED_HOLE_GRID_N + iy) * RESOLVED_HOLE_GRID_N + ix;
+
+describe('the resolution-hole grid', () => {
   // README.md § The table is a texture, not a uniform array — every one
   // of these is load-bearing.
-  it('is a 32x8 half-float red texture, linear and clamped', () => {
+  it('is a 64-cube half-float red texture, linear and clamped on all three axes', () => {
     const tex = makeResolvedHoleTexture();
-    expect(tex.image.width).toBe(RESOLVED_HOLE_SHELLS);
-    expect(tex.image.height).toBe(RESOLVED_HOLE_BANDS);
+    expect(tex.image.width).toBe(RESOLVED_HOLE_GRID_N);
+    expect(tex.image.height).toBe(RESOLVED_HOLE_GRID_N);
+    expect(tex.image.depth).toBe(RESOLVED_HOLE_GRID_N);
     expect(tex.format).toBe(THREE.RedFormat);
     expect(tex.type).toBe(THREE.HalfFloatType);
     expect(tex.minFilter).toBe(THREE.LinearFilter);
     expect(tex.magFilter).toBe(THREE.LinearFilter);
     expect(tex.wrapS).toBe(THREE.ClampToEdgeWrapping);
     expect(tex.wrapT).toBe(THREE.ClampToEdgeWrapping);
+    expect(tex.wrapR).toBe(THREE.ClampToEdgeWrapping);
     expect(tex.flipY).toBe(false);
     expect(tex.generateMipmaps).toBe(false);
   });
 
-  // Row-major with one row per |sin b| band and flipY off, which is what
-  // makes `resolvedHoleIndex` the texel index too. A transpose here
-  // renders a plausible wrong sky.
-  it('lays the table out band per row, shell per column', () => {
+  // x fastest, then y, then z, which is what makes the shader's
+  // `fromSol / span + 0.5` land on the cell that owns the point.
+  it('lays the cube out x fastest, and Sol sits at the centre', () => {
     const tex = makeResolvedHoleTexture();
     writeResolvedHoleTexture(tex);
-    const expected = unresolvedHoleTexels();
-    for (const [shell, band] of [[0, 0], [17, 0], [6, 5], [31, 7]]) {
-      const i = resolvedHoleIndex(shell, band);
-      expect(texelAt(tex, i)).toBeCloseTo(expected[i], 3);
+    const expected = unresolvedHoleVoxels();
+    for (const [ix, iy, iz] of [[0, 0, 0], [32, 32, 32], [63, 0, 17], [8, 40, 63]]) {
+      const i = index(ix, iy, iz);
+      expect(voxelAt(tex, i)).toBeCloseTo(expected[i], 3);
     }
+    expect(voxelAt(tex, index(32, 32, 32))).toBeLessThan(0.1);
+    expect(voxelAt(tex, index(0, 0, 0))).toBeGreaterThan(0.99);
   });
 
   // `version` is what a re-upload is keyed on, so a write that did not
@@ -47,7 +51,7 @@ describe('the resolution-hole texture', () => {
   // nothing else in the frame touches this texture.
   it('writes in place and re-uploads only on a write', () => {
     const tex = makeResolvedHoleTexture();
-    expect(texelAt(tex, resolvedHoleIndex(18, 0))).toBe(0);
+    expect(voxelAt(tex, index(18, 0, 0))).toBe(0);
     const data = tex.image.data;
     const version = tex.version;
 
@@ -58,6 +62,11 @@ describe('the resolution-hole texture', () => {
     writeResolvedHoleTexture(tex, 0);
     expect(tex.version).toBe(version + 2);
     // Hole off: the band owes the whole of the model's light again.
-    for (let i = 0; i < RESOLVED_HOLE_VALUES.length; i++) expect(texelAt(tex, i)).toBe(1);
+    const n = RESOLVED_HOLE_GRID_N ** 3;
+    for (let i = 0; i < n; i += 997) expect(voxelAt(tex, i)).toBe(1);
+  });
+
+  it('spans the cube the shaders divide by', () => {
+    expect(RESOLVED_HOLE_GRID_HALF_PC).toBe(4000);
   });
 });

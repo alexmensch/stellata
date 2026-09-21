@@ -56,10 +56,7 @@ import {
   RESOLVED_CATALOGUE_MAG_ARCSEC2,
 } from './calibration/diffuse-reference';
 import {
-  RESOLVED_HOLE_DEX_PER_SHELL,
-  RESOLVED_HOLE_LOG_DISTANCE0,
-  RESOLVED_HOLE_MIN_DISTANCE_PC,
-  RESOLVED_HOLE_SHELLS,
+  RESOLVED_HOLE_GRID_HALF_PC,
   SHIPPED_RESOLVED_HOLE,
   unresolvedHoleTexels,
 } from './calibration/resolved-fraction-pure';
@@ -807,23 +804,20 @@ describe('raymarch parameters the mirror duplicates from GLSL', () => {
   });
 
   // Drift in a layout literal samples the wrong cell with no error.
-  it('agrees on the resolution-hole table layout', () => {
-    expect(glslConst('int', 'RESOLVED_HOLE_SHELLS')).toBe(RESOLVED_HOLE_SHELLS);
-    expect(glslConst('float', 'RESOLVED_HOLE_LOG_DISTANCE0')).toBe(RESOLVED_HOLE_LOG_DISTANCE0);
-    expect(glslConst('float', 'RESOLVED_HOLE_DEX_PER_SHELL')).toBe(RESOLVED_HOLE_DEX_PER_SHELL);
-    expect(glslConst('float', 'RESOLVED_HOLE_MIN_DISTANCE_PC'))
-      .toBe(RESOLVED_HOLE_MIN_DISTANCE_PC);
-    expect(frag).toMatch(/uniform sampler2D uUnresolvedLight;/);
+  it('agrees on the resolution-hole grid extent', () => {
+    expect(glslConst('float', 'RESOLVED_HOLE_GRID_HALF_PC'))
+      .toBe(RESOLVED_HOLE_GRID_HALF_PC);
+    expect(frag).toMatch(/uniform sampler3D uUnresolvedLight;/);
   });
 
-  // The two coordinates ARE the transcription: a swapped or unscaled axis
+  // The coordinate IS the transcription: a mis-scaled or unshifted axis
   // renders a plausible wrong picture rather than failing.
-  it('maps the two table axes onto the texture the same way the mirror does', () => {
+  it('maps the cube onto the texture the same way the mirror does', () => {
     expect(frag).toMatch(
-      /\(0\.5 \* log\(d2\) \/ STELLATA_LOG10 - RESOLVED_HOLE_LOG_DISTANCE0\) \/ RESOLVED_HOLE_DEX_SPAN,\n\s*abs\(fromSol\.z\) \* inversesqrt\(d2\)\)/);
+      /vec3 uvw = fromSol \* RESOLVED_HOLE_GRID_INV_SPAN \+ 0\.5;/);
     expect(frag).toMatch(
-      /RESOLVED_HOLE_DEX_SPAN =\n?\s*float\(RESOLVED_HOLE_SHELLS\) \* RESOLVED_HOLE_DEX_PER_SHELL;/);
-    expect(frag).toMatch(/return textureLod\(uUnresolvedLight, uv, 0\.0\)\.r;/);
+      /RESOLVED_HOLE_GRID_INV_SPAN =\n?\s*0\.5 \/ RESOLVED_HOLE_GRID_HALF_PC;/);
+    expect(frag).toMatch(/return textureLod\(uUnresolvedLight, uvw, 0\.0\)\.r;/);
   });
 
   // The hole multiplies the emissivity before the dust, so the resolved
