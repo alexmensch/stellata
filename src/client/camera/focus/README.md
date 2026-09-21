@@ -31,6 +31,12 @@ close-approach focused star sitting at exactly NDC origin.
   origin on the focal object under time advance. Deps are live
   references + two gate closures; the shell supplies which controllers
   count as camera-busy (§ Moving-focal ride).
+- `focal-ride-pure.ts` (+ test) — `focalRideStep`, one frame of the ride
+  both moving-focal kinds and the binary walk drive, plus
+  `shouldRecenterFocalOrigin`. The seed frame measures from `target` in
+  navigate and from `cameraPosition` in observe, because observe parks the
+  camera — not the target — on the object; `../../binaries/README.md`
+  § Focal-frame ride is the authority.
 - `focus-transition.ts` (+ test) — `tickFocusLerp` + the generic
   `parkDistance(...)` + `newFocusLerpFrom(...)` primitives. Star-,
   cloud-, and future-focusable-park-arrivals all compose these. The

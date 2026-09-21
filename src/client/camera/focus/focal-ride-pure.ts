@@ -43,12 +43,11 @@ export interface FocalRideInputs {
   liveLocal: Vec3;
   /** Current orbit target. */
   target: Vec3;
-  /** True while the camera mode is observe. The seed-frame re-snap is
-   *  keyed on the navigate pin invariant (target sits ON the star); in
-   *  observe the target is deliberately parked one parsec ahead of the
-   *  camera as a look-direction pin, so re-snapping against it would
-   *  translate the parked camera a full parsec off the focal star (the
-   *  cold-load observe URL-restore bug). */
+  /** Current camera position — what observe parks ON the star, and so the
+   *  seed frame's reference point in that mode. */
+  cameraPosition: Vec3;
+  /** True while the camera mode is observe, which moves the seed-frame
+   *  re-snap from `target` to `cameraPosition`. */
   observeMode: boolean;
 }
 
@@ -71,14 +70,14 @@ export interface FocalRideStep {
  * - **Steady focal** (same star, no warp): translate by the perturbation
  *   change since last frame, so orbital drift accumulates onto the pose
  *   while any user pan offset is preserved.
- * - **Seed frame** (focal just changed, no warp): snap `target` onto the
- *   star's live buffer position. `setFocus` sampled the perturbation at
- *   focus-event time, but sim-time may have advanced before this frame
- *   (fast scrub), so trusting that snap leaves a fixed residual offset —
- *   the star lands off-centre. Re-snapping here corrects it against the
- *   same buffer position every consumer projects. Suppressed in observe
- *   mode, where `target` is the look-direction pin (not on the star) and
- *   the camera itself is already parked at the live position.
+ * - **Seed frame** (focal just changed, no warp): snap the point that is
+ *   supposed to sit ON the star onto its live buffer position — `target` in
+ *   navigate, `cameraPosition` in observe. `setFocus` sampled the
+ *   perturbation at focus-event time, but sim-time may have advanced before
+ *   this frame (fast scrub), so trusting that snap leaves a fixed residual
+ *   offset and the star lands off-centre. The observe leg additionally
+ *   catches a park taken while the binary field was still unattached, where
+ *   the sample was the bare baseline and no later delta ever repairs it.
  * - **Warp / unfocus**: no translate; just resync the baseline.
  */
 export function focalRideStep(i: FocalRideInputs): FocalRideStep {
@@ -87,11 +86,12 @@ export function focalRideStep(i: FocalRideInputs): FocalRideStep {
   const py = i.focalPert.y;
   const pz = i.focalPert.z;
   if (i.warpActive || seed) {
-    const reSnap = seed && !i.warpActive && i.focal !== null && !i.observeMode;
+    const reSnap = seed && !i.warpActive && i.focal !== null;
+    const from = i.observeMode ? i.cameraPosition : i.target;
     return {
-      dx: reSnap ? i.liveLocal.x - i.target.x : 0,
-      dy: reSnap ? i.liveLocal.y - i.target.y : 0,
-      dz: reSnap ? i.liveLocal.z - i.target.z : 0,
+      dx: reSnap ? i.liveLocal.x - from.x : 0,
+      dy: reSnap ? i.liveLocal.y - from.y : 0,
+      dz: reSnap ? i.liveLocal.z - from.z : 0,
       px, py, pz,
       rideFocalIdx: i.focal,
     };
