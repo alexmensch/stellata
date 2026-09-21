@@ -1244,6 +1244,23 @@ function applyFocusTarget(stellata: Stellata, target: Target, snap: boolean): vo
   else stellata.focus.flyTo(target, { animate: false });
 }
 
+/** OBSERVE's enter leg plus the chart flag it gates. The origin pre-snap
+ *  precedes `controls.update()` so `lookAt` resolves the quaternion from the
+ *  focal origin, not the orbit position the focus left; `setMode` preserves it
+ *  when it pins position again. Idempotent — both the synchronous tail and the
+ *  deferred focus callback run it. */
+function restoreObserve(stellata: Stellata, view: DecodedView): void {
+  if (view.mode !== 'observe') return;
+  if (!isHardTarget(stellata.focus.getFocusedTarget())) return;
+  if (view.cam === undefined) {
+    setCameraToDefault(stellata, 'observe');
+    stellata.controls.update();
+    stellata.roll.adoptFromCamera(stellata.camera);
+  }
+  stellata.observe.setMode('observe', { animate: false });
+  if (view.chart) stellata.filters.setFilter({ chart: true });
+}
+
 // **The order here is load-bearing**:
 //   - unit is applied first so any DOM sync triggered later reads it
 //   - preset before filter, so derived size defaults are populated before
@@ -1349,12 +1366,17 @@ export function applyDecodedView(
         const idx = targetIdxOf(idMaps, kind, localIndex);
         if (idx !== null) {
           applyFocusTarget(stellata, { kind, idx }, snap);
-          // A sid whose domain attaches after this function returns fires its
-          // 'focus' event then, disarming the ORB the tail already restored.
-          restoreOrbitFrame(stellata, view);
           // README.md § A focus that resolves after the pose, both halves:
           // why a late focus has to re-seat, and why user input vetoes it.
-          if (deferred && !stellata.renderGate.sawUserInput) reapplyPose(stellata, view);
+          // The mode rides the same veto: entering observe parks the camera,
+          // which is the move the veto exists to abandon.
+          if (deferred && !stellata.renderGate.sawUserInput) {
+            reapplyPose(stellata, view);
+            restoreObserve(stellata, view);
+          }
+          // Last: a sid whose domain attaches after this function returns fires
+          // its 'focus' event then, and the mode change above disarms ORB too.
+          restoreOrbitFrame(stellata, view);
         }
         settle?.();
       });
@@ -1418,18 +1440,6 @@ export function applyDecodedView(
     stellata.controls.target.set(view.tgt[0], view.tgt[1], view.tgt[2]);
     controlsDirty = true;
   }
-  // Mirror the encoder's observe-mode cam omission: pre-snap the camera
-  // to the focal-star origin *before* controls.update so that lookAt
-  // computes the right quaternion from (0,0,0)→tgt rather than from
-  // focusStar's orbit position. setCameraMode('observe', animate:false)
-  // below preserves that quaternion when it pins position again.
-  // setCameraToDefault routes through defaultCamForMode so the elision
-  // invariant lives in one place.
-  const willEnterObserve = view.mode === 'observe' && isHardTarget(stellata.focus.getFocusedTarget());
-  if (willEnterObserve && !hasCam) {
-    setCameraToDefault(stellata, 'observe');
-    controlsDirty = true;
-  }
   if (controlsDirty) {
     stellata.controls.update();
     // The restored `up` arrived as an axis, ahead of the position and target
@@ -1440,16 +1450,8 @@ export function applyDecodedView(
     stellata.roll.adoptFromCamera(stellata.camera);
   }
 
-  if (willEnterObserve) {
-    stellata.observe.setMode('observe', { animate: false });
-  }
-
-  // Chart applies after observe mode is engaged so the chart-mode
-  // orchestrator's observe-gate sees the right cameraMode on the
-  // resulting filter-change event.
-  if (view.chart && stellata.focus.getCameraMode() === 'observe') {
-    stellata.filters.setFilter({ chart: true });
-  }
+  // Pending focus → the deferred callback owns this leg instead.
+  if (focusPending === null) restoreObserve(stellata, view);
 
   // Legacy HIP POI lists resolve through idMaps (star-kind by
   // construction); v4 SID lists through the resolver, any pinnable

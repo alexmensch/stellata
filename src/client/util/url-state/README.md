@@ -221,7 +221,11 @@ bit order, so mode isn't known until the field loop completes).
   so the saved pose lands first; the receiver then
   `setCameraMode('observe', { animate: false })` if the bit is set and
   a hard-kind focus (star / planet / probe) exists. Default-omitted
-  (navigate).
+  (navigate). **That anchor test cannot answer while a focus is pending**:
+  it reads boot's Sol focus, not the star the blob names, and applying the
+  real focus bails observe straight back out. So the leg is skipped there
+  and re-run from the deferred callback — § A focus that resolves after the
+  pose. Chart rides with it, being observe-gated.
 - The URL writer skips frame-triggered updates while
   `isCameraTransitionActive()` is true (warp, observe enter/exit, or the
   navigate-mode unfocus zoom-out) — those animate camera position and
@@ -407,7 +411,9 @@ That makes focus-before-pose an ordering requirement, not a preference, and
 the streaming catalogue can break it: a star in a late chunk resolves after
 `applyFromUrl` has already seated the camera against the un-recentred
 origin, which lands it somewhere else entirely. So the deferred branch
-re-seats `cam`/`tgt` itself once the focus lands. A `resolvedInline` flag
+re-seats `cam`/`tgt` — and re-enters observe, which the same lateness cost
+— itself once the focus lands. The mode leg runs **before** the ORB restore
+there, since a mode change disarms ORB. A `resolvedInline` flag
 distinguishes the synchronous case — where the pose below simply has not
 run yet — from the late one.
 
@@ -415,7 +421,8 @@ run yet — from the late one.
 touched the canvas or the keyboard while the catalogue was still arriving,
 the view is theirs; a restore that yanks it back is worse than one that
 gives up. The focus itself still attaches, because that costs nothing and
-is what the link asked for — only the camera move is abandoned.
+is what the link asked for — the camera move is abandoned, and observe with
+it, since entering it parks the camera and is therefore the same move.
 
 **Re-seating it is not enough, because the wrong frame is on screen
 meanwhile.** Boot paints on the catalogue's first chunk, so between first
