@@ -37,6 +37,15 @@ different languages in different processes. `multi-star-regression.test.ts`
 pins the correspondence against the real artifact, so drift on either
 side fails.
 
+**`bySynth` also carries bridged keys.** A component whose row carries no
+identifier is addressable only under its synth key, and where promotion
+refused the mint because a stored same-as edge names a Gaia source already in
+the catalogue (`../README.md` § Same-as bridge to an already-admitted source),
+the key maps onto that source's record — or the star ships with no component
+letter, no search entry and no `binaries.bin` pairing. A record that owns the
+key outright wins over a bridge. Addressing only: the record's own
+designations stay the manifest's.
+
 The writer's **`override_inner_primary_indices`** — an inner pair's primary
 forced onto its PARENT component's slot — is replicated, by
 `reHomeToParent`. It was left out while it only changed *which* index

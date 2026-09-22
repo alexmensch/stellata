@@ -32,12 +32,7 @@ export interface CatalogRowIndexMap {
 // search-index.json.
 export function buildCatalogRowIndexMap(
   stars: Star[],
-  /** Runtime synth id -> the Gaia source a stored same-as edge calls the same
-   *  star. A component whose row carries no identifier is addressable only
-   *  under its synth key, and where promotion refused the mint because that
-   *  source is already a record, the key has to reach it here or the star
-   *  ships with no component letter and no search entry. Addressing only:
-   *  the record's own designations stay the manifest's. */
+  /** README.md § The sidecar and why resolution is duplicated from Python. */
   synthGaiaBridges: ReadonlyMap<string, string> = new Map(),
 ): CatalogRowIndexMap {
   const byGaia: Record<string, number> = {};
