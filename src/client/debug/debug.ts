@@ -51,8 +51,8 @@ export interface DebugTools {
    *  Navigate mode, both blobs on one focus — `capture/README.md`. */
   capture(options: CaptureOptions): CaptureRun;
   /** Price each render pass by gpu.frame differential from the current
-   *  viewpoint. Camera stationary; on WebGL2 also panel CLOSED, since the
-   *  sweep needs the context's single query slot. */
+   *  viewpoint. Camera stationary; under raf-delta also panel CLOSED, since
+   *  wall time counts its per-tick work (`frame-cost/README.md`). */
   priceFrame(options?: PriceFrameOptions): Promise<PriceFrameRow[]>;
   /** Prints per-pass savedMs ranges across runs — the repeatability check. */
   priceFrameRepeat(runs: number, options?: PriceFrameOptions): Promise<PriceFrameRow[][]>;

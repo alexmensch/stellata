@@ -143,10 +143,10 @@ after exiting chart mode (otherwise the average would lag forever).
 | `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes **and the whole layer fan-out** (`layers.updateAll` — star frame, binaries, planets, Milky Way, galactic, clouds), plus the adaptation fold. Normally the largest CPU section, and it *contains* the `extinction.prepass` / `coreMask` rows below rather than sitting beside them. |
 | `extinction.prepass`    | `stellata.ts` `animate()`       | Per-star A_V cache recompute submission (near-zero on skipped frames). |
 | `coreMask`              | core-mask layer's `skip`         | The binary-search `shouldEnableCoreMask()` (see below), run as that layer's contribution test. |
-| `adaptation`            | `scene-adaptation.ts` `measure()` | Folding the landed reduction into the applied cut — a handful of arithmetic, since the measurement itself is GPU work priced under `submit.reduction` / `gpu.reduction` (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
+| `adaptation`            | `scene-adaptation.ts` `measure()` | Folding the landed reduction into the applied cut — a handful of arithmetic, since the measurement itself is GPU work priced under `submit.reduction` (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
 | `submit.main`           | `stellata.ts` `animate()`       | CPU wall-time around `renderer.render()` — submission, not GPU work. |
 | `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's bracketed renders — one for the whole bracket under reversed-z (K = 1). |
-| `submit.tonemap`        | `stellata.ts` `animate()`       | CPU wall-time around the HDR resolve. Near-zero while the seam is parked (HDR off, chart mode, no float target). |
+| `submit.tonemap`        | `stellata.ts` `animate()`       | CPU wall-time around the HDR resolve. Near-zero in chart mode, where the seam has no target to resolve. |
 | `submit.reduction`      | `stellata.ts` `animate()`       | CPU wall-time around the statistic attachment's mip reduction. Zero on frames whose readback has not landed, and in chart mode (`../hdr/exposure/reduction/README.md` § Latency). |
 | `gpu.frame`             | timestamps                       | Real GPU ms for the frame's render passes, summed from three's per-pass timestamps. The headline's source, and the only row that prices anything. |
 | `gpu.compute`           | timestamps                       | Real GPU ms for the frame's compute passes — the star compaction every frame, the extinction prepass when it recomputes — from three's separate compute pool, resolved in the same cycle as `gpu.frame` and never summed into it (`gpu-timing/README.md`). |
@@ -174,8 +174,8 @@ The environment does, though. **Safari 26 with Web Inspector open against
 the dev server runs the fan-out ~50× slower — `pre-render` 2 ms → 100 ms,
 and the frame rate collapses with it, so the work really is that slow
 rather than misreported.** Scope, measured: Safari only (Chrome DevTools
-shows no effect at all), dev server only (a production build is clean),
-and identical on both renderer backends. It is not the HUD, and it is not
+shows no effect at all), and dev server only (a production build is
+clean). It is not the HUD, and it is not
 logging — nothing in the fan-out logs per frame and the prod build strips
 no `console` calls — so it is deoptimised execution of Vite's unbundled
 module graph, a cost the shipped app never pays. **Take Safari CPU numbers

@@ -17,8 +17,8 @@ const webgpuHost = (timestampsAvailable: boolean): GpuFrameSourceHost => ({
   webgpu: { timestampsAvailable },
 });
 
-describe('the pricing sweep picks its sample source per backend', () => {
-  it('subscribes to the renderer resolve on a WebGPU boot', () => {
+describe('the pricing sweep picks its sample source per adapter', () => {
+  it('subscribes to the renderer resolve where timestamps are live', () => {
     const samples: number[] = [];
     const source = acquireGpuFrameSource(webgpuHost(true), (ms) => samples.push(ms));
 
@@ -36,7 +36,7 @@ describe('the pricing sweep picks its sample source per backend', () => {
     // trackTimestamp: true is a request, not a grant — three clears it when
     // the feature is absent and every resolve then returns undefined.
     // Claiming 'timestamp' here would burn the whole warmup before aborting
-    // with no rows, on the one backend Safari can price at all.
+    // with no rows, on the one clock Safari can price with at all.
     const samples: number[] = [];
     const info = vi.spyOn(console, 'info').mockImplementation(() => {});
 
@@ -60,7 +60,7 @@ describe('the pricing sweep picks its sample source per backend', () => {
     second!.release();
   });
 
-  it('pins raf-delta on any backend without subscribing to a GPU clock', () => {
+  it('pins raf-delta without subscribing to a GPU clock', () => {
     // The caller times frames itself under raf-delta, so a subscription
     // left live would double-count every dwell sample.
     const samples: number[] = [];
@@ -77,18 +77,18 @@ describe('the pricing sweep picks its sample source per backend', () => {
     info.mockRestore();
   });
 
-  it('honours a pinned method the backend can supply', () => {
+  it('honours a pinned method the adapter can supply', () => {
     const timestamp = acquireGpuFrameSource(webgpuHost(true), () => {}, 'timestamp');
     expect(timestamp?.method).toBe('timestamp');
     timestamp!.release();
   });
 
-  it('refuses a pinned method the backend cannot supply, never falls back', () => {
+  it('refuses a pinned method the adapter cannot supply, never falls back', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     // A silent fallback would rebuild exactly the mixed-method table
     // pinning exists to prevent, so each of these must return null.
-    // 'timer-query' names a clock this app no longer has at all.
+    // 'timer-query' parses, for archived runs, and names no clock this app has.
     expect(acquireGpuFrameSource(webgpuHost(true), () => {}, 'timer-query')).toBeNull();
     expect(acquireGpuFrameSource(webgpuHost(false), () => {}, 'timestamp')).toBeNull();
 
@@ -135,9 +135,9 @@ describe('the pricing sweep picks its sample source per backend', () => {
     const info = vi.spyOn(console, 'info').mockImplementation(() => {});
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    // The acquire-time check passes with the panel closed; on timer-query a
-    // mid-run open dries the samples up and aborts the sweep, but rAF-delta
-    // samples keep flowing, so release is the only place left to catch it.
+    // The acquire-time check passes with the panel closed, and rAF-delta
+    // samples keep flowing after a mid-run open, so release is the only
+    // place left to catch it.
     const source = acquireGpuFrameSource(webgpuHost(true), () => {}, 'raf-delta');
     expect(warn).not.toHaveBeenCalled();
 

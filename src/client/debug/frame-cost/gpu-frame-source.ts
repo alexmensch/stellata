@@ -1,5 +1,5 @@
-// Where a pricing sweep gets its whole-frame GPU numbers from, per
-// backend. See README.md § Preconditions.
+// Where a pricing sweep gets its whole-frame GPU numbers from: the
+// timestamp pool or rAF wall time. See README.md § Preconditions.
 
 import { perfInstrumentationInstalled } from '../perf-hud';
 import { gpuFrameSamplesAreSound, onGpuFrameSample } from '../gpu-timing/gpu-frame-samples';
@@ -31,7 +31,7 @@ function rafDeltaSource(lead: string): GpuFrameSource {
       "its per-tick ring fills and DOM writes land inside the sweep's own " +
       'samples. They largely cancel in a differential but widen the spread, ' +
       'and absolute frame times are biased outright — close it before ' +
-      'recording a cross-backend table.',
+      'recording a table.',
     );
   }
   return {
@@ -57,18 +57,13 @@ function refusePinned(method: GpuFrameMethod, reason: string): null {
     `priceFrame: { method: '${method}' } pinned, but ${reason}. Refusing ` +
     'rather than silently switching clocks — a silent fallback rebuilds the ' +
     "mixed-method table pinning exists to prevent. 'raf-delta' is the one " +
-    'method every backend can supply.',
+    'method every adapter can supply.',
   );
   return null;
 }
 
-/**
- * Null when the sweep cannot proceed; the caller has already been told why
- * on the console.
- *
- * `pinned` forces a method instead of taking the backend's best. A pinned
- * method the backend cannot supply refuses (null) — never falls back.
- */
+/** Null when the sweep cannot proceed; the caller has already been told why
+ *  on the console. `pinned`: README.md § Preconditions. */
 export function acquireGpuFrameSource(
   host: GpuFrameSourceHost,
   onSample: (ms: number) => void,
@@ -79,14 +74,14 @@ export function acquireGpuFrameSource(
       pinned,
       `'${pinned}' is not a clock — expected one of ` +
       `${GPU_FRAME_METHODS.map((m) => `'${m}'`).join(', ')}, and the ` +
-      'console is untyped, so falling through to the backend preference ' +
+      'console is untyped, so falling through to the preference ' +
       'order would leave a typo looking like an honoured pin',
     );
   }
   if (pinned === 'raf-delta') {
     return rafDeltaSource(
-      'method pinned to raf-delta wall time — the one clock every backend ' +
-      'shares, so cross-backend tables compare',
+      'method pinned to raf-delta wall time — the one clock every adapter ' +
+      'supplies, so tables across adapters and browsers compare',
     );
   }
   if (pinned === 'timer-query') {
@@ -99,7 +94,7 @@ export function acquireGpuFrameSource(
   }
   if (!gpuFrameSamplesAreSound()) {
     const reason =
-      'this backend granted timestamp-query but resolves durations no ' +
+      'this adapter granted timestamp-query but resolves durations no ' +
       'frame can have, so every sample is being dropped';
     if (pinned === 'timestamp') return refusePinned(pinned, reason);
     return rafDelta(reason);

@@ -75,9 +75,8 @@ section below:
   inline tone-mapping. Its row prices target-chain-vs-direct-to-canvas,
   not the resolve draw alone. The park also stops `measure()` being
   called at all, so the toggle sets `reduction.fenceWhileParked` for the
-  duration: without it the row prices the loss of the frame's only
-  submission barrier on top of the chain (`../README.md` § The readback
-  cadence confound).
+  duration: without it the row prices the loss of the statistic readback on
+  top of the chain (`../README.md` § The readback cadence).
 - **`emptyPass`** ADDS `clearDepth()` calls to the local depth pass when
   disabled (`localDepthPass.extraEmptyPasses`). On WebGPU three encodes a
   clear as its own render pass and submit — every colour attachment loaded
@@ -98,15 +97,15 @@ section below:
   taken so far resolves it: on `raf-delta` a baseline under one refresh
   interval cannot show a sub-millisecond addition, and those rows now say
   so themselves — `cadenceBound` (`../README.md` § Reading a row).
-- **`reduction`** keeps its readback fence while disabled and drops only
-  the chain draws. Dropping the fence too priced the loss of the frame's
-  only ANGLE submission barrier — see
-  `../../../hdr/exposure/reduction/README.md`. Keeping it is necessary and
-  **still not sufficient** — the row reads solidly negative at the
-  default Sol view with the fence held, the readback cadence identical
-  in both states, and `bracketMs` at 0.23. Reproduced 2026-08-16 with
-  the exposure pinned: −18.2 ms at bracket 15.1 and −52.4 ms at bracket
-  0.33, limit mags equal — and at Earth close approach (−10.5 and
+- **`reduction`** keeps its readback while disabled and drops only the
+  chain draws, so the row prices the mip chain rather than the readback's
+  own copy and map (`../../../webgpu/hdr/README.md` § Reduction). On the
+  retired WebGL2 boot, where that readback was the frame's only ANGLE
+  submission barrier, keeping it was necessary and **still not
+  sufficient** — the row read solidly negative at the default Sol view
+  with the fence held, the readback cadence identical in both states, and
+  `bracketMs` at 0.23. Reproduced 2026-08-16 with the exposure pinned:
+  −18.2 ms at bracket 15.1 and −52.4 ms at bracket 0.33, limit mags equal — and at Earth close approach (−10.5 and
   −14.1, brackets 6.6 / 7.0). The sign tracks the vantage: negative at
   both deep-cut views, positive at both dm-0 views, and it flips
   positive when the statistic writes are masked (§ The compression

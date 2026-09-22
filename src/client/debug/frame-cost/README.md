@@ -106,16 +106,17 @@ src/client/debug/frame-cost/
   verdict — the console says which of the two applied.
   `method` labels every row; never
   compare numbers across two methods. The sweep picks the source itself and
-  says which on the console — it never claims a clock the backend does not
+  says which on the console — it never claims a clock the adapter does not
   have, since that would spend the whole warmup before aborting with no
-  rows. **That preference order picks each backend's BEST clock, not a
-  comparable one** — the four browser × backend combinations land on three
-  different methods — so a cross-backend table has to pin the method by
-  hand: `debug.priceFrame({ method: 'raf-delta' })`, the one clock all of
-  them share. A pinned method the backend cannot supply refuses the sweep
-  outright rather than silently switching clocks, and so does a name that is
-  not one of the three — the console is untyped, so a typo would otherwise
-  read as an honoured pin.
+  rows. **That preference order picks each adapter's BEST clock, not a
+  comparable one** — Safari and a Chrome whose timestamps resolve garbage
+  land on `raf-delta`, an adapter with sound timestamps on `timestamp` — so
+  a table across adapters or browsers has to pin the method by hand:
+  `debug.priceFrame({ method: 'raf-delta' })`, the one clock every adapter
+  supplies. A pinned method the adapter cannot supply refuses the sweep
+  outright rather than silently switching clocks, and so does a name
+  `GpuFrameMethod` does not hold — the console is untyped, so a typo would
+  otherwise read as an honoured pin.
 - **A settled instrument — and this is the one precondition you cannot
   satisfy.** The GPU's own clock state moves over a sweep in both
   directions, and neither a longer warmup nor a quieter settle reaches the
@@ -128,22 +129,22 @@ src/client/debug/frame-cost/
 
 ## The readback cadence — measured, and NOT the confound
 
-The reduction's `gl.flush()` is the frame's only ANGLE submission
-barrier, and the rate it fires at is emergent rather than pinned — the
-fence clears only when the GPU drains. The obvious worry follows:
-disabling a pass makes the frame cheaper, the fence lands sooner, the
-barrier fires more often, and the row prices batching depth instead of
-the pass.
+The statistic readback's rate is emergent rather than pinned: one readback
+is in flight at a time, and the next is issued only once the last one lands
+(`../../webgpu/hdr/README.md` § Reduction). The obvious worry follows:
+disabling a pass makes the frame cheaper, the readback lands sooner and
+fires more often, and the row prices the readback's own copy and map
+instead of the pass.
 
-**Measured, it does not happen.** `baselineReadback` /
-`disabledReadback` report readbacks per frame per state, and at the
-default Sol view every dwell of every row read **0.25 exactly** — one
-readback per four frames, identical in both states, across frames
-ranging 31 ms (HDR parked) to 112 ms. The latency is constant in
-*frames*, not in wall time, which is pipeline-depth buffering rather
-than GPU-drain latency: it does not care what the frame costs. Keep the
-columns as a standing check, but the hypothesis is refuted at this
-viewpoint.
+**Measured 2026-08-16 on the retired WebGL2 boot, it did not happen.**
+`baselineReadback` / `disabledReadback` report readbacks per frame per
+state, and at the default Sol view every dwell of every row read **0.25
+exactly** — one readback per four frames, identical in both states, across
+frames ranging 31 ms (HDR parked) to 112 ms. The latency was constant in
+*frames*, not in wall time: pipeline-depth buffering rather than
+GPU-drain latency. Keep the columns as a standing check; the dwell mode
+pins the cadence outright (`../../../../scripts/perf/dwell/README.md`), which a sweep
+does not.
 
 Both remain gates worth reading — **equal rates mean the row is clean on
 this axis** — and a viewpoint that does move them would invalidate the
@@ -205,8 +206,8 @@ single-baseline sweep when the instrument is known to be settled.
   the floor may not be zero. Computed on ranks, so a hitched frame moves
   it by one sample rather than by its magnitude.
 - **`baselineReadback` / `disabledReadback`** — equal is clean; diverging
-  means the row priced a change in submission-barrier rate on top of the
-  pass (§ The readback cadence).
+  means the row priced a change in readback rate on top of the pass
+  (§ The readback cadence).
 - **`bufferMpx`** — the drawing buffer the sweep ran at. Run metadata, not
   a statistic, and stamped on every row so a pasted table stays
   self-describing. **Only compare tables at the same buffer size**: the
@@ -232,10 +233,11 @@ single-baseline sweep when the instrument is known to be settled.
   pass. A toggle that resets or freezes the exposure statistic is the way
   this happens.
 - **A saving that vanishes while the frame time holds was never a cost.**
-  The limit-mag gate misses a draw the backend dropped — same star
+  The limit-mag gate misses a draw the driver dropped — same star
   population in both states, only one drawing it. Compare `disabledMs`
-  across backends: a WebGPU `mrtAttachments` read 61 % at Sol on a
-  `disabledMs` of 35 against an honest 78 (`../../webgpu/hdr/README.md`
+  against an earlier run of the same row: `mrtAttachments` read 61 % at Sol
+  on a `disabledMs` of 35 against an honest 78, while Dawn discarded every
+  command buffer carrying the star pass (`../../webgpu/hdr/README.md`
   § The gate becomes the output struct).
 - **`baselineRising`** — one verdict about the whole SWEEP, stamped on
   every row of it: the baseline walked upward past what the run's own
