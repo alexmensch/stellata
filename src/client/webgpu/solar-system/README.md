@@ -83,17 +83,14 @@ nearest because its r32float target must be (`../extinction/README.md`
 because those volumes are. `tests/tsl-standin-filters.test.ts` pins that
 every construction states the pair rather than inheriting the default.
 
-## Constant drift runs in both directions
+## Constant drift
 
-A constant both backends read is authored once in a `*-pure.ts` module.
-GLSL cannot import, so its guards pin each literal in the source text
-against that module (`atmosphere-glsl-drift.test.ts`,
-`ring-photometry-pure.test.ts`). These files **can** import, so their
-guard is the mirror image: `tsl-drift.test.ts` asserts every pinned
-constant is referenced by name across the six surfaces, and that none of
-their values reappears as a bare literal in any of them. A number copied
-out of the GLSL into a TSL twin is the drift that has no compiler to
-catch it.
+A constant the graph and its CPU mirror share is authored once in a
+`*-pure.ts` module, and these files import it — so the copy that could
+drift is the one written out by hand. `tsl-drift.test.ts` asserts every
+pinned constant is referenced by name across the six surfaces, and that
+none of their values reappears as a bare literal in any of them. A number
+transcribed rather than imported is the drift no compiler catches.
 
 The literal half compares by **value**, through the scan shared with the
 other subsystems' guards (`../tsl/README.md` § TSL test pattern) — so a

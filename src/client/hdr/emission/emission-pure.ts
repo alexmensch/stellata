@@ -1,6 +1,6 @@
 // The emission half of the HDR unit: apparent magnitude → linear
 // luminance, and the peak a point source's display kernel carries. CPU
-// mirror of emission.glsl — see README.md § Unit.
+// mirror of ../../webgpu/emission-tsl.ts — see README.md § Unit.
 
 import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
 import { type Rgb, relativeLuminance } from '../tonemap/tonemap-pure';

@@ -1,6 +1,6 @@
-// Pure side of the LG emission renderer: emission-block → component
-// decomposition, instance packing, flux ↔ magnitude inverse, and the
-// CPU raymarch mirror — keep in lockstep with the .frag.glsl.
+// Pure side of the LG emission renderer: component decomposition,
+// instance packing, flux ↔ magnitude inverse, and the CPU raymarch
+// mirror of ../../webgpu/local-group/local-group-emission-tsl.ts.
 
 import {
   SB_ZERO_POINT,
@@ -63,7 +63,7 @@ export function subPixelExpansion(meshRadiusPx: number): number {
 /** The expansion applied to one component — the CPU twin of the vertex
  *  shader's block, and what lets the calibration test integrate the
  *  expanded profile rather than a restatement of it. Keep in lockstep
- *  with local-group-emission.vert.glsl.
+ *  with ../../webgpu/local-group/local-group-emission-tsl.ts.
  *
  *  Sérsic `uMax` rides untouched: it is in R_e units and R_e = axes/uMax,
  *  so scaling the axes already scales R_e. */

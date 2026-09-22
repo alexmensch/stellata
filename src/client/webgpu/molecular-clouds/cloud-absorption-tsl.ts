@@ -1,4 +1,4 @@
-// absorption/cloud-absorption.vert.glsl / .frag.glsl on the TSL path: the jittered
+// The cloud absorption graph: the jittered
 // ellipsoid raymarch that dims every diffuse layer behind the cloud.
 
 import {

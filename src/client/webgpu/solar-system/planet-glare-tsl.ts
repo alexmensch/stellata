@@ -1,4 +1,4 @@
-// planet.vert.glsl / planet.frag.glsl on the TSL path: the reflected-glare
+// ./planet-mesh-tsl.ts / ./planet-mesh-tsl.ts on the TSL path: the reflected-glare
 // billboard over ./planet-glare-geometry.ts's packed layout. Physics:
 // ../../solar-system/planets/glare/README.md.
 

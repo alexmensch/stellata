@@ -1,4 +1,4 @@
-// planet-mesh.frag.glsl on the TSL path: equirect sample, terminator, DEM
+// ./planet-mesh-tsl.ts on the TSL path: equirect sample, terminator, DEM
 // relief and its cast shadows, casters, umbral glow, disc airlight.
 // Physics: ../../solar-system/planets/README.md; port notes: README.md.
 

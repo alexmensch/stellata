@@ -1,6 +1,6 @@
 // Surface relief in the mesh shader: the tangent frame, the normal
 // perturbation and the horizon lookup on it — CPU mirrors of
-// ../planet-mesh.frag.glsl — plus the limb bound that stands in while loading.
+// ../../../webgpu/solar-system/planet-mesh-tsl.ts — plus the limb bound that stands in while loading.
 
 /** Below this the east direction is numerically undefined and the
  *  perturbation is dropped — mirrors the guard in the GLSL. */

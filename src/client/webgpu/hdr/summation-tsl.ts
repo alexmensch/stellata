@@ -52,7 +52,7 @@ export function summationMeanTsl(
   return acc.div(weight);
 }
 
-/** The box-downsample fragment (summation-downsample.frag.glsl): average
+/** The box-downsample fragment (./summation-tsl.ts): average
  *  a `factor`-wide cell of `source`, clamping the ragged edge taps. */
 export function buildSummationDownsampleFragment(
   source: TextureNode,

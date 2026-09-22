@@ -1,4 +1,4 @@
-// cloud-rim.frag.glsl on the TSL path: the Local-Bubble fresnel treatment
+// ./cloud-rim-tsl.ts on the TSL path: the Local-Bubble fresnel treatment
 // in realistic mode, a stippled silhouette contour in chart mode. The
 // vertex stage is the shared one, which here means none at all.
 

@@ -142,7 +142,7 @@ the rest of it.
 Variable pulsation carries an anti-strobe floor: no cycle is allowed to
 complete in under `uMinPeriodSec` (4 s) of real time, so above
 `period / 4 s` the star pulsates at the floor rather than at its own period
-(`../../star-pipeline/star.vert.glsl`). A take shooting a variable has to
+(`../../webgpu/star/star-vertex-tsl.ts`). A take shooting a variable has to
 stay under that, and it is the take's rate that decides — Mira's 332 days in
 5 seconds runs at 64 model-days a second, whose floor is 256 days, just
 inside its period. Ask for the same span in 4 seconds and the floor is 320

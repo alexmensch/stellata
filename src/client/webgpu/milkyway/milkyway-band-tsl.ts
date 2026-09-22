@@ -1,4 +1,4 @@
-// milkyway.{vert,frag}.glsl on the TSL path: the log-distributed march
+// The Milky Way band's graph: the log-distributed march
 // through a proxy mesh, with running per-channel dust extinction.
 // CPU mirror: ../../milkyway/milkyway-column-pure.ts.
 

@@ -1,4 +1,4 @@
-// dust-particle.vert.glsl / .frag.glsl on the TSL path: the additive
+// The dust sprite's graph: the additive
 // density-sized billboard.
 
 import { AdditiveBlending } from 'three';

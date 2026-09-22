@@ -111,7 +111,7 @@ regenerated data. Encoding mechanics: `scripts/dust/README.md`
 The de-extinction invariant (`scripts/catalog/distance/dust/README.md` § Build-time
 de-extinction) means the catalog rebuild ships with the re-encoded
 grid: intrinsic absmags of stars behind dense dust brightened by up to
-~1.8 mag. Because extinction only dims (A_V ≥ 0), the `star.vert.glsl`
+~1.8 mag. Because extinction only dims (A_V ≥ 0), the `../src/client/webgpu/star/star-vertex-tsl.ts`
 prefilter needs no headroom term — a star whose unextincted appMag
 exceeds the soft-taper bound can never become visible.
 
@@ -263,7 +263,7 @@ terms, both in cloud-local frame:
 
 ## 6. Reddening
 
-`star.vert.glsl` accumulates A_V and applies `E(B−V) = A_V / 3.1` as a
+`../src/client/webgpu/star/star-vertex-tsl.ts` accumulates A_V and applies `E(B−V) = A_V / 3.1` as a
 shift of the LUT-input B−V — the CCM 1989 diffuse-ISM law. The raymarch
 is single-channel in *storage* (one A_V accumulator); the colour effect
 is present. The CPU mirror (decode + integration + `E(B−V) = A_V / R_V`)

@@ -392,7 +392,7 @@ describe('Picker / pickStar', () => {
     });
 
     it('withholds that bright-extreme reach where iSuppressPulsation is set', () => {
-      // Same variable again, but flagged eclipsing: star.vert.glsl gates
+      // Same variable again, but flagged eclipsing: ../../webgpu/star/star-vertex-tsl.ts gates
       // the pulsation block off, so the disc never swings bright and the
       // scan must not credit half an amplitude of extra reach. 1,342
       // eclipsing rows rode on the picker's missing varType check.

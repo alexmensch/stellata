@@ -1,4 +1,4 @@
-// CPU mirror of the absorption-pass math in cloud-absorption.frag.glsl:
+// CPU mirror of the absorption-pass math in ../../webgpu/molecular-clouds/cloud-absorption-tsl.ts:
 // Plummer density and absorption alpha. Physics: docs/science-molecular-clouds.md
 // §§ 2, 4, 9.
 

@@ -1,4 +1,4 @@
-// local-group-emission.{vert,frag}.glsl on the TSL path: the bounded
+// The Local Group emission graph: the bounded
 // volumetric raymarch through each object's proxy volume, both families.
 // CPU mirror: ../../local-group/emission/local-group-emission-pure.ts.
 

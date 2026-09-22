@@ -1,6 +1,5 @@
-// The rim shell's authored constants, in the one place both shader
-// backends read them from. GLSL cannot import, so its copies are pinned
-// against these by cloud-glsl-drift.test.ts.
+// The rim shell's authored constants. The graph imports them, so no
+// mirror can drift from this module.
 
 import { rimDistancesForExtent } from '../fresnel-shell/shell-distance-pure';
 

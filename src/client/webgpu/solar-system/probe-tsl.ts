@@ -1,4 +1,4 @@
-// probe.vert.glsl / probe.frag.glsl on the TSL path: the fixed-pixel
+// ./probe-tsl.ts / ./probe-tsl.ts on the TSL path: the fixed-pixel
 // diamond glyph, one material for both passes (README.md § The probe glyph
 // needs no mirror variant).
 

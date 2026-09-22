@@ -1,6 +1,6 @@
 // The rod-summation convolution's kernel and resolution budget: patch
 // radius in pixels, the downsample factor that bounds the tap count, and the
-// disc's area-overlap weights. CPU mirror of summation.glsl — see README.md.
+// disc's area-overlap weights. CPU mirror of ../../webgpu/hdr/summation-tsl.ts — see README.md.
 
 /**
  * In **CSS pixels** — a caller choosing a downsample factor has to cross to

@@ -1,4 +1,4 @@
-// CPU mirror of perceptual-disc.glsl: the dM soft knee, the √Δm size
+// CPU mirror of ../../webgpu/perceptual-disc-tsl.ts: the dM soft knee, the √Δm size
 // curve, the super-Gaussian exponent and its profile. The chunk's header
 // carries the math; every other mirror composes over this module.
 

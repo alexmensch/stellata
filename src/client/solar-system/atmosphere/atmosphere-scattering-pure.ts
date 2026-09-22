@@ -1,5 +1,5 @@
 // Single-scattering atmosphere model (Nishita/O'Neil few-sample) — the CPU
-// mirror of atmosphere-scatter.glsl. Geometry in planet-radius units, planet
+// mirror of ../../webgpu/solar-system/atmosphere-scatter-tsl.ts. Geometry in planet-radius units, planet
 // centred at origin. Model + calibration: README.md § The model.
 
 import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
@@ -274,7 +274,7 @@ export interface ScatterResult {
 /** Integrate single-scattered airlight (+ a cheap multiple-scattering fill)
  *  and view-path transmittance along the ray o + t·d for t ∈ [tStart, tStop]
  *  (planet centred at origin, rPlanet = 1). Mirrors stellata_atmosphereRadiance
- *  in atmosphere-scatter.glsl. `jitter` ∈ [0,1) offsets the sample lattice
+ *  in ../../webgpu/solar-system/atmosphere-scatter-tsl.ts. `jitter` ∈ [0,1) offsets the sample lattice
  *  within each segment — the shader passes a per-fragment value to break
  *  ray-march banding; the CPU mirror uses the midpoint (0.5). */
 export function scatterAlongRay(

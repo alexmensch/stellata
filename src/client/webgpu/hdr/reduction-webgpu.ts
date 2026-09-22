@@ -28,7 +28,7 @@ interface Level {
   height: number;
 }
 
-/** One level of the chain (reduce.frag.glsl): the weighted 2x2 combine,
+/** One level of the chain (./reduction-webgpu.ts): the weighted 2x2 combine,
  *  with the masked-mean product formed on the statistic-reading level
  *  alone. Source size bakes as literals — the materials rebuild with the
  *  level chain on every resize anyway. */

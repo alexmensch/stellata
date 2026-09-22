@@ -9,14 +9,14 @@ import { DCAM_LOG_FLOOR_PC } from '../../camera/timing';
  *  local-depth membership scan. */
 export const RESOLVED_DISC_MIN_PX = 5;
 
-/** Mirrors `STELLATA_PHYS_RATIO_THRESHOLD` in perceptual-disc.glsl — the
+/** Mirrors `STELLATA_PHYS_RATIO_THRESHOLD` in ../../webgpu/perceptual-disc-tsl.ts — the
  *  disc/glow pass split. A star renders as an opaque depth-writing disc
  *  when physSize ≥ this fraction of its final quad size. */
 export const PHYS_RATIO_THRESHOLD = 0.5;
 
 /** The pass split itself, with no size floor: true when the opaque disc
  *  pass owns the star, false when the glow pass does. Mirrors
- *  `star.frag.glsl`'s `vPhysRatio` test on the same
+ *  `../../webgpu/star/star-glow-tsl.ts`'s `vPhysRatio` test on the same
  *  `max(appSize, physSize)` the vertex stage divides by. The one CPU
  *  mirror of that split — the local-depth membership test below and the
  *  pick gate's taper / eclipse-dim branches all read it.

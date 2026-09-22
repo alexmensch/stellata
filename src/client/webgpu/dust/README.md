@@ -68,13 +68,11 @@ digit.
 ## Constants live in TypeScript
 
 `PARTICLE_MIN_PX`, `PARTICLE_MAX_PX`, `PARTICLE_DIM_FLOOR` and
-`DUST_TINT` are imported from `../../dust/dust-particle-pure.ts`, and the
-guard runs in **both** directions, as it does for the solar-system
-surfaces (`../solar-system/README.md` § Constant drift runs in both
-directions): `dust-particle-glsl-drift.test.ts` pins the GLSL's copies
-against that module, since GLSL cannot import; `dust-tsl-drift.test.ts`
-asserts this side names each constant and spells none of them as a
-literal (`../tsl/README.md` § TSL test pattern).
+`DUST_TINT` are imported from `../../dust/dust-particle-pure.ts`, so no
+copy exists to drift. What `dust-tsl-drift.test.ts` still holds is the
+other direction — that this side names each constant and spells none of
+them as a literal (`../tsl/README.md` § TSL test pattern), which an import
+does not prevent.
 
 **The tint is the one chrome colour still unmapped.** It is a shader
 constant rather than a uniform, so it never went through the inverse

@@ -3,7 +3,7 @@
 The two pure tables driving variable-star pulsation: the per-type
 {ρ radius-swing, ΔB−V colour-swing} params and the eclipsing-binary
 suppress mask. Both are built at catalog load and consumed as
-per-instance attributes by `../star.vert.glsl`.
+per-instance attributes by `../../webgpu/star/star-vertex-tsl.ts`.
 
 Full physics, the per-type table, and interferometry citations are in
 `docs/science-stellar-modelling.md` § Variable-star pulsation; this file

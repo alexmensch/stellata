@@ -2,7 +2,7 @@ import type { Stellata } from '../stellata';
 import { type DebugSection, makeMonoReadout, makeSlider, setReadoutText } from './debug-panel';
 
 // Each slider drives one uniform on the shared star material, starting from
-// the production value. See star.frag.glsl for what each uniform shapes.
+// the production value. See ../webgpu/star/star-glow-tsl.ts for what each uniform shapes.
 //
 // Slider ranges are conservative envelopes: nothing crashes outside them, but
 // extremes (lumBias < 0.3, say) start to look cartoony. No reverse sync —
@@ -108,7 +108,7 @@ export function buildStarSection(stellata: Stellata): DebugSection {
   // Δm = uSizeSpan (legacy); higher values stretch the curve so very
   // bright stars (Sol from inside its own neighborhood, focused-star
   // close approach) keep growing before saturating. See uSizeKnee in
-  // star.vert.glsl for the exact formula.
+  // ../webgpu/star/star-vertex-tsl.ts for the exact formula.
   body.appendChild(makeSlider({
     label: 'sizeKnee (sat. extent, mag)',
     min: 0,

@@ -164,7 +164,7 @@ export interface RenderedSizeArgs {
 
 /** The GCVS amplitude the vertex shader will actually swing this star
  *  by — zero wherever `iSuppressPulsation` gates the pulsation block off
- *  (`../../star-pipeline/star.vert.glsl`). Every CPU mirror of that gate
+ *  (`../../webgpu/star/star-vertex-tsl.ts`). Every CPU mirror of that gate
  *  routes through here: the disc-size mirror below, and the pick path's
  *  bright-extreme reach. Two mirrors of one shader gate is how the two
  *  came to disagree over 1,342 eclipsing rows. */
@@ -180,7 +180,7 @@ export function activePulsationAmp(
 
 /** The perceptual, brightness-driven half of a star's quad size in px.
  *  Split out of `renderedSizeComponents` because the pick path re-solves
- *  it at the eclipse-dimmed magnitude: `star.vert.glsl` folds the dim into
+ *  it at the eclipse-dimmed magnitude: `../../webgpu/star/star-vertex-tsl.ts` folds the dim into
  *  `appMag` before deriving `pxSize`, so a dimmed star draws a smaller
  *  quad and the pick radius has to follow. */
 export function appSizePxForMag(
@@ -199,7 +199,7 @@ export interface RenderedSizeComponents {
   appMag: number;
   appSizePx: number;
   physSizePx: number;
-  /** `physSizePx` BEFORE the viewport-fraction up-clamp. star.vert.glsl
+  /** `physSizePx` BEFORE the viewport-fraction up-clamp. ../../webgpu/star/star-vertex-tsl.ts
    *  divides the point-source peak by the true angular radius and clamps
    *  only afterwards, so a visibility mirror must take this one — the
    *  clamped value over-brightens a star at the zoom floor. */
@@ -216,7 +216,7 @@ export interface PulsationPhase {
 const phaseScratch: PulsationPhase = { amp: 0, cos: 0 };
 
 /** Where a star sits in its pulsation cycle THIS frame. Mirrors
- *  star.vert.glsl: model-clock phase (days since J2000) with the
+ *  ../../webgpu/star/star-vertex-tsl.ts: model-clock phase (days since J2000) with the
  *  uMinPeriodSec anti-strobe floor, φ = 0 at maximum light. */
 export function pulsationPhaseInto(
   catalog: Pick<Catalog, 'periodDays' | 'amplitudeMag'>,
@@ -268,7 +268,7 @@ export function livePulsationRadiusFactor(
 }
 
 // The two size terms behind the GPU-rendered quad size — the CPU mirror
-// of star.vert.glsl's `max(appSize, physSize)` sizing. Consumers that
+// of ../../webgpu/star/star-vertex-tsl.ts's `max(appSize, physSize)` sizing. Consumers that
 // need the disc/glow pass split (physSize vs appSize dominance) read the
 // components; everything sizing against the rendered disc edge takes the
 // max via `renderedSizePx`. If the shader's size computation changes,
@@ -297,13 +297,13 @@ export function renderedSizeComponents(
   appMag += -0.5 * phase.amp * phase.cos;
   const radiusFactor = pulsationRadiusFactor(catalog.pulsRho[idx], phase);
 
-  // Same perceptualDmEff soft-knee + √Δm curve as star.vert.glsl — the
+  // Same perceptualDmEff soft-knee + √Δm curve as ../../webgpu/star/star-vertex-tsl.ts — the
   // shared CPU mirrors in solar-system/perceptual-magnitude.ts. A local
   // reimplementation here previously hard-clamped brightness at sizeMax
   // and undersized the focus ring / pick radius on the brightest stars.
   const appSize = appSizePxForMag(appMag, filter, u.uSizeKnee.value);
 
-  // Up-clamp physSize to the viewport fraction, mirroring star.vert.glsl.
+  // Up-clamp physSize to the viewport fraction, mirroring ../../webgpu/star/star-vertex-tsl.ts.
   const physSizeTrue = physSizePx(R, dCam, viewport.y, fovYRad, radiusFactor);
   out.appMag = appMag;
   out.appSizePx = appSize;
@@ -347,7 +347,7 @@ export function renderedDiscPxAtPeak(args: PeakDiscArgs): number {
   const R = Math.max(catalog.physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC;
   const viewport = u.uViewport.value;
   const peak = physSizePx(R, dCam, viewport.y, u.uFovYRad.value, peakAmplitudeFactor(catalog, idx));
-  // Up-clamp to the viewport fraction, mirroring star.vert.glsl / renderedSizePx.
+  // Up-clamp to the viewport fraction, mirroring ../../webgpu/star/star-vertex-tsl.ts / renderedSizePx.
   return Math.min(peak, ZOOM_FLOOR_FRACTION * Math.min(viewport.x, viewport.y));
 }
 

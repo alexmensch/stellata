@@ -1,28 +1,20 @@
 # The tone-map operator
 
-The curve that maps scene luminance to the canvas, its shared GLSL
-chunk, the fullscreen resolve that runs it, and the CPU mirror plus
-exact inverse. `../README.md` owns the target, the attachments and the
-pass ordering; this folder owns the transfer function they resolve
-through.
+The curve that maps scene luminance to the canvas, the fullscreen
+resolve that runs it, and the CPU mirror plus exact inverse.
+`../README.md` owns the target, the attachments and the pass ordering;
+this folder owns the transfer function they resolve through.
 
-The chunk is a **two-consumer** shape: the fullscreen pass runs it, and
-so does every emitting shader inline whenever `uHdrTarget` is 0 (chart
-mode on either backend, plus the WebGL2 no-float-buffer fallback —
-`../README.md` § The inline operator). One source, so the two can never drift.
+The operator is a **two-consumer** shape: the fullscreen resolve runs it,
+and so does every emitting graph inline whenever `uHdrTarget` is 0 — chart
+mode (`../README.md` § The inline operator). One source, so the two can
+never drift.
 
 ## Files
 
 ```
 src/client/hdr/tonemap/
-  ign.glsl                   Interleaved gradient noise as a shared
-                             chunk (stellata_ign) — § One hash.
-  tonemap.glsl               The operator as a shared chunk. Consumed by
-                             tonemap.frag.glsl and inline by each
-                             emitting shader when the target isn't bound.
-  tonemap.frag.glsl          The fullscreen resolve. Pairs with
-                             ../../util/fullscreen-pass.vert.glsl.
-  tonemap-pure.ts (+ test)   CPU mirror of tonemap.glsl plus the exact
+  tonemap-pure.ts (+ test)   CPU mirror of the operator plus its exact
                              inverse. Vitest-pinned against the design
                              doc's worked values. Also the codebase's
                              shared sRGB transfer pair and Rec.709 luma
@@ -30,9 +22,10 @@ src/client/hdr/tonemap/
                              scripts/ import from it.
 ```
 
-`../emission/chunk-constant-drift.test.ts` and
-`../summation/summation-pure.test.ts` read these `.glsl` files by
-relative path; moving either file means updating those reads.
+The shipped operator is `../../webgpu/tonemap-tsl.ts`, run by
+`../../webgpu/hdr/hdr-pipeline-webgpu.ts`'s resolve; the dither's
+interleaved gradient noise is `../../webgpu/tsl/jitter-tsl.ts`
+(§ One hash). All three import their constants from `tonemap-pure.ts`.
 
 ## Operator
 

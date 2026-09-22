@@ -1,11 +1,11 @@
-// Canonical uniform shape for the perceptual-disc.glsl chunk. See
+// Canonical uniform shape for the ../../webgpu/perceptual-disc-tsl.ts chunk. See
 // ./README.md for the kernel, and ../../solar-system/planets/README.md
 // § The two layers for the planet-glare consumer.
 
 import * as THREE from 'three';
 
 /**
- * Uniforms the shared `perceptual-disc.glsl` chunk reads. The star
+ * Uniforms the shared `../../webgpu/perceptual-disc-tsl.ts` chunk reads. The star
  * pipeline's `sharedUniforms` map (initialised in `stellata.ts`)
  * `satisfies` this shape, and the planet pipeline picks exactly these
  * keys out at material-build time via `pickPerceptualDiscUniforms`.

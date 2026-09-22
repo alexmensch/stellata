@@ -96,7 +96,7 @@ describe('star-physics / fovMinorRad', () => {
   });
 });
 
-// The one CPU mirror of star.vert.glsl's pulsation gate. It exists
+// The one CPU mirror of ../../webgpu/star/star-vertex-tsl.ts's pulsation gate. It exists
 // because there used to be two, and they disagreed: the disc-size mirror
 // honoured iSuppressPulsation, the pick path's bright-extreme reach
 // checked periodDays alone and handed every eclipsing row half an
@@ -341,7 +341,7 @@ describe('star-physics / renderedSizePx', () => {
     const uniforms = makeUniforms();
     const filter = makeFilter();
     // Camera 0.01 AU away → R/d is huge → physSize wins, then hits the
-    // uMaxPhysFrac up-clamp (mirrors star.vert.glsl).
+    // uMaxPhysFrac up-clamp (mirrors ../../webgpu/star/star-vertex-tsl.ts).
     const camPos = new THREE.Vector3(0.01 * AU_PC, 0, 0);
     const got = renderedSizePx({ catalog, idx: 0, camPos, localPositions, uniforms, filter });
     // Reconstruct via the float32-rounded catalog value so the pin is exact.

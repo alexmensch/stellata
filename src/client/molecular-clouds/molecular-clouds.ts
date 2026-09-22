@@ -59,7 +59,7 @@ const RIM_RENDER_ORDER = -1;
  * Molecular-cloud layer — two decoupled components per cloud:
  *
  * - Absorption: per-cloud ellipsoid raymarch of the calibrated Plummer
- *   model (absorption/cloud-absorption.frag.glsl), an alpha-only over that dims the
+ *   model (../webgpu/molecular-clouds/cloud-absorption-tsl.ts), an alpha-only over that dims the
  *   diffuse background. Physics, so it is ALWAYS on in realistic mode —
  *   never declutter-gated — and hidden only in chart mode.
  * - Rim shell: the fresnel-rim orientation silhouette on the per-cloud

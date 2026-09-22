@@ -263,7 +263,7 @@ the same measurement, not the same precedent.
 **How to apply.** `src/client/webgpu/README.md` § Early-z is the
 authority for the star layer's depth-honest design and stays so. Two
 vitest scanners hold the line: `tests/shader-frag-depth.test.ts` allows
-exactly one GLSL file (`star-pipeline/star.frag.glsl`) and fails on any
+exactly one GLSL file (`../src/client/webgpu/star/star-glow-tsl.ts`) and fails on any
 other, and `tests/tsl-frag-depth.test.ts` holds the TSL allowlist at
 empty. Shrinking the GLSL allowlist to empty is the WebGL2 path's
 deletion (stellata-0it.14).

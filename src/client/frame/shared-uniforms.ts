@@ -97,7 +97,7 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     uModelDaysPerRealSec: { value: 1 / 86400 },
     uMinPeriodSec: { value: 4.0 },
 
-    // Star-disc rendering knobs (debug-panel tunable). See star.frag.glsl
+    // Star-disc rendering knobs (debug-panel tunable). See ../webgpu/star/star-glow-tsl.ts
     // for what each parameter shapes; defaults here are the calibrated
     // baseline that ships in production.
     uVisibleThreshold: { value: STAR_RENDER_DEFAULTS.visibleThreshold },

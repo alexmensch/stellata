@@ -107,7 +107,7 @@ the standing perf program is epic `stellata-8cg`. An unmeasured perf claim is a
 hypothesis and must be called one.
 
 **A render-path diff without a `## Perf` section is a blocking finding.** A
-render path is any `.ts`, `.glsl` or `.wgsl` under `src/client/` outside the
+render path is any `.ts` or `.wgsl` under `src/client/` outside the
 folders `RELEASING.md` § Perf pin exempts. Refuse the review until the
 section is there. A `✗` row without an `accepted: <row> <reason>
 (<bead-id>)` line is P1, and the bead must exist. Only the frame row and the

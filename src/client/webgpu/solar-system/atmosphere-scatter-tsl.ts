@@ -1,4 +1,4 @@
-// TSL mirror of atmosphere-scatter.glsl: ray helpers, the analytic shadow
+// TSL mirror of ./atmosphere-scatter-tsl.ts: ray helpers, the analytic shadow
 // span, the skylight model, and the single-scattering march. Model and
 // calibration: ../../solar-system/atmosphere/README.md.
 

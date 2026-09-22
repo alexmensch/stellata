@@ -130,7 +130,7 @@ In chart mode the vertex shader replaces `max(appSize, physSize)` with
 a **linear-in-magnitude** mapping (= log10-in-flux by definition of
 magnitude). **Planet bodies take the identical treatment** (uadc.3
 decision: magnitude disc + star-style name label, no glyph
-vocabulary): `planet.vert.glsl` carries the same chart branch driven
+vocabulary): `../webgpu/solar-system/planet-mesh-tsl.ts` carries the same chart branch driven
 by the same shared uniforms, the reflected-light appMag feeds the same
 formula, and `PlanetBodyField.setMonochrome` swaps blending exactly
 like the star pipeline's `setMonochromeBlend` (the spheroid mesh LOD
@@ -200,7 +200,7 @@ inherits no exposure state at all.
 
 ## Chart treatments — Milky Way isobar + cloud outlines
 
-- **Milky Way** (`milkyway.frag.glsl`): an `if (uChartIsobar > 0.5)`
+- **Milky Way** (`../webgpu/milkyway/milkyway-band-tsl.ts`): an `if (uChartIsobar > 0.5)`
   branch renders a single thin line, `line = 1 - smoothstep(fw*0.5,
   fw*1.5, |appMag - uLimitMag|)` where `fw = fwidth(appMag)`. The
   contour tracks "where the integrated brightness would equal the
@@ -208,7 +208,7 @@ inherits no exposure state at all.
   moves through the band like a topographic line. Discarded outside the
   line so depth stays clean. Solid black ink (`uMonoColor`), toggled by
   `MilkyWay.setIsobar` with the shared `uLimitMag` uniform reference.
-- **Molecular clouds** (`../molecular-clouds/cloud-rim.frag.glsl`): the
+- **Molecular clouds** (`../webgpu/molecular-clouds/cloud-rim-tsl.ts`): the
   rim-shell material's chart branch draws a **stippled silhouette
   outline** of each cloud's isosurface mesh — the SkyAtlas 2000 nebula
   convention — via `MolecularClouds.setMonochrome` (the registry

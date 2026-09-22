@@ -29,7 +29,7 @@ src/client/webgpu/fresnel-shell/
 ## No vertex stage
 
 `NodeMaterial`'s own model-view-projection is exactly what
-`fresnel-shell.vert.glsl` does, and both its varyings are TSL built-ins —
+`./fresnel-shell-tsl.ts` does, and both its varyings are TSL built-ins —
 `normalView` and `positionView`. So the material sets `fragmentNode`
 alone, the same reasoning as three of the five solar-system surfaces
 (`../solar-system/README.md` § Vertex stages).

@@ -1,4 +1,4 @@
-// planet-rings.frag.glsl on the TSL path: the radial strip, the lit and
+// ./planet-rings-tsl.ts on the TSL path: the radial strip, the lit and
 // transmitted faces, and the analytic body shadow toward the host.
 // Physics: ../../solar-system/planets/rings/README.md.
 

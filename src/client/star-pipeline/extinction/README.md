@@ -173,7 +173,7 @@ strength changes never invalidate the cache.
 ## Reading A_V back on the CPU
 
 `readAvMag(idx)` returns one star's raw A_V out of the cache texel
-`star.vert.glsl` fetches — **synchronously, on WebGL2 only**. WebGPU has
+`../../webgpu/star/star-vertex-tsl.ts` fetches — **synchronously, on WebGL2 only**. WebGPU has
 no synchronous readback, so its implementation answers out of a CPU
 mirror of the whole buffer that the pointer events preceding a pick stage
 for it (`warmAvReadback`), and null until one lands; the caveats below

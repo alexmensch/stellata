@@ -224,7 +224,7 @@ mesh and the atmosphere shell call `interleavedGradientNoiseTsl` like
 every other layer, and `webgpu/solar-system/tsl-drift.test.ts` pins the
 helper's name in their place while still forbidding the numbers as
 literals. The GLSL side is the registered `stellata_ign` chunk
-(`../../hdr/tonemap/ign.glsl`), included by the operator, both cloud
+(`./jitter-tsl.ts`), included by the operator, both cloud
 raymarches and the atmosphere integrator; the two stages that reach it
 down both paths at once are what its include guard is for.
 

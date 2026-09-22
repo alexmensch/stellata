@@ -4,7 +4,7 @@ import {
 } from './star-pass';
 
 describe('star pass identities', () => {
-  // The numeric identities are the shader contract: star.frag.glsl's
+  // The numeric identities are the shader contract: ../webgpu/star/star-glow-tsl.ts's
   // uRenderMode comparisons read literal 0/1/2. One pin here; every other
   // test imports the constants.
   it('match the uRenderMode values the GLSL shaders compare against', () => {

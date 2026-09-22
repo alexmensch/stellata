@@ -7,17 +7,6 @@ into it. `docs/science-hdr-pipeline.md` § 1 is the design gate.
 
 ```
 src/client/hdr/emission/
-  emission.glsl              The unit: magnitude → linear luminance, the
-                             point-source peak rule, the extended-source
-                             surface-brightness rule, the footprint
-                             softening (§ Footprint), and the plate scale /
-                             extended threshold recovered from the two
-                             solid angles.
-  extended-emitter.glsl      The write tail a volumetric emitter shares:
-                             gain, clamp, every attachment, and the inline
-                             operator off-target. Composes the unit and the
-                             operator, so it is the only include a
-                             raymarching stage needs (§ Extended sources).
   density0-solver-pure.ts    The ρ₀ solve both volumetric emitters share:
     (+ test)                 flux number, Gauss–Legendre quadrature over a
                              truncated ellipsoid, ρ₀ = d²·F/G
@@ -34,14 +23,16 @@ src/client/hdr/emission/
                              plus the constrained solve that turns a
                              galaxy's published integrated index into its
                              disc's (§ Population colours).
-  chunk-constant-drift.test  Pins the numbers the surviving GLSL chunks
-                             duplicate
-                             from TypeScript, and the include guards.
 ```
+
+The shipped graphs are `../../webgpu/emission-tsl.ts` (the unit) and
+`../../webgpu/extended-emitter-tsl.ts` (the write tail a volumetric
+emitter shares). Both import their constants from `emission-pure.ts`, so
+neither can drift from the mirror.
 
 ## Unit — what an emitting layer writes
 
-`emission.glsl` (`stellata_hdr_emission`) is the contract.
+`../../webgpu/emission-tsl.ts` (`stellata_hdr_emission`) is the contract.
 `L = uExposure · 10^(−0.4·m)` from a physical V-band apparent magnitude,
 clamped at `LUMA_CEIL` (4096) before the write.
 `stellataPointSourcePeak` adds the flux-vs-surface-brightness rule for
@@ -214,7 +205,7 @@ that chunk owns it: both gains, the clamp at `LUMA_CEIL`, every attachment,
 and off-target the undithered operator. `stellataEmitNothing` is the miss
 case. Both take the attachments as `out` params, making "attachments 1 and 2
 have no default, so every branch must write them" one decision rather than
-one per early return. `milkyway.frag.glsl` keeps its own magnitude step
+one per early return. `../../webgpu/milkyway/milkyway-band-tsl.ts` keeps its own magnitude step
 for the chart isobar, which would contour surface brightness against
 `stellataExtendedThresholdSb`, the inverse of the same pair — so contour
 and emission could not disagree about where threshold is. **That contour

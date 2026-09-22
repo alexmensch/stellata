@@ -1,5 +1,5 @@
 // TSL mirror of stellata_dust_raymarch (../../star-pipeline/extinction/
-// dust-raymarch.glsl): the camera→star Edenhofer march returning raw
+// ./dust-raymarch-tsl.ts): the camera→star Edenhofer march returning raw
 // physical A_V, shared by the prepass and the star vertex fallback.
 
 import {

@@ -82,7 +82,7 @@ different pixel ratios.
 
 **sRGB is not a 2.2 power law**, and treating it as one is the trap this
 section is built to avoid. It is a 2.4 exponent on a shifted curve with a
-linear toe, so solving `../hdr/tonemap/tonemap.glsl`'s actual encode for linear
+linear toe, so solving `../webgpu/tonemap-tsl.ts`'s actual encode for linear
 0.5 gives code value **188** — between the 2.2 stop (186) and the 2.4 one
 (191), equal to neither. A screen that marks γ2.2 as the target therefore
 tells a correctly behaving display that it is wrong.

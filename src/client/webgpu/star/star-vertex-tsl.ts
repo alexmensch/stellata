@@ -307,7 +307,7 @@ export function buildStarVertexNode(
       : int(source.survivors.element(uint(source.listBase).add(instanceIndex)));
     const localPos = tables.position(self).toVar();
 
-    // The off-screen clip sentinel of star.vert.glsl's early returns;
+    // The off-screen clip sentinel of ./star-vertex-tsl.ts's early returns;
     // TSL has no value-carrying return, so the draw path assigns over it.
     const clipOut = vec4(2.0, 2.0, 2.0, 1.0).toVar();
 
