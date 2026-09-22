@@ -75,17 +75,14 @@ attribute writers here.
   `../webgpu/star/star-tables.ts` forwards.
 - `star-blend.ts` (+ test) — `applyDiscBlendDefaults`,
   `applyGlowBlendDefaults`, `applyMonochromeBlend` and the
-  `applyChartBlendSwap` pair helper over them. Renderer-neutral: every
-  field they set is on `THREE.Material`, so the TSL star layer, the
-  planet glare and the planet body field share them
-  (§ Blend states).
+  `applyChartBlendSwap` pair helper over them. Every field they set is on
+  `THREE.Material`, so the star layer and the planet glare share them.
 - `star-quad.ts` — `STAR_QUAD_CORNERS` / `STAR_QUAD_INDEX`, the unit
   square every star-shaped emitter's geometry expands.
 - `star-pass.ts` (+ test) — the pass identities (`STAR_PASS_GLOW` /
-  `STAR_PASS_DISC` / `STAR_PASS_CORE_MASK`, = the shaders' `uRenderMode`
-  values) and `colourPassFor`, the size-terms → colour-pass routing the
-  pick mirror shares. The WebGPU port keys its compile-time pass
-  specialization on the same constants. `starPassRouting` reads the
+  `STAR_PASS_DISC` / `STAR_PASS_CORE_MASK`) and `colourPassFor`, the
+  size-terms → colour-pass routing the pick mirror shares. The vertex
+  stage's compile-time pass specialization keys on the same constants. `starPassRouting` reads the
   split both ways — undimmed and dimmed — for the eclipse debug HUD
   (`../debug/README.md` § Eclipse routing); nothing in the render path
   calls it.
@@ -117,10 +114,10 @@ instance in the vertex shader from the star's apparent magnitude:
 vPeakL = stellataPointSourcePeak(uExposure, appMag, 0.5 * physSize)
 ```
 
-The footprint math is untouched, but its *meaning* changed: the √Δm
-appSize curve and the plate-scale exaggeration `K` are now purely a
-display kernel normalised to peak 1 (`perceptual-disc/README.md` § Star intensity profile) — they
-size the star, they no longer encode how bright it is. **`K` therefore
+The √Δm appSize curve and the plate-scale exaggeration `K` are purely a
+display kernel normalised to peak 1 (`perceptual-disc/README.md` § Star
+intensity profile) — they size the star and do not encode how bright it
+is. **`K` therefore
 stops being a calibration knob**, trading only legibility against how
 crowded a dense field looks.
 
@@ -231,8 +228,8 @@ Rendering is **three passes over the same instanced geometry**:
 - **Disc pass** (`renderOrder = 0`). Stars where `vPhysRatio ≥ 0.5` —
   i.e. the physical-size term dominates the final
   `max(appSize, physSize)`. Per-channel `MaxEquation` blend
-  (`CustomBlending` with `OneFactor` × `OneFactor`) + `depthTest` +
-  `depthWrite`. The four blend fields live in one helper,
+  (`CustomBlending` with `OneFactor` × `OneFactor`) + `depthTest`, and
+  no `depthWrite`. The blend and depth state lives in one helper,
   `applyDiscBlendDefaults()`, called both at construction and on
   chart-mode → colour-mode swap-back, so the two sites can't drift.
   **The pass writes no depth of its own**: the core-mask draw already
@@ -298,10 +295,9 @@ held pinned to the source star throughout an observe-launched warp so the
 reorient phase doesn't flash the focal disc as the camera pulls away; the
 pick path mirrors it (`../camera/controls/star-pick-visibility-pure.ts`).
 
-`iCompositeSuppress` (float, per-instance) collapses a star's disc
-(mode 1) and core depth-mask (mode 2) passes — but not the additive
-glow (mode 0) — under the same clip-space-sentinel mechanism, gated on
-`uRenderMode`. Written by `BinaryOrbitField` (see
+`iCompositeSuppress` (float, per-instance) collapses a star's disc and
+core depth-mask passes — but not the additive glow — under the same
+clip-space-sentinel mechanism, gated on the compile-time pass. Written by `BinaryOrbitField` (see
 `../binaries/README.md`) for the dimmer member of a sub-pixel binary
 pair: the two near-coincident point sources sum brightness correctly
 under AdditiveBlending in the glow pass, and dropping the opaque disc
@@ -339,8 +335,8 @@ shell when the focused star qualifies; the engage / disengage rules +
 load-bearing `controls.target` invariant are managed in the focus
 controller.
 
-Chart mode swaps both star materials to `MultiplyBlending` + disables
-depth for an ink-on-paper look against the light canvas, and replaces
+Chart mode swaps the disc and glow materials to `MultiplyBlending` +
+disables depth for an ink-on-paper look against the light canvas, and replaces
 the super-Gaussian profile with flat hard-edged discs sized linearly
 by magnitude. It is non-photometric and bypasses the HDR seam
 entirely, so it emits no luminance (`../hdr/README.md` § Chart mode).

@@ -16,7 +16,7 @@ import { STAR_QUAD_INDEX_COUNT, buildStarGeometries, type StarGeometries } from 
 import { StarTables, type StarLayerSources } from './star-tables';
 import { applyChartBlendSwap } from '../../star-pipeline/star-blend';
 import { buildStarCoreMaskMaterial } from './star-core-mask-tsl';
-import { applyStarDiscTslBlend, buildStarDiscMaterial } from './star-disc-tsl';
+import { buildStarDiscMaterial } from './star-disc-tsl';
 import { buildStarGlowMaterial } from './star-glow-tsl';
 import { StarLocalMirrorTsl } from './star-local-mirror-tsl';
 import type { MrtEmitterMaterial } from '../hdr/mrt-material';
@@ -142,16 +142,10 @@ export class StarLayer {
     this.coreMaskMesh.visible = on;
   }
 
-  /** Chart mode's blend swap, over the same pair helper `StarPipeline`'s
-   *  `setMonochromeBlend` takes — only the disc-defaults argument differs.
-   *  `uMonochrome` is a shared node the shell writes; swap-back goes
-   *  through the construction helper, so the two cannot drift
-   *  (star-disc-tsl.ts § applyStarDiscTslBlend). The core mask takes no
-   *  BLEND swap (colour writes are off, so its blend state is
-   *  unobservable) even though it does take the MRT one above. */
+  /** The core mask takes no blend swap (colour writes are off, so its
+   *  blend state is unobservable) even though it does take the MRT one. */
   setMonochrome(on: boolean): void {
-    applyChartBlendSwap(
-      this.discMaterial, this.glowMaterial, on, applyStarDiscTslBlend);
+    applyChartBlendSwap(this.discMaterial, this.glowMaterial, on);
   }
 
   /** The frame's compaction: forward this frame's attribute writes onto the

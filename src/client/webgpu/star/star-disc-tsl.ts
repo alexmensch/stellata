@@ -4,7 +4,6 @@
 
 import { Discard, Fn, step } from 'three/tsl';
 import { NodeMaterial, type Node } from 'three/webgpu';
-import type * as THREE from 'three';
 import { applyDiscBlendDefaults } from '../../star-pipeline/star-blend';
 import { STAR_PASS_DISC } from '../../star-pipeline/star-pass';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
@@ -15,19 +14,6 @@ import {
 import {
   buildStarVaryings, buildStarVertexNode, type StarTslDeps, type StarVertexSource,
 } from './star-vertex-tsl';
-
-/** The disc draw's calibrated blend state — construction AND chart-mode
- *  swap-back both go through here, exactly as the GLSL pipeline's two
- *  sites share `applyDiscBlendDefaults`. The `depthWrite` override is what
- *  makes it more than that helper: the core mask stamped every core at
- *  renderOrder −4, so a second write here would be the same value, and a
- *  halo must not write at all (README.md § The disc draw writes no
- *  depth). Losing it on swap-back would put the halo's depth back. */
-export function applyStarDiscTslBlend(m: THREE.Material) {
-  applyDiscBlendDefaults(m);
-  m.transparent = true;
-  m.depthWrite = false;
-}
 
 export function buildStarDiscMaterial(
   deps: StarTslDeps,
@@ -54,7 +40,7 @@ export function buildStarDiscMaterial(
   const material = new NodeMaterial();
   material.name = source.kind === 'mirror' ? 'star-disc-local-tsl' : 'star-disc-tsl';
   material.vertexNode = buildStarVertexNode(deps, STAR_PASS_DISC, v, source);
-  applyStarDiscTslBlend(material);
+  applyDiscBlendDefaults(material);
   return finishStarColourMaterial(
     material, deps.u, v, gates, () => discPassEntryGate(v), kernel, coreMask);
 }

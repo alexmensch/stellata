@@ -3,13 +3,17 @@
 
 import * as THREE from 'three';
 
+// No depth write: the core mask already stamped every core, and a halo
+// must not write at all — ../webgpu/star/README.md § The disc draw writes
+// no depth.
 export function applyDiscBlendDefaults(m: THREE.Material) {
+  m.transparent = true;
   m.blending = THREE.CustomBlending;
   m.blendSrc = THREE.OneFactor;
   m.blendDst = THREE.OneFactor;
   m.blendEquation = THREE.MaxEquation;
   m.premultipliedAlpha = false;
-  m.depthWrite = true;
+  m.depthWrite = false;
   m.depthTest = true;
 }
 
@@ -35,27 +39,15 @@ export function applyMonochromeBlend(m: THREE.Material) {
   m.depthTest = false;
 }
 
-/**
- * The disc + glow pair's whole chart-mode swap, both directions.
- * `discDefaults` is a parameter because the TSL disc must come back with
- * `depthWrite` off (`../webgpu/star/star-disc-tsl.ts`), which
- * `applyDiscBlendDefaults` alone does not give it.
- *
- * Both materials need `needsUpdate` — the blend state is compiled into
- * the program, and a swap that skips it renders with the previous mode's
- * blending.
- */
-export function applyChartBlendSwap(
-  disc: THREE.Material,
-  glow: THREE.Material,
-  on: boolean,
-  discDefaults: (m: THREE.Material) => void,
-) {
+/** Both materials need `needsUpdate` — the blend state is compiled into
+ *  the pipeline, and a swap that skips it renders with the previous mode's
+ *  blending. */
+export function applyChartBlendSwap(disc: THREE.Material, glow: THREE.Material, on: boolean) {
   if (on) {
     applyMonochromeBlend(disc);
     applyMonochromeBlend(glow);
   } else {
-    discDefaults(disc);
+    applyDiscBlendDefaults(disc);
     applyGlowBlendDefaults(glow);
   }
   disc.needsUpdate = true;

@@ -7,18 +7,10 @@ import {
   applyMonochromeBlend,
 } from './star-blend';
 
-// Pin the disc-pass blend equation across the helper's lifecycle.
-// PR #25 had to update two parallel sites for the AddEquation →
-// MaxEquation switch (constructor + chart-mode swap-back). The helper
-// now owns both; this test guards against future drift between the
-// constructor's intent and what ends up on the material after a
-// chart-mode toggle.
 describe('applyDiscBlendDefaults', () => {
-  function makeMaterial(): THREE.ShaderMaterial {
-    return new THREE.ShaderMaterial({});
-  }
+  const makeMaterial = () => new THREE.MeshBasicMaterial();
 
-  it('writes the four CustomBlending fields + depth flags', () => {
+  it('writes the four CustomBlending fields, and tests depth without writing it', () => {
     const m = makeMaterial();
     applyDiscBlendDefaults(m);
     expect(m.blending).toBe(THREE.CustomBlending);
@@ -26,7 +18,7 @@ describe('applyDiscBlendDefaults', () => {
     expect(m.blendDst).toBe(THREE.OneFactor);
     expect(m.blendEquation).toBe(THREE.MaxEquation);
     expect(m.premultipliedAlpha).toBe(false);
-    expect(m.depthWrite).toBe(true);
+    expect(m.depthWrite).toBe(false);
     expect(m.depthTest).toBe(true);
   });
 
@@ -36,11 +28,11 @@ describe('applyDiscBlendDefaults', () => {
     // MultiplyBlending with depth off — the toggle-back must restore the
     // colour-mode defaults.
     m.blending = THREE.MultiplyBlending;
-    m.depthWrite = false;
+    m.depthWrite = true;
     m.depthTest = false;
     applyDiscBlendDefaults(m);
     expect(m.blending).toBe(THREE.CustomBlending);
-    expect(m.depthWrite).toBe(true);
+    expect(m.depthWrite).toBe(false);
     expect(m.depthTest).toBe(true);
   });
 
@@ -60,16 +52,8 @@ describe('applyDiscBlendDefaults', () => {
   });
 });
 
-// three.js REFUSES MultiplyBlending on a material with
-// premultipliedAlpha = false: it logs, issues no blendFunc at all, and
-// still caches the swap as applied, so the draw silently inherits the
-// previous material's blend state. That shipped as chart-mode star discs
-// rendering white when chart was toggled on from observe, while entering
-// chart directly on load happened to inherit a benign state.
 describe('applyMonochromeBlend', () => {
-  function makeMaterial(): THREE.ShaderMaterial {
-    return new THREE.ShaderMaterial({});
-  }
+  const makeMaterial = () => new THREE.MeshBasicMaterial();
 
   it('sets premultipliedAlpha alongside MultiplyBlending', () => {
     const m = makeMaterial();
@@ -96,20 +80,17 @@ describe('applyMonochromeBlend', () => {
   });
 });
 
-// The pair swap both backends take. `discDefaults` is the only argument
-// because it is the only thing that differs: the GLSL disc restores
-// depthWrite, the TSL disc must not (../webgpu/star/star-disc-tsl.ts).
 describe('applyChartBlendSwap', () => {
   const pair = () => ({
-    disc: new THREE.ShaderMaterial({}),
-    glow: new THREE.ShaderMaterial({}),
+    disc: new THREE.MeshBasicMaterial(),
+    glow: new THREE.MeshBasicMaterial(),
   });
 
   it('takes both materials into ink, and flags both for recompile', () => {
     const { disc, glow } = pair();
     disc.needsUpdate = false;
     glow.needsUpdate = false;
-    applyChartBlendSwap(disc, glow, true, applyDiscBlendDefaults);
+    applyChartBlendSwap(disc, glow, true);
     for (const m of [disc, glow]) {
       expect(m.blending).toBe(THREE.MultiplyBlending);
       expect(m.premultipliedAlpha).toBe(true);
@@ -117,28 +98,15 @@ describe('applyChartBlendSwap', () => {
     }
   });
 
-  it('restores the glow default and defers the disc to its argument', () => {
+  // Losing the disc's depthWrite = false on swap-back would put the halo's
+  // depth write back and cost all three pipelines their early-z.
+  it('restores both colour-mode defaults on the way back', () => {
     const { disc, glow } = pair();
-    applyChartBlendSwap(disc, glow, true, applyDiscBlendDefaults);
-    applyChartBlendSwap(disc, glow, false, applyDiscBlendDefaults);
-    expect(disc.blending).toBe(THREE.CustomBlending);
-    expect(disc.depthWrite).toBe(true);
-    expect(glow.blending).toBe(THREE.AdditiveBlending);
-  });
-
-  // The TSL disc's depthWrite override is the whole reason the helper is
-  // parameterised rather than hardcoding applyDiscBlendDefaults: losing
-  // it on swap-back puts the halo's depth write back and defeats early-z.
-  it('honours a disc-defaults argument that overrides the shared helper', () => {
-    const { disc, glow } = pair();
-    const tslDefaults = (m: THREE.Material) => {
-      applyDiscBlendDefaults(m);
-      m.depthWrite = false;
-    };
-    applyChartBlendSwap(disc, glow, true, tslDefaults);
-    applyChartBlendSwap(disc, glow, false, tslDefaults);
+    applyChartBlendSwap(disc, glow, true);
+    applyChartBlendSwap(disc, glow, false);
     expect(disc.blending).toBe(THREE.CustomBlending);
     expect(disc.blendEquation).toBe(THREE.MaxEquation);
     expect(disc.depthWrite).toBe(false);
+    expect(glow.blending).toBe(THREE.AdditiveBlending);
   });
 });
