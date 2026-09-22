@@ -166,7 +166,7 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
     survivors: async () => {
       const report = await readSurvivorReport(stellata);
       if (report === null) {
-        console.warn('survivors: no compaction kernel — this is a WebGL2 boot');
+        console.warn('survivors: the star layer is disposed — no compaction dispatch to read');
         return null;
       }
       console.log(formatSurvivorReport(report));

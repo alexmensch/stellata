@@ -61,8 +61,7 @@ export function formatSurvivorReport(r: SurvivorReport): string {
   ].join('\n');
 }
 
-/** Null on a WebGL2 boot, which lists no survivors — its three draws are
- *  priced at the whole catalogue. */
+/** Null once the star layer is disposed. */
 export async function readSurvivorReport(stellata: Stellata): Promise<SurvivorReport | null> {
   const counts = await stellata.readSurvivorCounts();
   if (counts === null) return null;
