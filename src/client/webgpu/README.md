@@ -10,20 +10,17 @@ members reach a browser that cannot run it (§ Import boundary).
 
 ```
 src/client/webgpu/
-  renderer-flag.ts (+ test)         Parse #renderer=webgpu|webgl2 and the
-                                    #webgpu-gate=<verdict> dev switch from
-                                    the URL fragment.
   boot-route.ts (+ test)            resolveBootRoute — gate page or
-                                    renderer, off the fragment and the
-                                    capability probe. In the entry
+                                    renderer, off the capability probe and
+                                    the gate's dev switch. In the entry
                                     bundle (§ Import boundary).
   chrome-lines/                     The line overlays' strokes — solid
                                     and dashed, over three's own line
                                     fragment — its own README.
   gate/                             The user-facing "requires WebGPU" page,
-                                    shown on a failing capability verdict.
-                                    Outside the import boundary by
-                                    necessity — its own README.
+                                    shown on a failing capability verdict,
+                                    and its dev switch. Outside the import
+                                    boundary by necessity — its own README.
   seam.ts                           WebGpuSeam — the type-only contract the
                                     integration shell holds on this boot.
                                     StellataRenderer union type.
@@ -100,39 +97,26 @@ src/client/webgpu/
 
 ## The renderer is WebGPU
 
-`resolveBootRoute` settles every load before the catalogue is fetched:
-no fragment boots WebGPU, and a browser failing `detectWebGpuSupport`
-gets the gate page instead of a dead canvas (`gate/README.md`). A
-`bootWebGpu` that returns null after a *passing* probe — `init()`
-rejected, the renderer dropped `reversedDepthBuffer`, or the device
-allows no vertex-stage storage buffer (`tsl/README.md` § Storage
-attributes) — lands on the same page with the `no-adapter` advice. Each
-of the three is a capability the probe's `requestAdapter` cannot see, so
-refusing the boot is the only thing between them and a black canvas. **There is no automatic WebGL2
-fallback**; the only route to that renderer is naming it.
+**There is one renderer, and no fallback.** `resolveBootRoute` settles
+every load before the catalogue is fetched: a browser passing
+`detectWebGpuSupport` boots, and one failing it gets the gate page
+instead of a dead canvas (`gate/README.md`). A `bootWebGpu` that returns
+null after a *passing* probe — `init()` rejected, the renderer dropped
+`reversedDepthBuffer`, or the device allows no vertex-stage storage
+buffer (`tsl/README.md` § Storage attributes) — lands on the same page
+with the `no-adapter` advice. Each of the three is a capability the
+probe's `requestAdapter` cannot see, so refusing the boot is the only
+thing between them and a black canvas.
 
-`#renderer=webgl2` is the escape hatch, and it is undocumented on
-purpose: rollback is flipping one default back, not asking users to edit
-a URL. It skips the probe entirely, so it settles on a browser that
-would fail one.
-
-Both spellings ride the **URL fragment**, read once at boot by
-`main.ts`. Why the fragment: `util/url-state`'s writers replaceState the
-address bar on every state change, dropping query and fragment alike —
-they re-append `location.hash` verbatim (`util/url-state/README.md`
-§ Transport), and the fragment is the one slot that is *not* URL state,
-so the renderer choice costs url-state no knowledge of it. A query param
-would re-introduce query emission into a transport that deliberately
-retired it, and `resetJunkUrl` would need a renderer-aware exemption.
-
-Consequences that make the A/B smoke work:
-
-- Composes with a share blob: `/v/<blob>/#renderer=webgl2`, and with
-  the legacy query form `/?v=<blob>#renderer=webgl2`.
-- Survives refresh, camera moves, share-link apply, and the junk-URL
-  reset.
-- Parity smoke is "same `/v/<blob>/`, add or drop the fragment, reload"
-  — editing only the hash does not reload; hit reload yourself.
+The gate's `#webgpu-gate` dev switch is the only fragment the boot reads,
+and it rides the **URL fragment** for a reason worth keeping if anything
+else ever joins it: `util/url-state`'s writers replaceState the address
+bar on every state change, dropping query and fragment alike — they
+re-append `location.hash` verbatim (`util/url-state/README.md`
+§ Transport), and the fragment is the one slot that is *not* URL state.
+A query param would re-introduce query emission into a transport that
+deliberately retired it, and `resetJunkUrl` would need an exemption for
+it.
 
 ## What this boot draws
 
@@ -319,21 +303,25 @@ dispatches on `.isX` flags rather than instanceof, and the spike ran a
 `'three'`-built LUT texture through both browsers — but treat any
 "object not recognised" oddity as a cross-copy suspect first.
 
-## Import boundary — nothing WebGPU in the WebGL2 bundle
+## Import boundary — nothing WebGPU in the entry bundle
 
 `three/webgpu` (and `three/tsl`, which re-exports its node system) is a
 separate ~1 MB entry that duplicates three's core, and no tree-shaking
-removes an eagerly-imported renderer. The rule:
+removes an eagerly-imported renderer. **The split survives having one
+renderer**: it is what the gate is worth. A browser that fails the probe
+gets the page without fetching a megabyte of renderer it cannot run, and
+that is the same saving the probe-before-catalogue ordering buys. The
+rule:
 
 - **Value imports of `three/webgpu` / `three/tsl` live only in this
   folder**, in modules reachable solely through `main.ts`'s
   `import('./webgpu/boot-webgpu')` (Vite code-splits that whole graph
-  into an async chunk the WebGL2 boot never fetches).
+  into an async chunk a gated browser never fetches).
 - Modules outside this folder may import from it **statically only for
-  `renderer-flag.ts`, `boot-route.ts`, `gate/` and type-only imports**
-  (`import type` is erased at compile time and costs nothing). Those
-  three run on a browser with no WebGPU at all, and the boundary test
-  guards each against acquiring a `three/webgpu` import.
+  `boot-route.ts`, `gate/` and type-only imports** (`import type` is
+  erased at compile time and costs nothing). Both run on a browser with
+  no WebGPU at all, and the boundary test guards each against acquiring a
+  `three/webgpu` import.
 - A port child's TSL layer module is therefore also loaded dynamically
   — construct it through the seam, never `import` it from `stellata.ts`.
 

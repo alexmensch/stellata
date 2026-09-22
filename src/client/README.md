@@ -113,7 +113,7 @@ themselves.
   `webgpu/gate/` and `webgpu/boot-route.ts` are the exceptions to the
   folder's dynamic-import boundary: the "requires WebGPU" page has to
   render where WebGPU does not exist, so `main.ts` imports both
-  statically. `#renderer=webgl2` is the undocumented escape hatch.
+  statically. There is no fallback renderer.
 
 ## Boot in two waves
 

@@ -15,18 +15,17 @@ src/client/webgpu/gate/
   gate-page.ts (+ test)          showWebGpuGate — builds and mounts the
                                  takeover. Styles: ../../styles.css
                                  `.webgpu-gate*`.
+  gate-override.ts (+ test)      parseGateOverride — the #webgpu-gate dev
+                                 switch, off the URL fragment
+                                 (§ The dev switch).
 ```
-
-The `#webgpu-gate` dev switch is **not** in this folder: it is fragment
-parsing, so `parseGateOverride` sits beside `parseRendererFlag` in
-`../renderer-flag.ts` and is tested there.
 
 ## Not behind the import boundary
 
 This folder holds **no** `three/webgpu` value import and must never gain
 one. The gate has to render on a browser with no WebGPU at all, so it sits
 in the entry bundle and `main.ts` imports it statically — the same
-exemption `renderer-flag.ts` has (`../README.md` § Import boundary).
+exemption `../boot-route.ts` has (`../README.md` § Import boundary).
 `detectWebGpuSupport` therefore declares the slice of `navigator.gpu` it
 touches structurally rather than importing the typings.
 
@@ -127,9 +126,8 @@ so the async chunk and the adapter init cost the loading screen nothing,
 but the verdict still lands last. The probe is what spares a browser the
 download; this path was never going to.
 
-There is no WebGL2 fallback on either route. `#renderer=webgl2` reaches
-that renderer and is undocumented (`../README.md` § The renderer is
-WebGPU).
+There is no fallback renderer on either route (`../README.md` § The
+renderer is WebGPU).
 
 ## The dev switch
 
