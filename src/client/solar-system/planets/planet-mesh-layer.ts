@@ -68,6 +68,7 @@ import {
 } from '../atmosphere/atmosphere-scattering-pure';
 import type { EmitterMaterial } from '../../scene/emitter-material';
 import type { SolarSystemMaterials } from '../materials/solar-system-materials';
+import type { WebGpuSeam } from '../../webgpu/seam';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
@@ -262,6 +263,7 @@ export class PlanetMeshLayer {
   private readonly loader = new THREE.ImageBitmapLoader()
     .setOptions({ ...TEXTURE_DECODE_OPTIONS });
   private readonly requestRender: (reason: string) => void;
+  private readonly upload: WebGpuSeam['uploadTexture'];
   /** The texture cap and the resident budget; `stepDownTextureLimits` lowers
    *  both. */
   private limits: TextureLimits;
@@ -303,9 +305,11 @@ export class PlanetMeshLayer {
     hdr: HdrEmitterUniforms & { uPixelRatio?: THREE.IUniform<number> },
     requestRender: (reason: string) => void,
     materials: (placeholder: THREE.Texture) => SolarSystemMaterials,
+    upload: WebGpuSeam['uploadTexture'],
     limits: TextureLimits = INITIAL_TEXTURE_LIMITS,
   ) {
     this.field = field;
+    this.upload = upload;
     this.textureBaseUrl = textureBaseUrl;
     this.requestRender = requestRender;
     this.limits = limits;
@@ -1151,11 +1155,21 @@ export class PlanetMeshLayer {
         tex.version = tex.id + 1;
         const bytesPerTexel =
           texelBytes(format ?? THREE.RGBAFormat, THREE.UnsignedByteType) ?? 4;
-        this.resolveTexture(key, {
-          state: 'ready',
-          tex,
-          bytes: textureBytes(bitmap.width, bitmap.height, bytesPerTexel),
-          lastFrame: this.frame,
+        const bytes = textureBytes(bitmap.width, bitmap.height, bytesPerTexel);
+        // Bound only once the upload is known clean —
+        // ../../webgpu/README.md § Out of memory.
+        this.upload(tex, (uploaded) => {
+          // False once dispose has cleared the entry under the upload.
+          const awaited = this.textures.get(key)?.state === 'loading';
+          if (awaited && uploaded) {
+            this.resolveTexture(key, { state: 'ready', tex, bytes, lastFrame: this.frame });
+            return;
+          }
+          tex.dispose();
+          bitmap.close();
+          if (!awaited) return;
+          this.resolveTexture(key, { state: 'missing' });
+          this.stepDownTextureLimits();
         });
       },
       undefined,

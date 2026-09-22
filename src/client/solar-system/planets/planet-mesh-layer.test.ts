@@ -28,6 +28,9 @@ import { DEPTH_MASK_RENDER_ORDER } from '../../scene/render-order';
 const read = (name: string) =>
   readTslSource(new URL(name, import.meta.url));
 
+const acceptUpload = (_texture: THREE.Texture, settled: (uploaded: boolean) => void) =>
+  settled(true);
+
 // Every surface this layer draws alpha-composites in FRONT of the volumetric
 // emitters, which live in attachment 2 until the resolve convolves them
 // (../../hdr/summation/README.md). Depth cannot help: the emitters drew first
@@ -80,6 +83,7 @@ describe('the mesh stand-in is filterable', () => {
         handed.push(placeholder);
         return fakeSolarSystemMaterials();
       },
+      acceptUpload,
     );
     expect(handed).toHaveLength(1);
     const [standIn] = handed;
@@ -157,6 +161,8 @@ function harness(
     hostPlanetOf: () => null,
   } as unknown as PlanetBodyField;
   const meshSurfaces: EmitterMaterial[] = [];
+  let uploads: 'accept' | 'refuse' | 'defer' = 'accept';
+  const deferredUploads: ((uploaded: boolean) => void)[] = [];
   const layer = new PlanetMeshLayer(
     field,
     '/',
@@ -173,6 +179,10 @@ function harness(
         },
       };
     },
+    (_texture, settled) => {
+      if (uploads === 'defer') deferredUploads.push(settled);
+      else settled(uploads === 'accept');
+    },
     { budgetBytes, maxTextureSize },
   );
   const camera = new THREE.PerspectiveCamera();
@@ -182,6 +192,12 @@ function harness(
     loads,
     /** Body mesh surfaces, in the order the bodies first drew. */
     meshSurfaces,
+    /** How the GPU answers each upload from now on; 'defer' holds the answer
+     *  in `deferredUploads` until the test settles it. */
+    setUploads(mode: 'accept' | 'refuse' | 'defer'): void {
+      uploads = mode;
+    },
+    deferredUploads,
     /** One frame, with each body at the given projected diameter. */
     frame(sizes: number[]): void {
       physPx.clear();
@@ -455,6 +471,42 @@ describe('an out-of-memory report steps the limits down', () => {
     expect(h.pendingFor('europa-2048')).toBe(true);
   });
 
+  it('binds a map only once its upload is known clean', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    h.setUploads('defer');
+    h.resolve('europa-1024', 1024);
+    h.frame([3000]);
+    const { uHasMap } = h.meshSurfaces[0].uniforms;
+    expect(uHasMap.value).toBe(0);
+
+    h.deferredUploads.shift()!(true);
+    h.frame([3000]);
+    expect(uHasMap.value).toBe(1);
+  });
+
+  it('drops a map the GPU refused, and steps down itself', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    h.setUploads('refuse');
+    const refused = h.resolve('europa-8192', 8192);
+    expect(refused.close).toHaveBeenCalledTimes(1);
+
+    h.frame([3000]);
+    expect(h.pendingFor('europa-8192')).toBe(false);
+    expect(h.pendingFor('europa-4096')).toBe(true);
+  });
+
+  it('releases a map whose upload settles after dispose', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    h.setUploads('defer');
+    const map = h.resolve('europa-1024', 1024);
+    h.layer.dispose();
+    h.deferredUploads.shift()!(true);
+    expect(map.close).toHaveBeenCalledTimes(1);
+  });
+
   it('stops lowering the cap at its floor', () => {
     const h = harness(['Europa'], MIN_TEXTURE_CAP);
     h.layer.stepDownTextureLimits();
@@ -636,6 +688,7 @@ describe('the ring annulus phase scalar', () => {
           },
         };
       },
+      acceptUpload,
     );
     const cam = new THREE.PerspectiveCamera();
     cam.position.copy(camera);

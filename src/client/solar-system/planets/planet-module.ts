@@ -130,6 +130,7 @@ export function createPlanetKindModule(): PlanetKindModule {
       meshLayer = new PlanetMeshLayer(
         field, baseUrl, kindCtx.sharedUniforms, kindCtx.requestRender,
         (placeholder) => webgpu.solarSystemMaterials(placeholder),
+        (texture, settled) => webgpu.uploadTexture(texture, settled),
       );
       const layer = meshLayer;
       const unsubscribeOutOfMemory = webgpu.onOutOfMemory(() => layer.stepDownTextureLimits());

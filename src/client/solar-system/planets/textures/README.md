@@ -202,10 +202,13 @@ plus one body at mid range — a 4096 colour rung and its 4096 horizon pair,
 reports no memory size and every device carries the same 8192 texture limit,
 so nothing the app can read separates the two.
 
-**An out-of-memory report steps both limits down.** Three's `renderer.onError`
-reports every uncaptured `GPUOutOfMemoryError`
-(`../../../webgpu/README.md` § Out of memory); the planet module answers with
-`stepDownTextureLimits`, which halves the budget (floor
+**An out-of-memory report steps both limits down.** Each map uploads through
+`WebGpuSeam.uploadTexture`, inside an out-of-memory error scope, and is bound
+only once the scope comes back clean; a refused map resolves `missing`,
+because an invalid texture in a bind group drops the whole frame
+(`../../../webgpu/README.md` § Out of memory). Every other allocation's
+refusal arrives through three's `renderer.onError` as an uncaptured
+`GPUOutOfMemoryError`. Both answer with `stepDownTextureLimits`, which halves the budget (floor
 `TEXTURE_BUDGET_FLOOR_BYTES`, 64 MB — the pinned set alone) and drops the cap
 one rung (floor `MIN_TEXTURE_CAP`, 2048), then releases every resident map
 wider than the new cap at once rather than waiting for selection to replace

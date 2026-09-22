@@ -102,6 +102,9 @@ export interface WebGpuSeam {
   /** Called on every uncaptured `GPUOutOfMemoryError`; returns the
    *  unsubscribe (README.md § Out of memory). */
   onOutOfMemory(listener: () => void): () => void;
+  /** Upload `texture` now; `settled(false)` when the GPU refused it
+   *  (README.md § Out of memory). */
+  uploadTexture(texture: THREE.Texture, settled: (uploaded: boolean) => void): void;
   /** Build the per-star A_V cache. It points the star
    *  layer's A_V buffer slot at its own storage buffer, so the shell wires
    *  nothing beyond holding the handle. */

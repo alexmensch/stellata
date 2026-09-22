@@ -35,7 +35,12 @@ import type { StarCompaction } from './star/compaction/star-compaction';
 import { STAR_VERTEX_STAGE_STORAGE_BUFFERS, StarLayer } from './star/star-layer';
 import type { StarTables } from './star/star-tables';
 import { settleTimestampSupport, type TimestampBackend } from './timestamps/timestamp-probe';
-import { watchOutOfMemory, type ErrorReporter } from './out-of-memory';
+import {
+  allocatesWithinMemory,
+  watchOutOfMemory,
+  type ErrorReporter,
+  type ErrorScopeDevice,
+} from './out-of-memory';
 
 /** Null when the device came back and then refused the renderer. The
  *  caller shows the requires-WebGPU page rather than a broken canvas
@@ -95,6 +100,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // `setDustTexture` cannot reach one and miss the other.
   const extinctionSlots = new ExtinctionNodes();
   const outOfMemory = watchOutOfMemory(renderer as unknown as ErrorReporter);
+  const scopeDevice = (renderer.backend as unknown as { device: ErrorScopeDevice }).device;
   const nodesOrThrow = (caller: string) => {
     if (registry === null) throw new Error(`${caller} before bindSharedUniforms`);
     return registry.nodes;
@@ -216,6 +222,15 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     },
     onOutOfMemory(listener: () => void) {
       return outOfMemory.subscribe(listener);
+    },
+    uploadTexture(texture: THREE.Texture, settled: (uploaded: boolean) => void) {
+      allocatesWithinMemory(scopeDevice, () => renderer.initTexture(texture)).then(
+        settled,
+        (err: unknown) => {
+          console.error('planet texture upload threw', err);
+          settled(false);
+        },
+      );
     },
     attachExtinctionPrepass(options: WebGpuExtinctionPrepassSources) {
       if (starTables === null || starCompaction === null) {

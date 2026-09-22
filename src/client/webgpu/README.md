@@ -32,7 +32,9 @@ src/client/webgpu/
                                     The dynamic-import boundary.
   out-of-memory.ts (+ test)         watchOutOfMemory — the renderer's
                                     uncaptured GPUOutOfMemoryError reports,
-                                    fanned out to subscribers (§ Out of
+                                    fanned out to subscribers — and
+                                    allocatesWithinMemory, the scoped
+                                    upload behind uploadTexture (§ Out of
                                     memory). Imports nothing from three.
   reversed-depth-sort.ts (+ test)   Render-list comparators countering
                                     r185's reversed-depth list reversal;
@@ -370,6 +372,17 @@ been, so they are what steps down
 (`../solar-system/planets/textures/README.md` § Staying inside VRAM). A
 subscriber unsubscribes in its layer's dispose; the seam's own `dispose`
 restores three's hook.
+
+**A refused texture has to be caught at its upload, not after it.** An
+allocation the GPU refuses still returns a `GPUTexture`, invalid, and any
+bind group holding it invalidates the command buffer it is encoded into —
+the whole frame drops, every frame it stays bound. The uncaptured report
+names no texture, so it cannot say which binding to take back.
+`WebGpuSeam.uploadTexture` therefore uploads at once, through
+`renderer.initTexture`, inside `pushErrorScope('out-of-memory')`, and
+settles false on a non-null pop; the caller binds the texture only on
+true. The scope captures the error, so a refused upload reaches no
+`onOutOfMemory` subscriber — its caller answers it.
 
 ## Timestamps
 

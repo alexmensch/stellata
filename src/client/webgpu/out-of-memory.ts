@@ -19,6 +19,28 @@ export interface OutOfMemoryWatch {
 /** three names the report by the error's constructor. */
 export const OUT_OF_MEMORY_ERROR_TYPE = 'GPUOutOfMemoryError';
 
+/** The slice of GPUDevice an error scope needs, structurally — the project
+ *  pulls in no WebGPU type package (timestamps/timestamp-probe.ts). */
+export interface ErrorScopeDevice {
+  pushErrorScope(filter: 'out-of-memory'): void;
+  popErrorScope(): Promise<unknown>;
+}
+
+/** README.md § Out of memory. */
+export async function allocatesWithinMemory(
+  device: ErrorScopeDevice,
+  allocate: () => void,
+): Promise<boolean> {
+  device.pushErrorScope('out-of-memory');
+  try {
+    allocate();
+  } catch (err) {
+    await device.popErrorScope();
+    throw err;
+  }
+  return (await device.popErrorScope()) === null;
+}
+
 export function watchOutOfMemory(reporter: ErrorReporter): OutOfMemoryWatch {
   const listeners = new Set<() => void>();
   const previous = reporter.onError;
