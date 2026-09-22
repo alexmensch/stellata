@@ -10,7 +10,9 @@ import {
   NO_CONSTELLATION_INDEX,
   type SearchEntry,
 } from '../../../scripts/catalog/record/catalog-pure';
-import { buildSearchIndex, GL_QUERY_RE, normalizeGlKey } from './search-corpus';
+import {
+  buildSearchIndex, GL_QUERY_RE, normalizeGlKey, type SearchIndex,
+} from './search-corpus';
 
 export type { SearchEntry };
 export type { FuzzyEntry, SearchIndex } from './search-corpus';
@@ -36,6 +38,7 @@ export {
   buildBayerMap,
   buildSpectralMap,
   buildStarLabels,
+  composedLabelsOf,
 } from './star-name-tables';
 
 import type { FuzzyEntry } from './search-corpus';
@@ -49,11 +52,13 @@ export function createSearchRunner(
   catalog: Catalog,
   raw: SearchEntry[],
   kinds: KindModules | null = null,
+  /** `./README.md` § The search-index worker. */
+  prebuilt?: SearchIndex,
 ): (q: string) => FuzzyEntry[] {
   // Direct-lookup maps for numeric IDs. Prefix form ("HIP 12345", "HD 128620")
   // dispatches here rather than through the fuzzy index.
   const { fuzzyEntries, hipMap, hdMap, hrMap, glMap, flamMap } =
-    buildSearchIndex(raw, catalog.constellations);
+    prebuilt ?? buildSearchIndex(raw, catalog.constellations);
 
   // Kind-module corpus rows. Each entry's index is its kind's Target idx
   // by the module contract, so a missing artifact leaves an object out
@@ -265,8 +270,9 @@ export function bindSearch(
   stellata: Stellata,
   catalog: Catalog,
   raw: SearchEntry[],
+  corpus?: SearchIndex,
 ) {
-  const runQuery = createSearchRunner(catalog, raw, stellata.kinds);
+  const runQuery = createSearchRunner(catalog, raw, stellata.kinds, corpus);
 
   const resultsEl = document.getElementById('search-results') as HTMLUListElement;
   const focusInput = document.getElementById('search-focus') as HTMLInputElement;
@@ -394,8 +400,9 @@ export function bindFindSearch(
   stellata: Stellata,
   catalog: Catalog,
   raw: SearchEntry[],
+  corpus?: SearchIndex,
 ): void {
-  const runQuery = createSearchRunner(catalog, raw, stellata.kinds);
+  const runQuery = createSearchRunner(catalog, raw, stellata.kinds, corpus);
   const input = document.getElementById('find-input') as HTMLInputElement;
   const resultsEl = document.getElementById('find-results') as HTMLUListElement;
 

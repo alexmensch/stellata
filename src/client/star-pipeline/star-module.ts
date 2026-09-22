@@ -26,9 +26,9 @@ import type { SceneLayer } from '../scene/scene-layer';
 import { StarShardTable } from './shards/star-shard-table';
 import { catalogShard } from './shards/star-shards-pure';
 import { tToJdUt } from '../solar-system/time/time';
-import {
-  buildSpectralMap, buildStarLabels, seedStarLabelsFromNames,
-} from '../typeahead/star-name-tables';
+import { buildStarLabels, seedStarLabelsFromNames } from '../typeahead/star-name-tables';
+import { loadSearchIndex } from '../typeahead/search-index-host';
+import type { SearchIndexPayload } from '../typeahead/search-index-payload';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
 
 /** Shell-owned star machinery the module's legs read through closures —
@@ -64,6 +64,13 @@ export interface StarKindModule extends ObjectKindModule<'star'> {
    *  Chart mode and the planet card's host breadcrumb read the same
    *  table the module's own name ladder does. */
   readonly starLabels: Map<number, string>;
+  /** Fills into `starLabels` and its sibling tables, counted
+   *  (`../focus-card/README.md` § Surfaces retained over a growing
+   *  catalogue). */
+  derivedGeneration(): number;
+  /** Valid after `ready` — `../typeahead/README.md` § The search-index
+   *  worker. */
+  readonly searchTables: SearchIndexPayload;
   /** Settles when the whole catalogue and the search index have landed and
    *  every table derived from them is built. `load` resolves far earlier —
    *  on the catalogue's first chunk — so anything needing the COMPLETE
@@ -85,12 +92,14 @@ export function createStarKindModule(): StarKindModule {
   let runtime: StarModuleRuntime | null = null;
   let ready: Promise<void> = Promise.resolve();
   let offRecords: (() => void) | null = null;
+  let searchTables: SearchIndexPayload | null = null;
   // Filled in place rather than reassigned — every card provider, chart
   // binding and hover formatter captures these at boot, before the search
   // index has landed.
   const starLabels = new Map<number, string>();
   const spectralMap = new Map<number, string>();
   const searchEntryById = new Map<number, SearchEntry>();
+  let derivedGeneration = 0;
   const tmpLocal = new THREE.Vector3();
 
   const nameCtx = () => ({
@@ -127,6 +136,11 @@ export function createStarKindModule(): StarKindModule {
       return starLabels;
     },
     get ready(): Promise<void> { return ready; },
+    derivedGeneration: () => derivedGeneration,
+    get searchTables(): SearchIndexPayload {
+      if (!searchTables) throw new Error('star module search tables read before ready');
+      return searchTables;
+    },
     photometry: photometryOf,
     setRuntime(rt) {
       runtime = rt;
@@ -137,11 +151,12 @@ export function createStarKindModule(): StarKindModule {
      *  and feeds only search, chart labels and designations, none of which
      *  is on the first-paint path. Both land under `ready`. */
     async load(baseUrl: string, onProgress?: (p: KindLoadProgress) => void): Promise<void> {
-      const index = fetch(`${baseUrl}search-index.json`).then(
-        (r) => r.json() as Promise<SearchEntry[]>,
-      );
+      const indexBytes = fetch(`${baseUrl}search-index.json`).then((r) => {
+        if (!r.ok) throw new Error(`search-index.json: HTTP ${r.status}`);
+        return r.arrayBuffer();
+      });
       // Handled-marker only — README.md, the star-module.ts bullet.
-      index.catch(() => {});
+      indexBytes.catch(() => {});
       catalog = await loadCatalog(
         `${baseUrl}${CATALOG_MANIFEST_FILENAME}`,
         `${baseUrl}constellations.json`,
@@ -155,21 +170,25 @@ export function createStarKindModule(): StarKindModule {
       // "Sol", not the SID fallback, while the search index is still on the
       // wire.
       seedStarLabelsFromNames(catalog, starLabels);
+      derivedGeneration++;
       offRecords?.();
-      offRecords = catalog.onRecordsDecoded(
-        () => seedStarLabelsFromNames(catalog!, starLabels),
-      );
+      offRecords = catalog.onRecordsDecoded(() => {
+        seedStarLabelsFromNames(catalog!, starLabels);
+        derivedGeneration++;
+      });
       const loaded = catalog;
+      const derived = indexBytes.then((b) => loadSearchIndex(b, loaded.constellations));
       ready = (async () => {
-        const [, raw] = await Promise.all([loaded.whenComplete, index]);
+        const [, { raw, tables }] = await Promise.all([loaded.whenComplete, derived]);
         searchIndex = raw;
-        // The per-chunk seeding above has done its job; this pass redoes it
-        // and adds the composed-designation tier.
+        // The per-chunk seeding has done its job.
         offRecords?.();
         offRecords = null;
-        buildStarLabels(loaded, raw, starLabels);
-        buildSpectralMap(raw, spectralMap);
+        buildStarLabels(loaded, tables.composedLabels, starLabels);
+        for (const [idx, spect] of tables.spectral) spectralMap.set(idx, spect);
         for (const e of raw) searchEntryById.set(e.i, e);
+        searchTables = tables;
+        derivedGeneration++;
       })();
     },
 
@@ -221,6 +240,7 @@ export function createStarKindModule(): StarKindModule {
         spectralMap,
         searchEntries: searchEntryById,
         getBinaries: () => runtime?.getBinaries() ?? null,
+        tablesComplete: () => searchTables !== null,
         cameraDistancePc: (idx) => (runtime
           ? runtime.localPositionInto(idx, tmpLocal).distanceTo(attached.camera.position)
           : 0),

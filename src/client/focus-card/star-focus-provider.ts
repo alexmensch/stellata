@@ -45,6 +45,9 @@ export interface StarFocusProviderConfig {
   cameraDistancePc: (idx: number) => number;
   /** Current sim time as JD — drives the Tier-1 live companion separation. */
   nowJd: () => number;
+  /** Whether every search-index derivation has landed; the three fill
+   *  together, so one predicate answers for all of them. */
+  tablesComplete: () => boolean;
 }
 
 export function createStarFocusProvider(
@@ -55,6 +58,7 @@ export function createStarFocusProvider(
 
   return {
     kind: 'star',
+    ready: (idx: number) => idx < catalog.loadedCount && config.tablesComplete(),
     format(idx: number): FocusCardContent {
       const name = resolveStarName(nameCtx, idx);
       const identityLines: string[] = [];

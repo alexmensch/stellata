@@ -97,6 +97,84 @@ so the whole unit stays card-sized regardless of pin count.
   is neither hidden nor collapsed (the `CardBody` gate points at
   `#card-stack`).
 
+## A card appears only when its own subject is ready
+
+Over a progressive catalogue a subject is provisional in three ways, and the
+card is wrong in a different way for each: **not yet known** (the URL focus
+has not resolved, so the Sol default stands in — a different object),
+**known but incomplete** (the record decoded, its derived tables have not —
+wrong values), and **rendered while it was either** and never redrawn
+(§ Surfaces retained over a growing catalogue).
+
+One rule covers all three: a card renders a subject only once that subject is
+settled and complete, and re-renders when that changes. Same rule as the
+camera's — **no place beats a wrong place.**
+
+**Per subject, never per stack.** The focus and every pin complete
+independently, so one gate over the rolodex would either hold back a ready
+card or admit an unready one — a pinned star whose record had decoded
+rendered a card from the name table alone while the focus was still
+suppressed. `FocusCardProvider.ready(idx)` is the per-kind answer, and the
+rolodex asks it for the focus and filters the pin list through it. Kinds
+whose artifact lands whole omit the leg; star is the only implementor, and
+its answer is "record decoded **and** the search-index derivations landed" —
+a decoded record alone composes the designation line from the name table
+only, which is how a star with no proper name showed its Gaia DR3 source id.
+
+The one condition that is not a subject's own readiness is a focus that has
+not resolved at all: there the session has no subject to ask about, so boot
+passes a `focusPending` thunk and the focus card is withheld until it clears.
+Boot clears it at the one point that also lifts the loading cover, so the two
+cannot disagree, and that point carries the `kinds.star.ready` backstop — a
+focus that never resolves releases the card rather than hiding it for the
+session's life.
+
+## Surfaces retained over a growing catalogue
+
+The catalogue streams (`../loaders/README.md` § Progressive catalog load) and
+the tables the providers read — `starLabels`, `spectralMap`,
+`searchEntryById`, the binaries relation — keep filling until wave 2 ends. A
+provider always answers correctly: each holds its table by reference and
+`getBinaries` is a thunk. **The rendered card is what goes stale**, because
+`reconcile` runs on `'focus'` / `'cameraMode'` / `'pois'` and a header click,
+and a table filling fires none of them. A card built at first paint therefore
+kept the designation, spectral class and companions the partial catalogue
+could answer, until something unrelated made it rebuild.
+
+So the rolodex watches **one number**: `derivedGeneration`, bumped by the star
+module at each fill, compared on the `'frame'` tick it already runs and
+reconciled when it moves. An integer compare against a field — the frame leg
+allocates nothing — and a rebuild only on the two or three frames where a
+table actually landed. A row changing under a still generation deliberately
+does not reach the card, which is what keeps this off every frame's cost.
+The pending-focus flag rides the same comparison, since it clears without a
+table landing.
+
+**Watching a number rather than subscribing per source is the point.** A
+notification per late-filling artifact is a list to remember, and the next
+artifact is found by a user rather than by CI.
+
+The gate is `card-rolodex.test.ts`, and **it names no field**: a card built
+against a partial catalogue, completed and ticked, must render identically to
+one built against the complete catalogue from the start. A per-field
+assertion list would be the same omission moved into the test file — it
+cannot cover a row added later, which is how the reported case
+(`Gaia DR3 …` where `HIP 100557` belonged) reached a user at all.
+
+The write side stays a convention: the bump sits at the star module's fill
+sites, so a fourth table added later could forget it. Making that impossible
+means replacing the bare `Map` handoffs with a table type whose `set` bumps —
+weighed and not taken, since it touches every consumer signature. This test
+is what catches the omission instead.
+
+The same convention binds `ready()`: **it may only answer from quantities
+that bump the generation.** A predicate reading something that moves
+silently would flip on a frame nothing reconciles, and the card would wait
+for an unrelated table to land. The star provider's two terms — the decoded
+record count and `tablesComplete` — both move at a bump, and the gate test
+drives the generation by hand, so this is the one part of the mechanism no
+test can check for you.
+
 ## Files
 
 - `focus-card-types.ts` — the `FocusCardProvider` contract and the
@@ -114,12 +192,16 @@ so the whole unit stays card-sized regardless of pin count.
   `FocusCardRow.value`), and re-evaluates them on `tick()` while the
   card is neither `hidden` nor `.collapsed`. Sole consumer today: the
   rolodex front card.
-- `card-rolodex.ts` — the stack wiring over `card-body`. Owns the
+- `card-rolodex.ts` (+ test) — the stack wiring over `card-body`. Owns the
   `#card-stack` DOM (built in `index.html`, styled via `.card-stack` /
   `.card-strip` + the `.panel` chrome in `styles.css`), rebuilds on
-  `'focus'` / `'cameraMode'` / `'pois'`, and ticks
+  `'focus'` / `'cameraMode'` / `'pois'` and on a `derivedGeneration` move
+  (§ Surfaces retained over a growing catalogue), and ticks
   LIVE rows on `'frame'`. Collapse rides the shared `bindCollapse`
   helper (`../ui/panel-layout.ts`).
+- `card-dom-mock.ts` — the element fake the rolodex suite installs as
+  `document` / `localStorage`, plus `dump()`, the flat text of the rendered
+  card that the equivalence assertion compares.
 - `card-rolodex-pure.ts` (+ test) — the rolodex plan (front card +
   strip order from pins / focus / promote state) and the strip-height
   compression curve.

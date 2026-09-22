@@ -16,24 +16,97 @@ three, so either import path stays valid.
 - `star-designations.ts` — the per-entry designation list
   (`starDesignations`) plus the wire adapter onto the composer.
 - `star-name-tables.ts` — the per-catalog derived maps
-  (`buildStarLabels`, `buildSpectralMap`, `buildBayerMap`). The star
-  module builds the first two inside its own `load`; `buildBayerMap` is
-  the one derivation no module consumes, so boot still calls it for
-  chart mode. **All three fill a caller-owned map rather than returning a
-  fresh one**, because their source — the search index — lands well after
-  the consumers that captured the map (`../README.md`, the boot-waves
-  note). Chart mode binds against an empty `bayerMap` and the glyphs
-  appear as it fills; returning a new map would strand it on the empty
-  one for the session.
+  (`buildSpectralMap`, `buildBayerMap`, `composedLabelsOf`) plus
+  `buildStarLabels`, which merges the composed tier under the name table.
+  The payload pass builds all three in the worker; the star module runs
+  `buildStarLabels` on the main thread because the name tier is the
+  binary's and only the main thread holds it, and boot reads the Bayer map
+  off `kinds.star.searchTables` rather than deriving its own.
+  **A table whose consumers captured it before the index landed is filled
+  in place, never replaced** (`../README.md` § Boot in two waves):
+  `buildStarLabels` takes the module's own `starLabels` map, and boot
+  copies the worker's Bayer map into the one chart mode bound against in
+  wave 1 — swapping either strands its consumer on the empty map for the
+  session.
 - `search-corpus.ts` — the fuzzy corpus and the exact-match identifier
   maps (`buildSearchIndex` and the label builders).
+- `search-index-payload.ts` — every catalogue-wide derivation of the search
+  index, in ONE composer pass. § The search-index worker.
+- `search-index-worker.ts` / `search-index-host.ts` — that pass, off the
+  main thread, and the parse + spawn + inline fallback around it.
+
+## The search-index worker
+
+Deriving the search index's catalogue-wide tables costs about a second of
+main thread at boot, and since the catalogue now paints from its first
+chunk (`../loaders/README.md` § Progressive catalog load) that second
+freezes a **rendered** app rather than sitting behind a loading cover. So
+it runs in a worker.
+
+Measured over the 384,767-entry index:
+
+| step | cost |
+| --- | --- |
+| `displayNamesFromSearchIndex` | 329 ms |
+| rest of `buildSearchIndex` | 136 ms |
+| `JSON.parse` of the 17.8 MB index | 76 ms |
+| `buildSpectralMap`, `buildBayerMap`, id maps | ~30 ms |
+| `new Fuse(fuzzyEntries)` | 13 ms |
+
+**The composer was running twice** — once for `buildStarLabels`, once
+inside `buildSearchIndex` — which alone was 658 ms of it.
+`buildSearchIndexPayload` runs it once and both callers take the result;
+`buildSearchIndex` accepts it as `precomposed`.
+
+Three things decided the split, each measured rather than assumed:
+
+- **Nothing raw crosses.** Structured-cloning the parsed entries back costs
+  189 ms against 76 ms to parse them again, so each side parses its own. The
+  main thread keeps the raw entries because the focus card looks one up per
+  focused star.
+- **Only derived tables cross**, and they clone in 130 ms — labels 45,
+  corpus entries 30, the rest small. So the main thread pays ~206 ms of the
+  original ~1,050.
+- **Fuse is not serialised.** Constructing it over the returned entries is
+  13 ms, so `createIndex`/`parseIndex` would buy nothing and would pin the
+  search options into this module. The corpus crosses as data and
+  `search.ts` builds Fuse from it.
+
+Everything crossing is plain Maps and arrays by construction — no class
+instances — which is what makes it structured-cloneable at all.
+
+**The index is fetched once, by the star module, and the bytes are what
+cross.** `loadSearchIndex` takes that `ArrayBuffer`, hands the worker a copy
+(~1 ms for 17 MB) and parses its own — two readers of one 4.4 MB-gzipped
+download, rather than two downloads relying on the HTTP cache to collapse
+them, which it does not do reliably while both are in flight. `TextDecoder`
++ `JSON.parse` is 72–75 ms against `Response.json()`'s 76–90, so owning the
+bytes costs nothing. Constellations cross narrowed to `{code, name}` — the
+composer reads no asterism geometry.
+
+`loadSearchIndex` rejects only on a corrupt artifact, because the fallback
+needs nothing the caller does not already hold: `deriveOffThread` resolves
+**null** — never rejects — for a missing `Worker`, a failed spawn, a throw
+inside or an `onerror`, and the tables are then built from the entries the
+main thread has already parsed. Search arriving late is a degradation;
+search never arriving is a broken app. Serving the URL as anything but the
+index is the one failure inline cannot paper over, so the star module's
+fetch checks `r.ok` and lets `ready` reject.
+
+**Footprint, measured on the 384,767-entry artifact** (Node, `--expose-gc`):
+17.0 MB on the wire, 36.3 MB parsed, 64.5 MB of derived tables. Both sides
+hold both for the window between the worker finishing and the main thread
+taking the clone, so the index costs ~200 MB at that peak against ~101 MB
+resident afterwards. `stellata-8cg.52` owns the whole-app budget; the lever
+here, if one is ever needed, is deriving `spectral` and `bayer` main-side
+(~30 ms) so only the composer's labels and the corpus cross.
 
 **Nothing here parses a designation string.** The wire carries the Bayer
 letter as a glyph with its index alongside (`b` / `bx`), and every label —
 display and search alike — is rendered from that structure by the one pure
 composer the record build wrote it with
-(`scripts/catalog/naming/README.md` § Two callers, one composer). So
-`buildStarLabels` is a single pass of that composer over the corpus rather
+(`scripts/catalog/naming/README.md` § Two callers, one composer). So the
+label tier is a single pass of that composer over the corpus rather
 than a per-entry fallback chain: two of the ladder's rules are relational
 (a component borrows its system's base, and a letter is appended only
 where a sibling OWNS the same designation), which no per-entry

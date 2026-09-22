@@ -39,10 +39,15 @@ function makeRuntime(overrides: Partial<StarModuleRuntime> = {}): StarModuleRunt
   };
 }
 
+const searchIndexResponse = (rows: SearchEntry[]) => ({
+  ok: true,
+  arrayBuffer: async () => new TextEncoder().encode(JSON.stringify(rows)).buffer,
+});
+
 async function loadedModule(searchRows: SearchEntry[] = []) {
   const cat = makeMockCatalog();
   loadCatalogMock.mockResolvedValue(cat);
-  vi.stubGlobal('fetch', vi.fn(async () => ({ json: async () => searchRows })));
+  vi.stubGlobal('fetch', vi.fn(async () => searchIndexResponse(searchRows)));
   const m = createStarKindModule();
   await m.load('/base/');
   await m.ready;
@@ -89,7 +94,7 @@ describe('star kind module', () => {
   it('loads the catalog + search index pair, forwarding onProgress', async () => {
     const cat = makeMockCatalog();
     loadCatalogMock.mockResolvedValue(cat);
-    const fetchMock = vi.fn(async () => ({ json: async () => [{ i: 1 }] }));
+    const fetchMock = vi.fn(async () => searchIndexResponse([{ i: 1 }]));
     vi.stubGlobal('fetch', fetchMock);
     const m = createStarKindModule();
     const onProgress = () => {};
@@ -101,8 +106,19 @@ describe('star kind module', () => {
       onProgress,
     );
     expect(fetchMock).toHaveBeenCalledWith('/base/search-index.json');
+    // Once, not once per reader: the worker takes a copy of these bytes
+    // rather than fetching 4.4 MB of its own.
+    expect(fetchMock.mock.calls).toHaveLength(1);
     expect(m.catalog).toBe(cat);
     expect(m.searchIndex).toEqual([{ i: 1 }]);
+  });
+
+  it('fails the load on a search index the server did not serve', async () => {
+    loadCatalogMock.mockResolvedValue(makeMockCatalog());
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 404 })));
+    const m = createStarKindModule();
+    await m.load('/base/');
+    await expect(m.ready).rejects.toThrow(/HTTP 404/);
   });
 
   it('answers the SID domain as the catalog column itself', async () => {

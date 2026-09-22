@@ -37,6 +37,7 @@ function buildConfig(overrides: Partial<StarFocusProviderConfig> = {}): StarFocu
     getBinaries: () => null,
     cameraDistancePc: () => 7.68,
     nowJd: () => J2000_JD,
+    tablesComplete: () => true,
     ...overrides,
   };
 }

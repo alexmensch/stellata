@@ -5,7 +5,7 @@ import { createMilkyWayLabel } from './local-group/local-group';
 import { Stellata } from './stellata';
 import { bindControls } from './camera/controls/controls';
 import { bindSearch, bindFindSearch } from './typeahead/search';
-import { buildBayerMap, type BayerInfo } from './typeahead/star-name-tables';
+import type { BayerInfo } from './typeahead/star-name-tables';
 import { createDistanceVectorOverlay } from './overlays/distance-vector-overlay';
 import { createFocusRingOverlay } from './overlays/focus-ring-overlay';
 import { createPoiOverlay } from './overlays/poi-overlay';
@@ -275,6 +275,9 @@ async function main() {
     if (!applied) {
       applyFirstLoadView(stellata, idMaps);
     }
+    // Clear this only alongside `scene-live` below — the two decide
+    // together whether anything renders over a covered scene.
+    let awaitingFocus = focusPending !== null;
     startUrlSync(stellata, idMaps);
 
     // Bottom-right meta: catalog count + (when focused on a planet host)
@@ -304,6 +307,8 @@ async function main() {
     // so the values match what hover's pick paths report.
     createCardRolodex({
       stellata,
+      derivedGeneration: () => kinds.star.derivedGeneration(),
+      focusPending: () => awaitingFocus,
       providers: {
         star: kinds.star.card(),
         planet: kinds.planet.card(),
@@ -319,6 +324,7 @@ async function main() {
     // sky rather than in front of a blank one.
     // util/url-state/README.md § A focus that resolves after the pose.
     if (focusPending) await Promise.race([focusPending, kinds.star.ready]);
+    awaitingFocus = false;
     await new Promise((r) => requestAnimationFrame(r));
     // Out of the root stacking context and into the instrument stack —
     // styles.css § .loading.
@@ -370,14 +376,13 @@ async function main() {
     if (binaries) stellata.attachBinaries(binaries);
     await frame();
 
-    // Chart-mode's Greek-letter labels are the one search-index
-    // derivation no kind module consumes.
-    buildBayerMap(searchIndex, bayerMap);
+    // Chart mode bound against this map in wave 1 and holds it by
+    // reference (README.md § Boot in two waves), so fill it, never swap it.
+    const searchTables = kinds.star.searchTables;
+    for (const [idx, info] of searchTables.bayer) bayerMap.set(idx, info);
     await frame();
-    // The dearest step in this wave by a distance — a fuzzy corpus over
-    // every searchable entry, half a second of main thread on its own.
-    bindSearch(stellata, catalog, searchIndex);
-    bindFindSearch(stellata, catalog, searchIndex);
+    bindSearch(stellata, catalog, searchIndex, searchTables.corpus);
+    bindFindSearch(stellata, catalog, searchIndex, searchTables.corpus);
     for (const el of searchInputs) {
       el.disabled = false;
       el.placeholder = el.id === 'search-to' ? 'Search destination…' : 'Search stars…';

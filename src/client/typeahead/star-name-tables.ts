@@ -9,22 +9,31 @@ import {
 } from '../../../scripts/catalog/naming/star-naming-pure';
 import type { Catalog } from '../loaders/catalog-loader';
 
-/** Display label per star, composed by the SAME pure ladder the record
- *  build used — `catalog.bin`'s name table carries the NAME tiers, and
- *  every designation below them is composed here from the structured wire
- *  (docs/star-naming.md § 6).
+/** The composer's output reduced to the label tier alone — what crosses
+ *  from the worker, and what `buildStarLabels` merges. */
+export function composedLabelsOf(
+  composed: ReturnType<typeof displayNamesFromSearchIndex>,
+): Map<number, string> {
+  const out = new Map<number, string>();
+  for (const [idx, c] of composed) out.set(idx, c.label);
+  return out;
+}
+
+/** Display label per star: `catalog.bin`'s name table carries the NAME
+ *  tiers and always wins; `composedLabels` fills every record an authority
+ *  never named (docs/star-naming.md § 6). A record the search index does
+ *  not carry falls to `resolveStarName`'s `Gaia DR3` / `SID #` last resort.
  *
- *  Records the search index does not carry — no identifier a user could
- *  type — keep the name table's entry where they have one and otherwise
- *  fall to `resolveStarName`'s `Gaia DR3` / `SID #` last resort. */
+ *  The composer runs once for the whole catalogue and both its callers
+ *  take the result — `./README.md` § The search-index worker. */
 export function buildStarLabels(
   catalog: Catalog,
-  raw: SearchEntry[],
+  composedLabels: Map<number, string>,
   into: Map<number, string> = new Map(),
 ): Map<number, string> {
   seedStarLabelsFromNames(catalog, into);
-  for (const [idx, composed] of displayNamesFromSearchIndex(raw, catalog.constellations)) {
-    if (!into.has(idx)) into.set(idx, composed.label);
+  for (const [idx, label] of composedLabels) {
+    if (!into.has(idx)) into.set(idx, label);
   }
   return into;
 }
@@ -46,10 +55,8 @@ export function seedStarLabelsFromNames(
 // Map of star index → spectral designation string ("G2 V", "M1.5Iab-b",
 // "K0III+K7V", etc.), as carried from the source catalog via search-index.
 // Used by the hover tooltip to show full classification info.
-export function buildSpectralMap(
-  raw: SearchEntry[],
-  into: Map<number, string> = new Map(),
-): Map<number, string> {
+export function buildSpectralMap(raw: SearchEntry[]): Map<number, string> {
+  const into = new Map<number, string>();
   for (const entry of raw) {
     if (entry.s) into.set(entry.i, entry.s);
   }
@@ -66,10 +73,8 @@ export interface BayerInfo {
 // Used by chart mode to render the letter glyph + optional superscript
 // alongside proper names. The wire carries the glyph itself, so there is
 // nothing to parse.
-export function buildBayerMap(
-  raw: SearchEntry[],
-  out: Map<number, BayerInfo> = new Map(),
-): Map<number, BayerInfo> {
+export function buildBayerMap(raw: SearchEntry[]): Map<number, BayerInfo> {
+  const out = new Map<number, BayerInfo>();
   for (const entry of raw) {
     if (entry.b === undefined) continue;
     out.set(entry.i, {

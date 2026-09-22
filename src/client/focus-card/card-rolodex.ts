@@ -21,10 +21,15 @@ const COLLAPSED_KEY = 'stellata.focus-card-collapsed';
 export interface CardRolodexConfig {
   stellata: Stellata;
   providers: FocusCardProviders;
+  /** README.md § Surfaces retained over a growing catalogue. */
+  derivedGeneration: () => number;
+  /** True while a URL-named focus has not resolved — README.md § A card
+   *  appears only when its own subject is ready. */
+  focusPending: () => boolean;
 }
 
 export function createCardRolodex(config: CardRolodexConfig): () => void {
-  const { stellata, providers } = config;
+  const { stellata, providers, derivedGeneration, focusPending } = config;
   const stack = document.getElementById('card-stack')!;
   const stripsEl = document.getElementById('card-strips')!;
   const front = document.getElementById('front-card')!;
@@ -35,6 +40,9 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
   let desiredFront: CardKey | null = null;
   let frontKey: CardKey | null = null;
   let knownPois: readonly Target[] = stellata.pois.get();
+  // README.md § Surfaces retained over a growing catalogue.
+  let seenGeneration = -1;
+  let seenFocusPending = true;
 
   bindCollapse({
     container: stack,
@@ -50,12 +58,15 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
     inner: document.getElementById('front-card-inner')!,
   });
 
+  const subjectReady = (t: Target): boolean => {
+    const provider = providers[t.kind];
+    return provider.ready === undefined || provider.ready(t.idx);
+  };
+
   // Recompute from current state on any input event rather than
   // tracking event payloads; the provider map is exhaustive over kind.
-  const focusContent = (): FocusCardContent | null => {
-    const focused = stellata.focus.getFocusedTarget();
-    return focused !== null ? providers[focused.kind].format(focused.idx) : null;
-  };
+  const focusContent = (focused: Target | null): FocusCardContent | null =>
+    (focused !== null ? providers[focused.kind].format(focused.idx) : null);
 
   const dismiss = (key: CardKey) => {
     if (key === FOCUS_KEY) stellata.focus.unfocus();
@@ -87,10 +98,17 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
   };
 
   const reconcile = () => {
-    const focus = stellata.focus.getCameraMode() === 'observe' ? null : focusContent();
+    seenGeneration = derivedGeneration();
+    seenFocusPending = focusPending();
+    // README.md § A card appears only when its own subject is ready.
+    const focused = stellata.focus.getFocusedTarget();
+    const suppress = stellata.focus.getCameraMode() === 'observe'
+      || seenFocusPending
+      || (focused !== null && !subjectReady(focused));
+    const focus = suppress ? null : focusContent(focused);
     const plan = planRolodex({
-      pois: stellata.pois.get(),
-      focused: stellata.focus.getFocusedTarget(),
+      pois: stellata.pois.get().filter(subjectReady),
+      focused,
       focusVisible: focus !== null,
       desiredFront,
     });
@@ -153,7 +171,12 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
       if (added.length > 0) desiredFront = poiKey(added[added.length - 1]);
       reconcile();
     }),
-    stellata.on('frame', () => body.tick()),
+    stellata.on('frame', () => {
+      if (derivedGeneration() !== seenGeneration || focusPending() !== seenFocusPending) {
+        reconcile();
+      }
+      body.tick();
+    }),
   ];
   reconcile();
 
