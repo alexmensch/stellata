@@ -209,7 +209,9 @@ reports every uncaptured `GPUOutOfMemoryError`
 `TEXTURE_BUDGET_FLOOR_BYTES`, 64 MB — the pinned set alone) and drops the cap
 one rung (floor `MIN_TEXTURE_CAP`, 2048), then releases every resident map
 wider than the new cap at once rather than waiting for selection to replace
-it. This is the one protection for the ON-screen set, which the budget cannot
+it. Each released map stays recorded `missing`: the fixed-width relief and
+ring maps have no narrower rung to select instead, so a forgotten key would
+be fetched and decoded again only to be refused. This is the one protection for the ON-screen set, which the budget cannot
 touch. It cannot see a tab the browser kills under memory pressure without an
 error, which is why the fixed budget is sized low rather than left to it.
 

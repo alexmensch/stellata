@@ -711,12 +711,18 @@ export class PlanetMeshLayer {
     const next = steppedTextureLimits(this.limits);
     if (next === null) return;
     this.limits = next;
+    const oversized: string[] = [];
     for (const [key, state] of this.textures) {
       if (state.state !== 'ready') continue;
       const { width, height } = state.tex.image as ImageBitmap;
-      if (width > next.maxTextureSize || height > next.maxTextureSize) {
-        this.evictTexture(key);
-      }
+      if (width > next.maxTextureSize || height > next.maxTextureSize) oversized.push(key);
+    }
+    // Left as 'missing' rather than forgotten: the relief and ring maps ship
+    // one width each, so a forgotten key is fetched and fully decoded again
+    // next frame only for the cap check to refuse it.
+    for (const key of oversized) {
+      this.evictTexture(key);
+      this.textures.set(key, { state: 'missing' });
     }
     this.enforceTextureBudget();
     this.requestRender('planet-texture-limits');

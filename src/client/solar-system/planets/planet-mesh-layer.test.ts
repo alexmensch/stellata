@@ -404,6 +404,17 @@ describe('an out-of-memory report steps the limits down', () => {
     expect(h.pendingFor('europa-4096')).toBe(true);
   });
 
+  it('does not fetch again a fixed-width map it released for the lowered cap', () => {
+    const h = harness(['Earth']);
+    h.frame([3000]);
+    const normal = h.resolve('earth-normal', 8192, 4096);
+    h.frame([3000]);
+    h.layer.stepDownTextureLimits();
+    expect(normal.close).toHaveBeenCalledTimes(1);
+    h.frame([3000]);
+    expect(h.pendingFor('earth-normal')).toBe(false);
+  });
+
   it('stops lowering the cap at its floor', () => {
     const h = harness(['Europa'], MIN_TEXTURE_CAP);
     h.layer.stepDownTextureLimits();
