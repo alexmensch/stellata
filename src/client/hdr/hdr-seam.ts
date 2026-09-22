@@ -15,6 +15,7 @@ export interface ReducedStatistic extends TileReduction {
 
 export interface HdrSeam {
   readonly emitterUniforms: HdrEmitterUniforms;
+  readonly reduction: ReductionSeam;
   bind(): void;
   resolve(): void;
   statisticTexture(): THREE.Texture | null;

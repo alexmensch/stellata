@@ -5,7 +5,7 @@
 import type * as THREE from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
 import type { SharedUniforms } from '../frame/shared-uniforms';
-import type { HdrSeam, ReductionSeam } from '../hdr/hdr-seam';
+import type { HdrSeam } from '../hdr/hdr-seam';
 import type {
   PlanetGlareSources,
 } from '../solar-system/planets/planet-body-field';
@@ -73,13 +73,6 @@ export interface WebGpuStarLayer {
   dispose(): void;
 }
 
-/** The WebGPU HDR pipeline as the shell sees it: the backend-neutral seam
- *  plus the reduction it owns (the WebGL boot constructs the two
- *  separately). */
-export interface WebGpuHdrSeam extends HdrSeam {
-  readonly reduction: ReductionSeam;
-}
-
 export interface WebGpuSeam {
   readonly renderer: WebGPURenderer;
   /** The boot probe's verdict on whether timestamp queries survive
@@ -89,9 +82,7 @@ export interface WebGpuSeam {
    *  allocates no query pool, so resolving anyway only warns
    *  (timestamps/README.md § Why the resolve is not gated on the HUD). */
   readonly timestampsAvailable: boolean;
-  /** The HDR chain on this boot — target, resolve, reduction. The shell
-   *  drives it in place of constructing the WebGL HdrPipeline. */
-  readonly hdr: WebGpuHdrSeam;
+  readonly hdr: HdrSeam;
   /** Built by the shell right after buildSharedUniforms; null before. */
   readonly uniformNodes: SharedUniformNodes | null;
   bindSharedUniforms(shared: SharedUniforms): void;

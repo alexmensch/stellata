@@ -340,7 +340,7 @@ export class Stellata implements FrameAnchor {
   // Per-frame scene-luminance measurement feeding the automatic exposure
   // cut (hdr/exposure/README.md § Adaptation).
   readonly adaptation!: SceneAdaptation;
-  readonly reduction: ReductionSeam;
+  get reduction(): ReductionSeam { return this.hdr.reduction; }
   private readonly drawingBufferSize = new THREE.Vector2();
 
   // Declutter cycle (scene/declutter/README.md § Detail-level declutter cycle).
@@ -495,10 +495,7 @@ export class Stellata implements FrameAnchor {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.renderer.setClearColor(0x000000, 0);
-    // The HDR chain and its reduction come pre-built on the seam, behind
-    // the import boundary.
     this.hdr = this.webgpu.hdr;
-    this.reduction = this.webgpu.hdr.reduction;
 
     this.scene = new THREE.Scene();
 
@@ -3019,7 +3016,6 @@ export class Stellata implements FrameAnchor {
     this.layers.disposeAll();
     this.floatingOrigin.dispose();
     this.localDepthPass.dispose();
-    // The pipeline constructed its own reduction and releases it here.
     this.hdr.dispose();
     // The dust voxel grid is the largest single GPU allocation in the app
     // (~128 MiB Data3DTexture). MilkyWay shares the same texture handle but
