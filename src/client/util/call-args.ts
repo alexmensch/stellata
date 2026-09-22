@@ -1,5 +1,5 @@
-// Top-level argument list of a call in GLSL source, for the drift tests
-// that pin what a shader passes where. See README.md.
+// Top-level argument list of a call in shader source, for the suites that
+// pin what a graph passes where. See README.md.
 
 const IDENTIFIER_CHAR = /[A-Za-z0-9_]/;
 
@@ -11,7 +11,7 @@ const IDENTIFIER_CHAR = /[A-Za-z0-9_]/;
  * The match is whole-identifier: callers assert on argument text, so a hit
  * inside a longer name would pin a different call and still pass.
  */
-export function glslCallArgs(src: string, name: string): string[] {
+export function callArgs(src: string, name: string): string[] {
   let open = src.indexOf(`${name}(`);
   while (open > 0 && IDENTIFIER_CHAR.test(src[open - 1])) {
     open = src.indexOf(`${name}(`, open + 1);

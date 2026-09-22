@@ -1,6 +1,6 @@
 import { readTslSource } from '../../webgpu/tsl/tsl-source-fixture';
 import { describe, expect, it } from 'vitest';
-import { glslCallArgs } from '../../util/glsl-call-args';
+import { callArgs } from '../../util/call-args';
 
 const read = (name: string) =>
   readTslSource(new URL(name, import.meta.url));
@@ -54,7 +54,7 @@ describe('the statistic attachment mask', () => {
 
   for (const { label, src, mask, alpha } of TSL_WRITERS) {
     it(`carries the ${label}'s mask and park gate on the TSL path`, () => {
-      const args = glslCallArgs(read(src), 'maskedStatisticTexelTsl');
+      const args = callArgs(read(src), 'maskedStatisticTexelTsl');
       expect(args[0]).toBe('gates.statisticWrites');
       expect(args[2]).toBe(mask);
       expect(args[3]).toBe(alpha);

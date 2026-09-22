@@ -80,27 +80,17 @@ build scripts, tests, and shader uniforms.
   `skyBasis` deliberately does NOT ride this: it seeds a rotation
   quaternion and picks a canonical orientation at the pole, which this
   helper leaves to the caller's ra.
-- `fullscreen-pass.ts` (+ test) + `fullscreen-pass.vert.glsl` —
-  `fullscreenTriangleGeometry()` and the matrix-free vertex stage every
-  fullscreen shader pass shares (the extinction A_V prepass, the HDR
-  tone-map resolve). The geometry carries `aPosition` and **must stay
-  indexed**: with no `position` attribute the renderer derives its draw
-  count from `index.count`, so an un-indexed geometry silently draws
-  nothing.
-- `glsl-call-args.ts` (+ test) — `glslCallArgs(src, name)`, the top-level
-  argument list of a call in shader source. Walks the parens rather than
-  matching a regex, so a nested call in an earlier slot cannot split the list
-  in the wrong place, and matches a **whole identifier** — callers assert on
+- `call-args.ts` (+ test) — `callArgs(src, name)`, the top-level argument
+  list of a call in shader source. Walks the parens rather than matching a
+  regex, so a nested call in an earlier slot cannot split the list in the
+  wrong place, and matches a **whole identifier** — callers assert on
   argument text, so a hit inside a longer name would pin a different call and
-  still pass. It reads **TSL sources too**: a node-graph call is TypeScript,
-  and the paren walk is indifferent to the language, so a WebGPU-side pin
-  shares this parser rather than matching source text with its indentation
-  baked in. The drift tests that pin what a shader passes where run on
-  it — which alpha an occluder texel dims by
-  (`../solar-system/planets/planet-mesh-layer.test.ts`), which emitters may
-  claim lit-surface coverage (`../hdr/attachments/statistic-mask.test.ts`).
-  Nothing at runtime reads shader text; this exists so those pins share one
-  parser instead of one each.
+  still pass. A TSL node-graph call is TypeScript, and the paren walk is
+  indifferent to the language, so a pin shares this parser rather than
+  matching source text with its indentation baked in. Its consumer pins which
+  emitters may claim lit-surface coverage
+  (`../hdr/attachments/statistic-mask.test.ts`). Nothing at runtime reads
+  shader text.
 - `kepler-solver.ts` (+ test) — `solveKepler(M, e)`, the Newton
   solver shared between Sol's planet ephemerides (e ≲ 0.25) and binary
   orbits (e up to ~0.95). 50-iter, 1e-12 tolerance defaults. Also the
