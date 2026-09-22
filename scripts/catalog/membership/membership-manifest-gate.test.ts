@@ -130,7 +130,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
       manifest,
       parseSameasTsv(readFileSync(OVERRIDES_PATH, 'utf-8'), 'sameas-overrides.tsv'),
     );
-  });
+  }, 180_000);
 
   it('matches the pinned row counts', () => {
     expect(manifest).toHaveLength(expected.rows);

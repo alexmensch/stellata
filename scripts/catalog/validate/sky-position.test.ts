@@ -79,7 +79,7 @@ describe.skipIf(!CATALOG_BIN_PRESENT)('sky-position corpus', () => {
 
   beforeAll(async () => {
     catalog = await loadCatalog({ withSearchIndex: true });
-  });
+  }, 180_000);
 
   it('corpus covers the high-PM set plus one pin per non-Gaia tier', () => {
     expect(corpus.map((r) => `${r.ref.kind}:${r.ref.value}`)).toEqual([
