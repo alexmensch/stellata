@@ -336,11 +336,11 @@ and why the reference count is a floor.
 still carry its substitution rather than a number, the subsystem table must
 still sum to the credited total, and the derivations must not have
 collapsed. Two cells are prose because nothing in the repo can count them —
-**6.5 million light years** and **3000 BC – 3000 AD**, the model's measured
-radius and its clock clamp, both stated in `../../README.md`.
+**6.5 Mly** and **3000 BCE – 3000 CE**, the model's measured radius and its
+clock clamp, both stated in `../../README.md`.
 
-Rounded prose is a different case and is still fine — the hero's "around
-390,000 real objects" is held true by
+Rounded prose is a different case and is still fine — the "Before you click"
+aside's "around 980,000 records" is held true by
 `tests/star-count-consistency.test.ts`, which reads this folder's pages
 among its prose surfaces. `docs/authoring-patterns.md` § The star count is
 never a literal.

@@ -51,14 +51,14 @@ describe('the rendition opens the way an agent client expects', () => {
   // The title takes h1, so the hero heading has to move under it or the
   // document has two roots and an agent reads two documents.
   it('shifts every body heading down a level', () => {
-    expect(home()).toContain('## A 3D model of the universe with nothing invented in it.');
+    expect(home()).toContain('## A model of the universe anchored in science');
     expect(home()).toContain('### Three things this is.');
   });
 });
 
 describe('the page’s content survives the derivation', () => {
   it.each([
-    'Around 390,000 real objects',
+    'Around 980,000 records stream in brightest first',
     'There is no false colour anywhere in Stellata',
     'The citation record is the product.',
     'Chrome and Edge 113+, Safari 26+',
@@ -68,7 +68,7 @@ describe('the page’s content survives the derivation', () => {
 
   it('renders the readout strip as labelled figures rather than loose text', () => {
     expect(home()).toContain('- **Catalogued objects** — 388,068');
-    expect(home()).toContain('- **Clock range** — 3000 BC – 3000 AD');
+    expect(home()).toContain('- **Clock range** — 3000 BCE – 3000 CE');
   });
 
   it('renders the sources table as a table, header row included', () => {
