@@ -12,25 +12,23 @@ describe('scenarios', () => {
   it('opens the canon with the Tier 1 vantages, and the gated backend first', () => {
     expect(TIER1_SCENARIOS).toEqual(['mw120', 'sol']);
     expect(SCENARIO_NAMES.slice(0, TIER1_SCENARIOS.length)).toEqual([...TIER1_SCENARIOS]);
-    expect(BACKENDS).toEqual(['webgpu', 'webgl2']);
+    expect(BACKENDS).toEqual(['webgpu']);
   });
 
   it('builds the canonical /v/<blob>/ path with no fragment on the default boot', () => {
-    expect(scenarioUrl('http://localhost:5173', SCENARIOS.sol.blob, 'webgpu')).toBe(
+    expect(scenarioUrl('http://localhost:5173', SCENARIOS.sol.blob)).toBe(
       'http://localhost:5173/v/BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB/',
     );
   });
 
-  it('appends the escape-hatch fragment for a WebGL2 boot and tolerates a trailing slash', () => {
-    expect(scenarioUrl('http://localhost:5174/', 'BLOB', 'webgl2')).toBe(
-      'http://localhost:5174/v/BLOB/#renderer=webgl2',
+  it('tolerates a trailing slash on the base', () => {
+    expect(scenarioUrl('http://localhost:5174/', 'BLOB')).toBe(
+      'http://localhost:5174/v/BLOB/',
     );
   });
 
-  it('composes --hash with the backend fragment: both present, either alone, neither', () => {
-    expect(scenarioUrl('http://h', 'B', 'webgl2', 'webgpu-gate=force')).toBe('http://h/v/B/#renderer=webgl2&webgpu-gate=force');
-    expect(scenarioUrl('http://h', 'B', 'webgpu', 'webgpu-gate=force')).toBe('http://h/v/B/#webgpu-gate=force');
-    expect(scenarioUrl('http://h', 'B', 'webgl2', '')).toBe('http://h/v/B/#renderer=webgl2');
-    expect(scenarioUrl('http://h', 'B', 'webgpu', '')).toBe('http://h/v/B/');
+  it('appends --hash as the fragment, and omits it when empty', () => {
+    expect(scenarioUrl('http://h', 'B', 'webgpu-gate=force')).toBe('http://h/v/B/#webgpu-gate=force');
+    expect(scenarioUrl('http://h', 'B', '')).toBe('http://h/v/B/');
   });
 });

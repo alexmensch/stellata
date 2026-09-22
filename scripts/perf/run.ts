@@ -151,7 +151,7 @@ interface ScenarioOutcome {
 async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan): Promise<ScenarioOutcome> {
   const { name, backend } = plan;
   const scenario = SCENARIOS[name];
-  const url = scenarioUrl(args.url, scenario.blob, backend, args.hash);
+  const url = scenarioUrl(args.url, scenario.blob, args.hash);
   const context = await browser.newContext({
     viewport: { width: args.width, height: args.height },
     deviceScaleFactor: args.dpr,

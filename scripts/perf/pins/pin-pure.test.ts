@@ -67,7 +67,7 @@ function alternatingWall(): DwellSummary {
 
 function dwell(wall: DwellSummary, gpu: DwellSummary | null): DwellRecord {
   return {
-    deltasMs: [], gpuMs: gpu === null ? null : [], gpuNote: gpu === null ? 'webgl2 boot' : 'sound',
+    deltasMs: [], gpuMs: gpu === null ? null : [], gpuNote: gpu === null ? 'no query set' : 'sound',
     stats: wall, gpuStats: gpu, limitMag: 1.511, dm: -6.289, readbackPerFrame: 0.25, passCounts: null,
   };
 }
@@ -119,7 +119,8 @@ function file(scenarios: readonly ScenarioRecord[], overrides: FileOverrides = {
 
 const SOL_GPU = scenario('sol', 'webgpu', dwell(stats(25.2), stats(21.8)));
 const MW120_GPU = scenario('mw120', 'webgpu', dwell(stats(16.7, { iqrMs: 0.4, vsyncClamped: true }), stats(21.0)));
-const SOL_GL = scenario('sol', 'webgl2', dwell(stats(16.0, { iqrMs: 21 }), null));
+/** A canon row with wall time and no GPU stream at all. */
+const EARTH_NO_STREAM = scenario('earth', 'webgpu', dwell(stats(16.0, { iqrMs: 21 }), null));
 
 /** The pinned lg row and a later one, at the wall clock lg actually reads:
  *  quantised to the refresh interval whatever the GPU stream does. */
@@ -131,7 +132,7 @@ const SOURCE = { version: '3.44.3', accepted: {} };
 
 const runOf = (perf: PerfFile, sourceRun = RUN) => ({ file: perf, sourceRun });
 
-function pinOf(scenarios: readonly ScenarioRecord[] = [SOL_GPU, MW120_GPU, SOL_GL]): PinFile {
+function pinOf(scenarios: readonly ScenarioRecord[] = [SOL_GPU, MW120_GPU, EARTH_NO_STREAM]): PinFile {
   const { pin, refusals } = pinFromRuns([runOf(file(scenarios))], SOURCE);
   expect(refusals).toEqual([]);
   return pin!;
@@ -140,7 +141,7 @@ function pinOf(scenarios: readonly ScenarioRecord[] = [SOL_GPU, MW120_GPU, SOL_G
 /** Every canon row, steady, so a pin is complete. */
 function wholeCanon(gpuP50 = 20): ScenarioRecord[] {
   return BACKENDS.flatMap((backend) => SCENARIO_NAMES.map((name) =>
-    scenario(name, backend, dwell(stats(16.7), backend === 'webgpu' ? stats(gpuP50) : null))));
+    scenario(name, backend, dwell(stats(16.7), stats(gpuP50)))));
 }
 
 describe('adapterSlug', () => {
@@ -162,10 +163,9 @@ describe('adapterSlug', () => {
 });
 
 describe('CANON_POSITIONS', () => {
-  it('places the ten canon rows backend-major in canon order, the Tier 1 pair first', () => {
+  it('places the five canon rows in canon order, the Tier 1 pair first', () => {
     expect([...CANON_POSITIONS.entries()]).toEqual([
       ['mw120|webgpu', 1], ['sol|webgpu', 2], ['earth|webgpu', 3], ['mw50|webgpu', 4], ['lg|webgpu', 5],
-      ['mw120|webgl2', 6], ['sol|webgl2', 7], ['earth|webgl2', 8], ['mw50|webgl2', 9], ['lg|webgl2', 10],
     ]);
     expect([...CANON_POSITIONS.keys()].slice(0, TIER1_SCENARIOS.length))
       .toEqual(TIER1_SCENARIOS.map((name) => `${name}|webgpu`));
@@ -175,7 +175,7 @@ describe('CANON_POSITIONS', () => {
 describe('pinFromRuns — one run', () => {
   it('summarises every dwell row in canon order, GPU stream where sound, each row citing its run', () => {
     const { pin, merged } = pinFromRuns(
-      [runOf(file([SOL_GPU, MW120_GPU, SOL_GL]))], { ...SOURCE, accepted: { 'sol|webgpu': { bead: 'bead-1' } } },
+      [runOf(file([SOL_GPU, MW120_GPU, EARTH_NO_STREAM]))], { ...SOURCE, accepted: { 'sol|webgpu': { bead: 'bead-1' } } },
     );
     expect(pin!.schema).toBe(PIN_SCHEMA);
     expect(pin!.adapterSlug).toBe('apple-m4-metal-3');
@@ -184,12 +184,12 @@ describe('pinFromRuns — one run', () => {
     expect(pin!.sourceRuns).toEqual([RUN]);
     expect(pin!.accepted['sol|webgpu'].bead).toBe('bead-1');
     expect(pin!.rows.map((r) => [r.key, r.position, r.sourceRun]))
-      .toEqual([['mw120|webgpu', 1, RUN], ['sol|webgpu', 2, RUN], ['sol|webgl2', 7, RUN]]);
+      .toEqual([['mw120|webgpu', 1, RUN], ['sol|webgpu', 2, RUN], ['earth|webgpu', 3, RUN]]);
     expect(pin!.rows[1].gpu!.p50).toBe(21.8);
     expect(pin!.rows[0].wall.vsyncClamped).toBe(true);
     expect(pin!.rows[2].gpu).toBeNull();
     expect(pin!.rows[2].method).toBe('raf-delta');
-    expect(merged!.scenarios.map((s) => s.name)).toEqual(['mw120', 'sol', 'sol']);
+    expect(merged!.scenarios.map((s) => s.name)).toEqual(['mw120', 'sol', 'earth']);
   });
 
   it('refuses the whole pin on any row it cannot stand behind', () => {
@@ -254,12 +254,12 @@ describe('pinFromRuns — one run', () => {
       .toEqual([`sol|webgpu: ${RUN}: the dwell trended across its quarters — it straddled a load-state transition`]);
   });
 
-  it('stands the guard down at an ungated vantage on WebGL2, where wall is the gating clock', () => {
-    const lgGl = scenario('lg', 'webgl2', dwell(trending(16.7), null));
-    expect(pinFromRuns([runOf(file([lgGl]))], SOURCE).refusals).toEqual([]);
+  it('stands the guard down at an ungated vantage with no GPU stream', () => {
+    const lgNoStream = scenario('lg', 'webgpu', dwell(trending(16.7), null));
+    expect(pinFromRuns([runOf(file([lgNoStream]))], SOURCE).refusals).toEqual([]);
 
-    const solGl = scenario('sol', 'webgl2', dwell(trending(16.7), null));
-    expect(pinFromRuns([runOf(file([solGl]))], SOURCE).refusals[0]).toContain('load-state transition');
+    const solNoStream = scenario('sol', 'webgpu', dwell(trending(16.7), null));
+    expect(pinFromRuns([runOf(file([solNoStream]))], SOURCE).refusals[0]).toContain('load-state transition');
   });
 
   it('refuses a headed run, a run without a probe, an empty run, a cadence probe and no runs at all', () => {
@@ -385,7 +385,7 @@ describe('the floor beside the median', () => {
   it('records the GPU floor on the pinned row, and none where the row has no samples', () => {
     expect(pinOf([withGpu(18.99, STEADY)]).rows[0].gpuFloor).toEqual({ p10: 18.85 });
     expect(pinOf([MW120_GPU]).rows[0].gpuFloor).toBeNull();
-    expect(pinOf([SOL_GL]).rows[0].gpuFloor).toBeNull();
+    expect(pinOf([EARTH_NO_STREAM]).rows[0].gpuFloor).toBeNull();
   });
 
   // The 2026-09-13 false mark: the median rose 0.43 past a 0.25 band while the
@@ -411,15 +411,14 @@ describe('the floor beside the median', () => {
   it('prints no floor where either side lacks samples, and never on a wall row', () => {
     expect(compareToPin(pinOf([MW120_GPU]), file([withGpu(21.0, STEADY)])).rows[0].floorDeltaMs).toBeNull();
     expect(compareToPin(pinOf([withGpu(21.0, STEADY)]), file([MW120_GPU])).rows[0].floorDeltaMs).toBeNull();
-    expect(compareToPin(pinOf([SOL_GL]), file([SOL_GL])).rows[0].floorDeltaMs).toBeNull();
+    expect(compareToPin(pinOf([EARTH_NO_STREAM]), file([EARTH_NO_STREAM])).rows[0].floorDeltaMs).toBeNull();
   });
 });
 
 describe('missingCanonRows and pinWriteRefusal — the whole canon, or nothing', () => {
   it('names the canon rows a pin lacks, in canon order', () => {
-    expect(missingCanonRows(pinOf([SOL_GPU, SOL_GL]))).toEqual([
-      'mw120|webgpu', 'earth|webgpu', 'mw50|webgpu', 'lg|webgpu',
-      'mw120|webgl2', 'earth|webgl2', 'mw50|webgl2', 'lg|webgl2',
+    expect(missingCanonRows(pinOf([SOL_GPU, EARTH_NO_STREAM]))).toEqual([
+      'mw120|webgpu', 'mw50|webgpu', 'lg|webgpu',
     ]);
     expect(missingCanonRows(pinOf(wholeCanon()))).toEqual([]);
   });
@@ -446,13 +445,13 @@ describe('missingCanonRows and pinWriteRefusal — the whole canon, or nothing',
 
 describe('compareToPin', () => {
   it('calls a run against its own pin unchanged, on the GPU stream where the pin has one', () => {
-    const diff = compareToPin(pinOf(), file([SOL_GPU, MW120_GPU, SOL_GL]));
+    const diff = compareToPin(pinOf(), file([SOL_GPU, MW120_GPU, EARTH_NO_STREAM]));
     expect(diff.refusedWholeRun).toBeNull();
     expect(diff.refusals).toEqual([]);
     expect(diff.rows.map((r) => [r.key, r.metric, r.verdict])).toEqual([
       ['sol|webgpu', 'gpu-p50', 'same'],
       ['mw120|webgpu', 'gpu-p50', 'same'],
-      ['sol|webgl2', 'wall-p50', 'ungated'],
+      ['earth|webgpu', 'wall-p50', 'ungated'],
     ]);
     expect(diff.rows[0].bandMs).toBe(dwellFloorMs(21.8));
     expect(pinDiffFails(diff)).toBe(false);
@@ -506,21 +505,21 @@ describe('compareToPin', () => {
     expect(row.metric).toBe('gpu-p50');
     expect(row.verdict).toBe('same');
 
-    const onto = scenario('sol', 'webgl2', dwell(stats(16.7, { iqrMs: 0.4, vsyncClamped: true }), null));
-    expect(compareToPin(pinOf([SOL_GL]), file([onto])).rows[0].verdict).toBe('ungated');
+    const onto = scenario('earth', 'webgpu', dwell(stats(16.7, { iqrMs: 0.4, vsyncClamped: true }), null));
+    expect(compareToPin(pinOf([EARTH_NO_STREAM]), file([onto])).rows[0].verdict).toBe('ungated');
   });
 
   it('records a row with no GPU stream and never gates it, naming the side that lacks one', () => {
-    const row = compareToPin(pinOf([SOL_GL]), file([SOL_GL])).rows[0];
+    const row = compareToPin(pinOf([EARTH_NO_STREAM]), file([EARTH_NO_STREAM])).rows[0];
     expect([row.metric, row.verdict]).toEqual(['wall-p50', 'ungated']);
-    expect(row.note).toContain('WebGL2 supplies none');
+    expect(row.note).toContain('the adapter resolved no believable durations');
     expect(row.bandMs).toBe(0);
 
     const lost = scenario('sol', 'webgpu', dwell(stats(25.2), null));
     expect(compareToPin(pinOf([SOL_GPU]), file([lost])).rows[0].note)
       .toContain('this run resolved none');
-    const gained = scenario('sol', 'webgl2', dwell(stats(16.0, { iqrMs: 21 }), stats(15.2)));
-    expect(compareToPin(pinOf([SOL_GL]), file([gained])).rows[0].note).toContain('this run does');
+    const gained = scenario('earth', 'webgpu', dwell(stats(16.0, { iqrMs: 21 }), stats(15.2)));
+    expect(compareToPin(pinOf([EARTH_NO_STREAM]), file([gained])).rows[0].note).toContain('this run does');
   });
 
   describe('the compute row', () => {
@@ -538,7 +537,7 @@ describe('compareToPin', () => {
       expect(row.compute?.p50).toBe(1.4);
       expect(row.computeFloor).toEqual({ p10: 1.2 });
       expect(pinOf([SOL_GPU]).rows[0].compute).toBeNull();
-      expect(pinOf([SOL_GL]).rows[0].compute).toBeNull();
+      expect(pinOf([EARTH_NO_STREAM]).rows[0].compute).toBeNull();
     });
 
     it('marks a compute move past the floor dearer under its own key, and the frame row separately', () => {
@@ -597,8 +596,9 @@ describe('compareToPin', () => {
       expect(row.deltaMs).toBeCloseTo(4.9, 6);
     });
 
-    it('prints no compute row at all where neither side has one — every WebGL2 row', () => {
-      expect(compareToPin(pinOf([SOL_GL]), file([SOL_GL])).rows.map((r) => r.key)).toEqual(['sol|webgl2']);
+    it('prints no compute row at all where neither side has one', () => {
+      expect(compareToPin(pinOf([EARTH_NO_STREAM]), file([EARTH_NO_STREAM])).rows.map((r) => r.key))
+        .toEqual(['earth|webgpu']);
       expect(compareToPin(pinOf([SOL_GPU]), file([SOL_GPU])).rows.map((r) => r.key)).toEqual(['sol|webgpu']);
     });
 
@@ -666,7 +666,7 @@ describe('compareToPin', () => {
     expect(diff.rows).toEqual([]);
     expect(diff.refusals.map((r) => r.key)).toEqual(['sol|webgpu']);
     expect(diff.refusals[0].reason).toContain('load-state transition');
-    expect(diff.unmeasured).toEqual(['mw120|webgpu', 'sol|webgl2']);
+    expect(diff.unmeasured).toEqual(['mw120|webgpu', 'earth|webgpu']);
     expect(compareToPin(pinOf([SOL_GPU]), file([resized])).refusals[0].reason).toContain('Mpx');
   });
 
@@ -683,12 +683,12 @@ describe('compareToPin', () => {
     expect(pinDiffFails(diff)).toBe(true);
   });
 
-  // Tier 1 visits two of the pin's ten contexts and answers for those two.
+  // Tier 1 visits two of the pin's five contexts and answers for those two.
   it('does not fail a run for the pin rows it did not measure', () => {
     const diff = compareToPin(pinOf(), file([SOL_GPU]));
     expect(diff.rows.map((r) => r.key)).toEqual(['sol|webgpu']);
     expect(diff.refusals).toEqual([]);
-    expect(diff.unmeasured).toEqual(['mw120|webgpu', 'sol|webgl2']);
+    expect(diff.unmeasured).toEqual(['mw120|webgpu', 'earth|webgpu']);
     expect(pinDiffFails(diff)).toBe(false);
   });
 
@@ -715,11 +715,11 @@ describe('compareToPin', () => {
   // the Tier 1 run's own shape — so those two rows compare and a row taken
   // deeper into a run does not.
   it('compares a row only against one taken at the same position in its run', () => {
-    const pin = pinOf([MW120_GPU, SOL_GPU, SOL_GL]);
+    const pin = pinOf([MW120_GPU, SOL_GPU, EARTH_NO_STREAM]);
     const tier1 = compareToPin(pin, file([MW120_GPU, SOL_GPU]));
     expect(tier1.refusals).toEqual([]);
     expect(tier1.rows.map((r) => [r.key, r.verdict])).toEqual([['mw120|webgpu', 'same'], ['sol|webgpu', 'same']]);
-    expect(tier1.unmeasured).toEqual(['sol|webgl2']);
+    expect(tier1.unmeasured).toEqual(['earth|webgpu']);
 
     const deeper = compareToPin(pin, file([{ ...SOL_GPU, position: 8 }]));
     expect(deeper.rows).toEqual([]);
@@ -772,7 +772,7 @@ describe('pinDiffFails — a refused comparison is not a pass', () => {
   });
 
   it('passes a run whose only unmarked rows are ungated', () => {
-    expect(pinDiffFails(compareToPin(pinOf([SOL_GL]), file([SOL_GL])))).toBe(false);
+    expect(pinDiffFails(compareToPin(pinOf([EARTH_NO_STREAM]), file([EARTH_NO_STREAM])))).toBe(false);
   });
 });
 
@@ -788,7 +788,7 @@ describe('unacceptedMarks — writing a pin must not ratchet the frame upward', 
   it('never asks acceptance of a cheaper, unchanged or ungated row', () => {
     const cheaper = scenario('sol', 'webgpu', dwell(stats(25.2), stats(20.9)));
     expect(unacceptedMarks(compareToPin(pinOf([SOL_GPU]), file([cheaper])), {})).toEqual([]);
-    expect(unacceptedMarks(compareToPin(pinOf([SOL_GL]), file([SOL_GL])), {})).toEqual([]);
+    expect(unacceptedMarks(compareToPin(pinOf([EARTH_NO_STREAM]), file([EARTH_NO_STREAM])), {})).toEqual([]);
   });
 });
 

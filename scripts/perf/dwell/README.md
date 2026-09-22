@@ -87,7 +87,7 @@ taken after settle (`../README.md` § What a run does, step 4) is the
 display's cadence with the gate idle, and
 the clamp test is judged against it: 16.67 ms on a 60 Hz panel, 8.33 on a
 120 Hz one. Headless Chromium's virtual display idles at 16.70 ms (59.9 Hz),
-measured on every canon vantage on both backends (stellata-8cg.49.13's
+measured on every canon vantage (stellata-8cg.49.13's
 notes) — the same cadence as a 60 Hz panel, though headed and headless still
 never compare. The tolerance is `CADENCE_TOLERANCE` (6 %) of the measured
 interval, and `isVsyncClamped` is shared with the differential's own
@@ -108,8 +108,8 @@ a rise through the quarters**: that power step is a step, so it lands as
 test reads as steady. Frames either side of the transition never compare.
 
 **The verdict is read off the clock the band gates** — the GPU stream where
-the row has one, wall only where it does not (`gatingClock`, every WebGL2
-row). Wall deltas are quantised to the refresh interval, so at a vantage whose
+the row has one, wall only where it does not (`gatingClock`; an adapter
+that refuses the query set resolves none). Wall deltas are quantised to the refresh interval, so at a vantage whose
 frame exceeds one interval they alternate between one and two and the quarter
 medians swing by a whole interval however idle the machine is: mw50 split 240
 deltas 120/120 and 117/123 on two cold runs whose GPU quarters spanned
@@ -121,7 +121,7 @@ pin, it blocked the pin for *every* render-path PR at random. Wall
 Which gate acts on the verdict, and where it stands down:
 `../pins/README.md` § State guard.
 
-**A WebGPU dwell also counts what the frame submits.** For the timed frames
+**A dwell also counts what the frame submits.** For the timed frames
 it wraps `GPUQueue.submit` and `GPUCommandEncoder.beginRenderPass` /
 `beginComputePass` on their prototypes and records, per rAF interval, the
 submits, the command buffers they carried, and the render and compute
@@ -130,8 +130,8 @@ clock and the hold. The table prints min / p50 / max per counter, since a
 count is small and quantised: a readback frame carries the reduction
 chain's extra passes, so the distribution is bimodal and the extremes are
 the two modes. It is an API-surface count, not a GPU cost — the per-pass
-floor is still a differential (`docs/render-rules.md` § 8). A WebGL2 dwell
-has no queue to count on and records null.
+floor is still a differential (`docs/render-rules.md` § 8). A dwell with no
+queue to count on records null.
 
 **Where the frame has two classes, the GPU-stream median follows the
 readback duty cycle, and a pair whose rates differ is refused.** Only the
@@ -225,8 +225,7 @@ wrapped call adds one JavaScript frame: at the counts a canon vantage
 actually reads (2–4 submits and 2–4 render passes per frame, up to 12 on a
 readback frame), that is under twenty extra calls against a 16.7 ms
 interval. Stated rather than assumed, because it is the instrument sitting
-inside its own measurement — and it is one more reason never to difference
-a WebGL2 dwell against a WebGPU one.
+inside its own measurement.
 
 **`--roundtrip <pass>` asks whether a toggle leaves the frame where it found
 it.** Dwell; then, under the differential's own conditions (gate held, clock

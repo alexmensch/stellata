@@ -22,6 +22,8 @@ export const PERF_SCHEMA = 'stellata-perf/2';
 
 export class SchemaError extends Error {}
 
+/** What the throwaway context reports — `README.md` § What a run does,
+ *  step 2, on why one is opened at all. */
 export interface WebGlProbe {
   readonly renderer: string;
   readonly vendor: string;
@@ -43,8 +45,7 @@ export interface AdapterProbe {
 }
 
 /** Per-frame WebGPU API counts over the timed frames, and their summary.
- *  Null on a WebGL2 boot, and wherever the page had no GPUQueue to count
- *  on — `note` says which. */
+ *  Null wherever the page had no GPUQueue to count on — `note` says so. */
 export interface PassCountsRecord {
   readonly perFrame: PassCountsPerFrame;
   readonly summary: PassCountsSummary;
@@ -96,6 +97,8 @@ export interface Viewport {
 export interface ScenarioRecord {
   readonly name: ScenarioName;
   readonly blob: string;
+  /** What this run ASKED for and what booted; `null` never booted. Nothing
+   *  validates the pair — `diff/diff-pure.ts`, on `absenceReason`. */
   readonly backend: { readonly requested: Backend; readonly actual: Backend | null };
   readonly viewport: Viewport;
   readonly buffer: { readonly width: number; readonly height: number } | null;

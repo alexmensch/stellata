@@ -54,7 +54,7 @@ function scenario(overrides: Partial<ScenarioRecord> = {}): ScenarioRecord {
   return {
     name: 'sol',
     blob: 'blob',
-    backend: { requested: 'webgl2', actual: 'webgl2' },
+    backend: { requested: 'webgpu', actual: 'webgpu' },
     viewport: { width: 1280, height: 800, dpr: 2 },
     buffer: { width: 2560, height: 1600 },
     bufferMpx: 4.096,
@@ -566,7 +566,7 @@ describe('diffRuns — refusals', () => {
       withDifferential(rows, { params: { emptyPasses: 1 } }),
       withDifferential(rows, { params: { emptyPasses: 4 } }),
     );
-    expect(diff.rows.map((r) => r.key)).toEqual(['sol|webgl2|localDepth']);
+    expect(diff.rows.map((r) => r.key)).toEqual(['sol|webgpu|localDepth']);
     expect(diff.refusals[0].reason).toContain('1 vs 4 empty passes added');
   });
 
@@ -575,7 +575,7 @@ describe('diffRuns — refusals', () => {
       withDifferential([priceRow({ pass: 'localDepth' })]),
       file([scenario({ name: 'mw120', differential: [priceRow({ pass: 'localDepth' })] })]),
     );
-    expect(diff.refusals.map((r) => r.key)).toContain('sol|webgl2');
+    expect(diff.refusals.map((r) => r.key)).toContain('sol|webgpu');
   });
 
   it('names a pass the current run did not price', () => {
@@ -584,29 +584,22 @@ describe('diffRuns — refusals', () => {
       withDifferential([priceRow({ pass: 'localDepth' })]),
     );
     expect(diff.rows).toHaveLength(1);
-    expect(diff.refusals[0].key).toBe('sol|webgl2|reduction');
+    expect(diff.refusals[0].key).toBe('sol|webgpu|reduction');
   });
 
-  it('says a vantage measured on the other backend was not absent', () => {
+  // Nothing validates the recorded backend, so an archive taken before the
+  // cutover parses and keys itself apart from this build's rows. Saying so
+  // is the fixable half of what would otherwise read as an absent vantage.
+  it('says a vantage measured on another backend was not absent', () => {
+    const archived = { requested: 'webgl2', actual: 'webgl2' } as unknown as
+      ScenarioRecord['backend'];
     const diff = diffRuns(
+      file([scenario({ backend: archived, differential: [priceRow({ pass: 'localDepth' })] })]),
       withDifferential([priceRow({ pass: 'localDepth' })]),
-      file([scenario({
-        backend: { requested: 'webgpu', actual: 'webgpu' },
-        differential: [priceRow({ pass: 'localDepth' })],
-      })]),
     );
     expect(diff.refusals[0].key).toBe('sol|webgl2');
     expect(diff.refusals[0].reason).toContain('measured on webgpu in the current run');
     expect(diff.refusals[0].reason).not.toContain('absent');
-  });
-
-  it('keys the two backends of one scenario apart', () => {
-    const both = (adapterRows: readonly PriceFrameRow[]): PerfFile => file([
-      scenario({ differential: adapterRows }),
-      scenario({ backend: { requested: 'webgpu', actual: 'webgpu' }, differential: adapterRows }),
-    ]);
-    const diff = diffRuns(both([priceRow({ pass: 'localDepth' })]), both([priceRow({ pass: 'localDepth' })]));
-    expect(diff.rows.map((r) => r.key)).toEqual(['sol|webgl2|localDepth', 'sol|webgpu|localDepth']);
   });
 
   it('does not pretend a sweep is a cost', () => {
@@ -616,7 +609,7 @@ describe('diffRuns — refusals', () => {
     })]);
     const diff = diffRuns(swept, swept);
     expect(diff.rows).toEqual([]);
-    expect(diff.refusals[0].key).toBe('sol|webgl2|sweep');
+    expect(diff.refusals[0].key).toBe('sol|webgpu|sweep');
   });
 });
 
@@ -628,8 +621,8 @@ describe('the compute row', () => {
     );
     expect(diff.refusals).toEqual([]);
     expect(diff.rows.map((r) => [r.key, r.metric, r.verdict])).toEqual([
-      ['sol|webgl2|dwell', 'gpu-p50', 'same'],
-      ['sol|webgl2|compute', 'compute-p10', 'dearer'],
+      ['sol|webgpu|dwell', 'gpu-p50', 'same'],
+      ['sol|webgpu|compute', 'compute-p10', 'dearer'],
     ]);
     expect(diff.rows[1].bandMs).toBe(computeFloorMs('sol', 1.2));
     expect(diff.rows[1].baselineMs).toBe(1.2);
@@ -703,7 +696,7 @@ describe('the compute row', () => {
     );
     expect(diff.refusals).toEqual([]);
     const compute = diff.rows[1];
-    expect(compute.key).toBe('mw120|webgl2|compute');
+    expect(compute.key).toBe('mw120|webgpu|compute');
     expect(compute.bandMs).toBe(0.05);
     expect(compute.verdict).toBe('dearer');
     expect(Math.abs(compute.deltaMs)).toBeLessThan(DWELL_FLOOR_MS);
@@ -720,26 +713,26 @@ describe('the compute row', () => {
       withCompute(19.350, 0.289, { name: 'mw120', stats: tight }),
     );
     const frame = diff.rows[0];
-    expect(frame.key).toBe('mw120|webgl2|dwell');
+    expect(frame.key).toBe('mw120|webgpu|dwell');
     expect(frame.bandMs).toBe(DWELL_FLOOR_MS);
     expect(frame.verdict).toBe('same');
   });
 
   it('refuses the compute row where one run recorded the stream and the other did not, and keeps the frame row', () => {
     const diff = diffRuns(withCompute(18.98, null), withCompute(18.98, 1.4));
-    expect(diff.rows.map((r) => r.key)).toEqual(['sol|webgl2|dwell']);
+    expect(diff.rows.map((r) => r.key)).toEqual(['sol|webgpu|dwell']);
     expect(diff.refusals).toEqual([{
-      key: 'sol|webgl2|compute',
+      key: 'sol|webgpu|compute',
       reason: 'one run recorded a compute stream for this row and the other did not',
     }]);
   });
 
   it('prints no compute row where neither run has one — a pre-compute archive, or WebGL2', () => {
     const diff = diffRuns(withCompute(18.98, null), withCompute(18.98, null));
-    expect(diff.rows.map((r) => r.key)).toEqual(['sol|webgl2|dwell']);
+    expect(diff.rows.map((r) => r.key)).toEqual(['sol|webgpu|dwell']);
     expect(diff.refusals).toEqual([]);
     const old = only(diffRuns(withDwell(dwellStats(30)), withDwell(dwellStats(30))));
-    expect(old.key).toBe('sol|webgl2|dwell');
+    expect(old.key).toBe('sol|webgpu|dwell');
   });
 
   it('does not outlive a refused frame row', () => {
@@ -750,7 +743,7 @@ describe('the compute row', () => {
     }, trended);
     const diff = diffRuns(a, b);
     expect(diff.rows).toEqual([]);
-    expect(diff.refusals.map((r) => r.key)).toEqual(['sol|webgl2|dwell']);
+    expect(diff.refusals.map((r) => r.key)).toEqual(['sol|webgpu|dwell']);
   });
 });
 

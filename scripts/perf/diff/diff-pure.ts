@@ -144,9 +144,10 @@ function scenarioKey(record: ScenarioRecord): string {
 
 /**
  * Why a baseline scenario found no partner. The key already carries the
- * backend, so a WebGL2 baseline against a WebGPU run reads as an absent
- * scenario unless the vantage is checked separately — and "you measured a
- * different backend" is the fixable half of that.
+ * backend, so an archived baseline taken on a backend this build no longer
+ * offers reads as an absent scenario unless the vantage is checked
+ * separately — and "you measured a different backend" is the fixable half
+ * of that.
  */
 function absenceReason(record: ScenarioRecord, current: readonly ScenarioRecord[]): string {
   const backends = current
@@ -447,13 +448,10 @@ function differentialRows(key: string, a: ScenarioRecord, b: ScenarioRecord): {
  * all.
  *
  * Where NEITHER side resolved a stream this row still marks, on wall, and
- * that is where it parts company with the pin: `compareToPin` prints such a
- * pair `ungated` and never marks it. The pin can afford to, having five
- * vantages on two backends to fall back on; refusing here would leave
- * `--baseline --mode dwell --backend webgl2` with no row at all, WebGL2
- * supplying no stream anywhere. The quantisation is why such a row is worth
- * little: it is the one case in this function where a whole-interval delta
- * can be an artefact of the clock rather than the frame.
+ * that is where it parts company with the pin — README.md, on the rows that
+ * gate. The quantisation is why such a row is worth little: it is the one
+ * case in this function where a whole-interval delta can be an artefact of
+ * the clock rather than the frame.
  */
 function dwellRows(key: string, a: ScenarioRecord, b: ScenarioRecord): (DiffRow | DiffRefusal)[] {
   const [da, db] = [a.dwell, b.dwell];

@@ -228,7 +228,8 @@ export interface GatingClock {
 
 /**
  * Which of a dwell's two clocks a gate is entitled to act on: the GPU stream
- * where the row has one, wall only where it does not (every WebGL2 row).
+ * where the row has one, wall only where it does not (README.md § The state
+ * guard).
  *
  * Wall deltas are quantised to the display's refresh interval, so at a
  * vantage whose frame exceeds one interval they alternate between one and

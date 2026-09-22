@@ -231,8 +231,7 @@ two runs of the same shape agreed to 0.019 ms, and each run's own state
 guard read steady throughout. A cool-down does not reset it: sol at 2nd of
 10 behind 120 s idle matched sol at 2nd of 2 with none to 2e-6 ms. So
 every row records its position, both gates refuse a row whose position
-differs, and the canon order puts the Tier 1 vantages first on the gated
-backend — `--backend both` runs WebGPU contexts before WebGL2, and `all`
+differs, and the canon order puts the Tier 1 vantages first — `all`
 expands mw120, sol, earth, mw50, lg — so the pin run and the Tier 1 run
 share their first two contexts. Reordering either constant re-takes the
 pin (stellata-8cg.49.27).
@@ -295,10 +294,10 @@ across frames and a coincidence of timing move it alike. Wall time is quantised 
 interval, so every canon row's wall p50 reads 16.7–17.5 ms with a
 middle-half spread of a whole interval, and its median turns on whether
 50.1 % or 49.9 % of the frames made the deadline: wall is recorded, never
-marked. A row carrying no GPU stream is recorded and not gated — every
-WebGL2 row, since the backend supplies no such clock, and any WebGPU row
-whose adapter resolves no believable durations. Deleting the WebGL2 path
-(stellata-0it.14) leaves only gated rows behind. A vantage that does not
+marked. A row carrying no GPU stream is recorded and not gated — an adapter that
+grants the timestamp feature and then refuses the query set resolves no
+believable durations. Every canon row on the pinned adapter gates. A
+vantage that does not
 reproduce cold-to-cold is recorded and not gated on the same footing —
 today that is lg alone, and the paragraph on the floor below says why.
 It keeps its GPU reading, so unlike a row with no such clock it still

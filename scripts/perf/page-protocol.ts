@@ -63,11 +63,11 @@ export async function bootScenario(page: Page, url: string, { backend, timeoutMs
   const failure = bootFailure((await outcome.jsonValue()) as string);
   if (failure !== null) throw new BootError(failure);
 
-  const actual = await page.evaluate(() =>
-    ((window as unknown as PerfWindow).stellata.webgpu === null ? 'webgl2' : 'webgpu'));
-  if (actual !== backend) {
+  const booted = await page.evaluate(() =>
+    (window as unknown as PerfWindow).stellata.webgpu !== null);
+  if (!booted) {
     throw new BootError(
-      `requested the ${backend} boot but the page booted ${actual}` +
+      `requested the ${backend} boot but the page came up without a seam` +
       ' — a mislabelled measurement is worse than none',
     );
   }
@@ -117,9 +117,8 @@ export function probeAdapters(page: Page): Promise<AdapterProbe> {
         vendor: String(gl.getParameter(info ? info.UNMASKED_VENDOR_WEBGL : gl.VENDOR)),
         timerQuery: gl.getExtension('EXT_disjoint_timer_query_webgl2') !== null,
       };
-      // The page has no GL context of its own, so this probe made one. Drop
-      // it before the sweep: the instrument must not leave a second GPU
-      // context alive in the page whose frame it is about to price.
+      // The instrument must not leave a second GPU context alive in the
+      // page whose frame it is about to price.
       gl.getExtension('WEBGL_lose_context')?.loseContext();
     }
 

@@ -5,7 +5,7 @@
 import type { GpuFrameMethod } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import type { AdapterProbe, GitProvenance, RunProvenance } from './schema';
 import type { BackendRequest } from './args';
-import { BACKENDS, type Backend, type ScenarioName } from './scenarios';
+import type { Backend, ScenarioName } from './scenarios';
 
 /** Names a renderer that is not the GPU. Nothing measured on one counts, so
  *  a match aborts the whole run rather than failing one scenario. */
@@ -22,24 +22,24 @@ export const BROWSER_CHANNEL = 'chromium';
 
 export type MarkerVerdict = 'armed' | 'absent' | 'stale';
 
-/**
- * The clock a run will use. `both` pins rAF wall time because the backends'
- * best clocks are three different instruments — taking each one's best would
- * build exactly the mixed-method table that must never be compared. An
- * explicit `--method` wins, on the caller's head, and the run says it did.
- */
-export function methodFor(args: { backend: BackendRequest; method?: GpuFrameMethod }): {
+/** The clock a run will use — README.md § Invocation, on `--method`. An
+ *  explicit one wins, on the caller's head, and the run says it did. */
+export function methodFor(args: {
+  method?: GpuFrameMethod; pin?: string; againstPin?: string;
+}): {
   method: GpuFrameMethod | undefined;
   why: string | null;
 } {
   if (args.method !== undefined) return { method: args.method, why: null };
-  if (args.backend !== 'both') return { method: undefined, why: null };
+  if (args.pin === undefined && args.againstPin === undefined) {
+    return { method: undefined, why: null };
+  }
   return {
     method: DWELL_METHOD,
     why:
-      `--backend both pins --method ${DWELL_METHOD}: it is the one clock WebGL2 and WebGPU ` +
-      'share, and a table mixing timer-query with timestamp compares two instruments. ' +
-      'Pass --method explicitly to override.',
+      `a pin run pins --method ${DWELL_METHOD}: every archived pin and baseline was `
+      + 'recorded on it, and a table mixing clocks compares two instruments. '
+      + 'Pass --method explicitly to override.',
   };
 }
 
@@ -64,12 +64,8 @@ export function readbackOrder(cadences: readonly number[]): number[] {
   return cadences.length > 1 ? [...cadences, cadences[0]] : [...cadences];
 }
 
-/**
- * Backend-major, the scenarios as given within each backend. So that
- * `--scenario all --backend both` opens with the Tier 1 vantages on the gated
- * backend — the positions a Tier 1 run visits them at, which is what lets its
- * rows compare against the pin's (`pins/README.md` § Run position).
- */
+/** Backend-major, the scenarios as given within each backend
+ *  (`pins/README.md` § Run position). */
 export function contextOrder(
   scenarios: readonly ScenarioName[],
   backends: readonly Backend[],
@@ -87,9 +83,8 @@ export function planContexts(
   request: BackendRequest,
   cadences: readonly number[],
 ): readonly ContextPlan[] {
-  const backends: readonly Backend[] = request === 'both' ? BACKENDS : [request];
   const order = readbackOrder(cadences);
-  return contextOrder(scenarios, backends)
+  return contextOrder(scenarios, [request])
     .flatMap(({ name, backend }) => order.map((readbackEvery) => ({ name, backend, readbackEvery })));
 }
 
@@ -126,7 +121,7 @@ export function describeProbe(p: AdapterProbe): string {
     : 'no WebGL2 context';
   const webgpu = p.webgpu
     ? `${p.webgpu.description || p.webgpu.device || '(unnamed)'} · ${p.webgpu.vendor}/${p.webgpu.architecture} · ` +
-      `fallback ${p.webgpu.isFallbackAdapter} · timestampsAvailable ${p.webgpu.timestampsAvailable ?? 'n/a on a webgl2 boot'}`
+      `fallback ${p.webgpu.isFallbackAdapter} · timestampsAvailable ${p.webgpu.timestampsAvailable ?? 'unread'}`
     : 'no adapter';
   return `webgl : ${webgl}\nwebgpu: ${webgpu}`;
 }

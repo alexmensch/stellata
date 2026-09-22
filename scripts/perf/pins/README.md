@@ -20,7 +20,7 @@ scripts/perf/pins/
 
 ## Taking one
 
-`pnpm run perf -- --mode dwell --scenario all --backend both --cooldown-ms 120000
+`pnpm run perf -- --mode dwell --scenario all --cooldown-ms 120000
 --json .perf-runs/<date>/pin.json --pin scripts/perf/pins/<slug>.json`
 
 Per `scenario|backend` the pin holds wall p50 / p90 / iqr / n /
@@ -34,8 +34,14 @@ tainted, not dwell, not `raf-delta`, trending at a *gated* vantage, a round
 trip, a headed run, no record count, no position, or **taken under a setup
 lever** (§ Setup levers) — because a pin missing a
 row narrows the gate silently, and for the same reason `--pin` refuses a
-command line short of `--scenario all --backend both`, or one naming the
-whole canon in another order (§ Run position).
+command line short of `--scenario all`, or one naming the whole canon in
+another order (§ Run position).
+
+**A row at no canon position is left out rather than pinned.** An archive
+taken before the WebGPU cutover carries one row per retired backend; such a
+row compares with nothing, every comparison being at equal position, so
+pinning it would put a value in the file no later run can be judged
+against.
 `--accept <scenario>|<backend>[|compute]:<bead>` records an accepted mark
 as provenance for the value now pinned; it never filters a verdict. The
 compute row is its own key, so accepting a context's frame never accepts
@@ -86,9 +92,8 @@ refused one, and the verdicts, and writes nothing. Exit 1 is a refusal,
 
 ## Run position
 
-The run visits its ten contexts backend-major in the canon order —
-mw120|webgpu, sol|webgpu, earth|webgpu, mw50|webgpu, lg|webgpu, then the
-five WebGL2 contexts — and every row records where it sat. **A row
+The run visits its five contexts in the canon order — mw120, sol, earth,
+mw50, lg — and every row records where it sat. **A row
 compares only against one taken at the same position**, in `--against-pin`
 and `--baseline` alike: the GPU's load history before a context moves its
 frame time on unchanged code, and the state guard cannot see it because
@@ -105,8 +110,14 @@ hunting for a recent run of its own shape (`RELEASING.md` § Perf pin).
 `TIER1_SCENARIOS` in `../scenarios.ts` is the prefix and a test holds the
 canon to it; reordering either constant re-takes the pin. `--pin` enforces
 the order rather than the membership for the same reason — a permuted run
-covers all ten contexts and pins every one of them where nothing later
+covers all five contexts and pins every one of them where nothing later
 looks.
+
+**A row at no canon position is left out rather than pinned.** An archive
+taken before the WebGPU cutover carries one row per retired backend; such a
+row compares with nothing, every comparison being at equal position, so
+pinning it would put a value in the file that no later run can be judged
+against.
 
 ## The compute row
 
@@ -119,7 +130,7 @@ The two are never summed: `gpu.frame` has meant the render passes in
 every pin row ever taken, and a compute pass that read as no change was
 the instrument blind where the programme aims — every cheaper-per-frame
 candidate on this backend is a compute dispatch, so a 40 ms kernel landed
-as `~` on the frame row. A compute row on neither side — every WebGL2 row
+as `~` on the frame row. A compute row on neither side
 — prints nothing; one side alone prints `·` ungated with a note naming
 the side that lacks it, which is what a pin taken before the compute pool
 was resolved reads as until it is re-taken. The side with no reading prints
@@ -316,7 +327,7 @@ a pin run reads `steady`.
   reading the pin holds. Two cold pins on identical code put four of the
   five canon vantages inside 0.18 %. Wall time is quantised to the
   display's refresh interval, so it is recorded and never marked: a row
-  with no GPU stream on either side, every WebGL2 row among them, reads
+  with no GPU stream on either side reads
   `·` ungated with its wall p50 shown as context. The `metric` column
   names which statistic the row was judged on, and it is not the same at
   every row: `gpu-plain-p50` where the vantage draws two pass classes and
@@ -338,16 +349,16 @@ a pin run reads `steady`.
   not a verdict on the run, and since any refused row refuses the whole pin,
   leaving the refusal in force killed roughly one pin re-take in three on the
   one row the gate never acts on — ~25 min of held-idle machine each.
-  **The stand-down is keyed on the vantage, so it takes `lg|webgl2` with
-  it**, where the gating clock is the wall clock and not the GPU stream every
-  figure above is measured on. That row earns the exemption on the other
-  ground: its wall median sits on the refresh interval, so its quarters swing
-  by a whole interval however idle the machine is, exactly as mw50's do
-  (§ State guard) — and refusing there spends a re-take to protect a verdict
-  nothing reads, a WebGL2 row carrying no band and no ceiling either.
-  Everything else still reaches the row: the ceiling below still marks a
-  WebGPU lg, and a failed, tainted, resized or mis-positioned lg still
-  refuses, those being facts about the run rather than about lg. **`lg` is
+  **The stand-down is keyed on the vantage**, so it covers an lg row whose
+  adapter resolved no GPU stream and is therefore gated on wall. Such a row
+  earns the exemption on the other ground: its wall median sits on the
+  refresh interval, so its quarters swing by a whole interval however idle
+  the machine is, exactly as mw50's do (§ State guard) — and refusing there
+  spends a re-take to protect a verdict nothing reads, the row carrying no
+  band and no ceiling either. Everything else still reaches the row: the
+  ceiling below still marks lg, and a failed, tainted, resized or
+  mis-positioned lg still refuses, those being facts about the run rather
+  than about lg. **`lg` is
   the only canon vantage that sees the Local Group**, so a
   `src/client/local-group/` render change has no pin row that prices it short
   of the ceiling: price one with a per-pass differential at lg instead, never

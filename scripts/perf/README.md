@@ -125,7 +125,7 @@ the page they came off.
 ## Invocation
 
 ```
-pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu|webgl2|both]
+pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu]
                  [--mode differential|probe|dwell|sweep] [--passes a,b]
                  [--pre-disable a,b] [--no-park] [--force-recompute]
                  [--method timer-query|timestamp|raf-delta]
@@ -138,8 +138,8 @@ pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu|we
                  [--url http://localhost:5173] [--chrome-arg=<switch>]... [--hash <fragment>]
 ```
 
-Defaults: Sol, WebGL2, differential, every present pass, the backend's best
-clock, 1280×800 at dpr 2 (4.096 Mpx), headless. The priceFrame knobs
+Defaults: Sol, differential, every present pass, the adapter's best clock,
+1280×800 at dpr 2 (4.096 Mpx), headless. The priceFrame knobs
 (`--dwell-frames`, `--warmup-frames`, `--settle-frames`, `--budget-ms`) pass
 straight through; unset ones take priceFrame's own defaults. `--mode probe`
 boots, settles and prints the adapter block and the idle rAF period, no sweep.
@@ -212,24 +212,22 @@ differential mode and the dwell's in the other two, defaulting to the same
 `--hash <fragment>` appends the app's own URL-fragment switches to every
 boot — `--hash webgpu-gate=force` shows the requires-WebGPU page on a
 browser that supports it, the one way to exercise the gate's `BootError`
-end to end. It composes with the `#renderer=webgl2` a WebGL2 boot already
-carries (`&`-joined; the app reads every switch off one hash). `--url`
+end to end (the app reads every switch off one hash, `&`-joined). `--url`
 cannot carry it: the base is prefixed with `/v/<blob>/`, so a fragment
 there lands mid-path.
 
-**Contexts run backend-major — every WebGPU context, then every WebGL2
-one — with the scenarios in the order given; `all` is the canon order
-mw120, sol, earth, mw50, lg.** So `--scenario all --backend both` opens
-with mw120|webgpu then sol|webgpu, the two contexts a Tier 1 run visits,
-in the same order. That is what lets Tier 1 compare against the pin:
-`diff/README.md` § The refusals, run position.
+**Contexts run in the scenario order given; `all` is the canon order
+mw120, sol, earth, mw50, lg.** So `--scenario all` opens with mw120 then
+sol, the two contexts a Tier 1 run visits, in the same order. That is what
+lets Tier 1 compare against the pin: `diff/README.md` § The refusals, run
+position.
 
-**`--backend both` runs each scenario twice, in separate contexts, and pins
-`--method raf-delta`.** The two backends' best clocks are different
-instruments — WebGL2's timer query against WebGPU's timestamp resolve — so
-taking each one's best builds exactly the mixed-method table that must never
-be compared. rAF wall time is the one clock both supply. An explicit
-`--method` overrides the pin, and the run says it did.
+**A run that writes or reads the pin pins `--method raf-delta`.** Every
+archived pin and baseline was recorded on it, `pinRefusal` rejects any
+other method outright, and a table mixing clocks compares two instruments —
+so defaulting to the adapter's best would spend a whole armed run to be
+refused. An explicit `--method` overrides the pin, and the run says it
+did.
 
 **A flag the chosen mode does not read is an error, not a no-op.**
 `--mode dwell --method timer-query` is refused rather than quietly stamping
@@ -285,8 +283,7 @@ device pixel ratio, with `localStorage['stellata.info-dismissed']` and
 `sessionStorage['stellata.mobile-advisory-dismissed']` seeded to `'1'` so
 neither modal ever shows:
 
-1. **Boot** `<url>/v/<blob>/`, plus `#renderer=webgl2` for the escape
-   hatch — WebGPU is the default (`src/client/webgpu/README.md`
+1. **Boot** `<url>/v/<blob>/` (`src/client/webgpu/README.md`
    § The renderer is WebGPU). Wait for `window.debug`,
    `window.stellata` and `#loading` gone; a `#loading-status` starting
    `Error:` is a `BootError`. The requires-WebGPU gate is read *before*
@@ -295,14 +292,15 @@ neither modal ever shows:
    `display:none` and `window.stellata` is never set, so every predicate
    stays false and the wait would spend its whole timeout to say nothing.
    A mounted gate is a `BootError` naming its `data-verdict` instead.
-   Then check `stellata.webgpu` against the request: **a boot on the
-   other backend fails the scenario** rather than yielding a mislabelled
-   measurement.
+   Then check `stellata.webgpu`: **a page that came up without the seam
+   fails the scenario** rather than yielding a mislabelled measurement.
 2. **Adapter probe.** WebGL renderer/vendor via `WEBGL_debug_renderer_info`
-   and `EXT_disjoint_timer_query_webgl2` presence (the live context on a
-   WebGL2 boot, a throwaway one otherwise — dropped via `WEBGL_lose_context`
-   before the sweep, so the instrument leaves no second GPU context alive in
-   the page it is about to price); WebGPU `requestAdapter().info`,
+   and `EXT_disjoint_timer_query_webgl2` presence, off a throwaway context
+   dropped via `WEBGL_lose_context` before the sweep so the instrument
+   leaves no second GPU context alive in the page it is about to price.
+   Nothing measures on it: the unmasked renderer string is what
+   `adapterSlug` names the committed pin file by. Then WebGPU
+   `requestAdapter().info`,
    the fallback flag, and `stellata.webgpu.timestampsAvailable`. A software
    renderer (`/swiftshader|llvmpipe|software/i`, or a fallback adapter)
    **aborts the whole run** — nothing measured on it counts.

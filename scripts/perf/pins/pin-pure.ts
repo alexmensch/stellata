@@ -348,11 +348,11 @@ function runIdentityRefusals(sources: readonly RunSource[]): string[] {
   return refusals;
 }
 
-/** Union of the runs' keys, canon rows first in canon order. */
+/** The canon rows the runs hold, in canon order — and ONLY those
+ *  (README.md § Run position). */
 function keysAcross(sources: readonly RunSource[]): string[] {
   const keys = new Set(sources.flatMap((s) => s.file.scenarios.map(pinKey)));
-  const rank = (key: string): number => CANON_POSITIONS.get(key) ?? Number.POSITIVE_INFINITY;
-  return [...keys].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  return [...CANON_POSITIONS.keys()].filter((key) => keys.has(key));
 }
 
 function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
@@ -457,14 +457,12 @@ export function missingCanonRows(pin: PinFile): readonly string[] {
 
 /** Which side is missing the stream, so an ungated row says why rather than
  *  only that it is ungated — the pin having one and the run not is an
- *  instrument regression, not the WebGL2 backend being itself. */
+ *  instrument regression rather than the adapter being itself. */
 function ungatedNote(
-  stream: 'GPU' | 'compute', backend: Backend, hasPinned: boolean, hasCurrent: boolean,
+  stream: 'GPU' | 'compute', hasPinned: boolean, hasCurrent: boolean,
 ): string {
   if (!hasPinned && !hasCurrent) {
-    return backend === 'webgl2'
-      ? `no ${stream} stream — WebGL2 supplies none`
-      : `no ${stream} stream on either side — the adapter resolved no believable durations`;
+    return `no ${stream} stream on either side — the adapter resolved no believable durations`;
   }
   return hasPinned
     ? `the pin carries a ${stream} stream for this row; this run resolved none`
@@ -565,7 +563,7 @@ function streamRow(pinned: PinRow, spec: StreamSpec): PinVerdictRow {
   const { key, metric, current } = spec;
   const side = spec.pinned;
   if (side === null || current === null) {
-    const note = ungatedNote(spec.stream, pinned.backend, side !== null, current !== null);
+    const note = ungatedNote(spec.stream, side !== null, current !== null);
     const context = spec.ungatedContext;
     return context === null
       ? ungatedRow(key, metric, side?.valueMs ?? null, current?.valueMs ?? null, note)
