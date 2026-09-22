@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { SOL_BODIES } from '../../planet-system';
 import { texelBytes } from '../../../util/texture-bytes-pure';
+import { readTslSource } from '../../../webgpu/tsl/tsl-source-fixture';
 import {
   HORIZON_AZIMUTHS,
   HORIZON_SIN_RANGE,
@@ -17,17 +18,9 @@ import {
   terrainViewFactor,
 } from './surface-relief-pure';
 
-/** The shipped mesh shader's graph builder, comments stripped. The node
- *  graph is the render path and this module is only its mirror, so the
- *  expression shapes are pinned as source text — there is no GPU here. The
- *  strip runs once and every assertion reads the result: these modules
- *  carry long comments that quote their own expressions, so a claim over
- *  the raw text can be satisfied by prose about the code rather than by the
- *  code. */
-const fragCode = readFileSync(
-  fileURLToPath(new URL('../../../webgpu/solar-system/planet-mesh-tsl.ts', import.meta.url)),
-  'utf8',
-).replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+/** The shipped mesh graph, pinned as source text — there is no GPU here. */
+const fragCode = readTslSource(
+  new URL('../../../webgpu/solar-system/planet-mesh-tsl.ts', import.meta.url));
 
 /** Equator at longitude 0 with the pole on +z: east is +y, north is +z. */
 const N: readonly [number, number, number] = [1, 0, 0];

@@ -1,6 +1,6 @@
 // The TSL band's constant-drift guard against the CPU mirror the brightness
 // bound is taken from — README.md § The bound is taken off the mirror, and
-// ../solar-system/README.md § Constant drift runs in both directions.
+// ../solar-system/README.md § Constant drift.
 
 import { readTslSource } from '../tsl/tsl-source-fixture';
 import { describe, expect, it } from 'vitest';

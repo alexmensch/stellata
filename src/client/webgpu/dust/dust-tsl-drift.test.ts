@@ -1,5 +1,5 @@
 // The TSL half of the dust sprite's constant-drift guards. See
-// ../solar-system/README.md § Constant drift runs in both directions.
+// ../solar-system/README.md § Constant drift.
 
 import { readTslSource } from '../tsl/tsl-source-fixture';
 import { describe, expect, it } from 'vitest';

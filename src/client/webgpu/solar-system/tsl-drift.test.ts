@@ -1,9 +1,7 @@
-// The TSL half of the shader-constant drift guards: a pinned constant must
-// be read from its `*-pure.ts` home, never restated as a literal.
-// README.md § Constant drift runs in both directions.
+// The solar-system graphs' constant-drift guards: a pinned constant must be
+// read from its `*-pure.ts` home, never restated as a literal.
+// README.md § Constant drift.
 
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   ATMO_N_LIGHT, ATMO_N_VIEW, LIGHT_JITTER_STRIDE, TWILIGHT_TAIL_AMP,
@@ -18,9 +16,9 @@ import {
 import {
   literalDriftOffenders, type DriftExemption, type PinnedConstant,
 } from '../tsl/literal-drift-pure';
+import { readTslSource } from '../tsl/tsl-source-fixture';
 
-const read = (name: string) =>
-  readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
+const read = (name: string) => readTslSource(new URL(name, import.meta.url));
 
 const SOURCES: Record<string, string> = {
   'atmosphere-scatter-tsl.ts': read('./atmosphere-scatter-tsl.ts'),
@@ -33,8 +31,8 @@ const SOURCES: Record<string, string> = {
 const ALL = Object.values(SOURCES).join('\n');
 
 /** Every constant whose value is authored once in a `*-pure.ts` module and
- *  read by both shader backends. `identifier` is what the TSL side must
- *  reference; `values` are the numbers that must NOT appear as literals. */
+ *  read by these graphs. `identifier` is what a graph must reference;
+ *  `values` are the numbers that must NOT appear as literals. */
 const PINNED: readonly PinnedConstant[] = [
   { identifier: 'ATMO_N_VIEW', values: [ATMO_N_VIEW] },
   { identifier: 'ATMO_N_LIGHT', values: [ATMO_N_LIGHT] },
@@ -82,12 +80,8 @@ describe('the TSL surfaces restate no pinned constant as a literal', () => {
   }
 });
 
-/** Comments stripped: a claim must be satisfied by the graph, never by a
- *  comment quoting it. */
-const stripped = (src: string) =>
-  src.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-const scatter = stripped(SOURCES['atmosphere-scatter-tsl.ts']);
-const meshTsl = stripped(SOURCES['planet-mesh-tsl.ts']);
+const scatter = SOURCES['atmosphere-scatter-tsl.ts'];
+const meshTsl = SOURCES['planet-mesh-tsl.ts'];
 
 // The constants above are pinned; these are the expression shapes, and each
 // is a plausible picture rather than a failure when it drifts.

@@ -45,7 +45,7 @@ src/client/webgpu/solar-system/
                               (`../../solar-system/materials/README.md`
                               § Texture-slot rosters).
   tsl-materials.ts (+ test)   The factory implementing SolarSystemMaterials.
-  tsl-drift.test.ts           § Constant drift runs in both directions.
+  tsl-drift.test.ts           § Constant drift.
 ```
 
 ## A stand-in's filters
