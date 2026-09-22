@@ -70,23 +70,17 @@ geometry and attribute writers.
   the one leg a *non*-star module reads, via
   `KindContext.starPhotometry`.
 - `star-pipeline.ts` — `InstancedBufferGeometry` + disc / glow /
-  coreMask `RawShaderMaterial`s + meshes. Owns
-  `applyDiscBlendDefaults` + `applyGlowBlendDefaults` (shared with the
-  local mirror + planet body field) + `setMonochromeBlend` + `dispose`.
-  `absorbRecords()` grows `instanceCount` to the decoded record count and
-  range-uploads the window that landed. **On this backend the instance
-  count IS the bound** — there is no compaction pass — so leaving it at
-  the full catalogue during a progressive load draws every undecoded
-  record as an absolute-magnitude-zero star sitting on Sol. `iPuls` is the
-  one static attribute backed by a copy rather than a catalog column, so
-  its window is re-interleaved rather than just flagged.
-  **The attributes it flags are derived from the geometry** — every
-  instanced attribute whose `usage` is not `DynamicDrawUsage` — rather
-  than listed. A hand-kept roster is a list a later attribute gets left
-  off, and the symptom is that attribute rendering its whole post-chunk-0
-  tail stale with nothing failing; the four dynamic ones upload whole and
-  need no range.
+  coreMask `RawShaderMaterial`s + meshes, drawn only on the escape
+  hatch.
 - `star.vert.glsl`, `star.frag.glsl` — GLSL3 / WebGL2 shaders.
+- `star-blend.ts` (+ test) — `applyDiscBlendDefaults`,
+  `applyGlowBlendDefaults`, `applyMonochromeBlend` and the
+  `applyChartBlendSwap` pair helper over them. Renderer-neutral: every
+  field they set is on `THREE.Material`, so the TSL star layer, the
+  planet glare and the planet body field share them
+  (§ Blend states).
+- `star-quad.ts` — `STAR_QUAD_CORNERS` / `STAR_QUAD_INDEX`, the unit
+  square every star-shaped emitter's geometry expands.
 - `star-pass.ts` (+ test) — the pass identities (`STAR_PASS_GLOW` /
   `STAR_PASS_DISC` / `STAR_PASS_CORE_MASK`, = the shaders' `uRenderMode`
   values) and `colourPassFor`, the size-terms → colour-pass routing the
@@ -112,7 +106,6 @@ geometry and attribute writers.
   derives the port's packable-attribute partition from it.
 - `star-pipeline.test.ts` — dispose + uniform-sharing + blend
   defaults.
-- `disc-blend.test.ts` — disc/glow blend-equation parity.
 - `star-pass-split-drift.test.ts` — pins both backends' vertex stages to
   routing the disc/glow split on the undimmed magnitude (§ Star
   rendering). Source-level, because no behavioural suite can reach it:

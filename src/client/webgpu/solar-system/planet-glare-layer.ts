@@ -3,7 +3,7 @@
 // mirror, and the per-frame re-pack. README.md § The glare packs.
 
 import * as THREE from 'three';
-import { applyGlowBlendDefaults, applyMonochromeBlend } from '../../star-pipeline/star-pipeline';
+import { applyGlowBlendDefaults, applyMonochromeBlend } from '../../star-pipeline/star-blend';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import type { MrtOutputLayer } from '../hdr/hdr-pipeline-webgpu';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';

@@ -14,7 +14,7 @@ import {
   ringPlaneElevationDeg,
 } from './rings/ring-photometry-pure';
 import { poleVectorAt } from './rotation/rotation-elements-pure';
-import { applyGlowBlendDefaults, applyMonochromeBlend } from '../../star-pipeline/star-pipeline';
+import { applyGlowBlendDefaults, applyMonochromeBlend } from '../../star-pipeline/star-blend';
 import {
   pickChartDiscUniforms,
   pickPerceptualDiscUniforms,

@@ -14,7 +14,7 @@ import { STAR_TIER_DISC, STAR_TIER_GLOW, tierListBase, type StarTier } from './c
 import { StarCompaction } from './compaction/star-compaction';
 import { STAR_QUAD_INDEX_COUNT, buildStarGeometries, type StarGeometries } from './star-geometry';
 import { StarTables, type StarLayerSources } from './star-tables';
-import { applyChartBlendSwap } from '../../star-pipeline/star-pipeline';
+import { applyChartBlendSwap } from '../../star-pipeline/star-blend';
 import { buildStarCoreMaskMaterial } from './star-core-mask-tsl';
 import { applyStarDiscTslBlend, buildStarDiscMaterial } from './star-disc-tsl';
 import { buildStarGlowMaterial } from './star-glow-tsl';

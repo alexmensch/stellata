@@ -5,7 +5,7 @@
 import { Discard, Fn, step } from 'three/tsl';
 import { NodeMaterial, type Node } from 'three/webgpu';
 import type * as THREE from 'three';
-import { applyDiscBlendDefaults } from '../../star-pipeline/star-pipeline';
+import { applyDiscBlendDefaults } from '../../star-pipeline/star-blend';
 import { STAR_PASS_DISC } from '../../star-pipeline/star-pass';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import type { MrtEmitterMaterial } from '../hdr/mrt-material';

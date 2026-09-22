@@ -2,7 +2,7 @@
 // the 8 guaranteed vertex buffers (README.md § The glare packs).
 
 import * as THREE from 'three';
-import { STAR_QUAD_CORNERS, STAR_QUAD_INDEX } from '../../star-pipeline/star-pipeline';
+import { STAR_QUAD_CORNERS, STAR_QUAD_INDEX } from '../../star-pipeline/star-quad';
 import type {
   PlanetGlareBuffers,
 } from '../../solar-system/planets/planet-body-field';

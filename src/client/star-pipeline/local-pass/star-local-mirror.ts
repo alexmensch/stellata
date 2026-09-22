@@ -3,7 +3,7 @@
 // See src/client/local-depth/README.md § Full membership.
 
 import * as THREE from 'three';
-import { applyDiscBlendDefaults, applyGlowBlendDefaults } from '../star-pipeline';
+import { applyDiscBlendDefaults, applyGlowBlendDefaults } from '../star-blend';
 import { markStatisticEmitter } from '../../hdr/attachments/attachment-gate';
 import {
   STAR_PASS_CORE_MASK, STAR_PASS_DISC, STAR_PASS_GLOW, type StarPass,

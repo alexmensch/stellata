@@ -4,7 +4,7 @@
 import { Discard, Fn, float, smoothstep } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';
 import { PHYS_RATIO_THRESHOLD } from '../../star-pipeline/local-pass/star-local-cluster-pure';
-import { applyGlowBlendDefaults } from '../../star-pipeline/star-pipeline';
+import { applyGlowBlendDefaults } from '../../star-pipeline/star-blend';
 import { STAR_PASS_GLOW } from '../../star-pipeline/star-pass';
 import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';

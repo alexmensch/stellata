@@ -5,7 +5,7 @@ import {
   applyDiscBlendDefaults,
   applyGlowBlendDefaults,
   applyMonochromeBlend,
-} from './star-pipeline';
+} from './star-blend';
 
 // Pin the disc-pass blend equation across the helper's lifecycle.
 // PR #25 had to update two parallel sites for the AddEquation →
