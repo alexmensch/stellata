@@ -83,21 +83,19 @@ only pick path.
 ## The material seam
 
 Both passes take their material from an `LgEmissionMaterials` factory
-rather than building one inline, so the shader side moves without a second
-copy of the instance packing or the enable / chart gates. Both geometries
-cross unchanged — six buffers for the disc family, seven for the Sérsic
-one, inside WebGPU's eight. The factory is
+rather than building one inline: the layer owns the instance packing and
+the enable / chart gates. Its geometries are six buffers for the disc
+family and seven for the Sérsic one, inside WebGPU's eight. The factory is
 `../../webgpu/local-group/README.md`; `lg-module.ts` passes
 `kindCtx.webgpu.lgEmissionMaterials` and adds the emission group to
-`kindCtx.scene` — the wireframes are Line2 chrome and
-join it there, on the seam's stroke, since that scene is drawn on either
-backend (`../../webgpu/README.md` § One scene per boot).
+`kindCtx.scene` — the wireframes are Line2 chrome and join it there, on
+the seam's stroke (`../../webgpu/README.md` § One scene per boot).
 
 **Every uniform these shaders read is shared**, so the factory exposes no
 slot record at all: the six HDR emitter slots and `uWorldOffset` are in
 the uniform-node mirror. The layer holds no floating-origin slot of its
 own — `FloatingOrigin`'s write to the shared map is what reaches the
-shader, and `update()` is left settling the group's visibility.
+shader — and no per-frame update at all.
 
 ## Zero free parameters — the emission scale is derived
 

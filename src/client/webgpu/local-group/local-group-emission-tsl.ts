@@ -45,9 +45,6 @@ export function buildLocalGroupEmissionMaterial(
   // exit; entry is computed analytically in the fragment stage.
   material.side = BackSide;
 
-  // Per-instance, so every vertex of a triangle carries the same value and
-  // interpolation is exact — GLSL's `flat` is a cost choice here, not a
-  // correctness one, and TSL has no flat qualifier to spend on it.
   const vMeshLocalPos = varying(vec3(0), 'vLgMeshLocalPos');
   const vWorldPos = varying(vec3(0), 'vLgWorldPos');
   const vCamLocal = varying(vec3(0), 'vLgCamLocal');
@@ -108,9 +105,7 @@ export function buildLocalGroupEmissionMaterial(
     const c = dot(vCamLocal, vCamLocal).sub(1.0).toVar();
     const disc = b.mul(b).sub(a.mul(c)).toVar();
 
-    // The GLSL's three early returns, as one coverage predicate: WGSL has
-    // no value-carrying return, and each of them wrote the same all-zero
-    // texel set.
+    // README.md § One coverage predicate.
     const sqDisc = max(disc, 0.0).sqrt();
     const tEnter = max(b.negate().sub(sqDisc).div(a), 0.0).toVar();
     const worldPerT = length(vWorldPos.sub(cameraPosition)).toVar();

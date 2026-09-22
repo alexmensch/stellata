@@ -83,7 +83,7 @@ one an object gets depends on its family:
   envelope.** Derived by `renderedWireframeAxes`
   (`scripts/local-group/README.md`), not hand-entered, so it cannot
   drift. `overrides.tsv`'s `a_pc/b_pc/c_pc` remain the *structural*
-  input the emission geometry is built from; they are no longer what
+  input the emission geometry is built from; they are not what
   gets drawn. This exists because the overhang was structural rather
   than incidental: `z_d = c/3` makes the vertical envelope `4·z_d =
   4c/3`, so the glow spilled a third of the disc's thickness past its

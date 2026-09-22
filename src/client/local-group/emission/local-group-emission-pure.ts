@@ -84,7 +84,7 @@ export function expandComponent(
   return { ...comp, axesPc, density0 };
 }
 
-/** Raymarch scheme shared by the GLSL shader and the CPU mirror. The
+/** Raymarch scheme shared by the graph and the CPU mirror. The
  *  disc pass marches denser: grazing rays run tens of kpc through an
  *  envelope whose vertical scale height is ~10² pc, and undersampling
  *  that profile bands. */
