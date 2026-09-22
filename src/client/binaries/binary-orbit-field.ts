@@ -50,8 +50,8 @@ export interface BinaryOrbitFieldOptions {
    *  point sources sum brightness correctly. Mutated in place each frame. */
   compositeSuppress: Float32Array;
   /** Star-pipeline attributes the field flushes after each update(). */
-  iPositionAttr: THREE.InstancedBufferAttribute;
-  iCompositeSuppressAttr: THREE.InstancedBufferAttribute;
+  iPositionAttr: THREE.BufferAttribute;
+  iCompositeSuppressAttr: THREE.BufferAttribute;
 }
 
 const DELTA_OUT: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };

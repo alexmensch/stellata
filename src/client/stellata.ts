@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { Catalog } from './loaders/catalog-loader';
 import { createBinarySystemMembership } from './binaries/binary-system-membership';
-import { builtinChromeLineMaterials } from './chrome-lines/builtin-chrome-lines';
 import type { ChromeLineMaterials } from './chrome-lines/chrome-line-materials';
 import { createPlanetSystemMembership } from './solar-system/planet-system-membership';
 import { SystemMembershipRegistry } from './system-membership/system-membership';
@@ -12,8 +11,6 @@ import {
   verifyDustChunks,
   type ChunkVerifyReport,
 } from './loaders/dust-voxel-readback';
-import vertexShader from './star-pipeline/star.vert.glsl?raw';
-import fragmentShader from './star-pipeline/star.frag.glsl?raw';
 import perceptualDiscChunk from './star-pipeline/perceptual-disc/perceptual-disc.glsl?raw';
 import dustRaymarchChunk from './star-pipeline/extinction/dust-raymarch.glsl?raw';
 import { DustParticleLayer } from './dust/dust-particle-layer';
@@ -76,7 +73,6 @@ import {
   auditCadenceFrame,
   type CadenceTrustState,
 } from './render-gate/cadence/cadence-trust-pure';
-import { HdrPipeline } from './hdr/hdr-pipeline';
 import type { HdrSeam, ReductionSeam } from './hdr/hdr-seam';
 import {
   angularToPx as angularToPxPure,
@@ -120,7 +116,6 @@ import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { OccluderSet } from './occlusion/occluder-set';
 import type { PickVisibility } from './hover/hover-pick-disambiguator';
 import { SolarSystemCluster } from './solar-system/local-cluster';
-import { StarLocalMirror } from './star-pipeline/local-pass/star-local-mirror';
 import { StarLocalCluster } from './star-pipeline/local-pass/star-local-cluster';
 import {
   PHYS_RATIO_THRESHOLD,
@@ -162,7 +157,6 @@ import {
   type FrameStatistic,
 } from './hdr/exposure/scene-adaptation-pure';
 import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
-import { LuminanceReduction } from './hdr/exposure/reduction/reduction-pass';
 import {
   cameraAbsInto,
   SceneLayerRegistry,
@@ -177,12 +171,13 @@ import {
   type SceneElementId,
   SCENE_ELEMENT_IDS,
 } from './scene/declutter/scene-elements';
-import { StarPipeline } from './star-pipeline/star-pipeline';
+import {
+  buildStarSourceAttributes, type StarSourceAttributes,
+} from './star-pipeline/star-source-attributes';
 import { CATALOG_BOUNDING_RADIUS_PC } from './star-pipeline/shards/star-shards-pure';
 import { StarFrame } from './star-pipeline/star-frame/star-frame';
 import { buildSharedUniforms, type SharedUniforms } from './frame/shared-uniforms';
 import { FloatingOrigin } from './frame/floating-origin';
-import { ExtinctionPrepass } from './star-pipeline/extinction/extinction-prepass';
 import { formatAvParity, type AvParityReport } from './star-pipeline/extinction/av-parity-pure';
 import type {
   ExtinctionPrepassSeam, ExtinctionView,
@@ -212,9 +207,10 @@ export interface StellataOptions {
    *  constructor attaches each module, and an unloaded one attaches to
    *  an empty roster (kinds/kind-modules.ts). */
   kinds: BuiltKindModules;
-  /** Pre-initialised WebGPU boot seam (webgpu/README.md). Absent =
-   *  the shipped WebGL2 boot, byte-identical to before the seam. */
-  webgpu?: WebGpuSeam | null;
+  /** The booted renderer and everything hung off it (webgpu/README.md).
+   *  Built before the shell, because only a live device can refuse
+   *  itself and that refusal is the gate page, not a fallback. */
+  webgpu: WebGpuSeam;
 }
 
 export type CameraMode = 'navigate' | 'observe';
@@ -258,13 +254,9 @@ export type StellataEventMap = {
 export class Stellata implements FrameAnchor {
   readonly catalog: Catalog;
   readonly renderer: StellataRenderer;
-  /** Narrowed WebGL2 renderer — null on a WebGPU boot. GL-only consumers
-   *  (extinction prepass, GPU timer, frame pricing) gate on it instead of
-   *  casting `renderer`. */
-  readonly rendererGL: THREE.WebGLRenderer | null;
-  /** WebGPU boot seam — null on the shipped WebGL2 boot. Port children
-   *  reach their scene and the shared uniform nodes through it. */
-  readonly webgpu: WebGpuSeam | null;
+  /** The boot seam — layers reach their scene and the shared uniform
+   *  nodes through it. */
+  readonly webgpu: WebGpuSeam;
   private webgpuStarLayer: WebGpuStarLayer | null = null;
   private readonly chromeLines: ChromeLineMaterials;
   readonly camera: THREE.PerspectiveCamera;
@@ -273,10 +265,7 @@ export class Stellata implements FrameAnchor {
   readonly roll = new RollController();
 
   private scene: THREE.Scene;
-  // Star render pipeline — one InstancedBufferGeometry feeds three
-  // ShaderMaterials (core depth-mask / disc / glow). Owns the dispose
-  // contract for the densest resource cluster in the app.
-  private starPipeline!: StarPipeline;
+  private starAttrs!: StarSourceAttributes;
   // The shared view/screen uniform map (frame/README.md § Shared
   // uniforms) — every per-frame write goes through this field, never
   // through a star material's uniforms object.
@@ -515,32 +504,15 @@ export class Stellata implements FrameAnchor {
     this.catalog = catalog;
     this.kinds = kinds;
 
-    this.webgpu = webgpu ?? null;
-    if (this.webgpu !== null) {
-      this.renderer = this.webgpu.renderer;
-      this.rendererGL = null;
-    } else {
-      this.rendererGL = new THREE.WebGLRenderer({
-        canvas,
-        antialias: false,
-        alpha: true,
-        powerPreference: 'high-performance',
-        logarithmicDepthBuffer: true,
-      });
-      this.renderer = this.rendererGL;
-    }
+    this.webgpu = webgpu;
+    this.renderer = this.webgpu.renderer;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.renderer.setClearColor(0x000000, 0);
-    // Each boot owns one HDR chain: the WebGPU pipeline (and its
-    // reduction) come pre-built on the seam, behind the import boundary.
-    if (this.webgpu !== null) {
-      this.hdr = this.webgpu.hdr;
-      this.reduction = this.webgpu.hdr.reduction;
-    } else {
-      this.hdr = new HdrPipeline(this.rendererGL!);
-      this.reduction = new LuminanceReduction(this.rendererGL!);
-    }
+    // The HDR chain and its reduction come pre-built on the seam, behind
+    // the import boundary.
+    this.hdr = this.webgpu.hdr;
+    this.reduction = this.webgpu.hdr.reduction;
 
     this.scene = new THREE.Scene();
 
@@ -591,11 +563,10 @@ export class Stellata implements FrameAnchor {
       hdr: this.hdr.emitterUniforms,
     });
     this.sharedUniforms = sharedUniforms;
-    this.webgpu?.bindSharedUniforms(sharedUniforms);
+    this.webgpu.bindSharedUniforms(sharedUniforms);
     // Must follow bindSharedUniforms: the TSL factory resolves the shared
     // uniform nodes on read and throws while the registry is unbound.
-    this.chromeLines =
-      this.webgpu?.chromeLineMaterials ?? builtinChromeLineMaterials();
+    this.chromeLines = this.webgpu.chromeLineMaterials;
     // Constructed before every consumer of the magnitude bounds: it
     // rewrites all five slots from its own constructor, so the seeds in
     // buildSharedUniforms never reach a shader.
@@ -625,7 +596,7 @@ export class Stellata implements FrameAnchor {
       cameraPosition: this.camera.position,
       t: this.getT(),
       onLocalPositionsWritten: () => {
-        uploadFull(this.starPipeline.iPositionAttr);
+        uploadFull(this.starAttrs.iPositionAttr);
         this.binaryOrbitField?.markBaselinesDirty();
       },
     });
@@ -653,54 +624,37 @@ export class Stellata implements FrameAnchor {
     // and binary-independent; see the field declaration for the rationale.
     this._suppressPulsation = new Float32Array(catalog.count);
 
-    this.starPipeline = new StarPipeline({
-      scene: this.webgpu === null ? this.scene : null,
-      catalog,
-      logRadii: this.starFrame.logRadii,
-      lumClassF32: this.starFrame.lumClassF32,
-      distSol: this.starFrame.distSol,
-      teffApsis: this.starFrame.teffApsis,
+    this.starAttrs = buildStarSourceAttributes({
       localPositions: this.starFrame.localPositions,
       compositeSuppress: this._compositeSuppress,
       eclipseDim: this._eclipseDim,
       suppressPulsation: this._suppressPulsation,
-      vertexShader,
-      fragmentShader,
-      sharedUniforms,
-      boundingSphereRadiusPc: CATALOG_BOUNDING_RADIUS_PC,
     });
 
-    // Renders in place of the GLSL pipeline above, which still constructs
-    // either way: its attributes are the live source buffers this layer
-    // watches, and the writers keep writing them.
-    this.webgpuStarLayer = this.webgpu?.attachStarLayer(this.scene, {
+    this.webgpuStarLayer = this.webgpu.attachStarLayer(this.scene, {
       catalog,
       logRadii: this.starFrame.logRadii,
       lumClassF32: this.starFrame.lumClassF32,
       distSol: this.starFrame.distSol,
       teffApsis: this.starFrame.teffApsis,
       boundingSphereRadiusPc: CATALOG_BOUNDING_RADIUS_PC,
-      iPositionAttr: this.starPipeline.iPositionAttr,
-      iCompositeSuppressAttr: this.starPipeline.iCompositeSuppressAttr,
-      iEclipseDimAttr: this.starPipeline.iEclipseDimAttr,
-      iSuppressPulsationAttr: this.starPipeline.iSuppressPulsationAttr,
-    }) ?? null;
+      ...this.starAttrs,
+    });
 
-    // Chunk 0 is already decoded and both pipelines were constructed
-    // against it, so this first call folds it in; every later one follows a
+    // Chunk 0 is already decoded and the pipeline was constructed against
+    // it, so this first call folds it in; every later one follows a
     // landing chunk.
     this.offCatalogRecords = this.catalog.onRecordsDecoded(
       () => this.absorbCatalogRecords());
     this.absorbCatalogRecords();
 
-    // Shared uniforms passed by reference so floating-origin recenters,
-    // resize updates, and dust loads propagate to the particle pass
-    // automatically. On a WebGPU boot the sprite takes its slots off the
-    // uniform-node mirror instead.
+    // The sprite takes its slots off the uniform-node mirror; the shared
+    // uniforms still pass by reference so floating-origin recenters,
+    // resize updates and dust loads reach it.
     this.dustParticles = new DustParticleLayer(
       this.scene,
       sharedUniforms,
-      this.webgpu?.dustParticleMaterials,
+      this.webgpu.dustParticleMaterials,
     );
 
     // Galactic reference layers — disc is always added; grid hides itself
@@ -711,16 +665,8 @@ export class Stellata implements FrameAnchor {
     this.scene.add(this.galacticDisc.group);
     this.orbitRingsLayer = new OrbitRingsLayer(this.chromeLines);
     this.binaryOrbitPathLayer = new BinaryOrbitPathLayer(this.chromeLines);
-    // One mirror per boot: the pass scene renders on whichever backend
-    // booted, so the mirror's materials must match it.
-    const starMirror = this.webgpuStarLayer?.localMirror ?? new StarLocalMirror(
-      this.starPipeline.geometry,
-      vertexShader,
-      fragmentShader,
-      sharedUniforms,
-    );
     this.starLocalCluster = new StarLocalCluster(
-      starMirror,
+      this.webgpuStarLayer.localMirror,
       this.binaryOrbitPathLayer,
       sharedUniforms.uLocalMemberIdx as { value: Int32Array },
       {
@@ -762,11 +708,11 @@ export class Stellata implements FrameAnchor {
       camera: this.camera,
       canvas: this.renderer.domElement,
       sharedUniforms,
-      // WebGPU exposes no equivalent through three's public surface, so that
-      // boot takes the spec's guaranteed floor for maxTextureDimension2D —
+      // WebGPU exposes no equivalent through three's public surface, so
+      // this is the spec's guaranteed floor for maxTextureDimension2D —
       // 8192, which is the texture ladder's top rung anyway, so nothing
       // clamps on a device whose real limit is only ever higher.
-      maxTextureSize: this.rendererGL?.capabilities.maxTextureSize ?? 8192,
+      maxTextureSize: 8192,
       solIndex: catalog.solIndex,
       solAbsInto: (out) => {
         const si = catalog.solIndex;
@@ -993,7 +939,7 @@ export class Stellata implements FrameAnchor {
     this.milkyway = new MilkyWay({
       uLimitMag: sharedUniforms.uLimitMag,
       hdr: this.hdr.emitterUniforms,
-    }, this.webgpu?.bandMaterials);
+    }, this.webgpu.bandMaterials);
     this.scene.add(this.milkyway.group);
 
     this.filters = new FilterController({
@@ -1622,7 +1568,7 @@ export class Stellata implements FrameAnchor {
     if (dust === null) {
       u.uDustTexture.value = null;
       u.uDustEnabled.value = 0;
-      this.webgpu?.setDustTexture(null);
+      this.webgpu.setDustTexture(null);
       this.extinctionPrepass?.dispose();
       this.extinctionPrepass = null;
       this.milkyway.attachDust(null);
@@ -1637,20 +1583,13 @@ export class Stellata implements FrameAnchor {
     // Texture slots are not part of the WebGPU uniform-node mirror, so the
     // volume reaches the TSL march by call rather than by map write
     // (webgpu/tsl/README.md § Shared uniform nodes).
-    this.webgpu?.setDustTexture(dust.texture);
+    this.webgpu.setDustTexture(dust.texture);
     if (this.extinctionPrepass === null) {
-      this.extinctionPrepass = this.webgpu !== null
-        ? this.webgpu.attachExtinctionPrepass({
-          positions: this.catalog.positions,
-          count: this.catalog.count,
-          uniforms: u,
-        })
-        : new ExtinctionPrepass({
-          renderer: this.rendererGL!,
-          positions: this.catalog.positions,
-          count: this.catalog.count,
-          uniforms: u,
-        });
+      this.extinctionPrepass = this.webgpu.attachExtinctionPrepass({
+        positions: this.catalog.positions,
+        count: this.catalog.count,
+        uniforms: u,
+      });
     }
     this.extinctionPrepass?.markDirty();
     // Each streamed voxel chunk changes sightline integrals — refresh the
@@ -1786,8 +1725,8 @@ export class Stellata implements FrameAnchor {
       absoluteMags: this.catalog.absmag,
       localPositions: this.localPositions,
       compositeSuppress: this._compositeSuppress,
-      iPositionAttr: this.starPipeline.iPositionAttr,
-      iCompositeSuppressAttr: this.starPipeline.iCompositeSuppressAttr,
+      iPositionAttr: this.starAttrs.iPositionAttr,
+      iCompositeSuppressAttr: this.starAttrs.iCompositeSuppressAttr,
     });
     this.binaryOrbitField.recenter(this.worldOffset);
     // Re-attach scrubs the prior attach's residual per-instance state.
@@ -1795,7 +1734,7 @@ export class Stellata implements FrameAnchor {
     // slots, so values written under the previous set would otherwise
     // persist on stars the new one doesn't touch.
     this._eclipseDim.fill(1);
-    uploadFull(this.starPipeline.iEclipseDimAttr);
+    uploadFull(this.starAttrs.iEclipseDimAttr);
     this.eclipsePhotometryField = new EclipsePhotometryField({
       binaries,
       absolutePositions: this.catalog.positions,
@@ -1803,7 +1742,7 @@ export class Stellata implements FrameAnchor {
       absoluteMags: this.catalog.absmag,
       physicalRadiusSolar: this.catalog.physicalRadius,
       eclipseDimBuffer: this._eclipseDim,
-      iEclipseDimAttr: this.starPipeline.iEclipseDimAttr,
+      iEclipseDimAttr: this.starAttrs.iEclipseDimAttr,
     });
   }
 
@@ -2170,11 +2109,9 @@ export class Stellata implements FrameAnchor {
   private tmpConstellationAbs = new THREE.Vector3();
   private tmpBound = new THREE.Sphere();
 
-  /** The core depth-mask's one visibility write, reaching both backends.
-   *  Whether it should be on is the layer's contribution verdict; this is
-   *  only the apply. */
+  /** The core depth-mask's one visibility write. Whether it should be on
+   *  is the layer's contribution verdict; this is only the apply. */
   private setCoreMaskVisible(on: boolean): void {
-    this.starPipeline.coreMaskMesh.visible = on;
     this.webgpuStarLayer?.setCoreMaskVisible(on);
   }
 
@@ -2350,7 +2287,6 @@ export class Stellata implements FrameAnchor {
     if (this.monochrome === on) return;
     this.monochrome = on;
     this.sharedUniforms.uMonochrome.value = on ? 1 : 0;
-    this.starPipeline.setMonochromeBlend(on);
     this.webgpuStarLayer?.setMonochrome(on);
     this.renderer.setClearColor(
       on ? paperClearColour(this.renderer.outputColorSpace) : 0x000000, on ? 1 : 0);
@@ -2823,7 +2759,7 @@ export class Stellata implements FrameAnchor {
     // viewport and the two distN sliders, so a stale one would elide the
     // physical-size branch against last frame's plate scale.
     this.starFrame.syncPhysSizeWindow();
-    this.webgpu?.syncUniformNodes();
+    this.webgpu.syncUniformNodes();
     // Reads the scalars the sync above just copied, writes the lists every
     // star draw below reads — its own submit, so it has to sit between
     // the two (webgpu/star/compaction/README.md).
@@ -2835,7 +2771,7 @@ export class Stellata implements FrameAnchor {
     // this constructor, ahead of animate), and a GLSL material here
     // discards the whole submit rather than dropping one layer
     // (webgpu/README.md § One scene per boot).
-    if (this.webgpu !== null && !this.glslResidentsChecked) {
+    if (!this.glslResidentsChecked) {
       this.glslResidentsChecked = true;
       const residents = findGlslResidents(this.scene);
       if (residents.length > 0) {
@@ -2867,13 +2803,9 @@ export class Stellata implements FrameAnchor {
     perfGpuEnd('reduction');
     perfMeasure('submit.reduction');
     perfGpuEnd(GPU_WHOLE_FRAME_SCOPE);
-    if (this.webgpu !== null) {
-      // After the frame's LAST pass, and on every rendered frame whatever
-      // is listening: a pool nothing resolves overruns and stops sampling.
-      // See debug/gpu-timing/README.md § WebGPU.
-      resolveAndPublishGpuFrame(
-        this.webgpu.renderer, this.webgpu.timestampsAvailable);
-    }
+    // After the frame's LAST pass, whatever is listening: a pool nothing
+    // resolves overruns and stops sampling.
+    resolveAndPublishGpuFrame(this.webgpu.renderer, this.webgpu.timestampsAvailable);
     perfMark('frame.handlers');
     this.bus.emit('frame');
     perfMeasure('frame.handlers');
@@ -3110,7 +3042,6 @@ export class Stellata implements FrameAnchor {
     this.observe.dispose();
     this.focus.dispose();
     this.controls.dispose();
-    this.starPipeline.dispose();
     // The prepass's refill kernel binds the compaction's dispatch buffer, so
     // it has to drop its bind groups before the star layer releases that
     // buffer (webgpu/extinction/refill/README.md § The kernel bounds itself
@@ -3124,9 +3055,7 @@ export class Stellata implements FrameAnchor {
     this.layers.disposeAll();
     this.floatingOrigin.dispose();
     this.localDepthPass.dispose();
-    // Whoever built the chain releases it: on a WebGPU boot the pipeline
-    // constructed its own reduction and disposes it from hdr.dispose().
-    if (this.webgpu === null) this.reduction.dispose();
+    // The pipeline constructed its own reduction and releases it here.
     this.hdr.dispose();
     // The dust voxel grid is the largest single GPU allocation in the app
     // (~128 MiB Data3DTexture). MilkyWay shares the same texture handle but
@@ -3136,7 +3065,7 @@ export class Stellata implements FrameAnchor {
     // After every layer and the prepass: those hand their texture slots
     // back to the seam's placeholders, which this frees. Before the
     // renderer, so the releases go through a live device.
-    this.webgpu?.dispose();
+    this.webgpu.dispose();
     this.renderer.dispose();
     this.bus.clear();
   }

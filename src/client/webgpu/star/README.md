@@ -194,11 +194,12 @@ at its `iSourceIdx`. Two kinds of table:
   slot: 16 B per star, 5.9 MiB at today's count. Built from the
   catalogue and star-frame arrays; never written again.
 - **The forwarded tables** — `iPosition`, `iCompositeSuppress`,
-  `iEclipseDim`, `iSuppressPulsation`. The shell constructs the WebGL
-  `StarPipeline` on every boot; on this one its meshes never render, but
-  its **attributes are the live source buffers** every writer
-  (BinaryOrbitField, EclipsePhotometryField, StarFrame's recentre, the
-  shell's re-attach inits) keeps writing. Each forwarded table is a
+  `iEclipseDim`, `iSuppressPulsation`. The shell builds them through
+  `../../star-pipeline/star-source-attributes.ts` as plain
+  `BufferAttribute`s over its **own live arrays** — nothing instances
+  them and no geometry holds them; they carry the version and dirty
+  ranges every writer (BinaryOrbitField, EclipsePhotometryField,
+  StarFrame's recentre, the shell's re-attach inits) flags. Each forwarded table is a
   `StorageBufferAttribute` **over that attribute's own `Float32Array`**,
   itemSize 1 — no copy, so there is nothing to keep current — and
   `StarTables.syncSources()` forwards the source's `version` and

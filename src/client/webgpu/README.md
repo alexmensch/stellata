@@ -22,8 +22,8 @@ src/client/webgpu/
                                     and its dev switch. Outside the import
                                     boundary by necessity — its own README.
   seam.ts                           WebGpuSeam — the type-only contract the
-                                    integration shell holds on this boot.
-                                    StellataRenderer union type.
+                                    integration shell holds on this boot,
+                                    and the StellataRenderer alias.
   boot-webgpu.ts                    Async boot: construct + init the
                                     WebGPURenderer, build the seam handle.
                                     The dynamic-import boundary.
@@ -200,55 +200,8 @@ Three tiers, and a new allocation has to pick one:
   placeholders it then releases. A boot-scoped allocation added without a
   line there is unreachable by any teardown.
 - **Shell-held.** The renderer and the HDR pipeline are seam fields the
-  shell also holds as its own (`renderer`, `hdr`) and disposes on either
-  backend, so the seam's dispose must NOT touch them — it would
-  double-release.
-
-### Every park is a gate someone has to delete
-
-Each GL-only path parks behind a `rendererGL !== null` test. **A port
-child that lands its feature but leaves its gate in place ships a
-feature that is silently dead on WebGPU** — tests pass, nothing warns,
-the code simply never runs. So deleting the gate is part of the port,
-in the same PR.
-
-**Nothing is parked today.** What follows is the record of what closed
-each row, so a new park adds its own row here rather than landing silently.
-
-The line-layer row is gone: the local pass's three line layers (orbit
-rings, binary orbit paths, probe trails) drew nowhere on this boot because
-`LineBasicMaterial`'s lone fragment output fails WGSL pipeline creation
-against the HDR target's three attachments — and one invalid pipeline
-poisons the whole pass submit — so the shell removed their groups from the
-pass scene. The chrome line seam (`../chrome-lines/README.md`) replaced
-those materials and the three `remove()` calls went with it.
-
-The HDR row is gone: the chain port deleted `HdrPipeline`'s null-renderer
-park and `measureAdaptationStatistic`'s early return when `hdr/` landed.
-The extinction-prepass row went with `0it.20`: `attachDust` now builds
-one on either backend through `ExtinctionPrepassSeam`, so the
-`rendererGL !== null` test is gone. `extinctionPrepass` is still
-optional-chained, but on its lifecycle alone — it is null before the
-first `attachDust` and after `attachDust(null)`, on both boots.
-The three local-depth rows went with `0it.12`/`0it.4.8`: the pass renders
-on both boots, the `localPassLive` flag is deleted from both clusters,
-and the TSL star mirror + glare mirror repaint what collapses.
-
-The cutover swept for survivors and found none — every `rendererGL`
-test left is a live backend branch the escape hatch still takes (the
-WebGL renderer's own construction, its HDR pipeline and prepass, the
-timer-query frame source, the `maxTextureSize` read), not a feature
-parked off. `StellataRenderer` therefore stays a union and
-`Stellata.renderer` stays narrowed until `0it.14` deletes the hatch.
-That deletion is the backstop for a future park, not the plan — a gate
-still standing then means its feature was dead for a release.
-
-**A park that REMOVES rather than skips is invisible to that backstop,
-and the line-layer row was one.** It keyed on `webgpu !== null` — a
-positive test — so at cutover the branch would have become permanently
-TRUE, reading as ordinary unconditional code while a sweep for dead
-false-branches walked straight past it. Any future park of that shape has
-to be deleted by name; nothing else will catch it.
+  shell also holds as its own (`renderer`, `hdr`) and disposes itself, so
+  the seam's dispose must NOT touch them — it would double-release.
 
 The renderer boots with `reversedDepthBuffer: true` from day 1 — native
 [0, 1] reversed clip, depth funcs remapped, clear inverted, all

@@ -109,7 +109,7 @@ themselves.
   TSL test pattern), and the TSL layers (`webgpu/star/`,
   `webgpu/solar-system/`, `webgpu/hdr/`, `webgpu/extinction/`,
   `webgpu/chrome-lines/`). Every CPU subsystem is backend-blind, and the
-  seam owns no scene — layers add to the one below either way.
+  seam owns no scene — layers add to the one below.
   `webgpu/gate/` and `webgpu/boot-route.ts` are the exceptions to the
   folder's dynamic-import boundary: the "requires WebGPU" page has to
   render where WebGPU does not exist, so `main.ts` imports both

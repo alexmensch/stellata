@@ -3,9 +3,8 @@
 The star renderer's CPU half — instanced quads, three passes,
 physical-size scaling, the super-Gaussian intensity profile, and
 luminosity-class softness. Pulsation and dust extinction live in the
-subfolders. The GLSL materials here draw only on the `#renderer=webgl2`
-escape hatch; the shipped pipelines are `../webgpu/star/`, over the same
-geometry and attribute writers.
+subfolders. The pipelines that draw are `../webgpu/star/`, over the
+attribute writers here.
 
 ## Subfolders
 
@@ -69,9 +68,15 @@ geometry and attribute writers.
   through the single injected `StarModuleRuntime`. `photometry()` is
   the one leg a *non*-star module reads, via
   `KindContext.starPhotometry`.
+- `star-source-attributes.ts` — the four per-star buffers the shell
+  rewrites (`iPosition`, `iCompositeSuppress`, `iEclipseDim`,
+  `iSuppressPulsation`), wrapped as `BufferAttribute`s over the shell's
+  own arrays. Nothing instances them: they exist for the version and
+  dirty ranges `util/attribute-upload` flags and
+  `../webgpu/star/star-tables.ts` forwards.
 - `star-pipeline.ts` — `InstancedBufferGeometry` + disc / glow /
-  coreMask `RawShaderMaterial`s + meshes, drawn only on the escape
-  hatch.
+  coreMask `RawShaderMaterial`s + meshes. Unreachable from the shell;
+  deleted with the rest of the GLSL path.
 - `star.vert.glsl`, `star.frag.glsl` — GLSL3 / WebGL2 shaders.
 - `star-blend.ts` (+ test) — `applyDiscBlendDefaults`,
   `applyGlowBlendDefaults`, `applyMonochromeBlend` and the

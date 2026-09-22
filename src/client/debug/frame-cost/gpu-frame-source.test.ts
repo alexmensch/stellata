@@ -1,11 +1,9 @@
-import type * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { acquireGpuFrameSource, type GpuFrameSourceHost } from './gpu-frame-source';
 import {
   publishGpuFrameSample,
   resolveAndPublishGpuFrame,
 } from '../gpu-timing/gpu-frame-samples';
-import { FakeGl, asGl } from '../gpu-timing/fake-gl';
 import type { GpuFrameMethod } from './frame-cost-pure';
 import type * as PerfHud from '../perf-hud';
 
@@ -15,13 +13,7 @@ vi.mock('../perf-hud', async (importOriginal) => ({
   perfInstrumentationInstalled: () => perfState.panelOpen,
 }));
 
-const glHost = (fake: FakeGl): GpuFrameSourceHost => ({
-  rendererGL: { getContext: () => asGl(fake) } as unknown as THREE.WebGLRenderer,
-  webgpu: null,
-});
-
 const webgpuHost = (timestampsAvailable: boolean): GpuFrameSourceHost => ({
-  rendererGL: null,
   webgpu: { timestampsAvailable },
 });
 
@@ -58,30 +50,9 @@ describe('the pricing sweep picks its sample source per backend', () => {
     info.mockRestore();
   });
 
-  it('takes the WebGL2 timer query where the extension exists', () => {
-    const source = acquireGpuFrameSource(glHost(new FakeGl()), () => {});
-    expect(source?.method).toBe('timer-query');
-    source!.release();
-  });
-
-  it('falls back to rAF deltas where WebGL2 exposes no timer query', () => {
-    const fake = new FakeGl();
-    fake.hasExtension = false;
-    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
-
-    const source = acquireGpuFrameSource(glHost(fake), () => {});
-
-    expect(source?.method).toBe('raf-delta');
-    // The caller times frames itself in this mode, so there is nothing to
-    // release — but it must still be safe to call in the sweep's finally.
-    expect(() => source!.release()).not.toThrow();
-    expect(info).toHaveBeenCalled();
-    info.mockRestore();
-  });
-
-  it('leaves the WebGPU path unconstrained by the WebGL2 query slot', () => {
+  it('leaves the timestamp path unconstrained by any single query slot', () => {
     // No exclusivity on the timestamp path: two live subscriptions are
-    // fine, which is why the closed-panel precondition is WebGL2-only.
+    // fine, so no sweep has to wait on another releasing a clock.
     const first = acquireGpuFrameSource(webgpuHost(true), () => {});
     const second = acquireGpuFrameSource(webgpuHost(true), () => {});
     expect(second?.method).toBe('timestamp');
@@ -110,25 +81,18 @@ describe('the pricing sweep picks its sample source per backend', () => {
     const timestamp = acquireGpuFrameSource(webgpuHost(true), () => {}, 'timestamp');
     expect(timestamp?.method).toBe('timestamp');
     timestamp!.release();
-
-    const timerQuery = acquireGpuFrameSource(glHost(new FakeGl()), () => {}, 'timer-query');
-    expect(timerQuery?.method).toBe('timer-query');
-    timerQuery!.release();
   });
 
   it('refuses a pinned method the backend cannot supply, never falls back', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const noExtension = new FakeGl();
-    noExtension.hasExtension = false;
 
     // A silent fallback would rebuild exactly the mixed-method table
     // pinning exists to prevent, so each of these must return null.
-    expect(acquireGpuFrameSource(glHost(new FakeGl()), () => {}, 'timestamp')).toBeNull();
+    // 'timer-query' names a clock this app no longer has at all.
     expect(acquireGpuFrameSource(webgpuHost(true), () => {}, 'timer-query')).toBeNull();
     expect(acquireGpuFrameSource(webgpuHost(false), () => {}, 'timestamp')).toBeNull();
-    expect(acquireGpuFrameSource(glHost(noExtension), () => {}, 'timer-query')).toBeNull();
 
-    expect(warn).toHaveBeenCalledTimes(4);
+    expect(warn).toHaveBeenCalledTimes(2);
     warn.mockRestore();
   });
 
@@ -139,32 +103,11 @@ describe('the pricing sweep picks its sample source per backend', () => {
     // Falling through would run the preference order behind a pin the
     // caller believes was honoured.
     const typo = 'rafdelta' as GpuFrameMethod;
-    expect(acquireGpuFrameSource(glHost(new FakeGl()), () => {}, typo)).toBeNull();
+    expect(acquireGpuFrameSource(webgpuHost(true), () => {}, typo)).toBeNull();
 
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("'rafdelta'"));
     warn.mockRestore();
-  });
-
-  it('pins raf-delta on a WebGL2 boot without touching the GL context', () => {
-    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
-    const host: GpuFrameSourceHost = {
-      rendererGL: {
-        getContext: () => {
-          throw new Error('the raf-delta pin reached the GL context');
-        },
-      } as unknown as THREE.WebGLRenderer,
-      webgpu: null,
-    };
-
-    // Chrome WebGL2 is the cross-backend recipe's own boot, so the pin has
-    // to short-circuit ahead of the timer-query slot rather than fall into
-    // it — which is also what leaves the closed-panel refusal unreachable.
-    const source = acquireGpuFrameSource(host, () => {}, 'raf-delta');
-
-    expect(source?.method).toBe('raf-delta');
-    expect(() => source!.release()).not.toThrow();
-    info.mockRestore();
   });
 
   it('warns that an open debug panel contaminates rAF-delta wall time', () => {

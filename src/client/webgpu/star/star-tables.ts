@@ -26,13 +26,12 @@ export interface StarLayerSources {
   distSol: Float32Array;
   teffApsis: Float32Array;
   boundingSphereRadiusPc: number;
-  /** The shell-owned WebGL attributes whose arrays the forwarded tables
-   *  wrap. Their writers never learn about this backend: the tables share
-   *  the array and take the version + ranges each writer flags. */
-  iPositionAttr: THREE.InstancedBufferAttribute;
-  iCompositeSuppressAttr: THREE.InstancedBufferAttribute;
-  iEclipseDimAttr: THREE.InstancedBufferAttribute;
-  iSuppressPulsationAttr: THREE.InstancedBufferAttribute;
+  /** The shell-owned attributes the forwarded tables wrap.
+   *  See README.md § Star tables. */
+  iPositionAttr: THREE.BufferAttribute;
+  iCompositeSuppressAttr: THREE.BufferAttribute;
+  iEclipseDimAttr: THREE.BufferAttribute;
+  iSuppressPulsationAttr: THREE.BufferAttribute;
 }
 
 export function staticFieldSources(s: StarLayerSources): StaticFieldSources {
@@ -53,7 +52,7 @@ export function staticFieldSources(s: StarLayerSources): StaticFieldSources {
 
 export function forwardedSourceAttrs(
   s: StarLayerSources,
-): Record<StarForwardedAttribute, THREE.InstancedBufferAttribute> {
+): Record<StarForwardedAttribute, THREE.BufferAttribute> {
   return {
     iPosition: s.iPositionAttr,
     iCompositeSuppress: s.iCompositeSuppressAttr,
@@ -63,7 +62,7 @@ export function forwardedSourceAttrs(
 }
 
 interface ForwardedTable {
-  src: THREE.InstancedBufferAttribute;
+  src: THREE.BufferAttribute;
   attr: StorageBufferAttribute;
   node: FloatStorageNode;
   /** Sentinel -1: no attribute version is negative, so the first sync

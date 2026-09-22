@@ -27,7 +27,10 @@ import type { SharedUniformNodes } from './tsl/shared-uniform-nodes';
 import type { SurvivorCounts } from './star/compaction/compaction-pure';
 import type { StarLayerSources } from './star/star-tables';
 
-export type StellataRenderer = THREE.WebGLRenderer | WebGPURenderer;
+/** The renderer the app boots. An alias rather than the bare class so
+ *  consumers outside this folder name the app's renderer without a
+ *  `three/webgpu` value import (README.md § Import boundary). */
+export type StellataRenderer = WebGPURenderer;
 
 export type { StarLayerSources } from './star/star-tables';
 

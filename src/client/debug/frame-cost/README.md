@@ -8,15 +8,12 @@ number is not what their name suggests: `passes/README.md`. This page is
 the sweep around them — its preconditions, its drift bracketing, its
 budget, and how to read a row.
 
-**Differentials survive the WebGPU port, for a different reason.** On
-WebGL2 they are the only honest per-pass price because the per-pass timer
-scopes over-attribute on ANGLE/Metal. On WebGPU nothing over-attributes —
-three times every render pass truly — but those per-pass durations are
-keyed by an internal `timestampUID` and are not public API, so there are
-no per-pass rows to read. Either way the differential is the measurement,
-and on WebGPU its input is *better*: `gpu.frame` there is a sum of real
-per-pass timestamps rather than one derived elapsed span.
-`../gpu-timing/README.md` owns both halves.
+**The differential is the measurement, not a workaround.** three times
+every render pass truly, but those per-pass durations are keyed by an
+internal `timestampUID` and are not public API — so there are no per-pass
+rows to read, and disable-and-difference is what is left. Its input is a
+good one: `gpu.frame` is a sum of real per-pass timestamps rather than one
+derived elapsed span. `../gpu-timing/README.md` owns that half.
 
 ## Files
 
@@ -41,8 +38,9 @@ src/client/debug/frame-cost/
                               isCadenceBound itself stay client-side — the
                               runner reads the `cadenceBound` and
                               `baselineRising` fields off a row instead.
-  gpu-frame-source.ts         Which sample source a sweep gets, per
-    (+ test)                  backend, and the method label it stamps.
+  gpu-frame-source.ts         Which sample source a sweep gets — the
+    (+ test)                  timestamp pool or rAF wall time — and the
+                              method label it stamps.
   passes/                     buildPassToggles and PRICED_PASS_KEYS: what
                               each row of the table disables, and what its
                               number is therefore worth. Own README.
@@ -50,27 +48,18 @@ src/client/debug/frame-cost/
 
 ## Preconditions
 
-- **Debug panel CLOSED — on WebGL2 only.** There the run borrows the
-  swappable perf hooks via `acquireGpuFrameSampler` (`../perf-hud.ts`) — a
-  single-scope timer that samples `gpu.frame` EVERY frame, because
-  WebGL2's one-query-per-context limit is not shared with any rotating
-  scope. Panel open → the call warns and returns `[]`. Panel opened
-  mid-run → samples dry up and the run aborts rather than reporting zeros.
-  **On WebGPU there is no such requirement**: wherever the boot probe left
-  timestamps live the render loop resolves them every frame whatever is
-  listening, and the sweep just subscribes alongside the HUD.
-  **A pinned `raf-delta` sweep escapes that refusal on every backend** — it
-  never calls `acquireGpuFrameSampler`, so nothing consults the panel. It is
-  also the one mode where an open panel corrupts the number rather than
-  merely holding the slot: rAF deltas are wall time, so the panel's per-tick
-  ring fills and DOM writes sit inside the measurement. They largely cancel
-  in a differential and surface as a wider spread; an absolute frame time is
+- **Debug panel CLOSED — under `raf-delta` only.** The timestamp path has
+  no exclusivity: wherever the boot probe left timestamps live the render
+  loop resolves them every frame whatever is listening, and the sweep just
+  subscribes alongside the HUD. Under wall time the panel corrupts the
+  number instead — rAF deltas are wall time, so the panel's per-tick ring
+  fills and DOM writes sit inside the measurement. They largely cancel in a
+  differential and surface as a wider spread; an absolute frame time is
   biased outright. That corruption belongs to `raf-delta` however it was
-  reached — pinned, or fallen back to where no GPU clock exists — and a
-  panel opened mid-run keeps the samples flowing rather than drying them up
-  as it does on `timer-query`, so the sweep checks at both ends: acquire
-  warns, and release warns again if the panel is open when the sweep ends.
-  Closing it is still on you.
+  reached — pinned, or fallen back to where no GPU clock exists — and the
+  samples keep flowing rather than drying up, so nothing aborts on your
+  behalf. The sweep checks at both ends: acquire warns, and release warns
+  again if the panel is open when the sweep ends. Closing it is on you.
 - **Camera stationary.** The pose is snapshotted and a move warns at the
   end. The run holds the render gate for its duration — a still camera
   over a paused clock would otherwise be exactly the state the gate
@@ -90,18 +79,18 @@ src/client/debug/frame-cost/
   unpinned, which is six magnitudes of extra stars. `{ pinExposure:
   false }` prices the live path. `baselineLimitMag` / `disabledLimitMag`
   stay in the output as the check that it held.
-- **A GPU clock.** `timestamp` on WebGPU where the adapter granted
+- **A GPU clock.** `timestamp` where the adapter granted
   `timestamp-query` — the render passes' `gpu.frame`, not the compute
   row beside it, so a toggle that moves work between a render pass and a
   compute kernel (`extinctionPrepass`) prices its render half here and
   its compute half on a dwell's compute row
   (`../gpu-timing/README.md` § `gpu.frame` is the only row that prices
-  anything) — `timer-query` on WebGL2 with the extension, and
-  `raf-delta` wall time otherwise — WebGL2 Safari, any adapter that
-  withheld the timestamp feature, and any backend that granted it but
-  resolves durations no frame can have, which is Chrome today
+  anything) — and `raf-delta` wall time otherwise: any adapter that
+  withheld the timestamp feature, and any that granted it but resolves
+  durations no frame can have, which is Chrome today
   (`../gpu-timing/README.md` § WebGPU, § A granted feature can still
-  resolve garbage).
+  resolve garbage). `timer-query` remains in `GpuFrameMethod` so an
+  archived run that names it still parses; pinning it now refuses.
   Under `raf-delta` a differential below the vsync quantum reads as zero
   unless the frame is already over budget *and* not itself pinned to a
   higher multiple of the refresh — so every row whose dwells the display

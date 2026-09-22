@@ -108,8 +108,7 @@ export async function awaitSettle(page: Page, { quietMs, timeoutMs, pollMs = 250
 export function probeAdapters(page: Page): Promise<AdapterProbe> {
   return page.evaluate(async () => {
     const s = (window as unknown as PerfWindow).stellata;
-    const live = s.rendererGL?.getContext() as WebGL2RenderingContext | undefined;
-    const gl = (live ?? document.createElement('canvas').getContext('webgl2')) as WebGL2RenderingContext | null;
+    const gl = document.createElement('canvas').getContext('webgl2') as WebGL2RenderingContext | null;
     let webgl: WebGlProbe | null = null;
     if (gl !== null) {
       const info = gl.getExtension('WEBGL_debug_renderer_info');
@@ -118,10 +117,10 @@ export function probeAdapters(page: Page): Promise<AdapterProbe> {
         vendor: String(gl.getParameter(info ? info.UNMASKED_VENDOR_WEBGL : gl.VENDOR)),
         timerQuery: gl.getExtension('EXT_disjoint_timer_query_webgl2') !== null,
       };
-      // A WebGPU boot has no live GL context, so this probe made one. Drop it
-      // before the sweep: the instrument must not leave a second GPU context
-      // alive in the page whose frame it is about to price.
-      if (live === undefined) gl.getExtension('WEBGL_lose_context')?.loseContext();
+      // The page has no GL context of its own, so this probe made one. Drop
+      // it before the sweep: the instrument must not leave a second GPU
+      // context alive in the page whose frame it is about to price.
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
     }
 
     type AdapterLike = { readonly info?: Record<string, unknown>; readonly isFallbackAdapter?: boolean };
