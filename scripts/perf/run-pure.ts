@@ -22,27 +22,6 @@ export const BROWSER_CHANNEL = 'chromium';
 
 export type MarkerVerdict = 'armed' | 'absent' | 'stale';
 
-/** The clock a run will use — README.md § Invocation, on `--method`. An
- *  explicit one wins, on the caller's head, and the run says it did. */
-export function methodFor(args: {
-  method?: GpuFrameMethod; pin?: string; againstPin?: string;
-}): {
-  method: GpuFrameMethod | undefined;
-  why: string | null;
-} {
-  if (args.method !== undefined) return { method: args.method, why: null };
-  if (args.pin === undefined && args.againstPin === undefined) {
-    return { method: undefined, why: null };
-  }
-  return {
-    method: DWELL_METHOD,
-    why:
-      `a pin run pins --method ${DWELL_METHOD}: every archived pin and baseline was `
-      + 'recorded on it, and a table mixing clocks compares two instruments. '
-      + 'Pass --method explicitly to override.',
-  };
-}
-
 export interface ContextPlan {
   readonly name: ScenarioName;
   readonly backend: Backend;

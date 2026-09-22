@@ -13,7 +13,6 @@ import {
 import { COMPUTE_ROW, DEFAULT_DWELL_FRAMES, DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
 import { DEFAULT_QUIET_MS } from './settle-pure';
-import { DWELL_METHOD } from './run-pure';
 import { BACKENDS, SCENARIO_NAMES, type ScenarioName } from './scenarios';
 
 export const MODES = ['differential', 'probe', 'dwell', 'sweep'] as const;
@@ -155,7 +154,7 @@ export function usage(): string {
     '  --pre-disable <keys>     differential: switch these passes OFF for the whole sweep (restored after)',
     '  --no-park                differential: keep the adaptation measurement unparked for the sweep',
     '  --force-recompute        differential and dwell: run the extinction kernel every frame (a parked camera skips it)',
-    `  --method <clock>         ${REQUESTABLE_GPU_FRAME_METHODS.join('|')}       (default: the adapter\'s best; a pin run, ${DWELL_METHOD})`,
+    `  --method <clock>         ${REQUESTABLE_GPU_FRAME_METHODS.join('|')}       (default: the adapter\'s best)`,
     `  --budget-ms <n>          whole-sweep wall-clock ceiling            (default ${ARG_DEFAULTS.budgetMs})`,
     '  --dwell-frames <n>  --warmup-frames <n>  --settle-frames <n>       (default: priceFrame\'s own)',
     `  --empty-passes <n>       emptyPass row: empty passes added; savedMs bounds all n, never n× one (default ${EMPTY_PASSES_DEFAULT})`,

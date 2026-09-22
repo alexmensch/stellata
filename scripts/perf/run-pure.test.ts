@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BROWSER_CHANNEL, DWELL_METHOD, GATE_BOOT_PREFIX, bootFailure, bufferShortfall, describeProbe,
-  markerVerdict, methodFor, planContexts, readbackOrder, runProvenance, softwareRenderer,
+  BROWSER_CHANNEL, GATE_BOOT_PREFIX, bootFailure, bufferShortfall, describeProbe,
+  markerVerdict, planContexts, readbackOrder, runProvenance, softwareRenderer,
 } from './run-pure';
 import { SCENARIO_NAMES, TIER1_SCENARIOS } from './scenarios';
 import type { AdapterProbe, GitProvenance } from './schema';
@@ -32,25 +32,6 @@ function probe(over: {
     },
   };
 }
-
-describe('methodFor', () => {
-  it('leaves an ordinary run on the adapter\'s own best clock', () => {
-    expect(methodFor({})).toEqual({ method: undefined, why: null });
-  });
-
-  it('pins wall time for a run that writes or reads the pin, and says why', () => {
-    for (const args of [{ pin: 'p.json' }, { againstPin: 'p.json' }]) {
-      const { method, why } = methodFor(args);
-      expect(method).toBe(DWELL_METHOD);
-      expect(why).toContain('every archived pin and baseline was recorded on it');
-    }
-  });
-
-  it('honours an explicit pin over that default, silently', () => {
-    expect(methodFor({ pin: 'p.json', method: 'timestamp' }))
-      .toEqual({ method: 'timestamp', why: null });
-  });
-});
 
 describe('planContexts — the order a run visits its contexts in', () => {
   it('runs one backend in the order the scenarios were given', () => {

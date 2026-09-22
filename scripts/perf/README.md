@@ -222,12 +222,11 @@ sol, the two contexts a Tier 1 run visits, in the same order. That is what
 lets Tier 1 compare against the pin: `diff/README.md` § The refusals, run
 position.
 
-**A run that writes or reads the pin pins `--method raf-delta`.** Every
-archived pin and baseline was recorded on it, `pinRefusal` rejects any
-other method outright, and a table mixing clocks compares two instruments —
-so defaulting to the adapter's best would spend a whole armed run to be
-refused. An explicit `--method` overrides the pin, and the run says it
-did.
+**A dwell's clock is always `raf-delta`, so every pin run is on it.**
+`--method` is read by `differential` alone, the pin and both gates read
+dwells, and `pinRefusal` rejects any other method outright — every
+archived pin and baseline was recorded on it, and a table mixing clocks
+compares two instruments.
 
 **A flag the chosen mode does not read is an error, not a no-op.**
 `--mode dwell --method timestamp` is refused rather than quietly stamping
