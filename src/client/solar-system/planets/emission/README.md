@@ -22,7 +22,8 @@ normaliser, and each tier swap would then step the disc's brightness
 Both planet layers emit into the scene-wide HDR unit — the glare through
 the point-source rule, the mesh through the surface-brightness rule. There
 is no per-layer brightness encoding left, and no multiplier on either:
-`uExposure` is the one exposure (`../glare/README.md`).
+`uExposure` is the one exposure
+(`../../../webgpu/solar-system/README.md` § Reflected glare).
 
 **The mesh anchor is a closed form.** A body's mean disc surface
 brightness drops both its radius and the viewer distance, because they

@@ -94,13 +94,10 @@ section below:
   and a bound cannot tell a small linear cost from a coalesced one
   (`docs/render-rules.md` § 8). The real frame already
   carries one such pass wherever a local cluster is active: the
-  `clearDepth()` between the main render and the local repaint. On WebGL2
-  a clear is a state command inside the current framebuffer, so the row
-  should read ~0 there — an expectation, not yet a measurement: on
-  `raf-delta` a baseline under one refresh interval cannot show a
-  sub-millisecond addition, and the WebGL2 rows taken so far sat there.
-  Those rows now say so themselves — `cadenceBound`
-  (`../README.md` § Reading a row).
+  `clearDepth()` between the main render and the local repaint. No row
+  taken so far resolves it: on `raf-delta` a baseline under one refresh
+  interval cannot show a sub-millisecond addition, and those rows now say
+  so themselves — `cadenceBound` (`../README.md` § Reading a row).
 - **`reduction`** keeps its readback fence while disabled and drops only
   the chain draws. Dropping the fence too priced the loss of the frame's
   only ANGLE submission barrier — see
@@ -138,8 +135,9 @@ other's complement. Read each as an upper bound on its own side. The runner
 refuses to diff such a pair outright (`../../../../../scripts/perf/diff/README.md`
 § The refusals); the subtraction is done by hand, knowing this.
 
-**Measured 2026-09-11**, WebGL2 `timer-query` (the only path where the row
-resolves), default Sol view, park off, exposure pinned at dm −6.289 with
+**Measured 2026-09-11**, on the retired WebGL2 boot's `timer-query` — a
+figure this build cannot reproduce, kept as the record it was taken as —
+default Sol view, park off, exposure pinned at dm −6.289 with
 `limitMag` 1.511 in every state, 4.096 Mpx, headless Chromium 151:
 
 | preconditions | baseline | `savedMs` | `savedPct` | `noiseMs` | `bracketMs` | readback |
@@ -192,8 +190,8 @@ Sol sits above it by the duty-cycle share reasoned two paragraphs up.
 
 **Every `statisticWrites` figure above predates the vertex-stage collapse**
 (`../../../star-pipeline/collapse/README.md`, 2026-08-20). Re-measured
-after it on the canon's own instrument — WebGL2 in Chrome, `timer-query`,
-6.774 Mpx,
+after it on the instrument of the day — the retired WebGL2 boot in
+Chrome, `timer-query`, 6.774 Mpx,
 default Sol view, limit mags equal at 1.511, `noiseMs` 4.1, `bracketMs` 9.3,
 readback 0.25 in both states — the row reads **50.7 ms / 50.6 % on a 100.2 ms
 frame** (2026-08-21). Two readings, and the second is the one to carry:
@@ -206,11 +204,9 @@ frame** (2026-08-21). Two readings, and the second is the one to carry:
   survives the fix built to attack it, and the surviving 50.7 ms is a live
   target rather than a residue.
 
-Instrument matters because two of the three combinations this machine offers
-cannot be read against the canon at all: WebGPU makes the row structurally
-null (§ Decomposing the HDR chain), and Safari's WebGL2 exposes no timer
-query, so it falls to `raf-delta` wall time — a different method, which
-`../README.md` § Preconditions forbids comparing across.
+Instrument matters, and the row is structurally null on this build
+(§ Decomposing the HDR chain) — the figures above are the record of a
+boot that no longer exists, not a baseline to diff against.
 
 **These rows price the fully parked frame, not the duty cycle.** The pin
 collapses the machine to parked for the whole sweep, so no probe runs
@@ -235,9 +231,9 @@ Two rows, and they price opposite halves of the same cache.
   threads, each spending taps in proportion to its in-cube path, so ~17M
   volume fetches at Sol against a ~37M ceiling
   (`../../../star-pipeline/extinction/README.md` § The march) — plus its
-  own compute submit on WebGPU
-  (`../../../webgpu/extinction/README.md` § The prepass kernel), or its own
-  fragment pass on WebGL2. **On WebGPU the row is a fraction of that**: the
+  own compute submit
+  (`../../../webgpu/extinction/README.md` § The prepass kernel).
+  **The row is a fraction of that ceiling**: the
   fill spreads over `REFILL_SLICES` frames, so a frame dispatches one slice
   of the slot space, and inside it only the stars the prefilter and the
   frustum both admit march at all
@@ -309,8 +305,8 @@ them; read each against the aggregate.
   the clear keeps writing it, so the reduction runs over an empty
   attachment. Prices the emitters' statistic write bandwidth — NOT the
   attachment's load/store, which only `mrtAttachments` removes.
-  **This row resolves on WebGL2 only.** There the mask puts `NONE` in
-  slot 1 and the write does not happen. On WebGPU it is a uniform
+  **This row no longer resolves.** It did where the mask could put
+  `NONE` in slot 1 and the write did not happen; here it is a uniform
   multiplying the statistic texel to the blend's identity element
   (`../../../webgpu/hdr/README.md` § The gate becomes the output struct):
   the fragment still emits its three-member struct and the additive

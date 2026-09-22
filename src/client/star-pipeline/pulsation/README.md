@@ -19,7 +19,7 @@ src/client/star-pipeline/pulsation/
                                  Called at catalog load
                                  (catalog.pulsRho / catalog.pulsColorSwing).
                                  interleavePulsParams packs the pair into
-                                 the vec2 backing array (WebGL2 + WebGPU
+                                 the vec2 backing array (both
                                  geometries). Vitest-pinned.
   pulsation-suppress-pure.ts     buildPulsationSuppressMask(varType): the
     (+ test)                     per-instance iSuppressPulsation mask
@@ -71,7 +71,7 @@ amplitude split:
 
 `iPuls` is a per-instance `vec2` built by `buildPulsationParams` from
 `catalog.varType`; ρ + ΔB−V are packed into one attribute to stay under
-the WebGL2 16-attribute budget. The ρ-bounded swing (≤1.4) replaces the
+the 16-attribute budget. The ρ-bounded swing (≤1.4) replaces the
 old per-frame amplitude-compression machinery; a single up-clamp
 (`physSize ≤ uMaxPhysFrac × min(viewport)`) keeps a supergiant at the
 orbit floor inside the viewport.

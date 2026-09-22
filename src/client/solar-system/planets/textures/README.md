@@ -96,7 +96,7 @@ A rung is promoted to *drawn* only once it is fully resident — decoded,
 uploaded, mips built. Swapping on first byte shows a frame of black or
 bottom-mip, which is the pop these rules exist to avoid.
 
-**Every rule is capped by what the device accepts.** WebGL2 guarantees
+**Every rule is capped by what the device accepts.** The spec guarantees
 `MAX_TEXTURE_SIZE` only 2048, and an upload past a device's own limit fails
 outright — the body sits on its white placeholder with nothing else looking
 wrong. Selection takes the cap (`KindContext.maxTextureSize`) and rounds

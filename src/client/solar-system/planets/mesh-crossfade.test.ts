@@ -43,7 +43,8 @@ describe('reflected-glare calibration constants', () => {
 
   it('has no glare peak multiplier — a planet reads as a star of its mag', () => {
     // The invariant used to be defended by a debug knob defaulting to 1;
-    // now nothing can multiply the peak. glare/README.md.
+    // now nothing can multiply the peak.
+    // ../../webgpu/solar-system/README.md § Reflected glare.
     const glare = readTslSource(
       new URL('../../webgpu/solar-system/planet-glare-tsl.ts', import.meta.url));
     expect(glare).not.toMatch(/uGlareGain/);

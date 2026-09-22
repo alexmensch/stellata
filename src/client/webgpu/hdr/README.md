@@ -67,7 +67,7 @@ a mapAsync-staged copy whose promise resolves frames later, which is
 exactly the frame-decoupled contract the render gate and the adaptation
 park rely on. It reads the whole tile grid, and the CPU combine and the
 coverage-weighted median that turn it into three numbers are
-`reduction-pure`'s, shared with the WebGL2 half rather than re-expressed.
+`reduction-pure`'s, imported rather than re-expressed.
 The one-in-flight rule, the pinnable cadence, the stale-drop on a
 parked/disabled frame, and the render-time-exposure pairing are all kept
 verbatim from
@@ -76,7 +76,7 @@ name and behaviour for the frame-cost harness even though the ANGLE
 submission-barrier rationale has no analogue here.
 
 **The landing array is three's, so it is a fresh allocation per readback**
-where the WebGL2 half refills one buffer it owns. At the tile level that
+rather than refilling one buffer it owns. At the tile level that
 is ~23 KB every second-to-fourth frame rather than the 16 B the 1x1 tail
 cost, so this backend alone carries a garbage-collection term the other
 does not — the one place the two readbacks differ in cost rather than in
@@ -115,7 +115,7 @@ redundant.
 
 ## The gate becomes the output struct
 
-WebGL2's gate opens attachments per draw with `gl.drawBuffers`
+A per-draw `gl.drawBuffers` gate
 (`../../hdr/attachments/README.md` § The gate). WebGPU bakes the
 attachment set into the pipeline, so the same contract is expressed in
 node-material terms instead, two mechanisms replacing the one call:
@@ -124,7 +124,7 @@ node-material terms instead, two mechanisms replacing the one call:
   positional members land on attachments 0/1/2. A slot the WebGL gate
   would mask off instead writes **the blend's identity element**: under
   the material's own blend (one blend state covers every attachment,
-  same as WebGL2) a zero write is `dst + 0` for additive, `max(dst, 0)`
+  a zero write is `dst + 0` for additive, `max(dst, 0)`
   for per-channel max over non-negative values, and `0·1 + dst·(1−0)`
   for premultiplied-over — the destination is untouched in every case,
   which is exactly what `NONE` bought. The struct member and the mark

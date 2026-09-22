@@ -34,10 +34,9 @@ The **fragment is never URL state**: both writers (`writeUrl`, the junk
 reset) re-append `location.hash` verbatim to whatever they write, because
 `history.replaceState` with a bare path resolves to a URL without a
 fragment and would silently drop it. Boot flags ride the fragment —
-today the renderer escape hatch `#renderer=webgl2` and the gate override
-`#webgpu-gate=<verdict>` (`src/client/webgpu/README.md`), read once at
-boot and deliberately outside the blob (they can't apply without a
-reload).
+today the gate override `#webgpu-gate=<verdict>`
+(`src/client/webgpu/README.md`), read once at boot and deliberately
+outside the blob (it can't apply without a reload).
 
 ## Files in this area
 

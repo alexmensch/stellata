@@ -1574,39 +1574,29 @@ under the unaided eye, a telescopic atlas under a telescope. It inherits
 neither adaptation nor the EV trim, and that is correct rather than a
 gap: paper has no exposure state.
 
-## 6. Float-RT fallback
+## 6. The inline operator
 
-Primary path requires a float-renderable target: RGBA16F via WebGL2
-`EXT_color_buffer_float`, else `EXT_color_buffer_half_float` (fp16
-blending needs no further extension; `EXT_float_blend` is only a 32F
-concern — we never need 32F).
+A float-renderable target is core to the shipped backend, so there is no
+capability verdict to branch on. **Chart mode** is what still reaches the
+inline path: each emitting graph applies the shared operator
+(`../src/client/webgpu/tonemap-tsl.ts`) and renders direct to the canvas,
+with no intermediate target.
 
-On contexts with neither, mirror the extinction-prepass strategy
-(`star-pipeline/extinction/README.md` § The prepass cache — same chunk,
-two paths):
-**each emitting fragment shader applies the shared `../src/client/webgpu/tonemap-tsl.ts` chunk
-inline and renders direct to the canvas** — no intermediate RT at all.
 Calibration is identical (same `L`, same operator, same exposure); what
 degrades is compositing: additive accumulation happens on tone-mapped
 values, so dense star fields and the MW band over-brighten slightly
 where sources overlap, and per-channel-max discs blend post-curve.
-Accepted — the fallback population is ~zero on real hardware, and for a
-point source the result is approximately right rather than
-differently-calibrated.
 
 **§ 1's convolution ended that symmetry for diffuse sources, and took the
 dev switch with it.** Off-target there is no attachment 2 and no pass, so
 both volumetric emitters lose the extended-source anchor and read several
 magnitudes faint. A `stellata.hdr.setEnabled(false)` switch used to park the
-whole frame here for A/B, mirroring `setExtinctionPrepassEnabled`; it is
-**retired**, because a path that changes the calibration is not a
-compositing comparison, and shipping it as a setting invited release notes
-describing a mis-calibrated scene as what older hardware gets. What remains
-is a hardware verdict (`supported`) and chart mode, neither of which anyone
-selects.
+whole frame here for A/B; it is **retired**, because a path that changes
+the calibration is not a compositing comparison. Chart mode is the one
+remaining route off the target, and nobody selects it for an A/B.
 
-The fallback is why the operator must live in the shared chunk from H2
-day one — the fullscreen pass and the inline path can never drift.
+That route is why the operator must live in one shared module — the
+fullscreen resolve and the inline path can never drift.
 
 ## 7. Plumbing constraints (H2 scope)
 

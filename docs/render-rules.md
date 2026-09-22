@@ -28,23 +28,24 @@ pixel and skipping work that cannot reach a pixel is the whole programme.
 instances that can reach the display from this vantage — never the
 whole catalogue with the invisible members culled inside the shader.
 
-**Why.** A vertex that early-outs still ran. The WebGL2 star passes
-issue the full catalogue count in two to three passes every frame, and
-the mag prefilter's ~30-instruction exit still costs a measured ~9 ms
-pixel-independent floor in the main pass at the default view (the
-dpr 2 → 0.5 scaling run recorded in stellata-8cg.1's notes). Three.js
+**Why.** A vertex that early-outs still ran. Issuing the full catalogue
+count every frame, the mag prefilter's ~30-instruction exit still cost a
+measured ~9 ms pixel-independent floor in the main pass at the default
+view (the dpr 2 → 0.5 scaling run recorded in stellata-8cg.1's notes). Three.js
 frustum culling is off on every layer (`frustumCulled = false`) because
 floating-origin rebasing invalidates the bounding spheres three would
 test — so a population out of view still pays its full vertex floor
 unless it compacts.
 
 **How to apply.** Any population past roughly ten thousand instances
-computes a visible index once per frame and draws that: on WebGL2 a
-CPU frustum test plus a magnitude window over the population's own
-distance-sorted index (`star-pipeline/star-frame/README.md`
-§ `forEachStarNearCamera` is the existing binary-searched window);
-on WebGPU a compute pass that compacts the visible list and issues an
-indirect draw, so the GPU never sees the catalogue count. A reorder
+computes a visible index once per frame and draws that: a compute pass
+that compacts the visible list and issues an indirect draw, so the GPU
+never sees the catalogue count. A CPU frustum test plus a magnitude
+window over the population's own distance-sorted index is the cheaper
+form where a compute pass would not pay for itself
+(`star-pipeline/star-frame/README.md`
+§ `forEachStarNearCamera` is the existing binary-searched window).
+A reorder
 that changes instance identity must sweep every consumer of the old
 order (picker sorted arrays and binary relation indices are index-
 coupled; URL-state references are not).
@@ -53,9 +54,8 @@ coupled; URL-state references are not).
 `src/client/webgpu/star/compaction/README.md` — a per-frame kernel over
 the catalogue lists each tier's survivors and the three star draws are
 `drawIndexedIndirect` at those counts, the vertex stage reading every
-per-star field out of storage tables at the resolved index. The design
-gate for the WebGL2 half is stellata-8cg.5. Priced by the Tier 2 pin
-before and after.
+per-star field out of storage tables at the resolved index. Priced by
+the Tier 2 pin before and after.
 
 ## 2. Contribution-gated liveness
 
@@ -236,10 +236,8 @@ extinction prepass provides one texel per stand-in.
 
 **Rule.** No new static fragment-depth write anywhere in a pipeline; a
 depth contract is satisfied by removing writes, never by adding draws;
-draw count per subsystem is part of parity. The WebGL2 star fragment
-shader is the one allowlisted exception today — its unconditional
-`gl_FragDepth` write costs all three star passes their early-z — and
-removing it is the port contract, not a tolerated state.
+draw count per subsystem is part of parity. The allowlist is empty, and
+an addition to it is a pipeline giving up early-z.
 
 **Why.** Any static `gl_FragDepth` / `frag_depth` write disables early-z
 — the hardware skipping a pixel's shading when it is already known to be
@@ -261,12 +259,9 @@ that argument: the star core mask, and the planet depth pre-stamp
 the same measurement, not the same precedent.
 
 **How to apply.** `src/client/webgpu/README.md` § Early-z is the
-authority for the star layer's depth-honest design and stays so. Two
-vitest scanners hold the line: `tests/shader-frag-depth.test.ts` allows
-exactly one GLSL file (`../src/client/webgpu/star/star-glow-tsl.ts`) and fails on any
-other, and `tests/tsl-frag-depth.test.ts` holds the TSL allowlist at
-empty. Shrinking the GLSL allowlist to empty is the WebGL2 path's
-deletion (stellata-0it.14).
+authority for the star layer's depth-honest design and stays so.
+`tests/tsl-frag-depth.test.ts` holds the allowlist at empty and fails on
+any depth write.
 
 ## 7. One writer per buffer per submit
 
@@ -325,11 +320,7 @@ conclude from it.
 attachments hold ~115 MB at this buffer, and moving them out and back
 across an M4's memory bandwidth is of the order of 2 ms — an order above
 what the row reads, so the tile store is partial, deferred, or elided,
-not the round trip the tile-memory model suggests. The
-WebGL2 rows did not resolve (−0.025 / −0.05 against 1.6–1.95 ms of noise,
-baselines under one 16.7 ms refresh, where frame-to-frame wall time cannot
-show a sub-millisecond addition); the expectation there is ~0, because a
-WebGL2 clear is a state command inside the bound framebuffer, not a pass.
+not the round trip the tile-memory model suggests.
 
 **Counts** (stellata-0it.37, arm 4, same machine and buffer): the
 steady-state WebGPU frame is 4 render passes on 4 submits wherever a

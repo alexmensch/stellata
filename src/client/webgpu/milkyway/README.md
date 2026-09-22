@@ -1,12 +1,11 @@
 # Milky Way band on WebGPU
 
-The TSL half of the band: a log-distributed march through each proxy mesh
-with running per-channel dust extinction, and the shipped one. The
-WebGL2 shaders (`../../milkyway/`) stay the semantic reference until
-`0it.14` deletes them; the density profiles, the ρ₀ solve and the
-calibration are not re-decided here.
+The band's graph: a log-distributed march through each proxy mesh with
+running per-channel dust extinction. The density profiles, the ρ₀ solve
+and the calibration live in `../../milkyway/` and are not re-decided
+here.
 
-**The chart isobar contour has never drawn, on either backend.** Chart
+**The chart isobar contour has never drawn.** Chart
 mode hides both meshes, so the branch is unreachable
 (`../../milkyway/README.md` § Chart mode + warp). It is transcribed here
 because the two shaders are maintained as one artefact — not because

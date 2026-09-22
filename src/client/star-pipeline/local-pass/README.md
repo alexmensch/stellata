@@ -17,7 +17,7 @@ bracket. Pass mechanics and the other member layers are
   slot layout is a property of the geometry being mirrored, not of the
   shader language, which is why it is shared: a copy resolving a
   differently-packed component on one backend reads as a silent
-  brightness bug. Survives the WebGL2 deletion; the two classes below
+  brightness bug. The two classes below
   do not both.
 - `../../webgpu/star/star-local-mirror-tsl.ts` — the materials over
   those slots (the TSL twin is
@@ -63,7 +63,7 @@ its geometry has no per-instance attribute to copy, every star field
 being a storage read at that index (`../../webgpu/star/README.md`
 § The local mirror). The
 attribute-budget invariant: each compile variant must fit within 16
-attributes (the WebGL2 guaranteed minimum). Pinned per-variant in
+attributes (the guaranteed minimum a vertex stage gets). Pinned per-variant in
 `../star-pipeline.test.ts`, along with the uniform-array-size ↔
 `MIRROR_CAPACITY` tie.
 
@@ -79,7 +79,7 @@ attribute, leaving `iSourceIdx`'s 32 B as the whole carrier. **Give that
 geometry one per-instance attribute and the hint becomes a full upload of
 every slot, three times per rendered frame.** The answer then is a
 per-backend usage rather than a removal: `MirrorSlots` is shared, and on the
-WebGL2 boot `DYNAMIC_DRAW` is the correct hint and costs nothing.
+geometry rewritten every frame `DYNAMIC_DRAW` is the correct hint.
 
 ## Membership
 

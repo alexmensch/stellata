@@ -104,19 +104,17 @@ dust-loader.ts           public/dust/manifest.json + chunk_X_Y_Z.bin →
                          Build-side counterpart: scripts/catalog/
                          dust-deextinction.ts reads the same artifact to
                          de-extinct absmag/ci (mirrored decode + integral).
-dust-voxel-upload.ts     Landing one chunk inside the volume texture —
-  (+ test)               the single step the dual boot splits per backend
-                         (§ Dust voxel upload). Also owns
-                         `createVoxelTexture` (every voxel texture, volume
-                         and staging alike) and `isWebGpuRenderer`, the
-                         backend test both dust-voxel modules branch on.
+dust-voxel-upload.ts     Landing one chunk inside the volume texture
+  (+ test)               (§ Dust voxel upload). Also owns
+                         `createVoxelTexture` — every voxel texture,
+                         volume and staging alike.
 dust-voxel-readback.ts   Reading voxels back off the GPU and comparing
   (+ test)               them against the chunk files — the numeric smoke
                          behind `stellata.verifyDust()`
                          (§ Dust voxel readback).
-dust-renderer-mock.ts    Recording WebGL2 / WebGPU renderer stand-ins,
-                         enough surface for the upload and readback tests
-                         to run headless.
+dust-renderer-mock.ts    A recording renderer stand-in, enough surface
+                         for the upload and readback tests to run
+                         headless.
 ```
 
 ## Progressive catalog load
@@ -153,9 +151,8 @@ What the undecoded tail holds, and why each is what it is:
   search actually reads, and filling only `distSol` looks sufficient and is
   not (`../star-pipeline/star-frame/README.md` § Absorbing a chunk).
 - **Positions, magnitudes and flags stay zero**, which is safe only because
-  nothing walks past `loadedCount`: the WebGPU compaction kernel's thread
-  count and the WebGL2 geometry's `instanceCount` are both the decoded count
-  (`../webgpu/star/compaction/README.md`).
+  nothing walks past `loadedCount`: the compaction kernel's thread count
+  is the decoded count (`../webgpu/star/compaction/README.md`).
 
 Three traps, all of them silent if missed:
 
@@ -294,24 +291,18 @@ An uploader also stops writing once disposed. Chunk fetches outlive a
 `DustField.dispose()`, and on WebGPU a write to a released texture walks
 three's create-on-demand path and resurrects the whole volume.
 
-- **WebGL2** — `gl.texSubImage3D` straight at the chunk's grid offset.
-  Each chunk clears UNPACK_FLIP_Y / PREMULTIPLY / ALIGNMENT through
-  `renderer.state` and never on the raw context: three's state cache
-  suppresses a call whose tracked value already matches, so a raw poke
-  desyncs that cache from GL and the NEXT flipY 2D upload anywhere in the
-  app lands mirrored with no other symptom.
-- **WebGPU** — three's backend exposes no sub-region texture write, so a
+three's backend exposes no sub-region texture write, so a
   chunk-sized staging `Data3DTexture` takes the bytes as a whole upload
   and `renderer.copyTextureToTexture` moves them into the volume's
   region. That staging texture is reused across chunks and **must be
   re-marked `needsUpdate` every time** — three's texture cache
   short-circuits on an unchanged version, and the copy would then re-land
   the previous chunk's bytes at the new offset. Both it and the volume come
-  from `createVoxelTexture`, because WebGPU rejects a copy between differing
-  formats and a hand-copied format is a format that can drift.
+from `createVoxelTexture`, because WebGPU rejects a copy between differing
+formats and a hand-copied format is a format that can drift.
 
 Chunk bytes are z-major with x innermost per the Python writer, which is
-what both backends read as width/height/depth.
+what the volume reads as width/height/depth.
 
 The star vertex raymarch and the extinction prepass sample the volume on
 a WebGPU boot as of `0it.4.6` / `0it.20`
@@ -338,8 +329,8 @@ placeholder from it marks its own.
 
 `stellata.verifyDust()` answers "is the dust actually in the texture, at
 the offset the uploader claimed?" numerically, because on a WebGPU boot no
-pixel can answer it and on WebGL2 the answer arrives as a dim sky that
-looks the same whether one chunk or sixty landed. It re-fetches chunk
+pixel can answer it — a dim sky looks the same whether one chunk or
+sixty landed. It re-fetches chunk
 files (served from cache) and compares sampled voxels against what the GPU
 holds.
 
@@ -349,21 +340,16 @@ holds.
   working upload and a broken one alike. `nonZeroExpected` in each report
   is that guarantee made visible — at zero, the samples prove nothing.
 - **A readback that cannot work throws instead of reporting zeros**, for
-  the same reason: on WebGL2 an incomplete framebuffer and genuinely empty
-  dust are both a buffer full of zeros.
-- **WebGL2** reads by attaching the volume's z-slice to a framebuffer
-  (`framebufferTextureLayer`) and calling `readPixels` as RGBA — the one
-  combination WebGL2 accepts for every normalised colour buffer. The bind
-  goes through `renderer.state`, same cache rule as the upload's
-  pixel-store resets.
-- **WebGPU** has no public readback for a plain texture
+  the same reason: a failed read and genuinely empty dust are both a
+  buffer full of zeros.
+- three has no public readback for a plain texture
   (`readRenderTargetPixelsAsync` only takes a RenderTarget), so it calls
   the backend's own `copyTextureToBuffer`, whose `faceIndex` argument is
   the 3D texture's z origin. That is the one place either dust-voxel
   module reaches past three's public surface.
 - **Reads are 4 voxels wide along x.** WebGPU rejects a buffer mapping
   whose range is not a multiple of 4 bytes, so a single-texel readback is
-  not available and both backends read a run for symmetry.
+  not available.
 
 ## Where the other layer loaders live
 

@@ -8,14 +8,14 @@ depth output), D3 core mask (depth-only, member stamp in the vertex
 stage), and D4 disc (colour only, no depth output either — § The disc
 draw writes no depth) — plus their local-depth-pass mirror variants
 (§ The local mirror). No pipeline here writes fragment depth, and the
-draw count matches the WebGL2 stack one for one, mirror draws included.
+draw count is three, mirror draws included.
 Each main draw is indirect at its tier's survivor count
 (`compaction/README.md`), over storage tables indexed by star (§ Star
 tables) — the vertex stage runs over the stars that can draw, not the
 catalogue.
-That stack (`../../star-pipeline/`) stays the semantic reference until
-`0it.14` deletes it; parity is verified by the A/B smoke, same
-`/v/<blob>/` with and without the `#renderer=webgl2` fragment.
+The renderer-neutral half of that stack — the star frame, the pass
+identities, the blend states, the perceptual-disc mirror — stays in
+`../../star-pipeline/`.
 
 ## Files in this area
 
@@ -343,7 +343,7 @@ In-pass renderOrders mirror the GLSL stack: mask −1 → disc 0 → glow 3.5
 
 ## The disc draw writes no depth
 
-The WebGL2 disc pass wrote `gl_FragDepth = 1.0` under its halo
+A disc pass that wrote `gl_FragDepth = 1.0` under its halo
 fragments so later glow could peek through the haze — and that one
 conditional write is what cost the whole pipeline its early rejection
 of hidden fragments. Writing **no** depth from this draw buys the same
@@ -355,7 +355,7 @@ no longer punches a hole in the annulus through the depth test either.
 renderOrder −4 over the *same* gate this draw runs — same three tests,
 same kernel, one helper (`star-emission-tsl.ts` `discPassKernel`) — and
 stamps every fragment with `glow ≥ uCoreThreshold`. That is exactly the
-set the WebGL2 disc pass wrote fixed-function depth for, at exactly the
+set a disc pass would write fixed-function depth for, at exactly the
 same value, several renderOrders earlier. So a depth write here would
 be a second write of a value already in the buffer:
 
@@ -370,7 +370,7 @@ Splitting the draw in two — a depth-writing core plus a
 depthWrite-off halo — was the first cut, and it worked, but it doubled
 this pass's per-corner cost: a second full 390k-instance draw running
 the whole distance / magnitude / pulsation / colour-lookup chain to
-re-derive varyings the first draw already had. Three draws is WebGL2's
+re-derive varyings the first draw already had. Three draws is the
 own count; four was the migration costing more than the renderer it
 replaces.
 

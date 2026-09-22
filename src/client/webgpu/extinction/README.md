@@ -58,9 +58,8 @@ src/client/webgpu/extinction/
   kernel fills and walks in an order of its own
   (`dispatch-order/README.md` § Dispatch order).
   `AV_TEX_WIDTH` × `⌈count/1024⌉`, `packPositionsRgba` and the
-  `(i % 1024, i / 1024)` arithmetic are the WebGL2 twin's — and the
-  parity reference's, which draws that layout on purpose (§ The prepass
-  kernel). The consumers' index is the instance index itself, and the
+  `(i % 1024, i / 1024)` arithmetic are the parity reference's, which
+  draws that layout on purpose (§ The prepass kernel). The consumers' index is the instance index itself, and the
   mirror draws' `iSourceIdx` indirection is untouched.
 
 The algorithm, the tap count and the `RECOMPUTE_EPSILON_PC` displacement
@@ -156,7 +155,7 @@ parity check below is a **bit** comparison and not a tolerance.
 
 **`stellata.verifyExtinction()`** is that check: it marches every star
 once more as a fragment pass over the *same* position buffer, at the last
-computed camera, into an R32F target of the WebGL2 layout, reads both
+computed camera, into an R32F target of that texture layout, reads both
 back and compares float32 bit patterns over the whole catalogue —
 `A_V parity: N stars, bit-identical`, or the count that differ with the
 first offender and the largest gap. It refills the whole catalogue first,
@@ -202,14 +201,11 @@ catalogue index as before.
 
 ## What it costs, and what it holds
 
-The first two rows are the WebGL2 pass's unchanged in size — the port
-moved the work to a compute stage and the four uint tables are what it
-added. **Re-derive rather than trust them**: they are
+**Re-derive rather than trust them**: they are
 `recordCount` (388,071 —
 `../../../../scripts/catalog/build-catalog-expected.json`) × the element
 size, and every row moves with the catalog. `debug.memory()` prices the
-live app (`../../debug/memory/README.md`), and on a WebGL2 boot it
-*measures* the A_V target rather than taking this table's word.
+live app (`../../debug/memory/README.md`).
 
 | Resident | Size |
 | --- | --- |
@@ -224,8 +220,7 @@ So ~13.3 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
 and the ~1.5 MiB `Uint32Array` behind the order table, which the parity
 check reads (§ The prepass kernel). **The buffer and that CPU copy are one
 array**, so `dispose()` drops the field as well as releasing the
-attribute — either reference alone keeps the 1.48 MiB alive.
-The WebGL2 twin's `DataTexture` holds the position copy the same way. All
+attribute — either reference alone keeps the 1.48 MiB alive. All
 survive on an integrated or mobile GPU without argument.
 
 The pick mirror (§ Cold reads) is a third heap allocation, the A_V row's
@@ -234,9 +229,10 @@ and re-allocated per recompute the pick actually reaches, never per
 recompute.
 
 **What does not survive everywhere is the vertex stage's right to read the
-buffer at all.** The WebGL2 layout's floor was `maxTextureDimension2D`,
-which 1024 clears on every device; a storage buffer read from a vertex
-stage answers to `maxStorageBuffersInVertexStage` instead, and that is
+buffer at all.** A texture layout's floor would be
+`maxTextureDimension2D`, which 1024 clears on every device; a storage
+buffer read from a vertex stage answers to
+`maxStorageBuffersInVertexStage` instead, and that is
 **zero** at WebGPU's compatibility feature level. So the floor this cache
 sets is no longer free, and it is no longer this folder's to keep: the
 boot refuses such a device outright (`../tsl/README.md` § Storage

@@ -217,7 +217,7 @@ export function pinKey(record: ScenarioRecord): string {
 }
 
 /** Every canon row and the position a pin run takes it at — backend-major in
- *  canon order, so mw120|webgpu is 1 and lg|webgl2 is 10. A pin holds all of
+ *  canon order, so mw120|webgpu is 1 and lg|webgpu is 5. A pin holds all of
  *  them and each at its own position (README.md § Run position). */
 export const CANON_POSITIONS: ReadonlyMap<string, number> = new Map(
   contextOrder(SCENARIO_NAMES, BACKENDS).map(({ name, backend }, i) => [keyOf(name, backend), i + 1]),

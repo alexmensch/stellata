@@ -21,9 +21,10 @@ ellipses — `../star-pipeline/local-pass/star-local-cluster.ts`).
 ## Files
 
 - `local-depth-pass.ts` (+ test) — `LocalDepthPass`: owns the local
-  scene, cluster registration, and the per-frame render — the slice loop
-  (`clearDepth` + bracketed render, far→near) on WebGL2, one bracket on
-  a reversed-z renderer.
+  scene, cluster registration, and the per-frame render — one bracket
+  (`clearDepth` + bracketed render) on a reversed-z renderer, which the
+  boot guarantees; the general slice loop behind it has no live caller
+  (`bracket/README.md`).
 - `bracket/` — the bracket math and the precision record. `MemberSphere`
   (the cluster-API input type) is defined there, in `slice-pure.ts`.
 

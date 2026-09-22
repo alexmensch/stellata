@@ -56,11 +56,11 @@ Two slot kinds need a word here:
 ## Texture-slot rosters
 
 `texture-slots.ts` is the ONE declaration of which slots hold a texture.
-Both factories seed theirs by spreading `textureSlotRecord(<roster>, …)`,
+The factory seeds its record by spreading `textureSlotRecord(<roster>, …)`,
 so it cannot carry a subset — and `planet-mesh-layer.ts` snapshots its
-release targets off the same roster, so the layer cannot look for a slot a
+release targets off the same roster, so the layer cannot look for a slot the
 factory never built. A sixth map is one edit here for the **slot**; the map
-itself still needs its own `uHas*` flag in both factories, shader plumbing,
+itself still needs its own `uHas*` flag in the factory, graph plumbing,
 a ladder suffix (`../planets/textures/README.md`), and a release site.
 
 The two rosters differ in what a slot **owes**, which is why they are two

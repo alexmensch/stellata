@@ -1951,9 +1951,8 @@ export class Stellata implements FrameAnchor {
 
   /** Whether the renderer puts a pixel on screen for this star, and the
    *  disc radius it actually draws — the pick gate proper, as against
-   *  `drawCutoffMag`'s intrinsic-magnitude prefilter. On the WebGL2
-   *  escape hatch it stalls on a synchronous readback, so it runs per
-   *  pick candidate and never per frame
+   *  `drawCutoffMag`'s intrinsic-magnitude prefilter. Runs per pick
+   *  candidate, never per frame
    *  (`camera/controls/star-geometry.ts` `pickFromCandidatesResolved`). */
   private resolveStarPick(idx: number): ResolvedCandidate {
     const c = starPhysics.renderedSizeComponents({

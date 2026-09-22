@@ -235,20 +235,22 @@ Rendering is **three passes over the same instanced geometry**:
   `depthWrite`. The four blend fields live in one helper,
   `applyDiscBlendDefaults()`, called both at construction and on
   chart-mode → colour-mode swap-back, so the two sites can't drift.
-  Halo fragments (`glow < uCoreThreshold`) push `gl_FragDepth = 1.0`
-  so they paint dim haze without occluding the later glow pass —
-  distant stars peek through the halo additively.
+  **The pass writes no depth of its own**: the core-mask draw already
+  stamped the same fragments several renderOrders earlier
+  (`../webgpu/star/README.md` § The disc draw writes no depth), which is
+  what keeps all three pipelines' early-z.
 - **Glow pass** (`renderOrder = 1`). Stars where `vPhysRatio < 0.5`.
   Additive blending + depthTest but no depthWrite, so overlapping
   distant-field stars accumulate brightness (Milky Way density stays
   alive) and glows correctly depth-fail against any disc drawn in
   pass 2.
 
-All three materials share a single `InstancedBufferGeometry` and the
-same `uniforms` map (the only divergent uniform is `uRenderMode` bound
-to its material). The disc pass discards fragments with `vPhysRatio <
-0.5`; the glow pass discards `vPhysRatio ≥ 0.5`; the core mask
-discards both `vPhysRatio < 0.5` and `glow < uCoreThreshold`.
+The three are separate pipelines over the same star-indexed storage
+tables, drawn indirect at survivor count, and the pass is a compile-time
+specialisation rather than a uniform (`../webgpu/star/README.md`). The
+disc pass discards fragments with `vPhysRatio < 0.5`; the glow pass
+discards `vPhysRatio ≥ 0.5`; the core mask discards both
+`vPhysRatio < 0.5` and `glow < uCoreThreshold`.
 
 **The three discards are complementary only while all three agree on
 `physRatio`, and that is not free.** Each pipeline runs the vertex stage
@@ -264,10 +266,8 @@ the vertex stage) while the footprint `pxSize` still carries the dim.
 `physSize / pxSize` — a dim fades the star and shrinks its quad, it never
 re-tiers it. `isDiscDominant`
 (`local-pass/star-local-cluster-pure.ts`) is the CPU mirror of that
-routing and takes the undimmed size for the same reason; the pick gate
-(`../camera/controls/star-pick-visibility-pure.ts`) already routed this
-way. The WebGPU port carries the same rule in `routeAppSize`
-(`../webgpu/star/star-vertex-tsl.ts`).
+routing and takes the undimmed size for the same reason, as does the
+pick gate (`../camera/controls/star-pick-visibility-pure.ts`).
 
 **`appMagRoute` is carried, never reconstructed.** The undimmed
 magnitude is captured before the eclipse fold and takes the dust add
@@ -275,10 +275,10 @@ alongside `appMag`, so it is the identical sequence of adds the disc and
 core-mask compilations run — equal bit for bit. Rebuilding it as
 `appMag − eclipseDimMag` instead does not round-trip in float32 and puts
 the glow pass back on a value the other two never compute, for any star
-within ~1.6 × 10⁻³ px of the split. Both backends are pinned against
+within ~1.6 × 10⁻³ px of the split. It is pinned against
 that in `star-pass-split.test.ts`, which is the only thing that
 can catch it: `colourPassFor` takes size terms already resolved, so the
-CPU mirror agrees with itself whatever the shaders do.
+CPU mirror agrees with itself whatever the graph does.
 
 **`vPhysRatio` is not only the router**, so this reaches more than the
 vanish band. It also drives `perceptualDiscExponent`
@@ -290,9 +290,9 @@ dims under the floor. `vFluxPeakL` stays exact either way — the fragment
 paints from the same varying the flux integral is taken over.
 
 `uHideFocusIdx` (int) suppresses a single star across all three passes by
-collapsing its vertex to a clip-space sentinel
-(`gl_Position = vec4(2, 2, 2, 1)`) when `gl_InstanceID == uHideFocusIdx`.
-Defaults to `-1` (no suppression). Set to the focal-star index in OBSERVE
+collapsing its vertex to a clip-space sentinel outside the frustum when
+the star being drawn is the one it names. Defaults to `-1` (no
+suppression). Set to the focal-star index in OBSERVE
 mode (camera parked at the focal star — disc would render from inside) and
 held pinned to the source star throughout an observe-launched warp so the
 reorient phase doesn't flash the focal disc as the camera pulls away; the

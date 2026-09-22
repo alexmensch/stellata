@@ -37,11 +37,9 @@ row narrows the gate silently, and for the same reason `--pin` refuses a
 command line short of `--scenario all`, or one naming the whole canon in
 another order (§ Run position).
 
-**A row at no canon position is left out rather than pinned.** An archive
-taken before the WebGPU cutover carries one row per retired backend; such a
-row compares with nothing, every comparison being at equal position, so
-pinning it would put a value in the file no later run can be judged
-against.
+A row at no canon position is left out rather than pinned
+(§ Run position).
+
 `--accept <scenario>|<backend>[|compute]:<bead>` records an accepted mark
 as provenance for the value now pinned; it never filters a verdict. The
 compute row is its own key, so accepting a context's frame never accepts

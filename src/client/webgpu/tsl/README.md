@@ -172,10 +172,10 @@ own pipeline. Found on the chrome line strokes, but it is a property of the
 node system rather than of that layer.
 
 The consequence a port child has to design around: **a material shared
-across N objects is worth far more here than on GLSL**, where three's
-program cache collapsed N identical materials onto one program and hid the
-duplication entirely. A per-object material that cost nothing on WebGL2 is
-N shader builds and N pipelines on this boot. Hoist it to the layer — the
+across N objects**: a per-object material is N shader builds and N
+pipelines, where a program cache would have collapsed N identical
+materials onto one program and hidden the duplication. Hoist it to the
+layer — the
 orbit rings were 27 of them (`../../solar-system/ephemerides/README.md`
 § Orbit rings).
 

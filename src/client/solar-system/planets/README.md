@@ -226,7 +226,8 @@ read the live `uExposure` — and must, or a parked body blacks out the
 whole faint end while leaving every one of those bodies clickable.
 
 `bodyInkVisible` is that extra gate, and it is the star pipeline's own
-test: the glare IS the shared star-perceptual point (`glare/README.md`),
+test: the glare IS the shared star-perceptual point
+(`../../webgpu/solar-system/README.md` § Reflected glare),
 so it runs through `emitterPutsInkOnScreen` unchanged, `tapered` always
 true because a body carries no opaque disc pass. The mesh OR-branch is
 `forEachDrawnBodyView`'s, unchanged — an opaque surface is pickable at
@@ -317,7 +318,7 @@ crossfade.
   emission rule the star field runs. That is the load-bearing invariant:
   **visibility matches magnitude.** The billboard's own behaviour — the
   photocentre shift and why a resolved mesh hides the glare's core — is
-  `glare/README.md`.
+  `../../webgpu/solar-system/README.md` § Reflected glare.
 
 - **Geometry**: one shared unit sphere, scaled per body to
   `(R_eq, R_eq·(1−f), R_eq)` — `Planet.flattening` carries NASA

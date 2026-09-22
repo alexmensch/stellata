@@ -37,13 +37,11 @@ in both navigate and observe modes.
   never swings bright. Prefiltering on the intrinsic value is sound only
   because every omitted term dims (`../../hdr/exposure/README.md` § What
   "visible" means to a pick path); making it the *gate* is the bug that
-  had clicks landing on stars in empty sky. On the WebGL2 escape hatch
-  the confirm step stalls on a readback per candidate, so
-  `pickFromCandidatesResolved` walks the score order lazily and stops at
-  the first candidate that renders; on the shipped renderer the same read
-  is a lookup into a CPU mirror the pointer event ahead of the pick
-  staged (`../../webgpu/extinction/README.md` § Cold reads), so the
-  laziness costs nothing there either way. The
+  had clicks landing on stars in empty sky. `pickFromCandidatesResolved`
+  walks the score order lazily and stops at the first candidate that
+  renders; the confirm step's extinction read is a lookup into a CPU
+  mirror the pointer event ahead of the pick staged
+  (`../../webgpu/extinction/README.md` § Cold reads). The
   prefilter's radius must be an **upper bound** of the resolved one or
   the walk can skip a candidate that encloses the cursor — in chart mode that means
   bounding the magnitude-mapped ink disc as well as the realistic
@@ -181,9 +179,8 @@ cancellation entirely. The near plane must stay
 **strictly less** than the closest orbit distance, otherwise a centered
 star lands on the clip plane at max zoom and gets culled. Depth
 precision over that multi-decade range — sub-AU close approach to 100 kpc
-background — comes from reversed-z float32 on the shipped renderer, and
-from `logarithmicDepthBuffer: true` on the WebGL2 escape hatch. Neither
-is what resolves intra-system ordering: that is the local depth pass
+background — comes from reversed-z float32. It is not what resolves
+intra-system ordering: that is the local depth pass
 (`../../local-depth/README.md`).
 
 When a star is focused, two distinct distances are in play —

@@ -180,7 +180,7 @@ the failure is order-dependent rather than consistent: it shipped as
 chart discs rendering white when chart was toggled on from observe, while
 entering chart directly on load happened to inherit a benign state. Every
 emitter that inks on paper takes the swap through
-`applyMonochromeBlend` (`../star-pipeline/star-pipeline.ts`) for that
+`applyMonochromeBlend` (`../star-pipeline/star-blend.ts`) for that
 reason — the flag is not optional decoration.
 
 `vAaWidth = 1 / pxSize` is computed per-vertex and passed as a

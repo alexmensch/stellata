@@ -310,7 +310,7 @@ sampler's screen-space derivatives, computed inside the march's `Break`
 where they are non-uniform, on a layer that is pure fill.
 
 Half rather than single: `r16float` is core-filterable on both backends,
-where `r32float` needs `OES_texture_float_linear` on WebGL2 and the
+where `r32float` needs a float-linear filtering extension and the
 `float32-filterable` feature on WebGPU.
 
 Regenerate the underlying table with `pnpm run measure:band-resolved` on a

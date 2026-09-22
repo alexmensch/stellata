@@ -195,6 +195,84 @@ a frame identity `PlanetGlareSources` does not carry, to buy a quarter of
 what the layout split already saves, well under anything `gpu.frame`
 resolves.
 
+## Reflected glare — a planet reads exactly like a star
+
+The instanced billboard that carries a body's reflected light while it is
+unresolved, and the point↔bloom behaviour it morphs through as the mesh
+takes over. `../../solar-system/planets/README.md` § Planet mesh LOD owns the resolvedness band
+both halves ride; this folder owns the glare half of it.
+
+The billboard's graph and its packed geometry are
+`./` (`planet-glare-tsl.ts`,
+`planet-glare-geometry.ts`, `planet-glare-layer.ts`); the glow profile is
+the one stars use (`../../star-pipeline/perceptual-disc/`), and
+`../../solar-system/planets/planet-body-field.ts` writes the per-instance arrays it packs from.
+
+The glare is the **shared star-perceptual point** — a planet reads
+*exactly* like a star of its apparent magnitude: size =
+`perceptualAppSizePx(appMag)`, peak =
+`stellataPointSourcePeak(uExposure, appMag, 0.5·physSize)` —
+the same emission rule the star field runs
+(`../../solar-system/planets/emission/README.md`). This is the load-bearing invariant:
+**visibility matches magnitude.** A body visible in chart mode
+(`appMag ≤ slider`) is equally visible here, rendered like the naked-eye
+"wandering star" it is — Mars (~+1.3), Jupiter (~−2), Saturn (~+0.5),
+Venus (~−4) all show, ordered by magnitude, exactly as the surrounding
+star field does.
+
+`appMag` already folds the phase factor φ(α)
+(`../../perceptual-magnitude.ts`), so a crescent is correctly dimmer — no
+separate illumFrac on brightness. A ring system folds in the same way, on
+`iRingFlux` (`../../solar-system/planets/rings/README.md` § Ring photometry): its flux belongs in
+the magnitude, so it ADDS to φ — same unit — rather than touching the
+peak. Eclipse is the opposite call and folds in as a flux multiplier on
+the peak.
+
+**The photocentre shift is shape only, never brightness.** A shift toward
+the sub-solar limb, scaled by crescentness `(1−illumFrac)` and
+resolvedness `res`, keeps a barely-resolved crescent's halo off its dark
+limb — which is what kills the ring — while leaving a sub-pixel dot
+centred. `../mesh-crossfade.ts` carries the constant
+(`uGlarePhotocentreShift`).
+
+**When resolved the mesh hides the glare's core.** The mesh draws the
+surface, writes depth, and occludes it: the magnitude bloom (`appSize`,
+capped at `uSizeMax`) is smaller than a well-resolved disc (`physSize`),
+so the glare sits inside the disc and only shows as a lit-limb halo while
+the body is small and bright. The full-Moon calibration
+(`../../perceptual-magnitude.test.ts`, −12.7) anchors the underlying flux,
+so the magnitude — and therefore visibility — is correct for any host
+star. CPU mirror for the hover footprint: `max(physSize, appSize)`.
+
+That occlusion is the local depth pass; the old core mask is gone.
+
+The billboard writes no fragment depth, and may not: a static write costs
+the whole draw its early-z, and nothing carries one
+(`../../webgpu/README.md` § Early-z). Reversed-z leaves fixed-function
+depth correct in both passes.
+
+The billboard also carries `vFluxPeakL` — the same kernel renormalised so
+its integral is the body's true flux, for the exposure statistic's flux
+channel (`../../hdr/attachments/README.md`).
+
+### The one surface that does not swap materials
+
+Every other close-range surface ports to WebGPU by handing its layer a
+different material over the same geometry (`../../solar-system/materials/README.md`).
+This one cannot: its **13** per-instance attributes exceed WebGPU's 8
+vertex buffers, so it builds a packed geometry of its own over
+`PlanetBodyField.glareSources()` — the field's live arrays, four of them
+shared by reference and three interleaved
+(`README.md` § The glare packs). The field
+writes the arrays and owns nothing on the GPU; its `group` is the
+layer's visibility state alone.
+
+**There is no gain on the peak, and adding one would break the invariant
+above.** A `uGlareGain` debug multiplier rode both channels until the
+emission rule was physical; at 1 it did nothing, and at anything else it made
+a planet read as a star of a *different* magnitude. `mesh-crossfade.test.ts`
+pins its absence from the graph. Calibration lives in `../../solar-system/planets/emission/README.md`.
+
 ## Which pass draws them
 
 The mesh, the annulus and the shell render in the local depth pass

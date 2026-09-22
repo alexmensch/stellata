@@ -41,7 +41,7 @@ The GPU table walks every scene in `stellata.sceneGraphs`, deduped by
 interleaved buffers counted once) and every texture reachable from a
 material — including the ones hanging off `ShaderMaterial.uniforms`,
 which is how the dust `Data3DTexture`, the cloud bricks and the
-extinction A_V target are found **on a WebGL2 boot**. A TSL material
+extinction A_V target are found by the walk. A TSL material
 holds no `uniforms` slot, so none of that reaches a ported layer — § Re-running
 it after the WebGPU port.
 
@@ -102,9 +102,9 @@ size.
 | HDR MRT | drawing buffer | 8 (RGBA16F) + 4 (RG16F) + 8 (RGBA16F) + 4 (depth24) = **24 B** | `../../hdr/README.md` § Three attachments |
 | Rod summation | half on each axis (¼ the texels) | 8 B (RGBA16F) | `../../hdr/summation/README.md` |
 | Reduction chain | quartering levels from the statistic attachment, stopping at the ~1024-texel tile level | 8 B/level, 16 B at the RGBA32F tile level | `../../hdr/exposure/reduction/README.md` § The chain |
-| Extinction positions | WebGL2: `AV_TEX_WIDTH` × ⌈stars ÷ `AV_TEX_WIDTH`⌉ texels; WebGPU: one vec4 per star in a storage buffer | 16 B (RGBA32F / vec4<f32>), plus the same array retained on the heap | `../../star-pipeline/extinction/README.md`, `../../webgpu/extinction/README.md` |
+| Extinction positions | One vec4 per star in a storage buffer | 16 B (RGBA32F / vec4<f32>), plus the same array retained on the heap | `../../star-pipeline/extinction/README.md`, `../../webgpu/extinction/README.md` |
 
-The A_V target itself is **measured** on a WebGL2 boot, not hand-priced —
+The A_V cache is **measured**, not hand-priced —
 the star pipeline samples it through a uniform, so it is in the GPU
 table. **On a WebGPU boot it is neither**: the A_V cache is a storage
 buffer the TSL vertex stage binds through a node, so the walk cannot
@@ -123,7 +123,7 @@ Worked example — a 1920×1080 window at `devicePixelRatio` 2, so a
 - Reduction chain — the quartering sum converges to ⅓ of the source, so
   ≈ 8.29 Mpx × 8 B ÷ 3 ≈ **22 MiB**.
 - Extinction positions — 1024 × 322 texels × 16 B ≈ **5.0 MiB** GPU on
-  WebGL2, the catalogue count × 16 B on WebGPU (the same figure minus the
+  the catalogue count × 16 B (the same figure minus the
   padding row), and the same array again on the heap.
 
 So the viewport-scaled targets alone are ~240 MiB at dpr 2 before a

@@ -6,9 +6,12 @@ pass itself, its cluster API and its compositing rules live one level
 up (`../README.md`); this folder owns only how far the bracket reaches
 and how finely depth resolves inside it.
 
-Two encodings are live at once during the WebGPU migration: 24-bit
-fixed-point depth, sliced (WebGL2, shipped) and reversed-z Depth32Float
-with a single bracket (WebGPU). Both are derived below.
+The shipped encoding is reversed-z Depth32Float with a single bracket
+(K = 1). The 24-bit fixed-point sliced form is derived below too: it is
+the general mechanism the K = 1 bracket is a special case of, and
+`computeDepthSlices` still implements it behind
+`reversedDepthBuffer` — a flag the boot refuses to proceed without
+(`../../webgpu/boot-webgpu.ts`), so that branch has no live caller.
 
 ## Files
 
@@ -38,16 +41,15 @@ members' depth range into K equal-ratio slices, each within
 - **Seam artefacts:** a fragment exactly on a boundary is measure-zero
   (float equality); no visible seam is expected. Verify in smoke; an
   epsilon overlap is the fallback if one ever shows.
-- **WebGPU:** the reversed-z decision below collapses the partition to
-  K = 1; the sliced form stays live on WebGL2 until cutover deletes
-  that path.
+- **Shipped:** the reversed-z decision below collapses the partition to
+  K = 1.
 
 ## Precision analysis
 
-### 24-bit standard depth, sliced — the shipped WebGL2 mechanism
+### 24-bit standard depth, sliced — the general mechanism
 
 Standard perspective depth quantum at distance `z` in `[near, far]`
-(24-bit buffer, the WebGL2 default renderbuffer):
+(24-bit buffer):
 
 ```
 δz(z) = z²·(far − near) / (far·near·2²⁴)   ⇒   δz(z)/z ≤ (far/near)/2²⁴
@@ -175,15 +177,14 @@ reversed-z:
    the main pass's Max/additive blend semantics; the mirror machinery
    is sunk cost that ports mechanically.
 
-Retiring the pass buys none of that back and breaks WebGL2/WebGPU A/B
-parity during dual-boot. Keeping slicing carries a partition whose
+Retiring the pass buys none of that back. Keeping slicing carries a partition whose
 guarantee is now redundant, at a measured price: the pass costs 30–42%
 of frame near stars and is fill-bound (4.68× on an area cut against
 the frame's 3.04×), with slice-count overdraw a leading candidate
 cause and the K≈4 vantages exactly the expensive ones
-(stellata-8cg.25). K = 1 deletes the slice loop (single `clearDepth` +
-one bracketed render), draws boundary-spanning geometry once, and
-inherits reversed-z in-bracket automatically — the pass camera's
+(stellata-8cg.25). K = 1 collapses the slice loop to a single
+`clearDepth` + one bracketed render, draws boundary-spanning geometry
+once, and inherits reversed-z in-bracket automatically — the pass camera's
 projection comes from the same reversed `makePerspective`, because the
 renderer stamps `reversedDepth` on whatever camera it is handed and
 `updateProjectionMatrix` reads it.
@@ -221,8 +222,7 @@ be observed.
 
 Shipped: `LocalDepthPass.render` takes the K = 1 branch whenever the
 renderer reports `reversedDepthBuffer` (`computeBracket`, one
-`clearDepth` + one bracketed render); the WebGL2 sliced path lives
-until 0it.14 deletes it.
+`clearDepth` + one bracketed render), which the boot guarantees.
 
 **Rejected encodings** (updated 2026-08-18):
 

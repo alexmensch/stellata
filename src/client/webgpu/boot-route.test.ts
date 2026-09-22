@@ -28,7 +28,8 @@ describe('resolveBootRoute', () => {
   });
 
   // The probe is the only thing that decides a boot, so a fragment naming
-  // a renderer is inert rather than a second route.
+  // a renderer is inert rather than a second route — which is what keeps a
+  // bookmark carrying the retired escape hatch from breaking the boot.
   it('probes regardless of any other fragment param', async () => {
     const probe = probing('supported');
     expect(await resolveBootRoute('#renderer=webgl2', probe)).toEqual({ kind: 'boot' });

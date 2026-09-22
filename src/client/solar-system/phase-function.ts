@@ -172,7 +172,8 @@ export function phaseFactorAt(
 /** Illuminated fraction of a sphere seen at phase angle α: (1 + cos α)/2
  *  — 1 at full phase (α = 0), 0 at new (α = 180). CPU mirror of
  *  `illumFrac` in ../webgpu/solar-system/planet-mesh-tsl.ts, which drives the glare photocentre
- *  shift (glare/README.md); no TS caller, so the mirror is what the
+ *  shift (`../webgpu/solar-system/README.md` § Reflected glare); no TS
+ *  caller, so the mirror is what the
  *  vitest pin holds. α clamped to [0, π]. */
 export function illuminatedFraction(alphaRad: number): number {
   const a = Math.max(0, Math.min(Math.PI, alphaRad));
