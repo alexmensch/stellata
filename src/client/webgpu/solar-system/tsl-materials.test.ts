@@ -73,30 +73,18 @@ describe('the solar-system material seam', () => {
   it('leaves the frame-shared pair off the glyph’s own record', () => {
     // uViewport / uPixelRatio ride the shared node mirror rather than the
     // material's own block.
-    expect(Object.keys(tslProbeFactory().probeMarker(false).uniforms).sort())
+    expect(Object.keys(tslProbeFactory().probeMarker().uniforms).sort())
       .toEqual(['uColour', 'uSizePx']);
   });
 
-  it('gives the glyph one shared material across both passes', () => {
-    // See README.md § The probe glyph needs no mirror variant.
-    const probes = tslProbeFactory();
-    expect(probes.probeMarker(false).material).toBe(probes.probeMarker(true).material);
-  });
-
-  it('holds the shared glyph until every variant has been disposed', () => {
+  it('severs the glyph’s MRT registration on dispose', () => {
     let registered = 0;
-    const probes = makeTslProbeMaterial({
+    const marker = makeTslProbeMaterial({
       nodes: sharedNodes(),
       registerMrtLayer: () => { registered++; return () => { registered--; }; },
-    });
-    const main = probes.probeMarker(false);
-    const mirror = probes.probeMarker(true);
+    }).probeMarker();
     expect(registered).toBe(1);
-
-    // The field disposes both; the material must outlive the first.
-    main.dispose();
-    expect(registered).toBe(1);
-    mirror.dispose();
+    marker.dispose();
     expect(registered).toBe(0);
   });
 

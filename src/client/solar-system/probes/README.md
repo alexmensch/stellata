@@ -214,9 +214,8 @@ radius. Voyager 1 at 167 AU widens the range to ~8e13, still the same four
 slices the planet members already need.
 
 The trail's mirror stroke takes the same material as its main-pass one,
-and the marker needs no mirror variant at all: reversed-z deleted the
-log-depth stage that was the two variants' only difference
-(`../../materials/README.md`, `../../chrome-lines/README.md`).
+and the marker's mirror draws the same material as its main-pass mesh
+(`../materials/README.md`, `../../chrome-lines/README.md`).
 
 Neither surface writes a fragment depth, and neither may: a static write
 costs the whole draw its early-z, and nothing carries one

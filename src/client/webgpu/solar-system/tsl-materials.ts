@@ -59,37 +59,12 @@ function wrapper(cfg: TslProbeConfig) {
   };
 }
 
-/**
- * The glyph alone. Reversed-z deleted the only thing that differed
- * between the main-pass and mirror variants, so both draws share ONE
- * material rather than compiling two identical graphs — `localPass` is
- * inert here (`README.md` § The probe glyph needs no mirror variant).
- *
- * Sharing makes dispose refcounted: the probe field builds both variants
- * and disposes both, and the material must outlive the first of those.
- */
 export function makeTslProbeMaterial(cfg: TslProbeConfig): ProbeMaterials {
   const wrap = wrapper(cfg);
-  let shared: EmitterMaterial | null = null;
-  let holders = 0;
   return {
-    probeMarker(_localPass: boolean) {
-      if (shared === null) {
-        const nodes = probeMarkerUniformNodes();
-        shared = wrap(buildProbeMarkerMaterial(cfg.nodes, nodes), nodes);
-      }
-      const built = shared;
-      holders++;
-      return {
-        material: built.material,
-        uniforms: built.uniforms,
-        dispose() {
-          holders--;
-          if (holders > 0) return;
-          shared = null;
-          built.dispose();
-        },
-      };
+    probeMarker() {
+      const nodes = probeMarkerUniformNodes();
+      return wrap(buildProbeMarkerMaterial(cfg.nodes, nodes), nodes);
     },
   };
 }

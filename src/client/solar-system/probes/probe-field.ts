@@ -103,7 +103,6 @@ export class ProbeField {
   private alpha = new Float32Array(0);
   private geometry: THREE.InstancedBufferGeometry;
   private material: EmitterMaterial;
-  private localMaterial: EmitterMaterial;
   private mesh: THREE.Mesh;
   private localMesh: THREE.Mesh;
   private state: ProbeState = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0 };
@@ -123,28 +122,21 @@ export class ProbeField {
     );
     this.geometry.setIndex([0, 1, 2, 1, 3, 2]);
     this.geometry.instanceCount = 0;
-    // Two compile variants over one geometry. The mirror shares the
-    // geometry outright — the instance buffers this.update writes are the
-    // same ones it draws, so there is no attribute copy and no way for the
-    // two passes to disagree about where a probe is.
-    const makeMat = (localPass = false) => {
-      const m = materials.probeMarker(localPass);
-      m.uniforms.uSizePx.value = PROBE_MARKER_PX;
-      setRawChromeColour(m.uniforms.uColour.value as THREE.Color, PROBE_COLOUR);
-      return m;
-    };
-    const makeMesh = (name: string, material: EmitterMaterial, renderOrder: number) => {
-      const mesh = new THREE.Mesh(this.geometry, material.material);
+    // The mirror shares the geometry and the material outright — the
+    // instance buffers this.update writes are the same ones it draws, so the
+    // two passes cannot disagree about where a probe is.
+    this.material = materials.probeMarker();
+    this.material.uniforms.uSizePx.value = PROBE_MARKER_PX;
+    setRawChromeColour(this.material.uniforms.uColour.value as THREE.Color, PROBE_COLOUR);
+    const makeMesh = (name: string, renderOrder: number) => {
+      const mesh = new THREE.Mesh(this.geometry, this.material.material);
       mesh.name = name;
       mesh.frustumCulled = false;
       mesh.renderOrder = renderOrder;
       return mesh;
     };
-    this.material = makeMat();
-    this.localMaterial = makeMat(true);
-    this.mesh = makeMesh('probe-marker', this.material, MARKER_RENDER_ORDER);
-    this.localMesh = makeMesh(
-      'probe-marker-local', this.localMaterial, MARKER_LOCAL_RENDER_ORDER);
+    this.mesh = makeMesh('probe-marker', MARKER_RENDER_ORDER);
+    this.localMesh = makeMesh('probe-marker-local', MARKER_LOCAL_RENDER_ORDER);
     this.group.add(this.mesh);
     this.localGroup.add(this.localMesh);
   }
@@ -403,6 +395,5 @@ export class ProbeField {
   dispose(): void {
     this.geometry.dispose();
     this.material.dispose();
-    this.localMaterial.dispose();
   }
 }

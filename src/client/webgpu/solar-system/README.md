@@ -283,14 +283,12 @@ paths, probe trails — through the chrome line seam
 `LineBasicMaterial` a fragment that can create a WGSL pipeline against the
 three-attachment HDR target.
 
-## The probe glyph needs no mirror variant
+## The probe glyph is one material across both passes
 
-The glyph's main-pass and local-mirror draws differed only by the
-log-depth stage. Reversed-z deleted it, so one graph serves both draws and
-`probeMarker`'s `localPass` argument is inert.
-The same reasoning covers the glare's *fragment* stage; its **vertex**
-stage still needs both variants, because `uLocalPassRange` gates opposite
-senses there.
+The glyph's main-pass and local-mirror draws shade identically, so one
+material serves both meshes. The glare is the contrast: its fragment stage
+is shared the same way, but its **vertex** stage needs both variants,
+because `uLocalPassRange` gates opposite senses there.
 
 ## Loop control and the discard that is not a return
 

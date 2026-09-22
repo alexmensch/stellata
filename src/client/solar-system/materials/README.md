@@ -14,8 +14,8 @@ The port child that added this folder is `../../webgpu/README.md`'s.
 
 ```
 src/client/solar-system/materials/
-  solar-system-materials.ts SolarSystemMaterials, ProbeMaterials and
-                            ViewportUniforms: which surfaces this family
+  solar-system-materials.ts SolarSystemMaterials and ProbeMaterials:
+                            which surfaces this family
                             builds, over the shared EmitterMaterial —
                             the lit mesh, the ring annulus, the
                             atmosphere shell, and the depth-only
@@ -115,10 +115,9 @@ builds and the probe field a config full of dead fields.
 reads by reference — bind onto the **factory**, not onto each call: they
 come off the shared uniform-node mirror rather than a per-call argument.
 
-`probeMarker(localPass)` returns **one shared material** for both
-variants, since reversed-z deleted the only stage that differed. Sharing
-is why the factory refcounts dispose: the probe field builds both
-variants and disposes both, and the material has to outlive the first.
+`probeMarker()` builds one material, and the probe field draws both its
+main-pass mesh and its local-pass mirror with it: the two draws differ only
+in render order and parent group, never in shading.
 
 ## The one surface that is NOT here
 
