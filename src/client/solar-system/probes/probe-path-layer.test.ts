@@ -8,7 +8,7 @@ import { tToJdUt } from '../time/time';
 import type { ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
 import { PROBE_MARKER_PX, ProbeField, type ProbeSharedUniforms } from './probe-field';
 import { ProbePathLayer } from './probe-path-layer';
-import { builtinChromeLineMaterials } from '../../chrome-lines/builtin-chrome-lines';
+import { fakeChromeLineMaterials } from '../../chrome-lines/chrome-lines-mock';
 import { buildProbeTrajectory } from './probe-trajectory';
 import { fakeProbeMaterials } from '../materials/solar-system-materials-mock';
 
@@ -49,7 +49,7 @@ function makeHarness() {
     uFovYRad: { value: (50 * Math.PI) / 180 },
   };
   const field = new ProbeField(fakeProbeMaterials());
-  const layer = new ProbePathLayer(shared, builtinChromeLineMaterials());
+  const layer = new ProbePathLayer(shared, fakeChromeLineMaterials());
   const t = ROSTER[0].sampleT[2];
   field.attach(ROSTER, t);
   layer.attach(ROSTER);

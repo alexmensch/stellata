@@ -57,7 +57,7 @@ export interface FatChromeLineSpec {
 /** `colour` is an authored sRGB hex, not a linear value — README.md
  *  § Colour is authored once, at construction. */
 export interface ChromeLineMaterials {
-  solid(colour: number, opacity: number, localPass?: boolean): ChromeLineMaterial;
+  solid(colour: number, opacity: number): ChromeLineMaterial;
   dashed(
     colour: number, dash: number, gap: number, opacity: number,
   ): ChromeLineMaterial<DashedChromeLineStroke>;

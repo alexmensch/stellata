@@ -1,5 +1,4 @@
-// The WebGL2 half of the chrome line seam: three's built-in line
-// materials. See README.md.
+// ChromeLineMaterials test double. See README.md § Files in this area.
 
 import * as THREE from 'three';
 import { Line2 } from 'three/examples/jsm/lines/Line2.js';
@@ -26,23 +25,10 @@ function handle<M extends THREE.Material & { color: THREE.Color }>(
   };
 }
 
-/** `localPass` — README.md § `localPass` is a GLSL-only argument. */
-export function builtinChromeLineMaterials(): ChromeLineMaterials {
+export function fakeChromeLineMaterials(): ChromeLineMaterials {
   return {
-    solid(colour: number, opacity: number, localPass = false) {
-      const mat = new THREE.LineBasicMaterial(strokeParams(opacity));
-      if (localPass) {
-        mat.onBeforeCompile = (shader) => {
-          shader.vertexShader = shader.vertexShader
-            .replace('#include <logdepthbuf_pars_vertex>', '')
-            .replace('#include <logdepthbuf_vertex>', '');
-          shader.fragmentShader = shader.fragmentShader
-            .replace('#include <logdepthbuf_pars_fragment>', '')
-            .replace('#include <logdepthbuf_fragment>', '');
-        };
-        mat.customProgramCacheKey = () => 'orbit-line-local-depth';
-      }
-      return handle(mat, colour);
+    solid(colour: number, opacity: number) {
+      return handle(new THREE.LineBasicMaterial(strokeParams(opacity)), colour);
     },
     dashed(colour: number, dash: number, gap: number, opacity: number) {
       const mat = new THREE.LineDashedMaterial({
@@ -51,8 +37,6 @@ export function builtinChromeLineMaterials(): ChromeLineMaterials {
       return handle<DashedChromeLineStroke>(mat, colour);
     },
     fat(spec: FatChromeLineSpec): ChromeFatLine {
-      // `resolution` is three's own to write — README.md § The fat stroke
-      // brings its own object.
       const mat = new LineMaterial({
         ...strokeParams(spec.opacity),
         linewidth: spec.widthPx, worldUnits: false,

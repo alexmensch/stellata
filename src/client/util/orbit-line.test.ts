@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { builtinChromeLineMaterials } from '../chrome-lines/builtin-chrome-lines';
+import { fakeChromeLineMaterials } from '../chrome-lines/chrome-lines-mock';
 import { SHELL_RIM_BLUE } from '../fresnel-shell/fresnel-shell';
 import {
   makeOrbitLineLoop,
@@ -19,7 +19,7 @@ function ring(vertexCount: number): Float32Array {
   return pts;
 }
 
-const stroke = builtinChromeLineMaterials().solid(0xffffff, 0.5);
+const stroke = fakeChromeLineMaterials().solid(0xffffff, 0.5);
 const loop = (n: number) => makeOrbitLineLoop(ring(n), stroke.material, 3);
 
 describe('makeOrbitLineLoop', () => {

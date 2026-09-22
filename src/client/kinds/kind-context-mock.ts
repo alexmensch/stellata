@@ -2,7 +2,7 @@
 
 import * as THREE from 'three';
 import { angularToPx } from '../camera/controls/star-geometry';
-import { builtinChromeLineMaterials } from '../chrome-lines/builtin-chrome-lines';
+import { fakeChromeLineMaterials } from '../chrome-lines/chrome-lines-mock';
 import type { HdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import type { SharedUniforms } from '../frame/shared-uniforms';
 import { OccluderSet } from '../occlusion/occluder-set';
@@ -51,7 +51,7 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
     // Empty on purpose: a kind reads only the material factory it owns,
     // so a suite exercising one passes that leg through the overrides.
     webgpu: {} as unknown as WebGpuSeam,
-    chromeLines: builtinChromeLineMaterials(),
+    chromeLines: fakeChromeLineMaterials(),
     solIndex: 0,
     solAbsInto: (out) => {
       out.set(0, 0, 0);

@@ -68,7 +68,7 @@ export class ProbePathLayer {
     this.localGroup.renderOrder = TRAIL_LOCAL_RENDER_ORDER;
     this.localGroup.visible = false;
     this.stroke = chromeLines.solid(ORBIT_LINE_COLOUR, ORBIT_LINE_OPACITY);
-    this.localStroke = chromeLines.solid(ORBIT_LINE_COLOUR, ORBIT_LINE_OPACITY, true);
+    this.localStroke = chromeLines.solid(ORBIT_LINE_COLOUR, ORBIT_LINE_OPACITY);
   }
 
   /** Allocate one full-capacity trail per probe, plus its local-pass mirror.

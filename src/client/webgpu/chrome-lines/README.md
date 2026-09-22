@@ -1,10 +1,8 @@
 # Chrome lines on WebGPU
 
-The TSL half of the chrome line seam (`../../chrome-lines/README.md` owns
+The chrome line seam's implementation (`../../chrome-lines/README.md` owns
 the contract, the colour authoring, and why the seam exists at all).
-**These are the shipped strokes.** The WebGL2 built-ins stay the
-semantic reference until `0it.14` deletes them; parity is the A/B smoke,
-same `/v/<blob>/` with and without the `#renderer=webgl2` fragment.
+These are the shipped strokes.
 
 ## Files in this area
 
@@ -17,18 +15,17 @@ src/client/webgpu/chrome-lines/
   tsl-chrome-lines.ts         The factory implementing ChromeLineMaterials.
 ```
 
-Both are covered against the WebGL2 half by
-`../../chrome-lines/chrome-line-materials.test.ts`.
+Both are covered by `../../chrome-lines/chrome-line-materials.test.ts`.
 
 ## The fragment is a transcription, not a re-derivation
 
 `LineBasicMaterial` emits `vec4(diffuse, opacity)` and — into a render
 target — no colour-space encode. So the stroke's colour member is
 `vec4(materialColor, materialOpacity)`, read off the **same two material
-properties** the WebGL path reads. That is what makes the parity claim
-structural rather than tuned: a consumer's `material.color` /
+properties** three's own fragment reads. That is what makes it a
+transcription rather than a tuning: a consumer's `material.color` /
 `.opacity` write lands in this graph, and the authored chrome mapping
-(`../../hdr/chrome/README.md`) needs no WebGPU variant.
+(`../../hdr/chrome/README.md`) applies unchanged.
 
 The dashed stroke adds three's own dash rule over the same properties —
 `lineDistance × materialLineScale`, discarded across the gap half of each
@@ -36,11 +33,11 @@ The dashed stroke adds three's own dash rule over the same properties —
 consumer's own, for the reason `../../chrome-lines/README.md` gives.
 
 Both are chrome, so **both extra attachments write `vec4(0)`** — the
-blend's identity element under this alpha-composited blend, which leaves
-the destination exactly as the WebGL gate's `NONE` did
+blend's identity element under this alpha-composited blend, so the
+destination is left exactly as it was
 (`../hdr/README.md` § The gate becomes the output struct).
 
-## The encode the built-in path lost
+## The encode the struct graph does not carry
 
 three encodes linear→sRGB for the canvas and nothing for a render target.
 With `outputColorSpace` pinned to the working space
@@ -97,26 +94,24 @@ false`: `WebGPUPipelineUtils.createRenderPipeline` skips only `NoBlending`
 and opaque-`NormalBlending`, and `CustomBlending` is neither. Chart mode's
 opaque flip is the same function with `NoBlending`.
 
-`alphaToCoverage` is forced off to match the WebGL2 stroke, which never
-defines `USE_ALPHA_TO_COVERAGE`. What keeps the stroke's alpha alive
+`alphaToCoverage` is forced off — three's own line fragment never defines
+`USE_ALPHA_TO_COVERAGE`. What keeps the stroke's alpha alive
 through that is `NodeBuilder.isOpaque()` — it requires `NormalBlending`,
 so a `CustomBlending` or `NoBlending` stroke reads false and
 `NodeMaterial.setupDiffuseColor` leaves the alpha rather than forcing it
 to 1.
 
 **`transparent: false` does move the draw into the opaque list, and that
-is the one asymmetry the flag buys.** `isOpaque()` decides the alpha
+is the one thing the flag still buys.** `isOpaque()` decides the alpha
 force above and nothing else; the render list buckets on
 `material.transparent` alone (`RenderList.push`), and the renderer draws
-the opaque list before the transparent one. So the WebGL2 fat stroke
-sorts as transparent and this one does not. It costs nothing today
+the opaque list before the transparent one. So a fat stroke sorts ahead of
+every thin one however its render order reads. It costs nothing today
 because the only consumer is the coordinate spheres' equator at
-`renderOrder = -1`: it draws ahead of every transparent layer on both
-backends either way, and opaque geometry simply overwrites the fragments
-WebGL2's depth test would have discarded instead. **A fat stroke at a
-render order that interleaves with transparent layers would composite
-differently on the two backends** — check that before adding the second
-consumer.
+`renderOrder = -1`, already ahead of every transparent layer. **A fat
+stroke at a render order that interleaves with transparent layers would
+composite in a different order than its number reads** — check that
+before adding the second consumer.
 
 The class default is `blending = NoBlending` ("transparency is not
 supported, yet"), so a fat stroke that never ran the flip draws opaque

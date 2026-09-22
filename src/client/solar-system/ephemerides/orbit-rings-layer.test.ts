@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { builtinChromeLineMaterials as chromeLines } from '../../chrome-lines/builtin-chrome-lines';
+import { fakeChromeLineMaterials as chromeLines } from '../../chrome-lines/chrome-lines-mock';
 import type { ChromeLineMaterials } from '../../chrome-lines/chrome-line-materials';
 import {
   ECLIPTIC_NORTH_POLE_ICRS,
@@ -1093,9 +1093,9 @@ describe('the ring stroke', () => {
     let built = 0;
     let disposed = 0;
     const seam: ChromeLineMaterials = {
-      solid(colour, opacity, localPass) {
+      solid(colour, opacity) {
         built++;
-        const handle = inner.solid(colour, opacity, localPass);
+        const handle = inner.solid(colour, opacity);
         return {
           material: handle.material,
           setOpaque: (on) => handle.setOpaque(on),
