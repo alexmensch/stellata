@@ -168,7 +168,7 @@ against the GLSL by `../../hdr/attachments/statistic-mask.test.ts`.
 The MRT emission/statistic write side is here (`finishStarColourMaterial`,
 `StarLayer.setMrtOutputs`) but engages only while the HDR pipeline binds
 its target; single-output frames run the inline operator, which is exact
-for point sources (`../../hdr/README.md` § Fallback). All three
+for point sources (`../../hdr/README.md` § The inline operator). All three
 pipelines swap, the depth-only core mask included — its writes are
 masked, but an unchanged fragment program is handed the stale
 three-target pipeline from three's cache when the target drops to one

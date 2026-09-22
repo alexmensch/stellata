@@ -125,7 +125,7 @@ nothing failing.
 
 **`FrameCtx.exposure` is the exempt class, named.** The shell fills a
 `FrameExposure` record every tick and hands it to each gated layer's
-`skip` (`../../scene/README.md` § The brightness reason). It is per frame,
+`skip` (`../../scene/contribution/README.md` § The brightness reason). It is per frame,
 stateless, and stores nothing keyed on adaptation. **What the prohibition
 turns on is HOLDING something derived from the cut, never object
 identity** — so the record is one preallocated slot rewritten in place,

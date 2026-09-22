@@ -14,17 +14,11 @@ import {
   ringPlaneElevationDeg,
 } from './rings/ring-photometry-pure';
 import { poleVectorAt } from './rotation/rotation-elements-pure';
-import { applyGlowBlendDefaults, applyMonochromeBlend } from '../../star-pipeline/star-blend';
-import {
-  pickChartDiscUniforms,
-  pickPerceptualDiscUniforms,
-  type ChartDiscUniforms,
-  type PerceptualDiscUniforms,
+import type {
+  ChartDiscUniforms,
+  PerceptualDiscUniforms,
 } from '../../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
-import {
-  pickHdrEmitterUniforms,
-  type HdrEmitterUniforms,
-} from '../../hdr/hdr-emitter-uniforms';
+import type { HdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../../util/astronomy-constants';
 import {
@@ -34,11 +28,7 @@ import {
 } from '../../render-gate/cadence/clock-cadence-pure';
 import type { CadenceCtx } from '../../scene/scene-layer';
 import { angleBetweenRad } from '../../util/angles';
-import {
-  GLARE_PHOTOCENTRE_SHIFT,
-  MESH_FADE_FULL_PX,
-  MESH_FADE_MIN_PX,
-} from './mesh-crossfade';
+import { MESH_FADE_MIN_PX } from './mesh-crossfade';
 import {
   orbitPlaneNormalInto,
   orbitalPlaneNormalFor,
@@ -72,9 +62,6 @@ import { ECLIPSE_DIM_TAU_S } from '../../binaries/binary-tuning';
 import { umbralDepthFromOffsets, umbralGlow } from './eclipses/umbral-glow-pure';
 import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
-import planetVert from './glare/planet.vert.glsl?raw';
-import planetFrag from './glare/planet.frag.glsl?raw';
-import { markStatisticEmitter } from '../../hdr/attachments/attachment-gate';
 
 /** Screen separation below which a body reads as one point with its
  *  parent (host star / parent planet). Deliberately looser than the
@@ -297,11 +284,6 @@ export class PlanetBodyField {
   // resolve their host in O(1) instead of an O(hosts) scan — several
   // run per-frame (focal ride, POI overlay per pin, focus-card rows).
   private instanceHost!: Int32Array;
-  private geometry!: THREE.InstancedBufferGeometry;
-  private matGlow!: THREE.ShaderMaterial;
-  private matGlowLocal: THREE.ShaderMaterial | null = null;
-  private meshGlow!: THREE.Mesh;
-  private meshGlowLocal: THREE.Mesh | null = null;
   // One shared { value } slot across every material — the uHideIdx
   // uniform hiding the observe-anchor body (-1 = none).
   private hideIdxUniform = { value: -1 };
@@ -342,13 +324,8 @@ export class PlanetBodyField {
   // across the one frame this can lag.
   private lastT = 0;
 
-  /** `glslLocalMirror: false` (the WebGPU boot) skips the GLSL mirror
-   *  draw: localGroup renders in the local depth pass on that boot, and a
-   *  GLSL material there fails WGSL pipeline creation — the TSL glare
-   *  layer parents its own mirror into localGroup instead. */
   constructor(
     magnitudeShared: PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms,
-    glslLocalMirror = true,
   ) {
     this.magShared = magnitudeShared;
     this.cullMag = magnitudeShared.uCullMag.value;
@@ -358,8 +335,6 @@ export class PlanetBodyField {
     // translation). iHostLocalPos delivers each host's offset from
     // world-local origin per-instance; the shader does the rest.
     this.allocateBuffers(this.capacity);
-    this.buildGeometry();
-    this.buildMaterials(magnitudeShared, glslLocalMirror);
   }
 
   /**
@@ -432,9 +407,7 @@ export class PlanetBodyField {
     // has valid iLocalRel data.
     this.writeHostStaticAttributes(host);
     this.writeHostPositions(host, t);
-    this.flushAllAttributes();
     this.layoutVersion++;
-    this.geometry.instanceCount = this.liveCount;
     this.group.visible = !this.hidden;
   }
 
@@ -456,8 +429,6 @@ export class PlanetBodyField {
       }
     }
     this.liveCount -= host.count;
-    this.geometry.instanceCount = this.liveCount;
-    this.flushAllAttributes();
     this.layoutVersion++;
     this.hosts.delete(hostStarIdx);
     this.rebuildInstanceMap();
@@ -506,7 +477,6 @@ export class PlanetBodyField {
       host.hostLocalPos.copy(host.hostAbsPos).sub(this.worldOffset);
       this.writeHostLocalPos(host);
     }
-    this.markAttributeDirty('hostLocalPos');
   }
 
   /**
@@ -551,30 +521,18 @@ export class PlanetBodyField {
     this.dimTargets = swapDims;
     this.dimTargets.clear();
     this.lastT = t;
-    const render = !this.hidden;
-    this.group.visible = render;
-    let touched = false;
-    let ringTouched = false;
+    this.group.visible = !this.hidden;
     for (const host of this.hosts.values()) {
       const dToHost = camera.position.distanceTo(host.hostLocalPos);
       if (dToHost > host.cullDistance) continue;
-      if (host.positionsAt) {
-        this.writeHostPositions(host, t);
-        touched = true;
-      }
+      if (host.positionsAt) this.writeHostPositions(host, t);
       this.collectEclipseDimTargets(host, camera.position);
-      if (this.writeRingFluxes(host, camera.position)) ringTouched = true;
-    }
-    if (render) {
-      if (touched) this.markAttributeDirty('localRel');
-      if (ringTouched) this.markAttributeDirty('ringFlux');
+      this.writeRingFluxes(host, camera.position);
     }
 
     const blend = dimBlendFactor(nowMs, this.lastDimNowMs, ECLIPSE_DIM_TAU_S);
     this.lastDimNowMs = nowMs;
-    if (blendDimBuffer(this.bufs.eclipseDim, this.dimTargets, this.dimActive, blend)) {
-      this.markAttributeDirty('eclipseDim');
-    }
+    blendDimBuffer(this.bufs.eclipseDim, this.dimTargets, this.dimActive, blend);
     perfMeasure('solar.bodies');
   }
 
@@ -1580,20 +1538,8 @@ export class PlanetBodyField {
     return this.hosts.values();
   }
 
-  /** Chart mode renders the bodies as flat ink discs through the single
-   *  glare material: the shared uMonochrome uniform flips the shader to
-   *  the flat-disc branch; here we only swap the blending to Multiply
-   *  (ink on white), the same swap the star pipeline's setMonochromeBlend
-   *  does. Rings stay hidden (their own layer); the mesh LOD hides via
-   *  `monochrome` below. */
   setMonochrome(on: boolean): void {
     this.mono = on;
-    if (on) {
-      applyMonochromeBlend(this.matGlow);
-    } else {
-      applyGlowBlendDefaults(this.matGlow);
-    }
-    this.matGlow.needsUpdate = true;
     this.group.visible = !this.hidden && this.liveCount > 0;
   }
 
@@ -1615,11 +1561,7 @@ export class PlanetBodyField {
     this.hideIdxUniform.value = instanceIdx;
   }
 
-  dispose(): void {
-    this.geometry.dispose();
-    this.matGlow.dispose();
-    this.matGlowLocal?.dispose();
-  }
+  dispose(): void {}
 
   // ── private ─────────────────────────────────────────────────────────
 
@@ -1647,92 +1589,6 @@ export class PlanetBodyField {
     this.localRel64.set(oldLocalRel64);
     this.prevBodyLocal64.set(oldPrevBodyLocal64);
     this.capacity *= 2;
-    // Replace the geometry with a fresh one over the new buffers.
-    // Materials and meshes are re-bound via three.js's normal
-    // geometry-swap path.
-    const oldGeom = this.geometry;
-    this.buildGeometry();
-    this.meshGlow.geometry = this.geometry;
-    if (this.meshGlowLocal !== null) this.meshGlowLocal.geometry = this.geometry;
-    oldGeom.dispose();
-  }
-
-  private buildGeometry(): void {
-    const geom = new THREE.InstancedBufferGeometry();
-    geom.setAttribute(
-      'aCorner',
-      new THREE.BufferAttribute(
-        new Float32Array([-0.5, -0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5]),
-        2,
-      ),
-    );
-    geom.setIndex([0, 1, 2, 1, 3, 2]);
-    for (const [key, spec] of SPEC_ENTRIES) {
-      const attr = new THREE.InstancedBufferAttribute(this.bufs[key], spec.dims);
-      if (spec.dynamicUsage) attr.setUsage(THREE.DynamicDrawUsage);
-      geom.setAttribute(spec.attr, attr);
-    }
-    geom.instanceCount = this.liveCount;
-    geom.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
-    this.geometry = geom;
-  }
-
-  private buildMaterials(
-    sm: PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms,
-    glslLocalMirror: boolean,
-  ): void {
-    const sharedPlanetUniforms = {
-      ...pickPerceptualDiscUniforms(sm),
-      ...pickChartDiscUniforms(sm),
-      ...pickHdrEmitterUniforms(sm),
-    };
-
-    const makeMat = (localPass = false) =>
-      new THREE.ShaderMaterial({
-        glslVersion: THREE.GLSL3,
-        vertexShader: planetVert,
-        fragmentShader: planetFrag,
-        ...(localPass ? { defines: { LOCAL_DEPTH_PASS: '' } } : {}),
-        uniforms: {
-          ...sharedPlanetUniforms,
-          uHideIdx: this.hideIdxUniform,
-          uLocalPassRange: this.localPassRangeUniform,
-          uMeshFadePx: {
-            value: new THREE.Vector2(MESH_FADE_MIN_PX, MESH_FADE_FULL_PX),
-          },
-          uGlarePhotocentreShift: { value: GLARE_PHOTOCENTRE_SHIFT },
-        },
-      });
-
-    // Planet bodies = spheroid mesh (resolved surface) + one additive
-    // reflected-glare pass. No opaque disc / core-mask: the mesh writes
-    // depth for background occlusion in the resolved regime, and an
-    // unresolved point-glare needs none (additive like a star). The
-    // main-pass glare draws distant, not-locally-active bodies; the
-    // mirror draws the locally-active cluster in the local depth pass.
-    this.matGlow = makeMat();
-    applyGlowBlendDefaults(this.matGlow);
-
-    const makeMesh = (mat: THREE.ShaderMaterial, name: string, order: number) => {
-      const m = new THREE.Mesh(this.geometry, mat);
-      m.name = name;
-      m.frustumCulled = false;
-      m.renderOrder = order;
-      markStatisticEmitter(m);
-      return m;
-    };
-
-    // Glare last (4) so a transiting body's glare adds over everything,
-    // including a parent mesh behind it.
-    this.meshGlow = makeMesh(this.matGlow, 'glow', 4);
-    this.group.add(this.meshGlow);
-
-    if (glslLocalMirror) {
-      this.matGlowLocal = makeMat(true);
-      applyGlowBlendDefaults(this.matGlowLocal);
-      this.meshGlowLocal = makeMesh(this.matGlowLocal, 'glow-local', 4);
-      this.localMirrorGroup.add(this.meshGlowLocal);
-    }
   }
 
   /** One-shot fill of static per-instance attributes (radius, colour,
@@ -1833,28 +1689,6 @@ export class PlanetBodyField {
       dst[dstStart + i + 0] = tmp.x;
       dst[dstStart + i + 1] = tmp.y;
       dst[dstStart + i + 2] = tmp.z;
-    }
-  }
-
-  /** Queue one per-instance attribute for re-upload, keyed on the buffer
-   *  name so a mistyped target is a compile error rather than a silently
-   *  skipped upload. Every flush path goes through here: at bk5 scale
-   *  (hundreds of hosts × thousands of planets) a per-frame re-upload of
-   *  the statics would be measurable wasted bus bandwidth, so each caller
-   *  flags only what it wrote. */
-  private markAttributeDirty(key: InstanceBufKey): void {
-    const buffer = this.geometry?.attributes[INSTANCE_ATTR_SPECS[key].attr] as
-      | THREE.InstancedBufferAttribute
-      | undefined;
-    if (buffer) buffer.needsUpdate = true;
-  }
-
-  /** Attach / detach / grow: every per-instance attribute could be
-   *  dirty (the host's slot was just written; or a tail-shift moved
-   *  every other host's data). */
-  private flushAllAttributes(): void {
-    for (const [key] of SPEC_ENTRIES) {
-      this.markAttributeDirty(key);
     }
   }
 

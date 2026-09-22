@@ -9,7 +9,7 @@ import type { KindContext } from '../kinds/kind-module';
 import type { WebGpuSeam } from '../webgpu/seam';
 import { makeKindContext } from '../kinds/kind-context-mock';
 import { HELIOPAUSE_EXTENT_PC } from '../solar-system/heliopause/heliopause';
-import { makeGlslShellMaterials } from './fresnel-shell';
+import { fakeShellMaterials } from './shell-materials-mock';
 import { SHELL_OBJECT_SIDS } from './shell-object-sids';
 import { createShellKindModule } from './shell-module';
 
@@ -54,7 +54,10 @@ function stubDocument(): void {
 }
 
 function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
-  const ctx = makeKindContext(overrides);
+  const ctx = makeKindContext({
+    webgpu: { shellMaterials: fakeShellMaterials() } as unknown as WebGpuSeam,
+    ...overrides,
+  });
   ctx.camera.position.set(50, 0, 300);
   ctx.camera.lookAt(50, 0, 0);
   ctx.camera.updateMatrixWorld();
@@ -115,21 +118,14 @@ describe('shell kind module', () => {
   // elsewhere — it renders nowhere while every CPU mirror believes it
   // draws (`../webgpu/README.md` § One scene per boot). This is the only
   // guard on that.
-  it('builds both shells into the context scene on either backend', async () => {
+  it('builds both shells into the context scene', async () => {
     stubFetch(true);
 
-    const webgl = createShellKindModule();
-    await webgl.load('/');
-    const glCtx = makeCtx();
-    webgl.attach(glCtx);
-    expect(glCtx.scene.children).toHaveLength(2);
-
-    const seam = { shellMaterials: makeGlslShellMaterials() } as unknown as WebGpuSeam;
-    const webgpu = createShellKindModule();
-    await webgpu.load('/');
-    const gpuCtx = makeCtx({ webgpu: seam });
-    webgpu.attach(gpuCtx);
-    expect(gpuCtx.scene.children).toHaveLength(2);
+    const m = createShellKindModule();
+    await m.load('/');
+    const ctx = makeCtx();
+    m.attach(ctx);
+    expect(ctx.scene.children).toHaveLength(2);
   });
 
   it('picks the drawn silhouette once the declutter push permits it', async () => {

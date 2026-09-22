@@ -5,16 +5,11 @@ unresolved, and the point↔bloom behaviour it morphs through as the mesh
 takes over. `../README.md` § Planet mesh LOD owns the resolvedness band
 both halves ride; this folder owns the glare half of it.
 
-```
-src/client/solar-system/planets/glare/
-  planet.vert.glsl,
-  planet.frag.glsl   Instanced reflected-glare billboards (point↔bloom on
-                     resolvedness, phase-gated + photocentre-shifted).
-                     Imports perceptual-disc.glsl from
-                     ../../../star-pipeline/perceptual-disc/ — the glow
-                     profile shared with stars. Built and driven by
-                     ../planet-body-field.ts.
-```
+The billboard's graph and its packed geometry are
+`../../../webgpu/solar-system/` (`planet-glare-tsl.ts`,
+`planet-glare-geometry.ts`, `planet-glare-layer.ts`); the glow profile is
+the one stars use (`../../../star-pipeline/perceptual-disc/`), and
+`../planet-body-field.ts` writes the per-instance arrays it packs from.
 
 The glare is the **shared star-perceptual point** — a planet reads
 *exactly* like a star of its apparent magnitude: size =
@@ -54,13 +49,10 @@ star. CPU mirror for the hover footprint: `max(physSize, appSize)`.
 
 That occlusion is the local depth pass; the old core mask is gone.
 
-`planet.frag.glsl` writes no `gl_FragDepth`, and may not: a static write
-costs the whole draw its early-z, and nothing carries one
-(`../../../webgpu/README.md` § Early-z, pinned by
-`tests/shader-frag-depth.test.ts`). The glare is a non-raw
-`ShaderMaterial`, so in the main pass three's `logdepthbuf_fragment`
-writes the depth; in the local pass fixed-function depth is already
-exactly `gl_FragCoord.z`.
+The billboard writes no fragment depth, and may not: a static write costs
+the whole draw its early-z, and nothing carries one
+(`../../../webgpu/README.md` § Early-z). Reversed-z leaves fixed-function
+depth correct in both passes.
 
 The billboard also carries `vFluxPeakL` — the same kernel renormalised so
 its integral is the body's true flux, for the exposure statistic's flux
@@ -71,14 +63,15 @@ channel (`../../../hdr/attachments/README.md`).
 Every other close-range surface ports to WebGPU by handing its layer a
 different material over the same geometry (`../../materials/README.md`).
 This one cannot: its **13** per-instance attributes exceed WebGPU's 8
-vertex buffers, so the TSL path builds a packed geometry of its own over
+vertex buffers, so it builds a packed geometry of its own over
 `PlanetBodyField.glareSources()` — the field's live arrays, four of them
 shared by reference and three interleaved
 (`../../../webgpu/solar-system/README.md` § The glare packs). The field
-writes exactly what it always wrote; nothing about the WebGL path moves.
+writes the arrays and owns nothing on the GPU; its `group` is the
+layer's visibility state alone.
 
 **There is no gain on the peak, and adding one would break the invariant
 above.** A `uGlareGain` debug multiplier rode both channels until the
 emission rule was physical; at 1 it did nothing, and at anything else it made
 a planet read as a star of a *different* magnitude. `mesh-crossfade.test.ts`
-pins its absence from the shader. Calibration lives in `../emission/README.md`.
+pins its absence from the graph. Calibration lives in `../emission/README.md`.

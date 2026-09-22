@@ -66,7 +66,6 @@ import {
 } from '../atmosphere/atmosphere-scattering-pure';
 import type { EmitterMaterial } from '../../scene/emitter-material';
 import type { SolarSystemMaterials } from '../materials/solar-system-materials';
-import { makeGlslSolarSystemMaterials } from '../materials/glsl-materials';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import { markOccludingEmitter } from '../../hdr/attachments/attachment-gate';
 
@@ -302,7 +301,7 @@ export class PlanetMeshLayer {
     maxTextureSize: number,
     /** The TSL surfaces on a WebGPU boot; absent = the shipped GLSL ones
      *  (`../materials/README.md`). */
-    materials?: (placeholder: THREE.Texture) => SolarSystemMaterials,
+    materials: (placeholder: THREE.Texture) => SolarSystemMaterials,
   ) {
     this.field = field;
     this.textureBaseUrl = textureBaseUrl;
@@ -329,8 +328,7 @@ export class PlanetMeshLayer {
     // swap a slot BACK to the placeholder, and that swap has to rebuild
     // the bind group too.
     this.placeholder.version = this.placeholder.id + 1;
-    this.materials = materials?.(this.placeholder)
-      ?? makeGlslSolarSystemMaterials({ hdr: this.hdr, placeholder: this.placeholder });
+    this.materials = materials(this.placeholder);
     this.stampMaterial = this.materials.planetDepthStamp();
   }
 

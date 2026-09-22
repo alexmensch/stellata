@@ -28,8 +28,8 @@ src/client/solar-system/planets/
                                   additive reflected-glare pass (+ its
                                   local-pass mirror); the resolved surface
                                   is the spheroid mesh (planet-mesh-layer).
-                                  Shares the glow half of perceptual-disc.glsl
-                                  with stars — see
+                                  Shares the glow half of the perceptual
+                                  disc with stars — see
                                   ../../star-pipeline/README.md.
                                   pick() adds one gate over
                                   forEachDrawnBodyView: bodyInkVisible,
@@ -119,12 +119,12 @@ src/client/solar-system/planets/
                                   resolvability-gated. Imports nothing from
                                   here and stays wired in main.ts. Its own
                                   README.
-  planet-mesh.vert.glsl,
-  planet-mesh.frag.glsl           Lit spheroid shaders (equirect sample,
-                                  host-direction Lambert terminator,
-                                  representative-colour + limb-darkening
-                                  fallback, atmosphere airlight over the disc).
 ```
+
+The lit spheroid's own graph — equirect sample, host-direction Lambert
+terminator, representative-colour + limb-darkening fallback, atmosphere
+airlight over the disc — is
+`../../webgpu/solar-system/planet-mesh-tsl.ts`.
 
 ## The two layers
 
@@ -413,7 +413,8 @@ flattest and buys nothing below 8192. The tangent frame, the single term the
 perturbed normal may reach, how the facet's own slope composes with the
 skyline beyond it — the body's own limb included — and why the sky the ground
 sees needs a different march from the sun it sees, are
-`surface-relief/README.md`; the shader is `planet-mesh.frag.glsl` here.
+`surface-relief/README.md`; the shader is
+`../../webgpu/solar-system/planet-mesh-tsl.ts`.
 
 ### Ring systems
 

@@ -39,9 +39,9 @@ import {
   OLD_SPHEROID_COLOUR_INDEX_BV,
   combinedColourIndex,
 } from '../../hdr/emission/population-colour-pure';
-import { DEFAULT_SUMMATION_ARCSEC2 } from '../../hdr/exposure/exposure-epoch';
 import { bindAttachmentGate } from '../../hdr/attachments/attachment-gate';
 import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
+import { fakeLgEmissionMaterials } from './lg-emission-materials-mock';
 
 const SMC_EMISSION: LgEmission = {
   family: 'sersic',
@@ -296,56 +296,8 @@ describe('surface-brightness zero point', () => {
     expect(SB_ZERO_POINT).toBeCloseTo(26.5721256659, 9);
   });
 
-  // Nothing at compile time ties the shader's copy to this one.
-  it('the fragment shader declares the same value', () => {
-    const frag = readFileSync(
-      fileURLToPath(new URL('./local-group-emission.frag.glsl', import.meta.url)),
-      'utf8',
-    );
-    const m = frag.match(/const float SB_ZERO_POINT = ([\d.]+);/);
-    expect(m).not.toBeNull();
-    expect(Number(m![1])).toBeCloseTo(SB_ZERO_POINT, 9);
-  });
-
-  it('the resolution floor matches the one the vertex shader applies', () => {
-    const vert = readFileSync(
-      fileURLToPath(new URL('./local-group-emission.vert.glsl', import.meta.url)),
-      'utf8',
-    );
-    const m = vert.match(/const float MIN_PROJECTED_RADIUS_PX = ([\d.]+);/);
-    expect(m).not.toBeNull();
-    expect(Number(m![1])).toBe(MIN_PROJECTED_RADIUS_PX);
-  });
-
   it('a unit column reads at the zero point', () => {
     expect(columnSurfaceBrightness(1)).toBeCloseTo(SB_ZERO_POINT, 12);
-  });
-
-  // The march's own four literals. The TSL graph imports these constants,
-  // so it cannot drift; the GLSL spells them out and needs the pin, and the
-  // slack is the one the CPU mirror breaks on too.
-  it('the fragment shader declares the same march constants', () => {
-    const frag = readFileSync(
-      fileURLToPath(new URL('./local-group-emission.frag.glsl', import.meta.url)),
-      'utf8',
-    );
-    const literal = (name: string): number => {
-      const m = frag.match(new RegExp(`const float ${name} = ([\\d.e-]+);`));
-      expect(m, name).not.toBeNull();
-      return Number(m![1]);
-    };
-    expect(literal('S_MIN_PC')).toBe(EMISSION_S_MIN_PC);
-    expect(literal('U_FLOOR')).toBe(EMISSION_U_FLOOR);
-
-    const slack = frag.match(/dot\(pLocal, pLocal\) > ([\d.]+)\) break;/);
-    expect(slack).not.toBeNull();
-    expect(Number(slack![1])).toBe(EMISSION_UNIT_BALL_SLACK);
-
-    const jitter = frag.match(
-      /fract\(sin\(dot\(gl_FragCoord\.xy, vec2\(([\d.]+), ([\d.]+)\)\)\) \* ([\d.]+)\)/);
-    expect(jitter).not.toBeNull();
-    expect([Number(jitter![1]), Number(jitter![2])]).toEqual([...EMISSION_JITTER_DOT]);
-    expect(Number(jitter![3])).toBe(EMISSION_JITTER_SCALE);
   });
 
   it('pins the march constants themselves', () => {
@@ -354,36 +306,6 @@ describe('surface-brightness zero point', () => {
     expect(EMISSION_UNIT_BALL_SLACK).toBe(1.001);
     expect(EMISSION_JITTER_SCALE).toBe(43758.5453);
     expect([...EMISSION_JITTER_DOT]).toEqual([12.9898, 78.233]);
-  });
-
-  // The band's own summation anchor, which this layer used to opt out of by
-  // passing Ω_px twice. It can take it now only because the anchor rides
-  // attachment 2 and the resolve averages over the patch first
-  // (../../hdr/summation/README.md) — so the `location = 2` declaration and the
-  // summation uniform are one contract. A shader that gained by Ω_sum
-  // straight into attachment 0 would put 3.95 mag on M31's nucleus.
-  it('displays at the summation area, through the diffuse attachment', () => {
-    const frag = readFileSync(
-      fileURLToPath(new URL('./local-group-emission.frag.glsl', import.meta.url)),
-      'utf8',
-    );
-    expect(frag).toMatch(
-      /uExposure, SB_ZERO_POINT, uOmegaSummationArcsec2, uOmegaPxArcsec2,/,
-    );
-    expect(frag).toMatch(/layout\(location = 2\) out vec4 outDiffuse;/);
-  });
-
-  // Both volumetric emitters have to reach attachment 2 and neither may
-  // reach attachment 0 on-target, so the gate they mark themselves with is
-  // part of the contract: `markStatisticEmitter` would discard every diffuse
-  // write silently rather than fail.
-  it('marks itself a diffuse emitter, not merely a physical one', () => {
-    const src = readFileSync(
-      fileURLToPath(new URL('./local-group-emission.ts', import.meta.url)),
-      'utf8',
-    );
-    expect(src).toContain('markDiffuseEmitter(mesh)');
-    expect(src).not.toContain('markStatisticEmitter');
   });
 });
 
@@ -482,17 +404,6 @@ describe('LocalGroupEmission controller', () => {
     lgObject('LMC', LMC_EMISSION, [15_000, 5_000, -42_000]),
     lgObject('M31', M31_EMISSION, [300_000, 500_000, 400_000]),
   ];
-  const makeDeps = () => ({
-    hdr: {
-      uExposure: { value: 26.365 },
-      uOmegaPxArcsec2: { value: 40_000 },
-      uOmegaSummationArcsec2: { value: DEFAULT_SUMMATION_ARCSEC2 },
-      uWhitePoint: { value: 20 },
-      uHighlightDesat: { value: 0.35 },
-      uHdrTarget: { value: 1 },
-    },
-  });
-  const deps = makeDeps();
 
   const sersicMeshOf = (layer: LocalGroupEmission) =>
     layer.group.children.find((m) =>
@@ -500,7 +411,7 @@ describe('LocalGroupEmission controller', () => {
     ) as THREE.Mesh;
 
   it('builds one instanced mesh per family with the packed component counts', () => {
-    const layer = new LocalGroupEmission(objects, deps);
+    const layer = new LocalGroupEmission(objects, fakeLgEmissionMaterials());
     expect(layer.group.children).toHaveLength(2);
     const geoms = layer.group.children.map(
       (m) => (m as THREE.Mesh).geometry as THREE.InstancedBufferGeometry,
@@ -514,7 +425,7 @@ describe('LocalGroupEmission controller', () => {
   });
 
   it('per-instance attributes are readable back off the geometry', () => {
-    const layer = new LocalGroupEmission(objects, deps);
+    const layer = new LocalGroupEmission(objects, fakeLgEmissionMaterials());
     const geom = sersicMeshOf(layer).geometry as THREE.InstancedBufferGeometry;
     const aSersic = geom.getAttribute('aSersic') as THREE.InstancedBufferAttribute;
     expect(aSersic.getX(0)).toBeCloseTo(SMC_EMISSION.density0, 7);
@@ -523,29 +434,9 @@ describe('LocalGroupEmission controller', () => {
     layer.dispose();
   });
 
-  it('per-family march density rides the material defines', () => {
-    const layer = new LocalGroupEmission(objects, deps);
-    const sersicMat = sersicMeshOf(layer).material as THREE.ShaderMaterial;
-    expect(sersicMat.defines!.EMISSION_STEPS).toBe(EMISSION_STEPS_SERSIC);
-    const discMesh = layer.group.children.find((m) => m !== sersicMeshOf(layer)) as THREE.Mesh;
-    const discMat = discMesh.material as THREE.ShaderMaterial;
-    expect(discMat.defines!.FAMILY_DISC).toBe(1);
-    expect(discMat.defines!.EMISSION_STEPS).toBe(EMISSION_STEPS_DISC);
-    layer.dispose();
-  });
-
-  it('update writes the floating-origin offset uniform', () => {
-    const layer = new LocalGroupEmission(objects, deps);
-    layer.update(new THREE.Vector3(7, 8, 9));
-    const mat = (layer.group.children[0] as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.uniforms.uWorldOffset.value.x).toBe(7);
-    expect(mat.uniforms.uWorldOffset.value.z).toBe(9);
-    layer.dispose();
-  });
-
   it('chart mode and setEnabled both gate visibility; either one hides', () => {
-    const layer = new LocalGroupEmission(objects, deps);
-    layer.update(new THREE.Vector3());
+    const layer = new LocalGroupEmission(objects, fakeLgEmissionMaterials());
+    layer.update();
     expect(layer.group.visible).toBe(true);
     layer.setChartHidden(true);
     expect(layer.group.visible).toBe(false);
@@ -557,7 +448,7 @@ describe('LocalGroupEmission controller', () => {
   });
 
   it('dispose empties the group and disposes every pass', () => {
-    const layer = new LocalGroupEmission(objects, deps);
+    const layer = new LocalGroupEmission(objects, fakeLgEmissionMaterials());
     const materials = layer.group.children.map((m) => (m as THREE.Mesh).material as THREE.ShaderMaterial);
     const spies = materials.map((m) => {
       let called = false;
@@ -570,37 +461,8 @@ describe('LocalGroupEmission controller', () => {
     for (const wasCalled of spies) expect(wasCalled()).toBe(true);
   });
 
-  it('binds the HDR emitter uniforms by reference on every pass', () => {
-    const d = makeDeps();
-    const layer = new LocalGroupEmission(objects, d);
-    for (const child of layer.group.children) {
-      const mat = (child as THREE.Mesh).material as THREE.ShaderMaterial;
-      expect(mat.uniforms.uExposure).toBe(d.hdr.uExposure);
-      expect(mat.uniforms.uOmegaPxArcsec2).toBe(d.hdr.uOmegaPxArcsec2);
-      expect(mat.uniforms.uHdrTarget).toBe(d.hdr.uHdrTarget);
-    }
-    d.hdr.uExposure.value = 99;
-    const mat = (layer.group.children[0] as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.uniforms.uExposure.value).toBe(99);
-    layer.dispose();
-  });
-
-  it('reads no star-pipeline gate uniform — the exposure model is the only lever', () => {
-    const layer = new LocalGroupEmission(objects, deps);
-    for (const child of layer.group.children) {
-      const names = Object.keys(
-        ((child as THREE.Mesh).material as THREE.ShaderMaterial).uniforms,
-      );
-      expect(names).not.toContain('uLimitMag');
-      expect(names).not.toContain('uSizeSpan');
-      expect(names).not.toContain('uBrightnessScale');
-      expect(names).not.toContain('uGlowMagOffset');
-    }
-    layer.dispose();
-  });
-
   it('marks every pass a physical emitter so it reaches the statistic attachment', () => {
-    const layer = new LocalGroupEmission(objects, deps);
+    const layer = new LocalGroupEmission(objects, fakeLgEmissionMaterials());
     let opened = 0;
     bindAttachmentGate(() => { opened += 1; }, () => {});
     for (const child of layer.group.children) {
@@ -622,7 +484,7 @@ describe('LocalGroupEmission controller', () => {
   // and an A/B that pays the bound on both sides prices nothing.
   describe('the brightness verdict refuses above the bound while the glow is off', () => {
     function asksFor(mutate: (layer: LocalGroupEmission) => void): number {
-      const layer = new LocalGroupEmission(objects, makeDeps());
+      const layer = new LocalGroupEmission(objects, fakeLgEmissionMaterials());
       let asked = 0;
       layer.peakSurfaceBrightness = () => { asked += 1; return 17.42; };
       mutate(layer);
@@ -646,7 +508,7 @@ describe('LocalGroupEmission controller', () => {
 
   describe('isDrawn is the whole conjunction, not the user toggle', () => {
     const drawnAfter = (mutate: (layer: LocalGroupEmission) => void) => {
-      const layer = new LocalGroupEmission(objects, makeDeps());
+      const layer = new LocalGroupEmission(objects, fakeLgEmissionMaterials());
       mutate(layer);
       const drawn = layer.isDrawn();
       expect(layer.group.visible, 'group.visible tracks isDrawn').toBe(drawn);

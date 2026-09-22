@@ -111,8 +111,8 @@ band keyed on where Sol is:
    (`brightnessSkip`) is the one implementation, and the Milky Way band
    and the Local Group pair are its two users. Unlike the geometric
    three this reason is not a function of camera pose, so a layer taking
-   it owes the wake argument `scene/README.md` § A skipped layer reports
-   nothing enumerates.
+   it owes the wake argument `scene/contribution/README.md` § A skipped
+   layer reports nothing enumerates.
 
 "Prefilter with the bound, decide with the predicate"
 (`hdr/exposure/visibility/README.md` § What "visible" means to a pick path) holds
@@ -128,12 +128,12 @@ starting `permitted = false` so it agrees with its constructor's
 (`fresnel-shell/fresnel-shell.ts`).
 
 **Where.** `SceneLayer.contribution`, beside `timeBehaviour`
-(`scene/README.md` § Declaring what a layer can put on screen — a
+(`scene/contribution/README.md` § Declaring what a layer can put on screen — a
 required discriminated union, because an omitted hook reads as an answer
 and the failure it prevents is silence). The registry runs the test and
 skips the update; the layer hides its groups.
 `tests/cadence-layer-declarations.test.ts` pins the census, and
-`scene/README.md` § Which layers are gated, and which refused carries the
+`scene/contribution/README.md` § Which layers are gated, and which refused carries the
 roster — including the three layers that took a verdict of `'always'`
 with an argument rather than by omission.
 

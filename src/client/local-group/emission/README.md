@@ -17,13 +17,12 @@ are no Deep-field emission knobs (§ Zero free parameters).
   passes, their materials and the per-frame rebase.
 - `local-group-emission-pure.ts` — emission-block → component
   decomposition, the population tints (§ Population tints), instance
-  packing, the flux ↔ magnitude inverse, and a CPU mirror of the GLSL
-  raymarch. Keep the mirror in lockstep with the shader.
-- `local-group-emission.{vert,frag}.glsl` — one shader pair for both
-  families; the disc material defines `FAMILY_DISC`.
-- `lg-emission-materials.ts` (+ test) — the material seam: the neutral
-  `LgEmissionMaterials` contract and the WebGL2 implementation
-  (§ The material seam).
+  packing, the flux ↔ magnitude inverse, and a CPU mirror of the
+  raymarch. Keep the mirror in lockstep with the shader
+  (`../../webgpu/local-group/local-group-emission-tsl.ts`), which imports
+  the constants it marches on.
+- `lg-emission-materials.ts` (+ test, + mock) — the material seam: the
+  neutral `LgEmissionMaterials` contract (§ The material seam).
 - `local-group-emission.test.ts` — wiring, instance packing, the shader
   mirror, the tint derivation.
 - `local-group-emission-calibration.test.ts` — the epic's acceptance
@@ -84,21 +83,21 @@ only pick path.
 ## The material seam
 
 Both passes take their material from an `LgEmissionMaterials` factory
-rather than building a `ShaderMaterial` inline, so a WebGPU boot swaps
-shaders without a second copy of the instance packing, the per-frame
-rebase or the enable / chart gates. Both geometries cross unchanged — six
-buffers for the disc family, seven for the Sérsic one, inside WebGPU's
-eight. The WebGPU twin is `../../webgpu/local-group/README.md`;
-`lg-module.ts` passes `kindCtx.webgpu?.lgEmissionMaterials` and adds the
-emission group to `kindCtx.scene` — the wireframes are Line2 chrome and
+rather than building one inline, so the shader side moves without a second
+copy of the instance packing or the enable / chart gates. Both geometries
+cross unchanged — six buffers for the disc family, seven for the Sérsic
+one, inside WebGPU's eight. The factory is
+`../../webgpu/local-group/README.md`; `lg-module.ts` passes
+`kindCtx.webgpu.lgEmissionMaterials` and adds the emission group to
+`kindCtx.scene` — the wireframes are Line2 chrome and
 join it there, on the seam's stroke, since that scene is drawn on either
 backend (`../../webgpu/README.md` § One scene per boot).
 
-**Every uniform these shaders read is shared**, so the TSL side exposes no
+**Every uniform these shaders read is shared**, so the factory exposes no
 slot record at all: the six HDR emitter slots and `uWorldOffset` are in
-the uniform-node mirror. The layer's own `uWorldOffset` object is
-therefore inert on that backend — `FloatingOrigin`'s write to the shared
-map is what reaches the shader instead.
+the uniform-node mirror. The layer holds no floating-origin slot of its
+own — `FloatingOrigin`'s write to the shared map is what reaches the
+shader, and `update()` is left settling the group's visibility.
 
 ## Zero free parameters — the emission scale is derived
 
@@ -120,9 +119,8 @@ one scalar gain (`stellataSurfaceBrightnessLuminance`), so the
 population tint rides through untouched. `SB_ZERO_POINT` lives in
 `../../hdr/emission/emission-pure.ts` — it is the emission unit's
 constant, not this layer's, and the Milky Way band takes the same one
-(`../../milkyway/calibration/README.md`). The TypeScript constant and the
-shader's `SB_ZERO_POINT` are pinned against each other in
-`local-group-emission.test.ts` — nothing at compile time ties them.
+(`../../milkyway/calibration/README.md`). The graph imports it, so the
+two cannot drift.
 
 **The same extended-source anchor the band takes, and it took a convolution
 to earn it.** Both layers gain by `uOmegaSummationArcsec2` — the eye's rod
@@ -293,7 +291,7 @@ only this layer's margin is thin enough for a resize to flip it.
 and `Ω_px`, never on exposure; `dispose` resets it.
 
 `LocalGroupEmission.contributionSkip` runs it through the two-rule
-predicate (`../../scene/README.md` § The brightness reason). **The
+predicate (`../../scene/contribution/README.md` § The brightness reason). **The
 verdict is not this layer's alone**: the lg module returns ONE scene
 layer for the wireframe and the glow together, so its `skip` is the
 conjunction — the wireframe's distance fade has to have reached zero as

@@ -70,11 +70,10 @@ export interface KindContext {
    *  changes what a layer draws must say so here. `reason` is a short
    *  stable slug the render watcher prints. */
   requestRender(reason: string): void;
-  /** The WebGPU seam, or null on the WebGL2 escape hatch. A kind reads
-   *  its TSL surfaces from here and adds its groups to `scene` either
-   *  way — the seam owns no scene of its own
+  /** The WebGPU seam. A kind reads its TSL surfaces from here and adds
+   *  its groups to `scene` — the seam owns no scene of its own
    *  (`../webgpu/README.md` § One scene per boot). */
-  readonly webgpu: WebGpuSeam | null;
+  readonly webgpu: WebGpuSeam;
   /** The chrome line strokes for this boot, already resolved to the
    *  backend — a kind that draws overlay lines takes them from here
    *  rather than reading `webgpu` itself

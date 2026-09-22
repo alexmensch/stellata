@@ -224,7 +224,7 @@ magnitude step is the branch's cost and nothing else's.
 **Off-target there is no attachment 2 and no pass, so the anchor is gone
 entirely** and both emitters fall back to `Ω_px`. One rule rather than a
 per-layer choice: the concession *is* the pass. That is the float-RT fallback
-and chart mode (`../README.md` § Fallback), where the
+and chart mode (`../README.md` § The inline operator), where the
 band returns to its pre-xypg.34 level.
 
 It `#include`s the unit and the operator — three resolves includes

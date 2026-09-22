@@ -22,22 +22,12 @@ src/client/hdr/summation/
                              weights, and the CPU mirror of the
                              convolution. The test is the epic's acceptance
                              for this pass (§ What is pinned).
-  summation.glsl             The convolution as a shared chunk
-                             (stellata_summation), pasted into the resolve.
-  summation-downsample.frag  Box-average of the diffuse attachment, so the
-    .glsl                    kernel spans a bounded number of texels.
-  summation-pass.ts          SummationPass — the downsample target's
-    (+ test)                 lifecycle, the per-frame factor choice, and
-                             the uniforms it hands the resolve. The test
-                             drives it against a stub renderer, which is
-                             what pins the sub-rect seam and the pixel-ratio
-                             crossing without a GL context.
 ```
 
-The WebGPU boot runs the same math through its own pass and TSL chunk —
-`src/client/webgpu/hdr/` — over exactly the constants in
-`summation-pure.ts`; a change to a bound or the kernel rule lands on
-both backends through that one module.
+The pass and the convolution graph live in `src/client/webgpu/hdr/`
+(`summation-tsl.ts`, `summation-pass-webgpu.ts`) and import exactly the
+constants in `summation-pure.ts`, so a change to a bound or the kernel
+rule lands through that one module.
 
 ## Where it sits in the frame
 
@@ -137,10 +127,10 @@ brightness**, and every bound here is measured over it: 0.8 px at 120° FOV to
 `summationDownsample` is what keeps a non-separable kernel affordable across
 that range: the source is box-averaged until the kernel is ~3 texels, so the
 tap count is bounded at every FOV instead of growing quadratically.
-`MAX_KERNEL_REACH_TEXELS` is the GLSL loop bound this buys, and the
+`MAX_KERNEL_REACH_TEXELS` is the loop bound this buys, and the
 downsample target is sized to the *widest* factor the pass will use, with
 each frame rendering into the sub-rect it needs — **on the target's own
-viewport, never the renderer's** (`summation-pass.ts` says why; a
+viewport, never the renderer's** (`summation-pass-webgpu.ts` says why; a
 `renderer.setViewport` here is a CSS-unit write that three scales by the same
 pixel ratio and that outlives the pass) — so a zoom never reallocates.
 

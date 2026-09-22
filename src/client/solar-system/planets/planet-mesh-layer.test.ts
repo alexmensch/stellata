@@ -2,9 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { glslCallArgs } from '../../util/glsl-call-args';
-import { pickHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
-import { makeGlslSolarSystemMaterials } from '../materials/glsl-materials';
+import { fakeSolarSystemMaterials } from '../materials/solar-system-materials-mock';
 import { makeMockHdrEmitterUniforms } from '../../kinds/kind-context-mock';
 import { SOL_BODIES } from '../planet-system';
 import { PLANET_MESH_TEXTURE_SLOTS } from '../materials/texture-slots';
@@ -20,14 +18,11 @@ import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import { phaseAngleFromLegs } from '../phase-function';
 import { ringPhaseFactor } from './rings/ring-photometry-pure';
 import { depthStampRadius } from './depth-stamp/depth-stamp-pure';
+import type { EmitterMaterial } from '../../scene/emitter-material';
 import { DEPTH_MASK_RENDER_ORDER } from '../../scene/render-order';
 
 const read = (name: string) =>
   readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
-
-/** The alpha of a `vec4(rgb, a)` write, or the sole argument of an occluder
- *  texel. */
-const lastArgOf = (src: string, name: string) => glslCallArgs(src, name).at(-1);
 
 // Every surface this layer draws alpha-composites in FRONT of the volumetric
 // emitters, which live in attachment 2 until the resolve convolves them
@@ -38,36 +33,31 @@ const lastArgOf = (src: string, name: string) => glslCallArgs(src, name).at(-1);
 // section and the atmosphere limb, exactly where the surface is dim.
 describe('the planet surfaces occlude the diffuse attachment', () => {
   const SURFACES = [
-    { label: 'body mesh', frag: './planet-mesh.frag.glsl' },
-    { label: 'ring annulus', frag: './rings/planet-rings.frag.glsl' },
-    { label: 'atmosphere shell', frag: '../atmosphere/planet-atmosphere.frag.glsl' },
+    { label: 'body mesh', src: '../../webgpu/solar-system/planet-mesh-tsl.ts', alpha: 'p.uFade' },
+    { label: 'ring annulus', src: '../../webgpu/solar-system/planet-rings-tsl.ts', alpha: 'alpha' },
+    {
+      label: 'atmosphere shell',
+      src: '../../webgpu/solar-system/planet-atmosphere-tsl.ts',
+      alpha: 'a',
+    },
   ];
 
-  for (const { label, frag } of SURFACES) {
-    describe(label, () => {
-      const src = read(frag);
-
-      it('declares the diffuse attachment it has to dim', () => {
-        expect(src).toMatch(/layout\(location = 2\) out vec4 outDiffuse;/);
-      });
-
-      // One blend equation runs over every attachment, so black at the
-      // fragment's own alpha dims attachment 2 by exactly the opacity
-      // attachment 0 was composited with. A DIFFERENT alpha would occlude the
-      // band by a different amount than it occludes everything else — which
-      // is the one way this can go wrong without failing to compile.
-      it('dims it by the same alpha it composites attachment 0 with', () => {
-        expect(src).toContain('outDiffuse = stellataOccluderTexel(');
-        expect(lastArgOf(src, 'stellataOccluderTexel')).toBe(
-          lastArgOf(src, 'outColor = vec4'),
-        );
-      });
+  // One blend equation runs over every attachment, so black at the
+  // fragment's own alpha dims attachment 2 by exactly the opacity
+  // attachment 0 was composited with. A DIFFERENT alpha would occlude the
+  // band by a different amount than it occludes everything else — which
+  // is the one way this can go wrong without failing to compile.
+  for (const { label, src: path, alpha } of SURFACES) {
+    it(`dims it with the alpha the ${label} composites attachment 0 with`, () => {
+      const src = read(path);
+      expect(src).toContain(`diffuse: occluderTexelTsl(${alpha}),`);
+      expect(src).toMatch(new RegExp(`colour: vec4\\([\\s\\S]*?, ${alpha}\\),`));
     });
   }
 
-  // The `location = 2` declarations above are discarded unless the draw opens
-  // attachment 2, and a draw that opens it without declaring the output leaves
-  // it undefined. Neither half errors on its own, so both are pinned.
+  // A surface whose output struct carries the diffuse member still writes
+  // nothing unless the draw is marked, and the mark alone leaves the
+  // attachment undefined. Neither half errors on its own, so both are pinned.
   it('marks all three meshes occluding emitters, so the gate opens', () => {
     const src = read('./planet-mesh-layer.ts');
     expect(src.match(/markOccludingEmitter\(mesh\)/g)).toHaveLength(SURFACES.length);
@@ -92,9 +82,7 @@ describe('the mesh stand-in is filterable', () => {
       8192,
       (placeholder) => {
         handed.push(placeholder);
-        return makeGlslSolarSystemMaterials({
-          hdr: pickHdrEmitterUniforms(hdr), placeholder,
-        });
+        return fakeSolarSystemMaterials();
       },
     );
     expect(handed).toHaveLength(1);
@@ -174,6 +162,7 @@ function harness(bodyNames: string[], maxTextureSize = 8192) {
     { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } },
     () => {},
     maxTextureSize,
+    () => fakeSolarSystemMaterials(),
   );
   const camera = new THREE.PerspectiveCamera();
   return {
@@ -390,8 +379,6 @@ describe('the depth pre-stamp', () => {
     h.frame([3000]);
     const [stamp] = stampsOf(h);
     expect(stamp.renderOrder).toBe(DEPTH_MASK_RENDER_ORDER);
-    expect((stamp.material as THREE.Material).colorWrite).toBe(false);
-    expect((stamp.material as THREE.Material).depthWrite).toBe(true);
     expect(stamp.frustumCulled).toBe(false);
     expect(stamp.parent).toBe(h.layer.depthStampGroup);
     expect(h.layer.group.children).not.toContain(h.layer.depthStampGroup);
@@ -508,12 +495,24 @@ describe('the ring annulus phase scalar', () => {
       getAttachedPlanetSystem: () => ({ hostStarIdx: 0, planets: [saturn] }),
       eclipseDimForInstance: () => 1,
     } as unknown as PlanetBodyField;
+    const ringSurfaces: EmitterMaterial[] = [];
     const layer = new PlanetMeshLayer(
       field,
       '/',
       { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } },
       () => {},
       8192,
+      () => {
+        const materials = fakeSolarSystemMaterials();
+        return {
+          ...materials,
+          planetRings() {
+            const surface = materials.planetRings();
+            ringSurfaces.push(surface);
+            return surface;
+          },
+        };
+      },
     );
     const cam = new THREE.PerspectiveCamera();
     cam.position.copy(camera);
@@ -524,10 +523,8 @@ describe('the ring annulus phase scalar', () => {
       pending.onLoad({ width: 2048, height: 1024, close: vi.fn() });
     }
     layer.update(cam, 0);
-    const ring = layer.group.getObjectByName('planet-rings') as
-      | THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>
-      | undefined;
-    return { layer, ring, planetPos };
+    const ring = layer.group.getObjectByName('planet-rings') as THREE.Mesh | undefined;
+    return { layer, ring, ringSlots: () => ringSurfaces.at(-1)!.uniforms, planetPos };
   }
 
   afterEach(() => {
@@ -537,7 +534,7 @@ describe('the ring annulus phase scalar', () => {
   it('reaches the annulus material, and agrees with the pure law', () => {
     // Near-opposition Earth-like vantage.
     const camPos = new THREE.Vector3(1 * AU_PC, 0, 0);
-    const { layer, ring, planetPos } = litHarness(camPos);
+    const { layer, ring, ringSlots, planetPos } = litHarness(camPos);
     expect(ring, 'no ring annulus drawn').toBeDefined();
     expect(ring!.visible).toBe(true);
 
@@ -549,7 +546,7 @@ describe('the ring annulus phase scalar', () => {
       phaseAngleFromLegs(toCam.x, toCam.y, toCam.z, toHost.x, toHost.y, toHost.z),
       saturn.phaseCoefficients,
     );
-    expect(ring!.material.uniforms.uRingPhaseScale.value).toBeCloseTo(expected, 6);
+    expect(ringSlots().uRingPhaseScale.value).toBeCloseTo(expected, 6);
     expect(expected).toBeGreaterThan(0);
     layer.dispose();
   });
@@ -560,7 +557,7 @@ describe('the ring annulus phase scalar', () => {
     // it at 8.5 AU range — alpha ~ 0.13 deg, a fifth of the way down.
     const scaleAt = (y: number): number => {
       const h = litHarness(new THREE.Vector3(1 * AU_PC, y * AU_PC, 0));
-      const v = h.ring!.material.uniforms.uRingPhaseScale.value;
+      const v = h.ringSlots().uRingPhaseScale.value;
       h.layer.dispose();
       vi.restoreAllMocks();
       return v;

@@ -6,6 +6,7 @@ import { builtinChromeLineMaterials } from '../chrome-lines/builtin-chrome-lines
 import type { HdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import type { SharedUniforms } from '../frame/shared-uniforms';
 import { OccluderSet } from '../occlusion/occluder-set';
+import type { WebGpuSeam } from '../webgpu/seam';
 import type { KindContext } from './kind-module';
 
 export const MOCK_VIEWPORT_W = 800;
@@ -47,9 +48,9 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
     } as unknown as HTMLElement,
     sharedUniforms,
     maxTextureSize: 8192,
-    // The shipped WebGL2 boot's values — a test wanting the ported layers
-    // passes a seam and the TSL strokes through the overrides.
-    webgpu: null,
+    // Empty on purpose: a kind reads only the material factory it owns,
+    // so a suite exercising one passes that leg through the overrides.
+    webgpu: {} as unknown as WebGpuSeam,
     chromeLines: builtinChromeLineMaterials(),
     solIndex: 0,
     solAbsInto: (out) => {

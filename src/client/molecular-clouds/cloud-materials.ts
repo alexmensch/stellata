@@ -3,19 +3,6 @@
 
 import * as THREE from 'three';
 import type { EmitterMaterial } from '../scene/emitter-material';
-import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
-import {
-  DEFAULT_FACE_ON_FLOOR, DEFAULT_FRESNEL_POWER, SHELL_RIM_ALPHA_LIMB, SHELL_RIM_BLUE,
-} from '../fresnel-shell/fresnel-shell';
-import { DEPTH_DIM_POWER } from '../fresnel-shell/shell-distance-pure';
-import { CLOUD_RIM_DISTANCES } from './cloud-rim-pure';
-
-/** The frame-shared pair the absorption march reads, held by reference on
- *  the WebGL path. */
-export interface CloudSharedUniforms {
-  uFovYRad: { value: number };
-  uViewport: { value: THREE.Vector2 };
-}
 
 /** The traced tier: the per-cloud Edenhofer density brick and the frame
  *  that maps a cloud-local sample point into it. Its presence is what

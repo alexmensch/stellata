@@ -42,22 +42,19 @@ rather than building a `ShaderMaterial` directly, so a WebGPU boot swaps
 shaders with no second copy of the attach / strength / dispose logic. The
 geometry crosses backends unchanged — `aCorner`, `iPosition`, `iDensity`
 is three vertex buffers, well inside WebGPU's eight — which is why this is
-a material swap rather than a layer of its own. The WebGPU twin is
+a material swap rather than a layer of its own. The factory is
 `../webgpu/dust/README.md`; `stellata.ts` passes
-`webgpu?.dustParticleMaterials` and falls back to
-`makeGlslDustParticleMaterials()`.
+`webgpu.dustParticleMaterials`.
 
 **Six of the seven uniforms are shared-by-reference and one is the
-layer's.** On WebGL the six come straight off the shared map; on WebGPU
-they come off the uniform-node mirror and the factory ignores its
-`shared` argument entirely (`../webgpu/dust/README.md` § Six of its seven
-uniforms). Only `uParticleStrength` appears in the slot record `setStrength`
-writes, so that one call reaches either backend.
+layer's.** The six come off the uniform-node mirror and the factory
+ignores its `shared` argument entirely (`../webgpu/dust/README.md` § Six
+of its seven uniforms), so `uParticleStrength` is the only key in the
+slot record `setStrength` writes.
 
 `dust-particle-pure.ts` holds the footprint window, the dim floor and the
-tint, so the TSL twin imports what the GLSL can only copy;
-`dust-particle-glsl-drift.test.ts` pins the copies, and its TSL-side
-counterpart lives with the twin (`../webgpu/dust/README.md` § Constants
-live in TypeScript). `dust-materials.test.ts` carries the seam's own
-guard — the layer-owned slot on both backends, and the TSL dispose
-severing its MRT registration.
+tint, which the sprite graph imports (`../webgpu/dust/README.md`
+§ Constants live in TypeScript). `dust-materials.test.ts` carries the
+seam's own guard — the layer-owned slot, and dispose severing the MRT
+registration; `dust-materials-mock.ts` is the double the layer suite
+builds on.

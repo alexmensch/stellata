@@ -46,6 +46,7 @@ import { EventBus } from '../../util/event-bus';
 import { FOCUS_LERP_MS } from '../timing';
 import { RollController } from '../controls/input/roll-controller';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
+import { fakeProbeMaterials } from '../../solar-system/materials/solar-system-materials-mock';
 
 interface WarpStub {
   isActive: ReturnType<typeof vi.fn>;
@@ -285,11 +286,7 @@ function makeHarness(opts: {
   };
 
   // Empty probe roster — probe-kind paths no-op (probeAt returns null).
-  const probeField = new ProbeField({
-    uViewport: { value: new THREE.Vector2(800, 600) },
-    uPixelRatio: { value: 1 },
-    uFovYRad: { value: (60 * Math.PI) / 180 },
-  });
+  const probeField = new ProbeField(fakeProbeMaterials());
 
   // Body field stub with no attached hosts — planet-kind paths no-op
   // (planetAt returns null). Tests exercising planet focus construct a

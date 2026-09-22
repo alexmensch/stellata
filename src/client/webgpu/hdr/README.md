@@ -55,7 +55,7 @@ purpose:
   replaced by § The gate becomes the output struct below.
 - **No float-support verdict** — `supported` is constant true; float
   render targets are core WebGPU. The inline-operator path survives for
-  chart mode alone (`../../hdr/README.md` § Fallback).
+  chart mode alone (`../../hdr/README.md` § The inline operator).
 
 ## Reduction — the readback without the fence
 

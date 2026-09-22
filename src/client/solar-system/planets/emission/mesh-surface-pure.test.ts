@@ -13,7 +13,6 @@ import {
 import { LUMA_CEIL, pointSourcePeakLuminance, surfaceBrightnessLuminance } from '../../../hdr/emission/emission-pure';
 import { BASE_EPOCH_EXPOSURE } from '../../../hdr/exposure/exposure-epoch';
 import { ARCSEC_TO_RAD, AU_PC, KM_PC, SUN_ABSMAG_V } from '../../../util/astronomy-constants';
-import meshFrag from '../planet-mesh.frag.glsl?raw';
 
 /** Numerical disc average of the shader's shading, area-weighted over the
  *  projected disc at full phase — the independent check on the closed form. */
@@ -41,13 +40,6 @@ describe('lambertLimbDiscMean', () => {
 
   it('darkens the disc — limb darkening removes light before normalisation', () => {
     expect(lambertLimbDiscMean(LIMB_FLOOR, LIMB_EXP)).toBeLessThan(2 / 3);
-  });
-});
-
-describe('planet-mesh.frag.glsl limb constants', () => {
-  it('mirrors LIMB_FLOOR / LIMB_EXP — the disc-mean normaliser depends on them', () => {
-    expect(meshFrag).toContain(`const float LIMB_FLOOR = ${LIMB_FLOOR};`);
-    expect(meshFrag).toContain(`const float LIMB_EXP = ${LIMB_EXP};`);
   });
 });
 

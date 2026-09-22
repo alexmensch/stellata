@@ -16,11 +16,9 @@ import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
 import { markAbsorber } from '../hdr/attachments/attachment-gate';
 import type { EmitterMaterial } from '../scene/emitter-material';
 import {
-  makeGlslCloudMaterials,
   type CloudAbsorptionSpec,
   type CloudFieldSpec,
   type CloudMaterials,
-  type CloudSharedUniforms,
 } from './cloud-materials';
 
 // Shared sphere geometries. The absorption mesh is slightly circumscribed
@@ -56,13 +54,6 @@ const ABSORPTION_RENDER_ORDER = -2;
 // Rim shells draw with the reference wireframes at −1 — annotation
 // chrome, deliberately NOT extincted by the absorption pass.
 const RIM_RENDER_ORDER = -1;
-
-function localSharedUniforms(): CloudSharedUniforms {
-  return {
-    uFovYRad: { value: Math.PI / 3.6 },
-    uViewport: { value: new THREE.Vector2(1920, 1080) },
-  };
-}
 
 /**
  * Molecular-cloud layer — two decoupled components per cloud:
@@ -132,10 +123,9 @@ export class MolecularClouds {
   constructor(
     catalog: CloudCatalog,
     surfaces: Map<number, CloudSurface> | null = null,
-    shared: CloudSharedUniforms = localSharedUniforms(),
-    materials?: CloudMaterials,
+    materials: CloudMaterials,
   ) {
-    this.materials = materials ?? makeGlslCloudMaterials(shared);
+    this.materials = materials;
     this.clouds = catalog.clouds;
     this.group = new THREE.Group();
     // Groups keep renderOrder 0: a non-zero Group.renderOrder becomes the

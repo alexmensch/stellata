@@ -17,7 +17,6 @@ import {
 import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
 import type { EmitterMaterial } from '../../scene/emitter-material';
 import type { ProbeMaterials } from '../materials/solar-system-materials';
-import { makeGlslProbeMaterial } from '../materials/glsl-materials';
 import {
   CADENCE_REPORT_STILL,
   fasterRate,
@@ -109,12 +108,7 @@ export class ProbeField {
   private localMesh: THREE.Mesh;
   private state: ProbeState = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0 };
 
-  constructor(
-    shared: ProbeSharedUniforms,
-    /** The TSL glyph on a WebGPU boot; absent = the shipped GLSL pair
-     *  (`../materials/README.md`). */
-    materials?: ProbeMaterials,
-  ) {
+  constructor(materials: ProbeMaterials) {
     this.group = new THREE.Group();
     this.group.visible = false;
     this.localGroup = new THREE.Group();
@@ -133,7 +127,7 @@ export class ProbeField {
     // geometry outright — the instance buffers this.update writes are the
     // same ones it draws, so there is no attribute copy and no way for the
     // two passes to disagree about where a probe is.
-    const factory = materials ?? makeGlslProbeMaterial(shared);
+    const factory = materials;
     const makeMat = (localPass = false) => {
       const m = factory.probeMarker(localPass);
       m.uniforms.uSizePx.value = PROBE_MARKER_PX;

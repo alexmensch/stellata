@@ -10,6 +10,7 @@ import { PROBE_MARKER_PX, ProbeField, type ProbeSharedUniforms } from './probe-f
 import { ProbePathLayer } from './probe-path-layer';
 import { builtinChromeLineMaterials } from '../../chrome-lines/builtin-chrome-lines';
 import { buildProbeTrajectory } from './probe-trajectory';
+import { fakeProbeMaterials } from '../materials/solar-system-materials-mock';
 
 const STEP_DAYS = 30;
 const FIRST_JD = tToJdUt(0);
@@ -47,7 +48,7 @@ function makeHarness() {
     uPixelRatio: { value: 1 },
     uFovYRad: { value: (50 * Math.PI) / 180 },
   };
-  const field = new ProbeField(shared);
+  const field = new ProbeField(fakeProbeMaterials());
   const layer = new ProbePathLayer(shared, builtinChromeLineMaterials());
   const t = ROSTER[0].sampleT[2];
   field.attach(ROSTER, t);
@@ -114,11 +115,7 @@ describe('ProbeField out-of-frame reads', () => {
     // Probe focus applies from a URL before the first frame runs, and it
     // bails on a false localPositionInto — so the attach seed is what keeps
     // a shared probe link from decoding to Sol.
-    const field = new ProbeField({
-      uViewport: { value: new THREE.Vector2(800, 600) },
-      uPixelRatio: { value: 1 },
-      uFovYRad: { value: (50 * Math.PI) / 180 },
-    });
+    const field = new ProbeField(fakeProbeMaterials());
     field.attach(ROSTER, ROSTER[0].sampleT[2]);
     const out = new THREE.Vector3();
     expect(field.localPositionInto(0, out)).toBe(true);

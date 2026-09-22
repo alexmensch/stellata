@@ -16,6 +16,8 @@ import { R_SUN_PC } from '../../util/astronomy-constants';
 import { getPlanetSystem, SOL_BODIES } from '../planet-system';
 import { SOL_OBJECT_SIDS } from '../sol-object-sids';
 import { createPlanetKindModule, type PlanetKindModule } from './planet-module';
+import type { WebGpuSeam } from '../../webgpu/seam';
+import { fakeSolarSystemMaterials } from '../materials/solar-system-materials-mock';
 
 const SOL_PHOTOMETRY = { absMag: 4.83, radiusPc: R_SUN_PC };
 const MARS = SOL_BODIES.findIndex((b) => b.name === 'Mars');
@@ -36,6 +38,17 @@ function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
     hdr: makeMockHdrEmitterUniforms(),
   });
   return makeKindContext({
+    webgpu: {
+      solarSystemMaterials: () => fakeSolarSystemMaterials(),
+      // The glare is the one surface that ports as a layer, so the seam
+      // hands back a handle rather than a material.
+      attachPlanetGlare: () => ({
+        setVisible: () => {},
+        setMonochrome: () => {},
+        update: () => {},
+        dispose: () => {},
+      }),
+    } as unknown as WebGpuSeam,
     sharedUniforms,
     solIndex: 0,
     starPhotometry: (idx) => (idx === 0 ? SOL_PHOTOMETRY : null),

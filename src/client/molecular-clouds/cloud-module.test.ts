@@ -11,6 +11,8 @@ import { makeFrameCtx } from '../scene/frame-ctx-mock';
 import { makeLabelDom } from '../overlays/label-dom-mock';
 import { CLOUD_LABELS_GROUP_ID } from './cloud-labels';
 import { createCloudKindModule } from './cloud-module';
+import type { WebGpuSeam } from '../webgpu/seam';
+import { fakeCloudMaterials } from './cloud-mock';
 
 function rawCloud(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -63,7 +65,10 @@ function stubFetch(present: boolean): void {
 }
 
 function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
-  const ctx = makeKindContext(overrides);
+  const ctx = makeKindContext({
+    webgpu: { cloudMaterials: fakeCloudMaterials() } as unknown as WebGpuSeam,
+    ...overrides,
+  });
   ctx.camera.position.set(0, 0, 30);
   ctx.camera.lookAt(0, 0, 0);
   ctx.camera.updateMatrixWorld();
@@ -184,7 +189,7 @@ describe('cloud kind module', () => {
     vi.stubGlobal('document', dom.document);
     const frames: (() => void)[] = [];
     let unsubscribed = 0;
-    const layer = m.attach(makeKindContext({
+    const layer = m.attach(makeCtx({
       onFrame: (handler) => {
         frames.push(handler);
         return () => { unsubscribed++; };

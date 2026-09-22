@@ -4,7 +4,9 @@
 
 import * as THREE from 'three';
 import type { Cloud, CloudCatalog } from './cloud-loader';
-import type { CloudAbsorptionSpec } from './cloud-materials';
+import { fakeEmitterMaterial } from '../scene/emitter-material-mock';
+import type { EmitterMaterial } from '../scene/emitter-material';
+import type { CloudAbsorptionSpec, CloudMaterials } from './cloud-materials';
 
 export function makeMockCloud(overrides: Partial<Cloud> = {}): Cloud {
   return {
@@ -70,3 +72,39 @@ export function makeMockAbsorptionSpec(withField: boolean): CloudAbsorptionSpec 
 
 /** Must match the layer's defaults. */
 export const MOCK_RIM_SPEC = { inkHex: 0x000000, inkAlpha: 0.95, opacity: 1 };
+
+export interface FakeCloudMaterials extends CloudMaterials {
+  /** One per `absorption()` call, in catalogue order. */
+  readonly absorptionSpecs: CloudAbsorptionSpec[];
+  readonly absorptionSurfaces: EmitterMaterial[];
+  /** The one rim surface every cloud shares. */
+  readonly rimSurface: EmitterMaterial;
+}
+
+/** Records what the layer asked for and hands back a surface whose slots
+ *  its setters write through. */
+export function fakeCloudMaterials(): FakeCloudMaterials {
+  const absorptionSpecs: CloudAbsorptionSpec[] = [];
+  const absorptionSurfaces: EmitterMaterial[] = [];
+  const rim = fakeEmitterMaterial();
+  return {
+    absorptionSpecs,
+    absorptionSurfaces,
+    rimSurface: rim,
+    absorption(spec) {
+      absorptionSpecs.push(spec);
+      const surface = fakeEmitterMaterial();
+      surface.uniforms.uSteps.value = spec.steps;
+      absorptionSurfaces.push(surface);
+      return surface;
+    },
+    // One material for all ~96 clouds, as the factories build it.
+    rim(spec) {
+      rim.uniforms.uChart.value = 0;
+      rim.uniforms.uOpacity.value = spec.opacity;
+      rim.uniforms.uInk.value = new THREE.Color(spec.inkHex);
+      rim.uniforms.uInkAlpha.value = spec.inkAlpha;
+      return rim;
+    },
+  };
+}

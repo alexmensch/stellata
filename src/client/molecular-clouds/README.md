@@ -66,63 +66,52 @@ module's `sids()` leg, attached by main.ts's roster loop (see
 - `cloud-loader.ts` — `clouds.json` v3 fetch/decode.
 - `cloud-surfaces-loader.ts` — `cloud-surfaces.bin` fetch/decode
   (format: `scripts/cloud-surfaces/README.md`).
-- `cloud-materials.ts` (+ test) — the material seam: the neutral
-  `CloudMaterials` contract, the per-cloud `CloudAbsorptionSpec` both
-  factories consume, and the WebGL2 implementation (§ The material seam).
+- `cloud-materials.ts` — the material seam: the neutral `CloudMaterials`
+  contract and the per-cloud `CloudAbsorptionSpec` the factory consumes
+  (§ The material seam). The factory and its guard are
+  `../webgpu/molecular-clouds/`.
 - `absorption/` — the raymarch: its shader pair, `cloud-presence-pure.ts`
   and their own drift pin. `absorption/README.md`.
 - `cloud-rim-pure.ts` — the rim shell's authored constants (stipple grid,
   contour width, alpha floor, `MIN_FWIDTH`), plus `CLOUD_RIM_EXTENT_PC` /
-  `CLOUD_RIM_DISTANCES` (§ Rim shell render). GLSL cannot import, so its
-  copies are pinned against this module.
-- `cloud-glsl-drift.test.ts` — that rim pin, plus the output dither's seed
-  offset and 8-bit divisor against `../hdr/tonemap/tonemap-pure.ts`, which
-  owns them for every layer that dithers. The dither is asserted for **both**
-  cloud shaders here rather than per folder, because it is one shape across
-  the pair and the resolve. The noise itself is not copied at all — both
-  shaders include the shared `stellata_ign` chunk (`../hdr/tonemap/README.md`
-  § One hash). The absorption constants are pinned in `absorption/`.
+  `CLOUD_RIM_DISTANCES` (§ Rim shell render), which the rim graph
+  imports.
 - `cloud-pick-pure.ts` — the overlapping-cloud pick score + winner
   resolution (§ Picking + hover).
-- `cloud-mock.ts` — `Cloud`/`CloudCatalog` test fixture builders.
-- `cloud-rim.frag.glsl` — the rim/outline fragment stage; the vertex
-  stage is the shared `../fresnel-shell/fresnel-shell.vert.glsl`.
+- `cloud-mock.ts` — `Cloud`/`CloudCatalog` fixture builders plus
+  `fakeCloudMaterials`, the recording seam double the layer suite runs on.
 - `cloud-labels.ts` — per-cloud silhouette-hugging SVG name labels
   (§ Labels).
 
 ## The material seam
 
 Both surfaces are built through a `CloudMaterials` factory rather than
-inline `ShaderMaterial`s, so a WebGPU boot swaps shaders without a second
-copy of any cloud logic — per-cloud transforms, declutter and chart
-gating, picking, labels and focus geometry all stay as they were. The
-WebGPU twin is `../webgpu/molecular-clouds/README.md`; `cloud-module.ts`
-passes `kindCtx.webgpu?.cloudMaterials` and adds the group to
-`(webgpu?.scene ?? scene)`.
+inline, so the shader side moves without a second copy of any cloud logic
+— per-cloud transforms, declutter and chart gating, picking, labels and
+focus geometry all stay as they were. The factory is
+`../webgpu/molecular-clouds/README.md`; `cloud-module.ts` passes
+`kindCtx.webgpu.cloudMaterials` and adds the group to `kindCtx.scene`.
 
 The layer hands each factory a `CloudAbsorptionSpec` rather than a
 `Cloud`: it already owns the brick texture's lifetime (`brickTextures` is
 what disposes it), and the tier — traced brick versus analytic Plummer —
-is a **compile-time** choice on both backends, a `USE_FIELD` define on one
-and two builder branches on the other. So the spec's values are seeded at
-construction rather than written over neutral defaults; a material built
-for the wrong `uUEnv` marches the wrong envelope from its first frame and
-no later write would fix it.
+is a **compile-time** choice — two builder branches. So the spec's values
+are seeded at construction rather than written over neutral defaults; a
+material built for the wrong `uUEnv` marches the wrong envelope from its
+first frame and no later write would fix it.
 
-One absorption material per cloud, one rim material for all of them —
-unchanged from the WebGL layout.
+One absorption material per cloud, one rim material for all of them.
 
 ## Absorption render
 
 Its own folder now: `absorption/README.md` — the march and both tiers, the
-`BackSide` and GLSL3 invariants, the fragment budget, the render-order
-contract and the `location = 2` attachment write, and which clouds may dim
-the band. `cloud-materials.ts` here still builds the material and owns the
+`BackSide` invariant, the fragment budget, the render-order contract and
+the diffuse-attachment write, and which clouds may dim the band. `cloud-materials.ts` here still builds the material and owns the
 brick texture's lifetime (§ The material seam).
 
 ## Rim shell render
 
-One shared `ShaderMaterial` across all clouds (`FrontSide`,
+One shared material across all clouds (`FrontSide`,
 `depthWrite: false`). Geometry is the traced isosurface mesh when
 `cloud-surfaces.bin` carries the cloud's sid — absolute ICRS pc
 positions with outward winding baked by the build, normals computed at
@@ -132,8 +121,7 @@ winding is the fresnel-shell **hide-when-inside** contract: the shell
 back-face-culls with the camera inside the cloud, while the BackSide
 absorption keeps working from inside.
 
-- **Realistic:** additive fresnel rim (`stellata_fresnel_rim` chunk) at
-  the exact Local Bubble params (`SHELL_RIM_ALPHA_LIMB` + the shared
+- **Realistic:** additive fresnel rim at the exact Local Bubble params (`SHELL_RIM_ALPHA_LIMB` + the shared
   face-on-floor / fresnel-power defaults — one annotation vocabulary),
   ±0.5-LSB dither.
 - **Chart:** the material swaps to `NormalBlending` ink and the shader

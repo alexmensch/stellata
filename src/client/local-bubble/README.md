@@ -27,7 +27,7 @@ targets.
   into `group.visible`) plus `createLocalBubbleLabel` (the
   silhouette-hugging SVG label).
 
-The Fresnel shell material + shader pair + gating base live in
+The Fresnel shell's material seam and gating base live in
 `src/client/fresnel-shell/` (shared with the heliopause).
 
 ## Invariants

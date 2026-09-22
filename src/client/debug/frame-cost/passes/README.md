@@ -39,7 +39,7 @@ DRAWS — never whether the user left it on.** `mwBand`
 (`MilkyWay.isDrawn`), `lgEmission` (`LocalGroupEmission.isDrawn`) and
 `cloudAbsorption` (`MolecularClouds.isAbsorptionDrawn`) each answer the whole
 condition behind the draw: user toggle, contribution verdict and chart gate.
-The brightness skip (`../../../scene/README.md` § The brightness reason) leaves
+The brightness skip (`../../../scene/contribution/README.md` § The brightness reason) leaves
 both emitters enabled and not drawing at the app default view and at a planet
 approach, so a toggle-only test admits the row and its A/B disables a pass that
 is already gone. `planetDepthStamp` is the model — it walks the entries and

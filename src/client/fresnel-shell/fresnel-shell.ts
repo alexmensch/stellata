@@ -1,5 +1,5 @@
-// Shared Fresnel-rim shell primitive: material + shader pair + gating
-// base for translucent boundary shells (heliopause, Local Bubble).
+// Shared Fresnel-rim shell primitive: material seam + gating base for
+// translucent boundary shells (heliopause, Local Bubble).
 // See src/client/fresnel-shell/README.md.
 
 import * as THREE from 'three';
@@ -8,10 +8,6 @@ import { LABEL_OFFSET_PX } from '../solar-system/planets/labels/planet-labels';
 import { angularToPx } from '../camera/controls/star-geometry';
 import type { ShellRegistry } from './shell-registry';
 import type { EmitterMaterial } from '../scene/emitter-material';
-import { DEPTH_DIM_POWER, rimDistancesForExtent } from './shell-distance-pure';
-
-(THREE.ShaderChunk as Record<string, string>)['stellata_fresnel_rim'] =
-  fresnelRimChunk;
 
 export const DEFAULT_FACE_ON_FLOOR = 0.04;
 export const DEFAULT_FRESNEL_POWER = 2.5;

@@ -9,7 +9,7 @@ through.
 The chunk is a **two-consumer** shape: the fullscreen pass runs it, and
 so does every emitting shader inline whenever `uHdrTarget` is 0 (chart
 mode on either backend, plus the WebGL2 no-float-buffer fallback —
-`../README.md` § Fallback). One source, so the two can never drift.
+`../README.md` § The inline operator). One source, so the two can never drift.
 
 ## Files
 
@@ -136,7 +136,7 @@ colour space, not the resolve — so with the operator parked,
 constellation figure) renders un-encoded and therefore dark. No resolve
 setting fixes it: a single fullscreen pass can't both encode and not
 encode. Custom-shader chrome *is* exact. There is no whole-frame comparison
-to fall back on any more — `../README.md` § Fallback says why the one that
+to fall back on any more — `../README.md` § The inline operator says why the one that
 existed was worse than nothing.
 
 **Chrome line work reads brighter through the seam than authored, and that

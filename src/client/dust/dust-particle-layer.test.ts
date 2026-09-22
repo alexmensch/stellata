@@ -5,6 +5,7 @@ import {
   type DustParticleSharedUniforms,
 } from './dust-particle-layer';
 import type { DustParticleData } from '../loaders/dust-loader';
+import { fakeDustParticleMaterials } from './dust-materials-mock';
 
 function makeSharedUniforms(): DustParticleSharedUniforms {
   return {
@@ -25,10 +26,16 @@ function makeData(count: number): DustParticleData {
   };
 }
 
+function makeLayer() {
+  const scene = new THREE.Scene();
+  const materials = fakeDustParticleMaterials();
+  const layer = new DustParticleLayer(scene, makeSharedUniforms(), materials);
+  return { scene, layer, slots: () => materials.surfaces.at(-1)!.uniforms };
+}
+
 describe('DustParticleLayer', () => {
   it('attach() adds a hidden mesh with renderOrder 2 to the scene', () => {
-    const scene = new THREE.Scene();
-    const layer = new DustParticleLayer(scene, makeSharedUniforms());
+    const { scene, layer } = makeLayer();
     layer.attach(makeData(3));
 
     const mesh = scene.children.find(
@@ -40,63 +47,42 @@ describe('DustParticleLayer', () => {
     expect(mesh!.frustumCulled).toBe(false);
   });
 
-  it('shares uniform objects by reference with the star material', () => {
-    const scene = new THREE.Scene();
-    const shared = makeSharedUniforms();
-    const layer = new DustParticleLayer(scene, shared);
-    layer.attach(makeData(1));
-
-    const mesh = scene.children[0] as THREE.Mesh;
-    const mat = mesh.material as THREE.ShaderMaterial;
-    expect(mat.uniforms.uWorldOffset).toBe(shared.uWorldOffset);
-    expect(mat.uniforms.uViewport).toBe(shared.uViewport);
-    expect(mat.uniforms.uDustEnabled).toBe(shared.uDustEnabled);
-  });
-
   it('uParticleStrength is layer-local (not shared)', () => {
-    const scene = new THREE.Scene();
-    const layer = new DustParticleLayer(scene, makeSharedUniforms());
+    const { layer, slots } = makeLayer();
     layer.attach(makeData(1));
 
-    const mat = (scene.children[0] as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.uniforms.uParticleStrength.value).toBe(0);
+    expect(slots().uParticleStrength.value).toBe(0);
   });
 
   it('setStrength updates uniform and toggles mesh visibility', () => {
-    const scene = new THREE.Scene();
-    const layer = new DustParticleLayer(scene, makeSharedUniforms());
+    const { scene, layer, slots } = makeLayer();
     layer.attach(makeData(1));
     const mesh = scene.children[0] as THREE.Mesh;
-    const mat = mesh.material as THREE.ShaderMaterial;
 
     layer.setStrength(0.5);
-    expect(mat.uniforms.uParticleStrength.value).toBe(0.5);
+    expect(slots().uParticleStrength.value).toBe(0.5);
     expect(mesh.visible).toBe(true);
 
     layer.setStrength(0);
-    expect(mat.uniforms.uParticleStrength.value).toBe(0);
+    expect(slots().uParticleStrength.value).toBe(0);
     expect(mesh.visible).toBe(false);
   });
 
   it('setStrength clamps negative inputs to 0', () => {
-    const scene = new THREE.Scene();
-    const layer = new DustParticleLayer(scene, makeSharedUniforms());
+    const { layer, slots } = makeLayer();
     layer.attach(makeData(1));
-    const mat = (scene.children[0] as THREE.Mesh).material as THREE.ShaderMaterial;
 
     layer.setStrength(-1);
-    expect(mat.uniforms.uParticleStrength.value).toBe(0);
+    expect(slots().uParticleStrength.value).toBe(0);
   });
 
   it('setStrength before attach is a no-op', () => {
-    const scene = new THREE.Scene();
-    const layer = new DustParticleLayer(scene, makeSharedUniforms());
+    const { layer } = makeLayer();
     expect(() => layer.setStrength(1)).not.toThrow();
   });
 
   it('attach() replaces an existing mesh and disposes the old resources', () => {
-    const scene = new THREE.Scene();
-    const layer = new DustParticleLayer(scene, makeSharedUniforms());
+    const { scene, layer } = makeLayer();
     layer.attach(makeData(2));
     const oldMesh = scene.children[0] as THREE.Mesh;
     const oldGeom = oldMesh.geometry;
@@ -113,8 +99,7 @@ describe('DustParticleLayer', () => {
   });
 
   it('dispose() releases geometry + material and clears refs', () => {
-    const scene = new THREE.Scene();
-    const layer = new DustParticleLayer(scene, makeSharedUniforms());
+    const { scene, layer } = makeLayer();
     layer.attach(makeData(1));
     const mesh = scene.children[0] as THREE.Mesh;
     const geomSpy = vi.spyOn(mesh.geometry, 'dispose');
@@ -127,8 +112,7 @@ describe('DustParticleLayer', () => {
   });
 
   it('dispose({ removeFromScene: true }) pulls the mesh out of the scene', () => {
-    const scene = new THREE.Scene();
-    const layer = new DustParticleLayer(scene, makeSharedUniforms());
+    const { scene, layer } = makeLayer();
     layer.attach(makeData(1));
     expect(scene.children.length).toBe(1);
 
@@ -137,8 +121,7 @@ describe('DustParticleLayer', () => {
   });
 
   it('dispose() (default removeFromScene: false) leaves the mesh in the scene', () => {
-    const scene = new THREE.Scene();
-    const layer = new DustParticleLayer(scene, makeSharedUniforms());
+    const { scene, layer } = makeLayer();
     layer.attach(makeData(1));
 
     layer.dispose();
@@ -146,14 +129,12 @@ describe('DustParticleLayer', () => {
   });
 
   it('dispose() before attach is a no-op', () => {
-    const scene = new THREE.Scene();
-    const layer = new DustParticleLayer(scene, makeSharedUniforms());
+    const { layer } = makeLayer();
     expect(() => layer.dispose()).not.toThrow();
   });
 
   it('dispose() then attach() rebuilds cleanly', () => {
-    const scene = new THREE.Scene();
-    const layer = new DustParticleLayer(scene, makeSharedUniforms());
+    const { scene, layer } = makeLayer();
     layer.attach(makeData(2));
     layer.dispose({ removeFromScene: true });
     layer.attach(makeData(3));

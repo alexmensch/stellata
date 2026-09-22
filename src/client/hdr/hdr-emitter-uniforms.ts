@@ -1,7 +1,8 @@
 // The uniform slots every physical emitter binds by reference, so one
-// write reaches all of them. See README.md § Unit.
+// write reaches all of them, and the attachment contract their target
+// carries. See README.md §§ Unit, Three attachments.
 
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { DEFAULT_FOV } from '../filters/filter-state';
 import { HIGHLIGHT_DESAT, tonemapWhitePoint } from './tonemap/tonemap-pure';
@@ -68,3 +69,25 @@ export function makeHdrEmitterUniforms(): HdrEmitterUniforms {
 }
 
 export const HDR_ATTACHMENT_COUNT = 3;
+
+/** Per-attachment format and filter state the seam's target carries
+ *  (README.md § Three attachments). */
+export function applyHdrAttachmentState(textures: readonly THREE.Texture[]): void {
+  textures[0].colorSpace = THREE.LinearSRGBColorSpace;
+  if (textures.length > 1) {
+    // Half attachment 0's memory, and the reduction reads its missing
+    // alpha as 1 — which is exactly the level-0 weight
+    // (exposure/reduction/README.md § The chain).
+    textures[1].format = THREE.RGFormat;
+    textures[1].colorSpace = THREE.LinearSRGBColorSpace;
+  }
+  if (textures.length > 2) {
+    // Linear to match the downsample target, though inert at factor 1: the
+    // resolve reads this attachment directly there, at integer offsets from
+    // gl_FragCoord, so every tap lands on a texel centre where bilinear and
+    // nearest agree. It stops being inert the moment a tap is off-centre.
+    textures[2].minFilter = THREE.LinearFilter;
+    textures[2].magFilter = THREE.LinearFilter;
+    textures[2].colorSpace = THREE.LinearSRGBColorSpace;
+  }
+}

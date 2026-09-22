@@ -11,9 +11,9 @@ then do.
 src/client/hdr/attachments/
   attachment-gate.ts        The per-draw gate on every attachment past 0 —
     (+ test)                one mark per role (§ The gate) plus the seam
-                            HdrPipeline drives it through.
+                            the pipeline drives it through.
   statistic-mask.test.ts    Which emitters may claim lit-surface coverage,
-                            read off the shader sources (§ The unit).
+                            read off each surface's graph (§ The unit).
 ```
 
 **The mark a layer calls is its whole declaration of how it stands to the
@@ -60,8 +60,8 @@ writes 0 or 1 and lets the one blend equation scale it; one compositing
 premultiplied has to arrive pre-scaled, so it writes the fraction itself.
 Both land the same number in the buffer.
 
-`stellataStatisticTexel` (`../emission/emission.glsl`) is the texel rule. R
-clamps at `LUMA_CEIL`, for the reason the display peak does: a clamped read
+`maskedStatisticTexelTsl` (`../../webgpu/emission-tsl.ts`) is the texel
+rule. R clamps at `LUMA_CEIL`, for the reason the display peak does: a clamped read
 is a lower bound the adaptation loop closes from above
 (`../exposure/reduction/README.md` § Measure at the base exposure).
 
@@ -149,7 +149,7 @@ than device pixels is what keeps the frame mean
 The target binds with `drawBuffers [0, NONE, NONE]`, and only a mesh passed
 to one of the marks below flips anything else on for the span of its own draw.
 Every state resolves through one table, `gateDrawSlots`, which is also where
-`HdrPipeline`'s two frame-cost masks apply (`../README.md` § Dev switches) —
+the pipeline's two frame-cost masks apply (`../README.md` § Dev switches) —
 the adaptation park rides the statistic mask through its own flag, ANDed in
 so neither restore can clobber the other
 (`../exposure/park/README.md`).
@@ -157,12 +157,13 @@ Nothing else can reach the statistic, **including a chrome layer added
 later** — which is the opposite failure mode from patching ten chrome call
 sites and hoping the eleventh remembers.
 
-On WebGPU the same table is expressed in node-material terms — output
-structs whose masked slots write the blend's identity element, and a park
-mask that scales the WHOLE statistic texel rather than its flux, since an
-alpha-composited writer's identity needs alpha 0 too
-(`src/client/webgpu/hdr/README.md` § The gate becomes the output
-struct); everything below is the WebGL2 mechanism.
+**The table is what the marks MEAN; the output struct is how they run.**
+Each surface's fragment returns a three-member struct whose masked slots
+carry the blend's identity element, and the adaptation park scales the
+WHOLE statistic texel rather than its flux, since an alpha-composited
+writer's identity needs alpha 0 too (`src/client/webgpu/hdr/README.md`
+§ The gate becomes the output struct). The `drawBuffers` spelling below
+is the vocabulary the table is written in, not a second mechanism.
 
 **Which mark a layer calls is part of its contract**, not a detail:
 
@@ -190,8 +191,8 @@ struct); everything below is the WebGL2 mechanism.
   cannot substitute: the emitters drew first, and the resolve adds attachment
   2 unconditionally. Additive and max blends need nothing, since neither can
   attenuate. Live members: the planet mesh, its ring annulus, its atmosphere
-  shell — each writing `stellataOccluderTexel` at the alpha it composited
-  attachment 0 with (`../emission/emission.glsl`).
+  shell — each writing `occluderTexelTsl` at the alpha it composited
+  attachment 0 with (`../../webgpu/emission-tsl.ts`).
 
 **Two of these marks invert the gate's safety.** A draw that forgets
 `markStatisticEmitter` merely fails to contribute; one that forgets
@@ -233,8 +234,8 @@ carries, so it is order-independent against a layer that wants its own.
 
 ## One blend equation, every attachment
 
-WebGL2 has no per-attachment blend state, so the blend an emitter chose for
-its colour runs over its statistic and diffuse texels too. **Each emitter's
+A material carries one blend, so the blend an emitter chose for its colour
+runs over its statistic and diffuse texels too. **Each emitter's
 alpha on those attachments is therefore part of its contract, not a free
 slot** — and it is what lets an occluder dim attachment 2 by a gate flag
 rather than a second draw.

@@ -108,7 +108,7 @@ export function createProbeKindModule(): ProbeKindModule {
 
     attach(kindCtx: KindContext): SceneLayer {
       ctx = kindCtx;
-      field = new ProbeField(kindCtx.sharedUniforms, kindCtx.webgpu?.probeMaterial);
+      field = new ProbeField(kindCtx.webgpu.probeMaterial);
       paths = new ProbePathLayer(kindCtx.sharedUniforms, kindCtx.chromeLines);
       // The trail's local-depth mirror is a third group the solar-system
       // cluster parents into the pass scene.

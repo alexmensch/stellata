@@ -4,9 +4,10 @@ DEM-derived maps shading the Moon, Mercury, Mars and Earth on the planet
 mesh: the
 frame they are sampled in, which terms the perturbed normal is allowed to
 reach, and how the two occluders that can hide the sun from a patch of ground
-are composed. The shader consuming all of it is `../planet-mesh.frag.glsl`
-and the uniforms are written in `../planet-mesh-layer.ts`; this README is the
-authority on the relief half of both.
+are composed. The shader consuming all of it is
+`../../../webgpu/solar-system/planet-mesh-tsl.ts` and the uniforms are
+written in `../planet-mesh-layer.ts`; this README is the authority on the
+relief half of both.
 
 ```
 src/client/solar-system/planets/surface-relief/
@@ -238,9 +239,9 @@ from. Both readings of `F` are mirrored in `surface-relief-pure.ts` —
 `decodeSkyView` for the shipped map, `terrainViewFactor` for the fallback the
 next section describes — and `SKY_VIEW_RANGE` lives there too, so the shader
 and `sky_view.py` are both pinned against one owner rather than against each
-other. The clamp inside `terrainViewFactor` is source-pinned to the GLSL
-because a `max()` dropped on the shader side alone would brighten every plain
-with nothing in the TS suite noticing.
+other. The clamp inside `terrainViewFactor` is source-pinned against the
+shader's own graph, because a `max()` dropped there alone would brighten
+every plain with nothing in the TS suite noticing.
 
 **No flux renormalisation**, and measured rather than assumed — the fourth
 column of `../emission/README.md`'s phase table.

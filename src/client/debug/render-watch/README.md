@@ -37,7 +37,7 @@ step with whatever is actually on screen.
   visible change, where "visible" means a quarter of a device pixel of
   on-screen motion or 1 % of a body's own flux.
 - **`contribute`** — the contribution census
-  (`../../scene/README.md` § Declaring what a layer can put on screen):
+  (`../../scene/contribution/README.md` § Declaring what a layer can put on screen):
   how many layers declare `always` versus `gated`, and how many gated
   layers are skipping their draw this frame, by reason — `frustum`,
   `legibility`, `opacity`, `brightness`. A skipped layer costs one

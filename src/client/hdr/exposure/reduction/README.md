@@ -18,21 +18,15 @@ src/client/hdr/exposure/reduction/
                               invokes at runtime), the level-0 channel
                               expansion, the tile level's CPU combine and
                               median, and the base-exposure rescale.
-  reduce.frag.glsl            One level: three weighted means, and the
-                              masked-mean product formed at level 0.
-  reduction-pass.ts           LuminanceReduction — the chain of targets, the
-                              draws, and the readback. Needs a live GL
-                              context, hence no test of its own.
-  reduction-readback.ts       The pixel-pack buffer + fence (§ Latency).
   readback-cadence.ts         How many rendered frames apart a readback may
     (+ test)                  go out, for a caller that needs the duty cycle
                               held (§ Latency).
 ```
 
-The WebGPU boot runs the same chain through
-`src/client/webgpu/hdr/reduction-webgpu.ts` — `reduction-pure.ts` is the
-one executable spec both shaders are held to; the readback and fence
-mechanics below are the WebGL2 half only.
+The chain, its draws and its readback live in
+`src/client/webgpu/hdr/reduction-webgpu.ts`; `reduction-pure.ts` is the
+executable spec its graph is held to, and its own suite source-pins the
+combine against this one (§ TSL drift there).
 
 ## Why a buffer reduction and not a source walk
 
@@ -224,9 +218,9 @@ flux half of `D` passes through the rescale at all.
 The readback lands a frame or two after the draw it measures, which the
 statistic already tolerates — the applied cut is slew-limited over
 `ADAPT_SLEW_TAU_S` (300 ms), so tens of ms are far inside the ramp it
-feeds. Do not make it synchronous to "fix" a lag nobody can see:
-`getBufferSubData` on an unsignalled fence stalls the pipeline, which is
-the whole thing the fence exists to avoid.
+feeds. Do not make it synchronous to "fix" a lag nobody can see: the
+staged read the renderer maps behind it would stall the pipeline, which
+is the whole thing the staging exists to avoid.
 
 **One readback in flight.** A frame whose predecessor has not landed does
 no GPU work at all rather than queueing a second, so the measurement
@@ -276,15 +270,14 @@ mode's reset-and-drop) — a frame-cost measurement lever
 (`../../../debug/frame-cost/README.md`). `measure()`'s `parked` argument
 is the same skip driven per frame by the adaptation park
 (`../park/README.md`) instead of by a debug toggle;
-everything below about the disabled path — fence kept, landing dropped —
-holds for it verbatim.
+everything below about the disabled path — readback kept, landing
+dropped — holds for it verbatim.
 
-**The readback keeps running while disabled, and must.** `request()`
-ends in `gl.flush()`, and on ANGLE that flush is the frame's only
-submission barrier: drop it and the driver batches deeper, so
-`TIME_ELAPSED` spans more overlapped work and the frame reads *slower*
-with the pass off. The disabled path therefore still binds the last
-level and re-requests it — same fence, only the draws removed.
+**The readback keeps running while disabled, and must.** It is the
+frame's own submission barrier: drop it and the driver batches deeper, so
+a timer span covers more overlapped work and the frame reads *slower*
+with the pass off. The disabled path therefore still reads the last
+level — same round trip, only the draws removed.
 
 **The cadence is emergent in the app, and a caller may pin it.**
 `ReadbackCadence` counts rendered frames and admits a request every
@@ -299,11 +292,11 @@ GPU-stream median measures at a vantage whose frame has two classes
 follows is about the rate it runs at when nothing does.
 
 **An emergent cadence does not confound a frame-cost row — and
-measurement says so.** `pending` is just `fence !== null`, cleared in
-`poll()` only once the fence has SIGNALED, so nothing pins the rate. The worry
-that follows is that removing the draws lets the GPU drain sooner, the
-fence signal sooner, and the `gl.flush()` fire more often — pricing
-batching depth rather than the pass.
+measurement says so.** `readbackPending` is just "a read is in flight",
+cleared when its promise resolves, so nothing pins the rate. The worry
+that follows is that removing the draws lets the GPU drain sooner and the
+read resolve sooner, firing the barrier more often — pricing batching
+depth rather than the pass.
 
 `requestsIssued` counts what actually went out, and the frame-cost
 harness reports it per dwell. At the default Sol view it read **0.25

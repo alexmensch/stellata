@@ -1,20 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import type { IUniform } from 'three';
-import { makeGlslShellMaterials, type ShellMaterials } from '../fresnel-shell/fresnel-shell';
+import type { ShellMaterials } from '../fresnel-shell/fresnel-shell';
+import { fakeShellMaterials } from '../fresnel-shell/shell-materials-mock';
 import {
   DEPTH_DIM_CLEARANCE_PC, NEAR_FADE_EXTENT_FRAC,
 } from '../fresnel-shell/shell-distance-pure';
 import { LocalBubbleShell } from './local-bubble';
 import type { LocalBubbleMesh } from './local-bubble-loader';
 
-/** A shell over the real WebGL2 surface, with its uniform record handed
- *  back — the slots are private to the shell otherwise. */
+/** The shell's uniform record handed back — private to the shell
+ *  otherwise. */
 function shellWithSlots(): { shell: LocalBubbleShell; slots: () => Record<string, IUniform> } {
-  const glsl = makeGlslShellMaterials();
+  const fake = fakeShellMaterials();
   let captured: Record<string, IUniform> = {};
   const materials: ShellMaterials = {
     fresnelShell: (opts) => {
-      const surface = glsl.fresnelShell(opts);
+      const surface = fake.fresnelShell(opts);
       captured = surface.uniforms;
       return surface;
     },

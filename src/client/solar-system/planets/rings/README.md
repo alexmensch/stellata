@@ -7,10 +7,6 @@ the Jupiter exclusion.
 
 ```
 src/client/solar-system/planets/rings/
-  planet-rings.vert.glsl,
-  planet-rings.frag.glsl   Ring-annulus shaders (radial strip sample,
-                           lit/transmitted faces, body shadow). Built and
-                           driven by ../planet-mesh-layer.ts.
   ring-photometry-pure.ts  The joint phase-angle / ring-tilt law: the
   (+ test)                 ring system's share of the body's unresolved
                            magnitude, and the drawn annulus's phase
@@ -53,9 +49,9 @@ for whichever is brighter.
 
 **`lit` is the mask's gate and the flux's shadow term at once**, which is
 why the shadow test and the edge-on fade are factored out of `light`: the
-band inside the planet's shadow sits at `SHADOW_FLOOR` — `RING_SHADOW_FLOOR`
-here, which the annulus's TSL twin reads and the drift test pins against the
-GLSL literal, exactly as it does `TRANSMIT` — and the whole annulus goes
+band inside the planet's shadow sits at `RING_SHADOW_FLOOR`, which the
+annulus graph imports from here exactly as it does `TRANSMIT` — and the
+whole annulus goes
 dark as the sun crosses the ring plane. Either counted as coverage is a
 dark vote — and the annulus runs ~3.6x the globe's own disc area face-on, so
 it outweighs every other coverage term the frame has. The **transmitted face
@@ -107,7 +103,7 @@ already being drawn on top).
 one** — β depends on where the camera is. `PlanetBodyField.update`
 evaluates the law on the CPU and ships one float per body, the same shape
 `iEclipseDim` takes; `evalPlanetView` recomputes it for the hover/pick
-viewer. Nothing in `planet.vert.glsl` knows the law, only that the float
+viewer. Nothing in the glare graph knows the law, only that the float
 **adds** to φ. It adds rather than scaling for a numerical reason as much
 as a physical one: as α → 180° the globe's flux and the rings' both
 vanish, and a multiplier would be 0/0 there.
@@ -135,7 +131,7 @@ rings dominate the system and is unconstrained near edge-on, so at low
 tilt it drives the *system* fainter than the globe alone and the
 difference crosses zero **inside the fitted α range**: at α = 6.5° for
 every β ≤ 6.06°, and by α ≈ 2° at β = 2°. Normalised that is exactly 0,
-and `planet-rings.frag.glsl` leaves the annulus's alpha at the strip's own
+and the annulus leaves its alpha at the strip's own
 opacity — so the rings paint an **opaque black band** over the globe and
 the Milky Way instead of fading out. Holding the shape at the reference
 tilt keeps it strictly positive short of α = 180° and makes the
@@ -169,9 +165,9 @@ against a black band is the trade.
   domain, not merely unfitted: from Earth β_v and β_h never differ in
   sign, and Mallama's own rule is β = 0, no ring term at all. Stellata's
   camera reaches this routinely, so the term survives scaled by
-  `RING_BACKLIT_TRANSMIT` — **the same `TRANSMIT` constant the annulus
-  shader above dims its unlit face by**, test-pinned against the GLSL
-  source. That shared fraction is what makes resolved and unresolved
+  `RING_BACKLIT_TRANSMIT` — **the same constant the annulus graph above
+  dims its unlit face by**, which it imports from here. That shared
+  fraction is what makes resolved and unresolved
   agree that crossing the ring plane dims the rings.
 
 **The cull reads the term's MAXIMUM** (`maxRingSystemFluxFactor`, α = 0
@@ -200,8 +196,8 @@ annulus needs only α, and the resolvedness band is stepless by
 construction rather than by calibration: inside that band the billboard
 and the annulus both draw, and a surge on one alone would step the
 handoff. The backlit factor is a constant on the flux and cancels out of
-the shape — `planet-rings.frag.glsl` owns that split itself through
-`TRANSMIT`.
+the shape — the annulus owns that split itself through
+`RING_BACKLIT_TRANSMIT`.
 
 **It scales `light`, never `lit`.** `lit` gates the coverage mask as well
 as carrying the shadow term, so folding the phase factor in there would

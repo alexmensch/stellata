@@ -9,7 +9,7 @@ import {
   maxCadenceReport,
   type CadenceReport,
 } from '../render-gate/cadence/clock-cadence-pure';
-import type { FrameFrustum } from './frame-frustum';
+import type { FrameFrustum } from './contribution/frame-frustum';
 import type { FrameExposure } from '../hdr/exposure/visibility/emitter-visibility-pure';
 
 /** Per-frame inputs shared by every layer, computed ONCE per frame by
@@ -262,7 +262,7 @@ export class SceneLayerRegistry {
    *  A skipped layer is excluded rather than asked: its `update` did not
    *  run, so its rate would read the state of whichever frame it last
    *  drew — and content that cannot reach a pixel cannot move one
-   *  (README.md § A skipped layer reports nothing).
+   *  (contribution/README.md § A skipped layer reports nothing).
    *
    *  A NaN rate cannot win: `maxCadenceReport` compares rather than
    *  calling `Math.max`, so a layer returning garbage cannot freeze the
@@ -289,8 +289,8 @@ export class SceneLayerRegistry {
    *  its own wake: the geometric three are functions of camera pose, which
    *  renders by itself, and `'brightness'` is not — every input to it
    *  changes only on a rendered frame instead. A fifth reason owes that
-   *  argument before it may be declared (README.md § A skipped layer
-   *  reports nothing). */
+   *  argument before it may be declared (contribution/README.md
+   *  § A skipped layer reports nothing). */
   realtimeFramesNeeded(ctx: FrameCtx): boolean {
     for (let i = 0; i < this.layers.length; i++) {
       if (!this.contributing[i]) continue;

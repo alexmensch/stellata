@@ -100,9 +100,9 @@ multiplies on top a pure redistribution rather than a dimming:
   `planetApparentMagnitude` uses; limb darkening then redistributes at
   unit mean. Atmospheric bodies substitute `F = 1` (no limb term — the
   scattering governs their limb), recovering the pure 2/3.
-  **`LIMB_FLOOR` / `LIMB_EXP` are mirrored as literals in
-  `../planet-mesh.frag.glsl`** and drift-pinned; changing one side alone
-  shifts every body off its flux with no other symptom.
+  **`LIMB_FLOOR` / `LIMB_EXP` are imported by the mesh graph**
+  (`../../../webgpu/solar-system/planet-mesh-tsl.ts`), so the disc-mean
+  normaliser and the shader cannot disagree about them.
 - The **day map's own mean linear luminance**
   (`../textures/texture-ladder-generated.ts`), measured at build from the
   body's top rung, cos-latitude weighted, and shared by every rung.

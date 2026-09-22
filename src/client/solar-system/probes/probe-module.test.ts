@@ -15,6 +15,8 @@ import { tToJdUt } from '../time/time';
 import { SOL_OBJECT_SIDS } from '../sol-object-sids';
 import { PROBE_MARKER_PX } from './probe-field';
 import { createProbeKindModule } from './probe-module';
+import type { WebGpuSeam } from '../../webgpu/seam';
+import { fakeProbeMaterials } from '../materials/solar-system-materials-mock';
 
 const STEP_DAYS = 30;
 const FIRST_JD = tToJdUt(0);
@@ -43,6 +45,7 @@ function makeFile(id: string, label: string): ProbeTrajectoryFile {
 
 function makeCtx(): KindContext {
   const ctx = makeKindContext({
+    webgpu: { probeMaterial: fakeProbeMaterials() } as unknown as WebGpuSeam,
     solIndex: 7,
     constellationOf: () => 'Ophiuchus',
   });

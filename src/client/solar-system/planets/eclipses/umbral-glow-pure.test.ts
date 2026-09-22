@@ -229,21 +229,21 @@ describe('the glow costs nothing outside the shadow', () => {
 
 describe('the shader adds it rather than flooring the shadow', () => {
   const frag = readFileSync(
-    fileURLToPath(new URL('../planet-mesh.frag.glsl', import.meta.url)),
+    fileURLToPath(new URL(
+      '../../../webgpu/solar-system/planet-mesh-tsl.ts', import.meta.url)),
     'utf8',
   );
 
-  it('declares the uniform and weights it by what the caster removed', () => {
-    expect(frag).toContain('uniform vec3 uUmbralGlow;');
-    expect(frag).toContain('* uUmbralGlow * (dayside * limb * uPhaseScale)');
-    expect(frag).toContain('(1.0 - shadow)');
+  it('weights the glow by exactly what the caster removed', () => {
+    expect(frag).toContain('.mul(p.uUmbralGlow).mul(reflected));');
+    expect(frag).toContain('float(1.0).sub(shadow)');
   });
 
   it('leaves the shadow factor itself reaching zero', () => {
     // eclipse-canon.test.ts asserts the shadow factor bottoms out at exactly
     // 0 for every total eclipse. Flooring it to fake the glow would break
     // that pin AND light the body from the wrong direction.
-    expect(frag).toContain('shadow *= smoothstep(');
+    expect(frag).toContain('shadow.mulAssign(');
     expect(frag).not.toContain('max(shadow,');
   });
 });

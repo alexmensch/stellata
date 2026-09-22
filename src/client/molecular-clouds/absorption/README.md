@@ -9,19 +9,14 @@ annotates the same cloud's silhouette is annotation and lives in the parent
 
 ## Files
 
-- `cloud-absorption.vert.glsl`, `cloud-absorption.frag.glsl` — the raymarch
-  pair. Both tiers are one source; `USE_FIELD` selects between them.
 - `cloud-presence-pure.ts` (+ test) — the CPU mirror of the math (Plummer
-  density, absorption alpha) plus the constants both shader backends read:
+  density, absorption alpha) plus the constants the march reads:
   `TAU_PER_AV`, `AV_RATE_PER_NH`, `AV_PER_DENSITY`, `ALPHA_CAP`,
   `AV_SATURATED`, `ENVELOPE_TAPER_FRAC`, `MARCH_MIN_STEPS`,
-  `MARCH_MIN_CHORD_T`. Vitest-pinned. The TSL twin
-  (`../../webgpu/molecular-clouds/cloud-absorption-tsl.ts`) imports these;
-  GLSL cannot, so `absorption-glsl-drift.test.ts` pins its copies against
-  them. The **dither** is pinned in the parent's `cloud-glsl-drift.test.ts`
-  instead — one shape across both cloud shaders and the resolve, so it is
-  owned by `../../hdr/tonemap/tonemap-pure.ts` and asserted once for the
-  pair rather than per shader.
+  `MARCH_MIN_CHORD_T`. Vitest-pinned, and imported by the graph
+  (`../../webgpu/molecular-clouds/cloud-absorption-tsl.ts`), so neither
+  can drift from the other. The **dither** is owned by
+  `../../hdr/tonemap/tonemap-pure.ts` and read from there.
 
 The materials that consume these — the seam, the per-cloud
 `CloudAbsorptionSpec`, and the brick texture's lifetime — stay in the

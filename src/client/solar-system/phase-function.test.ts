@@ -509,11 +509,12 @@ describe('illuminatedFraction mirrors the shader', () => {
   });
 
   it('carries the shader expression that drives the photocentre shift', () => {
-    const glareVert = readFileSync(
-      fileURLToPath(new URL('./planets/glare/planet.vert.glsl', import.meta.url)),
+    const glare = readFileSync(
+      fileURLToPath(new URL(
+        '../webgpu/solar-system/planet-glare-tsl.ts', import.meta.url)),
       'utf8',
     );
-    expect(glareVert).toContain('float illumFrac = (1.0 + cosA) * 0.5;');
-    expect(glareVert).toContain('(1.0 - illumFrac)');
+    expect(glare).toContain('const illumFrac = cosA.add(1.0).mul(0.5);');
+    expect(glare).toContain('float(1.0).sub(illumFrac)');
   });
 });

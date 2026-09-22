@@ -1477,8 +1477,8 @@ instrument or the trim (`onChange` → invalidate) or the applied cut
 through resize or FOV; the statistic lands only off a rendered frame's
 reduction; camera pose renders. A sub-JND drift of the applied cut renders
 nothing and can leave the verdict stale by under 0.01 mag of exposure —
-invisible by the same definition. The obligation `scene/README.md` § A
-skipped layer reports nothing states is discharged by construction, not by
+invisible by the same definition. The obligation `scene/contribution/README.md`
+§ A skipped layer reports nothing states is discharged by construction, not by
 a scheduler.
 
 **What the park inherits.** Its "never reads a partial measurement" claim

@@ -1,6 +1,5 @@
-// The backend-neutral shape of the HDR seam and its reduction. WebGL:
-// ./hdr-pipeline.ts + exposure/reduction/; WebGPU: ../webgpu/hdr/,
-// behind the import boundary.
+// The shape of the HDR seam and its reduction, held by the shell.
+// Implemented in ../webgpu/hdr/, behind the import boundary.
 
 import type * as THREE from 'three';
 import type { HdrEmitterUniforms } from './hdr-emitter-uniforms';
@@ -15,8 +14,10 @@ export interface ReducedStatistic extends TileReduction {
 }
 
 export interface HdrSeam {
-  /** WebGL2: whether a float-renderable colour buffer exists. WebGPU:
-   *  always true — float targets are core (README.md § Fallback). */
+  /** Whether a float-renderable colour buffer exists; constant true, since
+   *  float targets are core to the shipped backend (README.md § Chart
+   *  mode). `wantsTarget()` keeps it as a term so the ship gate stays a
+   *  conjunction rather than a bare chart test. */
   readonly supported: boolean;
   readonly emitterUniforms: HdrEmitterUniforms;
   bind(): void;

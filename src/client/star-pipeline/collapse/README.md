@@ -81,7 +81,7 @@ The margin also covers the **off-target** path, where the operator runs
 per-fragment and the blend's second multiply lands outside it: the peak
 there is `tap·tonemap(vPeakL·tap)` rather than `tonemap(vPeakL·tap²)`, and
 the toe's convexity bounds it at the same half-step/16
-(`../../hdr/README.md` § Fallback).
+(`../../hdr/README.md` § The inline operator).
 
 Reading the live exposure here is deliberate and allowed: the
 no-adaptation rule protects cached and per-frame CPU consumers from

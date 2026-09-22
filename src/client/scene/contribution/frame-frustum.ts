@@ -1,5 +1,5 @@
 // The per-frame view frustum a gated layer tests its bounding volume
-// against. See README.md § Declaring what a layer can put on screen.
+// against. See README.md.
 
 import * as THREE from 'three';
 

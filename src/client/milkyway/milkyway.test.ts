@@ -28,12 +28,9 @@ import {
   DISC_THICK_SCALE_HEIGHT_PC,
   DISC_TINT_RGB,
   DISC_VOLUME_INTEGRAL,
-  FOREGROUND_DUST_STEPS,
   LOCAL_DUST_RATE_MAG_PER_KPC,
   MAG_PER_TAU,
   SOL_GALACTOCENTRIC_PC,
-  STEPS,
-  S_MIN_PC,
   type Vec3,
   componentLuminanceShare,
   discVerticalProfile,
@@ -63,7 +60,7 @@ import {
 import { buildHoleCells, holeLight } from '../../../scripts/milkyway-calibration/resolved-light-pure';
 import { fluxNumber } from '../hdr/emission/density0-solver-pure';
 import { linearSrgbFromColourIndex } from '../../../scripts/colour/blackbody-lut-pure';
-import { makeHdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
+import { fakeBandMaterials } from './band-materials-mock';
 import {
   DEFAULT_INSTRUMENT,
   extendedThresholdSbFor,
@@ -92,47 +89,12 @@ import {
 } from '../hdr/tonemap/tonemap-pure';
 
 function build() {
-  const hdr = makeHdrEmitterUniforms();
-  const uLimitMag = { value: instrumentLimitMag(DEFAULT_INSTRUMENT) };
-  const layer = new MilkyWay({ uLimitMag, hdr });
-  const materials = layer.group.children.map(
-    (m) => (m as THREE.Mesh).material as THREE.ShaderMaterial,
-  );
-  return { layer, hdr, uLimitMag, materials };
+  const materials = fakeBandMaterials();
+  const layer = new MilkyWay(materials);
+  return { layer, specs: materials.specs, surfaces: materials.surfaces };
 }
 
-describe('MilkyWay uniform wiring', () => {
-  it('binds the HDR seam by reference in both components', () => {
-    const { hdr, materials } = build();
-    expect(materials).toHaveLength(2);
-    for (const key of [
-      'uHdrTarget',
-      'uWhitePoint',
-      'uHighlightDesat',
-      'uExposure',
-      'uOmegaPxArcsec2',
-      'uOmegaSummationArcsec2',
-    ] as const) {
-      for (const mat of materials) expect(mat.uniforms[key]).toBe(hdr[key]);
-    }
-  });
-
-  it('shares the star pipeline’s uLimitMag for the chart isobar', () => {
-    const { uLimitMag, materials } = build();
-    for (const mat of materials) expect(mat.uniforms.uLimitMag).toBe(uLimitMag);
-  });
-
-  // The layer emits physical luminance now; the per-layer squash and the
-  // magnitude gate it needed are gone, not merely off the debug panel
-  // (docs/science-hdr-pipeline.md § 9).
-  it('carries neither the retired brightness scalar nor the gate input', () => {
-    const { materials } = build();
-    for (const mat of materials) {
-      expect(mat.uniforms.uBrightnessScale).toBeUndefined();
-      expect(mat.uniforms.uSizeSpan).toBeUndefined();
-    }
-  });
-
+describe('MilkyWay component specs', () => {
   it('exposes glowMagOffset as the only photometric knob left', () => {
     const { layer } = build();
     const v = layer.getValues();
@@ -140,24 +102,20 @@ describe('MilkyWay uniform wiring', () => {
     expect(v).not.toHaveProperty('brightness');
   });
 
-  // An unbound uniform reads 0 in GLSL, so a missing thick-disc binding
-  // deletes the term silently — no compile error, no visible change from
-  // Sol, and the external edge-on view quietly loses its halo.
-  it('binds the thick-disc term in both components', () => {
-    const { materials } = build();
-    for (const mat of materials) {
-      expect(mat.uniforms.uDiscThickScaleHeightPc.value).toBe(
-        DISC_THICK_SCALE_HEIGHT_PC,
-      );
-      expect(mat.uniforms.uDiscThickFraction.value).toBe(
-        DISC_THICK_DENSITY_FRACTION,
-      );
+  // A spec that dropped the term would delete it silently — no compile
+  // error, no visible change from Sol, and the external edge-on view
+  // quietly loses its halo.
+  it('states the thick-disc term for both components', () => {
+    const { specs } = build();
+    expect(specs).toHaveLength(2);
+    for (const spec of specs) {
+      expect(spec.discThickScaleHeightPc).toBe(DISC_THICK_SCALE_HEIGHT_PC);
+      expect(spec.discThickFraction).toBe(DISC_THICK_DENSITY_FRACTION);
     }
   });
 
-  it('binds the luma-normalised tint, not the authored palette', () => {
-    const { materials } = build();
-    const [disc, bulge] = materials.map((m) => m.uniforms.uColor.value as THREE.Color);
+  it('states the luma-normalised tint, not the authored palette', () => {
+    const [disc, bulge] = build().specs.map((s) => s.tint);
     expect([disc.r, disc.g, disc.b]).toEqual([...DISC_TINT_RGB]);
     expect([bulge.r, bulge.g, bulge.b]).toEqual([...BULGE_TINT_RGB]);
   });
@@ -238,9 +196,9 @@ describe('MilkyWay population tints', () => {
   });
 
   it('keeps a colour-picker edit off the flux', () => {
-    const { layer, materials } = build();
+    const { layer, surfaces } = build();
     layer.setBulgeColor(0.1, 0.9, 0.3);
-    const c = materials[1].uniforms.uColor.value as THREE.Color;
+    const c = surfaces[1].uniforms.uColor.value as THREE.Color;
     expect(relativeLuminance([c.r, c.g, c.b])).toBeCloseTo(1, 12);
   });
 });
@@ -761,97 +719,6 @@ describe('MilkyWay surface-brightness calibration', () => {
         instrumentLimitMag(DEFAULT_INSTRUMENT),
       ),
     ).toBeCloseTo(22, 9);
-  });
-});
-
-// The CPU mirror is only worth its constants if it marches the same way
-// the shader does. Nothing at compile time ties the two sides together.
-describe('raymarch parameters the mirror duplicates from GLSL', () => {
-  const frag = readFileSync(
-    fileURLToPath(new URL('./milkyway.frag.glsl', import.meta.url)),
-    'utf8',
-  );
-  const glslConst = (decl: string, name: string): number => {
-    const m = frag.match(
-      new RegExp(`const ${decl}\\s+${name}\\s*=\\s*([\\d.]+(?:[eE][-+]?\\d+)?);`),
-    );
-    if (m === null) throw new Error(`${name} not declared in milkyway.frag.glsl`);
-    return Number(m[1]);
-  };
-
-  it('agrees on the in-volume step count and near clamp', () => {
-    expect(glslConst('int', 'STEPS')).toBe(STEPS);
-    expect(glslConst('float', 'S_MIN_PC')).toBe(S_MIN_PC);
-  });
-
-  it('agrees on the foreground pre-march step count', () => {
-    expect(glslConst('int', 'FOREGROUND_DUST_STEPS')).toBe(FOREGROUND_DUST_STEPS);
-  });
-
-  // The vertical profile is two exponentials on ONE softened |z|, not two
-  // independent softenings — the footprint correction is a property of the
-  // sample, not of the component it feeds.
-  it('sums both vertical exponentials over one softened |z|', () => {
-    expect(frag).toMatch(
-      /float absZ = stellataSoftenRadius\(abs\(zVal\), zFootprintPc\);/,
-    );
-    expect(frag).toMatch(
-      /exp\(-absZ \/ uDiscScaleHeightPc\)\s*\+ uDiscThickFraction \* exp\(-absZ \/ uDiscThickScaleHeightPc\)/,
-    );
-  });
-
-  it('agrees on the τ→magnitude conversion', () => {
-    expect(glslConst('float', 'MAG_PER_TAU')).toBe(MAG_PER_TAU);
-  });
-
-  // Drift in a layout literal samples the wrong cell with no error.
-  it('agrees on the resolution-hole grid extent', () => {
-    expect(glslConst('float', 'RESOLVED_HOLE_GRID_HALF_PC'))
-      .toBe(RESOLVED_HOLE_GRID_HALF_PC);
-    expect(frag).toMatch(/uniform sampler3D uUnresolvedLight;/);
-  });
-
-  // The coordinate IS the transcription: a mis-scaled or unshifted axis
-  // renders a plausible wrong picture rather than failing.
-  it('maps the cube onto the texture the same way the mirror does', () => {
-    expect(frag).toMatch(
-      /vec3 uvw = fromSol \* RESOLVED_HOLE_GRID_INV_SPAN \+ 0\.5;/);
-    expect(frag).toMatch(
-      /RESOLVED_HOLE_GRID_INV_SPAN =\n?\s*0\.5 \/ RESOLVED_HOLE_GRID_HALF_PC;/);
-    expect(frag).toMatch(/return textureLod\(uUnresolvedLight, uvw, 0\.0\)\.r;/);
-  });
-
-  // The hole multiplies the emissivity before the dust, so the resolved
-  // stars and what the band still draws see the same column.
-  it('applies the hole to the emissivity ahead of the dust step', () => {
-    expect(frag).toMatch(/float densityVal = unresolvedBandLight\(posGalCentric\) \* \(uIsBulge/);
-  });
-
-  // The pre-march has to seed the accumulator, not be computed and
-  // dropped — the failure mode a reader can't see from the constants.
-  it('seeds tauAccum from the foreground column', () => {
-    expect(frag).toMatch(/vec3 tauAccum = foregroundDustTau\(/);
-  });
-
-  // Which solid angle reaches which attachment is the whole fix, and it is
-  // one argument order in one call — swap the pair and the band silently
-  // returns to a seventh of a threshold star while the adaptation cut
-  // starts reading the display concession as light.
-  it('displays at the summation solid angle and measures at the pixel’s', () => {
-    expect(frag).toMatch(
-      /uExposure, uGlowMagOffset, uOmegaSummationArcsec2, uOmegaPxArcsec2,/,
-    );
-  });
-
-  // A chart's band outline is a fixed feature of the sky, so the contour
-  // must carry no plate-scale term — and the threshold it crosses is the
-  // extended-source one, not the point-source m_lim it used to read.
-  it('contours surface brightness against the extended-source threshold', () => {
-    expect(frag).toMatch(/float sb = uGlowMagOffset - 2\.5 \* log\(column\)/);
-    expect(frag).toMatch(
-      /stellataExtendedThresholdSb\(uOmegaSummationArcsec2, uLimitMag\)/,
-    );
-    expect(frag).not.toMatch(/abs\(magPx - uLimitMag\)/);
   });
 });
 

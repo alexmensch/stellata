@@ -8,6 +8,7 @@ import {
 } from '../../fresnel-shell/shell-distance-pure';
 import { AU_PC } from '../../util/astronomy-constants';
 import { ShellRegistry } from '../../fresnel-shell/shell-registry';
+import { fakeShellMaterials } from '../../fresnel-shell/shell-materials-mock';
 
 describe('HELIOPAUSE_APEX_SOL_PC', () => {
   it('lies 122 AU from Sol (the upwind heliopause boundary distance)', () => {
@@ -58,13 +59,13 @@ describe('HELIOPAUSE_APEX_SOL_PC', () => {
 
 describe('Heliopause', () => {
   it('group is hidden until the declutter cycle permits it (no focus coupling)', () => {
-    const h = new Heliopause();
+    const h = new Heliopause(fakeShellMaterials());
     expect(h.group.visible).toBe(false);
     h.dispose();
   });
 
   it('setPermitted(true) reveals the group — the declutter floor governs', () => {
-    const h = new Heliopause();
+    const h = new Heliopause(fakeShellMaterials());
     h.setPermitted(true);
     expect(h.group.visible).toBe(true);
     h.dispose();
@@ -76,7 +77,7 @@ describe('Heliopause', () => {
   // declutter seed for the Local Bubble (its attach path calls
   // setMonochrome) while leaving the heliopause invisible on a fresh load.
   it('a mono round-trip does not substitute for a permission push', () => {
-    const h = new Heliopause();
+    const h = new Heliopause(fakeShellMaterials());
     h.setMonochrome(true);
     h.setMonochrome(false);
     expect(h.group.visible).toBe(false);
@@ -86,7 +87,7 @@ describe('Heliopause', () => {
   });
 
   it('setMonochrome hides the group even when permitted', () => {
-    const h = new Heliopause();
+    const h = new Heliopause(fakeShellMaterials());
     h.setPermitted(true);
     h.setMonochrome(true);
     expect(h.group.visible).toBe(false);
@@ -96,7 +97,7 @@ describe('Heliopause', () => {
   });
 
   it('recenter parks the group at −worldOffset (Sol local position)', () => {
-    const h = new Heliopause();
+    const h = new Heliopause(fakeShellMaterials());
     h.recenter(new THREE.Vector3(0.1, -0.2, 0.3));
     expect(h.group.position.x).toBeCloseTo(-0.1, 12);
     expect(h.group.position.y).toBeCloseTo(0.2, 12);
@@ -105,7 +106,7 @@ describe('Heliopause', () => {
   });
 
   it('group rotation maps local +Z onto the antiapex direction (forward heliotail)', () => {
-    const h = new Heliopause();
+    const h = new Heliopause(fakeShellMaterials());
     // The group's quaternion was built via setFromUnitVectors(+Z, antiapex).
     // Applying it to (0, 0, 1) should yield the antiapex direction.
     const localZ = new THREE.Vector3(0, 0, 1);
@@ -145,7 +146,7 @@ describe('Heliopause', () => {
   });
 
   it('mesh apex point in world coordinates lands at +122 AU along apex direction', () => {
-    const h = new Heliopause();
+    const h = new Heliopause(fakeShellMaterials());
     // The mesh sits at local (0, 0, +offset_AU) inside the group, and
     // local +Z = antiapex. The "upwind" surface point is at local
     // (0, 0, -semiMajor) = (0, 0, -161 AU). After translate (+39 AU on

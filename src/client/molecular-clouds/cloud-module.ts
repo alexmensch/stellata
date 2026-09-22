@@ -98,10 +98,7 @@ export function createCloudKindModule(): CloudKindModule {
     attach(kindCtx: KindContext): SceneLayer | null {
       ctx = kindCtx;
       if (!catalog || catalog.clouds.length === 0) return null;
-      layer = new MolecularClouds(catalog, surfaces, {
-        uFovYRad: kindCtx.sharedUniforms.uFovYRad,
-        uViewport: kindCtx.sharedUniforms.uViewport,
-      }, kindCtx.webgpu?.cloudMaterials);
+      layer = new MolecularClouds(catalog, surfaces, kindCtx.webgpu.cloudMaterials);
       layer.setMonochrome(kindCtx.getMonochrome());
       kindCtx.scene.add(layer.group);
       return {

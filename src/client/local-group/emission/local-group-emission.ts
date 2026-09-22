@@ -3,10 +3,9 @@
 // § The two passes.
 
 import * as THREE from 'three';
-import type { HdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import type { EmitterMaterial } from '../../scene/emitter-material';
 import {
-  makeGlslLgEmissionMaterials, type LgEmissionMaterials,
+  type LgEmissionMaterials,
 } from './lg-emission-materials';
 import { markDiffuseEmitter } from '../../hdr/attachments/attachment-gate';
 import type { LgObject } from '../local-group-loader';
@@ -25,14 +24,6 @@ import type { ContributionSkip } from '../../scene/scene-layer';
 const SPHERE_WIDTH_SEGMENTS = 48;
 const SPHERE_HEIGHT_SEGMENTS = 24;
 
-export interface LgEmissionDeps {
-  /** `HdrPipeline.emitterUniforms`, by reference so exposure, pixel
-   *  solid angle and the inline-operator branch reach both family
-   *  passes with one write. This layer only reads them — the exposure
-   *  model is the only thing that moves the glow's brightness. */
-  hdr: HdrEmitterUniforms;
-}
-
 interface FamilyPass {
   mesh: THREE.Mesh;
   geometry: THREE.InstancedBufferGeometry;
@@ -46,7 +37,6 @@ export class LocalGroupEmission {
 
   private readonly baseGeometry: THREE.SphereGeometry;
   private readonly passes: FamilyPass[] = [];
-  private readonly uWorldOffset = { value: new THREE.Vector3() };
   private readonly materials: LgEmissionMaterials;
   private readonly objects: readonly LgObject[];
   private readonly peakCache = new LgPeakCache();
@@ -57,13 +47,10 @@ export class LocalGroupEmission {
 
   constructor(
     objects: readonly LgObject[],
-    deps: LgEmissionDeps,
-    materials?: LgEmissionMaterials,
+    materials: LgEmissionMaterials,
   ) {
     this.objects = objects;
-    this.materials = materials ?? makeGlslLgEmissionMaterials({
-      uWorldOffset: this.uWorldOffset, hdr: deps.hdr,
-    });
+    this.materials = materials;
     this.baseGeometry = new THREE.SphereGeometry(
       1,
       SPHERE_WIDTH_SEGMENTS,
@@ -113,11 +100,10 @@ export class LocalGroupEmission {
     return { mesh, geometry, surface };
   }
 
-  /** Per-frame: refresh the floating-origin offset the vertex shader
-   *  subtracts from each instance's absolute centre. */
-  update(worldOffset: THREE.Vector3): void {
-    if (!this.groupVisible()) return;
-    this.uWorldOffset.value.copy(worldOffset);
+  /** Per-frame: settle the group's visibility. The floating-origin offset
+   *  arrives through the shared uniform mirror, not from here. */
+  update(): void {
+    this.groupVisible();
   }
 
   private groupVisible(): boolean {
@@ -132,9 +118,8 @@ export class LocalGroupEmission {
 
   /** Contribution gate. A term of the conjunction rather than a bare
    *  `group.visible` write, which would resurrect a glow the user or
-   *  chart mode had switched off. The layer's only per-frame state is the
-   *  floating-origin uniform, rewritten unconditionally on the first
-   *  drawn frame back, so this is the whole reset. */
+   *  chart mode had switched off. The layer holds no per-frame state, so
+   *  this is the whole reset. */
   setContributing(on: boolean): void {
     this.contributing = on;
     this.groupVisible();

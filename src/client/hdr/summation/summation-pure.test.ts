@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   MAX_DOWNSAMPLE,
@@ -18,9 +16,6 @@ import {
 import { angularToPx } from '../../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../../camera/timing';
 import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
-
-const read = (name: string) =>
-  readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
 
 const omegaPxFor = (fovDeg: number, viewportPx: number) =>
   pixelSolidAngleArcsec2(angularToPx(viewportPx, (fovDeg * Math.PI) / 180));
@@ -121,19 +116,6 @@ describe('the downsample factor that bounds the tap count', () => {
     }
   });
 
-  it('mirrors its ceiling into the downsample stage', () => {
-    const frag = read('./summation-downsample.frag.glsl');
-    const m = frag.match(/const int STELLATA_MAX_DOWNSAMPLE = (\d+);/);
-    expect(m).not.toBeNull();
-    expect(Number(m![1])).toBe(MAX_DOWNSAMPLE);
-  });
-
-  it('mirrors the kernel’s reach into the convolution chunk', () => {
-    const chunk = read('./summation.glsl');
-    const m = chunk.match(/const int STELLATA_SUMMATION_REACH = (\d+);/);
-    expect(m).not.toBeNull();
-    expect(Number(m![1])).toBe(MAX_KERNEL_REACH_TEXELS);
-  });
 });
 
 describe('the kernel weights', () => {
@@ -220,59 +202,6 @@ describe('one anchor for both volumetric emitters', () => {
       surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, 22, omegaPxFor(fovDeg, 900));
     expect(2.5 * Math.log10(perPixel(FOV_MAX_DEG) / perPixel(FOV_MIN_DEG)))
       .toBeCloseTo(5.40, 2);
-  });
-});
-
-// The resolve is the only consumer, and the chunk it pastes has to be there.
-describe('the resolve composites the convolution', () => {
-  const resolveFrag = read('../tonemap/tonemap.frag.glsl');
-
-  it('adds the patch mean to attachment 0 before the operator', () => {
-    expect(resolveFrag).toContain('#include <stellata_summation>');
-    expect(resolveFrag).toMatch(/hdr\.rgb \+ stellataSummationMean\(/);
-    expect(resolveFrag.indexOf('stellataSummationMean('))
-      .toBeLessThan(resolveFrag.indexOf('stellataTonemap('));
-  });
-
-  // Pass-through parks the operator, not the convolution: the diffuse
-  // emitters write no attachment 0 at all, so skipping the mean there would
-  // drop the band and the Local Group out of the A/B entirely.
-  it('keeps the diffuse light on the pass-through path', () => {
-    const passThrough = resolveFrag.slice(resolveFrag.indexOf('uTonemapEnabled < 0.5'));
-    expect(passThrough).toContain('outColor = vec4(linear, 1.0);');
-  });
-
-  // A diffuse emitter masks attachment 0 off, so its alpha is the clear's 0
-  // while its rgb is the whole band. Handing that to a premultiplied canvas
-  // is rgb > a — undefined by spec, black in practice, and the reason the
-  // first cut of this pass rendered no band at all.
-  it('owns the canvas alpha rather than carrying attachment 0’s', () => {
-    expect(resolveFrag).not.toContain('hdr.a');
-  });
-
-  it('maps a display pixel onto the source with the factor’s own scale', () => {
-    expect(resolveFrag).toContain('gl_FragCoord.xy * uSummationTexelScale');
-  });
-});
-
-describe('the CPU mirror tracks the chunk', () => {
-  const chunk = read('./summation.glsl');
-
-  it('weights each tap the same way', () => {
-    expect(chunk).toContain('clamp(radiusTexels + 0.5 - length(offset), 0.0, 1.0)');
-  });
-
-  it('normalises by the summed weight, not by the tap count', () => {
-    expect(chunk).toContain('acc / weight');
-    expect(chunk).not.toMatch(/acc \/ float\(/);
-  });
-
-  // Clamping to the edge rather than to zero. A fragment near the frame
-  // border has a patch reaching sky the frame does not contain, and treating
-  // that as black would ring the border — visible against the band.
-  it('clamps taps into the live sub-rect', () => {
-    expect(chunk).toContain('clamp(sourceTexel + offset, vec2(0.5), hi)');
-    expect(chunk).toContain('vec2 hi = extent - 0.5;');
   });
 });
 

@@ -137,8 +137,7 @@ once; and one shared stroke from the chrome line seam
 (`../chrome-lines/README.md`) already served every ring, so the
 per-frame opacity write still hits one slot. Nothing fades, hides or
 moves an object on its own — a feature that needed to would have to add
-a per-instance attribute rather than split the geometry back up. The
-wireframe draws on either backend.
+a per-instance attribute rather than split the geometry back up.
 
 At 123 objects the buffer holds 23,616 vertices: 277 KiB of positions
 plus a 92 KiB 16-bit index, so 369 KiB against the 324 KiB the per-ring

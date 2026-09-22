@@ -15,7 +15,7 @@ import {
   LIMB_EXP, LIMB_FLOOR,
 } from '../../solar-system/planets/emission/mesh-surface-pure';
 import {
-  HORIZON_AZIMUTHS, HORIZON_SIN_RANGE, SKY_VIEW_RANGE,
+  HORIZON_AZIMUTHS, HORIZON_SIN_RANGE, RELIEF_POLE_EPS, SKY_VIEW_RANGE,
 } from '../../solar-system/planets/surface-relief/surface-relief-pure';
 import { maskedStatisticTexelTsl, occluderTexelTsl } from '../emission-tsl';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
@@ -82,7 +82,9 @@ function tangentFrame(n: N3, pole: N3): { east: N3; north: N3; ok: Node<'bool'> 
   const e = cross(pole, n);
   const eLen = length(e).toVar();
   const east = e.div(max(eLen, 1e-30)).toVar();
-  return { east, north: cross(n, east).toVar(), ok: eLen.greaterThanEqual(1e-6) };
+  return {
+    east, north: cross(n, east).toVar(), ok: eLen.greaterThanEqual(RELIEF_POLE_EPS),
+  };
 }
 
 export function buildPlanetMeshMaterial(

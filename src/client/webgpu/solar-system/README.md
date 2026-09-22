@@ -3,12 +3,10 @@
 The TSL half of the solar-system shader family: the spheroid mesh, its
 ring annulus and atmosphere shell, the reflected-glare billboard, the
 probe glyph, and the single-scattering integrator two of them share.
-**These are the shipped surfaces.** The WebGL2 shaders
-(`../../solar-system/`) stay the semantic reference until `0it.14`
-deletes them; parity is the A/B smoke, same `/v/<blob>/` with and
-without the `#renderer=webgl2` fragment.
+These are the family's only surfaces; the physics they implement is
+`../../solar-system/`'s, and that is where it is argued.
 
-**Four of the five port as a material swap, not a layer.** The CPU
+**Four of the five are a material swap, not a layer.** The CPU
 layers keep every line they had and take their surfaces through
 `../../solar-system/materials/README.md` — that README owns which
 surfaces this family asks for, the neutral-defaults rule, and why the
@@ -21,8 +19,7 @@ packs).
 ```
 src/client/webgpu/solar-system/
   atmosphere-scatter-tsl.ts   Ray helpers, the analytic shadow span, the
-                              skylight model, and the view/light march —
-                              the TSL twin of atmosphere-scatter.glsl.
+                              skylight model, and the view/light march.
   planet-mesh-tsl.ts          The lit spheroid: terminator, DEM relief and
                               its cast shadows, caster loop, umbral glow,
                               disc airlight.
@@ -109,9 +106,8 @@ meant to stay short.
 
 ## Vertex stages: four of six need none
 
-`NodeMaterial`'s own model-view-projection is exactly what
-`planet-mesh.vert.glsl`, `planet-atmosphere.vert.glsl` and
-`planet-rings.vert.glsl` do, and each of their varyings is a TSL built-in
+`NodeMaterial`'s own model-view-projection is exactly what the mesh, the
+shell and the annulus need, and each of their varyings is a TSL built-in
 — `positionView`, `normalView`, `uv()`, and `varying(positionGeometry.xy)`
 for the annulus. So those three set `fragmentNode` alone, and the depth
 pre-stamp — the same spheroid, no varyings at all — sets a fragment that
@@ -214,10 +210,9 @@ three-attachment HDR target.
 
 ## The probe glyph needs no mirror variant
 
-`probe.vert.glsl` / `probe.frag.glsl` differ between the main pass and
-the local mirror only by `#ifndef LOCAL_DEPTH_PASS` around the log-depth
-chunks. Reversed-z deleted those chunks, so one TSL graph serves both
-draws and `probeMarker`'s `localPass` argument is inert on this backend.
+The glyph's main-pass and local-mirror draws differed only by the
+log-depth stage. Reversed-z deleted it, so one graph serves both draws and
+`probeMarker`'s `localPass` argument is inert.
 The same reasoning covers the glare's *fragment* stage; its **vertex**
 stage still needs both variants, because `uLocalPassRange` gates opposite
 senses there.

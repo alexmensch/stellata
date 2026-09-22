@@ -16,19 +16,14 @@ switches.
 
 ```
 src/client/hdr/
-  hdr-pipeline.ts            HdrPipeline — target lifecycle (lazy alloc),
-    (+ test)                 bind/resolve, chart bypass, float-support
-                             detection, every ShaderChunk registration, the
-                             emitter uniform seam (§ Unit), and the
-                             draw-buffer gate on attachments 1 and 2
-                             (§ Three attachments). The class needs a live GL
-                             context, so the test pins only that nothing can
-                             switch the seam off (§ Ship gate).
-  hdr-seam.ts                The backend-neutral interface the shell holds:
-                             a WebGPU boot constructs the twin pipeline in
-                             src/client/webgpu/hdr/ instead of this class,
-                             and every consumer drives whichever exists
-                             through this shape.
+  hdr-emitter-uniforms.ts    The six slots every physical emitter binds by
+                             reference (§ Unit), the picker that lifts them
+                             out of the shared map, and the attachment
+                             contract the seam's target carries
+                             (§ Three attachments).
+  hdr-seam.ts                The interface the shell holds; the pipeline
+                             behind it is src/client/webgpu/hdr/, past the
+                             import boundary.
   attachments/               The attachments past 0: the per-draw gate
                              every one of them goes through, and what may
                              write the statistic, in what unit — its own
@@ -61,9 +56,8 @@ two solid angles it can run on. What belongs *here* is the plumbing that
 carries those numbers to every layer.
 
 `uOmegaPxArcsec2` is the solid angle one **CSS** pixel subtends, in
-arcsec² (`pixelSolidAngleArcsec2`), written by
-`HdrPipeline.setPixelSolidAngle` from `angularToPx(viewportHeightCssPx,
-fovYRad)`. A layer needing the plate scale back — the Local Group's
+arcsec² (`pixelSolidAngleArcsec2`), written by the pipeline's
+`setPixelSolidAngle` from `angularToPx(viewportHeightCssPx, fovYRad)`. A layer needing the plate scale back — the Local Group's
 resolution floor — inverts it through `stellataPxPerRadian` rather than
 taking a second uniform, so a resize cannot leave the two disagreeing.
 CSS again so brightness is `devicePixelRatio`-independent, and
@@ -82,12 +76,12 @@ its level at any plate scale (`emission/README.md` § Extended sources). The
 statistic keeps the quadratic fall; an unresolved point keeps its peak at
 any FOV.
 
-`HdrPipeline.emitterUniforms` is how a layer binds to this. Six
+The pipeline's `emitterUniforms` is how a layer binds to this. Six
 uniforms, held **by reference** so one write reaches every pass:
 `uExposure`, `uOmegaSummationArcsec2`, `uOmegaPxArcsec2`, `uWhitePoint`,
 `uHighlightDesat`, and
 `uHdrTarget` — the 0/1 branch telling the shader whether to emit raw `L`
-or run the operator itself. `HdrPipeline` owns every write to
+or run the operator itself. The pipeline owns every write to
 `uHdrTarget` (via the same `wantsTarget()` the chrome mapping reads, so
 the chart bypass reaches emitters for free); layers only read. The
 resolve pass shares the white-point and desaturation objects, so inline
@@ -96,7 +90,7 @@ and fullscreen can never disagree.
 ## Exposure — two slots this class does not write
 
 `uExposure` and `uOmegaSummationArcsec2` are the `emitterUniforms` slots
-`HdrPipeline` never writes: both are instrument-derived, so
+the pipeline never writes: both are instrument-derived, so
 `ExposureController` owns them along with the three magnitude bounds
 (`uLimitMag`, `uThresholdMag`, `uCullMag`). `exposure/README.md` is the
 contract, and it is where the per-frame adaptation measurement lives too.
@@ -158,26 +152,19 @@ canvas — it binds its own chain of targets and restores, after the resolve
 so the measurement never delays the frame it measured
 (`exposure/reduction/README.md`).
 
-**The target's depth format is load-bearing in both renderers, and the
-two backends reach it by OPPOSITE routes.** The local depth pass
-derives its precision guarantee from the format
-(`../local-depth/bracket/README.md` § Precision analysis): the WebGL2
-slice-ratio bound assumes 24 bits, the WebGPU K = 1 bound assumes
-float32.
+**The target's depth format is load-bearing, and it has to be stated
+rather than inferred.** The local depth pass derives its precision
+guarantee from the format (`../local-depth/bracket/README.md`
+§ Precision analysis): the K = 1 bound assumes float32.
 
-- **WebGL2 infers it.** `depthBuffer: true`, `stencilBuffer: false`,
-  no depth *texture* gives `DEPTH_COMPONENT24` (three's
-  `getInternalDepthFormat`). A 16-bit renderbuffer would coarsen every
-  close-range z-test 256×.
-- **WebGPU must be TOLD.** `reversedDepthBuffer` makes three pick
-  `depth32float` for the CANVAS only; for a render target it
-  auto-creates a `depth24plus` depth texture regardless, which is
-  fixed-point and makes a single bracket wrong by ~262 AU at Neptune's
-  ring. So `WebGpuHdrPipeline` attaches an **explicit `FloatType`
-  `DepthTexture`** and throws unless the target resolves to one —
-  do not "simplify" that away on the strength of the WebGL2 line above.
+`reversedDepthBuffer` makes three pick `depth32float` for the CANVAS
+only; for a render target it auto-creates a `depth24plus` depth texture
+regardless, which is fixed-point and makes a single bracket wrong by
+~262 AU at Neptune's ring. So `WebGpuHdrPipeline` attaches an **explicit
+`FloatType` `DepthTexture`** and throws unless the target resolves to
+one.
 
-Adding stencil breaks both: it diverts WebGPU to
+Adding stencil breaks it: it diverts the target to
 `depth32float-stencil8`, an optional device feature.
 
 The target is `RGBA16F` plus its `RG16F` statistic attachment and a second
@@ -211,10 +198,9 @@ operator's inverse so the resolve returns them as authored.
 site wants depends on how its shader emits colour, and the mapping is
 only correct while the operator it inverts is running.
 
-`HdrPipeline.syncMode` is what drives that second point: every state
-change (the constructor's float-support check, both dev switches, the
-chart flip) routes through it, and it re-authors every registered colour
-when the operator parks.
+The pipeline's `syncMode` is what drives that second point: every state
+change (both dev switches, the chart flip) routes through it, and it
+re-authors every registered colour when the operator parks.
 
 ## Chart mode — full bypass
 
@@ -232,36 +218,25 @@ space, which makes three recompile every built-in material's program
 is a one-time hitch on the chart transition, which already swaps
 materials anyway.
 
-## Fallback — no float-renderable buffer (WebGL2 only)
-
-On the WebGL2 build, `supported` is false when neither
-`EXT_color_buffer_float` nor `EXT_color_buffer_half_float` is present.
-The instance is then inert: `bind()` binds the canvas and `resolve()`
-no-ops. **On WebGPU this branch does not exist** — float render targets
-are core, `supported` is constant true on the twin pipeline
-(`../webgpu/hdr/README.md`), and the inline-operator path survives there
-for **chart mode alone**, never as a hardware tier.
+## The inline operator — chart mode's path
 
 **A converted layer applies the operator itself whenever `uHdrTarget` is
 0** — a physical luminance reaching the canvas with no operator would just
-blow out. That is why the operator lives in a chunk rather than inside the
-fullscreen shader, the same two-consumers strategy as the extinction
-prepass (`../star-pipeline/extinction/README.md` § The prepass cache).
-Two things still reach it: this WebGL2 fallback, and **chart mode** on
-either backend — which is the reason the inline path cannot simply be
-deleted now that the seam has no switch.
+blow out. That is why the operator lives in a shared helper rather than
+inside the resolve alone, the same two-consumers strategy as the
+extinction prepass (`../star-pipeline/extinction/README.md` § The prepass
+cache). **Chart mode** is what reaches it, and float render targets being
+core to the shipped backend is why nothing else can.
 
-**This path is not a calibrated build, and that is why nothing can select
-it.** A point source is fine — same `L`, same operator, same exposure, and the
-**peak matches exactly**. A *diffuse* source is not: there is no attachment 2
-and no pass to convolve it, so the extended-source anchor is gone entirely and
-both volumetric emitters revert to the pixel solid angle
-(`emission/README.md` § Extended sources), which puts the band and the Local
-Group **several magnitudes faint**. There used to be a dev setter that parked
-the whole frame here; it was retired precisely because "the comparison path"
-and "a differently-calibrated scene" cannot be the same switch, and a release
-note describing it as what older hardware gets was describing a defect as a
-feature.
+**This path is not a calibrated build.** A point source is fine — same
+`L`, same operator, same exposure, and the **peak matches exactly**. A
+*diffuse* source is not: there is no attachment 2 and no pass to convolve
+it, so the extended-source anchor is gone entirely and both volumetric
+emitters revert to the pixel solid angle (`emission/README.md`
+§ Extended sources), which puts the band and the Local Group **several
+magnitudes faint**. There used to be a dev setter that parked the whole
+frame here; it was retired precisely because "the comparison path" and "a
+differently-calibrated scene" cannot be the same switch.
 
 Three further differences, all downstream of the operator and all minor
 against that one:
@@ -280,12 +255,10 @@ against that one:
 
 Every physical emitter carries luminance in the § Unit scale — stars (H3), the
 Milky Way (H4), the planet mesh / rings / airlight / reflected glare (H5), the
-Local Group glow — so the target is the path. The one thing that can take it
-away is the WebGL2 hardware verdict above; on WebGPU nothing can. There is no
-`HDR_DEFAULT_ENABLED` and no setter: `wantsTarget()` is
-`supported && !chart` on both pipelines, and `hdr-pipeline.test.ts` /
-`hdr-pipeline-webgpu.test.ts` pin that shape so a third input has to be a
-deliberate edit.
+Local Group glow — so the target is the path, and nothing can take it away.
+There is no `HDR_DEFAULT_ENABLED` and no setter: `wantsTarget()` is
+`supported && !chart`, and `hdr-pipeline-webgpu.test.ts` pins that shape so a
+third input has to be a deliberate edit.
 
 - **The target allocates lazily**, on first `bind()` that wants it — a
   full drawing-buffer RGBA16F plus its RG16F statistic attachment, its
