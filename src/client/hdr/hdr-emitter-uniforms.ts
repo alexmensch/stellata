@@ -10,10 +10,8 @@ import { pixelSolidAngleArcsec2 } from './emission/emission-pure';
 import { BASE_EPOCH_EXPOSURE, DEFAULT_SUMMATION_ARCSEC2 } from './exposure/exposure-epoch';
 
 /** `uHdrTarget` is the branch: 0 means the fragment lands straight on the
- *  canvas and the emitter applies the operator itself. `uExposure` is the
- *  one exposure control, written by `FilterController` from the magnitude
- *  limit. The resolve pass shares the same white-point and desaturation
- *  objects, so the inline path and the fullscreen path cannot disagree. */
+ *  canvas and the emitter applies the operator itself (README.md § The
+ *  inline operator). */
 export interface HdrEmitterUniforms {
   uHdrTarget: THREE.IUniform<number>;
   uWhitePoint: THREE.IUniform<number>;
@@ -23,32 +21,10 @@ export interface HdrEmitterUniforms {
   uOmegaSummationArcsec2: THREE.IUniform<number>;
 }
 
-/** Exhaustive both ways: `Record<keyof HdrEmitterUniforms, true>` refuses
- *  a key that is not a slot AND a slot that is not a key. A one-directional
- *  list would let a new slot compile while `pickHdrEmitterUniforms` dropped
- *  it, and the emitter would read `undefined` for that uniform. */
-const HDR_EMITTER_UNIFORM_SET: Record<keyof HdrEmitterUniforms, true> = {
-  uHdrTarget: true,
-  uWhitePoint: true,
-  uHighlightDesat: true,
-  uExposure: true,
-  uOmegaPxArcsec2: true,
-  uOmegaSummationArcsec2: true,
-};
-
-export const HDR_EMITTER_UNIFORM_KEYS = Object.keys(
-  HDR_EMITTER_UNIFORM_SET,
-) as (keyof HdrEmitterUniforms)[];
-
-/** Pick the seam's slots out of a wider shared-uniforms object, keeping
- *  each `{ value }` slot's identity — an emitter that copied the values
- *  would tone-map inline into an already-tone-mapped target the moment the
- *  pipeline rewrote `uHdrTarget`. Mirrors `pickPerceptualDiscUniforms`;
- *  used by the planet layers, which read the shared map rather than
- *  holding the pipeline. */
-export function pickHdrEmitterUniforms<T extends HdrEmitterUniforms>(
-  src: T,
-): HdrEmitterUniforms {
+/** Keeps each `{ value }` slot's identity — an emitter that copied the
+ *  values would tone-map inline into an already-tone-mapped target the
+ *  moment the pipeline rewrote `uHdrTarget`. */
+export function pickHdrEmitterUniforms(src: HdrEmitterUniforms): HdrEmitterUniforms {
   return {
     uHdrTarget: src.uHdrTarget,
     uWhitePoint: src.uWhitePoint,
@@ -59,13 +35,9 @@ export function pickHdrEmitterUniforms<T extends HdrEmitterUniforms>(
   };
 }
 
-/** `uHdrTarget` seeds to 0 and the pipeline's constructor rewrites it
- *  before the first frame, as it does `uWhitePoint` and `uHighlightDesat`
- *  (both live dev knobs, rewritten by `syncMode`). `uExposure` seeds at
- *  the base epoch; `ExposureController` owns every later write
- *  (`exposure/README.md`), and `uOmegaSummationArcsec2` the same way.
- *  `uOmegaPxArcsec2` seeds at the default FOV over a 1000 px viewport and
- *  is rewritten by `setPixelSolidAngle` on every FOV / resize change. */
+/** Seeds only: the pipeline's constructor rewrites the operator slots
+ *  before the first frame, and the writers of the rest are README.md
+ *  §§ Unit, Exposure. */
 export function makeHdrEmitterUniforms(): HdrEmitterUniforms {
   return {
     uHdrTarget: { value: 0 },

@@ -1,6 +1,6 @@
-// The HDR seam on WebGPU: ../../hdr/hdr-pipeline.ts's target, summation,
-// resolve and dev-switch surface over TSL materials and a requested
-// Depth32Float reversed-z depth attachment. See README.md.
+// The HDR pipeline: the MRT target, summation, resolve and dev-switch
+// surface over TSL materials and a requested Depth32Float reversed-z
+// depth attachment. See ../../hdr/README.md and README.md.
 
 import {
   DataTexture, DepthTexture, FloatType, HalfFloatType, LinearFilter,
@@ -49,7 +49,6 @@ export class WebGpuHdrPipeline implements HdrSeam {
   private summation: WebGpuSummationPass | null = null;
   private resolveQuad: QuadMesh | null = null;
   private resolveMaterial: NodeMaterial | null = null;
-  private hdrTexNode: ReturnType<typeof texture> | null = null;
   private readonly whitePointNode = uniform(tonemapWhitePoint());
   private readonly desatNode = uniform(HIGHLIGHT_DESAT);
   private readonly tonemapEnabledNode = uniform(1);
@@ -79,17 +78,15 @@ export class WebGpuHdrPipeline implements HdrSeam {
     return () => this.mrtLayers.delete(layer);
   }
 
-  /** Bind the target the scene draws into. The render pass's own clear
-   *  writes every attachment — WebGPU has no drawBuffers gate to hold
-   *  open, so no explicit clear call is needed (README.md). */
+  /** The render pass's own clear writes every attachment, so the
+   *  statistic and diffuse attachments read zero, never stale. */
   bind(): void {
-    const target = this.wantsTarget() && this.ensureResources() ? this.rt : null;
-    this.renderer.setRenderTarget(target);
+    if (this.wantsTarget()) this.ensureResources();
+    this.renderer.setRenderTarget(this.wantsTarget() ? this.rt : null);
   }
 
   /** Convolve the diffuse attachment, then tone-map the target onto the
-   *  canvas. Must pair with every `bind()` — same contract as the WebGL
-   *  seam's resolve. */
+   *  canvas. Must pair with every `bind()`. */
   resolve(): void {
     if (!this.wantsTarget() || this.rt === null || this.summation === null) return;
     if (this.summationOn && this.extraAttachments) {
@@ -187,7 +184,7 @@ export class WebGpuHdrPipeline implements HdrSeam {
 
   /** Frame-cost lever — the finer split of the summation row: keep the
    *  downsample running but collapse the resolve's kernel to one centre tap
-   *  of its output (../../hdr/hdr-pipeline.ts). */
+   *  of its output (../../hdr/README.md § Dev switches). */
   setSummationTapsEnabled(on: boolean): void {
     this.summationTapsOn = on;
   }
@@ -222,8 +219,7 @@ export class WebGpuHdrPipeline implements HdrSeam {
     clearChromeBindings();
   }
 
-  /** Chart mode is the only path off the target: float render targets are
-   *  core WebGPU, so no capability verdict enters. */
+  /** Chart mode is the only path off the target. */
   private wantsTarget(): boolean {
     return !this.chart;
   }
@@ -232,8 +228,8 @@ export class WebGpuHdrPipeline implements HdrSeam {
     return this.wantsTarget() && this.extraAttachments;
   }
 
-  private ensureResources(): boolean {
-    if (this.rt !== null) return true;
+  private ensureResources(): void {
+    if (this.rt !== null) return;
     this.renderer.getDrawingBufferSize(this.size);
     const rt = new RenderTarget(this.size.x, this.size.y, {
       count: this.extraAttachments ? HDR_ATTACHMENT_COUNT : 1,
@@ -265,14 +261,12 @@ export class WebGpuHdrPipeline implements HdrSeam {
     this.summation = new WebGpuSummationPass(this.renderer, diffuseSeed);
     this.buildResolve(this.rt.textures[0]);
     this.syncMode();
-    return true;
   }
 
   private buildResolve(hdrAttachment: Texture): void {
     const summation = this.summation;
     if (summation === null) return;
-    this.hdrTexNode = texture(hdrAttachment);
-    const hdrTexNode = this.hdrTexNode;
+    const hdrTexNode = texture(hdrAttachment);
     const material = new NodeMaterial();
     material.name = 'hdr-resolve-tsl';
     material.fragmentNode = Fn(() => {
@@ -319,9 +313,8 @@ export class WebGpuHdrPipeline implements HdrSeam {
       this.statisticWrites && !this.statisticParked ? 1 : 0;
   }
 
-  /** Fan the seam's state out exactly as the WebGL syncMode does — chrome
-   *  mapping, emitter branch, operator knobs — plus the WebGPU-only
-   *  output-struct swap. */
+  /** Fan the seam's state out: chrome mapping, emitter branch, operator
+   *  knobs, and the output-struct swap. */
   private syncMode(): void {
     const targetActive = this.wantsTarget();
     const whitePoint = tonemapWhitePoint(this.drMag);
@@ -347,6 +340,5 @@ export class WebGpuHdrPipeline implements HdrSeam {
     this.resolveMaterial = null;
     // QuadMesh's geometry is a module-level shared triangle — not ours.
     this.resolveQuad = null;
-    this.hdrTexNode = null;
   }
 }
