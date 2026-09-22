@@ -26,7 +26,7 @@ export const POSE_CHANGE_EPS = 1e-4;
 /** The pose's only intrinsic length: camera to orbit target. Every threshold
  *  here is a fraction of it. OBSERVE has no orbit pivot but still carries one
  *  — the serialised look pin a parsec down the forward axis
- *  (`../../camera/observe/README.md`) — so this is non-zero in both modes. */
+ *  (`../../../camera/observe/README.md`) — so this is non-zero in both modes. */
 export function orbitRadius(cam: Vec3Like, tgt: Vec3Like): number {
   return Math.hypot(cam.x - tgt.x, cam.y - tgt.y, cam.z - tgt.z);
 }
