@@ -310,9 +310,9 @@ export function recordCountRefusal(a: number | null, b: number | null): string |
  * This is the condition the readback guard below turns on, and it is a
  * property of the vantage rather than of the run: earth is bimodal in all 23
  * archived WebGPU dwells that carry counters, and mw120, sol, mw50 and lg in
- * none of their 109. A WebGL2 dwell has no queue to count on and records
- * nothing, which reads here as a single class — correctly, since that backend
- * supplies no GPU stream for the guard to protect.
+ * none of their 109. An archived WebGL2 dwell had no queue to count on and
+ * recorded nothing, which reads here as a single class — correctly, since
+ * that boot supplied no GPU stream for the guard to protect.
  *
  * A run written before the counters existed carries no field at all rather
  * than a null, and 31 of the 257 archived dwells are such runs — 16 of them

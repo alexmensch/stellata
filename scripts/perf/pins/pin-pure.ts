@@ -101,7 +101,7 @@ export interface PinRow {
   readonly frames?: number;
   readonly method: string;
   readonly wall: PinClock & { readonly vsyncClamped: boolean };
-  /** The WebGPU frame-sample stream where it was sound; null on WebGL2. */
+  /** The frame-sample stream where it was sound; null where it was not. */
   readonly gpu: PinClock | null;
   readonly gpuFloor: FrameFloor | null;
   /** The band gates `plain` here rather than `gpu.p50`. Absent on a pin taken

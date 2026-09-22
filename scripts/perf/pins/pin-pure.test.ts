@@ -605,7 +605,7 @@ describe('compareToPin', () => {
     it('keeps the frame row on the wall clock it always carries when its stream is one-sided', () => {
       // Only the compute row has no second clock to fall back to; the frame
       // substitutes wall rather than blanking, which is the pre-compute
-      // behaviour and what every WebGL2 row reads.
+      // behaviour and what every archived WebGL2 row reads.
       const lostStream = scenario('sol', 'webgpu', dwell(stats(30.1), null));
       const row = compareToPin(pinOf([SOL_GPU]), file([lostStream])).rows[0];
       expect([row.verdict, row.metric]).toEqual(['ungated', 'wall-p50']);
