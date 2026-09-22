@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { beforeAll, describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 
 import { DEFAULT_ROW_INDEX_MAP } from '../../catalog-lookup';
@@ -305,10 +305,12 @@ if (!BRIDGE_FIXTURES_READY) {
 }
 
 describe.skipIf(!BRIDGE_FIXTURES_READY)('the same-as bridge, over the built catalogue', () => {
-  const map = JSON.parse(
-    readFileSync(DEFAULT_ROW_INDEX_MAP, 'utf-8'),
-  ) as CatalogRowIndexMap;
-  const bridges = syntheticGaiaBridges(loadStoredEdges());
+  let map: CatalogRowIndexMap;
+  let bridges: ReturnType<typeof syntheticGaiaBridges>;
+  beforeAll(() => {
+    map = JSON.parse(readFileSync(DEFAULT_ROW_INDEX_MAP, 'utf-8')) as CatalogRowIndexMap;
+    bridges = syntheticGaiaBridges(loadStoredEdges());
+  });
 
   it('reaches at least one source this catalogue admits', () => {
     const admitted = [...bridges].filter(([, g]) => map.byGaia[g] !== undefined);
