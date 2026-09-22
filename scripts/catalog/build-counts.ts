@@ -225,6 +225,10 @@ export interface BuildCounts {
    *  contradicts its own parallax evidence (μ¹ Sco's B-J placement of
    *  a RUWE-corrupted source at 1.7 kpc) — members keep their own. */
   systemCoherenceAnchorInconsistent: number;
+  /** Member-anchor wins vetoed because the member displacing the pair
+   *  primary carries no trusted fit as precise as the primary's — tier
+   *  ranks provenance, and the placement moved is the primary's. */
+  systemCoherenceMemberAnchorPrecisionVetoed: number;
   /** Pair rows in multiples.tsv scanned by the companion-promotion pass
    *  (excludes standalone rows). */
   companionRowsScanned: number;
@@ -341,6 +345,14 @@ export interface BuildCounts {
   /** Existing records a pair row resolved to that took the anchor's
    *  designation constellation, carrying none of their own. */
   companionExistingDesigConFromAnchor: number;
+  /** Existing records whose own 5p solution Gaia rejects, re-curated onto the
+   *  pair's measured geometry, the anchor's systemic velocity and the curated
+   *  brightness (Sirius B once a magnitude floor admits it in its own right). */
+  companionExistingMemberRecurated: number;
+  /** Synthetic mints refused because a stored same-as edge bridges the key to
+   *  a Gaia source the catalogue already holds — without it one physical star
+   *  ships twice. Ratchets DOWN. */
+  companionExistingViaSameasBridge: number;
   /** Catalog records carrying a multiples.tsv component designation
    *  (`cl`/`cp` on their SearchEntry) — the WDS root's naming anchor plus
    *  the letter, which both the display-name composer and the

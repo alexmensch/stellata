@@ -40,6 +40,26 @@ export function isValidDesignation(d: string): boolean {
  *  `catalog-row-index-map.json` `bySynth`); stripped to the `synth:` key. */
 export const SYNTH_RUNTIME_PREFIX = 'synth-';
 
+/** Runtime synthetic id → the Gaia DR3 source_id a stored same-as edge calls
+ *  the same physical star. Companion promotion consults it so a member the
+ *  catalogue already holds under that source is recognised rather than minted
+ *  a twin — the row's own cells are empty, so nothing else can see the link. */
+export function syntheticGaiaBridges(edges: SameasEdge[]): Map<string, string> {
+  const bridges = new Map<string, string>();
+  const add = (synth: string, gaia: string): void => {
+    if (!synth.startsWith('synth:') || !gaia.startsWith('gaia_dr3:')) return;
+    bridges.set(
+      `${SYNTH_RUNTIME_PREFIX}${synth.slice('synth:'.length)}`,
+      gaia.slice('gaia_dr3:'.length),
+    );
+  };
+  for (const { a, b } of edges) {
+    add(a, b);
+    add(b, a);
+  }
+  return bridges;
+}
+
 export interface StarDesignationFields {
   isSol: boolean;
   hip: number | null;
