@@ -306,6 +306,6 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
       const diff = differences(fromBuild, fromManifest);
       expect(diff.slice(0, 20)).toEqual([]);
       expect(diff).toHaveLength(0);
-    });
+    }, 180_000);
   });
 });

@@ -168,7 +168,7 @@ close.
 
 Measured over the built catalog at a Sol vantage, 50° FOV and 1000 px
 (`phys-size-elision-catalog.test.ts`, which pins every figure here): the
-window is 7.12 pc and admits **163 of 983,069 records**; the other
+window is 7.12 pc and admits **163 of 983,068 records**; the other
 982,906 are gated, and the widest disc among them subtends 2.14e-4 px —
 93× inside the 0.0199 px bound, so the worst exponent movement in the
 whole gated population is 2.9e-7, about 8,600× inside the tolerance. That

@@ -109,7 +109,7 @@ primaries' own additions pin at zero: an admitted group falling through to its
 Gaia id means the admission rule leaked, while a magnitude row doing so is the
 term working. The two counts must not be read against each other.
 
-## The record total the floor implies — 983,069, measured
+## The record total the floor implies — 983,068, measured
 
 The catalogue is not the magnitude pull. It is the pull's `V <= 11` population
 **unioned** with the membership manifest and deduped on `source_id`, then put
@@ -123,9 +123,9 @@ committed files, then measured on a real floor-11 build, 2026-09-20:
 | in both | 327,701 | 327,701 |
 | source_id union | 973,222 | 973,222 |
 | manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 |
-| companions promoted to their own record | + 16,226 | **+ 14,657** |
+| companions promoted to their own record | + 16,226 | **+ 14,656** |
 | rows parked, so never a record | − 10,429 | **− 10,748** |
-| **records** | ~984,957 | **983,069** |
+| **records** | ~984,957 | **983,068** |
 
 The manifest side reproduced exactly: `build:membership` at the floor writes
 979,160 rows and every primaries-side count holds. Both build-side terms
@@ -134,12 +134,15 @@ today's 388,071 records.
 
 **Promotion is not carried forward unchanged**, which is what the projection
 assumed on the ground that WDS drives it and the deep population is not what
-WDS describes. It falls to 14,657, because promotion is gated on the secondary
-not already holding a record: `already-in-catalog` rises 1,668 → 3,317 as the
+WDS describes. It falls to 14,656, because promotion is gated on the secondary
+not already holding a record: `already-in-catalog` rises 1,668 → 3,324 as the
 deep population turns out to *contain* stars the build used to promote under a
 synthetic id. A deeper floor converts promoted companions into ordinary records
 rather than adding to them. Two of those synthetic classes then match only
-retired sids and need `../../../../data/sid/reinstatements.tsv` rows.
+retired sids and need `../../../../data/sid/reinstatements.tsv` rows, and seven
+rows reach the record only through a stored same-as edge
+(`../../companions/README.md` § Same-as bridge to an already-admitted
+source).
 
 **Parking scaled close to the projection**, against today's 5,087:
 
@@ -178,12 +181,17 @@ silently as a float64.
 
 **The manifest side is additive; the record side is not.** Measured sid-keyed
 against a floor-off build of the same tree
-(`../../validate/README.md` § Additive-mode record parity), the flip moves
+(`../../validate/README.md` § Additive-mode record parity), the flip adds
+595,002 sids, drops none, puts no sid on two records, and moves
 **about 3,000 of the 388,071 records that were already there** — `vx/vy/vz`
-3,085, `x/y/z` 3,035, `absmag` 2,857, `physRadius` 2,856, `ci` 2,408, `flags`
-1,905, the companion 1,690, `multiplicityStatus` 1,139, `lumClass` 1,101,
-`spectClass` 590, the display name 3. Some are large: sid 1406 moves about
-46 pc.
+3,063/3,060/3,059, `x/y/z` 3,010/3,009/3,009, `physRadius` 2,852, `absmag`
+2,839, `ci` 2,403, `flags` 1,904, the companion 1,689, `multiplicityStatus`
+1,140, `lumClass` 1,102, `spectClass` 591, the display name 3, one
+`gaiaSourceId`. Some are large: sid 1406 moves about 46 pc.
+
+**Nothing drops** because the five retirements below are DECLARED, so the
+same-tree floor-off baseline honours them too — all five sids are absent from
+both builds. An undeclared drop would still fail.
 
 The cause is that three build stages read the record SET, not the manifest —
 companion promotion, anchor-flux conservation
@@ -203,11 +211,12 @@ Two identity consequences, both handled in `data/sid/`:
   has something to promote against again. Both resume their original sid
   through `data/sid/reinstatements.tsv`.
 
-**One object is drawn twice** and is not resolved here: sid 232194,
-`synth:20450+1244-B`, whose same-as bridge names a Gaia source the deep
-population now admits as its own record. The promotion's already-in-catalog
-test matches on the row's own identifiers and cannot see the bridge, so both
-records ship — `stellata-cns.18`.
+**No object is drawn twice.** sid 232194, `synth:20450+1244-B`, was: its
+same-as bridge names a Gaia source the deep population admits as its own
+record, and the promotion's already-in-catalog test matches on the row's own
+identifiers. Promotion now reads the stored edges
+(`../../companions/README.md` § Same-as bridge to an already-admitted
+source), which refuses that mint and six more.
 
 ### What that costs on the wire
 
@@ -217,7 +226,7 @@ from a ratio:
 
 | | today | at `V <= 11` |
 |---|---|---|
-| records | 388,071 | 983,069 |
+| records | 388,071 | 983,068 |
 | `catalog.bin` raw | 37.0 MiB | 93.8 MiB |
 | `gzip -9` | 24.3 MiB | **59.5 MiB** |
 | brotli-5 | 23.1 MiB | **56.7 MiB** |

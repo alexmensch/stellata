@@ -275,7 +275,7 @@ limit). Two things follow from the ramp, and both are the point:
   which is a near-constant perceptual step (a magnitude is ~2.5× the count,
   so a doubling is ~0.75 mag). Past the 16 MiB ceiling each chunk is a flat
   ~168k records instead, ~0.3 mag apiece at this density. Measured,
-  cumulative, today's 983,069-record build; the build prints this table's
+  cumulative, today's 983,068-record build; the build prints this table's
   `records` and `faintest V` columns on every run:
 
   | chunk | raw | gz | cumulative gz | records | faintest V |
@@ -288,7 +288,7 @@ limit). Two things follow from the ramp, and both are the point:
   | 5 | 16 MiB | 11.19 MB | 33.37 MB | 492,757 | 10.32 |
   | 6 | 16 MiB | 11.16 MB | 44.53 MB | 660,530 | 10.63 |
   | 7 | 16 MiB | 11.15 MB | 55.68 MB | 828,302 | 10.87 |
-  | 8 | 14.76 MiB | 10.04 MB | 65.72 MB | 983,069 | 32.21 |
+  | 8 | 14.76 MiB | 10.04 MB | 65.72 MB | 983,068 | 32.21 |
 
   The last row's faintest V is an LMC-distance record at the 50 kpc cutoff,
   not a bad sort — the column is each chunk's faintest, so it tracks the
