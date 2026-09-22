@@ -211,8 +211,10 @@ one rung (floor `MIN_TEXTURE_CAP`, 2048), then releases every resident map
 wider than the new cap at once rather than waiting for selection to replace
 it. Each released map stays recorded `missing`: the fixed-width relief and
 ring maps have no narrower rung to select instead, so a forgotten key would
-be fetched and decoded again only to be refused. This is the one protection for the ON-screen set, which the budget cannot
-touch. It cannot see a tab the browser kills under memory pressure without an
+be fetched and decoded again only to be refused. It steps at most once per
+frame: one burst of failed allocations arrives as several reports, and each
+stepping would take both limits to their floors at once. The step-down is
+the one protection for the ON-screen set, which the budget cannot touch. It cannot see a tab the browser kills under memory pressure without an
 error, which is why the fixed budget is sized low rather than left to it.
 
 **Eviction is cheap to undo.** A released map re-fetches from the HTTP cache,

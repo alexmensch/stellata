@@ -265,6 +265,7 @@ export class PlanetMeshLayer {
   /** The texture cap and the resident budget; `stepDownTextureLimits` lowers
    *  both. */
   private limits: TextureLimits;
+  private steppedSinceUpdate = false;
   private readonly entries = new Map<number, MeshEntry>();
   private readonly textures = new Map<string, TextureState>();
   /** Frames are counted only to answer "was this drawn just now" during
@@ -410,6 +411,7 @@ export class PlanetMeshLayer {
    *  motion need no extra hooks. `t` is the model clock (getT()) —
    *  IAU spin runs on it like binary orbits. */
   update(camera: THREE.PerspectiveCamera, t: number): void {
+    this.steppedSinceUpdate = false;
     // Chart mode inks the bodies as flat discs (chart-mode/README.md);
     // a lit photographic sphere has no place on paper.
     this.group.visible = this.field.drawn && !this.field.monochrome;
@@ -708,8 +710,10 @@ export class PlanetMeshLayer {
 
   /** textures/README.md § Staying inside VRAM. */
   stepDownTextureLimits(): void {
+    if (this.steppedSinceUpdate) return;
     const next = steppedTextureLimits(this.limits);
     if (next === null) return;
+    this.steppedSinceUpdate = true;
     this.limits = next;
     const oversized: string[] = [];
     for (const [key, state] of this.textures) {
@@ -1212,6 +1216,7 @@ export class PlanetMeshLayer {
     this.shownRung.clear();
     this.requestedRung.clear();
     this.rungOf.clear();
+    this.steppedSinceUpdate = false;
     this.stampMaterial.dispose();
     this.geometry.dispose();
     this.placeholder.dispose();

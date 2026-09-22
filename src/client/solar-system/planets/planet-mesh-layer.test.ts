@@ -415,6 +415,19 @@ describe('an out-of-memory report steps the limits down', () => {
     expect(h.pendingFor('earth-normal')).toBe(false);
   });
 
+  it('steps once for a burst of reports between two frames', () => {
+    const h = harness(['Europa']);
+    h.layer.stepDownTextureLimits();
+    h.layer.stepDownTextureLimits();
+    h.frame([3000]);
+    expect(h.pendingFor('europa-4096')).toBe(true);
+    expect(h.pendingFor('europa-2048')).toBe(false);
+
+    h.layer.stepDownTextureLimits();
+    h.frame([3000]);
+    expect(h.pendingFor('europa-2048')).toBe(true);
+  });
+
   it('stops lowering the cap at its floor', () => {
     const h = harness(['Europa'], MIN_TEXTURE_CAP);
     h.layer.stepDownTextureLimits();
