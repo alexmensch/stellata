@@ -17,6 +17,7 @@ function base(over: Partial<FocalRideInputs> = {}): FocalRideInputs {
     lastAppliedPert: V(0, 0, 0),
     liveLocal: V(0, 0, 0),
     target: V(0, 0, 0),
+    cameraPosition: V(0, 0, 0),
     observeMode: false,
     ...over,
   };
@@ -72,22 +73,33 @@ describe('focalRideStep', () => {
     expect([s.dx, s.dy, s.dz]).toEqual([0, 0, 0]);
   });
 
-  it('seed frame in observe mode: no re-snap — target is the look pin, not the star', () => {
-    // Cold-load observe URL restore: the first-ever ride frame runs with
-    // mode already observe, where observeUpdateTarget parks target one
-    // parsec ahead of the camera. Re-snapping against that target would
-    // translate the star-parked camera a full parsec off the focal star.
+  it('seed frame in observe mode measures from the camera, never the look pin', () => {
+    // The look pin's parsec must not reach the delta.
     const s = focalRideStep(base({
       rideFocalIdx: null,
       focalPert: V(3, -1, 4),
       liveLocal: V(3, -1, 4),
       target: V(4, -1, 4), // camera + 1 pc forward
+      cameraPosition: V(3, -1, 4),
       observeMode: true,
     }));
     expect([s.dx, s.dy, s.dz]).toEqual([0, 0, 0]);
     // Baseline still resyncs so the steady-state ride takes over cleanly.
     expect([s.px, s.py, s.pz]).toEqual([3, -1, 4]);
     expect(s.rideFocalIdx).toBe(1);
+  });
+
+  it('seed frame in observe mode repairs a park taken before the orbit was known', () => {
+    // see ../../binaries/README.md § Focal-frame ride
+    const s = focalRideStep(base({
+      rideFocalIdx: null,
+      focalPert: V(3, -1, 4),
+      liveLocal: V(3, -1, 4),
+      target: V(1, 0, 0), // look pin, parsec-ahead and irrelevant
+      cameraPosition: V(0, 0, 0), // parked on the unperturbed baseline
+      observeMode: true,
+    }));
+    expect([s.dx, s.dy, s.dz]).toEqual([3, -1, 4]);
   });
 
   it('warp active: never translates, only resyncs the baseline', () => {

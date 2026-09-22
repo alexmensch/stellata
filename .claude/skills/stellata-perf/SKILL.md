@@ -21,10 +21,15 @@ table. Reference: `scripts/perf/README.md`. Interpretation authority:
 table). Tier 0 — the diff reaches no per-frame code — runs nothing and
 argues reachability in prose; do not arm for it. Tier 1 — per-frame code
 touched, draw counts and pass structure unchanged — is `--mode dwell
---scenario mw120,sol --backend webgpu --against-pin scripts/perf/pins/<slug>.json`,
+--scenario mw120,sol --backend webgpu --frames 960
+--against-pin scripts/perf/pins/<slug>.json`,
 two contexts and ~4 min, read against the committed pin (whose run opens
 with those two contexts, so the rows compare at equal position; the eight
-pin rows it does not visit print as not measured and fail nothing). Tier
+pin rows it does not visit print as not measured and fail nothing).
+**Match `--frames` to the count the pin's own rows carry** — today 960,
+readable off any row — or the run refuses every row as two dwell lengths
+rather than marking one, and the arm is spent for nothing. A mark still does
+not stand on one run (`RELEASING.md` § What a mark means). Tier
 2 — passes, buffers, draw counts, the catalogue
 or the instrument — is the full cold pin below. Arming for a sweep the
 diff cannot justify is the cost this tiering exists to stop: it spends

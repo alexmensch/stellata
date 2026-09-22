@@ -121,7 +121,7 @@ themselves.
 (`loaders/README.md` § Progressive catalog load). Wave 1 ends at first
 paint, on the catalogue's FIRST chunk; wave 2 waits on
 `kinds.star.ready` — the complete record set plus the search index.
-Three things follow, and each has cost a defect:
+Four things follow, and each has cost a defect:
 
 - **A wave-1 consumer sees a prefix, not the catalogue.** Anything
   walking records, or reading a table built from them, either bounds
@@ -141,6 +141,17 @@ Three things follow, and each has cost a defect:
 - **Wave 2 yields a frame between steps.** The scene is live by then,
   so a run of catalogue-wide table builds freezes it for their sum
   unless each hands the render loop a frame.
+- **A wave-1 read of a wave-2-backed value returns a plausible zero, not
+  an error**, and that is the defect shape this split keeps producing.
+  An unattached optional field coalesces (`binaryOrbitField?.…  ?? false`
+  reports "no perturbation" and "not attached" identically), an unfilled
+  buffer slot reads `(0,0,0)`, and a still-filling index answers off its
+  prefix. Nothing throws, so the wrong value is *kept* and surfaces later
+  somewhere unrelated — a camera parked on a bare baseline, a pin that
+  disengages on the next mode exit. Sampling such a value in wave 1 means
+  owning its reconciliation when the real one lands; a delta-tracking
+  consumer cannot, since it only ever sees CHANGES. Making this a contract
+  rather than a habit is `stellata-cns.16`.
 
 ## Public surface of `Stellata`
 

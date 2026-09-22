@@ -1863,6 +1863,7 @@ export class Stellata implements FrameAnchor {
       lastAppliedPert: this._lastAppliedPert,
       liveLocal: live,
       target: this.controls.target,
+      cameraPosition: this.camera.position,
       observeMode: this.focus.getCameraMode() === 'observe',
     });
     this._rideFocalIdx = step.rideFocalIdx;
@@ -1898,9 +1899,7 @@ export class Stellata implements FrameAnchor {
   // is what the camera / target / transition caches translate by, so the
   // object stays glued to controls.target, pan offsets survive, and the
   // camera rides the whole trajectory at any fast-forward rate. Seed
-  // frames (focus change, warp) resync the baseline; the observe-mode
-  // guard in focalRideStep suppresses the seed target re-snap, where
-  // target is the parsec-ahead look pin rather than on the object.
+  // frames (focus change, warp) resync the baseline.
   private applyMovingFocalRide(): void {
     const focused = this.focus.getFocusedTarget();
     if (focused === null || !KIND_TRAITS[focused.kind].moving) {
@@ -1921,6 +1920,7 @@ export class Stellata implements FrameAnchor {
       lastAppliedPert: this._movingRideLast,
       liveLocal: live,
       target: this.controls.target,
+      cameraPosition: this.camera.position,
       observeMode: this.focus.getCameraMode() === 'observe',
     });
     this._movingRideIdx = step.rideFocalIdx;

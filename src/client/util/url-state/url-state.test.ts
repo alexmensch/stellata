@@ -241,6 +241,7 @@ function makeStatefulStellata() {
     vectorToCloud: null as number | null,
     pois: [] as Target[],
     mode: 'navigate' as 'navigate' | 'observe',
+    chart: false,
     orbit: { armed: false, locked: false },
   };
   const clearFocus = () => {
@@ -249,7 +250,12 @@ function makeStatefulStellata() {
     state.focusedPlanet = null;
     state.focusedProbe = null;
   };
+  // see ../../attitude/orbit-frame/README.md § The lock
+  const disarmOrbit = () => { state.orbit.armed = false; state.orbit.locked = false; };
   const setFocusSlot = (t: Target) => {
+    // see ../../camera/focus/README.md § Hard kinds
+    if (state.mode === 'observe') state.mode = 'navigate';
+    disarmOrbit();
     if (t.kind === 'star') state.focusedStar = t.idx;
     else if (t.kind === 'planet') state.focusedPlanet = t.idx;
     else if (t.kind === 'probe') state.focusedProbe = t.idx;
@@ -258,7 +264,7 @@ function makeStatefulStellata() {
   const stub: Partial<Stellata> = {
     filters: partialOf<Stellata['filters']>({
       getFilter: () => ({ ...DEFAULT_FILTER }),
-      setFilter: () => {},
+      setFilter: (patch) => { if (patch.chart !== undefined) state.chart = patch.chart; },
       getCameraFov: () => DEFAULT_FOV,
     }),
     exposure: partialOf<Stellata['exposure']>({
@@ -301,7 +307,7 @@ function makeStatefulStellata() {
       },
     }),
     observe: partialOf<Stellata['observe']>({
-      setMode: (m) => { state.mode = m; },
+      setMode: (m) => { state.mode = m; disarmOrbit(); },
     }),
     pois: partialOf<Stellata['pois']>({
       get: () => state.pois,
@@ -1852,6 +1858,67 @@ describe('url-state', () => {
 
       const { x, y, z } = stellata.camera.position;
       expect([x, y, z]).toEqual([42, 43, 44]);
+    });
+
+    // A star domain left unattached is the fixture's stand-in for a sid sitting
+    // in a chunk that has not landed. Both cases start from boot's Sol focus,
+    // which is what makes the mode leg's anchor test answer for the wrong star.
+    it('restores observe and chart when the focus lands in a late chunk', () => {
+      const sidResolver = new SidResolver(['star', 'cloud']);
+      sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+      const idMaps = makeIdMaps({ sidResolver });
+      const { stellata, state } = makeStatefulStellata();
+      const blob = encodeBlob({
+        focus: { kind: 'sid', id: 103 }, mode: 'observe', chart: true, tgt: [0, 0, 1],
+      });
+      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+
+      // Not yet: engaging now would anchor on Sol.
+      expect(state.mode).toBe('navigate');
+      expect(state.chart).toBe(false);
+
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+
+      expect(state.focusedStar).toBe(3);
+      expect(state.mode).toBe('observe');
+      expect(state.chart).toBe(true);
+    });
+
+    // The mode leg runs BEFORE the ORB restore, because entering observe
+    // disarms ORB — README.md § A focus that resolves after the pose. Swap the
+    // two and the lock this blob asks for is gone by the time the frame lands.
+    it('restores ORB over the mode a late focus re-enters', () => {
+      const sidResolver = new SidResolver(['star', 'cloud']);
+      sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+      const idMaps = makeIdMaps({ sidResolver });
+      const { stellata, state } = makeStatefulStellata();
+      const blob = encodeBlob({
+        focus: { kind: 'sid', id: 103 }, mode: 'observe', tgt: [0, 0, 1],
+        orb: true, orbLock: true,
+      });
+      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+
+      expect(state.mode).toBe('observe');
+      expect(state.orbit).toEqual({ armed: true, locked: true });
+    });
+
+    it('leaves navigate standing when the user took the view before the focus landed', () => {
+      const sidResolver = new SidResolver(['star', 'cloud']);
+      sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+      const idMaps = makeIdMaps({ sidResolver });
+      const { stellata, state } = makeStatefulStellata();
+      const blob = encodeBlob({
+        focus: { kind: 'sid', id: 103 }, mode: 'observe', chart: true, tgt: [0, 0, 1],
+      });
+      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+
+      (stellata.renderGate as { sawUserInput: boolean }).sawUserInput = true;
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+
+      expect(state.focusedStar).toBe(3);
+      expect(state.mode).toBe('navigate');
     });
 
     // Both directions, because boot holds the loading cover on this promise —
