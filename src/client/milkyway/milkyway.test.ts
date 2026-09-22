@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
@@ -8,6 +8,7 @@ import {
   GC_SIGHTLINE_MAG_ARCSEC2,
   MilkyWay,
 } from './milkyway';
+import { RESOLVED_HOLE_CATALOGUE_RECORDS } from './calibration/resolved-hole-table';
 import {
   BULGE_COLOR_RGB,
   BULGE_COMPONENT,
@@ -92,11 +93,26 @@ import {
   tonemapWhitePoint,
 } from '../hdr/tonemap/tonemap-pure';
 
-function build() {
+function build(catalogRecords = RESOLVED_HOLE_CATALOGUE_RECORDS) {
   const materials = fakeBandMaterials();
-  const layer = new MilkyWay(materials);
+  const layer = new MilkyWay(materials, catalogRecords);
   return { layer, specs: materials.specs, surfaces: materials.surfaces };
 }
+
+describe('MilkyWay against the catalogue it loads', () => {
+  it('warns once when the hole table was measured on another catalogue', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      build(RESOLVED_HOLE_CATALOGUE_RECORDS - 1);
+      expect(warn).toHaveBeenCalledTimes(1);
+      warn.mockClear();
+      build();
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});
 
 describe('MilkyWay component specs', () => {
   it('exposes glowMagOffset as the only photometric knob left', () => {
@@ -327,7 +343,7 @@ describe('MilkyWay luminosity solve', () => {
             dustEnabled: false,
           }),
         );
-    expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - dustFree).toBeCloseTo(1.308, 3);
+    expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - dustFree).toBeCloseTo(1.3067, 4);
   });
 
   // Check 2, the sightline the ORIGINAL anchor used. Compared against
@@ -355,7 +371,7 @@ describe('MilkyWay luminosity solve', () => {
       { resolvedHole: null },
     );
     const doubleCounted = -2.5 * Math.log10(fluxNumber(bandWithoutHole) + catalogue);
-    expect(LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - sky).toBeCloseTo(0.412, 3);
+    expect(LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - sky).toBeCloseTo(0.4113, 4);
     expect(sky - bandWithoutHole).toBeCloseTo(0.017, 3);
     expect(LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - doubleCounted).toBeCloseTo(0.884, 3);
   });
@@ -544,7 +560,7 @@ describe('MilkyWay surface-brightness calibration', () => {
         sightlineSurfaceBrightness(SB_ZERO_POINT, SOL_GALACTOCENTRIC_PC, dir, { resolvedHole: quantised })
         - sightlineSurfaceBrightness(SB_ZERO_POINT, SOL_GALACTOCENTRIC_PC, dir)));
     }
-    expect(worst).toBeCloseTo(4.787e-4, 6);
+    expect(worst).toBeCloseTo(4.771e-4, 6);
   });
 
   it('gives the resolved stars’ share of the column back', () => {

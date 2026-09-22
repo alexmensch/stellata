@@ -9,7 +9,7 @@ export const MAGNITUDE_PULL_FILE = 'data/gaia/gaia_dr3_magnitude_pull.tsv';
 
 /** Johnson V the term admits on; `null` is the primaries alone.
  *  README.md § The floor is one constant. */
-export const MAGNITUDE_FLOOR_V: number | null = null;
+export const MAGNITUDE_FLOOR_V: number | null = 11;
 
 /** Raising MAGNITUDE_FLOOR_V past this needs a re-pull first —
  *  README.md § The floor is one constant. */

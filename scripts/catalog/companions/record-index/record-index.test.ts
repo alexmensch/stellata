@@ -1,4 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { beforeAll, describe, it, expect } from 'vitest';
+import { existsSync, readFileSync } from 'node:fs';
+
+import { DEFAULT_ROW_INDEX_MAP } from '../../catalog-lookup';
+import { loadStoredEdges } from '../../../sid/registry-io';
+import { syntheticGaiaBridges } from '../../../sid/sid-pure';
 
 import { FLAG_BINARY_PRIMARY } from '../../record/catalog-pure';
 import { makeStar as makeStarWithDefaults } from '../../parse/star-fixture';
@@ -9,6 +14,7 @@ import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
   wingRenderablePrimaries,
+  type CatalogRowIndexMap,
 } from './record-index';
 
 function makeStar(overrides: Partial<Star> = {}): Star {
@@ -18,6 +24,27 @@ function makeStar(overrides: Partial<Star> = {}): Star {
 }
 
 describe('buildCatalogRowIndexMap', () => {
+  it('addresses a bridged component under its synth key', () => {
+    const stars = [makeStar({ gaiaSourceId: 'g9' })];
+    const map = buildCatalogRowIndexMap(
+      stars, new Map([['synth-W1-B', 'g9']]),
+    );
+    expect(map.bySynth['synth-W1-B']).toBe(0);
+    // Addressing only -- the record's own designations are untouched.
+    expect(stars[0].syntheticId).toBeNull();
+  });
+
+  it('never lets a bridge shadow a record that owns the synth key', () => {
+    const stars = [
+      makeStar({ gaiaSourceId: 'g9' }),
+      makeStar({ syntheticId: 'synth-W1-B' }),
+    ];
+    const map = buildCatalogRowIndexMap(
+      stars, new Map([['synth-W1-B', 'g9']]),
+    );
+    expect(map.bySynth['synth-W1-B']).toBe(1);
+  });
+
   it('indexes by gaia and hip, first occurrence wins on collision', () => {
     const stars: Star[] = [
       makeStar({ gaiaSourceId: 'g1', hip: 100 }),
@@ -252,5 +279,52 @@ describe('buildComponentDesignations', () => {
       multiplesRow({ systemId: 'W1-AB', comp: 'B', hip: 200, orbitRole: 'secondary' }),
     ];
     expect(designate(rows, [b]).size).toBe(0);
+  });
+});
+
+// A same-as edge is the only witness that a Gaia source the catalogue admitted
+// IS a WDS component the build otherwise mints under a synth key. When the two
+// keys disagree, one physical star ships twice. Gaia DR4 admits another tranche
+// of sources against these same standing edges, so this guard has to outlive
+// the fix that prompted it.
+//
+// The other half of the class -- a refused mint that leaves the star drawn once
+// but UNNAMED -- is not stateable here, because an edge whose row the promotion
+// legitimately dropped (unresolved compound, refused parallax) is
+// indistinguishable from one it silently failed to key. That half is guarded by
+// the promotion unit tests and by the `componentDesignations` /
+// `namingUnlabelled` build counts, which is why their snapshot diff is read
+// rather than refreshed.
+const BRIDGE_FIXTURES_READY = existsSync(DEFAULT_ROW_INDEX_MAP);
+if (!BRIDGE_FIXTURES_READY) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[record-index] skipping the same-as bridge invariant — '
+    + 'public/catalog-row-index-map.json missing. Run `pnpm run build:catalog`.',
+  );
+}
+
+describe.skipIf(!BRIDGE_FIXTURES_READY)('the same-as bridge, over the built catalogue', () => {
+  let map: CatalogRowIndexMap;
+  let bridges: ReturnType<typeof syntheticGaiaBridges>;
+  beforeAll(() => {
+    map = JSON.parse(readFileSync(DEFAULT_ROW_INDEX_MAP, 'utf-8')) as CatalogRowIndexMap;
+    bridges = syntheticGaiaBridges(loadStoredEdges());
+  });
+
+  it('reaches at least one source this catalogue admits', () => {
+    const admitted = [...bridges].filter(([, g]) => map.byGaia[g] !== undefined);
+    expect(admitted.length).toBeGreaterThan(0);
+  });
+
+  it('never leaves one physical star on two records', () => {
+    const twinned: string[] = [];
+    for (const [synthKey, gaiaId] of bridges) {
+      const byGaia = map.byGaia[gaiaId];
+      const bySynth = map.bySynth[synthKey];
+      if (byGaia === undefined || bySynth === undefined) continue;
+      if (bySynth !== byGaia) twinned.push(synthKey);
+    }
+    expect(twinned).toEqual([]);
   });
 });

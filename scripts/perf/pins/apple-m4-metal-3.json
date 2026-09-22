@@ -17,15 +17,15 @@
     }
   },
   "git": {
-    "commit": "e367493e21a9897d664890074b7d0fca0c5e2443",
-    "dirty": true,
-    "mainCommit": "8d58948774181840ad3a0752f8ef077337ec1f89",
+    "commit": "fc27ff641e3c8d1ee12391e7569b33e5e4717f03",
+    "dirty": false,
+    "mainCommit": "bea433a890960ed46a7fc8fcb4869acf51208055",
     "mainReachable": false
   },
-  "version": "5.1.0",
-  "takenAt": "2026-09-22T21:43:22.801Z",
+  "version": "5.2.0",
+  "takenAt": "2026-09-22T22:13:01.516Z",
   "sourceRuns": [
-    ".perf-runs/2026-09-22/pr606-full-e367493e.json"
+    ".perf-runs/2026-09-22/pr605-full-fc27ff64.json"
   ],
   "rows": [
     {
@@ -33,7 +33,7 @@
       "name": "mw120",
       "backend": "webgpu",
       "bufferMpx": 4.096,
-      "recordCount": 388071,
+      "recordCount": 983068,
       "position": 1,
       "idleRafMs": 16.699999999999818,
       "readbackPerFrame": 0.25,
@@ -42,41 +42,41 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 16.799999999999272,
-        "iqrMs": 0.1000000000003638,
+        "p90": 17,
+        "iqrMs": 0.2000000000007276,
         "samples": 960,
         "stateGuard": "steady",
         "vsyncClamped": true
       },
       "gpu": {
-        "p50": 20.078195,
-        "p90": 20.166067,
-        "iqrMs": 0.10966700000000174,
-        "samples": 481,
+        "p50": 20.042693999999997,
+        "p90": 20.170859999999998,
+        "iqrMs": 0.2141639999999967,
+        "samples": 616,
         "stateGuard": "steady"
       },
       "gpuFloor": {
-        "p10": 19.889447
+        "p10": 19.84828
       },
       "gpuClasses": null,
       "compute": {
-        "p50": 0.261913,
-        "p90": 0.437827,
-        "iqrMs": 0.00899899999999998,
-        "samples": 481,
+        "p50": 0.653115,
+        "p90": 0.708281,
+        "iqrMs": 0.08728999999999998,
+        "samples": 616,
         "stateGuard": "steady"
       },
       "computeFloor": {
-        "p10": 0.258621
+        "p10": 0.580283
       },
-      "sourceRun": ".perf-runs/2026-09-22/pr606-full-e367493e.json"
+      "sourceRun": ".perf-runs/2026-09-22/pr605-full-fc27ff64.json"
     },
     {
       "key": "sol|webgpu",
       "name": "sol",
       "backend": "webgpu",
       "bufferMpx": 4.096,
-      "recordCount": 388071,
+      "recordCount": 983068,
       "position": 2,
       "idleRafMs": 16.69999999999891,
       "readbackPerFrame": 0.25,
@@ -92,34 +92,34 @@
         "vsyncClamped": true
       },
       "gpu": {
-        "p50": 11.752196000000001,
-        "p90": 12.204397,
-        "iqrMs": 0.5776579999999996,
-        "samples": 516,
+        "p50": 11.267786999999998,
+        "p90": 11.78307,
+        "iqrMs": 0.5657840000000007,
+        "samples": 525,
         "stateGuard": "steady"
       },
       "gpuFloor": {
-        "p10": 11.101581999999999
+        "p10": 10.712754
       },
       "gpuClasses": null,
       "compute": {
-        "p50": 0.420785,
-        "p90": 0.587825,
-        "iqrMs": 0.19587100000000002,
-        "samples": 516,
+        "p50": 1.026401,
+        "p90": 1.178649,
+        "iqrMs": 0.282288,
+        "samples": 525,
         "stateGuard": "steady"
       },
       "computeFloor": {
-        "p10": 0.268079
+        "p10": 0.699822
       },
-      "sourceRun": ".perf-runs/2026-09-22/pr606-full-e367493e.json"
+      "sourceRun": ".perf-runs/2026-09-22/pr605-full-fc27ff64.json"
     },
     {
       "key": "earth|webgpu",
       "name": "earth",
       "backend": "webgpu",
       "bufferMpx": 4.096,
-      "recordCount": 388071,
+      "recordCount": 983068,
       "position": 3,
       "idleRafMs": 16.69999999999891,
       "readbackPerFrame": 0.25,
@@ -128,53 +128,53 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 17.900000000001455,
-        "iqrMs": 0.6000000000021828,
+        "p90": 17.200000000000728,
+        "iqrMs": 0.10000000000218279,
         "samples": 960,
         "stateGuard": "steady",
         "vsyncClamped": true
       },
       "gpu": {
-        "p50": 12.614892,
-        "p90": 73.005969,
-        "iqrMs": 49.386122,
-        "samples": 858,
+        "p50": 12.375519,
+        "p90": 71.26990900000001,
+        "iqrMs": 49.569203,
+        "samples": 882,
         "stateGuard": "steady"
       },
       "gpuFloor": {
-        "p10": 11.137665000000002
+        "p10": 11.432701999999999
       },
       "gpuClasses": {
-        "cutMs": 36.0668465,
+        "cutMs": 38.034211,
         "plain": {
-          "p50": 12.071940000000001,
-          "iqrMs": 1.447893999999998,
-          "samples": 639
+          "p50": 12.250729999999999,
+          "iqrMs": 0.6148230000000012,
+          "samples": 658
         },
         "dear": {
-          "p50": 70.50546399999999,
-          "iqrMs": 9.060360000000003,
-          "samples": 219
+          "p50": 70.873834,
+          "iqrMs": 4.637011000000001,
+          "samples": 224
         }
       },
       "compute": {
-        "p50": 0.376453,
-        "p90": 0.440451,
-        "iqrMs": 0.041373999999999966,
-        "samples": 858,
+        "p50": 0.832028,
+        "p90": 0.931527,
+        "iqrMs": 0.07808100000000007,
+        "samples": 882,
         "stateGuard": "steady"
       },
       "computeFloor": {
-        "p10": 0.322536
+        "p10": 0.712906
       },
-      "sourceRun": ".perf-runs/2026-09-22/pr606-full-e367493e.json"
+      "sourceRun": ".perf-runs/2026-09-22/pr605-full-fc27ff64.json"
     },
     {
       "key": "mw50|webgpu",
       "name": "mw50",
       "backend": "webgpu",
       "bufferMpx": 4.096,
-      "recordCount": 388071,
+      "recordCount": 983068,
       "position": 4,
       "idleRafMs": 16.699999999999818,
       "readbackPerFrame": 0.25,
@@ -190,34 +190,34 @@
         "vsyncClamped": false
       },
       "gpu": {
-        "p50": 30.551075,
-        "p90": 30.581699,
-        "iqrMs": 0.02812499999999929,
+        "p50": 30.526409,
+        "p90": 30.557909,
+        "iqrMs": 0.027457999999999316,
         "samples": 192,
         "stateGuard": "steady"
       },
       "gpuFloor": {
-        "p10": 30.518785
+        "p10": 30.497284999999998
       },
       "gpuClasses": null,
       "compute": {
-        "p50": 0.29887,
-        "p90": 0.309121,
-        "iqrMs": 0.00762400000000002,
+        "p50": 0.669947,
+        "p90": 0.694822,
+        "iqrMs": 0.013958000000000026,
         "samples": 192,
         "stateGuard": "steady"
       },
       "computeFloor": {
-        "p10": 0.286954
+        "p10": 0.658448
       },
-      "sourceRun": ".perf-runs/2026-09-22/pr606-full-e367493e.json"
+      "sourceRun": ".perf-runs/2026-09-22/pr605-full-fc27ff64.json"
     },
     {
       "key": "lg|webgpu",
       "name": "lg",
       "backend": "webgpu",
       "bufferMpx": 4.096,
-      "recordCount": 388071,
+      "recordCount": 983068,
       "position": 5,
       "idleRafMs": 16.699999999999818,
       "readbackPerFrame": 0.25,
@@ -226,48 +226,35 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 17.799999999999272,
-        "iqrMs": 0.7999999999992724,
+        "p90": 17.900000000001455,
+        "iqrMs": 0.500000000001819,
         "samples": 960,
         "stateGuard": "steady",
         "vsyncClamped": true
       },
       "gpu": {
-        "p50": 10.038013,
-        "p90": 10.868416999999999,
-        "iqrMs": 0.42916100000000057,
-        "samples": 783,
+        "p50": 9.436523999999999,
+        "p90": 9.910473,
+        "iqrMs": 0.582491000000001,
+        "samples": 771,
         "stateGuard": "steady"
       },
       "gpuFloor": {
-        "p10": 9.406357
+        "p10": 8.63091
       },
       "gpuClasses": null,
       "compute": {
-        "p50": 0.664573,
-        "p90": 0.800238,
-        "iqrMs": 0.10558100000000004,
-        "samples": 783,
+        "p50": 1.145233,
+        "p90": 1.265189,
+        "iqrMs": 0.10470800000000002,
+        "samples": 771,
         "stateGuard": "steady"
       },
       "computeFloor": {
-        "p10": 0.569866
+        "p10": 1.044234
       },
-      "sourceRun": ".perf-runs/2026-09-22/pr606-full-e367493e.json"
+      "sourceRun": ".perf-runs/2026-09-22/pr605-full-fc27ff64.json"
     }
   ],
-  "accepted": {
-    "mw120|webgpu": {
-      "bead": "stellata-cns.9"
-    },
-    "mw50|webgpu": {
-      "bead": "stellata-cns.9"
-    },
-    "sol|webgpu": {
-      "bead": "stellata-cns.9"
-    },
-    "earth|webgpu": {
-      "bead": "stellata-cns.9"
-    }
-  }
+  "accepted": {}
 }

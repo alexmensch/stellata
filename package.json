@@ -1,6 +1,6 @@
 {
   "name": "stellata",
-  "version": "5.1.0",
+  "version": "5.2.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.24.0",
@@ -52,6 +52,7 @@
     "fetch:probes": "tsx scripts/probes/fetch-probe-trajectories.ts",
     "fetch:ephemerides": "tsx scripts/ephemerides/fetch-planet-elements.ts",
     "validate:simbad": "tsx scripts/catalog/validate/validate-simbad-sample.ts",
+    "validate:record-parity": "tsx scripts/catalog/validate/record-parity.ts",
     "analyse:prefilter": "tsx scripts/dust/prefilter/measure.ts",
     "analyse:prefilter-cost": "tsx scripts/dust/prefilter/cost.ts",
     "analyse:march-taps": "tsx scripts/dust/march-taps/measure.ts",

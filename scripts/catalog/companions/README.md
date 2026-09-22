@@ -76,7 +76,11 @@ Per-row gates and resolution:
 - **Identifier.** Real-ID resolution (gaia first, then hip)
   attempts to match the row against an existing catalog star;
   skip when it hits a row that ISN'T the system primary
-  (alreadyInCatalog). When the row carries no own gaia AND no
+  (alreadyInCatalog) — and so does a row whose own Gaia source missed the
+  index but whose own HIP names a non-anchor record. Every already-in-catalog
+  route (these two and the same-as bridge below) goes through
+  `adoptExistingMember`: the anchor's designation constellation, the
+  re-curation below, and anchor-dim registration. When the row carries no own gaia AND no
   own hip, mint `synth-<wds_id>-<comp>` and proceed —
   `FLAG_BINARY_COMPANION_SYNTHETIC` flags the result. Same path
   fires when the inherited-HIP or inherited-Gaia escapes strip
@@ -88,6 +92,49 @@ Per-row gates and resolution:
   strips it rather than colliding with the primary in every
   gaia-keyed lookup, and build-runtime-binaries retries the
   synth key when its id-first resolve degenerates.
+- **Same-as bridge to an already-admitted source.** A row with no id of its
+  own mints `synth-<wds_id>-<comp>`, and the already-in-catalog test above
+  has nothing to match on — so when a deeper magnitude floor admits the same
+  physical star on its Gaia source, both ship and one object is drawn twice,
+  100 pc apart. The SID registry's same-as edges are the only witness of the
+  link (`syntheticGaiaBridges` over `data/sid/sameas-overrides.tsv` +
+  `bridges/`, `docs/sid.md` § 4.1): a bridged source already in the catalog
+  IS this component, so the mint is refused and that record takes the
+  re-curation and anchor-dim registration an already-in-catalog hit gets.
+  Counted `companionExistingViaSameasBridge`, a ratchet-DOWN metric.
+- **Re-curation of an already-in-catalog member.** An existing member's
+  position, brightness and velocity all descend from its own 5p solution.
+  Where **Gaia rejects that solution** — `isCoherenceAnchorGrade`
+  (`../multiplicity/anchor-grade-pure.ts`) — AND the record's `distVia` says
+  that solution is what placed it (`bailer_jones` / `gaia_dr3_inversion`;
+  every other tier is an independent measurement, including a clean sibling's
+  parallax lent through `pair_member_parallax`) — the curated treatment a minted
+  member gets is the better source, so it is applied in place — but only
+  where a minted member would have taken the WDS projection, since a row
+  Stage 3 gave its own per-component fit has no curated geometry to apply
+  and its placement is the cascade's answer, not the rejected solution's.
+  What it takes: the WDS (ρ, θ) tangent projection off the anchor, the
+  anchor's `distVia` (as a minted member does — it now sits at the anchor's
+  distance, not its own fit's), the anchor's systemic velocity,
+  and a **curated** brightness with its Ballesteros colour — A+Δmag, the
+  row's WDS magnitude referenced to the distance the member now sits at, or
+  class→M_V. Photometry travels with the astrometry here because ONE cause
+  rejects both — the brighter star's light inside the detection window — and
+  BP/RP see more of it than G does. With no curated source the member keeps
+  its own apparent brightness across the move (absmag shifts by the distance
+  modulus and the A_V difference, colour untouched), never a row's `own` or
+  inherited-twin magnitude: those were derived at the rejected fit's distance
+  or are the anchor's light. The spectral type is measured elsewhere and
+  stays the record's own; the physical radius re-derives against it. The record keeps its identifiers and its first-class membership, so
+  this adds no star and retires none. Sirius B is the case: 11.1″ from a
+  star 9.91 mag brighter, RUWE 2.42 and a blended image on 18% of transits,
+  and a V ≤ 11 floor admits it in its own right — its own fit put the pair
+  at 19.1 AU against the measured 29.27, took M_V 11.467 against A+Δmag's
+  11.360 and B−V −0.224 against the DA1.9 Ballesteros −0.443, and fed the
+  systemic blend below a proper motion that dragged **Sirius A** from
+  1339.4 mas/yr to 1282.7. Counted `companionExistingMemberRecurated`, per
+  brightness source (`held` for the fallback), once per member however many
+  cursors reach it.
 - **Anchor-is-the-component refusal.** A pair whose two ends resolve to ONE
   record has no second star to mint. `01398-5612`'s A row carries the B
   record's HD, HIP and Gaia cells, so the cursor anchors on B and the B row's
@@ -280,7 +327,9 @@ Per-row gates and resolution:
     enter as `own` — flux subtraction against the record's own measurement,
     never the Δmag re-split, which would overwrite a first-class record's
     brightness — deduped per `(anchor, member)`, since every cursor pairing the
-    two arrives at the same registration.
+    two arrives at the same registration. A **re-curated** member is the
+    exception: its brightness is the curated one, so it enters under that
+    source exactly as a minted member would (and a class→M_V one not at all).
   - **Conservation is observed-frame.** A member's flux leaves at the apparent
     magnitude the observer sees and the residual converts back at the anchor's
     own distance. Identical arithmetic for a minted member (tangent projection

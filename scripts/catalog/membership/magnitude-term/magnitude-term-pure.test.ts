@@ -118,8 +118,8 @@ describe('isMagnitudeTermRow', () => {
 });
 
 describe('the shipped floor', () => {
-  it('is the primaries alone until the completeness phase turns the term on', () => {
-    expect(MAGNITUDE_FLOOR_V).toBeNull();
+  it('is V <= 11, the depth the committed pull is complete to', () => {
+    expect(MAGNITUDE_FLOOR_V).toBe(11);
   });
 
   it('cannot exceed the bound the pull on disk holds', () => {

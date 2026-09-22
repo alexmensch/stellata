@@ -7,20 +7,9 @@ import type {
   GaiaAstrometryCatalogRow,
   Hip2AstrometryRow,
 } from '../distance/direction-cascade';
-import { GAIA_RUWE_UNRELIABLE_THRESHOLD } from '../distance/direction-cascade';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
 import { wdsRootOf } from '../companions/companion-promotion';
-
-/** Gaia saturates brighter than G ≈ 3; a brighter source's 5p parallax
- *  is not trustworthy enough to anchor a system's distance. */
-export const GAIA_UNSATURATED_G_MIN = 3.0;
-
-/** Gaia's ipd_frac_multi_peak is a PERCENT (0–100), not a fraction —
- *  AU Mic carries 1 (1%, clean). Distinct from direction-cascade's
- *  GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD, which compares the same column on
- *  the fraction scale; there the NSS-membership requirement masks the
- *  difference, so do not read the two as one threshold. */
-export const ANCHOR_IPD_MAX_PERCENT = 2.0;
+import { isCoherenceAnchorGrade } from './anchor-grade-pure';
 
 /** A member snaps to the anchor distance only when the radial gap is
  *  NOT significant at this many sigma of the combined parallax error —
@@ -54,6 +43,7 @@ export interface SystemCoherenceStats {
   memberAnchorWins: number;
   significantDepthKept: number;
   anchorPlacementInconsistent: number;
+  memberAnchorPrecisionVetoed: number;
 }
 
 export interface CoherenceSources {
@@ -66,22 +56,26 @@ export interface CoherenceSources {
 
 const COMPONENT_TOKEN_RE = /^[A-Z][a-z]?\d?$/;
 
-/** The clean-Gaia bar a 5p solution must clear to carry a whole system's
- *  distance — its own parallax, unsaturated, un-blended and with a RUWE the
- *  fit itself stands behind. Shared with the parallax cascade's
- *  `pair_member_parallax` tier, which lends a sibling's distance to a member
- *  Gaia fitted no parallax for at all. */
-export function isCoherenceAnchorGrade(g: GaiaAstrometryCatalogRow): boolean {
-  return g.parallaxMas !== null && g.parallaxMas > 0
-    && (g.ruwe === null || g.ruwe <= GAIA_RUWE_UNRELIABLE_THRESHOLD)
-    && (g.ipdFracMultiPeak === null
-      || g.ipdFracMultiPeak <= ANCHOR_IPD_MAX_PERCENT)
-    && g.gMag !== null && g.gMag >= GAIA_UNSATURATED_G_MIN;
+/** Anchor tier, pair-primary side, WDS-canonical letter. */
+type AnchorRank = [number, number, string];
+
+function rankBeats(rank: AnchorRank, best: AnchorRank | null): boolean {
+  if (best === null) return true;
+  if (rank[0] !== best[0]) return rank[0] < best[0];
+  if (rank[1] !== best[1]) return rank[1] < best[1];
+  return rank[2] < best[2];
 }
 
-function anchorTier(
+function fractionalError(plxMas: number | null, errMas: number | null): number | null {
+  return plxMas !== null && plxMas > 0 && errMas !== null ? errMas / plxMas : null;
+}
+
+/** The member's anchor tier, and the fractional parallax error of the fit that
+ *  earned it — null below the HIP2 tier, which carries no trusted fit. See
+ *  README.md § System distance coherence, Precision veto. */
+function anchorEvidence(
   star: Star, sources: CoherenceSources, hostsSubsystem: boolean,
-): number {
+): { tier: number; fracError: number | null } {
   // A component that hosts its own sub-pair (Acrux C = Ca,Cb) is an
   // unresolved close binary whatever its RUWE says — photocentre wobble
   // on periods longer than Gaia's baseline corrupts the 5p parallax
@@ -91,16 +85,24 @@ function anchorTier(
   if (!hostsSubsystem && star.gaiaSourceId !== null) {
     const g = sources.gaiaAstrometry.get(star.gaiaSourceId);
     if (g !== undefined && isCoherenceAnchorGrade(g)) {
-      return ANCHOR_TIER_GAIA_CLEAN;
+      return {
+        tier: ANCHOR_TIER_GAIA_CLEAN,
+        fracError: fractionalError(g.parallaxMas, g.parallaxErrorMas),
+      };
     }
   }
-  if (star.hip !== null && sources.hip2.has(star.hip)) {
-    return ANCHOR_TIER_HIP2;
+  if (star.hip !== null) {
+    const h = sources.hip2.get(star.hip);
+    if (h !== undefined) {
+      return {
+        tier: ANCHOR_TIER_HIP2, fracError: fractionalError(h.plxMas, h.plxErrorMas),
+      };
+    }
   }
   if (star.gaiaSourceId !== null && sources.bjMap.has(star.gaiaSourceId)) {
-    return ANCHOR_TIER_BAILER_JONES;
+    return { tier: ANCHOR_TIER_BAILER_JONES, fracError: null };
   }
-  return ANCHOR_TIER_INHERITED;
+  return { tier: ANCHOR_TIER_INHERITED, fracError: null };
 }
 
 /** Best available (distance_pc, sigma_pc) measurement for the record,
@@ -111,27 +113,19 @@ function anchorTier(
 function parallaxDistanceWithError(
   star: Star, sources: CoherenceSources,
 ): { distPc: number; sigmaPc: number } | null {
-  if (star.gaiaSourceId !== null) {
-    const g = sources.gaiaAstrometry.get(star.gaiaSourceId);
-    if (g !== undefined && g.parallaxMas !== null && g.parallaxMas > 0) {
-      const distPc = 1000 / g.parallaxMas;
-      const sigmaPc = g.parallaxErrorMas !== null
-        ? (1000 * g.parallaxErrorMas) / (g.parallaxMas * g.parallaxMas)
-        : 0;
-      return { distPc, sigmaPc };
-    }
-  }
-  if (star.hip !== null) {
-    const h = sources.hip2.get(star.hip);
-    if (h !== undefined && h.plxMas !== null && h.plxMas > 0) {
-      const distPc = 1000 / h.plxMas;
-      const sigmaPc = h.plxErrorMas !== null
-        ? (1000 * h.plxErrorMas) / (h.plxMas * h.plxMas)
-        : 0;
-      return { distPc, sigmaPc };
-    }
-  }
-  return null;
+  const invert = (plxMas: number | null, errMas: number | null) =>
+    plxMas !== null && plxMas > 0
+      ? {
+        distPc: 1000 / plxMas,
+        sigmaPc: errMas !== null ? (1000 * errMas) / (plxMas * plxMas) : 0,
+      }
+      : null;
+  const g = star.gaiaSourceId !== null
+    ? sources.gaiaAstrometry.get(star.gaiaSourceId) : undefined;
+  const fromGaia = g !== undefined ? invert(g.parallaxMas, g.parallaxErrorMas) : null;
+  if (fromGaia !== null) return fromGaia;
+  const h = star.hip !== null ? sources.hip2.get(star.hip) : undefined;
+  return h !== undefined ? invert(h.plxMas, h.plxErrorMas) : null;
 }
 
 function starDist(star: Star): number {
@@ -177,6 +171,7 @@ export function applySystemDistanceCoherence(
     memberAnchorWins: 0,
     significantDepthKept: 0,
     anchorPlacementInconsistent: 0,
+    memberAnchorPrecisionVetoed: 0,
   };
 
   const byGaia = new Map<string, number>();
@@ -243,7 +238,11 @@ export function applySystemDistanceCoherence(
     };
 
     let anchorIdx: number | null = null;
-    let anchorRank: [number, number, string] | null = null;
+    let anchorRank: AnchorRank | null = null;
+    let anchorFracError: number | null = null;
+    let primaryIdx: number | null = null;
+    let primaryRank: AnchorRank | null = null;
+    let primaryFracError: number | null = null;
     for (const [idx, info] of members) {
       // Tier, then pair-primary side, then the WDS-canonical letter
       // (the record holding 'A' beats one holding 'C' — catalog index
@@ -252,22 +251,29 @@ export function applySystemDistanceCoherence(
       for (const t of info.tokens) {
         if (minToken === '' || t < minToken) minToken = t;
       }
-      const rank: [number, number, string] = [
-        anchorTier(stars[idx], sources, hostsSubsystem(info)),
-        info.isPrimary ? 0 : 1, minToken,
-      ];
-      if (
-        anchorRank === null
-        || rank[0] < anchorRank[0]
-        || (rank[0] === anchorRank[0] && rank[1] < anchorRank[1])
-        || (rank[0] === anchorRank[0] && rank[1] === anchorRank[1]
-          && rank[2] < anchorRank[2])
-      ) {
+      const evidence = anchorEvidence(stars[idx], sources, hostsSubsystem(info));
+      const rank: AnchorRank = [evidence.tier, info.isPrimary ? 0 : 1, minToken];
+      if (rankBeats(rank, anchorRank)) {
         anchorRank = rank;
         anchorIdx = idx;
+        anchorFracError = evidence.fracError;
+      }
+      if (info.isPrimary && rankBeats(rank, primaryRank)) {
+        primaryRank = rank;
+        primaryIdx = idx;
+        primaryFracError = evidence.fracError;
       }
     }
     if (anchorIdx === null) continue;
+    // see README.md § System distance coherence, Precision veto
+    if (anchorRank !== null && anchorRank[1] === 1 && primaryIdx !== null) {
+      if (anchorFracError !== null && primaryFracError !== null
+        && primaryFracError < anchorFracError) {
+        anchorIdx = primaryIdx;
+        anchorRank = primaryRank;
+        stats.memberAnchorPrecisionVetoed++;
+      }
+    }
     const anchorStar = stars[anchorIdx];
     const anchorDist = starDist(anchorStar);
     if (!(anchorDist > 0) || !Number.isFinite(anchorDist)) continue;

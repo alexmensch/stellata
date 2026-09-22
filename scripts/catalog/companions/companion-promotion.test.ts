@@ -17,6 +17,7 @@ import {
   parkedRefusals,
   promoteCompanions,
   type MultiplesTsvRow,
+  type PromotionStats,
 } from './companion-promotion';
 import {
   FLAG_BINARY_COMPANION_ONLY,
@@ -33,6 +34,8 @@ import { R_V, avSolToStar, type DustGrid } from '../distance/dust/dust-deextinct
 import type { Star } from '../parse/stars-parse';
 import { makeStar as makeStarWithDefaults } from '../parse/star-fixture';
 import { multiplesRow } from './multiples-fixture';
+import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
+import { AU_PER_PC } from '../../../src/client/util/astronomy-constants';
 
 // The real IAU decomposition, not a stub: the fixtures below carry real
 // coordinates, so a positional assertion (Sirius B in Canis Major) is a
@@ -3039,5 +3042,229 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
       );
       expect(stats.droppedParkedRecord, String(distPc)).toBe(1);
     }
+  });
+});
+
+describe('an existing member whose own 5p solution Gaia rejects', () => {
+  const SIRIUS_B_SOURCE = '2947050466531873024';
+  const recuratedTotal = (stats: PromotionStats): number =>
+    Object.values(stats.existingMemberRecurated).reduce((a, b) => a + b, 0);
+
+  function siriusRows() {
+    return [
+      multiplesRow({
+        systemId: '06451-1643-AB', comp: 'A', hip: 32349,
+        x_pc: -0.494207, y_pc: 2.476725, z_pc: -0.758737, distPc: 2.637061,
+        absmag: 1.454, spect: 'A0mA1Va', spectVia: 'simbad',
+        photometryVia: 'athyg_own', orbitRole: 'primary',
+        sepArcsec: 11.1, paDeg: 59.0, dmag: 9.91, magPri: -1.47, magSec: 8.44,
+      }),
+      multiplesRow({
+        systemId: '06451-1643-AB', comp: 'B', gaiaSourceId: SIRIUS_B_SOURCE,
+        x_pc: -0.494207, y_pc: 2.476725, z_pc: -0.758737, distPc: 2.637061,
+        absmag: null, spect: 'DA1.9', spectVia: 'simbad',
+        astrometryVia: 'system_inherited', photometryVia: 'none',
+        orbitRole: 'secondary',
+        sepArcsec: 11.1, paDeg: 59.0, dmag: 9.91, magPri: -1.47, magSec: 8.44,
+      }),
+    ];
+  }
+
+  const siriusA = () => makeStar({
+    hip: 32349, absmag: 1.454, spectDisplay: 'A0mA1Va',
+    x: -0.494207, y: 2.476725, z: -0.758737,
+    vx: 8.9e-6, vy: -6.1e-6, vz: -1.4e-5,
+  });
+
+  // B's own Gaia position, ~7.3" off A rather than the measured 11.1".
+  const siriusB = () => makeStar({
+    gaiaSourceId: SIRIUS_B_SOURCE, distVia: 'bailer_jones',
+    absmag: 11.4666, spectDisplay: 'DA1.9',
+    x: -0.494296, y: 2.476716, z: -0.75871,
+    vx: 1.2e-5, vy: -2.0e-6, vz: -9.0e-6,
+  });
+
+  function rejectedFit() {
+    return new Map([[SIRIUS_B_SOURCE, gaiaAstrometryRow({
+      parallaxMas: 374.4896, parallaxErrorMas: 0.2313,
+      ruwe: 2.4191, ipdFracMultiPeak: 18, gMag: 8.524133,
+    })]]);
+  }
+
+  function acceptedFit() {
+    return new Map([[SIRIUS_B_SOURCE, gaiaAstrometryRow({
+      parallaxMas: 374.4896, parallaxErrorMas: 0.2313,
+      ruwe: 1.02, ipdFracMultiPeak: 0, gMag: 8.524133,
+    })]]);
+  }
+
+  it('takes the pair geometry, the systemic velocity and the curated brightness', () => {
+    const a = siriusA();
+    a.distVia = 'hip2_parallax';
+    const b = siriusB();
+    const { newStars, stats } = promoteCompanions(
+      siriusRows(), [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
+    );
+    expect(newStars).toHaveLength(0);
+    expect(stats.existingMemberRecurated.dmag_imputed).toBe(1);
+    // Placed at the anchor's distance, so it claims the anchor's tier — the
+    // optical-double suppression reads distVia as the placement's provenance.
+    expect(b.distVia).toBe('hip2_parallax');
+    // 11.1" at 2.637061 pc is 29.27 AU, against the 19.1 its own fit gave.
+    const sepAu = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) * AU_PER_PC;
+    expect(sepAu).toBeCloseTo(29.27, 1);
+    // A's velocity, so the systemic blend cannot drag A's proper motion.
+    expect(b.vx).toBe(a.vx);
+    expect(b.vy).toBe(a.vy);
+    expect(b.vz).toBe(a.vz);
+    // A's 1.454 plus the WDS 9.91 magnitude difference.
+    expect(b.absmag).toBeCloseTo(11.364, 3);
+    // Not read off the astrometric fit, so untouched.
+    expect(b.spectDisplay).toBe('DA1.9');
+  });
+
+  it('references a WDS magnitude to the distance the member now sits at', () => {
+    const a = siriusA();
+    const b = siriusB();
+    const rows = siriusRows();
+    // No Δmag, and a dist_pc from the rejected fit rather than the anchor's.
+    Object.assign(rows[1], { dmag: null, distPc: 2.9 });
+    const { stats } = promoteCompanions(
+      rows, [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
+    );
+    expect(stats.existingMemberRecurated.wds_mag).toBe(1);
+    const dNew = Math.hypot(b.x, b.y, b.z);
+    expect(b.absmag).toBeCloseTo(8.44 - 5 * Math.log10(dNew / 10), 6);
+  });
+
+  it('holds its own apparent brightness when no curated source answers', () => {
+    const a = siriusA();
+    const b = siriusB();
+    const rows = siriusRows();
+    Object.assign(rows[1], {
+      dmag: null, magSec: null, spectVia: 'athyg',
+      absmag: 11.4666, photometryVia: 'gaia_photometry',
+    });
+    Object.assign(b, { x: b.x * 1.1, y: b.y * 1.1, z: b.z * 1.1 });
+    const dOld = Math.hypot(b.x, b.y, b.z);
+    const apparentBefore = b.absmag + 5 * Math.log10(dOld / 10);
+    const { stats } = promoteCompanions(
+      rows, [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
+    );
+    expect(stats.existingMemberRecurated.held).toBe(1);
+    const dNew = Math.hypot(b.x, b.y, b.z);
+    expect(dNew).not.toBeCloseTo(dOld, 6);
+    expect(b.absmag + 5 * Math.log10(dNew / 10)).toBeCloseTo(apparentBefore, 9);
+  });
+
+  it('dims the anchor by the Δmag re-split, not by the curated light it lent', () => {
+    // A printed blend of A+B at 5″, Δmag 0.5: the curated B is A+Δmag, so
+    // subtracting it as an independent 'own' measurement would take A's own
+    // light out of A.
+    const a = siriusA();
+    Object.assign(a, { absmag: 1.0, vVia: 'printed_hip' });
+    const b = siriusB();
+    const rows = siriusRows();
+    const blend = 1.0 + 5 * Math.log10(2.637061 / 10);
+    const split = 2.5 * Math.log10(1 + 10 ** -0.2);
+    for (const r of rows) {
+      Object.assign(r, {
+        sepArcsec: 5, dmag: 0.5, magPri: blend + split, magSec: blend + split + 0.5,
+      });
+    }
+    Object.assign(rows[0], { absmag: 1.0 });
+    const { stats } = promoteCompanions(
+      rows, [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
+    );
+    expect(stats.existingMemberRecurated.dmag_imputed).toBe(1);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(b.absmag - a.absmag).toBeCloseTo(0.5, 6);
+    expect(a.absmag).toBeCloseTo(1.0 + split, 6);
+  });
+
+  it('leaves a member alone when Gaia stands behind its own fit', () => {
+    const a = siriusA();
+    const b = siriusB();
+    const before = { x: b.x, absmag: b.absmag, vx: b.vx };
+    const { stats } = promoteCompanions(
+      siriusRows(), [a, b], CON_ASSIGNMENT, null, undefined, acceptedFit(),
+    );
+    expect(recuratedTotal(stats)).toBe(0);
+    expect(b.x).toBe(before.x);
+    expect(b.absmag).toBe(before.absmag);
+    expect(b.vx).toBe(before.vx);
+  });
+
+  it('leaves a member alone when an independent tier placed it', () => {
+    const a = siriusA();
+    const b = makeStar({
+      gaiaSourceId: SIRIUS_B_SOURCE, distVia: 'pair_member_parallax',
+      absmag: 11.4666, spectDisplay: 'DA1.9',
+      x: -0.494296, y: 2.476716, z: -0.75871,
+    });
+    const { stats } = promoteCompanions(
+      siriusRows(), [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
+    );
+    expect(recuratedTotal(stats)).toBe(0);
+    expect(b.absmag).toBe(11.4666);
+  });
+
+  it('leaves a member alone when no astrometry row answers for it', () => {
+    const a = siriusA();
+    const b = siriusB();
+    const { stats } = promoteCompanions(siriusRows(), [a, b], CON_ASSIGNMENT);
+    expect(recuratedTotal(stats)).toBe(0);
+    expect(b.absmag).toBe(11.4666);
+  });
+
+  // 20450+1244 B: the row carries no gaia and no hip, so it mints
+  // synth-20450+1244-B and only a same-as edge links it to a real source.
+  const bridgedRows = () => [
+    multiplesRow({
+      systemId: '20450+1244-AB', comp: 'A', hip: 102398,
+      x_pc: 68.494089, y_pc: -78.099838, z_pc: 23.461268, distPc: 106.496273,
+      absmag: 3.271, orbitRole: 'primary',
+      sepArcsec: 0.7, paDeg: 176.0, dmag: -0.58, magPri: 9.14, magSec: 8.56,
+    }),
+    multiplesRow({
+      systemId: '20450+1244-AB', comp: 'B',
+      x_pc: 58.362644, y_pc: -66.547695, z_pc: 19.991079, distPc: 90.7438,
+      absmag: 3.271, photometryVia: 'athyg_system_inherited',
+      orbitRole: 'secondary',
+      sepArcsec: 0.7, paDeg: 176.0, dmag: -0.58, magPri: 9.14, magSec: 8.56,
+    }),
+  ];
+
+  it('recognises a member through the SID same-as bridge and mints no twin', () => {
+    const rows = bridgedRows();
+    const anchor = makeStar({
+      hip: 102398, absmag: 3.271,
+      x: 68.494089, y: -78.099838, z: 23.461268,
+    });
+    const bridged = makeStar({
+      gaiaSourceId: '1755189379660877312', absmag: 4.0,
+      x: 58.362644, y: -66.547695, z: 19.991079,
+    });
+    const { newStars, stats } = promoteCompanions(
+      rows, [anchor, bridged], CON_ASSIGNMENT, null, undefined, new Map(),
+      new Map([['synth-20450+1244-B', '1755189379660877312']]),
+    );
+    expect(newStars).toHaveLength(0);
+    expect(stats.existingViaSameasBridge).toBe(1);
+    // Promotion amends no identifier: the record's designations stay the
+    // manifest's, and the synth key reaches it through the addressing
+    // sidecar instead (record-index/README.md).
+    expect(bridged.syntheticId).toBeNull();
+  });
+
+  it('mints as before when no bridge names the synthetic key', () => {
+    const rows = bridgedRows();
+    const anchor = makeStar({
+      hip: 102398, absmag: 3.271,
+      x: 68.494089, y: -78.099838, z: 23.461268,
+    });
+    const { newStars, stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    expect(stats.existingViaSameasBridge).toBe(0);
+    expect(newStars).toHaveLength(1);
   });
 });

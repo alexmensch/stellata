@@ -909,7 +909,7 @@ export class Stellata implements FrameAnchor {
     // the galactic centre; the fragment shader does a bounded raymarch
     // through its volume. renderOrder = -3 keeps it behind every other
     // layer.
-    this.milkyway = new MilkyWay(this.webgpu.bandMaterials);
+    this.milkyway = new MilkyWay(this.webgpu.bandMaterials, catalog.count);
     this.scene.add(this.milkyway.group);
 
     this.filters = new FilterController({

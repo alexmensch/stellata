@@ -78,6 +78,7 @@ import {
   readMultiplesTsv,
   MULTIPLES_TSV,
   parkedRefusals,
+  RECURATED_BRIGHTNESS,
 } from './companions/companion-promotion';
 import {
   buildCatalogRowIndexMap,
@@ -129,7 +130,10 @@ import {
 import { readGaiaHipXmatch } from './parse/gaia-xmatch';
 import { REPO_ROOT as ROOT, maxMtimeOfSources } from '../util/paths';
 import { assertOrUpdateSnapshot } from '../util/snapshot-assert';
-import { resolveSids, sidSuccessorPairs, starDesignations, type SidObject } from '../sid/sid-pure';
+import {
+  resolveSids, sidSuccessorPairs, starDesignations, syntheticGaiaBridges,
+  type SidObject,
+} from '../sid/sid-pure';
 import {
   HEAD_PATH,
   LEDGER_PATH,
@@ -137,6 +141,7 @@ import {
   REINSTATEMENTS_PATH,
   RETIREMENTS_PATH,
   loadRegistry,
+  loadStoredEdges,
 } from '../sid/registry-io';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -365,6 +370,7 @@ async function main() {
     systemCoherenceMemberAnchorWins: 0,
     systemCoherenceSignificantDepthKept: 0,
     systemCoherenceAnchorInconsistent: 0,
+    systemCoherenceMemberAnchorPrecisionVetoed: 0,
     companionRowsScanned: 0,
     companionPromoted: 0,
     companionPromotedSynthetic: 0,
@@ -395,6 +401,8 @@ async function main() {
     companionRepositionedCollocatedDouble: 0,
     companionConstellationSplitFromAnchor: 0,
     companionExistingDesigConFromAnchor: 0,
+    companionExistingMemberRecurated: emptyTallyPartition(RECURATED_BRIGHTNESS),
+    companionExistingViaSameasBridge: 0,
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
     hipVMagEntries: 0,
@@ -703,6 +711,7 @@ async function main() {
   const multiplesRows = existsSync(MULTIPLES_TSV)
     ? readMultiplesTsv(MULTIPLES_TSV)
     : null;
+  const synthGaiaBridges = syntheticGaiaBridges(loadStoredEdges());
   if (multiplesRows !== null) {
     // Intra-system radial coherence BEFORE promotion, so minted members
     // project off already-coherent anchor positions.
@@ -715,6 +724,7 @@ async function main() {
       `  system distance coherence: ${coherence.membersRepositioned} ` +
         `members repositioned across ${coherence.systemsProcessed} systems ` +
         `(${coherence.memberAnchorWins} member-anchor wins, ` +
+        `${coherence.memberAnchorPrecisionVetoed} vetoed on precision, ` +
         `${coherence.significantDepthKept} significant depths kept)`,
     );
     counts.systemCoherenceRepositioned = coherence.membersRepositioned;
@@ -724,17 +734,21 @@ async function main() {
       coherence.significantDepthKept;
     counts.systemCoherenceAnchorInconsistent =
       coherence.anchorPlacementInconsistent;
+    counts.systemCoherenceMemberAnchorPrecisionVetoed =
+      coherence.memberAnchorPrecisionVetoed;
     console.log('Promoting binary companions from multiples.tsv...');
     const tProm = Date.now();
     const { newStars, stats: ps } = promoteCompanions(
       multiplesRows, stars, conAssignment, dustGrid,
-      parkedRefusals(stats.parked),
+      parkedRefusals(stats.parked), directions.gaiaAstrometry, synthGaiaBridges,
     );
     for (const ns of newStars) stars.push(ns);
     console.log(
       `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
         `(${ps.promotedSynthetic} via synthetic ID); ` +
-        `already-in-catalog ${ps.alreadyInCatalog}; ` +
+        `already-in-catalog ${ps.alreadyInCatalog} ` +
+        `(re-curated ${formatPartition(ps.existingMemberRecurated)}, ` +
+        `${ps.existingViaSameasBridge} via same-as bridge); ` +
         `dropped (no-identifier=${ps.droppedNoIdentifier}, ` +
         `no-position=${ps.droppedNoPosition}, ` +
         `beyond-tidal=${ps.droppedBeyondTidalLimit}, ` +
@@ -790,6 +804,8 @@ async function main() {
     counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
     counts.companionConstellationSplitFromAnchor = ps.constellationSplitFromAnchor;
     counts.companionExistingDesigConFromAnchor = ps.existingDesigConFromAnchor;
+    counts.companionExistingMemberRecurated = ps.existingMemberRecurated;
+    counts.companionExistingViaSameasBridge = ps.existingViaSameasBridge;
 
   } else {
     console.log('multiples.tsv not found; skipping companion promotion.');
@@ -915,7 +931,7 @@ async function main() {
 
   // Built here (not at the sidecar write below) so the wings pass resolves
   // multiples.tsv rows exactly as the runtime binaries loader will.
-  const rowIndexMap = buildCatalogRowIndexMap(stars);
+  const rowIndexMap = buildCatalogRowIndexMap(stars, synthGaiaBridges);
 
   let componentDesignations = new Map<number, ComponentDesignation>();
   let multiplesMemberIndices = new Set<number>();
@@ -1170,6 +1186,15 @@ async function main() {
   counts.recordsInFirstChunk = recordsInChunkPrefix(
     chunkBytes, 1, HEADER_SIZE + nameTableLength, stars.length,
   );
+  // record/README.md § On-disk transport chunking is measured from this line.
+  const sortedKey = order.map((i) => sortKey[i]);
+  const chunkRows = chunkBytes.map((_, i) => {
+    const n = recordsInChunkPrefix(
+      chunkBytes, i + 1, HEADER_SIZE + nameTableLength, stars.length,
+    );
+    return `${i} ${n} records to V ${sortedKey[n - 1]?.toFixed(2) ?? '—'}`;
+  });
+  console.log(`  transport chunks — ${chunkRows.join(' · ')}`);
   const sidSuccessors = sidSuccessorPairs(registry.retirements, registry.reinstatements);
   const manifest: CatalogManifest = {
     chunkBytes,

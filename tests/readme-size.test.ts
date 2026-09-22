@@ -35,6 +35,18 @@ const ALLOWLIST: Record<string, string> = {
     'saving, plus duplicated rosters and no typechecker to verify the ' +
     'rewrite. Already trimmed of everything that had another home; the ' +
     'remainder is per-stage engineering contract.',
+  'scripts/catalog/companions/README.md':
+    'One pass (promoteCompanions) over one row type, whose post-passes all ' +
+    'read state the cursor walk accumulated. Every seam measured needs ' +
+    'MultiplesTsvRow plus 2-4 value helpers back OUT of the parent (the ' +
+    'wrong split, per AGENTS.md). Anchor flux conservation, the largest ' +
+    'topic at 91 lines, also writes seven counters ' +
+    'on PromotionStats that build-catalog reads, and placement needs ' +
+    'hasRenderableOrbit and the WDS letter algebra the rest of the pass ' +
+    'uses too. Same shape as scripts/binaries above. The science half is ' +
+    'already in docs/science-multiple-star-pipeline.md and the naming half ' +
+    'in ../naming/ and record-index/; what is left is the per-gate ' +
+    'engineering contract.',
 };
 
 // A trailing newline terminates the last line rather than starting a new

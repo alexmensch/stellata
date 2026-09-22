@@ -1068,9 +1068,19 @@ Applications of `docs/sid.md` (which remains the authority):
   `gaia_dr3:` ids bridge through `docs/sid.md` § 6 reconciliation.
 - The photometric transform (§ 5) gets the new release's successor
   calibration.
-- A deeper magnitude pull re-runs § 6 in additive mode: existing
-  records must not move (same SIDs, zero field deltas); new records
-  only add.
+- A deeper magnitude pull re-runs § 6 in additive mode **on identity**:
+  every existing SID survives, a component the deeper catalogue resolves
+  retires only through a row in `data/sid/retirements.tsv`, and no object
+  is drawn twice. **Field values on existing records may move**: companion
+  promotion, anchor-flux conservation and system distance coherence read
+  the record set rather than the manifest, so a deeper catalogue
+  re-anchors systems that were already there — onto the better-measured
+  source, never merely the newer one. `pnpm run validate:record-parity`
+  gates the identity half and reports the moved fields
+  (`scripts/catalog/validate/README.md` § Additive-mode record parity);
+  what the V ≤ 11 floor moves and why is
+  `scripts/catalog/membership/magnitude-term/README.md` § What the floor
+  moves that was already there.
 
 **Dead patterns — do not rebuild:** a bright/fill two-tier hybrid
 membership; positional joins at any stage; live SIMBAD in the build; a

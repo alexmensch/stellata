@@ -41,11 +41,11 @@ describe.skipIf(skip)('the physical-size elision over the built catalog', () => 
     catalog = parseBinary(ab, JSON.parse(conText), JSON.parse(manifestText).sidSuccessors);
   }, 120000);
 
-  it('admits 165 of 388,071 records at a Sol vantage, and gates the rest', () => {
+  it('admits 163 of 983,068 records at a Sol vantage, and gates the rest', () => {
     const { window, inside } = measure();
-    expect(catalog.count).toBe(388071);
+    expect(catalog.count).toBe(983068);
     expect(window).toBeCloseTo(7.1211, 4);
-    expect(inside).toBe(165);
+    expect(inside).toBe(163);
   });
 
   it('leaves the worst gated star three orders inside the tolerance', () => {

@@ -1,7 +1,10 @@
 // Layout, sampler mirror and texel values for the resolution hole.
 // README.md § The resolution hole; the table itself is generated.
 
-import { RESOLVED_HOLE_VALUES } from './resolved-hole-table';
+import {
+  RESOLVED_HOLE_CATALOGUE_RECORDS,
+  RESOLVED_HOLE_VALUES,
+} from './resolved-hole-table';
 
 /** Log-spaced distance shells from Sol, `RESOLVED_HOLE_DEX_PER_SHELL` wide,
  *  the first starting at 10^`RESOLVED_HOLE_LOG_DISTANCE0` pc. */
@@ -19,6 +22,22 @@ export interface ResolvedHoleTable {
 }
 
 export const SHIPPED_RESOLVED_HOLE: ResolvedHoleTable = { values: RESOLVED_HOLE_VALUES };
+
+/** The table subtracts the light of the catalogue it was MEASURED on, so a
+ *  client loading a different one removes light for stars the star field
+ *  never draws. Returns what to say about a mismatch, else null. A shallower
+ *  local build is legitimate and the band still renders, which is why the
+ *  caller warns rather than throwing. */
+export function resolvedHoleCatalogueMismatch(
+  loadedRecords: number,
+): string | null {
+  if (loadedRecords === RESOLVED_HOLE_CATALOGUE_RECORDS) return null;
+  return 'resolved-hole table was measured on '
+    + `${RESOLVED_HOLE_CATALOGUE_RECORDS.toLocaleString()} records but this `
+    + `catalogue loaded ${loadedRecords.toLocaleString()}, so the band `
+    + 'subtracts resolved light for a population the star field does not '
+    + 'draw. Regenerate with: pnpm run measure:band-resolved';
+}
 
 export function resolvedHoleIndex(shell: number, band: number): number {
   return band * RESOLVED_HOLE_SHELLS + shell;

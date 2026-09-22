@@ -24,8 +24,12 @@ comes out* is here.
   rows, the record count they were measured on, and the resolution-hole
   table (§ The resolution hole). Never edited by hand.
 - `resolved-fraction-pure.ts` (+ test) — the table's layout constants, the
-  rule the table is sampled with, the cube it is resampled onto, and the
-  CPU mirror of the trilinear fetch both shaders make.
+  rule the table is sampled with, the cube it is resampled onto, the
+  CPU mirror of the trilinear fetch both shaders make, and
+  `resolvedHoleCatalogueMismatch`: the table subtracts the light of the
+  catalogue it was measured on, so `MilkyWay` checks the loaded record count
+  against `RESOLVED_HOLE_CATALOGUE_RECORDS` once and warns. A warning, never
+  a throw — a shallower local build is legitimate and the band still renders.
 - `resolved-hole-texture.ts` (+ test) — the `Data3DTexture` those voxels go
   into and its filter pair.
 
@@ -219,7 +223,7 @@ model's light at that point**, read out of `resolved-hole-table.ts`:
   through the per-star extinction prepass, the band's remainder through its
   march.
 
-**Measured on the V ≤ 11 catalogue (983,069 records), not authored.**
+**Measured on the V ≤ 11 catalogue (983,068 records), not authored.**
 Within 200 pc the catalogue carries the whole of the model's light — the
 model's emissivity at Sol is right to a few percent, which is the one
 sightline-free check the solve has. From there the share falls: half the
@@ -336,7 +340,7 @@ The 25.44 is *not* published; `diffuse-reference.ts` builds it:
 | | mag/arcsec² |
 | --- | --- |
 | Leinert et al. 1998 Table 24, NGP — **total** starlight | 23.83 |
-| The 983,069 catalogue stars Stellata draws at V ≤ 11 | 24.110 |
+| The 983,068 catalogue stars Stellata draws at V ≤ 11 | 24.111 |
 | Residual left for the diffuse band | **25.44** |
 
 **The catalogue rows are measured per build, into `resolved-hole-table.ts`

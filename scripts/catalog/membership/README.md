@@ -4,7 +4,9 @@
 primaries admit: the spine's 313,257 rows re-keyed on the designations the
 primaries publish for them, less the one a correction folds
 (§ Correcting a merge decision), plus the 63,676 records the primaries name
-that AT-HYG's subset never carried — 376,932 rows. **`readStars` walks it, and
+that AT-HYG's subset never carried — 376,932 rows, and the 602,228 the V <= 11
+magnitude term adds on top (`magnitude-term/README.md`), 979,160 in
+all. **`readStars` walks it, and
 membership is exactly these rows less the § 6.1 parks**
 (`../parse/README.md` § Per-row pipeline). It is the artifact that retires
 `data/athyg/inherited-spine.tsv` as the build's input; the contract is
@@ -75,7 +77,7 @@ gaia_source_id  binding  routes  term
   evidence), or `none`. `binding/README.md` § Both gates weigh every candidate
   is the rule.
 - `term` is which side of `docs/catalog-driver.md` § 1's union admitted the
-  row. Every row reads `primaries` today; `magnitude-term/README.md` owns the
+  row — `primaries` or `magnitude`; `magnitude-term/README.md` owns the
   other side, its floor and its dedupe against the bindings derived below.
 - `routes` names the primary attesting each classical cell
   (`hd:iv25|hip:i239|gl:cns5|tyc:tycho2`), computed by the audit's

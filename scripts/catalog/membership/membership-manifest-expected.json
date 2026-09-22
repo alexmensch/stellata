@@ -63,7 +63,7 @@
     "gl": 0,
     "flam": 0
   },
-  "rows": 376932,
+  "rows": 979160,
   "spineRows": 313257,
   "spineRowsFolded": 1,
   "spineCellsCorrected": {
@@ -71,12 +71,12 @@
   },
   "additionRows": 63676,
   "magnitudeTerm": {
-    "rows": 0,
-    "kept": 0,
-    "above_floor": 0,
-    "no_v": 0
+    "rows": 1247240,
+    "kept": 929929,
+    "above_floor": 312475,
+    "no_v": 4836
   },
-  "magnitudeRows": 0,
+  "magnitudeRows": 602228,
   "additionsByReason": {
     "admitted:hd_link_gap": 54813,
     "admitted:hd_omitted": 5063,
@@ -88,7 +88,7 @@
     "crosswalk_gated": 358458,
     "simbad_corroborated": 12483,
     "reviewed": 53,
-    "gaia_native": 0,
+    "gaia_native": 602228,
     "none": 5938
   },
   "bindingReviewRows": 280,

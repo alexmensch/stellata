@@ -10,6 +10,7 @@ import {
   checkAppendOnly,
   compareDesignations,
   computeLedgerHead,
+  syntheticGaiaBridges,
   dropAmbiguousDesignations,
   isValidDesignation,
   namespaceRank,
@@ -675,5 +676,24 @@ describe('resolveSids', () => {
     });
     expect(r.errors).toEqual([]);
     expect(r.objectSids).toEqual([2]);
+  });
+});
+
+describe('syntheticGaiaBridges', () => {
+  it('maps a synthetic key to its Gaia source in either edge direction', () => {
+    const bridges = syntheticGaiaBridges([
+      { a: 'synth:20450+1244-B', b: 'gaia_dr3:1755189379660877312' },
+      { a: 'gaia_dr3:4109030160308317312', b: 'synth:17153-2636-B' },
+    ]);
+    expect(bridges.get('synth-20450+1244-B')).toBe('1755189379660877312');
+    expect(bridges.get('synth-17153-2636-B')).toBe('4109030160308317312');
+  });
+
+  it('ignores edges that are not synth↔gaia', () => {
+    const bridges = syntheticGaiaBridges([
+      { a: 'gl:277A', b: 'gl:277B' },
+      { a: 'hip:32349', b: 'gaia_dr3:2947050466531873024' },
+    ]);
+    expect(bridges.size).toBe(0);
   });
 });

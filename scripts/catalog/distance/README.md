@@ -353,10 +353,18 @@ Constants in `../record/catalog-pure.ts`:
 `isInLmcCone(raHours, decDegrees)` evaluates the cone independently
 of the PM gate so `readStars` can count cone-membership candidates
 (`lmcCandidates` in `build-catalog-expected.json`) separately from
-PM-passing overrides (`lmcOverridden`). The override fires for ~54
-of ~60 candidates each build; the residual ~6 fail the PM tolerance
-(MW halo / runaway stars whose PMs sit far from the LMC bulk
-centroid).
+PM-passing overrides (`lmcOverridden`). At `V ≤ 11` it fires for **122
+of 14,625** cone candidates; the rest fail the PM tolerance (MW halo /
+runaway stars whose PMs sit far from the LMC bulk centroid).
+
+**The PM gate is not a membership test, and the cone is crowded.** With
+no parallax-quality check, a foreground star that happens to lie toward
+the LMC and share its apparent motion is snapped to 49.6 kpc. Ten such
+captures are pinned in `build-distance-outliers-expected.json` with
+their measured parallaxes — 274 to 793 pc at 46σ to 167σ, where an LMC
+member's parallax would be ~0.02 mas and unmeasurable. `V ≤ 11` took
+that cohort from four rows to ten by multiplying the cone's population;
+`stellata-uadc.39` owns the parallax gate that would close it.
 
 The override **must** run after Layer 1: LMC supergiants typically
 carry Gaia source_ids that B-J's map covers, so Layer 1 fires on

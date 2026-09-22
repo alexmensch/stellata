@@ -30,7 +30,11 @@ export interface CatalogRowIndexMap {
 // binaries loader resolves multiples.tsv rows to catalog.bin records
 // through this map; the build script writes it next to catalog.bin /
 // search-index.json.
-export function buildCatalogRowIndexMap(stars: Star[]): CatalogRowIndexMap {
+export function buildCatalogRowIndexMap(
+  stars: Star[],
+  /** README.md § The sidecar and why resolution is duplicated from Python. */
+  synthGaiaBridges: ReadonlyMap<string, string> = new Map(),
+): CatalogRowIndexMap {
   const byGaia: Record<string, number> = {};
   const byHip: Record<string, number> = {};
   const bySynth: Record<string, number> = {};
@@ -45,6 +49,10 @@ export function buildCatalogRowIndexMap(stars: Star[]): CatalogRowIndexMap {
     if (s.syntheticId && !(s.syntheticId in bySynth)) {
       bySynth[s.syntheticId] = i;
     }
+  }
+  for (const [synthId, gaiaId] of synthGaiaBridges) {
+    const idx = byGaia[gaiaId];
+    if (idx !== undefined && !(synthId in bySynth)) bySynth[synthId] = idx;
   }
   return { byGaia, byHip, bySynth };
 }

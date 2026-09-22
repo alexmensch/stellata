@@ -7,6 +7,7 @@ import {
   spectralSimbadPartitionError,
   type BuildCounts,
 } from './build-counts';
+import { RECURATED_BRIGHTNESS } from './companions/companion-promotion';
 import { DIST_VIA_VALUES } from './distance/parallax/parallax-cascade';
 
 function baseCounts(): BuildCounts {
@@ -17,6 +18,7 @@ function baseCounts(): BuildCounts {
     systemCoherenceMemberAnchorWins: 0,
     systemCoherenceSignificantDepthKept: 0,
     systemCoherenceAnchorInconsistent: 0,
+    systemCoherenceMemberAnchorPrecisionVetoed: 0,
     binaryPairs: 100,
     binaryMutualPairs: 50,
     gcvsEntries: 60000,
@@ -109,6 +111,8 @@ function baseCounts(): BuildCounts {
     companionRepositionedCollocatedDouble: 1,
     companionConstellationSplitFromAnchor: 0,
     companionExistingDesigConFromAnchor: 0,
+    companionExistingMemberRecurated: emptyTallyPartition(RECURATED_BRIGHTNESS),
+    companionExistingViaSameasBridge: 0,
     designationConMismatch: 1,
     gcvsDesignationCon: 4,
     boundarySegments: 781,

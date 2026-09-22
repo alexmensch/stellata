@@ -24,9 +24,9 @@ scripts/catalog/membership/magnitude-term/
 
 ## The floor is one constant
 
-`MAGNITUDE_FLOOR_V` is the whole parameter. `null` is a membership term of the
-primaries alone — what ships today — and a number re-cuts the catalogue with no
-other edit: `build:membership` reads the pull, unions the survivors onto the
+`MAGNITUDE_FLOOR_V` is the whole parameter. It ships at **11**; `null` is a
+membership term of the primaries alone, and a number re-cuts the catalogue with
+no other edit: `build:membership` reads the pull, unions the survivors onto the
 manifest, and the record build walks the longer file unchanged.
 
 Moving it **deeper than `V ≤ 11` needs a re-pull first**. The file on disk is
@@ -85,10 +85,10 @@ of them in the kept set, so 602,228 rows are the term's own and the union is
 973,222 source_ids. The record total that implies, once promotion and parking
 apply: § The record total the floor implies, below.
 
-Run at `V ≤ 11` the generator writes **979,160** manifest rows — 376,932 plus
+At `V ≤ 11` the generator writes **979,160** manifest rows — 376,932 plus
 those 602,228 — and every primaries-side count holds byte for byte, which is
-what says the term adds and moves nothing. Reproduce by setting the floor and
-running `pnpm run build:membership`; nothing else changes.
+what says the term adds and moves nothing on the manifest side. The record side
+is not additive: § What the floor moves that was already there.
 
 ## The column is the ledger
 
@@ -109,7 +109,7 @@ primaries' own additions pin at zero: an admitted group falling through to its
 Gaia id means the admission rule leaked, while a magnitude row doing so is the
 term working. The two counts must not be read against each other.
 
-## The record total the floor implies — 983,069, measured
+## The record total the floor implies — 983,068, measured
 
 The catalogue is not the magnitude pull. It is the pull's `V <= 11` population
 **unioned** with the membership manifest and deduped on `source_id`, then put
@@ -123,9 +123,9 @@ committed files, then measured on a real floor-11 build, 2026-09-20:
 | in both | 327,701 | 327,701 |
 | source_id union | 973,222 | 973,222 |
 | manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 |
-| companions promoted to their own record | + 16,226 | **+ 14,657** |
+| companions promoted to their own record | + 16,226 | **+ 14,656** |
 | rows parked, so never a record | − 10,429 | **− 10,748** |
-| **records** | ~984,957 | **983,069** |
+| **records** | ~984,957 | **983,068** |
 
 The manifest side reproduced exactly: `build:membership` at the floor writes
 979,160 rows and every primaries-side count holds. Both build-side terms
@@ -134,12 +134,15 @@ today's 388,071 records.
 
 **Promotion is not carried forward unchanged**, which is what the projection
 assumed on the ground that WDS drives it and the deep population is not what
-WDS describes. It falls to 14,657, because promotion is gated on the secondary
-not already holding a record: `already-in-catalog` rises 1,668 → 3,317 as the
+WDS describes. It falls to 14,656, because promotion is gated on the secondary
+not already holding a record: `already-in-catalog` rises 1,668 → 3,324 as the
 deep population turns out to *contain* stars the build used to promote under a
 synthetic id. A deeper floor converts promoted companions into ordinary records
 rather than adding to them. Two of those synthetic classes then match only
-retired sids and need `../../../../data/sid/reinstatements.tsv` rows.
+retired sids and need `../../../../data/sid/reinstatements.tsv` rows, and seven
+rows reach the record only through a stored same-as edge
+(`../../companions/README.md` § Same-as bridge to an already-admitted
+source).
 
 **Parking scaled close to the projection**, against today's 5,087:
 
@@ -170,9 +173,50 @@ anyway. The floor bounds the magnitude term, never the catalogue.
 
 Reproduce the projection by streaming the pull through `rielloVMagnitude` and
 intersecting the kept `source_id`s against the manifest's `gaia_source_id`
-column; reproduce the measurement by setting `MAGNITUDE_FLOOR_V` to 11 and
-running `build:membership` then `build:catalog`. **Key on strings**: a Gaia
-`source_id` runs to 19 digits and loses precision silently as a float64.
+column; the measurement is what `build:membership` then `build:catalog` emit.
+**Key on strings**: a Gaia `source_id` runs to 19 digits and loses precision
+silently as a float64.
+
+### What the floor moves that was already there
+
+**Identity is additive; field values are not.** Measured sid-keyed against a
+floor-off build of the same tree
+(`../../validate/README.md` § Additive-mode record parity), the flip adds
+595,002 sids, drops none, puts no sid on two records — so the gate passes —
+and moves **about 3,000 of the 388,071 records that were already there** —
+`vx/vy/vz` 3,063/3,060/3,059, `x/y/z` 3,010/3,009/3,009, `physRadius` 2,851,
+`absmag` 2,838, `ci` 2,400, `flags` 1,907, the companion 1,689,
+`multiplicityStatus` 1,139, `lumClass` 1,102, `spectClass` 591, the display
+name 3, one `gaiaSourceId`. Some are large: sid 1406 moves about 46 pc.
+
+**Nothing drops** because the five retirements below are DECLARED, so the
+same-tree floor-off baseline honours them too — all five sids are absent from
+both builds. An undeclared drop would still fail.
+
+The cause is that three build stages read the record SET, not the manifest —
+companion promotion, anchor-flux conservation
+(`../../companions/README.md`) and system distance coherence. A deeper
+catalogue gives a system a nearer or better-measured anchor, and every member
+follows it.
+
+Two identity consequences, both handled in `data/sid/`:
+
+- **Five synthetic components stop promoting**, because the component's own
+  Gaia source is now an ordinary record or the system's anchor changed:
+  `09174+2339 B`, `17067-4350 B`, `10444-6000 D` retire onto the record that
+  now carries their source (sids 245097 · 224486 · 1798), and `05239-0052 B`
+  and `06583-3525 D` retire with no successor.
+- **Two retired components reappear** — `19059+3502 B` and `00392+6207 C` —
+  because the floor admits each pair's anchor, so the id-less pair-row primary
+  has something to promote against again. Both resume their original sid
+  through `data/sid/reinstatements.tsv`.
+
+**No object is drawn twice.** sid 232194, `synth:20450+1244-B`, was: its
+same-as bridge names a Gaia source the deep population admits as its own
+record, and the promotion's already-in-catalog test matches on the row's own
+identifiers. Promotion now reads the stored edges
+(`../../companions/README.md` § Same-as bridge to an already-admitted
+source), which refuses that mint and six more.
 
 ### What that costs on the wire
 
@@ -182,11 +226,11 @@ from a ratio:
 
 | | today | at `V <= 11` |
 |---|---|---|
-| records | 388,071 | 983,069 |
+| records | 388,071 | 983,068 |
 | `catalog.bin` raw | 37.0 MiB | 93.8 MiB |
 | `gzip -9` | 24.3 MiB | **59.5 MiB** |
 | brotli-5 | 23.1 MiB | **56.7 MiB** |
-| transport chunks | 3 | 6 |
+| transport chunks | 3 | 9 |
 
 The deep population compresses better than today's, as the projection warned it
 would: `gzip -9` lands at 0.6347 against today's 0.6556, so the ratio-scaled
@@ -203,10 +247,15 @@ reads it**: it is a build- and test-side sidecar addressed only from `scripts/`
 and `tests/`, so it is not a first-load cost and cannot drive a wire-chunking
 decision.
 
-First load therefore moves 29.8 → 66.9 MB gz, **2.24x**. `cns.6` owns the
-barrier that makes that matter: the loader fetches every chunk under one
-`Promise.all` and reassembles before decoding, so nothing renders until the
-last byte of the last chunk lands.
+**First paint does not pay any of it.** The whole catalogue on the wire moves
+29.8 → 66.9 MB gz, 2.24×, but the loader paints from the first transport chunk
+and fills behind it (`../../record/README.md` § On-disk transport chunking,
+`../../../../src/client/loaders/README.md` § Progressive catalog load). That
+chunk is a fixed byte budget, so it holds the same 10,412 records to apparent
+V 6.62 at either depth: the naked-eye sky arrives at the speed it always did
+and the depth streams in. Summed over nine separately-compressed chunks the
+transfer is 65.72 MB gz rather than the 62.4 MB the table's single-blob
+`gzip -9` gives — smaller windows, slightly worse ratio.
 
 ### What that costs in video memory
 
