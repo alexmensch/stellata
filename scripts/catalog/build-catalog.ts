@@ -1170,6 +1170,15 @@ async function main() {
   counts.recordsInFirstChunk = recordsInChunkPrefix(
     chunkBytes, 1, HEADER_SIZE + nameTableLength, stars.length,
   );
+  // record/README.md § On-disk transport chunking is measured from this line.
+  const sortedKey = order.map((i) => sortKey[i]);
+  const chunkRows = chunkBytes.map((_, i) => {
+    const n = recordsInChunkPrefix(
+      chunkBytes, i + 1, HEADER_SIZE + nameTableLength, stars.length,
+    );
+    return `${i} ${n} records to V ${sortedKey[n - 1]?.toFixed(2) ?? '—'}`;
+  });
+  console.log(`  transport chunks — ${chunkRows.join(' · ')}`);
   const sidSuccessors = sidSuccessorPairs(registry.retirements, registry.reinstatements);
   const manifest: CatalogManifest = {
     chunkBytes,

@@ -267,20 +267,28 @@ limit). Two things follow from the ramp, and both are the point:
   apparent-V order (§ Record order) that is the naked-eye sky, and it is
   smaller than every other artifact boot fetches, so the star catalogue
   stops being the thing first paint waits on. `recordsInFirstChunk` in
-  `../build-catalog-expected.json` pins the count.
-- **Each chunk roughly doubles the star count**, which is a near-constant
-  perceptual step (a magnitude is ~2.5× the count, so a doubling is ~0.75
-  mag). The sky densifies in even steps instead of arriving in one lump.
-  Measured, cumulative, today's 388,071-record build:
+  `../build-catalog-expected.json` pins the count. **It does not move with
+  the catalogue's depth**: the ramp's first chunk is a fixed byte budget,
+  so the V ≤ 11 floor left this row untouched and added chunks at the
+  faint end instead.
+- **Each chunk roughly doubles the star count until the ramp tops out**,
+  which is a near-constant perceptual step (a magnitude is ~2.5× the count,
+  so a doubling is ~0.75 mag). Past the 16 MiB ceiling each chunk is a flat
+  ~168k records instead, ~0.3 mag apiece at this density. Measured,
+  cumulative, today's 983,069-record build; the build prints this table's
+  `records` and `faintest V` columns on every run:
 
   | chunk | raw | gz | cumulative gz | records | faintest V |
   | --- | --- | --- | --- | --- | --- |
   | 0 | 1 MiB | 716 KB | 716 KB | 10,412 | 6.62 |
-  | 1 | 2 MiB | 1.47 MB | 2.19 MB | 31,384 | 7.64 |
-  | 2 | 4 MiB | 2.93 MB | 5.11 MB | 73,327 | 8.44 |
-  | 3 | 8 MiB | 5.77 MB | 10.9 MB | 157,213 | 9.27 |
-  | 4 | 16 MiB | 11.3 MB | 22.2 MB | 324,985 | 10.66 |
-  | 5 | 6.02 MiB | 3.92 MB | 26.1 MB | 388,071 | 32.21 |
+  | 1 | 2 MiB | 1.47 MB | 2.19 MB | 31,384 | 7.63 |
+  | 2 | 4 MiB | 2.92 MB | 5.11 MB | 73,327 | 8.42 |
+  | 3 | 8 MiB | 5.75 MB | 10.86 MB | 157,213 | 9.16 |
+  | 4 | 16 MiB | 11.32 MB | 22.18 MB | 324,985 | 9.89 |
+  | 5 | 16 MiB | 11.19 MB | 33.37 MB | 492,757 | 10.32 |
+  | 6 | 16 MiB | 11.16 MB | 44.53 MB | 660,530 | 10.63 |
+  | 7 | 16 MiB | 11.15 MB | 55.68 MB | 828,302 | 10.87 |
+  | 8 | 14.76 MiB | 10.04 MB | 65.72 MB | 983,069 | 32.21 |
 
   The last row's faintest V is an LMC-distance record at the 50 kpc cutoff,
   not a bad sort — the column is each chunk's faintest, so it tracks the

@@ -221,7 +221,7 @@ from a ratio:
 | `catalog.bin` raw | 37.0 MiB | 93.8 MiB |
 | `gzip -9` | 24.3 MiB | **59.5 MiB** |
 | brotli-5 | 23.1 MiB | **56.7 MiB** |
-| transport chunks | 3 | 6 |
+| transport chunks | 3 | 9 |
 
 The deep population compresses better than today's, as the projection warned it
 would: `gzip -9` lands at 0.6347 against today's 0.6556, so the ratio-scaled
@@ -238,10 +238,15 @@ reads it**: it is a build- and test-side sidecar addressed only from `scripts/`
 and `tests/`, so it is not a first-load cost and cannot drive a wire-chunking
 decision.
 
-First load therefore moves 29.8 → 66.9 MB gz, **2.24x**. `cns.6` owns the
-barrier that makes that matter: the loader fetches every chunk under one
-`Promise.all` and reassembles before decoding, so nothing renders until the
-last byte of the last chunk lands.
+**First paint does not pay any of it.** The whole catalogue on the wire moves
+29.8 → 66.9 MB gz, 2.24×, but the loader paints from the first transport chunk
+and fills behind it (`../../record/README.md` § On-disk transport chunking,
+`../../../../src/client/loaders/README.md` § Progressive catalog load). That
+chunk is a fixed byte budget, so it holds the same 10,412 records to apparent
+V 6.62 at either depth: the naked-eye sky arrives at the speed it always did
+and the depth streams in. Summed over nine separately-compressed chunks the
+transfer is 65.72 MB gz rather than the 62.4 MB the table's single-blob
+`gzip -9` gives — smaller windows, slightly worse ratio.
 
 ### What that costs in video memory
 
