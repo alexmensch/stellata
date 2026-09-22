@@ -167,7 +167,14 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     const admitted = ledger.filter((l) => !l.reason.startsWith(COMPONENT_REASON_PREFIX));
     const components = ledger.filter((l) => l.reason.startsWith(COMPONENT_REASON_PREFIX));
 
-    const unreachedKeys = match.unreached.map((i) => manifestKey(manifest[i])).sort();
+    // The magnitude term is unreached by construction and carries no ledger
+    // row: its `term` column is the whole ledger for that cohort, since every
+    // row of it has the same admission reason
+    // (magnitude-term/README.md § The column is the ledger).
+    const unreachedKeys = match.unreached
+      .filter((i) => manifest[i].term === 'primaries')
+      .map((i) => manifestKey(manifest[i]))
+      .sort();
     expect(admitted.map(manifestKey).sort()).toEqual(unreachedKeys);
     for (const l of admitted) {
       expect((ADDITION_REASONS as readonly string[]).includes(l.reason), l.reason).toBe(true);

@@ -16,7 +16,7 @@ const ATHYG_SPINE_ROWS = '313,257';
 /** The rounding every prose surface quotes. § rounds to the figure the prose
  *  quotes derives the same string from the built artifact, so a refresh that
  *  moves the catalogue fails there and the sweep starts from this constant. */
-const PROSE_ROUNDED = '390k';
+const PROSE_ROUNDED = '980k';
 
 // A digit separator hides the figure from a bare `313,000` pattern, which is
 // how `scripts/dust/prefilter/cost.ts` held `313_000` through two count
@@ -38,8 +38,11 @@ const PROSE_SURFACES = [
   'README.md', 'CITATION.cff', 'public/llms.txt', 'src/client/index.html',
 ];
 
-/** Any three-hundred-thousand-odd star figure: `380,000`, `~384k`, `390k`. */
-const SIZE_FIGURE = /\b3\d\d(?:,\d{3}|k)\b/g;
+/** Any hundred-thousands star figure: `380,000`, `~384k`, `390k`, `980,000`.
+ *  Wide enough to catch the PREVIOUS rounding as well as a wrong new one —
+ *  a pattern that only matches the current bucket goes blind the moment the
+ *  catalogue moves, which is the failure it exists to catch. */
+const SIZE_FIGURE = /\b\d\d\d(?:,\d{3}|k)\b/g;
 
 function scannedFiles(): string[] {
   return execFileSync('git', ['ls-files', 'src', 'docs', 'scripts', 'tests',
