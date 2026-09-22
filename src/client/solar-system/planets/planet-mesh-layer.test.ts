@@ -5,7 +5,12 @@ import { fakeSolarSystemMaterials } from '../materials/solar-system-materials-mo
 import { makeMockHdrEmitterUniforms } from '../../kinds/kind-context-mock';
 import { SOL_BODIES } from '../planet-system';
 import { PLANET_MESH_TEXTURE_SLOTS } from '../materials/texture-slots';
-import { TEXTURE_VRAM_BUDGET_BYTES } from './textures/texture-budget-pure';
+import {
+  DEVICE_MAX_TEXTURE_SIZE,
+  MIN_TEXTURE_CAP,
+  TEXTURE_BUDGET_FLOOR_BYTES,
+  TEXTURE_VRAM_BUDGET_BYTES,
+} from './textures/texture-budget-pure';
 import type { PlanetBodyField } from './planet-body-field';
 import { PlanetMeshLayer, TEXTURE_DECODE_OPTIONS } from './planet-mesh-layer';
 import {
@@ -71,7 +76,6 @@ describe('the mesh stand-in is filterable', () => {
       '/',
       hdr,
       () => {},
-      8192,
       (placeholder) => {
         handed.push(placeholder);
         return fakeSolarSystemMaterials();
@@ -124,7 +128,11 @@ interface FakeBitmap {
 /** The real layer over a stub field and a stub loader; each frame places
  *  every body at a given projected diameter. No host: an unlit body skips
  *  the sun, caster and atmosphere legs. */
-function harness(bodyNames: string[], maxTextureSize = 8192) {
+function harness(
+  bodyNames: string[],
+  maxTextureSize = DEVICE_MAX_TEXTURE_SIZE,
+  budgetBytes = TEXTURE_VRAM_BUDGET_BYTES,
+) {
   const planets = bodyNames.map((n) => SOL_BODIES.find((b) => b.name === n)!);
   const physPx = new Map<number, number>();
   const loads: { url: string; onLoad: (bitmap: unknown) => void }[] = [];
@@ -153,8 +161,8 @@ function harness(bodyNames: string[], maxTextureSize = 8192) {
     '/',
     { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } },
     () => {},
-    maxTextureSize,
     () => fakeSolarSystemMaterials(),
+    { budgetBytes, maxTextureSize },
   );
   const camera = new THREE.PerspectiveCamera();
   return {
@@ -270,7 +278,7 @@ describe('the layer releases what it stops drawing', () => {
   it('never evicts a map drawn this frame, however far over budget', () => {
     const h = harness(['Europa', 'Ganymede']);
     h.frame([3000, 3000]);
-    // Square maps, so two of them are 716 MB against the 512 MB budget.
+    // Square maps, so two of them are 716 MB against the 192 MB budget.
     const a = h.resolve('europa-8192', 8192, 8192);
     const b = h.resolve('ganymede-8192', 8192, 8192);
     expect(BYTES_8192_SQ * 2).toBeGreaterThan(TEXTURE_VRAM_BUDGET_BYTES);
@@ -328,6 +336,68 @@ describe('the layer releases what it stops drawing', () => {
 
     h.layer.dispose();
     expect(map.close).toHaveBeenCalledTimes(1);
+  });
+});
+
+// See textures/README.md § Staying inside VRAM.
+describe('the floor rung stays resident', () => {
+  it('fetches the floor alongside whatever the demand asks for', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    expect(h.pendingFor('europa-1024')).toBe(true);
+    expect(h.pendingFor('europa-8192')).toBe(true);
+  });
+
+  it('keeps a floor that lands after the wider rung it was fetched beside', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    h.resolve('europa-8192', 8192);
+    h.frame([3000]);
+    const floor = h.resolve('europa-1024', 1024);
+    h.frame([3000]);
+    expect(floor.close).not.toHaveBeenCalled();
+  });
+
+  it('evicts the wide rung of a body off screen and keeps its floor', () => {
+    const h = harness(['Europa', 'Ganymede'], DEVICE_MAX_TEXTURE_SIZE, TEXTURE_BUDGET_FLOOR_BYTES);
+    h.frame([3000, 3000]);
+    const floor = h.resolve('ganymede-1024', 1024);
+    const wide = h.resolve('ganymede-8192', 8192);
+    h.frame([3000, 3000]);
+    h.frame([3000, 0]);
+    expect(wide.close).toHaveBeenCalledTimes(1);
+    expect(floor.close).not.toHaveBeenCalled();
+  });
+});
+
+describe('an out-of-memory report steps the limits down', () => {
+  it('releases every map wider than the new cap at once', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    h.resolve('europa-1024', 1024);
+    const wide = h.resolve('europa-8192', 8192);
+    h.frame([3000]);
+    h.layer.stepDownTextureLimits();
+    expect(wide.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('then asks for no rung past the lowered cap', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    h.resolve('europa-1024', 1024);
+    h.resolve('europa-8192', 8192);
+    h.frame([3000]);
+    h.layer.stepDownTextureLimits();
+    h.frame([3000]);
+    expect(h.pendingFor('europa-8192')).toBe(false);
+    expect(h.pendingFor('europa-4096')).toBe(true);
+  });
+
+  it('stops lowering the cap at its floor', () => {
+    const h = harness(['Europa'], MIN_TEXTURE_CAP);
+    h.layer.stepDownTextureLimits();
+    h.frame([3000]);
+    expect(h.pendingFor(`europa-${MIN_TEXTURE_CAP}`)).toBe(true);
   });
 });
 
@@ -493,7 +563,6 @@ describe('the ring annulus phase scalar', () => {
       '/',
       { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } },
       () => {},
-      8192,
       () => {
         const materials = fakeSolarSystemMaterials();
         return {

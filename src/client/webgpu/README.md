@@ -30,6 +30,10 @@ src/client/webgpu/
   boot-webgpu.ts                    Async boot: construct + init the
                                     WebGPURenderer, build the seam handle.
                                     The dynamic-import boundary.
+  out-of-memory.ts (+ test)         watchOutOfMemory — the renderer's
+                                    uncaptured GPUOutOfMemoryError reports,
+                                    fanned out to subscribers (§ Out of
+                                    memory). Imports nothing from three.
   reversed-depth-sort.ts (+ test)   Render-list comparators countering
                                     r185's reversed-depth list reversal;
                                     retire with the three bump.
@@ -352,6 +356,20 @@ local-pass pair is ever visible. The glare billboard dropped the hint
 (`solar-system/README.md` § The glare packs); the star mirror's slots keep
 it on a size ceiling, not on the rule
 (`../star-pipeline/local-pass/README.md` § Mirror draw).
+
+## Out of memory
+
+WebGPU reports no memory size, so an allocation the GPU refuses is the one
+memory signal the app gets. three routes every uncaptured device error
+through `renderer.onError`, naming it by the error's constructor;
+`watchOutOfMemory` chains that hook, keeps three's console log running
+first, and calls each `WebGpuSeam.onOutOfMemory` subscriber on a
+`GPUOutOfMemoryError`. The planet module is the one subscriber: planet
+textures are the only resident set that grows with where the camera has
+been, so they are what steps down
+(`../solar-system/planets/textures/README.md` § Staying inside VRAM). A
+subscriber unsubscribes in its layer's dispose; the seam's own `dispose`
+restores three's hook.
 
 ## Timestamps
 

@@ -20,10 +20,12 @@ import {
 } from './textures/texture-ladder';
 import {
   evictionOrder,
+  INITIAL_TEXTURE_LIMITS,
   otherRungs,
+  steppedTextureLimits,
   textureBytes,
-  textureVramBudgetBytes,
   type ResidentTexture,
+  type TextureLimits,
 } from './textures/texture-budget-pure';
 import { polarRadiusRatio } from './spheroid-pure';
 import {
@@ -193,6 +195,9 @@ const textureKey = (name: string, suffix = ''): string =>
 /** The colour map's key without any rung. */
 const ladderKey = (name: string): string => name.toLowerCase();
 
+/** The narrowest rung a body ships, which it keeps resident once drawn. */
+const floorRungOf = (body: string): number | null => rungsOf(body)?.[0] ?? null;
+
 /** The body's DEM elevation span, or null where it ships no relief maps —
  *  which bodies fetch them and the fallback limb bound are the same question. */
 const reliefSpanOf = (planet: Planet): readonly [number, number] | null =>
@@ -257,10 +262,9 @@ export class PlanetMeshLayer {
   private readonly loader = new THREE.ImageBitmapLoader()
     .setOptions({ ...TEXTURE_DECODE_OPTIONS });
   private readonly requestRender: (reason: string) => void;
-  /** Widest texture this device accepts. Bounds the ladder, and stands in for
-   *  the device tier the VRAM budget is sized on. */
-  private readonly maxTextureSize: number;
-  private readonly vramBudgetBytes: number;
+  /** The texture cap and the resident budget; `stepDownTextureLimits` lowers
+   *  both. */
+  private limits: TextureLimits;
   private readonly entries = new Map<number, MeshEntry>();
   private readonly textures = new Map<string, TextureState>();
   /** Frames are counted only to answer "was this drawn just now" during
@@ -297,14 +301,13 @@ export class PlanetMeshLayer {
     textureBaseUrl: string,
     hdr: HdrEmitterUniforms & { uPixelRatio?: THREE.IUniform<number> },
     requestRender: (reason: string) => void,
-    maxTextureSize: number,
     materials: (placeholder: THREE.Texture) => SolarSystemMaterials,
+    limits: TextureLimits = INITIAL_TEXTURE_LIMITS,
   ) {
     this.field = field;
     this.textureBaseUrl = textureBaseUrl;
     this.requestRender = requestRender;
-    this.maxTextureSize = maxTextureSize;
-    this.vramBudgetBytes = textureVramBudgetBytes(maxTextureSize);
+    this.limits = limits;
     this.hdr = pickHdrEmitterUniforms(hdr);
     this.uPixelRatio = hdr.uPixelRatio;
     this.group = new THREE.Group();
@@ -661,23 +664,48 @@ export class PlanetMeshLayer {
       body,
       requiredMapWidth(physPx, this.pixelRatio()),
       shown,
-      this.maxTextureSize,
+      this.limits.maxTextureSize,
     );
     // A body with no ladder row ships no map at all (Uranus, future
     // exoplanets) and takes the representative-colour base path.
-    if (want === null) return;
+    const floor = floorRungOf(body);
+    if (want === null || floor === null) return;
     // Recorded even when it is what we already draw, so a rung still in flight
     // from a demand that has since receded is recognised as superseded when it
     // lands rather than sitting resident and undrawn.
     this.requestedRung.set(body, want);
+    const floorReady = this.ensureRung(body, floor);
     if (want === shown) return;
-    const key = textureKey(planet.name, `-${want}`);
-    this.rungOf.set(key, { body, width: want });
-    this.ensureTexture(key, { ext: 'jpg' });
-    if (this.useTexture(key)?.state === 'ready') {
+    if (this.ensureRung(body, want)) {
       this.shownRung.set(body, want);
       this.releaseOtherRungs(planet, want);
+    } else if (shown === null && floorReady) {
+      this.shownRung.set(body, floor);
     }
+  }
+
+  /** Request one colour rung, and report whether it is drawable yet. */
+  private ensureRung(body: string, width: number): boolean {
+    const key = textureKey(body, `-${width}`);
+    this.rungOf.set(key, { body, width });
+    this.ensureTexture(key, { ext: 'jpg' });
+    return this.useTexture(key)?.state === 'ready';
+  }
+
+  /** textures/README.md § Staying inside VRAM. */
+  stepDownTextureLimits(): void {
+    const next = steppedTextureLimits(this.limits);
+    if (next === null) return;
+    this.limits = next;
+    for (const [key, state] of this.textures) {
+      if (state.state !== 'ready') continue;
+      const { width, height } = state.tex.image as ImageBitmap;
+      if (width > next.maxTextureSize || height > next.maxTextureSize) {
+        this.evictTexture(key);
+      }
+    }
+    this.enforceTextureBudget();
+    this.requestRender('planet-texture-limits');
   }
 
   /**
@@ -760,17 +788,33 @@ export class PlanetMeshLayer {
     this.rungOf.delete(key);
   }
 
-  /** Free every rung of a body except the one now drawn. Narrower rungs are
-   *  outgrown; wider ones are only ever left behind after the body shrank
-   *  well past them, so both are memory the screen cannot show. */
   private releaseOtherRungs(planet: Planet, shownWidth: number): void {
     const body = ladderKey(planet.name);
     const rungs = rungsOf(body);
     if (rungs === null) return;
     const held = rungs.filter((w) => this.isResident(textureKey(planet.name, `-${w}`)));
-    for (const w of otherRungs(held, shownWidth)) {
+    for (const w of otherRungs(held, shownWidth, rungs[0])) {
       this.releaseTexture(textureKey(planet.name, `-${w}`));
     }
+  }
+
+  /** Release a map; when it was a body's drawn rung, the body falls back to
+   *  its floor, or to the placeholder if the floor is not resident. */
+  private evictTexture(key: string): void {
+    const rung = this.rungOf.get(key);
+    this.releaseTexture(key);
+    if (!rung || this.shownRung.get(rung.body) !== rung.width) return;
+    const floor = floorRungOf(rung.body);
+    if (floor !== null && this.isResident(textureKey(rung.body, `-${floor}`))) {
+      this.shownRung.set(rung.body, floor);
+    } else {
+      this.shownRung.delete(rung.body);
+    }
+  }
+
+  private isPinnedRung(key: string): boolean {
+    const rung = this.rungOf.get(key);
+    return rung !== undefined && rung.width === floorRungOf(rung.body);
   }
 
   /** Evict least-recently-drawn maps until the resident set is back inside
@@ -783,22 +827,17 @@ export class PlanetMeshLayer {
     for (const state of this.textures.values()) {
       if (state.state === 'ready') total += state.bytes;
     }
-    if (total <= this.vramBudgetBytes) return;
+    const budget = this.limits.budgetBytes;
+    if (total <= budget) return;
 
     const resident: ResidentTexture[] = [];
     for (const [key, state] of this.textures) {
       if (state.state !== 'ready') continue;
-      resident.push({ key, bytes: state.bytes, lastFrame: state.lastFrame });
+      resident.push({
+        key, bytes: state.bytes, lastFrame: state.lastFrame, pinned: this.isPinnedRung(key),
+      });
     }
-    for (const key of evictionOrder(resident, this.vramBudgetBytes, this.frame)) {
-      const rung = this.rungOf.get(key);
-      this.releaseTexture(key);
-      // A colour rung that goes must stop being the drawn one, or the body
-      // renders its placeholder until it happens to grow into a new rung.
-      if (rung && this.shownRung.get(rung.body) === rung.width) {
-        this.shownRung.delete(rung.body);
-      }
-    }
+    for (const key of evictionOrder(resident, budget, this.frame)) this.evictTexture(key);
   }
 
   /** Fill the material's uCasters array with view-space shadow spheres
@@ -1059,7 +1098,8 @@ export class PlanetMeshLayer {
         // cap has to be enforced where every map passes. An oversized upload
         // fails and leaves the body white; refusing here takes the
         // representative-colour path instead, which is a designed fallback.
-        if (bitmap.width > this.maxTextureSize || bitmap.height > this.maxTextureSize) {
+        const cap = this.limits.maxTextureSize;
+        if (bitmap.width > cap || bitmap.height > cap) {
           bitmap.close();
           this.resolveTexture(key, { state: 'missing' });
           return;
@@ -1118,7 +1158,7 @@ export class PlanetMeshLayer {
     // comes back off the HTTP cache while a narrower one is still on the
     // wire — so ordering cannot be relied on instead.
     const rung = this.rungOf.get(key);
-    if (rung && this.requestedRung.get(rung.body) !== rung.width) {
+    if (rung && !this.isPinnedRung(key) && this.requestedRung.get(rung.body) !== rung.width) {
       this.releaseTexture(key);
     }
     this.requestRender('planet-texture');

@@ -35,6 +35,7 @@ import type { StarCompaction } from './star/compaction/star-compaction';
 import { STAR_VERTEX_STAGE_STORAGE_BUFFERS, StarLayer } from './star/star-layer';
 import type { StarTables } from './star/star-tables';
 import { settleTimestampSupport, type TimestampBackend } from './timestamps/timestamp-probe';
+import { watchOutOfMemory, type ErrorReporter } from './out-of-memory';
 
 /** Null when the device came back and then refused the renderer. The
  *  caller shows the requires-WebGPU page rather than a broken canvas
@@ -93,6 +94,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // fallback march and the prepass march sample the SAME dust node, so
   // `setDustTexture` cannot reach one and miss the other.
   const extinctionSlots = new ExtinctionNodes();
+  const outOfMemory = watchOutOfMemory(renderer as unknown as ErrorReporter);
   const nodesOrThrow = (caller: string) => {
     if (registry === null) throw new Error(`${caller} before bindSharedUniforms`);
     return registry.nodes;
@@ -212,6 +214,9 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     setDustTexture(texture: THREE.Data3DTexture | null) {
       extinctionSlots.setDustTexture(texture);
     },
+    onOutOfMemory(listener: () => void) {
+      return outOfMemory.subscribe(listener);
+    },
     attachExtinctionPrepass(options: WebGpuExtinctionPrepassSources) {
       if (starTables === null || starCompaction === null) {
         throw new Error('attachExtinctionPrepass before attachStarLayer');
@@ -227,6 +232,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     },
     dispose() {
       extinctionSlots.dispose();
+      outOfMemory.dispose();
       // The node registry holds no GPU resource — it mirrors the shell's
       // uniform value-objects, which the shell owns. Dropping it is what
       // makes a post-dispose attach throw rather than build against a

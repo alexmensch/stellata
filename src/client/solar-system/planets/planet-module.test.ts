@@ -1,7 +1,7 @@
 // Planet kind-module contract: absence before attach, the boot host
 // attach behind systemsReady, and the capability legs over the field.
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import type { KindContext } from '../../kinds/kind-module';
 import {
@@ -30,8 +30,9 @@ const DECOY_HOST_POS = new THREE.Vector3(0, 0, 1e4);
 
 function makeCtxWithGlare(
   overrides: Partial<KindContext> = {},
-): { ctx: KindContext; glare: FakePlanetGlare } {
+): { ctx: KindContext; glare: FakePlanetGlare; outOfMemoryListeners: Set<() => void> } {
   const glare = fakePlanetGlare();
+  const outOfMemoryListeners = new Set<() => void>();
   // Same viewport / FOV as the mock's camera and canvas rect, so pick
   // projections and screen-centre coordinates agree across both maps.
   const sharedUniforms = buildSharedUniforms({
@@ -47,13 +48,17 @@ function makeCtxWithGlare(
       // The glare is the one surface that ports as a layer, so the seam
       // hands back a handle rather than a material.
       attachPlanetGlare: () => glare.glare,
+      onOutOfMemory: (listener) => {
+        outOfMemoryListeners.add(listener);
+        return () => { outOfMemoryListeners.delete(listener); };
+      },
     }),
     sharedUniforms,
     solIndex: 0,
     starPhotometry: (idx) => (idx === 0 ? SOL_PHOTOMETRY : null),
     ...overrides,
   });
-  return { ctx, glare };
+  return { ctx, glare, outOfMemoryListeners };
 }
 
 function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
@@ -228,6 +233,18 @@ describe('planet kind module', () => {
     expect(m.meshLayer.group.children).not.toContain(m.meshLayer.depthStampGroup);
     layer!.dispose();
     expect(ctx.scene.children).not.toContain(m.meshLayer.depthStampGroup);
+  });
+
+  it('steps the mesh layer down on an out-of-memory report, until dispose', async () => {
+    const m = createPlanetKindModule();
+    await m.load('/');
+    const { ctx, outOfMemoryListeners } = makeCtxWithGlare();
+    const layer = m.attach(ctx);
+    const stepDown = vi.spyOn(m.meshLayer, 'stepDownTextureLimits');
+    for (const listener of outOfMemoryListeners) listener();
+    expect(stepDown).toHaveBeenCalledTimes(1);
+    layer!.dispose();
+    expect(outOfMemoryListeners.size).toBe(0);
   });
 
   it('setFocalHidden drives the field hide slot; -1 unhides', async () => {

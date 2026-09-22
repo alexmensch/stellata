@@ -96,14 +96,14 @@ A rung is promoted to *drawn* only once it is fully resident — decoded,
 uploaded, mips built. Swapping on first byte shows a frame of black or
 bottom-mip, which is the pop these rules exist to avoid.
 
-**Every rule is capped by what the device accepts.** The spec guarantees
-`MAX_TEXTURE_SIZE` only 2048, and an upload past a device's own limit fails
-outright — the body sits on its white placeholder with nothing else looking
-wrong. Selection takes the cap (`KindContext.maxTextureSize`) and rounds
-*down* to a rung inside it, rule 2 included, so the lead cannot step over the
-limit at exactly the moment the body is closest. The WebGPU boot answers no
-capabilities object and takes that spec's guaranteed floor for
-`maxTextureDimension2D` — 8192, the ladder's top rung, so nothing clamps there.
+**Every rule is capped.** An upload past the device's limit fails outright —
+the body sits on its white placeholder with nothing else looking wrong.
+Selection takes the layer's cap and rounds *down* to a rung inside it, rule 2
+included, so the lead cannot step over the limit at exactly the moment the
+body is closest. The cap starts at `DEVICE_MAX_TEXTURE_SIZE`, 8192: three
+requests no raised limits, so every device carries the WebGPU default for
+`maxTextureDimension2D`, which is also the ladder's top rung. It only falls
+after an out-of-memory report (§ Staying inside VRAM).
 
 The relief and ring maps ship **one fixed width each** (Earth's normal map is
 8192), so the ladder's clamp cannot cover them. Every decoded bitmap is
@@ -153,11 +153,19 @@ session length rather than in what is on screen: visiting the Moon, Earth and
 Mars held ~980 MB of colour and relief until the layer was torn down. Two
 mechanisms fix that, and they answer different questions.
 
-**A body keeps exactly one rung.** Every other rung it holds is freed the
-moment a new one is drawn — narrower ones because the demand outgrew them,
-wider ones because rule 4 only drops after the body shrank well past them.
-Freeing both there rather than waiting for pressure is what keeps resident
-memory tracking demand instead of the session's high-water mark.
+**A body keeps the rung it draws, plus its floor.** Every other rung it holds
+is freed the moment a new one is drawn — narrower ones because the demand
+outgrew them, wider ones because rule 4 only drops after the body shrank well
+past them. Freeing both there rather than waiting for pressure is what keeps
+resident memory tracking demand instead of the session's high-water mark.
+
+**The floor is the body's narrowest rung (1024), and it is pinned**: fetched
+beside the first rung the body asks for, and never released by promotion, by
+an in-flight supersede or by eviction. All 21 textured bodies' floors cost
+~59 MB together. What it buys is the return visit: when eviction takes a
+body's drawn rung, the body falls back to its floor rather than to the flat
+representative colour, so coming back reads soft-then-sharp through the
+normal ladder instead of a pop.
 
 **A rung still in flight is the case promotion cannot reach**, and it needs
 its own release. Selection is fed the DRAWN rung, so a demand moving faster
@@ -172,28 +180,35 @@ HTTP cache while a narrower one is still downloading.
 
 **Everything else goes on a budget.** `textureVramBudgetBytes` bounds the
 resident set; over it, maps are released least-recently-drawn first, largest
-breaking the tie. **Nothing drawn this frame is ever a candidate** — evicting
+breaking the tie. **Nothing drawn this frame is ever a candidate**, and no
+pinned floor is either — evicting
 the map on screen flips the body to its placeholder mid-view, which is worse
 than being over budget — so if the drawn set alone exceeds the budget the pass
 sheds what it can and stops. No thrash.
 
-The budget is sized on the worst legitimate working set rather than a round
-number: one body parked at the camera floor on a high-DPI display. That is
-Earth at its 8192 colour rung plus **all three** of its relief planes — the
-8192 normal map, the 4096 horizon pair and the 4096 sky-view factor — which is
-369 MB for the single body the camera is looking at, with the remainder as
-headroom for distant bodies holding 1024s at 2.8 MB each. Every relief plane
-that ships has to be counted here: each one is a fixed width the ladder's clamp
-cannot lower, so they enter the worst case in full or not at all.
+**The budget decides how much OFF-screen memory survives, not how sharp
+anything on screen is.** Only undrawn maps can go, so what is on screen may
+exceed the budget on its own — Earth parked at the camera floor draws its 8192
+colour rung and all three relief planes, ~369 MB — and the pass then sheds
+everything off screen and stops. The cost of a small budget is a re-decode
+from the HTTP cache when the camera returns to a body, never a blurrier view.
 
-**It follows the device cap, because a fixed budget is inert below it.**
-Eviction fires only *above* the budget, so a flat 512 MB on a device with less
-texture memory than that never evicts at all — the protection is missing
-exactly where it is needed, which is the opposite of over-allocating.
-`maxTextureSize` is the only capability WebGL exposes that tracks how much
-texture memory a GPU is likely to have, so the budget steps with it (512 MB at
-8192, 192 MB at 4096, 48 MB below), each tier still holding one body at the
-camera floor.
+`TEXTURE_VRAM_BUDGET_BYTES` is **192 MB**: every body's pinned floor (~59 MB)
+plus one body at mid range — a 4096 colour rung and its 4096 horizon pair,
+~134 MB. Sized for the weakest device rather than the desktop, because WebGPU
+reports no memory size and every device carries the same 8192 texture limit,
+so nothing the app can read separates the two.
+
+**An out-of-memory report steps both limits down.** Three's `renderer.onError`
+reports every uncaptured `GPUOutOfMemoryError`
+(`../../../webgpu/README.md` § Out of memory); the planet module answers with
+`stepDownTextureLimits`, which halves the budget (floor
+`TEXTURE_BUDGET_FLOOR_BYTES`, 64 MB — the pinned set alone) and drops the cap
+one rung (floor `MIN_TEXTURE_CAP`, 2048), then releases every resident map
+wider than the new cap at once rather than waiting for selection to replace
+it. This is the one protection for the ON-screen set, which the budget cannot
+touch. It cannot see a tab the browser kills under memory pressure without an
+error, which is why the fixed budget is sized low rather than left to it.
 
 **Eviction is cheap to undo.** A released map re-fetches from the HTTP cache,
 so a device that cannot afford the budget evicts more often and pays decode

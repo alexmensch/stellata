@@ -129,9 +129,10 @@ export function createPlanetKindModule(): PlanetKindModule {
       field = new PlanetBodyField(kindCtx.sharedUniforms);
       meshLayer = new PlanetMeshLayer(
         field, baseUrl, kindCtx.sharedUniforms, kindCtx.requestRender,
-        kindCtx.maxTextureSize,
         (placeholder) => webgpu.solarSystemMaterials(placeholder),
       );
+      const layer = meshLayer;
+      const unsubscribeOutOfMemory = webgpu.onOutOfMemory(() => layer.stepDownTextureLimits());
       // The mesh group itself is parented into the local depth pass by the
       // solar-system cluster; the stamps have to sit in the MAIN scene.
       kindCtx.scene.add(meshLayer.depthStampGroup);
@@ -187,6 +188,7 @@ export function createPlanetKindModule(): PlanetKindModule {
         },
         recenter: (newOrigin) => field!.recenter(newOrigin),
         dispose: () => {
+          unsubscribeOutOfMemory();
           glare?.dispose();
           glare = null;
           field!.dispose();

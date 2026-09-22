@@ -99,6 +99,9 @@ export interface WebGpuSeam {
    *  uniform-node mirror (tsl/README.md § Shared uniform nodes), which is why
    *  this is a call rather than a map write. */
   setDustTexture(texture: THREE.Data3DTexture | null): void;
+  /** Called on every uncaptured `GPUOutOfMemoryError`; returns the
+   *  unsubscribe (README.md § Out of memory). */
+  onOutOfMemory(listener: () => void): () => void;
   /** Build the per-star A_V cache. It points the star
    *  layer's A_V buffer slot at its own storage buffer, so the shell wires
    *  nothing beyond holding the handle. */

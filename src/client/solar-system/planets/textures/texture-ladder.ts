@@ -110,13 +110,8 @@ export function selectRung(
   return resident;
 }
 
-/**
- * WebGL2 only guarantees `MAX_TEXTURE_SIZE` 2048, and an upload past the
- * device's own limit fails outright — leaving the body on its white
- * placeholder with nothing else looking wrong. A body whose NARROWEST rung
- * already exceeds the cap keeps that rung anyway: there is nothing else to
- * draw, and no device in reach of the WebGL2 floor is in that position.
- */
+/** A body whose NARROWEST rung already exceeds the cap keeps that rung
+ *  anyway: there is nothing else to draw. */
 function deviceCappedTop(rungs: readonly number[], maxWidth: number): number {
   let cap = rungs[0];
   for (let i = 0; i < rungs.length; i++) {
