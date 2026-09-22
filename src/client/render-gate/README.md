@@ -25,7 +25,7 @@ src/client/render-gate/
 
 Every sentinel resets on `dispose()` — the pose snapshot back to NaN, the
 hold count to zero, the cadence budget to 0 and its sim stamp to NaN, the
-trust state to whole. A hold released *after* that zeroing floors at 0
+trust state to whole, the `sawUserInput` latch to false. A hold released *after* that zeroing floors at 0
 rather than going negative: `Stellata.dispose()` does not close an open
 debug panel, so its release outlives the gate, and a negative count
 would silently make the next `hold()` a no-op.

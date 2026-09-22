@@ -363,8 +363,8 @@ names moves past its band — the pair's two-sigma standard error floored, on a
 frame row; the vantage's own constant alone, on a compute row — or when it
 crosses the
 ceiling — 33.4 ms at any canon vantage, two 60 Hz intervals of hardware
-time — whatever the band says and whether or not the vantage is gated. mw50 at 31.936 is the nearest
-row today, 1.46 ms under. `✓` is cheaper, `~` is not resolved — not "no
+time — whatever the band says and whether or not the vantage is gated. mw50 at 29.028 is the nearest
+row today, 4.37 ms under. `✓` is cheaper, `~` is not resolved — not "no
 change". The `floor` column beside `delta` — how far the 10th-percentile
 frame moved — never marks; it says whether a `✗` lifted every frame or
 only the slow half (`scripts/perf/pins/README.md` § Reading `--against-pin`).

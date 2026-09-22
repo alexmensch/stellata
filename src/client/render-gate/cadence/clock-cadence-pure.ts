@@ -149,9 +149,11 @@ export function pulsationCadenceBudgetS(
   periodDays: ArrayLike<number>,
   amplitudeMag: ArrayLike<number>,
   suppressPulsation?: ArrayLike<number>,
+  first = 0,
+  end = periodDays.length,
 ): number {
   let maxRate = 0;
-  for (let i = 0; i < periodDays.length; i++) {
+  for (let i = first; i < end; i++) {
     const p = periodDays[i];
     const a = amplitudeMag[i];
     if (p <= 0 || a <= 0) continue;

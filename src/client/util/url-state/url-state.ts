@@ -1230,6 +1230,15 @@ function setCameraToDefault(stellata: Stellata, mode: 'navigate' | 'observe' | u
 
 // The one route into focus for every decoded blob — README.md, the
 // applyFocusTarget bullet.
+/** Re-seat the camera in a local frame that only existed once a deferred
+ *  focus recentred the origin. Only the frame-relative part of the pose —
+ *  everything else in the restore is absolute and already correct. */
+function reapplyPose(stellata: Stellata, view: DecodedView): void {
+  if (view.cam) stellata.camera.position.set(view.cam[0], view.cam[1], view.cam[2]);
+  if (view.tgt) stellata.controls.target.set(view.tgt[0], view.tgt[1], view.tgt[2]);
+  if (view.cam || view.tgt) stellata.controls.update();
+}
+
 function applyFocusTarget(stellata: Stellata, target: Target, snap: boolean): void {
   if (snap) stellata.focus.setOrbitTarget(target);
   else stellata.focus.flyTo(target, { animate: false });
@@ -1248,7 +1257,7 @@ export function applyDecodedView(
   stellata: Stellata,
   view: DecodedView,
   idMaps: IdMaps,
-): void {
+): Promise<void> | null {
   if (view.unit) setUnit(view.unit);
 
   // Declutter level — applied before the filter patch below; drives the
@@ -1284,6 +1293,9 @@ export function applyDecodedView(
   // update() reads as "if any of those happened, refresh" — replaces
   // a hand-maintained N-way OR that grew with every new branch.
   let controlsDirty = false;
+  // Non-null once a focus sid has queued as a deferred intent — README.md
+  // § A focus that resolves after the pose.
+  let focusPending: Promise<void> | null = null;
 
   // An omitted `up` is a positive statement — the sender was galactic-LEVEL
   // — so the receiver restores the pole itself and lets the `lookAt` below
@@ -1327,14 +1339,29 @@ export function applyDecodedView(
       // the rest of the decoded state stands. Planet sids translate
       // domain index → flat Target index; a translation miss (host
       // body-field not attached) drops the focus like an unknown sid.
+      // Flips once `whenResolved` has returned, so the callback can tell
+      // which side of the synchronous window it ran on.
+      let deferred = false;
+      let resolvedInline = false;
+      let settle: (() => void) | undefined;
       idMaps.sidResolver.whenResolved(view.focus.id, (kind, localIndex) => {
+        if (!deferred) resolvedInline = true;
         const idx = targetIdxOf(idMaps, kind, localIndex);
-        if (idx === null) return;
-        applyFocusTarget(stellata, { kind, idx }, snap);
-        // A sid whose domain attaches after this function returns fires its
-        // 'focus' event then, disarming the ORB the tail already restored.
-        restoreOrbitFrame(stellata, view);
+        if (idx !== null) {
+          applyFocusTarget(stellata, { kind, idx }, snap);
+          // A sid whose domain attaches after this function returns fires its
+          // 'focus' event then, disarming the ORB the tail already restored.
+          restoreOrbitFrame(stellata, view);
+          // README.md § A focus that resolves after the pose, both halves:
+          // why a late focus has to re-seat, and why user input vetoes it.
+          if (deferred && !stellata.renderGate.sawUserInput) reapplyPose(stellata, view);
+        }
+        settle?.();
       });
+      deferred = true;
+      if (!resolvedInline) {
+        focusPending = new Promise<void>((resolve) => { settle = resolve; });
+      }
     } else {
       const idx = resolveStarRef(view.focus, idMaps, idMaps.solIndex);
       if (idx >= 0 && idx < idMaps.starCount) {
@@ -1427,11 +1454,8 @@ export function applyDecodedView(
   // Legacy HIP POI lists resolve through idMaps (star-kind by
   // construction); v4 SID lists through the resolver, any pinnable
   // kind. Entries that don't resolve are silently dropped (graceful
-  // partial restore). SID POIs resolve synchronously rather than via
-  // deferred intents: the star domain attaches at catalog load and
-  // main.ts awaits kinds.planet.systemsReady, both strictly before
-  // applyFromUrl — a pending POI sid is therefore as dead as an
-  // unknown one.
+  // partial restore) — a pending POI sid included, since unlike the
+  // focus below nothing re-runs this list when a later chunk lands.
   {
     const resolved: Target[] = [];
     if (Array.isArray(view.pois)) {
@@ -1458,6 +1482,8 @@ export function applyDecodedView(
   // this same function. Applied again from the deferred focus callback for the
   // one case that lands after this returns; `restore` is idempotent.
   restoreOrbitFrame(stellata, view);
+
+  return focusPending;
 }
 
 /** Absent bits mean the gesture was never made, which is a positive
@@ -1497,16 +1523,22 @@ function resetJunkUrl(): void {
   }
 }
 
-// Returns true when a state blob was present and applied — from the
-// canonical `/v/<blob>/` path or the legacy `?v=` query param, any schema
-// version. The caller uses the false branch to fall back to the canonical
-// first-load view. A malformed blob also returns false so the user lands
-// on the framed default rather than the unframed canvas-default pose.
-export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): boolean {
+export interface AppliedUrl {
+  /** A state blob was present and applied — from the canonical `/v/<blob>/`
+   *  path or the legacy `?v=` query param, any schema version. False sends
+   *  the caller to the canonical first-load view; a malformed blob is false
+   *  too, so the user lands on the framed default rather than the unframed
+   *  canvas-default pose. */
+  applied: boolean;
+  /** README.md § A focus that resolves after the pose. */
+  focusPending: Promise<void> | null;
+}
+
+export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): AppliedUrl {
   const { blob, legacyQueryForm } = pickShareBlob(location.pathname, location.search);
   if (!blob) {
     resetJunkUrl();
-    return false;
+    return { applied: false, focusPending: null };
   }
   let decoded: DecodedBlob;
   try {
@@ -1514,9 +1546,9 @@ export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): boolean {
   } catch (err) {
     console.warn('Failed to decode URL state:', err);
     resetJunkUrl();
-    return false;
+    return { applied: false, focusPending: null };
   }
-  applyDecodedView(stellata, decoded.view, idMaps);
+  const focusPending = applyDecodedView(stellata, decoded.view, idMaps);
   // After the same debounce as routine writes, rewrite the address bar to
   // the canonical path form when the link arrived in legacy query form OR
   // in a superseded schema (the docs/sid.md § 9.4 migration: HIP refs land
@@ -1529,7 +1561,7 @@ export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): boolean {
   if (legacyQueryForm || decoded.version !== SCHEMA_VERSION) {
     setTimeout(() => writeUrl(stellata, idMaps), DEBOUNCE_MS);
   }
-  return true;
+  return { applied: true, focusPending };
 }
 
 // Write the live camera/target/up triple into `out` at the canonical

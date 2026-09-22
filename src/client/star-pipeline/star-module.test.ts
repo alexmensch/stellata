@@ -45,6 +45,7 @@ async function loadedModule(searchRows: SearchEntry[] = []) {
   vi.stubGlobal('fetch', vi.fn(async () => ({ json: async () => searchRows })));
   const m = createStarKindModule();
   await m.load('/base/');
+  await m.ready;
   return { m, cat };
 }
 
@@ -93,6 +94,7 @@ describe('star kind module', () => {
     const m = createStarKindModule();
     const onProgress = () => {};
     await m.load('/base/', onProgress);
+    await m.ready;
     expect(loadCatalogMock).toHaveBeenCalledWith(
       `/base/${CATALOG_MANIFEST_FILENAME}`,
       '/base/constellations.json',

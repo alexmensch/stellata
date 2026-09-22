@@ -17,8 +17,13 @@ src/client/star-pipeline/star-frame/
                                   and the Sol-distance proximity
                                   queries including the core-mask gate.
                                   The test covers the recentre rewrite,
-                                  epoch re-advance + focal delta, and
-                                  the proximity / core-mask window.
+                                  epoch re-advance + focal delta, the
+                                  proximity / core-mask window, and the
+                                  partial-catalogue window bound.
+  star-frame-pure.ts (+ test)     The proximity index's in-place merge
+                                  (§ Absorbing a chunk). Pure; pinned
+                                  against a full re-sort over an
+                                  arbitrary chunk ramp.
 ```
 
 ## The star frame
@@ -41,10 +46,13 @@ actually are:
   `bucketEpochJyr` bucket and reports the focal star's space-motion
   delta so the shell can translate the camera by it.
 - **Derived per-instance buffers.** `logRadii`, `lumClassF32`,
-  `distSol`, `teffApsis`, and `maxPhysicalRadiusPc`, all computed once
+  `distSol`, `teffApsis`, and `maxPhysicalRadiusPc`, all computed
   off the *advanced* positions, so `StarPipeline`'s attributes and
   every downstream consumer inherit current-epoch positions by
   construction.
+- **Growing with the catalogue.** `absorbRecords()` folds each landing
+  transport chunk's records into all of the above — see § Absorbing a
+  chunk, which carries the two traps.
 - **Proximity queries.** The Sol-distance-sorted index and
   `forEachStarNearCamera` / `discWindowPcFor` / `shouldEnableCoreMask`
   built on it (§ Star rendering, core depth-mask). `Picker` slices the
@@ -92,6 +100,51 @@ clears the flag. That leaves exactly one window where
 and the flush. Nothing may read the buffer inside it (the focal-drift
 recentre in that gap reads only camera + orbit target), and anything
 new landing there has to sit after the flush instead.
+
+## Absorbing a chunk
+
+The catalogue arrives progressively (`../../loaders/README.md`
+§ Progressive catalog load), so every buffer above is allocated at the full
+record count and filled forward, one window per chunk, by `absorbRecords()`.
+The shell calls it from `Stellata.absorbCatalogRecords`, never on a timer.
+
+Two things here are traps rather than choices:
+
+- **`basePositions` is EXTENDED, never re-snapshotted.** `advanceEpochTo`
+  writes `base + v·Δt` back over `catalog.positions`. A baseline taken while
+  the tail was still zeroed would therefore overwrite those records with
+  zeros the first time the model clock crossed a bucket — the stars would
+  arrive, render, and then vanish on the first scrub.
+- **Both sorted-distance arrays are re-sorted IN PLACE.** `Picker` captures
+  `sortedByDistFromSol` and `sortedDistFromSol` by array reference, not
+  through a getter, so reallocating either leaves it on a stale pair for the
+  session.
+
+**`distSol` AND `sortedDistFromSol` are both pre-filled with `Infinity`**,
+and the second one is the one that matters. `sortedDistRange` binary-searches
+`sortedDistFromSol` over its full allocated length, so whatever sits past the
+decoded prefix decides where the search stops:
+
+- At `Infinity` the array is monotone, every band ends at the decoded count,
+  and the untouched `sortedByDistFromSol` tail is unreachable.
+- At zero it is not monotone, and zero is *inside* every band a consumer asks
+  for — so the search walks off the prefix and the window runs to the full
+  record count. Every index slot out there reads 0, which is record 0, which
+  is Sol. The Picker's band then scans several hundred thousand phantoms at
+  the origin on every pick, and a camera far from Sol gets the opposite
+  failure: `start` and `end` both land past the prefix and the near-camera
+  walk sees *no* stars, so the core-mask gate never fires for the whole load.
+
+`mergeSortedByDistance` (`star-frame-pure.ts`) takes that as its contract —
+`Infinity` past `end` on entry, and the same on exit.
+
+Filling `distSol` alone is the trap, because it looks sufficient: an
+undecoded record does sort past every window, but only the *sorted* array is
+ever searched.
+
+`maxPhysicalRadiusPc` and `maxEpochDriftPc` are running maxima over what has
+landed. Both bound windows, so they may only grow — a chunk carrying a larger
+star or a faster mover widens them, and nothing narrows them.
 
 ## `forEachStarNearCamera` — sorted-distance binary-search window
 

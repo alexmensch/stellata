@@ -13,8 +13,12 @@ import { physSizeElisionBoundPx } from '../perceptual-disc/phys-size-elision-pur
 
 const T_LOAD = julianEpochYearToT(2016.0);
 
-function makeCatalog(positions: number[][], radiiRsol?: number[]): Catalog {
-  const catalog = makeEmptyCatalog(positions.length);
+function makeCatalog(
+  positions: number[][],
+  radiiRsol?: number[],
+  loadedCount = positions.length,
+): Catalog {
+  const catalog = makeEmptyCatalog(positions.length, loadedCount);
   positions.forEach((p, i) => {
     catalog.positions[i * 3] = p[0];
     catalog.positions[i * 3 + 1] = p[1];
@@ -56,6 +60,36 @@ describe('StarFrame construction', () => {
     expect(frame.logRadii[1]).toBeCloseTo(2, 12);
     expect(Array.from(frame.lumClassF32)).toEqual([255, 255]);
     expect(frame.maxPhysicalRadiusPc).toBeCloseTo(100 * R_SUN_PC, 12);
+  });
+
+  it('fills the local buffer without firing the write callback', () => {
+    // The callback is a GPU-upload side channel and the shell builds the
+    // pipeline it uploads to AFTER this class, so a notify here dereferences
+    // an unassigned field and blanks the app on boot.
+    const { frame, writeCount } = makeFrame(makeCatalog([[3, 4, 0], [0, 0, 10]]));
+
+    expect(writeCount()).toBe(0);
+    expect(Array.from(frame.localPositions)).toEqual([3, 4, 0, 0, 0, 10]);
+  });
+
+  it('bounds the proximity window to the decoded prefix, then grows it', () => {
+    // README.md § Absorbing a chunk, the distSol/sortedDistFromSol pair.
+    const catalog = makeCatalog([[3, 0, 0], [0, 12, 0], [0, 0, 7]], undefined, 2);
+    const { frame } = makeFrame(catalog);
+
+    expect(Array.from(frame.sortedDistFromSol)).toEqual([3, 12, Infinity]);
+    expect(frame.distSol[2]).toBe(Infinity);
+    let walked: number[] = [];
+    frame.forEachStarNearCamera(1e6, (i) => { walked.push(i); return false; });
+    expect(walked).toEqual([0, 1]);
+
+    catalog.loadedCount = 3;
+    frame.absorbRecords();
+
+    expect(Array.from(frame.sortedDistFromSol)).toEqual([3, 7, 12]);
+    walked = [];
+    frame.forEachStarNearCamera(1e6, (i) => { walked.push(i); return false; });
+    expect(walked.sort()).toEqual([0, 1, 2]);
   });
 
   it('snapshots an immutable J2016.0 baseline and advances the catalog to t', () => {

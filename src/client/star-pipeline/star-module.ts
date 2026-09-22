@@ -26,7 +26,9 @@ import type { SceneLayer } from '../scene/scene-layer';
 import { StarShardTable } from './shards/star-shard-table';
 import { catalogShard } from './shards/star-shards-pure';
 import { tToJdUt } from '../solar-system/time/time';
-import { buildSpectralMap, buildStarLabels } from '../typeahead/star-name-tables';
+import {
+  buildSpectralMap, buildStarLabels, seedStarLabelsFromNames,
+} from '../typeahead/star-name-tables';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
 
 /** Shell-owned star machinery the module's legs read through closures —
@@ -56,10 +58,18 @@ export interface StarKindModule extends ObjectKindModule<'star'> {
   readonly shardTable: StarShardTable;
   /** Valid after `load`. */
   readonly searchIndex: SearchEntry[];
-  /** Star idx → display label, derived from the search index at `load`.
+  /** Star idx → display label, derived from the search index. One map
+   *  instance for the module's lifetime, filled in place when the index
+   *  lands, so a consumer that captured it at boot sees the labels appear.
    *  Chart mode and the planet card's host breadcrumb read the same
    *  table the module's own name ladder does. */
   readonly starLabels: Map<number, string>;
+  /** Settles when the whole catalogue and the search index have landed and
+   *  every table derived from them is built. `load` resolves far earlier —
+   *  on the catalogue's first chunk — so anything needing the COMPLETE
+   *  population waits here instead (`../loaders/README.md` § Progressive
+   *  catalog load). */
+  readonly ready: Promise<void>;
   /** Absolute V magnitude + floored physical radius (pc) of star `idx`;
    *  null out of range or before load. Backs `KindContext.starPhotometry`
    *  — the module owns the catalog, so the formula lives here only. */
@@ -73,9 +83,14 @@ export function createStarKindModule(): StarKindModule {
   let searchIndex: SearchEntry[] | null = null;
   let ctx: KindContext | null = null;
   let runtime: StarModuleRuntime | null = null;
-  let starLabels = new Map<number, string>();
-  let spectralMap = new Map<number, string>();
-  let searchEntryById = new Map<number, SearchEntry>();
+  let ready: Promise<void> = Promise.resolve();
+  let offRecords: (() => void) | null = null;
+  // Filled in place rather than reassigned — every card provider, chart
+  // binding and hover formatter captures these at boot, before the search
+  // index has landed.
+  const starLabels = new Map<number, string>();
+  const spectralMap = new Map<number, string>();
+  const searchEntryById = new Map<number, SearchEntry>();
   const tmpLocal = new THREE.Vector3();
 
   const nameCtx = () => ({
@@ -111,26 +126,51 @@ export function createStarKindModule(): StarKindModule {
       if (!catalog) throw new Error('star module read before load');
       return starLabels;
     },
+    get ready(): Promise<void> { return ready; },
     photometry: photometryOf,
     setRuntime(rt) {
       runtime = rt;
     },
 
+    /** Resolves on the catalogue's FIRST chunk, so boot can paint. The
+     *  search index is deliberately not awaited here — it is 4.4 MB gzipped
+     *  and feeds only search, chart labels and designations, none of which
+     *  is on the first-paint path. Both land under `ready`. */
     async load(baseUrl: string, onProgress?: (p: KindLoadProgress) => void): Promise<void> {
-      [catalog, searchIndex] = await Promise.all([
-        loadCatalog(
-          `${baseUrl}${CATALOG_MANIFEST_FILENAME}`,
-          `${baseUrl}constellations.json`,
-          onProgress,
-        ),
-        fetch(`${baseUrl}search-index.json`).then(
-          (r) => r.json() as Promise<SearchEntry[]>,
-        ),
-      ]);
-      starLabels = buildStarLabels(catalog, searchIndex);
-      spectralMap = buildSpectralMap(searchIndex);
-      searchEntryById = new Map(searchIndex.map((e) => [e.i, e]));
+      const index = fetch(`${baseUrl}search-index.json`).then(
+        (r) => r.json() as Promise<SearchEntry[]>,
+      );
+      // Handled-marker only — README.md, the star-module.ts bullet.
+      index.catch(() => {});
+      catalog = await loadCatalog(
+        `${baseUrl}${CATALOG_MANIFEST_FILENAME}`,
+        `${baseUrl}constellations.json`,
+        onProgress,
+      );
+      // Sized off the header count, which chunk 0 carries, so the shard's
+      // SID domain spans the whole population from the start.
       shardTable = new StarShardTable([catalogShard(catalog)]);
+      // Names ride chunk 0 and every chunk after it, so the label ladder's
+      // authority tier is live from first paint — a focused Sol shows
+      // "Sol", not the SID fallback, while the search index is still on the
+      // wire.
+      seedStarLabelsFromNames(catalog, starLabels);
+      offRecords?.();
+      offRecords = catalog.onRecordsDecoded(
+        () => seedStarLabelsFromNames(catalog!, starLabels),
+      );
+      const loaded = catalog;
+      ready = (async () => {
+        const [, raw] = await Promise.all([loaded.whenComplete, index]);
+        searchIndex = raw;
+        // The per-chunk seeding above has done its job; this pass redoes it
+        // and adds the composed-designation tier.
+        offRecords?.();
+        offRecords = null;
+        buildStarLabels(loaded, raw, starLabels);
+        buildSpectralMap(raw, spectralMap);
+        for (const e of raw) searchEntryById.set(e.i, e);
+      })();
     },
 
     attach(kindCtx: KindContext): SceneLayer | null {

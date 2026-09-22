@@ -79,6 +79,20 @@ html, body {
   touch-action: none;
 }
 
+/* Two states, one element, and `main.ts` MOVES IT IN THE DOM between them:
+   a root-level full-bleed cover before the first frame, re-parented into
+   #bottom-left-stack at `body.scene-live` to finish loading as the top card
+   of the instrument stack.
+
+   Authoring it inside that stack instead does not work, in two ways that
+   both look fine until a deep link holds the cover for several seconds.
+   `.ui-bottom` carries `z-index: 7`, which is a stacking context, so the
+   cover's own z-index is capped inside it and the tooltip (11) and both
+   `.ui-top*` columns (10) paint over the full-bleed state. And
+   `.bottom-left-stack` sets `pointer-events: none`, which the cover would
+   inherit — a drag then reaches the canvas it is hiding and latches
+   `renderGate.sawUserInput`, cancelling the restore it is being held for
+   (`util/url-state/README.md` § A focus that resolves after the pose). */
 .loading {
   position: fixed;
   inset: 0;
@@ -87,9 +101,26 @@ html, body {
   background: var(--bg);
   z-index: 20;
 }
+body.scene-live .loading {
+  position: static;
+  display: block;
+  background: none;
+  z-index: auto;
+  flex: 0 0 auto;
+  width: var(--panel-width);
+  max-width: calc(100vw - 2 * var(--page-margin-x));
+}
 .loading-inner {
   width: min(420px, 80vw);
   text-align: center;
+}
+body.scene-live .loading-inner {
+  width: auto;
+  padding: 10px 14px 12px;
+  text-align: left;
+  background: rgba(7, 9, 18, 0.85);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(6px);
 }
 .loading-label {
   text-transform: uppercase;

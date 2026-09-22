@@ -58,6 +58,10 @@ export class StarCompaction {
    *  bound — its own node, not the one the finish kernel assigns through. */
   readonly refillDispatchNode: UintStorageNode;
 
+  /** The per-star kernel, held so its thread count can follow the decoded
+   *  record count. */
+  private readonly kernel: ComputeNode;
+
   private readonly renderer: WebGPURenderer;
   private readonly viewProjection = uniform(new Matrix4());
   /** 1 only while a readback is waiting for its dispatch — the counter it
@@ -145,6 +149,7 @@ export class StarCompaction {
       });
     })(), this.count);
     kernel.setName('star-compaction');
+    this.kernel = kernel;
     // README.md § The refill dispatch.
     const dispatchBuf = refillDispatchNodes.write;
     const copyCounts = compute(Fn(() => {
@@ -172,6 +177,14 @@ export class StarCompaction {
     finish.setName('star-compaction-refill-dispatch');
     this.kernels = [reset, kernel, copyCounts, finish];
     this.plainKernels = [reset, kernel];
+  }
+
+  /** Bound the per-star kernel to the records actually decoded — it is a
+   *  correctness bound before it is a saving, and `tierListBase` keeps the
+   *  full count. README.md § The kernel's thread count follows the decoded
+   *  records. */
+  setLoadedCount(loaded: number): void {
+    this.kernel.count = Math.min(loaded, this.count);
   }
 
   /** The view-projection the kernel tested against on the last dispatch, as a

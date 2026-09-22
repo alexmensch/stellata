@@ -219,3 +219,58 @@ describe('StarPipeline', () => {
     expect(opts.scene.children).toHaveLength(0);
   });
 });
+
+describe('StarPipeline.absorbRecords', () => {
+  const staticAttrs = (geometry: THREE.InstancedBufferGeometry) =>
+    Object.entries(geometry.attributes).flatMap(([name, a]) =>
+      (a instanceof THREE.InstancedBufferAttribute && a.usage !== THREE.DynamicDrawUsage)
+        ? [[name, a] as const]
+        : []);
+
+  it('draws only the decoded prefix, and grows as chunks land', () => {
+    const opts = makeOpts(8, 3);
+    const pipe = new StarPipeline(opts);
+
+    expect(pipe.geometry.instanceCount).toBe(3);
+
+    (opts.catalog as { loadedCount: number }).loadedCount = 8;
+    pipe.absorbRecords();
+    expect(pipe.geometry.instanceCount).toBe(8);
+  });
+
+  it('flags a range on EVERY static attribute, none excepted', () => {
+    const opts = makeOpts(8, 3);
+    const pipe = new StarPipeline(opts);
+    pipe.absorbRecords(); // the shell's own constructor-time call
+    const attrs = staticAttrs(pipe.geometry);
+    expect(attrs.length).toBeGreaterThan(0);
+    const versions = new Map(attrs.map(([n, a]) => [n, a.version]));
+    for (const [, a] of attrs) a.clearUpdateRanges();
+
+    (opts.catalog as { loadedCount: number }).loadedCount = 8;
+    pipe.absorbRecords();
+
+    for (const [name, a] of attrs) {
+      expect(a.updateRanges, name).toEqual([{ start: 3 * a.itemSize, count: 5 * a.itemSize }]);
+      // needsUpdate is write-only in three; the version bump is the read.
+      expect(a.version, name).toBeGreaterThan(versions.get(name)!);
+    }
+  });
+
+  it('re-packs iPuls, which is a copy rather than a catalog column', () => {
+    const opts = makeOpts(4, 1);
+    const pipe = new StarPipeline(opts);
+    pipe.absorbRecords();
+    // Written only once the chunk carrying record 3 has decoded, so the
+    // attribute's copy has to be re-packed rather than just flagged.
+    opts.catalog.pulsRho[3] = 0.25;
+    opts.catalog.pulsColorSwing[3] = 0.5;
+
+    (opts.catalog as { loadedCount: number }).loadedCount = 4;
+    pipe.absorbRecords();
+
+    const puls = pipe.iPulsAttr.array as Float32Array;
+    expect(puls[6]).toBeCloseTo(0.25, 6);
+    expect(puls[7]).toBeCloseTo(0.5, 6);
+  });
+});

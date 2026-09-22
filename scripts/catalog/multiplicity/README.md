@@ -45,7 +45,7 @@ surface consuming it is tracked separately (stellata-lo5.10).
 
 ## Geometric binary inference
 
-`inferBinaries` in `build-catalog.ts` runs after the absmag sort so record
+`inferBinaries` in `build-catalog.ts` runs after the record sort so record
 indices are final. Spatial grid keyed at `BINARY_MAX_SEP_PC = 0.005 pc`
 (≈1030 AU) using a three-axis hash; for each star, check own cell + 26
 neighbours and record the nearest neighbour within the threshold.

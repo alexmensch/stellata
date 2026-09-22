@@ -35,10 +35,13 @@ import {
   CATALOG_MANIFEST_FILENAME,
   catalogChunkFilename,
   planCatalogChunks,
+  recordsInChunkPrefix,
   buildSearchEntry,
   type SearchEntry,
   type CatalogManifest,
 } from './record/catalog-pure';
+import { apparentVFromSol } from './record/record-order-pure';
+import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   BUILD_COUNTS_EXPECTED_FILE,
   compareBuildCounts,
@@ -276,6 +279,7 @@ async function main() {
     ccdmGroups: 0,
     ccdmResolved: 0,
     ccdmFlagged: 0,
+    recordsInFirstChunk: 0,
     ccdmSuppressedOptical: 0,
     eclipsingWinged: 0,
     renderableCompanionWinged: 0,
@@ -793,9 +797,23 @@ async function main() {
 
   counts.recordCount = stars.length;
 
-  // Sort by absolute magnitude ascending (brightest first). Record indices
-  // are final after this point.
-  stars.sort((a, b) => a.absmag - b.absmag);
+  // Sort by apparent V from Sol ascending (brightest-looking first), so any
+  // prefix of the record array is a usable sky and the transport chunks can
+  // stream one (record/README.md § Record order). Record indices are final
+  // after this point.
+  const sortKey = new Float64Array(stars.length);
+  for (let i = 0; i < stars.length; i++) {
+    const s = stars[i];
+    const v = apparentVFromSol(s, dustGrid ? avSolToStar(dustGrid, s.x, s.y, s.z) : 0);
+    // On the key, before the sort — record/README.md § Record order.
+    if (!Number.isFinite(v)) {
+      throw new Error(`Record ${i} has a non-finite apparent V sort key: ${v}`);
+    }
+    sortKey[i] = v;
+  }
+  const order = Array.from(stars.keys()).sort((a, b) => sortKey[a] - sortKey[b]);
+  const sorted = order.map((i) => stars[i]);
+  for (let i = 0; i < sorted.length; i++) stars[i] = sorted[i];
 
   const hipToIndex = buildHipToIndex(stars);
 
@@ -1041,20 +1059,27 @@ async function main() {
 
   // Allocate output buffer.
   const recordsLength = stars.length * RECORD_SIZE;
-  const totalLength = HEADER_SIZE + recordsLength + nameTableLength;
+  const totalLength = HEADER_SIZE + nameTableLength + recordsLength;
   const out = new ArrayBuffer(totalLength);
   const view = new DataView(out);
   const bytes = new Uint8Array(out);
 
-  // Header.
+  // Header, then the name table, then the records — the order the first
+  // transport chunk needs to decode standalone (`record/README.md`
+  // § On-disk transport chunking).
   writeCatalogHeader(view, {
     count: stars.length,
-    nameTableOffset: HEADER_SIZE + recordsLength,
+    nameTableOffset: HEADER_SIZE,
     nameTableLength,
   });
 
-  // Records.
   let off = HEADER_SIZE;
+  for (const chunk of nameChunks) {
+    bytes.set(chunk, off);
+    off += chunk.length;
+  }
+
+  // Records.
   let solIndex = -1;
   const unclassifiedCon: number[] = [];
   let variableCount = 0;
@@ -1132,12 +1157,6 @@ async function main() {
     );
   }
 
-  // Name table.
-  for (const chunk of nameChunks) {
-    bytes.set(chunk, off);
-    off += chunk.length;
-  }
-
   if (off !== totalLength) {
     throw new Error(`Size mismatch: wrote ${off}, expected ${totalLength}`);
   }
@@ -1145,6 +1164,12 @@ async function main() {
   await mkdir(PUBLIC_DIR, { recursive: true });
   await removeStaleCatalogChunks(PUBLIC_DIR);
   const chunkBytes = planCatalogChunks(totalLength);
+  // What first paint actually gets. Pinned because it is the number the
+  // progressive load's whole latency argument rests on, and it moves with
+  // the name table's length as well as the chunk target.
+  counts.recordsInFirstChunk = recordsInChunkPrefix(
+    chunkBytes, 1, HEADER_SIZE + nameTableLength, stars.length,
+  );
   const sidSuccessors = sidSuccessorPairs(registry.retirements, registry.reinstatements);
   const manifest: CatalogManifest = {
     chunkBytes,

@@ -313,6 +313,10 @@ function makeStatefulStellata() {
     roll: rollStub() as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     controls: { target: mockVec3(), update() {} } as any,
+    // A restore that lands after the user has taken the camera declines to
+    // re-seat it; these cases all restore into an untouched view.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    renderGate: { sawUserInput: false } as any,
   };
   return { stellata: stub as Stellata, state };
 }
@@ -1805,6 +1809,102 @@ describe('url-state', () => {
       expect(state.focusedCloud).toBe(1);
     });
 
+    it('re-seats the camera when the focus resolves after the pose', () => {
+      // With a focus the encoder elides worldOffset, so `cam` is in the
+      // FOCAL object's local frame. A star whose catalogue chunk lands late
+      // resolves after the pose was applied against the un-recentred
+      // origin, which leaves the camera short by the focal object's own
+      // offset — and re-encoding bakes it in, so the error compounds on
+      // every reload.
+      const sidResolver = new SidResolver(['star', 'cloud']);
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+      const idMaps = makeIdMaps({ sidResolver });
+      const { stellata } = makeStatefulStellata();
+      const CAM: [number, number, number] = [0.08, 9.26, -0.76];
+      const blob = encodeBlob({ focus: { kind: 'sid', id: 202 }, cam: CAM });
+      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+
+      // Something else moved the camera between the pose and the resolve —
+      // standing in for the recentre the real focus performs.
+      stellata.camera.position.set(999, 999, 999);
+      sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+
+      // Blob floats are float32, so compare at that precision.
+      const { x, y, z } = stellata.camera.position;
+      expect(x).toBeCloseTo(CAM[0], 6);
+      expect(y).toBeCloseTo(CAM[1], 5);
+      expect(z).toBeCloseTo(CAM[2], 6);
+    });
+
+    it('leaves a camera the user has taken alone when the focus resolves late', () => {
+      // A restore that yanks the view out from under a deliberate move is
+      // worse than one that quietly gives up.
+      const sidResolver = new SidResolver(['star', 'cloud']);
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+      const idMaps = makeIdMaps({ sidResolver });
+      const { stellata } = makeStatefulStellata();
+      const blob = encodeBlob({ focus: { kind: 'sid', id: 202 }, cam: [1, 2, 3] });
+      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+
+      (stellata.renderGate as { sawUserInput: boolean }).sawUserInput = true;
+      stellata.camera.position.set(42, 43, 44);
+      sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+
+      const { x, y, z } = stellata.camera.position;
+      expect([x, y, z]).toEqual([42, 43, 44]);
+    });
+
+    // Both directions, because boot holds the loading cover on this promise —
+    // README.md § A focus that resolves after the pose.
+    it('reports no pending focus when the sid resolves synchronously', () => {
+      const sidResolver = new SidResolver(['star']);
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+      const idMaps = makeIdMaps({ sidResolver });
+      const { stellata } = makeStatefulStellata();
+      const blob = encodeBlob({ focus: { kind: 'sid', id: STAR_SIDS[1] } });
+      expect(applyDecodedView(stellata, decodeBlob(blob).view, idMaps)).toBeNull();
+    });
+
+    it('reports no pending focus for a blob that names none', () => {
+      const idMaps = makeIdMaps({});
+      const { stellata } = makeStatefulStellata();
+      expect(applyDecodedView(stellata, decodeBlob(encodeBlob({ fov: 62 })).view, idMaps))
+        .toBeNull();
+    });
+
+    it('settles the pending focus when the late domain attaches', async () => {
+      const sidResolver = new SidResolver(['star', 'cloud']);
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+      const idMaps = makeIdMaps({ sidResolver });
+      const { stellata } = makeStatefulStellata();
+      const blob = encodeBlob({ focus: { kind: 'sid', id: 202 } });
+      const pending = applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+      expect(pending).not.toBeNull();
+
+      let settled = false;
+      void pending!.then(() => { settled = true; });
+      await Promise.resolve();
+      expect(settled).toBe(false);
+
+      sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+      await pending;
+      expect(settled).toBe(true);
+    });
+
+    it('settles the pending focus even when the sid resolves to nothing', async () => {
+      const sidResolver = new SidResolver(['star', 'planet']);
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+      const idMaps = makeIdMaps({ sidResolver, planet: NO_PLANET_HOST });
+      const { stellata, state } = makeStatefulStellata();
+      const blob = encodeBlob({ focus: { kind: 'sid', id: 901 } });
+      const pending = applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+      expect(pending).not.toBeNull();
+
+      sidResolver.attach('planet', arrayDomain([901]));
+      await expect(pending).resolves.toBeUndefined();
+      expect(state.focusedPlanet).toBeNull();
+    });
+
     it('planet focus round-trips: sid on the wire, flat Target index in the runtime', () => {
       // The planet SID domain is keyed planet-within-host; the Target
       // currency is the body field's flat instance index.
@@ -2148,7 +2248,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     it('strips a bogus non-share path back to bare /', () => {
       const { loc, replaceState } = installUrl('/garbage');
       const { stellata } = makeSyncStellata();
-      expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
+      expect(applyFromUrl(stellata, syncIdMaps()).applied).toBe(false);
       expect(replaceState).toHaveBeenCalledWith(null, '', '/');
       expect(loc.pathname).toBe('/');
     });
@@ -2157,7 +2257,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       // Single byte 0xFF → version 255, an unknown schema decodeBlob rejects.
       const { loc } = installUrl('/v/_w/');
       const { stellata } = makeSyncStellata();
-      expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
+      expect(applyFromUrl(stellata, syncIdMaps()).applied).toBe(false);
       expect(loc.pathname).toBe('/');
       expect(loc.search).toBe('');
     });
@@ -2165,7 +2265,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     it('strips a stray/undecodable ?v= query', () => {
       const { loc } = installUrl('/?v=_w');
       const { stellata } = makeSyncStellata();
-      expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
+      expect(applyFromUrl(stellata, syncIdMaps()).applied).toBe(false);
       expect(loc.pathname).toBe('/');
       expect(loc.search).toBe('');
     });
@@ -2173,14 +2273,14 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     it('leaves a clean / untouched (no history write)', () => {
       const { replaceState } = installUrl('/');
       const { stellata } = makeSyncStellata();
-      expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
+      expect(applyFromUrl(stellata, syncIdMaps()).applied).toBe(false);
       expect(replaceState).not.toHaveBeenCalled();
     });
 
     it('preserves the fragment while stripping junk (the renderer flag rides it)', () => {
       const { loc } = installUrl('/garbage?v=_w#renderer=webgpu');
       const { stellata } = makeSyncStellata();
-      expect(applyFromUrl(stellata, syncIdMaps())).toBe(false);
+      expect(applyFromUrl(stellata, syncIdMaps()).applied).toBe(false);
       expect(loc.pathname).toBe('/');
       expect(loc.search).toBe('');
       expect(loc.hash).toBe('#renderer=webgpu');
@@ -2192,7 +2292,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       const blob = encodeBlob({ fov: 90 }); // non-default (DEFAULT_FOV = 50)
       const { loc, replaceState } = installUrl(`/?v=${blob}`);
       const { stellata, state } = makeSyncStellata();
-      expect(applyFromUrl(stellata, syncIdMaps())).toBe(true);
+      expect(applyFromUrl(stellata, syncIdMaps()).applied).toBe(true);
       expect(state.fov).toBe(90);
       // Address-bar rewrite is deferred to the shared debounce window.
       expect(replaceState).not.toHaveBeenCalled();
@@ -2206,7 +2306,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       const blob = encodeBlob({ fov: 90 });
       const { loc } = installUrl(`/?v=${blob}#renderer=webgpu`);
       const { stellata } = makeSyncStellata();
-      expect(applyFromUrl(stellata, syncIdMaps())).toBe(true);
+      expect(applyFromUrl(stellata, syncIdMaps()).applied).toBe(true);
       vi.advanceTimersByTime(1000);
       expect(loc.pathname.startsWith('/v/')).toBe(true);
       expect(loc.hash).toBe('#renderer=webgpu');

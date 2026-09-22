@@ -20,9 +20,9 @@ layout, its codec, the chunk plan and the search-index wire entry — is
 
 ## Subfolders
 
-- `record/` — the on-disk contract: the v9 `catalog.bin` layout with both
-  directions of its codec, the transport chunk plan, and the `SearchEntry`
-  wire shape. `catalog-pure.ts` alone, imported by every other subfolder and
+- `record/` — the on-disk contract: the v10 `catalog.bin` layout with both
+  directions of its codec, the record order, the transport chunk plan, and
+  the `SearchEntry` wire shape. `catalog-pure.ts` alone, imported by every other subfolder and
   by `src/client/loaders/`, importing back from none of them.
 - `astrometry-request/` — the Gaia 5p pull's source_id list: the manifest's
   `gaia_source_id` column, both binding gates' candidates (overlay and
@@ -41,7 +41,8 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   fade window from.
 - `companions/` — promotion of `data/binaries/multiples.tsv` secondaries
   into first-class catalog records. Its `record-index/` subfolder holds
-  everything that addresses records *after* the absmag sort: the row-index
+  everything that addresses records *after* the apparent-V sort
+  (`record/README.md` § Record order): the row-index
   sidecar, the renderable-companion wings bit, and the component-letter
   designations the display-name composer builds on.
 - `naming/` — the IAU WGSN authority ladder end to end: ingest, the

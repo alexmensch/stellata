@@ -44,6 +44,9 @@ export interface BuildCounts {
   /** New FLAG_BINARY_PRIMARY bits set by the CCDM pass (excludes ones
    *  already set by `inferBinaries`). */
   ccdmFlagged: number;
+  /** Records the first transport chunk carries — what first paint draws
+   *  (`record/README.md` § On-disk transport chunking). */
+  recordsInFirstChunk: number;
   /** CCDM primaries the optical-double gate vetoed: nearest same-group
    *  sibling >1 pc away in 3D at Gaia-quality distances, with no physical
    *  pair / eclipsing / geometric evidence. See isOpticalDoublePrimary. */

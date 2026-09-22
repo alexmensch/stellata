@@ -1,7 +1,7 @@
 # Post-sort record addressing
 
 Resolving `data/binaries/multiples.tsv` rows back to `catalog.bin` record
-indices *after* the final absmag sort, and the two passes that need
+indices *after* the final record sort, and the two passes that need
 nothing else: the chart-mode wings bit and the component-letter search
 designations. Promotion itself is `../README.md` — it runs before the
 sort and never reads anything here, so this folder is downstream of it

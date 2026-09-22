@@ -33,6 +33,7 @@ export class RenderGate {
   private readonly lastRenderedPose = new Float64Array(POSE_SLOTS).fill(Number.NaN);
   private readonly scratchPose = new Float64Array(POSE_SLOTS);
   private detachDom: (() => void) | null = null;
+  private _sawUserInput = false;
 
   private lastWake: GateWake | null = null;
   private lastDecision: GateDecisionTrace | null = null;
@@ -122,17 +123,30 @@ export class RenderGate {
   attachDom(canvas: HTMLElement): void {
     const wakes = new Map<string, () => void>();
     for (const name of CANVAS_WAKE_EVENTS) {
-      const wake = () => this.invalidate(`dom:${name}`);
+      const wake = () => {
+        this._sawUserInput = true;
+        this.invalidate(`dom:${name}`);
+      };
       wakes.set(name, wake);
       canvas.addEventListener(name, wake, { passive: true });
     }
-    const keyWake = () => this.invalidate('dom:keydown');
+    const keyWake = () => {
+      this._sawUserInput = true;
+      this.invalidate('dom:keydown');
+    };
     window.addEventListener('keydown', keyWake);
     this.detachDom = () => {
       for (const name of CANVAS_WAKE_EVENTS) canvas.removeEventListener(name, wakes.get(name)!);
       window.removeEventListener('keydown', keyWake);
     };
   }
+
+  /** Whether the user has touched the canvas or the keyboard since boot.
+   *  Latches — the question every reader asks is "has the view been theirs
+   *  at any point", not "is it theirs now". The deferred URL restore reads
+   *  it before re-seating a camera it would otherwise yank
+   *  (`../util/url-state/README.md`). */
+  get sawUserInput(): boolean { return this._sawUserInput; }
 
   /** Per-tick decision. The pose snapshot advances only on rendered
    *  frames, so change accumulating across skipped ticks still triggers. */
@@ -179,6 +193,7 @@ export class RenderGate {
     this.detachDom?.();
     this.detachDom = null;
     this.holds = 0;
+    this._sawUserInput = false;
     this.lastActiveMs = Number.NEGATIVE_INFINITY;
     this.lastRenderedPose.fill(Number.NaN);
     this.lastWake = null;

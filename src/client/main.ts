@@ -5,7 +5,7 @@ import { createMilkyWayLabel } from './local-group/local-group';
 import { Stellata } from './stellata';
 import { bindControls } from './camera/controls/controls';
 import { bindSearch, bindFindSearch } from './typeahead/search';
-import { buildBayerMap } from './typeahead/star-name-tables';
+import { buildBayerMap, type BayerInfo } from './typeahead/star-name-tables';
 import { createDistanceVectorOverlay } from './overlays/distance-vector-overlay';
 import { createFocusRingOverlay } from './overlays/focus-ring-overlay';
 import { createPoiOverlay } from './overlays/poi-overlay';
@@ -44,6 +44,12 @@ import { createHoverEngine } from './hover/hover-engine';
 import { createCardRolodex } from './focus-card/card-rolodex';
 import type { HoverProvider } from './hover/hover-types';
 
+/** Hand the render loop a frame. Wave 2 builds several catalogue-wide
+ *  tables back to back, and without a yield between them the scene — which
+ *  is live by then — stops dead for their sum rather than hitching once per
+ *  table. Yielding splits the block; it does not shrink it. */
+const frame = () => new Promise<void>((r) => { requestAnimationFrame(() => r()); });
+
 async function main() {
   const canvas = document.getElementById('scene') as HTMLCanvasElement;
   const loading = document.getElementById('loading')!;
@@ -55,8 +61,9 @@ async function main() {
   const meta = document.getElementById('meta')!;
   const tooltip = document.getElementById('tooltip')!;
 
-  // Byte progress of the critical artifact — the star catalog is the
-  // only download first paint waits on.
+  // Byte progress of the star catalog. It keeps running past first paint:
+  // the scene is live from chunk 0 and the rest of the population streams
+  // in behind this panel (loaders/README.md § Progressive catalog load).
   const showCatalogProgress = ({ bytes, total }: KindLoadProgress) => {
     loadingBar.style.width = `${((bytes / total) * 100).toFixed(0)}%`;
     loadingStatus.textContent =
@@ -103,15 +110,7 @@ async function main() {
       ...loadKindModules(kinds, import.meta.env.BASE_URL, showCatalogProgress),
     ]);
     const catalog = kinds.star.catalog;
-    const searchIndex = kinds.star.searchIndex;
     const starLabels = kinds.star.starLabels;
-
-    loadingStatus.textContent = `Parsed ${catalog.count.toLocaleString()} stars`;
-    loadingBar.style.width = '100%';
-
-    // Chart-mode's Greek-letter labels are the one search-index
-    // derivation no kind module consumes.
-    const bayerMap = buildBayerMap(searchIndex);
 
     const webgpu = await webgpuBoot;
     // The probe said supported, so a null here is a device that came back
@@ -126,11 +125,6 @@ async function main() {
     // dust debugging and not worth gating behind an env check on a solo
     // project.
     window.stellata = stellata;
-    // Binary-orbit runtime — visible orbital motion for ~hundreds of
-    // catalog pairs against `Stellata.getT()`. Static placements remain
-    // identical when this artifact is absent.
-    if (binaries) stellata.attachBinaries(binaries);
-
     // IAU constellation boundaries — a chart-only declutter element at floor
     // 'all'; absent artifact = no arcs.
     if (boundaries) stellata.attachConstellationBoundaries(boundaries);
@@ -145,20 +139,19 @@ async function main() {
     // all read it, so settle it first.
     await stellata.kinds.planet.systemsReady;
 
-    // HIP → row-index lookup, used by url-state to encode/decode shared
-    // links with stable star IDs that survive a future catalog reorder.
-    // Built once over `catalog.hip` (uint32 per row, 0 = no HIP). First-
-    // seen wins on collision (matches Stellarium-figure HIP resolution).
+    // util/url-state/README.md § Legacy HIP refs.
     const hipToIndex = new Map<number, number>();
-    for (let i = 0; i < catalog.count; i++) {
-      const h = catalog.hip[i];
-      if (h > 0 && !hipToIndex.has(h)) hipToIndex.set(h, i);
-    }
-    // Global SID resolver (docs/sid.md § 8). Every domain this client can
-    // attach settles here at boot; `pending` is only reachable for a
-    // future genuinely-async domain. `sun` is not in the planet domain —
-    // Sol's catalog record carries the same sid, so the star domain
-    // claims it (see util/sid-resolver/README.md).
+    let hipIndexed = 0;
+    const indexHips = () => {
+      for (; hipIndexed < catalog.loadedCount; hipIndexed++) {
+        const h = catalog.hip[hipIndexed];
+        if (h > 0 && !hipToIndex.has(h)) hipToIndex.set(h, hipIndexed);
+      }
+    };
+    indexHips();
+    // Global SID resolver (docs/sid.md § 8). `sun` is not in the planet
+    // domain — Sol's catalog record carries the same sid, so the star
+    // domain claims it (see util/sid-resolver/README.md).
     const sidResolver = new SidResolver(
       ['star', 'planet', 'cloud', 'lg', 'shell', 'probe'],
       catalog.sidSuccessors,
@@ -169,13 +162,29 @@ async function main() {
     // below). Static lists (planet, shell) attach even when a layer's
     // artifact is absent — focus/pin then fall through to null via the
     // empty registry slot.
+    //
+    // The STAR domain attaches now but declares itself STILL FILLING, so a
+    // hit resolves immediately and only a miss stays pending
+    // (util/sid-resolver/README.md § A domain that is still filling). That
+    // ordering matters beyond latency: with a focus the encoder elides
+    // `worldOffset`, so the URL's cam/tgt are in the focal star's local
+    // frame — resolving the focus after they are applied puts the camera in
+    // the wrong frame and then recentres out from under it.
     for (const kind of KIND_ROSTER) {
       const m = kinds[kind];
       if (!m) continue;
       const sids = m.sids();
-      if (sids) sidResolver.attach(kind, arrayDomain(sids));
-      else sidResolver.conclude(kind);
+      if (!sids) { sidResolver.conclude(kind); continue; }
+      sidResolver.attach(kind, kind === 'star'
+        ? arrayDomain(sids, () => catalog.loadedCount)
+        : arrayDomain(sids));
     }
+    // Each landing chunk can claim a queued intent, and a still-filling
+    // domain has no attach event of its own to flush on.
+    const offChunk = catalog.onRecordsDecoded(() => {
+      indexHips();
+      sidResolver.refresh();
+    });
 
     const idMaps: IdMaps = {
       hipToIndex,
@@ -222,10 +231,11 @@ async function main() {
 
     bindUnitToggle();
     registerThemeStellata(stellata);
+    // Bound in wave 1 over a map filled in wave 2 — README.md § Boot in
+    // two waves.
+    const bayerMap = new Map<number, BayerInfo>();
     bindChartMode(stellata, { bayerMap, starLabels });
     bindControls(stellata);
-    bindSearch(stellata, catalog, searchIndex);
-    bindFindSearch(stellata, catalog, searchIndex);
     createDistanceVectorOverlay(stellata);
     createFocusRingOverlay(stellata);
     createPoiOverlay(stellata);
@@ -261,7 +271,8 @@ async function main() {
     // the galactic centre, HUD on, no constellation highlight).
     // Planet-focus refs need the body field's attach table, settled by
     // the kinds.planet.systemsReady await above.
-    if (!applyFromUrl(stellata, idMaps)) {
+    const { applied, focusPending } = applyFromUrl(stellata, idMaps);
+    if (!applied) {
       applyFirstLoadView(stellata, idMaps);
     }
     startUrlSync(stellata, idMaps);
@@ -303,26 +314,80 @@ async function main() {
       },
     });
 
+    // FIRST PAINT. The scene is live on the catalogue's first chunk, so the
+    // chrome comes up now and the loading panel stays on top of a rendering
+    // sky rather than in front of a blank one.
+    // util/url-state/README.md § A focus that resolves after the pose.
+    if (focusPending) await Promise.race([focusPending, kinds.star.ready]);
     await new Promise((r) => requestAnimationFrame(r));
+    // Out of the root stacking context and into the instrument stack —
+    // styles.css § .loading.
+    document.getElementById('bottom-left-stack')!.prepend(loading);
+    document.body.classList.add('scene-live');
+    // README.md § Boot in two waves, the dead-control rule.
+    const searchInputs = [
+      document.getElementById('search-focus'),
+      document.getElementById('search-to'),
+    ].filter((el): el is HTMLInputElement => el !== null);
+    for (const el of searchInputs) {
+      el.disabled = true;
+      el.placeholder = 'Loading catalogue…';
+    }
+    topbar.hidden = false;
+    panel.hidden = false;
+    brandBox.hidden = false;
+    meta.hidden = false;
+    bindPanelLayout();
+    bindBrandModals(catalog.count);
+    bindControlsHideToggle();
+    bindKeyboardShortcuts(stellata, {
+      levelAttitude: () => attitude?.level(),
+      cycleReferenceFrame: () => attitude?.cycleFrame(),
+      aimAtFrameOrigin: (opposite) => attitude?.aimAtFrameOrigin(opposite),
+      toggleOrbitLock: () => attitude?.toggleOrbitLock(),
+      toggleDebugPanel: debugTools.panel,
+      timeScrubber,
+    });
+
+    // WAVE 2. Everything that needs the COMPLETE record set, or the search
+    // index that rides beside it. Each entry here is a correctness
+    // requirement, not a tidiness one — see the comment at each call.
+    await kinds.star.ready;
+    const searchIndex = kinds.star.searchIndex;
+    await frame();
+
+    // The column is full, so the domain now answers `unknown` for a sid
+    // nothing carries instead of holding its intent open forever.
+    offChunk();
+    indexHips();
+    sidResolver.refresh();
+    await frame();
+
+    // Relation caches bake each system's anchor from its primary's
+    // position, and `relationIndicesInBounds` tests against the full
+    // allocation — so a pair in a late chunk would cache (0,0,0) as its
+    // anchor and project the whole orbit in the wrong frame, silently.
+    if (binaries) stellata.attachBinaries(binaries);
+    await frame();
+
+    // Chart-mode's Greek-letter labels are the one search-index
+    // derivation no kind module consumes.
+    buildBayerMap(searchIndex, bayerMap);
+    await frame();
+    // The dearest step in this wave by a distance — a fuzzy corpus over
+    // every searchable entry, half a second of main thread on its own.
+    bindSearch(stellata, catalog, searchIndex);
+    bindFindSearch(stellata, catalog, searchIndex);
+    for (const el of searchInputs) {
+      el.disabled = false;
+      el.placeholder = el.id === 'search-to' ? 'Search destination…' : 'Search stars…';
+    }
+    await frame();
+
     loading.style.transition = 'opacity 0.4s ease';
     loading.style.opacity = '0';
     setTimeout(() => {
       loading.remove();
-      topbar.hidden = false;
-      panel.hidden = false;
-      brandBox.hidden = false;
-      meta.hidden = false;
-      bindPanelLayout();
-      bindBrandModals(catalog.count);
-      bindControlsHideToggle();
-      bindKeyboardShortcuts(stellata, {
-        levelAttitude: () => attitude?.level(),
-        cycleReferenceFrame: () => attitude?.cycleFrame(),
-        aimAtFrameOrigin: (opposite) => attitude?.aimAtFrameOrigin(opposite),
-        toggleOrbitLock: () => attitude?.toggleOrbitLock(),
-        toggleDebugPanel: debugTools.panel,
-        timeScrubber,
-      });
       // On a bare touch device the mobile advisory takes the one splash
       // slot; otherwise the welcome modal shows as usual.
       if (!maybeShowMobileAdvisory()) {

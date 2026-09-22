@@ -111,9 +111,29 @@ The v1/v2/v3 `FIELDS_V*` tables are **frozen** — standalone literal
 arrays, never edited (a golden-blob corpus in `url-state.test.ts`
 pins them byte-for-byte). SID refs that arrive before their object's
 artifact attaches ride the resolver's deferred-intent contract; a
-retired/unknown SID expires silently. POI SIDs resolve synchronously
-— every pinnable kind's SID domain (star, planet, lg) attaches at
-boot, strictly before `applyFromUrl`.
+retired/unknown SID expires silently.
+
+**The STAR domain is attached but STILL FILLING when `applyFromUrl`
+runs**, because the catalogue streams (`../../loaders/README.md`
+§ Progressive catalog load). A hit resolves synchronously — which is the
+whole naked-eye sky, records being apparent-V ordered — and only a miss
+stays `pending` and queues, because the sid may sit in a chunk that has
+not arrived (`../sid-resolver/README.md` § A domain that is still
+filling). Withholding the domain until the last chunk instead would make
+every star ref deferred, and § A focus that resolves after the pose is
+why that is wrong rather than merely slow. Every other pinnable kind's
+domain (planet, lg) attaches complete at boot, strictly before
+`applyFromUrl`.
+
+### Legacy HIP refs
+
+They resolve against a map that is also still filling.
+`idMaps.hipToIndex` is grown per landing chunk by `main.ts` for the same
+reason and with the same guarantee: records arrive in their final order,
+so first-seen-wins over a growing prefix picks the winner a complete pass
+would. A v1–v3 focus or POI list therefore restores at first paint when
+its stars are in the prefix, and its misses drop — the pre-existing
+best-effort contract, not a new one.
 
 The vec3 sub-mask uses **strict equality** (`!==`), not the EPS=1e-3
 `approx` check — under floating origin (a7d.2.11) the local-frame cam
@@ -374,3 +394,48 @@ shared URL that someone reports. Both read their argument through
 reads their poses through `viewPose`, the one place a decoded view's
 omitted pose slots resolve to the values `applyDecodedView` restores
 (`../../debug/capture/README.md`).
+
+## A focus that resolves after the pose
+
+**With a focus, `cam` and `tgt` are frame-relative.** Focusing recentres
+the floating origin onto the focal object, and the encoder elides
+`worldOffset` in that case, so the restored pose is expressed in a frame
+that only exists once the focus has been applied. Everything else in the
+restore is absolute.
+
+That makes focus-before-pose an ordering requirement, not a preference, and
+the streaming catalogue can break it: a star in a late chunk resolves after
+`applyFromUrl` has already seated the camera against the un-recentred
+origin, which lands it somewhere else entirely. So the deferred branch
+re-seats `cam`/`tgt` itself once the focus lands. A `resolvedInline` flag
+distinguishes the synchronous case — where the pose below simply has not
+run yet — from the late one.
+
+**It declines when `renderGate.sawUserInput` has latched.** If the user has
+touched the canvas or the keyboard while the catalogue was still arriving,
+the view is theirs; a restore that yanks it back is worse than one that
+gives up. The focus itself still attaches, because that costs nothing and
+is what the link asked for — only the camera move is abandoned.
+
+**Re-seating it is not enough, because the wrong frame is on screen
+meanwhile.** Boot paints on the catalogue's first chunk, so between first
+paint and the focal star's chunk the camera sits at the default Sol view and
+the restore reads as a jump from Sol rather than as arriving. So
+`applyDecodedView` returns a promise whenever a focus queued as a deferred
+intent — null otherwise, including for every focus the resolver answered
+synchronously — and `applyFromUrl` hands it to boot as `focusPending`.
+`main.ts` holds the **full-bleed** loading cover on it rather than
+revealing the live scene behind the panel, so no wrong vantage is ever
+drawn.
+
+**It settles itself only where the callback runs**, which is a resolution
+that lands — including one that lands and then translates to nothing, like
+a planet whose host body field never attached. A sid that never resolves
+never fires the callback at all: `flushIntents` drops an intent that has
+gone `unknown` without calling it, so nothing on this side settles the
+promise. `kinds.star.ready` is not a belt-and-braces backstop, it is the
+*only* thing that ends that wait, and boot races the two for exactly that
+reason. At the complete catalogue a focus that has not landed never will,
+and holding the cover that long is what boot did before it painted
+progressively at all — so the worst case is the old behaviour, not a black
+screen forever.

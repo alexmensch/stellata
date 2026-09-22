@@ -9,8 +9,20 @@ import { VAR_TYPE_ECLIPSING } from '../../../../scripts/catalog/record/catalog-p
  *  them regardless of whether they carry a renderable orbit. */
 export function buildPulsationSuppressMask(varType: Uint8Array): Float32Array {
   const mask = new Float32Array(varType.length);
-  for (let i = 0; i < varType.length; i++) {
+  writePulsationSuppressMask(varType, mask, 0, varType.length);
+  return mask;
+}
+
+/** `buildPulsationSuppressMask` over one record window, into a mask the
+ *  caller owns. Zero reads as "not suppressed", so an undecoded eclipsing
+ *  binary would pulsate cosmetically until its window lands. */
+export function writePulsationSuppressMask(
+  varType: Uint8Array,
+  mask: Float32Array,
+  first: number,
+  end: number,
+): void {
+  for (let i = first; i < end; i++) {
     if (varType[i] === VAR_TYPE_ECLIPSING) mask[i] = 1;
   }
-  return mask;
 }

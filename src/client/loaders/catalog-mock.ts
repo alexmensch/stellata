@@ -11,13 +11,17 @@ function nanFloat32(count: number): Float32Array {
   return a;
 }
 
-export function makeEmptyCatalog(count: number): Catalog {
+/** `loadedCount` defaults to the whole catalogue; pass fewer to express a
+ *  progressive load mid-flight, and raise it on the returned object to land
+ *  a chunk (`./README.md` § Progressive catalog load). */
+export function makeEmptyCatalog(count: number, loadedCount = count): Catalog {
   const apsis = {} as Record<ApsisField, Float32Array>;
   for (const name of APSIS_FIELDS) apsis[name] = nanFloat32(count);
   const varType = new Uint8Array(count);
   const { rho: pulsRho, colorSwing: pulsColorSwing } = buildPulsationParams(varType);
   return {
     count,
+    loadedCount,
     positions: new Float32Array(count * 3),
     velocities: new Float32Array(count * 3),
     absmag: new Float32Array(count),
@@ -42,5 +46,7 @@ export function makeEmptyCatalog(count: number): Catalog {
     solIndex: -1,
     constellations: [],
     sidSuccessors: new Map(),
+    onRecordsDecoded: () => () => {},
+    whenComplete: Promise.resolve(),
   };
 }

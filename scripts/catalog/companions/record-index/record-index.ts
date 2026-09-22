@@ -26,7 +26,7 @@ export interface CatalogRowIndexMap {
   bySynth: Record<string, number>;
 }
 
-// Build the lookup sidecar after the final absmag sort. The runtime
+// Build the lookup sidecar after the final record sort. The runtime
 // binaries loader resolves multiples.tsv rows to catalog.bin records
 // through this map; the build script writes it next to catalog.bin /
 // search-index.json.

@@ -16,9 +16,9 @@ const { magic, version, count, nameTableOffset, nameTableLength } = catalog.head
 
 console.log(`magic=${magic} version=${version} count=${count} recordSize=${RECORD_SIZE}`);
 console.log(`nameTableOffset=${nameTableOffset} nameTableLength=${nameTableLength}`);
-console.log(`file size=${HEADER_SIZE + count * RECORD_SIZE + nameTableLength} (header+records+names)`);
+console.log(`file size=${HEADER_SIZE + nameTableLength + count * RECORD_SIZE} (header+names+records)`);
 
-console.log('\nBrightest 5 records (by absmag):');
+console.log('\nBrightest 5 records (by apparent V from Sol):');
 for (let i = 0; i < 5; i++) console.log(catalog.record(i));
 
 console.log('\nDimmest 3 records:');

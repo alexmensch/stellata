@@ -83,6 +83,8 @@ import {
   type NumericRecordField,
   type WireStarRecord,
   planCatalogChunks,
+  CATALOG_CHUNK_TARGET_BYTES,
+  CATALOG_FIRST_CHUNK_TARGET_BYTES,
   assembleCatalogChunks,
   type CatalogManifest,
   parseGaiaApsisTsv,
@@ -947,9 +949,9 @@ describe('catalog-pure / binary-format constants', () => {
     expect(expected + RECORD_RESERVED_TAIL_BYTES).toBe(RECORD_SIZE);
   });
 
-  it('magic + version identify the v9 format', () => {
-    expect(MAGIC).toBe('HYG9');
-    expect(BINARY_VERSION).toBe(9);
+  it('magic + version identify the v10 format', () => {
+    expect(MAGIC).toBe('HYGA');
+    expect(BINARY_VERSION).toBe(10);
   });
 
   it('record fields cover the v9 byte plan (Apsis 7×float32 at 52..79, sid uint32 at 80, velocity 3×float32 at 84..95, multiplicity uint8 at 96)', () => {
@@ -1078,6 +1080,8 @@ describe('catalog-pure / record reader surface', () => {
     multiplicityStatus: MULTIPLICITY_RESOLVED,
   };
 
+  const span = (count: number) => ({ offset: HEADER_SIZE, first: 0, end: count });
+
   function writeOne(record: WireStarRecord, count = 1): DataView {
     const view = new DataView(new ArrayBuffer(HEADER_SIZE + count * RECORD_SIZE));
     for (let i = 0; i < count; i++) writeStarRecord(view, HEADER_SIZE + i * RECORD_SIZE, record);
@@ -1124,14 +1128,14 @@ describe('catalog-pure / record reader surface', () => {
     for (const [field, kind] of Object.entries(RECORD_FIELD_KINDS)) {
       if (kind === 'u64') continue;
       const out = new Float32Array(count);
-      decodeRecordColumn(view, count, field as NumericRecordField, out);
+      decodeRecordColumn(view, span(count), field as NumericRecordField, out);
       for (let i = 0; i < count; i++) {
         const scalar = readRecordField(view, HEADER_SIZE + i * RECORD_SIZE, field as NumericRecordField);
         expect(out[i], `${field}[${i}]`).toBe(Math.fround(scalar));
       }
     }
     const big = new BigUint64Array(count);
-    decodeRecordColumnBig(view, count, 'gaiaSourceId', big);
+    decodeRecordColumnBig(view, span(count), 'gaiaSourceId', big);
     expect([...big]).toEqual(Array(count).fill(DISTINCT.gaiaSourceId));
   });
 
@@ -1139,9 +1143,9 @@ describe('catalog-pure / record reader surface', () => {
     const count = 3;
     const view = writeOne(DISTINCT, count);
     const positions = new Float32Array(count * 3);
-    decodeRecordColumn(view, count, 'x', positions, { stride: 3, component: 0 });
-    decodeRecordColumn(view, count, 'y', positions, { stride: 3, component: 1 });
-    decodeRecordColumn(view, count, 'z', positions, { stride: 3, component: 2 });
+    decodeRecordColumn(view, span(count), 'x', positions, { stride: 3, component: 0 });
+    decodeRecordColumn(view, span(count), 'y', positions, { stride: 3, component: 1 });
+    decodeRecordColumn(view, span(count), 'z', positions, { stride: 3, component: 2 });
     for (let i = 0; i < count; i++) {
       expect(positions[i * 3 + 0]).toBeCloseTo(DISTINCT.x, 5);
       expect(positions[i * 3 + 1]).toBeCloseTo(DISTINCT.y, 5);
@@ -1153,8 +1157,8 @@ describe('catalog-pure / record reader surface', () => {
     const view = writeOne(DISTINCT);
     const amp = new Float32Array(1);
     const period = new Float32Array(1);
-    decodeRecordColumn(view, 1, 'ampUnits', amp, { scale: AMP_MAG_PER_UNIT });
-    decodeRecordColumn(view, 1, 'period', period, { scale: PERIOD_DAYS_PER_UNIT });
+    decodeRecordColumn(view, span(1), 'ampUnits', amp, { scale: AMP_MAG_PER_UNIT });
+    decodeRecordColumn(view, span(1), 'period', period, { scale: PERIOD_DAYS_PER_UNIT });
     expect(amp[0]).toBeCloseTo(10, 6);      // 200 × 0.05 mag
     expect(period[0]).toBeCloseTo(4000, 3); // 40000 × 0.1 d
   });
@@ -2005,6 +2009,30 @@ describe('catalog-pure / transport chunking', () => {
 
   it('planCatalogChunks rejects a non-positive target', () => {
     expect(() => planCatalogChunks(100, 0)).toThrow(/Invalid chunk target/);
+    expect(() => planCatalogChunks(100, 10, 0)).toThrow(/Invalid first-chunk target/);
+  });
+
+  it('planCatalogChunks doubles from the first-chunk target up to the ceiling', () => {
+    expect(planCatalogChunks(1000, 64, 4)).toEqual(
+      [4, 8, 16, 32, ...Array<number>(14).fill(64), 44],
+    );
+  });
+
+  it('no chunk ever exceeds the target, at any catalogue size', () => {
+    // The ceiling is the Cloudflare Workers 25 MiB per-asset limit with
+    // headroom; a plan that doubled past it would break deploy rather than
+    // fail a test, so the doubling is asserted clamped rather than trusted.
+    const MiB = 1024 * 1024;
+    for (const totalMiB of [37, 94, 235, 4096]) {
+      const plan = planCatalogChunks(totalMiB * MiB);
+      expect(Math.max(...plan), `${totalMiB} MiB`).toBe(CATALOG_CHUNK_TARGET_BYTES);
+      expect(plan.reduce((a, b) => a + b, 0)).toBe(totalMiB * MiB);
+    }
+  });
+
+  it('the first chunk is the first-paint payload, not the transport ceiling', () => {
+    expect(CATALOG_FIRST_CHUNK_TARGET_BYTES).toBeLessThan(CATALOG_CHUNK_TARGET_BYTES);
+    expect(planCatalogChunks(100 * 1024 * 1024)[0]).toBe(CATALOG_FIRST_CHUNK_TARGET_BYTES);
   });
 
   it('assembleCatalogChunks throws on chunk-count mismatch', () => {

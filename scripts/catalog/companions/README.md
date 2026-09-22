@@ -52,7 +52,7 @@ cell it leaves empty is the § 4 gate's decision rather than an omission
 re-derived). So a pair-primary row's own ids stay on the promoted companion
 and never reach the anchor's record.
 
-`companion-promotion.ts` runs BEFORE the absmag sort. It reads the
+`companion-promotion.ts` runs BEFORE the record sort. It reads the
 binaries pipeline output and adds first-class catalog records for
 the secondary of every physical pair whose identifier isn't already
 a record the membership manifest admitted. ~16.4k companions promoted
@@ -347,7 +347,7 @@ Per-row gates and resolution:
   its radius re-derived. Equal split — a pair Gaia couldn't resolve is
   near-equal by construction, exact for the M-dwarf eclipsing pairs that
   dominate; total system light is preserved. `ci` stays the shared
-  colour. Counted `companionBlendSplit`; runs before the absmag sort.
+  colour. Counted `companionBlendSplit`; runs before the record sort.
   See `docs/science-multiple-star-pipeline.md` § Multiple-star pipeline
   (Blend split).
 - **B-V (ci).** When Stage 6 tags the row's photometry as inherited
@@ -382,7 +382,7 @@ Promoted records carry `FLAG_BINARY_COMPANION_ONLY = 0x08`, and
 additionally `FLAG_BINARY_COMPANION_SYNTHETIC = 0x20` when the
 record lacks own gaia/hip and is addressed exclusively through a
 `synth-<wds_id>-<comp>` key. They're pushed onto `stars` before
-the absmag sort so they receive the same final record indexing as
+the record sort so they receive the same final record indexing as
 everything else. Addressing those records afterwards — the
 `byGaia` / `byHip` / `bySynth` sidecar, the chart-mode wings bit, and the
 component-letter search designations — is `record-index/README.md`;
