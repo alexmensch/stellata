@@ -6,11 +6,6 @@ import type { CloudSurface } from './cloud-surfaces-loader';
 import {
   fakeCloudMaterials, makeMockCatalog, makeMockCloud, type FakeCloudMaterials,
 } from './cloud-mock';
-import { bindAttachmentGate } from '../hdr/attachments/attachment-gate';
-
-/** The render hooks take three's full callback signature and ignore all of
- *  it; firing them is the whole test. */
-const NO_RENDER_ARGS = [] as unknown as Parameters<THREE.Object3D['onBeforeRender']>;
 
 function makeCloud(axes: [number, number, number], id = 'test'): Cloud {
   return makeMockCloud({ name: id, id, sid: id.charCodeAt(0), axes });
@@ -90,26 +85,6 @@ describe('MolecularClouds / absorption material contract', () => {
     c.setMonochrome(false);
     c.update(new THREE.Vector3(), true);
     expect(absorptionGroup(c).visible).toBe(true);
-  });
-
-  // The light an absorber dims is in attachment 2 now
-  // (../hdr/summation/README.md), and the gate's default keeps it shut. A
-  // draw that never opens it multiplies an attachment holding nothing: no
-  // error, no dark rift. Both halves of the contract are pinned because
-  // either alone is silent.
-  it('opens the absorption gate around every absorption draw', () => {
-    const log: string[] = [];
-    bindAttachmentGate((a) => log.push(`open:${a}`), () => log.push('close'));
-    try {
-      const { c } = makeClouds(makeCatalog());
-      for (const m of absorptionGroup(c).children) {
-        m.onBeforeRender(...NO_RENDER_ARGS);
-        m.onAfterRender(...NO_RENDER_ARGS);
-      }
-    } finally {
-      bindAttachmentGate(null, null);
-    }
-    expect(log).toEqual(['open:absorption', 'close', 'open:absorption', 'close']);
   });
 
   it('setSteps clamps into the shader budget', () => {

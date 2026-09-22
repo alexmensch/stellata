@@ -55,15 +55,6 @@ describe('the planet surfaces occlude the diffuse attachment', () => {
       expect(colour![1]).toBe(occluder![1]);
     });
   }
-
-  // A surface whose output struct carries the diffuse member still writes
-  // nothing unless the draw is marked, and the mark alone leaves the
-  // attachment undefined. Neither half errors on its own, so both are pinned.
-  it('marks all three meshes occluding emitters, so the gate opens', () => {
-    const src = read('./planet-mesh-layer.ts');
-    expect(src.match(/markOccludingEmitter\(mesh\)/g)).toHaveLength(SURFACES.length);
-    expect(src).not.toContain('markStatisticEmitter');
-  });
 });
 
 // The stand-in every mesh and annulus slot is cloned from. Nearest on BOTH

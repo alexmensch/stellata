@@ -39,9 +39,6 @@ import {
   OLD_SPHEROID_COLOUR_INDEX_BV,
   combinedColourIndex,
 } from '../../hdr/emission/population-colour-pure';
-import {
-  bindAttachmentGate, type GatedAttachments,
-} from '../../hdr/attachments/attachment-gate';
 import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
 import { fakeLgEmissionMaterials } from './lg-emission-materials-mock';
 
@@ -460,24 +457,6 @@ describe('LocalGroupEmission controller', () => {
     layer.dispose();
     expect(layer.group.children).toHaveLength(0);
     for (const wasCalled of spies) expect(wasCalled()).toBe(true);
-  });
-
-  // Counting opens is not enough: a `diffuse` → `statistic` swap still
-  // opens once per child, and it discards every diffuse write silently —
-  // M31 and the LMC lose their light with no error anywhere.
-  it('marks every pass a DIFFUSE emitter, not merely a physical one', () => {
-    const layer = new LocalGroupEmission(objects, fakeLgEmissionMaterials());
-    const opened: GatedAttachments[] = [];
-    bindAttachmentGate((attachments) => { opened.push(attachments); }, () => {});
-    for (const child of layer.group.children) {
-      child.onBeforeRender(
-        null as never, null as never, null as never,
-        null as never, null as never, null as never,
-      );
-    }
-    bindAttachmentGate(null, null);
-    expect(opened).toEqual(layer.group.children.map(() => 'diffuse'));
-    layer.dispose();
   });
 
   // The bound is 123 objects' central rays on the frame thread, so a glow

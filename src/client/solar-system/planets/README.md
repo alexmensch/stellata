@@ -261,11 +261,11 @@ the resolve step is continuous by construction. The mesh anchor, the two
 disc means that divide out, and the colour bookkeeping that keeps a
 gamma-bent albedo from lighting the body live in `emission/README.md`.
 
-The three alpha-composited surfaces — mesh, annulus, atmosphere shell — are
-`markOccludingEmitter` rather than `markStatisticEmitter`, so they dim the
+The three alpha-composited surfaces — mesh, annulus, atmosphere shell — take
+the occluding-emitter role rather than the point-emitter one, so they dim the
 diffuse attachment by their own opacity as well as emitting. The additive
 glare needs nothing: an additive blend cannot attenuate
-(`../../hdr/attachments/README.md` § The gate).
+(`../../hdr/attachments/README.md` § The roles).
 
 **They are also the only emitters in the client that claim lit-surface
 coverage**, the term the exposure pin divides its masked mean by

@@ -67,7 +67,7 @@ the slant-path enhancement the source walk applied analytically
 (`../../../hdr/attachments/README.md` § Known residuals).
 
 **"Behind them" includes the Milky Way band and the Local Group**, which is
-why the annulus is a `markOccludingEmitter` and writes `stellataOccluderTexel`
+why the annulus takes the occluding-emitter role and writes `occluderTexelTsl`
 at that same alpha: the diffuse emitters live in their own attachment until the
 resolve convolves them, and a draw that dims only attachment 0 lets the band
 back in over a shadowed ring section (`../../../hdr/summation/README.md`

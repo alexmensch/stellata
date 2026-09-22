@@ -67,7 +67,6 @@ import {
 import type { EmitterMaterial } from '../../scene/emitter-material';
 import type { SolarSystemMaterials } from '../materials/solar-system-materials';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
-import { markOccludingEmitter } from '../../hdr/attachments/attachment-gate';
 
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 const X_AXIS = new THREE.Vector3(1, 0, 0);
@@ -968,7 +967,6 @@ export class PlanetMeshLayer {
     mesh.name = 'planet-mesh';
     mesh.frustumCulled = false;
     mesh.renderOrder = 2.8;
-    markOccludingEmitter(mesh);
     this.group.add(mesh);
     const stamp = new THREE.Mesh(this.geometry, this.stampMaterial.material);
     stamp.name = 'planet-depth-stamp';
@@ -1015,7 +1013,6 @@ export class PlanetMeshLayer {
     mesh.renderOrder = 2.82;
     mesh.scale.setScalar(shellRadiusPc);
     mesh.visible = false;
-    markOccludingEmitter(mesh);
     this.group.add(mesh);
     return { mesh, material, shellRadiusPc };
   }
@@ -1038,7 +1035,6 @@ export class PlanetMeshLayer {
     mesh.renderOrder = 2.81;
     mesh.scale.setScalar(outerPc);
     mesh.visible = false;
-    markOccludingEmitter(mesh);
     this.group.add(mesh);
     return { mesh, material, geometry };
   }

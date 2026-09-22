@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission/emission-pure';
-import { markDiffuseEmitter } from '../hdr/attachments/attachment-gate';
 import type { EmitterMaterial } from '../scene/emitter-material';
 import {
   type BandMaterials, type BandSharedSlots,
@@ -198,7 +197,6 @@ export class MilkyWay {
     // mis-cull when the camera is offset far from Sol.
     mesh.frustumCulled = false;
     mesh.renderOrder = -3;
-    markDiffuseEmitter(mesh);
     return mesh;
   }
 

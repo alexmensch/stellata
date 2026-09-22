@@ -48,13 +48,11 @@ an empty slot record and there is nothing per-frame for the layer to
 write. `FloatingOrigin`'s write to the shared map is what reaches the
 mirror.
 
-## The output struct is the gate, so the mesh's mark is inert
+## The output struct is the gate
 
-Both meshes are `markDiffuseEmitter`ed and that call reaches nothing:
-`bindAttachmentGate` has no binder, so the hooks it installs open no gate.
 What opens attachments 1 and 2 is the fragment's own output struct
-(`../hdr/README.md` § The gate becomes the output struct) — same shape as
-the cloud absorption's `markAbsorber` (`../molecular-clouds/README.md`).
+(`../hdr/README.md` § The gate becomes the output struct), in the
+volumetric-emitter role (`../../hdr/attachments/README.md` § The roles).
 Drop the diffuse member from the struct and the glow still draws, still
 sorts, and never reaches the resolve.
 

@@ -278,11 +278,11 @@ naked-eye M31 is a smudge, which a gain cannot reproduce.
   - *Molecular-cloud absorption* is a multiply drawn after the band
     (`renderOrder` −2 against −3), so it opens attachment 2 as well and writes
     the same alpha-only texel to both — one blend equation covers every
-    attachment, so it is a gate flag, not a second draw. Extinction therefore
-    lands **before** the convolution, which is the physical order: light is
-    absorbed in interstellar space, and the eye sums what survives. It is the
-    only *interstellar* absorber in the scene; a future one takes the same mark
-    (`src/client/hdr/attachments/README.md` § The gate).
+    attachment, so it is one more struct member, not a second draw. Extinction
+    therefore lands **before** the convolution, which is the physical order:
+    light is absorbed in interstellar space, and the eye sums what survives. It
+    is the only *interstellar* absorber in the scene; a future one takes the
+    same role (`src/client/hdr/attachments/README.md` § The roles).
   - *Every close-range surface in front of the band* — the planet mesh, the
     ring annulus, the atmosphere shell, all alpha-composited in the local
     depth pass. They emit and attenuate, so they open all three attachments.

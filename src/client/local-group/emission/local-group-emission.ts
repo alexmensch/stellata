@@ -7,7 +7,6 @@ import type { EmitterMaterial } from '../../scene/emitter-material';
 import {
   type LgEmissionMaterials,
 } from './lg-emission-materials';
-import { markDiffuseEmitter } from '../../hdr/attachments/attachment-gate';
 import type { LgObject } from '../local-group-loader';
 import {
   buildEmissionInstanceData,
@@ -96,7 +95,6 @@ export class LocalGroupEmission {
     // drop everything off-centre.
     mesh.frustumCulled = false;
     mesh.renderOrder = -3;
-    markDiffuseEmitter(mesh);
     return { mesh, geometry, surface };
   }
 

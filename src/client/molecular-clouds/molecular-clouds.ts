@@ -13,7 +13,6 @@ import {
 import type { HoverHit } from '../hover/hover-types';
 import { applyRimParams, type RimParams } from '../fresnel-shell/fresnel-shell';
 import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
-import { markAbsorber } from '../hdr/attachments/attachment-gate';
 import type { EmitterMaterial } from '../scene/emitter-material';
 import {
   type CloudAbsorptionSpec,
@@ -160,7 +159,6 @@ export class MolecularClouds {
       mesh.scale.set(c.axes[0], c.axes[1], c.axes[2]);
       mesh.frustumCulled = false; // group origin is offset per frame
       mesh.renderOrder = ABSORPTION_RENDER_ORDER;
-      markAbsorber(mesh);
       this.absorptionGroup.add(mesh);
 
       const rimMesh = this.makeRimMesh(c, surfaceForCloud);

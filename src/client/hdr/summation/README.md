@@ -61,17 +61,17 @@ such draw ordered after the emitters needs attachment 2 open. Additive and max
 blends are exempt because neither can attenuate anything.
 
 - **Molecular-cloud absorption** (`renderOrder` −2, against the emitters'
-  −3) is a premultiplied `rgb = 0` multiply, so it is `markAbsorber` →
-  `[0, NONE, 2]`: one blend equation covers every attachment, so the same
+  −3) is a premultiplied `rgb = 0` multiply, so it takes the absorber role —
+  attachments 0 and 2: one blend equation covers every attachment, so the same
   alpha-only texel dims both. Extinction lands **before** the convolution,
   which is the physical order — light is absorbed in interstellar space and
   the eye sums what survives. Keeping attachment 0 costs nothing and leaves
   any future far-field opaque emitter extincted.
 - **Every close-range surface in front of the band** — the planet mesh, its
   ring annulus, its atmosphere shell, all alpha-composited in the local depth
-  pass. They emit *and* attenuate, so they take `markOccludingEmitter` →
-  `[0, 1, 2]` and write black at their own alpha
-  (`../attachments/README.md` § The gate). Without it the band is added over a
+  pass. They emit *and* attenuate, so they take the occluding-emitter role — all
+  three attachments — and write black at their own alpha
+  (`../attachments/README.md` § The roles). Without it the band is added over a
   planet's night side, a shadowed ring section and the atmosphere limb —
   wherever the surface is dim enough for 38/255 to show.
 - **The canvas alpha.** The resolve writes **1**, not attachment 0's: a

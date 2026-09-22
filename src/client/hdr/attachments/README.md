@@ -1,7 +1,7 @@
 # The target's extra attachments — who may write them
 
-The HDR target's attachments past 0, and the per-draw gate deciding which of
-them a given mesh reaches. `../README.md` owns the target's lifecycle;
+The HDR target's attachments past 0, and the role each drawing surface takes
+towards them. `../README.md` owns the target's lifecycle;
 attachment 1's unit and residuals are here; attachment 2's contract is
 `../summation/README.md`'s; `../exposure/reduction/README.md` reduces
 attachment 1 and `../exposure/README.md` owns what the two reduced numbers
@@ -9,17 +9,15 @@ then do.
 
 ```
 src/client/hdr/attachments/
-  attachment-gate.ts        The per-draw gate on every attachment past 0 —
-    (+ test)                one mark per role (§ The gate) plus the seam
-                            the pipeline drives it through.
+  attachment-roles.test.ts  The struct each volumetric emitter and absorber
+                            returns, read off its graph (§ The roles).
   statistic-mask.test.ts    Which emitters may claim lit-surface coverage,
                             read off each surface's graph (§ The unit).
 ```
 
-**The mark a layer calls is its whole declaration of how it stands to the
-light already in the target**, and nothing else may touch `drawBuffers`.
-§ The gate is that table: a new layer picks a row, and a layer that fits no
-row adds one there rather than reaching for the GL call itself.
+**The struct a surface's graph returns is its whole declaration of how it
+stands to the light already in the target.** § The roles is that table: a new
+layer picks a row, and a layer that fits no row adds one there.
 
 ## Why attachment 0 cannot serve
 
@@ -146,40 +144,33 @@ than device pixels is what keeps the frame mean
 
 ## The gate — chrome is safe by default
 
-The target binds with `drawBuffers [0, NONE, NONE]`, and only a mesh passed
-to one of the marks below flips anything else on for the span of its own draw.
-Every state resolves through one table, `gateDrawSlots`, which is also where
-the pipeline's two frame-cost masks apply (`../README.md` § Dev switches) —
-the adaptation park rides the statistic mask through its own flag, ANDed in
-so neither restore can clobber the other
-(`../exposure/park/README.md`).
-Nothing else can reach the statistic, **including a chrome layer added
-later** — which is the opposite failure mode from patching ten chrome call
-sites and hoping the eleventh remembers.
+Which attachments a draw reaches is the three-member struct its fragment
+graph returns (`../../webgpu/hdr/README.md` § The gate becomes the output
+struct). A member the draw must not reach writes the blend's identity element,
+so the destination is untouched. A material built without the struct — every
+chrome layer — writes attachment 0 alone, so nothing else can reach the
+statistic, **including a chrome layer added later**. The pipeline's two
+frame-cost masks and the adaptation park ride uniforms the struct graphs read
+(`../README.md` § Dev switches, `../exposure/park/README.md`), and the park
+scales the WHOLE statistic texel, since an alpha-composited writer's identity
+needs alpha 0 too.
 
-**The table is what the marks MEAN; the output struct is how they run.**
-Each surface's fragment returns a three-member struct whose masked slots
-carry the blend's identity element, and the adaptation park scales the
-WHOLE statistic texel rather than its flux, since an alpha-composited
-writer's identity needs alpha 0 too (`src/client/webgpu/hdr/README.md`
-§ The gate becomes the output struct). The `drawBuffers` spelling below
-is the vocabulary the table is written in, not a second mechanism.
+## The roles
 
-**Which mark a layer calls is part of its contract**, not a detail:
+**Which role a surface's struct takes is part of its contract**, not a
+detail:
 
-| mark | opens | for |
-| --- | --- | --- |
-| `markStatisticEmitter` | `[0, 1, NONE]` | a point emitter: stars, planet glare, airlight |
-| `markDiffuseEmitter` | `[NONE, 1, 2]` | a volumetric emitter |
-| `markAbsorber` | `[0, NONE, 2]` | a draw that only dims: molecular-cloud absorption |
-| `markOccludingEmitter` | `[0, 1, 2]` | an emitter drawn in FRONT of the diffuse field |
+| role | 0 | 1 | 2 | for |
+| --- | --- | --- | --- | --- |
+| point emitter | ✓ | ✓ | — | stars, planet glare, airlight |
+| volumetric emitter | — | ✓ | ✓ | the Milky Way band, the Local Group glow |
+| absorber | ✓ | — | ✓ | a draw that only dims: molecular-cloud absorption |
+| occluding emitter | ✓ | ✓ | ✓ | an emitter drawn in FRONT of the diffuse field |
 
-- **A volumetric emitter masks attachment 0 off**, because on-target the
+- **A volumetric emitter leaves attachment 0 black on-target**, because the
   resolve owns that pixel once it has averaged attachment 2 over the summation
-  patch (`../summation/README.md`). The mark and the shader's
-  `layout(location = 2)` are one decision — either alone fails silently,
-  discarding the diffuse write in one direction and leaving attachment 2
-  undefined for every other draw in the other.
+  patch (`../summation/README.md`). Both volumetric graphs return
+  `emitExtendedSourceTsl`'s struct, which is where that rule lives.
 - **An absorber keeps attachment 0** because nothing else may assume that
   attachment is empty behind it, and needs attachment 2 because that is where
   the light it dims now is. Attachment 1 stays shut — § Known residuals.
@@ -194,50 +185,20 @@ is the vocabulary the table is written in, not a second mechanism.
   shell — each writing `occluderTexelTsl` at the alpha it composited
   attachment 0 with (`../../webgpu/emission-tsl.ts`).
 
-**Two of these marks invert the gate's safety.** A draw that forgets
-`markStatisticEmitter` merely fails to contribute; one that forgets
-`markAbsorber` silently stops absorbing, which reads as a missing dark rift,
-and one that forgets `markOccludingEmitter` silently stops occluding, which
-reads as the Milky Way band glowing through a planet's night side. Both call
-sites are pinned — `../../molecular-clouds/molecular-clouds.test.ts` and
+**Two of these roles invert the default's safety.** A point emitter that
+writes zero into its statistic member merely fails to contribute; an absorber
+that leaves attachment 2 alone silently stops absorbing, which reads as a
+missing dark rift, and an occluder that does silently stops occluding, which
+reads as the Milky Way band glowing through a planet's night side. Both are
+pinned off the graphs — `attachment-roles.test.ts` and
 `../../solar-system/planets/planet-mesh-layer.test.ts`.
-
-Two further things the gate has to get right:
-
-- **It is unbound whenever no MRT framebuffer is current.** `drawBuffers`
-  on the default framebuffer accepts only `BACK` or `NONE`, so an emitter
-  hook firing on the canvas path — chart mode, or a context with no
-  float-renderable buffer — would be a GL error rather than a no-op.
-- **The resting state is restored on the way out of every draw**, so a
-  mid-frame re-bind of the target cannot leave the gate open behind it.
-
-## The cache the gate rides
-
-Every `drawBuffers` call above is issued **straight to the context**, behind
-three's back. It survives only because three caches the draw buffers it
-believes each framebuffer has (`WebGLState.drawBuffers`) and re-issues them
-just on a change of **attachment count** or of **slot 0** — neither of which
-any mark touches, since all four keep three attachments and all but
-`markDiffuseEmitter` keep `COLOR_ATTACHMENT0` in slot 0. `markDiffuseEmitter`
-puts `NONE` in slot 0, and three still won't re-issue, because it compares
-against its own cached array rather than against the context.
-
-That asymmetry is the whole mechanism: three's cache goes stale the moment a
-mark fires, and staying stale is what keeps the gate shut until `bind()`
-re-opens it. It is also why this is a **read of three's source, re-checked at
-every version bump** rather than something a test can pin — `WebGLState` needs
-a live context. `tests/three-version-audit.test.ts` is the tripwire that forces
-the re-read.
-
-`markStatisticEmitter` composes with whatever hooks the object already
-carries, so it is order-independent against a layer that wants its own.
 
 ## One blend equation, every attachment
 
 A material carries one blend, so the blend an emitter chose for its colour
 runs over its statistic and diffuse texels too. **Each emitter's
 alpha on those attachments is therefore part of its contract, not a free
-slot** — and it is what lets an occluder dim attachment 2 by a gate flag
+slot** — and it is what lets an occluder dim attachment 2 by its own struct member
 rather than a second draw.
 
 - **Additive passes** (star glow, planet glare, the Milky Way band) blend

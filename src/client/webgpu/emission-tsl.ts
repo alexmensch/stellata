@@ -119,7 +119,7 @@ export const maskedStatisticTexelTsl = /* @__PURE__ */ Fn(
  *  light but standing in front of some. `alpha` MUST be the alpha the same
  *  fragment writes to attachment 0, or the object dims the band by a
  *  different amount than it dims everything else
- *  (../hdr/attachments/README.md § The gate). */
+ *  (../hdr/attachments/README.md § The roles). */
 export const occluderTexelTsl = /* @__PURE__ */ Fn(
   ([alpha]: [NF]) => vec4(0.0, 0.0, 0.0, alpha),
 );

@@ -45,11 +45,8 @@ The fragment's output struct is the gate (`../hdr/README.md` § The gate
 becomes the output struct), so the **same alpha-only texel** is returned
 for `colour` and `diffuse`. Drop the second and the clouds keep drawing,
 keep sorting correctly, and extinct nothing — no error, no missing draw,
-just no dark rift.
-
-`markAbsorber` stays on the mesh as the layer's declaration of which
-attachment it dims (`../../hdr/attachments/README.md` § The gate); the
-struct is what carries it out.
+just no dark rift. That is the absorber role
+(`../../hdr/attachments/README.md` § The roles).
 
 The statistic takes `vec4(0)`. Under this material's premultiplied-over
 blend a zero source leaves the destination untouched — and an absorber has
