@@ -124,7 +124,7 @@ information.
   prose, though: it marks wherever it appears (§ What the section carries).
 - **Tier 1 — per-frame code touched, no change to draw counts or pass
   structure.** `--mode dwell --scenario mw120,sol --backend webgpu
-  --against-pin scripts/perf/pins/<slug>.json`. Two contexts, ~4 min, one
+  --frames 960 --against-pin scripts/perf/pins/<slug>.json`. Two contexts, ~4 min, one
   arm, read against the committed pin: the pin run opens with exactly
   those two contexts in that order (§ Run position), so its rows for them
   were taken at the positions Tier 1 takes them at. Direction against a
