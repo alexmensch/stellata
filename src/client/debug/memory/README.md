@@ -195,12 +195,11 @@ Everywhere else, and whenever the number needs to be trusted:
    snapshot reports less than the catalog columns sum to, it did not
    capture the whole isolate.
 
-## Re-running it after the WebGPU port
+## Comparing two readings
 
 The point of an inventory is the *second* reading. The walk reads scene
-graphs and three's own counters, so it runs on either backend — but three
-things change the comparison and all three must be stated when quoting a
-before/after:
+graphs and three's own counters, and three things change the comparison —
+all three must be stated when quoting a before/after:
 
 - **`sceneGraphs` is a list**, and the walk visits every entry. One
   scene is what a boot draws today (`../../webgpu/README.md` § One scene
@@ -213,5 +212,6 @@ before/after:
   material the walk found no texture on gets an `unknown`-basis row
   naming it, so a ported layer shows up as flagged rather than absent.
   Pricing them means traversing the node graph, which is not done.
-- **The hand-priced table above is WebGL-shaped.** Re-derive it against
-  whatever the ported passes bind before comparing totals.
+- **The hand-priced table above was derived against the retired WebGL2
+  boot's bindings.** Re-derive it against what the passes bind now before
+  comparing totals.
