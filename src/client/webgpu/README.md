@@ -34,8 +34,7 @@ src/client/webgpu/
                                     r185's reversed-depth list reversal;
                                     retire with the three bump.
   timestamps/                       The boot probe that settles whether
-                                    this backend's GPU clock can be
-                                    trusted, and the resolve cadence —
+                                    the GPU clock can be trusted, and the resolve cadence —
                                     its own README.
   star-attribute-roster.ts          Which per-star field feeds which
                                     storage table — interleaved into the
@@ -47,23 +46,20 @@ src/client/webgpu/
                                     entry fails to compile;
                                     star/star-tables.test.ts pins that
                                     neither roster silently shrank.
-  tonemap-tsl.ts                    TSL mirror of stellata_tonemap's
-                                    undithered operator and the sRGB
+  tonemap-tsl.ts                    The tone-map operator and the sRGB
                                     transfer pair, over tonemap-pure's
                                     constants.
   emission-tsl.ts                   TSL mirror of the emission unit's
                                     point-source peak, flux-peak,
                                     statistic and occluder texel rules.
-  perceptual-disc-tsl.ts            TSL mirror of the
-                                    stellata_perceptual_disc chunk (dM
-                                    knee, √Δm size, exponent, profile).
-                                    Shared by the star field and the
-                                    planet glare, exactly as the GLSL
-                                    chunk is.
-  tsl/                              The TSL authoring layer every port
-                                    child builds on: the shared uniform-node
+  perceptual-disc-tsl.ts            The perceptual disc kernel (dM knee,
+                                    √Δm size, exponent, profile). Shared
+                                    by the star field and the planet
+                                    glare.
+  tsl/                              The TSL authoring layer every layer
+                                    builds on: the shared uniform-node
                                     mirror, the typing shim, attribute
-                                    packing, and the test pattern a ported
+                                    packing, and the test pattern a
                                     layer is covered by — its own README.
   fresnel-shell/                    The boundary-shell surface shared by
                                     the heliopause and the Local Bubble —
@@ -95,7 +91,7 @@ src/client/webgpu/
   solar-system/                     The planet mesh, ring annulus,
                                     atmosphere shell, reflected glare and
                                     probe glyph — its own README.
-  hdr/                              The HDR chain on this backend: MRT
+  hdr/                              The HDR chain: MRT
                                     target, summation, resolve, reduction
                                     readback, and the output-struct form
                                     of the attachment gate — its own
@@ -125,36 +121,19 @@ A query param would re-introduce query emission into a transport that
 deliberately retired it, and `resetJunkUrl` would need an exemption for
 it.
 
-## What this boot draws
+## What the renderer draws
 
 **The whole app.** Every CPU subsystem (catalog, star frame, focus,
 picker, typeahead, URL state, overlays, HUD, render gate) is
-backend-blind, and the renderer draws the shell's one scene
-(§ One scene per boot). The star layer (`star/README.md`) carries
-all three depth-honest pipelines plus their local-mirror clones, dust
-extinction on both tiers, and chart mode. The
-solar-system family (`solar-system/README.md`) draws whole: glare
-billboards and probe glyphs in the main pass, the spheroid mesh, ring
-annulus and atmosphere shell in the local depth pass, which runs on
-this boot as a single reversed-z bracket (K = 1 —
-`../local-depth/bracket/README.md` § Decision), and its line layers —
-orbit rings, binary orbit paths and probe trails — through the chrome
-line seam (`../chrome-lines/README.md`).
-Both boundary shells draw too — the heliopause and the Local Bubble,
-through `fresnel-shell/` — as do the molecular clouds
-(`molecular-clouds/`), whose absorption is the first ported layer that
-*dims* the target rather than adding to it, and both volumetric
-emitters — the Local Group's glow (`local-group/`) and the Milky Way band
-(`milkyway/`), which write the diffuse attachment the resolve convolves. The dust sprite (`dust/`)
-is ported as well, though its layer is shelved at strength 0 so nothing
-of it is visible without a console call.
-Every remaining line overlay draws too — the galactic disc, both
-coordinate spheres, the constellation figure, the IAU boundary arcs and
-the Local Group wireframe — each on the chrome line seam, the equator
-through its fat stroke (`../chrome-lines/README.md`).
-The HDR chain runs for real through `hdr/` — MRT target, summation,
-resolve, exposure reduction — behind the `HdrSeam` interface
-(`../hdr/hdr-seam.ts`).
+renderer-blind, and the renderer draws the shell's one scene (§ One scene
+per boot) plus the local depth pass, which runs as a single reversed-z
+bracket (K = 1 — `../local-depth/bracket/README.md` § Decision). Every
+layer takes its surfaces from the seam — the subfolders above, one per
+family — and every line overlay takes its stroke from the chrome line seam
+(`../chrome-lines/README.md`). The dust sprite (`dust/`) is built, but its
+layer is shelved at strength 0 so nothing of it is visible without a
+console call. The HDR chain runs through `hdr/` behind the `HdrSeam`
+interface (`../hdr/hdr-seam.ts`).
 
 ### One scene per boot
 
@@ -164,7 +143,7 @@ the star layer and the planet glare, which take the scene as an argument
 (`attachStarLayer` / `attachPlanetGlare`) and parent their own meshes.
 
 **Nothing reachable from that scene may carry a GLSL material.** The
-graph every layer builds into is now the graph the renderer draws, so a
+graph every layer builds into is the graph the renderer draws, so a
 `ShaderMaterial` there fails WGSL pipeline creation and one invalid
 pipeline discards the whole submit — a black app, not a missing layer
 (`../chrome-lines/README.md` § Why a seam at all).
@@ -172,21 +151,15 @@ pipeline discards the whole submit — a black app, not a missing layer
 frame and names any offender on the console; it is the only thing between
 a mis-parented material and a silent black frame.
 
-`scene/glsl-residents-pure.ts` keeps its place with no `ShaderMaterial`
-left in the tree: it is what catches a re-introduction, and the walk runs
-once on the first rendered frame.
-
 The dust voxel volume streams and uploads through
 `loaders/README.md` § Dust voxel upload; the star vertex stage's
-fallback march and the extinction prepass (`extinction/README.md`) are
-its first WebGPU samplers, and the band's measured stack joins them at
-`0it.5`. It was ported first on purpose, since each of those is
-smoke-blind without dust in the texture, and because no pixel could
-confirm the upload it is verified numerically instead:
+fallback march and the extinction prepass (`extinction/README.md`)
+sample it, and each is smoke-blind without dust in the texture. Because
+no pixel can confirm the upload, it is verified numerically instead:
 `stellata.verifyDust()` reads voxels back off the GPU and compares them
 against the chunk files (`loaders/README.md` § Dust voxel readback). A
-port child whose layer renders nothing on the WebGPU boot should run it
-before suspecting its own shader.
+layer that samples the volume and renders nothing should run it before
+suspecting its own shader.
 
 ### Who releases what
 
@@ -218,10 +191,9 @@ requested, not asserted.
 ## Output colour space — pinned to the working space
 
 The boot sets `renderer.outputColorSpace = LinearSRGBColorSpace` (the
-working space), and the pin is load-bearing twice over. Ported shaders
-own the whole transfer chain — operator plus sRGB encode — exactly as
-the GLSL `RawShaderMaterial`s do, so any renderer-side conversion would
-encode their output a second time. And `WebGPURenderer` implements
+working space), and the pin is load-bearing twice over. The shaders own
+the whole transfer chain — operator plus sRGB encode — so any
+renderer-side conversion would encode their output a second time. And `WebGPURenderer` implements
 "output ≠ working" by rendering the whole scene into a hidden
 full-resolution framebuffer target and running a fullscreen
 colour-transform quad after it (`Renderer._renderOutput`) — an extra
@@ -236,12 +208,12 @@ the chrome line seam, whose single-output graph owns the encode and
 selects it on the `uHdrTarget` node mirror, 0 exactly in chart mode
 (`chrome-lines/README.md` § The encode the struct graph does not carry). Do not
 "fix" a dark built-in by unpinning the output space — that re-breaks
-every ported emitter and re-prices the hidden pass; put the material on
+every emitter and re-prices the hidden pass; put the material on
 the seam instead.
 
 **The clear colour is the second casualty, and no shader can fix that one.**
 Chart mode's paper is a `setClearColor` hex, so nothing owns its transfer;
-worse, this backend clears with the *working*-space components and never
+worse, the renderer clears with the *working*-space components and never
 reads `outputColorSpace` (`Background.update` → `_clearColor.getRGB()` at
 its default space). The paper is therefore authored in the space the
 renderer clears in — `chart-mode/chart-palette.ts`'s `paperClearColour`,
@@ -274,7 +246,7 @@ rule:
   erased at compile time and costs nothing). Both run on a browser with
   no WebGPU at all, and the boundary test guards each against acquiring a
   `three/webgpu` import.
-- A port child's TSL layer module is therefore also loaded dynamically
+- A TSL layer module is therefore also loaded dynamically
   — construct it through the seam, never `import` it from `stellata.ts`.
 - **A `*-mock.ts` here is held to the OUTSIDE rule**, not the folder's: it
   may type-import only. That is what lets a suite anywhere import it —
@@ -291,25 +263,24 @@ async chunk to share, which is what stops the async chunk duplicating
 core (verified by rebuilding with a stubbed, import-free boot module;
 no WebGPU identifier appears in the entry either way).
 
-## Authoring a port child — `tsl/`
+## Authoring a layer — `tsl/`
 
-How app data reaches a TSL graph, and what a ported layer's tests look
-like, moved to `tsl/README.md`, which stays the authority: the
+How app data reaches a TSL graph, and what a layer's tests look like,
+is `tsl/README.md`: the
 uniform-node mirror's reference-vs-sync contract and the texture-slot
 exception (§ Shared uniform nodes), the @types/three gaps worth casting
 around (§ TSL typing shim), the 8-vertex-buffer limit and the two ways
 a population answers it (§ Per-instance data), and the three legs a
-ported layer is covered by (§ TSL test pattern).
+layer is covered by (§ TSL test pattern).
 
 ## Early-z — the star layer's depth-honest redesign
 
-Any static `gl_FragDepth` write disables early-z for the whole draw (in
-WGSL: pipeline) and no conservative-depth qualifier exists, so a
+Any static `frag_depth` write disables early-z for the whole pipeline
+and WGSL has no conservative-depth qualifier, so a
 defensive write shared across the three star passes would cost all three
 their early-z, not just the halo branch needing it. The contract, valid
-on any renderer or encoding: one program per pass (compile-time define
-replacing `uRenderMode`); glow carries no depth output (removal of the defensive
-write is bit-exact); the core-mask member stamp moves to the vertex stage
+on any renderer or encoding: one program per pass (a compile-time
+specialization); glow carries no depth output; the core-mask member stamp moves to the vertex stage
 (per-instance, so clip z pins to the near end of the active depth
 convention); the disc pass writes no depth at all, because the core-mask
 draw already stamped the same fragments at the same value several
@@ -317,11 +288,10 @@ renderOrders earlier (`star/README.md` § The disc draw writes no depth
 carries the argument, what it gives up, and the fallbacks).
 
 **The contract is satisfied by removing writes, never by adding draws.**
-A port child that answers "one program per pass" with a second draw over
-the same 390k instances has made the migration cost more per frame than
-the renderer it replaces — which is the one outcome the port is not
-allowed to have. Draw count per subsystem is part of parity, alongside
-what the pixels look like.
+A layer that answers "one program per pass" with a second draw over the
+same 390k instances pays a whole extra per-corner pass for a depth
+property a removed write would have bought for nothing. Draw count per
+subsystem is part of the contract, alongside what the pixels look like.
 
 ## One writer per buffer per submit
 
@@ -366,7 +336,7 @@ table over the same array (`star/README.md` § Star tables), and the compute
 prepass owns a vec4 position table of its own. No itemSize-3 storage
 attribute exists in this tree.
 
-**`DynamicDrawUsage` is a per-render full upload on this backend.**
+**`DynamicDrawUsage` is a per-render full upload.**
 `Attributes.update` re-runs the upload for an attribute carrying that usage
 on every render call whatever its version, and with no pending ranges that
 is the whole buffer. The star tables carry the default usage and upload on

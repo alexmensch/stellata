@@ -100,7 +100,7 @@ band keyed on where Sol is:
    encodes under half an 8-bit step — the extended-source form of
    `emitterPutsInkOnScreen`, i.e. its peak surface brightness is more
    than `TOE_BLACK_MAG` past the live extended threshold
-   (`stellataExtendedThresholdSb`, 22.0 mag/arcsec² at the shipped
+   (`extendedThresholdSbTsl`, 22.0 mag/arcsec² at the shipped
    instrument, `hdr/emission/README.md` § Extended sources). Skipping an
    emitter on this test removes its share from the exposure statistic,
    which eases the cut, which brings the emitter back — so the skip is
@@ -229,23 +229,22 @@ time, or rebuild the index past a threshold; do not let a drifted member
 be culled at a node edge.
 
 **Where.** Design bead stellata-cns.1.1; the HDR peak of a stand-in
-comes through `stellataPointSourcePeak` from the summed flux, and the
+comes through `pointSourcePeakTsl` from the summed flux, and the
 extinction prepass provides one texel per stand-in.
 
 ## 6. Depth is a pipeline property
 
 **Rule.** No new static fragment-depth write anywhere in a pipeline; a
 depth contract is satisfied by removing writes, never by adding draws;
-draw count per subsystem is part of parity. The allowlist is empty, and
+draw count per subsystem is part of the contract. The allowlist is empty, and
 an addition to it is a pipeline giving up early-z.
 
-**Why.** Any static `gl_FragDepth` / `frag_depth` write disables early-z
-— the hardware skipping a pixel's shading when it is already known to be
-hidden — for the *whole* pipeline, not the branch that needed it, and
-neither GLSL ES nor WGSL has a conservative-depth qualifier. A port child
-that answers "one program per pass" with a second draw over the same
-390k instances has made the frame cost more than the renderer it
-replaced.
+**Why.** Any static `frag_depth` write disables early-z — the hardware
+skipping a pixel's shading when it is already known to be hidden — for the
+*whole* pipeline, not the branch that needed it, and WGSL has no
+conservative-depth qualifier. A layer that answers "one program per pass"
+with a second draw over the same 390k instances pays a whole extra
+per-corner pass for what a removed write buys for nothing.
 
 **The one addition the rule does not refuse: a depth-only draw that BUYS
 early-z.** The clause above forbids answering a depth *ordering*

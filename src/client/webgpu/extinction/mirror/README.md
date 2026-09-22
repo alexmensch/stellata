@@ -1,8 +1,7 @@
 # The pick's CPU copy of the A_V table
 
-WebGPU has no synchronous readback, so the one behaviour the port cannot
-reach by parity is the pick's cold read. This folder owns the copy that
-closes it; the kernel that fills the buffer is the parent's (`../README.md`).
+WebGPU has no synchronous readback, so the pick's cold read of the A_V
+buffer needs a CPU copy. This folder owns that copy; the kernel that fills the buffer is the parent's (`../README.md`).
 
 ```
 src/client/webgpu/extinction/mirror/
@@ -13,8 +12,7 @@ src/client/webgpu/extinction/mirror/
 
 ## Cold reads — the one behaviour that is not parity
 
-`readAvMag(idx)` is synchronous on WebGL (`gl.readPixels`, memoised) and
-the pick paths call it that way: a star's extinction decides whether the
+`readAvMag(idx)` is synchronous, and the pick paths call it that way: a star's extinction decides whether the
 renderer put a pixel on screen for it, so a pick gated on the intrinsic
 magnitude selects stars the frame drew black.
 
@@ -46,8 +44,7 @@ everything — and 1.48 MiB copied once beats racing the scan.
 mirror is dropped on every recompute and re-read at most once per
 recompute, so a `pointermove` sweep across a dusty field costs one copy
 and a still pointer costs none. `AvMirror`'s own **epoch** — bumped by every
-`invalidate` — drops a read that resolves against a superseded buffer,
-which is the WebGL twin's `avCache.clear()` expressed for a promise that can
+`invalidate` — drops a read that resolves against a superseded buffer — a promise can
 outlive the thing it was reading. A map that *fails* consumes that one
 attempt rather than re-arming, so a device refusing the copy cannot turn a
 pointer sweep into a 1.48 MiB-per-event drip.

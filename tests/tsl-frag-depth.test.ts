@@ -1,10 +1,6 @@
-// Frag-depth roster for TSL pipelines — the successor to the GLSL text
-// scan in shader-frag-depth.test.ts, which keeps guarding the live GLSL
-// until the WebGL2 path is deleted (the two coexist until then). Any
-// fragment-stage depth write disables early-z for the whole WebGPU
-// pipeline, and the depth-honest redesign's whole point is that NO star
-// pipeline writes it (src/client/webgpu/README.md § Early-z) — so the
-// allowlist starts, and should stay, empty.
+// Frag-depth roster for TSL pipelines. Any fragment-stage depth write
+// disables early-z for the whole pipeline, and no star pipeline writes it
+// (src/client/webgpu/README.md § Early-z) — so the allowlist stays empty.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';

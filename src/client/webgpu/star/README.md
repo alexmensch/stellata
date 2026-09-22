@@ -1,6 +1,6 @@
-# Star layer on WebGPU
+# Star layer
 
-**The shipped star pipeline**, constructed through
+**The star pipeline**, constructed through
 `WebGpuSeam.attachStarLayer` over the shell's scene (never imported from
 `stellata.ts` — the import boundary in `../README.md`). It carries the
 three depth-honest pipelines of `../README.md` § Early-z: D2 glow (no
@@ -13,9 +13,8 @@ Each main draw is indirect at its tier's survivor count
 (`compaction/README.md`), over storage tables indexed by star (§ Star
 tables) — the vertex stage runs over the stars that can draw, not the
 catalogue.
-The renderer-neutral half of that stack — the star frame, the pass
-identities, the blend states, the perceptual-disc mirror — stays in
-`../../star-pipeline/`.
+The CPU half of that stack — the star frame, the pass identities, the
+blend states, the perceptual-disc mirror — is `../../star-pipeline/`.
 
 ## Files in this area
 
@@ -81,20 +80,19 @@ satisfy, and the one consumer held to a tolerance rather than an exact
 threshold, is `../../star-pipeline/perceptual-disc/README.md` § Eliding
 the physical-size branch.
 
-Which WebGL attribute lands where — the static-table fields, the
+Which per-star field lands where — the static-table fields, the
 forwarded four, the one per-vertex attribute — is
-`../star-attribute-roster.ts`, pinned against the live WebGL geometry by
-its test.
+`../star-attribute-roster.ts` (§ Star tables).
 
 The operator, emission-unit and perceptual-disc mirrors the fragment
 composes live one level up (`../tonemap-tsl.ts`, `../emission-tsl.ts`,
 `../perceptual-disc-tsl.ts`) — they are layer-agnostic, and the planet
-glare already takes all three, exactly as it takes the GLSL chunks.
+glare takes all three.
 
 ## Dust extinction — two tiers, one gate
 
-The vertex stage reddens and dims every survivor of the prefilter, on the
-same two-tier shape the GLSL has: the per-star A_V cache is one read of
+The vertex stage reddens and dims every survivor of the prefilter, on two
+tiers: the per-star A_V cache is one read of
 the star's own element of a storage buffer when `uAvPrepassEnabled` is
 set, and the full camera→star march otherwise. Both come from
 `../extinction/`, which owns the march, the cache and the one behaviour
@@ -129,7 +127,7 @@ belong here rather than there:
 
 Chart is a full bypass: flat hard-edged ink discs sized linearly by
 magnitude under `MultiplyBlending`, non-photometric, no HDR emission
-(`../../star-pipeline/README.md`). On this backend it is one branch on
+(`../../star-pipeline/README.md`). It is one branch on
 `uMonochrome` in the vertex stage and one in each fragment graph, plus
 the layer's blend swap. Three things the split is built around:
 
@@ -158,12 +156,11 @@ single-output mode by the time the branch runs.
 
 Both colour passes share one fragment builder
 (`finishStarColourMaterial`), so the statistic mask each one claims is an
-argument it hands that builder rather than a branch inside it — the GLSL
-twin's two `starEmission` call sites in node form. D4 claims
+argument it hands that builder rather than a branch inside it. D4 claims
 `step(uCoreThreshold, glow)`, its resolved core; D2 claims a literal zero
 at every framing. Why the split is the general rule and not a star-shaped
 exception: `../../hdr/attachments/README.md` § The unit. Both are pinned
-against the GLSL by `../../hdr/attachments/statistic-mask.test.ts`.
+by `../../hdr/attachments/statistic-mask.test.ts`.
 
 The MRT emission/statistic write side is here (`finishStarColourMaterial`,
 `StarLayer.setMrtOutputs`) but engages only while the HDR pipeline binds
@@ -215,8 +212,8 @@ Two paths, picked by whether the writer reported three.js update ranges:
   (`BinaryOrbitField`'s `DirtyItemUploader`, `util/README.md`
   § attribute-upload). The forwarded ranges upload those bytes and no
   others, so a sub-pixel binary flip costs a handful of floats. The layer
-  also **clears the source's range list** — no renderer reads the WebGL
-  geometry on this boot, so they would otherwise accumulate to
+  also **clears the source's range list** — no geometry draws the source
+  attribute itself, so they would otherwise accumulate to
   `MAX_PARTIAL_RANGES` and collapse into a full upload.
 - **Whole-buffer** — a bare `needsUpdate`, which is what the shell's
   re-attach inits and a recentre set (through `uploadFull`, so a pending
@@ -229,9 +226,8 @@ Two paths, picked by whether the writer reported three.js update ranges:
 **None of the tables carries `DynamicDrawUsage`, on purpose.** three's
 WebGPU backend re-runs `updateAttribute` on every render call for any
 attribute with that usage, and with no pending ranges that is the whole
-buffer — the `iPosition` vertex attribute this layer used to share paid
-its 4.4 MiB every rendered frame that way, and the packed dynamic vec4 its
-5.9 MiB. A table upload happens when its version moves and not otherwise.
+buffer — 4.4 MiB every rendered frame for the position table with the
+hint set. A table upload happens when its version moves and not otherwise.
 
 `EclipsePhotometryField` forces its own first writing flush full,
 because the shell's re-attach fill reaches stars outside the member
@@ -243,7 +239,7 @@ would strand every untracked star at the previous attach's value.
 
 Byte counts, derived not measured — `recordCount`
 (`scripts/catalog/build-catalog-expected.json`) × element size, moving
-with the catalogue. `debug.memory()` cannot price them on this backend
+with the catalogue. `debug.memory()` cannot price them
 (they bind through TSL nodes, `../../debug/memory/README.md`), which is
 why the arithmetic is stated:
 
@@ -267,11 +263,11 @@ construction — then diffs a stride and an array the GPU never sees, and
 emits ranges addressing the unpadded layout. Reading positions as three
 scalars out of an itemSize-1 table over the writer's own array is what
 keeps `../../binaries/README.md` § Partial re-upload's contract on the
-WebGL attribute intact without that attribute ever becoming storage.
+source attribute intact without that attribute ever becoming storage.
 
 ## Suppression semantics carried by the pass specialization
 
-Compile-time pass constants replace the `uRenderMode` branches
+Compile-time pass constants decide what each pipeline suppresses
 (star-vertex-tsl.ts):
 
 - **Glow (D2)**: the hidden focal star and local-pass members collapse to
@@ -292,25 +288,21 @@ Compile-time pass constants replace the `uRenderMode` branches
   pair's occlusion orders geometrically in the local depth pass.
 - **Core mask (D3)**: focal hide and `iCompositeSuppress` collapse;
   **members keep their draw** — the stamp is what stops main-pass
-  background painting inside the core the local pass repaints. The GLSL
-  build's `gl_FragDepth = 0.0` member stamp moves to the vertex stage:
-  the member quad's clip z pins to the near end of the reversed-z
+  background painting inside the core the local pass repaints. The member
+  stamp is in the vertex stage: the member quad's clip z pins to the near end of the reversed-z
   convention (`z = +w`, `CORE_MASK_NEAR_PIN_EPS` inside the bound), so
   fixed-function depth writes the nearest value and early-z survives.
 
-`uPinFocusToCenter` substitutes the canonical projection exactly as the
-GLSL does. Every pass also carries the taper cull — off entirely in
+`uPinFocusToCenter` substitutes the canonical projection. Every pass also carries the taper cull — off entirely in
 chart mode, which sizes and clips against `uLimitMag` and keeps its
 quads — and the colour passes carry the kernel collapse; the exactness
 and flux-preservation arguments are
-`../../star-pipeline/collapse/README.md`'s, one mechanism on both
-backends.
+`../../star-pipeline/collapse/README.md`'s.
 
 ## The local mirror
 
-`star-local-mirror-tsl.ts` sits behind
-the shared `StarMirror` interface: `StarLocalCluster` drives whichever
-one the boot built, and never learns which. What the port changes:
+`star-local-mirror-tsl.ts` sits behind the `StarMirror` interface, which
+`StarLocalCluster` drives. Its shape:
 
 - **The slots carry `iSourceIdx` alone.** The slot geometry, the copy and
   the three draws are the shared `MirrorSlots`
@@ -338,16 +330,15 @@ one the boot built, and never learns which. What the port changes:
   land in the same HDR target as the main passes, so the single↔struct
   swap covers all four colour materials at once.
 
-In-pass renderOrders mirror the GLSL stack: mask −1 → disc 0 → glow 3.5
+In-pass renderOrders: mask −1 → disc 0 → glow 3.5
 (after the body surfaces, before the planet glare at 4).
 
 ## The disc draw writes no depth
 
-A disc pass that wrote `gl_FragDepth = 1.0` under its halo
-fragments so later glow could peek through the haze — and that one
-conditional write is what cost the whole pipeline its early rejection
-of hidden fragments. Writing **no** depth from this draw buys the same
-thing more directly: the halo leaves the buffer alone, so background
+A disc pass that wrote a far-plane depth under its halo fragments, so
+later glow could peek through the haze, would cost the whole pipeline its
+early rejection of hidden fragments with that one conditional write.
+Writing **no** depth from this draw buys the same thing more directly: the halo leaves the buffer alone, so background
 glow accumulates over it exactly as before, and a mesh behind the star
 no longer punches a hole in the annulus through the depth test either.
 
@@ -366,21 +357,18 @@ be a second write of a value already in the buffer:
   farther one's fragments, as before. A core passes its own stamp
   because `LessEqualDepth` maps to greater-or-equal under reversed z.
 
-Splitting the draw in two — a depth-writing core plus a
-depthWrite-off halo — was the first cut, and it worked, but it doubled
-this pass's per-corner cost: a second full 390k-instance draw running
-the whole distance / magnitude / pulsation / colour-lookup chain to
-re-derive varyings the first draw already had. Three draws is the
-own count; four was the migration costing more than the renderer it
-replaces.
+Splitting the draw in two — a depth-writing core plus a depthWrite-off
+halo — also works, but doubles this pass's per-corner cost: a second full
+390k-instance draw running the whole distance / magnitude / pulsation /
+colour-lookup chain to re-derive varyings the first draw already had.
+Three draws is the count.
 
 **In the local pass the same split holds with one caveat.** The mirror's
 disc draw writes no depth either — its own mask (in-pass renderOrder −1)
 stamps every member core's true bracket depth first, so the redundancy
-argument carries over. What has no successor is the GLSL local-pass
-halo's `gl_FragDepth = 1.0` write, which let a nearer member's halo
-reopen depth over a farther member's stamped core; here that stamp
-survives instead. The recorded fallback if close-pair smoke rejects the
+argument carries over. The one consequence: a nearer member's halo
+cannot reopen depth over a farther member's stamped core, so that stamp
+survives. The recorded fallback if close-pair smoke rejects the
 difference is the viewport depth-range pin — bit-exact, at the price of
 a per-draw viewport state change.
 
@@ -406,5 +394,5 @@ and nearly free, but it moves a shared gate: widen the mask's window
 from `RESOLVED_DISC_MIN_PX` to the disc pass's own floor,
 `0.5 · uSizeMin`, so the mask is on wherever a disc draws at all — that
 makes the redundancy above total rather than conditional, at the cost of
-a mask draw over a wider camera-distance band on **both** backends, and
-of a gate that keys on a debug slider.
+a mask draw over a wider camera-distance band, and of a gate that keys
+on a debug slider.

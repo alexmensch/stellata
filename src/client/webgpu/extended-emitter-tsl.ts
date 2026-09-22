@@ -62,8 +62,7 @@ export interface ExtendedEmitterInputs {
  * layers stack several fragments on one pixel and the dither keys on the
  * fragment position alone, so it would bias rather than cancel.
  *
- * The GLSL's early `return` on-target becomes a branch rather than a
- * `select`, because a select is a value pick and evaluates both operands:
+ * On-target is a branch rather than a `select`, because a select is a value pick and evaluates both operands:
  * on-target the fragment would pay the whole operator — a `log2`, the
  * toe's `pow`, the desaturation's `exp` and the sRGB encode's per-channel
  * `pow` — to discard it. `hdrTarget` is a uniform, so this is uniform

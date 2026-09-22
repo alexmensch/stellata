@@ -1,9 +1,9 @@
 # TSL authoring layer
 
-The scaffolding every port child builds on: how app data reaches a TSL
+The scaffolding every layer's graph builds on: how app data reaches a TSL
 shader graph (uniform nodes per frame, packed attributes per instance),
-the typing patches you need to write one, and the test pattern a ported
-layer is covered by.
+the typing patches you need to write one, and the test pattern a layer is
+covered by.
 
 ## Files in this area
 
@@ -13,7 +13,7 @@ src/client/webgpu/tsl/
                                     ../../frame/shared-uniforms.ts.
   tsl-shim.ts (+ test)              Typed patches over @types/three's TSL
                                     surface — verified gaps only.
-  uniform-slots.ts                  The IUniform face a ported layer
+  uniform-slots.ts                  The IUniform face a layer
                                     writes, over a record of TSL nodes.
   literal-drift-pure.ts (+ test)    Which pinned constants a TSL source
                                     restates as a bare literal — the scan
@@ -32,20 +32,20 @@ src/client/webgpu/tsl/
                                     (§ Storage attributes).
 ```
 
-Which WebGL star attribute feeds which storage table is
+Which per-star field feeds which storage table is
 `../star-attribute-roster.ts` — star-specific, so it stays with the
 layer that owns the roster (§ Per-instance data).
 
 ## Shared uniform nodes
 
-`buildSharedUniformNodes(shared)` mirrors the WebGL-side
-shared-uniforms-by-reference map (`../../frame/shared-uniforms.ts`) as TSL
-`uniform()` nodes, so every existing writer — `FilterController`,
-`ExposureController`, `FloatingOrigin`, `animate()` — keeps writing the
-WebGL map and never learns about the port. The contract:
+`buildSharedUniformNodes(shared)` mirrors the shared-uniforms-by-reference
+map (`../../frame/shared-uniforms.ts`) as TSL `uniform()` nodes, so every
+writer — `FilterController`, `ExposureController`, `FloatingOrigin`,
+`animate()` — writes the plain map and never learns about the nodes. The
+contract:
 
 - **Vector slots** (`uCameraPos`, `uViewport`, `uWorldOffset`) hold the
-  WebGL map's value **objects by reference** — a `.set()` on the map
+  map's value **objects by reference** — a `.set()` on the map
   reaches the node with no copy.
 - **Scalar slots** (float, int, uint — the hdr emitter slots included)
   are **copied by `registry.sync()`**, called once per rendered frame
@@ -74,17 +74,16 @@ vector lines are load-bearing; a mis-transcribed scalar is overwritten by
 the first `sync()`.
 
 Three legs pin it: key parity against `buildSharedUniforms` (adding a
-WebGL slot without its node counterpart fails CI), every vector slot
+slot without its node counterpart fails CI), every vector slot
 holding its map object by identity, and a unique value per scalar proving
-`sync()`'s reflective key filter reaches all of them. Port-child materials
-take slots from `stellata.webgpu.uniformNodes` — shared node objects are
-what replaces shared uniform objects.
+`sync()`'s reflective key filter reaches all of them. Materials take
+slots from `stellata.webgpu.uniformNodes`.
 
-## Uniform slots — the face a ported layer writes
+## Uniform slots — the face a layer writes
 
-A layer that ports as a material swap keeps writing `uniforms`, never
+A layer that takes its material from a factory writes `uniforms`, never
 `material.uniforms`, and `uniformSlotsOf(nodes)` is what makes that reach
-this backend: a TSL `uniform()` node already carries `.value` exactly as
+the graph: a TSL `uniform()` node already carries `.value` exactly as
 an `IUniform` does, so most slots pass straight through. The one that
 cannot is a **uniform array** — it has no `.value`, so the helper puts an
 `IUniform` face over `UniformArrayNode.array`, which the layer mutates in
@@ -102,7 +101,7 @@ A buffer bound through `storage()` — a compute kernel's output, a table
 the vertex stage indexes by instance — is a `StorageBufferAttribute` that
 belongs to no geometry, and three r185 frees a GPU buffer only through
 the geometry that owns its attribute. `BufferAttribute.dispose()`
-dispatches an event nothing on this backend listens to, so a storage
+dispatches an event nothing in three's WebGPU renderer listens to, so a storage
 attribute released that way leaks its buffer for the renderer's life.
 `disposeStorageAttribute(renderer, attribute)` walks the same private
 registry `Geometries` uses to drop its own attributes; it is the one
@@ -157,7 +156,7 @@ Three properties of a storage node worth knowing before binding one:
   tables a main-pass star vertex stage binds. Core guarantees 8 per
   stage. **Any new vertex-stage storage binding on the star pipelines
   raises that constant** — and the gate page is the ceiling on what this
-  backend can ask of a device (`../star/compaction/README.md` § Binding
+  renderer can ask of a device (`../star/compaction/README.md` § Binding
   budget).
 
 ## One program per material instance
@@ -169,7 +168,7 @@ node-builder-state cache misses and each one compiles its own WGSL and its
 own pipeline. Found on the chrome line strokes, but it is a property of the
 node system rather than of that layer.
 
-The consequence a port child has to design around: **a material shared
+The consequence a layer has to design around: **a material shared
 across N objects**: a per-object material is N shader builds and N
 pipelines, where a program cache would have collapsed N identical
 materials onto one program and hidden the duplication. Hoist it to the
@@ -188,7 +187,7 @@ inside it writes `varying(float(0), 'vName')` and `.assign(...)`s over
 it. That reads like a race — the varying carries its own node, and the
 fragment stage's reference forces that node to run in the vertex stage
 too — but it resolves correctly, and the reason is worth stating so the
-next port child does not re-derive it: `NodeBuilder` generates the vertex
+next layer does not re-derive it: `NodeBuilder` generates the vertex
 stage before the fragment one, the varying's node properties are keyed
 stage-agnostically, and the property is filled the first time it
 generates. So the vertex stage emits the seed assignment followed by the
@@ -211,20 +210,15 @@ shimmers (`docs/science-molecular-clouds.md` § 9.1 rules 3–4).
 Both jobs are exported, because writing the dither out as
 `noise(coord).sub(0.5).div(255)` is what let three copies of it
 accumulate: `lsbDitherTsl` is that composition, and the resolve pass reads
-it through `../tonemap-tsl.ts` rather than keeping a private twin. Its two
+it through `../tonemap-tsl.ts` rather than keeping a private copy. Its two
 constants — the 8-bit divisor and the `DITHER_SEED_OFFSET` a caller adds
 when it jitters a ray start off the same noise — live with the rest of the
 dither's numbers in `../../hdr/tonemap/tonemap-pure.ts`.
 
-**One helper, one hash, both backends.** The solar-system atmosphere's
-`atmoJitterTsl` and its `ATMO_JITTER_*` constants are gone — the planet
-mesh and the atmosphere shell call `interleavedGradientNoiseTsl` like
-every other layer, and `webgpu/solar-system/tsl-drift.test.ts` pins the
-helper's name in their place while still forbidding the numbers as
-literals. The GLSL side is the registered `stellata_ign` chunk
-(`./jitter-tsl.ts`), included by the operator, both cloud
-raymarches and the atmosphere integrator; the two stages that reach it
-down both paths at once are what its include guard is for.
+**One helper, one hash.** The planet mesh and the atmosphere shell call
+`interleavedGradientNoiseTsl` like every other layer, and
+`webgpu/solar-system/tsl-drift.test.ts` pins the helper's name while
+forbidding its numbers as literals.
 
 ## TSL typing shim
 
@@ -277,7 +271,7 @@ data that never changes — the glare keeps its per-frame scalars in their
 own buffer for that reason, and the star tables keep each live scalar in
 its own table.
 
-## TSL test pattern — what a port child writes
+## TSL test pattern — what a layer's suite covers
 
 A layer is covered by three legs, none of which read generated code:
 

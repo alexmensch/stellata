@@ -104,8 +104,7 @@ export const statisticTexelTsl = /* @__PURE__ */ Fn(
 /**
  * The statistic texel under the frame's write gate.
  *
- * The WebGL build masks attachment 1 off with `drawBuffers`; here the whole
- * texel scales to zero instead, which is the blend's identity for every
+ * The whole texel scales to zero, which is the blend's identity for every
  * writer of that attachment — additive leaves the destination because the
  * source is zero, and an alpha-composited one leaves it because the alpha
  * went to zero with the rest. Masking the flux alone would be wrong for the

@@ -404,9 +404,8 @@ describe('the displacement gate', () => {
     expect(computes).toHaveLength(settled);
   });
 
-  // A compute pass binds no render target, so the ends-at-the-canvas
-  // contract the fragment twin kept (../hdr/reduction-webgpu.ts) has
-  // nothing here to hold — pin that nothing is bound at all.
+  // A compute pass binds no render target — pin that nothing is bound at
+  // all.
   it('never touches the render-target binding', () => {
     const { prepass, setRenderTarget, attachDust } = makePrepass();
     attachDust();
@@ -612,9 +611,8 @@ describe('the pick mirror', () => {
     expect(reads).toHaveLength(1);
   });
 
-  // The WebGL twin clears its memo inside the recompute; here the read can
-  // outlive the buffer's contents, so the generation counter is that same
-  // invalidation rule expressed for a promise (README.md § Cold reads).
+  // The read can outlive the buffer's contents, so the generation counter
+  // is what invalidates it (README.md § Cold reads).
   it('drops a read that resolves against a superseded buffer', async () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();

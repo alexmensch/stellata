@@ -137,7 +137,7 @@ Three stop responding at a hard threshold:
   `physSize ≥ uSizeMin/2`, since `routeAppSize` is floored at `uSizeMin`.
 - **`pxSize`** — `max(appSize, physSize)` is unaffected below that same
   floor, so tiering's bound implies this one.
-- **The peak** — `stellataPointSourcePeak`'s `max(1, π·r²)` saturates at
+- **The peak** — `pointSourcePeakTsl`'s `max(1, π·r²)` saturates at
   or below `POINT_SOURCE_FLAT_PEAK_DIAMETER_PX` = 2/√π
   (`../../hdr/emission/README.md` § Unit), where pinning the radius to 0
   changes the peak by nothing at all.
@@ -200,9 +200,9 @@ profile:
 - **Halo transparency.** When `glow < uCoreThreshold`, the fragment
   paints its colour under the disc pass's `MaxEquation` blend (so the
   halo brightens the framebuffer per channel up to the halo's level)
-  but writes `gl_FragDepth = 1.0` (far plane). The later glow pass's
-  distant stars then pass the depth test and accumulate additively on
-  top — the haze stays visible while background stars peek through.
+  and writes no depth (`../../webgpu/star/README.md` § The disc draw
+  writes no depth). The later glow pass's distant stars then pass the
+  depth test and accumulate additively on top — the haze stays visible while background stars peek through.
   `MaxEquation`'s trade-off: faint halos against bright backgrounds
   wash out instead of summing, in exchange for no disc-edge artefacts
   in close binaries. The core mask handles the inverse problem

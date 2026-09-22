@@ -1,6 +1,6 @@
 // Async half of the boot: construct + init the WebGPURenderer and the
-// seam handle. Loaded via import() from main.ts — the module (and
-// three/webgpu with it) never reaches the WebGL2 bundle.
+// seam handle. Loaded via import() from main.ts, so the module (and
+// three/webgpu with it) never reaches the entry bundle.
 
 import { LinearSRGBColorSpace, WebGPURenderer } from 'three/webgpu';
 import type * as THREE from 'three';
@@ -37,8 +37,8 @@ import type { StarTables } from './star/star-tables';
 import { settleTimestampSupport, type TimestampBackend } from './timestamps/timestamp-probe';
 
 /** Null when the device came back and then refused the renderer. The
- *  caller shows the requires-WebGPU page rather than a broken canvas —
- *  there is no WebGL2 fallback (README.md § The renderer is WebGPU). */
+ *  caller shows the requires-WebGPU page rather than a broken canvas
+ *  (README.md § The renderer is WebGPU). */
 export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam | null> {
   if (!('gpu' in navigator)) return null;
   const renderer = new WebGPURenderer({
@@ -85,12 +85,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // three bump (reversed-depth-sort.ts carries the mechanism).
   renderer.setOpaqueSort(reversedDepthOpaqueSort);
   renderer.setTransparentSort(reversedDepthTransparentSort);
-  // Output stays in the working colour space: ported shaders own the
-  // whole transfer chain (operator + sRGB encode), exactly as the GLSL
-  // build's do, and any other setting makes three render the scene into
-  // a hidden full-resolution target plus a colour-transform pass —
-  // double-encoding every emitter and pricing an extra fullscreen pass
-  // into every frame (README.md § Output colour space).
+  // README.md § Output colour space.
   renderer.outputColorSpace = LinearSRGBColorSpace;
   let registry: SharedUniformNodeRegistry | null = null;
   const hdr = new WebGpuHdrPipeline(renderer);

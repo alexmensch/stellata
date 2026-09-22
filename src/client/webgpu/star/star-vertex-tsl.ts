@@ -60,8 +60,8 @@ export interface StarTslDeps {
    *  the shared uniform-node mirror (../shared-uniform-nodes.ts). */
   lut: THREE.DataTexture;
   /** The dust volume the raymarch fallback samples, and the star-indexed
-   *  A_V buffer the prepass path indexes. Both nullable on the WebGL side,
-   *  hence nodes over placeholders whose `.value` the prepass swaps — a
+   *  A_V buffer the prepass path indexes. Both arrive after the layer is
+   *  built, hence nodes over placeholders whose `.value` the prepass swaps — a
    *  node cannot carry a nullable texture or buffer. */
   dust: DustTextureNode;
   av: AvStorageNode;
@@ -242,11 +242,10 @@ export function solveStarTsl(
         // carry a star just under the split over it and glow discards it
         // as disc-owned while disc, reading the undimmed appMag, still
         // discards it as glow-owned — drawn by neither pipeline. Route on
-        // the undimmed size so all three agree, matching the GLSL twin
-        // and the CPU pick mirror
-        // (../../camera/controls/star-pick-visibility-pure.ts). The
-        // re-solve sits behind the same dim test the GLSL ternary uses,
-        // so an undimmed star reuses appSize on both backends.
+        // the undimmed size so all three agree, matching the CPU pick
+        // mirror (../../camera/controls/star-pick-visibility-pure.ts). The
+        // re-solve sits behind a test on the dim, so an undimmed star
+        // reuses appSize.
         const routeAppSize = float(0.0).toVar();
         routeAppSize.assign(appSize);
         if (eclipseDim !== null) {
@@ -378,8 +377,8 @@ export function buildStarVertexNode(
         If(self.equal(u.uPinFocusToCenter), () => {
           centreClip.assign(cameraProjectionMatrix.mul(vec4(0.0, 0.0, s.dPc.negate(), 1.0)));
         });
-        // uPixelRatio cancels out of the GLSL's offset chain; both
-        // uViewport and pxSize are CSS px.
+        // uPixelRatio cancels out of the offset: both uViewport and pxSize
+        // are CSS px.
         const ndcOffset = corner.mul(s.pxSize).div(u.uViewport).mul(2.0);
         clipOut.assign(centreClip.add(vec4(ndcOffset.mul(centreClip.w), 0.0, 0.0)));
 

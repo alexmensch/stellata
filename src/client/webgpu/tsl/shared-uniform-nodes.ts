@@ -1,4 +1,4 @@
-// TSL uniform-node mirror of the WebGL-side shared map
+// TSL uniform-node mirror of the shared uniform map
 // (../../frame/shared-uniforms.ts). Reference/sync contract: README.md
 // § Shared uniform nodes.
 
@@ -15,7 +15,7 @@ export type SharedUniformNodes = SharedUniformNodeRegistry['nodes'];
 
 export interface SharedUniformNodeRegistry {
   nodes: ReturnType<typeof buildNodes>;
-  /** Copy every scalar slot's current value from the WebGL-side map into
+  /** Copy every scalar slot's current value from the shared map into
    *  its node, and re-split the member-index array. Vector slots need no
    *  copy — their node holds the map's value object by reference. Called
    *  once per rendered frame, before the render. */

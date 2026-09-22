@@ -44,7 +44,7 @@ describe('StarTables forwarded attributes', () => {
     expect(both, 'a field in both rosters uploads twice and diverges').toEqual([]);
   });
 
-  it('wrap the WebGL attribute arrays by identity as itemSize-1 storage', () => {
+  it('wrap the shell attribute arrays by identity as itemSize-1 storage', () => {
     const { sources, tables } = make();
     expect(tables.forwardedAttribute('iPosition').array).toBe(sources.iPositionAttr.array);
     expect(tables.forwardedAttribute('iEclipseDim').array).toBe(sources.iEclipseDimAttr.array);

@@ -61,9 +61,8 @@ describe('StarLayer', () => {
     expect(m.depthWrite).toBe(false);
   });
 
-  // Draw-count parity with the WebGL2 stack is part of the port contract:
-  // the migration may not cost more per frame than the renderer it
-  // replaces (../README.md § Early-z).
+  // ../README.md § Early-z: the depth contract is met by removing writes,
+  // never by adding draws.
   it('is three draws, no more', () => {
     const { scene, layer } = makeLayer();
     expect([...scene.children].sort((a, b) => a.renderOrder - b.renderOrder))

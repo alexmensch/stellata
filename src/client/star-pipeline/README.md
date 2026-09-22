@@ -111,7 +111,7 @@ Brightness is the **peak** of the profile, `vPeakL`, computed per
 instance in the vertex shader from the star's apparent magnitude:
 
 ```
-vPeakL = stellataPointSourcePeak(uExposure, appMag, 0.5 * physSize)
+vPeakL = pointSourcePeakTsl(uExposure, appMag, 0.5 * physSize)
 ```
 
 The √Δm appSize curve and the plate-scale exaggeration `K` are purely a
@@ -180,9 +180,9 @@ the blue end and will not fit uint8 — `scripts/colour/README.md`.
 ## Star rendering: instanced quads, three passes
 
 Stars are rendered as **instanced unit-quads**, not `THREE.Points`.
-Points were capped by the driver-defined `gl_PointSize` max (commonly
-64–511 px) — too small for the close-range physical-size rendering,
-which can target up to 50% of the viewport. Each instance is one
+WebGPU draws a point primitive at exactly 1 px — nothing like the
+close-range physical-size rendering, which can target up to 50% of the
+viewport. Each instance is one
 `aCorner` vertex × 4, expanded to screen-space pixels in the vertex
 shader by projecting the star centre, then offsetting each corner in
 clip space by `corner × pxSize / viewport × 2 × centre.w` (the `×w`

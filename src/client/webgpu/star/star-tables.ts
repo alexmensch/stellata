@@ -150,8 +150,8 @@ export class StarTables {
 
   /** Forward each source attribute's version and update ranges onto its
    *  table, verbatim: same array, same element units. Idempotent within a
-   *  frame; the source's ranges are consumed here because no renderer
-   *  ever reads the WebGL geometry on this boot. */
+   *  frame; the source's ranges are consumed here because no geometry
+   *  draws the source attribute itself. */
   syncSources(): void {
     for (const name of STAR_FORWARDED_ATTRIBUTES) {
       const f = this.forwarded[name];

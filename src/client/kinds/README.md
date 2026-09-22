@@ -56,7 +56,7 @@ its catalog load blocks first paint and may reject) — and are only
   non-nullable, and the fixture keeps it honest: `fakeWebGpuSeam`
   (`../webgpu/seam-mock.ts`) carries every member and refuses by name until
   a suite overrides the leg it exercises.
-- **NOTHING a kind contributes is immune to an unported material.** Both
+- **NOTHING a kind contributes is immune to a GLSL material.** Both
   graphs a kind can reach are drawn — `KindContext.scene` and the local
   depth pass (`../local-depth/README.md`) — so a hand-written GLSL
   material in either fails WGSL pipeline creation, and one invalid

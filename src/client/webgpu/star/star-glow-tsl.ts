@@ -1,5 +1,5 @@
 // The D2 glow pipeline in TSL: the shared vertex stage plus the glow-pass
-// fragment, compile-time specialized (no uRenderMode), no depth output.
+// fragment, compile-time specialized per pass, no depth output.
 
 import { Discard, Fn, float, smoothstep } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';

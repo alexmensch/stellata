@@ -60,8 +60,7 @@ export function starVisibilityTsl(
   const distOk = distSol.greaterThanEqual(u.uMinDistSol)
     .and(distSol.lessThanEqual(u.uMaxDistSol));
   // Chart sizes and clips against uLimitMag in the fragment stage and
-  // keeps its quads, so the taper cull is off there entirely — GLSL
-  // twin is ./star-vertex-tsl.ts's `starTaperDead` early exit.
+  // keeps its quads, so the taper cull is off there entirely.
   const chart = u.uMonochrome.greaterThan(0.5);
   const magOk = () => appMag.lessThanEqual(u.uCullMag);
   const taperAlive = () => chart.or(pass === STAR_PASS_GLOW

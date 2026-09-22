@@ -1,10 +1,9 @@
 // Pure helpers for the per-star A_V prepass: texture geometry, position
 // packing, and the camera-displacement invalidation predicate.
 
-/** Fixed width of the star-indexed prepass textures; star i lives at
- *  texel (i % width, i / width) in both the position texture and the
- *  A_V render target. The GLSL side derives it via textureSize() so no
- *  shader constant can drift from this one. */
+/** Fixed width of the parity reference's star-indexed textures; star i
+ *  lives at texel (i % width, i / width) in both the position texture and
+ *  the A_V render target. */
 export const AV_TEX_WIDTH = 1024;
 
 /** Camera displacement (pc) beyond which the cached per-star A_V is

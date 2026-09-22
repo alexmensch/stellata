@@ -1628,8 +1628,8 @@ export class Stellata implements FrameAnchor {
 
   /** Numeric check that streamed dust really is in the volume texture where
    *  the uploader put it: samples voxels off the GPU and compares them
-   *  against the chunk files. Identical on both backends, and the only
-   *  verification a WebGPU boot has until something samples the volume.
+   *  against the chunk files — the only verification the upload has until
+   *  something samples the volume.
    *  Logs a summary and returns the reports.
    *  `loaders/README.md` § Dust voxel readback. */
   async verifyDust(count?: number): Promise<ChunkVerifyReport[]> {
@@ -1659,7 +1659,7 @@ export class Stellata implements FrameAnchor {
 
   /** Numeric check that the compute A_V kernel and a fragment march of the
    *  same integral agree bit for bit over the whole catalogue — the parity
-   *  a WebGPU boot has no pixel to show. Null on WebGL2 or with no dust.
+   *  no pixel can show. Null with no dust.
    *  `webgpu/extinction/README.md` § The prepass kernel. */
   async verifyExtinction(): Promise<AvParityReport | null> {
     const report = await this.extinctionPrepass?.verifyParity() ?? null;
@@ -1986,8 +1986,7 @@ export class Stellata implements FrameAnchor {
   /** Dev-console A/B switch for the per-star A_V prepass. false parks the
    *  star shader on the legacy in-vertex raymarch (the before/after
    *  comparison path); true restores the cache. No-op until dust
-   *  attaches, and on WebGL2 contexts without EXT_color_buffer_float
-   *  (where the fallback is permanent). */
+   *  attaches. */
   setExtinctionPrepassEnabled(on: boolean) {
     this.extinctionPrepass?.setEnabled(on);
   }
@@ -2745,7 +2744,7 @@ export class Stellata implements FrameAnchor {
       const residents = findGlslResidents(this.scene);
       if (residents.length > 0) {
         console.error(
-          'GLSL materials in the rendered scene on a WebGPU boot — the submit '
+          'GLSL materials in the rendered scene — the submit '
           + `will draw nothing: ${residents.join(', ')}`,
         );
       }

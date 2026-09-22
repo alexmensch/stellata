@@ -29,17 +29,15 @@ export const STAR_VERTEX_STAGE_STORAGE_BUFFERS =
 
 export class StarLayer {
   /** Depth-only member/core stamp, first in the frame (renderOrder −4);
-   *  `visible` is the shell's CPU gate, exactly as on the WebGL mesh.
-   *  This is the ONLY depth a disc core gets on this backend — the disc
-   *  draw writes none (README.md § The disc draw writes no depth). */
+   *  `visible` is the shell's CPU gate. This is the ONLY depth a disc core
+   *  gets — the disc draw writes none (README.md § The disc draw writes no
+   *  depth). */
   readonly coreMaskMesh: THREE.Mesh;
   readonly discMesh: THREE.Mesh;
   readonly glowMesh: THREE.Mesh;
-  /** Owned by this layer alone — the WebGL pipeline builds its own. */
   readonly colorLut: THREE.DataTexture;
   /** NOT in the scene above: the shell hands it to StarLocalCluster, which
-   *  parents it into the pass scene and owns its dispose — the same split as
-   *  the GLSL mirror. */
+   *  parents it into the pass scene and owns its dispose. */
   readonly localMirror: StarLocalMirrorTsl;
   readonly tables: StarTables;
   readonly compaction: StarCompaction;
@@ -52,8 +50,7 @@ export class StarLayer {
   private readonly targetMaterials: MrtEmitterMaterial[];
   /** The two materials chart mode swaps to flat ink. The mirror's clones
    *  never take the swap: local-pass membership parks in chart mode, so
-   *  they have nothing to draw — the same split the GLSL
-   *  `setMonochromeBlend` makes. */
+   *  they have nothing to draw. */
   private readonly discMaterial: THREE.Material;
   private readonly glowMaterial: THREE.Material;
   private readonly sources: StarLayerSources;
@@ -102,8 +99,7 @@ export class StarLayer {
       scene.add(m);
       return m;
     };
-    // renderOrder mirrors the WebGL stack exactly, three draws and no
-    // more: core mask (−4) → background layers → disc (0) → glow (1).
+    // Three draws and no more: core mask (−4) → background layers → disc (0) → glow (1).
     const mask = buildStarCoreMaskMaterial(deps, listSource(STAR_TIER_DISC));
     const disc = buildStarDiscMaterial(deps, gates, listSource(STAR_TIER_DISC));
     const glow = buildStarGlowMaterial(deps, gates, listSource(STAR_TIER_GLOW));
